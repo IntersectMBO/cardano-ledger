@@ -294,12 +294,19 @@ shelleyStyleWitness ::
   TransitionRule (utxow era)
 shelleyStyleWitness collectVKeyWitnesses embed = do
   (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+
+  {-  (utxo,_,_,_ ) := utxoSt  -}
+  {-  txb := txbody tx  -}
+  {-  txw := txwits tx  -}
+  {-  auxdata := auxiliaryData tx   -}
+  {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let txbody = getField @"body" tx
       utxo = _utxo u
       witsKeyHashes = witsFromTxWitnesses @era tx
       auxdata = getField @"auxiliaryData" tx
 
   -- check scripts
+  {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
   let failedScripts =
         filter
           ( \(hs, validator) ->
@@ -311,14 +318,18 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
     [] -> pure ()
     fs -> failBecauseS $ embed $ ScriptWitnessNotValidatingUTXOW $ Set.fromList $ fmap fst fs
 
+  {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   let sNeeded = scriptsNeeded utxo tx
       sReceived = Map.keysSet (getField @"scriptWits" tx)
   sNeeded == sReceived
     ?! embed (MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived))
 
   -- check VKey witnesses
+
+  {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
   verifiedWits @era tx ?!#: (embed . InvalidWitnessesUTXOW)
 
+  {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
   let needed = collectVKeyWitnesses utxo tx genDelegs
       missingWitnesses = diffWitHashes needed witsKeyHashes
       haveNeededWitnesses =
@@ -328,6 +339,7 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
   haveNeededWitnesses ?!: (embed . MissingVKeyWitnessesUTXOW)
 
   -- check metadata hash
+  {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
   case (getField @"adHash" txbody, auxdata) of
     (SNothing, SNothing) -> pure ()
     (SJust mdh, SNothing) -> failBecauseS $ embed (MissingTxMetadata mdh)
@@ -343,6 +355,7 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
         validateAuxiliaryData @era md' ?!# embed InvalidMetadata
 
   -- check genesis keys signatures for instantaneous rewards certificates
+  {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   let genDelegates =
         Set.fromList $
           asWitness . genDelegKeyHash
@@ -356,6 +369,7 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
           $ getField @"certs" txbody
       GenDelegs genMapping = genDelegs
 
+  {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   coreNodeQuorum <- liftSTS $ asks quorum
   ( (not $ null mirCerts)
       ==> Set.size genSig >= fromIntegral coreNodeQuorum

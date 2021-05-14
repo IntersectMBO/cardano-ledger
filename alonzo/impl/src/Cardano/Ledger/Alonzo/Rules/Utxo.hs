@@ -335,6 +335,8 @@ utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup = u
 
+  {-   txb := txbody tx   -}
+  {-   (,i_f) := txvldttx   -}
   let txb = txbody tx
       vi@(ValidityInterval _ i_f) = getField @"vldt" txb
       inputsAndCollateral =
@@ -342,9 +344,11 @@ utxoTransition = do
           (getField @"inputs" txb)
           (getField @"collateral" txb)
 
+  {-   ininterval slot (txvldt tx)    -}
   inInterval slot vi
     ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
 
+  {-   epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇   -}
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfoWithErr
   case i_f of
@@ -354,59 +358,35 @@ utxoTransition = do
       Left _ -> (nullRedeemers . txrdmrs' . wits' $ tx) ?! OutsideForecast ifj
       Right _ -> pure ()
 
+  {-   txins txb ≠ ∅   -}
   not (Set.null (getField @"inputs" txb)) ?!# InputSetEmptyUTxO
 
+  {-   feesOKp p tx utxo   -}
   feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+
+  {-   (txins txb) ∪ (collateral txb)  ⊆ dom utxo   -}
   eval (inputsAndCollateral ⊆ dom utxo)
     ?! BadInputsUTxO (eval (inputsAndCollateral ➖ dom utxo))
 
+  {-   consumedpp utxo txb = producedpp poolParams txb    -}
   let consumed_ = consumed @era pp utxo txb
       produced_ = Shelley.produced @era pp stakepools txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
-  -- Check that the mint field does not try to mint ADA. This is equivalent to
-  -- the check `adaPolicy ∉ supp mint tx` in the spec.
+  {-   adaID  ∉ supp mint tx   -}
+  -- Check that the mint field does not try to mint ADA.
+  -- Here in the implementation, we store the adaId policyID in the coin field of the value.
   Val.coin (getField @"mint" txb) == Val.zero ?!# TriesToForgeADA
 
-  -- use serialized length of Value because this Value size is being limited inside a serialized Tx
-  let outputs = Map.elems $ unUTxO (txouts @era txb)
-      maxValSize = getField @"_maxValSize" pp
-      outputsTooBig = foldl' accum [] outputs
-        where
-          accum ans out =
-            let v = getField @"value" out
-                size = (fromIntegral . BSL.length . serialize) v
-             in if size > maxValSize
-                  then (fromIntegral size, fromIntegral maxValSize, out) : ans
-                  else ans
-  null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
-
-  ni <- liftSTS $ asks networkId
-  let addrsWrongNetwork =
-        filter
-          (\a -> getNetwork a /= ni)
-          (fmap (getField @"address") $ toList $ getField @"outputs" txb)
-  null addrsWrongNetwork ?!# WrongNetwork ni (Set.fromList addrsWrongNetwork)
-  let wdrlsWrongNetwork =
-        filter
-          (\a -> getRwdNetwork a /= ni)
-          (Map.keys . unWdrl . getField @"wdrls" $ txb)
-  null wdrlsWrongNetwork
-    ?!# WrongNetworkWithdrawal
-      ni
-      (Set.fromList wdrlsWrongNetwork)
-  case txnetworkid' txb of
-    SNothing -> pure ()
-    SJust bid -> ni == bid ?!# WrongNetworkInTxBody ni bid
-
-  -- pointwise is used because non-ada amounts must be >= 0 too
+  {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject(uxoEntrySizetxout ∗ adaPerUTxOWordp p)   -}
   let (Coin adaPerUTxOWord) = getField @"_adaPerUTxOWord" pp
+      outputs = Map.elems $ unUTxO (txouts @era txb)
       outputsTooSmall =
         filter
           ( \out ->
               let v = getField @"value" out
                in not $
-                    Val.pointwise
+                    Val.pointwise -- pointwise is used because non-ada amounts must be >= 0 too
                       (>=)
                       v
                       (Val.inject $ Coin (utxoEntrySize out * adaPerUTxOWord))
@@ -414,15 +394,20 @@ utxoTransition = do
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
-  let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
-      txSize_ = getField @"txsize" tx
-  txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
+  {-   ∀ txout ∈ txouts txb, serSize(getValuetxout) ≤ (maxTxSizep p)∗(maxValSizep pp)   -}
+  -- use serialized length of Value because this Value size is being limited inside a serialized Tx
+  let maxValSize = getField @"_maxValSize" pp
+      outputsTooBig = foldl' accum [] outputs
+        where
+          accum ans out =
+            let v = getField @"value" out
+                sersize = (fromIntegral . BSL.length . serialize) v
+             in if sersize > maxValSize
+                  then (fromIntegral sersize, fromIntegral maxValSize, out) : ans
+                  else ans
+  null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
-  let maxTxEx = getField @"_maxTxExUnits" pp
-      totExunits = getField @"totExunits" tx
-  pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooBigUTxO maxTxEx totExunits
-
-  -- This does not appear in the Alonzo specification. But the test should be in every Era.
+  {-    ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64   -}
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
@@ -434,6 +419,40 @@ utxoTransition = do
           outputs
   null outputsAttrsTooBig ?!# OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
+  {-   ∀(_ ↦ (a,_)) ∈ txouts txb, netId a = NetworkId   -}
+  ni <- liftSTS $ asks networkId
+  let addrsWrongNetwork =
+        filter
+          (\a -> getNetwork a /= ni)
+          (fmap (getField @"address") $ toList $ getField @"outputs" txb)
+  null addrsWrongNetwork ?!# WrongNetwork ni (Set.fromList addrsWrongNetwork)
+
+  {-   ∀ (a ↦ _) ∈ txwdrls txb, netId a = NetworkId   -}
+  let wdrlsWrongNetwork =
+        filter
+          (\a -> getRwdNetwork a /= ni)
+          (Map.keys . unWdrl . getField @"wdrls" $ txb)
+  null wdrlsWrongNetwork
+    ?!# WrongNetworkWithdrawal
+      ni
+      (Set.fromList wdrlsWrongNetwork)
+
+  {-   txnetworkid txb = NetworkId   -}
+  case txnetworkid' txb of
+    SNothing -> pure ()
+    SJust bid -> ni == bid ?!# WrongNetworkInTxBody ni bid
+
+  {-   txsize tx ≤ maxTxSize pp   -}
+  let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
+      txSize_ = getField @"txsize" tx
+  txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
+
+  {-   totExunits tx ≤ maxTxExUnits pp    -}
+  let maxTxEx = getField @"_maxTxExUnits" pp
+      totExunits = getField @"totExunits" tx
+  pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooBigUTxO maxTxEx totExunits
+
+  {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   let maxColl = getField @"_maxCollateralInputs" pp
       numColl = fromIntegral . Set.size $ getField @"collateral" txb
   numColl <= maxColl ?! TooManyCollateralInputs maxColl numColl
