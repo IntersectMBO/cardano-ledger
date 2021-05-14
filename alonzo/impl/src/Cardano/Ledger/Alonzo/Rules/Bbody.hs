@@ -182,6 +182,7 @@ bbodyTransition =
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
 
+        {- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp  -}
         let txTotal, ppMax :: ExUnits
             txTotal = foldr (<>) mempty (fmap (getField @"totExunits") txs)
             ppMax = getField @"_maxBlockExUnits" pp

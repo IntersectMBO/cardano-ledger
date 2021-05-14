@@ -235,17 +235,16 @@ alonzoStyleWitness ::
   TransitionRule (utxow era)
 alonzoStyleWitness = do
   (TRC (UtxoEnv _slot pp _stakepools _genDelegs, u', tx)) <- judgmentContext
-  let txbody = getField @"body" (tx :: TxInBlock era)
 
+  {-  (utxo,_,_,_ ) := utxoSt  -}
+  {-  txb := txbody tx  -}
+  {-  txw := txwits tx  -}
+  {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = _utxo u'
-      sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-      sphs = scriptsNeeded utxo tx
-      unredeemed =
-        -- A script is unredeemed, is we can't find the Data that it requires to execute.
-        let ans = (filter (not . checkScriptData tx) sphs)
-         in seq (rnf ans) ans
-  null unredeemed ?! UnRedeemableScripts unredeemed
+      txbody = getField @"body" (tx :: TxInBlock era)
+      witsKeyHashes = unWitHashes $ witsFromTxWitnesses @era tx
 
+  {-  { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} = dom(txdats txw)   -}
   let inputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
       smallUtxo = eval (inputs ◁ utxo) :: Map.Map (TxIn (Crypto era)) (Core.TxOut era)
       utxoHashes :: [SafeHash (Crypto era) EraIndependentData]
@@ -259,11 +258,21 @@ alonzoStyleWitness = do
       inputHashes = Set.fromList utxoHashes
   txHashes == inputHashes ?! DataHashSetsDontAgree txHashes inputHashes
 
+  {-  ∀ sph ∈ scriptsNeeded utxo tx, checkScriptData tx utxo  ph  -}
+  let sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
+      sphs = scriptsNeeded utxo tx
+      unredeemed =
+        -- A script is unredeemed, is we can't find the Data that it requires to execute.
+        let ans = (filter (not . checkScriptData tx) sphs)
+         in seq (rnf ans) ans
+  null unredeemed ?! UnRedeemableScripts unredeemed
+
+  {-  THIS DOES NOT APPPEAR IN THE SPEC  -}
   let reqSignerHashes' = getField @"reqSignerHashes" txbody
-      witsKeyHashes = unWitHashes $ witsFromTxWitnesses @era tx
   eval (reqSignerHashes' ⊆ witsKeyHashes)
     ?!# MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)
 
+  {-  wppHash txb = hashWitnessPPData pp (languages txw) (txrdmrs txw)  -}
   let languages =
         [ l
           | (_hash, script) <- Map.toList (getField @"scriptWits" tx),
@@ -274,7 +283,15 @@ alonzoStyleWitness = do
       bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
 
-  -- The shelleyStyleWitness calls the UTXO rule
+  {- The shelleyStyleWitness calls the UTXO rule which applies all these rules -}
+  {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
+  {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
+  {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
+  {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
+  {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
+  {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
+  {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
+  {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
   shelleyStyleWitness witsVKeyNeeded WrappedShelleyEraFailure
 
 -- | Collect the set of hashes of keys that needs to sign a given transaction.
