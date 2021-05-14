@@ -18,7 +18,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 {-# OPTIONS_GHC -Wno-unticked-promoted-constructors #-}
 
-module Shelley.Spec.Ledger.Keys
+module Cardano.Ledger.Keys
   ( KeyRole (..),
     HasKeyRole (..),
     asWitness,
@@ -92,7 +92,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
+import Cardano.Ledger.Serialization (decodeRecordNamed)
 
 -- | The role of a key.
 --

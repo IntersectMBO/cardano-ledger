@@ -41,6 +41,7 @@ import Cardano.Ledger.SafeHash
     SafeToHash (..),
     hashAnnotated,
   )
+import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
@@ -55,7 +56,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
-import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 
 -- | A generic metadatum type.
 data Metadatum

@@ -103,7 +103,7 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( Hash,
     KeyHash (..),
     KeyPair (..),
@@ -148,7 +148,7 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature)
-import Shelley.Spec.Ledger.Serialization
+import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
     decodeMapTraverse,

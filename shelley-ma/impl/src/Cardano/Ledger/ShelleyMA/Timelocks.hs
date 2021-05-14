@@ -45,6 +45,7 @@ import Cardano.Binary
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto), TxInBlock)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -56,6 +57,10 @@ import Cardano.Ledger.Pretty
     ppStrictMaybe,
   )
 import Cardano.Ledger.SafeHash (SafeToHash)
+import Cardano.Ledger.Serialization
+  ( decodeStrictSeq,
+    encodeFoldable,
+  )
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
@@ -86,12 +91,7 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
-import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
-import Shelley.Spec.Ledger.Serialization
-  ( decodeStrictSeq,
-    encodeFoldable,
-  )
 import Shelley.Spec.Ledger.Tx (WitVKey)
 import Shelley.Spec.Ledger.TxBody
   ( witKeyHash,

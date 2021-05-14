@@ -32,7 +32,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyPair (..),
     KeyRole (..),

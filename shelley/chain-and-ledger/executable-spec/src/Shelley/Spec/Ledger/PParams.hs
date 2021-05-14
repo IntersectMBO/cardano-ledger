@@ -41,6 +41,18 @@ import Cardano.Binary
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Cardano.Ledger.Serialization
+  ( CBORGroup (..),
+    FromCBORGroup (..),
+    ToCBORGroup (..),
+    decodeMapContents,
+    decodeRecordNamed,
+    mapFromCBOR,
+    mapToCBOR,
+    ratioFromCBOR,
+    ratioToCBOR,
+  )
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -69,19 +81,7 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
     strictMaybeToMaybe,
   )
-import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.Orphans ()
-import Shelley.Spec.Ledger.Serialization
-  ( CBORGroup (..),
-    FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeMapContents,
-    decodeRecordNamed,
-    mapFromCBOR,
-    mapToCBOR,
-    ratioFromCBOR,
-    ratioToCBOR,
-  )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
 -- ====================================================================

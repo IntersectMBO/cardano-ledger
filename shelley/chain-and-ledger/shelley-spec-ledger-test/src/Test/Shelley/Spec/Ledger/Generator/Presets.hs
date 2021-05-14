@@ -25,7 +25,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,
     KeyPair (..),

@@ -38,6 +38,8 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
+import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
   ( BaseRep (MapR),
@@ -50,8 +52,6 @@ import Data.Relation (Relation (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),

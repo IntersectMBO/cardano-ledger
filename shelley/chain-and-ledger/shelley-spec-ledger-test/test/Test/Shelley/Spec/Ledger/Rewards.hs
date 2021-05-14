@@ -71,7 +71,7 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyHash,
     KeyPair (..),
     KeyRole (..),

@@ -62,7 +62,7 @@ import Shelley.Spec.Ledger.BaseTypes
     maybeToStrictMaybe,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyHash,
     KeyPair,
     KeyRole (..),

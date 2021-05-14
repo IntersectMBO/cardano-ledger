@@ -27,6 +27,7 @@ import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), TxInBlock)
 import qualified Cardano.Ledger.Era as Era
+import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -56,7 +57,6 @@ import Shelley.Spec.Ledger.BlockChain
     incrBlocks,
     issuerIDfromBHBody,
   )
-import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState (LedgerState)
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Bbody

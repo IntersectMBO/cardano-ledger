@@ -44,7 +44,7 @@ import Shelley.Spec.Ledger.BaseTypes
     UnitInterval,
     mkNonceFromNumber,
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
     KeyHash,

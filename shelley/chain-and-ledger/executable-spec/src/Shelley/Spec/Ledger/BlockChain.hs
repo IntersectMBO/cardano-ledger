@@ -87,7 +87,32 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
+import Cardano.Ledger.Keys
+  ( CertifiedVRF,
+    Hash,
+    KeyHash,
+    KeyRole (..),
+    SignedKES,
+    VKey,
+    VerKeyVRF,
+    decodeSignedKES,
+    decodeVerKeyVRF,
+    encodeSignedKES,
+    encodeVerKeyVRF,
+    hashKey,
+  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Serialization
+  ( FromCBORGroup (..),
+    ToCBORGroup (..),
+    decodeMap,
+    decodeRecordNamed,
+    decodeSeq,
+    encodeFoldableEncoder,
+    encodeFoldableMapEncoder,
+    listLenInt,
+    runByteBuilder,
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -124,33 +149,8 @@ import Shelley.Spec.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import Shelley.Spec.Ledger.Keys
-  ( CertifiedVRF,
-    Hash,
-    KeyHash,
-    KeyRole (..),
-    SignedKES,
-    VKey,
-    VerKeyVRF,
-    decodeSignedKES,
-    decodeVerKeyVRF,
-    encodeSignedKES,
-    encodeVerKeyVRF,
-    hashKey,
-  )
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
-import Shelley.Spec.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeMap,
-    decodeRecordNamed,
-    decodeSeq,
-    encodeFoldableEncoder,
-    encodeFoldableMapEncoder,
-    listLenInt,
-    runByteBuilder,
-  )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (segwitTx)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)

@@ -59,6 +59,12 @@ import Cardano.Ledger.Coin
     rationalToCoinViaFloor,
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Serialization
+  ( decodeRecordNamed,
+    decodeSeq,
+    encodeFoldable,
+  )
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
@@ -97,14 +103,8 @@ import Shelley.Spec.Ledger.EpochBoundary
     maxPool',
   )
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenancePool (..))
-import Shelley.Spec.Ledger.Serialization
-  ( decodeRecordNamed,
-    decodeSeq,
-    encodeFoldable,
-  )
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), getRwdCred)
 
 newtype LogWeight = LogWeight {unLogWeight :: Float}

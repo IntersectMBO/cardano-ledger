@@ -33,7 +33,9 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
 import Data.MemoBytes
@@ -44,8 +46,6 @@ import Data.MemoBytes
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
-import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import Shelley.Spec.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 
 -- | A simple language for expressing conditions under which it is valid to
 -- withdraw from a normal UTxO payment address or to use a stake address.

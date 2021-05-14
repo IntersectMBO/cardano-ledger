@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
+import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState (..),
     PulsingRewUpdate,

@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.BlockChain
     BHeader,
     LaxBlock,
   )
-import Shelley.Spec.Ledger.Keys (KeyRole (Staking))
+import Cardano.Ledger.Keys (KeyRole (Staking))
 import Shelley.Spec.Ledger.Metadata (Metadata)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.TxBody

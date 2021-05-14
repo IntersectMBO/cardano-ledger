@@ -21,6 +21,7 @@ import Cardano.Binary
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Prelude (Text, cborError, panic)
 import Control.Monad (ap)
 import qualified Control.Monad.Fail
@@ -40,7 +41,6 @@ import Shelley.Spec.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Shelley.Spec.Ledger.Keys (KeyHash (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 

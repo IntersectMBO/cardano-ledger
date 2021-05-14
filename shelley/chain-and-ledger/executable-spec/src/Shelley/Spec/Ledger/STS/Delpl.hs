@@ -28,6 +28,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Serialization (decodeRecordSum)
 import Control.State.Transition
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
@@ -46,7 +47,6 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG, DelegEnv (..), DelegPredicateFailure)
 import Shelley.Spec.Ledger.STS.Pool (POOL, PoolEnv (..), PoolPredicateFailure)
-import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

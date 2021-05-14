@@ -30,6 +30,15 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto (Crypto, VRF)
+import Cardano.Ledger.Keys
+  ( DSignable,
+    GenDelegs (..),
+    KESignable,
+    KeyHash,
+    KeyRole (..),
+    VRFSignable,
+  )
+import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
@@ -54,18 +63,9 @@ import Shelley.Spec.Ledger.BlockChain
     lastAppliedHash,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    GenDelegs (..),
-    KESignable,
-    KeyHash,
-    KeyRole (..),
-    VRFSignable,
-  )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.STS.Overlay (OVERLAY, OverlayEnv (..))
 import Shelley.Spec.Ledger.STS.Updn (UPDN, UpdnEnv (..), UpdnState (..))
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (BlockNo, SlotNo)
 
 data PRTCL crypto

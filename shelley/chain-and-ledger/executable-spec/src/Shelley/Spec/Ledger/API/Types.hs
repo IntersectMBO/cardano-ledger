@@ -9,6 +9,27 @@ import Cardano.Ledger.Coin as X
   ( Coin (..),
     word64ToCoin,
   )
+import Cardano.Ledger.Keys as X
+  ( CertifiedVRF,
+    GenDelegPair (..),
+    GenDelegs (..),
+    Hash,
+    KESignable,
+    KeyHash (..),
+    KeyPair (..),
+    KeyRole (..),
+    SignKeyDSIGN,
+    SignKeyKES,
+    SignKeyVRF,
+    SignedDSIGN,
+    SignedKES,
+    VKey (..),
+    VerKeyKES,
+    VerKeyVRF,
+    coerceKeyRole,
+    hashKey,
+    hashVerKeyVRF,
+  )
 import Shelley.Spec.Ledger.Address as X
   ( Addr (..),
     RewardAcnt (..),
@@ -55,27 +76,6 @@ import Shelley.Spec.Ledger.EpochBoundary as X
     Stake (..),
   )
 import Shelley.Spec.Ledger.Genesis as X
-import Shelley.Spec.Ledger.Keys as X
-  ( CertifiedVRF,
-    GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KESignable,
-    KeyHash (..),
-    KeyPair (..),
-    KeyRole (..),
-    SignKeyDSIGN,
-    SignKeyKES,
-    SignKeyVRF,
-    SignedDSIGN,
-    SignedKES,
-    VKey (..),
-    VerKeyKES,
-    VerKeyVRF,
-    coerceKeyRole,
-    hashKey,
-    hashVerKeyVRF,
-  )
 import Shelley.Spec.Ledger.LedgerState as X
   ( AccountState (..),
     DPState (..),

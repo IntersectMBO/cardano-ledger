@@ -15,6 +15,7 @@ module Shelley.Spec.Ledger.STS.Ocert
 where
 
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, singleton, (⨃))
 import Control.State.Transition
@@ -25,7 +26,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.BlockChain
-import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.OCert
 
 data OCERT crypto

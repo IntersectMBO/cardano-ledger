@@ -55,6 +55,16 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Keys
+  ( DSignable,
+    Hash,
+    KeyHash (..),
+    KeyPair (..),
+    KeyRole (StakePool, Witness),
+    asWitness,
+    signedDSIGN,
+    verifySignedDSIGN,
+  )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Val (zero, (<+>), (<×>))
 import Control.DeepSeq (NFData)
@@ -88,16 +98,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
     isRegKey,
     requiresVKeyWitness,
-  )
-import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    Hash,
-    KeyHash (..),
-    KeyPair (..),
-    KeyRole (StakePool, Witness),
-    asWitness,
-    signedDSIGN,
-    verifySignedDSIGN,
   )
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Scripts

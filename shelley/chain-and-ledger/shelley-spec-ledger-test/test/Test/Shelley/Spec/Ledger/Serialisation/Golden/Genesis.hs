@@ -30,7 +30,7 @@ import Hedgehog (Property)
 import qualified Shelley.Spec.Ledger.API as L
 import Shelley.Spec.Ledger.BaseTypes (textToDns, textToUrl, truncateUnitInterval)
 import Shelley.Spec.Ledger.Genesis
-import Shelley.Spec.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
+import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import Test.Cardano.Prelude
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)

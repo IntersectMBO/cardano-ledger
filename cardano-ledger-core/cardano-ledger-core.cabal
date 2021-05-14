@@ -46,14 +46,17 @@ library
     Cardano.Ledger.Core
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
+    Cardano.Ledger.Keys
     Cardano.Ledger.Hashes
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
+    Cardano.Ledger.Serialization
     Cardano.Ledger.Tx
     Cardano.Ledger.Val
 
   build-depends:
     aeson,
+    binary,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
@@ -62,9 +65,13 @@ library
     containers,
     deepseq,
     groups,
+    iproute,
     mtl,
+    network,
     nothunks,
     partial-order,
     quiet,
     small-steps,
-    strict-containers
+    strict-containers,
+    text,
+    time

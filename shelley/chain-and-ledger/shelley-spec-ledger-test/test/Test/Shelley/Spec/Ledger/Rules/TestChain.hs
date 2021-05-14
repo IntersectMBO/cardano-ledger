@@ -69,7 +69,7 @@ import Shelley.Spec.Ledger.BlockChain
     bheaderSlotNo,
   )
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
-import Shelley.Spec.Ledger.Keys(KeyHash,KeyRole(Witness))
+import Cardano.Ledger.Keys(KeyHash,KeyRole(Witness))
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)
 import Shelley.Spec.Ledger.PParams ( ProtVer)
 import Shelley.Spec.Ledger.Rewards (sumRewards)

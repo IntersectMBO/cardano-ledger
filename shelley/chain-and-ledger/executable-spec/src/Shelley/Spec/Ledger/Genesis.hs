@@ -35,7 +35,15 @@ import Cardano.Ledger.Crypto (HASH, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import Cardano.Ledger.Serialization
+  ( decodeRecordNamed,
+    mapFromCBOR,
+    mapToCBOR,
+    utcTimeFromCBOR,
+    utcTimeToCBOR,
+  )
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
@@ -58,15 +66,7 @@ import GHC.Natural (Natural)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.Serialization
-  ( decodeRecordNamed,
-    mapFromCBOR,
-    mapToCBOR,
-    utcTimeFromCBOR,
-    utcTimeToCBOR,
-  )
 import Shelley.Spec.Ledger.StabilityWindow
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxId (..), TxIn (..))
 import Shelley.Spec.Ledger.UTxO

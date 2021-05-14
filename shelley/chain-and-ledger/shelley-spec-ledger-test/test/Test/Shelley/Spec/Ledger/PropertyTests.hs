@@ -76,7 +76,7 @@ import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
 
-import Shelley.Spec.Ledger.Keys(KeyRole(Witness))
+import Cardano.Ledger.Keys(KeyRole(Witness))
 import Shelley.Spec.Ledger.Scripts(ScriptHash)
 import Data.Map(Map)
 

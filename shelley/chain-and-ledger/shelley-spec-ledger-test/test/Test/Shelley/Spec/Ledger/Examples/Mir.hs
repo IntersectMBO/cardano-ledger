@@ -30,7 +30,7 @@ import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
     asWitness,

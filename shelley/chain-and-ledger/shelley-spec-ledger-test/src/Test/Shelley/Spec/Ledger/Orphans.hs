@@ -9,7 +9,7 @@ module Test.Shelley.Spec.Ledger.Orphans () where
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (DSIGN)
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
 
 -- We need this here for the tests, but should not be in the actual library because

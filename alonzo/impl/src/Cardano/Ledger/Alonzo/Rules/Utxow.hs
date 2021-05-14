@@ -38,6 +38,7 @@ import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentData)
+import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
@@ -65,7 +66,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     poolCWitness,
     requiresVKeyWitness,
   )
-import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
     WitHashes (..),

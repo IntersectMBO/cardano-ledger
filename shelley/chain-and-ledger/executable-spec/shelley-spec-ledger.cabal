@@ -70,7 +70,6 @@ library
     Shelley.Spec.Ledger.RewardProvenance
     Shelley.Spec.Ledger.RewardUpdate
     Shelley.Spec.Ledger.Scripts
-    Shelley.Spec.Ledger.Serialization
     Shelley.Spec.Ledger.Slot
     Shelley.Spec.Ledger.SoftForks
     Shelley.Spec.Ledger.StabilityWindow

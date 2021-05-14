@@ -108,7 +108,7 @@ import Shelley.Spec.Ledger.Credential
     pattern StakeRefBase,
     pattern StakeRefPtr,
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
     Hash,
     KeyHash,
@@ -202,7 +202,7 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 
 
-import Shelley.Spec.Ledger.Serialization(ToCBORGroup)
+import Cardano.Ledger.Serialization(ToCBORGroup)
 import Cardano.Ledger.Era(SupportsSegWit(toTxSeq,hashTxSeq))
 import qualified Cardano.Ledger.Era as Era(TxSeq)
 

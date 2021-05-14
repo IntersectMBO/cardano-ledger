@@ -44,6 +44,7 @@ import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppCoin, ppInteger, ppList, ppLong, ppScriptHash, ppSexp)
+import Cardano.Ledger.Serialization (decodeMap, encodeMap)
 import Cardano.Ledger.Val
   ( DecodeMint (..),
     DecodeNonNegative (..),
@@ -94,7 +95,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
 import Prettyprinter (hsep)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.Serialization (decodeMap, encodeMap)
 import Prelude hiding (lookup)
 
 -- | Asset Name

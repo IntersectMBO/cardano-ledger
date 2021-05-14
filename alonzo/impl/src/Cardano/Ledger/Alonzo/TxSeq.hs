@@ -39,6 +39,7 @@ import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
+import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (prettyA),
@@ -46,6 +47,10 @@ import Cardano.Ledger.Pretty
     ppStrictSeq,
   )
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
+import Cardano.Ledger.Serialization
+  ( ToCBORGroup (..),
+    encodeFoldableMapEncoder,
+  )
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
@@ -68,11 +73,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (AllowThunksIn (..), NoThunks)
 import Shelley.Spec.Ledger.BlockChain (constructMetadata)
-import Shelley.Spec.Ledger.Keys (Hash)
-import Shelley.Spec.Ledger.Serialization
-  ( ToCBORGroup (..),
-    encodeFoldableMapEncoder,
-  )
 
 -- =================================================
 

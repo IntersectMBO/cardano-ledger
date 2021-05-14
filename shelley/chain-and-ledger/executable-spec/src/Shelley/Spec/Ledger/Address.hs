@@ -67,6 +67,12 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Keys
+  ( KeyHash (..),
+    KeyPair (..),
+    KeyRole (..),
+    hashKey,
+  )
 import Cardano.Prelude (cborError, panic)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
@@ -97,12 +103,6 @@ import Shelley.Spec.Ledger.Credential
     PaymentCredential,
     Ptr (..),
     StakeReference (..),
-  )
-import Shelley.Spec.Ledger.Keys
-  ( KeyHash (..),
-    KeyPair (..),
-    KeyRole (..),
-    hashKey,
   )
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.Slot (SlotNo (..))

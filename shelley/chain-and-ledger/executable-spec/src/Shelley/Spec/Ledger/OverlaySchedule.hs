@@ -27,6 +27,10 @@ import Cardano.Binary
     peekTokenType,
   )
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys
+  ( KeyHash (..),
+    KeyRole (..),
+  )
 import Cardano.Slotting.Slot
 import Control.DeepSeq (NFData)
 import Data.Set (Set)
@@ -34,10 +38,6 @@ import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Keys
-  ( KeyHash (..),
-    KeyRole (..),
-  )
 import Shelley.Spec.Ledger.Slot
 
 data OBftSlot crypto

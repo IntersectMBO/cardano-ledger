@@ -71,6 +71,14 @@ import Cardano.Ledger.SafeHash
   ( HashAnnotated (..),
     SafeToHash (..),
   )
+import Cardano.Ledger.Serialization
+  ( FromCBORGroup (..),
+    ToCBORGroup (..),
+    mapFromCBOR,
+    mapToCBOR,
+    ratioFromCBOR,
+    ratioToCBOR,
+  )
 import Control.DeepSeq (NFData)
 import Data.ByteString.Short (fromShort)
 import Data.Coders
@@ -107,14 +115,6 @@ import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import qualified Shelley.Spec.Ledger.PParams as Shelley (PParams' (..))
-import Shelley.Spec.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    mapFromCBOR,
-    mapToCBOR,
-    ratioFromCBOR,
-    ratioToCBOR,
-  )
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 
 type PParamsUpdate era = PParams' StrictMaybe era

@@ -69,6 +69,7 @@ import Cardano.Ledger.Pretty
     ppWdrl,
   )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
+import Cardano.Ledger.Serialization (encodeFoldable)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
@@ -100,7 +101,6 @@ import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.Serialization (encodeFoldable)
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     TxIn (..),

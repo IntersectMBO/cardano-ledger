@@ -23,6 +23,17 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Keys
+  ( HasKeyRole (..),
+    KeyHash,
+    KeyRole (..),
+  )
+import Cardano.Ledger.Serialization
+  ( CBORGroup (..),
+    FromCBORGroup (..),
+    ToCBORGroup (..),
+    decodeRecordSum,
+  )
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -34,19 +45,8 @@ import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes (invalidKey)
-import Shelley.Spec.Ledger.Keys
-  ( HasKeyRole (..),
-    KeyHash,
-    KeyRole (..),
-  )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization
-  ( CBORGroup (..),
-    FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeRecordSum,
-  )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 -- | Script hash or key hash for a payment or a staking object.

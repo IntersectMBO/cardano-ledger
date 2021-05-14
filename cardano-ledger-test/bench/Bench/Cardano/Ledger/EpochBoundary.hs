@@ -9,6 +9,7 @@ import Cardano.Crypto.DSIGN.Mock
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Compactible (Compactible (toCompact))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys (VKey (..), hashKey)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.SafeHash
   ( SafeToHash (makeHashWithExplicitProxys),
@@ -37,7 +38,6 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
   )
 import Shelley.Spec.Ledger.EpochBoundary (aggregateUtxoCoinByCredential)
-import Shelley.Spec.Ledger.Keys (VKey (..), hashKey)
 import Shelley.Spec.Ledger.Slot (SlotNo (SlotNo))
 import Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (TxInCompact), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (UTxO))

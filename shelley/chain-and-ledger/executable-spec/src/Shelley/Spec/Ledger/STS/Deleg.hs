@@ -25,6 +25,15 @@ import Cardano.Binary
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys
+  ( GenDelegPair (..),
+    GenDelegs (..),
+    Hash,
+    KeyHash,
+    KeyRole (..),
+    VerKeyVRF,
+  )
+import Cardano.Ledger.Serialization (decodeRecordSum)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.State.Transition
@@ -45,14 +54,6 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.HardForks as HardForks
-import Shelley.Spec.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KeyHash,
-    KeyRole (..),
-    VerKeyVRF,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DState,
@@ -67,7 +68,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
   )
 import Shelley.Spec.Ledger.PParams (ProtVer)
-import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot
   ( Duration (..),
     EpochNo (..),

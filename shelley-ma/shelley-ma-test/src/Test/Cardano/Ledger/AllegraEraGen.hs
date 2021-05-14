@@ -46,7 +46,7 @@ import Data.Sequence.Strict (StrictSeq (..), fromList)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API (KeyRole (Witness))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.Keys (KeyHash)
+import Cardano.Ledger.Keys (KeyHash)
 import Shelley.Spec.Ledger.PParams (PParams, Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut(..), Wdrl)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()

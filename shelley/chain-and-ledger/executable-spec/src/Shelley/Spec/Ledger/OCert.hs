@@ -26,6 +26,23 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import Cardano.Ledger.Crypto (Crypto, KES)
+import Cardano.Ledger.Keys
+  ( KeyHash,
+    KeyRole (..),
+    SignedDSIGN,
+    VerKeyKES,
+    coerceKeyRole,
+    decodeSignedDSIGN,
+    decodeVerKeyKES,
+    encodeSignedDSIGN,
+    encodeVerKeyKES,
+  )
+import Cardano.Ledger.Serialization
+  ( CBORGroup (..),
+    FromCBORGroup (..),
+    ToCBORGroup (..),
+    runByteBuilder,
+  )
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
@@ -40,23 +57,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.BaseTypes
-import Shelley.Spec.Ledger.Keys
-  ( KeyHash,
-    KeyRole (..),
-    SignedDSIGN,
-    VerKeyKES,
-    coerceKeyRole,
-    decodeSignedDSIGN,
-    decodeVerKeyKES,
-    encodeSignedDSIGN,
-    encodeVerKeyKES,
-  )
-import Shelley.Spec.Ledger.Serialization
-  ( CBORGroup (..),
-    FromCBORGroup (..),
-    ToCBORGroup (..),
-    runByteBuilder,
-  )
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 data OCertEnv crypto = OCertEnv

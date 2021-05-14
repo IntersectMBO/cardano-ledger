@@ -39,7 +39,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (Staking))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
 import qualified Shelley.Spec.Ledger.LedgerState as LS
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)

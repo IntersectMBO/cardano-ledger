@@ -20,6 +20,19 @@ where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys
+  ( DSignable,
+    GenDelegPair (..),
+    GenDelegs (..),
+    Hash,
+    KESignable,
+    KeyHash,
+    KeyRole (..),
+    VerKeyVRF,
+    coerceKeyRole,
+    hashKey,
+    hashVerKeyVRF,
+  )
 import Control.Monad (unless)
 import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Reader (asks)
@@ -53,19 +66,6 @@ import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),
-  )
-import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KESignable,
-    KeyHash,
-    KeyRole (..),
-    VerKeyVRF,
-    coerceKeyRole,
-    hashKey,
-    hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.OverlaySchedule

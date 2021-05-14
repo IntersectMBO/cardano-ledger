@@ -29,6 +29,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (TxBody, TxOut, Value)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -84,7 +85,6 @@ import qualified PlutusTx.IsData.Class as P (IsData (..))
 import Shelley.Spec.Ledger.Address (Addr (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
-import Shelley.Spec.Ledger.Keys (KeyHash (..), hashKey)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

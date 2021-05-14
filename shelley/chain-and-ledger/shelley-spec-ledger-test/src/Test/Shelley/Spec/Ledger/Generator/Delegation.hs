@@ -65,7 +65,7 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.BaseTypes (interval0)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( coerceKeyRole,
     hashKey,
     hashVerKeyVRF,

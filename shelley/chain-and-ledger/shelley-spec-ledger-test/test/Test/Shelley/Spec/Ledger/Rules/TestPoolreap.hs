@@ -14,7 +14,7 @@ where
 
 import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
 import qualified Data.Set as Set (Set, null)
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (StakePool))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
   ( PState (..),
     _pParams,

@@ -30,6 +30,13 @@ import Cardano.Binary
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Cardano.Ledger.Serialization
+  ( decodeList,
+    decodeRecordSum,
+    decodeSet,
+    encodeFoldable,
+  )
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -79,7 +86,6 @@ import Shelley.Spec.Ledger.BaseTypes
     invalidKey,
     networkId,
   )
-import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( PPUPState,
     TransUTxOState,
@@ -91,12 +97,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
-import Shelley.Spec.Ledger.Serialization
-  ( decodeList,
-    decodeRecordSum,
-    decodeSet,
-    encodeFoldable,
-  )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn)
 import Shelley.Spec.Ledger.TxBody

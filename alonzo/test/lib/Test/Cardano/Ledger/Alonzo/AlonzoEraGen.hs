@@ -26,6 +26,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core (PParams, PParamsDelta, Script)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (policies)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary (pattern AuxiliaryData)
@@ -44,7 +45,6 @@ import Data.Set as Set
 import GHC.Records (HasField (..))
 import qualified PlutusTx as Plutus
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl)
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)

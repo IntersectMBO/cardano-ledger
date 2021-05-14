@@ -108,6 +108,7 @@ import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (isNativeScript))
+import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Mary.Value (AssetName, PolicyID (..), Value (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
@@ -147,7 +148,6 @@ import Shelley.Spec.Ledger.Address (Addr (..), RewardAcnt (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
-import Shelley.Spec.Ledger.Keys (KeyRole (Witness))
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.TxBody (TxIn (..), Wdrl (..), WitVKey, unWdrl)
 import qualified Shelley.Spec.Ledger.UTxO as Shelley

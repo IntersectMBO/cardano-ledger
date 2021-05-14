@@ -28,6 +28,16 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
 import qualified Cardano.Ledger.Era as Era (TxSeq)
+import Cardano.Ledger.Keys
+  ( GKeys (..),
+    GenDelegPair (..),
+    GenDelegs (..),
+    KeyHash (..),
+    KeyPair (..),
+    KeyRole (Staking),
+    VKey (..),
+    VerKeyKES,
+  )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
@@ -79,16 +89,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShot (..),
     SnapShots (..),
     Stake (..),
-  )
-import Shelley.Spec.Ledger.Keys
-  ( GKeys (..),
-    GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash (..),
-    KeyPair (..),
-    KeyRole (Staking),
-    VKey (..),
-    VerKeyKES,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),

@@ -23,6 +23,8 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData (..))
 import Control.Provenance (ProvM, liftProv)
@@ -68,7 +70,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     Stake (..),
     poolStake,
   )
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenancePool (..))
 import qualified Shelley.Spec.Ledger.RewardProvenance as RP
@@ -80,7 +81,6 @@ import Shelley.Spec.Ledger.Rewards
     likelihood,
     rewardOnePool,
   )
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxBody (PoolParams (..))
 
 -- ===============================================================

@@ -33,7 +33,7 @@ import qualified Data.Set as Set
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import qualified Shelley.Spec.Ledger.Metadata as SMD
 import Shelley.Spec.Ledger.PParams
   ( PParams' (..),

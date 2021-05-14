@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( Hash,
     KeyHash,
     KeyPair (..),

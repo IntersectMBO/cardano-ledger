@@ -50,7 +50,7 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
     asWitness,

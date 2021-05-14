@@ -7,7 +7,7 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Shelley.Spec.Ledger.Serialization
+module Cardano.Ledger.Serialization
   ( ToCBORGroup (..),
     FromCBORGroup (..),
     CBORGroup (..),

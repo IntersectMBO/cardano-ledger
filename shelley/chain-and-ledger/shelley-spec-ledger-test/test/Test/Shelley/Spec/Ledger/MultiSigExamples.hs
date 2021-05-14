@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.Credential
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyHash (..),
     KeyPair,

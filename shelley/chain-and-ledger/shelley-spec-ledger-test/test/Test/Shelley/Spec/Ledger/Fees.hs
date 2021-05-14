@@ -54,7 +54,7 @@ import Shelley.Spec.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( DSignable,
     Hash,
     KeyHash,
