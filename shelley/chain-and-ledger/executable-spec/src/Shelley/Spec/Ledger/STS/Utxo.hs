@@ -27,6 +27,13 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes
+  ( Network,
+    ShelleyBase,
+    StrictMaybe,
+    invalidKey,
+    networkId,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -78,13 +85,6 @@ import Shelley.Spec.Ledger.Address
     bootstrapAddressAttrsSize,
     getNetwork,
     getRwdNetwork,
-  )
-import Shelley.Spec.Ledger.BaseTypes
-  ( Network,
-    ShelleyBase,
-    StrictMaybe,
-    invalidKey,
-    networkId,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( PPUPState,

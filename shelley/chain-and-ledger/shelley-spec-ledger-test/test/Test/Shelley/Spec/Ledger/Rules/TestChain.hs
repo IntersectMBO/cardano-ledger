@@ -59,7 +59,7 @@ import Shelley.Spec.Ledger.API
     LEDGER,
     UtxoEnv,
   )
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (..),
     Block (..),

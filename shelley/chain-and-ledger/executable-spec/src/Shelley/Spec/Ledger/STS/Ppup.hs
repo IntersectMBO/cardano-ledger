@@ -25,6 +25,7 @@ import Cardano.Binary
     decodeWord,
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -40,7 +41,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Slot

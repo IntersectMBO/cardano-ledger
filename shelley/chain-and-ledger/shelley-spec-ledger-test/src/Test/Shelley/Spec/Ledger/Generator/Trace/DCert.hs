@@ -64,7 +64,7 @@ import Shelley.Spec.Ledger.API
     PState (..),
     Ptr (..),
   )
-import Shelley.Spec.Ledger.BaseTypes (Globals, ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure)

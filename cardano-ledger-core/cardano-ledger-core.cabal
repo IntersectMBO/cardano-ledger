@@ -41,6 +41,7 @@ library
 
   exposed-modules:
     Cardano.Ledger.AuxiliaryData
+    Cardano.Ledger.BaseTypes
     Cardano.Ledger.Coin
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
@@ -62,6 +63,7 @@ library
     cardano-crypto-class,
     cardano-crypto-praos,
     cardano-prelude,
+    cardano-slotting,
     containers,
     deepseq,
     groups,
@@ -71,7 +73,10 @@ library
     nothunks,
     partial-order,
     quiet,
+    scientific,
+    shelley-spec-non-integral,
     small-steps,
     strict-containers,
     text,
-    time
+    time,
+    transformers

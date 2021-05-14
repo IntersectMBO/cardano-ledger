@@ -53,6 +53,13 @@ import Cardano.Binary
     encodeListLen,
     encodeWord,
   )
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    UnitInterval,
+    activeSlotVal,
+    invalidKey,
+    unitIntervalToRational,
+  )
 import Cardano.Ledger.Coin
   ( Coin (..),
     coinToRational,
@@ -88,13 +95,6 @@ import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
-import Shelley.Spec.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    UnitInterval,
-    activeSlotVal,
-    invalidKey,
-    unitIntervalToRational,
-  )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.PoolParams (poolSpec)
 import Shelley.Spec.Ledger.EpochBoundary

@@ -25,6 +25,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), toCBOR)
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto (Crypto, KES)
 import Cardano.Ledger.Keys
   ( KeyHash,
@@ -56,7 +57,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
-import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 data OCertEnv crypto = OCertEnv

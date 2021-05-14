@@ -17,11 +17,11 @@ module Shelley.Spec.Ledger.STS.Tickn
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes
 
 data TICKN
 

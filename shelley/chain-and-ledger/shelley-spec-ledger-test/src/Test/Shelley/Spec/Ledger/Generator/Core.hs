@@ -81,7 +81,7 @@ import Data.Word (Word64)
 import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Nonce (..),
     UnitInterval,
     epochInfo,

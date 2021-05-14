@@ -21,6 +21,7 @@ module Shelley.Spec.Ledger.STS.Bbody
   )
 where
 
+import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
 import qualified Cardano.Ledger.Era as Era
@@ -44,7 +45,6 @@ import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),

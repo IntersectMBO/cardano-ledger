@@ -106,6 +106,16 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    ShelleyBase,
+    StrictMaybe (..),
+    UnitInterval,
+    activeSlotVal,
+    intervalValue,
+    strictMaybeToMaybe,
+    unitIntervalToRational,
+  )
 import Cardano.Ledger.Coin
   ( Coin (..),
     DeltaCoin (..),
@@ -170,16 +180,6 @@ import Shelley.Spec.Ledger.Address.Bootstrap
   ( BootstrapWitness (..),
     bootstrapWitKeyHash,
     verifyBootstrapWit,
-  )
-import Shelley.Spec.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    ShelleyBase,
-    StrictMaybe (..),
-    UnitInterval,
-    activeSlotVal,
-    intervalValue,
-    strictMaybeToMaybe,
-    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), isBootstrapRedeemer)
 import Shelley.Spec.Ledger.Credential (Credential (..))

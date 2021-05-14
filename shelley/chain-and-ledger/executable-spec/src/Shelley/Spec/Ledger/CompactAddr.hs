@@ -19,6 +19,7 @@ import Cardano.Binary
     decodeFull',
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
+import Cardano.Ledger.BaseTypes (word8ToNetwork)
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..))
@@ -34,7 +35,6 @@ import qualified Data.Primitive.ByteArray as BA
 import Data.Word (Word8)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Address (Addr (..), BootstrapAddress (..), Word7 (..), byron, isEnterpriseAddr, notBaseAddr, payCredIsScript, serialiseAddr, stakeCredIsScript, toWord7, word7sToNat)
-import Shelley.Spec.Ledger.BaseTypes (word8ToNetwork)
 import Shelley.Spec.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     PaymentCredential,

@@ -72,6 +72,10 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import Cardano.Ledger.BaseTypes
+  ( invalidKey,
+    maybeToStrictMaybe,
+  )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
@@ -99,10 +103,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.BaseTypes
-  ( invalidKey,
-    maybeToStrictMaybe,
-  )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxBody

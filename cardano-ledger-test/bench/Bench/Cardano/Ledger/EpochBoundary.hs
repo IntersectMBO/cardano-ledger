@@ -6,6 +6,7 @@
 module Bench.Cardano.Ledger.EpochBoundary where
 
 import Cardano.Crypto.DSIGN.Mock
+import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Compactible (Compactible (toCompact))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -28,7 +29,6 @@ import Data.Maybe (fromJust)
 import Data.Proxy
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.Address (Addr (Addr))
-import Shelley.Spec.Ledger.BaseTypes (Network (Testnet))
 import Shelley.Spec.Ledger.CompactAddr (compactAddr)
 import Shelley.Spec.Ledger.Credential
   ( Credential (KeyHashObj),

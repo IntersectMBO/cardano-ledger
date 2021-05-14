@@ -71,7 +71,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkHash,
   )
 import Cardano.Ledger.Era(SupportsSegWit(TxSeq))
-import Shelley.Spec.Ledger.BaseTypes(UnitInterval)
+import Cardano.Ledger.BaseTypes(UnitInterval)
 import Cardano.Ledger.Serialization(ToCBORGroup)
 import Test.Shelley.Spec.Ledger.Generator.EraGen
   ( EraGen (..),

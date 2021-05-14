@@ -82,6 +82,19 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    FixedPoint,
+    Nonce (..),
+    Seed (..),
+    StrictMaybe (..),
+    activeSlotLog,
+    activeSlotVal,
+    intervalValue,
+    mkNonceFromNumber,
+    mkNonceFromOutputVRF,
+    strictMaybeToMaybe,
+  )
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
@@ -135,19 +148,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    FixedPoint,
-    Nonce (..),
-    Seed (..),
-    StrictMaybe (..),
-    activeSlotLog,
-    activeSlotVal,
-    intervalValue,
-    mkNonceFromNumber,
-    mkNonceFromOutputVRF,
-    strictMaybeToMaybe,
-  )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))

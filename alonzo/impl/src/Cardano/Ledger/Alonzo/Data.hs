@@ -41,6 +41,7 @@ import Cardano.Ledger.Alonzo.Scripts
     isPlutusScript,
   )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
@@ -88,7 +89,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import qualified PlutusTx as Plutus
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Metadata (Metadatum)
 
 -- =====================================================================

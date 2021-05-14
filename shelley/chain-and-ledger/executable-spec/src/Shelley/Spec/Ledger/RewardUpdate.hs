@@ -21,6 +21,11 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    ShelleyBase,
+    UnitInterval,
+  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -59,11 +64,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..), allNoThunks)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    ShelleyBase,
-    UnitInterval,
-  )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( SnapShots (..),

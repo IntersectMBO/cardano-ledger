@@ -30,6 +30,14 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
+import Cardano.Ledger.BaseTypes
+  ( Globals,
+    ShelleyBase,
+    StrictMaybe (..),
+    epochInfo,
+    strictMaybeToMaybe,
+    systemStart,
+  )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -48,14 +56,6 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Globals,
-    ShelleyBase,
-    StrictMaybe (..),
-    epochInfo,
-    strictMaybeToMaybe,
-    systemStart,
-  )
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), UTxOState (..), keyRefunds)
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (Update)

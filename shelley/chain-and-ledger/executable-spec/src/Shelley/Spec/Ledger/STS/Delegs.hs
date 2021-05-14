@@ -26,6 +26,11 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes
+  ( ShelleyBase,
+    invalidKey,
+    networkId,
+  )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
@@ -58,11 +63,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
-    invalidKey,
-    networkId,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState (..),

@@ -16,12 +16,12 @@ module Shelley.Spec.Ledger.STS.Updn
   )
 where
 
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Slot
 
 data UPDN crypto

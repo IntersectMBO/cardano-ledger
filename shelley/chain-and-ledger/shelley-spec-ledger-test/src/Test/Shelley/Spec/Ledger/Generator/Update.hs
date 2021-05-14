@@ -38,7 +38,7 @@ import Shelley.Spec.Ledger.API
   ( ProposedPPUpdates,
     Update,
   )
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,

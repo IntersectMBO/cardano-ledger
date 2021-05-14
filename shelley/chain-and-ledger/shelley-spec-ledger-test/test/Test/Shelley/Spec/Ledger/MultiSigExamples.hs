@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.Address
   ( Addr,
     pattern Addr,
   )
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     maybeToStrictMaybe,

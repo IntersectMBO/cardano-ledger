@@ -38,6 +38,7 @@ import Cardano.Ledger.Alonzo.Tx
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
 import Cardano.Ledger.Alonzo.TxInfo (runPLCScript, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts')
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
@@ -58,7 +59,6 @@ import GHC.Generics
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Address (Addr)
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))

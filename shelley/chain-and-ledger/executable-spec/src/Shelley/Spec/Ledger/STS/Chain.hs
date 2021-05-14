@@ -31,6 +31,13 @@ module Shelley.Spec.Ledger.STS.Chain
   )
 where
 
+import Cardano.Ledger.BaseTypes
+  ( Globals (..),
+    Nonce (..),
+    ShelleyBase,
+    StrictMaybe (..),
+    UnitInterval,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -69,13 +76,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Globals (..),
-    Nonce (..),
-    ShelleyBase,
-    StrictMaybe (..),
-    UnitInterval,
-  )
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader,
     Block (..),

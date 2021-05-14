@@ -20,6 +20,7 @@ module Shelley.Spec.Ledger.STS.Ledgers
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (DSignable, Hash)
@@ -38,7 +39,6 @@ import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState,

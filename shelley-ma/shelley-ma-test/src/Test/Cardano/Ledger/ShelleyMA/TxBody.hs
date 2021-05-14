@@ -35,7 +35,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (empty)
 import Data.String (fromString)
 import GHC.Records
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)

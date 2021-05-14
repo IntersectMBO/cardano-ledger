@@ -57,7 +57,7 @@ import Shelley.Spec.Ledger.Address
     RewardAcnt (..),
     toCred,
   )
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Network (..),
     maybeToStrictMaybe,
   )

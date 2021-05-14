@@ -66,6 +66,10 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
+import Cardano.Ledger.BaseTypes
+  ( Network,
+    StrictMaybe (..),
+  )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
@@ -123,10 +127,6 @@ import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Shelley.Spec.Ledger.Address (Addr)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Network,
-    StrictMaybe (..),
-  )
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update)

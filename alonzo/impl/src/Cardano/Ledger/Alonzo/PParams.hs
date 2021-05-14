@@ -50,6 +50,13 @@ import Cardano.Ledger.Alonzo.Scripts
     ppExUnits,
     ppPrices,
   )
+import Cardano.Ledger.BaseTypes
+  ( Nonce (NeutralNonce),
+    StrictMaybe (..),
+    UnitInterval,
+    interval0,
+    strictMaybeToMaybe,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentPParamView)
@@ -105,13 +112,6 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce (NeutralNonce),
-    StrictMaybe (..),
-    UnitInterval,
-    interval0,
-    strictMaybeToMaybe,
-  )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import qualified Shelley.Spec.Ledger.PParams as Shelley (PParams' (..))

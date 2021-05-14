@@ -90,6 +90,16 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.BaseTypes
+  ( DnsName,
+    Port,
+    StrictMaybe (..),
+    UnitInterval,
+    Url,
+    invalidKey,
+    maybeToStrictMaybe,
+    strictMaybeToMaybe,
+  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
@@ -187,16 +197,6 @@ import Quiet
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
     RewardAcnt (..),
-  )
-import Shelley.Spec.Ledger.BaseTypes
-  ( DnsName,
-    Port,
-    StrictMaybe (..),
-    UnitInterval,
-    Url,
-    invalidKey,
-    maybeToStrictMaybe,
-    strictMaybeToMaybe,
   )
 import Shelley.Spec.Ledger.CompactAddr
   ( CompactAddr,

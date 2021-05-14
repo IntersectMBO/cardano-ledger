@@ -35,6 +35,13 @@ module Shelley.Spec.Ledger.API.Protocol
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.BaseTypes
+  ( Globals,
+    Nonce (NeutralNonce),
+    Seed,
+    ShelleyBase,
+    UnitInterval,
+  )
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -74,13 +81,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Globals,
-    Nonce (NeutralNonce),
-    Seed,
-    ShelleyBase,
-    UnitInterval,
-  )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody,
     BHeader,

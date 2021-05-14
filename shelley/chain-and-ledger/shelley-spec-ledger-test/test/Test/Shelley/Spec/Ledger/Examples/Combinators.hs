@@ -61,7 +61,7 @@ import Data.Set (Set)
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
+import Cardano.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     Block (..),

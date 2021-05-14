@@ -35,6 +35,11 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
+import Cardano.Ledger.BaseTypes
+  ( ShelleyBase,
+    StrictMaybe (..),
+    strictMaybeToMaybe,
+  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentData)
@@ -54,11 +59,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
-    StrictMaybe (..),
-    strictMaybeToMaybe,
-  )
 import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( delegCWitness,

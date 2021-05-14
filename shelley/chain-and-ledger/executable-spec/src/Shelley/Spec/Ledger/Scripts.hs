@@ -31,6 +31,7 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     ToCBOR,
   )
+import Cardano.Ledger.BaseTypes (invalidKey)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
@@ -45,7 +46,6 @@ import Data.MemoBytes
   )
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (invalidKey)
 
 -- | A simple language for expressing conditions under which it is valid to
 -- withdraw from a normal UTxO payment address or to use a stake address.

@@ -25,7 +25,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.BaseTypes (Globals (..))
+import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash (..),

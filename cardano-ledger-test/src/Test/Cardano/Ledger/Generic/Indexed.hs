@@ -24,6 +24,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
+import Cardano.Ledger.Keys
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.Pretty (PrettyA (..), ppPair, ppString)
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -34,7 +35,6 @@ import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import qualified Shelley.Spec.Ledger.Scripts as Multi
 import Shelley.Spec.Ledger.TxBody (WitVKey (..))

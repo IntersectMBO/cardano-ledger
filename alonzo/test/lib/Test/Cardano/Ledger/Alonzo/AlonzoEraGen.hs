@@ -22,6 +22,7 @@ import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core (PParams, PParamsDelta, Script)
 import qualified Cardano.Ledger.Crypto as CC
@@ -44,7 +45,6 @@ import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
 import GHC.Records (HasField (..))
 import qualified PlutusTx as Plutus
-import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl)
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)

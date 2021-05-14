@@ -24,7 +24,7 @@ import qualified Cardano.Ledger.Val as Val
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Nonce,
     StrictMaybe (..),
     mkNonceFromNumber,

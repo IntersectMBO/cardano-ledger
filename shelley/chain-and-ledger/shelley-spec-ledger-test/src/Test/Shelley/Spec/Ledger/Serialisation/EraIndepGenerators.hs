@@ -78,7 +78,7 @@ import Shelley.Spec.Ledger.API hiding (SignedDSIGN, TxBody (..))
 import Shelley.Spec.Ledger.Address.Bootstrap
   ( ChainCode (..),
   )
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     DnsName,
     UnitInterval,

@@ -22,6 +22,12 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes
+  ( Globals (..),
+    ShelleyBase,
+    epochInfo,
+    invalidKey,
+  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -46,12 +52,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes
-  ( Globals (..),
-    ShelleyBase,
-    epochInfo,
-    invalidKey,
-  )
 import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.LedgerState

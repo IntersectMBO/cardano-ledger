@@ -21,6 +21,7 @@ module Shelley.Spec.Ledger.API.Wallet
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes (Globals (..), Seed, UnitInterval, epochInfo)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
@@ -44,7 +45,6 @@ import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed, UnitInterval, epochInfo)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr)
 import Shelley.Spec.Ledger.Credential (Credential (..))

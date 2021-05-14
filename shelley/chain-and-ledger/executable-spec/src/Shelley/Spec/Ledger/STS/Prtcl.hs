@@ -29,6 +29,12 @@ import Cardano.Binary
     encodeListLen,
   )
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes
+  ( Nonce,
+    Seed,
+    ShelleyBase,
+    UnitInterval,
+  )
 import Cardano.Ledger.Crypto (Crypto, VRF)
 import Cardano.Ledger.Keys
   ( DSignable,
@@ -47,12 +53,6 @@ import Data.Map.Strict (Map)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce,
-    Seed,
-    ShelleyBase,
-    UnitInterval,
-  )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),

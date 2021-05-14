@@ -126,7 +126,6 @@ library
     groups,
     iproute,
     mtl,
-    network,
     nothunks,
     prettyprinter,
     primitive >= 0.7.1.0,

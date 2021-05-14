@@ -35,6 +35,13 @@ import Cardano.Ledger.AuxiliaryData
     ValidateAuxiliaryData (..),
     hashAuxiliaryData,
   )
+import Cardano.Ledger.BaseTypes
+  ( ShelleyBase,
+    StrictMaybe (..),
+    invalidKey,
+    quorum,
+    (==>),
+  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
 import Cardano.Ledger.Keys
@@ -84,13 +91,6 @@ import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
-    StrictMaybe (..),
-    invalidKey,
-    quorum,
-    (==>),
-  )
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),

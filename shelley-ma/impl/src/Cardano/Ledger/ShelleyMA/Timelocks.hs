@@ -42,6 +42,7 @@ import Cardano.Binary
     FullByteString (Full),
     ToCBOR (toCBOR),
   )
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto), TxInBlock)
@@ -90,7 +91,6 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
 import Shelley.Spec.Ledger.Tx (WitVKey)
 import Shelley.Spec.Ledger.TxBody

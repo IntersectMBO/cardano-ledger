@@ -51,6 +51,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as CH
+import Cardano.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -92,7 +93,6 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),

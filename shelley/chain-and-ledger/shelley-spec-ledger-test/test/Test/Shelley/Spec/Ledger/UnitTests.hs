@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.Address
     getRwdCred,
     mkVKeyRwdAcnt,
   )
-import Shelley.Spec.Ledger.BaseTypes hiding ((==>))
+import Cardano.Ledger.BaseTypes hiding ((==>))
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),

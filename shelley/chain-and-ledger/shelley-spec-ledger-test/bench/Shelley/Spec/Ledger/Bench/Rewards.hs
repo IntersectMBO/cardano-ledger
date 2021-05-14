@@ -30,7 +30,7 @@ import Shelley.Spec.Ledger.Address
   ( Addr (..),
     mkRwdAcnt,
   )
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Globals (activeSlotCoeff, securityParameter),
     Network (Testnet),
     StrictMaybe (..),

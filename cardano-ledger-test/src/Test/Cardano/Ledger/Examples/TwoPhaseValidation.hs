@@ -46,14 +46,27 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..))
+import Cardano.Ledger.BaseTypes (Network (..), Seed, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), SupportsSegWit (..), ValidateScript (hashScript))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
+import Cardano.Ledger.Keys
+  ( GenDelegs (..),
+    KeyHash,
+    KeyPair (..),
+    KeyRole (..),
+    asWitness,
+    coerceKeyRole,
+    hashKey,
+    signedDSIGN,
+    signedKES,
+  )
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.Tx as Core (Tx (..))
 import Cardano.Ledger.Val (inject, (<+>))
@@ -88,7 +101,6 @@ import Shelley.Spec.Ledger.API
     UTxO (..),
   )
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.BaseTypes (Network (..), Seed, StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (bBodySize, mkSeed, seedEta, seedL)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -96,23 +108,11 @@ import Shelley.Spec.Ledger.Credential
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import Shelley.Spec.Ledger.Keys
-  ( GenDelegs (..),
-    KeyHash,
-    KeyPair (..),
-    KeyRole (..),
-    asWitness,
-    coerceKeyRole,
-    hashKey,
-    signedDSIGN,
-    signedKES,
-  )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), WitHashes (..))
 import Shelley.Spec.Ledger.OCert (OCertSignable (..))
 import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv (..), BbodyState (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Shelley.Spec.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Slot (BlockNo (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

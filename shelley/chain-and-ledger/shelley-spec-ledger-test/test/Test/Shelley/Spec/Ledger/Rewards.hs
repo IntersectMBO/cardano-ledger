@@ -47,7 +47,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Wallet (getRewardInfo)
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     Globals (..),
     Network (..),

@@ -50,7 +50,7 @@ import Shelley.Spec.Ledger.API
     Block(..),
   )
 import Shelley.Spec.Ledger.Address (toAddr)
-import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe,ShelleyBase)
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe,ShelleyBase)
 import Shelley.Spec.Ledger.Tx (TxId (TxId))
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl, WitVKey)
 import Shelley.Spec.Ledger.UTxO (UTxO)
@@ -77,7 +77,7 @@ import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Control.State.Transition.Extended(STS(..))
 
 import GHC.Records(HasField(..))
-import Shelley.Spec.Ledger.BaseTypes(UnitInterval)
+import Cardano.Ledger.BaseTypes(UnitInterval)
 import Shelley.Spec.Ledger.PParams(ProtVer)
 import Shelley.Spec.Ledger.Slot (EpochNo)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)

@@ -23,7 +23,7 @@ import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Nonce (..),
   )
 import Shelley.Spec.Ledger.BlockChain

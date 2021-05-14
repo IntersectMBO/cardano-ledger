@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.Address
     bootstrapKeyHash,
   )
 import Shelley.Spec.Ledger.Address.Bootstrap
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )

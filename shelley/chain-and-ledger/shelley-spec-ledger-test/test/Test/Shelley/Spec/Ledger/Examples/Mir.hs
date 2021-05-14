@@ -25,7 +25,7 @@ import qualified Cardano.Ledger.Val as Val
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.BaseTypes (Nonce, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))

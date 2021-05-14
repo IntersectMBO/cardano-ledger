@@ -23,6 +23,7 @@ module Shelley.Spec.Ledger.STS.Tick
   )
 where
 
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (GenDelegs (..))
@@ -33,7 +34,6 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo)
 import Shelley.Spec.Ledger.EpochBoundary (SnapShots (_pstakeMark))
 import Shelley.Spec.Ledger.LedgerState (DPState (..), DState (..), EpochState (..), FutureGenDeleg (..), LedgerState (..), NewEpochState (..), PulsingRewUpdate)
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochPredicateFailure)

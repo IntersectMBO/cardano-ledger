@@ -38,6 +38,14 @@ import Cardano.Binary
     encodeMapLen,
     encodeWord,
   )
+import Cardano.Ledger.BaseTypes
+  ( Nonce (NeutralNonce),
+    StrictMaybe (..),
+    UnitInterval,
+    interval0,
+    invalidKey,
+    strictMaybeToMaybe,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import Cardano.Ledger.Era
@@ -73,14 +81,6 @@ import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce (NeutralNonce),
-    StrictMaybe (..),
-    UnitInterval,
-    interval0,
-    invalidKey,
-    strictMaybeToMaybe,
-  )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
