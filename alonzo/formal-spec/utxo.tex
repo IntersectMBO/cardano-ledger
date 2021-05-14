@@ -588,9 +588,9 @@ UTXOS rule.
     \inference[UTxO-inductive]
     {
       \var{txb}\leteq\txbody{tx} &
-      \fun{ininterval}~\var{slot}~(\fun{txvldt}~{tx}) \\
-      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} &
-      \hldiff{\fun{epochInfoSlotToUTCTime}~\mathsf{epochInfo}~\mathsf{systemTime}~i_f \neq \Nothing} \\
+      \fun{ininterval}~\var{slot}~(\fun{txvldt}~{tx}) &
+      \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} \\~\\
+      \hldiff{\fun{txrdmrs}~\var{tx}\neq \Nothing ~\Rightarrow~ \fun{epochInfoSlotToUTCTime}~\mathsf{epochInfo}~\mathsf{systemTime}~i_f \neq \Nothing} \\
       \txins{txb} \neq \emptyset
       & \hldiff{\fun{feesOK}~pp~tx~utxo}
       & \txins{txb}~\cup~\fun{collateral}~{txb}~ \subseteq~ \dom \var{utxo}

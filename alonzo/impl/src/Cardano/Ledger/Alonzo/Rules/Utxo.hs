@@ -350,7 +350,8 @@ utxoTransition = do
   case i_f of
     SNothing -> pure ()
     SJust ifj -> case (epochInfoSlotToUTCTime ei sysSt ifj) of
-      Left _ -> failBecause (OutsideForecast ifj) -- error translating slot
+      -- if tx has non-native scripts, end of validity interval must translate to time
+      Left _ -> (nullRedeemers . txrdmrs' . wits' $ tx) ?! OutsideForecast ifj
       Right _ -> pure ()
 
   not (Set.null (getField @"inputs" txb)) ?!# InputSetEmptyUTxO

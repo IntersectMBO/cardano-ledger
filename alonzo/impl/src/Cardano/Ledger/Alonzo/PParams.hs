@@ -531,7 +531,7 @@ updatePParams pp ppup =
 -- the instances when that happens.
 
 data RawView :: Type -> Language -> Type where
-  RawPlutusView :: CostModel -> RawView era 'PlutusV1
+  RawPlutusView :: Maybe CostModel -> RawView era 'PlutusV1
 
 -- RawOtherView :: Int -> RawView era 'OtherLANG
 
@@ -548,7 +548,7 @@ deriving via InspectHeapNamed "RawView" (RawView e l) instance NoThunks (RawView
 instance (Typeable era) => ToCBOR (LangDepView era) where
   toCBOR (LangDepViewConstr (Memo _ bytes)) = encodePreEncoded (fromShort bytes)
 
-pattern PlutusView :: CostModel -> LangDepView era
+pattern PlutusView :: Maybe CostModel -> LangDepView era
 pattern PlutusView cm <-
   LangDepViewConstr (Memo (RawPlutusView cm) _)
   where
@@ -616,8 +616,8 @@ getLanguageView ::
   forall era.
   PParams era ->
   Language ->
-  Maybe (LangDepView era)
-getLanguageView pp PlutusV1 = PlutusView <$> Map.lookup PlutusV1 (_costmdls pp)
+  (LangDepView era)
+getLanguageView pp PlutusV1 = PlutusView (Map.lookup PlutusV1 (_costmdls pp))
 
 -- Usefull in tests and in translating from earlier Era to the Alonzo Era.
 
