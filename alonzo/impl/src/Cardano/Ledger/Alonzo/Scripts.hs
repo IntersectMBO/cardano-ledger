@@ -33,6 +33,7 @@ module Cardano.Ledger.Alonzo.Scripts
     alwaysSucceeds,
     alwaysFails,
     pointWiseExUnits,
+    validateCostModelParams,
   )
 where
 
@@ -70,7 +71,7 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
-import qualified Plutus.V1.Ledger.Api as Plutus (validateCostModelParams)
+import Plutus.V1.Ledger.Api (validateCostModelParams)
 import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
 import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
 
@@ -170,7 +171,7 @@ deriving instance ToCBOR CostModel
 
 checkCostModel :: Map Text Integer -> Either String CostModel
 checkCostModel cm =
-  if Plutus.validateCostModelParams cm
+  if validateCostModelParams cm
     then Right (CostModel cm)
     else Left ("Invalid cost model: " ++ show cm)
 
