@@ -18,7 +18,7 @@ import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq((:|>)))
 import Data.Set (Set)
 import Shelley.Spec.Ledger.API
   ( Coin (..),
@@ -72,22 +72,23 @@ instance
   genGenesisValue
     ( GenEnv
         _keySpace
+        _scriptspace
         Constants {minGenesisOutputVal, maxGenesisOutputVal}
       ) =
       genCoin minGenesisOutputVal maxGenesisOutputVal
-  genEraTxBody _ge = genTxBody
+  genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genMetadata
 
-  updateEraTxBody body fee ins outs =
+  updateEraTxBody _utxo _pp _wits body fee ins out =
     body
       { _txfee = fee,
-        _inputs = ins,
-        _outputs = outs
+        _inputs = (_inputs body) <> ins,
+        _outputs = (_outputs body) :|> out
       }
   genEraPParamsDelta = genShelleyPParamsDelta
   genEraPParams = genPParams
 
-  genEraWitnesses setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
+  genEraWitnesses _ setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
   unsafeApplyTx x = x
 
 
@@ -144,7 +145,7 @@ genTimeToLive currentSlot = do
 instance Mock c => MinGenTxout (ShelleyEra c) where
   calcEraMinUTxO _txout pp = (_minUTxOValue pp)
   addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
-  genEraTxOut genVal addrs = do
+  genEraTxOut _genenv genVal addrs = do
      values <- replicateM (length addrs) genVal
      let  makeTxOut (addr,val) = TxOut addr val
      pure (makeTxOut <$> zip addrs values)

@@ -247,7 +247,7 @@ somealonzo c =
 alonzolength :: Int
 alonzolength = length (somealonzo Mock :: [Script (AlonzoEra Mock)]) -1
 
-instance Reflect era => Fixed (Script era) where
+instance Reflect (AlonzoEra c) => Fixed (Script (AlonzoEra c)) where
   unique n = (liftC somealonzo) !! n
   size _ = Just alonzolength
 

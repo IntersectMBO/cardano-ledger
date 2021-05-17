@@ -25,7 +25,7 @@ import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Example (ExampleEra)
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq((:|>)))
 import Data.Set (Set)
 import Generic.Random (genericArbitraryU)
 import Shelley.Spec.Ledger.API
@@ -41,7 +41,7 @@ import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( TxIn (..),
     TxOut (..),
-    WitnessSetHKD(WitnessSet)
+    WitnessSetHKD(WitnessSet),
   )
 import Shelley.Spec.Ledger.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
 import qualified Shelley.Spec.Ledger.STS.Utxo as STS
@@ -83,20 +83,21 @@ instance
   genGenesisValue
     ( GenEnv
         _keySpace
+        _ScriptSpace
         Constants {minGenesisOutputVal, maxGenesisOutputVal}
       ) =
       genCoin minGenesisOutputVal maxGenesisOutputVal
-  genEraTxBody _ge = genTxBody
+  genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genMetadata
   genEraPParamsDelta = genShelleyPParamsDelta
   genEraPParams = genPParams
-  genEraWitnesses setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
+  genEraWitnesses _triple setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
 
-  updateEraTxBody body fee ins outs =
+  updateEraTxBody _utxo _pp _wits body fee ins out =
     body
       { _txfee = fee,
-        _inputs = ins,
-        _outputs = outs
+        _inputs = (_inputs body) <> ins,
+        _outputs = (_outputs body) :|> out
       }
   unsafeApplyTx x = x
 
@@ -170,7 +171,7 @@ instance Mock c => Arbitrary (STS.UtxoPredicateFailure (ExampleEra c)) where
 instance Mock c => MinGenTxout (ExampleEra c) where
   calcEraMinUTxO _txout pp = (_minUTxOValue pp)
   addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
-  genEraTxOut genVal addrs = do
+  genEraTxOut _genenv genVal addrs = do
      values <- replicateM (length addrs) genVal
      let  makeTxOut (addr,val) = TxOut addr val
      pure (makeTxOut <$> zip addrs values)

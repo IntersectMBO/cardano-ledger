@@ -345,7 +345,7 @@ runPLCScript (CostModel cost) scriptbytestring units ds =
     (transExUnits units)
     scriptbytestring
     ds of
-    (_, Left _) -> False
+    (_, Left _e) -> False -- trace ("\nrunPLC fails "++show _e++"\nData = "++show ds) False
     (_, Right ()) -> True
 
 validPlutusdata :: P.Data -> Bool

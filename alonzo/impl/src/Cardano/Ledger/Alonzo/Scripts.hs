@@ -39,8 +39,9 @@ where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
 import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (Crypto), ValidateScript (hashScript))
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -95,7 +96,11 @@ instance NoThunks Tag
 data Script era
   = TimelockScript (Timelock (Crypto era))
   | PlutusScript (ShortByteString) -- A Plutus.V1.Ledger.Scripts(Script) that has been 'Flat'ened
-  deriving (Eq, Show, Generic, Ord)
+  deriving (Eq, Generic, Ord)
+
+instance (ValidateScript era, Core.Script era ~ Script era) => Show (Script era) where
+  show (TimelockScript x) = "TimelockScript " ++ show x
+  show (s@(PlutusScript _)) = "PlutusScript " ++ show (hashScript @era s)
 
 deriving via
   InspectHeapNamed "Script" (Script era)
@@ -261,11 +266,11 @@ ppTag x = ppString (show x)
 
 instance PrettyA Tag where prettyA = ppTag
 
-ppScript :: Script era -> PDoc
-ppScript (PlutusScript _) = ppString "PlutusScript"
+ppScript :: forall era. (ValidateScript era, Core.Script era ~ Script era) => Script era -> PDoc
+ppScript (s@(PlutusScript _)) = ppString ("PlutusScript " ++ show (hashScript @era s))
 ppScript (TimelockScript x) = ppTimelock x
 
-instance PrettyA (Script era) where prettyA = ppScript
+instance (ValidateScript era, Core.Script era ~ Script era) => PrettyA (Script era) where prettyA = ppScript
 
 ppExUnits :: ExUnits -> PDoc
 ppExUnits (ExUnits mem step) =

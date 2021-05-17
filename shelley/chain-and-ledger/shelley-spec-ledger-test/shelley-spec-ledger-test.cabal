@@ -108,7 +108,9 @@ library
     iproute,
     nothunks,
     process-extras,
+    plutus-tx,
     QuickCheck >= 2.13.2,
+    serialise,
     shelley-spec-ledger,
     small-steps-test,
     small-steps,
@@ -214,7 +216,7 @@ test-suite shelley-spec-ledger-test
       tasty-hunit,
       tasty-quickcheck,
       tasty,
-      time, 
+      time,
       transformers
 
 

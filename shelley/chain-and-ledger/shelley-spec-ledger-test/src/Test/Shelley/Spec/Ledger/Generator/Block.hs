@@ -115,7 +115,7 @@ genBlockWithTxGen ::
   Gen (Block era)
 genBlockWithTxGen
   genTxs
-  ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
+  ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _scriptspace  _)
   origChainState = do
     -- Firstly, we must choose a slot in which to lead.
     -- Caution: the number of slots we jump here will affect the number
@@ -183,7 +183,7 @@ selectNextSlotWithLeader ::
   SlotNo ->
   Maybe (SlotNo, ChainState era, AllIssuerKeys (Crypto era) 'BlockIssuer)
 selectNextSlotWithLeader
-  (GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _)
+  (GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _ _)
   origChainState
   startSlot =
     List.find (const True) . catMaybes $

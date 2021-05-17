@@ -26,16 +26,19 @@ module Test.Shelley.Spec.Ledger.Generator.EraGen
    MinGenTxout(..),
    Label(..),
    Sets(..),
+   someKeyPairs,
+   allScripts,
  ) where
 
 import Cardano.Binary (ToCBOR (toCBOR),FromCBOR,Annotator)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin(..))
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (HASH)
+import qualified Cardano.Ledger.Crypto as CC (HASH,Crypto)
 import Cardano.Ledger.Era (Crypto, ValidateScript (..),TxInBlock)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import Cardano.Ledger.Hashes(ScriptHash)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams(..))
 import Shelley.Spec.Ledger.PParams(Update)
 import Cardano.Slotting.Slot (SlotNo)
@@ -55,14 +58,15 @@ import Shelley.Spec.Ledger.Tx (TxId (TxId))
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl, WitVKey)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Cardano.Ledger.Keys(KeyRole(Witness))
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen,shuffle,choose)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( GenEnv (..),
+    TwoPhaseInfo(..),
+    ScriptInfo,
     genesisCoins,
   )
-import Test.Shelley.Spec.Ledger.Generator.Presets (someKeyPairs)
-import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, someScripts)
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, combinedScripts, baseScripts,  keyPairs)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
 import Data.Sequence (Seq)
 import Shelley.Spec.Ledger.API
@@ -70,6 +74,7 @@ import Shelley.Spec.Ledger.API
     LedgerEnv,
     LedgerState,
     LedgersEnv,
+    KeyPairs,
   )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.STS.Chain(CHAIN,ChainState)
@@ -80,12 +85,12 @@ import GHC.Records(HasField(..))
 import Cardano.Ledger.BaseTypes(UnitInterval)
 import Shelley.Spec.Ledger.PParams(ProtVer)
 import Shelley.Spec.Ledger.Slot (EpochNo)
-import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Cardano.Ledger.Era (Era)
 import GHC.Natural(Natural)
 import Cardano.Ledger.AuxiliaryData(ValidateAuxiliaryData(..))
 import NoThunks.Class(NoThunks)
 import Data.Map(Map)
+import Cardano.Ledger.Pretty(PrettyA(..))
 
 
 {------------------------------------------------------------------------------
@@ -192,7 +197,7 @@ type MinGenTxBody era =
 class Show (Core.TxOut era) => MinGenTxout era where
   calcEraMinUTxO :: Core.TxOut era -> Core.PParams era -> Coin
   addValToTxOut :: Core.Value era -> Core.TxOut era -> Core.TxOut era
-  genEraTxOut :: Gen (Core.Value era) -> [Addr (Crypto era)] -> Gen [Core.TxOut era]
+  genEraTxOut :: GenEnv era -> Gen (Core.Value era) -> [Addr (Crypto era)] -> Gen [Core.TxOut era]
 
 -- ======================================================================================
 -- The EraGen class. Generally one method for each type family in Cardano.Ledger.Core
@@ -206,18 +211,27 @@ class
     MinGenWitnesses era,
     MinGenAuxData era,
     MinGenTxBody era,
-    MinGenTxout era
+    MinGenTxout era,
+    PrettyA (Core.Tx era),
+    PrettyA (Core.TxBody era),
+    PrettyA (Core.Witnesses era),
+    PrettyA (Core.Value era)
   ) =>
   EraGen era
   where
   -- | Generate a genesis value for the Era
   genGenesisValue :: GenEnv era -> Gen (Core.Value era)
 
+  -- | A list of two-phase scripts that can be chosen when building a transaction
+  genEraTwoPhaseScripts :: [ TwoPhaseInfo era]
+  genEraTwoPhaseScripts = []
+
   -- | Given some pre-generated data, generate an era-specific TxBody,
   -- and a list of additional scripts for eras that sometimes require
   -- additional script witnessing.
   genEraTxBody ::
     GenEnv era ->
+    UTxO era ->
     Core.PParams era ->
     SlotNo ->
     Set (TxIn (Crypto era)) ->
@@ -234,11 +248,17 @@ class
 
   -- | Update an era-specific TxBody
   updateEraTxBody ::
+    UTxO era ->
+    Core.PParams era ->
+    Core.Witnesses era ->
     Core.TxBody era ->
-    Coin ->
-    Set (TxIn (Crypto era)) ->
-    StrictSeq (Core.TxOut era) ->
+    Coin ->                          -- | This overrides the existing TxFee
+    Set (TxIn (Crypto era)) ->       -- | This is to be Unioned with the existing TxIn
+    (Core.TxOut era) ->              -- | This is to be Appended to the end of the existing TxOut
     Core.TxBody era
+
+  addInputs :: Core.TxBody era -> Set (TxIn (Crypto era)) -> Core.TxBody era  -- |  Union the TxIn with the existing TxIn in the TxBody
+  addInputs txb _ins = txb
 
   genEraPParamsDelta :: Constants -> Core.PParams era -> Gen (Core.PParamsDelta era)
 
@@ -248,11 +268,22 @@ class
    -- use Test.Shelley.Spec.Ledger.Generator.Update(genDecentralisationParam) in your instance.
 
   genEraWitnesses ::
+     (UTxO era, Core.TxBody era, ScriptInfo era) ->
      (Set (WitVKey 'Witness (Crypto era))) ->
      Map (ScriptHash (Crypto era)) (Core.Script era) ->
      Core.Witnesses era
 
+  -- When choosing new recipeients from the UTxO, choose only those whose Outputs meet this predicate.
+  genEraGoodTxOut :: Core.TxOut era -> Bool
+  genEraGoodTxOut _ = True -- The default implementation marks every TxOut as good.
+
   unsafeApplyTx :: Core.Tx era -> TxInBlock era
+
+  genEraScriptCost :: Core.PParams era -> Core.Script era -> Coin
+  genEraScriptCost _pp _script = Coin 0
+
+  genEraDone ::  (Core.Tx era) ->  (Core.Tx era)
+  genEraDone x = x
 
 
 
@@ -260,12 +291,20 @@ class
   Generators shared across eras
  -----------------------------------------------------------------------------}
 
+-- | Select between _lower_ and _upper_ keys from 'keyPairs'
+someKeyPairs :: CC.Crypto crypto => Constants -> Int -> Int -> Gen (KeyPairs crypto)
+someKeyPairs c lower upper =
+  take
+    <$> choose (lower, upper)
+    <*> shuffle (keyPairs c)
+
+
 genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)
-genUtxo0 ge@(GenEnv _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
+genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
   genesisKeys <- someKeyPairs c minGenesisUTxOouts maxGenesisUTxOouts
   genesisScripts <- someScripts @era c minGenesisUTxOouts maxGenesisUTxOouts
   outs <-
-    (genEraTxOut @era)
+    (genEraTxOut @era ge)
       (genGenesisValue @era ge)
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)
@@ -285,6 +324,27 @@ genesisId = TxId (unsafeMakeSafeHash (mkDummyHash 0))
   where
     mkDummyHash :: forall h a. Hash.HashAlgorithm h => Int -> Hash.Hash h a
     mkDummyHash = coerce . Hash.hashWithSerialiser @h toCBOR
+
+-- ==========================================================
+
+
+-- | Select between _lower_ and _upper_ scripts from the possible combinations
+-- of the first `numBaseScripts` multi-sig scripts of `mSigScripts` (i.e compound scripts) AND
+-- some simple scripts (NOT compound. ie either signature or Plutus scripts).
+someScripts ::
+  forall era.
+  EraGen era =>
+  Constants ->
+  Int ->
+  Int ->
+  Gen [(Core.Script era, Core.Script era)]
+someScripts c lower upper = take <$> choose (lower, upper) <*> shuffle (allScripts @era c)
+
+allScripts:: forall era. EraGen era => Constants -> [(Core.Script era, Core.Script era)]
+allScripts c = (zipWith combine genEraTwoPhaseScripts (baseScripts @era c) ++ combinedScripts @era c)
+    where -- make pairs of scripts (payment,staking) where the payment part is a PlutusScript
+          combine :: TwoPhaseInfo era -> (Core.Script era, Core.Script era) -> (Core.Script era, Core.Script era)
+          combine info (_,stake) = (getScript info,stake)
 
 
 -- =========================================================

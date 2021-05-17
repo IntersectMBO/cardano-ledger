@@ -68,7 +68,6 @@ library
     cardano-slotting,
     cborg,
     containers,
-    data-default-class,
     generic-random,
     hashable,
     mtl,
@@ -80,8 +79,7 @@ library
     tasty-hunit,
     tasty-quickcheck,
     tasty,
-    text,
-    time,
+    text
   hs-source-dirs: src
 
 test-suite cardano-ledger-shelley-ma-test

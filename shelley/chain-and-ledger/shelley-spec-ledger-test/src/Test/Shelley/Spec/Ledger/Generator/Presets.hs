@@ -34,22 +34,13 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Shelley.Spec.Ledger.LedgerState
-  ( KeyPairs,
-  )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Test.QuickCheck (Gen)
-import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
     defaultConstants,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
-import Test.Shelley.Spec.Ledger.Generator.ScriptClass
-  ( ScriptClass (..),
-    combinedScripts,
-    keyPairs,
-  )
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass(keyPairs)
 import Test.Shelley.Spec.Ledger.Utils
   ( maxKESIterations,
     mkKESKeyPair,
@@ -57,21 +48,32 @@ import Test.Shelley.Spec.Ledger.Utils
     slotsPerKESIteration,
   )
 
+import Test.Shelley.Spec.Ledger.Generator.EraGen(EraGen(genEraTwoPhaseScripts),allScripts,someKeyPairs)
+import Data.Proxy(Proxy(..))
+import Cardano.Ledger.Era (ValidateScript(hashScript))
+
+-- =================================================================
+
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv ::
-  ScriptClass era =>
-  proxy era ->
+genEnv :: forall era.
+  (EraGen era) =>
+  Proxy era ->
   GenEnv era
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
+    (scriptSpace @era (genEraTwoPhaseScripts @era))
     defaultConstants
+
+-- | An Example Script space for use in Trace generators
+scriptSpace :: forall era. ValidateScript era => [TwoPhaseInfo era] -> ScriptSpace era
+scriptSpace scripts = ScriptSpace scripts (Map.fromList [(hashScript @era (getScript s),s) | s <- scripts])
 
 -- | Example keyspace for use in generators
 keySpace ::
   forall era.
-  ScriptClass era =>
+  EraGen era =>
   Constants ->
   KeySpace era
 keySpace c =
@@ -80,14 +82,7 @@ keySpace c =
     (genesisDelegates c)
     (stakePoolKeys c)
     (keyPairs c)
-    (combinedScripts @era c)
-
--- | Select between _lower_ and _upper_ keys from 'keyPairs'
-someKeyPairs :: CC.Crypto crypto => Constants -> Int -> Int -> Gen (KeyPairs crypto)
-someKeyPairs c lower upper =
-  take
-    <$> QC.choose (lower, upper)
-    <*> QC.shuffle (keyPairs c)
+    (allScripts @era c)
 
 -- Pairs of (genesis key, node keys)
 --
