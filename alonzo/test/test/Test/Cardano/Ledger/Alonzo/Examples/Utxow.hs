@@ -62,7 +62,7 @@ import qualified Data.ByteString.Char8 as BS
 import Data.Default.Class (def)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -70,20 +70,14 @@ import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as P
   ( EvaluationError (..),
-    ExBudget (..),
     VerboseMode (..),
+    defaultCekCostModelParams,
+    evaluateScriptCounting,
     evaluateScriptRestricting,
   )
 import Plutus.V1.Ledger.Examples
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
-  )
-import qualified PlutusCore.Evaluation.Machine.ExBudgetingDefaults as P
-  ( defaultCostModelParams,
-  )
-import qualified PlutusCore.Evaluation.Machine.ExMemory as P
-  ( ExCPU (..),
-    ExMemory (..),
   )
 import qualified PlutusTx as Plutus
 import Shelley.Spec.Ledger.API (WitHashes (WitHashes))
@@ -122,6 +116,10 @@ import Test.Tasty.HUnit (Assertion, assertBool, testCase, (@?=))
 
 type A = AlonzoEra C_Crypto
 
+-- | A cost model that sets everything as being free
+freeCostModel :: CostModel
+freeCostModel = CostModel $ 0 <$ fromJust P.defaultCekCostModelParams
+
 -- =======================
 -- Setup the initial state
 -- =======================
@@ -135,7 +133,7 @@ testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 pp :: PParams A
 pp =
   def
-    { _costmdls = Map.singleton PlutusV1 (CostModel mempty),
+    { _costmdls = Map.singleton PlutusV1 freeCostModel,
       _maxValSize = 1000000000,
       _maxTxExUnits = ExUnits 1000000 1000000,
       _maxBlockExUnits = ExUnits 1000000 1000000
@@ -1219,27 +1217,29 @@ plutusScriptExamples =
   testGroup
     "run plutus script directly"
     [ testCase "always true" $
-        case P.evaluateScriptRestricting
-          P.Verbose
-          costModel
-          (P.ExBudget (P.ExCPU 1) (P.ExMemory 2))
-          (alwaysSucceedingNAryFunction 0)
-          [] of
+        case evalWithDecentBudget (alwaysSucceedingNAryFunction 0) of
           (_, Left e) -> assertBool ("This script should have succeeded, but: " <> show e) False
           (_, Right _) -> assertBool "" True,
       testCase "always false" $
-        case P.evaluateScriptRestricting
-          P.Verbose
-          costModel
-          (P.ExBudget (P.ExCPU 1) (P.ExMemory 2))
-          (alwaysFailingNAryFunction 0)
-          [] of
+        case evalWithDecentBudget (alwaysFailingNAryFunction 0) of
           (_, Left (P.CekError _)) -> assertBool "" True -- TODO rule out cost model failure
           (_, Left e) -> assertBool ("Not the script failure we expected: " <> show e) False
           (_, Right _) -> assertBool "This script should have failed" False
     ]
   where
-    costModel = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
+    costModel = fromMaybe (error "corrupt default cost model") P.defaultCekCostModelParams
+    -- Evaluate a script with sufficient budget to run it.
+    evalWithDecentBudget scr =
+      let (lg, eeb) = P.evaluateScriptCounting P.Verbose costModel scr []
+       in case eeb of
+            Left e -> (lg, Left e)
+            Right budget ->
+              P.evaluateScriptRestricting
+                P.Verbose
+                costModel
+                budget
+                scr
+                []
 
 testUTXOW ::
   UTxOState A ->
@@ -1260,7 +1260,7 @@ collectTwoPhaseScriptInputsOutputOrdering =
       [ ( alwaysSucceeds 3,
           [datumExample1, redeemerExample1, context],
           ExUnits 5000 5000,
-          CostModel mempty
+          freeCostModel
         )
       ]
   where

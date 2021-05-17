@@ -313,9 +313,6 @@ txInfo ::
 txInfo ei sysS utxo tx =
   P.TxInfo
     { P.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),
-      -- TODO There are now no fee inputs, and collateral inputs will not be
-      -- provided to Plutus, so this field can be removed.
-      P.txInfoInputsFees = mempty,
       P.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
       P.txInfoFee = (transValue (inject @(Mary.Value (Crypto era)) fee)),
       P.txInfoForge = (transValue forge),
