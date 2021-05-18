@@ -65,6 +65,7 @@ source-repository-package
   subdir:
     plutus-ledger-api
     plutus-tx
+    plutus-tx-plugin
     plutus-core
     prettyprinter-configurable
 
