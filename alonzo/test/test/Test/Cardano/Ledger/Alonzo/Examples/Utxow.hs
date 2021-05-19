@@ -69,7 +69,8 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as P
-  ( EvaluationError (..),
+  ( Data (..),
+    EvaluationError (..),
     VerboseMode (..),
     defaultCekCostModelParams,
     evaluateScriptCounting,
@@ -79,7 +80,6 @@ import Plutus.V1.Ledger.Examples
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
   )
-import qualified PlutusTx as Plutus
 import Shelley.Spec.Ledger.API (WitHashes (WitHashes))
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -277,10 +277,10 @@ expectedUTxO ex idx = UTxO utxo
 -- =========================================================================
 
 datumExample1 :: Data A
-datumExample1 = Data (Plutus.I 123)
+datumExample1 = Data (P.I 123)
 
 redeemerExample1 :: Data A
-redeemerExample1 = Data (Plutus.I 42)
+redeemerExample1 = Data (P.I 42)
 
 alwaysSucceedsOutput :: TxOut A
 alwaysSucceedsOutput =
@@ -343,10 +343,10 @@ utxoStEx1 = UTxOState utxoEx1 (Coin 0) (Coin 5) def
 -- ======================================================================
 
 datumExample2 :: Data A
-datumExample2 = Data (Plutus.I 0)
+datumExample2 = Data (P.I 0)
 
 redeemerExample2 :: Data A
-redeemerExample2 = Data (Plutus.I 1)
+redeemerExample2 = Data (P.I 1)
 
 notValidatingRedeemers :: Redeemers A
 notValidatingRedeemers =
@@ -409,7 +409,7 @@ outEx3 :: TxOut A
 outEx3 = TxOut someAddr (Val.inject $ Coin 995) SNothing
 
 redeemerExample3 :: Data A
-redeemerExample3 = Data (Plutus.I 42)
+redeemerExample3 = Data (P.I 42)
 
 validatingRedeemersEx3 :: Redeemers A
 validatingRedeemersEx3 =
@@ -465,7 +465,7 @@ outEx4 :: TxOut A
 outEx4 = TxOut someAddr (Val.inject $ Coin 995) SNothing
 
 redeemerExample4 :: Data A
-redeemerExample4 = Data (Plutus.I 0)
+redeemerExample4 = Data (P.I 0)
 
 notValidatingRedeemersEx4 :: Redeemers A
 notValidatingRedeemersEx4 =
@@ -525,7 +525,7 @@ outEx5 :: TxOut A
 outEx5 = TxOut someAddr (Val.inject $ Coin 1995) SNothing
 
 redeemerExample5 :: Data A
-redeemerExample5 = Data (Plutus.I 42)
+redeemerExample5 = Data (P.I 42)
 
 validatingRedeemersEx5 :: Redeemers A
 validatingRedeemersEx5 =
@@ -586,7 +586,7 @@ outEx6 :: TxOut A
 outEx6 = TxOut someAddr (Val.inject $ Coin 1995) SNothing
 
 redeemerExample6 :: Data A
-redeemerExample6 = Data (Plutus.I 0)
+redeemerExample6 = Data (P.I 0)
 
 notValidatingRedeemersEx6 :: Redeemers A
 notValidatingRedeemersEx6 =
@@ -658,7 +658,7 @@ outEx7 :: TxOut A
 outEx7 = TxOut someAddr (mintEx7 <+> Val.inject (Coin 995)) SNothing
 
 redeemerExample7 :: Data A
-redeemerExample7 = Data (Plutus.I 42)
+redeemerExample7 = Data (P.I 42)
 
 validatingRedeemersEx7 :: Redeemers A
 validatingRedeemersEx7 =
@@ -723,7 +723,7 @@ outEx8 :: TxOut A
 outEx8 = TxOut someAddr (mintEx8 <+> Val.inject (Coin 995)) SNothing
 
 redeemerExample8 :: Data A
-redeemerExample8 = Data (Plutus.I 0)
+redeemerExample8 = Data (P.I 0)
 
 notValidatingRedeemersEx8 :: Redeemers A
 notValidatingRedeemersEx8 =
@@ -780,10 +780,10 @@ utxoStEx8 = UTxOState utxoEx8 (Coin 0) (Coin 1000) def
 validatingRedeemersEx9 :: Redeemers A
 validatingRedeemersEx9 =
   Redeemers . Map.fromList $
-    [ (RdmrPtr Spend 0, (Data (Plutus.I 101), ExUnits 5000 5000)),
-      (RdmrPtr Cert 1, (Data (Plutus.I 102), ExUnits 5000 5000)),
-      (RdmrPtr Rewrd 1, (Data (Plutus.I 103), ExUnits 5000 5000)),
-      (RdmrPtr Mint 1, (Data (Plutus.I 104), ExUnits 5000 5000))
+    [ (RdmrPtr Spend 0, (Data (P.I 101), ExUnits 5000 5000)),
+      (RdmrPtr Cert 1, (Data (P.I 102), ExUnits 5000 5000)),
+      (RdmrPtr Rewrd 1, (Data (P.I 103), ExUnits 5000 5000)),
+      (RdmrPtr Mint 1, (Data (P.I 104), ExUnits 5000 5000))
     ]
 
 pidEx9 :: PolicyID C_Crypto

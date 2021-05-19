@@ -85,8 +85,6 @@ test-suite cardano-ledger-alonzo-test
     cardano-slotting,
     containers,
     data-default-class,
-    plutus-core,
-    plutus-tx,
     plutus-ledger-api,
     QuickCheck,
     small-steps,
