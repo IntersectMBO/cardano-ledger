@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -12,8 +13,7 @@
 module Cardano.Ledger.Alonzo.Translation where
 
 import Cardano.Binary
-  ( Annotator,
-    DecoderError,
+  ( DecoderError,
     FromCBOR (..),
     ToCBOR (..),
     decodeAnnotator,
@@ -37,6 +37,7 @@ import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Mary (MaryEra)
 import qualified Cardano.Ledger.Tx as LTX
 import Control.Monad.Except (Except, throwError)
+import Data.Coders
 import Data.Map.Strict (Map)
 import Data.Text (Text)
 import GHC.Generics (Generic)
@@ -218,8 +219,50 @@ translateTxOut (Shelley.TxOutCompact addr value) =
 
 translatePParams ::
   AlonzoGenesis -> Shelley.PParams (MaryEra c) -> PParams (AlonzoEra c)
-translatePParams (AlonzoGenesis ada cost price mxTx mxBl mxV c mxC) pp = extendPP pp ada cost price mxTx mxBl mxV c mxC
+translatePParams (AlonzoGenesis ada cost price mxTx mxBl mxV c mxC) pp =
+  extendPP pp ada cost price mxTx mxBl mxV c mxC
 
 translatePParamsUpdate ::
   Shelley.PParamsUpdate (MaryEra c) -> PParamsUpdate (AlonzoEra c)
-translatePParamsUpdate pp = extendPP pp SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing
+translatePParamsUpdate pp =
+  extendPP pp SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing
+
+--------------------------------------------------------------------------------
+-- Serialisation
+--------------------------------------------------------------------------------
+
+instance FromCBOR AlonzoGenesis where
+  fromCBOR =
+    decode $
+      RecD AlonzoGenesis
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance ToCBOR AlonzoGenesis where
+  toCBOR
+    AlonzoGenesis
+      { adaPerUTxOWord,
+        costmdls,
+        prices,
+        maxTxExUnits,
+        maxBlockExUnits,
+        maxValSize,
+        collateralPercentage,
+        maxCollateralInputs
+      } =
+      encode $
+        Rec AlonzoGenesis
+          !> To adaPerUTxOWord
+          !> To costmdls
+          !> To prices
+          !> To maxTxExUnits
+          !> To maxBlockExUnits
+          !> To maxValSize
+          !> To collateralPercentage
+          !> To maxCollateralInputs
