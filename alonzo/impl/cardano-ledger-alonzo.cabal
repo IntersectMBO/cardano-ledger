@@ -33,14 +33,15 @@ library
   exposed-modules:
     Cardano.Ledger.Alonzo
     Cardano.Ledger.Alonzo.Data
-    Cardano.Ledger.Alonzo.PlutusScriptApi
+    Cardano.Ledger.Alonzo.Genesis
     Cardano.Ledger.Alonzo.Language
+    Cardano.Ledger.Alonzo.PlutusScriptApi
     Cardano.Ledger.Alonzo.PParams
+    Cardano.Ledger.Alonzo.Rules.Bbody
+    Cardano.Ledger.Alonzo.Rules.Ledger
     Cardano.Ledger.Alonzo.Rules.Utxo
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Rules.Utxow
-    Cardano.Ledger.Alonzo.Rules.Ledger
-    Cardano.Ledger.Alonzo.Rules.Bbody
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Translation
     Cardano.Ledger.Alonzo.Tx
