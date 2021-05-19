@@ -20,7 +20,7 @@ import qualified Cardano.Ledger.Tx as LTX
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import qualified PlutusTx as Plutus
+import qualified Plutus.V1.Ledger.Api as Plutus
 import Shelley.Spec.Ledger.BlockChain (Block)
 import Shelley.Spec.Ledger.Metadata (Metadata)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
