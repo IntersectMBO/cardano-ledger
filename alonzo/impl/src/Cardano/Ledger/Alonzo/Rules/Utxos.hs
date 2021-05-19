@@ -345,10 +345,10 @@ constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
             [] -> pure (newState, vTx)
             _ -> throwError errs
   where
-    runTransitionRule :: RuleInterpreter
+    runTransitionRule :: RuleInterpreter 'EventPolicyDiscard
     runTransitionRule = applyRuleInternal EPDiscard ValidateAll runSTS
-    runSTS :: STSInterpreter
-    runSTS = applySTSInternal AssertionsOff runTransitionRule
+    runSTS :: STSInterpreter 'EventPolicyDiscard
+    runSTS = applySTSInternal EPDiscard AssertionsOff runTransitionRule
     utxo = _utxo st
     sysS = systemStart globals
     ei = epochInfo globals

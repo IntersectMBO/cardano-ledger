@@ -326,7 +326,7 @@ applySTSTest ::
   RuleContext rtype s ->
   m (Either [[PredicateFailure s]] (State s))
 applySTSTest ctx =
-  applySTSOpts defaultOpts ctx <&> \case
+  applySTSOpts EPDiscard defaultOpts ctx <&> \case
     (st, []) -> Right st
     (_, pfs) -> Left pfs
   where
