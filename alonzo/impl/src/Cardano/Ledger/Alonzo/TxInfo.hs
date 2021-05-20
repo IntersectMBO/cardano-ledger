@@ -39,11 +39,13 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
+import Data.Fixed (HasResolution (resolution))
 import Data.Functor.Identity (Identity, runIdentity)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
-import Data.Time.Clock (UTCTime (..))
+import Data.Time.Clock (nominalDiffTimeToSeconds)
+import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Ada as P (adaSymbol, adaToken)
@@ -69,9 +71,10 @@ import qualified Plutus.V1.Ledger.Interval as P
     Interval (..),
     LowerBound (..),
     UpperBound (..),
+    always,
   )
 import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), ValidatorHash (..))
-import qualified Plutus.V1.Ledger.Slot as P (SlotRange)
+import qualified Plutus.V1.Ledger.Time as P (POSIXTime (..), POSIXTimeRange)
 import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
 import qualified Plutus.V1.Ledger.Value as P (CurrencySymbol (..), TokenName (..), Value (..), singleton, unionWith)
@@ -138,51 +141,34 @@ transAddr :: Addr crypto -> Maybe P.Address
 transAddr (Addr _net object stake) = Just (P.Address (transCred object) (transStakeReference stake))
 transAddr (AddrBootstrap _bootaddr) = Nothing
 
--- ===============================
--- Translate ValidityIntervals
--- TODO remove this function when we are using transVITime instead
-transVI ::
+slotToPOSIXTime ::
   EpochInfo Identity ->
   SystemStart ->
-  ValidityInterval ->
-  P.SlotRange
-transVI _ _ (ValidityInterval SNothing SNothing) =
-  P.Interval
-    (P.LowerBound P.NegInf True)
-    (P.UpperBound P.PosInf False)
-transVI _ _ (ValidityInterval (SJust (SlotNo i)) SNothing) =
-  P.Interval
-    (P.LowerBound (P.Finite (fromIntegral i)) True)
-    (P.UpperBound P.PosInf False)
-transVI _ _ (ValidityInterval SNothing (SJust (SlotNo i))) =
-  P.Interval
-    (P.LowerBound P.NegInf True)
-    (P.UpperBound (P.Finite (fromIntegral i)) False)
-transVI _ _ (ValidityInterval (SJust (SlotNo i)) (SJust (SlotNo j))) =
-  P.Interval
-    (P.LowerBound (P.Finite (fromIntegral i)) True)
-    (P.UpperBound (P.Finite (fromIntegral j)) False)
+  SlotNo ->
+  P.Extended P.POSIXTime
+slotToPOSIXTime ei sysS s =
+  P.Finite . P.POSIXTime . resolution . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds . runIdentity $
+    epochInfoSlotToUTCTime ei sysS s
 
--- ===============================
--- Translate ValidityIntervals to UTCTime
-
-data TimeInterval = TimeInterval (StrictMaybe UTCTime) (StrictMaybe UTCTime)
-
--- | translate a validity interval to a UTCTime interval
--- | TODO use this function instead of transVI
+-- | translate a validity interval to POSIX time
 transVITime ::
   EpochInfo Identity ->
   SystemStart ->
   ValidityInterval ->
-  TimeInterval
-transVITime _ _ (ValidityInterval SNothing SNothing) =
-  TimeInterval SNothing SNothing
+  P.POSIXTimeRange
+transVITime _ _ (ValidityInterval SNothing SNothing) = P.always
 transVITime ei sysS (ValidityInterval (SJust i) SNothing) =
-  TimeInterval (SJust (runIdentity $ epochInfoSlotToUTCTime ei sysS i)) SNothing
+  P.Interval
+    (P.LowerBound (slotToPOSIXTime ei sysS i) True)
+    (P.UpperBound P.PosInf True)
 transVITime ei sysS (ValidityInterval SNothing (SJust i)) =
-  TimeInterval SNothing (SJust (runIdentity $ epochInfoSlotToUTCTime ei sysS i))
+  P.Interval
+    (P.LowerBound P.NegInf True)
+    (P.UpperBound (slotToPOSIXTime ei sysS i) False)
 transVITime ei sysS (ValidityInterval (SJust i) (SJust j)) =
-  TimeInterval (SJust (runIdentity $ epochInfoSlotToUTCTime ei sysS i)) (SJust (runIdentity $ epochInfoSlotToUTCTime ei sysS j))
+  P.Interval
+    (P.LowerBound (slotToPOSIXTime ei sysS i) True)
+    (P.UpperBound (slotToPOSIXTime ei sysS j) False)
 
 -- ========================================
 -- translate TxIn and TxOut
@@ -318,7 +304,7 @@ txInfo ei sysS utxo tx =
       P.txInfoForge = (transValue forge),
       P.txInfoDCert = (foldr (\c ans -> transDCert c : ans) [] (certs' tbody)),
       P.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
-      P.txInfoValidRange = (transVI ei sysS interval), -- TODO replace with transVITime when possible
+      P.txInfoValidRange = transVITime ei sysS interval,
       P.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
       P.txInfoData = (map transDataPair datpairs),
       P.txInfoId = (P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody)))
