@@ -73,9 +73,11 @@ import Flat (flat)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as P
   ( EvaluationError (..),
+    ExBudget (..),
+    ExCPU (..),
+    ExMemory (..),
     VerboseMode (..),
     defaultCekCostModelParams,
-    evaluateScriptCounting,
     evaluateScriptRestricting,
   )
 import Plutus.V1.Ledger.Examples
@@ -1221,7 +1223,7 @@ data ShouldSucceed = ShouldSucceed | ShouldFail
 
 directPlutusTest :: ShouldSucceed -> ShortByteString -> [P.Data] -> Assertion
 directPlutusTest expectation script ds =
-  case (expectation, evalWithDecentBudget script ds) of
+  case (expectation, evalWithHugeBudget script ds) of
     (ShouldSucceed, (_, Left e)) ->
       assertBool ("This script should have succeeded, but: " <> show e) False
     (ShouldSucceed, (_, Right _)) ->
@@ -1235,17 +1237,13 @@ directPlutusTest expectation script ds =
   where
     costModel = fromMaybe (error "corrupt default cost model") P.defaultCekCostModelParams
     -- Evaluate a script with sufficient budget to run it.
-    evalWithDecentBudget scr datums =
-      let (lg, eeb) = P.evaluateScriptCounting P.Verbose costModel scr []
-       in case eeb of
-            Left e -> (lg, Left e)
-            Right budget ->
-              P.evaluateScriptRestricting
-                P.Verbose
-                costModel
-                budget
-                scr
-                datums
+    evalWithHugeBudget scr datums =
+      P.evaluateScriptRestricting
+        P.Verbose
+        costModel
+        (P.ExBudget (P.ExCPU 100000000) (P.ExMemory 10000000))
+        scr
+        datums
 
 guessTheNumber' :: P.Data -> P.Data -> ()
 guessTheNumber' d1 d2 = if d1 P.== d2 then () else (P.error ())
