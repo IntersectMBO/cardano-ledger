@@ -40,8 +40,8 @@ import           Lens.Micro.Extras (view)
 import           Lens.Micro.TH (makeLenses)
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
-                     Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed, (?!))
+                     Signal, State, TRC (TRC), Event, applySTS, initialRules, judgmentContext, trans,
+                     transitionRules, wrapFailed, (?!), wrapEvents)
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, SignalGenerator,
                      TraceProfile (TraceProfile), classifySize, classifyTraceLength, envGen,
                      failures, isTrivial, nonTrivialTrace, proportionOfValidSignals, sigGen,
@@ -109,6 +109,8 @@ instance STS DBLOCK where
   type State DBLOCK = (DSEnv, DIState)
   type Signal DBLOCK = DBlock
   type PredicateFailure DBLOCK = DBlockPredicateFailure
+  data Event _ = 
+    DELEGEvent (Event DELEG)
 
   initialRules
     = [ do
@@ -132,6 +134,7 @@ instance STS DBLOCK where
 
 instance Embed DELEG DBLOCK where
   wrapFailed = DPF
+  wrapEvents = DELEGEvent
 
 -- | Check that all the delegation certificates in the trace were correctly
 -- applied.

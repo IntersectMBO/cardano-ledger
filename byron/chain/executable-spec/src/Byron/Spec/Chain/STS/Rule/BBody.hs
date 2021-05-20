@@ -22,7 +22,7 @@ import           Byron.Spec.Ledger.Update (PParams, UPIState, maxBkSz)
 import           Byron.Spec.Ledger.UTxO (UTxO)
 import           Control.State.Transition (Embed, Environment, STS (..), Signal, State,
                      TRC (TRC), initialRules, judgmentContext, trans, transitionRules, wrapFailed,
-                     (?!))
+                     (?!), wrapEvents)
 
 import           Byron.Spec.Chain.STS.Block
 
@@ -33,8 +33,8 @@ data BbodyPredicateFailure
   | InvalidUtxoHash
   | InvalidDelegationHash
   | InvalidUpdateProposalHash
-  | BUPIFailure (PredicateFailure BUPI)
-  | DelegationFailure (PredicateFailure DELEG)
+  | BUPIFailure (PredicateFailure BUPI)         
+  | DelegationFailure (PredicateFailure DELEG)  
   | UTXOWSFailure (PredicateFailure UTXOWS)
   deriving (Eq, Show, Data, Typeable)
 
@@ -56,6 +56,11 @@ instance STS BBODY where
   type Signal BBODY = Block
 
   type PredicateFailure BBODY = BbodyPredicateFailure
+
+  data Event _
+    = BUPIEvent (Event BUPI)
+    | DelegationEvent (Event DELEG)
+    | UTXOWSEvent (Event UTXOWS)
 
   initialRules = []
 
@@ -93,9 +98,12 @@ instance STS BBODY where
 
 instance Embed BUPI BBODY where
   wrapFailed = BUPIFailure
+  wrapEvents = BUPIEvent
 
 instance Embed DELEG BBODY where
   wrapFailed = DelegationFailure
+  wrapEvents = DelegationEvent
 
 instance Embed UTXOWS BBODY where
   wrapFailed = UTXOWSFailure
+  wrapEvents = UTXOWSEvent

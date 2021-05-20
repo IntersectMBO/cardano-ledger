@@ -53,7 +53,7 @@ import Control.State.Transition
     trans,
     wrapFailed,
     (?!),
-    (?!:),
+    (?!:), wrapEvents
   )
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
@@ -387,6 +387,7 @@ instance
   Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
+  wrapEvents = UtxoEvent
 
 instance
   ( -- Fix Core.Witnesses to the Shelley Era
@@ -409,5 +410,6 @@ instance
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
+  data Event _ = UtxoEvent (Event (UTXO era))
   transitionRules = [shelleyStyleWitness witsVKeyNeeded id]
   initialRules = [initialLedgerStateUTXOW]

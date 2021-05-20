@@ -30,8 +30,7 @@ import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
 import Control.State.Transition
-  ( Event (..),
-    STS (..),
+  ( STS (..),
     TRC (..),
     TransitionRule,
     failBecause,
@@ -105,6 +104,10 @@ instance
 
   type BaseM (POOL era) = ShelleyBase
   type PredicateFailure (POOL era) = PoolPredicateFailure era
+
+  data Event (POOL era) 
+    = NewPoolParam
+    | NewFuturePoolParam
 
   transitionRules = [poolDelegationTransition]
 

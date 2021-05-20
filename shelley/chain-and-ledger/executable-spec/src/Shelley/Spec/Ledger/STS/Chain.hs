@@ -270,6 +270,12 @@ instance
 
   type PredicateFailure (CHAIN era) = ChainPredicateFailure era
 
+  data Event _
+    = BbodyEvent (Event (BBODY era))
+    | TicknEvent (Event TICKN)
+    | TickEvent  (Event (TICK era))
+    | PrtclEvent (Event (PRTCL (Crypto era)))
+
   initialRules = []
   transitionRules = [chainTransition]
 
@@ -417,6 +423,7 @@ instance
   Embed (BBODY era) (CHAIN era)
   where
   wrapFailed = BbodyFailure
+  wrapEvents = BbodyEvent
 
 instance
   ( Era era,
@@ -426,6 +433,7 @@ instance
   Embed TICKN (CHAIN era)
   where
   wrapFailed = TicknFailure
+  wrapEvents = TicknEvent
 
 instance
   ( Era era,
@@ -436,6 +444,7 @@ instance
   Embed (TICK era) (CHAIN era)
   where
   wrapFailed = TickFailure
+  wrapEvents = TickEvent
 
 instance
   ( Era era,
@@ -446,6 +455,7 @@ instance
   Embed (PRTCL c) (CHAIN era)
   where
   wrapFailed = PrtclFailure
+  wrapEvents = PrtclEvent
 
 data AdaPots = AdaPots
   { treasuryAdaPot :: Coin,

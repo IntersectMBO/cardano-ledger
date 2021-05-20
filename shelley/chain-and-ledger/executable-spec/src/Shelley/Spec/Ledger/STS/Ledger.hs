@@ -162,6 +162,9 @@ instance
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
   type PredicateFailure (LEDGER era) = LedgerPredicateFailure era
+  data Event _ 
+    = UtxowEvent (Event (UTXOW era))
+    | DelegsEvent (Event (DELEGS era))
 
   initialRules = []
   transitionRules = [ledgerTransition]
@@ -229,6 +232,7 @@ instance
   Embed (DELEGS era) (LEDGER era)
   where
   wrapFailed = DelegsFailure
+  wrapEvents = DelegsEvent
 
 instance
   ( Era era,
@@ -238,3 +242,4 @@ instance
   Embed (UTXOW era) (LEDGER era)
   where
   wrapFailed = UtxowFailure
+  wrapEvents = UtxowEvent

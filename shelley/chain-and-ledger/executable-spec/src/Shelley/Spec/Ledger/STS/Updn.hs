@@ -48,6 +48,7 @@ instance
   type Environment (UPDN crypto) = UpdnEnv
   type BaseM (UPDN crypto) = ShelleyBase
   type PredicateFailure (UPDN crypto) = UpdnPredicateFailure crypto
+  data Event _
   initialRules =
     [ pure
         ( UpdnState

@@ -53,7 +53,7 @@ import Control.State.Transition
     liftSTS,
     trans,
     wrapFailed,
-    (?!),
+    (?!), wrapEvents
   )
 import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)
@@ -295,6 +295,7 @@ instance
   type Environment (UTXO era) = UtxoEnv era
   type BaseM (UTXO era) = ShelleyBase
   type PredicateFailure (UTXO era) = UtxoPredicateFailure era
+  data Event _ = UpdateEvent (Event (PPUP era))
 
   transitionRules = [utxoInductive]
 
@@ -438,3 +439,4 @@ instance
   Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
+  wrapEvents = UpdateEvent
