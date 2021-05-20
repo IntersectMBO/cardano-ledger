@@ -229,11 +229,11 @@ class
 class (STS sub, BaseM sub ~ BaseM super) => Embed sub super where
   -- | Wrap a predicate failure of the subsystem in a failure of the super-system.
   wrapFailed :: PredicateFailure sub -> PredicateFailure super
-  wrapEvents :: Event sub -> Event super
+  wrapEvent :: Event sub -> Event super
 
 instance STS sts => Embed sts sts where
   wrapFailed = id
-  wrapEvents = id
+  wrapEvent = id
 
 data EventPolicy 
   = EventPolicyReturn
@@ -513,7 +513,7 @@ applyRuleInternal ep vp goSTS jc r =
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
       () <- case ep of
         EPDiscard -> pure ()
-        EPReturn -> tell (wrapEvents <$> snd s)
+        EPReturn -> tell (wrapEvent <$> snd s)
       pure $ next ss
     runClause (Writer w a) = case ep of
       EPReturn -> tell w $> a

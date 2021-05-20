@@ -263,4 +263,4 @@ instance
   Embed (DELPL era) (DELEGS era)
   where
   wrapFailed = DelplFailure
-  wrapEvents = DelplEvent
+  wrapEvent = DelplEvent

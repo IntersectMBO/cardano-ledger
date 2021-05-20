@@ -423,7 +423,7 @@ instance
   Embed (BBODY era) (CHAIN era)
   where
   wrapFailed = BbodyFailure
-  wrapEvents = BbodyEvent
+  wrapEvent = BbodyEvent
 
 instance
   ( Era era,
@@ -433,7 +433,7 @@ instance
   Embed TICKN (CHAIN era)
   where
   wrapFailed = TicknFailure
-  wrapEvents = TicknEvent
+  wrapEvent = TicknEvent
 
 instance
   ( Era era,
@@ -444,7 +444,7 @@ instance
   Embed (TICK era) (CHAIN era)
   where
   wrapFailed = TickFailure
-  wrapEvents = TickEvent
+  wrapEvent = TickEvent
 
 instance
   ( Era era,
@@ -455,7 +455,7 @@ instance
   Embed (PRTCL c) (CHAIN era)
   where
   wrapFailed = PrtclFailure
-  wrapEvents = PrtclEvent
+  wrapEvent = PrtclEvent
 
 data AdaPots = AdaPots
   { treasuryAdaPot :: Coin,

@@ -36,7 +36,7 @@ import           Numeric.Natural (Natural)
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS, Event,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed, (?!), wrapEvents)
+                     transitionRules, wrapFailed, (?!), wrapEvent)
 import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen,
                      randomTraceOfSize, ratio, sigGen, trace, traceLengthsAreClassified,
                      traceOfLength)
@@ -356,15 +356,15 @@ instance STS UBLOCK where
 
 instance Embed UPIREG UBLOCK where
   wrapFailed = UPIREGFailure
-  wrapEvents = UPIREGEvent
+  wrapEvent = UPIREGEvent
 
 instance Embed UPIVOTES UBLOCK where
   wrapFailed = UPIVOTESFailure
-  wrapEvents = UPIVOTESEvent
+  wrapEvent = UPIVOTESEvent
 
 instance Embed UPIEND UBLOCK where
   wrapFailed = UPIENDFailure
-  wrapEvents = UPIENDEvent
+  wrapEvent = UPIENDEvent
 
 instance HasTrace UBLOCK where
   envGen _ =

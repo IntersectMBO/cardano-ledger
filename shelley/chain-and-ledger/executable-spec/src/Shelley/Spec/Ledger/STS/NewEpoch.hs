@@ -190,7 +190,7 @@ instance
   Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure
-  wrapEvents = EpochEvent
+  wrapEvent = EpochEvent
 
 instance
   ( Era era,
@@ -200,4 +200,4 @@ instance
   Embed (MIR era) (NEWEPOCH era)
   where
   wrapFailed = MirFailure
-  wrapEvents = MirEvent
+  wrapEvent = MirEvent

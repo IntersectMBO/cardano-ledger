@@ -454,7 +454,7 @@ instance STS SDELEGS where
 
 instance Embed SDELEG SDELEGS where
   wrapFailed = SDelegFailure
-  wrapEvents = SDelegEvent
+  wrapEvent = SDelegEvent
 
 -- | Delegation rules sequencing
 data ADELEGS deriving (Data, Typeable)
@@ -489,7 +489,7 @@ instance STS ADELEGS where
 
 instance Embed ADELEG ADELEGS where
   wrapFailed = ADelegFailure
-  wrapEvents = ADelegEvent
+  wrapEvent = ADelegEvent
 
 -- | Delegation interface
 data DELEG deriving (Data, Typeable)
@@ -537,11 +537,11 @@ instance STS DELEG where
 
 instance Embed SDELEGS DELEG where
   wrapFailed = SDelegSFailure
-  wrapEvents = SDelegSEvent
+  wrapEvent = SDelegSEvent
 
 instance Embed ADELEGS DELEG where
   wrapFailed = ADelegSFailure
-  wrapEvents = ADelegSEvent
+  wrapEvent = ADelegSEvent
 
 --------------------------------------------------------------------------------
 -- Generators
@@ -635,7 +635,7 @@ instance STS MSDELEG where
 
 instance Embed SDELEG MSDELEG where
   wrapFailed = SDELEGFailure
-  wrapEvents = SDELEGEvent
+  wrapEvent = SDELEGEvent
 
 instance HasTrace MSDELEG where
 

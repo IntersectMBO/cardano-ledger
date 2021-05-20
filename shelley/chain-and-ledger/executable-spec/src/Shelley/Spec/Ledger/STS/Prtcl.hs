@@ -203,7 +203,7 @@ instance
   Embed (OVERLAY crypto) (PRTCL crypto)
   where
   wrapFailed = OverlayFailure
-  wrapEvents = OverlayEvent
+  wrapEvent = OverlayEvent
 
 instance
   ( Crypto crypto,
@@ -214,7 +214,7 @@ instance
   Embed (UPDN crypto) (PRTCL crypto)
   where
   wrapFailed = UpdnFailure
-  wrapEvents = UpdnEvent
+  wrapEvent = UpdnEvent
 
 data PrtlSeqFailure crypto
   = WrongSlotIntervalPrtclSeq

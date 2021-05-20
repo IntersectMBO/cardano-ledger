@@ -195,7 +195,7 @@ instance
   Embed (NEWEPOCH era) (TICK era)
   where
   wrapFailed = NewEpochFailure
-  wrapEvents = NewEpochEvent
+  wrapEvent = NewEpochEvent
 
 instance
   ( Era era,
@@ -205,7 +205,7 @@ instance
   Embed (RUPD era) (TICK era)
   where
   wrapFailed = RupdFailure
-  wrapEvents = RupdEvent
+  wrapEvent = RupdEvent
 
 {------------------------------------------------------------------------------
 -- TICKF transition
@@ -277,4 +277,4 @@ instance
   Embed (NEWEPOCH era) (TICKF era)
   where
   wrapFailed = TickfNewEpochFailure
-  wrapEvents = TickfNewEpochEvent
+  wrapEvent = TickfNewEpochEvent

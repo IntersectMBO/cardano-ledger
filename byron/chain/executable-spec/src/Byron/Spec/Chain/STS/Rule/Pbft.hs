@@ -63,4 +63,4 @@ instance STS PBFT where
 
 instance Embed SIGCNT PBFT where
   wrapFailed = SigCountFailure
-  wrapEvents = SigCountEvent
+  wrapEvent = SigCountEvent

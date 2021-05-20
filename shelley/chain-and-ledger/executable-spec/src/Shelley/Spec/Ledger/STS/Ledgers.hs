@@ -153,4 +153,4 @@ instance
   Embed (LEDGER era) (LEDGERS era)
   where
   wrapFailed = LedgerFailure
-  wrapEvents = LedgerEvent
+  wrapEvent = LedgerEvent

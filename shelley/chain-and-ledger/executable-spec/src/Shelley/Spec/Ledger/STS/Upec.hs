@@ -158,4 +158,4 @@ instance
   Embed (NEWPP era) (UPEC era)
   where
   wrapFailed = NewPpFailure
-  wrapEvents = NewPpEvent
+  wrapEvent = NewPpEvent

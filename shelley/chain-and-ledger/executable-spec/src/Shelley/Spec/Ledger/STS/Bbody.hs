@@ -205,4 +205,4 @@ instance
   Embed ledgers (BBODY era)
   where
   wrapFailed = LedgersFailure
-  wrapEvents = LedgersEvent
+  wrapEvent = LedgersEvent

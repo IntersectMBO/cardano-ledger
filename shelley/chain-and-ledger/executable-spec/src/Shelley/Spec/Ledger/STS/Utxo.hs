@@ -53,7 +53,7 @@ import Control.State.Transition
     liftSTS,
     trans,
     wrapFailed,
-    (?!), wrapEvents
+    (?!), wrapEvent
   )
 import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)
@@ -439,4 +439,4 @@ instance
   Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
-  wrapEvents = UpdateEvent
+  wrapEvent = UpdateEvent

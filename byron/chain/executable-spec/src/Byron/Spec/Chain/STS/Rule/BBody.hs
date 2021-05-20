@@ -22,7 +22,7 @@ import           Byron.Spec.Ledger.Update (PParams, UPIState, maxBkSz)
 import           Byron.Spec.Ledger.UTxO (UTxO)
 import           Control.State.Transition (Embed, Environment, STS (..), Signal, State,
                      TRC (TRC), initialRules, judgmentContext, trans, transitionRules, wrapFailed,
-                     (?!), wrapEvents)
+                     (?!), wrapEvent)
 
 import           Byron.Spec.Chain.STS.Block
 
@@ -98,12 +98,12 @@ instance STS BBODY where
 
 instance Embed BUPI BBODY where
   wrapFailed = BUPIFailure
-  wrapEvents = BUPIEvent
+  wrapEvent = BUPIEvent
 
 instance Embed DELEG BBODY where
   wrapFailed = DelegationFailure
-  wrapEvents = DelegationEvent
+  wrapEvent = DelegationEvent
 
 instance Embed UTXOWS BBODY where
   wrapFailed = UTXOWSFailure
-  wrapEvents = UTXOWSEvent
+  wrapEvent = UTXOWSEvent

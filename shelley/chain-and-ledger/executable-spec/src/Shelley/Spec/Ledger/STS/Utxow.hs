@@ -53,7 +53,7 @@ import Control.State.Transition
     trans,
     wrapFailed,
     (?!),
-    (?!:), wrapEvents
+    (?!:), wrapEvent
   )
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
@@ -387,7 +387,7 @@ instance
   Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
-  wrapEvents = UtxoEvent
+  wrapEvent = UtxoEvent
 
 instance
   ( -- Fix Core.Witnesses to the Shelley Era

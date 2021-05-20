@@ -232,7 +232,7 @@ instance
   Embed (DELEGS era) (LEDGER era)
   where
   wrapFailed = DelegsFailure
-  wrapEvents = DelegsEvent
+  wrapEvent = DelegsEvent
 
 instance
   ( Era era,
@@ -242,4 +242,4 @@ instance
   Embed (UTXOW era) (LEDGER era)
   where
   wrapFailed = UtxowFailure
-  wrapEvents = UtxowEvent
+  wrapEvent = UtxowEvent

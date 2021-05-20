@@ -200,7 +200,7 @@ instance
   Embed (POOL era) (DELPL era)
   where
   wrapFailed = PoolFailure
-  wrapEvents = PoolEvent
+  wrapEvent = PoolEvent
 
 instance
   ( Era era,
@@ -210,4 +210,4 @@ instance
   Embed (DELEG era) (DELPL era)
   where
   wrapFailed = DelegFailure
-  wrapEvents = DelegEvent
+  wrapEvent = DelegEvent

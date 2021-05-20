@@ -210,7 +210,7 @@ instance
   Embed (SNAP era) (EPOCH era)
   where
   wrapFailed = SnapFailure
-  wrapEvents = SnapEvent
+  wrapEvent = SnapEvent
 
 instance
   ( Era era,
@@ -220,7 +220,7 @@ instance
   Embed (POOLREAP era) (EPOCH era)
   where
   wrapFailed = PoolReapFailure
-  wrapEvents = PoolReapEvent
+  wrapEvent = PoolReapEvent
 
 instance
   ( Era era,
@@ -230,4 +230,4 @@ instance
   Embed (UPEC era) (EPOCH era)
   where
   wrapFailed = UpecFailure
-  wrapEvents = UpecEvents
+  wrapEvent = UpecEvents

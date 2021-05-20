@@ -296,4 +296,4 @@ instance
   Embed (OCERT crypto) (OVERLAY crypto)
   where
   wrapFailed = OcertFailure
-  wrapEvents = OcertEvent
+  wrapEvent = OcertEvent

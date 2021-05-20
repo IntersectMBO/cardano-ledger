@@ -505,11 +505,11 @@ instance STS UPV where
 
 instance Embed UPPVV UPV where
   wrapFailed = UPPVVFailure
-  wrapEvents = UPPVVEvent
+  wrapEvent = UPPVVEvent
 
 instance Embed UPSVV UPV where
   wrapFailed = UPSVVFailure
-  wrapEvents = UPSVVEvent
+  wrapEvent = UPSVVEvent
 
 data UPREG deriving (Generic, Data, Typeable)
 -- | These `PredicateFailure`s are all throwable.
@@ -553,7 +553,7 @@ instance STS UPREG where
 
 instance Embed UPV UPREG where
   wrapFailed = UPVFailure
-  wrapEvents = UPVEvent
+  wrapEvent = UPVEvent
 
 ------------------------------------------------------------------------
 -- Update voting
@@ -681,7 +681,7 @@ instance STS UPVOTE where
 
 instance Embed ADDVOTE UPVOTE where
   wrapFailed = ADDVOTEFailure
-  wrapEvents = ADDVOTEEvent
+  wrapEvent = ADDVOTEEvent
 
 ------------------------------------------------------------------------
 -- Update voting
@@ -825,7 +825,7 @@ instance STS UPEND where
 
 instance Embed FADS UPEND where
   wrapFailed = error "No possible failures in FADS"
-  wrapEvents = FADSEvent
+  wrapEvent = FADSEvent
 
 ------------------------------------------------------------------------
 -- Update interface
@@ -998,7 +998,7 @@ instance STS UPIREG where
 
 instance Embed UPREG UPIREG where
   wrapFailed = UPREGFailure
-  wrapEvents = UPREGEvent
+  wrapEvent = UPREGEvent
 
 instance HasTrace UPIREG where
 
@@ -1383,7 +1383,7 @@ instance STS UPIVOTE where
 
 instance Embed UPVOTE UPIVOTE where
   wrapFailed = UPVOTEFailure
-  wrapEvents = UPVOTEEvent
+  wrapEvent = UPVOTEEvent
 
 
 data APPLYVOTES deriving (Generic, Data, Typeable)
@@ -1414,7 +1414,7 @@ instance STS APPLYVOTES where
 
 instance Embed UPIVOTE APPLYVOTES where
   wrapFailed = UpivoteFailure
-  wrapEvents = UpivoteEvent
+  wrapEvent = UpivoteEvent
 
 data UPIVOTES deriving (Generic, Data, Typeable)
 
@@ -1474,7 +1474,7 @@ instance STS UPIVOTES where
 
 instance Embed APPLYVOTES UPIVOTES where
   wrapFailed = ApplyVotesFailure
-  wrapEvents = ApplyVotesEvent
+  wrapEvent = ApplyVotesEvent
 
 instance HasTrace UPIVOTES where
 
@@ -1615,7 +1615,7 @@ instance STS UPIEND where
 
 instance Embed UPEND UPIEND where
   wrapFailed = UPENDFailure
-  wrapEvents = UPENDEvent
+  wrapEvent = UPENDEvent
 
 -- | Given a list of protocol versions and keys endorsing those versions,
 -- generate a protocol-version endorsement, or 'Nothing' if the list of
@@ -1720,7 +1720,7 @@ instance STS UPIEC where
 
 instance Embed PVBUMP UPIEC where
   wrapFailed = PVBUMPFailure
-  wrapEvents = PVBUMPEvent
+  wrapEvent = PVBUMPEvent
 
 -- | Generate an optional update-proposal and a list of votes, given an update
 -- environment and state.
