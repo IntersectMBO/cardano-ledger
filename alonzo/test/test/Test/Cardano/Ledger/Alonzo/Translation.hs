@@ -13,7 +13,8 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
-import Cardano.Ledger.Alonzo.Translation (AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (TranslateEra (..))

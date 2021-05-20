@@ -117,10 +117,6 @@ import Shelley.Spec.Ledger.Serialization
   )
 import Shelley.Spec.Ledger.Slot (EpochNo (..))
 
--- ================================================================
--- TODO make type families for PParams and PParamsUpdate
-
--- How to handle this alonzo-specific type?
 type PParamsUpdate era = PParams' StrictMaybe era
 
 -- | Protocol parameters.

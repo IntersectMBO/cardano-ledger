@@ -20,9 +20,8 @@ import Cardano.Binary
     serialize,
   )
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Language (Language)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), extendPPWithGenesis)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate, extendPP)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits, Prices)
 import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import qualified Cardano.Ledger.Core as Core
@@ -38,11 +37,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import qualified Cardano.Ledger.Tx as LTX
 import Control.Monad.Except (Except, throwError)
 import Data.Coders
-import Data.Map.Strict (Map)
 import Data.Text (Text)
-import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
   ( EpochState (..),
     NewEpochState (..),
@@ -67,18 +62,6 @@ import qualified Shelley.Spec.Ledger.TxBody as Shelley
 -- 'TranslationError', i.e., 'Void', it means the consensus layer relies on it
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
-
-data AlonzoGenesis = AlonzoGenesis
-  { adaPerUTxOWord :: API.Coin,
-    costmdls :: Map Language CostModel,
-    prices :: Prices,
-    maxTxExUnits :: ExUnits,
-    maxBlockExUnits :: ExUnits,
-    maxValSize :: Natural,
-    collateralPercentage :: Natural,
-    maxCollateralInputs :: Natural
-  }
-  deriving (Eq, Generic, NoThunks)
 
 type instance PreviousEra (AlonzoEra c) = MaryEra c
 
@@ -219,50 +202,9 @@ translateTxOut (Shelley.TxOutCompact addr value) =
 
 translatePParams ::
   AlonzoGenesis -> Shelley.PParams (MaryEra c) -> PParams (AlonzoEra c)
-translatePParams (AlonzoGenesis ada cost price mxTx mxBl mxV c mxC) pp =
-  extendPP pp ada cost price mxTx mxBl mxV c mxC
+translatePParams = flip extendPPWithGenesis
 
 translatePParamsUpdate ::
   Shelley.PParamsUpdate (MaryEra c) -> PParamsUpdate (AlonzoEra c)
 translatePParamsUpdate pp =
   extendPP pp SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing
-
---------------------------------------------------------------------------------
--- Serialisation
---------------------------------------------------------------------------------
-
-instance FromCBOR AlonzoGenesis where
-  fromCBOR =
-    decode $
-      RecD AlonzoGenesis
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-        <! From
-
-instance ToCBOR AlonzoGenesis where
-  toCBOR
-    AlonzoGenesis
-      { adaPerUTxOWord,
-        costmdls,
-        prices,
-        maxTxExUnits,
-        maxBlockExUnits,
-        maxValSize,
-        collateralPercentage,
-        maxCollateralInputs
-      } =
-      encode $
-        Rec AlonzoGenesis
-          !> To adaPerUTxOWord
-          !> To costmdls
-          !> To prices
-          !> To maxTxExUnits
-          !> To maxBlockExUnits
-          !> To maxValSize
-          !> To collateralPercentage
-          !> To maxCollateralInputs
