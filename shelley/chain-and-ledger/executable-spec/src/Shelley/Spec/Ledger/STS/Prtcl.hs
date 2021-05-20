@@ -148,7 +148,7 @@ instance
   type BaseM (PRTCL crypto) = ShelleyBase
   type PredicateFailure (PRTCL crypto) = PrtclPredicateFailure crypto
 
-  data Event _ 
+  data Event _
     = OverlayEvent (Event (OVERLAY crypto))
     | UpdnEvent (Event (UPDN crypto))
 

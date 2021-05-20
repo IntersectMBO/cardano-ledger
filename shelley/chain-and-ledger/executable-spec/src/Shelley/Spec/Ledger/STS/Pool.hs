@@ -105,7 +105,7 @@ instance
   type BaseM (POOL era) = ShelleyBase
   type PredicateFailure (POOL era) = PoolPredicateFailure era
 
-  data Event (POOL era) 
+  data Event (POOL era)
     = NewPoolParam
     | NewFuturePoolParam
 

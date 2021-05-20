@@ -257,7 +257,7 @@ instance
   type Environment (TICKF era) = ()
   type BaseM (TICKF era) = ShelleyBase
   type PredicateFailure (TICKF era) = TickfPredicateFailure era
-  data Event _ 
+  data Event _
     = TickfNewEpochEvent (Event (NEWEPOCH era))
 
   initialRules = []

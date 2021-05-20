@@ -52,8 +52,9 @@ import Control.State.Transition
     judgmentContext,
     liftSTS,
     trans,
+    wrapEvent,
     wrapFailed,
-    (?!), wrapEvent
+    (?!),
   )
 import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)

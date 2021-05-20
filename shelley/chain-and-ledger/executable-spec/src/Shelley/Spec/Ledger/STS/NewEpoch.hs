@@ -98,7 +98,7 @@ instance
   type BaseM (NEWEPOCH era) = ShelleyBase
   type PredicateFailure (NEWEPOCH era) = NewEpochPredicateFailure era
 
-  data Event _ 
+  data Event _
     = EpochEvent (Event (EPOCH era))
     | MirEvent (Event (MIR era))
 

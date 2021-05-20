@@ -273,7 +273,7 @@ instance
   data Event _
     = BbodyEvent (Event (BBODY era))
     | TicknEvent (Event TICKN)
-    | TickEvent  (Event (TICK era))
+    | TickEvent (Event (TICK era))
     | PrtclEvent (Event (PRTCL (Crypto era)))
 
   initialRules = []

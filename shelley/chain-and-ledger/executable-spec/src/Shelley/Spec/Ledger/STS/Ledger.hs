@@ -162,7 +162,7 @@ instance
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
   type PredicateFailure (LEDGER era) = LedgerPredicateFailure era
-  data Event _ 
+  data Event _
     = UtxowEvent (Event (UTXOW era))
     | DelegsEvent (Event (DELEGS era))
 

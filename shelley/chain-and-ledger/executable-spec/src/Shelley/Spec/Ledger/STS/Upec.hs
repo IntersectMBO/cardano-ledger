@@ -91,7 +91,7 @@ instance
   type Environment (UPEC era) = EpochState era
   type BaseM (UPEC era) = ShelleyBase
   type PredicateFailure (UPEC era) = UpecPredicateFailure era
-  data Event (UPEC era) 
+  data Event (UPEC era)
     = NewPpEvent (Event (NEWPP era))
   initialRules = []
   transitionRules =

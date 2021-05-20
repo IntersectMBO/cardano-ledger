@@ -51,9 +51,10 @@ import Control.State.Transition
     judgmentContext,
     liftSTS,
     trans,
+    wrapEvent,
     wrapFailed,
     (?!),
-    (?!:), wrapEvent
+    (?!:),
   )
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)

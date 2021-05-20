@@ -137,7 +137,7 @@ instance
   type BaseM (BBODY era) = ShelleyBase
 
   type PredicateFailure (BBODY era) = BbodyPredicateFailure era
-  data Event _ 
+  data Event _
     = LedgersEvent (Event (Core.EraRule "LEDGERS" era)) -- Subtransition Failures
 
   initialRules = []
