@@ -69,6 +69,7 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
+import qualified Codec.Serialise as Cborg (Serialise (..))
 import qualified Data.ByteString as BS (ByteString, length)
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (toShort)
@@ -97,17 +98,7 @@ import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
 -- instances to also work in the ledger.
 
 instance FromCBOR (Annotator Plutus.Data) where
-  fromCBOR = decode (Summands "PlutusData" decPlutus)
-    where
-      decPlutus :: Word -> Decode 'Open (Annotator Plutus.Data)
-      decPlutus 0 = Ann (SumD Plutus.Constr) <*! (Ann From) <*! listDecodeA From
-      decPlutus 1 =
-        Ann (SumD Plutus.Map)
-          <*! (D $ decodeMapContentsTraverse fromCBOR fromCBOR)
-      decPlutus 2 = Ann (SumD Plutus.List) <*! listDecodeA From
-      decPlutus 3 = Ann (SumD Plutus.I <! From)
-      decPlutus 4 = Ann (SumD checkPlutusByteString <? From)
-      decPlutus n = Invalid n
+  fromCBOR = pure <$> Cborg.decode
 
 checkPlutusByteString :: BS.ByteString -> Either String Plutus.Data
 checkPlutusByteString s =
@@ -116,15 +107,7 @@ checkPlutusByteString s =
     else Left ("Plutus Bytestring in Plutus Data has length greater than 64: " ++ show (BS.length s) ++ "\n  " ++ show s)
 
 instance ToCBOR Plutus.Data where
-  toCBOR x = encode (encPlutus x)
-    where
-      encPlutus (Plutus.Constr tag args) = Sum Plutus.Constr 0 !> To tag !> listEncode args
-      encPlutus (Plutus.Map pairs) =
-        Sum Plutus.Map 1
-          !> E encodeFoldableMapPairs pairs
-      encPlutus (Plutus.List xs) = Sum Plutus.List 2 !> listEncode xs
-      encPlutus (Plutus.I i) = Sum Plutus.I 3 !> To i
-      encPlutus (Plutus.B bytes) = Sum Plutus.B 4 !> To bytes
+  toCBOR = Cborg.encode
 
 deriving instance NoThunks Plutus.Data
 
