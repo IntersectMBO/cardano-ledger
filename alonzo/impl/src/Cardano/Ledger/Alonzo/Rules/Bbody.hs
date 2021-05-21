@@ -24,9 +24,11 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
 import Cardano.Ledger.Alonzo.TxSeq (txSeqTxns)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
+import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), TxInBlock)
 import qualified Cardano.Ledger.Era as Era
+import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -46,7 +48,6 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (bhash, bheaderSlotNo),
     BHeader (..),
@@ -56,7 +57,6 @@ import Shelley.Spec.Ledger.BlockChain
     incrBlocks,
     issuerIDfromBHBody,
   )
-import Shelley.Spec.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState (LedgerState)
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Bbody

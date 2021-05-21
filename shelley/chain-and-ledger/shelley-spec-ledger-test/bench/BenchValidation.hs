@@ -47,7 +47,7 @@ import Shelley.Spec.Ledger.API.Protocol
     tickChainDepState,
     updateChainDepState,
   )
-import Shelley.Spec.Ledger.BaseTypes (Globals (..))
+import Cardano.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.Bench.Gen (genBlock, genChainState)
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (..),

@@ -20,6 +20,7 @@ module Shelley.Spec.Ledger.STS.NewEpoch
   )
 where
 
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -33,7 +34,6 @@ import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState

@@ -21,6 +21,7 @@ import Cardano.Chain.Common
   )
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (PParamsDelta)
@@ -28,6 +29,16 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
 import qualified Cardano.Ledger.Era as Era (TxSeq)
+import Cardano.Ledger.Keys
+  ( GKeys (..),
+    GenDelegPair (..),
+    GenDelegs (..),
+    KeyHash (..),
+    KeyPair (..),
+    KeyRole (Staking),
+    VKey (..),
+    VerKeyKES,
+  )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
@@ -57,7 +68,6 @@ import Shelley.Spec.Ledger.Address
     RewardAcnt (..),
   )
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Shelley.Spec.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
@@ -79,16 +89,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShot (..),
     SnapShots (..),
     Stake (..),
-  )
-import Shelley.Spec.Ledger.Keys
-  ( GKeys (..),
-    GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash (..),
-    KeyPair (..),
-    KeyRole (Staking),
-    VKey (..),
-    VerKeyKES,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),

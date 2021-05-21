@@ -28,9 +28,12 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
+import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Serialization (decodeRecordSum)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -48,9 +51,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
-import Shelley.Spec.Ledger.Keys (DSignable, Hash)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState (..),
@@ -64,7 +65,6 @@ import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
   )
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW, UtxowPredicateFailure)
-import Shelley.Spec.Ledger.Serialization (decodeRecordSum)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
 

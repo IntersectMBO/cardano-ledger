@@ -13,9 +13,9 @@ import Cardano.Ledger.Coin (Coin (..))
 import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
-import Shelley.Spec.Ledger.Keys (asWitness, hashKey, vKey)
+import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (WitHashes (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
 import Shelley.Spec.Ledger.Tx (hashScript)

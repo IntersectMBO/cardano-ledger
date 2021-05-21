@@ -44,10 +44,12 @@ import Cardano.Ledger.Alonzo.TxInfo (validPlutusdata, validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
+import qualified Cardano.Ledger.BaseTypes as Shelley
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as EraModule
+import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
 import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -69,11 +71,9 @@ import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Shelley.Spec.Ledger.API as API
-import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Genesis (genesisUTxO, sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams)
-import Shelley.Spec.Ledger.Keys (GenDelegs (GenDelegs))
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley

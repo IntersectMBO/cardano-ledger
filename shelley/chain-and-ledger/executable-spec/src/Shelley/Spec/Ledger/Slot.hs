@@ -20,6 +20,7 @@ module Shelley.Spec.Ledger.Slot
   )
 where
 
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import qualified Cardano.Slotting.EpochInfo as EI
@@ -31,7 +32,6 @@ import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Quiet
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 
 newtype Duration = Duration {unDuration :: Word64}
   deriving (Eq, Generic, Ord, NoThunks, Num, Integral, Real, Enum)

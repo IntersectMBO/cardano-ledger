@@ -19,6 +19,7 @@ module Shelley.Spec.Ledger.STS.Epoch
   )
 where
 
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
@@ -37,7 +38,6 @@ import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.EpochBoundary (SnapShots, obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,

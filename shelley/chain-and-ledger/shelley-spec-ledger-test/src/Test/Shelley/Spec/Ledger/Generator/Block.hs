@@ -64,9 +64,9 @@ import Test.Shelley.Spec.Ledger.Utils
   )
 import Cardano.Ledger.Era(SupportsSegWit(TxSeq,TxInBlock))
 import Test.Shelley.Spec.Ledger.Generator.EraGen(EraGen(..), MinLEDGER_STS)
-import Shelley.Spec.Ledger.BaseTypes(UnitInterval)
+import Cardano.Ledger.BaseTypes(UnitInterval)
 import GHC.Records(HasField(getField))
-import Shelley.Spec.Ledger.Serialization(ToCBORGroup)
+import Cardano.Ledger.Serialization(ToCBORGroup)
 import qualified Cardano.Ledger.Era as Era(TxInBlock)
 
 

@@ -35,11 +35,30 @@ module Shelley.Spec.Ledger.API.Protocol
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.BaseTypes
+  ( Globals,
+    Nonce (NeutralNonce),
+    Seed,
+    ShelleyBase,
+    UnitInterval,
+  )
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys
+  ( DSignable,
+    GenDelegPair (..),
+    GenDelegs,
+    Hash,
+    KESignable,
+    KeyHash,
+    KeyRole (Genesis),
+    VRFSignable,
+    coerceKeyRole,
+  )
+import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.Arrow (left, right)
 import Control.Monad.Except
@@ -62,13 +81,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Globals,
-    Nonce (NeutralNonce),
-    Seed,
-    ShelleyBase,
-    UnitInterval,
-  )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody,
     BHeader,
@@ -77,17 +89,6 @@ import Shelley.Spec.Ledger.BlockChain
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
-import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs,
-    Hash,
-    KESignable,
-    KeyHash,
-    KeyRole (Genesis),
-    VRFSignable,
-    coerceKeyRole,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
@@ -102,7 +103,6 @@ import Shelley.Spec.Ledger.STS.EraMapping ()
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TickfPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- =======================================================

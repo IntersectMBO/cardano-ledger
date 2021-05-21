@@ -46,13 +46,13 @@ import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API (PraosCrypto)
 import Shelley.Spec.Ledger.Address (Addr)
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( Hash,
     KeyHash,
     KeyPair (..),

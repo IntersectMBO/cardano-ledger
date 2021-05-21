@@ -38,7 +38,7 @@ import Cardano.Prelude
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
-import Shelley.Spec.Ledger.Serialization
+import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
     groupRecord,

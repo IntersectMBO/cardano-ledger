@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.STS.Newpp
   )
 where
 
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -35,7 +36,6 @@ import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase, StrictMaybe)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,

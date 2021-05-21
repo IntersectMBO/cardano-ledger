@@ -35,9 +35,15 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
+import Cardano.Ledger.BaseTypes
+  ( ShelleyBase,
+    StrictMaybe (..),
+    strictMaybeToMaybe,
+  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentData)
+import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
@@ -53,11 +59,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
 import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
-    StrictMaybe (..),
-    strictMaybeToMaybe,
-  )
 import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( delegCWitness,
@@ -65,7 +66,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     poolCWitness,
     requiresVKeyWitness,
   )
-import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
     WitHashes (..),

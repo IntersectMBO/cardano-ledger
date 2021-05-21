@@ -32,7 +32,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
     Nonce,
@@ -51,7 +51,7 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Keys (asWitness, coerceKeyRole)
+import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState (..),
     PulsingRewUpdate,

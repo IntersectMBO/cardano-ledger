@@ -12,7 +12,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Text as T (pack)
 import qualified Data.Text.Encoding as T
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.Metadata

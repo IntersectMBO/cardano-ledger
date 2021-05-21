@@ -41,6 +41,7 @@ import Cardano.Ledger.Alonzo.Scripts
     isPlutusScript,
   )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
@@ -68,6 +69,7 @@ import Cardano.Ledger.SafeHash
     SafeToHash (..),
     hashAnnotated,
   )
+import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import qualified Data.ByteString as BS (ByteString, length)
 import Data.ByteString.Lazy (toStrict)
@@ -87,9 +89,7 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import qualified PlutusTx as Plutus
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.Metadata (Metadatum)
-import Shelley.Spec.Ledger.Serialization (mapFromCBOR)
 
 -- =====================================================================
 -- Plutus.Data is the type that Plutus expects as data.

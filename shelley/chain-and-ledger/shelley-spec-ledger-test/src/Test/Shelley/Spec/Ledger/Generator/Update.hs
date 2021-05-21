@@ -38,13 +38,13 @@ import Shelley.Spec.Ledger.API
   ( ProposedPPUpdates,
     Update,
   )
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
     mkNonceFromNumber,
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
     KeyHash,

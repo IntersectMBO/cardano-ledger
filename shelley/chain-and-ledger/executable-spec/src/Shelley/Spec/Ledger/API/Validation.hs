@@ -20,6 +20,7 @@ module Shelley.Spec.Ledger.API.Validation
   )
 where
 
+import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -31,7 +32,6 @@ import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Shelley.Spec.Ledger.BlockChain (BHeader, Block)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState

@@ -30,13 +30,13 @@ import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.Address
-import Shelley.Spec.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.BaseTypes (Network (..))
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     Ptr (..),
     StakeReference (..),
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyRole (..),
     pattern KeyHash,
   )

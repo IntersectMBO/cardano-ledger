@@ -47,7 +47,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Wallet (getRewardInfo)
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     Globals (..),
     Network (..),
@@ -71,7 +71,7 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyHash,
     KeyPair (..),
     KeyRole (..),

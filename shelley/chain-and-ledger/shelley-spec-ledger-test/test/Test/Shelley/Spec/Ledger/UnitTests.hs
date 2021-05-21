@@ -43,14 +43,14 @@ import Shelley.Spec.Ledger.Address
     getRwdCred,
     mkVKeyRwdAcnt,
   )
-import Shelley.Spec.Ledger.BaseTypes hiding ((==>))
+import Cardano.Ledger.BaseTypes hiding ((==>))
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
     asWitness,

@@ -50,6 +50,15 @@ import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.Crypto (ADDRHASH, DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys
+  ( Hash,
+    KeyHash (..),
+    KeyRole (..),
+    VKey (..),
+    verifySignedDSIGN,
+  )
+import qualified Cardano.Ledger.Keys as Keys
+import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Prelude (panic)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -60,15 +69,6 @@ import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Quiet
-import Shelley.Spec.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyRole (..),
-    VKey (..),
-    verifySignedDSIGN,
-  )
-import qualified Shelley.Spec.Ledger.Keys as Keys
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)

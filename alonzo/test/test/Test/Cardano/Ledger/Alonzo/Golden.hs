@@ -13,12 +13,12 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (Value (..))
 import Data.Char (chr)
 import qualified Data.Map.Strict as Map
 import Plutus.V1.Ledger.Api (Data (..))
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Mary.Golden
   ( largestName,

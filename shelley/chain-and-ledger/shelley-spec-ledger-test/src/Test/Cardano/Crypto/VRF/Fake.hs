@@ -33,7 +33,7 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (Seed)
+import Cardano.Ledger.BaseTypes (Seed)
 
 data FakeVRF
 

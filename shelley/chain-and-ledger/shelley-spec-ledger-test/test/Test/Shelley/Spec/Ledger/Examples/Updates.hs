@@ -24,7 +24,7 @@ import qualified Cardano.Ledger.Val as Val
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Nonce,
     StrictMaybe (..),
     mkNonceFromNumber,
@@ -32,7 +32,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Keys (asWitness, hashKey)
+import Cardano.Ledger.Keys (asWitness, hashKey)
 import Shelley.Spec.Ledger.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams
