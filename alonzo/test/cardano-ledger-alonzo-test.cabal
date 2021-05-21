@@ -68,15 +68,13 @@ test-suite cardano-ledger-alonzo-test
     Test.Cardano.Ledger.Alonzo.Trials
     Test.Cardano.Ledger.Alonzo.Golden
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
-    Test.Cardano.Ledger.Alonzo.Examples.Bbody
-    Test.Cardano.Ledger.Alonzo.Examples.Utxow
+    Test.Cardano.Ledger.Alonzo.Examples
     Test.Cardano.Ledger.Alonzo.Translation
     Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
   build-depends:
     base16-bytestring,
     bytestring,
     cardano-binary,
-    cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-shelley-ma,
@@ -92,7 +90,6 @@ test-suite cardano-ledger-alonzo-test
     plutus-tx-plugin,
     QuickCheck,
     small-steps,
-    small-steps-test,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
     strict-containers,

@@ -8,8 +8,7 @@
 
 module Main where
 
-import Test.Cardano.Ledger.Alonzo.Examples.Bbody (bbodyExamples)
-import Test.Cardano.Ledger.Alonzo.Examples.Utxow (plutusScriptExamples, utxowExamples)
+import Test.Cardano.Ledger.Alonzo.Examples (plutusScriptExamples)
 import Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
@@ -35,9 +34,7 @@ mainTests =
       Translation.tests,
       CDDL.tests 5,
       Golden.goldenUTxOEntryMinAda,
-      plutusScriptExamples,
-      bbodyExamples,
-      utxowExamples
+      plutusScriptExamples
     ]
 
 fastTests :: TestTree
@@ -48,9 +45,7 @@ fastTests =
       Translation.tests,
       CDDL.tests 1,
       Golden.goldenUTxOEntryMinAda,
-      plutusScriptExamples,
-      bbodyExamples,
-      utxowExamples
+      plutusScriptExamples
     ]
 
 nightlyTests :: TestTree
