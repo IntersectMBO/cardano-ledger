@@ -22,6 +22,7 @@ import Control.State.Transition
     STS,
     Signal,
     State,
+    Event,
     TRC (TRC),
     initialRules,
     judgmentContext,
@@ -136,6 +137,8 @@ instance
   type
     PredicateFailure (CR hashAlgo hashToDataMap commitData) =
       CRPredicateFailure hashAlgo hashToDataMap commitData
+
+  data Event _ = Cert
 
   initialRules =
     [ pure
