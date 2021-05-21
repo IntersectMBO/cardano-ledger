@@ -85,7 +85,11 @@ test-suite cardano-ledger-alonzo-test
     cardano-slotting,
     containers,
     data-default-class,
+    flat,
+    plutus-core,
+    plutus-tx,
     plutus-ledger-api,
+    plutus-tx-plugin,
     QuickCheck,
     small-steps,
     small-steps-test,
@@ -95,4 +99,4 @@ test-suite cardano-ledger-alonzo-test
     tasty,
     tasty-hunit,
     tasty-quickcheck,
-    time
+    time,

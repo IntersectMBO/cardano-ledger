@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Alonzo.Examples.Utxow where
@@ -59,6 +60,7 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS
+import Data.ByteString.Short (ShortByteString, toShort)
 import Data.Default.Class (def)
 import Data.Functor.Identity (Identity)
 import qualified Data.Map.Strict as Map
@@ -67,19 +69,24 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
+import Flat (flat)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as P
-  ( Data (..),
-    EvaluationError (..),
+  ( EvaluationError (..),
+    ExBudget (..),
+    ExCPU (..),
+    ExMemory (..),
     VerboseMode (..),
     defaultCekCostModelParams,
-    evaluateScriptCounting,
     evaluateScriptRestricting,
   )
 import Plutus.V1.Ledger.Examples
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
   )
+import qualified Plutus.V1.Ledger.Scripts as P
+import qualified PlutusTx as P
+import qualified PlutusTx.Prelude as P
 import Shelley.Spec.Ledger.API (WitHashes (WitHashes))
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BaseTypes (Network (..), StrictMaybe (..))
@@ -1212,34 +1219,65 @@ missingCollateralSig =
 --  Tests
 -- =======
 
+data ShouldSucceed = ShouldSucceed | ShouldFail
+
+directPlutusTest :: ShouldSucceed -> ShortByteString -> [P.Data] -> Assertion
+directPlutusTest expectation script ds =
+  case (expectation, evalWithHugeBudget script ds) of
+    (ShouldSucceed, (_, Left e)) ->
+      assertBool ("This script should have succeeded, but: " <> show e) False
+    (ShouldSucceed, (_, Right _)) ->
+      assertBool "" True
+    (ShouldFail, (_, Left ((P.CekError _)))) ->
+      assertBool "" True -- TODO rule out cost model failure
+    (ShouldFail, (_, Left e)) ->
+      assertBool ("Not the script failure we expected: " <> show e) False
+    (ShouldFail, (_, Right _)) ->
+      assertBool "This script should have failed" False
+  where
+    costModel = fromMaybe (error "corrupt default cost model") P.defaultCekCostModelParams
+    -- Evaluate a script with sufficient budget to run it.
+    evalWithHugeBudget scr datums =
+      P.evaluateScriptRestricting
+        P.Verbose
+        costModel
+        (P.ExBudget (P.ExCPU 100000000) (P.ExMemory 10000000))
+        scr
+        datums
+
+guessTheNumber' :: P.Data -> P.Data -> ()
+guessTheNumber' d1 d2 = if d1 P.== d2 then () else (P.error ())
+
+guessTheNumber :: ShortByteString
+guessTheNumber =
+  toShort . flat . P.fromCompiledCode $
+    $$(P.compile [||guessTheNumber'||])
+
 plutusScriptExamples :: TestTree
 plutusScriptExamples =
   testGroup
     "run plutus script directly"
     [ testCase "always true" $
-        case evalWithDecentBudget (alwaysSucceedingNAryFunction 0) of
-          (_, Left e) -> assertBool ("This script should have succeeded, but: " <> show e) False
-          (_, Right _) -> assertBool "" True,
+        directPlutusTest
+          ShouldSucceed
+          (alwaysSucceedingNAryFunction 0)
+          [],
       testCase "always false" $
-        case evalWithDecentBudget (alwaysFailingNAryFunction 0) of
-          (_, Left (P.CekError _)) -> assertBool "" True -- TODO rule out cost model failure
-          (_, Left e) -> assertBool ("Not the script failure we expected: " <> show e) False
-          (_, Right _) -> assertBool "This script should have failed" False
+        directPlutusTest
+          ShouldFail
+          (alwaysFailingNAryFunction 0)
+          [],
+      testCase "guess the number, correct" $
+        directPlutusTest
+          ShouldSucceed
+          guessTheNumber
+          [P.I 3, P.I 3],
+      testCase "guess the number, incorrect" $
+        directPlutusTest
+          ShouldFail
+          guessTheNumber
+          [P.I 3, P.I 4]
     ]
-  where
-    costModel = fromMaybe (error "corrupt default cost model") P.defaultCekCostModelParams
-    -- Evaluate a script with sufficient budget to run it.
-    evalWithDecentBudget scr =
-      let (lg, eeb) = P.evaluateScriptCounting P.Verbose costModel scr []
-       in case eeb of
-            Left e -> (lg, Left e)
-            Right budget ->
-              P.evaluateScriptRestricting
-                P.Verbose
-                costModel
-                budget
-                scr
-                []
 
 testUTXOW ::
   UTxOState A ->
