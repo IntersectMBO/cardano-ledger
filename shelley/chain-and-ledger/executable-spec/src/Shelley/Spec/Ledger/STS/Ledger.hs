@@ -19,7 +19,7 @@ module Shelley.Spec.Ledger.STS.Ledger
   ( LEDGER,
     LedgerEnv (..),
     LedgerPredicateFailure (..),
-    Event(..),
+    Event (..),
     PredicateFailure,
   )
 where
