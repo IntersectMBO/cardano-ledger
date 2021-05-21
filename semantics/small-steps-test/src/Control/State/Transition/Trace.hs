@@ -132,6 +132,7 @@ mkTrace env initState sigs = Trace env initState sigs'
 --   type State DUMMY = Int
 --   type Signal DUMMY = String
 --   type PredicateFailure DUMMY = DummyPredicateFailure
+--   data Event _
 --   initialRules = []
 --   transitionRules = []
 -- :}
