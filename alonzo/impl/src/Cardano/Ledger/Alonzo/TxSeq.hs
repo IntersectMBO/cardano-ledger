@@ -34,7 +34,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx, ppTx, segwitTx)
+import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..), ppTx, segwitTx)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)

@@ -25,7 +25,6 @@ import Cardano.Ledger.Alonzo.Tx
     DataHash,
     IsValidating (..),
     ValidatedTx (..),
-    txbody,
     txouts,
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
@@ -159,7 +158,7 @@ scriptsValidateTransition = do
       tx
       ) <-
     judgmentContext
-  let txb = txbody tx
+  let txb = body tx
       refunded = keyRefunds pp txb
       depositChange =
         ( totalDeposits
@@ -210,7 +209,7 @@ scriptsNotValidateTransition ::
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
   TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _), tx) <- judgmentContext
-  let txb = txbody tx
+  let txb = body tx
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of

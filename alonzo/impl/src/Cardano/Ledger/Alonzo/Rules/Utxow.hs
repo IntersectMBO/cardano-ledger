@@ -28,10 +28,9 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailur
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
-    ValidatedTx,
+    ValidatedTx (..),
     hashWitnessPPData,
     isTwoPhaseScriptAddress,
-    wits',
   )
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
@@ -265,7 +264,7 @@ alonzoStyleWitness = do
             isTwoPhaseScriptAddress @era tx (getField @"address" output)
         ]
     SJust utxoHashes -> do
-      let txHashes = domain (txdats . wits' $ tx)
+      let txHashes = domain (txdats . wits $ tx)
           inputHashes = Set.fromList utxoHashes
       txHashes == inputHashes ?! DataHashSetsDontAgree txHashes inputHashes
 
@@ -290,7 +289,7 @@ alonzoStyleWitness = do
             (not . isNativeScript @era) script,
             Just l <- [language @era script]
         ]
-      computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits' $ tx)
+      computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits $ tx)
       bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
 

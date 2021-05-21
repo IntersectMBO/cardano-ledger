@@ -1,13 +1,17 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Translation where
@@ -110,7 +114,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGenesis where
           API.sgStaking = API.sgStaking genesis
         }
 
-newtype TxInBlock era = TxInBlock (Era.TxInBlock era)
+newtype TxInBlock era = TxInBlock {unTxInBlock :: (Era.TxInBlock era)}
 
 instance
   ( Crypto c,
