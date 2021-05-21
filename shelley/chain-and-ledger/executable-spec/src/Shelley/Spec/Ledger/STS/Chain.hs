@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.STS.Chain
   ( CHAIN,
     ChainState (..),
     ChainPredicateFailure (..),
+    Event (..),
     PredicateFailure,
     AdaPots (..),
     initialShelleyState,
@@ -271,7 +272,7 @@ instance
   type PredicateFailure (CHAIN era) = ChainPredicateFailure era
 
   data Event _
-    = BbodyEvent (Event (BBODY era))
+    = BbodyEvent (Event (Core.EraRule "BBODY" era))
     | TicknEvent (Event TICKN)
     | TickEvent (Event (TICK era))
     | PrtclEvent (Event (PRTCL (Crypto era)))
@@ -418,7 +419,8 @@ instance
   ( Era era,
     Era era,
     STS (BBODY era),
-    PredicateFailure (Core.EraRule "BBODY" era) ~ BbodyPredicateFailure era
+    PredicateFailure (Core.EraRule "BBODY" era) ~ BbodyPredicateFailure era,
+    Event (Core.EraRule "BBODY" era) ~ Event (BBODY era)
   ) =>
   Embed (BBODY era) (CHAIN era)
   where
