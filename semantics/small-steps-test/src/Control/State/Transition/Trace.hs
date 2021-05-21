@@ -355,6 +355,7 @@ preStatesAndSignals NewestFirst tr
 --   type State ADDER = Int
 --   type Signal ADDER = Int
 --   type PredicateFailure ADDER = AdderPredicateFailure
+--   data Event _
 --   initialRules = [ pure 0 ]
 --   transitionRules =
 --     [ do
