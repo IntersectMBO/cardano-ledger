@@ -53,7 +53,7 @@ import Shelley.Spec.Ledger.API
     Delegation (..),
     LEDGER,
   )
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..), epochInfo)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     bhbody,

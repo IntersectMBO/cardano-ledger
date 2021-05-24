@@ -33,6 +33,14 @@ import Cardano.Ledger.Alonzo.TxBody
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody, TxOut)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txrdmrs'), nullRedeemers)
+import Cardano.Ledger.BaseTypes
+  ( Network,
+    ShelleyBase,
+    StrictMaybe (..),
+    epochInfoWithErr,
+    networkId,
+    systemStart,
+  )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock, ValidateScript (..))
@@ -80,14 +88,6 @@ import Shelley.Spec.Ledger.Address
     bootstrapAddressAttrsSize,
     getNetwork,
     getRwdNetwork,
-  )
-import Shelley.Spec.Ledger.BaseTypes
-  ( Network,
-    ShelleyBase,
-    StrictMaybe (..),
-    epochInfoWithErr,
-    networkId,
-    systemStart,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley

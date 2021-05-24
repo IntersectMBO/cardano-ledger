@@ -26,9 +26,20 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes
+  ( ShelleyBase,
+    invalidKey,
+    networkId,
+  )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Serialization
+  ( decodeRecordSum,
+    mapFromCBOR,
+    mapToCBOR,
+  )
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈), (⨃))
@@ -52,12 +63,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
-    invalidKey,
-    networkId,
-  )
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState (..),
@@ -67,11 +72,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
   )
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..), DelplPredicateFailure)
-import Shelley.Spec.Ledger.Serialization
-  ( decodeRecordSum,
-    mapFromCBOR,
-    mapToCBOR,
-  )
 import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody

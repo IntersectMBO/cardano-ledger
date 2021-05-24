@@ -105,7 +105,7 @@ import Shelley.Spec.Ledger.API
     PParams,
   )
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
     Nonce,
@@ -118,7 +118,7 @@ import Shelley.Spec.Ledger.BaseTypes
   )
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, TxSeq, bhbody, bheader)
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyPair,
     KeyRole (..),
     VKey (..),

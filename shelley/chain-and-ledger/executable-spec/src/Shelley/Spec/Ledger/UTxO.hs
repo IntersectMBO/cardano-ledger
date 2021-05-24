@@ -51,10 +51,21 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as CH
+import Cardano.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Keys
+  ( DSignable,
+    Hash,
+    KeyHash (..),
+    KeyPair (..),
+    KeyRole (StakePool, Witness),
+    asWitness,
+    signedDSIGN,
+    verifySignedDSIGN,
+  )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Val (zero, (<+>), (<×>))
 import Control.DeepSeq (NFData)
@@ -82,22 +93,11 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
     isRegKey,
     requiresVKeyWitness,
-  )
-import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    Hash,
-    KeyHash (..),
-    KeyPair (..),
-    KeyRole (StakePool, Witness),
-    asWitness,
-    signedDSIGN,
-    verifySignedDSIGN,
   )
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.Scripts

@@ -21,10 +21,12 @@ module Shelley.Spec.Ledger.API.Wallet
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes (Globals (..), Seed, UnitInterval, epochInfo)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
@@ -43,7 +45,6 @@ import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
 import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.BaseTypes (Globals (..), Seed, UnitInterval, epochInfo)
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr)
 import Shelley.Spec.Ledger.Credential (Credential (..))
@@ -52,7 +53,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
     EpochState (..),

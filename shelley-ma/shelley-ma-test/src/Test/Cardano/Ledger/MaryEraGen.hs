@@ -36,7 +36,7 @@ import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq (..), (<|), (><))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
 import Shelley.Spec.Ledger.Tx (TxIn, TxOut (..), hashScript)
 import Shelley.Spec.Ledger.TxBody (DCert, Wdrl)

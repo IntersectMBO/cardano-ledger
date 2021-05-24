@@ -23,6 +23,7 @@ module Cardano.Ledger.Alonzo
 where
 
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), getPlutusData)
+import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams
   ( PParams,
     PParams' (..),
@@ -43,9 +44,12 @@ import Cardano.Ledger.Alonzo.TxInfo (validPlutusdata, validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
+import qualified Cardano.Ledger.BaseTypes as Shelley
+import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as EraModule
+import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
 import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -57,18 +61,20 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Tx (Tx (Tx))
+import Cardano.Ledger.Val (Val (inject), coin, (<->))
 import Control.Arrow (left)
 import Control.Monad (join)
 import Control.Monad.Except (liftEither, runExcept)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
+import Data.Default (def)
+import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict
 import qualified Shelley.Spec.Ledger.API as API
-import qualified Shelley.Spec.Ledger.BaseTypes as Shelley
+import Shelley.Spec.Ledger.Delegation.Certificates
+import Shelley.Spec.Ledger.EpochBoundary
+import Shelley.Spec.Ledger.Genesis (genesisUTxO, sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams)
 import Shelley.Spec.Ledger.LedgerState
-  ( DPState (..),
-    DState (..),
-    PState (..),
-  )
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
 import Shelley.Spec.Ledger.STS.Ledger
@@ -85,6 +91,7 @@ import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
 import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (UtxoFailure))
 import qualified Shelley.Spec.Ledger.Tx as Shelley
+import Shelley.Spec.Ledger.UTxO (balance)
 
 -- =====================================================
 
@@ -153,9 +160,40 @@ instance
   ) =>
   API.CanStartFromGenesis (AlonzoEra c)
   where
-  -- type AdditionalGenesisConfig era = ()
-  -- initialState :: ShelleyGenesis era -> AdditionalGenesisConfig era -> NewEpochState era
-  initialState _ _ = error "TODO: implement initialState"
+  type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis
+
+  initialState sg ag =
+    NewEpochState
+      initialEpochNo
+      (BlocksMade Map.empty)
+      (BlocksMade Map.empty)
+      ( EpochState
+          (AccountState (Coin 0) reserves)
+          emptySnapShots
+          ( LedgerState
+              ( UTxOState
+                  initialUtxo
+                  (Coin 0)
+                  (Coin 0)
+                  def
+              )
+              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+          )
+          (extendPPWithGenesis pp ag)
+          (extendPPWithGenesis pp ag)
+          def
+      )
+      SNothing
+      (PoolDistr Map.empty)
+    where
+      initialEpochNo = 0
+      initialUtxo = genesisUTxO sg
+      reserves =
+        coin $
+          inject (word64ToCoin (sgMaxLovelaceSupply sg))
+            <-> balance initialUtxo
+      genDelegs = sgGenDelegs sg
+      pp = sgProtocolParams sg
 
 instance (CC.Crypto c) => UsesTxOut (AlonzoEra c) where
   makeTxOut _proxy addr val = TxOut addr val Shelley.SNothing

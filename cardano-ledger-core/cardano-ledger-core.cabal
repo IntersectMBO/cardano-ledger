@@ -41,30 +41,42 @@ library
 
   exposed-modules:
     Cardano.Ledger.AuxiliaryData
+    Cardano.Ledger.BaseTypes
     Cardano.Ledger.Coin
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
+    Cardano.Ledger.Keys
     Cardano.Ledger.Hashes
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
+    Cardano.Ledger.Serialization
     Cardano.Ledger.Tx
     Cardano.Ledger.Val
 
   build-depends:
     aeson,
+    binary,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
     cardano-crypto-praos,
     cardano-prelude,
+    cardano-slotting,
     containers,
     deepseq,
     groups,
+    iproute,
     mtl,
+    network,
     nothunks,
     partial-order,
     quiet,
+    scientific,
+    shelley-spec-non-integral,
     small-steps,
-    strict-containers
+    strict-containers,
+    text,
+    time,
+    transformers

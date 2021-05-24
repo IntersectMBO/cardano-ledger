@@ -106,6 +106,16 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    ShelleyBase,
+    StrictMaybe (..),
+    UnitInterval,
+    activeSlotVal,
+    intervalValue,
+    strictMaybeToMaybe,
+    unitIntervalToRational,
+  )
 import Cardano.Ledger.Coin
   ( Coin (..),
     DeltaCoin (..),
@@ -118,7 +128,19 @@ import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys
+  ( DSignable,
+    GenDelegPair (..),
+    GenDelegs (..),
+    Hash,
+    KeyHash (..),
+    KeyPair,
+    KeyRole (..),
+    VKey,
+    asWitness,
+  )
 import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
+import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
@@ -159,16 +181,6 @@ import Shelley.Spec.Ledger.Address.Bootstrap
     bootstrapWitKeyHash,
     verifyBootstrapWit,
   )
-import Shelley.Spec.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    ShelleyBase,
-    StrictMaybe (..),
-    UnitInterval,
-    activeSlotVal,
-    intervalValue,
-    strictMaybeToMaybe,
-    unitIntervalToRational,
-  )
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), isBootstrapRedeemer)
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
@@ -186,17 +198,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
     aggregateUtxoCoinByCredential,
-  )
-import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KeyHash (..),
-    KeyPair,
-    KeyRole (..),
-    VKey,
-    asWitness,
   )
 import Shelley.Spec.Ledger.PParams
   ( PParams,
@@ -228,7 +229,6 @@ import Shelley.Spec.Ledger.Rewards
     percentile',
     sumRewards,
   )
-import Shelley.Spec.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Shelley.Spec.Ledger.Slot
   ( EpochNo (..),
     EpochSize (..),

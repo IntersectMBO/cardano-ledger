@@ -78,7 +78,7 @@ import Shelley.Spec.Ledger.API hiding (SignedDSIGN, TxBody (..))
 import Shelley.Spec.Ledger.Address.Bootstrap
   ( ChainCode (..),
   )
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     DnsName,
     UnitInterval,
@@ -125,7 +125,7 @@ import qualified Shelley.Spec.Ledger.STS.Ppup as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
-import Shelley.Spec.Ledger.Serialization (ToCBORGroup)
+import Cardano.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass)
 import Test.QuickCheck (Arbitrary, arbitrary, genericShrink, listOf, oneof, recursivelyShrink, resize, shrink, vectorOf)

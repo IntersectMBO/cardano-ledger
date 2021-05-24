@@ -55,6 +55,7 @@ import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData, ppData)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag, isPlutusScript, ppExUnits, ppTag)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript, hashScript)
+import Cardano.Ledger.Keys
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
@@ -70,6 +71,7 @@ import Cardano.Ledger.Pretty
     ppWord64,
   )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
+import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import qualified Data.ByteString.Short as SBS
 import Data.Coders
 import Data.Map.Strict (Map)
@@ -85,9 +87,7 @@ import GHC.Generics
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.Keys
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Shelley.Spec.Ledger.TxBody (WitVKey)
 
 -- ==========================================

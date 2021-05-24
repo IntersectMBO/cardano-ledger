@@ -61,7 +61,7 @@ import Data.Set (Set)
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
+import Cardano.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     Block (..),
@@ -78,7 +78,7 @@ import Shelley.Spec.Ledger.Credential
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( GenDelegPair,
     GenDelegs (..),
     KeyHash,

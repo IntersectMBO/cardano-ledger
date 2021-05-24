@@ -44,6 +44,8 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
@@ -60,8 +62,6 @@ import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyRole (..))
-import Shelley.Spec.Ledger.Serialization (decodeRecordNamed)
 import Shelley.Spec.Ledger.TxBody (PoolParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 

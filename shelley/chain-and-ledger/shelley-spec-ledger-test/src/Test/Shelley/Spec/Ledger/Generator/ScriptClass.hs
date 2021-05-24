@@ -52,7 +52,7 @@ import qualified Data.Map as Map
 import Data.Proxy
 import Data.Tuple (swap)
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), asWitness, hashKey, vKey)
+import Cardano.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (KeyPairs)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Test.QuickCheck (Gen)

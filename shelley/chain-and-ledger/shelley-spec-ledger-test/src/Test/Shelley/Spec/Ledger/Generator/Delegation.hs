@@ -63,9 +63,9 @@ import Shelley.Spec.Ledger.API
     VKey,
   )
 import Shelley.Spec.Ledger.Address (mkRwdAcnt)
-import Shelley.Spec.Ledger.BaseTypes (interval0)
+import Cardano.Ledger.BaseTypes (interval0)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
@@ -87,7 +87,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Utils
 import GHC.Records(HasField(..))
-import Shelley.Spec.Ledger.BaseTypes(UnitInterval)
+import Cardano.Ledger.BaseTypes(UnitInterval)
 import Shelley.Spec.Ledger.PParams(ProtVer)
 
 -- ======================================================

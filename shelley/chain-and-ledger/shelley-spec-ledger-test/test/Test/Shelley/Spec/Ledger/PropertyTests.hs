@@ -39,7 +39,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, PPUPState, UTxOState, UtxoEnv)
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
@@ -76,7 +76,7 @@ import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
 import Test.Tasty (TestTree, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
 
-import Shelley.Spec.Ledger.Keys(KeyRole(Witness))
+import Cardano.Ledger.Keys(KeyRole(Witness))
 import Shelley.Spec.Ledger.Scripts(ScriptHash)
 import Data.Map(Map)
 

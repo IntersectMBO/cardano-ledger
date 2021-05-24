@@ -48,13 +48,13 @@ import Shelley.Spec.Ledger.API
     TxOut (..),
     hashVerKeyVRF,
   )
-import Shelley.Spec.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     textToDns,
     textToUrl,
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( DSignable,
     Hash,
     KeyHash,

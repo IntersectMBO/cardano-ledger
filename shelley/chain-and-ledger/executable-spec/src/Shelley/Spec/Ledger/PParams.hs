@@ -38,9 +38,29 @@ import Cardano.Binary
     encodeMapLen,
     encodeWord,
   )
+import Cardano.Ledger.BaseTypes
+  ( Nonce (NeutralNonce),
+    StrictMaybe (..),
+    UnitInterval,
+    interval0,
+    invalidKey,
+    strictMaybeToMaybe,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import Cardano.Ledger.Era
+import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
+import Cardano.Ledger.Serialization
+  ( CBORGroup (..),
+    FromCBORGroup (..),
+    ToCBORGroup (..),
+    decodeMapContents,
+    decodeRecordNamed,
+    mapFromCBOR,
+    mapToCBOR,
+    ratioFromCBOR,
+    ratioToCBOR,
+  )
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -61,27 +81,7 @@ import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( Nonce (NeutralNonce),
-    StrictMaybe (..),
-    UnitInterval,
-    interval0,
-    invalidKey,
-    strictMaybeToMaybe,
-  )
-import Shelley.Spec.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Shelley.Spec.Ledger.Orphans ()
-import Shelley.Spec.Ledger.Serialization
-  ( CBORGroup (..),
-    FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeMapContents,
-    decodeRecordNamed,
-    mapFromCBOR,
-    mapToCBOR,
-    ratioFromCBOR,
-    ratioToCBOR,
-  )
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
 -- ====================================================================

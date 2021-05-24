@@ -26,7 +26,7 @@ import Shelley.Spec.Ledger.API
     MIRTarget (..),
     Ptr (..),
   )
-import Shelley.Spec.Ledger.Keys
+import Cardano.Ledger.Keys
   ( KeyRole (..),
     hashKey,
   )

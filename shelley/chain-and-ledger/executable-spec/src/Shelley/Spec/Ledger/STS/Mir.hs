@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.STS.Mir
   )
 where
 
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (addDeltaCoin)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
@@ -35,7 +36,6 @@ import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes (ShelleyBase)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState,

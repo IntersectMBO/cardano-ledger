@@ -23,6 +23,16 @@ module Shelley.Spec.Ledger.STS.Rupd
   )
 where
 
+import Cardano.Ledger.BaseTypes
+  ( ShelleyBase,
+    StrictMaybe (..),
+    UnitInterval,
+    activeSlotCoeff,
+    epochInfo,
+    maxLovelaceSupply,
+    randomnessStabilisationWindow,
+    securityParameter,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -43,16 +53,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
-    StrictMaybe (..),
-    UnitInterval,
-    activeSlotCoeff,
-    epochInfo,
-    maxLovelaceSupply,
-    randomnessStabilisationWindow,
-    securityParameter,
-  )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState,

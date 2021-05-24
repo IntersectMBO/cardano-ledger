@@ -19,7 +19,29 @@ module Shelley.Spec.Ledger.STS.Overlay
 where
 
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    Nonce,
+    Seed,
+    ShelleyBase,
+    UnitInterval,
+    activeSlotCoeff,
+    epochInfo,
+  )
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Keys
+  ( DSignable,
+    GenDelegPair (..),
+    GenDelegs (..),
+    Hash,
+    KESignable,
+    KeyHash,
+    KeyRole (..),
+    VerKeyVRF,
+    coerceKeyRole,
+    hashKey,
+    hashVerKeyVRF,
+  )
 import Control.Monad (unless)
 import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Reader (asks)
@@ -32,15 +54,6 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    Nonce,
-    Seed,
-    ShelleyBase,
-    UnitInterval,
-    activeSlotCoeff,
-    epochInfo,
-  )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     BHeader (..),
@@ -53,19 +66,6 @@ import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),
-  )
-import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KESignable,
-    KeyHash,
-    KeyRole (..),
-    VerKeyVRF,
-    coerceKeyRole,
-    hashKey,
-    hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.OverlaySchedule

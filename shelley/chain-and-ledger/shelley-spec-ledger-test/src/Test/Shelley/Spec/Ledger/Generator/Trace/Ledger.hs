@@ -39,7 +39,7 @@ import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField)
-import Shelley.Spec.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,

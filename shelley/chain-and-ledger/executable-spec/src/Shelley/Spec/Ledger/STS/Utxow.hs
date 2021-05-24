@@ -35,9 +35,32 @@ import Cardano.Ledger.AuxiliaryData
     ValidateAuxiliaryData (..),
     hashAuxiliaryData,
   )
+import Cardano.Ledger.BaseTypes
+  ( ShelleyBase,
+    StrictMaybe (..),
+    invalidKey,
+    quorum,
+    (==>),
+  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
+import Cardano.Ledger.Keys
+  ( DSignable,
+    GenDelegPair (..),
+    GenDelegs (..),
+    Hash,
+    KeyHash,
+    KeyRole (..),
+    VKey,
+    asWitness,
+  )
 import Cardano.Ledger.Rules.ValidationMode (failBecauseS, (?!#), (?!#:))
+import Cardano.Ledger.Serialization
+  ( decodeList,
+    decodeRecordSum,
+    decodeSet,
+    encodeFoldable,
+  )
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))
@@ -69,24 +92,7 @@ import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.BaseTypes
-  ( ShelleyBase,
-    StrictMaybe (..),
-    invalidKey,
-    quorum,
-    (==>),
-  )
 import Shelley.Spec.Ledger.Delegation.Certificates (isInstantaneousRewards)
-import Shelley.Spec.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs (..),
-    Hash,
-    KeyHash,
-    KeyRole (..),
-    VKey,
-    asWitness,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState (..),
     WitHashes (..),
@@ -99,12 +105,6 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (ProtVer, Update)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..), UtxoPredicateFailure)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.Serialization
-  ( decodeList,
-    decodeRecordSum,
-    decodeSet,
-    encodeFoldable,
-  )
 import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.Tx
   ( Tx,

@@ -16,6 +16,12 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
+import Cardano.Ledger.BaseTypes
+  ( Network,
+    ShelleyBase,
+    StrictMaybe (..),
+    networkId,
+  )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -59,12 +65,6 @@ import Shelley.Spec.Ledger.Address
   ( Addr (AddrBootstrap),
     bootstrapAddressAttrsSize,
     getNetwork,
-  )
-import Shelley.Spec.Ledger.BaseTypes
-  ( Network,
-    ShelleyBase,
-    StrictMaybe (..),
-    networkId,
   )
 import Shelley.Spec.Ledger.LedgerState (PPUPState)
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
