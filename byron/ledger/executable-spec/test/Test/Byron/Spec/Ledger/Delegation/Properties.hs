@@ -109,7 +109,7 @@ instance STS DBLOCK where
   type State DBLOCK = (DSEnv, DIState)
   type Signal DBLOCK = DBlock
   type PredicateFailure DBLOCK = DBlockPredicateFailure
-  data Event _ = 
+  data Event _ =
     DELEGEvent (Event DELEG)
 
   initialRules

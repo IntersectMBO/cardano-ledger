@@ -45,7 +45,7 @@ tests = checkParallel $$discover
 --   is almost certainly amiss.
 
 newtype Limit t = Limit
-  { getLimit :: Word32 
+  { getLimit :: Word32
   } deriving (Eq, Ord, Show, Num, Enum, Real, Integral)
 
 instance Functor Limit where

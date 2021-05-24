@@ -33,8 +33,8 @@ data BbodyPredicateFailure
   | InvalidUtxoHash
   | InvalidDelegationHash
   | InvalidUpdateProposalHash
-  | BUPIFailure (PredicateFailure BUPI)         
-  | DelegationFailure (PredicateFailure DELEG)  
+  | BUPIFailure (PredicateFailure BUPI)
+  | DelegationFailure (PredicateFailure DELEG)
   | UTXOWSFailure (PredicateFailure UTXOWS)
   deriving (Eq, Show, Data, Typeable)
 

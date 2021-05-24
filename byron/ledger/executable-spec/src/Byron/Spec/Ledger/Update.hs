@@ -466,8 +466,8 @@ instance STS UPV where
 
   type Signal UPV = UProp
   type PredicateFailure UPV = UpvPredicateFailure
-  
-  data Event _ 
+
+  data Event _
     = UPPVVEvent (Event UPPVV)
     | UPSVVEvent (Event UPSVV)
 

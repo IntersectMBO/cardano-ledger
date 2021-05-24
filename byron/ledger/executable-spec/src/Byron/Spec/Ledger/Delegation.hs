@@ -505,7 +505,7 @@ instance STS DELEG where
   type Environment DELEG = DIEnv
 
   type PredicateFailure DELEG = DelegPredicateFailure
-  data Event _ 
+  data Event _
     = SDelegSEvent (Event SDELEGS)
     | ADelegSEvent (Event ADELEGS)
 

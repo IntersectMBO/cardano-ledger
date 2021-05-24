@@ -235,7 +235,7 @@ instance STS sts => Embed sts sts where
   wrapFailed = id
   wrapEvent = id
 
-data EventPolicy 
+data EventPolicy
   = EventPolicyReturn
   | EventPolicyDiscard
 
@@ -467,7 +467,7 @@ instance MonadTrans (RuleEventLoggerT s) where
   lift = RuleEventLoggerT . lift . lift
 
 runRuleEventLoggerT :: forall s m a. RuleEventLoggerT s m a -> [PredicateFailure s] -> m ((a, [PredicateFailure s]), [Event s])
-runRuleEventLoggerT (RuleEventLoggerT m) s = runWriterT $ runStateT m s 
+runRuleEventLoggerT (RuleEventLoggerT m) s = runWriterT $ runStateT m s
 
 -- | Apply a rule even if its predicates fail.
 --
@@ -483,7 +483,7 @@ applyRuleInternal ::
   RuleContext rtype s ->
   Rule s rtype (State s) ->
   m (EventReturnType ep s (State s, [PredicateFailure s]))
-applyRuleInternal ep vp goSTS jc r = 
+applyRuleInternal ep vp goSTS jc r =
   case ep of
     EPReturn -> flip (runRuleEventLoggerT @s) [] $ foldF runClause r
     EPDiscard -> flip runStateT [] $ foldF runClause r
@@ -535,15 +535,15 @@ applySTSInternal ::
 applySTSInternal ep ap goRule ctx =
   successOrFirstFailure <$> applySTSInternal' rTypeRep ctx
   where
-    successOrFirstFailure :: 
-         [EventReturnType ep s (State s, [PredicateFailure s])] 
+    successOrFirstFailure ::
+         [EventReturnType ep s (State s, [PredicateFailure s])]
       -> EventReturnType ep s (State s, [[PredicateFailure s]])
     successOrFirstFailure xs =
       case find (\x -> null $ snd $ (discardEvents ep @s x :: (State s, [PredicateFailure s]))) xs of
         Nothing ->
           case xs of
             [] -> error "applySTSInternal was called with an empty set of rules"
-            s' : _ -> case ep of 
+            s' : _ -> case ep of
               EPDiscard -> (fst s', snd <$> xs)
               EPReturn -> ((fst $ fst s', (snd . fst) <$> xs), snd s')
         Just s' -> case ep of

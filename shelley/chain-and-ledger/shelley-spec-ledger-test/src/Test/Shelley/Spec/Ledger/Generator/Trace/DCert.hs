@@ -112,7 +112,7 @@ instance
   type State (CERTS era) = (DPState (Crypto era), Ix)
   type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
-  
+
   type BaseM (CERTS era) = ShelleyBase
 
   data Event _ = DELPLEvent (Event (DELPL era))
