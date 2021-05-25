@@ -231,6 +231,17 @@ timelockOut :: PostShelley era => Proof era -> Core.TxOut era
 timelockOut pf =
   newTxOut Override pf [Address $ timelockAddr pf, Amount (inject $ Coin 1)]
 
+-- | This output is unspendable since it is locked by a plutus script,
+--  but has no datum hash.
+unspendableOut :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+unspendableOut pf =
+  newTxOut
+    Override
+    pf
+    [ Address (scriptAddr (always 3 pf) pf),
+      Amount (inject $ Coin 5000)
+    ]
+
 initUTxO :: PostShelley era => Proof era -> UTxO era
 initUTxO pf =
   UTxO $
@@ -240,7 +251,9 @@ initUTxO pf =
       ]
         ++ map (\i -> (TxIn genesisId i, someOutput pf)) [3 .. 8]
         ++ map (\i -> (TxIn genesisId i, collateralOutput pf)) [11 .. 18]
-        ++ [(TxIn genesisId 100, timelockOut pf)]
+        ++ [ (TxIn genesisId 100, timelockOut pf),
+             (TxIn genesisId 101, unspendableOut pf)
+           ]
 
 initialUtxoSt ::
   ( Default (State (EraRule "PPUP" era)),
@@ -1187,6 +1200,37 @@ missingCollateralSig pf =
         ]
     ]
 
+plutusOutputWithNoDataTxBody :: Scriptic era => Proof era -> Core.TxBody era
+plutusOutputWithNoDataTxBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 101],
+      Collateral [TxIn genesisId 11],
+      Outputs [outEx1 pf],
+      Txfee (Coin 5),
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1)
+    ]
+
+plutusOutputWithNoDataTx ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+plutusOutputWithNoDataTx pf =
+  newTx
+    Override
+    pf
+    [ Body (plutusOutputWithNoDataTxBody pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (plutusOutputWithNoDataTxBody pf)) (someKeys pf)],
+          ScriptWits [always 3 pf],
+          RdmrWits validatingRedeemersEx1
+        ]
+    ]
+
 -- =======================
 -- Alonzo UTXOW Tests
 -- =======================
@@ -1426,6 +1470,11 @@ alonzoUTXOWexamples =
                         )
                     ]
                   ]
+              ),
+          testCase "two-phase UTxO with no datum hash" $
+            testUTXOW
+              (trustMe True $ plutusOutputWithNoDataTx pf)
+              ( Left [[UnspendableUTxONoDatumHash . Set.singleton $ TxIn genesisId 101]]
               )
         ]
     ]
@@ -1557,7 +1606,8 @@ example1UTxO =
         (TxIn genesisId 6, someOutput pf),
         (TxIn genesisId 17, collateralOutput pf),
         (TxIn genesisId 8, someOutput pf),
-        (TxIn genesisId 100, timelockOut pf)
+        (TxIn genesisId 100, timelockOut pf),
+        (TxIn genesisId 101, unspendableOut pf)
       ]
   where
     pf = Alonzo Mock

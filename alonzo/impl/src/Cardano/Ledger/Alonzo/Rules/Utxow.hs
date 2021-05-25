@@ -42,10 +42,8 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
-import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
-import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
@@ -109,6 +107,7 @@ data AlonzoPredFail era
       !(StrictMaybe (WitnessPPDataHash (Crypto era)))
       -- ^ Computed from the current Protocol Parameters
   | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
+  | UnspendableUTxONoDatumHash (Set (TxIn (Crypto era)))
   deriving (Generic)
 
 deriving instance
@@ -156,6 +155,7 @@ encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
 encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 2 !> To x !> To y
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 3 !> To x !> To y
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 4 !> To x
+encodePredFail (UnspendableUTxONoDatumHash x) = Sum UnspendableUTxONoDatumHash 5 !> To x
 
 instance
   ( Era era,
@@ -180,6 +180,7 @@ decodePredFail 1 = SumD UnRedeemableScripts <! From
 decodePredFail 2 = SumD DataHashSetsDontAgree <! From <! From
 decodePredFail 3 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 4 = SumD MissingRequiredSigners <! From
+decodePredFail 5 = SumD UnspendableUTxONoDatumHash <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -247,16 +248,26 @@ alonzoStyleWitness = do
   {-  { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} = dom(txdats txw)   -}
   let inputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
       smallUtxo = eval (inputs ◁ utxo) :: Map.Map (TxIn (Crypto era)) (Core.TxOut era)
-      utxoHashes :: [SafeHash (Crypto era) EraIndependentData]
-      utxoHashes =
-        [ h
+      twoPhaseOuts =
+        [ output
           | (_input, output) <- Map.toList smallUtxo,
-            SJust h <- [getField @"datahash" output],
             isTwoPhaseScriptAddress @era tx (getField @"address" output)
         ]
-      txHashes = domain (txdats . wits' $ tx)
-      inputHashes = Set.fromList utxoHashes
-  txHashes == inputHashes ?! DataHashSetsDontAgree txHashes inputHashes
+      utxoHashes' = mapM (getField @"datahash") twoPhaseOuts
+  case utxoHashes' of
+    SNothing ->
+      -- In the spec, the Nothing value can end up on the left hand side
+      -- of the equality check, but we must explicitly rule it out.
+      failBecause . UnspendableUTxONoDatumHash . Set.fromList $
+        [ input
+          | (input, output) <- Map.toList smallUtxo,
+            SNothing <- [getField @"datahash" output],
+            isTwoPhaseScriptAddress @era tx (getField @"address" output)
+        ]
+    SJust utxoHashes -> do
+      let txHashes = domain (txdats . wits' $ tx)
+          inputHashes = Set.fromList utxoHashes
+      txHashes == inputHashes ?! DataHashSetsDontAgree txHashes inputHashes
 
   {-  ∀ sph ∈ scriptsNeeded utxo tx, checkScriptData tx utxo  ph  -}
   let sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
