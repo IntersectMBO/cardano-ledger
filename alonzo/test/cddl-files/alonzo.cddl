@@ -224,19 +224,23 @@ transaction_witness_set =
 
 plutus_script = bytes ; New
 
-plutus_data =           ; New
-  [ plutus_data_constr
-  // plutus_data_map
-  // plutus_data_list
-  // plutus_data_int
-  // plutus_data_bytes
-  ]
+plutus_data = ; New
+    constr<plutus_data>
+  / { * plutus_data => plutus_data }
+  / [ * plutus_data ]
+  / integer
+  / bytes .size (0..64)
 
-plutus_data_constr = (0, integer, [ * plutus_data ]) ; New
-plutus_data_map    = (1, { * plutus_data => plutus_data }) ; New
-plutus_data_list   = (2, [ * plutus_data ]) ; New
-plutus_data_int    = (3, integer) ; New
-plutus_data_bytes  = (4, bytes .size (0..64)) ; New
+constr<a> =
+    #6.121([* a])
+  / #6.122([* a])
+  / #6.123([* a])
+  / #6.124([* a])
+  / #6.125([* a])
+  / #6.126([* a])
+  / #6.127([* a])
+  ; similarly for tag range: 6.1280 .. 6.1400 inclusive
+  / #6.102([int, * a])
 
 redeemer = [ tag: redeemer_tag, index: uint, data: plutus_data, ex_units: ex_units ] ; New
 redeemer_tag = ; New
