@@ -44,7 +44,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
@@ -115,6 +115,8 @@ class
     VRFSignable c Seed
   ) =>
   PraosCrypto c
+
+instance PraosCrypto CC.StandardCrypto
 
 class
   ( ChainData (ChainDepState (Crypto era)),
