@@ -20,7 +20,7 @@ module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
     Script (TimelockScript, PlutusScript),
     ExUnits (..),
-    CostModel (CostModel, ..),
+    CostModel (..),
     Prices (..),
     hashCostModel,
     scriptfee,
@@ -37,7 +37,7 @@ module Cardano.Ledger.Alonzo.Scripts
   )
 where
 
-import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR))
+import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
@@ -65,7 +65,6 @@ import Control.DeepSeq (NFData (..))
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
 import Data.Map (Map)
-import Data.MemoBytes
 import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word64, Word8)
@@ -143,31 +142,25 @@ pointWiseExUnits :: (Word64 -> Word64 -> Bool) -> ExUnits -> ExUnits -> Bool
 pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `oper` s2)
 
 -- =====================================
--- Cost Model needs to preserve its serialization bytes as
--- it is going to be hashed. Thus we make it a newtype around a MemoBytes
 
-newtype CostModel = CostModelConstr (MemoBytes (Map Text Integer))
+newtype CostModel = CostModel (Map Text Integer)
   deriving (Eq, Generic, Show, Ord)
-  deriving newtype (SafeToHash)
+
+-- NOTE: Since cost model serializations need to be independently reproduced,
+-- we use the 'canonical' serialization approach used in Byron.
+deriving instance ToCBOR CostModel
+
+instance SafeToHash CostModel where
+  originalBytes = serialize'
 
 -- CostModel does not determine 'crypto' so make a HashWithCrypto
 -- rather than a HashAnotated instance.
 
 instance HashWithCrypto CostModel CostModel
 
-pattern CostModel :: Map Text Integer -> CostModel
-pattern CostModel m <-
-  CostModelConstr (Memo m _)
-  where
-    CostModel m = CostModelConstr (memoBytes (To m))
-
-{-# COMPLETE CostModel #-}
-
 instance NoThunks CostModel
 
 instance NFData CostModel
-
-deriving instance ToCBOR CostModel
 
 checkCostModel :: Map Text Integer -> Either String CostModel
 checkCostModel cm =
@@ -281,7 +274,7 @@ ppExUnits (ExUnits mem step) =
 instance PrettyA ExUnits where prettyA = ppExUnits
 
 ppCostModel :: CostModel -> PDoc
-ppCostModel (CostModelConstr (Memo m _)) =
+ppCostModel (CostModel m) =
   ppSexp "CostModel" [ppMap text ppInteger m]
 
 instance PrettyA CostModel where prettyA = ppCostModel
