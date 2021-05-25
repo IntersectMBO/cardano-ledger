@@ -301,7 +301,6 @@ constructValidated ::
     Show (Core.PParams era),
     Show (Core.PParamsDelta era),
     Eq (Core.PParamsDelta era),
-    ToCBOR (Core.AuxiliaryData era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
