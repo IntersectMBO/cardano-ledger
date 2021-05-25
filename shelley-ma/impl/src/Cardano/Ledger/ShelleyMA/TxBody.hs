@@ -402,12 +402,6 @@ instance
 instance Value era ~ value => HasField "mint" (TxBody era) value where
   getField (TxBodyConstr (Memo m _)) = getField @"mint" m
 
-instance
-  Crypto era ~ crypto =>
-  HasField "txinputs_fee" (TxBody era) (Set (TxIn crypto))
-  where
-  getField (TxBodyConstr (Memo m _)) = getField @"inputs" m
-
 -- ============================================
 
 ppTxBody ::
