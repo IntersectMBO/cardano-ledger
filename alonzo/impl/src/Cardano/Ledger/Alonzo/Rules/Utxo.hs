@@ -22,8 +22,6 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx
   ( ValidatedTx (..),
     minfee,
-    txbody,
-    wits',
   )
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
 import Cardano.Ledger.Alonzo.TxBody
@@ -284,7 +282,7 @@ feesOK pp tx (UTxO m) = do
   -- Part 1
   (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
   -- Part 2
-  if nullRedeemers . txrdmrs' . wits' $ tx
+  if nullRedeemers . txrdmrs' . wits $ tx
     then pure ()
     else do
       -- Part 3
@@ -337,7 +335,7 @@ utxoTransition = do
 
   {-   txb := txbody tx   -}
   {-   (,i_f) := txvldttx   -}
-  let txb = txbody tx
+  let txb = body tx
       vi@(ValidityInterval _ i_f) = getField @"vldt" txb
       inputsAndCollateral =
         Set.union
@@ -355,7 +353,7 @@ utxoTransition = do
     SNothing -> pure ()
     SJust ifj -> case (epochInfoSlotToUTCTime ei sysSt ifj) of
       -- if tx has non-native scripts, end of validity interval must translate to time
-      Left _ -> (nullRedeemers . txrdmrs' . wits' $ tx) ?! OutsideForecast ifj
+      Left _ -> (nullRedeemers . txrdmrs' . wits $ tx) ?! OutsideForecast ifj
       Right _ -> pure ()
 
   {-   txins txb ≠ ∅   -}
