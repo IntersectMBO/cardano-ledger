@@ -209,6 +209,7 @@ data UtxoPredicateFailure era
     TooManyCollateralInputs
       !Natural -- Max allowed collateral inputs
       !Natural -- Number of collateral inputs
+  | NoCollateralInputs
   deriving (Generic)
 
 deriving stock instance
@@ -247,7 +248,8 @@ isKeyHashAddr _ = False
 --   3) The collateral consists only of VKey addresses
 --   4) The collateral is sufficient to cover the appropriate percentage of the
 --      fee marked in the transaction
---   5) The fee inputs do not contain any non-ADA part
+--   5) The collateral inputs do not contain any non-ADA part
+--   6) There is at least one collateral input
 --   As a TransitionRule it will return (), and raise an error (rather than
 --   return) if any of the required parts are False.
 feesOK ::
@@ -294,6 +296,8 @@ feesOK pp tx (UTxO m) = do
         ?! InsufficientCollateral (Val.coin bal) theFee
       -- Part 5
       Val.inject (Val.coin bal) == bal ?! CollateralContainsNonADA bal
+      -- Part 6
+      (not $ null utxoCollateral) ?! NoCollateralInputs
       pure ()
 
 -- ================================================================
@@ -579,6 +583,8 @@ encFail (OutsideForecast a) =
   Sum OutsideForecast 18 !> To a
 encFail (TooManyCollateralInputs a b) =
   Sum TooManyCollateralInputs 19 !> To a !> To b
+encFail NoCollateralInputs =
+  Sum NoCollateralInputs 20
 
 decFail ::
   ( Era era,
@@ -608,6 +614,7 @@ decFail 16 = SumD CollateralContainsNonADA <! From
 decFail 17 = SumD WrongNetworkInTxBody <! From <! From
 decFail 18 = SumD OutsideForecast <! From
 decFail 19 = SumD TooManyCollateralInputs <! From <! From
+decFail 20 = SumD NoCollateralInputs
 decFail n = Invalid n
 
 instance
