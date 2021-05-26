@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (CostModel, WitnessPPData)
+import Cardano.Ledger.Alonzo.Tx (CostModel)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Tx as LTX
@@ -108,8 +108,6 @@ tests =
         tripping @(UtxosPredicateFailure (AlonzoEra C_Crypto)),
       testProperty "Script" $
         trippingAnn @(Script (AlonzoEra C_Crypto)),
-      testProperty "WitnessPPData" $
-        trippingAnn @(WitnessPPData (AlonzoEra C_Crypto)),
       testProperty "alonzo/Tx" $
         trippingAnn @(LTX.Tx (AlonzoEra C_Crypto)),
       testProperty "alonzo/Block" $

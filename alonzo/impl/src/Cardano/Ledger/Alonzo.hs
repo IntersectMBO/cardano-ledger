@@ -22,7 +22,7 @@ module Cardano.Ledger.Alonzo
   )
 where
 
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), getPlutusData)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.PParams
   ( PParams,
@@ -40,7 +40,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo (validPlutusdata, validScript)
+import Cardano.Ledger.Alonzo.TxInfo (validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -221,10 +221,9 @@ instance (CC.Crypto c) => UsesPParams (AlonzoEra c) where
 
 instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
-  validateAuxiliaryData (AuxiliaryData metadata scrips plutusdata) =
+  validateAuxiliaryData (AuxiliaryData metadata scrips) =
     all validMetadatum metadata
       && all validScript scrips
-      && all (validPlutusdata . getPlutusData) plutusdata
 
 instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
   type TxSeq (AlonzoEra c) = Alonzo.TxSeq (AlonzoEra c)
