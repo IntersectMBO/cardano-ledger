@@ -21,9 +21,10 @@
     &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collateral}~{txb} \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
     &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
     &~~~~~~\wedge~ \var{balance} \geq \fun{quot}~(\txfee~{txb} * (\fun{collateralPercent}~pp))~100)) \\
+    &~~~~~~\fun{collateral}~{tx}~ \neq~\{\} \\
     &~~      \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
-    & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})
+    & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo}) \\
     \nextdef
     & \fun{txscriptfee} \in \Prices \to \ExUnits \to \Coin \\
     & \fun{txscriptfee}~(pr_{mem}, pr_{steps})~ (\var{mem, steps})
@@ -55,6 +56,7 @@ We have added or changed several functions that deal with fees and collateral as
     \item all the collateral inputs refer to UTxOs containing Ada only and no other kinds of token; and
     \item the collateral provided is sufficient to cover the percentage of the
     transaction fee amount specified by the protocol parameter $\fun{collateralPercent}$
+    \item the set of collateral inputs is non-empty
   \end{enumerate}
   Note that checking that a transaction is carrying redeemers is the most simple way to
   check that it is carrying non-native scripts. A separate check is done in the rule prior to
@@ -760,6 +762,9 @@ additional ones;
     the datum hash fields of such UTxOs are $\Nothing$, as $\Nothing$ is not a
     hash of a datum (and therefore is not a key of the $\DataHash$-indexed map).
 
+    This check is a subset equality check, rather than an equality check, because optional datum objects
+    can be added to the datum map for the purpose of posting them on chain for communication;
+
     \item For every item that needs to be validated by a non-native script, the transaction contains
       an entry in the indexed redeemer structure (ie. the execution units and redeemer for it are specified);
 
@@ -768,8 +773,9 @@ additional ones;
     have all indeed signed it;
 
     \item
-    The hash of the subset of protocol parameter values that have been included in the transaction body is the same as
-    the hash of the same subset of protocol parameters that are currently contained in the ledger;
+    The hash of the subset of protocol parameter values and witnessing data that have been included in the
+    transaction body is the same as
+    the hash of the witness data and the subset of protocol parameters that are currently contained in the ledger;
 
     \item A check that ensures that the list of scripts paired with their input data (context, datum and redeemer)
     has the same number of elements as the set of scripts needed for each script purpose. Note that the same
@@ -810,9 +816,9 @@ by the UTXO transition (the application of which is also part of the conditions)
       \dom (\txwitsVKey{txw}) \}\\~\\
       \hldiff{\forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptNative,
       \fun{runNativeScript}~\var{s}~\var{tx}}\\~\\
-      \hldiff{\{ s \mid (\_, s) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} = \dom (\fun{txscripts}~{txw})} \\
-      \hldiff{\{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isNonNativeScriptAddress}~{tx}~{a}\} =} \\
-      \hldiff{\dom (\fun{txdats}~{txw})} \\
+      \hldiff{\{ s \mid (\_, s) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} = \dom (\fun{txscripts}~{txw})} \\~\\
+      \hldiff{\{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isNonNativeScriptAddress}~{tx}~{a}\} } \\
+      \hldiff{\subseteq \dom (\fun{txdats}~{txw})} \\~\\
       \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkScriptData}~tx~utxo~sph}
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
@@ -839,7 +845,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \lor
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
-      \hldiff{\fun{wppHash}~{txb}~=~\fun{hashWitnessPPData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})}
+      \hldiff{\fun{wppHash}~{txb}~=~\fun{hashWitnessPPData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})~(\fun{txdats}~{txw})}
       \\~\\
       \hldiff{\|~\fun{scriptsNeeded}~\var{utxo}~\var{tx}~\|~=~\|~\fun{collectTwoPhaseScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo}~\|}
       \\~\\

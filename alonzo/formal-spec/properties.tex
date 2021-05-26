@@ -6,28 +6,219 @@ This appendix collects the main formal properties that the new ledger rules are 
 \begin{enumerate}[label=P{\arabic*}:\ ]
 \item
   \emph{Consistency with Shelley.}
-  All formal properties that were defined for Shelley in \ref{XX} remain valid.\todo{Confirm this, or list any exceptions.}
+  \begin{itemize}
+    \item properties 15.6 - 15.16 (except 15.8 and 15.13) hold specifically in the $\fun{txValTag}~tx~=~\True$ case, because
+    the calculations refer to the UTxO as if it was updated by a scripts-validating transaction
+    \item other properties hold as-is
+  \end{itemize}
+
 \item
   \emph{Consistency with Multi-Asset.}
-  All formal properties that were defined for multi-asset tokens in \ref{XX} also remain valid.\todo{Confirm this, or list any exceptions.}
-\item
-  \emph{Ada Consistency.}
-  Any token with the $\PolicyID$ of Ada is an Ada token, i.e. it
-  also has the $\AssetID$ of Ada.
-\item
-  \emph{General Accounting.}
-  The \emph{general accounting} property\todo{Reference or explain this} holds for any transaction,
-  whether it is fully processed or just paying collateral. In particular,
-  this implies that the total amount of Ada in the system is constant.
-\item
-  \emph{Fee Movement.}
+  \begin{itemize}
+    \item properties 8.1 and 8.2 hold specifically in the $\fun{txValTag}~tx~=~\True$ case, because
+    the calculations refer to the UTxO as if it was updated by a scripts-validating transaction
+    \item other properties hold as-is
+  \end{itemize}
+\end{enumerate}
+
+
+\begin{definition}
+  For a state $s$ that is used in any subtransaction of
+  $\mathsf{CHAIN}$, we define $\Utxo(s) \in \UTxO$ to be the $\UTxO$
+  contained in $s$, or an empty map if it does not exist. This is
+  similar to the definition of $\Val$ in the Shelley specification.
+
+  Similarly, we also define $\field_{v}~(s)$ for the field $v$ that is part of
+  the ledger state $s$, referenced by the typical variable name (eg. $\var{fees}$
+  for the fee pot on the ledger).
+\end{definition}
+
+We also define a helper function $\varphi$ as follows:
+\[\varphi(x, tx) :=
+  \begin{cases}
+    x & \fun{txValTag}~tx = \True \\
+    0 & \fun{txValTag}~tx = \False
+  \end{cases}\]
+This function is useful to distinguish between the two
+cases where a transaction can mint tokens or not, depending on whether
+its scripts validate.
+
+\begin{property}[General Accounting]
+  \label{prop:pov}
+  The \emph{general accounting} property in Alonzo encompasses two parts
+  \begin{itemize}
+    \item preservation of value property expressed via the $\fun{produced}$ and $\fun{consumed}$
+    calculations, applicable for transactions with $\fun{txValTag}~tx~=~\True$, which
+    is specified as in the ShelleMA POV.
+    \item the preservation of value for $\fun{txValTag}~tx~=~\False$, when
+    only the collateral fees are collected into the fee pot.
+  \end{itemize}
+
+Both of these are expressed in the following lemma.
+
+\begin{lemma}
+  For all environments $e$, transactions $tx$ and states $s, s'$, if
+  \begin{equation*}
+    e\vdash s\trans{utxos}{tx}s'
+  \end{equation*}
+  then
+  \begin{equation*}
+    \Val(s) + \varphi(\fun{mint}~(\fun{txbody}~tx), tx) = \Val(s')
+  \end{equation*}
+\end{lemma}
+
+\begin{proof}
+  In the case that $\fun{txValTag}~tx = \True$ holds, the proof is
+  identical to the proof of Lemma 9.1 of the multi-asset
+  specification. Otherwise, the transition must have been done via the
+  $\mathsf{Scripts-No}$ rule, which removes
+  $\fun{collateral}~(\fun{txbody}~tx)$ from the UTxO, and increases the fee pot by the amount of the sum of Ada in the
+  collateral UTxO entries. The value contained in $s$ is not changed.
+
+  Note that in the $\fun{feesOK}$ function, there is a check that verifies
+  that, in the case that there are non-native scripts, there are no non-Ada tokens in the UTxOs
+  which the collateral inputs reference, so non-Ada tokens do not get minted, burned, or transfered
+  in this case.
+\end{proof}
+\end{property}
+
+\begin{property}[No Changes Except Fees]
+  \label{prop:fees-only}
   If a transaction is accepted and marked as paying collateral only
-  (i.e. $\fun{isValidating}\, tx = \False$), then the only change to the ledger
+  (i.e. $\fun{txValTag}~tx = \False$), then the only change to the ledger
   when processing the transaction is that the collateral inputs
   are moved to the fee pot.
+
+  \begin{lemma}
+    For all environments $e$, transactions $tx$ and states $s, s'$, if $\fun{txvaltag}~tx = \False$ and
+    \begin{equation*}
+      e\vdash s\trans{ledger}{tx}s'
+    \end{equation*}
+    then
+    \begin{itemize}
+      \item $\Utxo(s') = \fun{collateral}~{tx} \subtractdom \Utxo(s)$
+      \item $\field_{fees}~(s') = \field~\var{fees}~(s) + \fun{coin}~(\Val~(\fun{collateral}~{tx} \subtractdom \Utxo(s)))$
+      \item $\field_{v}~(s') = \field_{v}~(s)$ for all $v~\neq~{fees}, ~v~\neq~{utxo}$
+    \end{itemize}
+  \end{lemma}
+
+  \begin{proof}
+  The top-level single-transaction processing transition is $\mathsf{LEDGER}$.
+   In the case that $\fun{txValTag}~tx = \False$, this transition calls the rule
+   that does not update $\DPState$ at all, only the $\UTxOState$. This state update is specified
+   in the $\mathsf{UTXOS}$ transition (and applied via the $\mathsf{UTXO}$ and $\mathsf{UTXOW}$ transitions).
+
+   The only parts of the state that are updated are the UTxO, where the collateral entries
+   are removed, and the fee pot, which is increased by the amount of the sum of Ada in the
+   collateral UTxO entries.
+  \end{proof}
+\end {property}
+
+\begin{property}[Validating when No NN Scripts]
+  \label{prop:is-valid}
+
+Whenever a valid transaction does not have any non-native scripts, its
+$\fun{txValTag} = \True$.
+
+\begin{lemma}
+  For all environments $e$, transactions $tx$ and states $s, s'$ such that
+  \begin{equation*}
+    e\vdash s\trans{ledger}{tx}s',
+  \end{equation*}
+  If $\range (\fun{txscripts}~tx) \cap \ScriptNonNative = \emptyset$
+  then $\fun{txValTag} = \True$.
+\end{lemma}
+\begin{proof}
+  With the same argument as previously, we only need to discuss the
+  equivalent claim for the $\mathsf{UTXOS}$ transition. Under these
+  assumptions, $\var{sLst} := \fun{collectTwoPhaseScriptInputs}$ is an empty
+  list. Thus $\fun{evalScripts}~sLst = \True$, and the transition rule
+  had to be $\mathsf{Scripts{-}Yes}$.
+\end{proof}
+\end{property}
+
+\begin{property}[Paying fees]
+  \label{prop:pay-fees}
+
+A transaction always pays into the fee pot.
+
+\begin{lemma}
+  For all environments $e$, transactions $tx$ and states $s, s'$ such that
+  \begin{equation*}
+    e\vdash s\trans{ledger}{tx}s',
+  \end{equation*}
+  The following holds : $\field_{fees}~(s)~<~\field_{fees}~(s')$.
+\end{lemma}
+\begin{proof}
+  The fee pot is updated by the $\mathsf{Scripts{-}Yes}$ and the $\mathsf{Scripts{-}No}$
+  rules, one of which is necessarily called by a valid transaction.
+\end{proof}
+\end{property}
+
+\begin{property}[Replay protection]
+  \label{prop:replay}
+
+A transaction always removes at least one UTxO entry from the ledger, which provides
+replay protection.
+
+\begin{lemma}
+  For all environments $e$, transactions $tx$ and states $s, s'$ such that
+  \begin{equation*}
+    e\vdash s\trans{ledger}{tx}s',
+  \end{equation*}
+  The following holds : $\Utxo~(s)~\nsubseteq~\Utxo~(s')$.
+\end{lemma}
+\begin{proof}
+  The UTxO is updated by the $\mathsf{Scripts{-}Yes}$ and the $\mathsf{Scripts{-}No}$
+  rules, on of which is necessarily called by a valid transaction. Both of these
+  rules remove UTxOs corresponding to a set of inputs.
+
+  In both cases, there is a check that the removed inputs set is non-empty.
+  The $\mathsf{Scripts{-}Yes}$ rule of the $\mathsf{UTXOS}$ transition
+  removes the UTxOs associated with the input set $\fun{txinputs}~{tx}$ from the ledger.
+  The $\fun{txinputs}~{tx}$ set must be non-empty because there is a check in the
+  $\mathsf{UTXO}$ rule (which calls $\mathsf{UTXOS}$) that ensure this is true.
+
+  For the $\mathsf{Scripts{-}No}$ rule of the $\mathsf{UTXOS}$ transition
+  removes the UTxOs associated with the input set $\fun{collateral}~{tx}$ from the ledger.
+  The $\fun{collateral}~{tx}$ set must be non-empty because
+  the $\fun{feesOK}$ function (called by the same rule that calls $\mathsf{UTXO},
+  \mathsf{UTXOS}$) ensures that in the case that the $tx$ contains non-native scripts,
+  $\fun{collateral}~{tx}$ must be non-empty.
+
+  Note that by property~\ref{prop:is-valid}, non-native scripts must always be present
+  if $\fun{txValTag}~tx = \False$ (that is, whenever $\mathsf{Scripts{-}No}$ rule is used).
+\end{proof}
+\end{property}
+
+\begin{property}[UTxO-changing transitions]
+  \label{prop:utxo-change}
+
+Only the $\mathsf{UTXOS}$ transition affects the ledger UTxO in Alonzo.
+
+\begin{lemma}
+  For all environments $e$, transitions $\mathsf{TRNS}$, transactions $tx$ and states $s, s'$ such that
+  \begin{equation*}
+    e\vdash s\trans{trns}{tx}s',
+  \end{equation*}
+  The following holds for some states $u, u'$ and environment $e'$ :
+  \begin{equation*}
+    \Utxo(s) \neq \Utxo (s')~ \Rightarrow~e'\vdash u\trans{utxos}{tx}u'~\wedge~\Utxo(s)=\Utxo (u)~\wedge~\Utxo(s')=\Utxo (u')
+  \end{equation*}
+\end{lemma}
+\begin{proof}
+  The $\mathsf{UTXOS}$ transition is the only one that updates the UTxO, but not via
+  the result of another transition, so any update from the UTxO of $s$ to that of $s'$
+  must be done by $\mathsf{UTXOS}$.
+\end{proof}
+\end{property}
+
+\begin{enumerate}
 \item
   \emph{Transaction Validation.}
-  If a Shelley transaction is accepted, it is fully processed.\todo{What does this mean? Is this: Transaction consistency - any transaction that is successfully validated can be executed successfully by the interpreter.}
+  If a Shelley transaction is accepted, it is fully processed.
+
+  What does this mean? Is this: Transaction consistency - any transaction that is successfully validated can be executed successfully by the interpreter.
 \item
   \emph{Extended UTxO Validation.}
   If a transaction extends the UTxO, all its scripts validate, and
@@ -39,21 +230,19 @@ This appendix collects the main formal properties that the new ledger rules are 
   accounting property of the Shelley ledger where the type $\Coin$ is
   replaced by $\Value$.
 \item
-  \todo{\emph{Script consistency.} Scripts are only processed by valid version of the interpreter.}
+  \emph{Script consistency.} Scripts are only processed by valid version of the interpreter.
 \item
-  \todo{\emph{Script backwards compatibility.} All scripts that could be processed by any previous version of the interpreter
-    remain valid indefinitely.}
+  \emph{Script backwards compatibility.} All scripts that could be processed by any previous version of the interpreter
+    remain valid indefinitely.
 \item
-  \todo{\emph{Cost consistency.} - no transaction exceeds the specified resource bounds.}
+  \emph{Cost consistency.} - no transaction exceeds the specified resource bounds.
 \item
   \emph{Cost Increase.} if a transaction is valid, it will remain valid if you increase the execution units
 \item
   \emph{Cost Lower Bound.} if a transaction contains at least one valid script, it must have at least one execution unit
 \item
-  \todo{\emph{Tx backwards Compatibility.} Any transaction that was accepted in a previous version of the ledger rules
-    has exactly the same cost and effect, except that the transaction output is extended.}
-\item \emph{UTxO-changing transitions.} Only the UTXOS transition affects the ledger UTxO in Alonzo.
-For Shelley/ShelleyMA, only the UTXO transition does.
+  \emph{Tx backwards Compatibility.} Any transaction that was accepted in a previous version of the ledger rules
+    has exactly the same cost and effect, except that the transaction output is extended.
 \item \emph{Run all scripts.} All scripts attached to a transaction are run
 \item \emph{Scripts are run on correct inputs.}
   A script is run for everything witnessed with a non-native script, and the script will
@@ -63,7 +252,6 @@ get all the correct inputs, which must be present.
   of script validation is not affected by these ledger state changes.
 \item \emph{Script inputs are fixed.} All data that a non-native script gets as input
 is fixed either by being signed in a transaction, or fixed by its hash living on the ledger
-\item \emph{Paying fees.} A transaction always pays into the fee pot
 \item
   ... \todo{Anything else?}
 \end{enumerate}

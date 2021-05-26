@@ -60,7 +60,8 @@ We add the following helper functions:
   \item $\fun{language}$ selects the language of a non-native script, and $\Nothing$ in case
   the script is native.
   \item $\fun{hashData}$ hashes a value of type $\Data$.
-  \item $\fun{hashWitnessPPData}$ hashes the protocol parameters and witnesses relevant to script execution.
+  \item $\fun{hashWitnessPPData}$ hashes the protocol parameters and data relevant to script execution.
+  In particular, the redeemer structure, and the datum objects.
 \end{itemize}
 
 \begin{figure*}[htb]
@@ -117,16 +118,18 @@ We add the following helper functions:
     \fun{language}& \in \Script \to \Language^?\\
     \fun{hashData}& \in \Data \to \DataHash
     \nextdef
-    \fun{hashWitnessPPData}&\in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits)\\
-    & ~~~~ \to \WitnessPPDataHash^? \\
-    \fun{hashWitnessPPData}&~{pp}~{langs}~{rdmrs}~=~ \\
-                          &\begin{cases}
-                            \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \\
-                            \fun{hash} (rdmrs, \{ \fun{getLanguageView}~pp~l \mid l \in langs \}) & \text{otherwise}
-                          \end{cases}
-    \nextdef
     \fun{getCoin}& \in \TxOut \to \Coin \\
     \fun{getCoin}&~\hldiff{{(\_, \var{v}, \_)}} ~=~\fun{valueToCoin}~{v}
+  \end{align*}
+  %
+  \begin{align*}
+  &\fun{hashWitnessPPData} \in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits) \\
+  &~~~~ \to (\DataHash \mapsto \Datum) \to \WitnessPPDataHash^? \\
+  &\fun{hashWitnessPPData}~{pp}~{langs}~{rdmrs}~{dats}~=~ \\
+                    &~~~~ \begin{cases}
+                          \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \land dats~=~\emptyset \\
+                          \fun{hash} (rdmrs, dats, \{ \fun{getLanguageView}~pp~l \mid l \in langs \}) & \text{otherwise}
+                        \end{cases}
   \end{align*}
   \caption{Definitions for Transactions}
   \label{fig:defs:utxo-shelley-1}
@@ -167,15 +170,6 @@ We add the following helper functions:
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
-      \var{ad} ~\in~ \AuxiliaryData ~=~
-      & \seqof{\Script} & \fun{scripts}& \text{Optional scripts}\\
-      & \times \hldiff{\powerset{\Datum}} & \hldiff{\fun{dats}}& \text{Optional datum objects}\\
-      & \times ~\Metadata^? & \fun{txMD}&\text{Metadata}
-    \end{array}
-  \end{equation*}
-  %
-  \begin{equation*}
-    \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \var{tx} ~\in~ \Tx ~=~
       & \TxBody & \fun{txbody} & \text{Body}\\
       & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
@@ -187,10 +181,8 @@ We add the following helper functions:
   \label{fig:defs:utxo-shelley-2}
 \end{figure*}
 
-\textbf{Auxiliary Data. }
-Figure \ref{fig:defs:utxo-shelley-2} gives the Alonzo era auxiliary data found in a transaction.
-In addition to a list of scripts and a metadata object, transaction auxiliary data now
-contains a set of datum objects.
+\textbf{Auxiliary Data. } The auxiliary data in an Alonzo transaction has the same structure as
+in a ShelleMA transaction, but can additionally contain non-native scripts.
 
 \subsection{Witnessing}
 Figure \ref{fig:defs:utxo-shelley-2} defines the witness type, $\TxWitness$.  This contains everything
@@ -199,7 +191,8 @@ in a transaction that is needed for witnessing, namely:
 \begin{itemize}
   \item VKey signatures;
   \item a map of scripts indexed by their hashes, including non-native scripts;
-  \item a map of terms of type $\Datum$ indexed by their hashes, containing all required datum objects; and
+  \item a map of terms of type $\Datum$ indexed by their hashes, containing all required datum objects
+  as well as any optional ones that are posted for communication; and
   \item a map of a pair of a $\Redeemer$ object and an $\ExUnits$ value indexed by $\RdmrPtr$,
   containing the redeemers and execution units budgets.
 \end{itemize}
@@ -284,12 +277,29 @@ This is so that the signatures can ensure that this data is not tampered with.
 As before, a transaction that does not include the correct signatures is completely invalid.
 Thus, all data that influences script validation outcomes must also be determined by the body.
 
-Scripts and datum objects need not be included in the body,
-since a hash of every script that is needed
-is included in the body of the transaction or the UTxO (depending on what the script is validating),
-and the hash of every datum that is needed is recorded in the UTxO.
+Scripts and datum objects whose hashes are specified on-chain do not require to be
+signed when included in a transaction. That is, script hashes locking UTxOs (as well as
+with the datum hashes these UTxOs contain), and also the posted
+certificates, minting policies, and reward addresses do not need to be signed.
+The optional datum objects, however, could be stripped from the transaction without making
+it invalid. The optional datums are stored in the same map the required ones, so,
+for this reason, we do include all datum objects in the witness and PP hash calculation.
 %
 The hash of the indexed redeemer structure and the protocol parameters that are used by
-script interpreters are included in the body of the transaction. In the future, other parts of the ledger
+script interpreters are included in the body of the transaction, as these are composed
+by the transaction author rather than
+fixed via a hash on the ledger. In the future, other parts of the ledger
 state may also need to be included in this hash, if they are passed as
 arguments to new script interpreter.
+
+\subsection{Data required for script validation.}
+\label{sec:script-data}
+
+The body of the transaction, alongside the witness data, are required for script validation.
+Script validation should not depend on the auxiliary data in any way. Script validation
+may require certain optional datums to be posted. For this reason, we include optional
+datums in the part of the transaction (the witnesses) which scripts do see.
+Any metadata that a user wants to expose to a transaction can be included in the
+redeemer, whose purpose is to contain all user-supplied data relevant to validation.
+
+For more about what scripts do and do not inspect, see Section~\ref{sec:txinfo}.
