@@ -15,6 +15,7 @@ module Cardano.Ledger.Rules.ValidationMode
     (?!#:),
     failBecauseS,
     applySTSNonStatic,
+    applySTSValidateSuchThat,
   )
 where
 

@@ -10,7 +10,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Alonzo.Rules.Utxos where
+module Cardano.Ledger.Alonzo.Rules.Utxos
+  ( UTXOS,
+    UtxosPredicateFailure (..),
+    constructValidated,
+    lbl2Phase,
+  )
+where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
@@ -41,7 +47,7 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
-import Cardano.Ledger.Rules.ValidationMode ((?!#))
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.Monad.Except (MonadError (throwError))
@@ -172,7 +178,7 @@ scriptsValidateTransition = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       evalScripts @era tx sLst
-        ?!# ValidationTagMismatch (getField @"isValidating" tx)
+        ?!## ValidationTagMismatch (getField @"isValidating" tx)
     Left info -> failBecause (CollectErrors info)
   pup' <-
     trans @(Core.EraRule "PPUP" era) $
@@ -215,10 +221,8 @@ scriptsNotValidateTransition = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       not (evalScripts @era tx sLst)
-        ?!# ValidationTagMismatch (getField @"isValidating" tx)
+        ?!## ValidationTagMismatch (getField @"isValidating" tx)
     Left info -> failBecause (CollectErrors info)
-  getField @"isValidating" tx == IsValidating False
-    ?!# ValidationTagMismatch (getField @"isValidating" tx)
   pure $
     us
       { _utxo = eval (getField @"collateral" txb ⋪ utxo),
@@ -335,3 +339,29 @@ constructValidated globals (UtxoEnv _ pp _ _) st tx =
     utxo = _utxo st
     sysS = systemStart globals
     ei = epochInfo globals
+
+--------------------------------------------------------------------------------
+-- 2-phase checks
+--------------------------------------------------------------------------------
+
+-- $2-phase
+--
+-- Above and beyond 'static' checks (see 'Cardano.Ledger.Rules.ValidateMode') we
+-- additionally label 2-phase checks. This is to support a workflow where we
+-- validate a 'ValidatedTx' directly after constructing it with
+-- 'constructValidated' - we would like to trust the flag we have ourselves just
+-- computed rather than re-calculating it. However, all other checks should be
+-- computed as normal.
+
+-- | Indicates that this check depends only upon the signal to the transition,
+-- not the state or environment.
+lbl2Phase :: Label
+lbl2Phase = "2phase"
+
+-- | Construct a 2-phase predicate check.
+--
+--   Note that 2-phase predicate checks are by definition static.
+(?!##) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
+(?!##) = labeledPred [lblStatic, lbl2Phase]
+
+infix 1 ?!##
