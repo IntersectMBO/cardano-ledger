@@ -72,7 +72,6 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import qualified Codec.Serialise as Cborg (Serialise (..))
-import qualified Data.ByteString as BS (ByteString, length)
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (toShort)
 import Data.Coders
@@ -99,12 +98,6 @@ import Shelley.Spec.Ledger.Metadata (Metadatum)
 
 instance FromCBOR (Annotator Plutus.Data) where
   fromCBOR = pure <$> Cborg.decode
-
-checkPlutusByteString :: BS.ByteString -> Either String Plutus.Data
-checkPlutusByteString s =
-  if BS.length s <= 64
-    then Right (Plutus.B s)
-    else Left ("Plutus Bytestring in Plutus Data has length greater than 64: " ++ show (BS.length s) ++ "\n  " ++ show s)
 
 instance ToCBOR Plutus.Data where
   toCBOR = Cborg.encode

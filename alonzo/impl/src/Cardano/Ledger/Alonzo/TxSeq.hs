@@ -178,11 +178,11 @@ hashTxSeq ::
   (Era era) =>
   TxSeq era ->
   Hash (Crypto era) EraIndependentBlockBody
-hashTxSeq (TxSeq' _ bodies wits md vs) =
+hashTxSeq (TxSeq' _ bodies ws md vs) =
   coerce $
     hashStrict
       ( hashPart bodies
-          <> hashPart wits
+          <> hashPart ws
           <> hashPart md
           <> hashPart vs
       )
@@ -208,10 +208,10 @@ instance
   where
   fromCBOR = do
     (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
-    (wits, witsAnn) <- withSlice $ decodeSeq fromCBOR
+    (ws, witsAnn) <- withSlice $ decodeSeq fromCBOR
     let b = length bodies
         inRange x = (0 <= x) && (x <= (b -1))
-        w = length wits
+        w = length ws
     (metadata, metadataAnn) <- withSlice $
       do
         m <- decodeMap fromCBOR fromCBOR
@@ -247,7 +247,7 @@ instance
     let txns =
           sequenceA $
             StrictSeq.forceToStrict $
-              Seq.zipWith4 segwitTx bodies wits vs metadata
+              Seq.zipWith4 segwitTx bodies ws vs metadata
     pure $
       TxSeq'
         <$> txns

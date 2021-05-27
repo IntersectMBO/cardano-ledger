@@ -72,9 +72,6 @@ import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (toCBOR),
     encodeListLen,
-    encodeNull,
-    serialize,
-    serialize',
     serializeEncoding,
   )
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
@@ -122,9 +119,7 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Short as SBS (length, toShort)
 import Data.Coders
 import qualified Data.Map as Map
 import Data.Maybe.Strict
@@ -508,10 +503,6 @@ deriving newtype instance FromCBOR IsValidating
 deriving newtype instance ToCBOR IsValidating
 
 segwitTx ::
-  ( Era era,
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.AuxiliaryData era)
-  ) =>
   Annotator (Core.TxBody era) ->
   Annotator (TxWitness era) ->
   IsValidating ->
