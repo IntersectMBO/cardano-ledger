@@ -66,7 +66,7 @@ import Control.Arrow (left)
 import Control.Monad (join)
 import Control.Monad.Except (liftEither, runExcept)
 import Control.Monad.Reader (runReader)
-import Control.State.Transition.Extended (TRC (TRC))
+import Control.State.Transition.Extended (TRC (TRC), applySTS)
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
@@ -107,9 +107,9 @@ instance
   type Crypto (AlonzoEra c) = c
 
 instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
-  applyTx globals (LedgerEnv slot _ix pp _accnt) (utxostate, dpstate) tx =
+  applyTx globals env@(LedgerEnv slot _ix pp _accnt) st@(utxostate, dpstate) tx =
     do
-      (utxostate2, vtx) <-
+      vtx <-
         liftEither
           . left
             ( API.ApplyTxError
@@ -122,7 +122,14 @@ instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
             )
           . runExcept
           $ Alonzo.constructValidated globals utxoenv utxostate tx
-      pure ((utxostate2, dpstate), vtx)
+      state' <-
+        liftEither
+          . left (API.ApplyTxError . join)
+          . flip runReader globals
+          . applySTS
+            @(Core.EraRule "LEDGER" (AlonzoEra c))
+          $ TRC (env, st, vtx)
+      pure (state', vtx)
     where
       delegs = (_genDelegs . _dstate) dpstate
       stake = (_pParams . _pstate) dpstate
