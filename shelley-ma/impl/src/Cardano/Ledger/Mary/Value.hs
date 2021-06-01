@@ -12,6 +12,8 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Cardano.Ledger.Mary.Value
   ( PolicyID (..),
     AssetName (..),
@@ -120,7 +122,8 @@ instance FromCBOR AssetName where
 
 -- | Policy ID
 newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
-  deriving (Show, Eq, ToCBOR, FromCBOR, Generic, Ord, NoThunks, NFData)
+  deriving Generic
+  deriving newtype (Show, Eq, Ord, ToCBOR, FromCBOR, NoThunks, NFData)
 
 -- | The Value representing MultiAssets
 data Value crypto = Value !Integer !(Map (PolicyID crypto) (Map AssetName Integer))
@@ -332,7 +335,8 @@ instance
 
 instance CC.Crypto crypto => Compactible (Value crypto) where
   newtype CompactForm (Value crypto) = CompactValue (CompactValue crypto)
-    deriving (Eq, Generic, Typeable, Show, NoThunks, ToCBOR, FromCBOR)
+    deriving Generic
+    deriving newtype (Eq, Typeable, Show, NoThunks, ToCBOR, FromCBOR)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
