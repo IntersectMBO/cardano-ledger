@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -42,6 +43,7 @@ import Cardano.Binary
 import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
+import qualified Cardano.Ledger.Compactible as Ledger
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppCoin, ppInteger, ppList, ppLong, ppScriptHash, ppSexp)
 import Cardano.Ledger.Serialization (decodeMap, encodeMap)
@@ -55,6 +57,7 @@ import Cardano.Prelude (HeapWords (..), cborError)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
+import Data.Aeson (ToJSON(..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
 import qualified Data.ByteString.Short as SBS
@@ -117,7 +120,7 @@ instance FromCBOR AssetName where
 
 -- | Policy ID
 newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
-  deriving (Show, Eq, ToCBOR, FromCBOR, Ord, NoThunks, NFData)
+  deriving (Show, Eq, ToCBOR, FromCBOR, Generic, Ord, NoThunks, NFData)
 
 -- | The Value representing MultiAssets
 data Value crypto = Value !Integer !(Map (PolicyID crypto) (Map AssetName Integer))
@@ -329,7 +332,7 @@ instance
 
 instance CC.Crypto crypto => Compactible (Value crypto) where
   newtype CompactForm (Value crypto) = CompactValue (CompactValue crypto)
-    deriving (Eq, Typeable, Show, NoThunks, ToCBOR, FromCBOR)
+    deriving (Eq, Generic, Typeable, Show, NoThunks, ToCBOR, FromCBOR)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -351,7 +354,7 @@ data CompactValue crypto
       {-# UNPACK #-} !Word64 -- ada
       {-# UNPACK #-} !Word32 -- number of ma's
       {-# UNPACK #-} !ShortByteString -- rep
-  deriving (Show, Typeable)
+  deriving (Generic, Show, Typeable)
 
 instance CC.Crypto crypto => Eq (CompactValue crypto) where
   a == b = from a == from b
@@ -798,3 +801,9 @@ instance PrettyA (Value crypto) where prettyA = ppValue
 instance PrettyA (PolicyID crypto) where prettyA x = ppSexp "PolicyID" [ppPolicyID x]
 
 instance PrettyA AssetName where prettyA x = ppSexp "AssetName" [ppAssetName x]
+
+deriving newtype instance ToJSON (Ledger.CompactForm (Value crypto))
+deriving instance ToJSON (CompactValue crypto)
+
+instance ToJSON ShortByteString where
+  toJSON = toJSON . decodeUtf8 . SBS.fromShort

@@ -86,7 +86,14 @@ import Cardano.Ledger.Serialization
     ratioFromCBOR,
     ratioToCBOR,
   )
+import Cardano.Prelude
+  ( panic
+  )
 import Control.DeepSeq (NFData)
+import Data.Aeson (FromJSON(..), ToJSON(..), FromJSONKey(..), ToJSONKey(..), (.:), (.=), (.!=))
+import qualified Data.Aeson as Aeson
+import qualified Data.Aeson.Types as Aeson
+import qualified Data.ByteString.Lazy as LBS
 import Data.ByteString.Short (fromShort)
 import Data.Coders
   ( Decode (..),
@@ -108,6 +115,10 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (MemoBytes (..), memoBytes)
+import Data.Scientific (Scientific)
+import Data.Text (Text)
+import qualified Data.Text as Text
+import qualified Data.Text.Encoding as Text
 import Data.Typeable
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
@@ -718,3 +729,74 @@ ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mp
 
 instance PrettyA (PParams' StrictMaybe era) where
   prettyA = ppPParamsUpdate
+
+-- instance ToJSON (PParams era) where
+--   toJSON pp =
+--     Aeson.object
+--       [ "minFeeA" .= _minfeeA pp
+--       , "minFeeB" .= _minfeeB pp
+--       , "maxBlockBodySize" .= _maxBBSize pp
+--       , "maxTxSize" .= _maxTxSize pp
+--       , "maxBlockHeaderSize" .= _maxBHSize pp
+--       , "keyDeposit" .= _keyDeposit pp
+--       , "poolDeposit" .= _poolDeposit pp
+--       , "eMax" .= _eMax pp
+--       , "nOpt" .= _nOpt pp
+--       , "a0" .= (fromRational (_a0 pp) :: Scientific)
+--       , "rho" .= _rho pp
+--       , "tau" .= _tau pp
+--       , "decentralisationParam" .= _d pp
+--       , "extraEntropy" .= _extraEntropy pp
+--       , "protocolVersion" .= _protocolVersion pp
+--       , "minPoolCost" .= _minPoolCost pp
+--       , "adaPerUTxOWord" .= _adaPerUTxOWord pp
+--       , "costmdls" .= _costmdls pp
+--       , "prices" .= _prices pp
+--       , "maxTxExUnits" .= _maxTxExUnits pp
+--       , "maxBlockExUnits" .= _maxBlockExUnits pp
+--       , "maxValSize" .= _maxValSize pp
+--       , "collateralPercentage" .= _collateralPercentage pp
+--       , "maxCollateralInputs " .= _maxCollateralInputs pp
+--       ]
+
+-- instance FromJSON (PParams era) where
+--   parseJSON =
+--     Aeson.withObject "PParams" $ \obj ->
+--       PParams
+--         <$> obj .: "minFeeA"
+--         <*> obj .: "minFeeB"
+--         <*> obj .: "maxBlockBodySize"
+--         <*> obj .: "maxTxSize"
+--         <*> obj .: "maxBlockHeaderSize"
+--         <*> obj .: "keyDeposit"
+--         <*> obj .: "poolDeposit"
+--         <*> obj .: "eMax"
+--         <*> obj .: "nOpt"
+--         <*> ( (toRational :: Scientific -> Rational)
+--                 <$> obj .: "a0"
+--             )
+--         <*> obj .: "rho"
+--         <*> obj .: "tau"
+--         <*> obj .: "decentralisationParam"
+--         <*> obj .: "extraEntropy"
+--         <*> obj .: "protocolVersion"
+--         <*> obj .: "minPoolCost" .!= mempty
+--         <*> obj .: "adaPerUTxOWord"
+--         <*> obj .: "costmdls"
+--         <*> obj .: "prices"
+--         <*> obj .: "maxTxExUnits"
+--         <*> obj .: "maxBlockExUnits"
+--         <*> obj .: "maxValSize"
+--         <*> obj .: "collateralPercentage"
+--         <*> obj .: "maxCollateralInputs "
+
+-- instance ToJSONKey Language where
+--   toJSONKey = Aeson.toJSONKeyText (Text.decodeLatin1 . LBS.toStrict . Aeson.encode)
+
+-- instance FromJSONKey Language where
+--   fromJSONKey = Aeson.FromJSONKeyText parseLang
+--    where
+--      parseLang :: Text -> Language
+--      parseLang lang = case Aeson.eitherDecode $ LBS.fromStrict $ Text.encodeUtf8 lang of
+--         Left err -> panic $ Text.pack err
+--         Right lang' -> lang'

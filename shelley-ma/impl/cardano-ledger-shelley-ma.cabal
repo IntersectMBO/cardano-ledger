@@ -51,6 +51,7 @@ library
 
   -- other-extensions:
   build-depends:
+    aeson,
     bytestring,
     base16-bytestring,
     cardano-binary,
