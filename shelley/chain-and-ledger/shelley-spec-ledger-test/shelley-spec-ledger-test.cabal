@@ -47,6 +47,7 @@ library
     Test.Shelley.Spec.Ledger.BenchmarkFunctions
     Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Test.Shelley.Spec.Ledger.Examples.Cast
+    Test.Shelley.Spec.Ledger.Examples.Consensus
     Test.Shelley.Spec.Ledger.Generator.Block
     Test.Shelley.Spec.Ledger.Generator.Constants
     Test.Shelley.Spec.Ledger.Generator.Core

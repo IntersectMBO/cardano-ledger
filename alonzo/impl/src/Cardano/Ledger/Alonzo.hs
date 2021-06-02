@@ -34,7 +34,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
 import qualified Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (UtxosFailure))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS, constructValidated)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS, constructValidated, lbl2Phase)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (WrappedShelleyEraFailure))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
@@ -51,7 +51,10 @@ import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as EraModule
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
 import qualified Cardano.Ledger.Mary.Value as V (Value)
-import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
+import Cardano.Ledger.Rules.ValidationMode
+  ( applySTSNonStatic,
+    applySTSValidateSuchThat,
+  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.Shelley.Constraints
@@ -107,9 +110,9 @@ instance
   type Crypto (AlonzoEra c) = c
 
 instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
-  applyTx globals (LedgerEnv slot _ix pp _accnt) (utxostate, dpstate) tx =
+  applyTx globals env@(LedgerEnv slot _ix pp _accnt) st@(utxostate, dpstate) tx =
     do
-      (utxostate2, vtx) <-
+      vtx <-
         liftEither
           . left
             ( API.ApplyTxError
@@ -122,7 +125,19 @@ instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
             )
           . runExcept
           $ Alonzo.constructValidated globals utxoenv utxostate tx
-      pure ((utxostate2, dpstate), vtx)
+      -- Note here that we exclude checks of 2-phase validation, since we have
+      -- just constructed our own validating flag and can hence trust it! Other
+      -- static checks must be run, however, since we haven't computed them
+      -- before.
+      state' <-
+        liftEither
+          . left (API.ApplyTxError . join)
+          . flip runReader globals
+          . applySTSValidateSuchThat
+            @(Core.EraRule "LEDGER" (AlonzoEra c))
+            (notElem Alonzo.lbl2Phase)
+          $ TRC (env, st, vtx)
+      pure (state', vtx)
     where
       delegs = (_genDelegs . _dstate) dpstate
       stake = (_pParams . _pstate) dpstate

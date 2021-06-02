@@ -36,9 +36,6 @@ class
 -- | The same crypto used on the net
 data StandardCrypto
 
--- This should match that defined at
--- https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
-
 instance Crypto StandardCrypto where
   type DSIGN StandardCrypto = Ed25519DSIGN
   type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256

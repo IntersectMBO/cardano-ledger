@@ -66,6 +66,7 @@ library
     plutus-ledger-api,
     plutus-tx,
     plutus-core,
+    serialise,
     shelley-spec-ledger,
     small-steps,
     strict-containers,

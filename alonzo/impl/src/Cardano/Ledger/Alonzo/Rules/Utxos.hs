@@ -10,7 +10,13 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Cardano.Ledger.Alonzo.Rules.Utxos where
+module Cardano.Ledger.Alonzo.Rules.Utxos
+  ( UTXOS,
+    UtxosPredicateFailure (..),
+    constructValidated,
+    lbl2Phase,
+  )
+where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
@@ -25,7 +31,6 @@ import Cardano.Ledger.Alonzo.Tx
     DataHash,
     IsValidating (..),
     ValidatedTx (..),
-    txbody,
     txouts,
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
@@ -42,11 +47,11 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (Value)
-import Cardano.Ledger.Rules.ValidationMode ((?!#))
+import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.Monad.Except (MonadError (throwError))
-import Control.Monad.Trans.Reader (asks, runReader)
+import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.Coders
 import Data.Foldable (toList)
@@ -159,7 +164,7 @@ scriptsValidateTransition = do
       tx
       ) <-
     judgmentContext
-  let txb = txbody tx
+  let txb = body tx
       refunded = keyRefunds pp txb
       depositChange =
         ( totalDeposits
@@ -173,7 +178,7 @@ scriptsValidateTransition = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       evalScripts @era tx sLst
-        ?!# ValidationTagMismatch (getField @"isValidating" tx)
+        ?!## ValidationTagMismatch (getField @"isValidating" tx)
     Left info -> failBecause (CollectErrors info)
   pup' <-
     trans @(Core.EraRule "PPUP" era) $
@@ -210,16 +215,14 @@ scriptsNotValidateTransition ::
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
   TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _), tx) <- judgmentContext
-  let txb = txbody tx
+  let txb = body tx
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       not (evalScripts @era tx sLst)
-        ?!# ValidationTagMismatch (getField @"isValidating" tx)
+        ?!## ValidationTagMismatch (getField @"isValidating" tx)
     Left info -> failBecause (CollectErrors info)
-  getField @"isValidating" tx == IsValidating False
-    ?!# ValidationTagMismatch (getField @"isValidating" tx)
   pure $
     us
       { _utxo = eval (getField @"collateral" txb ⋪ utxo),
@@ -294,19 +297,16 @@ instance
 
 -- =================================================================
 
+-- | Construct a 'ValidatedTx' from a 'Core.Tx' by setting the `IsValidating`
+-- flag.
+--
+-- Note that this simply constructs the transaction; it does not validate
+-- anything other than the scripts. Thus the resulting transaction may be
+-- completely invalid.
 constructValidated ::
   forall era m.
   ( MonadError [UtxosPredicateFailure era] m,
     Era era,
-    Eq (Core.PParams era),
-    Show (Core.PParams era),
-    Show (Core.PParamsDelta era),
-    Eq (Core.PParamsDelta era),
-    ToCBOR (Core.AuxiliaryData era),
-    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Core.Script era ~ Script era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
@@ -314,8 +314,6 @@ constructValidated ::
     Core.Witnesses era ~ Alonzo.TxWitness era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
@@ -324,8 +322,8 @@ constructValidated ::
   UtxoEnv era ->
   UTxOState era ->
   Core.Tx era ->
-  m (UTxOState era, ValidatedTx era)
-constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
+  m (ValidatedTx era)
+constructValidated globals (UtxoEnv _ pp _ _) st tx =
   case collectTwoPhaseScriptInputs ei sysS pp tx utxo of
     Left errs -> throwError [CollectErrors errs]
     Right sLst ->
@@ -336,19 +334,34 @@ constructValidated globals env@(UtxoEnv _ pp _ _) st tx =
               (getField @"wits" tx)
               (IsValidating scriptEvalResult)
               (getField @"auxiliaryData" tx)
-          (newState, errs) =
-            flip runReader globals . runTransitionRule (TRC (env, st, vTx)) $
-              if scriptEvalResult
-                then scriptsValidateTransition
-                else scriptsNotValidateTransition
-       in case errs of
-            [] -> pure (newState, vTx)
-            _ -> throwError errs
+       in pure vTx
   where
-    runTransitionRule :: RuleInterpreter 'EventPolicyDiscard
-    runTransitionRule = applyRuleInternal EPDiscard ValidateAll runSTS
-    runSTS :: STSInterpreter 'EventPolicyDiscard
-    runSTS = applySTSInternal EPDiscard AssertionsOff runTransitionRule
     utxo = _utxo st
     sysS = systemStart globals
     ei = epochInfo globals
+
+--------------------------------------------------------------------------------
+-- 2-phase checks
+--------------------------------------------------------------------------------
+
+-- $2-phase
+--
+-- Above and beyond 'static' checks (see 'Cardano.Ledger.Rules.ValidateMode') we
+-- additionally label 2-phase checks. This is to support a workflow where we
+-- validate a 'ValidatedTx' directly after constructing it with
+-- 'constructValidated' - we would like to trust the flag we have ourselves just
+-- computed rather than re-calculating it. However, all other checks should be
+-- computed as normal.
+
+-- | Indicates that this check depends only upon the signal to the transition,
+-- not the state or environment.
+lbl2Phase :: Label
+lbl2Phase = "2phase"
+
+-- | Construct a 2-phase predicate check.
+--
+--   Note that 2-phase predicate checks are by definition static.
+(?!##) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
+(?!##) = labeledPred [lblStatic, lbl2Phase]
+
+infix 1 ?!##
