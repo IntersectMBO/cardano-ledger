@@ -500,9 +500,7 @@ applyRuleInternal ep vp goSTS jc r =
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
       ((ss, sfails), sevents) :: ((State sub, [[PredicateFailure sub]]), [Event sub]) <- lift $ goSTS subCtx
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
-      () <- case ep of
-        EPDiscard -> pure ()
-        EPReturn -> tell $ fmap wrapEvent sevents
+      runClause $ Writer (fmap wrapEvent sevents) ()
       pure $ next ss
     runClause (Writer w a) = case ep of
       EPReturn -> tell w $> a
