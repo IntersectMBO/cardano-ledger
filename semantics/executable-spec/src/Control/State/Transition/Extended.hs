@@ -511,9 +511,7 @@ applyRuleInternal ep vp goSTS jc r =
           sfails :: [[PredicateFailure sub]]
           (ss, sfails) = (discardEvents ep @sub) s
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
-      () <- case ep of
-        EPDiscard -> pure ()
-        EPReturn -> tell (wrapEvent <$> snd s)
+      runClause $ Writer (fmap wrapEvent sevents) ()
       pure $ next ss
     runClause (Writer w a) = case ep of
       EPReturn -> tell w $> a
