@@ -206,7 +206,7 @@ translateTxOut (Shelley.TxOutCompact addr value) =
 -- (PParamsUpdate era) = (PParams' StrictMaybe era)
 
 translatePParams ::
-  AlonzoGenesis -> Shelley.PParams era -> PParams (AlonzoEra c)
+  AlonzoGenesis -> Shelley.PParams (MaryEra era) -> PParams (AlonzoEra c)
 translatePParams = flip extendPPWithGenesis
 
 translatePParamsUpdate ::

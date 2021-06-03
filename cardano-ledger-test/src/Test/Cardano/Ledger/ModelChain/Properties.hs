@@ -31,7 +31,7 @@ import Test.Cardano.Ledger.Elaborators.Shelley ()
 import Test.Cardano.Ledger.Elaborators.Alonzo ()
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 
-newTestFw ::
+modelUnitTests ::
   forall era proxy.
   ( ElaborateEraModel era
   , HasEraElaboratorState (ElaborateEraModelState era) era
@@ -42,7 +42,7 @@ newTestFw ::
   , Cardano.Ledger.Era.Era era
   )
   => proxy era -> TestTree
-newTestFw proxy = testGroup (show $ typeRep proxy)
+modelUnitTests proxy = testGroup (show $ typeRep proxy)
   [ testProperty "noop" $ testChainModelInteraction proxy Map.empty []
 
   , testProperty "noop-2" $ testChainModelInteraction proxy
@@ -148,11 +148,11 @@ newTestFw proxy = testGroup (show $ typeRep proxy)
     ] mempty]
   ]
 
-newUnitTests :: TestTree
-newUnitTests = testGroup "new-unit-tests"
-    [ newTestFw (Proxy :: Proxy (ShelleyEra C_Crypto))
-    , newTestFw (Proxy :: Proxy (AlonzoEra C_Crypto))
+modelUnitTests_ :: TestTree
+modelUnitTests_ = testGroup "model-unit-tests"
+    [ modelUnitTests (Proxy :: Proxy (ShelleyEra C_Crypto))
+    , modelUnitTests (Proxy :: Proxy (AlonzoEra C_Crypto))
     ]
 
 defaultTestMain :: IO ()
-defaultTestMain = defaultMain newUnitTests
+defaultTestMain = defaultMain modelUnitTests_

@@ -36,14 +36,14 @@ import Test.Cardano.Ledger.ModelChain
 
 instance Default AlonzoGenesis where
   def = AlonzoGenesis
-    { adaPerUTxOWord = Coin 10000  -- error "Default AlonzoGenesis :: adaPerUTxOWord"
-    , costmdls = Map.fromSet (const $ CostModel Map.empty) $ Set.fromList [minBound..] -- error "Default AlonzoGenesis :: costmdls"
+    { adaPerUTxOWord = Coin 10000
+    , costmdls = Map.fromSet (const $ CostModel Map.empty) $ Set.fromList [minBound..]
     , prices = Prices (Coin 1000) (Coin 1000)
     , maxTxExUnits = ExUnits 100 100
     , maxBlockExUnits = ExUnits 100 100
     , maxValSize = 100000
-    , collateralPercentage = 1 -- TODO: what is a normal value for this?
-    , maxCollateralInputs = 100 -- TODO: what is a normal value for this?
+    , collateralPercentage = 100
+    , maxCollateralInputs = 100
     }
 
 instance
