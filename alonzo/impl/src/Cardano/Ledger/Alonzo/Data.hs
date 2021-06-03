@@ -26,7 +26,7 @@ module Cardano.Ledger.Alonzo.Data
     getPlutusData,
     dataHashSize,
     -- $
-    AuxiliaryData (AuxiliaryData, scripts, dats, txMD),
+    AuxiliaryData (AuxiliaryData, scripts, txMD),
     AuxiliaryDataHash (..),
     -- $
     ppPlutusData,
@@ -58,7 +58,6 @@ import Cardano.Ledger.Pretty
     ppMap,
     ppMetadatum,
     ppPair,
-    ppSet,
     ppSexp,
     ppStrictSeq,
     ppWord64,
@@ -82,8 +81,6 @@ import Data.Maybe (mapMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -150,8 +147,7 @@ instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
 
 data AuxiliaryDataRaw era = AuxiliaryDataRaw
   { txMD' :: !(Map Word64 Metadatum),
-    scripts' :: !(StrictSeq (Core.Script era)),
-    dats' :: !(Set (Data era))
+    scripts' :: !(StrictSeq (Core.Script era))
   }
   deriving (Generic)
 
@@ -170,26 +166,23 @@ instance
   ) =>
   ToCBOR (AuxiliaryDataRaw era)
   where
-  toCBOR (AuxiliaryDataRaw s d m) =
-    encode (encodeRaw s d m)
+  toCBOR (AuxiliaryDataRaw m s) =
+    encode (encodeRaw m s)
 
 encodeRaw ::
   ( Core.Script era ~ Script era,
-    Typeable (Crypto era),
-    Typeable era
+    Typeable (Crypto era)
   ) =>
   Map Word64 Metadatum ->
   StrictSeq (Core.Script era) ->
-  Set (Data era) ->
   Encode ('Closed 'Sparse) (AuxiliaryDataRaw era)
-encodeRaw metadata allScripts dataSet =
+encodeRaw metadata allScripts =
   ( Tag 259 $
       Keyed
-        (\m tss pss d -> AuxiliaryDataRaw m (StrictSeq.fromList $ tss <> pss) d)
+        (\m tss pss -> AuxiliaryDataRaw m (StrictSeq.fromList $ tss <> pss))
         !> Omit null (Key 0 $ mapEncode metadata)
         !> Omit null (Key 1 $ E (encodeFoldable . mapMaybe getTimelock) timelocks)
         !> Omit null (Key 2 $ E (encodeFoldable . mapMaybe getPlutus) plutusScripts)
-        !> Omit null (Key 3 $ setEncode dataSet)
   )
   where
     getTimelock (TimelockScript x) = Just x
@@ -226,7 +219,6 @@ instance
           ( Ann (Emit AuxiliaryDataRaw)
               <*! Ann (D mapFromCBOR)
               <*! Ann (Emit StrictSeq.empty)
-              <*! Ann (Emit Set.empty)
           )
       decodeShelleyMA =
         decode
@@ -237,7 +229,6 @@ instance
                         <$> decodeStrictSeq
                           (fmap TimelockScript <$> fromCBOR)
                   )
-              <*! Ann (Emit Set.empty)
           )
       decodeAlonzo =
         decode $
@@ -254,14 +245,10 @@ instance
         fieldA
           (\x ad -> ad {scripts' = scripts' ad <> (PlutusScript <$> x)})
           (D (decodeStrictSeq fromCBOR))
-      auxDataField 3 =
-        fieldAA
-          (\x ad -> ad {dats' = x})
-          (setDecodeA From)
       auxDataField n = field (\_ t -> t) (Invalid n)
 
 emptyAuxData :: AuxiliaryDataRaw era
-emptyAuxData = AuxiliaryDataRaw mempty mempty mempty
+emptyAuxData = AuxiliaryDataRaw mempty mempty
 
 -- ================================================================================
 -- Version with serialized bytes.
@@ -295,15 +282,14 @@ pattern AuxiliaryData ::
   ) =>
   Map Word64 Metadatum ->
   StrictSeq (Core.Script era) ->
-  Set (Data era) ->
   AuxiliaryData era
-pattern AuxiliaryData {txMD, scripts, dats} <-
-  AuxiliaryDataConstr (Memo (AuxiliaryDataRaw txMD scripts dats) _)
+pattern AuxiliaryData {txMD, scripts} <-
+  AuxiliaryDataConstr (Memo (AuxiliaryDataRaw txMD scripts) _)
   where
-    AuxiliaryData m s d =
+    AuxiliaryData m s =
       AuxiliaryDataConstr
         ( memoBytes
-            (encodeRaw m s d)
+            (encodeRaw m s)
         )
 
 {-# COMPLETE AuxiliaryData #-}
@@ -325,7 +311,7 @@ ppData (DataConstr (Memo x _)) = ppSexp "Data" [ppPlutusData x]
 instance PrettyA (Data era) where prettyA = ppData
 
 ppAuxiliaryData :: (PrettyA (Core.Script era)) => AuxiliaryData era -> PDoc
-ppAuxiliaryData (AuxiliaryDataConstr (Memo (AuxiliaryDataRaw m s d) _)) =
-  ppSexp "AuxiliaryData" [ppMap ppWord64 ppMetadatum m, ppStrictSeq prettyA s, ppSet ppData d]
+ppAuxiliaryData (AuxiliaryDataConstr (Memo (AuxiliaryDataRaw m s) _)) =
+  ppSexp "AuxiliaryData" [ppMap ppWord64 ppMetadatum m, ppStrictSeq prettyA s]
 
 instance (PrettyA (Core.Script era)) => PrettyA (AuxiliaryData era) where prettyA = ppAuxiliaryData

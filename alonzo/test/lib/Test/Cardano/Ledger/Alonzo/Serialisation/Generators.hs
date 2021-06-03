@@ -78,7 +78,7 @@ instance
   ) =>
   Arbitrary (AuxiliaryData era)
   where
-  arbitrary = AuxiliaryData <$> arbitrary <*> arbitrary <*> arbitrary
+  arbitrary = AuxiliaryData <$> arbitrary <*> arbitrary
 
 instance Arbitrary Tag where
   arbitrary = elements [Spend, Mint, Cert, Rewrd]
@@ -123,8 +123,8 @@ genScripts ::
   Gen (Map (ScriptHash (Crypto era)) (Core.Script era))
 genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Core.Script era])
 
-genData :: forall era. Era era => Gen (Map (DataHash (Crypto era)) (Data era))
-genData = keyBy hashData <$> arbitrary
+genData :: forall era. Era era => Gen (TxDats era)
+genData = TxDats <$> keyBy hashData <$> arbitrary
 
 instance HasAlgorithm c => Arbitrary (SafeHash c i) where
   arbitrary = unsafeMakeSafeHash <$> arbitrary
@@ -290,7 +290,7 @@ instance Mock c => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
     oneof
       [ WrappedShelleyEraFailure <$> arbitrary,
         UnRedeemableScripts <$> arbitrary,
-        DataHashSetsDontAgree <$> arbitrary <*> arbitrary,
+        MissingRequiredDatums <$> arbitrary,
         PPViewHashesDontMatch <$> arbitrary <*> arbitrary
       ]
 
@@ -307,4 +307,5 @@ instance Mock c => Arbitrary (WitnessPPData (AlonzoEra c)) where
   arbitrary =
     WitnessPPData
       <$> arbitrary
+      <*> genData
       <*> (Set.singleton <$> (getLanguageView <$> arbitrary <*> arbitrary))

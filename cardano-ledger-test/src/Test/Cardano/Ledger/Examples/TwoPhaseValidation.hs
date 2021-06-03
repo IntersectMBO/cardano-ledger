@@ -45,7 +45,7 @@ import Cardano.Ledger.Alonzo.Tx
     hashWitnessPPData,
   )
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..))
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.BaseTypes (Network (..), Seed, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
@@ -78,6 +78,7 @@ import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (..))
 import Data.Functor.Identity (Identity)
+import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -289,6 +290,9 @@ expectedUTxO pf ex idx = UTxO utxo
     filteredUTxO :: Natural -> Map.Map (TxIn (Crypto era)) (Core.TxOut era)
     filteredUTxO x = Map.filterWithKey (\(TxIn _ i) _ -> i /= x) (unUTxO . initUTxO $ pf)
 
+keyBy :: Ord k => (a -> k) -> [a] -> Map k a
+keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
+
 -- =========================================================================
 --  Example 1: Process a SPEND transaction with a succeeding Plutus script.
 -- =========================================================================
@@ -298,6 +302,9 @@ datumExample1 = Data (Plutus.I 123)
 
 redeemerExample1 :: Data era
 redeemerExample1 = Data (Plutus.I 42)
+
+txDatsExample1 :: Era era => TxDats era
+txDatsExample1 = TxDats $ keyBy hashData $ [datumExample1]
 
 alwaysSucceedsOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 alwaysSucceedsOutput pf =
@@ -326,7 +333,7 @@ validatingBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 txDatsExample1)
     ]
 
 type SignBody era =
@@ -375,6 +382,9 @@ datumExample2 = Data (Plutus.I 0)
 redeemerExample2 :: Data era
 redeemerExample2 = Data (Plutus.I 1)
 
+txDatsExample2 :: Era era => TxDats era
+txDatsExample2 = TxDats $ keyBy hashData $ [datumExample2]
+
 notValidatingRedeemers :: Era era => Redeemers era
 notValidatingRedeemers =
   Redeemers
@@ -407,7 +417,7 @@ notValidatingBody pf =
       Collateral [TxIn genesisId 12],
       Outputs [outEx2 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemers)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemers txDatsExample2)
     ]
 
 notValidatingTx ::
@@ -466,7 +476,7 @@ validatingBodyWithCert pf =
       Outputs [outEx3 pf],
       Certs [DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx3)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx3 mempty)
     ]
 
 validatingTxWithCert ::
@@ -525,7 +535,7 @@ notValidatingBodyWithCert pf =
       Outputs [outEx4 pf],
       Certs [DCertDeleg (DeRegKey $ scriptStakeCredFail pf)],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx4)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx4 mempty)
     ]
 
 notValidatingTxWithCert ::
@@ -586,7 +596,7 @@ validatingBodyWithWithdrawal pf =
               (RewardAcnt Testnet (scriptStakeCredSuceed pf))
               (Coin 1000)
         ),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx5)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx5 mempty)
     ]
 
 validatingTxWithWithdrawal ::
@@ -647,7 +657,7 @@ notValidatingBodyWithWithdrawal pf =
               (RewardAcnt Testnet (scriptStakeCredFail pf))
               (Coin 1000)
         ),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx6)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx6 mempty)
     ]
 
 notValidatingTxWithWithdrawal ::
@@ -706,7 +716,7 @@ validatingBodyWithMint pf =
       Outputs [outEx7 pf],
       Txfee (Coin 5),
       Mint (mintEx7 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx7)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx7 mempty)
     ]
 
 validatingTxWithMint ::
@@ -767,7 +777,7 @@ notValidatingBodyWithMint pf =
       Outputs [outEx8 pf],
       Txfee (Coin 5),
       Mint (mintEx8 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx8)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx8 mempty)
     ]
 
 notValidatingTxWithMint ::
@@ -852,7 +862,7 @@ validatingBodyManyScripts pf =
               ]
         ),
       Mint (mintEx9 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx9),
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx9 txDatsExample1),
       Vldt (ValidityInterval SNothing (SJust $ SlotNo 1))
     ]
 
@@ -962,7 +972,7 @@ missingRedeemerTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] (Redeemers mempty))
+      WppHash (newWppHash pf (pp pf) [PlutusV1] (Redeemers mempty) txDatsExample1)
     ]
 
 missingRedeemerTx ::
@@ -981,11 +991,11 @@ missingRedeemerTx pf =
         ]
     ]
 
-wrongRedeemerHashTx ::
+wrongWppHashTx ::
   (Scriptic era, SignBody era) =>
   Proof era ->
   Core.Tx era
-wrongRedeemerHashTx pf =
+wrongWppHashTx pf =
   newTx
     Override
     pf
@@ -1073,7 +1083,7 @@ wrongRedeemerLabelTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] misPurposedRedeemer)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] misPurposedRedeemer txDatsExample1)
     ]
 
 wrongRedeemerLabelTx ::
@@ -1096,6 +1106,18 @@ wrongRedeemerLabelTx pf =
         ]
     ]
 
+missingDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
+missingDatumTxBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 1],
+      Collateral [TxIn genesisId 11],
+      Outputs [outEx1 pf],
+      Txfee (Coin 5),
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
+    ]
+
 missingDatumTx ::
   forall era.
   ( Scriptic era,
@@ -1107,9 +1129,9 @@ missingDatumTx pf =
   newTx
     Override
     pf
-    [ Body (validatingBody pf),
+    [ Body (missingDatumTxBody pf),
       Witnesses'
-        [ AddrWits [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
+        [ AddrWits [makeWitnessVKey (hashAnnotated (missingDatumTxBody pf)) (someKeys pf)],
           ScriptWits [always 3 pf],
           RdmrWits validatingRedeemersEx1
         ]
@@ -1160,7 +1182,7 @@ tooManyExUnitsTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersTooManyExUnits)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersTooManyExUnits txDatsExample1)
     ]
 
 tooManyExUnitsTx ::
@@ -1209,7 +1231,7 @@ plutusOutputWithNoDataTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1)
+      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
     ]
 
 plutusOutputWithNoDataTx ::
@@ -1329,13 +1351,23 @@ alonzoUTXOWexamples =
                     ]
                   ]
               ),
-          testCase "wrong redeemer hash" $
+          testCase "wrong wpp hash" $
             testUTXOW
-              (trustMe True $ wrongRedeemerHashTx pf)
+              (trustMe True $ wrongWppHashTx pf)
               ( Left
                   [ [ PPViewHashesDontMatch
-                        (hashWitnessPPData (pp pf) (Set.singleton PlutusV1) (Redeemers mempty))
-                        (hashWitnessPPData (pp pf) (Set.singleton PlutusV1) validatingRedeemersEx1)
+                        ( hashWitnessPPData
+                            (pp pf)
+                            (Set.singleton PlutusV1)
+                            (Redeemers mempty)
+                            txDatsExample1
+                        )
+                        ( hashWitnessPPData
+                            (pp pf)
+                            (Set.singleton PlutusV1)
+                            validatingRedeemersEx1
+                            txDatsExample1
+                        )
                     ]
                   ]
               ),
@@ -1404,8 +1436,7 @@ alonzoUTXOWexamples =
             testUTXOW
               (trustMe True $ missingDatumTx pf)
               ( Left
-                  [ [ DataHashSetsDontAgree
-                        mempty
+                  [ [ MissingRequiredDatums
                         (Set.singleton $ hashData @A datumExample1)
                     ]
                   ]

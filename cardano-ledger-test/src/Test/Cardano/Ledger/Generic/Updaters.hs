@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.Tx (hashWitnessPPData)
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), WitnessPPDataHash)
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..), unTxDats)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     Nonce,
@@ -507,7 +507,10 @@ updateWitnesses p wit@(Alonzo _) w dw = case dw of
   (AddrWits ks) -> w {txwitsVKey = applyMerge p (txwitsVKey w) ks}
   (BootWits boots) -> w {txwitsBoot = applyMerge p (txwitsBoot w) boots}
   (ScriptWits ss) -> w {txscripts = applyMap "ScriptWits" p (txscripts w) (map (hashpair wit) ss)}
-  (DataWits ds) -> w {txdats = applyMap "DataWits" p (txdats w) (map (\x -> (hashData @era x, x)) ds)}
+  (DataWits ds) ->
+    w
+      { txdats = TxDats $ applyMap "DataWits" p (unTxDats $ txdats w) (map (\x -> (hashData @era x, x)) ds)
+      }
   (RdmrWits r) -> w {txrdmrs = r} -- We do not use a merging sematics on Redeemers because the Hashes would get messed up.
 
 newWitnesses :: Era era => Policy -> Proof era -> [WitnessesField era] -> Core.Witnesses era
@@ -676,12 +679,13 @@ newWppHash ::
   Core.PParams era ->
   [Language] ->
   Redeemers era ->
+  TxDats era ->
   [Alonzo.WitnessPPDataHash (Crypto era)] -- always of length 0 or 1
-newWppHash (Alonzo _) pp ls rds =
-  case (hashWitnessPPData pp (Set.fromList ls) rds) of
+newWppHash (Alonzo _) pp ls rds dats =
+  case (hashWitnessPPData pp (Set.fromList ls) rds dats) of
     SJust x -> [x]
     SNothing -> []
-newWppHash _wit _pp _ls _rds = []
+newWppHash _wit _pp _ls _rds _dats = []
 
 vkey :: Era era => Int -> Proof era -> VKey 'Witness (Crypto era)
 vkey n _w = theVKey n

@@ -24,7 +24,7 @@ import Cardano.Ledger.Alonzo.TxBody
     wdrls',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (TxBody, TxOut, Value)
@@ -316,7 +316,7 @@ txInfo ei sysS utxo tx =
     fee = txfee' tbody
     forge = mint' tbody
     interval = vldt' tbody
-    datpairs = Map.toList (txdats' _witnesses)
+    datpairs = Map.toList (unTxDats $ txdats' _witnesses)
 
 -- ===============================================================
 -- From the specification, Figure 7 "Script Validation, cont."

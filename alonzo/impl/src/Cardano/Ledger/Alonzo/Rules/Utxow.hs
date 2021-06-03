@@ -33,7 +33,7 @@ import Cardano.Ledger.Alonzo.Tx
     isTwoPhaseScriptAddress,
   )
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..), unTxDats)
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
@@ -95,11 +95,8 @@ import Shelley.Spec.Ledger.UTxO (UTxO, txinLookup)
 data AlonzoPredFail era
   = WrappedShelleyEraFailure !(UtxowPredicateFailure era)
   | UnRedeemableScripts ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-  | DataHashSetsDontAgree
+  | MissingRequiredDatums
       !(Set (DataHash (Crypto era)))
-      -- ^ from the Tx
-      !(Set (DataHash (Crypto era)))
-      -- ^ from the UTxO restricted to the Tx inputs
   | PPViewHashesDontMatch
       !(StrictMaybe (WitnessPPDataHash (Crypto era)))
       -- ^ The PPHash in the TxBody
@@ -151,7 +148,7 @@ encodePredFail ::
   Encode 'Open (AlonzoPredFail era)
 encodePredFail (WrappedShelleyEraFailure x) = Sum WrappedShelleyEraFailure 0 !> E toCBOR x
 encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
-encodePredFail (DataHashSetsDontAgree x y) = Sum DataHashSetsDontAgree 2 !> To x !> To y
+encodePredFail (MissingRequiredDatums x) = Sum MissingRequiredDatums 2 !> To x
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 3 !> To x !> To y
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 4 !> To x
 encodePredFail (UnspendableUTxONoDatumHash x) = Sum UnspendableUTxONoDatumHash 5 !> To x
@@ -176,7 +173,7 @@ decodePredFail ::
   Decode 'Open (AlonzoPredFail era)
 decodePredFail 0 = SumD WrappedShelleyEraFailure <! D fromCBOR
 decodePredFail 1 = SumD UnRedeemableScripts <! From
-decodePredFail 2 = SumD DataHashSetsDontAgree <! From <! From
+decodePredFail 2 = SumD MissingRequiredDatums <! From
 decodePredFail 3 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 4 = SumD MissingRequiredSigners <! From
 decodePredFail 5 = SumD UnspendableUTxONoDatumHash <! From
@@ -264,9 +261,10 @@ alonzoStyleWitness = do
             isTwoPhaseScriptAddress @era tx (getField @"address" output)
         ]
     SJust utxoHashes -> do
-      let txHashes = domain (txdats . wits $ tx)
+      let txHashes = domain (unTxDats . txdats . wits $ tx)
           inputHashes = Set.fromList utxoHashes
-      txHashes == inputHashes ?! DataHashSetsDontAgree txHashes inputHashes
+          unmatchedInputHashes = eval (inputHashes ➖ txHashes)
+      Set.null unmatchedInputHashes ?! MissingRequiredDatums unmatchedInputHashes
 
   {-  ∀ sph ∈ scriptsNeeded utxo tx, checkScriptData tx utxo  ph  -}
   let sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
@@ -289,7 +287,7 @@ alonzoStyleWitness = do
             (not . isNativeScript @era) script,
             Just l <- [language @era script]
         ]
-      computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits $ tx)
+      computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits $ tx) (txdats . wits $ tx)
       bodyPPhash = getField @"wppHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
 

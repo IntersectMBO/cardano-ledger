@@ -72,6 +72,7 @@ import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (toCBOR),
     encodeListLen,
+    serialize',
     serializeEncoding,
   )
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
@@ -93,10 +94,13 @@ import Cardano.Ledger.Alonzo.TxBody
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
     Redeemers (..),
+    TxDats (..),
     TxWitness (..),
+    nullDats,
     ppTxWitness,
     txrdmrs,
     unRedeemers,
+    unTxDats,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
@@ -114,7 +118,7 @@ import Cardano.Ledger.Pretty
   )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
-    SafeToHash,
+    SafeToHash (..),
     hashAnnotated,
   )
 import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
@@ -127,7 +131,6 @@ import Data.Maybe.Strict
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
-import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -219,7 +222,7 @@ instance
   c ~ Crypto era =>
   HasField "txdatahash" (ValidatedTx era) (Map.Map (DataHash c) (Data era))
   where
-  getField = txdats' . wits
+  getField = unTxDats . txdats' . wits
 
 -- =========================================================
 -- Figure 2: Definitions for Transactions
@@ -233,48 +236,26 @@ getCoin txout = coin (getField @"value" txout)
 -- In order to hash 2 things we make a newtype WitnessPPData which will be
 -- a MemoBytes of these two things (WitnessPPDataRaw), so that we can hash it.
 
-data WitnessPPDataRaw era
-  = WitnessPPDataRaw
+data WitnessPPData era
+  = WitnessPPData
       !(Redeemers era) -- From the witnesses
+      !(TxDats era)
       !(Set (LangDepView era)) -- From the Porotocl parameters
   deriving (Show, Eq, Generic, Typeable)
 
-deriving instance Typeable era => NoThunks (WitnessPPDataRaw era)
+deriving instance Typeable era => NoThunks (WitnessPPData era)
 
-instance Era era => ToCBOR (WitnessPPDataRaw era) where
-  toCBOR (WitnessPPDataRaw m s) = encode (Rec WitnessPPDataRaw !> To m !> To s)
+-- WitnessPPData is not transmitted over the network. The bytes are independently
+-- reconstructed by all nodes. There are no original bytes to preserve.
+-- Instead, we must use a reproducable serialization
+instance Era era => SafeToHash (WitnessPPData era) where
+  originalBytes (WitnessPPData m d l) =
+    -- TODO: double check that canonical encodings are used for the langDepView (l)
+    if nullDats d
+      then originalBytes m <> serialize' l
+      else originalBytes m <> originalBytes d <> serialize' l
 
-instance Era era => FromCBOR (Annotator (WitnessPPDataRaw era)) where
-  fromCBOR =
-    decode
-      ( Ann (RecD WitnessPPDataRaw)
-          <*! From
-          <*! setDecodeA (Ann From)
-      )
-
-newtype WitnessPPData era = WitnessPPDataConstr (MemoBytes (WitnessPPDataRaw era))
-  deriving (Show, Eq)
-  deriving newtype (ToCBOR, SafeToHash)
-
-deriving via
-  (Mem (WitnessPPDataRaw era))
-  instance
-    Era era => FromCBOR (Annotator (WitnessPPData era))
-
-pattern WitnessPPData ::
-  Era era =>
-  Redeemers era ->
-  Set (LangDepView era) ->
-  WitnessPPData era
-pattern WitnessPPData r s <-
-  WitnessPPDataConstr (Memo (WitnessPPDataRaw r s) _)
-  where
-    WitnessPPData r s =
-      WitnessPPDataConstr
-        . memoBytes
-        $ (Rec WitnessPPDataRaw !> To r !> setEncode s)
-
-instance (c ~ Crypto era) => HashAnnotated (WitnessPPData era) EraIndependentWitnessPPData c
+instance (Era era, c ~ Crypto era) => HashAnnotated (WitnessPPData era) EraIndependentWitnessPPData c
 
 hashWitnessPPData ::
   forall era.
@@ -282,13 +263,14 @@ hashWitnessPPData ::
   PParams era ->
   Set Language ->
   Redeemers era ->
+  TxDats era ->
   StrictMaybe (WitnessPPDataHash (Crypto era))
-hashWitnessPPData pp langs rdmrs =
+hashWitnessPPData pp langs rdmrs dats =
   if (Map.null $ unRedeemers rdmrs) && Set.null langs
     then SNothing
     else
       let newset = mapLangSet (getLanguageView pp) langs
-       in SJust (hashAnnotated (WitnessPPData rdmrs newset))
+       in SJust (hashAnnotated (WitnessPPData rdmrs dats newset))
   where
     mapLangSet :: (Language -> LangDepView era) -> (Set Language -> Set (LangDepView era))
     mapLangSet f = Set.foldr (\x acc -> Set.insert (f x) acc) mempty
