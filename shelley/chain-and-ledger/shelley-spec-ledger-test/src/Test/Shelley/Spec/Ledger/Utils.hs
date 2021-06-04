@@ -209,7 +209,6 @@ mkKeyPair seed =
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
--- mkKeyPair' :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair kr
 mkKeyPair' ::
   DSIGNAlgorithm (DSIGN crypto) =>
   (Word64, Word64, Word64, Word64, Word64) ->
