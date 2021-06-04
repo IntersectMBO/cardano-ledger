@@ -40,7 +40,7 @@ import qualified Shelley.Spec.Ledger.Scripts as Multi
 import Shelley.Spec.Ledger.TxBody (WitVKey (..))
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Shelley.Spec.Ledger.Utils (mkKeyPair)
+import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), mkKeyPair)
 
 -- ===========================================================================
 -- Classes for "picking" the unique element of a type associated with an Int
@@ -117,7 +117,7 @@ instance CC.Crypto c => Fixed (KeyPair kr c) where
   unique n = (KeyPair a b)
     where
       m1 = fromIntegral n
-      (b, a) = mkKeyPair (0, 0, 0, 0, m1)
+      (b, a) = mkKeyPair (RawSeed 0 0 0 0 m1)
 
 theKeyPair :: CC.Crypto c => Int -> KeyPair kr c
 theKeyPair = unique
@@ -285,8 +285,8 @@ instance CC.Crypto c => Fixed (PublicSecret kr kr' c) where
     where
       m1 = fromIntegral (2 * n)
       m2 = fromIntegral (2 * n + 1)
-      (b, a) = mkKeyPair (m1, m1, m1, m1, m1)
-      (d, c) = mkKeyPair (m2, m2, m2, m2, m2)
+      (b, a) = mkKeyPair (RawSeed m1 m1 m1 m1 m1)
+      (d, c) = mkKeyPair (RawSeed m2 m2 m2 m2 m2)
 
 -- ===============================================================
 -- PrettyA instances

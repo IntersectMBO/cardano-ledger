@@ -98,7 +98,7 @@ coreNodeKeys ::
   Constants ->
   [(KeyPair 'Genesis crypto, AllIssuerKeys crypto 'GenesisDelegate)]
 coreNodeKeys c@Constants {numCoreNodes} =
-  [ ( (toKeyPair . mkGenKey) (x, 0, 0, 0, 0),
+  [ ( (toKeyPair . mkGenKey) (RawSeed x 0 0 0 0),
       issuerKeys c 0 x
     )
     | x <- [1001 .. 1000 + numCoreNodes]
@@ -130,12 +130,12 @@ issuerKeys ::
   Word64 ->
   AllIssuerKeys crypto r
 issuerKeys Constants {maxSlotTrace} ns x =
-  let (skCold, vkCold) = mkKeyPair (x, 0, 0, 0, ns + 1)
+  let (skCold, vkCold) = mkKeyPair (RawSeed x 0 0 0 (ns + 1))
    in AllIssuerKeys
         { cold = KeyPair vkCold skCold,
           hot =
             [ ( KESPeriod (fromIntegral (iter * fromIntegral maxKESIterations)),
-                mkKESKeyPair (x, 0, 0, fromIntegral iter, ns + 3)
+                mkKESKeyPair (RawSeed x 0 0 (fromIntegral iter) (ns + 3))
               )
               | iter <-
                   [ 0
@@ -148,7 +148,7 @@ issuerKeys Constants {maxSlotTrace} ns x =
                        )
                   ]
             ],
-          vrf = mkVRFKeyPair (x, 0, 0, 0, ns + 2),
+          vrf = mkVRFKeyPair (RawSeed x 0 0 0 (ns + 2)),
           hk = hashKey vkCold
         }
 

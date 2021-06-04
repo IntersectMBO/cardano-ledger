@@ -128,7 +128,8 @@ import Test.Cardano.Ledger.Generic.Updaters
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
-  ( applySTSTest,
+  ( RawSeed (..),
+    applySTSTest,
     mkKESKeyPair,
     mkKeyPair,
     mkVRFKeyPair,
@@ -175,18 +176,18 @@ scriptAddr :: forall era. (Scriptic era) => Core.Script era -> Proof era -> Addr
 scriptAddr s _pf = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
-    (_ssk, svk) = mkKeyPair @(Crypto era) (0, 0, 0, 0, 0)
+    (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
 someKeys :: forall era. Era era => Proof era -> KeyPair 'Payment (Crypto era)
 someKeys _pf = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @(Crypto era) (1, 1, 1, 1, 1)
+    (sk, vk) = mkKeyPair @(Crypto era) (RawSeed 1 1 1 1 1)
 
 someAddr :: forall era. Era era => Proof era -> Addr (Crypto era)
 someAddr pf = Addr Testnet pCred sCred
   where
-    (_ssk, svk) = mkKeyPair @(Crypto era) (0, 0, 0, 0, 2)
+    (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 2)
     pCred = KeyHashObj . hashKey . vKey $ someKeys pf
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
@@ -223,7 +224,7 @@ timelockHash n pf = hashScript @era $ (timelockScript n pf)
 timelockAddr :: forall era. PostShelley era => Proof era -> Addr (Crypto era)
 timelockAddr pf = Addr Testnet pCred sCred
   where
-    (_ssk, svk) = mkKeyPair @(Crypto era) (0, 0, 0, 0, 2)
+    (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 2)
     pCred = ScriptHashObj (timelockHash 0 pf)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
@@ -929,7 +930,7 @@ incorrectNetworkIDTx pf =
     ]
 
 extraneousKeyHash :: CC.Crypto c => KeyHash 'Witness c
-extraneousKeyHash = hashKey . snd . mkKeyPair $ (0, 0, 0, 0, 99)
+extraneousKeyHash = hashKey . snd . mkKeyPair $ (RawSeed 0 0 0 0 99)
 
 missingRequiredWitnessTxBody :: Era era => Proof era -> Core.TxBody era
 missingRequiredWitnessTxBody pf =
@@ -1532,7 +1533,7 @@ initialBBodyState pf =
 coldKeys :: CC.Crypto c => KeyPair 'BlockIssuer c
 coldKeys = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (1, 2, 3, 2, 1)
+    (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
 
 makeNaiveBlock ::
   forall era.
@@ -1572,8 +1573,8 @@ makeNaiveBlock txs = Block (BHeader bhb sig) txs'
     nonceNonce = mkSeed seedEta (SlotNo 0) NeutralNonce
     leaderNonce = mkSeed seedL (SlotNo 0) NeutralNonce
     txs' = (toTxSeq @era) . StrictSeq.fromList $ txs
-    (svrf, vvrf) = mkVRFKeyPair (0, 0, 0, 0, 2)
-    (skes, vkes) = mkKESKeyPair (0, 0, 0, 0, 3)
+    (svrf, vvrf) = mkVRFKeyPair (RawSeed 0 0 0 0 2)
+    (skes, vkes) = mkKESKeyPair (RawSeed 0 0 0 0 3)
 
 testAlonzoBlock :: Block A
 testAlonzoBlock =

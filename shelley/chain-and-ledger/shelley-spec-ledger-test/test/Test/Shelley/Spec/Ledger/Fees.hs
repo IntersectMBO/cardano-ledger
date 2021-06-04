@@ -16,10 +16,26 @@ import Cardano.Binary (serialize)
 import Cardano.Crypto.VRF (VRFAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
+import Cardano.Ledger.BaseTypes
+  ( Network (..),
+    StrictMaybe (..),
+    textToDns,
+    textToUrl,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys
+  ( DSignable,
+    Hash,
+    KeyHash,
+    KeyPair (..),
+    KeyRole (..),
+    asWitness,
+    hashKey,
+    vKey,
+  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Tx (Tx (..))
@@ -48,22 +64,6 @@ import Shelley.Spec.Ledger.API
     TxOut (..),
     hashVerKeyVRF,
   )
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-    textToDns,
-    textToUrl,
-  )
-import Cardano.Ledger.Keys
-  ( DSignable,
-    Hash,
-    KeyHash,
-    KeyPair (..),
-    KeyRole (..),
-    asWitness,
-    hashKey,
-    vKey,
-  )
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
@@ -79,7 +79,13 @@ import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
-import Test.Shelley.Spec.Ledger.Utils (mkAddr, mkKeyPair, mkVRFKeyPair, unsafeMkUnitInterval)
+import Test.Shelley.Spec.Ledger.Utils
+  ( RawSeed (..),
+    mkAddr,
+    mkKeyPair,
+    mkVRFKeyPair,
+    unsafeMkUnitInterval,
+  )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
@@ -96,12 +102,12 @@ sizeTest _ b16 tx s = do
 alicePay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
 alicePay = KeyPair @'Payment @crypto vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 0)
+    (sk, vk) = mkKeyPair @crypto (RawSeed 0 0 0 0 0)
 
 aliceStake :: forall crypto. Cr.Crypto crypto => KeyPair 'Staking crypto
 aliceStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 1)
+    (sk, vk) = mkKeyPair @crypto (RawSeed 0 0 0 0 1)
 
 aliceSHK :: forall crypto. Cr.Crypto crypto => Credential 'Staking crypto
 aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
@@ -109,13 +115,13 @@ aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 alicePool :: forall crypto. Cr.Crypto crypto => KeyPair 'StakePool crypto
 alicePool = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (0, 0, 0, 0, 2)
+    (sk, vk) = mkKeyPair @crypto (RawSeed 0 0 0 0 2)
 
 alicePoolKH :: forall crypto. Cr.Crypto crypto => KeyHash 'StakePool crypto
 alicePoolKH = (hashKey . vKey) alicePool
 
 aliceVRF :: forall v. VRFAlgorithm v => (VRF.SignKeyVRF v, VRF.VerKeyVRF v)
-aliceVRF = mkVRFKeyPair (0, 0, 0, 0, 3)
+aliceVRF = mkVRFKeyPair (RawSeed 0 0 0 0 3)
 
 alicePoolParams :: forall crypto. Cr.Crypto crypto => PoolParams crypto
 alicePoolParams =
@@ -145,12 +151,12 @@ aliceAddr = mkAddr (alicePay, aliceStake)
 bobPay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
 bobPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (1, 0, 0, 0, 0)
+    (sk, vk) = mkKeyPair @crypto (RawSeed 1 0 0 0 0)
 
 bobStake :: forall crypto. Cr.Crypto crypto => KeyPair 'Staking crypto
 bobStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair @crypto (1, 0, 0, 0, 1)
+    (sk, vk) = mkKeyPair @crypto (RawSeed 1 0 0 0 1)
 
 bobSHK :: forall crypto. Cr.Crypto crypto => Credential 'Staking crypto
 bobSHK = (KeyHashObj . hashKey . vKey) bobStake
@@ -161,7 +167,7 @@ bobAddr = mkAddr (bobPay, bobStake)
 carlPay :: forall crypto. Cr.Crypto crypto => KeyPair 'Payment crypto
 carlPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (2, 0, 0, 0, 0)
+    (sk, vk) = mkKeyPair (RawSeed 2 0 0 0 0)
 
 -- | Simple Transaction which consumes one UTxO and creates one UTxO
 -- | and has one witness

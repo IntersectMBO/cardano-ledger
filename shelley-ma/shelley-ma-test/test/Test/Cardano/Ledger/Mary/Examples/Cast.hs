@@ -27,19 +27,19 @@ import Cardano.Ledger.Keys
     KeyRole (..),
   )
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
-import Test.Shelley.Spec.Ledger.Utils (mkAddr, mkKeyPair)
+import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), mkAddr, mkKeyPair)
 
 -- | Alice's payment key pair
 alicePay :: KeyPair 'Payment TestCrypto
 alicePay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
 
 -- | Alice's stake key pair
 aliceStake :: KeyPair 'Staking TestCrypto
 aliceStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
+    (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's base address
 aliceAddr :: Addr TestCrypto
@@ -49,13 +49,13 @@ aliceAddr = mkAddr (alicePay, aliceStake)
 bobPay :: KeyPair 'Payment TestCrypto
 bobPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (2, 2, 2, 2, 2)
+    (sk, vk) = mkKeyPair (RawSeed 2 2 2 2 2)
 
 -- | Bob's stake key pair
 bobStake :: KeyPair 'Staking TestCrypto
 bobStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
+    (sk, vk) = mkKeyPair (RawSeed 3 3 3 3 3)
 
 -- | Bob's address
 bobAddr :: Addr TestCrypto
@@ -65,13 +65,13 @@ bobAddr = mkAddr (bobPay, bobStake)
 carlPay :: KeyPair 'Payment TestCrypto
 carlPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
+    (sk, vk) = mkKeyPair (RawSeed 4 4 4 4 4)
 
 -- | Carl's stake key pair
 carlStake :: KeyPair 'Staking TestCrypto
 carlStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
+    (sk, vk) = mkKeyPair (RawSeed 5 5 5 5 5)
 
 -- | Carl's address
 carlAddr :: Addr TestCrypto
@@ -81,13 +81,13 @@ carlAddr = mkAddr (carlPay, carlStake)
 dariaPay :: KeyPair 'Payment TestCrypto
 dariaPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
+    (sk, vk) = mkKeyPair (RawSeed 6 6 6 6 6)
 
 -- | Daria's stake key pair
 dariaStake :: KeyPair 'Staking TestCrypto
 dariaStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
+    (sk, vk) = mkKeyPair (RawSeed 7 7 7 7 7)
 
 -- | Daria's address
 dariaAddr :: Addr TestCrypto

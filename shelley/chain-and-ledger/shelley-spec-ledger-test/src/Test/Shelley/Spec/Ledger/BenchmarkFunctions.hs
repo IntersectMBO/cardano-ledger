@@ -102,7 +102,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
-  ( mkAddr,
+  ( RawSeed (..),
+    mkAddr,
     mkKeyPair,
     mkKeyPair',
     mkVRFKeyPair,
@@ -131,12 +132,12 @@ instance PraosCrypto B_Crypto
 aliceStake :: KeyPair 'Staking B_Crypto
 aliceStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
 alicePay :: KeyPair 'Payment B_Crypto
 alicePay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
 
 aliceAddr :: Addr B_Crypto
 aliceAddr = mkAddr (alicePay, aliceStake)
@@ -222,12 +223,12 @@ ledgerSpendOneGivenUTxO state = testLEDGER (state, def) txSpendOneUTxO ledgerEnv
 --
 
 -- Create stake key pairs, corresponding to seeds
--- (start, 0, 0, 0, 0) through (end, 0, 0, 0, 0)
+-- (RawSeed start 0 0 0 0) through (RawSeed end 0 0 0 0)
 stakeKeys :: Word64 -> Word64 -> [KeyPair 'Staking B_Crypto]
-stakeKeys start end = fmap (\w -> mkKeyPair' (w, 0, 0, 0, 0)) [start .. end]
+stakeKeys start end = fmap (\w -> mkKeyPair' (RawSeed w 0 0 0 0)) [start .. end]
 
 stakeKeyOne :: KeyPair 'Staking B_Crypto
-stakeKeyOne = mkKeyPair' (1, 0, 0, 0, 0)
+stakeKeyOne = mkKeyPair' (RawSeed 1 0 0 0 0)
 
 stakeKeyToCred :: KeyPair 'Staking B_Crypto -> Credential 'Staking B_Crypto
 stakeKeyToCred = KeyHashObj . hashKey . vKey
@@ -288,7 +289,7 @@ makeLEDGERState start tx =
         Left e -> error $ show e
 
 -- Create a ledger state that has registered stake credentials that
--- are seeded with (n, 0, 0, 0, 0) to (m, 0, 0, 0, 0).
+-- are seeded with (RawSeed n 0 0 0 0) to (RawSeed m 0 0 0 0).
 -- It is pre-populated with 2 genesis injcoins.
 ledgerStateWithNregisteredKeys ::
   Word64 -> Word64 -> (UTxOState B, DPState B_Crypto)
@@ -299,8 +300,8 @@ ledgerStateWithNregisteredKeys n m =
 -- Stake Key Registration example
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredKeys n m,
--- so that keys (n, 0, 0, 0, 0) through (m, 0, 0, 0, 0) are already registered,
--- register new keys (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
+-- so that keys (RawSeed n 0 0 0 0) through (RawSeed m 0 0 0 0) are already registered,
+-- register new keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [n, m] must be disjoint from [x, y].
 ledgerRegisterStakeKeys :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
 ledgerRegisterStakeKeys x y state =
@@ -313,7 +314,7 @@ ledgerRegisterStakeKeys x y state =
 -- Deregistration example
 
 -- Create a transaction body that de-registers stake credentials,
--- corresponding to the keys seeded with (x, 0, 0, 0, 0) to (y, 0, 0, 0, 0)
+-- corresponding to the keys seeded with (RawSeed x 0 0 0 0) to (RawSeed y 0 0 0 0)
 txbDeRegStakeKey :: Word64 -> Word64 -> TxBody B
 txbDeRegStakeKey x y =
   TxBody
@@ -337,8 +338,8 @@ txDeRegStakeKeys x y =
     (asWitness alicePay : fmap asWitness (stakeKeys x y))
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredKeys n m,
--- so that keys (n, 0, 0, 0, 0) through (m, 0, 0, 0, 0) are already registered,
--- deregister keys (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
+-- so that keys (RawSeed n 0 0 0 0) through (RawSeed m 0 0 0 0) are already registered,
+-- deregister keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [x, y] must be contained in [n, m].
 ledgerDeRegisterStakeKeys :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
 ledgerDeRegisterStakeKeys x y state =
@@ -351,7 +352,7 @@ ledgerDeRegisterStakeKeys x y state =
 -- Reward Withdrawal example
 
 -- Create a transaction body that withdrawls from reward accounts,
--- corresponding to the keys seeded with (x, 0, 0, 0, 0) to (y, 0, 0, 0, 0).
+-- corresponding to the keys seeded with (RawSeed x 0 0 0 0) to (RawSeed y 0 0 0 0).
 txbWithdrawals :: Word64 -> Word64 -> TxBody B
 txbWithdrawals x y =
   TxBody
@@ -376,8 +377,8 @@ txWithdrawals x y =
     (asWitness alicePay : fmap asWitness (stakeKeys x y))
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredKeys n m,
--- so that keys (n, 0, 0, 0, 0) through (m, 0, 0, 0, 0) are already registered,
--- make reward withdrawls for keys (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
+-- so that keys (RawSeed n 0 0 0 0) through (RawSeed m 0 0 0 0) are already registered,
+-- make reward withdrawls for keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [x, y] must be contained in [n, m].
 ledgerRewardWithdrawals :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
 ledgerRewardWithdrawals x y state = testLEDGER state (txWithdrawals x y) ledgerEnv
@@ -388,12 +389,12 @@ ledgerRewardWithdrawals x y state = testLEDGER state (txWithdrawals x y) ledgerE
 --
 
 -- Create stake pool key pairs, corresponding to seeds
--- (start, 0, 0, 0, 0) through (end, 0, 0, 0, 0)
+-- (RawSeed start 0 0 0 0) through (RawSeed end 0 0 0 0)
 poolColdKeys :: Word64 -> Word64 -> [KeyPair 'StakePool B_Crypto]
-poolColdKeys start end = fmap (\w -> mkKeyPair' (w, 1, 0, 0, 0)) [start .. end]
+poolColdKeys start end = fmap (\w -> mkKeyPair' (RawSeed w 1 0 0 0)) [start .. end]
 
 firstStakePool :: KeyPair 'StakePool B_Crypto
-firstStakePool = mkKeyPair' (1, 1, 0, 0, 0)
+firstStakePool = mkKeyPair' (RawSeed 1 1 0 0 0)
 
 mkPoolKeyHash :: KeyPair 'StakePool B_Crypto -> KeyHash 'StakePool B_Crypto
 mkPoolKeyHash = hashKey . vKey
@@ -402,7 +403,7 @@ firstStakePoolKeyHash :: KeyHash 'StakePool B_Crypto
 firstStakePoolKeyHash = mkPoolKeyHash firstStakePool
 
 vrfKeyHash :: Hash B_Crypto (VerKeyVRF B_Crypto)
-vrfKeyHash = hashVerKeyVRF . snd . mkVRFKeyPair $ (0, 0, 0, 0, 0)
+vrfKeyHash = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0
 
 mkPoolParameters :: KeyPair 'StakePool B_Crypto -> PoolParams B_Crypto
 mkPoolParameters keys =
@@ -430,7 +431,7 @@ txRegStakePools ix keys =
     ([asWitness alicePay, asWitness stakeKeyOne] ++ fmap asWitness keys)
 
 -- Create a ledger state that has n registered stake pools.
--- The keys are seeded with (n, 1, 0, 0, 0) to (m, 1, 0, 0, 0)
+-- The keys are seeded with (RawSeed n 1 0 0 0) to (RawSeed m 1 0 0 0)
 -- It is pre-populated with 2 genesis injcoins.
 ledgerStateWithNregisteredPools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto)
 ledgerStateWithNregisteredPools n m =
@@ -440,8 +441,8 @@ ledgerStateWithNregisteredPools n m =
 -- Stake Pool Registration example
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredPools n m,
--- so that pool keys (n, 1, 0, 0, 0) through (m, 1, 0, 0, 0) are already registered,
--- register new pools (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
+-- so that pool keys (RawSeed n 1 0 0 0) through (RawSeed m 1 0 0 0) are already registered,
+-- register new pools (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [n, m] must be disjoint from [x, y].
 ledgerRegisterStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
 ledgerRegisterStakePools x y state =
@@ -454,8 +455,8 @@ ledgerRegisterStakePools x y state =
 -- Stake Pool Re-Registration/Update example
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredPools n m,
--- so that pool keys (n, 1, 0, 0, 0) through (m, 1, 0, 0, 0) are already registered,
--- re-register pools (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
+-- so that pool keys (RawSeed n 1 0 0 0) through (RawSeed m 1 0 0 0) are already registered,
+-- re-register pools (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [n, m] must be contained in [x, y].
 ledgerReRegisterStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
 ledgerReRegisterStakePools x y state =
@@ -468,7 +469,7 @@ ledgerReRegisterStakePools x y state =
 -- Stake Pool Retirement example
 
 -- Create a transaction body that retires stake pools,
--- corresponding to the keys seeded with (x, 1, 0, 0, 0) to (y, 1, 0, 0, 0)
+-- corresponding to the keys seeded with (RawSeed x 1 0 0 0) to (RawSeed y 1 0 0 0)
 txbRetireStakePool :: Word64 -> Word64 -> TxBody B
 txbRetireStakePool x y =
   TxBody
@@ -494,8 +495,8 @@ txRetireStakePool x y =
     (asWitness alicePay : fmap asWitness (poolColdKeys x y))
 
 -- Given a ledger state, presumably created by ledgerStateWithNregisteredPools n m,
--- so that pool keys (n, 1, 0, 0, 0) through (m, 1, 0, 0, 0) are already registered,
--- retire pools (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0).
+-- so that pool keys (RawSeed n 1 0 0 0) through (RawSeed m 1 0 0 0) are already registered,
+-- retire pools (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [n, m] must be contained in [x, y].
 ledgerRetireStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
 ledgerRetireStakePools x y state = testLEDGER state (txRetireStakePool x y) ledgerEnv
@@ -506,8 +507,8 @@ ledgerRetireStakePools x y state = testLEDGER state (txRetireStakePool x y) ledg
 --
 
 -- Create a ledger state that has n registered stake keys and m stake pools.
--- The stake keys are seeded with (1, 0, 0, 0, 0) to (n, 0, 0, 0, 0)
--- The stake pools are seeded with (1, 1, 0, 0, 0) to (m, 1, 0, 0, 0)
+-- The stake keys are seeded with (RawSeed 1 0 0 0 0) to (RawSeed n 0 0 0 0)
+-- The stake pools are seeded with (RawSeed 1 1 0 0 0) to (RawSeed m 1 0 0 0)
 -- It is pre-populated with 3 genesis injcoins.
 ledgerStateWithNkeysMpools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto)
 ledgerStateWithNkeysMpools n m =
@@ -516,7 +517,7 @@ ledgerStateWithNkeysMpools n m =
     (txRegStakePools 1 (poolColdKeys 1 m))
 
 -- Create a transaction body that delegates several keys to ONE stake pool,
--- corresponding to the keys seeded with (n, 0, 0, 0, 0) to (m, 0, 0, 0, 0)
+-- corresponding to the keys seeded with (RawSeed n 0 0 0 0) to (RawSeed m 0 0 0 0)
 txbDelegate :: Word64 -> Word64 -> TxBody B
 txbDelegate n m =
   TxBody
@@ -541,9 +542,9 @@ txDelegate n m =
     (asWitness alicePay : fmap asWitness (stakeKeys n m))
 
 -- Given a ledger state, presumably created by ledgerStateWithNkeysMpools n m,
--- so that stake keys (1, 0, 0, 0, 0) through (n, 0, 0, 0, 0) are already registered
--- and pool keys (1, 1, 0, 0, 0) through (m, 1, 0, 0, 0) are already registered,
--- delegate stake keys (x, 0, 0, 0, 0) through (y, 0, 0, 0, 0) to ONE pool.
+-- so that stake keys (RawSeed 1 0 0 0 0) through (RawSeed n 0 0 0 0) are already registered
+-- and pool keys (RawSeed 1 1 0 0 0) through (RawSeed m 1 0 0 0) are already registered,
+-- delegate stake keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0) to ONE pool.
 -- Note that [x, y] must be contained in [1, n].
 ledgerDelegateManyKeysOnePool ::
   Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()

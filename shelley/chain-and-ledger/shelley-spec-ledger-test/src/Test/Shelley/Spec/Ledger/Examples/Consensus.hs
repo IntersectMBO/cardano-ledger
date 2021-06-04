@@ -475,7 +475,7 @@ exampleKeys =
   AllIssuerKeys
     coldKey
     (mkVRFKeyPair (Proxy @c) 1)
-    [(KESPeriod 0, mkKESKeyPair (1, 0, 0, 0, 3))]
+    [(KESPeriod 0, mkKESKeyPair (RawSeed 1 0 0 0 3))]
     (hashKey (vKey coldKey))
   where
     coldKey = mkDSIGNKeyPair 1

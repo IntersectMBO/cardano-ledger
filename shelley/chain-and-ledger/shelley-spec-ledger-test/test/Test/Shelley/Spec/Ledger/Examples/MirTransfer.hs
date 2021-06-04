@@ -7,6 +7,10 @@ module Test.Shelley.Spec.Ledger.Examples.MirTransfer
 where
 
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Keys
+  ( KeyRole (..),
+    hashKey,
+  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
@@ -26,15 +30,11 @@ import Shelley.Spec.Ledger.API
     MIRTarget (..),
     Ptr (..),
   )
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-    hashKey,
-  )
 import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Deleg (DelegPredicateFailure (..))
 import Shelley.Spec.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
-import Test.Shelley.Spec.Ledger.Utils (applySTSTest, mkKeyPair, runShelleyBase)
+import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), applySTSTest, mkKeyPair, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
@@ -80,7 +80,7 @@ testMirTransfer pv pot target ir acnt predicateFailure@(Left _) = do
   (ignoreAllButIRWD st) @?= predicateFailure
 
 alice :: Credential 'Staking C_Crypto
-alice = (KeyHashObj . hashKey . snd) $ mkKeyPair (0, 0, 0, 0, 1)
+alice = (KeyHashObj . hashKey . snd) $ mkKeyPair (RawSeed 0 0 0 0 1)
 
 aliceOnlyReward :: Integer -> Map (Credential 'Staking C_Crypto) Coin
 aliceOnlyReward c = Map.fromList [(alice, Coin c)]
@@ -89,7 +89,7 @@ aliceOnlyDelta :: Integer -> Map (Credential 'Staking C_Crypto) DeltaCoin
 aliceOnlyDelta c = Map.fromList [(alice, DeltaCoin c)]
 
 bob :: Credential 'Staking C_Crypto
-bob = (KeyHashObj . hashKey . snd) $ mkKeyPair (0, 0, 0, 0, 2)
+bob = (KeyHashObj . hashKey . snd) $ mkKeyPair (RawSeed 0 0 0 0 2)
 
 bobOnlyReward :: Integer -> Map (Credential 'Staking C_Crypto) Coin
 bobOnlyReward c = Map.fromList [(bob, Coin c)]

@@ -59,7 +59,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
     checkEncodingCBOR,
     checkEncodingCBORAnnotated,
   )
-import Test.Shelley.Spec.Ledger.Utils (mkGenKey, mkKeyPair)
+import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), mkGenKey, mkKeyPair)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 
@@ -94,20 +94,20 @@ assetName3 = BS.pack "a3"
 -- ===========================================
 
 testGKeyHash :: KeyHash 'Genesis TestCrypto
-testGKeyHash = hashKey . snd . mkGenKey $ (0, 0, 0, 0, 0)
+testGKeyHash = hashKey . snd . mkGenKey $ (RawSeed 0 0 0 0 0)
 
 testAddrE :: Addr TestCrypto
 testAddrE =
   Addr
     Testnet
-    (KeyHashObj . hashKey . snd $ mkKeyPair (0, 0, 0, 0, 1))
+    (KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 1))
     StakeRefNull
 
 testKeyHash :: KeyHash 'Staking TestCrypto
-testKeyHash = hashKey . snd $ mkKeyPair (0, 0, 0, 0, 2)
+testKeyHash = hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 2)
 
 testStakeCred :: Credential 'Staking TestCrypto
-testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (0, 0, 0, 0, 3)
+testStakeCred = KeyHashObj . hashKey . snd $ mkKeyPair (RawSeed 0 0 0 0 3)
 
 testUpdate ::
   forall era.
@@ -150,8 +150,8 @@ testUpdate =
 
 scriptGoldenTest :: forall era. (Era era) => TestTree
 scriptGoldenTest =
-  let kh0 = hashKey . snd . mkGenKey $ (0, 0, 0, 0, 0) :: KeyHash 'Witness (Crypto era)
-      kh1 = hashKey . snd . mkGenKey $ (1, 1, 1, 1, 1) :: KeyHash 'Witness (Crypto era)
+  let kh0 = hashKey . snd . mkGenKey $ (RawSeed 0 0 0 0 0) :: KeyHash 'Witness (Crypto era)
+      kh1 = hashKey . snd . mkGenKey $ (RawSeed 1 1 1 1 1) :: KeyHash 'Witness (Crypto era)
    in checkEncodingCBORAnnotated
         "timelock_script"
         ( RequireAllOf @(Crypto era)
