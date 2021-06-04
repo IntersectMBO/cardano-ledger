@@ -36,7 +36,6 @@ import Control.Monad.Trans.Class (lift)
 import Data.Default.Class
 import Data.Foldable
 import Data.Group
-import Data.Kind (Type)
 import Data.Proxy
 import Data.Set (Set)
 import Data.Traversable
@@ -84,7 +83,8 @@ import qualified Shelley.Spec.Ledger.TxBody as Shelley
 import Cardano.Ledger.SafeHash (SafeHash)
 
 
-type KeyPair' crypto = (KeyPair 'Payment crypto, KeyPair 'Staking crypto)
+-- | both keypairs used for an address
+type AddressKeyPair crypto = (KeyPair 'Payment crypto, KeyPair 'Staking crypto)
 
 data EraElaboratorState era = EraElaboratorState
   { _eesUnusedKeyPairs :: Word64
@@ -100,14 +100,6 @@ deriving instance
   ( C.Crypto (Crypto era)
   )
   => Show (EraElaboratorState era)
-
-class HasEraElaboratorState s era | s -> era where
-  eraElaboratorState
-    :: forall f. Functor f
-    => (EraElaboratorState era -> f (EraElaboratorState era)) -> s -> f s
-
-instance HasEraElaboratorState (EraElaboratorState era) era where
-  eraElaboratorState = id
 
 eesUnusedKeyPairs :: Functor f => (Word64 -> f Word64) -> EraElaboratorState era -> f (EraElaboratorState era)
 eesUnusedKeyPairs a2fb s = (\b -> s {_eesUnusedKeyPairs = b}) <$> a2fb (_eesUnusedKeyPairs s)
@@ -130,35 +122,32 @@ eesUTxOs a2fb s = (\b -> s {_eesUTxOs = b}) <$> a2fb (_eesUTxOs s)
 eesCurrentSlot :: Lens' (EraElaboratorState era) SlotNo
 eesCurrentSlot a2fb s = (\b -> s {_eesCurrentSlot = b}) <$> a2fb (_eesCurrentSlot s)
 
+-- various derived values for an address to avoid recomputing them
 data TestKeyPair crypto = TestKeyPair
-  { _tkpKeyPair :: KeyPair' crypto
+  { _tkpKeyPair :: AddressKeyPair crypto
   , _tkpVRF :: (SignKeyVRF crypto , VerKeyVRF crypto )
   , _tkpAddr :: Addr crypto
   , _tkpVRFHash :: Hash.Hash (C.HASH crypto) (Cardano.Crypto.VRF.Class.VerKeyVRF (C.VRF crypto))
   , _tkpStakePool :: KeyHash 'Staking crypto
   , _tkpStakeCredential :: StakeCredential crypto
   }
-
-deriving instance
-  ( C.Crypto crypto
-  )
-  => Show (TestKeyPair crypto)
+deriving instance C.Crypto crypto => Show (TestKeyPair crypto)
 
 
+-- | get the TestKeyPair for a ModelAddress
 getKeyPairForImpl
-  :: forall m era st proxy.
-  ( MonadState st m
-  , HasEraElaboratorState st era
+  :: forall m era proxy.
+  ( MonadState (EraElaboratorState era) m
   , C.Crypto (Crypto era)
   )
   => proxy era -> ModelAddress
   -> m (TestKeyPair (Crypto era))
 getKeyPairForImpl _ mAddr = do
-  st <- use eraElaboratorState
+  st <- use id
   case Map.lookup mAddr (_eesKeys st) of
     Just k -> pure k
     Nothing -> do
-      unusedKeyPairId <- eraElaboratorState . eesUnusedKeyPairs <<%= succ
+      unusedKeyPairId <- eesUnusedKeyPairs <<%= succ
 
       let
         keyPair@(_, poolKey) = mkKeyPairs @(Crypto era) unusedKeyPairId
@@ -172,47 +161,52 @@ getKeyPairForImpl _ mAddr = do
           , _tkpStakeCredential = KeyHashObj . hashKey $ vKey poolKey
           }
 
-      eraElaboratorState . eesKeys . at mAddr .= Just k
+      eesKeys . at mAddr .= Just k
       pure k
 
-getKeyPairFor :: forall m era st proxy.
-  ( MonadState st m , HasEraElaboratorState st era , C.Crypto (Crypto era))
+-- | get the AddressKeyPair for a ModelAddress
+getKeyPairFor :: forall m era proxy.
+  ( MonadState (EraElaboratorState era) m , C.Crypto (Crypto era))
   => proxy era -> ModelAddress
-  -> m (KeyPair' (Crypto era))
+  -> m (AddressKeyPair (Crypto era))
 getKeyPairFor proxy mAddr = _tkpKeyPair <$> getKeyPairForImpl proxy mAddr
 
+-- | get the Addr for a ModelAddress
 getAddrFor
-  :: forall m era st proxy.
-  ( MonadState st m , HasEraElaboratorState st era , C.Crypto (Crypto era))
+  :: forall m era proxy.
+  ( MonadState (EraElaboratorState era) m , C.Crypto (Crypto era))
   => proxy era -> ModelAddress
   -> m (Addr (Crypto era))
 getAddrFor proxy mAddr = _tkpAddr <$> getKeyPairForImpl proxy mAddr
 
+-- | get the Addr for a ModelAddress
 getStakingKeyHashFor
-  :: forall m era st proxy.
-  ( MonadState st m , HasEraElaboratorState st era , C.Crypto (Crypto era))
+  :: forall m era proxy.
+  ( MonadState (EraElaboratorState era) m , C.Crypto (Crypto era))
   => proxy era -> ModelAddress
   -> m (KeyHash 'Staking (Crypto era))
 getStakingKeyHashFor proxy maddr = _tkpStakePool <$> getKeyPairForImpl proxy maddr
 
+-- | get the StakePool hash for a ModelAddress
 getStakePoolFor
-  :: forall m era st proxy.
-  ( MonadState st m , HasEraElaboratorState st era , C.Crypto (Crypto era))
+  :: forall m era proxy.
+  ( MonadState (EraElaboratorState era) m , C.Crypto (Crypto era))
   => proxy era -> ModelAddress
   -> m (KeyHash 'StakePool (Crypto era))
 getStakePoolFor proxy maddr = coerceKeyRole @_ @_ @(Crypto era) . _tkpStakePool <$> getKeyPairForImpl proxy maddr
 
+-- | get the StakeCredential for a ModelAddress
 getStakeCredenetialFor
-  :: forall m era st proxy.
-  ( MonadState st m , HasEraElaboratorState st era , C.Crypto (Crypto era))
+  :: forall m era proxy.
+  ( MonadState (EraElaboratorState era) m , C.Crypto (Crypto era))
   => proxy era -> ModelAddress
   -> m (StakeCredential (Crypto era))
 getStakeCredenetialFor proxy maddr = _tkpStakeCredential <$> getKeyPairForImpl proxy maddr
 
+-- | get the VRFHash for a ModelAddress
 getHashKeyVRFFor
-  :: forall m era st proxy.
-  ( MonadState st m
-  , HasEraElaboratorState st era
+  :: forall m era proxy.
+  ( MonadState (EraElaboratorState era) m
   , C.Crypto (Crypto era)
   )
   => proxy era -> ModelAddress
@@ -232,9 +226,8 @@ instance Default (EraElaboratorState era) where
     }
 
 mkTxOut
-  :: forall m era st.
-  ( MonadState st m
-  , HasEraElaboratorState st era
+  :: forall m era .
+  ( MonadState (EraElaboratorState era) m
   , Era era
   , UsesTxOut era
   )
@@ -242,13 +235,12 @@ mkTxOut
   -> ModelTxOut
   -> m (Core.TxOut era)
 mkTxOut mutxoId (ModelTxOut mAddr (ModelValue mValue)) = do
-  eraElaboratorState . eesUTxOs . at mutxoId .= Just mAddr
+  eesUTxOs . at mutxoId .= Just mAddr
   addr <- getAddrFor (Proxy :: Proxy era) mAddr
   pure (makeTxOut (Proxy :: Proxy era) addr (Val.inject $ Coin mValue))
 
-mkTxIn :: forall m era st.
-  ( MonadState st m
-  , HasEraElaboratorState st era
+mkTxIn :: forall m era .
+  ( MonadState (EraElaboratorState era) m
   , C.Crypto (Crypto era)
   )
   => ModelTxIn
@@ -256,8 +248,8 @@ mkTxIn :: forall m era st.
 mkTxIn = \case
   -- TODO: handle missing txnIds more gracefully?
   ModelTxIn mtxId idx -> do
-    ses <- use eraElaboratorState
-    ownerMAddr <- use $ eraElaboratorState . eesUTxOs . at (ModelUTxOId mtxId idx)
+    ses <- use id
+    ownerMAddr <- use $ eesUTxOs . at (ModelUTxOId mtxId idx)
     for_ ownerMAddr $ \mAddr -> do
       (myKeys, _) <- getKeyPairFor (Proxy :: Proxy era) mAddr
       pushWitness myKeys
@@ -268,19 +260,19 @@ mkTxIn = \case
     pushWitness myKeys
     pure $ Set.singleton $ initialFundsPseudoTxIn $ myAddr
 
+-- | accumulate a witness while elaborating a ModelTx.
 pushWitness
-  :: forall kr m era st.
-  ( HasEraElaboratorState st era
-  , MonadState st m
+  :: forall kr m era .
+  ( MonadState (EraElaboratorState era) m
   )
   => KeyPair kr (Crypto era)
   -> m ()
-pushWitness keyP = eraElaboratorState . eesPendingWitnessKeys %= (:) (coerceKeyRole keyP)
+pushWitness keyP = eesPendingWitnessKeys %= (:) (coerceKeyRole keyP)
 
+-- | return all accumulated witnesses.
 popWitnesses
-  :: forall proxy m era st.
-  ( HasEraElaboratorState st era
-  , MonadState st m
+  :: forall proxy m era .
+  ( MonadState (EraElaboratorState era) m
   , DSIGN.Signable (C.DSIGN (Crypto era)) (Hash.Hash (C.HASH (Crypto era)) Shelley.EraIndependentTxBody)
   , C.Crypto (Crypto era)
   )
@@ -288,7 +280,7 @@ popWitnesses
   -> SafeHash (Crypto era) Shelley.EraIndependentTxBody
   -> m (Set.Set ( Shelley.WitVKey 'Witness (Crypto era) ) )
 popWitnesses _ bodyHash = do
-  witness <- eraElaboratorState . eesPendingWitnessKeys <<.= []
+  witness <- eesPendingWitnessKeys <<.= []
   pure $ flip foldMap witness $ \keyP ->
     Set.singleton $ UTxO.makeWitnessVKey bodyHash keyP
 
@@ -368,6 +360,8 @@ data ModelPredicateFailure
       !ModelValue
       -- ^ the Coin produced by this transaction
 
+-- | lens to focus the ledger state from that used by ApplyBlock to that used by
+-- ApplyTx
 mempoolState :: Functor f => (MempoolState era -> f (MempoolState era)) -> (NewEpochState era -> f (NewEpochState era))
 mempoolState = \a2b s ->
   let
@@ -386,39 +380,37 @@ mempoolState = \a2b s ->
 {-# INLINE mempoolState #-}
 
 class ElaborateEraModel era where
-  type ElaborateEraModelState era :: Type
-  type ElaborateEraModelState era = EraElaboratorState era
 
+  -- | Apply a ModelBlock to a specific era's ledger.
   elaborateBlock
     :: Globals
     -> ModelBlock
-    -> (NewEpochState era, ElaborateEraModelState era)
+    -> (NewEpochState era, EraElaboratorState era)
     -> ( Either (ApplyTxError era) ()
-       , (NewEpochState era, ElaborateEraModelState era)
+       , (NewEpochState era, EraElaboratorState era)
        )
 
   default elaborateBlock
     ::
     ( ApplyBlock era
     , ApplyTx era
-    , HasEraElaboratorState (ElaborateEraModelState era) era
     )
     => Globals
     -> ModelBlock
-    -> (NewEpochState era, ElaborateEraModelState era)
+    -> (NewEpochState era, EraElaboratorState era)
     -> ( Either (ApplyTxError era) ()
-       , (NewEpochState era, ElaborateEraModelState era)
+       , (NewEpochState era, EraElaboratorState era)
        )
   elaborateBlock globals = State.runState . Except.runExceptT . \case
     ModelBlock mslot mtxSeq -> do
-      currentEpoch <- use $ _2 . eraElaboratorState . eesCurrentEpoch
+      currentEpoch <- use $ _2 . eesCurrentEpoch
       let
         slot = runIdentity (epochInfoFirst ei currentEpoch) + mslot
         ei = epochInfo globals
         ttl = succ slot
 
       unless (currentEpoch == runIdentity (epochInfoEpoch ei slot)) $ error $ "model slot out of range: " <> show mslot
-      _2 . eraElaboratorState . eesCurrentSlot .= slot
+      _2 . eesCurrentSlot .= slot
       -- tick the model
       lift $ zoom _1 $ State.state $ \nes0 -> ((), applyTick globals nes0 slot)
       txSeq <- lift $ zoom _2 $ for mtxSeq $ \tx -> State.state $ elaborateTx (Proxy :: Proxy era) globals ttl tx
@@ -434,26 +426,26 @@ class ElaborateEraModel era where
       -- pure (slot, txSeq)
       pure ()
 
+  -- | get a NewEpochState from genesis conditions.
   elaborateInitialState
     :: ShelleyGenesis era
     -> AdditionalGenesisConfig era
-    -> Map.Map ModelAddress Coin
-    -> ElaborateEraModelState era
+    -> Map.Map ModelAddress Coin -- ^ Initial coins present at time of genesis.  Each address will have its full balance in a single UTxO from a single "transaction"
+    -> EraElaboratorState era
     -> ( NewEpochState era
-       , ElaborateEraModelState era
+       , EraElaboratorState era
        )
 
   default elaborateInitialState
-    :: ( HasEraElaboratorState (ElaborateEraModelState era) era
-       , C.Crypto (Crypto era)
+    :: ( C.Crypto (Crypto era)
        , CanStartFromGenesis era
        )
     => ShelleyGenesis era
     -> AdditionalGenesisConfig era
     -> Map.Map ModelAddress Coin
-    -> ElaborateEraModelState era
+    -> EraElaboratorState era
     -> ( NewEpochState era
-       , ElaborateEraModelState era
+       , EraElaboratorState era
        )
   elaborateInitialState sg additionalGenesesConfig genesisAccounts = State.runState $ do
     utxo0 <- fmap Map.fromList $ for (Map.toList genesisAccounts) $ \(mAddr, coins) -> do
@@ -462,26 +454,27 @@ class ElaborateEraModel era where
 
     pure $ initialState sg {sgInitialFunds = Map.unionWith const utxo0 $ sgInitialFunds sg } additionalGenesesConfig
 
+  -- | Construct a TxBody from some elaborated inputs.
   makeTxBody
     :: proxy era
-    -> SlotNo -- ttl
-    -> Coin -- fee
-    -> Set.Set (Shelley.TxIn (Crypto era))
-    -> StrictSeq.StrictSeq (Core.TxOut era)
-    -> StrictSeq.StrictSeq (DCert (Crypto era))
-    -> Shelley.Wdrl (Crypto era)
+    -> SlotNo -- ^ ttl
+    -> Coin -- ^ fee
+    -> Set.Set (Shelley.TxIn (Crypto era)) -- ^ inputs
+    -> StrictSeq.StrictSeq (Core.TxOut era) -- ^ outputs
+    -> StrictSeq.StrictSeq (DCert (Crypto era)) -- ^ Deleg certs.
+    -> Shelley.Wdrl (Crypto era) -- ^ withdrawals
     -> Core.TxBody era
 
+  -- | apply a single Model transaction to a specific eras ledger
   elaborateTx
     :: proxy era
     -> Globals
-    -> SlotNo
+    -> SlotNo -- ^ ttl
     -> ModelTx
-    -> ElaborateEraModelState era
-    -> (Era.TxInBlock era, ElaborateEraModelState era)
+    -> EraElaboratorState era
+    -> (Era.TxInBlock era, EraElaboratorState era)
   default elaborateTx ::
-    ( HasEraElaboratorState (ElaborateEraModelState era) era
-    , DSIGN.Signable (C.DSIGN (Crypto era)) (Hash.Hash (C.HASH (Crypto era)) Shelley.EraIndependentTxBody)
+    ( DSIGN.Signable (C.DSIGN (Crypto era)) (Hash.Hash (C.HASH (Crypto era)) Shelley.EraIndependentTxBody)
     , Hash.HashAlgorithm (C.HASH (Crypto era))
     , HashAnnotated (Core.TxBody era) Shelley.EraIndependentTxBody (Crypto era)
     , C.Crypto (Crypto era)
@@ -491,8 +484,8 @@ class ElaborateEraModel era where
     -> Globals
     -> SlotNo
     -> ModelTx
-    -> ElaborateEraModelState era
-    -> (Era.TxInBlock era, ElaborateEraModelState era)
+    -> EraElaboratorState era
+    -> (Era.TxInBlock era, EraElaboratorState era)
   elaborateTx proxy _ maxTTL (ModelTx mtxId mtxInputs mtxOutputs mtxFee mtxDCert mtxWdrl) = State.runState $ do
     outs <- ifor mtxOutputs $ \idx -> mkTxOut $ ModelUTxOId mtxId $ toEnum @Natural idx
     ins :: Set.Set (Shelley.TxIn (Crypto era)) <- fmap fold $ traverse mkTxIn $ Set.toList mtxInputs
@@ -508,37 +501,40 @@ class ElaborateEraModel era where
 
     wits <- popWitnesses (Proxy :: Proxy era) bodyHash
 
-    eraElaboratorState . eesTxIds %= Map.insert mtxId (UTxO.txid @era realTxBody)
+    eesTxIds %= Map.insert mtxId (UTxO.txid @era realTxBody)
     pure $ makeTx proxy realTxBody wits
 
+  -- | build a full tx from TxBody and set of witnesses.
   makeTx
     :: proxy era
     -> Core.TxBody era
     -> Set.Set ( Shelley.WitVKey 'Witness (Crypto era) )
     -> Era.TxInBlock era
 
+  -- | convert an expeced failure by the model to the concrete error that will
+  -- be produced.
   toEraPredicateFailure
     :: ModelPredicateFailure
     -> ApplyBlockTransitionError era
 
+  -- | apply the model New Epoch event to a specific eras ledger
   elaborateBlocksMade
     :: Globals
     -> ModelBlocksMade
-    -> ( NewEpochState era, ElaborateEraModelState era)
+    -> ( NewEpochState era, EraElaboratorState era)
     -> ( BlocksMade (Crypto era)
-       , (NewEpochState era, ElaborateEraModelState era)
+       , (NewEpochState era, EraElaboratorState era)
        )
 
   default elaborateBlocksMade ::
-    ( HasEraElaboratorState (ElaborateEraModelState era) era
-    , C.Crypto (Crypto era)
+    ( C.Crypto (Crypto era)
     , ApplyBlock era
     )
     => Globals
     -> ModelBlocksMade
-    -> (NewEpochState era, ElaborateEraModelState era)
+    -> (NewEpochState era, EraElaboratorState era)
     -> ( BlocksMade (Crypto era)
-       , (NewEpochState era, ElaborateEraModelState era)
+       , (NewEpochState era, EraElaboratorState era)
        )
   elaborateBlocksMade globals (ModelBlocksMade mblocksMade) = State.runState $ do
     bs <- for (Map.toList mblocksMade) $ \(maddr, n) -> do
@@ -548,8 +544,8 @@ class ElaborateEraModel era where
     let bs' = BlocksMade $ Map.fromList bs
     _1 %= emulateBlocksMade bs'
 
-    prevEpoch <- use $ _2 . eraElaboratorState . eesCurrentEpoch
-    epoch <- _2 . eraElaboratorState . eesCurrentEpoch <%= succ
+    prevEpoch <- use $ _2 . eesCurrentEpoch
+    epoch <- _2 . eesCurrentEpoch <%= succ
     let
       ei = epochInfo globals
       firstOfNew = runIdentity $ epochInfoFirst ei epoch
@@ -558,7 +554,7 @@ class ElaborateEraModel era where
         = SlotNo (randomnessStabilisationWindow globals)
         + runIdentity (epochInfoFirst ei prevEpoch)
 
-    currentSlot <- _2 . eraElaboratorState . eesCurrentSlot <<.= firstOfNew
+    currentSlot <- _2 . eesCurrentSlot <<.= firstOfNew
 
     unless (currentSlot > neededSlot) $
       zoom _1 $ State.state $ \nes0 -> ((), applyTick globals nes0 (neededSlot + 1))
@@ -566,21 +562,20 @@ class ElaborateEraModel era where
 
     pure bs'
 
-
+  -- | convert a model deleg certificate to a real DCert
   elaborateDCert
     :: proxy era
     -> ModelDCert
-    -> ElaborateEraModelState era
-    -> (DCert (Crypto era), ElaborateEraModelState era)
+    -> EraElaboratorState era
+    -> (DCert (Crypto era), EraElaboratorState era)
 
   default elaborateDCert ::
-    ( HasEraElaboratorState (ElaborateEraModelState era) era
-    , C.Crypto (Crypto era)
+    ( C.Crypto (Crypto era)
     )
     => proxy era
     -> ModelDCert
-    -> ElaborateEraModelState era
-    -> (DCert (Crypto era), ElaborateEraModelState era)
+    -> EraElaboratorState era
+    -> (DCert (Crypto era), EraElaboratorState era)
   elaborateDCert proxy = State.runState . \case
     ModelRegisterStake maddr -> DCertDeleg . RegKey
       <$> getStakeCredenetialFor proxy maddr
@@ -626,7 +621,7 @@ class ElaborateEraModel era where
 
 
 mkDCerts :: forall m era proxy.
-  ( MonadState (ElaborateEraModelState era) m
+  ( MonadState (EraElaboratorState era) m
   , ElaborateEraModel era
   )
   => proxy era
@@ -646,16 +641,16 @@ emulateBlocksMade
 emulateBlocksMade (BlocksMade newBlocksMade) nes@(LedgerState.NewEpochState {LedgerState.nesBcur = BlocksMade currentBlocksMade })
   = nes {LedgerState.nesBcur = BlocksMade (Map.unionWith (+) newBlocksMade currentBlocksMade)}
 
-type ModelChainInteraction = ModelEpoch
 
+-- | apply several epochs full of blocks to a ledger
 elaborateBlocks_
   :: forall era.
   ( ElaborateEraModel era )
   => Globals
-  -> [ModelChainInteraction]
-  -> (NewEpochState era, ElaborateEraModelState era)
+  -> [ModelEpoch]
+  -> (NewEpochState era, EraElaboratorState era)
   -> ( Either (ApplyTxError era) ()
-     , (NewEpochState era, ElaborateEraModelState era)
+     , (NewEpochState era, EraElaboratorState era)
      )
 elaborateBlocks_ globals = State.runState . Except.runExceptT . traverse_ f
   where
@@ -664,16 +659,16 @@ elaborateBlocks_ globals = State.runState . Except.runExceptT . traverse_ f
       _ :: BlocksMade (Crypto era) <- lift $ State.state $ elaborateBlocksMade globals blocksMade
       pure ()
 
-
+-- | get the current balance of rewards in terms of the model addresses that can
+-- spend them.
 observeRewards
   :: forall era.
-  (HasEraElaboratorState (ElaborateEraModelState era) era)
-  => ( NewEpochState era, ElaborateEraModelState era )
+  ( NewEpochState era, EraElaboratorState era )
   -> Map.Map ModelAddress Coin
 observeRewards (nes, ems) =
   let
     creds :: Map.Map (StakeCredential (Crypto era)) ModelAddress
-    creds = Map.fromList $ (\(alias, tkp) -> (_tkpStakeCredential tkp, alias)) <$> Map.toList (view (eraElaboratorState . eesKeys) ems)
+    creds = Map.fromList $ (\(alias, tkp) -> (_tkpStakeCredential tkp, alias)) <$> Map.toList (view eesKeys ems)
   in Map.fromList $ do
     (a, b) <- Map.toList . LedgerState._rewards . LedgerState._dstate . LedgerState._delegationState . LedgerState.esLState $ LedgerState.nesEs nes
     a' <- case Map.lookup a creds of

@@ -35,16 +35,17 @@ import Cardano.Slotting.EpochInfo.API (epochInfoSize)
 
 type ApplyBlockError era = (ApplyBlockTransitionError era)
 
+-- | apply a list of ModelEpoch to an empty ledger and return the resulting
+-- state, or the error if one occured
 chainModelInteractionWith
   :: forall era proxy .
   ( Default (AdditionalGenesisConfig era)
-  , Default (ElaborateEraModelState era)
   , ElaborateEraModel era
   )
   => proxy era
   -> Map.Map ModelAddress Coin
-  -> [ModelChainInteraction]
-  -> Either (ApplyBlockError era) (NewEpochState era, ElaborateEraModelState era)
+  -> [ModelEpoch]
+  -> Either (ApplyBlockError era) (NewEpochState era, EraElaboratorState era)
 chainModelInteractionWith _ genesisAccounts modelBlocks =
   let
     -- TODO, pass this in as a generator.
@@ -77,18 +78,18 @@ chainModelInteractionWith _ genesisAccounts modelBlocks =
   in bimap ApplyBlockTransitionError_Tx (\() -> y) x
 
 
+-- | Apply a list of ModelEpoch's to an empty ledger, then check the resulting
+-- ledger against a user supplied predicate.
 testChainModelInteractionWith ::
   ( Testable prop
   , ElaborateEraModel era
-  -- , ApplyBlock era
   , Default (AdditionalGenesisConfig era)
   , Show (PredicateFailure (Core.EraRule "LEDGER" era))
-  , Default (ElaborateEraModelState era)
   )
   => proxy era
-  -> (NewEpochState era -> ElaborateEraModelState era -> prop)
+  -> (NewEpochState era -> EraElaboratorState era -> prop)
   -> Map.Map ModelAddress Coin
-  -> [ModelChainInteraction]
+  -> [ModelEpoch]
   -> Property
 testChainModelInteractionWith proxy p a b =
   case chainModelInteractionWith proxy a b of
@@ -100,18 +101,19 @@ compareLists a b = case nub a \\ nub b of
   [] -> property True
   _ -> a === b
 
+-- | Apply a list of ModelEpoch's to an empty ledger, then check the resulting
+-- error is the one predicted by the model.
 testChainModelInteractionRejection
   :: forall era proxy.
   ( ElaborateEraModel era
   , Default (AdditionalGenesisConfig era)
   , Eq (PredicateFailure (Core.EraRule "LEDGER" era))
   , Show (PredicateFailure (Core.EraRule "LEDGER" era ))
-  , Default (ElaborateEraModelState era)
   )
   => proxy era
   -> ModelPredicateFailure
   -> Map.Map ModelAddress Coin
-  -> [ModelChainInteraction]
+  -> [ModelEpoch]
   -> Property
 testChainModelInteractionRejection proxy e a b =
   case chainModelInteractionWith proxy a b of
@@ -126,16 +128,16 @@ testChainModelInteractionRejection proxy e a b =
 
     Right _ -> counterexample "no error encountered" False
 
+-- | Apply a list of ModelEpoch's to an empty ledger, and fail if there was an
+-- error
 testChainModelInteraction ::
   ( Show (PredicateFailure (Core.EraRule "LEDGER" era))
   , ElaborateEraModel era
-  -- , ApplyBlock era
   , Default (AdditionalGenesisConfig era)
-  , Default (ElaborateEraModelState era)
   )
   => proxy era
   -> Map.Map ModelAddress Coin
-  -> [ModelChainInteraction]
+  -> [ModelEpoch]
   -> Property
 testChainModelInteraction proxy = testChainModelInteractionWith proxy $ (\x y -> x `seq` y `seq` True)
 

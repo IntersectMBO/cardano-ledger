@@ -31,12 +31,11 @@ import Test.Cardano.Ledger.Elaborators.Shelley ()
 import Test.Cardano.Ledger.Elaborators.Alonzo ()
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 
+-- | some hand-written model based unit tests
 modelUnitTests ::
   forall era proxy.
   ( ElaborateEraModel era
-  , HasEraElaboratorState (ElaborateEraModelState era) era
   , Default (AdditionalGenesisConfig era)
-  , Default (ElaborateEraModelState era)
   , Eq (PredicateFailure (Core.EraRule "LEDGER" era))
   , Show (PredicateFailure (Core.EraRule "LEDGER" era))
   , Cardano.Ledger.Era.Era era
