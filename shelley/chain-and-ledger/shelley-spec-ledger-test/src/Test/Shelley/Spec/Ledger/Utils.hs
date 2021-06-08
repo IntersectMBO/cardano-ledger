@@ -37,6 +37,7 @@ module Test.Shelley.Spec.Ledger.Utils
     ShelleyTest,
     ChainProperty,
     Split (..),
+    RawSeed (..),
   )
 where
 
@@ -69,12 +70,32 @@ import Cardano.Crypto.VRF
     genKeyVRF,
   )
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes
+  ( Globals (..),
+    Network (..),
+    Nonce,
+    ShelleyBase,
+    UnitInterval,
+    epochInfo,
+    mkActiveSlotCoeff,
+    mkNonceFromOutputVRF,
+    mkUnitInterval,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Era (Crypto (..), SupportsSegWit (TxInBlock))
 import qualified Cardano.Ledger.Era as Era
+import Cardano.Ledger.Keys
+  ( KeyPair,
+    KeyRole (..),
+    VKey (..),
+    hashKey,
+    updateKES,
+    vKey,
+    pattern KeyPair,
+  )
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Prelude (Coercible, asks)
 import Cardano.Slotting.EpochInfo
@@ -98,6 +119,7 @@ import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Ratio (Ratio)
 import Data.Time.Clock.POSIX
+import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.API
   ( ApplyBlock,
@@ -105,28 +127,8 @@ import Shelley.Spec.Ledger.API
     PParams,
   )
 import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    Network (..),
-    Nonce,
-    ShelleyBase,
-    UnitInterval,
-    epochInfo,
-    mkActiveSlotCoeff,
-    mkNonceFromOutputVRF,
-    mkUnitInterval,
-  )
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, TxSeq, bhbody, bheader)
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys
-  ( KeyPair,
-    KeyRole (..),
-    VKey (..),
-    hashKey,
-    updateKES,
-    vKey,
-    pattern KeyPair,
-  )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
@@ -136,7 +138,6 @@ import Test.Tasty.HUnit
   ( Assertion,
     (@?=),
   )
-import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
 
 type ChainProperty era =
   ( UsesTxOut era,
@@ -150,8 +151,6 @@ type ChainProperty era =
     Show (TxInBlock era),
     Eq (TxInBlock era)
   )
-
-
 
 -- ================================================
 
@@ -173,18 +172,24 @@ type ShelleyTest era =
     Core.AnnotatedData (Core.Witnesses era)
   )
 
-
 class Split v where
   vsplit :: v -> Integer -> ([v], Coin)
 
 type GenesisKeyPair crypto = KeyPair 'Genesis crypto
+
+data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
+  deriving (Eq, Show)
+
+instance ToCBOR RawSeed where
+  toCBOR (RawSeed w1 w2 w3 w4 w5) = toCBOR (w1, w2, w3, w4, w5)
+  encodedSizeExpr size _ = 1 + size (Proxy :: Proxy Word64) * 5
 
 -- | Construct a seed from a bunch of Word64s
 --
 --   We multiply these words by some extra stuff to make sure they contain
 --   enough bits for our seed.
 mkSeedFromWords ::
-  (Word64, Word64, Word64, Word64, Word64) ->
+  RawSeed ->
   Seed
 mkSeedFromWords stuff =
   mkSeedFromBytes . hashToBytes $ hashWithSerialiser @Blake2b_256 toCBOR stuff
@@ -192,7 +197,7 @@ mkSeedFromWords stuff =
 -- | For testing purposes, generate a deterministic genesis key pair given a seed.
 mkGenKey ::
   DSIGNAlgorithm (DSIGN crypto) =>
-  (Word64, Word64, Word64, Word64, Word64) ->
+  RawSeed ->
   (SignKeyDSIGN (DSIGN crypto), VKey kd crypto)
 mkGenKey seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
@@ -202,17 +207,16 @@ mkGenKey seed =
 mkKeyPair ::
   forall crypto kd.
   DSIGNAlgorithm (DSIGN crypto) =>
-  (Word64, Word64, Word64, Word64, Word64) ->
+  RawSeed ->
   (SignKeyDSIGN (DSIGN crypto), VKey kd crypto)
 mkKeyPair seed =
   let sk = genKeyDSIGN $ mkSeedFromWords seed
    in (sk, VKey $ deriveVerKeyDSIGN sk)
 
 -- | For testing purposes, generate a deterministic key pair given a seed.
--- mkKeyPair' :: (Word64, Word64, Word64, Word64, Word64) -> KeyPair kr
 mkKeyPair' ::
   DSIGNAlgorithm (DSIGN crypto) =>
-  (Word64, Word64, Word64, Word64, Word64) ->
+  RawSeed ->
   KeyPair kd crypto
 mkKeyPair' seed = KeyPair vk sk
   where
@@ -221,7 +225,7 @@ mkKeyPair' seed = KeyPair vk sk
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
 mkVRFKeyPair ::
   VRFAlgorithm v =>
-  (Word64, Word64, Word64, Word64, Word64) ->
+  RawSeed ->
   (SignKeyVRF v, VerKeyVRF v)
 mkVRFKeyPair seed =
   let sk = genKeyVRF $ mkSeedFromWords seed
@@ -243,7 +247,7 @@ mkCertifiedVRF a sk =
 -- | For testing purposes, generate a deterministic KES key pair given a seed.
 mkKESKeyPair ::
   KESAlgorithm v =>
-  (Word64, Word64, Word64, Word64, Word64) ->
+  RawSeed ->
   (SignKeyKES v, VerKeyKES v)
 mkKESKeyPair seed =
   let sk = genKeyKES $ mkSeedFromWords seed

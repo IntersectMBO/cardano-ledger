@@ -58,11 +58,11 @@ mkAllCoreNodeKeys ::
 mkAllCoreNodeKeys w =
   AllIssuerKeys
     (KeyPair vkCold skCold)
-    (mkVRFKeyPair (w, 0, 0, 0, 2))
-    [(KESPeriod 0, mkKESKeyPair (w, 0, 0, 0, 3))]
+    (mkVRFKeyPair (RawSeed w 0 0 0 2))
+    [(KESPeriod 0, mkKESKeyPair (RawSeed w 0 0 0 3))]
     (hashKey vkCold)
   where
-    (skCold, vkCold) = mkKeyPair (w, 0, 0, 0, 1)
+    (skCold, vkCold) = mkKeyPair (RawSeed w 0 0 0 1)
 
 coreNodes ::
   forall crypto.
@@ -72,7 +72,7 @@ coreNodes ::
     )
   ]
 coreNodes =
-  [ (mkGenKey (x, 0, 0, 0, 0), mkAllCoreNodeKeys x)
+  [ (mkGenKey (RawSeed x 0 0 0 0), mkAllCoreNodeKeys x)
     | x <- [101 .. 100 + numCoreNodes]
   ]
 

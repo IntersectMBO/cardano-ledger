@@ -18,20 +18,12 @@ import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Val ((<->))
-import qualified Cardano.Ledger.Val as Val
-import qualified Data.Map.Strict as Map
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyPair (..),
@@ -40,6 +32,14 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
+import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Val ((<->))
+import qualified Cardano.Ledger.Val as Val
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
+import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
@@ -81,7 +81,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
-  ( ShelleyTest,
+  ( RawSeed (..),
+    ShelleyTest,
     getBlockNonce,
     mkKeyPair,
     mkVRFKeyPair,
@@ -112,13 +113,13 @@ newGenDelegate ::
   KeyPair 'GenesisDelegate crypto
 newGenDelegate = KeyPair vkCold skCold
   where
-    (skCold, vkCold) = mkKeyPair (108, 0, 0, 0, 1)
+    (skCold, vkCold) = mkKeyPair (RawSeed 108 0 0 0 1)
 
 newGenesisVrfKH ::
   forall h v.
   (HashAlgorithm h, VRF.VRFAlgorithm v) =>
   Hash.Hash h (VRF.VerKeyVRF v)
-newGenesisVrfKH = hashVerKeyVRF . snd $ mkVRFKeyPair (9, 8, 7, 6, 5)
+newGenesisVrfKH = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 9 8 7 6 5)
 
 feeTx1 :: Coin
 feeTx1 = Coin 1

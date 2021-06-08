@@ -82,7 +82,7 @@ After that there are a few options:
 
 ### The decision is agreed to
 
-THe proposal becomes the choice for concrete implementations henceforth. The PR
+The proposal becomes the choice for concrete implementations henceforth. The PR
 is approved and merged
 
 
