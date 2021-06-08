@@ -55,7 +55,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     interval0,
-    strictMaybeToMaybe,
+    fromSMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era
@@ -107,7 +107,6 @@ import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import Data.MemoBytes (MemoBytes (..), memoBytes)
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -480,35 +479,32 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
   PParams
-    { _minfeeA = fromMaybe' (_minfeeA pp) (_minfeeA ppup),
-      _minfeeB = fromMaybe' (_minfeeB pp) (_minfeeB ppup),
-      _maxBBSize = fromMaybe' (_maxBBSize pp) (_maxBBSize ppup),
-      _maxTxSize = fromMaybe' (_maxTxSize pp) (_maxTxSize ppup),
-      _maxBHSize = fromMaybe' (_maxBHSize pp) (_maxBHSize ppup),
-      _keyDeposit = fromMaybe' (_keyDeposit pp) (_keyDeposit ppup),
-      _poolDeposit = fromMaybe' (_poolDeposit pp) (_poolDeposit ppup),
-      _eMax = fromMaybe' (_eMax pp) (_eMax ppup),
-      _nOpt = fromMaybe' (_nOpt pp) (_nOpt ppup),
-      _a0 = fromMaybe' (_a0 pp) (_a0 ppup),
-      _rho = fromMaybe' (_rho pp) (_rho ppup),
-      _tau = fromMaybe' (_tau pp) (_tau ppup),
-      _d = fromMaybe' (_d pp) (_d ppup),
-      _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
-      _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
-      _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup),
+    { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
+      _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
+      _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
+      _maxTxSize = fromSMaybe (_maxTxSize pp) (_maxTxSize ppup),
+      _maxBHSize = fromSMaybe (_maxBHSize pp) (_maxBHSize ppup),
+      _keyDeposit = fromSMaybe (_keyDeposit pp) (_keyDeposit ppup),
+      _poolDeposit = fromSMaybe (_poolDeposit pp) (_poolDeposit ppup),
+      _eMax = fromSMaybe (_eMax pp) (_eMax ppup),
+      _nOpt = fromSMaybe (_nOpt pp) (_nOpt ppup),
+      _a0 = fromSMaybe (_a0 pp) (_a0 ppup),
+      _rho = fromSMaybe (_rho pp) (_rho ppup),
+      _tau = fromSMaybe (_tau pp) (_tau ppup),
+      _d = fromSMaybe (_d pp) (_d ppup),
+      _extraEntropy = fromSMaybe (_extraEntropy pp) (_extraEntropy ppup),
+      _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
+      _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup),
       -- new/updated for alonzo
-      _coinsPerUTxOWord = fromMaybe' (_coinsPerUTxOWord pp) (_coinsPerUTxOWord ppup),
-      _costmdls = fromMaybe' (_costmdls pp) (_costmdls ppup),
-      _prices = fromMaybe' (_prices pp) (_prices ppup),
-      _maxTxExUnits = fromMaybe' (_maxTxExUnits pp) (_maxTxExUnits ppup),
-      _maxBlockExUnits = fromMaybe' (_maxBlockExUnits pp) (_maxBlockExUnits ppup),
-      _maxValSize = fromMaybe' (_maxValSize pp) (_maxValSize ppup),
-      _collateralPercentage = fromMaybe' (_collateralPercentage pp) (_collateralPercentage ppup),
-      _maxCollateralInputs = fromMaybe' (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
+      _coinsPerUTxOWord = fromSMaybe (_coinsPerUTxOWord pp) (_coinsPerUTxOWord ppup),
+      _costmdls = fromSMaybe (_costmdls pp) (_costmdls ppup),
+      _prices = fromSMaybe (_prices pp) (_prices ppup),
+      _maxTxExUnits = fromSMaybe (_maxTxExUnits pp) (_maxTxExUnits ppup),
+      _maxBlockExUnits = fromSMaybe (_maxBlockExUnits pp) (_maxBlockExUnits ppup),
+      _maxValSize = fromSMaybe (_maxValSize pp) (_maxValSize ppup),
+      _collateralPercentage = fromSMaybe (_collateralPercentage pp) (_collateralPercentage ppup),
+      _maxCollateralInputs = fromSMaybe (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
     }
-  where
-    fromMaybe' :: a -> StrictMaybe a -> a
-    fromMaybe' x = fromMaybe x . strictMaybeToMaybe
 
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
