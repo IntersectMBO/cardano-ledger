@@ -52,7 +52,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
-import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
   ( AccountState,
     DCert,
@@ -199,7 +198,7 @@ genDCerts ::
   Core.PParams era ->
   DPState (Crypto era) ->
   SlotNo ->
-  Natural ->
+  Ix ->
   AccountState ->
   Gen
     ( StrictSeq (DCert (Crypto era)),

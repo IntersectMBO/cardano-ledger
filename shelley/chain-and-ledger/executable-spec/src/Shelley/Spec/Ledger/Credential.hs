@@ -40,10 +40,9 @@ import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=
 import qualified Data.Aeson as Aeson
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)
-import Data.Word (Word8)
+import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
@@ -100,7 +99,7 @@ data StakeReference crypto
 
 instance NoThunks (StakeReference crypto)
 
-type Ix = Natural
+type Ix = Word64
 
 -- | Pointer to a slot, transaction index and index in certificate list.
 data Ptr
@@ -133,8 +132,8 @@ instance
 instance ToCBORGroup Ptr where
   toCBORGroup (Ptr sl txIx certIx) =
     toCBOR sl
-      <> toCBOR (fromInteger (toInteger txIx) :: Word)
-      <> toCBOR (fromInteger (toInteger certIx) :: Word)
+      <> toCBOR txIx
+      <> toCBOR certIx
   encodedGroupSizeExpr size_ proxy =
     encodedSizeExpr size_ (getSlotNo <$> proxy)
       + encodedSizeExpr size_ (getIx1 <$> proxy)

@@ -39,16 +39,16 @@ module Shelley.Spec.Ledger.Address
     getPtr,
     getRewardAcnt,
     getScriptHash,
-    getVariableLengthNat,
+    getVariableLengthWord64,
     payCredIsScript,
     putAddr,
     putCredential,
     putPtr,
     putRewardAcnt,
-    putVariableLengthNat,
+    putVariableLengthWord64,
     -- TODO: these should live somewhere else
-    natToWord7s,
-    word7sToNat,
+    word64ToWord7s,
+    word7sToWord64,
     Word7 (..),
     toWord7,
   )
@@ -94,9 +94,9 @@ import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Numeric.Natural (Natural)
 import Quiet
 import Shelley.Spec.Ledger.Credential
   ( Credential (..),
@@ -385,16 +385,16 @@ isBootstrapRedeemer _ = False
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do
   putSlot slot
-  putVariableLengthNat txIx
-  putVariableLengthNat certIx
+  putVariableLengthWord64 txIx
+  putVariableLengthWord64 certIx
   where
-    putSlot (SlotNo n) = putVariableLengthNat . fromIntegral $ n
+    putSlot (SlotNo n) = putVariableLengthWord64 n
 
 getPtr :: Get Ptr
 getPtr =
-  Ptr <$> (SlotNo . fromIntegral <$> getVariableLengthNat)
-    <*> getVariableLengthNat
-    <*> getVariableLengthNat
+  Ptr <$> (SlotNo <$> getVariableLengthWord64)
+    <*> getVariableLengthWord64
+    <*> getVariableLengthWord64
 
 newtype Word7 = Word7 Word8
   deriving (Eq, Show)
@@ -410,27 +410,32 @@ putWord7s (Word7 x : xs) = B.putWord8 (x .|. 0x80) >> putWord7s xs
 getWord7s :: Get [Word7]
 getWord7s = do
   next <- B.getWord8
-  case next .&. 0x80 of
-    0x80 -> (:) (toWord7 next) <$> getWord7s
-    _ -> pure [Word7 next]
+  -- is the high bit set?
+  if testBit next 7
+  -- if so, grab more words
+  then (:) (toWord7 next) <$> getWord7s
+  -- otherwise, this is the last one
+  else pure [Word7 next]
 
-natToWord7s :: Natural -> [Word7]
-natToWord7s = reverse . go
+word64ToWord7s :: Word64 -> [Word7]
+word64ToWord7s = reverse . go
   where
+    go :: Word64 -> [Word7]
     go n
-      | n <= 0x7F = [Word7 . fromIntegral $ n]
-      | otherwise = (toWord7 . fromIntegral) n : go (shiftR n 7)
+      | n > 0x7F = (toWord7 . fromIntegral) n : go (shiftR n 7)
+      | otherwise = [Word7 . fromIntegral $ n]
 
-putVariableLengthNat :: Natural -> Put
-putVariableLengthNat = putWord7s . natToWord7s
+putVariableLengthWord64 :: Word64 -> Put
+putVariableLengthWord64 = putWord7s . word64ToWord7s
 
-word7sToNat :: [Word7] -> Natural
-word7sToNat = foldl' f 0
+-- invariant: length [Word7] < 8
+word7sToWord64 :: [Word7] -> Word64
+word7sToWord64 = foldl' f 0
   where
     f n (Word7 r) = shiftL n 7 .|. (fromIntegral r)
 
-getVariableLengthNat :: Get Natural
-getVariableLengthNat = word7sToNat <$> getWord7s
+getVariableLengthWord64 :: Get Word64
+getVariableLengthWord64 = word7sToWord64 <$> getWord7s
 
 decoderFromGet :: Text -> Get a -> Decoder s a
 decoderFromGet name get = do

@@ -32,9 +32,8 @@ import Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.Maybe (fromMaybe)
 import qualified Data.Primitive.ByteArray as BA
-import Data.Word (Word8)
-import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (Addr (..), BootstrapAddress (..), Word7 (..), byron, isEnterpriseAddr, notBaseAddr, payCredIsScript, serialiseAddr, stakeCredIsScript, toWord7, word7sToNat)
+import Data.Word (Word64, Word8)
+import Shelley.Spec.Ledger.Address (Addr (..), BootstrapAddress (..), Word7 (..), byron, isEnterpriseAddr, notBaseAddr, payCredIsScript, serialiseAddr, stakeCredIsScript, toWord7, word7sToWord64)
 import Shelley.Spec.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     PaymentCredential,
@@ -180,21 +179,21 @@ skip n = GetShort $ \i sbs ->
 getWord7s :: GetShort [Word7]
 getWord7s = do
   next <- getWord
-  case next .&. 0x80 of -- 0x80 ~ 0b10000000
   -- is the high bit set?
+  if testBit next 7
   -- if so, grab more words
-    0x80 -> (:) (toWord7 next) <$> getWord7s
-    -- otherwise, this is the last one
-    _ -> pure [Word7 next]
+  then (:) (toWord7 next) <$> getWord7s
+  -- otherwise, this is the last one
+  else pure [Word7 next]
 
-getVariableLengthNat :: GetShort Natural
-getVariableLengthNat = word7sToNat <$> getWord7s
+getVariableLengthWord64 :: GetShort Word64
+getVariableLengthWord64 = word7sToWord64 <$> getWord7s
 
 getPtr :: GetShort Ptr
 getPtr =
-  Ptr <$> (SlotNo . fromIntegral <$> getVariableLengthNat)
-    <*> getVariableLengthNat
-    <*> getVariableLengthNat
+  Ptr <$> (SlotNo <$> getVariableLengthWord64)
+    <*> getVariableLengthWord64
+    <*> getVariableLengthWord64
 
 getKeyHash :: CC.Crypto crypto => GetShort (Credential kr crypto)
 getKeyHash = KeyHashObj . KeyHash <$> getHash
