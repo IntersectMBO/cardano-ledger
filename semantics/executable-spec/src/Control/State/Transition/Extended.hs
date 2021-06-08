@@ -256,6 +256,11 @@ discardEvents ep = case ep of
   EPReturn -> fst
   EPDiscard -> id
 
+getEvents :: forall ep. SingEP ep -> forall s a. EventReturnType ep s a -> [Event s]
+getEvents ep ert = case ep of
+  EPReturn -> snd ert
+  EPDiscard -> []
+
 data Clause sts (rtype :: RuleType) a where
   Lift ::
     STS sts =>
@@ -506,12 +511,12 @@ applyRuleInternal ep vp goSTS jc r =
             Right x -> pure x
         else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
-      s :: (EventReturnType ep sub (State sub, [[PredicateFailure sub]])) <- lift $ goSTS subCtx
+      s <- lift $ goSTS subCtx
       let ss :: State sub
           sfails :: [[PredicateFailure sub]]
           (ss, sfails) = (discardEvents ep @sub) s
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
-      runClause $ Writer (fmap wrapEvent sevents) ()
+      runClause $ Writer (fmap wrapEvent $ getEvents ep @sub @(State sub, [[PredicateFailure sub]]) s) ()
       pure $ next ss
     runClause (Writer w a) = case ep of
       EPReturn -> tell w $> a
