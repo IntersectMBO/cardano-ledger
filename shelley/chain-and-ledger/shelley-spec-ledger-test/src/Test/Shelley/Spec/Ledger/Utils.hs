@@ -327,8 +327,8 @@ applySTSTest ::
   m (Either [[PredicateFailure s]] (State s))
 applySTSTest ctx =
   applySTSOpts EPDiscard defaultOpts ctx <&> \case
-    ((st, []), _) -> Right st
-    ((_, pfs), _) -> Left pfs
+    (st, []) -> Right st
+    (_, pfs) -> Left pfs
   where
     defaultOpts =
       ApplySTSOpts

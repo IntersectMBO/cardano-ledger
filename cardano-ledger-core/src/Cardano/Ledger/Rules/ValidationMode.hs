@@ -30,8 +30,8 @@ applySTSValidateSuchThat ::
   m (Either [[PredicateFailure s]] (State s))
 applySTSValidateSuchThat cond ctx =
   applySTSOpts EPDiscard opts ctx <&> \case
-    ((st, []), _) -> Right st
-    ((_, pfs), _) -> Left pfs
+    (st, []) -> Right st
+    (_, pfs) -> Left pfs
   where
     opts =
       ApplySTSOpts
