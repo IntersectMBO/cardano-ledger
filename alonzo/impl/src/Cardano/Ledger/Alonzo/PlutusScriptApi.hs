@@ -37,7 +37,7 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
 import Cardano.Ledger.Alonzo.TxInfo (runPLCScript, txInfo, valContext)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts')
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts', unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -99,7 +99,7 @@ getData tx (UTxO m) sp = case sp of
         case getField @"datahash" txout of
           SNothing -> []
           SJust hash ->
-            case Map.lookup hash (txdats' (getField @"wits" tx)) of
+            case Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx)) of
               Nothing -> []
               Just d -> [d]
 

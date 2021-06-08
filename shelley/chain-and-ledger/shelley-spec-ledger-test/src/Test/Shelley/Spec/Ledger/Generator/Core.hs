@@ -42,6 +42,7 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     mkOCert,
     getKESPeriodRenewalNo,
     tooLateInEpoch,
+    RawSeed (..),
     mkKeyPair,
     mkKeyPairs,
     mkGenKey,
@@ -76,7 +77,6 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
-import Data.Tuple (swap)
 import Data.Word (Word64)
 import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
@@ -186,6 +186,7 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass
     exponential,
     mkPayScriptHashMap,
     mkStakeScriptHashMap,
+    mkKeyPairs,
   )
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
@@ -197,6 +198,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkCertifiedVRF,
     mkGenKey,
     mkKeyPair,
+    RawSeed (..),
     runShelleyBase,
     unsafeMkUnitInterval,
   )
@@ -313,17 +315,6 @@ genWord64 :: Word64 -> Word64 -> Gen Word64
 genWord64 lower upper =
   fromIntegral
     <$> genNatural (fromIntegral lower) (fromIntegral upper)
-
-mkKeyPairs ::
-  (DSIGNAlgorithm (DSIGN crypto)) =>
-  Word64 ->
-  (KeyPair kr crypto, KeyPair kr' crypto)
-mkKeyPairs n =
-  (mkKeyPair_ (2 * n), mkKeyPair_ (2 * n + 1))
-  where
-    mkKeyPair_ n_ =
-      (uncurry KeyPair . swap)
-        (mkKeyPair (n_, n_, n_, n_, n_))
 
 -- | Generate a mapping from genesis delegate cold key hash to the issuer keys.
 -- Note: we index all possible genesis delegate keys, that is,

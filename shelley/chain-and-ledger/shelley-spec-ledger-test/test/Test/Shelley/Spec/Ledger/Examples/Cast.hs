@@ -74,7 +74,8 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
   )
 import Test.Shelley.Spec.Ledger.Utils
-  ( mkAddr,
+  ( RawSeed (..),
+    mkAddr,
     mkKESKeyPair,
     mkKeyPair,
     mkVRFKeyPair,
@@ -85,24 +86,24 @@ import Test.Shelley.Spec.Ledger.Utils
 alicePay :: CC.Crypto crypto => KeyPair 'Payment crypto
 alicePay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 0)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 0)
 
 -- | Alice's stake key pair
 aliceStake :: CC.Crypto crypto => KeyPair 'Staking crypto
 aliceStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (1, 1, 1, 1, 1)
+    (sk, vk) = mkKeyPair (RawSeed 1 1 1 1 1)
 
 -- | Alice's stake pool keys (cold keys, VRF keys, hot KES keys)
 alicePoolKeys :: CC.Crypto crypto => AllIssuerKeys crypto 'StakePool
 alicePoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
-    (mkVRFKeyPair (1, 0, 0, 0, 2))
-    [(KESPeriod 0, mkKESKeyPair (1, 0, 0, 0, 3))]
+    (mkVRFKeyPair (RawSeed 1 0 0 0 2))
+    [(KESPeriod 0, mkKESKeyPair (RawSeed 1 0 0 0 3))]
     (hashKey vkCold)
   where
-    (skCold, vkCold) = mkKeyPair (1, 0, 0, 0, 1)
+    (skCold, vkCold) = mkKeyPair (RawSeed 1 0 0 0 1)
 
 -- | Alice's base address
 aliceAddr :: CC.Crypto crypto => Addr crypto
@@ -150,13 +151,13 @@ aliceVRFKeyHash = hashVerKeyVRF (snd $ vrf (alicePoolKeys @crypto))
 bobPay :: CC.Crypto crypto => KeyPair 'Payment crypto
 bobPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (2, 2, 2, 2, 2)
+    (sk, vk) = mkKeyPair (RawSeed 2 2 2 2 2)
 
 -- | Bob's stake key pair
 bobStake :: CC.Crypto crypto => KeyPair 'Staking crypto
 bobStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (3, 3, 3, 3, 3)
+    (sk, vk) = mkKeyPair (RawSeed 3 3 3 3 3)
 
 -- | Bob's address
 bobAddr :: CC.Crypto crypto => Addr crypto
@@ -171,11 +172,11 @@ bobPoolKeys :: CC.Crypto crypto => AllIssuerKeys crypto 'StakePool
 bobPoolKeys =
   AllIssuerKeys
     (KeyPair vkCold skCold)
-    (mkVRFKeyPair (2, 0, 0, 0, 2))
-    [(KESPeriod 0, mkKESKeyPair (2, 0, 0, 0, 3))]
+    (mkVRFKeyPair (RawSeed 2 0 0 0 2))
+    [(KESPeriod 0, mkKESKeyPair (RawSeed 2 0 0 0 3))]
     (hashKey vkCold)
   where
-    (skCold, vkCold) = mkKeyPair (2, 0, 0, 0, 1)
+    (skCold, vkCold) = mkKeyPair (RawSeed 2 0 0 0 1)
 
 -- | Bob's stake pool parameters
 bobPoolParams :: forall crypto. CC.Crypto crypto => PoolParams crypto
@@ -203,13 +204,13 @@ bobVRFKeyHash = hashVerKeyVRF (snd $ vrf (bobPoolKeys @crypto))
 carlPay :: CC.Crypto crypto => KeyPair 'Payment crypto
 carlPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (4, 4, 4, 4, 4)
+    (sk, vk) = mkKeyPair (RawSeed 4 4 4 4 4)
 
 -- | Carl's stake key pair
 carlStake :: CC.Crypto crypto => KeyPair 'Staking crypto
 carlStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (5, 5, 5, 5, 5)
+    (sk, vk) = mkKeyPair (RawSeed 5 5 5 5 5)
 
 -- | Carl's address
 carlAddr :: CC.Crypto crypto => Addr crypto
@@ -223,13 +224,13 @@ carlSHK = (KeyHashObj . hashKey . vKey) carlStake
 dariaPay :: CC.Crypto crypto => KeyPair 'Payment crypto
 dariaPay = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (6, 6, 6, 6, 6)
+    (sk, vk) = mkKeyPair (RawSeed 6 6 6 6 6)
 
 -- | Daria's stake key pair
 dariaStake :: CC.Crypto crypto => KeyPair 'Staking crypto
 dariaStake = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (7, 7, 7, 7, 7)
+    (sk, vk) = mkKeyPair (RawSeed 7 7 7 7 7)
 
 -- | Daria's address
 dariaAddr :: CC.Crypto crypto => Addr crypto

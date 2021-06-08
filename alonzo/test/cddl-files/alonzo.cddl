@@ -278,7 +278,6 @@ auxiliary_data =
   / #6.259({ ? 0 => metadata         ; Alonzo and future ; New
       , ? 1 => [ * native_script ]
       , ? 2 => [ * plutus_script ]
-      , ? 3 => [ * plutus_data ]
       })
 
 

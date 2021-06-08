@@ -26,11 +26,47 @@ import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
+import Cardano.Ledger.BaseTypes
+  ( Network (..),
+    Nonce (..),
+    StrictMaybe (..),
+    mkNonceFromNumber,
+    textToDns,
+    textToUrl,
+    truncateUnitInterval,
+  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys
+  ( Hash,
+    KeyHash (..),
+    KeyPair (..),
+    KeyRole (..),
+    SignKeyKES,
+    SignKeyVRF,
+    SignedDSIGN,
+    VKey (..),
+    VerKeyKES,
+    VerKeyVRF,
+    asWitness,
+    encodeSignedKES,
+    hashKey,
+    hashVerKeyVRF,
+    hashWithSerialiser,
+    sKey,
+    signedDSIGN,
+    signedKES,
+    vKey,
+  )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
+import Cardano.Ledger.Serialization
+  ( FromCBORGroup (..),
+    ToCBORGroup (..),
+    decodeMapTraverse,
+    ipv4ToBytes,
+  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Prelude (LByteString)
@@ -53,15 +89,6 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.Address
   ( Addr (..),
-  )
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    Nonce (..),
-    StrictMaybe (..),
-    mkNonceFromNumber,
-    textToDns,
-    textToUrl,
-    truncateUnitInterval,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
@@ -103,27 +130,6 @@ import Shelley.Spec.Ledger.EpochBoundary
     SnapShots (..),
     Stake (..),
   )
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyPair (..),
-    KeyRole (..),
-    SignKeyKES,
-    SignKeyVRF,
-    SignedDSIGN,
-    VKey (..),
-    VerKeyKES,
-    VerKeyVRF,
-    asWitness,
-    encodeSignedKES,
-    hashKey,
-    hashVerKeyVRF,
-    hashWithSerialiser,
-    sKey,
-    signedDSIGN,
-    signedKES,
-    vKey,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
@@ -148,12 +154,6 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeMapTraverse,
-    ipv4ToBytes,
-  )
 import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..), hashScript)
 import Shelley.Spec.Ledger.TxBody
@@ -230,13 +230,13 @@ getRawNonce NeutralNonce = error "The neutral nonce has no bytes"
 testGKey :: CC.Crypto crypto => GenesisKeyPair crypto
 testGKey = KeyPair vk sk
   where
-    (sk, vk) = mkGenKey (0, 0, 0, 0, 0)
+    (sk, vk) = mkGenKey (RawSeed 0 0 0 0 0)
 
 testGKeyHash :: CC.Crypto crypto => KeyHash 'Genesis crypto
 testGKeyHash = (hashKey . vKey) testGKey
 
 testVRF :: CC.Crypto crypto => (SignKeyVRF crypto, VerKeyVRF crypto)
-testVRF = mkVRFKeyPair (0, 0, 0, 0, 5)
+testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 
 testVRFKH :: forall crypto. CC.Crypto crypto => Hash crypto (VerKeyVRF crypto)
 testVRFKH = hashVerKeyVRF $ snd (testVRF @crypto)
@@ -262,29 +262,29 @@ testTxbHash = hashAnnotated $ testTxb @era
 testKey1 :: CC.Crypto crypto => KeyPair 'Payment crypto
 testKey1 = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 1)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 1)
 
 testKey2 :: CC.Crypto crypto => KeyPair kr crypto
 testKey2 = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 2)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 2)
 
 testBlockIssuerKey :: CC.Crypto crypto => KeyPair 'BlockIssuer crypto
 testBlockIssuerKey = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 4)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 4)
 
 testStakePoolKey :: CC.Crypto crypto => KeyPair 'StakePool crypto
 testStakePoolKey = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 5)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 5)
 
 testGenesisDelegateKey ::
   CC.Crypto crypto =>
   KeyPair 'GenesisDelegate crypto
 testGenesisDelegateKey = KeyPair vk sk
   where
-    (sk, vk) = mkKeyPair (0, 0, 0, 0, 6)
+    (sk, vk) = mkKeyPair (RawSeed 0 0 0 0 6)
 
 testBlockIssuerKeyTokens :: Tokens -> Tokens
 testBlockIssuerKeyTokens = e
@@ -326,7 +326,7 @@ testKeyHash2 :: CC.Crypto crypto => KeyHash 'Staking crypto
 testKeyHash2 = (hashKey . vKey) testKey2
 
 testKESKeys :: CC.Crypto crypto => (SignKeyKES crypto, VerKeyKES crypto)
-testKESKeys = mkKESKeyPair (0, 0, 0, 0, 3)
+testKESKeys = mkKESKeyPair (RawSeed 0 0 0 0 3)
 
 testAddrE :: CC.Crypto crypto => Addr crypto
 testAddrE =

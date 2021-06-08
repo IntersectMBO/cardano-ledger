@@ -17,9 +17,9 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- | MemoBytes is an abstration for a datetype that encodes its own serialization.
+-- | MemoBytes is an abstraction for a data type that encodes its own serialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
---   For example:   newtype Foo = Foo(MemoBytes NonMemoizingFoo)
+--   For example:   newtype Foo = Foo (MemoBytes NonMemoizingFoo)
 --   This way all the instances for Foo (Eq,Show,Ord,ToCBOR,FromCBOR,NoThunks,Generic)
 --   can be derived for free.
 module Data.MemoBytes

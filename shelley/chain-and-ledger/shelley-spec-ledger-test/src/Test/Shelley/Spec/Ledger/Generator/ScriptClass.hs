@@ -60,7 +60,7 @@ import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
   )
-import Test.Shelley.Spec.Ledger.Utils (mkKeyPair)
+import Test.Shelley.Spec.Ledger.Utils (mkKeyPair, RawSeed(..))
 import Cardano.Ledger.Shelley.Constraints (UsesScript)
 
 {------------------------------------------------------------------------------
@@ -265,7 +265,7 @@ mkKeyPairs n =
   where
     mkKeyPair_ n_ =
       (uncurry KeyPair . swap)
-        (mkKeyPair (n_, n_, n_, n_, n_))
+        (mkKeyPair (RawSeed n_ n_ n_ n_ n_))
 
 {------------------------------------------------------------------------------
   How to be a Generic Value
