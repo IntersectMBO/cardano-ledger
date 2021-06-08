@@ -8,6 +8,9 @@
 
 module Main where
 
+import Test.Cardano.Ledger.BaseTypesSpec
+  ( baseTypesSpec,
+  )
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   ( alonzoBBODYexamples,
     alonzoUTXOWexamples,
@@ -27,10 +30,14 @@ tests = askOption $ \case
 mainTests :: TestTree
 mainTests =
   testGroup
-    "STS Tests"
-    [ alonzoUTXOWexamples,
-      alonzoBBODYexamples,
-      collectOrderingAlonzo
+    "cardano-core"
+    [ baseTypesSpec,
+      testGroup
+        "STS Tests"
+        [ alonzoUTXOWexamples,
+          alonzoBBODYexamples,
+          collectOrderingAlonzo
+        ]
     ]
 
 -- main entry point

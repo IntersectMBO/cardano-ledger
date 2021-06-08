@@ -22,6 +22,7 @@ module Cardano.Ledger.BaseTypes
     Nonce (..),
     Seed (..),
     UnitInterval,
+    fromScientificUnitInterval,
     fpPrecision,
     interval0,
     intervalValue,
@@ -124,9 +125,11 @@ instance ToJSON UnitInterval where
 instance FromJSON UnitInterval where
   parseJSON v = do
     d <- parseJSON v
-    case mkUnitInterval (realToFrac (d :: Scientific) :: Ratio Word64) of
-      Just u -> return u
-      Nothing -> fail "The value must be between 0 and 1 (inclusive)"
+    either fail pure $ fromScientificUnitInterval d
+
+fromScientificUnitInterval :: Scientific -> Either String UnitInterval
+fromScientificUnitInterval d =
+  maybe (Left "The value must be between 0 and 1 (inclusive)") Right $ mkUnitInterval (realToFrac d)
 
 unitIntervalToRational :: UnitInterval -> Rational
 unitIntervalToRational (UnsafeUnitInterval x) =

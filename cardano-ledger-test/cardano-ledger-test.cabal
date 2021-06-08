@@ -35,12 +35,14 @@ library
   import:             base, project-config
   hs-source-dirs:     src
   exposed-modules:
+    Test.Cardano.Ledger.BaseTypesSpec
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
     Test.Cardano.Ledger.Generic.Proof
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Updaters
     Test.Cardano.Ledger.TestableEra
   build-depends:
+    aeson,
     bytestring,
     cardano-crypto-class,
     cardano-ledger-alonzo,
@@ -49,8 +51,11 @@ library
     cardano-slotting,
     containers,
     data-default-class,
+    genvalidity,
+    genvalidity-scientific,
     plutus-ledger-api,
     plutus-tx,
+    scientific,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
     small-steps,
@@ -58,7 +63,9 @@ library
     strict-containers,
     tasty,
     tasty-hunit,
+    tasty-quickcheck,
     time,
+    QuickCheck,
 
 
 test-suite cardano-ledger-test
