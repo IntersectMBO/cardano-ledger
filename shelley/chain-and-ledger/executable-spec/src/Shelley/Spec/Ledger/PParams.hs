@@ -44,6 +44,7 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     interval0,
     invalidKey,
+    fromSMaybe,
     strictMaybeToMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
@@ -76,7 +77,7 @@ import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, mapMaybe)
+import Data.Maybe (mapMaybe)
 import Data.Scientific (Scientific)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -487,24 +488,21 @@ emptyPPPUpdates = ProposedPPUpdates Map.empty
 updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
   PParams
-    { _minfeeA = fromMaybe' (_minfeeA pp) (_minfeeA ppup),
-      _minfeeB = fromMaybe' (_minfeeB pp) (_minfeeB ppup),
-      _maxBBSize = fromMaybe' (_maxBBSize pp) (_maxBBSize ppup),
-      _maxTxSize = fromMaybe' (_maxTxSize pp) (_maxTxSize ppup),
-      _maxBHSize = fromMaybe' (_maxBHSize pp) (_maxBHSize ppup),
-      _keyDeposit = fromMaybe' (_keyDeposit pp) (_keyDeposit ppup),
-      _poolDeposit = fromMaybe' (_poolDeposit pp) (_poolDeposit ppup),
-      _eMax = fromMaybe' (_eMax pp) (_eMax ppup),
-      _nOpt = fromMaybe' (_nOpt pp) (_nOpt ppup),
-      _a0 = fromMaybe' (_a0 pp) (_a0 ppup),
-      _rho = fromMaybe' (_rho pp) (_rho ppup),
-      _tau = fromMaybe' (_tau pp) (_tau ppup),
-      _d = fromMaybe' (_d pp) (_d ppup),
-      _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
-      _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
-      _minUTxOValue = fromMaybe' (_minUTxOValue pp) (_minUTxOValue ppup),
-      _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup)
+    { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
+      _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
+      _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
+      _maxTxSize = fromSMaybe (_maxTxSize pp) (_maxTxSize ppup),
+      _maxBHSize = fromSMaybe (_maxBHSize pp) (_maxBHSize ppup),
+      _keyDeposit = fromSMaybe (_keyDeposit pp) (_keyDeposit ppup),
+      _poolDeposit = fromSMaybe (_poolDeposit pp) (_poolDeposit ppup),
+      _eMax = fromSMaybe (_eMax pp) (_eMax ppup),
+      _nOpt = fromSMaybe (_nOpt pp) (_nOpt ppup),
+      _a0 = fromSMaybe (_a0 pp) (_a0 ppup),
+      _rho = fromSMaybe (_rho pp) (_rho ppup),
+      _tau = fromSMaybe (_tau pp) (_tau ppup),
+      _d = fromSMaybe (_d pp) (_d ppup),
+      _extraEntropy = fromSMaybe (_extraEntropy pp) (_extraEntropy ppup),
+      _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
+      _minUTxOValue = fromSMaybe (_minUTxOValue pp) (_minUTxOValue ppup),
+      _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup)
     }
-  where
-    fromMaybe' :: a -> StrictMaybe a -> a
-    fromMaybe' x = fromMaybe x . strictMaybeToMaybe
