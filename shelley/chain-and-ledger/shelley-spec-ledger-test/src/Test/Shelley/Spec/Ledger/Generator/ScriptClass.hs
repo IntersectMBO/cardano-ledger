@@ -33,7 +33,6 @@ module Test.Shelley.Spec.Ledger.Generator.ScriptClass
     mkScripts,
     mkScriptCombinations,
     combinedScripts,
-    someScripts,
     baseScripts,
     scriptKeyCombinations,
     scriptKeyCombination,
@@ -77,6 +76,8 @@ class
   where
   basescript :: Proxy era -> KeyHash 'Witness (Crypto era) -> Script era
   isKey :: Proxy era -> Script era -> Maybe (KeyHash 'Witness (Crypto era))
+  isOnePhase :: Proxy era -> Script era -> Bool
+  isOnePhase _proxy _ = True -- Many Eras have only OnePhase Scripts.
   quantify :: Proxy era -> Script era -> Quantifier (Script era)
   unQuantify :: Proxy era -> Quantifier (Script era) -> Script era
 
@@ -238,19 +239,6 @@ combinedScripts ::
 combinedScripts c@(Constants {numBaseScripts}) =
   mkScriptCombinations @era . take numBaseScripts $ baseScripts @era c
 
--- | Select between _lower_ and _upper_ scripts from the possible combinations
--- of the first `numBaseScripts` multi-sig scripts of `mSigScripts`.
-someScripts ::
-  forall era.
-  ScriptClass era =>
-  Constants ->
-  Int ->
-  Int ->
-  Gen [(Core.Script era, Core.Script era)]
-someScripts c lower upper =
-  take
-    <$> QC.choose (lower, upper)
-    <*> QC.shuffle (combinedScripts @era c)
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto

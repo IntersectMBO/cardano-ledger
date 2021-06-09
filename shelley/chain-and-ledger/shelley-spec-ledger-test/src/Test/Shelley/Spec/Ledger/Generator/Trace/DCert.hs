@@ -167,6 +167,7 @@ instance
   sigGen
     ( GenEnv
         ks
+        _scriptspace
         constants
       )
     (slot, _txIx, pparams, accountState)
@@ -210,6 +211,7 @@ genDCerts ::
 genDCerts
   ge@( GenEnv
          KeySpace_ {ksIndexedStakingKeys}
+         _scriptspace
          Constants {maxCertsPerTx}
        )
   pparams

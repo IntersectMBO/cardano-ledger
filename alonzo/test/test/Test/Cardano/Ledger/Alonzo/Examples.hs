@@ -88,5 +88,18 @@ plutusScriptExamples =
         directPlutusTest
           ShouldFail
           guessTheNumber
-          [P.I 3, P.I 4]
+          [P.I 3, P.I 4],
+      testCase "guess the number with 3 args, correct" $
+        directPlutusTest
+          ShouldSucceed
+          guessTheNumber3
+          [P.I 3, P.I 3, P.I 9]
     ]
+
+guessTheNumber'3 :: P.Data -> P.Data -> P.Data -> ()
+guessTheNumber'3 d1 d2 _d3 = if d1 P.== d2 then () else (P.error ())
+
+guessTheNumber3 :: ShortByteString
+guessTheNumber3 =
+  toShort . flat . P.fromCompiledCode $
+    $$(P.compile [||guessTheNumber'3||])

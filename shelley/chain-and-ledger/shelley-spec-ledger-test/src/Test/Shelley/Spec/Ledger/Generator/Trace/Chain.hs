@@ -144,7 +144,7 @@ mkGenesisChainState ::
   GenEnv era ->
   IRC (CHAIN era) ->
   Gen (Either a (ChainState era))
-mkGenesisChainState ge@(GenEnv _ constants) (IRC _slotNo) = do
+mkGenesisChainState ge@(GenEnv _ _ constants) (IRC _slotNo) = do
   utxo0 <- genUtxo0 ge
 
   pParams <- genEraPParams @era constants

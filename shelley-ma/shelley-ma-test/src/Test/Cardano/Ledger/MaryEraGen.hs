@@ -87,13 +87,13 @@ instance (CryptoClass.Crypto c) => ScriptClass (MaryEra c) where
 
 instance (CryptoClass.Crypto c, Mock c) => EraGen (MaryEra c) where
   genGenesisValue = maryGenesisValue
-  genEraTxBody _ge = genTxBody
+  genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
-  updateEraTxBody (TxBody _in _out cert wdrl _txfee vi upd meta mint) fee ins outs =
-    TxBody ins outs cert wdrl fee vi upd meta mint
+  updateEraTxBody _utxo _pp _wits (TxBody existingins outs cert wdrl _txfee vi upd meta mint) fee ins out =
+    TxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd meta mint
   genEraPParamsDelta = genShelleyPParamsDelta
   genEraPParams = genPParams
-  genEraWitnesses setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
+  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
   unsafeApplyTx x = x
 
 genAuxiliaryData ::
@@ -108,7 +108,7 @@ genAuxiliaryData Constants {frequencyTxWithMetadata} =
 
 -- | Carefully crafted to apply in any Era where Core.Value is Value
 maryGenesisValue :: forall era crypto. CryptoClass.Crypto crypto =>  GenEnv era -> Gen(Value crypto)
-maryGenesisValue (GenEnv _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
+maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 
 --------------------------------------------------------
@@ -327,7 +327,7 @@ instance Split (Value era) where
 instance Mock c => MinGenTxout (MaryEra c) where
   calcEraMinUTxO _txout pp = (_minUTxOValue pp)
   addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
-  genEraTxOut genVal addrs = do
+  genEraTxOut _genenv genVal addrs = do
      values <- replicateM (length addrs) genVal
      let  makeTxOut (addr,val) = TxOut addr val
      pure (makeTxOut <$> zip addrs values)

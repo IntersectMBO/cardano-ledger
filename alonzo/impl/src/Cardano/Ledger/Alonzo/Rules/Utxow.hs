@@ -13,10 +13,9 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxow where
 
--- import Shelley.Spec.Ledger.UTxO(UTxO(..))
-
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (DataHash)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( checkScriptData,
@@ -86,9 +85,9 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl,
     unWdrl,
   )
-import Shelley.Spec.Ledger.UTxO (UTxO, txinLookup)
+import Shelley.Spec.Ledger.UTxO (UTxO (..), txinLookup)
 
--- =====================================================
+-- =================================================
 
 -- | The Predicate failure type in the Alonzo Era. It embeds the Predicate
 --   failure type of the Shelley Era, as they share some failure modes.
@@ -181,6 +180,13 @@ decodePredFail n = Invalid n
 
 -- =============================================
 
+-- | given the "txscripts" field of the Witnesses, compute the set of languages used in a transaction
+langsUsed :: forall era. (Core.Script era ~ Script era, ValidateScript era) => Map.Map (ScriptHash (Crypto era)) (Script era) -> Set Language
+langsUsed hashScriptMap =
+  Set.fromList
+    [ l | (_hash, script) <- Map.toList hashScriptMap, (not . isNativeScript @era) script, Just l <- [language @era script]
+    ]
+
 {- Defined in the Shelley Utxow rule.
 type ShelleyStyleWitnessNeeds era =
   ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -265,7 +271,6 @@ alonzoStyleWitness = do
           inputHashes = Set.fromList utxoHashes
           unmatchedInputHashes = eval (inputHashes ➖ txHashes)
       Set.null unmatchedInputHashes ?! MissingRequiredDatums unmatchedInputHashes
-
   {-  ∀ sph ∈ scriptsNeeded utxo tx, checkScriptData tx utxo  ph  -}
   let sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
       sphs = scriptsNeeded utxo tx
@@ -405,6 +410,7 @@ instance
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     -- Supply the HasField and Validate instances for Alonzo
     ShelleyStyleWitnessNeeds era, -- supplies a subset of those needed. All the old Shelley Needs still apply.
+    Show (Core.TxOut era),
     AlonzoStyleAdditions era
   ) =>
   STS (AlonzoUTXOW era)

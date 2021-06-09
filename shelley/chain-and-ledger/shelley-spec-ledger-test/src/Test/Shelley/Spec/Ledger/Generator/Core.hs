@@ -15,6 +15,9 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     applyTxBody,
     GenEnv (..),
+    ScriptSpace(..),
+    TwoPhaseInfo(..),
+    ScriptInfo,
     KeySpace (..),
     pattern KeySpace,
     NatNonce (..),
@@ -49,6 +52,9 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     genesisAccountState,
     genCoin,
     PreAlonzo,
+    hashData,
+    genPlutus,
+    findPlutus,
   )
 where
 
@@ -87,6 +93,7 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
     intervalValue,
     stabilityWindow,
+    StrictMaybe(..),
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (BHeader),
@@ -177,7 +184,7 @@ import Shelley.Spec.Ledger.UTxO
     pattern UTxO,
   )
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-import Test.QuickCheck (Gen)
+import Test.QuickCheck (Gen,oneof)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -203,11 +210,16 @@ import Test.Shelley.Spec.Ledger.Utils
     unsafeMkUnitInterval,
   )
 
-
 import Cardano.Ledger.Serialization(ToCBORGroup)
 import Cardano.Ledger.Era(SupportsSegWit(toTxSeq,hashTxSeq))
 import qualified Cardano.Ledger.Era as Era(TxSeq)
-
+import qualified PlutusTx as Plutus
+import Cardano.Ledger.SafeHash(SafeHash)
+import Cardano.Ledger.Hashes(EraIndependentData)
+import qualified Cardano.Crypto.Hash as Hash
+import Codec.Serialise(serialise)
+import Data.ByteString.Lazy(toStrict)
+import Cardano.Ledger.SafeHash(unsafeMakeSafeHash)
 
 -- | For use in the Serialisation and Example Tests, which assume Shelley, Allegra, or Mary Eras.
 type PreAlonzo era =
@@ -225,9 +237,33 @@ data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
   }
   deriving (Show)
 
+type DataHash crypto = SafeHash crypto EraIndependentData
+type ScriptInfo era = Map (ScriptHash (Crypto era)) (TwoPhaseInfo era)
+
+data TwoPhaseInfo era = TwoPhaseInfo
+  { getScript :: Core.Script era,    -- ^ A Plutus Script
+    getHash :: ScriptHash (Crypto era),       -- ^ Its ScriptHash
+    getData :: Plutus.Data,          -- ^ A Data that will make it succeed
+    getRedeemer ::                   -- ^ A Redeemer that will make it succeed
+      ( Plutus.Data,                 -- ^ The redeeming data
+        Word64,                      -- ^ The ExUnits memory count
+        Word64                       -- ^ The ExUnits steps count
+      )
+  }
+
+deriving instance Show (Core.Script era) => Show (TwoPhaseInfo era)
+
+data ScriptSpace era = ScriptSpace
+ { ssScripts :: [TwoPhaseInfo era],  -- ^ A list of Two Phase Scripts and their associated data we can use.
+   ssHash :: Map (ScriptHash (Crypto era)) (TwoPhaseInfo era) -- ^ Also called (ScriptInfo era)
+ }
+
+deriving instance Show (Core.Script era) => Show (ScriptSpace era)
+
 -- | Generator environment.
 data GenEnv era = GenEnv
   { geKeySpace :: KeySpace era,
+    geScriptSpapce :: ScriptSpace era,
     geConstants :: Constants
   }
 
@@ -714,3 +750,27 @@ applyTxBody ls pp tx =
       reapRewards
         ((_rewards . _dstate . _delegationState) ls)
         (Map.mapKeys getRwdCred . unWdrl $ getField @"wdrls" tx)
+
+-- ==================================================================
+-- Operations on GenEnv that deal with ScriptSpace
+
+hashData :: forall era. Era era => Plutus.Data -> DataHash (Crypto era)
+hashData x = unsafeMakeSafeHash (Hash.castHash (Hash.hashWith (toStrict . serialise) x))
+
+-- | Choose one of the preallocated PlutusScripts, and return it and its Hash
+genPlutus :: forall era. GenEnv era -> Gen(Core.Script era,ScriptHash (Crypto era),TwoPhaseInfo era)
+genPlutus (GenEnv _ (ScriptSpace scripts _) _) = gettriple <$> oneof (pure <$> scripts)
+  where gettriple (info@(TwoPhaseInfo script hash _data _rdmr)) = (script,hash,info)
+
+-- | Find the preallocated Script from its Hash.
+findPlutus :: forall era. Era era => GenEnv era -> (ScriptHash (Crypto era)) -> (Core.Script era, StrictMaybe (DataHash (Crypto era)))
+findPlutus (GenEnv keyspace (ScriptSpace _ mp) _) hsh =
+  case Map.lookup hsh mp of
+    Just info -> (getScript info, SJust (hashData @era (getData info)))
+    Nothing ->
+      case Map.lookup hsh (ksIndexedPayScripts keyspace) of
+        Just (pay,_stake) -> (pay, SNothing)
+        Nothing ->
+          case Map.lookup hsh (ksIndexedStakeScripts keyspace) of
+            Just(_pay,stake) -> (stake, SNothing)
+            Nothing -> error ("Can't find a Script for the hash: "++show hsh)

@@ -47,7 +47,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
         minGenesisUTxOouts
       ),
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..),ScriptSpace(..))
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
@@ -56,6 +56,7 @@ import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)  -- Use Another constraint, so this works in all Eras
 import Test.Shelley.Spec.Ledger.Generator.EraGen(MinLEDGER_STS)
+import qualified Data.Map as Map
 
 -- ===============================================================
 
@@ -77,7 +78,7 @@ genChainState n ge =
             -- unimportant for now, we set the A part of the fee to 0
             maxMinFeeA = 0
           }
-      ge' = GenEnv (geKeySpace ge) cs
+      ge' = GenEnv (geKeySpace ge) (ScriptSpace [] Map.empty) cs
    in fromRight (error "genChainState failed")
         <$> ( generate $
                 mkGenesisChainState ge' (IRC ())

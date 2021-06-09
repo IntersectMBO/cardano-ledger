@@ -14,6 +14,7 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
     evalScripts,
     -- Figure 12
     scriptsNeeded,
+    scriptsNeededFromBody,
     checkScriptData,
     language,
     CollectError (..),
@@ -263,9 +264,33 @@ scriptsNeeded ::
   UTxO era ->
   tx ->
   [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
+scriptsNeeded utxo tx = scriptsNeededFromBody utxo (getField @"body" tx)
+
+-- We only find certificate witnesses in Delegating and Deregistration DCerts
+-- that have ScriptHashObj credentials.
+addOnlyCwitness ::
+  [(ScriptPurpose crypto, ScriptHash crypto)] ->
+  DCert crypto ->
+  [(ScriptPurpose crypto, ScriptHash crypto)]
+addOnlyCwitness !ans (DCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
+  (Certifying $ DCertDeleg c, hk) : ans
+addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
+  (Certifying $ DCertDeleg c, hk) : ans
+addOnlyCwitness !ans _ = ans
+
+scriptsNeededFromBody ::
+  forall era.
+  ( Era era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+  ) =>
+  UTxO era ->
+  Core.TxBody era ->
+  [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
+scriptsNeededFromBody (UTxO utxomap) txb = spend ++ reward ++ cert ++ minted
   where
-    txb = getField @"body" tx
     !spend = foldl' accum [] (getField @"inputs" txb)
       where
         accum !ans !i =
@@ -288,15 +313,3 @@ scriptsNeeded (UTxO utxomap) tx = spend ++ reward ++ cert ++ minted
     !minted = foldr (\hash ans -> (Minting (PolicyID hash), hash) : ans) [] valuePolicyHashes
       where
         valuePolicyHashes = getField @"minted" txb
-
--- We only find certificate witnesses in Delegating and Deregistration DCerts
--- that have ScriptHashObj credentials.
-addOnlyCwitness ::
-  [(ScriptPurpose crypto, ScriptHash crypto)] ->
-  DCert crypto ->
-  [(ScriptPurpose crypto, ScriptHash crypto)]
-addOnlyCwitness !ans (DCertDeleg c@(DeRegKey (ScriptHashObj hk))) =
-  (Certifying $ DCertDeleg c, hk) : ans
-addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpool))) =
-  (Certifying $ DCertDeleg c, hk) : ans
-addOnlyCwitness !ans _ = ans

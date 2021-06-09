@@ -39,7 +39,9 @@ library
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
     Test.Cardano.Ledger.Alonzo.AlonzoEraGen
+    Test.Cardano.Ledger.Alonzo.Trace
   build-depends:
+    bytestring,
     cardano-binary,
     cardano-ledger-alonzo,
     cardano-ledger-core,
@@ -47,11 +49,15 @@ library
     cardano-ledger-shelley-ma,
     cardano-slotting,
     containers,
+    flat,
     hashable,
     plutus-tx,
+    plutus-tx-plugin,
+    plutus-ledger-api,
     QuickCheck,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
+    small-steps,
     strict-containers,
     text,
   hs-source-dirs:

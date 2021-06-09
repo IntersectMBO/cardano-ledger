@@ -127,7 +127,6 @@ import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
-import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass)
 import Test.QuickCheck (Arbitrary, arbitrary, genericShrink, listOf, oneof, recursivelyShrink, resize, shrink, vectorOf)
 import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -807,10 +806,9 @@ genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era.
-  ( Era era,
+  ( EraGen era,
     ToCBORGroup (TxSeq era),
     Mock (Crypto era),
-    ScriptClass era,
     UsesTxBody era,
     Arbitrary (TxInBlock era)
   ) =>
