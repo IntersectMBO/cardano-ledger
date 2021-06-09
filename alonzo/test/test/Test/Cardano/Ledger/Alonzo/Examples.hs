@@ -16,7 +16,7 @@ import qualified Plutus.V1.Ledger.Api as P
     ExCPU (..),
     ExMemory (..),
     VerboseMode (..),
-    defaultCekCostModelParams,
+    defaultCostModelParams,
     evaluateScriptRestricting,
   )
 import Plutus.V1.Ledger.Examples
@@ -47,7 +47,7 @@ directPlutusTest expectation script ds =
     (ShouldFail, (_, Right _)) ->
       assertBool "This script should have failed" False
   where
-    costModel = fromMaybe (error "corrupt default cost model") P.defaultCekCostModelParams
+    costModel = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
     -- Evaluate a script with sufficient budget to run it.
     evalWithHugeBudget scr datums =
       P.evaluateScriptRestricting
