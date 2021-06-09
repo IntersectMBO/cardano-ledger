@@ -58,8 +58,8 @@ import Cardano.Ledger.Serialization
     decodeRecordNamed,
     mapFromCBOR,
     mapToCBOR,
-    ratioFromCBOR,
     ratioToCBOR,
+    rationalFromCBOR,
   )
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -256,7 +256,7 @@ instance (Era era) => FromCBOR (PParams era) where
         <*> fromCBOR -- _poolDeposit     :: Coin
         <*> fromCBOR -- _eMax            :: EpochNo
         <*> fromCBOR -- _nOpt            :: Natural
-        <*> ratioFromCBOR -- _a0         :: Rational
+        <*> rationalFromCBOR -- _a0         :: Rational
         <*> fromCBOR -- _rho             :: UnitInterval
         <*> fromCBOR -- _tau             :: UnitInterval
         <*> fromCBOR -- _d               :: UnitInterval
@@ -441,7 +441,7 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
           6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
           7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
           8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
-          9 -> ratioFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
+          9 -> rationalFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
           10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
           11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
           12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
