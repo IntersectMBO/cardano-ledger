@@ -66,7 +66,7 @@ import Cardano.Binary
     withWordSize,
   )
 import Cardano.Prelude (cborError)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Binary.Put (putWord32le, runPut)
 import qualified Data.ByteString as BS
@@ -202,7 +202,9 @@ ratioFromCBOR = do
   unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
   (numValues, values) <- decodeCollectionWithLen (decodeListLenOrIndef) fromCBOR
   case values of
-    n : d : [] -> pure $ n % d
+    n : d : [] -> do
+      when (d == 0) (fail "denominator cannot be 0")
+      pure $ n % d
     _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
 
 ipv4ToBytes :: IPv4 -> BS.ByteString
