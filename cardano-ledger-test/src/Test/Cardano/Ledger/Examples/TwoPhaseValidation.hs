@@ -85,7 +85,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (defaultCekCostModelParams)
+import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified PlutusTx as Plutus
 import Shelley.Spec.Ledger.API
   ( BHBody (..),
@@ -151,7 +151,7 @@ testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 -- | A cost model that sets everything as being free
 freeCostModel :: CostModel
-freeCostModel = CostModel $ 0 <$ fromJust defaultCekCostModelParams
+freeCostModel = CostModel $ 0 <$ fromJust defaultCostModelParams
 
 pp :: Proof era -> Core.PParams era
 pp pf =
