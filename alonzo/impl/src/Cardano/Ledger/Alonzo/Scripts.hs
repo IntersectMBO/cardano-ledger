@@ -19,21 +19,24 @@
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
     Script (TimelockScript, PlutusScript),
-    ExUnits (..),
-    CostModel (..),
-    Prices (..),
-    hashCostModel,
     scriptfee,
     ppTag,
     ppScript,
-    ppExUnits,
-    ppCostModel,
-    ppPrices,
     isPlutusScript,
     alwaysSucceeds,
     alwaysFails,
     pointWiseExUnits,
+
+    -- * Cost Model
+    CostModel (..),
+    ExUnits (..),
+    Prices (..),
+    defaultCostModel,
+    hashCostModel,
     validateCostModelParams,
+    ppExUnits,
+    ppCostModel,
+    ppPrices,
   )
 where
 
@@ -71,7 +74,7 @@ import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (validateCostModelParams)
+import Plutus.V1.Ledger.Api (defaultCostModelParams, validateCostModelParams)
 import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
 
 -- | Marker indicating the part of a transaction for which this script is acting
@@ -167,6 +170,9 @@ checkCostModel cm =
   if validateCostModelParams cm
     then Right (CostModel cm)
     else Left ("Invalid cost model: " ++ show cm)
+
+defaultCostModel :: Maybe CostModel
+defaultCostModel = CostModel <$> defaultCostModelParams
 
 instance FromCBOR CostModel where
   fromCBOR = decode $ SumD checkCostModel <? (D mapFromCBOR)
