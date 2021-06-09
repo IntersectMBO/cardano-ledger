@@ -7,6 +7,8 @@
 {-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
+{-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
+
 module Cardano.Ledger.Serialization
   ( ToCBORGroup (..),
     FromCBORGroup (..),
@@ -31,6 +33,7 @@ module Cardano.Ledger.Serialization
     groupRecord,
     ratioToCBOR,
     ratioFromCBOR,
+    rationalFromCBOR,
     mapToCBOR,
     mapFromCBOR,
     -- IPv4
@@ -59,6 +62,7 @@ import Cardano.Binary
     FromCBOR (..),
     Size,
     ToCBOR (..),
+    decodeInt64,
     decodeListLenOrIndef,
     decodeTag,
     encodeListLen,
@@ -66,7 +70,7 @@ import Cardano.Binary
     withWordSize,
   )
 import Cardano.Prelude (cborError)
-import Control.Monad (unless)
+import Control.Monad (unless, when)
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Binary.Put (putWord32le, runPut)
 import qualified Data.ByteString as BS
@@ -196,13 +200,23 @@ ratioToCBOR r =
     <> toCBOR (numerator r)
     <> toCBOR (denominator r)
 
-ratioFromCBOR :: (Integral a, FromCBOR a) => Decoder s (Ratio a)
-ratioFromCBOR = do
+ratioFromCBOR :: (Bounded a, Integral a, FromCBOR a) => Decoder s (Ratio a)
+ratioFromCBOR = decodeFraction fromCBOR
+
+rationalFromCBOR :: Decoder s Rational
+rationalFromCBOR = do
+  x <- decodeFraction decodeInt64
+  pure $ fromIntegral (numerator x) % fromIntegral (denominator x)
+
+decodeFraction :: Integral a => Decoder s a -> Decoder s (Ratio a)
+decodeFraction decoder = do
   t <- decodeTag
   unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
-  (numValues, values) <- decodeCollectionWithLen (decodeListLenOrIndef) fromCBOR
+  (numValues, values) <- decodeCollectionWithLen (decodeListLenOrIndef) decoder
   case values of
-    n : d : [] -> pure $ n % d
+    n : d : [] -> do
+      when (d == 0) (fail "denominator cannot be 0")
+      pure $ n % d
     _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
 
 ipv4ToBytes :: IPv4 -> BS.ByteString

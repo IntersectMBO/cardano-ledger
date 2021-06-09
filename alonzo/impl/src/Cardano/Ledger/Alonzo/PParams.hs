@@ -83,8 +83,8 @@ import Cardano.Ledger.Serialization
     ToCBORGroup (..),
     mapFromCBOR,
     mapToCBOR,
-    ratioFromCBOR,
     ratioToCBOR,
+    rationalFromCBOR,
   )
 import Control.DeepSeq (NFData)
 import Data.ByteString.Short (fromShort)
@@ -260,7 +260,7 @@ instance
         <! From -- _poolDeposit     :: Coin
         <! From -- _eMax            :: EpochNo
         <! From -- _nOpt            :: Natural
-        <! (D ratioFromCBOR) -- _a0 :: Rational
+        <! (D rationalFromCBOR) -- _a0 :: Rational
         <! From -- _rho             :: UnitInterval
         <! From -- _tau             :: UnitInterval
         <! From -- _d               :: UnitInterval
@@ -452,7 +452,7 @@ updateField 5 = field (\x up -> up {_keyDeposit = SJust x}) From
 updateField 6 = field (\x up -> up {_poolDeposit = SJust x}) From
 updateField 7 = field (\x up -> up {_eMax = SJust x}) From
 updateField 8 = field (\x up -> up {_nOpt = SJust x}) From
-updateField 9 = field (\x up -> up {_a0 = x}) (D $ SJust <$> ratioFromCBOR)
+updateField 9 = field (\x up -> up {_a0 = x}) (D $ SJust <$> rationalFromCBOR)
 updateField 10 = field (\x up -> up {_rho = SJust x}) From
 updateField 11 = field (\x up -> up {_tau = SJust x}) From
 updateField 12 = field (\x up -> up {_d = SJust x}) From
