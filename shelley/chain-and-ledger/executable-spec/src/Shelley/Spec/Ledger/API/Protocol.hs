@@ -31,6 +31,8 @@ module Shelley.Spec.Ledger.API.Protocol
     updateChainDepState,
     reupdateChainDepState,
     initialChainDepState,
+    -- Re-exports
+    checkLeaderValue,
   )
 where
 
@@ -86,6 +88,7 @@ import Shelley.Spec.Ledger.BlockChain
     BHeader,
     bhbody,
     bheaderPrev,
+    checkLeaderValue,
     prevHashToNonce,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
