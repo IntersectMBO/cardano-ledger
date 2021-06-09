@@ -29,6 +29,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), TxInBlock)
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
+import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -65,7 +66,6 @@ import Shelley.Spec.Ledger.STS.Bbody
     BbodyState (..),
   )
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
-import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 -- =======================================

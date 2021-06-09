@@ -126,6 +126,7 @@ import Cardano.Ledger.Serialization
     listLenInt,
     runByteBuilder,
   )
+import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -151,7 +152,6 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
-import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (segwitTx)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 

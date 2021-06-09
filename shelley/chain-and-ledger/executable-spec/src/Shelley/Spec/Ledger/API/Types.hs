@@ -5,6 +5,10 @@ module Shelley.Spec.Ledger.API.Types
   )
 where
 
+import Cardano.Ledger.Address as X
+  ( Addr (..),
+    RewardAcnt (..),
+  )
 import Cardano.Ledger.BaseTypes as X
   ( Globals (..),
     Network (..),
@@ -16,6 +20,10 @@ import Cardano.Ledger.BaseTypes as X
 import Cardano.Ledger.Coin as X
   ( Coin (..),
     word64ToCoin,
+  )
+import Cardano.Ledger.Credential as X
+  ( Credential (..),
+    StakeReference (..),
   )
 import Cardano.Ledger.Keys as X
   ( CertifiedVRF,
@@ -38,10 +46,6 @@ import Cardano.Ledger.Keys as X
     hashKey,
     hashVerKeyVRF,
   )
-import Shelley.Spec.Ledger.Address as X
-  ( Addr (..),
-    RewardAcnt (..),
-  )
 import Shelley.Spec.Ledger.Address.Bootstrap as X
   ( BootstrapWitness (..),
   )
@@ -58,10 +62,6 @@ import Shelley.Spec.Ledger.BlockChain as X
     bhHash,
     bhbody,
     bheader,
-  )
-import Shelley.Spec.Ledger.Credential as X
-  ( Credential (..),
-    StakeReference (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates as X
   ( DCert (..),

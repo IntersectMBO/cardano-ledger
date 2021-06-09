@@ -79,7 +79,7 @@ import Shelley.Spec.Ledger.PParams
     pattern Update,
   )
 import Shelley.Spec.Ledger.PParams as PParams (Update)
-import Shelley.Spec.Ledger.Slot (SlotNo (..), epochInfoSize)
+import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Shelley.Spec.Ledger.TxBody(TxIn,Wdrl (..))
 import Test.QuickCheck
   ( Property,

@@ -9,10 +9,10 @@ module Test.Shelley.Spec.Ledger.Address.CompactAddr where
 
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import qualified Data.ByteString.Short as SBS
-import Shelley.Spec.Ledger.Address (Addr (..), serialiseAddr)
-import qualified Shelley.Spec.Ledger.Address as Addr
+import Cardano.Ledger.Address (Addr (..), serialiseAddr)
+import qualified Cardano.Ledger.Address as Addr
 import qualified Shelley.Spec.Ledger.CompactAddr as CA
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( PaymentCredential,
     StakeReference (..),
   )

@@ -42,6 +42,7 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
+import Cardano.Ledger.Slot (SlotNo, epochInfoEpoch, epochInfoFirst)
 import Control.Monad (unless)
 import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Reader (asks)
@@ -73,7 +74,6 @@ import Shelley.Spec.Ledger.OverlaySchedule
     lookupInOverlaySchedule,
   )
 import Shelley.Spec.Ledger.STS.Ocert (OCERT, OCertEnv (..))
-import Shelley.Spec.Ledger.Slot (SlotNo, epochInfoEpoch, epochInfoFirst)
 
 data OVERLAY crypto
 

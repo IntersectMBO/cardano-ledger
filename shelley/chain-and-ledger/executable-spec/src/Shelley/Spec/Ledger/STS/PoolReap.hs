@@ -23,6 +23,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
 import Control.State.Transition
@@ -48,7 +49,6 @@ import Shelley.Spec.Ledger.LedgerState
     TransUTxOState,
     UTxOState (..),
   )
-import Shelley.Spec.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxBody (getRwdCred, _poolRAcnt)
 
 data POOLREAP era

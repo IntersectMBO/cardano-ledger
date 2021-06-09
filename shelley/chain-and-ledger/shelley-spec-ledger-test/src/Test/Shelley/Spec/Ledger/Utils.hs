@@ -126,12 +126,12 @@ import Shelley.Spec.Ledger.API
     GetLedgerView,
     PParams,
   )
-import Shelley.Spec.Ledger.Address (Addr, pattern Addr)
+import Cardano.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, TxSeq, bhbody, bheader)
-import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import Shelley.Spec.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
+import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx, TxOut, WitnessSet)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Tasty.HUnit

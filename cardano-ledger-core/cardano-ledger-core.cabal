@@ -40,11 +40,13 @@ library
   hs-source-dirs: src
 
   exposed-modules:
+    Cardano.Ledger.Address
     Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.BaseTypes
     Cardano.Ledger.Coin
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
+    Cardano.Ledger.Credential
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
     Cardano.Ledger.Keys
@@ -52,16 +54,20 @@ library
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
     Cardano.Ledger.Serialization
+    Cardano.Ledger.Slot
     Cardano.Ledger.Tx
     Cardano.Ledger.Val
 
   build-depends:
     aeson,
+    base16-bytestring,
     binary,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
     cardano-crypto-praos,
+    cardano-crypto-wrapper,
+    cardano-ledger-byron,
     cardano-prelude,
     cardano-slotting,
     containers,

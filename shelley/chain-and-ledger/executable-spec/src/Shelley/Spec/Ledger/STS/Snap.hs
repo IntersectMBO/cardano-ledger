@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.STS.Snap
   )
 where
 
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
@@ -27,7 +28,6 @@ import Control.State.Transition
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),

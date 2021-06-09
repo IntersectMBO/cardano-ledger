@@ -62,6 +62,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -106,7 +107,6 @@ import Shelley.Spec.Ledger.STS.EraMapping ()
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TickfPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
-import Shelley.Spec.Ledger.Slot (SlotNo)
 
 -- =======================================================
 

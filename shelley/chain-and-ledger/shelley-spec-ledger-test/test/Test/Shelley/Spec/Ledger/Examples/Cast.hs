@@ -44,13 +44,13 @@ import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     textToUrl,
   )
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( Credential (..),
     Ptr (..),
     StakeReference (..),
@@ -64,7 +64,7 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.TxBody
   ( PoolMetadata (..),
     PoolParams (..),

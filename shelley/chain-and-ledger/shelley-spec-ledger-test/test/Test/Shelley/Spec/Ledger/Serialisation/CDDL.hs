@@ -30,7 +30,7 @@ import Shelley.Spec.Ledger.API
     Tx,
     Update,
   )
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( Addr,
     RewardAcnt,
   )

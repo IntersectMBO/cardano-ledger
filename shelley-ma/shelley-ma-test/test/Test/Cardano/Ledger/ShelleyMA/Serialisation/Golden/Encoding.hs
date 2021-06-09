@@ -30,9 +30,9 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
-import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import qualified Shelley.Spec.Ledger.Metadata as SMD
 import Shelley.Spec.Ledger.PParams
@@ -42,7 +42,7 @@ import Shelley.Spec.Ledger.PParams
     pattern ProposedPPUpdates,
     pattern Update,
   )
-import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),

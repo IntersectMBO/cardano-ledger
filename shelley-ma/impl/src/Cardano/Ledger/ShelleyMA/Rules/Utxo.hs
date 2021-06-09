@@ -16,6 +16,11 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
+import Cardano.Ledger.Address
+  ( Addr (AddrBootstrap),
+    bootstrapAddressAttrsSize,
+    getNetwork,
+  )
 import Cardano.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
@@ -61,11 +66,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address
-  ( Addr (AddrBootstrap),
-    bootstrapAddressAttrsSize,
-    getNetwork,
-  )
 import Shelley.Spec.Ledger.LedgerState (PPUPState)
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)

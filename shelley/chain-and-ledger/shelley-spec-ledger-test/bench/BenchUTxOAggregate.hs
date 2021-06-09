@@ -18,11 +18,11 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence as Seq
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( Addr (..),
   )
 import Shelley.Spec.Ledger.CompactAddr (compactAddr)
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( Credential (..),
     Ptr (..),
     StakeReference (..),

@@ -51,6 +51,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Slot (EpochNo)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
 import Control.DeepSeq (NFData)
@@ -115,7 +116,6 @@ import Shelley.Spec.Ledger.STS.Prtcl
   )
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickPredicateFailure)
 import Shelley.Spec.Ledger.STS.Tickn
-import Shelley.Spec.Ledger.Slot (EpochNo)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
 data CHAIN era

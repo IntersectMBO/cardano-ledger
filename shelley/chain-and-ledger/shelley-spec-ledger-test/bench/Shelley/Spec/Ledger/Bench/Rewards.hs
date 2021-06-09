@@ -26,7 +26,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( Addr (..),
     mkRwdAcnt,
   )
@@ -37,7 +37,7 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
     truncateUnitInterval,
   )
-import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
 import qualified Shelley.Spec.Ledger.LedgerState as LS

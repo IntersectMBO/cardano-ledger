@@ -60,7 +60,7 @@ import Cardano.Ledger.BaseTypes
     mkActiveSlotCoeff,
     unitIntervalToRational,
   )
-import Shelley.Spec.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
     SnapShot (..),
@@ -117,7 +117,7 @@ import Shelley.Spec.Ledger.Rewards
     mkApparentPerformance,
     sumRewards,
   )
-import Shelley.Spec.Ledger.Slot (epochInfoSize)
+import Cardano.Ledger.Slot (epochInfoSize)
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), RewardAcnt (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genCoin, genNatural)

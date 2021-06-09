@@ -44,7 +44,7 @@ import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

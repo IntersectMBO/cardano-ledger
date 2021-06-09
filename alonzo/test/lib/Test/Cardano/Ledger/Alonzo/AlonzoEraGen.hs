@@ -13,6 +13,7 @@
 module Test.Cardano.Ledger.Alonzo.AlonzoEraGen where
 
 import Cardano.Binary (ToCBOR (toCBOR), serializeEncoding')
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data as Alonzo (AuxiliaryData (..), Data (..), DataHash)
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
@@ -36,6 +37,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core (PParams, PParamsDelta, Script, TxOut)
+import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (ScriptHash)
@@ -62,8 +64,6 @@ import GHC.Records (HasField (..))
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
-import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
@@ -414,59 +414,3 @@ someLeaf _proxy x =
    in case mode of
         0 -> TimelockScript $ (RequireAnyOf . Seq.fromList) [RequireTimeStart slot, RequireTimeExpire slot]
         _ -> TimelockScript $ RequireSignature x
-
-{-
-The bytestring below is a compiled (and then converted to ShortByteString) version of
-this PlutusScript. See the source Test.Cardano.Ledger.Alonzo.Examples
-It has three arguments 1) the data 2) the redeemer, 3) the context. Designed to be used
-as a script locking an output.
-
-guessTheNumber3args' :: P.Data -> P.Data -> P.Data -> ()
-guessTheNumber3args' d1 d2 _d3 = if d1 P.== d2 then () else (P.error ())
-
-guessTheNumber3args :: ShortByteString
-guessTheNumber3args =
-  toShort . toStrict . serialise . P.fromCompiledCode $
-    $$(P.compile [||guessTheNumber3args'||])
--}
-
-{-
-guessTheNumber3args:: ShortByteString
-guessTheNumber3args = read "\SOH\NUL\NUL2\NUL2\NUL2\NUL32\NUL \STX\NUL3 \STX\NUL32\NUL \STX\NUL2\NUL2\NUL2\NUL2\NUL3 \STX\NUL333 \STX\NUL \STX\NUL \STX\NUL2\NUL2\NUL2\NUL2\NUL2\NUL2\NUL\NUL\DC2\NUL \STX\NUL350\NAK35\NULS\NULq \NUL\SOH\NUL0\STX \NUL\SUB \ETXP\ENQ\SOH\160\EM\DC2\NULa \NUL\SOH5\NUL\"\NUL \NUL\SOH5\NUL\DC2\NUL \NUL\STX5UP\SYN\DC2\NUL \STX\NUL3\NUL2\NUL \STX\NUL3350\a\NUL\"\NUL333S\NUL\128\STX \STX\NUL3\SOH0\ETX\NUL\"\NUL \STX\NUL\SOH\130\NUL \NUL\ETB \STX\NUL\SOHr\NUL \NUL\ETB\SOH\130\NUL \ETX3350\t\NUL2\NUL \NUL\CAN \STX\NUL \ETX3S\SOH\131\&0\DC4\NULP\ETX \ETX3S\SOHq \NUL\SOH0\v\DC2\NUL\NUL\DLE\ENQ\NUL2\NUL\SOH\160\FS \STX\NUL\SOH\130\NUL \NUL\CAN \STX\NUL\SOH\128\EM \ETX3350\b\NUL\"\NUL \NUL\ETB \STX\NUL \NUL\CAN \STX\NUL3\SOH \ETX\NUL\"\NUL \NUL\ETB \STX\NUL\SOHp\CAN \ETX3350\b\NUL\"\NUL \NUL\ETB \STX\NUL \NUL\CAN \STX\NUL\SOHr\NUL \ETX3S\SOHA \NUL\SOH0\b\DC2\NUL\NUL\DLE\ETX\NUL\"\NUL \NUL\ETB\SOH\130\NUL333S\NUL\128\STX \STX\NUL\SOHr\NUL \STX\NUL\SOH\130\NUL \NUL\ETB \STX\NUL\SOHr\NUL \ETX3S\SOHA \NUL\SOH\NULp\ETX\NUL \CAN \STX\NUL55P\f\NUL\"\NUL \ETXSU\NUL\224\ETX \STX\NUL350\SYN30\b\DC2\NUL\NUL\DLE\EOT\NUL\"\NUL30\t\DC2\NUL\NUL\DLE\EOT\NUL\"\NUL\SOH\128\SUB \SOH \STX\NUL \STX\NUL \ETX\NULP\ACK \STX\NUL\DC2\NUL \STX\NUL \STX\NUL3\NUL@\a\NULb\NUL\DC2\NUL \STX\NUL \STX\NUL0\ETX\NULb\NUL\DC2\NUL \STX\NUL \STX\NUL0\STX\NULb\NUL\DC2\NUL \STX\NUL \STX\NUL0\SOH\NULb\NUL\NUL\DC1\DC2\NUL \SOH \ETX0\SOH\NUL0\STX\DC1 \NUL\SOH \STX\NUL2\NUL35z\128\b\EOT\128A\155\164\NUL\128\EOT\128\b\NUL\200\NUL\204\213\234\NUL \DLE\NUL\230o\NUL\STX\NUL\DC3P\SOH \NUL\SOH\DC2\NUL0\SOH5P\n \STX\NUL\DC2\NUL \STX\NUL355\NUL\192\STX \ETX3SP\r\NUL\"\NUL\NUL\178\NUL \STX\NUL\NUL\192\f \STX\NUL \ETX3SP\SI\NULB\NUL\NUL\194\NUL \STX\NUL350\r3\NUL\144\ACK\NUL2\NUL350\f\DC2\NUL\NUL\DLE\n\NUL`\ETX \NUL\SI\SOH\DLE\SO\NUL\177 \STX\NUL\NUL! \STX\NUL\NUL\DC2\NUL\NUL\DC1 \NUL\SOH \NUL\SOH\DC1 \STX\NUL\NUL! \STX\NUL\DC2\NUL \ETX0\SOH\NUL@\ETX\DC2\NUL\NUL\DC1\DC2\NUL2\NUL0\SOH\NUL\DC2\NUL \ETX0\ETX2\NUL0\SOH\NUL\DLE\STX\NUL\DC1\DC1\DC2\NUL3P\STX \SOH \ETX0\SOH \ETXP\ETX \STX\NUL0\STX\NUL2\NUL5\NUL2\NUL \ETX\NUL\DLE\ETX\NUL\DC1 \ETX \ETX \ETX\NUL\DLE\SOH \STX\NUL3\NUL3 \ETX\NUL\DLE\SOH\NUL \SOH \STX\NUL\DC2\NUL50\EOT\DC2\NUL50\EOT\NUL3P\ETX\NUL\DLE\SOH\SOH"
--}
-
-guess :: Alonzo.Script era
-guess = guessTheNumber3
-
-{-
-guessTheNumber'3 :: P.Data -> P.Data -> P.Data -> ()
-guessTheNumber'3 d1 d2 _d3 = if d1 P.== d2 then () else (P.error ())
-
-guessTheNumber3 :: ShortByteString
-guessTheNumber3 =
-  toShort . toStrict . serialise . P.fromCompiledCode $
-    $$(P.compile [||guessTheNumber'3||])
-
-isEven3 :: [Word8]
-isEven3 =
-  concat
-    [ [1, 0, 0, 51, 50, 0, 32, 2, 0, 50, 0, 50, 0, 51, 32],
-      [2, 0, 51, 50, 0, 32, 2, 0, 51, 51, 51, 32, 2, 0, 32],
-      [2, 0, 32, 2, 0, 51, 32, 2, 0, 50, 0, 50, 0, 0, 18],
-      [0, 32, 2, 0, 51, 51, 51, 83, 0, 112, 3, 32, 2, 0, 98],
-      [0, 32, 2, 0, 98, 0, 32, 3, 51, 83, 1, 99, 51, 80, 20],
-      [1, 83, 55, 144, 1, 36, 0, 137, 0, 1, 0, 0, 73, 0, 26],
-      [128, 56, 4, 128, 65, 0, 16, 3, 16, 1, 0, 48, 3, 9, 0],
-      [48, 144, 0, 0, 144, 0, 0, 144, 0, 144, 1, 0, 16, 1, 0],
-      [16, 1, 128, 40, 3, 16, 1, 0, 9, 0, 16, 1, 0, 16, 1],
-      [0, 25, 128, 32, 3, 128, 49, 0, 9, 0, 16, 1, 0, 16, 1],
-      [0, 24, 1, 128, 49, 0, 9, 0, 16, 1, 0, 16, 1, 0, 24],
-      [1, 0, 49, 0, 9, 0, 16, 1, 0, 16, 1, 0, 24, 0, 128],
-      [49, 0, 0, 8, 137, 0, 16, 0, 1, 9, 0, 16, 0, 144, 1],
-      [0, 25, 128, 8, 2, 0, 24, 144, 0, 0, 136, 144, 1, 0, 9],
-      [0, 25, 128, 8, 1, 128, 16, 137, 0, 0, 8, 144, 0, 0, 144],
-      [1, 0, 25, 0, 25, 154, 189, 64, 4, 1, 128, 20, 205, 210, 0],
-      [64, 2, 36, 0, 64, 0, 4, 36, 0, 64, 0, 2, 64, 0, 3]
-    ]
-
--}

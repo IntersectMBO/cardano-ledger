@@ -41,7 +41,7 @@ import Cardano.Ledger.Keys
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
   )

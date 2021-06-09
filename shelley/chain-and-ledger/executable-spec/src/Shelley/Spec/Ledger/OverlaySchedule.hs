@@ -32,13 +32,13 @@ import Cardano.Ledger.Keys
   ( KeyHash (..),
     KeyRole (..),
   )
+import Cardano.Ledger.Slot ((-*))
 import Cardano.Slotting.Slot
 import Control.DeepSeq (NFData)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Slot
 
 data OBftSlot crypto
   = NonActiveSlot

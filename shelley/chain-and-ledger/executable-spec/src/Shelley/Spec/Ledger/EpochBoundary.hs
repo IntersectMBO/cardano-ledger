@@ -36,12 +36,14 @@ module Shelley.Spec.Ledger.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Coin
   ( Coin (..),
     coinToRational,
     rationalToCoinViaFloor,
   )
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -60,8 +62,6 @@ import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
-import Shelley.Spec.Ledger.Address (Addr (..))
-import Shelley.Spec.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import Shelley.Spec.Ledger.TxBody (PoolParams)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 

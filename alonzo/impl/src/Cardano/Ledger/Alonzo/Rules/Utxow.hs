@@ -14,6 +14,7 @@
 module Cardano.Ledger.Alonzo.Rules.Utxow where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams)
@@ -39,6 +40,7 @@ import Cardano.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
@@ -54,8 +56,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
-import Shelley.Spec.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
-import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( delegCWitness,
     genesisCWitness,

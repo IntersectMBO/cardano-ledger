@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.API
   ( ScriptHash,
     UTXOW,
   )
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( Addr,
     pattern Addr,
   )
@@ -46,7 +46,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     maybeToStrictMaybe,
   )
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( pattern KeyHashObj,
     pattern ScriptHashObj,
     pattern StakeRefBase,
@@ -74,7 +74,7 @@ import Shelley.Spec.Ledger.Scripts
     pattern RequireSignature,
     pattern ScriptHash,
   )
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxId,

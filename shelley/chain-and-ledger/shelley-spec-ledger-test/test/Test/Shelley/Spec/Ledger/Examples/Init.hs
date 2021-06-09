@@ -40,7 +40,7 @@ import Shelley.Spec.Ledger.STS.Chain
   ( ChainState (..),
     initialShelleyState,
   )
-import Shelley.Spec.Ledger.Slot
+import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
     SlotNo (..),

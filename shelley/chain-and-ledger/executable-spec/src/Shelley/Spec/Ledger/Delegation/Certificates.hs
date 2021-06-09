@@ -37,6 +37,7 @@ module Shelley.Spec.Ledger.Delegation.Certificates
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
@@ -51,7 +52,6 @@ import Data.Map.Strict (Map)
 import Data.Relation (Relation (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),

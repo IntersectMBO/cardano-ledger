@@ -25,7 +25,7 @@ import Shelley.Spec.Ledger.LedgerState
     _pParams,
   )
 import Shelley.Spec.Ledger.STS.Pool (POOL)
-import Shelley.Spec.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxBody (DCert (DCertPool), PoolParams (..))
 import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 

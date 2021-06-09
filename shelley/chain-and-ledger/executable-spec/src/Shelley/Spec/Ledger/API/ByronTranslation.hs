@@ -22,6 +22,7 @@ import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
 import Data.Default.Class (def)
@@ -33,7 +34,6 @@ import Shelley.Spec.Ledger.API.Types
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (UnsafeCompactAddr))
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.STS.Chain (pparamsToChainChecksData)
-import Shelley.Spec.Ledger.Slot
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
 -- We don't care about the type that is hashed, which will differ going from

@@ -17,7 +17,7 @@ import Cardano.Ledger.BaseTypes (Nonce)
 import Shelley.Spec.Ledger.BlockChain (Block)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.Slot
+import Cardano.Ledger.Slot
   ( BlockNo (..),
     SlotNo (..),
   )

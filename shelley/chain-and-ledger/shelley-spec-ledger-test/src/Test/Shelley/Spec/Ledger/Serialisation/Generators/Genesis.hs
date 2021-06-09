@@ -29,9 +29,9 @@ import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Gen ()
 import Hedgehog.Range (Range)
 import qualified Hedgehog.Range as Range
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes hiding (Seed)
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
 import Shelley.Spec.Ledger.Genesis
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),

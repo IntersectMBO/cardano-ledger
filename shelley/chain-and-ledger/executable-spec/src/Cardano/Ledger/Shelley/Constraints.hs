@@ -8,6 +8,7 @@
 module Cardano.Ledger.Shelley.Constraints where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
@@ -29,7 +30,6 @@ import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
 import GHC.Records (HasField)
-import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
 
 --------------------------------------------------------------------------------

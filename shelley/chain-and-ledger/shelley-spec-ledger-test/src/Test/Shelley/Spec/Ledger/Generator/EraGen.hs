@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.API
     StakeReference (StakeRefBase),
     Block(..),
   )
-import Shelley.Spec.Ledger.Address (toAddr)
+import Cardano.Ledger.Address (toAddr)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe,ShelleyBase)
 import Shelley.Spec.Ledger.Tx (TxId (TxId))
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl, WitVKey)
@@ -84,7 +84,7 @@ import Control.State.Transition.Extended(STS(..))
 import GHC.Records(HasField(..))
 import Cardano.Ledger.BaseTypes(UnitInterval)
 import Shelley.Spec.Ledger.PParams(ProtVer)
-import Shelley.Spec.Ledger.Slot (EpochNo)
+import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.Era (Era)
 import GHC.Natural(Natural)
 import Cardano.Ledger.AuxiliaryData(ValidateAuxiliaryData(..))

@@ -65,7 +65,7 @@ import Shelley.Spec.Ledger.API
     hashVerKeyVRF,
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
-import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (..),
     hashScript,

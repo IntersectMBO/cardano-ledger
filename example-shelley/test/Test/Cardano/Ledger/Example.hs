@@ -37,7 +37,7 @@ import Shelley.Spec.Ledger.API
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Shelley.Spec.Ledger.STS.EraMapping ()
 import Shelley.Spec.Ledger.Scripts (MultiSig (..))
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( TxIn (..),
     TxOut (..),

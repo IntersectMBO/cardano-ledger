@@ -26,6 +26,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
     invalidKey,
@@ -41,6 +42,7 @@ import Cardano.Ledger.Serialization
     mapToCBOR,
   )
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Slot (SlotNo)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (∈), (⨃))
 import Control.State.Transition
@@ -62,7 +64,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Address (mkRwdAcnt)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState,
     DPState (..),
@@ -72,7 +73,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
   )
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..), DelplPredicateFailure)
-import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

@@ -29,9 +29,9 @@ import Data.Either
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (..))
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( Credential (..),
     Ptr (..),
     StakeReference (..),
@@ -41,7 +41,7 @@ import Cardano.Ledger.Keys
     pattern KeyHash,
   )
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T

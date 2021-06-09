@@ -34,6 +34,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (decodeRecordSum)
+import Cardano.Ledger.Slot (SlotNo)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -65,7 +66,6 @@ import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
   )
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW, UtxowPredicateFailure)
-import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
 
 data LEDGER era

@@ -89,6 +89,10 @@ import Cardano.Binary
     szCases,
   )
 import qualified Cardano.Crypto.Hash.Class as HS
+import Cardano.Ledger.Address
+  ( Addr (..),
+    RewardAcnt (..),
+  )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes
   ( DnsName,
@@ -103,6 +107,12 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    Ix,
+    Ptr (..),
+    StakeCredential,
+  )
 import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
@@ -144,6 +154,7 @@ import Cardano.Ledger.Serialization
     mapToCBOR,
   )
 import Cardano.Ledger.Shelley.Constraints (TransValue)
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude
   ( HeapWords (..),
@@ -194,24 +205,13 @@ import GHC.Records
 import NoThunks.Class (AllowThunksIn (..), InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
-import Shelley.Spec.Ledger.Address
-  ( Addr (..),
-    RewardAcnt (..),
-  )
 import Shelley.Spec.Ledger.CompactAddr
   ( CompactAddr,
     compactAddr,
     decompactAddr,
   )
-import Shelley.Spec.Ledger.Credential
-  ( Credential (..),
-    Ix,
-    Ptr (..),
-    StakeCredential,
-  )
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
 -- ========================================================================
 

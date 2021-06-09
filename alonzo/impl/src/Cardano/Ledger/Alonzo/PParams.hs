@@ -86,6 +86,7 @@ import Cardano.Ledger.Serialization
     ratioToCBOR,
     rationalFromCBOR,
   )
+import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString.Short (fromShort)
 import Data.Coders
@@ -115,7 +116,6 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
 import qualified Shelley.Spec.Ledger.PParams as Shelley (PParams' (..))
-import Shelley.Spec.Ledger.Slot (EpochNo (..))
 
 type PParamsUpdate era = PParams' StrictMaybe era
 

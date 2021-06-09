@@ -19,7 +19,7 @@ import Shelley.Spec.Ledger.LedgerState
   ( PState (..),
     _pParams,
   )
-import Shelley.Spec.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.Slot (EpochNo (..))
 import Test.QuickCheck (Property, property)
 
 -----------------------------

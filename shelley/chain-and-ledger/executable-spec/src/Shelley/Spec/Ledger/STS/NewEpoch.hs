@@ -25,6 +25,7 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
+import Cardano.Ledger.Slot
 import qualified Cardano.Ledger.Val as Val
 import Control.Provenance (runProvM)
 import Control.State.Transition
@@ -41,7 +42,6 @@ import Shelley.Spec.Ledger.PParams (ProtVer)
 import Shelley.Spec.Ledger.Rewards (sumRewards)
 import Shelley.Spec.Ledger.STS.Epoch
 import Shelley.Spec.Ledger.STS.Mir
-import Shelley.Spec.Ledger.Slot
 import Shelley.Spec.Ledger.TxBody
 
 data NEWEPOCH era

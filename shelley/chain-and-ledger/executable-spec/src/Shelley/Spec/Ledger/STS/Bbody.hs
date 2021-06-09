@@ -29,6 +29,7 @@ import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
+import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -62,7 +63,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
-import Shelley.Spec.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data BBODY era

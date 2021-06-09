@@ -17,6 +17,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, ValidateScript)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
 import Criterion
 import qualified Data.ByteString.Lazy as BSL
@@ -36,7 +37,6 @@ import Shelley.Spec.Ledger.API
     Tx,
     applyTxsTransition,
   )
-import Shelley.Spec.Ledger.Slot (SlotNo (SlotNo))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
 

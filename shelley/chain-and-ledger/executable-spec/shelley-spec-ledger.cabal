@@ -108,7 +108,6 @@ library
     aeson,
     base16-bytestring >= 1,
     bech32,
-    binary,
     bytestring,
     cardano-binary,
     cardano-crypto,

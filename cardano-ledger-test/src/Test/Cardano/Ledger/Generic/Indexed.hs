@@ -21,6 +21,7 @@ import Cardano.Ledger.Alonzo.Scripts (Script (..), alwaysFails, alwaysSucceeds)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (Value)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
@@ -34,7 +35,6 @@ import Data.ByteString (ByteString, pack, unpack)
 import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as Seq (fromList)
-import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Scripts (MultiSig)
 import qualified Shelley.Spec.Ledger.Scripts as Multi
 import Shelley.Spec.Ledger.TxBody (WitVKey (..))
