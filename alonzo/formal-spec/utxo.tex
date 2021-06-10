@@ -561,7 +561,7 @@ This rule has the following changes:
   Note that we do not need to check that the start slot can be converted to
   time, because all pasts slots can be converted into time correctly.
 
-  \item $\fun{adaPerUTxOWord}$ is now a protocol parameter explicitly, the
+  \item $\fun{coinsPerUTxOWord}$ is now a protocol parameter explicitly, the
   $\fun{utxoEntrySize}$ calculation is defined differently than for ShelleyMA
   (see Section~\ref{sec:value-size})
 
@@ -601,7 +601,7 @@ UTXOS rule.
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \txouts{txb}, \\
-      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp)} \\~
+      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{coinsPerUTxOWord}~pp)} \\~
       \\
       \forall txout \in \txouts{txb},\\
       \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ (\fun{maxTxSize}~pp) * (\fun{maxValSize}~pp)} \\~
