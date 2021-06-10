@@ -75,7 +75,7 @@ isOverlaySlot ::
 isOverlaySlot firstSlotNo dval slot = step s < step (s + 1)
   where
     s = fromIntegral $ slot -* firstSlotNo
-    d = unitIntervalToRational dval
+    d = unboundRational dval
     step :: Rational -> Integer
     step x = ceiling (x * d)
 
@@ -93,11 +93,11 @@ classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
        in gkeys `getAtIndex` genesisIdx
     else NonActiveSlot
   where
-    d = unitIntervalToRational dval
+    d = unboundRational dval
     position = ceiling (fromIntegral (slot -* firstSlotNo) * d)
     isActive = position `mod` ascInv == 0
     getAtIndex gs i = if i < length gs then ActiveSlot (Set.elemAt i gs) else NonActiveSlot
-    ascInv = floor (1 / (unitIntervalToRational . activeSlotVal $ ascValue))
+    ascInv = floor (1 / unboundRational (activeSlotVal ascValue))
 
 lookupInOverlaySchedule ::
   SlotNo -> -- first slot of the epoch

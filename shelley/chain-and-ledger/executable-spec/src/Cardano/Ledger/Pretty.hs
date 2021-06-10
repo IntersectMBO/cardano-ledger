@@ -26,7 +26,22 @@ import Cardano.Ledger.Address
     RewardAcnt (..),
   )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    BoundedRational (..),
+    DnsName,
+    FixedPoint,
+    Globals (..),
+    Network (..),
+    Nonce (..),
+    Port (..),
+    StrictMaybe (..),
+    UnitInterval,
+    Url (..),
+    activeSlotLog,
+    activeSlotVal,
+    dnsToText,
+  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (PParamsDelta)
@@ -488,7 +503,7 @@ ppRewardSnapShot (RewardSnapShot snaps a0 nopt ver non deltaR1 rR deltaT1 total 
   ppRecord
     "RewardSnapShot"
     [ ("snapshots", ppSnapShots snaps),
-      ("a0", ppRational a0),
+      ("a0", ppRational $ unboundRational a0),
       ("nOpt", ppNatural nopt),
       ("version", ppProtVer ver),
       ("nonmyopic", ppNonMyopic non),
@@ -514,7 +529,7 @@ ppFreeVars (FreeVars b1 del stake1 addrs total active asc1 blocks r1 slots d a0 
       ("r", ppCoin r1),
       ("slotserEpoch", ppEpochSize slots),
       ("d", ppUnitInterval d),
-      ("a0", ppRational a0),
+      ("a0", ppRational $ unboundRational a0),
       ("nOpt", ppNatural nOpt)
     ]
 
@@ -1098,7 +1113,7 @@ ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mp
       ("poolDeposit", ppCoin pd),
       ("eMax", ppEpochNo em),
       ("nOpt", ppNatural no),
-      ("a0", ppRational a0),
+      ("a0", ppRational $ unboundRational a0),
       ("rho", ppUnitInterval rho),
       ("tau", ppUnitInterval tau),
       ("d", ppUnitInterval d),
@@ -1121,7 +1136,7 @@ ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mu
       ("poolDeposit", lift ppCoin pd),
       ("eMax", lift ppEpochNo em),
       ("nOpt", lift ppNatural no),
-      ("a0", lift ppRational a0),
+      ("a0", lift (ppRational . unboundRational) a0),
       ("rho", lift ppUnitInterval rho),
       ("tau", lift ppUnitInterval tau),
       ("d", lift ppUnitInterval d),
@@ -1342,7 +1357,7 @@ ppActiveSlotCoeff :: ActiveSlotCoeff -> PDoc
 ppActiveSlotCoeff x =
   ppRecord
     "ActiveSlotCoeff"
-    [ ("activeSlotVal", ppUnitInterval (activeSlotVal x)),
+    [ ("activeSlotVal", viaShow (activeSlotVal x)),
       ("ActiveSlotLog", ppFixedPoint (activeSlotLog x))
     ]
 

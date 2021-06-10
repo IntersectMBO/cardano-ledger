@@ -79,7 +79,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkKESKeyPair,
     mkKeyPair,
     mkVRFKeyPair,
-    unsafeMkUnitInterval,
+    unsafeBoundRational,
   )
 
 -- | Alice's payment key pair
@@ -128,7 +128,7 @@ alicePoolParams =
       _poolVrf = hashVerKeyVRF . snd $ vrf (alicePoolKeys @crypto),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
-      _poolMargin = unsafeMkUnitInterval 0.1,
+      _poolMargin = unsafeBoundRational 0.1,
       _poolRAcnt = RewardAcnt Testnet aliceSHK,
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
       _poolRelays = StrictSeq.empty,
@@ -186,7 +186,7 @@ bobPoolParams =
       _poolVrf = hashVerKeyVRF . snd $ vrf (bobPoolKeys @crypto),
       _poolPledge = Coin 2,
       _poolCost = Coin 1,
-      _poolMargin = unsafeMkUnitInterval 0.1,
+      _poolMargin = unsafeBoundRational 0.1,
       _poolRAcnt = RewardAcnt Testnet bobSHK,
       _poolOwners = Set.singleton $ (hashKey . vKey) bobStake,
       _poolRelays = StrictSeq.empty,

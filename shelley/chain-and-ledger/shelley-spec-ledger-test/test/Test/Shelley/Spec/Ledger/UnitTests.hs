@@ -174,7 +174,7 @@ testVRFCheckWithActiveSlotCoeffOne =
   checkLeaderValue
     (VRF.mkTestOutputVRF 0 :: VRF.OutputVRF (VRF C_Crypto))
     (1 % 2)
-    (mkActiveSlotCoeff $ unsafeMkUnitInterval 1)
+    (mkActiveSlotCoeff $ unsafeBoundRational 1)
     @?= True
 
 testsPParams :: TestTree
@@ -184,12 +184,6 @@ testsPParams =
     [ testCase "VRF checks when the activeSlotCoeff is one" $
         testVRFCheckWithActiveSlotCoeffOne
     ]
-
-testTruncateUnitInterval :: TestTree
-testTruncateUnitInterval = testProperty "truncateUnitInterval in [0,1]" $
-  \n ->
-    let x = intervalValue $ truncateUnitInterval n
-     in (x <= 1) && (x >= 0)
 
 newtype VRFNatVal = VRFNatVal Natural
   deriving (Show)
@@ -214,7 +208,7 @@ instance Arbitrary ASC where
   arbitrary =
     ASC
       . mkActiveSlotCoeff
-      . unsafeMkUnitInterval
+      . unsafeBoundRational
       . fromRational
       . toRational
       <$> choose @Double (0.01, 0.5)
@@ -249,7 +243,7 @@ testCheckLeaderVal =
         \(VRFNatVal n) (ASC f) (StakeProportion r) ->
           r > 0
             ==> let ascVal :: Double
-                    ascVal = fromRational . unitIntervalToRational $ activeSlotVal f
+                    ascVal = fromRational . unboundRational $ activeSlotVal f
                  in checkLeaderValue @v
                       (VRF.mkTestOutputVRF n)
                       r
@@ -276,7 +270,7 @@ testCheckLeaderVal =
         \(ASC f) (StakeProportion r) ->
           r > 0
             ==> let ascVal :: Double
-                    ascVal = fromRational . unitIntervalToRational $ activeSlotVal f
+                    ascVal = fromRational . unboundRational $ activeSlotVal f
                     numTrials = 500
                     -- 4 standard deviations
                     δ = 4 * sqrt (realToFrac numTrials * p * (1 - p))
@@ -668,7 +662,7 @@ alicePoolParamsSmallCost =
       _poolVrf = hashVerKeyVRF vkVrf,
       _poolPledge = Coin 1,
       _poolCost = Coin 5, -- Too Small!
-      _poolMargin = unsafeMkUnitInterval 0.1,
+      _poolMargin = unsafeBoundRational 0.1,
       _poolRAcnt = RewardAcnt Testnet (KeyHashObj . hashKey . vKey $ aliceStake),
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
       _poolRelays = StrictSeq.empty,
@@ -763,7 +757,6 @@ unitTests =
     [ testsInvalidLedger,
       testsPParams,
       sizeTests,
-      testTruncateUnitInterval,
       testCheckLeaderVal,
       testBootstrap
     ]

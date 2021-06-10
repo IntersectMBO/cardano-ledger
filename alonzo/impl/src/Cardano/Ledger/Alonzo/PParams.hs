@@ -51,10 +51,11 @@ import Cardano.Ledger.Alonzo.Scripts
     ppPrices,
   )
 import Cardano.Ledger.BaseTypes
-  ( Nonce (NeutralNonce),
+  ( BoundedRational (unboundRational),
+    NonNegativeInterval,
+    Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
-    interval0,
     fromSMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
@@ -83,8 +84,6 @@ import Cardano.Ledger.Serialization
     ToCBORGroup (..),
     mapFromCBOR,
     mapToCBOR,
-    ratioToCBOR,
-    rationalFromCBOR,
   )
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
@@ -140,7 +139,7 @@ data PParams' f era = PParams
     -- | Desired number of pools
     _nOpt :: !(HKD f Natural),
     -- | Pool influence
-    _a0 :: !(HKD f Rational),
+    _a0 :: !(HKD f NonNegativeInterval),
     -- | Monetary expansion
     _rho :: !(HKD f UnitInterval),
     -- | Treasury expansion
@@ -225,7 +224,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To poolDeposit'
             !> To eMax'
             !> To nOpt'
-            !> E ratioToCBOR a0'
+            !> To a0'
             !> To rho'
             !> To tau'
             !> To d'
@@ -259,7 +258,7 @@ instance
         <! From -- _poolDeposit     :: Coin
         <! From -- _eMax            :: EpochNo
         <! From -- _nOpt            :: Natural
-        <! (D rationalFromCBOR) -- _a0 :: Rational
+        <! From -- _a0              :: NonNegativeInterval
         <! From -- _rho             :: UnitInterval
         <! From -- _tau             :: UnitInterval
         <! From -- _d               :: UnitInterval
@@ -289,10 +288,10 @@ emptyPParams =
       _poolDeposit = Coin 0,
       _eMax = EpochNo 0,
       _nOpt = 100,
-      _a0 = 0,
-      _rho = interval0,
-      _tau = interval0,
-      _d = interval0,
+      _a0 = minBound,
+      _rho = minBound,
+      _tau = minBound,
+      _d = minBound,
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
       _minPoolCost = mempty,
@@ -380,7 +379,7 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 6 (_poolDeposit ppup) toCBOR
     !> omitStrictMaybe 7 (_eMax ppup) toCBOR
     !> omitStrictMaybe 8 (_nOpt ppup) toCBOR
-    !> omitStrictMaybe 9 (_a0 ppup) ratioToCBOR
+    !> omitStrictMaybe 9 (_a0 ppup) toCBOR
     !> omitStrictMaybe 10 (_rho ppup) toCBOR
     !> omitStrictMaybe 11 (_tau ppup) toCBOR
     !> omitStrictMaybe 12 (_d ppup) toCBOR
@@ -451,7 +450,7 @@ updateField 5 = field (\x up -> up {_keyDeposit = SJust x}) From
 updateField 6 = field (\x up -> up {_poolDeposit = SJust x}) From
 updateField 7 = field (\x up -> up {_eMax = SJust x}) From
 updateField 8 = field (\x up -> up {_nOpt = SJust x}) From
-updateField 9 = field (\x up -> up {_a0 = x}) (D $ SJust <$> rationalFromCBOR)
+updateField 9 = field (\x up -> up {_a0 = SJust x}) From
 updateField 10 = field (\x up -> up {_rho = SJust x}) From
 updateField 11 = field (\x up -> up {_tau = SJust x}) From
 updateField 12 = field (\x up -> up {_d = SJust x}) From
@@ -660,7 +659,7 @@ ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ad
       ("poolDeposit", ppCoin pd),
       ("eMax", ppEpochNo em),
       ("nOpt", ppNatural no),
-      ("a0", ppRational a0),
+      ("a0", ppRational (unboundRational a0)),
       ("rho", ppUnitInterval rho),
       ("tau", ppUnitInterval tau),
       ("d", ppUnitInterval d),
@@ -693,7 +692,7 @@ ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mp
       ("poolDeposit", lift ppCoin pd),
       ("eMax", lift ppEpochNo em),
       ("nOpt", lift ppNatural no),
-      ("a0", lift ppRational a0),
+      ("a0", lift (ppRational . unboundRational) a0),
       ("rho", lift ppUnitInterval rho),
       ("tau", lift ppUnitInterval tau),
       ("d", lift ppUnitInterval d),

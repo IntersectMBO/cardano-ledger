@@ -47,7 +47,7 @@ import Cardano.Ledger.Slot
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 import Test.Shelley.Spec.Ledger.Examples.Federation (genDelegs)
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash, unsafeMkUnitInterval)
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash, unsafeBoundRational)
 
 -- === Initial Protocol Parameters
 --
@@ -59,9 +59,9 @@ import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, maxLLSupply, mkHash, unsafeM
 --       _eMax = EpochNo 10000,
 --       _keyDeposit = Coin 7,
 --       _poolDeposit = Coin 250,
---       _d = unsafeMkUnitInterval 0.5,
---       _tau = unsafeMkUnitInterval 0.2,
---       _rho = unsafeMkUnitInterval 0.0021,
+--       _d = unsafeBoundRational 0.5,
+--       _tau = unsafeBoundRational 0.2,
+--       _rho = unsafeBoundRational 0.0021,
 --       _minUTxOValue = 100
 --     }
 -- @
@@ -74,9 +74,9 @@ ppEx =
       _eMax = EpochNo 10000,
       _keyDeposit = Coin 7,
       _poolDeposit = Coin 250,
-      _d = unsafeMkUnitInterval 0.5,
-      _tau = unsafeMkUnitInterval 0.2,
-      _rho = unsafeMkUnitInterval 0.0021,
+      _d = unsafeBoundRational 0.5,
+      _tau = unsafeBoundRational 0.2,
+      _rho = unsafeBoundRational 0.0021,
       _minUTxOValue = Coin 100
     }
 

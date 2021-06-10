@@ -35,7 +35,7 @@ library
   import:             base, project-config
   hs-source-dirs:     src
   exposed-modules:
-    Test.Cardano.Ledger.BaseTypesSpec
+    Test.Cardano.Ledger.BaseTypes
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
     Test.Cardano.Ledger.Generic.Proof
     Test.Cardano.Ledger.Generic.Indexed
@@ -44,6 +44,7 @@ library
   build-depends:
     aeson,
     bytestring,
+    cardano-binary,
     cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-core,

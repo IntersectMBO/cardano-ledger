@@ -41,6 +41,8 @@ import Shelley.Spec.Ledger.API
 import Cardano.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
     StrictMaybe (..),
+    BoundedRational,
+    NonNegativeInterval,
     UnitInterval,
     mkNonceFromNumber,
   )
@@ -82,7 +84,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
     epochFromSlotNo,
-    unsafeMkUnitInterval,
+    unsafeBoundRational,
   )
 import Cardano.Ledger.Core(PParamsDelta)
 
@@ -92,13 +94,9 @@ genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
   (% 1000) <$> genInteger lower upper
 
-genRatioWord64InThousands :: HasCallStack => Word64 -> Word64 -> Gen (Ratio Word64)
-genRatioWord64InThousands lower upper =
-  (% 1000) <$> genWord64 lower upper
-
-genIntervalInThousands :: HasCallStack => Word64 -> Word64 -> Gen UnitInterval
+genIntervalInThousands :: (BoundedRational a, HasCallStack) => Integer -> Integer -> Gen a
 genIntervalInThousands lower upper =
-  unsafeMkUnitInterval <$> genRatioWord64InThousands lower upper
+  unsafeBoundRational <$> genRationalInThousands lower upper
 
 genPParams :: Constants -> Gen (PParams era)
 genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
@@ -178,8 +176,8 @@ genKeyDeposit =
     (Coin 0, Coin 20)
 
 -- | a0: 0.01-1.0
-genA0 :: HasCallStack => Gen Rational
-genA0 = genRationalInThousands 10 1000
+genA0 :: HasCallStack => Gen NonNegativeInterval
+genA0 = genIntervalInThousands 10 1000
 
 -- | rho: 0.001-0.009
 genRho :: HasCallStack => Gen UnitInterval
@@ -190,7 +188,7 @@ genTau :: HasCallStack => Gen UnitInterval
 genTau = genIntervalInThousands 100 300
 
 genDecentralisationParam :: HasCallStack => Gen UnitInterval
-genDecentralisationParam = unsafeMkUnitInterval <$> QC.elements [0.1, 0.2 .. 1]
+genDecentralisationParam = unsafeBoundRational <$> QC.elements [0.1, 0.2 .. 1]
 -- ^ ^ TODO jc - generating d=0 takes some care, if there are no registered
 --  stake pools then d=0 deadlocks the system.
 

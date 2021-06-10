@@ -39,6 +39,7 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..)
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..), unTxDats)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
+    NonNegativeInterval,
     Nonce,
     StrictMaybe (..),
     UnitInterval,
@@ -537,7 +538,7 @@ data PParamsField era
   | -- | Desired number of pools
     NOpt (Natural)
   | -- | Pool influence
-    A0 (Rational)
+    A0 (NonNegativeInterval)
   | -- | Monetary expansion
     Rho (UnitInterval)
   | -- | Treasury expansion

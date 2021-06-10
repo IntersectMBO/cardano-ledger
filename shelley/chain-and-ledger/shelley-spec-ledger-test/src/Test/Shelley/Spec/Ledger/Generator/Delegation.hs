@@ -63,7 +63,6 @@ import Shelley.Spec.Ledger.API
     VKey,
   )
 import Cardano.Ledger.Address (mkRwdAcnt)
-import Cardano.Ledger.BaseTypes (interval0)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Cardano.Ledger.Keys
   ( coerceKeyRole,
@@ -376,7 +375,7 @@ genStakePool poolKeys skeys (Coin minPoolCost) =
     getAnyStakeKey :: KeyPairs crypto -> Gen (VKey 'Staking crypto)
     getAnyStakeKey keys = vKey . snd <$> QC.elements keys
     mkPoolParams allPoolKeys pledge cost marginPercent acntKey =
-      let interval = unsafeMkUnitInterval $ fromIntegral marginPercent % 100
+      let interval = unsafeBoundRational $ fromIntegral marginPercent % 100
           pps =
             PoolParams
               (hashKey . vKey . cold $ allPoolKeys)
@@ -476,7 +475,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
   pure $
     if -- Discard this generator (by returning Nothing) if:
     -- we are in full decentralisation mode (d=0) when IR certs are not allowed
-    getField @"_d" pparams == interval0
+    getField @"_d" pparams == minBound
       -- or when we don't have keys available for generating an IR cert
       || null credCoinMap
       -- or it's too late in the epoch for IR certs
@@ -517,7 +516,7 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
   pure $
     if -- Discard this generator (by returning Nothing) if:
     -- we are in full decentralisation mode (d=0) when IR certs are not allowed
-    getField @"_d" pparams == interval0
+    getField @"_d" pparams == minBound
       -- or it's too late in the epoch for IR certs
       || tooLateInEpoch s
       then Nothing

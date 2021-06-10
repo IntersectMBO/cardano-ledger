@@ -24,7 +24,7 @@ where
 
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Globals (..), Seed, UnitInterval, epochInfo)
+import Cardano.Ledger.BaseTypes (Globals (..), NonNegativeInterval, Seed, UnitInterval, epochInfo)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
@@ -127,7 +127,7 @@ getTotalStake globals ss =
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
   ( UsesValue era,
-    HasField "_a0" (Core.PParams era) Rational,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
@@ -303,7 +303,7 @@ getPoolParameters = Map.restrictKeys . f
 
 getRewardInfo ::
   forall era.
-  ( HasField "_a0" (Core.PParams era) Rational,
+  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,

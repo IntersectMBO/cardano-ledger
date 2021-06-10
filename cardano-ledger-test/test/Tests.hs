@@ -8,9 +8,7 @@
 
 module Main where
 
-import Test.Cardano.Ledger.BaseTypesSpec
-  ( baseTypesSpec,
-  )
+import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   ( alonzoBBODYexamples,
     alonzoUTXOWexamples,
@@ -31,7 +29,7 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "cardano-core"
-    [ baseTypesSpec,
+    [ baseTypesTests,
       testGroup
         "STS Tests"
         [ alonzoUTXOWexamples,

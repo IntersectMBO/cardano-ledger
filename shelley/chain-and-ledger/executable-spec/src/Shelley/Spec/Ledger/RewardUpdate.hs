@@ -23,6 +23,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    NonNegativeInterval,
     ShelleyBase,
     UnitInterval,
   )
@@ -158,7 +159,7 @@ emptyRewardUpdate =
 -- | To pulse the reward update, we need a snap shot of the EpochState particular to this computation
 data RewardSnapShot crypto = RewardSnapShot
   { rewSnapshots :: !(SnapShots crypto),
-    rewa0 :: !Rational,
+    rewa0 :: !NonNegativeInterval,
     rewnOpt :: !Natural,
     rewprotocolVersion :: !ProtVer,
     rewNonMyopic :: !(NonMyopic crypto),
@@ -191,7 +192,7 @@ instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
 -- passed a RewardSnapShot, as it copies of some values from PParams
 
 -- | RewardSnapShot can act as a Proxy for PParams where "_a0" is "Pool influence"
-instance HasField "_a0" (RewardSnapShot crypto) Rational where
+instance HasField "_a0" (RewardSnapShot crypto) NonNegativeInterval where
   getField x = rewa0 x
 
 -- | RewardSnapShot can act as a Proxy for PParams where "_nOpt" is "Desired number of pools"
@@ -219,7 +220,7 @@ data FreeVars crypto = FreeVars
     r :: !Coin,
     slotsPerEpoch :: !EpochSize,
     pp_d :: !UnitInterval, -- The last three fields come from some version of PParams
-    pp_a0 :: !Rational,
+    pp_a0 :: !NonNegativeInterval,
     pp_nOpt :: !Natural
   }
   deriving (Eq, Show, Generic)

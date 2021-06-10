@@ -45,10 +45,9 @@ import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Network (..),
     Nonce,
+    BoundedRational (..),
     StrictMaybe (..),
     activeSlotVal,
-    intervalValue,
-    unitIntervalToRational,
     (⭒),
   )
 import Shelley.Spec.Ledger.BlockChain
@@ -134,7 +133,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genesisCoins,
     mkBlockFakeVRF,
     mkOCert,
-    zero,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
@@ -255,7 +253,7 @@ blockEx1 =
     (BlockNo 1)
     (nonce0 @(Crypto era))
     (NatNonce 1)
-    zero
+    minBound
     0
     0
     (mkOCert (coreNodeKeysBySchedule @era ppEx 10) 0 (KESPeriod 0))
@@ -310,7 +308,7 @@ blockEx2 =
     (BlockNo 2)
     (nonce0 @(Crypto era))
     (NatNonce 2)
-    zero
+    minBound
     4
     0
     (mkOCert (coreNodeKeysBySchedule @era ppEx 90) 0 (KESPeriod 0))
@@ -360,7 +358,7 @@ blockEx3 =
     (BlockNo 3)
     (epoch1Nonce @era)
     (NatNonce 3)
-    zero
+    minBound
     5
     0
     (mkOCert (coreNodeKeysBySchedule @era ppEx 110) 0 (KESPeriod 0))
@@ -426,7 +424,7 @@ blockEx4 =
     (BlockNo 4)
     (epoch1Nonce @era)
     (NatNonce 4)
-    zero
+    minBound
     9
     0
     (mkOCert (coreNodeKeysBySchedule @era ppEx 190) 0 (KESPeriod 0))
@@ -480,7 +478,7 @@ blockEx5 =
     (BlockNo 5)
     (epoch2Nonce @era)
     (NatNonce 5)
-    zero
+    minBound
     11
     10
     (mkOCert Cast.alicePoolKeys 0 (KESPeriod 10))
@@ -540,7 +538,7 @@ blockEx6 =
     (BlockNo 6)
     (epoch2Nonce @era)
     (NatNonce 6)
-    zero
+    minBound
     14
     14
     (mkOCert Cast.alicePoolKeys 0 (KESPeriod 14))
@@ -574,7 +572,7 @@ blockEx7 =
     (BlockNo 7)
     (epoch2Nonce @era)
     (NatNonce 7)
-    zero
+    minBound
     14
     14
     (mkOCert Cast.bobPoolKeys 0 (KESPeriod 14))
@@ -612,7 +610,7 @@ blockEx8 =
     (BlockNo 8)
     (epoch3Nonce @era)
     (NatNonce 8)
-    zero
+    minBound
     15
     15
     (mkOCert (coreNodeKeysBySchedule @era ppEx 310) 1 (KESPeriod 15))
@@ -647,7 +645,7 @@ blockEx9 =
     (BlockNo 9)
     (epoch3Nonce @era)
     (NatNonce 9)
-    zero
+    minBound
     19
     19
     (mkOCert (coreNodeKeysBySchedule @era ppEx 390) 2 (KESPeriod 19))
@@ -658,8 +656,8 @@ blocksMadeEpoch3 = 3
 expectedBlocks :: Integer
 expectedBlocks =
   floor $
-    (1 - (unitIntervalToRational . _d $ ppEx))
-      * unitIntervalToRational (activeSlotVal $ activeSlotCoeff testGlobals)
+    (1 - (unboundRational . _d $ ppEx))
+      * unboundRational (activeSlotVal $ activeSlotCoeff testGlobals)
       * fromIntegral (epochSize $ EpochNo 3)
 
 reserves9 :: Coin
@@ -669,14 +667,14 @@ deltaR1Ex9 :: Coin
 deltaR1Ex9 =
   rationalToCoinViaFloor $
     (blocksMadeEpoch3 % expectedBlocks)
-      * (unitIntervalToRational $ _rho ppEx)
+      * (unboundRational $ _rho ppEx)
       * (fromIntegral . unCoin $ reserves9)
 
 rPot :: Integer
 rPot = unCoin deltaR1Ex9 -- There were no fees
 
 deltaTEx9 :: Integer
-deltaTEx9 = floor $ intervalValue (_tau ppEx) * fromIntegral rPot
+deltaTEx9 = floor $ unboundRational (_tau ppEx) * fromIntegral rPot
 
 bigR :: Coin
 bigR = Coin $ rPot - deltaTEx9

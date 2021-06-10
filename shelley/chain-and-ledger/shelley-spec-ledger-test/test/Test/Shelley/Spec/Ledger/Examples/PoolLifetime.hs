@@ -117,7 +117,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genesisCoins,
     mkBlockFakeVRF,
     mkOCert,
-    zero,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
@@ -229,7 +228,7 @@ blockEx1 =
     (BlockNo 1)
     (nonce0 @(Crypto (ShelleyEra c)))
     (NatNonce 1)
-    zero
+    minBound
     0
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10) 0 (KESPeriod 0))
@@ -318,7 +317,7 @@ blockEx2 =
     (BlockNo 2)
     (nonce0 @(Crypto (ShelleyEra c)))
     (NatNonce 2)
-    zero
+    minBound
     4
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 90) 0 (KESPeriod 0))
@@ -385,7 +384,7 @@ blockEx3 =
     (BlockNo 3)
     (epoch1Nonce @c)
     (NatNonce 3)
-    zero
+    minBound
     5
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
@@ -472,7 +471,7 @@ blockEx4 =
     (BlockNo 4)
     (epoch1Nonce @c)
     (NatNonce 4)
-    zero
+    minBound
     9
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 190) 0 (KESPeriod 0))
@@ -530,7 +529,7 @@ blockEx5 =
     (BlockNo 5)
     (epoch2Nonce @c)
     (NatNonce 5)
-    zero
+    minBound
     11
     10
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 220) 1 (KESPeriod 10))
@@ -596,7 +595,7 @@ blockEx6 =
     (BlockNo 6)
     (epoch2Nonce @c)
     (NatNonce 6)
-    zero
+    minBound
     14
     14
     (mkOCert Cast.alicePoolKeys 0 (KESPeriod 14))
@@ -648,7 +647,7 @@ blockEx7 =
     (BlockNo 7)
     (epoch3Nonce @c)
     (NatNonce 7)
-    zero
+    minBound
     15
     15
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 310) 1 (KESPeriod 15))
@@ -684,7 +683,7 @@ blockEx8 =
     (BlockNo 8)
     (epoch3Nonce @c)
     (NatNonce 8)
-    zero
+    minBound
     19
     19
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 390) 2 (KESPeriod 19))
@@ -779,7 +778,7 @@ blockEx9 =
     (BlockNo 9)
     (epoch4Nonce @c)
     (NatNonce 9)
-    zero
+    minBound
     20
     20
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 410) 2 (KESPeriod 20))
@@ -858,7 +857,7 @@ blockEx10 =
     (BlockNo 10)
     (epoch4Nonce @c)
     (NatNonce 10)
-    zero
+    minBound
     21
     19
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 420) 2 (KESPeriod 19))
@@ -927,7 +926,7 @@ blockEx11 =
     (BlockNo 11)
     (epoch4Nonce @c)
     (NatNonce 11)
-    zero
+    minBound
     24
     19
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 490) 2 (KESPeriod 19))
@@ -1000,7 +999,7 @@ blockEx12 =
     (BlockNo 12)
     (epoch5Nonce @c)
     (NatNonce 12)
-    zero
+    minBound
     25
     25
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 510) 3 (KESPeriod 25))

@@ -37,7 +37,6 @@ module Test.Shelley.Spec.Ledger.Generator.Core
     pickStakeKey,
     toAddr,
     toCred,
-    zero,
     unitIntervalToNatural,
     mkBlock,
     mkBlockHeader,
@@ -79,7 +78,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
-import Data.Ratio ((%))
+import Data.Ratio ((%), numerator, denominator)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -90,10 +89,10 @@ import Cardano.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
 import Cardano.Ledger.BaseTypes
   ( Nonce (..),
     UnitInterval,
+    BoundedRational (..),
+    StrictMaybe (..),
     epochInfo,
-    intervalValue,
     stabilityWindow,
-    StrictMaybe(..),
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (BHeader),
@@ -207,7 +206,6 @@ import Test.Shelley.Spec.Ledger.Utils
     mkKeyPair,
     RawSeed (..),
     runShelleyBase,
-    unsafeMkUnitInterval,
   )
 
 import Cardano.Ledger.Serialization(ToCBORGroup)
@@ -493,14 +491,14 @@ increasingProbabilityAt gen (lower, upper) =
       (5, pure upper)
     ]
 
-zero :: UnitInterval
-zero = unsafeMkUnitInterval 0
-
 -- | Try to map the unit interval to a natural number. We don't care whether
 -- this is surjective. But it should be right inverse to `fromNatural` - that
 -- is, one should be able to recover the `UnitInterval` value used here.
 unitIntervalToNatural :: UnitInterval -> Natural
-unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
+unitIntervalToNatural ui =
+  toNat ((toInteger (maxBound :: Word64) % 1) * unboundRational ui)
+  where
+    toNat r = fromInteger (numerator r `quot` denominator r)
 
 mkBlockHeader ::
   ( Mock crypto

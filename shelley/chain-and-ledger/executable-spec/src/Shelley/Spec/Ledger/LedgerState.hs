@@ -109,13 +109,13 @@ import Cardano.Binary
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BoundedRational (..),
+    NonNegativeInterval,
     ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
     activeSlotVal,
-    intervalValue,
     strictMaybeToMaybe,
-    unitIntervalToRational,
   )
 import Cardano.Ledger.Coin
   ( Coin (..),
@@ -1114,7 +1114,7 @@ updateNonMyopic nm rPot newLikelihoods =
 type UsesPP era =
   ( HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) Rational,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_rho" (Core.PParams era) UnitInterval,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer
@@ -1136,7 +1136,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       f, numPools, k :: Rational
       numPools = fromIntegral (Map.size poolParams)
       k = fromIntegral secparam
-      f = unitIntervalToRational (activeSlotVal asc)
+      f = unboundRational (activeSlotVal asc)
       pulseSize = max 1 (ceiling ((numPools * f) / (6 * k)))
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
@@ -1144,20 +1144,20 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       deltaR1 =
         rationalToCoinViaFloor $
           min 1 eta
-            * unitIntervalToRational (getField @"_rho" pr)
+            * unboundRational (getField @"_rho" pr)
             * fromIntegral reserves
-      d = unitIntervalToRational (getField @"_d" pr)
+      d = unboundRational (getField @"_d" pr)
       expectedBlocks =
         floor $
-          (1 - d) * unitIntervalToRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
+          (1 - d) * unboundRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
       eta
-        | intervalValue (getField @"_d" pr) >= 0.8 = 1
+        | unboundRational (getField @"_d" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
       Coin rPot = _feeSS ss <> deltaR1
-      deltaT1 = floor $ intervalValue (getField @"_tau" pr) * fromIntegral rPot
+      deltaT1 = floor $ unboundRational (getField @"_tau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       totalStake = circulation es maxSupply
       rewsnap =

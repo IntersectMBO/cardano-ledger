@@ -243,7 +243,8 @@ examplePoolDistr =
       ]
 
 exampleNonMyopicRewards ::
-  forall c. PraosCrypto c =>
+  forall c.
+  PraosCrypto c =>
   Map
     (Either Coin (Credential 'Staking c))
     (Map (KeyHash 'StakePool c) Coin)
@@ -262,7 +263,7 @@ testShelleyGenesis =
       sgNetworkMagic = 0,
       sgNetworkId = Testnet,
       -- Chosen to match activeSlotCoeff
-      sgActiveSlotsCoeff = 0.9,
+      sgActiveSlotsCoeff = unsafeBoundRational 0.9,
       sgSecurityParam = securityParameter testGlobals,
       sgEpochLength = runIdentity $ epochInfoSize testEpochInfo 0,
       sgSlotsPerKESPeriod = slotsPerKESPeriod testGlobals,
@@ -282,7 +283,7 @@ testShelleyGenesis =
 exampleNewEpochState ::
   forall era.
   ( ShelleyBasedEra' era,
-    HasField "_a0" (Cardano.Ledger.Core.PParams era) Rational,
+    HasField "_a0" (Cardano.Ledger.Core.PParams era) NonNegativeInterval,
     HasField "_nOpt" (Cardano.Ledger.Core.PParams era) Natural,
     HasField "_rho" (Cardano.Ledger.Core.PParams era) UnitInterval,
     HasField "_tau" (Cardano.Ledger.Core.PParams era) UnitInterval
@@ -410,7 +411,6 @@ mkWitnessesPreAlonzo _ txBody keyPairWits =
 
 exampleCoin :: Coin
 exampleCoin = Coin 10
-
 
 exampleTxBodyShelley :: Shelley.Spec.Ledger.API.TxBody StandardShelley
 exampleTxBodyShelley =
@@ -541,7 +541,7 @@ examplePoolParams =
       _poolVrf = hashVerKeyVRF $ snd $ vrf poolKeys,
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
-      _poolMargin = unsafeMkUnitInterval 0.1,
+      _poolMargin = unsafeBoundRational 0.1,
       _poolRAcnt = RewardAcnt Testnet (keyToCredential exampleStakeKey),
       _poolOwners = Set.singleton $ hashKey $ vKey exampleStakeKey,
       _poolRelays = StrictSeq.empty,

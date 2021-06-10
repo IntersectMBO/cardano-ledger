@@ -71,6 +71,7 @@ library
     cardano-prelude,
     cardano-slotting,
     containers,
+    data-default-class,
     deepseq,
     groups,
     iproute,

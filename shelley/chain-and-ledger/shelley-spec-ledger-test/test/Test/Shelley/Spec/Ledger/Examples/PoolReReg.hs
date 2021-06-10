@@ -72,7 +72,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genesisCoins,
     mkBlockFakeVRF,
     mkOCert,
-    zero,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
@@ -139,7 +138,7 @@ blockEx1 =
     (BlockNo 1)
     (nonce0 @(Crypto (ShelleyEra c)))
     (NatNonce 1)
-    zero
+    minBound
     0
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 10) 0 (KESPeriod 0))
@@ -220,7 +219,7 @@ blockEx2 slot =
     (BlockNo 2)
     (nonce0 @(Crypto (ShelleyEra c)))
     (NatNonce 2)
-    zero
+    minBound
     (word64SlotToKesPeriodWord slot)
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 20) 0 (KESPeriod 0))
@@ -285,7 +284,7 @@ blockEx3 =
     (BlockNo 3)
     (epoch1Nonce @c)
     (NatNonce 3)
-    zero
+    minBound
     5
     0
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110) 0 (KESPeriod 0))
