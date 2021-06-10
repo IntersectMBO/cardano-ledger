@@ -61,7 +61,7 @@ import Data.Set as Set
 import Data.Word (Word64)
 import Flat (flat)
 import GHC.Records (HasField (..))
-import Plutus.V1.Ledger.Api (defaultCekCostModelParams)
+import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified Plutus.V1.Ledger.Scripts as P
 import qualified PlutusTx as P (Data (..), compile)
 import qualified PlutusTx as Plutus
@@ -115,7 +115,7 @@ phase2scripts =
 
 -- | A cost model that sets everything as being free
 freeCostModel :: CostModel
-freeCostModel = CostModel $ 0 <$ fromJust defaultCekCostModelParams
+freeCostModel = CostModel $ 0 <$ fromJust defaultCostModelParams
 
 -- ================================================================
 
