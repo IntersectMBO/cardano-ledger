@@ -156,8 +156,8 @@ data PParams' f era = PParams
     _minPoolCost :: !(HKD f Coin),
     -- new/updated for alonzo
 
-    -- | Cost in ada per byte of UTxO storage (instead of _minUTxOValue)
-    _adaPerUTxOWord :: !(HKD f Coin),
+    -- | Cost in lovelace per word (8 bytes) of UTxO storage (instead of _minUTxOValue)
+    _coinsPerUTxOWord :: !(HKD f Coin),
     -- | Cost models for non-native script languages
     _costmdls :: !(HKD f (Map Language CostModel)),
     -- | Prices of execution units (for non-native script languages)
@@ -206,7 +206,7 @@ instance (Era era) => ToCBOR (PParams era) where
         _protocolVersion = protocolVersion',
         _minPoolCost = minPoolCost',
         -- new/updated for alonzo
-        _adaPerUTxOWord = adaPerUTxOWord',
+        _coinsPerUTxOWord = coinsPerUTxOWord',
         _costmdls = costmdls',
         _prices = prices',
         _maxTxExUnits = maxTxExUnits',
@@ -234,7 +234,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> E toCBORGroup protocolVersion'
             !> To minPoolCost'
             -- new/updated for alonzo
-            !> To adaPerUTxOWord'
+            !> To coinsPerUTxOWord'
             !> mapEncode costmdls'
             !> To prices'
             !> To maxTxExUnits'
@@ -268,7 +268,7 @@ instance
         <! (D fromCBORGroup) -- _protocolVersion :: ProtVer
         <! From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
-        <! From -- _adaPerUTxOWord  :: Coin
+        <! From -- _coinsPerUTxOWord  :: Coin
         <! (D mapFromCBOR) -- _costmdls :: (Map Language CostModel)
         <! From -- _prices = prices',
         <! From -- _maxTxExUnits = maxTxExUnits',
@@ -298,7 +298,7 @@ emptyPParams =
       _protocolVersion = ProtVer 0 0,
       _minPoolCost = mempty,
       -- new/updated for alonzo
-      _adaPerUTxOWord = Coin 0,
+      _coinsPerUTxOWord = Coin 0,
       _costmdls = mempty,
       _prices = Prices (Coin 0) (Coin 0),
       _maxTxExUnits = ExUnits 0 0,
@@ -328,7 +328,7 @@ instance Ord (PParams' StrictMaybe era) where
       <== (_extraEntropy x, _extraEntropy y)
       <== (_protocolVersion x, _protocolVersion y)
       <== (_minPoolCost x, _minPoolCost y)
-      <== (_adaPerUTxOWord x, _adaPerUTxOWord y)
+      <== (_coinsPerUTxOWord x, _coinsPerUTxOWord y)
       <== (_costmdls x, _costmdls y)
       <== (_prices x, _prices y)
       <== ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
@@ -388,7 +388,7 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 13 (_extraEntropy ppup) toCBOR
     !> omitStrictMaybe 14 (_protocolVersion ppup) toCBOR
     !> omitStrictMaybe 16 (_minPoolCost ppup) toCBOR
-    !> omitStrictMaybe 17 (_adaPerUTxOWord ppup) toCBOR
+    !> omitStrictMaybe 17 (_coinsPerUTxOWord ppup) toCBOR
     !> omitStrictMaybe 18 (_costmdls ppup) mapToCBOR
     !> omitStrictMaybe 19 (_prices ppup) toCBOR
     !> omitStrictMaybe 20 (_maxTxExUnits ppup) toCBOR
@@ -432,7 +432,7 @@ emptyPParamsUpdate =
       _protocolVersion = SNothing,
       _minPoolCost = SNothing,
       -- new/updated for alonzo
-      _adaPerUTxOWord = SNothing,
+      _coinsPerUTxOWord = SNothing,
       _costmdls = SNothing,
       _prices = SNothing,
       _maxTxExUnits = SNothing,
@@ -459,7 +459,7 @@ updateField 12 = field (\x up -> up {_d = SJust x}) From
 updateField 13 = field (\x up -> up {_extraEntropy = SJust x}) From
 updateField 14 = field (\x up -> up {_protocolVersion = SJust x}) From
 updateField 16 = field (\x up -> up {_minPoolCost = SJust x}) From
-updateField 17 = field (\x up -> up {_adaPerUTxOWord = SJust x}) From
+updateField 17 = field (\x up -> up {_coinsPerUTxOWord = SJust x}) From
 updateField 18 = field (\x up -> up {_costmdls = x}) (D $ SJust <$> mapFromCBOR)
 updateField 19 = field (\x up -> up {_prices = SJust x}) From
 updateField 20 = field (\x up -> up {_maxTxExUnits = SJust x}) From
@@ -497,7 +497,7 @@ updatePParams pp ppup =
       _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
       _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup),
       -- new/updated for alonzo
-      _adaPerUTxOWord = fromMaybe' (_adaPerUTxOWord pp) (_adaPerUTxOWord ppup),
+      _coinsPerUTxOWord = fromMaybe' (_coinsPerUTxOWord pp) (_coinsPerUTxOWord ppup),
       _costmdls = fromMaybe' (_costmdls pp) (_costmdls ppup),
       _prices = fromMaybe' (_prices pp) (_prices ppup),
       _maxTxExUnits = fromMaybe' (_maxTxExUnits pp) (_maxTxExUnits ppup),

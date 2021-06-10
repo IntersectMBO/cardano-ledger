@@ -80,7 +80,7 @@ scripts and that cannot be varied for individual languages. This parameter
 reflects the real-world costs in terms of energy usage, hardware resources etc.
 
 In Alonzo, the protocol parameter $\var{minUTxOValue}$ is deprecated, and replaced by
-$\var{adaPerUTxOWord}$. This specifies directly the deposit required for storing
+$\var{coinsPerUTxOWord}$. This specifies directly the deposit required for storing
 bytes of data on the ledger in the form of UTxO entries.
 
 \textbf{Limiting Script Execution Costs.}
@@ -162,8 +162,8 @@ signatures that must be checked during validation.
         % & \text{Max. total block script exec. resources}\\
         \var{maxValSize} \mapsto \N & \PParams \\
         % & \text{Max size a value can be}\\
-        \var{adaPerUTxOWord} \mapsto \Coin & \PParams \\
-        % & \text{Min. ada per word (8 bytes) a UTxO entry must contain}
+        \var{coinsPerUTxOWord} \mapsto \Coin & \PParams \\
+        % & \text{Min. lovelace per word (8 bytes) a UTxO entry must contain}
         \var{collateralPercent} \mapsto \N & \PParams \\
         % & \text{Percentage of Tx fee which collateral must cover}
         \var{maxCollInputs} \mapsto \N & \PParams \\

@@ -319,7 +319,7 @@ utxoTransition ::
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
+    HasField "_coinsPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxValSize" (Core.PParams era) Natural,
     HasField "_collateralPercentage" (Core.PParams era) Natural,
     HasField "_maxCollateralInputs" (Core.PParams era) Natural,
@@ -378,8 +378,8 @@ utxoTransition = do
   -- Here in the implementation, we store the adaId policyID in the coin field of the value.
   Val.coin (getField @"mint" txb) == Val.zero ?!# TriesToForgeADA
 
-  {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject(uxoEntrySizetxout ∗ adaPerUTxOWordp p)   -}
-  let (Coin adaPerUTxOWord) = getField @"_adaPerUTxOWord" pp
+  {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject(uxoEntrySizetxout ∗ coinsPerUTxOWord p)   -}
+  let (Coin coinsPerUTxOWord) = getField @"_coinsPerUTxOWord" pp
       outputs = Map.elems $ unUTxO (txouts @era txb)
       outputsTooSmall =
         filter
@@ -389,7 +389,7 @@ utxoTransition = do
                     Val.pointwise -- pointwise is used because non-ada amounts must be >= 0 too
                       (>=)
                       v
-                      (Val.inject $ Coin (utxoEntrySize out * adaPerUTxOWord))
+                      (Val.inject $ Coin (utxoEntrySize out * coinsPerUTxOWord))
           )
           outputs
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
@@ -478,11 +478,10 @@ instance
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_adaPerUTxOWord" (Core.PParams era) Coin,
+    HasField "_coinsPerUTxOWord" (Core.PParams era) Coin,
     HasField "_maxValSize" (Core.PParams era) Natural,
     HasField "_collateralPercentage" (Core.PParams era) Natural,
     HasField "_maxCollateralInputs" (Core.PParams era) Natural,

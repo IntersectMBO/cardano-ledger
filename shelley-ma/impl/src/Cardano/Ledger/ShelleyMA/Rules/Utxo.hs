@@ -115,7 +115,7 @@ scaledMinDeposit v (Coin mv)
   -- The calculation should represent this equation
   -- minValueParameter / coinUTxOSize = actualMinValue / valueUTxOSize
   -- actualMinValue = (minValueParameter / coinUTxOSize) * valueUTxOSize
-  | otherwise = Coin $ max mv (adaPerUTxOWord * (utxoEntrySizeWithoutVal + Val.size v))
+  | otherwise = Coin $ max mv (coinsPerUTxOWord * (utxoEntrySizeWithoutVal + Val.size v))
   where
     -- lengths obtained from tracing on HeapWords of inputs and outputs
     -- obtained experimentally, and number used here
@@ -132,8 +132,8 @@ scaledMinDeposit v (Coin mv)
 
     -- how much ada does a Word64 of UTxO space cost, calculated from minAdaValue PP
     -- round down
-    adaPerUTxOWord :: Integer
-    adaPerUTxOWord = quot mv (utxoEntrySizeWithoutVal + coinSize)
+    coinsPerUTxOWord :: Integer
+    coinsPerUTxOWord = quot mv (utxoEntrySizeWithoutVal + coinSize)
 
 -- ==========================================================
 

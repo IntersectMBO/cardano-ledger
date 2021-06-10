@@ -5,6 +5,9 @@
 module Cardano.Ledger.Alonzo.Genesis
   ( AlonzoGenesis (..),
     extendPPWithGenesis,
+
+    -- * Deprecated
+    adaPerUTxOWord,
   )
 where
 
@@ -22,7 +25,7 @@ import Numeric.Natural
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 data AlonzoGenesis = AlonzoGenesis
-  { adaPerUTxOWord :: Coin,
+  { coinsPerUTxOWord :: Coin,
     costmdls :: Map Language CostModel,
     prices :: Prices,
     maxTxExUnits :: ExUnits,
@@ -33,6 +36,10 @@ data AlonzoGenesis = AlonzoGenesis
   }
   deriving (Eq, Generic, NoThunks)
 
+{-# DEPRECATED adaPerUTxOWord "Use coinsPerUTxOWord instead" #-}
+adaPerUTxOWord :: AlonzoGenesis -> Coin
+adaPerUTxOWord = coinsPerUTxOWord
+
 -- | Given the missing pieces turn a Shelley.PParams' into an Params'
 extendPPWithGenesis ::
   Shelley.PParams' Identity era1 ->
@@ -41,7 +48,7 @@ extendPPWithGenesis ::
 extendPPWithGenesis
   pp
   AlonzoGenesis
-    { adaPerUTxOWord,
+    { coinsPerUTxOWord,
       costmdls,
       prices,
       maxTxExUnits,
@@ -52,7 +59,7 @@ extendPPWithGenesis
     } =
     extendPP
       pp
-      adaPerUTxOWord
+      coinsPerUTxOWord
       costmdls
       prices
       maxTxExUnits
@@ -81,7 +88,7 @@ instance FromCBOR AlonzoGenesis where
 instance ToCBOR AlonzoGenesis where
   toCBOR
     AlonzoGenesis
-      { adaPerUTxOWord,
+      { coinsPerUTxOWord,
         costmdls,
         prices,
         maxTxExUnits,
@@ -92,7 +99,7 @@ instance ToCBOR AlonzoGenesis where
       } =
       encode $
         Rec AlonzoGenesis
-          !> To adaPerUTxOWord
+          !> To coinsPerUTxOWord
           !> To costmdls
           !> To prices
           !> To maxTxExUnits

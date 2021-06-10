@@ -367,7 +367,7 @@ getDataMap scriptinfo scrips = Map.foldlWithKey' accum Map.empty scrips
         Just (TwoPhaseInfo _script _hash dat _redeem) -> Map.insert (hashData @era dat) (Data dat) ans
 
 instance Mock c => MinGenTxout (AlonzoEra c) where
-  calcEraMinUTxO tout pp = (utxoEntrySize tout <×> getField @"_adaPerUTxOWord" pp)
+  calcEraMinUTxO tout pp = (utxoEntrySize tout <×> getField @"_coinsPerUTxOWord" pp)
   addValToTxOut v (TxOut a u _b) = TxOut a (v <+> u) (dataFromAddr a) -- _b
   genEraTxOut genv genVal addrs = do
     values <- (replicateM (length addrs) genVal)

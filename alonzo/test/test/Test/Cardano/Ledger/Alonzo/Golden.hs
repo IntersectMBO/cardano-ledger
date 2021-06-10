@@ -34,16 +34,16 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
 -- | ada cost of storing a word8 of data as a UTxO entry, assuming no change to minUTxOValue
-adaPerUTxOWordLocal :: Integer
-adaPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
+coinsPerUTxOWordLocal :: Integer
+coinsPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
   where
     utxoEntrySizeWithoutValLocal = 29
     Coin minUTxOValueShelleyMA = minUTxO
 
 calcMinUTxO :: TxOut (AlonzoEra StandardCrypto) -> Coin
-calcMinUTxO tout = Coin (utxoEntrySize tout * adaPerUTxOWordLocal)
+calcMinUTxO tout = Coin (utxoEntrySize tout * coinsPerUTxOWordLocal)
 
--- | (heapWords of a DataHash) * adaPerUTxOWordLocal is 344820
+-- | (heapWords of a DataHash) * coinsPerUTxOWordLocal is 344820
 goldenUTxOEntryMinAda :: TestTree
 goldenUTxOEntryMinAda =
   testGroup
