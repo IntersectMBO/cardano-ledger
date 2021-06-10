@@ -80,7 +80,7 @@ prop_golden_cbor_ShelleyGenesis =
         . TkInt 4036000900 -- sgNetworkMagic
         . TkInt 0 -- sgNetworkId
         . TkListLen 2
-        . TkInt 6259
+        . TkInt 259
         . TkInt 1000 -- sgActiveSlotsCoeff
         . TkInt 120842 -- sgSecurityParam
         . TkInt 1215 -- sgEpochLength
