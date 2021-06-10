@@ -24,19 +24,23 @@ ledgerExamplesMary =
     defaultShelleyLedgerExamples
       (mkWitnessesPreAlonzo (Proxy @StandardMary))
       id
-      exampleMultiAssetValue
+      (exampleMultiAssetValue 1)
       exampleTxBodyMary
       exampleAuxiliaryDataMA
 
-exampleMultiAssetValue :: forall c. Cardano.Ledger.Crypto.Crypto c => Cardano.Ledger.Mary.Value.Value c
-exampleMultiAssetValue =
-    Value 100 $ Map.singleton policyId $ Map.singleton couttsCoin 1000
+exampleMultiAssetValue ::
+  forall c.
+  Cardano.Ledger.Crypto.Crypto c =>
+  Int ->
+  Cardano.Ledger.Mary.Value.Value c
+exampleMultiAssetValue x =
+  Value 100 $ Map.singleton policyId $ Map.singleton couttsCoin 1000
   where
     policyId :: PolicyID c
-    policyId = PolicyID $ mkScriptHash 1
+    policyId = PolicyID $ mkScriptHash x
 
     couttsCoin :: AssetName
     couttsCoin = AssetName "couttsCoin"
 
 exampleTxBodyMary :: Cardano.Ledger.Core.TxBody StandardMary
-exampleTxBodyMary = exampleTxBodyMA exampleMultiAssetValue
+exampleTxBodyMary = exampleTxBodyMA (exampleMultiAssetValue 1)
