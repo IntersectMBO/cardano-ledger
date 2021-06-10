@@ -35,7 +35,6 @@ import Cardano.Ledger.BaseTypes
     Network (Testnet),
     StrictMaybe (..),
     epochInfo,
-    truncateUnitInterval,
   )
 import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
@@ -145,7 +144,7 @@ genChainInEpoch epoch = do
                             _poolVrf = hashVerKeyVRF $ snd vrf,
                             _poolPledge = Coin 1,
                             _poolCost = Coin 1,
-                            _poolMargin = truncateUnitInterval 0,
+                            _poolMargin = minBound,
                             _poolRAcnt = mkRwdAcnt Testnet $ KeyHashObj owner,
                             _poolOwners = Set.singleton owner,
                             _poolRelays = StrictSeq.empty,

@@ -90,7 +90,6 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     activeSlotLog,
     activeSlotVal,
-    intervalValue,
     mkNonceFromNumber,
     mkNonceFromOutputVRF,
     strictMaybeToMaybe,
@@ -808,7 +807,7 @@ checkLeaderValue ::
   ActiveSlotCoeff ->
   Bool
 checkLeaderValue certVRF σ f =
-  if (intervalValue $ activeSlotVal f) == 1
+  if activeSlotVal f == maxBound
     then -- If the active slot coefficient is equal to one,
     -- then nearly every stake pool can produce a block every slot.
     -- In this degenerate case, where ln (1-f) is not defined,

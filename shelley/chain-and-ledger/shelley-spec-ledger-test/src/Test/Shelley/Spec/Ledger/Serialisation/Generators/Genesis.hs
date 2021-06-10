@@ -53,7 +53,7 @@ genShelleyGenesis =
     <$> genUTCTime
     <*> genNetworkMagic
     <*> Gen.element [Mainnet, Testnet]
-    <*> fmap realToFrac genSlotLength
+    <*> genUnitInterval
     <*> Gen.word64 (Range.linear 1 1000000)
     <*> fmap EpochSize genSecurityParam
     <*> Gen.word64 (Range.linear 1 100000)
@@ -206,9 +206,9 @@ genProtVer =
     <*> genNatural (Range.linear 0 1000)
 
 genUnitInterval :: Gen UnitInterval
-genUnitInterval =
-  truncateUnitInterval
-    <$> Gen.realFrac_ (Range.linearFrac 0.01 1)
+genUnitInterval = do
+  unitRational <- Gen.realFrac_ (Range.linearFrac 0.01 1)
+  maybe genUnitInterval pure $ unitIntervalFromRational unitRational
 
 genGenesisDelegationList ::
   CC.Crypto crypto =>

@@ -27,7 +27,7 @@ module Shelley.Spec.Ledger.Genesis
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Binary (DecoderError (DecoderErrorCustom), FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.BaseTypes
@@ -47,17 +47,17 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (forceElemsToWHNF)
+import Cardano.Prelude (cborError, forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
+import Control.Monad (when)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (..))
-import Data.Scientific (Scientific)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Time (NominalDiffTime, UTCTime (..))
@@ -127,7 +127,7 @@ data ShelleyGenesis era = ShelleyGenesis
   { sgSystemStart :: !UTCTime,
     sgNetworkMagic :: !Word32,
     sgNetworkId :: !Network,
-    sgActiveSlotsCoeff :: !Rational,
+    sgActiveSlotsCoeff :: !UnitInterval,
     sgSecurityParam :: !Word64,
     sgEpochLength :: !EpochSize,
     sgSlotsPerKESPeriod :: !Word64,
@@ -145,10 +145,7 @@ data ShelleyGenesis era = ShelleyGenesis
 deriving instance Era era => NoThunks (ShelleyGenesis era)
 
 sgActiveSlotCoeff :: ShelleyGenesis era -> ActiveSlotCoeff
-sgActiveSlotCoeff =
-  mkActiveSlotCoeff
-    . unitIntervalFromRational
-    . sgActiveSlotsCoeff
+sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
 instance Era era => ToJSON (ShelleyGenesis era) where
   toJSON sg =
@@ -156,7 +153,7 @@ instance Era era => ToJSON (ShelleyGenesis era) where
       [ "systemStart" .= sgSystemStart sg,
         "networkMagic" .= sgNetworkMagic sg,
         "networkId" .= sgNetworkId sg,
-        "activeSlotsCoeff" .= (fromRational (sgActiveSlotsCoeff sg) :: Scientific),
+        "activeSlotsCoeff" .= sgActiveSlotsCoeff sg,
         "securityParam" .= sgSecurityParam sg,
         "epochLength" .= sgEpochLength sg,
         "slotsPerKESPeriod" .= sgSlotsPerKESPeriod sg,
@@ -177,9 +174,7 @@ instance Era era => FromJSON (ShelleyGenesis era) where
         <$> (forceUTCTime <$> obj .: "systemStart")
         <*> obj .: "networkMagic"
         <*> obj .: "networkId"
-        <*> ( (toRational :: Scientific -> Rational)
-                <$> obj .: "activeSlotsCoeff"
-            )
+        <*> (ensureNonZero =<< obj .: "activeSlotsCoeff")
         <*> obj .: "securityParam"
         <*> obj .: "epochLength"
         <*> obj .: "slotsPerKESPeriod"
@@ -192,6 +187,8 @@ instance Era era => FromJSON (ShelleyGenesis era) where
         <*> (forceElemsToWHNF <$> obj .: "initialFunds")
         <*> obj .:? "staking" .!= emptyGenesisStaking
     where
+      ensureNonZero coeff =
+        coeff <$ when (coeff == minBound) (fail "activeSlotsCoeff can't be zero")
       forceUTCTime date =
         let !day = utctDay date
             !time = utctDayTime date
@@ -234,7 +231,7 @@ instance Era era => ToCBOR (ShelleyGenesis era) where
         <> utcTimeToCBOR sgSystemStart
         <> toCBOR sgNetworkMagic
         <> toCBOR sgNetworkId
-        <> toCBOR sgActiveSlotsCoeff
+        <> toCBOR (unitIntervalToRational sgActiveSlotsCoeff)
         <> toCBOR sgSecurityParam
         <> toCBOR (unEpochSize sgEpochLength)
         <> toCBOR sgSlotsPerKESPeriod
@@ -253,7 +250,12 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
       sgSystemStart <- utcTimeFromCBOR
       sgNetworkMagic <- fromCBOR
       sgNetworkId <- fromCBOR
-      sgActiveSlotsCoeff <- fromCBOR
+      activeSlotCoeffRational <- fromCBOR
+      sgActiveSlotsCoeff <-
+        case unitIntervalFromRational activeSlotCoeffRational of
+          Just coeff | coeff /= minBound -> pure coeff
+          _ ->
+            cborError $ DecoderErrorCustom "sgActiveSlotsCoeff" "Value outside of (0, 1] interval"
       sgSecurityParam <- fromCBOR
       sgEpochLength <- fromCBOR
       sgSlotsPerKESPeriod <- fromCBOR
@@ -395,14 +397,14 @@ validateGenesis
         let minLength =
               EpochSize . ceiling $
                 fromIntegral @_ @Double (3 * sgSecurityParam)
-                  / fromRational sgActiveSlotsCoeff
+                  / fromRational (unitIntervalToRational sgActiveSlotsCoeff)
          in if minLength > sgEpochLength
               then
                 Just $
                   EpochNotLongEnough
                     sgEpochLength
                     sgSecurityParam
-                    sgActiveSlotsCoeff
+                    (unitIntervalToRational sgActiveSlotsCoeff)
                     minLength
               else Nothing
       checkKesEvolutions =

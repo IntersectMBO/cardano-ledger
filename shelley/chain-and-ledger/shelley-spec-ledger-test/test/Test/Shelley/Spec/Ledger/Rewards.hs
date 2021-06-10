@@ -40,7 +40,7 @@ import qualified Data.Map as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Proxy
 import Data.Pulse (Pulsable (..))
-import Data.Ratio (Ratio, (%))
+import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -56,7 +56,6 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     activeSlotVal,
     epochInfo,
-    intervalValue,
     mkActiveSlotCoeff,
     unitIntervalToRational,
   )
@@ -177,13 +176,13 @@ maxPoolBlocks = 1000000
 numberOfTests :: Int
 numberOfTests = 500
 
-decentralizationRange :: [Ratio Word64]
+decentralizationRange :: [Rational]
 decentralizationRange = [0, 0.1 .. 1]
 
-tauRange :: [Ratio Word64]
+tauRange :: [Rational]
 tauRange = [0, 0.05 .. 0.3]
 
-rhoRange :: [Ratio Word64]
+rhoRange :: [Rational]
 rhoRange = [0, 0.05 .. 0.3]
 
 -- Helpers --
@@ -658,10 +657,10 @@ createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm)
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
       eta
-        | intervalValue (_d pr) >= 0.8 = 1
+        | unitIntervalToRational (_d pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
       Coin rPot = _feeSS ss <> deltaR1
-      deltaT1 = floor $ intervalValue (_tau pr) * fromIntegral rPot
+      deltaT1 = floor $ unitIntervalToRational (_tau pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       totalStake = circulation es maxSupply
       (rs_, newLikelihoods) =

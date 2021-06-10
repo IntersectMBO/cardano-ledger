@@ -185,12 +185,6 @@ testsPParams =
         testVRFCheckWithActiveSlotCoeffOne
     ]
 
-testTruncateUnitInterval :: TestTree
-testTruncateUnitInterval = testProperty "truncateUnitInterval in [0,1]" $
-  \n ->
-    let x = intervalValue $ truncateUnitInterval n
-     in (x <= 1) && (x >= 0)
-
 newtype VRFNatVal = VRFNatVal Natural
   deriving (Show)
 
@@ -763,7 +757,6 @@ unitTests =
     [ testsInvalidLedger,
       testsPParams,
       sizeTests,
-      testTruncateUnitInterval,
       testCheckLeaderVal,
       testBootstrap
     ]

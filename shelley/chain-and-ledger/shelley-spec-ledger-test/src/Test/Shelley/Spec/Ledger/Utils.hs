@@ -79,7 +79,7 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
     mkActiveSlotCoeff,
     mkNonceFromOutputVRF,
-    mkUnitInterval,
+    unitIntervalFromRational,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -117,7 +117,6 @@ import Data.Default.Class (Default)
 import Data.Functor ((<&>))
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
-import Data.Ratio (Ratio)
 import Data.Time.Clock.POSIX
 import Data.Typeable (Proxy (Proxy))
 import Data.Word (Word64)
@@ -264,9 +263,9 @@ mkAddr (payKey, stakeKey) =
     (StakeRefBase . KeyHashObj . hashKey $ vKey stakeKey)
 
 -- | You vouch that argument is in [0; 1].
-unsafeMkUnitInterval :: Ratio Word64 -> UnitInterval
-unsafeMkUnitInterval r =
-  fromMaybe (error "could not construct unit interval") $ mkUnitInterval r
+unsafeMkUnitInterval :: Rational -> UnitInterval
+unsafeMkUnitInterval =
+  fromMaybe (error "could not construct unit interval") . unitIntervalFromRational
 
 testGlobals :: Globals
 testGlobals =

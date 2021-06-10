@@ -112,7 +112,6 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     activeSlotVal,
-    intervalValue,
     strictMaybeToMaybe,
     unitIntervalToRational,
   )
@@ -1155,10 +1154,10 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- it would be nice to not have to compute expectedBlocks every epoch
       blocksMade = fromIntegral $ Map.foldr (+) 0 b' :: Integer
       eta
-        | intervalValue (getField @"_d" pr) >= 0.8 = 1
+        | unitIntervalToRational (getField @"_d" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
       Coin rPot = _feeSS ss <> deltaR1
-      deltaT1 = floor $ intervalValue (getField @"_tau" pr) * fromIntegral rPot
+      deltaT1 = floor $ unitIntervalToRational (getField @"_tau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
       totalStake = circulation es maxSupply
       rewsnap =

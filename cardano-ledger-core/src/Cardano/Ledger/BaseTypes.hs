@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
@@ -22,17 +23,14 @@ module Cardano.Ledger.BaseTypes
     Nonce (..),
     Seed (..),
     UnitInterval,
+    unitScale,
     fromScientificUnitInterval,
     fpPrecision,
-    interval0,
-    intervalValue,
     unitIntervalToRational,
     unitIntervalFromRational,
     invalidKey,
     mkNonceFromOutputVRF,
     mkNonceFromNumber,
-    mkUnitInterval,
-    truncateUnitInterval,
     StrictMaybe (..),
     strictMaybeToMaybe,
     maybeToStrictMaybe,
@@ -71,24 +69,30 @@ import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Time (SystemStart)
 import Control.Exception (throw)
+import Control.Monad (when)
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders (invalidKey)
+import Data.Coerce
+import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
 import Data.Maybe.Strict
-import Data.Ratio (Ratio, denominator, numerator, (%))
-import Data.Scientific (Scientific)
+import Data.Proxy
+import Data.Ratio (denominator, numerator, (%))
+import Data.Scientific (Scientific, base10Exponent, coefficient, normalize)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
 import Data.Word (Word16, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
+import GHC.TypeLits
 import NoThunks.Class (NoThunks (..))
+import Numeric.Decimal
 import Numeric.Natural (Natural)
 import Shelley.Spec.NonIntegral (ln')
 
@@ -104,56 +108,81 @@ type FixedPoint = Digits34
 fpPrecision :: FixedPoint
 fpPrecision = (10 :: FixedPoint) ^ (34 :: Integer)
 
--- | Type to represent a value in the unit interval [0; 1]
-newtype UnitInterval = UnsafeUnitInterval (Ratio Word64)
-  deriving (Show, Ord, Eq, Generic)
-  deriving newtype (NoThunks, NFData)
+-- | Maximum precision possible for unit interval when backed by a 64bit
+type UnitScale = 19
 
+unitScale :: Int
+unitScale = fromInteger (natVal (Proxy :: Proxy UnitScale))
+
+newtype RawUnit
+  = RawUnit Word64
+  deriving newtype (Show, Eq, Ord, Num, Real, Enum, Integral, NFData)
+
+instance Bounded RawUnit where
+  minBound = 0
+  maxBound = RawUnit (10 ^ unitScale)
+
+-- | Type to represent a value in the unit interval [0; 1]
+newtype UnitInterval = UnitInterval
+  { unitDecimal :: Decimal RoundHalfEven UnitScale RawUnit
+  }
+  deriving (Generic)
+  deriving newtype (Show, Ord, Eq, Bounded, NFData)
+
+instance Default UnitInterval where
+  def = minBound
+
+instance NoThunks UnitInterval where
+  noThunks ctx = noThunks ctx . coerce @_ @Word64
+  wNoThunks ctx = wNoThunks ctx . coerce @_ @Word64
+
+-- We are using CBOR serialization through `Ratio Word64` for hisotrical reasons. It would
+-- be better to use Word64 directly: `toCBOR . coerce @_ @Word64`
 instance ToCBOR UnitInterval where
-  toCBOR (UnsafeUnitInterval u) = ratioToCBOR u
+  toCBOR = ratioToCBOR . (% coerce (maxBound :: RawUnit)) . coerce @_ @Word64
 
 instance FromCBOR UnitInterval where
   fromCBOR = do
     r <- ratioFromCBOR
-    case mkUnitInterval r of
+    let n = toInteger (numerator r :: Word64)
+        d = toInteger (denominator r :: Word64)
+    case unitIntervalFromRational (n % d) of
       Nothing -> cborError $ DecoderErrorCustom "UnitInterval" (Text.pack $ show r)
       Just u -> pure u
 
 instance ToJSON UnitInterval where
-  toJSON ui = toJSON (fromRational (unitIntervalToRational ui) :: Scientific)
+  toJSON = toJSON . toScientificDecimal . unitDecimal
 
 instance FromJSON UnitInterval where
   parseJSON v = do
     d <- parseJSON v
     either fail pure $ fromScientificUnitInterval d
 
+-- | safe-decimal-0.2.1.0 has a fixed version of `fromScientificDecimalBounded` function
+-- that makes both of the `when` checks and `normalize` call redundant.
 fromScientificUnitInterval :: Scientific -> Either String UnitInterval
-fromScientificUnitInterval d =
-  maybe (Left "The value must be between 0 and 1 (inclusive)") Right $ mkUnitInterval (realToFrac d)
+fromScientificUnitInterval (normalize -> num) = do
+  when (coeff < 0) $ Left "Negative values aren't allowed - protect against underflow"
+  when (coeff > toInteger (maxBound :: Word64) || exp10 < 0 || exp10 > unitScale) $
+    Left "Precision is too large - protection against overflow"
+  either (Left . show) (Right . UnitInterval) . fromScientificDecimalBounded $ num
+  where
+    coeff = coefficient num
+    exp10 = negate (base10Exponent num)
 
 unitIntervalToRational :: UnitInterval -> Rational
-unitIntervalToRational (UnsafeUnitInterval x) =
-  (fromIntegral $ numerator x) % (fromIntegral $ denominator x)
+unitIntervalToRational = toRationalDecimal . unitDecimal
 
-unitIntervalFromRational :: Rational -> UnitInterval
-unitIntervalFromRational = truncateUnitInterval . fromRational
-
--- | Return a `UnitInterval` type if `r` is in [0; 1].
-mkUnitInterval :: Ratio Word64 -> Maybe UnitInterval
-mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnsafeUnitInterval r else Nothing
-
--- | Convert a rational to a `UnitInterval` by ignoring its integer part.
-truncateUnitInterval :: Ratio Word64 -> UnitInterval
-truncateUnitInterval (abs -> r) = case (numerator r, denominator r) of
-  (n, d) | n > d -> UnsafeUnitInterval $ (n `mod` d) % d
-  _ -> UnsafeUnitInterval r
-
--- | Get rational value of `UnitInterval` type
-intervalValue :: UnitInterval -> Ratio Word64
-intervalValue (UnsafeUnitInterval v) = v
-
-interval0 :: UnitInterval
-interval0 = UnsafeUnitInterval 0
+-- | Returns `Nothing` when supplied value is not in the [0, 1] range. When rational
+-- cannot be represented as decimal exactly it will be rounded.
+--
+-- ===__Example__
+--
+-- >>> import Data.Ratio
+-- >>> unitIntervalFromRational $ 2 % 3
+-- Just 0.6666666666666666667
+unitIntervalFromRational :: Rational -> Maybe UnitInterval
+unitIntervalFromRational r = UnitInterval <$> fromRationalDecimalBoundedWithRounding r
 
 -- | Evolving nonce type.
 data Nonce
@@ -300,7 +329,7 @@ mkActiveSlotCoeff v =
   ActiveSlotCoeff
     { unActiveSlotVal = v,
       unActiveSlotLog =
-        if (intervalValue v) == 1
+        if v == maxBound
           then -- If the active slot coefficient is equal to one,
           -- then nearly every stake pool can produce a block every slot.
           -- In this degenerate case, where ln (1-f) is not defined,

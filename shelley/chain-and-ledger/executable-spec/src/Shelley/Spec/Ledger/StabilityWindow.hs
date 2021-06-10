@@ -19,9 +19,9 @@ computeStabilityWindow ::
   ActiveSlotCoeff ->
   Word64
 computeStabilityWindow k asc =
-  ceiling $ fromIntegral @_ @Double (3 * k) / fromRational (toRational f)
+  ceiling $ fromIntegral @_ @Double (3 * k) / fromRational f
   where
-    f = intervalValue . activeSlotVal $ asc
+    f = unitIntervalToRational . activeSlotVal $ asc
 
 -- | Calculate the randomness stabilisation window from the security param and
 -- the active slot coefficient.
@@ -33,6 +33,6 @@ computeRandomnessStabilisationWindow ::
   ActiveSlotCoeff ->
   Word64
 computeRandomnessStabilisationWindow k asc =
-  ceiling $ fromIntegral @_ @Double (4 * k) / fromRational (toRational f)
+  ceiling $ fromIntegral @_ @Double (4 * k) / fromRational f
   where
-    f = intervalValue . activeSlotVal $ asc
+    f = unitIntervalToRational . activeSlotVal $ asc

@@ -16,7 +16,7 @@ where
 
 import Cardano.Binary (Encoding (..), ToCBOR (..), Tokens (..), serializeEncoding)
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.BaseTypes (textToDns, textToUrl, truncateUnitInterval)
+import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
@@ -183,7 +183,7 @@ exampleShelleyGenesis =
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),
       sgNetworkMagic = 4036000900,
       sgNetworkId = L.Testnet,
-      sgActiveSlotsCoeff = 6.259,
+      sgActiveSlotsCoeff = unsafeMkUnitInterval 0.259,
       sgSecurityParam = 120842,
       sgEpochLength = EpochSize 1215,
       sgSlotsPerKESPeriod = 8541,
@@ -193,7 +193,7 @@ exampleShelleyGenesis =
       sgMaxLovelaceSupply = 71,
       sgProtocolParams =
         emptyPParams
-          { _d = truncateUnitInterval . realToFrac $ (1.9e-2 :: Scientific),
+          { _d = unsafeMkUnitInterval . realToFrac $ (1.9e-2 :: Scientific),
             _maxBBSize = 239857,
             _maxBHSize = 217569
           },

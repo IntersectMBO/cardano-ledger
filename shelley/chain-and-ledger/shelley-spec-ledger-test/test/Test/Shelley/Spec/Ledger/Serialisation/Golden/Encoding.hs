@@ -33,7 +33,6 @@ import Cardano.Ledger.BaseTypes
     mkNonceFromNumber,
     textToDns,
     textToUrl,
-    truncateUnitInterval,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -444,7 +443,7 @@ tests =
         (T (TkWord64 30)),
       checkEncodingCBOR
         "rational"
-        (truncateUnitInterval (1 % 2))
+        (unsafeMkUnitInterval (1 % 2))
         (T (TkTag 30 . TkListLen 2 . TkWord64 1 . TkWord64 2)),
       checkEncodingCBOR
         "slot"
@@ -676,9 +675,9 @@ tests =
           emax = EpochNo 7
           nopt = 8
           a0 = 1 % 6
-          rho = truncateUnitInterval $ 1 % 6
-          tau = truncateUnitInterval $ 1 % 7
-          d = truncateUnitInterval $ 1 % 9
+          rho = unsafeMkUnitInterval $ 1 % 6
+          tau = unsafeMkUnitInterval $ 1 % 7
+          d = unsafeMkUnitInterval $ 1 % 9
           extraEntropy = NeutralNonce
           protocolVersion = ProtVer 0 1
           minUTxOValue = Coin 121

@@ -92,13 +92,9 @@ genRationalInThousands :: HasCallStack => Integer -> Integer -> Gen Rational
 genRationalInThousands lower upper =
   (% 1000) <$> genInteger lower upper
 
-genRatioWord64InThousands :: HasCallStack => Word64 -> Word64 -> Gen (Ratio Word64)
-genRatioWord64InThousands lower upper =
-  (% 1000) <$> genWord64 lower upper
-
-genIntervalInThousands :: HasCallStack => Word64 -> Word64 -> Gen UnitInterval
+genIntervalInThousands :: HasCallStack => Integer -> Integer -> Gen UnitInterval
 genIntervalInThousands lower upper =
-  unsafeMkUnitInterval <$> genRatioWord64InThousands lower upper
+  unsafeMkUnitInterval <$> genRationalInThousands lower upper
 
 genPParams :: Constants -> Gen (PParams era)
 genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =

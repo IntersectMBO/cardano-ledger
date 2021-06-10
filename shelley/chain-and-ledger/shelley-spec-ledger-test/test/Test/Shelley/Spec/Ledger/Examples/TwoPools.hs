@@ -47,7 +47,6 @@ import Cardano.Ledger.BaseTypes
     Nonce,
     StrictMaybe (..),
     activeSlotVal,
-    intervalValue,
     unitIntervalToRational,
     (⭒),
   )
@@ -676,7 +675,7 @@ rPot :: Integer
 rPot = unCoin deltaR1Ex9 -- There were no fees
 
 deltaTEx9 :: Integer
-deltaTEx9 = floor $ intervalValue (_tau ppEx) * fromIntegral rPot
+deltaTEx9 = floor $ unitIntervalToRational (_tau ppEx) * fromIntegral rPot
 
 bigR :: Coin
 bigR = Coin $ rPot - deltaTEx9

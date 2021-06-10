@@ -79,7 +79,7 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
-import Data.Ratio ((%))
+import Data.Ratio ((%), numerator)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -91,9 +91,10 @@ import Cardano.Ledger.BaseTypes
   ( Nonce (..),
     UnitInterval,
     epochInfo,
-    intervalValue,
     stabilityWindow,
     StrictMaybe(..),
+    unitScale,
+    unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (BHeader),
@@ -500,7 +501,8 @@ zero = unsafeMkUnitInterval 0
 -- this is surjective. But it should be right inverse to `fromNatural` - that
 -- is, one should be able to recover the `UnitInterval` value used here.
 unitIntervalToNatural :: UnitInterval -> Natural
-unitIntervalToNatural = floor . ((10000 % 1) *) . intervalValue
+unitIntervalToNatural =
+  fromInteger . numerator . (((10 ^ unitScale) % 1) *) . unitIntervalToRational
 
 mkBlockHeader ::
   ( Mock crypto

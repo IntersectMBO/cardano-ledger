@@ -250,7 +250,7 @@ testShelleyGenesis =
       sgNetworkMagic = 0,
       sgNetworkId = Testnet,
       -- Chosen to match activeSlotCoeff
-      sgActiveSlotsCoeff = 0.9,
+      sgActiveSlotsCoeff = unsafeMkUnitInterval 0.9,
       sgSecurityParam = securityParameter testGlobals,
       sgEpochLength = runIdentity $ epochInfoSize testEpochInfo 0,
       sgSlotsPerKESPeriod = slotsPerKESPeriod testGlobals,

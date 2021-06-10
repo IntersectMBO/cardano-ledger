@@ -42,9 +42,8 @@ import Cardano.Ledger.BaseTypes
   ( Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
-    interval0,
-    invalidKey,
     fromSMaybe,
+    invalidKey,
     strictMaybeToMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
@@ -329,9 +328,9 @@ emptyPParams =
       _eMax = EpochNo 0,
       _nOpt = 100,
       _a0 = 0,
-      _rho = interval0,
-      _tau = interval0,
-      _d = interval0,
+      _rho = minBound,
+      _tau = minBound,
+      _d = minBound,
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
       _minUTxOValue = mempty,

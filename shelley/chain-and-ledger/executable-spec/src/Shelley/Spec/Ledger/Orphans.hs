@@ -11,7 +11,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
-import Cardano.Ledger.BaseTypes (Network (..), UnitInterval, interval0)
+import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Prelude (HeapWords (..), readEither)
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
@@ -82,9 +82,6 @@ instance SignableRepresentation (Hash.Hash a b) where
 
 -- ===============================================
 -- Blank instance needed to compute Provenance
-
-instance Default UnitInterval where
-  def = interval0
 
 instance Default Network where
   def = Mainnet
