@@ -40,6 +40,7 @@ library
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
     Test.Cardano.Ledger.Alonzo.AlonzoEraGen
     Test.Cardano.Ledger.Alonzo.Trace
+    Test.Cardano.Ledger.Alonzo.PlutusScripts
   build-depends:
     bytestring,
     cardano-binary,
@@ -51,10 +52,8 @@ library
     containers,
     hashable,
     plutus-tx,
-    plutus-tx-plugin,
     plutus-ledger-api,
     QuickCheck,
-    serialise,
     shelley-spec-ledger-test,
     shelley-spec-ledger,
     small-steps,
@@ -91,10 +90,8 @@ test-suite cardano-ledger-alonzo-test
     data-default-class,
     plutus-core,
     plutus-tx,
-    plutus-tx-plugin,
     plutus-ledger-api,
     QuickCheck,
-    serialise,
     small-steps,
     shelley-spec-ledger,
     shelley-spec-ledger-test,

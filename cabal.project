@@ -11,6 +11,7 @@ packages:
   byron/crypto/test
   cardano-ledger-core
   cardano-ledger-test
+  plutus-preprocessor
   semantics/executable-spec
   semantics/small-steps-test
   shelley/chain-and-ledger/dependencies/non-integer
