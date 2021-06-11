@@ -93,7 +93,7 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
     stabilityWindow,
     StrictMaybe(..),
-    unitScale,
+    unitIntervalPrecision,
     unitIntervalToRational,
   )
 import Shelley.Spec.Ledger.BlockChain
@@ -502,7 +502,7 @@ zero = unsafeMkUnitInterval 0
 -- is, one should be able to recover the `UnitInterval` value used here.
 unitIntervalToNatural :: UnitInterval -> Natural
 unitIntervalToNatural =
-  fromInteger . numerator . (((10 ^ unitScale) % 1) *) . unitIntervalToRational
+  fromInteger . numerator . (((10 ^ unitIntervalPrecision) % 1) *) . unitIntervalToRational
 
 mkBlockHeader ::
   ( Mock crypto

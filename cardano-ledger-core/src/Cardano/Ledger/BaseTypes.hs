@@ -23,7 +23,7 @@ module Cardano.Ledger.BaseTypes
     Nonce (..),
     Seed (..),
     UnitInterval,
-    unitScale,
+    unitIntervalPrecision,
     fromScientificUnitInterval,
     fpPrecision,
     unitIntervalToRational,
@@ -109,10 +109,10 @@ fpPrecision :: FixedPoint
 fpPrecision = (10 :: FixedPoint) ^ (34 :: Integer)
 
 -- | Maximum precision possible for unit interval when backed by a 64bit
-type UnitScale = 19
+type RawUnitScalingParam = 19
 
-unitScale :: Int
-unitScale = fromInteger (natVal (Proxy :: Proxy UnitScale))
+unitIntervalPrecision :: Int
+unitIntervalPrecision = fromInteger (natVal (Proxy :: Proxy RawUnitScalingParam))
 
 newtype RawUnit
   = RawUnit Word64
@@ -120,11 +120,11 @@ newtype RawUnit
 
 instance Bounded RawUnit where
   minBound = 0
-  maxBound = RawUnit (10 ^ unitScale)
+  maxBound = RawUnit (10 ^ unitIntervalPrecision)
 
 -- | Type to represent a value in the unit interval [0; 1]
 newtype UnitInterval = UnitInterval
-  { unitDecimal :: Decimal RoundHalfEven UnitScale RawUnit
+  { unitDecimal :: Decimal RoundHalfEven RawUnitScalingParam RawUnit
   }
   deriving (Generic)
   deriving newtype (Show, Ord, Eq, Bounded, NFData)
@@ -163,7 +163,7 @@ instance FromJSON UnitInterval where
 fromScientificUnitInterval :: Scientific -> Either String UnitInterval
 fromScientificUnitInterval (normalize -> num) = do
   when (coeff < 0) $ Left "Negative values aren't allowed - protect against underflow"
-  when (coeff > toInteger (maxBound :: Word64) || exp10 < 0 || exp10 > unitScale) $
+  when (coeff > toInteger (maxBound :: Word64) || exp10 < 0 || exp10 > unitIntervalPrecision) $
     Left "Precision is too large - protection against overflow"
   either (Left . show) (Right . UnitInterval) . fromScientificDecimalBounded $ num
   where

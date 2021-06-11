@@ -52,7 +52,7 @@ import Cardano.Ledger.BaseTypes
     textToDns,
     textToUrl,
     unitIntervalFromRational,
-    unitScale,
+    unitIntervalPrecision,
   )
 import Cardano.Ledger.Coin (DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -293,7 +293,7 @@ instance Arbitrary Nonce where
 
 instance Arbitrary UnitInterval where
   arbitrary = do
-    let denominator = 10 ^ unitScale
+    let denominator = 10 ^ unitIntervalPrecision
     numerator <- choose (0, denominator)
     let rationalUnit = numerator % denominator
     case unitIntervalFromRational rationalUnit of
