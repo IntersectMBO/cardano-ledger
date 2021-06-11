@@ -18,6 +18,20 @@ It should, however, use the value of the reserve pot as it was during the previo
 epoch, since $\fun{createRUpd}$ is creating the rewards earned during the previous epoch
 (see the overview in Section~\ref{sec:reward-overview}).
 
+\subsection{Active stake registrations and the Reward Calculation}
+\label{sec:errata:active-accounts-and-reward-calc}
+
+The reward calculation takes the set of active reward accounts as a parameter
+(the forth parameter of $\fun{reward}$ in Figure~\ref{fig:functions:reward-calc}).
+It is only used at the end of the calculation for filtering out unregistered accounts.
+Therefore, if a stake credential is deregistered just before the reward calculation starts,
+it cannot reregister before the end of the epoch in order to get the rewards.
+The time within the epoch when the reward calculation starts should not make any difference.
+Note that this does not affect the earnings that stake pools make from their margin,
+since each pool's total stake is summed before filtering.
+The solution is to not filter by the current active reward accounts, since rewards for
+unregistered accounts go to the treasury already anyway.
+
 \subsection{Stability Windows}
 \label{sec:errata:stability-windows}
 
