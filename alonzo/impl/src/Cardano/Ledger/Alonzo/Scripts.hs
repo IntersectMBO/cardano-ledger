@@ -98,7 +98,7 @@ instance NoThunks Tag
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data Script era
   = TimelockScript (Timelock (Crypto era))
-  | PlutusScript (ShortByteString) -- A Plutus.V1.Ledger.Scripts(Script) that has been 'Flat'ened
+  | PlutusScript (ShortByteString) -- A Plutus.V1.Ledger.Scripts(Script) that has been 'CBOR' encoded
   deriving (Eq, Generic, Ord)
 
 instance (ValidateScript era, Core.Script era ~ Script era) => Show (Script era) where

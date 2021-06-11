@@ -47,8 +47,10 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.Tx (Tx (Tx))
 import Cardano.Ledger.Val (adaOnly, (<+>), (<×>))
 import Cardano.Slotting.Slot (SlotNo (..))
+import Codec.Serialise (serialise)
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Monad (replicateM)
+import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (ShortByteString, toShort)
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
@@ -59,7 +61,6 @@ import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
 import Data.Word (Word64)
-import Flat (flat)
 import GHC.Records (HasField (..))
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified Plutus.V1.Ledger.Scripts as P
@@ -426,7 +427,7 @@ guessTheNumber3args' d1 d2 _d3 = if d1 P.== d2 then () else (P.error ())
 
 guessTheNumber3args :: ShortByteString
 guessTheNumber3args =
-  toShort . flat . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||guessTheNumber3args'||])
 -}
 
@@ -443,5 +444,5 @@ guessTheNumber'3 d1 d2 _d3 = if d1 P.== d2 then () else (P.error ())
 
 guessTheNumber3 :: ShortByteString
 guessTheNumber3 =
-  toShort . flat . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||guessTheNumber'3||])

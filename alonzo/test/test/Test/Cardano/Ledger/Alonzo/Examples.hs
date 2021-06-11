@@ -7,9 +7,10 @@
 
 module Test.Cardano.Ledger.Alonzo.Examples where
 
+import Codec.Serialise (serialise)
+import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (ShortByteString, toShort)
 import Data.Maybe (fromMaybe)
-import Flat (flat)
 import qualified Plutus.V1.Ledger.Api as P
   ( EvaluationError (..),
     ExBudget (..),
@@ -62,7 +63,7 @@ guessTheNumber' d1 d2 = if d1 P.== d2 then () else (P.error ())
 
 guessTheNumber :: ShortByteString
 guessTheNumber =
-  toShort . flat . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||guessTheNumber'||])
 
 plutusScriptExamples :: TestTree
@@ -101,5 +102,5 @@ guessTheNumber'3 d1 d2 _d3 = if d1 P.== d2 then () else (P.error ())
 
 guessTheNumber3 :: ShortByteString
 guessTheNumber3 =
-  toShort . flat . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||guessTheNumber'3||])
