@@ -49,7 +49,6 @@ import Cardano.Ledger.Val (adaOnly, (<+>), (<×>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Monad (replicateM)
-import Data.ByteString.Short (ShortByteString, toShort)
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
 import Data.Map as Map
@@ -59,11 +58,9 @@ import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
 import Data.Word (Word64)
-import Flat (flat)
 import GHC.Records (HasField (..))
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
-import qualified Plutus.V1.Ledger.Scripts as P
-import qualified PlutusTx as P (Data (..), compile)
+import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import qualified PlutusTx.Prelude as P
 import Shelley.Spec.Ledger.Address (Addr (..))
@@ -106,9 +103,7 @@ phase2scripts =
   [ TwoPhaseInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep),
     TwoPhaseInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep),
     TwoPhaseInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep),
-    TwoPhaseInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep),
-    TwoPhaseInfo guess (hashScript @(AlonzoEra c) guess) (P.I 9) (P.I 9, bigMem, bigStep),
-    TwoPhaseInfo guess (hashScript @(AlonzoEra c) guess) (P.I 9) (P.I 9, bigMem, bigStep)
+    TwoPhaseInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep)
   ]
 
 -- ================================================================
@@ -435,13 +430,6 @@ guessTheNumber3args:: ShortByteString
 guessTheNumber3args = read "\SOH\NUL\NUL2\NUL2\NUL2\NUL32\NUL \STX\NUL3 \STX\NUL32\NUL \STX\NUL2\NUL2\NUL2\NUL2\NUL3 \STX\NUL333 \STX\NUL \STX\NUL \STX\NUL2\NUL2\NUL2\NUL2\NUL2\NUL2\NUL\NUL\DC2\NUL \STX\NUL350\NAK35\NULS\NULq \NUL\SOH\NUL0\STX \NUL\SUB \ETXP\ENQ\SOH\160\EM\DC2\NULa \NUL\SOH5\NUL\"\NUL \NUL\SOH5\NUL\DC2\NUL \NUL\STX5UP\SYN\DC2\NUL \STX\NUL3\NUL2\NUL \STX\NUL3350\a\NUL\"\NUL333S\NUL\128\STX \STX\NUL3\SOH0\ETX\NUL\"\NUL \STX\NUL\SOH\130\NUL \NUL\ETB \STX\NUL\SOHr\NUL \NUL\ETB\SOH\130\NUL \ETX3350\t\NUL2\NUL \NUL\CAN \STX\NUL \ETX3S\SOH\131\&0\DC4\NULP\ETX \ETX3S\SOHq \NUL\SOH0\v\DC2\NUL\NUL\DLE\ENQ\NUL2\NUL\SOH\160\FS \STX\NUL\SOH\130\NUL \NUL\CAN \STX\NUL\SOH\128\EM \ETX3350\b\NUL\"\NUL \NUL\ETB \STX\NUL \NUL\CAN \STX\NUL3\SOH \ETX\NUL\"\NUL \NUL\ETB \STX\NUL\SOHp\CAN \ETX3350\b\NUL\"\NUL \NUL\ETB \STX\NUL \NUL\CAN \STX\NUL\SOHr\NUL \ETX3S\SOHA \NUL\SOH0\b\DC2\NUL\NUL\DLE\ETX\NUL\"\NUL \NUL\ETB\SOH\130\NUL333S\NUL\128\STX \STX\NUL\SOHr\NUL \STX\NUL\SOH\130\NUL \NUL\ETB \STX\NUL\SOHr\NUL \ETX3S\SOHA \NUL\SOH\NULp\ETX\NUL \CAN \STX\NUL55P\f\NUL\"\NUL \ETXSU\NUL\224\ETX \STX\NUL350\SYN30\b\DC2\NUL\NUL\DLE\EOT\NUL\"\NUL30\t\DC2\NUL\NUL\DLE\EOT\NUL\"\NUL\SOH\128\SUB \SOH \STX\NUL \STX\NUL \ETX\NULP\ACK \STX\NUL\DC2\NUL \STX\NUL \STX\NUL3\NUL@\a\NULb\NUL\DC2\NUL \STX\NUL \STX\NUL0\ETX\NULb\NUL\DC2\NUL \STX\NUL \STX\NUL0\STX\NULb\NUL\DC2\NUL \STX\NUL \STX\NUL0\SOH\NULb\NUL\NUL\DC1\DC2\NUL \SOH \ETX0\SOH\NUL0\STX\DC1 \NUL\SOH \STX\NUL2\NUL35z\128\b\EOT\128A\155\164\NUL\128\EOT\128\b\NUL\200\NUL\204\213\234\NUL \DLE\NUL\230o\NUL\STX\NUL\DC3P\SOH \NUL\SOH\DC2\NUL0\SOH5P\n \STX\NUL\DC2\NUL \STX\NUL355\NUL\192\STX \ETX3SP\r\NUL\"\NUL\NUL\178\NUL \STX\NUL\NUL\192\f \STX\NUL \ETX3SP\SI\NULB\NUL\NUL\194\NUL \STX\NUL350\r3\NUL\144\ACK\NUL2\NUL350\f\DC2\NUL\NUL\DLE\n\NUL`\ETX \NUL\SI\SOH\DLE\SO\NUL\177 \STX\NUL\NUL! \STX\NUL\NUL\DC2\NUL\NUL\DC1 \NUL\SOH \NUL\SOH\DC1 \STX\NUL\NUL! \STX\NUL\DC2\NUL \ETX0\SOH\NUL@\ETX\DC2\NUL\NUL\DC1\DC2\NUL2\NUL0\SOH\NUL\DC2\NUL \ETX0\ETX2\NUL0\SOH\NUL\DLE\STX\NUL\DC1\DC1\DC2\NUL3P\STX \SOH \ETX0\SOH \ETXP\ETX \STX\NUL0\STX\NUL2\NUL5\NUL2\NUL \ETX\NUL\DLE\ETX\NUL\DC1 \ETX \ETX \ETX\NUL\DLE\SOH \STX\NUL3\NUL3 \ETX\NUL\DLE\SOH\NUL \SOH \STX\NUL\DC2\NUL50\EOT\DC2\NUL50\EOT\NUL3P\ETX\NUL\DLE\SOH\SOH"
 -}
 
-guess :: Alonzo.Script era
-guess = Alonzo.PlutusScript guessTheNumber3
-
 guessTheNumber'3 :: P.Data -> P.Data -> P.Data -> ()
 guessTheNumber'3 d1 d2 _d3 = if d1 P.== d2 then () else (P.error ())
 
-guessTheNumber3 :: ShortByteString
-guessTheNumber3 =
-  toShort . flat . P.fromCompiledCode $
-    $$(P.compile [||guessTheNumber'3||])

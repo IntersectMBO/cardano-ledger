@@ -41,7 +41,6 @@ library
     Test.Cardano.Ledger.Alonzo.AlonzoEraGen
     Test.Cardano.Ledger.Alonzo.Trace
   build-depends:
-    bytestring,
     cardano-binary,
     cardano-ledger-alonzo,
     cardano-ledger-core,
@@ -49,10 +48,8 @@ library
     cardano-ledger-shelley-ma,
     cardano-slotting,
     containers,
-    flat,
     hashable,
     plutus-tx,
-    plutus-tx-plugin,
     plutus-ledger-api,
     QuickCheck,
     shelley-spec-ledger-test,
@@ -92,7 +89,6 @@ test-suite cardano-ledger-alonzo-test
     flat,
     plutus-core,
     plutus-tx,
-    plutus-tx-plugin,
     plutus-ledger-api,
     QuickCheck,
     small-steps,
