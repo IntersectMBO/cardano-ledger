@@ -47,11 +47,8 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.Tx (Tx (Tx))
 import Cardano.Ledger.Val (adaOnly, (<+>), (<×>))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Codec.Serialise (serialise)
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Monad (replicateM)
-import Data.ByteString.Lazy (toStrict)
-import Data.ByteString.Short (ShortByteString, toShort)
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
 import Data.Map as Map
@@ -63,16 +60,15 @@ import Data.Set as Set
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
-import qualified Plutus.V1.Ledger.Scripts as P
-import qualified PlutusTx as P (Data (..), compile)
+import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
-import qualified PlutusTx.Prelude as P
 import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
+import Test.Cardano.Ledger.Alonzo.PlutusScripts (evendata3, guessTheNumber3, odddata3)
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.QuickCheck hiding ((><))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -108,8 +104,9 @@ phase2scripts =
     TwoPhaseInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep),
     TwoPhaseInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep),
     TwoPhaseInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep),
-    TwoPhaseInfo guess (hashScript @(AlonzoEra c) guess) (P.I 9) (P.I 9, bigMem, bigStep),
-    TwoPhaseInfo guess (hashScript @(AlonzoEra c) guess) (P.I 9) (P.I 9, bigMem, bigStep)
+    TwoPhaseInfo guessTheNumber3 (hashScript @(AlonzoEra c) guessTheNumber3) (P.I 9) (P.I 9, bigMem, bigStep),
+    TwoPhaseInfo evendata3 (hashScript @(AlonzoEra c) evendata3) (P.I 8) (P.I 8, bigMem, bigStep),
+    TwoPhaseInfo odddata3 (hashScript @(AlonzoEra c) odddata3) (P.I 9) (P.I 9, bigMem, bigStep)
   ]
 
 -- ================================================================
@@ -437,8 +434,9 @@ guessTheNumber3args = read "\SOH\NUL\NUL2\NUL2\NUL2\NUL32\NUL \STX\NUL3 \STX\NUL
 -}
 
 guess :: Alonzo.Script era
-guess = Alonzo.PlutusScript guessTheNumber3
+guess = guessTheNumber3
 
+{-
 guessTheNumber'3 :: P.Data -> P.Data -> P.Data -> ()
 guessTheNumber'3 d1 d2 _d3 = if d1 P.== d2 then () else (P.error ())
 
@@ -446,3 +444,27 @@ guessTheNumber3 :: ShortByteString
 guessTheNumber3 =
   toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||guessTheNumber'3||])
+
+isEven3 :: [Word8]
+isEven3 =
+  concat
+    [ [1, 0, 0, 51, 50, 0, 32, 2, 0, 50, 0, 50, 0, 51, 32],
+      [2, 0, 51, 50, 0, 32, 2, 0, 51, 51, 51, 32, 2, 0, 32],
+      [2, 0, 32, 2, 0, 51, 32, 2, 0, 50, 0, 50, 0, 0, 18],
+      [0, 32, 2, 0, 51, 51, 51, 83, 0, 112, 3, 32, 2, 0, 98],
+      [0, 32, 2, 0, 98, 0, 32, 3, 51, 83, 1, 99, 51, 80, 20],
+      [1, 83, 55, 144, 1, 36, 0, 137, 0, 1, 0, 0, 73, 0, 26],
+      [128, 56, 4, 128, 65, 0, 16, 3, 16, 1, 0, 48, 3, 9, 0],
+      [48, 144, 0, 0, 144, 0, 0, 144, 0, 144, 1, 0, 16, 1, 0],
+      [16, 1, 128, 40, 3, 16, 1, 0, 9, 0, 16, 1, 0, 16, 1],
+      [0, 25, 128, 32, 3, 128, 49, 0, 9, 0, 16, 1, 0, 16, 1],
+      [0, 24, 1, 128, 49, 0, 9, 0, 16, 1, 0, 16, 1, 0, 24],
+      [1, 0, 49, 0, 9, 0, 16, 1, 0, 16, 1, 0, 24, 0, 128],
+      [49, 0, 0, 8, 137, 0, 16, 0, 1, 9, 0, 16, 0, 144, 1],
+      [0, 25, 128, 8, 2, 0, 24, 144, 0, 0, 136, 144, 1, 0, 9],
+      [0, 25, 128, 8, 1, 128, 16, 137, 0, 0, 8, 144, 0, 0, 144],
+      [1, 0, 25, 0, 25, 154, 189, 64, 4, 1, 128, 20, 205, 210, 0],
+      [64, 2, 36, 0, 64, 0, 4, 36, 0, 64, 0, 2, 64, 0, 3]
+    ]
+
+-}
