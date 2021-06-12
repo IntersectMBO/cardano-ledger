@@ -62,9 +62,9 @@ import Cardano.Binary
     FromCBOR (..),
     Size,
     ToCBOR (..),
-    decodeInt64,
     decodeListLenOrIndef,
     decodeTag,
+    decodeWord64,
     encodeListLen,
     encodeTag,
     withWordSize,
@@ -203,9 +203,10 @@ ratioToCBOR r =
 ratioFromCBOR :: (Bounded a, Integral a, FromCBOR a) => Decoder s (Ratio a)
 ratioFromCBOR = decodeFraction fromCBOR
 
+-- | Decode a non-negative rational with a bounded representation.
 rationalFromCBOR :: Decoder s Rational
 rationalFromCBOR = do
-  x <- decodeFraction decodeInt64
+  x <- decodeFraction decodeWord64
   pure $ fromIntegral (numerator x) % fromIntegral (denominator x)
 
 decodeFraction :: Integral a => Decoder s a -> Decoder s (Ratio a)
