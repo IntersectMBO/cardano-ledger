@@ -43,6 +43,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Time
 import Data.Word (Word64, Word8)
+import GHC.Records (HasField)
+import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
@@ -63,7 +65,7 @@ type KeyPairWits era = [KeyPair 'Witness (Cardano.Ledger.Era.Crypto era)]
 -------------------------------------------------------------------------------}
 
 data ShelleyResultExamples era = ShelleyResultExamples
-  { srePParams :: Shelley.Spec.Ledger.PParams.PParams era,
+  { srePParams :: Cardano.Ledger.Core.PParams era,
     sreProposedPPUpdates :: ProposedPPUpdates era,
     srePoolDistr :: PoolDistr (Cardano.Ledger.Era.Crypto era),
     sreNonMyopicRewards ::
@@ -92,7 +94,6 @@ type ShelleyBasedEra' era =
   ( ShelleyBasedEra era,
     ToCBORGroup (TxSeq era),
     ToCBOR (Witnesses era),
-    Witnesses era ~ WitnessSet era,
     Default (State (EraRule "PPUP" era))
   )
 
@@ -127,7 +128,11 @@ defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData =
             Right (KeyHashObj (mkKeyHash 2))
           ],
       sleResultExamples = resultExamples,
-      sleNewEpochState = exampleNewEpochState value,
+      sleNewEpochState =
+        exampleNewEpochState
+          value
+          emptyPParams
+          (emptyPParams {_minUTxOValue = Coin 1}),
       sleChainDepState = exampleLedgerChainDepState 1
     }
   where
@@ -138,12 +143,7 @@ defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData =
         { srePParams = def,
           sreProposedPPUpdates = exampleProposedPParamsUpdates,
           srePoolDistr = examplePoolDistr,
-          sreNonMyopicRewards =
-            Map.fromList
-              [ (Left (Coin 100), Map.singleton (mkKeyHash 2) (Coin 3)),
-                (Right (ScriptHashObj (mkScriptHash 1)), Map.empty),
-                (Right (KeyHashObj (mkKeyHash 2)), Map.singleton (mkKeyHash 3) (Coin 9))
-              ],
+          sreNonMyopicRewards = exampleNonMyopicRewards,
           sreShelleyGenesis = testShelleyGenesis
         }
 
@@ -242,6 +242,18 @@ examplePoolDistr =
         )
       ]
 
+exampleNonMyopicRewards ::
+  forall c. PraosCrypto c =>
+  Map
+    (Either Coin (Credential 'Staking c))
+    (Map (KeyHash 'StakePool c) Coin)
+exampleNonMyopicRewards =
+  Map.fromList
+    [ (Left (Coin 100), Map.singleton (mkKeyHash 2) (Coin 3)),
+      (Right (ScriptHashObj (mkScriptHash 1)), Map.empty),
+      (Right (KeyHashObj (mkKeyHash 2)), Map.singleton (mkKeyHash 3) (Coin 9))
+    ]
+
 -- | These are dummy values.
 testShelleyGenesis :: ShelleyGenesis era
 testShelleyGenesis =
@@ -270,11 +282,16 @@ testShelleyGenesis =
 exampleNewEpochState ::
   forall era.
   ( ShelleyBasedEra' era,
-    Cardano.Ledger.Core.PParams era ~ Shelley.Spec.Ledger.PParams.PParams era
+    HasField "_a0" (Cardano.Ledger.Core.PParams era) Rational,
+    HasField "_nOpt" (Cardano.Ledger.Core.PParams era) Natural,
+    HasField "_rho" (Cardano.Ledger.Core.PParams era) UnitInterval,
+    HasField "_tau" (Cardano.Ledger.Core.PParams era) UnitInterval
   ) =>
   Value era ->
+  Cardano.Ledger.Core.PParams era ->
+  Cardano.Ledger.Core.PParams era ->
   NewEpochState era
-exampleNewEpochState value =
+exampleNewEpochState value ppp pp =
   NewEpochState
     { nesEL = EpochNo 0,
       nesBprev = BlocksMade (Map.singleton (mkKeyHash 1) 10),
@@ -310,8 +327,8 @@ exampleNewEpochState value =
                     },
                 _delegationState = def
               },
-          esPrevPp = emptyPParams,
-          esPp = emptyPParams {_minUTxOValue = Coin 1},
+          esPrevPp = ppp,
+          esPp = pp,
           esNonMyopic = def
         }
       where
