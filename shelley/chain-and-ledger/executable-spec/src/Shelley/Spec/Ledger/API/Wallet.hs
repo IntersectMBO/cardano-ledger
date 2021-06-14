@@ -11,6 +11,7 @@
 module Shelley.Spec.Ledger.API.Wallet
   ( getNonMyopicMemberRewards,
     getUTxO,
+    getUTxOSubset,
     getFilteredUTxO,
     getLeaderSchedule,
     getPoolParameters,
@@ -78,7 +79,7 @@ import Shelley.Spec.Ledger.Rewards
 import Shelley.Spec.Ledger.STS.NewEpoch (calculatePoolDistr)
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.Slot (epochInfoSize)
-import Shelley.Spec.Ledger.TxBody (PoolParams (..))
+import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxIn (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Get pool sizes, but in terms of total stake
@@ -235,6 +236,16 @@ getFilteredUTxO ss addrs =
     -- Instead of decompacting each address in the huge UTxO, compact each
     -- address in the small set of address.
     addrSBSs = Set.map compactAddr addrs
+
+getUTxOSubset ::
+  NewEpochState era ->
+  Set (TxIn (Crypto era)) ->
+  UTxO era
+getUTxOSubset ss txins =
+  UTxO $
+    fullUTxO `Map.restrictKeys` txins
+  where
+    UTxO fullUTxO = getUTxO ss
 
 -- | Get the (private) leader schedule for this epoch.
 --
