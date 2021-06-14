@@ -181,10 +181,10 @@ getWord7s = do
   next <- getWord
   -- is the high bit set?
   if testBit next 7
-  -- if so, grab more words
-  then (:) (toWord7 next) <$> getWord7s
-  -- otherwise, this is the last one
-  else pure [Word7 next]
+    then -- if so, grab more words
+      (:) (toWord7 next) <$> getWord7s
+    else -- otherwise, this is the last one
+      pure [Word7 next]
 
 getVariableLengthWord64 :: GetShort Word64
 getVariableLengthWord64 = word7sToWord64 <$> getWord7s

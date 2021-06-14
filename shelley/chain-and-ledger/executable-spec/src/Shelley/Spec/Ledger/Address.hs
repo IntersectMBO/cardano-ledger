@@ -412,10 +412,10 @@ getWord7s = do
   next <- B.getWord8
   -- is the high bit set?
   if testBit next 7
-  -- if so, grab more words
-  then (:) (toWord7 next) <$> getWord7s
-  -- otherwise, this is the last one
-  else pure [Word7 next]
+    then -- if so, grab more words
+      (:) (toWord7 next) <$> getWord7s
+    else -- otherwise, this is the last one
+      pure [Word7 next]
 
 word64ToWord7s :: Word64 -> [Word7]
 word64ToWord7s = reverse . go
