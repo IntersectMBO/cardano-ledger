@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.API.Wallet
     getUTxOSubset,
     getFilteredUTxO,
     getLeaderSchedule,
+    getPools,
     getPoolParameters,
     getTotalStake,
     poolsByTotalStakeFraction,
@@ -279,12 +280,26 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
     epochSlots = Set.fromList [a .. b]
     (a, b) = runIdentity $ epochInfoRange ei currentEpoch
 
--- | Get the registered stake pool parameters for a given ID.
+-- | Get the /current/ registered stake pool parameters for a given set of
+-- stake pools. The result map will contain entries for all the given stake
+-- pools that are currently registered.
+--
+getPools ::
+  NewEpochState era ->
+  Set (KeyHash 'StakePool (Crypto era))
+getPools = Map.keysSet . f
+  where
+    f = _pParams . _pstate . _delegationState . esLState . nesEs
+
+-- | Get the /current/ registered stake pool parameters for a given set of
+-- stake pools. The result map will contain entries for all the given stake
+-- pools that are currently registered.
+--
 getPoolParameters ::
   NewEpochState era ->
-  KeyHash 'StakePool (Crypto era) ->
-  Maybe (PoolParams (Crypto era))
-getPoolParameters nes poolId = Map.lookup poolId (f nes)
+  Set (KeyHash 'StakePool (Crypto era)) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
+getPoolParameters = Map.restrictKeys . f
   where
     f = _pParams . _pstate . _delegationState . esLState . nesEs
 
