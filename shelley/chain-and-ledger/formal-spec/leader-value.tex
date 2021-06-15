@@ -24,14 +24,14 @@ this as a natural number $\var{certNat}$ in the range $[0,2^{512})$.
 \subsection{Node eligibility}
 
 As per \cite{ouroboros_praos}, a node is eligible to lead when its leader value
-$\ell < 1 - (1 - f)^\sigma$. We have
+$p < 1 - (1 - f)^\sigma$. We have
 
 \begin{align*}
-  \ell & < 1 - (1 -f)^\sigma \\
-  \iff \left(\frac{1}{1-\ell}\right) & < \exp{(-\sigma \cdot \ln{(1-f)})}
+  p & < 1 - (1 -f)^\sigma \\
+  \iff \left(\frac{1}{1-p}\right) & < \exp{(-\sigma \cdot \ln{(1-f)})}
 \end{align*}
 
-The latter inquality can be efficiently computed through use of its Taylor
+The latter inequality can be efficiently computed through use of its Taylor
 expansion and error estimation to stop computing terms once we are certain that
 the result will be either above or below the target value.
 
@@ -42,7 +42,8 @@ of a single lovelace.)
 As such, we define the following:
 
 \begin{align*}
-  q & = \frac{2^{512}}{2^{512} - \var{certNat}} \\
+  p & = \frac{\var{certNat}}{2^{512}} \\
+  q & = 1 - p \\
   c & = \ln{(1 - f)}
 \end{align*}
 
@@ -53,7 +54,7 @@ and define the function \textit{checkLeaderVal} as follows:
     \left\{
       \begin{array}{l@{~}r}
         \mathsf{True}, & f = 1 \\
-        q > \exp{(-\sigma \cdot c)}, & \text{otherwise}
+        \frac{1}{q} < \exp{(-\sigma \cdot c)}, & \text{ otherwise}
       \end{array}
     \right.
 \end{equation*}

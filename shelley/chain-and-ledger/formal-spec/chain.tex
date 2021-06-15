@@ -642,7 +642,7 @@ near the end of the epoch is not discarded).
   \begin{equation}\label{eq:update-both}
     \inference[Update-Both]
     {
-      s < \fun{firstSlot}~((\epoch{s}) + 1) - \RandomnessStabilisationWindow
+      s < \fun{firstSlot}~((\epoch{s}) + 1) - \StabilityWindow
     }
     {
       {\begin{array}{c}
@@ -666,7 +666,7 @@ near the end of the epoch is not discarded).
   \begin{equation}\label{eq:only-evolve}
     \inference[Only-Evolve]
     {
-      s \geq \fun{firstSlot}~((\epoch{s}) + 1) - \RandomnessStabilisationWindow
+      s \geq \fun{firstSlot}~((\epoch{s}) + 1) - \StabilityWindow
     }
     {
       {\begin{array}{c}
@@ -728,12 +728,13 @@ execution of the transition role is as follows:
 
 \begin{itemize}
 \item If the current reward update \var{ru} is empty and \var{s} is greater than
-  the sum of the first slot of its epoch and the duration \StabilityWindow, then a
+  the sum of the first slot of its epoch and the duration \RandomnessStabilisationWindow, then a
   new rewards update is calculated and the state is updated.
+  (Note the errata in Section~\ref{sec:errata:stability-windows}.)
 \item If the current reward update \var{ru} is not \Nothing, i.e., a reward
   update has already been calculated but not yet applied, then the state is not updated.
 \item If the current reward update \var{ru} is empty and \var{s} is less than or equal to the sum
-  of the first slot of its epoch and the duration to start rewards \StabilityWindow,
+  of the first slot of its epoch and the duration to start rewards \RandomnessStabilisationWindow,
   then the state is not updated.
 \end{itemize}
 
@@ -741,7 +742,7 @@ execution of the transition role is as follows:
   \begin{equation}\label{eq:reward-update}
     \inference[Create-Reward-Update]
     {
-      s > \fun{firstSlot}~(\epoch{s}) + \StabilityWindow
+      s > \fun{firstSlot}~(\epoch{s}) + \RandomnessStabilisationWindow
       &
       ru = \Nothing
       \\~\\
@@ -781,7 +782,7 @@ execution of the transition role is as follows:
     {
       ru = \Nothing
       \\
-      s \leq \fun{firstSlot}~(\epoch{s}) + \StabilityWindow
+      s \leq \fun{firstSlot}~(\epoch{s}) + \RandomnessStabilisationWindow
     }
     {
       {\begin{array}{c}

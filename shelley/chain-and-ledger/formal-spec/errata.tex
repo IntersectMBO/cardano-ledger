@@ -1,0 +1,88 @@
+\section{Errata}
+\label{sec:errata}
+
+We list issues found within the Shelley ledger which will be corrected in future eras.
+
+\subsection{Total stake calculation}
+\label{sec:errata:total-stake}
+
+As described in \cite[3.4.3]{delegation_design}, stake is sometimes considered
+relative to all the delegated stake, and sometimes relative to the
+totally supply less the amount held by the reserves.
+The former is called active stake, the latter total stake.
+
+
+The $\fun{createRUpd}$ function from Figure~\ref{fig:rules:reward-update} uses the
+current value of the reserve pot, named $\var{reserves}$, to calculate the total stake.
+It should, however, use the value of the reserve pot as it was during the previous
+epoch, since $\fun{createRUpd}$ is creating the rewards earned during the previous epoch
+(see the overview in Section~\ref{sec:reward-overview}).
+
+\subsection{Active stake registrations and the Reward Calculation}
+\label{sec:errata:active-accounts-and-reward-calc}
+
+The reward calculation takes the set of active reward accounts as a parameter
+(the forth parameter of $\fun{reward}$ in Figure~\ref{fig:functions:reward-calc}).
+It is only used at the end of the calculation for filtering out unregistered accounts.
+Therefore, if a stake credential is deregistered just before the reward calculation starts,
+it cannot reregister before the end of the epoch in order to get the rewards.
+The time within the epoch when the reward calculation starts should not make any difference.
+Note that this does not affect the earnings that stake pools make from their margin,
+since each pool's total stake is summed before filtering.
+The solution is to not filter by the current active reward accounts, since rewards for
+unregistered accounts go to the treasury already anyway.
+
+\subsection{Stability Windows}
+\label{sec:errata:stability-windows}
+
+The constant $RandomnessStabilisationWindow$ was intended to be used only
+for freezing the candidate nonce in the $\mathsf{UPDN}$ rule
+from Figure~\ref{fig:rules:update-nonce}.
+This was chosen as a good value for both Ouroboros Praos and Ouroboros Genesis.
+The implementation mistakenly used the constant in the $\mathsf{RUPD}$ rule
+from Figure~\ref{fig:rules:reward-update}, and used $\StabilityWindow$
+in for the $\mathsf{UPDN}$ transition.
+
+The constant $\StabilityWindow$ is a good choice for the $\mathsf{UPDN}$
+transition while we remain using Ouroboros Praos, but it will be changed before
+adopting Ouroboros Genesis in the consensus layer.
+
+There is no problem with using $RandomnessStabilisationWindow$ for the
+$\mathsf{RUPD}$ transition, since anything after $\StabilityWindow$ would work,
+but there is no reason to do so.
+
+\subsection{Reward aggregation}
+\label{sec:errata:reward-aggregation}
+
+On any given epoch, a reward account can earn rewards by being a member of a stake pool,
+and also by being the registered reward account for a stake pool (to receive leader rewards).
+A reward account can be registered to receive leader rewards from multiple stake pools.
+It was intended that reward accounts receive the sum of all such rewards,
+but a mistake caused reward accounts to receive at most one of them.
+
+In Figure~\ref{fig:functions:reward-calc}, the value of $\var{potentialRewards}$ in the
+$\fun{rewardOnePool}$ function should be computed using an aggregating union
+$\unionoverridePlus$, so that member rewards are not overridden by leader rewards.
+Similarly, the value of $\var{rewards}$ in the $\fun{reward}$ function should be computed
+using an aggregating union so that leader rewards from multiple sources are aggregated.
+
+This was corrected at the Allegra hard fork.
+There were sixty-four stake addresses that were affected,
+each of which was reimbursed for the exact amount lost using a MIR certificate.
+Four of the stake address were unregistered and had to be re-registered.
+The unregistered addresses were reimbursed in transaction
+\newline
+$a01b9fe136e5703668c9c7776a76cc8541b84824635d237e270670a8ca56a392$,
+and the registered addresses were reimbursed in transaction
+\newline
+$8cab8049e3b8c4802d7d11277b21afc74056223a596c39ef00e002c2d1f507ad$.
+
+\subsection{Byron redeem addresses}
+\label{sec:errata:byron-redeem-addresses}
+
+The bootstrap addresses from Figure~\ref{fig:defs:addresses} were not intended
+to include the Byron era redeem addresses
+(those with addrtype 2, see the Byron CDDL spec).
+These addresses were, however, not spendable in the Shelley era.
+At the Allegra hard fork they were removed from the UTxO
+and the Ada contained in them was returned to the reserves.
