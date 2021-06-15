@@ -283,7 +283,6 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
 -- pools that are currently registered.
---
 getPools ::
   NewEpochState era ->
   Set (KeyHash 'StakePool (Crypto era))
@@ -294,7 +293,6 @@ getPools = Map.keysSet . f
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
 -- pools that are currently registered.
---
 getPoolParameters ::
   NewEpochState era ->
   Set (KeyHash 'StakePool (Crypto era)) ->
