@@ -250,40 +250,9 @@ fastPropertyTests =
       testProperty "total amount of Ada is preserved (Chain)" (withMaxSuccess 50 (adaPreservationChain @(AlonzoEra TestCrypto)))
     ]
 
--- ============================================================================
--- When debugging property tests failures, it is usefull to run a test
--- with a given replay value. go is a template for how to do this.
-
--- go :: Int -> IO (Maybe ())
-go n =
-  -- timeout 20000000 $
-  defaultMain
-    ( localOption
-        (QuickCheckReplay (Just n))
-        -- some properties we might use
-        -- (testProperty "preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
-        -- (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
-        -- fastPropertyTests
-        -- (propertyTests @(AlonzoEra TestCrypto))
-        (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
-    )
-
-localOptions :: Test.Tasty.Options.IsOption v => [v] -> TestTree -> TestTree
-localOptions [] t = t
-localOptions (x : xs) t = localOptions xs (localOption x t)
-
-replay :: Int -> IO ()
-replay n =
-  defaultMain
-    ( localOption
-        (QuickCheckReplay (Just n))
-        -- some properties we might use
-        -- (testProperty "preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
-        -- (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
-        -- fastPropertyTests
-        -- (propertyTests @(AlonzoEra TestCrypto))
-        (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
-    )
+-- ==========================================================================================
+-- When debugging property tests failures, it is usefull to run a test with a given replay
+-- value, or a certain number of times. manytimes is a template for how to do this.
 
 -- | Run a a single testmany times. Uncomment out  QuickCheckReplay or QuickCheckVerbose to control things.
 manytimes :: String -> Int -> Int -> IO ()
