@@ -31,7 +31,6 @@ module Test.Cardano.Ledger.Alonzo.Trials
     propertyTests,
     relevantCasesAreCovered,
     removedAfterPoolreap,
-    go,
     payscript,
     stakescript,
     scripts,
@@ -42,6 +41,8 @@ module Test.Cardano.Ledger.Alonzo.Trials
     d2,
     d3,
     d4,
+    manytimes,
+    search,
   )
 where
 
@@ -110,7 +111,6 @@ import Test.Shelley.Spec.Ledger.PropertyTests
     removedAfterPoolreap,
   )
 import Test.Tasty
-import Test.Tasty.Options (IsOption (..))
 import Test.Tasty.QuickCheck
 
 -- ======================================================================
@@ -256,7 +256,7 @@ fastPropertyTests =
 
 -- | Run a a single testmany times. Uncomment out  QuickCheckReplay or QuickCheckVerbose to control things.
 manytimes :: String -> Int -> Int -> IO ()
-manytimes prop count seed =
+manytimes prop count _seed =
   defaultMain $
     ( -- localOption (QuickCheckReplay (Just seed)) $
       localOption (QuickCheckShowReplay True) $
@@ -277,6 +277,7 @@ manytimes prop count seed =
                 "STS Rules - Delegation Properties"
                 (withMaxSuccess count (delegProperties @(AlonzoEra TestCrypto)))
             )
+          other -> error ("unknown test: " ++ other)
     )
 
 -- ==============================================================================
