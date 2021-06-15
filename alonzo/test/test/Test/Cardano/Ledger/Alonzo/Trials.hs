@@ -110,6 +110,7 @@ import Test.Shelley.Spec.Ledger.PropertyTests
     removedAfterPoolreap,
   )
 import Test.Tasty
+import Test.Tasty.Options (IsOption (..))
 import Test.Tasty.QuickCheck
 
 -- ======================================================================
@@ -251,17 +252,91 @@ fastPropertyTests =
 
 -- ============================================================================
 -- When debugging property tests failures, it is usefull to run a test
--- with a given replay value. go and go2 are templates for how to do this.
+-- with a given replay value. go is a template for how to do this.
 
-go :: Int -> IO (Maybe ())
+-- go :: Int -> IO (Maybe ())
 go n =
-  timeout 20000000 $
+  -- timeout 20000000 $
+  defaultMain
+    ( localOption
+        (QuickCheckReplay (Just n))
+        -- some properties we might use
+        -- (testProperty "preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
+        -- (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
+        -- fastPropertyTests
+        -- (propertyTests @(AlonzoEra TestCrypto))
+        (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
+    )
+
+localOptions :: Test.Tasty.Options.IsOption v => [v] -> TestTree -> TestTree
+localOptions [] t = t
+localOptions (x : xs) t = localOptions xs (localOption x t)
+
+replay :: Int -> IO ()
+replay n =
+  defaultMain
+    ( localOption
+        (QuickCheckReplay (Just n))
+        -- some properties we might use
+        -- (testProperty "preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
+        -- (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
+        -- fastPropertyTests
+        -- (propertyTests @(AlonzoEra TestCrypto))
+        (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
+    )
+
+-- | Run a a single testmany times. Uncomment out  QuickCheckReplay or QuickCheckVerbose to control things.
+manytimes :: String -> Int -> Int -> IO ()
+manytimes prop count seed =
+  defaultMain $
+    ( -- localOption (QuickCheckReplay (Just seed)) $
+      localOption (QuickCheckShowReplay True) $
+        -- localOption (QuickCheckVerbose True) $
+        case prop of
+          "valid" ->
+            ( testProperty
+                "Only valid CHAIN STS signals are generated"
+                (withMaxSuccess count (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
+            )
+          "ada" ->
+            ( testProperty
+                "collection of Ada preservation properties:"
+                (withMaxSuccess count (adaPreservationChain @(AlonzoEra TestCrypto)))
+            )
+          "deleg" ->
+            ( testProperty
+                "STS Rules - Delegation Properties"
+                (withMaxSuccess count (delegProperties @(AlonzoEra TestCrypto)))
+            )
+    )
+
+-- ==============================================================================
+-- try to find a quick failure. A quick failure helps debugging turnaround time.
+
+-- | run the test, using replay 'seed', timeing out after 'seconds', return 'Nothing' if it timesout.
+--   This means the test did not complete in the time alloted. If all tests suceed, it does not return at all,
+--   it raises the Exception: ExitSuccess, if it fails in the time allotted it returns (Just ()).
+--   Which is what we are looking for.
+searchForQuickFailure :: Int -> Int -> IO (Maybe ())
+searchForQuickFailure seconds seed = do
+  timeout (seconds * 1000000) $
     defaultMain
       ( localOption
-          (QuickCheckReplay (Just n))
+          (QuickCheckReplay (Just seed))
           -- some properties we might use
-          -- (testProperty "preserves ADA" $ adaPreservationChain @(AllegraEra TestCrypto))
+          -- (testProperty "preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
           -- (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
           -- fastPropertyTests
-          (propertyTests @(AlonzoEra TestCrypto))
+          -- (propertyTests @(AlonzoEra TestCrypto))
+          (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
       )
+
+-- | search for a quick failure using replay seeds 'low' .. 'high'
+search :: Int -> Int -> IO ()
+search low high = mapM_ zzz [low .. high]
+  where
+    zzz n = do
+      ans <- searchForQuickFailure 10 n
+      case ans of
+        Nothing -> putStrLn ("OK " ++ show n) >> pure (Right ())
+        Just () -> putStrLn ("Fails " ++ show n) >> pure (Left n)
