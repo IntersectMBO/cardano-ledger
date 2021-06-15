@@ -124,12 +124,8 @@ transHash (UnsafeHash h) = fromShort h
 txInfoId :: TxId era -> P.TxId
 txInfoId (TxId safe) = P.TxId (transSafeHash safe)
 
-transStakeCred :: Credential keyrole crypto -> BS.ByteString
-transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = (fromShort kh)
-transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = (fromShort kh)
-
 transStakeReference :: StakeReference crypto -> Maybe P.StakingCredential
-transStakeReference (StakeRefBase cred) = Just (P.StakingHash (transStakeCred cred))
+transStakeReference (StakeRefBase cred) = Just (P.StakingHash (transCred cred))
 transStakeReference (StakeRefPtr (Ptr (SlotNo slot) i1 i2)) = Just (P.StakingPtr (fromIntegral slot) (fromIntegral i1) (fromIntegral i2))
 transStakeReference StakeRefNull = Nothing
 
@@ -241,12 +237,12 @@ transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp
 
 transDCert :: DCert c -> P.DCert
 transDCert (DCertDeleg (RegKey stkcred)) =
-  P.DCertDelegRegKey (P.StakingHash (transStakeCred stkcred))
+  P.DCertDelegRegKey (P.StakingHash (transCred stkcred))
 transDCert (DCertDeleg (DeRegKey stkcred)) =
-  P.DCertDelegDeRegKey (P.StakingHash (transStakeCred stkcred))
+  P.DCertDelegDeRegKey (P.StakingHash (transCred stkcred))
 transDCert (DCertDeleg (Delegate (Delegation stkcred keyhash))) =
   P.DCertDelegDelegate
-    (P.StakingHash (transStakeCred stkcred))
+    (P.StakingHash (transCred stkcred))
     (transKeyHash keyhash)
 transDCert (DCertPool (RegPool pp)) =
   P.DCertPoolRegister (transKeyHash (_poolId pp)) (P.PubKeyHash (transHash (_poolVrf pp)))
@@ -258,7 +254,7 @@ transDCert (DCertMir _) = P.DCertMir
 transWdrl :: Wdrl crypto -> Map.Map P.StakingCredential Integer
 transWdrl (Wdrl mp) = Map.foldlWithKey' accum Map.empty mp
   where
-    accum ans (RewardAcnt _network cred) (Coin n) = Map.insert (P.StakingHash (transStakeCred cred)) n ans
+    accum ans (RewardAcnt _network cred) (Coin n) = Map.insert (P.StakingHash (transCred cred)) n ans
 
 getWitVKeyHash :: (CC.Crypto crypto, Typeable kr) => WitVKey kr crypto -> P.PubKeyHash
 getWitVKeyHash = P.PubKeyHash . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash x) -> x) . hashKey . (\(WitVKey x _) -> x)
@@ -275,7 +271,7 @@ transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.
 transScriptPurpose :: CC.Crypto crypto => ScriptPurpose crypto -> P.ScriptPurpose
 transScriptPurpose (Minting policyid) = P.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = P.Spending (txInfoIn' txin)
-transScriptPurpose (Rewarding (RewardAcnt _network cred)) = P.Rewarding (P.StakingHash (transStakeCred cred))
+transScriptPurpose (Rewarding (RewardAcnt _network cred)) = P.Rewarding (P.StakingHash (transCred cred))
 transScriptPurpose (Certifying dcert) = P.Certifying (transDCert dcert)
 
 -- ===================================
