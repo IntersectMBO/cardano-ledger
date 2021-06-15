@@ -326,6 +326,7 @@ instance Mock c => EraGen (AlonzoEra c) where
   unsafeApplyTx (Tx bod wit auxdata) = ValidatedTx bod wit (IsValidating True) auxdata
 
   genEraGoodTxOut = vKeyLocked
+
   genEraScriptCost pp script =
     if isPlutusScript script
       then case List.find (\info -> (getScript @(AlonzoEra c) info) == script) genEraTwoPhaseScripts of
@@ -333,8 +334,9 @@ instance Mock c => EraGen (AlonzoEra c) where
           scriptfee (getField @"_prices" pp) (ExUnits mems steps)
             <+> storageCost 10 pp (rdmr, ExUnits mems steps) -- Extra 10 for the RdmrPtr
             <+> storageCost 32 pp inputdata -- Extra 32 for the hash
-        Nothing -> Coin 0
-      else Coin 0
+            <+> storageCost 0 pp script
+        Nothing -> storageCost 0 pp script
+      else storageCost 0 pp script
 
   genEraDone x = x -- ptrace "\nDone " x x
 
