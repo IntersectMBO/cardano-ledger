@@ -258,33 +258,33 @@ fastPropertyTests =
 manytimes :: String -> Int -> Int -> IO ()
 manytimes prop count _seed =
   defaultMain $
-    ( -- localOption (QuickCheckReplay (Just seed)) $
-      localOption (QuickCheckShowReplay True) $
-        -- localOption (QuickCheckVerbose True) $
-        case prop of
-          "valid" ->
-            ( testProperty
-                "Only valid CHAIN STS signals are generated"
-                (withMaxSuccess count (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
-            )
-          "ada" ->
-            ( testProperty
-                "collection of Ada preservation properties:"
-                (withMaxSuccess count (adaPreservationChain @(AlonzoEra TestCrypto)))
-            )
-          "deleg" ->
-            ( testProperty
-                "STS Rules - Delegation Properties"
-                (withMaxSuccess count (delegProperties @(AlonzoEra TestCrypto)))
-            )
-          other -> error ("unknown test: " ++ other)
+    ( localOption (QuickCheckReplay (Just _seed)) $
+        localOption (QuickCheckShowReplay True) $
+          -- localOption (QuickCheckVerbose True) $
+          case prop of
+            "valid" ->
+              ( testProperty
+                  "Only valid CHAIN STS signals are generated"
+                  (withMaxSuccess count (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
+              )
+            "ada" ->
+              ( testProperty
+                  "collection of Ada preservation properties:"
+                  (withMaxSuccess count (adaPreservationChain @(AlonzoEra TestCrypto)))
+              )
+            "deleg" ->
+              ( testProperty
+                  "STS Rules - Delegation Properties"
+                  (withMaxSuccess count (delegProperties @(AlonzoEra TestCrypto)))
+              )
+            other -> error ("unknown test: " ++ other)
     )
 
 -- ==============================================================================
 -- try to find a quick failure. A quick failure helps debugging turnaround time.
 
--- | run the test, using replay 'seed', timeing out after 'seconds', return 'Nothing' if it timesout.
---   This means the test did not complete in the time alloted. If all tests suceed, it does not return at all,
+-- | Run the test, using replay 'seed', timeing out after 'seconds', return 'Nothing' if it timesout.
+--   This means the test did not complete in the time alloted. If all tests succeed, it does not return at all,
 --   it raises the Exception: ExitSuccess, if it fails in the time allotted it returns (Just ()).
 --   Which is what we are looking for.
 searchForQuickFailure :: Int -> Int -> IO (Maybe ())
@@ -294,11 +294,11 @@ searchForQuickFailure seconds seed = do
       ( localOption
           (QuickCheckReplay (Just seed))
           -- some properties we might use
-          -- (testProperty "preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
+          (testProperty "preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
           -- (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
           -- fastPropertyTests
           -- (propertyTests @(AlonzoEra TestCrypto))
-          (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
+          -- (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
       )
 
 -- | search for a quick failure using replay seeds 'low' .. 'high'
@@ -306,7 +306,7 @@ search :: Int -> Int -> IO ()
 search low high = mapM_ zzz [low .. high]
   where
     zzz n = do
-      ans <- searchForQuickFailure 10 n
+      ans <- searchForQuickFailure 20 n
       case ans of
         Nothing -> putStrLn ("OK " ++ show n) >> pure (Right ())
         Just () -> putStrLn ("Fails " ++ show n) >> pure (Left n)

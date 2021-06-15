@@ -298,8 +298,7 @@ genTx
         keySpace
         draftTx
 
-
--- | - Collect additional inputs (and witnesses and keys and scripts) to make
+-- | Collect additional inputs (and witnesses and keys and scripts) to make
 -- the transaction balance.
 data Delta era = Delta
   { dfees :: Coin,
@@ -585,7 +584,7 @@ converge
   keySpace
   tx = do
     delta <- genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx
-    pure (genEraDone (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta))
+    genEraDone pparams (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta)
 
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)
