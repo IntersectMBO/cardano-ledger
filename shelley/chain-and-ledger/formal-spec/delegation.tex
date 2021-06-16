@@ -157,7 +157,7 @@ It does the following:
       \fun{genesisDeleg} & \DCertGen \to (\KeyHashGen,~\KeyHash,~\KeyHash_{vrf})
                                             & \text{genesis delegation}
       \\
-      \fun{moveRewards} & \DCertMir \to (\StakeCredential \mapsto \Coin)
+      \fun{credCoinMap} & \DCertMir \to (\StakeCredential \mapsto \Coin)
                                             & \text{moved inst. rewards}
       \\
       \fun{mirPot} & \DCertMir \to \MIRPot & \text{pot for inst. rewards}
@@ -592,7 +592,7 @@ concerns are independent of the ledger rules.
       slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{StabilityWindow}\\
       (\var{irReserves},~\var{irTreasury})\leteq\var{i_{rwd}}
       &
-      \var{combinedR}\leteq\var{irReserves}\unionoverrideRight(\fun{moveRewards}~\var{c}) \\
+      \var{combinedR}\leteq(\fun{credCoinMap}~\var{c})\unionoverrideLeft\var{irReserves} \\
       \sum\limits_{\wcard\mapsto\var{val}\in\var{combinedR}} val \leq\var{reserves}
     }
     {
@@ -636,7 +636,7 @@ concerns are independent of the ledger rules.
       slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{StabilityWindow}\\
       (\var{irReserves},~\var{irTreasury})\leteq\var{i_{rwd}}
       &
-      \var{combinedT}\leteq\var{irTreasury}\unionoverrideRight(\fun{moveRewards}~\var{c}) \\
+      \var{combinedT}\leteq(\fun{credCoinMap}~\var{c})\unionoverrideLeft\var{irTreasury} \\
       \sum\limits_{\wcard\mapsto\var{val}\in\var{combinedT}} val \leq\var{treasury}
     }
     {
