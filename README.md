@@ -16,6 +16,7 @@ The documents are built in our CI and can be readily accessed using the
 following links:
 
 - [Plutus integration formal specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.alonzo-ledger/latest/download-by-type/doc-pdf/alonzo-changes): the formal mathematical specification of the addition of Plutus scripts to the ledger rules, following on from the multi-asset formal specification.
+- [Plutus integration binary format specification (CDDL)](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/alonzo/test/cddl-files): the binary formats for the ledger with Plutus integration using CBOR CDDL schema notation.
 - [Multi-asset formal specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.shelley-ma/latest/download-by-type/doc-pdf/shelley-ma): the formal mathematical specification of the additon of multi-assets to the Shelley era ledger rules.
 - [Multi-asset binary format specification (CDDL)](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley-ma/shelley-ma-test/cddl-files): the binary formats for the ledger with multi-assets using CBOR CDDL schema notation.
 - [Shelley design specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec): the primary design document for Cardano Shelley.
