@@ -1200,10 +1200,10 @@ The calculation is done pool-by-pool.
   \emph{Calculation to reward a single stake pool}
   %
   \begin{align*}
-    & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \KeyHash \to \PoolParam\\
+    & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \PoolParam\\
       & ~~~\to \Stake \to \Q \to \Q \to \Coin \to \powerset{\AddrRWD}
            \to (\AddrRWD \mapsto \Coin) \\
-      & \fun{rewardOnePool}~\var{pp}~\var{R}~\var{n}~\var{\overline{N}}~\var{poolHK}~\var{pool}~\var{stake}~{\sigma}~{\sigma_a}~\var{tot}~\var{addrs_{rew}} =
+      & \fun{rewardOnePool}~\var{pp}~\var{R}~\var{n}~\var{\overline{N}}~\var{pool}~\var{stake}~{\sigma}~{\sigma_a}~\var{tot}~\var{addrs_{rew}} =
           \var{rewards}\\
       & ~~~\where \\
       & ~~~~~~~\var{ostake} = \sum_{\substack{
@@ -1218,7 +1218,7 @@ The calculation is done pool-by-pool.
         \var{pledge} \leq \var{ostake}\\
         0 & \text{otherwise.}
       \end{cases} \\
-      & ~~~~~~~\var{appPerf} = \mkApparentPerformance{(\fun{d}~pp)}{\sigma}{n}{\overline{N}} \\
+      & ~~~~~~~\var{appPerf} = \mkApparentPerformance{(\fun{d}~pp)}{\sigma_a}{n}{\overline{N}} \\
       & ~~~~~~~\var{poolR} = \floor{\var{appPerf}\cdot\var{maxP}} \\
       & ~~~~~~~\var{mRewards} = \\
       & ~~~~~~~~~~\left\{
@@ -1260,12 +1260,11 @@ The calculation is done pool-by-pool.
                      \var{R}~
                      \var{n}~
                      \var{\overline{N}}~
-                     \var{hk}~
                      \var{p}~
                      \var{s}~
                      \frac{\sum s}{total}~
                      \frac{\sum s}{\var{total}_a}~
-                     \var{tot}~
+                     \var{total}~
                      \var{addrs_{rew}}
                  \mid
         hk\mapsto(p, n, s)\in\var{pdata} \right\} \\
