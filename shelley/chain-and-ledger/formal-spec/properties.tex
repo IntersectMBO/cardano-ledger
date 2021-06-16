@@ -575,21 +575,6 @@ arithmetic have properties which guarantee consistency of the system. Here, we
 state those properties and formulate them in a way that makes them usable in
 properties-based testing for validation in the executable spec.
 
-\begin{property}[\textbf{Minimal Refund}]
-  \label{prop:minimal-refund}
-
-  The function $\fun{refund}$ takes a value, a minimal percentage, a decay
-  parameter and a duration. It must guarantee that the refunded amount is within
-  the minimal refund (off-by-one for rounding / floor) and the original value.
-
-  \begin{multline*}
-    \forall d_{val} \in \mathbb{N}, d_{min} \in [0,1], \lambda \in (0, \infty),
-    \delta \in \mathbb{N} \\
-    \implies \max(0,d_{val}\cdot d_{min} - 1) \leq \floor*{d_{val}\cdot(d_{min} +
-      (1-d_{min})\cdot e^{-\lambda\cdot\delta})} \leq d_{val}
-  \end{multline*}
-\end{property}
-
 \begin{property}[\textbf{Maximal Pool Reward}]
   \label{prop:maximal-pool-reward}
 
