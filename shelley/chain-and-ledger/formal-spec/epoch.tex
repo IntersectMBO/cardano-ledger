@@ -591,7 +591,7 @@ This transition has no preconditions and results in the following state change:
       \left(
         \begin{array}{r}
           \var{utxo} \\
-          \var{deposits} \\
+          \var{deposited} \\
           \var{fees} \\
           \var{ups} \\
           ~ \\
@@ -614,7 +614,7 @@ This transition has no preconditions and results in the following state change:
       \left(
         \begin{array}{rcl}
           \var{utxo} \\
-          \varUpdate{\var{deposits}}
+          \varUpdate{\var{deposited}}
           & \varUpdate{-}
           & \varUpdate{(\var{unclaimed} + \var{refunded})} \\
           \var{fees} \\
@@ -694,11 +694,11 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
       & \fun{updatePpup} \in \UTxOState \to \PParams \to \UTxOState\\
       & \fun{updatePpup}~\var{utxoSt}~\var{pp} =
       \begin{cases}
-        (\var{utxo},\var{deposits},\var{fees},(\var{fpup},~\emptyset))
+        (\var{utxo},\var{deposited},\var{fees},(\var{fpup},~\emptyset))
         &
         \var{canFollow}
         \\
-        (\var{utxo},\var{deposits},\var{fees},(\emptyset,~\emptyset))
+        (\var{utxo},\var{deposited},\var{fees},(\emptyset,~\emptyset))
         &
         \text{otherwise} \\
       \end{cases}\\
@@ -707,7 +707,7 @@ The type of this state transition is given in Figure~\ref{fig:ts-types:new-proto
         \forall\var{ps}\in\range{pup},~
         \var{pv}\mapsto\var{v}\in\var{ps}\implies\fun{pvCanFollow}~(\fun{pv}~\var{pp})~\var{v}
         \\
-      & ~~~~~~~(\var{utxo},\var{deposits},\var{fees},(\var{pup},~\var{fpup})) = \var{utxoSt} \\
+      & ~~~~~~~(\var{utxo},\var{deposited},\var{fees},(\var{pup},~\var{fpup})) = \var{utxoSt} \\
   \end{align*}
 \end{figure}
 
@@ -764,7 +764,7 @@ for ease of reading.
     {
       \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
-         (\var{utxo},~\var{deposits},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
+         (\var{utxo},~\var{deposited},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
          \var{(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
          \leteq & \var{dstate}\\
          \var{(\var{poolParams},~\wcard,~\wcard)} & \leteq & \var{pstate}\\
@@ -773,7 +773,7 @@ for ease of reading.
          \var{diff} & \leteq & \var{oblg_{cur}} - \var{oblg_{new}}\\
       \end{array}}
       \\~\\~\\
-      \var{oblg_{cur}} = \var{deposits} \\
+      \var{oblg_{cur}} = \var{deposited} \\
       \var{reserves} + \var{diff} \geq \sum\limits_{\wcard\mapsto\var{val}\in\var{i_{rwd}}} val \\
       \fun{maxTxSize}~\var{pp_{new}} + \fun{maxHeaderSize}~\var{pp_{new}} <
         \fun{maxBlockSize}~\var{pp_{new}}
@@ -825,7 +825,7 @@ for ease of reading.
       \end{array}}\right)
       \\~\\~\\
       {\begin{array}{rcl}
-         (\var{utxo},~\var{deposits},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
+         (\var{utxo},~\var{deposited},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
           \var{(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
           \leteq & \var{dstate}\\
          \var{(\var{poolParams},~\wcard,~\wcard)} & \leteq & \var{pstate}\\
@@ -1498,7 +1498,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{retiring} \\
           ~ \\
           \var{utxo} \\
-          \var{deposits} \\
+          \var{deposited} \\
           \var{fees} \\
           \var{up} \\
           ~ \\
@@ -1524,7 +1524,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
           \var{retiring} \\
           ~ \\
           \var{utxo} \\
-          \var{deposits} \\
+          \var{deposited} \\
           \varUpdate{\var{fees}+\Delta f} \\
           \var{up} \\
           ~ \\
