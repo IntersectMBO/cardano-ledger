@@ -120,7 +120,8 @@ library
     tasty,
     text,
     time,
-    transformers
+    transformers,
+    tree-diff
 
 test-suite shelley-spec-ledger-test
   import:             base, project-config
@@ -217,7 +218,8 @@ test-suite shelley-spec-ledger-test
       tasty-quickcheck,
       tasty,
       time,
-      transformers
+      transformers,
+      tree-diff
 
 
 benchmark mainbench
