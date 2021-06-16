@@ -244,11 +244,11 @@ data TwoPhaseInfo era = TwoPhaseInfo
   { getScript :: Core.Script era,    -- ^ A Plutus Script
     getHash :: ScriptHash (Crypto era),       -- ^ Its ScriptHash
     getData :: Plutus.Data,          -- ^ A Data that will make it succeed
-    getRedeemer ::                   -- ^ A Redeemer that will make it succeed
-      ( Plutus.Data,                 -- ^ The redeeming data
-        Word64,                      -- ^ The ExUnits memory count
-        Word64                       -- ^ The ExUnits steps count
-      )
+    getRedeemer ::
+      ( Plutus.Data,                 -- The redeeming data
+        Word64,                      -- The ExUnits memory count
+        Word64                       -- The ExUnits steps count
+      )                              -- ^ A Redeemer that will make it succeed
   }
 
 deriving instance Show (Core.Script era) => Show (TwoPhaseInfo era)
