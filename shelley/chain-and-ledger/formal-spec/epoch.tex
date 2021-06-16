@@ -593,7 +593,7 @@ This transition has no preconditions and results in the following state change:
           \var{utxo} \\
           \var{deposited} \\
           \var{fees} \\
-          \var{ups} \\
+          \var{ppup} \\
           ~ \\
           \var{treasury} \\
           \var{reserves} \\
@@ -618,7 +618,7 @@ This transition has no preconditions and results in the following state change:
           & \varUpdate{-}
           & \varUpdate{(\var{unclaimed} + \var{refunded})} \\
           \var{fees} \\
-          \var{ups} \\
+          \var{ppup} \\
           ~ \\
           \varUpdate{\var{treasury}} & \varUpdate{+} & \varUpdate{\var{unclaimed}} \\
           \var{reserves} \\
@@ -764,7 +764,7 @@ for ease of reading.
     {
       \var{pp_{new}}\neq\Nothing \\~\\
       {\begin{array}{rcl}
-         (\var{utxo},~\var{deposited},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
+         (\var{utxo},~\var{deposited},~\var{fees},~\var{ppup}) & \leteq & \var{utxoSt} \\
          \var{(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
          \leteq & \var{dstate}\\
          \var{(\var{poolParams},~\wcard,~\wcard)} & \leteq & \var{pstate}\\
@@ -779,7 +779,7 @@ for ease of reading.
         \fun{maxBlockSize}~\var{pp_{new}}
       \\~\\
         \var{utxoSt'} \leteq
-        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees},~\var{pup}\right)
+        \left(\var{utxo},~\varUpdate{oblg_{new}},~\var{fees},~\var{ppup}\right)
       \\
       \var{utxoSt''} \leteq \fun{updatePpup}~\var{utxoSt'}~\var{pp_{new}}
       \\~\\
@@ -825,7 +825,6 @@ for ease of reading.
       \end{array}}\right)
       \\~\\~\\
       {\begin{array}{rcl}
-         (\var{utxo},~\var{deposited},~\var{fees},~\var{pup}) & \leteq & \var{utxoSt} \\
           \var{(\var{rewards},~\wcard,~\wcard,~\wcard,~\wcard,~\var{i_{rwd}})} &
           \leteq & \var{dstate}\\
          \var{(\var{poolParams},~\wcard,~\wcard)} & \leteq & \var{pstate}\\

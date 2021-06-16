@@ -166,7 +166,7 @@ The signal for the UTxO transition is a transaction.
         \var{utxo} & \UTxO & \text{UTxO}\\
         \var{deposited} & \Coin & \text{deposits pot}\\
         \var{fees} & \Coin & \text{fee pot}\\
-        \var{pup} & \PPUpdateState & \text{proposed updates}\\
+        \var{ppup} & \PPUpdateState & \text{proposed updates}\\
       \end{array}
     \right)
   \end{equation*}
@@ -286,7 +286,7 @@ accounts where a reward is accumulated to a specific address.
           \var{genDelegs} \\
         \end{array}
       }
-      \vdash \var{pup} \trans{\hyperref[fig:rules:pp-update]{ppup}}{\fun{txup}~\var{tx}} \var{pup'}
+      \vdash \var{ppup} \trans{\hyperref[fig:rules:pp-update]{ppup}}{\fun{txup}~\var{tx}} \var{ppup'}
       \\
       ~
       \\
@@ -320,7 +320,7 @@ accounts where a reward is accumulated to a specific address.
         \var{utxo} \\
         \var{deposited} \\
         \var{fees} \\
-        \var{pup}\\
+        \var{ppup}\\
       \end{array}
       \right)
       \trans{utxo}{tx}
@@ -329,7 +329,7 @@ accounts where a reward is accumulated to a specific address.
         \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{txb}}  \\
         \varUpdate{\var{deposited} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{txb}} \\
-        \varUpdate{pup'}\\
+        \varUpdate{ppup'}\\
       \end{array}
       \right)
     }
