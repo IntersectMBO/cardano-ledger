@@ -257,7 +257,8 @@ class
     (Core.TxOut era) ->              -- | This is to be Appended to the end of the existing TxOut
     Core.TxBody era
 
-  addInputs :: Core.TxBody era -> Set (TxIn (Crypto era)) -> Core.TxBody era  -- |  Union the TxIn with the existing TxIn in the TxBody
+  -- |  Union the TxIn with the existing TxIn in the TxBody
+  addInputs :: Core.TxBody era -> Set (TxIn (Crypto era)) -> Core.TxBody era
   addInputs txb _ins = txb
 
   genEraPParamsDelta :: Constants -> Core.PParams era -> Gen (Core.PParamsDelta era)
