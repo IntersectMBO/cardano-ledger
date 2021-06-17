@@ -1439,6 +1439,7 @@ alonzoUTXOWexamples =
               ( Left
                   [ [ MissingRequiredDatums
                         (Set.singleton $ hashData @A datumExample1)
+                        mempty
                     ]
                   ]
               ),

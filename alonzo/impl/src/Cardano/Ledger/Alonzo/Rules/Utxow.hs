@@ -95,7 +95,8 @@ data AlonzoPredFail era
   = WrappedShelleyEraFailure !(UtxowPredicateFailure era)
   | UnRedeemableScripts ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
   | MissingRequiredDatums
-      !(Set (DataHash (Crypto era)))
+      !(Set (DataHash (Crypto era))) -- Set of missing data hashes
+      !(Set (DataHash (Crypto era))) -- Set of received data hashes
   | PPViewHashesDontMatch
       !(StrictMaybe (WitnessPPDataHash (Crypto era)))
       -- ^ The PPHash in the TxBody
@@ -147,7 +148,7 @@ encodePredFail ::
   Encode 'Open (AlonzoPredFail era)
 encodePredFail (WrappedShelleyEraFailure x) = Sum WrappedShelleyEraFailure 0 !> E toCBOR x
 encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
-encodePredFail (MissingRequiredDatums x) = Sum MissingRequiredDatums 2 !> To x
+encodePredFail (MissingRequiredDatums x y) = Sum MissingRequiredDatums 2 !> To x !> To y
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 3 !> To x !> To y
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 4 !> To x
 encodePredFail (UnspendableUTxONoDatumHash x) = Sum UnspendableUTxONoDatumHash 5 !> To x
@@ -172,7 +173,7 @@ decodePredFail ::
   Decode 'Open (AlonzoPredFail era)
 decodePredFail 0 = SumD WrappedShelleyEraFailure <! D fromCBOR
 decodePredFail 1 = SumD UnRedeemableScripts <! From
-decodePredFail 2 = SumD MissingRequiredDatums <! From
+decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
 decodePredFail 3 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 4 = SumD MissingRequiredSigners <! From
 decodePredFail 5 = SumD UnspendableUTxONoDatumHash <! From
@@ -270,7 +271,7 @@ alonzoStyleWitness = do
       let txHashes = domain (unTxDats . txdats . wits $ tx)
           inputHashes = Set.fromList utxoHashes
           unmatchedInputHashes = eval (inputHashes ➖ txHashes)
-      Set.null unmatchedInputHashes ?! MissingRequiredDatums unmatchedInputHashes
+      Set.null unmatchedInputHashes ?! MissingRequiredDatums unmatchedInputHashes txHashes
   {-  ∀ sph ∈ scriptsNeeded utxo tx, checkScriptData tx utxo  ph  -}
   let sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
       sphs = scriptsNeeded utxo tx
