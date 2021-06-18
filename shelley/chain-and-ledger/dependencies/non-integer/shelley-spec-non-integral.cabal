@@ -53,6 +53,5 @@ test-suite shelley-spec-non-integral-test
                       -rtsopts
                       -with-rtsopts=-N
 
-  if (!flag(development))
-    build-depends:    shelley-spec-non-integral
+  build-depends:      shelley-spec-non-integral
                     , QuickCheck
