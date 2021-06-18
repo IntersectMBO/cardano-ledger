@@ -44,6 +44,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T (pack)
+import Numeric.Natural (Natural)
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
@@ -65,7 +66,8 @@ instance Arbitrary Plutus.Data where
             [ (Plutus.I <$> arbitrary),
               (Plutus.B <$> arbitrary),
               (Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))),
-              (Plutus.Constr <$> arbitrary <*> listOf (gendata (n `div` 2))),
+              (Plutus.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
+                             <*> listOf (gendata (n `div` 2))),
               (Plutus.List <$> listOf (gendata (n `div` 2)))
             ]
       gendata _ = oneof [Plutus.I <$> arbitrary, Plutus.B <$> arbitrary]
