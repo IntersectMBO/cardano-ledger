@@ -30,6 +30,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
+import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto (HASH, KES)
@@ -65,7 +66,6 @@ import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Address
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.StabilityWindow
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxId (..), TxIn (..))

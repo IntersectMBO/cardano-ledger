@@ -87,7 +87,7 @@ import Shelley.Spec.Ledger.API
   ( MultiSig,
     ScriptHash,
   )
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( Addr (..),
   )
 import Shelley.Spec.Ledger.BlockChain
@@ -113,7 +113,7 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
-import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
     pattern Delegate,
@@ -154,7 +154,7 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature)
-import Shelley.Spec.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..), hashScript)
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),

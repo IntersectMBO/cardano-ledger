@@ -35,7 +35,7 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( Addr (..),
     BootstrapAddress (..),
     bootstrapKeyHash,
@@ -45,7 +45,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
@@ -72,7 +72,7 @@ import Shelley.Spec.Ledger.STS.Utxow
   ( UTXOW,
     UtxowPredicateFailure (..),
   )
-import Shelley.Spec.Ledger.Slot
+import Cardano.Ledger.Slot
   ( SlotNo (..),
   )
 import Shelley.Spec.Ledger.Tx

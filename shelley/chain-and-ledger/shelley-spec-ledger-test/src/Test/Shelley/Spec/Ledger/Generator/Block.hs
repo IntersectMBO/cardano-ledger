@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.BlockChain
     seedL,
   )
 import Shelley.Spec.Ledger.OCert (currentIssueNo, kesPeriod)
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes

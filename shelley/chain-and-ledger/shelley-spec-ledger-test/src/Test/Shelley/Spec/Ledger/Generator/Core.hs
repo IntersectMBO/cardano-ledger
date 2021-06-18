@@ -86,7 +86,7 @@ import Data.Set (Set)
 import Data.Word (Word64)
 import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
+import Cardano.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
 import Cardano.Ledger.BaseTypes
   ( Nonce (..),
     UnitInterval,
@@ -108,7 +108,7 @@ import Shelley.Spec.Ledger.BlockChain
     pattern Block,
     pattern BlockHash,
   )
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( Credential (..),
     pattern KeyHashObj,
     pattern ScriptHashObj,
@@ -159,7 +159,7 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
   ( ScriptHash,
   )
-import Shelley.Spec.Ledger.Slot
+import Cardano.Ledger.Slot
   ( BlockNo (..),
     Duration (..),
     SlotNo (..),

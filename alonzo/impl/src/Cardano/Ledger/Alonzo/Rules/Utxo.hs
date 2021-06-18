@@ -16,6 +16,13 @@
 module Cardano.Ledger.Alonzo.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
+import Cardano.Ledger.Address
+  ( Addr (..),
+    RewardAcnt,
+    bootstrapAddressAttrsSize,
+    getNetwork,
+    getRwdNetwork,
+  )
 import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
@@ -38,6 +45,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Era (Crypto, Era, TxInBlock, ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Mary.Value as Alonzo (Value)
@@ -77,14 +85,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address
-  ( Addr (..),
-    RewardAcnt,
-    bootstrapAddressAttrsSize,
-    getNetwork,
-    getRwdNetwork,
-  )
-import Shelley.Spec.Ledger.Credential (Credential (..))
 import qualified Shelley.Spec.Ledger.LedgerState as Shelley
 import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
 import Shelley.Spec.Ledger.Tx (TxIn)

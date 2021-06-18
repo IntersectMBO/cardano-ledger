@@ -20,7 +20,7 @@ import Shelley.Spec.Ledger.API
     ProtVer (..),
     RewardAcnt (..),
   )
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)

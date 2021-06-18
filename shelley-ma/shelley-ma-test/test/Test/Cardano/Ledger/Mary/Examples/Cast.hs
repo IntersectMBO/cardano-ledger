@@ -21,7 +21,7 @@ module Test.Cardano.Ledger.Mary.Examples.Cast
   )
 where
 
-import Shelley.Spec.Ledger.Address (Addr (..))
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),

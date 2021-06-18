@@ -31,6 +31,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Serialization (decodeRecordSum)
+import Cardano.Ledger.Slot
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
@@ -43,7 +44,6 @@ import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.LedgerState (PPUPState (..), pvCanFollow)
 import Shelley.Spec.Ledger.PParams
-import Shelley.Spec.Ledger.Slot
 
 data PPUP era
 

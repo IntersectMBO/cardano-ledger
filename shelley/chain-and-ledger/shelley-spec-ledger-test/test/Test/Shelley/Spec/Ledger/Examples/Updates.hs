@@ -43,7 +43,7 @@ import Shelley.Spec.Ledger.PParams
     Update (..),
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.Slot
+import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
     SlotNo (..),

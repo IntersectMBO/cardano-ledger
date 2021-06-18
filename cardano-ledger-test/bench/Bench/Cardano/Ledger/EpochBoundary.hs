@@ -6,9 +6,17 @@
 module Bench.Cardano.Ledger.EpochBoundary where
 
 import Cardano.Crypto.DSIGN.Mock
+import Cardano.Ledger.Address (Addr (Addr))
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.Compactible (Compactible (toCompact))
+import Cardano.Ledger.Credential
+  ( Credential (KeyHashObj),
+    PaymentCredential,
+    Ptr (..),
+    StakeCredential,
+    StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
+  )
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (VKey (..), hashKey)
 import Cardano.Ledger.Mary (MaryEra)
@@ -17,6 +25,7 @@ import Cardano.Ledger.SafeHash
     castSafeHash,
   )
 import Cardano.Ledger.ShelleyMA ()
+import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData (..))
 import Criterion
@@ -28,17 +37,8 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.Address (Addr (Addr))
 import Shelley.Spec.Ledger.CompactAddr (compactAddr)
-import Shelley.Spec.Ledger.Credential
-  ( Credential (KeyHashObj),
-    PaymentCredential,
-    Ptr (..),
-    StakeCredential,
-    StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
-  )
 import Shelley.Spec.Ledger.EpochBoundary (aggregateUtxoCoinByCredential)
-import Shelley.Spec.Ledger.Slot (SlotNo (SlotNo))
 import Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (TxInCompact), TxOut (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (UTxO))
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)

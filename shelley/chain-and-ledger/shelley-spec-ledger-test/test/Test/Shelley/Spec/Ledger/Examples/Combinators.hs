@@ -72,7 +72,7 @@ import Shelley.Spec.Ledger.BlockChain
     lastAppliedHash,
     prevHashToNonce,
   )
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( Credential (..),
     Ptr,
   )

@@ -44,6 +44,7 @@ import Cardano.Ledger.Serialization
     ToCBORGroup (..),
     runByteBuilder,
   )
+import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (asks)
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
@@ -57,7 +58,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 data OCertEnv crypto = OCertEnv
   { ocertEnvStPools :: Set (KeyHash 'StakePool crypto),

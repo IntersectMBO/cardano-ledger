@@ -24,6 +24,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
+import Cardano.Ledger.Slot (EpochNo)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
   ( Embed (..),
@@ -63,7 +64,6 @@ import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP, PoolreapPredicateFailure, PoolreapState (..))
 import Shelley.Spec.Ledger.STS.Snap (SNAP, SnapPredicateFailure)
 import Shelley.Spec.Ledger.STS.Upec (UPEC, UpecPredicateFailure)
-import Shelley.Spec.Ledger.Slot (EpochNo)
 
 data EPOCH era
 

@@ -9,6 +9,7 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), TxInBlock)
@@ -16,7 +17,6 @@ import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Control.State.Transition.Extended
 import GHC.Records (HasField)
-import Shelley.Spec.Ledger.Address (Addr)
 import Shelley.Spec.Ledger.LedgerState
   ( UTxOState,
     witsVKeyNeeded,

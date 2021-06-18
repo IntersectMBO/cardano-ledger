@@ -45,12 +45,12 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API (PraosCrypto)
-import Shelley.Spec.Ledger.Address (Addr)
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )
-import Shelley.Spec.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
 import Cardano.Ledger.Keys
   ( Hash,
@@ -70,7 +70,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
-import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

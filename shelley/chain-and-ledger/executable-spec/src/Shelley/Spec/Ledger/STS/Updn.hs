@@ -18,11 +18,11 @@ where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto
+import Cardano.Ledger.Slot
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Slot
 
 data UPDN crypto
 

@@ -47,13 +47,13 @@ import Shelley.Spec.Ledger.API
     LEDGER,
     LedgerEnv (..),
   )
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( Addr (..),
     getRwdCred,
     mkVKeyRwdAcnt,
   )
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
-import Shelley.Spec.Ledger.Credential
+import Cardano.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
@@ -76,7 +76,7 @@ import Shelley.Spec.Ledger.STS.Ledger
 import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Shelley.Spec.Ledger.Slot
+import Cardano.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxBody (..),

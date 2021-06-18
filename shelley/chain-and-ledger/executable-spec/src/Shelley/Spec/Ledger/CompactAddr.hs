@@ -19,10 +19,18 @@ import Cardano.Binary
     decodeFull',
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
+import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), Word7 (..), byron, isEnterpriseAddr, notBaseAddr, payCredIsScript, serialiseAddr, stakeCredIsScript, toWord7, word7sToWord64)
 import Cardano.Ledger.BaseTypes (word8ToNetwork)
+import Cardano.Ledger.Credential
+  ( Credential (KeyHashObj, ScriptHashObj),
+    PaymentCredential,
+    Ptr (..),
+    StakeReference (..),
+  )
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Prelude (Text, cborError, panic)
 import Control.Monad (ap)
 import qualified Control.Monad.Fail
@@ -33,15 +41,7 @@ import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.Maybe (fromMaybe)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Word (Word64, Word8)
-import Shelley.Spec.Ledger.Address (Addr (..), BootstrapAddress (..), Word7 (..), byron, isEnterpriseAddr, notBaseAddr, payCredIsScript, serialiseAddr, stakeCredIsScript, toWord7, word7sToWord64)
-import Shelley.Spec.Ledger.Credential
-  ( Credential (KeyHashObj, ScriptHashObj),
-    PaymentCredential,
-    Ptr (..),
-    StakeReference (..),
-  )
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
 
 newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
   deriving (Eq, Ord)

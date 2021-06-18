@@ -32,7 +32,7 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Deleg (DelegPredicateFailure (..))
-import Shelley.Spec.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), applySTSTest, mkKeyPair, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)

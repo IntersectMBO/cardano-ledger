@@ -27,6 +27,12 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Address
+  ( Addr (AddrBootstrap),
+    bootstrapAddressAttrsSize,
+    getNetwork,
+    getRwdNetwork,
+  )
 import Cardano.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
@@ -52,6 +58,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
+import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
@@ -80,12 +87,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address
-  ( Addr (AddrBootstrap),
-    bootstrapAddressAttrsSize,
-    getNetwork,
-    getRwdNetwork,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( PPUPState,
     TransUTxOState,
@@ -97,7 +98,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
-import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn)
 import Shelley.Spec.Ledger.TxBody
   ( DCert,

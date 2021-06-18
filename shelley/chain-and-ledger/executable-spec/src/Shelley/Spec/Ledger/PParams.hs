@@ -61,6 +61,7 @@ import Cardano.Ledger.Serialization
     ratioToCBOR,
     rationalFromCBOR,
   )
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -82,7 +83,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Orphans ()
-import Shelley.Spec.Ledger.Slot (EpochNo (..), SlotNo (..))
 
 -- ====================================================================
 

@@ -67,7 +67,7 @@ import Shelley.Spec.Ledger.PParams
     pattern ProposedPPUpdates,
     pattern Update,
   )
-import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Test.QuickCheck (Gen,frequency)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))

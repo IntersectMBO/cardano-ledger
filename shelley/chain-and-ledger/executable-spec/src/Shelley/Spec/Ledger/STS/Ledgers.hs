@@ -25,6 +25,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Slot (SlotNo)
 import Control.Monad (foldM)
 import Control.State.Transition
   ( Embed (..),
@@ -52,7 +53,6 @@ import Shelley.Spec.Ledger.STS.Ledger
     LedgerEnv (..),
     LedgerPredicateFailure,
   )
-import Shelley.Spec.Ledger.Slot (SlotNo)
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 data LEDGERS era

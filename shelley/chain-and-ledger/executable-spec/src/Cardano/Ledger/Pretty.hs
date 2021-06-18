@@ -20,12 +20,23 @@ import Cardano.Chain.Common
     UnparsedFields (..),
   )
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Address
+  ( Addr (..),
+    BootstrapAddress (..),
+    RewardAcnt (..),
+  )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential
+  ( Credential (KeyHashObj, ScriptHashObj),
+    GenesisCredential (..),
+    Ptr (..),
+    StakeReference (..),
+  )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
 import qualified Cardano.Ledger.Era as Era (TxSeq)
@@ -40,6 +51,13 @@ import Cardano.Ledger.Keys
     VerKeyKES,
   )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.Slot
+  ( BlockNo (..),
+    Duration (..),
+    EpochNo (..),
+    EpochSize (..),
+    SlotNo (..),
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
@@ -62,11 +80,6 @@ import GHC.Records
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
-import Shelley.Spec.Ledger.Address
-  ( Addr (..),
-    BootstrapAddress (..),
-    RewardAcnt (..),
-  )
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
@@ -77,12 +90,6 @@ import Shelley.Spec.Ledger.BlockChain
     PrevHash (..),
   )
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), decompactAddr)
-import Shelley.Spec.Ledger.Credential
-  ( Credential (KeyHashObj, ScriptHashObj),
-    GenesisCredential (..),
-    Ptr (..),
-    StakeReference (..),
-  )
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
@@ -139,13 +146,6 @@ import Shelley.Spec.Ledger.Rewards
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Scripts (MultiSig (..), ScriptHash (..))
-import Shelley.Spec.Ledger.Slot
-  ( BlockNo (..),
-    Duration (..),
-    EpochNo (..),
-    EpochSize (..),
-    SlotNo (..),
-  )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD,

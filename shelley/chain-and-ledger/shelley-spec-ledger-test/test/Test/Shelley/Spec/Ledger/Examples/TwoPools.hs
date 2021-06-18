@@ -57,7 +57,7 @@ import Shelley.Spec.Ledger.BlockChain
     bheader,
     hashHeaderToNonce,
   )
-import Shelley.Spec.Ledger.Credential (Credential, Ptr (..))
+import Cardano.Ledger.Credential (Credential, Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),
@@ -91,7 +91,7 @@ import Shelley.Spec.Ledger.Rewards
     sumRewards,
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.Slot
+import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
     SlotNo (..),

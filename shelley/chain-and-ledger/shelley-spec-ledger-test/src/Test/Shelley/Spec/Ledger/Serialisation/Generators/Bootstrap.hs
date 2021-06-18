@@ -16,7 +16,7 @@ where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
 import Data.Maybe (fromJust)
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( BootstrapAddress (..),
   )
 import qualified Test.Cardano.Chain.Common.Gen as Byron
@@ -33,4 +33,3 @@ genSignature =
 
 genBootstrapAddress :: Gen (BootstrapAddress crypto)
 genBootstrapAddress = BootstrapAddress <$> hedgehog Byron.genAddress
-

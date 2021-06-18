@@ -36,6 +36,14 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Slot
+  ( Duration (..),
+    SlotNo,
+    epochInfoEpoch,
+    epochInfoFirst,
+    epochInfoSize,
+    (+*),
+  )
 import Cardano.Slotting.EpochInfo.API (epochInfoRange)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans (lift)
@@ -63,14 +71,6 @@ import Shelley.Spec.Ledger.LedgerState
     startStep,
   )
 import Shelley.Spec.Ledger.PParams (ProtVer)
-import Shelley.Spec.Ledger.Slot
-  ( Duration (..),
-    SlotNo,
-    epochInfoEpoch,
-    epochInfoFirst,
-    epochInfoSize,
-    (+*),
-  )
 
 data RUPD era
 

@@ -37,6 +37,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, TxInBlock)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (ArrowChoice (right), left)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -59,7 +60,6 @@ import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv, LedgerPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Ledger as Ledger
-import Shelley.Spec.Ledger.Slot (SlotNo)
 
 class
   ( ChainData (Core.Tx era),

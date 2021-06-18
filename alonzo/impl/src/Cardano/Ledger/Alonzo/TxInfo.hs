@@ -10,6 +10,7 @@ module Cardano.Ledger.Alonzo.TxInfo where
 -- =============================================
 
 import Cardano.Crypto.Hash.Class (Hash (UnsafeHash))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..))
 import Cardano.Ledger.Alonzo.Tx
@@ -28,6 +29,7 @@ import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (TxBody, TxOut, Value)
+import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
@@ -83,8 +85,6 @@ import qualified Plutus.V1.Ledger.Value as P (CurrencySymbol (..), TokenName (..
 import qualified PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx.IsData.Class as P (IsData (..))
-import Shelley.Spec.Ledger.Address (Addr (..), RewardAcnt (..))
-import Shelley.Spec.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

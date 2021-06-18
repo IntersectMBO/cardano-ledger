@@ -27,7 +27,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..))
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
-import Shelley.Spec.Ledger.Credential (Ptr (..))
+import Cardano.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Keys
@@ -52,7 +52,7 @@ import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Shelley.Spec.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

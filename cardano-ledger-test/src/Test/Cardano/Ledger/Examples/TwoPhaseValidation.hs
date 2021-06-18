@@ -24,6 +24,7 @@ import qualified Cardano.Crypto.Hash as CH
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Crypto.VRF.Class as VRF
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
@@ -50,6 +51,11 @@ import Cardano.Ledger.BaseTypes (Network (..), Seed, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    StakeCredential,
+    StakeReference (..),
+  )
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), SupportsSegWit (..), ValidateScript (hashScript))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
@@ -68,6 +74,7 @@ import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.Slot (BlockNo (..))
 import qualified Cardano.Ledger.Tx as Core (Tx (..))
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
@@ -101,20 +108,13 @@ import Shelley.Spec.Ledger.API
     ProtVer (..),
     UTxO (..),
   )
-import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.BlockChain (bBodySize, mkSeed, seedEta, seedL)
-import Shelley.Spec.Ledger.Credential
-  ( Credential (..),
-    StakeCredential,
-    StakeReference (..),
-  )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), WitHashes (..))
 import Shelley.Spec.Ledger.OCert (OCertSignable (..))
 import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv (..), BbodyState (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Shelley.Spec.Ledger.Slot (BlockNo (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),

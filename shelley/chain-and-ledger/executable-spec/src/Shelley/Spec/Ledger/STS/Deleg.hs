@@ -30,6 +30,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -40,6 +41,15 @@ import Cardano.Ledger.Keys
     VerKeyVRF,
   )
 import Cardano.Ledger.Serialization (decodeRecordSum)
+import Cardano.Ledger.Slot
+  ( Duration (..),
+    EpochNo (..),
+    SlotNo,
+    epochInfoEpoch,
+    epochInfoFirst,
+    (*-),
+    (+*),
+  )
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
 import Control.State.Transition
@@ -52,7 +62,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Credential (Credential)
 import Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -68,15 +77,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
   )
 import Shelley.Spec.Ledger.PParams (ProtVer)
-import Shelley.Spec.Ledger.Slot
-  ( Duration (..),
-    EpochNo (..),
-    SlotNo,
-    epochInfoEpoch,
-    epochInfoFirst,
-    (*-),
-    (+*),
-  )
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),

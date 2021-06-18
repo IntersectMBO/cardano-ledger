@@ -24,7 +24,7 @@ import Debug.Trace (traceShowId)
 import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
-import Shelley.Spec.Ledger.Slot
+import Cardano.Ledger.Slot
 import Shelley.Spec.Ledger.TxBody
 import Test.QuickCheck (shrinkIntegral, shrinkList)
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)

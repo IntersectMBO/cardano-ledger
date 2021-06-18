@@ -11,7 +11,7 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Shelley.Spec.Ledger.API.ByronTranslation
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
 import Shelley.Spec.Ledger.TxBody
 import Test.Cardano.Chain.UTxO.Gen (genCompactTxOut)
 import Test.QuickCheck.Hedgehog (hedgehog)

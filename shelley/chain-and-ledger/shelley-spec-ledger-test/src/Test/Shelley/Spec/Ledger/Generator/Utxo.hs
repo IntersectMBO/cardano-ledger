@@ -53,7 +53,7 @@ import Shelley.Spec.Ledger.API
   ( DCert,
     ScriptHash,
   )
-import Shelley.Spec.Ledger.Address
+import Cardano.Ledger.Address
   ( Addr (..),
     RewardAcnt (..),
     toCred,
@@ -62,7 +62,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     maybeToStrictMaybe,
   )
-import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys
   ( KeyHash,
     KeyPair,

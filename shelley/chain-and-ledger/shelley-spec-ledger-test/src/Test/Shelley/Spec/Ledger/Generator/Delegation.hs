@@ -62,7 +62,7 @@ import Shelley.Spec.Ledger.API
     StrictMaybe (..),
     VKey,
   )
-import Shelley.Spec.Ledger.Address (mkRwdAcnt)
+import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes (interval0)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Cardano.Ledger.Keys
@@ -72,7 +72,7 @@ import Cardano.Ledger.Keys
     vKey,
   )
 import Shelley.Spec.Ledger.LedgerState (availableAfterMIR)
-import Shelley.Spec.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))

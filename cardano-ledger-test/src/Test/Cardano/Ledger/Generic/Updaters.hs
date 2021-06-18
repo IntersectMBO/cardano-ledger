@@ -20,6 +20,7 @@
 module Test.Cardano.Ledger.Generic.Updaters where
 
 import Cardano.Crypto.DSIGN.Class ()
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, Data (..), DataHash, hashData)
@@ -44,6 +45,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (ScriptHash (..))
@@ -65,9 +67,7 @@ import qualified Data.Sequence.Strict as Seq (empty, fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.Address (Addr (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..))
-import Shelley.Spec.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
 import qualified Shelley.Spec.Ledger.PParams as PP (PParams, PParams' (..), Update)
 import qualified Shelley.Spec.Ledger.Scripts as Multi

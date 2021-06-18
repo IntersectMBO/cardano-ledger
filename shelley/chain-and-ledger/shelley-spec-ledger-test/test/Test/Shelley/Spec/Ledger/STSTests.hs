@@ -14,7 +14,7 @@ import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Cardano.Ledger.BaseTypes (Network (..))
-import Shelley.Spec.Ledger.Credential (pattern ScriptHashObj)
+import Cardano.Ledger.Credential (pattern ScriptHashObj)
 import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (WitHashes (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))

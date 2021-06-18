@@ -23,6 +23,7 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
@@ -41,6 +42,7 @@ import Cardano.Ledger.Alonzo.TxInfo (runPLCScript, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts', unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Mary.Value (PolicyID (..))
@@ -59,8 +61,6 @@ import qualified Data.Set as Set
 import GHC.Generics
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.Address (Addr)
-import Shelley.Spec.Ledger.Credential (Credential (ScriptHashObj))
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
