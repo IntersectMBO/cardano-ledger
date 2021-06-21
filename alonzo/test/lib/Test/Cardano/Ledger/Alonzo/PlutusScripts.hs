@@ -135,9 +135,9 @@ oddRedeemer3 =
 sumsTo10'_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
                PlutusTx.Builtins.Internal.BuiltinData ->
                PlutusTx.Builtins.Internal.BuiltinData -> ()
-sumsTo10'_0 d1_1 d2_2 _d3_3 = let {m_4 = PlutusTx.Builtins.unsafeDataAsI d1_1;
-                                   n_5 = PlutusTx.Builtins.unsafeDataAsI d2_2}
-                               in if (m_4 PlutusTx.Numeric.+ n_5) PlutusTx.Eq.== 10
+sumsTo10'_0 d1_1 d2_2 _d3_3 = let {n_4 = PlutusTx.Builtins.unsafeDataAsI d1_1;
+                                   m_5 = PlutusTx.Builtins.unsafeDataAsI d2_2}
+                               in if (m_5 PlutusTx.Numeric.+ n_4) PlutusTx.Eq.== 10
                                    then GHC.Tuple.()
                                    else PlutusTx.Builtins.error GHC.Tuple.()
 -}
@@ -147,9 +147,71 @@ sumsTo103 =
   (PlutusScript . pack . concat)
     [ [88, 102, 1, 0, 0, 50, 51, 50, 34, 50, 50, 50, 50, 51, 34],
       [50, 50, 50, 0, 18, 34, 51, 53, 48, 12, 51, 53, 0, 144, 11],
-      [51, 53, 0, 160, 15, 48, 4, 0, 51, 0, 64, 2, 72, 5, 8],
+      [51, 53, 0, 160, 15, 48, 4, 0, 35, 0, 64, 3, 72, 5, 8],
       [2, 8, 212, 1, 128, 32, 1, 200, 221, 96, 0, 137, 26, 128, 33],
       [169, 128, 16, 0, 164, 194, 64, 2, 64, 2, 36, 194, 64, 2, 36],
       [0, 36, 70, 102, 174, 84, 205, 196, 128, 16, 0, 128, 40, 2, 9],
       [16, 1, 9, 16, 0, 144, 0, 145, 25, 184, 0, 2, 0, 17]
+    ]
+
+{- Preproceesed Plutus Script
+oddRedeemer2'_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                   PlutusTx.Builtins.Internal.BuiltinData -> ()
+oddRedeemer2'_0 d1_1 _d3_2 = let n_3 = PlutusTx.Builtins.unsafeDataAsI d1_1
+                              in if PlutusTx.Prelude.modulo n_3 2 PlutusTx.Eq.== 1
+                                  then GHC.Tuple.()
+                                  else PlutusTx.Builtins.error GHC.Tuple.()
+-}
+
+oddRedeemer2 :: Script era
+oddRedeemer2 =
+  (PlutusScript . pack . concat)
+    [ [88, 94, 1, 0, 0, 51, 50, 34, 50, 50, 50, 51, 34, 50, 50],
+      [50, 50, 0, 18, 35, 51, 83, 0, 179, 51, 80, 9, 0, 163, 48],
+      [4, 48, 3, 0, 36, 128, 17, 32, 2, 32, 8, 35, 80, 6, 0],
+      [128, 7, 35, 117, 128, 2, 68, 102, 228, 128, 8, 0, 68, 141, 64],
+      [16, 212, 192, 8, 0, 82, 97, 32, 1, 32, 1, 18, 97, 32, 1],
+      [34, 51, 53, 114, 166, 110, 36, 0, 128, 4, 1, 64, 16, 72, 128],
+      [8, 72, 128, 4, 128, 5]
+    ]
+
+{- Preproceesed Plutus Script
+evenRedeemer2'_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                    PlutusTx.Builtins.Internal.BuiltinData -> ()
+evenRedeemer2'_0 d1_1 _d3_2 = let n_3 = PlutusTx.Builtins.unsafeDataAsI d1_1
+                               in if PlutusTx.Prelude.modulo n_3 2 PlutusTx.Eq.== 0
+                                   then GHC.Tuple.()
+                                   else PlutusTx.Builtins.error GHC.Tuple.()
+-}
+
+evenRedeemer2 :: Script era
+evenRedeemer2 =
+  (PlutusScript . pack . concat)
+    [ [88, 94, 1, 0, 0, 51, 50, 34, 50, 50, 50, 51, 34, 50, 50],
+      [50, 50, 0, 18, 35, 51, 83, 0, 179, 51, 80, 9, 0, 163, 48],
+      [4, 48, 3, 0, 36, 128, 17, 32, 0, 32, 8, 35, 80, 6, 0],
+      [128, 7, 35, 117, 128, 2, 68, 102, 228, 128, 8, 0, 68, 141, 64],
+      [16, 212, 192, 8, 0, 82, 97, 32, 1, 32, 1, 18, 97, 32, 1],
+      [34, 51, 53, 114, 166, 110, 36, 0, 128, 4, 1, 64, 16, 72, 128],
+      [8, 72, 128, 4, 128, 5]
+    ]
+
+{- Preproceesed Plutus Script
+redeemerIs102'_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
+                    PlutusTx.Builtins.Internal.BuiltinData -> ()
+redeemerIs102'_0 d1_1 _d3_2 = let n_3 = PlutusTx.Builtins.unsafeDataAsI d1_1
+                               in if n_3 PlutusTx.Eq.== 10
+                                   then GHC.Tuple.()
+                                   else PlutusTx.Builtins.error GHC.Tuple.()
+-}
+
+redeemerIs102 :: Script era
+redeemerIs102 =
+  (PlutusScript . pack . concat)
+    [ [88, 82, 1, 0, 0, 51, 50, 34, 50, 50, 50, 51, 34, 50, 50],
+      [50, 0, 18, 35, 51, 83, 0, 163, 51, 80, 8, 0, 147, 0, 48],
+      [2, 72, 5, 8, 1, 200, 212, 1, 64, 28, 1, 136, 221, 96, 0],
+      [137, 26, 128, 33, 169, 128, 16, 0, 164, 194, 64, 2, 64, 2, 36],
+      [194, 64, 2, 68, 102, 106, 229, 76, 220, 72, 1, 0, 8, 2, 128],
+      [32, 145, 0, 16, 145, 0, 9, 0, 9]
     ]

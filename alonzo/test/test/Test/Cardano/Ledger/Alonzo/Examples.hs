@@ -16,12 +16,16 @@ import Plutus.V1.Ledger.Examples
     alwaysSucceedingNAryFunction,
   )
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
-  ( evendata3,
+  ( evenRedeemer2,
+    evendata3,
     guessTheNumber2,
     guessTheNumber3,
+    oddRedeemer2,
     odddata3,
+    redeemerIs102,
+    sumsTo103,
   )
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
 
 -- Tests running Plutus scripts directely
@@ -71,6 +75,26 @@ odd3 = case Generated.odddata3 of
   PlutusScript sbs -> sbs
   _ -> error ("Should not happen 'odddata3' is a plutus script")
 
+sum103 :: ShortByteString
+sum103 = case Generated.sumsTo103 of
+  PlutusScript sbs -> sbs
+  _ -> error ("Should not happen 'sumsTo1033' is a plutus script")
+
+evenRed2 :: ShortByteString
+evenRed2 = case Generated.evenRedeemer2 of
+  PlutusScript sbs -> sbs
+  _ -> error ("Should not happen 'evenredeemer2' is a plutus script")
+
+redeemer102 :: ShortByteString
+redeemer102 = case Generated.redeemerIs102 of
+  PlutusScript sbs -> sbs
+  _ -> error ("Should not happen 'redeemeris102' is a plutus script")
+
+oddredeemer2 :: ShortByteString
+oddredeemer2 = case Generated.oddRedeemer2 of
+  PlutusScript sbs -> sbs
+  _ -> error ("Should not happen 'oddredeemer2' is a plutus script")
+
 plutusScriptExamples :: TestTree
 plutusScriptExamples =
   testGroup
@@ -78,7 +102,7 @@ plutusScriptExamples =
     [ testCase "always true" $
         directPlutusTest
           ShouldSucceed
-          (alwaysSucceedingNAryFunction 0)
+          (alwaysSucceedingNAryFunction 4)
           [],
       testCase "always false" $
         directPlutusTest
@@ -119,5 +143,30 @@ plutusScriptExamples =
         directPlutusTest
           ShouldFail
           odd3
-          [P.I 4, P.I 3, P.I 9]
+          [P.I 4, P.I 3, P.I 9],
+      testCase "sumsTo10 with 3 args, correct" $
+        directPlutusTest
+          ShouldSucceed
+          sum103
+          [P.I 3, P.I 7, P.I 9],
+      testCase "sumsTo10 with 3 args, incorrect" $
+        directPlutusTest
+          ShouldFail
+          sum103
+          [P.I 4, P.I 3, P.I 9],
+      testCase "even redeemer with 2 args, correct" $
+        directPlutusTest
+          ShouldSucceed
+          evenRed2
+          [P.I 12, P.I 9],
+      testCase "odd redeemer with 2 args, correct" $
+        directPlutusTest
+          ShouldSucceed
+          oddredeemer2
+          [P.I 11, P.I 9],
+      testCase "redeemer is 10 with 2 args, correct" $
+        directPlutusTest
+          ShouldSucceed
+          redeemer102
+          [P.I 10, P.I 10]
     ]

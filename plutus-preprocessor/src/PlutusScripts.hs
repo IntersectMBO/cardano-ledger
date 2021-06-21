@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 
 module PlutusScripts
   ( guessDecl,
@@ -9,14 +11,19 @@ module PlutusScripts
     odddataDecl,
     oddRedeemerDecl,
     sumsTo10Decl,
+    evenRedeemerDecl2Args,
+    oddRedeemerDecl2Args,
+    redeemerIs10Decl2Args,
   )
 where
 
+import Data.String (fromString)
 import Language.Haskell.TH
 import qualified Plutus.V1.Ledger.Api as P
 import qualified PlutusTx as P (Data (..), compile)
 import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
+import qualified PlutusTx.Trace as Trace (traceError)
 
 guessDecl :: Q [Dec]
 guessDecl =
@@ -65,7 +72,32 @@ sumsTo10Decl =
   [d|
     sumsTo10' :: P.BuiltinData -> P.BuiltinData -> P.BuiltinData -> ()
     sumsTo10' d1 d2 _d3 =
-      let m = P.unsafeDataAsI d1
-          n = P.unsafeDataAsI d2
+      let n = P.unsafeDataAsI d1
+          m = P.unsafeDataAsI d2
        in if (m P.+ n) P.== 10 then () else (P.error ())
+    |]
+
+-- ===========================
+-- 2 arg Plutus scripts, for use in non payment contexts
+
+oddRedeemerDecl2Args :: Q [Dec]
+oddRedeemerDecl2Args =
+  [d|
+    oddRedeemer2' :: P.BuiltinData -> P.BuiltinData -> ()
+    oddRedeemer2' d1 _d3 = let n = P.unsafeDataAsI d1 in if (P.modulo n 2) P.== 1 then () else (P.error ())
+    |]
+
+evenRedeemerDecl2Args :: Q [Dec]
+evenRedeemerDecl2Args =
+  [d|
+    evenRedeemer2' :: P.BuiltinData -> P.BuiltinData -> ()
+    evenRedeemer2' d1 _d3 = let n = P.unsafeDataAsI d1 in if (P.modulo n 2) P.== 0 then () else (P.error ())
+    |]
+
+redeemerIs10Decl2Args :: Q [Dec]
+redeemerIs10Decl2Args =
+  [d|
+    redeemerIs102' :: P.BuiltinData -> P.BuiltinData -> ()
+    redeemerIs102' d1 _d3 =
+      let n = P.unsafeDataAsI d1 in if n P.== 10 then () else (P.error ())
     |]

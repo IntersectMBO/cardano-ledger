@@ -27,10 +27,11 @@ module Test.Shelley.Spec.Ledger.Generator.EraGen
     Sets (..),
     someKeyPairs,
     allScripts,
+    randomByHash,
   )
 where
 
-import Cardano.Binary (Annotator, FromCBOR, ToCBOR (toCBOR))
+import Cardano.Binary (Annotator, FromCBOR, ToCBOR (toCBOR), serializeEncoding')
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (toAddr)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData (..))
@@ -49,6 +50,7 @@ import Cardano.Slotting.Slot (SlotNo)
 import Control.State.Transition.Extended (STS (..))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default)
+import Data.Hashable (Hashable (..))
 import Data.Map (Map)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
@@ -79,7 +81,8 @@ import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( GenEnv (..),
     ScriptInfo,
-    TwoPhaseInfo (..),
+    TwoPhase2ArgInfo (..),
+    TwoPhase3ArgInfo (..),
     genesisCoins,
   )
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, baseScripts, combinedScripts, keyPairs)
@@ -214,9 +217,13 @@ class
   -- | Generate a genesis value for the Era
   genGenesisValue :: GenEnv era -> Gen (Core.Value era)
 
-  -- | A list of two-phase scripts that can be chosen when building a transaction
-  genEraTwoPhaseScripts :: [TwoPhaseInfo era]
-  genEraTwoPhaseScripts = []
+  -- | A list of three-phase scripts that can be chosen for payment when building a transaction
+  genEraTwoPhase3Arg :: [TwoPhase3ArgInfo era]
+  genEraTwoPhase3Arg = []
+
+  -- | A list of two-phase scripts that can be chosen for Delegating, Minting, or Rewarding when building a transaction
+  genEraTwoPhase2Arg :: [TwoPhase2ArgInfo era]
+  genEraTwoPhase2Arg = []
 
   -- | Given some pre-generated data, generate an era-specific TxBody,
   -- and a list of additional scripts for eras that sometimes require
@@ -346,12 +353,47 @@ someScripts ::
   Gen [(Core.Script era, Core.Script era)]
 someScripts c lower upper = take <$> choose (lower, upper) <*> shuffle (allScripts @era c)
 
+-- | A list of all possible kinds of scripts in the current Era.
+--   Might include Keylocked scripts, Start-Finish Timelock scripts, Quantified scripts (All, Any, MofN), Plutus Scripts
+--   Note that 'genEraTwoPhase3Arg' and 'genEraTwoPhase2Arg' may be the empty list ([]) in some Eras.
 allScripts :: forall era. EraGen era => Constants -> [(Core.Script era, Core.Script era)]
-allScripts c = (zipWith combine genEraTwoPhaseScripts (baseScripts @era c) ++ combinedScripts @era c)
+allScripts c =
+  (plutusPairs genEraTwoPhase3Arg genEraTwoPhase2Arg (take 3 simple))
+    ++ (take (numSimpleScripts c) simple) -- 10 means about 5% of allScripts are Plutus Scripts
+    -- Plutus scripts in some Eras ([] in other Eras)
+    -- [(payment,staking)] where the either payment or staking may be a plutus script
+    ++
+    -- Simple scripts (key locked, Start-Finish timelocks)
+    (combinedScripts @era c)
   where
-    -- make pairs of scripts (payment,staking) where the payment part is a PlutusScript
-    combine :: TwoPhaseInfo era -> (Core.Script era, Core.Script era) -> (Core.Script era, Core.Script era)
-    combine info (_, stake) = (getScript info, stake)
+    -- Quantifed scripts (All, Any, MofN)
+
+    simple = baseScripts @era c
+    plutusPairs :: [TwoPhase3ArgInfo era] -> [TwoPhase2ArgInfo era] -> [(Core.Script era, Core.Script era)] -> [(Core.Script era, Core.Script era)]
+    plutusPairs [] _ _ = []
+    plutusPairs _ [] _ = []
+    plutusPairs _ _ [] = []
+    plutusPairs args3 args2 ((pay, stake) : more) = pair : plutusPairs args3 args2 more
+      where
+        count3 = length args3 - 1
+        count2 = length args2 - 1
+        n = randomByHash 0 count3 stake
+        m = randomByHash 0 count2 pay
+        mode = randomByHash 1 3 pay
+        pair = case mode of
+          1 -> (getScript3 (args3 !! n), stake)
+          2 -> (pay, getScript2 (args2 !! m))
+          3 -> (getScript3 (args3 !! n), getScript2 (args2 !! m))
+          i -> error ("mod function returns value out of bounds: " ++ show i)
+
+randomByHash :: forall x. ToCBOR x => Int -> Int -> x -> Int
+randomByHash low high x = low + remainder
+  where
+    n = hash (serializeEncoding' (toCBOR x))
+    -- We don't really care about the hash, we only
+    -- use it to pseudo-randomly pick a number bewteen low and high
+    m = high - low + 1
+    remainder = mod n m -- mode==0 is a time leaf,  mode 1 or 2 is a signature leaf
 
 -- =========================================================
 
