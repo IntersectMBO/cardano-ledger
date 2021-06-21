@@ -22,7 +22,7 @@ import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams, extendPP, ret
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 import Cardano.Ledger.Alonzo.Rules.Utxow (langsUsed)
-import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, scriptfee)
+import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, scriptfee)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo
   ( CostModel (..),
     ExUnits (..),
@@ -30,9 +30,16 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo
     Script (..),
     alwaysSucceeds,
   )
-import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ScriptPurpose (..), ValidatedTx (..), hashWitnessPPData, rdptr)
+import Cardano.Ledger.Alonzo.Tx
+  ( IsValidating (..),
+    ScriptPurpose (..),
+    ValidatedTx (..),
+    hashWitnessPPData,
+    minfee,
+    rdptr,
+  )
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..), inputs')
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..), unRedeemers)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -86,6 +93,8 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass (Quantifier (..), ScriptCl
 import Test.Shelley.Spec.Ledger.Generator.Update (genM, genShelleyPParamsDelta)
 import qualified Test.Shelley.Spec.Ledger.Generator.Update as Shelley (genPParams)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (encodedLen)
+
+-- ============================================================
 
 isKeyHashAddr :: Addr crypto -> Bool
 isKeyHashAddr (AddrBootstrap _) = True
@@ -271,6 +280,11 @@ bigStep, bigMem :: Word64
 bigStep = 999 -- 9999999990
 bigMem = 500 -- 50000000
 
+instance HasField "totExunits" (Tx (AlonzoEra c)) ExUnits where
+  getField tx = Prelude.foldl (<>) mempty (snd $ unzip (Map.elems trd))
+    where
+      trd = unRedeemers $ (getField @"txrdmrs" (getField @"wits" tx))
+
 instance Mock c => EraGen (AlonzoEra c) where
   genEraAuxiliaryData = genAux
   genGenesisValue = maryGenesisValue
@@ -338,7 +352,21 @@ instance Mock c => EraGen (AlonzoEra c) where
         Nothing -> storageCost 0 pp script
       else storageCost 0 pp script
 
-  genEraDone x = x -- ptrace "\nDone " x x
+  genEraDone pp tx =
+    let txb = getField @"body" tx
+        theFee = getField @"txfee" txb -- Coin supplied to pay fees
+        minimumFee = minfee @(AlonzoEra c) pp tx
+     in if (minimumFee <= theFee)
+          then pure tx
+          else discard
+
+  genEraTweakBlock pp txns =
+    let txTotal, ppMax :: ExUnits
+        txTotal = Prelude.foldr (<>) mempty (fmap (getField @"totExunits") txns)
+        ppMax = getField @"_maxBlockExUnits" pp
+     in if pointWiseExUnits (<=) txTotal ppMax
+          then pure txns
+          else discard
 
 storageCost :: ToCBOR t => Integer -> (Alonzo.PParams era) -> t -> Coin
 storageCost extra pp x = (extra + encodedLen x) <×> Coin (fromIntegral (getField @"_minfeeA" pp))

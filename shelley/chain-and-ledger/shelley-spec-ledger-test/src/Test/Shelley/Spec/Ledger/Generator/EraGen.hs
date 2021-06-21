@@ -280,11 +280,19 @@ class
 
   unsafeApplyTx :: Core.Tx era -> TxInBlock era
 
+  -- | compute the delta cost of an additional script on  per Era basis.
   genEraScriptCost :: Core.PParams era -> Core.Script era -> Coin
   genEraScriptCost _pp _script = Coin 0
 
-  genEraDone ::  (Core.Tx era) ->  (Core.Tx era)
-  genEraDone x = x
+  -- | A final opportunity to tweak things when the generator is done. Possible uses
+  --   1) Add tracing when debugging on a per Era basis
+  genEraDone :: Core.PParams era -> (Core.Tx era) -> Gen (Core.Tx era)
+  genEraDone _pp x = pure x
+
+  -- | A final opportunity to tweak things at the block level. Possible uses
+  --   2) Run a test that might decide to 'discard' the test, because we got unlucky, and a rare unfixible condition has occurred.
+  genEraTweakBlock :: Core.PParams era -> Seq (TxInBlock era) -> Gen (Seq (TxInBlock era))
+  genEraTweakBlock _pp seqTx = pure seqTx
 
 
 

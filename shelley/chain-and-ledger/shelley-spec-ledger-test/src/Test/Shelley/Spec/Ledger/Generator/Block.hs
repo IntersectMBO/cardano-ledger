@@ -96,7 +96,8 @@ genBlock ge = genBlockWithTxGen genTxs ge
     genTxs :: TxGen era
     genTxs pp reserves ls s = do
       let ledgerEnv = LedgersEnv @era s pp reserves
-      sigGen @(Core.EraRule "LEDGERS" era) ge ledgerEnv ls
+      block <- sigGen @(Core.EraRule "LEDGERS" era) ge ledgerEnv ls
+      genEraTweakBlock @era pp block
 
 genBlockWithTxGen ::
   forall era.
