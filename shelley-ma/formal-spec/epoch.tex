@@ -62,7 +62,7 @@ calculation function to add up only the Ada in the UTxO
         \left(\fun{stakeCred_b}^{-1}\cup\left(\fun{addrPtr}\circ\var{ptr}\right)^{-1}\right)
         \circ\left(\hldiff{\fun{utxoAda}}~{\var{utxo}}\right)
         \right)
-        \cup \left(\fun{stakeCred_r}^{-1}\circ\var{rewards}\right) \\
+        \cup \var{rewards} \\
       & ~~~~ \var{activeDelegs} =
                (\dom{rewards}) \restrictdom \var{delegations} \restrictrange (\dom{poolParams})
   \end{align*}

@@ -164,9 +164,9 @@ The signal for the UTxO transition is a transaction.
     \left(
       \begin{array}{r@{~\in~}lr}
         \var{utxo} & \UTxO & \text{UTxO}\\
-        \var{deposits} & \Coin & \text{deposits pot}\\
+        \var{deposited} & \Coin & \text{deposits pot}\\
         \var{fees} & \Coin & \text{fee pot}\\
-        \var{pup} & \PPUpdateState & \text{proposed updates}\\
+        \var{ppup} & \PPUpdateState & \text{proposed updates}\\
       \end{array}
     \right)
   \end{equation*}
@@ -262,8 +262,8 @@ preservation of value and witnessing, described in Section~\ref{sec:witnesses-sh
 assures that the ledger state is updated correctly.
 
 The main difference, however, in how rewards and refunds work is that refunds
-come from a $\var{deposits}$ pool, which is a single coin value indicating
-the total decayed amount of all the deposits ever made, while rewards come from individual
+come from the $\var{deposited}$ pot, which is a single coin value indicating
+the sum of all the deposits, while rewards come from individual
 accounts where a reward is accumulated to a specific address.
 
 \begin{figure}[htb]
@@ -286,7 +286,7 @@ accounts where a reward is accumulated to a specific address.
           \var{genDelegs} \\
         \end{array}
       }
-      \vdash \var{pup} \trans{\hyperref[fig:rules:pp-update]{ppup}}{\fun{txup}~\var{tx}} \var{pup'}
+      \vdash \var{ppup} \trans{\hyperref[fig:rules:pp-update]{ppup}}{\fun{txup}~\var{tx}} \var{ppup'}
       \\
       ~
       \\
@@ -318,18 +318,18 @@ accounts where a reward is accumulated to a specific address.
       \left(
       \begin{array}{r}
         \var{utxo} \\
-        \var{deposits} \\
+        \var{deposited} \\
         \var{fees} \\
-        \var{pup}\\
+        \var{ppup}\\
       \end{array}
       \right)
       \trans{utxo}{tx}
       \left(
       \begin{array}{r}
         \varUpdate{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{txb}}  \\
-        \varUpdate{\var{deposits} + \var{depositChange}} \\
+        \varUpdate{\var{deposited} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{txb}} \\
-        \varUpdate{pup'}\\
+        \varUpdate{ppup'}\\
       \end{array}
       \right)
     }
