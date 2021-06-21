@@ -28,7 +28,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( Globals' (..),
     Nonce,
     StrictMaybe (..),
   )

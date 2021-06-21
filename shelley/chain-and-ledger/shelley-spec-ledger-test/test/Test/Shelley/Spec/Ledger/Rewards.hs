@@ -49,7 +49,8 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Wallet (getRewardInfo)
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
-    Globals (..),
+    Globals,
+    Globals' (..),
     Network (..),
     ShelleyBase,
     StrictMaybe (..),

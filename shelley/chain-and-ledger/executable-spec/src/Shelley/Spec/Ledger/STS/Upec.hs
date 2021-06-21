@@ -16,7 +16,7 @@
 -- handles the epoch transitions.
 module Shelley.Spec.Ledger.STS.Upec where
 
-import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe)
+import Cardano.Ledger.BaseTypes (Globals' (..), ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.Constraints

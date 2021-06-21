@@ -23,7 +23,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (Globals (..), Network, ShelleyBase, epochInfo, invalidKey, networkId)
+import Cardano.Ledger.BaseTypes (Globals' (..), Network, ShelleyBase, epochInfo, invalidKey, networkId)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)

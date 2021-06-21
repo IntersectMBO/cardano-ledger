@@ -23,7 +23,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( Globals' (..),
     ShelleyBase,
     epochInfo,
     invalidKey,

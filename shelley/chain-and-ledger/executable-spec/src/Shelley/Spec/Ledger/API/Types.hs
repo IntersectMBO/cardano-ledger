@@ -10,7 +10,7 @@ import Cardano.Ledger.Address as X
     RewardAcnt (..),
   )
 import Cardano.Ledger.BaseTypes as X
-  ( Globals (..),
+  ( Globals' (..),
     Network (..),
     Nonce (..),
     Port (..),

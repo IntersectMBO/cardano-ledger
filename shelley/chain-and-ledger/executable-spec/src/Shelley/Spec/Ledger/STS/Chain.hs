@@ -32,7 +32,7 @@ module Shelley.Spec.Ledger.STS.Chain
 where
 
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( Globals' (..),
     Nonce (..),
     ShelleyBase,
     StrictMaybe (..),

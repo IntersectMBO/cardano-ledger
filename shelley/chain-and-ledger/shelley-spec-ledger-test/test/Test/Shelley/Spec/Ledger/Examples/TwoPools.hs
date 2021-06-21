@@ -42,7 +42,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( Globals' (..),
     Network (..),
     Nonce,
     StrictMaybe (..),

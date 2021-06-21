@@ -49,7 +49,8 @@ module Cardano.Ledger.BaseTypes
     activeSlotLog,
 
     -- * STS Base
-    Globals (..),
+    Globals,
+    Globals' (..),
     epochInfo,
     ShelleyBase,
   )
@@ -321,8 +322,10 @@ activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
 -- Base monad for all STS systems
 --------------------------------------------------------------------------------
 
-data Globals = Globals
-  { epochInfoWithErr :: !(EpochInfo (Either Text)),
+type Globals = Globals' (EpochInfo (Either Text))
+
+data Globals' ei = Globals
+  { epochInfoWithErr :: !ei,
     slotsPerKESPeriod :: !Word64,
     -- | The window size in which our chosen chain growth property
     --   guarantees at least k blocks. From the paper
@@ -353,7 +356,7 @@ data Globals = Globals
   }
   deriving (Show, Generic)
 
-instance NoThunks Globals
+instance NoThunks ei => NoThunks (Globals' ei)
 
 type ShelleyBase = ReaderT Globals Identity
 

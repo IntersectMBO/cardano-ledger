@@ -71,7 +71,8 @@ import Cardano.Crypto.VRF
   )
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( Globals,
+    Globals' (..),
     Network (..),
     Nonce,
     ShelleyBase,
