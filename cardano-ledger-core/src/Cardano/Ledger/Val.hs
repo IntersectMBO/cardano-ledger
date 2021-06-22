@@ -29,6 +29,7 @@ import Cardano.Binary (Decoder, Encoding, decodeWord64, toCBOR)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Data.Group (Abelian)
+import Data.Foldable (foldl')
 
 class
   ( Abelian t,
@@ -84,7 +85,7 @@ scale :: (Val t, Integral i) => i -> t -> t
 scale i v = i <×> v
 
 sumVal :: (Foldable t, Val v) => t v -> v
-sumVal xs = foldl (<+>) mempty xs
+sumVal = foldl' (<+>) mempty
 
 invert :: Val t => t -> t
 invert x = (-1 :: Integer) <×> x
