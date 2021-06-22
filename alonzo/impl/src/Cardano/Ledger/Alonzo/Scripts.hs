@@ -19,7 +19,7 @@
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
     Script (TimelockScript, PlutusScript),
-    scriptfee,
+    txscriptfee,
     ppTag,
     ppScript,
     isPlutusScript,
@@ -41,14 +41,14 @@ module Cardano.Ledger.Alonzo.Scripts
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin, SubCoin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript (hashScript))
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
-    ppCoin,
+    ppSubCoin,
     ppInteger,
     ppMap,
     ppRecord,
@@ -64,7 +64,7 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.Val (Val ((<+>), (<×>)))
+import Cardano.Ledger.Val (Val ((<+>), (<×>), coin))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
@@ -197,8 +197,8 @@ hashCostModel _proxy = hashWithCrypto (Proxy @(Crypto e))
 
 -- | Prices per execution unit
 data Prices = Prices
-  { prMem :: !Coin,
-    prSteps :: !Coin
+  { prMem :: !SubCoin,
+    prSteps :: !SubCoin
   }
   deriving (Eq, Generic, Show, Ord)
 
@@ -208,9 +208,13 @@ instance NFData Prices
 
 -- | Compute the cost of a script based upon prices and the number of execution
 -- units.
-scriptfee :: Prices -> ExUnits -> Coin
+scriptfee :: Prices -> ExUnits -> SubCoin
 scriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
   (mem <×> pr_mem) <+> (steps <×> pr_steps)
+
+-- | Same as `scriptfee`, but returns the fee rounded to the Coin precision.
+txscriptfee :: Prices -> ExUnits -> Coin
+txscriptfee ps = coin . scriptfee ps
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -292,6 +296,6 @@ instance PrettyA CostModel where prettyA = ppCostModel
 
 ppPrices :: Prices -> PDoc
 ppPrices (Prices mem step) =
-  ppRecord "Prices" [("prMem", ppCoin mem), ("prSteps", ppCoin step)]
+  ppRecord "Prices" [("prMem", ppSubCoin mem), ("prSteps", ppSubCoin step)]
 
 instance PrettyA Prices where prettyA = ppPrices

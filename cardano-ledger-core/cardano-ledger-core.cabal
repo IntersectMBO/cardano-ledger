@@ -79,6 +79,7 @@ library
     nothunks,
     partial-order,
     quiet,
+    safe-decimal,
     scientific,
     shelley-spec-non-integral,
     small-steps,

@@ -42,7 +42,7 @@ import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
-import Cardano.Ledger.Coin (DeltaCoin (..))
+import Cardano.Ledger.Coin (DeltaCoin (..), SubCoin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -126,6 +126,7 @@ import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
 import Cardano.Ledger.Serialization (ToCBORGroup)
+import Numeric.Decimal (Decimal(..))
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
 import Test.QuickCheck (Arbitrary, arbitrary, genericShrink, listOf, oneof, recursivelyShrink, resize, shrink, vectorOf)
 import Test.QuickCheck.Gen (chooseAny)
@@ -323,6 +324,10 @@ instance Arbitrary Coin where
 
 instance Arbitrary DeltaCoin where
   arbitrary = DeltaCoin <$> choose (-1000, 1000)
+
+instance Arbitrary SubCoin where
+  -- Cannot be negative even though it is an 'Integer'
+  arbitrary = SubCoin . Decimal <$> choose (0, toInteger (maxBound :: Word64))
 
 instance Arbitrary SlotNo where
   -- Cannot be negative even though it is an 'Integer'

@@ -1,20 +1,26 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Coin
   ( Coin (..),
     CompactForm (..),
     DeltaCoin (..),
+    SubCoin (..),
     word64ToCoin,
     coinToRational,
     rationalToCoinViaFloor,
     addDeltaCoin,
     toDeltaCoin,
     integerToWord64,
+    roundSubCoin,
+    toSubCoin,
   )
 where
 
@@ -29,7 +35,9 @@ import Data.PartialOrd (PartialOrd)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
+import GHC.TypeLits
 import NoThunks.Class (NoThunks (..))
+import Numeric.Decimal
 import Quiet
 
 -- | The amount of value held by a transaction output.
@@ -78,13 +86,31 @@ instance Compactible Coin where
 
 -- It's odd for this to live here. Where should it go?
 integerToWord64 :: Integer -> Maybe Word64
-integerToWord64 c
-  | c < 0 = Nothing
-  | c > (fromIntegral (maxBound :: Word64)) = Nothing
-  | otherwise = Just $ fromIntegral c
+integerToWord64 = fromIntegerBounded
 
 instance ToCBOR (CompactForm Coin) where
   toCBOR (CompactCoin c) = toCBOR c
 
 instance FromCBOR (CompactForm Coin) where
   fromCBOR = CompactCoin <$> fromCBOR
+
+type SubCoinRounding = RoundHalfEven
+
+-- | A `Coin` that has 9 digits of precision after the decimal point.
+newtype SubCoin = SubCoin (Decimal SubCoinRounding 9 Integer)
+  deriving (Eq, Generic)
+  deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
+  deriving newtype (Show, Ord, FromCBOR, ToCBOR, NoThunks, NFData)
+
+-- TODO: move these instances into cardano-binary
+deriving instance (Typeable r, KnownNat s) => ToCBOR (Decimal r s Integer)
+
+deriving instance (Typeable r, KnownNat s) => FromCBOR (Decimal r s Integer)
+
+deriving instance NoThunks p => NoThunks (Decimal r s p)
+
+roundSubCoin :: SubCoin -> Coin
+roundSubCoin (SubCoin d) = Coin (unwrapDecimal (roundDecimal d :: Decimal SubCoinRounding 0 Integer))
+
+toSubCoin :: Coin -> SubCoin
+toSubCoin (Coin c) = SubCoin (fromIntegerDecimal c)

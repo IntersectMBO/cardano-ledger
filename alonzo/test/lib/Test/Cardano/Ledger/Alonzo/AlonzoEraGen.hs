@@ -22,7 +22,7 @@ import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams, extendPP, ret
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 import Cardano.Ledger.Alonzo.Rules.Utxow (langsUsed)
-import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, scriptfee)
+import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, txscriptfee)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo
   ( CostModel (..),
     ExUnits (..),
@@ -54,7 +54,7 @@ import Cardano.Ledger.Mary.Value (policies)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.Tx (Tx (Tx))
-import Cardano.Ledger.Val (adaOnly, (<+>), (<×>))
+import Cardano.Ledger.Val (adaOnly, (<+>), (<×>), inject)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Monad (replicateM)
@@ -246,7 +246,7 @@ genAlonzoPParamsDelta constants pp = do
   shelleypp <- genShelleyPParamsDelta @(MaryEra c) constants (Alonzo.retractPP (Coin 100) pp)
   ada <- genM (Coin <$> choose (1, 5))
   cost <- genM (pure (Map.singleton PlutusV1 freeCostModel)) -- TODO what is a better assumption for this?
-  price <- genM (Prices <$> (Coin <$> choose (0, 2)) <*> (Coin <$> choose (0, 2)))
+  price <- genM (Prices <$> (inject . Coin <$> choose (0, 2)) <*> (inject . Coin <$> choose (0, 2)))
   mxTx <- pure SNothing -- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   -- Not too small for mxV, if this is too small then any Tx with Value
@@ -264,7 +264,7 @@ genAlonzoPParams constants = do
   shelleypp <- Shelley.genPParams @(MaryEra c) constants -- This ensures that "_d" field is not 0.
   ada <- (Coin <$> choose (1, 5))
   cost <- pure (Map.singleton PlutusV1 freeCostModel) -- There are no other Languages, and there must be something for PlutusV1
-  price <- pure (Prices (Coin 0) (Coin 0)) -- (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
+  price <- pure (Prices mempty mempty) -- (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- pure (ExUnits (5 * bigMem + 1) (5 * bigStep + 1)) -- (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- (ExUnits <$> (choose ((20 * bigMem + 1), (30 * bigMem + 1))) <*> choose ((20 * bigStep + 1), (30 * bigStep + 1)))
   mxV <- (genNatural 4000 10000) -- This can't be too small. Shelley uses Hard coded 4000
@@ -345,7 +345,7 @@ instance Mock c => EraGen (AlonzoEra c) where
     if isPlutusScript script
       then case List.find (\info -> (getScript @(AlonzoEra c) info) == script) genEraTwoPhaseScripts of
         Just (TwoPhaseInfo _script _hash inputdata (rdmr, mems, steps)) ->
-          scriptfee (getField @"_prices" pp) (ExUnits mems steps)
+          txscriptfee (getField @"_prices" pp) (ExUnits mems steps)
             <+> storageCost 10 pp (rdmr, ExUnits mems steps) -- Extra 10 for the RdmrPtr
             <+> storageCost 32 pp inputdata -- Extra 32 for the hash
             <+> storageCost 0 pp script

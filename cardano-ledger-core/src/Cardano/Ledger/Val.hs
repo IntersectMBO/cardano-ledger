@@ -26,10 +26,12 @@ module Cardano.Ledger.Val
 where
 
 import Cardano.Binary (Decoder, Encoding, decodeWord64, toCBOR)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), SubCoin (..), roundSubCoin, toSubCoin)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Data.Group (Abelian)
+import Data.Coerce
 import Data.Foldable (foldl')
+import Data.Group (Abelian)
+import Numeric.Decimal
 
 class
   ( Abelian t,
@@ -64,6 +66,7 @@ class
 
   -- | modify the blessed Coin part of t
   modifyCoin :: (Coin -> Coin) -> t -> t
+  modifyCoin f = inject . f . coin
 
   size :: t -> Integer -- compute size of Val instance
 
@@ -100,9 +103,16 @@ instance Val Coin where
   inject = id
   size _ = 1
   modifyCoin f v = f v
-  pointwise p (Coin x) (Coin y) = p x y
+  pointwise = coerce
 
 deriving via Coin instance Val DeltaCoin
+
+instance Val SubCoin where
+  n <×> SubCoin (Decimal d) = SubCoin (Decimal (toInteger n * d))
+  coin = roundSubCoin
+  inject = toSubCoin
+  size _ = 1
+  pointwise = coerce
 
 -- =============================================================
 

@@ -84,7 +84,7 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     Prices,
     Tag (..),
-    scriptfee,
+    txscriptfee,
   )
 import Cardano.Ledger.Alonzo.TxBody
   ( EraIndependentWitnessPPData,
@@ -333,7 +333,7 @@ minfee ::
 minfee pp tx =
   (getField @"txsize" tx <×> a pp)
     <+> b pp
-    <+> scriptfee (getField @"_prices" pp) allExunits
+    <+> txscriptfee (getField @"_prices" pp) allExunits
   where
     a protparam = Coin (fromIntegral (getField @"_minfeeA" protparam))
     b protparam = Coin (fromIntegral (getField @"_minfeeB" protparam))

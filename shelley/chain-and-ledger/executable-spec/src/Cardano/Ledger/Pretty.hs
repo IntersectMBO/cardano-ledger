@@ -27,7 +27,7 @@ import Cardano.Ledger.Address
   )
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (ActiveSlotCoeff, DnsName, FixedPoint, Globals (..), Network (..), Nonce (..), Port (..), StrictMaybe (..), UnitInterval, Url (..), activeSlotLog, activeSlotVal, dnsToText)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), SubCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -72,7 +72,7 @@ import Data.MemoBytes (MemoBytes (..))
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Natural (Natural)
@@ -1168,6 +1168,9 @@ ppCoin (Coin n) = ppSexp "Coin" [pretty n]
 
 ppDeltaCoin :: DeltaCoin -> PDoc
 ppDeltaCoin (DeltaCoin n) = ppSexp "DeltaCoin" [pretty n]
+
+ppSubCoin :: SubCoin -> PDoc
+ppSubCoin (SubCoin n) = ppSexp "SubCoin" [pretty $ pack $ show n]
 
 instance PrettyA Coin where prettyA = ppCoin
 

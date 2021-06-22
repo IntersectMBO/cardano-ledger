@@ -110,6 +110,7 @@ library
     process-extras,
     plutus-tx,
     QuickCheck >= 2.13.2,
+    safe-decimal,
     serialise,
     shelley-spec-ledger,
     small-steps-test,
