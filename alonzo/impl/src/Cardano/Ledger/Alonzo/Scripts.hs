@@ -48,12 +48,12 @@ import Cardano.Ledger.Era (Era (Crypto), ValidateScript (hashScript))
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
-    ppSubCoin,
     ppInteger,
     ppMap,
     ppRecord,
     ppSexp,
     ppString,
+    ppSubCoin,
     ppWord64,
     text,
   )
@@ -64,7 +64,7 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.Val (Val ((<+>), (<×>), coin))
+import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
