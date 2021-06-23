@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -24,18 +25,21 @@ module Cardano.Ledger.Coin
     integerToWord64,
     roundSubCoin,
     toSubCoin,
+    timesSubCoin,
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), DecoderError (..))
 import Cardano.Ledger.Compactible
-import Cardano.Prelude (HeapWords)
+import Control.Monad (when)
+import Cardano.Prelude (HeapWords, cborError)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
 import Data.Proxy
+import Data.Text as Text (pack)
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -104,14 +108,22 @@ type SubCoinRounding = Ceiling
 newtype SubCoin = SubCoin (Decimal SubCoinRounding 9 Integer)
   deriving (Eq, Generic)
   deriving (Semigroup, Monoid, Group, Abelian) via Sum Integer
-  deriving newtype (Show, Ord, FromCBOR, ToCBOR, NoThunks, NFData)
+  deriving newtype (Show, Ord, NoThunks, NFData, Num)
 
--- TODO: move these instances into cardano-binary
-deriving instance (Typeable r, KnownNat s) => ToCBOR (Decimal r s Integer)
+instance ToCBOR SubCoin where
+  toCBOR (SubCoin (Decimal d)) = toCBOR d
 
-deriving instance (Typeable r, KnownNat s) => FromCBOR (Decimal r s Integer)
+instance FromCBOR SubCoin where
+  fromCBOR = do
+    i <- fromCBOR
+    when (i < 0 || i > toInteger (maxBound :: Word64)) $
+      cborError $ DecoderErrorCustom "SubCoin" ("Value is out of bounds: " <> Text.pack (show i))
+    pure $ SubCoin $ Decimal i
 
 deriving instance NoThunks p => NoThunks (Decimal r s p)
+
+timesSubCoin :: Integer -> SubCoin -> SubCoin
+timesSubCoin n (SubCoin (Decimal d)) = SubCoin (Decimal (n * d))
 
 roundSubCoin :: SubCoin -> Coin
 roundSubCoin (SubCoin d) = Coin (unwrapDecimal (roundDecimal d :: Decimal SubCoinRounding 0 Integer))

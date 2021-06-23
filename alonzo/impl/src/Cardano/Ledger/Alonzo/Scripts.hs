@@ -41,7 +41,7 @@ module Cardano.Ledger.Alonzo.Scripts
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
-import Cardano.Ledger.Coin (Coin, SubCoin)
+import Cardano.Ledger.Coin (Coin, SubCoin, roundSubCoin, timesSubCoin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript (hashScript))
@@ -64,7 +64,6 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
@@ -210,11 +209,11 @@ instance NFData Prices
 -- units.
 scriptfee :: Prices -> ExUnits -> SubCoin
 scriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
-  (mem <×> pr_mem) <+> (steps <×> pr_steps)
+  (toInteger mem `timesSubCoin` pr_mem) + (toInteger steps `timesSubCoin` pr_steps)
 
 -- | Same as `scriptfee`, but returns the fee rounded to the Coin precision.
 txscriptfee :: Prices -> ExUnits -> Coin
-txscriptfee ps = coin . scriptfee ps
+txscriptfee ps = roundSubCoin . scriptfee ps
 
 --------------------------------------------------------------------------------
 -- Serialisation

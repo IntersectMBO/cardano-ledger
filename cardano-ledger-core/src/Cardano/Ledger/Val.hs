@@ -26,11 +26,10 @@ module Cardano.Ledger.Val
 where
 
 import Cardano.Binary (Decoder, Encoding, decodeWord64, toCBOR)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), SubCoin (..), roundSubCoin, toSubCoin)
+import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Data.Foldable (foldl')
 import Data.Group (Abelian)
-import Numeric.Decimal
 
 class
   ( Abelian t,
@@ -105,13 +104,6 @@ instance Val Coin where
   pointwise p (Coin x) (Coin y) = p x y
 
 deriving via Coin instance Val DeltaCoin
-
-instance Val SubCoin where
-  n <×> SubCoin (Decimal d) = SubCoin (Decimal (toInteger n * d))
-  coin = roundSubCoin
-  inject = toSubCoin
-  size _ = 1
-  pointwise p (SubCoin (Decimal x)) (SubCoin (Decimal y)) = p x y
 
 -- =============================================================
 
