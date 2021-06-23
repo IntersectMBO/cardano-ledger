@@ -7,7 +7,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Shelley.Spec.Ledger.RewardProvenance where
+module Shelley.Spec.Ledger.RewardProvenance
+  ( RewardProvenance (..),
+    RewardProvenancePool (..),
+    Desirability (..),
+  )
+where
 
 import Cardano.Binary
   ( FromCBOR (fromCBOR),
@@ -43,16 +48,31 @@ import Shelley.Spec.Ledger.TxBody (PoolParams (..), RewardAcnt (..))
 -- instances only
 -- ==========================================================
 
+-- | Provenance for an individual stake pool's reward calculation.
 data RewardProvenancePool crypto = RewardProvenancePool
-  { poolBlocksP :: !Natural,
+  { -- | The number of blocks the pool produced.
+    poolBlocksP :: !Natural,
+    -- | The stake pool's stake share (portion of the total stake).
     sigmaP :: !Rational,
+    -- | The stake pool's active stake share (portion of the active stake).
     sigmaAP :: !Rational,
+    -- | The number of Lovelace owned by the stake pool owners.
+    -- If this value is not at least as large as the 'pledgeRatioP',
+    -- the stake pool will not earn any rewards for the given epoch.
     ownerStakeP :: !Coin,
+    -- | The stake pool's registered parameters.
     poolParamsP :: !(PoolParams crypto),
+    -- | The stake pool's pledge.
     pledgeRatioP :: !Rational,
+    -- | The maximum number of Lovelace this stake pool can earn.
     maxPP :: !Coin,
+    -- | The stake pool's apparent performance.
+    -- See Section 5.5.2 of the
+    --  <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
     appPerfP :: !Rational,
+    -- | The total Lovelace earned by the stake pool.
     poolRP :: !Coin,
+    -- | The total Lovelace earned by the stake pool leader.
     lRewardP :: !Coin
   }
   deriving (Eq, Generic)
@@ -68,6 +88,10 @@ deriving instance (CC.Crypto crypto) => ToJSON (RewardProvenancePool crypto)
 instance Default (RewardProvenancePool crypto) where
   def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
 
+-- | The desirability score of a stake pool, as described
+-- in <https://arxiv.org/abs/1807.11218 "Reward Sharing Schemes for Stake Pools">.
+-- Additionally, the hit rate estimation described in the
+-- <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document> is included.
 data Desirability = Desirability
   { desirabilityScore :: !Double,
     hitRateEstimate :: !Double
@@ -78,31 +102,62 @@ instance NoThunks Desirability
 
 instance NFData Desirability
 
--- | RewardProvenenace captures some of the intermediate calculations when computimg
---     the statking reward distribution, most of these fields are simple scalar
+-- | 'RewardProvenenace' captures some of the intermediate calculations when computing
+--     the staking reward distribution. Most of these fields are simple scalar
 --     values, computed from the current State, and are fixed before we start to compute
---     the distribution. 3 of them are aggregates computed when we compute the distribution.
+--     the distribution. Two of them are aggregates computed when we compute the distribution
+--     ('pools' and 'desirabilities').
+--
+--  For more background, see "Figure 48: The Reward Calculation" and
+--  "Figure 51: Reward Update Creation" of the
+--  <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec the formal specification>.
+--  The variable names here align with those in the specification.
+--  See also Section 5 of the
+--  <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
 data RewardProvenance crypto = RewardProvenance
-  { spe :: !Word64,
+  { -- | The number of slots per epoch.
+    spe :: !Word64,
+    -- | A map from pool ID (the key hash of the stake pool operator's
+    -- verification key) to the number of blocks made in the given epoch.
     blocks :: !(BlocksMade crypto),
+    -- | The maximum Lovelace supply. On mainnet, this value is equal to
+    -- 45 * 10^15 (45 billion ADA).
     maxLL :: !Coin,
+    -- | The maximum amount of Lovelace which can be removed from the reserves
+    -- to be given out as rewards for the given epoch.
     deltaR1 :: !Coin,
-    deltaR2 :: !Coin, -- Aggregate
+    -- | The difference between the total Lovelace that could have been
+    -- distributed as rewards this epoch (which is 'r') and what was actually distributed.
+    deltaR2 :: !Coin,
+    -- | The total Lovelace available for rewards for the given epoch,
+    -- equal to 'rPot' less 'deltaT1'.
     r :: !Coin,
+    -- | The maximum Lovelace supply ('maxLL') less the current value of the reserves.
     totalStake :: !Coin,
+    -- | The total number of blocks produced during the given epoch.
     blocksCount :: !Integer,
+    -- | The decentralization parameter.
     d :: !Rational,
+    -- | The number of blocks expected to be produced during the given epoch.
     expBlocks :: !Integer,
+    -- | The ratio of the number of blocks actually made versus the number
+    -- of blocks that were expected.
     eta :: !Rational,
+    -- | The reward pot for the given epoch, equal to 'deltaR1' plus the fee pot.
     rPot :: !Coin,
+    -- | The amount of Lovelace taken from the treasury for the given epoch.
     deltaT1 :: !Coin,
+    -- | The amount of Lovelace that is delegated during the given epoch.
     activeStake :: !Coin,
-    pools :: -- Aggregate
+    -- | Individual stake pool provenance.
+    pools ::
       !( Map
            (KeyHash 'StakePool crypto)
            (RewardProvenancePool crypto)
        ),
-    desirabilities :: -- Aggregate
+    -- | A map from pool ID to the desirability score.
+    -- See the <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document>.
+    desirabilities ::
       !(Map (KeyHash 'StakePool crypto) Desirability)
   }
   deriving (Eq, Generic)
