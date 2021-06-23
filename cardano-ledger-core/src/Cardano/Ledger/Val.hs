@@ -28,7 +28,6 @@ where
 import Cardano.Binary (Decoder, Encoding, decodeWord64, toCBOR)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), SubCoin (..), roundSubCoin, toSubCoin)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Data.Coerce
 import Data.Foldable (foldl')
 import Data.Group (Abelian)
 import Numeric.Decimal
@@ -103,7 +102,7 @@ instance Val Coin where
   inject = id
   size _ = 1
   modifyCoin f v = f v
-  pointwise = coerce
+  pointwise p (Coin x) (Coin y) = p x y
 
 deriving via Coin instance Val DeltaCoin
 
@@ -112,7 +111,7 @@ instance Val SubCoin where
   coin = roundSubCoin
   inject = toSubCoin
   size _ = 1
-  pointwise = coerce
+  pointwise p (SubCoin (Decimal x)) (SubCoin (Decimal y)) = p x y
 
 -- =============================================================
 
