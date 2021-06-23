@@ -48,6 +48,7 @@ import Control.DeepSeq (NFData (..))
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
+import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -97,6 +98,9 @@ data AlonzoPredFail era
   | MissingRequiredDatums
       !(Set (DataHash (Crypto era))) -- Set of missing data hashes
       !(Set (DataHash (Crypto era))) -- Set of received data hashes
+  | NonOutputSupplimentaryDatums
+      !(Set (DataHash (Crypto era))) -- Set of unallowed data hashes
+      !(Set (DataHash (Crypto era))) -- Set of acceptable supplimental data hashes
   | PPViewHashesDontMatch
       !(StrictMaybe (WitnessPPDataHash (Crypto era)))
       -- ^ The PPHash in the TxBody
@@ -149,9 +153,10 @@ encodePredFail ::
 encodePredFail (WrappedShelleyEraFailure x) = Sum WrappedShelleyEraFailure 0 !> E toCBOR x
 encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
 encodePredFail (MissingRequiredDatums x y) = Sum MissingRequiredDatums 2 !> To x !> To y
-encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 3 !> To x !> To y
-encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 4 !> To x
-encodePredFail (UnspendableUTxONoDatumHash x) = Sum UnspendableUTxONoDatumHash 5 !> To x
+encodePredFail (NonOutputSupplimentaryDatums x y) = Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
+encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
+encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
+encodePredFail (UnspendableUTxONoDatumHash x) = Sum UnspendableUTxONoDatumHash 6 !> To x
 
 instance
   ( Era era,
@@ -174,9 +179,10 @@ decodePredFail ::
 decodePredFail 0 = SumD WrappedShelleyEraFailure <! D fromCBOR
 decodePredFail 1 = SumD UnRedeemableScripts <! From
 decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
-decodePredFail 3 = SumD PPViewHashesDontMatch <! From <! From
-decodePredFail 4 = SumD MissingRequiredSigners <! From
-decodePredFail 5 = SumD UnspendableUTxONoDatumHash <! From
+decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
+decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
+decodePredFail 5 = SumD MissingRequiredSigners <! From
+decodePredFail 6 = SumD UnspendableUTxONoDatumHash <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -270,8 +276,22 @@ alonzoStyleWitness = do
     SJust utxoHashes -> do
       let txHashes = domain (unTxDats . txdats . wits $ tx)
           inputHashes = Set.fromList utxoHashes
-          unmatchedInputHashes = eval (inputHashes ➖ txHashes)
-      Set.null unmatchedInputHashes ?! MissingRequiredDatums unmatchedInputHashes txHashes
+          unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
+      Set.null unmatchedDatumHashes ?! MissingRequiredDatums unmatchedDatumHashes txHashes
+
+      -- Check that all supplimental datums contained in the witness set appear in the outputs.
+      let outputDatumHashes =
+            Set.fromList
+              [ dh
+                | out <- toList $ getField @"outputs" txbody,
+                  SJust dh <- [getField @"datahash" out]
+              ]
+          supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
+          (okSupplimentalDHs, notOkSupplimentalDHs) =
+            Set.partition (`Set.member` outputDatumHashes) supplimentalDatumHashes
+      Set.null notOkSupplimentalDHs
+        ?! NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs
+
   {-  ∀ sph ∈ scriptsNeeded utxo tx, checkScriptData tx utxo  ph  -}
   let sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
       sphs = scriptsNeeded utxo tx

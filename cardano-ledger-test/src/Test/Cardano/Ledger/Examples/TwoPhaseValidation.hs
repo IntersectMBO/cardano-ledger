@@ -913,6 +913,58 @@ utxoStEx9 ::
   UTxOState era
 utxoStEx9 pf = UTxOState (utxoEx9 pf) (Coin 0) (Coin 5) def
 
+-- ====================================================================================
+--  Example 10: A transaction with an acceptable supplimentary datum
+-- ====================================================================================
+
+outEx10 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+outEx10 pf =
+  newTxOut
+    Override
+    pf
+    [ Address (scriptAddr (always 3 pf) pf),
+      Amount (inject $ Coin 995),
+      DHash [hashData $ datumExample1 @era]
+    ]
+
+okSupplimentaryDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
+okSupplimentaryDatumTxBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 3],
+      Outputs [outEx10 pf],
+      Txfee (Coin 5)
+    ]
+
+okSupplimentaryDatumTx ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+okSupplimentaryDatumTx pf =
+  newTx
+    Override
+    pf
+    [ Body (okSupplimentaryDatumTxBody pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (okSupplimentaryDatumTxBody pf)) (someKeys pf)],
+          DataWits [datumExample1]
+        ]
+    ]
+
+utxoEx10 :: forall era. PostShelley era => Proof era -> UTxO era
+utxoEx10 pf = expectedUTxO pf (ExpectSuccess (okSupplimentaryDatumTxBody pf) (outEx10 pf)) 3
+
+utxoStEx10 ::
+  forall era.
+  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  Proof era ->
+  UTxOState era
+utxoStEx10 pf = UTxOState (utxoEx10 pf) (Coin 0) (Coin 5) def
+
 -- =======================
 -- Invalid Transactions
 -- =======================
@@ -1254,6 +1306,40 @@ plutusOutputWithNoDataTx pf =
         ]
     ]
 
+totallyIrrelevantDatum :: Data era
+totallyIrrelevantDatum = Data (Plutus.I 1729)
+
+outputWithNoDatum :: forall era. Era era => Proof era -> Core.TxOut era
+outputWithNoDatum pf = newTxOut Override pf [Address $ someAddr pf, Amount (inject $ Coin 995)]
+
+notOkSupplimentaryDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
+notOkSupplimentaryDatumTxBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 3],
+      Outputs [outputWithNoDatum pf],
+      Txfee (Coin 5)
+    ]
+
+notOkSupplimentaryDatumTx ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+notOkSupplimentaryDatumTx pf =
+  newTx
+    Override
+    pf
+    [ Body (notOkSupplimentaryDatumTxBody pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (notOkSupplimentaryDatumTxBody pf)) (someKeys pf)],
+          DataWits [totallyIrrelevantDatum]
+        ]
+    ]
+
 -- =======================
 -- Alonzo UTXOW Tests
 -- =======================
@@ -1318,7 +1404,11 @@ alonzoUTXOWexamples =
           testCase "validating scripts everywhere" $
             testUTXOW
               (trustMe True $ validatingTxManyScripts pf)
-              (Right . utxoStEx9 $ pf)
+              (Right . utxoStEx9 $ pf),
+          testCase "acceptable supplimentary datum" $
+            testUTXOW
+              (trustMe True $ okSupplimentaryDatumTx pf)
+              (Right . utxoStEx10 $ pf)
         ],
       testGroup
         "invalid transactions"
@@ -1508,6 +1598,16 @@ alonzoUTXOWexamples =
             testUTXOW
               (trustMe True $ plutusOutputWithNoDataTx pf)
               ( Left [[UnspendableUTxONoDatumHash . Set.singleton $ TxIn genesisId 101]]
+              ),
+          testCase "unacceptable supplimentary datum" $
+            testUTXOW
+              (trustMe True $ notOkSupplimentaryDatumTx pf)
+              ( Left
+                  [ [ NonOutputSupplimentaryDatums
+                        (Set.singleton $ hashData @A totallyIrrelevantDatum)
+                        mempty
+                    ]
+                  ]
               )
         ]
     ]
