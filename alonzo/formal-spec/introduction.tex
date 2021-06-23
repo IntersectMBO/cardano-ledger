@@ -89,7 +89,7 @@ start of the Alonzo era.
 
 \subsection{Extended UTxO}
 
-The specification of the extended UTxO model follows the description that was given in~\cite{plutus_eutxo}.
+The specification of the extended UTxO model follows the description that was given in~\cite{chakravarty2020extended}.
 All transaction outputs that are locked by non-native scripts must include the hash of an additional ``datum''. The actual datum needs to be supplied by the transaction spending that output, and can be used to encode state, for example.
 While this datum could instead have been stored directly in the UTxO, our choice of storing it in the transaction body improves space efficiency in the implementation by reducing the UTxO storage requirements. The datum is passed to a script that validates that the output is spent correctly.
 
