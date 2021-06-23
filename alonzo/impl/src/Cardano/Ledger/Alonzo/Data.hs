@@ -99,6 +99,7 @@ instance FromCBOR (Annotator Plutus.Data) where
 instance ToCBOR Plutus.Data where
   toCBOR = Cborg.encode
 
+deriving anyclass instance NoThunks Plutus.BuiltinByteString
 deriving instance NoThunks Plutus.Data
 
 -- ============================================================================
