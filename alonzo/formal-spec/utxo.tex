@@ -5,10 +5,10 @@
   \emph{Functions}
   %
   \begin{align*}
-    & \fun{isNonNativeScriptAddress} \in \Tx \to \Addr \to \Bool \\
-    & \fun{isNonNativeScriptAddress}~tx~a = \\
+    & \fun{isTwoPhaseScriptAddress} \in \Tx \to \Addr \to \Bool \\
+    & \fun{isTwoPhaseScriptAddress}~tx~a = \\
       &\quad\begin{cases}
-        s \in \ScriptNonNative & a \in \AddrScr \land \fun{validatorHash}~a \mapsto s \in \fun{txscripts} (\fun{txwits}~tx) \\
+        s \in \ScriptPhTwo & a \in \AddrScr \land \fun{validatorHash}~a \mapsto s \in \fun{txscripts} (\fun{txwits}~tx) \\
         \False & \text{otherwise}
       \end{cases}
                  \nextdef
@@ -42,8 +42,8 @@
 We have added or changed several functions that deal with fees and collateral as shown in Figure \ref{fig:functions:utxo}.
 
 \begin{itemize}
-  \item $\fun{isNonNativeScriptAddress}$ is a predicate that checks
-  whether an address is used as a script address with a non-native
+  \item $\fun{isTwoPhaseScriptAddress}$ is a predicate that checks
+  whether an address is used as a script address with a phase-2
   script.
   \item $\fun{totExunits}$ calculates the total $\ExUnits$ in a transaction by summing
   the per-script units stored in the indexed redeemer structure
@@ -51,7 +51,7 @@ We have added or changed several functions that deal with fees and collateral as
   paying the necessary fees, and that it does it correctly. That is, it checks that:
   \begin{enumerate}[label=({\roman*})]
     \item the fee amount that the transaction states it is paying suffices to cover
-    the minimum fee that the transaction is obligated to pay; and if the transaction uses non-native scripts, that
+    the minimum fee that the transaction is obligated to pay; and if the transaction uses phase-2 scripts, that
     \item the collateral inputs refer only to UTxOs with key-hash addresses;
     \item all the collateral inputs refer to UTxOs containing Ada only and no other kinds of token; and
     \item the collateral provided is sufficient to cover the percentage of the
@@ -59,7 +59,7 @@ We have added or changed several functions that deal with fees and collateral as
     \item the set of collateral inputs is non-empty
   \end{enumerate}
   Note that checking that a transaction is carrying redeemers is the most simple way to
-  check that it is carrying non-native scripts. A separate check is done in the rule prior to
+  check that it is carrying phase-2 scripts. A separate check is done in the rule prior to
   calling the $\fun{feesOK}$ function that ensure that this is the case.
   \item $\fun{txscriptfee}$ calculates the fee that a transaction must pay for script
   execution based on the amount of $\ExUnits$ it has budgeted, and the prices in the current protocol parameters
@@ -69,7 +69,7 @@ We have added or changed several functions that deal with fees and collateral as
 \end{itemize}
 
 Note that when creating a transaction, the wallet is responsible for
-determining the fees. Thus, it also has to execute the non-native scripts
+determining the fees. Thus, it also has to execute the phase-2 scripts
 and include the fees for their execution.
 
 \subsection{Combining Scripts with Their Inputs}
@@ -94,7 +94,26 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
 \item
   $\fun{indexof}$ is a helper function that finds the index of a given certificate, value, input, or
   withdrawal in a list, finite map, or set of such objects.
-  It assumes there is some ordering on each of these structures.
+  For each of these, it computes the index as follows :
+  \begin{itemize}
+    \item certificates in the $\DCert$ list are indexed in the order in which they arranged
+    in the (full, unfiltered) list of certificates inside the transaction
+    \item the index of a reward account $\var{ract}$ in the the reward withdrawals map is
+    the index of $\var{ract}$ as a key in the (unfiltered) map. The keys of the $\Wdrl$
+    map are arranged in the order defined on the $\RewardAcnt$ type, which is a lexicographical
+    (abbrv. lex) order
+    on the pair of the $\Network$ and the $\Credential$.
+    \item the set of inputs is an ordered set (according to the order defined on
+    the type $\TxIn$) - this also is the order in which the elements of the set are
+    indexed (lex order on the pair of $\TxId$ and $\Ix$). All inputs of a transaction
+    are included in the set being indexed (not just the ones that point to a Plutus script UTxO)
+    \item the set of policy IDs is ordered according to the order defined on $\PolicyID$ (lex).
+    The index of a $\PolicyID$ in this set of policy IDs is computed according to this order.
+    Note that at the use site, the set of policy IDs passed to $\fun{indexof}$ is
+    the (unfiltered) domain of the $\Value$ map in the $\fun{mint}$ field of the transaction.
+  \end{itemize}
+  Note that in all the orderings above, long and short lex are one in the same, since
+  for each of the ordered types, all the terms of that type have the same length.
 \item
   $\fun{indexedRdmrs}$ indexes the pair of a redeemer and an $\ExUnits$ value
   for a given script by its script purpose (eg. the input, or certificate, etc.),
@@ -137,7 +156,7 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
     &\fun{indexof} \in \DCert \to \seqof{\DCert} \to \Ix\\
     &\fun{indexof} \in \AddrRWD \to \Wdrl \to \Ix\\
     &\fun{indexof} \in \TxIn \to \powerset{\TxIn} \to \Ix\\
-    &\fun{indexof} \in \PolicyID \to \Value \to \Ix
+    &\fun{indexof} \in \PolicyID \to \powerset{\PolicyID} \to \Ix
   \end{align*}
   %
   \emph{Indexing functions}
@@ -153,7 +172,7 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
     & ~~\quad \var{rdptr} = \begin{cases}
         (\mathsf{Cert},\fun{indexof}~\var{sp}~(\fun{txcerts}~{txb}))   & \var{sp}~\in~\DCert \\
         (\mathsf{Rewrd},\fun{indexof}~\var{sp}~(\fun{txwdrls}~{txb}))   & \var{sp}~\in~\AddrRWD \\
-        (\mathsf{Mint},\fun{indexof}~\var{sp}~(\fun{mint}~{txb}))    & \var{sp}~\in~\PolicyID \\
+        (\mathsf{Mint},\fun{indexof}~\var{sp}~(\dom~(\fun{mint}~{txb})))    & \var{sp}~\in~\PolicyID \\
         (\mathsf{Spend},\fun{indexof}~\var{sp}~(\fun{txinputs}~{txb})) & \var{sp}~\in~\TxIn
       \end{cases}
   \end{align*}
@@ -179,8 +198,13 @@ predict the exact time to which it refers.
   that needs to be passed to the script interpreter. The $\Language$ argument
   is required because different languages have different expectations of the
   format and contents of the $\TxInfo$ summary.
-  It has a $\UTxO$ as its argument to recover the full information of the inputs of the transaction,
-  but only the inputs of the transaction are provided to scripts. For details, see~\ref{sec:txinfo}
+
+  Note that $\fun{txInfo}$ has a $\UTxO$ argument. Even though the full ledger UTxO
+  is passed to it, we define this function in such a way that the only
+  entries in the ledger UTxO map that a Plutus script
+  actually sees via the argument $\fun{txInfo}$ builds are the ones corresponding to the transaction
+  inputs (ie. its realized inputs). This is done in order to maintain
+  deterministic evaluation. For details, see~\ref{sec:txinfo}
 
 \item
   $\fun{valContext}$ constructs the \emph{validation context}. A validation context is
@@ -198,7 +222,7 @@ predict the exact time to which it refers.
   \end{itemize}
   It outputs the validation result.
   Note that script execution stops if the full budget has been spent before validation is complete.
-  It is left abstract because it is implemented as part of the native script interpreter, not the ledger.
+  It is left abstract because it is implemented as part of the phase-1 script interpreter, not the ledger.
   The interpreter called depends on the language of the script.
 \end{itemize}
 
@@ -221,7 +245,7 @@ Therefore, the slot numbers inside the contract and the slot numbers in the tran
 map differently onto points in time. The ledger does not have access to data (or conversion functions)
 that is needed to convert transaction validity interval slots numbers to slots numbers
 that correspond to the contracts world view. To address this, we decided to pass
-non-native contracts (in all languages and all eras) the system time instead of slot numbers.
+phase-2 contracts (in all languages and all eras) the system time instead of slot numbers.
 The conversion function is implemented by consensus (see~\cite{cardano_consensus}),
 which has the information to do this correctly for
 
@@ -231,8 +255,14 @@ which has the information to do this correctly for
   the consensus's forecast window)
 \end{itemize}
 
+Note that because of this potential slot length change issue, Plutus scripts will
+not receive any information in terms of slot numbers (no phase-1 scripts, no
+validity intervals as slots, and not the current slot). Phase-1 timelock scripts
+continue to operate on validity interval data expressed as slot numbers, and are
+therefore vulnerable to the consequences of changing the slot length.
+
 \textbf{Validation context construction.}
-  As additional non-native scripting languages become supported in the future, scripts of different
+  As additional phase-2 scripting languages become supported in the future, scripts of different
   languages may expect different (or differently structured) transaction and ledger data summary.
   The $\fun{txInfo}$ function will be implemented differently
   for each new language. So, the construction is
@@ -256,11 +286,21 @@ which has the information to do this correctly for
   Script authors must keep this in mind when writing scripts, since the ledger call to the interpreter is oblivious to what
   arguments are required.
 
-  Datum objects are required for all output-locking non-native scripts. That is, a
-  non-native script-locked output that does not include a datum hash is unspendable.
-  Non-output scripts do not expect datum objects - that is, it is not possible to pass
-  a datum to a script used for another purpose (certificate, etc.). Redeemers
-  are required for all non-native scripts.
+  The following is a summary of what arguments are required for what scripts:
+  \begin{itemize}
+    \item Datum objects are required for all output-locking phase-2 scripts. That is, a
+    phase-2 script-locked output that does not include a datum hash is unspendable.
+    \item Non-output locking scripts do not expect datum objects - that is, it is not possible to pass
+    a datum to a script used for another purpose (certificate, etc.).
+    \item Redeemers are required for all phase-2 scripts.
+  \end{itemize}
+
+   If a transaction carrying a Plutus script is missing any inputs required
+   to run a script, we have specified this to be a phase 1
+   ledger failure, and the script is never run (even if its code does not look at
+   the missing input). The reason for this approach is that
+   not passing all inputs results in a script never actually getting run,
+   rather than running and failing.
 
 \begin{figure*}[htb]
   \emph{Abstract Script Validation Types}
@@ -280,7 +320,7 @@ which has the information to do this correctly for
      &\fun{valContext} \in \TxInfo \to \ScriptPurpose \to \Data \\
      &\text{Pairs transaction data with a script purpose} \\~\\
      &\fun{runPLCScript} \in \ScriptPlutus \to \seqof{\Data} \to \ExUnits \to \CostMod \to
-     \IsValidating \\
+     \IsValid \\
      &\text{Validate a Plutus script, taking resource limits into account}
   \end{align*}
   %
@@ -308,7 +348,7 @@ evaluator.
   inputs. Specifically, each tuple in the list contains :
 
   \begin{itemize}
-  \item the script;
+  \item the script, only if it is a phase-2 one;
 
   \item a list of the following script arguments, in this order:
 
@@ -329,15 +369,18 @@ evaluator.
   \item the cost model for $\PlutusVI$, specified in the protocol parameters
   \end{itemize}
 
-  \item $\fun{evalScripts}$ evaluates a whole list of scripts paired with all their
-  inputs by calling the native script validator function, $\fun{runPLCScript}$
-
-  \item $\fun{runNativeScript}$ replaces the $\fun{validateScript}$ function,
-  to diffentiate running native and non-native scripts. The definition is the
-  same as in the ShelleyMA specification.
+  \item $\fun{evalScripts}$ evaluates a whole list of scripts. For $\PlutusVI$ scripts,
+  it evaluates them paired with all their
+  inputs by calling the phase-2 script validator function, $\fun{runPLCScript}$ (see
+  \ref{sec:txinfo} for details).
+  For phase-1 (timelock) scripts, it calls $\fun{evalTimelock}$. Note that although this
+  case is covered in the $\fun{evalScripts}$ definition, it should never be used, as
+  the list of scripts and inputs that gets passed to the this function is constructed
+  to contain only Plutus scripts. So, phase-1 scripts do not get evaluated twice.
 \end{itemize}
 
-Note that no ``checks'' are performed within these functions.
+Note that no ``checks'' are performed within these functions (though they may be,
+in the implementation).
 Missing validators, missing inputs, incorrect hashes, the wrong type of script etc,
 are caught during the application of the UTXOW rule (before these functions are ever applied).
 
@@ -351,55 +394,73 @@ are caught during the application of the UTXOW rule (before these functions are 
       \end{cases}
     \nextdef
     & \fun{collectTwoPhaseScriptInputs} \in \PParams \to \Tx \to \UTxO \to \\
-    & ~~~~ \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
+    & ~~~~ \seqof{(\Script \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
     & \fun{collectTwoPhaseScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
     & ~~\fun{toList} \{ (\var{script}, (\fun{getDatum}~tx~utxo~sp~++~[~\var{rdmr};~\fun{valContext}~\var{txinfo}~\var{sp}~]), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{tx}, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
     & ~~~~(\var{rdmr}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
     & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp}, \\
-    & ~~~~\var{script} \in \ScriptNonNative \} \\
+    & ~~~~\var{script} \in \ScriptPhTwo \} \\
     & \where \\
     & ~~~~~~~ \var{txinfo}~=~\fun{txInfo}~(\fun{language}~{script})~\var{utxo}~\var{tx} \\
     \nextdef
-    & \fun{evalScripts} \in \seqof{(\ScriptNonNative \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \IsValidating \\
-    & \fun{evalScripts}~\epsilon = \True \\
-    & \fun{evalScripts}~((\var{sc}, \var{d}, \var{eu}, \var{cm});\Gamma) =
-      \llbracket sc \rrbracket_{cm,\var{eu}} d \land \fun{evalScripts}~\Gamma
-    \nextdef
-    &\fun{runNativeScript} \in\ScriptNative \to \Tx \to \IsValidating
+    & \fun{evalScripts} \in \Tx \times \seqof{(\Script \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \IsValid \\
+    & \fun{evalScripts}~\var{tx}~\epsilon = \True \\
+    & \fun{evalScripts}~\var{tx}~((\var{sc}, \var{d}, \var{eu}, \var{cm});\Gamma) = \\
+      & \begin{cases}
+        \llbracket sc \rrbracket_{cm,\var{eu}} d \land \fun{evalScripts}~\var{tx}~\Gamma & \var{sc}\in\ScriptPlutus \\
+        \fun{evalTimelock}~\var{tx}~\var{sc} \land \fun{evalScripts}~\var{tx}~\Gamma & \var{sc}\in\ScriptPhOne
+      \end{cases}
   \end{align*}
   \caption{Scripts and their arguments}
   \label{fig:functions:script2}
 \end{figure}
 
-\subsection{Two-Phase Transaction Validation for Non-Native Scripts}
+\subsection{Two-Phase Transaction Validation for Phase-2 Scripts}
 \label{sec:two-phase}
 
 Transactions are validated in two phases:
-the first phase consists of every aspect of transaction validation apart from executing the non-native scripts; and
+the first phase consists of every aspect of transaction validation apart from executing the phase-2 scripts; and
 the second phase involves actually executing those scripts.
-This ensures that users pay for the computational resources that are needed to validate non-native scripts, even
+This ensures that users pay for the computational resources that are needed to validate phase-2 scripts, even
 if script validation fails. %
 In order to handle script execution, an additional transition system is used, called UTXOS.
 It performs the appropriate UTxO state changes, based on the
-value of the $\IsValidating$ tag, which it checks using the $\fun{evalScripts}$ function.
+value of the $\IsValid$ tag, which it checks using the $\fun{evalScripts}$ function.
 
 In general, there is no way to check \emph{a-priori} that the budget that has been supplied is sufficient for the transaction.
 This can only be done by actually running the scripts. From the perspective of the ledger, there is no difference
 between a script that exhausts the $\ExUnits$ budget during validation, and one that fails to validate.
-If a transaction contains a failing script, the only change to the ledger that is made
-is that the collateral is collected into the fee pot.
 
+\textbf{Transaction integrity and charging for failing scripts.}
+If a transaction contains a failing script, the only change to the ledger that is made
+is that the collateral is collected into the fee pot. It is important to note here
+that it can be the case that the only signatures on a transaction are those
+of the keys for the collateral UTxOs (but this must include at least one signature).
+
+The implication of this is that the collateral key owners may be the only
+users that attest to the integrity of the data in the body of the transaction. These
+same key owners, however, are also the only users who stand to lose money if the
+transaction is modified in some way that results in phase-2 failure.
+Transactions with the same body will necessarily have the same outcome of phase-2
+script validation (we give the details in the deterministic script validation property, \ref{prop:fixed-inputs}).
+Therefore, signing the body ensures any modification to any part of a transaction (including
+witnesses, etc.) or update to the ledger state that affect the transaction's validity will result in a phase-1 failure,
+and no collateral collected. The implication of this is that
+the collateral-locking keys have full control over the outcome of phase-2 validation.
+
+
+\textbf{The $\IsValid$ Tag. }
 It is always in the interest of the slot leader to have the new block validate,
 and for it to contain only valid transactions. This motivates the
 slot leader to:
 
 \begin{enumerate}
-  \item Correctly apply the $\IsValidating$ tag;
+  \item Correctly apply the $\IsValid$ tag;
   \item Include all transactions that validate within the block,
   \textit{even when there is a 2nd phase script validation failure};
-  \item Exclude any transactions that are invalid in some way \textit{other than 2nd step script validation failure}.
+  \item Exclude any transactions that are phase-1 invalid
 \end{enumerate}
 
 One important reason for adding the validation tag
@@ -432,9 +493,9 @@ are identical to the UTXO transition (Figure
 There are two rules, corresponding to the two possible state changes of the
 UTxO state in the UTXOS transition system (Figure~\ref{fig:rules:utxo-state-upd}).
 %
-In both cases, the $\fun{evalScripts}$ function is called upon to verify that the $\IsValidating$
+In both cases, the $\fun{evalScripts}$ function is called upon to verify that the $\IsValid$
 tag has been applied correctly. The function $\fun{collectTwoPhaseScriptInputs}$ is used to build
-the inputs $\var{sLst}$ for the $\fun{evalScripts}$ function.
+the input list $\var{sLst}$ for the $\fun{evalScripts}$ function.
 %
 The first rule
 applies when the validation tag is $\True$.
@@ -464,7 +525,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \fun{isValidating}~\var{tx} = \fun{evalScripts}~\var{sLst} = \True
+    \fun{isValid}~\var{tx} = \fun{evalScripts}~\var{tx}~\var{sLst} = \True
     \\~\\
     {
       \begin{array}{r}
@@ -515,7 +576,7 @@ In this case, the states of the UTxO, fee
     \\
     ~
     \\
-    \fun{isValidating}~\var{tx} = \fun{evalScripts}~\var{sLst} = \False
+    \fun{isValid}~\var{tx} = \fun{evalScripts}~\var{tx}~\var{sLst} = \False
     }
     {
     \begin{array}{l}
@@ -579,7 +640,7 @@ This rule has the following changes:
   \item The number of maximum allowed collateral inputs is not exceeded
 
   \item The UTXOS state transition is valid (this is the transition that runs the
-  non-native scripts)
+  phase-2 scripts)
 \end{enumerate}
 
 The resulting state transition is defined entirely by the application of the
@@ -604,7 +665,7 @@ UTXOS rule.
       \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{coinsPerUTxOWord}~pp)} \\~
       \\
       \forall txout \in \txouts{txb},\\
-      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ (\fun{maxTxSize}~pp) * (\fun{maxValSize}~pp)} \\~
+      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ \fun{maxValSize}~pp} \\~
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \to \fun{bootstrapAttrsSize}~a \leq 64 \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
@@ -682,10 +743,10 @@ UTXOS rule.
 \subsection{Witnessing}
 \label{sec:wits}
 
-Because of two-phase transaction validation, non-native script validation is not part of phase one of transaction witnessing
+Because of two-phase transaction validation, phase-2 script validation is not part of phase one of transaction witnessing
 (it is done in phase 2, once the rest of the transaction is validated).
-However, native script validation does remain part of transaction witnessing.
-When witnessing a transaction in phase one, we therefore need to validate only the native scripts.
+However, phase-1 script validation does remain part of transaction witnessing.
+When witnessing a transaction in phase one, we therefore need to validate only the phase-1 scripts.
 
 We construct the following helper functions :
 
@@ -697,13 +758,13 @@ We construct the following helper functions :
   \item $\fun{scriptsNeeded}$ assembles the all the $\ScriptPurpose$ terms
   for validation of every transaction action that requires script validation,
   paired with the hashes of corresponding the witnessing scripts.
-  This function collects hashes of both native and non-native scripts.
+  This function collects hashes of both phase-1 and phase-2 scripts.
 
   \item $\fun{checkScriptData}$ returns $\True$ if, for the given script purpose,
-  whenever the script it points to is non-native, the transaction contains an associated entry
+  whenever the script it points to is phase-2, the transaction contains an associated entry
   in the indexed redeemers structure.
 
-  \item $\fun{languages}$ returns the set of (non-native) script languages
+  \item $\fun{languages}$ returns the set of (phase-2) script languages
   of all the scripts included in the transaction
 \end{itemize}
 
@@ -737,11 +798,11 @@ We construct the following helper functions :
     \nextdef
     & \hspace{-1cm}\fun{checkScriptData} \in \Tx \to \UTxO \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
     & \hspace{-1cm}\fun{checkScriptData}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
-    & (s \in \ScriptNonNative~\Rightarrow \fun{txrdmrs}~tx~sp \neq \{\}) \\
+    & (s \in \ScriptPhTwo~\Rightarrow \fun{txrdmrs}~tx~sp \neq \{\}) \\
     \nextdef
     & \hspace{-1cm}\fun{languages} \in \TxWitness \to \powerset{\Language} \\
     & \hspace{-1cm}\fun{languages}~\var{txw}~=~
-      \{\fun{language}~s \mid s \in \range (\fun{txscripts}~{txw}) \cap \ScriptNonNative\}
+      \{\fun{language}~s \mid s \in \range (\fun{txscripts}~{txw}) \cap \ScriptPhTwo\}
   \end{align*}
   \caption{UTXOW helper functions}
   \label{fig:functions-witnesses}
@@ -751,22 +812,31 @@ We have made the following changes and additions to the UTXOW preconditions:
 
 \begin{itemize}
 
-\item All the native scripts in the transaction validate;
+\item All the phase-1 scripts in the transaction validate;
 
 \item The transaction contains exactly those scripts that are required for witnessing and no
 additional ones;
 
-    \item The datums included in the witnesses are exactly those that are required for validating. That is,
-    datums for all output-locking non-native scripts for the payment credentials of the addresses of the
+    \item The datums included in the witnesses contain all the datums required for
+    validating in phase 2. That is,
+    datums for all output-locking phase-2 scripts for the payment credentials of the addresses of the
     UTxOs the transaction is spending must have attached datum objects. This check will also fail if
     the datum hash fields of such UTxOs are $\Nothing$, as $\Nothing$ is not a
     hash of a datum (and therefore is not a key of the $\DataHash$-indexed map).
 
-    This check is a subset equality check, rather than an equality check, because optional datum objects
-    can be added to the datum map for the purpose of posting them on chain for communication;
+    \item The only datums included in a transaction have hashes that are either in a UTxO
+    corresponding to a transaction input, or in a transaction output. The
+    output datums are for communication only, and are therefore optional, hence
+    the use of subset equality. No additional
+    datums are permitted.
 
-    \item For every item that needs to be validated by a non-native script, the transaction contains
+    \item For every item that needs to be validated by a phase-2 script, the transaction contains
       an entry in the indexed redeemer structure (ie. the execution units and redeemer for it are specified);
+
+    \item The size of the set containing script purposes for all phase-2 scripts is the
+    same as the size of the indexed redeemer structure. Combined with the check above,
+    this ensures that there are no additional entries present in the indexed redeemer structure 
+    (ie. those that are not associated with a specific script purpose);
 
     \item The signatures of the keys whose hashes are specified in the
     $\fun{reqSignerHashes}$ field in a transaction
@@ -776,17 +846,6 @@ additional ones;
     The hash of the subset of protocol parameter values and witnessing data that have been included in the
     transaction body is the same as
     the hash of the witness data and the subset of protocol parameters that are currently contained in the ledger;
-
-    \item A check that ensures that the list of scripts paired with their input data (context, datum and redeemer)
-    has the same number of elements as the set of scripts needed for each script purpose. Note that the same
-    script may appear more than once in both the list and the set, as it can be used for different purposes, and therefore
-    run separately for each, with different input data. Note also that by construction, the output of
-    the $\fun{collectTwoPhaseScriptInputs}$ function should have exactly the same collection of scripts as
-    the $\fun{scriptsNeeded}$ function output - this check is in place to catch discrepancies in this construction.
-    \begin{note}
-      Note that $\fun{collectTwoPhaseScriptInputs}$ is called twice, here and in UTXO. We need to avoid this.
-      ALSO we need to audit the $\fun{wppHash}$ function
-    \end{note}
 \end{itemize}
 
 If these conditions are all satisfied, then the resulting UTxO state change is fully determined
@@ -813,17 +872,21 @@ by the UTXO transition (the application of which is also part of the conditions)
       \var{txw}\leteq\fun{txwits}~{tx} \\
       (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
       \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
-      \dom (\txwitsVKey{txw}) \}\\~\\
-      \hldiff{\forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptNative,
-      \fun{runNativeScript}~\var{s}~\var{tx}}\\~\\
+      \dom (\txwitsVKey{txw}) \}\\
+      \hldiff{\var{inputHashes}\leteq \{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isTwoPhaseScriptAddress}~{tx}~{a}\}}   \\~\\
+      \hldiff{\forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptPhOne,
+      \fun{validateScript}~\var{s}~\var{tx}}\\~\\
       \hldiff{\{ s \mid (\_, s) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} = \dom (\fun{txscripts}~{txw})} \\~\\
-      \hldiff{\{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isNonNativeScriptAddress}~{tx}~{a}\} } \\
-      \hldiff{\subseteq \dom (\fun{txdats}~{txw})} \\~\\
-      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkScriptData}~tx~utxo~sph}
+      \hldiff{\var{inputHashes} \subseteq \dom (\fun{txdats}~{txw})} \\~\\
+      \hldiff{\dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup \{h~\mid~ (\wcard, \wcard, h)\in\fun{txouts}\}}
+      \\~\\
+      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkScriptData}~tx~utxo~sph} \\
+      \hldiff{\|\{ (sp, h)~ \in~ \fun{scriptsNeeded}~\var{utxo}~\var{tx} ~\vert~h\mapsto s~\in~ \fun{txscripts}~{txw},~
+      \var{s} \in \ScriptPhTwo \}\|~=~\|\fun{txrdmrs}~tx\|}
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
-      \hldiff{\fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}}
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}
       \\~\\
       genSig \leteq
       \left\{
@@ -846,8 +909,6 @@ by the UTXO transition (the application of which is also part of the conditions)
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
       \hldiff{\fun{wppHash}~{txb}~=~\fun{hashWitnessPPData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})~(\fun{txdats}~{txw})}
-      \\~\\
-      \hldiff{\|~\fun{scriptsNeeded}~\var{utxo}~\var{tx}~\|~=~\|~\fun{collectTwoPhaseScriptInputs} ~\var{pp}~\var{tx}~ \var{utxo}~\|}
       \\~\\
       {
         \begin{array}{r}

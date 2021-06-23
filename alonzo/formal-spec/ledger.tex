@@ -3,7 +3,7 @@
 
 Figure~\ref{fig:rules:ledger} separates the case where all the scripts
 in a transaction successfully validate from the case where there is one or more that does not.
-These two cases are distinguished by the use of the $\IsValidating$ tag.
+These two cases are distinguished by the use of the $\IsValid$ tag.
 %
 Besides collateral collection, no side effects should occur when processing a
 transaction that contains a script that does not validate. That is, no
@@ -16,7 +16,7 @@ validation tag is verified, and where collateral inputs are collected.
     \label{eq:ledger}
     \inference[ledger-V]
     {
-      \fun{isValidating}~{tx} = \True \\~\\
+      \fun{isValid}~{tx} = \True \\~\\
       {
         \begin{array}{c}
           \var{slot} \\
@@ -74,7 +74,7 @@ validation tag is verified, and where collateral inputs are collected.
     \label{eq:ledger}
     \inference[ledger-NV]
     {
-      \fun{isValidating}~{tx} = \False \\~\\
+      \fun{isValid}~{tx} = \False \\~\\
       (\var{dstate}, \var{pstate}) \leteq \var{dpstate} \\
       (\_, \_, \_, \_, \_, \var{genDelegs}, \_) \leteq \var{dstate} \\
       (\var{poolParams}, \_, \_) \leteq \var{pstate} \\

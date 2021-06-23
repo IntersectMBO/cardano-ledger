@@ -5,44 +5,48 @@
 \begin{figure}[htb]
   \begin{align*}
     \fun{validateScript} & \in\Script\to\Tx\to\Bool \\
-    \fun{validateScript} & ~s~\var{tx}~=
-                           \begin{cases}
-                             \fun{evalMultiSigScript}~s~vhks & \text{if}~s \in\ScriptNI \\
-                             \fun{evalTimelock}~s~\var{vhks} ~\var{itr} & \text{if}~s \in\Timelock \\
-                             \mathsf{False} & \text{otherwise}
-                           \end{cases} \\
-                         & ~~~~\where \var{vhks}\leteq \{\fun{hashKey}~vk \vert
+    \fun{validateScript} ~s~\var{tx}~& =~
+                             \fun{evalTimelock}~\var{vhks} ~\var{itr}~\var{s} \\
+                         & ~~~~\where \\
+                         & ~~~~~~~~\var{vhks}\leteq \{\fun{hashKey}~vk \vert
                            vk \in \dom(\fun{txwitsVKey}~\var{tx})\} \\
-                           \var{itr} \leteq \fun{txvldt}~ (\txbody~ \var{tx})
+                         & ~~~~~~~~\var{itr} \leteq \fun{txvldt}~ (\txbody~ \var{tx})
   \end{align*}
   \caption{Script Validation}
   \label{fig:functions-validate}
 \end{figure}
 
-We have updated the
-$\fun{validateScript}$ function, to allow for the validation of both the
-multi-signature scripts and minting policy scripts, calling the appropriate
-evaluator for each type of script, see Figure~\ref{fig:functions-validate}.
+In the ShelleyMA era, the
+$\fun{validateScript}$ function performs validation of only timelock scripts,
+see Figure~\ref{fig:functions-validate}. Note that while there is no explicit
+support for validating multi-signature scripts in $\fun{validateScript}$,
+these scripts remain effectively usable as the encodings of multi-sig and timelock
+scripts are compatible. An existing multi-sig script-locked output is
+spent by interpreting the encoded script as a timelock script (one without
+any validity interval clauses), then validating it. For details, see the CDDL
+specification.
 
 The arguments that are passed to the $\fun{validateScript}$ function include all those
-that are needed for Timelock and MSig script evaluation :
+that are needed for $\Timelock$ script evaluation :
 
 \begin{itemize}
 \item The script getting evaluated
-\item The set of key hashes (needed to use MSig scripts as Timelock scripts)
-\item The transaction body
+\item The transaction
 \end{itemize}
 
-Because of the extra arguments
-(the $\TxBody$), we must also modify the call to this function
-within the UTXOW rule, passing it the body of the signal transaction.
-
 The semantics of the Timelock language are specified in Figure~\ref{fig:defs:tx-mc-eval}.
+The evaluation of the scripts constructed by $\type{Signature}, \type{AllOf},
+\type{AnyOf}, \type{MOfN}$ is done the same as for their
+$\ScriptNI$ counterparts. The $\type{RequireTimeStart}$ evaluation
+checks that the start of the transaction validity interval is not $\Nothing$, and is in or after
+the slot specified by the constructor. The $\type{RequireTimeExpire}$ evaluation
+checks that the end of the transaction validity interval is not $\Nothing$, and is in or before
+the slot specified by the constructor.
 
 \begin{figure*}[htb]
   \emph{Timelock Script Constructor Types}
   \begin{align*}
-    & \type{evalTimelock} & \in\Timelock \to \powerset{\KeyHash}\to(\Slot^? \times \Slot^?)\to\Bool & \\
+    & \type{evalTimelock} & \in \powerset{\KeyHash}\to(\Slot^? \times \Slot^?)\to\Timelock \to \Bool & \\
     & \text{The type of the Timelock script evaluator} \\~\\
     %
     & \type{Signature} & \in \KeyHash \to \Timelock & \\
@@ -53,29 +57,32 @@ The semantics of the Timelock language are specified in Figure~\ref{fig:defs:tx-
     %
     & \type{MOfN} & \in \N \to \seqof{\Timelock} \to \Timelock & \\
     %
-    & \type{ValidityInterval} & \in (\Slot^? \times \Slot^?) \to \Timelock &\\
+    & \type{RequireTimeStart} & \in \Slot \to \Timelock &\\
+    %
+    & \type{RequireTimeExpire} & \in \Slot \to \Timelock &\\
   \end{align*}
   %
   \emph{Timelock Script Evaluation}
   \begin{align*}
-    & \text {following are defined as in $\ScriptNI$}\\
     \fun{evalTimelock} & ~(\type{Signature}~hk)~\var{vhks}~\wcard =  hk \in vhks \\
     \fun{evalTimelock} & ~(\type{AllOf}~ts)~\var{vhks}~\wcard =
-                              \forall t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+                              \forall t \in ts: \fun{evalTimelock}~t~vhks\\
     \fun{evalTimelock} & ~(\type{AnyOf}~ts)~\var{vhks}~\wcard =
-                              \exists t \in ts: \fun{evalMultiSigScript}~t~vhks\\
+                              \exists t \in ts: \fun{evalTimelock}~t~vhks\\
     \fun{evalTimelock} & ~(\type{MOfN}~m~ts)~\var{vhks}~\wcard = \\
                              & m \leq \Sigma
-                               (\textrm{card} \{ t s.t. t \leftarrow ts \wedge \fun{evalMultiSigScript}~\var{t}~\var{vhks} \\~\\
-    %
-    & \text {checks that the tx validity interval is within the interval specified by the script:}\\
-    & \fun{evalTimelock} ~(\type{ValidityInterval}~\var{(i_s, i_f)})~\var{vhks}~\var{(i_s, i_f)} \\
-    &~~~~ =~
+                               (\textrm{card} \{ t s.t. t \leftarrow ts \wedge \fun{evalTimelock}~\var{t}~\var{vhks} \\
+    \fun{evalTimelock} &~(\type{RequireTimeStart}~\var{lockStart})~\var{vhks}~\var{(\var{txStart}, \wcard)} \\
+    & =~
     \begin{cases}
-      \True & (i_s = \Nothing)~\wedge~(i_f = \Nothing) \\
-      (i_f' \neq \Nothing) \wedge (i_f'~\leq~i_f) & (i_s = \Nothing)~\wedge~(i_f \neq \Nothing) \\
-      (i_s' \neq \Nothing) \wedge (i_s~\leq~i_s') & (i_s \neq \Nothing)~\wedge~(i_f = \Nothing)\\
-      (i_s~\leq~i_s') \wedge (i_f'~\leq~i_f) & (i_s \neq \Nothing)~\wedge~(i_f \neq \Nothing)
+      \False & \var{txStart} = \Nothing \\
+      \var{lockStart} \leq \var{txStart} & \text{otherwise}
+    \end{cases} \\
+    \fun{evalTimelock} &~(\type{RequireTimeExpire}~\var{lockExp})~\var{vhks}~\var{(\wcard, \var{txExp})} \\
+    & =~
+    \begin{cases}
+      \False & \var{txExp} = \Nothing \\
+      \var{txExp} \leq \var{lockExp} & \text{otherwise}
     \end{cases} \\
   \end{align*}
   \caption{Timelock Script Constructor Types and Evaluation}
