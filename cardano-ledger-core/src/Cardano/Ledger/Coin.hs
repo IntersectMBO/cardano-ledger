@@ -3,9 +3,12 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Coin
@@ -32,6 +35,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
+import Data.Proxy
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -94,7 +98,7 @@ instance ToCBOR (CompactForm Coin) where
 instance FromCBOR (CompactForm Coin) where
   fromCBOR = CompactCoin <$> fromCBOR
 
-type SubCoinRounding = RoundHalfEven
+type SubCoinRounding = Ceiling
 
 -- | A `Coin` that has 9 digits of precision after the decimal point.
 newtype SubCoin = SubCoin (Decimal SubCoinRounding 9 Integer)
@@ -114,3 +118,25 @@ roundSubCoin (SubCoin d) = Coin (unwrapDecimal (roundDecimal d :: Decimal SubCoi
 
 toSubCoin :: Coin -> SubCoin
 toSubCoin (Coin c) = SubCoin (fromIntegerDecimal c)
+
+------------------------------------------------------------------------------------------
+-- `Ceiling` type and its `Round` instance have been added to safe-decimal-0.2.2 and can
+-- be removed once upgraded
+-----------
+
+data Ceiling
+
+instance Round Ceiling Integer where
+  roundDecimal = roundUp
+  {-# INLINEABLE roundDecimal #-}
+
+roundUp :: forall r n k p. (Integral p, KnownNat k) => Decimal r (n + k) p -> Decimal r n p
+roundUp (Decimal x)
+  | x >= 0 && r /= 0 = Decimal (q + 1)
+  | otherwise = Decimal q
+  where
+    k = fromIntegral (natVal (Proxy :: Proxy k)) :: Int
+    (q, r) = quotRem x (10 ^ k)
+{-# INLINEABLE roundUp #-}
+
+------------------------------------------------------------------------------------------
