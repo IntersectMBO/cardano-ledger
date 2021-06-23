@@ -686,7 +686,7 @@ spent inputs that are locked by scripts and the consumed withdrawals that are lo
 
 There are different implementation possibilities for the introduced
 multi-signature scheme. Section~\ref{sec:plutus-scripts} describes an
-implementation based on Plutus~\cite{plutus_eutxo} which uses only simple
+implementation based on Plutus~\cite{chakravarty2020extended} which uses only simple
 scripts, without redeemer or data
 scripts. Section~\ref{sec:native-script-interp} describes an alternative
 implementation that supports validation using a
@@ -729,7 +729,7 @@ corresponds to such a Plutus validator script. Its type consists of two
 parameters of unit type and one parameter of type $\PendingTx$; its return type
 is Boolean. The first two input parameters correspond to the redeemer and the
 data scripts which are used in the full extended UTxO model for
-Plutus~\cite{plutus_eutxo}. As those values are not required for simple
+Plutus~\cite{chakravarty2020extended}. As those values are not required for simple
 multi-signature, we use the unit type for them. The Boolean return type signals
 whether the script succeeded in validating the transaction. The function
 $\fun{validateScript}$ specialized for $\ScriptPlutus$ takes a Plutus script
