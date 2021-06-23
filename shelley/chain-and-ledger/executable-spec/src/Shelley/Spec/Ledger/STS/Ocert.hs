@@ -71,6 +71,7 @@ instance
   type Environment (OCERT crypto) = OCertEnv crypto
   type BaseM (OCERT crypto) = ShelleyBase
   type PredicateFailure (OCERT crypto) = OcertPredicateFailure crypto
+  data Event _
 
   initialRules = [pure Map.empty]
   transitionRules = [ocertTransition]

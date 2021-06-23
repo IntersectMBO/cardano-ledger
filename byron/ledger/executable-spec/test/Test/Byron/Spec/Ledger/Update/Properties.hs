@@ -34,9 +34,9 @@ import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
 import           Numeric.Natural (Natural)
 
-import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
+import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS, Event,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed, (?!))
+                     transitionRules, wrapFailed, (?!), wrapEvent)
 import           Control.State.Transition.Generator (HasTrace, SignalGenerator, envGen,
                      randomTraceOfSize, ratio, sigGen, trace, traceLengthsAreClassified,
                      traceOfLength)
@@ -305,6 +305,11 @@ instance STS UBLOCK where
 
   type PredicateFailure UBLOCK = UBlockPredicateFailure
 
+  data Event _
+    = UPIREGEvent (Event UPIREG)
+    | UPIVOTESEvent (Event UPIVOTES)
+    | UPIENDEvent (Event UPIEND)
+
   initialRules
     = [ do
           IRC env <- judgmentContext
@@ -351,12 +356,15 @@ instance STS UBLOCK where
 
 instance Embed UPIREG UBLOCK where
   wrapFailed = UPIREGFailure
+  wrapEvent = UPIREGEvent
 
 instance Embed UPIVOTES UBLOCK where
   wrapFailed = UPIVOTESFailure
+  wrapEvent = UPIVOTESEvent
 
 instance Embed UPIEND UBLOCK where
   wrapFailed = UPIENDFailure
+  wrapEvent = UPIENDEvent
 
 instance HasTrace UBLOCK where
   envGen _ =

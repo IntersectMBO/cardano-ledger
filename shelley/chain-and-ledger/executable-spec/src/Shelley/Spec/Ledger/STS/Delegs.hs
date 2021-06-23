@@ -136,6 +136,7 @@ instance
   type
     PredicateFailure (DELEGS era) =
       DelegsPredicateFailure era
+  data Event _ = DelplEvent (Event (DELPL era))
 
   transitionRules = [delegsTransition]
 
@@ -262,3 +263,4 @@ instance
   Embed (DELPL era) (DELEGS era)
   where
   wrapFailed = DelplFailure
+  wrapEvent = DelplEvent

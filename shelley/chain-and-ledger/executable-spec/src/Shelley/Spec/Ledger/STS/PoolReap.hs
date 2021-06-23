@@ -86,6 +86,7 @@ instance
   type Environment (POOLREAP era) = Core.PParams era
   type BaseM (POOLREAP era) = ShelleyBase
   type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
+  data Event _
   transitionRules = [poolReapTransition]
   assertions =
     [ PostCondition

@@ -91,6 +91,9 @@ instance
   type Environment (TICK era) = ()
   type BaseM (TICK era) = ShelleyBase
   type PredicateFailure (TICK era) = TickPredicateFailure era
+  data Event _
+    = NewEpochEvent (Event (NEWEPOCH era))
+    | RupdEvent (Event (RUPD era))
 
   initialRules = []
   transitionRules = [bheadTransition]
@@ -192,6 +195,7 @@ instance
   Embed (NEWEPOCH era) (TICK era)
   where
   wrapFailed = NewEpochFailure
+  wrapEvent = NewEpochEvent
 
 instance
   ( Era era,
@@ -201,6 +205,7 @@ instance
   Embed (RUPD era) (TICK era)
   where
   wrapFailed = RupdFailure
+  wrapEvent = RupdEvent
 
 {------------------------------------------------------------------------------
 -- TICKF transition
@@ -252,6 +257,8 @@ instance
   type Environment (TICKF era) = ()
   type BaseM (TICKF era) = ShelleyBase
   type PredicateFailure (TICKF era) = TickfPredicateFailure era
+  data Event _
+    = TickfNewEpochEvent (Event (NEWEPOCH era))
 
   initialRules = []
   transitionRules =
@@ -270,3 +277,4 @@ instance
   Embed (NEWEPOCH era) (TICKF era)
   where
   wrapFailed = TickfNewEpochFailure
+  wrapEvent = TickfNewEpochEvent

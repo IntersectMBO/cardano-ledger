@@ -93,6 +93,7 @@ instance
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
   type PredicateFailure (NEWPP era) = NewppPredicateFailure era
+  data Event _
   transitionRules = [newPpTransition]
 
 instance Default (Core.PParams era) => Default (NewppState era) where

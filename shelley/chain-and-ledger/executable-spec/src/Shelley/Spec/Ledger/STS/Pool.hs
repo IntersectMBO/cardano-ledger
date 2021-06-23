@@ -40,6 +40,7 @@ import Control.State.Transition
     failBecause,
     judgmentContext,
     liftSTS,
+    tellEvent,
     (?!),
   )
 import Data.Kind (Type)
@@ -103,6 +104,10 @@ instance
 
   type BaseM (POOL era) = ShelleyBase
   type PredicateFailure (POOL era) = PoolPredicateFailure era
+
+  data Event (POOL era)
+    = NewPoolParam
+    | NewFuturePoolParam
 
   transitionRules = [poolDelegationTransition]
 
@@ -176,13 +181,15 @@ poolDelegationTransition = do
 
       let hk = _poolId poolParam
       if eval (hk ∉ dom stpools)
-        then -- register new, Pool-Reg
-
+        then do
+          -- register new, Pool-Reg
+          tellEvent NewPoolParam
           pure $
             ps
               { _pParams = eval (_pParams ps ∪ singleton hk poolParam)
               }
         else do
+          tellEvent NewFuturePoolParam
           pure $
             ps
               { _fPParams = eval (_fPParams ps ⨃ singleton hk poolParam),

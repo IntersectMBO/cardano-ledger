@@ -92,6 +92,7 @@ instance
   type Environment (PPUP era) = PPUPEnv era
   type BaseM (PPUP era) = ShelleyBase
   type PredicateFailure (PPUP era) = PpupPredicateFailure era
+  data Event _
 
   initialRules = []
 

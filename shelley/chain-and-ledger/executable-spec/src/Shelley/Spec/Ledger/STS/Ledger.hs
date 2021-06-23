@@ -19,6 +19,7 @@ module Shelley.Spec.Ledger.STS.Ledger
   ( LEDGER,
     LedgerEnv (..),
     LedgerPredicateFailure (..),
+    Event (..),
     PredicateFailure,
   )
 where
@@ -162,6 +163,9 @@ instance
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
   type PredicateFailure (LEDGER era) = LedgerPredicateFailure era
+  data Event _
+    = UtxowEvent (Event (Core.EraRule "UTXOW" era))
+    | DelegsEvent (Event (DELEGS era))
 
   initialRules = []
   transitionRules = [ledgerTransition]
@@ -229,12 +233,15 @@ instance
   Embed (DELEGS era) (LEDGER era)
   where
   wrapFailed = DelegsFailure
+  wrapEvent = DelegsEvent
 
 instance
   ( Era era,
     STS (UTXOW era),
-    PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFailure era
+    PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFailure era,
+    Event (Core.EraRule "UTXOW" era) ~ Event (UTXOW era)
   ) =>
   Embed (UTXOW era) (LEDGER era)
   where
   wrapFailed = UtxowFailure
+  wrapEvent = UtxowEvent

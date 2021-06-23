@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.STS.Chain
   ( CHAIN,
     ChainState (..),
     ChainPredicateFailure (..),
+    Event (..),
     PredicateFailure,
     AdaPots (..),
     initialShelleyState,
@@ -270,6 +271,12 @@ instance
 
   type PredicateFailure (CHAIN era) = ChainPredicateFailure era
 
+  data Event _
+    = BbodyEvent (Event (Core.EraRule "BBODY" era))
+    | TicknEvent (Event TICKN)
+    | TickEvent (Event (TICK era))
+    | PrtclEvent (Event (PRTCL (Crypto era)))
+
   initialRules = []
   transitionRules = [chainTransition]
 
@@ -412,11 +419,13 @@ instance
   ( Era era,
     Era era,
     STS (BBODY era),
-    PredicateFailure (Core.EraRule "BBODY" era) ~ BbodyPredicateFailure era
+    PredicateFailure (Core.EraRule "BBODY" era) ~ BbodyPredicateFailure era,
+    Event (Core.EraRule "BBODY" era) ~ Event (BBODY era)
   ) =>
   Embed (BBODY era) (CHAIN era)
   where
   wrapFailed = BbodyFailure
+  wrapEvent = BbodyEvent
 
 instance
   ( Era era,
@@ -426,6 +435,7 @@ instance
   Embed TICKN (CHAIN era)
   where
   wrapFailed = TicknFailure
+  wrapEvent = TicknEvent
 
 instance
   ( Era era,
@@ -436,6 +446,7 @@ instance
   Embed (TICK era) (CHAIN era)
   where
   wrapFailed = TickFailure
+  wrapEvent = TickEvent
 
 instance
   ( Era era,
@@ -446,6 +457,7 @@ instance
   Embed (PRTCL c) (CHAIN era)
   where
   wrapFailed = PrtclFailure
+  wrapEvent = PrtclEvent
 
 data AdaPots = AdaPots
   { treasuryAdaPot :: Coin,

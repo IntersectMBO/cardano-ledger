@@ -27,7 +27,7 @@ import           Data.Data (Data, Typeable)
 import qualified Data.Set as Set
 import           GHC.Generics (Generic)
 
-import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Signal,
+import           Control.State.Transition (Environment, IRC (IRC), PredicateFailure, STS, Event, Signal,
                      State, TRC (TRC), initialRules, judgmentContext, transitionRules, (?!))
 import           Byron.Spec.Ledger.Core (Lovelace, dom, range, (∪), (⊆), (⋪), (◁))
 import           Byron.Spec.Ledger.GlobalParams (lovelaceCap)
@@ -70,6 +70,7 @@ instance STS UTXO where
   type State UTXO = UTxOState
   type Signal UTXO = Tx
   type PredicateFailure UTXO = UtxoPredicateFailure
+  data Event _
 
   initialRules =
     [ do

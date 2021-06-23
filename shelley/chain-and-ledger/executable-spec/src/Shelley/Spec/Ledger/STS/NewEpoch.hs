@@ -98,6 +98,10 @@ instance
   type BaseM (NEWEPOCH era) = ShelleyBase
   type PredicateFailure (NEWEPOCH era) = NewEpochPredicateFailure era
 
+  data Event _
+    = EpochEvent (Event (EPOCH era))
+    | MirEvent (Event (MIR era))
+
   initialRules =
     [ pure $
         NewEpochState
@@ -186,6 +190,7 @@ instance
   Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure
+  wrapEvent = EpochEvent
 
 instance
   ( Era era,
@@ -195,3 +200,4 @@ instance
   Embed (MIR era) (NEWEPOCH era)
   where
   wrapFailed = MirFailure
+  wrapEvent = MirEvent

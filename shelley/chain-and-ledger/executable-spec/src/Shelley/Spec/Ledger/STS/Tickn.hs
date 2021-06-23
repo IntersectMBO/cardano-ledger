@@ -73,6 +73,7 @@ instance STS TICKN where
   type Environment TICKN = TicknEnv
   type BaseM TICKN = ShelleyBase
   type PredicateFailure TICKN = TicknPredicateFailure
+  data Event _
 
   initialRules =
     [ pure

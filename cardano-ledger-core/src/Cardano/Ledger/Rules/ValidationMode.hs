@@ -29,7 +29,7 @@ applySTSValidateSuchThat ::
   RuleContext rtype s ->
   m (Either [[PredicateFailure s]] (State s))
 applySTSValidateSuchThat cond ctx =
-  applySTSOpts opts ctx <&> \case
+  applySTSOpts EPDiscard opts ctx <&> \case
     (st, []) -> Right st
     (_, pfs) -> Left pfs
   where
