@@ -317,6 +317,7 @@ invalid_hereafter = (5, uint)
 
 coin = uint
 
+; sub_coin is integral form of a decimal number with 1e-9 precision
 sub_coin = uint
 
 multiasset<a> = { * policy_id => { * asset_name => a } }
