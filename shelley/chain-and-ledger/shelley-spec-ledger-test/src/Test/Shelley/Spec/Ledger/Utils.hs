@@ -9,7 +9,8 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 module Test.Shelley.Spec.Ledger.Utils
   ( mkSeedFromWords,
     mkCertifiedVRF,
@@ -133,7 +134,7 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.BlockChain (Block, TxSeq, bheader)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.Tx (Tx, TxOut, WitnessSet)
-import Test.QuickCheck (Arbitrary (..))
+import Test.QuickCheck (Arbitrary (..), chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Tasty.HUnit
   ( Assertion,
@@ -183,7 +184,8 @@ data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
 
 instance Arbitrary RawSeed where
   arbitrary =
-    RawSeed <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
+    RawSeed
+      <$> chooseAny <*> chooseAny <*> chooseAny <*> chooseAny <*> chooseAny
 
 instance ToCBOR RawSeed where
   toCBOR (RawSeed w1 w2 w3 w4 w5) = toCBOR (w1, w2, w3, w4, w5)
@@ -226,6 +228,9 @@ mkKeyPair' ::
 mkKeyPair' seed = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair seed
+
+instance DSIGNAlgorithm (DSIGN crypto) => Arbitrary (KeyPair kd crypto) where
+  arbitrary = mkKeyPair' <$> arbitrary
 
 -- | For testing purposes, generate a deterministic VRF key pair given a seed.
 mkVRFKeyPair ::
