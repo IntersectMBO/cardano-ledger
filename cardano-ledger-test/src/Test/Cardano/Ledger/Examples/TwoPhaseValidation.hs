@@ -84,7 +84,7 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (..))
-import Data.Functor.Identity (Identity)
+import Data.Functor.Identity (Identity, runIdentity)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -1630,7 +1630,7 @@ collectTwoPhaseScriptInputsOutputOrdering =
     apf = Alonzo Mock
     context =
       valContext
-        (txInfo testEpochInfo testSystemStart (initUTxO apf) (validatingTx apf))
+        (runIdentity $ txInfo testEpochInfo testSystemStart (initUTxO apf) (validatingTx apf))
         (Spending $ TxIn genesisId 1)
 
 collectOrderingAlonzo :: TestTree
