@@ -21,9 +21,10 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx, totExUnits)
 import Cardano.Ledger.Alonzo.TxSeq (txSeqTxns)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), TxInBlock)
@@ -42,6 +43,7 @@ import Control.State.Transition
     (?!),
   )
 import Data.Coders
+import Data.Foldable (fold)
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -138,7 +140,8 @@ bbodyTransition ::
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     Era era, -- supplies WellFormed HasField, and Crypto constraints
     Era.TxSeq era ~ Alonzo.TxSeq era,
-    Era.TxInBlock era ~ Alonzo.ValidatedTx era
+    Era.TxInBlock era ~ Alonzo.ValidatedTx era,
+    Core.Witnesses era ~ TxWitness era
   ) =>
   TransitionRule (someBBODY era)
 bbodyTransition =
@@ -184,7 +187,7 @@ bbodyTransition =
 
         {- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp  -}
         let txTotal, ppMax :: ExUnits
-            txTotal = foldr (<>) mempty (fmap (getField @"totExunits") txs)
+            txTotal = fold (fmap Alonzo.totExUnits txs)
             ppMax = getField @"_maxBlockExUnits" pp
         pointWiseExUnits (<=) txTotal ppMax ?! TooManyExUnits txTotal ppMax
 
@@ -209,6 +212,7 @@ instance
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     Era.TxSeq era ~ Alonzo.TxSeq era,
     Era.TxInBlock era ~ Alonzo.ValidatedTx era,
+    Core.Witnesses era ~ TxWitness era,
     SupportsSegWit era
   ) =>
   STS (AlonzoBBODY era)

@@ -26,7 +26,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee, totExUnits)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
@@ -258,6 +258,7 @@ feesOK ::
     ValidateScript era, -- isTwoPhaseScriptAddress
     Core.TxOut era ~ Alonzo.TxOut era, -- balance requires this,
     Era.TxInBlock era ~ Alonzo.ValidatedTx era,
+    Core.Witnesses era ~ TxWitness era,
     HasField
       "collateral" -- to get inputs to pay the fees
       (Core.TxBody era)
@@ -327,6 +328,7 @@ utxoTransition ::
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
+    Core.Witnesses era ~ TxWitness era,
     TxInBlock era ~ Alonzo.ValidatedTx era,
     Era.TxSeq era ~ Alonzo.TxSeq era
   ) =>
@@ -449,7 +451,7 @@ utxoTransition = do
 
   {-   totExunits tx ≤ maxTxExUnits pp    -}
   let maxTxEx = getField @"_maxTxExUnits" pp
-      totExunits = getField @"totExunits" tx -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction.
+      totExunits = totExUnits tx -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction.
   pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooBigUTxO maxTxEx totExunits
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
@@ -488,6 +490,7 @@ instance
     -- We fix Core.Value, Core.TxBody, and Core.TxOut
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
+    Core.Witnesses era ~ TxWitness era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Era.TxSeq era ~ Alonzo.TxSeq era,
     Era.TxInBlock era ~ Alonzo.ValidatedTx era
