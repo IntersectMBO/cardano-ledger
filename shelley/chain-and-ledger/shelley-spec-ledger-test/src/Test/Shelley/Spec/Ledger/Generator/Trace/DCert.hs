@@ -45,7 +45,7 @@ import Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, trac
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (runIdentity)
 import Data.List (partition)
-import qualified Data.Map.Strict as Map (lookup)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
@@ -233,7 +233,7 @@ genDCerts
 
     pure
       ( StrictSeq.fromList certs,
-        totalDeposits pparams (_pParams (_pstate dpState)) certs,
+        totalDeposits pparams (`Map.notMember` pools) certs,
         (length deRegStakeCreds) <×> (getField @"_keyDeposit" pparams),
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
@@ -241,6 +241,7 @@ genDCerts
         )
       )
     where
+      pools = _pParams (_pstate dpState)
       isScript (ScriptCred _) = True
       isScript _ = False
 

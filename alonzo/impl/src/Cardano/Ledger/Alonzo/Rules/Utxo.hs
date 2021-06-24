@@ -370,7 +370,7 @@ utxoTransition = do
 
   {-   consumedpp utxo txb = producedpp poolParams txb    -}
   let consumed_ = consumed @era pp utxo txb
-      produced_ = Shelley.produced @era pp stakepools txb
+      produced_ = Shelley.produced @era pp (`Map.notMember` stakepools) txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   {-   adaID  ∉ supp mint tx   -}

@@ -139,7 +139,7 @@ showBalance
   (DPState _ (PState stakepools _ _))
   tx =  "\n\nConsumed: " ++ show (consumed pparams utxo txBody)
          ++ "  Produced: "
-         ++ show (produced @era pparams stakepools txBody)
+         ++ show (produced @era pparams (`Map.notMember` stakepools) txBody)
     where txBody = getField @"body" tx
 
 --  ========================================================================

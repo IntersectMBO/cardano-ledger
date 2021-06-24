@@ -274,16 +274,16 @@ totalDeposits ::
     HasField "_keyDeposit" pp Coin
   ) =>
   pp ->
-  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  (KeyHash 'StakePool crypto -> Bool) ->
   [DCert crypto] ->
   Coin
-totalDeposits pp stpools cs =
+totalDeposits pp isNewPool cs =
   (numKeys <×> getField @"_keyDeposit" pp)
     <+> (numNewPools <×> getField @"_poolDeposit" pp)
   where
     numKeys = length $ filter isRegKey cs
     pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool cs
-    numNewPools = length $ pools `Set.difference` Map.keysSet stpools
+    numNewPools = length $ Set.filter isNewPool pools
 
 getKeyHashFromRegPool :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)
 getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolId $ p

@@ -383,7 +383,7 @@ utxoInductive = do
   null wdrlsWrongNetwork ?! WrongNetworkWithdrawal ni (Set.fromList wdrlsWrongNetwork)
 
   let consumed_ = consumed pp utxo txb
-      produced_ = produced @era pp stakepools txb
+      produced_ = produced @era pp (`Map.notMember` stakepools) txb
   consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
 
   -- process Protocol Parameter Update Proposals
@@ -420,7 +420,7 @@ utxoInductive = do
 
   let refunded = keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
-  let depositChange = totalDeposits pp stakepools txCerts <-> refunded
+  let depositChange = totalDeposits pp (`Map.notMember` stakepools) txCerts <-> refunded
 
   pure
     UTxOState

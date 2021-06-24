@@ -583,7 +583,7 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         created =
           Val.coin (balance u')
             <+> getField @"txfee" txb
-            <+> totalDeposits pp_ pools certs
+            <+> totalDeposits pp_ (`Map.notMember` pools) certs
         consumed_ =
           Val.coin (balance u)
             <+> keyRefunds pp_ txb
@@ -632,7 +632,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
           let certs = toList (getField @"certs" txb)
            in Val.coin (balance (txouts @era txb))
                 <> getField @"txfee" txb
-                <> totalDeposits pp_ pools certs
+                <> totalDeposits pp_ (`Map.notMember` pools) certs
 
 preserveOutputsTx ::
   forall era.

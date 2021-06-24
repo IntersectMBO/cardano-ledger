@@ -169,7 +169,7 @@ scriptsValidateTransition = do
       depositChange =
         ( totalDeposits
             pp
-            poolParams
+            (`Map.notMember` poolParams)
             (toList $ getField @"certs" txb)
         )
           Val.<-> refunded

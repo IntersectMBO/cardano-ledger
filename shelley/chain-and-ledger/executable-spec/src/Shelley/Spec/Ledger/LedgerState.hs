@@ -801,14 +801,14 @@ produced ::
     HasField "_poolDeposit" pp Coin
   ) =>
   pp ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
+  (KeyHash 'StakePool (Crypto era) -> Bool) ->
   Core.TxBody era ->
   Core.Value era
-produced pp stakePools tx =
+produced pp isNewPool tx =
   balance (txouts @era tx)
     <+> Val.inject
       ( getField @"txfee" tx
-          <+> totalDeposits pp stakePools (toList $ getField @"certs" tx)
+          <+> totalDeposits pp isNewPool (toList $ getField @"certs" tx)
       )
 
 -- | Compute the key deregistration refunds in a transaction
@@ -1006,8 +1006,9 @@ depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
     -- to emphasize this point.
 
     currentPool = (_deposited . _utxoState) ls
+    pools = _pParams . _pstate . _delegationState $ ls
     txDeposits =
-      totalDeposits pp ((_pParams . _pstate . _delegationState) ls) (toList $ getField @"certs" tx)
+      totalDeposits pp (`Map.notMember` pools) (toList $ getField @"certs" tx)
     txRefunds = keyRefunds pp tx
 
 reapRewards ::
