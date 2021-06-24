@@ -32,17 +32,17 @@ import Cardano.Ledger.Alonzo.PParams
   )
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
 import qualified Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
-import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (UtxosFailure))
+import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (UtxosFailure), utxoEntrySize)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS, constructValidated, lbl2Phase)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (WrappedShelleyEraFailure))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import qualified Cardano.Ledger.BaseTypes as Shelley
 import Cardano.Ledger.Coin
@@ -62,6 +62,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut (..),
     UsesValue,
   )
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Tx (Tx (Tx))
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
@@ -73,11 +74,23 @@ import Control.State.Transition.Extended (TRC (TRC))
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
+import qualified Data.Set as Set
 import qualified Shelley.Spec.Ledger.API as API
 import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Genesis (genesisUTxO, sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams)
 import Shelley.Spec.Ledger.LedgerState
+  ( AccountState (..),
+    DPState (..),
+    EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    UTxOState (..),
+    _dstate,
+    _genDelegs,
+    _pParams,
+    _pstate,
+  )
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
 import Shelley.Spec.Ledger.STS.Ledger
@@ -212,6 +225,18 @@ instance
 
 instance (CC.Crypto c) => UsesTxOut (AlonzoEra c) where
   makeTxOut _proxy addr val = TxOut addr val Shelley.SNothing
+
+instance CC.Crypto c => API.CLI (AlonzoEra c) where
+  evaluateMinFee = minfee
+
+  evaluateConsumed = consumed
+
+  addKeyWitnesses (Tx b ws aux) newWits = Tx b ws' aux
+    where
+      ws' = ws {txwitsVKey = Set.union newWits (txwitsVKey ws)}
+
+  evaluateMinLovelaceOutput pp out =
+    Coin $ utxoEntrySize out * unCoin (_coinsPerUTxOWord pp)
 
 type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)
 

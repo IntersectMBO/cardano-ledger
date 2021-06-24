@@ -37,9 +37,10 @@ import Cardano.Ledger.Alonzo.Tx
     hashWitnessPPData,
     minfee,
     rdptr,
+    totExUnits,
   )
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..), inputs')
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..), unRedeemers)
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -280,11 +281,6 @@ bigStep, bigMem :: Word64
 bigStep = 999 -- 9999999990
 bigMem = 500 -- 50000000
 
-instance HasField "totExunits" (Tx (AlonzoEra c)) ExUnits where
-  getField tx = Prelude.foldl (<>) mempty (snd $ unzip (Map.elems trd))
-    where
-      trd = unRedeemers $ (getField @"txrdmrs" (getField @"wits" tx))
-
 instance Mock c => EraGen (AlonzoEra c) where
   genEraAuxiliaryData = genAux
   genGenesisValue = maryGenesisValue
@@ -362,7 +358,7 @@ instance Mock c => EraGen (AlonzoEra c) where
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
-        txTotal = Prelude.foldr (<>) mempty (fmap (getField @"totExunits") txns)
+        txTotal = Prelude.foldr (<>) mempty (fmap totExUnits txns)
         ppMax = getField @"_maxBlockExUnits" pp
      in if pointWiseExUnits (<=) txTotal ppMax
           then pure txns

@@ -43,6 +43,7 @@ library
     Cardano.Ledger.Alonzo.Rules.Utxos
     Cardano.Ledger.Alonzo.Rules.Utxow
     Cardano.Ledger.Alonzo.Scripts
+    Cardano.Ledger.Alonzo.Tools
     Cardano.Ledger.Alonzo.Translation
     Cardano.Ledger.Alonzo.Tx
     Cardano.Ledger.Alonzo.TxBody
@@ -51,6 +52,7 @@ library
     Cardano.Ledger.Alonzo.TxWitness
     Cardano.Ledger.DescribeEras
   build-depends:
+    array,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
