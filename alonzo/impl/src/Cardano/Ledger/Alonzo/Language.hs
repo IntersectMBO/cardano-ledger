@@ -11,6 +11,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord64)
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppString)
 import Control.DeepSeq (NFData (..))
 import Data.Coders
+import Data.Ix (Ix)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -26,7 +27,7 @@ import NoThunks.Class (NoThunks)
 -- We might add new languages in the futures.
 
 data Language = PlutusV1 --    | ADD-NEW-LANGUAGES-HERE
-  deriving (Eq, Generic, Show, Ord)
+  deriving (Eq, Generic, Show, Ord, Enum, Bounded, Ix)
 
 instance NoThunks Language
 
