@@ -149,7 +149,6 @@ instance
   type Environment (DELEG era) = DelegEnv era
   type BaseM (DELEG era) = ShelleyBase
   type PredicateFailure (DELEG era) = DelegPredicateFailure era
-  data Event _
 
   transitionRules = [delegationTransition]
 

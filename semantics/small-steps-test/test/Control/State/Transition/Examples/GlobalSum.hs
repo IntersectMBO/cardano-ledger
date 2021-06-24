@@ -33,8 +33,6 @@ instance STS GSUM where
 
   type PredicateFailure GSUM = NoFailure
 
-  data Event _
-
   initialRules = [pure 0]
 
   transitionRules =

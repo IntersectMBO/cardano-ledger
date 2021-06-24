@@ -67,7 +67,6 @@ instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
   type Environment (MIR era) = ()
   type BaseM (MIR era) = ShelleyBase
   type PredicateFailure (MIR era) = MirPredicateFailure era
-  data Event _
 
   transitionRules = [mirTransition]
 

@@ -31,7 +31,6 @@ import Control.State.Transition
     Environment,
     PredicateFailure,
     STS,
-    Event,
     Signal,
     State,
     TRC (..),
@@ -40,7 +39,7 @@ import Control.State.Transition
     judgmentContext,
     trans,
     transitionRules,
-    wrapFailed, wrapEvent
+    wrapFailed,
   )
 import Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
@@ -114,8 +113,6 @@ instance
 
   type BaseM (CERTS era) = ShelleyBase
 
-  data Event _ = DELPLEvent (Event (DELPL era))
-
   initialRules = []
   transitionRules = [certsTransition]
 
@@ -154,7 +151,6 @@ instance
   Embed (DELPL era) (CERTS era)
   where
   wrapFailed = CertsFailure
-  wrapEvent = DELPLEvent
 
 instance
   ( EraGen era,

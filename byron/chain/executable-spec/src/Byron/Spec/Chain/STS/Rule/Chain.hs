@@ -87,16 +87,6 @@ instance STS CHAIN where
 
   type PredicateFailure CHAIN = ChainPredicateFailure
 
-  data Event _
-   = UPIREGEvent           ( Event UPIREG   )
-   | UPVOTESEvent          ( Event UPIVOTES )
-   | UPIENDEvent           ( Event UPIEND   )
-   | EpochEvent            ( Event EPOCH    )
-   | BBodyEvent            ( Event BBODY    )
-   | PBFTEvent             ( Event PBFT     )
-   | LedgerDelegationEvent ( Event DELEG    )
-   | LedgerUTxOEvent       ( Event UTXOWS   )
-
   initialRules =
     [ do
         IRC (_sNow, utxo0', ads, pps', k) <- judgmentContext
@@ -172,23 +162,18 @@ instance STS CHAIN where
 
 instance Embed EPOCH CHAIN where
   wrapFailed = EpochFailure
-  wrapEvent = EpochEvent
 
 instance Embed BBODY CHAIN where
   wrapFailed = BBodyFailure
-  wrapEvent = BBodyEvent
 
 instance Embed PBFT CHAIN where
   wrapFailed = PBFTFailure
-  wrapEvent = PBFTEvent
 
 instance Embed DELEG CHAIN where
   wrapFailed = LedgerDelegationFailure
-  wrapEvent = LedgerDelegationEvent
 
 instance Embed UTXOWS CHAIN where
   wrapFailed = LedgerUTxOFailure
-  wrapEvent = LedgerUTxOEvent
 
 isHeaderSizeTooBigFailure :: PredicateFailure CHAIN -> Bool
 isHeaderSizeTooBigFailure (HeaderSizeTooBig _ _ _) = True

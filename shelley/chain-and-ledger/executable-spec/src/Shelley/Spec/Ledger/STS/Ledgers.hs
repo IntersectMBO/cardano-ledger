@@ -118,7 +118,6 @@ instance
   type Environment (LEDGERS era) = LedgersEnv era
   type BaseM (LEDGERS era) = ShelleyBase
   type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
-  data Event _ = LedgerEvent (Event (LEDGER era))
 
   transitionRules = [ledgersTransition]
 
@@ -153,4 +152,3 @@ instance
   Embed (LEDGER era) (LEDGERS era)
   where
   wrapFailed = LedgerFailure
-  wrapEvent = LedgerEvent
