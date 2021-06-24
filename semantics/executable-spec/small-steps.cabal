@@ -69,7 +69,6 @@ library
                      , strict-containers
                      , text
                      , transformers >= 0.5
-                     , writer-cps-mtl
                      -- IOHK deps
                      , cardano-crypto-class
                      , cardano-binary

@@ -132,7 +132,6 @@ mkTrace env initState sigs = Trace env initState sigs'
 --   type State DUMMY = Int
 --   type Signal DUMMY = String
 --   type PredicateFailure DUMMY = DummyPredicateFailure
---   data Event _
 --   initialRules = []
 --   transitionRules = []
 -- :}
@@ -355,7 +354,6 @@ preStatesAndSignals NewestFirst tr
 --   type State ADDER = Int
 --   type Signal ADDER = Int
 --   type PredicateFailure ADDER = AdderPredicateFailure
---   data Event _
 --   initialRules = [ pure 0 ]
 --   transitionRules =
 --     [ do
@@ -497,7 +495,7 @@ applySTSTest ::
   RuleContext rtype s ->
   m (Either [[PredicateFailure s]] (State s))
 applySTSTest ctx =
-  applySTSOpts EPDiscard defaultOpts ctx <&> \case
+  applySTSOpts defaultOpts ctx <&> \case
     (st, []) -> Right st
     (_, pfs) -> Left pfs
   where

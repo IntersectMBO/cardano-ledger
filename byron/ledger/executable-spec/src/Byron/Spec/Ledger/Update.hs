@@ -385,7 +385,6 @@ instance STS UPSVV where
   type State UPSVV = Map UpId (ApName, ApVer, Metadata)
   type Signal UPSVV = UProp
   type PredicateFailure UPSVV = UpsvvPredicateFailure
-  data Event _
 
   initialRules = []
   transitionRules =
@@ -424,7 +423,6 @@ instance STS UPPVV where
   type State UPPVV = Map UpId (ProtVer, PParams)
   type Signal UPPVV = UProp
   type PredicateFailure UPPVV = UppvvPredicateFailure
-  data Event _
 
   initialRules = []
   transitionRules =
@@ -467,9 +465,6 @@ instance STS UPV where
   type Signal UPV = UProp
   type PredicateFailure UPV = UpvPredicateFailure
 
-  data Event _
-    = UPPVVEvent (Event UPPVV)
-    | UPSVVEvent (Event UPSVV)
 
   initialRules = []
   transitionRules =
@@ -505,11 +500,9 @@ instance STS UPV where
 
 instance Embed UPPVV UPV where
   wrapFailed = UPPVVFailure
-  wrapEvent = UPPVVEvent
 
 instance Embed UPSVV UPV where
   wrapFailed = UPSVVFailure
-  wrapEvent = UPSVVEvent
 
 data UPREG deriving (Generic, Data, Typeable)
 -- | These `PredicateFailure`s are all throwable.
@@ -532,8 +525,6 @@ instance STS UPREG where
     )
   type Signal UPREG = UProp
   type PredicateFailure UPREG = UpregPredicateFailure
-  data Event _
-    = UPVEvent (Event UPV)
 
   initialRules = []
   transitionRules =
@@ -553,7 +544,6 @@ instance STS UPREG where
 
 instance Embed UPV UPREG where
   wrapFailed = UPVFailure
-  wrapEvent = UPVEvent
 
 ------------------------------------------------------------------------
 -- Update voting
@@ -602,7 +592,6 @@ instance STS ADDVOTE where
   type State ADDVOTE = Set (UpId, Core.VKeyGenesis)
   type Signal ADDVOTE = Vote
   type PredicateFailure ADDVOTE = AddvotePredicateFailure
-  data Event _
 
   initialRules = []
   transitionRules =
@@ -649,7 +638,6 @@ instance STS UPVOTE where
     )
   type Signal UPVOTE = Vote
   type PredicateFailure UPVOTE = UpvotePredicateFailure
-  data Event _ = ADDVOTEEvent (Event ADDVOTE)
 
   initialRules = []
   transitionRules =
@@ -681,7 +669,6 @@ instance STS UPVOTE where
 
 instance Embed ADDVOTE UPVOTE where
   wrapFailed = ADDVOTEFailure
-  wrapEvent = ADDVOTEEvent
 
 ------------------------------------------------------------------------
 -- Update voting
@@ -697,7 +684,6 @@ instance STS FADS where
   type State FADS = [(Core.Slot, (ProtVer, PParams))]
   type Signal FADS = (Core.Slot, (ProtVer, PParams))
   type PredicateFailure FADS = FadsPredicateFailure
-  data Event _
 
   initialRules = []
   transitionRules =
@@ -753,7 +739,6 @@ instance STS UPEND where
     )
   type Signal UPEND = (ProtVer, Core.VKey)
   type PredicateFailure UPEND = UpendPredicateFailure
-  data Event _ = FADSEvent (Event FADS)
 
   initialRules = []
   transitionRules =
@@ -825,7 +810,6 @@ instance STS UPEND where
 
 instance Embed FADS UPEND where
   wrapFailed = error "No possible failures in FADS"
-  wrapEvent = FADSEvent
 
 ------------------------------------------------------------------------
 -- Update interface
@@ -964,7 +948,6 @@ instance STS UPIREG where
   type State UPIREG = UPIState
   type Signal UPIREG = UProp
   type PredicateFailure UPIREG = UpiregPredicateFailure
-  data Event _ = UPREGEvent (Event UPREG)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -998,7 +981,6 @@ instance STS UPIREG where
 
 instance Embed UPREG UPIREG where
   wrapFailed = UPREGFailure
-  wrapEvent = UPREGEvent
 
 instance HasTrace UPIREG where
 
@@ -1342,7 +1324,6 @@ instance STS UPIVOTE where
   type State UPIVOTE = UPIState
   type Signal UPIVOTE = Vote
   type PredicateFailure UPIVOTE = UpivotePredicateFailure
-  data Event _ = UPVOTEEvent (Event UPVOTE)
 
   initialRules = []
   transitionRules =
@@ -1383,7 +1364,6 @@ instance STS UPIVOTE where
 
 instance Embed UPVOTE UPIVOTE where
   wrapFailed = UPVOTEFailure
-  wrapEvent = UPVOTEEvent
 
 
 data APPLYVOTES deriving (Generic, Data, Typeable)
@@ -1397,7 +1377,6 @@ instance STS APPLYVOTES where
   type State APPLYVOTES = UPIState
   type Signal APPLYVOTES = [Vote]
   type PredicateFailure APPLYVOTES = ApplyVotesPredicateFailure
-  data Event _ = UpivoteEvent (Event UPIVOTE)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1414,7 +1393,6 @@ instance STS APPLYVOTES where
 
 instance Embed UPIVOTE APPLYVOTES where
   wrapFailed = UpivoteFailure
-  wrapEvent = UpivoteEvent
 
 data UPIVOTES deriving (Generic, Data, Typeable)
 
@@ -1427,7 +1405,6 @@ instance STS UPIVOTES where
   type State UPIVOTES = UPIState
   type Signal UPIVOTES = [Vote]
   type PredicateFailure UPIVOTES = UpivotesPredicateFailure
-  data Event _ = ApplyVotesEvent (Event APPLYVOTES)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1474,7 +1451,6 @@ instance STS UPIVOTES where
 
 instance Embed APPLYVOTES UPIVOTES where
   wrapFailed = ApplyVotesFailure
-  wrapEvent = ApplyVotesEvent
 
 instance HasTrace UPIVOTES where
 
@@ -1575,7 +1551,6 @@ instance STS UPIEND where
   type State UPIEND = UPIState
   type Signal UPIEND = (ProtVer, Core.VKey)
   type PredicateFailure UPIEND = UpiendPredicateFailure
-  data Event _ = UPENDEvent (Event UPEND)
 
   initialRules = [ return $! emptyUPIState ]
 
@@ -1615,7 +1590,6 @@ instance STS UPIEND where
 
 instance Embed UPEND UPIEND where
   wrapFailed = UPENDFailure
-  wrapEvent = UPENDEvent
 
 -- | Given a list of protocol versions and keys endorsing those versions,
 -- generate a protocol-version endorsement, or 'Nothing' if the list of
@@ -1658,8 +1632,6 @@ instance STS PVBUMP where
   type Signal PVBUMP = ()
   type PredicateFailure PVBUMP = PvbumpPredicateFailure
 
-  data Event _
-
   initialRules = []
   transitionRules =
     [ do
@@ -1688,7 +1660,6 @@ instance STS UPIEC where
   type State UPIEC = UPIState
   type Signal UPIEC = ()
   type PredicateFailure UPIEC = UpiecPredicateFailure
-  data Event _ = PVBUMPEvent (Event PVBUMP)
 
   initialRules = []
   transitionRules =
@@ -1720,7 +1691,6 @@ instance STS UPIEC where
 
 instance Embed PVBUMP UPIEC where
   wrapFailed = PVBUMPFailure
-  wrapEvent = PVBUMPEvent
 
 -- | Generate an optional update-proposal and a list of votes, given an update
 -- environment and state.

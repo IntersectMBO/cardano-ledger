@@ -378,7 +378,6 @@ instance
   type
     PredicateFailure (UTXO era) =
       UtxoPredicateFailure era
-  data Event _ = UpdateEvent (Event (PPUP era))
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -391,7 +390,6 @@ instance
   Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
-  wrapEvent = UpdateEvent
 
 --------------------------------------------------------------------------------
 -- Serialisation

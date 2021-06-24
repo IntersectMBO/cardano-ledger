@@ -20,9 +20,9 @@ import           GHC.Generics (Generic)
 import           Byron.Spec.Ledger.STS.UTXO (UTxOEnv, UTxOState)
 import           Byron.Spec.Ledger.STS.UTXOW (UTXOW)
 import           Byron.Spec.Ledger.UTxO (Tx)
-import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS(..),
+import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed, wrapEvent)
+                     transitionRules, wrapFailed)
 import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 
@@ -37,7 +37,6 @@ instance STS UTXOWS where
   type Signal UTXOWS = [Tx]
   type Environment UTXOWS = UTxOEnv
   type PredicateFailure UTXOWS = UtxowsPredicateFailure
-  data Event _ = UtxowEvent (Event UTXOW)
 
   initialRules =
     [ do
@@ -58,7 +57,6 @@ instance STS UTXOWS where
 
 instance Embed UTXOW UTXOWS where
   wrapFailed = UtxowFailure
-  wrapEvent = UtxowEvent
 
 instance HasTrace UTXOWS where
   envGen = envGen @UTXOW

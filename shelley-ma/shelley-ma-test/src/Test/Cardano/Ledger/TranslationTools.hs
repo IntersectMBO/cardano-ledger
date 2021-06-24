@@ -79,7 +79,7 @@ decodeTestAnn _ x =
    let bytes = serialize x
        decoded = decodeAnnotator mempty fromCBOR bytes :: Either DecoderError b
     in case decoded of
-  Left e -> assertFailure $
+  Left e -> assertFailure $ 
        "\nerror: " <> show e
     <> "\nbytes: " <> show (B16.encode bytes) <> "\n"
   Right _ -> return ()

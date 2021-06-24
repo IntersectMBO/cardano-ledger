@@ -91,8 +91,6 @@ instance
   type Environment (UPEC era) = EpochState era
   type BaseM (UPEC era) = ShelleyBase
   type PredicateFailure (UPEC era) = UpecPredicateFailure era
-  data Event (UPEC era)
-    = NewPpEvent (Event (NEWPP era))
   initialRules = []
   transitionRules =
     [ do
@@ -158,4 +156,3 @@ instance
   Embed (NEWPP era) (UPEC era)
   where
   wrapFailed = NewPpFailure
-  wrapEvent = NewPpEvent

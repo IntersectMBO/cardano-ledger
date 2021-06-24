@@ -114,10 +114,6 @@ instance
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
   type PredicateFailure (EPOCH era) = EpochPredicateFailure era
-  data Event _
-    = SnapEvent (Event (SNAP era))
-    | PoolReapEvent (Event (POOLREAP era))
-    | UpecEvents (Event (UPEC era))
   transitionRules = [epochTransition]
 
 instance
@@ -210,7 +206,6 @@ instance
   Embed (SNAP era) (EPOCH era)
   where
   wrapFailed = SnapFailure
-  wrapEvent = SnapEvent
 
 instance
   ( Era era,
@@ -220,7 +215,6 @@ instance
   Embed (POOLREAP era) (EPOCH era)
   where
   wrapFailed = PoolReapFailure
-  wrapEvent = PoolReapEvent
 
 instance
   ( Era era,
@@ -230,4 +224,3 @@ instance
   Embed (UPEC era) (EPOCH era)
   where
   wrapFailed = UpecFailure
-  wrapEvent = UpecEvents

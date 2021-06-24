@@ -49,7 +49,6 @@ instance (UsesTxOut era, UsesValue era) => STS (SNAP era) where
   type Environment (SNAP era) = LedgerState era
   type BaseM (SNAP era) = ShelleyBase
   type PredicateFailure (SNAP era) = SnapPredicateFailure era
-  data Event _
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 

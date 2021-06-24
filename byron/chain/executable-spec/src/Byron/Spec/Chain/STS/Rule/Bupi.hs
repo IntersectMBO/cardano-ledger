@@ -9,8 +9,8 @@ import           Data.Data (Data, Typeable)
 
 
 import           Control.State.Transition (Embed, Environment, PredicateFailure, STS, Signal, State,
-                     TRC (TRC), TransitionRule, Event, initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed, wrapEvent)
+                     TRC (TRC), TransitionRule, initialRules, judgmentContext, trans,
+                     transitionRules, wrapFailed)
 import           Byron.Spec.Ledger.Core (VKey)
 import           Byron.Spec.Ledger.Update (ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, Vote)
 
@@ -38,11 +38,6 @@ instance STS BUPI where
   type Signal BUPI = UpdatePayload
 
   type PredicateFailure BUPI = BupiPredicateFailure
-
-  data Event _
-    = UPIREGEvent  (Event UPIREG)
-    | UPVOTESEvent (Event UPIVOTES)
-    | UPIENDEvent  (Event UPIEND)
 
   initialRules = []
 
@@ -72,12 +67,9 @@ instance STS BUPI where
 
 instance Embed UPIREG BUPI where
   wrapFailed = UPIREGFailure
-  wrapEvent = UPIREGEvent
 
 instance Embed UPIVOTES BUPI where
   wrapFailed = UPIVOTESFailure
-  wrapEvent = UPVOTESEvent
 
 instance Embed UPIEND BUPI where
   wrapFailed = UPIENDFailure
-  wrapEvent = UPIENDEvent

@@ -98,7 +98,6 @@ instance
   type Environment (RUPD era) = RupdEnv era
   type BaseM (RUPD era) = ShelleyBase
   type PredicateFailure (RUPD era) = RupdPredicateFailure era
-  data Event _
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]

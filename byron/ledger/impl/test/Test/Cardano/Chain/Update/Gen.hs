@@ -250,6 +250,6 @@ genEndorsementError = Endorsement.MultipleProposalsForProtocolVersion <$>
   genProtocolVersion
 
 genRegistrationTooLarge :: Gen (Registration.TooLarge Int)
-genRegistrationTooLarge = Registration.TooLarge
+genRegistrationTooLarge = Registration.TooLarge 
   <$> Gen.int Range.constantBounded
   <*> Gen.int Range.constantBounded
