@@ -118,7 +118,7 @@ On-chain requirements may be split into mandatory and optional requirements.
 \item
   prevent denial-of-service attacks by limiting the proposal submission rate;
 \item
-  avoid signficant increases in memory and storage requirements;
+  avoid significant increases in memory and storage requirements in the node implementation;
 \item
   avoid service interruptions by ensuring that computation for vote tallying etc does not impact normal block production;
 \item
@@ -155,7 +155,7 @@ proposals that are in the general interest.   This attack is mitigated by:
   \item
     setting high thresholds for vote acceptance, and basing these thresholds on active participation;
   \item
-    ensuring that all ada holders can easily participate in vote delegation, including setting low costs for participation\khcomment{and not locking tokens};
+    ensuring that all ada holders can easily participate in vote delegation, including setting low costs for participation and not locking tokens\footnote{This has been shown to reduce voter participation};
   \item
     never permanently transferring voting rights to delegates, and allowing vote delegation to be easily changed by the ada holder;
   \item

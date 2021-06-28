@@ -39,12 +39,39 @@ over the blockchain, without first gaining the authorisation of the majority of
 the held stake.
 
 \stepcounter{issue}
-\subsection*{Issue \theissue{}.}
+\subsection*{Issue \theissue{}: How to prevent proxy Ada holders from exercising voting rights.}
 
 \subsubsection*{Description of Issue.}
 
+Proxy holders, such as exchanges, may exercise voting rights.  This may affect legitimacy: votes are exercised by those who do not own Ada.
+
+One proposed solution is ``token locking''.  Votes are only counted for tokens that have been locked.  Locked tokens cannot be sold or transferred.
+This discourages proxy holders from voting by restricting token liquidity.
+However, experience with the Catalyst voting system shows that this also reduces normal voter participation,
+with a consequent effect on representation and legitimacy. \khcomment{Can we quantify this?}
+% A significant proportion of Ada holders are discouraged from voting.
+
 \subsubsection*{Alternative Solutions.}
 
+\begin{enumerate}
+\item
+  \emph{Only locked tokens may vote.}  Unfortunately, this also reduces voting participation by direct Ada holders, who must accept a loss of liquidity in return for voting rights.
+\item
+  \emph{``Enterprise'' addresses do not possess voting rights.}  Proxy holders register enterprise addresses, which forgo voting (and stake delegation) rights.
+\item
+  \emph{There is no explicit control over proxy voting rights.}  Ada holders may enter a legal agreement with their proxies, electing to retain voting
+  rights but to delegate staking rights, for example.  
+\end{enumerate}
+
+Although both token locking and enterprise addresses have been implemented, neither has been effective.
+The rewards mechanism incentivises proxy holders to delegate stake (meaning that enterprise addresses are rarely, if ever, used),
+and token locking creates risk for normal ada holders, so reducing participation.
+
+
 \subsubsection*{Chosen Resolution.}
+
+Since neither token locking nor enterprise addresses have been shown to be effective, we have adopted the third solution.
+Any tokens may vote: tokens do not need to be locked for voting purposes.  Enterprise addresses are supported (and have no voting rights), but
+there is no on-chain mechanism to enforce this.
 
 \pagebreak
