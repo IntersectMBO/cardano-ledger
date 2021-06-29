@@ -947,7 +947,8 @@ okSupplimentaryDatumTxBody pf =
     pf
     [ Inputs [TxIn genesisId 3],
       Outputs [outEx10 pf],
-      Txfee (Coin 5)
+      Txfee (Coin 5),
+      WppHash (newWppHash pf (pp pf) [] (Redeemers mempty) txDatsExample1)
     ]
 
 okSupplimentaryDatumTx ::
@@ -1332,8 +1333,11 @@ notOkSupplimentaryDatumTxBody pf =
     pf
     [ Inputs [TxIn genesisId 3],
       Outputs [outputWithNoDatum pf],
-      Txfee (Coin 5)
+      Txfee (Coin 5),
+      WppHash (newWppHash pf (pp pf) [] (Redeemers mempty) totallyIrrelevantTxDats)
     ]
+  where
+    totallyIrrelevantTxDats = TxDats $ keyBy hashData [totallyIrrelevantDatum]
 
 notOkSupplimentaryDatumTx ::
   forall era.
