@@ -98,6 +98,7 @@ import Cardano.Ledger.Alonzo.TxWitness
     TxDats (..),
     TxWitness (..),
     nullDats,
+    nullRedeemers,
     ppTxWitness,
     txrdmrs,
     unRedeemers,
@@ -266,7 +267,7 @@ hashWitnessPPData ::
   TxDats era ->
   StrictMaybe (WitnessPPDataHash (Crypto era))
 hashWitnessPPData pp langs rdmrs dats =
-  if (Map.null $ unRedeemers rdmrs) && Set.null langs
+  if nullRedeemers rdmrs && Set.null langs && nullDats dats
     then SNothing
     else
       let newset = Set.map (getLanguageView pp) langs
