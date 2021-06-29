@@ -397,6 +397,7 @@ closure env st0 sigs = mkTrace env st0 <$> loop st0 (reverse sigs) []
    . ( MonadIO m
      , MonadReader (st -> sig -> Either err st) m
      , Show err
+     , HasCallStack
      )
   => m st -> sig -> m st
 mSt .- sig = do
@@ -410,7 +411,7 @@ mSt .- sig = do
 -- the expected state, given in the second argument.
 (.->)
   :: forall m st
-   . (MonadIO m, Eq st, Show st)
+   . (MonadIO m, Eq st, Show st, HasCallStack)
   => m st -> st -> m st
 mSt .-> stExpected = do
   stActual <- mSt
