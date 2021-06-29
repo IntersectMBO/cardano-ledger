@@ -269,11 +269,8 @@ hashWitnessPPData pp langs rdmrs dats =
   if (Map.null $ unRedeemers rdmrs) && Set.null langs
     then SNothing
     else
-      let newset = mapLangSet (getLanguageView pp) langs
+      let newset = Set.map (getLanguageView pp) langs
        in SJust (hashAnnotated (WitnessPPData rdmrs dats newset))
-  where
-    mapLangSet :: (Language -> LangDepView era) -> (Set Language -> Set (LangDepView era))
-    mapLangSet f = Set.foldr (\x acc -> Set.insert (f x) acc) mempty
 
 -- ===============================================================
 -- From the specification, Figure 5 "Functions related to fees"
