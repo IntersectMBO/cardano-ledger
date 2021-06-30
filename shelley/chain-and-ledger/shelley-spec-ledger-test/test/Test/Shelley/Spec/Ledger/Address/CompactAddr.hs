@@ -62,6 +62,7 @@ propDecompactShelleyLazyAddr = do
       keyHash1 = unsafeGetHash . CA.decompactAddr . mangle . CA.compactAddr $ addr
    in pure $ keyHash0 == keyHash1
 
+-- | TODO This property test is failing to find a discrepancy that was found on mainnet.
 propIsBootstrapRedeemer :: Addr crypto -> Property
 propIsBootstrapRedeemer addr =
   Addr.isBootstrapRedeemer addr === CA.isBootstrapRedeemer (CA.compactAddr addr)
