@@ -310,3 +310,16 @@ search low high = mapM_ zzz [low .. high]
       case ans of
         Nothing -> putStrLn ("OK " ++ show n) >> pure (Right ())
         Just () -> putStrLn ("Fails " ++ show n) >> pure (Left n)
+
+-- ==============================
+
+go :: IO ()
+go =
+  defaultMain $
+    testGroup
+      "Fast Alonzo Property Tests"
+      [ testProperty
+          "Chain and Ledger traces cover the relevant cases"
+          -- (withDiscardRatio 0
+          (withMaxSuccess 10 (relevantCasesAreCovered @(AlonzoEra TestCrypto)))
+      ]
