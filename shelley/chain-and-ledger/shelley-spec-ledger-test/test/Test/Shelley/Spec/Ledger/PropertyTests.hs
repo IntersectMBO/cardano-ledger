@@ -108,7 +108,7 @@ minimalPropertyTests ::
 minimalPropertyTests =
   testGroup
     "Minimal Property Tests"
-    [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era),
+    [ (localOption (QuickCheckMaxRatio 45) $ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era)),
       TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain @era),
       TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated @era),
       bootstrapHashTest,
@@ -153,9 +153,10 @@ propertyTests =
     "Property-Based Testing"
     [ testGroup
         "Classify Traces"
-        [ TQC.testProperty
+        [  (localOption (QuickCheckMaxRatio 45) $
+            TQC.testProperty
             "Chain and Ledger traces cover the relevant cases"
-            (relevantCasesAreCovered @era)
+            (relevantCasesAreCovered @era))
         ],
       testGroup
         "STS Rules - Delegation Properties"

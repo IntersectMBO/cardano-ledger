@@ -246,7 +246,9 @@ fastPropertyTests :: TestTree
 fastPropertyTests =
   testGroup
     "Fast Alonzo Property Tests"
-    [ testProperty "Chain and Ledger traces cover the relevant cases" (withMaxSuccess 10 (relevantCasesAreCovered @(AlonzoEra TestCrypto))),
+    [ ( localOption (QuickCheckMaxRatio 45) $
+          testProperty "Chain and Ledger traces cover the relevant cases" (withMaxSuccess 10 (relevantCasesAreCovered @(AlonzoEra TestCrypto)))
+      ),
       testProperty "total amount of Ada is preserved (Chain)" (withMaxSuccess 50 (adaPreservationChain @(AlonzoEra TestCrypto)))
     ]
 
@@ -318,8 +320,9 @@ go =
   defaultMain $
     testGroup
       "Fast Alonzo Property Tests"
-      [ testProperty
-          "Chain and Ledger traces cover the relevant cases"
-          -- (withDiscardRatio 0
-          (withMaxSuccess 10 (relevantCasesAreCovered @(AlonzoEra TestCrypto)))
+      [ ( localOption (QuickCheckMaxRatio 45) $
+            testProperty
+              "Chain and Ledger traces cover the relevant cases"
+              (withMaxSuccess 10 (relevantCasesAreCovered @(AlonzoEra TestCrypto)))
+        )
       ]
