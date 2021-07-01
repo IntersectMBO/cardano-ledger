@@ -215,6 +215,8 @@ getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
 
+-- | WARNING: This optimized version of isBootstrapRedeemer does not agree
+-- with the one in Cardano.Ledger.Address
 isBootstrapRedeemer :: CompactAddr crypto -> Bool
 isBootstrapRedeemer (UnsafeCompactAddr bytes) =
   testBit header byron -- AddrBootstrap

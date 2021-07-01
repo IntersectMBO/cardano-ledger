@@ -106,7 +106,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
+import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     ShelleyBase,
@@ -187,7 +187,6 @@ import Shelley.Spec.Ledger.Address.Bootstrap
     bootstrapWitKeyHash,
     verifyBootstrapWit,
   )
-import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), isBootstrapRedeemer)
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
     PoolDistr (..),
@@ -1326,7 +1325,7 @@ updateNES
 
 returnRedeemAddrsToReserves ::
   forall era.
-  (Era era, HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era))) =>
+  (Era era, HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
@@ -1337,7 +1336,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     (redeemers, nonredeemers) =
       Map.partition
         ( \out ->
-            isBootstrapRedeemer (getField @"compactAddress" out)
+            isBootstrapRedeemer (getField @"address" out)
         )
         utxo
     acnt = esAccountState es
