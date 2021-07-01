@@ -116,6 +116,11 @@ import Test.Shelley.Spec.Ledger.Utils (Split (..))
 import Cardano.Ledger.Era(Era)
 import NoThunks.Class()  -- Instances only
 
+import Debug.Trace(trace)
+
+myDiscard :: [Char] -> a
+myDiscard message = trace ("\nDiscarded trace: "++message) discard
+
 -- ====================================================
 
 showBalance ::
@@ -258,7 +263,8 @@ genTx
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
       let enough = (length outputAddrs) <×> (getField @"_minUTxOValue" pparams)
-      !_ <- when (coin spendingBalance < coin enough) discard
+      !_ <- when (coin spendingBalance < coin enough)
+              (myDiscard ("not enough coin in outputs. needed: "++show enough++", available: "++show spendingBalance) discard)
 
       -------------------------------------------------------------------------
       -- Build a Draft Tx and repeatedly add to Delta until all fees are
@@ -441,7 +447,7 @@ genNextDelta
                 -- testing framework to generate almost-random transactions that always succeed every time.
                 -- Experience suggests that this happens less than 1% of the time, and does not lead to backtracking.
 
-                !_ <- when (null inputs) discard
+                !_ <- when (null inputs) (myDiscard ("Can't generate a new input, the Utxo is empty") discard)
 
                 let newWits =
                       mkTxWits @era

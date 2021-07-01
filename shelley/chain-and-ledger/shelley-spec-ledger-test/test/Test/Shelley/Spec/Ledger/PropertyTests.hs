@@ -73,7 +73,7 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
 import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Shelley.Spec.Ledger.Utils (ChainProperty)
 import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestTree, testGroup, localOption)
 import qualified Test.Tasty.QuickCheck as TQC
 
 import Cardano.Ledger.Keys(KeyRole(Witness))
@@ -108,7 +108,7 @@ minimalPropertyTests ::
 minimalPropertyTests =
   testGroup
     "Minimal Property Tests"
-    [ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era),
+    [ (localOption (TQC.QuickCheckMaxRatio 50) $ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era)),
       TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain @era),
       TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated @era),
       bootstrapHashTest,
@@ -153,9 +153,10 @@ propertyTests =
     "Property-Based Testing"
     [ testGroup
         "Classify Traces"
-        [ TQC.testProperty
+        [  (localOption (TQC.QuickCheckMaxRatio 50) $
+            TQC.testProperty
             "Chain and Ledger traces cover the relevant cases"
-            (relevantCasesAreCovered @era)
+            (relevantCasesAreCovered @era))
         ],
       testGroup
         "STS Rules - Delegation Properties"
