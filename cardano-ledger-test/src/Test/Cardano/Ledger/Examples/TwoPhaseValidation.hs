@@ -21,6 +21,7 @@ module Test.Cardano.Ledger.Examples.TwoPhaseValidation where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import qualified Cardano.Crypto.Hash as CH
+import Cardano.Crypto.Hash.Class (sizeHash)
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.VRF (evalCertified)
 import qualified Cardano.Crypto.VRF.Class as VRF
@@ -30,7 +31,7 @@ import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
-import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY)
+import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..), AlonzoUTXOW)
@@ -47,7 +48,7 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.BaseTypes (Network (..), Seed, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Network (..), Seed, StrictMaybe (..), textToUrl)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
@@ -67,6 +68,7 @@ import Cardano.Ledger.Keys
     asWitness,
     coerceKeyRole,
     hashKey,
+    hashVerKeyVRF,
     signedDSIGN,
     signedKES,
   )
@@ -82,6 +84,7 @@ import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
+import qualified Data.ByteString as BS (replicate)
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (..))
 import Data.Functor.Identity (Identity)
@@ -104,6 +107,7 @@ import Shelley.Spec.Ledger.API
     LedgerState (..),
     Nonce (NeutralNonce),
     OCert (..),
+    PoolParams (..),
     PrevHash (GenesisHash),
     ProtVer (..),
     UTxO (..),
@@ -112,12 +116,19 @@ import Shelley.Spec.Ledger.BlockChain (bBodySize, mkSeed, seedEta, seedL)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), WitHashes (..))
 import Shelley.Spec.Ledger.OCert (OCertSignable (..))
-import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv (..), BbodyState (..))
+import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
+import Shelley.Spec.Ledger.STS.Delegs (DelegsPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Ledger (LedgerPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Ledgers (LedgersPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
+    PoolCert (..),
+    PoolMetadata (..),
     RewardAcnt (..),
     TxIn (..),
     Wdrl (..),
@@ -135,6 +146,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkKeyPair,
     mkVRFKeyPair,
     runShelleyBase,
+    unsafeMkUnitInterval,
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -160,7 +172,8 @@ pp pf =
     [ Costmdls $ Map.singleton PlutusV1 freeCostModel,
       MaxValSize 1000000000,
       MaxTxExUnits $ ExUnits 1000000 1000000,
-      MaxBlockExUnits $ ExUnits 1000000 1000000
+      MaxBlockExUnits $ ExUnits 1000000 1000000,
+      ProtocolVersion $ ProtVer 5 0
     ]
 
 utxoEnv :: Proof era -> UtxoEnv era
@@ -1340,6 +1353,53 @@ notOkSupplimentaryDatumTx pf =
         ]
     ]
 
+hashsize :: forall c. CC.Crypto c => Int
+hashsize = fromIntegral $ sizeHash ([] @(CC.HASH c))
+
+poolMDHTooBigTxBody :: forall era. Scriptic era => Proof era -> Core.TxBody era
+poolMDHTooBigTxBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 3],
+      Outputs [newTxOut Override pf [Address $ someAddr pf, Amount (inject $ Coin 995)]],
+      Certs [DCertPool (RegPool poolParams)],
+      Txfee (Coin 5)
+    ]
+  where
+    tooManyBytes = BS.replicate (hashsize @(Crypto era) + 1) 0
+    poolParams =
+      PoolParams
+        { _poolId = coerceKeyRole . hashKey . vKey $ someKeys pf,
+          _poolVrf = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0,
+          _poolPledge = Coin 0,
+          _poolCost = Coin 0,
+          _poolMargin = unsafeMkUnitInterval 0,
+          _poolRAcnt = RewardAcnt Testnet (scriptStakeCredSuceed pf),
+          _poolOwners = mempty,
+          _poolRelays = mempty,
+          _poolMD = SJust $ PoolMetadata (fromJust $ textToUrl "") tooManyBytes
+        }
+
+poolMDHTooBigTx ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+poolMDHTooBigTx pf =
+  -- Note that the UTXOW rule will no trigger the expected predicate failure,
+  -- since it is checked in the POOL rule. BBODY will trigger it, however.
+  newTx
+    Override
+    pf
+    [ Body (poolMDHTooBigTxBody pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (poolMDHTooBigTxBody pf)) (someKeys pf)]
+        ]
+    ]
+
 -- =======================
 -- Alonzo UTXOW Tests
 -- =======================
@@ -1723,6 +1783,11 @@ testAlonzoBlock =
   where
     pf = Alonzo Mock
 
+testAlonzoBadPMDHBlock :: Block A
+testAlonzoBadPMDHBlock = makeNaiveBlock [trustMe True $ poolMDHTooBigTx pf]
+  where
+    pf = Alonzo Mock
+
 example1UTxO :: UTxO A
 example1UTxO =
   UTxO $
@@ -1774,7 +1839,17 @@ alonzoBBODYexamples =
   testGroup
     "Alonzo BBODY examples"
     [ testCase "eight plutus scripts cases" $
-        testBBODY (initialBBodyState pf) testAlonzoBlock (Right example1BBodyState)
+        testBBODY (initialBBodyState pf) testAlonzoBlock (Right example1BBodyState),
+      testCase "block with bad pool md hash in tx" $
+        testBBODY
+          (initialBBodyState pf)
+          testAlonzoBadPMDHBlock
+          ( Left $
+              [ [ ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+                    PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys pf) (hashsize @Mock + 1)
+                ]
+              ]
+          )
     ]
   where
     pf = Alonzo Mock

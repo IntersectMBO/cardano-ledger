@@ -5,6 +5,8 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -23,9 +25,19 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (Globals (..), Network, ShelleyBase, epochInfo, invalidKey, networkId)
+import Cardano.Crypto.Hash.Class (sizeHash)
+import Cardano.Ledger.BaseTypes
+  ( Globals (..),
+    Network,
+    ShelleyBase,
+    StrictMaybe (..),
+    epochInfo,
+    invalidKey,
+    networkId,
+  )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordSum)
@@ -42,6 +54,7 @@ import Control.State.Transition
     liftSTS,
     (?!),
   )
+import qualified Data.ByteString as BS
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
@@ -51,9 +64,11 @@ import NoThunks.Class (NoThunks (..))
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
 import Shelley.Spec.Ledger.LedgerState (PState (..))
 import Shelley.Spec.Ledger.PParams (ProtVer)
+import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     PoolCert (..),
+    PoolMetadata (..),
     PoolParams (..),
     getRwdNetwork,
   )
@@ -83,12 +98,15 @@ data PoolPredicateFailure era
       !Network -- Actual Network ID
       !Network -- Network ID listed in Pool Registration Certificate
       !(KeyHash 'StakePool (Crypto era)) -- Stake Pool ID
+  | PoolMedataHashTooBig
+      !(KeyHash 'StakePool (Crypto era)) -- Stake Pool ID
+      !Int -- Size of the metadata hash
   deriving (Show, Eq, Generic)
 
 instance NoThunks (PoolPredicateFailure era)
 
 instance
-  ( Typeable era,
+  ( Era era,
     HasField "_minPoolCost" (Core.PParams era) Coin,
     HasField "_eMax" (Core.PParams era) EpochNo,
     HasField "_protocolVersion" (Core.PParams era) ProtVer
@@ -121,6 +139,8 @@ instance
       encodeListLen 3 <> toCBOR (3 :: Word8) <> toCBOR pc <> toCBOR mc
     WrongNetworkPOOL a b c ->
       encodeListLen 4 <> toCBOR (4 :: Word8) <> toCBOR a <> toCBOR b <> toCBOR c
+    PoolMedataHashTooBig a b ->
+      encodeListLen 3 <> toCBOR (5 :: Word8) <> toCBOR a <> toCBOR b
 
 instance
   (Era era) =>
@@ -148,10 +168,15 @@ instance
         suppliedNetID <- fromCBOR
         poolID <- fromCBOR
         pure (4, WrongNetworkPOOL actualNetID suppliedNetID poolID)
+      5 -> do
+        poolID <- fromCBOR
+        s <- fromCBOR
+        pure (3, PoolMedataHashTooBig poolID s)
       k -> invalidKey k
 
 poolDelegationTransition ::
-  ( Typeable era,
+  forall era.
+  ( Era era,
     HasField "_minPoolCost" (Core.PParams era) Coin,
     HasField "_eMax" (Core.PParams era) EpochNo,
     HasField "_protocolVersion" (Core.PParams era) ProtVer
@@ -169,6 +194,14 @@ poolDelegationTransition = do
         let suppliedNetID = getRwdNetwork (_poolRAcnt poolParam)
         actualNetID == suppliedNetID
           ?! WrongNetworkPOOL actualNetID suppliedNetID (_poolId poolParam)
+
+      when (SoftForks.restrictPoolMetadataHash pp) $ do
+        case _poolMD poolParam of
+          SNothing -> pure ()
+          SJust pmd ->
+            let s = BS.length (_poolMDHash pmd)
+             in s <= fromIntegral (sizeHash ([] @(CC.HASH (Crypto era))))
+                  ?! PoolMedataHashTooBig (_poolId poolParam) s
 
       let poolCost = _poolCost poolParam
           minPoolCost = getField @"_minPoolCost" pp
