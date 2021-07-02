@@ -1,15 +1,20 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.BaseTypes
@@ -22,16 +27,15 @@ module Cardano.Ledger.BaseTypes
     Nonce (..),
     Seed (..),
     UnitInterval,
+    PositiveUnitInterval,
+    PositiveInterval,
+    NonNegativeInterval,
+    BoundedRational (..),
     fpPrecision,
-    interval0,
-    intervalValue,
-    unitIntervalToRational,
-    unitIntervalFromRational,
+    promoteRatio,
     invalidKey,
     mkNonceFromOutputVRF,
     mkNonceFromNumber,
-    mkUnitInterval,
-    truncateUnitInterval,
     StrictMaybe (..),
     strictMaybeToMaybe,
     maybeToStrictMaybe,
@@ -70,20 +74,23 @@ import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Time (SystemStart)
 import Control.Exception (throw)
+import Control.Monad (when, (<=<))
 import Control.Monad.Trans.Reader (ReaderT)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders (invalidKey)
+import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
 import Data.Maybe.Strict
 import Data.Ratio (Ratio, denominator, numerator, (%))
-import Data.Scientific (Scientific)
+import Data.Scientific (Scientific, base10Exponent, coefficient, normalize, scientific)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
+import Data.Typeable
 import Data.Word (Word16, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
@@ -103,54 +110,240 @@ type FixedPoint = Digits34
 fpPrecision :: FixedPoint
 fpPrecision = (10 :: FixedPoint) ^ (34 :: Integer)
 
--- | Type to represent a value in the unit interval [0; 1]
-newtype UnitInterval = UnsafeUnitInterval (Ratio Word64)
-  deriving (Show, Ord, Eq, Generic)
-  deriving newtype (NoThunks, NFData)
+-- | This is an internal type for representing rational numbers that are bounded on some
+-- interval that is controlled by phantom type variable @b@ as well as by
+-- the bounds of underlying type @a@.
+newtype BoundedRatio b a = BoundedRatio (Ratio a)
+  deriving (Eq, Generic)
+  deriving newtype (Show, NoThunks, NFData)
 
-instance ToCBOR UnitInterval where
-  toCBOR (UnsafeUnitInterval u) = ratioToCBOR u
+-- Deriving Ord instance can lead to integer overflow. We must go through Rational.
+instance Integral a => Ord (BoundedRatio b a) where
+  compare (BoundedRatio a) (BoundedRatio b) = compare (promoteRatio a) (promoteRatio b)
 
-instance FromCBOR UnitInterval where
+promoteRatio :: Integral a => Ratio a -> Rational
+promoteRatio r = toInteger (numerator r) % toInteger (denominator r)
+
+-- | Type clases that allows conversion between `Rational` and some form of bounded
+-- rational type. Bounds can be restricted by both the `Bounded` type class and underlyng
+-- representation.
+--
+-- > maybe True (\br -> minBound <= br && br <= maxBound) . boundRational
+--
+-- Roundtrip properties must hold:
+--
+-- > \r -> maybe True ((r ==) . unboundRational) (boundRational r)
+-- > \br -> Just br == boundRational (unboundRational br)
+class Bounded r => BoundedRational r where
+  -- | Returns `Nothing` when supplied value is not within bounds or when precision is
+  -- too high to be represented by the underlying type
+  --
+  -- ===__Example__
+  --
+  -- >>> :set -XTypeApplications
+  -- >>> import Data.Ratio
+  -- >>> boundRational @UnitInterval $ 2 % 3
+  -- Just (2 % 3)
+  -- >>> boundRational @UnitInterval (-0.5)
+  -- Nothing
+  -- >>> boundRational @UnitInterval (1.5)
+  -- Nothing
+  -- >>> boundRational @UnitInterval 0
+  -- Just (0 % 1)
+  -- >>> boundRational @PositiveUnitInterval 0
+  -- Nothing
+  boundRational :: Rational -> Maybe r
+
+  -- | Promote bounded rational type into the unbounded `Rational`.
+  unboundRational :: r -> Rational
+
+instance
+  (Bounded (BoundedRatio b a), Bounded a, Integral a) =>
+  BoundedRational (BoundedRatio b a)
+  where
+  boundRational = fromRationalBoundedRatio
+  unboundRational = toRationalBoundedRatio
+
+toRationalBoundedRatio :: Integral a => BoundedRatio b a -> Rational
+toRationalBoundedRatio (BoundedRatio r) = promoteRatio r
+
+fromRationalBoundedRatio ::
+  forall b a.
+  (Bounded (BoundedRatio b a), Bounded a, Integral a) =>
+  Rational ->
+  Maybe (BoundedRatio b a)
+fromRationalBoundedRatio r
+  | n < minVal || d < minVal || n > maxVal || d > maxVal = Nothing -- protect against overflow
+  | otherwise = fromRatioBoundedRatio $ fromInteger n % fromInteger d
+  where
+    minVal = toInteger (minBound :: a)
+    maxVal = toInteger (maxBound :: a)
+    n = numerator r
+    d = denominator r
+
+-- | Convert to `BoundedRatio`, while checking the bounds. This function doesn't guard
+-- against overflow, therefore use `fromRationalBoundedRatio . promoteRatio` instead
+-- when in doubt.
+fromRatioBoundedRatio ::
+  forall b a.
+  (Bounded (BoundedRatio b a), Integral a) =>
+  Ratio a ->
+  Maybe (BoundedRatio b a)
+fromRatioBoundedRatio ratio
+  | r < toRationalBoundedRatio lowerBound
+      || r > toRationalBoundedRatio upperBound =
+    Nothing -- ensure valid range
+  | otherwise = Just $ BoundedRatio ratio
+  where
+    r = promoteRatio ratio
+    lowerBound = minBound :: BoundedRatio b a
+    upperBound = maxBound :: BoundedRatio b a
+
+instance (ToCBOR a, Integral a, Bounded a, Typeable b, Typeable a) => ToCBOR (BoundedRatio b a) where
+  toCBOR (BoundedRatio u) = ratioToCBOR u
+
+instance
+  (FromCBOR a, Bounded (BoundedRatio b a), Bounded a, Integral a, Typeable b, Typeable a, Show a) =>
+  FromCBOR (BoundedRatio b a)
+  where
   fromCBOR = do
     r <- ratioFromCBOR
-    case mkUnitInterval r of
-      Nothing -> cborError $ DecoderErrorCustom "UnitInterval" (Text.pack $ show r)
+    case fromRatioBoundedRatio r of
+      Nothing ->
+        cborError $ DecoderErrorCustom "UnitInterval" (Text.pack $ show r)
       Just u -> pure u
 
-instance ToJSON UnitInterval where
-  toJSON ui = toJSON (fromRational (unitIntervalToRational ui) :: Scientific)
+instance ToJSON (BoundedRatio b Word64) where
+  toJSON = toJSON . toScientificBoundedRatioWord64WithRounding
 
-instance FromJSON UnitInterval where
-  parseJSON v = do
-    d <- parseJSON v
-    case mkUnitInterval (realToFrac (d :: Scientific) :: Ratio Word64) of
-      Just u -> return u
-      Nothing -> fail "The value must be between 0 and 1 (inclusive)"
+toScientificBoundedRatioWord64WithRounding :: BoundedRatio b Word64 -> Scientific
+toScientificBoundedRatioWord64WithRounding (toRationalBoundedRatio -> ur) =
+  scientific q 0 + scientific ((r * scale) `quot` d) (negate exp10)
+  where
+    n = numerator ur
+    d = denominator ur
+    (q, r) = n `quotRem` d
+    -- We need to reduce precision for numbers bigger than 1 in order to make them
+    -- parsable without overflowing
+    exp10 = 19 - min 19 (numDigits q)
+    scale = 10 ^ exp10
+    numDigits :: Integer -> Int
+    numDigits = go 0
+      where
+        go ds 0 = ds
+        go ds i = ds `seq` go (ds + 1) (i `quot` 10)
 
-unitIntervalToRational :: UnitInterval -> Rational
-unitIntervalToRational (UnsafeUnitInterval x) =
-  (fromIntegral $ numerator x) % (fromIntegral $ denominator x)
+instance Bounded (BoundedRatio b Word64) => FromJSON (BoundedRatio b Word64) where
+  parseJSON = either fail pure . fromScientificBoundedRatioWord64 <=< parseJSON
 
-unitIntervalFromRational :: Rational -> UnitInterval
-unitIntervalFromRational = truncateUnitInterval . fromRational
+fromScientificBoundedRatioWord64 ::
+  Bounded (BoundedRatio b Word64) =>
+  Scientific ->
+  Either String (BoundedRatio b Word64)
+fromScientificBoundedRatioWord64 (normalize -> sci)
+  | coeff < 0 = failWith "negative"
+  | exp10 <= 0 = do
+    when (exp10 < -19) $ failWith "too precise"
+    fromRationalEither (coeff % (10 ^ negate exp10))
+  | otherwise = do
+    when (19 < exp10) $ failWith "too big"
+    fromRationalEither (coeff * 10 ^ exp10 % 1)
+  where
+    coeff = coefficient sci
+    exp10 = base10Exponent sci
+    failWith :: String -> Either String a
+    failWith msg = Left $ "Value is " ++ msg ++ ": " ++ show sci
+    fromRationalEither =
+      maybe (failWith "outside of bounds") Right . fromRationalBoundedRatio
 
--- | Return a `UnitInterval` type if `r` is in [0; 1].
-mkUnitInterval :: Ratio Word64 -> Maybe UnitInterval
-mkUnitInterval r = if r <= 1 && r >= 0 then Just $ UnsafeUnitInterval r else Nothing
 
--- | Convert a rational to a `UnitInterval` by ignoring its integer part.
-truncateUnitInterval :: Ratio Word64 -> UnitInterval
-truncateUnitInterval (abs -> r) = case (numerator r, denominator r) of
-  (n, d) | n > d -> UnsafeUnitInterval $ (n `mod` d) % d
-  _ -> UnsafeUnitInterval r
+-- | Type to represent a value in the interval [0; +∞)
+newtype NonNegativeInterval
+  = NonNegativeInterval (BoundedRatio NonNegativeInterval Word64)
+  deriving (Ord, Eq, Generic)
+  deriving newtype
+    ( Show,
+      Bounded,
+      BoundedRational,
+      ToCBOR,
+      FromCBOR,
+      ToJSON,
+      FromJSON,
+      NoThunks,
+      NFData
+    )
 
--- | Get rational value of `UnitInterval` type
-intervalValue :: UnitInterval -> Ratio Word64
-intervalValue (UnsafeUnitInterval v) = v
+instance Bounded (BoundedRatio NonNegativeInterval Word64) where
+  minBound = BoundedRatio (0 % 1)
+  maxBound = BoundedRatio (maxBound % 1)
 
-interval0 :: UnitInterval
-interval0 = UnsafeUnitInterval 0
+
+-- | Type to represent a value in the interval (0; +∞)
+newtype PositiveInterval
+  = PositiveInterval (BoundedRatio PositiveInterval Word64)
+  deriving (Ord, Eq, Generic)
+  deriving newtype
+    ( Show,
+      Bounded,
+      BoundedRational,
+      ToCBOR,
+      FromCBOR,
+      ToJSON,
+      FromJSON,
+      NoThunks,
+      NFData
+    )
+
+instance Bounded (BoundedRatio PositiveInterval Word64) where
+  minBound = positiveIntervalEpsilon
+  maxBound = BoundedRatio (maxBound % 1)
+
+-- | The smallest decimal value that can roundtrip JSON
+positiveIntervalEpsilon :: BoundedRatio b Word64
+positiveIntervalEpsilon = BoundedRatio (1 % 10 ^ (19 :: Int))
+
+-- | Type to represent a value in the unit interval (0; 1]
+newtype PositiveUnitInterval
+  = PositiveUnitInterval (BoundedRatio PositiveUnitInterval Word64)
+  deriving (Ord, Eq, Generic)
+  deriving newtype
+    ( Show,
+      Bounded,
+      BoundedRational,
+      ToCBOR,
+      FromCBOR,
+      ToJSON,
+      FromJSON,
+      NoThunks,
+      NFData
+    )
+
+instance Bounded (BoundedRatio PositiveUnitInterval Word64) where
+  minBound = positiveIntervalEpsilon
+  maxBound = BoundedRatio (1 % 1)
+
+-- | Type to represent a value in the unit interval [0; 1]
+newtype UnitInterval
+  = UnitInterval (BoundedRatio UnitInterval Word64)
+  deriving (Ord, Eq, Generic)
+  deriving newtype
+    ( Show,
+      Bounded,
+      BoundedRational,
+      ToCBOR,
+      FromCBOR,
+      ToJSON,
+      FromJSON,
+      NoThunks,
+      NFData
+    )
+
+instance Integral a => Bounded (BoundedRatio UnitInterval a) where
+  minBound = BoundedRatio (0 % 1)
+  maxBound = BoundedRatio (1 % 1)
+
+instance Default UnitInterval where
+  def = minBound
 
 -- | Evolving nonce type.
 data Nonce
@@ -267,7 +460,7 @@ newtype Port = Port {portToWord16 :: Word16}
 --------------------------------------------------------------------------------
 
 data ActiveSlotCoeff = ActiveSlotCoeff
-  { unActiveSlotVal :: !UnitInterval,
+  { unActiveSlotVal :: !PositiveUnitInterval,
     unActiveSlotLog :: !Integer -- TODO mgudemann make this FixedPoint,
     -- currently a problem because of
     -- NoThunks instance for FixedPoint
@@ -292,12 +485,12 @@ instance ToCBOR ActiveSlotCoeff where
       ) =
       toCBOR slotVal
 
-mkActiveSlotCoeff :: UnitInterval -> ActiveSlotCoeff
+mkActiveSlotCoeff :: PositiveUnitInterval -> ActiveSlotCoeff
 mkActiveSlotCoeff v =
   ActiveSlotCoeff
     { unActiveSlotVal = v,
       unActiveSlotLog =
-        if (intervalValue v) == 1
+        if v == maxBound
           then -- If the active slot coefficient is equal to one,
           -- then nearly every stake pool can produce a block every slot.
           -- In this degenerate case, where ln (1-f) is not defined,
@@ -306,12 +499,12 @@ mkActiveSlotCoeff v =
           else
             floor
               ( fpPrecision
-                  * ( ln' $ (1 :: FixedPoint) - (fromRational $ unitIntervalToRational v)
+                  * ( ln' $ (1 :: FixedPoint) - fromRational (unboundRational v)
                     )
               )
     }
 
-activeSlotVal :: ActiveSlotCoeff -> UnitInterval
+activeSlotVal :: ActiveSlotCoeff -> PositiveUnitInterval
 activeSlotVal = unActiveSlotVal
 
 activeSlotLog :: ActiveSlotCoeff -> FixedPoint

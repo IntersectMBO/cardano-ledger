@@ -61,7 +61,7 @@ import Data.Set (Set)
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
-import Cardano.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
+import Cardano.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), NonNegativeInterval, UnitInterval, (⭒))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     Block (..),
@@ -113,7 +113,7 @@ import Test.Shelley.Spec.Ledger.Utils (epochFromSlotNo, getBlockNonce)
 type UsesPP era =
   ( HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) Rational,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_rho" (Core.PParams era) UnitInterval,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer

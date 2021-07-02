@@ -108,7 +108,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkKeyPair',
     mkVRFKeyPair,
     runShelleyBase,
-    unsafeMkUnitInterval,
+    unsafeBoundRational,
   )
 
 -- ===============================================
@@ -163,7 +163,7 @@ ppsBench :: PParams era
 ppsBench =
   emptyPParams
     { _maxBBSize = 50000,
-      _d = unsafeMkUnitInterval 0.5,
+      _d = unsafeBoundRational 0.5,
       _eMax = EpochNo 10000,
       _keyDeposit = Coin 0,
       _maxBHSize = 10000,
@@ -172,8 +172,8 @@ ppsBench =
       _minfeeB = 0,
       _minUTxOValue = Coin 10,
       _poolDeposit = Coin 0,
-      _rho = unsafeMkUnitInterval 0.0021,
-      _tau = unsafeMkUnitInterval 0.2
+      _rho = unsafeBoundRational 0.0021,
+      _tau = unsafeBoundRational 0.2
     }
 
 ledgerEnv :: (Core.PParams era ~ PParams era) => LedgerEnv era
@@ -412,7 +412,7 @@ mkPoolParameters keys =
       _poolVrf = vrfKeyHash,
       _poolPledge = Coin 0,
       _poolCost = Coin 0,
-      _poolMargin = unsafeMkUnitInterval 0,
+      _poolMargin = unsafeBoundRational 0,
       _poolRAcnt = RewardAcnt Testnet firstStakeKeyCred,
       _poolOwners = Set.singleton $ (hashKey . vKey) stakeKeyOne,
       _poolRelays = StrictSeq.empty,

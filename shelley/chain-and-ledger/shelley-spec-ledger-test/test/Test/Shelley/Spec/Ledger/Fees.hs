@@ -84,7 +84,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkAddr,
     mkKeyPair,
     mkVRFKeyPair,
-    unsafeMkUnitInterval,
+    unsafeBoundRational,
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -130,7 +130,7 @@ alicePoolParams =
       _poolVrf = hashVerKeyVRF . snd $ aliceVRF @(Cr.VRF crypto),
       _poolPledge = Coin 1,
       _poolCost = Coin 5,
-      _poolMargin = unsafeMkUnitInterval 0.1,
+      _poolMargin = unsafeBoundRational 0.1,
       _poolRAcnt = RewardAcnt Testnet aliceSHK,
       _poolOwners = Set.singleton $ (hashKey . vKey) aliceStake,
       _poolRelays =

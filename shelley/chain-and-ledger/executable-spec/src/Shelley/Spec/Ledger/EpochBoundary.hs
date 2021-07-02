@@ -37,6 +37,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
 import Cardano.Ledger.Coin
   ( Coin (..),
     coinToRational,
@@ -149,7 +150,7 @@ obligation pp rewards stakePools =
 
 -- | Calculate maximal pool reward
 maxPool' ::
-  Rational ->
+  NonNegativeInterval ->
   Natural ->
   Coin ->
   Rational ->
@@ -160,14 +161,14 @@ maxPool' a0 nOpt r sigma pR = rationalToCoinViaFloor $ factor1 * factor2
     z0 = 1 % fromIntegral nOpt
     sigma' = min sigma z0
     p' = min pR z0
-    factor1 = coinToRational r / (1 + a0)
-    factor2 = sigma' + p' * a0 * factor3
+    factor1 = coinToRational r / (1 + unboundRational a0)
+    factor2 = sigma' + p' * unboundRational a0 * factor3
     factor3 = (sigma' - p' * factor4) / z0
     factor4 = (z0 - sigma') / z0
 
 -- | Version of maxPool' that extracts a0 and nOpt from a PParam with the right HasField instances
 maxPool ::
-  (HasField "_a0" pp Rational, HasField "_nOpt" pp Natural) =>
+  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
   pp ->
   Coin ->
   Rational ->

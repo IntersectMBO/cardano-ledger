@@ -16,7 +16,7 @@ where
 
 import Cardano.Binary (Encoding (..), ToCBOR (..), Tokens (..), serializeEncoding)
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.BaseTypes (textToDns, textToUrl, truncateUnitInterval)
+import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
@@ -39,7 +39,7 @@ import Test.Shelley.Spec.Ledger.Utils
   ( RawSeed (..),
     mkKeyPair,
     mkVRFKeyPair,
-    unsafeMkUnitInterval,
+    unsafeBoundRational,
   )
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertFailure, testCase)
@@ -80,7 +80,7 @@ prop_golden_cbor_ShelleyGenesis =
         . TkInt 4036000900 -- sgNetworkMagic
         . TkInt 0 -- sgNetworkId
         . TkListLen 2
-        . TkInt 6259
+        . TkInt 259
         . TkInt 1000 -- sgActiveSlotsCoeff
         . TkInt 120842 -- sgSecurityParam
         . TkInt 1215 -- sgEpochLength
@@ -183,7 +183,7 @@ exampleShelleyGenesis =
     { sgSystemStart = posixSecondsToUTCTime $ realToFrac (1234566789 :: Integer),
       sgNetworkMagic = 4036000900,
       sgNetworkId = L.Testnet,
-      sgActiveSlotsCoeff = 6.259,
+      sgActiveSlotsCoeff = unsafeBoundRational 0.259,
       sgSecurityParam = 120842,
       sgEpochLength = EpochSize 1215,
       sgSlotsPerKESPeriod = 8541,
@@ -193,7 +193,7 @@ exampleShelleyGenesis =
       sgMaxLovelaceSupply = 71,
       sgProtocolParams =
         emptyPParams
-          { _d = truncateUnitInterval . realToFrac $ (1.9e-2 :: Scientific),
+          { _d = unsafeBoundRational . realToFrac $ (1.9e-2 :: Scientific),
             _maxBBSize = 239857,
             _maxBHSize = 217569
           },
@@ -244,7 +244,7 @@ exampleShelleyGenesis =
           L._poolVrf = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 1 0 0 0 2),
           L._poolPledge = L.Coin 1,
           L._poolCost = L.Coin 5,
-          L._poolMargin = unsafeMkUnitInterval 0.25,
+          L._poolMargin = unsafeBoundRational 0.25,
           L._poolRAcnt = L.RewardAcnt L.Testnet Cast.aliceSHK,
           L._poolOwners = Set.singleton $ (hashKey . vKey) Cast.aliceStake,
           L._poolRelays = relays,

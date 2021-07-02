@@ -10,29 +10,13 @@ import Cardano.Crypto.DSIGN.Class
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
+import Cardano.Ledger.Address
+import Cardano.Ledger.BaseTypes hiding (Seed)
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto (DSIGN, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
-import Cardano.Prelude (Natural, Word32, Word64, Word8)
-import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
-import Data.Fixed
-import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
-import qualified Data.Map.Strict as Map
-import Data.Proxy
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import Data.Time.Clock (NominalDiffTime, UTCTime)
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Hedgehog (Gen)
-import qualified Hedgehog.Gen as Gen
-import Hedgehog.Internal.Gen ()
-import Hedgehog.Range (Range)
-import qualified Hedgehog.Range as Range
-import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes hiding (Seed)
-import Cardano.Ledger.Credential
-import Shelley.Spec.Ledger.Genesis
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     Hash,
@@ -42,10 +26,27 @@ import Cardano.Ledger.Keys
     VKey (..),
     hashKey,
   )
+import Cardano.Prelude (Natural, Word32, Word64, Word8)
+import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
+import Data.Fixed
+import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
+import qualified Data.Map.Strict as Map
+import Data.Proxy
+import Data.Ratio ((%))
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
+import Data.Time.Clock (NominalDiffTime, UTCTime)
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Hedgehog (Gen)
+import qualified Hedgehog.Gen as Gen
+import Hedgehog.Internal.Gen ()
+import Hedgehog.Range (Range)
+import qualified Hedgehog.Range as Range
+import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
 import Shelley.Spec.Ledger.TxBody
-import Test.Shelley.Spec.Ledger.Utils (mkHash)
+import Test.Shelley.Spec.Ledger.Utils (mkHash, unsafeBoundRational)
 
 genShelleyGenesis :: Era era => Gen (ShelleyGenesis era)
 genShelleyGenesis =
@@ -53,7 +54,7 @@ genShelleyGenesis =
     <$> genUTCTime
     <*> genNetworkMagic
     <*> Gen.element [Mainnet, Testnet]
-    <*> fmap realToFrac genSlotLength
+    <*> genPositiveUnitInterval
     <*> Gen.word64 (Range.linear 1 1000000)
     <*> fmap EpochSize genSecurityParam
     <*> Gen.word64 (Range.linear 1 100000)
@@ -65,6 +66,7 @@ genShelleyGenesis =
     <*> fmap Map.fromList genGenesisDelegationList
     <*> fmap Map.fromList genFundsList
     <*> genStaking
+
 
 genStaking :: CC.Crypto crypto => Gen (ShelleyGenesisStaking crypto)
 genStaking =
@@ -171,7 +173,7 @@ genPParams =
     <*> genCoin
     <*> genEpochNo
     <*> genNatural (Range.linear 0 10)
-    <*> genRational
+    <*> genNonNegativeInterval
     <*> genUnitInterval
     <*> genUnitInterval
     <*> genUnitInterval
@@ -206,9 +208,24 @@ genProtVer =
     <*> genNatural (Range.linear 0 1000)
 
 genUnitInterval :: Gen UnitInterval
-genUnitInterval =
-  truncateUnitInterval
-    <$> Gen.realFrac_ (Range.linearFrac 0.01 1)
+genUnitInterval = genDecimalBoundedRational (Gen.word64 . Range.linear 0)
+
+genPositiveUnitInterval :: Gen PositiveUnitInterval
+genPositiveUnitInterval = genDecimalBoundedRational (Gen.word64 . Range.linear 1)
+
+genNonNegativeInterval :: Gen NonNegativeInterval
+genNonNegativeInterval =
+  genDecimalBoundedRational (Gen.word64 . Range.linear 0 . const (10 ^ (19 :: Int)))
+
+-- | Only numbers in Scientific format can roundtrip JSON, so we generate numbers
+-- that can be represented in both decimal form and some bounded type rational form.
+genDecimalBoundedRational :: (Integral a, BoundedRational r) => (a -> Gen a) -> Gen r
+genDecimalBoundedRational gen = do
+  let maxExp = 19
+  denom <- (10 ^) <$> Gen.int (Range.linear 0 maxExp)
+  num <- gen denom
+  pure $ unsafeBoundRational $ toInteger num % toInteger denom
+
 
 genGenesisDelegationList ::
   CC.Crypto crypto =>

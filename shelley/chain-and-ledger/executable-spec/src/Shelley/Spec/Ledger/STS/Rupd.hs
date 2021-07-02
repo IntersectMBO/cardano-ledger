@@ -24,7 +24,8 @@ module Shelley.Spec.Ledger.STS.Rupd
 where
 
 import Cardano.Ledger.BaseTypes
-  ( ShelleyBase,
+  ( NonNegativeInterval,
+    ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
     activeSlotCoeff,
@@ -84,7 +85,7 @@ instance NoThunks (RupdPredicateFailure era)
 
 instance
   ( Era era,
-    HasField "_a0" (Core.PParams era) Rational,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
@@ -104,7 +105,7 @@ instance
 
 rupdTransition ::
   ( Era era,
-    HasField "_a0" (Core.PParams era) Rational,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,

@@ -39,10 +39,11 @@ import Cardano.Binary
     encodeWord,
   )
 import Cardano.Ledger.BaseTypes
-  ( Nonce (NeutralNonce),
+  ( NonNegativeInterval,
+    Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
-    interval0,
+    fromSMaybe,
     invalidKey,
     strictMaybeToMaybe,
   )
@@ -58,8 +59,6 @@ import Cardano.Ledger.Serialization
     decodeRecordNamed,
     mapFromCBOR,
     mapToCBOR,
-    ratioToCBOR,
-    rationalFromCBOR,
   )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Control.DeepSeq (NFData)
@@ -77,8 +76,7 @@ import Data.Functor.Identity (Identity)
 import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe, mapMaybe)
-import Data.Scientific (Scientific)
+import Data.Maybe (mapMaybe)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
@@ -135,7 +133,7 @@ data PParams' f era = PParams
     -- | Desired number of pools
     _nOpt :: !(HKD f Natural),
     -- | Pool influence
-    _a0 :: !(HKD f Rational),
+    _a0 :: !(HKD f NonNegativeInterval),
     -- | Monetary expansion
     _rho :: !(HKD f UnitInterval),
     -- | Treasury expansion
@@ -234,7 +232,7 @@ instance (Era era) => ToCBOR (PParams era) where
         <> toCBOR poolDeposit'
         <> toCBOR eMax'
         <> toCBOR nOpt'
-        <> ratioToCBOR a0'
+        <> toCBOR a0'
         <> toCBOR rho'
         <> toCBOR tau'
         <> toCBOR d'
@@ -256,7 +254,7 @@ instance (Era era) => FromCBOR (PParams era) where
         <*> fromCBOR -- _poolDeposit     :: Coin
         <*> fromCBOR -- _eMax            :: EpochNo
         <*> fromCBOR -- _nOpt            :: Natural
-        <*> rationalFromCBOR -- _a0         :: Rational
+        <*> fromCBOR -- _a0              :: NonNegativeInterval
         <*> fromCBOR -- _rho             :: UnitInterval
         <*> fromCBOR -- _tau             :: UnitInterval
         <*> fromCBOR -- _d               :: UnitInterval
@@ -277,7 +275,7 @@ instance ToJSON (PParams era) where
         "poolDeposit" .= _poolDeposit pp,
         "eMax" .= _eMax pp,
         "nOpt" .= _nOpt pp,
-        "a0" .= (fromRational (_a0 pp) :: Scientific),
+        "a0" .= _a0 pp,
         "rho" .= _rho pp,
         "tau" .= _tau pp,
         "decentralisationParam" .= _d pp,
@@ -300,9 +298,7 @@ instance FromJSON (PParams era) where
         <*> obj .: "poolDeposit"
         <*> obj .: "eMax"
         <*> obj .: "nOpt"
-        <*> ( (toRational :: Scientific -> Rational)
-                <$> obj .: "a0"
-            )
+        <*> obj .: "a0"
         <*> obj .: "rho"
         <*> obj .: "tau"
         <*> obj .: "decentralisationParam"
@@ -327,10 +323,10 @@ emptyPParams =
       _poolDeposit = Coin 0,
       _eMax = EpochNo 0,
       _nOpt = 100,
-      _a0 = 0,
-      _rho = interval0,
-      _tau = interval0,
-      _d = interval0,
+      _a0 = minBound,
+      _rho = minBound,
+      _tau = minBound,
+      _d = minBound,
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
       _minUTxOValue = mempty,
@@ -391,7 +387,7 @@ instance (Era era) => ToCBOR (PParamsUpdate era) where
               encodeMapElement 6 toCBOR =<< _poolDeposit ppup,
               encodeMapElement 7 toCBOR =<< _eMax ppup,
               encodeMapElement 8 toCBOR =<< _nOpt ppup,
-              encodeMapElement 9 ratioToCBOR =<< _a0 ppup,
+              encodeMapElement 9 toCBOR =<< _a0 ppup,
               encodeMapElement 10 toCBOR =<< _rho ppup,
               encodeMapElement 11 toCBOR =<< _tau ppup,
               encodeMapElement 12 toCBOR =<< _d ppup,
@@ -441,7 +437,7 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
           6 -> fromCBOR >>= \x -> pure (6, \up -> up {_poolDeposit = SJust x})
           7 -> fromCBOR >>= \x -> pure (7, \up -> up {_eMax = SJust x})
           8 -> fromCBOR >>= \x -> pure (8, \up -> up {_nOpt = SJust x})
-          9 -> rationalFromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
+          9 -> fromCBOR >>= \x -> pure (9, \up -> up {_a0 = SJust x})
           10 -> fromCBOR >>= \x -> pure (10, \up -> up {_rho = SJust x})
           11 -> fromCBOR >>= \x -> pure (11, \up -> up {_tau = SJust x})
           12 -> fromCBOR >>= \x -> pure (12, \up -> up {_d = SJust x})
@@ -487,24 +483,21 @@ emptyPPPUpdates = ProposedPPUpdates Map.empty
 updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
   PParams
-    { _minfeeA = fromMaybe' (_minfeeA pp) (_minfeeA ppup),
-      _minfeeB = fromMaybe' (_minfeeB pp) (_minfeeB ppup),
-      _maxBBSize = fromMaybe' (_maxBBSize pp) (_maxBBSize ppup),
-      _maxTxSize = fromMaybe' (_maxTxSize pp) (_maxTxSize ppup),
-      _maxBHSize = fromMaybe' (_maxBHSize pp) (_maxBHSize ppup),
-      _keyDeposit = fromMaybe' (_keyDeposit pp) (_keyDeposit ppup),
-      _poolDeposit = fromMaybe' (_poolDeposit pp) (_poolDeposit ppup),
-      _eMax = fromMaybe' (_eMax pp) (_eMax ppup),
-      _nOpt = fromMaybe' (_nOpt pp) (_nOpt ppup),
-      _a0 = fromMaybe' (_a0 pp) (_a0 ppup),
-      _rho = fromMaybe' (_rho pp) (_rho ppup),
-      _tau = fromMaybe' (_tau pp) (_tau ppup),
-      _d = fromMaybe' (_d pp) (_d ppup),
-      _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
-      _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
-      _minUTxOValue = fromMaybe' (_minUTxOValue pp) (_minUTxOValue ppup),
-      _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup)
+    { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
+      _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
+      _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
+      _maxTxSize = fromSMaybe (_maxTxSize pp) (_maxTxSize ppup),
+      _maxBHSize = fromSMaybe (_maxBHSize pp) (_maxBHSize ppup),
+      _keyDeposit = fromSMaybe (_keyDeposit pp) (_keyDeposit ppup),
+      _poolDeposit = fromSMaybe (_poolDeposit pp) (_poolDeposit ppup),
+      _eMax = fromSMaybe (_eMax pp) (_eMax ppup),
+      _nOpt = fromSMaybe (_nOpt pp) (_nOpt ppup),
+      _a0 = fromSMaybe (_a0 pp) (_a0 ppup),
+      _rho = fromSMaybe (_rho pp) (_rho ppup),
+      _tau = fromSMaybe (_tau pp) (_tau ppup),
+      _d = fromSMaybe (_d pp) (_d ppup),
+      _extraEntropy = fromSMaybe (_extraEntropy pp) (_extraEntropy ppup),
+      _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
+      _minUTxOValue = fromSMaybe (_minUTxOValue pp) (_minUTxOValue ppup),
+      _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup)
     }
-  where
-    fromMaybe' :: a -> StrictMaybe a -> a
-    fromMaybe' x = fromMaybe x . strictMaybeToMaybe

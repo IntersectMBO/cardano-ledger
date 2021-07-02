@@ -42,12 +42,27 @@ import Cardano.Crypto.DSIGN.Mock (VerKeyDSIGN (..))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    DnsName,
+    PositiveInterval,
+    NonNegativeInterval,
+    PositiveUnitInterval,
+    UnitInterval,
+    Url,
+    mkActiveSlotCoeff,
+    mkNonceFromNumber,
+    promoteRatio,
+    textToDns,
+    textToUrl,
+  )
 import Cardano.Ledger.Coin (DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript)
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesScript,
     UsesTxBody,
@@ -75,25 +90,10 @@ import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API hiding (SignedDSIGN, TxBody (..))
-import Shelley.Spec.Ledger.Address.Bootstrap
-  ( ChainCode (..),
-  )
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    DnsName,
-    UnitInterval,
-    Url,
-    mkActiveSlotCoeff,
-    mkNonceFromNumber,
-    mkUnitInterval,
-    textToDns,
-    textToUrl,
-  )
+import Shelley.Spec.Ledger.Address.Bootstrap (ChainCode (..))
 import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import Shelley.Spec.Ledger.LedgerState
-  ( FutureGenDeleg,
-  )
+import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg)
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.RewardProvenance
   ( Desirability (..),
@@ -125,19 +125,32 @@ import qualified Shelley.Spec.Ledger.STS.Ppup as STS
 import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
-import Cardano.Ledger.Serialization (ToCBORGroup)
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)
-import Test.QuickCheck (Arbitrary, arbitrary, genericShrink, listOf, oneof, recursivelyShrink, resize, shrink, vectorOf)
+import Test.QuickCheck
+  ( Arbitrary,
+    Gen,
+    Positive (..),
+    arbitrary,
+    choose,
+    elements,
+    genericShrink,
+    listOf,
+    oneof,
+    recursivelyShrink,
+    resize,
+    shrink,
+    vectorOf,
+  )
 import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( KeySpace (KeySpace_),
-    mkOCert,
     geKeySpace,
     ksCoreNodes,
     mkBlock,
     mkBlockHeader,
+    mkOCert,
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
 import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
@@ -145,7 +158,7 @@ import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
   )
-import Test.Tasty.QuickCheck (Gen, choose, elements)
+import Test.Shelley.Spec.Ledger.Utils (unsafeBoundRational)
 
 -- =======================================================
 
@@ -291,7 +304,28 @@ instance Arbitrary Nonce where
       ]
 
 instance Arbitrary UnitInterval where
-  arbitrary = fromJust . mkUnitInterval . (% 100) <$> choose (1, 99)
+  arbitrary = do
+    x :: Word64 <- arbitrary
+    Positive (y :: Word64) <- arbitrary
+    pure $ unsafeBoundRational $ promoteRatio (if x > y then y % x else x % y)
+
+instance Arbitrary PositiveUnitInterval where
+  arbitrary = do
+    Positive (x :: Word64) <- arbitrary
+    Positive (y :: Word64) <- arbitrary
+    pure $ unsafeBoundRational $ promoteRatio (if x > y then y % x else x % y)
+
+instance Arbitrary PositiveInterval where
+  arbitrary = do
+    Positive (x :: Word64) <- arbitrary
+    Positive (y :: Word64) <- arbitrary
+    pure $ unsafeBoundRational $ promoteRatio (x % y)
+
+instance Arbitrary NonNegativeInterval where
+  arbitrary = do
+    x :: Word64 <- arbitrary
+    Positive (y :: Word64) <- arbitrary
+    pure $ unsafeBoundRational $ promoteRatio (x % y)
 
 instance CC.Crypto crypto => Arbitrary (KeyHash a crypto) where
   arbitrary = KeyHash <$> genHash

@@ -146,7 +146,7 @@ import Test.Shelley.Spec.Ledger.Utils
     mkKeyPair,
     mkVRFKeyPair,
     runShelleyBase,
-    unsafeMkUnitInterval,
+    unsafeBoundRational,
   )
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -1378,7 +1378,7 @@ poolMDHTooBigTxBody pf =
           _poolVrf = hashVerKeyVRF . snd . mkVRFKeyPair $ RawSeed 0 0 0 0 0,
           _poolPledge = Coin 0,
           _poolCost = Coin 0,
-          _poolMargin = unsafeMkUnitInterval 0,
+          _poolMargin = unsafeBoundRational 0,
           _poolRAcnt = RewardAcnt Testnet (scriptStakeCredSuceed pf),
           _poolOwners = mempty,
           _poolRelays = mempty,

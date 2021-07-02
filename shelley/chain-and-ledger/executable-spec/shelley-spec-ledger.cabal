@@ -129,7 +129,6 @@ library
     prettyprinter,
     primitive >= 0.7.1.0,
     quiet,
-    scientific,
     shelley-spec-non-integral,
     small-steps,
     strict-containers,

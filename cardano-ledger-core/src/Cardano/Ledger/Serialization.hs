@@ -33,7 +33,6 @@ module Cardano.Ledger.Serialization
     groupRecord,
     ratioToCBOR,
     ratioFromCBOR,
-    rationalFromCBOR,
     mapToCBOR,
     mapFromCBOR,
     -- IPv4
@@ -62,7 +61,6 @@ import Cardano.Binary
     FromCBOR (..),
     Size,
     ToCBOR (..),
-    decodeInt64,
     decodeListLenOrIndef,
     decodeTag,
     encodeListLen,
@@ -202,11 +200,6 @@ ratioToCBOR r =
 
 ratioFromCBOR :: (Bounded a, Integral a, FromCBOR a) => Decoder s (Ratio a)
 ratioFromCBOR = decodeFraction fromCBOR
-
-rationalFromCBOR :: Decoder s Rational
-rationalFromCBOR = do
-  x <- decodeFraction decodeInt64
-  pure $ fromIntegral (numerator x) % fromIntegral (denominator x)
 
 decodeFraction :: Integral a => Decoder s a -> Decoder s (Ratio a)
 decodeFraction decoder = do

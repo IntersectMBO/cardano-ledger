@@ -39,7 +39,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   ( NatNonce (..),
     mkBlockFakeVRF,
     mkOCert,
-    zero,
     PreAlonzo,
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
@@ -65,7 +64,7 @@ blockEx1 =
     (BlockNo 1)
     (nonce0 @(Crypto era))
     (NatNonce 1)
-    zero
+    minBound
     0
     0
     (mkOCert (coreNodeKeysBySchedule @era ppEx 10) 0 (KESPeriod 0))

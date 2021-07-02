@@ -30,10 +30,11 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     Nonce (..),
     StrictMaybe (..),
+    BoundedRational (..),
+    UnitInterval,
     mkNonceFromNumber,
     textToDns,
     textToUrl,
-    truncateUnitInterval,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -444,7 +445,7 @@ tests =
         (T (TkWord64 30)),
       checkEncodingCBOR
         "rational"
-        (truncateUnitInterval (1 % 2))
+        (unsafeBoundRational (1 % 2) :: UnitInterval)
         (T (TkTag 30 . TkListLen 2 . TkWord64 1 . TkWord64 2)),
       checkEncodingCBOR
         "slot"
@@ -541,7 +542,7 @@ tests =
         ),
       -- checkEncodingCBOR "register-pool"
       let poolOwner = testKeyHash2 @C_Crypto
-          poolMargin = unsafeMkUnitInterval 0.7
+          poolMargin = unsafeBoundRational 0.7
           poolRAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto)
           poolPledge = Coin 11
           poolCost = Coin 55
@@ -675,10 +676,10 @@ tests =
           pooldeposit = Coin 6
           emax = EpochNo 7
           nopt = 8
-          a0 = 1 % 6
-          rho = truncateUnitInterval $ 1 % 6
-          tau = truncateUnitInterval $ 1 % 7
-          d = truncateUnitInterval $ 1 % 9
+          a0 = unsafeBoundRational $ 1 % 6
+          rho = unsafeBoundRational $ 1 % 6
+          tau = unsafeBoundRational $ 1 % 7
+          d = unsafeBoundRational $ 1 % 9
           extraEntropy = NeutralNonce
           protocolVersion = ProtVer 0 1
           minUTxOValue = Coin 121
@@ -726,7 +727,7 @@ tests =
                 <> (T $ TkWord 8)
                 <> S nopt
                 <> (T $ TkWord 9 . TkTag 30)
-                <> S a0
+                <> S (unboundRational a0)
                 <> (T $ TkWord 10)
                 <> S rho
                 <> (T $ TkWord 11)
@@ -1235,7 +1236,7 @@ tests =
                 _poolVrf = testVRFKH @C_Crypto,
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
-                _poolMargin = unsafeMkUnitInterval 0.7,
+                _poolMargin = unsafeBoundRational 0.7,
                 _poolRAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto),
                 _poolOwners = Set.singleton testKeyHash2,
                 _poolRelays = StrictSeq.empty,
@@ -1280,7 +1281,7 @@ tests =
                 _poolVrf = testVRFKH @C_Crypto,
                 _poolPledge = Coin 5,
                 _poolCost = Coin 4,
-                _poolMargin = unsafeMkUnitInterval 0.7,
+                _poolMargin = unsafeBoundRational 0.7,
                 _poolRAcnt = RewardAcnt Testnet (testStakeCred @C_Crypto),
                 _poolOwners = Set.singleton testKeyHash2,
                 _poolRelays = StrictSeq.empty,

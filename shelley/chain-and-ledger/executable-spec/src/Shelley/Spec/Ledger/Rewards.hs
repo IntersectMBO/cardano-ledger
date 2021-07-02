@@ -55,10 +55,11 @@ import Cardano.Binary
   )
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BoundedRational (..),
+    NonNegativeInterval,
     UnitInterval,
     activeSlotVal,
     invalidKey,
-    unitIntervalToRational,
   )
 import Cardano.Ledger.Coin
   ( Coin (..),
@@ -151,8 +152,8 @@ leaderProbability :: ActiveSlotCoeff -> Rational -> UnitInterval -> Double
 leaderProbability activeSlotCoeff relativeStake decentralizationParameter =
   (1 - (1 - asc) ** s) * (1 - d')
   where
-    d' = realToFrac . unitIntervalToRational $ decentralizationParameter
-    asc = realToFrac . unitIntervalToRational . activeSlotVal $ activeSlotCoeff
+    d' = realToFrac . unboundRational $ decentralizationParameter
+    asc = realToFrac . unboundRational . activeSlotVal $ activeSlotCoeff
     s = realToFrac relativeStake
 
 samplePositions :: StrictSeq Double
@@ -289,7 +290,7 @@ instance CC.Crypto crypto => FromCBOR (NonMyopic crypto) where
 -- corresponding to f^~ in section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 desirability ::
-  (Rational, Natural) ->
+  (NonNegativeInterval, Natural) ->
   Coin ->
   PoolParams c ->
   PerformanceEstimate ->
@@ -301,10 +302,10 @@ desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
     else (fTilde - cost) * (1 - margin)
   where
     fTilde = fTildeNumer / fTildeDenom
-    fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * a0))
-    fTildeDenom = fromRational $ 1 + a0
+    fTildeNumer = p * fromRational (coinToRational r * (z0 + min s z0 * unboundRational a0))
+    fTildeDenom = fromRational $ 1 + unboundRational a0
     cost = (fromRational . coinToRational . _poolCost) pool
-    margin = (fromRational . unitIntervalToRational . _poolMargin) pool
+    margin = (fromRational . unboundRational . _poolMargin) pool
     tot = max 1 (fromIntegral totalStake)
     Coin pledge = _poolPledge pool
     s = fromIntegral pledge % tot
@@ -314,7 +315,7 @@ desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
 -- corresponding to section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 getTopRankedPools ::
-  (HasField "_a0" pp Rational, HasField "_nOpt" pp Natural) =>
+  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
   Coin ->
   Coin ->
   pp ->
@@ -348,7 +349,7 @@ mkApparentPerformance ::
   Rational
 mkApparentPerformance d_ sigma blocksN blocksTotal
   | sigma == 0 = 0
-  | unitIntervalToRational d_ < 0.8 = beta / sigma
+  | unboundRational d_ < 0.8 = beta / sigma
   | otherwise = 1
   where
     beta = fromIntegral blocksN / fromIntegral (max 1 blocksTotal)
@@ -368,7 +369,7 @@ leaderRew f pool (StakeShare s) (StakeShare sigma)
         (coinToRational (f <-> c) * (m' + (1 - m') * s / sigma))
   where
     (c, m, _) = poolSpec pool
-    m' = unitIntervalToRational m
+    m' = unboundRational m
 
 -- | Calculate pool member reward
 memberRew ::
@@ -384,7 +385,7 @@ memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
       fromIntegral (f' - c) * (1 - m') * t / sigma
   where
     (Coin c, m, _) = poolSpec pool
-    m' = unitIntervalToRational m
+    m' = unboundRational m
 
 data RewardType = MemberReward | LeaderReward
   deriving (Eq, Show, Ord, Generic)
@@ -458,13 +459,13 @@ aggregateRewards pp rewards =
 -- | Reward one pool. The first argument (the triple (pp_d, pp_a0, pp_nOpt))
 --     is a subset of the fields of PParams
 --     { _d :: !(HKD f UnitInterval) --  Decentralization parameter
---     , _a0 :: !(HKD f Rational),   -- Pool influence
+--     , _a0 :: !(HKD f NonNegativeInterval),   -- Pool influence
 --     , _nOpt :: !(HKD f Natural)   -- Desired number of pools
 --     }
 rewardOnePool ::
   forall c m.
   Monad m =>
-  (UnitInterval, Rational, Natural) ->
+  (UnitInterval, NonNegativeInterval, Natural) ->
   Coin ->
   Natural ->
   Natural ->
@@ -597,7 +598,7 @@ nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
 --   r to compare with k, we pass the top k desirable pools and
 --   check for membership.
 nonMyopicMemberRew ::
-  ( HasField "_a0" pp Rational,
+  ( HasField "_a0" pp NonNegativeInterval,
     HasField "_nOpt" pp Natural
   ) =>
   pp ->

@@ -51,11 +51,12 @@ import Cardano.Ledger.Alonzo.Scripts
     ppPrices,
   )
 import Cardano.Ledger.BaseTypes
-  ( Nonce (NeutralNonce),
+  ( BoundedRational (unboundRational),
+    NonNegativeInterval,
+    Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
-    interval0,
-    strictMaybeToMaybe,
+    fromSMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era
@@ -83,8 +84,6 @@ import Cardano.Ledger.Serialization
     ToCBORGroup (..),
     mapFromCBOR,
     mapToCBOR,
-    ratioToCBOR,
-    rationalFromCBOR,
   )
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
@@ -107,7 +106,6 @@ import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import Data.MemoBytes (MemoBytes (..), memoBytes)
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -141,7 +139,7 @@ data PParams' f era = PParams
     -- | Desired number of pools
     _nOpt :: !(HKD f Natural),
     -- | Pool influence
-    _a0 :: !(HKD f Rational),
+    _a0 :: !(HKD f NonNegativeInterval),
     -- | Monetary expansion
     _rho :: !(HKD f UnitInterval),
     -- | Treasury expansion
@@ -226,7 +224,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To poolDeposit'
             !> To eMax'
             !> To nOpt'
-            !> E ratioToCBOR a0'
+            !> To a0'
             !> To rho'
             !> To tau'
             !> To d'
@@ -260,7 +258,7 @@ instance
         <! From -- _poolDeposit     :: Coin
         <! From -- _eMax            :: EpochNo
         <! From -- _nOpt            :: Natural
-        <! (D rationalFromCBOR) -- _a0 :: Rational
+        <! From -- _a0              :: NonNegativeInterval
         <! From -- _rho             :: UnitInterval
         <! From -- _tau             :: UnitInterval
         <! From -- _d               :: UnitInterval
@@ -290,10 +288,10 @@ emptyPParams =
       _poolDeposit = Coin 0,
       _eMax = EpochNo 0,
       _nOpt = 100,
-      _a0 = 0,
-      _rho = interval0,
-      _tau = interval0,
-      _d = interval0,
+      _a0 = minBound,
+      _rho = minBound,
+      _tau = minBound,
+      _d = minBound,
       _extraEntropy = NeutralNonce,
       _protocolVersion = ProtVer 0 0,
       _minPoolCost = mempty,
@@ -381,7 +379,7 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 6 (_poolDeposit ppup) toCBOR
     !> omitStrictMaybe 7 (_eMax ppup) toCBOR
     !> omitStrictMaybe 8 (_nOpt ppup) toCBOR
-    !> omitStrictMaybe 9 (_a0 ppup) ratioToCBOR
+    !> omitStrictMaybe 9 (_a0 ppup) toCBOR
     !> omitStrictMaybe 10 (_rho ppup) toCBOR
     !> omitStrictMaybe 11 (_tau ppup) toCBOR
     !> omitStrictMaybe 12 (_d ppup) toCBOR
@@ -452,7 +450,7 @@ updateField 5 = field (\x up -> up {_keyDeposit = SJust x}) From
 updateField 6 = field (\x up -> up {_poolDeposit = SJust x}) From
 updateField 7 = field (\x up -> up {_eMax = SJust x}) From
 updateField 8 = field (\x up -> up {_nOpt = SJust x}) From
-updateField 9 = field (\x up -> up {_a0 = x}) (D $ SJust <$> rationalFromCBOR)
+updateField 9 = field (\x up -> up {_a0 = SJust x}) From
 updateField 10 = field (\x up -> up {_rho = SJust x}) From
 updateField 11 = field (\x up -> up {_tau = SJust x}) From
 updateField 12 = field (\x up -> up {_d = SJust x}) From
@@ -480,35 +478,32 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
   PParams
-    { _minfeeA = fromMaybe' (_minfeeA pp) (_minfeeA ppup),
-      _minfeeB = fromMaybe' (_minfeeB pp) (_minfeeB ppup),
-      _maxBBSize = fromMaybe' (_maxBBSize pp) (_maxBBSize ppup),
-      _maxTxSize = fromMaybe' (_maxTxSize pp) (_maxTxSize ppup),
-      _maxBHSize = fromMaybe' (_maxBHSize pp) (_maxBHSize ppup),
-      _keyDeposit = fromMaybe' (_keyDeposit pp) (_keyDeposit ppup),
-      _poolDeposit = fromMaybe' (_poolDeposit pp) (_poolDeposit ppup),
-      _eMax = fromMaybe' (_eMax pp) (_eMax ppup),
-      _nOpt = fromMaybe' (_nOpt pp) (_nOpt ppup),
-      _a0 = fromMaybe' (_a0 pp) (_a0 ppup),
-      _rho = fromMaybe' (_rho pp) (_rho ppup),
-      _tau = fromMaybe' (_tau pp) (_tau ppup),
-      _d = fromMaybe' (_d pp) (_d ppup),
-      _extraEntropy = fromMaybe' (_extraEntropy pp) (_extraEntropy ppup),
-      _protocolVersion = fromMaybe' (_protocolVersion pp) (_protocolVersion ppup),
-      _minPoolCost = fromMaybe' (_minPoolCost pp) (_minPoolCost ppup),
+    { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
+      _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
+      _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
+      _maxTxSize = fromSMaybe (_maxTxSize pp) (_maxTxSize ppup),
+      _maxBHSize = fromSMaybe (_maxBHSize pp) (_maxBHSize ppup),
+      _keyDeposit = fromSMaybe (_keyDeposit pp) (_keyDeposit ppup),
+      _poolDeposit = fromSMaybe (_poolDeposit pp) (_poolDeposit ppup),
+      _eMax = fromSMaybe (_eMax pp) (_eMax ppup),
+      _nOpt = fromSMaybe (_nOpt pp) (_nOpt ppup),
+      _a0 = fromSMaybe (_a0 pp) (_a0 ppup),
+      _rho = fromSMaybe (_rho pp) (_rho ppup),
+      _tau = fromSMaybe (_tau pp) (_tau ppup),
+      _d = fromSMaybe (_d pp) (_d ppup),
+      _extraEntropy = fromSMaybe (_extraEntropy pp) (_extraEntropy ppup),
+      _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
+      _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup),
       -- new/updated for alonzo
-      _coinsPerUTxOWord = fromMaybe' (_coinsPerUTxOWord pp) (_coinsPerUTxOWord ppup),
-      _costmdls = fromMaybe' (_costmdls pp) (_costmdls ppup),
-      _prices = fromMaybe' (_prices pp) (_prices ppup),
-      _maxTxExUnits = fromMaybe' (_maxTxExUnits pp) (_maxTxExUnits ppup),
-      _maxBlockExUnits = fromMaybe' (_maxBlockExUnits pp) (_maxBlockExUnits ppup),
-      _maxValSize = fromMaybe' (_maxValSize pp) (_maxValSize ppup),
-      _collateralPercentage = fromMaybe' (_collateralPercentage pp) (_collateralPercentage ppup),
-      _maxCollateralInputs = fromMaybe' (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
+      _coinsPerUTxOWord = fromSMaybe (_coinsPerUTxOWord pp) (_coinsPerUTxOWord ppup),
+      _costmdls = fromSMaybe (_costmdls pp) (_costmdls ppup),
+      _prices = fromSMaybe (_prices pp) (_prices ppup),
+      _maxTxExUnits = fromSMaybe (_maxTxExUnits pp) (_maxTxExUnits ppup),
+      _maxBlockExUnits = fromSMaybe (_maxBlockExUnits pp) (_maxBlockExUnits ppup),
+      _maxValSize = fromSMaybe (_maxValSize pp) (_maxValSize ppup),
+      _collateralPercentage = fromSMaybe (_collateralPercentage pp) (_collateralPercentage ppup),
+      _maxCollateralInputs = fromSMaybe (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
     }
-  where
-    fromMaybe' :: a -> StrictMaybe a -> a
-    fromMaybe' x = fromMaybe x . strictMaybeToMaybe
 
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
@@ -664,7 +659,7 @@ ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ad
       ("poolDeposit", ppCoin pd),
       ("eMax", ppEpochNo em),
       ("nOpt", ppNatural no),
-      ("a0", ppRational a0),
+      ("a0", ppRational (unboundRational a0)),
       ("rho", ppUnitInterval rho),
       ("tau", ppUnitInterval tau),
       ("d", ppUnitInterval d),
@@ -697,7 +692,7 @@ ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mp
       ("poolDeposit", lift ppCoin pd),
       ("eMax", lift ppEpochNo em),
       ("nOpt", lift ppNatural no),
-      ("a0", lift ppRational a0),
+      ("a0", lift (ppRational . unboundRational) a0),
       ("rho", lift ppUnitInterval rho),
       ("tau", lift ppUnitInterval tau),
       ("d", lift ppUnitInterval d),
