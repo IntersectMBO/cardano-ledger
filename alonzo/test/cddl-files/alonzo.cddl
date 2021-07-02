@@ -255,7 +255,7 @@ redeemer_tag = ; New
 ex_units = [mem: uint, steps: uint] ; New
 
 ex_unit_prices = ; New
-  [ mem_price: coin, step_price: coin ]
+  [ mem_price: sub_coin, step_price: sub_coin ]
 
 ; This is an enumeration. for now there's only one value ; New
 language = 0 ; Plutus v1
@@ -316,6 +316,12 @@ invalid_before = (4, uint)
 invalid_hereafter = (5, uint)
 
 coin = uint
+
+positive_interval = #6.30([1, 2])
+  ; fractional positive_interval is: #6.30([uint, uint])
+  ; but this can produce a zero in the denominator
+
+sub_coin = positive_interval
 
 multiasset<a> = { * policy_id => { * asset_name => a } }
 policy_id = scripthash

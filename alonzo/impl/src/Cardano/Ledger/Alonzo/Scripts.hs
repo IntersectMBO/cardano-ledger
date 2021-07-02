@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -19,7 +20,7 @@
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
     Script (TimelockScript, PlutusScript),
-    scriptfee,
+    txscriptfee,
     ppTag,
     ppScript,
     isPlutusScript,
@@ -41,6 +42,7 @@ module Cardano.Ledger.Alonzo.Scripts
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -48,9 +50,9 @@ import Cardano.Ledger.Era (Era (Crypto), ValidateScript (hashScript))
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (..),
-    ppCoin,
     ppInteger,
     ppMap,
+    ppRational,
     ppRecord,
     ppSexp,
     ppString,
@@ -64,7 +66,6 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.ShelleyMA.Timelocks
-import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
@@ -197,8 +198,8 @@ hashCostModel _proxy = hashWithCrypto (Proxy @(Crypto e))
 
 -- | Prices per execution unit
 data Prices = Prices
-  { prMem :: !Coin,
-    prSteps :: !Coin
+  { prMem :: !NonNegativeInterval,
+    prSteps :: !NonNegativeInterval
   }
   deriving (Eq, Generic, Show, Ord)
 
@@ -208,9 +209,12 @@ instance NFData Prices
 
 -- | Compute the cost of a script based upon prices and the number of execution
 -- units.
-scriptfee :: Prices -> ExUnits -> Coin
-scriptfee (Prices pr_mem pr_steps) (ExUnits mem steps) =
-  (mem <×> pr_mem) <+> (steps <×> pr_steps)
+txscriptfee :: Prices -> ExUnits -> Coin
+txscriptfee Prices {prMem, prSteps} ExUnits {exUnitsMem, exUnitsSteps} =
+  Coin $
+    ceiling $
+      (fromIntegral exUnitsMem * unboundRational prMem)
+        + (fromIntegral exUnitsSteps * unboundRational prSteps)
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -291,7 +295,11 @@ ppCostModel (CostModel m) =
 instance PrettyA CostModel where prettyA = ppCostModel
 
 ppPrices :: Prices -> PDoc
-ppPrices (Prices mem step) =
-  ppRecord "Prices" [("prMem", ppCoin mem), ("prSteps", ppCoin step)]
+ppPrices Prices {prMem, prSteps} =
+  ppRecord
+    "Prices"
+    [ ("prMem", ppRational $ unboundRational prMem),
+      ("prSteps", ppRational $ unboundRational prSteps)
+    ]
 
 instance PrettyA Prices where prettyA = ppPrices

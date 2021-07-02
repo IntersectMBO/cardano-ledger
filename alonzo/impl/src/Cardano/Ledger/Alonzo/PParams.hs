@@ -298,7 +298,7 @@ emptyPParams =
       -- new/updated for alonzo
       _coinsPerUTxOWord = Coin 0,
       _costmdls = mempty,
-      _prices = Prices (Coin 0) (Coin 0),
+      _prices = Prices minBound minBound,
       _maxTxExUnits = ExUnits 0 0,
       _maxBlockExUnits = ExUnits 0 0,
       _maxValSize = 0,
