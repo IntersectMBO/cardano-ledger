@@ -11,40 +11,45 @@ mechanisms to take into account the specific Cardano requirements in terms of fu
 
 \subsection{Key Differences between the PUP and PriviLedge Mechanisms}
 
-The key differences between the PUP mechanism and the one that has been produced for the EU PriviLedge project are shown in the table below.
+The key differences between the PUP mechanism and the one that has been produced for the EU PriviLedge project are shown in the table below
+(this table has been revised to reflect the current PriviLedge implementation for Cardano -- additional changes could be made to the PriviLedge design
+that would create further alignment).
 
 \begin{tabular}{||p{3in}|p{3in}||}
   \hline\hline
   \textbf{Priviledge} & \textbf{PUP}
   \\\hline
   Completely on-chain & Uses off-chain processes as well as on-chain ones \\\hline
-  Proposal implementations must be completed before any voting can commence\khcomment{Confirm this}. & Proposal implementations must be completed before being submitted on-chain \\\hline
-  New end-to-end mechanism & Conservative automation of existing update mechanism \\\hline
-  Does not restrict proposal submission to specific individuals & Restricts on-chain submission to a specific group (aims to avoid ``flooding''/denial-of-service) \\\hline
-  Proposals are tracked throughout & Proposals are tracked once they are on-chain, mechanisms are provided to tie on-chain to off-chain proposals \\\hline
-  Proposals are completely independent & A single off-chain proposal may initiate multiple on-chain proposals for enactment \\\hline
-  Security-related proposals follow the standard process\khcomment{Confirm this.}  & Security-related proposals may bypass some off-chain processes \\\hline
-  A single vote may only be used for one active proposal\khcomment{Confirm this.} & A single vote may be used for any active proposals \\\hline
-  Does not identify different actor groups & Clearly identifies different actor groups: submitters, delegates etc. \\\hline
-  Supports explicit vote abstention & Treats abstention as rejection \\\hline
-  Allows votes to be removed prior to tally & Allows votes and delegations to be changed prior to tally (equivalent effect) \\\hline
-  Allows multiple voting rounds for each proposal & Allows only one on-chain voting round for a proposal \\\hline
-  Allows  vote stake snapshots to be taken at arbitrary points & Takes vote snapshots at fixed points \\\hline
+%  Proposal implementations must be completed before any voting can commence\khcomment{Confirm this}. & Proposal implementations must be completed before being submitted on-chain \\\hline
+%  New end-to-end mechanism & Conservative automation of existing update mechanism \\\hline
+  Does not restrict proposal submission tof specific individuals\footnote{It would be possible to do this, but it could change some of the research results (e.g. for chain liveness)} & Restricts on-chain submission to a specific group\footnote{This aims to avoid ``flooding''/denial-of-service, but assumes an honest submitter group.}\\\hline
+  Proposals are tracked throughout & Proposals are tracked once they are on-chain, mechanisms are provided to tie enactment to off-chain/on-chain proposals \\\hline
+  Each proposal is independent & A single off-chain proposal may initiate multiple on-chain proposals for enactment \\\hline
+  Security-related proposals follow the standard process  & Security-related proposals may bypass some off-chain processes \\\hline
+  A single vote may only be used for one active proposal\footnote{This is intended to ensure that votes are consistent (so that a voter does not vote for one proposal, and also for a contradictory proposal, for example).  However, this could create problems with
+    securing sufficient vote to pass a threshold.}
+    & A single vote may be used for any active proposals \\\hline
+  Does not identify different actor groups\footnote{Submitters are currently drawn from the full voting group.} & Clearly identifies different actor groups and privileges: submitters, delegates etc. \\\hline
+  Supports explicit vote abstention & Treats abstention as rejection\footnote{This is a minor simplification, but it reduces the complexity of vote tallying and what needs to be recorded on chain.} \\\hline
+  Allows votes to be removed prior to tally & Allows votes and delegations to be \emph{changed} prior to tally\footnote{The effect is equivalent, except that in the Priviledge design, the vote could be reassigned to another proposal.  This is not a concern with the PUP design, since it is anyway possible to vote on multiple proposals.} \\\hline
+  Allows multiple voting rounds for each proposal & Only allows a single on-chain voting round for a proposal\footnote{This has the advantage of removing proposals that are not approved, so reducing the number of choices that are presented to the voter group, and avoiding chain ``clogging'' over time.} \\\hline
+  %  Allows  vote stake snapshots to be taken at arbitrary points & Takes vote snapshots at fixed points \\\hline
+  % The implementation has changed this design
   \hline
-\end{tabular}
-
-\begin{tabular}{||p{3in}|p{3in}||}
-  \hline\hline
-  \textbf{Priviledge} & \textbf{PUP}
-  \\\hline
+% \end{tabular}
+%
+%\begin{tabular}{||p{3in}|p{3in}||}
+%  \hline\hline
+%  \textbf{Priviledge} & \textbf{PUP}
+%  \\\hline
   Explicit proposal prioritisation -- order of enactment can be specified  & Submission-based prioritisation -- proposals are enacted in order of submission \\\hline
   Proposals can be cancelled & Proposals cannot be cancelled once they are approved and endorsed \\\hline
-  Includes software upgrades (not just protocol upgrades) & Does not consider software upgrades, except where these are protocol version changes \\\hline
+  Includes software upgrades (not just protocol upgrades) & Does not consider software upgrades, except indirectly via protocol version changes \\\hline
   Does not handle central funds transfers & Handles central funds transfers \\\hline
-  Does not support vote delegation\footnote{New work is in progress.} & Supports vote delegation \\\hline
-  Does not consider Cardano blockchain stability windows & Explicitly considers Cardano blockchain stability windows \\\hline
+%  Does not support vote delegation\footnote{New work is in progress.} & Supports vote delegation \\\hline
+%  Does not consider Cardano blockchain stability windows & Explicitly considers Cardano blockchain stability windows \\\hline
   Requires version numbering in each proposal & No version numbering required  \\\hline
-  Single proposal enactment at an epoch boundary\khcomment{From memory.  Check this.}  & Multiple proposal enactment at each epoch boundary \\\hline
+  Single proposal enactment at an epoch boundary  & Multiple proposal enactment at each epoch boundary \\\hline
   \hline
 \end{tabular}
 
@@ -52,5 +57,6 @@ Most of these differences reflect either differences in stated user requirements
 the PUP mechanism generally consistent with the existing update mechanism.
 Other differences are simplifications that are aimed at improving peformance or security (e.g. vote
 stake snapshots, restricting submission) or reducing development and testing time (e.g. version numbering, time-based prioritisation).
-Most of the Priviledge mechanisms could be added at a later date, if required, assuming that suitable adaptations were carried out.
-The proposal submission process could then be adapted so that proposals were automatically carried forwards from previous Priviledge stages.
+Most of the Priviledge mechanisms could be added at a later date, to create a full on-chain ideation, approval and enactment process.
+The proposal submission process could then be adapted so that proposals were automatically carried forwards from previous Priviledge stages,
+using the proposal identifier to link approved proposals with those that are to be endorsed for enactment.
