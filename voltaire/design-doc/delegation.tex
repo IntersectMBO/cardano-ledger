@@ -24,23 +24,29 @@ at the specified future time (which is always an epoch boundary).  Protocol para
 the address becomes void, and any vote delegation to that address is no longer considered when calculating votes or thresholds.  This means that votes cannot be allocated for a future proposal, and the delegate then
 retire but have their vote counted.
 
-\paragraph{Delegate Keys.} Potential delegates must generate a secure key. The following elements are required.
+%% Just standard, I believe.
+%% \paragraph{Delegate Keys.} Potential delegates must generate a secure key. The following elements are required.
 
-\begin{center}
-\begin{tabular}{||l|p{3in}|l||}
-  \hline\hline
-  \\\hline
-  \hline
-\end{tabular}
-\end{center}
-\khcomment{Determine what's required here.}
+%% \begin{center}
+%% \begin{tabular}{||l|p{3in}|l||}
+%%   \hline\hline
+%%   \\\hline
+%%   \hline
+%% \end{tabular}
+%% \end{center}
+%% \khcomment{Determine what's required here.}
 
 \paragraph{Registration Certificate.} The delegate registration certificate must include:
 
 \begin{center}
 \begin{tabular}{||l|p{3in}|l||}
   \hline\hline
-  Delegate public key hash\khcomment{The delegate key structure needs to be confirmed}  & Unique identifier & 32 bytes
+  Delegate public key hash % \khcomment{The delegate key structure needs to be confirmed}
+           & Unique identifier & 32 bytes
+  \\\hline
+  Link to public ``manifesto''/personal statement & URL & 32 bytes
+  \\\hline
+  Pledged stake & Natural number & 8 bytes
   \\\hline
   \hline
 \end{tabular}
@@ -49,7 +55,7 @@ retire but have their vote counted.
 %% Remove the note about the witness.
 % A witness is required for the delegate key. \khcomment{Confirm.}\pkcomment{I don't think so; we do not require a witness for stake address registration, and this should be similar}
 The registration comes into effect as soon as the transaction is accepted on-chain.
-\khcomment{We could ask for pledge here, but this sounds a bit like vote buying?}
+% \khcomment{We could ask for pledge here, but this sounds a bit like vote buying?}  I added it anyway.
 
 \paragraph{De-Registration Certificate.} Delegate de-registration certificates must include:
 
@@ -58,7 +64,7 @@ The registration comes into effect as soon as the transaction is accepted on-cha
   \hline\hline
   Delegate public key hash & Unique identifier & 32 bytes
   \\\hline
-  Retirement Date & A future epoch & 28 bytes
+  Retirement Date & A future epoch & 8 bytes
   \\\hline
   \hline
 \end{tabular}
@@ -66,12 +72,15 @@ The registration comes into effect as soon as the transaction is accepted on-cha
 
 A witness is required for the delegate key. % \khcomment{Confirm this.} Confirmed.
 
-De-registration takes effect from the retirement date (at a specific epoch boundary that may be no sooner than the end of the current epoch, and no more than \emph{maxDelegateRetire} epochs in the future.\khcomment{This needs to be defined, and the size confirmed above.}  Retirement on an epoch boundary ensures that stakeholders do not mistakenly delegate their vote to delegates that will retire before the end of the current epoch.
+De-registration takes effect from the retirement date (at a specific epoch boundary that may be no sooner than the end of the current epoch, and no more than \emph{maxDelegateRetire} epochs in the future.
+% \khcomment{This needs to be defined, and the size confirmed above.}
+Retirement on an epoch boundary ensures that stakeholders do not mistakenly delegate their vote to delegates that will retire before the end of the current epoch.
 Vote delegations to a retired delegate are treated in the same way as those to delegates that choose not to vote on a specific issue.
 
 \subsection{Vote Delegation}
 
-Ada stakeholders delegate their vote by issuing an on-chain transaction.  As with normal stake delegation, vote delegation may be transferred from one delegate to another, but can never be retracted.\khcomment{There is an argument that you should  be able to delegate to no-one, but it seems sensible to maintain consistency with the stake delegation mechanism.}
+Ada stakeholders delegate their vote by issuing an on-chain transaction.  As with normal stake delegation, vote delegation may be transferred from one delegate to another, but can only be completely retracted by de-registering the voting key.  Votes that are delegated to a retired delegate are not counted.
+% \khcomment{There is an argument that you should  be able to delegate to no-one, but it seems sensible to maintain consistency with the stake delegation mechanism.}
 
 Vote delegation certificates must include:
 
@@ -101,11 +110,13 @@ If they choose to delegate, voters must be able to determine who should receive 
 \item
 Details of the delegate, e.g. their name (which could be the name of a collective group);
 \item
-Details of the delegate's policies o
+Details of the delegate's policies or manifesto;
 \item
 Details of the voting record for the delegate (which proposals have been voted for/against and which have not been voted on);
+\item
+Possibly, details of the delegate's ``pledge'' or currently controlled delegation.
 \end{itemize}
-See Appendix~\ref{sect:voting-centre}.
+See Appendix~\ref{sect:voting-centre} for more details.
 
 \subsection{Vote Addresses}
 
@@ -158,8 +169,9 @@ Figure~\ref{fig:indirection} outlines how payment addresses relate to payment cr
 authorise payments of any kind, including transacion fees.  Unspent ada is accumulated in UTxOs (Unspent Transaction Outputs).  These UTxOs may either be associated
 with the payment address (so returning unspent ada to the user's account), or may be associated with some other address (so allowing ada to be transferred to other wallets,
 including those owned by third parties.  If payment credentials are given to a third party, they will have full spending rights over the associated ada.  These rights cannot be
-revoked without withdrawing all the associated ada. \khcomment{Not completely clear how the payment address is then removed - there's no on-chain registration.  Does it just become
-useless and a target for GC?}
+revoked without withdrawing all the associated ada.
+%% Something for Shelley - may not matter anyway
+%\khcomment{Not completely clear how the payment address is then removed - there's no on-chain registration.  Does it just become useless and a target for GC?}
 In Shelley, stake addresses are used to delegate block production rights.  They must be registered on chain before use.  They may be passed with the associated secret key to third parties
 in order to allow them to delegate on behalf of the ada holder.  This may be useful to protect the original capital while allowing custodial delegation, for example.  Similarly,
 the payment credentials may be protected by a hardware wallet, while the stake rights may be protected by software.  This may be more convenient where the hardware wallet is
@@ -180,24 +192,25 @@ revoked.  New addresses may then be created and assigned as required, and new de
 
 The revised structure for payment addresses is shown in Figure~\ref{fig:address-structure} (this is adapted from the Shelley delegation design document~\cite{delegation-design}).
 Payment addresses may be either Byron Addresses, Shelley Addresses or Voltaire Addresses.
-\khcomment{There's apparently no on-chain registration for payment addresses.}
+%% Yes, just generated from keys, I believe.
+% \khcomment{There's apparently no on-chain registration for payment addresses.}
 Voltaire addresses extend Shelley addresses by including a vote address reference in addition to the existing payment credential and stake address
 reference fields.  Payment credentials may be either payment verification key hashes or script hashes.  Stake address references may be either
 by value (in which case the stake credential is directly embedded in the address), by pointer to the registration transaction, or null (an efficient
 form used where payment addresses do not need stake delegation rights).
 Stake addresses refer to a stake credential that must either be a stake verification key hash or a script hash.
-\khcomment{The Shelley address design looks over-complicated -- stake references could probably be collapsed to just pointers.}
+% \khcomment{The Shelley address design looks over-complicated -- stake references could probably be collapsed to just pointers.}
 Voltaire extends the Shelley address format by including vote address references.  These must be either by pointer to the registration transaction, or null (an efficient
 form used where payment addresses do not need vote delegation rights).
-\khcomment{I think the null form might not be used?  In which case we could avoid problems by eliminating it.  However, the vote address would then need either to be optional
-or it would be necessary to always register the vote credentials with the payment address.}
+% \khcomment{I think the null form might not be used?  In which case we could avoid problems by eliminating it.  However, the vote address would then need either to be optional
+% or it would be necessary to always register the vote credentials with the payment address.}
 Vote addresses refer to a vote credential that must be a vote verification key hash.
-\khcomment{The different levels seem a bit confusing.  An address is presumably a reference to the structure.  But embedded stake credentials won't have an address.  Credentials similarly
-seem to always collapse down to the underlying structure (so may be naming artefects that do not really need to exist).}
-\khcomment{Should script hashes be allowed as voting credentials?  I would imagine so.}
+% \khcomment{The different levels seem a bit confusing.  An address is presumably a reference to the structure.  But embedded stake credentials won't have an address.  Credentials similarly
+% seem to always collapse down to the underlying structure (so may be naming artefects that do not really need to exist).}
+% \khcomment{Should script hashes be allowed as voting credentials?  I would imagine so.}
 The same registration/de-registration concerns apply when pointers are used for vote address references as for stake address references (see ~\cite{delegation-design}).
 Although these can be specified separately, enterprise addresses are expected to have both null stake address references and null vote address references.
-\khcomment{A single null would do here for both kinds of address reference in an enterprise address, but that would be a bit harder to fit with the existing structure.}
+% \khcomment{A single null would do here for both kinds of address reference in an enterprise address, but that would be a bit harder to fit with the existing structure.}
 
 \begin{figure*}[h]
   \begin{center}
