@@ -6,11 +6,13 @@ All ada holders will have on-chain voting rights, in direct proportion to the ex
 They may delegate these voting rights to any registered delegate, who is expected to act faithfully on their behalf.
 Only registered delegates may actually vote on a proposal, but any ada holder may choose to register as a delegate if they choose to do so.
 They may then allocate their own vote as they wish, as well as that of any other ada holder who delegates to them.
-\khcomment{There is potentially a transaction cost to voting.  This needs to be considered carefully for acceptability.  Unlike block production, there may be no direct return from voting, so
-this may restrict participation if done wrongly.}\pkcomment{We'll probably need to have a good look at what the researchers have to say on incentives for all the roles}
-\khcomment{Agreed!}
+A delegate may either be an individual or a group that has agreed to act in a specific way.
+% \khcomment{There is potentially a transaction cost to voting.  This needs to be considered carefully for acceptability.  Unlike block production, there may be no direct return from voting, so
+% this may restrict participation if done wrongly.}\pkcomment{We'll probably need to have a good look at what the researchers have to say on incentives for all the roles}
+% \khcomment{Agreed!}
 Ada holders may delegate their
-vote to any registered delegate by submitting a vote delegation transaction that includes the registered delegate address.\khcomment{How do voters know about the available delegates?  They will need to advertise themselves somehow in the voting centre.}
+vote to any registered delegate by submitting a vote delegation transaction that includes the registered delegate address.
+% \khcomment{How do voters know about the available delegates?  They will need to advertise themselves somehow in the voting centre.}
 Ada holders may change this delegation at any point in time simply by submitting a new vote delegation transaction.  When votes are tallied, the most recent delegation choice that has been made \emph{prior to the deadline} by each ada holder is considered to be the effective delegation.
 
 \subsection{Delegate Address Registration/De-Registration}
@@ -91,6 +93,19 @@ they can simply post a new delegation certificate. The delegation certificate is
 Vote delegation comes into effect immediately that the transaction has appeared on-chain.  % There is no stability window.
 Vote delegations may be made at any time up to the point where votes are tallied.
 Only vote that is associated with stake in the relevant stake snapshot counts for voting and thresholds.
+
+\paragraph{Voting Centre Requirements}
+
+If they choose to delegate, voters must be able to determine who should receive their vote delegation.  Information should be presented through a voting centre that might include:
+\begin{itemize}
+\item
+Details of the delegate, e.g. their name (which could be the name of a collective group);
+\item
+Details of the delegate's policies o
+\item
+Details of the voting record for the delegate (which proposals have been voted for/against and which have not been voted on);
+\end{itemize}
+See Appendix~\ref{sect:voting-centre}.
 
 \subsection{Vote Addresses}
 

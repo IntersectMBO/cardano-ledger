@@ -34,8 +34,8 @@ We can identify a number of distinct groups that may be involved in proposal sub
   Delegates				   & Vote on acceptance of on-chain proposals. & On-chain \\
   \hline
   Endorsers			   & Endorse readiness for protocol version upgrade. & On-chain\\
-  \hline
-  Electors			       & Nominate submitters. & Either \\
+%   \hline
+%   Electors			       & Nominate submitters. & Either \\
   \hline \hline
 \end{tabular}
 
@@ -43,7 +43,9 @@ We can identify a number of distinct groups that may be involved in proposal sub
 
 General Ada holders may make informal proposals and discuss them using an off-chain mechanism.  They vote on the acceptance of these proposals
 both on-chain and off-chain, in proportion to the ada that they hold.  They may delegate their stake for voting purposes to on-chain representatives,
-who will vote on their behalf for or against submitted proposals.  This vote delegation may be changed at any time\pkcomment{We should clarify whether this includes changing the delegation \emph{after} delegates have voted. I think it would be good to allow this}\khcomment{Yes, the design allows that up to the vote deadline}.
+who will vote on their behalf for or against submitted proposals.  The vote delegation may be changed at any time prior to the voting deadline.
+The final delegation is the one that is considered for tallying purposes.
+% \pkcomment{We should clarify whether this includes changing the delegation \emph{after} delegates have voted. I think it would be good to allow this}\khcomment{Yes, the design allows that up to the vote deadline}.
 
 \subsection{Executive Team (Off-Chain)}
 
@@ -84,15 +86,20 @@ source file\footnote{Currently in JSON format.} that fully describes the proposa
 
 \subsection{Submitters (On-Chain)}
 
-Submitters are permitted to submit proposals on-chain.  Each proposal must be signed by a quorum of submitters, who verify the submitted
-proposal, checking that it is in the correct format, conforms to the original proposal, and meets other process requirements.
-Submitters are appointed by electors.  Depending on the governance design, the submitter group might % be restricted to a few members,
+Submitters are permitted to submit proposals on-chain.  Each proposal must be signed by a quorum of submitters\footnote{It would be possible to split the roles into distinct submitter and counter-signatory groups, if preferred.},
+who verify the submitted proposal, checking that it is in the correct format, conforms to the original proposal, and meets other process requirements that are laid down.
+% Submitters are appointed by electors.
+Depending on the governance design, the submitter group might % be restricted to a few members,
 be an elected or appointed group, be limited by ada holding, or be limited to endorsers, delegates or another group.
 It is important for dececentralisation that the group is not restricted to too few members.
 However, to avoid overwhelming voters by ``flooding'' the system with voting choices, it is also important to limit the number of proposals that can
 be submitted, which is most easily done by limiting the number of submitters.  This implies that the required quorum should be a significant percentage
 of the submitter group.
-\emph{Since this group controls what is ultimately voted on, care needs to be taken over its composition and accountability.}
+\emph{Since this group controls what proposals are ultimately voted on, care needs to be taken over its size, composition and accountability.  It is important that there is an ``honest'' majority of submitters,
+so that proposals are submitted in accordance with prior approvals, and that proper care is taken over proposal verification.  It is also important that the group is ``legitimate''
+and can be changed through some proper process.  This avoids a small group gaining control.  Collectively, the group has the power of veto -- either by refusing to submit a proposal, or by
+refusing to counter-sign a proposal.  This helps ensure the quality of proposals and limits the volume that need to be considered by the voter group.  Where necessary, the group is also responsible for ordering
+proposals so that a sensible enactment order is applied, or grouping proposals so that a single vote can cover a set of related proposals (e.g. funds transfers from some Catalyst round).}
 
 \subsection{Delegates (On-Chain)}
 
@@ -121,9 +128,9 @@ The design assumes that endorsement will be automated by recording the stake tha
 is associated with upgraded pools as they produce blocks (Section~\ref{sect:endorsement}).
 
 
-\subsection{Electors (Off-chain or On-Chain)}
+%% \subsection{Electors (Off-chain or On-Chain)}
 
-Electors determine who belongs to the submitter group.  The composition of this group is to be determined.  It might be formed by direct election off-chain\pkcomment{If it is an off-chain election, how do we ensure the correct result is recorded on the chain?}, by
-nomination from an agreed group, by submission of an on-chain proposal.  In some systems, it may even be unnecessary.
-One possibility is to have a self-perpetuating and renewing submitter group, so that submitters nominate and sign for additional members, or remove existing members.
-\khcomment{This needs to be agreed.}
+%% Electors determine who belongs to the submitter group.  The composition of this group is to be determined.  It might be formed by direct election off-chain\pkcomment{If it is an off-chain election, how do we ensure the correct result is recorded on the chain?}, by
+%% nomination from an agreed group, by submission of an on-chain proposal.  In some systems, it may even be unnecessary.
+%% One possibility is to have a self-perpetuating and renewing submitter group, so that submitters nominate and sign for additional members, or remove existing members.
+%% \khcomment{This needs to be agreed.}
