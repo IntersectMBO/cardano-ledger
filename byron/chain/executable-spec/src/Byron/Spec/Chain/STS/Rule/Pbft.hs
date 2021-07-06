@@ -43,6 +43,7 @@ instance STS PBFT where
 
   type PredicateFailure PBFT = PbftPredicateFailure
 
+
   initialRules = []
 
   transitionRules =
@@ -61,3 +62,4 @@ instance STS PBFT where
 
 instance Embed SIGCNT PBFT where
   wrapFailed = SigCountFailure
+  wrapEvent = id

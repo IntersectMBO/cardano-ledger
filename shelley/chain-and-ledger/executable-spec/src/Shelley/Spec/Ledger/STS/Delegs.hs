@@ -17,6 +17,7 @@ module Shelley.Spec.Ledger.STS.Delegs
   ( DELEGS,
     DelegsEnv (..),
     DelegsPredicateFailure (..),
+    DelegsEvent (..),
     PredicateFailure,
   )
 where
@@ -72,7 +73,7 @@ import Shelley.Spec.Ledger.LedgerState
     _pParams,
     _rewards,
   )
-import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..), DelplPredicateFailure)
+import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..), DelplEvent, DelplPredicateFailure)
 import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
@@ -108,6 +109,9 @@ data DelegsPredicateFailure era
   | DelplFailure (PredicateFailure (Core.EraRule "DELPL" era)) -- Subtransition Failures
   deriving (Generic)
 
+data DelegsEvent era
+  = DelplEvent (Event (Core.EraRule "DELPL" era))
+
 deriving stock instance
   ( Show (PredicateFailure (Core.EraRule "DELPL" era))
   ) =>
@@ -136,6 +140,7 @@ instance
   type
     PredicateFailure (DELEGS era) =
       DelegsPredicateFailure era
+  type Event _ = DelegsEvent era
 
   transitionRules = [delegsTransition]
 
@@ -257,8 +262,10 @@ delegsTransition = do
 instance
   ( Era era,
     STS (DELPL era),
-    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era
+    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
+    Event (Core.EraRule "DELPL" era) ~ DelplEvent era
   ) =>
   Embed (DELPL era) (DELEGS era)
   where
   wrapFailed = DelplFailure
+  wrapEvent = DelplEvent

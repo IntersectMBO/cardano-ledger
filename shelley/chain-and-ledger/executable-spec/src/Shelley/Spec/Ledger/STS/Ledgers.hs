@@ -15,6 +15,7 @@ module Shelley.Spec.Ledger.STS.Ledgers
   ( LEDGERS,
     LedgersEnv (..),
     LedgersPredicateFailure (..),
+    LedgersEvent (..),
     PredicateFailure,
   )
 where
@@ -51,6 +52,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.STS.Ledger
   ( LEDGER,
     LedgerEnv (..),
+    LedgerEvent,
     LedgerPredicateFailure,
   )
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
@@ -66,6 +68,9 @@ data LedgersEnv era = LedgersEnv
 data LedgersPredicateFailure era
   = LedgerFailure (PredicateFailure (Core.EraRule "LEDGER" era)) -- Subtransition Failures
   deriving (Generic)
+
+data LedgersEvent era
+  = LedgerEvent (Event (Core.EraRule "LEDGER" era))
 
 deriving stock instance
   ( ShelleyBased era,
@@ -118,6 +123,7 @@ instance
   type Environment (LEDGERS era) = LedgersEnv era
   type BaseM (LEDGERS era) = ShelleyBase
   type PredicateFailure (LEDGERS era) = LedgersPredicateFailure era
+  type Event (LEDGERS era) = LedgersEvent era
 
   transitionRules = [ledgersTransition]
 
@@ -147,8 +153,10 @@ ledgersTransition = do
 instance
   ( Era era,
     STS (LEDGER era),
-    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era
+    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
+    Event (Core.EraRule "LEDGER" era) ~ LedgerEvent era
   ) =>
   Embed (LEDGER era) (LEDGERS era)
   where
   wrapFailed = LedgerFailure
+  wrapEvent = LedgerEvent

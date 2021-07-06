@@ -42,6 +42,7 @@ import Data.Kind (Type)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Void (Void)
 import GHC.Records (HasField, getField)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
@@ -50,8 +51,8 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     UTxOState (..),
   )
-import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsPredicateFailure)
-import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..), LedgerPredicateFailure (..))
+import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
+import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (..))
 import qualified Shelley.Spec.Ledger.STS.Ledgers as Shelley
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
@@ -143,6 +144,7 @@ instance
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
   type PredicateFailure (AlonzoLEDGER era) = LedgerPredicateFailure era
+  type Event (AlonzoLEDGER era) = LedgerEvent era
 
   initialRules = []
   transitionRules = [ledgerTransition @AlonzoLEDGER]
@@ -167,26 +169,32 @@ instance
 instance
   ( Era era,
     STS (DELEGS era),
-    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era
+    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era,
+    Event (Core.EraRule "DELEGS" era) ~ DelegsEvent era
   ) =>
   Embed (DELEGS era) (AlonzoLEDGER era)
   where
   wrapFailed = DelegsFailure
+  wrapEvent = DelegsEvent
 
 instance
   ( Era era,
     STS (AlonzoUTXOW era),
-    PredicateFailure (Core.EraRule "UTXOW" era) ~ AlonzoPredFail era
+    PredicateFailure (Core.EraRule "UTXOW" era) ~ AlonzoPredFail era,
+    Event (Core.EraRule "UTXOW" era) ~ Void
   ) =>
   Embed (AlonzoUTXOW era) (AlonzoLEDGER era)
   where
   wrapFailed = UtxowFailure
+  wrapEvent = UtxowEvent
 
 instance
   ( Era era,
     STS (AlonzoLEDGER era),
-    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era
+    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
+    Event (Core.EraRule "LEDGER" era) ~ LedgerEvent era
   ) =>
   Embed (AlonzoLEDGER era) (Shelley.LEDGERS era)
   where
   wrapFailed = Shelley.LedgerFailure
+  wrapEvent = Shelley.LedgerEvent

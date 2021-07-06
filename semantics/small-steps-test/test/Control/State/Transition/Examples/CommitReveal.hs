@@ -137,6 +137,7 @@ instance
     PredicateFailure (CR hashAlgo hashToDataMap commitData) =
       CRPredicateFailure hashAlgo hashToDataMap commitData
 
+
   initialRules =
     [ pure
         $! CRSt

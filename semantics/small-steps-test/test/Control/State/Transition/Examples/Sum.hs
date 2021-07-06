@@ -34,6 +34,7 @@ instance STS SUM where
 
   type PredicateFailure SUM = NoFailure
 
+
   initialRules = [pure 0]
 
   transitionRules =

@@ -19,6 +19,8 @@ module Shelley.Spec.Ledger.STS.Ledger
   ( LEDGER,
     LedgerEnv (..),
     LedgerPredicateFailure (..),
+    LedgerEvent (..),
+    Event,
     PredicateFailure,
   )
 where
@@ -61,7 +63,7 @@ import Shelley.Spec.Ledger.LedgerState
     PState (..),
     UTxOState (..),
   )
-import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsPredicateFailure)
+import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
 import Shelley.Spec.Ledger.STS.Utxo
   ( UtxoEnv (..),
   )
@@ -83,6 +85,10 @@ data LedgerPredicateFailure era
   = UtxowFailure (PredicateFailure (Core.EraRule "UTXOW" era)) -- Subtransition Failures
   | DelegsFailure (PredicateFailure (Core.EraRule "DELEGS" era)) -- Subtransition Failures
   deriving (Generic)
+
+data LedgerEvent era
+  = UtxowEvent (Event (Core.EraRule "UTXOW" era))
+  | DelegsEvent (Event (Core.EraRule "DELEGS" era))
 
 deriving stock instance
   ( Show (PredicateFailure (Core.EraRule "DELEGS" era)),
@@ -162,6 +168,7 @@ instance
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
   type PredicateFailure (LEDGER era) = LedgerPredicateFailure era
+  type Event (LEDGER era) = LedgerEvent era
 
   initialRules = []
   transitionRules = [ledgerTransition]
@@ -224,17 +231,21 @@ ledgerTransition = do
 instance
   ( Era era,
     STS (DELEGS era),
-    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era
+    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era,
+    Event (Core.EraRule "DELEGS" era) ~ DelegsEvent era
   ) =>
   Embed (DELEGS era) (LEDGER era)
   where
   wrapFailed = DelegsFailure
+  wrapEvent = DelegsEvent
 
 instance
   ( Era era,
     STS (UTXOW era),
-    PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFailure era
+    PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFailure era,
+    Event (Core.EraRule "UTXOW" era) ~ Event (UTXOW era)
   ) =>
   Embed (UTXOW era) (LEDGER era)
   where
   wrapFailed = UtxowFailure
+  wrapEvent = UtxowEvent

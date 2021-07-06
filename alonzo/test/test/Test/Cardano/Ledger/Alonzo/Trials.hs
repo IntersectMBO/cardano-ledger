@@ -81,8 +81,8 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
   )
 import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainPredicateFailure (..), ChainState (..))
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..), LedgerPredicateFailure (UtxowFailure))
+import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainEvent (..), ChainPredicateFailure (..), ChainState (..))
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (UtxowFailure))
 import System.Timeout
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
@@ -118,9 +118,11 @@ import Test.Tasty.QuickCheck
 
 instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto)) where
   wrapFailed = BbodyFailure
+  wrapEvent = BbodyEvent
 
 instance Embed (AlonzoUTXOW (AlonzoEra TestCrypto)) (LEDGER (AlonzoEra TestCrypto)) where
   wrapFailed = UtxowFailure
+  wrapEvent = UtxowEvent
 
 -- ======================================================================================
 -- It is incredably hard to debug property test generators.  These functions mimic the

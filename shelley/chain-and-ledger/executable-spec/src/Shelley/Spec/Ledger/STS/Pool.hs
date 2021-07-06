@@ -14,6 +14,7 @@
 
 module Shelley.Spec.Ledger.STS.Pool
   ( POOL,
+    PoolEvent (..),
     PoolEnv (..),
     PredicateFailure,
     PoolPredicateFailure (..),
@@ -52,6 +53,7 @@ import Control.State.Transition
     failBecause,
     judgmentContext,
     liftSTS,
+    tellEvent,
     (?!),
   )
 import qualified Data.ByteString as BS
@@ -121,8 +123,13 @@ instance
 
   type BaseM (POOL era) = ShelleyBase
   type PredicateFailure (POOL era) = PoolPredicateFailure era
+  type Event (POOL era) = PoolEvent era
 
   transitionRules = [poolDelegationTransition]
+
+data PoolEvent era
+  = RegisterPool (KeyHash 'StakePool (Crypto era))
+  | ReregisterPool (KeyHash 'StakePool (Crypto era))
 
 instance
   (Typeable era, Era era) =>
@@ -209,13 +216,15 @@ poolDelegationTransition = do
 
       let hk = _poolId poolParam
       if eval (hk ∉ dom stpools)
-        then -- register new, Pool-Reg
-
+        then do
+          -- register new, Pool-Reg
+          tellEvent $ RegisterPool hk
           pure $
             ps
               { _pParams = eval (_pParams ps ∪ singleton hk poolParam)
               }
         else do
+          tellEvent $ ReregisterPool hk
           pure $
             ps
               { _fPParams = eval (_fPParams ps ⨃ singleton hk poolParam),

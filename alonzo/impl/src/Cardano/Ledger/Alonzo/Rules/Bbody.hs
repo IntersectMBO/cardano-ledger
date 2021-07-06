@@ -15,6 +15,7 @@
 module Cardano.Ledger.Alonzo.Rules.Bbody
   ( AlonzoBBODY,
     AlonzoBbodyPredFail (..),
+    AlonzoBbodyEvent (..),
     bbodyTransition,
   )
 where
@@ -64,6 +65,7 @@ import Shelley.Spec.Ledger.LedgerState (LedgerState)
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Bbody
   ( BbodyEnv (..),
+    BbodyEvent (..),
     BbodyPredicateFailure (..),
     BbodyState (..),
   )
@@ -81,6 +83,9 @@ data AlonzoBbodyPredFail era
       !ExUnits
       -- ^ Maximum allowed by protocal parameters
   deriving (Generic)
+
+data AlonzoBbodyEvent era
+  = ShelleyInAlonzoEvent (BbodyEvent era)
 
 deriving instance
   (Era era, Show (PredicateFailure (Core.EraRule "LEDGERS" era))) =>
@@ -230,6 +235,7 @@ instance
   type BaseM (AlonzoBBODY era) = ShelleyBase
 
   type PredicateFailure (AlonzoBBODY era) = AlonzoBbodyPredFail era
+  type Event (AlonzoBBODY era) = AlonzoBbodyEvent era
 
   initialRules = []
   transitionRules = [bbodyTransition @AlonzoBBODY]
@@ -245,3 +251,4 @@ instance
   Embed ledgers (AlonzoBBODY era)
   where
   wrapFailed = ShelleyInAlonzoPredFail . LedgersFailure
+  wrapEvent = ShelleyInAlonzoEvent . LedgersEvent

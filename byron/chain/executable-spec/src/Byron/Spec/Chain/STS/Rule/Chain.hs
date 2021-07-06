@@ -162,18 +162,23 @@ instance STS CHAIN where
 
 instance Embed EPOCH CHAIN where
   wrapFailed = EpochFailure
+  wrapEvent = id
 
 instance Embed BBODY CHAIN where
   wrapFailed = BBodyFailure
+  wrapEvent = id
 
 instance Embed PBFT CHAIN where
   wrapFailed = PBFTFailure
+  wrapEvent = id
 
 instance Embed DELEG CHAIN where
   wrapFailed = LedgerDelegationFailure
+  wrapEvent = id
 
 instance Embed UTXOWS CHAIN where
   wrapFailed = LedgerUTxOFailure
+  wrapEvent = id
 
 isHeaderSizeTooBigFailure :: PredicateFailure CHAIN -> Bool
 isHeaderSizeTooBigFailure (HeaderSizeTooBig _ _ _) = True

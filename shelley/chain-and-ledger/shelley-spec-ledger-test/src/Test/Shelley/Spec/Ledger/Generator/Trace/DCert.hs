@@ -31,6 +31,7 @@ import Control.State.Transition
     Environment,
     PredicateFailure,
     STS,
+    Event,
     Signal,
     State,
     TRC (..),
@@ -39,7 +40,7 @@ import Control.State.Transition
     judgmentContext,
     trans,
     transitionRules,
-    wrapFailed,
+    wrapFailed, wrapEvent
   )
 import Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
@@ -66,7 +67,7 @@ import Shelley.Spec.Ledger.API
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
 import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
-import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure)
+import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure, DelplEvent)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.TxBody (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
@@ -86,6 +87,9 @@ data CERTS era
 newtype CertsPredicateFailure era
   = CertsFailure (PredicateFailure (Core.EraRule "DELPL" era))
   deriving (Generic)
+
+newtype CertsEvent era
+  = CertsEvent (Event (Core.EraRule "DELPL" era))
 
 deriving stock instance
   ( Eq (PredicateFailure (Core.EraRule "DELPL" era))
@@ -110,6 +114,7 @@ instance
   type State (CERTS era) = (DPState (Crypto era), Ix)
   type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
+  type Event (CERTS era) = CertsEvent era
 
   type BaseM (CERTS era) = ShelleyBase
 
@@ -146,11 +151,13 @@ certsTransition = do
 instance
   ( Era era,
     STS (DELPL era),
-    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era
+    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
+    Event (Core.EraRule "DELPL" era) ~ DelplEvent era
   ) =>
   Embed (DELPL era) (CERTS era)
   where
   wrapFailed = CertsFailure
+  wrapEvent = CertsEvent
 
 instance
   ( EraGen era,

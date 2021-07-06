@@ -10,7 +10,7 @@ import           Data.Data (Data, Typeable)
 
 import           Control.State.Transition (Embed, Environment, PredicateFailure, STS, Signal, State,
                      TRC (TRC), TransitionRule, initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed)
+                     transitionRules, wrapFailed, wrapEvent)
 import           Byron.Spec.Ledger.Core (VKey)
 import           Byron.Spec.Ledger.Update (ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, Vote)
 
@@ -67,9 +67,12 @@ instance STS BUPI where
 
 instance Embed UPIREG BUPI where
   wrapFailed = UPIREGFailure
+  wrapEvent = id
 
 instance Embed UPIVOTES BUPI where
   wrapFailed = UPIVOTESFailure
+  wrapEvent = id
 
 instance Embed UPIEND BUPI where
   wrapFailed = UPIENDFailure
+  wrapEvent = id

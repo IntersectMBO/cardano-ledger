@@ -73,6 +73,7 @@ import Control.State.Transition
     judgmentContext,
     liftSTS,
     trans,
+    wrapEvent,
     wrapFailed,
     (?!),
   )
@@ -438,3 +439,4 @@ instance
   Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
+  wrapEvent = id

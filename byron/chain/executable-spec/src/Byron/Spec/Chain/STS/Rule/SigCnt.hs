@@ -44,6 +44,7 @@ instance STS SIGCNT where
   type Signal SIGCNT = VKey
   type PredicateFailure SIGCNT = SigcntPredicateFailure
 
+
   initialRules = []
 
   transitionRules =

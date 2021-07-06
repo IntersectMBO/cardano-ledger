@@ -456,3 +456,4 @@ instance
   Embed (AlonzoUTXO era) (AlonzoUTXOW era)
   where
   wrapFailed = WrappedShelleyEraFailure . UtxoFailure
+  wrapEvent = id

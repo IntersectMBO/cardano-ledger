@@ -25,7 +25,7 @@ import qualified Hedgehog.Gen as Gen
 import           Hedgehog.Internal.Property (CoverPercentage)
 import qualified Hedgehog.Range as Range
 
-import           Control.State.Transition (Embed, Environment, IRC (IRC), STS (..),
+import           Control.State.Transition (Embed(..), Environment, IRC (IRC), STS (..),
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
                      transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasTrace, SignalGenerator, coverFailures,
@@ -93,6 +93,7 @@ witnessed (Tx tx wits) utxo =
 
 instance Embed UTXO UTXOW where
   wrapFailed = UtxoFailure
+  wrapEvent = id
 
 -- | Constant list of addresses intended to be used in the generators.
 traceAddrs :: [Addr]
