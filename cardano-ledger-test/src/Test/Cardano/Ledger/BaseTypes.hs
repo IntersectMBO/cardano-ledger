@@ -93,7 +93,11 @@ boundedRationalTests badJSONValues =
                | (testName, invalidInput) <- badJSONValues
              ],
       testProperty "CBOR roundtrip" $ \(br :: a) ->
-        either (error . show) (br ==) $ Binary.decodeFull (Binary.serialize br)
+        either (error . show) (br ==) $ Binary.decodeFull (Binary.serialize br),
+      testProperty "CBOR BoundedRational roundtrip" $ \(br :: a) ->
+        either (error . show) (br ==) $
+          Binary.decodeFullDecoder "BoundedRational" boundedRationalFromCBOR $
+            Binary.serializeEncoding (boundedRationalToCBOR br)
     ]
   where
     boundedFromJSON = eitherDecode :: ByteString -> Either String a

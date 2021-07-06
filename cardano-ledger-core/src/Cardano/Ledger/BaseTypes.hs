@@ -31,6 +31,8 @@ module Cardano.Ledger.BaseTypes
     PositiveInterval,
     NonNegativeInterval,
     BoundedRational (..),
+    boundedRationalFromCBOR,
+    boundedRationalToCBOR,
     fpPrecision,
     promoteRatio,
     invalidKey,
@@ -62,6 +64,7 @@ where
 import Cardano.Binary
   ( Decoder,
     DecoderError (..),
+    Encoding,
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     encodeListLen,
@@ -210,8 +213,28 @@ instance
     r <- ratioFromCBOR
     case fromRatioBoundedRatio r of
       Nothing ->
-        cborError $ DecoderErrorCustom "UnitInterval" (Text.pack $ show r)
+        cborError $ DecoderErrorCustom "BoundedRatio" (Text.pack $ show r)
       Just u -> pure u
+
+-- TODO: Remove `boundedRationalToCBOR`/`boundedRationalFromCBOR` in favor of
+-- serialization through `ToCBOR`/`FromCBOR` that relies on the @Tag 30@. This
+-- is a backwards incompatible change and must be done when breaking
+-- serialization changes can be introduced.
+
+-- | Serialize `BoundedRational` type in the same way `Rational` is serialized.
+boundedRationalToCBOR :: BoundedRational r => r -> Encoding
+boundedRationalToCBOR = toCBOR . unboundRational
+
+-- | Deserialize `BoundedRational` type using `Rational` deserialization and
+-- fail when bounds are violated.
+boundedRationalFromCBOR :: BoundedRational r => Decoder s r
+boundedRationalFromCBOR = do
+  r <- fromCBOR
+  case boundRational r of
+    Nothing ->
+      cborError $ DecoderErrorCustom "BoundedRational" (Text.pack $ show r)
+    Just u -> pure u
+
 
 instance ToJSON (BoundedRatio b Word64) where
   toJSON = toJSON . toScientificBoundedRatioWord64WithRounding
@@ -472,9 +495,7 @@ instance NoThunks ActiveSlotCoeff
 instance NFData ActiveSlotCoeff
 
 instance FromCBOR ActiveSlotCoeff where
-  fromCBOR = do
-    v <- fromCBOR
-    pure $ mkActiveSlotCoeff v
+  fromCBOR = mkActiveSlotCoeff <$> fromCBOR
 
 instance ToCBOR ActiveSlotCoeff where
   toCBOR

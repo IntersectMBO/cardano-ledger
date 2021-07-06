@@ -26,6 +26,8 @@ import Cardano.Ledger.BaseTypes
     NonNegativeInterval,
     ShelleyBase,
     UnitInterval,
+    boundedRationalFromCBOR,
+    boundedRationalToCBOR,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..))
@@ -178,7 +180,7 @@ instance NFData (RewardSnapShot crypto)
 instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
   toCBOR (RewardSnapShot ss a0 nopt ver nm dr1 r dt1 tot pot) =
     encode
-      ( Rec RewardSnapShot !> To ss !> To a0 !> To nopt !> To ver !> To nm !> To dr1
+      ( Rec RewardSnapShot !> To ss !> E boundedRationalToCBOR a0 !> To nopt !> To ver !> To nm !> To dr1
           !> To r
           !> To dt1
           !> To tot
@@ -186,7 +188,7 @@ instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
       )
 
 instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
-  fromCBOR = decode (RecD RewardSnapShot <! From <! From <! From <! From <! From <! From <! From <! From <! From <! From)
+  fromCBOR = decode (RecD RewardSnapShot <! From <! D boundedRationalFromCBOR <! From <! From <! From <! From <! From <! From <! From <! From)
 
 -- Some functions that only need a subset of the PParams can be
 -- passed a RewardSnapShot, as it copies of some values from PParams
@@ -255,7 +257,7 @@ instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
             !> To r
             !> To slotsPerEpoch
             !> To pp_d
-            !> To pp_a0
+            !> E boundedRationalToCBOR pp_a0
             !> To pp_nOpt
         )
 
@@ -270,7 +272,7 @@ instance (CC.Crypto crypto) => FromCBOR (FreeVars crypto) where
           <! From {- r -}
           <! From {- slotsPerEpoch -}
           <! From {- pp_d -}
-          <! From {- pp_a0 -}
+          <! D boundedRationalFromCBOR {- pp_a0 -}
           <! From {- pp_nOpt -}
       )
 
