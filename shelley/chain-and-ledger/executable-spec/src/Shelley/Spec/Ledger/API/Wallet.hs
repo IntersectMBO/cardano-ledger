@@ -1,6 +1,8 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -19,34 +21,46 @@ module Shelley.Spec.Ledger.API.Wallet
     getTotalStake,
     poolsByTotalStakeFraction,
     getRewardInfo,
+    CLI (..),
+    addShelleyKeyWitnesses,
   )
 where
 
+import Cardano.Binary (ToCBOR (..), decodeFull, decodeFullDecoder, serialize)
+import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Globals (..), NonNegativeInterval, Seed, UnitInterval, epochInfo)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Crypto (VRF)
+import Cardano.Ledger.Crypto (DSIGN, VRF)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Slot (epochInfoSize)
+import Cardano.Ledger.Tx (Tx (..))
+import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
 import Control.Monad.Trans.Reader (runReader)
 import Control.Provenance (runWithProvM)
+import qualified Data.ByteString.Lazy as LBS
 import Data.Default.Class (Default (..))
+import Data.Either (fromRight)
 import Data.Foldable (fold)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Records (HasField, getField)
+import GHC.Records (HasField (..), getField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
@@ -65,7 +79,10 @@ import Shelley.Spec.Ledger.LedgerState
     RewardUpdate,
     UTxOState (..),
     circulation,
+    consumed,
     createRUpd,
+    minfee,
+    produced,
     stakeDistr,
   )
 import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
@@ -80,7 +97,8 @@ import Shelley.Spec.Ledger.Rewards
   )
 import Shelley.Spec.Ledger.STS.NewEpoch (calculatePoolDistr)
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
-import Shelley.Spec.Ledger.TxBody (PoolParams (..), TxIn (..))
+import Shelley.Spec.Ledger.Tx (WitnessSet, WitnessSetHKD (..))
+import Shelley.Spec.Ledger.TxBody (DCert, PoolParams (..), TxIn (..), WitVKey (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- | Get pool sizes, but in terms of total stake
@@ -330,3 +348,103 @@ getRewardInfo globals newepochstate =
     slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
     asc = activeSlotCoeff globals
     secparam = securityParameter globals
+
+-- | A collection of functons to help construction transactions
+--  from the cardano-cli.
+class
+  ( Era era,
+    HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  ) =>
+  CLI era
+  where
+  -- | The minimum fee calculation.
+  -- Used for the default implentation of 'evaluateTransactionFee'.
+  evaluateMinFee :: Core.PParams era -> Core.Tx era -> Coin
+
+  -- | The consumed calculation.
+  -- Used for the default implentation of 'evaluateTransactionBalance'.
+  evaluateConsumed :: Core.PParams era -> UTxO era -> Core.TxBody era -> Core.Value era
+
+  addKeyWitnesses :: Core.Tx era -> Set (WitVKey 'Witness (Crypto era)) -> Core.Tx era
+
+  -- | Evaluate the difference between the value currently being consumed by
+  -- a transaction and the number of lovelace being produced.
+  -- This value will be zero for a valid transaction.
+  evaluateTransactionBalance ::
+    -- | The current protocol parameters.
+    Core.PParams era ->
+    -- | The UTxO relevant to the transaction.
+    UTxO era ->
+    -- | A predicate that a stake pool ID is new (i.e. unregistered).
+    -- Typically this will be:
+    --
+    -- @
+    --   (`Map.notMember` stakepools)
+    -- @
+    (KeyHash 'StakePool (Crypto era) -> Bool) ->
+    -- | The transaction being evaluated for balance.
+    Core.TxBody era ->
+    -- | The difference between what the transaction consumes and what it produces.
+    Core.Value era
+  evaluateTransactionBalance pp u isNewPool txb =
+    evaluateConsumed pp u txb <-> produced @era pp isNewPool txb
+
+  -- | Evaluate the fee for a given transaction.
+  evaluateTransactionFee ::
+    -- | The current protocol parameters.
+    Core.PParams era ->
+    -- | The transaction.
+    Core.Tx era ->
+    -- | The number of key witnesses still be be added to the transaction.
+    Word ->
+    -- | The required fee.
+    Coin
+  evaluateTransactionFee pp tx numKeyWits =
+    evaluateMinFee pp tx'
+    where
+      sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (Crypto era)))
+      dummySig =
+        fromRight
+          (error "corrupt dummy signature")
+          (decodeFullDecoder "dummy signature" decodeSignedDSIGN (LBS.replicate sigSize 0))
+      vkeySize = fromIntegral $ sizeVerKeyDSIGN (Proxy @(DSIGN (Crypto era)))
+      dummyVKey w =
+        let padding = LBS.replicate paddingSize 0
+            paddingSize = vkeySize - LBS.length sw
+            sw = serialize w
+            keyBytes = padding <> sw
+         in fromRight (error "corrupt dummy vkey") (decodeFull keyBytes)
+      dummyKeyWits = Set.fromList $
+        flip map [0 .. numKeyWits] $
+          \x -> WitVKey (dummyVKey x) dummySig
+
+      tx' = addKeyWitnesses tx dummyKeyWits
+
+  -- | Evaluate the minimum lovelace that a given transaciton output must contain.
+  evaluateMinLovelaceOutput :: Core.PParams era -> Core.TxOut era -> Coin
+
+addShelleyKeyWitnesses ::
+  ( Era era,
+    Core.Witnesses era ~ WitnessSet era,
+    Core.AnnotatedData (Core.Script era),
+    ToCBOR (Core.AuxiliaryData era),
+    ToCBOR (Core.TxBody era)
+  ) =>
+  Core.Tx era ->
+  Set (WitVKey 'Witness (Crypto era)) ->
+  Core.Tx era
+addShelleyKeyWitnesses (Tx b ws aux) newWits = Tx b ws' aux
+  where
+    ws' = ws {addrWits = Set.union newWits (addrWits ws)}
+
+instance CC.Crypto c => CLI (ShelleyEra c) where
+  evaluateMinFee = minfee
+
+  evaluateConsumed = consumed
+
+  addKeyWitnesses = addShelleyKeyWitnesses
+
+  evaluateMinLovelaceOutput pp _out = _minUTxOValue pp

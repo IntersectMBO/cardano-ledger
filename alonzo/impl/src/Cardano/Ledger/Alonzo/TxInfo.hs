@@ -44,7 +44,6 @@ import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import Data.Fixed (HasResolution (resolution))
-import Data.Functor.Identity (Identity, runIdentity)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
@@ -142,33 +141,42 @@ transAddr (Addr _net object stake) = Just (P.Address (transCred object) (transSt
 transAddr (AddrBootstrap _bootaddr) = Nothing
 
 slotToPOSIXTime ::
-  EpochInfo Identity ->
+  Monad m =>
+  EpochInfo m ->
   SystemStart ->
   SlotNo ->
-  P.Extended P.POSIXTime
-slotToPOSIXTime ei sysS s =
-  P.Finite . P.POSIXTime . resolution . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds . runIdentity $
-    epochInfoSlotToUTCTime ei sysS s
+  m (P.Extended P.POSIXTime)
+slotToPOSIXTime ei sysS s = do
+  P.Finite . P.POSIXTime . resolution . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
+    <$> (epochInfoSlotToUTCTime ei sysS s)
 
 -- | translate a validity interval to POSIX time
 transVITime ::
-  EpochInfo Identity ->
+  Monad m =>
+  EpochInfo m ->
   SystemStart ->
   ValidityInterval ->
-  P.POSIXTimeRange
-transVITime _ _ (ValidityInterval SNothing SNothing) = P.always
-transVITime ei sysS (ValidityInterval (SJust i) SNothing) =
-  P.Interval
-    (P.LowerBound (slotToPOSIXTime ei sysS i) True)
-    (P.UpperBound P.PosInf True)
-transVITime ei sysS (ValidityInterval SNothing (SJust i)) =
-  P.Interval
-    (P.LowerBound P.NegInf True)
-    (P.UpperBound (slotToPOSIXTime ei sysS i) False)
-transVITime ei sysS (ValidityInterval (SJust i) (SJust j)) =
-  P.Interval
-    (P.LowerBound (slotToPOSIXTime ei sysS i) True)
-    (P.UpperBound (slotToPOSIXTime ei sysS j) False)
+  m P.POSIXTimeRange
+transVITime _ _ (ValidityInterval SNothing SNothing) = pure P.always
+transVITime ei sysS (ValidityInterval (SJust i) SNothing) = do
+  t <- slotToPOSIXTime ei sysS i
+  pure $
+    P.Interval
+      (P.LowerBound t True)
+      (P.UpperBound P.PosInf True)
+transVITime ei sysS (ValidityInterval SNothing (SJust i)) = do
+  t <- slotToPOSIXTime ei sysS i
+  pure $
+    P.Interval
+      (P.LowerBound P.NegInf True)
+      (P.UpperBound t False)
+transVITime ei sysS (ValidityInterval (SJust i) (SJust j)) = do
+  t1 <- slotToPOSIXTime ei sysS i
+  t2 <- slotToPOSIXTime ei sysS j
+  pure $
+    P.Interval
+      (P.LowerBound t1 True)
+      (P.UpperBound t2 False)
 
 -- ========================================
 -- translate TxIn and TxOut
@@ -283,32 +291,35 @@ transScriptPurpose (Certifying dcert) = P.Certifying (transDCert dcert)
 -- | Compute a Digest of the current transaction to pass to the script
 --   This is the major component of the valContext function.
 txInfo ::
-  forall era tx.
+  forall era tx m.
   ( Era era,
+    Monad m,
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.TxBody era ~ Alonzo.TxBody era,
     Value era ~ Mary.Value (Crypto era),
     HasField "body" tx (Core.TxBody era),
     HasField "wits" tx (TxWitness era)
   ) =>
-  EpochInfo Identity ->
+  EpochInfo m ->
   SystemStart ->
   UTxO era ->
   tx ->
-  P.TxInfo
-txInfo ei sysS utxo tx =
-  P.TxInfo
-    { P.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),
-      P.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
-      P.txInfoFee = (transValue (inject @(Mary.Value (Crypto era)) fee)),
-      P.txInfoForge = (transValue forge),
-      P.txInfoDCert = (foldr (\c ans -> transDCert c : ans) [] (certs' tbody)),
-      P.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
-      P.txInfoValidRange = transVITime ei sysS interval,
-      P.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
-      P.txInfoData = (map transDataPair datpairs),
-      P.txInfoId = (P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody)))
-    }
+  m P.TxInfo
+txInfo ei sysS utxo tx = do
+  timeRange <- transVITime ei sysS interval
+  pure $
+    P.TxInfo
+      { P.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),
+        P.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
+        P.txInfoFee = (transValue (inject @(Mary.Value (Crypto era)) fee)),
+        P.txInfoForge = (transValue forge),
+        P.txInfoDCert = (foldr (\c ans -> transDCert c : ans) [] (certs' tbody)),
+        P.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
+        P.txInfoValidRange = timeRange,
+        P.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
+        P.txInfoData = (map transDataPair datpairs),
+        P.txInfoId = (P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody)))
+      }
   where
     tbody = getField @"body" tx
     _witnesses = getField @"wits" tx

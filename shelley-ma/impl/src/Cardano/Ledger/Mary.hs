@@ -1,5 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -18,11 +20,12 @@ module Cardano.Ledger.Mary
 where
 
 import Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as E (Era (Crypto))
 import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.Rules.EraMapping ()
-import Cardano.Ledger.ShelleyMA.Rules.Utxo ()
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed, scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.Val (Val ((<->)), coin, inject)
@@ -30,6 +33,7 @@ import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Shelley.Spec.Ledger.API hiding (TxBody)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Shelley.Spec.Ledger.LedgerState (minfee)
 import qualified Shelley.Spec.Ledger.PParams as Shelley (PParamsUpdate)
 
 instance PraosCrypto c => ApplyTx (MaryEra c)
@@ -77,6 +81,15 @@ instance
       pp = sgProtocolParams sg
 
 instance PraosCrypto c => ShelleyBasedEra (MaryEra c)
+
+instance CC.Crypto c => CLI (MaryEra c) where
+  evaluateMinFee = minfee
+
+  evaluateConsumed = consumed
+
+  addKeyWitnesses = addShelleyKeyWitnesses
+
+  evaluateMinLovelaceOutput pp (TxOut _ v) = scaledMinDeposit v (_minUTxOValue pp)
 
 -- Self-Describing type synomyms
 

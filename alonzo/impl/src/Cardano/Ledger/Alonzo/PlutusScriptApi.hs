@@ -51,7 +51,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Coders
-import Data.Functor.Identity (Identity)
+import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (foldl')
 import qualified Data.Map as Map
 import Data.Maybe (isJust)
@@ -132,6 +132,12 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 --     the consequences of not finding Data means scripts can get dropped, so things
 --     might validate that shouldn't. So we double check that every Script has its Data, and
 --     if that is not the case, a PredicateFailure is raised in the Utxos rule.
+--
+--   NOTE that 'runIdentity $ txInfo ei sysS utxo tx' will fail when the validity interval
+--     of the transaction 'tx' is beyond the time horizon, ie when
+--     'epochInfoSlotToUTCTime ei sysS validityInterval' returns Left.
+--     Therefore collectTwoPhaseScriptInputs must only be called after checking
+--     that the transaction is within the time horizon.
 collectTwoPhaseScriptInputs ::
   forall era tx.
   ( Era era,
@@ -158,7 +164,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
     Nothing -> Left [NoCostModel PlutusV1]
     Just cost -> merge (apply cost) (map redeemer needed) (map getscript needed) (Right [])
   where
-    txinfo = txInfo ei sysS utxo tx
+    txinfo = runIdentity $ txInfo ei sysS utxo tx
     needed = filter knownToNotBe1Phase $ scriptsNeeded utxo tx
     -- The formal spec achieves the same filtering as knownToNotBe1Phase
     -- by use of the (partial) language function, which is not defined
