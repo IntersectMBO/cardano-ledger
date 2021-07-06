@@ -42,6 +42,7 @@ module Cardano.Ledger.BaseTypes
     strictMaybeToMaybe,
     maybeToStrictMaybe,
     fromSMaybe,
+    isSNothing,
     Url,
     urlToText,
     textToUrl,
@@ -602,3 +603,7 @@ instance FromCBOR Network where
     word8ToNetwork <$> fromCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
+
+isSNothing :: StrictMaybe a -> Bool
+isSNothing SNothing = True
+isSNothing _ = False

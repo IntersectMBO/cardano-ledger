@@ -70,6 +70,7 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
 import Cardano.Ledger.BaseTypes
   ( Network,
     StrictMaybe (..),
+    isSNothing,
   )
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible
@@ -515,10 +516,6 @@ encodeTxBodyRaw
     where
       encodeKeyedStrictMaybe key x =
         Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
-
-      isSNothing :: StrictMaybe a -> Bool
-      isSNothing SNothing = True
-      isSNothing _ = False
 
       fromSJust :: StrictMaybe a -> a
       fromSJust (SJust x) = x
