@@ -27,7 +27,7 @@ module Shelley.Spec.Ledger.Genesis
   )
 where
 
-import Cardano.Binary (DecoderError (DecoderErrorCustom), FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Address
@@ -48,7 +48,7 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (cborError, forceElemsToWHNF)
+import Cardano.Prelude (forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
@@ -228,7 +228,7 @@ instance Era era => ToCBOR (ShelleyGenesis era) where
         <> utcTimeToCBOR sgSystemStart
         <> toCBOR sgNetworkMagic
         <> toCBOR sgNetworkId
-        <> toCBOR (unboundRational sgActiveSlotsCoeff)
+        <> boundedRationalToCBOR sgActiveSlotsCoeff
         <> toCBOR sgSecurityParam
         <> toCBOR (unEpochSize sgEpochLength)
         <> toCBOR sgSlotsPerKESPeriod
@@ -247,12 +247,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
       sgSystemStart <- utcTimeFromCBOR
       sgNetworkMagic <- fromCBOR
       sgNetworkId <- fromCBOR
-      activeSlotCoeffRational <- fromCBOR
-      sgActiveSlotsCoeff <-
-        case boundRational activeSlotCoeffRational of
-          Just coeff -> pure coeff
-          Nothing ->
-            cborError $ DecoderErrorCustom "sgActiveSlotsCoeff" "Value outside of (0, 1] interval"
+      sgActiveSlotsCoeff <- boundedRationalFromCBOR
       sgSecurityParam <- fromCBOR
       sgEpochLength <- fromCBOR
       sgSlotsPerKESPeriod <- fromCBOR

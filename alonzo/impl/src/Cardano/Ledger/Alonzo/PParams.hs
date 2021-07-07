@@ -57,6 +57,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     fromSMaybe,
+    isSNothing,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era
@@ -402,10 +403,6 @@ encodePParamsUpdate ppup =
     fromSJust :: StrictMaybe a -> a
     fromSJust (SJust x) = x
     fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
-
-    isSNothing :: StrictMaybe a -> Bool
-    isSNothing SNothing = True
-    isSNothing (SJust _) = False
 
 instance (Era era) => ToCBOR (PParamsUpdate era) where
   toCBOR ppup = encode (encodePParamsUpdate ppup)

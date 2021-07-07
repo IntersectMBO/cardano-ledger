@@ -101,6 +101,7 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     Url,
     invalidKey,
+    isSNothing,
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
@@ -742,10 +743,6 @@ instance
 --   Neither the Omit or the key is needed for Decoders.
 omitStrictNothingDual :: (FromCBOR t, ToCBOR t) => Dual (StrictMaybe t)
 omitStrictNothingDual = Dual (toCBOR . fromJust . strictMaybeToMaybe) (SJust <$> fromCBOR)
-
-isSNothing :: StrictMaybe a -> Bool
-isSNothing SNothing = True
-isSNothing _ = False
 
 -- | Choose a de-serialiser when given the key (of type Word).
 --   Wrap it in a Field which pairs it with its update function which

@@ -38,7 +38,6 @@ module Cardano.Ledger.ShelleyMA.TxBody
     txSparse,
     bodyFields,
     StrictMaybe (..),
-    isSNothing,
     fromSJust,
     ValidityInterval (..),
     initial,
@@ -48,7 +47,7 @@ where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), isSNothing)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta, Script, Value)
 import qualified Cardano.Ledger.Core as Core
@@ -190,10 +189,6 @@ instance
   FromCBOR (Annotator (TxBodyRaw era))
   where
   fromCBOR = pure <$> fromCBOR
-
-isSNothing :: StrictMaybe a -> Bool
-isSNothing SNothing = True
-isSNothing _ = False
 
 fromSJust :: StrictMaybe a -> a
 fromSJust (SJust x) = x
