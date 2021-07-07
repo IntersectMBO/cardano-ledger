@@ -96,7 +96,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
-import qualified PlutusTx as Plutus
+import qualified Plutus.V1.Ledger.Api as Plutus
 import Shelley.Spec.Ledger.API
   ( BHBody (..),
     BHeader (..),

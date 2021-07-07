@@ -56,9 +56,13 @@ import qualified Plutus.V1.Ledger.Address as P (Address (..))
 import qualified Plutus.V1.Ledger.Api as P
   ( DCert (..),
     ExBudget (..),
+    ExCPU (..),
+    ExMemory (..),
     VerboseMode (..),
     evaluateScriptRestricting,
     validateScript,
+    Data (..),
+    IsData (..)
   )
 import qualified Plutus.V1.Ledger.Contexts as P
   ( ScriptContext (..),
@@ -81,9 +85,6 @@ import qualified Plutus.V1.Ledger.Time as P (POSIXTime (..), POSIXTimeRange)
 import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
 import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
 import qualified Plutus.V1.Ledger.Value as P (CurrencySymbol (..), TokenName (..), Value (..), singleton, unionWith)
-import qualified PlutusCore.Evaluation.Machine.ExMemory as P (ExCPU (..), ExMemory (..))
-import qualified PlutusTx as P (Data (..))
-import qualified PlutusTx.IsData.Class as P (IsData (..))
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

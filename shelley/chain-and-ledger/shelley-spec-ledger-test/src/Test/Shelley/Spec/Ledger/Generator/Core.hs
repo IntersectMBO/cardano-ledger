@@ -211,7 +211,7 @@ import Test.Shelley.Spec.Ledger.Utils
 import Cardano.Ledger.Serialization(ToCBORGroup)
 import Cardano.Ledger.Era(SupportsSegWit(toTxSeq,hashTxSeq))
 import qualified Cardano.Ledger.Era as Era(TxSeq)
-import qualified PlutusTx as Plutus
+import qualified Plutus.V1.Ledger.Api as Plutus
 import Cardano.Ledger.SafeHash(SafeHash)
 import Cardano.Ledger.Hashes(EraIndependentData)
 import qualified Cardano.Crypto.Hash as Hash

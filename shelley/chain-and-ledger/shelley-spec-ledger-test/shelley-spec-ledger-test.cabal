@@ -108,7 +108,7 @@ library
     iproute,
     nothunks,
     process-extras,
-    plutus-tx,
+    plutus-ledger-api,
     QuickCheck >= 2.13.2,
     serialise,
     shelley-spec-ledger,
