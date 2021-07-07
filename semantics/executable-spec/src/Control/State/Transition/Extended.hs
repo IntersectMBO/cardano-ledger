@@ -32,6 +32,7 @@ module Control.State.Transition.Extended
     InitialRule,
     Assertion (..),
     AssertionViolation (..),
+    AssertionException (..),
     STS (..),
     STUB,
     Embed (..),
@@ -50,6 +51,7 @@ module Control.State.Transition.Extended
     ValidationPolicy (..),
     ApplySTSOpts (..),
     applySTSOpts,
+    applySTSOptsEither,
     applySTS,
     applySTSIndifferently,
     reapplySTS,
@@ -68,10 +70,10 @@ where
 
 import Control.Exception (Exception (..), throw)
 import Control.Monad (when)
-import Control.Monad.Except (MonadError (..))
 import Control.Monad.Free.Church
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except
 import Control.Monad.Trans.State.Strict (modify, runStateT)
 import qualified Control.Monad.Trans.State.Strict as MonadState
 import Data.Data (Data, Typeable)
@@ -79,7 +81,6 @@ import Data.Default.Class (Default, def)
 import Data.Foldable (find, traverse_)
 import Data.Functor ((<&>))
 import Data.Kind (Type)
-import Data.Proxy (Proxy (..))
 import Data.Typeable (typeRep)
 import NoThunks.Class (NoThunks (..))
 
@@ -151,9 +152,13 @@ data AssertionViolation sts = AssertionViolation
 instance STS sts => Show (AssertionViolation sts) where
   show = renderAssertionViolation
 
-instance
-  (STS sts) =>
-  Exception (AssertionViolation sts)
+data AssertionException where
+  AssertionException :: forall sts. STS sts => AssertionViolation sts -> AssertionException
+
+instance Show AssertionException where
+  show (AssertionException exc) = show exc
+
+instance Exception AssertionException
 
 -- | State transition system.
 class
@@ -355,46 +360,54 @@ applySTSOpts ApplySTSOpts {asoAssertions, asoValidation} ctx =
   let goRule :: RuleInterpreter
       goRule = applyRuleInternal asoValidation goSTS
       goSTS :: STSInterpreter
-      goSTS = applySTSInternal asoAssertions goRule
+      goSTS c =
+        runExceptT (applySTSInternal asoAssertions goRule c) >>= \case
+          Left err -> throw $! AssertionException err
+          Right res -> pure $! res
    in goSTS ctx
+
+applySTSOptsEither ::
+  forall s m rtype.
+  (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  ApplySTSOpts ->
+  RuleContext rtype s ->
+  m (Either [[PredicateFailure s]] (State s))
+applySTSOptsEither opts ctx =
+  applySTSOpts opts ctx <&> \case
+    (st, []) -> Right st
+    (_, pfs) -> Left pfs
 
 applySTS ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
   m (Either [[PredicateFailure s]] (State s))
-applySTS ctx =
-  applySTSOpts defaultOpts ctx <&> \case
-    (st, []) -> Right st
-    (_, pfs) -> Left pfs
+applySTS = applySTSOptsEither defaultOpts
   where
+    defaultOpts =
+      ApplySTSOpts
+        { asoAssertions = globalAssertionPolicy,
+          asoValidation = ValidateAll
+        }
 
 #ifdef STS_ASSERT
-    defaultOpts =
-      ApplySTSOpts
-        { asoAssertions = AssertionsAll,
-          asoValidation = ValidateAll
-        }
+globalAssertionPolicy = AssertionsAll
 #else
-    defaultOpts =
-      ApplySTSOpts
-        { asoAssertions = AssertionsOff,
-          asoValidation = ValidateAll
-        }
+globalAssertionPolicy = AssertionsOff
 #endif
+globalAssertionPolicy :: AssertionPolicy
 
 -- | Re-apply an STS.
 --
 --   It is assumed that the caller of this function has previously applied this
---   STS, and can guarantee that it completed successfully. No predicates will
---   be checked when calling this function.
+--   STS, and can guarantee that it completed successfully. No predicates or
+--   assertions will be checked when calling this function.
 reapplySTS ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
   m (State s)
-reapplySTS ctx =
-  applySTSOpts defaultOpts ctx <&> fst
+reapplySTS ctx = applySTSOpts defaultOpts ctx <&> fst
   where
     defaultOpts =
       ApplySTSOpts
@@ -408,13 +421,11 @@ applySTSIndifferently ::
   RuleContext rtype s ->
   m (State s, [[PredicateFailure s]])
 applySTSIndifferently =
-  applySTSOpts opts
-  where
-    opts =
-      ApplySTSOpts
-        { asoAssertions = AssertionsAll,
-          asoValidation = ValidateAll
-        }
+  applySTSOpts
+    ApplySTSOpts
+      { asoAssertions = AssertionsAll,
+        asoValidation = ValidateAll
+      }
 
 -- | Apply a rule even if its predicates fail.
 --
@@ -436,10 +447,9 @@ applyRuleInternal vp goSTS jc r = flip runStateT [] $ foldF runClause r
     runClause (GetCtx next) = pure $ next jc
     runClause (Predicate lbls cond orElse val) =
       if validateIf lbls
-        then do
-          case catchError cond throwError of
-            Left err -> modify (orElse err :) >> pure val
-            Right x -> pure x
+        then case cond of
+          Left err -> modify (orElse err :) >> pure val
+          Right x -> pure x
         else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
       (ss, sfails) <- lift $ goSTS subCtx
@@ -458,7 +468,7 @@ applySTSInternal ::
   -- | Interpreter for rules
   RuleInterpreter ->
   RuleContext rtype s ->
-  m (State s, [[PredicateFailure s]])
+  ExceptT (AssertionViolation s) m (State s, [[PredicateFailure s]])
 applySTSInternal ap goRule ctx =
   successOrFirstFailure <$> applySTSInternal' rTypeRep ctx
   where
@@ -473,49 +483,42 @@ applySTSInternal ap goRule ctx =
     applySTSInternal' ::
       SRuleType rtype ->
       RuleContext rtype s ->
-      m [(State s, [PredicateFailure s])]
+      ExceptT (AssertionViolation s) m [(State s, [PredicateFailure s])]
     applySTSInternal' SInitial env =
-      goRule env `traverse` initialRules
+      lift (goRule env `traverse` initialRules)
     applySTSInternal' STransition jc = do
-      !_ <-
-        when
-          (assertPre ap)
-          ( sfor_ (assertions @s)
-              $! \case
-                PreCondition msg cond ->
-                  when
-                    (not (cond jc))
-                    ( throw
-                        $! AssertionViolation
-                          { avSTS = show $ typeRep (Proxy @s),
-                            avMsg = msg,
-                            avCtx = jc,
-                            avState = Nothing
-                          }
-                    )
-                _ -> pure ()
-          )
-      res <- goRule jc `traverse` transitionRules
+      when (assertPre ap) $
+        sfor_ (assertions @s) $! \case
+          PreCondition msg cond
+            | not (cond jc) ->
+              let assertion =
+                    AssertionViolation
+                      { avSTS = show $ typeRep assertion,
+                        avMsg = msg,
+                        avCtx = jc,
+                        avState = Nothing
+                      }
+               in throwE assertion
+          _ -> pure ()
+      res <- lift (goRule jc `traverse` transitionRules)
       -- We only care about running postconditions if the state transition was
       -- successful.
-      !_ <- case (assertPost ap, successOrFirstFailure res) of
-        (True, (st, [])) ->
-          sfor_ (assertions @s)
-            $! ( \case
-                   PostCondition msg cond ->
-                     if not (cond jc st)
-                       then
-                         throw
-                           $! AssertionViolation
-                             { avSTS = show $ typeRep (Proxy @s),
-                               avMsg = msg,
-                               avCtx = jc,
-                               avState = Just st
-                             }
-                       else pure ()
-                   _ -> pure ()
-               )
-        _ -> pure ()
+      when (assertPost ap) $
+        case successOrFirstFailure res of
+          (st, []) ->
+            sfor_ (assertions @s) $! \case
+              PostCondition msg cond
+                | not (cond jc st) ->
+                  let assertion =
+                        AssertionViolation
+                          { avSTS = show $ typeRep assertion,
+                            avMsg = msg,
+                            avCtx = jc,
+                            avState = Just st
+                          }
+                   in throwE assertion
+              _ -> pure ()
+          _ -> pure ()
       pure $! res
 
     assertPre :: AssertionPolicy -> Bool

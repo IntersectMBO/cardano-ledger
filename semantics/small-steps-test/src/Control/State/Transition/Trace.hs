@@ -50,7 +50,6 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import           Data.Data (Data, Typeable, cast, gmapQ)
-import           Data.Functor ((<&>))
 import           Data.Maybe (catMaybes)
 import           Data.Sequence.Strict (StrictSeq ((:<|), Empty))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -495,10 +494,7 @@ applySTSTest ::
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
   m (Either [[PredicateFailure s]] (State s))
-applySTSTest ctx =
-  applySTSOpts defaultOpts ctx <&> \case
-    (st, []) -> Right st
-    (_, pfs) -> Left pfs
+applySTSTest = applySTSOptsEither defaultOpts
   where
     defaultOpts =
       ApplySTSOpts

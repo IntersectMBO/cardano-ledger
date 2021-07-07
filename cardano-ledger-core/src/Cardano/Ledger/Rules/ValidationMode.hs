@@ -20,7 +20,6 @@ module Cardano.Ledger.Rules.ValidationMode
 where
 
 import Control.State.Transition.Extended
-import Data.Functor ((<&>))
 
 applySTSValidateSuchThat ::
   forall s m rtype.
@@ -28,10 +27,7 @@ applySTSValidateSuchThat ::
   ([Label] -> Bool) ->
   RuleContext rtype s ->
   m (Either [[PredicateFailure s]] (State s))
-applySTSValidateSuchThat cond ctx =
-  applySTSOpts opts ctx <&> \case
-    (st, []) -> Right st
-    (_, pfs) -> Left pfs
+applySTSValidateSuchThat cond = applySTSOptsEither opts
   where
     opts =
       ApplySTSOpts
