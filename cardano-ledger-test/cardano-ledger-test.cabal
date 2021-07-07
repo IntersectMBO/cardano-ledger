@@ -51,6 +51,7 @@ library
     Test.Cardano.Ledger.Elaborators
     Test.Cardano.Ledger.Elaborators.Alonzo
     Test.Cardano.Ledger.Elaborators.Shelley
+    Test.Cardano.Ledger.DependGraph
 
   build-depends:
     aeson,
@@ -66,14 +67,18 @@ library
     criterion,
     data-default-class,
     deepseq,
+    fgl,
     genvalidity,
     genvalidity-scientific,
     groups,
     lens,
+    monad-supply,
     mtl,
+    nonempty-containers,
     plutus-ledger-api,
     plutus-tx,
     QuickCheck,
+    QuickCheck-GenT,
     scientific,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
@@ -85,6 +90,7 @@ library
     tasty-quickcheck,
     time,
     transformers,
+
 
 test-suite cardano-ledger-test
   import:             base, project-config
