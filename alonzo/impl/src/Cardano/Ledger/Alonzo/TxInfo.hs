@@ -51,40 +51,46 @@ import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
-import qualified Plutus.V1.Ledger.Ada as P (adaSymbol, adaToken)
-import qualified Plutus.V1.Ledger.Address as P (Address (..))
 import qualified Plutus.V1.Ledger.Api as P
-  ( DCert (..),
+  ( Address (..),
+    Credential (..),
+    CurrencySymbol (..),
+    DCert (..),
+    Data (..),
+    Datum (..),
+    DatumHash (..),
     ExBudget (..),
     ExCPU (..),
     ExMemory (..),
-    VerboseMode (..),
-    evaluateScriptRestricting,
-    validateScript,
-    Data (..),
-    IsData (..)
-  )
-import qualified Plutus.V1.Ledger.Contexts as P
-  ( ScriptContext (..),
+    Interval (..),
+    IsData (..),
+    POSIXTime (..),
+    POSIXTimeRange,
+    PubKeyHash (..),
+    ScriptContext (..),
     ScriptPurpose (..),
+    StakingCredential (..),
+    TokenName (..),
+    TxId (..),
     TxInInfo (..),
     TxInfo (..),
     TxOut (..),
-  )
-import qualified Plutus.V1.Ledger.Credential as P (Credential (..), StakingCredential (..))
-import qualified Plutus.V1.Ledger.Crypto as P (PubKeyHash (..))
-import qualified Plutus.V1.Ledger.Interval as P
-  ( Extended (..),
-    Interval (..),
-    LowerBound (..),
-    UpperBound (..),
+    TxOutRef (..),
+    ValidatorHash (..),
+    Value (..),
+    VerboseMode (..),
+    adaSymbol,
+    adaToken,
     always,
+    evaluateScriptRestricting,
+    from,
+    lowerBound,
+    singleton,
+    strictUpperBound,
+    to,
+    unionWith,
+    validateScript,
   )
-import qualified Plutus.V1.Ledger.Scripts as P (Datum (..), DatumHash (..), ValidatorHash (..))
-import qualified Plutus.V1.Ledger.Time as P (POSIXTime (..), POSIXTimeRange)
-import qualified Plutus.V1.Ledger.Tx as P (TxOutRef (..))
-import qualified Plutus.V1.Ledger.TxId as P (TxId (..))
-import qualified Plutus.V1.Ledger.Value as P (CurrencySymbol (..), TokenName (..), Value (..), singleton, unionWith)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
@@ -146,9 +152,9 @@ slotToPOSIXTime ::
   EpochInfo m ->
   SystemStart ->
   SlotNo ->
-  m (P.Extended P.POSIXTime)
+  m (P.POSIXTime)
 slotToPOSIXTime ei sysS s = do
-  P.Finite . P.POSIXTime . resolution . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
+  P.POSIXTime . resolution . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
     <$> (epochInfoSlotToUTCTime ei sysS s)
 
 -- | translate a validity interval to POSIX time
@@ -161,23 +167,17 @@ transVITime ::
 transVITime _ _ (ValidityInterval SNothing SNothing) = pure P.always
 transVITime ei sysS (ValidityInterval (SJust i) SNothing) = do
   t <- slotToPOSIXTime ei sysS i
-  pure $
-    P.Interval
-      (P.LowerBound t True)
-      (P.UpperBound P.PosInf True)
+  pure $ P.from t
 transVITime ei sysS (ValidityInterval SNothing (SJust i)) = do
   t <- slotToPOSIXTime ei sysS i
-  pure $
-    P.Interval
-      (P.LowerBound P.NegInf True)
-      (P.UpperBound t False)
+  pure $ P.to t
 transVITime ei sysS (ValidityInterval (SJust i) (SJust j)) = do
   t1 <- slotToPOSIXTime ei sysS i
   t2 <- slotToPOSIXTime ei sysS j
   pure $
     P.Interval
-      (P.LowerBound t1 True)
-      (P.UpperBound t2 False)
+      (P.lowerBound t1)
+      (P.strictUpperBound t2)
 
 -- ========================================
 -- translate TxIn and TxOut
