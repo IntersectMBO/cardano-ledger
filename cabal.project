@@ -61,14 +61,15 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: c89e13e66c5bef628a1f7ea3a3732951be8be8ba
-  --sha256: 0hdck39i4yv656phxjy5ppqgzrq7x3q4b5rf8vj7hrzcs0aggl8r
+  tag: 2d2a5da2a73a5d1789f8f789ec034ab978754f11
+  --sha256: 1chb3pwfs1g4q4ln5605v10dmbkvqsk6kcvylm0ak604gpjbd2n0
   subdir:
     plutus-ledger-api
     plutus-tx
     plutus-tx-plugin
     plutus-core
     prettyprinter-configurable
+    word-array
 
 allow-newer:
   monoidal-containers:aeson,
@@ -77,3 +78,16 @@ allow-newer:
   -- TODO: This is only needed until index-state is updated to 2021-02-17 or later.
   test-framework:random,
   test-framework-quickcheck2:random
+
+constraints:
+  -- bizarre issue: in earlier versions they define their own 'GEq', in newer
+  -- ones they reuse the one from 'some', but there isn't e.g. a proper version
+  -- constraint from dependent-sum-template (which is the library we actually use).
+  , dependent-sum > 0.6.2.0
+
+-- Drops an instance breaking our code. Should be released to Hackage eventually.
+source-repository-package
+  type: git
+  location: https://github.com/Quid2/flat.git
+  tag: 95e5d7488451e43062ca84d5376b3adcc465f1cd
+  --sha256: 06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3
