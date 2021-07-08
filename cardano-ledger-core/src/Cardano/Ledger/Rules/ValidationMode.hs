@@ -26,7 +26,7 @@ applySTSValidateSuchThat ::
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   ([Label] -> Bool) ->
   RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
+  m (Either [PredicateFailure s] (State s))
 applySTSValidateSuchThat cond = applySTSOptsEither opts
   where
     opts =
@@ -83,5 +83,5 @@ applySTSNonStatic ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
+  m (Either [PredicateFailure s] (State s))
 applySTSNonStatic = applySTSValidateSuchThat (notElem lblStatic)

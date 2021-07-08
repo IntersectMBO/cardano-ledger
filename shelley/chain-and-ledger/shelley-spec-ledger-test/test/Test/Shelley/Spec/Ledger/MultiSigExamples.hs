@@ -224,7 +224,7 @@ initialUTxOState ::
   [(MultiSig c, Coin)] ->
   ( TxId c,
     Either
-      [[PredicateFailure (UTXOW (ShelleyEra c))]]
+      [PredicateFailure (UTXOW (ShelleyEra c))]
       (UTxOState (ShelleyEra c))
   )
 initialUTxOState aliceKeep msigs =
@@ -276,7 +276,7 @@ applyTxWithScript ::
   Wdrl c ->
   Coin ->
   [KeyPair 'Witness c] ->
-  Either [[PredicateFailure (UTXOW (ShelleyEra c))]] (UTxOState (ShelleyEra c))
+  Either [PredicateFailure (UTXOW (ShelleyEra c))] (UTxOState (ShelleyEra c))
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts

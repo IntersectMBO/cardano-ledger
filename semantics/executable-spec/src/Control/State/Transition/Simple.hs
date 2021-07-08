@@ -17,12 +17,12 @@ applySTSIndifferently ::
   forall s rtype.
   (STS s, RuleTypeRep rtype, Identity ~ BaseM s) =>
   RuleContext rtype s ->
-  (State s, [[PredicateFailure s]])
+  (State s, [PredicateFailure s])
 applySTSIndifferently ctx = runIdentity $ X.applySTSIndifferently ctx
 
 applySTS ::
   forall s rtype.
   (STS s, RuleTypeRep rtype, BaseM s ~ Identity) =>
   RuleContext rtype s ->
-  Either [[PredicateFailure s]] (State s)
+  Either [PredicateFailure s] (State s)
 applySTS ctx = runIdentity $ X.applySTS ctx

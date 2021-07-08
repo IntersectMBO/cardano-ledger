@@ -1412,7 +1412,7 @@ type A = AlonzoEra C_Crypto
 
 testUTXOW ::
   ValidatedTx A ->
-  Either [[PredicateFailure (Core.EraRule "UTXOW" A)]] (UTxOState A) ->
+  Either [PredicateFailure (Core.EraRule "UTXOW" A)] (UTxOState A) ->
   Assertion
 testUTXOW tx (Right expectedSt) =
   checkTrace @(AlonzoUTXOW A) runShelleyBase (utxoEnv (Alonzo Mock)) $
@@ -1480,197 +1480,184 @@ alonzoUTXOWexamples =
             testUTXOW
               (trustMe True $ incorrectNetworkIDTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure
-                        (UtxoFailure (WrongNetworkInTxBody Testnet Mainnet))
-                    ]
+                  [ WrappedShelleyEraFailure
+                      (UtxoFailure (WrongNetworkInTxBody Testnet Mainnet))
                   ]
               ),
           testCase "missing required key witness" $
             testUTXOW
               (trustMe True $ missingRequiredWitnessTx pf)
-              ( Left [[(MissingRequiredSigners . Set.singleton) extraneousKeyHash]]
+              ( Left [(MissingRequiredSigners . Set.singleton) extraneousKeyHash]
               ),
           testCase "missing redeemer" $
             testUTXOW
               (trustMe True $ missingRedeemerTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure . UtxoFailure
-                        . UtxosFailure
-                        . CollectErrors
-                        $ [NoRedeemer (Spending (TxIn genesisId 1))],
-                      UnRedeemableScripts
-                        [ ( Spending (TxIn genesisId 1),
-                            (alwaysSucceedsHash 3 pf)
-                          )
-                        ]
-                    ]
+                  [ WrappedShelleyEraFailure . UtxoFailure
+                      . UtxosFailure
+                      . CollectErrors
+                      $ [NoRedeemer (Spending (TxIn genesisId 1))],
+                    UnRedeemableScripts
+                      [ ( Spending (TxIn genesisId 1),
+                          (alwaysSucceedsHash 3 pf)
+                        )
+                      ]
                   ]
               ),
           testCase "wrong wpp hash" $
             testUTXOW
               (trustMe True $ wrongWppHashTx pf)
               ( Left
-                  [ [ PPViewHashesDontMatch
-                        ( hashWitnessPPData
-                            (pp pf)
-                            (Set.singleton PlutusV1)
-                            (Redeemers mempty)
-                            txDatsExample1
-                        )
-                        ( hashWitnessPPData
-                            (pp pf)
-                            (Set.singleton PlutusV1)
-                            validatingRedeemersEx1
-                            txDatsExample1
-                        )
-                    ]
+                  [ PPViewHashesDontMatch
+                      ( hashWitnessPPData
+                          (pp pf)
+                          (Set.singleton PlutusV1)
+                          (Redeemers mempty)
+                          txDatsExample1
+                      )
+                      ( hashWitnessPPData
+                          (pp pf)
+                          (Set.singleton PlutusV1)
+                          validatingRedeemersEx1
+                          txDatsExample1
+                      )
                   ]
               ),
           testCase "missing 1-phase script witness" $
             testUTXOW
               (trustMe True $ missing1phaseScriptWitnessTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
-                        [ NoRedeemer (Spending (TxIn genesisId 100)),
-                          NoWitness (timelockHash 0 pf)
-                        ],
-                      WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                        (timelockHash 0 pf),
-                      UnRedeemableScripts [(Spending $ TxIn genesisId 100, timelockHash 0 pf)]
-                    ]
+                  [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
+                      [ NoRedeemer (Spending (TxIn genesisId 100)),
+                        NoWitness (timelockHash 0 pf)
+                      ],
+                    WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
+                      (timelockHash 0 pf),
+                    UnRedeemableScripts [(Spending $ TxIn genesisId 100, timelockHash 0 pf)]
                   ]
               ),
           testCase "missing 2-phase script witness" $
             testUTXOW
               (trustMe True $ missing2phaseScriptWitnessTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
-                        [ NoWitness (alwaysSucceedsHash 2 pf),
-                          NoWitness (alwaysSucceedsHash 2 pf),
-                          NoWitness (alwaysSucceedsHash 2 pf)
-                        ],
-                      WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                        (alwaysSucceedsHash 2 pf),
-                      UnRedeemableScripts
-                        [ ( Rewarding
-                              ( RewardAcnt
-                                  { getRwdNetwork = Testnet,
-                                    getRwdCred = ScriptHashObj (alwaysSucceedsHash 2 pf)
-                                  }
-                              ),
-                            (alwaysSucceedsHash 2 pf)
-                          ),
-                          ( Certifying . DCertDeleg . DeRegKey . ScriptHashObj $
-                              (alwaysSucceedsHash 2 pf),
-                            (alwaysSucceedsHash 2 pf)
-                          ),
-                          ( Minting (PolicyID {policyID = (alwaysSucceedsHash 2 pf)}),
-                            (alwaysSucceedsHash 2 pf)
-                          )
-                        ]
-                    ]
+                  [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
+                      [ NoWitness (alwaysSucceedsHash 2 pf),
+                        NoWitness (alwaysSucceedsHash 2 pf),
+                        NoWitness (alwaysSucceedsHash 2 pf)
+                      ],
+                    WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
+                      (alwaysSucceedsHash 2 pf),
+                    UnRedeemableScripts
+                      [ ( Rewarding
+                            ( RewardAcnt
+                                { getRwdNetwork = Testnet,
+                                  getRwdCred = ScriptHashObj (alwaysSucceedsHash 2 pf)
+                                }
+                            ),
+                          (alwaysSucceedsHash 2 pf)
+                        ),
+                        ( Certifying . DCertDeleg . DeRegKey . ScriptHashObj $
+                            (alwaysSucceedsHash 2 pf),
+                          (alwaysSucceedsHash 2 pf)
+                        ),
+                        ( Minting (PolicyID {policyID = (alwaysSucceedsHash 2 pf)}),
+                          (alwaysSucceedsHash 2 pf)
+                        )
+                      ]
                   ]
               ),
           testCase "redeemer with incorrect label" $
             testUTXOW
               (trustMe True $ wrongRedeemerLabelTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure . UtxoFailure
-                        . UtxosFailure
-                        . CollectErrors
-                        $ [NoRedeemer (Spending (TxIn genesisId 1))],
-                      UnRedeemableScripts
-                        [ ( Spending (TxIn genesisId 1),
-                            (alwaysSucceedsHash 3 pf)
-                          )
-                        ]
-                    ]
+                  [ WrappedShelleyEraFailure . UtxoFailure
+                      . UtxosFailure
+                      . CollectErrors
+                      $ [NoRedeemer (Spending (TxIn genesisId 1))],
+                    UnRedeemableScripts
+                      [ ( Spending (TxIn genesisId 1),
+                          (alwaysSucceedsHash 3 pf)
+                        )
+                      ]
                   ]
               ),
           testCase "missing datum" $
             testUTXOW
               (trustMe True $ missingDatumTx pf)
               ( Left
-                  [ [ MissingRequiredDatums
-                        (Set.singleton $ hashData @A datumExample1)
-                        mempty
-                    ]
+                  [ MissingRequiredDatums
+                      (Set.singleton $ hashData @A datumExample1)
+                      mempty
                   ]
               ),
           testCase "phase 1 script failure" $
             testUTXOW
               (trustMe True $ phase1FailureTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure . ScriptWitnessNotValidatingUTXOW $
-                        Set.fromList
-                          [ timelockHash 0 pf,
-                            timelockHash 1 pf,
-                            timelockHash 2 pf
-                          ]
-                    ]
+                  [ WrappedShelleyEraFailure . ScriptWitnessNotValidatingUTXOW $
+                      Set.fromList
+                        [ timelockHash 0 pf,
+                          timelockHash 1 pf,
+                          timelockHash 2 pf
+                        ]
                   ]
               ),
           testCase "valid transaction marked as invalid" $
             testUTXOW
               (trustMe False $ validatingTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure
-                        ( UtxoFailure
-                            (UtxosFailure (ValidationTagMismatch (IsValidating False)))
-                        )
-                    ]
+                  [ WrappedShelleyEraFailure
+                      ( UtxoFailure
+                          (UtxosFailure (ValidationTagMismatch (IsValidating False)))
+                      )
                   ]
               ),
           testCase "invalid transaction marked as valid" $
             testUTXOW
               (trustMe True $ notValidatingTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure
-                        (UtxoFailure (UtxosFailure (ValidationTagMismatch (IsValidating True))))
-                    ]
+                  [ WrappedShelleyEraFailure
+                      (UtxoFailure (UtxosFailure (ValidationTagMismatch (IsValidating True))))
                   ]
               ),
           testCase "too many execution units for tx" $
             testUTXOW
               (trustMe True $ tooManyExUnitsTx pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure . UtxoFailure $
-                        ExUnitsTooBigUTxO
-                          (ExUnits {exUnitsMem = 1000000, exUnitsSteps = 1000000})
-                          (ExUnits {exUnitsMem = 1000001, exUnitsSteps = 5000})
-                    ]
+                  [ WrappedShelleyEraFailure . UtxoFailure $
+                      ExUnitsTooBigUTxO
+                        (ExUnits {exUnitsMem = 1000000, exUnitsSteps = 1000000})
+                        (ExUnits {exUnitsMem = 1000001, exUnitsSteps = 5000})
                   ]
               ),
           testCase "missing signature for collateral input" $
             testUTXOW
               (trustMe True $ missingCollateralSig pf)
               ( Left
-                  [ [ WrappedShelleyEraFailure
-                        ( MissingVKeyWitnessesUTXOW
-                            ( WitHashes
-                                ( Set.fromList
-                                    [ asWitness $
-                                        hashKey (vKey $ someKeys pf)
-                                    ]
-                                )
-                            )
-                        )
-                    ]
+                  [ WrappedShelleyEraFailure
+                      ( MissingVKeyWitnessesUTXOW
+                          ( WitHashes
+                              ( Set.fromList
+                                  [ asWitness $
+                                      hashKey (vKey $ someKeys pf)
+                                  ]
+                              )
+                          )
+                      )
                   ]
               ),
           testCase "two-phase UTxO with no datum hash" $
             testUTXOW
               (trustMe True $ plutusOutputWithNoDataTx pf)
-              ( Left [[UnspendableUTxONoDatumHash . Set.singleton $ TxIn genesisId 101]]
+              ( Left [UnspendableUTxONoDatumHash . Set.singleton $ TxIn genesisId 101]
               ),
           testCase "unacceptable supplimentary datum" $
             testUTXOW
               (trustMe True $ notOkSupplimentaryDatumTx pf)
               ( Left
-                  [ [ NonOutputSupplimentaryDatums
-                        (Set.singleton $ hashData @A totallyIrrelevantDatum)
-                        mempty
-                    ]
+                  [ NonOutputSupplimentaryDatums
+                      (Set.singleton $ hashData @A totallyIrrelevantDatum)
+                      mempty
                   ]
               )
         ]
@@ -1826,7 +1813,7 @@ example1BBodyState =
 testBBODY ::
   BbodyState A ->
   Block A ->
-  Either [[PredicateFailure (AlonzoBBODY A)]] (BbodyState A) ->
+  Either [PredicateFailure (AlonzoBBODY A)] (BbodyState A) ->
   Assertion
 testBBODY initialSt block (Right expectedSt) =
   checkTrace @(AlonzoBBODY A) runShelleyBase (bbodyEnv $ Alonzo Mock) $
@@ -1848,10 +1835,9 @@ alonzoBBODYexamples =
         testBBODY
           (initialBBodyState pf)
           testAlonzoBadPMDHBlock
-          ( Left $
-              [ [ ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
-                    PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys pf) (hashsize @Mock + 1)
-                ]
+          ( Left
+              [ ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+                  PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys pf) (hashsize @Mock + 1)
               ]
           )
     ]

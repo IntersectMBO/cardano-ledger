@@ -246,7 +246,7 @@ mirFailWits pot =
     (initStMIR (Coin 1000))
     (blockEx1' insufficientMIRWits pot)
     ( Left
-        [ [ BbodyFailure @(ShelleyEra c)
+        [ BbodyFailure @(ShelleyEra c)
               ( LedgersFailure
                   ( LedgerFailure
                       ( UtxowFailure $
@@ -255,7 +255,6 @@ mirFailWits pot =
                   )
               )
           ]
-        ]
     )
   where
     ws = Set.fromList $ asWitness <$> map (\x -> hk . coreNodeIssuerKeys $ x) [0 .. 3]
@@ -275,22 +274,21 @@ mirFailFunds pot treasury llNeeded llReceived =
     (initStMIR treasury)
     (blockEx1' sufficientMIRWits pot)
     ( Left
-        [ [ BbodyFailure
-              ( LedgersFailure
-                  ( LedgerFailure
-                      ( DelegsFailure
-                          ( DelplFailure
-                              ( DelegFailure $
-                                  InsufficientForInstantaneousRewardsDELEG
-                                    pot
-                                    llNeeded
-                                    llReceived
-                              )
-                          )
-                      )
-                  )
-              )
-          ]
+        [ BbodyFailure
+            ( LedgersFailure
+                ( LedgerFailure
+                    ( DelegsFailure
+                        ( DelplFailure
+                            ( DelegFailure $
+                                InsufficientForInstantaneousRewardsDELEG
+                                  pot
+                                  llNeeded
+                                  llReceived
+                            )
+                        )
+                    )
+                )
+            )
         ]
     )
 

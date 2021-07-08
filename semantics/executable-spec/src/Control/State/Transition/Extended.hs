@@ -339,7 +339,7 @@ type STSInterpreter =
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (State s, [[PredicateFailure s]])
+  m (State s, [PredicateFailure s])
 
 type RuleInterpreter =
   forall s m rtype.
@@ -355,7 +355,7 @@ applySTSOpts ::
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   ApplySTSOpts ->
   RuleContext rtype s ->
-  m (State s, [[PredicateFailure s]])
+  m (State s, [PredicateFailure s])
 applySTSOpts ApplySTSOpts {asoAssertions, asoValidation} ctx =
   let goRule :: RuleInterpreter
       goRule = applyRuleInternal asoValidation goSTS
@@ -371,7 +371,7 @@ applySTSOptsEither ::
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   ApplySTSOpts ->
   RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
+  m (Either [PredicateFailure s] (State s))
 applySTSOptsEither opts ctx =
   applySTSOpts opts ctx <&> \case
     (st, []) -> Right st
@@ -381,7 +381,7 @@ applySTS ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
+  m (Either [PredicateFailure s] (State s))
 applySTS = applySTSOptsEither defaultOpts
   where
     defaultOpts =
@@ -419,7 +419,7 @@ applySTSIndifferently ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (State s, [[PredicateFailure s]])
+  m (State s, [PredicateFailure s])
 applySTSIndifferently =
   applySTSOpts
     ApplySTSOpts
@@ -453,7 +453,7 @@ applyRuleInternal vp goSTS jc r = flip runStateT [] $ foldF runClause r
         else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
       (ss, sfails) <- lift $ goSTS subCtx
-      traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> concat sfails
+      traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> sfails
       pure $ next ss
 
     validateIf lbls = case vp of
@@ -468,7 +468,7 @@ applySTSInternal ::
   -- | Interpreter for rules
   RuleInterpreter ->
   RuleContext rtype s ->
-  ExceptT (AssertionViolation s) m (State s, [[PredicateFailure s]])
+  ExceptT (AssertionViolation s) m (State s, [PredicateFailure s])
 applySTSInternal ap goRule ctx =
   successOrFirstFailure <$> applySTSInternal' rTypeRep ctx
   where
@@ -477,7 +477,7 @@ applySTSInternal ap goRule ctx =
         Nothing ->
           case xs of
             [] -> error "applySTSInternal was called with an empty set of rules"
-            (s, _) : _ -> (s, snd <$> xs)
+            (s, _) : _ -> (s, concatMap snd xs)
         Just (s, _) -> (s, [])
 
     applySTSInternal' ::

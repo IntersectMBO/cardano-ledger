@@ -129,18 +129,16 @@ makeTxb ins outs interval minted =
     SNothing
     minted
 
-policyFailure :: PolicyID TestCrypto -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
+policyFailure :: PolicyID TestCrypto -> Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest)
 policyFailure p =
   Left
-    [ [ UtxowFailure
-          ( ScriptWitnessNotValidatingUTXOW
-              (Set.singleton (policyID p))
-          )
-      ]
+    [ UtxowFailure
+        (ScriptWitnessNotValidatingUTXOW (Set.singleton (policyID p)))
     ]
 
-outTooBigFailure :: TxOut MaryTest -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
-outTooBigFailure out = Left [[UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]]
+
+outTooBigFailure :: TxOut MaryTest -> Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest)
+outTooBigFailure out = Left [UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens

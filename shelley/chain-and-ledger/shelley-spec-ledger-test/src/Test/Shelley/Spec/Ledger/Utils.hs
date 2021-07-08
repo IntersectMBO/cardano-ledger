@@ -329,7 +329,7 @@ testSTS ::
   Environment s ->
   State s ->
   Signal s ->
-  Either [[PredicateFailure s]] (State s) ->
+  Either [PredicateFailure s] (State s) ->
   Assertion
 testSTS env initSt signal (Right expectedSt) = do
   checkTrace @s runShelleyBase env $ pure initSt .- signal .-> expectedSt

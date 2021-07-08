@@ -67,7 +67,6 @@ import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Tx (Tx (Tx))
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
 import Control.Arrow (left)
-import Control.Monad (join)
 import Control.Monad.Except (liftEither, runExcept)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
@@ -144,7 +143,7 @@ instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
       -- before.
       state' <-
         liftEither
-          . left (API.ApplyTxError . join)
+          . left API.ApplyTxError
           . flip runReader globals
           . applySTSValidateSuchThat
             @(Core.EraRule "LEDGER" (AlonzoEra c))
@@ -162,7 +161,7 @@ instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
             . applySTSNonStatic
               @(Core.EraRule "LEDGER" (AlonzoEra c))
             $ TRC (env, state, tx)
-     in liftEither . left (API.ApplyTxError . join) $ res
+     in liftEither . left API.ApplyTxError $ res
 
   extractTx ValidatedTx {body = b, wits = w, auxiliaryData = a} = Tx b w a
 

@@ -423,7 +423,7 @@ checkTrace
   => (forall a. m a -> a)
   -> Environment s
   -> ReaderT (State s ->
-        Signal s -> (Either [[PredicateFailure s]] (State s))) IO (State s)
+              Signal s -> Either [PredicateFailure s] (State s)) IO (State s)
   -> IO ()
 checkTrace interp env act =
   void $ runReaderT act (\st sig -> interp $ applySTSTest @s (TRC(env, st, sig)))
@@ -493,7 +493,7 @@ applySTSTest ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
+  m (Either [PredicateFailure s] (State s))
 applySTSTest = applySTSOptsEither defaultOpts
   where
     defaultOpts =
