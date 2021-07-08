@@ -77,7 +77,6 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Slot (BlockNo (..))
-import qualified Cardano.Ledger.Tx as Core (Tx (..))
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -124,6 +123,7 @@ import Shelley.Spec.Ledger.STS.Ledgers (LedgersPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
+import qualified Shelley.Spec.Ledger.Tx as Core (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),

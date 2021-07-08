@@ -39,7 +39,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Ledger.Tx (Tx (..))
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -69,7 +68,8 @@ import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.Tx
-  ( WitnessSetHKD (..),
+  ( Tx (..),
+    WitnessSetHKD (..),
     hashScript,
   )
 import Shelley.Spec.Ledger.TxBody

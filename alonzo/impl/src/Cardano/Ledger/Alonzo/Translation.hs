@@ -38,7 +38,6 @@ import Cardano.Ledger.Era
   )
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Mary (MaryEra)
-import qualified Cardano.Ledger.Tx as LTX
 import Control.Monad.Except (Except, throwError)
 import Data.Coders
 import Data.Text (Text)
@@ -50,6 +49,7 @@ import Shelley.Spec.Ledger.API
   )
 import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.PParams as Shelley
+import qualified Shelley.Spec.Ledger.Tx as LTX
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
 
 --------------------------------------------------------------------------------

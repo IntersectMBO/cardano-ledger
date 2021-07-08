@@ -64,7 +64,6 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
-import Cardano.Ledger.Tx (Tx (Tx))
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
 import Control.Arrow (left)
 import Control.Monad.Except (liftEither, runExcept)
@@ -105,6 +104,7 @@ import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
 import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
 import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (UtxoFailure))
+import Shelley.Spec.Ledger.Tx (Tx (Tx))
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import Shelley.Spec.Ledger.UTxO (balance)
 
