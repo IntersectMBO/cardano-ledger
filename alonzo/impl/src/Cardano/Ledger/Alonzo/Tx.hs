@@ -66,6 +66,7 @@ module Cardano.Ledger.Alonzo.Tx
     segwitTx,
     -- Other
     toCBORForSizeComputation,
+    toCBORForMempoolSubmission,
   )
 where
 
@@ -89,6 +90,7 @@ import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
     Prices,
+    Script,
     Tag (..),
     txscriptfee,
   )
@@ -507,3 +509,68 @@ segwitTx
           witnessSet
           isval
           (maybeToStrictMaybe metadata)
+
+--------------------------------------------------------------------------------
+-- Mempool Serialisation
+--
+-- We do not store the Tx bytes for the following reasons:
+-- - A Tx serialised in this way never forms part of any hashed structure, hence
+--   we do not worry about the serialisation changing and thus seeing a new
+--   hash.
+-- - The three principal components of this Tx already store their own bytes;
+--   here we simply concatenate them. The final component, `IsValidating`, is
+--   just a flag and very cheap to serialise.
+--------------------------------------------------------------------------------
+
+-- | Encode to CBOR for the purposes of transmission from node to node, or from
+-- wallet to node.
+--
+-- Note that this serialisation is neither the serialisation used on-chain
+-- (where Txs are deconstructed using segwit), nor the serialisation used for
+-- computing the transaction size (which omits the `IsValidating` field for
+-- compatibility with Mary - see 'toCBORForSizeComputation').
+toCBORForMempoolSubmission ::
+  ( Typeable era,
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era)
+  ) =>
+  ValidatedTx era ->
+  Encoding
+toCBORForMempoolSubmission
+  ValidatedTx {body, wits, auxiliaryData, isValidating} =
+    encode $
+      Rec ValidatedTx
+        !> To body
+        !> To wits
+        !> To isValidating
+        !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) auxiliaryData
+
+instance
+  ( Typeable era,
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.AuxiliaryData era)
+  ) =>
+  ToCBOR (ValidatedTx era)
+  where
+  toCBOR = toCBORForMempoolSubmission
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (Core.TxBody era)),
+    FromCBOR (Annotator (Core.AuxiliaryData era)),
+    FromCBOR (Annotator (Core.Witnesses era)),
+    ValidateScript era,
+    Core.Script era ~ Script era
+  ) =>
+  FromCBOR (Annotator (ValidatedTx era))
+  where
+  fromCBOR =
+    decode $
+      Ann (RecD ValidatedTx)
+        <*! From
+        <*! From
+        <*! Ann From
+        <*! D
+          ( sequence . maybeToStrictMaybe
+              <$> decodeNullMaybe fromCBOR
+          )
