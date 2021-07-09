@@ -130,9 +130,9 @@ transHash (UnsafeHash h) = fromShort h
 txInfoId :: TxId era -> P.TxId
 txInfoId (TxId safe) = P.TxId (transSafeHash safe)
 
-transStakeCred :: Credential keyrole crypto -> BS.ByteString
-transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = (fromShort kh)
-transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = (fromShort kh)
+transStakeCred :: Credential keyrole crypto -> P.Credential
+transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (fromShort kh))
+transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (fromShort kh))
 
 transStakeReference :: StakeReference crypto -> Maybe P.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (P.StakingHash (transStakeCred cred))
