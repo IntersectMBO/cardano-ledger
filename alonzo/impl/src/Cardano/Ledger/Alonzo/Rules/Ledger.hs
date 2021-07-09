@@ -26,7 +26,7 @@ import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Control.State.Transition
   ( Assertion (..),
@@ -68,7 +68,7 @@ data AlonzoLEDGER era
 --   make it concrete. Depends only on the "certs" and "isValidating" HasField instances.
 ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
-  ( Signal (someLEDGER era) ~ TxInBlock era,
+  ( Signal (someLEDGER era) ~ Core.Tx era,
     State (someLEDGER era) ~ (UTxOState era, DPState (Crypto era)),
     Environment (someLEDGER era) ~ LedgerEnv era,
     Embed (Core.EraRule "UTXOW" era) (someLEDGER era),
@@ -78,9 +78,9 @@ ledgerTransition ::
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "isValidating" (TxInBlock era) IsValidating,
+    HasField "isValidating" (Core.Tx era) IsValidating,
     Era era
   ) =>
   TransitionRule (someLEDGER era)
@@ -121,7 +121,7 @@ instance
     Show (Core.PParamsDelta era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
-    TxInBlock era ~ ValidatedTx era,
+    Core.Tx era ~ ValidatedTx era,
     Embed (Core.EraRule "DELEGS" era) (AlonzoLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (AlonzoLEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,

@@ -104,7 +104,6 @@ import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
 import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
 import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (UtxoFailure))
-import Shelley.Spec.Ledger.Tx (Tx (Tx))
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import Shelley.Spec.Ledger.UTxO (balance)
 
@@ -162,8 +161,6 @@ instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
               @(Core.EraRule "LEDGER" (AlonzoEra c))
             $ TRC (env, state, tx)
      in liftEither . left API.ApplyTxError $ res
-
-  extractTx ValidatedTx {body = b, wits = w, auxiliaryData = a} = Tx b w a
 
 instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
 
@@ -230,12 +227,14 @@ instance CC.Crypto c => API.CLI (AlonzoEra c) where
 
   evaluateConsumed = consumed
 
-  addKeyWitnesses (Tx b ws aux) newWits = Tx b ws' aux
+  addKeyWitnesses (ValidatedTx b ws aux iv) newWits = ValidatedTx b ws' aux iv
     where
       ws' = ws {txwitsVKey = Set.union newWits (txwitsVKey ws)}
 
   evaluateMinLovelaceOutput pp out =
     Coin $ utxoEntrySize out * unCoin (_coinsPerUTxOWord pp)
+
+type instance Core.Tx (AlonzoEra c) = ValidatedTx (AlonzoEra c)
 
 type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)
 
@@ -266,7 +265,6 @@ instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
 
 instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
   type TxSeq (AlonzoEra c) = Alonzo.TxSeq (AlonzoEra c)
-  type TxInBlock (AlonzoEra c) = ValidatedTx (AlonzoEra c)
   fromTxSeq = Alonzo.txSeqTxns
   toTxSeq = Alonzo.TxSeq
   hashTxSeq = Alonzo.hashTxSeq

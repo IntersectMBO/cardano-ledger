@@ -41,7 +41,7 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Control.DeepSeq (NFData (..))
@@ -220,7 +220,7 @@ alonzoStyleWitness ::
   forall era utxow.
   ( Era era,
     -- Fix some Core types to the Alonzo Era
-    TxInBlock era ~ ValidatedTx era, -- scriptsNeeded, checkScriptData etc. are fixed at Alonzo.Tx
+    Core.Tx era ~ ValidatedTx era, -- scriptsNeeded, checkScriptData etc. are fixed at Alonzo.Tx
     Core.PParams era ~ PParams era,
     Core.Script era ~ Script era,
     -- Allow UTXOW to call UTXO
@@ -251,7 +251,7 @@ alonzoStyleWitness = do
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = _utxo u'
-      txbody = getField @"body" (tx :: TxInBlock era)
+      txbody = getField @"body" (tx :: Core.Tx era)
       witsKeyHashes = unWitHashes $ witsFromTxWitnesses @era tx
 
   {-  { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} = dom(txdats txw)   -}
@@ -418,7 +418,7 @@ data AlonzoUTXOW era
 instance
   forall era.
   ( -- Fix some Core types to the Alonzo Era
-    TxInBlock era ~ ValidatedTx era,
+    Core.Tx era ~ ValidatedTx era,
     Core.PParams era ~ PParams era,
     Core.Script era ~ Script era,
     -- Allow UTXOW to call UTXO

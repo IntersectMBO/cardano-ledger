@@ -151,7 +151,7 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.OCert (OCert (..))
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
-import Shelley.Spec.Ledger.Tx (segwitTx)
+import Shelley.Spec.Ledger.Tx (Tx, segwitTx)
 import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- =======================================================
@@ -166,7 +166,7 @@ deriving newtype instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
 deriving newtype instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
 
 data TxSeq era = TxSeq'
-  { txSeqTxns' :: !(StrictSeq (Core.Tx era)),
+  { txSeqTxns' :: !(StrictSeq (Tx era)),
     txSeqBodyBytes :: BSL.ByteString,
     txSeqWitsBytes :: BSL.ByteString,
     txSeqMetadataBytes :: BSL.ByteString
@@ -182,14 +182,14 @@ deriving via
      ]
     (TxSeq era)
   instance
-    (Typeable era, NoThunks (Core.Tx era)) => NoThunks (TxSeq era)
+    (Typeable era, NoThunks (Tx era)) => NoThunks (TxSeq era)
 
 deriving stock instance
-  Show (Core.Tx era) =>
+  Show (Tx era) =>
   Show (TxSeq era)
 
 deriving stock instance
-  Eq (Core.Tx era) =>
+  Eq (Tx era) =>
   Eq (TxSeq era)
 
 -- ===========================
@@ -197,10 +197,9 @@ deriving stock instance
 
 coreWitnessBytes ::
   forall era.
-  ( SafeToHash (Core.Witnesses era),
-    HasField "wits" (Core.Tx era) (Core.Witnesses era)
+  ( SafeToHash (Core.Witnesses era)
   ) =>
-  (Core.Tx era) ->
+  Tx era ->
   ByteString
 coreWitnessBytes coretx =
   originalBytes @(Core.Witnesses era) $
@@ -208,10 +207,9 @@ coreWitnessBytes coretx =
 
 coreBodyBytes ::
   forall era.
-  ( SafeToHash (Core.TxBody era),
-    HasField "body" (Core.Tx era) (Core.TxBody era)
+  ( SafeToHash (Core.TxBody era)
   ) =>
-  (Core.Tx era) ->
+  Tx era ->
   ByteString
 coreBodyBytes coretx =
   originalBytes @(Core.TxBody era) $
@@ -219,12 +217,11 @@ coreBodyBytes coretx =
 
 coreAuxDataBytes ::
   forall era.
-  ( SafeToHash (Core.AuxiliaryData era),
-    HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era))
+  ( SafeToHash (Core.AuxiliaryData era)
   ) =>
-  (Core.Tx era) ->
+  Tx era ->
   StrictMaybe ByteString
-coreAuxDataBytes coretx = getbytes <$> getField @"auxiliaryData" @(Core.Tx era) coretx
+coreAuxDataBytes coretx = getbytes <$> getField @"auxiliaryData" coretx
   where
     getbytes auxdata = originalBytes @(Core.AuxiliaryData era) auxdata
 
@@ -236,7 +233,7 @@ pattern TxSeq ::
   ( Era era,
     SafeToHash (Core.Witnesses era)
   ) =>
-  StrictSeq (Core.Tx era) ->
+  StrictSeq (Tx era) ->
   TxSeq era
 pattern TxSeq xs <-
   TxSeq' xs _ _ _
@@ -262,7 +259,7 @@ pattern TxSeq xs <-
 
 {-# COMPLETE TxSeq #-}
 
-txSeqTxns :: TxSeq era -> StrictSeq (Core.Tx era)
+txSeqTxns :: TxSeq era -> StrictSeq (Tx era)
 txSeqTxns (TxSeq' ts _ _ _) = ts
 
 instance

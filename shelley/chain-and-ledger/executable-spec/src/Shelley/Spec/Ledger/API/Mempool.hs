@@ -34,7 +34,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, TxInBlock)
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Slot (SlotNo)
@@ -72,7 +72,7 @@ class
     BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ MempoolState era,
-    Signal (Core.EraRule "LEDGER" era) ~ TxInBlock era,
+    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
     PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era
   ) =>
   ApplyTx era
@@ -89,15 +89,14 @@ class
     MempoolEnv era ->
     MempoolState era ->
     Core.Tx era ->
-    m (MempoolState era, TxInBlock era)
+    m (MempoolState era, Core.Tx era)
   default applyTx ::
-    Core.Tx era ~ TxInBlock era =>
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
     Core.Tx era ->
-    m (MempoolState era, TxInBlock era)
+    m (MempoolState era, Core.Tx era)
   applyTx globals env state tx =
     let res =
           flip runReader globals
@@ -124,15 +123,14 @@ class
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    TxInBlock era ->
+    Core.Tx era ->
     m (MempoolState era)
   default applyTxInBlock ::
-    Core.Tx era ~ TxInBlock era =>
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    TxInBlock era ->
+    Core.Tx era ->
     m (MempoolState era)
   applyTxInBlock globals env state tx =
     let res =
@@ -142,14 +140,6 @@ class
      in liftEither
           . left ApplyTxError
           $ res
-
-  -- | Extract the underlying `Tx` from the `TxInBlock`.
-  extractTx :: TxInBlock era -> Core.Tx era
-  default extractTx ::
-    Core.Tx era ~ TxInBlock era =>
-    TxInBlock era ->
-    Core.Tx era
-  extractTx = id
 
 instance PraosCrypto c => ApplyTx (ShelleyEra c)
 

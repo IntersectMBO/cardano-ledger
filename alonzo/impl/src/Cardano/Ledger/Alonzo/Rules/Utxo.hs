@@ -46,7 +46,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Era (Crypto, Era, TxInBlock, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.Mary.Value as Alonzo (Value)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
@@ -257,7 +257,7 @@ feesOK ::
   ( Era era,
     ValidateScript era, -- isTwoPhaseScriptAddress
     Core.TxOut era ~ Alonzo.TxOut era, -- balance requires this,
-    Era.TxInBlock era ~ Alonzo.ValidatedTx era,
+    Core.Tx era ~ Alonzo.ValidatedTx era,
     Core.Witnesses era ~ TxWitness era,
     HasField
       "collateral" -- to get inputs to pay the fees
@@ -269,7 +269,7 @@ feesOK ::
     HasField "_collateralPercentage" (Core.PParams era) Natural
   ) =>
   Core.PParams era ->
-  TxInBlock era ->
+  Core.Tx era ->
   UTxO era ->
   Rule (AlonzoUTXO era) 'Transition ()
 feesOK pp tx (UTxO m) = do
@@ -310,7 +310,7 @@ utxoTransition ::
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
-    Signal (Core.EraRule "UTXOS" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
     -- We leave Core.PParams abstract
     UsesPParams era,
     HasField "_minfeeA" (Core.PParams era) Natural,
@@ -325,11 +325,11 @@ utxoTransition ::
     HasField "_collateralPercentage" (Core.PParams era) Natural,
     HasField "_maxCollateralInputs" (Core.PParams era) Natural,
     -- We fix Core.Tx, Core.Value, Core.TxBody, and Core.TxOut
+    Core.Tx era ~ Alonzo.ValidatedTx era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Alonzo.Value (Crypto era),
     Core.TxBody era ~ Alonzo.TxBody era,
     Core.Witnesses era ~ TxWitness era,
-    TxInBlock era ~ Alonzo.ValidatedTx era,
     Era.TxSeq era ~ Alonzo.TxSeq era
   ) =>
   TransitionRule (AlonzoUTXO era)
@@ -493,7 +493,7 @@ instance
     Core.Witnesses era ~ TxWitness era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Era.TxSeq era ~ Alonzo.TxSeq era,
-    Era.TxInBlock era ~ Alonzo.ValidatedTx era
+    Core.Tx era ~ Alonzo.ValidatedTx era
   ) =>
   STS (AlonzoUTXO era)
   where

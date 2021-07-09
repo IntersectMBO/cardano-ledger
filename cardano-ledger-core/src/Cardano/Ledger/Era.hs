@@ -82,12 +82,12 @@ class
 class
   ( Era era,
     SafeToHash (Core.Script era),
-    HasField "body" (TxInBlock era) (Core.TxBody era)
+    HasField "body" (Core.Tx era) (Core.TxBody era)
   ) =>
   ValidateScript era
   where
   scriptPrefixTag :: Core.Script era -> BS.ByteString
-  validateScript :: Core.Script era -> TxInBlock era -> Bool
+  validateScript :: Core.Script era -> Core.Tx era -> Bool
   hashScript :: Core.Script era -> ScriptHash (Crypto era)
   -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
   -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
@@ -116,21 +116,16 @@ class
 -- - A 'TxSeq`, which represents the decoded structure of a sequence of
 --   transactions as represented in the encoded block; that is, with witnessing,
 --   metadata and other non-body parts split separately.
--- - A 'TxInBlock', which represents a transaction as included in a block. In
---   general, we expect this to be the same as a normal 'Tx'. However, we know
---   that in future eras it will include extra data not present when the
---   transaction is first created.
 
 -- | Indicates that an era supports segregated witnessing.
 --
 --   This class is embodies an isomorphism between 'TxSeq era' and 'StrictSeq
---   (TxInBlock era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
+--   (Tx era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
 class SupportsSegWit era where
   type TxSeq era :: Type
-  type TxInBlock era :: Type
 
-  fromTxSeq :: TxSeq era -> StrictSeq (TxInBlock era)
-  toTxSeq :: StrictSeq (TxInBlock era) -> TxSeq era
+  fromTxSeq :: TxSeq era -> StrictSeq (Core.Tx era)
+  toTxSeq :: StrictSeq (Core.Tx era) -> TxSeq era
 
   -- | Get the block body hash from the TxSeq. Note that this is not a regular
   -- "hash the stored bytes" function since the block body hash forms a small
@@ -243,12 +238,12 @@ type WellFormed era =
     HasField "txfee" (Core.TxBody era) Coin,
     HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era))),
     HasField "adHash" (Core.TxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era))),
-    -- TxInBlock
-    HasField "body" (TxInBlock era) (Core.TxBody era),
-    HasField "wits" (TxInBlock era) (Core.Witnesses era),
-    HasField "auxiliaryData" (TxInBlock era) (StrictMaybe (Core.AuxiliaryData era)),
-    HasField "txsize" (TxInBlock era) Integer,
-    HasField "scriptWits" (TxInBlock era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
+    -- Tx
+    HasField "body" (Core.Tx era) (Core.TxBody era),
+    HasField "wits" (Core.Tx era) (Core.Witnesses era),
+    HasField "auxiliaryData" (Core.Tx era) (StrictMaybe (Core.AuxiliaryData era)),
+    HasField "txsize" (Core.Tx era) Integer,
+    HasField "scriptWits" (Core.Tx era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
     -- TxOut
     HasField "value" (Core.TxOut era) (Core.Value era),
     -- HashAnnotated

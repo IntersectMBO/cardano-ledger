@@ -433,7 +433,7 @@ indexedRdmrs ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wits" tx (TxWitness era), -- Generalized over tx, so tx can be Tx or TxInBlock
+    HasField "wits" tx (TxWitness era),
     HasField "body" tx (Core.TxBody era)
   ) =>
   tx ->

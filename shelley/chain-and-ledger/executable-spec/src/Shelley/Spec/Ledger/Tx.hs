@@ -510,7 +510,7 @@ hashMultiSigScript ::
   ) =>
   MultiSig (Crypto era) ->
   ScriptHash (Crypto era)
-hashMultiSigScript x = hashScript @era x
+hashMultiSigScript = hashScript @era
 
 -- ========================================
 
@@ -551,7 +551,7 @@ extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.
   [Credential r crypto] ->
   Set (KeyHash 'Witness crypto)
-extractKeyHashWitnessSet credentials = foldr accum Set.empty credentials
+extractKeyHashWitnessSet = foldr accum Set.empty
   where
     accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans
     accum _other ans = ans

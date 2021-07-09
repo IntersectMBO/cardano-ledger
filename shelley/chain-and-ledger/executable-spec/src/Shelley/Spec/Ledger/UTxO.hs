@@ -290,14 +290,16 @@ getKeyHashFromRegPool (DCertPool (RegPool p)) = Just . _poolId $ p
 getKeyHashFromRegPool _ = Nothing
 
 txup ::
-  forall era.
-  HasField "update" (Core.TxBody era) (StrictMaybe (Update era)) =>
-  Core.Tx era ->
+  forall era tx.
+  ( HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "body" tx (Core.TxBody era)
+  ) =>
+  tx ->
   Maybe (Update era)
 txup tx = strictMaybeToMaybe (getField @"update" txbody)
   where
     txbody :: Core.TxBody era
-    txbody = (getField @"body" tx)
+    txbody = getField @"body" tx
 
 -- | Extract script hash from value address with script.
 getScriptHash :: Addr crypto -> Maybe (ScriptHash crypto)

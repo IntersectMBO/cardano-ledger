@@ -402,7 +402,7 @@ class
     -- | The required fee.
     Coin
   evaluateTransactionFee pp tx numKeyWits =
-    evaluateMinFee pp tx'
+    evaluateMinFee @era pp tx'
     where
       sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (Crypto era)))
       dummySig =
@@ -420,10 +420,14 @@ class
         flip map [1 .. numKeyWits] $
           \x -> WitVKey (dummyVKey x) dummySig
 
-      tx' = addKeyWitnesses tx dummyKeyWits
+      tx' = addKeyWitnesses @era tx dummyKeyWits
 
   -- | Evaluate the minimum lovelace that a given transaciton output must contain.
   evaluateMinLovelaceOutput :: Core.PParams era -> Core.TxOut era -> Coin
+
+--------------------------------------------------------------------------------
+-- Shelley specifics
+--------------------------------------------------------------------------------
 
 addShelleyKeyWitnesses ::
   ( Era era,
@@ -432,9 +436,9 @@ addShelleyKeyWitnesses ::
     ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.TxBody era)
   ) =>
-  Core.Tx era ->
+  Tx era ->
   Set (WitVKey 'Witness (Crypto era)) ->
-  Core.Tx era
+  Tx era
 addShelleyKeyWitnesses (Tx b ws aux) newWits = Tx b ws' aux
   where
     ws' = ws {addrWits = Set.union newWits (addrWits ws)}

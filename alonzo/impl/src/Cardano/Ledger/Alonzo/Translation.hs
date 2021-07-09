@@ -36,7 +36,6 @@ import Cardano.Ledger.Era
     TranslationContext,
     translateEra',
   )
-import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Mary (MaryEra)
 import Control.Monad.Except (Except, throwError)
 import Data.Coders
@@ -86,13 +85,6 @@ instance
           nesPd = nesPd nes
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) Core.Tx where
-  type TranslationError (AlonzoEra c) Core.Tx = DecoderError
-  translateEra _ctx tx =
-    case decodeAnnotator "tx" fromCBOR (serialize tx) of
-      Right newTx -> pure newTx
-      Left decoderError -> throwError decoderError
-
 instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGenesis where
   translateEra ctxt genesis =
     return
@@ -114,16 +106,16 @@ instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGenesis where
           API.sgStaking = API.sgStaking genesis
         }
 
-newtype TxInBlock era = TxInBlock {unTxInBlock :: (Era.TxInBlock era)}
+newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
   ( Crypto c,
-    Era.TxInBlock (AlonzoEra c) ~ ValidatedTx (AlonzoEra c)
+    Core.Tx (AlonzoEra c) ~ ValidatedTx (AlonzoEra c)
   ) =>
-  TranslateEra (AlonzoEra c) TxInBlock
+  TranslateEra (AlonzoEra c) Tx
   where
-  type TranslationError (AlonzoEra c) TxInBlock = DecoderError
-  translateEra _ctxt (TxInBlock tx) = do
+  type TranslationError (AlonzoEra c) Tx = DecoderError
+  translateEra _ctxt (Tx tx) = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
@@ -134,7 +126,7 @@ instance
       SNothing -> pure SNothing
       SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
     let validating = IsValidating True
-    pure $ TxInBlock $ ValidatedTx bdy txwits validating aux
+    pure $ Tx $ ValidatedTx bdy txwits validating aux
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
