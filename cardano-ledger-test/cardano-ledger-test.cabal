@@ -55,7 +55,6 @@ library
     genvalidity,
     genvalidity-scientific,
     plutus-ledger-api,
-    plutus-tx,
     scientific,
     shelley-spec-ledger,
     shelley-spec-ledger-test,

@@ -11,7 +11,7 @@ module PlutusScripts
     sumsTo10Decl,
   ) where
 
-import qualified Plutus.V1.Ledger.Scripts as P
+import qualified Plutus.V1.Ledger.Api as P
 import qualified PlutusTx as P (Data (..), compile)
 import qualified PlutusTx.Prelude as P
 import Language.Haskell.TH
