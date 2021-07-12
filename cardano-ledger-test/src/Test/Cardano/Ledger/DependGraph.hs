@@ -1,5 +1,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -81,7 +83,7 @@ maxInputs = 5
 data ActionState = ActionState
   { -- | Lazy supply of Ints
     _actionState_freshNames :: [Int],
-    -- | Node ID to label
+    -- | Node ID to label and out-edges
     _actionState_withDeps :: Map Int (Int, Action, Map Int Enables),
     -- | Epoch number to set of node ids
     _actionState_needsDelegate :: Map Int (Set Int),
@@ -147,9 +149,9 @@ chooseEnablement targets _ i = \case
 randomEnablement :: (MonadState ActionState m, MonadGen m) => Int -> Int -> Action -> m ()
 randomEnablement epoch i = \case
   Action_Withdraw -> do
-    -- Withdrawal produces an output that can be spent, so flip a coin if it's used
+    -- Withdrawal produces outputs that can be spent
     spenders <- use actionState_needsInputs
-    outputTo i 0 1 spenders
+    outputTo i 0 4 spenders
   Action_Delegate -> do
     -- Delegation can enable withdrawal of staking rewards
     -- A particular delegation can only enable a withdrawal once per epoch
@@ -275,13 +277,19 @@ minTxs = 1
 maxTxs :: Int
 maxTxs = 4
 
+minFee :: Integer
+minFee = 1000
+
+maxFee :: Integer
+maxFee = 10000
+
 data TransactionState era = TransactionState
   { _transactionState_freshNames :: [Integer]
   , _transactionState_livePaymentAddresses :: Set ModelAddress
-  , _transactionState_liveUtxos :: Map Int {- action id -} (Map ModelUTxOId (ModelTxOut era))
-  , _transactionState_txDependencies :: Map {- action id -} Int (Map ModelTxId (NESet Enables))
+  , _transactionState_utxos :: Map Int {- action id -} (Map ModelUTxOId (ModelTxOut era))
+  , _transactionState_txDependents :: Map {- action id -} Int (Map ModelTxId (NESet Enables))
   , _transactionState_genesisUtxo :: [(ModelUTxOId, ModelAddress, Coin)]
-  , _transactionState_transactionsInEpoch :: Map {- epoch -} Int (Map ModelTxId (ModelTx era))
+  , _transactionState_withDepsInEpoch :: Map {- epoch -} Int (Map ModelTxId (ModelTx era, Map ModelTxId (NESet Enables)))
   }
 
 makeLenses ''TransactionState
@@ -290,10 +298,10 @@ initialTransactionState :: TransactionState era
 initialTransactionState = TransactionState
   { _transactionState_freshNames = [1..]
   , _transactionState_livePaymentAddresses = mempty
-  , _transactionState_liveUtxos = mempty
-  , _transactionState_txDependencies = mempty
+  , _transactionState_utxos = mempty
+  , _transactionState_txDependents = mempty
   , _transactionState_genesisUtxo = mempty
-  , _transactionState_transactionsInEpoch = mempty
+  , _transactionState_withDepsInEpoch = mempty
   }
 
 freshTxId :: MonadSupply Integer m => m ModelTxId
@@ -317,47 +325,50 @@ genTransactions
 genTransactions actionIds actionGraph = do
   -- Here we exploit the fact that we generated our action graph in such a way that [1..]
   -- is an antitone topological sort of the actions.
-  gr <- (\x y f -> foldlM f x y) (unActionGraph actionGraph) (Set.toDescList actionIds) $ \gr i -> do
+  gr <- (\x y f -> foldlM f x y) (unActionGraph actionGraph) (Set.toAscList actionIds) $ \gr i -> do
     let (mctx, gr') = FGL.match i gr
     case mctx of
       Nothing -> error "genTransactions: Passed invalid actionId"
       Just (eIn, _, (epoch, action), eOut) -> do
-        case eIn of
+        case eOut of
           [] -> pure ()
           _:_ -> error "genTransactions: actionIds were not topsorted"
-        txDeps <- uses (transactionState_txDependencies . at i) (maybe mempty id)
-        myInputs <- uses (transactionState_liveUtxos . at i) (maybe mempty id)
-        -- TODO: Handle ModelValue properly
-        let Sum myTotalInput = flip foldMap myInputs $ \(ModelTxOut _ (ModelValue mv)) -> case mv of
-              ModelValue_Inject (Coin v) -> Sum v
-              _ -> Sum 0
+        dependents <- uses (transactionState_txDependents . at i) (maybe mempty id)
         case action of
           -- Spends are the simplest. Since they represent an arbitrary exchange of inputs to outputs
           -- each spend action is its own transaction. Other actions must be merged into
           -- transactions with spends or require a genesis UTxO for fees
           Action_Spend -> do
+            -- Get the UTxOs my dependents spend and also generate some that don't ever get spent
+            depOutputs <- uses (transactionState_utxos . at i) (maybe mempty id)
+            inertOutputs <- mconcat <$> do
+              numInert <- choose (0,4)
+              replicateM numInert $ do
+                val <- choose (minFee, maxFee)
+                uncurry Map.singleton <$> generateUtxo val
+            let myOutputs = Map.union depOutputs inertOutputs
+            let Sum sumMyOutputs = flip foldMap myOutputs $ \(ModelTxOut _ (ModelValue mv)) -> case mv of
+                  ModelValue_Inject (Coin v) -> Sum v
+                  _ -> error "genTransactions: utxo has abstract value"
             txId <- freshTxId
-            writeDependencies i txId eOut
-            let outs = [ aId | (Enables_Spending, aId) <- eOut ]
-            -- Generate UTxOs for my dependencies and then maybe a UTXO that lies inert
-            (leftoverValue, myUtxos) <- do
-              (lv, utxos) <- generateUtxosFor myTotalInput outs
-              case lv > 1 of
-                False -> pure (lv, utxos)
-                True -> do
-                  leftoverUtxo <- frequency
-                    [ (3, pure 0)
-                    , (1, choose (1, lv-1))
-                    ]
-                  case leftoverUtxo > 0 of
-                    False -> pure (lv, utxos)
-                    True -> do
-                      paddr <- generatePaymentAddress
-                      utxoId <- freshUtxoId
-                      pure $
-                        ( lv - leftoverUtxo
-                        , Map.insert utxoId (ModelTxOut paddr (ModelValue (ModelValue_Inject (Coin leftoverUtxo)))) utxos
-                        )
+            -- Generate my fee and then ask my dependencies to cover my total outputs + fee
+            myFee <- choose (minFee, maxFee)
+            let ins = [ aId | (Enables_Spending, aId) <- eIn ]
+            myInputs <- generateUtxosFor (sumMyOutputs + myFee) ins
+            -- Tell my dependencies my transaction id
+            addDependent i txId eIn
+            -- Finally record the body of my transaction along with my dependents
+            let newTx = ModelTx
+                  { _mtxId = txId
+                  , _mtxInputs = myInputs
+                  , _mtxOutputs = Map.toList myOutputs
+                  , _mtxFee = ModelValue (ModelValue_Inject (Coin myFee))
+                  , _mtxDCert = []
+                  , _mtxWdrl = mempty
+                  , _mtxMint = undefined
+                  }
+            transactionState_withDepsInEpoch . at epoch %= Just . Map.insert txId (newTx, dependents) .
+              maybe mempty id
             pure ()
           Action_Withdraw -> pure ()
           Action_Delegate -> pure ()
@@ -365,11 +376,6 @@ genTransactions actionIds actionGraph = do
           Action_RegisterPool -> pure ()
         pure gr'
   pure ()
-
-writeDependencies :: MonadState (TransactionState era) m => Int -> ModelTxId -> [(Enables, Int)] -> m ()
-writeDependencies aId txId eOut = do
-  let newDeps = Map.fromList $ flip fmap eOut $ \(enable, depId) -> (depId, Map.singleton txId (NES.singleton enable))
-  transactionState_txDependencies %= Map.unionWith (Map.unionWith (<>)) newDeps . Map.delete aId
 
 generatePaymentAddress
   :: (MonadState (TransactionState era) m, MonadSupply Integer m, MonadGen m)
@@ -385,16 +391,59 @@ generateUtxosFor
   :: (MonadState (TransactionState era) m, MonadSupply Integer m, MonadGen m)
   => Integer
   -> [Int] {- action ids -}
-  -> m (Integer, Map ModelUTxOId (ModelTxOut era))
-generateUtxosFor totalValue outs = do
-  (leftoverValue, newUtxos) <- (\x y f -> foldlM f x y) (totalValue, mempty) outs $ \(valueLeft, acc) aId -> do
+  -> m (Set ModelUTxOId)
+generateUtxosFor totalValue = \case
+-- No input actions were specified so we need to generate genesis UTxOs
+  [] -> do
     utxoId <- freshUtxoId
-    amount <- choose (1, valueLeft `div` 4 + 1) -- TODO: Split up the value in a more sensible and robust way
     paddr <- generatePaymentAddress
-    let newUtxo = Map.singleton aId (Map.singleton utxoId (ModelTxOut paddr (ModelValue (ModelValue_Inject (Coin amount)))))
-    pure (valueLeft - amount, Map.union newUtxo acc)
-  transactionState_liveUtxos %= Map.unionWith Map.union newUtxos
-  pure (leftoverValue, fold newUtxos)
+    transactionState_genesisUtxo %= ((utxoId, paddr, Coin totalValue):)
+    pure $ Set.singleton utxoId
+  aId0:aIds -> do
+    (leftoverValue, newUtxos) <- (\x y f -> foldlM f x y) (totalValue, mempty) aIds $ \(valueLeft, acc) aId -> do
+      utxoId <- freshUtxoId
+      amount <- choose (1, max 1 (valueLeft `div` 4)) -- TODO: Split up the value in a more sensible and robust way
+      paddr <- generatePaymentAddress
+      let newUtxo = Map.singleton aId (Map.singleton utxoId (ModelTxOut paddr (ModelValue (ModelValue_Inject (Coin amount)))))
+      pure (valueLeft - amount, Map.union newUtxo acc)
+    xUtxos <- do
+      utxoId <- freshUtxoId
+      paddr <- generatePaymentAddress
+      pure $ Map.singleton aId0 $ Map.singleton utxoId $
+        ModelTxOut paddr (ModelValue (ModelValue_Inject (Coin leftoverValue)))
+    let allUtxos = Map.union newUtxos xUtxos
+    transactionState_utxos %= Map.unionWith Map.union allUtxos
+    pure $ mconcat $ fmap Map.keysSet $ Map.elems allUtxos
+
+generateUtxo
+  :: (MonadSupply Integer m, MonadState (TransactionState era) m, MonadGen m)
+  => Integer
+  -> m (ModelUTxOId, ModelTxOut era)
+generateUtxo value = do
+  utxoId <- freshUtxoId
+  paddr <- generatePaymentAddress
+  pure $ (utxoId, ModelTxOut paddr $ ModelValue (ModelValue_Inject (Coin value)))
+
+generateRewardsUtxo
+  :: (MonadSupply Integer m, MonadState (TransactionState era) m, MonadGen m)
+  => ModelAddress
+  -> Integer
+  -> m (ModelUTxOId, ModelTxOut era)
+generateRewardsUtxo rewardAddr deficit = do
+  utxoId <- freshUtxoId
+  paddr <- generatePaymentAddress
+  pure $
+    ( utxoId
+    , ModelTxOut paddr $ ModelValue $
+        ModelValue_Var (ModelValue_Reward rewardAddr) `ModelValue_Sub` ModelValue_Inject (Coin deficit)
+    )
+
+-- When associating an action to a transaction id, add that transaction id to the set of dependents of all its enabling
+-- depndencies
+addDependent :: MonadState (TransactionState era) m => Int -> ModelTxId -> [(Enables, Int)] -> m ()
+addDependent aId txId eIn = do
+  let newDeps = Map.fromList $ flip fmap eIn $ \(enable, depId) -> (depId, Map.singleton txId (NES.singleton enable))
+  transactionState_txDependents %= Map.unionWith (Map.unionWith (<>)) newDeps . Map.delete aId
 
 -- Orphans
 instance MonadFail Gen where
