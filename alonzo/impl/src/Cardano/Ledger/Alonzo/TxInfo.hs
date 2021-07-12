@@ -278,6 +278,16 @@ transDataPair (x, y) = (transDataHash' x, P.Datum (getPlutusData y))
 transExUnits :: ExUnits -> P.ExBudget
 transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
 
+exBudgetToExUnits :: P.ExBudget -> Maybe ExUnits
+exBudgetToExUnits (P.ExBudget (P.ExCPU steps) (P.ExMemory memory)) =
+  ExUnits <$> safeFromInteger (toInteger memory)
+    <*> safeFromInteger (toInteger steps)
+  where
+    safeFromInteger :: forall a. (Integral a, Bounded a) => Integer -> Maybe a
+    safeFromInteger i
+      | toInteger (minBound :: a) <= i && i <= toInteger (maxBound :: a) = Just $ fromInteger i
+      | otherwise = Nothing
+
 -- ===================================
 -- translate Script Purpose
 
