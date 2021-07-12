@@ -505,7 +505,12 @@ txWithWithdrawalBytes16 = "83a50081824a93b885adfe0da089cdf600018182510075c40f44e
 -- | The transaction fee of txSimpleUTxO if one key witness were to be added,
 -- given minfeeA and minfeeB are set to 1.
 testEvaluateTransactionFee :: Assertion
-testEvaluateTransactionFee = API.evaluateTransactionFee pp (txSimpleUTxO @C_Crypto) 1 @?= Coin 103
+testEvaluateTransactionFee =
+  API.evaluateTransactionFee @(ShelleyEra C_Crypto)
+    pp
+    (txSimpleUTxO @C_Crypto)
+    1
+    @?= Coin 103
   where
     pp = emptyPParams {_minfeeA = 1, _minfeeB = 1}
 

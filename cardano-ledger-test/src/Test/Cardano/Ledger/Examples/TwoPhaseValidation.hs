@@ -123,7 +123,6 @@ import Shelley.Spec.Ledger.STS.Ledgers (LedgersPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import qualified Shelley.Spec.Ledger.Tx as Core (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -1424,8 +1423,8 @@ testUTXOW tx predicateFailure@(Left _) = do
             (TRC (utxoEnv (Alonzo Mock), (initialUtxoSt $ Alonzo Mock), tx))
   st @?= predicateFailure
 
-trustMe :: Bool -> Core.Tx A -> ValidatedTx A
-trustMe v (Core.Tx b w a) = ValidatedTx b w (IsValidating v) a
+trustMe :: Bool -> ValidatedTx A -> ValidatedTx A
+trustMe iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValidating iv') m
 
 alonzoUTXOWexamples :: TestTree
 alonzoUTXOWexamples =
@@ -1726,7 +1725,7 @@ makeNaiveBlock ::
     Signable (CC.DSIGN (Crypto era)) (OCertSignable (Crypto era)),
     KES.Signable (CC.KES (Crypto era)) (BHBody (Crypto era))
   ) =>
-  [TxInBlock era] ->
+  [Core.Tx era] ->
   Block era
 makeNaiveBlock txs = Block (BHeader bhb sig) txs'
   where

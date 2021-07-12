@@ -56,7 +56,7 @@ ledgerExamplesAlonzo =
   SLE.ShelleyLedgerExamples
     { SLE.sleBlock = SLE.exampleShelleyLedgerBlock exampleTransactionInBlock,
       SLE.sleHashHeader = SLE.exampleHashHeader (Proxy @StandardAlonzo),
-      SLE.sleTx = exampleTx,
+      SLE.sleTx = exampleTransactionInBlock,
       SLE.sleApplyTxError =
         ApplyTxError $
           pure $

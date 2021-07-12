@@ -35,7 +35,8 @@ import Cardano.Ledger.Alonzo.Scripts
     alwaysSucceeds,
   )
 import Cardano.Ledger.Alonzo.Tx (hashWitnessPPData)
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), WitnessPPDataHash)
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..), unTxDats)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -219,7 +220,12 @@ initialTx :: forall era. Proof era -> Core.Tx era
 initialTx era@(Shelley _) = Shelley.Tx (initialTxBody era) (initialWitnesses era) SNothing
 initialTx era@(Allegra _) = Shelley.Tx (initialTxBody era) (initialWitnesses era) SNothing
 initialTx era@(Mary _) = Shelley.Tx (initialTxBody era) (initialWitnesses era) SNothing
-initialTx era@(Alonzo _) = Shelley.Tx (initialTxBody era) (initialWitnesses era) SNothing
+initialTx era@(Alonzo _) =
+  Alonzo.ValidatedTx
+    (initialTxBody era)
+    (initialWitnesses era)
+    (Alonzo.IsValidating True)
+    SNothing
 
 initialPParams :: forall era. Proof era -> Core.PParams era
 initialPParams (Shelley _) = def
@@ -360,7 +366,7 @@ data TxField era
   | AuxData [(Core.AuxiliaryData era)] -- 0 or 1 element, represents Maybe type
   | Valid Bool
 
-updateTx :: Policy -> Proof era -> Shelley.Tx era -> TxField era -> Shelley.Tx era
+updateTx :: Policy -> Proof era -> Core.Tx era -> TxField era -> Core.Tx era
 updateTx p (wit@(Shelley _)) (tx@(Shelley.Tx b w d)) dt =
   case dt of
     Body fbody -> Shelley.Tx fbody w d
@@ -385,14 +391,14 @@ updateTx p (wit@(Mary _)) (tx@(Shelley.Tx b w d)) dt =
     Witnesses' wfields -> Shelley.Tx b (newWitnesses p wit wfields) d
     AuxData faux -> Shelley.Tx b w (applySMaybe p d faux)
     Valid _ -> tx
-updateTx p (wit@(Alonzo _)) (tx@(Shelley.Tx b w d)) dt =
+updateTx p wit@(Alonzo _) (Alonzo.ValidatedTx b w iv d) dt =
   case dt of
-    Body fbody -> Shelley.Tx fbody w d
-    Body' bfields -> Shelley.Tx (newTxBody p wit bfields) w d
-    Witnesses fwit -> Shelley.Tx b fwit d
-    Witnesses' wfields -> Shelley.Tx b (newWitnesses p wit wfields) d
-    AuxData faux -> Shelley.Tx b w (applySMaybe p d faux)
-    Valid _ -> tx
+    Body fbody -> Alonzo.ValidatedTx fbody w iv d
+    Body' bfields -> Alonzo.ValidatedTx (newTxBody p wit bfields) w iv d
+    Witnesses fwit -> Alonzo.ValidatedTx b fwit iv d
+    Witnesses' wfields -> Alonzo.ValidatedTx b (newWitnesses p wit wfields) iv d
+    AuxData faux -> Alonzo.ValidatedTx b w iv (applySMaybe p d faux)
+    Valid iv' -> Alonzo.ValidatedTx b w (Alonzo.IsValidating iv') d
 
 newTx :: Policy -> Proof era -> [TxField era] -> Core.Tx era
 newTx p era = List.foldl' (updateTx p era) (initialTx era)

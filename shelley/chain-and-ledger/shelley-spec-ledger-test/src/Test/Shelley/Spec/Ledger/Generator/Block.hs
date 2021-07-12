@@ -12,7 +12,6 @@ module Test.Shelley.Spec.Ledger.Generator.Block
   ( genBlock,
     genBlockWithTxGen,
     tickChainState,
-    TxInBlock,
   )
 where
 
@@ -20,8 +19,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
-import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxInBlock, TxSeq))
-import qualified Cardano.Ledger.Era as Era (TxInBlock)
+import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxSeq))
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -75,7 +73,7 @@ type TxGen era =
   AccountState ->
   LedgerState era ->
   SlotNo ->
-  Gen (Seq (Era.TxInBlock era))
+  Gen (Seq (Core.Tx era))
 
 -- | Generate a valid block.
 genBlock ::

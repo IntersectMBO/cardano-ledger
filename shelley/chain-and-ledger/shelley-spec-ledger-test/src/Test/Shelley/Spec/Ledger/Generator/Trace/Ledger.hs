@@ -20,7 +20,7 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.BaseTypes (Globals)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxInBlock))
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -98,7 +98,7 @@ instance
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
@@ -106,17 +106,16 @@ instance
     HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     Show (State (Core.EraRule "PPUP" era)),
-    Show (TxInBlock era)
+    Show (Core.Tx era)
   ) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
-    LedgerEnv <$> pure (SlotNo 0)
-      <*> pure 0
-      <*> genEraPParams @era geConstants
+    LedgerEnv (SlotNo 0) 0
+      <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
-  sigGen genenv env state = unsafeApplyTx <$> genTx genenv env state
+  sigGen genenv env state = genTx genenv env state
 
   shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
@@ -164,12 +163,12 @@ instance
       pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
       where
         genAndApplyTx ::
-          (UTxOState era, DPState (Crypto era), [TxInBlock era]) ->
+          (UTxOState era, DPState (Crypto era), [Core.Tx era]) ->
           Ix ->
-          Gen (UTxOState era, DPState (Crypto era), [TxInBlock era])
+          Gen (UTxOState era, DPState (Crypto era), [Core.Tx era])
         genAndApplyTx (u, dp, txs) ix = do
           let ledgerEnv = LedgerEnv slotNo ix pParams reserves
-          tx <- unsafeApplyTx <$> genTx ge ledgerEnv (u, dp)
+          tx <- genTx ge ledgerEnv (u, dp)
 
           let res =
                 runShelleyBase $

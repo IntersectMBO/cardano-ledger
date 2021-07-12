@@ -17,7 +17,7 @@ import Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys
@@ -65,7 +65,7 @@ type KeyPairWits era = [KeyPair 'Witness (Cardano.Ledger.Era.Crypto era)]
 -------------------------------------------------------------------------------}
 
 data ShelleyResultExamples era = ShelleyResultExamples
-  { srePParams :: Cardano.Ledger.Core.PParams era,
+  { srePParams :: Core.PParams era,
     sreProposedPPUpdates :: ProposedPPUpdates era,
     srePoolDistr :: PoolDistr (Cardano.Ledger.Era.Crypto era),
     sreNonMyopicRewards ::
@@ -78,7 +78,7 @@ data ShelleyResultExamples era = ShelleyResultExamples
 data ShelleyLedgerExamples era = ShelleyLedgerExamples
   { sleBlock :: Block era,
     sleHashHeader :: HashHeader (Cardano.Ledger.Era.Crypto era),
-    sleTx :: Tx era,
+    sleTx :: Core.Tx era,
     sleApplyTxError :: ApplyTxError era,
     sleRewardsCredentials :: Set (Either Coin (Credential 'Staking (Cardano.Ledger.Era.Crypto era))),
     sleResultExamples :: ShelleyResultExamples era,
@@ -93,29 +93,29 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
 type ShelleyBasedEra' era =
   ( ShelleyBasedEra era,
     ToCBORGroup (TxSeq era),
-    ToCBOR (Witnesses era),
-    Default (State (EraRule "PPUP" era))
+    ToCBOR (Core.Witnesses era),
+    Default (State (Core.EraRule "PPUP" era))
   )
 
 defaultShelleyLedgerExamples ::
   forall era.
   ( ShelleyBasedEra' era,
-    PredicateFailure (EraRule "DELEGS" era)
+    PredicateFailure (Core.EraRule "DELEGS" era)
       ~ DelegsPredicateFailure era,
-    Cardano.Ledger.Core.PParams era ~ Shelley.Spec.Ledger.PParams.PParams era,
-    PParamsDelta era ~ PParams' StrictMaybe era
+    Core.PParams era ~ Shelley.Spec.Ledger.PParams.PParams era,
+    Core.PParamsDelta era ~ PParams' StrictMaybe era
   ) =>
-  (Cardano.Ledger.Core.TxBody era -> KeyPairWits era -> Witnesses era) ->
-  (Tx era -> TxInBlock era) ->
-  Value era ->
-  Cardano.Ledger.Core.TxBody era ->
-  AuxiliaryData era ->
+  (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
+  (Tx era -> Core.Tx era) ->
+  Core.Value era ->
+  Core.TxBody era ->
+  Core.AuxiliaryData era ->
   ShelleyLedgerExamples era
 defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData =
   ShelleyLedgerExamples
     { sleBlock = exampleShelleyLedgerBlock (mkValidatedTx tx),
       sleHashHeader = exampleHashHeader (Proxy @era),
-      sleTx = tx,
+      sleTx = mkValidatedTx tx,
       sleApplyTxError =
         ApplyTxError $
           pure $
@@ -154,7 +154,7 @@ defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData =
 exampleShelleyLedgerBlock ::
   forall era.
   ShelleyBasedEra' era =>
-  TxInBlock era ->
+  Core.Tx era ->
   Block era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
   where
@@ -206,9 +206,9 @@ mkScriptHash = ScriptHash . mkDummyHash (Proxy @(ADDRHASH c))
 exampleTx ::
   forall era.
   ShelleyBasedEra' era =>
-  (Cardano.Ledger.Core.TxBody era -> KeyPairWits era -> Witnesses era) ->
-  Cardano.Ledger.Core.TxBody era ->
-  AuxiliaryData era ->
+  (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
+  Core.TxBody era ->
+  Core.AuxiliaryData era ->
   Tx era
 exampleTx mkWitnesses txBody auxData =
   Tx txBody (mkWitnesses txBody keyPairWits) (SJust auxData)
@@ -222,7 +222,7 @@ exampleTx mkWitnesses txBody auxData =
 
 exampleProposedPParamsUpdates ::
   ( ShelleyBasedEra' era,
-    PParamsDelta era ~ PParams' StrictMaybe era
+    Core.PParamsDelta era ~ PParams' StrictMaybe era
   ) =>
   ProposedPPUpdates era
 exampleProposedPParamsUpdates =
@@ -283,14 +283,14 @@ testShelleyGenesis =
 exampleNewEpochState ::
   forall era.
   ( ShelleyBasedEra' era,
-    HasField "_a0" (Cardano.Ledger.Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Cardano.Ledger.Core.PParams era) Natural,
-    HasField "_rho" (Cardano.Ledger.Core.PParams era) UnitInterval,
-    HasField "_tau" (Cardano.Ledger.Core.PParams era) UnitInterval
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval
   ) =>
-  Value era ->
-  Cardano.Ledger.Core.PParams era ->
-  Cardano.Ledger.Core.PParams era ->
+  Core.Value era ->
+  Core.PParams era ->
+  Core.PParams era ->
   NewEpochState era
 exampleNewEpochState value ppp pp =
   NewEpochState
@@ -400,7 +400,7 @@ ledgerExamplesShelley =
 mkWitnessesPreAlonzo ::
   ShelleyBasedEra' era =>
   Proxy era ->
-  Cardano.Ledger.Core.TxBody era ->
+  Core.TxBody era ->
   KeyPairWits era ->
   WitnessSet era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
@@ -441,7 +441,7 @@ exampleMetadataMap =
       (4, Map [(I 3, B "b")])
     ]
 
-exampleAuxiliaryDataShelley :: AuxiliaryData StandardShelley
+exampleAuxiliaryDataShelley :: Core.AuxiliaryData StandardShelley
 exampleAuxiliaryDataShelley = Metadata exampleMetadataMap
 
 exampleTxIns :: Cardano.Ledger.Crypto.Crypto c => Set (TxIn c)
@@ -471,7 +471,7 @@ exampleWithdrawals =
       ]
 
 exampleProposedPPUpdates ::
-  ( PParamsDelta era ~ PParams' StrictMaybe era,
+  ( Core.PParamsDelta era ~ PParams' StrictMaybe era,
     ShelleyBasedEra' era
   ) =>
   ProposedPPUpdates era

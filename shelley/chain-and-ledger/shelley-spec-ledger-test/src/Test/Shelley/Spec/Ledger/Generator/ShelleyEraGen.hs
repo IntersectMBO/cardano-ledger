@@ -34,7 +34,8 @@ import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Shelley.Spec.Ledger.STS.EraMapping ()
 import Shelley.Spec.Ledger.Scripts (MultiSig (..))
 import Shelley.Spec.Ledger.Tx
-  ( TxIn (..),
+  ( Tx (..),
+    TxIn (..),
     TxOut (..),
     pattern WitnessSet,
   )
@@ -78,17 +79,17 @@ instance
   genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genMetadata
 
-  updateEraTxBody _utxo _pp _wits body fee ins out =
-    body
+  updateEraTxBody _utxo _pp _wits body' fee ins out =
+    body'
       { _txfee = fee,
-        _inputs = (_inputs body) <> ins,
-        _outputs = (_outputs body) :|> out
+        _inputs = (_inputs body') <> ins,
+        _outputs = (_outputs body') :|> out
       }
   genEraPParamsDelta = genShelleyPParamsDelta
   genEraPParams = genPParams
 
   genEraWitnesses _ setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
-  unsafeApplyTx x = x
+  constructTx = Tx
 
 instance CC.Crypto c => ScriptClass (ShelleyEra c) where
   basescript _proxy = RequireSignature

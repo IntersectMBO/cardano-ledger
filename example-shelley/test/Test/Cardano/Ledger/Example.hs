@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -46,6 +47,7 @@ import Shelley.Spec.Ledger.Tx
   ( TxIn (..),
     TxOut (..),
     WitnessSetHKD (WitnessSet),
+    pattern Tx,
   )
 import Shelley.Spec.Ledger.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
 import Test.QuickCheck
@@ -98,7 +100,7 @@ instance
         _inputs = (_inputs body) <> ins,
         _outputs = (_outputs body) :|> out
       }
-  unsafeApplyTx x = x
+  constructTx = Tx
 
 instance CC.Crypto c => ScriptClass (ExampleEra c) where
   basescript _proxy = RequireSignature

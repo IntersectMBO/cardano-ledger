@@ -13,6 +13,7 @@ module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
 
 import Cardano.Binary
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, ValidateScript)
 import Cardano.Ledger.Mary (MaryEra)
@@ -46,6 +47,8 @@ type AllegraBench = AllegraEra C_Crypto
 
 type MaryBench = MaryEra C_Crypto
 
+type AlonzoBench = AlonzoEra C_Crypto
+
 --------------------------------------------------------------------------------
 -- Applying a Shelley transaction in multiple eras.
 --
@@ -69,7 +72,7 @@ data ApplyTxRes era = ApplyTxRes
   { atrGlobals :: Globals,
     atrMempoolEnv :: MempoolEnv era,
     atrState :: MempoolState era,
-    atrTx :: Tx era
+    atrTx :: Core.Tx era
   }
   deriving (Generic)
 
@@ -165,6 +168,7 @@ applyTxBenchmarks =
         "Deserialise Shelley Tx"
         [ deserialiseTxEra (Proxy @ShelleyBench),
           deserialiseTxEra (Proxy @AllegraBench),
-          deserialiseTxEra (Proxy @MaryBench)
+          deserialiseTxEra (Proxy @MaryBench),
+          deserialiseTxEra (Proxy @AlonzoBench)
         ]
     ]

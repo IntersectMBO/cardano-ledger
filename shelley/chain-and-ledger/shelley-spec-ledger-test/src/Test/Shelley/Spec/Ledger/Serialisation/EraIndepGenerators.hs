@@ -825,7 +825,7 @@ genBlock ::
   ( Era era,
     ToCBORGroup (TxSeq era),
     Mock (Crypto era),
-    Arbitrary (TxInBlock era)
+    Arbitrary (Core.Tx era)
   ) =>
   Gen (Block era)
 genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
@@ -844,7 +844,7 @@ genCoherentBlock ::
     ToCBORGroup (TxSeq era),
     Mock (Crypto era),
     UsesTxBody era,
-    Arbitrary (TxInBlock era)
+    Arbitrary (Core.Tx era)
   ) =>
   Gen (Block era)
 genCoherentBlock = do
@@ -893,7 +893,7 @@ instance
     ToCBORGroup (TxSeq era),
     SupportsSegWit era,
     Mock (Crypto era),
-    Arbitrary (TxInBlock era)
+    Arbitrary (Core.Tx era)
   ) =>
   Arbitrary (Block era)
   where

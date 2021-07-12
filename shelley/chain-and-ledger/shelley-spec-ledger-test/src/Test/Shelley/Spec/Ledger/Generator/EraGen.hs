@@ -38,7 +38,7 @@ import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe, UnitInt
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
-import Cardano.Ledger.Era (Crypto, Era, TxInBlock, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Pretty (PrettyA (..))
@@ -119,12 +119,12 @@ import Test.Shelley.Spec.Ledger.Utils (Split (..))
 type MinLEDGER_STS era =
   ( Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
-    Signal (Core.EraRule "LEDGER" era) ~ TxInBlock era,
+    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
     State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (TxInBlock era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     STS (Core.EraRule "LEDGER" era)
   )
 
@@ -143,10 +143,10 @@ type MinUTXO_STS era =
     BaseM (Core.EraRule "UTXOW" era) ~ ShelleyBase,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
-    Signal (Core.EraRule "UTXO" era) ~ TxInBlock era
+    Signal (Core.EraRule "UTXO" era) ~ Core.Tx era
   )
 
 -- | Minimal requirements on Core.PParams to generate random stuff
@@ -274,7 +274,12 @@ class
   genEraGoodTxOut :: Core.TxOut era -> Bool
   genEraGoodTxOut _ = True -- The default implementation marks every TxOut as good.
 
-  unsafeApplyTx :: Core.Tx era -> TxInBlock era
+  -- | Construct a transaction given its constituent parts.
+  constructTx ::
+    Core.TxBody era ->
+    Core.Witnesses era ->
+    StrictMaybe (Core.AuxiliaryData era) ->
+    Core.Tx era
 
   -- | compute the delta cost of an additional script on  per Era basis.
   genEraScriptCost :: Core.PParams era -> Core.Script era -> Coin
@@ -282,12 +287,12 @@ class
 
   -- | A final opportunity to tweak things when the generator is done. Possible uses
   --   1) Add tracing when debugging on a per Era basis
-  genEraDone :: Core.PParams era -> (Core.Tx era) -> Gen (Core.Tx era)
+  genEraDone :: Core.PParams era -> Core.Tx era -> Gen (Core.Tx era)
   genEraDone _pp x = pure x
 
   -- | A final opportunity to tweak things at the block level. Possible uses
   --   2) Run a test that might decide to 'discard' the test, because we got unlucky, and a rare unfixible condition has occurred.
-  genEraTweakBlock :: Core.PParams era -> Seq (TxInBlock era) -> Gen (Seq (TxInBlock era))
+  genEraTweakBlock :: Core.PParams era -> Seq (Core.Tx era) -> Gen (Seq (Core.Tx era))
   genEraTweakBlock _pp seqTx = pure seqTx
 
 {------------------------------------------------------------------------------

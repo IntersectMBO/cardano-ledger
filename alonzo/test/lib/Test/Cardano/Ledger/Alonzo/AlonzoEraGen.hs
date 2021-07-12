@@ -73,7 +73,6 @@ import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.Tx (Tx (Tx))
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl)
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
@@ -336,7 +335,7 @@ instance Mock c => EraGen (AlonzoEra c) where
                 Nothing -> ans
                 Just info -> addRedeemMap txbody info purpose ans -- Add it to the redeemer map
 
-  unsafeApplyTx (Tx bod wit auxdata) = ValidatedTx bod wit (IsValidating True) auxdata
+  constructTx bod wit auxdata = ValidatedTx bod wit (IsValidating True) auxdata
 
   genEraGoodTxOut = vKeyLocked
 

@@ -153,6 +153,7 @@ type TwoPoolsConstraints era =
   ( ShelleyTest era,
     ExMock (Crypto era),
     Core.TxBody era ~ TxBody era,
+    Core.Tx era ~ Tx era,
     PreAlonzo era
   )
 

@@ -22,7 +22,7 @@ where
 import Cardano.Binary (ToCBOR, serialize')
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfo)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (TxInBlock, fromTxSeq))
+import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -134,7 +134,7 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block era -> [TxInBlock era]
+  let blockTxs :: Block era -> [Core.Tx era]
       blockTxs (Block' _ txSeq _) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
@@ -238,9 +238,9 @@ scriptCredentialCertsRatio certs =
 certsByTx ::
   forall era.
   ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "body" (TxInBlock era) (Core.TxBody era)
+    HasField "body" (Core.Tx era) (Core.TxBody era)
   ) =>
-  [TxInBlock era] ->
+  [Core.Tx era] ->
   [[DCert (Crypto era)]]
 certsByTx txs = toList . (getField @"certs") . getField @"body" <$> txs
 
@@ -272,17 +272,17 @@ txScriptOutputsRatio _ txoutsList =
 
 hasWithdrawal ::
   ( HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "body" (TxInBlock era) (Core.TxBody era)
+    HasField "body" (Core.Tx era) (Core.TxBody era)
   ) =>
-  TxInBlock era ->
+  Core.Tx era ->
   Bool
 hasWithdrawal x = (not . null . unWdrl . (getField @"wdrls") . getField @"body") x
 
 hasPParamUpdate ::
   ( HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era)),
-    HasField "body" (TxInBlock era) (Core.TxBody era)
+    HasField "body" (Core.Tx era) (Core.TxBody era)
   ) =>
-  TxInBlock era ->
+  Core.Tx era ->
   Bool
 hasPParamUpdate tx =
   ppUpdates . getField @"update" . getField @"body" $ tx
@@ -294,7 +294,7 @@ hasMetadata ::
   forall era.
   ( UsesTxBody era
   ) =>
-  TxInBlock era ->
+  Core.Tx era ->
   Bool
 hasMetadata tx =
   f . getField @"adHash" . getField @"body" $ tx
@@ -332,7 +332,7 @@ propAbstractSizeBoundsBytes ::
     ChainProperty era,
     QC.HasTrace (LEDGER era) (GenEnv era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    ToCBOR (TxInBlock era), -- Arises from propAbstractSizeNotTooBig (which serializes)
+    ToCBOR (Core.Tx era), -- Arises from propAbstractSizeNotTooBig (which serializes)
     Default (State (Core.EraRule "PPUP" era))
   ) =>
   Property
@@ -345,7 +345,7 @@ propAbstractSizeBoundsBytes = property $ do
     (genEnv p)
     genesisLedgerSt
     $ \tr -> do
-      let txs :: [TxInBlock era]
+      let txs :: [Core.Tx era]
           txs = traceSignals OldestFirst tr
       all (\tx -> txsizeBound (Proxy @era) tx >= numBytes tx) txs
   where
@@ -360,7 +360,7 @@ propAbstractSizeNotTooBig ::
   ( EraGen era,
     ChainProperty era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    ToCBOR (TxInBlock era), -- We need to serialize it to get its size.
+    ToCBOR (Core.Tx era), -- We need to serialize it to get its size.
     QC.HasTrace (LEDGER era) (GenEnv era),
     Default (State (Core.EraRule "PPUP" era))
   ) =>
@@ -381,7 +381,7 @@ propAbstractSizeNotTooBig = property $ do
     (genEnv p)
     genesisLedgerSt
     $ \tr -> do
-      let txs :: [TxInBlock era]
+      let txs :: [Core.Tx era]
           txs = traceSignals OldestFirst tr
       all notTooBig txs
   where

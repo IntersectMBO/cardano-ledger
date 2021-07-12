@@ -81,7 +81,7 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..), SupportsSegWit (hashTxSeq, toTxSeq), TxInBlock)
+import Cardano.Ledger.Era (Crypto (..), SupportsSegWit (hashTxSeq, toTxSeq))
 import qualified Cardano.Ledger.Era as Era (TxSeq)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody, EraIndependentData)
 import Cardano.Ledger.Keys
@@ -564,7 +564,7 @@ mkBlock ::
   -- | All keys in the stake pool
   AllIssuerKeys (Crypto era) r ->
   -- | Transactions to record
-  [TxInBlock era] ->
+  [Core.Tx era] ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"
@@ -597,7 +597,7 @@ mkBlockFakeVRF ::
   -- | All keys in the stake pool
   AllIssuerKeys (Crypto era) r ->
   -- | Transactions to record
-  [TxInBlock era] ->
+  [Core.Tx era] ->
   -- | Current slot
   SlotNo ->
   -- | Block number/chain length/chain "difficulty"

@@ -19,12 +19,11 @@ import Cardano.Binary
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Translation (TxInBlock (..))
+import Cardano.Ledger.Alonzo.Translation (Tx (..))
 import Cardano.Ledger.Alonzo.Tx (toCBORForSizeComputation)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (TranslateEra (..))
-import qualified Cardano.Ledger.Era as Era
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA
 import Data.Typeable (Typeable)
@@ -77,8 +76,7 @@ alonzoTranslationTests :: TestTree
 alonzoTranslationTests =
   testGroup
     "Alonzo translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (test @API.Tx),
-      testProperty "TxInBlock compatibility" testTxInBlock,
+    [ testProperty "Core.Tx compatibility" testTx,
       testProperty "ProposedPPUpdates compatibility" (test @API.ProposedPPUpdates),
       testProperty "PPUPState compatibility" (test @API.PPUPState),
       testProperty "UTxO compatibility" (test @API.UTxO),
@@ -87,16 +85,16 @@ alonzoTranslationTests =
     ]
 
 deriving newtype instance
-  (Arbitrary (Era.TxInBlock era)) =>
-  Arbitrary (TxInBlock era)
+  (Arbitrary (Core.Tx era)) =>
+  Arbitrary (Tx era)
 
 deriving newtype instance
-  (Typeable era, ToCBOR (Era.TxInBlock era)) =>
-  ToCBOR (TxInBlock era)
+  (Typeable era, ToCBOR (Core.Tx era)) =>
+  ToCBOR (Tx era)
 
 deriving newtype instance
-  (Show (Era.TxInBlock era)) =>
-  Show (TxInBlock era)
+  (Show (Core.Tx era)) =>
+  Show (Tx era)
 
 dummyAlonzoGenesis :: AlonzoGenesis
 dummyAlonzoGenesis = undefined
@@ -110,12 +108,11 @@ test ::
   ) =>
   f Mary ->
   Bool
-test x = translationCompatToCBOR ([] :: [Alonzo]) dummyAlonzoGenesis x
+test = translationCompatToCBOR ([] :: [Alonzo]) dummyAlonzoGenesis
 
-testTxInBlock :: TxInBlock Mary -> Bool
-testTxInBlock x =
+testTx :: Tx Mary -> Bool
+testTx =
   translationCompat @Alonzo
     dummyAlonzoGenesis
-    (toCBORForSizeComputation . unTxInBlock)
+    (toCBORForSizeComputation . unTx)
     toCBOR
-    x

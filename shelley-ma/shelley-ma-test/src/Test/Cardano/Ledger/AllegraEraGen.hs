@@ -47,7 +47,7 @@ import Data.Sequence.Strict (StrictSeq (..), fromList)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API (KeyRole (Witness))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
-import Shelley.Spec.Ledger.Tx (pattern WitnessSet)
+import Shelley.Spec.Ledger.Tx (pattern Tx, pattern WitnessSet)
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut (..), Wdrl)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (Gen, arbitrary, frequency)
@@ -91,7 +91,7 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
   genEraPParamsDelta = genShelleyPParamsDelta
   genEraPParams = genPParams
   genEraWitnesses _scriptinfo setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
-  unsafeApplyTx x = x
+  constructTx = Tx
 
 genTxBody ::
   forall era.

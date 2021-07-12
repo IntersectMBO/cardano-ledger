@@ -88,7 +88,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.STS.Delpl (DelplEnv)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
-import Shelley.Spec.Ledger.Tx (Tx (..), TxIn (..))
+import Shelley.Spec.Ledger.Tx (TxIn (..))
 import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
@@ -298,7 +298,11 @@ genTx
           draftFee
           (maybeToStrictMaybe update)
           (hashAuxiliaryData @era <$> metadata)
-      let draftTx = Tx draftTxBody (mkTxWits' draftTxBody) metadata
+      let draftTx =
+            constructTx @era
+              draftTxBody
+              (mkTxWits' draftTxBody)
+              metadata
           scripts' = Map.fromList $ map (\s -> (hashScript @era s, s)) additionalScripts
       -- We add now repeatedly add inputs until the process converges.
       converge
@@ -538,7 +542,7 @@ applyDelta
   neededKeys
   neededScripts
   KeySpace_ {ksIndexedPaymentKeys, ksIndexedStakingKeys}
-  tx@(Tx _ _ _auxdata)
+  tx
   (Delta deltafees extraIn _extraWits change extraKeys extraScripts) =
     --fix up the witnesses here?
     -- Adds extraInputs, extraWitnesses, and change from delta to tx
@@ -570,12 +574,13 @@ applyDelta
             kw
             sw
             (hashAnnotated body2)
-     in Tx @era body2 newWitnessSet _auxdata
+     in constructTx @era body2 newWitnessSet (getField @"auxiliaryData" tx)
 
 fix :: (Eq d, Monad m) => Int -> (Int -> d -> m d) -> d -> m d
 fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
+  forall era.
   ( EraGen era,
     UsesTxOut era,
     Mock (Crypto era),
@@ -604,7 +609,7 @@ converge
   keySpace
   tx = do
     delta <- genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx
-    genEraDone pparams (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta)
+    genEraDone @era pparams (applyDelta utxo scriptinfo pparams neededKeys neededScripts keySpace tx delta)
 
 -- | Return up to /k/ random elements from /items/
 -- (instead of the less efficient /take k <$> QC.shuffle items/)
