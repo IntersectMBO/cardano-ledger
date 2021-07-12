@@ -38,6 +38,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Tx (Tx (..))
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
@@ -64,8 +65,9 @@ import Shelley.Spec.Ledger.API
     TxOut (..),
     hashVerKeyVRF,
   )
+import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.Metadata as MD
-import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.Tx
   ( WitnessSetHKD (..),
     hashScript,
@@ -76,7 +78,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, Mock)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
@@ -500,6 +502,13 @@ txWithWithdrawal =
 txWithWithdrawalBytes16 :: BSL.ByteString
 txWithWithdrawalBytes16 = "83a50081824a93b885adfe0da089cdf600018182510075c40f44e1c155bedab80d3ec7c2190b0a02185e030a05a149e0dab80d3ec7c2190b1864a10082824873ed39075e40d2a6509543f3cca5c77bce73ed39075e40d2a682489ac25c873e2248cc509543f3cca5c77bce9ac25c873e2248ccf6"
 
+-- | The transaction fee of txSimpleUTxO if one key witness were to be added,
+-- given minfeeA and minfeeB are set to 1.
+testEvaluateTransactionFee :: Assertion
+testEvaluateTransactionFee = API.evaluateTransactionFee pp (txSimpleUTxO @C_Crypto) 1 @?= Coin 103
+  where
+    pp = emptyPParams {_minfeeA = 1, _minfeeB = 1}
+
 -- NOTE the txsize function takes into account which actual crypto parameter is use.
 -- These tests are using MD5Prefix and MockDSIGN so that:
 --       the regular hash length is ----> 10
@@ -520,7 +529,8 @@ sizeTests =
       testCase "retire stake pool" $ sizeTest p txRetirePoolBytes16 txRetirePool 89,
       testCase "auxiliaryData" $ sizeTest p txWithMDBytes16 txWithMD 96,
       testCase "multisig" $ sizeTest p txWithMultiSigBytes16 txWithMultiSig 141,
-      testCase "reward withdrawal" $ sizeTest p txWithWithdrawalBytes16 txWithWithdrawal 116
+      testCase "reward withdrawal" $ sizeTest p txWithWithdrawalBytes16 txWithWithdrawal 116,
+      testCase "evaluate transaction fee" $ testEvaluateTransactionFee
     ]
   where
     p :: Proxy C

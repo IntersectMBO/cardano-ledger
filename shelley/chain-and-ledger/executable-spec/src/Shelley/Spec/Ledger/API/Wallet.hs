@@ -409,16 +409,16 @@ class
       dummySig =
         fromRight
           (error "corrupt dummy signature")
-          (decodeFullDecoder "dummy signature" decodeSignedDSIGN (LBS.replicate sigSize 0))
+          (decodeFullDecoder "dummy signature" decodeSignedDSIGN (serialize $ LBS.replicate sigSize 0))
       vkeySize = fromIntegral $ sizeVerKeyDSIGN (Proxy @(DSIGN (Crypto era)))
       dummyVKey w =
         let padding = LBS.replicate paddingSize 0
             paddingSize = vkeySize - LBS.length sw
             sw = serialize w
-            keyBytes = padding <> sw
+            keyBytes = serialize $ padding <> sw
          in fromRight (error "corrupt dummy vkey") (decodeFull keyBytes)
       dummyKeyWits = Set.fromList $
-        flip map [0 .. numKeyWits] $
+        flip map [1 .. numKeyWits] $
           \x -> WitVKey (dummyVKey x) dummySig
 
       tx' = addKeyWitnesses tx dummyKeyWits
