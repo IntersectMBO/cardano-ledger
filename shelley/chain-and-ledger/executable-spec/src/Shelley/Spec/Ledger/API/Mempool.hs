@@ -16,6 +16,8 @@
 module Shelley.Spec.Ledger.API.Mempool
   ( ApplyTx (..),
     ApplyTxError (..),
+    Validated,
+    extractTx,
 
     -- * Exports for testing
     MempoolEnv,
@@ -61,6 +63,15 @@ import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv, LedgerPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Ledger as Ledger
 
+-- | A newtype which indicates that a transaction has been validated against
+-- some chain state.
+newtype Validated tx = Validated tx
+  deriving (Eq, Show)
+
+-- | Extract the underlying unvalidated Tx.
+extractTx :: Validated tx -> tx
+extractTx (Validated tx) = tx
+
 class
   ( ChainData (Core.Tx era),
     AnnotatedData (Core.Tx era),
@@ -89,14 +100,14 @@ class
     MempoolEnv era ->
     MempoolState era ->
     Core.Tx era ->
-    m (MempoolState era, Core.Tx era)
+    m (MempoolState era, Validated (Core.Tx era))
   default applyTx ::
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
     Core.Tx era ->
-    m (MempoolState era, Core.Tx era)
+    m (MempoolState era, Validated (Core.Tx era))
   applyTx globals env state tx =
     let res =
           flip runReader globals
@@ -104,10 +115,10 @@ class
             $ TRC (env, state, tx)
      in liftEither
           . left ApplyTxError
-          . right (,tx)
+          . right (,Validated tx)
           $ res
 
-  -- | Reapply a 'TxInBlock'.
+  -- | Reapply a previously validated 'Tx'.
   --
   --   This applies the (validated) transaction to a new mempool state. It may
   --   fail due to the mempool state changing (for example, a needed output
@@ -118,21 +129,21 @@ class
   --   any static checks. This is not required, but strongly encouraged since
   --   this function will be called each time the mempool revalidates
   --   transactions against a new mempool state.
-  applyTxInBlock ::
+  reapplyTx ::
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    Core.Tx era ->
+    Validated (Core.Tx era) ->
     m (MempoolState era)
-  default applyTxInBlock ::
+  default reapplyTx ::
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    Core.Tx era ->
+    Validated (Core.Tx era) ->
     m (MempoolState era)
-  applyTxInBlock globals env state tx =
+  reapplyTx globals env state (Validated tx) =
     let res =
           flip runReader globals
             . applySTS @(Core.EraRule "LEDGER" era)
