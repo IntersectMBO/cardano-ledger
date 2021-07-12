@@ -345,10 +345,16 @@ for each transaction.
 \end{proof}
 \end{property}
 
-\begin{property}[Script interpreter arguments are fixed (deterministic script evaluation)]
+\begin{property}[Deterministic script evaluation]
   \label{prop:fixed-inputs}
 
-For this property, we make some assumptions about things that are outside the scope of this specifications :
+The deterministic script evaluation property, also stated as
+"script interpreter arguments are fixed", is a property of the Alonzo ledger
+that guarantees that the outcome of phase-2 script validation in a (phase-1 valid) transaction
+depends only on the contents of that transaction, and not on when, by who, or in what
+block that transaction was submitted.
+
+For this property, we make some assumptions about things that are outside the scope of this specification :
 
 \begin{itemize}
   \item The Plutus script

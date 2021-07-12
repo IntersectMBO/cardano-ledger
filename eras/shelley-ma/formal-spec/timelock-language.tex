@@ -71,7 +71,7 @@ the slot specified by the constructor.
                               \exists t \in ts: \fun{evalTimelock}~t~vhks\\
     \fun{evalTimelock} & ~(\type{MOfN}~m~ts)~\var{vhks}~\wcard = \\
                              & m \leq \Sigma
-                               (\textrm{card} \{ t s.t. t \leftarrow ts \wedge \fun{evalTimelock}~\var{t}~\var{vhks} \\
+                               (\textrm{card} \{ t s.t. t \leftarrow ts \wedge \fun{evalTimelock}~\var{t}~\var{vhks} \}) \\
     \fun{evalTimelock} &~(\type{RequireTimeStart}~\var{lockStart})~\var{vhks}~\var{(\var{txStart}, \wcard)} \\
     & =~
     \begin{cases}

@@ -7,7 +7,7 @@
   \emph{Type Definition}
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{mest} & \MemoryEstimate & \N
+      \var{mest} & \MemoryEstimate & \Integer
     \end{array}
   \end{equation*}
   %
@@ -30,18 +30,25 @@
     & \fun{getCoin} \in \TxOut \to \Coin \\
     & \fun{getCoin}~{(\wcard,~\var{out})} ~=~\fun{coin}~\var{out}
     \nextdef
-    & \fun{ubalance} \in \UTxO \to \hldiff{\Value} \\
+    & \fun{ubalance} \in \UTxO \to \hldiff{\ValMonoid} \\
     & \fun{ubalance} ~ utxo = \hldiff{\sum_{\wcard\mapsto\var{u}\in~\var{utxo}} \fun{getValue}~\var{u}}
+    \nextdef
+    & \fun{scaledMinDeposit} \in \ValMonoid \to \Coin \to \Coin \\
+    & \fun{scaledMinDeposit}~\var{v}~\var{mv} ~=~
+    \begin{cases}
+      \var{mv} & \fun{adaOnly}~v \\
+      \fun{max}~(\var{mv},~\fun{utxoEntrySize}~{v} * \fun{coinsPerUTxOWord}~mv)) & \text{otherwise}
+    \end{cases}
   \end{align*}
   %
   \emph{Produced and Consumed Calculations}
   \begin{align*}
-    & \fun{consumed} \in \PParams \to \UTxO \to \TxBody \to \hldiff{\Value} \\
+    & \fun{consumed} \in \PParams \to \UTxO \to \TxBody \to \hldiff{\ValMonoid} \\
     & \consumed{pp}{utxo}{txb} = \\
     & ~~\ubalance{(\txins{txb} \restrictdom \var{utxo})} ~+~ \hldiff{\fun{mint}~\var{txb}} \\
     &~~+~\hldiff{\fun{inject}}(\fun{wbalance}~(\fun{txwdrls}~{txb})~+~ \keyRefunds{pp}{txb})
     \nextdef
-    & \fun{produced} \in \PParams \to \StakePools \to \TxBody \to \hldiff{\Value} \\
+    & \fun{produced} \in \PParams \to \StakePools \to \TxBody \to \hldiff{\ValMonoid} \\
     & \fun{produced}~\var{pp}~\var{stpools}~\var{txb} = \\
     &~~\ubalance{(\fun{outs}~{txb})} \\
     &~~+ \hldiff{\fun{inject}}(\txfee{txb} + \totalDeposits{pp}{stpools}{(\txcerts{txb})})
@@ -73,33 +80,32 @@ UTxO transition system with multi-assets:
   \item The $\fun{ubalance}$ function calculates the sum total in a given UTxO.
 
   \item The $\fun{consumed}$ and $\fun{produced}$ calculations are similar to their Shelley
-    counterparts, with the following changes: 1) They return elements of $\Value$, which
+    counterparts, with the following changes: 1) They return elements of $\ValMonoid$, which
     the administrative fields of type $\Coin$ have to be converted to, via $\fun{inject}$.
     2) $\fun{consumed}$ also contains the $\fun{mint}$ field of the transaction.
     This is explained below.
 \end{itemize}
 
 \subsection*{Minting and the Preservation of Value}
-What does it mean to preserve the value of non-Ada tokens, since they
-are put in and taken out of circulation by the users themselves?
+What does it mean to preserve the value of non-Ada assets, since they
+are put in and taken out of circulation by the users themselves? This
+question becomes relevant when we pick a $\ValMonoid$ that can represent
+assets other than Ada.
 
-For the following discussion, we focus on a single arbitrary
-$\var{pid}$ that is not $\mathsf{adaPolicy}$. If a transaction $\var{tx}$
-does not mint any tokens with policy ID $\var{pid}$, the preservation
-of value reduces to an equation that the sum of inputs and the sum of
-outputs are equal, which is exactly the same condition as for Shelley,
-except that there are no administrative fields. If a transactions
-mints tokens of that policy ID, then the sum of inputs and the sum of
-outputs will differ, and that difference has to be exactly the value
-of the $\fun{mint}$ field. Note that this means that the
-$\fun{mint}$ field can also contain negative quantities.
+If a transaction $\var{tx}$ has an empty $\fun{mint}$ field, the preservation
+of value condition reduces to the same equality as the POV in Shelley. If a transaction
+mints assets, the value of the $\fun{mint}$ field has to reflect exactly
+the increase or decrease of the total quantities of the assets being
+minted or burned. Note that this means that the
+$\fun{mint}$ field can also contain negative quantities in the case assets
+are being burned.
 
 To balance the preservation of value equation, the $\fun{mint}$ field
 could be included in either $\fun{consumed}$ or $\fun{produced}$, with
 the only difference being the sign of the $\fun{mint}$ field. We
 include it on the $\fun{consumed}$ side, because this means that
-minting a positive quantity increases the amount of tokens on the
-ledger, and minting a negative quantity reduces the amount of tokens on
+minting a positive quantity increases the total quantity of assets on the
+ledger, and minting a negative quantity reduces the total quantity of assets on
 the ledger.
 
 Note that the UTXO rule specifically forbids the minting of Ada, and
@@ -110,8 +116,8 @@ The minting scripts themselves are not evaluated at part of the UTXO, but instea
 as part of witnessing, i.e. in the UTXOW rule, see Figure~\ref{fig:functions-witnesses}.
 
 \subsection*{The UTXO Transition Rule}
-In Figure \ref{fig:rules:utxo-shelley}, we give the UTXO transition rule,
-updated for multi-asset support. There are the following changes to the preconditions
+In Figure \ref{fig:rules:utxo-shelley}, we give the UTXO transition rule for ShelleyMA.
+There are the following changes to the preconditions
 of this rule as compared to the original Shelley UTXO rule:
 
 \begin{itemize}
@@ -121,28 +127,34 @@ of this rule as compared to the original Shelley UTXO rule:
   \item In the preservation of value calculation (which looks the same as in
   Shelley), the value in the $\fun{mint}$ field is taken into account.
 
-  \item The transaction is not minting any Ada.
+  \item The transaction is not minting any Ada. This condition, in the Allegra
+  era, ensures that no assets can ever be minted (since Ada is the only existing
+  asset).
 
-  \item The $\Value$ in each output is constrained from below by a
-    $\Value$ that contains some amount of ada and no other tokens.
-    The amount of ada that is contained in the constraint $\Value$ (and
-    hence the $\Value$ in the output itself must contain at least as much) depends on the
-    size of the output. To get the minimum ada amount, the size of the output is multiplied by
-    the function $\var{adaPerUTxOWord}$ applied to protocol parameters
+  \item The $\ValMonoid$ element in each output is constrained from below by a
+    $\ValMonoid$ element that contains some amount of Ada and no other assets.
+    The amount of Ada that is contained in this element (and therefore, the output
+    element which it constrains) depends on the
+    size of the output. To get the minimum Ada amount, the size of the output is multiplied by
+    the function $\var{coinsPerUTxOWord}$ applied to protocol parameters
     (see Section~\ref{sec:value-size} for the function definition).
-    Note that this check implies that no quantity of any token appearing in that output can be
+    Note that this check implies that no quantity of any asset appearing in that output can be
     negative.
 
-    \item The serialized size of the $\Value$ in each output is no greater than $\mathsf{MaxValSize}$
+    In the case that $\ValMonoid$ is set to $\Coin$, this constraint exactly mimics
+    the $\fun{minUTxOValue}$ constraint in Shelley, see \ref{sec:min-value}.
+
+    \item The serialized size of the $\ValMonoid$ element in each output is no greater than $\mathsf{MaxValSize}$
     (specified in Section~\ref{sec:value-size}).
     This ensures that each individual output is never so large that any transaction carrying all the
     witness data (eg. large scripts, etc.) necessary for spending such an output will exceed the transaction size limit.
-    See Section~\ref{sec:value-size} for details.
+    See Section~\ref{sec:value-size} for details. Note that this precondition can be assumed to
+    hold for the $\ValMonoid$ $\Coin$, as it is a single integer.
 \end{itemize}
 
 Note that updating the $\UTxO$ with the inputs and the outputs of the transaction
 looks the same as in the Shelley rule. There is a type-level difference however, as
-the outputs of a transaction contain a $\Value$ term, rather than
+the outputs of a transaction contain an element of $\ValMonoid$, rather than
 $\Coin$.
 
 
@@ -170,11 +182,10 @@ $\Coin$.
       \\
       ~
       \\
-      \hldiff{\mathsf{adaPolicy}~\notin \supp{\fun{mint}~txb}} \\
+      \hldiff{\fun{coin}~(\fun{mint}~txb)~=~0} \\
       ~\\
-      \hldiff{\forall txout \in \txouts{txb},} \\
-      \hldiff{\fun{getValue}~txout \geq} \\
-      \hldiff{\fun{inject}~(\fun{max}~(\var{minUTxOValue}~pp,~\fun{utxoEntrySize}~{txout} * \fun{adaPerUTxOWord}~pp))} \\~
+      \hldiff{\forall txout \in \txouts{txb},~\fun{getValue}~txout \geq} \\
+      \hldiff{\fun{inject}~(\fun{scaledMinDeposit}~v~(\fun{minUTxOValue}~pp))} \\~
       \\
       \hldiff{\forall txout \in \txouts{txb},} \\
       \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~\mathsf{MaxValSize}} \\~\\
@@ -236,7 +247,7 @@ $\Coin$.
     \cup & ~~\{ \fun{stakeCred_{r}}~\var{a} \mid a \in \dom (\AddrRWDScr
            \restrictdom \fun{txwdrls}~\var{txb}) \} \\
       \cup & ~~(\AddrScr \cap \fun{certWitsNeeded}~{txb}) \\
-      \cup & ~~\hldiff{\supp~(\fun{mint}~\var{txb})} \\
+      \cup & ~~\hldiff{\fun{policies}~(\fun{mint}~{txb})} \\
     & \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
   \end{align*}
@@ -247,6 +258,8 @@ $\Coin$.
 Figure~\ref{fig:functions-witnesses} contains the changed definition
 of the function $\fun{scriptsNeeded}$, which also collects the scripts
 necessary for minting.
+Recall that in Allegra, no assets can ever be minted, so there are no scripts to run that
+validate minting.
 
-The witnessing rule UTXOW only needs a minor change for verifying the meta data hash,
+The witnessing rule UTXOW only needs a minor change for verifying the metadata hash,
 which is replacing the condition $\var{md} = \Nothing$ with $\var{md} = (\emptyset, \Nothing)$.
