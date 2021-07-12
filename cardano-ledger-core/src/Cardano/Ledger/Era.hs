@@ -21,6 +21,7 @@ module Cardano.Ledger.Era
     ValidateScript (..),
     -- $segWit
     SupportsSegWit (..),
+    TxInBlock,
   )
 where
 
@@ -136,6 +137,13 @@ class SupportsSegWit era where
 
   -- | The number of segregated components
   numSegComponents :: Word64
+
+{-# DEPRECATED TxInBlock "Please use Cardano.Ledger.Core.Tx instead." #-}
+
+-- | Deprecated alias for Tx.
+--
+--   TODO Remove this once downstream projects have been updated.
+type TxInBlock era = Core.Tx era
 
 --------------------------------------------------------------------------------
 -- Era translation
