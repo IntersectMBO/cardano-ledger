@@ -63,7 +63,6 @@ import qualified Plutus.V1.Ledger.Api as P
     ExCPU (..),
     ExMemory (..),
     Interval (..),
-    IsData (..),
     POSIXTime (..),
     POSIXTimeRange,
     PubKeyHash (..),
@@ -82,12 +81,14 @@ import qualified Plutus.V1.Ledger.Api as P
     adaSymbol,
     adaToken,
     always,
+    dataToBuiltinData,
     evaluateScriptRestricting,
     from,
     lowerBound,
     singleton,
     strictUpperBound,
     to,
+    toData,
     unionWith,
     validateScript,
   )
@@ -273,7 +274,7 @@ getWitVKeyHash :: (CC.Crypto crypto, Typeable kr) => WitVKey kr crypto -> P.PubK
 getWitVKeyHash = P.PubKeyHash . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash x) -> x) . hashKey . (\(WitVKey x _) -> x)
 
 transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
-transDataPair (x, y) = (transDataHash' x, P.Datum (getPlutusData y))
+transDataPair (x, y) = (transDataHash' x, P.Datum (P.dataToBuiltinData (getPlutusData y)))
 
 transExUnits :: ExUnits -> P.ExBudget
 transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
