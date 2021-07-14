@@ -30,10 +30,7 @@ import Cardano.Prelude
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Write as CBOR
-import Control.Monad.Except
-import Control.Monad.Reader
 import qualified Data.Set as Set
-import Data.Word
 
 {-------------------------------------------------------------------------------
   Apply any kind of transactions

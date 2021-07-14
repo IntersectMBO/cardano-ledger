@@ -30,8 +30,6 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Validation.Interface as U.Iface
 import qualified Cardano.Chain.ValidationMode as CC
 import Cardano.Prelude
-import Control.Monad.Except
-import Control.Monad.Reader
 
 {-------------------------------------------------------------------------------
   Applying blocks

@@ -27,7 +27,7 @@ import Cardano.Ledger.Mary.Value
   )
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (StrictMaybe, TxBody (TxBody))
+import Cardano.Ledger.ShelleyMA.TxBody (TxBody (TxBody))
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)

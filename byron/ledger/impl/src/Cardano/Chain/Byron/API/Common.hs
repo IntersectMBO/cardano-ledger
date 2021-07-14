@@ -46,10 +46,8 @@ import Cardano.Crypto.ProtocolMagic
 import Cardano.Prelude
 import qualified Codec.CBOR.Read as CBOR
 import qualified Codec.CBOR.Write as CBOR
-import Control.Monad.Except
 import qualified Data.ByteString.Lazy as Lazy
 import qualified Data.Text as T
-import Data.Word
 
 {-------------------------------------------------------------------------------
   Extract info from genesis config
