@@ -24,7 +24,7 @@ data Trace s
     -- ^ Last signal in the trace. This might cause a predicate failure, but it
     -- isn't guaranteed to do so, since invalid trace generation is
     -- probabilistic.
-    , errorOrLastState :: !(Either [[PredicateFailure s]] (State s))
+    , errorOrLastState :: !(Either [PredicateFailure s] (State s))
     } deriving Generic
 
 deriving instance

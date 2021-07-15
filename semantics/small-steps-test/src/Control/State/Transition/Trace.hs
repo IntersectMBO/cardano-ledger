@@ -50,7 +50,6 @@ import           Control.Monad (void)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import           Data.Data (Data, Typeable, cast, gmapQ)
-import           Data.Functor ((<&>))
 import           Data.Maybe (catMaybes)
 import           Data.Sequence.Strict (StrictSeq ((:<|), Empty))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -424,7 +423,7 @@ checkTrace
   => (forall a. m a -> a)
   -> Environment s
   -> ReaderT (State s ->
-        Signal s -> (Either [[PredicateFailure s]] (State s))) IO (State s)
+              Signal s -> Either [PredicateFailure s] (State s)) IO (State s)
   -> IO ()
 checkTrace interp env act =
   void $ runReaderT act (\st sig -> interp $ applySTSTest @s (TRC(env, st, sig)))
@@ -494,11 +493,8 @@ applySTSTest ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
-applySTSTest ctx =
-  applySTSOpts defaultOpts ctx <&> \case
-    (st, []) -> Right st
-    (_, pfs) -> Left pfs
+  m (Either [PredicateFailure s] (State s))
+applySTSTest = applySTSOptsEither defaultOpts
   where
     defaultOpts =
       ApplySTSOpts

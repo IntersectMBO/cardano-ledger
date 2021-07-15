@@ -1101,7 +1101,7 @@ runBoolExp e =
        then error ("In Testing mode, SetAlgebra expression: "++show e++" falls through to slow mode.")
        else runBool e
 
--- Only for use inthe SetAlgebra internal tests
+-- Only for use in the SetAlgebra internal tests
 runBool :: Exp Bool -> Bool
 runBool (Elem k v) = haskey k (compute v)
 runBool (NotElem k set) = not $ haskey k (compute set)
@@ -1124,7 +1124,7 @@ runBool (w@(Subset x y)) = runCollect (lifo left) True (\ (k,_v) ans -> haskey k
 -- ===============================================================================================
 
 
-compute:: Exp t -> t
+compute :: Exp t -> t
 compute (Base _rep relation) = relation
 
 compute (Dom (Base SetR rel)) = rel

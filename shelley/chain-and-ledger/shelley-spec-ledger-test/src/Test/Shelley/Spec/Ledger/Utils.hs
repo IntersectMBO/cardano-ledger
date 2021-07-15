@@ -70,18 +70,20 @@ import Cardano.Crypto.VRF
     genKeyVRF,
   )
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Address (Addr, pattern Addr)
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( BoundedRational (..),
+    Globals (..),
     Network (..),
     Nonce,
     ShelleyBase,
-    BoundedRational (..),
     epochInfo,
     mkActiveSlotCoeff,
     mkNonceFromOutputVRF,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..), SupportsSegWit (TxInBlock))
@@ -96,6 +98,7 @@ import Cardano.Ledger.Keys
     pattern KeyPair,
   )
 import Cardano.Ledger.Shelley.Constraints
+import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Prelude (Coercible, asks)
 import Cardano.Slotting.EpochInfo
   ( epochInfoEpoch,
@@ -107,13 +110,13 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
-  ( checkTrace,
+  ( applySTSTest,
+    checkTrace,
     (.-),
     (.->),
   )
 import Data.Coerce (coerce)
 import Data.Default.Class (Default)
-import Data.Functor ((<&>))
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock.POSIX
@@ -125,12 +128,9 @@ import Shelley.Spec.Ledger.API
     GetLedgerView,
     PParams,
   )
-import Cardano.Ledger.Address (Addr, pattern Addr)
 import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, TxSeq, bhbody, bheader)
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
-import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Shelley.Spec.Ledger.Tx (Tx, TxOut, WitnessSet)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Tasty.HUnit
@@ -267,7 +267,6 @@ unsafeBoundRational :: (HasCallStack, BoundedRational r) => Rational -> r
 unsafeBoundRational r =
   fromMaybe (error $ "Could not convert from Rational: " ++ show r) $ boundRational r
 
-
 testGlobals :: Globals
 testGlobals =
   Globals
@@ -324,29 +323,13 @@ slotsPerKESIteration = runShelleyBase (asks slotsPerKESPeriod)
 maxLLSupply :: Coin
 maxLLSupply = Coin $ fromIntegral $ runShelleyBase (asks maxLovelaceSupply)
 
-applySTSTest ::
-  forall s m rtype.
-  (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
-  RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
-applySTSTest ctx =
-  applySTSOpts defaultOpts ctx <&> \case
-    (st, []) -> Right st
-    (_, pfs) -> Left pfs
-  where
-    defaultOpts =
-      ApplySTSOpts
-        { asoAssertions = AssertionsAll,
-          asoValidation = ValidateAll
-        }
-
 testSTS ::
   forall s.
   (BaseM s ~ ShelleyBase, STS s, Eq (State s), Show (State s)) =>
   Environment s ->
   State s ->
   Signal s ->
-  Either [[PredicateFailure s]] (State s) ->
+  Either [PredicateFailure s] (State s) ->
   Assertion
 testSTS env initSt signal (Right expectedSt) = do
   checkTrace @s runShelleyBase env $ pure initSt .- signal .-> expectedSt

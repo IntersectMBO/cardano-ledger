@@ -266,7 +266,7 @@ testBootstrapNotSpending =
     utxoEnv
     utxoState0
     txBad
-    (Left [[InvalidWitnessesUTXOW [aliceVKey]]])
+    (Left [InvalidWitnessesUTXOW [aliceVKey]])
 
 type C = ShelleyEra C_crypto
 

@@ -105,7 +105,7 @@ class
   applyBlock globals state blk =
     liftEither
       . right (updateNewEpochState state)
-      . left (BlockTransitionError . join)
+      . left BlockTransitionError
       $ res
     where
       res =

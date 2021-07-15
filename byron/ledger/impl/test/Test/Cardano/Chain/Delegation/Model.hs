@@ -10,6 +10,7 @@ module Test.Cardano.Chain.Delegation.Model
   )
 where
 
+import Prelude (id)
 import Cardano.Prelude
 
 import Control.Arrow (left)
@@ -133,7 +134,7 @@ commandSDELEG concreteRef abstractEnv = Command gen execute callbacks
       let
         result =
           STS.applySTS @SDELEG (STS.TRC (abstractEnv, abstractState, cert))
-      in StateSDELEG (fromRight abstractState result) (left concat result)
+      in StateSDELEG (fromRight abstractState result) (left Prelude.id result)
     , Ensure $ \_ StateSDELEG { lastAbstractResult } _ result -> do
       annotateShow lastAbstractResult
       annotateShow result

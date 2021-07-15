@@ -311,7 +311,7 @@ ts_prop_invalidDelegationCertificatesAreRejected =
 
     -- @mhueschen : this is lifted from adjacent coverage checkers and does not (at least intentionally)
     -- address the TODOs listed below.
-    coverDcerts :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+    coverDcerts :: [PredicateFailure CHAIN]  -> ChainValidationError -> PropertyT IO ()
     -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
     coverDcerts abstractPfs _concretePfs =
       Delegation.Test.coverDelegFailures 1 abstractPfs
@@ -336,7 +336,7 @@ ts_prop_invalidDelegationCertificatesAreRejected =
 invalidChainTracesAreRejected
   :: TestLimit
   -> [(Int, SignalGenerator CHAIN)]
-  -> ([[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ())
+  -> ([PredicateFailure CHAIN]  -> ChainValidationError -> PropertyT IO ())
   -> TSProperty
 invalidChainTracesAreRejected numberOfTests failureProfile onFailureAgreement =
   withTestsTS numberOfTests $ property $ do
@@ -394,7 +394,7 @@ ts_prop_invalidUpdateRegistrationsAreRejected =
                     block
                     (\body -> body { Abstract._bUpdProp = Just tamperedUprop })
 
-    coverUpdateRegistration :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+    coverUpdateRegistration :: [PredicateFailure CHAIN]  -> ChainValidationError -> PropertyT IO ()
     -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
     coverUpdateRegistration abstractPfs _concretePfs =
       Update.Test.coverUpiregFailures 1 abstractPfs
@@ -451,7 +451,7 @@ ts_prop_invalidTxWitsAreRejected =
               block
               (\body -> body { Abstract._bUtxo = txWitsList })
 
-  coverTxWits :: [[PredicateFailure CHAIN]] -> ChainValidationError -> PropertyT IO ()
+  coverTxWits :: [PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()
   -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
   coverTxWits abstractPfs _concretePfs =
     coverUtxoFailure 1 abstractPfs
@@ -473,7 +473,7 @@ ts_prop_invalidVotesAreRejected =
                     block
                     (\body -> body { Abstract._bUpdVotes = tamperedVotes })
 
-    coverVotes :: [[PredicateFailure CHAIN]]  -> ChainValidationError -> PropertyT IO ()
+    coverVotes :: [PredicateFailure CHAIN]  -> ChainValidationError -> PropertyT IO ()
     -- TODO: Establish a mapping between concrete and abstract errors. See 'coverDelegationRegistration'
     coverVotes abstractPfs _concretePf =
       Update.Test.coverUpivoteFailures 1 abstractPfs
@@ -482,15 +482,15 @@ ts_prop_invalidBlockPayloadProofsAreRejected :: TSProperty
 ts_prop_invalidBlockPayloadProofsAreRejected =
   invalidChainTracesAreRejected 300 [(1, invalidProofsBlockGen)] coverFailures
   where
-    coverFailures :: [[PredicateFailure CHAIN]] -> ChainValidationError -> PropertyT IO ()
+    coverFailures :: [PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ()
     coverFailures abstractPfs concretePf = do
       coverInvalidBlockProofs 15 abstractPfs
       -- Check that the concrete failures correspond with the abstract ones.
-      when (any (== InvalidDelegationHash) (extractValues abstractPfs))
+      when (any (== InvalidDelegationHash) $ extractValues abstractPfs)
         $ assert $ concretePf == ChainValidationProofValidationError DelegationProofValidationError
-      when (any (== InvalidUpdateProposalHash) (extractValues abstractPfs))
+      when (any (== InvalidUpdateProposalHash) $ extractValues abstractPfs)
         $ assert $ concretePf == ChainValidationProofValidationError UpdateProofValidationError
-      when (any (== InvalidUtxoHash) (extractValues abstractPfs))
+      when (any (== InvalidUtxoHash) $ extractValues abstractPfs)
         $ assert $ concretePf == ChainValidationProofValidationError UTxOProofValidationError
 
 -- | Output resulting from elaborating and validating an abstract trace with
@@ -546,13 +546,12 @@ ts_prop_invalidHeaderSizesAreRejected =
     checkMaxSizeFailure
   where
     checkMaxSizeFailure
-      :: [[PredicateFailure CHAIN]]
+      :: [PredicateFailure CHAIN]
       -> ChainValidationError
       -> PropertyT IO ()
     checkMaxSizeFailure abstractPfs ChainValidationHeaderTooLarge{} = do
       assert
-        $ any isHeaderSizeTooBigFailure
-              (extractValues abstractPfs)
+        $ any isHeaderSizeTooBigFailure abstractPfs
       footnote
         $ "HeaderSizeTooBig not found in the abstract predicate failures: "
         ++ show abstractPfs
@@ -574,7 +573,7 @@ invalidSizesAreRejected
   -- ^ Setter for the concrete protocol parameters.
   -> (ABlock ByteString -> Natural)
   -- ^ Function used to compute the size of the concrete-block's component.
-  -> ([[PredicateFailure CHAIN]] -> ChainValidationError -> PropertyT IO ())
+  -> ([PredicateFailure CHAIN] -> ChainValidationError -> PropertyT IO ())
   -- ^ Function to check agreement of concrete and abstract failures.
   -> TSProperty
 invalidSizesAreRejected
@@ -702,13 +701,12 @@ ts_prop_invalidBlockSizesAreRejected =
     checkMaxSizeFailure
   where
     checkMaxSizeFailure
-      :: [[PredicateFailure CHAIN]]
+      :: [PredicateFailure CHAIN]
       -> ChainValidationError
       -> PropertyT IO ()
     checkMaxSizeFailure abstractPfs ChainValidationBlockTooLarge{} = do
       assert
-        $ any (== InvalidBlockSize)
-              (extractValues abstractPfs)
+        $ any (== InvalidBlockSize) $ extractValues abstractPfs
       footnote
         $ "InvalidBlockSize not found in the abstract predicate failures: "
         ++ show abstractPfs

@@ -20,18 +20,14 @@ module Cardano.Ledger.Rules.ValidationMode
 where
 
 import Control.State.Transition.Extended
-import Data.Functor ((<&>))
 
 applySTSValidateSuchThat ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   ([Label] -> Bool) ->
   RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
-applySTSValidateSuchThat cond ctx =
-  applySTSOpts opts ctx <&> \case
-    (st, []) -> Right st
-    (_, pfs) -> Left pfs
+  m (Either [PredicateFailure s] (State s))
+applySTSValidateSuchThat cond = applySTSOptsEither opts
   where
     opts =
       ApplySTSOpts
@@ -87,5 +83,5 @@ applySTSNonStatic ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (Either [[PredicateFailure s]] (State s))
+  m (Either [PredicateFailure s] (State s))
 applySTSNonStatic = applySTSValidateSuchThat (notElem lblStatic)
