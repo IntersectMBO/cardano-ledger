@@ -1,5 +1,5 @@
 module Cardano.Chain.Block
-  ( module X
+  ( module X,
   )
 where
 

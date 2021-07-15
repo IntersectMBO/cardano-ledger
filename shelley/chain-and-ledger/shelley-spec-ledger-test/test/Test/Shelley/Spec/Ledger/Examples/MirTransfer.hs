@@ -12,6 +12,7 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Default.Class (def)
@@ -32,7 +33,6 @@ import Shelley.Spec.Ledger.API
   )
 import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Deleg (DelegPredicateFailure (..))
-import Cardano.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), applySTSTest, mkKeyPair, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)

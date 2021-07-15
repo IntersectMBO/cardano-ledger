@@ -1,6 +1,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -10,21 +10,31 @@
 
 -- | Transition system that models the application of multiple transactions to
 -- the UTxO part of the ledger state.
-
 module Byron.Spec.Ledger.STS.UTXOWS where
 
-import           NoThunks.Class (NoThunks(..))
-import           Data.Data (Data, Typeable)
-import           GHC.Generics (Generic)
-
-import           Byron.Spec.Ledger.STS.UTXO (UTxOEnv, UTxOState)
-import           Byron.Spec.Ledger.STS.UTXOW (UTXOW)
-import           Byron.Spec.Ledger.UTxO (Tx)
-import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
-                     Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed)
-import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
-import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
+import Byron.Spec.Ledger.STS.UTXO (UTxOEnv, UTxOState)
+import Byron.Spec.Ledger.STS.UTXOW (UTXOW)
+import Byron.Spec.Ledger.UTxO (Tx)
+import Control.State.Transition
+  ( Embed,
+    Environment,
+    IRC (IRC),
+    PredicateFailure,
+    STS,
+    Signal,
+    State,
+    TRC (TRC),
+    initialRules,
+    judgmentContext,
+    trans,
+    transitionRules,
+    wrapFailed,
+  )
+import Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
+import Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
+import Data.Data (Data, Typeable)
+import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 
 data UTXOWS deriving (Data, Typeable)
 
@@ -48,9 +58,9 @@ instance STS UTXOWS where
     [ do
         TRC (env, utxo, txWits) <- judgmentContext
         case (txWits :: [Tx]) of
-          []     -> return utxo
-          (tx:gamma) -> do
-            utxo'  <- trans @UTXOW  $ TRC (env, utxo, tx)
+          [] -> return utxo
+          (tx : gamma) -> do
+            utxo' <- trans @UTXOW $ TRC (env, utxo, tx)
             utxo'' <- trans @UTXOWS $ TRC (env, utxo', gamma)
             return utxo''
     ]

@@ -38,23 +38,19 @@ module Test.Shelley.Spec.Ledger.Examples.Cast
   )
 where
 
-import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Data.ByteString.Char8 as BS (pack)
-import Data.Maybe (fromJust)
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     textToUrl,
   )
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential
   ( Credential (..),
     Ptr (..),
     StakeReference (..),
   )
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( Hash,
     KeyPair (..),
@@ -63,8 +59,12 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Cardano.Ledger.Slot (SlotNo (..))
+import qualified Data.ByteString.Char8 as BS (pack)
+import Data.Maybe (fromJust)
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
+import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.TxBody
   ( PoolMetadata (..),
     PoolParams (..),

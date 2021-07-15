@@ -1,20 +1,30 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Boundary blocks have been deprecated, but we keep functions to decode them
-
 module Cardano.Chain.Block.Boundary
-  ( fromCBORBoundaryConsensusData
-  , dropBoundaryExtraHeaderData
-  , dropBoundaryExtraHeaderDataRetainGenesisTag
-  , dropBoundaryBody
-  , dropBoundaryExtraBodyData
+  ( fromCBORBoundaryConsensusData,
+    dropBoundaryExtraHeaderData,
+    dropBoundaryExtraHeaderDataRetainGenesisTag,
+    dropBoundaryBody,
+    dropBoundaryExtraBodyData,
   )
 where
 
 import Cardano.Binary
-  (Decoder, Dropper, decodeWord64, dropBytes, dropList, enforceSize, fromCBOR)
+  ( Decoder,
+    Dropper,
+    decodeWord64,
+    dropBytes,
+    dropList,
+    enforceSize,
+    fromCBOR,
+  )
 import Cardano.Chain.Common
-  (ChainDifficulty, attrData, dropAttributes, fromCBORAttributes)
+  ( ChainDifficulty,
+    attrData,
+    dropAttributes,
+    fromCBORAttributes,
+  )
 import Cardano.Prelude
 
 --------------------------------------------------------------------------------
@@ -37,7 +47,6 @@ dropBoundaryExtraHeaderData = do
   enforceSize "BoundaryExtraHeaderData" 1
   dropAttributes
 
-
 -- | When starting a new chain in ourorobos-consensus, we often start from a
 --   non-zero epoch. This is done in order to ensure synchronisation between
 --   nodes - we assume that the chain started at some fixed point in the past
@@ -53,8 +62,10 @@ dropBoundaryExtraHeaderData = do
 dropBoundaryExtraHeaderDataRetainGenesisTag :: Decoder s Bool
 dropBoundaryExtraHeaderDataRetainGenesisTag = do
   enforceSize "BoundaryExtraHeaderData" 1
-  attrData <$> fromCBORAttributes False
-    (\w8 bs t -> pure . Just $ t || w8 == 255 && bs == "Genesis")
+  attrData
+    <$> fromCBORAttributes
+      False
+      (\w8 bs t -> pure . Just $ t || w8 == 255 && bs == "Genesis")
 
 --------------------------------------------------------------------------------
 -- BoundaryBody
@@ -62,7 +73,6 @@ dropBoundaryExtraHeaderDataRetainGenesisTag = do
 
 dropBoundaryBody :: Dropper s
 dropBoundaryBody = dropList dropBytes
-
 
 --------------------------------------------------------------------------------
 -- BoundaryExtraBodyData

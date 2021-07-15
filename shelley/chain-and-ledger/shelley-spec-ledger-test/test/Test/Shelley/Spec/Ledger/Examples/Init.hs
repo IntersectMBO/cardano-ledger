@@ -17,15 +17,20 @@ module Test.Shelley.Spec.Ledger.Examples.Init
   )
 where
 
-import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Val ((<->))
-import qualified Cardano.Ledger.Val as Val
-import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Ledger.BaseTypes
   ( Nonce (..),
   )
+import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Slot
+  ( BlockNo (..),
+    EpochNo (..),
+    SlotNo (..),
+  )
+import Cardano.Ledger.Val ((<->))
+import qualified Cardano.Ledger.Val as Val
+import Cardano.Slotting.Slot (WithOrigin (..))
 import Shelley.Spec.Ledger.BlockChain
   ( HashHeader (..),
     LastAppliedBlock (..),
@@ -39,11 +44,6 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.STS.Chain
   ( ChainState (..),
     initialShelleyState,
-  )
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    EpochNo (..),
-    SlotNo (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 import Test.Shelley.Spec.Ledger.Examples.Federation (genDelegs)

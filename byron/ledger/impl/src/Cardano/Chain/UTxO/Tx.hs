@@ -1,46 +1,46 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.UTxO.Tx
-  ( Tx(..)
-  , txF
-  , TxId
-  , TxAttributes
-  , TxIn(..)
-  , TxOut(..)
+  ( Tx (..),
+    txF,
+    TxId,
+    TxAttributes,
+    TxIn (..),
+    TxOut (..),
   )
 where
 
+import Cardano.Binary
+  ( Case (..),
+    DecoderError (DecoderErrorUnknownTag),
+    FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    enforceSize,
+    szCases,
+  )
+import Cardano.Chain.Common
+  ( Address (..),
+    Lovelace,
+    lovelaceF,
+  )
+import Cardano.Chain.Common.Attributes (Attributes, attributesAreKnown)
+import Cardano.Chain.Common.CBOR
+  ( decodeKnownCborDataItem,
+    encodeKnownCborDataItem,
+    knownCborDataItemSizeExpr,
+  )
+import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
 import Cardano.Prelude
-
 import Data.Aeson (ToJSON)
 import Formatting (Format, bprint, build, builder, int)
 import qualified Formatting.Buildable as B
-
-import Cardano.Binary
-  ( Case(..)
-  , DecoderError(DecoderErrorUnknownTag)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , encodeListLen
-  , enforceSize
-  , szCases
-  )
-import Cardano.Chain.Common.CBOR
-  (encodeKnownCborDataItem, knownCborDataItemSizeExpr, decodeKnownCborDataItem)
-import Cardano.Chain.Common
-  ( Address(..)
-  , Lovelace
-  , lovelaceF
-  )
-import Cardano.Chain.Common.Attributes (Attributes, attributesAreKnown)
-import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
-
 
 --------------------------------------------------------------------------------
 -- Tx
@@ -50,46 +50,50 @@ import Cardano.Crypto (Hash, serializeCborHash, shortHashF)
 --
 --   NB: transaction witnesses are stored separately
 data Tx = UnsafeTx
-  { txInputs     :: !(NonEmpty TxIn)
-  -- ^ Inputs of transaction.
-  , txOutputs    :: !(NonEmpty TxOut)
-  -- ^ Outputs of transaction.
-  , txAttributes :: !TxAttributes
-  -- ^ Attributes of transaction
-  } deriving (Eq, Ord, Generic, Show)
-    deriving anyclass NFData
+  { -- | Inputs of transaction.
+    txInputs :: !(NonEmpty TxIn),
+    -- | Outputs of transaction.
+    txOutputs :: !(NonEmpty TxOut),
+    -- | Attributes of transaction
+    txAttributes :: !TxAttributes
+  }
+  deriving (Eq, Ord, Generic, Show)
+  deriving anyclass (NFData)
 
 instance B.Buildable Tx where
-  build tx = bprint
-    ( "Tx "
-    . build
-    . " with inputs "
-    . listJson
-    . ", outputs: "
-    . listJson
-    . builder
-    )
-    (serializeCborHash tx)
-    (txInputs tx)
-    (txOutputs tx)
-    attrsBuilder
-   where
-    attrs = txAttributes tx
-    attrsBuilder
-      | attributesAreKnown attrs = mempty
-      | otherwise                = bprint (", attributes: " . build) attrs
+  build tx =
+    bprint
+      ( "Tx "
+          . build
+          . " with inputs "
+          . listJson
+          . ", outputs: "
+          . listJson
+          . builder
+      )
+      (serializeCborHash tx)
+      (txInputs tx)
+      (txOutputs tx)
+      attrsBuilder
+    where
+      attrs = txAttributes tx
+      attrsBuilder
+        | attributesAreKnown attrs = mempty
+        | otherwise = bprint (", attributes: " . build) attrs
 
 -- Used for debugging purposes only
-instance ToJSON Tx where
+instance ToJSON Tx
 
 instance ToCBOR Tx where
   toCBOR tx =
-    encodeListLen 3 <> toCBOR (txInputs tx) <> toCBOR (txOutputs tx) <> toCBOR
-      (txAttributes tx)
+    encodeListLen 3 <> toCBOR (txInputs tx) <> toCBOR (txOutputs tx)
+      <> toCBOR
+        (txAttributes tx)
 
   encodedSizeExpr size pxy =
-    1 + size (txInputs <$> pxy) + size (txOutputs <$> pxy) + size
-      (txAttributes <$> pxy)
+    1 + size (txInputs <$> pxy) + size (txOutputs <$> pxy)
+      + size
+        (txAttributes <$> pxy)
 
 instance FromCBOR Tx where
   fromCBOR = do
@@ -100,14 +104,12 @@ instance FromCBOR Tx where
 txF :: Format r (Tx -> r)
 txF = build
 
-
 --------------------------------------------------------------------------------
 -- TxId
 --------------------------------------------------------------------------------
 
 -- | Represents transaction identifier as 'Hash' of 'Tx'
 type TxId = Hash Tx
-
 
 --------------------------------------------------------------------------------
 -- TxAttributes
@@ -118,33 +120,35 @@ type TxId = Hash Tx
 --   via softfork.
 type TxAttributes = Attributes ()
 
-
 --------------------------------------------------------------------------------
 -- TxIn
 --------------------------------------------------------------------------------
 
 -- | Transaction arbitrary input
 data TxIn
-  -- | TxId = Which transaction's output is used
-  -- | Word32 = Index of the output in transaction's outputs
-  = TxInUtxo TxId Word32
+  = -- | TxId = Which transaction's output is used
+    -- | Word32 = Index of the output in transaction's outputs
+    TxInUtxo TxId Word32
   deriving (Eq, Ord, Generic, Show)
-  deriving anyclass NFData
+  deriving anyclass (NFData)
 
 instance B.Buildable TxIn where
   build (TxInUtxo txInHash txInIndex) =
     bprint ("TxInUtxo " . shortHashF . " #" . int) txInHash txInIndex
 
 -- Used for debugging purposes only
-instance ToJSON TxIn where
+instance ToJSON TxIn
 
 instance ToCBOR TxIn where
   toCBOR (TxInUtxo txInHash txInIndex) =
-    encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeKnownCborDataItem
-      (txInHash, txInIndex)
+    encodeListLen 2 <> toCBOR (0 :: Word8)
+      <> encodeKnownCborDataItem
+        (txInHash, txInIndex)
 
-  encodedSizeExpr size _ = 2 + knownCborDataItemSizeExpr
-    (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word32)])
+  encodedSizeExpr size _ =
+    2
+      + knownCborDataItemSizeExpr
+        (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word32)])
 
 instance FromCBOR TxIn where
   fromCBOR = do
@@ -157,26 +161,27 @@ instance FromCBOR TxIn where
 instance HeapWords TxIn where
   heapWords (TxInUtxo txid w32) = heapWords2 txid w32
 
-
 --------------------------------------------------------------------------------
 -- TxOut
 --------------------------------------------------------------------------------
 
 -- | Transaction output
 data TxOut = TxOut
-  { txOutAddress :: !Address
-  , txOutValue   :: !Lovelace
-  } deriving (Eq, Ord, Generic, Show)
-    deriving anyclass NFData
+  { txOutAddress :: !Address,
+    txOutValue :: !Lovelace
+  }
+  deriving (Eq, Ord, Generic, Show)
+  deriving anyclass (NFData)
 
 instance B.Buildable TxOut where
-  build txOut = bprint
-    ("TxOut " . lovelaceF . " -> " . build)
-    (txOutValue txOut)
-    (txOutAddress txOut)
+  build txOut =
+    bprint
+      ("TxOut " . lovelaceF . " -> " . build)
+      (txOutValue txOut)
+      (txOutAddress txOut)
 
 -- Used for debugging purposes only
-instance ToJSON TxOut where
+instance ToJSON TxOut
 
 instance ToCBOR TxOut where
   toCBOR txOut =

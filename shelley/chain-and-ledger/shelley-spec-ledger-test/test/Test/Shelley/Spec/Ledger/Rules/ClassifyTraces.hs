@@ -19,10 +19,12 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
   )
 where
 
-import Cardano.Binary (ToCBOR,serialize')
+import Cardano.Binary (ToCBOR, serialize')
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfo)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Constraints(UsesTxBody)
+import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (TxInBlock, fromTxSeq))
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
+import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.State.Transition (STS (State))
 import Control.State.Transition.Trace
@@ -53,7 +55,6 @@ import Shelley.Spec.Ledger.API
     Delegation (..),
     LEDGER,
   )
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     bhbody,
@@ -79,8 +80,7 @@ import Shelley.Spec.Ledger.PParams
     pattern Update,
   )
 import Shelley.Spec.Ledger.PParams as PParams (Update)
-import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
-import Shelley.Spec.Ledger.TxBody(TxIn,Wdrl (..))
+import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl (..))
 import Test.QuickCheck
   ( Property,
     checkCoverage,
@@ -97,7 +97,6 @@ import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)
 import Test.Shelley.Spec.Ledger.Utils
-import Cardano.Ledger.Era(SupportsSegWit(TxInBlock,fromTxSeq))
 
 -- =================================================================
 
@@ -130,7 +129,7 @@ relevantCasesAreCoveredForTrace ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
-   --  HasField "address" (Core.TxOut era) (Addr (Crypto era))
+    --  HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   Trace (CHAIN era) ->
   Property
@@ -250,7 +249,8 @@ ratioInt x y =
   fromIntegral x / fromIntegral y
 
 -- | Transaction has script locked TxOuts
-txScriptOutputsRatio :: forall era.
+txScriptOutputsRatio ::
+  forall era.
   HasField "address" (Core.TxOut era) (Addr (Crypto era)) =>
   Proxy era ->
   [StrictSeq (Core.TxOut era)] ->
@@ -264,7 +264,7 @@ txScriptOutputsRatio _ txoutsList =
     countScriptOuts txouts =
       sum $
         fmap
-          ( \out -> case (getField @"address" (out::Core.TxOut era)) of
+          ( \out -> case (getField @"address" (out :: Core.TxOut era)) of
               Addr _ (ScriptHashObj _) _ -> 1
               _ -> 0
           )
@@ -290,7 +290,8 @@ hasPParamUpdate tx =
     ppUpdates SNothing = False
     ppUpdates (SJust (Update (ProposedPPUpdates ppUpd) _)) = Map.size ppUpd > 0
 
-hasMetadata :: forall era.
+hasMetadata ::
+  forall era.
   ( UsesTxBody era
   ) =>
   TxInBlock era ->
@@ -331,7 +332,7 @@ propAbstractSizeBoundsBytes ::
     ChainProperty era,
     QC.HasTrace (LEDGER era) (GenEnv era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    ToCBOR(TxInBlock era),  -- Arises from propAbstractSizeNotTooBig (which serializes)
+    ToCBOR (TxInBlock era), -- Arises from propAbstractSizeNotTooBig (which serializes)
     Default (State (Core.EraRule "PPUP" era))
   ) =>
   Property
@@ -359,7 +360,7 @@ propAbstractSizeNotTooBig ::
   ( EraGen era,
     ChainProperty era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    ToCBOR (TxInBlock era),  -- We need to serialize it to get its size.
+    ToCBOR (TxInBlock era), -- We need to serialize it to get its size.
     QC.HasTrace (LEDGER era) (GenEnv era),
     Default (State (Core.EraRule "PPUP" era))
   ) =>

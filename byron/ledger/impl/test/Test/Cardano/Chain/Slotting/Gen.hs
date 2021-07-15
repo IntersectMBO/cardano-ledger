@@ -1,35 +1,31 @@
 {-# LANGUAGE TupleSections #-}
 
 module Test.Cardano.Chain.Slotting.Gen
-  ( genEpochNumber
-  , genSlotNumber
-  , genEpochSlots
-  , genWithEpochSlots
-  , genSlotCount
-  , genEpochAndSlotCount
-  , genConsistentEpochAndSlotCountEpochSlots
-  , feedPMEpochSlots
+  ( genEpochNumber,
+    genSlotNumber,
+    genEpochSlots,
+    genWithEpochSlots,
+    genSlotCount,
+    genEpochAndSlotCount,
+    genConsistentEpochAndSlotCountEpochSlots,
+    feedPMEpochSlots,
   )
 where
 
+import Cardano.Chain.Slotting
+  ( EpochAndSlotCount (..),
+    EpochNumber (..),
+    EpochSlots (..),
+    SlotCount (..),
+    SlotNumber (..),
+    WithEpochSlots (WithEpochSlots),
+  )
+import Cardano.Crypto (ProtocolMagicId)
 import Cardano.Prelude
-
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
-import Cardano.Chain.Slotting
-  ( EpochNumber(..)
-  , EpochSlots(..)
-  , SlotNumber(..)
-  , SlotCount(..)
-  , EpochAndSlotCount(..)
-  , WithEpochSlots(WithEpochSlots)
-  )
-import Cardano.Crypto (ProtocolMagicId)
-
 import Test.Cardano.Crypto.Gen (genProtocolMagicId)
-
 
 genEpochNumber :: Gen EpochNumber
 genEpochNumber = EpochNumber <$> Gen.word64 Range.constantBounded
@@ -46,18 +42,17 @@ genSlotNumber = SlotNumber <$> Gen.word64 Range.constantBounded
 -- the slot number by the number of slots-per-epoch ('EpochSlots'). So if the
 -- generated epoch would be greater than @2^16@ we couldn't guarantee that the
 -- local-index would fit inside its representation.
---
 genEpochSlots :: Gen EpochSlots
 genEpochSlots =
   EpochSlots . fromIntegral <$> Gen.word16 (Range.constant 1 maxBound)
 
 -- | Generate a value wrapped on a 'WithEpochSlots' context, using the given
 -- generator functions, and its arguments
-genWithEpochSlots
-  :: (ProtocolMagicId -> EpochSlots -> Gen a)
-  -> ProtocolMagicId
-  -> EpochSlots
-  -> Gen (WithEpochSlots a)
+genWithEpochSlots ::
+  (ProtocolMagicId -> EpochSlots -> Gen a) ->
+  ProtocolMagicId ->
+  EpochSlots ->
+  Gen (WithEpochSlots a)
 genWithEpochSlots gen pm es = WithEpochSlots es <$> gen pm es
 
 genSlotCount :: Gen SlotCount
@@ -77,17 +72,17 @@ genEpochSlotCount epochSlots =
 genConsistentEpochAndSlotCountEpochSlots :: Gen (EpochAndSlotCount, EpochSlots)
 genConsistentEpochAndSlotCountEpochSlots = do
   epochSlots <- genEpochSlots
-  fmap (, epochSlots)
-    $   EpochAndSlotCount
-    <$> genRestrictedEpochNumber (maxBound `div` unEpochSlots epochSlots)
-    <*> genEpochSlotCount epochSlots
- where
-  genRestrictedEpochNumber :: Word64 -> Gen EpochNumber
-  genRestrictedEpochNumber bound =
-    EpochNumber <$> Gen.word64 (Range.linear 0 bound)
+  fmap (,epochSlots) $
+    EpochAndSlotCount
+      <$> genRestrictedEpochNumber (maxBound `div` unEpochSlots epochSlots)
+      <*> genEpochSlotCount epochSlots
+  where
+    genRestrictedEpochNumber :: Word64 -> Gen EpochNumber
+    genRestrictedEpochNumber bound =
+      EpochNumber <$> Gen.word64 (Range.linear 0 bound)
 
 feedPMEpochSlots :: (ProtocolMagicId -> EpochSlots -> Gen a) -> Gen a
 feedPMEpochSlots genA = do
-  pm         <- genProtocolMagicId
+  pm <- genProtocolMagicId
   epochSlots <- genEpochSlots
   genA pm epochSlots

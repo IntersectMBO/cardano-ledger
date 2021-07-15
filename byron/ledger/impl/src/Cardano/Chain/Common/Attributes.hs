@@ -1,36 +1,45 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TemplateHaskell            #-}
-{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | Helper data type for block, tx attributes
 --
 --   Map with integer 1-byte keys, arbitrary-type polymorph values. Needed
 --   primarily for partial serialization. Values are either parsed and put to
 --   some constructor or left as unparsed.
-
 module Cardano.Chain.Common.Attributes
-  ( UnparsedFields(..)
-  , Attributes(..)
-  , attributesAreKnown
-  , unknownAttributesLength
-  , toCBORAttributes
-  , fromCBORAttributes
-  , mkAttributes
-  , dropAttributes
-  , dropEmptyAttributes
+  ( UnparsedFields (..),
+    Attributes (..),
+    attributesAreKnown,
+    unknownAttributesLength,
+    toCBORAttributes,
+    fromCBORAttributes,
+    mkAttributes,
+    dropAttributes,
+    dropEmptyAttributes,
   )
 where
 
+import Cardano.Binary
+  ( Decoder,
+    DecoderError (..),
+    Dropper,
+    Encoding,
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeMapLen,
+    dropBytes,
+    dropMap,
+    dropWord8,
+  )
 import Cardano.Prelude
-import qualified Prelude
-
-import Data.Aeson (ToJSON(..))
+import Data.Aeson (ToJSON (..))
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Lazy.Char8 as LChar8
 import qualified Data.Map.Strict as M
@@ -38,33 +47,20 @@ import Formatting (bprint, build, int)
 import Formatting.Buildable (Buildable)
 import qualified Formatting.Buildable as Buildable
 import NoThunks.Class (NoThunks (..))
-
-import Cardano.Binary
-  ( Decoder
-  , DecoderError(..)
-  , Dropper
-  , Encoding
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , decodeMapLen
-  , dropBytes
-  , dropMap
-  , dropWord8
-  )
+import qualified Prelude
 
 -- | Representation of unparsed fields in Attributes. Newtype wrapper is used
 --   for clear backward compatibility between previous representation (which was
 --   just a single ByteString) during transition from Store to CBOR.
-newtype UnparsedFields =
-  UnparsedFields (Map Word8 LBS.ByteString)
+newtype UnparsedFields
+  = UnparsedFields (Map Word8 LBS.ByteString)
   deriving (Eq, Ord, Show, Generic)
-  deriving newtype HeapWords
+  deriving newtype (HeapWords)
   deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON UnparsedFields where
-    toJSON (UnparsedFields map') = toJSON $ M.map LChar8.unpack map'
-
+  toJSON (UnparsedFields map') = toJSON $ M.map LChar8.unpack map'
 
 fromUnparsedFields :: UnparsedFields -> Map Word8 LBS.ByteString
 fromUnparsedFields (UnparsedFields m) = m
@@ -77,41 +73,44 @@ mkAttributes dat = Attributes dat (UnparsedFields M.empty)
 -- | Convenient wrapper for the datatype to represent it (in binary format) as
 --   k-v map
 data Attributes h = Attributes
-  { attrData   :: !h
-  -- ^ Data, containing known keys (deserialized)
-  , attrRemain :: !UnparsedFields
-  -- ^ Remaining, unparsed fields
-  } deriving (Eq, Ord, Generic, NoThunks)
-    deriving anyclass NFData
+  { -- | Data, containing known keys (deserialized)
+    attrData :: !h,
+    -- | Remaining, unparsed fields
+    attrRemain :: !UnparsedFields
+  }
+  deriving (Eq, Ord, Generic, NoThunks)
+  deriving anyclass (NFData)
 
 instance Show h => Show (Attributes h) where
   show attr =
-    let
-      remain :: Prelude.String
-      remain
-        | attributesAreKnown attr
-        = ""
-        | otherwise
-        = ", remain: <" <> show (unknownAttributesLength attr) <> " bytes>"
-    in mconcat ["Attributes { data: ", show (attrData attr), remain, " }"]
+    let remain :: Prelude.String
+        remain
+          | attributesAreKnown attr =
+            ""
+          | otherwise =
+            ", remain: <" <> show (unknownAttributesLength attr) <> " bytes>"
+     in mconcat ["Attributes { data: ", show (attrData attr), remain, " }"]
 
 instance {-# OVERLAPPABLE #-} Buildable h => Buildable (Attributes h) where
-  build attr = if attributesAreKnown attr
-    then Buildable.build (attrData attr)
-    else bprint
-      ("Attributes { data: " . build . ", remain: <" . int . " bytes> }")
-      (attrData attr)
-      (unknownAttributesLength attr)
+  build attr =
+    if attributesAreKnown attr
+      then Buildable.build (attrData attr)
+      else
+        bprint
+          ("Attributes { data: " . build . ", remain: <" . int . " bytes> }")
+          (attrData attr)
+          (unknownAttributesLength attr)
 
 instance Buildable (Attributes ()) where
   build attr
     | attributesAreKnown attr = "<no attributes>"
-    | otherwise = bprint
-      ("Attributes { data: (), remain: <" . int . " bytes> }")
-      (unknownAttributesLength attr)
+    | otherwise =
+      bprint
+        ("Attributes { data: (), remain: <" . int . " bytes> }")
+        (unknownAttributesLength attr)
 
 -- Used for debugging purposes only
-instance ToJSON a => ToJSON (Attributes a) where
+instance ToJSON a => ToJSON (Attributes a)
 
 instance ToCBOR (Attributes ()) where
   toCBOR = toCBORAttributes []
@@ -179,47 +178,50 @@ version would be able to parse it).
 
 -}
 
-toCBORAttributes
-  :: forall t . [(Word8, t -> LBS.ByteString)] -> Attributes t -> Encoding
-toCBORAttributes encs attr = toCBOR
-  $ foldr go (fromUnparsedFields $ attrRemain attr) encs
- where
-  go
-    :: (Word8, t -> LBS.ByteString)
-    -> Map Word8 LBS.ByteString
-    -> Map Word8 LBS.ByteString
-  go (k, f) = M.alter (insertCheck $ f (attrData attr)) k
-   where
-    insertCheck :: a -> Maybe LByteString -> Maybe a
-    insertCheck v Nothing = Just v
-    insertCheck _ (Just v') =
-      panic
-        $  "toCBORAttributes: impossible: field no. "
-        <> show k
-        <> " is already encoded as unparsed field: "
-        <> show v'
+toCBORAttributes ::
+  forall t. [(Word8, t -> LBS.ByteString)] -> Attributes t -> Encoding
+toCBORAttributes encs attr =
+  toCBOR $
+    foldr go (fromUnparsedFields $ attrRemain attr) encs
+  where
+    go ::
+      (Word8, t -> LBS.ByteString) ->
+      Map Word8 LBS.ByteString ->
+      Map Word8 LBS.ByteString
+    go (k, f) = M.alter (insertCheck $ f (attrData attr)) k
+      where
+        insertCheck :: a -> Maybe LByteString -> Maybe a
+        insertCheck v Nothing = Just v
+        insertCheck _ (Just v') =
+          panic $
+            "toCBORAttributes: impossible: field no. "
+              <> show k
+              <> " is already encoded as unparsed field: "
+              <> show v'
 
-fromCBORAttributes
-  :: forall t s
-   . t
-  -> (Word8 -> LBS.ByteString -> t -> Decoder s (Maybe t))
-  -> Decoder s (Attributes t)
+fromCBORAttributes ::
+  forall t s.
+  t ->
+  (Word8 -> LBS.ByteString -> t -> Decoder s (Maybe t)) ->
+  Decoder s (Attributes t)
 fromCBORAttributes initval updater = do
   raw <- fromCBOR @(Map Word8 LBS.ByteString)
   foldrM go (Attributes initval $ UnparsedFields raw) $ M.toList raw
- where
-  go :: (Word8, LBS.ByteString) -> Attributes t -> Decoder s (Attributes t)
-  go (k, v) attr = do
-    updaterData <- updater k v $ attrData attr
-    pure $ case updaterData of
-      Nothing      -> attr
-      Just newData -> Attributes
-        { attrData   = newData
-        , attrRemain = UnparsedFields
-          . M.delete k
-          . fromUnparsedFields
-          $ attrRemain attr
-        }
+  where
+    go :: (Word8, LBS.ByteString) -> Attributes t -> Decoder s (Attributes t)
+    go (k, v) attr = do
+      updaterData <- updater k v $ attrData attr
+      pure $ case updaterData of
+        Nothing -> attr
+        Just newData ->
+          Attributes
+            { attrData = newData,
+              attrRemain =
+                UnparsedFields
+                  . M.delete k
+                  . fromUnparsedFields
+                  $ attrRemain attr
+            }
 
 dropAttributes :: Dropper s
 dropAttributes = dropMap dropWord8 dropBytes

@@ -1,5 +1,5 @@
 module Cardano.Chain.Update
-  ( module X
+  ( module X,
   )
 where
 

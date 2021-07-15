@@ -1,5 +1,5 @@
 module Cardano.Chain.Delegation
-  ( module X
+  ( module X,
   )
 where
 

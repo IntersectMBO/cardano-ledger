@@ -1,25 +1,30 @@
 -- | Generators for the 'Ledger.Core' values.
 module Byron.Spec.Ledger.Core.Generators
-  ( vkGen
-  , vkgenesisGen
-  , addrGen
-  , slotGen
-  , epochGen
-  , blockCountGen
-  , k
-  , kForNumberOfEpochs
+  ( vkGen,
+    vkgenesisGen,
+    addrGen,
+    slotGen,
+    epochGen,
+    blockCountGen,
+    k,
+    kForNumberOfEpochs,
   )
 where
 
-import           Data.Word (Word64)
-import           Hedgehog (Gen)
+import Byron.Spec.Ledger.Core
+  ( Addr (Addr),
+    BlockCount (BlockCount),
+    Epoch (Epoch),
+    Owner (Owner),
+    Slot (Slot),
+    VKey (VKey),
+    VKeyGenesis (VKeyGenesis),
+  )
+import Byron.Spec.Ledger.GlobalParams (slotsPerEpochToK)
+import Data.Word (Word64)
+import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
-import           Byron.Spec.Ledger.Core (Addr (Addr), BlockCount (BlockCount), Epoch (Epoch), Owner (Owner),
-                     Slot (Slot), VKey (VKey), VKeyGenesis (VKeyGenesis))
-import           Byron.Spec.Ledger.GlobalParams (slotsPerEpochToK)
-
 
 vkGen :: Gen VKey
 vkGen = VKey . Owner <$> Gen.integral (Range.linear 0 100)
@@ -47,21 +52,21 @@ blockCountGen lower upper =
 
 -- | Generate a chain stability parameter value (@k@) using the given chain length and desired
 -- number of epochs.
---
-k
-  :: Word64
-  -- ^ Chain length
-  -> Word64
-  -- ^ Maximum number of epochs
-  -> Gen BlockCount
+k ::
+  -- | Chain length
+  Word64 ->
+  -- | Maximum number of epochs
+  Word64 ->
+  Gen BlockCount
 k chainLength maxNumberOfEpochs =
   kForNumberOfEpochs chainLength <$> numberOfEpochsGen
-    where
-      numberOfEpochsGen :: Gen Word64
-      numberOfEpochsGen =
-         Gen.frequency [ (9, Gen.integral $ Range.linear 1 (maxNumberOfEpochs `max` 1))
-                       , (1, pure 1)
-                       ]
+  where
+    numberOfEpochsGen :: Gen Word64
+    numberOfEpochsGen =
+      Gen.frequency
+        [ (9, Gen.integral $ Range.linear 1 (maxNumberOfEpochs `max` 1)),
+          (1, pure 1)
+        ]
 
 -- | Given a chain length, determine the @k@ value that will split the chain length into the desired
 -- number of epochs.
@@ -79,12 +84,12 @@ k chainLength maxNumberOfEpochs =
 --
 -- The minimum value for @k@ will be 1. In particular, this will be the value
 -- returned when the number of epochs is greater or equal than @chainLength@.
-kForNumberOfEpochs
-  :: Word64
-  -- ^ Chain length
-  -> Word64
-  -- ^ Desired number of epochs
-  -> BlockCount
+kForNumberOfEpochs ::
+  -- | Chain length
+  Word64 ->
+  -- | Desired number of epochs
+  Word64 ->
+  BlockCount
 kForNumberOfEpochs chainLength numberOfEpochs =
   max 1 (slotsPerEpochToK slotsPerEpoch)
   where

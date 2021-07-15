@@ -42,7 +42,7 @@ import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256, MD5Prefix)
 import Cardano.Crypto.KES (MockKES, Sum6KES)
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Core (Script, TxBody, Value, AuxiliaryData)
+import Cardano.Ledger.Core (AuxiliaryData, Script, TxBody, Value)
 import Cardano.Ledger.Crypto (HASH)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto, Era)

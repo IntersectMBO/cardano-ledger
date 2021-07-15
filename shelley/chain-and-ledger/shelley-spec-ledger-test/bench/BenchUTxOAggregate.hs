@@ -7,8 +7,17 @@
 
 module BenchUTxOAggregate where
 
+import Cardano.Ledger.Address
+  ( Addr (..),
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (toCompact)
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    Ptr (..),
+    StakeReference (..),
+  )
+import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
@@ -18,16 +27,7 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence as Seq
-import Cardano.Ledger.Address
-  ( Addr (..),
-  )
 import Shelley.Spec.Ledger.CompactAddr (compactAddr)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ptr (..),
-    StakeReference (..),
-  )
-import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Shelley.Spec.Ledger.LedgerState
   ( DState (..),
     InstantaneousRewards (..),

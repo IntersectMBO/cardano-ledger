@@ -1,33 +1,31 @@
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Crypto.Signing.SigningKey
-  ( SigningKey(..)
-  , toVerification
-  , toCBORXPrv
-  , fromCBORXPrv
+  ( SigningKey (..),
+    toVerification,
+    toCBORXPrv,
+    fromCBORXPrv,
   )
 where
 
-import Cardano.Prelude
-
-import Formatting.Buildable
+import Cardano.Binary (Decoder, Encoding, FromCBOR (..), ToCBOR (..))
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..), shortVerificationKeyHexF)
 import qualified Cardano.Crypto.Wallet as CC
-import qualified GHC.Show
+import Cardano.Prelude
 import Formatting (bprint)
-import NoThunks.Class (NoThunks (..), InspectHeap (..))
-
-import Cardano.Binary (Decoder, Encoding, FromCBOR(..), ToCBOR(..))
-import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..), shortVerificationKeyHexF)
-
+import Formatting.Buildable
+import qualified GHC.Show
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
 
 -- | Wrapper around 'CC.XPrv'.
 newtype SigningKey = SigningKey
   { unSigningKey :: CC.XPrv
-  } deriving newtype (NFData)
-    deriving NoThunks via InspectHeap CC.XPrv
+  }
+  deriving newtype (NFData)
+  deriving (NoThunks) via InspectHeap CC.XPrv
 
 -- Note that there is deliberately no Eq instance. The cardano-crypto library
 -- does not define one for XPrv.

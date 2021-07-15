@@ -1,8 +1,7 @@
 -- | Non-configurable constants
 --   For configurable constants, see Cardano.Genesis.Configuration.
-
 module Cardano.Chain.Constants
-  ( sharedSeedLength
+  ( sharedSeedLength,
   )
 where
 

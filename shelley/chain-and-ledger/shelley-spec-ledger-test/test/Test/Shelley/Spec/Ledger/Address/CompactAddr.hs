@@ -7,15 +7,15 @@
 
 module Test.Shelley.Spec.Ledger.Address.CompactAddr where
 
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Data.ByteString.Short as SBS
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
 import qualified Cardano.Ledger.Address as Addr
-import qualified Shelley.Spec.Ledger.CompactAddr as CA
 import Cardano.Ledger.Credential
   ( PaymentCredential,
     StakeReference (..),
   )
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Data.ByteString.Short as SBS
+import qualified Shelley.Spec.Ledger.CompactAddr as CA
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()

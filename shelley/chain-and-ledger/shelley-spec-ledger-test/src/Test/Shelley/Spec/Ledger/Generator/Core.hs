@@ -15,8 +15,8 @@ module Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     applyTxBody,
     GenEnv (..),
-    ScriptSpace(..),
-    TwoPhaseInfo(..),
+    ScriptSpace (..),
+    TwoPhaseInfo (..),
     ScriptInfo,
     KeySpace (..),
     pattern KeySpace,
@@ -59,54 +59,19 @@ where
 
 import Cardano.Binary (ToCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
+import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.VRF (evalCertified)
-import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (DSIGN)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..),TxInBlock)
-import Cardano.Ledger.Hashes (EraIndependentBlockBody)
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesTxBody,
-    UsesTxOut (..),
-  )
-import Control.Monad (replicateM)
-import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (∪), (⋪))
-import Data.Coerce (coerce)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
-import Data.Proxy (Proxy (..))
-import Data.Ratio ((%), numerator, denominator)
-import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
-import Data.Word (Word64)
-import GHC.Records (HasField, getField)
-import Numeric.Natural (Natural)
 import Cardano.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
 import Cardano.Ledger.BaseTypes
-  ( Nonce (..),
-    UnitInterval,
-    BoundedRational (..),
+  ( BoundedRational (..),
+    Nonce (..),
     StrictMaybe (..),
+    UnitInterval,
     epochInfo,
     stabilityWindow,
   )
-import Shelley.Spec.Ledger.BlockChain
-  ( BHeader (BHeader),
-    Block (Block),
-    HashHeader,
-    bBodySize,
-    mkSeed,
-    seedEta,
-    seedL,
-    pattern BHBody,
-    pattern BHeader,
-    pattern Block,
-    pattern BlockHash,
-  )
+import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
   ( Credential (..),
     pattern KeyHashObj,
@@ -114,6 +79,11 @@ import Cardano.Ledger.Credential
     pattern StakeRefBase,
     pattern StakeRefPtr,
   )
+import Cardano.Ledger.Crypto (DSIGN)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Era (Crypto (..), SupportsSegWit (hashTxSeq, toTxSeq), TxInBlock)
+import qualified Cardano.Ledger.Era as Era (TxSeq)
+import Cardano.Ledger.Hashes (EraIndependentBlockBody, EraIndependentData)
 import Cardano.Ledger.Keys
   ( HasKeyRole (coerceKeyRole),
     Hash,
@@ -130,6 +100,50 @@ import Cardano.Ledger.Keys
     signedDSIGN,
     signedKES,
     vKey,
+  )
+import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
+import Cardano.Ledger.Serialization (ToCBORGroup)
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesTxBody,
+    UsesTxOut (..),
+  )
+import Cardano.Ledger.Slot
+  ( BlockNo (..),
+    Duration (..),
+    SlotNo (..),
+    epochInfoFirst,
+    (*-),
+  )
+import Codec.Serialise (serialise)
+import Control.Monad (replicateM)
+import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (∪), (⋪))
+import Data.ByteString.Lazy (toStrict)
+import Data.Coerce (coerce)
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (..))
+import Data.Ratio (denominator, numerator, (%))
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
+import Data.Word (Word64)
+import GHC.Records (HasField, getField)
+import Numeric.Natural (Natural)
+import qualified Plutus.V1.Ledger.Api as Plutus
+import Shelley.Spec.Ledger.BlockChain
+  ( BHeader (BHeader),
+    Block (Block),
+    HashHeader,
+    bBodySize,
+    mkSeed,
+    seedEta,
+    seedL,
+    pattern BHBody,
+    pattern BHeader,
+    pattern Block,
+    pattern BlockHash,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -158,13 +172,6 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Scripts
   ( ScriptHash,
   )
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    Duration (..),
-    SlotNo (..),
-    epochInfoFirst,
-    (*-),
-  )
 import Shelley.Spec.Ledger.Tx
   ( TxIn,
     WitnessSet,
@@ -183,20 +190,21 @@ import Shelley.Spec.Ledger.UTxO
     pattern UTxO,
   )
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
-import Test.QuickCheck (Gen,oneof)
+import Test.QuickCheck (Gen, oneof)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( ScriptClass,
     exponential,
+    mkKeyPairs,
     mkPayScriptHashMap,
     mkStakeScriptHashMap,
-    mkKeyPairs,
   )
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
+    RawSeed (..),
     epochFromSlotNo,
     evolveKESUntil,
     maxKESIterations,
@@ -204,20 +212,8 @@ import Test.Shelley.Spec.Ledger.Utils
     mkCertifiedVRF,
     mkGenKey,
     mkKeyPair,
-    RawSeed (..),
     runShelleyBase,
   )
-
-import Cardano.Ledger.Serialization(ToCBORGroup)
-import Cardano.Ledger.Era(SupportsSegWit(toTxSeq,hashTxSeq))
-import qualified Cardano.Ledger.Era as Era(TxSeq)
-import qualified Plutus.V1.Ledger.Api as Plutus
-import Cardano.Ledger.SafeHash(SafeHash)
-import Cardano.Ledger.Hashes(EraIndependentData)
-import qualified Cardano.Crypto.Hash as Hash
-import Codec.Serialise(serialise)
-import Data.ByteString.Lazy(toStrict)
-import Cardano.Ledger.SafeHash(unsafeMakeSafeHash)
 
 -- | For use in the Serialisation and Example Tests, which assume Shelley, Allegra, or Mary Eras.
 type PreAlonzo era =
@@ -236,25 +232,32 @@ data AllIssuerKeys v (r :: KeyRole) = AllIssuerKeys
   deriving (Show)
 
 type DataHash crypto = SafeHash crypto EraIndependentData
+
 type ScriptInfo era = Map (ScriptHash (Crypto era)) (TwoPhaseInfo era)
 
 data TwoPhaseInfo era = TwoPhaseInfo
-  { getScript :: Core.Script era,    -- ^ A Plutus Script
-    getHash :: ScriptHash (Crypto era),       -- ^ Its ScriptHash
-    getData :: Plutus.Data,          -- ^ A Data that will make it succeed
+  { -- | A Plutus Script
+    getScript :: Core.Script era,
+    -- | Its ScriptHash
+    getHash :: ScriptHash (Crypto era),
+    -- | A Data that will make it succeed
+    getData :: Plutus.Data,
+    -- | A Redeemer that will make it succeed
     getRedeemer ::
-      ( Plutus.Data,                 -- The redeeming data
-        Word64,                      -- The ExUnits memory count
-        Word64                       -- The ExUnits steps count
-      )                              -- ^ A Redeemer that will make it succeed
+      ( Plutus.Data, -- The redeeming data
+        Word64, -- The ExUnits memory count
+        Word64 -- The ExUnits steps count
+      )
   }
 
 deriving instance Show (Core.Script era) => Show (TwoPhaseInfo era)
 
 data ScriptSpace era = ScriptSpace
- { ssScripts :: [TwoPhaseInfo era],  -- ^ A list of Two Phase Scripts and their associated data we can use.
-   ssHash :: Map (ScriptHash (Crypto era)) (TwoPhaseInfo era) -- ^ Also called (ScriptInfo era)
- }
+  { -- | A list of Two Phase Scripts and their associated data we can use.
+    ssScripts :: [TwoPhaseInfo era],
+    -- | Also called (ScriptInfo era)
+    ssHash :: Map (ScriptHash (Crypto era)) (TwoPhaseInfo era)
+  }
 
 deriving instance Show (Core.Script era) => Show (ScriptSpace era)
 
@@ -756,9 +759,10 @@ hashData :: forall era. Era era => Plutus.Data -> DataHash (Crypto era)
 hashData x = unsafeMakeSafeHash (Hash.castHash (Hash.hashWith (toStrict . serialise) x))
 
 -- | Choose one of the preallocated PlutusScripts, and return it and its Hash
-genPlutus :: forall era. GenEnv era -> Gen(Core.Script era,ScriptHash (Crypto era),TwoPhaseInfo era)
+genPlutus :: forall era. GenEnv era -> Gen (Core.Script era, ScriptHash (Crypto era), TwoPhaseInfo era)
 genPlutus (GenEnv _ (ScriptSpace scripts _) _) = gettriple <$> oneof (pure <$> scripts)
-  where gettriple (info@(TwoPhaseInfo script hash _data _rdmr)) = (script,hash,info)
+  where
+    gettriple (info@(TwoPhaseInfo script hash _data _rdmr)) = (script, hash, info)
 
 -- | Find the preallocated Script from its Hash.
 findPlutus :: forall era. Era era => GenEnv era -> (ScriptHash (Crypto era)) -> (Core.Script era, StrictMaybe (DataHash (Crypto era)))
@@ -767,8 +771,8 @@ findPlutus (GenEnv keyspace (ScriptSpace _ mp) _) hsh =
     Just info -> (getScript info, SJust (hashData @era (getData info)))
     Nothing ->
       case Map.lookup hsh (ksIndexedPayScripts keyspace) of
-        Just (pay,_stake) -> (pay, SNothing)
+        Just (pay, _stake) -> (pay, SNothing)
         Nothing ->
           case Map.lookup hsh (ksIndexedStakeScripts keyspace) of
-            Just(_pay,stake) -> (stake, SNothing)
-            Nothing -> error ("Can't find a Script for the hash: "++show hsh)
+            Just (_pay, stake) -> (stake, SNothing)
+            Nothing -> error ("Can't find a Script for the hash: " ++ show hsh)

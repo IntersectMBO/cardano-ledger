@@ -18,14 +18,19 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Trace.Chain where
 
+-- import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock) -- TODO FIX ME
+
+import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (TxSeq))
+import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
     UsesTxBody,
     UsesTxOut,
     UsesValue,
   )
+import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (WithOrigin (..))
@@ -39,7 +44,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck
     sigGen,
   )
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
-import Data.Default.Class(Default)
+import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -56,32 +61,25 @@ import Shelley.Spec.Ledger.BlockChain
 import Shelley.Spec.Ledger.LedgerState (stakeDistr)
 import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv, BbodyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
-import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
   )
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
-
+import Test.Shelley.Spec.Ledger.Generator.EraGen
+  ( EraGen (..),
+    MinCHAIN_STS,
+    MinLEDGER_STS,
+    genUtxo0,
+  )
 import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
--- import Test.Shelley.Spec.Ledger.Shrinkers (shrinkBlock) -- TODO FIX ME
 import Test.Shelley.Spec.Ledger.Utils
   ( maxLLSupply,
     mkHash,
   )
-import Cardano.Ledger.Era(SupportsSegWit(TxSeq))
-import Cardano.Ledger.BaseTypes(UnitInterval)
-import Cardano.Ledger.Serialization(ToCBORGroup)
-import Test.Shelley.Spec.Ledger.Generator.EraGen
-  ( EraGen (..),
-    genUtxo0,
-    MinLEDGER_STS,
-    MinCHAIN_STS,
-  )
 
 -- ======================================================
-
 
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
@@ -120,7 +118,7 @@ instance
 
   sigGen ge _env st = genBlock ge st
 
-  shrinkSignal = (\ _x -> []) -- shrinkBlock -- TO DO FIX ME
+  shrinkSignal = (\_x -> []) -- shrinkBlock -- TO DO FIX ME
 
   type BaseEnv (CHAIN era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals

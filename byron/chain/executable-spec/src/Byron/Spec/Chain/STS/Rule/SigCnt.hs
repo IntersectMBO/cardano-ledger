@@ -4,39 +4,37 @@
 
 module Byron.Spec.Chain.STS.Rule.SigCnt where
 
-import           Control.Arrow ((|||))
-import           Data.Bimap (Bimap)
+import Byron.Spec.Ledger.Core hiding ((|>))
+import Byron.Spec.Ledger.Update hiding (NotADelegate)
+import Control.Arrow ((|||))
+import Control.State.Transition
+import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import           Data.Data (Data, Typeable)
-import           Data.Sequence (Seq, (|>))
+import Data.Data (Data, Typeable)
+import Data.Sequence (Seq, (|>))
 import qualified Data.Sequence as S
-import           Data.Word (Word8)
-import           Hedgehog (Gen)
+import Data.Word (Word8)
+import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-import           Lens.Micro ((^.))
-
-import           Control.State.Transition
-
-import           Byron.Spec.Ledger.Core hiding ((|>))
-import           Byron.Spec.Ledger.Update hiding (NotADelegate)
+import Lens.Micro ((^.))
 
 data SIGCNT deriving (Data, Typeable)
 
 -- | These `PredicateFailure`s are all throwable.
 data SigcntPredicateFailure
-  = TooManyIssuedBlocks VKeyGenesis
-  -- ^ The given genesis key issued too many blocks.
-  | NotADelegate
-  -- ^ The key signing the block is not a delegate of a genesis key.
+  = -- | The given genesis key issued too many blocks.
+    TooManyIssuedBlocks VKeyGenesis
+  | -- | The key signing the block is not a delegate of a genesis key.
+    NotADelegate
   deriving (Eq, Show, Data, Typeable)
 
-
 instance STS SIGCNT where
-  type Environment SIGCNT
-    = ( PParams
-      , Bimap VKeyGenesis VKey
-      , BlockCount -- Chain stability parameter
+  type
+    Environment SIGCNT =
+      ( PParams,
+        Bimap VKeyGenesis VKey,
+        BlockCount -- Chain stability parameter
       )
 
   type State SIGCNT = Seq VKeyGenesis
@@ -49,12 +47,11 @@ instance STS SIGCNT where
   transitionRules =
     [ do
         TRC ((pps, dms, k), sgs, vk) <- judgmentContext
-        let
-          t' = pps ^. bkSgnCntT
+        let t' = pps ^. bkSgnCntT
         case Bimap.lookupR vk dms of
           Just vkG -> do
             let sgs' = S.drop (S.length sgs + 1 - (fromIntegral . unBlockCount $ k)) (sgs |> vkG)
-                nrSignedBks = fromIntegral (S.length (S.filter (==vkG) sgs'))
+                nrSignedBks = fromIntegral (S.length (S.filter (== vkG) sgs'))
             nrSignedBks <= fromIntegral (unBlockCount k) * t' ?! TooManyIssuedBlocks vkG
             pure $! sgs'
           Nothing -> do
@@ -71,20 +68,33 @@ instance STS SIGCNT where
 --
 -- This generator will throw an error if no suitable issuer can be found, which means that the block
 -- production halted.
-issuer
-  :: Environment SIGCNT
-  -> State SIGCNT
-  -> Gen VKey
+issuer ::
+  Environment SIGCNT ->
+  State SIGCNT ->
+  Gen VKey
 issuer (pps, dms, k) sgs =
   if null validIssuers
-  then error $ "No valid issuers!" ++ "\n"
-             ++ "k = " ++ show k ++ "\n"
-             ++ "keys = " ++ show (Bimap.elems dms) ++ "\n"
-             ++ "sgs = " ++ show sgs ++ "\n"
-             ++ "length sgs = " ++ show (length sgs) ++ "\n"
-             ++ "_bkSgnCntT = " ++ show (_bkSgnCntT pps) ++ "\n"
-             ++ "dms = " ++ show dms
-  else Gen.element validIssuers
+    then
+      error $
+        "No valid issuers!" ++ "\n"
+          ++ "k = "
+          ++ show k
+          ++ "\n"
+          ++ "keys = "
+          ++ show (Bimap.elems dms)
+          ++ "\n"
+          ++ "sgs = "
+          ++ show sgs
+          ++ "\n"
+          ++ "length sgs = "
+          ++ show (length sgs)
+          ++ "\n"
+          ++ "_bkSgnCntT = "
+          ++ show (_bkSgnCntT pps)
+          ++ "\n"
+          ++ "dms = "
+          ++ show dms
+    else Gen.element validIssuers
   where
     validIssuers =
       filter canIssueABlock anyIssuer
@@ -92,7 +102,6 @@ issuer (pps, dms, k) sgs =
     canIssueABlock :: VKey -> Bool
     canIssueABlock vk =
       (const False ||| const True) $ applySTS @SIGCNT (TRC ((pps, dms, k), sgs, vk))
-
 
 -- | Generate a signature count threshold given a chain stability parameter @k@ and number of
 -- genesis keys @ngk@.
@@ -121,7 +130,6 @@ issuer (pps, dms, k) sgs =
 -- > 1/ngk + 1/k <= t
 --
 -- To pick a value for @t@ we vary the proportion of honest keys.
---
 sigCntT :: BlockCount -> Word8 -> Gen Double
 sigCntT (BlockCount k) ngk =
   Gen.double (Range.constant lower upper)

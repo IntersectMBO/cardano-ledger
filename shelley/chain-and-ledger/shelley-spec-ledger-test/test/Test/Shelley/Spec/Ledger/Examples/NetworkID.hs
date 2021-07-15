@@ -7,6 +7,7 @@ module Test.Shelley.Spec.Ledger.Examples.NetworkID
 where
 
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Default.Class (def)
 import Shelley.Spec.Ledger.API
@@ -20,7 +21,6 @@ import Shelley.Spec.Ledger.API
     ProtVer (..),
     RewardAcnt (..),
   )
-import Cardano.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)

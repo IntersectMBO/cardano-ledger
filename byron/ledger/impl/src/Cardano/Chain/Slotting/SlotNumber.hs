@@ -1,30 +1,27 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Slotting.SlotNumber
-  ( SlotNumber(..)
-  , addSlotCount
-  , subSlotCount
+  ( SlotNumber (..),
+    addSlotCount,
+    subSlotCount,
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Chain.Slotting.SlotCount (SlotCount (..))
 import Cardano.Prelude
-
 import qualified Data.Aeson as Aeson
 import Formatting (bprint, int)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
-import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
-
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
-import Cardano.Chain.Slotting.SlotCount (SlotCount(..))
-
+import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 
 -- | 'SlotNumber' is an absolute slot number from the beginning of time
 --
@@ -32,13 +29,13 @@ import Cardano.Chain.Slotting.SlotCount (SlotCount(..))
 --   is sufficient for slot indices for 10^13 years.
 newtype SlotNumber = SlotNumber
   { unSlotNumber :: Word64
-  } deriving (Eq, Generic, Ord, Show)
-    deriving newtype Num
-    deriving anyclass (NFData, NoThunks)
-
+  }
+  deriving (Eq, Generic, Ord, Show)
+  deriving newtype (Num)
+  deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
-instance Aeson.ToJSON SlotNumber where
+instance Aeson.ToJSON SlotNumber
 
 instance ToCBOR SlotNumber where
   toCBOR = toCBOR . unSlotNumber
