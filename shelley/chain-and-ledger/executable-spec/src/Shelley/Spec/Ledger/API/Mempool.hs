@@ -1,8 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -18,6 +20,8 @@ module Shelley.Spec.Ledger.API.Mempool
     ApplyTxError (..),
     Validated,
     extractTx,
+    coerceValidated,
+    translateValidated,
 
     -- * Exports for testing
     MempoolEnv,
@@ -36,7 +40,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Crypto, PreviousEra, TranslateEra (translateEra), TranslationContext, TranslationError)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Slot (SlotNo)
@@ -53,9 +57,11 @@ import Control.State.Transition.Extended
     TRC (..),
     applySTS,
   )
+import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
+import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
@@ -66,11 +72,26 @@ import qualified Shelley.Spec.Ledger.STS.Ledger as Ledger
 -- | A newtype which indicates that a transaction has been validated against
 -- some chain state.
 newtype Validated tx = Validated tx
-  deriving (Eq, Show)
+  deriving (Eq, NoThunks, Show)
 
 -- | Extract the underlying unvalidated Tx.
 extractTx :: Validated tx -> tx
 extractTx (Validated tx) = tx
+
+coerceValidated :: Coercible a b => Validated a -> Validated b
+coerceValidated (Validated a) = Validated $ coerce a
+
+-- | Translate a validated transaction across eras.
+--
+-- This is not a `TranslateEra` instance since `Validated` is not itself
+-- era-parametrised.
+translateValidated ::
+  forall era f.
+  (TranslateEra era f) =>
+  TranslationContext era ->
+  Validated (f (PreviousEra era)) ->
+  Except (TranslationError era f) (Validated (f era))
+translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
 
 class
   ( ChainData (Core.Tx era),
