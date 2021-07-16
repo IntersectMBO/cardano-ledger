@@ -39,7 +39,7 @@ import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
+import Test.Tasty.HUnit (assertFailure, testCase)
 import Test.Tasty.QuickCheck (Gen, Property, chooseBoundedIntegral, counterexample, testProperty)
 
 tests :: TestTree
@@ -78,11 +78,12 @@ testExUnitCalculation ::
   EpochInfo m ->
   SystemStart ->
   Array Language CostModel ->
+  (forall a. String -> m a) ->
   m ()
-testExUnitCalculation tx utxoState ue ei ss costmdls = do
-  tx' <- updateTxExUnits tx utxo ei ss costmdls
+testExUnitCalculation tx utxoState ue ei ss costmdls err = do
+  tx' <- updateTxExUnits tx utxo ei ss costmdls err
   _ <-
-    failLeft $
+    failLeft err $
       runShelleyBase $
         applySTSTest @(UTXOS A) (TRC (ue, utxoState, vtx tx'))
   pure ()
@@ -98,6 +99,7 @@ exampleExUnitCalc =
     exampleEpochInfo
     testSystemStart
     costmodels
+    assertFailure
 
 exampleTx :: Core.Tx A
 exampleTx =
@@ -151,11 +153,12 @@ updateTxExUnits ::
   EpochInfo m ->
   SystemStart ->
   Array Language CostModel ->
+  (forall a. String -> m a) ->
   m (Core.Tx A)
-updateTxExUnits tx utxo ei ss costmdls = do
+updateTxExUnits tx utxo ei ss costmdls err = do
   -- rdmrs :: Map RdmrPtr ExUnits
   rdmrs <-
-    traverse failLeft
+    traverse (failLeft err)
       =<< evaluateTransactionExecutionUnits tx utxo ei ss costmdls
   pure (replaceRdmrs tx rdmrs)
 
@@ -171,9 +174,9 @@ replaceRdmrs tx rdmrs = tx {Core.wits = wits'}
         Just (dat, _ex) -> Redeemers $ Map.insert ptr (dat, ex) r
         Nothing -> x
 
-failLeft :: MonadFail m => Show e => Either e a -> m a
-failLeft (Right a) = pure a
-failLeft (Left e) = fail (show e)
+failLeft :: (Monad m, Show e) => (String -> m a) -> Either e a -> m a
+failLeft _ (Right a) = pure a
+failLeft err (Left e) = err (show e)
 
 vtx :: Core.Tx A -> ValidatedTx A
 vtx tx =
