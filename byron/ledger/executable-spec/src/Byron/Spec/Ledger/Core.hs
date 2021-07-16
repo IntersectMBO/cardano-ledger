@@ -37,7 +37,7 @@ import           GHC.Generics (Generic)
 import           NoThunks.Class (NoThunks(..))
 import           Numeric.Natural (Natural)
 
-import           Cardano.Binary (ToCBOR)
+import           Cardano.Binary (FromCBOR, ToCBOR)
 
 import           Data.AbstractSize
 
@@ -72,7 +72,7 @@ class HasHash a where
 newtype Owner = Owner
   { unOwner :: Natural
   } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
+    deriving newtype (Eq, Ord, Hashable, FromCBOR, ToCBOR, NoThunks)
     deriving anyclass (HasTypeReps)
 
 class HasOwner a where
@@ -90,7 +90,7 @@ instance HasOwner SKey where
 -- |Verification Key.
 newtype VKey = VKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, FromCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasHash VKey where
@@ -102,7 +102,7 @@ instance HasOwner VKey where
 -- | A genesis key is a specialisation of a generic VKey.
 newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey }
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, HasHash, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, HasHash, FromCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner VKeyGenesis where
@@ -219,7 +219,7 @@ minusSlotMaybe (Slot m) (SlotCount n)
 
 newtype BlockCount = BlockCount { unBlockCount :: Word64 }
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Num, Hashable, NoThunks)
+  deriving newtype (Eq, Ord, Num, Hashable, NoThunks, FromCBOR, ToCBOR)
 
 instance HasTypeReps BlockCount
 

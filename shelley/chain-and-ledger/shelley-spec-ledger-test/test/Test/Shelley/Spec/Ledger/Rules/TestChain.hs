@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Test.Shelley.Spec.Ledger.Rules.TestChain
   ( -- TestPoolReap
@@ -115,6 +116,7 @@ import Data.Map(Map)
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Test.QuickCheck(Property,Testable(..),withMaxSuccess,conjoin,(===),counterexample)
+import Data.TreeDiff.QuickCheck (ediffEq)
 
 
 ------------------------------
@@ -572,8 +574,8 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
 
     createdIsConsumed SourceSignalTarget {source = ledgerSt, signal = tx, target = ledgerSt'} =
       counterexample
-        ("preserveBalance created /= consumed ... " <> show created <> " /= " <> show consumed_)
-        (created === consumed_)
+        "preserveBalance created /= consumed ... "
+        (ediffEq created consumed_)
       where
         (UTxOState {_utxo = u}, dstate) = ledgerSt
         (UTxOState {_utxo = u'}, _) = ledgerSt'

@@ -700,7 +700,7 @@ invalidSignalsAreGenerated
   -- ^ Failure profile.
   -> Word64
   -- ^ Maximum trace length.
-  -> ([[PredicateFailure s]] -> PropertyT IO ())
+  -> ([PredicateFailure s] -> PropertyT IO ())
   -- ^ Action to run when the an invalid signal is generated.
   -> Property
 invalidSignalsAreGenerated baseEnv failureProfile maximumTraceLength checkFailures = property $ do

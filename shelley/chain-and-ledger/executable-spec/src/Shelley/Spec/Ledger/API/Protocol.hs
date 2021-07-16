@@ -286,7 +286,7 @@ futureView ::
 futureView globals ss slot =
   liftEither
     . right view
-    . left (FutureLedgerViewError . join)
+    . left FutureLedgerViewError
     $ res
   where
     res =
@@ -427,7 +427,7 @@ updateChainDepState
                 csLabNonce = prevHashToNonce (bheaderPrev . bhbody $ bh)
               }
         )
-      . left (ChainTransitionError . join)
+      . left ChainTransitionError
       $ res
     where
       res =

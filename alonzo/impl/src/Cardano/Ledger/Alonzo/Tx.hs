@@ -73,13 +73,18 @@ import Cardano.Binary
   ( FromCBOR (..),
     ToCBOR (toCBOR),
     encodeListLen,
-    serialize',
     serializeEncoding,
+    serializeEncoding',
   )
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.Alonzo.PParams (LangDepView (..), PParams, getLanguageView)
+import Cardano.Ledger.Alonzo.PParams
+  ( LangDepView (..),
+    PParams,
+    encodeLangViews,
+    getLanguageView,
+  )
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
@@ -243,7 +248,7 @@ data WitnessPPData era
   = WitnessPPData
       !(Redeemers era) -- From the witnesses
       !(TxDats era)
-      !(Set (LangDepView era)) -- From the Porotocl parameters
+      !(Set LangDepView) -- From the Porotocl parameters
   deriving (Show, Eq, Generic, Typeable)
 
 deriving instance Typeable era => NoThunks (WitnessPPData era)
@@ -254,9 +259,9 @@ deriving instance Typeable era => NoThunks (WitnessPPData era)
 instance Era era => SafeToHash (WitnessPPData era) where
   originalBytes (WitnessPPData m d l) =
     -- TODO: double check that canonical encodings are used for the langDepView (l)
-    if nullDats d
-      then originalBytes m <> serialize' l
-      else originalBytes m <> originalBytes d <> serialize' l
+    let dBytes = if nullDats d then mempty else originalBytes d
+        lBytes = serializeEncoding' (encodeLangViews l)
+     in originalBytes m <> dBytes <> lBytes
 
 instance (Era era, c ~ Crypto era) => HashAnnotated (WitnessPPData era) EraIndependentWitnessPPData c
 

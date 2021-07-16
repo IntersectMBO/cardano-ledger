@@ -129,7 +129,7 @@ traceFromInitState
   -> Word64
   -- ^ Maximum trace length.
   -> traceGenEnv
-  -> Maybe (IRC sts -> QuickCheck.Gen (Either [[STS.PredicateFailure sts]] (State sts)))
+  -> Maybe (IRC sts -> QuickCheck.Gen (Either [STS.PredicateFailure sts] (State sts)))
   -- ^ Optional generator of STS initial state
   -> QuickCheck.Gen (Trace sts)
 traceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 = do
@@ -156,7 +156,7 @@ forAllTraceFromInitState
   -> Word64
   -- ^ Maximum trace length.
   -> traceGenEnv
-  -> Maybe (IRC sts -> QuickCheck.Gen (Either [[STS.PredicateFailure sts]] (State sts)))
+  -> Maybe (IRC sts -> QuickCheck.Gen (Either [STS.PredicateFailure sts] (State sts)))
   -- ^ Optional generator of STS initial state
   -> (Trace sts -> prop)
   -> QuickCheck.Property
@@ -249,7 +249,7 @@ onlyValidSignalsAreGeneratedFromInitState
   -> Word64
   -- ^ Maximum trace length.
   -> traceGenEnv
-  -> Maybe (IRC sts -> QuickCheck.Gen (Either [[STS.PredicateFailure sts]] (State sts)))
+  -> Maybe (IRC sts -> QuickCheck.Gen (Either [STS.PredicateFailure sts] (State sts)))
   -- ^ Optional generator of STS initial state
   -> QuickCheck.Property
 onlyValidSignalsAreGeneratedFromInitState baseEnv maxTraceLength traceGenEnv genSt0 =

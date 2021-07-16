@@ -104,7 +104,7 @@ class
             . applySTS @(Core.EraRule "LEDGER" era)
             $ TRC (env, state, tx)
      in liftEither
-          . left (ApplyTxError . join)
+          . left ApplyTxError
           . right (,tx)
           $ res
 
@@ -140,7 +140,7 @@ class
             . applySTS @(Core.EraRule "LEDGER" era)
             $ TRC (env, state, tx)
      in liftEither
-          . left (ApplyTxError . join)
+          . left ApplyTxError
           $ res
 
   -- | Extract the underlying `Tx` from the `TxInBlock`.

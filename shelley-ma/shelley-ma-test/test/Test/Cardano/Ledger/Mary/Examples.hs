@@ -29,16 +29,15 @@ import Test.Tasty.HUnit (Assertion, (@?=))
 type MaryTest = MaryEra TestCrypto
 
 ignoreAllButUTxO ::
-  Either [[PredicateFailure (LEDGER MaryTest)]] (UTxOState MaryTest, DPState TestCrypto) ->
-  Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
-ignoreAllButUTxO (Left e) = Left e
-ignoreAllButUTxO (Right (UTxOState utxo _ _ _, _)) = Right utxo
+  Either [PredicateFailure (LEDGER MaryTest)] (UTxOState MaryTest, DPState TestCrypto) ->
+  Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest)
+ignoreAllButUTxO = fmap (\(UTxOState utxo _ _ _, _) -> utxo)
 
 testMaryNoDelegLEDGER ::
   UTxO MaryTest ->
   Tx MaryTest ->
   LedgerEnv MaryTest ->
-  Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest) ->
+  Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest) ->
   Assertion
 testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
   checkTrace @(LEDGER MaryTest) runShelleyBase env $

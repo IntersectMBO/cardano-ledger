@@ -17,7 +17,7 @@ import Flat (flat)
 import Data.ByteString.Short (ShortByteString, toShort, pack, unpack)
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy (toStrict)
-import qualified Plutus.V1.Ledger.Scripts as P
+import qualified Plutus.V1.Ledger.Api as P
 import qualified PlutusTx as P (Data (..), compile)
 import qualified PlutusTx.Prelude as P
 import Language.Haskell.TH.Ppr
