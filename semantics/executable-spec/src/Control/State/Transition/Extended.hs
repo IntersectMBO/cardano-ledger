@@ -91,6 +91,7 @@ import Data.Proxy (Proxy (..))
 import Data.Typeable (typeRep)
 import NoThunks.Class (NoThunks (..))
 import Data.Void (Void)
+import Data.Coerce (coerce, Coercible)
 
 data RuleType
   = Initial
@@ -230,10 +231,11 @@ class (STS sub, BaseM sub ~ BaseM super) => Embed sub super where
   -- | Wrap a predicate failure of the subsystem in a failure of the super-system.
   wrapFailed :: PredicateFailure sub -> PredicateFailure super
   wrapEvent :: Event sub -> Event super
+  default wrapEvent :: Coercible (Event sub) (Event super) => Event sub -> Event super
+  wrapEvent = coerce
 
 instance STS sts => Embed sts sts where
   wrapFailed = id
-  wrapEvent = id
 
 data EventPolicy
   = EventPolicyReturn

@@ -518,7 +518,6 @@ instance
   Embed (UTXOS era) (AlonzoUTXO era)
   where
   wrapFailed = UtxosFailure
-  wrapEvent = id
 
 --------------------------------------------------------------------------------
 -- Serialisation

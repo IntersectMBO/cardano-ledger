@@ -293,4 +293,3 @@ instance
   Embed (OCERT crypto) (OVERLAY crypto)
   where
   wrapFailed = OcertFailure
-  wrapEvent = id

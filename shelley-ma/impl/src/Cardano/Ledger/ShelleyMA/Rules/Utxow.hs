@@ -81,7 +81,6 @@ instance
   Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
-  wrapEvent = id
 
 instance
   ( Era era,

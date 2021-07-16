@@ -41,7 +41,7 @@ import           Lens.Micro.TH (makeLenses)
 
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS,
                      Signal, State, TRC (TRC), applySTS, initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed, (?!), wrapEvent)
+                     transitionRules, wrapFailed, (?!))
 import           Control.State.Transition.Generator (HasSizeInfo, HasTrace, SignalGenerator,
                      TraceProfile (TraceProfile), classifySize, classifyTraceLength, envGen,
                      failures, isTrivial, nonTrivialTrace, proportionOfValidSignals, sigGen,
@@ -132,7 +132,6 @@ instance STS DBLOCK where
 
 instance Embed DELEG DBLOCK where
   wrapFailed = DPF
-  wrapEvent = id
 
 -- | Check that all the delegation certificates in the trace were correctly
 -- applied.

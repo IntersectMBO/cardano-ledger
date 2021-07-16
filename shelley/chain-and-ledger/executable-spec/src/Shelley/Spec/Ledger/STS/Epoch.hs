@@ -206,7 +206,6 @@ instance
   Embed (SNAP era) (EPOCH era)
   where
   wrapFailed = SnapFailure
-  wrapEvent = id
 
 instance
   ( Era era,
@@ -216,7 +215,6 @@ instance
   Embed (POOLREAP era) (EPOCH era)
   where
   wrapFailed = PoolReapFailure
-  wrapEvent = id
 
 instance
   ( Era era,
@@ -226,4 +224,3 @@ instance
   Embed (UPEC era) (EPOCH era)
   where
   wrapFailed = UpecFailure
-  wrapEvent = id

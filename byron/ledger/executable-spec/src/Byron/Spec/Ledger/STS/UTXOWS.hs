@@ -22,7 +22,7 @@ import           Byron.Spec.Ledger.STS.UTXOW (UTXOW)
 import           Byron.Spec.Ledger.UTxO (Tx)
 import           Control.State.Transition (Embed, Environment, IRC (IRC), PredicateFailure, STS(..),
                      Signal, State, TRC (TRC), initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed, wrapEvent)
+                     transitionRules, wrapFailed)
 import           Control.State.Transition.Generator (HasTrace, envGen, genTrace, sigGen)
 import           Control.State.Transition.Trace (TraceOrder (OldestFirst), traceSignals)
 
@@ -57,7 +57,6 @@ instance STS UTXOWS where
 
 instance Embed UTXOW UTXOWS where
   wrapFailed = UtxowFailure
-  wrapEvent = id
 
 instance HasTrace UTXOWS where
   envGen = envGen @UTXOW

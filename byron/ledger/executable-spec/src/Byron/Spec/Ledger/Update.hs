@@ -499,11 +499,9 @@ instance STS UPV where
 
 instance Embed UPPVV UPV where
   wrapFailed = UPPVVFailure
-  wrapEvent = id
 
 instance Embed UPSVV UPV where
   wrapFailed = UPSVVFailure
-  wrapEvent = id
 
 data UPREG deriving (Generic, Data, Typeable)
 -- | These `PredicateFailure`s are all throwable.
@@ -545,7 +543,6 @@ instance STS UPREG where
 
 instance Embed UPV UPREG where
   wrapFailed = UPVFailure
-  wrapEvent = id
 
 ------------------------------------------------------------------------
 -- Update voting
@@ -671,7 +668,6 @@ instance STS UPVOTE where
 
 instance Embed ADDVOTE UPVOTE where
   wrapFailed = ADDVOTEFailure
-  wrapEvent = id
 
 ------------------------------------------------------------------------
 -- Update voting
@@ -813,7 +809,6 @@ instance STS UPEND where
 
 instance Embed FADS UPEND where
   wrapFailed = error "No possible failures in FADS"
-  wrapEvent = id
 
 ------------------------------------------------------------------------
 -- Update interface
@@ -985,7 +980,6 @@ instance STS UPIREG where
 
 instance Embed UPREG UPIREG where
   wrapFailed = UPREGFailure
-  wrapEvent = id
 
 instance HasTrace UPIREG where
 
@@ -1369,7 +1363,6 @@ instance STS UPIVOTE where
 
 instance Embed UPVOTE UPIVOTE where
   wrapFailed = UPVOTEFailure
-  wrapEvent = id
 
 
 data APPLYVOTES deriving (Generic, Data, Typeable)
@@ -1399,7 +1392,6 @@ instance STS APPLYVOTES where
 
 instance Embed UPIVOTE APPLYVOTES where
   wrapFailed = UpivoteFailure
-  wrapEvent = id
 
 data UPIVOTES deriving (Generic, Data, Typeable)
 
@@ -1458,7 +1450,6 @@ instance STS UPIVOTES where
 
 instance Embed APPLYVOTES UPIVOTES where
   wrapFailed = ApplyVotesFailure
-  wrapEvent = id
 
 instance HasTrace UPIVOTES where
 
@@ -1598,7 +1589,6 @@ instance STS UPIEND where
 
 instance Embed UPEND UPIEND where
   wrapFailed = UPENDFailure
-  wrapEvent = id
 
 -- | Given a list of protocol versions and keys endorsing those versions,
 -- generate a protocol-version endorsement, or 'Nothing' if the list of
@@ -1701,7 +1691,6 @@ instance STS UPIEC where
 
 instance Embed PVBUMP UPIEC where
   wrapFailed = PVBUMPFailure
-  wrapEvent = id
 
 -- | Generate an optional update-proposal and a list of votes, given an update
 -- environment and state.

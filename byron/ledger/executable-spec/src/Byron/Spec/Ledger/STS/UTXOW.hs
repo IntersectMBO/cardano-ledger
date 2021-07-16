@@ -93,7 +93,6 @@ witnessed (Tx tx wits) utxo =
 
 instance Embed UTXO UTXOW where
   wrapFailed = UtxoFailure
-  wrapEvent = id
 
 -- | Constant list of addresses intended to be used in the generators.
 traceAddrs :: [Addr]
