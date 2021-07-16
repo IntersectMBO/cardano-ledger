@@ -1,44 +1,40 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 module Test.Cardano.Crypto.Example
-  ( exampleProtocolMagic0
-  , exampleProtocolMagic1
-  , exampleProtocolMagic2
-  , exampleProtocolMagic3
-  , exampleProtocolMagic4
-  , exampleProtocolMagicId0
-  , exampleVerificationKey
-  , exampleVerificationKeys
-  , exampleRedeemVerificationKey
-  , exampleSigningKey
-  , exampleSigningKeys
-  , exampleSafeSigner
-  , staticSafeSigners
+  ( exampleProtocolMagic0,
+    exampleProtocolMagic1,
+    exampleProtocolMagic2,
+    exampleProtocolMagic3,
+    exampleProtocolMagic4,
+    exampleProtocolMagicId0,
+    exampleVerificationKey,
+    exampleVerificationKeys,
+    exampleRedeemVerificationKey,
+    exampleSigningKey,
+    exampleSigningKeys,
+    exampleSafeSigner,
+    staticSafeSigners,
   )
 where
 
-import Cardano.Prelude
-
+import Cardano.Binary (Annotated (..))
+import Cardano.Crypto
+  ( AProtocolMagic (..),
+    ProtocolMagic,
+    ProtocolMagicId (..),
+    RedeemVerificationKey,
+    RequiresNetworkMagic (..),
+    SafeSigner,
+    SigningKey (..),
+    VerificationKey (..),
+    noPassSafeSigner,
+    redeemDeterministicKeyGen,
+  )
 import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Prelude
 import Data.List ((!!))
 import Data.Maybe (fromJust)
-
-import Cardano.Binary (Annotated(..))
-import Cardano.Crypto
-  ( AProtocolMagic(..)
-  , ProtocolMagic
-  , ProtocolMagicId(..)
-  , VerificationKey(..)
-  , RedeemVerificationKey
-  , RequiresNetworkMagic(..)
-  , SafeSigner
-  , SigningKey(..)
-  , noPassSafeSigner
-  , redeemDeterministicKeyGen
-  )
-
 import Test.Cardano.Crypto.CBOR (getBytes)
-
 
 exampleProtocolMagicId0 :: ProtocolMagicId
 exampleProtocolMagicId0 = ProtocolMagicId 31337
@@ -68,9 +64,9 @@ exampleVerificationKey = vk where [vk] = exampleVerificationKeys 16 1 -- 16 coul
 
 exampleVerificationKeys :: Int -> Int -> [VerificationKey]
 exampleVerificationKeys offset count = map (toKey . (* offset)) [0 .. count - 1]
- where
-  toKey start =
-    let Right vk = VerificationKey <$> CC.xpub (getBytes start 64) in vk
+  where
+    toKey start =
+      let Right vk = VerificationKey <$> CC.xpub (getBytes start 64) in vk
 
 exampleRedeemVerificationKey :: RedeemVerificationKey
 exampleRedeemVerificationKey =
@@ -83,9 +79,9 @@ exampleSigningKey = exampleSigningKeys 10 2 !! 1
 
 exampleSigningKeys :: Int -> Int -> [SigningKey]
 exampleSigningKeys offset count = map (toKey . (* offset)) [0 .. count - 1]
- where
-  toKey start =
-    let Right sk = SigningKey <$> CC.xprv (getBytes start 128) in sk
+  where
+    toKey start =
+      let Right sk = SigningKey <$> CC.xprv (getBytes start 128) in sk
 
 exampleSafeSigner :: Int -> SafeSigner
 exampleSafeSigner offset = staticSafeSigners !! offset

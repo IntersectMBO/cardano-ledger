@@ -12,14 +12,14 @@ module Test.Shelley.Spec.Ledger.Rules.TestPoolreap
   )
 where
 
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
+import Cardano.Ledger.Slot (EpochNo (..))
 import Control.SetAlgebra (dom, eval, setSingleton, (∩), (⊆), (▷))
 import qualified Data.Set as Set (Set, null)
-import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Shelley.Spec.Ledger.LedgerState
   ( PState (..),
     _pParams,
   )
-import Cardano.Ledger.Slot (EpochNo (..))
 import Test.QuickCheck (Property, property)
 
 -----------------------------

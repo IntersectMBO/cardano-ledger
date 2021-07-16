@@ -1,89 +1,88 @@
-{-# LANGUAGE DataKinds           #-}
-{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell     #-}
-{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Chain.Common.CBOR
-       ( tests
-       ) where
-
-import Cardano.Prelude hiding (check)
-import Test.Cardano.Prelude
-
-import qualified Data.Map as M
-import Hedgehog (Gen, Property)
-import qualified Hedgehog as H
-
-import Cardano.Binary (Case(..), Raw(..), SizeOverride(..), ToCBOR, szCases)
-import Cardano.Chain.Common
-  ( AddrAttributes(..)
-  , AddrSpendingData (..)
-  , AddrType(..)
-  , Attributes(..)
-  , BlockCount(..)
-  , ChainDifficulty(..)
-  , TxFeePolicy(..)
-  , TxSizeLinear(..)
-  , isRedeemAddress
-  , mkAttributes
-  , mkKnownLovelace
-  , mkMerkleTree
-  , mtRoot
-  , decodeAddressBase58
-  , encodeAddressBase58
-  , rationalToLovelacePortion
+  ( tests,
   )
-import Cardano.Crypto
-  ( Hash
-  , abstractHash
-  , redeemDeterministicKeyGen
-  )
-
-import Test.Cardano.Binary.Helpers (SizeTestConfig (..), sizeTest, scfg)
-import Test.Cardano.Binary.Helpers.GoldenRoundTrip
-  ( goldenTestCBOR
-  , roundTripsCBORBuildable
-  , roundTripsCBORShow
-  )
-import Test.Cardano.Chain.Common.Example
-  ( exampleAddress
-  , exampleAddress1
-  , exampleAddress2
-  , exampleAddress3
-  , exampleAddress4
-  , exampleAddrSpendingData_VerKey
-  , exampleKeyHash
-
-  )
-import Test.Cardano.Chain.Common.Gen
-  ( genAddress
-  , genAddrAttributes
-  , genAddrSpendingData
-  , genAddrType
-  , genAttributes
-  , genBlockCount
-  , genChainDifficulty
-  , genLovelace
-  , genLovelaceError
-  , genLovelacePortion
-  , genMerkleTree
-  , genMerkleRoot
-  , genKeyHash
-  , genTxFeePolicy
-  , genTxSizeLinear
-  )
+where
 
 import Cardano.Binary
-  (serializeEncoding, decodeFullDecoder)
+  ( Case (..),
+    Raw (..),
+    SizeOverride (..),
+    ToCBOR,
+    decodeFullDecoder,
+    serializeEncoding,
+    szCases,
+  )
 import Cardano.Chain.Common
-  (encodeCrcProtected, decodeCrcProtected)
-
+  ( AddrAttributes (..),
+    AddrSpendingData (..),
+    AddrType (..),
+    Attributes (..),
+    BlockCount (..),
+    ChainDifficulty (..),
+    TxFeePolicy (..),
+    TxSizeLinear (..),
+    decodeAddressBase58,
+    decodeCrcProtected,
+    encodeAddressBase58,
+    encodeCrcProtected,
+    isRedeemAddress,
+    mkAttributes,
+    mkKnownLovelace,
+    mkMerkleTree,
+    mtRoot,
+    rationalToLovelacePortion,
+  )
+import Cardano.Crypto
+  ( Hash,
+    abstractHash,
+    redeemDeterministicKeyGen,
+  )
+import Cardano.Prelude hiding (check)
+import qualified Data.Map as M
+import Hedgehog (Gen, Property, cover, forAll, property, (===))
+import qualified Hedgehog as H
+import Test.Cardano.Binary.Helpers (SizeTestConfig (..), scfg, sizeTest)
+import Test.Cardano.Binary.Helpers.GoldenRoundTrip
+  ( goldenTestCBOR,
+    roundTripsCBORBuildable,
+    roundTripsCBORShow,
+  )
+import Test.Cardano.Chain.Common.Example
+  ( exampleAddrSpendingData_VerKey,
+    exampleAddress,
+    exampleAddress1,
+    exampleAddress2,
+    exampleAddress3,
+    exampleAddress4,
+    exampleKeyHash,
+  )
+import Test.Cardano.Chain.Common.Gen
+  ( genAddrAttributes,
+    genAddrSpendingData,
+    genAddrType,
+    genAddress,
+    genAttributes,
+    genBlockCount,
+    genChainDifficulty,
+    genKeyHash,
+    genLovelace,
+    genLovelaceError,
+    genLovelacePortion,
+    genMerkleRoot,
+    genMerkleTree,
+    genTxFeePolicy,
+    genTxSizeLinear,
+  )
 import Test.Cardano.Crypto.CBOR (getBytes)
 import Test.Cardano.Crypto.Gen (genHashRaw)
+import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
-import Hedgehog  ((===), cover, forAll, property)
-
 
 --------------------------------------------------------------------------------
 -- CRC encoding
@@ -129,7 +128,7 @@ ts_roundTripAddressCBOR = eachOfTS 1000 genAddress roundTripsCBORBuildable
 
 ts_roundTripAddress :: TSProperty
 ts_roundTripAddress =
-  eachOfTS 1000 genAddress $ \ addr -> do
+  eachOfTS 1000 genAddress $ \addr -> do
     cover 30 "Redeem Address" $ isRedeemAddress addr
     cover 30 "Pubkey Address" $ not (isRedeemAddress addr)
     decodeAddressBase58 (encodeAddressBase58 addr) === Right addr
@@ -139,18 +138,19 @@ ts_roundTripAddress =
 --------------------------------------------------------------------------------
 golden_AddrSpendingData_VerKey :: Property
 golden_AddrSpendingData_VerKey =
-  goldenTestCBOR exampleAddrSpendingData_VerKey
-                 "test/golden/cbor/common/AddrSpendingData_VerKey"
+  goldenTestCBOR
+    exampleAddrSpendingData_VerKey
+    "test/golden/cbor/common/AddrSpendingData_VerKey"
 
 golden_AddrSpendingData_Redeem :: Property
 golden_AddrSpendingData_Redeem =
   goldenTestCBOR asd "test/golden/cbor/common/AddrSpendingData_Redeem"
- where
-  asd = RedeemASD redeemVerificationKey
-  redeemVerificationKey =
-    case fst <$> redeemDeterministicKeyGen (getBytes 0 32) of
-      Nothing -> panic "golden_AddrSpendingData_Redeem: impossible"
-      Just rk -> rk
+  where
+    asd = RedeemASD redeemVerificationKey
+    redeemVerificationKey =
+      case fst <$> redeemDeterministicKeyGen (getBytes 0 32) of
+        Nothing -> panic "golden_AddrSpendingData_Redeem: impossible"
+        Just rk -> rk
 
 ts_roundTripAddrSpendingDataCBOR :: TSProperty
 ts_roundTripAddrSpendingDataCBOR =
@@ -173,7 +173,8 @@ ts_roundTripAddrTypeCBOR = eachOfTS 1000 genAddrType roundTripsCBORShow
 --------------------------------------------------------------------------------
 golden_BlockCount :: Property
 golden_BlockCount = goldenTestCBOR bc "test/golden/cbor/common/BlockCount"
-  where bc = BlockCount 999
+  where
+    bc = BlockCount 999
 
 ts_roundTripBlockCountCBOR :: TSProperty
 ts_roundTripBlockCountCBOR = eachOfTS 1000 genBlockCount roundTripsCBORBuildable
@@ -184,8 +185,8 @@ ts_roundTripBlockCountCBOR = eachOfTS 1000 genBlockCount roundTripsCBORBuildable
 golden_ChainDifficulty :: Property
 golden_ChainDifficulty =
   goldenTestCBOR cd "test/golden/cbor/common/ChainDifficulty"
- where
-  cd = ChainDifficulty 9999
+  where
+    cd = ChainDifficulty 9999
 
 ts_roundTripChainDifficultyCBOR :: TSProperty
 ts_roundTripChainDifficultyCBOR =
@@ -196,7 +197,8 @@ ts_roundTripChainDifficultyCBOR =
 --------------------------------------------------------------------------------
 golden_Lovelace :: Property
 golden_Lovelace = goldenTestCBOR c "test/golden/cbor/common/Lovelace"
-  where c = mkKnownLovelace @9732
+  where
+    c = mkKnownLovelace @9732
 
 ts_roundTripLovelaceCBOR :: TSProperty
 ts_roundTripLovelaceCBOR = eachOfTS 1000 genLovelace roundTripsCBORBuildable
@@ -214,13 +216,12 @@ ts_roundTripLovelaceErrorCBOR =
 golden_LovelacePortion :: Property
 golden_LovelacePortion =
   goldenTestCBOR c "test/golden/cbor/common/LovelacePortion"
- where
-  c = rationalToLovelacePortion 9702e-15
+  where
+    c = rationalToLovelacePortion 9702e-15
 
 ts_roundTripLovelacePortionCBOR :: TSProperty
 ts_roundTripLovelacePortionCBOR =
   eachOfTS 1000 genLovelacePortion roundTripsCBORBuildable
-
 
 --------------------------------------------------------------------------------
 -- KeyHash
@@ -239,10 +240,10 @@ ts_roundTripKeyHashCBOR =
 golden_TxFeePolicy_Linear :: Property
 golden_TxFeePolicy_Linear =
   goldenTestCBOR tfp "test/golden/cbor/common/TxFeePolicy_Linear"
- where
-  tfp = TxFeePolicyTxSizeLinear (TxSizeLinear c1 c2)
-  c1 = mkKnownLovelace @99
-  c2 = 777 :: Rational
+  where
+    tfp = TxFeePolicyTxSizeLinear (TxSizeLinear c1 c2)
+    c1 = mkKnownLovelace @99
+    c2 = 777 :: Rational
 
 ts_roundTripTxFeePolicyCBOR :: TSProperty
 ts_roundTripTxFeePolicyCBOR =
@@ -254,10 +255,10 @@ ts_roundTripTxFeePolicyCBOR =
 golden_TxSizeLinear :: Property
 golden_TxSizeLinear =
   goldenTestCBOR tsl "test/golden/cbor/common/TxSizeLinear"
- where
-  tsl = TxSizeLinear c1 c2
-  c1 = mkKnownLovelace @99
-  c2 = 777 :: Rational
+  where
+    tsl = TxSizeLinear c1 c2
+    c1 = mkKnownLovelace @99
+    c2 = 777 :: Rational
 
 ts_roundTripTxSizeLinearCBOR :: TSProperty
 ts_roundTripTxSizeLinearCBOR =
@@ -268,7 +269,8 @@ ts_roundTripTxSizeLinearCBOR =
 --------------------------------------------------------------------------------
 golden_Attributes :: Property
 golden_Attributes = goldenTestCBOR attrib "test/golden/cbor/common/Attributes"
-    where attrib = mkAttributes ()
+  where
+    attrib = mkAttributes ()
 
 ts_roundTripAttributes :: TSProperty
 ts_roundTripAttributes =
@@ -279,8 +281,8 @@ ts_roundTripAttributes =
 --------------------------------------------------------------------------------
 golden_MerkleTree :: Property
 golden_MerkleTree = goldenTestCBOR mTree "test/golden/cbor/common/MerkleTree"
-    where mTree = mkMerkleTree [(abstractHash $ Raw ("9") :: Hash Raw)]
-
+  where
+    mTree = mkMerkleTree [(abstractHash $ Raw ("9") :: Hash Raw)]
 
 ts_roundTripMerkleTree :: TSProperty
 ts_roundTripMerkleTree =
@@ -291,7 +293,8 @@ ts_roundTripMerkleTree =
 --------------------------------------------------------------------------------
 golden_MerkleRoot :: Property
 golden_MerkleRoot = goldenTestCBOR mTree "test/golden/cbor/common/MerkleRoot"
-    where mTree = mtRoot $ mkMerkleTree [(abstractHash $ Raw ("9") :: Hash Raw)]
+  where
+    mTree = mtRoot $ mkMerkleTree [(abstractHash $ Raw ("9") :: Hash Raw)]
 
 ts_roundTripMerkleRoot :: TSProperty
 ts_roundTripMerkleRoot =
@@ -303,36 +306,55 @@ ts_roundTripMerkleRoot =
 sizeEstimates :: H.Group
 sizeEstimates =
   let check :: forall a. (Show a, ToCBOR a) => Gen a -> Property
-      check g = sizeTest $ scfg { gen = g }
+      check g = sizeTest $ scfg {gen = g}
 
       -- Explicit bounds for types, based on the generators from Gen.
-      attrUnitSize = (typeRep (Proxy @(Attributes ()))
-                     , SizeConstant 1)
-      attrAddrSize = (typeRep (Proxy @(Attributes AddrAttributes)),
-                      SizeConstant (szCases [ Case "min" 1, Case "max" 1024 ]))
-
-  in H.Group "Encoded size bounds for core types."
-        [ ("Lovelace"             , check genLovelace)
-        , ("BlockCount"           , check genBlockCount)
-        , ("Attributes ()"        , sizeTest $ scfg
-              { gen = genAttributes (pure ())
-              , addlCtx = M.fromList [ attrUnitSize ]
-              })
-        , ("Attributes AddrAttributes", sizeTest $ scfg
-              { gen = genAttributes genAddrAttributes
-              , addlCtx = M.fromList [ attrAddrSize ]
-              })
-        , ("Address"              , sizeTest $ scfg
-              { gen = genAddress
-              , addlCtx = M.fromList [ attrAddrSize ]
-              })
-        , ("AddrSpendingData"     , sizeTest $ scfg
-              { gen = genAddrSpendingData
-              , addlCtx = M.fromList
-                  [ (typeRep (Proxy @AddrSpendingData),
-                     SelectCases ["VerKeyASD", "RedeemASD"])
-                  ] })
-        , ("AddrType"             , check genAddrType)
+      attrUnitSize =
+        ( typeRep (Proxy @(Attributes ())),
+          SizeConstant 1
+        )
+      attrAddrSize =
+        ( typeRep (Proxy @(Attributes AddrAttributes)),
+          SizeConstant (szCases [Case "min" 1, Case "max" 1024])
+        )
+   in H.Group
+        "Encoded size bounds for core types."
+        [ ("Lovelace", check genLovelace),
+          ("BlockCount", check genBlockCount),
+          ( "Attributes ()",
+            sizeTest $
+              scfg
+                { gen = genAttributes (pure ()),
+                  addlCtx = M.fromList [attrUnitSize]
+                }
+          ),
+          ( "Attributes AddrAttributes",
+            sizeTest $
+              scfg
+                { gen = genAttributes genAddrAttributes,
+                  addlCtx = M.fromList [attrAddrSize]
+                }
+          ),
+          ( "Address",
+            sizeTest $
+              scfg
+                { gen = genAddress,
+                  addlCtx = M.fromList [attrAddrSize]
+                }
+          ),
+          ( "AddrSpendingData",
+            sizeTest $
+              scfg
+                { gen = genAddrSpendingData,
+                  addlCtx =
+                    M.fromList
+                      [ ( typeRep (Proxy @AddrSpendingData),
+                          SelectCases ["VerKeyASD", "RedeemASD"]
+                        )
+                      ]
+                }
+          ),
+          ("AddrType", check genAddrType)
         ]
 
 --------------------------------------------------------------------------------
@@ -340,5 +362,6 @@ sizeEstimates =
 --------------------------------------------------------------------------------
 
 tests :: TSGroup
-tests = concatTSGroups
-  [const $$discoverGolden, $$discoverRoundTripArg, const sizeEstimates]
+tests =
+  concatTSGroups
+    [const $$discoverGolden, $$discoverRoundTripArg, const sizeEstimates]

@@ -13,7 +13,19 @@ module Shelley.Spec.Ledger.Bench.Rewards
 where
 
 import Cardano.Crypto.VRF (hashVerKeyVRF)
+import Cardano.Ledger.Address
+  ( Addr (..),
+    mkRwdAcnt,
+  )
+import Cardano.Ledger.BaseTypes
+  ( Globals (activeSlotCoeff, securityParameter),
+    Network (Testnet),
+    StrictMaybe (..),
+    epochInfo,
+  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)
@@ -26,19 +38,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Cardano.Ledger.Address
-  ( Addr (..),
-    mkRwdAcnt,
-  )
-import Cardano.Ledger.BaseTypes
-  ( Globals (activeSlotCoeff, securityParameter),
-    Network (Testnet),
-    StrictMaybe (..),
-    epochInfo,
-  )
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Genesis (ShelleyGenesisStaking (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
 import qualified Shelley.Spec.Ledger.LedgerState as LS
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
@@ -55,7 +55,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
     GenEnv (..),
-    ScriptSpace(..),
+    ScriptSpace (..),
     geConstants,
     geKeySpace,
     ksStakePools,

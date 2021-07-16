@@ -3,20 +3,20 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Export the EraGen instance for MaryEra, as well as some reusable functions for future Eras
-module Test.Cardano.Ledger.MaryEraGen (genMint,maryGenesisValue,policyIndex,addTokens) where
-
+module Test.Cardano.Ledger.MaryEraGen (genMint, maryGenesisValue, policyIndex, addTokens) where
 
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core (AuxiliaryData, Value, PParams, TxOut)
+import qualified Cardano.Ledger.Core as Core (AuxiliaryData, PParams, TxOut, Value)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Mary.Value
@@ -27,18 +27,21 @@ import Cardano.Ledger.Mary.Value
   )
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (StrictMaybe, TxBody (TxBody))
+import Cardano.Ledger.ShelleyMA.TxBody (TxBody (TxBody))
+import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
+import Control.Monad (replicateM)
 import qualified Data.ByteString.Char8 as BS
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq (..), (<|), (><))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import GHC.Records (HasField (getField))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
-import Shelley.Spec.Ledger.Tx (TxIn, TxOut (..), hashScript)
+import Shelley.Spec.Ledger.Tx (TxIn, TxOut (..), hashScript, pattern WitnessSet)
 import Shelley.Spec.Ledger.TxBody (DCert, Wdrl)
 import Test.Cardano.Ledger.AllegraEraGen
   ( genValidityInterval,
@@ -52,20 +55,13 @@ import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genInteger)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..),MinGenTxout(..))
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), MinGenTxout (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( ScriptClass (..),
     exponential,
   )
+import Test.Shelley.Spec.Ledger.Generator.Update (genPParams, genShelleyPParamsDelta)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
-import Test.Shelley.Spec.Ledger.Generator.Update(genShelleyPParamsDelta)
-import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
-import Shelley.Spec.Ledger.Tx(pattern WitnessSet)
-import Data.Proxy(Proxy(..))
-import GHC.Records(HasField(getField))
-import Cardano.Ledger.Val((<+>))
-import Control.Monad (replicateM)
-
 
 {------------------------------------------------------------------------------
  EraGen instance for MaryEra - This instance makes it possible to run the
@@ -107,9 +103,9 @@ genAuxiliaryData Constants {frequencyTxWithMetadata} =
     ]
 
 -- | Carefully crafted to apply in any Era where Core.Value is Value
-maryGenesisValue :: forall era crypto. CryptoClass.Crypto crypto =>  GenEnv era -> Gen(Value crypto)
+maryGenesisValue :: forall era crypto. CryptoClass.Crypto crypto => GenEnv era -> Gen (Value crypto)
 maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
-    Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
+  Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 
 --------------------------------------------------------
 -- Permissionless Tokens                              --
@@ -252,28 +248,27 @@ genMint = do
 -- END Permissionless Tokens --
 -------------------------------
 
-
 -- | Carefully crafted to apply to any Era where Core.Value is Value
 -- We attempt to Add tokens to a non-empty list of transaction outputs.
 -- It will add them to the first output that has enough lovelace
 -- to meet the minUTxO requirment, if such an output exists.
-addTokens :: forall era.
+addTokens ::
+  forall era.
   ( EraGen era,
     Core.Value era ~ Value (Crypto era)
   ) =>
   Proxy era ->
-  StrictSeq (Core.TxOut era) ->  -- This is an accumuating parameter
+  StrictSeq (Core.TxOut era) -> -- This is an accumuating parameter
   Core.PParams era ->
   Value (Crypto era) ->
   StrictSeq (Core.TxOut era) ->
   Maybe (StrictSeq (Core.TxOut era))
 addTokens proxy tooLittleLovelace pparams ts (txout :<| os) =
-      let v = getField @"value" txout
-      in if Val.coin v < scaledMinDeposit v (getField @"_minUTxOValue" pparams)
-            then addTokens proxy (txout :<| tooLittleLovelace) pparams ts os
-            else (Just $ tooLittleLovelace >< addValToTxOut @era ts txout <| os)
+  let v = getField @"value" txout
+   in if Val.coin v < scaledMinDeposit v (getField @"_minUTxOValue" pparams)
+        then addTokens proxy (txout :<| tooLittleLovelace) pparams ts os
+        else (Just $ tooLittleLovelace >< addValToTxOut @era ts txout <| os)
 addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
-
 
 -- | This function is only good in the Mary Era
 genTxBody ::
@@ -323,11 +318,10 @@ instance Split (Value era) where
         Coin (n `rem` m)
       )
 
-
 instance Mock c => MinGenTxout (MaryEra c) where
   calcEraMinUTxO _txout pp = (_minUTxOValue pp)
   addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
-     values <- replicateM (length addrs) genVal
-     let  makeTxOut (addr,val) = TxOut addr val
-     pure (makeTxOut <$> zip addrs values)
+    values <- replicateM (length addrs) genVal
+    let makeTxOut (addr, val) = TxOut addr val
+    pure (makeTxOut <$> zip addrs values)

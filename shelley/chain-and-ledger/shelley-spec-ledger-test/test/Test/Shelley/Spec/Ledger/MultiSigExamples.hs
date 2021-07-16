@@ -18,12 +18,34 @@ module Test.Shelley.Spec.Ledger.MultiSigExamples
 where
 
 import qualified Cardano.Crypto.Hash as Hash
+import Cardano.Ledger.Address
+  ( Addr,
+    pattern Addr,
+  )
+import Cardano.Ledger.BaseTypes
+  ( Network (..),
+    StrictMaybe (..),
+    maybeToStrictMaybe,
+  )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential
+  ( pattern KeyHashObj,
+    pattern ScriptHashObj,
+    pattern StakeRefBase,
+  )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Keys
+  ( GenDelegs (..),
+    KeyHash (..),
+    KeyPair,
+    KeyRole (..),
+    asWitness,
+  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Foldable (fold)
@@ -36,27 +58,6 @@ import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.API
   ( ScriptHash,
     UTXOW,
-  )
-import Cardano.Ledger.Address
-  ( Addr,
-    pattern Addr,
-  )
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-    maybeToStrictMaybe,
-  )
-import Cardano.Ledger.Credential
-  ( pattern KeyHashObj,
-    pattern ScriptHashObj,
-    pattern StakeRefBase,
-  )
-import Cardano.Ledger.Keys
-  ( GenDelegs (..),
-    KeyHash (..),
-    KeyPair,
-    KeyRole (..),
-    asWitness,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( LedgerState (..),
@@ -74,7 +75,6 @@ import Shelley.Spec.Ledger.Scripts
     pattern RequireSignature,
     pattern ScriptHash,
   )
-import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxId,
@@ -224,7 +224,7 @@ initialUTxOState ::
   [(MultiSig c, Coin)] ->
   ( TxId c,
     Either
-      [[PredicateFailure (UTXOW (ShelleyEra c))]]
+      [PredicateFailure (UTXOW (ShelleyEra c))]
       (UTxOState (ShelleyEra c))
   )
 initialUTxOState aliceKeep msigs =
@@ -276,7 +276,7 @@ applyTxWithScript ::
   Wdrl c ->
   Coin ->
   [KeyPair 'Witness c] ->
-  Either [[PredicateFailure (UTXOW (ShelleyEra c))]] (UTxOState (ShelleyEra c))
+  Either [PredicateFailure (UTXOW (ShelleyEra c))] (UTxOState (ShelleyEra c))
 applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
   where
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts

@@ -10,7 +10,9 @@ module Test.Cardano.Ledger.Mary.Examples.MultiAssets
   )
 where
 
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Keys (KeyPair (..), asWitness, hashKey)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
@@ -21,6 +23,7 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Exception (ErrorCall (ErrorCall), evaluate, try)
@@ -30,13 +33,10 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API (LEDGER, LedgerEnv (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Keys (KeyPair (..), asWitness, hashKey)
 import Shelley.Spec.Ledger.LedgerState (AccountState (..))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),
@@ -129,18 +129,15 @@ makeTxb ins outs interval minted =
     SNothing
     minted
 
-policyFailure :: PolicyID TestCrypto -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
+policyFailure :: PolicyID TestCrypto -> Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest)
 policyFailure p =
   Left
-    [ [ UtxowFailure
-          ( ScriptWitnessNotValidatingUTXOW
-              (Set.singleton (policyID p))
-          )
-      ]
+    [ UtxowFailure
+        (ScriptWitnessNotValidatingUTXOW (Set.singleton (policyID p)))
     ]
 
-outTooBigFailure :: TxOut MaryTest -> Either [[PredicateFailure (LEDGER MaryTest)]] (UTxO MaryTest)
-outTooBigFailure out = Left [[UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]]
+outTooBigFailure :: TxOut MaryTest -> Either [PredicateFailure (LEDGER MaryTest)] (UTxO MaryTest)
+outTooBigFailure out = Left [UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))]
 
 ----------------------------------------------------
 -- Introduce a new Token Bundle, Purple Tokens

@@ -1,36 +1,43 @@
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Options
-  ( TestScenario(..)
-  , mainWithTestScenario
-  , scenarioScaled
-  , scenarioScaleDefault
-  , eachOfTS
-  , withTestsTS
-  , TSProperty
-  , TSGroup
-  , concatGroups
-  , concatTSGroups
-  , tsGroupToTree
-  , ShouldAssertNF (..)
+  ( TestScenario (..),
+    mainWithTestScenario,
+    scenarioScaled,
+    scenarioScaleDefault,
+    eachOfTS,
+    withTestsTS,
+    TSProperty,
+    TSGroup,
+    concatGroups,
+    concatTSGroups,
+    tsGroupToTree,
+    ShouldAssertNF (..),
   )
 where
 
 import Cardano.Prelude hiding (Option)
+import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)
+import Hedgehog.Internal.Property (GroupName (..), PropertyName (..))
 import Test.Cardano.Prelude
-
-import Hedgehog (Gen, Group(..), Property, PropertyT, TestLimit, withTests)
-import Hedgehog.Internal.Property (GroupName(..), PropertyName(..))
 import Test.Tasty
-  (TestTree, askOption, defaultMainWithIngredients, includingOptions, testGroup)
+  ( TestTree,
+    askOption,
+    defaultMainWithIngredients,
+    includingOptions,
+    testGroup,
+  )
 import Test.Tasty.Hedgehog (testProperty)
-import Test.Tasty.Ingredients (Ingredient(..), composeReporters)
+import Test.Tasty.Ingredients (Ingredient (..), composeReporters)
 import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
 import Test.Tasty.Options
-  (IsOption(..), OptionDescription(..), lookupOption, safeRead)
-
+  ( IsOption (..),
+    OptionDescription (..),
+    lookupOption,
+    safeRead,
+  )
 
 --------------------------------------------------------------------------------
 -- TestScenario
@@ -55,17 +62,17 @@ logScenario = TestReporter [] $ \options _ -> Just $ \_ -> do
   pure (const (pure True))
 
 mainWithTestScenario :: TestTree -> IO ()
-mainWithTestScenario = defaultMainWithIngredients
-  [ includingOptions [Option (Proxy @TestScenario)]
-  , listingTests
-  , composeReporters logScenario consoleTestReporter
-  ]
+mainWithTestScenario =
+  defaultMainWithIngredients
+    [ includingOptions [Option (Proxy @TestScenario)],
+      listingTests,
+      composeReporters logScenario consoleTestReporter
+    ]
 
 helpText :: [Char]
 helpText =
   "Run under one of Development (default), ContinuousIntegration, or "
     <> "QualityAssurance, to affect how tests are run"
-
 
 --------------------------------------------------------------------------------
 -- TestLimit scaling functions & helpers
@@ -75,7 +82,7 @@ helpText =
 type TSGroup = TestScenario -> Group
 
 concatGroups :: [Group] -> Group
-concatGroups []         = panic "concatGroups: No tests in test Group"
+concatGroups [] = panic "concatGroups: No tests in test Group"
 concatGroups gs@(g : _) = Group (groupName g) (concat $ groupProperties <$> gs)
 
 concatTSGroups :: [TSGroup] -> TSGroup
@@ -83,10 +90,10 @@ concatTSGroups gs ts = concatGroups $ ($ ts) <$> gs
 
 tsGroupToTree :: TSGroup -> TestTree
 tsGroupToTree tsGroup = askOption $ \scenario -> case tsGroup scenario of
-  Group { groupName, groupProperties } -> testGroup
-    (unGroupName groupName)
-    (uncurry testProperty . first unPropertyName <$> groupProperties)
-
+  Group {groupName, groupProperties} ->
+    testGroup
+      (unGroupName groupName)
+      (uncurry testProperty . first unPropertyName <$> groupProperties)
 
 -- | Convenient alias for TestScenario-dependent @Property@s
 type TSProperty = TestScenario -> Property
@@ -114,32 +121,34 @@ scenarioScaleDefault ts = case ts of
 scenarioScaled :: TestLimit -> TestScenario -> TestLimit
 scenarioScaled count ts =
   if scaledCount > 0
-     then scaledCount
-     else panic $ "scenarioScaled: produced a non-positive TestLimit: "
-               <> show scaledCount
- where
-  scaledCount :: TestLimit
-  scaledCount = round . ((count%1) *) $ scenarioScaleDefault ts
+    then scaledCount
+    else
+      panic $
+        "scenarioScaled: produced a non-positive TestLimit: "
+          <> show scaledCount
+  where
+    scaledCount :: TestLimit
+    scaledCount = round . ((count % 1) *) $ scenarioScaleDefault ts
 
 -- | A modified `eachOf` which uses the default TestScenario values,
 -- multiplied by a scalar
-eachOfTS
-  :: (Show a, HasCallStack)
-  => TestLimit
-  -> Gen a
-  -> (a -> PropertyT IO ())
-  -> TestScenario
-  -> Property
+eachOfTS ::
+  (Show a, HasCallStack) =>
+  TestLimit ->
+  Gen a ->
+  (a -> PropertyT IO ()) ->
+  TestScenario ->
+  Property
 eachOfTS count gen predicate scenario =
   withFrozenCallStack $ eachOf (scenarioScaled count scenario) gen predicate
 
 -- | A modified `withTests` which uses the default TestScenario values,
 -- multiplied by a scalar
-withTestsTS
-  :: TestLimit
-  -> Property
-  -> TestScenario
-  -> Property
+withTestsTS ::
+  TestLimit ->
+  Property ->
+  TestScenario ->
+  Property
 withTestsTS count prop scenario =
   withTests (scenarioScaled count scenario) prop
 

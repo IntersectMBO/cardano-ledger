@@ -15,11 +15,18 @@ module Test.Shelley.Spec.Ledger.Examples.PoolReReg
   )
 where
 
+import Cardano.Ledger.BaseTypes
+  ( Globals (..),
+    Nonce,
+    StrictMaybe (..),
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.Map.Strict as Map
@@ -27,19 +34,12 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    Nonce,
-    StrictMaybe (..),
-  )
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import Shelley.Spec.Ledger.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
-import Cardano.Ledger.Keys (asWitness)
 import Shelley.Spec.Ledger.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),

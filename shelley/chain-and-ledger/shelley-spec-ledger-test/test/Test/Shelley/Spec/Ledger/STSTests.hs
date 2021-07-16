@@ -9,13 +9,13 @@ module Test.Shelley.Spec.Ledger.STSTests
   )
 where
 
+import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Credential (pattern ScriptHashObj)
+import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
 import Data.Either (isRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
-import Cardano.Ledger.BaseTypes (Network (..))
-import Cardano.Ledger.Credential (pattern ScriptHashObj)
-import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (WitHashes (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
@@ -108,7 +108,7 @@ testAliceSignsAlone =
 
 testAliceDoesntSign :: Assertion
 testAliceDoesntSign =
-  utxoSt' @?= Left [[ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript @C aliceOnly)]]
+  utxoSt' @?= Left [ScriptWitnessNotValidatingUTXOW (Set.singleton $ hashScript @C aliceOnly)]
   where
     utxoSt' =
       applyTxWithScript
@@ -139,7 +139,7 @@ testEverybodySigns =
 
 testWrongScript :: Assertion
 testWrongScript =
-  utxoSt' @?= Left [[MissingScriptWitnessesUTXOW (Set.singleton $ hashScript @C aliceOnly)]]
+  utxoSt' @?= Left [MissingScriptWitnessesUTXOW (Set.singleton $ hashScript @C aliceOnly)]
   where
     utxoSt' =
       applyTxWithScript
@@ -196,9 +196,8 @@ testAliceAndBob' :: Assertion
 testAliceAndBob' =
   utxoSt'
     @?= Left
-      [ [ ScriptWitnessNotValidatingUTXOW
-            (Set.singleton $ hashScript @C aliceAndBob)
-        ]
+      [ ScriptWitnessNotValidatingUTXOW
+          (Set.singleton $ hashScript @C aliceAndBob)
       ]
   where
     utxoSt' =
@@ -214,9 +213,8 @@ testAliceAndBob'' :: Assertion
 testAliceAndBob'' =
   utxoSt'
     @?= Left
-      [ [ ScriptWitnessNotValidatingUTXOW
-            (Set.singleton $ hashScript @C aliceAndBob)
-        ]
+      [ ScriptWitnessNotValidatingUTXOW
+          (Set.singleton $ hashScript @C aliceAndBob)
       ]
   where
     utxoSt' =
@@ -350,9 +348,8 @@ testTwoScripts' :: Assertion
 testTwoScripts' =
   utxoSt'
     @?= Left
-      [ [ ScriptWitnessNotValidatingUTXOW
-            (Set.singleton $ hashScript @C aliceAndBob)
-        ]
+      [ ScriptWitnessNotValidatingUTXOW
+          (Set.singleton $ hashScript @C aliceAndBob)
       ]
   where
     utxoSt' =
@@ -388,9 +385,8 @@ testScriptAndSKey' :: Assertion
 testScriptAndSKey' =
   utxoSt'
     @?= Left
-      [ [ MissingVKeyWitnessesUTXOW $
-            WitHashes wits
-        ]
+      [ MissingVKeyWitnessesUTXOW $
+          WitHashes wits
       ]
   where
     utxoSt' =
@@ -458,9 +454,8 @@ testRwdAliceSignsAlone' :: Assertion
 testRwdAliceSignsAlone' =
   utxoSt'
     @?= Left
-      [ [ ScriptWitnessNotValidatingUTXOW
-            (Set.singleton $ hashScript @C bobOnly)
-        ]
+      [ ScriptWitnessNotValidatingUTXOW
+          (Set.singleton $ hashScript @C bobOnly)
       ]
   where
     utxoSt' =
@@ -508,11 +503,10 @@ testRwdAliceSignsAlone''' :: Assertion
 testRwdAliceSignsAlone''' =
   utxoSt'
     @?= Left
-      [ [ MissingScriptWitnessesUTXOW
-            ( Set.singleton $
-                hashScript @C bobOnly
-            )
-        ]
+      [ MissingScriptWitnessesUTXOW
+          ( Set.singleton $
+              hashScript @C bobOnly
+          )
       ]
   where
     utxoSt' =

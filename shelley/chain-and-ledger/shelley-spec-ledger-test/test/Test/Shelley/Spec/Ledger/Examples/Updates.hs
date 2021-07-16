@@ -14,25 +14,30 @@ module Test.Shelley.Spec.Ledger.Examples.Updates
   )
 where
 
-import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as Cr
-import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Val ((<+>), (<->))
-import qualified Cardano.Ledger.Val as Val
-import qualified Data.Map.Strict as Map
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
 import Cardano.Ledger.BaseTypes
   ( Nonce,
     StrictMaybe (..),
     mkNonceFromNumber,
     (⭒),
   )
+import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Crypto as Cr
+import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Keys (asWitness, hashKey)
+import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot
+  ( BlockNo (..),
+    EpochNo (..),
+    SlotNo (..),
+  )
+import Cardano.Ledger.Val ((<+>), (<->))
+import qualified Cardano.Ledger.Val as Val
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
 import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Keys (asWitness, hashKey)
 import Shelley.Spec.Ledger.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams
@@ -43,11 +48,6 @@ import Shelley.Spec.Ledger.PParams
     Update (..),
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    EpochNo (..),
-    SlotNo (..),
-  )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),

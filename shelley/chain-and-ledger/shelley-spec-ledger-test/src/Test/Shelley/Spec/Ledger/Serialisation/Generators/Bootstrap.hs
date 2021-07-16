@@ -15,10 +15,10 @@ module Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
 where
 
 import qualified Cardano.Crypto.DSIGN as DSIGN
-import Data.Maybe (fromJust)
 import Cardano.Ledger.Address
   ( BootstrapAddress (..),
   )
+import Data.Maybe (fromJust)
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import Test.Cardano.Prelude (genBytes)
 import Test.QuickCheck (Gen)

@@ -1,5 +1,5 @@
 module Cardano.Chain.Slotting
-  ( module X
+  ( module X,
   )
 where
 

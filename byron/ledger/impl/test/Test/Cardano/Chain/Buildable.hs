@@ -1,38 +1,33 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Chain.Buildable
-  ( tests
+  ( tests,
   )
 where
 
-import Cardano.Prelude
-import Test.Cardano.Prelude
-
-import Formatting (Buildable, build, sformat)
-
 import Cardano.Chain.Common
-  ( Attributes(Attributes)
-  , UnparsedFields(UnparsedFields)
+  ( Attributes (Attributes),
+    UnparsedFields (UnparsedFields),
   )
-
+import Cardano.Prelude
+import Formatting (Buildable, build, sformat)
 import Hedgehog (PropertyT, eval, property)
-
-import qualified Test.Cardano.Chain.Block.Gen as Block
 import Test.Cardano.Chain.Block.Gen
-  ( genBlockSignature
-  , genBlockWithEpochSlots
-  , genHeader
+  ( genBlockSignature,
+    genBlockWithEpochSlots,
+    genHeader,
   )
+import qualified Test.Cardano.Chain.Block.Gen as Block
 import qualified Test.Cardano.Chain.Common.Gen as Common
 import qualified Test.Cardano.Chain.Delegation.Gen as Delegation
 import qualified Test.Cardano.Chain.Genesis.Gen as Genesis
-import qualified Test.Cardano.Chain.Slotting.Gen as Slotting
 import Test.Cardano.Chain.Slotting.Gen (feedPMEpochSlots)
-import qualified Test.Cardano.Chain.Update.Gen as Update
+import qualified Test.Cardano.Chain.Slotting.Gen as Slotting
 import qualified Test.Cardano.Chain.UTxO.Gen as UTxO
+import qualified Test.Cardano.Chain.Update.Gen as Update
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, eachOfTS)
-
 
 --------------------------------------------------------------------------------
 -- Test helpers
@@ -44,7 +39,6 @@ tests = $$discoverPropArg
 -- | Check that the 'Buildable' instance for @a@ doesn't throw exceptions
 isBuildable :: Buildable a => a -> PropertyT IO ()
 isBuildable = void . eval . sformat build
-
 
 --------------------------------------------------------------------------------
 -- Block
@@ -67,7 +61,6 @@ ts_prop_headerIsBuildable =
 ts_prop_blockSignatureIsBuildable :: TSProperty
 ts_prop_blockSignatureIsBuildable =
   eachOfTS 100 (feedPMEpochSlots genBlockSignature) isBuildable
-
 
 --------------------------------------------------------------------------------
 -- Common
@@ -119,7 +112,6 @@ ts_prop_txSizeLinearIsBuildable :: TSProperty
 ts_prop_txSizeLinearIsBuildable =
   eachOfTS 100 Common.genTxSizeLinear isBuildable
 
-
 --------------------------------------------------------------------------------
 -- Delegation
 --------------------------------------------------------------------------------
@@ -132,7 +124,6 @@ ts_prop_delegationPayloadIsBuildable :: TSProperty
 ts_prop_delegationPayloadIsBuildable =
   eachOfTS 100 (feedPM Delegation.genPayload) isBuildable
 
-
 --------------------------------------------------------------------------------
 -- Genesis
 --------------------------------------------------------------------------------
@@ -144,7 +135,6 @@ ts_prop_genesisKeyHashesIsBuildable =
 ts_prop_genesisNonAvvmBalancesIsBuildable :: TSProperty
 ts_prop_genesisNonAvvmBalancesIsBuildable =
   eachOfTS 100 Genesis.genGenesisNonAvvmBalances isBuildable
-
 
 --------------------------------------------------------------------------------
 -- Slotting
@@ -169,7 +159,6 @@ ts_prop_slotCountIsBuildable = eachOfTS 100 Slotting.genSlotCount isBuildable
 
 ts_prop_slotNumberIsBuilable :: TSProperty
 ts_prop_slotNumberIsBuilable = eachOfTS 100 Slotting.genSlotNumber isBuildable
-
 
 --------------------------------------------------------------------------------
 -- Update
@@ -216,7 +205,6 @@ ts_prop_systemTagIsBuildable = eachOfTS 100 Update.genSystemTag isBuildable
 
 ts_prop_voteIsBuildable :: TSProperty
 ts_prop_voteIsBuildable = eachOfTS 100 (feedPM Update.genVote) isBuildable
-
 
 --------------------------------------------------------------------------------
 -- Update

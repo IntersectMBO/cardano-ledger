@@ -4,12 +4,11 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE PatternSynonyms #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Cardano.Ledger.AllegraEraGen
@@ -22,11 +21,14 @@ module Test.Cardano.Ledger.AllegraEraGen
 where
 
 import Cardano.Binary (serializeEncoding', toCBOR)
+import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
     UsesPParams,
@@ -37,34 +39,27 @@ import Cardano.Ledger.ShelleyMA.TxBody
   ( TxBody (..),
     ValidityInterval (ValidityInterval),
   )
-import Shelley.Spec.Ledger.Tx(pattern WitnessSet)
-import Cardano.Ledger.Allegra(AllegraEra)
-import Cardano.Ledger.Val (Val (zero))
+import Cardano.Ledger.Val (Val (zero), (<+>))
 import Cardano.Slotting.Slot (SlotNo (SlotNo))
+import Control.Monad (replicateM)
 import Data.Hashable (hash)
 import Data.Sequence.Strict (StrictSeq (..), fromList)
 import qualified Data.Set as Set
 import Shelley.Spec.Ledger.API (KeyRole (Witness))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
-import Cardano.Ledger.Keys (KeyHash)
-import Shelley.Spec.Ledger.PParams (PParams, Update)
-import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut(..), Wdrl)
+import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
+import Shelley.Spec.Ledger.Tx (pattern WitnessSet)
+import Shelley.Spec.Ledger.TxBody (DCert, TxIn, TxOut (..), Wdrl)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (Gen, arbitrary, frequency)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..))
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..),MinGenTxout(..))
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genCoin)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), MinGenTxout (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
-import Test.Shelley.Spec.Ledger.Generator.Update(genShelleyPParamsDelta)
-import Test.Shelley.Spec.Ledger.Generator.Core(genCoin)
-import Test.Shelley.Spec.Ledger.Generator.Update (genPParams)
-import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Cardano.Ledger.Val((<+>))
-import Control.Monad (replicateM)
+import Test.Shelley.Spec.Ledger.Generator.Update (genPParams, genShelleyPParamsDelta)
 
 -- ==========================================================
 
@@ -136,9 +131,9 @@ instance Mock c => MinGenTxout (AllegraEra c) where
   calcEraMinUTxO _txout pp = (_minUTxOValue pp)
   addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
-     values <- replicateM (length addrs) genVal
-     let makeTxOut (addr,val) = TxOut addr val
-     pure (makeTxOut <$> zip addrs values)
+    values <- replicateM (length addrs) genVal
+    let makeTxOut (addr, val) = TxOut addr val
+    pure (makeTxOut <$> zip addrs values)
 
 {------------------------------------------------------------------------------
   ShelleyMA helpers, shared by Allegra and Mary

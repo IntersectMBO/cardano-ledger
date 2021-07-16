@@ -1,6 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstrainedClassMethods #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -16,7 +17,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
-{-# LANGUAGE DeriveFunctor #-}
 
 module Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( ScriptClass (..),
@@ -44,14 +44,15 @@ import Cardano.Ledger.Core (Script)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (..),ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), ValidateScript (..))
+import Cardano.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), asWitness, hashKey, vKey)
+import Cardano.Ledger.Shelley.Constraints (UsesScript)
 import Data.List (permutations)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Proxy
 import Data.Tuple (swap)
 import Data.Word (Word64)
-import Cardano.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), asWitness, hashKey, vKey)
 import Shelley.Spec.Ledger.LedgerState (KeyPairs)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Test.QuickCheck (Gen)
@@ -59,8 +60,7 @@ import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
   )
-import Test.Shelley.Spec.Ledger.Utils (mkKeyPair, RawSeed(..))
-import Cardano.Ledger.Shelley.Constraints (UsesScript)
+import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), mkKeyPair)
 
 {------------------------------------------------------------------------------
   ScriptClass defines the operations that enable an Era's scripts to
@@ -87,7 +87,7 @@ class
  -----------------------------------------------------------------------------}
 
 data Quantifier t = AllOf [t] | AnyOf [t] | MOf Int [t] | Leaf t
-  deriving Functor
+  deriving (Functor)
 
 anyOf :: forall era. ScriptClass era => Proxy era -> [Script era] -> Script era
 anyOf prox xs = unQuantify prox $ AnyOf xs
@@ -97,8 +97,6 @@ allOf prox xs = unQuantify prox $ AllOf xs
 
 mOf :: forall era. ScriptClass era => Proxy era -> Int -> [Script era] -> Script era
 mOf prox m xs = unQuantify prox $ MOf m xs
-
-
 
 {------------------------------------------------------------------------------
   Compute lists of keyHashes
@@ -238,7 +236,6 @@ combinedScripts ::
   [(Core.Script era, Core.Script era)]
 combinedScripts c@(Constants {numBaseScripts}) =
   mkScriptCombinations @era . take numBaseScripts $ baseScripts @era c
-
 
 -- | Constant list of KeyPairs intended to be used in the generators.
 keyPairs :: CC.Crypto crypto => Constants -> KeyPairs crypto

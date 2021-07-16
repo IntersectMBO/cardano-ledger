@@ -1,7 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
-
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-missing-export-lists #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 -- | Module containing the imports needed to test that a given abstract trace
 -- passes the concrete validation. This is useful when debugging
@@ -13,23 +12,19 @@
 -- > Hedgehog.check $ property $ passConcreteValidation trace0
 --
 -- Replace @trace0@ by the trace under analysis.
---
 module Test.Cardano.Chain.Block.Model.Examples where
-
-import GHC.Exts
-import Cardano.Prelude hiding (trace, State)
-
-import Control.State.Transition
-import Control.State.Transition.Trace
-
-import Byron.Spec.Ledger.Core
-import Byron.Spec.Ledger.Delegation
-import Byron.Spec.Ledger.Update
-import Byron.Spec.Ledger.UTxO
-import Byron.Spec.Ledger.STS.UTXO
 
 import Byron.Spec.Chain.STS.Block
 import Byron.Spec.Chain.STS.Rule.Chain
+import Byron.Spec.Ledger.Core
+import Byron.Spec.Ledger.Delegation
+import Byron.Spec.Ledger.STS.UTXO
+import Byron.Spec.Ledger.UTxO
+import Byron.Spec.Ledger.Update
+import Cardano.Prelude hiding (State, trace)
+import Control.State.Transition
+import Control.State.Transition.Trace
+import GHC.Exts
 
 -- | A trace example. When debugging conformance tests you can add such a
 -- trace, and use it in the repl. __NOTE__: Do not commit such trace.

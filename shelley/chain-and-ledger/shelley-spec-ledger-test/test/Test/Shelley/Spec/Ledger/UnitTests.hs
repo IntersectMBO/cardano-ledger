@@ -15,8 +15,17 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 import Cardano.Binary (serialize')
 import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Address
+  ( Addr (..),
+    getRwdCred,
+    mkVKeyRwdAcnt,
+  )
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    StakeReference (..),
+  )
 import Cardano.Ledger.Crypto (DSIGN, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
@@ -28,6 +37,7 @@ import Cardano.Ledger.Keys
     vKey,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
@@ -47,16 +57,7 @@ import Shelley.Spec.Ledger.API
     LEDGER,
     LedgerEnv (..),
   )
-import Cardano.Ledger.Address
-  ( Addr (..),
-    getRwdCred,
-    mkVKeyRwdAcnt,
-  )
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    StakeReference (..),
-  )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -76,7 +77,6 @@ import Shelley.Spec.Ledger.STS.Ledger
 import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Cardano.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxBody (..),
@@ -312,7 +312,7 @@ testLEDGER ::
   (UTxOState C, DPState C_Crypto) ->
   Tx C ->
   LedgerEnv C ->
-  Either [[PredicateFailure (LEDGER C)]] (UTxOState C, DPState C_Crypto) ->
+  Either [PredicateFailure (LEDGER C)] (UTxOState C, DPState C_Crypto) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
   checkTrace @(LEDGER C) runShelleyBase env $ pure initSt .- tx .-> expectedSt
@@ -394,7 +394,7 @@ testInvalidTx ::
   Tx C ->
   Assertion
 testInvalidTx errs tx =
-  testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
+  testLEDGER (utxoState, dpState) tx ledgerEnv (Left errs)
 
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
@@ -516,7 +516,7 @@ testEmptyInputSet =
         (utxoState, dpState')
         tx
         ledgerEnv
-        (Left [[UtxowFailure (UtxoFailure InputSetEmptyUTxO)]])
+        (Left [UtxowFailure (UtxoFailure InputSetEmptyUTxO)])
 
 testFeeTooSmall :: Assertion
 testFeeTooSmall =
@@ -550,7 +550,7 @@ testExpiredTx =
               signers = ([asWitness alicePay])
             }
       ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp (AccountState (Coin 0) (Coin 0))
-   in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left [errs])
+   in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left errs)
 
 testInvalidWintess :: Assertion
 testInvalidWintess =
@@ -577,7 +577,7 @@ testInvalidWintess =
             InvalidWitnessesUTXOW
               [asWitness $ vKey alicePay]
         ]
-   in testLEDGER (utxoState, dpState) tx ledgerEnv (Left [errs])
+   in testLEDGER (utxoState, dpState) tx ledgerEnv (Left errs)
 
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
@@ -603,7 +603,7 @@ testWithdrawalNoWit =
         [ UtxowFailure . MissingVKeyWitnessesUTXOW $ WitHashes missing
         ]
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
-   in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
+   in testLEDGER (utxoState, dpState') tx ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
@@ -632,7 +632,7 @@ testWithdrawalWrongAmt =
       dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
       tx = Tx @C txb txwits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
-   in testLEDGER (utxoState, dpState') tx ledgerEnv (Left [errs])
+   in testLEDGER (utxoState, dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion
 testOutputTooSmall =

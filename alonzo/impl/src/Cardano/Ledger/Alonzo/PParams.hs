@@ -28,6 +28,7 @@ module Cardano.Ledger.Alonzo.PParams
     updatePParams,
     getLanguageView,
     LangDepView (..),
+    encodeLangViews,
     retractPP,
     extendPP,
     ppPParams,
@@ -39,7 +40,9 @@ import Cardano.Binary
   ( Encoding,
     FromCBOR (..),
     ToCBOR (..),
-    encodePreEncoded,
+    encodeNull,
+    serialize',
+    serializeEncoding',
   )
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1), ppLanguage)
 import Cardano.Ledger.Alonzo.Scripts
@@ -61,7 +64,6 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era
-import Cardano.Ledger.Hashes (EraIndependentPParamView)
 import Cardano.Ledger.Pretty
   ( PDoc,
     PrettyA (prettyA),
@@ -76,10 +78,6 @@ import Cardano.Ledger.Pretty
     ppStrictMaybe,
     ppUnitInterval,
   )
-import Cardano.Ledger.SafeHash
-  ( HashAnnotated (..),
-    SafeToHash (..),
-  )
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -88,7 +86,7 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
-import Data.ByteString.Short (fromShort)
+import Data.ByteString (ByteString)
 import Data.Coders
   ( Decode (..),
     Density (..),
@@ -104,13 +102,12 @@ import Data.Coders
   )
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity (..))
-import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.MemoBytes (MemoBytes (..), memoBytes)
-import Data.Typeable
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.Orphans ()
 import Shelley.Spec.Ledger.PParams (HKD, ProtVer (..))
@@ -505,109 +502,27 @@ updatePParams pp ppup =
 -- ===================================================
 -- Figure 1: "Definitions Used in Protocol Parameters"
 
--- The Language Depenedent View type (LangDepView) is a GADT, it will have a
--- different Constructor for each Language. This way each language can have a
--- different view of the Protocol parameters. This is an intermediate type and
--- we introduce it only because we are interested in combining it with other
--- things so we can hash the combination. Thus this type (and the other things
--- we combine it with) must remember their original bytes. We make it a data
--- type around a MemoBytes. Unfortunately we can't use a newtype, because the
--- constructor must existentially hide the Language index. Instances on GADT's
--- are a bit tricky so we are carefull in the comments below to explain them.
--- Because we intend to add new languages the GADT will someday end up with more
--- constructors. So we add some commented out code that suggests how to extend
--- the instances when that happens.
-
-data RawView :: Type -> Language -> Type where
-  RawPlutusView :: Maybe CostModel -> RawView era 'PlutusV1
-
--- RawOtherView :: Int -> RawView era 'OtherLANG
-
-deriving instance Eq (RawView era lang)
-
-deriving instance Ord (RawView era lang)
-
-deriving instance Show (RawView era lang)
-
-deriving instance Typeable (RawView era lang)
-
-deriving via InspectHeapNamed "RawView" (RawView e l) instance NoThunks (RawView e l)
-
-instance (Typeable era) => ToCBOR (LangDepView era) where
-  toCBOR (LangDepViewConstr (Memo _ bytes)) = encodePreEncoded (fromShort bytes)
-
-pattern PlutusView :: Maybe CostModel -> LangDepView era
-pattern PlutusView cm <-
-  LangDepViewConstr (Memo (RawPlutusView cm) _)
-  where
-    PlutusView cm = LangDepViewConstr (memoBytes (Sum RawPlutusView 0 !> To cm))
-
--- Note the tag 0 ^
-{- How to extend to another language
-pattern OtherView :: Int -> LangDepView era
-pattern OtherView n <- LangDepViewConstr (Memo (RawOtherView cm) _)
-  where OtherView n = LangDepViewConstr (memoBytes (Sum RawOtherView 1 !> To n))
-                                                  -- Note the tag 1  ^
--}
-
-{-# COMPLETE PlutusView {- OtherView -} #-}
-
-instance (Typeable era) => FromCBOR (LangDepView era) where
-  fromCBOR = decode $ Summands "LangDepView" decodeTag
-    where
-      decodeTag :: Word -> Decode 'Open (LangDepView era)
-      decodeTag 0 = SumD PlutusView <! From
-      -- decodeTag 1 = SumD OtherView <! From
-      -- Since Int has FromCBOR instance
-      decodeTag n = Invalid n
-
-data LangDepView era where
-  LangDepViewConstr :: (MemoBytes (RawView era lang)) -> LangDepView era
-
--- We can't derive SafeToHash via newtype deriving because LandDepViewConstr is
--- a data not a newtype. But it does remember its original bytes so we can add
--- the instance manually.
-
-instance SafeToHash (LangDepView era) where
-  originalBytes (LangDepViewConstr (Memo _ bs)) = fromShort bs
-
-instance
-  (Crypto era ~ c) =>
-  HashAnnotated (LangDepView era) EraIndependentPParamView c
-
-deriving via
-  InspectHeapNamed "LangDepView" (LangDepView e)
-  instance
-    NoThunks (LangDepView e)
-
-instance Show (LangDepView era) where
-  show (PlutusView x) = show x
-
--- show (OtherView n) = Show n
-
-instance Eq (LangDepView era) where
-  (PlutusView x) == (PlutusView y) = x == y
-
--- (OtherView n) == (OtherView m) = n==m
---  _ == _ = False
-
-instance Ord (LangDepView era) where
-  compare (PlutusView x) (PlutusView y) = compare x y
-
--- compare (OtherView n) (OtherView m) = compare n m
--- compare x y = compare (rank x) (rank y)
---   where rank :: LangDepView era -> Int
---         rank (PlutusView _) = 1
---         rank (OtherView _) = 2
+-- The LangDepView is a key value pair. The key is the (canonically) encoded
+-- language tag and the value is the (canonically) encoded set of relevant
+-- protocol parameters
+data LangDepView = LangDepView {tag :: ByteString, params :: ByteString}
+  deriving (Eq, Show, Ord, Generic, NoThunks)
 
 getLanguageView ::
   forall era.
   PParams era ->
   Language ->
-  (LangDepView era)
-getLanguageView pp PlutusV1 = PlutusView (Map.lookup PlutusV1 (_costmdls pp))
+  LangDepView
+getLanguageView pp lang@PlutusV1 =
+  LangDepView
+    (serialize' lang)
+    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))
 
--- Usefull in tests and in translating from earlier Era to the Alonzo Era.
+encodeLangViews :: Set LangDepView -> Encoding
+encodeLangViews views =
+  toCBOR $ Map.fromList (unLangDepView <$> Set.toList views)
+  where
+    unLangDepView (LangDepView a b) = (a, b)
 
 -- | Turn an PParams' into a Shelley.Params'
 retractPP :: (HKD f Coin) -> PParams' f era2 -> Shelley.PParams' f era1

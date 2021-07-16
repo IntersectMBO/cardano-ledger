@@ -1,22 +1,25 @@
 module Shelley.Spec.NonIntegral
-  ( (***)
-  , exp'
-  , ln'
-  , findE
-  , splitLn
-  , scaleExp
-  , CompareResult(..)
-  , taylorExpCmp
-  ) where
+  ( (***),
+    exp',
+    ln',
+    findE,
+    splitLn,
+    scaleExp,
+    CompareResult (..),
+    taylorExpCmp,
+  )
+where
 
-data CompareResult a = BELOW a Int
-                     | ABOVE a Int
-                     | MaxReached Int
+data CompareResult a
+  = BELOW a Int
+  | ABOVE a Int
+  | MaxReached Int
   deriving (Show, Eq)
 
 scaleExp :: (RealFrac a) => a -> (Integer, a)
 scaleExp x = (x', x / fromIntegral x')
-  where x' = ceiling x
+  where
+    x' = ceiling x
 
 -- | Exponentiation
 (***) :: (RealFrac a, Enum a, Show a) => a -> a -> a
@@ -31,11 +34,12 @@ ipow' x n
   | n == 0 = 1
   | m == 0 = let y = ipow' x d in y * y
   | otherwise = x * ipow' x (n - 1)
-  where (d,m) = divMod n 2
+  where
+    (d, m) = divMod n 2
 
 ipow :: Fractional a => a -> Integer -> a
 ipow x n
-  | n < 0 = 1 / ipow' x (-n)
+  | n < 0 = 1 / ipow' x (- n)
   | otherwise = ipow' x n
 
 logAs :: (Num a) => a -> [a]
@@ -48,12 +52,13 @@ logAs a = a' : a' : logAs (a + 1)
 -- b_n = n, n >= 0
 lncf :: (Fractional a, Enum a, Ord a, Show a) => Int -> a -> a
 lncf maxN x
-  | x < 0     = error ("x = " ++ show x ++ " is not inside domain [0,..)")
-  | otherwise = cf maxN 0 eps Nothing 1 0 0 1 as [1,2..]
-  where as = x : map (*x) (logAs 1)
+  | x < 0 = error ("x = " ++ show x ++ " is not inside domain [0,..)")
+  | otherwise = cf maxN 0 eps Nothing 1 0 0 1 as [1, 2 ..]
+  where
+    as = x : map (* x) (logAs 1)
 
 eps :: (Fractional a) => a
-eps = 1 / 10^(24::Int)
+eps = 1 / 10 ^ (24 :: Int)
 
 -- | Compute continued fraction using max steps or bounded list of a/b factors.
 -- The 'maxN' parameter gives the maximum recursion depth, 'n' gives the current
@@ -83,19 +88,19 @@ eps = 1 / 10^(24::Int)
 -- list 'as' or 'bs' is exhausted or 'lastVal' differs less than 'epsilon' from the
 -- new convergent.
 cf ::
-     (Fractional a, Ord a, Show a)
-  => Int
-  -> Int
-  -> a
-  -> Maybe a
-  -> a
-  -> a
-  -> a
-  -> a
-  -> [a]
-  -> [a]
-  -> a
-cf maxN n epsilon lastVal aNm2 bNm2 aNm1 bNm1 (an:as) (bn:bs)
+  (Fractional a, Ord a, Show a) =>
+  Int ->
+  Int ->
+  a ->
+  Maybe a ->
+  a ->
+  a ->
+  a ->
+  a ->
+  [a] ->
+  [a] ->
+  a
+cf maxN n epsilon lastVal aNm2 bNm2 aNm1 bNm1 (an : as) (bn : bs)
   | maxN == n = xn
   | converges = xn
   | otherwise = cf maxN (n + 1) epsilon (Just xn) aNm1 bNm1 aN bN as bs
@@ -111,14 +116,14 @@ cf _ _ _ _ _ _ aN bN _ _ = aN / bN
 -- factor^u`, initially x' is assumed to be `1/factor` and x'' `factor`, l = -1
 -- and u = 1.
 bound ::
-     (Fractional a, Ord a)
-  => a
-  -> a
-  -> a
-  -> a
-  -> Integer
-  -> Integer
-  -> (Integer, Integer)
+  (Fractional a, Ord a) =>
+  a ->
+  a ->
+  a ->
+  a ->
+  Integer ->
+  Integer ->
+  (Integer, Integer)
 bound factor x x' x'' l u
   | x' <= x && x <= x'' = (l, u)
   | otherwise = bound factor x (x' * x') (x'' * x'') (2 * l) (2 * u)
@@ -126,12 +131,12 @@ bound factor x x' x'' l u
 -- | Bisect bounds to find the smallest integer power such that
 -- `factor^n<=x<factor^(n+1)`.
 contract ::
-     (Fractional a, Ord a)
-  => a
-  -> a
-  -> Integer
-  -> Integer
-  -> Integer
+  (Fractional a, Ord a) =>
+  a ->
+  a ->
+  Integer ->
+  Integer ->
+  Integer
 contract factor x = go
   where
     go l u
@@ -151,35 +156,39 @@ exp1 = exp' 1
 findE :: (RealFrac a) => a -> a -> Integer
 findE e x = contract e x lower upper
   where
-    (lower, upper) = bound e x (1/e) e (-1) 1
+    (lower, upper) = bound e x (1 / e) e (-1) 1
 
 -- | Compute natural logarithm via continued fraction, first splitting integral
 -- part and then using continued fractions approximation for `ln(1+x)`
 ln' :: (RealFrac a, Enum a, Show a) => a -> a
 ln' x
-  | x <= 0    = error (show x ++ " is not in domain of ln")
+  | x <= 0 = error (show x ++ " is not in domain of ln")
   | otherwise = fromIntegral n + lncf 1000 x'
-  where (n, x') = splitLn x
+  where
+    (n, x') = splitLn x
 
 splitLn :: (RealFrac a, Show a) => a -> (Integer, a)
 splitLn x = (n, x')
-  where n = findE exp1 x
-        y' = ipow exp1 n
-        x' = (x / y') - 1 -- x / e^n > 1!
+  where
+    n = findE exp1 x
+    y' = ipow exp1 n
+    x' = (x / y') - 1 -- x / e^n > 1!
 
 exp' :: (RealFrac a, Show a) => a -> a
 exp' x
-  | x < 0     = 1 / exp' (-x)
+  | x < 0 = 1 / exp' (- x)
   | otherwise = ipow x' n
-  where (n, x_) = scaleExp x
-        x'      = taylorExp 1000 1 x_ 1 1 1
+  where
+    (n, x_) = scaleExp x
+    x' = taylorExp 1000 1 x_ 1 1 1
 
 taylorExp :: (RealFrac a, Show a) => Int -> Int -> a -> a -> a -> a -> a
 taylorExp maxN n x lastX acc divisor
   | maxN == n = acc
   | abs nextX < eps = acc
   | otherwise = taylorExp maxN (n + 1) x nextX (acc + nextX) (divisor + 1)
-  where nextX = (lastX * x) / divisor
+  where
+    nextX = (lastX * x) / divisor
 
 -- | Efficient way to compare the result of the Taylor expansion of the
 -- exponential function to a threshold value. Using error estimation one can
@@ -189,12 +198,13 @@ taylorExpCmp :: (RealFrac a) => a -> a -> a -> CompareResult a
 taylorExpCmp boundX cmp x = go 1000 0 x 1 1
   where
     go maxN n err acc divisor
-      | maxN == n               = MaxReached n
+      | maxN == n = MaxReached n
       | cmp >= acc' + errorTerm = ABOVE acc' (n + 1)
-      | cmp < acc' - errorTerm  = BELOW acc' (n + 1)
+      | cmp < acc' - errorTerm = BELOW acc' (n + 1)
       | otherwise = go maxN (n + 1) err' acc' divisor'
-      where errorTerm = err' * boundX
-            divisor' = divisor + 1
-            nextX = err
-            err' = (err * x) / divisor'
-            acc' = acc + nextX
+      where
+        errorTerm = err' * boundX
+        divisor' = divisor + 1
+        nextX = err
+        err' = (err * x) / divisor'
+        acc' = acc + nextX

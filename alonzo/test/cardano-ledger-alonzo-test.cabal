@@ -74,6 +74,7 @@ test-suite cardano-ledger-alonzo-test
   other-modules:
     Test.Cardano.Ledger.Alonzo.Trials
     Test.Cardano.Ledger.Alonzo.Golden
+    Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
     Test.Cardano.Ledger.Alonzo.Examples
     Test.Cardano.Ledger.Alonzo.Translation

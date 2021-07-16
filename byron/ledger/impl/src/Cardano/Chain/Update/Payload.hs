@@ -1,55 +1,53 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Chain.Update.Payload
-  ( APayload(..)
-  , Payload
-  , payload
+  ( APayload (..),
+    Payload,
+    payload,
   )
 where
 
+import Cardano.Binary
+  ( Annotated (..),
+    ByteSpan,
+    Decoded (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    annotatedDecoder,
+    encodeListLen,
+    enforceSize,
+  )
+import Cardano.Chain.Update.Proposal
+  ( AProposal,
+    Proposal,
+    formatMaybeProposal,
+  )
+import Cardano.Chain.Update.Vote
+  ( AVote,
+    Vote,
+    formatVoteShort,
+  )
 import Cardano.Prelude
-
 import Data.Aeson (ToJSON)
 import Formatting (bprint)
 import qualified Formatting.Buildable as B
 
-import Cardano.Binary
-  ( Annotated(..)
-  , ByteSpan
-  , Decoded(..)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , annotatedDecoder
-  , encodeListLen
-  , enforceSize
-  )
-import Cardano.Chain.Update.Proposal
-  ( AProposal
-  , Proposal
-  , formatMaybeProposal
-  )
-import Cardano.Chain.Update.Vote
-  ( AVote
-  , Vote
-  , formatVoteShort
-  )
-
-
 -- | Update System payload
 data APayload a = APayload
-  { payloadProposal   :: !(Maybe (AProposal a))
-  , payloadVotes      :: ![AVote a]
-  , payloadAnnotation :: a
-  } deriving (Eq, Show, Generic, Functor)
-    deriving anyclass NFData
+  { payloadProposal :: !(Maybe (AProposal a)),
+    payloadVotes :: ![AVote a],
+    payloadAnnotation :: a
+  }
+  deriving (Eq, Show, Generic, Functor)
+  deriving anyclass (NFData)
 
 type Payload = APayload ()
 
@@ -62,15 +60,16 @@ instance Decoded (APayload ByteString) where
 
 instance B.Buildable Payload where
   build p
-    | null (payloadVotes p)
-    = formatMaybeProposal (payloadProposal p) <> ", no votes"
-    | otherwise
-    = formatMaybeProposal (payloadProposal p) <> bprint
-      ("\n    votes: " . listJson)
-      (map formatVoteShort (payloadVotes p))
+    | null (payloadVotes p) =
+      formatMaybeProposal (payloadProposal p) <> ", no votes"
+    | otherwise =
+      formatMaybeProposal (payloadProposal p)
+        <> bprint
+          ("\n    votes: " . listJson)
+          (map formatVoteShort (payloadVotes p))
 
 -- Used for debugging purposes only
-instance ToJSON a => ToJSON (APayload a) where
+instance ToJSON a => ToJSON (APayload a)
 
 instance ToCBOR Payload where
   toCBOR p =

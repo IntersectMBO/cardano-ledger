@@ -1,37 +1,29 @@
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NumDecimals                #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumDecimals #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Common.LovelacePortion
-  ( LovelacePortion
-  , rationalToLovelacePortion
-  , lovelacePortionToRational
+  ( LovelacePortion,
+    rationalToLovelacePortion,
+    lovelacePortionToRational,
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
-
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
-
 import Control.Monad (fail)
-
 import qualified Data.Aeson as Aeson
-
-import Formatting (sformat, build, bprint, float, int)
+import Formatting (bprint, build, float, int, sformat)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
-
 import Quiet
-
-import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
-
-
+import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 
 -- | 'LovelacePortion' is a legacy Byron type that we keep only for
 -- compatibility. It was originally intended to represent a fraction of stake
@@ -50,21 +42,22 @@ import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
 -- genesis file.
 --
 -- It is interpreted as a 'Rational' via the provided conversion functions.
---
 newtype LovelacePortion = LovelacePortion
   { unLovelacePortion :: Word64
-  } deriving (Ord, Eq, Generic, HeapWords, NFData, NoThunks)
-    deriving Show via (Quiet LovelacePortion)
+  }
+  deriving (Ord, Eq, Generic, HeapWords, NFData, NoThunks)
+  deriving (Show) via (Quiet LovelacePortion)
 
 instance B.Buildable LovelacePortion where
-  build cp@(LovelacePortion x) = bprint
-    (int . "/" . int . " (approx. " . float . ")")
-    x
-    lovelacePortionDenominator
-    (fromRational (lovelacePortionToRational cp) :: Double)
+  build cp@(LovelacePortion x) =
+    bprint
+      (int . "/" . int . " (approx. " . float . ")")
+      x
+      lovelacePortionDenominator
+      (fromRational (lovelacePortionToRational cp) :: Double)
 
 -- Used for debugging purposes only
-instance Aeson.ToJSON LovelacePortion where
+instance Aeson.ToJSON LovelacePortion
 
 instance ToCBOR LovelacePortion where
   toCBOR = toCBOR . unLovelacePortion
@@ -86,10 +79,11 @@ instance MonadError SchemaError m => FromJSON m LovelacePortion where
   fromJSON val = do
     nominator <- fromJSON val
     when (nominator > lovelacePortionDenominator) $
-      throwError SchemaError {
-        seExpected = "LovelacePortion integer in bounds [0..1e15]",
-        seActual   = Just (sformat build nominator)
-      }
+      throwError
+        SchemaError
+          { seExpected = "LovelacePortion integer in bounds [0..1e15]",
+            seActual = Just (sformat build nominator)
+          }
     pure (LovelacePortion nominator)
 
 -- | Denominator used by 'LovelacePortion'.
@@ -98,15 +92,14 @@ lovelacePortionDenominator = 1e15
 
 -- | Make a 'LovelacePortion' from a 'Rational'
 -- which must be in the range @[0..1]@.
---
 rationalToLovelacePortion :: Rational -> LovelacePortion
 rationalToLovelacePortion r
-  | r >= 0 && r <= 1 = LovelacePortion
-                         (ceiling (r * toRational lovelacePortionDenominator))
-  | otherwise        = panic "rationalToLovelacePortion: out of range [0..1]"
+  | r >= 0 && r <= 1 =
+    LovelacePortion
+      (ceiling (r * toRational lovelacePortionDenominator))
+  | otherwise = panic "rationalToLovelacePortion: out of range [0..1]"
 
 -- | Turn a 'LovelacePortion' into a 'Rational' in the range @[0..1]@.
---
 lovelacePortionToRational :: LovelacePortion -> Rational
 lovelacePortionToRational (LovelacePortion n) =
   toInteger n % toInteger lovelacePortionDenominator

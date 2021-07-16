@@ -66,14 +66,22 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
 import Cardano.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    PaymentCredential,
+    Ptr (..),
+    StakeReference (..),
+  )
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys
   ( KeyHash (..),
     KeyPair (..),
     KeyRole (..),
     hashKey,
   )
+import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Prelude (cborError, panic)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
@@ -98,14 +106,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    PaymentCredential,
-    Ptr (..),
-    StakeReference (..),
-  )
-import Cardano.Ledger.Hashes(ScriptHash(..))
-import Cardano.Ledger.Slot (SlotNo (..))
 
 mkVKeyRwdAcnt ::
   CC.Crypto crypto =>

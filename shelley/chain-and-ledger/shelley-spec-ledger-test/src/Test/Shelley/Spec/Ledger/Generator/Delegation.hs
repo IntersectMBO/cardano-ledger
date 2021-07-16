@@ -19,10 +19,19 @@ module Test.Shelley.Spec.Ledger.Generator.Delegation
   )
 where
 
+import Cardano.Ledger.Address (mkRwdAcnt)
+import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Keys
+  ( coerceKeyRole,
+    hashKey,
+    hashVerKeyVRF,
+    vKey,
+  )
+import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
@@ -34,6 +43,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set ((\\))
 import qualified Data.Set as Set
+import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
   ( AccountState (..),
@@ -62,16 +72,9 @@ import Shelley.Spec.Ledger.API
     StrictMaybe (..),
     VKey,
   )
-import Cardano.Ledger.Address (mkRwdAcnt)
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
-import Cardano.Ledger.Keys
-  ( coerceKeyRole,
-    hashKey,
-    hashVerKeyVRF,
-    vKey,
-  )
 import Shelley.Spec.Ledger.LedgerState (availableAfterMIR)
-import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import Shelley.Spec.Ledger.PParams (ProtVer)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -85,9 +88,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
   )
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Utils
-import GHC.Records(HasField(..))
-import Cardano.Ledger.BaseTypes(UnitInterval)
-import Shelley.Spec.Ledger.PParams(ProtVer)
 
 -- ======================================================
 
@@ -111,7 +111,9 @@ deriving instance (Era era, Show (Core.Script era)) => Show (CertCred era)
 --
 -- Note: we register keys and pools more often than deregistering/retiring them,
 -- and we generate more delegations than registrations of keys/pools.
-genDCert :: forall era. EraGen era =>
+genDCert ::
+  forall era.
+  EraGen era =>
   Constants ->
   KeySpace era ->
   Core.PParams era ->
@@ -165,7 +167,9 @@ genDCert
       pState = _pstate dpState
 
 -- | Generate a RegKey certificate
-genRegKeyCert :: forall era. ValidateScript era =>
+genRegKeyCert ::
+  forall era.
+  ValidateScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
@@ -209,7 +213,8 @@ genRegKeyCert
 -- | Generate a DeRegKey certificate along with the staking credential, which is
 -- needed to witness the certificate.
 genDeRegKeyCert ::
-  forall era. ValidateScript era =>
+  forall era.
+  ValidateScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
@@ -262,7 +267,9 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 --
 -- Returns nothing if there are no registered staking credentials or no
 -- registered pools.
-genDelegation :: forall era. ValidateScript era =>
+genDelegation ::
+  forall era.
+  ValidateScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->

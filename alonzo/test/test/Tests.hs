@@ -11,6 +11,7 @@ module Main where
 import Test.Cardano.Ledger.Alonzo.Examples (plutusScriptExamples)
 import Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
+import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
 import Test.Cardano.Ledger.Alonzo.Trials (alonzoPropertyTests, fastPropertyTests)
@@ -32,6 +33,7 @@ mainTests =
     [ fastPropertyTests, -- These are still pretty slow (it is just that a few are omitted)
       Tripping.tests,
       Translation.tests,
+      Canonical.tests,
       CDDL.tests 5,
       Golden.goldenUTxOEntryMinAda,
       plutusScriptExamples

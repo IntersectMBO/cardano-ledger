@@ -76,6 +76,41 @@ transaction_output =
   ]
 
 script_data_hash = $hash32 ; New
+; This is a hash of data which may affect evaluation of a script.
+; This data consists of:
+;   - The redeemers from the transaction_witness_set (the value of field 5).
+;   - The datums from the transaction_witness_set (the value of field 4).
+;   - The value in the costmdls map corresponding to the script's language
+;     (in field 18 of protocol_param_update.)
+; (In the future it may contain additional protocol parameters.)
+;
+; Since this data does not exist in contiguous form inside a transaction, it needs
+; to be independently constructed by each recipient.
+;
+; script data format:
+; [ redeemers | datums | language views ]
+; The redeemers are exactly the data present in the transaction witness set.
+; Similarly for the datums, if present. If no datums are provided, the middle
+; field is an empty string.
+;
+; language views CDDL:
+; { * language => script_integrity_data }
+;
+; This must be encoded canonically, using the same scheme as in
+; RFC7049 section 3.9:
+;  - Maps, strings, and bytestrings must use a definite-length encoding
+;  - Integers must be as small as possible.
+;  - The expressions for map length, string length, and bytestring length
+;    must be as short as possible.
+;  - The keys in the map must be sorted as follows:
+;     -  If two keys have different lengths, the shorter one sorts earlier.
+;     -  If two keys have the same length, the one with the lower value
+;        in (byte-wise) lexical order sorts earlier.
+;
+; For PlutusV1 (language id 0), the script integrity data is a cost_model.
+; This is the value of the costmdls map at key 0.
+; If there is no value for key 0, then the corresponding scripts cannot execute.
+; Regardless of what the script integrity data is.
 
 ; address = bytes
 ; reward_account = bytes

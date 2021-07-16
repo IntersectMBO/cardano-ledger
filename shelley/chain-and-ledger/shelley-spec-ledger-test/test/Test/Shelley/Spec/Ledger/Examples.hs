@@ -24,7 +24,7 @@ data CHAINExample h = CHAINExample
     -- | Block to run chain state transition system on
     newBlock :: Block h,
     -- | type of fatal error, if failure expected and final chain state if success expected
-    intendedResult :: Either [[PredicateFailure (CHAIN h)]] (ChainState h)
+    intendedResult :: Either [PredicateFailure (CHAIN h)] (ChainState h)
   }
 
 -- | Runs example, applies chain state transition system rule (STS),

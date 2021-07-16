@@ -16,35 +16,38 @@
 
 module Byron.Spec.Ledger.Core where
 
-import           Data.Bimap (Bimap)
+import Cardano.Binary (FromCBOR, ToCBOR)
+import Data.AbstractSize
+import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
-import           Data.Data (Data, Typeable)
-import           Data.Foldable (toList)
-import           Data.Hashable (Hashable)
+import Data.Data (Data, Typeable)
+import Data.Foldable (toList)
+import Data.Hashable (Hashable)
 import qualified Data.Hashable as H
-import           Data.Int (Int64)
-import           Data.Kind (Type)
-import           Data.Map.Strict (Map)
+import Data.Int (Int64)
+import Data.Kind (Type)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import           Data.Maybe (isJust)
-import           Data.Monoid (Sum (..))
+import Data.Maybe (isJust)
+import Data.Monoid (Sum (..))
 import qualified Data.Sequence as Seq
-import           Data.Set (Set, intersection, isSubsetOf)
+import Data.Set (Set, intersection, isSubsetOf)
 import qualified Data.Set as Set
-import           Data.Typeable (typeOf)
-import           Data.Word (Word64, Word8)
-import           GHC.Generics (Generic)
-import           NoThunks.Class (NoThunks(..))
-import           Numeric.Natural (Natural)
-
-import           Cardano.Binary (ToCBOR)
-
-import           Data.AbstractSize
-
-import           Test.Goblin (AddShrinks (..), GeneOps, Goblin (..), SeedGoblin (..),
-                     saveInBagOfTricks, tinkerRummagedOrConjureOrSave, (<$$>))
-import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
-
+import Data.Typeable (typeOf)
+import Data.Word (Word64, Word8)
+import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
+import Test.Goblin
+  ( AddShrinks (..),
+    GeneOps,
+    Goblin (..),
+    SeedGoblin (..),
+    saveInBagOfTricks,
+    tinkerRummagedOrConjureOrSave,
+    (<$$>),
+  )
+import Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGoblin)
 
 -- | An encoded hash of part of the system.
 --
@@ -53,9 +56,10 @@ import           Test.Goblin.TH (deriveAddShrinks, deriveGoblin, deriveSeedGobli
 -- invalid concrete hash.
 newtype Hash = Hash
   { unHash :: Maybe Int
-  } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
-    deriving anyclass (HasTypeReps)
+  }
+  deriving stock (Show, Generic, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
+  deriving anyclass (HasTypeReps)
 
 isValid :: Hash -> Bool
 isValid = isJust . unHash
@@ -68,17 +72,18 @@ class HasHash a where
 -- Signing and verification
 ---------------------------------------------------------------------------------
 
--- |Representation of the owner of key pair.
+-- | Representation of the owner of key pair.
 newtype Owner = Owner
   { unOwner :: Natural
-  } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
-    deriving anyclass (HasTypeReps)
+  }
+  deriving stock (Show, Generic, Data, Typeable)
+  deriving newtype (Eq, Ord, Hashable, FromCBOR, ToCBOR, NoThunks)
+  deriving anyclass (HasTypeReps)
 
 class HasOwner a where
   owner :: a -> Owner
 
--- |Signing Key.
+-- | Signing Key.
 newtype SKey = SKey Owner
   deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, ToCBOR, NoThunks)
@@ -87,10 +92,10 @@ newtype SKey = SKey Owner
 instance HasOwner SKey where
   owner (SKey o) = o
 
--- |Verification Key.
+-- | Verification Key.
 newtype VKey = VKey Owner
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, FromCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasHash VKey where
@@ -100,9 +105,9 @@ instance HasOwner VKey where
   owner (VKey o) = o
 
 -- | A genesis key is a specialisation of a generic VKey.
-newtype VKeyGenesis = VKeyGenesis { unVKeyGenesis :: VKey }
+newtype VKeyGenesis = VKeyGenesis {unVKeyGenesis :: VKey}
   deriving stock (Show, Generic, Data, Typeable)
-  deriving newtype (Eq, Ord, Hashable, HasHash, ToCBOR, NoThunks)
+  deriving newtype (Eq, Ord, Hashable, HasHash, FromCBOR, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
 instance HasOwner VKeyGenesis where
@@ -113,26 +118,26 @@ mkVKeyGenesis = VKeyGenesis . VKey . Owner
 
 -- | Make a set of genesis keys. The genesis keys are continuously numbered from 0 to the given
 -- number of genesis keys minus 1.
-mkVkGenesisSet
-  :: Word8
-  -- ^ Number of genesis keys
-  -> Set VKeyGenesis
+mkVkGenesisSet ::
+  -- | Number of genesis keys
+  Word8 ->
+  Set VKeyGenesis
 mkVkGenesisSet ngk = Set.fromAscList $ mkVKeyGenesis <$> [0 .. (fromIntegral ngk - 1)]
 
-
--- |Key Pair.
+-- | Key Pair.
 data KeyPair = KeyPair
-  { sKey :: SKey
-  , vKey :: VKey
-  } deriving (Eq, Ord, Show, Generic, NoThunks)
+  { sKey :: SKey,
+    vKey :: VKey
+  }
+  deriving (Eq, Ord, Show, Generic, NoThunks)
 
 instance HasTypeReps KeyPair
 
--- |Return a key pair for a given owner.
+-- | Return a key pair for a given owner.
 keyPair :: Owner -> KeyPair
 keyPair o = KeyPair (SKey o) (VKey o)
 
--- |A digital signature.
+-- | A digital signature.
 data Sig a = Sig a Owner
   deriving (Show, Eq, Ord, Generic, Hashable, Typeable, Data, NoThunks)
 
@@ -144,11 +149,11 @@ data Sig a = Sig a Owner
 instance Typeable a => HasTypeReps (Sig a) where
   typeReps x = typeOf x Seq.<| Seq.empty
 
--- |Produce a digital signature
+-- | Produce a digital signature
 sign :: SKey -> a -> Sig a
 sign (SKey k) d = Sig d k
 
--- |Verify a digital signature
+-- | Verify a digital signature
 verify :: Eq a => VKey -> a -> Sig a -> Bool
 verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 
@@ -156,12 +161,12 @@ verify (VKey vk) vd (Sig sd sk) = vk == sk && vd == sd
 -- Slots and Epochs
 ---------------------------------------------------------------------------------
 
-newtype Epoch = Epoch { unEpoch :: Word64 }
+newtype Epoch = Epoch {unEpoch :: Word64}
   deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, Num, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
 
-newtype Slot = Slot { unSlot :: Word64 }
+newtype Slot = Slot {unSlot :: Word64}
   deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, ToCBOR, NoThunks)
   deriving anyclass (HasTypeReps)
@@ -171,7 +176,7 @@ newtype Slot = Slot { unSlot :: Word64 }
 --  We use this newtype to distinguish between a cardinal slot and a relative
 --  period of slots, and also to distinguish between number of slots and number
 --  of blocks.
-newtype SlotCount = SlotCount { unSlotCount :: Word64 }
+newtype SlotCount = SlotCount {unSlotCount :: Word64}
   deriving stock (Generic, Show, Data, Typeable)
   deriving newtype (Eq, Ord, Num, Hashable, ToCBOR, NoThunks)
 
@@ -192,7 +197,7 @@ infixl 6 +.
 --   This is bounded below by 0.
 minusSlot :: Slot -> SlotCount -> Slot
 minusSlot (Slot m) (SlotCount n)
-  | m <= n    = Slot 0
+  | m <= n = Slot 0
   | otherwise = Slot $ m - n
 
 -- | An alias for 'minusSlot'
@@ -214,12 +219,12 @@ infixl 7 *.
 -- Nothing.
 minusSlotMaybe :: Slot -> SlotCount -> Maybe Slot
 minusSlotMaybe (Slot m) (SlotCount n)
-  | m < n     = Nothing
+  | m < n = Nothing
   | otherwise = Just . Slot $ m - n
 
-newtype BlockCount = BlockCount { unBlockCount :: Word64 }
+newtype BlockCount = BlockCount {unBlockCount :: Word64}
   deriving stock (Generic, Show)
-  deriving newtype (Eq, Ord, Num, Hashable, NoThunks)
+  deriving newtype (Eq, Ord, Num, Hashable, NoThunks, FromCBOR, ToCBOR)
 
 instance HasTypeReps BlockCount
 
@@ -227,7 +232,7 @@ instance HasTypeReps BlockCount
 -- Transactions
 ---------------------------------------------------------------------------------
 
--- |The address of a transaction output, used to identify the owner.
+-- | The address of a transaction output, used to identify the owner.
 newtype Addr = Addr VKey
   deriving stock (Show, Generic, Data, Typeable)
   deriving newtype (Eq, Ord, Hashable, HasOwner, ToCBOR, NoThunks)
@@ -241,13 +246,13 @@ instance HasHash Addr where
   hash = Hash . Just . H.hash
 
 -- | A unit of value held by a UTxO.
---
 newtype Lovelace = Lovelace
   { unLovelace :: Integer
-  } deriving stock (Show, Generic, Data, Typeable)
-    deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral, ToCBOR, NoThunks)
-    deriving (Semigroup, Monoid) via (Sum Integer)
-    deriving anyclass (HasTypeReps)
+  }
+  deriving stock (Show, Generic, Data, Typeable)
+  deriving newtype (Eq, Ord, Num, Hashable, Enum, Real, Integral, ToCBOR, NoThunks)
+  deriving (Semigroup, Monoid) via (Sum Integer)
+  deriving anyclass (HasTypeReps)
 
 -- | Constant amount of Lovelace in the system.
 lovelaceCap :: Lovelace
@@ -303,20 +308,22 @@ class Relation m where
   --
   -- Unicode: 25c1
   (<=◁) :: Ord (Domain m) => Domain m -> m -> m
+
   infixl 5 <=◁
 
   -- | Restrict range to values less or equal than the given value
   --
   -- Unicode: 25b7
   (▷<=) :: (Ord (Range m)) => m -> Range m -> m
+
   infixl 5 ▷<=
 
   -- | Restrict range to values greater or equal than the given value
   --
   -- Unicode: 25b7
   (▷>=) :: (Ord (Range m)) => m -> Range m -> m
-  infixl 5 ▷>=
 
+  infixl 5 ▷>=
 
   -- | Size of the relation
   size :: Integral n => m -> n
@@ -381,6 +388,7 @@ instance Relation (Map k v) where
   r ⋫ s = Map.filter (flip Set.notMember s) r
 
   d0 ∪ d1 = Map.union d0 d1
+
   -- For union override we pass @d1@ as first argument, since 'Map.union' is
   -- left biased.
   d0 ⨃ d1 = Map.union (Map.fromList . toList $ d1) d0
@@ -399,21 +407,21 @@ a ∪+ b = ((dom a) ⋪ b) ∪ ((dom b) ⋪ a) ∪ (Map.unionWith (+) a b)
 
 instance Relation (Set (a, b)) where
   type Domain (Set (a, b)) = a
-  type Range (Set (a, b))  = b
+  type Range (Set (a, b)) = b
 
-  singleton a b = Set.singleton (a,b)
+  singleton a b = Set.singleton (a, b)
 
   dom = Set.map fst
 
   range = Set.map snd
 
-  s ◁ r = Set.filter (\(k,_) -> k `Set.member` toSet s) r
+  s ◁ r = Set.filter (\(k, _) -> k `Set.member` toSet s) r
 
-  s ⋪ r = Set.filter (\(k,_) -> k `Set.notMember` toSet s) r
+  s ⋪ r = Set.filter (\(k, _) -> k `Set.notMember` toSet s) r
 
-  r ▷ s = Set.filter (\(_,v) -> Set.member v s) r
+  r ▷ s = Set.filter (\(_, v) -> Set.member v s) r
 
-  r ⋫ s = Set.filter (\(_,v) -> Set.notMember v s) r
+  r ⋫ s = Set.filter (\(_, v) -> Set.notMember v s) r
 
   (∪) = Set.union
 
@@ -467,7 +475,6 @@ instance Relation [(a, b)] where
 -- | Inclusion among foldables.
 --
 -- Unicode: 2286
---
 (⊆) :: (Foldable f, Foldable g, Ord a) => f a -> g a -> Bool
 x ⊆ y = toSet x `isSubsetOf` toSet y
 
@@ -476,7 +483,6 @@ toSet = Set.fromList . toList
 
 (∩) :: Ord a => Set a -> Set a -> Set a
 (∩) = intersection
-
 
 --------------------------------------------------------------------------------
 -- Goblins instances
@@ -493,25 +499,27 @@ deriveGoblin ''VKey
 deriveGoblin ''VKeyGenesis
 
 instance GeneOps g => Goblin g Hash where
-  tinker gen
-    = tinkerRummagedOrConjureOrSave
-        ((Hash . Just . (`mod` 30))
-           <$$> tinker (unwrapValue <$> gen))
+  tinker gen =
+    tinkerRummagedOrConjureOrSave
+      ( (Hash . Just . (`mod` 30))
+          <$$> tinker (unwrapValue <$> gen)
+      )
     where
       unwrapValue (Hash (Just x)) = x
       unwrapValue (Hash Nothing) =
-        error $  "tinker Hash instance: trying to tinker with an invalid hash"
-              ++ " (which contains nothing)"
+        error $
+          "tinker Hash instance: trying to tinker with an invalid hash"
+            ++ " (which contains nothing)"
 
   conjure = saveInBagOfTricks =<< (Hash . Just . (`mod` 30) <$> conjure)
 
 instance GeneOps g => Goblin g Lovelace where
-  tinker gen
-    = tinkerRummagedOrConjureOrSave
-        ((\x -> (Lovelace x) `mod` lovelaceCap)
-           <$$> tinker ((\(Lovelace x) -> x) <$> gen))
+  tinker gen =
+    tinkerRummagedOrConjureOrSave
+      ( (\x -> (Lovelace x) `mod` lovelaceCap)
+          <$$> tinker ((\(Lovelace x) -> x) <$> gen)
+      )
   conjure = saveInBagOfTricks =<< ((`mod` lovelaceCap) . Lovelace <$> conjure)
-
 
 --------------------------------------------------------------------------------
 -- AddShrinks instances
@@ -528,7 +536,6 @@ deriveAddShrinks ''Slot
 deriveAddShrinks ''SlotCount
 deriveAddShrinks ''VKey
 deriveAddShrinks ''VKeyGenesis
-
 
 --------------------------------------------------------------------------------
 -- SeedGoblin instances

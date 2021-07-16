@@ -1,77 +1,73 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE NamedFieldPuns     #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Chain.Update.Vote
-  (
-  -- * Vote
-    AVote(..)
-  , Vote
-  , VoteId
+  ( -- * Vote
+    AVote (..),
+    Vote,
+    VoteId,
 
-  -- * Vote Constructors
-  , mkVote
-  , signVote
-  , signatureForVote
-  , unsafeVote
+    -- * Vote Constructors
+    mkVote,
+    signVote,
+    signatureForVote,
+    unsafeVote,
 
-  -- * Vote Accessors
-  , proposalId
-  , recoverVoteId
+    -- * Vote Accessors
+    proposalId,
+    recoverVoteId,
 
-  -- * Vote Binary Serialization
-  , recoverSignedBytes
+    -- * Vote Binary Serialization
+    recoverSignedBytes,
 
-  -- * Vote Formatting
-  , formatVoteShort
-  , shortVoteF
+    -- * Vote Formatting
+    formatVoteShort,
+    shortVoteF,
   )
 where
 
-import Cardano.Prelude
-
-import Data.Aeson (ToJSON)
-import Data.Text.Lazy.Builder (Builder)
-import Formatting (Format, bprint, build, later)
-import qualified Formatting.Buildable as B
-
 import Cardano.Binary
-  ( Annotated(Annotated, unAnnotated)
-  , ByteSpan
-  , Decoded(..)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , annotatedDecoder
-  , fromCBORAnnotated
-  , encodeListLen
-  , enforceSize
+  ( Annotated (Annotated, unAnnotated),
+    ByteSpan,
+    Decoded (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    annotatedDecoder,
+    encodeListLen,
+    enforceSize,
+    fromCBORAnnotated,
   )
 import qualified Cardano.Binary as Binary (annotation)
 import Cardano.Chain.Common (addressHash)
 import Cardano.Chain.Update.Proposal (Proposal, UpId)
 import Cardano.Crypto
-  ( Hash
-  , ProtocolMagicId
-  , VerificationKey
-  , SafeSigner
-  , SigningKey
-  , SignTag(SignUSVote)
-  , Signature
-  , hashDecoded
-  , safeSign
-  , safeToVerification
-  , shortHashF
-  , sign
-  , toVerification
+  ( Hash,
+    ProtocolMagicId,
+    SafeSigner,
+    SignTag (SignUSVote),
+    Signature,
+    SigningKey,
+    VerificationKey,
+    hashDecoded,
+    safeSign,
+    safeToVerification,
+    shortHashF,
+    sign,
+    toVerification,
   )
-
+import Cardano.Prelude
+import Data.Aeson (ToJSON)
+import Data.Text.Lazy.Builder (Builder)
+import Formatting (Format, bprint, build, later)
+import qualified Formatting.Buildable as B
 
 --------------------------------------------------------------------------------
 -- Vote
@@ -86,81 +82,78 @@ type Vote = AVote ()
 --
 --   Invariant: The signature is valid.
 data AVote a = UnsafeVote
-  { voterVK     :: !VerificationKey
-  -- ^ Verification key casting the vote
-  , aProposalId :: !(Annotated UpId a)
-  -- ^ Proposal to which this vote applies
-  , signature   :: !(Signature (UpId, Bool))
-  -- ^ Signature of (Update proposal, Approval/rejection bit)
-  , annotation  :: !a
-  } deriving (Eq, Show, Generic, Functor)
-    deriving anyclass NFData
+  { -- | Verification key casting the vote
+    voterVK :: !VerificationKey,
+    -- | Proposal to which this vote applies
+    aProposalId :: !(Annotated UpId a),
+    -- | Signature of (Update proposal, Approval/rejection bit)
+    signature :: !(Signature (UpId, Bool)),
+    annotation :: !a
+  }
+  deriving (Eq, Show, Generic, Functor)
+  deriving anyclass (NFData)
 
 -- Used for debugging purposes only
-instance ToJSON a => ToJSON (AVote a) where
-
+instance ToJSON a => ToJSON (AVote a)
 
 --------------------------------------------------------------------------------
 -- Vote Constructors
 --------------------------------------------------------------------------------
 
 -- | A safe constructor for 'UnsafeVote'
-mkVote
-  :: ProtocolMagicId
-  -> SigningKey
-  -- ^ The voter
-  -> UpId
-  -- ^ Proposal which is voted for
-  -> Bool
-  -- ^ Approval/rejection bit
-  -> Vote
-mkVote pm sk upId decision = UnsafeVote
-  (toVerification sk)
-  (Annotated upId ())
-  (sign pm SignUSVote sk (upId, decision))
-  ()
-
+mkVote ::
+  ProtocolMagicId ->
+  -- | The voter
+  SigningKey ->
+  -- | Proposal which is voted for
+  UpId ->
+  -- | Approval/rejection bit
+  Bool ->
+  Vote
+mkVote pm sk upId decision =
+  UnsafeVote
+    (toVerification sk)
+    (Annotated upId ())
+    (sign pm SignUSVote sk (upId, decision))
+    ()
 
 -- | Create a vote for the given update proposal id, signing it with the
 -- provided safe signer.
-signVote
-  :: ProtocolMagicId
-  -> UpId
-  -- ^ Proposal which is voted for
-  -> Bool
-  -- ^ Approval/rejection bit
-  -> SafeSigner
-  -- ^ The voter
-  -> Vote
+signVote ::
+  ProtocolMagicId ->
+  -- | Proposal which is voted for
+  UpId ->
+  -- | Approval/rejection bit
+  Bool ->
+  -- | The voter
+  SafeSigner ->
+  Vote
 signVote protocolMagicId upId decision safeSigner =
   unsafeVote
     (safeToVerification safeSigner)
     upId
     (signatureForVote protocolMagicId upId decision safeSigner)
 
-
-signatureForVote
-  :: ProtocolMagicId
-  -> UpId
-  -> Bool
-  -> SafeSigner
-  -> Signature (UpId, Bool)
+signatureForVote ::
+  ProtocolMagicId ->
+  UpId ->
+  Bool ->
+  SafeSigner ->
+  Signature (UpId, Bool)
 signatureForVote protocolMagicId upId decision safeSigner =
   safeSign protocolMagicId SignUSVote safeSigner (upId, decision)
-
 
 -- | Create a vote for the given update proposal id using the provided
 -- signature.
 --
 -- For the meaning of the parameters see 'signVote'.
-unsafeVote
-  :: VerificationKey
-  -> UpId
-  -> Signature (UpId, Bool)
-  -> Vote
+unsafeVote ::
+  VerificationKey ->
+  UpId ->
+  Signature (UpId, Bool) ->
+  Vote
 unsafeVote vk upId voteSignature =
   UnsafeVote vk (Annotated upId ()) voteSignature ()
-
 
 --------------------------------------------------------------------------------
 -- Vote Accessors
@@ -195,7 +188,7 @@ instance FromCBOR (AVote ByteSpan) where
   fromCBOR = do
     Annotated (voterVK, aProposalId, signature) byteSpan <- annotatedDecoder $ do
       enforceSize "Vote" 4
-      voterVK     <- fromCBOR
+      voterVK <- fromCBOR
       aProposalId <- fromCBORAnnotated
       -- Drop the decision bit that previously allowed negative voting
       void $ fromCBOR @Bool
@@ -209,33 +202,33 @@ instance Decoded (AVote ByteString) where
 
 recoverSignedBytes :: AVote ByteString -> Annotated (UpId, Bool) ByteString
 recoverSignedBytes v =
-  let
-    bytes = mconcat
-      [ "\130"
-      -- The byte above is part of the signed payload, but is not part of the
-      -- transmitted payload
-      , Binary.annotation $ aProposalId v
-      , "\245"
-      -- The byte above is the canonical encoding of @True@, which we hardcode,
-      -- because we removed the possibility of negative voting
-      ]
-  in Annotated (proposalId v, True) bytes
-
+  let bytes =
+        mconcat
+          [ "\130",
+            -- The byte above is part of the signed payload, but is not part of the
+            -- transmitted payload
+            Binary.annotation $ aProposalId v,
+            "\245"
+            -- The byte above is the canonical encoding of @True@, which we hardcode,
+            -- because we removed the possibility of negative voting
+          ]
+   in Annotated (proposalId v, True) bytes
 
 --------------------------------------------------------------------------------
 -- Vote Formatting
 --------------------------------------------------------------------------------
 
 instance B.Buildable (AVote a) where
-  build uv = bprint
-    ( "Update Vote { voter: "
-    . build
-    . ", proposal id: "
-    . build
-    . " }"
-    )
-    (addressHash $ voterVK uv)
-    (proposalId uv)
+  build uv =
+    bprint
+      ( "Update Vote { voter: "
+          . build
+          . ", proposal id: "
+          . build
+          . " }"
+      )
+      (addressHash $ voterVK uv)
+      (proposalId uv)
 
 instance B.Buildable (Proposal, [Vote]) where
   build (up, votes) =
@@ -243,10 +236,11 @@ instance B.Buildable (Proposal, [Vote]) where
 
 -- | Format 'Vote' compactly
 formatVoteShort :: Vote -> Builder
-formatVoteShort uv = bprint
-  ("(" . shortHashF . " " . shortHashF . ")")
-  (addressHash $ voterVK uv)
-  (proposalId uv)
+formatVoteShort uv =
+  bprint
+    ("(" . shortHashF . " " . shortHashF . ")")
+    (addressHash $ voterVK uv)
+    (proposalId uv)
 
 -- | Formatter for 'Vote' which displays it compactly
 shortVoteF :: Format r (Vote -> r)

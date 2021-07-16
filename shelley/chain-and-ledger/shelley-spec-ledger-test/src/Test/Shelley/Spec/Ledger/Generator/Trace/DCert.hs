@@ -20,9 +20,12 @@ module Test.Shelley.Spec.Ledger.Generator.Trace.DCert
   )
 where
 
+import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
+import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<×>))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -51,6 +54,7 @@ import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
+import GHC.Records (HasField (getField))
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API
   ( AccountState,
@@ -63,11 +67,8 @@ import Shelley.Spec.Ledger.API
     PState (..),
     Ptr (..),
   )
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
-import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), asWitness)
 import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure)
-import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.TxBody (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
 import Test.QuickCheck (Gen)
@@ -77,7 +78,6 @@ import Test.Shelley.Spec.Ledger.Generator.Delegation (CertCred (..), genDCert)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombination)
 import Test.Shelley.Spec.Ledger.Utils (testGlobals)
-import GHC.Records(HasField(getField))
 
 -- | This is a non-spec STS used to generate a sequence of certificates with
 -- witnesses.

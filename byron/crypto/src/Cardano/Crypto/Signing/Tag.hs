@@ -1,24 +1,21 @@
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Crypto.Signing.Tag
-  ( SignTag(..)
-  , signTag
-  , signTagDecoded
+  ( SignTag (..),
+    signTag,
+    signTagDecoded,
   )
 where
 
-import Cardano.Prelude
-
+import Cardano.Binary (Annotated (..), serialize')
+import Cardano.Crypto.ProtocolMagic (ProtocolMagicId (..))
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..))
 import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Prelude
 import Formatting (bprint, shown)
-import Formatting.Buildable (Buildable(..))
-
-import Cardano.Binary (Annotated(..), serialize')
-import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
-import Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
-
+import Formatting.Buildable (Buildable (..))
 
 -- | To protect against replay attacks (i.e. when an attacker intercepts a
 --   signed piece of data and later sends it again), we add a tag to all data
@@ -30,28 +27,28 @@ import Cardano.Crypto.ProtocolMagic (ProtocolMagicId(..))
 --   makes sense, to ensure that things intended for testnet won't work for
 --   mainnet.
 data SignTag
-  = SignForTestingOnly
-  -- ^ Anything (to be used for testing only)
-  | SignTx
-  -- ^ Tx:               @TxSigData@
-  | SignRedeemTx
-  -- ^ Redeem tx:        @TxSigData@
-  | SignVssCert
-  -- ^ Vss certificate:  @(VssVerificationKey, EpochNumber)@
-  | SignUSProposal
-  -- ^ Update proposal:  @UpdateProposalToSign@
-  | SignCommitment
-  -- ^ Commitment:       @(EpochNumber, Commitment)@
-  | SignUSVote
-  -- ^ US proposal vote: @(UpId, Bool)@
-  | SignBlock VerificationKey
-  -- ^ Block header:     @ToSign@
-  --
-  --   This constructor takes the 'VerificationKey' of the delegation
-  --   certificate issuer, which is prepended to the signature as part of the
-  --   sign tag
-  | SignCertificate
-  -- ^ Certificate:      @Certificate@
+  = -- | Anything (to be used for testing only)
+    SignForTestingOnly
+  | -- | Tx:               @TxSigData@
+    SignTx
+  | -- | Redeem tx:        @TxSigData@
+    SignRedeemTx
+  | -- | Vss certificate:  @(VssVerificationKey, EpochNumber)@
+    SignVssCert
+  | -- | Update proposal:  @UpdateProposalToSign@
+    SignUSProposal
+  | -- | Commitment:       @(EpochNumber, Commitment)@
+    SignCommitment
+  | -- | US proposal vote: @(UpId, Bool)@
+    SignUSVote
+  | -- | Block header:     @ToSign@
+    --
+    --   This constructor takes the 'VerificationKey' of the delegation
+    --   certificate issuer, which is prepended to the signature as part of the
+    --   sign tag
+    SignBlock VerificationKey
+  | -- | Certificate:      @Certificate@
+    SignCertificate
   deriving (Eq, Ord, Show, Generic)
 
 -- TODO: it would be nice if we couldn't use 'SignTag' with wrong
@@ -73,13 +70,12 @@ signTag = signTagRaw . serialize' . unProtocolMagicId
 signTagRaw :: ByteString -> SignTag -> ByteString
 signTagRaw network = \case
   SignForTestingOnly -> "\x00"
-  SignTx         -> "\x01" <> network
-  SignRedeemTx   -> "\x02" <> network
-  SignVssCert    -> "\x03" <> network
+  SignTx -> "\x01" <> network
+  SignRedeemTx -> "\x02" <> network
+  SignVssCert -> "\x03" <> network
   SignUSProposal -> "\x04" <> network
   SignCommitment -> "\x05" <> network
-  SignUSVote     -> "\x06" <> network
-
+  SignUSVote -> "\x06" <> network
   -- "\x07" was used for SignMainBlock, but was never used in mainnet
   -- "\x08" was used for SignMainBlockLight, but was never used in mainnet
 
@@ -87,5 +83,4 @@ signTagRaw network = \case
   -- allowing us to unify the two signing functions
   SignBlock (VerificationKey issuerVK) ->
     "01" <> CC.unXPub issuerVK <> "\x09" <> network
-
   SignCertificate -> "\x0a" <> network

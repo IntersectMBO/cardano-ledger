@@ -1,19 +1,16 @@
 module Cardano.Crypto.Signing.Safe.KeyGen
-  ( safeDeterministicKeyGen
-  , safeKeyGen
+  ( safeDeterministicKeyGen,
+    safeKeyGen,
   )
 where
 
-import Cardano.Prelude
-
+import Cardano.Crypto.Signing.Safe.PassPhrase (PassPhrase (..))
+import Cardano.Crypto.Signing.SigningKey (SigningKey (..))
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..))
 import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Prelude
 import Crypto.Random (MonadRandom, getRandomBytes)
 import qualified Data.ByteString as BS
-
-import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
-import Cardano.Crypto.Signing.SigningKey (SigningKey(..))
-import Cardano.Crypto.Signing.Safe.PassPhrase (PassPhrase(..))
-
 
 safeCreateKeypairFromSeed :: BS.ByteString -> PassPhrase -> (CC.XPub, CC.XPrv)
 safeCreateKeypairFromSeed seed (PassPhrase pp) =
@@ -27,7 +24,7 @@ safeKeyGen pp = do
   seed <- getRandomBytes 32
   pure $ safeDeterministicKeyGen seed pp
 
-safeDeterministicKeyGen
-  :: BS.ByteString -> PassPhrase -> (VerificationKey, SigningKey)
+safeDeterministicKeyGen ::
+  BS.ByteString -> PassPhrase -> (VerificationKey, SigningKey)
 safeDeterministicKeyGen seed pp =
   bimap VerificationKey SigningKey (safeCreateKeypairFromSeed seed pp)

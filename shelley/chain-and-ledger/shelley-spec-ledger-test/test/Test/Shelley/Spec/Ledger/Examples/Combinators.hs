@@ -46,9 +46,20 @@ module Test.Shelley.Spec.Ledger.Examples.Combinators
   )
 where
 
+import Cardano.Ledger.BaseTypes (NonNegativeInterval, Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    Ptr,
+  )
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys
+  ( GenDelegPair,
+    GenDelegs (..),
+    KeyHash,
+    KeyRole (..),
+  )
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
@@ -61,7 +72,6 @@ import Data.Set (Set)
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
-import Cardano.Ledger.BaseTypes (Nonce (..), StrictMaybe (..), NonNegativeInterval, UnitInterval, (⭒))
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
     Block (..),
@@ -72,18 +82,8 @@ import Shelley.Spec.Ledger.BlockChain
     lastAppliedHash,
     prevHashToNonce,
   )
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ptr,
-  )
 import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
-import Cardano.Ledger.Keys
-  ( GenDelegPair,
-    GenDelegs (..),
-    KeyHash,
-    KeyRole (..),
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState (..),
