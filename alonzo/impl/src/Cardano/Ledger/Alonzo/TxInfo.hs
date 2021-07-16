@@ -47,10 +47,11 @@ import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
+-- Instances only
+import Data.Text.Prettyprint.Doc (Pretty (..))
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Typeable (Typeable)
-import Debug.Trace (trace)
+import Data.Typeable (Proxy (..), Typeable)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as P
   ( Address (..),
@@ -60,6 +61,7 @@ import qualified Plutus.V1.Ledger.Api as P
     Data (..),
     Datum (..),
     DatumHash (..),
+    EvaluationError (..),
     ExBudget (..),
     ExCPU (..),
     ExMemory (..),
@@ -85,6 +87,7 @@ import qualified Plutus.V1.Ledger.Api as P
     dataToBuiltinData,
     evaluateScriptRestricting,
     from,
+    fromData,
     lowerBound,
     singleton,
     strictUpperBound,
@@ -93,6 +96,7 @@ import qualified Plutus.V1.Ledger.Api as P
     unionWith,
     validateScript,
   )
+import Plutus.V1.Ledger.Contexts ()
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
@@ -356,21 +360,114 @@ valContext ::
   Data era
 valContext txinfo sp = Data (P.toData (P.ScriptContext txinfo (transScriptPurpose sp)))
 
+data ScriptResult = Passes | Fails ![String]
+
+andResult :: ScriptResult -> ScriptResult -> ScriptResult
+andResult Passes Passes = Passes
+andResult Passes ans = ans
+andResult ans Passes = ans
+andResult (Fails xs) (Fails ys) = Fails (xs ++ ys)
+
+instance Semigroup ScriptResult where
+  (<>) = andResult
+
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
--- of P.evaluateScriptRestricting which is the interface to Plutus
+-- of P.evaluateScriptRestricting which is the interface to Plutus, and in the impementation
+-- we try to track why a script failed (if it does) by the [String] in the Fails constructor of ScriptResut.
 
 -- | Run a Plutus Script, given the script and the bounds on resources it is allocated.
-runPLCScript :: CostModel -> SBS.ShortByteString -> ExUnits -> [P.Data] -> Bool
-runPLCScript (CostModel cost) scriptbytestring units ds =
+runPLCScript ::
+  forall era.
+  Show (Script era) =>
+  Proxy era ->
+  CostModel ->
+  SBS.ShortByteString ->
+  ExUnits ->
+  [P.Data] ->
+  ScriptResult
+runPLCScript proxy (CostModel cost) scriptbytestring units ds =
   case P.evaluateScriptRestricting
     P.Quiet
     cost
     (transExUnits units)
     scriptbytestring
     ds of
-    (_, Left _e) -> trace ("\nrunPLC fails " ++ show _e ++ "\nData = " ++ show ds) False
-    (_, Right ()) -> True
+    (_, Left e) -> explain_plutus_failure proxy scriptbytestring e ds
+    (_, Right ()) -> Passes
+
+-- | Explin why a script might fail. Scripts come in two flavors. 1) with 3  data arguments [data,redeemer,context]
+--   and  2) with 2 data arguments [redeemer,context]. It pays to decode the context data into a real context
+--   because that provides way more information. But there is no guarantee the context data really can be decoded.
+explain_plutus_failure :: forall era. Show (Script era) => Proxy era -> SBS.ShortByteString -> P.EvaluationError -> [P.Data] -> ScriptResult
+explain_plutus_failure _proxy scriptbytestring e [dat, redeemer, info] =
+  -- A three data argument script.
+  let ss :: Script era
+      ss = PlutusScript scriptbytestring
+      name :: String
+      name = show ss
+   in case P.fromData info of
+        Nothing -> Fails [line]
+          where
+            line =
+              unlines
+                [ "\nThe 3 arg plutus script (" ++ name ++ ") fails.",
+                  show e,
+                  "The data is: " ++ show dat,
+                  "The redeemer is: " ++ show redeemer,
+                  "The third data argument, does not decode to a context\n" ++ show info
+                ]
+        Just info2 -> Fails [line]
+          where
+            info3 = show (pretty (info2 :: P.ScriptContext))
+            line =
+              unlines
+                [ "\nThe 3 arg plutus script (" ++ name ++ ") fails.",
+                  show e,
+                  "The data is: " ++ show dat,
+                  "The redeemer is: " ++ show redeemer,
+                  "The context is:\n" ++ info3
+                ]
+explain_plutus_failure _proxy scriptbytestring e [redeemer, info] =
+  -- A two data argument script.
+  let ss :: Script era
+      ss = PlutusScript scriptbytestring
+      name :: String
+      name = show ss
+   in case P.fromData info of
+        Nothing -> Fails [line]
+          where
+            line =
+              unlines
+                [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
+                  show e,
+                  "The redeemer is: " ++ show redeemer,
+                  "The second data argument, does not decode to a context\n" ++ show info
+                ]
+        Just info2 -> Fails [line]
+          where
+            info3 = show (pretty (info2 :: P.ScriptContext))
+            line =
+              unlines
+                [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
+                  show e,
+                  "The redeemer is: " ++ show redeemer,
+                  "The context is:\n" ++ info3
+                ]
+explain_plutus_failure _proxy scriptbytestring e ds = Fails [line] -- A script with the wrong number of arguments
+  where
+    ss :: Script era
+    ss = PlutusScript scriptbytestring
+    name :: String
+    name = show ss
+    line =
+      unlines
+        ( [ "\nThe plutus script (" ++ name ++ ") fails.",
+            show e,
+            "It was passed these " ++ show (Prelude.length ds) ++ " data arguments."
+          ]
+            ++ map show ds
+        )
 
 validPlutusdata :: P.Data -> Bool
 validPlutusdata (P.Constr _n ds) = all validPlutusdata ds
