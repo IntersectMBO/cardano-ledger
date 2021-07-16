@@ -25,7 +25,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
   )
 where
 
-import Cardano.Binary (ToCBOR(toCBOR),FromCBOR,Annotator)
+import Cardano.Binary (Annotator, FromCBOR, ToCBOR (toCBOR))
 import Cardano.Crypto.Hash (HashAlgorithm, hashWithSerialiser)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Allegra (AllegraEra)
@@ -113,13 +113,14 @@ sizedTimelock n =
     ]
 
 -- TODO Generate metadata with script preimages
-instance forall era c.
+instance
+  forall era c.
   ( Era era,
     c ~ Crypto era,
     Mock c,
     FromCBOR (Annotator (Core.Script era)),
     ToCBOR (Core.Script era),
-    Ord(Core.Script era),
+    Ord (Core.Script era),
     Arbitrary (Core.Script era)
   ) =>
   Arbitrary (MA.AuxiliaryData era)
@@ -140,7 +141,7 @@ instance forall era c.
       Metadata m -> MA.AuxiliaryData m <$> (genScriptSeq @era)
 
 genScriptSeq ::
-  forall era. Arbitrary (Core.Script era) => Gen(StrictSeq (Core.Script era))
+  forall era. Arbitrary (Core.Script era) => Gen (StrictSeq (Core.Script era))
 genScriptSeq = do
   n <- choose (0, 3)
   l <- vectorOf n arbitrary

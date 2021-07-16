@@ -236,7 +236,6 @@ boundedRationalFromCBOR = do
       cborError $ DecoderErrorCustom "BoundedRational" (Text.pack $ show r)
     Just u -> pure u
 
-
 instance ToJSON (BoundedRatio b Word64) where
   toJSON = toJSON . toScientificBoundedRatioWord64WithRounding
 
@@ -280,7 +279,6 @@ fromScientificBoundedRatioWord64 (normalize -> sci)
     fromRationalEither =
       maybe (failWith "outside of bounds") Right . fromRationalBoundedRatio
 
-
 -- | Type to represent a value in the interval [0; +∞)
 newtype NonNegativeInterval
   = NonNegativeInterval (BoundedRatio NonNegativeInterval Word64)
@@ -300,7 +298,6 @@ newtype NonNegativeInterval
 instance Bounded (BoundedRatio NonNegativeInterval Word64) where
   minBound = BoundedRatio (0 % 1)
   maxBound = BoundedRatio (maxBound % 1)
-
 
 -- | Type to represent a value in the interval (0; +∞)
 newtype PositiveInterval

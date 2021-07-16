@@ -1,36 +1,35 @@
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
 
-{- | The 'main' function in this file writes a file
-     'cardano-ledger-specs/alonzo/test/lib/Test/Cardano/Ledger/Alonzo/PlutusScripts.hs'
-     When this file is compiled it exports a bunch of Alonzo era scripts that are plutus scripts.
-     Compiling that file does not have any dependency on the plutus-plugin.
-     Instead this package 'plutus-preproccssor' has that dependency, but one does not have
-     to compile this package to build the system.
-     If the plutus package changes, we will have to regenerate the PlutusScripts.hs file.
-     To regenerate PlutusScripts.hs, on a machine that can depend upon plutus=plugin, then
-     cd into the plutus-preprocessor directory and type 'cabal run'
--}
+-- | The 'main' function in this file writes a file
+--     'cardano-ledger-specs/alonzo/test/lib/Test/Cardano/Ledger/Alonzo/PlutusScripts.hs'
+--     When this file is compiled it exports a bunch of Alonzo era scripts that are plutus scripts.
+--     Compiling that file does not have any dependency on the plutus-plugin.
+--     Instead this package 'plutus-preproccssor' has that dependency, but one does not have
+--     to compile this package to build the system.
+--     If the plutus package changes, we will have to regenerate the PlutusScripts.hs file.
+--     To regenerate PlutusScripts.hs, on a machine that can depend upon plutus=plugin, then
+--     cd into the plutus-preprocessor directory and type 'cabal run'
 module Main where
 
-import Flat (flat)
-import Data.ByteString.Short (ShortByteString, toShort, pack, unpack)
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy (toStrict)
-import qualified Plutus.V1.Ledger.Api as P
-import qualified PlutusTx as P (Data (..), compile)
-import qualified PlutusTx.Prelude as P
-import Language.Haskell.TH.Ppr
+import Data.ByteString.Short (ShortByteString, pack, toShort, unpack)
+import Flat (flat)
 import Language.Haskell.TH
+import Language.Haskell.TH.Ppr
+import qualified Plutus.V1.Ledger.Api as P
 import PlutusScripts
-  ( guessDecl,
-    guessDecl2args,
+  ( evenRedeemerDecl,
     evendataDecl,
-    evenRedeemerDecl,
-    odddataDecl,
+    guessDecl,
+    guessDecl2args,
     oddRedeemerDecl,
+    odddataDecl,
     sumsTo10Decl,
   )
+import qualified PlutusTx as P (Data (..), compile)
+import qualified PlutusTx.Prelude as P
 import System.IO
 
 -- =============================================
@@ -39,19 +38,19 @@ import System.IO
 display :: Handle -> ShortByteString -> Q [Dec] -> String -> IO ()
 display h bytes code name = do
   xxx <- runQ code
-  hPutStrLn h $ ("\n\n{- Preproceesed Plutus Script\n"++pprint xxx++"\n-}")
-  hPutStr h ("\n"++name++" :: Script era\n"++name++" = (PlutusScript . pack . concat) \n  [")
+  hPutStrLn h $ ("\n\n{- Preproceesed Plutus Script\n" ++ pprint xxx ++ "\n-}")
+  hPutStr h ("\n" ++ name ++ " :: Script era\n" ++ name ++ " = (PlutusScript . pack . concat) \n  [")
   manylines h 15 (unpack bytes)
 
-
-manylines :: Show t => Handle -> Int -> [t] -> IO()
+manylines :: Show t => Handle -> Int -> [t] -> IO ()
 manylines h n ts = write (split ts)
-  where split [] = []
-        split ts = take n ts : split (drop n ts)
-        write [ts] = hPutStrLn h (show ts++"]")
-        write (ts:tss) = do
-           hPutStr h (show ts++",\n   ")
-           write tss
+  where
+    split [] = []
+    split ts = take n ts : split (drop n ts)
+    write [ts] = hPutStrLn h (show ts ++ "]")
+    write (ts : tss) = do
+      hPutStr h (show ts ++ ",\n   ")
+      write tss
 
 -- ==========================================================================
 -- Turn the Template Haskell Decls into real haskell functions using Template
@@ -71,40 +70,39 @@ $sumsTo10Decl
 -- Compile the real functions as Plutus scripts, and get their
 -- bytestring equaivalents. Here is where we depend on plutus-plugin.
 
-guessTheNumberBytes:: ShortByteString
+guessTheNumberBytes :: ShortByteString
 guessTheNumberBytes =
-  toShort  . toStrict . serialise . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||guessTheNumber'3||])
 
-guess2args:: ShortByteString
+guess2args :: ShortByteString
 guess2args =
-  toShort  . toStrict . serialise . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||guessTheNumber'2||])
-
 
 evendataBytes :: ShortByteString
 evendataBytes =
-  toShort  . toStrict . serialise . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||evendata'||])
 
 evenRedeemerBytes :: ShortByteString
 evenRedeemerBytes =
-  toShort  . toStrict . serialise . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||evenRedeemer'||])
 
 odddataBytes :: ShortByteString
 odddataBytes =
-  toShort  . toStrict . serialise . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||odddata'||])
 
 oddRedeemerBytes :: ShortByteString
 oddRedeemerBytes =
-  toShort  . toStrict . serialise . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||oddRedeemer'||])
 
 sumsTo10Bytes :: ShortByteString
 sumsTo10Bytes =
-  toShort  . toStrict . serialise . P.fromCompiledCode $
+  toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||sumsTo10'||])
 
 -- ========================================================================
@@ -114,18 +112,19 @@ sumsTo10Bytes =
 
 main :: IO ()
 main = do
-   outh <- openFile "../alonzo/test/lib/Test/Cardano/Ledger/Alonzo/PlutusScripts.hs" WriteMode
-   mapM_ (hPutStrLn outh)
-     ["-- | This file is generated by plutus-preprocessor/src/Main.hs"
-     ,"module Test.Cardano.Ledger.Alonzo.PlutusScripts where\n"
-     ,"import Data.ByteString.Short (pack)"
-     ,"import Cardano.Ledger.Alonzo.Scripts(Script(..))\n"
-     ]
-   display outh guess2args guessDecl2args "guessTheNumber2"
-   display outh guessTheNumberBytes guessDecl "guessTheNumber3"
-   display outh evendataBytes evendataDecl "evendata3"
-   display outh odddataBytes odddataDecl "odddata3"
-   display outh evenRedeemerBytes evenRedeemerDecl "evenRedeemer3"
-   display outh oddRedeemerBytes oddRedeemerDecl "oddRedeemer3"
-   display outh sumsTo10Bytes sumsTo10Decl "sumsTo103"
-   hClose outh
+  outh <- openFile "../alonzo/test/lib/Test/Cardano/Ledger/Alonzo/PlutusScripts.hs" WriteMode
+  mapM_
+    (hPutStrLn outh)
+    [ "-- | This file is generated by plutus-preprocessor/src/Main.hs",
+      "module Test.Cardano.Ledger.Alonzo.PlutusScripts where\n",
+      "import Data.ByteString.Short (pack)",
+      "import Cardano.Ledger.Alonzo.Scripts(Script(..))\n"
+    ]
+  display outh guess2args guessDecl2args "guessTheNumber2"
+  display outh guessTheNumberBytes guessDecl "guessTheNumber3"
+  display outh evendataBytes evendataDecl "evendata3"
+  display outh odddataBytes odddataDecl "odddata3"
+  display outh evenRedeemerBytes evenRedeemerDecl "evenRedeemer3"
+  display outh oddRedeemerBytes oddRedeemerDecl "oddRedeemer3"
+  display outh sumsTo10Bytes sumsTo10Decl "sumsTo103"
+  hClose outh

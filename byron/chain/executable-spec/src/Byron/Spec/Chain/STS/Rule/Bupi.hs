@@ -5,22 +5,30 @@
 
 module Byron.Spec.Chain.STS.Rule.Bupi where
 
-import           Data.Data (Data, Typeable)
-
-
-import           Control.State.Transition (Embed, Environment, PredicateFailure, STS, Signal, State,
-                     TRC (TRC), TransitionRule, initialRules, judgmentContext, trans,
-                     transitionRules, wrapFailed)
-import           Byron.Spec.Ledger.Core (VKey)
-import           Byron.Spec.Ledger.Update (ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, Vote)
-
+import Byron.Spec.Ledger.Core (VKey)
+import Byron.Spec.Ledger.Update (ProtVer, UPIEND, UPIEnv, UPIREG, UPIState, UPIVOTES, UProp, Vote)
+import Control.State.Transition
+  ( Embed,
+    Environment,
+    PredicateFailure,
+    STS,
+    Signal,
+    State,
+    TRC (TRC),
+    TransitionRule,
+    initialRules,
+    judgmentContext,
+    trans,
+    transitionRules,
+    wrapFailed,
+  )
+import Data.Data (Data, Typeable)
 
 type UpdatePayload =
-  ( Maybe UProp
-  , [Vote]
-  , (ProtVer, VKey)
+  ( Maybe UProp,
+    [Vote],
+    (ProtVer, VKey)
   )
-
 
 data BUPI deriving (Data, Typeable)
 
@@ -46,24 +54,23 @@ instance STS BUPI where
         TRC (_, _, (mProp, _, _)) <- judgmentContext
         case mProp of
           Just prop -> hasProposalRule prop
-          Nothing   -> noProposalRule
+          Nothing -> noProposalRule
     ]
-   where
-    hasProposalRule :: UProp -> TransitionRule BUPI
-    hasProposalRule prop = do
-      TRC (env, us, (_, votes, end)) <- judgmentContext
-      us'    <- trans @UPIREG   $ TRC (env, us  , prop)
-      us''   <- trans @UPIVOTES $ TRC (env, us' , votes)
-      us'''  <- trans @UPIEND   $ TRC (env, us'', end)
-      return $! us'''
+    where
+      hasProposalRule :: UProp -> TransitionRule BUPI
+      hasProposalRule prop = do
+        TRC (env, us, (_, votes, end)) <- judgmentContext
+        us' <- trans @UPIREG $ TRC (env, us, prop)
+        us'' <- trans @UPIVOTES $ TRC (env, us', votes)
+        us''' <- trans @UPIEND $ TRC (env, us'', end)
+        return $! us'''
 
-    noProposalRule :: TransitionRule BUPI
-    noProposalRule = do
-      TRC (env, us, (_, votes, end)) <- judgmentContext
-      us'    <- trans @UPIVOTES $ TRC (env, us , votes)
-      us''   <- trans @UPIEND   $ TRC (env, us', end)
-      return $! us''
-
+      noProposalRule :: TransitionRule BUPI
+      noProposalRule = do
+        TRC (env, us, (_, votes, end)) <- judgmentContext
+        us' <- trans @UPIVOTES $ TRC (env, us, votes)
+        us'' <- trans @UPIEND $ TRC (env, us', end)
+        return $! us''
 
 instance Embed UPIREG BUPI where
   wrapFailed = UPIREGFailure

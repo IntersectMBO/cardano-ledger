@@ -10,17 +10,17 @@ module Test.Shelley.Spec.Ledger.Examples.EmptyBlock
   )
 where
 
-import Cardano.Ledger.Era (Crypto (..))
-import qualified Data.Map.Strict as Map
-import GHC.Stack (HasCallStack)
 import Cardano.Ledger.BaseTypes (Nonce)
-import Shelley.Spec.Ledger.BlockChain (Block)
-import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
+import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     SlotNo (..),
   )
+import qualified Data.Map.Strict as Map
+import GHC.Stack (HasCallStack)
+import Shelley.Spec.Ledger.BlockChain (Block)
+import Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..))
@@ -37,9 +37,9 @@ import Test.Shelley.Spec.Ledger.Examples.Init
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( NatNonce (..),
+    PreAlonzo,
     mkBlockFakeVRF,
     mkOCert,
-    PreAlonzo,
   )
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 
@@ -81,7 +81,7 @@ blockNonce = getBlockNonce (blockEx1 @era)
 
 expectedStEx1 ::
   forall era.
-  (ShelleyTest era, ExMock (Crypto era),PreAlonzo era) =>
+  (ShelleyTest era, ExMock (Crypto era), PreAlonzo era) =>
   ChainState era
 expectedStEx1 =
   (evolveNonceUnfrozen (blockNonce @era))
@@ -95,5 +95,5 @@ expectedStEx1 =
 --
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
-exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era),PreAlonzo era) => CHAINExample era
+exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era), PreAlonzo era) => CHAINExample era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

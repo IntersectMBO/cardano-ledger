@@ -10,62 +10,64 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Crypto.Signing.Redeem.Compact
-  ( CompactRedeemVerificationKey(..)
-  , fromCompactRedeemVerificationKey
-  , toCompactRedeemVerificationKey
+  ( CompactRedeemVerificationKey (..),
+    fromCompactRedeemVerificationKey,
+    toCompactRedeemVerificationKey,
   )
 where
 
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    enforceSize,
+  )
+import Cardano.Crypto.Signing.Redeem.VerificationKey
+  ( RedeemVerificationKey (..),
+    fromAvvmVK,
+    fromVerificationKeyToByteString,
+    redeemVKB64UrlF,
+    redeemVKBuild,
+  )
 import Cardano.Prelude
-
 import Data.Aeson
-  ( FromJSON(..)
-  , FromJSONKey(..)
-  , ToJSON(..)
-  , ToJSONKey(..)
-  , ToJSONKeyFunction(..)
+  ( FromJSON (..),
+    FromJSONKey (..),
+    ToJSON (..),
+    ToJSONKey (..),
+    ToJSONKeyFunction (..),
   )
 import qualified Data.Aeson.Encoding as A
 import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
 import Formatting (build, formatToString, sformat)
-import NoThunks.Class (NoThunks (..), InspectHeap (..))
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
 import Text.JSON.Canonical
-  (FromObjectKey(..), JSValue(..), ToObjectKey(..), toJSString)
-
-import Cardano.Binary
-  ( FromCBOR(..)
-  , ToCBOR(..)
-  , enforceSize
-  , encodeListLen
-  )
-import Cardano.Crypto.Signing.Redeem.VerificationKey
-  ( RedeemVerificationKey (..)
-  , fromAvvmVK
-  , fromVerificationKeyToByteString
-  , redeemVKB64UrlF
-  , redeemVKBuild
+  ( FromObjectKey (..),
+    JSValue (..),
+    ToObjectKey (..),
+    toJSString,
   )
 
-
-data CompactRedeemVerificationKey =
-  CompactRedeemVerificationKey {-# UNPACK #-} !Word64
-                               {-# UNPACK #-} !Word64
-                               {-# UNPACK #-} !Word64
-                               {-# UNPACK #-} !Word64
+data CompactRedeemVerificationKey
+  = CompactRedeemVerificationKey
+      {-# UNPACK #-} !Word64
+      {-# UNPACK #-} !Word64
+      {-# UNPACK #-} !Word64
+      {-# UNPACK #-} !Word64
   deriving (Eq, Generic, Show)
-  deriving NoThunks via InspectHeap CompactRedeemVerificationKey
-  deriving anyclass NFData
+  deriving (NoThunks) via InspectHeap CompactRedeemVerificationKey
+  deriving anyclass (NFData)
 
 instance ToCBOR CompactRedeemVerificationKey where
-  toCBOR (CompactRedeemVerificationKey a b c d)
-    = mconcat [
-        encodeListLen 4
-      , toCBOR @Word64 a
-      , toCBOR @Word64 b
-      , toCBOR @Word64 c
-      , toCBOR @Word64 d
+  toCBOR (CompactRedeemVerificationKey a b c d) =
+    mconcat
+      [ encodeListLen 4,
+        toCBOR @Word64 a,
+        toCBOR @Word64 b,
+        toCBOR @Word64 c,
+        toCBOR @Word64 d
       ]
 
 instance FromCBOR CompactRedeemVerificationKey where
@@ -92,22 +94,26 @@ putCompactRedeemVerificationKey (CompactRedeemVerificationKey a b c d) =
     >> putWord64le c
     >> putWord64le d
 
-toCompactRedeemVerificationKey :: RedeemVerificationKey
-                               -> CompactRedeemVerificationKey
+toCompactRedeemVerificationKey ::
+  RedeemVerificationKey ->
+  CompactRedeemVerificationKey
 toCompactRedeemVerificationKey (RedeemVerificationKey pk) =
   runGet getCompactRedeemVerificationKey (BSL.fromStrict bs)
- where
-  bs :: ByteString
-  bs = fromVerificationKeyToByteString pk
+  where
+    bs :: ByteString
+    bs = fromVerificationKeyToByteString pk
 
-fromCompactRedeemVerificationKey :: CompactRedeemVerificationKey
-                                 -> RedeemVerificationKey
+fromCompactRedeemVerificationKey ::
+  CompactRedeemVerificationKey ->
+  RedeemVerificationKey
 fromCompactRedeemVerificationKey compactRvk =
   redeemVKBuild bs
- where
-  bs :: ByteString
-  bs = BSL.toStrict $ runPut $
-    putCompactRedeemVerificationKey compactRvk
+  where
+    bs :: ByteString
+    bs =
+      BSL.toStrict $
+        runPut $
+          putCompactRedeemVerificationKey compactRvk
 
 instance Ord CompactRedeemVerificationKey where
   compare = compare `on` fromCompactRedeemVerificationKey
@@ -129,7 +135,8 @@ instance MonadError SchemaError m => FromObjectKey m CompactRedeemVerificationKe
 
 instance ToJSONKey CompactRedeemVerificationKey where
   toJSONKey = ToJSONKeyText render (A.text . render)
-    where render = sformat redeemVKB64UrlF . fromCompactRedeemVerificationKey
+    where
+      render = sformat redeemVKB64UrlF . fromCompactRedeemVerificationKey
 
 instance FromJSONKey CompactRedeemVerificationKey where
   fromJSONKey = toCompactRedeemVerificationKey <$> fromJSONKey

@@ -16,6 +16,9 @@ import Cardano.Ledger.Era (Crypto)
 import Control.State.Transition.Extended
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Either (fromRight)
+-- Use Another constraint, so this works in all Eras
+
+import qualified Data.Map as Map
 import Data.Proxy
 import Data.Set (Set)
 import GHC.Records (HasField (..))
@@ -47,16 +50,14 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
         minGenesisUTxOouts
       ),
   )
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..),ScriptSpace(..))
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
+import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), ScriptSpace (..))
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)  -- Use Another constraint, so this works in all Eras
-import Test.Shelley.Spec.Ledger.Generator.EraGen(MinLEDGER_STS)
-import qualified Data.Map as Map
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
 
 -- ===============================================================
 

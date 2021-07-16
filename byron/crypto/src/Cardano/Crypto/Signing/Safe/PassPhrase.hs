@@ -1,29 +1,26 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Crypto.Signing.Safe.PassPhrase
-  ( PassPhrase(..)
-  , emptyPassphrase
-  , passphraseLength
+  ( PassPhrase (..),
+    emptyPassphrase,
+    passphraseLength,
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
-
 import Data.ByteArray (ByteArray, ByteArrayAccess, ScrubbedBytes)
 import qualified Data.ByteArray as ByteArray
 import qualified Data.ByteString as BS
-import Data.Default (Default(..))
+import Data.Default (Default (..))
 import Formatting (int, sformat)
-import Formatting.Buildable (Buildable(..))
+import Formatting.Buildable (Buildable (..))
 import qualified Prelude
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
-
-
-newtype PassPhrase =
-  PassPhrase ScrubbedBytes
+newtype PassPhrase
+  = PassPhrase ScrubbedBytes
   deriving (Eq, Ord, Semigroup, Monoid, NFData, ByteArray, ByteArrayAccess)
 
 passphraseLength :: Int
@@ -51,12 +48,15 @@ instance FromCBOR PassPhrase where
     let bl = BS.length bs
     -- Currently passphrase may be either 32-byte long or empty (for
     -- unencrypted keys).
-    toCborError $ if bl == 0 || bl == passphraseLength
-      then Right $ ByteArray.convert bs
-      else Left $ sformat
-        ("put@PassPhrase: expected length 0 or " . int . ", not " . int)
-        passphraseLength
-        bl
+    toCborError $
+      if bl == 0 || bl == passphraseLength
+        then Right $ ByteArray.convert bs
+        else
+          Left $
+            sformat
+              ("put@PassPhrase: expected length 0 or " . int . ", not " . int)
+              passphraseLength
+              bl
 
 {-instance Monoid PassPhrase where
     mempty = PassPhrase mempty

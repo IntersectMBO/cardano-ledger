@@ -9,12 +9,10 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-
-{- | Currently this uses the trace mechansim to check that computing rewards has
-a required set of properties. It works only in the Shelley Era. It could be
-generalized, and then moved to the Generator/Trace/ directory which computes
-property tests in all eras.
--}
+-- | Currently this uses the trace mechansim to check that computing rewards has
+-- a required set of properties. It works only in the Shelley Era. It could be
+-- generalized, and then moved to the Generator/Trace/ directory which computes
+-- property tests in all eras.
 module Test.Shelley.Spec.Ledger.Rewards (rewardTests, C, defaultMain, newEpochProp) where
 
 import Cardano.Binary (toCBOR)
@@ -22,17 +20,45 @@ import qualified Cardano.Crypto.DSIGN as Crypto
 import Cardano.Crypto.Hash (MD5, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    BoundedRational (..),
+    Globals (..),
+    Network (..),
+    NonNegativeInterval,
+    ShelleyBase,
+    StrictMaybe (..),
+    UnitInterval,
+    activeSlotVal,
+    epochInfo,
+    mkActiveSlotCoeff,
+  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys
+  ( KeyHash,
+    KeyPair (..),
+    KeyRole (..),
+    VKey (..),
+    hashKey,
+    hashWithSerialiser,
+    vKey,
+  )
+-- (TestTree, defaultMain, testGroup)
+
+import Cardano.Ledger.Pretty (PrettyA (..))
+import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (invert, (<+>), (<->))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
 import Control.Provenance (ProvM, preservesJust, preservesNothing, runProvM, runWithProvM)
+import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Map (Map)
@@ -47,20 +73,6 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Wallet (getRewardInfo)
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    Globals (..),
-    Network (..),
-    ShelleyBase,
-    StrictMaybe (..),
-    NonNegativeInterval,
-    UnitInterval,
-    BoundedRational (..),
-    activeSlotVal,
-    epochInfo,
-    mkActiveSlotCoeff,
-  )
-import Cardano.Ledger.Credential (Credential (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
     SnapShot (..),
@@ -71,15 +83,6 @@ import Shelley.Spec.Ledger.EpochBoundary
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import qualified Shelley.Spec.Ledger.HardForks as HardForks
-import Cardano.Ledger.Keys
-  ( KeyHash,
-    KeyPair (..),
-    KeyRole (..),
-    VKey (..),
-    hashKey,
-    hashWithSerialiser,
-    vKey,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -117,11 +120,12 @@ import Shelley.Spec.Ledger.Rewards
     mkApparentPerformance,
     sumRewards,
   )
-import Cardano.Ledger.Slot (epochInfoSize)
+import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.TxBody (PoolParams (..), RewardAcnt (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Generator.Core (genCoin, genNatural)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
+import Test.Shelley.Spec.Ledger.Rules.TestChain (forAllChainTrace)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils
@@ -129,7 +133,7 @@ import Test.Shelley.Spec.Ledger.Utils
     testGlobals,
     unsafeBoundRational,
   )
-import Test.Tasty -- (TestTree, defaultMain, testGroup)
+import Test.Tasty
 import Test.Tasty.HUnit (testCaseInfo)
 import Test.Tasty.QuickCheck
   ( Gen,
@@ -144,11 +148,6 @@ import Test.Tasty.QuickCheck
     withMaxSuccess,
     (===),
   )
-import Test.Shelley.Spec.Ledger.Rules.TestChain(forAllChainTrace)
-import Control.State.Transition.Trace(SourceSignalTarget (..), sourceSignalTargets)
-import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Cardano.Ledger.Pretty(PrettyA(..))
-
 
 -- ========================================================================
 -- Bounds and Constants --
@@ -445,9 +444,9 @@ nothingInNothingOut ::
   Property
 nothingInNothingOut newepochstate =
   counterexample "nothingInNothingOut fails" $
-  runReader
-    (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
-    globals
+    runReader
+      (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
+      globals
   where
     globals = testGlobals
     epochstate = nesEs newepochstate
@@ -468,9 +467,9 @@ justInJustOut ::
   Property
 justInJustOut newepochstate =
   counterexample "justInJustOut fails" $
-  runReader
-    (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
-    globals
+    runReader
+      (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
+      globals
   where
     globals = testGlobals
     epochstate = nesEs newepochstate
@@ -555,8 +554,8 @@ rewardOnePool
         f (getRwdCred $ _poolRAcnt pool) lReward mRewards
       rewards' = Map.filter (/= Coin 0) $ (eval (addrsRew ◁ potentialRewards))
 
-
-rewardOld :: forall era.
+rewardOld ::
+  forall era.
   PParams era ->
   BlocksMade (Crypto era) ->
   Coin ->
@@ -586,7 +585,7 @@ rewardOld
     where
       totalBlocks = sum b
       Coin activeStake = fold . unStake $ stake
-      results :: [(KeyHash 'StakePool (Crypto era),Maybe (Map (Credential 'Staking (Crypto era)) Coin),Likelihood)]
+      results :: [(KeyHash 'StakePool (Crypto era), Maybe (Map (Credential 'Staking (Crypto era)) Coin), Likelihood)]
       results = do
         (hk, pparams) <- Map.toList poolParams
         let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
@@ -619,7 +618,7 @@ rewardOld
         if HardForks.aggregatedRewards pp
           then Map.unionsWith (<>)
           else Map.unions
-      rewards' = f . catMaybes $ fmap (\ (_, x, _) -> x) results
+      rewards' = f . catMaybes $ fmap (\(_, x, _) -> x) results
       hs = Map.fromList $ fmap (\(hk, _, l) -> (hk, l)) results
 
 data RewardUpdateOld crypto = RewardUpdateOld
@@ -687,11 +686,14 @@ createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm)
         nonMyopicOld = (updateNonMyopic nm _R newLikelihoods)
       }
 
-oldEqualsNew :: forall era.
-   ( era ~ C,
-     Core.PParams era ~ PParams era
-   ) => NewEpochState era -> Property
-oldEqualsNew newepochstate = counterexample (show(prettyA newepochstate)++"\n new = "++show new++"\n old = "++show old) (old===new)
+oldEqualsNew ::
+  forall era.
+  ( era ~ C,
+    Core.PParams era ~ PParams era
+  ) =>
+  NewEpochState era ->
+  Property
+oldEqualsNew newepochstate = counterexample (show (prettyA newepochstate) ++ "\n new = " ++ show new ++ "\n old = " ++ show old) (old === new)
   where
     globals = testGlobals
     epochstate = nesEs newepochstate
@@ -730,21 +732,18 @@ oldEqualsNewOn newepochstate = old === new
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
-
 lastElem :: [a] -> Maybe a
 lastElem [a] = Just a
 lastElem [] = Nothing
 lastElem (_ : xs) = lastElem xs
 
-
 -- | Provide a legitimate NewEpochState to make an test Property
 newEpochProp :: Word64 -> (NewEpochState C -> Property) -> Property
 newEpochProp tracelen propf = withMaxSuccess 100 $
   forAllChainTrace @C tracelen $ \tr ->
-     case (lastElem (sourceSignalTargets tr)) of
-       Just(SourceSignalTarget {target}) -> propf (chainNes target)
-       _ -> True === True
-
+    case (lastElem (sourceSignalTargets tr)) of
+      Just (SourceSignalTarget {target}) -> propf (chainNes target)
+      _ -> True === True
 
 -- ================================================================
 
@@ -808,7 +807,7 @@ rewardTests =
       testProperty "provenance does not affect result" (newEpochProp 100 (sameWithOrWithoutProvenance @C testGlobals)),
       testProperty "ProvM preserves Nothing" (newEpochProp 100 (nothingInNothingOut @C)),
       testProperty "ProvM preserves Just" (newEpochProp 100 (justInJustOut @C)),
-      testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance off style" (newEpochProp chainlen (oldEqualsNew @C)) ,
+      testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance off style" (newEpochProp chainlen (oldEqualsNew @C)),
       testProperty "oldstyle (aggregate immediately) matches newstyle (late aggregation) with provenance on style" (newEpochProp chainlen (oldEqualsNewOn @C)),
       testCaseInfo "Reward Provenance works" (rewardsProvenance (Proxy @C))
     ]

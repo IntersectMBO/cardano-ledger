@@ -1,33 +1,36 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveFunctor     #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms   #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Block.Body
-  ( Body
-  , pattern Body
-  , ABody(..)
-  , bodyTxs
-  , bodyWitnesses
+  ( Body,
+    pattern Body,
+    ABody (..),
+    bodyTxs,
+    bodyWitnesses,
   )
 where
 
-import Cardano.Prelude
-
-import Data.Aeson (ToJSON)
-
 import Cardano.Binary
-  (ByteSpan, FromCBOR(..), ToCBOR(..), encodeListLen, enforceSize)
+  ( ByteSpan,
+    FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+    enforceSize,
+  )
 import qualified Cardano.Chain.Delegation.Payload as Delegation
-import Cardano.Chain.Ssc (SscPayload(..))
+import Cardano.Chain.Ssc (SscPayload (..))
 import Cardano.Chain.UTxO.Tx (Tx)
 import Cardano.Chain.UTxO.TxPayload (ATxPayload, TxPayload, txpTxs, txpWitnesses)
 import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import qualified Cardano.Chain.Update.Payload as Update
+import Cardano.Prelude
+import Data.Aeson (ToJSON)
 
 -- | 'Body' consists of payloads of all block components
 type Body = ABody ()
@@ -38,18 +41,19 @@ pattern Body tx ssc dlg upd = ABody tx ssc dlg upd
 
 -- | 'Body' consists of payloads of all block components
 data ABody a = ABody
-  { bodyTxPayload     :: !(ATxPayload a)
-  -- ^ UTxO payload
-  , bodySscPayload    :: !SscPayload
-  -- ^ Ssc payload
-  , bodyDlgPayload    :: !(Delegation.APayload a)
-  -- ^ Heavyweight delegation payload (no-ttl certificates)
-  , bodyUpdatePayload :: !(Update.APayload a)
-  -- ^ Additional update information for the update system
-  } deriving (Eq, Show, Generic, Functor, NFData)
+  { -- | UTxO payload
+    bodyTxPayload :: !(ATxPayload a),
+    -- | Ssc payload
+    bodySscPayload :: !SscPayload,
+    -- | Heavyweight delegation payload (no-ttl certificates)
+    bodyDlgPayload :: !(Delegation.APayload a),
+    -- | Additional update information for the update system
+    bodyUpdatePayload :: !(Update.APayload a)
+  }
+  deriving (Eq, Show, Generic, Functor, NFData)
 
 -- Used for debugging purposes only
-instance ToJSON a => ToJSON (ABody a) where
+instance ToJSON a => ToJSON (ABody a)
 
 instance ToCBOR Body where
   toCBOR bc =

@@ -1,4 +1,5 @@
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -10,8 +11,6 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ConstraintKinds #-}
-
 -- The HasTrace instance relies on test generators and so cannot
 -- be included with the LEDGER STS
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -19,8 +18,9 @@
 module Test.Shelley.Spec.Ledger.Generator.Trace.Ledger where
 
 import Cardano.Binary (ToCBOR)
+import Cardano.Ledger.BaseTypes (Globals)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxInBlock))
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -28,6 +28,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
+import Cardano.Ledger.Slot (SlotNo (..))
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -39,7 +40,6 @@ import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField)
-import Cardano.Ledger.BaseTypes (Globals)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,
@@ -52,7 +52,6 @@ import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv, DelplPredicateFailure)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS, LedgersEnv (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
-import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.TxBody (DCert, Ix, TxIn)
 import Test.QuickCheck (Gen)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
@@ -60,8 +59,8 @@ import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), genCoin)
 import Test.Shelley.Spec.Ledger.Generator.EraGen
   ( EraGen (..),
-    genUtxo0,
     MinLEDGER_STS,
+    genUtxo0,
   )
 import Test.Shelley.Spec.Ledger.Generator.Presets (genesisDelegs0)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
@@ -70,7 +69,6 @@ import Test.Shelley.Spec.Ledger.Utils
   ( applySTSTest,
     runShelleyBase,
   )
-import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
 
 -- ======================================================
 
@@ -120,7 +118,7 @@ instance
 
   sigGen genenv env state = unsafeApplyTx <$> genTx genenv env state
 
-  shrinkSignal _ = []  -- TODO add some kind of Shrinker?
+  shrinkSignal _ = [] -- TODO add some kind of Shrinker?
 
   type BaseEnv (LEDGER era) = Globals
   interpretSTS globals act = runIdentity $ runReaderT act globals

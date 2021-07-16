@@ -10,8 +10,8 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import Cardano.Ledger.Keys
+import Data.TreeDiff.Class (ToExpr (..))
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
-import Data.TreeDiff.Class (ToExpr(..))
 
 -- We need this here for the tests, but should not be in the actual library because
 -- a Num instance for this type does not make sense in the general case.

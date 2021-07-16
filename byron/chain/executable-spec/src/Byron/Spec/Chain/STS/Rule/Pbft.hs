@@ -5,18 +5,15 @@
 
 module Byron.Spec.Chain.STS.Rule.Pbft where
 
-import           Data.Bimap (Bimap)
-import           Data.Data (Data, Typeable)
-import           Data.Sequence (Seq)
-import           Lens.Micro ((^.))
-
-import           Control.State.Transition
-
-import           Byron.Spec.Ledger.Core
-import           Byron.Spec.Ledger.Update
-
-import           Byron.Spec.Chain.STS.Block
-import           Byron.Spec.Chain.STS.Rule.SigCnt
+import Byron.Spec.Chain.STS.Block
+import Byron.Spec.Chain.STS.Rule.SigCnt
+import Byron.Spec.Ledger.Core
+import Byron.Spec.Ledger.Update
+import Control.State.Transition
+import Data.Bimap (Bimap)
+import Data.Data (Data, Typeable)
+import Data.Sequence (Seq)
+import Lens.Micro ((^.))
 
 data PBFT deriving (Data, Typeable)
 
@@ -29,13 +26,14 @@ data PbftPredicateFailure
   deriving (Eq, Show, Data, Typeable)
 
 instance STS PBFT where
-  type Environment PBFT =
-    ( PParams
-    , Bimap VKeyGenesis VKey
-    , Slot
-    , Slot
-    , BlockCount -- Chain stability parameter
-    )
+  type
+    Environment PBFT =
+      ( PParams,
+        Bimap VKeyGenesis VKey,
+        Slot,
+        Slot,
+        BlockCount -- Chain stability parameter
+      )
 
   type State PBFT = (Hash, Seq VKeyGenesis)
 
@@ -48,9 +46,8 @@ instance STS PBFT where
   transitionRules =
     [ do
         TRC ((pps, ds, sLast, sNow, k), (h, sgs), bh) <- judgmentContext
-        let
-          vkd = bh ^. bhIssuer :: VKey
-          s = bh ^. bhSlot :: Slot
+        let vkd = bh ^. bhIssuer :: VKey
+            s = bh ^. bhSlot :: Slot
         s > sLast ?! SlotNotAfterLastBlock s sLast
         s <= sNow ?! SlotInTheFuture s sNow
         (bh ^. bhPrevHash) == h ?! PrevHashNotMatching (bh ^. bhPrevHash) h

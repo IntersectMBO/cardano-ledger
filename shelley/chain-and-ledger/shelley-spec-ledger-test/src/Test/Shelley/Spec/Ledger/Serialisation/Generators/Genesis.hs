@@ -12,8 +12,8 @@ import Cardano.Crypto.Seed (mkSeedFromBytes)
 import Cardano.Crypto.VRF.Class
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes hiding (Seed)
-import Cardano.Ledger.Credential
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (DSIGN, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
@@ -66,7 +66,6 @@ genShelleyGenesis =
     <*> fmap Map.fromList genGenesisDelegationList
     <*> fmap Map.fromList genFundsList
     <*> genStaking
-
 
 genStaking :: CC.Crypto crypto => Gen (ShelleyGenesisStaking crypto)
 genStaking =
@@ -225,7 +224,6 @@ genDecimalBoundedRational gen = do
   denom <- (10 ^) <$> Gen.int (Range.linear 0 maxExp)
   num <- gen denom
   pure $ unsafeBoundRational $ toInteger num % toInteger denom
-
 
 genGenesisDelegationList ::
   CC.Crypto crypto =>

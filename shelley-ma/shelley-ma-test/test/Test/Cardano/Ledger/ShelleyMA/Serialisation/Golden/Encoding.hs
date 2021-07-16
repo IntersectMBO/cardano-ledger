@@ -11,29 +11,30 @@
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding (goldenEncodingTests) where
 
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..), ValidateScript (hashScript))
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
-import Cardano.Ledger.Core(PParamsDelta)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     ValidityInterval (..),
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import qualified Cardano.Ledger.Val as Val
 import Codec.CBOR.Encoding (Tokens (..))
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import qualified Shelley.Spec.Ledger.Metadata as SMD
 import Shelley.Spec.Ledger.PParams
   ( PParams' (..),
@@ -42,7 +43,6 @@ import Shelley.Spec.Ledger.PParams
     pattern ProposedPPUpdates,
     pattern Update,
   )
-import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),

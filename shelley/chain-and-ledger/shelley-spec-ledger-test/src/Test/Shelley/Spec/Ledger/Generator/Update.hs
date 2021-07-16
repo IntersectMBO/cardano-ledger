@@ -3,16 +3,15 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
-
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
+{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
 module Test.Shelley.Spec.Ledger.Generator.Update
   ( genPParams,
@@ -23,10 +22,29 @@ module Test.Shelley.Spec.Ledger.Generator.Update
   )
 where
 
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
+import Cardano.Ledger.BaseTypes
+  ( BoundedRational,
+    NonNegativeInterval,
+    Nonce (NeutralNonce),
+    StrictMaybe (..),
+    UnitInterval,
+    mkNonceFromNumber,
+  )
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core(PParams,PParamsDelta)
+import Cardano.Ledger.Core (PParamsDelta)
+import qualified Cardano.Ledger.Core as Core (PParams, PParamsDelta)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Keys
+  ( GenDelegPair (..),
+    GenDelegs (..),
+    KeyHash,
+    KeyPair,
+    KeyRole (..),
+    asWitness,
+    hashKey,
+    vKey,
+  )
+import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -38,24 +56,6 @@ import Shelley.Spec.Ledger.API
   ( ProposedPPUpdates,
     Update,
   )
-import Cardano.Ledger.BaseTypes
-  ( Nonce (NeutralNonce),
-    StrictMaybe (..),
-    BoundedRational,
-    NonNegativeInterval,
-    UnitInterval,
-    mkNonceFromNumber,
-  )
-import Cardano.Ledger.Keys
-  ( GenDelegPair (..),
-    GenDelegs (..),
-    KeyHash,
-    KeyPair,
-    KeyRole (..),
-    asWitness,
-    hashKey,
-    vKey,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
     DState (..),
@@ -64,13 +64,12 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
-    ProtVer (..),
     PParamsUpdate,
+    ProtVer (..),
     pattern ProposedPPUpdates,
     pattern Update,
   )
-import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
-import Test.QuickCheck (Gen,frequency)
+import Test.QuickCheck (Gen, frequency)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
@@ -81,12 +80,12 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     increasingProbabilityAt,
     tooLateInEpoch,
   )
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
 import Test.Shelley.Spec.Ledger.Utils
   ( GenesisKeyPair,
     epochFromSlotNo,
     unsafeBoundRational,
   )
-import Cardano.Ledger.Core(PParamsDelta)
 
 -- ====================================
 
@@ -215,12 +214,12 @@ genNextProtocolVersion pp = do
   where
     ProtVer m n = _protocolVersion pp
 
-
 genM :: Gen a -> Gen (StrictMaybe a)
-genM gen = frequency[(1,SJust <$> gen),(2,pure SNothing)]
+genM gen = frequency [(1, SJust <$> gen), (2, pure SNothing)]
 
 -- | This is only good in the Shelley Era, used to define the genEraPParamsDelta method for (EraGen (ShelleyEra c))
-genShelleyPParamsDelta:: forall era.
+genShelleyPParamsDelta ::
+  forall era.
   ( PParams era ~ Core.PParams era,
     Core.PParamsDelta era ~ PParamsUpdate era
   ) =>
@@ -246,29 +245,32 @@ genShelleyPParamsDelta (c@Constants {maxMinFeeA, maxMinFeeB}) pp = do
   protocolVersion <- genM $ genNextProtocolVersion pp
   minUTxOValue <- genM $ genMinUTxOValue
   minPoolCost <- genM $ genMinPoolCost
-  pure(PParams
-          { _minfeeA = minFeeA,
-            _minfeeB = minFeeB,
-            _maxBBSize = maxBBSize,
-            _maxTxSize = maxTxSize,
-            _maxBHSize = maxBHSize,
-            _keyDeposit = keyDeposit,
-            _poolDeposit = poolDeposit,
-            _eMax = eMax,
-            _nOpt = nopt,
-            _a0 = a0,
-            _rho = rho,
-            _tau = tau,
-            _d = d,
-            _extraEntropy = extraEntropy,
-            _protocolVersion = protocolVersion,
-            _minUTxOValue = minUTxOValue,
-            _minPoolCost = minPoolCost
-          })
+  pure
+    ( PParams
+        { _minfeeA = minFeeA,
+          _minfeeB = minFeeB,
+          _maxBBSize = maxBBSize,
+          _maxTxSize = maxTxSize,
+          _maxBHSize = maxBHSize,
+          _keyDeposit = keyDeposit,
+          _poolDeposit = poolDeposit,
+          _eMax = eMax,
+          _nOpt = nopt,
+          _a0 = a0,
+          _rho = rho,
+          _tau = tau,
+          _d = d,
+          _extraEntropy = extraEntropy,
+          _protocolVersion = protocolVersion,
+          _minUTxOValue = minUTxOValue,
+          _minPoolCost = minPoolCost
+        }
+    )
 
 -- | Generate a proposal for protocol parameter updates for all the given genesis keys.
 -- Return an empty update if it is too late in the epoch for updates.
-genPPUpdate :: forall era.
+genPPUpdate ::
+  forall era.
   (EraGen era) =>
   Constants ->
   Core.PParams era ->
@@ -280,7 +282,8 @@ genPPUpdate constants pp genesisKeys = do
   pure $ ProposedPPUpdates . Map.fromList $ ppUpdate
 
 -- | Generate an @Update (where all the given nodes participate)
-genUpdateForNodes :: forall era.
+genUpdateForNodes ::
+  forall era.
   (EraGen era) =>
   Constants ->
   SlotNo ->
@@ -294,7 +297,6 @@ genUpdateForNodes c s e coreKeys pp =
     genesisKeys = hashKey . vKey <$> coreKeys
     genPPUpdate_ = genPPUpdate c pp genesisKeys
     e' = if tooLateInEpoch s then e + 1 else e
-
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::

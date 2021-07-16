@@ -1,22 +1,20 @@
 -- | Dummy values used in tests (replacing `configuration.yaml`)
-
 module Test.Cardano.Crypto.Dummy
-  ( annotatedProtocolMagicId
-  , aProtocolMagic
-  , protocolMagic
-  , protocolMagicId
+  ( annotatedProtocolMagicId,
+    aProtocolMagic,
+    protocolMagic,
+    protocolMagicId,
   )
 where
 
-import Cardano.Prelude
-
-import Cardano.Binary (Annotated(..), serialize')
+import Cardano.Binary (Annotated (..), serialize')
 import Cardano.Crypto
-  ( AProtocolMagic(..)
-  , ProtocolMagic
-  , ProtocolMagicId(..)
-  , RequiresNetworkMagic(..)
+  ( AProtocolMagic (..),
+    ProtocolMagic,
+    ProtocolMagicId (..),
+    RequiresNetworkMagic (..),
   )
+import Cardano.Prelude
 
 aProtocolMagic :: AProtocolMagic ByteString
 aProtocolMagic = AProtocolMagic annotatedProtocolMagicId RequiresMagic

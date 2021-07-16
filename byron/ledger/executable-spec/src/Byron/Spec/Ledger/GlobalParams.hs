@@ -1,18 +1,15 @@
 -- | Ledger global parameters.
-
 module Byron.Spec.Ledger.GlobalParams
-  ( epochFirstSlot
-  , lovelaceCap
-  , slotsPerEpoch
-  , slotsPerEpochToK
-  , c
+  ( epochFirstSlot,
+    lovelaceCap,
+    slotsPerEpoch,
+    slotsPerEpochToK,
+    c,
   )
 where
 
-import           Data.Word (Word64)
-
-import           Byron.Spec.Ledger.Core (BlockCount (BlockCount), Epoch(..), Slot(..), lovelaceCap)
-
+import Byron.Spec.Ledger.Core (BlockCount (BlockCount), Epoch (..), Slot (..), lovelaceCap)
+import Data.Word (Word64)
 
 -- | Given the chain stability parameter, often referred to as @k@, which is
 -- expressed in an amount of blocks, return the number of slots contained in an

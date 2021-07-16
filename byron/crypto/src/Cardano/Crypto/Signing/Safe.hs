@@ -1,5 +1,5 @@
 module Cardano.Crypto.Signing.Safe
-  ( module X
+  ( module X,
   )
 where
 

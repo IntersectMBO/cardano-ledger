@@ -27,6 +27,7 @@ module BenchValidation
   )
 where
 
+import Cardano.Ledger.BaseTypes (Globals (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
@@ -47,7 +48,6 @@ import Shelley.Spec.Ledger.API.Protocol
     tickChainDepState,
     updateChainDepState,
   )
-import Cardano.Ledger.BaseTypes (Globals (..))
 import Shelley.Spec.Ledger.Bench.Gen (genBlock, genChainState)
 import Shelley.Spec.Ledger.BlockChain
   ( BHeader (..),
@@ -66,12 +66,11 @@ import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxBody (TransTxBody, TransTxId)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
+-- Use Another constraint, so this works in all Eras
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals) -- Use Another constraint, so this works in all Eras
-import Test.Shelley.Spec.Ledger.Generator.EraGen(MinLEDGER_STS)
-
+import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 

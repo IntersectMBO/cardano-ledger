@@ -21,12 +21,28 @@ module Test.Shelley.Spec.Ledger.Generator.Utxo
   )
 where
 
-import Cardano.Binary (ToCBOR,serialize)
+import Cardano.Binary (ToCBOR, serialize)
+import Cardano.Ledger.Address
+  ( Addr (..),
+    RewardAcnt (..),
+    toCred,
+  )
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
+import Cardano.Ledger.BaseTypes
+  ( Network (..),
+    maybeToStrictMaybe,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, ValidateScript (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys
+  ( KeyHash,
+    KeyPair,
+    KeyRole (..),
+    asWitness,
+  )
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
@@ -48,26 +64,14 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+-- Instances only
+
+import Debug.Trace (trace)
 import GHC.Records (HasField (..))
+import NoThunks.Class ()
 import Shelley.Spec.Ledger.API
   ( DCert,
     ScriptHash,
-  )
-import Cardano.Ledger.Address
-  ( Addr (..),
-    RewardAcnt (..),
-    toCred,
-  )
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    maybeToStrictMaybe,
-  )
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Keys
-  ( KeyHash,
-    KeyPair,
-    KeyRole (..),
-    asWitness,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -84,7 +88,7 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.STS.Delpl (DelplEnv)
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
-import Shelley.Spec.Ledger.Tx(Tx(..), TxIn (..))
+import Shelley.Spec.Ledger.Tx (Tx (..), TxIn (..))
 import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
@@ -101,8 +105,8 @@ import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..), defaultCons
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( GenEnv (..),
     KeySpace (..),
-    ScriptSpace(..),
     ScriptInfo,
+    ScriptSpace (..),
     findPayKeyPairAddr,
     findPayKeyPairCred,
     findPayScriptFromAddr,
@@ -113,13 +117,9 @@ import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombination)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS, genDCerts)
 import Test.Shelley.Spec.Ledger.Generator.Update (genUpdate)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
-import Cardano.Ledger.Era(Era)
-import NoThunks.Class()  -- Instances only
-
-import Debug.Trace(trace)
 
 myDiscard :: [Char] -> a
-myDiscard message = trace ("\nDiscarded trace: "++message) discard
+myDiscard message = trace ("\nDiscarded trace: " ++ message) discard
 
 -- ====================================================
 
@@ -142,10 +142,12 @@ showBalance
   (LedgerEnv _ _ pparams _)
   (UTxOState utxo _ _ _)
   (DPState _ (PState stakepools _ _))
-  tx =  "\n\nConsumed: " ++ show (consumed pparams utxo txBody)
-         ++ "  Produced: "
-         ++ show (produced @era pparams (`Map.notMember` stakepools) txBody)
-    where txBody = getField @"body" tx
+  tx =
+    "\n\nConsumed: " ++ show (consumed pparams utxo txBody)
+      ++ "  Produced: "
+      ++ show (produced @era pparams (`Map.notMember` stakepools) txBody)
+    where
+      txBody = getField @"body" tx
 
 --  ========================================================================
 
@@ -233,8 +235,13 @@ genTx
       let txWits = spendWits ++ wdrlWits ++ certWits ++ updateWits
           scripts = mkScriptWits @era spendScripts (certScripts ++ wdrlScripts)
           mkTxWits' txbody =
-            mkTxWits @era (utxo,txbody,ssHash scriptspace)  ksIndexedPaymentKeys
-                     ksIndexedStakingKeys txWits scripts (hashAnnotated txbody)
+            mkTxWits @era
+              (utxo, txbody, ssHash scriptspace)
+              ksIndexedPaymentKeys
+              ksIndexedStakingKeys
+              txWits
+              scripts
+              (hashAnnotated txbody)
       -------------------------------------------------------------------------
       -- SpendingBalance, Output Addresses (including some Pointer addresses)
       -- and a Outputs builder that distributes the given balance over
@@ -254,7 +261,7 @@ genTx
               -- generating a transaction. If we get unexplained failures one
               -- might investigate changing these constants.
 
-          -- !_ = occaisionally (length inputs * length ksKeyPairs * length ksMSigScripts) 10000 ("UTxOSize = "++show (Map.size (unUTxO utxo)))
+      -- !_ = occaisionally (length inputs * length ksKeyPairs * length ksMSigScripts) 10000 ("UTxOSize = "++show (Map.size (unUTxO utxo)))
 
       outputAddrs <-
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
@@ -263,8 +270,10 @@ genTx
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
       let enough = (length outputAddrs) <×> (getField @"_minUTxOValue" pparams)
-      !_ <- when (coin spendingBalance < coin enough)
-              (myDiscard ("not enough coin in outputs. needed: "++show enough++", available: "++show spendingBalance) discard)
+      !_ <-
+        when
+          (coin spendingBalance < coin enough)
+          (myDiscard ("not enough coin in outputs. needed: " ++ show enough ++ ", available: " ++ show spendingBalance) discard)
 
       -------------------------------------------------------------------------
       -- Build a Draft Tx and repeatedly add to Delta until all fees are
@@ -317,8 +326,7 @@ data Delta era = Delta
 
 instance Show (Delta era) where
   show (Delta fee is _wit _change dvs ds) =
-    "(Delta"++show fee++" "++show(Set.size is)++" wit change "++show(length dvs)++" "++show(length ds)++")"
-
+    "(Delta" ++ show fee ++ " " ++ show (Set.size is) ++ " wit change " ++ show (length dvs) ++ " " ++ show (length ds) ++ ")"
 
 -- | - We need this instance to know when delta has stopped growing. We don't
 --  actually need to compare all the fields, because if the extraInputs has not
@@ -328,7 +336,9 @@ instance
     UsesScript era,
     TransValue Eq era,
     Eq (Core.Witnesses era)
-  ) => Eq (Delta era) where
+  ) =>
+  Eq (Delta era)
+  where
   a == b =
     dfees a == dfees b
       && extraInputs a == extraInputs b
@@ -393,17 +403,18 @@ genNextDelta
         -- increase when we add the delta to the tx?
         draftSize =
           sum
-            [ 1100 :: Integer,  -- safety net in case the coin or a list prefix rolls over into a
-              -- larger encoding, or some other fudge factor occurs. Sometimes we need extra buffer
-              -- when minting tokens. 1100 has been empirically determined to make non-failing Txs
+            [ 1100 :: Integer, -- safety net in case the coin or a list prefix rolls over into a
+            -- larger encoding, or some other fudge factor occurs. Sometimes we need extra buffer
+            -- when minting tokens. 1100 has been empirically determined to make non-failing Txs
               encodedLen (max dfees (Coin 0)) - 1,
-              (foldr (\a b -> b + encodedLen a) 0 extraInputs) *2,
-                 --  inputs end up in collateral as well, so we ^ multiply by 2
+              (foldr (\a b -> b + encodedLen a) 0 extraInputs) * 2,
+              --  inputs end up in collateral as well, so we ^ multiply by 2
               encodedLen change,
               encodedLen extraWitnesses
             ]
         deltaScriptCost = foldr accum (Coin 0) extraScripts
-            where accum (s1,_) ans = genEraScriptCost @era pparams s1 <+> ans
+          where
+            accum (s1, _) ans = genEraScriptCost @era pparams s1 <+> ans
         deltaFee = (draftSize <×> Coin (fromIntegral (getField @"_minfeeA" pparams))) <+> deltaScriptCost
         totalFee = baseTxFee <+> deltaFee :: Coin
         remainingFee = totalFee <-> dfees :: Coin
@@ -415,7 +426,8 @@ genNextDelta
 
             if remainingFee <= (changeAmount <-> minAda)
               then
-                pure $ delta
+                pure $
+                  delta
                     { dfees = totalFee,
                       change =
                         deltaChange
@@ -431,10 +443,10 @@ genNextDelta
                       -- Remove possible inputs from Utxo, if they already
                       -- appear in inputs.
                       UTxO $
-                        Map.filter (genEraGoodTxOut @era) $  -- filter out URxO entries where the TxOut are not appropriate for this Era (i.e. Keylocked in AlonzoEra)
-                        Map.withoutKeys
-                          (unUTxO utxo)
-                          inputs_in_use
+                        Map.filter (genEraGoodTxOut @era) $ -- filter out URxO entries where the TxOut are not appropriate for this Era (i.e. Keylocked in AlonzoEra)
+                          Map.withoutKeys
+                            (unUTxO utxo)
+                            inputs_in_use
                 (inputs, value, (vkeyPairs, msigPairs)) <-
                   genInputs (1, 1) ksIndexedPaymentKeys ksIndexedPayScripts utxo'
                 -- It is possible that the Utxo has no possible inputs left, so
@@ -457,7 +469,8 @@ genNextDelta
                         vkeyPairs
                         (mkScriptWits @era msigPairs mempty)
                         (hashAnnotated txBody)
-                pure $ delta
+                pure $
+                  delta
                     { extraWitnesses = extraWitnesses <> newWits,
                       extraInputs = extraInputs <> Set.fromList inputs,
                       change = deltaChange (<+> value) change, -- <+> is plus of the Val class
@@ -496,7 +509,8 @@ genNextDeltaTilFixPoint ::
   Gen (Delta era)
 genNextDeltaTilFixPoint scriptinfo initialfee keys scripts utxo pparams keySpace tx = do
   addr <- genRecipients @era 1 keys scripts
-  fix 0
+  fix
+    0
     (genNextDelta scriptinfo utxo pparams keySpace tx)
     (deltaZero initialfee (safetyOffset <+> getField @"_minUTxOValue" pparams) (head addr))
   where
@@ -531,7 +545,7 @@ applyDelta
     let txBody = getField @"body" tx
         oldWitnessSet =
           mkTxWits @era
-            (utxo,addInputs @era txBody extraIn,scriptinfo)
+            (utxo, addInputs @era txBody extraIn, scriptinfo)
             ksIndexedPaymentKeys
             ksIndexedStakingKeys
             kw
@@ -544,13 +558,13 @@ applyDelta
             oldWitnessSet
             txBody
             deltafees -- Override the existing fee
-            extraIn   -- Union with existing inputs
-            change    -- Append to end of the existing outputs
+            extraIn -- Union with existing inputs
+            change -- Append to end of the existing outputs
         kw = neededKeys <> extraKeys
         sw = neededScripts <> mkScriptWits @era extraScripts mempty
         newWitnessSet =
           mkTxWits @era
-            (utxo,body2,scriptinfo)
+            (utxo, body2, scriptinfo)
             ksIndexedPaymentKeys
             ksIndexedStakingKeys
             kw
@@ -559,7 +573,7 @@ applyDelta
      in Tx @era body2 newWitnessSet _auxdata
 
 fix :: (Eq d, Monad m) => Int -> (Int -> d -> m d) -> d -> m d
-fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n+1) f d1
+fix n f d = do d1 <- f n d; if d1 == d then pure d else fix (n + 1) f d1
 
 converge ::
   ( EraGen era,
@@ -603,18 +617,20 @@ ruffle k items = do
     pickIndex = QC.choose (0, length items - 1)
 
 -- | Return 'num' random pairs from the map 'm'. If the size of 'm' is less than 'num' return 'size m' pairs.
-getNRandomPairs :: Ord k => Int -> Map.Map k t -> Gen[(k,t)]
+getNRandomPairs :: Ord k => Int -> Map.Map k t -> Gen [(k, t)]
 getNRandomPairs 0 _ = pure []
 getNRandomPairs num m =
   let n = Map.size m
-  in if n==0
+   in if n == 0
         then pure []
-        else (do
-          i <- QC.choose (0,n-1)
-          let (k,y) = Map.elemAt i m
-              m2 = Map.delete k m
-          ys <- getNRandomPairs (num-1) m2
-          pure ((k,y):ys))
+        else
+          ( do
+              i <- QC.choose (0, n -1)
+              let (k, y) = Map.elemAt i m
+                  m2 = Map.delete k m
+              ys <- getNRandomPairs (num -1) m2
+              pure ((k, y) : ys)
+          )
 
 mkScriptWits ::
   forall era.
@@ -652,22 +668,23 @@ mkTxWits ::
   SafeHash (Crypto era) EraIndependentTxBody ->
   Core.Witnesses era
 mkTxWits
-  (utxo,txbody,scriptinfo)
+  (utxo, txbody, scriptinfo)
   indexedPaymentKeys
   indexedStakingKeys
   awits
   msigs
   txBodyHash =
-     genEraWitnesses @era
-        (utxo,txbody,scriptinfo)
-        (makeWitnessesVKey txBodyHash awits
-            `Set.union` makeWitnessesFromScriptKeys
-              txBodyHash
-              ( indexedPaymentKeysAsWitnesses
-                  `Map.union` indexedStakingKeysAsWitnesses
-              )
-              msigSignatures)
-        msigs
+    genEraWitnesses @era
+      (utxo, txbody, scriptinfo)
+      ( makeWitnessesVKey txBodyHash awits
+          `Set.union` makeWitnessesFromScriptKeys
+            txBodyHash
+            ( indexedPaymentKeysAsWitnesses
+                `Map.union` indexedStakingKeysAsWitnesses
+            )
+            msigSignatures
+      )
+      msigs
     where
       indexedPaymentKeysAsWitnesses =
         Map.fromAscList
@@ -833,16 +850,19 @@ genRecipients len keys scripts = do
 
   -- choose m scripts and n keys as recipients
   -- We want to choose more Keys than Scripts by a factor of 2 or more.
-  (m,n) <- case n' of
-             0 -> pure (0,0)
-             1 -> pure (0,1)
-             2 -> pure (0,2)
-             3 -> pure (1,2)
-             4 -> pure (1,3)
-             5 -> pure (2,3)
-             _ -> (do m <- QC.choose (0, n' - 4)
-                      let n = n' - m
-                      pure (m,n))
+  (m, n) <- case n' of
+    0 -> pure (0, 0)
+    1 -> pure (0, 1)
+    2 -> pure (0, 2)
+    3 -> pure (1, 2)
+    4 -> pure (1, 3)
+    5 -> pure (2, 3)
+    _ ->
+      ( do
+          m <- QC.choose (0, n' - 4)
+          let n = n' - m
+          pure (m, n)
+      )
   recipientKeys <- ruffle n keys
   recipientScripts <- ruffle m scripts
 
