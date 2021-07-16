@@ -1,59 +1,65 @@
-{-# LANGUAGE AllowAmbiguousTypes        #-}
-{-# LANGUAGE DataKinds                  #-}
-{-# LANGUAGE DeriveDataTypeable         #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE NumDecimals                #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE RankNTypes                 #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE TypeApplications           #-}
-{-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeOperators              #-}
-
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NumDecimals #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 -- This is for 'mkKnownLovelace''s @n <= 45000000000000000@ constraint, which is
 -- considered redundant. TODO: investigate this.
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Chain.Common.Lovelace
-  (
-  -- * Lovelace
-    Lovelace
-  , LovelaceError(..)
-  , maxLovelaceVal
+  ( -- * Lovelace
+    Lovelace,
+    LovelaceError (..),
+    maxLovelaceVal,
 
-  -- * Constructors
-  , mkLovelace
-  , mkKnownLovelace
+    -- * Constructors
+    mkLovelace,
+    mkKnownLovelace,
 
-  -- * Formatting
-  , lovelaceF
+    -- * Formatting
+    lovelaceF,
 
-  -- * Conversions
-  , unsafeGetLovelace
-  , lovelaceToInteger
-  , integerToLovelace
+    -- * Conversions
+    unsafeGetLovelace,
+    lovelaceToInteger,
+    integerToLovelace,
 
-  -- * Arithmetic operations
-  , sumLovelace
-  , addLovelace
-  , subLovelace
-  , scaleLovelace
-  , scaleLovelaceRational
-  , scaleLovelaceRationalUp
-  , divLovelace
-  , modLovelace
+    -- * Arithmetic operations
+    sumLovelace,
+    addLovelace,
+    subLovelace,
+    scaleLovelace,
+    scaleLovelaceRational,
+    scaleLovelaceRationalUp,
+    divLovelace,
+    modLovelace,
   )
 where
 
+import Cardano.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    matchSize,
+  )
 import Cardano.Prelude
-
 import Data.Aeson (ToJSON)
 import Data.Data (Data)
 import Formatting (Format, bprint, build, int, sformat)
@@ -62,24 +68,17 @@ import GHC.TypeLits (type (<=))
 import NoThunks.Class (NoThunks (..))
 import Quiet
 import qualified Text.JSON.Canonical as Canonical
-  (FromJSON(..), ReportSchemaErrors, ToJSON(..))
-
-import Cardano.Binary
-  ( DecoderError(..)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , decodeListLen
-  , decodeWord8
-  , encodeListLen
-  , matchSize
+  ( FromJSON (..),
+    ReportSchemaErrors,
+    ToJSON (..),
   )
-
 
 -- | Lovelace is the least possible unit of currency
 newtype Lovelace = Lovelace
   { unLovelace :: Word64
-  } deriving (Ord, Eq, Generic, Data, NFData, NoThunks)
-    deriving Show via (Quiet Lovelace)
+  }
+  deriving (Ord, Eq, Generic, Data, NFData, NoThunks)
+  deriving (Show) via (Quiet Lovelace)
 
 instance B.Buildable Lovelace where
   build (Lovelace n) = bprint (int . " lovelace") n
@@ -89,7 +88,7 @@ instance Bounded Lovelace where
   maxBound = Lovelace maxLovelaceVal
 
 -- Used for debugging purposes only
-instance ToJSON Lovelace where
+instance ToJSON Lovelace
 
 instance ToCBOR Lovelace where
   toCBOR = toCBOR . unsafeGetLovelace
@@ -117,21 +116,25 @@ data LovelaceError
 
 instance B.Buildable LovelaceError where
   build = \case
-    LovelaceOverflow c -> bprint
-      ("Lovelace value, " . build . ", overflowed")
-      c
-    LovelaceTooLarge c -> bprint
-      ("Lovelace value, " . build . ", exceeds maximum, " . build)
-      c
-      maxLovelaceVal
-    LovelaceTooSmall c -> bprint
-      ("Lovelace value, " . build . ", is less than minimum, " . build)
-      c
-      (minBound :: Lovelace)
-    LovelaceUnderflow c c' -> bprint
-      ("Lovelace underflow when subtracting " . build . " from " . build)
-      c'
-      c
+    LovelaceOverflow c ->
+      bprint
+        ("Lovelace value, " . build . ", overflowed")
+        c
+    LovelaceTooLarge c ->
+      bprint
+        ("Lovelace value, " . build . ", exceeds maximum, " . build)
+        c
+        maxLovelaceVal
+    LovelaceTooSmall c ->
+      bprint
+        ("Lovelace value, " . build . ", is less than minimum, " . build)
+        c
+        (minBound :: Lovelace)
+    LovelaceUnderflow c c' ->
+      bprint
+        ("Lovelace underflow when subtracting " . build . " from " . build)
+        c'
+        c
 
 instance ToCBOR LovelaceError where
   toCBOR = \case
@@ -165,12 +168,12 @@ maxLovelaceVal = 45e15
 mkLovelace :: Word64 -> Either LovelaceError Lovelace
 mkLovelace c
   | c <= maxLovelaceVal = Right (Lovelace c)
-  | otherwise           = Left (LovelaceTooLarge (toInteger c))
+  | otherwise = Left (LovelaceTooLarge (toInteger c))
 {-# INLINE mkLovelace #-}
 
 -- | Construct a 'Lovelace' from a 'KnownNat', known to be less than
 --   'maxLovelaceVal'
-mkKnownLovelace :: forall n . (KnownNat n, n <= 45000000000000000) => Lovelace
+mkKnownLovelace :: forall n. (KnownNat n, n <= 45000000000000000) => Lovelace
 mkKnownLovelace = Lovelace . fromIntegral . natVal $ Proxy @n
 
 -- | Lovelace formatter which restricts type.
@@ -185,8 +188,8 @@ unsafeGetLovelace = unLovelace
 
 -- | Compute sum of all lovelace in container. Result is 'Integer' as a
 --   protection against possible overflow.
-sumLovelace
-  :: (Foldable t, Functor t) => t Lovelace -> Either LovelaceError Lovelace
+sumLovelace ::
+  (Foldable t, Functor t) => t Lovelace -> Either LovelaceError Lovelace
 sumLovelace = integerToLovelace . sum . map lovelaceToInteger
 
 lovelaceToInteger :: Lovelace -> Integer
@@ -198,13 +201,14 @@ addLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
 addLovelace (Lovelace a) (Lovelace b)
   | res >= a && res >= b && res <= maxLovelaceVal = Right (Lovelace res)
   | otherwise = Left (LovelaceOverflow res)
-  where res = a + b
+  where
+    res = a + b
 {-# INLINE addLovelace #-}
 
 -- | Subtraction of lovelace, returning 'LovelaceError' on underflow
 subLovelace :: Lovelace -> Lovelace -> Either LovelaceError Lovelace
 subLovelace (Lovelace a) (Lovelace b)
-  | a >= b    = Right (Lovelace (a - b))
+  | a >= b = Right (Lovelace (a - b))
   | otherwise = Left (LovelaceUnderflow a b)
 
 -- | Scale a 'Lovelace' by an 'Integral' factor, returning 'LovelaceError' when
@@ -216,7 +220,7 @@ scaleLovelace (Lovelace a) b = integerToLovelace $ toInteger a * toInteger b
 -- | Scale a 'Lovelace' by a rational factor, rounding down.
 scaleLovelaceRational :: Lovelace -> Rational -> Lovelace
 scaleLovelaceRational (Lovelace a) b =
-    Lovelace $ fromInteger $ toInteger a * n `div` d
+  Lovelace $ fromInteger $ toInteger a * n `div` d
   where
     n, d :: Integer
     n = numerator b
@@ -225,7 +229,7 @@ scaleLovelaceRational (Lovelace a) b =
 -- | Scale a 'Lovelace' by a rational factor, rounding up.
 scaleLovelaceRationalUp :: Lovelace -> Rational -> Lovelace
 scaleLovelaceRationalUp (Lovelace a) b =
-    Lovelace $ fromInteger $ ceiling $ toRational a * b
+  Lovelace $ fromInteger $ ceiling $ toRational a * b
 
 -- | Integer division of a 'Lovelace' by an 'Integral' factor
 divLovelace :: Integral b => Lovelace -> b -> Either LovelaceError Lovelace
@@ -240,6 +244,7 @@ modLovelace (Lovelace a) b = integerToLovelace $ toInteger a `mod` toInteger b
 integerToLovelace :: Integer -> Either LovelaceError Lovelace
 integerToLovelace n
   | n < 0 = Left (LovelaceTooSmall n)
-  | n <= lovelaceToInteger (maxBound :: Lovelace) = Right
-  $ Lovelace (fromInteger n)
+  | n <= lovelaceToInteger (maxBound :: Lovelace) =
+    Right $
+      Lovelace (fromInteger n)
   | otherwise = Left (LovelaceTooLarge n)

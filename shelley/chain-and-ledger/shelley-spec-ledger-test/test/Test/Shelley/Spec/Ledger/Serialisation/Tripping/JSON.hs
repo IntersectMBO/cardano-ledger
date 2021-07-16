@@ -18,7 +18,7 @@ import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
 import Hedgehog (Property)
 import qualified Hedgehog
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto, C)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
 import Test.Tasty
 import Test.Tasty.Hedgehog

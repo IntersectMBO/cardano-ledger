@@ -12,6 +12,7 @@ module Test.Shelley.Spec.Ledger.Rules.TestPool
   )
 where
 
+import Cardano.Ledger.Slot (EpochNo (..))
 import Control.SetAlgebra (dom, eval, (∈), (∉))
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
@@ -25,7 +26,6 @@ import Shelley.Spec.Ledger.LedgerState
     _pParams,
   )
 import Shelley.Spec.Ledger.STS.Pool (POOL)
-import Cardano.Ledger.Slot (EpochNo (..))
 import Shelley.Spec.Ledger.TxBody (DCert (DCertPool), PoolParams (..))
 import Test.QuickCheck (Property, conjoin, counterexample, property, (===))
 

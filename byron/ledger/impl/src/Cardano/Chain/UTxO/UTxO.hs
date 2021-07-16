@@ -1,70 +1,73 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.UTxO.UTxO
-  ( UTxO(..)
-  , UTxOError(..)
-  , empty
-  , fromList
-  , fromBalances
-  , fromTxOut
-  , toList
-  , member
-  , lookup
-  , lookupCompact
-  , lookupAddress
-  , union
-  , concat
-  , balance
-  , (<|)
-  , (</|)
-  , txOutputUTxO
-  , isRedeemUTxO
+  ( UTxO (..),
+    UTxOError (..),
+    empty,
+    fromList,
+    fromBalances,
+    fromTxOut,
+    toList,
+    member,
+    lookup,
+    lookupCompact,
+    lookupAddress,
+    union,
+    concat,
+    balance,
+    (<|),
+    (</|),
+    txOutputUTxO,
+    isRedeemUTxO,
   )
 where
 
-import Cardano.Prelude hiding (empty, toList, concat)
-
+import Cardano.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    matchSize,
+  )
+import Cardano.Chain.Common
+  ( Address,
+    Lovelace,
+    LovelaceError,
+    isRedeemAddress,
+    sumLovelace,
+  )
+import Cardano.Chain.UTxO.Compact
+  ( CompactTxIn,
+    CompactTxOut,
+    fromCompactTxIn,
+    fromCompactTxOut,
+    toCompactTxIn,
+    toCompactTxOut,
+  )
+import Cardano.Chain.UTxO.Tx (Tx (..), TxId, TxIn (..), TxOut (..))
+import Cardano.Crypto (serializeCborHash)
+import Cardano.Prelude hiding (concat, empty, toList)
 import Data.Coerce
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as M
 import qualified Data.Set as S
 import NoThunks.Class (NoThunks (..))
 
-import Cardano.Binary
-  ( DecoderError(..)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , decodeListLen
-  , decodeWord8
-  , encodeListLen
-  , matchSize
-  )
-import Cardano.Chain.Common
-  (Address, Lovelace, LovelaceError, isRedeemAddress, sumLovelace)
-import Cardano.Chain.UTxO.Tx (Tx(..), TxId, TxIn(..), TxOut(..))
-import Cardano.Chain.UTxO.Compact
-  ( CompactTxIn
-  , CompactTxOut
-  , fromCompactTxIn
-  , fromCompactTxOut
-  , toCompactTxIn
-  , toCompactTxOut
-  )
-import Cardano.Crypto (serializeCborHash)
-
-
 newtype UTxO = UTxO
   { unUTxO :: Map CompactTxIn CompactTxOut
-  } deriving (Eq, Show, Generic)
-    deriving newtype (HeapWords, FromCBOR, ToCBOR)
-    deriving anyclass (NFData, NoThunks)
+  }
+  deriving (Eq, Show, Generic)
+  deriving newtype (HeapWords, FromCBOR, ToCBOR)
+  deriving anyclass (NFData, NoThunks)
 
 data UTxOError
   = UTxOMissingInput TxIn
@@ -92,9 +95,9 @@ empty = UTxO mempty
 
 fromList :: [(TxIn, TxOut)] -> UTxO
 fromList = UTxO . M.fromList . toCompactTxInTxOutList
- where
-  toCompactTxInTxOutList :: [(TxIn, TxOut)] -> [(CompactTxIn, CompactTxOut)]
-  toCompactTxInTxOutList = map (bimap toCompactTxIn toCompactTxOut)
+  where
+    toCompactTxInTxOutList :: [(TxIn, TxOut)] -> [(CompactTxIn, CompactTxOut)]
+    toCompactTxInTxOutList = map (bimap toCompactTxIn toCompactTxOut)
 
 -- | Create a 'UTxO' from a list of initial balances
 fromBalances :: [(Address, Lovelace)] -> UTxO
@@ -138,30 +141,33 @@ concat = foldM union empty
 
 balance :: UTxO -> Either LovelaceError Lovelace
 balance = sumLovelace . fmap compactTxOutValue . M.elems . unUTxO
- where
-  compactTxOutValue :: CompactTxOut -> Lovelace
-  compactTxOutValue = txOutValue . fromCompactTxOut
+  where
+    compactTxOutValue :: CompactTxOut -> Lovelace
+    compactTxOutValue = txOutValue . fromCompactTxOut
 
 (<|) :: Set TxIn -> UTxO -> UTxO
 (<|) inputs = UTxO . flip M.restrictKeys compactInputs . unUTxO
- where
-  compactInputs = S.map toCompactTxIn inputs
+  where
+    compactInputs = S.map toCompactTxIn inputs
 
 (</|) :: Set TxIn -> UTxO -> UTxO
 (</|) inputs = UTxO . flip M.withoutKeys compactInputs . unUTxO
- where
-  compactInputs = S.map toCompactTxIn inputs
+  where
+    compactInputs = S.map toCompactTxIn inputs
 
 txOutputUTxO :: Tx -> UTxO
-txOutputUTxO tx = UTxO $ M.fromList
-  [ (toCompactTxIn (TxInUtxo (txId tx) ix), (toCompactTxOut txOut))
-    | (ix, txOut) <- indexedOutputs ]
- where
-  indexedOutputs :: [(Word32, TxOut)]
-  indexedOutputs = zip [0 ..] (NE.toList $ txOutputs tx)
+txOutputUTxO tx =
+  UTxO $
+    M.fromList
+      [ (toCompactTxIn (TxInUtxo (txId tx) ix), (toCompactTxOut txOut))
+        | (ix, txOut) <- indexedOutputs
+      ]
+  where
+    indexedOutputs :: [(Word32, TxOut)]
+    indexedOutputs = zip [0 ..] (NE.toList $ txOutputs tx)
 
-  txId :: Tx -> TxId
-  txId = serializeCborHash
+    txId :: Tx -> TxId
+    txId = serializeCborHash
 
 isRedeemUTxO :: UTxO -> Bool
 isRedeemUTxO =

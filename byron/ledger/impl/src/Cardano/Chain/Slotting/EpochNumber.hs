@@ -1,55 +1,54 @@
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DeriveDataTypeable         #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE StandaloneDeriving         #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Chain.Slotting.EpochNumber
-  ( EpochNumber(..)
-  , isBootstrapEra
+  ( EpochNumber (..),
+    isBootstrapEra,
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Prelude
-
 import qualified Data.Aeson as Aeson
 import Data.Data (Data)
 import Data.Ix (Ix)
 import Formatting (bprint, int)
-import Formatting.Buildable (Buildable(..))
+import Formatting.Buildable (Buildable (..))
 import NoThunks.Class (NoThunks (..))
-import Text.JSON.Canonical (FromJSON(..), ToJSON(..))
-
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
-
+import Text.JSON.Canonical (FromJSON (..), ToJSON (..))
 
 -- | Index of epoch.
 newtype EpochNumber = EpochNumber
   { getEpochNumber :: Word64
-  } deriving ( Show
-             , Data
-             , Eq
-             , Ord
-             , Num
-             , Enum
-             , Ix
-             , Integral
-             , Real
-             , Generic
-             , Bounded
-             , NFData
-             , NoThunks
-             )
+  }
+  deriving
+    ( Show,
+      Data,
+      Eq,
+      Ord,
+      Num,
+      Enum,
+      Ix,
+      Integral,
+      Real,
+      Generic,
+      Bounded,
+      NFData,
+      NoThunks
+    )
 
 instance Buildable EpochNumber where
   build = bprint ("#" . int)
 
 -- Used for debugging purposes only
-instance Aeson.ToJSON EpochNumber where
+instance Aeson.ToJSON EpochNumber
 
 instance ToCBOR EpochNumber where
   toCBOR (EpochNumber epoch) = toCBOR epoch
@@ -76,11 +75,11 @@ instance MonadError SchemaError m => FromJSON m EpochNumber where
 --          ------------------ | -----------------------
 --               Bootstrap era   Reward era
 --   @
-isBootstrapEra
-  :: EpochNumber
-  -- ^ Unlock stake epoch
-  -> EpochNumber
-  -- ^ Epoch in question (for which we determine whether it belongs to the
+isBootstrapEra ::
+  -- | Unlock stake epoch
+  EpochNumber ->
+  -- | Epoch in question (for which we determine whether it belongs to the
   --   bootstrap era)
-  -> Bool
+  EpochNumber ->
+  Bool
 isBootstrapEra unlockStakeEpoch epoch = epoch < unlockStakeEpoch

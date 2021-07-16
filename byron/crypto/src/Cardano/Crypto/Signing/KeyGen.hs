@@ -1,19 +1,16 @@
 module Cardano.Crypto.Signing.KeyGen
-  ( keyGen
-  , deterministicKeyGen
+  ( keyGen,
+    deterministicKeyGen,
   )
 where
 
-import Cardano.Prelude
-
+import Cardano.Crypto.Signing.SigningKey (SigningKey (..))
+import Cardano.Crypto.Signing.VerificationKey (VerificationKey (..))
 import qualified Cardano.Crypto.Wallet as CC
+import Cardano.Prelude
 import Crypto.Random (MonadRandom, getRandomBytes)
 import Data.ByteArray (ScrubbedBytes)
 import qualified Data.ByteString as BS
-
-import Cardano.Crypto.Signing.VerificationKey (VerificationKey(..))
-import Cardano.Crypto.Signing.SigningKey (SigningKey(..))
-
 
 -- TODO: this is just a placeholder for actual (not ready yet) derivation
 -- of keypair from seed in cardano-crypto API

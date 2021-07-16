@@ -1,14 +1,14 @@
-{-# LANGUAGE BangPatterns  #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Data.CanonicalMaps
-  ( CanonicalZero(..),
+  ( CanonicalZero (..),
     canonicalInsert,
     canonicalMapUnion,
     canonicalMap,
     pointWise,
     Map.Map,
   )
-  where
+where
 
 import Data.Map.Internal
   ( Map (..),

@@ -1,5 +1,5 @@
 module Cardano.Crypto
-  ( module X
+  ( module X,
   )
 where
 

@@ -3,28 +3,27 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Chain.Genesis.Json
-  ( tests
-  ) where
+  ( tests,
+  )
+where
 
 import Cardano.Prelude
-import Test.Cardano.Prelude
-
 import Hedgehog (Property)
-
+import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
 import Test.Cardano.Chain.Genesis.Example (exampleGenesisData0)
 import Test.Cardano.Chain.Genesis.Gen
-  ( genGenesisAvvmBalances
-  , genGenesisNonAvvmBalances
-  , genGenesisKeyHashes
+  ( genCanonicalGenesisData,
+    genCanonicalGenesisDelegation,
+    genGenesisAvvmBalances,
+    genGenesisKeyHashes,
+    genGenesisNonAvvmBalances,
   )
-import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
 import Test.Cardano.Chain.Update.Gen
-  (genCanonicalProtocolParameters)
-import Test.Cardano.Chain.Genesis.Gen
-  (genCanonicalGenesisData, genCanonicalGenesisDelegation)
+  ( genCanonicalProtocolParameters,
+  )
 import Test.Cardano.Crypto.Gen (feedPM)
+import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
-
 
 --------------------------------------------------------------------------------
 -- JSON Canonical Tests
@@ -68,7 +67,8 @@ ts_roundTripCanonicalProtocolParameters =
 
 golden_GenesisData0Dec :: Property
 golden_GenesisData0Dec =
-  goldenTestCanonicalJSONDec exampleGenesisData0
+  goldenTestCanonicalJSONDec
+    exampleGenesisData0
     "test/golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic"
 
 -------------------------------------------------------------------------------

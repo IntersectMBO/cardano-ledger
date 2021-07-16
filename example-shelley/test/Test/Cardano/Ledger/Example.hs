@@ -12,7 +12,7 @@
 
 module Test.Cardano.Ledger.Example
   ( -- export EraGen instance for ExampleEra and helpers shared with MaryEra
-    genCoin
+    genCoin,
   )
 where
 
@@ -20,12 +20,16 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Example (ExampleEra)
-import Data.Sequence.Strict (StrictSeq((:|>)))
+import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.Val ((<+>))
+import Control.Monad (replicateM)
+import Data.Sequence.Strict (StrictSeq ((:|>)))
 import Data.Set (Set)
 import Generic.Random (genericArbitraryU)
 import Shelley.Spec.Ledger.API
@@ -34,17 +38,16 @@ import Shelley.Spec.Ledger.API
     PraosCrypto,
     Update,
   )
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.EraMapping ()
+import qualified Shelley.Spec.Ledger.STS.Utxo as STS
 import Shelley.Spec.Ledger.Scripts (MultiSig (..))
-import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx
   ( TxIn (..),
     TxOut (..),
-    WitnessSetHKD(WitnessSet),
+    WitnessSetHKD (WitnessSet),
   )
 import Shelley.Spec.Ledger.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
-import qualified Shelley.Spec.Ledger.STS.Utxo as STS
 import Test.QuickCheck
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
@@ -53,20 +56,16 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     genCoin,
     genNatural,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), MinGenTxout (..))
 import Test.Shelley.Spec.Ledger.Generator.Metadata (genMetadata)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain ()
+import Test.Shelley.Spec.Ledger.Generator.Update (genPParams, genShelleyPParamsDelta)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
-import Test.Shelley.Spec.Ledger.Generator.Update(genShelleyPParamsDelta,genPParams)
-import Shelley.Spec.Ledger.PParams(PParams'(..))
-import Test.Shelley.Spec.Ledger.Generator.EraGen(MinGenTxout(..))
-import Cardano.Ledger.Val((<+>))
-import Control.Monad (replicateM)
 
 {------------------------------------------------------------------------------
   ExampleEra instances for EraGen and ScriptClass
@@ -76,7 +75,7 @@ instance
   ( PraosCrypto c,
     DSIGN.Signable (DSIGN c) ~ SignableRepresentation,
     KES.Signable (KES c) ~ SignableRepresentation,
-    MinGenTxout(ExampleEra c)
+    MinGenTxout (ExampleEra c)
   ) =>
   EraGen (ExampleEra c)
   where
@@ -100,7 +99,6 @@ instance
         _outputs = (_outputs body) :|> out
       }
   unsafeApplyTx x = x
-
 
 instance CC.Crypto c => ScriptClass (ExampleEra c) where
   basescript _proxy = RequireSignature
@@ -167,11 +165,10 @@ instance Mock c => Arbitrary (STS.UtxoPredicateFailure (ExampleEra c)) where
   arbitrary = genericArbitraryU
   shrink _ = []
 
-
 instance Mock c => MinGenTxout (ExampleEra c) where
   calcEraMinUTxO _txout pp = (_minUTxOValue pp)
   addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
-     values <- replicateM (length addrs) genVal
-     let  makeTxOut (addr,val) = TxOut addr val
-     pure (makeTxOut <$> zip addrs values)
+    values <- replicateM (length addrs) genVal
+    let makeTxOut (addr, val) = TxOut addr val
+    pure (makeTxOut <$> zip addrs values)

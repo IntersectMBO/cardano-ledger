@@ -1,67 +1,65 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Delegation.Validation.Scheduling
-  (
-  -- * Scheduling
-    Environment(..)
-  , State(..)
-  , Error(..)
-  , ScheduledDelegation(..)
-  , scheduleCertificate
+  ( -- * Scheduling
+    Environment (..),
+    State (..),
+    Error (..),
+    ScheduledDelegation (..),
+    scheduleCertificate,
   )
 where
 
-import Cardano.Prelude hiding (State)
-
-import Data.Sequence ((|>))
-import qualified Data.Sequence as Seq
-import qualified Data.Set as Set
-import NoThunks.Class (NoThunks (..))
-
 import Cardano.Binary
-  ( Annotated(..)
-  , Decoder
-  , DecoderError(..)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , decodeListLen
-  , decodeWord8
-  , encodeListLen
-  , enforceSize
-  , matchSize
+  ( Annotated (..),
+    Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    enforceSize,
+    matchSize,
   )
 import Cardano.Chain.Common (BlockCount, KeyHash, hashKey)
 import Cardano.Chain.Delegation.Certificate (ACertificate)
 import qualified Cardano.Chain.Delegation.Certificate as Certificate
 import Cardano.Chain.ProtocolConstants (kSlotSecurityParam)
 import Cardano.Chain.Slotting
-  ( EpochNumber
-  , SlotNumber(..)
-  , addSlotCount
+  ( EpochNumber,
+    SlotNumber (..),
+    addSlotCount,
   )
 import Cardano.Crypto (ProtocolMagicId)
-
+import Cardano.Prelude hiding (State)
+import Data.Sequence ((|>))
+import qualified Data.Sequence as Seq
+import qualified Data.Set as Set
+import NoThunks.Class (NoThunks (..))
 
 --------------------------------------------------------------------------------
 -- Scheduling
 --------------------------------------------------------------------------------
 
 data Environment = Environment
-  { protocolMagic     :: !(Annotated ProtocolMagicId ByteString)
-  , allowedDelegators :: !(Set KeyHash)
-  , currentEpoch      :: !EpochNumber
-  , currentSlot       :: !SlotNumber
-  , k                 :: !BlockCount
-  } deriving (Eq, Show, Generic, NFData)
+  { protocolMagic :: !(Annotated ProtocolMagicId ByteString),
+    allowedDelegators :: !(Set KeyHash),
+    currentEpoch :: !EpochNumber,
+    currentSlot :: !SlotNumber,
+    k :: !BlockCount
+  }
+  deriving (Eq, Show, Generic, NFData)
 
 data State = State
-  { scheduledDelegations :: !(Seq ScheduledDelegation)
-  , keyEpochDelegations  :: !(Set (EpochNumber, KeyHash))
-  } deriving (Eq, Show, Generic, NFData, NoThunks)
+  { scheduledDelegations :: !(Seq ScheduledDelegation),
+    keyEpochDelegations :: !(Set (EpochNumber, KeyHash))
+  }
+  deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance FromCBOR State where
   fromCBOR = do
@@ -77,10 +75,11 @@ instance ToCBOR State where
       <> toCBOR (keyEpochDelegations s)
 
 data ScheduledDelegation = ScheduledDelegation
-  { sdSlot      :: !SlotNumber
-  , sdDelegator :: !KeyHash
-  , sdDelegate  :: !KeyHash
-  } deriving (Eq, Show, Generic, NFData, NoThunks)
+  { sdSlot :: !SlotNumber,
+    sdDelegator :: !KeyHash,
+    sdDelegate :: !KeyHash
+  }
+  deriving (Eq, Show, Generic, NFData, NoThunks)
 
 instance FromCBOR ScheduledDelegation where
   fromCBOR = do
@@ -98,22 +97,16 @@ instance ToCBOR ScheduledDelegation where
       <> toCBOR (sdDelegate sd)
 
 data Error
-
-  = InvalidCertificate
-  -- ^ The delegation certificate has an invalid signature
-
-  | MultipleDelegationsForEpoch EpochNumber KeyHash
-  -- ^ This delegator has already delegated for the given epoch
-
-  | MultipleDelegationsForSlot SlotNumber KeyHash
-  -- ^ This delegator has already delgated in this slot
-
-  | NonGenesisDelegator KeyHash
-  -- ^ This delegator is not one of the allowed genesis keys
-
-  | WrongEpoch EpochNumber EpochNumber
-  -- ^ This delegation is for a past or for a too future epoch
-
+  = -- | The delegation certificate has an invalid signature
+    InvalidCertificate
+  | -- | This delegator has already delegated for the given epoch
+    MultipleDelegationsForEpoch EpochNumber KeyHash
+  | -- | This delegator has already delgated in this slot
+    MultipleDelegationsForSlot SlotNumber KeyHash
+  | -- | This delegator is not one of the allowed genesis keys
+    NonGenesisDelegator KeyHash
+  | -- | This delegation is for a past or for a too future epoch
+    WrongEpoch EpochNumber EpochNumber
   deriving (Eq, Show)
 
 instance ToCBOR Error where
@@ -131,7 +124,7 @@ instance ToCBOR Error where
         <> toCBOR (2 :: Word8)
         <> toCBOR slotNumber
         <> toCBOR keyHash
-    NonGenesisDelegator keyHash  ->
+    NonGenesisDelegator keyHash ->
       encodeListLen 2
         <> toCBOR (3 :: Word8)
         <> toCBOR keyHash
@@ -153,17 +146,17 @@ instance FromCBOR Error where
       2 -> checkSize 3 >> MultipleDelegationsForSlot <$> fromCBOR <*> fromCBOR
       3 -> checkSize 2 >> NonGenesisDelegator <$> fromCBOR
       4 -> checkSize 3 >> WrongEpoch <$> fromCBOR <*> fromCBOR
-      _ -> cborError   $  DecoderErrorUnknownTag "Scheduling.Error" tag
+      _ -> cborError $ DecoderErrorUnknownTag "Scheduling.Error" tag
 
 -- | Update the delegation 'State' with a 'Certificate' if it passes
 --   all the validation rules. This is an implementation of the delegation
 --   scheduling inference rule from the ledger specification.
-scheduleCertificate
-  :: MonadError Error m
-  => Environment
-  -> State
-  -> ACertificate ByteString
-  -> m State
+scheduleCertificate ::
+  MonadError Error m =>
+  Environment ->
+  State ->
+  ACertificate ByteString ->
+  m State
 scheduleCertificate env st cert = do
   -- Check that the delegator is a genesis key
   delegatorHash `Set.member` allowedDelegators
@@ -185,26 +178,28 @@ scheduleCertificate env st cert = do
   Certificate.isValid protocolMagic cert `orThrowError` InvalidCertificate
 
   -- Schedule the new delegation and register the epoch/delegator pair
-  pure $ State
-    { scheduledDelegations = scheduledDelegations |> delegation
-    , keyEpochDelegations  = Set.insert
-      (delegationEpoch, delegatorHash)
-      keyEpochDelegations
-    }
- where
-  Environment { protocolMagic, allowedDelegators, currentEpoch, currentSlot, k }
-    = env
+  pure $
+    State
+      { scheduledDelegations = scheduledDelegations |> delegation,
+        keyEpochDelegations =
+          Set.insert
+            (delegationEpoch, delegatorHash)
+            keyEpochDelegations
+      }
+  where
+    Environment {protocolMagic, allowedDelegators, currentEpoch, currentSlot, k} =
+      env
 
-  State { scheduledDelegations, keyEpochDelegations } = st
+    State {scheduledDelegations, keyEpochDelegations} = st
 
-  delegatorHash = hashKey $ Certificate.issuerVK cert
-  delegateHash = hashKey $ Certificate.delegateVK cert
+    delegatorHash = hashKey $ Certificate.issuerVK cert
+    delegateHash = hashKey $ Certificate.delegateVK cert
 
-  delegationEpoch = Certificate.epoch cert
+    delegationEpoch = Certificate.epoch cert
 
-  activationSlot  = addSlotCount (kSlotSecurityParam k) currentSlot
+    activationSlot = addSlotCount (kSlotSecurityParam k) currentSlot
 
-  delegatesThisSlot sd =
-    sdSlot sd == activationSlot && sdDelegator sd == delegatorHash
+    delegatesThisSlot sd =
+      sdSlot sd == activationSlot && sdDelegator sd == delegatorHash
 
-  delegation = ScheduledDelegation activationSlot delegatorHash delegateHash
+    delegation = ScheduledDelegation activationSlot delegatorHash delegateHash

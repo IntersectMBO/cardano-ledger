@@ -17,50 +17,50 @@
 --
 -- This module also includes a minimal domain-specific-language to specify
 -- expectations on traces.
---
 module Control.State.Transition.Trace
   ( -- * Trace checking
-    (.-)
-  , (.->)
-  , checkTrace
+    (.-),
+    (.->),
+    checkTrace,
+
     -- * Trace
-  , Trace (..)
-  , TraceOrder (NewestFirst, OldestFirst)
-  , mkTrace
-  , traceEnv
-  , traceInitState
-  , traceSignals
-  , traceStates
-  , preStatesAndSignals
-  , SourceSignalTarget (..)
-  , sourceSignalTargets
-  , traceLength
-  , traceInit
-  , lastState
-  , lastSignal
-  , firstAndLastState
-  , closure
-  -- * Miscellaneous utilities
-  , extractValues
-  , applySTSTest
+    Trace (..),
+    TraceOrder (NewestFirst, OldestFirst),
+    mkTrace,
+    traceEnv,
+    traceInitState,
+    traceSignals,
+    traceStates,
+    preStatesAndSignals,
+    SourceSignalTarget (..),
+    sourceSignalTargets,
+    traceLength,
+    traceInit,
+    lastState,
+    lastSignal,
+    firstAndLastState,
+    closure,
+
+    -- * Miscellaneous utilities
+    extractValues,
+    applySTSTest,
   )
 where
 
-import           Control.Monad (void)
-import           Control.Monad.IO.Class (MonadIO, liftIO)
-import           Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
-import           Data.Data (Data, Typeable, cast, gmapQ)
-import           Data.Maybe (catMaybes)
-import           Data.Sequence.Strict (StrictSeq ((:<|), Empty))
+import Control.Monad (void)
+import Control.Monad.IO.Class (MonadIO, liftIO)
+import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
+import Control.State.Transition.Extended hiding (Assertion, trans)
+import Data.Data (Data, Typeable, cast, gmapQ)
+import Data.Maybe (catMaybes)
+import Data.Sequence.Strict (StrictSeq (Empty, (:<|)))
 import qualified Data.Sequence.Strict as StrictSeq
-import           GHC.Generics (Generic)
-import           GHC.Stack (HasCallStack)
-import           Lens.Micro (Lens', lens, to, (^.), (^..))
-import           Lens.Micro.TH (makeLenses)
-import           NoThunks.Class (NoThunks(..))
-import           Test.Tasty.HUnit (assertFailure, (@?=))
-
-import           Control.State.Transition.Extended hiding (Assertion, trans)
+import GHC.Generics (Generic)
+import GHC.Stack (HasCallStack)
+import Lens.Micro (Lens', lens, to, (^.), (^..))
+import Lens.Micro.TH (makeLenses)
+import NoThunks.Class (NoThunks (..))
+import Test.Tasty.HUnit (assertFailure, (@?=))
 
 -- Signal and resulting state.
 --
@@ -81,22 +81,22 @@ deriving instance
   (Show (State s), Show (Signal s)) => (Show (SigState s))
 
 instance
-  ( NoThunks (State s)
-  , NoThunks (Signal s)
-  ) => (NoThunks (SigState s))
+  ( NoThunks (State s),
+    NoThunks (Signal s)
+  ) =>
+  (NoThunks (SigState s))
 
 -- | A successful trace of a transition system.
---
-data Trace s
-  = Trace
-    { _traceEnv :: !(Environment s)
-      -- ^ Environment under which the trace was run.
-      , _traceInitState :: !(State s)
-      -- ^ Initial state in the trace
-      , _traceTrans :: !(StrictSeq (SigState s))
-      -- ^ Signals and resulting states observed in the trace. New elements are
-      -- put in front of the list.
-    } deriving Generic
+data Trace s = Trace
+  { -- | Environment under which the trace was run.
+    _traceEnv :: !(Environment s),
+    -- | Initial state in the trace
+    _traceInitState :: !(State s),
+    -- | Signals and resulting states observed in the trace. New elements are
+    -- put in front of the list.
+    _traceTrans :: !(StrictSeq (SigState s))
+  }
+  deriving (Generic)
 
 makeLenses ''Trace
 
@@ -107,10 +107,11 @@ deriving instance
   (Show (State s), Show (Signal s), Show (Environment s)) => (Show (Trace s))
 
 instance
-  ( NoThunks (Environment s)
-  , NoThunks (State s)
-  , NoThunks (Signal s)
-  ) => (NoThunks (Trace s))
+  ( NoThunks (Environment s),
+    NoThunks (State s),
+    NoThunks (Signal s)
+  ) =>
+  (NoThunks (Trace s))
 
 -- | Make a trace given an environment and initial state.
 mkTrace :: Environment s -> State s -> [(State s, Signal s)] -> Trace s
@@ -151,13 +152,11 @@ mkTrace env initState sigs = Trace env initState sigs'
 -- >>> tr012 = mkTrace True 0 [(2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> lastState tr012
 -- 2
---
 lastState :: Trace s -> State s
-lastState Trace { _traceInitState, _traceTrans } =
+lastState Trace {_traceInitState, _traceTrans} =
   case _traceTrans of
     SigState st _ :<| _ -> st
     _ -> _traceInitState
-
 
 -- | Get the last applied signal in a trace (this is, the newest signal).
 --
@@ -180,13 +179,11 @@ lastState Trace { _traceInitState, _traceTrans } =
 -- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> lastSignal tr0123
 -- "three"
---
 lastSignal :: HasCallStack => Trace s -> Signal s
-lastSignal Trace { _traceTrans } =
+lastSignal Trace {_traceTrans} =
   case _traceTrans of
     Empty -> error "lastSignal was called with a trace without signals"
     SigState _st signal :<| _ -> signal
-
 
 -- | Return the first and last state of the trace.
 --
@@ -202,10 +199,8 @@ lastSignal Trace { _traceTrans } =
 -- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> firstAndLastState tr0123
 -- (0,3)
---
 firstAndLastState :: Trace s -> (State s, State s)
 firstAndLastState tr = (_traceInitState tr, lastState tr)
-
 
 data TraceOrder = NewestFirst | OldestFirst deriving (Eq)
 
@@ -234,7 +229,6 @@ fromNewestFirst OldestFirst = reverse
 --
 -- >>> traceSignals OldestFirst tr0123
 -- ["one","two","three"]
---
 traceSignals :: TraceOrder -> Trace s -> [Signal s]
 traceSignals order tr = fromNewestFirst order (tr ^.. traceTrans . traverse . transSig)
 
@@ -255,7 +249,6 @@ traceSignals order tr = fromNewestFirst order (tr ^.. traceTrans . traverse . tr
 --
 -- >>> traceStates OldestFirst tr0123
 -- [0,1,2,3]
---
 traceStates :: TraceOrder -> Trace s -> [State s]
 traceStates order tr = fromNewestFirst order (xs ++ [x])
   where
@@ -274,7 +267,6 @@ traceStates order tr = fromNewestFirst order (xs ++ [x])
 -- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> traceLength tr0123
 -- 3
---
 traceLength :: Trace s -> Int
 traceLength tr = tr ^. traceTrans . to length
 
@@ -298,12 +290,11 @@ traceLength tr = tr ^. traceTrans . to length
 -- >>> tr012 = mkTrace True 0 [(2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> traceInit tr012
 -- Trace {_traceEnv = True, _traceInitState = 0, _traceTrans = StrictSeq {fromStrict = fromList [SigState 1 "one"]}}
---
 traceInit :: HasCallStack => Trace s -> Trace s
-traceInit tr@Trace { _traceTrans } =
+traceInit tr@Trace {_traceTrans} =
   case _traceTrans of
     Empty -> error "traceInit was called with a trace without signals"
-    _ :<| trans -> tr { _traceTrans = trans }
+    _ :<| trans -> tr {_traceTrans = trans}
 
 -- | Retrieve all the signals in the trace paired with the state prior to the
 -- application of the signal.
@@ -327,12 +318,11 @@ traceInit tr@Trace { _traceTrans } =
 --
 -- >>> preStatesAndSignals NewestFirst tr0123
 -- [(2,"three"),(1,"two"),(0,"one")]
---
 preStatesAndSignals :: TraceOrder -> Trace s -> [(State s, Signal s)]
-preStatesAndSignals OldestFirst tr
-  = zip (traceStates OldestFirst tr) (traceSignals OldestFirst tr)
-preStatesAndSignals NewestFirst tr
-  = reverse $ preStatesAndSignals OldestFirst tr
+preStatesAndSignals OldestFirst tr =
+  zip (traceStates OldestFirst tr) (traceSignals OldestFirst tr)
+preStatesAndSignals NewestFirst tr =
+  reverse $ preStatesAndSignals OldestFirst tr
 
 -- | Apply the signals in the list and elaborate a trace with the resulting
 -- states.
@@ -366,20 +356,19 @@ preStatesAndSignals NewestFirst tr
 --
 -- >>> runIdentity $ closure @ADDER () 10 [-3, -2, -1]
 -- Trace {_traceEnv = (), _traceInitState = 10, _traceTrans = StrictSeq {fromStrict = fromList [SigState 4 (-3),SigState 7 (-2),SigState 9 (-1)]}}
---
-closure
-  :: forall s m
-   . (STS s, m ~ BaseM s)
-   => Environment s
-   -> State s
-   -> [Signal s]
-   -- ^ List of signals to apply, where the newest signal comes first.
-   -> m (Trace s)
+closure ::
+  forall s m.
+  (STS s, m ~ BaseM s) =>
+  Environment s ->
+  State s ->
+  -- | List of signals to apply, where the newest signal comes first.
+  [Signal s] ->
+  m (Trace s)
 closure env st0 sigs = mkTrace env st0 <$> loop st0 (reverse sigs) []
   where
     loop _ [] acc = pure acc
     loop sti (sig : sigs') acc =
-      applySTSTest @s (TRC(env, sti, sig)) >>= \case
+      applySTSTest @s (TRC (env, sti, sig)) >>= \case
         Left _ -> loop sti sigs' acc
         Right sti' -> loop sti' sigs' ((sti', sig) : acc)
 
@@ -391,16 +380,18 @@ closure env st0 sigs = mkTrace env st0 <$> loop st0 (reverse sigs) []
 -- function in the @Reader@ environment to that state and given signal,
 -- obtaining the resulting state, or an assertion failure if the transition
 -- function fails.
-(.-)
-  :: forall m st sig err
-   . ( MonadIO m
-     , MonadReader (st -> sig -> Either err st) m
-     , Show err
-     , HasCallStack
-     )
-  => m st -> sig -> m st
+(.-) ::
+  forall m st sig err.
+  ( MonadIO m,
+    MonadReader (st -> sig -> Either err st) m,
+    Show err,
+    HasCallStack
+  ) =>
+  m st ->
+  sig ->
+  m st
 mSt .- sig = do
-  st       <- mSt
+  st <- mSt
   validate <- ask -- Get the validation function from the environment
   case validate st sig of
     Left pfs -> liftIO . assertFailure . show $ pfs
@@ -408,25 +399,32 @@ mSt .- sig = do
 
 -- | Bind the state inside the first argument, and check whether it is equal to
 -- the expected state, given in the second argument.
-(.->)
-  :: forall m st
-   . (MonadIO m, Eq st, Show st, HasCallStack)
-  => m st -> st -> m st
+(.->) ::
+  forall m st.
+  (MonadIO m, Eq st, Show st, HasCallStack) =>
+  m st ->
+  st ->
+  m st
 mSt .-> stExpected = do
   stActual <- mSt
   liftIO $ stActual @?= stExpected
   return stActual
 
-checkTrace
-  :: forall s m
-   . (STS s, BaseM s ~ m)
-  => (forall a. m a -> a)
-  -> Environment s
-  -> ReaderT (State s ->
-              Signal s -> Either [PredicateFailure s] (State s)) IO (State s)
-  -> IO ()
+checkTrace ::
+  forall s m.
+  (STS s, BaseM s ~ m) =>
+  (forall a. m a -> a) ->
+  Environment s ->
+  ReaderT
+    ( State s ->
+      Signal s ->
+      Either [PredicateFailure s] (State s)
+    )
+    IO
+    (State s) ->
+  IO ()
 checkTrace interp env act =
-  void $ runReaderT act (\st sig -> interp $ applySTSTest @s (TRC(env, st, sig)))
+  void $ runReaderT act (\st sig -> interp $ applySTSTest @s (TRC (env, st, sig)))
 
 -- | Extract all the values of a given type.
 --
@@ -449,22 +447,22 @@ checkTrace interp env act =
 --
 -- >>> extractValues ("hello", 'z') :: [Char]
 -- "zhello"
---
-extractValues :: forall d a . (Data d, Typeable a) => d -> [a]
-extractValues d =  catMaybes (gmapQ extractValue d)
-                ++ concat (gmapQ extractValues d)
+extractValues :: forall d a. (Data d, Typeable a) => d -> [a]
+extractValues d =
+  catMaybes (gmapQ extractValue d)
+    ++ concat (gmapQ extractValues d)
   where
-    extractValue :: forall d1 . (Data d1) => d1 -> Maybe a
+    extractValue :: forall d1. (Data d1) => d1 -> Maybe a
     extractValue d1 = cast d1
 
-data SourceSignalTarget a =
-  SourceSignalTarget {
-    source :: State a
-  , target :: State a
-  , signal :: Signal a
+data SourceSignalTarget a = SourceSignalTarget
+  { source :: State a,
+    target :: State a,
+    signal :: Signal a
   }
 
 deriving instance (Eq (State a), Eq (Signal a)) => Eq (SourceSignalTarget a)
+
 deriving instance (Show (State a), Show (Signal a)) => Show (SourceSignalTarget a)
 
 -- | Extract triplets of the form [SourceSignalTarget {source = s, signal = sig, target =
@@ -481,7 +479,6 @@ deriving instance (Show (State a), Show (Signal a)) => Show (SourceSignalTarget 
 -- >>> tr0123 = mkTrace True 0 [(3, "three"), (2, "two"), (1, "one")] :: Trace DUMMY
 -- >>> sourceSignalTargets tr0123
 -- [SourceSignalTarget {source = 0, target = 1, signal = "one"},SourceSignalTarget {source = 1, target = 2, signal = "two"},SourceSignalTarget {source = 2, target = 3, signal = "three"}]
---
 sourceSignalTargets :: forall a. Trace a -> [SourceSignalTarget a]
 sourceSignalTargets trace = zipWith3 SourceSignalTarget states (tail states) signals
   where

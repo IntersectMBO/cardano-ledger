@@ -1,86 +1,87 @@
 module Test.Cardano.Crypto.Gen
-  (
-  -- * Protocol Magic Generator
-    genProtocolMagic
-  , genProtocolMagicId
-  , genRequiresNetworkMagic
+  ( -- * Protocol Magic Generator
+    genProtocolMagic,
+    genProtocolMagicId,
+    genRequiresNetworkMagic,
 
-  -- * Sign Tag Generator
-  , genSignTag
+    -- * Sign Tag Generator
+    genSignTag,
 
-  -- * Key Generators
-  , genKeypair
-  , genVerificationKey
-  , genSigningKey
+    -- * Key Generators
+    genKeypair,
+    genVerificationKey,
+    genSigningKey,
 
-  -- * Redeem Key Generators
-  , genRedeemKeypair
-  , genRedeemVerificationKey
-  , genCompactRedeemVerificationKey
-  , genRedeemSigningKey
+    -- * Redeem Key Generators
+    genRedeemKeypair,
+    genRedeemVerificationKey,
+    genCompactRedeemVerificationKey,
+    genRedeemSigningKey,
 
-  -- * Signature Generators
-  , genSignature
-  , genSignatureEncoded
-  , genRedeemSignature
+    -- * Signature Generators
+    genSignature,
+    genSignatureEncoded,
+    genRedeemSignature,
 
-  -- * Hash Generators
-  , genAbstractHash
+    -- * Hash Generators
+    genAbstractHash,
 
-  -- * SafeSigner Generators
-  , genSafeSigner
+    -- * SafeSigner Generators
+    genSafeSigner,
 
-  -- * PassPhrase Generators
-  , genPassPhrase
+    -- * PassPhrase Generators
+    genPassPhrase,
 
-  -- * Helper Generators
-  , genHashRaw
-  , genTextHash
-  , feedPM
+    -- * Helper Generators
+    genHashRaw,
+    genTextHash,
+    feedPM,
   )
 where
 
+import Cardano.Binary (Annotated (..), Raw (..), ToCBOR)
+import Cardano.Crypto (PassPhrase)
+import Cardano.Crypto.Hashing
+  ( AbstractHash,
+    Hash,
+    HashAlgorithm,
+    abstractHash,
+    serializeCborHash,
+  )
+import Cardano.Crypto.ProtocolMagic
+  ( AProtocolMagic (..),
+    ProtocolMagic,
+    ProtocolMagicId (..),
+    RequiresNetworkMagic (..),
+  )
+import Cardano.Crypto.Signing
+  ( SafeSigner (..),
+    SignTag (..),
+    Signature,
+    SigningKey,
+    VerificationKey,
+    deterministicKeyGen,
+    emptyPassphrase,
+    sign,
+    signRaw,
+  )
+import Cardano.Crypto.Signing.Redeem
+  ( CompactRedeemVerificationKey,
+    RedeemSignature,
+    RedeemSigningKey,
+    RedeemVerificationKey,
+    redeemDeterministicKeyGen,
+    redeemSign,
+    toCompactRedeemVerificationKey,
+  )
 import Cardano.Prelude
-import Test.Cardano.Prelude
-
 import qualified Data.ByteArray as ByteArray
 import Data.Coerce (coerce)
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
-import Cardano.Binary (Annotated(..), Raw(..), ToCBOR)
-import Cardano.Crypto (PassPhrase)
-import Cardano.Crypto.Hashing
-  (AbstractHash, Hash, HashAlgorithm, abstractHash, serializeCborHash)
-import Cardano.Crypto.ProtocolMagic
-  ( AProtocolMagic(..)
-  , ProtocolMagic
-  , ProtocolMagicId(..)
-  , RequiresNetworkMagic(..)
-  )
-import Cardano.Crypto.Signing
-  ( VerificationKey
-  , SafeSigner(..)
-  , SigningKey
-  , SignTag(..)
-  , Signature
-  , deterministicKeyGen
-  , emptyPassphrase
-  , sign
-  , signRaw
-  )
-import Cardano.Crypto.Signing.Redeem
-  ( CompactRedeemVerificationKey
-  , RedeemVerificationKey
-  , RedeemSigningKey
-  , RedeemSignature
-  , redeemDeterministicKeyGen
-  , redeemSign
-  , toCompactRedeemVerificationKey
-  )
 import Test.Cardano.Crypto.Orphans ()
-
+import Test.Cardano.Prelude
 
 --------------------------------------------------------------------------------
 -- Protocol Magic Generator
@@ -97,8 +98,9 @@ genProtocolMagic =
 -- don't care about testing compatibility with negative values, we only
 -- generate values between @0@ and @(maxBound :: Int32) - 1@, inclusive.
 genProtocolMagicId :: Gen ProtocolMagicId
-genProtocolMagicId = ProtocolMagicId
-  <$> Gen.word32 (Range.constant 0 $ fromIntegral (maxBound :: Int32) - 1)
+genProtocolMagicId =
+  ProtocolMagicId
+    <$> Gen.word32 (Range.constant 0 $ fromIntegral (maxBound :: Int32) - 1)
 
 genRequiresNetworkMagic :: Gen RequiresNetworkMagic
 genRequiresNetworkMagic = Gen.element [RequiresNoMagic, RequiresMagic]
@@ -108,18 +110,18 @@ genRequiresNetworkMagic = Gen.element [RequiresNoMagic, RequiresMagic]
 --------------------------------------------------------------------------------
 
 genSignTag :: Gen SignTag
-genSignTag = Gen.choice
-  [ pure SignForTestingOnly
-  , pure SignTx
-  , pure SignRedeemTx
-  , pure SignVssCert
-  , pure SignUSProposal
-  , pure SignCommitment
-  , pure SignUSVote
-  , SignBlock <$> genVerificationKey
-  , pure SignCertificate
-  ]
-
+genSignTag =
+  Gen.choice
+    [ pure SignForTestingOnly,
+      pure SignTx,
+      pure SignRedeemTx,
+      pure SignVssCert,
+      pure SignUSProposal,
+      pure SignCommitment,
+      pure SignUSVote,
+      SignBlock <$> genVerificationKey,
+      pure SignCertificate
+    ]
 
 --------------------------------------------------------------------------------
 -- Key Generators
@@ -133,7 +135,6 @@ genVerificationKey = fst <$> genKeypair
 
 genSigningKey :: Gen SigningKey
 genSigningKey = snd <$> genKeypair
-
 
 --------------------------------------------------------------------------------
 -- Redeem Key Generators
@@ -152,7 +153,6 @@ genCompactRedeemVerificationKey =
 genRedeemSigningKey :: Gen RedeemSigningKey
 genRedeemSigningKey = snd <$> genRedeemKeypair
 
-
 --------------------------------------------------------------------------------
 -- Signature Generators
 --------------------------------------------------------------------------------
@@ -164,22 +164,20 @@ genSignatureEncoded :: Gen ByteString -> Gen (Signature a)
 genSignatureEncoded genB =
   coerce . signRaw <$> genProtocolMagicId <*> (Just <$> genSignTag) <*> genSigningKey <*> genB
 
-genRedeemSignature
-  :: ToCBOR a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
+genRedeemSignature ::
+  ToCBOR a => ProtocolMagicId -> Gen a -> Gen (RedeemSignature a)
 genRedeemSignature pm genA = redeemSign pm <$> gst <*> grsk <*> genA
- where
-  gst  = genSignTag
-  grsk = genRedeemSigningKey
-
+  where
+    gst = genSignTag
+    grsk = genRedeemSigningKey
 
 --------------------------------------------------------------------------------
 -- Hash Generators
 --------------------------------------------------------------------------------
 
-genAbstractHash
-  :: (ToCBOR a, HashAlgorithm algo) => Gen a -> Gen (AbstractHash algo a)
+genAbstractHash ::
+  (ToCBOR a, HashAlgorithm algo) => Gen a -> Gen (AbstractHash algo a)
 genAbstractHash genA = abstractHash <$> genA
-
 
 --------------------------------------------------------------------------------
 -- PassPhrase Generators
@@ -187,11 +185,10 @@ genAbstractHash genA = abstractHash <$> genA
 
 genPassPhrase :: Gen PassPhrase
 genPassPhrase = ByteArray.pack <$> genWord8List
- where
-  genWord8List :: Gen [Word8]
-  genWord8List =
-    Gen.list (Range.singleton 32) (Gen.word8 Range.constantBounded)
-
+  where
+    genWord8List :: Gen [Word8]
+    genWord8List =
+      Gen.list (Range.singleton 32) (Gen.word8 Range.constantBounded)
 
 --------------------------------------------------------------------------------
 -- SafeSigner Generators
@@ -199,7 +196,6 @@ genPassPhrase = ByteArray.pack <$> genWord8List
 
 genSafeSigner :: Gen SafeSigner
 genSafeSigner = SafeSigner <$> genSigningKey <*> pure emptyPassphrase
-
 
 --------------------------------------------------------------------------------
 -- Helper Generators

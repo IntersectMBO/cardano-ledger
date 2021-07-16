@@ -25,6 +25,11 @@ import Cardano.Binary
     serialize,
     serializeEncoding,
   )
+import Cardano.Ledger.Serialization
+  ( FromCBORGroup (..),
+    ToCBORGroup (..),
+    groupRecord,
+  )
 import Cardano.Prelude
   ( Exception,
     ExitCode (..),
@@ -38,11 +43,6 @@ import Cardano.Prelude
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    groupRecord,
-  )
 import qualified System.Directory as Sys
 import qualified System.IO as Sys
 import qualified System.IO.Error as Sys

@@ -1,24 +1,19 @@
-{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Cardano.Crypto.Orphans
-  ()
-where
+module Test.Cardano.Crypto.Orphans () where
 
+import Cardano.Crypto
+  ( SigningKey (..),
+  )
+import Cardano.Crypto.Hashing (serializeCborHash)
 import Cardano.Prelude
-
-import qualified Data.ByteArray as BA
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import           Cardano.Crypto
-                   ( SigningKey(..)
-                   )
-import           Cardano.Crypto.Hashing (serializeCborHash)
-
+import qualified Data.ByteArray as BA
 
 -- Note that we /only/ provide these Eq and Ord instances for test suites.
 -- The crypto libraries encourage using key /hashes/ not keys for things
 -- like sets, map etc.
-
 
 instance Eq SigningKey where
   a == b = serializeCborHash a == serializeCborHash b

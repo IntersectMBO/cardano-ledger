@@ -23,6 +23,7 @@ import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxInBlock, TxSeq))
 import qualified Cardano.Ledger.Era as Era (TxInBlock)
 import Cardano.Ledger.Serialization (ToCBORGroup)
+import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.SetAlgebra (dom, eval)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
@@ -43,7 +44,6 @@ import Shelley.Spec.Ledger.BlockChain
     seedL,
   )
 import Shelley.Spec.Ledger.OCert (currentIssueNo, kesPeriod)
-import Cardano.Ledger.Slot (SlotNo (..))
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
@@ -113,7 +113,7 @@ genBlockWithTxGen ::
   Gen (Block era)
 genBlockWithTxGen
   genTxs
-  ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _scriptspace  _)
+  ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _scriptspace _)
   origChainState = do
     -- Firstly, we must choose a slot in which to lead.
     -- Caution: the number of slots we jump here will affect the number

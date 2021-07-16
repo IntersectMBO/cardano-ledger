@@ -22,13 +22,13 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Data.ByteString.Char8 as BS
 import Data.Char (chr)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Text as Text
 import qualified Data.Text.Encoding as Text
-import Cardano.Ledger.Slot (SlotNo (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty (TestTree, testGroup)

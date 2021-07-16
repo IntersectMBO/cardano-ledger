@@ -25,6 +25,7 @@ import Cardano.Crypto.Hash
 import Cardano.Crypto.Seed (runMonadRandomWithSeed)
 import Cardano.Crypto.Util
 import Cardano.Crypto.VRF.Class
+import Cardano.Ledger.BaseTypes (Seed)
 import Data.Bits
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
@@ -33,7 +34,6 @@ import Data.Proxy (Proxy (..))
 import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Cardano.Ledger.BaseTypes (Seed)
 
 data FakeVRF
 

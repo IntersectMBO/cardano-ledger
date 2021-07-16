@@ -1,49 +1,46 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveFunctor      #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE FlexibleContexts   #-}
-{-# LANGUAGE FlexibleInstances  #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE TemplateHaskell    #-}
-{-# LANGUAGE TypeApplications   #-}
-{-# LANGUAGE TypeFamilies       #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Chain.UTxO.TxAux
-  ( TxAux
-  , ATxAux(..)
-  , mkTxAux
-  , annotateTxAux
-  , taTx
-  , taWitness
-  , txaF
+  ( TxAux,
+    ATxAux (..),
+    mkTxAux,
+    annotateTxAux,
+    taTx,
+    taWitness,
+    txaF,
   )
 where
 
+import Cardano.Binary
+  ( Annotated (..),
+    ByteSpan,
+    Decoded (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    annotatedDecoder,
+    encodeListLen,
+    enforceSize,
+    fromCBORAnnotated,
+    serialize,
+    slice,
+    unsafeDeserialize,
+  )
+import Cardano.Chain.UTxO.Tx (Tx)
+import Cardano.Chain.UTxO.TxWitness (TxWitness)
 import Cardano.Prelude
-
 import Data.Aeson (ToJSON)
 import qualified Data.ByteString.Lazy as Lazy
 import Formatting (Format, bprint, build, later)
 import qualified Formatting.Buildable as B
-
-import Cardano.Binary
-  ( Annotated(..)
-  , ByteSpan
-  , Decoded(..)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , annotatedDecoder
-  , fromCBORAnnotated
-  , encodeListLen
-  , enforceSize
-  , serialize
-  , slice
-  , unsafeDeserialize
-  )
-import Cardano.Chain.UTxO.Tx (Tx)
-import Cardano.Chain.UTxO.TxWitness (TxWitness)
-
 
 -- | Transaction + auxiliary data
 type TxAux = ATxAux ()
@@ -54,22 +51,23 @@ mkTxAux tx tw = ATxAux (Annotated tx ()) (Annotated tw ()) ()
 annotateTxAux :: TxAux -> ATxAux ByteString
 annotateTxAux ta = Lazy.toStrict . slice bs <$> ta'
   where
-    bs  = serialize ta
+    bs = serialize ta
     ta' = unsafeDeserialize bs
 
 data ATxAux a = ATxAux
-  { aTaTx         :: !(Annotated Tx a)
-  , aTaWitness    :: !(Annotated TxWitness a)
-  , aTaAnnotation :: !a
-  } deriving (Generic, Show, Eq, Functor)
-    deriving anyclass NFData
+  { aTaTx :: !(Annotated Tx a),
+    aTaWitness :: !(Annotated TxWitness a),
+    aTaAnnotation :: !a
+  }
+  deriving (Generic, Show, Eq, Functor)
+  deriving anyclass (NFData)
 
 instance Decoded (ATxAux ByteString) where
   type BaseType (ATxAux ByteString) = ATxAux ()
   recoverBytes = aTaAnnotation
 
 -- Used for debugging purposes only
-instance ToJSON a => ToJSON (ATxAux a) where
+instance ToJSON a => ToJSON (ATxAux a)
 
 taTx :: ATxAux a -> Tx
 taTx = unAnnotated . aTaTx
@@ -79,10 +77,11 @@ taWitness = unAnnotated . aTaWitness
 
 -- | Specialized formatter for 'TxAux'
 txaF :: Format r (TxAux -> r)
-txaF = later $ \ta -> bprint
-  (build . "\n" . "witnesses: " . listJsonIndent 4)
-  (taTx ta)
-  (taWitness ta)
+txaF = later $ \ta ->
+  bprint
+    (build . "\n" . "witnesses: " . listJsonIndent 4)
+    (taTx ta)
+    (taWitness ta)
 
 instance B.Buildable TxAux where
   build = bprint txaF
@@ -99,7 +98,7 @@ instance FromCBOR (ATxAux ByteSpan) where
   fromCBOR = do
     Annotated (tx, witness) byteSpan <- annotatedDecoder $ do
       enforceSize "TxAux" 2
-      tx      <- fromCBORAnnotated
+      tx <- fromCBORAnnotated
       witness <- fromCBORAnnotated
       pure (tx, witness)
     pure $ ATxAux tx witness byteSpan

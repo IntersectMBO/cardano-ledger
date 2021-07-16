@@ -1,31 +1,26 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Crypto.Keys
-  ( tests
+  ( tests,
   )
 where
 
+import Cardano.Crypto.Signing
+  ( deterministicKeyGen,
+    fullVerificationKeyF,
+    parseFullVerificationKey,
+    redeemDeterministicKeyGen,
+    redeemToVerification,
+    safeDeterministicKeyGen,
+    toVerification,
+  )
 import Cardano.Prelude
-
 import Formatting (sformat)
-
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
-import Cardano.Crypto.Signing
-  ( deterministicKeyGen
-  , fullVerificationKeyF
-  , parseFullVerificationKey
-  , redeemDeterministicKeyGen
-  , redeemToVerification
-  , safeDeterministicKeyGen
-  , toVerification
-  )
-
 import Test.Cardano.Crypto.Gen (genPassPhrase, genVerificationKey)
-
 
 --------------------------------------------------------------------------------
 -- Main Test Action
@@ -33,7 +28,6 @@ import Test.Cardano.Crypto.Gen (genPassPhrase, genVerificationKey)
 
 tests :: IO Bool
 tests = checkParallel $$discover
-
 
 --------------------------------------------------------------------------------
 -- Key Properties
@@ -55,15 +49,14 @@ prop_pubKeyParsing = property $ do
 prop_redeemVerKeyDerivedGenerated :: Property
 prop_redeemVerKeyDerivedGenerated = property $ do
   seed <- forAll $ Gen.bytes (Range.singleton 32)
-  let
-    (vk, sk) =
-      fromMaybe (panic "redeem keygen failed") $ redeemDeterministicKeyGen seed
+  let (vk, sk) =
+        fromMaybe (panic "redeem keygen failed") $ redeemDeterministicKeyGen seed
   vk === redeemToVerification sk
 
 -- | Derived 'VerificationKey' is the same as generated one
 prop_safeVerKeyDerivedGenerated :: Property
 prop_safeVerKeyDerivedGenerated = property $ do
-  pp   <- forAll genPassPhrase
+  pp <- forAll genPassPhrase
   seed <- forAll $ Gen.bytes (Range.singleton 32)
   let (vk, sk) = safeDeterministicKeyGen seed pp
   vk === toVerification sk

@@ -1,42 +1,40 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Update.InstallerHash
-  ( InstallerHash(..)
+  ( InstallerHash (..),
   )
 where
 
+import Cardano.Binary
+  ( FromCBOR (..),
+    Raw,
+    ToCBOR (..),
+    dropBytes,
+    encodeListLen,
+    enforceSize,
+  )
+import Cardano.Crypto (Hash, hashRaw)
 import Cardano.Prelude
-
 import Data.Aeson (ToJSON)
 import Formatting (bprint, build)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
-import Cardano.Binary
-  ( FromCBOR(..)
-  , Raw
-  , ToCBOR(..)
-  , dropBytes
-  , encodeListLen
-  , enforceSize
-  )
-import Cardano.Crypto (Hash, hashRaw)
-
-
 -- | The hash of the installer of the new application
 newtype InstallerHash = InstallerHash
   { unInstallerHash :: Hash Raw
-  } deriving (Eq, Show, Generic)
-    deriving anyclass (NFData, NoThunks)
+  }
+  deriving (Eq, Show, Generic)
+  deriving anyclass (NFData, NoThunks)
 
 instance B.Buildable InstallerHash where
   build (InstallerHash h) = bprint ("{ installer hash: " . build . " }") h
 
 -- Used for debugging purposes only
-instance ToJSON InstallerHash where
+instance ToJSON InstallerHash
 
 instance ToCBOR InstallerHash where
   toCBOR (InstallerHash h) =
@@ -45,7 +43,8 @@ instance ToCBOR InstallerHash where
       <> toCBOR h
       <> toCBOR emptyHash
       <> toCBOR emptyHash
-    where emptyHash = hashRaw "\NUL"
+    where
+      emptyHash = hashRaw "\NUL"
 
 instance FromCBOR InstallerHash where
   fromCBOR = do

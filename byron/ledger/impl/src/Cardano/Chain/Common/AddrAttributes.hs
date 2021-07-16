@@ -1,64 +1,67 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE FlexibleInstances          #-}
-{-# LANGUAGE OverloadedStrings          #-}
+{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.Chain.Common.AddrAttributes
-  ( AddrAttributes(..)
-  , HDAddressPayload(..)
+  ( AddrAttributes (..),
+    HDAddressPayload (..),
   )
 where
 
+import Cardano.Binary
+  ( Decoder,
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeBytesCanonical,
+    decodeFull,
+    decodeFullDecoder,
+    decodeWord32Canonical,
+    serialize,
+  )
+import Cardano.Chain.Common.Attributes
+  ( Attributes (..),
+    fromCBORAttributes,
+    toCBORAttributes,
+  )
+import Cardano.Chain.Common.NetworkMagic (NetworkMagic (..))
 import Cardano.Prelude
-
-import Data.Aeson (ToJSON(..), object, (.=))
+import Data.Aeson (ToJSON (..), object, (.=))
 import qualified Data.ByteString.Char8 as Char8
 import Data.Text.Lazy.Builder (Builder)
 import Formatting (bprint, builder)
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
 
-import Cardano.Binary
-  ( Decoder
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , decodeFull
-  , decodeFullDecoder
-  , decodeWord32Canonical
-  , decodeBytesCanonical
-  , serialize
-  )
-import Cardano.Chain.Common.Attributes
-  (Attributes(..), fromCBORAttributes, toCBORAttributes)
-import Cardano.Chain.Common.NetworkMagic (NetworkMagic(..))
-
-
 -- | Additional information stored along with address. It's intended
 -- to be put into 'Attributes' data type to make it extensible with
 -- softfork.
 data AddrAttributes = AddrAttributes
-    { aaVKDerivationPath  :: !(Maybe HDAddressPayload)
-    , aaNetworkMagic      :: !NetworkMagic
-    } deriving (Eq, Ord, Show, Generic, NFData, NoThunks)
+  { aaVKDerivationPath :: !(Maybe HDAddressPayload),
+    aaNetworkMagic :: !NetworkMagic
+  }
+  deriving (Eq, Ord, Show, Generic, NFData, NoThunks)
 
 instance HeapWords AddrAttributes where
-  heapWords aa = 3 + heapWords (aaVKDerivationPath aa)
-                   + heapWords (aaNetworkMagic aa)
+  heapWords aa =
+    3 + heapWords (aaVKDerivationPath aa)
+      + heapWords (aaNetworkMagic aa)
 
 instance B.Buildable AddrAttributes where
-  build aa = bprint
-    ("AddrAttributes { derivation path: " . builder . " }")
-    derivationPathBuilder
-   where
-    derivationPathBuilder :: Builder
-    derivationPathBuilder = case aaVKDerivationPath aa of
-      Nothing -> "{}"
-      Just _  -> "{path is encrypted}"
+  build aa =
+    bprint
+      ("AddrAttributes { derivation path: " . builder . " }")
+      derivationPathBuilder
+    where
+      derivationPathBuilder :: Builder
+      derivationPathBuilder = case aaVKDerivationPath aa of
+        Nothing -> "{}"
+        Just _ -> "{path is encrypted}"
 
 -- Used for debugging purposes only
-instance ToJSON AddrAttributes where
+instance ToJSON AddrAttributes
 
 {- NOTE: Address attributes serialization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -77,52 +80,54 @@ instance ToCBOR (Attributes AddrAttributes) where
   -- toStrict call.
   -- Also consider using a custom builder strategy; serialized attributes are
   -- probably small, right?
-  toCBOR attrs@Attributes { attrData = AddrAttributes derivationPath networkMagic } =
+  toCBOR attrs@Attributes {attrData = AddrAttributes derivationPath networkMagic} =
     toCBORAttributes listWithIndices attrs
-   where
-    listWithIndices :: [(Word8, AddrAttributes -> LByteString)]
-    listWithIndices = derivationPathListWithIndices
-                   <> networkMagicListWithIndices
+    where
+      listWithIndices :: [(Word8, AddrAttributes -> LByteString)]
+      listWithIndices =
+        derivationPathListWithIndices
+          <> networkMagicListWithIndices
 
-    derivationPathListWithIndices :: [(Word8, AddrAttributes -> LByteString)]
-    derivationPathListWithIndices = case derivationPath of
-      Nothing -> []
-      -- 'unsafeFromJust' is safe, because 'case' ensures
-      -- that derivation path is 'Just'.
-      Just _  -> [(1, serialize . unsafeFromJust . aaVKDerivationPath)]
-    unsafeFromJust :: Maybe a -> a
-    unsafeFromJust =
-      fromMaybe (panic "Maybe was Nothing in ToCBOR (Attributes AddrAttributes)")
+      derivationPathListWithIndices :: [(Word8, AddrAttributes -> LByteString)]
+      derivationPathListWithIndices = case derivationPath of
+        Nothing -> []
+        -- 'unsafeFromJust' is safe, because 'case' ensures
+        -- that derivation path is 'Just'.
+        Just _ -> [(1, serialize . unsafeFromJust . aaVKDerivationPath)]
+      unsafeFromJust :: Maybe a -> a
+      unsafeFromJust =
+        fromMaybe (panic "Maybe was Nothing in ToCBOR (Attributes AddrAttributes)")
 
-    networkMagicListWithIndices :: [(Word8, AddrAttributes -> LByteString)]
-    networkMagicListWithIndices =
-      case networkMagic of
-        NetworkMainOrStage -> []
-        NetworkTestnet x  ->
-          [(2, \_ -> serialize x)]
+      networkMagicListWithIndices :: [(Word8, AddrAttributes -> LByteString)]
+      networkMagicListWithIndices =
+        case networkMagic of
+          NetworkMainOrStage -> []
+          NetworkTestnet x ->
+            [(2, \_ -> serialize x)]
 
 instance FromCBOR (Attributes AddrAttributes) where
   fromCBOR = fromCBORAttributes initValue go
-   where
-    initValue = AddrAttributes
-      { aaVKDerivationPath = Nothing
-      , aaNetworkMagic     = NetworkMainOrStage
-      }
+    where
+      initValue =
+        AddrAttributes
+          { aaVKDerivationPath = Nothing,
+            aaNetworkMagic = NetworkMainOrStage
+          }
 
-    go
-      :: Word8
-      -> LByteString
-      -> AddrAttributes
-      -> Decoder s (Maybe AddrAttributes)
-    go n v acc = case n of
-      1 -> (\deriv -> Just $ acc { aaVKDerivationPath = Just deriv })
-        <$> toCborError (decodeFull v)
-      2 ->
-        (\deriv -> Just $ acc { aaNetworkMagic = NetworkTestnet deriv })
-          <$> toCborError
-                (decodeFullDecoder "NetworkMagic" decodeWord32Canonical v)
-      _ -> pure Nothing
-
+      go ::
+        Word8 ->
+        LByteString ->
+        AddrAttributes ->
+        Decoder s (Maybe AddrAttributes)
+      go n v acc = case n of
+        1 ->
+          (\deriv -> Just $ acc {aaVKDerivationPath = Just deriv})
+            <$> toCborError (decodeFull v)
+        2 ->
+          (\deriv -> Just $ acc {aaNetworkMagic = NetworkTestnet deriv})
+            <$> toCborError
+              (decodeFullDecoder "NetworkMagic" decodeWord32Canonical v)
+        _ -> pure Nothing
 
 -- | Passphrase is a hash of root verification key.
 data HDPassphrase = HDPassphrase !ByteString
@@ -140,12 +145,12 @@ data HDPassphrase = HDPassphrase !ByteString
 --
 -- It is still distinguished as an attribute, but not used by the ledger,
 -- because the attributes size limits treat this attribute specially.
---
 newtype HDAddressPayload = HDAddressPayload
   { getHDAddressPayload :: ByteString
-  } deriving (Eq, Ord, Show, Generic)
-    deriving newtype (ToCBOR, HeapWords)
-    deriving anyclass (NFData, NoThunks)
+  }
+  deriving (Eq, Ord, Show, Generic)
+  deriving newtype (ToCBOR, HeapWords)
+  deriving anyclass (NFData, NoThunks)
 
 -- Used for debugging purposes only
 instance ToJSON HDAddressPayload where

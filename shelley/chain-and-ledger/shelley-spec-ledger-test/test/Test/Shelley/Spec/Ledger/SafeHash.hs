@@ -1,15 +1,13 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Shelley.Spec.Ledger.SafeHash (safeHashTest) where
-
-import Cardano.Ledger.SafeHash
 
 -- Crypto imports
 import Cardano.Crypto.DSIGN (Ed25519DSIGN, MockDSIGN)
@@ -17,19 +15,19 @@ import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256, MD5Prefix)
 import Cardano.Crypto.KES (MockKES, Sum6KES)
 import Cardano.Crypto.VRF.Praos
 import qualified Cardano.Ledger.Crypto as CryptoClass
+import Cardano.Ledger.SafeHash
+-- ByteString imports
+
+import Data.ByteString (ByteString)
+import Data.ByteString.Short (ShortByteString, toShort)
+-- Testing imports
+
+import Data.Proxy
+import Data.String (fromString)
 import Shelley.Spec.Ledger.API (PraosCrypto)
 import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
-
--- ByteString imports
-import Data.ByteString.Short (ShortByteString,toShort)
-import Data.ByteString(ByteString)
-import Data.String(fromString)
-
--- Testing imports
 import Test.Tasty
 import Test.Tasty.HUnit
-import Data.Proxy
-
 
 -- =======================================================
 
@@ -58,7 +56,7 @@ instance PraosCrypto StandardCrypto
 -- =========================
 -- Some examples
 
-data FooI  -- HashAnnotated indexes which are analogs of our EraIndependentXXX
+data FooI -- HashAnnotated indexes which are analogs of our EraIndependentXXX
 
 long :: ByteString
 long = (fromString "abc")
@@ -71,15 +69,15 @@ short = toShort long
 -- thus become a client of 'hashAnnotated'
 
 newtype Foo c = Foo ShortByteString
-   deriving (Show,SafeToHash)
+  deriving (Show, SafeToHash)
+
 instance HashAnnotated (Foo c) FooI c
 
-foo:: Foo c
+foo :: Foo c
 foo = Foo short
 
 -- ===================================
 -- Lets run some examples, we'll need some concrete Crypto
-
 
 foohash :: SafeHash StandardCrypto FooI
 foohash = hashAnnotated foo
@@ -99,15 +97,16 @@ shorthashT = makeHashWithExplicitProxys (Proxy @TestCrypto) (Proxy @ShortByteStr
 longhashT :: SafeHash TestCrypto ByteString
 longhashT = makeHashWithExplicitProxys (Proxy @TestCrypto) (Proxy @ByteString) long
 
-test1,test2,test3,test4 :: TestTree
+test1, test2, test3, test4 :: TestTree
 test1 = testCase "short==long" (assertEqual "ShortByteString and ByteString don't hash the same" shorthash (castSafeHash longhash))
 test2 = testCase "newtype==underlyingtype" (assertEqual "A newtype and its underlying type dont hash the same" shorthash (castSafeHash foohash))
-
 test3 = testCase "short==long" (assertEqual "ShortByteString and ByteString don't hash the same" shorthashT (castSafeHash longhashT))
 test4 = testCase "newtype==underlyingtype" (assertEqual "A newtype and its underlying type dont hash the same" shorthashT (castSafeHash foohashT))
 
 safeHashTest :: TestTree
-safeHashTest = testGroup "SafeHash"
-                    [testGroup "StandardCrypto" [test1,test2]
-                    ,testGroup "TestCrypto" [test3,test4]
-                    ]
+safeHashTest =
+  testGroup
+    "SafeHash"
+    [ testGroup "StandardCrypto" [test1, test2],
+      testGroup "TestCrypto" [test3, test4]
+    ]

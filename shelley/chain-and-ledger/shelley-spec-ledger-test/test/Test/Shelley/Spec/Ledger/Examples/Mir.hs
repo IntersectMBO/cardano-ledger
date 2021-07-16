@@ -15,26 +15,27 @@ module Test.Shelley.Spec.Ledger.Examples.Mir
   )
 where
 
+import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
+import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Val ((<+>), (<->))
-import qualified Cardano.Ledger.Val as Val
-import qualified Data.Map.Strict as Map
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..))
-import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
-import Cardano.Ledger.Credential (Ptr (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
-import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
     asWitness,
   )
+import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Ledger.Val ((<+>), (<->))
+import qualified Cardano.Ledger.Val as Val
+import qualified Data.Map.Strict as Map
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
+import Shelley.Spec.Ledger.BlockChain (Block, bhHash, bheader)
+import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..), MIRCert (..))
+import Shelley.Spec.Ledger.EpochBoundary (emptySnapShot)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     EpochState (..),
@@ -52,7 +53,6 @@ import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
@@ -247,14 +247,14 @@ mirFailWits pot =
     (blockEx1' insufficientMIRWits pot)
     ( Left
         [ BbodyFailure @(ShelleyEra c)
-              ( LedgersFailure
-                  ( LedgerFailure
-                      ( UtxowFailure $
-                          MIRInsufficientGenesisSigsUTXOW ws
-                      )
-                  )
-              )
-          ]
+            ( LedgersFailure
+                ( LedgerFailure
+                    ( UtxowFailure $
+                        MIRInsufficientGenesisSigsUTXOW ws
+                    )
+                )
+            )
+        ]
     )
   where
     ws = Set.fromList $ asWitness <$> map (\x -> hk . coreNodeIssuerKeys $ x) [0 .. 3]

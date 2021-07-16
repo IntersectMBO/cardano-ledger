@@ -33,12 +33,13 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     embedTripAnn,
     RoundTripResult,
   )
-  where
+where
 
 import Cardano.Binary
   ( Annotator (..),
     DecoderError (DecoderErrorCustom),
     FromCBOR (fromCBOR),
+    FullByteString (Full),
     ToCBOR (toCBOR),
     decodeBreakOr,
     decodeListLenOrIndef,
@@ -50,7 +51,6 @@ import Cardano.Binary
     encodeMapLen,
     encodeWord,
     matchSize,
-    FullByteString (Full),
   )
 import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
@@ -64,11 +64,10 @@ import qualified Data.ByteString.Lazy as Lazy
 import Data.Coders
   ( Annotator (..),
     Decode (..),
+    Density (..),
     Dual (..),
     Encode (..),
     Field,
-    field,
-    Density(..),
     Wrapped (..),
     decode,
     decodeCollection,
@@ -87,6 +86,7 @@ import Data.Coders
     encode,
     encodeFoldable,
     encodeFoldableEncoder,
+    field,
     from,
     invalidKey,
     runE,
@@ -112,14 +112,13 @@ import Test.Tasty.QuickCheck hiding (scale)
 
 -- =====================================================================
 
-
 type RoundTripResult t = Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
 
-roundTrip :: (ToCBOR t,FromCBOR t) => t -> RoundTripResult t
+roundTrip :: (ToCBOR t, FromCBOR t) => t -> RoundTripResult t
 roundTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))
 
-roundTrip' ::(t ->  Encoding) -> (forall s. Decoder s t) -> t -> RoundTripResult t
-roundTrip' enc dec t = deserialiseFromBytes dec  (toLazyByteString (enc t))
+roundTrip' :: (t -> Encoding) -> (forall s. Decoder s t) -> t -> RoundTripResult t
+roundTrip' enc dec t = deserialiseFromBytes dec (toLazyByteString (enc t))
 
 roundTripAnn :: (ToCBOR t, FromCBOR (Annotator t)) => t -> RoundTripResult t
 roundTripAnn s =
@@ -129,10 +128,10 @@ roundTripAnn s =
         Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
 
 -- | Can we serialise a type, and then deserialise it as something else?
-embedTrip :: (ToCBOR t,FromCBOR s) => t -> RoundTripResult s
+embedTrip :: (ToCBOR t, FromCBOR s) => t -> RoundTripResult s
 embedTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))
 
-embedTrip' :: (s -> Encoding) -> (forall x.Decoder x t) -> s -> RoundTripResult t
+embedTrip' :: (s -> Encoding) -> (forall x. Decoder x t) -> s -> RoundTripResult t
 embedTrip' enc dec s = deserialiseFromBytes dec (toLazyByteString (enc s))
 
 embedTripAnn :: forall s t. (ToCBOR t, FromCBOR (Annotator s)) => t -> RoundTripResult s
@@ -344,7 +343,7 @@ encM :: M -> Encode 'Open M
 encM (M 0 [] t) = Sum M 0 !> OmitC 0 !> OmitC [] !> To t
 encM (M 0 bs t) = Sum M 1 !> OmitC 0 !> To bs !> To t
 encM (M n [] t) = Sum M 2 !> To n !> OmitC [] !> To t
-encM (M n bs t) =   Sum M 3 !> To n !> To bs !> To t
+encM (M n bs t) = Sum M 3 !> To n !> To bs !> To t
 
 decM :: Word -> Decode 'Open M
 decM 0 = SumD M <! Emit 0 <! Emit [] <! From
@@ -394,7 +393,7 @@ boxM n = field (\_ t -> t) (Invalid n)
 -- of required fields is checked.
 
 decodeM :: Decode ('Closed 'Dense) M
-decodeM = SparseKeyed "M" (M 0 [] (pack "a")) boxM [(2,"Stringpart")] -- Only the field with Key 2 is required
+decodeM = SparseKeyed "M" (M 0 [] (pack "a")) boxM [(2, "Stringpart")] -- Only the field with Key 2 is required
 
 dualM = Dual (encode . baz) (decode decodeM)
 
@@ -411,7 +410,7 @@ roundtrip name (Dual enc dec) v =
         name
         ( case (roundTrip' enc dec v) of
             Right _ -> True
-            Left s -> error(show s)
+            Left s -> error (show s)
         )
     )
 
@@ -527,7 +526,7 @@ codersTest =
           roundtrip "a2" dualM a2,
           roundtrip "a3" dualM a3
         ],
-       testGroup
+      testGroup
         "Virtual Cosntructor tests"
         [ roundtrip "a0v" dualMvirtual a0,
           roundtrip "a1v" dualMvirtual a1,
