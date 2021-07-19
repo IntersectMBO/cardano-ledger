@@ -204,7 +204,7 @@ data ModelTx (era :: FeatureSet) = ModelTx
     _mtxWdrl :: !(Map.Map (ModelAddress (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era)),
     _mtxMint :: !(IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era)),
     _mtxCollateral :: !(IfSupportsPlutus () (Set ModelTxIn) (ScriptFeature era))
-  }
+  } deriving Show
 
 data ModelBlock era = ModelBlock SlotNo [ModelTx era]
 
@@ -230,7 +230,7 @@ data ModelEpoch era = ModelEpoch [ModelBlock era] ModelBlocksMade
 data ModelDelegation era = ModelDelegation
   { _mdDelegator :: !(ModelAddress (ScriptFeature era)),
     _mdDelegatee :: !ModelPoolId
-  }
+  } deriving Show
 
 instance RequiredFeatures ModelDelegation where
   filterFeatures tag (ModelDelegation a b) =
@@ -245,7 +245,7 @@ data ModelPoolParams era = ModelPoolParams
     _mppMargin :: !UnitInterval,
     _mppRAcnt :: !(ModelAddress (ScriptFeature era)),
     _mppOwners :: ![ModelAddress (ScriptFeature era)]
-  }
+  } deriving Show
 
 instance RequiredFeatures ModelPoolParams where
   filterFeatures tag (ModelPoolParams poolId pledge cost margin rAcnt owners) =
@@ -260,6 +260,7 @@ data ModelDCert era
   | ModelDelegate (ModelDelegation era)
   | ModelRegisterPool (ModelPoolParams era)
   | ModelRetirePool ModelPoolId EpochNo
+  deriving Show
 
 instance RequiredFeatures ModelDCert where
   filterFeatures tag = \case
