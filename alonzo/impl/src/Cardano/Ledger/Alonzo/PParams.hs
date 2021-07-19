@@ -132,7 +132,8 @@ data PParams' f era = PParams
     _keyDeposit :: !(HKD f Coin),
     -- | The amount of a pool registration deposit
     _poolDeposit :: !(HKD f Coin),
-    -- | epoch bound on pool retirement
+    -- | Maximum number of epochs in the future a pool retirement is allowed to
+    -- be scheduled for.
     _eMax :: !(HKD f EpochNo),
     -- | Desired number of pools
     _nOpt :: !(HKD f Natural),
@@ -142,7 +143,9 @@ data PParams' f era = PParams
     _rho :: !(HKD f UnitInterval),
     -- | Treasury expansion
     _tau :: !(HKD f UnitInterval),
-    -- | Decentralization parameter
+    -- | Decentralization parameter. Note that the scale is inverted here - a
+    -- value of 0 indicates full decentralisation, where 1 indicates full
+    -- federalisation.
     _d :: !(HKD f UnitInterval),
     -- | Extra entropy
     _extraEntropy :: !(HKD f Nonce),
