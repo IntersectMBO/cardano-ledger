@@ -18,6 +18,7 @@ module Shelley.Spec.Ledger.STS.Utxo
   ( UTXO,
     UtxoEnv (..),
     UtxoPredicateFailure (..),
+    UtxoEvent (..),
     PredicateFailure,
   )
 where
@@ -72,7 +73,9 @@ import Control.State.Transition
     TransitionRule,
     judgmentContext,
     liftSTS,
+    tellEvent,
     trans,
+    wrapEvent,
     wrapFailed,
     (?!),
   )
@@ -82,6 +85,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Void (Void)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -126,6 +130,10 @@ data UtxoEnv era
       (GenDelegs (Crypto era))
 
 deriving instance Show (Core.PParams era) => Show (UtxoEnv era)
+
+data UtxoEvent era
+  = TotalDeposits Coin
+  | UpdateEvent (Event (Core.EraRule "PPUP" era))
 
 data UtxoPredicateFailure era
   = BadInputsUTxO
@@ -295,6 +303,7 @@ instance
   type Environment (UTXO era) = UtxoEnv era
   type BaseM (UTXO era) = ShelleyBase
   type PredicateFailure (UTXO era) = UtxoPredicateFailure era
+  type Event (UTXO era) = UtxoEvent era
 
   transitionRules = [utxoInductive]
 
@@ -336,6 +345,7 @@ utxoInductive ::
     State (utxo era) ~ UTxOState era,
     Signal (utxo era) ~ Tx era,
     PredicateFailure (utxo era) ~ UtxoPredicateFailure era,
+    Event (utxo era) ~ UtxoEvent era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
@@ -420,7 +430,9 @@ utxoInductive = do
 
   let refunded = keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
-  let depositChange = totalDeposits pp (`Map.notMember` stakepools) txCerts <-> refunded
+  let totalDeposits' = totalDeposits pp (`Map.notMember` stakepools) txCerts
+  tellEvent $ TotalDeposits totalDeposits'
+  let depositChange = totalDeposits' <-> refunded
 
   pure
     UTxOState
@@ -433,8 +445,10 @@ utxoInductive = do
 instance
   ( Era era,
     STS (PPUP era),
-    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
+    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era,
+    Event (Core.EraRule "PPUP" era) ~ Void
   ) =>
   Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
+  wrapEvent = UpdateEvent

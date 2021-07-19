@@ -27,7 +27,8 @@ applySTSValidateSuchThat ::
   ([Label] -> Bool) ->
   RuleContext rtype s ->
   m (Either [PredicateFailure s] (State s))
-applySTSValidateSuchThat cond = applySTSOptsEither opts
+applySTSValidateSuchThat cond =
+  applySTSOptsEither opts
   where
     opts =
       ApplySTSOpts

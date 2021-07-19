@@ -39,12 +39,17 @@ module Control.State.Transition.Extended
     (?!),
     (?!:),
     Label,
+    SingEP (..),
+    EventPolicy (..),
+    EventReturnType,
     labeledPred,
     labeledPredE,
     failBecause,
     judgmentContext,
     trans,
     liftSTS,
+    tellEvent,
+    tellEvents,
 
     -- * Apply STS
     AssertionPolicy (..),
@@ -72,16 +77,19 @@ import Control.Exception (Exception (..), throw)
 import Control.Monad (when)
 import Control.Monad.Free.Church
 import Control.Monad.Identity (Identity (..))
-import Control.Monad.Trans.Class (lift)
+import Control.Monad.State.Class (MonadState (..), modify)
+import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Except
-import Control.Monad.Trans.State.Strict (modify, runStateT)
-import qualified Control.Monad.Trans.State.Strict as MonadState
+import Control.Monad.Trans.State.Strict (StateT (..))
+import Data.Bifunctor (Bifunctor (second), first)
+import Data.Coerce (Coercible, coerce)
 import Data.Data (Data, Typeable)
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, traverse_)
-import Data.Functor ((<&>))
+import Data.Functor (($>), (<&>))
 import Data.Kind (Type)
 import Data.Typeable (typeRep)
+import Data.Void (Void)
 import NoThunks.Class (NoThunks (..))
 
 data RuleType
@@ -183,6 +191,11 @@ class
 
   type BaseM a = Identity
 
+  -- | Event type.
+  type Event a :: Type
+
+  type Event a = Void
+
   -- | Descriptive type for the possible failures which might cause a transition
   -- to fail.
   --
@@ -221,8 +234,34 @@ class (STS sub, BaseM sub ~ BaseM super) => Embed sub super where
   -- | Wrap a predicate failure of the subsystem in a failure of the super-system.
   wrapFailed :: PredicateFailure sub -> PredicateFailure super
 
+  wrapEvent :: Event sub -> Event super
+  default wrapEvent :: Coercible (Event sub) (Event super) => Event sub -> Event super
+  wrapEvent = coerce
+
 instance STS sts => Embed sts sts where
   wrapFailed = id
+
+data EventPolicy
+  = EventPolicyReturn
+  | EventPolicyDiscard
+
+data SingEP ep where
+  EPReturn :: SingEP 'EventPolicyReturn
+  EPDiscard :: SingEP 'EventPolicyDiscard
+
+type family EventReturnType ep sts a :: Type where
+  EventReturnType 'EventPolicyReturn sts a = (a, [Event sts])
+  EventReturnType _ _ a = a
+
+discardEvents :: forall ep a. SingEP ep -> forall s. EventReturnType ep s a -> a
+discardEvents ep = case ep of
+  EPReturn -> fst
+  EPDiscard -> id
+
+getEvents :: forall ep. SingEP ep -> forall s a. EventReturnType ep s a -> [Event s]
+getEvents ep ert = case ep of
+  EPReturn -> snd ert
+  EPDiscard -> []
 
 data Clause sts (rtype :: RuleType) a where
   Lift ::
@@ -238,6 +277,10 @@ data Clause sts (rtype :: RuleType) a where
     RuleContext rtype sub ->
     -- Subsequent computation with state introduced
     (State sub -> a) ->
+    Clause sts rtype a
+  Writer ::
+    [Event sts] ->
+    a ->
     Clause sts rtype a
   Predicate ::
     [Label] ->
@@ -335,33 +378,34 @@ data ApplySTSOpts = ApplySTSOpts
     asoValidation :: ValidationPolicy
   }
 
-type STSInterpreter =
+type STSInterpreter ep =
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
-  m (State s, [PredicateFailure s])
+  m (EventReturnType ep s (State s, [PredicateFailure s]))
 
-type RuleInterpreter =
+type RuleInterpreter ep =
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
   Rule s rtype (State s) ->
-  m (State s, [PredicateFailure s])
+  m (EventReturnType ep s (State s, [PredicateFailure s]))
 
 -- | Apply an STS with options. Note that this returns both the final state and
 -- the list of predicate failures.
 applySTSOpts ::
-  forall s m rtype.
+  forall s m rtype ep.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  SingEP ep ->
   ApplySTSOpts ->
   RuleContext rtype s ->
-  m (State s, [PredicateFailure s])
-applySTSOpts ApplySTSOpts {asoAssertions, asoValidation} ctx =
-  let goRule :: RuleInterpreter
-      goRule = applyRuleInternal asoValidation goSTS
-      goSTS :: STSInterpreter
+  m (EventReturnType ep s (State s, [PredicateFailure s]))
+applySTSOpts ep ApplySTSOpts {asoAssertions, asoValidation} ctx =
+  let goRule :: RuleInterpreter ep
+      goRule = applyRuleInternal ep asoValidation goSTS
+      goSTS :: STSInterpreter ep
       goSTS c =
-        runExceptT (applySTSInternal asoAssertions goRule c) >>= \case
+        runExceptT (applySTSInternal ep asoAssertions goRule c) >>= \case
           Left err -> throw $! AssertionException err
           Right res -> pure $! res
    in goSTS ctx
@@ -373,7 +417,7 @@ applySTSOptsEither ::
   RuleContext rtype s ->
   m (Either [PredicateFailure s] (State s))
 applySTSOptsEither opts ctx =
-  applySTSOpts opts ctx <&> \case
+  applySTSOpts EPDiscard opts ctx <&> \case
     (st, []) -> Right st
     (_, pfs) -> Left pfs
 
@@ -407,7 +451,7 @@ reapplySTS ::
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
   m (State s)
-reapplySTS ctx = applySTSOpts defaultOpts ctx <&> fst
+reapplySTS ctx = applySTSOpts EPDiscard defaultOpts ctx <&> fst
   where
     defaultOpts =
       ApplySTSOpts
@@ -422,6 +466,7 @@ applySTSIndifferently ::
   m (State s, [PredicateFailure s])
 applySTSIndifferently =
   applySTSOpts
+    EPDiscard
     ApplySTSOpts
       { asoAssertions = AssertionsAll,
         asoValidation = ValidateAll
@@ -432,58 +477,85 @@ applySTSIndifferently =
 --   If the rule successfully applied, the list of predicate failures will be
 --   empty.
 applyRuleInternal ::
-  forall s m rtype.
+  forall (ep :: EventPolicy) s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  SingEP ep ->
   ValidationPolicy ->
   -- | Interpreter for subsystems
-  STSInterpreter ->
+  STSInterpreter ep ->
   RuleContext rtype s ->
   Rule s rtype (State s) ->
-  m (State s, [PredicateFailure s])
-applyRuleInternal vp goSTS jc r = flip runStateT [] $ foldF runClause r
+  m (EventReturnType ep s (State s, [PredicateFailure s]))
+applyRuleInternal ep vp goSTS jc r = do
+  (s, er) <- flip runStateT ([], []) $ foldF runClause r
+  case ep of
+    EPDiscard -> pure (s, fst er)
+    EPReturn -> pure ((s, fst er), snd er)
   where
-    runClause :: Clause s rtype a -> MonadState.StateT [PredicateFailure s] m a
+    runClause ::
+      forall f t a.
+      ( f ~ t m,
+        MonadState ([PredicateFailure s], [Event s]) f,
+        MonadTrans t
+      ) =>
+      Clause s rtype a ->
+      t m a
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
     runClause (Predicate lbls cond orElse val) =
       if validateIf lbls
         then case cond of
-          Left err -> modify (orElse err :) >> pure val
+          Left err -> modify (first (orElse err :)) >> pure val
           Right x -> pure x
         else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
-      (ss, sfails) <- lift $ goSTS subCtx
-      traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> sfails
+      s <- lift $ goSTS subCtx
+      let ss :: State sub
+          sfails :: [PredicateFailure sub]
+          sevs :: [Event sub]
+          (ss, sfails) = discardEvents ep @sub s
+          sevs = getEvents ep @sub @(State sub, [PredicateFailure sub]) s
+      traverse_ (\a -> modify (first (a :))) $ wrapFailed @sub @s <$> sfails
+      runClause $ Writer (wrapEvent @sub @s <$> sevs) ()
       pure $ next ss
-
+    runClause (Writer w a) = case ep of
+      EPReturn -> modify (second (\es -> es <> w)) $> a
+      EPDiscard -> pure a
     validateIf lbls = case vp of
       ValidateAll -> True
       ValidateNone -> False
       ValidateSuchThat f -> f lbls
 
 applySTSInternal ::
-  forall s m rtype.
+  forall s m rtype ep.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  SingEP ep ->
   AssertionPolicy ->
   -- | Interpreter for rules
-  RuleInterpreter ->
+  RuleInterpreter ep ->
   RuleContext rtype s ->
-  ExceptT (AssertionViolation s) m (State s, [PredicateFailure s])
-applySTSInternal ap goRule ctx =
+  ExceptT (AssertionViolation s) m (EventReturnType ep s (State s, [PredicateFailure s]))
+applySTSInternal ep ap goRule ctx =
   successOrFirstFailure <$> applySTSInternal' rTypeRep ctx
   where
+    successOrFirstFailure ::
+      [EventReturnType ep s (State s, [PredicateFailure s])] ->
+      EventReturnType ep s (State s, [PredicateFailure s])
     successOrFirstFailure xs =
-      case find (null . snd) xs of
+      case find (\x -> null $ snd $ (discardEvents ep @s x :: (State s, [PredicateFailure s]))) xs of
         Nothing ->
           case xs of
             [] -> error "applySTSInternal was called with an empty set of rules"
-            (s, _) : _ -> (s, concatMap snd xs)
-        Just (s, _) -> (s, [])
-
+            s' : _ -> case ep of
+              EPDiscard -> (fst s', concatMap snd xs)
+              EPReturn -> (((fst . fst) s', concatMap (snd . fst) xs), snd s')
+        Just s' -> case ep of
+          EPDiscard -> (fst s', [])
+          EPReturn -> ((fst $ fst s', []), snd s')
     applySTSInternal' ::
       SRuleType rtype ->
       RuleContext rtype s ->
-      ExceptT (AssertionViolation s) m [(State s, [PredicateFailure s])]
+      ExceptT (AssertionViolation s) m [EventReturnType ep s (State s, [PredicateFailure s])]
     applySTSInternal' SInitial env =
       lift (goRule env `traverse` initialRules)
     applySTSInternal' STransition jc = do
@@ -504,21 +576,23 @@ applySTSInternal ap goRule ctx =
       -- We only care about running postconditions if the state transition was
       -- successful.
       when (assertPost ap) $
-        case successOrFirstFailure res of
-          (st, []) ->
-            sfor_ (assertions @s) $! \case
-              PostCondition msg cond
-                | not (cond jc st) ->
-                  let assertion =
-                        AssertionViolation
-                          { avSTS = show $ typeRep assertion,
-                            avMsg = msg,
-                            avCtx = jc,
-                            avState = Just st
-                          }
-                   in throwE assertion
+        let res' :: (EventReturnType ep s (State s, [PredicateFailure s]))
+            res' = successOrFirstFailure res
+         in case discardEvents ep @s res' :: ((State s, [PredicateFailure s])) of
+              (st, []) ->
+                sfor_ (assertions @s) $! \case
+                  PostCondition msg cond
+                    | not (cond jc st) ->
+                      let assertion =
+                            AssertionViolation
+                              { avSTS = show $ typeRep assertion,
+                                avMsg = msg,
+                                avCtx = jc,
+                                avState = Just st
+                              }
+                       in throwE assertion
+                  _ -> pure ()
               _ -> pure ()
-          _ -> pure ()
       pure $! res
 
     assertPre :: AssertionPolicy -> Bool
@@ -591,3 +665,13 @@ straverse_ f = foldr c (pure ())
 sfor_ :: (Foldable t, Applicative f) => t a -> (a -> f b) -> f ()
 {-# INLINE sfor_ #-}
 sfor_ = flip straverse_
+
+tellEvent ::
+  Event sts ->
+  Rule sts ctx ()
+tellEvent e = tellEvents [e]
+
+tellEvents ::
+  [Event sts] ->
+  Rule sts ctx ()
+tellEvents es = liftF $ Writer es ()

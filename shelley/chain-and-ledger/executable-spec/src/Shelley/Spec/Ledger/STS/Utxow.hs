@@ -75,6 +75,7 @@ import Control.State.Transition
     judgmentContext,
     liftSTS,
     trans,
+    wrapEvent,
     wrapFailed,
     (?!),
     (?!:),
@@ -142,6 +143,9 @@ data UtxowPredicateFailure era
       -- Contains out of range values (strings too long)
   | InvalidMetadata
   deriving (Generic)
+
+data UtxowEvent era
+  = UtxoEvent (Event (UTXO era))
 
 instance
   ( NoThunks (PredicateFailure (Core.EraRule "UTXO" era)),
@@ -387,6 +391,7 @@ instance
   Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
+  wrapEvent = UtxoEvent
 
 instance
   ( -- Fix Core.Witnesses to the Shelley Era
@@ -409,5 +414,6 @@ instance
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
+  type Event _ = UtxowEvent era
   transitionRules = [shelleyStyleWitness witsVKeyNeeded id]
   initialRules = [initialLedgerStateUTXOW]

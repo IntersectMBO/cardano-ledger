@@ -32,6 +32,7 @@ import Control.State.Transition
   ( BaseM,
     Embed,
     Environment,
+    Event,
     PredicateFailure,
     STS,
     Signal,
@@ -42,6 +43,7 @@ import Control.State.Transition
     judgmentContext,
     trans,
     transitionRules,
+    wrapEvent,
     wrapFailed,
   )
 import Control.State.Transition.Trace (TraceOrder (OldestFirst), lastState, traceSignals)
@@ -68,7 +70,7 @@ import Shelley.Spec.Ledger.API
     Ptr (..),
   )
 import Shelley.Spec.Ledger.Delegation.Certificates (isDeRegKey)
-import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure)
+import Shelley.Spec.Ledger.STS.Delpl (DelplEvent, DelplPredicateFailure)
 import Shelley.Spec.Ledger.TxBody (Ix)
 import Shelley.Spec.Ledger.UTxO (totalDeposits)
 import Test.QuickCheck (Gen)
@@ -86,6 +88,9 @@ data CERTS era
 newtype CertsPredicateFailure era
   = CertsFailure (PredicateFailure (Core.EraRule "DELPL" era))
   deriving (Generic)
+
+newtype CertsEvent era
+  = CertsEvent (Event (Core.EraRule "DELPL" era))
 
 deriving stock instance
   ( Eq (PredicateFailure (Core.EraRule "DELPL" era))
@@ -110,6 +115,7 @@ instance
   type State (CERTS era) = (DPState (Crypto era), Ix)
   type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
+  type Event (CERTS era) = CertsEvent era
 
   type BaseM (CERTS era) = ShelleyBase
 
@@ -146,11 +152,13 @@ certsTransition = do
 instance
   ( Era era,
     STS (DELPL era),
-    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era
+    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
+    Event (Core.EraRule "DELPL" era) ~ DelplEvent era
   ) =>
   Embed (DELPL era) (CERTS era)
   where
   wrapFailed = CertsFailure
+  wrapEvent = CertsEvent
 
 instance
   ( EraGen era,
