@@ -17,11 +17,25 @@ module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
   )
 where
 
+import Cardano.Ledger.BaseTypes
+  ( Globals (..),
+    Network (..),
+    Nonce,
+    StrictMaybe (..),
+    (⭒),
+  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
+import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot
+  ( BlockNo (..),
+    EpochNo (..),
+    SlotNo (..),
+  )
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Data.Default.Class (def)
@@ -32,26 +46,17 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    Network (..),
-    Nonce,
-    StrictMaybe (..),
-    (⭒),
-  )
 import Shelley.Spec.Ledger.BlockChain
   ( Block,
     bhHash,
     bheader,
     hashHeaderToNonce,
   )
-import Cardano.Ledger.Credential (Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState (..),
     PulsingRewUpdate,
@@ -72,11 +77,6 @@ import Shelley.Spec.Ledger.Rewards
     likelihood,
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    EpochNo (..),
-    SlotNo (..),
-  )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),

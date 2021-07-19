@@ -1,24 +1,20 @@
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE NumDecimals       #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Chain.Common.Address
-  ( tests
+  ( tests,
   )
 where
 
-import Cardano.Prelude
-import Test.Cardano.Prelude
-
-import Hedgehog ((===), cover, forAll, property)
-
 import Cardano.Chain.Common (addrNetworkMagic, isRedeemAddress)
-
+import Cardano.Prelude
+import Hedgehog (cover, forAll, property, (===))
 import Test.Cardano.Chain.Common.Gen (genAddress, genAddressWithNM, genNetworkMagic)
+import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, withTestsTS)
-
 
 ts_prop_addressNetworkMagicIdentity :: TSProperty
 ts_prop_addressNetworkMagicIdentity =

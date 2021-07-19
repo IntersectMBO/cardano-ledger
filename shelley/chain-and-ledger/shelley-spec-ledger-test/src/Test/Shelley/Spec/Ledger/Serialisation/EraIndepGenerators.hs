@@ -45,8 +45,8 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     DnsName,
-    PositiveInterval,
     NonNegativeInterval,
+    PositiveInterval,
     PositiveUnitInterval,
     UnitInterval,
     Url,

@@ -1,9 +1,9 @@
+{-# LANGUAGE EmptyDataDecls #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE TypeSynonymInstances  #-}
-{-# LANGUAGE FlexibleInstances     #-}
-{-# LANGUAGE EmptyDataDecls        #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
-import           Tests.Shelley.Spec.NonIntegral
+import Tests.Shelley.Spec.NonIntegral
 
 main :: IO ()
 main = do

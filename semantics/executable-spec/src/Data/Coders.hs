@@ -128,7 +128,6 @@ import Control.Applicative (liftA2)
 import Control.Monad (replicateM, unless, when)
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
-import Numeric.Natural (Natural)
 import qualified Data.Map as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -140,6 +139,7 @@ import qualified Data.Text as Text
 import Data.Typeable
 import Formatting (build, formatToString)
 import Formatting.Buildable (Buildable)
+import Numeric.Natural (Natural)
 
 -- ====================================================================
 
@@ -242,17 +242,19 @@ encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
 encodeFoldable = encodeFoldableEncoder toCBOR
 
 -- Encodes a sequence of pairs as a cbor map
-encodeFoldableMapPairs :: (ToCBOR a, ToCBOR b, Foldable f) => f (a,b) -> Encoding
+encodeFoldableMapPairs :: (ToCBOR a, ToCBOR b, Foldable f) => f (a, b) -> Encoding
 encodeFoldableMapPairs = encodeFoldableEncoderAs wrapCBORMap $
-  \(a,b) -> toCBOR a <> toCBOR b
+  \(a, b) -> toCBOR a <> toCBOR b
 
 encodeFoldableEncoder :: (Foldable f) => (a -> Encoding) -> f a -> Encoding
 encodeFoldableEncoder = encodeFoldableEncoderAs wrapCBORArray
 
-encodeFoldableEncoderAs :: (Foldable f) =>
+encodeFoldableEncoderAs ::
+  (Foldable f) =>
   (Word -> Encoding -> Encoding) ->
   (a -> Encoding) ->
-   f a -> Encoding
+  f a ->
+  Encoding
 encodeFoldableEncoderAs wrap encoder xs = wrap len contents
   where
     (len, contents) = foldl' go (0, mempty) xs
@@ -304,7 +306,7 @@ decodeMapContentsTraverse ::
   (Applicative t) =>
   Decoder s (t a) ->
   Decoder s (t b) ->
-  Decoder s (t [(a,b)])
+  Decoder s (t [(a, b)])
 decodeMapContentsTraverse decodeKey decodeValue =
   sequenceA <$> decodeMapContents decodeInlinedPair
   where
@@ -523,7 +525,7 @@ data Decode (w :: Wrapped) t where
   Ann :: Decode w t -> Decode w (Annotator t)
   ApplyAnn :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
   -- A function to Either can raise an error when applied by returning (Left errorMessage)
-  ApplyErr ::  Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
+  ApplyErr :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 
 infixl 4 <!
 
@@ -593,7 +595,7 @@ decodeCount (ApplyErr cn g) n = do
   (i, f) <- decodeCount cn (n + hsize g)
   y <- decodeClosed g
   case f y of
-    Right z -> pure(i,z)
+    Right z -> pure (i, z)
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack $ message)
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
@@ -822,13 +824,13 @@ mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
 
 assertTag :: Word -> Decoder s ()
 assertTag tag = do
-  t <- peekTokenType >>= \case
-    TypeTag -> fromIntegral <$> decodeTag
-    TypeTag64 -> fromIntegral <$> decodeTag64
-    _ -> cborError ("expected tag" :: String)
+  t <-
+    peekTokenType >>= \case
+      TypeTag -> fromIntegral <$> decodeTag
+      TypeTag64 -> fromIntegral <$> decodeTag64
+      _ -> cborError ("expected tag" :: String)
   when (t /= (fromIntegral tag :: Natural)) $
     cborError ("expecteg tag " <> show tag <> " but got tag " <> show t)
-
 
 -- | Convert a @Buildable@ error into a 'cborg' decoder error
 cborError :: Buildable e => e -> Decoder s a

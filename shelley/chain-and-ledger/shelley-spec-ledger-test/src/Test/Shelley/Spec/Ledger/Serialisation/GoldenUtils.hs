@@ -28,11 +28,11 @@ import Cardano.Binary
     serializeEncoding,
     toCBOR,
   )
+import Cardano.Ledger.Serialization (ToCBORGroup (..))
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import qualified Data.ByteString.Base16.Lazy as Base16
 import Data.String (fromString)
-import Cardano.Ledger.Serialization (ToCBORGroup (..))
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
 

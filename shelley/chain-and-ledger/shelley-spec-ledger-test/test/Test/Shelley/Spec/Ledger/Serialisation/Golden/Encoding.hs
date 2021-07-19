@@ -25,18 +25,22 @@ import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
+import Cardano.Ledger.Address
+  ( Addr (..),
+  )
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import Cardano.Ledger.BaseTypes
-  ( Network (..),
+  ( BoundedRational (..),
+    Network (..),
     Nonce (..),
     StrictMaybe (..),
-    BoundedRational (..),
     UnitInterval,
     mkNonceFromNumber,
     textToDns,
     textToUrl,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -70,6 +74,7 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
+import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
@@ -87,9 +92,6 @@ import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
   ( MultiSig,
     ScriptHash,
-  )
-import Cardano.Ledger.Address
-  ( Addr (..),
   )
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody (..),
@@ -114,7 +116,6 @@ import Shelley.Spec.Ledger.BlockChain
     seedEta,
     seedL,
   )
-import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
     pattern Delegate,
@@ -155,7 +156,6 @@ import Shelley.Spec.Ledger.PParams
   )
 import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..), hashScript)
 import Shelley.Spec.Ledger.TxBody
   ( MIRPot (..),

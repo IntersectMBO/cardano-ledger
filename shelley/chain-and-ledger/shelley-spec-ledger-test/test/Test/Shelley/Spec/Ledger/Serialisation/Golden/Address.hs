@@ -17,7 +17,20 @@ where
 import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), hashFromBytes, sizeHash)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
+import Cardano.Ledger.Address
+import Cardano.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    Ptr (..),
+    StakeReference (..),
+  )
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Keys
+  ( KeyRole (..),
+    pattern KeyHash,
+  )
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Data.Binary as B
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
@@ -29,25 +42,11 @@ import Data.Either
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
-import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes (Network (..))
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ptr (..),
-    StakeReference (..),
-  )
-import Cardano.Ledger.Keys
-  ( KeyRole (..),
-    pattern KeyHash,
-  )
 import Shelley.Spec.Ledger.Scripts (pattern ScriptHash)
-import Cardano.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
-
-import Cardano.Ledger.Shelley(ShelleyEra)
 
 -- Crypto family as used in production Shelley
 -- This should match that defined at https://github.com/input-output-hk/ouroboros-network/blob/master/ouroboros-consensus-shelley/src/Ouroboros/Consensus/Shelley/Protocol/Crypto.hs
@@ -137,8 +136,6 @@ goldenTests_MockCrypto =
         SBS.toShort . fromRight (error "Unable to decode") . B16.decode $ "05060708"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
-
-
 
 goldenTests_ShelleyCrypto :: TestTree
 goldenTests_ShelleyCrypto =

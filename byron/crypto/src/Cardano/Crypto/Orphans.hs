@@ -1,29 +1,23 @@
 {-# LANGUAGE OverloadedStrings #-}
-
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Crypto.Orphans
-  ()
-where
+module Cardano.Crypto.Orphans () where
 
+import Cardano.Binary
+  ( FromCBOR (..),
+    Size,
+    ToCBOR (..),
+    encodeBytes,
+    withWordSize,
+  )
 import Cardano.Prelude
-
-import Crypto.Error (CryptoFailable(..))
+import Crypto.Error (CryptoFailable (..))
 import qualified Crypto.PubKey.Ed25519 as Ed25519
-import Data.Aeson (FromJSON(..), ToJSON(..))
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
 import Data.ByteString.Base64.Type (getByteString64, makeByteString64)
 import qualified Data.Text as T
-
-import Cardano.Binary
-  ( FromCBOR(..)
-  , Size
-  , ToCBOR(..)
-  , encodeBytes
-  , withWordSize
-  )
-
 
 fromByteStringToBytes :: ByteString -> BA.Bytes
 fromByteStringToBytes = BA.convert
@@ -43,9 +37,9 @@ instance FromJSON Ed25519.PublicKey where
   parseJSON v = do
     res <-
       Ed25519.publicKey
-      .   fromByteStringToBytes
-      .   getByteString64
-      <$> parseJSON v
+        . fromByteStringToBytes
+        . getByteString64
+        <$> parseJSON v
     toAesonError $ fromCryptoFailable "parseJSON Ed25519.PublicKey" res
 
 instance ToJSON Ed25519.PublicKey where
@@ -55,9 +49,9 @@ instance FromJSON Ed25519.Signature where
   parseJSON v = do
     res <-
       Ed25519.signature
-      .   fromByteStringToBytes
-      .   getByteString64
-      <$> parseJSON v
+        . fromByteStringToBytes
+        . getByteString64
+        <$> parseJSON v
     toAesonError $ fromCryptoFailable "parseJSON Ed25519.Signature" res
 
 instance ToJSON Ed25519.Signature where
@@ -74,16 +68,17 @@ instance FromCBOR Ed25519.PublicKey where
 
 instance ToCBOR Ed25519.SecretKey where
   encodedSizeExpr _ _ = bsSize 64
-  toCBOR sk = encodeBytes
-    $ BS.append (toByteString sk) (toByteString $ Ed25519.toPublic sk)
+  toCBOR sk =
+    encodeBytes $
+      BS.append (toByteString sk) (toByteString $ Ed25519.toPublic sk)
 
 instance FromCBOR Ed25519.SecretKey where
   fromCBOR = do
     res <-
       Ed25519.secretKey
-      .   fromByteStringToScrubbedBytes
-      .   BS.take Ed25519.secretKeySize
-      <$> fromCBOR
+        . fromByteStringToScrubbedBytes
+        . BS.take Ed25519.secretKeySize
+        <$> fromCBOR
     toCborError $ fromCryptoFailable "fromCBOR Ed25519.SecretKey" res
 
 instance ToCBOR Ed25519.Signature where

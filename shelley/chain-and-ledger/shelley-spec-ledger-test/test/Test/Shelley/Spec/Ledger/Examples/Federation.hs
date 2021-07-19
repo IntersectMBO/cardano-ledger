@@ -18,14 +18,9 @@ module Test.Shelley.Spec.Ledger.Examples.Federation
   )
 where
 
+import Cardano.Ledger.BaseTypes (Globals (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Data.List
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Word (Word64)
-import GHC.Stack (HasCallStack)
-import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash (..),
@@ -38,10 +33,15 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
+import Cardano.Ledger.Slot (SlotNo (..))
+import qualified Data.List
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Word (Word64)
+import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
-import Cardano.Ledger.Slot (SlotNo (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),
   )
@@ -112,11 +112,11 @@ coreNodeKeysBySchedule ::
   AllIssuerKeys (Crypto era) 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =
   case lookupInOverlaySchedule
-         firstSlot
-         (Map.keysSet genDelegs)
-         (_d pp)
-         (activeSlotCoeff testGlobals)
-         slot' of
+    firstSlot
+    (Map.keysSet genDelegs)
+    (_d pp)
+    (activeSlotCoeff testGlobals)
+    slot' of
     Nothing -> error $ "coreNodesForSlot: Cannot find keys for slot " <> show slot
     Just NonActiveSlot -> error $ "coreNodesForSlot: Non-active slot " <> show slot
     Just (ActiveSlot gkh) ->

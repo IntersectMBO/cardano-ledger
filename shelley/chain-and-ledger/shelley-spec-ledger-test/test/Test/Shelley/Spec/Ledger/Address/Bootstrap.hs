@@ -23,10 +23,33 @@ import qualified Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Signing as Byron
 import qualified Cardano.Crypto.Wallet as Byron
+import Cardano.Ledger.Address
+  ( Addr (..),
+    BootstrapAddress (..),
+    bootstrapKeyHash,
+  )
+import Cardano.Ledger.BaseTypes
+  ( Network (..),
+    StrictMaybe (..),
+  )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    StakeReference (..),
+  )
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Keys
+  ( GenDelegs (..),
+    KeyRole (..),
+    VKey (..),
+    coerceKeyRole,
+    hashKey,
+  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot
+  ( SlotNo (..),
+  )
 import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
   ( ByteString,
@@ -35,27 +58,7 @@ import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Cardano.Ledger.Address
-  ( Addr (..),
-    BootstrapAddress (..),
-    bootstrapKeyHash,
-  )
 import Shelley.Spec.Ledger.Address.Bootstrap
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-  )
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    StakeReference (..),
-  )
-import Cardano.Ledger.Keys
-  ( GenDelegs (..),
-    KeyRole (..),
-    VKey (..),
-    coerceKeyRole,
-    hashKey,
-  )
 import Shelley.Spec.Ledger.LedgerState
   ( PPUPState (..),
     UTxOState (..),
@@ -71,9 +74,6 @@ import Shelley.Spec.Ledger.STS.Utxo
 import Shelley.Spec.Ledger.STS.Utxow
   ( UTXOW,
     UtxowPredicateFailure (..),
-  )
-import Cardano.Ledger.Slot
-  ( SlotNo (..),
   )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),

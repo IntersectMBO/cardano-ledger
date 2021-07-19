@@ -1,32 +1,31 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE FlexibleContexts           #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns             #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE ScopedTypeVariables        #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Merkle tree implementation.
 --
 -- See <https://tools.ietf.org/html/rfc6962>.
 module Cardano.Chain.Common.Merkle
-  (
-  -- * MerkleRoot
-    MerkleRoot(..)
+  ( -- * MerkleRoot
+    MerkleRoot (..),
 
-  -- * MerkleTree
-  , MerkleTree(..)
-  , mtRoot
-  , mkMerkleTree
-  , mkMerkleTreeDecoded
+    -- * MerkleTree
+    MerkleTree (..),
+    mtRoot,
+    mkMerkleTree,
+    mkMerkleTreeDecoded,
 
-  -- * MerkleNode
-  , MerkleNode(..)
-  , mkBranch
-  , mkLeaf
-  , mkLeafDecoded
+    -- * MerkleNode
+    MerkleNode (..),
+    mkBranch,
+    mkLeaf,
+    mkLeafDecoded,
   )
 where
 
@@ -36,22 +35,25 @@ where
 -- but HLint insists that this is not OK because toList and foldMap are never
 -- used unqualified. The hiding in fact makes it clearer for the human reader
 -- what's going on.
-import Cardano.Prelude
 
+import Cardano.Binary
+  ( Annotated (..),
+    FromCBOR (..),
+    Raw,
+    ToCBOR (..),
+    serializeBuilder,
+  )
+import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
+import Cardano.Prelude
 import Data.Aeson (ToJSON)
 import Data.ByteString.Builder (Builder, byteString, word8)
 import qualified Data.ByteString.Builder.Extra as Builder
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
 import qualified Data.Foldable as Foldable
-import Formatting.Buildable (Buildable(..))
+import Formatting.Buildable (Buildable (..))
 import NoThunks.Class (NoThunks (..))
 import qualified Prelude
-
-import Cardano.Binary
-  (Annotated(..), FromCBOR(..), Raw, ToCBOR(..), serializeBuilder)
-import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
-
 
 --------------------------------------------------------------------------------
 -- MerkleRoot
@@ -59,15 +61,17 @@ import Cardano.Crypto (Hash, hashDecoded, hashRaw, hashToBytes)
 
 -- | Data type for root of Merkle tree
 newtype MerkleRoot a = MerkleRoot
-  { getMerkleRoot :: Hash Raw  -- ^ returns root 'Hash' of Merkle Tree
-  } deriving (Show, Eq, Ord, Generic)
-    deriving anyclass (NFData, NoThunks)
+  { -- | returns root 'Hash' of Merkle Tree
+    getMerkleRoot :: Hash Raw
+  }
+  deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData, NoThunks)
 
 instance Buildable (MerkleRoot a) where
   build (MerkleRoot h) = "MerkleRoot|" <> build h
 
 -- Used for debugging purposes only
-instance ToJSON a => ToJSON (MerkleRoot a) where
+instance ToJSON a => ToJSON (MerkleRoot a)
 
 instance ToCBOR a => ToCBOR (MerkleRoot a) where
   toCBOR = toCBOR . getMerkleRoot
@@ -80,12 +84,13 @@ merkleRootToBuilder :: MerkleRoot a -> Builder
 merkleRootToBuilder (MerkleRoot h) = byteString (hashToBytes h)
 
 mkRoot :: MerkleRoot a -> MerkleRoot a -> MerkleRoot a
-mkRoot a b = MerkleRoot . hashRaw . toLazyByteString $ mconcat
-  [word8 1, merkleRootToBuilder a, merkleRootToBuilder b]
+mkRoot a b =
+  MerkleRoot . hashRaw . toLazyByteString $
+    mconcat
+      [word8 1, merkleRootToBuilder a, merkleRootToBuilder b]
 
 emptyHash :: MerkleRoot a
 emptyHash = MerkleRoot (hashRaw mempty)
-
 
 --------------------------------------------------------------------------------
 -- MerkleTree
@@ -95,16 +100,16 @@ data MerkleTree a
   = MerkleEmpty
   | MerkleTree !Word32 !(MerkleNode a)
   deriving (Eq, Generic)
-  deriving anyclass NFData
+  deriving anyclass (NFData)
 
 instance Foldable MerkleTree where
-  foldMap _ MerkleEmpty      = mempty
+  foldMap _ MerkleEmpty = mempty
   foldMap f (MerkleTree _ n) = Foldable.foldMap f n
 
   null MerkleEmpty = True
-  null _           = False
+  null _ = False
 
-  length MerkleEmpty      = 0
+  length MerkleEmpty = 0
   length (MerkleTree s _) = fromIntegral s
 
 instance Show a => Show (MerkleTree a) where
@@ -126,18 +131,18 @@ mkMerkleTree = mkMerkleTree' (mkLeaf . getConst) . fmap Const
 mkMerkleTreeDecoded :: [Annotated a ByteString] -> MerkleTree a
 mkMerkleTreeDecoded = mkMerkleTree' mkLeafDecoded
 
-mkMerkleTree'
-  :: forall f a b . (f a b -> MerkleNode a) -> [f a b] -> MerkleTree a
-mkMerkleTree' _           [] = MerkleEmpty
+mkMerkleTree' ::
+  forall f a b. (f a b -> MerkleNode a) -> [f a b] -> MerkleTree a
+mkMerkleTree' _ [] = MerkleEmpty
 mkMerkleTree' leafBuilder ls = MerkleTree (fromIntegral lsLen) (go lsLen ls)
- where
-  lsLen = length ls
-  go :: Int -> [f a b] -> MerkleNode a
-  go _   [x] = leafBuilder x
-  go len xs  = mkBranch (go i l) (go (len - i) r)
-   where
-    i      = powerOfTwo len
-    (l, r) = splitAt i xs
+  where
+    lsLen = length ls
+    go :: Int -> [f a b] -> MerkleNode a
+    go _ [x] = leafBuilder x
+    go len xs = mkBranch (go i l) (go (len - i) r)
+      where
+        i = powerOfTwo len
+        (l, r) = splitAt i xs
 
 -- | Return the largest power of two such that it's smaller than X.
 --
@@ -145,11 +150,11 @@ mkMerkleTree' leafBuilder ls = MerkleTree (fromIntegral lsLen) (go lsLen ls)
 -- 32
 -- >>> powerOfTwo 65
 -- 64
-powerOfTwo :: forall a . (Bits a, Num a) => a -> a
+powerOfTwo :: forall a. (Bits a, Num a) => a -> a
 powerOfTwo n
   | n .&. (n - 1) == 0 = n `shiftR` 1
-  | otherwise          = go n
- where
+  | otherwise = go n
+  where
     {- “x .&. (x - 1)” clears the least significant bit:
 
            ↓
@@ -160,26 +165,25 @@ powerOfTwo n
 
        I could've used something like “until (\x -> x*2 > w) (*2) 1”,
        but bit tricks are fun. -}
-  go :: a -> a
-  go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))
+    go :: a -> a
+    go w = if w .&. (w - 1) == 0 then w else go (w .&. (w - 1))
 
 -- | Returns root of Merkle tree
 mtRoot :: MerkleTree a -> MerkleRoot a
-mtRoot MerkleEmpty      = emptyHash
+mtRoot MerkleEmpty = emptyHash
 mtRoot (MerkleTree _ n) = nodeRoot n
-
 
 --------------------------------------------------------------------------------
 -- MerkleNode
 --------------------------------------------------------------------------------
 
 data MerkleNode a
-  = MerkleBranch !(MerkleRoot a) !(MerkleNode a) !(MerkleNode a)
-  -- ^ MerkleBranch mRoot mLeft mRight
-  | MerkleLeaf !(MerkleRoot a) a
-  -- ^ MerkleLeaf mRoot mVal
+  = -- | MerkleBranch mRoot mLeft mRight
+    MerkleBranch !(MerkleRoot a) !(MerkleNode a) !(MerkleNode a)
+  | -- | MerkleLeaf mRoot mVal
+    MerkleLeaf !(MerkleRoot a) a
   deriving (Eq, Show, Generic)
-  deriving anyclass NFData
+  deriving anyclass (NFData)
 
 instance Foldable MerkleNode where
   foldMap f x = case x of
@@ -195,21 +199,24 @@ nodeRoot :: MerkleNode a -> MerkleRoot a
 nodeRoot (MerkleLeaf root _) = root
 nodeRoot (MerkleBranch root _ _) = root
 
-mkLeaf :: forall a . ToCBOR a => a -> MerkleNode a
+mkLeaf :: forall a. ToCBOR a => a -> MerkleNode a
 mkLeaf a = MerkleLeaf mRoot a
- where
-  mRoot :: MerkleRoot a
-  mRoot = MerkleRoot $ hashRaw
-    (toLazyByteString (word8 0 <> serializeBuilder a))
+  where
+    mRoot :: MerkleRoot a
+    mRoot =
+      MerkleRoot $
+        hashRaw
+          (toLazyByteString (word8 0 <> serializeBuilder a))
 
 mkLeafDecoded :: Annotated a ByteString -> MerkleNode a
 mkLeafDecoded a = MerkleLeaf mRoot (unAnnotated a)
- where
-  mRoot :: MerkleRoot a
-  mRoot = MerkleRoot . coerce . hashDecoded $ prependTag <$> a
+  where
+    mRoot :: MerkleRoot a
+    mRoot = MerkleRoot . coerce . hashDecoded $ prependTag <$> a
 
-  prependTag = (LBS.toStrict (toLazyByteString (word8 0)) <>)
+    prependTag = (LBS.toStrict (toLazyByteString (word8 0)) <>)
 
 mkBranch :: MerkleNode a -> MerkleNode a -> MerkleNode a
 mkBranch nodeA nodeB = MerkleBranch root nodeA nodeB
-  where root = mkRoot (nodeRoot nodeA) (nodeRoot nodeB)
+  where
+    root = mkRoot (nodeRoot nodeA) (nodeRoot nodeB)

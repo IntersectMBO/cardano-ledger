@@ -19,6 +19,15 @@ module Test.Shelley.Spec.Ledger.Examples.TwoPools
   )
 where
 
+import Cardano.Ledger.BaseTypes
+  ( BoundedRational (..),
+    Globals (..),
+    Network (..),
+    Nonce,
+    StrictMaybe (..),
+    activeSlotVal,
+    (⭒),
+  )
 import Cardano.Ledger.Coin
   ( Coin (..),
     DeltaCoin (..),
@@ -26,9 +35,16 @@ import Cardano.Ledger.Coin
     toDeltaCoin,
   )
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Slot
+  ( BlockNo (..),
+    EpochNo (..),
+    SlotNo (..),
+  )
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.Provenance (runProvM)
@@ -41,28 +57,17 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    Network (..),
-    Nonce,
-    BoundedRational (..),
-    StrictMaybe (..),
-    activeSlotVal,
-    (⭒),
-  )
 import Shelley.Spec.Ledger.BlockChain
   ( Block,
     bhHash,
     bheader,
     hashHeaderToNonce,
   )
-import Cardano.Ledger.Credential (Credential, Ptr (..))
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Shelley.Spec.Ledger.LedgerState
   ( PulsingRewUpdate (..),
     RewardUpdate (..),
@@ -90,11 +95,6 @@ import Shelley.Spec.Ledger.Rewards
     sumRewards,
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Cardano.Ledger.Slot
-  ( BlockNo (..),
-    EpochNo (..),
-    SlotNo (..),
-  )
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),

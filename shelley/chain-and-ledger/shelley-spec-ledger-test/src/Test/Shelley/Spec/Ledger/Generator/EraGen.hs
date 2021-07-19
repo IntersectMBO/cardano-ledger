@@ -1,97 +1,89 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Infrastructure for generating STS Traces over any Era
 module Test.Shelley.Spec.Ledger.Generator.EraGen
- ( genUtxo0,
-   genesisId,
-   EraGen (..),
-   MinLEDGER_STS,
-   MinCHAIN_STS,
-   MinUTXO_STS,
-   MinGenTxBody,
-   MinGenTxout(..),
-   Label(..),
-   Sets(..),
-   someKeyPairs,
-   allScripts,
- ) where
+  ( genUtxo0,
+    genesisId,
+    EraGen (..),
+    MinLEDGER_STS,
+    MinCHAIN_STS,
+    MinUTXO_STS,
+    MinGenTxBody,
+    MinGenTxout (..),
+    Label (..),
+    Sets (..),
+    someKeyPairs,
+    allScripts,
+  )
+where
 
-import Cardano.Binary (ToCBOR (toCBOR),FromCBOR,Annotator)
+import Cardano.Binary (Annotator, FromCBOR, ToCBOR (toCBOR))
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.Coin (Coin(..))
+import Cardano.Ledger.Address (toAddr)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData (..))
+import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe, UnitInterval)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (HASH,Crypto)
-import Cardano.Ledger.Era (Crypto, ValidateScript (..),TxInBlock)
+import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
+import Cardano.Ledger.Era (Crypto, Era, TxInBlock, ValidateScript (..))
+import Cardano.Ledger.Hashes (ScriptHash)
+import Cardano.Ledger.Keys (KeyRole (Witness))
+import Cardano.Ledger.Pretty (PrettyA (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-import Cardano.Ledger.Hashes(ScriptHash)
-import Cardano.Ledger.Shelley.Constraints (UsesPParams(..))
-import Shelley.Spec.Ledger.PParams(Update)
+import Cardano.Ledger.Shelley.Constraints (UsesPParams (..))
+import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Slotting.Slot (SlotNo)
+import Control.State.Transition.Extended (STS (..))
 import Data.Coerce (coerce)
+import Data.Default.Class (Default)
+import Data.Map (Map)
+import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import Data.Default.Class(Default)
+import GHC.Natural (Natural)
+import GHC.Records (HasField (..))
+import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.API
   ( Addr (Addr),
+    Block (..),
     Credential (ScriptHashObj),
-    StakeReference (StakeRefBase),
-    Block(..),
-  )
-import Cardano.Ledger.Address (toAddr)
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe,ShelleyBase)
-import Shelley.Spec.Ledger.Tx (TxId (TxId))
-import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl, WitVKey)
-import Shelley.Spec.Ledger.UTxO (UTxO)
-import Cardano.Ledger.Keys(KeyRole(Witness))
-import Test.QuickCheck (Gen,shuffle,choose)
-import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core
-  ( GenEnv (..),
-    TwoPhaseInfo(..),
-    ScriptInfo,
-    genesisCoins,
-  )
-import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, combinedScripts, baseScripts,  keyPairs)
-import Test.Shelley.Spec.Ledger.Utils (Split (..))
-import Data.Sequence (Seq)
-import Shelley.Spec.Ledger.API
-  ( DPState,
+    DPState,
+    KeyPairs,
     LedgerEnv,
     LedgerState,
     LedgersEnv,
-    KeyPairs,
+    StakeReference (StakeRefBase),
   )
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
-import Shelley.Spec.Ledger.STS.Chain(CHAIN,ChainState)
+import Shelley.Spec.Ledger.PParams (ProtVer, Update)
+import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainState)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
-import Control.State.Transition.Extended(STS(..))
-
-import GHC.Records(HasField(..))
-import Cardano.Ledger.BaseTypes(UnitInterval)
-import Shelley.Spec.Ledger.PParams(ProtVer)
-import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Ledger.Era (Era)
-import GHC.Natural(Natural)
-import Cardano.Ledger.AuxiliaryData(ValidateAuxiliaryData(..))
-import NoThunks.Class(NoThunks)
-import Data.Map(Map)
-import Cardano.Ledger.Pretty(PrettyA(..))
-
+import Shelley.Spec.Ledger.Tx (TxId (TxId))
+import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl, WitVKey)
+import Shelley.Spec.Ledger.UTxO (UTxO)
+import Test.QuickCheck (Gen, choose, shuffle)
+import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import Test.Shelley.Spec.Ledger.Generator.Core
+  ( GenEnv (..),
+    ScriptInfo,
+    TwoPhaseInfo (..),
+    genesisCoins,
+  )
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, baseScripts, combinedScripts, keyPairs)
+import Test.Shelley.Spec.Ledger.Utils (Split (..))
 
 {------------------------------------------------------------------------------
  An EraGen instance makes it possible to run the Shelley property tests. The idea
@@ -183,7 +175,7 @@ type MinGenAuxData era =
     ToCBOR (Core.AuxiliaryData era), -- Needs to be serialized
     Eq (Core.AuxiliaryData era),
     Show (Core.AuxiliaryData era),
-    FromCBOR(Annotator (Core.AuxiliaryData era)) -- arises because some pattern Constructors deserialize
+    FromCBOR (Annotator (Core.AuxiliaryData era)) -- arises because some pattern Constructors deserialize
   )
 
 type MinGenTxBody era =
@@ -191,7 +183,7 @@ type MinGenTxBody era =
     ToCBOR (Core.TxBody era),
     NoThunks (Core.TxBody era),
     Show (Core.TxBody era),
-    FromCBOR(Annotator (Core.TxBody era)) -- arises because some pattern Constructors deserialize
+    FromCBOR (Annotator (Core.TxBody era)) -- arises because some pattern Constructors deserialize
   )
 
 class Show (Core.TxOut era) => MinGenTxout era where
@@ -223,7 +215,7 @@ class
   genGenesisValue :: GenEnv era -> Gen (Core.Value era)
 
   -- | A list of two-phase scripts that can be chosen when building a transaction
-  genEraTwoPhaseScripts :: [ TwoPhaseInfo era]
+  genEraTwoPhaseScripts :: [TwoPhaseInfo era]
   genEraTwoPhaseScripts = []
 
   -- | Given some pre-generated data, generate an era-specific TxBody,
@@ -252,9 +244,12 @@ class
     Core.PParams era ->
     Core.Witnesses era ->
     Core.TxBody era ->
-    Coin ->                          -- | This overrides the existing TxFee
-    Set (TxIn (Crypto era)) ->       -- | This is to be Unioned with the existing TxIn
-    (Core.TxOut era) ->              -- | This is to be Appended to the end of the existing TxOut
+    Coin ->
+    -- | This overrides the existing TxFee
+    Set (TxIn (Crypto era)) ->
+    -- | This is to be Unioned with the existing TxIn
+    (Core.TxOut era) ->
+    -- | This is to be Appended to the end of the existing TxOut
     Core.TxBody era
 
   -- |  Union the TxIn with the existing TxIn in the TxBody
@@ -264,15 +259,16 @@ class
   genEraPParamsDelta :: Constants -> Core.PParams era -> Gen (Core.PParamsDelta era)
 
   genEraPParams :: Constants -> Gen (Core.PParams era)
-   -- Its is VERY IMPORTANT that the decentralisation parameter "_d" be non-zero and less than 1.
-   -- The system will deadlock if d==0 and there are no registered stake pools.
-   -- use Test.Shelley.Spec.Ledger.Generator.Update(genDecentralisationParam) in your instance.
+
+  -- Its is VERY IMPORTANT that the decentralisation parameter "_d" be non-zero and less than 1.
+  -- The system will deadlock if d==0 and there are no registered stake pools.
+  -- use Test.Shelley.Spec.Ledger.Generator.Update(genDecentralisationParam) in your instance.
 
   genEraWitnesses ::
-     (UTxO era, Core.TxBody era, ScriptInfo era) ->
-     (Set (WitVKey 'Witness (Crypto era))) ->
-     Map (ScriptHash (Crypto era)) (Core.Script era) ->
-     Core.Witnesses era
+    (UTxO era, Core.TxBody era, ScriptInfo era) ->
+    (Set (WitVKey 'Witness (Crypto era))) ->
+    Map (ScriptHash (Crypto era)) (Core.Script era) ->
+    Core.Witnesses era
 
   -- When choosing new recipeients from the UTxO, choose only those whose Outputs meet this predicate.
   genEraGoodTxOut :: Core.TxOut era -> Bool
@@ -294,8 +290,6 @@ class
   genEraTweakBlock :: Core.PParams era -> Seq (TxInBlock era) -> Gen (Seq (TxInBlock era))
   genEraTweakBlock _pp seqTx = pure seqTx
 
-
-
 {------------------------------------------------------------------------------
   Generators shared across eras
  -----------------------------------------------------------------------------}
@@ -306,7 +300,6 @@ someKeyPairs c lower upper =
   take
     <$> choose (lower, upper)
     <*> shuffle (keyPairs c)
-
 
 genUtxo0 :: forall era. EraGen era => GenEnv era -> Gen (UTxO era)
 genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = do
@@ -336,7 +329,6 @@ genesisId = TxId (unsafeMakeSafeHash (mkDummyHash 0))
 
 -- ==========================================================
 
-
 -- | Select between _lower_ and _upper_ scripts from the possible combinations
 -- of the first `numBaseScripts` multi-sig scripts of `mSigScripts` (i.e compound scripts) AND
 -- some simple scripts (NOT compound. ie either signature or Plutus scripts).
@@ -349,15 +341,14 @@ someScripts ::
   Gen [(Core.Script era, Core.Script era)]
 someScripts c lower upper = take <$> choose (lower, upper) <*> shuffle (allScripts @era c)
 
-allScripts:: forall era. EraGen era => Constants -> [(Core.Script era, Core.Script era)]
+allScripts :: forall era. EraGen era => Constants -> [(Core.Script era, Core.Script era)]
 allScripts c = (zipWith combine genEraTwoPhaseScripts (baseScripts @era c) ++ combinedScripts @era c)
-    where -- make pairs of scripts (payment,staking) where the payment part is a PlutusScript
-          combine :: TwoPhaseInfo era -> (Core.Script era, Core.Script era) -> (Core.Script era, Core.Script era)
-          combine info (_,stake) = (getScript info,stake)
-
+  where
+    -- make pairs of scripts (payment,staking) where the payment part is a PlutusScript
+    combine :: TwoPhaseInfo era -> (Core.Script era, Core.Script era) -> (Core.Script era, Core.Script era)
+    combine info (_, stake) = (getScript info, stake)
 
 -- =========================================================
-
 
 data Label t where
   Body' :: Label (Core.TxBody era)

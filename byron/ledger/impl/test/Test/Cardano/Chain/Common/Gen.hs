@@ -1,83 +1,79 @@
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE NumDecimals       #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE NumDecimals #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Chain.Common.Gen
-  ( genAddrAttributes
-  , genAddrAttributesWithNM
-  , genAddress
-  , genAddressWithNM
-  , genAddrType
-  , genAddrSpendingData
-  , genAttributes
-  , genBlockCount
-  , genCanonicalTxFeePolicy
-  , genChainDifficulty
-  , genCompactAddress
-  , genCustomLovelace
-  , genLovelace
-  , genLovelaceError
-  , genLovelaceWithRange
-  , genLovelacePortion
-  , genMerkleRoot
-  , genMerkleTree
-  , genNetworkMagic
-  , genScriptVersion
-  , genKeyHash
-  , genTxFeePolicy
-  , genTxSizeLinear
+  ( genAddrAttributes,
+    genAddrAttributesWithNM,
+    genAddress,
+    genAddressWithNM,
+    genAddrType,
+    genAddrSpendingData,
+    genAttributes,
+    genBlockCount,
+    genCanonicalTxFeePolicy,
+    genChainDifficulty,
+    genCompactAddress,
+    genCustomLovelace,
+    genLovelace,
+    genLovelaceError,
+    genLovelaceWithRange,
+    genLovelacePortion,
+    genMerkleRoot,
+    genMerkleTree,
+    genNetworkMagic,
+    genScriptVersion,
+    genKeyHash,
+    genTxFeePolicy,
+    genTxSizeLinear,
   )
 where
 
+import Cardano.Binary (ToCBOR)
+import Cardano.Chain.Common
+  ( AddrAttributes (..),
+    AddrSpendingData (..),
+    AddrType (..),
+    Address (..),
+    Attributes,
+    BlockCount (..),
+    ChainDifficulty (..),
+    CompactAddress,
+    HDAddressPayload (..),
+    KeyHash,
+    Lovelace,
+    LovelaceError (..),
+    LovelacePortion,
+    MerkleRoot (..),
+    MerkleTree,
+    NetworkMagic (..),
+    TxFeePolicy (..),
+    TxSizeLinear (..),
+    hashKey,
+    makeAddress,
+    maxLovelaceVal,
+    mkAttributes,
+    mkLovelace,
+    mkMerkleTree,
+    mtRoot,
+    rationalToLovelacePortion,
+    toCompactAddress,
+  )
 import Cardano.Prelude
-import Test.Cardano.Prelude (gen32Bytes)
-
 import Formatting (build, sformat)
-
 import Hedgehog
 import qualified Hedgehog.Gen as Gen
 import qualified Hedgehog.Range as Range
-
-import Cardano.Binary (ToCBOR)
-import Cardano.Chain.Common
-  ( AddrAttributes(..)
-  , HDAddressPayload(..)
-  , AddrSpendingData(..)
-  , AddrType(..)
-  , Address(..)
-  , Attributes
-  , BlockCount(..)
-  , ChainDifficulty(..)
-  , CompactAddress
-  , Lovelace
-  , LovelaceError(..)
-  , LovelacePortion
-  , MerkleRoot(..)
-  , MerkleTree
-  , NetworkMagic(..)
-  , KeyHash
-  , TxFeePolicy(..)
-  , TxSizeLinear(..)
-  , rationalToLovelacePortion
-  , makeAddress
-  , maxLovelaceVal
-  , mkAttributes
-  , mkLovelace
-  , mkMerkleTree
-  , hashKey
-  , mtRoot
-  , toCompactAddress
-  )
-
-import Test.Cardano.Crypto.Gen (genVerificationKey, genRedeemVerificationKey)
-
+import Test.Cardano.Crypto.Gen (genRedeemVerificationKey, genVerificationKey)
+import Test.Cardano.Prelude (gen32Bytes)
 
 genAddrAttributes :: Gen AddrAttributes
 genAddrAttributes = genAddrAttributesWithNM =<< genNetworkMagic
 
 genAddrAttributesWithNM :: NetworkMagic -> Gen AddrAttributes
 genAddrAttributesWithNM nm = AddrAttributes <$> hap <*> pure nm
-  where hap = Gen.maybe genHDAddressPayload
+  where
+    hap = Gen.maybe genHDAddressPayload
 
 genHDAddressPayload :: Gen HDAddressPayload
 genHDAddressPayload = HDAddressPayload <$> gen32Bytes
@@ -86,8 +82,9 @@ genAddress :: Gen Address
 genAddress = makeAddress <$> genAddrSpendingData <*> genAddrAttributes
 
 genAddressWithNM :: NetworkMagic -> Gen Address
-genAddressWithNM nm = makeAddress <$> genAddrSpendingData
-                                  <*> genAddrAttributesWithNM nm
+genAddressWithNM nm =
+  makeAddress <$> genAddrSpendingData
+    <*> genAddrAttributesWithNM nm
 
 genAddrType :: Gen AddrType
 genAddrType = Gen.choice [pure ATVerKey, pure ATRedeem]
@@ -107,22 +104,21 @@ genCanonicalTxFeePolicy = TxFeePolicyTxSizeLinear <$> genCanonicalTxSizeLinear
 
 genCanonicalTxSizeLinear :: Gen TxSizeLinear
 genCanonicalTxSizeLinear = TxSizeLinear <$> genLovelace' <*> genMultiplier
- where
-  genLovelace' :: Gen Lovelace
-  genLovelace' =
-    mkLovelace
-      <$> Gen.word64 (Range.constant 0 maxCanonicalLovelaceVal)
-      >>= \case
-            Right lovelace -> pure lovelace
-            Left  err      -> panic $ sformat
-              ("The impossible happened in genLovelace: " . build)
-              err
-  -- | Maximal possible value of `Lovelace` in Canonical JSON (JSNum !Int54)
-  -- This should be (2^53 - 1) ~ 9e15, however in the Canonical ToJSON instance of
-  -- `TxFeePolicy` this number is multiplied by 1e9 to keep compatibility with 'Nano'
-  --  coefficients
-  maxCanonicalLovelaceVal :: Word64
-  maxCanonicalLovelaceVal = 9e6
+  where
+    genLovelace' :: Gen Lovelace
+    genLovelace' =
+      mkLovelace
+        <$> Gen.word64 (Range.constant 0 maxCanonicalLovelaceVal)
+        >>= \case
+          Right lovelace -> pure lovelace
+          Left err ->
+            panic $
+              sformat
+                ("The impossible happened in genLovelace: " . build)
+                err
+
+    maxCanonicalLovelaceVal :: Word64
+    maxCanonicalLovelaceVal = 9e6
 
 genChainDifficulty :: Gen ChainDifficulty
 genChainDifficulty = ChainDifficulty <$> Gen.word64 Range.constantBounded
@@ -137,28 +133,31 @@ genLovelace :: Gen Lovelace
 genLovelace = genLovelaceWithRange (Range.constant 0 maxLovelaceVal)
 
 genLovelaceError :: Gen LovelaceError
-genLovelaceError = Gen.choice
-  [ LovelaceOverflow <$> Gen.word64 overflowRange
-  , LovelaceTooLarge <$> Gen.integral tooLargeRange
-  , LovelaceTooSmall <$> Gen.integral tooSmallRange
-  , uncurry LovelaceUnderflow <$> genUnderflowErrorValues
-  ]
- where
-  overflowRange :: Range Word64
-  overflowRange = Range.constant (maxLovelaceVal + 1) (maxBound :: Word64)
+genLovelaceError =
+  Gen.choice
+    [ LovelaceOverflow <$> Gen.word64 overflowRange,
+      LovelaceTooLarge <$> Gen.integral tooLargeRange,
+      LovelaceTooSmall <$> Gen.integral tooSmallRange,
+      uncurry LovelaceUnderflow <$> genUnderflowErrorValues
+    ]
+  where
+    overflowRange :: Range Word64
+    overflowRange = Range.constant (maxLovelaceVal + 1) (maxBound :: Word64)
 
-  tooLargeRange :: Range Integer
-  tooLargeRange = Range.constant (fromIntegral (maxLovelaceVal + 1))
-                                 (fromIntegral (maxBound :: Word64))
+    tooLargeRange :: Range Integer
+    tooLargeRange =
+      Range.constant
+        (fromIntegral (maxLovelaceVal + 1))
+        (fromIntegral (maxBound :: Word64))
 
-  tooSmallRange :: Range Integer
-  tooSmallRange = Range.constant (fromIntegral (minBound :: Int)) (- 1)
+    tooSmallRange :: Range Integer
+    tooSmallRange = Range.constant (fromIntegral (minBound :: Int)) (- 1)
 
-  genUnderflowErrorValues :: Gen (Word64, Word64)
-  genUnderflowErrorValues = do
-    a <- Gen.word64 (Range.constant 0 (maxBound - 1))
-    b <- Gen.word64 (Range.constant a maxBound)
-    pure (a, b)
+    genUnderflowErrorValues :: Gen (Word64, Word64)
+    genUnderflowErrorValues = do
+      a <- Gen.word64 (Range.constant 0 (maxBound - 1))
+      b <- Gen.word64 (Range.constant a maxBound)
+      pure (a, b)
 
 genLovelaceWithRange :: Range Word64 -> Gen Lovelace
 genLovelaceWithRange r =
@@ -180,10 +179,11 @@ genMerkleRoot :: ToCBOR a => Gen a -> Gen (MerkleRoot a)
 genMerkleRoot genA = mtRoot <$> genMerkleTree genA
 
 genNetworkMagic :: Gen NetworkMagic
-genNetworkMagic = Gen.choice
-  [ pure NetworkMainOrStage
-  , NetworkTestnet <$> Gen.word32 Range.constantBounded
-  ]
+genNetworkMagic =
+  Gen.choice
+    [ pure NetworkMainOrStage,
+      NetworkTestnet <$> Gen.word32 Range.constantBounded
+    ]
 
 genScriptVersion :: Gen Word16
 genScriptVersion = Gen.word16 Range.constantBounded

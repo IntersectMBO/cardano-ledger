@@ -23,9 +23,7 @@ module Test.Shelley.Spec.Ledger.Generator.Presets
 where
 
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Word (Word64)
+import Cardano.Ledger.Era (ValidateScript (hashScript))
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,
@@ -35,13 +33,18 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
+import Data.Word (Word64)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
     defaultConstants,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
-import Test.Shelley.Spec.Ledger.Generator.ScriptClass(keyPairs)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (genEraTwoPhaseScripts), allScripts, someKeyPairs)
+import Test.Shelley.Spec.Ledger.Generator.ScriptClass (keyPairs)
 import Test.Shelley.Spec.Ledger.Utils
   ( maxKESIterations,
     mkKESKeyPair,
@@ -49,15 +52,12 @@ import Test.Shelley.Spec.Ledger.Utils
     slotsPerKESIteration,
   )
 
-import Test.Shelley.Spec.Ledger.Generator.EraGen(EraGen(genEraTwoPhaseScripts),allScripts,someKeyPairs)
-import Data.Proxy(Proxy(..))
-import Cardano.Ledger.Era (ValidateScript(hashScript))
-
 -- =================================================================
 
 -- | Example generator environment, consisting of default constants and an
 -- corresponding keyspace.
-genEnv :: forall era.
+genEnv ::
+  forall era.
   (EraGen era) =>
   Proxy era ->
   GenEnv era
@@ -69,7 +69,7 @@ genEnv _ =
 
 -- | An Example Script space for use in Trace generators
 scriptSpace :: forall era. ValidateScript era => [TwoPhaseInfo era] -> ScriptSpace era
-scriptSpace scripts = ScriptSpace scripts (Map.fromList [(hashScript @era (getScript s),s) | s <- scripts])
+scriptSpace scripts = ScriptSpace scripts (Map.fromList [(hashScript @era (getScript s), s) | s <- scripts])
 
 -- | Example keyspace for use in generators
 keySpace ::

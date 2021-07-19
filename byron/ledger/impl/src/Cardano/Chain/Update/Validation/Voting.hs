@@ -1,8 +1,8 @@
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DerivingVia       #-}
-{-# LANGUAGE FlexibleContexts  #-}
-{-# LANGUAGE NamedFieldPuns    #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
 -- | Validation rules for registering votes and confirming proposals
@@ -10,65 +10,64 @@
 --   This is an implementation of the rules defined in the Byron ledger
 --   specification
 module Cardano.Chain.Update.Validation.Voting
-  ( Environment(..)
-  , RegistrationEnvironment(..)
-  , State(..)
-  , Error(..)
-  , registerVoteWithConfirmation
+  ( Environment (..),
+    RegistrationEnvironment (..),
+    State (..),
+    Error (..),
+    registerVoteWithConfirmation,
   )
 where
 
-import Cardano.Prelude hiding (State)
-
-import qualified Data.Map.Strict as M
-import qualified Data.Set as Set
-
 import Cardano.Binary
-  ( Annotated
-  , Decoder
-  , DecoderError(..)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , decodeListLen
-  , decodeWord8
-  , encodeListLen
-  , matchSize
+  ( Annotated,
+    Decoder,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    matchSize,
   )
 import Cardano.Chain.Common (KeyHash, hashKey)
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.Slotting (SlotNumber)
 import Cardano.Chain.Update.Proposal (UpId)
 import Cardano.Chain.Update.Vote
-  ( AVote(..)
-  , recoverSignedBytes
-  , proposalId
+  ( AVote (..),
+    proposalId,
+    recoverSignedBytes,
   )
 import Cardano.Crypto
-  ( ProtocolMagicId
-  , SignTag(SignUSVote)
-  , verifySignatureDecoded
+  ( ProtocolMagicId,
+    SignTag (SignUSVote),
+    verifySignatureDecoded,
   )
-
+import Cardano.Prelude hiding (State)
+import qualified Data.Map.Strict as M
+import qualified Data.Set as Set
 
 -- | Environment used to register votes and confirm proposals
 data Environment = Environment
-  { veCurrentSlot                   :: SlotNumber
-  , veConfirmationThreshold         :: Int
-  , veVotingRegistrationEnvironment :: RegistrationEnvironment
-  } deriving (Eq, Show, Generic)
-    deriving anyclass NFData
+  { veCurrentSlot :: SlotNumber,
+    veConfirmationThreshold :: Int,
+    veVotingRegistrationEnvironment :: RegistrationEnvironment
+  }
+  deriving (Eq, Show, Generic)
+  deriving anyclass (NFData)
 
 -- | Environment required to validate and register a vote
 data RegistrationEnvironment = RegistrationEnvironment
- { vreRegisteredUpdateProposal :: !(Set UpId)
- , vreDelegationMap            :: !Delegation.Map
- } deriving (Eq, Show, Generic)
-   deriving anyclass NFData
+  { vreRegisteredUpdateProposal :: !(Set UpId),
+    vreDelegationMap :: !Delegation.Map
+  }
+  deriving (Eq, Show, Generic)
+  deriving anyclass (NFData)
 
 -- | State keeps track of registered votes and confirmed proposals
 data State = State
-  { vsVotes              :: !RegisteredVotes
-  , vsConfirmedProposals :: !(Map UpId SlotNumber)
+  { vsVotes :: !RegisteredVotes,
+    vsConfirmedProposals :: !(Map UpId SlotNumber)
   }
 
 type RegisteredVotes = Map UpId (Set KeyHash)
@@ -110,46 +109,44 @@ instance FromCBOR Error where
       1 -> checkSize 2 >> VotingProposalNotRegistered <$> fromCBOR
       2 -> checkSize 2 >> VotingVoterNotDelegate <$> fromCBOR
       3 -> checkSize 2 >> VotingVoteAlreadyCast <$> fromCBOR
-      _ -> cborError   $  DecoderErrorUnknownTag "Voting.Error" tag
-
+      _ -> cborError $ DecoderErrorUnknownTag "Voting.Error" tag
 
 -- | Register a vote and confirm the corresponding proposal if it passes the
 --   voting threshold. This corresponds to the @UPVOTE@ rules in the spec.
-registerVoteWithConfirmation
-  :: MonadError Error m
-  => Annotated ProtocolMagicId ByteString
-  -> Environment
-  -> State
-  -> AVote ByteString
-  -> m State
+registerVoteWithConfirmation ::
+  MonadError Error m =>
+  Annotated ProtocolMagicId ByteString ->
+  Environment ->
+  State ->
+  AVote ByteString ->
+  m State
 registerVoteWithConfirmation pm votingEnv vs vote = do
-
   -- Register the vote ignoring proposal confirmation
   votes' <- registerVote pm voteRegEnv votes vote
 
   -- Confirm the proposal if it passes the threshold and isn't confirmed
-  let
-    confirmedProposals' = if pastThreshold votes' && not (isConfirmed upId)
-      then M.insert upId slot confirmedProposals
-      else confirmedProposals
+  let confirmedProposals' =
+        if pastThreshold votes' && not (isConfirmed upId)
+          then M.insert upId slot confirmedProposals
+          else confirmedProposals
 
   -- Return the new state with additional vote and maybe confirmation
-  pure $ State
-    { vsVotes = votes'
-    , vsConfirmedProposals = confirmedProposals'
-    }
- where
-  Environment slot threshold voteRegEnv  = votingEnv
-  State votes confirmedProposals = vs
+  pure $
+    State
+      { vsVotes = votes',
+        vsConfirmedProposals = confirmedProposals'
+      }
+  where
+    Environment slot threshold voteRegEnv = votingEnv
+    State votes confirmedProposals = vs
 
-  pastThreshold :: RegisteredVotes -> Bool
-  pastThreshold votes' =
-    length (M.findWithDefault Set.empty upId votes') >= threshold
+    pastThreshold :: RegisteredVotes -> Bool
+    pastThreshold votes' =
+      length (M.findWithDefault Set.empty upId votes') >= threshold
 
-  isConfirmed = flip M.member confirmedProposals
+    isConfirmed = flip M.member confirmedProposals
 
-  upId        = proposalId vote
-
+    upId = proposalId vote
 
 -- | Validate and register a vote
 --
@@ -161,13 +158,13 @@ registerVoteWithConfirmation pm votingEnv vs vote = do
 --   4) The vote has not already been cast
 --
 --   This corresponds to the `ADDVOTE` rule in the spec.
-registerVote
-  :: MonadError Error m
-  => Annotated ProtocolMagicId ByteString
-  -> RegistrationEnvironment
-  -> RegisteredVotes
-  -> AVote ByteString
-  -> m RegisteredVotes
+registerVote ::
+  MonadError Error m =>
+  Annotated ProtocolMagicId ByteString ->
+  RegistrationEnvironment ->
+  RegisteredVotes ->
+  AVote ByteString ->
+  m RegisteredVotes
 registerVote pm vre votes vote = do
   -- Check that the proposal being voted on is registered
   (upId `Set.member` registeredProposals)
@@ -176,13 +173,12 @@ registerVote pm vre votes vote = do
   -- Check that the set of genesis keys is not empty
   delegator <- case Delegation.lookupR voter delegationMap of
     Nothing -> throwError (VotingVoterNotDelegate voter)
-    Just d  -> pure d
+    Just d -> pure d
 
   -- Check that the vote has not already been cast
   case M.lookup upId votes of
     Just khs | delegator `Set.member` khs -> throwError (VotingVoteAlreadyCast delegator)
     _ -> pure ()
-
 
   -- Check that the signature is valid
   verifySignatureDecoded pm SignUSVote voterVK signedBytes signature
@@ -190,13 +186,13 @@ registerVote pm vre votes vote = do
 
   -- Add the delegators to the set of votes for this proposal
   pure $ M.insertWith Set.union upId (Set.singleton delegator) votes
- where
-  RegistrationEnvironment registeredProposals delegationMap = vre
+  where
+    RegistrationEnvironment registeredProposals delegationMap = vre
 
-  UnsafeVote { voterVK, signature } = vote
+    UnsafeVote {voterVK, signature} = vote
 
-  voter       = hashKey voterVK
+    voter = hashKey voterVK
 
-  upId        = proposalId vote
+    upId = proposalId vote
 
-  signedBytes = recoverSignedBytes vote
+    signedBytes = recoverSignedBytes vote

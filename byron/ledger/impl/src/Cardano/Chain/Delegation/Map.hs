@@ -1,40 +1,38 @@
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 
 module Cardano.Chain.Delegation.Map
-  ( Map(..)
+  ( Map (..),
 
-  -- * Query
-  , memberR
-  , notMemberR
-  , pairMember
-  , lookupR
+    -- * Query
+    memberR,
+    notMemberR,
+    pairMember,
+    lookupR,
 
-  -- * Update
-  , insert
+    -- * Update
+    insert,
 
-  -- * Conversion/traversal
-  , fromList
-  , keysSet
+    -- * Conversion/traversal
+    fromList,
+    keysSet,
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Chain.Common.KeyHash (KeyHash)
 import Cardano.Prelude hiding (Map)
-
 import Data.Bimap (Bimap)
 import qualified Data.Bimap as Bimap
 import qualified Data.Set as Set
 import NoThunks.Class (NoThunks (..), noThunksInKeysAndValues)
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
-import Cardano.Chain.Common.KeyHash (KeyHash)
-
-
 newtype Map = Map
   { unMap :: Bimap KeyHash KeyHash
-  } deriving (Eq, Show, Generic)
-    deriving anyclass NFData
+  }
+  deriving (Eq, Show, Generic)
+  deriving anyclass (NFData)
 
 instance FromCBOR Map where
   fromCBOR = Map . Bimap.fromList <$> fromCBOR
@@ -49,7 +47,6 @@ instance NoThunks Map where
     noThunksInKeysAndValues ctxt
       . Bimap.toList
       . unMap
-
 
 --------------------------------------------------------------------------------
 -- Query
@@ -69,14 +66,12 @@ pairMember p = Bimap.pairMember p . unMap
 lookupR :: KeyHash -> Map -> Maybe KeyHash
 lookupR b = Bimap.lookupR b . unMap
 
-
 --------------------------------------------------------------------------------
 -- Update
 --------------------------------------------------------------------------------
 
 insert :: KeyHash -> KeyHash -> Map -> Map
 insert a b = Map . Bimap.insert a b . unMap
-
 
 --------------------------------------------------------------------------------
 -- Conversion/traversal

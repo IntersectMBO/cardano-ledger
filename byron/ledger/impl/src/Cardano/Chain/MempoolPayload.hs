@@ -1,31 +1,30 @@
-{-# LANGUAGE DeriveFunctor     #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase        #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications  #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.MempoolPayload
-  ( MempoolPayload
-  , AMempoolPayload (..)
+  ( MempoolPayload,
+    AMempoolPayload (..),
   )
 where
 
-import Cardano.Prelude
-
 import Cardano.Binary
-  ( ByteSpan
-  , DecoderError(..)
-  , FromCBOR(..)
-  , ToCBOR(..)
-  , decodeWord8
-  , encodeListLen
-  , encodePreEncoded
-  , enforceSize
-  , recoverBytes
+  ( ByteSpan,
+    DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeWord8,
+    encodeListLen,
+    encodePreEncoded,
+    enforceSize,
+    recoverBytes,
   )
 import qualified Cardano.Chain.Delegation as Delegation
 import Cardano.Chain.UTxO (ATxAux)
 import qualified Cardano.Chain.Update as Update
+import Cardano.Prelude
 
 -- | A payload which can be submitted into or between mempools via the
 -- transaction submission protocol.
@@ -34,14 +33,14 @@ type MempoolPayload = AMempoolPayload ()
 -- | A payload which can be submitted into or between mempools via the
 -- transaction submission protocol.
 data AMempoolPayload a
-  = MempoolTx !(ATxAux a)
-  -- ^ A transaction payload (transaction and witness).
-  | MempoolDlg !(Delegation.ACertificate a)
-  -- ^ A delegation certificate payload.
-  | MempoolUpdateProposal !(Update.AProposal a)
-  -- ^ An update proposal payload.
-  | MempoolUpdateVote !(Update.AVote a)
-  -- ^ An update vote payload.
+  = -- | A transaction payload (transaction and witness).
+    MempoolTx !(ATxAux a)
+  | -- | A delegation certificate payload.
+    MempoolDlg !(Delegation.ACertificate a)
+  | -- | An update proposal payload.
+    MempoolUpdateProposal !(Update.AProposal a)
+  | -- | An update vote payload.
+    MempoolUpdateVote !(Update.AVote a)
   deriving (Eq, Show, Functor)
 
 instance ToCBOR MempoolPayload where
@@ -71,8 +70,8 @@ instance FromCBOR (AMempoolPayload ByteSpan) where
   fromCBOR = do
     enforceSize "MempoolPayload" 2
     decodeWord8 >>= \case
-      0   -> MempoolTx             <$> fromCBOR
-      1   -> MempoolDlg            <$> fromCBOR
-      2   -> MempoolUpdateProposal <$> fromCBOR
-      3   -> MempoolUpdateVote     <$> fromCBOR
+      0 -> MempoolTx <$> fromCBOR
+      1 -> MempoolDlg <$> fromCBOR
+      2 -> MempoolUpdateProposal <$> fromCBOR
+      3 -> MempoolUpdateVote <$> fromCBOR
       tag -> cborError $ DecoderErrorUnknownTag "MempoolPayload" tag

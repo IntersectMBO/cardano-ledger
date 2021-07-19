@@ -1,30 +1,32 @@
-
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.TranslationTools
-  ( translationCompat
-  , translationCompatToCBOR
-  , decodeTest
-  , decodeTestAnn
-  , expectDecodeFailure
-  ) where
-
-import Cardano.Ledger.Era (PreviousEra, TranslateEra (..), TranslationContext)
+  ( translationCompat,
+    translationCompatToCBOR,
+    decodeTest,
+    decodeTestAnn,
+    expectDecodeFailure,
+  )
+where
 
 import Cardano.Binary
-   (Encoding, ToCBOR (..), FromCBOR (..), serializeEncoding
-   , decodeFull
-   , serialize
-   , Annotator
-   , decodeAnnotator
-   , DecoderError
-   )
-import Test.Tasty.HUnit (Assertion, assertFailure)
+  ( Annotator,
+    DecoderError,
+    Encoding,
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeAnnotator,
+    decodeFull,
+    serialize,
+    serializeEncoding,
+  )
+import Cardano.Ledger.Era (PreviousEra, TranslateEra (..), TranslationContext)
 import Control.Monad.Except (runExcept)
 import qualified Data.ByteString.Base16.Lazy as B16
+import Test.Tasty.HUnit (Assertion, assertFailure)
 
 translate ::
   forall era f.
@@ -66,23 +68,34 @@ translationCompatToCBOR ::
 translationCompatToCBOR _ tc = translationCompat @era tc toCBOR toCBOR
 
 -- Tests that the type a can be decoded as b
-decodeTest :: forall a b proxy. (ToCBOR a, FromCBOR b)
-   => proxy b -> a -> Assertion
+decodeTest ::
+  forall a b proxy.
+  (ToCBOR a, FromCBOR b) =>
+  proxy b ->
+  a ->
+  Assertion
 decodeTest _ x = case decodeFull (serialize x) :: Either DecoderError b of
   Left e -> assertFailure $ show e
   Right _ -> return ()
 
 -- Tests that the type a can be decoded as b
-decodeTestAnn :: forall a b proxy. (ToCBOR a, FromCBOR (Annotator b))
-   => proxy b -> a -> Assertion
+decodeTestAnn ::
+  forall a b proxy.
+  (ToCBOR a, FromCBOR (Annotator b)) =>
+  proxy b ->
+  a ->
+  Assertion
 decodeTestAnn _ x =
-   let bytes = serialize x
-       decoded = decodeAnnotator mempty fromCBOR bytes :: Either DecoderError b
-    in case decoded of
-  Left e -> assertFailure $
-       "\nerror: " <> show e
-    <> "\nbytes: " <> show (B16.encode bytes) <> "\n"
-  Right _ -> return ()
+  let bytes = serialize x
+      decoded = decodeAnnotator mempty fromCBOR bytes :: Either DecoderError b
+   in case decoded of
+        Left e ->
+          assertFailure $
+            "\nerror: " <> show e
+              <> "\nbytes: "
+              <> show (B16.encode bytes)
+              <> "\n"
+        Right _ -> return ()
 
 -- Tests that a decoder error happens
 expectDecodeFailure :: forall a. (ToCBOR a, FromCBOR a) => a -> Assertion

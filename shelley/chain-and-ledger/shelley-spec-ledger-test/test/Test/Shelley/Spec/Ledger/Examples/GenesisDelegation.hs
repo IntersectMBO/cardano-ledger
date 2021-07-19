@@ -34,6 +34,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.Map.Strict as Map
@@ -44,7 +45,6 @@ import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

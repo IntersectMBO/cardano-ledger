@@ -1,24 +1,26 @@
-{-# LANGUAGE LambdaCase      #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Crypto.Signing.Safe
-  ( tests
+  ( tests,
   )
 where
 
-import Cardano.Prelude
-
-import Hedgehog
-  (Property, checkParallel, discover, forAll, property, (===))
-
 import Cardano.Crypto.Signing
-  ( noPassSafeSigner
-  , safeToVerification
-  , toVerification
+  ( noPassSafeSigner,
+    safeToVerification,
+    toVerification,
   )
-
+import Cardano.Prelude
+import Hedgehog
+  ( Property,
+    checkParallel,
+    discover,
+    forAll,
+    property,
+    (===),
+  )
 import Test.Cardano.Crypto.Gen (genSigningKey)
-
 
 --------------------------------------------------------------------------------
 -- Main Test Action
@@ -26,7 +28,6 @@ import Test.Cardano.Crypto.Gen (genSigningKey)
 
 tests :: IO Bool
 tests = checkParallel $$discover
-
 
 --------------------------------------------------------------------------------
 -- Safe Signing Properties
@@ -56,7 +57,6 @@ tests = checkParallel $$discover
 -- > = { by expanding definition of safeToVerification }
 -- >
 -- >   toVerification sk
---
 prop_safeSignerPreservesVerificationKey :: Property
 prop_safeSignerPreservesVerificationKey = property $ do
   sk <- forAll genSigningKey

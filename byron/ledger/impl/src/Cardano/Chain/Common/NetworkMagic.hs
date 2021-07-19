@@ -1,42 +1,50 @@
-{-# LANGUAGE DeriveAnyClass             #-}
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Chain.Common.NetworkMagic
-       ( NetworkMagic (..)
-       , makeNetworkMagic
-       ) where
+  ( NetworkMagic (..),
+    makeNetworkMagic,
+  )
+where
 
+import Cardano.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeListLen,
+    decodeWord8,
+    encodeListLen,
+    matchSize,
+  )
+import Cardano.Crypto.ProtocolMagic
+  ( AProtocolMagic (..),
+    RequiresNetworkMagic (..),
+    getProtocolMagic,
+  )
 import Cardano.Prelude hiding ((%))
-
-import           Data.Aeson (ToJSON)
-import           Formatting (bprint, build, (%))
+import Data.Aeson (ToJSON)
+import Formatting (bprint, build, (%))
 import qualified Formatting.Buildable as B
 import NoThunks.Class (NoThunks (..))
-
-import           Cardano.Binary (DecoderError(..), FromCBOR(..), ToCBOR(..),
-                     decodeListLen, decodeWord8, encodeListLen , matchSize)
-import           Cardano.Crypto.ProtocolMagic (AProtocolMagic (..),
-                     RequiresNetworkMagic (..), getProtocolMagic)
-
 
 --------------------------------------------------------------------------------
 -- NetworkMagic
 --------------------------------------------------------------------------------
 
 data NetworkMagic
-    = NetworkMainOrStage
-    | NetworkTestnet {-# UNPACK #-} !Word32
-    deriving (Show, Eq, Ord, Generic, NFData, NoThunks)
+  = NetworkMainOrStage
+  | NetworkTestnet {-# UNPACK #-} !Word32
+  deriving (Show, Eq, Ord, Generic, NFData, NoThunks)
 
 instance B.Buildable NetworkMagic where
-    build NetworkMainOrStage = "NetworkMainOrStage"
-    build (NetworkTestnet n) = bprint ("NetworkTestnet ("%build%")") n
+  build NetworkMainOrStage = "NetworkMainOrStage"
+  build (NetworkTestnet n) = bprint ("NetworkTestnet (" % build % ")") n
 
 -- Used for debugging purposes only
-instance ToJSON NetworkMagic where
+instance ToJSON NetworkMagic
 
 instance HeapWords NetworkMagic where
   heapWords NetworkMainOrStage = 0
@@ -60,5 +68,5 @@ instance FromCBOR NetworkMagic where
 
 makeNetworkMagic :: AProtocolMagic a -> NetworkMagic
 makeNetworkMagic pm = case getRequiresNetworkMagic pm of
-    RequiresNoMagic -> NetworkMainOrStage
-    RequiresMagic   -> NetworkTestnet (getProtocolMagic pm)
+  RequiresNoMagic -> NetworkMainOrStage
+  RequiresMagic -> NetworkTestnet (getProtocolMagic pm)

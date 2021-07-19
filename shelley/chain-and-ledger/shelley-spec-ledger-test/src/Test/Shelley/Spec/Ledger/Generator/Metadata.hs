@@ -2,19 +2,19 @@
 
 module Test.Shelley.Spec.Ledger.Generator.Metadata
   ( genMetadata,
-    genMetadata'
+    genMetadata',
   )
 where
 
+import Cardano.Ledger.BaseTypes
+  ( StrictMaybe (..),
+  )
 import Control.Exception (assert)
 import qualified Data.ByteString.Char8 as BS (length, pack)
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T (pack)
 import qualified Data.Text.Encoding as T
 import Data.Word (Word64)
-import Cardano.Ledger.BaseTypes
-  ( StrictMaybe (..),
-  )
 import Shelley.Spec.Ledger.Metadata
   ( Metadata (..),
     Metadatum (..),

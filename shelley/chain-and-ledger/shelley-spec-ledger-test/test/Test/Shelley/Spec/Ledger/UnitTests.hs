@@ -15,8 +15,17 @@ module Test.Shelley.Spec.Ledger.UnitTests (unitTests) where
 import Cardano.Binary (serialize')
 import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Address
+  ( Addr (..),
+    getRwdCred,
+    mkVKeyRwdAcnt,
+  )
 import Cardano.Ledger.BaseTypes hiding ((==>))
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Credential
+  ( Credential (..),
+    StakeReference (..),
+  )
 import Cardano.Ledger.Crypto (DSIGN, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
@@ -28,6 +37,7 @@ import Cardano.Ledger.Keys
     vKey,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<+>), (<->))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
@@ -47,16 +57,7 @@ import Shelley.Spec.Ledger.API
     LEDGER,
     LedgerEnv (..),
   )
-import Cardano.Ledger.Address
-  ( Addr (..),
-    getRwdCred,
-    mkVKeyRwdAcnt,
-  )
 import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    StakeReference (..),
-  )
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -76,7 +77,6 @@ import Shelley.Spec.Ledger.STS.Ledger
 import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Cardano.Ledger.Slot
 import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     TxBody (..),

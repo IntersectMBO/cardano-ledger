@@ -1,19 +1,18 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Crypto.Signing.Redeem.Compact
-  ( tests
+  ( tests,
   )
 where
 
-import Cardano.Prelude
-import Test.Cardano.Prelude
-
-import Hedgehog (MonadTest, Property, checkParallel, tripping)
-
 import Cardano.Crypto.Signing.Redeem
-  (fromCompactRedeemVerificationKey, toCompactRedeemVerificationKey)
-
+  ( fromCompactRedeemVerificationKey,
+    toCompactRedeemVerificationKey,
+  )
+import Cardano.Prelude
+import Hedgehog (MonadTest, Property, checkParallel, tripping)
 import Test.Cardano.Crypto.Gen (genRedeemVerificationKey)
+import Test.Cardano.Prelude
 
 --------------------------------------------------------------------------------
 -- Compact RedeemVerificationKey
@@ -30,9 +29,12 @@ roundTripCompactRedeemVerificationKey =
 -- Tripping util
 -------------------------------------------------------------------------------
 
-trippingCompact
-  :: (HasCallStack, MonadTest m, Show a, Show b, Eq a)
-  => (a -> b) -> (b -> a) -> a -> m ()
+trippingCompact ::
+  (HasCallStack, MonadTest m, Show a, Show b, Eq a) =>
+  (a -> b) ->
+  (b -> a) ->
+  a ->
+  m ()
 trippingCompact toCompact fromCompact x =
   tripping x toCompact (Identity . fromCompact)
 

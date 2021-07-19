@@ -39,8 +39,8 @@ module Control.State.Transition.Extended
     (?!),
     (?!:),
     Label,
-    SingEP(..),
-    EventPolicy(..),
+    SingEP (..),
+    EventPolicy (..),
     EventReturnType,
     EventConstraintType,
     labeledPred,
@@ -78,21 +78,21 @@ import Control.Exception (Exception (..), throw)
 import Control.Monad (when)
 import Control.Monad.Free.Church
 import Control.Monad.Identity (Identity (..))
-import Control.Monad.Trans.Class (lift, MonadTrans)
-import Control.Monad.Trans.State.Strict (StateT(..))
+import Control.Monad.State.Class (MonadState (..), modify)
+import Control.Monad.Trans.Class (MonadTrans, lift)
+import Control.Monad.Trans.Except
+import Control.Monad.Trans.State.Strict (StateT (..))
 import Control.Monad.Writer.CPS (WriterT, runWriterT)
 import Control.Monad.Writer.Class (MonadWriter (..))
-import Control.Monad.State.Class (MonadState (..), modify)
+import Data.Coerce (Coercible, coerce)
 import Data.Data (Data, Typeable)
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, traverse_)
-import Data.Functor ((<&>), ($>))
-import Data.Kind (Type, Constraint)
-import Control.Monad.Trans.Except
+import Data.Functor (($>), (<&>))
+import Data.Kind (Constraint, Type)
 import Data.Typeable (typeRep)
-import NoThunks.Class (NoThunks (..))
 import Data.Void (Void)
-import Data.Coerce (coerce, Coercible)
+import NoThunks.Class (NoThunks (..))
 
 data RuleType
   = Initial
@@ -194,8 +194,8 @@ class
   type BaseM a = Identity
 
   -- | Event type.
-
   type Event a :: Type
+
   type Event a = Void
 
   -- | Descriptive type for the possible failures which might cause a transition
@@ -235,6 +235,7 @@ class
 class (STS sub, BaseM sub ~ BaseM super) => Embed sub super where
   -- | Wrap a predicate failure of the subsystem in a failure of the super-system.
   wrapFailed :: PredicateFailure sub -> PredicateFailure super
+
   wrapEvent :: Event sub -> Event super
   default wrapEvent :: Coercible (Event sub) (Event super) => Event sub -> Event super
   wrapEvent = coerce
@@ -247,7 +248,7 @@ data EventPolicy
   | EventPolicyDiscard
 
 data SingEP ep where
-  EPReturn  :: SingEP 'EventPolicyReturn
+  EPReturn :: SingEP 'EventPolicyReturn
   EPDiscard :: SingEP 'EventPolicyDiscard
 
 type family EventReturnType ep sts a :: Type where
@@ -480,8 +481,8 @@ applySTSIndifferently =
 newtype RuleEventLoggerT s m a = RuleEventLoggerT (StateT [PredicateFailure s] (WriterT [Event s] m) a)
   deriving (Monad, Applicative, Functor)
 
-
 deriving instance (e ~ [Event s], Monad m) => MonadWriter e (RuleEventLoggerT s m)
+
 deriving instance (f ~ [PredicateFailure s], Monad m) => MonadState f (RuleEventLoggerT s m)
 
 instance MonadTrans (RuleEventLoggerT s) where
@@ -509,14 +510,15 @@ applyRuleInternal ep vp goSTS jc r =
     EPReturn -> flip (runRuleEventLoggerT @s) [] $ foldF runClause r
     EPDiscard -> flip runStateT [] $ foldF runClause r
   where
-    runClause :: forall f t a.
-      ( f ~ t m
-      , MonadState [PredicateFailure s] f
-      , EventConstraintType ep s f
-      , MonadTrans t
-      )
-      => Clause s rtype a
-      -> t m a
+    runClause ::
+      forall f t a.
+      ( f ~ t m,
+        MonadState [PredicateFailure s] f,
+        EventConstraintType ep s f,
+        MonadTrans t
+      ) =>
+      Clause s rtype a ->
+      t m a
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
     runClause (Predicate lbls cond orElse val) =
@@ -529,9 +531,11 @@ applyRuleInternal ep vp goSTS jc r =
       s <- lift $ goSTS subCtx
       let ss :: State sub
           sfails :: [PredicateFailure sub]
-          (ss, sfails) = (discardEvents ep @sub) s
+          sevs :: [Event sub]
+          (ss, sfails) = discardEvents ep @sub s
+          sevs = getEvents ep @sub @(State sub, [PredicateFailure sub]) s
       traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> sfails
-      runClause $ Writer (wrapEvent @sub @s <$> getEvents ep @sub @(State sub, [PredicateFailure sub]) s) ()
+      runClause $ Writer (wrapEvent @sub @s <$> sevs) ()
       pure $ next ss
     runClause (Writer w a) = case ep of
       EPReturn -> tell w $> a
@@ -554,8 +558,8 @@ applySTSInternal ep ap goRule ctx =
   successOrFirstFailure <$> applySTSInternal' rTypeRep ctx
   where
     successOrFirstFailure ::
-         [EventReturnType ep s (State s, [PredicateFailure s])]
-      -> EventReturnType ep s (State s, [PredicateFailure s])
+      [EventReturnType ep s (State s, [PredicateFailure s])] ->
+      EventReturnType ep s (State s, [PredicateFailure s])
     successOrFirstFailure xs =
       case find (\x -> null $ snd $ (discardEvents ep @s x :: (State s, [PredicateFailure s]))) xs of
         Nothing ->
@@ -591,24 +595,23 @@ applySTSInternal ep ap goRule ctx =
       -- We only care about running postconditions if the state transition was
       -- successful.
       when (assertPost ap) $
-        let 
-          res' :: (EventReturnType ep s (State s, [PredicateFailure s]))
-          res' = successOrFirstFailure res
-        in case discardEvents ep @s res' :: ((State s, [PredicateFailure s])) of
-          (st, []) ->
-            sfor_ (assertions @s) $! \case
-              PostCondition msg cond
-                | not (cond jc st) ->
-                  let assertion =
-                        AssertionViolation
-                          { avSTS = show $ typeRep assertion,
-                            avMsg = msg,
-                            avCtx = jc,
-                            avState = Just st
-                          }
-                   in throwE assertion
+        let res' :: (EventReturnType ep s (State s, [PredicateFailure s]))
+            res' = successOrFirstFailure res
+         in case discardEvents ep @s res' :: ((State s, [PredicateFailure s])) of
+              (st, []) ->
+                sfor_ (assertions @s) $! \case
+                  PostCondition msg cond
+                    | not (cond jc st) ->
+                      let assertion =
+                            AssertionViolation
+                              { avSTS = show $ typeRep assertion,
+                                avMsg = msg,
+                                avCtx = jc,
+                                avState = Just st
+                              }
+                       in throwE assertion
+                  _ -> pure ()
               _ -> pure ()
-          _ -> pure ()
       pure $! res
 
     assertPre :: AssertionPolicy -> Bool

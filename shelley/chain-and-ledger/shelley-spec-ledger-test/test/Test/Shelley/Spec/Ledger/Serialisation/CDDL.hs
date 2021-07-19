@@ -18,7 +18,12 @@ import Cardano.Crypto.DSIGN.Ed25519 (Ed25519DSIGN)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224, Blake2b_256)
 import Cardano.Crypto.KES.Sum
 import Cardano.Crypto.VRF.Praos (PraosVRF)
+import Cardano.Ledger.Address
+  ( Addr,
+    RewardAcnt,
+  )
 import Cardano.Ledger.Crypto (Crypto (..))
+import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Data.ByteString.Lazy as BSL
 import Shelley.Spec.Ledger.API
@@ -30,17 +35,12 @@ import Shelley.Spec.Ledger.API
     Tx,
     Update,
   )
-import Cardano.Ledger.Address
-  ( Addr,
-    RewardAcnt,
-  )
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
 import Shelley.Spec.Ledger.BlockChain
   ( BHBody,
     BHeader,
     LaxBlock,
   )
-import Cardano.Ledger.Keys (KeyRole (Staking))
 import Shelley.Spec.Ledger.Metadata (Metadata)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.TxBody

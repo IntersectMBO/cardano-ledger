@@ -1,32 +1,32 @@
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Test.Cardano.Ledger.Mary.Examples.Consensus where
 
-import qualified Data.Map.Strict as Map (singleton)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.Value
+import qualified Data.Map.Strict as Map (singleton)
 import Data.Proxy
 import Test.Cardano.Ledger.Allegra.Examples.Consensus
 import Test.Shelley.Spec.Ledger.Examples.Consensus
 import Test.Shelley.Spec.Ledger.Orphans ()
-import Cardano.Ledger.Mary.Value
 
 type StandardMary = MaryEra StandardCrypto
 
 -- | ShelleyLedgerExamples for Allegra era
 ledgerExamplesMary :: ShelleyLedgerExamples StandardMary
 ledgerExamplesMary =
-    defaultShelleyLedgerExamples
-      (mkWitnessesPreAlonzo (Proxy @StandardMary))
-      id
-      (exampleMultiAssetValue 1)
-      exampleTxBodyMary
-      exampleAuxiliaryDataMA
+  defaultShelleyLedgerExamples
+    (mkWitnessesPreAlonzo (Proxy @StandardMary))
+    id
+    (exampleMultiAssetValue 1)
+    exampleTxBodyMary
+    exampleAuxiliaryDataMA
 
 exampleMultiAssetValue ::
   forall c.

@@ -22,28 +22,18 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
-import Shelley.Spec.Ledger.PParams()
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
-import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesTxOut (..), UsesValue, UsesTxBody)
+import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesTxBody, UsesTxOut (..), UsesValue)
 import Cardano.Ledger.Val (Val ((<->)))
-import Data.Default.Class (def)
 import qualified Data.ByteString as BS
+import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
-import qualified Shelley.Spec.Ledger.BlockChain as Shelley
-  ( bbHash,
-    TxSeq (..),
-    txSeqTxns,
-  )
-import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
-import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
-import Shelley.Spec.Ledger.Scripts (MultiSig)
-import Shelley.Spec.Ledger.PParams as Shelley
 import Shelley.Spec.Ledger.API
   ( AccountState (AccountState),
     ApplyBlock,
     ApplyTx,
-    CanStartFromGenesis(..),
+    CanStartFromGenesis (..),
     Coin (Coin),
     DPState (DPState),
     DState (_genDelegs),
@@ -52,8 +42,8 @@ import Shelley.Spec.Ledger.API
     GetLedgerView,
     LedgerState (LedgerState),
     NewEpochState (NewEpochState),
-    PraosCrypto,
     PoolDistr (PoolDistr),
+    PraosCrypto,
     ShelleyBasedEra,
     ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
     StrictMaybe (SNothing),
@@ -63,14 +53,16 @@ import Shelley.Spec.Ledger.API
     genesisUTxO,
     word64ToCoin,
   )
-import qualified Shelley.Spec.Ledger.PParams as SPP
-import Shelley.Spec.Ledger.Tx
-  ( WitnessSet,
-    validateNativeMultiSigScript,
-    Tx,
+import qualified Shelley.Spec.Ledger.BlockChain as Shelley
+  ( TxSeq (..),
+    bbHash,
+    txSeqTxns,
   )
-import Shelley.Spec.Ledger.TxBody (TxBody (..))
-
+import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
+import Shelley.Spec.Ledger.PParams ()
+import Shelley.Spec.Ledger.PParams as Shelley
+import qualified Shelley.Spec.Ledger.PParams as SPP
 import Shelley.Spec.Ledger.STS.Bbody (BBODY)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS)
@@ -88,11 +80,18 @@ import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP)
 import Shelley.Spec.Ledger.STS.Rupd (RUPD)
 import Shelley.Spec.Ledger.STS.Snap (SNAP)
-import Shelley.Spec.Ledger.STS.Tickn (TICKN)
 import Shelley.Spec.Ledger.STS.Tick (TICK, TICKF)
+import Shelley.Spec.Ledger.STS.Tickn (TICKN)
 import Shelley.Spec.Ledger.STS.Upec (UPEC)
 import Shelley.Spec.Ledger.STS.Utxo (UTXO)
 import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
+import Shelley.Spec.Ledger.Scripts (MultiSig)
+import Shelley.Spec.Ledger.Tx
+  ( Tx,
+    WitnessSet,
+    validateNativeMultiSigScript,
+  )
+import Shelley.Spec.Ledger.TxBody (TxBody (..))
 
 data ExampleEra c
 
@@ -159,11 +158,14 @@ instance CryptoClass.Crypto c => ValidateAuxiliaryData (ExampleEra c) c where
   validateAuxiliaryData (Metadata m) = all validMetadatum m
 
 instance PraosCrypto c => ApplyTx (ExampleEra c)
+
 instance PraosCrypto c => ApplyBlock (ExampleEra c)
+
 instance PraosCrypto c => GetLedgerView (ExampleEra c)
+
 instance PraosCrypto c => ShelleyBasedEra (ExampleEra c)
 
-instance ( CryptoClass.Crypto c) => CanStartFromGenesis (ExampleEra c) where
+instance (CryptoClass.Crypto c) => CanStartFromGenesis (ExampleEra c) where
   initialState sg () =
     NewEpochState
       initialEpochNo
@@ -199,25 +201,47 @@ instance ( CryptoClass.Crypto c) => CanStartFromGenesis (ExampleEra c) where
 -- These rules are all inherited from Shelley
 -- The types on the right are all instances of class STS, ultimately defined in Control.State.Transition.Extended
 type instance Core.EraRule "BBODY" (ExampleEra c) = BBODY (ExampleEra c) -- Block body
+
 type instance Core.EraRule "DELEG" (ExampleEra c) = DELEG (ExampleEra c)
+
 type instance Core.EraRule "DELEGS" (ExampleEra c) = DELEGS (ExampleEra c)
+
 type instance Core.EraRule "DELPL" (ExampleEra c) = DELPL (ExampleEra c)
+
 type instance Core.EraRule "EPOCH" (ExampleEra c) = EPOCH (ExampleEra c)
+
 type instance Core.EraRule "LEDGER" (ExampleEra c) = LEDGER (ExampleEra c)
+
 type instance Core.EraRule "LEDGERS" (ExampleEra c) = LEDGERS (ExampleEra c)
+
 type instance Core.EraRule "MIR" (ExampleEra c) = MIR (ExampleEra c)
+
 type instance Core.EraRule "NEWEPOCH" (ExampleEra c) = NEWEPOCH (ExampleEra c)
+
 type instance Core.EraRule "NEWPP" (ExampleEra c) = NEWPP (ExampleEra c)
+
 type instance Core.EraRule "OCERT" (ExampleEra c) = OCERT (ExampleEra c)
+
 type instance Core.EraRule "OVERLAY" (ExampleEra c) = OVERLAY (ExampleEra c)
+
 type instance Core.EraRule "POOL" (ExampleEra c) = POOL (ExampleEra c)
+
 type instance Core.EraRule "POOLREAP" (ExampleEra c) = POOLREAP (ExampleEra c)
+
 type instance Core.EraRule "PPUP" (ExampleEra c) = PPUP (ExampleEra c)
+
 type instance Core.EraRule "RUPD" (ExampleEra c) = RUPD (ExampleEra c)
+
 type instance Core.EraRule "SNAP" (ExampleEra c) = SNAP (ExampleEra c)
+
 type instance Core.EraRule "TICK" (ExampleEra c) = TICK (ExampleEra c)
+
 type instance Core.EraRule "TICKF" (ExampleEra c) = TICKF (ExampleEra c)
+
 type instance Core.EraRule "TICKN" (ExampleEra _c) = TICKN
+
 type instance Core.EraRule "UPEC" (ExampleEra c) = UPEC (ExampleEra c)
+
 type instance Core.EraRule "UTXO" (ExampleEra c) = UTXO (ExampleEra c)
+
 type instance Core.EraRule "UTXOW" (ExampleEra c) = UTXOW (ExampleEra c)

@@ -30,28 +30,15 @@ where
 -- Cypto and Era stuff
 
 import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
-import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (Crypto (..))
-import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Val (Val (inject))
-import Control.State.Transition.Extended (TRC (..), applySTS)
-import Data.Default.Class (def)
-import qualified Data.Map as Map
-import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import Data.Word (Word64)
-import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.API (PraosCrypto)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
   )
+import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
+import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys
   ( Hash,
     KeyHash,
@@ -63,6 +50,20 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
+import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Val (Val (inject))
+import Control.State.Transition.Extended (TRC (..), applySTS)
+import Data.Default.Class (def)
+import qualified Data.Map as Map
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
+import Data.Word (Word64)
+import Numeric.Natural (Natural)
+import Shelley.Spec.Ledger.API (PraosCrypto)
+import Shelley.Spec.Ledger.Delegation.Certificates (DelegCert (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState,
@@ -70,7 +71,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
-import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),

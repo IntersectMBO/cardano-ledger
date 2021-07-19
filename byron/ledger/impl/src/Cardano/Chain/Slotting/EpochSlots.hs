@@ -1,29 +1,28 @@
-{-# LANGUAGE DeriveDataTypeable         #-}
-{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.Chain.Slotting.EpochSlots
-  ( EpochSlots(..)
-  , WithEpochSlots (..)
-  , epochFirstSlot
+  ( EpochSlots (..),
+    WithEpochSlots (..),
+    epochFirstSlot,
   )
 where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Chain.Slotting.EpochNumber
+import Cardano.Chain.Slotting.SlotNumber
 import Cardano.Prelude
-
 import Data.Data (Data)
 import Formatting.Buildable (Buildable)
 import NoThunks.Class (NoThunks (..))
 
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
-import Cardano.Chain.Slotting.EpochNumber
-import Cardano.Chain.Slotting.SlotNumber
-
 -- | The number of slots per epoch.
 newtype EpochSlots = EpochSlots
   { unEpochSlots :: Word64
-  } deriving (Data, Eq, Ord, Read, Show, Buildable, Generic, NoThunks)
+  }
+  deriving (Data, Eq, Ord, Read, Show, Buildable, Generic, NoThunks)
 
 instance ToCBOR EpochSlots where
   toCBOR = toCBOR . unEpochSlots
@@ -33,8 +32,8 @@ instance FromCBOR EpochSlots where
 
 -- | Data with an accompanying slots per epoch context.
 data WithEpochSlots a = WithEpochSlots
-  { epochSlots       :: EpochSlots
-  , unWithEpochSlots :: a
+  { epochSlots :: EpochSlots,
+    unWithEpochSlots :: a
   }
   deriving (Show, Eq)
 

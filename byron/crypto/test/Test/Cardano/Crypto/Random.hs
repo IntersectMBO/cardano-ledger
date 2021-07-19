@@ -1,18 +1,14 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Crypto.Random
-  ( tests
+  ( tests,
   )
 where
 
-import Cardano.Prelude
-
-import qualified Data.ByteString as BS
-
-import Hedgehog (Property, checkParallel, discover, property, withTests, (===))
-
 import Cardano.Crypto.Random (deterministic, randomNumber)
-
+import Cardano.Prelude
+import qualified Data.ByteString as BS
+import Hedgehog (Property, checkParallel, discover, property, withTests, (===))
 
 tests :: IO Bool
 tests = checkParallel $$discover

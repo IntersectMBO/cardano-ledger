@@ -4,15 +4,15 @@
 module Main where
 
 import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
+import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.EraBuffet (AllegraEra, MaryEra, TestCrypto)
-import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Mary.Examples.MultiAssets (multiAssetsExample)
 import Test.Cardano.Ledger.Mary.Golden (goldenScaledMinDeposit)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
 import Test.Cardano.Ledger.Mary.Value (valTests)
+import Test.Cardano.Ledger.MaryEraGen ()
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
 import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Tasty

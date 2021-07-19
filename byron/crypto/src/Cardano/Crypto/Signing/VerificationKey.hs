@@ -1,28 +1,34 @@
-{-# LANGUAGE DeriveGeneric              #-}
-{-# LANGUAGE DerivingStrategies         #-}
-{-# LANGUAGE DerivingVia                #-}
-{-# LANGUAGE FlexibleContexts           #-}
-{-# LANGUAGE FlexibleInstances          #-}
+{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase                 #-}
-{-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE OverloadedStrings          #-}
-{-# LANGUAGE UndecidableInstances       #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Crypto.Signing.VerificationKey
-  ( VerificationKey(..)
-  , formatFullVerificationKey
-  , fullVerificationKeyF
-  , fullVerificationKeyHexF
-  , shortVerificationKeyHexF
-  , parseFullVerificationKey
+  ( VerificationKey (..),
+    formatFullVerificationKey,
+    fullVerificationKeyF,
+    fullVerificationKeyHexF,
+    shortVerificationKeyHexF,
+    parseFullVerificationKey,
   )
 where
 
-import Cardano.Prelude
-
+import Cardano.Binary
+  ( Decoder,
+    Encoding,
+    FromCBOR (..),
+    ToCBOR (..),
+    decodeBytesCanonical,
+  )
 import qualified Cardano.Crypto.Wallet as CC
-import Data.Aeson (FromJSON(..), ToJSON(..))
+import Cardano.Prelude
+import Data.Aeson (FromJSON (..), ToJSON (..))
 import qualified Data.ByteString.Base64 as B64
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Text as Text
@@ -30,22 +36,27 @@ import qualified Data.Text.Encoding as Text
 import Data.Text.Lazy.Builder (Builder)
 import qualified Data.Text.Lazy.Builder as Builder
 import Formatting
-  (Format, bprint, fitLeft, formatToString, later, sformat, stext, (%.))
-import Formatting.Buildable (Buildable(..))
-import NoThunks.Class (NoThunks (..), InspectHeap (..))
-import Text.JSON.Canonical (JSValue(..), toJSString)
-import qualified Text.JSON.Canonical as TJC (FromJSON(..), ToJSON(..))
-
-import Cardano.Binary
-  (Decoder, Encoding, FromCBOR(..), ToCBOR(..), decodeBytesCanonical)
-
+  ( Format,
+    bprint,
+    fitLeft,
+    formatToString,
+    later,
+    sformat,
+    stext,
+    (%.),
+  )
+import Formatting.Buildable (Buildable (..))
+import NoThunks.Class (InspectHeap (..), NoThunks (..))
+import Text.JSON.Canonical (JSValue (..), toJSString)
+import qualified Text.JSON.Canonical as TJC (FromJSON (..), ToJSON (..))
 
 -- | Wrapper around 'CC.XPub'.
 newtype VerificationKey = VerificationKey
   { unVerificationKey :: CC.XPub
-  } deriving stock (Eq, Ord, Show, Generic)
-    deriving newtype (NFData)
-    deriving NoThunks via InspectHeap CC.XPub
+  }
+  deriving stock (Eq, Ord, Show, Generic)
+  deriving newtype (NFData)
+  deriving (NoThunks) via InspectHeap CC.XPub
 
 instance ToJSON VerificationKey where
   toJSON = toJSON . sformat fullVerificationKeyF
@@ -101,12 +112,14 @@ data VerificationKeyParseError
 
 instance Buildable VerificationKeyParseError where
   build = \case
-    VerificationKeyParseBase64Error err -> bprint
-      ("Failed to decode base 64 while parsing VerificationKey.\n Error: " . stext)
-      err
-    VerificationKeyParseXPubError err -> bprint
-      ("Failed to construct XPub while parsing VerificationKey.\n Error: " . stext)
-      err
+    VerificationKeyParseBase64Error err ->
+      bprint
+        ("Failed to decode base 64 while parsing VerificationKey.\n Error: " . stext)
+        err
+    VerificationKeyParseXPubError err ->
+      bprint
+        ("Failed to construct XPub while parsing VerificationKey.\n Error: " . stext)
+        err
 
 -- | Parse 'VerificationKey' from base64 encoded string
 parseFullVerificationKey :: Text -> Either VerificationKeyParseError VerificationKey

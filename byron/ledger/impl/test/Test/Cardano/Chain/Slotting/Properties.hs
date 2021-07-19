@@ -1,32 +1,29 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 module Test.Cardano.Chain.Slotting.Properties
-  ( tests
+  ( tests,
   )
 where
 
-import Cardano.Prelude
-import Test.Cardano.Prelude
-
-import Hedgehog ((===), forAll, property, success)
-
 import Cardano.Chain.Slotting
-  ( SlotCount(..)
-  , SlotNumber(..)
-  , addSlotCount
-  , toSlotNumber
-  , subSlotCount
-  , fromSlotNumber
+  ( SlotCount (..),
+    SlotNumber (..),
+    addSlotCount,
+    fromSlotNumber,
+    subSlotCount,
+    toSlotNumber,
   )
+import Cardano.Prelude
+import Hedgehog (forAll, property, success, (===))
 import Test.Cardano.Chain.Slotting.Gen
-  ( genEpochSlots
-  , genSlotNumber
-  , genSlotCount
-  , genEpochAndSlotCount
-  , genConsistentEpochAndSlotCountEpochSlots
+  ( genConsistentEpochAndSlotCountEpochSlots,
+    genEpochAndSlotCount,
+    genEpochSlots,
+    genSlotCount,
+    genSlotNumber,
   )
+import Test.Cardano.Prelude
 import Test.Options (TSGroup, TSProperty, withTestsTS)
-
 
 --------------------------------------------------------------------------------
 -- EpochAndSlotCount
@@ -36,9 +33,9 @@ import Test.Options (TSGroup, TSProperty, withTestsTS)
 -- allowed values of `EpochSlots` and `SlotNumber`.
 ts_prop_fromSlotNumber :: TSProperty
 ts_prop_fromSlotNumber = withTestsTS 100 . property $ do
-  sc   <- forAll genEpochSlots
+  sc <- forAll genEpochSlots
   fsId <- forAll $ genSlotNumber
-  _    <- pure $ fromSlotNumber sc fsId
+  _ <- pure $ fromSlotNumber sc fsId
   success
 
 -- Check that `fromSlotNumber . toSlotNumber == id`.
@@ -52,13 +49,13 @@ ts_prop_unflattenFlattenEpochAndSlotCount = withTestsTS 100 . property $ do
 ts_prop_genEpochAndSlotCount :: TSProperty
 ts_prop_genEpochAndSlotCount = withTestsTS 100 . property $ do
   sc <- forAll genEpochSlots
-  _  <- forAll $ genEpochAndSlotCount sc
+  _ <- forAll $ genEpochAndSlotCount sc
   success
 
 -- Check that `toSlotNumber . fromSlotNumber == id`.
 ts_prop_fromToSlotNumber :: TSProperty
 ts_prop_fromToSlotNumber = withTestsTS 100 . property $ do
-  es   <- forAll genEpochSlots
+  es <- forAll genEpochSlots
   slot <- forAll genSlotNumber
   let fromTo = toSlotNumber es $ fromSlotNumber es slot
   slot === fromTo
@@ -76,9 +73,8 @@ ts_prop_subSlotCount :: TSProperty
 ts_prop_subSlotCount = withTestsTS 100 . property $ do
   sc <- forAll genSlotCount
   fs <- forAll genSlotNumber
-  let
-    sc' = SlotNumber $ unSlotCount sc
-    subtracted = fs - sc'
+  let sc' = SlotNumber $ unSlotCount sc
+      subtracted = fs - sc'
   subSlotCount sc fs === if fs > sc' then subtracted else SlotNumber 0
 
 tests :: TSGroup

@@ -11,7 +11,6 @@
 module Test.Shelley.Spec.Ledger.PropertyTests
   ( propertyTests,
     minimalPropertyTests,
-
     relevantCasesAreCovered,
     delegProperties,
     poolProperties,
@@ -29,22 +28,25 @@ module Test.Shelley.Spec.Ledger.PropertyTests
 where
 
 import Cardano.Binary (ToCBOR)
+import Cardano.Ledger.BaseTypes
+  ( StrictMaybe (..),
+  )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxInBlock))
+import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import Data.Map (Map)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, PPUPState, UTxOState, UtxoEnv)
-import Cardano.Ledger.BaseTypes
-  ( StrictMaybe (..),
-  )
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
+import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl, WitVKey)
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
@@ -53,7 +55,8 @@ import Test.Shelley.Spec.Ledger.Address.CompactAddr
   ( propCompactAddrRoundTrip,
     propCompactSerializationAgree,
     propDecompactAddrLazy,
-    propDecompactShelleyLazyAddr, propIsBootstrapRedeemer
+    propDecompactShelleyLazyAddr,
+    propIsBootstrapRedeemer,
   )
 import Test.Shelley.Spec.Ledger.ByronTranslation (testGroupByronTranslation)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
@@ -72,13 +75,8 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
   )
 import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
 import Test.Shelley.Spec.Ledger.Utils (ChainProperty)
-import Cardano.Ledger.Era(SupportsSegWit(TxInBlock))
-import Test.Tasty (TestTree, testGroup, localOption)
+import Test.Tasty (TestTree, localOption, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
-
-import Cardano.Ledger.Keys(KeyRole(Witness))
-import Shelley.Spec.Ledger.Scripts(ScriptHash)
-import Data.Map(Map)
 
 -- =====================================================================
 
@@ -101,7 +99,6 @@ minimalPropertyTests ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-
     Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree
@@ -144,7 +141,7 @@ propertyTests ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "addrWits" (Core.Witnesses era) (Set (WitVKey 'Witness (Crypto era))),
-    HasField "scriptWits" (Core.Witnesses era)  (Map (ScriptHash (Crypto era)) (Core.Script era)),
+    HasField "scriptWits" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
   TestTree
@@ -153,10 +150,11 @@ propertyTests =
     "Property-Based Testing"
     [ testGroup
         "Classify Traces"
-        [  (localOption (TQC.QuickCheckMaxRatio 50) $
-            TQC.testProperty
-            "Chain and Ledger traces cover the relevant cases"
-            (relevantCasesAreCovered @era))
+        [ ( localOption (TQC.QuickCheckMaxRatio 50) $
+              TQC.testProperty
+                "Chain and Ledger traces cover the relevant cases"
+                (relevantCasesAreCovered @era)
+          )
         ],
       testGroup
         "STS Rules - Delegation Properties"
