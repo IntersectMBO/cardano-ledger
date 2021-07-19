@@ -108,6 +108,8 @@ data IfSupportsMint a b (valF :: TyValueExpected) where
   NoMintSupport :: a -> IfSupportsMint a b 'ExpectAdaOnly
   SupportsMint :: b -> IfSupportsMint a b 'ExpectAnyOutput
 
+deriving instance (Show a, Show b) => Show (IfSupportsMint a b k)
+
 type family ValueFeature (a :: FeatureSet) where
   ValueFeature ('FeatureSet v _) = v
 

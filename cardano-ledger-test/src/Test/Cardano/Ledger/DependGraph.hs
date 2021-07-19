@@ -22,6 +22,7 @@ import Control.Monad
 import Data.Proxy
 import Control.Monad.State
 import Control.Monad.Supply
+import Data.Either
 import Data.Foldable
 import qualified Data.Graph.Inductive as FGL
 import Data.Map (Map)
@@ -225,6 +226,7 @@ addAction enablement epoch i a = do
     Action_Withdraw -> do
       -- Withdrawal can only occur if a delegation was made in the past
       actionState_needsDelegate . at epoch %= Just . maybe (Set.singleton i) (Set.insert i)
+      actionState_needsInputs %= Set.insert i
     Action_Delegate -> do
       -- Delegation needs a staking certificate and registered pool
       actionState_needsStake %= Set.insert i
@@ -448,20 +450,25 @@ genTransactions actionIds actionGraph = do
             let Sum sumMyOutputs = flip foldMap depOutputs $ \(ModelTxOut _ (ModelValue mv) _) -> case mv of
                   ModelValue_Inject (Coin v) -> Sum v
                   _ -> error "genTransactions: utxo has abstract value"
+            let (fromRewards, r) = divMod (sumMyOutputs + myFee) 2
+                fromInputs = fromRewards + r
             txId <- freshTxId
             raddr <- generateRewardAddress
             rutxo <- generateRewardsUtxo raddr (sumMyOutputs + myFee)
-            -- A withdrawal should only have one dependency, which enables withdrawal
-            ins <- case eIn of
-              [(ActionEnables_Withdrawing, aId)] -> pure [(TransactionEnables_Withdrawing raddr, aId)]
-              _ -> error "genTransactions: withdrawal has invalid dependencies"
+            let (spendInputs, delegInputs) = partitionEithers $ flip fmap eIn $ \(enable, aId) ->
+                  case enable of
+                    ActionEnables_Withdrawing -> Right (TransactionEnables_Withdrawing raddr, aId)
+                    ActionEnables_Spending -> Left (TransactionEnables_Spending, aId)
+                    _ -> error "genTransactions: withdrawal had a dependency that was neither an input or a delegation"
+
+            myInputs <- generateUtxosFor fromInputs (fmap snd spendInputs)
             -- Tell my dependencies my transaction id
             dependents <- uses (transactionState_txDependents . at i) (maybe mempty id)
-            addDependent i txId ins
+            addDependent i txId (spendInputs ++ delegInputs)
             let newTx = ModelTx
                   { _mtxId = txId
                   , _mtxCollateral = ifSupportsPlutus (Proxy @(ScriptFeature era)) () Set.empty
-                  , _mtxInputs = mempty
+                  , _mtxInputs = myInputs
                   , _mtxOutputs = rutxo : Map.toList depOutputs
                   , _mtxFee = ModelValue (ModelValue_Inject (Coin myFee))
                   , _mtxDCert = []
@@ -565,7 +572,7 @@ generateRewardsUtxo rewardAddr deficit = do
 addDependent :: MonadState (TransactionState era) m => Int -> ModelTxId -> [(TransactionEnables era, Int)] -> m ()
 addDependent aId txId eIn = do
   let newDeps = Map.fromList $ flip fmap eIn $ \(enable, depId) -> (depId, Map.singleton txId (NES.singleton enable))
-  transactionState_txDependents %= Map.unionWith (Map.unionWith (<>)) newDeps
+  transactionState_txDependents %= Map.unionWith (Map.unionWith (<>)) newDeps . Map.delete aId
 
 -- Orphans
 instance MonadFail Gen where
