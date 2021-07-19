@@ -42,7 +42,6 @@ module Control.State.Transition.Extended
     SingEP (..),
     EventPolicy (..),
     EventReturnType,
-    EventConstraintType,
     labeledPred,
     labeledPredE,
     failBecause,
@@ -82,14 +81,13 @@ import Control.Monad.State.Class (MonadState (..), modify)
 import Control.Monad.Trans.Class (MonadTrans, lift)
 import Control.Monad.Trans.Except
 import Control.Monad.Trans.State.Strict (StateT (..))
-import Control.Monad.Writer.CPS (WriterT, runWriterT)
-import Control.Monad.Writer.Class (MonadWriter (..))
+import Data.Bifunctor (Bifunctor (second), first)
 import Data.Coerce (Coercible, coerce)
 import Data.Data (Data, Typeable)
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, traverse_)
 import Data.Functor (($>), (<&>))
-import Data.Kind (Constraint, Type)
+import Data.Kind (Type)
 import Data.Typeable (typeRep)
 import Data.Void (Void)
 import NoThunks.Class (NoThunks (..))
@@ -254,10 +252,6 @@ data SingEP ep where
 type family EventReturnType ep sts a :: Type where
   EventReturnType 'EventPolicyReturn sts a = (a, [Event sts])
   EventReturnType _ _ a = a
-
-type family EventConstraintType e sts m :: Constraint where
-  EventConstraintType 'EventPolicyReturn sts m = MonadWriter [Event sts] m
-  EventConstraintType _ _ _ = ()
 
 discardEvents :: forall ep a. SingEP ep -> forall s. EventReturnType ep s a -> a
 discardEvents ep = case ep of
@@ -478,19 +472,6 @@ applySTSIndifferently =
         asoValidation = ValidateAll
       }
 
-newtype RuleEventLoggerT s m a = RuleEventLoggerT (StateT [PredicateFailure s] (WriterT [Event s] m) a)
-  deriving (Monad, Applicative, Functor)
-
-deriving instance (e ~ [Event s], Monad m) => MonadWriter e (RuleEventLoggerT s m)
-
-deriving instance (f ~ [PredicateFailure s], Monad m) => MonadState f (RuleEventLoggerT s m)
-
-instance MonadTrans (RuleEventLoggerT s) where
-  lift = RuleEventLoggerT . lift . lift
-
-runRuleEventLoggerT :: forall s m a. RuleEventLoggerT s m a -> [PredicateFailure s] -> m ((a, [PredicateFailure s]), [Event s])
-runRuleEventLoggerT (RuleEventLoggerT m) s = runWriterT $ runStateT m s
-
 -- | Apply a rule even if its predicates fail.
 --
 --   If the rule successfully applied, the list of predicate failures will be
@@ -505,16 +486,16 @@ applyRuleInternal ::
   RuleContext rtype s ->
   Rule s rtype (State s) ->
   m (EventReturnType ep s (State s, [PredicateFailure s]))
-applyRuleInternal ep vp goSTS jc r =
+applyRuleInternal ep vp goSTS jc r = do
+  (s, er) <- flip runStateT ([], []) $ foldF runClause r
   case ep of
-    EPReturn -> flip (runRuleEventLoggerT @s) [] $ foldF runClause r
-    EPDiscard -> flip runStateT [] $ foldF runClause r
+    EPDiscard -> pure (s, fst er)
+    EPReturn -> pure ((s, fst er), snd er)
   where
     runClause ::
       forall f t a.
       ( f ~ t m,
-        MonadState [PredicateFailure s] f,
-        EventConstraintType ep s f,
+        MonadState ([PredicateFailure s], [Event s]) f,
         MonadTrans t
       ) =>
       Clause s rtype a ->
@@ -524,7 +505,7 @@ applyRuleInternal ep vp goSTS jc r =
     runClause (Predicate lbls cond orElse val) =
       if validateIf lbls
         then case cond of
-          Left err -> modify (orElse err :) >> pure val
+          Left err -> modify (first (orElse err :)) >> pure val
           Right x -> pure x
         else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
@@ -534,11 +515,11 @@ applyRuleInternal ep vp goSTS jc r =
           sevs :: [Event sub]
           (ss, sfails) = discardEvents ep @sub s
           sevs = getEvents ep @sub @(State sub, [PredicateFailure sub]) s
-      traverse_ (\a -> modify (a :)) $ wrapFailed @sub @s <$> sfails
+      traverse_ (\a -> modify (first (a :))) $ wrapFailed @sub @s <$> sfails
       runClause $ Writer (wrapEvent @sub @s <$> sevs) ()
       pure $ next ss
     runClause (Writer w a) = case ep of
-      EPReturn -> tell w $> a
+      EPReturn -> modify (second (\es -> es <> w)) $> a
       EPDiscard -> pure a
     validateIf lbls = case vp of
       ValidateAll -> True
