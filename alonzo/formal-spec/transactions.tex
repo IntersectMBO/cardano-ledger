@@ -2,7 +2,7 @@
 \label{sec:transactions}
 
 This section outlines the changes that are needed to the transaction
-structure to enable non-native scripts to validate
+structure to enable phase-2 scripts to validate
 the minting of tokens, spending outputs, verifying certificates, and
 verifying withdrawals.
 %
@@ -13,16 +13,16 @@ We make the following changes and additions:
   \item $\WitnessPPDataHash$ is the type of a hash of script execution
   related data. It is the hash of $\fun{txrdmrs}$ and relevant protocol parameters.
 
-  \item $\ScriptNative$ is the type of native scripts.
+  \item $\ScriptPhOne$ is the type of phase-1 scripts.
 
-  \item $\ScriptNonNative$ is the type of non-native scripts.
+  \item $\ScriptPhTwo$ is the type of phase-2 scripts.
 
   \item $\Data$ is a type for communicating data to script.  It is kept abstract here.
 
-  \item $\Script$ is the type of all scripts, both native and non-native.
+  \item $\Script$ is the type of all scripts, both phase-1 and phase-2.
 
-  \item $\IsValidating$ is a tag that indicates that a transaction
-  expects that all its non-native scripts will be validated.
+  \item $\IsValid$ is a tag that indicates that a transaction
+  expects that all its phase-2 scripts will be validated.
   This tag is added by the block creator when
   constructing a block, and its correctness is verified as part of the script execution.
 
@@ -34,9 +34,9 @@ We make the following changes and additions:
 
   \item $\TxOut$ is the type of transaction outputs. These are extended to include
   an optional hash of a datum. Note that \emph{any} output can
-  optionally include such a hash, even though only non-native scripts
+  optionally include such a hash, even though only phase-2 scripts
   can actually use the hash value. Since it is in general impossible for the ledger implementation to
-  know at the time of transaction creation whether or not an output belongs to a non-native
+  know at the time of transaction creation whether or not an output belongs to a phase-2
   script, we simply allow any output to contain a hash of a datum.
 
   \item $\Tag$ lets us differentiate what a script
@@ -57,8 +57,8 @@ We make the following changes and additions:
 We add the following helper functions:
 
 \begin{itemize}
-  \item $\fun{language}$ selects the language of a non-native script, and $\Nothing$ in case
-  the script is native.
+  \item $\fun{language}$ selects the language of a phase-2 script, and $\Nothing$ in case
+  the script is phase-1.
   \item $\fun{hashData}$ hashes a value of type $\Data$.
   \item $\fun{hashWitnessPPData}$ hashes the protocol parameters and data relevant to script execution.
   In particular, the redeemer structure, and the datum objects.
@@ -79,9 +79,9 @@ We add the following helper functions:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{sc} & \ScriptNonNative & \ScriptPlutus \\
-      \var{sc} & \Script & \ScriptNative \uniondistinct \ScriptNonNative \\
-      \var{isv} & \IsValidating & \Bool \\
+      \var{sc} & \ScriptPhTwo & \ScriptPlutus \\
+      \var{sc} & \Script & \ScriptPhOne \uniondistinct \ScriptPhTwo \\
+      \var{isv} & \IsValid & \Bool \\
       \var{d} & \Datum & \Data \\
       \var{r} & \Redeemer & \Data
     \end{array}
@@ -173,7 +173,7 @@ We add the following helper functions:
       \var{tx} ~\in~ \Tx ~=~
       & \TxBody & \fun{txbody} & \text{Body}\\
       & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
-      & \times ~\hldiff{\IsValidating} & \hldiff{\fun{isValidating}}&\text{Validation tag}\\
+      & \times ~\hldiff{\IsValid} & \hldiff{\fun{isValid}}&\text{Validation tag}\\
       & \times ~\AuxiliaryData^? & \fun{auxiliaryData}&\text{Auxiliary data}\\
     \end{array}
   \end{equation*}
@@ -182,7 +182,7 @@ We add the following helper functions:
 \end{figure*}
 
 \textbf{Auxiliary Data. } The auxiliary data in an Alonzo transaction has the same structure as
-in a ShelleMA transaction, but can additionally contain non-native scripts.
+in a ShelleMA transaction, but can additionally contain phase-2 scripts.
 
 \subsection{Witnessing}
 Figure \ref{fig:defs:utxo-shelley-2} defines the witness type, $\TxWitness$.  This contains everything
@@ -190,7 +190,7 @@ in a transaction that is needed for witnessing, namely:
 
 \begin{itemize}
   \item VKey signatures;
-  \item a map of scripts indexed by their hashes, including non-native scripts;
+  \item a map of scripts indexed by their hashes, including phase-2 scripts;
   \item a map of terms of type $\Datum$ indexed by their hashes, containing all required datum objects
   as well as any optional ones that are posted for communication; and
   \item a map of a pair of a $\Redeemer$ object and an $\ExUnits$ value indexed by $\RdmrPtr$,
@@ -223,7 +223,7 @@ the body of the transaction:
   \item The new field $\fun{collateral}$ is used to specify the \emph{collateral inputs}
     that are collected (into the fee pot) to cover a percentage of
     transaction fees (usually $100$ percent or more)
-    \emph{in case the transaction contains failing non-native scripts}. They are not collected otherwise.
+    \emph{in case the transaction contains failing phase-2 scripts}. They are not collected otherwise.
     The purpose of these is to cover the resource use costs incurred by block producers running not only
     scripts that validate, but the failing one also. Only the inputs that are locked by VKeys can
     be used for collateral, and they must only contain ada.
@@ -232,15 +232,19 @@ the body of the transaction:
     one set of inputs is ever collected : collateral ones in the case of script failure, and regular inputs
     in the case when all scripts validate.
 
-  \item There is a new field called $\fun{reqSignerHashes}$ that is used to specify a set of signers (via the
-    hashes of their VKeys) that the scripts a transaction is carrying expect to have signed the transaction.
-    These signatures are required in addition to the ones required by VKey addresses, and
-    these keys are passed to the Plutus scipts during validation.
+  \item There is a new field called $\fun{reqSignerHashes}$ that is used to specify a set of hashes
+  of keys that must sign the transaction in addition to the signatures required to validate
+  spending from VKey addresses, checking certificate validity, and validating reward withdrawals.
+  This field is there to allow users to add signatures that
+  \begin{itemize}
+    \item cannot be stripped from a transaction without invalidating it in phase 1 (ie. the
+    validation phase where fees are not collected for the validation work done)
+    \item are not attached to any validation being done in phase 1, such as VKey output spending
+  \end{itemize}
 
-    Unlike signatures required by MSig scripts, the signatures of the keys
-    (whose hashes are) included
-    in this field can never be stripped from the transaction. This is because
-    the hashes of the signing keys are listed inside the signed body.
+  This is a field where users can add signatures that a phase-2 script requires internally -
+  the transaction and the ledger are otherwise unaware of what signatures are expected by these scripts.
+
   \item We include a hash of some script-related data, specifically the redeemers and protocol parameters,
     with accessor $\fun{wppHash}$.
 
@@ -253,7 +257,7 @@ A complete transaction is comprised of:
 \begin{enumerate}
   \item the transaction body,
   \item all the information that is needed to witness transactions,
-  \item the $\IsValidating$ tag, which indicates whether all scripts
+  \item the $\IsValid$ tag, which indicates whether all scripts
   that are executed during the script execution phase validate.
   The correctness of the tag is verified as part of the ledger rules, and the block is
   deemed to be invalid if it is applied incorrectly.
@@ -264,7 +268,7 @@ A complete transaction is comprised of:
 
 Note that unlike in Shelley or ShelleyMA eras, transactions inside blocks and transactions
 a user submits are now of different types. A transaction inside a block is composed of
-the user-submitted transaction paired with the $\IsValidating$ tag, which is
+the user-submitted transaction paired with the $\IsValid$ tag, which is
 added by the block producer. The user cannot
 add their own tag because of how this tag is used in transaction validation, see
 Section~\ref{sec:two-phase}.

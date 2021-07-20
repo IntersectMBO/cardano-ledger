@@ -52,7 +52,8 @@ period between transaction
 submission and completion of the script processing.
 %
 In order to achieve this,
-any data that is passed to the interpreter must be determined by the transaction body itself.
+any data that is passed to the interpreter must be determined by the transaction body.
+In property \ref{prop:fixed-inputs}, we make precise what deterministic script evaluation means.
 The transaction body therefore includes a hash of any such data that is not uniquely determined by other parts of the transaction body or the UTXO.
 When the transaction is processed, as part of the UTXOW rule, this hash is compared with a hash of the data that is passed to the interpreter. This
 ensures that scripts are only executed if they have been provided with the intended data.
@@ -85,7 +86,7 @@ bytes of data on the ledger in the form of UTxO entries.
 
 \textbf{Limiting Script Execution Costs.}
 The $\var{maxTxExUnits}$ and $\var{maxBlockExUnits}$ protocol parameters are
-used to limit the total per-transaction and per-block resource use. These only apply to non-native scripts.
+used to limit the total per-transaction and per-block resource use. These only apply to phase-2 scripts.
 The parameters are used to ensure that the time and memory that are required to verify a block are bounded.
 
 \textbf{Value size limit as a protocol parameter.}
@@ -95,8 +96,8 @@ serialised transaction.
 
 \textbf{Collateral inputs.}
 Collateral inputs in a transaction are used to cover the transaction fees in the case
-that a non-native script fails (see Section~\ref{sec:transctions}).
-The term \emph{collateral} refers to the total ada contained in the UTxOs referenced 
+that a phase-2 script fails (see Section~\ref{sec:transctions}).
+The term \emph{collateral} refers to the total ada contained in the UTxOs referenced
 by collateral inputs.
 
 The parameter $\var{collateralPercent}$ is used to specify the percentage of

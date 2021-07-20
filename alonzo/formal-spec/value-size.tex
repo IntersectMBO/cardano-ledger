@@ -23,7 +23,7 @@ is accounted for in the size calculation.
     & \fun{dataHashSize}~ \wcard = \mathsf{JustDataHashSize} \\
     & \text{Return the size of $\DataHash^?$} \\~\\
     & \fun{utxoEntrySize} \in \TxOut \to \MemoryEstimate \\
-    & \fun{utxoEntrySize}~\var{(tout, d)} = \mathsf{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~tout)) + \mathsf{dataHashSize}~d \\
+    & \fun{utxoEntrySize}~\var{(a, v, d)} = \mathsf{utxoEntrySizeWithoutVal} + (\fun{size} (\fun{getValue}~(a, v, d))) + \mathsf{dataHashSize}~d \\
     & \text{Calculate the size of a UTxO entry}
   \end{align*}
   \caption{Value Size}
