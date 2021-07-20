@@ -38,11 +38,6 @@ module Cardano.Ledger.BaseTypes
     invalidKey,
     mkNonceFromOutputVRF,
     mkNonceFromNumber,
-    StrictMaybe (..),
-    strictMaybeToMaybe,
-    maybeToStrictMaybe,
-    fromSMaybe,
-    isSNothing,
     Url,
     urlToText,
     textToUrl,
@@ -54,6 +49,7 @@ module Cardano.Ledger.BaseTypes
     mkActiveSlotCoeff,
     activeSlotVal,
     activeSlotLog,
+    module Data.Maybe.Strict,
 
     -- * STS Base
     Globals (..),
@@ -600,7 +596,3 @@ instance FromCBOR Network where
     word8ToNetwork <$> fromCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
-
-isSNothing :: StrictMaybe a -> Bool
-isSNothing SNothing = True
-isSNothing _ = False
