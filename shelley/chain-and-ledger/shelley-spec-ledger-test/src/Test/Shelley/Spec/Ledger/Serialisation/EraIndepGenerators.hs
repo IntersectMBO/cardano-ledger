@@ -993,6 +993,7 @@ instance
       <*> arbitrary {- pp_d -}
       <*> arbitrary {- pp_a0 -}
       <*> arbitrary {- pp_nOpt -}
+      <*> arbitrary {- pp_mv -}
 
 instance
   Mock crypto =>
