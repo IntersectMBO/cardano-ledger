@@ -41,7 +41,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Records (HasField (getField))
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
-import Shelley.Spec.Ledger.Tx (TxIn, TxOut (..), hashScript, pattern WitnessSet)
+import Shelley.Spec.Ledger.Tx (TxIn, TxOut (..), hashScript, pattern Tx, pattern WitnessSet)
 import Shelley.Spec.Ledger.TxBody (DCert, Wdrl)
 import Test.Cardano.Ledger.AllegraEraGen
   ( genValidityInterval,
@@ -90,7 +90,7 @@ instance (CryptoClass.Crypto c, Mock c) => EraGen (MaryEra c) where
   genEraPParamsDelta = genShelleyPParamsDelta
   genEraPParams = genPParams
   genEraWitnesses _scriptinfo setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
-  unsafeApplyTx x = x
+  constructTx = Tx
 
 genAuxiliaryData ::
   Mock crypto =>

@@ -28,7 +28,7 @@ import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), TxInBlock)
+import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
@@ -139,13 +139,13 @@ bbodyTransition ::
     Embed (Core.EraRule "LEDGERS" era) (someBBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (TxInBlock era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     -- Conditions to define the rule in this Era
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     Era era, -- supplies WellFormed HasField, and Crypto constraints
     Era.TxSeq era ~ Alonzo.TxSeq era,
-    Era.TxInBlock era ~ Alonzo.ValidatedTx era,
+    Core.Tx era ~ Alonzo.ValidatedTx era,
     Core.Witnesses era ~ TxWitness era
   ) =>
   TransitionRule (someBBODY era)
@@ -212,11 +212,11 @@ instance
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Alonzo.ValidatedTx era),
     Era era,
-    TxInBlock era ~ Alonzo.ValidatedTx era,
+    Core.Tx era ~ Alonzo.ValidatedTx era,
     HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     Era.TxSeq era ~ Alonzo.TxSeq era,
-    Era.TxInBlock era ~ Alonzo.ValidatedTx era,
+    Core.Tx era ~ Alonzo.ValidatedTx era,
     Core.Witnesses era ~ TxWitness era,
     SupportsSegWit era
   ) =>

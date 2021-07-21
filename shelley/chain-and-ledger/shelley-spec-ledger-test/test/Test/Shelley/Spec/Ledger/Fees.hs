@@ -39,7 +39,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Ledger.Tx (Tx (..))
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -69,7 +68,8 @@ import qualified Shelley.Spec.Ledger.API as API
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.Tx
-  ( WitnessSetHKD (..),
+  ( Tx (..),
+    WitnessSetHKD (..),
     hashScript,
   )
 import Shelley.Spec.Ledger.TxBody
@@ -505,7 +505,12 @@ txWithWithdrawalBytes16 = "83a50081824a93b885adfe0da089cdf600018182510075c40f44e
 -- | The transaction fee of txSimpleUTxO if one key witness were to be added,
 -- given minfeeA and minfeeB are set to 1.
 testEvaluateTransactionFee :: Assertion
-testEvaluateTransactionFee = API.evaluateTransactionFee pp (txSimpleUTxO @C_Crypto) 1 @?= Coin 103
+testEvaluateTransactionFee =
+  API.evaluateTransactionFee @(ShelleyEra C_Crypto)
+    pp
+    (txSimpleUTxO @C_Crypto)
+    1
+    @?= Coin 103
   where
     pp = emptyPParams {_minfeeA = 1, _minfeeB = 1}
 

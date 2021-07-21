@@ -123,7 +123,7 @@ instance
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Era.TxInBlock era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   STS (BBODY era)
@@ -155,7 +155,7 @@ bbodyTransition ::
     Embed (Core.EraRule "LEDGERS" era) (BBODY era),
     Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Era.TxInBlock era),
+    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   TransitionRule (BBODY era)

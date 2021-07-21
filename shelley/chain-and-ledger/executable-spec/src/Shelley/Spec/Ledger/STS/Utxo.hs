@@ -343,7 +343,7 @@ utxoInductive ::
     BaseM (utxo era) ~ ShelleyBase,
     Environment (utxo era) ~ UtxoEnv era,
     State (utxo era) ~ UTxOState era,
-    Signal (utxo era) ~ Tx era,
+    Signal (utxo era) ~ Core.Tx era,
     PredicateFailure (utxo era) ~ UtxoPredicateFailure era,
     Event (utxo era) ~ UtxoEvent era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,

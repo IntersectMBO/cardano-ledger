@@ -35,7 +35,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
   ( decodeRecordSum,
@@ -74,7 +74,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
   )
 import Shelley.Spec.Ledger.STS.Delpl (DELPL, DelplEnv (..), DelplEvent, DelplPredicateFailure)
-import Shelley.Spec.Ledger.Tx (Tx (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -91,12 +90,12 @@ data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: SlotNo,
     delegsIx :: Ix,
     delegspp :: Core.PParams era,
-    delegsTx :: TxInBlock era,
+    delegsTx :: Core.Tx era,
     delegsAccount :: AccountState
   }
 
 deriving stock instance
-  ( Show (TxInBlock era),
+  ( Show (Core.Tx era),
     Show (Core.PParams era)
   ) =>
   Show (DelegsEnv era)
@@ -124,7 +123,6 @@ deriving stock instance
 
 instance
   ( ShelleyBased era,
-    Core.Tx era ~ Tx era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -194,7 +192,6 @@ instance
 delegsTransition ::
   forall era.
   ( ShelleyBased era,
-    Core.Tx era ~ Tx era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,

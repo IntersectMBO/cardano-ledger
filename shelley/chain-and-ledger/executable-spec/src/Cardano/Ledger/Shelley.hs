@@ -79,6 +79,8 @@ type instance E.TranslationContext (ShelleyEra c) = ()
 -- Core instances
 --------------------------------------------------------------------------------
 
+type instance Core.Tx (ShelleyEra c) = STx.Tx (ShelleyEra c)
+
 type instance Core.Value (ShelleyEra _c) = Coin
 
 type instance Core.TxBody (ShelleyEra c) = STx.TxBody (ShelleyEra c)
@@ -114,7 +116,6 @@ instance
   validateScript = validateNativeMultiSigScript
 
 instance CryptoClass.Crypto c => SupportsSegWit (ShelleyEra c) where
-  type TxInBlock (ShelleyEra c) = Tx (ShelleyEra c)
   type TxSeq (ShelleyEra c) = Shelley.TxSeq (ShelleyEra c)
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = Shelley.TxSeq

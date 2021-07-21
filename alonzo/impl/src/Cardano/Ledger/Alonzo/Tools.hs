@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     Script (..),
   )
-import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), rdptr)
+import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), ValidatedTx (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), unRedeemers, unTxDats)

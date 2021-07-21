@@ -1,8 +1,10 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -16,6 +18,10 @@
 module Shelley.Spec.Ledger.API.Mempool
   ( ApplyTx (..),
     ApplyTxError (..),
+    Validated,
+    extractTx,
+    coerceValidated,
+    translateValidated,
 
     -- * Exports for testing
     MempoolEnv,
@@ -34,7 +40,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, TxInBlock)
+import Cardano.Ledger.Era (Crypto, PreviousEra, TranslateEra (translateEra), TranslationContext, TranslationError)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Slot (SlotNo)
@@ -51,15 +57,41 @@ import Control.State.Transition.Extended
     TRC (..),
     applySTS,
   )
+import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
+import NoThunks.Class (NoThunks)
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv, LedgerPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Ledger as Ledger
+
+-- | A newtype which indicates that a transaction has been validated against
+-- some chain state.
+newtype Validated tx = Validated tx
+  deriving (Eq, NoThunks, Show)
+
+-- | Extract the underlying unvalidated Tx.
+extractTx :: Validated tx -> tx
+extractTx (Validated tx) = tx
+
+coerceValidated :: Coercible a b => Validated a -> Validated b
+coerceValidated (Validated a) = Validated $ coerce a
+
+-- | Translate a validated transaction across eras.
+--
+-- This is not a `TranslateEra` instance since `Validated` is not itself
+-- era-parametrised.
+translateValidated ::
+  forall era f.
+  (TranslateEra era f) =>
+  TranslationContext era ->
+  Validated (f (PreviousEra era)) ->
+  Except (TranslationError era f) (Validated (f era))
+translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
 
 class
   ( ChainData (Core.Tx era),
@@ -72,7 +104,7 @@ class
     BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ MempoolState era,
-    Signal (Core.EraRule "LEDGER" era) ~ TxInBlock era,
+    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
     PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era
   ) =>
   ApplyTx era
@@ -89,15 +121,14 @@ class
     MempoolEnv era ->
     MempoolState era ->
     Core.Tx era ->
-    m (MempoolState era, TxInBlock era)
+    m (MempoolState era, Validated (Core.Tx era))
   default applyTx ::
-    Core.Tx era ~ TxInBlock era =>
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
     Core.Tx era ->
-    m (MempoolState era, TxInBlock era)
+    m (MempoolState era, Validated (Core.Tx era))
   applyTx globals env state tx =
     let res =
           flip runReader globals
@@ -105,10 +136,10 @@ class
             $ TRC (env, state, tx)
      in liftEither
           . left ApplyTxError
-          . right (,tx)
+          . right (,Validated tx)
           $ res
 
-  -- | Reapply a 'TxInBlock'.
+  -- | Reapply a previously validated 'Tx'.
   --
   --   This applies the (validated) transaction to a new mempool state. It may
   --   fail due to the mempool state changing (for example, a needed output
@@ -119,22 +150,21 @@ class
   --   any static checks. This is not required, but strongly encouraged since
   --   this function will be called each time the mempool revalidates
   --   transactions against a new mempool state.
-  applyTxInBlock ::
+  reapplyTx ::
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    TxInBlock era ->
+    Validated (Core.Tx era) ->
     m (MempoolState era)
-  default applyTxInBlock ::
-    Core.Tx era ~ TxInBlock era =>
+  default reapplyTx ::
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    TxInBlock era ->
+    Validated (Core.Tx era) ->
     m (MempoolState era)
-  applyTxInBlock globals env state tx =
+  reapplyTx globals env state (Validated tx) =
     let res =
           flip runReader globals
             . applySTS @(Core.EraRule "LEDGER" era)
@@ -142,14 +172,6 @@ class
      in liftEither
           . left ApplyTxError
           $ res
-
-  -- | Extract the underlying `Tx` from the `TxInBlock`.
-  extractTx :: TxInBlock era -> Core.Tx era
-  default extractTx ::
-    Core.Tx era ~ TxInBlock era =>
-    TxInBlock era ->
-    Core.Tx era
-  extractTx = id
 
 instance PraosCrypto c => ApplyTx (ShelleyEra c)
 

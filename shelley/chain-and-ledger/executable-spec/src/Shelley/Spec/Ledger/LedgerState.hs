@@ -233,10 +233,7 @@ import Shelley.Spec.Ledger.Rewards
     percentile',
     sumRewards,
   )
-import Shelley.Spec.Ledger.Tx
-  ( Tx (..),
-    extractKeyHashWitnessSet,
-  )
+import Shelley.Spec.Ledger.Tx (extractKeyHashWitnessSet)
 import Shelley.Spec.Ledger.TxBody
   ( EraIndependentTxBody,
     Ix,
@@ -781,10 +778,11 @@ txsizeBound Proxy tx = numInputs * inputSize + numOutputs * outputSize + rest
 -- | Minimum fee calculation
 minfee ::
   ( HasField "_minfeeA" pp Natural,
-    HasField "_minfeeB" pp Natural
+    HasField "_minfeeB" pp Natural,
+    HasField "txsize" tx Integer
   ) =>
   pp ->
-  Tx era ->
+  tx ->
   Coin
 minfee pp tx =
   Coin $

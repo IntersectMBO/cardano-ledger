@@ -131,6 +131,10 @@ instance CryptoClass.Crypto c => UsesPParams (ShelleyMAEra 'Allegra c) where
 type instance Core.Value (ShelleyMAEra m c) = MAValue m c
 
 type instance
+  Core.Tx (ShelleyMAEra (ma :: MaryOrAllegra) c) =
+    Tx (ShelleyMAEra ma c)
+
+type instance
   Core.TxOut (ShelleyMAEra (ma :: MaryOrAllegra) c) =
     TxOut (ShelleyMAEra ma c)
 
@@ -185,7 +189,6 @@ instance
   ) =>
   SupportsSegWit (ShelleyMAEra ma c)
   where
-  type TxInBlock (ShelleyMAEra ma c) = Tx (ShelleyMAEra ma c)
   type TxSeq (ShelleyMAEra ma c) = Shelley.TxSeq (ShelleyMAEra ma c)
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = Shelley.TxSeq

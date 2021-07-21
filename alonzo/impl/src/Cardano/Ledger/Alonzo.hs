@@ -32,10 +32,9 @@ import Cardano.Ledger.Alonzo.PParams
   )
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
 import qualified Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
-import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (UtxosFailure), utxoEntrySize)
+import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS, constructValidated, lbl2Phase)
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (WrappedShelleyEraFailure))
+import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
@@ -53,7 +52,6 @@ import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
 import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.Rules.ValidationMode
   ( applySTSNonStatic,
-    applySTSValidateSuchThat,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
@@ -64,10 +62,9 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
-import Cardano.Ledger.Tx (Tx (Tx))
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
 import Control.Arrow (left)
-import Control.Monad.Except (liftEither, runExcept)
+import Control.Monad.Except (liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
 import Data.Default (def)
@@ -85,17 +82,10 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState (..),
     NewEpochState (..),
     UTxOState (..),
-    _dstate,
     _genDelegs,
-    _pParams,
-    _pstate,
   )
 import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
-import Shelley.Spec.Ledger.STS.Ledger
-  ( LedgerEnv (..),
-    LedgerPredicateFailure (UtxowFailure),
-  )
 import qualified Shelley.Spec.Ledger.STS.Mir as Shelley
 import qualified Shelley.Spec.Ledger.STS.Newpp as Shelley
 import qualified Shelley.Spec.Ledger.STS.Ocert as Shelley
@@ -104,7 +94,6 @@ import qualified Shelley.Spec.Ledger.STS.Rupd as Shelley
 import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
 import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
 import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
-import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (UtxoFailure))
 import qualified Shelley.Spec.Ledger.Tx as Shelley
 import Shelley.Spec.Ledger.UTxO (balance)
 
@@ -122,48 +111,13 @@ instance
   type Crypto (AlonzoEra c) = c
 
 instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
-  applyTx globals env@(LedgerEnv slot _ix pp _accnt) st@(utxostate, dpstate) tx =
-    do
-      vtx <-
-        liftEither
-          . left
-            ( API.ApplyTxError
-                . fmap
-                  ( UtxowFailure
-                      . WrappedShelleyEraFailure
-                      . UtxoFailure
-                      . UtxosFailure
-                  )
-            )
-          . runExcept
-          $ Alonzo.constructValidated globals utxoenv utxostate tx
-      -- Note here that we exclude checks of 2-phase validation, since we have
-      -- just constructed our own validating flag and can hence trust it! Other
-      -- static checks must be run, however, since we haven't computed them
-      -- before.
-      state' <-
-        liftEither
-          . left API.ApplyTxError
-          . flip runReader globals
-          . applySTSValidateSuchThat
-            @(Core.EraRule "LEDGER" (AlonzoEra c))
-            (notElem Alonzo.lbl2Phase)
-          $ TRC (env, st, vtx)
-      pure (state', vtx)
-    where
-      delegs = (_genDelegs . _dstate) dpstate
-      stake = (_pParams . _pstate) dpstate
-      utxoenv = API.UtxoEnv slot pp stake delegs
-
-  applyTxInBlock globals env state tx =
+  reapplyTx globals env state vtx =
     let res =
           flip runReader globals
             . applySTSNonStatic
               @(Core.EraRule "LEDGER" (AlonzoEra c))
-            $ TRC (env, state, tx)
+            $ TRC (env, state, API.extractTx vtx)
      in liftEither . left API.ApplyTxError $ res
-
-  extractTx ValidatedTx {body = b, wits = w, auxiliaryData = a} = Tx b w a
 
 instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
 
@@ -230,12 +184,14 @@ instance CC.Crypto c => API.CLI (AlonzoEra c) where
 
   evaluateConsumed = consumed
 
-  addKeyWitnesses (Tx b ws aux) newWits = Tx b ws' aux
+  addKeyWitnesses (ValidatedTx b ws aux iv) newWits = ValidatedTx b ws' aux iv
     where
       ws' = ws {txwitsVKey = Set.union newWits (txwitsVKey ws)}
 
   evaluateMinLovelaceOutput pp out =
     Coin $ utxoEntrySize out * unCoin (_coinsPerUTxOWord pp)
+
+type instance Core.Tx (AlonzoEra c) = ValidatedTx (AlonzoEra c)
 
 type instance Core.TxOut (AlonzoEra c) = TxOut (AlonzoEra c)
 
@@ -266,7 +222,6 @@ instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
 
 instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
   type TxSeq (AlonzoEra c) = Alonzo.TxSeq (AlonzoEra c)
-  type TxInBlock (AlonzoEra c) = ValidatedTx (AlonzoEra c)
   fromTxSeq = Alonzo.txSeqTxns
   toTxSeq = Alonzo.TxSeq
   hashTxSeq = Alonzo.hashTxSeq

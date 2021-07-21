@@ -33,7 +33,7 @@ import Cardano.Binary
 import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, TxInBlock)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (decodeRecordSum)
 import Cardano.Ledger.Slot (SlotNo)
@@ -143,14 +143,14 @@ instance
 
 instance
   ( Show (Core.PParams era),
-    Show (TxInBlock era),
+    Show (Core.Tx era),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
@@ -164,7 +164,7 @@ instance
   type
     State (LEDGER era) =
       (UTxOState era, DPState (Crypto era))
-  type Signal (LEDGER era) = TxInBlock era
+  type Signal (LEDGER era) = Core.Tx era
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
   type PredicateFailure (LEDGER era) = LedgerPredicateFailure era
@@ -199,9 +199,9 @@ ledgerTransition ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "body" (TxInBlock era) (Core.TxBody era)
+    HasField "body" (Core.Tx era) (Core.TxBody era)
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do

@@ -54,7 +54,6 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (policies)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.Tx (Tx (Tx))
 import Cardano.Ledger.Val (adaOnly, (<+>), (<×>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Iterate.SetAlgebra (eval, (◁))
@@ -336,7 +335,7 @@ instance Mock c => EraGen (AlonzoEra c) where
                 Nothing -> ans
                 Just info -> addRedeemMap txbody info purpose ans -- Add it to the redeemer map
 
-  unsafeApplyTx (Tx bod wit auxdata) = ValidatedTx bod wit (IsValidating True) auxdata
+  constructTx bod wit auxdata = ValidatedTx bod wit (IsValidating True) auxdata
 
   genEraGoodTxOut = vKeyLocked
 

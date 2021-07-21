@@ -107,6 +107,8 @@ instance CryptoClass.Crypto c => UsesTxOut (ExampleEra c) where
 -- Core instances
 --------------------------------------------------------------------------------
 
+type instance Core.Tx (ExampleEra c) = Tx (ExampleEra c)
+
 type instance Core.Value (ExampleEra _c) = Coin
 
 type instance Core.TxBody (ExampleEra c) = TxBody (ExampleEra c)
@@ -144,7 +146,6 @@ instance
   scriptPrefixTag _script = nativeMultiSigTag
 
 instance CryptoClass.Crypto c => SupportsSegWit (ExampleEra c) where
-  type TxInBlock (ExampleEra c) = Tx (ExampleEra c)
   type TxSeq (ExampleEra c) = Shelley.TxSeq (ExampleEra c)
   fromTxSeq = Shelley.txSeqTxns
   toTxSeq = Shelley.TxSeq

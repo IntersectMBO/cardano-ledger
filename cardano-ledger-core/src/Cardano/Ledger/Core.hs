@@ -40,11 +40,13 @@ module Cardano.Ledger.Core
 where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
-import {-# SOURCE #-} Cardano.Ledger.Tx (Tx)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import GHC.TypeLits (Symbol)
 import NoThunks.Class (NoThunks)
+
+-- | A transaction.
+type family Tx era :: Type
 
 -- | A transaction output.
 type family TxOut era :: Type

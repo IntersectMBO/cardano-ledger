@@ -77,7 +77,6 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Slot (BlockNo (..))
-import qualified Cardano.Ledger.Tx as Core (Tx (..))
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -1424,8 +1423,8 @@ testUTXOW tx predicateFailure@(Left _) = do
             (TRC (utxoEnv (Alonzo Mock), (initialUtxoSt $ Alonzo Mock), tx))
   st @?= predicateFailure
 
-trustMe :: Bool -> Core.Tx A -> ValidatedTx A
-trustMe v (Core.Tx b w a) = ValidatedTx b w (IsValidating v) a
+trustMe :: Bool -> ValidatedTx A -> ValidatedTx A
+trustMe iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValidating iv') m
 
 alonzoUTXOWexamples :: TestTree
 alonzoUTXOWexamples =
@@ -1726,7 +1725,7 @@ makeNaiveBlock ::
     Signable (CC.DSIGN (Crypto era)) (OCertSignable (Crypto era)),
     KES.Signable (CC.KES (Crypto era)) (BHBody (Crypto era))
   ) =>
-  [TxInBlock era] ->
+  [Core.Tx era] ->
   Block era
 makeNaiveBlock txs = Block (BHeader bhb sig) txs'
   where

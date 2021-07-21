@@ -27,7 +27,7 @@ import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (TxInBlock, fromTxSeq))
+import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Shelley.Constraints (TransValue, UsesPParams, UsesValue)
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -149,7 +149,7 @@ collisionFreeComplete ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "addrWits" (Core.Witnesses era) (Set (WitVKey 'Witness (Crypto era))),
@@ -185,7 +185,7 @@ adaPreservationChain ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -355,7 +355,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
 -- then the total rewards should change only by withdrawals
 checkWithdrawlBound ::
   ( SupportsSegWit era,
-    HasField "body" (TxInBlock era) (Core.TxBody era),
+    HasField "body" (Core.Tx era) (Core.TxBody era),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   SourceSignalTarget (CHAIN era) ->
@@ -428,7 +428,7 @@ potsSumIncreaseWdrlsPerTx ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -464,7 +464,7 @@ potsSumIncreaseByRewardsPerTx ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
@@ -505,7 +505,7 @@ potsRewardsDecreaseByWdrlsPerTx ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -554,7 +554,7 @@ preserveBalance ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Show (State (Core.EraRule "PPUP" era)),
@@ -602,7 +602,7 @@ preserveBalanceRestricted ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -646,7 +646,7 @@ preserveOutputsTx ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
@@ -677,7 +677,7 @@ eliminateTxInputs ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -709,7 +709,7 @@ newEntriesAndUniqueTxIns ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
@@ -753,7 +753,7 @@ requiredMSigSignaturesSubset ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     Show (State (Core.EraRule "PPUP" era))
   ) =>
@@ -773,7 +773,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
 
     existsReqKeyComb keyHashes msig =
       any (\kl -> (Set.fromList kl) `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
-    keyHashSet :: TxInBlock era -> Set (KeyHash 'Witness (Crypto era))
+    keyHashSet :: Core.Tx era -> Set (KeyHash 'Witness (Crypto era))
     keyHashSet tx_ =
       Set.map witKeyHash (getField @"addrWits" . getField @"wits" $ tx_)
 
@@ -790,10 +790,10 @@ noDoubleSpend SourceSignalTarget {signal} =
   where
     txs = toList $ (fromTxSeq @era . bbody) signal
 
-    getDoubleInputs :: [TxInBlock era] -> [(TxInBlock era, [TxInBlock era])]
+    getDoubleInputs :: [Core.Tx era] -> [(Core.Tx era, [Core.Tx era])]
     getDoubleInputs [] = []
     getDoubleInputs (t : ts) = lookForDoubleSpends t ts ++ getDoubleInputs ts
-    lookForDoubleSpends :: TxInBlock era -> [TxInBlock era] -> [(TxInBlock era, [TxInBlock era])]
+    lookForDoubleSpends :: Core.Tx era -> [Core.Tx era] -> [(Core.Tx era, [Core.Tx era])]
     lookForDoubleSpends _ [] = []
     lookForDoubleSpends tx_j ts =
       if null doubles then [] else [(tx_j, doubles)]
@@ -810,7 +810,7 @@ noDoubleSpend SourceSignalTarget {signal} =
 withdrawals ::
   forall era.
   ( HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "body" (TxInBlock era) (Core.TxBody era),
+    HasField "body" (Core.Tx era) (Core.TxBody era),
     SupportsSegWit era
   ) =>
   Block era ->
@@ -986,7 +986,7 @@ ledgerTraceFromBlock ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
@@ -1078,7 +1078,7 @@ ledgerTraceBase ::
   ( ChainState era,
     LedgerEnv era,
     (UTxOState era, DPState (Crypto era)),
-    [TxInBlock era]
+    [Core.Tx era]
   )
 ledgerTraceBase chainSt block =
   ( tickedChainSt,

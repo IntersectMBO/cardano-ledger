@@ -86,7 +86,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..), SupportsSegWit (TxInBlock))
+import Cardano.Ledger.Era (Crypto (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys
   ( KeyPair,
@@ -147,8 +147,8 @@ type ChainProperty era =
     Mock (Crypto era),
     ApplyBlock era,
     GetLedgerView era,
-    Show (TxInBlock era),
-    Eq (TxInBlock era)
+    Show (Core.Tx era),
+    Eq (Core.Tx era)
   )
 
 -- ================================================
@@ -160,8 +160,8 @@ type ShelleyTest era =
     UsesScript era,
     UsesAuxiliary era,
     UsesPParams era,
+    Core.Tx era ~ Tx era,
     Era.TxSeq era ~ TxSeq era,
-    Era.TxInBlock era ~ Tx era,
     TxOut era ~ Core.TxOut era,
     PParams era ~ Core.PParams era,
     Core.PParamsDelta era ~ PParamsUpdate era,

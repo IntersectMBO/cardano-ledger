@@ -41,7 +41,6 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Slot (epochInfoSize)
-import Cardano.Ledger.Tx (Tx (..))
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
@@ -97,7 +96,7 @@ import Shelley.Spec.Ledger.Rewards
   )
 import Shelley.Spec.Ledger.STS.NewEpoch (calculatePoolDistr)
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
-import Shelley.Spec.Ledger.Tx (WitnessSet, WitnessSetHKD (..))
+import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
 import Shelley.Spec.Ledger.TxBody (DCert, PoolParams (..), TxIn (..), WitVKey (..))
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
@@ -403,7 +402,7 @@ class
     -- | The required fee.
     Coin
   evaluateTransactionFee pp tx numKeyWits =
-    evaluateMinFee pp tx'
+    evaluateMinFee @era pp tx'
     where
       sigSize = fromIntegral $ sizeSigDSIGN (Proxy @(DSIGN (Crypto era)))
       dummySig =
@@ -421,10 +420,14 @@ class
         flip map [1 .. numKeyWits] $
           \x -> WitVKey (dummyVKey x) dummySig
 
-      tx' = addKeyWitnesses tx dummyKeyWits
+      tx' = addKeyWitnesses @era tx dummyKeyWits
 
   -- | Evaluate the minimum lovelace that a given transaciton output must contain.
   evaluateMinLovelaceOutput :: Core.PParams era -> Core.TxOut era -> Coin
+
+--------------------------------------------------------------------------------
+-- Shelley specifics
+--------------------------------------------------------------------------------
 
 addShelleyKeyWitnesses ::
   ( Era era,
@@ -433,9 +436,9 @@ addShelleyKeyWitnesses ::
     ToCBOR (Core.AuxiliaryData era),
     ToCBOR (Core.TxBody era)
   ) =>
-  Core.Tx era ->
+  Tx era ->
   Set (WitVKey 'Witness (Crypto era)) ->
-  Core.Tx era
+  Tx era
 addShelleyKeyWitnesses (Tx b ws aux) newWits = Tx b ws' aux
   where
     ws' = ws {addrWits = Set.union newWits (addrWits ws)}

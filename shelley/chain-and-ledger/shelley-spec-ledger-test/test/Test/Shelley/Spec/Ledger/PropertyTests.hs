@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes
   ( StrictMaybe (..),
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxInBlock))
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Control.State.Transition
@@ -93,7 +93,7 @@ minimalPropertyTests ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -134,7 +134,7 @@ propertyTests ::
     Embed (Core.EraRule "UTXOW" era) (LEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ TxInBlock era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),

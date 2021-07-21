@@ -16,13 +16,13 @@ import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (CostModel)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
-import qualified Cardano.Ledger.Tx as LTX
 import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import qualified Plutus.V1.Ledger.Api as Plutus
 import Shelley.Spec.Ledger.BlockChain (Block)
 import Shelley.Spec.Ledger.Metadata (Metadata)
+import qualified Shelley.Spec.Ledger.Tx as LTX
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (roundTrip, roundTripAnn)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
