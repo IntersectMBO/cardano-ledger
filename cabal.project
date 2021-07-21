@@ -27,13 +27,15 @@ write-ghc-environment-files: always
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: eb58eebc16ee898980c83bc325ab37a2c77b2414
-  --sha256: 1v5algrsa3g6lphl1nfih54xkc2xa5q1yfa3kgclcp6sxj1yjnnl
+  tag: 8c732560b201b5da8e3bdf175c6eda73a32d64bc
+  --sha256: 0nwy03wyd2ks4qxg47py7lm18karjz6vs7p8knmn3zy72i3n9rfi
   subdir:
+    base-deriving-via
     binary
     binary/test
     cardano-crypto-class
     cardano-crypto-praos
+    measures
     slotting
     strict-containers
 

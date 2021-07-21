@@ -53,6 +53,7 @@ library
     Cardano.Ledger.DescribeEras
   build-depends:
     array,
+    base-deriving-via,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
@@ -63,6 +64,7 @@ library
     containers,
     data-default,
     deepseq,
+    measures,
     mtl,
     nothunks,
     plutus-ledger-api,
