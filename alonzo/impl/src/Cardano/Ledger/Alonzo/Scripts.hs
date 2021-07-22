@@ -69,7 +69,9 @@ import Cardano.Ledger.ShelleyMA.Timelocks
 import Control.DeepSeq (NFData (..))
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
+import Data.DerivingVia (InstantiatedAt (..))
 import Data.Map (Map)
+import Data.Measure (BoundedMeasure, Measure)
 import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word64, Word8)
@@ -134,16 +136,16 @@ data ExUnits = ExUnits
     exUnitsSteps :: !Word64
   }
   deriving (Eq, Generic, Show) -- It is deliberate that there is NO ORD instance.
+  deriving
+    (BoundedMeasure, Measure)
+    via (InstantiatedAt Generic ExUnits)
+  deriving
+    (Monoid, Semigroup)
+    via (InstantiatedAt Measure ExUnits)
 
 instance NoThunks ExUnits
 
 instance NFData ExUnits
-
-instance Semigroup ExUnits where
-  ExUnits a c <> ExUnits b d = ExUnits (a + b) (c + d)
-
-instance Monoid ExUnits where
-  mempty = ExUnits 0 0
 
 -- | It is deliberate that there is no ORD instace for EXUnits. Use this function
 --   to compare if one ExUnit is pointwise compareable to another.
