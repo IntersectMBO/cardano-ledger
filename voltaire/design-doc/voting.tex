@@ -42,38 +42,46 @@ However, this brings major efficiency advantages (it is not necessary to calcula
   \label{fig:stake-snapshots}
 \end{figure}
 
-\khcomment{It seems sensible to separate the vote and block production snapshots like this, but it does give a slightly odd effect, in that vote and block production stake
-  will not always be the same in a given epoch.  They could be aligned, but then there will be a lag in the vote.}
+Note that because of the lag in block production delegation, this design means that vote and block production stake will not be exactly aligned in an epoch.
+%\khcomment{It seems sensible to separate the vote and block production snapshots like this, but it does give a slightly odd effect, in that vote and block production stake
+%  will not always be the same in a given epoch.  They could be aligned, but then there will be a lag in the vote.}
 
+ 
 
 \subsection{Tallying Votes}
 
 Votes are tailied according to a snapshot of delegated vote that is taken at the specific point given in the proposal submission.  The stake snapshot from the start of the epoch is used to determine
 the weight of each delegated vote for all votes that are tallied at the end of the epoch.  The total vote that is controlled by each delegate is the sum of all active delegations at the point that
 the vote is tallied.  A calculation is made for the total amount of stake that is: i) explicitly in favour and; ii) explicitly against the proposal.  This is compared against the required voting thresholds and
-if sufficient votes have been achieved, then the proposal will be accepted as decscibed below.\khcomment{Does the tally need to be recorded on chain?}
+if sufficient votes have been achieved, then the proposal will be accepted as decscibed below.
+The tally needs to be recorded on chain.
+%\khcomment{Does the tally need to be recorded on chain?}
 
 \subsection{Voting Outcomes and Thresholds}
 
 Following the tally, a proposal may be either accepted or rejected, based on whether it has achieved the required voting threshold.  Any proposal that achieves at least
 the specified percentage of votes is accepted, and passed forward for future enactment.
-The threshold for accepting a specific vote is specified in the proposal\khcomment{there may also be minima that are set in the protocol parameters.}.
+The threshold for accepting a specific vote is specified in the proposal.
+This must be no less than any relevant minima that are set in the protocol parameters for the specific type of proposal.
+% \khcomment{there may also be minima that are set in the protocol parameters.}.
 All thresholds are specified as a percentage of total ada.  There are a number of ways that this total can be specified.  In roughly declining order of size, these include:
 
 \begin{enumerate}
 \item
   The total ada that is in existence (i.e. 45 billion ada).
 \item
-  The total ada that is in circulation (i.e. that is not accounted in either the treasury or reserves pots).\khcomment{Preferred.}
+  The total ada that is in circulation (i.e. that is not accounted in either the treasury or reserves pots) (Preferred).
 \item
-  The total ada that has been delegated for block production purposes in the current epoch.\khcomment{Preferred.}
+  The total ada that has been delegated for block production purposes in the current epoch (Preferred).
 \item
   The total ada that has been delegated for voting purposes in the current epoch.
 \item
   The total ada that has been used to cast a vote on a specific proposal.
 \end{enumerate}
 
-A decision needs to be taken on how to determine the total that is used in a threshold calculation.\khcomment{It makes sense to use the same total for all votes rather than using different totals.}
+
+A decision needs to be taken on how to determine the total that is used in a threshold calculation\footnote{It makes sense to use the same total for all votes rather than using different totals
+  for different kinds of vote.}.
 Using the total ada in existence (option 1) means that very high voting thresholds cannot be achieved until all ada
 is in circulation, and that ada that has not been circulated will always have a negative effect on voting.
 This seems undesirable.

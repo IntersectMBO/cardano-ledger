@@ -29,7 +29,7 @@ Each proposal has a header and a body.  % and must be signed\khcomment{Submittin
   "enact"            : Epoch,
   "submitter"        : KeyHash
 }
-\end{verbatim}\pkcomment{Do we need \texttt{Slot}, or \texttt{Epoch}?}\khcomment{You want Slot, because that is what matters for consistent voting [I assume you want the current speed of enactment]}
+\end{verbatim}% \pkcomment{Do we need \texttt{Slot}, or \texttt{Epoch}?}\khcomment{You want Slot, because that is what matters for consistent voting [I assume you want the current speed of enactment]}
 
 The \texttt{linked} field allows the proposal to be linked with the previous off-chain or on-chain acceptance (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}), so enabling a chain of approval.  The \texttt{voteby} and \texttt{endorseby} fields specify deadlines.
 Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is only required for protocol version upgrades.
@@ -41,12 +41,13 @@ Deadlines can never be set in the past.
 The deadline for proposal enactment must be later than the  voting and endorsement deadlines, and account for required stability windows.
 %
 The \texttt{votethreshold} and \texttt{endorsethreshold} fields allow specific thresholds to be set for voting and endorsement, respectively.  This allows the type of proposal to be differentiated on a per-proposal basis
-(e.g. a protocol version upgrade may require a higher vote threshold than a simple parameter change).
-\khcomment{Arguably, this is dangerous and standard or minimum thresholds should be set as protocol parameters.}
+(e.g. a protocol version upgrade may require a higher vote threshold than a simple parameter change)
+\footnote{Arguably, this is dangerous and standard or minimum thresholds should be set as protocol parameters.}.
 %
 The \texttt{enact} field specifies when the proposal is to be enacted if it is approved and endorsed.  This will always be in the future.
 %
-The proposal submitter must belong to the correct submitter group.  \khcomment{Different groups for each kind of proposal?}
+The proposal submitter must belong to the correct submitter group.  \footnote{It would be possible to support
+  different groups for each kind of proposal.}
 
 The body of the proposal is specific to the proposal type.
 
@@ -79,17 +80,18 @@ All parameters in a proposal must comply with \emph{validity} rules both on subm
 
 The major and minor protocol version numbers identify the new protocol.  The genesis parameter hashes the genesis file, so ensuring that consistent initial protocol parameters are used.
 The proposal also includes a list of hashes that can be used to identify one or more reference versions of the node software that implement the new protocol (e.g. as references to a specific git commit).
-Node operators are not required to use one of these versions -- any software that follows the protocol rules may be be used.
-\khcomment{These could also be hashed in the genesis file?}
+Node operators are not required to use one of these versions -- any software that follows the protocol rules may be be used
+\footnote{Recommended software versions could also be included in the genesis file if desired.}.
 % Node software only needs to comply with the new protocol rules.  It does not need to be a specific version, for example, and we do not check a software hash.
-\khcomment{I assume that the new set of protocol parameters etc. is encoded in the genesis hash so do not need to be explicitly included here?}
+% \khcomment{I assume that
+The initial set of protocol parameters is encoded in the genesis hash.
 
 % \khcomment{We might also need to include some hash here that can be verified by the system?} % Dealt woth
 
 \paragraph{Central Funds Transfer Body.}  The format is also identical to that used for Shelley/Allegra/Mary/Alonzo.
 A single proposal may cover multiple funds transfers.  These are enacted in the order they are encountered.
-\khcomment{There is a tradeoff here: submit many proposals that may clog up the system, or submit a few.  Even if there are fewer proposals, transaction size limits mean
-that a set of transfers (for Catalyst funds, for instance), may  need to broken down into a large number of submission.}
+% \khcomment{There is a tradeoff here: submit many proposals that may clog up the system, or submit a few.  Even if there are fewer proposals, transaction size limits mean
+% that a set of transfers (for Catalyst funds, for instance), may  need to broken down into a large number of submission.}
 
 \begin{verbatim}
 "body": {
@@ -109,7 +111,7 @@ Errors in transfers between reserves and treasury, or vice-versa, may be correct
 This cannot happen for transfers to addresses.  Any errors in such transfers, must be corrected by the owner of the address, who must either explicitly transfer
 the funds to reserves or treasury, or else transfer the funds to a holding account. \khcomment{There is no way to transfer back to treasury/reserves at the moment!}
 Note that ledger rules ensure that the treasury and reserves may never decrease below zero (even temporarily), so that a ``double-spending attack'' is not possible.
-\khcomment{Jared to confirm.}
+% \khcomment{Jared to confirm.}
 
 \subsection{Proposal Signing}
 
@@ -122,10 +124,10 @@ parameter.
 Note that limits on transaction size will limit the maximum quorum size (currently to around 500 signatories).
 
 
-\khcomment{The obvious approach is to use transaction witnessing and a multi-sig approach, as described here.  That implies a change to the submission process, and also that
-  the submitter group is sufficiently small to allow this (I think we calculated n+m=500, where n is the actual number and m is the required number?}
-\khcomment{Using multi-sig potentially allows policies to be defined as described above.  This simplifies the system by removing the need for a separate Elector group,
-  but is perhaps open to abuse of power?}
+%\khcomment{The obvious approach is to use transaction witnessing and a multi-sig approach, as described here.  That implies a change to the submission process, and also that
+%  the submitter group is sufficiently small to allow this (I think we calculated n+m=500, where n is the actual number and m is the required number?}
+% \khcomment{Using multi-sig potentially allows policies to be defined as described above.  This simplifies the system by removing the need for a separate Elector group,
+%  but is perhaps open to abuse of power?}
 
 Note that the process described here intrinsically supports automation.  Signatories can be automated agents if desired rather than individuals.  This also allows integration into a full on-chain voting mechanism in the longer term, e.g. by adopting the PriviLedge mechanisms.  The outcome of an off-chain or on-chain vote may be to construct a signed on-chain proposal for subsequent enactment.  Ultimately, if the process is purely on-chain, then the vote outcome could be embedded as the authorisation for the proposal submission without needing to construct or maintain special submitter keys.  This would improve some aspects of security, but would mean that either: i) a proposal would need to be formalised prior to the initial voting round (which might be impractical for e.g. protocol upgrades or some forms of funds transfers); or else ii) delegates would need to confirm that the proposal that was enacted was equivalent to the one that was originally agreed.
 
