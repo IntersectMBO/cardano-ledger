@@ -8,7 +8,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -112,7 +111,31 @@ data ActionState = ActionState
   }
   deriving (Eq, Ord, Show)
 
-makeLenses ''ActionState
+actionState_freshNames :: Lens' ActionState ([Int])
+actionState_freshNames a2fb s = (\b -> s {_actionState_freshNames = b}) <$> a2fb (_actionState_freshNames s)
+{-# INLINE actionState_freshNames #-}
+
+actionState_withDeps :: Lens' ActionState (Map Int (Int, Action, Map Int ActionEnables))
+actionState_withDeps a2fb s = (\b -> s {_actionState_withDeps = b}) <$> a2fb (_actionState_withDeps s)
+{-# INLINE actionState_withDeps #-}
+
+actionState_needsDelegate :: Lens' ActionState (Map Int (Set Int))
+actionState_needsDelegate a2fb s = (\b -> s {_actionState_needsDelegate = b}) <$> a2fb (_actionState_needsDelegate s)
+{-# INLINE actionState_needsDelegate #-}
+
+actionState_needsStake :: Lens' ActionState (Set Int)
+actionState_needsStake a2fb s = (\b -> s {_actionState_needsStake = b}) <$> a2fb (_actionState_needsStake s)
+{-# INLINE actionState_needsStake #-}
+
+actionState_needsPool :: Lens' ActionState (Set Int)
+actionState_needsPool a2fb s = (\b -> s {_actionState_needsPool = b}) <$> a2fb (_actionState_needsPool s)
+{-# INLINE actionState_needsPool #-}
+
+actionState_needsInputs :: Lens' ActionState (Set Int)
+actionState_needsInputs a2fb s = (\b -> s {_actionState_needsInputs = b}) <$> a2fb (_actionState_needsInputs s)
+{-# INLINE actionState_needsInputs #-}
+
+
 
 initialActionState :: ActionState
 initialActionState = ActionState [1 ..] mempty mempty mempty mempty mempty
@@ -332,7 +355,34 @@ data TransactionState era = TransactionState
   , _transactionState_withDepsInEpoch :: Map {- epoch -} Int (Map ModelTxId (ModelTx era, Map ModelTxId (NESet (TransactionEnables era))))
   }
 
-makeLenses ''TransactionState
+transactionState_freshNames :: Lens' (TransactionState era) ([Integer])
+transactionState_freshNames a2fb s = (\b -> s {_transactionState_freshNames = b}) <$> a2fb (_transactionState_freshNames s)
+{-# INLINE transactionState_freshNames #-}
+
+transactionState_livePaymentAddresses :: Lens' (TransactionState era) (Set (ModelAddress (ScriptFeature era)))
+transactionState_livePaymentAddresses a2fb s = (\b -> s {_transactionState_livePaymentAddresses = b}) <$> a2fb (_transactionState_livePaymentAddresses s)
+{-# INLINE transactionState_livePaymentAddresses #-}
+
+transactionState_liveRewardAddresses :: Lens' (TransactionState era) (Set (ModelAddress (ScriptFeature era)))
+transactionState_liveRewardAddresses a2fb s = (\b -> s {_transactionState_liveRewardAddresses = b}) <$> a2fb (_transactionState_liveRewardAddresses s)
+{-# INLINE transactionState_liveRewardAddresses #-}
+
+transactionState_utxos :: Lens' (TransactionState era) (Map Int {- action id -} (Map ModelUTxOId (ModelTxOut era)))
+transactionState_utxos a2fb s = (\b -> s {_transactionState_utxos = b}) <$> a2fb (_transactionState_utxos s)
+{-# INLINE transactionState_utxos #-}
+
+transactionState_txDependents :: Lens' (TransactionState era) (Map {- action id -} Int (Map ModelTxId (NESet (TransactionEnables era))))
+transactionState_txDependents a2fb s = (\b -> s {_transactionState_txDependents = b}) <$> a2fb (_transactionState_txDependents s)
+{-# INLINE transactionState_txDependents #-}
+
+transactionState_genesisUtxo :: Lens' (TransactionState era) ([(ModelUTxOId, (ModelAddress (ScriptFeature era)), Coin)])
+transactionState_genesisUtxo a2fb s = (\b -> s {_transactionState_genesisUtxo = b}) <$> a2fb (_transactionState_genesisUtxo s)
+{-# INLINE transactionState_genesisUtxo #-}
+
+transactionState_withDepsInEpoch :: Lens' (TransactionState era) (Map {- epoch -} Int (Map ModelTxId (ModelTx era, Map ModelTxId (NESet (TransactionEnables era)))))
+transactionState_withDepsInEpoch a2fb s = (\b -> s {_transactionState_withDepsInEpoch = b}) <$> a2fb (_transactionState_withDepsInEpoch s)
+{-# INLINE transactionState_withDepsInEpoch #-}
+
 
 initialTransactionState :: TransactionState era
 initialTransactionState = TransactionState
