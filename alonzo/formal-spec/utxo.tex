@@ -120,6 +120,9 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
   and $\Nothing$ if no associated data is found.
   It uses the script purpose to generate the $\RdmrPtr$ key,
   then find the corresponding entry in the redeemer structure.
+  \item $\fun{rdptr}$ builds a redeemer pointer from a script purpose by
+  setting the tag according to the type of the script purpose, and the index
+  according to the placement of script purpose inside its container (ie. by using $\fun{indexof}$)
 \end{itemize}
 
 
@@ -164,12 +167,14 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
     &\fun{indexedRdmrs} \in \Tx \to \ScriptPurpose \to (\Redeemer~\times~\ExUnits)^?\\
     &\fun{indexedRdmrs}~tx~sp =
       \begin{cases}
-        (d, \var{eu}) & \var{rdptr} \mapsto (\var{d}, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
+        (d, \var{eu}) & (\fun{rdptr}~txb~sp)~ \mapsto (\var{d}, \var{eu}) \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
         \Nothing & \text{otherwise}
       \end{cases} \\
     & ~~\where \\
-    & ~~\quad \var{txb} = \txbody{tx} \\
-    & ~~\quad \var{rdptr} = \begin{cases}
+    & ~~\quad \var{txb} = \txbody{tx}
+    \nextdef
+    &\fun{rdptr} ~\in~\TxBody~\to~\ScriptPurpose~ \to~ \RdmrPtr \\
+    &\fun{rdptr}~txb~sp~ =~ \begin{cases}
         (\mathsf{Cert},\fun{indexof}~\var{sp}~(\fun{txcerts}~{txb}))   & \var{sp}~\in~\DCert \\
         (\mathsf{Rewrd},\fun{indexof}~\var{sp}~(\fun{txwdrls}~{txb}))   & \var{sp}~\in~\AddrRWD \\
         (\mathsf{Mint},\fun{indexof}~\var{sp}~(\dom~(\fun{mint}~{txb})))    & \var{sp}~\in~\PolicyID \\
@@ -833,10 +838,10 @@ additional ones;
     \item For every item that needs to be validated by a phase-2 script, the transaction contains
       an entry in the indexed redeemer structure (ie. the execution units and redeemer for it are specified);
 
-    \item The size of the set containing script purposes for all phase-2 scripts is the
-    same as the size of the indexed redeemer structure. Combined with the check above,
-    this ensures that there are no additional entries present in the indexed redeemer structure
-    (ie. those that are not associated with a specific script purpose);
+    \item Each redeemer pointer in the indexed redeemer structure corresponds to
+    a pointer constructed using $\fun{rdptr}$ from some script purpose of the transaction.
+    This ensures that there are no additional entries present in the structure
+    (ie. those that are not required for validation of any script);
 
     \item The signatures of the keys whose hashes are specified in the
     $\fun{reqSignerHashes}$ field in a transaction
@@ -881,8 +886,8 @@ by the UTXO transition (the application of which is also part of the conditions)
       \hldiff{\dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup \{h~\mid~ (\wcard, \wcard, h)\in\fun{txouts}\}}
       \\~\\
       \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkScriptData}~tx~sph} \\
-      \hldiff{\|\{ (sp, h)~ \in~ \fun{scriptsNeeded}~\var{utxo}~\var{tx} ~\vert~h\mapsto s~\in~ \fun{txscripts}~{txw},~
-      \var{s} \in \ScriptPhTwo \}\|~=~\|\fun{txrdmrs}~tx\|}
+      \hldiff{\ \forall~(\var{ptr}\mapsto \wcard)~\in~\fun{txrdmrs}~tx, ~ \var{ptr}~\in~\{~\fun{rdptr}~txb~sp~
+       \vert~ (sp,\wcard)~\in~\fun{scriptsNeeded}~\var{utxo}~\var{tx}~\} }
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\

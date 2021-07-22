@@ -315,7 +315,7 @@ alonzoStyleWitness = do
       extraRdmrs =
         Map.keys $
           Map.filterWithKey
-            (\el _ -> elem (SJust el) [rdptr @era txbody sp | (sp, _) <- sphs])
+            (\el _ -> not $ elem (SJust el) [rdptr @era txbody sp | (sp, _) <- sphs])
             (unRedeemers $ txrdmrs . wits $ tx)
   null extraRdmrs ?! ExtraRedeemers extraRdmrs
 
