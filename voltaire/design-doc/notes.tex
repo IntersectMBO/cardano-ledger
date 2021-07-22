@@ -45,10 +45,15 @@ the held stake.
 
 Proxy holders, such as exchanges, may exercise voting rights.  This may affect legitimacy: votes are exercised by those who do not own Ada.
 
-One proposed solution is ``token locking''.  Votes are only counted for tokens that have been locked.  Locked tokens cannot be sold or transferred.
-This discourages proxy holders from voting by restricting token liquidity.
-However, experience with the Catalyst voting system shows that this also reduces normal voter participation,
-with a consequent effect on representation and legitimacy. \khcomment{Can we quantify this?}
+One solution that has been proposed is ``token locking''.  Votes are
+only counted for tokens that have been locked.  Locked tokens cannot
+be sold or transferred.  This discourages proxy holders from voting by
+restricting token liquidity.  However, experience with the Catalyst
+voting system shows that this also reduces normal voter participation,
+with a consequent effect on representation and
+legitimacy. \todo{Can we quantify this?}
+A second solution is to provide a second kind of address that is designed to be used specifically by proxy holders (``enterprise addresses'')
+and that restricts voting rights.
 % A significant proportion of Ada holders are discouraged from voting.
 
 \subsubsection*{Alternative Solutions.}
@@ -70,7 +75,8 @@ and token locking creates risk for normal ada holders, so reducing participation
 
 \subsubsection*{Chosen Resolution.}
 
-Since neither token locking nor enterprise addresses have been shown to be effective, we have adopted the third solution.
+Since neither token locking nor enterprise addresses have been shown to be effective, we have adopted the third approach (no explicit control)
+as a pragmatic solution, pending further investigation.
 Any tokens may vote: tokens do not need to be locked for voting purposes.  Enterprise addresses are supported (and have no voting rights), but
 there is no on-chain mechanism to enforce this.
 

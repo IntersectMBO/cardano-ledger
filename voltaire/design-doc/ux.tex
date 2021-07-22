@@ -10,9 +10,9 @@ This appendix outlines how the voting experience could appear to ada holders and
 The voting centre displays a list of registered delegates, and allows them to delegate their vote to any delegate that they choose.  Transaction
 fees are paid for registration and for vote delegation.  The ada holder may choose to participate in the off-chain discussion and voting process for any
 parameter update or funds transfer. They will receive ada rewards for their participation.
-Voting rights are proportional to the ada that is held, both in Catalyst and on-chain.  However, there may be lag in the Catalyst system.\khcomment{It would be possible to export the vote snapshot at each epoch,
+\footnote{Voting rights are proportional to the ada that is held, both in Catalyst and on-chain.  However, there may be lag in the Catalyst system.
   so that the Catalyst system could be kept up to date.  At present, the stake transfer is manual and uses a \texttt{db-sync} snapshot -- this would need to be automated, and there might need to be some changes to the Jormungandr system
-  so that it could easily record dynamic stake changes.  Token locking information might also need to be recorded.}
+  so that it could easily record dynamic stake changes.  } % Token locking information might also need to be recorded.}
 
 \paragraph{Catalyst Process.}
 
@@ -22,12 +22,11 @@ This needs to be defined, but in essence:
 \item
   Ada holders register for Catalyst voting through the voting centre;
 \item
-  Voters are informed of active proposals in areas that interest them;
-  \khcomment{There is a tension here between participation and overload -- ada holders may find parameter updates to be too technical, for example}
+  Voters are informed of active proposals in areas that interest them\footnote{There is a tension here between participation and overload -- ada holders may find parameter updates to be too technical, for example};
 \item
   Using the Catalyst vote mechanism, ada holders vote on whether the proposal should be accepted, rejected or revised -- there may be multiple voting rounds
   before a decision is finalised;
-  \khcomment{This may reflect a change in the current Catalyst process?}
+%  \khcomment{This may reflect a change in the current Catalyst process?}
 \item
   Once a proposal is accepted, it proceeds to formal implementation and on-chain enactment.
 \end{itemize}
