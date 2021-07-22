@@ -1573,6 +1573,8 @@ alonzoUTXOWexamples =
                       . UtxosFailure
                       . CollectErrors
                       $ [NoRedeemer (Spending (TxIn genesisId 1))],
+                    -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
+                    ExtraRedeemers [RdmrPtr Mint 0],
                     UnRedeemableScripts
                       [ ( Spending (TxIn genesisId 1),
                           (alwaysSucceedsHash 3 pf)

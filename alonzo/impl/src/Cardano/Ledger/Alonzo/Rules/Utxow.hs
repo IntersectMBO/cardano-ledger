@@ -311,12 +311,9 @@ alonzoStyleWitness = do
   null unredeemed ?! UnRedeemableScripts unredeemed
 
   {-  || { (sp, h) ∈ \fun{scriptsNeeded} utxo tx | h\mapsto s ∈ txscripts txw, s ∈ ScriptPhTwo } || = || fun{txrdmrs} tx ||  -}
-  let extraRdmrs :: [RdmrPtr]
-      extraRdmrs =
-        Map.keys $
-          Map.filterWithKey
-            (\el _ -> not $ elem (SJust el) [rdptr @era txbody sp | (sp, _) <- sphs])
-            (unRedeemers $ txrdmrs . wits $ tx)
+  let rdptrs = Set.fromList [el | (sp, _) <- sphs, SJust el <- [rdptr @era txbody sp]]
+      extraRdmrs :: [RdmrPtr]
+      extraRdmrs = Map.keys $ Map.withoutKeys (unRedeemers $ txrdmrs $ wits tx) rdptrs
   null extraRdmrs ?! ExtraRedeemers extraRdmrs
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
