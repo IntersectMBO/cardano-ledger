@@ -31,9 +31,15 @@ import Cardano.Ledger.Alonzo.Tx
     ValidatedTx (..),
     hashWitnessPPData,
     isTwoPhaseScriptAddress,
+    rdptr,
   )
 import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..), unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness
+  ( RdmrPtr,
+    TxWitness (..),
+    unRedeemers,
+    unTxDats,
+  )
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
@@ -108,6 +114,7 @@ data AlonzoPredFail era
       -- ^ Computed from the current Protocol Parameters
   | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
   | UnspendableUTxONoDatumHash (Set (TxIn (Crypto era)))
+  | ExtraRedeemers ![RdmrPtr]
   deriving (Generic)
 
 deriving instance
@@ -157,6 +164,7 @@ encodePredFail (NonOutputSupplimentaryDatums x y) = Sum NonOutputSupplimentaryDa
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
 encodePredFail (MissingRequiredSigners x) = Sum MissingRequiredSigners 5 !> To x
 encodePredFail (UnspendableUTxONoDatumHash x) = Sum UnspendableUTxONoDatumHash 6 !> To x
+encodePredFail (ExtraRedeemers x) = Sum ExtraRedeemers 7 !> To x
 
 instance
   ( Era era,
@@ -183,6 +191,7 @@ decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
 decodePredFail 5 = SumD MissingRequiredSigners <! From
 decodePredFail 6 = SumD UnspendableUTxONoDatumHash <! From
+decodePredFail 7 = SumD ExtraRedeemers <! From
 decodePredFail n = Invalid n
 
 -- =============================================
@@ -301,7 +310,17 @@ alonzoStyleWitness = do
          in seq (rnf ans) ans
   null unredeemed ?! UnRedeemableScripts unredeemed
 
-  {-  THIS DOES NOT APPPEAR IN THE SPEC  -}
+  {-  || { (sp, h) ∈ \fun{scriptsNeeded} utxo tx | h\mapsto s ∈ txscripts txw, s ∈ ScriptPhTwo } || = || fun{txrdmrs} tx ||  -}
+  let extraRdmrs :: [RdmrPtr]
+      extraRdmrs =
+        Map.keys $
+          Map.filterWithKey
+            (\el _ -> elem (SJust el) [rdptr @era txbody sp | (sp, _) <- sphs])
+            (unRedeemers $ txrdmrs . wits $ tx)
+  null extraRdmrs ?! ExtraRedeemers extraRdmrs
+
+  {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
+      witsVKeyNeeded includes the reqSignerHashes in the union   -}
   let reqSignerHashes' = getField @"reqSignerHashes" txbody
   eval (reqSignerHashes' ⊆ witsKeyHashes)
     ?!# MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)

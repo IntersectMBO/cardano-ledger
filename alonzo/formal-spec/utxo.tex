@@ -796,8 +796,8 @@ We construct the following helper functions :
     & \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
     \nextdef
-    & \hspace{-1cm}\fun{checkScriptData} \in \Tx \to \UTxO \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
-    & \hspace{-1cm}\fun{checkScriptData}~\var{tx}~\var{utxo}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
+    & \hspace{-1cm}\fun{checkScriptData} \in \Tx \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
+    & \hspace{-1cm}\fun{checkScriptData}~\var{tx}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
     & (s \in \ScriptPhTwo~\Rightarrow \fun{txrdmrs}~tx~sp \neq \{\}) \\
     \nextdef
     & \hspace{-1cm}\fun{languages} \in \TxWitness \to \powerset{\Language} \\
@@ -835,7 +835,7 @@ additional ones;
 
     \item The size of the set containing script purposes for all phase-2 scripts is the
     same as the size of the indexed redeemer structure. Combined with the check above,
-    this ensures that there are no additional entries present in the indexed redeemer structure 
+    this ensures that there are no additional entries present in the indexed redeemer structure
     (ie. those that are not associated with a specific script purpose);
 
     \item The signatures of the keys whose hashes are specified in the
@@ -880,7 +880,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \hldiff{\var{inputHashes} \subseteq \dom (\fun{txdats}~{txw})} \\~\\
       \hldiff{\dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup \{h~\mid~ (\wcard, \wcard, h)\in\fun{txouts}\}}
       \\~\\
-      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkScriptData}~tx~utxo~sph} \\
+      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkScriptData}~tx~sph} \\
       \hldiff{\|\{ (sp, h)~ \in~ \fun{scriptsNeeded}~\var{utxo}~\var{tx} ~\vert~h\mapsto s~\in~ \fun{txscripts}~{txw},~
       \var{s} \in \ScriptPhTwo \}\|~=~\|\fun{txrdmrs}~tx\|}
       \\~\\

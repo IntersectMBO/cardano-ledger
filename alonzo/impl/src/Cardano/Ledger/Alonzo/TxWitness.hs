@@ -103,6 +103,13 @@ data RdmrPtr
 
 instance NoThunks RdmrPtr
 
+-- ToCBOR and FromCBOR for RdmrPtr is used in UTXOW for error reporting
+instance FromCBOR RdmrPtr where
+  fromCBOR = RdmrPtr <$> fromCBOR <*> fromCBOR
+
+instance ToCBOR RdmrPtr where
+  toCBOR (RdmrPtr t w) = toCBOR t <> toCBOR w
+
 instance ToCBORGroup RdmrPtr where
   listLen _ = 2
   listLenBound _ = 2

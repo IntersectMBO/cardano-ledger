@@ -247,10 +247,9 @@ checkScriptData ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   ValidatedTx era ->
-  -- UTxO era ->   -- TODO check that we really don't use the UTxO
   (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
   Bool
-checkScriptData tx {- utxo -} (sp, h) =
+checkScriptData tx (sp, h) =
   case Map.lookup h (txscripts' (getField @"wits" tx)) of
     Nothing -> False
     Just s -> if isNativeScript @era s then True else isJust (indexedRdmrs tx sp)
