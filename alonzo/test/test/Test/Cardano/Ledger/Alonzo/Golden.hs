@@ -196,5 +196,11 @@ goldenUTxOEntryMinAda =
               )
               SNothing
           )
-          @?= Coin 6896400
+          @?= Coin 6896400,
+      testCase "utxo entry size of ada-only" $
+        -- This value, 29, is helpful for comparing the alonzo protocol parameter utxoCostPerWord
+        -- with the old parameter minUTxOValue.
+        -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
+        -- we can divide minUTxOValue by 29 and round.
+        utxoEntrySize @(AlonzoEra StandardCrypto) (TxOut aliceAddr (Value 0 mempty) SNothing) @?= 29
     ]
