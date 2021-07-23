@@ -364,7 +364,7 @@ extraRedeemersTx pf =
     pf
     [ Body (extraRedeemersBody pf),
       Witnesses'
-        [ AddrWits [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
+        [ AddrWits [makeWitnessVKey (hashAnnotated (extraRedeemersBody pf)) (someKeys pf)],
           ScriptWits [always 3 pf],
           DataWits [datumExample1],
           RdmrWits extraRedeemersEx
