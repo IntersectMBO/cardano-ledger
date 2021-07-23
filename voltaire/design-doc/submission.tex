@@ -34,7 +34,7 @@ Each proposal has a header and a body.  % and must be signed\khcomment{Submittin
 The \texttt{linked} field allows the proposal to be linked with the previous off-chain or on-chain acceptance (see Appendix~\ref{sect:relating-off-and-on-chain} and Section~\ref{sect:proposalid}), so enabling a chain of approval.  The \texttt{voteby} and \texttt{endorseby} fields specify deadlines.
 Votes and endorsements must be received prior to the specified slot if they are to be counted.  The endorsement deadline is only required for protocol version upgrades.
 %\khcomment{Arguably, to avoid performance issues, tallying should either happen at epoch boundaries or in a separate thread.}\pkcomment{Yes, same as for calculating the stake distribution and the rewards}
-To avoid performance issues, tallying must be spread over time, eg in a separate thread or using a ``pulsing'' calculation.\pkcomment{Yes, same as for calculating the stake distribution and the rewards}
+To avoid performance issues, tallying must be spread over time, eg in a separate thread or using a ``pulsing'' calculation. % \pkcomment{Yes, same as for calculating the stake distribution and the rewards}
 In order to avoid zombie proposals that could disrupt operations, deadlines must be set within a reasonable time period after submission (e.g. within 3 epochs).
 Voting and endorsement slots and thresholds are completely independent, so a voting deadline may be set before/after/at the same time as an endorsement deadline.
 Deadlines can never be set in the past.
@@ -103,13 +103,13 @@ A single proposal may cover multiple funds transfers.  These are enacted in the 
 \end{verbatim}
 
 Funds may be transferred from either the treasury or the reserves, and sent to either an address, or to the treasury/reserves.
-Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be for a positive amount (including zero\pkcomment{Why do we want to allow zero here?})\khcomment{I was assuming that this might be needed for accounting or automation reasons}.
+Transfers from treasury to treasury or from reserves to reserves are not permitted.  All transfers must be for a positive amount (including zero, which might be required for accounting or automation reasons). %\pkcomment{Why do we want to allow zero here?})\khcomment{I was assuming that this might be needed for accounting or automation reasons}.
 Multiple transfers may be made in a single epoch.  This allows for proper accounting, where e.g. different kinds of transfer must
 be authorised by different groups.
 
 Errors in transfers between reserves and treasury, or vice-versa, may be corrected by constructing a reverse transfer that cancels the original error.
 This cannot happen for transfers to addresses.  Any errors in such transfers, must be corrected by the owner of the address, who must either explicitly transfer
-the funds to reserves or treasury, or else transfer the funds to a holding account. \khcomment{There is no way to transfer back to treasury/reserves at the moment!}
+the funds to reserves or treasury, or else transfer the funds to a holding account\footnote{Note that there is currently no way to transfer funds back to treasury/reserves.}
 Note that ledger rules ensure that the treasury and reserves may never decrease below zero (even temporarily), so that a ``double-spending attack'' is not possible.
 % \khcomment{Jared to confirm.}
 
