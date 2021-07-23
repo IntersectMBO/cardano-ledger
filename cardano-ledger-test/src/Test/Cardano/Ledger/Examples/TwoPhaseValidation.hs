@@ -72,7 +72,6 @@ import Cardano.Ledger.Keys
     signedDSIGN,
     signedKES,
   )
-import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -1533,7 +1532,7 @@ alonzoUTXOWexamples =
                       . UtxosFailure
                       . CollectErrors
                       $ [NoRedeemer (Spending (TxIn genesisId 1))],
-                    UnRedeemableScripts
+                    MissingRedeemers
                       [ ( Spending (TxIn genesisId 1),
                           (alwaysSucceedsHash 3 pf)
                         )
@@ -1568,8 +1567,7 @@ alonzoUTXOWexamples =
                         NoWitness (timelockHash 0 pf)
                       ],
                     WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      (timelockHash 0 pf),
-                    UnRedeemableScripts [(Spending $ TxIn genesisId 100, timelockHash 0 pf)]
+                      (timelockHash 0 pf)
                   ]
               ),
           testCase "missing 2-phase script witness" $
@@ -1583,22 +1581,11 @@ alonzoUTXOWexamples =
                       ],
                     WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
                       (alwaysSucceedsHash 2 pf),
-                    UnRedeemableScripts
-                      [ ( Rewarding
-                            ( RewardAcnt
-                                { getRwdNetwork = Testnet,
-                                  getRwdCred = ScriptHashObj (alwaysSucceedsHash 2 pf)
-                                }
-                            ),
-                          (alwaysSucceedsHash 2 pf)
-                        ),
-                        ( Certifying . DCertDeleg . DeRegKey . ScriptHashObj $
-                            (alwaysSucceedsHash 2 pf),
-                          (alwaysSucceedsHash 2 pf)
-                        ),
-                        ( Minting (PolicyID {policyID = (alwaysSucceedsHash 2 pf)}),
-                          (alwaysSucceedsHash 2 pf)
-                        )
+                    -- these redeemers are associated with phase-1 scripts
+                    ExtraRedeemers
+                      [ RdmrPtr Tag.Mint 1,
+                        RdmrPtr Tag.Cert 1,
+                        RdmrPtr Tag.Rewrd 0
                       ]
                   ]
               ),
@@ -1611,12 +1598,12 @@ alonzoUTXOWexamples =
                       . CollectErrors
                       $ [NoRedeemer (Spending (TxIn genesisId 1))],
                     -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
-                    ExtraRedeemers [RdmrPtr Tag.Mint 0],
-                    UnRedeemableScripts
+                    MissingRedeemers
                       [ ( Spending (TxIn genesisId 1),
                           (alwaysSucceedsHash 3 pf)
                         )
-                      ]
+                      ],
+                    ExtraRedeemers [RdmrPtr Tag.Mint 0]
                   ]
               ),
           testCase "missing datum" $

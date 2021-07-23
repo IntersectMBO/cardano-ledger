@@ -292,7 +292,7 @@ instance Mock c => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
   arbitrary =
     oneof
       [ WrappedShelleyEraFailure <$> arbitrary,
-        UnRedeemableScripts <$> arbitrary,
+        MissingRedeemers <$> arbitrary,
         MissingRequiredDatums <$> arbitrary <*> arbitrary,
         PPViewHashesDontMatch <$> arbitrary <*> arbitrary
       ]

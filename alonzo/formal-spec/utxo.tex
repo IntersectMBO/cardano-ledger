@@ -765,10 +765,6 @@ We construct the following helper functions :
   paired with the hashes of corresponding the witnessing scripts.
   This function collects hashes of both phase-1 and phase-2 scripts.
 
-  \item $\fun{checkScriptData}$ returns $\True$ if, for the given script purpose,
-  whenever the script it points to is phase-2, the transaction contains an associated entry
-  in the indexed redeemers structure.
-
   \item $\fun{languages}$ returns the set of (phase-2) script languages
   of all the scripts included in the transaction
 \end{itemize}
@@ -801,10 +797,6 @@ We construct the following helper functions :
     & \where \\
     & ~~~~~~~ \var{txb}~=~\txbody{tx}
     \nextdef
-    & \hspace{-1cm}\fun{checkScriptData} \in \Tx \to (\ScriptPurpose \times \ScriptHash) \to \Bool \\
-    & \hspace{-1cm}\fun{checkScriptData}~\var{tx}~(\var{sp},\var{h})~=~ \forall s, (h\mapsto s) \in \fun{txscripts}~(\fun{txwits}~tx),\\
-    & (s \in \ScriptPhTwo~\Rightarrow \fun{txrdmrs}~tx~sp \neq \{\}) \\
-    \nextdef
     & \hspace{-1cm}\fun{languages} \in \TxWitness \to \powerset{\Language} \\
     & \hspace{-1cm}\fun{languages}~\var{txw}~=~
       \{\fun{language}~s \mid s \in \range (\fun{txscripts}~{txw}) \cap \ScriptPhTwo\}
@@ -835,11 +827,15 @@ additional ones;
     the use of subset equality. No additional
     datums are permitted.
 
-    \item For every item that needs to be validated by a phase-2 script, the transaction contains
-      an entry in the indexed redeemer structure (ie. the execution units and redeemer for it are specified);
+    \item For every item that needs to be validated by a phase-2 script, and that
+    phase-2 script is present, the transaction contains
+      an entry in the indexed redeemer structure (ie. the execution units and redeemer for it are specified).
+      Note here that if the full script is not present, we cannot tell from the hash
+      that the script is phase-2, and therefore requires a redeemer;
 
     \item Each redeemer pointer in the indexed redeemer structure corresponds to
-    a pointer constructed using $\fun{rdptr}$ from some script purpose of the transaction.
+    a pointer constructed using $\fun{rdptr}$ from some script purpose of a phase-2
+    script of the transaction.
     This ensures that there are no additional entries present in the structure
     (ie. those that are not required for validation of any script);
 
@@ -881,13 +877,13 @@ by the UTXO transition (the application of which is also part of the conditions)
       \hldiff{\var{inputHashes}\leteq \{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isTwoPhaseScriptAddress}~{tx}~{a}\}}   \\~\\
       \hldiff{\forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptPhOne,
       \fun{validateScript}~\var{s}~\var{tx}}\\~\\
-      \hldiff{\{ s \mid (\_, s) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} = \dom (\fun{txscripts}~{txw})} \\~\\
+      \hldiff{\{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} = \dom (\fun{txscripts}~{txw})} \\~\\
       \hldiff{\var{inputHashes} \subseteq \dom (\fun{txdats}~{txw})} \\~\\
       \hldiff{\dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup \{h~\mid~ (\wcard, \wcard, h)\in\fun{txouts}\}}
       \\~\\
-      \hldiff{\forall sph \in \fun{scriptsNeeded}~\var{utxo}~\var{tx},~ \fun{checkScriptData}~tx~sph} \\
-      \hldiff{\ \forall~(\var{ptr}\mapsto \wcard)~\in~\fun{txrdmrs}~tx, ~ \var{ptr}~\in~\{~\fun{rdptr}~txb~sp~
-       \vert~ (sp,\wcard)~\in~\fun{scriptsNeeded}~\var{utxo}~\var{tx}~\} }
+      \hldiff{\ \dom (\fun{txrdmrs}~tx) ~=~\{~\fun{rdptr}~txb~sp~
+       \vert~ (sp,h)~\in~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, } \\
+      \hldiff{h\mapsto s~\in~\fun{txscripts}~{txw}, s~\in~\ScriptPhTwo \}}
       \\~\\
       \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
