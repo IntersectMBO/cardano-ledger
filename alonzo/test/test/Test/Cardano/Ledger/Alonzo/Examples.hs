@@ -11,19 +11,10 @@ import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Data.ByteString.Short (ShortByteString)
 import Data.Maybe (fromMaybe)
 import qualified Plutus.V1.Ledger.Api as P
-  ( EvaluationError (..),
-    ExBudget (..),
-    ExCPU (..),
-    ExMemory (..),
-    VerboseMode (..),
-    defaultCostModelParams,
-    evaluateScriptRestricting,
-  )
 import Plutus.V1.Ledger.Examples
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
   )
-import qualified PlutusTx as P
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
   ( evendata3,
     guessTheNumber2,
@@ -39,27 +30,24 @@ data ShouldSucceed = ShouldSucceed | ShouldFail
 
 directPlutusTest :: ShouldSucceed -> ShortByteString -> [P.Data] -> Assertion
 directPlutusTest expectation script ds =
-  case (expectation, evalWithHugeBudget script ds) of
-    (ShouldSucceed, (_, Left e)) ->
+  case (expectation, evalWithTightBudget script ds) of
+    (ShouldSucceed, Left e) ->
       assertBool ("This script should have succeeded, but: " <> show e) False
-    (ShouldSucceed, (_, Right _)) ->
+    (ShouldSucceed, Right _) ->
       assertBool "" True
-    (ShouldFail, (_, Left ((P.CekError _)))) ->
+    (ShouldFail, Left ((P.CekError _))) ->
       assertBool "" True -- TODO rule out cost model failure
-    (ShouldFail, (_, Left e)) ->
+    (ShouldFail, Left e) ->
       assertBool ("Not the script failure we expected: " <> show e) False
-    (ShouldFail, (_, Right _)) ->
+    (ShouldFail, Right _) ->
       assertBool "This script should have failed" False
   where
     costModel = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
     -- Evaluate a script with sufficient budget to run it.
-    evalWithHugeBudget scr datums =
-      P.evaluateScriptRestricting
-        P.Verbose
-        costModel
-        (P.ExBudget (P.ExCPU 100000000) (P.ExMemory 10000000))
-        scr
-        datums
+    evalWithTightBudget :: ShortByteString -> [P.Data] -> Either P.EvaluationError ()
+    evalWithTightBudget scr datums = do
+      budget <- snd $ P.evaluateScriptCounting P.Quiet costModel scr datums
+      snd $ P.evaluateScriptRestricting P.Verbose costModel budget scr datums
 
 -- | Expects 3 args (data, redeemer, context)
 guessTheNumber3 :: ShortByteString

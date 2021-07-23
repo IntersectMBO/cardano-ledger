@@ -22,7 +22,7 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), ValidatedTx (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
+import Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
@@ -57,19 +57,11 @@ data ScriptFailure c
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
     IncompatibleBudget P.ExBudget
+  deriving (Show)
 
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
 note e Nothing = Left e
-
-safeFromInteger :: forall a. (Integral a, Bounded a) => Integer -> Maybe a
-safeFromInteger i
-  | toInteger (minBound :: a) <= i && i <= toInteger (maxBound :: a) = Just $ fromInteger i
-  | otherwise = Nothing
-
-exBudgetToExUnits :: P.ExBudget -> Maybe ExUnits
-exBudgetToExUnits (P.ExBudget (P.ExCPU cpu) (P.ExMemory memory)) =
-  ExUnits <$> safeFromInteger (toInteger cpu) <*> safeFromInteger (toInteger memory)
 
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
