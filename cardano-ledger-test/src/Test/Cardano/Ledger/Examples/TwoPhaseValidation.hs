@@ -47,7 +47,7 @@ import Cardano.Ledger.Alonzo.Tx
     hashWitnessPPData,
   )
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BaseTypes (Network (..), Seed, StrictMaybe (..), textToUrl)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
@@ -333,6 +333,43 @@ validatingRedeemersEx1 :: Era era => Redeemers era
 validatingRedeemersEx1 =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Spend 0) (redeemerExample1, ExUnits 5000 5000)
+
+extraRedeemersEx :: Era era => Redeemers era
+extraRedeemersEx =
+  Redeemers $
+    Map.insert (RdmrPtr Tag.Spend 7) (redeemerExample1, ExUnits 432 444) (unRedeemers validatingRedeemersEx1)
+
+extraRedeemersBody :: Scriptic era => Proof era -> Core.TxBody era
+extraRedeemersBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 1],
+      Collateral [TxIn genesisId 11],
+      Outputs [outEx1 pf],
+      Txfee (Coin 5),
+      WppHash (newWppHash pf (pp pf) [PlutusV1] extraRedeemersEx txDatsExample1)
+    ]
+
+extraRedeemersTx ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+extraRedeemersTx pf =
+  newTx
+    Override
+    pf
+    [ Body (extraRedeemersBody pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (extraRedeemersBody pf)) (someKeys pf)],
+          ScriptWits [always 3 pf],
+          DataWits [datumExample1],
+          RdmrWits extraRedeemersEx
+        ]
+    ]
 
 outEx1 :: Scriptic era => Proof era -> Core.TxOut era
 outEx1 pf = newTxOut Override pf [Address (someAddr pf), Amount (inject $ Coin 4995)]
@@ -1573,6 +1610,8 @@ alonzoUTXOWexamples =
                       . UtxosFailure
                       . CollectErrors
                       $ [NoRedeemer (Spending (TxIn genesisId 1))],
+                    -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
+                    ExtraRedeemers [RdmrPtr Tag.Mint 0],
                     UnRedeemableScripts
                       [ ( Spending (TxIn genesisId 1),
                           (alwaysSucceedsHash 3 pf)
@@ -1657,6 +1696,14 @@ alonzoUTXOWexamples =
                   [ NonOutputSupplimentaryDatums
                       (Set.singleton $ hashData @A totallyIrrelevantDatum)
                       mempty
+                  ]
+              ),
+          testCase "unacceptable extra redeemer" $
+            testUTXOW
+              (trustMe True $ extraRedeemersTx pf)
+              ( Left
+                  [ ExtraRedeemers
+                      [RdmrPtr Tag.Spend 7]
                   ]
               )
         ]
