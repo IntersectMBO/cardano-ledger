@@ -802,7 +802,7 @@ produced ::
   Core.TxBody era ->
   Core.Value era
 produced pp isNewPool tx =
-  balance (txouts @era tx)
+  balance (txouts tx)
     <+> Val.inject
       ( getField @"txfee" tx
           <+> totalDeposits pp isNewPool (toList $ getField @"certs" tx)

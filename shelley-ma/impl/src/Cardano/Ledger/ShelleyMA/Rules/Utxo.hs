@@ -290,7 +290,7 @@ utxoTransition = do
   -- the check `adaPolicy ∉ supp mint tx` in the spec.
   Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
 
-  let outputs = Map.elems $ unUTxO (txouts @era txb)
+  let outputs = Map.elems $ unUTxO (txouts txb)
       minUTxOValue = getField @"_minUTxOValue" pp
       outputsTooSmall =
         filter
@@ -338,7 +338,7 @@ utxoTransition = do
 
   pure
     Shelley.UTxOState
-      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb),
+      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
         Shelley._deposited = deposits' <> depositChange,
         Shelley._fees = fees <> getField @"txfee" txb,
         Shelley._ppups = ppup'

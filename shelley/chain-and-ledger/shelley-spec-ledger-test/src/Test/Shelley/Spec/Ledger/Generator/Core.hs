@@ -734,7 +734,7 @@ applyTxBody ls pp tx =
   ls
     { _utxoState =
         us
-          { _utxo = eval (txins @era tx ⋪ (_utxo us) ∪ txouts @era tx),
+          { _utxo = eval (txins @era tx ⋪ (_utxo us) ∪ txouts tx),
             _deposited = depositPoolChange ls pp tx,
             _fees = (getField @"txfee" tx) <> (_fees . _utxoState $ ls)
           },

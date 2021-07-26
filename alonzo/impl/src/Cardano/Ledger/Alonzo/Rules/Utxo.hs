@@ -382,7 +382,7 @@ utxoTransition = do
 
   {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject(uxoEntrySizetxout ∗ coinsPerUTxOWord p)   -}
   let (Coin coinsPerUTxOWord) = getField @"_coinsPerUTxOWord" pp
-      outputs = Map.elems $ unUTxO (txouts @era txb)
+      outputs = Map.elems $ unUTxO (txouts txb)
       outputsTooSmall =
         filter
           ( \out ->

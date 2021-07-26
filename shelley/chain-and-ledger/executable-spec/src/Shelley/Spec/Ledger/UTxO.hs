@@ -195,7 +195,7 @@ txouts tx =
         | (out, idx) <- zip (toList $ getField @"outputs" tx) [0 ..]
       ]
   where
-    transId = txid @era tx
+    transId = txid tx
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::

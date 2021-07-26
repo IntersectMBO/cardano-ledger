@@ -298,7 +298,7 @@ expectedUTxO pf ex idx = UTxO utxo
   where
     utxo = case ex of
       ExpectSuccess txb newOut ->
-        Map.insert (TxIn (txid @era txb) 0) newOut (filteredUTxO idx)
+        Map.insert (TxIn (txid txb) 0) newOut (filteredUTxO idx)
       ExpectFailure -> filteredUTxO (10 + idx)
     filteredUTxO :: Natural -> Map.Map (TxIn (Crypto era)) (Core.TxOut era)
     filteredUTxO x = Map.filterWithKey (\(TxIn _ i) _ -> i /= x) (unUTxO . initUTxO $ pf)
@@ -950,7 +950,7 @@ utxoEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> UTxO era
 utxoEx9 pf = UTxO utxo
   where
     utxo =
-      Map.insert (TxIn (txid @era (validatingBodyManyScripts pf)) 0) (outEx9 pf) $
+      Map.insert (TxIn (txid (validatingBodyManyScripts pf)) 0) (outEx9 pf) $
         Map.filterWithKey
           (\k _ -> k /= (TxIn genesisId 1) && k /= (TxIn genesisId 100))
           (unUTxO $ initUTxO pf)
@@ -1829,10 +1829,10 @@ example1UTxO :: UTxO A
 example1UTxO =
   UTxO $
     Map.fromList
-      [ (TxIn (txid @A (validatingBody pf)) 0, outEx1 pf),
-        (TxIn (txid @A (validatingBodyWithCert pf)) 0, outEx3 pf),
-        (TxIn (txid @A (validatingBodyWithWithdrawal pf)) 0, outEx5 pf),
-        (TxIn (txid @A (validatingBodyWithMint pf)) 0, outEx7 pf),
+      [ (TxIn (txid (validatingBody pf)) 0, outEx1 pf),
+        (TxIn (txid (validatingBodyWithCert pf)) 0, outEx3 pf),
+        (TxIn (txid (validatingBodyWithWithdrawal pf)) 0, outEx5 pf),
+        (TxIn (txid (validatingBodyWithMint pf)) 0, outEx7 pf),
         (TxIn genesisId 11, collateralOutput pf),
         (TxIn genesisId 2, alwaysFailsOutput pf),
         (TxIn genesisId 13, collateralOutput pf),
