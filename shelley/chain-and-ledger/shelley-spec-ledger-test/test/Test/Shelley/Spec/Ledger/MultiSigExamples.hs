@@ -246,7 +246,7 @@ initialUTxOState aliceKeep msigs =
               (asWitness <$> [Cast.alicePay, Cast.bobPay])
               Map.empty
               Nothing
-       in ( txid @(ShelleyEra c) $ getField @"body" tx,
+       in ( txid $ getField @"body" tx,
             runShelleyBase $
               applySTSTest @(UTXOW (ShelleyEra c))
                 ( TRC

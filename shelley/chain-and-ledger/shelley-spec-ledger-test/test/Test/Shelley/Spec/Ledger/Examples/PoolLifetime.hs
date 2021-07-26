@@ -274,7 +274,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx2 =
   TxBody
-    { _inputs = Set.fromList [TxIn (txid @(ShelleyEra c) (txbodyEx1 @c)) 0],
+    { _inputs = Set.fromList [TxIn (txid (txbodyEx1 @c)) 0],
       _outputs =
         StrictSeq.fromList
           [ TxOut Cast.aliceAddr (Val.inject aliceCoinEx2Base),
@@ -437,7 +437,7 @@ aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 txbodyEx4 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx4 =
   TxBody
-    { _inputs = Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx2) 0],
+    { _inputs = Set.fromList [TxIn (txid txbodyEx2) 0],
       _outputs = StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)],
       _certs =
         StrictSeq.fromList
@@ -893,7 +893,7 @@ aliceRetireEpoch = EpochNo 5
 txbodyEx11 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx11 =
   TxBody
-    (Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx4) 0])
+    (Set.fromList [TxIn (txid txbodyEx4) 0])
     (StrictSeq.singleton $ TxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
     (StrictSeq.fromList [DCertPool (RetirePool (hk Cast.alicePoolKeys) aliceRetireEpoch)])
     (Wdrl Map.empty)

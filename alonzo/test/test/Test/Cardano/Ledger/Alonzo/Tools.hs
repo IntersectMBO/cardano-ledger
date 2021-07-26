@@ -11,15 +11,14 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS)
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), defaultCostModel)
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.Tx
-  ( IsValidating (..),
-    ValidatedTx (..),
+  ( ValidatedTx (..),
   )
 import Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, Redeemers (..), txrdmrs)
 import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import qualified Cardano.Ledger.Tx as Core
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart, mkSlotLength)
@@ -30,7 +29,6 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import Data.Word (Word64)
-import GHC.Records (getField)
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.UTxO (UTxO, makeWitnessVKey)
@@ -85,7 +83,7 @@ testExUnitCalculation tx utxoState ue ei ss costmdls err = do
   _ <-
     failLeft err $
       runShelleyBase $
-        applySTSTest @(UTXOS A) (TRC (ue, utxoState, vtx tx'))
+        applySTSTest @(UTXOS A) (TRC (ue, utxoState, tx'))
   pure ()
   where
     utxo = _utxo utxoState
@@ -163,10 +161,10 @@ updateTxExUnits tx utxo ei ss costmdls err = do
   pure (replaceRdmrs tx rdmrs)
 
 replaceRdmrs :: Core.Tx A -> Map RdmrPtr ExUnits -> Core.Tx A
-replaceRdmrs tx rdmrs = tx {Core.wits = wits'}
+replaceRdmrs tx rdmrs = tx {wits = wits'}
   where
-    wits' = (Core.wits tx) {txrdmrs = newrdmrs}
-    newrdmrs = foldr replaceRdmr (txrdmrs (Core.wits tx)) (Map.assocs rdmrs)
+    wits' = (wits tx) {txrdmrs = newrdmrs}
+    newrdmrs = foldr replaceRdmr (txrdmrs (wits tx)) (Map.assocs rdmrs)
 
     replaceRdmr :: (RdmrPtr, ExUnits) -> Redeemers A -> Redeemers A
     replaceRdmr (ptr, ex) x@(Redeemers r) =
@@ -177,12 +175,3 @@ replaceRdmrs tx rdmrs = tx {Core.wits = wits'}
 failLeft :: (Monad m, Show e) => (String -> m a) -> Either e a -> m a
 failLeft _ (Right a) = pure a
 failLeft err (Left e) = err (show e)
-
-vtx :: Core.Tx A -> ValidatedTx A
-vtx tx =
-  ValidatedTx
-    { body = getField @"body" tx,
-      wits = getField @"wits" tx,
-      isValidating = IsValidating True,
-      auxiliaryData = getField @"auxiliaryData" tx
-    }
