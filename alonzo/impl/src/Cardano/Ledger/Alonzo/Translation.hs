@@ -26,7 +26,7 @@ import Cardano.Binary
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), extendPPWithGenesis)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate, extendPP)
-import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -125,7 +125,7 @@ instance
     aux <- case LTX.auxiliaryData tx of
       SNothing -> pure SNothing
       SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
-    let validating = IsValidating True
+    let validating = IsValid True
     pure $ Tx $ ValidatedTx bdy txwits validating aux
 
 --------------------------------------------------------------------------------

@@ -33,7 +33,7 @@ module Cardano.Ledger.Alonzo.Tx
     -- Figure 2
     Data,
     DataHash,
-    IsValidating (..),
+    IsValid (..),
     hashData,
     nonNativeLanguages,
     hashWitnessPPData,
@@ -42,7 +42,7 @@ module Cardano.Ledger.Alonzo.Tx
     WitnessPPData (WitnessPPData),
     WitnessPPDataHash,
     -- Figure 3
-    ValidatedTx (ValidatedTx, body, wits, isValidating, auxiliaryData),
+    ValidatedTx (ValidatedTx, body, wits, isValid, auxiliaryData),
     txdats',
     txscripts',
     TxBody (..),
@@ -60,13 +60,16 @@ module Cardano.Ledger.Alonzo.Tx
     getMapFromValue,
     indexedRdmrs,
     -- Pretty
-    ppIsValidating,
+    ppIsValid,
     ppTx,
     -- Segwit
     segwitTx,
     -- Other
     toCBORForSizeComputation,
     toCBORForMempoolSubmission,
+    -- Deprecated
+    IsValidating,
+    isValidating,
   )
 where
 
@@ -161,16 +164,28 @@ import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 -- ===================================================
 
+{-# DEPRECATED IsValidating "Use IsValid instead" #-}
+
+type IsValidating = IsValid
+
+{-# DEPRECATED isValidating "Use isValid instead" #-}
+isValidating :: ValidatedTx era -> IsValid
+isValidating = isValid
+
+-- | DEPRECATED - remove this HasField instance once we have removed IsValidating
+instance HasField "isValidating" (ValidatedTx era) IsValid where
+  getField = isValid
+
 -- | Tag indicating whether non-native scripts in this transaction are expected
 -- to validate. This is added by the block creator when constructing the block.
-newtype IsValidating = IsValidating Bool
+newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
   deriving newtype (NoThunks)
 
 data ValidatedTx era = ValidatedTx
   { body :: !(Core.TxBody era),
     wits :: !(TxWitness era),
-    isValidating :: !IsValidating,
+    isValid :: !IsValid,
     auxiliaryData :: !(StrictMaybe (Core.AuxiliaryData era))
   }
   deriving (Generic, Typeable)
@@ -449,11 +464,11 @@ indexedRdmrs tx sp = case rdptr @era (getField @"body" tx) sp of
 
 -- =======================================================
 
-ppIsValidating :: IsValidating -> PDoc
-ppIsValidating (IsValidating True) = ppString "True"
-ppIsValidating (IsValidating False) = ppString "False"
+ppIsValid :: IsValid -> PDoc
+ppIsValid (IsValid True) = ppString "True"
+ppIsValid (IsValid False) = ppString "False"
 
-instance PrettyA IsValidating where prettyA = ppIsValidating
+instance PrettyA IsValid where prettyA = ppIsValid
 
 ppTx ::
   ( Era era,
@@ -468,7 +483,7 @@ ppTx (ValidatedTx b w iv aux) =
     "Tx"
     [ ("body", prettyA b),
       ("wits", ppTxWitness w),
-      ("isValidating", ppIsValidating iv),
+      ("isValid", ppIsValid iv),
       ("auxiliaryData", ppStrictMaybe prettyA aux)
     ]
 
@@ -486,14 +501,14 @@ instance
 -- Serialisation
 --------------------------------------------------------------------------------
 
-deriving newtype instance FromCBOR IsValidating
+deriving newtype instance FromCBOR IsValid
 
-deriving newtype instance ToCBOR IsValidating
+deriving newtype instance ToCBOR IsValid
 
 segwitTx ::
   Annotator (Core.TxBody era) ->
   Annotator (TxWitness era) ->
-  IsValidating ->
+  IsValid ->
   Maybe (Annotator (Core.AuxiliaryData era)) ->
   Annotator (ValidatedTx era)
 segwitTx
@@ -518,7 +533,7 @@ segwitTx
 --   we do not worry about the serialisation changing and thus seeing a new
 --   hash.
 -- - The three principal components of this Tx already store their own bytes;
---   here we simply concatenate them. The final component, `IsValidating`, is
+--   here we simply concatenate them. The final component, `IsValid`, is
 --   just a flag and very cheap to serialise.
 --------------------------------------------------------------------------------
 
@@ -527,7 +542,7 @@ segwitTx
 --
 -- Note that this serialisation is neither the serialisation used on-chain
 -- (where Txs are deconstructed using segwit), nor the serialisation used for
--- computing the transaction size (which omits the `IsValidating` field for
+-- computing the transaction size (which omits the `IsValid` field for
 -- compatibility with Mary - see 'toCBORForSizeComputation').
 toCBORForMempoolSubmission ::
   ( Typeable era,
@@ -537,12 +552,12 @@ toCBORForMempoolSubmission ::
   ValidatedTx era ->
   Encoding
 toCBORForMempoolSubmission
-  ValidatedTx {body, wits, auxiliaryData, isValidating} =
+  ValidatedTx {body, wits, auxiliaryData, isValid} =
     encode $
       Rec ValidatedTx
         !> To body
         !> To wits
-        !> To isValidating
+        !> To isValid
         !> E (encodeNullMaybe toCBOR . strictMaybeToMaybe) auxiliaryData
 
 instance
