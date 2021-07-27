@@ -89,6 +89,34 @@ class
       err :: Show a => a -> b
       err msg = error $ "Panic! applyTick failed: " <> show msg
 
+  applyBlockWithEvents ::
+    MonadError (BlockTransitionError era) m =>
+    Globals ->
+    NewEpochState era ->
+    Block era ->
+    m (NewEpochState era, [Event (Core.EraRule "BBODY" era)])
+  default applyBlockWithEvents ::
+    (MonadError (BlockTransitionError era) m) =>
+    Globals ->
+    NewEpochState era ->
+    Block era ->
+    m (NewEpochState era, [Event (Core.EraRule "BBODY" era)])
+  applyBlockWithEvents globals state blk = do
+    epochState <-
+      liftEither
+        . right (updateNewEpochState state)
+        . left BlockTransitionError
+        $ res
+    pure (epochState, evs)
+    where
+      (res, evs) =
+        flip runReader globals . applySTSWithEvents @(Core.EraRule "BBODY" era) $
+          TRC (mkBbodyEnv state, bbs, blk)
+      bbs =
+        STS.BbodyState
+          (LedgerState.esLState $ LedgerState.nesEs state)
+          (LedgerState.nesBcur state)
+
   -- | Apply the block level ledger transition.
   applyBlock ::
     MonadError (BlockTransitionError era) m =>
@@ -102,19 +130,7 @@ class
     NewEpochState era ->
     Block era ->
     m (NewEpochState era)
-  applyBlock globals state blk =
-    liftEither
-      . right (updateNewEpochState state)
-      . left BlockTransitionError
-      $ res
-    where
-      res =
-        flip runReader globals . applySTS @(Core.EraRule "BBODY" era) $
-          TRC (mkBbodyEnv state, bbs, blk)
-      bbs =
-        STS.BbodyState
-          (LedgerState.esLState $ LedgerState.nesEs state)
-          (LedgerState.nesBcur state)
+  applyBlock globals state blk = fmap fst $ applyBlockWithEvents globals state blk
 
   -- | Re-apply a ledger block to the same state it has been applied to before.
   --

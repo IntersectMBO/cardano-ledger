@@ -625,7 +625,7 @@ newEpoch b cs = cs'
     nes' =
       nes
         { nesEL = e,
-          nesBprev = (nesBcur nes),
+          nesBprev = nesBcur nes,
           nesBcur = BlocksMade Map.empty
         }
     n = getBlockNonce b

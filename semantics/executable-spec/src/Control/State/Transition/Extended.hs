@@ -70,6 +70,7 @@ module Control.State.Transition.Extended
     -- * Random thing
     Threshold (..),
     sfor_,
+    applySTSWithEvents,
   )
 where
 
@@ -427,6 +428,22 @@ applySTS ::
   RuleContext rtype s ->
   m (Either [PredicateFailure s] (State s))
 applySTS = applySTSOptsEither defaultOpts
+  where
+    defaultOpts =
+      ApplySTSOpts
+        { asoAssertions = globalAssertionPolicy,
+          asoValidation = ValidateAll
+        }
+
+applySTSWithEvents ::
+  forall s m rtype.
+  (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  RuleContext rtype s ->
+  m ((Either [PredicateFailure s] (State s)), [Event s])
+applySTSWithEvents ctx =
+  applySTSOpts EPReturn defaultOpts ctx <&> \case
+    ((st, []), evs) -> (Right st, evs)
+    ((_, pfs), evs) -> (Left pfs, evs)
   where
     defaultOpts =
       ApplySTSOpts
