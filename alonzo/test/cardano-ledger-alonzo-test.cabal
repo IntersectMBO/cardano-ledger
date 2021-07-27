@@ -73,7 +73,6 @@ test-suite cardano-ledger-alonzo-test
     test
   other-modules:
     Test.Cardano.Ledger.Alonzo.Trials
-    Test.Cardano.Ledger.Alonzo.Tools
     Test.Cardano.Ledger.Alonzo.Golden
     Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
@@ -81,7 +80,6 @@ test-suite cardano-ledger-alonzo-test
     Test.Cardano.Ledger.Alonzo.Translation
     Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
   build-depends:
-    array,
     base16-bytestring,
     bytestring,
     cardano-binary,
@@ -89,7 +87,6 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-alonzo-test,
     cardano-ledger-shelley-ma,
     cardano-ledger-core,
-    cardano-ledger-test,
     cardano-ledger-shelley-ma-test,
     cardano-slotting,
     containers,

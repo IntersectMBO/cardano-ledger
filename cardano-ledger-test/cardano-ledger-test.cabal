@@ -41,8 +41,10 @@ library
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Updaters
     Test.Cardano.Ledger.TestableEra
+    Test.Cardano.Ledger.Alonzo.Tools
   build-depends:
     aeson,
+    array,
     bytestring,
     cardano-binary,
     cardano-crypto-class,

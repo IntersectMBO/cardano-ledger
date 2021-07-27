@@ -177,7 +177,7 @@ newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
 txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx2 =
   TxBody
-    (Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx1) 0])
+    (Set.fromList [TxIn (txid txbodyEx1) 0])
     (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
     ( StrictSeq.fromList
         ( [ DCertPool (RegPool newPoolParams)

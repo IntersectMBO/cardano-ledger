@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 
 -- | Support for multiple (Shelley-based) eras in the ledger.
 module Cardano.Ledger.Era
@@ -123,7 +124,7 @@ class
 --   This class is embodies an isomorphism between 'TxSeq era' and 'StrictSeq
 --   (Tx era)', witnessed by 'fromTxSeq' and 'toTxSeq'.
 class SupportsSegWit era where
-  type TxSeq era :: Type
+  type TxSeq era = (r :: Type) | r -> era
 
   fromTxSeq :: TxSeq era -> StrictSeq (Core.Tx era)
   toTxSeq :: StrictSeq (Core.Tx era) -> TxSeq era

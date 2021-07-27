@@ -222,7 +222,7 @@ aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx2 =
   TxBody
-    (Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx1) 0])
+    (Set.fromList [TxIn (txid txbodyEx1) 0])
     (StrictSeq.singleton $ TxOut Cast.aliceAddr (Val.inject aliceCoinEx2))
     StrictSeq.empty
     (Wdrl Map.empty)
@@ -315,7 +315,7 @@ aliceCoinEx3 = aliceCoinEx2 <-> feeTx3
 txbodyEx3 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx3 =
   TxBody
-    (Set.fromList [TxIn (txid @(ShelleyEra c) txbodyEx2) 0])
+    (Set.fromList [TxIn (txid txbodyEx2) 0])
     (StrictSeq.singleton $ TxOut Cast.aliceAddr (Val.inject aliceCoinEx3))
     StrictSeq.empty
     (Wdrl Map.empty)

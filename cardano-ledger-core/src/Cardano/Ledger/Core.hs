@@ -6,6 +6,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- | This module defines core type families which we know to vary from era to
@@ -46,31 +47,31 @@ import GHC.TypeLits (Symbol)
 import NoThunks.Class (NoThunks)
 
 -- | A transaction.
-type family Tx era :: Type
+type family Tx era = (r :: Type) | r -> era
 
 -- | A transaction output.
-type family TxOut era :: Type
+type family TxOut era = (r :: Type) | r -> era
 
 -- | A value is something which quantifies a transaction output.
 type family Value era :: Type
 
 -- | The body of a transaction.
-type family TxBody era :: Type
+type family TxBody era = (r :: Type) | r -> era
 
 -- | Scripts which may lock transaction outputs in this era
 type family Script era :: Type
 
 -- | AuxiliaryData which may be attached to a transaction
-type family AuxiliaryData era :: Type
+type family AuxiliaryData era = (r :: Type) | r -> era
 
 -- | Protocol parameters
-type family PParams era :: Type
+type family PParams era = (r :: Type) | r -> era
 
 -- | The type of updates to Protocol parameters
-type family PParamsDelta era :: Type
+type family PParamsDelta era = (r :: Type) | r -> era
 
 -- | The set of witnesses in a Tx
-type family Witnesses era :: Type
+type family Witnesses era = (r :: Type) | r -> era
 
 -- | Common constraints
 --
