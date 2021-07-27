@@ -8,7 +8,15 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Test.Shelley.Spec.Ledger.ConcreteCryptoTypes where
+module Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+  ( Mock,
+    ExMock,
+    C_Crypto,
+    C,
+    TestCrypto,
+    StandardCrypto,
+  )
+where
 
 import Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
@@ -40,6 +48,8 @@ type ExMock c =
   )
 
 type C = ShelleyEra C_Crypto
+
+type TestCrypto = C_Crypto
 
 data C_Crypto
 
