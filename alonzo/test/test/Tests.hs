@@ -13,7 +13,6 @@ import Test.Cardano.Ledger.Alonzo.Golden as Golden
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
-import qualified Test.Cardano.Ledger.Alonzo.Tools as TOOLS
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
 import Test.Cardano.Ledger.Alonzo.Trials (alonzoPropertyTests, fastPropertyTests)
 import Test.Tasty
@@ -36,7 +35,6 @@ mainTests =
       Translation.tests,
       Canonical.tests,
       CDDL.tests 5,
-      TOOLS.tests,
       Golden.goldenUTxOEntryMinAda,
       plutusScriptExamples
     ]
@@ -48,7 +46,6 @@ fastTests =
     [ Tripping.tests,
       Translation.tests,
       CDDL.tests 1,
-      TOOLS.tests,
       Golden.goldenUTxOEntryMinAda,
       plutusScriptExamples
     ]
