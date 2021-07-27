@@ -60,7 +60,7 @@ prop_golden_cbor_ShelleyGenesis =
         mconcat
           [ "\nexpected:\n",
             show expected,
-            "\nexpected:\n",
+            "\nreceived:\n",
             show received,
             "\n"
           ]
@@ -123,28 +123,36 @@ prop_golden_cbor_ShelleyGenesis =
         . TkInt 0
         . TkInt 0
         . TkMapLen 1 -- sgGenDelegs
-        . TkBytes "#\213\RS\145#\213\RS\145"
+        . TkBytes
+          "8\231\197\152j4\243\&4\225\155q,\n\165%\DC4m\171\143\SI\248\137\178\173\SYN\137BA"
         . TkListLen 2
-        . TkBytes "\131\155\EOT\DEL\131\155\EOT\DEL"
-        . TkBytes "#\DC3\145\231#\DC3\145\231\SOH#"
+        . TkBytes
+          "\230\150\r\214q\238\141s\222\SUB\131\209\&4[f\DC1e\220\221\235\169\150#\190\239/\NAKz"
+        . TkBytes
+          "\252\227\FSo1\135S\RS\228\163\154\167C\194M\"'_AZ\136\149\233\205\"\195\f\138%\205\239\r"
         . TkMapLen 1 -- sgInitialFunds
-        . TkBytes "\NUL\FS\DC4\238\142\FS\DC4\238\142\227ze\234\227ze\234"
+        . TkBytes
+          "\NUL\225\186\222*\185FZ$\253^\170Ks\136\&09\ETB3\143\133:H\177\SUB_\201\150J\245\202\147\251e\SYN\235\222=\NAK\v>*\203\EM\tS'0\222\&3\131/\251\"\156\178\r"
         . TkInt 12157196
         . TkListLen 2 -- sgStaking
         . TkMapLen 1 -- sgsPools
-        . TkBytes "=\190\NUL\161=\190\NUL\161"
+        . TkBytes
+          "\245\131\164^IG\193\STX\t\ESC\150\ETB\SO\245\SO\240\207\142\219bfa\147\162\SYN2G\187"
         . TkListLen 9 -- PoolParams
-        . TkBytes "\160\132\186\143l\131\193\165"
-        . TkBytes "\237\201\a\154O7\FS\172\&1\SI"
+        . TkBytes
+          "N\DC3\f\v\222\183v\142\223.\143\133\NUL\DEL\213 s\227\220\CANq\244\196\DEL\157\252\169."
+        . TkBytes
+          "h\249\207\211:\200\240D\250\204fM\181\170\ESCs\192\176\245C[\133\231\181 \187/\SUB\146\240)\153"
         . TkInt 1
         . TkInt 5
         . TkTag 30
         . TkListLen 2
         . TkInt 1
         . TkInt 4
-        . TkBytes "\224\248h\161\150\n?\160C"
+        . TkBytes
+          "\224N\136\204-'\195d\170\249\ACKH\168}\251\149\248\238\DLE;\166\DEL\161\241/^\134\196*"
         . TkListLen 1
-        . TkBytes "\248h\161\150\n?\160C"
+        . TkBytes "N\136\204-'\195d\170\249\ACKH\168}\251\149\248\238\DLE;\166\DEL\161\241/^\134\196*"
         . TkListLen 3
         . TkListLen 4
         . TkInt 0
@@ -162,8 +170,9 @@ prop_golden_cbor_ShelleyGenesis =
         . TkString "best.pool.com"
         . TkBytes "100ab{}100ab{}"
         . TkMapLen 1 -- sgsStake
-        . TkBytes "\FS\DC4\238\142\FS\DC4\238\142"
-        . TkBytes "\FS\DC4\238\142\FS\DC4\238\142"
+        . TkBytes
+          "\131\161\146\222\192\232\218!\136\229 \208\197\&6\166\154t|\241s\163\223\SYN\166\218\169M\134"
+        . TkBytes "d\158\218\130\191dM4\166\146_$\234LL6\210~Q\222\ESCD\239G\227V\v\231"
 
 -- TODO - return a CBOR diff in the case of failure
 
@@ -205,13 +214,13 @@ exampleShelleyGenesis =
   where
     -- hash of the genesis verification key
     genesisVerKeyHash :: L.KeyHash 'L.Genesis (Crypto era)
-    genesisVerKeyHash = L.KeyHash "23d51e9123d51e91"
+    genesisVerKeyHash = L.KeyHash "38e7c5986a34f334e19b712c0aa525146dab8f0ff889b2ad16894241"
     -- hash of the delegators verififation key
     genDelegPair = L.GenDelegPair delegVerKeyHash delegVrfKeyHash
     delegVerKeyHash :: L.KeyHash 'L.GenesisDelegate (Crypto era)
-    delegVerKeyHash = L.KeyHash "839b047f839b047f"
+    delegVerKeyHash = L.KeyHash "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a"
     delegVrfKeyHash :: Hash.Hash (HASH (Crypto era)) (L.VerKeyVRF (Crypto era))
-    delegVrfKeyHash = "231391e7231391e70123"
+    delegVrfKeyHash = "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
     initialFundedAddress :: L.Addr (Crypto era)
     initialFundedAddress =
       L.Addr
@@ -222,11 +231,11 @@ exampleShelleyGenesis =
         paymentCredential =
           L.KeyHashObj $
             L.KeyHash
-              "1c14ee8e1c14ee8e"
+              "e1bade2ab9465a24fd5eaa4b7388303917338f853a48b11a5fc9964a"
         stakingCredential =
           L.KeyHashObj $
             L.KeyHash
-              "e37a65eae37a65ea"
+              "f5ca93fb6516ebde3d150b3e2acb1909532730de33832ffb229cb20d"
     initialFunds :: L.Coin
     initialFunds = L.Coin 12157196
     relays =
@@ -258,6 +267,14 @@ exampleShelleyGenesis =
         }
     staking =
       ShelleyGenesisStaking
-        { sgsPools = Map.fromList [(L.KeyHash "3dbe00a13dbe00a1", poolParams)],
-          sgsStake = Map.fromList [(L.KeyHash "1c14ee8e1c14ee8e", L.KeyHash "1c14ee8e1c14ee8e")]
+        { sgsPools =
+            Map.fromList
+              [ (L.KeyHash "f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb", poolParams)
+              ],
+          sgsStake =
+            Map.fromList
+              [ ( L.KeyHash "83a192dec0e8da2188e520d0c536a69a747cf173a3df16a6daa94d86",
+                  L.KeyHash "649eda82bf644d34a6925f24ea4c4c36d27e51de1b44ef47e3560be7"
+                )
+              ]
         }

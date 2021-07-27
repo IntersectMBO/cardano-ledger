@@ -32,11 +32,12 @@ import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import qualified Data.ByteString.Base16.Lazy as Base16
 import Data.String (fromString)
+import GHC.Stack
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
 
 roundTrip ::
-  (Show a, Eq a) =>
+  (HasCallStack, Show a, Eq a) =>
   (a -> Encoding) ->
   (LByteString -> Either DecoderError a) ->
   a ->
@@ -47,7 +48,7 @@ roundTrip encode decode x =
     Right y -> y @?= x
 
 checkEncoding ::
-  (Show a, Eq a) =>
+  (HasCallStack, Show a, Eq a) =>
   (a -> Encoding) ->
   (LByteString -> Either DecoderError a) ->
   String ->
@@ -55,17 +56,17 @@ checkEncoding ::
   ToTokens ->
   TestTree
 checkEncoding encode decode name x t =
-  testCase testName $
+  testCase testName $ do
     assertEqual
       testName
       (Base16.encode $ serialize t)
       (Base16.encode . serializeEncoding . encode $ x)
-      >> roundTrip encode decode x
+    roundTrip encode decode x
   where
     testName = "golden_serialize_" <> name
 
 checkEncodingCBOR ::
-  (FromCBOR a, ToCBOR a, Show a, Eq a) =>
+  (HasCallStack, FromCBOR a, ToCBOR a, Show a, Eq a) =>
   String ->
   a ->
   ToTokens ->
@@ -75,7 +76,7 @@ checkEncodingCBOR name x t =
    in checkEncoding toCBOR d name x t
 
 checkEncodingCBORAnnotated ::
-  (FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
+  (HasCallStack, FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
   String ->
   a ->
   ToTokens ->
