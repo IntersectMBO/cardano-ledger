@@ -38,7 +38,7 @@ module Test.Cardano.Ledger.EraBuffet
 where
 
 import Cardano.Crypto.DSIGN (Ed25519DSIGN, MockDSIGN)
-import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256, MD5Prefix)
+import Cardano.Crypto.Hash (Blake2bPrefix, Blake2b_224, Blake2b_256)
 import Cardano.Crypto.KES (MockKES, Sum6KES)
 import Cardano.Crypto.VRF.Praos
 import Cardano.Ledger.Allegra (AllegraEra)
@@ -58,8 +58,8 @@ import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
 data TestCrypto
 
 instance CryptoClass.Crypto TestCrypto where
-  type HASH TestCrypto = MD5Prefix 10
-  type ADDRHASH TestCrypto = MD5Prefix 8
+  type HASH TestCrypto = Blake2bPrefix 10
+  type ADDRHASH TestCrypto = Blake2bPrefix 8
   type DSIGN TestCrypto = MockDSIGN
   type KES TestCrypto = MockKES 10
   type VRF TestCrypto = FakeVRF

@@ -66,7 +66,7 @@ instance SneakilyContainResult Seed where
   sneakilyExtractResult s sk =
     OutputVRF
       . hashToBytes
-      . hashWithSerialiser @MD5 id
+      . hashWithSerialiser @Blake2b_224 id
       $ toCBOR s <> toCBOR sk
   unsneakilyExtractPayload = id
 
@@ -99,7 +99,7 @@ instance VRFAlgorithm FakeVRF where
   sizeVerKeyVRF _ = 8
   sizeSignKeyVRF _ = 8
   sizeCertVRF _ = 10
-  sizeOutputVRF _ = sizeHash (Proxy :: Proxy MD5)
+  sizeOutputVRF _ = sizeHash (Proxy :: Proxy Blake2b_224)
 
   rawSerialiseVerKeyVRF (VerKeyFakeVRF k) = writeBinaryWord64 k
   rawSerialiseSignKeyVRF (SignKeyFakeVRF k) = writeBinaryWord64 k
@@ -138,7 +138,7 @@ evalVRF' a sk@(SignKeyFakeVRF n) =
       p = unsneakilyExtractPayload a
       realValue =
         fromIntegral . bytesToNatural . hashToBytes
-          . hashWithSerialiser @MD5 id
+          . hashWithSerialiser @Blake2b_224 id
           $ toCBOR p <> toCBOR sk
    in (y, CertFakeVRF n realValue)
 

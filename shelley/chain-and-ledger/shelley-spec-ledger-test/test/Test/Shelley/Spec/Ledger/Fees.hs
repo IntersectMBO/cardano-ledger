@@ -523,7 +523,7 @@ testEvaluateTransactionFee =
         }
 
 -- NOTE the txsize function takes into account which actual crypto parameter is use.
--- These tests are using MD5Prefix and MockDSIGN so that:
+-- These tests are using Blake2bPrefix and MockDSIGN so that:
 --       the regular hash length is ----> 10
 --       the address hash length is ---->  8
 --       the verification key size is -->  8

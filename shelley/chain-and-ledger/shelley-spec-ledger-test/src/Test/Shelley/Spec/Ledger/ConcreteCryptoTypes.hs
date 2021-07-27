@@ -12,7 +12,7 @@ module Test.Shelley.Spec.Ledger.ConcreteCryptoTypes where
 
 import Cardano.Crypto.DSIGN (MockDSIGN, VerKeyDSIGN)
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
-import Cardano.Crypto.Hash (MD5Prefix)
+import Cardano.Crypto.Hash (Blake2bPrefix)
 import Cardano.Crypto.KES (MockKES)
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
@@ -44,8 +44,8 @@ type C = ShelleyEra C_Crypto
 data C_Crypto
 
 instance Cardano.Ledger.Crypto.Crypto C_Crypto where
-  type HASH C_Crypto = MD5Prefix 10
-  type ADDRHASH C_Crypto = MD5Prefix 8
+  type HASH C_Crypto = Blake2bPrefix 10
+  type ADDRHASH C_Crypto = Blake2bPrefix 8
   type DSIGN C_Crypto = MockDSIGN
   type KES C_Crypto = MockKES 10
   type VRF C_Crypto = FakeVRF
