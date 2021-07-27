@@ -79,7 +79,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, Mock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (StandardCrypto, Mock)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
@@ -94,7 +94,7 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 sizeTest ::
   Cr.Crypto c =>
-  proxy (ShelleyEra c) ->
+  proxy c ->
   BSL.ByteString ->
   Tx (ShelleyEra c) ->
   Integer ->
@@ -507,11 +507,11 @@ txWithWithdrawalBytes16 = "83a50081824a93b885adfe0da089cdf600018182510075c40f44e
 -- given minfeeA and minfeeB are set to 1.
 testEvaluateTransactionFee :: Assertion
 testEvaluateTransactionFee =
-  API.evaluateTransactionFee @(ShelleyEra C_Crypto)
+  API.evaluateTransactionFee @(ShelleyEra StandardCrypto)
     pp
     txSimpleUTxONoWit
     1
-    @?= minfee pp (txSimpleUTxO @C_Crypto)
+    @?= minfee pp (txSimpleUTxO @StandardCrypto)
   where
     pp = emptyPParams {_minfeeA = 1, _minfeeB = 1}
 
@@ -546,5 +546,5 @@ sizeTests =
       testCase "evaluate transaction fee" $ testEvaluateTransactionFee
     ]
   where
-    p :: Proxy C
+    p :: Proxy StandardCrypto
     p = Proxy

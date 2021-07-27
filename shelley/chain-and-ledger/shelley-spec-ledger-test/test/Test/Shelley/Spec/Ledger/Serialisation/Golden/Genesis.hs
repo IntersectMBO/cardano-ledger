@@ -20,6 +20,7 @@ import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Slotting.Slot (EpochSize (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
@@ -33,7 +34,7 @@ import qualified Shelley.Spec.Ledger.API as L
 import Shelley.Spec.Ledger.Genesis
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import Test.Cardano.Prelude
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (StandardCrypto)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Utils
   ( RawSeed (..),
@@ -48,7 +49,7 @@ import Test.Tasty.Hedgehog
 prop_golden_json_ShelleyGenesis :: Property
 prop_golden_json_ShelleyGenesis = goldenTestJSONPretty example "test/Golden/ShelleyGenesis"
   where
-    example :: ShelleyGenesis C
+    example :: ShelleyGenesis (ShelleyEra StandardCrypto)
     example = exampleShelleyGenesis
 
 prop_golden_cbor_ShelleyGenesis :: Assertion
@@ -65,7 +66,7 @@ prop_golden_cbor_ShelleyGenesis =
           ]
     else return ()
   where
-    example :: ShelleyGenesis C
+    example :: ShelleyGenesis (ShelleyEra StandardCrypto)
     example = exampleShelleyGenesis
 
     received = Encoding expectedTokens
