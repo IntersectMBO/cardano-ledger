@@ -22,7 +22,6 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Tasty
 import Test.Tasty.HUnit
 
-
 -- =========================
 -- Some examples
 

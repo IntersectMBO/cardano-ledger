@@ -523,7 +523,6 @@ testEvaluateTransactionFee =
           auxiliaryData = SNothing
         }
 
-
 -- NOTE the txsize function takes into account which actual crypto parameter is in use.
 -- These tests are using Blake2b and Ed25519 so that:
 --       the regular hash length is ----> 32

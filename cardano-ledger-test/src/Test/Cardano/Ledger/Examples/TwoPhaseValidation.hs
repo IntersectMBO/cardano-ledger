@@ -873,7 +873,7 @@ validatingRedeemersEx9 =
     [ (RdmrPtr Tag.Spend 0, (Data (Plutus.I 101), ExUnits 5000 5000)),
       (RdmrPtr Tag.Cert 1, (Data (Plutus.I 102), ExUnits 5000 5000)),
       (RdmrPtr Tag.Rewrd 0, (Data (Plutus.I 103), ExUnits 5000 5000)),
-      (RdmrPtr Tag.Mint 1, (Data (Plutus.I 104), ExUnits 5000 5000))
+      (RdmrPtr Tag.Mint 0, (Data (Plutus.I 104), ExUnits 5000 5000))
     ]
 
 mintEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> Core.Value era
@@ -1604,7 +1604,7 @@ alonzoUTXOWexamples =
                       (alwaysSucceedsHash 2 pf),
                     -- these redeemers are associated with phase-1 scripts
                     ExtraRedeemers
-                      [ RdmrPtr Tag.Mint 1,
+                      [ RdmrPtr Tag.Mint 0,
                         RdmrPtr Tag.Cert 1,
                         RdmrPtr Tag.Rewrd 0
                       ]
