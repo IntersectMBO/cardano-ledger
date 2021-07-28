@@ -34,7 +34,7 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..), ppTx, segwitTx)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), ppTx, segwitTx)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
@@ -91,8 +91,8 @@ data TxSeq era = TxSeq'
     -- SNothing for metadata
     txSeqMetadataBytes :: BSL.ByteString,
     -- | Bytes representing a set of integers. These are the indices of
-    -- transactions with isValidating == False.
-    txSeqIsValidatingBytes :: BSL.ByteString
+    -- transactions with isValid == False.
+    txSeqIsValidBytes :: BSL.ByteString
   }
   deriving (Generic)
 
@@ -127,8 +127,8 @@ pattern TxSeq xs <-
               txSeqMetadataBytes =
                 serializeEncoding . encodeFoldableMapEncoder metaChunk $
                   fmap originalBytes . getField @"auxiliaryData" <$> txns,
-              -- bytes encoding a [Int] Indexes where IsValidating is False.
-              txSeqIsValidatingBytes =
+              -- bytes encoding a [Int] Indexes where IsValid is False.
+              txSeqIsValidBytes =
                 serializeEncoding $ encodeFoldable $ nonValidatingIndices txns
             }
 
@@ -137,7 +137,7 @@ deriving via
     '[ "txSeqBodyBytes",
        "txSeqWitsBytes",
        "txSeqMetadataBytes",
-       "txSeqIsValidatingBytes"
+       "txSeqIsValidBytes"
      ]
     (TxSeq era)
   instance
@@ -237,7 +237,7 @@ instance
     unless
       (all inRange isValIdxs)
       ( fail
-          ( "Some IsValidating index is not in the range: 0 .. "
+          ( "Some IsValid index is not in the range: 0 .. "
               ++ show (b -1)
               ++ ", "
               ++ show isValIdxs
@@ -267,7 +267,7 @@ nonValidatingIndices :: StrictSeq (ValidatedTx era) -> [Int]
 nonValidatingIndices (StrictSeq.fromStrict -> xs) =
   Seq.foldrWithIndex
     ( \idx elt acc ->
-        if getField @"isValidating" elt == IsValidating False
+        if getField @"isValid" elt == IsValid False
           then idx : acc
           else acc
     )
@@ -275,17 +275,17 @@ nonValidatingIndices (StrictSeq.fromStrict -> xs) =
     xs
 
 -- | Given the number of transactions, and the set of indices for which these
--- transactions do not validate, create an aligned sequence of `IsValidating`
+-- transactions do not validate, create an aligned sequence of `IsValid`
 -- flags.
 --
 -- This function operates much as the inverse of 'nonValidatingIndices'.
-alignedValidFlags :: Int -> [Int] -> Seq.Seq IsValidating
+alignedValidFlags :: Int -> [Int] -> Seq.Seq IsValid
 alignedValidFlags = alignedValidFlags' (-1)
   where
-    alignedValidFlags' _ n [] = Seq.replicate n $ IsValidating True
+    alignedValidFlags' _ n [] = Seq.replicate n $ IsValid True
     alignedValidFlags' prev n (x : xs) =
-      Seq.replicate (x - prev - 1) (IsValidating True)
-        Seq.>< IsValidating False
+      Seq.replicate (x - prev - 1) (IsValid True)
+        Seq.>< IsValid False
         Seq.<| alignedValidFlags' x (n - (x - prev)) xs
 
 -- =======================================

@@ -31,7 +31,7 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo
     alwaysSucceeds,
   )
 import Cardano.Ledger.Alonzo.Tx
-  ( IsValidating (..),
+  ( IsValid (..),
     ScriptPurpose (..),
     ValidatedTx (..),
     hashWitnessPPData,
@@ -335,7 +335,7 @@ instance Mock c => EraGen (AlonzoEra c) where
                 Nothing -> ans
                 Just info -> addRedeemMap txbody info purpose ans -- Add it to the redeemer map
 
-  constructTx bod wit auxdata = ValidatedTx bod wit (IsValidating True) auxdata
+  constructTx bod wit auxdata = ValidatedTx bod wit (IsValid True) auxdata
 
   genEraGoodTxOut = vKeyLocked
 

@@ -166,7 +166,7 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-deriving newtype instance Arbitrary IsValidating
+deriving newtype instance Arbitrary IsValid
 
 instance Mock c => Arbitrary (ValidatedTx (AlonzoEra c)) where
   arbitrary =

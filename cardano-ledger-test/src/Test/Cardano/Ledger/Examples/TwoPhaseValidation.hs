@@ -41,7 +41,7 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx
-  ( IsValidating (..),
+  ( IsValid (..),
     ScriptPurpose (..),
     ValidatedTx (..),
     hashWitnessPPData,
@@ -279,7 +279,7 @@ initialUtxoSt pf = UTxOState (initUTxO pf) (Coin 0) (Coin 0) def
 
 -- | This is a helper type for the expectedUTxO function.
 --  ExpectSuccess indicates that we created a valid transaction
---  where the IsValidating flag is true.
+--  where the IsValid flag is true.
 data Expect era = ExpectSuccess (Core.TxBody era) (Core.TxOut era) | ExpectFailure
 
 -- | In each of our main eight examples, the UTxO map obtained
@@ -1461,7 +1461,7 @@ testUTXOW tx predicateFailure@(Left _) = do
   st @?= predicateFailure
 
 trustMe :: Bool -> ValidatedTx A -> ValidatedTx A
-trustMe iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValidating iv') m
+trustMe iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValid iv') m
 
 alonzoUTXOWexamples :: TestTree
 alonzoUTXOWexamples =
@@ -1646,7 +1646,7 @@ alonzoUTXOWexamples =
               ( Left
                   [ WrappedShelleyEraFailure
                       ( UtxoFailure
-                          (UtxosFailure (ValidationTagMismatch (IsValidating False)))
+                          (UtxosFailure (ValidationTagMismatch (IsValid False)))
                       )
                   ]
               ),
@@ -1655,7 +1655,7 @@ alonzoUTXOWexamples =
               (trustMe True $ notValidatingTx pf)
               ( Left
                   [ WrappedShelleyEraFailure
-                      (UtxoFailure (UtxosFailure (ValidationTagMismatch (IsValidating True))))
+                      (UtxoFailure (UtxosFailure (ValidationTagMismatch (IsValid True))))
                   ]
               ),
           testCase "too many execution units for tx" $
