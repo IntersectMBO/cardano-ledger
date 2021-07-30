@@ -54,6 +54,7 @@ import Cardano.Ledger.Pretty
     ppMap,
     ppRational,
     ppRecord,
+    ppScriptHash,
     ppSexp,
     ppString,
     ppWord64,
@@ -80,6 +81,7 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams, validateCostModelParams)
 import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
+import qualified Prettyprinter as PP
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -279,7 +281,7 @@ ppTag x = ppString (show x)
 instance PrettyA Tag where prettyA = ppTag
 
 ppScript :: forall era. (ValidateScript era, Core.Script era ~ Script era) => Script era -> PDoc
-ppScript (s@(PlutusScript _)) = ppString ("PlutusScript " ++ show (hashScript @era s))
+ppScript (s@(PlutusScript _)) = ppString "PlutusScript " PP.<+> ppScriptHash (hashScript @era s)
 ppScript (TimelockScript x) = ppTimelock x
 
 instance (ValidateScript era, Core.Script era ~ Script era) => PrettyA (Script era) where prettyA = ppScript

@@ -42,7 +42,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
     defaultConstants,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (genEraTwoPhaseScripts), allScripts, someKeyPairs)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), allScripts, someKeyPairs)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (keyPairs)
 import Test.Shelley.Spec.Ledger.Utils
   ( maxKESIterations,
@@ -63,12 +63,17 @@ genEnv ::
 genEnv _ =
   GenEnv
     (keySpace defaultConstants)
-    (scriptSpace @era (genEraTwoPhaseScripts @era))
+    (scriptSpace @era (genEraTwoPhase3Arg @era) (genEraTwoPhase2Arg @era))
     defaultConstants
 
 -- | An Example Script space for use in Trace generators
-scriptSpace :: forall era. ValidateScript era => [TwoPhaseInfo era] -> ScriptSpace era
-scriptSpace scripts = ScriptSpace scripts (Map.fromList [(hashScript @era (getScript s), s) | s <- scripts])
+scriptSpace :: forall era. ValidateScript era => [TwoPhase3ArgInfo era] -> [TwoPhase2ArgInfo era] -> ScriptSpace era
+scriptSpace scripts3 scripts2 =
+  ScriptSpace
+    scripts3
+    scripts2
+    (Map.fromList [(hashScript @era (getScript3 s), s) | s <- scripts3])
+    (Map.fromList [(hashScript @era (getScript2 s), s) | s <- scripts2])
 
 -- | Example keyspace for use in generators
 keySpace ::

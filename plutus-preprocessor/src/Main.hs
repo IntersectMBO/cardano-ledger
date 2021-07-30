@@ -21,14 +21,18 @@ import Language.Haskell.TH.Ppr
 import qualified Plutus.V1.Ledger.Api as P
 import PlutusScripts
   ( evenRedeemerDecl,
+    evenRedeemerDecl2Args,
     evendataDecl,
     guessDecl,
     guessDecl2args,
     oddRedeemerDecl,
+    oddRedeemerDecl2Args,
     odddataDecl,
+    redeemerIs10Decl2Args,
     sumsTo10Decl,
   )
 import qualified PlutusTx as P (Data (..), compile)
+import qualified PlutusTx.Builtins as P
 import qualified PlutusTx.Prelude as P
 import System.IO
 
@@ -65,6 +69,9 @@ $evenRedeemerDecl
 $odddataDecl
 $oddRedeemerDecl
 $sumsTo10Decl
+$evenRedeemerDecl2Args
+$oddRedeemerDecl2Args
+$redeemerIs10Decl2Args
 
 -- ================================================================
 -- Compile the real functions as Plutus scripts, and get their
@@ -105,6 +112,21 @@ sumsTo10Bytes =
   toShort . toStrict . serialise . P.fromCompiledCode $
     $$(P.compile [||sumsTo10'||])
 
+oddRedeemerBytes2Arg :: ShortByteString
+oddRedeemerBytes2Arg =
+  toShort . toStrict . serialise . P.fromCompiledCode $
+    $$(P.compile [||oddRedeemer2'||])
+
+evenRedeemerBytes2Args :: ShortByteString
+evenRedeemerBytes2Args =
+  toShort . toStrict . serialise . P.fromCompiledCode $
+    $$(P.compile [||evenRedeemer2'||])
+
+redeemerIs10Bytes2Args :: ShortByteString
+redeemerIs10Bytes2Args =
+  toShort . toStrict . serialise . P.fromCompiledCode $
+    $$(P.compile [||redeemerIs102'||])
+
 -- ========================================================================
 -- Generate the PlutusScripts.hs which does not depend on plutus-plugin.
 -- write out the file header (module and imports), then 'display' the result
@@ -127,4 +149,8 @@ main = do
   display outh evenRedeemerBytes evenRedeemerDecl "evenRedeemer3"
   display outh oddRedeemerBytes oddRedeemerDecl "oddRedeemer3"
   display outh sumsTo10Bytes sumsTo10Decl "sumsTo103"
+  -- 2 arg plutus scripts
+  display outh oddRedeemerBytes2Arg oddRedeemerDecl2Args "oddRedeemer2"
+  display outh evenRedeemerBytes2Args evenRedeemerDecl2Args "evenRedeemer2"
+  display outh redeemerIs10Bytes2Args redeemerIs10Decl2Args "redeemerIs102"
   hClose outh
