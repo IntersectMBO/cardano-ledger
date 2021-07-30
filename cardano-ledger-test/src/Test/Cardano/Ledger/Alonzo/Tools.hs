@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Alonzo.Tools (tests, testExUnitCalculation) where
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), ProtVer (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..), defaultCostModel)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.Tx
   ( ValidatedTx (..),
@@ -32,6 +32,7 @@ import Data.Word (Word64)
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.UTxO (UTxO, makeWitnessVKey)
+import Test.Cardano.Ledger.Alonzo.PlutusScripts (defaultCostModel)
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation (A, datumExample1, initUTxO, someKeys, testSystemStart, validatingBody, validatingRedeemersEx1)
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo))
 import Test.Cardano.Ledger.Generic.Updaters
