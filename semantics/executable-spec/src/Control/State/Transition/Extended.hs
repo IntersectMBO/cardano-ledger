@@ -50,6 +50,7 @@ module Control.State.Transition.Extended
     liftSTS,
     tellEvent,
     tellEvents,
+    EventReturnTypeRep,
     mapEventReturn,
 
     -- * Apply STS
@@ -61,6 +62,7 @@ module Control.State.Transition.Extended
     applySTS,
     applySTSIndifferently,
     reapplySTS,
+    globalAssertionPolicy,
 
     -- * Exported to allow running rules independently
     applySTSInternal,
