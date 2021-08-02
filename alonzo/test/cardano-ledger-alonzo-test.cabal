@@ -79,6 +79,7 @@ test-suite cardano-ledger-alonzo-test
     Test.Cardano.Ledger.Alonzo.Examples
     Test.Cardano.Ledger.Alonzo.Translation
     Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
+    Test.Cardano.Ledger.Alonzo.Trials
   build-depends:
     base16-bytestring,
     bytestring,

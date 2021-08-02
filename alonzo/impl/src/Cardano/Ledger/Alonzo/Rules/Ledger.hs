@@ -22,7 +22,7 @@ module Cardano.Ledger.Alonzo.Rules.Ledger
 where
 
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent, AlonzoPredFail, AlonzoUTXOW)
-import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
@@ -64,7 +64,7 @@ import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
 data AlonzoLEDGER era
 
 -- | An abstract Alonzo Era, Ledger transition. Fix 'someLedger' at a concrete type to
---   make it concrete. Depends only on the "certs" and "isValidating" HasField instances.
+--   make it concrete. Depends only on the "certs" and "isValid" HasField instances.
 ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( Signal (someLEDGER era) ~ Core.Tx era,
@@ -79,7 +79,7 @@ ledgerTransition ::
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "isValidating" (Core.Tx era) IsValidating,
+    HasField "isValid" (Core.Tx era) IsValid,
     Era era
   ) =>
   TransitionRule (someLEDGER era)
@@ -88,7 +88,7 @@ ledgerTransition = do
   let txbody = getField @"body" tx
 
   dpstate' <-
-    if getField @"isValidating" tx == IsValidating True
+    if getField @"isValid" tx == IsValid True
       then
         trans @(Core.EraRule "DELEGS" era) $
           TRC

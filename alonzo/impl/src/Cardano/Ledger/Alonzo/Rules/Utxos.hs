@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
   ( CostModel,
     DataHash,
-    IsValidating (..),
+    IsValid (..),
     ValidatedTx (..),
     txouts,
   )
@@ -131,9 +131,9 @@ utxosTransition ::
   TransitionRule (UTXOS era)
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
-    case getField @"isValidating" tx of
-      IsValidating True -> scriptsValidateTransition
-      IsValidating False -> scriptsNotValidateTransition
+    case getField @"isValid" tx of
+      IsValid True -> scriptsValidateTransition
+      IsValid False -> scriptsNotValidateTransition
 
 scriptsValidateTransition ::
   forall era.
@@ -179,7 +179,7 @@ scriptsValidateTransition = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       evalScripts @era tx sLst
-        ?!## ValidationTagMismatch (getField @"isValidating" tx)
+        ?!## ValidationTagMismatch (getField @"isValid" tx)
     Left info -> failBecause (CollectErrors info)
   pup' <-
     trans @(Core.EraRule "PPUP" era) $
@@ -222,7 +222,7 @@ scriptsNotValidateTransition = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       not (evalScripts @era tx sLst)
-        ?!## ValidationTagMismatch (getField @"isValidating" tx)
+        ?!## ValidationTagMismatch (getField @"isValid" tx)
     Left info -> failBecause (CollectErrors info)
   pure $
     us
@@ -231,10 +231,10 @@ scriptsNotValidateTransition = do
       }
 
 data UtxosPredicateFailure era
-  = -- | The 'isValidating' tag on the transaction is incorrect. The tag given
+  = -- | The 'isValid' tag on the transaction is incorrect. The tag given
     --   here is that provided on the transaction (whereas evaluation of the
     --   scripts gives the opposite.)
-    ValidationTagMismatch IsValidating
+    ValidationTagMismatch IsValid
   | -- | We could not find all the necessary inputs for a Plutus Script.
     --         Previous PredicateFailure tests should make this impossible, but the
     --         consequences of not detecting this means scripts get dropped, so things
@@ -303,7 +303,7 @@ instance
 
 -- =================================================================
 
--- | Construct a 'ValidatedTx' from a 'Core.Tx' by setting the `IsValidating`
+-- | Construct a 'ValidatedTx' from a 'Core.Tx' by setting the `IsValid`
 -- flag.
 --
 -- Note that this simply constructs the transaction; it does not validate
@@ -338,7 +338,7 @@ constructValidated globals (UtxoEnv _ pp _ _) st tx =
             ValidatedTx
               (getField @"body" tx)
               (getField @"wits" tx)
-              (IsValidating scriptEvalResult)
+              (IsValid scriptEvalResult)
               (getField @"auxiliaryData" tx)
        in pure vTx
   where

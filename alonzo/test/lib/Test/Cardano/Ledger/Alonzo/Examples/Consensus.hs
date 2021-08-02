@@ -9,7 +9,7 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), AuxiliaryDataHash (..), D
 import Cardano.Ledger.Alonzo.PParams (PParams' (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), alwaysFails, alwaysSucceeds)
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.Tx (IsValidating (..), ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
@@ -148,7 +148,7 @@ exampleTx =
     )
 
 exampleTransactionInBlock :: ValidatedTx StandardAlonzo
-exampleTransactionInBlock = ValidatedTx b w (IsValidating True) a
+exampleTransactionInBlock = ValidatedTx b w (IsValid True) a
   where
     (Tx b w a) = exampleTx
 

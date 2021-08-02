@@ -21,6 +21,12 @@ packages:
   shelley-ma/shelley-ma-test
   example-shelley/
 
+constraints:
+  -- bizarre issue: in earlier versions they define their own 'GEq', in newer
+  -- ones they reuse the one from 'some', but there isn't e.g. a proper version
+  -- constraint from dependent-sum-template (which is the library we actually use).
+  , dependent-sum > 0.6.2.0
+
 -- Always wrtie GHC env files, because they are needed by the doctests.
 write-ghc-environment-files: always
 
@@ -63,8 +69,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 826c2514a40e962c2e4d56ce912803a434cc28fe
-  --sha256: 04jryrgi2wggkf4a994smbcp8j39clshbzfnvfvvk7lq0sm8kssz
+  tag: 985bd37845cd0996fc38eaccd1db1a9ad3edab3a
+  --sha256: 01rar14075b1privhpyhch1qvv1j7d36nbv1frha864w6pr8zmkx
   subdir:
     plutus-ledger-api
     plutus-tx
@@ -72,6 +78,13 @@ source-repository-package
     plutus-core
     prettyprinter-configurable
     word-array
+
+-- For Plutus to work, Drops an instance breaking our code. Should be released to Hackage eventually.
+source-repository-package
+  type: git
+  location: https://github.com/Quid2/flat.git
+  tag: 95e5d7488451e43062ca84d5376b3adcc465f1cd
+  --sha256: 06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3
 
 allow-newer:
   monoidal-containers:aeson,

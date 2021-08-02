@@ -224,7 +224,7 @@ initialTx era@(Alonzo _) =
   Alonzo.ValidatedTx
     (initialTxBody era)
     (initialWitnesses era)
-    (Alonzo.IsValidating True)
+    (Alonzo.IsValid True)
     SNothing
 
 initialPParams :: forall era. Proof era -> Core.PParams era
@@ -398,7 +398,7 @@ updateTx p wit@(Alonzo _) (Alonzo.ValidatedTx b w iv d) dt =
     Witnesses fwit -> Alonzo.ValidatedTx b fwit iv d
     Witnesses' wfields -> Alonzo.ValidatedTx b (newWitnesses p wit wfields) iv d
     AuxData faux -> Alonzo.ValidatedTx b w iv (applySMaybe p d faux)
-    Valid iv' -> Alonzo.ValidatedTx b w (Alonzo.IsValidating iv') d
+    Valid iv' -> Alonzo.ValidatedTx b w (Alonzo.IsValid iv') d
 
 newTx :: Policy -> Proof era -> [TxField era] -> Core.Tx era
 newTx p era = List.foldl' (updateTx p era) (initialTx era)
