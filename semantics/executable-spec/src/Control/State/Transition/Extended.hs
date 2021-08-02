@@ -50,6 +50,7 @@ module Control.State.Transition.Extended
     liftSTS,
     tellEvent,
     tellEvents,
+    mapEventReturn,
 
     -- * Apply STS
     AssertionPolicy (..),
@@ -253,6 +254,15 @@ type family EventReturnType ep sts a :: Type where
   EventReturnType 'EventPolicyReturn sts a = (a, [Event sts])
   EventReturnType _ _ a = a
 
+class EventReturnTypeRep ert where
+  eventReturnTypeRep :: SingEP ert
+
+instance EventReturnTypeRep 'EventPolicyReturn where
+  eventReturnTypeRep = EPReturn
+
+instance EventReturnTypeRep 'EventPolicyDiscard where
+  eventReturnTypeRep = EPDiscard
+
 discardEvents :: forall ep a. SingEP ep -> forall s. EventReturnType ep s a -> a
 discardEvents ep = case ep of
   EPReturn -> fst
@@ -262,6 +272,17 @@ getEvents :: forall ep. SingEP ep -> forall s a. EventReturnType ep s a -> [Even
 getEvents ep ert = case ep of
   EPReturn -> snd ert
   EPDiscard -> []
+
+-- | Map over an arbitrary 'EventReturnType'.
+mapEventReturn ::
+  forall ep sts a b.
+  EventReturnTypeRep ep =>
+  (a -> b) ->
+  EventReturnType ep sts a ->
+  EventReturnType ep sts b
+mapEventReturn f ert = case eventReturnTypeRep @ep of
+  EPReturn -> first f ert
+  EPDiscard -> f ert
 
 data Clause sts (rtype :: RuleType) a where
   Lift ::
@@ -412,15 +433,22 @@ applySTSOpts ApplySTSOpts {asoAssertions, asoValidation, asoEvents} ctx =
    in goSTS ctx
 
 applySTSOptsEither ::
-  forall s m rtype.
+  forall s m rtype ep.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
-  ApplySTSOpts EventPolicyDiscard ->
+  ApplySTSOpts ep ->
   RuleContext rtype s ->
-  m (Either [PredicateFailure s] (State s))
+  m (Either [PredicateFailure s] (EventReturnType ep s (State s)))
 applySTSOptsEither opts ctx =
-  applySTSOpts opts ctx <&> \case
-    (st, []) -> Right st
-    (_, pfs) -> Left pfs
+  let r1 = applySTSOpts opts ctx
+   in case asoEvents opts of
+        EPDiscard ->
+          r1 <&> \case
+            (st, []) -> Right st
+            (_, pfs) -> Left pfs
+        EPReturn ->
+          r1 <&> \case
+            ((st, []), evts) -> Right (st, evts)
+            ((_, pfs), _) -> Left pfs
 
 applySTS ::
   forall s m rtype.
