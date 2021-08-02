@@ -24,7 +24,7 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi
     scriptsNeeded,
   )
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent, UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
@@ -80,6 +80,7 @@ import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow
   ( ShelleyStyleWitnessNeeds,
+    UtxowEvent (UtxoEvent),
     UtxowPredicateFailure (..),
     shelleyStyleWitness,
   )
@@ -148,6 +149,9 @@ instance
   ToCBOR (AlonzoPredFail era)
   where
   toCBOR x = encode (encodePredFail x)
+
+data AlonzoEvent era
+  = WrappedShelleyEraEvent !(UtxowEvent era)
 
 encodePredFail ::
   ( Era era,
@@ -456,9 +460,8 @@ instance
   type Signal (AlonzoUTXOW era) = ValidatedTx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
-  type
-    PredicateFailure (AlonzoUTXOW era) =
-      AlonzoPredFail era
+  type PredicateFailure (AlonzoUTXOW era) = AlonzoPredFail era
+  type Event (AlonzoUTXOW era) = AlonzoEvent era
   transitionRules = [alonzoStyleWitness]
   initialRules = []
 
@@ -466,9 +469,12 @@ instance
   ( Era era,
     STS (AlonzoUTXO era),
     PredicateFailure (Core.EraRule "UTXO" era) ~ Alonzo.UtxoPredicateFailure era,
+    Event (Core.EraRule "UTXO" era) ~ Alonzo.UtxoEvent era,
     BaseM (AlonzoUTXOW era) ~ ShelleyBase,
-    PredicateFailure (AlonzoUTXOW era) ~ AlonzoPredFail era
+    PredicateFailure (AlonzoUTXOW era) ~ AlonzoPredFail era,
+    Event (AlonzoUTXOW era) ~ AlonzoEvent era
   ) =>
   Embed (AlonzoUTXO era) (AlonzoUTXOW era)
   where
   wrapFailed = WrappedShelleyEraFailure . UtxoFailure
+  wrapEvent = WrappedShelleyEraEvent . UtxoEvent

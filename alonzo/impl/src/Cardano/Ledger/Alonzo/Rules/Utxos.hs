@@ -102,6 +102,7 @@ instance
   type State (UTXOS era) = UTxOState era
   type Signal (UTXOS era) = ValidatedTx era
   type PredicateFailure (UTXOS era) = UtxosPredicateFailure era
+  type Event (UTXOS era) = UtxosEvent era
 
   transitionRules = [utxosTransition]
 
@@ -286,14 +287,19 @@ instance
   ) =>
   NoThunks (UtxosPredicateFailure era)
 
+data UtxosEvent era
+  = UpdateEvent (Event (Core.EraRule "PPUP" era))
+
 instance
   ( Era era,
     STS (PPUP era),
-    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
+    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era,
+    Event (Core.EraRule "PPUP" era) ~ Event (PPUP era)
   ) =>
   Embed (PPUP era) (UTXOS era)
   where
   wrapFailed = UpdateFailure
+  wrapEvent = UpdateEvent
 
 -- =================================================================
 

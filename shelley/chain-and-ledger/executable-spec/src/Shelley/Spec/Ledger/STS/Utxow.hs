@@ -18,6 +18,7 @@
 module Shelley.Spec.Ledger.STS.Utxow
   ( UTXOW,
     UtxowPredicateFailure (..),
+    UtxowEvent (..),
     PredicateFailure,
     shelleyStyleWitness,
     ShelleyStyleWitnessNeeds,
@@ -103,7 +104,7 @@ import Shelley.Spec.Ledger.LedgerState
     witsVKeyNeeded,
   )
 import Shelley.Spec.Ledger.PParams (ProtVer, Update)
-import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..), UtxoPredicateFailure)
+import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..), UtxoEvent, UtxoPredicateFailure)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.Tx
@@ -145,7 +146,7 @@ data UtxowPredicateFailure era
   deriving (Generic)
 
 data UtxowEvent era
-  = UtxoEvent (Event (UTXO era))
+  = UtxoEvent (Event (Core.EraRule "UTXO" era))
 
 instance
   ( NoThunks (PredicateFailure (Core.EraRule "UTXO" era)),
@@ -386,7 +387,8 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
 instance
   ( Era era,
     STS (UTXO era),
-    PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era
+    PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era,
+    Event (Core.EraRule "UTXO" era) ~ UtxoEvent era
   ) =>
   Embed (UTXO era) (UTXOW era)
   where
