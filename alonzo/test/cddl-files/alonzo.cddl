@@ -352,10 +352,6 @@ invalid_hereafter = (5, uint)
 
 coin = uint
 
-positive_interval = #6.30([1, 2])
-  ; fractional positive_interval is: #6.30([uint, uint])
-  ; but this can produce a zero in the denominator
-
 sub_coin = positive_interval
 
 multiasset<a> = { * policy_id => { * asset_name => a } }
