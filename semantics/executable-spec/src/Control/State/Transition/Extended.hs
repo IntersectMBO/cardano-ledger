@@ -369,13 +369,15 @@ data ValidationPolicy
   | ValidateNone
   | ValidateSuchThat ([Label] -> Bool)
 
-data ApplySTSOpts = ApplySTSOpts
+data ApplySTSOpts ep = ApplySTSOpts
   { -- | Enable assertions during STS processing.
     --   If this option is enabled, STS processing will terminate on violation
     --   of an assertion.
     asoAssertions :: AssertionPolicy,
     -- | Validation policy
-    asoValidation :: ValidationPolicy
+    asoValidation :: ValidationPolicy,
+    -- | Event policy
+    asoEvents :: SingEP ep
   }
 
 type STSInterpreter ep =
@@ -396,16 +398,15 @@ type RuleInterpreter ep =
 applySTSOpts ::
   forall s m rtype ep.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
-  SingEP ep ->
-  ApplySTSOpts ->
+  ApplySTSOpts ep ->
   RuleContext rtype s ->
   m (EventReturnType ep s (State s, [PredicateFailure s]))
-applySTSOpts ep ApplySTSOpts {asoAssertions, asoValidation} ctx =
+applySTSOpts ApplySTSOpts {asoAssertions, asoValidation, asoEvents} ctx =
   let goRule :: RuleInterpreter ep
-      goRule = applyRuleInternal ep asoValidation goSTS
+      goRule = applyRuleInternal asoEvents asoValidation goSTS
       goSTS :: STSInterpreter ep
       goSTS c =
-        runExceptT (applySTSInternal ep asoAssertions goRule c) >>= \case
+        runExceptT (applySTSInternal asoEvents asoAssertions goRule c) >>= \case
           Left err -> throw $! AssertionException err
           Right res -> pure $! res
    in goSTS ctx
@@ -413,11 +414,11 @@ applySTSOpts ep ApplySTSOpts {asoAssertions, asoValidation} ctx =
 applySTSOptsEither ::
   forall s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
-  ApplySTSOpts ->
+  ApplySTSOpts EventPolicyDiscard ->
   RuleContext rtype s ->
   m (Either [PredicateFailure s] (State s))
 applySTSOptsEither opts ctx =
-  applySTSOpts EPDiscard opts ctx <&> \case
+  applySTSOpts opts ctx <&> \case
     (st, []) -> Right st
     (_, pfs) -> Left pfs
 
@@ -431,15 +432,17 @@ applySTS = applySTSOptsEither defaultOpts
     defaultOpts =
       ApplySTSOpts
         { asoAssertions = globalAssertionPolicy,
-          asoValidation = ValidateAll
+          asoValidation = ValidateAll,
+          asoEvents = EPDiscard
         }
+
+globalAssertionPolicy :: AssertionPolicy
 
 #ifdef STS_ASSERT
 globalAssertionPolicy = AssertionsAll
 #else
 globalAssertionPolicy = AssertionsOff
 #endif
-globalAssertionPolicy :: AssertionPolicy
 
 -- | Re-apply an STS.
 --
@@ -451,12 +454,13 @@ reapplySTS ::
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
   RuleContext rtype s ->
   m (State s)
-reapplySTS ctx = applySTSOpts EPDiscard defaultOpts ctx <&> fst
+reapplySTS ctx = applySTSOpts defaultOpts ctx <&> fst
   where
     defaultOpts =
       ApplySTSOpts
         { asoAssertions = AssertionsOff,
-          asoValidation = ValidateNone
+          asoValidation = ValidateNone,
+          asoEvents = EPDiscard
         }
 
 applySTSIndifferently ::
@@ -466,10 +470,10 @@ applySTSIndifferently ::
   m (State s, [PredicateFailure s])
 applySTSIndifferently =
   applySTSOpts
-    EPDiscard
     ApplySTSOpts
       { asoAssertions = AssertionsAll,
-        asoValidation = ValidateAll
+        asoValidation = ValidateAll,
+        asoEvents = EPDiscard
       }
 
 -- | Apply a rule even if its predicates fail.
@@ -519,7 +523,7 @@ applyRuleInternal ep vp goSTS jc r = do
       runClause $ Writer (wrapEvent @sub @s <$> sevs) ()
       pure $ next ss
     runClause (Writer w a) = case ep of
-      EPReturn -> modify (second (\es -> es <> w)) $> a
+      EPReturn -> modify (second (<> w)) $> a
       EPDiscard -> pure a
     validateIf lbls = case vp of
       ValidateAll -> True
@@ -542,7 +546,7 @@ applySTSInternal ep ap goRule ctx =
       [EventReturnType ep s (State s, [PredicateFailure s])] ->
       EventReturnType ep s (State s, [PredicateFailure s])
     successOrFirstFailure xs =
-      case find (\x -> null $ snd $ (discardEvents ep @s x :: (State s, [PredicateFailure s]))) xs of
+      case find (\x -> null $ snd (discardEvents ep @s x :: (State s, [PredicateFailure s]))) xs of
         Nothing ->
           case xs of
             [] -> error "applySTSInternal was called with an empty set of rules"
@@ -578,7 +582,7 @@ applySTSInternal ep ap goRule ctx =
       when (assertPost ap) $
         let res' :: (EventReturnType ep s (State s, [PredicateFailure s]))
             res' = successOrFirstFailure res
-         in case discardEvents ep @s res' :: ((State s, [PredicateFailure s])) of
+         in case discardEvents ep @s res' :: (State s, [PredicateFailure s]) of
               (st, []) ->
                 sfor_ (assertions @s) $! \case
                   PostCondition msg cond
