@@ -32,12 +32,14 @@ module Cardano.Ledger.Alonzo.Scripts
     CostModel (..),
     ExUnits (..),
     Prices (..),
-    defaultCostModel,
     hashCostModel,
     validateCostModelParams,
     ppExUnits,
     ppCostModel,
     ppPrices,
+
+    -- * Deprecated
+    defaultCostModel,
   )
 where
 
@@ -181,6 +183,7 @@ checkCostModel cm =
     then Right (CostModel cm)
     else Left ("Invalid cost model: " ++ show cm)
 
+{-# DEPRECATED defaultCostModel "Use 'import Test.Cardano.Ledger.Alonzo.PlutusScripts' instead." #-}
 defaultCostModel :: Maybe CostModel
 defaultCostModel = CostModel <$> defaultCostModelParams
 

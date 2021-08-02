@@ -49,6 +49,7 @@ library
     cardano-binary,
     cardano-crypto-class,
     cardano-ledger-alonzo,
+    cardano-ledger-alonzo-test,
     cardano-ledger-core,
     cardano-ledger-shelley-ma,
     cardano-slotting,
