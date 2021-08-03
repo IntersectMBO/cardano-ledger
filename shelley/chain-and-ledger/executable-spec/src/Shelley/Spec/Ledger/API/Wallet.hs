@@ -22,6 +22,10 @@ module Shelley.Spec.Ledger.API.Wallet
     getRewardInfo,
     CLI (..),
     addShelleyKeyWitnesses,
+
+    -- * Second Iteration Pool Ranking Functions
+    getMyopicROS,
+    getSaturationROS,
   )
 where
 
@@ -29,8 +33,15 @@ import Cardano.Binary (ToCBOR (..), decodeFull, decodeFullDecoder, serialize)
 import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BaseTypes (Globals (..), NonNegativeInterval, Seed, UnitInterval, epochInfo)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.BaseTypes
+  ( BoundedRational (unboundRational),
+    Globals (..),
+    NonNegativeInterval,
+    Seed,
+    UnitInterval,
+    epochInfo,
+  )
+import Cardano.Ledger.Coin (Coin (..), coinToRational, rationalToCoinViaFloor)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN, VRF)
@@ -87,7 +98,9 @@ import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.Rewards
-  ( NonMyopic (..),
+  ( Likelihood (..),
+    NonMyopic (..),
+    PerformanceEstimate (..),
     StakeShare (..),
     getTopRankedPools,
     nonMyopicMemberRew,
@@ -450,3 +463,130 @@ instance CC.Crypto c => CLI (ShelleyEra c) where
   addKeyWitnesses = addShelleyKeyWitnesses
 
   evaluateMinLovelaceOutput pp _out = _minUTxOValue pp
+
+---------------------------------------
+-- Second Iteration Of Pool Rankings --
+---------------------------------------
+
+maxPoolWithPledge ::
+  ( HasField "_a0" pp NonNegativeInterval,
+    HasField "_nOpt" pp Natural
+  ) =>
+  pp ->
+  Coin ->
+  PoolParams c ->
+  EB.Stake c ->
+  Rational ->
+  Coin ->
+  Coin
+maxPoolWithPledge pp r pool (EB.Stake stake) sigma (Coin totalStake) =
+  if pledge <= ostake
+    then EB.maxPool pp r sigma pr
+    else mempty
+  where
+    Coin ostake =
+      Set.foldl'
+        (\c o -> c <> (fromMaybe mempty $ Map.lookup (KeyHashObj o) stake))
+        mempty
+        (_poolOwners pool)
+    Coin pledge = _poolPledge pool
+    pr = fromIntegral pledge % fromIntegral totalStake
+
+fHat ::
+  ( HasField "_a0" pp NonNegativeInterval,
+    HasField "_nOpt" pp Natural
+  ) =>
+  PerformanceEstimate ->
+  pp ->
+  Coin ->
+  PoolParams c ->
+  EB.Stake c ->
+  Rational ->
+  Coin ->
+  Coin
+fHat (PerformanceEstimate p) pp r pool stakeDistribution sigma totalStake =
+  Coin $ floor (p * (fromRational . coinToRational) poolRP)
+  where
+    poolRP = maxPoolWithPledge pp r pool stakeDistribution sigma totalStake
+
+-- | Calculate the ROS (Return on Stake).
+getROS ::
+  Coin ->
+  Coin ->
+  UnitInterval ->
+  Rational ->
+  Coin ->
+  Coin
+getROS userStake poolCost poolMargin poolStake poolRewardPot =
+  rationalToCoinViaFloor $
+    (73 * (poolRewardPot' - poolCost') * (1 - poolMargin') * userStake')
+      / poolStake
+  where
+    userStake' = coinToRational userStake
+    poolCost' = coinToRational poolCost
+    poolMargin' = unboundRational poolMargin
+    poolRewardPot' = coinToRational poolRewardPot
+
+-- | Calculate the Myopic ROS (Return on Stake).
+getMyopicROS ::
+  ( HasField "_a0" pp NonNegativeInterval,
+    HasField "_nOpt" pp Natural
+  ) =>
+  -- | The approximation of the stake pool's hit-rate probability distribution function.
+  -- A map of these, indexed by pool ID, is stored in the ledger state under 'NonMyopic'.
+  Likelihood ->
+  -- | The protocol parameters.
+  pp ->
+  -- | The total reward pot for the given epoch.
+  -- The latest value of this is stored in 'NonMyopic'.
+  Coin ->
+  -- | The stake pool's current registered parameters.
+  PoolParams c ->
+  -- | The stake distribution.
+  EB.Stake c ->
+  -- | The relative stake of the stake pool
+  -- (relative to total stake, not active stake).
+  Rational ->
+  -- | The total stake, which is the total supply less the reserves amount.
+  Coin ->
+  -- | The user stake.
+  Coin ->
+  -- | The total stake of the stake pool, including the user's stake.
+  Coin ->
+  Coin
+getMyopicROS lhood pp r pool stakeDistribution sigma totalStake userStake realStake =
+  getROS userStake poolCost poolMargin realStake' poolRewardPot
+  where
+    poolCost = _poolCost pool
+    poolMargin = _poolMargin pool
+    realStake' = coinToRational realStake
+    perf = percentile' lhood
+    poolRewardPot = fHat perf pp r pool stakeDistribution sigma totalStake
+
+-- | Calculate the Saturation ROS (Return on Stake).
+getSaturationROS ::
+  ( HasField "_a0" pp NonNegativeInterval,
+    HasField "_nOpt" pp Natural
+  ) =>
+  -- | The protocol parameters.
+  pp ->
+  -- | The total reward pot for the given epoch.
+  -- The latest value of this is stored in 'NonMyopic'.
+  Coin ->
+  -- | The stake pool's current registered parameters.
+  PoolParams c ->
+  -- | The stake distribution.
+  EB.Stake c ->
+  -- | The total stake, which is the total supply less the reserves amount.
+  Coin ->
+  -- | The user stake.
+  Coin ->
+  Coin
+getSaturationROS pp r pool stakeDistribution totalStake userStake =
+  getROS userStake poolCost poolMargin supplyOverK poolRewardPot
+  where
+    poolCost = _poolCost pool
+    poolMargin = _poolMargin pool
+    kInverse = 1 % (fromIntegral $ getField @"_nOpt" pp)
+    poolRewardPot = fHat (PerformanceEstimate 1) pp r pool stakeDistribution kInverse totalStake
+    supplyOverK = (coinToRational totalStake) * kInverse
