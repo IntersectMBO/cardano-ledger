@@ -11,7 +11,8 @@ module Main where
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
-  ( alonzoBBODYexamples,
+  ( alonzoAPITests,
+    alonzoBBODYexamples,
     alonzoUTXOWexamples,
     collectOrderingAlonzo,
   )
@@ -36,6 +37,7 @@ mainTests =
         "STS Tests"
         [ alonzoUTXOWexamples,
           alonzoBBODYexamples,
+          alonzoAPITests,
           collectOrderingAlonzo
         ]
     ]

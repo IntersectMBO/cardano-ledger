@@ -45,6 +45,7 @@ import Cardano.Ledger.Alonzo.Tx
     ScriptPurpose (..),
     ValidatedTx (..),
     hashWitnessPPData,
+    minfee,
   )
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
@@ -100,6 +101,7 @@ import Shelley.Spec.Ledger.API
   ( BHBody (..),
     BHeader (..),
     Block (..),
+    CLI (..),
     DPState (..),
     DState (..),
     KESPeriod (..),
@@ -1927,3 +1929,29 @@ alonzoBBODYexamples =
     ]
   where
     pf = Alonzo Mock
+
+testEvaluateTransactionFee :: Assertion
+testEvaluateTransactionFee =
+  evaluateTransactionFee @A
+    pparams
+    validatingTxNoWits
+    1
+    @?= minfee pparams (validatingTx pf)
+  where
+    pf = Alonzo Mock
+    pparams = newPParams pf $ defaultPPs ++ [MinfeeA 1]
+    validatingTxNoWits =
+      newTx
+        Override
+        pf
+        [ Body (validatingBody pf),
+          Witnesses'
+            [ ScriptWits [always 3 pf],
+              DataWits [datumExample1],
+              RdmrWits validatingRedeemersEx1
+            ]
+        ]
+
+alonzoAPITests :: TestTree
+alonzoAPITests =
+  testGroup "Alonzo API" [testCase "evaluateTransactionFee" testEvaluateTransactionFee]

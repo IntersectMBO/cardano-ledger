@@ -65,6 +65,7 @@ import Shelley.Spec.Ledger.API
     hashVerKeyVRF,
   )
 import qualified Shelley.Spec.Ledger.API as API
+import Shelley.Spec.Ledger.LedgerState (minfee)
 import qualified Shelley.Spec.Ledger.Metadata as MD
 import Shelley.Spec.Ledger.PParams (PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.Tx
@@ -508,11 +509,18 @@ testEvaluateTransactionFee :: Assertion
 testEvaluateTransactionFee =
   API.evaluateTransactionFee @(ShelleyEra C_Crypto)
     pp
-    (txSimpleUTxO @C_Crypto)
+    txSimpleUTxONoWit
     1
-    @?= Coin 103
+    @?= minfee pp (txSimpleUTxO @C_Crypto)
   where
     pp = emptyPParams {_minfeeA = 1, _minfeeB = 1}
+
+    txSimpleUTxONoWit =
+      Tx
+        { body = txbSimpleUTxO,
+          wits = mempty,
+          auxiliaryData = SNothing
+        }
 
 -- NOTE the txsize function takes into account which actual crypto parameter is use.
 -- These tests are using MD5Prefix and MockDSIGN so that:
