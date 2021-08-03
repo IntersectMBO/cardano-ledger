@@ -217,9 +217,9 @@ the collateral is required to cover.
 
   The $\fun{feesOK}$ check enforces that if a transaction has a non-empty
   $\fun{txrdmrs}$ field, the balance of the realized collateral inputs
-  (which $\field_{fees}~(s)$ is increased by as part of processing $tx$) is 
+  (which $\field_{fees}~(s)$ is increased by as part of processing $tx$) is
 
-  \[\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})~\geq~\fun{quot}~(\txfee~{txb} * (\fun{collateralPercent}~pp))~100))\]
+  \[\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})~\geq~\fun{quot}~(\txfee~{txb} * (\fun{collateralPercent}~pp))~100\]
 
   which, since $\txfee~{txb}~\geq~\fun{minfee}~{txb}$, gives
 
@@ -231,6 +231,33 @@ the collateral is required to cover.
 
   \[\field_{fees}~(s')~\geq~\field_{fees}~(s)~+~\fun{quot}~(\fun{minfee}~{txb} * (\fun{collateralPercent}~pp))~100))\]
 \end{proof}
+
+An immediate corollary to this property is that when the $\fun{collateralPercent}$ is set to 100 or more,
+the transaction always pays at least the minimum fee. This, in turn, implies that it
+pays at least the fee that it has stated in the $\fun{txfee}$ field.
+
+\begin{corollary}
+  For all environments $e$, transactions $tx$ and states $s, s'$ such that
+  \begin{equation*}
+    e\vdash s\trans{ledger}{tx}s'~~\wedge~~\fun{collateralPercent}~(\field_{pp}~(s)) \geq 100
+  \end{equation*}
+  The following holds :
+  \[\field_{fees}~(s')~\geq~\field_{fees}~(s)~+~\fun{minfee}~{tx} \]
+\end{corollary}
+
+\begin{proof}
+  In both two cases in the lemma above, the $\field_{fees}$ field in the ledger state
+  is increased by at least $\fun{minfee}~{tx}$ :
+  \begin{itemize}
+    \item when $\fun{txValTag} = \True$, the lemma states already that
+    \[\field_{fees}~(s')~\geq~\field_{fees}~(s)~+~\fun{minfee}~{tx}\]
+    \item when $\fun{txValTag} = \False$, we have
+    $ \field_{fees}~(s')~\geq~\field_{fees}~(s)~+~\fun{quot}~(\fun{minfee}~{txb} * (\fun{collateralPercent}~pp))~100$ \\
+    $~~~\geq~\field_{fees}~(s)~+~\fun{quot}~(\fun{minfee}~{tx}~*~100)~100$ \\
+    $~~~=~\field_{fees}~(s)~+~\fun{minfee}~{tx}$
+  \end{itemize}
+\end{proof}
+
 \end{property}
 
 \begin{property}[Correct tag]
@@ -450,17 +477,17 @@ We split this result into a lemma and its corollary :
       examines four fields fixed by the transaction body ($\fun{mint}$, $\fun{txwdrls}$,
       $\fun{txcerts}$, and $\fun{txinputs}$).
       It also looks at data in the $\fun{txrdmrs}$ field, which is fixed
-      by the transaction body via the $\fun{wppHash}$
+      by the transaction body via the $\fun{scriptIntegrityHash}$
       hash. This is done as follows: the $\mathsf{UTXOW}$ rule verifies that this
       hash-containing field matches the computed hash
       of the preimage constructed from several fields of the transaction,
       including $\fun{txrdmrs}$ (this calculation
-      is done by the $\fun{hashWitnessPPData}$ function).
+      is done by the $\fun{hashScriptIntegrity}$ function).
 
       \item $\fun{language}$ : this is directly conveyed by the type of a script.
 
-      \item $\fun{costmdls}$ : The hash calculated by the $\fun{hashWitnessPPData}$
-      function and compared to the hash value in the $\fun{wppHash}$ field
+      \item $\fun{costmdls}$ : The hash calculated by the $\fun{hashScriptIntegrity}$
+      function and compared to the hash value in the $\fun{scriptIntegrityHash}$ field
       must include in the preimage the current cost models of
       all script languages of scripts carried by the transaction. Recall that
       if a cost model changed between when a transaction was submitted and the
@@ -496,7 +523,7 @@ We split this result into a lemma and its corollary :
 
         \item $\fun{txInfoData}$ : this field is populated with the datums (and their
         hashes) in the transaction field $\fun{txdats}$, which are fixed by the body
-        via the $\fun{wppHash}$ field.
+        via the $\fun{scriptIntegrityHash}$ field.
 
         \item $\fun{txInfoId}$ : this field contains the hash of the transaction body,
         which is clearly the same for transactions with the same body.
@@ -575,8 +602,6 @@ as in Lemma \ref{lem:inputs}.
   the same as apply to MA ledger, then translate the ledger.
 \item
   \emph{Zero ExUnits.} If a script is run (there’s a redeemer/exunits) , it will fail with 0 units
-\item
-  \emph{Zipper property.}
 \item
   \emph{Cost Increase.} if a transaction is valid, it will remain valid if you increase the execution units
 \item
