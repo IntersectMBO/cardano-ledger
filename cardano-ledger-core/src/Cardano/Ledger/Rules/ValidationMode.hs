@@ -33,7 +33,8 @@ applySTSValidateSuchThat cond =
     opts =
       ApplySTSOpts
         { asoAssertions = AssertionsOff,
-          asoValidation = ValidateSuchThat cond
+          asoValidation = ValidateSuchThat cond,
+          asoEvents = EPDiscard
         }
 
 --------------------------------------------------------------------------------

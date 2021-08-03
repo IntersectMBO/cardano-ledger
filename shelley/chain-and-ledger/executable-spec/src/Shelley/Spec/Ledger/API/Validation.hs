@@ -14,6 +14,8 @@
 -- API.
 module Shelley.Spec.Ledger.API.Validation
   ( ApplyBlock (..),
+    applyBlock,
+    applyTick,
     TickTransitionError (..),
     BlockTransitionError (..),
     chainChecks,
@@ -71,46 +73,58 @@ class
   --
   -- This handles checks and updates that happen on a slot tick, as well as a
   -- few header level checks, such as size constraints.
-  applyTick ::
+  applyTickOpts ::
+    ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    NewEpochState era
-  default applyTick ::
+    EventReturnType ep (Core.EraRule "TICK" era) (NewEpochState era)
+  default applyTickOpts ::
+    ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    NewEpochState era
-  applyTick globals state hdr =
-    either err id . flip runReader globals
-      . applySTS @(Core.EraRule "TICK" era)
+    EventReturnType ep (Core.EraRule "TICK" era) (NewEpochState era)
+  applyTickOpts opts globals state hdr =
+    either err id
+      . flip runReader globals
+      . applySTSOptsEither @(Core.EraRule "TICK" era) opts
       $ TRC ((), state, hdr)
     where
       err :: Show a => a -> b
       err msg = error $ "Panic! applyTick failed: " <> show msg
 
   -- | Apply the block level ledger transition.
-  applyBlock ::
-    MonadError (BlockTransitionError era) m =>
+  applyBlockOpts ::
+    forall ep m.
+    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m) =>
+    ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
     Block era ->
-    m (NewEpochState era)
-  default applyBlock ::
-    (MonadError (BlockTransitionError era) m) =>
+    m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
+  default applyBlockOpts ::
+    forall ep m.
+    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m) =>
+    ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
     Block era ->
-    m (NewEpochState era)
-  applyBlock globals state blk =
+    m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
+  applyBlockOpts opts globals state blk =
     liftEither
-      . right (updateNewEpochState state)
       . left BlockTransitionError
+      . right
+        ( mapEventReturn @ep @(Core.EraRule "BBODY" era) $
+            updateNewEpochState state
+        )
       $ res
     where
       res =
-        flip runReader globals . applySTS @(Core.EraRule "BBODY" era) $
-          TRC (mkBbodyEnv state, bbs, blk)
+        flip runReader globals
+          . applySTSOptsEither @(Core.EraRule "BBODY" era)
+            opts
+          $ TRC (mkBbodyEnv state, bbs, blk)
       bbs =
         STS.BbodyState
           (LedgerState.esLState $ LedgerState.nesEs state)
@@ -141,6 +155,36 @@ class
         STS.BbodyState
           (LedgerState.esLState $ LedgerState.nesEs state)
           (LedgerState.nesBcur state)
+
+applyTick ::
+  ApplyBlock era =>
+  Globals ->
+  NewEpochState era ->
+  SlotNo ->
+  NewEpochState era
+applyTick =
+  applyTickOpts $
+    ApplySTSOpts
+      { asoAssertions = globalAssertionPolicy,
+        asoValidation = ValidateAll,
+        asoEvents = EPDiscard
+      }
+
+applyBlock ::
+  ( ApplyBlock era,
+    MonadError (BlockTransitionError era) m
+  ) =>
+  Globals ->
+  NewEpochState era ->
+  Block era ->
+  m (NewEpochState era)
+applyBlock =
+  applyBlockOpts $
+    ApplySTSOpts
+      { asoAssertions = globalAssertionPolicy,
+        asoValidation = ValidateAll,
+        asoEvents = EPDiscard
+      }
 
 instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
 
