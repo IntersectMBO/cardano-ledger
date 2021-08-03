@@ -26,6 +26,11 @@ data ModelAddress (k :: TyScriptFeature) where
   ModelAddress :: String -> ModelAddress k
   ModelScriptAddress :: ModelPlutusScript -> ModelAddress ('TyScriptFeature x 'True)
 
+liftModelAddress ::
+  ModelAddress ('TyScriptFeature 'False 'False) ->
+  ModelAddress a
+liftModelAddress (ModelAddress a) = ModelAddress a
+
 deriving instance Eq (ModelAddress k)
 
 deriving instance Ord (ModelAddress k)

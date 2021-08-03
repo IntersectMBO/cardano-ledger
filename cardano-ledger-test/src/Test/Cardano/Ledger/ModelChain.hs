@@ -12,6 +12,7 @@
 {-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -35,6 +36,7 @@ import Control.Lens
 import qualified Control.Monad.State.Strict as State
 import Data.Foldable (fold)
 import Data.Kind (Type)
+import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Proxy
 import Data.Set (Set)
@@ -161,7 +163,7 @@ instance RequiredFeatures ModelEpoch where
       <$> traverse (filterFeatures tag) blocks
       <*> pure x
 
-newtype ModelTxId = ModelTxId Integer
+newtype ModelTxId = ModelTxId {unModelTxId :: Integer}
   deriving (Eq, Ord, Show, Num)
 
 type ModelTxIn = ModelUTxOId
@@ -192,6 +194,18 @@ data ModelTxOut era = ModelTxOut
   }
   deriving (Eq, Ord, Show)
 
+modelTxOut_address :: Lens' (ModelTxOut era) (ModelAddress (ScriptFeature era))
+modelTxOut_address = lens _mtxo_address (\s b -> s {_mtxo_address = b})
+{-# INLINE modelTxOut_address #-}
+
+modelTxOut_value :: Lens' (ModelTxOut era) (ModelValue (ValueFeature era) era)
+modelTxOut_value = lens _mtxo_value (\s b -> s {_mtxo_value = b})
+{-# INLINE modelTxOut_value #-}
+
+modelTxOut_data :: Lens' (ModelTxOut era) (IfSupportsPlutus () (Maybe PlutusTx.Data) (ScriptFeature era))
+modelTxOut_data = lens _mtxo_data (\s b -> s {_mtxo_data = b})
+{-# INLINE modelTxOut_data #-}
+
 newtype ModelUTxOId = ModelUTxOId {unModelUTxOId :: Integer}
   deriving (Eq, Ord, Show, Num, Enum)
 
@@ -204,14 +218,76 @@ data ModelTx (era :: FeatureSet) = ModelTx
     _mtxWdrl :: !(Map.Map (ModelAddress (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era)),
     _mtxMint :: !(IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era)),
     _mtxCollateral :: !(IfSupportsPlutus () (Set ModelTxIn) (ScriptFeature era))
-  } deriving Show
+  }
+  deriving (Show)
 
-data ModelBlock era = ModelBlock SlotNo [ModelTx era]
+modelTx_id :: Lens' (ModelTx era) ModelTxId
+modelTx_id = lens _mtxId (\s b -> s {_mtxId = b})
+{-# INLINE modelTx_id #-}
+
+modelTx_inputs :: Lens' (ModelTx era) (Set ModelTxIn)
+modelTx_inputs = lens _mtxInputs (\s b -> s {_mtxInputs = b})
+{-# INLINE modelTx_inputs #-}
+
+modelTx_outputs :: Lens' (ModelTx era) [(ModelUTxOId, ModelTxOut era)]
+modelTx_outputs = lens _mtxOutputs (\s b -> s {_mtxOutputs = b})
+{-# INLINE modelTx_outputs #-}
+
+-- focus on a specified output with the given id;
+modelTx_outputAt :: ModelUTxOId -> Lens' (ModelTx era) (Maybe (ModelTxOut era))
+modelTx_outputAt k = modelTx_outputs . lens (List.lookup k) (flip f)
+  where
+    f :: forall a. Maybe a -> [(ModelUTxOId, a)] -> [(ModelUTxOId, a)]
+    f = \case
+      Nothing ->
+        let g [] = []
+            g ((k', v) : rest) = if k == k' then rest else (k', v) : g rest
+         in g
+      Just v' ->
+        let h [] = [(k, v')]
+            h ((k', v) : rest) = if k == k' then (k, v') : rest else (k', v) : h rest
+         in h
+{-# INLINE modelTx_outputAt #-}
+
+modelTx_fee :: Lens' (ModelTx era) (ModelValue 'ExpectAdaOnly era)
+modelTx_fee = lens _mtxFee (\s b -> s {_mtxFee = b})
+{-# INLINE modelTx_fee #-}
+
+modelTx_dCert :: Lens' (ModelTx era) [ModelDCert era]
+modelTx_dCert = lens _mtxDCert (\s b -> s {_mtxDCert = b})
+{-# INLINE modelTx_dCert #-}
+
+modelTx_wdrl :: Lens' (ModelTx era) (Map.Map (ModelAddress (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era))
+modelTx_wdrl = lens _mtxWdrl (\s b -> s {_mtxWdrl = b})
+{-# INLINE modelTx_wdrl #-}
+
+modelTx_mint :: Lens' (ModelTx era) (IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era))
+modelTx_mint = lens _mtxMint (\s b -> s {_mtxMint = b})
+{-# INLINE modelTx_mint #-}
+
+modelTx_collateral :: Lens' (ModelTx era) (IfSupportsPlutus () (Set ModelTxIn) (ScriptFeature era))
+modelTx_collateral = lens _mtxCollateral (\s b -> s {_mtxCollateral = b})
+{-# INLINE modelTx_collateral #-}
+
+data ModelBlock era = ModelBlock
+  { _modelBlock_slot :: SlotNo,
+    _modelBlock_txSeq :: [ModelTx era]
+  }
+  deriving (Show)
+
+modelBlock_slot :: Lens' (ModelBlock era) SlotNo
+modelBlock_slot = lens _modelBlock_slot (\s b -> s {_modelBlock_slot = b})
+{-# INLINE modelBlock_slot #-}
+
+modelBlock_txSeq :: Lens' (ModelBlock era) [ModelTx era]
+modelBlock_txSeq = lens _modelBlock_txSeq (\s b -> s {_modelBlock_txSeq = b})
+{-# INLINE modelBlock_txSeq #-}
 
 newtype ModelPoolId = ModelPoolId {unModelPoolId :: String}
   deriving (Eq, Ord, Show, GHC.IsString)
 
 data ModelBlocksMade = ModelBlocksMade (Map.Map ModelPoolId Rational)
+  deriving (Show)
 
 repartition :: forall a b t. (Traversable t, Integral a, RealFrac b) => a -> t b -> t a
 repartition total weights = State.evalState (traverse step weights) (0 :: b)
@@ -225,12 +301,25 @@ repartition total weights = State.evalState (traverse step weights) (0 :: b)
       State.put (fracValue - fromIntegral value)
       pure value
 
-data ModelEpoch era = ModelEpoch [ModelBlock era] ModelBlocksMade
+data ModelEpoch era = ModelEpoch
+  { _modelEpoch_blocks :: [ModelBlock era],
+    _modelEpoch_blocksMade :: ModelBlocksMade
+  }
+  deriving (Show)
+
+modelEpoch_blocks :: Lens' (ModelEpoch era) [ModelBlock era]
+modelEpoch_blocks = lens _modelEpoch_blocks (\s b -> s {_modelEpoch_blocks = b})
+{-# INLINE modelEpoch_blocks #-}
+
+modelEpoch_blocksMade :: Lens' (ModelEpoch era) ModelBlocksMade
+modelEpoch_blocksMade = lens _modelEpoch_blocksMade (\s b -> s {_modelEpoch_blocksMade = b})
+{-# INLINE modelEpoch_blocksMade #-}
 
 data ModelDelegation era = ModelDelegation
   { _mdDelegator :: !(ModelAddress (ScriptFeature era)),
     _mdDelegatee :: !ModelPoolId
-  } deriving Show
+  }
+  deriving (Show)
 
 instance RequiredFeatures ModelDelegation where
   filterFeatures tag (ModelDelegation a b) =
@@ -245,7 +334,8 @@ data ModelPoolParams era = ModelPoolParams
     _mppMargin :: !UnitInterval,
     _mppRAcnt :: !(ModelAddress (ScriptFeature era)),
     _mppOwners :: ![ModelAddress (ScriptFeature era)]
-  } deriving Show
+  }
+  deriving (Show)
 
 instance RequiredFeatures ModelPoolParams where
   filterFeatures tag (ModelPoolParams poolId pledge cost margin rAcnt owners) =
@@ -260,7 +350,7 @@ data ModelDCert era
   | ModelDelegate (ModelDelegation era)
   | ModelRegisterPool (ModelPoolParams era)
   | ModelRetirePool ModelPoolId EpochNo
-  deriving Show
+  deriving (Show)
 
 instance RequiredFeatures ModelDCert where
   filterFeatures tag = \case

@@ -2,13 +2,18 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.ModelChain.FeatureSet where
 
@@ -109,6 +114,16 @@ data IfSupportsMint a b (valF :: TyValueExpected) where
   SupportsMint :: b -> IfSupportsMint a b 'ExpectAnyOutput
 
 deriving instance (Show a, Show b) => Show (IfSupportsMint a b k)
+
+ifSupportsMint ::
+  KnownValueFeature s =>
+  proxy s ->
+  a ->
+  b ->
+  IfSupportsMint a b s
+ifSupportsMint proxy x y = case reifyValueFeature proxy of
+  ValueFeatureTag_AdaOnly -> NoMintSupport x
+  ValueFeatureTag_AnyOutput -> SupportsMint y
 
 type family ValueFeature (a :: FeatureSet) where
   ValueFeature ('FeatureSet v _) = v

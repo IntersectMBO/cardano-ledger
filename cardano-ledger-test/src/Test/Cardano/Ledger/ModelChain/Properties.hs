@@ -4,6 +4,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -28,6 +29,7 @@ import Data.Typeable
 import GHC.Natural
 import qualified PlutusTx
 import Shelley.Spec.Ledger.API.Genesis
+import Test.Cardano.Ledger.DependGraph (genModel)
 import Test.Cardano.Ledger.Elaborators
 import Test.Cardano.Ledger.Elaborators.Alonzo ()
 import Test.Cardano.Ledger.Elaborators.Shelley ()
@@ -205,6 +207,19 @@ modelTestDelegations proxy needsCollateral stakeAddr =
         testProperty "oneAtATime" $ go oneAtATime
       ]
 
+genModel' ::
+  forall era proxy.
+  ( KnownRequiredFeatures era
+  ) =>
+  proxy era ->
+  Gen
+    ( [(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)],
+      [ModelEpoch AllModelFeatures]
+    )
+genModel' _ = do
+  (a, b) <- genModel @era
+  pure (a, maybe (error "fromJust") id $ traverse (filterFeatures $ FeatureTag ValueFeatureTag_AnyOutput $ ScriptFeatureTag_PlutusV1) b)
+
 -- | some hand-written model based unit tests
 modelUnitTests ::
   forall era proxy.
@@ -219,7 +234,8 @@ modelUnitTests ::
 modelUnitTests proxy =
   testGroup
     (show $ typeRep proxy)
-    [ testProperty "noop" $ testChainModelInteraction proxy [] [],
+    [ testProperty "gen" $ forAll (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era))) $ uncurry $ testChainModelInteraction proxy,
+      testProperty "noop" $ testChainModelInteraction proxy [] [],
       testProperty "noop-2" $
         testChainModelInteraction
           proxy

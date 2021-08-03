@@ -418,11 +418,6 @@ elaboratePoolId _ seed (ModelPoolId _) =
           _tpkKey = poolKey
         }
 
-liftModelAddress ::
-  ModelAddress ('TyScriptFeature 'False 'False) ->
-  ModelAddress a
-liftModelAddress (ModelAddress a) = ModelAddress a
-
 -- | get the StakePool hash for a ModelAddress
 getScriptWitnessFor ::
   forall m era proxy.
@@ -638,7 +633,7 @@ mempoolState = \a2b s ->
 {-# INLINE mempoolState #-}
 
 data ElaborateBlockError era
-  = ElaborateBlockError_ApplyTx (ApplyTxError era)
+  = ElaborateBlockError_ApplyTx ModelTxId (ApplyTxError era)
   | ElaborateBlockError_Fee (ModelValueError Coin)
   | ElaborateBlockError_TxValue (ModelValueError (Core.Value era))
 
@@ -782,15 +777,15 @@ class
         -- tick the model
         lift $ zoom _1 $ State.state $ \nes0 -> ((), applyTick globals nes0 slot)
         txSeq ::
-          [Core.Tx era] <-
-          for mtxSeq $ \tx -> Except.ExceptT $ State.state $ elaborateTx (Proxy :: Proxy era) globals ttl tx
+          [(ModelTxId, Core.Tx era)] <-
+          for mtxSeq $ \tx -> fmap ((,) (_mtxId tx)) $ Except.ExceptT $ State.state $ elaborateTx (Proxy :: Proxy era) globals ttl tx
 
         mempoolEnv <- (\(nes0, _) -> mkMempoolEnv nes0 slot) <$> get
 
         -- apply the transactions.
-        for_ txSeq $ \tx -> do
+        for_ txSeq $ \(mtxid, tx) -> do
           (nes0, ems) <- get
-          (mps', _) <- liftApplyTxError $ applyTx globals mempoolEnv (view mempoolState nes0) tx
+          (mps', _) <- liftApplyTxError mtxid $ applyTx globals mempoolEnv (view mempoolState nes0) tx
 
           let nes1 = set mempoolState mps' nes0
           put (nes1, ems)
@@ -818,13 +813,13 @@ class
       EraElaboratorState era
     )
   elaborateInitialState sg additionalGenesesConfig genesisAccounts = State.runState $ do
-    utxo0 <- fmap Map.fromList $
+    utxo0 <- fmap (Map.fromListWith (\_ _ -> error "addr collision")) $
       for genesisAccounts $ \(oid, mAddr, coins) -> do
         addr <- getAddrFor (Proxy :: Proxy era) mAddr
         eesUTxOs . at oid .= Just (TestUTxOInfo (Left (initialFundsPseudoTxIn addr)) mAddr SNothing)
         pure (addr, coins)
 
-    pure $ initialState sg {sgInitialFunds = Map.unionWith const utxo0 $ sgInitialFunds sg} additionalGenesesConfig
+    pure $ initialState sg {sgInitialFunds = Map.unionWith (error "duplicate genesis accounts") utxo0 $ sgInitialFunds sg} additionalGenesesConfig
 
   makeTimelockScript ::
     proxy era ->
@@ -1076,20 +1071,19 @@ class
 --     <*> pure reward
 
 class AsApplyTxError era e | e -> era where
-  asApplyTxError :: Prism' e (ApplyTxError era)
-
-instance AsApplyTxError era (ApplyTxError era) where asApplyTxError = id
+  asApplyTxError :: Prism' e (ModelTxId, ApplyTxError era)
 
 instance AsApplyTxError era (ElaborateBlockError era) where
-  asApplyTxError = prism ElaborateBlockError_ApplyTx $ \case
-    ElaborateBlockError_ApplyTx x -> Right x
+  asApplyTxError = prism (uncurry ElaborateBlockError_ApplyTx) $ \case
+    ElaborateBlockError_ApplyTx i x -> Right (i, x)
     x -> Left x
 
 liftApplyTxError ::
   (Except.MonadError e m, AsApplyTxError era e) =>
+  ModelTxId ->
   Except.Except (ApplyTxError era) a ->
   m a
-liftApplyTxError = either (Except.throwError . review asApplyTxError) pure . Except.runExcept
+liftApplyTxError txid = either (Except.throwError . review asApplyTxError . (,) txid) pure . Except.runExcept
 
 mkDCerts ::
   (ElaborateEraModel era) =>
