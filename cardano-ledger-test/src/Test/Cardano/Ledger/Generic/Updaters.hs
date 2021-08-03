@@ -569,6 +569,8 @@ data PParamsField era
     MaxBlockExUnits (ExUnits)
   | -- | Max size of a Value in an output
     MaxValSize (Natural)
+  | -- | The scaling percentage of the collateral relative to the fee
+    CollateralPercentage (Natural)
 
 -- | An updater specialized to the Shelley PParams (also used in Allegra and Mary)
 updateShelleyPP :: PP.PParams era -> PParamsField era -> PP.PParams era
@@ -617,6 +619,7 @@ updatePParams (Alonzo _) pp dpp = case dpp of
   MaxValSize n -> pp {Alonzo._maxValSize = n}
   MaxTxExUnits n -> pp {Alonzo._maxTxExUnits = n}
   MaxBlockExUnits n -> pp {Alonzo._maxBlockExUnits = n}
+  CollateralPercentage perc -> pp {Alonzo._collateralPercentage = perc}
   _ -> pp
 
 newPParams :: Proof era -> [PParamsField era] -> Core.PParams era
