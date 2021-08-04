@@ -45,6 +45,7 @@ import QuickCheck.GenT
 import qualified System.Random
 import Test.Cardano.Ledger.Elaborators
 import Test.Cardano.Ledger.Elaborators.Shelley ()
+import Control.Monad.Reader
 import Test.Cardano.Ledger.ModelChain
 import Test.Cardano.Ledger.ModelChain.Address
 import Test.Cardano.Ledger.ModelChain.FeatureSet
@@ -88,23 +89,19 @@ data ActionEnables
 -- dependencies between rewards and delegation.
 newtype ActionGraph = ActionGraph {unActionGraph :: FGL.Gr (EpochNo, Action) ActionEnables}
 
-minEpochs :: EpochNo
-minEpochs = 3
+data GenActionContextF f = GenActionContext
+  { _genActionContexts_epochs :: f EpochNo,
+    _genActionContexts_actionsPerEpoch :: f Int,
+    _genActionContexts_inputs :: f Int
+  }
 
-maxEpochs :: EpochNo
-maxEpochs = 3
+type GenActionContext = GenActionContextF Gen
 
-minActionsPerEpoch :: Int
-minActionsPerEpoch = 64
-
-maxActionsPerEpoch :: Int
-maxActionsPerEpoch = 2 * minActionsPerEpoch
-
-minInputs :: Int
-minInputs = 1
-
-maxInputs :: Int
-maxInputs = 5
+defaultGenActionContext :: GenActionContext
+defaultGenActionContext = GenActionContext
+  (choose (1, 8))
+  (choose (2, 8)) -- 128))
+  (pure 1) -- (choose (1, 5))
 
 data ActionState = ActionState
   { -- | Lazy supply of Ints
@@ -151,7 +148,7 @@ initialActionState = ActionState 1 mempty mempty mempty mempty mempty
 
 testGenActions :: IO (Set ActionId, ActionGraph)
 testGenActions = do
-  s <- generate (execStateT genActions initialActionState)
+  s <- generate (execStateT (runReaderT genActions defaultGenActionContext) initialActionState)
   pure $ (Map.keysSet (_actionState_withDeps s), materializeActionGraph s)
 
 materializeActionGraph :: ActionState -> ActionGraph
@@ -163,7 +160,7 @@ materializeActionGraph s = ActionGraph $
          in (aIn, aid, (epoch, alab), [])
 
 -- TODO: this generation method doesn't produce long-lived UTxOs which are common in a realistic ledger
-outputTo :: (MonadGen m, MonadState ActionState m) => ActionId -> Int -> Int -> Set ActionId -> m ()
+outputTo :: (MonadReader GenActionContext m, MonadGen m, MonadState ActionState m) => ActionId -> Int -> Int -> Set ActionId -> m ()
 outputTo aId minOutputs maxOutputs spenders = do
   -- First decide how many and which actions to enable
   numOutputs <- choose (min minOutputs 0, max maxOutputs (Set.size spenders))
@@ -176,7 +173,7 @@ outputTo aId minOutputs maxOutputs spenders = do
       Nothing -> error "outputTo: impossible empty deps"
       Just deps -> do
         let numInputs = Map.size $ Map.filter (== ActionEnables_Spending) deps
-        r <- choose (minInputs, maxInputs)
+        r <- join $ asks (liftGen . _genActionContexts_inputs)
         case r <= numInputs of
           True -> actionState_needsInputs %= (Set.delete i)
           False -> pure ()
@@ -191,7 +188,7 @@ makeWithdrawal aId epoch withdrawals = do
       actionState_needsDelegate . at epoch . _Just %= Set.delete wId
 
 -- TODO: Some of these actions should not be passed more than one dependent.
-chooseEnablement :: (MonadState ActionState m, MonadGen m) => Set ActionId -> a -> ActionId -> Action -> m ()
+chooseEnablement :: (MonadReader GenActionContext m, MonadState ActionState m, MonadGen m) => Set ActionId -> a -> ActionId -> Action -> m ()
 chooseEnablement targets _ i = \case
   Action_Withdraw -> outputTo i 1 1 targets
   Action_Delegate -> do
@@ -209,7 +206,7 @@ chooseEnablement targets _ i = \case
       actionState_withDeps . at target . _Just . _3 . at i .= Just ActionEnables_StakeForDelegating
     actionState_needsStake %= (`Set.difference` targets)
 
-randomEnablement :: (MonadState ActionState m, MonadGen m) => EpochNo -> ActionId -> Action -> m ()
+randomEnablement :: (MonadReader GenActionContext m, MonadState ActionState m, MonadGen m) => EpochNo -> ActionId -> Action -> m ()
 randomEnablement epoch i = \case
   Action_Withdraw -> do
     -- Withdrawal produces outputs that can be spent
@@ -257,22 +254,21 @@ addAction enablement epoch i a = do
   -- and also chooses to fulfill some dependencies that have been emitted by actions
   -- that happen after it.
   enablement epoch i a
+  actionState_needsInputs %= Set.insert i
   case a of
     Action_Withdraw -> do
       -- Withdrawal can only occur if a delegation was made in the past
       actionState_needsDelegate . at epoch %= Just . maybe (Set.singleton i) (Set.insert i)
-      actionState_needsInputs %= Set.insert i
     Action_Delegate -> do
       -- Delegation needs a staking certificate and registered pool
       actionState_needsStake %= Set.insert i
       actionState_needsPool %= Set.insert i
-    Action_Spend -> do
-      -- Spending requires inputs, which potentially could come from the genesis block
-      actionState_needsInputs %= Set.insert i
+    Action_Spend -> pure ()
+      -- Spending requires inputs, which potentially could come from the genesis block, but that's the only thing it requires.
     Action_RegisterPool -> pure ()
     Action_RegisterStake -> pure ()
 
-fillDependencies :: (MonadState ActionState m, MonadSupply Int m, MonadGen m) => m ()
+fillDependencies :: (MonadReader GenActionContext m, MonadState ActionState m, MonadSupply Int m, MonadGen m) => m ()
 fillDependencies = do
   -- Delegations first
   ds <- uses actionState_needsDelegate fold
@@ -290,9 +286,9 @@ fillDependencies = do
     n <- ActionId <$> supply
     addAction (chooseEnablement (Set.singleton i)) 1 n Action_RegisterStake
 
-genEpoch :: (MonadGen m, MonadSupply Int m, MonadState ActionState m) => EpochNo -> m ()
+genEpoch :: (MonadReader GenActionContext m, MonadGen m, MonadSupply Int m, MonadState ActionState m) => EpochNo -> m ()
 genEpoch epoch = do
-  numActions <- choose (minActionsPerEpoch, maxActionsPerEpoch)
+  numActions <- join $ asks $ liftGen . _genActionContexts_actionsPerEpoch
   replicateM_ numActions $ do
     -- We assign IDs to actions so that the lower IDs depend on
     -- higher IDs.
@@ -301,39 +297,27 @@ genEpoch epoch = do
       frequency
         -- Can't ever withdraw rewards before rewards
         -- could have been generated for a staking pool.
-        [ -- (if epoch > 2 then 1 else 0, pure Action_Withdraw),
+        [ (if epoch > 2 then 1 else 0, pure Action_Withdraw),
           (2, pure Action_RegisterStake),
           (2, pure Action_RegisterPool),
-          (if unActionId i > minActionsPerEpoch then 1 else 0, pure Action_Delegate),
+          (1, pure Action_Delegate),
           (12, pure Action_Spend)
         ]
     addAction randomEnablement epoch i a
   pure ()
 
-genActions :: (MonadGen m, MonadSupply Int m, MonadState ActionState m) => m ()
+genActions :: (MonadReader GenActionContext m, MonadGen m, MonadSupply Int m, MonadState ActionState m) => m ()
 genActions = do
   -- First figure out how many epochs we're aiming for.
   -- We need to do this here because delegation to a pool
   -- has to happen some number of epochs (2) before reward
   -- withdrawal.
-  numEpochs <- choose (minEpochs, maxEpochs)
+  numEpochs <- join $ asks $ liftGen . _genActionContexts_epochs
   forM_ [numEpochs, numEpochs -1 .. 1] genEpoch
   -- After random generation there might still be actions in the graph
   -- that don't have their dependencies met. Fill those in now in the first epoch.
   fillDependencies
   pure ()
-
-minActions :: Int
-minActions = 1
-
-maxActions :: Int
-maxActions = 4
-
-minTxs :: Int
-minTxs = 1
-
-maxTxs :: Int
-maxTxs = 4
 
 minFee :: Integer
 minFee = 100000
@@ -622,12 +606,13 @@ genModel ::
     KnownScriptFeature (ScriptFeature era),
     MonadGen m
   ) =>
+  GenActionContext ->
   m
     ( [(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)],
       [ModelEpoch era]
     )
-genModel = do
-  s1 <- (execStateT genActions initialActionState)
+genModel ctx = do
+  s1 <- (execStateT (runReaderT genActions ctx) initialActionState)
   let actions = (Map.keysSet (_actionState_withDeps s1), materializeActionGraph s1)
   s2 <- (execStateT (uncurry (genTransactions @era) actions) initialTransactionState)
   pure $ fixupDust (Coin 500_000) $ transactionStateToModel s2
@@ -872,6 +857,13 @@ instance MonadGen g => MonadGen (StateT s g) where
   variant n a = StateT $ \s -> variant n (runStateT a s)
   sized f = StateT $ \s -> sized (\i -> runStateT (f i) s)
   resize n a = StateT $ \s -> resize n (runStateT a s)
+  choose = lift . choose
+
+instance MonadGen g => MonadGen (ReaderT r g) where
+  liftGen = lift . liftGen
+  variant n a = ReaderT $ \s -> variant n (runReaderT a s)
+  sized f = ReaderT $ \s -> sized (\i -> runReaderT (f i) s)
+  resize n a = ReaderT $ \s -> resize n (runReaderT a s)
   choose = lift . choose
 
 instance {-# OVERLAPPING #-} (Monad m) => MonadSupply Int (StateT ActionState m) where

@@ -10,6 +10,7 @@
 
 module Test.Cardano.Ledger.ModelChain.Properties where
 
+import Debug.Trace(traceM)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes (boundRational)
 import Cardano.Ledger.Coin
@@ -29,7 +30,7 @@ import Data.Typeable
 import GHC.Natural
 import qualified PlutusTx
 import Shelley.Spec.Ledger.API.Genesis
-import Test.Cardano.Ledger.DependGraph (genModel)
+import Test.Cardano.Ledger.DependGraph (genModel, defaultGenActionContext)
 import Test.Cardano.Ledger.Elaborators
 import Test.Cardano.Ledger.Elaborators.Alonzo ()
 import Test.Cardano.Ledger.Elaborators.Shelley ()
@@ -217,7 +218,7 @@ genModel' ::
       [ModelEpoch AllModelFeatures]
     )
 genModel' _ = do
-  (a, b) <- genModel @era
+  (a, b) <- genModel @era defaultGenActionContext
   pure (a, maybe (error "fromJust") id $ traverse (filterFeatures $ FeatureTag ValueFeatureTag_AnyOutput $ ScriptFeatureTag_PlutusV1) b)
 
 -- | some hand-written model based unit tests
@@ -234,7 +235,10 @@ modelUnitTests ::
 modelUnitTests proxy =
   testGroup
     (show $ typeRep proxy)
-    [ testProperty "gen" $ forAll (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era))) $ uncurry $ testChainModelInteraction proxy,
+    [ testProperty "gen" $ forAll (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era))) $ \(a, b) -> conjoin
+      [ testChainModelInteraction proxy a b
+      ]
+      ,
       testProperty "noop" $ testChainModelInteraction proxy [] [],
       testProperty "noop-2" $
         testChainModelInteraction
