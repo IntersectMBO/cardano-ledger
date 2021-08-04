@@ -41,7 +41,7 @@ import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (deepseq)
-import Data.ByteString as BS (ByteString, length)
+import Data.ByteString as BS (length)
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
@@ -97,6 +97,7 @@ import qualified Plutus.V1.Ledger.Api as P
     validateScript,
   )
 import Plutus.V1.Ledger.Contexts ()
+import PlutusTx.Builtins (BuiltinByteString, toBuiltin)
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
@@ -111,6 +112,9 @@ import Shelley.Spec.Ledger.TxBody
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
+shortToBuiltinBS :: ShortByteString -> BuiltinByteString
+shortToBuiltinBS = toBuiltin . fromShort
+
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
 
@@ -122,23 +126,23 @@ transDataHash' :: (DataHash c) -> P.DatumHash
 transDataHash' safe = (P.DatumHash (transSafeHash safe))
 
 transKeyHash :: KeyHash d c -> P.PubKeyHash
-transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (fromShort h)
+transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (shortToBuiltinBS h)
 
 transScriptHash :: ScriptHash i -> P.ValidatorHash
-transScriptHash (ScriptHash (UnsafeHash h)) = P.ValidatorHash (fromShort h)
+transScriptHash (ScriptHash (UnsafeHash h)) = P.ValidatorHash (shortToBuiltinBS h)
 
-transSafeHash :: SafeHash c i -> BS.ByteString
-transSafeHash safe = case extractHash safe of UnsafeHash b -> fromShort b
+transSafeHash :: SafeHash c i -> BuiltinByteString
+transSafeHash safe = case extractHash safe of UnsafeHash b -> shortToBuiltinBS b
 
-transHash :: Hash h a -> BS.ByteString
-transHash (UnsafeHash h) = fromShort h
+transHash :: Hash h a -> BuiltinByteString
+transHash (UnsafeHash h) = shortToBuiltinBS h
 
 txInfoId :: TxId era -> P.TxId
 txInfoId (TxId safe) = P.TxId (transSafeHash safe)
 
 transStakeCred :: Credential keyrole crypto -> P.Credential
-transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (fromShort kh))
-transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (fromShort kh))
+transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (shortToBuiltinBS kh))
+transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (shortToBuiltinBS kh))
 
 transStakeReference :: StakeReference crypto -> Maybe P.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (P.StakingHash (transStakeCred cred))
@@ -146,8 +150,8 @@ transStakeReference (StakeRefPtr (Ptr (SlotNo slot) i1 i2)) = Just (P.StakingPtr
 transStakeReference StakeRefNull = Nothing
 
 transCred :: Credential keyrole crypto -> P.Credential
-transCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (fromShort kh))
-transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (fromShort kh))
+transCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (shortToBuiltinBS kh))
+transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (shortToBuiltinBS kh))
 
 transAddr :: Addr crypto -> Maybe P.Address
 transAddr (Addr _net object stake) = Just (P.Address (transCred object) (transStakeReference stake))
@@ -234,10 +238,10 @@ txInfoOut (Alonzo.TxOut addr val datahash) =
 -- translate Values
 
 transPolicyID :: Mary.PolicyID crypto -> P.CurrencySymbol
-transPolicyID (Mary.PolicyID (ScriptHash (UnsafeHash x))) = P.CurrencySymbol (fromShort x)
+transPolicyID (Mary.PolicyID (ScriptHash (UnsafeHash x))) = P.CurrencySymbol (shortToBuiltinBS x)
 
 transAssetName :: Mary.AssetName -> P.TokenName
-transAssetName (Mary.AssetName bs) = P.TokenName bs
+transAssetName (Mary.AssetName bs) = P.TokenName (toBuiltin bs)
 
 transValue :: forall c. Mary.Value c -> P.Value
 transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp
@@ -276,7 +280,7 @@ transWdrl (Wdrl mp) = Map.foldlWithKey' accum Map.empty mp
     accum ans (RewardAcnt _network cred) (Coin n) = Map.insert (P.StakingHash (transStakeCred cred)) n ans
 
 getWitVKeyHash :: (CC.Crypto crypto, Typeable kr) => WitVKey kr crypto -> P.PubKeyHash
-getWitVKeyHash = P.PubKeyHash . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash x) -> x) . hashKey . (\(WitVKey x _) -> x)
+getWitVKeyHash = P.PubKeyHash . shortToBuiltinBS . (\(UnsafeHash x) -> x) . (\(KeyHash x) -> x) . hashKey . (\(WitVKey x _) -> x)
 
 transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
 transDataPair (x, y) = (transDataHash' x, P.Datum (P.dataToBuiltinData (getPlutusData y)))

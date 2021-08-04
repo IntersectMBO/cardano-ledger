@@ -69,8 +69,8 @@ source-repository-package
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/plutus
-  tag: 985bd37845cd0996fc38eaccd1db1a9ad3edab3a
-  --sha256: 01rar14075b1privhpyhch1qvv1j7d36nbv1frha864w6pr8zmkx
+  tag: ec392d428037bf50008523f6efd5575639adda0f
+  --sha256: 1889ldkygkhwk91mzbaipzilw8f368v9q0jrkhd72sxfjr7hgmjh
   subdir:
     plutus-ledger-api
     plutus-tx
@@ -100,9 +100,3 @@ constraints:
   -- constraint from dependent-sum-template (which is the library we actually use).
   , dependent-sum > 0.6.2.0
 
--- Drops an instance breaking our code. Should be released to Hackage eventually.
-source-repository-package
-  type: git
-  location: https://github.com/Quid2/flat.git
-  tag: 95e5d7488451e43062ca84d5376b3adcc465f1cd
-  --sha256: 06l31x3y93rjpryvlxnpsyq2zyxvb0z6lik6yq2fvh36i5zwvwa3
