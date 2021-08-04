@@ -99,7 +99,7 @@ type GenActionContext = GenActionContextF Gen
 
 defaultGenActionContext :: GenActionContext
 defaultGenActionContext = GenActionContext
-  (choose (1, 8))
+  (choose (1, 5))
   (choose (2, 8)) -- 128))
   (pure 1) -- (choose (1, 5))
 

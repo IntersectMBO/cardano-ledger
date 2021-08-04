@@ -164,7 +164,10 @@ instance RequiredFeatures ModelEpoch where
       <*> pure x
 
 newtype ModelTxId = ModelTxId {unModelTxId :: Integer}
-  deriving (Eq, Ord, Show, Num)
+  deriving (Eq, Ord, Num)
+
+instance Show ModelTxId where
+  showsPrec n (ModelTxId x) = showsPrec n x
 
 type ModelTxIn = ModelUTxOId
 
@@ -207,7 +210,10 @@ modelTxOut_data = lens _mtxo_data (\s b -> s {_mtxo_data = b})
 {-# INLINE modelTxOut_data #-}
 
 newtype ModelUTxOId = ModelUTxOId {unModelUTxOId :: Integer}
-  deriving (Eq, Ord, Show, Num, Enum)
+  deriving (Eq, Ord, Num, Enum)
+
+instance Show ModelUTxOId where
+  showsPrec n (ModelUTxOId x) = showsPrec n x
 
 data ModelTx (era :: FeatureSet) = ModelTx
   { _mtxId :: !ModelTxId,
@@ -284,7 +290,10 @@ modelBlock_txSeq = lens _modelBlock_txSeq (\s b -> s {_modelBlock_txSeq = b})
 {-# INLINE modelBlock_txSeq #-}
 
 newtype ModelPoolId = ModelPoolId {unModelPoolId :: String}
-  deriving (Eq, Ord, Show, GHC.IsString)
+  deriving (Eq, Ord, GHC.IsString)
+
+instance Show ModelPoolId where
+  showsPrec n (ModelPoolId x) = showsPrec n x
 
 data ModelBlocksMade = ModelBlocksMade (Map.Map ModelPoolId Rational)
   deriving (Show)

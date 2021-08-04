@@ -43,6 +43,7 @@ import Test.Cardano.Ledger.ModelChain.Value
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty
 import Test.Tasty.QuickCheck
+import Data.List (tails)
 
 modelMACoin ::
   (ValueFeature era ~ 'ExpectAnyOutput) =>
@@ -221,6 +222,12 @@ genModel' _ = do
   (a, b) <- genModel @era defaultGenActionContext
   pure (a, maybe (error "fromJust") id $ traverse (filterFeatures $ FeatureTag ValueFeatureTag_AnyOutput $ ScriptFeatureTag_PlutusV1) b)
 
+shrinkModelSimple
+  :: forall a.
+      (a, [ModelEpoch AllModelFeatures])
+  -> [(a, [ModelEpoch AllModelFeatures])]
+shrinkModelSimple (genesis, epochs) = (,) genesis <$> reverse (drop 1 $ tails epochs)
+--
 -- | some hand-written model based unit tests
 modelUnitTests ::
   forall era proxy.
@@ -235,7 +242,7 @@ modelUnitTests ::
 modelUnitTests proxy =
   testGroup
     (show $ typeRep proxy)
-    [ testProperty "gen" $ forAll (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era))) $ \(a, b) -> conjoin
+    [ testProperty "gen" $ forAllShrink (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era))) shrinkModelSimple $ \(a, b) -> conjoin
       [ testChainModelInteraction proxy a b
       ]
       ,
