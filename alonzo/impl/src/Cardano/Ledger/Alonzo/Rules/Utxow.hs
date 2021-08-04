@@ -18,11 +18,7 @@ import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams)
-import Cardano.Ledger.Alonzo.PlutusScriptApi
-  ( checkScriptData,
-    language,
-    scriptsNeeded,
-  )
+import Cardano.Ledger.Alonzo.PlutusScriptApi (language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
@@ -50,7 +46,6 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
-import Control.DeepSeq (NFData (..))
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
@@ -100,7 +95,7 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..), txinLookup)
 --   failure type of the Shelley Era, as they share some failure modes.
 data AlonzoPredFail era
   = WrappedShelleyEraFailure !(UtxowPredicateFailure era)
-  | UnRedeemableScripts ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
+  | MissingRedeemers ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
   | MissingRequiredDatums
       !(Set (DataHash (Crypto era))) -- Set of missing data hashes
       !(Set (DataHash (Crypto era))) -- Set of received data hashes
@@ -158,7 +153,7 @@ encodePredFail ::
   AlonzoPredFail era ->
   Encode 'Open (AlonzoPredFail era)
 encodePredFail (WrappedShelleyEraFailure x) = Sum WrappedShelleyEraFailure 0 !> E toCBOR x
-encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
+encodePredFail (MissingRedeemers x) = Sum MissingRedeemers 1 !> To x
 encodePredFail (MissingRequiredDatums x y) = Sum MissingRequiredDatums 2 !> To x !> To y
 encodePredFail (NonOutputSupplimentaryDatums x y) = Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
@@ -185,7 +180,7 @@ decodePredFail ::
   Word ->
   Decode 'Open (AlonzoPredFail era)
 decodePredFail 0 = SumD WrappedShelleyEraFailure <! D fromCBOR
-decodePredFail 1 = SumD UnRedeemableScripts <! From
+decodePredFail 1 = SumD MissingRedeemers <! From
 decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
 decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
@@ -301,20 +296,23 @@ alonzoStyleWitness = do
       Set.null notOkSupplimentalDHs
         ?! NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs
 
-  {-  ∀ sph ∈ scriptsNeeded utxo tx, checkScriptData tx utxo  ph  -}
-  let sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-      sphs = scriptsNeeded utxo tx
-      unredeemed =
-        -- A script is unredeemed, is we can't find the Data that it requires to execute.
-        let ans = (filter (not . checkScriptData tx) sphs)
-         in seq (rnf ans) ans
-  null unredeemed ?! UnRedeemableScripts unredeemed
-
-  {-  || { (sp, h) ∈ \fun{scriptsNeeded} utxo tx | h\mapsto s ∈ txscripts txw, s ∈ ScriptPhTwo } || = || fun{txrdmrs} tx ||  -}
-  let rdptrs = Set.fromList [el | (sp, _) <- sphs, SJust el <- [rdptr @era txbody sp]]
-      extraRdmrs :: [RdmrPtr]
-      extraRdmrs = Map.keys $ Map.withoutKeys (unRedeemers $ txrdmrs $ wits tx) rdptrs
+  {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
+                           h \mapsto s ∈ txscripts txw, s ∈ Scriptph2}     -}
+  let redeemersNeeded =
+        [ (rp, (sp, sh))
+          | (sp, sh) <- scriptsNeeded utxo tx,
+            SJust rp <- [rdptr @era txbody sp],
+            Just script <- [Map.lookup sh (getField @"scriptWits" tx)],
+            (not . isNativeScript @era) script
+        ]
+      (extraRdmrs, missingRdmrs) =
+        extSymmetricDifference
+          (Map.keys $ unRedeemers $ txrdmrs $ wits tx)
+          id
+          redeemersNeeded
+          fst
   null extraRdmrs ?! ExtraRedeemers extraRdmrs
+  null missingRdmrs ?! MissingRedeemers (map snd missingRdmrs)
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded includes the reqSignerHashes in the union   -}
@@ -425,6 +423,13 @@ witsVKeyNeeded utxo' tx genDelegs =
               getField @"update" txbody
           )
           genDelegs
+
+extSymmetricDifference :: (Ord k) => [a] -> (a -> k) -> [b] -> (b -> k) -> ([a], [b])
+extSymmetricDifference as fa bs fb = (extraA, extraB)
+  where
+    intersection = (Set.fromList $ map fa as) `Set.intersection` (Set.fromList $ map fb bs)
+    extraA = filter (\x -> not $ fa x `Set.member` intersection) as
+    extraB = filter (\x -> not $ fb x `Set.member` intersection) bs
 
 -- ====================================
 -- Make the STS instance
