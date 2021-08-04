@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
     ScriptPurpose (..),
     ValidatedTx (..),
-    hashWitnessPPData,
+    hashScriptIntegrity,
     minfee,
     rdptr,
     totExUnits,
@@ -257,8 +257,9 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs wdrls fee up
         -- reqSignerHashes
         Set.empty -- TODO do something better here
         minted2
-        -- wppHash starts out with empty Redeemers, as Remdeemers are added it is recomputed in updateEraTxBody
-        (hashWitnessPPData pparams (langsUsed @(AlonzoEra c) Map.empty) (Redeemers Map.empty) (TxDats Map.empty))
+        -- scriptIntegrityHash starts out with empty Redeemers,
+        -- as Remdeemers are added it is recomputed in updateEraTxBody
+        (hashScriptIntegrity pparams (langsUsed @(AlonzoEra c) Map.empty) (Redeemers Map.empty) (TxDats Map.empty))
         auxDHash
         netid,
       (List.map TimelockScript scriptsFromPolicies <> plutusScripts)
@@ -329,9 +330,9 @@ instance Mock c => EraGen (AlonzoEra c) where
             collateral = (collateral txb) <> Set.filter (okAsCollateral utxo) txin, -- In Alonzo, extra inputs also are added to collateral
             txfee = coinx,
             outputs = (outputs txb) :|> txout,
-            -- The witnesses may have changed, recompute the wpphash.
-            wppHash =
-              hashWitnessPPData
+            -- The witnesses may have changed, recompute the scriptIntegrityHash.
+            scriptIntegrityHash =
+              hashScriptIntegrity
                 pp
                 (langsUsed @(AlonzoEra c) (getField @"txscripts" witnesses))
                 (getField @"txrdmrs" witnesses)

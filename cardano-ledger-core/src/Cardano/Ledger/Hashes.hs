@@ -19,9 +19,12 @@ module Cardano.Ledger.Hashes
     EraIndependentScriptData,
     EraIndependentAuxiliaryData,
     EraIndependentPParamView,
-    EraIndependentWitnessPPData,
+    EraIndependentScriptIntegrity,
     -- $scriptHash
     ScriptHash (..),
+
+    -- * deprecated
+    EraIndependentWitnessPPData,
   )
 where
 
@@ -59,7 +62,11 @@ data EraIndependentScriptData
 
 data EraIndependentPParamView
 
-data EraIndependentWitnessPPData
+data EraIndependentScriptIntegrity
+
+{-# DEPRECATED EraIndependentWitnessPPData "Use EraIndependentScriptIntegrity instead" #-}
+
+type EraIndependentWitnessPPData = EraIndependentScriptIntegrity
 
 -- $scriptHash
 

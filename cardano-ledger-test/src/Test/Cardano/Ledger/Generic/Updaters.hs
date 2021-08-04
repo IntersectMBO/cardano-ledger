@@ -34,7 +34,7 @@ import Cardano.Ledger.Alonzo.Scripts
     alwaysFails,
     alwaysSucceeds,
   )
-import Cardano.Ledger.Alonzo.Tx (hashWitnessPPData)
+import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..), unTxDats)
@@ -417,7 +417,7 @@ data TxBodyField era
   | Update [PP.Update era] -- 0 or 1 element, represents Maybe type
   | ReqSignerHashes [KeyHash 'Witness (Crypto era)]
   | Mint (Core.Value era)
-  | WppHash [Alonzo.WitnessPPDataHash (Crypto era)] -- 0 or 1 element, represents Maybe type
+  | WppHash [Alonzo.ScriptIntegrityHash (Crypto era)] -- 0 or 1 element, represents Maybe type
   | AdHash [AuxiliaryDataHash (Crypto era)] -- 0 or 1 element, represents Maybe type
   | Txnetworkid (StrictMaybe Network)
 
@@ -469,7 +469,7 @@ updateTxBody p (Alonzo _) tx dt = case dt of
   (Update up) -> tx {Alonzo.txUpdates = applySMaybe p (Alonzo.txUpdates tx) up}
   (ReqSignerHashes hs) -> tx {Alonzo.reqSignerHashes = applyMerge p (Alonzo.reqSignerHashes tx) hs}
   (Mint v) -> tx {Alonzo.mint = v}
-  (WppHash h) -> tx {Alonzo.wppHash = applySMaybe p (Alonzo.wppHash tx) h}
+  (WppHash h) -> tx {Alonzo.scriptIntegrityHash = applySMaybe p (Alonzo.scriptIntegrityHash tx) h}
   (AdHash hs) -> tx {Alonzo.adHash = applySMaybe p (Alonzo.adHash tx) hs}
   (Txnetworkid i) -> tx {Alonzo.txnetworkid = i}
 
@@ -684,18 +684,18 @@ initialTxOut wit@(Alonzo _) = Alonzo.TxOut (initialAddr wit) (inject (Coin 0)) S
 -- ====================================
 
 -- | This only make sense in the Alonzo era, all other Eras return Nothing
-newWppHash ::
+newScriptIntegrityHash ::
   Proof era ->
   Core.PParams era ->
   [Language] ->
   Redeemers era ->
   TxDats era ->
-  [Alonzo.WitnessPPDataHash (Crypto era)] -- always of length 0 or 1
-newWppHash (Alonzo _) pp ls rds dats =
-  case (hashWitnessPPData pp (Set.fromList ls) rds dats) of
+  [Alonzo.ScriptIntegrityHash (Crypto era)] -- always of length 0 or 1
+newScriptIntegrityHash (Alonzo _) pp ls rds dats =
+  case (hashScriptIntegrity pp (Set.fromList ls) rds dats) of
     SJust x -> [x]
     SNothing -> []
-newWppHash _wit _pp _ls _rds _dats = []
+newScriptIntegrityHash _wit _pp _ls _rds _dats = []
 
 vkey :: Era era => Int -> Proof era -> VKey 'Witness (Crypto era)
 vkey n _w = theVKey n
