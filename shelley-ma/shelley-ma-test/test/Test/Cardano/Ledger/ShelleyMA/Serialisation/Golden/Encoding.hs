@@ -334,6 +334,12 @@ goldenEncodingTestsMary =
                 . TkInteger 2
                 . TkMapLen 2
             )
+            <> S policyID2
+            <> T
+              ( TkMapLen 1
+                  . TkBytes assetName3
+                  . TkInteger 19
+              )
             <> S policyID1
             <> T
               ( TkMapLen 2
@@ -341,12 +347,6 @@ goldenEncodingTestsMary =
                   . TkInteger 13
                   . TkBytes assetName2
                   . TkInteger 17
-              )
-            <> S policyID2
-            <> T
-              ( TkMapLen 1
-                  . TkBytes assetName3
-                  . TkInteger 19
               )
         ),
       checkEncodingCBOR

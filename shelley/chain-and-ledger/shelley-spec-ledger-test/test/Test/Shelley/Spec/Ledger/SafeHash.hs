@@ -9,12 +9,6 @@
 
 module Test.Shelley.Spec.Ledger.SafeHash (safeHashTest) where
 
--- Crypto imports
-import Cardano.Crypto.DSIGN (Ed25519DSIGN, MockDSIGN)
-import Cardano.Crypto.Hash (Blake2b_224, Blake2b_256, MD5Prefix)
-import Cardano.Crypto.KES (MockKES, Sum6KES)
-import Cardano.Crypto.VRF.Praos
-import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.SafeHash
 -- ByteString imports
 
@@ -24,34 +18,9 @@ import Data.ByteString.Short (ShortByteString, toShort)
 
 import Data.Proxy
 import Data.String (fromString)
-import Shelley.Spec.Ledger.API (PraosCrypto)
-import Test.Cardano.Crypto.VRF.Fake (FakeVRF)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Tasty
 import Test.Tasty.HUnit
-
--- =======================================================
-
-data TestCrypto
-
-instance CryptoClass.Crypto TestCrypto where
-  type HASH TestCrypto = MD5Prefix 10
-  type ADDRHASH TestCrypto = MD5Prefix 8
-  type DSIGN TestCrypto = MockDSIGN
-  type KES TestCrypto = MockKES 10
-  type VRF TestCrypto = FakeVRF
-
-instance PraosCrypto TestCrypto
-
-data StandardCrypto
-
-instance CryptoClass.Crypto StandardCrypto where
-  type DSIGN StandardCrypto = Ed25519DSIGN
-  type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256
-  type VRF StandardCrypto = PraosVRF
-  type HASH StandardCrypto = Blake2b_256
-  type ADDRHASH StandardCrypto = Blake2b_224
-
-instance PraosCrypto StandardCrypto
 
 -- =========================
 -- Some examples

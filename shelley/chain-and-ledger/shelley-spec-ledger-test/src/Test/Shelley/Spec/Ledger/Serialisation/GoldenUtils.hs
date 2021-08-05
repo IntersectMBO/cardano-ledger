@@ -30,13 +30,16 @@ import Cardano.Binary
 import Cardano.Ledger.Serialization (ToCBORGroup (..))
 import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
-import qualified Data.ByteString.Base16.Lazy as Base16
+import Codec.CBOR.Term (decodeTerm)
+import Control.Exception (throwIO)
+import Control.Monad (unless)
 import Data.String (fromString)
+import GHC.Stack
 import Test.Tasty (TestTree)
-import Test.Tasty.HUnit (Assertion, assertEqual, assertFailure, testCase, (@?=))
+import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
 roundTrip ::
-  (Show a, Eq a) =>
+  (HasCallStack, Show a, Eq a) =>
   (a -> Encoding) ->
   (LByteString -> Either DecoderError a) ->
   a ->
@@ -47,7 +50,7 @@ roundTrip encode decode x =
     Right y -> y @?= x
 
 checkEncoding ::
-  (Show a, Eq a) =>
+  (HasCallStack, Show a, Eq a) =>
   (a -> Encoding) ->
   (LByteString -> Either DecoderError a) ->
   String ->
@@ -55,17 +58,27 @@ checkEncoding ::
   ToTokens ->
   TestTree
 checkEncoding encode decode name x t =
-  testCase testName $
-    assertEqual
-      testName
-      (Base16.encode $ serialize t)
-      (Base16.encode . serializeEncoding . encode $ x)
-      >> roundTrip encode decode x
+  testCase testName $ do
+    unless (expectedBinary == actualBinary) $ do
+      expectedTerms <- getTerms "expected" expectedBinary
+      actualTerms <- getTerms "actual" actualBinary
+      assertFailure $
+        unlines
+          [ "Serialization did not match: ",
+            "expected = ",
+            show expectedTerms,
+            "actual = ",
+            show actualTerms
+          ]
+    roundTrip encode decode x
   where
+    getTerms lbl = either throwIO pure . decodeFullDecoder lbl decodeTerm
+    expectedBinary = serialize t
+    actualBinary = serializeEncoding $ encode x
     testName = "golden_serialize_" <> name
 
 checkEncodingCBOR ::
-  (FromCBOR a, ToCBOR a, Show a, Eq a) =>
+  (HasCallStack, FromCBOR a, ToCBOR a, Show a, Eq a) =>
   String ->
   a ->
   ToTokens ->
@@ -75,7 +88,7 @@ checkEncodingCBOR name x t =
    in checkEncoding toCBOR d name x t
 
 checkEncodingCBORAnnotated ::
-  (FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
+  (HasCallStack, FromCBOR (Annotator a), ToCBOR a, Show a, Eq a) =>
   String ->
   a ->
   ToTokens ->
