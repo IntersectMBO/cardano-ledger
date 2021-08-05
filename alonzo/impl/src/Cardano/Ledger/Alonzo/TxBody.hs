@@ -32,7 +32,7 @@ module Cardano.Ledger.Alonzo.TxBody
         txUpdates,
         reqSignerHashes,
         mint,
-        wppHash,
+        scriptIntegrityHash,
         adHash,
         txnetworkid
       ),
@@ -46,14 +46,17 @@ module Cardano.Ledger.Alonzo.TxBody
     update',
     reqSignerHashes',
     mint',
-    wppHash',
+    scriptIntegrityHash',
     adHash',
     txnetworkid',
     AlonzoBody,
-    EraIndependentWitnessPPData,
-    WitnessPPDataHash,
+    EraIndependentScriptIntegrity,
+    ScriptIntegrityHash,
     ppTxBody,
     ppTxOut,
+
+    -- * deprecated
+    WitnessPPDataHash,
   )
 where
 
@@ -79,8 +82,8 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
-  ( EraIndependentTxBody,
-    EraIndependentWitnessPPData,
+  ( EraIndependentScriptIntegrity,
+    EraIndependentTxBody,
   )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Mary.Value (Value (..), policies, policyID, ppValue)
@@ -194,7 +197,11 @@ pattern TxOut addr vl dh <-
 
 -- ======================================
 
-type WitnessPPDataHash crypto = SafeHash crypto EraIndependentWitnessPPData
+type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
+
+{-# DEPRECATED WitnessPPDataHash "Use ScriptIntegrityHash instead" #-}
+
+type WitnessPPDataHash crypto = SafeHash crypto EraIndependentScriptIntegrity
 
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (Crypto era))),
@@ -210,7 +217,7 @@ data TxBodyRaw era = TxBodyRaw
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
     -- Operations on the TxBody in the AlonzoEra depend upon this.
-    _wppHash :: !(StrictMaybe (WitnessPPDataHash (Crypto era))),
+    _scriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (Crypto era))),
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     _txnetworkid :: !(StrictMaybe Network)
   }
@@ -296,7 +303,7 @@ pattern TxBody ::
   StrictMaybe (Update era) ->
   Set (KeyHash 'Witness (Crypto era)) ->
   Value (Crypto era) ->
-  StrictMaybe (WitnessPPDataHash (Crypto era)) ->
+  StrictMaybe (ScriptIntegrityHash (Crypto era)) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   StrictMaybe (Network) ->
   TxBody era
@@ -311,7 +318,7 @@ pattern TxBody
     txUpdates,
     reqSignerHashes,
     mint,
-    wppHash,
+    scriptIntegrityHash,
     adHash,
     txnetworkid
   } <-
@@ -328,7 +335,7 @@ pattern TxBody
             _update = txUpdates,
             _reqSignerHashes = reqSignerHashes,
             _mint = mint,
-            _wppHash = wppHash,
+            _scriptIntegrityHash = scriptIntegrityHash,
             _adHash = adHash,
             _txnetworkid = txnetworkid
           }
@@ -346,7 +353,7 @@ pattern TxBody
       updateX
       reqSignerHashesX
       mintX
-      wppHashX
+      scriptIntegrityHashX
       adHashX
       txnetworkidX =
         TxBodyConstr $
@@ -363,7 +370,7 @@ pattern TxBody
                   updateX
                   reqSignerHashesX
                   mintX
-                  wppHashX
+                  scriptIntegrityHashX
                   adHashX
                   txnetworkidX
             )
@@ -389,7 +396,7 @@ update' :: TxBody era -> StrictMaybe (Update era)
 reqSignerHashes' :: TxBody era -> Set (KeyHash 'Witness (Crypto era))
 adHash' :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
 mint' :: TxBody era -> Value (Crypto era)
-wppHash' :: TxBody era -> StrictMaybe (WitnessPPDataHash (Crypto era))
+scriptIntegrityHash' :: TxBody era -> StrictMaybe (ScriptIntegrityHash (Crypto era))
 inputs' (TxBodyConstr (Memo raw _)) = _inputs raw
 
 txnetworkid' :: TxBody era -> StrictMaybe Network
@@ -414,7 +421,7 @@ adHash' (TxBodyConstr (Memo raw _)) = _adHash raw
 
 mint' (TxBodyConstr (Memo raw _)) = _mint raw
 
-wppHash' (TxBodyConstr (Memo raw _)) = _wppHash raw
+scriptIntegrityHash' (TxBodyConstr (Memo raw _)) = _scriptIntegrityHash raw
 
 txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 
@@ -491,7 +498,7 @@ encodeTxBodyRaw
       _update,
       _reqSignerHashes,
       _mint,
-      _wppHash,
+      _scriptIntegrityHash,
       _adHash,
       _txnetworkid
     } =
@@ -510,7 +517,7 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 8 bot
       !> Key 14 (E encodeFoldable _reqSignerHashes)
       !> Omit isZero (Key 9 (E encodeMint _mint))
-      !> encodeKeyedStrictMaybe 11 _wppHash
+      !> encodeKeyedStrictMaybe 11 _scriptIntegrityHash
       !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 15 _txnetworkid
     where
@@ -589,7 +596,7 @@ instance
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
-      bodyFields 11 = field (\x tx -> tx {_wppHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 11 = field (\x tx -> tx {_scriptIntegrityHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 14 = field (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
       bodyFields 15 = field (\x tx -> tx {_txnetworkid = x}) (D (SJust <$> fromCBOR))
       bodyFields n = field (\_ t -> t) (Invalid n)
@@ -659,11 +666,18 @@ instance
   where
   getField (TxBodyConstr (Memo m _)) = _adHash m
 
+-- | TODO deprecated
 instance
   c ~ (Crypto era) =>
-  HasField "wppHash" (TxBody era) (StrictMaybe (WitnessPPDataHash c))
+  HasField "wppHash" (TxBody era) (StrictMaybe (ScriptIntegrityHash c))
   where
-  getField (TxBodyConstr (Memo m _)) = _wppHash m
+  getField (TxBodyConstr (Memo m _)) = _scriptIntegrityHash m
+
+instance
+  c ~ (Crypto era) =>
+  HasField "scriptIntegrityHash" (TxBody era) (StrictMaybe (ScriptIntegrityHash c))
+  where
+  getField (TxBodyConstr (Memo m _)) = _scriptIntegrityHash m
 
 instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
   getField (TxBodyConstr (Memo m _)) = _txnetworkid m
@@ -713,7 +727,7 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u rsh mnt sdh axh ni
       ("update", ppStrictMaybe ppUpdate u),
       ("reqSignerHashes", ppSet ppKeyHash rsh),
       ("mint", ppValue mnt),
-      ("wppHash", ppStrictMaybe ppSafeHash sdh),
+      ("scriptIntegrityHash", ppStrictMaybe ppSafeHash sdh),
       ("adHash", ppStrictMaybe ppAuxDataHash axh),
       ("txnetworkid", ppStrictMaybe ppNetwork ni)
     ]

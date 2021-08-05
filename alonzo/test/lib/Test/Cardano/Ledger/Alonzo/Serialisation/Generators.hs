@@ -306,9 +306,9 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
         Certifying <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (WitnessPPData (AlonzoEra c)) where
+instance Mock c => Arbitrary (ScriptIntegrity (AlonzoEra c)) where
   arbitrary =
-    WitnessPPData
+    ScriptIntegrity
       <$> arbitrary
       <*> genData
       <*> (Set.singleton <$> (getLanguageView <$> arbitrary <*> arbitrary))

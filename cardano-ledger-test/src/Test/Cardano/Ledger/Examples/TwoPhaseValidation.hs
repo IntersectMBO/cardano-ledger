@@ -44,7 +44,7 @@ import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
     ScriptPurpose (..),
     ValidatedTx (..),
-    hashWitnessPPData,
+    hashScriptIntegrity,
     minfee,
   )
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
@@ -351,7 +351,7 @@ extraRedeemersBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] extraRedeemersEx txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] extraRedeemersEx txDatsExample1)
     ]
 
 extraRedeemersTx ::
@@ -386,7 +386,7 @@ validatingBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 txDatsExample1)
     ]
 
 type SignBody era =
@@ -470,7 +470,7 @@ notValidatingBody pf =
       Collateral [TxIn genesisId 12],
       Outputs [outEx2 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemers txDatsExample2)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemers txDatsExample2)
     ]
 
 notValidatingTx ::
@@ -529,7 +529,7 @@ validatingBodyWithCert pf =
       Outputs [outEx3 pf],
       Certs [DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx3 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx3 mempty)
     ]
 
 validatingTxWithCert ::
@@ -588,7 +588,7 @@ notValidatingBodyWithCert pf =
       Outputs [outEx4 pf],
       Certs [DCertDeleg (DeRegKey $ scriptStakeCredFail pf)],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx4 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx4 mempty)
     ]
 
 notValidatingTxWithCert ::
@@ -649,7 +649,7 @@ validatingBodyWithWithdrawal pf =
               (RewardAcnt Testnet (scriptStakeCredSuceed pf))
               (Coin 1000)
         ),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx5 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx5 mempty)
     ]
 
 validatingTxWithWithdrawal ::
@@ -710,7 +710,7 @@ notValidatingBodyWithWithdrawal pf =
               (RewardAcnt Testnet (scriptStakeCredFail pf))
               (Coin 1000)
         ),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx6 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx6 mempty)
     ]
 
 notValidatingTxWithWithdrawal ::
@@ -769,7 +769,7 @@ validatingBodyWithMint pf =
       Outputs [outEx7 pf],
       Txfee (Coin 5),
       Mint (mintEx7 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx7 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx7 mempty)
     ]
 
 validatingTxWithMint ::
@@ -830,7 +830,7 @@ notValidatingBodyWithMint pf =
       Outputs [outEx8 pf],
       Txfee (Coin 5),
       Mint (mintEx8 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx8 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx8 mempty)
     ]
 
 notValidatingTxWithMint ::
@@ -915,7 +915,7 @@ validatingBodyManyScripts pf =
               ]
         ),
       Mint (mintEx9 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx9 txDatsExample1),
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx9 txDatsExample1),
       Vldt (ValidityInterval SNothing (SJust $ SlotNo 1))
     ]
 
@@ -987,7 +987,7 @@ okSupplimentaryDatumTxBody pf =
     [ Inputs [TxIn genesisId 3],
       Outputs [outEx10 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [] (Redeemers mempty) txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) txDatsExample1)
     ]
 
 okSupplimentaryDatumTx ::
@@ -1078,7 +1078,7 @@ missingRedeemerTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] (Redeemers mempty) txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (Redeemers mempty) txDatsExample1)
     ]
 
 missingRedeemerTx ::
@@ -1189,7 +1189,7 @@ wrongRedeemerLabelTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] misPurposedRedeemer txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] misPurposedRedeemer txDatsExample1)
     ]
 
 wrongRedeemerLabelTx ::
@@ -1221,7 +1221,7 @@ missingDatumTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
     ]
 
 missingDatumTx ::
@@ -1288,7 +1288,7 @@ tooManyExUnitsTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersTooManyExUnits txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersTooManyExUnits txDatsExample1)
     ]
 
 tooManyExUnitsTx ::
@@ -1337,7 +1337,7 @@ plutusOutputWithNoDataTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
     ]
 
 plutusOutputWithNoDataTx ::
@@ -1373,7 +1373,7 @@ notOkSupplimentaryDatumTxBody pf =
     [ Inputs [TxIn genesisId 3],
       Outputs [outputWithNoDatum pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [] (Redeemers mempty) totallyIrrelevantTxDats)
+      WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) totallyIrrelevantTxDats)
     ]
   where
     totallyIrrelevantTxDats = TxDats $ keyBy hashData [totallyIrrelevantDatum]
@@ -1563,13 +1563,13 @@ alonzoUTXOWexamples =
               (trustMe True $ wrongWppHashTx pf)
               ( Left
                   [ PPViewHashesDontMatch
-                      ( hashWitnessPPData
+                      ( hashScriptIntegrity
                           (pp pf)
                           (Set.singleton PlutusV1)
                           (Redeemers mempty)
                           txDatsExample1
                       )
-                      ( hashWitnessPPData
+                      ( hashScriptIntegrity
                           (pp pf)
                           (Set.singleton PlutusV1)
                           validatingRedeemersEx1

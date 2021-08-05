@@ -118,7 +118,7 @@ exampleTxBodyAlonzo =
     ) --txUpdates
     (Set.singleton $ SLE.mkKeyHash 212) --reqSignerHashes
     (SLE.exampleMultiAssetValue 3) --mint
-    (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) --wppHash
+    (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) --scriptIntegrityHash
     (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) --adHash
     (SJust Mainnet) --txnetworkid
 

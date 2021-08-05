@@ -25,11 +25,11 @@ import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
     ValidatedTx (..),
-    hashWitnessPPData,
+    hashScriptIntegrity,
     isTwoPhaseScriptAddress,
     rdptr,
   )
-import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
+import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr,
     TxWitness (..),
@@ -103,9 +103,9 @@ data AlonzoPredFail era
       !(Set (DataHash (Crypto era))) -- Set of unallowed data hashes
       !(Set (DataHash (Crypto era))) -- Set of acceptable supplimental data hashes
   | PPViewHashesDontMatch
-      !(StrictMaybe (WitnessPPDataHash (Crypto era)))
+      !(StrictMaybe (ScriptIntegrityHash (Crypto era)))
       -- ^ The PPHash in the TxBody
-      !(StrictMaybe (WitnessPPDataHash (Crypto era)))
+      !(StrictMaybe (ScriptIntegrityHash (Crypto era)))
       -- ^ Computed from the current Protocol Parameters
   | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
   | UnspendableUTxONoDatumHash (Set (TxIn (Crypto era)))
@@ -216,7 +216,7 @@ type ShelleyStyleWitnessNeeds era =
 --   (in addition to ShelleyStyleWitnessNeeds)
 type AlonzoStyleAdditions era =
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
-    HasField "wppHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era)))
+    HasField "scriptIntegrityHash" (Core.TxBody era) (StrictMaybe (ScriptIntegrityHash (Crypto era)))
   )
 
 -- | A somewhat generic STS transitionRule function for the Alonzo Era.
@@ -320,15 +320,15 @@ alonzoStyleWitness = do
   eval (reqSignerHashes' ⊆ witsKeyHashes)
     ?!# MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)
 
-  {-  wppHash txb = hashWitnessPPData pp (languages txw) (txrdmrs txw)  -}
+  {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   let languages =
         [ l
           | (_hash, script) <- Map.toList (getField @"scriptWits" tx),
             (not . isNativeScript @era) script,
             Just l <- [language @era script]
         ]
-      computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits $ tx) (txdats . wits $ tx)
-      bodyPPhash = getField @"wppHash" txbody
+      computedPPhash = hashScriptIntegrity pp (Set.fromList languages) (txrdmrs . wits $ tx) (txdats . wits $ tx)
+      bodyPPhash = getField @"scriptIntegrityHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
 
   {- The shelleyStyleWitness calls the UTXO rule which applies all these rules -}
