@@ -55,6 +55,7 @@ import Data.Typeable (Proxy (..), Typeable)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as P
   ( Address (..),
+    BuiltinByteString,
     Credential (..),
     CurrencySymbol (..),
     DCert (..),
@@ -92,11 +93,10 @@ import qualified Plutus.V1.Ledger.Api as P
     singleton,
     strictUpperBound,
     to,
+    toBuiltin,
     toData,
     unionWith,
     validateScript,
-    BuiltinByteString,
-    toBuiltin
   )
 import Plutus.V1.Ledger.Contexts ()
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
