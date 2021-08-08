@@ -44,7 +44,8 @@ import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
     ScriptPurpose (..),
     ValidatedTx (..),
-    hashWitnessPPData,
+    hashScriptIntegrity,
+    minfee,
   )
 import Cardano.Ledger.Alonzo.TxInfo (txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
@@ -72,7 +73,6 @@ import Cardano.Ledger.Keys
     signedDSIGN,
     signedKES,
   )
-import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -100,6 +100,7 @@ import Shelley.Spec.Ledger.API
   ( BHBody (..),
     BHeader (..),
     Block (..),
+    CLI (..),
     DPState (..),
     DState (..),
     KESPeriod (..),
@@ -164,22 +165,24 @@ testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 freeCostModel :: CostModel
 freeCostModel = CostModel $ 0 <$ fromJust defaultCostModelParams
 
-pp :: Proof era -> Core.PParams era
-pp pf =
-  newPParams
-    pf
-    [ Costmdls $ Map.singleton PlutusV1 freeCostModel,
-      MaxValSize 1000000000,
-      MaxTxExUnits $ ExUnits 1000000 1000000,
-      MaxBlockExUnits $ ExUnits 1000000 1000000,
-      ProtocolVersion $ ProtVer 5 0
-    ]
+defaultPPs :: [PParamsField era]
+defaultPPs =
+  [ Costmdls $ Map.singleton PlutusV1 freeCostModel,
+    MaxValSize 1000000000,
+    MaxTxExUnits $ ExUnits 1000000 1000000,
+    MaxBlockExUnits $ ExUnits 1000000 1000000,
+    ProtocolVersion $ ProtVer 5 0,
+    CollateralPercentage 100
+  ]
 
-utxoEnv :: Proof era -> UtxoEnv era
-utxoEnv pf =
+pp :: Proof era -> Core.PParams era
+pp pf = newPParams pf defaultPPs
+
+utxoEnv :: Core.PParams era -> UtxoEnv era
+utxoEnv pparams =
   UtxoEnv
     (SlotNo 0)
-    (pp pf)
+    pparams
     mempty
     (GenDelegs mempty)
 
@@ -210,7 +213,7 @@ someOutput pf =
 
 collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
 collateralOutput pf =
-  newTxOut Override pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
+  newTxOut Override pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
 
 alwaysSucceedsHash ::
   forall era.
@@ -348,7 +351,7 @@ extraRedeemersBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] extraRedeemersEx txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] extraRedeemersEx txDatsExample1)
     ]
 
 extraRedeemersTx ::
@@ -383,7 +386,7 @@ validatingBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 txDatsExample1)
     ]
 
 type SignBody era =
@@ -467,7 +470,7 @@ notValidatingBody pf =
       Collateral [TxIn genesisId 12],
       Outputs [outEx2 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemers txDatsExample2)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemers txDatsExample2)
     ]
 
 notValidatingTx ::
@@ -496,7 +499,7 @@ utxoStEx2 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx2 pf = UTxOState (utxoEx2 pf) (Coin 0) (Coin 1000) def
+utxoStEx2 pf = UTxOState (utxoEx2 pf) (Coin 0) (Coin 5) def
 
 -- =========================================================================
 --  Example 3: Process a CERT transaction with a succeeding Plutus script.
@@ -526,7 +529,7 @@ validatingBodyWithCert pf =
       Outputs [outEx3 pf],
       Certs [DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx3 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx3 mempty)
     ]
 
 validatingTxWithCert ::
@@ -585,7 +588,7 @@ notValidatingBodyWithCert pf =
       Outputs [outEx4 pf],
       Certs [DCertDeleg (DeRegKey $ scriptStakeCredFail pf)],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx4 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx4 mempty)
     ]
 
 notValidatingTxWithCert ::
@@ -614,7 +617,7 @@ utxoStEx4 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx4 pf = UTxOState (utxoEx4 pf) (Coin 0) (Coin 1000) def
+utxoStEx4 pf = UTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
 
 -- ==============================================================================
 --  Example 5: Process a WITHDRAWAL transaction with a succeeding Plutus script.
@@ -646,7 +649,7 @@ validatingBodyWithWithdrawal pf =
               (RewardAcnt Testnet (scriptStakeCredSuceed pf))
               (Coin 1000)
         ),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx5 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx5 mempty)
     ]
 
 validatingTxWithWithdrawal ::
@@ -707,7 +710,7 @@ notValidatingBodyWithWithdrawal pf =
               (RewardAcnt Testnet (scriptStakeCredFail pf))
               (Coin 1000)
         ),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx6 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx6 mempty)
     ]
 
 notValidatingTxWithWithdrawal ::
@@ -736,7 +739,7 @@ utxoStEx6 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx6 pf = UTxOState (utxoEx6 pf) (Coin 0) (Coin 1000) def
+utxoStEx6 pf = UTxOState (utxoEx6 pf) (Coin 0) (Coin 5) def
 
 -- =============================================================================
 --  Example 7: Process a MINT transaction with a succeeding Plutus script.
@@ -766,7 +769,7 @@ validatingBodyWithMint pf =
       Outputs [outEx7 pf],
       Txfee (Coin 5),
       Mint (mintEx7 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx7 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx7 mempty)
     ]
 
 validatingTxWithMint ::
@@ -827,7 +830,7 @@ notValidatingBodyWithMint pf =
       Outputs [outEx8 pf],
       Txfee (Coin 5),
       Mint (mintEx8 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx8 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemersEx8 mempty)
     ]
 
 notValidatingTxWithMint ::
@@ -857,7 +860,7 @@ utxoStEx8 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx8 pf = UTxOState (utxoEx8 pf) (Coin 0) (Coin 1000) def
+utxoStEx8 pf = UTxOState (utxoEx8 pf) (Coin 0) (Coin 5) def
 
 -- ====================================================================================
 --  Example 9: Process a transaction with a succeeding script in every place possible,
@@ -870,7 +873,7 @@ validatingRedeemersEx9 =
     [ (RdmrPtr Tag.Spend 0, (Data (Plutus.I 101), ExUnits 5000 5000)),
       (RdmrPtr Tag.Cert 1, (Data (Plutus.I 102), ExUnits 5000 5000)),
       (RdmrPtr Tag.Rewrd 0, (Data (Plutus.I 103), ExUnits 5000 5000)),
-      (RdmrPtr Tag.Mint 1, (Data (Plutus.I 104), ExUnits 5000 5000))
+      (RdmrPtr Tag.Mint 0, (Data (Plutus.I 104), ExUnits 5000 5000))
     ]
 
 mintEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> Core.Value era
@@ -912,7 +915,7 @@ validatingBodyManyScripts pf =
               ]
         ),
       Mint (mintEx9 pf),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx9 txDatsExample1),
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx9 txDatsExample1),
       Vldt (ValidityInterval SNothing (SJust $ SlotNo 1))
     ]
 
@@ -984,7 +987,7 @@ okSupplimentaryDatumTxBody pf =
     [ Inputs [TxIn genesisId 3],
       Outputs [outEx10 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [] (Redeemers mempty) txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) txDatsExample1)
     ]
 
 okSupplimentaryDatumTx ::
@@ -1075,7 +1078,7 @@ missingRedeemerTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] (Redeemers mempty) txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (Redeemers mempty) txDatsExample1)
     ]
 
 missingRedeemerTx ::
@@ -1186,7 +1189,7 @@ wrongRedeemerLabelTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] misPurposedRedeemer txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] misPurposedRedeemer txDatsExample1)
     ]
 
 wrongRedeemerLabelTx ::
@@ -1218,7 +1221,7 @@ missingDatumTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
     ]
 
 missingDatumTx ::
@@ -1285,7 +1288,7 @@ tooManyExUnitsTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersTooManyExUnits txDatsExample1)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersTooManyExUnits txDatsExample1)
     ]
 
 tooManyExUnitsTx ::
@@ -1334,7 +1337,7 @@ plutusOutputWithNoDataTxBody pf =
       Collateral [TxIn genesisId 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
     ]
 
 plutusOutputWithNoDataTx ::
@@ -1370,7 +1373,7 @@ notOkSupplimentaryDatumTxBody pf =
     [ Inputs [TxIn genesisId 3],
       Outputs [outputWithNoDatum pf],
       Txfee (Coin 5),
-      WppHash (newWppHash pf (pp pf) [] (Redeemers mempty) totallyIrrelevantTxDats)
+      WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) totallyIrrelevantTxDats)
     ]
   where
     totallyIrrelevantTxDats = TxDats $ keyBy hashData [totallyIrrelevantDatum]
@@ -1447,17 +1450,18 @@ poolMDHTooBigTx pf =
 type A = AlonzoEra C_Crypto
 
 testUTXOW ::
+  Core.PParams A ->
   ValidatedTx A ->
   Either [PredicateFailure (Core.EraRule "UTXOW" A)] (UTxOState A) ->
   Assertion
-testUTXOW tx (Right expectedSt) =
-  checkTrace @(AlonzoUTXOW A) runShelleyBase (utxoEnv (Alonzo Mock)) $
+testUTXOW pparams tx (Right expectedSt) =
+  checkTrace @(AlonzoUTXOW A) runShelleyBase (utxoEnv pparams) $
     pure (initialUtxoSt $ Alonzo Mock) .- tx .-> expectedSt
-testUTXOW tx predicateFailure@(Left _) = do
+testUTXOW pparams tx predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(AlonzoUTXOW A)
-            (TRC (utxoEnv (Alonzo Mock), (initialUtxoSt $ Alonzo Mock), tx))
+            (TRC (utxoEnv pparams, (initialUtxoSt $ Alonzo Mock), tx))
   st @?= predicateFailure
 
 trustMe :: Bool -> ValidatedTx A -> ValidatedTx A
@@ -1471,42 +1475,52 @@ alonzoUTXOWexamples =
         "valid transactions"
         [ testCase "validating SPEND script" $
             testUTXOW
+              (pp pf)
               (trustMe True $ validatingTx pf)
               (Right . utxoStEx1 $ pf),
           testCase "not validating SPEND script" $
             testUTXOW
+              (pp pf)
               (trustMe False $ notValidatingTx pf)
               (Right . utxoStEx2 $ pf),
           testCase "validating CERT script" $
             testUTXOW
+              (pp pf)
               (trustMe True $ validatingTxWithCert pf)
               (Right . utxoStEx3 $ pf),
           testCase "not validating CERT script" $
             testUTXOW
+              (pp pf)
               (trustMe False $ notValidatingTxWithCert pf)
               (Right . utxoStEx4 $ pf),
           testCase "validating WITHDRAWAL script" $
             testUTXOW
+              (pp pf)
               (trustMe True $ validatingTxWithWithdrawal pf)
               (Right . utxoStEx5 $ pf),
           testCase "not validating WITHDRAWAL script" $
             testUTXOW
+              (pp pf)
               (trustMe False $ notValidatingTxWithWithdrawal pf)
               (Right . utxoStEx6 $ pf),
           testCase "validating MINT script" $
             testUTXOW
+              (pp pf)
               (trustMe True $ validatingTxWithMint pf)
               (Right . utxoStEx7 $ pf),
           testCase "not validating MINT script" $
             testUTXOW
+              (pp pf)
               (trustMe False $ notValidatingTxWithMint pf)
               (Right . utxoStEx8 $ pf),
           testCase "validating scripts everywhere" $
             testUTXOW
+              (pp pf)
               (trustMe True $ validatingTxManyScripts pf)
               (Right . utxoStEx9 $ pf),
           testCase "acceptable supplimentary datum" $
             testUTXOW
+              (pp pf)
               (trustMe True $ okSupplimentaryDatumTx pf)
               (Right . utxoStEx10 $ pf)
         ],
@@ -1514,6 +1528,7 @@ alonzoUTXOWexamples =
         "invalid transactions"
         [ testCase "wrong network ID" $
             testUTXOW
+              (pp pf)
               (trustMe True $ incorrectNetworkIDTx pf)
               ( Left
                   [ WrappedShelleyEraFailure
@@ -1522,18 +1537,20 @@ alonzoUTXOWexamples =
               ),
           testCase "missing required key witness" $
             testUTXOW
+              (pp pf)
               (trustMe True $ missingRequiredWitnessTx pf)
               ( Left [(MissingRequiredSigners . Set.singleton) extraneousKeyHash]
               ),
           testCase "missing redeemer" $
             testUTXOW
+              (pp pf)
               (trustMe True $ missingRedeemerTx pf)
               ( Left
                   [ WrappedShelleyEraFailure . UtxoFailure
                       . UtxosFailure
                       . CollectErrors
                       $ [NoRedeemer (Spending (TxIn genesisId 1))],
-                    UnRedeemableScripts
+                    MissingRedeemers
                       [ ( Spending (TxIn genesisId 1),
                           (alwaysSucceedsHash 3 pf)
                         )
@@ -1542,16 +1559,17 @@ alonzoUTXOWexamples =
               ),
           testCase "wrong wpp hash" $
             testUTXOW
+              (pp pf)
               (trustMe True $ wrongWppHashTx pf)
               ( Left
                   [ PPViewHashesDontMatch
-                      ( hashWitnessPPData
+                      ( hashScriptIntegrity
                           (pp pf)
                           (Set.singleton PlutusV1)
                           (Redeemers mempty)
                           txDatsExample1
                       )
-                      ( hashWitnessPPData
+                      ( hashScriptIntegrity
                           (pp pf)
                           (Set.singleton PlutusV1)
                           validatingRedeemersEx1
@@ -1561,6 +1579,7 @@ alonzoUTXOWexamples =
               ),
           testCase "missing 1-phase script witness" $
             testUTXOW
+              (pp pf)
               (trustMe True $ missing1phaseScriptWitnessTx pf)
               ( Left
                   [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
@@ -1568,12 +1587,12 @@ alonzoUTXOWexamples =
                         NoWitness (timelockHash 0 pf)
                       ],
                     WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      (timelockHash 0 pf),
-                    UnRedeemableScripts [(Spending $ TxIn genesisId 100, timelockHash 0 pf)]
+                      (timelockHash 0 pf)
                   ]
               ),
           testCase "missing 2-phase script witness" $
             testUTXOW
+              (pp pf)
               (trustMe True $ missing2phaseScriptWitnessTx pf)
               ( Left
                   [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
@@ -1583,27 +1602,17 @@ alonzoUTXOWexamples =
                       ],
                     WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
                       (alwaysSucceedsHash 2 pf),
-                    UnRedeemableScripts
-                      [ ( Rewarding
-                            ( RewardAcnt
-                                { getRwdNetwork = Testnet,
-                                  getRwdCred = ScriptHashObj (alwaysSucceedsHash 2 pf)
-                                }
-                            ),
-                          (alwaysSucceedsHash 2 pf)
-                        ),
-                        ( Certifying . DCertDeleg . DeRegKey . ScriptHashObj $
-                            (alwaysSucceedsHash 2 pf),
-                          (alwaysSucceedsHash 2 pf)
-                        ),
-                        ( Minting (PolicyID {policyID = (alwaysSucceedsHash 2 pf)}),
-                          (alwaysSucceedsHash 2 pf)
-                        )
+                    -- these redeemers are associated with phase-1 scripts
+                    ExtraRedeemers
+                      [ RdmrPtr Tag.Mint 0,
+                        RdmrPtr Tag.Cert 1,
+                        RdmrPtr Tag.Rewrd 0
                       ]
                   ]
               ),
           testCase "redeemer with incorrect label" $
             testUTXOW
+              (pp pf)
               (trustMe True $ wrongRedeemerLabelTx pf)
               ( Left
                   [ WrappedShelleyEraFailure . UtxoFailure
@@ -1611,16 +1620,17 @@ alonzoUTXOWexamples =
                       . CollectErrors
                       $ [NoRedeemer (Spending (TxIn genesisId 1))],
                     -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
-                    ExtraRedeemers [RdmrPtr Tag.Mint 0],
-                    UnRedeemableScripts
+                    MissingRedeemers
                       [ ( Spending (TxIn genesisId 1),
                           (alwaysSucceedsHash 3 pf)
                         )
-                      ]
+                      ],
+                    ExtraRedeemers [RdmrPtr Tag.Mint 0]
                   ]
               ),
           testCase "missing datum" $
             testUTXOW
+              (pp pf)
               (trustMe True $ missingDatumTx pf)
               ( Left
                   [ MissingRequiredDatums
@@ -1630,6 +1640,7 @@ alonzoUTXOWexamples =
               ),
           testCase "phase 1 script failure" $
             testUTXOW
+              (pp pf)
               (trustMe True $ phase1FailureTx pf)
               ( Left
                   [ WrappedShelleyEraFailure . ScriptWitnessNotValidatingUTXOW $
@@ -1642,24 +1653,27 @@ alonzoUTXOWexamples =
               ),
           testCase "valid transaction marked as invalid" $
             testUTXOW
+              (pp pf)
               (trustMe False $ validatingTx pf)
               ( Left
                   [ WrappedShelleyEraFailure
                       ( UtxoFailure
-                          (UtxosFailure (ValidationTagMismatch (IsValid False)))
+                          (UtxosFailure (ValidationTagMismatch (IsValid False) ("Script expected to fail, passes.")))
                       )
                   ]
               ),
           testCase "invalid transaction marked as valid" $
             testUTXOW
+              (pp pf)
               (trustMe True $ notValidatingTx pf)
               ( Left
                   [ WrappedShelleyEraFailure
-                      (UtxoFailure (UtxosFailure (ValidationTagMismatch (IsValid True))))
+                      (UtxoFailure (UtxosFailure (ValidationTagMismatch (IsValid True) (""))))
                   ]
               ),
           testCase "too many execution units for tx" $
             testUTXOW
+              (pp pf)
               (trustMe True $ tooManyExUnitsTx pf)
               ( Left
                   [ WrappedShelleyEraFailure . UtxoFailure $
@@ -1670,6 +1684,7 @@ alonzoUTXOWexamples =
               ),
           testCase "missing signature for collateral input" $
             testUTXOW
+              (pp pf)
               (trustMe True $ missingCollateralSig pf)
               ( Left
                   [ WrappedShelleyEraFailure
@@ -1684,13 +1699,24 @@ alonzoUTXOWexamples =
                       )
                   ]
               ),
+          testCase "insufficient collateral" $
+            testUTXOW
+              (newPParams pf $ defaultPPs ++ [CollateralPercentage 150])
+              (trustMe True $ validatingTx pf)
+              ( Left
+                  [ WrappedShelleyEraFailure
+                      (UtxoFailure (InsufficientCollateral (Coin 5) (Coin 8)))
+                  ]
+              ),
           testCase "two-phase UTxO with no datum hash" $
             testUTXOW
+              (pp pf)
               (trustMe True $ plutusOutputWithNoDataTx pf)
               ( Left [UnspendableUTxONoDatumHash . Set.singleton $ TxIn genesisId 101]
               ),
           testCase "unacceptable supplimentary datum" $
             testUTXOW
+              (pp pf)
               (trustMe True $ notOkSupplimentaryDatumTx pf)
               ( Left
                   [ NonOutputSupplimentaryDatums
@@ -1700,6 +1726,7 @@ alonzoUTXOWexamples =
               ),
           testCase "unacceptable extra redeemer" $
             testUTXOW
+              (pp pf)
               (trustMe True $ extraRedeemersTx pf)
               ( Left
                   [ ExtraRedeemers
@@ -1848,7 +1875,7 @@ example1UTxO =
     pf = Alonzo Mock
 
 example1UtxoSt :: UTxOState A
-example1UtxoSt = UTxOState example1UTxO (Coin 0) (Coin 4020) def
+example1UtxoSt = UTxOState example1UTxO (Coin 0) (Coin 40) def
 
 example1BBodyState :: BbodyState A
 example1BBodyState =
@@ -1889,3 +1916,29 @@ alonzoBBODYexamples =
     ]
   where
     pf = Alonzo Mock
+
+testEvaluateTransactionFee :: Assertion
+testEvaluateTransactionFee =
+  evaluateTransactionFee @A
+    pparams
+    validatingTxNoWits
+    1
+    @?= minfee pparams (validatingTx pf)
+  where
+    pf = Alonzo Mock
+    pparams = newPParams pf $ defaultPPs ++ [MinfeeA 1]
+    validatingTxNoWits =
+      newTx
+        Override
+        pf
+        [ Body (validatingBody pf),
+          Witnesses'
+            [ ScriptWits [always 3 pf],
+              DataWits [datumExample1],
+              RdmrWits validatingRedeemersEx1
+            ]
+        ]
+
+alonzoAPITests :: TestTree
+alonzoAPITests =
+  testGroup "Alonzo API" [testCase "evaluateTransactionFee" testEvaluateTransactionFee]

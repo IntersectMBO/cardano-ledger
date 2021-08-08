@@ -78,6 +78,7 @@ import Data.Coders
 import Data.Coerce (coerce)
 import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
+import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -185,7 +186,7 @@ data UtxoPredicateFailure era
       !Coin
       -- ^ balance computed
       !Coin
-      -- ^ the fee supplied in this transaction
+      -- ^ the required collateral for the given fee
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
       !(UTxO era)
@@ -295,7 +296,9 @@ feesOK pp tx (UTxO m) = do
           (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
       -- Part 4
       (Val.scale (100 :: Natural) (Val.coin bal) >= Val.scale collPerc theFee)
-        ?! InsufficientCollateral (Val.coin bal) theFee
+        ?! InsufficientCollateral
+          (Val.coin bal)
+          (rationalToCoinViaCeiling $ (fromIntegral collPerc * (unCoin theFee)) % 100)
       -- Part 5
       Val.inject (Val.coin bal) == bal ?! CollateralContainsNonADA bal
       -- Part 6

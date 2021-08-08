@@ -7,9 +7,13 @@
 
 module Test.Cardano.Ledger.Alonzo.Examples where
 
-import Cardano.Ledger.Alonzo.Scripts (Script (..))
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..))
+import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (Fails, Passes), runPLCScript)
 import Data.ByteString.Short (ShortByteString)
 import Data.Maybe (fromMaybe)
+import Data.Proxy (Proxy (..))
+import Debug.Trace
 import qualified Plutus.V1.Ledger.Api as P
 import Plutus.V1.Ledger.Examples
   ( alwaysFailingNAryFunction,
@@ -25,8 +29,11 @@ import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
     redeemerIs102,
     sumsTo103,
   )
+import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
+
+-- =============================================
 
 -- Tests running Plutus scripts directely
 
@@ -168,5 +175,43 @@ plutusScriptExamples =
         directPlutusTest
           ShouldSucceed
           redeemer102
-          [P.I 10, P.I 10]
+          [P.I 10, P.I 10],
+      explainTestTree
+    ]
+
+-- =========================================
+
+alonzo :: Proxy (AlonzoEra StandardCrypto)
+alonzo = Proxy
+
+explainTest :: Script (AlonzoEra StandardCrypto) -> ShouldSucceed -> [P.Data] -> Assertion
+explainTest (script@(PlutusScript bytes)) mode ds =
+  let cost = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
+   in case (mode, runPLCScript alonzo (CostModel cost) bytes (ExUnits 100000000 10000000) ds) of
+        (ShouldSucceed, Passes) -> assertBool "" True
+        (ShouldSucceed, Fails xs) -> assertBool (show xs) (trace (show (head xs)) False)
+        (ShouldFail, Passes) -> assertBool ("Test that should fail, passes: " ++ show script) False
+        (ShouldFail, Fails _) -> assertBool "" True
+explainTest _other _mode _ds = assertBool "BAD Script" False
+
+explainTestTree :: TestTree
+explainTestTree =
+  testGroup
+    "explain failures tests"
+    [ testCase
+        "even data with 3 args, fails as expected"
+        (explainTest Generated.evendata3 ShouldFail [P.I 3, P.I 3, P.I 5]),
+      testCase
+        "even data with 3 args, succeeds as expected"
+        (explainTest Generated.evendata3 ShouldSucceed [P.I 4, P.I 3, P.I 5]),
+      testCase
+        "guess the number with 3 args, succeeds as expected"
+        ( explainTest
+            Generated.guessTheNumber3
+            ShouldSucceed
+            [P.I 4, P.I 4, P.I 5]
+        ),
+      testCase
+        "guess the number with 3 args, fails as expected"
+        (explainTest Generated.guessTheNumber3 ShouldFail [P.I 4, P.I 5, P.I 5])
     ]

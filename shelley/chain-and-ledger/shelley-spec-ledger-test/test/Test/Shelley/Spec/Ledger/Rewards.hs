@@ -17,7 +17,7 @@ module Test.Shelley.Spec.Ledger.Rewards (rewardTests, C, defaultMain, newEpochPr
 
 import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.DSIGN as Crypto
-import Cardano.Crypto.Hash (MD5, hashToBytes)
+import Cardano.Crypto.Hash (Blake2b_256, hashToBytes)
 import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
 import Cardano.Ledger.BaseTypes
@@ -194,7 +194,7 @@ keyPair seed = KeyPair vk sk
     sk =
       Crypto.genKeyDSIGN $
         mkSeedFromBytes . hashToBytes $
-          hashWithSerialiser @MD5 toCBOR seed
+          hashWithSerialiser @Blake2b_256 toCBOR seed
 
 vrfKeyPair :: forall v. Crypto.VRFAlgorithm v => Int -> (Crypto.SignKeyVRF v, Crypto.VerKeyVRF v)
 vrfKeyPair seed = (sk, vk)
@@ -203,7 +203,7 @@ vrfKeyPair seed = (sk, vk)
     sk =
       Crypto.genKeyVRF $
         mkSeedFromBytes . hashToBytes $
-          hashWithSerialiser @MD5 toCBOR seed
+          hashWithSerialiser @Blake2b_256 toCBOR seed
 
 data PoolSetUpArgs crypto f = PoolSetUpArgs
   { poolPledge :: f Coin,

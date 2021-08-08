@@ -25,30 +25,30 @@
         "a0": 0.0
     },
     "genDelegs": {
-        "23d51e9123d51e91": {
-            "delegate": "839b047f839b047f",
-            "vrf": "231391e7231391e70123"
+        "38e7c5986a34f334e19b712c0aa525146dab8f0ff889b2ad16894241": {
+            "delegate": "e6960dd671ee8d73de1a83d1345b661165dcddeba99623beef2f157a",
+            "vrf": "fce31c6f3187531ee4a39aa743c24d22275f415a8895e9cd22c30c8a25cdef0d"
         }
     },
     "updateQuorum": 16991,
     "networkId": "Testnet",
     "initialFunds": {
-        "001c14ee8e1c14ee8ee37a65eae37a65ea": 12157196
+        "00e1bade2ab9465a24fd5eaa4b7388303917338f853a48b11a5fc9964af5ca93fb6516ebde3d150b3e2acb1909532730de33832ffb229cb20d": 12157196
     },
     "maxLovelaceSupply": 71,
     "networkMagic": 4036000900,
     "epochLength": 1215,
     "staking": {
         "pools": {
-            "3dbe00a13dbe00a1": {
+            "f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb": {
                 "owners": [
-                    "f868a1960a3fa043"
+                    "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a"
                 ],
                 "cost": 5,
                 "margin": 0.25,
-                "publicKey": "a084ba8f6c83c1a5",
+                "publicKey": "4e130c0bdeb7768edf2e8f85007fd52073e3dc1871f4c47f9dfca92e",
                 "pledge": 1,
-                "vrf": "edc9079a4f371cac310f",
+                "vrf": "68f9cfd33ac8f044facc664db5aa1b73c0b0f5435b85e7b520bb2f1a92f02999",
                 "metadata": {
                     "hash": "31303061627b7d31303061627b7d",
                     "url": "best.pool.com"
@@ -75,14 +75,14 @@
                 ],
                 "rewardAccount": {
                     "credential": {
-                        "key hash": "f868a1960a3fa043"
+                        "key hash": "4e88cc2d27c364aaf90648a87dfb95f8ee103ba67fa1f12f5e86c42a"
                     },
                     "network": "Testnet"
                 }
             }
         },
         "stake": {
-            "1c14ee8e1c14ee8e": "1c14ee8e1c14ee8e"
+            "83a192dec0e8da2188e520d0c536a69a747cf173a3df16a6daa94d86": "649eda82bf644d34a6925f24ea4c4c36d27e51de1b44ef47e3560be7"
         }
     },
     "systemStart": "2009-02-13T23:13:09Z",

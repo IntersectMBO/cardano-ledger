@@ -18,22 +18,18 @@ import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams)
-import Cardano.Ledger.Alonzo.PlutusScriptApi
-  ( checkScriptData,
-    language,
-    scriptsNeeded,
-  )
+import Cardano.Ledger.Alonzo.PlutusScriptApi (language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent, UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
     ValidatedTx (..),
-    hashWitnessPPData,
+    hashScriptIntegrity,
     isTwoPhaseScriptAddress,
     rdptr,
   )
-import Cardano.Ledger.Alonzo.TxBody (WitnessPPDataHash)
+import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr,
     TxWitness (..),
@@ -50,7 +46,6 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
-import Control.DeepSeq (NFData (..))
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
@@ -101,7 +96,7 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..), txinLookup)
 --   failure type of the Shelley Era, as they share some failure modes.
 data AlonzoPredFail era
   = WrappedShelleyEraFailure !(UtxowPredicateFailure era)
-  | UnRedeemableScripts ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
+  | MissingRedeemers ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
   | MissingRequiredDatums
       !(Set (DataHash (Crypto era))) -- Set of missing data hashes
       !(Set (DataHash (Crypto era))) -- Set of received data hashes
@@ -109,9 +104,9 @@ data AlonzoPredFail era
       !(Set (DataHash (Crypto era))) -- Set of unallowed data hashes
       !(Set (DataHash (Crypto era))) -- Set of acceptable supplimental data hashes
   | PPViewHashesDontMatch
-      !(StrictMaybe (WitnessPPDataHash (Crypto era)))
+      !(StrictMaybe (ScriptIntegrityHash (Crypto era)))
       -- ^ The PPHash in the TxBody
-      !(StrictMaybe (WitnessPPDataHash (Crypto era)))
+      !(StrictMaybe (ScriptIntegrityHash (Crypto era)))
       -- ^ Computed from the current Protocol Parameters
   | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
   | UnspendableUTxONoDatumHash (Set (TxIn (Crypto era)))
@@ -162,7 +157,7 @@ encodePredFail ::
   AlonzoPredFail era ->
   Encode 'Open (AlonzoPredFail era)
 encodePredFail (WrappedShelleyEraFailure x) = Sum WrappedShelleyEraFailure 0 !> E toCBOR x
-encodePredFail (UnRedeemableScripts x) = Sum UnRedeemableScripts 1 !> To x
+encodePredFail (MissingRedeemers x) = Sum MissingRedeemers 1 !> To x
 encodePredFail (MissingRequiredDatums x y) = Sum MissingRequiredDatums 2 !> To x !> To y
 encodePredFail (NonOutputSupplimentaryDatums x y) = Sum NonOutputSupplimentaryDatums 3 !> To x !> To y
 encodePredFail (PPViewHashesDontMatch x y) = Sum PPViewHashesDontMatch 4 !> To x !> To y
@@ -189,7 +184,7 @@ decodePredFail ::
   Word ->
   Decode 'Open (AlonzoPredFail era)
 decodePredFail 0 = SumD WrappedShelleyEraFailure <! D fromCBOR
-decodePredFail 1 = SumD UnRedeemableScripts <! From
+decodePredFail 1 = SumD MissingRedeemers <! From
 decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
 decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
 decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
@@ -225,7 +220,7 @@ type ShelleyStyleWitnessNeeds era =
 --   (in addition to ShelleyStyleWitnessNeeds)
 type AlonzoStyleAdditions era =
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
-    HasField "wppHash" (Core.TxBody era) (StrictMaybe (WitnessPPDataHash (Crypto era)))
+    HasField "scriptIntegrityHash" (Core.TxBody era) (StrictMaybe (ScriptIntegrityHash (Crypto era)))
   )
 
 -- | A somewhat generic STS transitionRule function for the Alonzo Era.
@@ -305,20 +300,23 @@ alonzoStyleWitness = do
       Set.null notOkSupplimentalDHs
         ?! NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs
 
-  {-  ∀ sph ∈ scriptsNeeded utxo tx, checkScriptData tx utxo  ph  -}
-  let sphs :: [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-      sphs = scriptsNeeded utxo tx
-      unredeemed =
-        -- A script is unredeemed, is we can't find the Data that it requires to execute.
-        let ans = (filter (not . checkScriptData tx) sphs)
-         in seq (rnf ans) ans
-  null unredeemed ?! UnRedeemableScripts unredeemed
-
-  {-  || { (sp, h) ∈ \fun{scriptsNeeded} utxo tx | h\mapsto s ∈ txscripts txw, s ∈ ScriptPhTwo } || = || fun{txrdmrs} tx ||  -}
-  let rdptrs = Set.fromList [el | (sp, _) <- sphs, SJust el <- [rdptr @era txbody sp]]
-      extraRdmrs :: [RdmrPtr]
-      extraRdmrs = Map.keys $ Map.withoutKeys (unRedeemers $ txrdmrs $ wits tx) rdptrs
+  {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
+                           h \mapsto s ∈ txscripts txw, s ∈ Scriptph2}     -}
+  let redeemersNeeded =
+        [ (rp, (sp, sh))
+          | (sp, sh) <- scriptsNeeded utxo tx,
+            SJust rp <- [rdptr @era txbody sp],
+            Just script <- [Map.lookup sh (getField @"scriptWits" tx)],
+            (not . isNativeScript @era) script
+        ]
+      (extraRdmrs, missingRdmrs) =
+        extSymmetricDifference
+          (Map.keys $ unRedeemers $ txrdmrs $ wits tx)
+          id
+          redeemersNeeded
+          fst
   null extraRdmrs ?! ExtraRedeemers extraRdmrs
+  null missingRdmrs ?! MissingRedeemers (map snd missingRdmrs)
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded includes the reqSignerHashes in the union   -}
@@ -326,15 +324,15 @@ alonzoStyleWitness = do
   eval (reqSignerHashes' ⊆ witsKeyHashes)
     ?!# MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)
 
-  {-  wppHash txb = hashWitnessPPData pp (languages txw) (txrdmrs txw)  -}
+  {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   let languages =
         [ l
           | (_hash, script) <- Map.toList (getField @"scriptWits" tx),
             (not . isNativeScript @era) script,
             Just l <- [language @era script]
         ]
-      computedPPhash = hashWitnessPPData pp (Set.fromList languages) (txrdmrs . wits $ tx) (txdats . wits $ tx)
-      bodyPPhash = getField @"wppHash" txbody
+      computedPPhash = hashScriptIntegrity pp (Set.fromList languages) (txrdmrs . wits $ tx) (txdats . wits $ tx)
+      bodyPPhash = getField @"scriptIntegrityHash" txbody
   bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
 
   {- The shelleyStyleWitness calls the UTXO rule which applies all these rules -}
@@ -429,6 +427,13 @@ witsVKeyNeeded utxo' tx genDelegs =
               getField @"update" txbody
           )
           genDelegs
+
+extSymmetricDifference :: (Ord k) => [a] -> (a -> k) -> [b] -> (b -> k) -> ([a], [b])
+extSymmetricDifference as fa bs fb = (extraA, extraB)
+  where
+    intersection = (Set.fromList $ map fa as) `Set.intersection` (Set.fromList $ map fb bs)
+    extraA = filter (\x -> not $ fa x `Set.member` intersection) as
+    extraB = filter (\x -> not $ fb x `Set.member` intersection) bs
 
 -- ====================================
 -- Make the STS instance

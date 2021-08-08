@@ -47,19 +47,22 @@ import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
+-- Instances only
+import Data.Text.Prettyprint.Doc (Pretty (..))
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
-import Data.Typeable (Typeable)
-import Debug.Trace (trace)
+import Data.Typeable (Proxy (..), Typeable)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as P
   ( Address (..),
+    BuiltinByteString,
     Credential (..),
     CurrencySymbol (..),
     DCert (..),
     Data (..),
     Datum (..),
     DatumHash (..),
+    EvaluationError (..),
     ExBudget (..),
     ExCPU (..),
     ExMemory (..),
@@ -85,14 +88,17 @@ import qualified Plutus.V1.Ledger.Api as P
     dataToBuiltinData,
     evaluateScriptRestricting,
     from,
+    fromData,
     lowerBound,
     singleton,
     strictUpperBound,
     to,
+    toBuiltin,
     toData,
     unionWith,
     validateScript,
   )
+import Plutus.V1.Ledger.Contexts ()
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
@@ -118,13 +124,13 @@ transDataHash' :: (DataHash c) -> P.DatumHash
 transDataHash' safe = (P.DatumHash (transSafeHash safe))
 
 transKeyHash :: KeyHash d c -> P.PubKeyHash
-transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (fromShort h)
+transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (P.toBuiltin (fromShort h))
 
 transScriptHash :: ScriptHash i -> P.ValidatorHash
-transScriptHash (ScriptHash (UnsafeHash h)) = P.ValidatorHash (fromShort h)
+transScriptHash (ScriptHash (UnsafeHash h)) = P.ValidatorHash (P.toBuiltin (fromShort h))
 
-transSafeHash :: SafeHash c i -> BS.ByteString
-transSafeHash safe = case extractHash safe of UnsafeHash b -> fromShort b
+transSafeHash :: SafeHash c i -> P.BuiltinByteString
+transSafeHash safe = case extractHash safe of UnsafeHash b -> P.toBuiltin (fromShort b)
 
 transHash :: Hash h a -> BS.ByteString
 transHash (UnsafeHash h) = fromShort h
@@ -133,8 +139,8 @@ txInfoId :: TxId era -> P.TxId
 txInfoId (TxId safe) = P.TxId (transSafeHash safe)
 
 transStakeCred :: Credential keyrole crypto -> P.Credential
-transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (fromShort kh))
-transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (fromShort kh))
+transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (P.toBuiltin (fromShort kh)))
+transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (fromShort kh)))
 
 transStakeReference :: StakeReference crypto -> Maybe P.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (P.StakingHash (transStakeCred cred))
@@ -142,8 +148,8 @@ transStakeReference (StakeRefPtr (Ptr (SlotNo slot) i1 i2)) = Just (P.StakingPtr
 transStakeReference StakeRefNull = Nothing
 
 transCred :: Credential keyrole crypto -> P.Credential
-transCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (fromShort kh))
-transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (fromShort kh))
+transCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (fromShort kh)))
+transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (P.toBuiltin (fromShort kh)))
 
 transAddr :: Addr crypto -> Maybe P.Address
 transAddr (Addr _net object stake) = Just (P.Address (transCred object) (transStakeReference stake))
@@ -230,10 +236,10 @@ txInfoOut (Alonzo.TxOut addr val datahash) =
 -- translate Values
 
 transPolicyID :: Mary.PolicyID crypto -> P.CurrencySymbol
-transPolicyID (Mary.PolicyID (ScriptHash (UnsafeHash x))) = P.CurrencySymbol (fromShort x)
+transPolicyID (Mary.PolicyID (ScriptHash (UnsafeHash x))) = P.CurrencySymbol (P.toBuiltin (fromShort x))
 
 transAssetName :: Mary.AssetName -> P.TokenName
-transAssetName (Mary.AssetName bs) = P.TokenName bs
+transAssetName (Mary.AssetName bs) = P.TokenName (P.toBuiltin bs)
 
 transValue :: forall c. Mary.Value c -> P.Value
 transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp
@@ -260,7 +266,7 @@ transDCert (DCertDeleg (Delegate (Delegation stkcred keyhash))) =
     (P.StakingHash (transStakeCred stkcred))
     (transKeyHash keyhash)
 transDCert (DCertPool (RegPool pp)) =
-  P.DCertPoolRegister (transKeyHash (_poolId pp)) (P.PubKeyHash (transHash (_poolVrf pp)))
+  P.DCertPoolRegister (transKeyHash (_poolId pp)) (P.PubKeyHash (P.toBuiltin (transHash (_poolVrf pp))))
 transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
   P.DCertPoolRetire (transKeyHash keyhash) (fromIntegral i)
 transDCert (DCertGenesis _) = P.DCertGenesis
@@ -272,7 +278,7 @@ transWdrl (Wdrl mp) = Map.foldlWithKey' accum Map.empty mp
     accum ans (RewardAcnt _network cred) (Coin n) = Map.insert (P.StakingHash (transStakeCred cred)) n ans
 
 getWitVKeyHash :: (CC.Crypto crypto, Typeable kr) => WitVKey kr crypto -> P.PubKeyHash
-getWitVKeyHash = P.PubKeyHash . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash x) -> x) . hashKey . (\(WitVKey x _) -> x)
+getWitVKeyHash = P.PubKeyHash . P.toBuiltin . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash x) -> x) . hashKey . (\(WitVKey x _) -> x)
 
 transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
 transDataPair (x, y) = (transDataHash' x, P.Datum (P.dataToBuiltinData (getPlutusData y)))
@@ -356,21 +362,114 @@ valContext ::
   Data era
 valContext txinfo sp = Data (P.toData (P.ScriptContext txinfo (transScriptPurpose sp)))
 
+data ScriptResult = Passes | Fails ![String]
+
+andResult :: ScriptResult -> ScriptResult -> ScriptResult
+andResult Passes Passes = Passes
+andResult Passes ans = ans
+andResult ans Passes = ans
+andResult (Fails xs) (Fails ys) = Fails (xs ++ ys)
+
+instance Semigroup ScriptResult where
+  (<>) = andResult
+
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
--- of P.evaluateScriptRestricting which is the interface to Plutus
+-- of P.evaluateScriptRestricting which is the interface to Plutus, and in the impementation
+-- we try to track why a script failed (if it does) by the [String] in the Fails constructor of ScriptResut.
 
 -- | Run a Plutus Script, given the script and the bounds on resources it is allocated.
-runPLCScript :: CostModel -> SBS.ShortByteString -> ExUnits -> [P.Data] -> Bool
-runPLCScript (CostModel cost) scriptbytestring units ds =
+runPLCScript ::
+  forall era.
+  Show (Script era) =>
+  Proxy era ->
+  CostModel ->
+  SBS.ShortByteString ->
+  ExUnits ->
+  [P.Data] ->
+  ScriptResult
+runPLCScript proxy (CostModel cost) scriptbytestring units ds =
   case P.evaluateScriptRestricting
     P.Quiet
     cost
     (transExUnits units)
     scriptbytestring
     ds of
-    (_, Left _e) -> trace ("\nrunPLC fails " ++ show _e ++ "\nData = " ++ show ds) False
-    (_, Right ()) -> True
+    (_, Left e) -> explain_plutus_failure proxy scriptbytestring e ds
+    (_, Right ()) -> Passes
+
+-- | Explin why a script might fail. Scripts come in two flavors. 1) with 3  data arguments [data,redeemer,context]
+--   and  2) with 2 data arguments [redeemer,context]. It pays to decode the context data into a real context
+--   because that provides way more information. But there is no guarantee the context data really can be decoded.
+explain_plutus_failure :: forall era. Show (Script era) => Proxy era -> SBS.ShortByteString -> P.EvaluationError -> [P.Data] -> ScriptResult
+explain_plutus_failure _proxy scriptbytestring e [dat, redeemer, info] =
+  -- A three data argument script.
+  let ss :: Script era
+      ss = PlutusScript scriptbytestring
+      name :: String
+      name = show ss
+   in case P.fromData info of
+        Nothing -> Fails [line]
+          where
+            line =
+              unlines
+                [ "\nThe 3 arg plutus script (" ++ name ++ ") fails.",
+                  show e,
+                  "The data is: " ++ show dat,
+                  "The redeemer is: " ++ show redeemer,
+                  "The third data argument, does not decode to a context\n" ++ show info
+                ]
+        Just info2 -> Fails [line]
+          where
+            info3 = show (pretty (info2 :: P.ScriptContext))
+            line =
+              unlines
+                [ "\nThe 3 arg plutus script (" ++ name ++ ") fails.",
+                  show e,
+                  "The data is: " ++ show dat,
+                  "The redeemer is: " ++ show redeemer,
+                  "The context is:\n" ++ info3
+                ]
+explain_plutus_failure _proxy scriptbytestring e [redeemer, info] =
+  -- A two data argument script.
+  let ss :: Script era
+      ss = PlutusScript scriptbytestring
+      name :: String
+      name = show ss
+   in case P.fromData info of
+        Nothing -> Fails [line]
+          where
+            line =
+              unlines
+                [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
+                  show e,
+                  "The redeemer is: " ++ show redeemer,
+                  "The second data argument, does not decode to a context\n" ++ show info
+                ]
+        Just info2 -> Fails [line]
+          where
+            info3 = show (pretty (info2 :: P.ScriptContext))
+            line =
+              unlines
+                [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
+                  show e,
+                  "The redeemer is: " ++ show redeemer,
+                  "The context is:\n" ++ info3
+                ]
+explain_plutus_failure _proxy scriptbytestring e ds = Fails [line] -- A script with the wrong number of arguments
+  where
+    ss :: Script era
+    ss = PlutusScript scriptbytestring
+    name :: String
+    name = show ss
+    line =
+      unlines
+        ( [ "\nThe plutus script (" ++ name ++ ") fails.",
+            show e,
+            "It was passed these " ++ show (Prelude.length ds) ++ " data arguments."
+          ]
+            ++ map show ds
+        )
 
 validPlutusdata :: P.Data -> Bool
 validPlutusdata (P.Constr _n ds) = all validPlutusdata ds

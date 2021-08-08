@@ -12,6 +12,7 @@ module Cardano.Ledger.Coin
     word64ToCoin,
     coinToRational,
     rationalToCoinViaFloor,
+    rationalToCoinViaCeiling,
     addDeltaCoin,
     toDeltaCoin,
     integerToWord64,
@@ -68,6 +69,9 @@ coinToRational (Coin c) = fromIntegral c
 
 rationalToCoinViaFloor :: Rational -> Coin
 rationalToCoinViaFloor r = Coin . floor $ r
+
+rationalToCoinViaCeiling :: Rational -> Coin
+rationalToCoinViaCeiling r = Coin . ceiling $ r
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64

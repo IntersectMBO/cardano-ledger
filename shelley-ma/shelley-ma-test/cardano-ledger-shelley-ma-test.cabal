@@ -61,7 +61,6 @@ library
     bytestring,
     cardano-binary,
     cardano-crypto-class,
-    cardano-crypto-praos,
     cardano-ledger-core,
     cardano-ledger-shelley-ma,
     cardano-prelude,

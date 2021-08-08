@@ -35,11 +35,11 @@ module Cardano.Ledger.Alonzo.Tx
     IsValid (..),
     hashData,
     nonNativeLanguages,
-    hashWitnessPPData,
+    hashScriptIntegrity,
     getCoin,
-    EraIndependentWitnessPPData,
-    WitnessPPData (WitnessPPData),
-    WitnessPPDataHash,
+    EraIndependentScriptIntegrity,
+    ScriptIntegrity (ScriptIntegrity),
+    ScriptIntegrityHash,
     -- Figure 3
     ValidatedTx (ValidatedTx, body, wits, isValid, auxiliaryData),
     txdats',
@@ -69,6 +69,8 @@ module Cardano.Ledger.Alonzo.Tx
     -- Deprecated
     IsValidating,
     isValidating,
+    WitnessPPData,
+    hashWitnessPPData,
   )
 where
 
@@ -97,10 +99,10 @@ import Cardano.Ledger.Alonzo.Scripts
     txscriptfee,
   )
 import Cardano.Ledger.Alonzo.TxBody
-  ( EraIndependentWitnessPPData,
+  ( EraIndependentScriptIntegrity,
+    ScriptIntegrityHash,
     TxBody (..),
     TxOut (..),
-    WitnessPPDataHash,
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -254,33 +256,49 @@ instance
 getCoin :: (Era era) => TxOut era -> Coin
 getCoin txout = coin (getField @"value" txout)
 
--- ========================================================================
--- A WitnessPPDataHash is the hash of two things. The first part comes from
--- the witnesses and the second comes from the Protocol Parameters (PParams).
--- In order to hash 2 things we make a newtype WitnessPPData which will be
--- a MemoBytes of these two things (WitnessPPDataRaw), so that we can hash it.
-
-data WitnessPPData era
-  = WitnessPPData
+-- | A ScriptIntegrityHash is the hash of three things.  The first two come
+-- from the witnesses and the last comes from the Protocol Parameters.
+data ScriptIntegrity era
+  = ScriptIntegrity
       !(Redeemers era) -- From the witnesses
       !(TxDats era)
       !(Set LangDepView) -- From the Porotocl parameters
   deriving (Show, Eq, Generic, Typeable)
 
-deriving instance Typeable era => NoThunks (WitnessPPData era)
+{-# DEPRECATED WitnessPPData "Use ScriptIntegrity instead" #-}
 
--- WitnessPPData is not transmitted over the network. The bytes are independently
+type WitnessPPData = ScriptIntegrity
+
+deriving instance Typeable era => NoThunks (ScriptIntegrity era)
+
+-- ScriptIntegrity is not transmitted over the network. The bytes are independently
 -- reconstructed by all nodes. There are no original bytes to preserve.
 -- Instead, we must use a reproducable serialization
-instance Era era => SafeToHash (WitnessPPData era) where
-  originalBytes (WitnessPPData m d l) =
+instance Era era => SafeToHash (ScriptIntegrity era) where
+  originalBytes (ScriptIntegrity m d l) =
     -- TODO: double check that canonical encodings are used for the langDepView (l)
     let dBytes = if nullDats d then mempty else originalBytes d
         lBytes = serializeEncoding' (encodeLangViews l)
      in originalBytes m <> dBytes <> lBytes
 
-instance (Era era, c ~ Crypto era) => HashAnnotated (WitnessPPData era) EraIndependentWitnessPPData c
+instance (Era era, c ~ Crypto era) => HashAnnotated (ScriptIntegrity era) EraIndependentScriptIntegrity c
 
+hashScriptIntegrity ::
+  forall era.
+  Era era =>
+  PParams era ->
+  Set Language ->
+  Redeemers era ->
+  TxDats era ->
+  StrictMaybe (ScriptIntegrityHash (Crypto era))
+hashScriptIntegrity pp langs rdmrs dats =
+  if nullRedeemers rdmrs && Set.null langs && nullDats dats
+    then SNothing
+    else
+      let newset = Set.map (getLanguageView pp) langs
+       in SJust (hashAnnotated (ScriptIntegrity rdmrs dats newset))
+
+{-# DEPRECATED hashWitnessPPData "Use hashScriptIntegrity instead" #-}
 hashWitnessPPData ::
   forall era.
   Era era =>
@@ -288,13 +306,8 @@ hashWitnessPPData ::
   Set Language ->
   Redeemers era ->
   TxDats era ->
-  StrictMaybe (WitnessPPDataHash (Crypto era))
-hashWitnessPPData pp langs rdmrs dats =
-  if nullRedeemers rdmrs && Set.null langs && nullDats dats
-    then SNothing
-    else
-      let newset = Set.map (getLanguageView pp) langs
-       in SJust (hashAnnotated (WitnessPPData rdmrs dats newset))
+  StrictMaybe (ScriptIntegrityHash (Crypto era))
+hashWitnessPPData = hashScriptIntegrity
 
 -- ===============================================================
 -- From the specification, Figure 5 "Functions related to fees"

@@ -42,6 +42,7 @@ import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Data.Text (pack)
 import qualified Data.Text as T (pack)
 import Numeric.Natural (Natural)
 import qualified PlutusTx as Plutus
@@ -261,7 +262,7 @@ instance Arbitrary (PParamsUpdate era) where
 instance Mock c => Arbitrary (UtxosPredicateFailure (AlonzoEra c)) where
   arbitrary =
     oneof
-      [ ValidationTagMismatch <$> arbitrary,
+      [ ValidationTagMismatch <$> arbitrary <*> (pack <$> arbitrary),
         UpdateFailure <$> arbitrary
       ]
 
@@ -291,7 +292,7 @@ instance Mock c => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
   arbitrary =
     oneof
       [ WrappedShelleyEraFailure <$> arbitrary,
-        UnRedeemableScripts <$> arbitrary,
+        MissingRedeemers <$> arbitrary,
         MissingRequiredDatums <$> arbitrary <*> arbitrary,
         PPViewHashesDontMatch <$> arbitrary <*> arbitrary
       ]
@@ -305,9 +306,9 @@ instance Mock c => Arbitrary (ScriptPurpose c) where
         Certifying <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (WitnessPPData (AlonzoEra c)) where
+instance Mock c => Arbitrary (ScriptIntegrity (AlonzoEra c)) where
   arbitrary =
-    WitnessPPData
+    ScriptIntegrity
       <$> arbitrary
       <*> genData
       <*> (Set.singleton <$> (getLanguageView <$> arbitrary <*> arbitrary))
