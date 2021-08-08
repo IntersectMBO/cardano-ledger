@@ -116,7 +116,7 @@ import Shelley.Spec.Ledger.STS.Prtcl
     PrtlSeqFailure,
     prtlSeqChecks,
   )
-import Shelley.Spec.Ledger.STS.Tick (TICK, TickPredicateFailure)
+import Shelley.Spec.Ledger.STS.Tick (TICK, TickEvent, TickPredicateFailure)
 import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)
 
@@ -445,7 +445,7 @@ instance
     Era era,
     STS (TICK era),
     PredicateFailure (Core.EraRule "TICK" era) ~ TickPredicateFailure era,
-    Event (Core.EraRule "TICK" era) ~ Void
+    Event (Core.EraRule "TICK" era) ~ TickEvent era
   ) =>
   Embed (TICK era) (CHAIN era)
   where

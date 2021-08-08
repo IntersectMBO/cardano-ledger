@@ -15,6 +15,7 @@
 module Shelley.Spec.Ledger.STS.NewEpoch
   ( NEWEPOCH,
     NewEpochPredicateFailure (..),
+    NewEpochEvent (..),
     PredicateFailure,
     calculatePoolDistr,
   )
@@ -32,6 +33,7 @@ import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -71,6 +73,11 @@ instance
   ) =>
   NoThunks (NewEpochPredicateFailure era)
 
+data NewEpochEvent era
+  = Rewards !EpochNo !(RewardUpdate (Crypto era))
+  | EpochEvent (Event (Core.EraRule "EPOCH" era))
+  | MirEvent (Event (Core.EraRule "MIR" era))
+
 instance
   ( UsesTxOut era,
     UsesValue era,
@@ -97,6 +104,7 @@ instance
 
   type BaseM (NEWEPOCH era) = ShelleyBase
   type PredicateFailure (NEWEPOCH era) = NewEpochPredicateFailure era
+  type Event (NEWEPOCH era) = NewEpochEvent era
 
   initialRules =
     [ pure $
@@ -138,19 +146,15 @@ newEpochTransition = do
   if e_ /= eL + 1
     then pure src
     else do
+      let updateRewards ru'@(RewardUpdate dt dr rs_ df _) = do
+            let totRs = sumRewards (esPrevPp es) rs_
+            Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
+            tellEvent $ Rewards e ru'
+            pure $ applyRUpd ru' es
       es' <- case ru of
         SNothing -> pure es
-        SJust (p@(Pulsing _ _)) -> do
-          ru'@(RewardUpdate dt dr rs_ df _) <- liftSTS $ runProvM $ completeRupd p
-          let totRs = sumRewards (esPrevPp es) rs_
-          Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
-          pure $ applyRUpd ru' es
-        SJust (Complete ru') -> do
-          let RewardUpdate dt dr rs_ df _ = ru'
-              totRs = sumRewards (esPrevPp es) rs_
-          Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
-          pure $ applyRUpd ru' es
-
+        SJust (p@(Pulsing _ _)) -> (liftSTS $ runProvM $ completeRupd p) >>= updateRewards
+        SJust (Complete ru') -> updateRewards ru'
       es'' <- trans @(Core.EraRule "MIR" era) $ TRC ((), es', ())
       es''' <- trans @(Core.EraRule "EPOCH" era) $ TRC ((), es'', e)
       let EpochState _acnt ss _ls _pr _ _ = es'''
@@ -181,17 +185,21 @@ instance
   ( UsesTxOut era,
     UsesValue era,
     STS (EPOCH era),
-    PredicateFailure (Core.EraRule "EPOCH" era) ~ EpochPredicateFailure era
+    PredicateFailure (Core.EraRule "EPOCH" era) ~ EpochPredicateFailure era,
+    Event (Core.EraRule "EPOCH" era) ~ EpochEvent era
   ) =>
   Embed (EPOCH era) (NEWEPOCH era)
   where
   wrapFailed = EpochFailure
+  wrapEvent = EpochEvent
 
 instance
   ( Era era,
     Default (EpochState era),
-    PredicateFailure (Core.EraRule "MIR" era) ~ MirPredicateFailure era
+    PredicateFailure (Core.EraRule "MIR" era) ~ MirPredicateFailure era,
+    Event (Core.EraRule "MIR" era) ~ Void
   ) =>
   Embed (MIR era) (NEWEPOCH era)
   where
   wrapFailed = MirFailure
+  wrapEvent = MirEvent

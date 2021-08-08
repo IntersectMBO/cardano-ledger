@@ -16,6 +16,7 @@ module Shelley.Spec.Ledger.STS.Tick
   ( TICK,
     State,
     TickPredicateFailure (..),
+    TickEvent (..),
     PredicateFailure,
     adoptGenesisDelegs,
     TICKF,
@@ -33,11 +34,12 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShots (_pstakeMark))
 import Shelley.Spec.Ledger.LedgerState (DPState (..), DState (..), EpochState (..), FutureGenDeleg (..), LedgerState (..), NewEpochState (..), PulsingRewUpdate)
-import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochPredicateFailure)
+import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochEvent, NewEpochPredicateFailure)
 import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..), RupdPredicateFailure)
 
 -- ==================================================
@@ -67,6 +69,11 @@ instance
   ) =>
   NoThunks (TickPredicateFailure era)
 
+data TickEvent era
+  = NewEpochEvent (Event (Core.EraRule "NEWEPOCH" era))
+  | RupdEvent (Event (Core.EraRule "RUPD" era))
+  deriving (Generic)
+
 instance
   ( Era era,
     Embed (Core.EraRule "NEWEPOCH" era) (TICK era),
@@ -91,6 +98,7 @@ instance
   type Environment (TICK era) = ()
   type BaseM (TICK era) = ShelleyBase
   type PredicateFailure (TICK era) = TickPredicateFailure era
+  type Event (TICK era) = TickEvent era
 
   initialRules = []
   transitionRules = [bheadTransition]
@@ -187,20 +195,24 @@ instance
   ( UsesTxOut era,
     UsesValue era,
     STS (NEWEPOCH era),
-    PredicateFailure (Core.EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era
+    PredicateFailure (Core.EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era,
+    Event (Core.EraRule "NEWEPOCH" era) ~ NewEpochEvent era
   ) =>
   Embed (NEWEPOCH era) (TICK era)
   where
   wrapFailed = NewEpochFailure
+  wrapEvent = NewEpochEvent
 
 instance
   ( Era era,
     STS (RUPD era),
-    PredicateFailure (Core.EraRule "RUPD" era) ~ RupdPredicateFailure era
+    PredicateFailure (Core.EraRule "RUPD" era) ~ RupdPredicateFailure era,
+    Event (Core.EraRule "RUPD" era) ~ Void
   ) =>
   Embed (RUPD era) (TICK era)
   where
   wrapFailed = RupdFailure
+  wrapEvent = RupdEvent
 
 {------------------------------------------------------------------------------
 -- TICKF transition
@@ -234,6 +246,9 @@ instance
   ) =>
   NoThunks (TickfPredicateFailure era)
 
+newtype TickfEvent era
+  = TickfNewEpochEvent (Event (Core.EraRule "NEWEPOCH" era)) -- Subtransition Events
+
 instance
   ( Era era,
     Embed (Core.EraRule "NEWEPOCH" era) (TICKF era),
@@ -252,6 +267,7 @@ instance
   type Environment (TICKF era) = ()
   type BaseM (TICKF era) = ShelleyBase
   type PredicateFailure (TICKF era) = TickfPredicateFailure era
+  type Event (TICKF era) = TickfEvent era
 
   initialRules = []
   transitionRules =
@@ -264,9 +280,10 @@ instance
   ( UsesTxOut era,
     UsesValue era,
     STS (NEWEPOCH era),
-    PredicateFailure (Core.EraRule "NEWEPOCH" era)
-      ~ NewEpochPredicateFailure era
+    PredicateFailure (Core.EraRule "NEWEPOCH" era) ~ NewEpochPredicateFailure era,
+    Event (Core.EraRule "NEWEPOCH" era) ~ NewEpochEvent era
   ) =>
   Embed (NEWEPOCH era) (TICKF era)
   where
   wrapFailed = TickfNewEpochFailure
+  wrapEvent = TickfNewEpochEvent

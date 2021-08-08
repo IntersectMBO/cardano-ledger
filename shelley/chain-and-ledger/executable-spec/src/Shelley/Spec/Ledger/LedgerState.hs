@@ -1129,7 +1129,7 @@ startStep ::
   Coin ->
   ActiveSlotCoeff ->
   Word64 ->
-  (PulsingRewUpdate (Crypto era))
+  PulsingRewUpdate (Crypto era)
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       f, numPools, k :: Rational
