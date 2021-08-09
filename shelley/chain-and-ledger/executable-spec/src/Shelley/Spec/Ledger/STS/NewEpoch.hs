@@ -74,7 +74,7 @@ instance
   NoThunks (NewEpochPredicateFailure era)
 
 data NewEpochEvent era
-  = Rewards !EpochNo !(RewardUpdate (Crypto era))
+  = RewardsUpdateEvent !EpochNo !(RewardUpdate (Crypto era))
   | EpochEvent (Event (Core.EraRule "EPOCH" era))
   | MirEvent (Event (Core.EraRule "MIR" era))
 
@@ -149,7 +149,7 @@ newEpochTransition = do
       let updateRewards ru'@(RewardUpdate dt dr rs_ df _) = do
             let totRs = sumRewards (esPrevPp es) rs_
             Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
-            tellEvent $ Rewards e ru'
+            tellEvent $ RewardsUpdateEvent e ru'
             pure $ applyRUpd ru' es
       es' <- case ru of
         SNothing -> pure es
