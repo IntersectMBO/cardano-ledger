@@ -53,6 +53,7 @@ import Data.Typeable (Typeable)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as P
   ( Address (..),
+    BuiltinByteString,
     Credential (..),
     CurrencySymbol (..),
     DCert (..),
@@ -88,11 +89,10 @@ import qualified Plutus.V1.Ledger.Api as P
     singleton,
     strictUpperBound,
     to,
+    toBuiltin,
     toData,
     unionWith,
     validateScript,
-    BuiltinByteString,
-    toBuiltin
   )
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
@@ -316,7 +316,7 @@ txInfo ei sysS utxo tx = do
       { P.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),
         P.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
         P.txInfoFee = (transValue (inject @(Mary.Value (Crypto era)) fee)),
-        P.txInfoForge = (transValue forge),
+        P.txInfoMint = (transValue forge),
         P.txInfoDCert = (foldr (\c ans -> transDCert c : ans) [] (certs' tbody)),
         P.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
         P.txInfoValidRange = timeRange,
