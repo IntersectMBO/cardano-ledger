@@ -953,16 +953,6 @@ pattern WitVKey k s <-
           hash = asWitness $ hashKey k
        in WitVKey' k s hash bytes
 
-{-
--- | Compute an era-independent transaction body hash
-eraIndTxBodyHash ::
-  forall era.
-  Era era =>
-  TxBody era ->
-  SafeHash (Crypto era) EraIndependentTxBody
-eraIndTxBodyHash x = hashAnnotated x
--}
-
 {-# COMPLETE WitVKey #-}
 
 witKeyHash ::
@@ -972,6 +962,14 @@ witKeyHash (WitVKey' _ _ kh _) = kh
 
 instance (Typeable kr, CC.Crypto crypto) => Ord (WitVKey kr crypto) where
   compare x y =
+    -- It is advised against comparison on keys and signatures directly,
+    -- therefore we use hashes of verification keys and signatures for
+    -- implementing this Ord instance. Note that we do not need to memoize the
+    -- hash of a signature, like it is done with the hash of a key, because Ord
+    -- instance is only used for Sets of WitVKeys and it would be a mistake to
+    -- have two WitVKeys in a same Set for different transactions. Therefore
+    -- comparison on signatures is unlikely to happen and is only needed for
+    -- compliance with Ord laws.
     comparing wvkKeyHash x y <> comparing (hashSignature @crypto . wvkSig') x y
 
 newtype StakeCreds crypto = StakeCreds
