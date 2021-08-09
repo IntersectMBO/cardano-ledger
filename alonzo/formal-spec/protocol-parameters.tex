@@ -103,7 +103,7 @@ by collateral inputs.
 The parameter $\var{collateralPercent}$ is used to specify the percentage of
 the total transaction fee its collateral must (at minimum) cover. The
 collateral inputs must not themselves be locked by a script. That is, they must
-be VK inputs. The parameter $\var{maxCollInputs}$ is used to limit, additionally,
+be VK inputs. The parameter $\var{maxCollateralInputs}$ is used to limit, additionally,
 the total number of collateral inputs, and thus the total number of additional
 signatures that must be checked during validation.
 
@@ -167,7 +167,7 @@ signatures that must be checked during validation.
         % & \text{Min. lovelace per word (8 bytes) a UTxO entry must contain}
         \var{collateralPercent} \mapsto \N & \PParams \\
         % & \text{Percentage of Tx fee which collateral must cover}
-        \var{maxCollInputs} \mapsto \N & \PParams \\
+        \var{maxCollateralInputs} \mapsto \N & \PParams \\
         % & \text{Maximum number of VK inputs that can be used to cover collateral}
       \end{array}
   \end{equation*}
@@ -182,7 +182,7 @@ signatures that must be checked during validation.
   %
   \begin{align*}
     & \fun{getLanguageView} \in \PParams \to \Language \to \LangDepView \\
-    & \fun{getLanguageView}~\var{pp}~\PlutusVI = \var{costmdls}~\mapsto~ (\fun{costmdls}~{pp}~\{\PlutusVI\})
+    & \fun{getLanguageView}~\var{pp}~\PlutusVI = \var{costmdls}~\mapsto~ (\fun{costmdls}~{pp}~\PlutusVI)
   \end{align*}
   %
   \caption{Definitions Used in Protocol Parameters}

@@ -427,7 +427,7 @@ We split this result into a lemma and its corollary :
       (and, by the same argument, the datum hash) are fixed by the inputs in body of the
       transaction, despite not being explicitly contained in it. We then get that
 
-      \[ \fun{scriptsNeeded}~\Utxo(s)~tx = \fun{scriptsNeeded}~\Utxo(u)~tx' \]
+      \[ \fun{scriptsNeeded}~\Utxo(s)~(\txbody{tx}) = \fun{scriptsNeeded}~\Utxo(u)~(\txbody{tx'}) \]
 
       \item $\fun{getDatum}$ : In the case the script purpose
       is of the input type, the datum this function returns is one that
