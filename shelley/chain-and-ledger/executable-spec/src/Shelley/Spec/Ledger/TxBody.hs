@@ -128,6 +128,7 @@ import Cardano.Ledger.Keys
     decodeSignedDSIGN,
     encodeSignedDSIGN,
     hashKey,
+    hashSignature,
   )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
@@ -969,11 +970,9 @@ witKeyHash ::
   KeyHash 'Witness crypto
 witKeyHash (WitVKey' _ _ kh _) = kh
 
-instance
-  (Typeable kr, CC.Crypto crypto) =>
-  Ord (WitVKey kr crypto)
-  where
-  compare = comparing wvkKeyHash
+instance (Typeable kr, CC.Crypto crypto) => Ord (WitVKey kr crypto) where
+  compare x y =
+    comparing wvkKeyHash x y <> comparing (hashSignature @crypto . wvkSig') x y
 
 newtype StakeCreds crypto = StakeCreds
   { unStakeCreds :: Map (Credential 'Staking crypto) SlotNo

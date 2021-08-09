@@ -132,6 +132,7 @@ import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, TxSeq, bhbody, bheade
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.Tx (Tx, TxOut, WitnessSet)
+import Test.QuickCheck (Arbitrary (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Tasty.HUnit
   ( Assertion,
@@ -178,6 +179,10 @@ type GenesisKeyPair crypto = KeyPair 'Genesis crypto
 
 data RawSeed = RawSeed !Word64 !Word64 !Word64 !Word64 !Word64
   deriving (Eq, Show)
+
+instance Arbitrary RawSeed where
+  arbitrary =
+    RawSeed <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
 
 instance ToCBOR RawSeed where
   toCBOR (RawSeed w1 w2 w3 w4 w5) = toCBOR (w1, w2, w3, w4, w5)

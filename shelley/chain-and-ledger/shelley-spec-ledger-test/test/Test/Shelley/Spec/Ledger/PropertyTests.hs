@@ -28,19 +28,21 @@ module Test.Shelley.Spec.Ledger.PropertyTests
 where
 
 import Cardano.Binary (ToCBOR)
-import Cardano.Ledger.BaseTypes
-  ( StrictMaybe (..),
-  )
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Keys (KeyRole (Witness))
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys (DSignable, Hash, KeyRole (Witness))
+import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import Data.List (nub, sort)
 import Data.Map (Map)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
+import Data.Set as Set (Set, fromList, singleton)
 import GHC.Records (HasField (..))
 import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, PPUPState, UTxOState, UtxoEnv)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
@@ -48,6 +50,8 @@ import Shelley.Spec.Ledger.PParams (Update (..))
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl, WitVKey)
+import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
+import Test.QuickCheck (conjoin, (===), (==>))
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
   ( bootstrapHashTest,
   )
@@ -73,12 +77,30 @@ import Test.Shelley.Spec.Ledger.Rules.TestChain
     poolProperties,
     removedAfterPoolreap,
   )
+import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
 import Test.Shelley.Spec.Ledger.ShelleyTranslation (testGroupShelleyTranslation)
-import Test.Shelley.Spec.Ledger.Utils (ChainProperty)
+import Test.Shelley.Spec.Ledger.Utils (ChainProperty, RawSeed, mkKeyPair')
 import Test.Tasty (TestTree, localOption, testGroup)
 import qualified Test.Tasty.QuickCheck as TQC
 
 -- =====================================================================
+
+propWitVKeys ::
+  forall c.
+  (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) =>
+  RawSeed ->
+  SafeHash c EraIndependentTxBody ->
+  SafeHash c EraIndependentTxBody ->
+  TQC.Property
+propWitVKeys seed h1 h2 =
+  let kp = mkKeyPair' seed
+      w1 = makeWitnessVKey h1 kp
+      w2 = makeWitnessVKey h2 kp
+   in conjoin
+        [ sort [w1, w2] === sort [w2, w1],
+          length (nub [w1, w2]) === length (Set.fromList [w1, w2]),
+          w1 /= w2 ==> length (Set.singleton w1 <> Set.singleton w2) === 2
+        ]
 
 minimalPropertyTests ::
   forall era.
@@ -116,7 +138,9 @@ minimalPropertyTests =
           TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
           TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era)),
           TQC.testProperty "isBootstrapRedeemer is equivalent for CompactAddr and Addr" (propIsBootstrapRedeemer @(Crypto era))
-        ]
+        ],
+      TQC.testProperty "WitVKey does not brake containers due to invalid Ord" $
+        propWitVKeys @(Crypto era)
     ]
 
 -- | 'TestTree' of property-based testing properties.
