@@ -43,7 +43,7 @@ import Test.Cardano.Ledger.ModelChain.Value
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Data.List (tails)
+import qualified Data.List as List
 
 modelMACoin ::
   (ValueFeature era ~ 'ExpectAnyOutput) =>
@@ -226,8 +226,8 @@ shrinkModelSimple
   :: forall a.
       (a, [ModelEpoch AllModelFeatures])
   -> [(a, [ModelEpoch AllModelFeatures])]
-shrinkModelSimple (genesis, epochs) = (,) genesis <$> reverse (drop 1 $ tails epochs)
---
+shrinkModelSimple (genesis, epochs) = (,) genesis <$> tail (List.init $ ([]:) $ List.inits epochs)
+
 -- | some hand-written model based unit tests
 modelUnitTests ::
   forall era proxy.
