@@ -51,7 +51,7 @@ its scripts validate.
   \begin{itemize}
     \item preservation of value property expressed via the $\fun{produced}$ and $\fun{consumed}$
     calculations, applicable for transactions with $\fun{txValTag}~tx~=~\True$, which
-    is specified as in the ShelleMA POV.
+    is specified as in the ShelleyMA POV.
     \item the preservation of value for $\fun{txValTag}~tx~=~\False$, when
     only the collateral fees are collected into the fee pot.
   \end{itemize}
@@ -79,7 +79,7 @@ Both of these are expressed in the following lemma.
 
   Note that in the $\fun{feesOK}$ function, there is a check that verifies
   that, in the case that there are phase-2 scripts, there are no non-Ada tokens in the UTxOs
-  which the collateral inputs reference, so non-Ada tokens do not get minted, burned, or transfered
+  which the collateral inputs reference, so non-Ada tokens do not get minted, burned, or transferred
   in this case.
 \end{proof}
 \end{property}
@@ -187,7 +187,7 @@ the collateral is required to cover.
   of transitions called in the order $\mathsf{LEDGER}, \mathsf{UTXOW}, \mathsf{UTXO}, \mathsf{UTXOS}$.
 
   The $\mathsf{Scripts{-}Yes}$ rule (i.e. $\fun{txValTag} = \True$)
-  transfers the amount of lovelace in the $\fun{txfee}$ field of the
+  transfers the amount of Lovelace in the $\fun{txfee}$ field of the
   transaction to the fee pot, which is checked to be at least the $\fun{minfee}$
   by $\fun{feesOK}$ in the $\mathsf{UTXO}$ transition. So, we get
 
@@ -195,7 +195,7 @@ the collateral is required to cover.
 
   The $\mathsf{Scripts{-}No}$ rule (i.e. $\fun{txValTag} = \False$) removes the
   $\fun{collateral}$ inputs from the
-  UTxO, and adds the the balance of these realized inputs to the fee pot.
+  UTxO, and adds the balance of these realized inputs to the fee pot.
 
   \[\field_{fees}~(s')~=~field_{fees}~(s)~+~\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})\]
 
@@ -390,7 +390,7 @@ We split this result into a lemma and its corollary :
     The $\fun{collectTwoPhaseScriptInputs}$
     function (see \ref{fig:functions:script2})
     constructs a list where each entry contains a Plutus script
-    and the argumets passed to the interpreter for its evaluation.
+    and the arguments passed to the interpreter for its evaluation.
 
     To show that $\fun{collectTwoPhaseScriptInputs}$ returns a list containing
     the same elements for both $tx$ and $tx'$, we observe that
@@ -485,13 +485,13 @@ We split this result into a lemma and its corollary :
 
         \item $\fun{txInfoValidRange}$ : this field contains the transaction
         validity interval as system time (converted from the slot numbers, which are
-        used to speficy the interval in the transaction body). This conversion is
+        used to specify the interval in the transaction body). This conversion is
         done by a function defined in the consensus layer, and takes two global
         constants in addition to the slot interval itself. Since the slot interval
         conversion function $\fun{epochInfoSlotToUTCTime}$ necessarily
         succeeds if both $tx$ and $tx'$ pass phase-1 validation, the additional
         global constant arguments must be the same (by assumption). The determinism of this conversion
-        is one of the assumptions of this property, and thus gives the same ouput
+        is one of the assumptions of this property, and thus gives the same output
         for both transactions.
 
         \item $\fun{txInfoData}$ : this field is populated with the datums (and their
@@ -547,13 +547,13 @@ as in Lemma \ref{lem:inputs}.
 
     \begin{itemize}
       \item has no impact on the outcome of script evaluation in the case the script
-      being validated at this step is phase-2, as it is competely ignored, and,
+      being validated at this step is phase-2, as it is completely ignored, and,
 
       \item because $\fun{collectTwoPhaseScriptInputs}$ filters out all phase-1 scripts,
       is, in fact, ignored always.
     \end{itemize}
 
-    The second argument to $\fun{evalScripts}$, ie. the list of scripts and their arguemnts,
+    The second argument to $\fun{evalScripts}$, ie. the list of scripts and their arguments,
     has already been shown to contain the same tuples for both transactions in the lemma above.
     The order of the list does not affect the validation outcome, since the interpreter is run
     on each tuple of a script and its arguments independently of all other tuples in the list.

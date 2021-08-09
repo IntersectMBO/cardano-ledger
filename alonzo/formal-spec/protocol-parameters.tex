@@ -58,7 +58,7 @@ The transaction body therefore includes a hash of any such data that is not uniq
 When the transaction is processed, as part of the UTXOW rule, this hash is compared with a hash of the data that is passed to the interpreter. This
 ensures that scripts are only executed if they have been provided with the intended data.
 
-The $\fun{getLanguageView}$ function (Figure~\ref{fig:defs:protocol-parameters}) filters the data relvant
+The $\fun{getLanguageView}$ function (Figure~\ref{fig:defs:protocol-parameters}) filters the data relevant
 to a given language from the protocol parameters. Recall here that $\Tppm$ is the type of the
 protocol parameter $\var{ppm}~\in~\Ppm$, and that $\PParams~=~\Ppm~\mapsto~\Tppm$.
 The type $\LangDepView$ is a subrecord of $\PParams$.
@@ -91,19 +91,19 @@ The parameters are used to ensure that the time and memory that are required to 
 
 \textbf{Value size limit as a protocol parameter.}
 The new parameter $\var{maxValSize}$ replaces the constant $\mathsf{maxValSize}$
-used (in the ShelleyMA era) to limit the size of the the $\Value$ part of an output in a
+used (in the ShelleyMA era) to limit the size of the $\Value$ part of an output in a
 serialised transaction.
 
 \textbf{Collateral inputs.}
 Collateral inputs in a transaction are used to cover the transaction fees in the case
 that a phase-2 script fails (see Section~\ref{sec:transctions}).
-The term \emph{collateral} refers to the total ada contained in the UTxOs referenced
+The term \emph{collateral} refers to the total Ada contained in the UTxOs referenced
 by collateral inputs.
 
 The parameter $\var{collateralPercent}$ is used to specify the percentage of
 the total transaction fee its collateral must (at minimum) cover. The
 collateral inputs must not themselves be locked by a script. That is, they must
-be VK inputs. The parameter $\var{maxCollateralInputs}$ is used to limit, additionally,
+be VKey inputs. The parameter $\var{maxCollateralInputs}$ is used to limit, additionally,
 the total number of collateral inputs, and thus the total number of additional
 signatures that must be checked during validation.
 
@@ -145,7 +145,7 @@ signatures that must be checked during validation.
   %
   \begin{equation*}
       \begin{array}{r@{~\in~}l@{\qquad}r}
-        \var{minUTxOValue} \mapsto \Coin & \PParams & \text{Min. amount of ada each UTxO must contain}
+        \var{minUTxOValue} \mapsto \Coin & \PParams & \text{Min. amount of Ada each UTxO must contain}
       \end{array}
   \end{equation*}
   %
@@ -164,7 +164,7 @@ signatures that must be checked during validation.
         \var{maxValSize} \mapsto \N & \PParams \\
         % & \text{Max size a value can be}\\
         \var{coinsPerUTxOWord} \mapsto \Coin & \PParams \\
-        % & \text{Min. lovelace per word (8 bytes) a UTxO entry must contain}
+        % & \text{Min. Lovelace per word (8 bytes) a UTxO entry must contain}
         \var{collateralPercent} \mapsto \N & \PParams \\
         % & \text{Percentage of Tx fee which collateral must cover}
         \var{maxCollateralInputs} \mapsto \N & \PParams \\

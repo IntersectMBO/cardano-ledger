@@ -101,7 +101,7 @@ the Alonzo era, this is also constant, with value $\mathsf{systemTime}$
   \begin{itemize}
     \item certificates in the $\DCert$ list are indexed in the order in which they arranged
     in the (full, unfiltered) list of certificates inside the transaction
-    \item the index of a reward account $\var{ract}$ in the the reward withdrawals map is
+    \item the index of a reward account $\var{ract}$ in the reward withdrawals map is
     the index of $\var{ract}$ as a key in the (unfiltered) map. The keys of the $\Wdrl$
     map are arranged in the order defined on the $\RewardAcnt$ type, which is a lexicographical
     (abbrv. lex) order
@@ -218,7 +218,7 @@ predict the exact time to which it refers.
 \item
   $\fun{valContext}$ constructs the \emph{validation context}. A validation context is
   a $\Data$ term which encodes both the summary of the transaction and ledger information
-  (this is supplied by the $\fun{txInfo}$ summarization function), and the script purpose.
+  (this is supplied by the $\fun{txInfo}$ summarizing function), and the script purpose.
 
 \item
   $\fun{runPLCScript}$ validates Plutus scripts. It takes the following
@@ -623,7 +623,7 @@ transition rule for the UTXO transition type.
 This rule has the following changes:
 
 \begin{enumerate}
-  \item The transaction pays fees and supplies collateral ada correctly, as defined above;
+  \item The transaction pays fees and supplies collateral Ada correctly, as defined above;
 
   \item The end of the transaction validity interval is translatable into
   system time (ie. within the consensus's forecast window). This is checked

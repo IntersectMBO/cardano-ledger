@@ -1,7 +1,5 @@
 \section{Introduction}
 
-\TODO{Please run a spell checker over the final document}
-
 This document describes the extensions to the multi-asset formal ledger specification~\cite{shelley_ma_spec} that are
 required for the support of phase two scripts, in particular Plutus Core. This underpins future Plutus development: there should be minimal changes to these ledger rules to support future phase-2 languages (eg. upcoming versions of Plutus).
 %
@@ -43,7 +41,7 @@ This allows execution costs (and so transaction fees) to be varied without requi
 This may be used, for example, if a more efficient interpreter is produced.
 
 The approach we use to bound execution costs to a pre-determined constant is
-distinct from the usual ``gas'' model~\cite{XX}.\TODO{And this one, please!} in the following notable ways :
+distinct from the usual ``gas'' model in the following notable ways :
 
 \begin{itemize}
   \item The exact budget to run a script is expressed in terms of computational resources,
@@ -79,10 +77,10 @@ Making it impossible to run a script in a particular scripting language
 makes UTxO entries locked by that script unspendable.
 
 We use the terms Plutus, $\PlutusVI$, and ``phase two scripting language'' in this specification
-somewhat interchangably. The reason for this is that while we intend for the infrastructure
+somewhat interchangeably. The reason for this is that while we intend for the infrastructure
 set up in this document to be somewhat language-agnostic (in particular,
 able to support multiple versions of Plutus), it only gives all the details for
-the first and (currenly only) phase-2 script language, $\PlutusVI$,
+the first and (currently only) phase-2 script language, $\PlutusVI$,
 the introduction of which represents the
 start of the Alonzo era.
 
