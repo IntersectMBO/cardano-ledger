@@ -259,17 +259,14 @@ sizedMetadatum 0 =
       MD.S <$> (T.pack <$> arbitrary)
     ]
 sizedMetadatum n =
-  oneof
-    [ MD.Map
-        <$> ( zip
-                <$> (resize maxMetadatumListLens (listOf (sizedMetadatum (n -1))))
-                <*> (listOf (sizedMetadatum (n -1)))
-            ),
-      MD.List <$> resize maxMetadatumListLens (listOf (sizedMetadatum (n -1))),
-      MD.I <$> arbitrary,
-      MD.B <$> arbitrary,
-      MD.S <$> (T.pack <$> arbitrary)
-    ]
+  let xsGen = listOf (sizedMetadatum (n - 1))
+   in oneof
+        [ MD.Map <$> (zip <$> resize maxMetadatumListLens xsGen <*> xsGen),
+          MD.List <$> resize maxMetadatumListLens xsGen,
+          MD.I <$> arbitrary,
+          MD.B <$> arbitrary,
+          MD.S <$> (T.pack <$> arbitrary)
+        ]
 
 instance Arbitrary MD.Metadatum where
   arbitrary = sizedMetadatum maxMetadatumDepth
