@@ -24,7 +24,9 @@ where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Slot
 import qualified Cardano.Ledger.Val as Val
@@ -33,7 +35,6 @@ import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
-import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -74,7 +75,7 @@ instance
   NoThunks (NewEpochPredicateFailure era)
 
 data NewEpochEvent era
-  = RewardsUpdateEvent !EpochNo !(RewardUpdate (Crypto era))
+  = SumRewards !EpochNo !(Map.Map (Credential 'Staking (Crypto era)) Coin)
   | EpochEvent (Event (Core.EraRule "EPOCH" era))
   | MirEvent (Event (Core.EraRule "MIR" era))
 
@@ -149,8 +150,9 @@ newEpochTransition = do
       let updateRewards ru'@(RewardUpdate dt dr rs_ df _) = do
             let totRs = sumRewards (esPrevPp es) rs_
             Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
-            tellEvent $ RewardsUpdateEvent e ru'
-            pure $ applyRUpd ru' es
+            let (es', regRU) = applyRUpd' ru' es
+            tellEvent $ SumRewards e regRU
+            pure es'
       es' <- case ru of
         SNothing -> pure es
         SJust (p@(Pulsing _ _)) -> (liftSTS $ runProvM $ completeRupd p) >>= updateRewards
@@ -197,7 +199,7 @@ instance
   ( Era era,
     Default (EpochState era),
     PredicateFailure (Core.EraRule "MIR" era) ~ MirPredicateFailure era,
-    Event (Core.EraRule "MIR" era) ~ Void
+    Event (Core.EraRule "MIR" era) ~ MirEvent era
   ) =>
   Embed (MIR era) (NEWEPOCH era)
   where

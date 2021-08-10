@@ -76,6 +76,7 @@ module Shelley.Spec.Ledger.LedgerState
     -- * Epoch boundary
     stakeDistr,
     applyRUpd,
+    applyRUpd',
     createRUpd,
     completeRupd,
     startStep,
@@ -1048,9 +1049,19 @@ applyRUpd ::
   RewardUpdate (Crypto era) ->
   EpochState era ->
   EpochState era
-applyRUpd
+applyRUpd ru es =
+  let (es', _) = applyRUpd' ru es
+   in es'
+
+applyRUpd' ::
+  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
+  RewardUpdate (Crypto era) ->
+  EpochState era ->
+  (EpochState era, Map (Credential 'Staking (Crypto era)) Coin)
+applyRUpd'
   ru
-  (EpochState as ss ls pr pp _nm) = EpochState as' ss ls' pr pp nm'
+  (EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', regRU)
     where
       utxoState_ = _utxoState ls
       delegState = _delegationState ls

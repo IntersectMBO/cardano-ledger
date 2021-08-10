@@ -14,12 +14,13 @@ module Shelley.Spec.Ledger.STS.Mir
   ( MIR,
     PredicateFailure,
     MirPredicateFailure,
+    MirEvent,
     emptyInstantaneousRewards,
   )
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (addDeltaCoin)
+import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (dom, eval, (∪+), (◁))
@@ -29,6 +30,7 @@ import Control.State.Transition
     TRC (..),
     TransitionRule,
     judgmentContext,
+    tellEvent,
   )
 import Data.Default.Class (Default)
 import Data.Foldable (fold)
@@ -59,6 +61,9 @@ data MIR era
 data MirPredicateFailure era
   deriving (Show, Generic, Eq)
 
+data MirEvent era
+  = TotalResTres Coin
+
 instance NoThunks (MirPredicateFailure era)
 
 instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
@@ -66,6 +71,7 @@ instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
   type Signal (MIR era) = ()
   type Environment (MIR era) = ()
   type BaseM (MIR era) = ShelleyBase
+  type Event (MIR era) = MirEvent era
   type PredicateFailure (MIR era) = MirPredicateFailure era
 
   transitionRules = [mirTransition]
@@ -106,6 +112,8 @@ mirTransition = do
       availableReserves = reserves `addDeltaCoin` (deltaReserves . _irwd $ ds)
       availableTreasury = treasury `addDeltaCoin` (deltaTreasury . _irwd $ ds)
       update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts (Crypto era)
+
+  tellEvent $ TotalResTres (totR <> totT)
 
   if totR <= availableReserves && totT <= availableTreasury
     then
