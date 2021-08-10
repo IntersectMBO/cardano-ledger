@@ -37,7 +37,6 @@ import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -128,9 +127,6 @@ genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Core.Script era])
 
 genData :: forall era. Era era => Gen (TxDats era)
 genData = TxDats <$> keyBy hashData <$> arbitrary
-
-instance HasAlgorithm c => Arbitrary (SafeHash c i) where
-  arbitrary = unsafeMakeSafeHash <$> arbitrary
 
 instance
   ( Era era,
