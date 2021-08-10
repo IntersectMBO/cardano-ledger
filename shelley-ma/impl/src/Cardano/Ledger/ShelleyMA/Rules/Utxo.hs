@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (heapWordsUnpacked)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁))
 import Control.Monad.Trans.Reader (asks)
@@ -125,7 +124,7 @@ scaledMinDeposit v (Coin mv)
 
     -- unpacked CompactCoin Word64 size in Word64s
     coinSize :: Integer
-    coinSize = fromIntegral $ heapWordsUnpacked (CompactCoin 0)
+    coinSize = 0
 
     utxoEntrySizeWithoutVal :: Integer
     utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen

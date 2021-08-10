@@ -56,7 +56,6 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), inInterval)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (HeapWords (..))
 import Cardano.Slotting.EpochInfo.API (epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (◁), (➖))
@@ -100,34 +99,17 @@ import Shelley.Spec.Ledger.UTxO
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
 utxoEntrySize :: Era era => TxOut era -> Integer
-utxoEntrySize txout
-  | Val.adaOnly v =
-    -- no non-ada assets, no hash datum case
-    case dh of
-      SNothing -> adaOnlyUTxOSize
-      SJust _ -> adaOnlyUTxOSize + dataHashSize dh
-  -- add the size of Value and the size of datum hash (if present) to base UTxO size
-  -- max function is a safeguard (in case calculation returns a smaller size than an ada-only entry)
-  | otherwise = max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh)
+utxoEntrySize txout = utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh
   where
     v = getField @"value" txout
     dh = getField @"datahash" txout
     -- lengths obtained from tracing on HeapWords of inputs and outputs
     -- obtained experimentally, and number used here
     -- units are Word64s
-    txoutLenNoVal = 14
-    txinLen = 7
-
-    -- unpacked CompactCoin Word64 size in Word64s
-    coinSize :: Integer
-    coinSize = fromIntegral $ heapWords (CompactCoin 0)
 
     -- size of UTxO entry excluding the Value part
     utxoEntrySizeWithoutVal :: Integer
-    utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen
-
-    -- size of commont UTxO with only ada and no datum
-    adaOnlyUTxOSize = utxoEntrySizeWithoutVal + coinSize
+    utxoEntrySizeWithoutVal = 27 -- 6 + txoutLenNoVal [14] + txinLen [7]
 
 -- ============================================
 
