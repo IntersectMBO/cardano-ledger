@@ -49,7 +49,6 @@ module Cardano.Ledger.Alonzo.Tx
     ScriptPurpose (..),
     totExUnits,
     --  Figure 5
-    getValidatorHash,
     minfee,
     isTwoPhaseScriptAddress,
     Shelley.txouts,
@@ -119,7 +118,6 @@ import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (isNativeScript))
 import Cardano.Ledger.Keys (KeyRole (Witness))
@@ -320,7 +318,7 @@ isTwoPhaseScriptAddress ::
   Addr (Crypto era) ->
   Bool
 isTwoPhaseScriptAddress tx addr =
-  case getValidatorHash addr of
+  case Shelley.getScriptHash addr of
     Nothing -> False
     Just hash ->
       case Map.lookup hash (getField @"scriptWits" tx) of
@@ -381,14 +379,6 @@ totExUnits ::
   tx era ->
   ExUnits
 totExUnits = fold . snd . unzip . Map.elems . unRedeemers . getField @"txrdmrs" . getField @"wits"
-
--- The specification uses "validatorHash" to extract ScriptHash from
--- an Addr. But not every Addr has a ScriptHash. In particular KeyHashObj
--- do not. So we use getValidatorHash which returns a Maybe type.
-
-getValidatorHash :: Addr crypto -> Maybe (ScriptHash crypto)
-getValidatorHash (Addr _network (ScriptHashObj hash) _ref) = Just hash
-getValidatorHash _ = Nothing
 
 -- ===============================================================
 -- Operations on scripts from specification

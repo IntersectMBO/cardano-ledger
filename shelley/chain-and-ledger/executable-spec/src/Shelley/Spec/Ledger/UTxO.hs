@@ -15,12 +15,6 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
--- |
--- Module      : UTxO
--- Description : Simple UTxO Ledger
---
--- This module defines the types and functions for a simple UTxO Ledger
--- as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module Shelley.Spec.Ledger.UTxO
   ( -- * Primitives
     UTxO (..),
