@@ -137,8 +137,9 @@ hashData :: Era era => Data era -> DataHash (Crypto era)
 hashData d = hashAnnotated d
 
 -- Size of the datum hash attached to the output (could be Nothing)
-dataHashSize :: (CC.Crypto c) => StrictMaybe (DataHash c) -> Integer
-dataHashSize dh = fromIntegral $ heapWords dh
+dataHashSize :: StrictMaybe (DataHash c) -> Integer
+dataHashSize SNothing = 0
+dataHashSize (SJust _) = 10
 
 instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
   heapWords SNothing = heapWords0

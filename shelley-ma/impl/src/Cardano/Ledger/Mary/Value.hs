@@ -51,7 +51,7 @@ import Cardano.Ledger.Val
     EncodeMint (..),
     Val (..),
   )
-import Cardano.Prelude (HeapWords (..), cborError)
+import Cardano.Prelude (cborError)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
@@ -163,7 +163,11 @@ instance CC.Crypto crypto => Val (Value crypto) where
   -- returns the size, in Word64's, of the CompactValue representation of Value
   size vv@(Value _ v)
     -- when Value contains only ada
-    | v == mempty = fromIntegral $ adaWords
+    -- !WARNING! This branch is INCORRECT in the Mary era and should ONLY be
+    -- used in the Alonzo ERA.
+    -- TODO - find a better way to reconcile the mistakes in Mary with what needs
+    -- to be the case in Alonzo.
+    | v == mempty = 2
     -- when Value contains ada as well as other tokens
     -- sums up :
     -- i) adaWords : the space taken up by the ada amount
@@ -173,9 +177,6 @@ instance CC.Crypto crypto => Val (Value crypto) where
       fromIntegral $
         (roundupBytesToWords $ representationSize (snd $ gettriples vv))
           + repOverhead
-
-instance CC.Crypto crypto => HeapWords (Value crypto) where
-  heapWords v = fromIntegral $ size v
 
 -- space (in Word64s) taken up by the ada amount
 adaWords :: Int
