@@ -161,7 +161,7 @@ showBalance
 -- need to be discarded. In that case we try to compute a Delta, that when
 -- added (applyDelta) to the transaction, repairs it. The repair is made
 -- by adding additional inputs from which more Ada can flow into the fee.
--- If that doesn't fix it, we add add more inputs to the Delta.
+-- If that doesn't fix it, we add more inputs to the Delta.
 -- Experience shows that this converges quite quickly (in traces we never saw
 -- more than 3 iterations).
 
