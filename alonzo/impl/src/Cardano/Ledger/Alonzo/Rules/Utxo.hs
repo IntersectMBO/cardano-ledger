@@ -215,6 +215,9 @@ instance
   ) =>
   NoThunks (UtxoPredicateFailure era)
 
+data UtxoEvent era
+  = UtxosEvent (Event (Core.EraRule "UTXOS" era))
+
 -- | Returns true for VKey locked addresses, and false for any kind of
 -- script-locked address.
 isKeyHashAddr :: Addr crypto -> Bool
@@ -484,13 +487,10 @@ instance
   where
   type State (AlonzoUTXO era) = Shelley.UTxOState era
   type Signal (AlonzoUTXO era) = ValidatedTx era
-  type
-    Environment (AlonzoUTXO era) =
-      Shelley.UtxoEnv era
+  type Environment (AlonzoUTXO era) = Shelley.UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
-  type
-    PredicateFailure (AlonzoUTXO era) =
-      UtxoPredicateFailure era
+  type PredicateFailure (AlonzoUTXO era) = UtxoPredicateFailure era
+  type Event (AlonzoUTXO era) = UtxoEvent era
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -498,11 +498,13 @@ instance
 instance
   ( Era era,
     STS (UTXOS era),
-    PredicateFailure (Core.EraRule "UTXOS" era) ~ UtxosPredicateFailure era
+    PredicateFailure (Core.EraRule "UTXOS" era) ~ UtxosPredicateFailure era,
+    Event (Core.EraRule "UTXOS" era) ~ Event (UTXOS era)
   ) =>
   Embed (UTXOS era) (AlonzoUTXO era)
   where
   wrapFailed = UtxosFailure
+  wrapEvent = UtxosEvent
 
 --------------------------------------------------------------------------------
 -- Serialisation

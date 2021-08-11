@@ -15,6 +15,7 @@
 module Shelley.Spec.Ledger.STS.Epoch
   ( EPOCH,
     EpochPredicateFailure (..),
+    EpochEvent (..),
     PredicateFailure,
   )
 where
@@ -36,6 +37,7 @@ import Control.State.Transition
   )
 import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -87,6 +89,11 @@ deriving stock instance
   ) =>
   Show (EpochPredicateFailure era)
 
+data EpochEvent era
+  = PoolReapEvent (Event (Core.EraRule "POOLREAP" era))
+  | SnapEvent (Event (Core.EraRule "SNAP" era))
+  | UpecEvent (Event (Core.EraRule "UPEC" era))
+
 instance
   ( UsesTxOut era,
     UsesValue era,
@@ -114,6 +121,7 @@ instance
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
   type PredicateFailure (EPOCH era) = EpochPredicateFailure era
+  type Event (EPOCH era) = EpochEvent era
   transitionRules = [epochTransition]
 
 instance
@@ -201,26 +209,32 @@ epochTransition = do
 instance
   ( UsesTxOut era,
     UsesValue era,
-    PredicateFailure (Core.EraRule "SNAP" era) ~ SnapPredicateFailure era
+    PredicateFailure (Core.EraRule "SNAP" era) ~ SnapPredicateFailure era,
+    Event (Core.EraRule "SNAP" era) ~ Void
   ) =>
   Embed (SNAP era) (EPOCH era)
   where
   wrapFailed = SnapFailure
+  wrapEvent = SnapEvent
 
 instance
   ( Era era,
     STS (POOLREAP era),
-    PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era
+    PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era,
+    Event (Core.EraRule "POOLREAP" era) ~ Void
   ) =>
   Embed (POOLREAP era) (EPOCH era)
   where
   wrapFailed = PoolReapFailure
+  wrapEvent = PoolReapEvent
 
 instance
   ( Era era,
     STS (UPEC era),
-    PredicateFailure (Core.EraRule "UPEC" era) ~ UpecPredicateFailure era
+    PredicateFailure (Core.EraRule "UPEC" era) ~ UpecPredicateFailure era,
+    Event (Core.EraRule "UPEC" era) ~ Void
   ) =>
   Embed (UPEC era) (EPOCH era)
   where
   wrapFailed = UpecFailure
+  wrapEvent = UpecEvent

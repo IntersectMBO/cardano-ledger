@@ -138,6 +138,9 @@ data DelegPredicateFailure era
   | MIRProducesNegativeUpdate
   deriving (Show, Eq, Generic)
 
+data DelegEvent era
+  = NewEpoch EpochNo
+
 instance
   ( Typeable era,
     HasField "_protocolVersion" (Core.PParams era) ProtVer
@@ -149,6 +152,7 @@ instance
   type Environment (DELEG era) = DelegEnv era
   type BaseM (DELEG era) = ShelleyBase
   type PredicateFailure (DELEG era) = DelegPredicateFailure era
+  type Event (DELEG era) = DelegEvent era
 
   transitionRules = [delegationTransition]
 
@@ -320,10 +324,11 @@ delegationTransition = do
       if HardForks.allowMIRTransfer pp
         then do
           sp <- liftSTS $ asks stabilityWindow
-          firstSlot <- liftSTS $ do
-            ei <- asks epochInfo
-            EpochNo currEpoch <- epochInfoEpoch ei slot
-            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          ei <- liftSTS $ asks epochInfo
+          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
+          let newEpoch = EpochNo (currEpoch + 1)
+          tellEvent (NewEpoch newEpoch)
+          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
           slot < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
@@ -347,10 +352,11 @@ delegationTransition = do
             TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
         else do
           sp <- liftSTS $ asks stabilityWindow
-          firstSlot <- liftSTS $ do
-            ei <- asks epochInfo
-            EpochNo currEpoch <- epochInfoEpoch ei slot
-            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          ei <- liftSTS $ asks epochInfo
+          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
+          let newEpoch = EpochNo (currEpoch + 1)
+          tellEvent (NewEpoch newEpoch)
+          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
           slot < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
@@ -374,10 +380,11 @@ delegationTransition = do
       if HardForks.allowMIRTransfer pp
         then do
           sp <- liftSTS $ asks stabilityWindow
-          firstSlot <- liftSTS $ do
-            ei <- asks epochInfo
-            EpochNo currEpoch <- epochInfoEpoch ei slot
-            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          ei <- liftSTS $ asks epochInfo
+          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
+          let newEpoch = EpochNo (currEpoch + 1)
+          tellEvent (NewEpoch newEpoch)
+          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
           slot < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate

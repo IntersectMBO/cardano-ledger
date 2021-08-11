@@ -14,6 +14,7 @@ module Shelley.Spec.Ledger.STS.Ppup
   ( PPUP,
     PPUPEnv (..),
     PpupPredicateFailure (..),
+    PpupEvent (..),
     PredicateFailure,
     VotingPeriod (..),
   )
@@ -80,6 +81,9 @@ data PpupPredicateFailure era
 
 instance NoThunks (PpupPredicateFailure era)
 
+data PpupEvent era
+  = NewEpoch EpochNo
+
 instance
   ( Typeable era,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
@@ -92,6 +96,7 @@ instance
   type Environment (PPUP era) = PPUPEnv era
   type BaseM (PPUP era) = ShelleyBase
   type PredicateFailure (PPUP era) = PpupPredicateFailure era
+  type Event (PPUP era) = PpupEvent era
 
   initialRules = []
 
@@ -159,10 +164,12 @@ ppupTransitionNonEmpty = do
         _ -> pure ()
 
       sp <- liftSTS $ asks stabilityWindow
-      firstSlotNextEpoch <- liftSTS $ do
-        ei <- asks epochInfo
-        EpochNo e <- epochInfoEpoch ei slot
-        epochInfoFirst ei (EpochNo $ e + 1)
+      firstSlotNextEpoch <- do
+        ei <- liftSTS $ asks epochInfo
+        EpochNo e <- liftSTS $ epochInfoEpoch ei slot
+        let newEpochNo = EpochNo $ e + 1
+        tellEvent $ NewEpoch newEpochNo
+        liftSTS $ epochInfoFirst ei newEpochNo
       let tooLate = firstSlotNextEpoch *- (Duration (2 * sp))
 
       currentEpoch <- liftSTS $ do
