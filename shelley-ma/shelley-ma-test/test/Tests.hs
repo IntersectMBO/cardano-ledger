@@ -4,6 +4,7 @@
 module Main where
 
 import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.AllegraEraGen ()
@@ -18,6 +19,14 @@ import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTes
 import Test.Tasty
 import Test.Tasty.HUnit ()
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
+
+type A = AllegraEra TestCrypto
+
+type AL = LEDGER (AllegraEra TestCrypto)
+
+type M = MaryEra TestCrypto
+
+type ML = LEDGER (MaryEra TestCrypto)
 
 tests :: TestTree
 tests = askOption $ \case
@@ -42,7 +51,7 @@ allegraTests =
   testGroup
     "Allegra Ledger Tests"
     [ allegraTranslationTests,
-      minimalPropertyTests @(AllegraEra TestCrypto),
+      minimalPropertyTests @A @AL,
       testScriptPostTranslation
     ]
 
@@ -62,11 +71,11 @@ nightlyTests =
     "ShelleyMA Ledger - nightly"
     [ testGroup
         "Allegra Ledger - nightly"
-        [ propertyTests @(AllegraEra TestCrypto)
+        [ propertyTests @A @AL
         ],
       testGroup
         "Mary Ledger - nightly"
-        [ propertyTests @(MaryEra TestCrypto)
+        [ propertyTests @M @ML
         ]
     ]
 

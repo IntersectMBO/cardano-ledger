@@ -250,7 +250,8 @@ data TwoPhase3ArgInfo era = TwoPhase3ArgInfo
       ( Plutus.Data, -- The redeeming data
         Word64, -- The ExUnits memory count
         Word64 -- The ExUnits steps count
-      )
+      ),
+    getSucceeds3 :: Bool
   }
 
 data TwoPhase2ArgInfo era = TwoPhase2ArgInfo
@@ -263,7 +264,8 @@ data TwoPhase2ArgInfo era = TwoPhase2ArgInfo
       ( Plutus.Data, -- The redeeming data
         Word64, -- The ExUnits memory count
         Word64 -- The ExUnits steps count
-      )
+      ),
+    getSucceeds2 :: Bool
   }
 
 deriving instance Show (Core.Script era) => Show (TwoPhase3ArgInfo era)

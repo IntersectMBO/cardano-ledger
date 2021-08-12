@@ -186,7 +186,8 @@ type MinGenTxBody era =
     ToCBOR (Core.TxBody era),
     NoThunks (Core.TxBody era),
     Show (Core.TxBody era),
-    FromCBOR (Annotator (Core.TxBody era)) -- arises because some pattern Constructors deserialize
+    FromCBOR (Annotator (Core.TxBody era)), -- arises because some pattern Constructors deserialize
+    HasField "txfee" (Core.TxBody era) Coin
   )
 
 class Show (Core.TxOut era) => MinGenTxout era where
@@ -206,6 +207,7 @@ class
     MinGenWitnesses era,
     MinGenAuxData era,
     MinGenTxBody era,
+    HasField "body" (Core.Tx era) (Core.TxBody era),
     MinGenTxout era,
     PrettyA (Core.Tx era),
     PrettyA (Core.TxBody era),
@@ -301,6 +303,12 @@ class
   --   2) Run a test that might decide to 'discard' the test, because we got unlucky, and a rare unfixible condition has occurred.
   genEraTweakBlock :: Core.PParams era -> Seq (Core.Tx era) -> Gen (Seq (Core.Tx era))
   genEraTweakBlock _pp seqTx = pure seqTx
+
+  hasFailedScripts :: Core.Tx era -> Bool
+  hasFailedScripts = const False
+
+  feeOrCollateral :: Core.Tx era -> UTxO era -> Coin
+  feeOrCollateral tx _ = getField @"txfee" $ getField @"body" tx
 
 {------------------------------------------------------------------------------
   Generators shared across eras

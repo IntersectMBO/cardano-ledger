@@ -191,13 +191,13 @@ instance
 -- To achieve this we (1) use 'IRC LEDGER' (the "initial rule context") instead of simply 'LedgerEnv'
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
-  forall a era.
+  forall a era ledger.
   ( UsesValue era,
     EraGen era,
     Default (State (Core.EraRule "PPUP" era))
   ) =>
   GenEnv era ->
-  IRC (LEDGER era) ->
+  IRC ledger ->
   Gen (Either a (UTxOState era, DPState (Crypto era)))
 mkGenesisLedgerState ge@(GenEnv _ _ c) _ = do
   utxo0 <- genUtxo0 ge
