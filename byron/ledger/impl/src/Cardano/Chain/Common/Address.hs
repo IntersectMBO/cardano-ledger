@@ -86,6 +86,7 @@ import Data.ByteString.Base58
     decodeBase58,
     encodeBase58,
   )
+import Data.Text.Encoding (decodeLatin1)
 import Data.Text.Internal.Builder (Builder)
 import Formatting
   ( Format,
@@ -205,7 +206,7 @@ addrToBase58 :: Address -> ByteString
 addrToBase58 = encodeBase58 addrAlphabet . serialize'
 
 instance B.Buildable Address where
-  build = B.build . decodeUtf8 . addrToBase58
+  build = B.build . decodeLatin1 . addrToBase58
 
 -- | Specialized formatter for 'Address'
 addressF :: Format r (Address -> r)
@@ -232,7 +233,7 @@ decodeAddressBase58 = fromCBORTextAddress
 -- | Encode an address to Text.
 -- `decodeAddressBase58 (encodeAddressBase58 x) === Right x`
 encodeAddressBase58 :: Address -> Text
-encodeAddressBase58 = decodeUtf8 . addrToBase58
+encodeAddressBase58 = decodeLatin1 . addrToBase58
 
 --------------------------------------------------------------------------------
 -- Constructors
