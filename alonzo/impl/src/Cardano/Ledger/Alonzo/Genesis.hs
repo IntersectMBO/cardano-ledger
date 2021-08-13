@@ -25,14 +25,14 @@ import Numeric.Natural
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 data AlonzoGenesis = AlonzoGenesis
-  { coinsPerUTxOWord :: Coin,
-    costmdls :: Map Language CostModel,
-    prices :: Prices,
-    maxTxExUnits :: ExUnits,
-    maxBlockExUnits :: ExUnits,
-    maxValSize :: Natural,
-    collateralPercentage :: Natural,
-    maxCollateralInputs :: Natural
+  { coinsPerUTxOWord :: !Coin,
+    costmdls :: !(Map Language CostModel),
+    prices :: !Prices,
+    maxTxExUnits :: !ExUnits,
+    maxBlockExUnits :: !ExUnits,
+    maxValSize :: !Natural,
+    collateralPercentage :: !Natural,
+    maxCollateralInputs :: !Natural
   }
   deriving (Eq, Generic, NoThunks)
 
