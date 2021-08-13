@@ -88,7 +88,7 @@ import Data.Ord (Down (..), comparing)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
-import Data.Text.Encoding (decodeUtf8)
+import Data.Text.Encoding (decodeLatin1)
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
@@ -112,7 +112,7 @@ instance FromCBOR AssetName where
   fromCBOR = do
     an <- fromCBOR
     if BS.length an > 32
-      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeUtf8 $ BS16.encode an)
+      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeLatin1 $ BS16.encode an)
       else pure . AssetName $ an
 
 -- | Policy ID
