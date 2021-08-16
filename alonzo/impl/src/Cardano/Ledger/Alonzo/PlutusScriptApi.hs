@@ -48,6 +48,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Coders
+import Data.Foldable (foldl')
 import Data.Functor.Identity (Identity, runIdentity)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
@@ -284,6 +285,6 @@ scriptsNeededFromBody (UTxO u) txb = spend ++ reward ++ cert ++ minted
           hash <- scriptCred $ getRwdCred accnt
           return (Rewarding accnt, hash)
 
-    !cert = foldl addOnlyCwitness [] (getField @"certs" txb)
+    !cert = foldl' addOnlyCwitness [] (getField @"certs" txb)
 
     !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ getField @"minted" txb

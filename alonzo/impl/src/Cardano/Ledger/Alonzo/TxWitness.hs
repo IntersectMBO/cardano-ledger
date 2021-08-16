@@ -195,12 +195,8 @@ newtype TxWitness era = TxWitnessConstr (MemoBytes (TxWitnessRaw era))
   deriving newtype (SafeToHash, ToCBOR)
 
 instance (Era era, Core.Script era ~ Script era) => Semigroup (TxWitness era) where
-  (<>) (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)) y
-    | (Set.null a && Set.null b && Map.null c && nullDats d && Map.null e) =
-      y
-  (<>) y (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _))
-    | (Set.null a && Set.null b && Map.null c && nullDats d && Map.null e) =
-      y
+  (<>) x y | isEmptyTxWitness x = y
+  (<>) x y | isEmptyTxWitness y = x
   (<>)
     (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _))
     (TxWitnessConstr (Memo (TxWitnessRaw u v w x (Redeemers' y)) _)) =
@@ -208,6 +204,10 @@ instance (Era era, Core.Script era ~ Script era) => Semigroup (TxWitness era) wh
 
 instance (Era era, Core.Script era ~ Script era) => Monoid (TxWitness era) where
   mempty = TxWitness mempty mempty mempty mempty (Redeemers mempty)
+
+isEmptyTxWitness :: TxWitness era -> Bool
+isEmptyTxWitness (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)) =
+  Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
 newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (Crypto era)) (Data era))
