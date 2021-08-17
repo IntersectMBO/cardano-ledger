@@ -124,21 +124,12 @@ import Shelley.Spec.Ledger.STS.Ledgers (LedgersPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    PoolCert (..),
-    PoolMetadata (..),
-    RewardAcnt (..),
-    TxIn (..),
-    Wdrl (..),
-  )
+import Shelley.Spec.Ledger.TxBody (DCert (..), DelegCert (..), PoolCert (..), PoolMetadata (..), RewardAcnt (..), TxIn (..), Wdrl (..), genesisId)
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, txid)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Utils
   ( RawSeed (..),
     applySTSTest,

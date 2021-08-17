@@ -51,8 +51,7 @@ import Test.Shelley.Spec.Ledger.Generator.Constants
       ),
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), ScriptSpace (..))
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen, MinLEDGER_STS)
-import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen, MinLEDGER_STS, genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)

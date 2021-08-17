@@ -54,15 +54,7 @@ import Shelley.Spec.Ledger.STS.Ledger (LedgerPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    TxBody (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
+import Shelley.Spec.Ledger.TxBody (DCert (..), MIRPot (..), MIRTarget (..), TxBody (..), TxIn (..), TxOut (..), Wdrl (..), genesisId)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -86,7 +78,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlockFakeVRF,
     mkOCert,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, getBlockNonce)
 import Test.Tasty (TestTree, testGroup)

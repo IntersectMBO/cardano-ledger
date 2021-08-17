@@ -23,11 +23,10 @@ module Test.Shelley.Spec.Ledger.Generator.EraGen
     MinUTXO_STS,
     MinGenTxBody,
     MinGenTxout (..),
-    Label (..),
-    Sets (..),
     someKeyPairs,
     allScripts,
     randomByHash,
+    genEnv,
   )
 where
 
@@ -52,6 +51,7 @@ import Data.Coerce (coerce)
 import Data.Default.Class (Default)
 import Data.Hashable (Hashable (..))
 import Data.Map (Map)
+import Data.Proxy (Proxy (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -77,13 +77,24 @@ import Shelley.Spec.Ledger.Tx (TxId (TxId))
 import Shelley.Spec.Ledger.TxBody (DCert, TxIn, Wdrl, WitVKey)
 import Shelley.Spec.Ledger.UTxO (UTxO)
 import Test.QuickCheck (Gen, choose, shuffle)
-import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
+import Test.Shelley.Spec.Ledger.Generator.Constants
+  ( Constants (..),
+    defaultConstants,
+  )
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( GenEnv (..),
+    KeySpace (..),
     ScriptInfo,
     TwoPhase2ArgInfo (..),
     TwoPhase3ArgInfo (..),
     genesisCoins,
+    pattern KeySpace,
+  )
+import Test.Shelley.Spec.Ledger.Generator.Presets
+  ( coreNodeKeys,
+    genesisDelegates,
+    scriptSpace,
+    stakePoolKeys,
   )
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (ScriptClass, baseScripts, combinedScripts, keyPairs)
 import Test.Shelley.Spec.Ledger.Utils (Split (..))
@@ -397,9 +408,39 @@ randomByHash low high x = low + remainder
 
 -- =========================================================
 
+{-
 data Label t where
   Body' :: Label (Core.TxBody era)
   Wits' :: Label (Core.Witnesses era)
 
 class Sets (x :: Label t) y where
   set :: Label t -> y -> y
+-}
+
+-- | One we have a EraGen instance we can create a GenEnv (see Test.Shelley.Spec.Ledger.Generator.Presets)
+--   which encodes 1) environment 2) set of default constants 3) a corresponding keyspace.
+--   for generating coherent Era generic transactions
+genEnv ::
+  forall era.
+  (EraGen era) =>
+  Proxy era ->
+  GenEnv era
+genEnv _ =
+  GenEnv
+    (keySpace defaultConstants)
+    (scriptSpace @era (genEraTwoPhase3Arg @era) (genEraTwoPhase2Arg @era))
+    defaultConstants
+
+-- | Example keyspace for use in generators
+keySpace ::
+  forall era.
+  EraGen era =>
+  Constants ->
+  KeySpace era
+keySpace c =
+  KeySpace
+    (coreNodeKeys c)
+    (genesisDelegates c)
+    (stakePoolKeys c)
+    (keyPairs c)
+    (allScripts @era c)

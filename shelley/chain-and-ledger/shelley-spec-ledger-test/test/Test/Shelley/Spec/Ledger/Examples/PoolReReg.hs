@@ -44,15 +44,7 @@ import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),
   )
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    PoolCert (..),
-    PoolParams (..),
-    TxBody (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
+import Shelley.Spec.Ledger.TxBody (DCert (..), PoolCert (..), PoolParams (..), TxBody (..), TxIn (..), TxOut (..), Wdrl (..), genesisId)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -73,7 +65,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlockFakeVRF,
     mkOCert,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)

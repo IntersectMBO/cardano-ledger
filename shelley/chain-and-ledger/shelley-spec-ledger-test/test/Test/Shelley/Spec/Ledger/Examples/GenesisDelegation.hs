@@ -46,14 +46,7 @@ import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    GenesisDelegCert (..),
-    TxBody (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
+import Shelley.Spec.Ledger.TxBody (DCert (..), GenesisDelegCert (..), TxBody (..), TxIn (..), TxOut (..), Wdrl (..), genesisId)
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
@@ -77,7 +70,6 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     mkBlockFakeVRF,
     mkOCert,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
   ( RawSeed (..),

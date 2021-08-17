@@ -74,14 +74,9 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     hashScript,
   )
-import Shelley.Spec.Ledger.TxBody
-  ( PoolMetadata (..),
-    StakePoolRelay (..),
-    Wdrl (..),
-  )
+import Shelley.Spec.Ledger.TxBody (PoolMetadata (..), StakePoolRelay (..), Wdrl (..), genesisId)
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock, StandardCrypto)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
   ( RawSeed (..),

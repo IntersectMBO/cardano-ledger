@@ -91,8 +91,7 @@ import Test.QuickCheck
     withMaxSuccess,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
-import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen, genEnv)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (mkGenesisLedgerState)

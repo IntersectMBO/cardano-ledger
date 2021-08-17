@@ -144,15 +144,11 @@ import Test.QuickCheck.Gen (chooseAny)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (defaultConstants)
 import Test.Shelley.Spec.Ledger.Generator.Core
-  ( KeySpace (KeySpace_),
-    geKeySpace,
-    ksCoreNodes,
-    mkBlock,
+  ( mkBlock,
     mkBlockHeader,
     mkOCert,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen)
-import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys, genEnv)
+import Test.Shelley.Spec.Ledger.Generator.Presets (coreNodeKeys)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
   ( genBootstrapAddress,
     genSignature,
@@ -533,8 +529,7 @@ instance
     Arbitrary (Core.TxOut era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.PParams era),
-    Arbitrary (State (Core.EraRule "PPUP" era)),
-    EraGen era
+    Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
   Arbitrary (NewEpochState era)
   where
@@ -558,8 +553,7 @@ instance
     Arbitrary (Core.TxOut era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.PParams era),
-    Arbitrary (State (Core.EraRule "PPUP" era)),
-    EraGen era
+    Arbitrary (State (Core.EraRule "PPUP" era))
   ) =>
   Arbitrary (EpochState era)
   where
@@ -699,7 +693,9 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (Mock (Crypto era), EraGen era, Arbitrary (PParams era)) =>
+  ( Mock (Crypto era),
+    Arbitrary (PParams era)
+  ) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =
@@ -836,15 +832,14 @@ genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era.
-  ( EraGen era,
-    ToCBORGroup (TxSeq era),
+  ( ToCBORGroup (TxSeq era),
     Mock (Crypto era),
     UsesTxBody era,
     Arbitrary (Core.Tx era)
   ) =>
   Gen (Block era)
 genCoherentBlock = do
-  let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
+  let ksCoreNodes = (coreNodeKeys defaultConstants)
   prevHash <- arbitrary :: Gen (HashHeader (Crypto era))
   allPoolKeys <- elements (map snd ksCoreNodes)
   txs <- arbitrary
@@ -865,9 +860,6 @@ genCoherentBlock = do
       kesPeriod
       keyRegKesPeriod
       ocert
-  where
-    p :: Proxy era
-    p = Proxy
 
 instance
   ( Era era,

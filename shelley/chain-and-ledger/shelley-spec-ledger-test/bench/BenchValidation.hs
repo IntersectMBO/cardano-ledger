@@ -67,8 +67,8 @@ import Shelley.Spec.Ledger.TxBody (TransTxBody, TransTxId)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
 -- Use Another constraint, so this works in all Eras
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen, MinLEDGER_STS)
-import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
+
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen, MinLEDGER_STS, genEnv)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
 

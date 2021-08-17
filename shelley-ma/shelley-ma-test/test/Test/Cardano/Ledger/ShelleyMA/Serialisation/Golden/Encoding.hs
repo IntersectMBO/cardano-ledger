@@ -43,17 +43,9 @@ import Shelley.Spec.Ledger.PParams
     pattern ProposedPPUpdates,
     pattern Update,
   )
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    RewardAcnt (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
+import Shelley.Spec.Ledger.TxBody (DCert (..), DelegCert (..), RewardAcnt (..), TxIn (..), TxOut (..), Wdrl (..), genesisId)
 import Test.Cardano.Ledger.EraBuffet (AllegraEra, MaryEra, TestCrypto)
 import Test.Cardano.Ledger.TranslationTools (expectDecodeFailure)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   ( ToTokens (..),
     checkEncodingCBOR,

@@ -60,7 +60,7 @@ import Test.Shelley.Spec.Ledger.Generator.Core
     geKeySpace,
     ksStakePools,
   )
-import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain
   ( mkGenesisChainState,
     registerGenesisStaking,

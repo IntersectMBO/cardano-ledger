@@ -72,26 +72,7 @@ import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
 import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..))
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSetHKD (..))
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    Delegation (..),
-    PoolCert (..),
-    PoolParams (..),
-    RewardAcnt (..),
-    TxBody (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-    _poolCost,
-    _poolId,
-    _poolMD,
-    _poolMargin,
-    _poolOwners,
-    _poolPledge,
-    _poolRAcnt,
-    _poolRelays,
-    _poolVrf,
-  )
+import Shelley.Spec.Ledger.TxBody (DCert (..), Delegation (..), PoolCert (..), PoolParams (..), RewardAcnt (..), TxBody (..), TxIn (..), TxOut (..), Wdrl (..), genesisId, _poolCost, _poolId, _poolMD, _poolMargin, _poolOwners, _poolPledge, _poolRAcnt, _poolRelays, _poolVrf)
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
   ( C_Crypto,
@@ -99,7 +80,6 @@ import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
   ( RawSeed (..),

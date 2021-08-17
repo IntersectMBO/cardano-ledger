@@ -54,6 +54,7 @@ module Shelley.Spec.Ledger.TxBody
       ),
     TxBodyRaw (..),
     TxId (..),
+    genesisId,
     TxIn (TxIn, ..),
     EraIndependentTxBody,
     -- eraIndTxBodyHash,
@@ -114,7 +115,7 @@ import Cardano.Ledger.Credential
     Ptr (..),
     StakeCredential,
   )
-import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto)
+import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto, HASH)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Keys
@@ -134,6 +135,7 @@ import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
     SafeToHash,
+    unsafeMakeSafeHash,
   )
 import Cardano.Ledger.Serialization
   ( CBORGroup (..),
@@ -185,6 +187,7 @@ import Data.Coders
     field,
     (!>),
   )
+import Data.Coerce (coerce)
 import Data.Constraint (Constraint)
 import Data.Foldable (asum)
 import Data.IP (IPv4, IPv6)
@@ -451,6 +454,19 @@ type TransTxId (c :: Type -> Constraint) era =
     TransValue ToCBOR era,
     TransValue c era
   )
+
+-- | We share this dummy TxId as genesis transaction id across eras
+--   This id is only used in tests, but must be inscope for many tests in all Crypto's and Era's.
+--   Since TxId is defined in this file, this is the logical place to define it.
+genesisId ::
+  HS.HashAlgorithm (CC.HASH crypto) =>
+  TxId crypto
+genesisId = TxId (unsafeMakeSafeHash (mkDummyHash 0))
+  where
+    mkDummyHash :: forall h a. HS.HashAlgorithm h => Int -> HS.Hash h a
+    mkDummyHash = coerce . HS.hashWithSerialiser @h toCBOR
+
+-- =======================================
 
 -- | The input of a UTxO.
 data TxIn crypto = TxInCompact {-# UNPACK #-} !(TxId crypto) {-# UNPACK #-} !Word64

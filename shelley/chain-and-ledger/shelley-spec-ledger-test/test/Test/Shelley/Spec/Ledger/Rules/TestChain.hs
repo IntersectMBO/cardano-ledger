@@ -91,8 +91,7 @@ import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern 
 import Test.QuickCheck (Property, Testable (..), conjoin, counterexample, withMaxSuccess, (===))
 import Test.Shelley.Spec.Ledger.Generator.Block (tickChainState)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
-import qualified Test.Shelley.Spec.Ledger.Generator.Presets as Preset (genEnv)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), genEnv)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (scriptKeyCombinations)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
@@ -1164,8 +1163,8 @@ forAllChainTrace n prop =
     forAllTraceFromInitState
       testGlobals
       n
-      (Preset.genEnv p)
-      (Just $ mkGenesisChainState (Preset.genEnv p))
+      (genEnv p)
+      (Just $ mkGenesisChainState (genEnv p))
       prop
   where
     p :: Proxy era

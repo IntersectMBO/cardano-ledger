@@ -86,23 +86,7 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     _ttl,
   )
-import Shelley.Spec.Ledger.TxBody
-  ( PoolMetadata (..),
-    PoolParams (..),
-    Wdrl (..),
-    _poolCost,
-    _poolId,
-    _poolMD,
-    _poolMDHash,
-    _poolMDUrl,
-    _poolMargin,
-    _poolOwners,
-    _poolPledge,
-    _poolRAcnt,
-    _poolRelays,
-    _poolVrf,
-    pattern RewardAcnt,
-  )
+import Shelley.Spec.Ledger.TxBody (PoolMetadata (..), PoolParams (..), Wdrl (..), genesisId, _poolCost, _poolId, _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolRAcnt, _poolRelays, _poolVrf, pattern RewardAcnt)
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import qualified Test.QuickCheck.Gen as Gen
 import Test.Shelley.Spec.Ledger.Address.Bootstrap
@@ -114,7 +98,6 @@ import Test.Shelley.Spec.Ledger.Fees (sizeTests)
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils

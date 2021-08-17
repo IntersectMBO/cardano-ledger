@@ -12,12 +12,11 @@
 --   involved, and thus cannot be used as generic generators.
 module Test.Shelley.Spec.Ledger.Generator.Presets
   ( coreNodeKeys,
-    keySpace,
-    genEnv,
     genesisDelegs0,
-    someKeyPairs,
     keyPairs,
     scriptSpace,
+    genesisDelegates,
+    stakePoolKeys,
   )
 where
 
@@ -34,15 +33,12 @@ import Cardano.Ledger.Keys
   )
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
-    defaultConstants,
   )
 import Test.Shelley.Spec.Ledger.Generator.Core
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), allScripts, someKeyPairs)
 import Test.Shelley.Spec.Ledger.Generator.ScriptClass (keyPairs)
 import Test.Shelley.Spec.Ledger.Utils
   ( maxKESIterations,
@@ -53,19 +49,6 @@ import Test.Shelley.Spec.Ledger.Utils
 
 -- =================================================================
 
--- | Example generator environment, consisting of default constants and an
--- corresponding keyspace.
-genEnv ::
-  forall era.
-  (EraGen era) =>
-  Proxy era ->
-  GenEnv era
-genEnv _ =
-  GenEnv
-    (keySpace defaultConstants)
-    (scriptSpace @era (genEraTwoPhase3Arg @era) (genEraTwoPhase2Arg @era))
-    defaultConstants
-
 -- | An Example Script space for use in Trace generators
 scriptSpace :: forall era. ValidateScript era => [TwoPhase3ArgInfo era] -> [TwoPhase2ArgInfo era] -> ScriptSpace era
 scriptSpace scripts3 scripts2 =
@@ -74,20 +57,6 @@ scriptSpace scripts3 scripts2 =
     scripts2
     (Map.fromList [(hashScript @era (getScript3 s), s) | s <- scripts3])
     (Map.fromList [(hashScript @era (getScript2 s), s) | s <- scripts2])
-
--- | Example keyspace for use in generators
-keySpace ::
-  forall era.
-  EraGen era =>
-  Constants ->
-  KeySpace era
-keySpace c =
-  KeySpace
-    (coreNodeKeys c)
-    (genesisDelegates c)
-    (stakePoolKeys c)
-    (keyPairs c)
-    (allScripts @era c)
 
 -- Pairs of (genesis key, node keys)
 --

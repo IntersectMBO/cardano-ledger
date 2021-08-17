@@ -157,41 +157,11 @@ import Shelley.Spec.Ledger.PParams
 import Shelley.Spec.Ledger.Rewards ()
 import Shelley.Spec.Ledger.Scripts (pattern RequireSignature)
 import Shelley.Spec.Ledger.Tx (Tx (..), WitnessSet, WitnessSetHKD (..), hashScript)
-import Shelley.Spec.Ledger.TxBody
-  ( MIRPot (..),
-    MIRTarget (..),
-    PoolMetadata (..),
-    StakePoolRelay (..),
-    TxBody (..),
-    TxId,
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-    WitVKey (..),
-    _poolCost,
-    _poolId,
-    _poolMD,
-    _poolMDHash,
-    _poolMDUrl,
-    _poolMargin,
-    _poolOwners,
-    _poolPledge,
-    _poolRAcnt,
-    _poolRelays,
-    _poolVrf,
-    pattern DCertDeleg,
-    pattern DCertGenesis,
-    pattern DCertMir,
-    pattern DCertPool,
-    pattern Delegation,
-    pattern PoolParams,
-    pattern RewardAcnt,
-  )
+import Shelley.Spec.Ledger.TxBody (MIRPot (..), MIRTarget (..), PoolMetadata (..), StakePoolRelay (..), TxBody (..), TxId, TxIn (..), TxOut (..), Wdrl (..), WitVKey (..), genesisId, _poolCost, _poolId, _poolMD, _poolMDHash, _poolMDUrl, _poolMargin, _poolOwners, _poolPledge, _poolRAcnt, _poolRelays, _poolVrf, pattern DCertDeleg, pattern DCertGenesis, pattern DCertMir, pattern DCertPool, pattern Delegation, pattern PoolParams, pattern RewardAcnt)
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
 import Test.Shelley.Spec.Ledger.Generator.Core (PreAlonzo)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
   ( ToTokens (..),
     checkEncoding,

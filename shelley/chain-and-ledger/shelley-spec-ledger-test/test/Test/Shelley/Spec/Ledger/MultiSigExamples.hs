@@ -81,12 +81,7 @@ import Shelley.Spec.Ledger.Tx
     WitnessSetHKD (..),
     hashScript,
   )
-import Shelley.Spec.Ledger.TxBody
-  ( TxBody (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
+import Shelley.Spec.Ledger.TxBody (TxBody (..), TxIn (..), TxOut (..), Wdrl (..), genesisId)
 import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey, txid)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
   ( Mock,
@@ -95,7 +90,6 @@ import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( genesisCoins,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Utils
 

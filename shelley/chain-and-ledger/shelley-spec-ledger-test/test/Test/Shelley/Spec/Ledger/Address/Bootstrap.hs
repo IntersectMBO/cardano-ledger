@@ -79,13 +79,7 @@ import Shelley.Spec.Ledger.Tx
   ( Tx (..),
     WitnessSetHKD (..),
   )
-import Shelley.Spec.Ledger.TxBody
-  ( TxBody (..),
-    TxId (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
+import Shelley.Spec.Ledger.TxBody (TxBody (..), TxId (..), TxIn (..), TxOut (..), Wdrl (..), genesisId)
 import Shelley.Spec.Ledger.UTxO
   ( UTxO (..),
   )
@@ -97,7 +91,6 @@ import Test.QuickCheck.Hedgehog (hedgehog)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Original
   ( C_Crypto,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Orphans ()
 import Test.Shelley.Spec.Ledger.Utils (testSTS)
