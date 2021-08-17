@@ -59,6 +59,7 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (◁), (➖))
+import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
@@ -269,23 +270,20 @@ feesOK pp tx (UTxO m) = do
   -- Part 1
   (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
   -- Part 2
-  if nullRedeemers . txrdmrs' . wits $ tx
-    then pure ()
-    else do
-      -- Part 3
-      all vKeyLocked utxoCollateral
-        ?! ScriptsNotPaidUTxO
-          (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
-      -- Part 4
-      (Val.scale (100 :: Natural) (Val.coin bal) >= Val.scale collPerc theFee)
-        ?! InsufficientCollateral
-          (Val.coin bal)
-          (rationalToCoinViaCeiling $ (fromIntegral collPerc * (unCoin theFee)) % 100)
-      -- Part 5
-      Val.inject (Val.coin bal) == bal ?! CollateralContainsNonADA bal
-      -- Part 6
-      (not $ null utxoCollateral) ?! NoCollateralInputs
-      pure ()
+  unless (nullRedeemers . txrdmrs' . wits $ tx) $ do
+    -- Part 3
+    all vKeyLocked utxoCollateral
+      ?! ScriptsNotPaidUTxO
+        (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
+    -- Part 4
+    (Val.scale (100 :: Natural) (Val.coin bal) >= Val.scale collPerc theFee)
+      ?! InsufficientCollateral
+        (Val.coin bal)
+        (rationalToCoinViaCeiling $ (fromIntegral collPerc * unCoin theFee) % 100)
+    -- Part 5
+    Val.inject (Val.coin bal) == bal ?! CollateralContainsNonADA bal
+    -- Part 6
+    not (null utxoCollateral) ?! NoCollateralInputs
 
 -- ================================================================
 
