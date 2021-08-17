@@ -37,6 +37,8 @@ module Cardano.Ledger.Alonzo.Scripts
     ppExUnits,
     ppCostModel,
     ppPrices,
+    decodeCostModelMap,
+    decodeCostModel,
 
     -- * Deprecated
     defaultCostModel,
@@ -44,6 +46,7 @@ module Cardano.Ledger.Alonzo.Scripts
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -67,14 +70,17 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash (..),
   )
-import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Control.DeepSeq (NFData (..))
+import Control.Monad (when)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Measure (BoundedMeasure, Measure)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word64, Word8)
@@ -163,7 +169,8 @@ newtype CostModel = CostModel (Map Text Integer)
 
 -- NOTE: Since cost model serializations need to be independently reproduced,
 -- we use the 'canonical' serialization approach used in Byron.
-deriving instance ToCBOR CostModel
+instance ToCBOR CostModel where
+  toCBOR (CostModel cm) = toCBOR $ Map.elems cm
 
 instance SafeToHash CostModel where
   originalBytes = serialize'
@@ -187,8 +194,31 @@ checkCostModel cm =
 defaultCostModel :: Maybe CostModel
 defaultCostModel = CostModel <$> defaultCostModelParams
 
-instance FromCBOR CostModel where
-  fromCBOR = decode $ SumD checkCostModel <? (D mapFromCBOR)
+decodeCostModelMap :: Decoder s (Map Language CostModel)
+decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel
+
+decodeCostModel :: Language -> Decoder s CostModel
+decodeCostModel PlutusV1 =
+  case defaultCostModelParams of
+    Nothing -> fail "Default Plutus Cost Model is corrupt."
+    Just dcm -> do
+      checked <- checkCostModel <$> decodeArrayAsMap (Map.keysSet dcm) fromCBOR
+      case checked of
+        Left e -> fail e
+        Right cm -> pure cm
+
+decodeArrayAsMap :: Ord a => Set a -> Decoder s b -> Decoder s (Map a b)
+decodeArrayAsMap keys decodeValue = do
+  values <- decodeList decodeValue
+  let numValues = length values
+      numKeys = Set.size keys
+  when (numValues /= numKeys) $
+    fail $
+      "Expected array with " <> show numKeys
+        <> " entries, but encoded array has "
+        <> show numValues
+        <> " entries."
+  pure $ Map.fromList $ zip (Set.toAscList keys) values
 
 -- CostModel is not parameterized by Crypto or Era so we use the
 -- hashWithCrypto function, rather than hashAnnotated

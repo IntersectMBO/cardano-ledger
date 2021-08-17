@@ -49,6 +49,7 @@ import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
     Prices (..),
+    decodeCostModelMap,
     ppCostModel,
     ppExUnits,
     ppPrices,
@@ -81,7 +82,6 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
-    mapFromCBOR,
     mapToCBOR,
   )
 import Cardano.Ledger.Slot (EpochNo (..))
@@ -268,7 +268,7 @@ instance
         <! From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
         <! From -- _coinsPerUTxOWord  :: Coin
-        <! (D mapFromCBOR) -- _costmdls :: (Map Language CostModel)
+        <! (D decodeCostModelMap) -- _costmdls :: (Map Language CostModel)
         <! From -- _prices = prices',
         <! From -- _maxTxExUnits = maxTxExUnits',
         <! From -- _maxBlockExUnits = maxBlockExUnits'
@@ -455,7 +455,7 @@ updateField 13 = field (\x up -> up {_extraEntropy = SJust x}) From
 updateField 14 = field (\x up -> up {_protocolVersion = SJust x}) From
 updateField 16 = field (\x up -> up {_minPoolCost = SJust x}) From
 updateField 17 = field (\x up -> up {_coinsPerUTxOWord = SJust x}) From
-updateField 18 = field (\x up -> up {_costmdls = x}) (D $ SJust <$> mapFromCBOR)
+updateField 18 = field (\x up -> up {_costmdls = x}) (D $ SJust <$> decodeCostModelMap)
 updateField 19 = field (\x up -> up {_prices = SJust x}) From
 updateField 20 = field (\x up -> up {_maxTxExUnits = SJust x}) From
 updateField 21 = field (\x up -> up {_maxBlockExUnits = SJust x}) From
