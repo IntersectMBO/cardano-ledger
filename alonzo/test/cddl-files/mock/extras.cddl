@@ -30,3 +30,14 @@ address = h'0001020304010203040102030401020304' /
 reward_account =
   h'E00102030405060708' /
   h'F00506070806050403'
+
+bounded_bytes = bytes .size (0..64)
+  ; the real bounded_bytes does not have this limit. it instead has a different
+  ; limit which cannot be expressed in CDDL.
+  ; The limit is as follows:
+  ;  - bytes with a definite-length encoding are limited to size 0..64
+  ;  - for bytes with an indefinite-length CBOR encoding, each chunk is
+  ;    limited to size 0..64
+  ;  ( reminder: in CBOR, the indefinite-length encoding of bytestrings
+  ;    consists of a token #2.31 followed by a sequence of definite-length
+  ;    encoded bytestrings and a stop code )

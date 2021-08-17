@@ -264,11 +264,11 @@ plutus_data = ; New
   / { * plutus_data => plutus_data }
   / [ * plutus_data ]
   / big_int
-  / bytes .size (0..64)
+  / bounded_bytes
 
 big_int = int / big_uint / big_nint ; New
-big_uint = #6.2(bytes .size (0..64)) ; New
-big_nint = #6.3(bytes .size (0..64)) ; New
+big_uint = #6.2(bounded_bytes) ; New
+big_nint = #6.3(bounded_bytes) ; New
 
 constr<a> = ; New
     #6.121([* a])
@@ -279,7 +279,7 @@ constr<a> = ; New
   / #6.126([* a])
   / #6.127([* a])
   ; similarly for tag range: 6.1280 .. 6.1400 inclusive
-  / #6.102([uint, * a])
+  / #6.102([uint, [* a]])
 
 redeemer = [ tag: redeemer_tag, index: uint, data: plutus_data, ex_units: ex_units ] ; New
 redeemer_tag = ; New
@@ -297,7 +297,7 @@ language = 0 ; Plutus v1
 
 costmdls = { * language => cost_model } ; New
 
-cost_model = { * text  => big_int } ; New
+cost_model = [ 166*166 int ] ; New
 
 transaction_metadatum =
     { * transaction_metadatum => transaction_metadatum }

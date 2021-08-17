@@ -240,7 +240,10 @@ alonzoPropertyTests :: TestTree
 alonzoPropertyTests =
   testGroup
     "Alonzo property tests"
-    [ propertyTests @(AlonzoEra TestCrypto)
+    [ propertyTests @(AlonzoEra TestCrypto),
+      ( localOption (QuickCheckMaxRatio 120) $
+          testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @(AlonzoEra TestCrypto))
+      )
     ]
 
 -- | A select subset of all the property tests
@@ -248,10 +251,7 @@ fastPropertyTests :: TestTree
 fastPropertyTests =
   testGroup
     "Fast Alonzo Property Tests"
-    [ ( localOption (QuickCheckMaxRatio 120) $
-          testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @(AlonzoEra TestCrypto))
-      ),
-      testProperty "total amount of Ada is preserved (Chain)" (withMaxSuccess 50 (adaPreservationChain @(AlonzoEra TestCrypto)))
+    [ testProperty "total amount of Ada is preserved (Chain)" (withMaxSuccess 50 (adaPreservationChain @(AlonzoEra TestCrypto)))
     ]
 
 -- ==========================================================================================

@@ -8,23 +8,21 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 import Cardano.Binary
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData, Data (..))
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
-import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (CostModel)
+import Cardano.Ledger.Alonzo.Scripts (Script, decodeCostModel)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
-import qualified Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import qualified Plutus.V1.Ledger.Api as Plutus
 import Shelley.Spec.Ledger.BlockChain (Block)
 import Shelley.Spec.Ledger.Metadata (Metadata)
 import qualified Shelley.Spec.Ledger.Tx as LTX
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (roundTrip, roundTripAnn)
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (roundTrip, roundTrip', roundTripAnn)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Tasty
@@ -68,15 +66,6 @@ trippingAnn x = trippingF roundTripAnn x
 tripping :: (Eq src, Show src, ToCBOR src, FromCBOR src) => src -> Property
 tripping x = trippingF roundTrip x
 
--- ==========================
--- Catch violations of bytestrings that are too long.
-
-toolong :: BS.ByteString
-toolong = "1234567890-=`~@#$%^&*()_+qwertyuiopQWERTYUIOPasdfghjklASDFGHJKLzxcvbnmZXCVBNM"
-
-badData :: Data (AlonzoEra C_Crypto)
-badData = Data $ Plutus.List [Plutus.I 34, Plutus.B toolong]
-
 tests :: TestTree
 tests =
   testGroup
@@ -85,7 +74,6 @@ tests =
         trippingAnn @(Script (AlonzoEra C_Crypto)),
       testProperty "alonzo/Data" $
         trippingAnn @(Data (AlonzoEra C_Crypto)),
-      testProperty "alonzo/Data/CatchToolong" (expectFailure (trippingAnn badData)),
       testProperty "alonzo/Metadata" $
         trippingAnn @(Metadata (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxWitness" $
@@ -93,7 +81,7 @@ tests =
       testProperty "alonzo/TxBody" $
         trippingAnn @(TxBody (AlonzoEra C_Crypto)),
       testProperty "alonzo/CostModel" $
-        tripping @CostModel,
+        trippingF (roundTrip' toCBOR (decodeCostModel PlutusV1)),
       testProperty "alonzo/PParams" $
         tripping @(PParams (AlonzoEra C_Crypto)),
       testProperty "alonzo/PParamsUpdate" $
