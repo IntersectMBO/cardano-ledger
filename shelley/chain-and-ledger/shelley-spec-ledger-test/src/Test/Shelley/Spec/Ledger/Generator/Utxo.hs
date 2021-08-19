@@ -65,6 +65,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Vector as V
 -- Instances only
 
 import Debug.Trace (trace)
@@ -615,9 +616,10 @@ ruffle :: Int -> [a] -> Gen [a]
 ruffle _ [] = pure []
 ruffle k items = do
   indices <- nub <$> QC.vectorOf k pickIndex
-  pure $ map (items !!) indices
+  pure $ map (itemsV V.!) indices
   where
-    pickIndex = QC.choose (0, length items - 1)
+    itemsV = V.fromList items
+    pickIndex = QC.choose (0, length itemsV - 1)
 
 -- | Return 'num' random pairs from the map 'm'. If the size of 'm' is less than 'num' return 'size m' pairs.
 getNRandomPairs :: Ord k => Int -> Map.Map k t -> Gen [(k, t)]

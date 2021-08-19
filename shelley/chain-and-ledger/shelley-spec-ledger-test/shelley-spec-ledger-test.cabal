@@ -122,7 +122,8 @@ library
     text,
     time,
     transformers,
-    tree-diff
+    tree-diff,
+    vector
 
 test-suite shelley-spec-ledger-test
   import:             base, project-config
