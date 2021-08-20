@@ -9,10 +9,12 @@ module Cardano.Ledger.Alonzo.TxInfo where
 
 -- =============================================
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull', serialize')
 import Cardano.Crypto.Hash.Class (Hash (UnsafeHash))
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..))
+import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( certs',
@@ -40,14 +42,27 @@ import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
+import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
+import qualified Data.ByteString.Base16 as B16
 import Data.ByteString.Short as SBS (ShortByteString, fromShort)
+import qualified Data.ByteString.UTF8 as BSU
+import Data.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    decodeList,
+    encode,
+    (!>),
+    (<!),
+  )
 import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
 -- Instances only
+import Data.Text (Text)
 import Data.Text.Prettyprint.Doc (Pretty (..))
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
@@ -373,6 +388,46 @@ andResult (Fails xs) (Fails ys) = Fails (xs ++ ys)
 instance Semigroup ScriptResult where
   (<>) = andResult
 
+data PlutusDebug = PlutusDebug
+  { debugCostModel :: CostModel,
+    debugExUnits :: ExUnits,
+    debugScript :: SBS.ShortByteString,
+    debegData :: [P.Data]
+  }
+  deriving (Show)
+
+data PlutusDebugInfo = DebugSuccess | DebugCannotDecode String | DebugInfo [Text] String | DebugBadHex String
+  deriving (Show)
+
+instance ToCBOR PlutusDebug where
+  toCBOR (PlutusDebug a b c d) = encode (Rec PlutusDebug !> To a !> To b !> To c !> To d)
+
+instance FromCBOR PlutusDebug where
+  fromCBOR =
+    decode $
+      RecD PlutusDebug
+        <! (D $ decodeCostModel PlutusV1)
+        <! From
+        <! From
+        <! (D $ decodeList Cborg.decode)
+
+debugPlutus :: String -> PlutusDebugInfo
+debugPlutus db =
+  case B16.decode (BSU.fromString db) of
+    Left e -> DebugBadHex (show e)
+    Right bs ->
+      case decodeFull' bs of
+        Left e -> DebugCannotDecode (show e)
+        Right (PlutusDebug (CostModel cost) units script ds) ->
+          case P.evaluateScriptRestricting
+            P.Verbose
+            cost
+            (transExUnits units)
+            script
+            ds of
+            (logs, Left e) -> DebugInfo logs (show e)
+            (_, Right ()) -> DebugSuccess
+
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
 -- of P.evaluateScriptRestricting which is the interface to Plutus, and in the impementation
@@ -395,14 +450,23 @@ runPLCScript proxy (CostModel cost) scriptbytestring units ds =
     (transExUnits units)
     scriptbytestring
     ds of
-    (_, Left e) -> explain_plutus_failure proxy scriptbytestring e ds
+    (_, Left e) -> explain_plutus_failure proxy scriptbytestring e ds (CostModel cost) units
     (_, Right ()) -> Passes
 
 -- | Explin why a script might fail. Scripts come in two flavors. 1) with 3  data arguments [data,redeemer,context]
 --   and  2) with 2 data arguments [redeemer,context]. It pays to decode the context data into a real context
 --   because that provides way more information. But there is no guarantee the context data really can be decoded.
-explain_plutus_failure :: forall era. Show (Script era) => Proxy era -> SBS.ShortByteString -> P.EvaluationError -> [P.Data] -> ScriptResult
-explain_plutus_failure _proxy scriptbytestring e [dat, redeemer, info] =
+explain_plutus_failure ::
+  forall era.
+  Show (Script era) =>
+  Proxy era ->
+  SBS.ShortByteString ->
+  P.EvaluationError ->
+  [P.Data] ->
+  CostModel ->
+  ExUnits ->
+  ScriptResult
+explain_plutus_failure _proxy scriptbytestring e ds@[dat, redeemer, info] cm eu =
   -- A three data argument script.
   let ss :: Script era
       ss = PlutusScript scriptbytestring
@@ -417,7 +481,8 @@ explain_plutus_failure _proxy scriptbytestring e [dat, redeemer, info] =
                   show e,
                   "The data is: " ++ show dat,
                   "The redeemer is: " ++ show redeemer,
-                  "The third data argument, does not decode to a context\n" ++ show info
+                  "The third data argument, does not decode to a context\n" ++ show info,
+                  "Debug Info: " ++ (show . B16.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds)
                 ]
         Just info2 -> Fails [line]
           where
@@ -428,9 +493,10 @@ explain_plutus_failure _proxy scriptbytestring e [dat, redeemer, info] =
                   show e,
                   "The data is: " ++ show dat,
                   "The redeemer is: " ++ show redeemer,
-                  "The context is:\n" ++ info3
+                  "The context is:\n" ++ info3,
+                  "Debug Info: " ++ (show . B16.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds)
                 ]
-explain_plutus_failure _proxy scriptbytestring e [redeemer, info] =
+explain_plutus_failure _proxy scriptbytestring e ds@[redeemer, info] cm eu =
   -- A two data argument script.
   let ss :: Script era
       ss = PlutusScript scriptbytestring
@@ -444,7 +510,8 @@ explain_plutus_failure _proxy scriptbytestring e [redeemer, info] =
                 [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
                   show e,
                   "The redeemer is: " ++ show redeemer,
-                  "The second data argument, does not decode to a context\n" ++ show info
+                  "The second data argument, does not decode to a context\n" ++ show info,
+                  "Debug Info: " ++ (show . B16.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds)
                 ]
         Just info2 -> Fails [line]
           where
@@ -454,9 +521,10 @@ explain_plutus_failure _proxy scriptbytestring e [redeemer, info] =
                 [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
                   show e,
                   "The redeemer is: " ++ show redeemer,
-                  "The context is:\n" ++ info3
+                  "The context is:\n" ++ info3,
+                  "Debug Info: " ++ (show . B16.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds)
                 ]
-explain_plutus_failure _proxy scriptbytestring e ds = Fails [line] -- A script with the wrong number of arguments
+explain_plutus_failure _proxy scriptbytestring e ds cm eu = Fails [line] -- A script with the wrong number of arguments
   where
     ss :: Script era
     ss = PlutusScript scriptbytestring
@@ -469,6 +537,7 @@ explain_plutus_failure _proxy scriptbytestring e ds = Fails [line] -- A script w
             "It was passed these " ++ show (Prelude.length ds) ++ " data arguments."
           ]
             ++ map show ds
+            ++ ["\nDebug Info: " ++ (show . B16.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds)]
         )
 
 validPlutusdata :: P.Data -> Bool
