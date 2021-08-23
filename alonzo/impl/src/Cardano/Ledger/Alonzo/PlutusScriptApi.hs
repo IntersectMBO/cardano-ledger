@@ -35,7 +35,14 @@ import Cardano.Ledger.Alonzo.Tx
     txdats',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
-import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..), andResult, runPLCScript, txInfo, valContext)
+import Cardano.Ledger.Alonzo.TxInfo
+  ( FailureDescription (..),
+    ScriptResult (..),
+    andResult,
+    runPLCScript,
+    txInfo,
+    valContext,
+  )
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts', unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
@@ -56,6 +63,7 @@ import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (pack)
 import GHC.Generics
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
@@ -225,7 +233,7 @@ evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
   where
     vhks = Set.map witKeyHash (txwitsVKey' (getField @"wits" tx))
     lift True = Passes
-    lift False = Fails ["Timelock: " ++ show timelock ++ " fails."]
+    lift False = Fails [OnePhaseFailure . pack . show $ timelock]
 evalScripts tx ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
   runPLCScript (Proxy @era) cost pscript units (map getPlutusData ds) `andResult` evalScripts tx rest
 
