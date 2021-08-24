@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -108,8 +107,7 @@ data DelegsPredicateFailure era
   | DelplFailure (PredicateFailure (Core.EraRule "DELPL" era)) -- Subtransition Failures
   deriving (Generic)
 
-data DelegsEvent era
-  = DelplEvent (Event (Core.EraRule "DELPL" era))
+newtype DelegsEvent era = DelplEvent (Event (Core.EraRule "DELPL" era))
 
 deriving stock instance
   ( Show (PredicateFailure (Core.EraRule "DELPL" era))
@@ -176,18 +174,17 @@ instance
   where
   fromCBOR =
     decodeRecordSum "PredicateFailure" $
-      ( \case
-          0 -> do
-            kh <- fromCBOR
-            pure (2, DelegateeNotRegisteredDELEG kh)
-          1 -> do
-            ws <- mapFromCBOR
-            pure (2, WithdrawalsNotInRewardsDELEGS ws)
-          2 -> do
-            a <- fromCBOR
-            pure (2, DelplFailure a)
-          k -> invalidKey k
-      )
+      \case
+        0 -> do
+          kh <- fromCBOR
+          pure (2, DelegateeNotRegisteredDELEG kh)
+        1 -> do
+          ws <- mapFromCBOR
+          pure (2, WithdrawalsNotInRewardsDELEGS ws)
+        2 -> do
+          a <- fromCBOR
+          pure (2, DelplFailure a)
+        k -> invalidKey k
 
 delegsTransition ::
   forall era.

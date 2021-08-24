@@ -1,8 +1,6 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -11,7 +9,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -138,7 +135,6 @@ import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coders
-import Data.Foldable (fold)
 import qualified Data.Map as Map
 import Data.Maybe.Strict
   ( StrictMaybe (..),
@@ -337,8 +333,9 @@ instance
     fromIntegral . LBS.length . serializeEncoding $
       toCBORForSizeComputation tx
 
--- This ensures that the size of transactions from Mary is unchanged.
--- The individual components all store their bytes; the only work we do in this function is concatenating
+-- | This ensures that the size of transactions from Mary is unchanged.
+-- The individual components all store their bytes; the only work we do in this
+-- function is concatenating
 toCBORForSizeComputation ::
   ( Typeable era,
     ToCBOR (Core.TxBody era),
@@ -346,7 +343,7 @@ toCBORForSizeComputation ::
   ) =>
   ValidatedTx era ->
   Encoding
-toCBORForSizeComputation (ValidatedTx {body, wits, auxiliaryData}) =
+toCBORForSizeComputation ValidatedTx {body, wits, auxiliaryData} =
   encodeListLen 3
     <> toCBOR body
     <> toCBOR wits
@@ -378,7 +375,7 @@ totExUnits ::
   ) =>
   tx era ->
   ExUnits
-totExUnits = fold . snd . unzip . Map.elems . unRedeemers . getField @"txrdmrs" . getField @"wits"
+totExUnits = foldMap snd . Map.elems . unRedeemers . getField @"txrdmrs" . getField @"wits"
 
 -- ===============================================================
 -- Operations on scripts from specification
@@ -437,10 +434,11 @@ rdptr ::
   Core.TxBody era ->
   ScriptPurpose (Crypto era) ->
   StrictMaybe RdmrPtr
-rdptr txb (Minting (PolicyID hash)) = RdmrPtr Mint <$> (indexOf hash ((getField @"minted" txb) :: Set (ScriptHash (Crypto era))))
-rdptr txb (Spending txin) = RdmrPtr Spend <$> (indexOf txin (getField @"inputs" txb))
-rdptr txb (Rewarding racnt) = RdmrPtr Rewrd <$> (indexOf racnt (unWdrl (getField @"wdrls" txb)))
-rdptr txb (Certifying d) = RdmrPtr Cert <$> (indexOf d (getField @"certs" txb))
+rdptr txb (Minting (PolicyID hash)) =
+  RdmrPtr Mint <$> indexOf hash (getField @"minted" txb :: Set (ScriptHash (Crypto era)))
+rdptr txb (Spending txin) = RdmrPtr Spend <$> indexOf txin (getField @"inputs" txb)
+rdptr txb (Rewarding racnt) = RdmrPtr Rewrd <$> indexOf racnt (unWdrl (getField @"wdrls" txb))
+rdptr txb (Certifying d) = RdmrPtr Cert <$> indexOf d (getField @"certs" txb)
 
 getMapFromValue :: Value crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
 getMapFromValue (Value _ m) = m

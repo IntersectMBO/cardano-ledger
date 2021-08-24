@@ -1,14 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -131,15 +129,14 @@ instance
   where
   fromCBOR =
     decodeRecordSum "PredicateFailure (LEDGER era)" $
-      ( \case
-          0 -> do
-            a <- fromCBOR
-            pure (2, UtxowFailure a)
-          1 -> do
-            a <- fromCBOR
-            pure (2, DelegsFailure a)
-          k -> invalidKey k
-      )
+      \case
+        0 -> do
+          a <- fromCBOR
+          pure (2, UtxowFailure a)
+        1 -> do
+          a <- fromCBOR
+          pure (2, DelegsFailure a)
+        k -> invalidKey k
 
 instance
   ( Show (Core.PParams era),

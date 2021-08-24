@@ -1,10 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Updn
@@ -39,8 +35,7 @@ data UpdnPredicateFailure crypto -- No predicate failures
 
 instance NoThunks (UpdnPredicateFailure crypto)
 
-data UpdnEvent crypto
-  = NewEpoch EpochNo
+newtype UpdnEvent crypto = NewEpoch EpochNo
 
 instance
   (Crypto crypto) =>

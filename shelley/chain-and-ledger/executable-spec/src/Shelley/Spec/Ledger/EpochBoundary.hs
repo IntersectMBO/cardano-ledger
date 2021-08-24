@@ -8,8 +8,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -195,27 +193,20 @@ instance
   ToCBOR (SnapShot crypto)
   where
   toCBOR
-    ( SnapShot
-        { _stake = s,
-          _delegations = d,
-          _poolParams = p
-        }
-      ) =
+    SnapShot
+      { _stake = s,
+        _delegations = d,
+        _poolParams = p
+      } =
       encodeListLen 3
         <> toCBOR s
         <> toCBOR d
         <> toCBOR p
 
-instance
-  CC.Crypto crypto =>
-  FromCBOR (SnapShot crypto)
-  where
-  fromCBOR = do
-    decodeRecordNamed "SnapShot" (const 3) $ do
-      s <- fromCBOR
-      d <- fromCBOR
-      p <- fromCBOR
-      pure $ SnapShot s d p
+instance CC.Crypto crypto => FromCBOR (SnapShot crypto) where
+  fromCBOR =
+    decodeRecordNamed "SnapShot" (const 3) $
+      SnapShot <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
@@ -245,13 +236,13 @@ instance
   CC.Crypto crypto =>
   FromCBOR (SnapShots crypto)
   where
-  fromCBOR = do
-    decodeRecordNamed "SnapShots" (const 4) $ do
-      mark <- fromCBOR
-      set <- fromCBOR
-      go <- fromCBOR
-      f <- fromCBOR
-      pure $ SnapShots mark set go f
+  fromCBOR =
+    decodeRecordNamed "SnapShots" (const 4) $
+      SnapShots
+        <$> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
+        <*> fromCBOR
 
 instance Default (SnapShots crypto) where
   def = emptySnapShots

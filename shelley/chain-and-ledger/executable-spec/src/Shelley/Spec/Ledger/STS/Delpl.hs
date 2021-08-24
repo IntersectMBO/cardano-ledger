@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -96,7 +95,7 @@ instance
 instance
   ( Era era,
     Embed (Core.EraRule "DELEG" era) (DELPL era),
-    Environment (Core.EraRule "DELEG" era) ~ (DelegEnv era),
+    Environment (Core.EraRule "DELEG" era) ~ DelegEnv era,
     State (Core.EraRule "DELEG" era) ~ DState (Crypto era),
     Signal (Core.EraRule "DELEG" era) ~ DCert (Crypto era),
     Embed (Core.EraRule "POOL" era) (DELPL era),
@@ -155,7 +154,7 @@ instance
 delplTransition ::
   forall era.
   ( Embed (Core.EraRule "DELEG" era) (DELPL era),
-    Environment (Core.EraRule "DELEG" era) ~ (DelegEnv era),
+    Environment (Core.EraRule "DELEG" era) ~ DelegEnv era,
     State (Core.EraRule "DELEG" era) ~ DState (Crypto era),
     Signal (Core.EraRule "DELEG" era) ~ DCert (Crypto era),
     Embed (Core.EraRule "POOL" era) (DELPL era),
@@ -175,7 +174,7 @@ delplTransition = do
       ps <-
         trans @(Core.EraRule "POOL" era) $ TRC (PoolEnv slot pp, _pstate d, c)
       pure $ d {_pstate = ps}
-    DCertGenesis (GenesisDelegCert {}) -> do
+    DCertGenesis GenesisDelegCert {} -> do
       ds <-
         trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
       pure $ d {_dstate = ds}

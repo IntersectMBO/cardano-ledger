@@ -235,7 +235,7 @@ scriptsNotValidateTransition = do
   pure $
     us
       { _utxo = eval (getField @"collateral" txb ⋪ utxo),
-        _fees = fees <> coin (balance @era (eval (getField @"collateral" txb ◁ utxo)))
+        _fees = fees <> Val.coin (balance @era (eval (getField @"collateral" txb ◁ utxo)))
       }
 
 data TagMismatchDescription

@@ -1,7 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,7 +12,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -305,7 +303,7 @@ pattern TxBody ::
   Value (Crypto era) ->
   StrictMaybe (ScriptIntegrityHash (Crypto era)) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  StrictMaybe (Network) ->
+  StrictMaybe Network ->
   TxBody era
 pattern TxBody
   { inputs,
@@ -661,20 +659,20 @@ instance HasField "vldt" (TxBody era) ValidityInterval where
   getField (TxBodyConstr (Memo m _)) = _vldt m
 
 instance
-  c ~ (Crypto era) =>
+  c ~ Crypto era =>
   HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash c))
   where
   getField (TxBodyConstr (Memo m _)) = _adHash m
 
 -- | TODO deprecated
 instance
-  c ~ (Crypto era) =>
+  c ~ Crypto era =>
   HasField "wppHash" (TxBody era) (StrictMaybe (ScriptIntegrityHash c))
   where
   getField (TxBodyConstr (Memo m _)) = _scriptIntegrityHash m
 
 instance
-  c ~ (Crypto era) =>
+  c ~ Crypto era =>
   HasField "scriptIntegrityHash" (TxBody era) (StrictMaybe (ScriptIntegrityHash c))
   where
   getField (TxBodyConstr (Memo m _)) = _scriptIntegrityHash m
@@ -688,7 +686,7 @@ instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr 
 instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
   getField (TxOutCompact a _ _) = decompactAddr a
 
-instance c ~ (Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
+instance c ~ Crypto era => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField (TxOutCompact _ _ datahash) = datahash
 
 instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where

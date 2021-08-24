@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Shelley.Spec.Ledger.OverlaySchedule
@@ -89,7 +88,7 @@ classifyOverlaySlot ::
 classifyOverlaySlot firstSlotNo gkeys dval ascValue slot =
   if isActive
     then
-      let genesisIdx = (position `div` ascInv) `mod` (fromIntegral $ length gkeys)
+      let genesisIdx = (position `div` ascInv) `mod` fromIntegral (length gkeys)
        in gkeys `getAtIndex` genesisIdx
     else NonActiveSlot
   where

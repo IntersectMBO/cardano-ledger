@@ -1,10 +1,7 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Tickn
@@ -92,7 +89,7 @@ tickTransition = do
     if newEpoch
       then
         TicknState
-          { ticknStateEpochNonce = (ηc ⭒ ηh ⭒ extraEntropy),
+          { ticknStateEpochNonce = ηc ⭒ ηh ⭒ extraEntropy,
             ticknStatePrevHashNonce = ηph
           }
       else st

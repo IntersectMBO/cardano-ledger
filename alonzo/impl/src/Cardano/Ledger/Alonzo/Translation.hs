@@ -1,14 +1,8 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -172,7 +166,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
   translateEra _ctxt utxo =
-    return $ API.UTxO $ fmap translateTxOut $ API.unUTxO utxo
+    return $ API.UTxO $ translateTxOut <$> API.unUTxO utxo
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.PPUPState where
   translateEra ctxt ps =

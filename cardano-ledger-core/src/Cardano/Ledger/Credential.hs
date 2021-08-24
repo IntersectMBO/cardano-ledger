@@ -1,14 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 
 module Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
@@ -24,7 +21,6 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.BaseTypes (invalidKey)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
--- import Shelley.Spec.Ledger.Orphans ()
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
   ( HasKeyRole (..),

@@ -6,7 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -43,7 +43,17 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppCoin, ppInteger, ppList, ppLong, ppScriptHash, ppSexp, ppString)
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppCoin,
+    ppInteger,
+    ppList,
+    ppLong,
+    ppScriptHash,
+    ppSexp,
+    ppString,
+  )
 import Cardano.Ledger.Serialization (decodeMap, encodeMap)
 import Cardano.Ledger.Val
   ( DecodeMint (..),

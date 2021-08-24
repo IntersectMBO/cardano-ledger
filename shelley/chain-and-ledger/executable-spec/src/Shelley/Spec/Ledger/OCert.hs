@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
@@ -67,7 +66,7 @@ data OCertEnv crypto = OCertEnv
 
 currentIssueNo ::
   OCertEnv crypto ->
-  (Map (KeyHash 'BlockIssuer crypto) Word64) ->
+  Map (KeyHash 'BlockIssuer crypto) Word64 ->
   -- | Pool hash
   KeyHash 'BlockIssuer crypto ->
   Maybe Word64
@@ -111,9 +110,9 @@ instance
       <> encodeSignedDSIGN (ocertSigma ocert)
   encodedGroupSizeExpr size proxy =
     KES.encodedVerKeyKESSizeExpr (ocertVkHot <$> proxy)
-      + encodedSizeExpr size ((toWord . ocertN) <$> proxy)
+      + encodedSizeExpr size (toWord . ocertN <$> proxy)
       + encodedSizeExpr size ((\(KESPeriod p) -> p) . ocertKESPeriod <$> proxy)
-      + DSIGN.encodedSigDSIGNSizeExpr (((\(DSIGN.SignedDSIGN sig) -> sig) . ocertSigma) <$> proxy)
+      + DSIGN.encodedSigDSIGNSizeExpr ((\(DSIGN.SignedDSIGN sig) -> sig) . ocertSigma <$> proxy)
     where
       toWord :: Word64 -> Word
       toWord = fromIntegral

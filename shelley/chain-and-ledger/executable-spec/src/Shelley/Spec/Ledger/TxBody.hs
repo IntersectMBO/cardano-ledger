@@ -2,23 +2,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -158,10 +153,7 @@ import Cardano.Ledger.Serialization
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val (DecodeNonNegative (..))
-import Cardano.Prelude
-  ( HeapWords (..),
-    panic,
-  )
+import Cardano.Prelude (HeapWords (..), panic)
 import qualified Cardano.Prelude as HW
 import Control.DeepSeq (NFData (rnf))
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
@@ -439,7 +431,7 @@ deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
 deriving newtype instance CC.Crypto crypto => NFData (TxId crypto)
 
 instance HeapWords (TxIn crypto) where
-  heapWords (TxInCompact txid ix) = 3 + HW.heapWordsUnpacked txid + HW.heapWordsUnpacked (ix)
+  heapWords (TxInCompact txid ix) = 3 + HW.heapWordsUnpacked txid + HW.heapWordsUnpacked ix
 
 type TransTxId (c :: Type -> Constraint) era =
   -- Transaction Ids are the hash of a transaction body, which contains
@@ -499,13 +491,13 @@ instance
   where
   heapWords (TxOutCompact _ vl) =
     3
-      + (heapWords (packedADDRHASH (Proxy :: Proxy era)))
+      + heapWords (packedADDRHASH (Proxy :: Proxy era))
       + heapWords vl
 
 -- a ShortByteString of the same length as the ADDRHASH
 -- used to calculate heapWords
 packedADDRHASH :: forall proxy era. (CC.Crypto (Crypto era)) => proxy era -> ShortByteString
-packedADDRHASH _ = pack (replicate (fromIntegral $ (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (Crypto era))))) (1 :: Word8))
+packedADDRHASH _ = pack (replicate (fromIntegral (1 + 2 * HS.sizeHash (Proxy :: Proxy (CC.ADDRHASH (Crypto era))))) (1 :: Word8))
 
 instance
   (TransTxOut Show era, Era era) => -- Use the weakest constraint possible here
@@ -559,7 +551,7 @@ instance
 -- ---------------------------
 -- WellFormed instances
 
-instance (Compactible v, v ~ (Core.Value era)) => HasField "value" (TxOut era) v where
+instance (Compactible v, v ~ Core.Value era) => HasField "value" (TxOut era) v where
   getField (TxOutCompact _ v) = fromCompact v
 
 instance (CC.Crypto c, c ~ Crypto era) => HasField "address" (TxOut era) (Addr c) where
@@ -644,10 +636,8 @@ instance
   CC.Crypto crypto =>
   FromCBOR (MIRCert crypto)
   where
-  fromCBOR = decodeRecordNamed "MIRCert" (const 2) $ do
-    pot <- fromCBOR
-    values <- fromCBOR
-    pure $ MIRCert pot values
+  fromCBOR =
+    decodeRecordNamed "MIRCert" (const 2) (MIRCert <$> fromCBOR <*> fromCBOR)
 
 instance
   CC.Crypto crypto =>
@@ -851,17 +841,16 @@ pattern TxBody ::
 pattern TxBody {_inputs, _outputs, _certs, _wdrls, _txfee, _ttl, _txUpdate, _mdHash} <-
   TxBodyConstr
     ( Memo
-        ( TxBodyRaw
-            { _inputsX = _inputs,
-              _outputsX = _outputs,
-              _certsX = _certs,
-              _wdrlsX = _wdrls,
-              _txfeeX = _txfee,
-              _ttlX = _ttl,
-              _txUpdateX = _txUpdate,
-              _mdHashX = _mdHash
-            }
-          )
+        TxBodyRaw
+          { _inputsX = _inputs,
+            _outputsX = _outputs,
+            _certsX = _certs,
+            _wdrlsX = _wdrls,
+            _txfeeX = _txfee,
+            _ttlX = _ttl,
+            _txUpdateX = _txUpdate,
+            _mdHashX = _mdHash
+          }
         _
       )
   where
@@ -1077,11 +1066,8 @@ instance
   CC.Crypto crypto =>
   FromCBOR (TxIn crypto)
   where
-  fromCBOR = do
-    decodeRecordNamed "TxIn" (const 2) $ do
-      a <- fromCBOR
-      b <- fromCBOR
-      pure $ TxInCompact a b
+  fromCBOR =
+    decodeRecordNamed "TxIn" (const 2) (TxInCompact <$> fromCBOR <*> fromCBOR)
 
 instance-- use the weakest constraint necessary
 
@@ -1129,10 +1115,7 @@ instance ToCBOR PoolMetadata where
 
 instance FromCBOR PoolMetadata where
   fromCBOR = do
-    decodeRecordNamed "PoolMetadata" (const 2) $ do
-      u <- fromCBOR
-      h <- fromCBOR
-      pure $ PoolMetadata u h
+    decodeRecordNamed "PoolMetadata" (const 2) (PoolMetadata <$> fromCBOR <*> fromCBOR)
 
 -- | The size of the '_poolOwners' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.

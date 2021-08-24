@@ -1,10 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveTraversable #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -12,8 +9,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -493,11 +488,10 @@ instance FromCBOR ActiveSlotCoeff where
 
 instance ToCBOR ActiveSlotCoeff where
   toCBOR
-    ( ActiveSlotCoeff
-        { unActiveSlotVal = slotVal,
-          unActiveSlotLog = _logVal
-        }
-      ) =
+    ActiveSlotCoeff
+      { unActiveSlotVal = slotVal,
+        unActiveSlotLog = _logVal
+      } =
       toCBOR slotVal
 
 mkActiveSlotCoeff :: PositiveUnitInterval -> ActiveSlotCoeff
@@ -513,17 +507,14 @@ mkActiveSlotCoeff v =
             0
           else
             floor
-              ( fpPrecision
-                  * ( ln' $ (1 :: FixedPoint) - fromRational (unboundRational v)
-                    )
-              )
+              (fpPrecision * ln' ((1 :: FixedPoint) - fromRational (unboundRational v)))
     }
 
 activeSlotVal :: ActiveSlotCoeff -> PositiveUnitInterval
 activeSlotVal = unActiveSlotVal
 
 activeSlotLog :: ActiveSlotCoeff -> FixedPoint
-activeSlotLog f = (fromIntegral $ unActiveSlotLog f) / fpPrecision
+activeSlotLog f = fromIntegral (unActiveSlotLog f) / fpPrecision
 
 --------------------------------------------------------------------------------
 -- Base monad for all STS systems
@@ -566,7 +557,7 @@ instance NoThunks Globals
 type ShelleyBase = ReaderT Globals Identity
 
 epochInfo :: Globals -> EpochInfo Identity
-epochInfo = (hoistEpochInfo (either (throw . EpochErr) pure)) . epochInfoWithErr
+epochInfo = hoistEpochInfo (either (throw . EpochErr) pure) . epochInfoWithErr
 
 newtype EpochErr = EpochErr Text
 

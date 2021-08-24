@@ -102,7 +102,7 @@ instance CC.Crypto c => ToCBOR (RewardAns c) where
   toCBOR (RewardAns x y) = toCBOR (x, y)
 
 instance CC.Crypto c => FromCBOR (RewardAns c) where
-  fromCBOR = (\(x, y) -> RewardAns x y) <$> fromCBOR
+  fromCBOR = uncurry RewardAns <$> fromCBOR
 
 -- | The provenance we collect
 type KeyHashPoolProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
@@ -233,23 +233,22 @@ instance NFData (FreeVars crypto)
 
 instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
   toCBOR
-    ( FreeVars
-        { b,
-          delegs,
-          stake,
-          addrsRew,
-          totalStake,
-          activeStake,
-          asc,
-          totalBlocks,
-          r,
-          slotsPerEpoch,
-          pp_d,
-          pp_a0,
-          pp_nOpt,
-          pp_mv
-        }
-      ) =
+    FreeVars
+      { b,
+        delegs,
+        stake,
+        addrsRew,
+        totalStake,
+        activeStake,
+        asc,
+        totalBlocks,
+        r,
+        slotsPerEpoch,
+        pp_d,
+        pp_a0,
+        pp_nOpt,
+        pp_mv
+      } =
       encode
         ( Rec FreeVars !> mapEncode b !> mapEncode delegs !> To stake !> setEncode addrsRew
             !> To totalStake
@@ -290,23 +289,22 @@ rewardStakePool ::
   PoolParams c ->
   ProvM (KeyHashPoolProvenance c) m (RewardAns c)
 rewardStakePool
-  ( FreeVars
-      { b,
-        delegs,
-        stake,
-        addrsRew,
-        totalStake,
-        activeStake,
-        asc,
-        totalBlocks,
-        r,
-        slotsPerEpoch,
-        pp_d,
-        pp_a0,
-        pp_nOpt,
-        pp_mv
-      }
-    )
+  FreeVars
+    { b,
+      delegs,
+      stake,
+      addrsRew,
+      totalStake,
+      activeStake,
+      asc,
+      totalBlocks,
+      r,
+      slotsPerEpoch,
+      pp_d,
+      pp_a0,
+      pp_nOpt,
+      pp_mv
+    }
   (RewardAns m1 m2)
   pparams = do
     let hk = _poolId pparams
@@ -400,8 +398,8 @@ instance (CC.Crypto crypto) => ToCBOR (PulsingRewUpdate crypto) where
 instance (CC.Crypto crypto) => FromCBOR (PulsingRewUpdate crypto) where
   fromCBOR = decode (Summands "PulsingRewUpdate" decPS)
     where
-      decPS 0 = (SumD Pulsing <! From <! From)
-      decPS 1 = (SumD Complete <! From)
+      decPS 0 = SumD Pulsing <! From <! From
+      decPS 1 = SumD Complete <! From
       decPS n = Invalid n
 
 instance NFData (PulsingRewUpdate crypto)
@@ -423,8 +421,12 @@ pulseProvM initial combine tma = liftProv (pulseM tma) initial (\_ s1 s2 -> comb
 -- | lift a pulseM function from (KeyHashPoolProvenance (Crypto era))
 --   provenance to (RewardProvenance (Crypto er)) provenance
 pulseOther :: Pulser crypto -> ProvM (RP.RewardProvenance crypto) ShelleyBase (Pulser crypto)
-pulseOther tma = pulseProvM Map.empty incrementProvenance tma
+pulseOther = pulseProvM Map.empty incrementProvenance
 
 -- | How to merge KeyHashPoolProvenance into RewardProvenance
-incrementProvenance :: (KeyHashPoolProvenance crypto) -> RP.RewardProvenance crypto -> RP.RewardProvenance crypto
-incrementProvenance provpools (prov@(RP.RewardProvenance {RP.pools = old})) = prov {RP.pools = Map.union provpools old}
+incrementProvenance ::
+  KeyHashPoolProvenance crypto ->
+  RP.RewardProvenance crypto ->
+  RP.RewardProvenance crypto
+incrementProvenance provpools prov@RP.RewardProvenance {RP.pools = old} =
+  prov {RP.pools = Map.union provpools old}

@@ -4,7 +4,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# OPTIONS_GHC -fno-warn-redundant-constraints #-}
 
@@ -204,9 +204,9 @@ decodeFraction :: Integral a => Decoder s a -> Decoder s (Ratio a)
 decodeFraction decoder = do
   t <- decodeTag
   unless (t == 30) $ cborError $ DecoderErrorCustom "rational" "expected tag 30"
-  (numValues, values) <- decodeCollectionWithLen (decodeListLenOrIndef) decoder
+  (numValues, values) <- decodeCollectionWithLen decodeListLenOrIndef decoder
   case values of
-    n : d : [] -> do
+    [n, d] -> do
       when (d == 0) (fail "denominator cannot be 0")
       pure $ n % d
     _ -> cborError $ DecoderErrorSizeMismatch "rational" 2 numValues
@@ -217,7 +217,7 @@ ipv4ToBytes = BSL.toStrict . runPut . putWord32le . toHostAddress
 ipv4FromBytes :: BS.ByteString -> Either String IPv4
 ipv4FromBytes b =
   case runGetOrFail getWord32le (BSL.fromStrict b) of
-    Left (_, _, err) -> Left $ err
+    Left (_, _, err) -> Left err
     Right (_, _, ha) -> Right $ fromHostAddress ha
 
 ipv4ToCBOR :: IPv4 -> Encoding
@@ -247,12 +247,12 @@ getHostAddress6 = do
   w2 <- getWord32le
   w3 <- getWord32le
   w4 <- getWord32le
-  return $ (w1, w2, w3, w4)
+  return (w1, w2, w3, w4)
 
 ipv6FromBytes :: BS.ByteString -> Either String IPv6
 ipv6FromBytes b =
   case runGetOrFail getHostAddress6 (BSL.fromStrict b) of
-    Left (_, _, err) -> Left $ err
+    Left (_, _, err) -> Left err
     Right (_, _, ha) -> Right $ fromHostAddress6 ha
 
 ipv6ToCBOR :: IPv6 -> Encoding

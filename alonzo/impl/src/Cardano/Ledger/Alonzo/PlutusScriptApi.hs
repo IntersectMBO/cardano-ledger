@@ -176,7 +176,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
     -- by use of the (partial) language function, which is not defined
     -- on 1-phase scripts.
     knownToNotBe1Phase (_, sh) =
-      case sh `Map.lookup` (txscripts' $ getField @"wits" tx) of
+      case sh `Map.lookup` txscripts' (getField @"wits" tx) of
         Just (AlonzoScript.PlutusScript _) -> True
         Just (AlonzoScript.TimelockScript _) -> False
         Nothing -> True
@@ -185,7 +185,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
         Just (d, eu) -> Right (sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
     getscript (_, hash) =
-      case Map.lookup hash (txscripts' (getField @"wits" tx)) of
+      case hash `Map.lookup` txscripts' (getField @"wits" tx) of
         Just script -> Right script
         Nothing -> Left (NoWitness hash)
     apply cost (sp, d, eu) script =
@@ -229,13 +229,15 @@ evalScripts ::
   ScriptResult
 evalScripts _tx [] = Passes
 evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
-  (lift $ evalTimelock vhks (Alonzo.vldt' (getField @"body" tx)) timelock) `andResult` evalScripts tx rest
+  lift (evalTimelock vhks (Alonzo.vldt' (getField @"body" tx)) timelock)
+    `andResult` evalScripts tx rest
   where
     vhks = Set.map witKeyHash (txwitsVKey' (getField @"wits" tx))
     lift True = Passes
     lift False = Fails [OnePhaseFailure . pack . show $ timelock]
 evalScripts tx ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
-  runPLCScript (Proxy @era) cost pscript units (map getPlutusData ds) `andResult` evalScripts tx rest
+  runPLCScript (Proxy @era) cost pscript units (map getPlutusData ds)
+    `andResult` evalScripts tx rest
 
 -- Collect information (purpose and hash) about all the scripts in a Tx.
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
