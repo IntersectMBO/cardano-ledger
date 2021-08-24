@@ -14,7 +14,7 @@ module Shelley.Spec.Ledger.STS.Mir
   ( MIR,
     PredicateFailure,
     MirPredicateFailure,
-    MirEvent,
+    MirEvent (..),
     emptyInstantaneousRewards,
   )
 where
@@ -62,7 +62,11 @@ data MirPredicateFailure era
   deriving (Show, Generic, Eq)
 
 data MirEvent era
-  = TotalResTres Coin
+  = MirTransfer (InstantaneousRewards (Crypto era))
+  | -- | We were not able to perform an MIR transfer due to insufficient funds.
+    --   This event gives the rewards we wanted to pay, plus the available
+    --   reserves and treasury.
+    NoMirTransfer (InstantaneousRewards (Crypto era)) Coin Coin
 
 instance NoThunks (MirPredicateFailure era)
 
@@ -113,10 +117,9 @@ mirTransition = do
       availableTreasury = treasury `addDeltaCoin` (deltaTreasury . _irwd $ ds)
       update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts (Crypto era)
 
-  tellEvent $ TotalResTres (totR <> totT)
-
   if totR <= availableReserves && totT <= availableTreasury
-    then
+    then do
+      tellEvent $ MirTransfer (_irwd ds)
       pure $
         EpochState
           acnt
@@ -137,7 +140,8 @@ mirTransition = do
           pr
           pp
           nm
-    else
+    else do
+      tellEvent $ NoMirTransfer (_irwd ds) availableReserves availableTreasury
       pure $
         EpochState
           acnt
