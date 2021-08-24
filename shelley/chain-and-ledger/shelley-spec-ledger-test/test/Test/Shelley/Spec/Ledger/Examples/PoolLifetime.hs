@@ -328,14 +328,16 @@ makePulser ::
   EB.BlocksMade (Crypto era) ->
   ChainState era ->
   PulsingRewUpdate (Crypto era)
-makePulser bs cs =
-  startStep
-    (epochSize $ EpochNo 0)
-    bs
-    (nesEs . chainNes $ cs)
-    maxLLSupply
-    (activeSlotCoeff testGlobals)
-    (securityParameter testGlobals)
+makePulser bs cs = p
+  where
+    (p, _) =
+      startStep
+        (epochSize $ EpochNo 0)
+        bs
+        (nesEs . chainNes $ cs)
+        maxLLSupply
+        (activeSlotCoeff testGlobals)
+        (securityParameter testGlobals)
 
 makePulser' ::
   forall era.
