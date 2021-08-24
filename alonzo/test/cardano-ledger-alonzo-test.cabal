@@ -72,13 +72,14 @@ test-suite cardano-ledger-alonzo-test
   hs-source-dirs:
     test
   other-modules:
-    Test.Cardano.Ledger.Alonzo.Trials
-    Test.Cardano.Ledger.Alonzo.Golden
-    Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
-    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
     Test.Cardano.Ledger.Alonzo.Examples
-    Test.Cardano.Ledger.Alonzo.Translation
+    Test.Cardano.Ledger.Alonzo.Golden
+    Test.Cardano.Ledger.Alonzo.PropertyTests
+    Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
     Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
+    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
+    Test.Cardano.Ledger.Alonzo.Translation
+    Test.Cardano.Ledger.Alonzo.Trials
     Test.Cardano.Ledger.Alonzo.Trials
   build-depends:
     base16-bytestring,
@@ -97,9 +98,12 @@ test-suite cardano-ledger-alonzo-test
     plutus-ledger-api,
     QuickCheck,
     small-steps,
+    small-steps-test,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
     strict-containers,
     tasty,
     tasty-hunit,
     tasty-quickcheck,
+    time,
+    transformers,

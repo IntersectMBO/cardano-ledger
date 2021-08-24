@@ -20,13 +20,14 @@ module Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
 where
 
 import Cardano.Binary (ToCBOR, serialize')
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), epochInfo)
+import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfo)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.State.Transition (STS (State))
+import Control.State.Transition.Extended (Environment, Signal)
 import Control.State.Transition.Trace
   ( Trace,
     TraceOrder (OldestFirst),
@@ -72,7 +73,9 @@ import Shelley.Spec.Ledger.Delegation.Certificates
     isTreasuryMIRCert,
   )
 import Shelley.Spec.Ledger.LedgerState
-  ( txsizeBound,
+  ( DPState,
+    UTxOState,
+    txsizeBound,
   )
 import Shelley.Spec.Ledger.PParams
   ( Update (..),
@@ -303,17 +306,21 @@ hasMetadata tx =
     f (SJust _) = True
 
 onlyValidLedgerSignalsAreGenerated ::
-  forall era.
+  forall era ledger.
   ( EraGen era,
     ChainProperty era,
-    QC.HasTrace (LEDGER era) (GenEnv era),
-    Default (State (Core.EraRule "PPUP" era))
+    QC.HasTrace ledger (GenEnv era),
+    Default (State (Core.EraRule "PPUP" era)),
+    QC.BaseEnv ledger ~ Globals,
+    State ledger ~ (UTxOState era, DPState (Crypto era)),
+    Show (Environment ledger),
+    Show (Signal ledger)
   ) =>
   Property
 onlyValidLedgerSignalsAreGenerated =
   withMaxSuccess 200 $
     onlyValidSignalsAreGeneratedFromInitState
-      @(LEDGER era)
+      @ledger
       testGlobals
       100
       ge

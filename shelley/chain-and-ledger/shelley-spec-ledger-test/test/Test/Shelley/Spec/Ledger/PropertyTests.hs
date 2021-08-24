@@ -27,27 +27,26 @@ module Test.Shelley.Spec.Ledger.PropertyTests
   )
 where
 
-import Cardano.Binary (ToCBOR)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash, KeyRole (Witness))
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.Constraints (TransValue)
+import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import Data.Functor.Identity (Identity)
 import Data.List (nub, sort)
 import Data.Map (Map)
-import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set as Set (Set, fromList, singleton)
 import GHC.Records (HasField (..))
-import Shelley.Spec.Ledger.API (CHAIN, DPState, DelegsEnv, PPUPState, UTxOState, UtxoEnv)
+import Shelley.Spec.Ledger.API (CHAIN, DPState, PPUPState, UTxOState)
 import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
 import Shelley.Spec.Ledger.PParams (Update (..))
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
+import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.TxBody (TxIn, Wdrl, WitVKey)
 import Shelley.Spec.Ledger.UTxO (makeWitnessVKey)
@@ -71,7 +70,8 @@ import Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
     relevantCasesAreCovered,
   )
 import Test.Shelley.Spec.Ledger.Rules.TestChain
-  ( adaPreservationChain,
+  ( TestingLedger,
+    adaPreservationChain,
     collisionFreeComplete,
     delegProperties,
     poolProperties,
@@ -103,32 +103,23 @@ propWitVKeys seed h1 h2 =
         ]
 
 minimalPropertyTests ::
-  forall era.
+  forall era ledger.
   ( EraGen era,
-    TransValue ToCBOR era,
+    TestingLedger era ledger,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
-    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
-    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    Show (State (Core.EraRule "PPUP" era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TestTree
 minimalPropertyTests =
   testGroup
     "Minimal Property Tests"
     [ (localOption (TQC.QuickCheckMaxRatio 50) $ TQC.testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @era)),
-      TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain @era),
+      TQC.testProperty "total amount of Ada is preserved (Chain)" (adaPreservationChain @era @ledger),
       TQC.testProperty "Only valid CHAIN STS signals are generated" (onlyValidChainSignalsAreGenerated @era),
       bootstrapHashTest,
       testGroup
@@ -145,28 +136,25 @@ minimalPropertyTests =
 
 -- | 'TestTree' of property-based testing properties.
 propertyTests ::
-  forall era.
+  forall era ledger.
   ( EraGen era,
-    TransValue ToCBOR era,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    QC.HasTrace (LEDGER era) (GenEnv era),
-    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
-    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    Embed (Core.EraRule "UTXOW" era) (LEDGER era),
-    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
+    QC.HasTrace ledger (GenEnv era),
+    Embed (Core.EraRule "DELEGS" era) ledger,
+    Embed (Core.EraRule "UTXOW" era) ledger,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    Environment ledger ~ LedgerEnv era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "addrWits" (Core.Witnesses era) (Set (WitVKey 'Witness (Crypto era))),
     HasField "scriptWits" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
-    Show (State (Core.EraRule "PPUP" era))
+    QC.BaseEnv ledger ~ Globals,
+    BaseM ledger ~ ReaderT Globals Identity,
+    State ledger ~ (UTxOState era, DPState (Crypto era)),
+    Signal ledger ~ Core.Tx era
   ) =>
   TestTree
 propertyTests =
@@ -174,7 +162,7 @@ propertyTests =
     "Property-Based Testing"
     [ testGroup
         "Classify Traces"
-        [ ( localOption (TQC.QuickCheckMaxRatio 50) $
+        [ ( localOption (TQC.QuickCheckMaxRatio 100) $
               TQC.testProperty
                 "Chain and Ledger traces cover the relevant cases"
                 (relevantCasesAreCovered @era)
@@ -202,16 +190,16 @@ propertyTests =
         "CHAIN level Properties"
         [ TQC.testProperty
             "collection of Ada preservation properties"
-            (adaPreservationChain @era),
+            (adaPreservationChain @era @ledger),
           TQC.testProperty
             "inputs are eliminated, outputs added to utxo and TxIds are unique"
-            (collisionFreeComplete @era)
+            (collisionFreeComplete @era @ledger)
         ],
       testGroup
         "Properties of Trace generators"
         [ TQC.testProperty
             "Only valid LEDGER STS signals are generated"
-            (onlyValidLedgerSignalsAreGenerated @era),
+            (onlyValidLedgerSignalsAreGenerated @era @ledger),
           TQC.testProperty
             "Only valid CHAIN STS signals are generated"
             (onlyValidChainSignalsAreGenerated @era)

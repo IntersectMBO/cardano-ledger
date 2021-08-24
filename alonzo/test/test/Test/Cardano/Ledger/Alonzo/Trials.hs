@@ -2,9 +2,12 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
--- Embed instances for (AlonzoEra TestCrypto)
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
+-- HasTrace instances for AlonzoLEDGE
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | Export several sets of property tests for the Alonzo Era.
@@ -46,16 +49,15 @@ module Test.Cardano.Ledger.Alonzo.Trials
   )
 where
 
--- import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Alonzo (AlonzoEra)
--- import Shelley.Spec.Ledger.UTxO(UTxO(..))
-
 import Cardano.Ledger.Alonzo.Data (Data (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
-import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY)
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Scripts (ppScript)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx)
 import Cardano.Ledger.Alonzo.TxBody ()
+import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
@@ -63,11 +65,25 @@ import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Constraints
+  ( TransValue,
+    UsesAuxiliary,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue,
+  )
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.State.Transition.Extended (Embed (..), IRC (..), STS (..))
+import Control.Monad.Trans.Reader (runReaderT)
+import Control.State.Transition
+import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Default.Class (Default (def))
+import Data.Functor.Identity (runIdentity)
 import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
+import Data.Sequence (Seq)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
+import GHC.Records (HasField)
 import qualified PlutusTx as P (Data (..))
 import Shelley.Spec.Ledger.BlockChain (Block)
 import Shelley.Spec.Ledger.LedgerState
@@ -81,18 +97,26 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState,
   )
 import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.STS.Chain (CHAIN, ChainEvent (..), ChainPredicateFailure (..), ChainState (..))
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER, LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (UtxowFailure))
+import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
+import Shelley.Spec.Ledger.STS.Delegs (DelegsEnv)
+import Shelley.Spec.Ledger.STS.Delpl (DelplEnv, DelplPredicateFailure)
+import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
+import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
+import Shelley.Spec.Ledger.TxBody (DCert, TxIn)
 import System.Timeout
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
+import qualified Test.Cardano.Ledger.Alonzo.PropertyTests as Alonzo
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
 import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
 import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..), ScriptSpace (..), hashData)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), allScripts, genUtxo0)
+import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), MinLEDGER_STS, allScripts, genUtxo0)
 import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
+import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
+import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (genAccountState)
 import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
 import Test.Shelley.Spec.Ledger.PropertyTests
   ( adaPreservationChain,
@@ -112,17 +136,6 @@ import Test.Shelley.Spec.Ledger.PropertyTests
   )
 import Test.Tasty
 import Test.Tasty.QuickCheck
-
--- ======================================================================
--- These instances are needed to make property tests in the Alonzo era
-
-instance Embed (AlonzoBBODY (AlonzoEra TestCrypto)) (CHAIN (AlonzoEra TestCrypto)) where
-  wrapFailed = BbodyFailure
-  wrapEvent = BbodyEvent
-
-instance Embed (AlonzoUTXOW (AlonzoEra TestCrypto)) (LEDGER (AlonzoEra TestCrypto)) where
-  wrapFailed = UtxowFailure
-  wrapEvent = UtxowEvent
 
 -- ======================================================================================
 -- It is incredably hard to debug property test generators.  These functions mimic the
@@ -168,17 +181,65 @@ genstuff proxy f =
 -- The following genXXX let one observe example generated XXX things
 -- these are very usefull to visualize what the the EraGen instances are doing.
 
-ap :: Proxy (AlonzoEra TestCrypto)
-ap = Proxy @(AlonzoEra TestCrypto)
+type A = AlonzoEra TestCrypto
+
+type L = AlonzoLEDGER A
+
+ap :: Proxy A
+ap = Proxy
+
+-- The AlonzoLEDGER STS combines utxo and delegation rules and allows for generating transactions
+-- with meaningful delegation certificates.
+instance
+  ( EraGen era,
+    UsesTxBody era,
+    UsesTxOut era,
+    UsesValue era,
+    UsesAuxiliary era,
+    Mock (Crypto era),
+    MinLEDGER_STS era,
+    TransValue ToCBOR era,
+    Embed (Core.EraRule "DELPL" era) (CERTS era),
+    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
+    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
+    Embed (Core.EraRule "DELEGS" era) (AlonzoLEDGER era),
+    Embed (Core.EraRule "UTXOW" era) (AlonzoLEDGER era),
+    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
+    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    Show (State (Core.EraRule "PPUP" era)),
+    Core.Tx era ~ ValidatedTx era
+  ) =>
+  TQC.HasTrace (AlonzoLEDGER era) (GenEnv era)
+  where
+  envGen GenEnv {geConstants} =
+    LedgerEnv (SlotNo 0) 0
+      <$> genEraPParams @era geConstants
+      <*> genAccountState geConstants
+
+  sigGen genenv env state = genTx genenv env state
+
+  shrinkSignal _ = [] -- TODO add some kind of Shrinker?
+
+  type BaseEnv (AlonzoLEDGER era) = Globals
+  interpretSTS globals act = runIdentity $ runReaderT act globals
 
 -- An initial (mostly empty) LedgerEnv
 ledgerEnv :: forall era. Default (Core.PParams era) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) 0 def (AccountState (Coin 0) (Coin 0))
 
-genAlonzoTx :: Gen (Core.Tx (AlonzoEra TestCrypto))
+genAlonzoTx :: Gen (Core.Tx A)
 genAlonzoTx = genstuff ap (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (utxo, dp))
 
-genAlonzoBlock :: Gen (Block (AlonzoEra TestCrypto))
+genAlonzoBlock :: Gen (Block A)
 genAlonzoBlock = genstuff ap (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
 
 genShelleyTx :: Gen (Core.Tx (ShelleyEra TestCrypto))
@@ -195,11 +256,11 @@ genShelleyBlock = genstuff (Proxy @(ShelleyEra TestCrypto)) (\genv cs _nep _ep _
 -- scripts, payscript, and stakescript let one observe the 'nth' generated script. Very usefull
 -- when debugging a Scriptic instance.
 
-keys :: KeySpace (AlonzoEra TestCrypto)
+keys :: KeySpace A
 _constants :: Constants
-scriptspace :: ScriptSpace (AlonzoEra TestCrypto)
-genenv0 :: GenEnv (AlonzoEra TestCrypto)
-genenv0@(GenEnv keys scriptspace _constants) = genEnv (Proxy @(AlonzoEra TestCrypto))
+scriptspace :: ScriptSpace A
+genenv0 :: GenEnv A
+genenv0@(GenEnv keys scriptspace _constants) = genEnv (Proxy @A)
 
 -- In scripts, n ranges over [0..149]
 scripts :: Int -> (PDoc, PDoc)
@@ -218,19 +279,19 @@ theutxo = do
   putStrLn (show (prettyA utx))
 
 alls :: [(PDoc, PDoc)]
-alls = (\(x, y) -> (ppScript x, ppScript y)) <$> (allScripts @(AlonzoEra TestCrypto) _constants)
+alls = (\(x, y) -> (ppScript x, ppScript y)) <$> (allScripts @A _constants)
 
 d1 :: P.Data
 d1 = P.I 4
 
-d2 :: Data (AlonzoEra TestCrypto)
+d2 :: Data A
 d2 = (Data (P.I 4))
 
 d3 :: SafeHash TestCrypto EraIndependentData
 d3 = hashAnnotated d2
 
 d4 :: SafeHash TestCrypto EraIndependentData
-d4 = hashData @(AlonzoEra TestCrypto) d1
+d4 = hashData @A d1
 
 -- ====================================================================================
 -- A few sets of property tests we can use to run in different Scenarios.
@@ -240,10 +301,8 @@ alonzoPropertyTests :: TestTree
 alonzoPropertyTests =
   testGroup
     "Alonzo property tests"
-    [ propertyTests @(AlonzoEra TestCrypto),
-      ( localOption (QuickCheckMaxRatio 120) $
-          testProperty "Chain and Ledger traces cover the relevant cases" (relevantCasesAreCovered @(AlonzoEra TestCrypto))
-      )
+    [ propertyTests @A @L,
+      Alonzo.propertyTests
     ]
 
 -- | A select subset of all the property tests
@@ -251,7 +310,9 @@ fastPropertyTests :: TestTree
 fastPropertyTests =
   testGroup
     "Fast Alonzo Property Tests"
-    [ testProperty "total amount of Ada is preserved (Chain)" (withMaxSuccess 50 (adaPreservationChain @(AlonzoEra TestCrypto)))
+    [ testProperty
+        "total amount of Ada is preserved (Chain)"
+        (withMaxSuccess 50 (adaPreservationChain @A @L))
     ]
 
 -- ==========================================================================================
@@ -269,17 +330,17 @@ manytimes prop count _seed =
             "valid" ->
               ( testProperty
                   "Only valid CHAIN STS signals are generated"
-                  (withMaxSuccess count (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
+                  (withMaxSuccess count (onlyValidLedgerSignalsAreGenerated @A @L))
               )
             "ada" ->
               ( testProperty
                   "collection of Ada preservation properties:"
-                  (withMaxSuccess count (adaPreservationChain @(AlonzoEra TestCrypto)))
+                  (withMaxSuccess count (adaPreservationChain @A @L))
               )
             "deleg" ->
               ( testProperty
                   "STS Rules - Delegation Properties"
-                  (withMaxSuccess count (delegProperties @(AlonzoEra TestCrypto)))
+                  (withMaxSuccess count (delegProperties @A))
               )
             other -> error ("unknown test: " ++ other)
     )
@@ -298,11 +359,11 @@ searchForQuickFailure seconds seed = do
       ( localOption
           (QuickCheckReplay (Just seed))
           -- some properties we might use
-          (testProperty "preserves ADA" $ adaPreservationChain @(AlonzoEra TestCrypto))
-          -- (testProperty "Delegation Properties" (delegProperties @(AlonzoEra TestCrypto)))
+          (testProperty "preserves ADA" $ adaPreservationChain @A @L)
+          -- (testProperty "Delegation Properties" (delegProperties @A))
           -- fastPropertyTests
-          -- (propertyTests @(AlonzoEra TestCrypto))
-          -- (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @(AlonzoEra TestCrypto)))
+          -- (propertyTests @A)
+          -- (testProperty "Only valid CHAIN STS signals are generated" (onlyValidLedgerSignalsAreGenerated @A))
       )
 
 -- | search for a quick failure using replay seeds 'low' .. 'high'
