@@ -37,3 +37,11 @@ executable plutus-preprocessor
       template-haskell
     hs-source-dirs:   src
     default-language: Haskell2010
+
+executable plutus-debug
+    main-is:          Debug.hs
+    build-depends:
+      base,
+      cardano-ledger-alonzo,
+    hs-source-dirs:   src
+    default-language: Haskell2010
