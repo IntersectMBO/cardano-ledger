@@ -347,7 +347,7 @@ evaluator.
 \begin{itemize}
   \item $\fun{getDatum}$ looks for a datum associated with a given script purpose. Note that
   only an $\TxIn$-type script purpose can result in finding an associated datum hash.
-  In no datum is found, an empty list is returned. A list containing the found datum
+  If no datum is found, an empty list is returned. A list containing the found datum
   is returned otherwise.
 
   \item $\fun{collectTwoPhaseScriptInputs}$ builds a list of scripts, paired with their
