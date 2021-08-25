@@ -1151,6 +1151,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
             rewTotalStake = totalStake,
             rewRPot = Coin rPot
           }
+      activestake = fold . unStake $ stake'
       free =
         FreeVars
           (unBlocksMade b)
@@ -1158,7 +1159,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           stake'
           (Map.keysSet $ _rewards ds)
           (unCoin totalStake)
-          (unCoin (fold . unStake $ stake'))
+          (unCoin activestake)
           asc
           (sum (unBlocksMade b))
           _R
@@ -1178,18 +1179,17 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
         def
           { spe = case slotsPerEpoch of EpochSize n -> n,
             blocks = b,
+            blocksCount = blocksMade,
             maxLL = maxSupply,
             deltaR1 = deltaR1,
             RP.r = _R,
             RP.totalStake = totalStake,
+            RP.activeStake = activestake,
             d = d,
             expBlocks = expectedBlocks,
             eta = eta,
             rPot = (Coin rPot),
             deltaT1 = (Coin deltaT1)
-            -- fields NOT intitialized here
-            --   blocksCount
-            --   activeStake
             -- Fields not initialized here, but filled in in completeRupd
             --   deltaR2
             --   pools
