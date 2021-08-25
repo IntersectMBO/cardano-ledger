@@ -44,6 +44,8 @@ import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import qualified Data.List as List
+import GHC.Exts (fromList)
+import Cardano.Slotting.Slot (SlotNo (..))
 
 modelMACoin ::
   (ValueFeature era ~ 'ExpectAnyOutput) =>
@@ -215,52 +217,59 @@ genModel' ::
   ) =>
   proxy era ->
   Gen
-    ( [(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)],
-      [ModelEpoch AllModelFeatures]
+    ( Bool,
+      (
+        [(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)],
+        [ModelEpoch AllModelFeatures]
+      )
     )
 genModel' _ = do
   (a, b) <- genModel @era defaultGenActionContext
-  pure (a, maybe (error "fromJust") id $ traverse (filterFeatures $ FeatureTag ValueFeatureTag_AnyOutput $ ScriptFeatureTag_PlutusV1) b)
+  pure (False, (a, maybe (error "fromJust") id $ traverse (filterFeatures $ FeatureTag ValueFeatureTag_AnyOutput $ ScriptFeatureTag_PlutusV1) b))
 
-shrinkModelTransactions ::
-  [ModelTx era] ->
-  [[ModelTx era]]
-shrinkModelTransactions txns = List.inits txns
-
-newPrevList ::
-  [a] ->
-  [a] ->
-  [a]
-newPrevList [] prevA = prevA
-newPrevList a prevA = prevA <> ((:) (List.last a) [])
-
-shrinkModelBlocks ::
-  [ModelBlock era] ->
-  [ModelBlock era] ->
-  [[ModelBlock era]]
-shrinkModelBlocks [] _ = []
-shrinkModelBlocks ((ModelBlock slotNo txns) : blocks) prevBlocks =
-  let currentBlockPrefixes = (ModelBlock slotNo) <$> (shrinkModelTransactions txns)
-      currentBPrefixList = (flip (:) []) <$> currentBlockPrefixes
-      allBlockPrefixes = ((<>) prevBlocks) <$> currentBPrefixList
-  in allBlockPrefixes <> (shrinkModelBlocks blocks $ newPrevList currentBlockPrefixes prevBlocks)
-
-shrinkModelEpochs ::
-  [ModelEpoch AllModelFeatures] ->
-  [ModelEpoch AllModelFeatures] ->
-  [[ModelEpoch AllModelFeatures]]
-shrinkModelEpochs [] _ = []
-shrinkModelEpochs ((ModelEpoch blocks blocksMade) : epochs) prevEpochs =
-  let currentEpochPrefixes = (flip ModelEpoch blocksMade) <$> (shrinkModelBlocks blocks [])
-      currentEpochPrefixList = (flip (:) []) <$> currentEpochPrefixes
-      allEpochPrefixes = ((<>) prevEpochs) <$> currentEpochPrefixList
-  in allEpochPrefixes <> (shrinkModelEpochs epochs $ newPrevList currentEpochPrefixes prevEpochs)
-
+-- | Shrink the epochs down to txns and each element will have its own prefix of txns, including all txns that came before
 shrinkModelSimple
   :: forall a.
       (a, [ModelEpoch AllModelFeatures])
   -> [(a, [ModelEpoch AllModelFeatures])]
-shrinkModelSimple (genesis, epochs) = (,) genesis <$> (List.init $ shrinkModelEpochs epochs [])
+shrinkModelSimple (genesis, epochs) = (,) genesis <$> (List.init $ shrinkModelEpochs epochs)
+  where
+    getBlockPrefixes ::
+      ModelBlock era ->
+      [ModelBlock era]
+    getBlockPrefixes (ModelBlock slotNo txns) = (ModelBlock slotNo) <$> (List.inits txns)
+
+    getEpochPrefixes ::
+     ModelEpoch AllModelFeatures ->
+     [ModelEpoch AllModelFeatures]
+    getEpochPrefixes (ModelEpoch blocks blocksMade) =
+      let blockPrefixes = snd $ foldl (appendPrefixes getBlockPrefixes) ([], []) blocks
+      in (flip ModelEpoch blocksMade) <$> blockPrefixes
+
+      -- | This function produces a tuple
+      -- | The first value is to keep track of any previous blocks/epochs
+      -- | The second value is the previous blocks/epochs plus the prefixes of each block/epochs
+    appendPrefixes ::
+      (b -> [b]) ->
+      ([b], [[b]]) ->
+      b ->
+      ([b], [[b]])
+    appendPrefixes getPrefixsFn (accumulatedXs, prefixList) x =
+      let addPrevXsFn = (++) accumulatedXs
+          newPrefixes = addPrevXsFn <$> (pure <$> (getPrefixsFn x))
+      in (accumulatedXs ++ [x], prefixList ++ newPrefixes)
+
+    shrinkModelEpochs ::
+      [ModelEpoch AllModelFeatures] ->
+      [[ModelEpoch AllModelFeatures]]
+    shrinkModelEpochs epochs = snd $ foldl (appendPrefixes getEpochPrefixes) ([], []) epochs
+
+
+shrinkPhases :: (a -> [a]) -> (a -> [a]) -> (Bool, a) -> [(Bool, a)]
+shrinkPhases f g (False, x) = ((,) True) <$> (f x)
+shrinkPhases f g (True, x) = ((,) True) <$> (g x)
+
+shrinkModel = shrinkPhases shrinkModelSimple (const [])
 
 -- | some hand-written model based unit tests
 modelUnitTests ::
@@ -276,10 +285,11 @@ modelUnitTests ::
 modelUnitTests proxy =
   testGroup
     (show $ typeRep proxy)
-    [ testProperty "gen" $ forAllShrink (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era))) shrinkModelSimple $ \(a, b) -> conjoin
-      [ testChainModelInteraction proxy a b
-      ]
+    [ testProperty "gen" $ forAllShrink (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era))) shrinkModel $ \(_ :: Bool, (a, b)) -> conjoin
+        [ testChainModelInteraction proxy a b
+        ]
       ,
+
       testProperty "noop" $ testChainModelInteraction proxy [] [],
       testProperty "noop-2" $
         testChainModelInteraction
