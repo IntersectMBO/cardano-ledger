@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -13,7 +12,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- This is needed to make Plutus.Data instances
@@ -134,7 +132,7 @@ getPlutusData (DataConstr (Memo d _)) = d
 type DataHash crypto = SafeHash crypto EraIndependentData
 
 hashData :: Era era => Data era -> DataHash (Crypto era)
-hashData d = hashAnnotated d
+hashData = hashAnnotated
 
 -- Size of the datum hash attached to the output (could be Nothing)
 dataHashSize :: StrictMaybe (DataHash c) -> Integer
@@ -180,13 +178,12 @@ encodeRaw ::
   StrictSeq (Core.Script era) ->
   Encode ('Closed 'Sparse) (AuxiliaryDataRaw era)
 encodeRaw metadata allScripts =
-  ( Tag 259 $
-      Keyed
-        (\m tss pss -> AuxiliaryDataRaw m (StrictSeq.fromList $ tss <> pss))
-        !> Omit null (Key 0 $ mapEncode metadata)
-        !> Omit null (Key 1 $ E (encodeFoldable . mapMaybe getTimelock) timelocks)
-        !> Omit null (Key 2 $ E (encodeFoldable . mapMaybe getPlutus) plutusScripts)
-  )
+  Tag 259 $
+    Keyed
+      (\m tss pss -> AuxiliaryDataRaw m (StrictSeq.fromList $ tss <> pss))
+      !> Omit null (Key 0 $ mapEncode metadata)
+      !> Omit null (Key 1 $ E (encodeFoldable . mapMaybe getTimelock) timelocks)
+      !> Omit null (Key 2 $ E (encodeFoldable . mapMaybe getPlutus) plutusScripts)
   where
     getTimelock (TimelockScript x) = Just x
     getTimelock _ = Nothing
@@ -227,11 +224,11 @@ instance
         decode
           ( Ann (RecD AuxiliaryDataRaw)
               <*! Ann (D mapFromCBOR)
-              <*! ( D $
-                      sequence
-                        <$> decodeStrictSeq
-                          (fmap TimelockScript <$> fromCBOR)
-                  )
+              <*! D
+                ( sequence
+                    <$> decodeStrictSeq
+                      (fmap TimelockScript <$> fromCBOR)
+                )
           )
       decodeAlonzo =
         decode $

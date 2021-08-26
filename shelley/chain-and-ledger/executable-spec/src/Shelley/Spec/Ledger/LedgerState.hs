@@ -4,23 +4,16 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- |
@@ -169,7 +162,6 @@ import Data.Group (invert)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
@@ -281,11 +273,9 @@ instance CC.Crypto crypto => ToCBOR (FutureGenDeleg crypto) where
     encodeListLen 2 <> toCBOR a <> toCBOR b
 
 instance CC.Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
-  fromCBOR = do
-    decodeRecordNamed "FutureGenDeleg" (const 2) $ do
-      a <- fromCBOR
-      b <- fromCBOR
-      pure $ FutureGenDeleg a b
+  fromCBOR =
+    decodeRecordNamed "FutureGenDeleg" (const 2) $
+      FutureGenDeleg <$> fromCBOR <*> fromCBOR
 
 -- | InstantaneousRewards captures the pending changes to the ledger
 -- state caused by MIR certificates. It consists of two mappings,
@@ -308,25 +298,19 @@ data InstantaneousRewards crypto = InstantaneousRewards
 -- transfers are accounted for.
 availableAfterMIR :: MIRPot -> AccountState -> InstantaneousRewards crypto -> Coin
 availableAfterMIR ReservesMIR as ir =
-  _reserves as `addDeltaCoin` (deltaReserves ir) <-> (fold $ iRReserves ir)
+  _reserves as `addDeltaCoin` deltaReserves ir <-> fold (iRReserves ir)
 availableAfterMIR TreasuryMIR as ir =
-  _treasury as `addDeltaCoin` (deltaTreasury ir) <-> (fold $ iRTreasury ir)
+  _treasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
 
 instance NoThunks (InstantaneousRewards crypto)
 
 instance NFData (InstantaneousRewards crypto)
 
-instance
-  CC.Crypto crypto =>
-  ToCBOR (InstantaneousRewards crypto)
-  where
+instance CC.Crypto crypto => ToCBOR (InstantaneousRewards crypto) where
   toCBOR (InstantaneousRewards irR irT dR dT) =
     encodeListLen 4 <> mapToCBOR irR <> mapToCBOR irT <> toCBOR dR <> toCBOR dT
 
-instance
-  CC.Crypto crypto =>
-  FromCBOR (InstantaneousRewards crypto)
-  where
+instance CC.Crypto crypto => FromCBOR (InstantaneousRewards crypto) where
   fromCBOR = do
     decodeRecordNamed "InstantaneousRewards" (const 4) $ do
       irR <- mapFromCBOR
@@ -356,10 +340,7 @@ instance NoThunks (DState crypto)
 
 instance NFData (DState crypto)
 
-instance
-  CC.Crypto crypto =>
-  ToCBOR (DState crypto)
-  where
+instance CC.Crypto crypto => ToCBOR (DState crypto) where
   toCBOR (DState rw dlg p fgs gs ir) =
     encodeListLen 6
       <> toCBOR rw
@@ -369,10 +350,7 @@ instance
       <> toCBOR gs
       <> toCBOR ir
 
-instance
-  CC.Crypto crypto =>
-  FromCBOR (DState crypto)
-  where
+instance CC.Crypto crypto => FromCBOR (DState crypto) where
   fromCBOR = do
     decodeRecordNamed "DState" (const 6) $ do
       rw <- fromCBOR
@@ -403,12 +381,9 @@ instance CC.Crypto crypto => ToCBOR (PState crypto) where
     encodeListLen 3 <> toCBOR a <> toCBOR b <> toCBOR c
 
 instance CC.Crypto crypto => FromCBOR (PState crypto) where
-  fromCBOR = do
-    decodeRecordNamed "PState" (const 3) $ do
-      a <- fromCBOR
-      b <- fromCBOR
-      c <- fromCBOR
-      pure $ PState a b c
+  fromCBOR =
+    decodeRecordNamed "PState" (const 3) $
+      PState <$> fromCBOR <*> fromCBOR <*> fromCBOR
 
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
@@ -432,11 +407,8 @@ instance
   CC.Crypto crypto =>
   FromCBOR (DPState crypto)
   where
-  fromCBOR = do
-    decodeRecordNamed "DPState" (const 2) $ do
-      ds <- fromCBOR
-      ps <- fromCBOR
-      pure $ DPState ds ps
+  fromCBOR =
+    decodeRecordNamed "DPState" (const 2) $ DPState <$> fromCBOR <*> fromCBOR
 
 data AccountState = AccountState
   { _treasury :: !Coin,
@@ -449,11 +421,8 @@ instance ToCBOR AccountState where
     encodeListLen 2 <> toCBOR t <> toCBOR r
 
 instance FromCBOR AccountState where
-  fromCBOR = do
-    decodeRecordNamed "AccountState" (const 2) $ do
-      t <- fromCBOR
-      r <- fromCBOR
-      pure $ AccountState t r
+  fromCBOR =
+    decodeRecordNamed "AccountState" (const 2) $ AccountState <$> fromCBOR <*> fromCBOR
 
 instance NoThunks AccountState
 
@@ -593,10 +562,7 @@ deriving stock instance
 
 instance TransUTxOState NoThunks era => NoThunks (UTxOState era)
 
-instance
-  TransUTxOState ToCBOR era =>
-  ToCBOR (UTxOState era)
-  where
+instance TransUTxOState ToCBOR era => ToCBOR (UTxOState era) where
   toCBOR (UTxOState ut dp fs us) =
     encodeListLen 4 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us
 
@@ -835,7 +801,7 @@ consumed ::
   Core.TxBody era ->
   Core.Value era
 consumed pp u tx =
-  balance @era (eval (txins @era tx ◁ u)) <> (Val.inject $ refunds <+> withdrawals)
+  balance @era (eval (txins @era tx ◁ u)) <> Val.inject (refunds <+> withdrawals)
   where
     refunds = keyRefunds pp tx
     withdrawals = fold . unWdrl $ getField @"wdrls" tx
@@ -1072,7 +1038,7 @@ applyRUpd'
           (aggregateRewards pr $ rs ru)
       as' =
         as
-          { _treasury = (addDeltaCoin (_treasury as) (deltaT ru)) <> fold unregRU,
+          { _treasury = addDeltaCoin (_treasury as) (deltaT ru) <> fold unregRU,
             _reserves = addDeltaCoin (_reserves as) (deltaR ru)
           }
       ls' =
@@ -1105,9 +1071,10 @@ updateNonMyopic nm rPot newLikelihoods =
   where
     history = likelihoodsNM nm
     performance kh newPerf =
-      fromMaybe
+      maybe
         mempty
-        (applyDecay decayFactor <$> Map.lookup kh history)
+        (applyDecay decayFactor)
+        (Map.lookup kh history)
         <> newPerf
     updatedLikelihoods = Map.mapWithKey performance newLikelihoods
 
@@ -1179,9 +1146,9 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
             rewNonMyopic = nm,
             rewDeltaR1 = deltaR1,
             rewR = _R,
-            rewDeltaT1 = (Coin deltaT1),
+            rewDeltaT1 = Coin deltaT1,
             rewTotalStake = totalStake,
-            rewRPot = (Coin rPot)
+            rewRPot = Coin rPot
           }
       free =
         FreeVars
@@ -1206,7 +1173,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           free
           (StrictSeq.fromList $ Map.elems poolParams)
           (RewardAns Map.empty Map.empty)
-   in (Pulsing rewsnap pulser)
+   in Pulsing rewsnap pulser
 
 -- Phase 2
 
@@ -1215,11 +1182,11 @@ pulseStep ::
   PulsingRewUpdate crypto ->
   ProvM (RewardProvenance crypto) ShelleyBase (PulsingRewUpdate crypto)
 pulseStep (Complete r) = pure (Complete r)
-pulseStep (p@(Pulsing _ pulser)) | done pulser = completeStep p
+pulseStep p@(Pulsing _ pulser) | done pulser = completeStep p
 pulseStep (Pulsing rewsnap pulser) = do
   -- The pulser computes one kind of provenance, pulseOther incorporates it
   -- into the current flavor of provenance: RewardProvenance.
-  p2 <- (pulseOther pulser)
+  p2 <- pulseOther pulser
   pure (Pulsing rewsnap p2)
 
 -- Phase 3
@@ -1242,31 +1209,30 @@ completeRupd ::
 completeRupd (Complete x) = pure x
 completeRupd
   ( Pulsing
-      ( rewsnap@RewardSnapShot
-          { rewDeltaR1 = deltaR1,
-            rewR = oldr,
-            rewDeltaT1 = (Coin deltaT1),
-            rewNonMyopic = nm,
-            rewTotalStake = totalstake,
-            rewRPot = rpot,
-            rewSnapshots = snaps,
-            rewa0 = a0,
-            rewnOpt = nOpt
-          }
-        )
+      rewsnap@RewardSnapShot
+        { rewDeltaR1 = deltaR1,
+          rewR = oldr,
+          rewDeltaT1 = (Coin deltaT1),
+          rewNonMyopic = nm,
+          rewTotalStake = totalstake,
+          rewRPot = rpot,
+          rewSnapshots = snaps,
+          rewa0 = a0,
+          rewnOpt = nOpt
+        }
       pulser
     ) = do
-    let combine (RewardAns rs likely) provPools (rewprov@RewardProvenance {pools = old}) =
+    let combine (RewardAns rs likely) provPools rewprov@RewardProvenance {pools = old} =
           rewprov
-            { deltaR2 = oldr <-> (sumRewards rewsnap rs),
+            { deltaR2 = oldr <-> sumRewards rewsnap rs,
               pools = Map.union provPools old,
-              desirabilities = (Map.foldlWithKey' addDesireability Map.empty likely)
+              desirabilities = Map.foldlWithKey' addDesireability Map.empty likely
             }
         -- A function to compute the 'desirablity' aggregate. Called only if we are computing
         -- provenance. Adds nested pair ('key',(LikeliHoodEstimate,Desirability)) to the Map 'ans'
         addDesireability ans key likelihood =
           let SnapShot _ _ poolParams = _pstakeGo snaps
-              estimate = (percentile' likelihood)
+              estimate = percentile' likelihood
            in Map.insert
                 key
                 ( Desirability
@@ -1278,14 +1244,14 @@ completeRupd
                 )
                 ans
     RewardAns rs_ newLikelihoods <- liftProv (completeM pulser) Map.empty combine
-    let deltaR2 = oldr <-> (sumRewards rewsnap rs_)
+    let deltaR2 = oldr <-> sumRewards rewsnap rs_
     pure $
       RewardUpdate
-        { deltaT = (DeltaCoin deltaT1),
-          deltaR = ((invert $ toDeltaCoin deltaR1) <> toDeltaCoin deltaR2),
+        { deltaT = DeltaCoin deltaT1,
+          deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
           rs = rs_,
-          deltaF = (invert (toDeltaCoin $ _feeSS snaps)),
-          nonMyopic = (updateNonMyopic nm oldr newLikelihoods)
+          deltaF = invert (toDeltaCoin $ _feeSS snaps),
+          nonMyopic = updateNonMyopic nm oldr newLikelihoods
         }
 
 -- | To create a reward update, run all 3 phases
@@ -1313,7 +1279,7 @@ createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
 -- This is used in the rewards calculation, and for API endpoints for pool ranking.
 circulation :: EpochState era -> Coin -> Coin
 circulation (EpochState acnt _ _ _ _ _) supply =
-  supply <-> (_reserves acnt)
+  supply <-> _reserves acnt
 
 -- | Update new epoch state
 updateNES ::
@@ -1345,17 +1311,13 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     us = _utxoState ls
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
-      Map.partition
-        ( \out ->
-            isBootstrapRedeemer (getField @"address" out)
-        )
-        utxo
+      Map.partition (isBootstrapRedeemer . getField @"address") utxo
     acnt = esAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
       acnt
         { _reserves =
-            (_reserves acnt)
+            _reserves acnt
               <+> (Val.coin . balance $ utxoR)
         }
     us' = us {_utxo = UTxO nonredeemers :: UTxO era}

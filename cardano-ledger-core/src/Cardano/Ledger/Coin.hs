@@ -62,16 +62,16 @@ toDeltaCoin :: Coin -> DeltaCoin
 toDeltaCoin (Coin x) = DeltaCoin x
 
 word64ToCoin :: Word64 -> Coin
-word64ToCoin w = Coin $ fromIntegral w
+word64ToCoin = Coin . fromIntegral
 
 coinToRational :: Coin -> Rational
 coinToRational (Coin c) = fromIntegral c
 
 rationalToCoinViaFloor :: Rational -> Coin
-rationalToCoinViaFloor r = Coin . floor $ r
+rationalToCoinViaFloor = Coin . floor
 
 rationalToCoinViaCeiling :: Rational -> Coin
-rationalToCoinViaCeiling r = Coin . ceiling $ r
+rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
@@ -84,7 +84,7 @@ instance Compactible Coin where
 integerToWord64 :: Integer -> Maybe Word64
 integerToWord64 c
   | c < 0 = Nothing
-  | c > (fromIntegral (maxBound :: Word64)) = Nothing
+  | c > fromIntegral (maxBound :: Word64) = Nothing
   | otherwise = Just $ fromIntegral c
 
 instance ToCBOR (CompactForm Coin) where

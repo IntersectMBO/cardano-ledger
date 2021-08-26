@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -149,13 +148,13 @@ newEpochTransition = do
     else do
       let updateRewards ru'@(RewardUpdate dt dr rs_ df _) = do
             let totRs = sumRewards (esPrevPp es) rs_
-            Val.isZero (dt <> (dr <> (toDeltaCoin totRs) <> df)) ?! CorruptRewardUpdate ru'
+            Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
             let (es', regRU) = applyRUpd' ru' es
             tellEvent $ SumRewards e regRU
             pure es'
       es' <- case ru of
         SNothing -> pure es
-        SJust (p@(Pulsing _ _)) -> (liftSTS $ runProvM $ completeRupd p) >>= updateRewards
+        SJust p@(Pulsing _ _) -> liftSTS (runProvM $ completeRupd p) >>= updateRewards
         SJust (Complete ru') -> updateRewards ru'
       es'' <- trans @(Core.EraRule "MIR" era) $ TRC ((), es', ())
       es''' <- trans @(Core.EraRule "EPOCH" era) $ TRC ((), es'', e)

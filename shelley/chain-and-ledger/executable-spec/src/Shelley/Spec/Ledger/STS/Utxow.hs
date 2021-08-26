@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -145,7 +144,7 @@ data UtxowPredicateFailure era
   | InvalidMetadata
   deriving (Generic)
 
-data UtxowEvent era
+newtype UtxowEvent era
   = UtxoEvent (Event (Core.EraRule "UTXO" era))
 
 instance
@@ -376,10 +375,10 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
 
   {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   coreNodeQuorum <- liftSTS $ asks quorum
-  ( (not $ null mirCerts)
+  ( not (null mirCerts)
       ==> Set.size genSig >= fromIntegral coreNodeQuorum
     )
-    ?! (embed (MIRInsufficientGenesisSigsUTXOW genSig))
+    ?! embed (MIRInsufficientGenesisSigsUTXOW genSig)
 
   trans @(Core.EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)

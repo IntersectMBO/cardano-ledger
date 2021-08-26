@@ -1,17 +1,12 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -81,10 +76,10 @@ data Metadata era = Metadata'
 instance SafeToHash (Metadata era) where
   originalBytes = LBS.toStrict . mdBytes
 
-instance c ~ (Crypto era) => HashAnnotated (Metadata era) EraIndependentAuxiliaryData c
+instance c ~ Crypto era => HashAnnotated (Metadata era) EraIndependentAuxiliaryData c
 
 hashMetadata :: Era era => Metadata era -> SafeHash (Crypto era) EraIndependentAuxiliaryData
-hashMetadata m = hashAnnotated m
+hashMetadata = hashAnnotated
 
 pattern Metadata :: Map Word64 Metadatum -> Metadata era
 pattern Metadata m <-

@@ -1,12 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -109,13 +107,13 @@ mirTransition = do
       rewards = _rewards ds
       reserves = _reserves acnt
       treasury = _treasury acnt
-      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd ds) :: RewardAccounts (Crypto era)
-      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts (Crypto era)
+      irwdR = eval $ dom rewards ◁ iRReserves (_irwd ds) :: RewardAccounts (Crypto era)
+      irwdT = eval $ dom rewards ◁ iRTreasury (_irwd ds) :: RewardAccounts (Crypto era)
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` (deltaReserves . _irwd $ ds)
       availableTreasury = treasury `addDeltaCoin` (deltaTreasury . _irwd $ ds)
-      update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts (Crypto era)
+      update = eval (irwdR ∪+ irwdT) :: RewardAccounts (Crypto era)
 
   if totR <= availableReserves && totT <= availableTreasury
     then do
@@ -132,7 +130,7 @@ mirTransition = do
                 dpState
                   { _dstate =
                       ds
-                        { _rewards = eval ((_rewards ds) ∪+ update),
+                        { _rewards = eval (_rewards ds ∪+ update),
                           _irwd = emptyInstantaneousRewards
                         }
                   }

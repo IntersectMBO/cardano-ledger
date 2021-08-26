@@ -139,8 +139,8 @@ transDataHash :: StrictMaybe (DataHash c) -> Maybe P.DatumHash
 transDataHash (SJust safe) = Just (transDataHash' safe)
 transDataHash SNothing = Nothing
 
-transDataHash' :: (DataHash c) -> P.DatumHash
-transDataHash' safe = (P.DatumHash (transSafeHash safe))
+transDataHash' :: DataHash c -> P.DatumHash
+transDataHash' safe = P.DatumHash (transSafeHash safe)
 
 transKeyHash :: KeyHash d c -> P.PubKeyHash
 transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (P.toBuiltin (fromShort h))
@@ -158,17 +158,22 @@ txInfoId :: TxId era -> P.TxId
 txInfoId (TxId safe) = P.TxId (transSafeHash safe)
 
 transStakeCred :: Credential keyrole crypto -> P.Credential
-transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (P.toBuiltin (fromShort kh)))
-transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (fromShort kh)))
+transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) =
+  P.ScriptCredential (P.ValidatorHash (P.toBuiltin (fromShort kh)))
+transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) =
+  P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (fromShort kh)))
 
 transStakeReference :: StakeReference crypto -> Maybe P.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (P.StakingHash (transStakeCred cred))
-transStakeReference (StakeRefPtr (Ptr (SlotNo slot) i1 i2)) = Just (P.StakingPtr (fromIntegral slot) (fromIntegral i1) (fromIntegral i2))
+transStakeReference (StakeRefPtr (Ptr (SlotNo slot) i1 i2)) =
+  Just (P.StakingPtr (fromIntegral slot) (fromIntegral i1) (fromIntegral i2))
 transStakeReference StakeRefNull = Nothing
 
 transCred :: Credential keyrole crypto -> P.Credential
-transCred (KeyHashObj (KeyHash (UnsafeHash kh))) = P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (fromShort kh)))
-transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) = P.ScriptCredential (P.ValidatorHash (P.toBuiltin (fromShort kh)))
+transCred (KeyHashObj (KeyHash (UnsafeHash kh))) =
+  P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (fromShort kh)))
+transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) =
+  P.ScriptCredential (P.ValidatorHash (P.toBuiltin (fromShort kh)))
 
 transAddr :: Addr crypto -> Maybe P.Address
 transAddr (Addr _net object stake) = Just (P.Address (transCred object) (transStakeReference stake))
@@ -179,10 +184,10 @@ slotToPOSIXTime ::
   EpochInfo m ->
   SystemStart ->
   SlotNo ->
-  m (P.POSIXTime)
+  m P.POSIXTime
 slotToPOSIXTime ei sysS s = do
   P.POSIXTime . resolution . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
-    <$> (epochInfoSlotToUTCTime ei sysS s)
+    <$> epochInfoSlotToUTCTime ei sysS s
 
 -- | translate a validity interval to POSIX time
 transVITime ::
@@ -222,11 +227,11 @@ txInfoIn ::
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
-  Maybe (P.TxInInfo)
+  Maybe P.TxInInfo
 txInfoIn (UTxO mp) txin =
   case Map.lookup txin mp of
     Nothing -> Nothing
-    Just txout -> case (transAddr addr) of
+    Just txout -> case transAddr addr of
       Just ad -> Just (P.TxInInfo (txInfoIn' txin) (P.TxOut ad valout dhash))
       Nothing -> Nothing
       where
@@ -234,7 +239,7 @@ txInfoIn (UTxO mp) txin =
         addr = getField @"address" txout
         dhash = case getField @"datahash" txout of
           SNothing -> Nothing
-          SJust (safehash) -> Just (P.DatumHash (transSafeHash safehash))
+          SJust safehash -> Just (P.DatumHash (transSafeHash safehash))
 
 -- | Given a TxOut, translate it and return (Just transalation). It is
 --   possible the address part is a Bootstrap Address, in that case return Nothing
@@ -245,9 +250,9 @@ txInfoOut ::
     Value era ~ Mary.Value (Crypto era)
   ) =>
   Alonzo.TxOut era ->
-  Maybe (P.TxOut)
+  Maybe P.TxOut
 txInfoOut (Alonzo.TxOut addr val datahash) =
-  case (transAddr addr) of
+  case transAddr addr of
     Just ad -> Just (P.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
     Nothing -> Nothing
 
@@ -294,16 +299,25 @@ transDCert (DCertMir _) = P.DCertMir
 transWdrl :: Wdrl crypto -> Map.Map P.StakingCredential Integer
 transWdrl (Wdrl mp) = Map.foldlWithKey' accum Map.empty mp
   where
-    accum ans (RewardAcnt _network cred) (Coin n) = Map.insert (P.StakingHash (transStakeCred cred)) n ans
+    accum ans (RewardAcnt _network cred) (Coin n) =
+      Map.insert (P.StakingHash (transStakeCred cred)) n ans
 
 getWitVKeyHash :: (CC.Crypto crypto, Typeable kr) => WitVKey kr crypto -> P.PubKeyHash
-getWitVKeyHash = P.PubKeyHash . P.toBuiltin . fromShort . (\(UnsafeHash x) -> x) . (\(KeyHash x) -> x) . hashKey . (\(WitVKey x _) -> x)
+getWitVKeyHash =
+  P.PubKeyHash
+    . P.toBuiltin
+    . fromShort
+    . (\(UnsafeHash x) -> x)
+    . (\(KeyHash x) -> x)
+    . hashKey
+    . (\(WitVKey x _) -> x)
 
 transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
 transDataPair (x, y) = (transDataHash' x, P.Datum (P.dataToBuiltinData (getPlutusData y)))
 
 transExUnits :: ExUnits -> P.ExBudget
-transExUnits (ExUnits mem steps) = P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
+transExUnits (ExUnits mem steps) =
+  P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
 
 exBudgetToExUnits :: P.ExBudget -> Maybe ExUnits
 exBudgetToExUnits (P.ExBudget (P.ExCPU steps) (P.ExMemory memory)) =
@@ -321,7 +335,8 @@ exBudgetToExUnits (P.ExBudget (P.ExCPU steps) (P.ExMemory memory)) =
 transScriptPurpose :: CC.Crypto crypto => ScriptPurpose crypto -> P.ScriptPurpose
 transScriptPurpose (Minting policyid) = P.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = P.Spending (txInfoIn' txin)
-transScriptPurpose (Rewarding (RewardAcnt _network cred)) = P.Rewarding (P.StakingHash (transStakeCred cred))
+transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
+  P.Rewarding (P.StakingHash (transStakeCred cred))
 transScriptPurpose (Certifying dcert) = P.Certifying (transDCert dcert)
 
 -- ===================================
@@ -349,14 +364,14 @@ txInfo ei sysS utxo tx = do
     P.TxInfo
       { P.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),
         P.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
-        P.txInfoFee = (transValue (inject @(Mary.Value (Crypto era)) fee)),
-        P.txInfoMint = (transValue forge),
-        P.txInfoDCert = (foldr (\c ans -> transDCert c : ans) [] (certs' tbody)),
+        P.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
+        P.txInfoMint = transValue forge,
+        P.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (certs' tbody),
         P.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
         P.txInfoValidRange = timeRange,
         P.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
-        P.txInfoData = (map transDataPair datpairs),
-        P.txInfoId = (P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody)))
+        P.txInfoData = map transDataPair datpairs,
+        P.txInfoId = P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
       }
   where
     tbody = getField @"body" tx
@@ -443,10 +458,10 @@ instance FromCBOR PlutusDebug where
   fromCBOR =
     decode $
       RecD PlutusDebug
-        <! (D $ decodeCostModel PlutusV1)
+        <! D (decodeCostModel PlutusV1)
         <! From
         <! From
-        <! (D $ decodeList Cborg.decode)
+        <! D (decodeList Cborg.decode)
         <! From
 
 debugPlutus :: String -> PlutusDebugInfo
@@ -488,23 +503,30 @@ runPLCScript proxy (CostModel cost) scriptbytestring units ds =
     (transExUnits units)
     scriptbytestring
     ds of
-    (_, Left e) -> explain_plutus_failure proxy scriptbytestring e ds (CostModel cost) units
+    (_, Left e) -> explainPlutusFailure proxy scriptbytestring e ds (CostModel cost) units
     (_, Right ()) -> Passes
 
--- | Explin why a script might fail. Scripts come in two flavors. 1) with 3  data arguments [data,redeemer,context]
---   and  2) with 2 data arguments [redeemer,context]. It pays to decode the context data into a real context
---   because that provides way more information. But there is no guarantee the context data really can be decoded.
-explain_plutus_failure ::
-  forall era.
-  Show (Script era) =>
-  Proxy era ->
-  SBS.ShortByteString ->
-  P.EvaluationError ->
-  [P.Data] ->
-  CostModel ->
-  ExUnits ->
-  ScriptResult
-explain_plutus_failure _proxy scriptbytestring e ds@[dat, redeemer, info] cm eu =
+-- | Explain why a script might fail. Scripts come in two flavors:
+--
+-- (1) with 3  data arguments [data,redeemer,context]
+--
+-- (2) with 2 data arguments [redeemer,context].
+--
+-- It pays to decode the context data into a real context because that provides
+-- way more information. But there is no guarantee the context data really can
+-- be decoded.
+explainPlutusFailure,
+  explain_plutus_failure ::
+    forall era.
+    Show (Script era) =>
+    Proxy era ->
+    SBS.ShortByteString ->
+    P.EvaluationError ->
+    [P.Data] ->
+    CostModel ->
+    ExUnits ->
+    ScriptResult
+explainPlutusFailure _proxy scriptbytestring e ds@[dat, redeemer, info] cm eu =
   -- A three data argument script.
   let ss :: Script era
       ss = PlutusScript scriptbytestring
@@ -536,7 +558,7 @@ explain_plutus_failure _proxy scriptbytestring e ds@[dat, redeemer, info] cm eu 
                     "The context is:\n" ++ info3
                   ]
             db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
-explain_plutus_failure _proxy scriptbytestring e ds@[redeemer, info] cm eu =
+explainPlutusFailure _proxy scriptbytestring e ds@[redeemer, info] cm eu =
   -- A two data argument script.
   let ss :: Script era
       ss = PlutusScript scriptbytestring
@@ -566,7 +588,7 @@ explain_plutus_failure _proxy scriptbytestring e ds@[redeemer, info] cm eu =
                     "The context is:\n" ++ info3
                   ]
             db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
-explain_plutus_failure _proxy scriptbytestring e ds cm eu =
+explainPlutusFailure _proxy scriptbytestring e ds cm eu =
   -- A script with the wrong number of arguments
   Fails [PlutusFailure line db]
   where
@@ -584,6 +606,8 @@ explain_plutus_failure _proxy scriptbytestring e ds cm eu =
               ++ map show ds
           )
     db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
+explain_plutus_failure = explainPlutusFailure
+{-# DEPRECATED explain_plutus_failure "In favor of properly named `explainPlutusFailure`" #-}
 
 validPlutusdata :: P.Data -> Bool
 validPlutusdata (P.Constr _n ds) = all validPlutusdata ds

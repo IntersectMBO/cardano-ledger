@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -120,18 +119,18 @@ rupdTransition = do
     sr <- asks randomnessStabilisationWindow
     e <- epochInfoEpoch ei s
     slotsPerEpoch <- epochInfoSize ei e
-    slot <- epochInfoFirst ei e <&> (+* (Duration sr))
+    slot <- epochInfoFirst ei e <&> (+* Duration sr)
     maxLL <- asks maxLovelaceSupply
     asc <- asks activeSlotCoeff
     k <- asks securityParameter -- Maximum number of blocks we are allowed to roll back
     return (slotsPerEpoch, slot, maxLL, asc, k)
   let maxsupply = Coin (fromIntegral maxLL)
-  case (s <= slot) of
+  case s <= slot of
     -- Waiting for the stabiliy point, do nothing, keep waiting
-    (True) -> pure SNothing
+    True -> pure SNothing
     -- More blocks to come, get things started or take a step
-    (False) ->
+    False ->
       case ru of
         SNothing -> liftSTS $ runProvM $ pure $ SJust $ startStep slotsPerEpoch b es maxsupply asc k
-        (SJust (p@(Pulsing _ _))) -> liftSTS $ runProvM $ (SJust <$> pulseStep p)
-        (SJust (p@(Complete _))) -> pure (SJust p)
+        (SJust p@(Pulsing _ _)) -> liftSTS $ runProvM (SJust <$> pulseStep p)
+        (SJust p@(Complete _)) -> pure (SJust p)

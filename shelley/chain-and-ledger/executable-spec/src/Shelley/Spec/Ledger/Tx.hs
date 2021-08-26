@@ -2,7 +2,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -14,7 +13,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -441,7 +439,7 @@ segwitTx
           Nothing -> serializeEncoding encodeNull
           Just b -> serialize b
         fullBytes =
-          (serializeEncoding $ encodeListLen 3)
+          serializeEncoding (encodeListLen 3)
             <> serialize body'
             <> serialize witnessSet
             <> wrappedMetadataBytes

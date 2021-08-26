@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -391,7 +390,7 @@ chainTransition =
             TRC
               ( TicknEnv (getField @"_extraEntropy" pp') etaC etaPH,
                 TicknState eta0 etaH,
-                (e1 /= e2)
+                e1 /= e2
               )
 
         PrtclState cs' etaV' etaC' <-

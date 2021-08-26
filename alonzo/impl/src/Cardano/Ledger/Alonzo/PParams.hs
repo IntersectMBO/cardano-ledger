@@ -1,16 +1,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -264,11 +261,11 @@ instance
         <! From -- _tau             :: UnitInterval
         <! From -- _d               :: UnitInterval
         <! From -- _extraEntropy    :: Nonce
-        <! (D fromCBORGroup) -- _protocolVersion :: ProtVer
+        <! D fromCBORGroup -- _protocolVersion :: ProtVer
         <! From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
         <! From -- _coinsPerUTxOWord  :: Coin
-        <! (D decodeCostModelMap) -- _costmdls :: (Map Language CostModel)
+        <! D decodeCostModelMap -- _costmdls :: (Map Language CostModel)
         <! From -- _prices = prices',
         <! From -- _maxTxExUnits = maxTxExUnits',
         <! From -- _maxBlockExUnits = maxBlockExUnits'
@@ -528,23 +525,23 @@ encodeLangViews views =
     unLangDepView (LangDepView a b) = (a, b)
 
 -- | Turn an PParams' into a Shelley.Params'
-retractPP :: (HKD f Coin) -> PParams' f era2 -> Shelley.PParams' f era1
+retractPP :: HKD f Coin -> PParams' f era2 -> Shelley.PParams' f era1
 retractPP
   c
   (PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP _ _ _ _ _ _ _ _) =
-    (Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP)
+    Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP
 
 -- | Given the missing pieces Turn a Shelley.PParams' into an Params'
 extendPP ::
   Shelley.PParams' f era1 ->
-  (HKD f Coin) ->
-  (HKD f (Map Language CostModel)) ->
-  (HKD f Prices) ->
-  (HKD f ExUnits) ->
-  (HKD f ExUnits) ->
-  (HKD f Natural) ->
-  (HKD f Natural) ->
-  (HKD f Natural) ->
+  HKD f Coin ->
+  HKD f (Map Language CostModel) ->
+  HKD f Prices ->
+  HKD f ExUnits ->
+  HKD f ExUnits ->
+  HKD f Natural ->
+  HKD f Natural ->
+  HKD f Natural ->
   PParams' f era2
 extendPP
   (Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv _ mnP)

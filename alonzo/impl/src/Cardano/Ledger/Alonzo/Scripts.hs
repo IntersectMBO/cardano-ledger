@@ -3,12 +3,10 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -88,7 +86,10 @@ import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams, validateCostModelParams)
-import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
+import qualified Plutus.V1.Ledger.Examples as Plutus
+  ( alwaysFailingNAryFunction,
+    alwaysSucceedingNAryFunction,
+  )
 import qualified Prettyprinter as PP
 
 -- | Marker indicating the part of a transaction for which this script is acting
@@ -111,12 +112,12 @@ instance NoThunks Tag
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data Script era
   = TimelockScript (Timelock (Crypto era))
-  | PlutusScript (ShortByteString) -- A Plutus.V1.Ledger.Scripts(Script) that has been 'CBOR' encoded
+  | PlutusScript ShortByteString -- A Plutus.V1.Ledger.Scripts(Script) that has been 'CBOR' encoded
   deriving (Eq, Generic, Ord)
 
 instance (ValidateScript era, Core.Script era ~ Script era) => Show (Script era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
-  show (s@(PlutusScript _)) = "PlutusScript " ++ show (hashScript @era s)
+  show s@(PlutusScript _) = "PlutusScript " ++ show (hashScript @era s)
 
 deriving via
   InspectHeapNamed "Script" (Script era)
@@ -145,7 +146,8 @@ data ExUnits = ExUnits
   { exUnitsMem :: !Word64,
     exUnitsSteps :: !Word64
   }
-  deriving (Eq, Generic, Show) -- It is deliberate that there is NO ORD instance.
+  deriving (Eq, Generic, Show)
+  -- It is deliberate that there is no Ord instance, use `pointWiseExUnits` instead.
   deriving
     (BoundedMeasure, Measure)
     via (InstantiatedAt Generic ExUnits)
@@ -157,8 +159,8 @@ instance NoThunks ExUnits
 
 instance NFData ExUnits
 
--- | It is deliberate that there is no ORD instace for EXUnits. Use this function
---   to compare if one ExUnit is pointwise compareable to another.
+-- | It is deliberate that there is no `Ord` instance for `ExUnits`. Use this function
+--   to compare if one `ExUnit` is pointwise compareable to another.
 pointWiseExUnits :: (Word64 -> Word64 -> Bool) -> ExUnits -> ExUnits -> Bool
 pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `oper` s2)
 
@@ -314,7 +316,7 @@ ppTag x = ppString (show x)
 instance PrettyA Tag where prettyA = ppTag
 
 ppScript :: forall era. (ValidateScript era, Core.Script era ~ Script era) => Script era -> PDoc
-ppScript (s@(PlutusScript _)) = ppString "PlutusScript " PP.<+> ppScriptHash (hashScript @era s)
+ppScript s@(PlutusScript _) = ppString "PlutusScript " PP.<+> ppScriptHash (hashScript @era s)
 ppScript (TimelockScript x) = ppTimelock x
 
 instance (ValidateScript era, Core.Script era ~ Script era) => PrettyA (Script era) where prettyA = ppScript

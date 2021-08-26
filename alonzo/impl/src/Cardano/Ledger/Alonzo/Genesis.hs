@@ -77,7 +77,7 @@ instance FromCBOR AlonzoGenesis where
     decode $
       RecD AlonzoGenesis
         <! From
-        <! (D decodeCostModelMap)
+        <! D decodeCostModelMap
         <! From
         <! From
         <! From

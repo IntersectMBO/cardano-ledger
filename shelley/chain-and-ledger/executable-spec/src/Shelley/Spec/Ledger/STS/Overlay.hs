@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -207,7 +206,6 @@ praosVrfChecks eta0 (PoolDistr pd) f bhb = do
       unless
         (checkLeaderValue (VRF.certifiedOutput $ bheaderL bhb) sigma f)
         (throwError $ VRFLeaderValueTooBig (VRF.certifiedOutput $ bheaderL bhb) sigma f)
-      pure ()
   where
     hk = coerceKeyRole . issuerIDfromBHBody $ bhb
     vrfK = bheaderVrfVk bhb
@@ -275,7 +273,7 @@ overlayTransition =
         let oce =
               OCertEnv
                 { ocertEnvStPools = eval (dom pd),
-                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ (range genDelegs)
+                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
                 }
 
         trans @(OCERT crypto) $ TRC (oce, cs, bh)

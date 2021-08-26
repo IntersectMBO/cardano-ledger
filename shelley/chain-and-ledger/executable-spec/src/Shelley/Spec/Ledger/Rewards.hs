@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -7,14 +6,11 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.Rewards
@@ -493,7 +489,7 @@ rewardOnePool
     where
       Coin ostake =
         Set.foldl'
-          (\c o -> c <> (fromMaybe mempty $ Map.lookup (KeyHashObj o) stake))
+          (\c o -> c <> fromMaybe mempty (Map.lookup (KeyHashObj o) stake))
           mempty
           (_poolOwners pool)
       Coin pledge = _poolPledge pool

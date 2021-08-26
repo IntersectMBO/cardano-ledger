@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -65,11 +64,11 @@ data LedgersEnv era = LedgersEnv
     ledgersAccount :: AccountState
   }
 
-data LedgersPredicateFailure era
+newtype LedgersPredicateFailure era
   = LedgerFailure (PredicateFailure (Core.EraRule "LEDGER" era)) -- Subtransition Failures
   deriving (Generic)
 
-data LedgersEvent era
+newtype LedgersEvent era
   = LedgerEvent (Event (Core.EraRule "LEDGER" era))
 
 deriving stock instance

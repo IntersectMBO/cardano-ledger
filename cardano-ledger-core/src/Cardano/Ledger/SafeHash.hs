@@ -1,12 +1,9 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -136,7 +133,7 @@ class SafeToHash x => HashAnnotated x index crypto | x -> index crypto where
   indexProxy _ = Proxy @index
 
 hashAnnotated :: forall c i x. (HasAlgorithm c, HashAnnotated x i c) => x -> SafeHash c i
-hashAnnotated x = makeHashWithExplicitProxys (Proxy @c) (Proxy @i) x
+hashAnnotated = makeHashWithExplicitProxys (Proxy @c) (Proxy @i)
 
 -- ========================================================================
 

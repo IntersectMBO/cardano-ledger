@@ -1,14 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -218,7 +214,7 @@ encodeTxDatsRaw ::
   ToCBOR (Data era) =>
   TxDatsRaw era ->
   Encode ('Closed 'Dense) (TxDatsRaw era)
-encodeTxDatsRaw t = E (encodeFoldable . Map.elems . unTxDatsRaw) t
+encodeTxDatsRaw = E (encodeFoldable . Map.elems . unTxDatsRaw)
   where
     unTxDatsRaw (TxDatsRaw m) = m
 
@@ -393,7 +389,7 @@ instance
             dat <- fromCBOR
             ex <- fromCBOR
             let f x y z = (x, (y, z))
-            pure $ f <$> pure rdmrPtr <*> dat <*> pure ex
+            pure $ f rdmrPtr <$> dat <*> pure ex
         pure $ Map.fromList <$> entries
 
 deriving via

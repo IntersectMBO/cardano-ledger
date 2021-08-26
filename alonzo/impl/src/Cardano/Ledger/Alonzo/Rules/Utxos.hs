@@ -51,7 +51,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Trans.Reader (asks)
@@ -172,13 +172,9 @@ scriptsValidateTransition = do
     judgmentContext
   let txb = body tx
       refunded = keyRefunds pp txb
+      txcerts = toList $ getField @"certs" txb
       depositChange =
-        ( totalDeposits
-            pp
-            (`Map.notMember` poolParams)
-            (toList $ getField @"certs" txb)
-        )
-          Val.<-> refunded
+        totalDeposits pp (`Map.notMember` poolParams) txcerts <-> refunded
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
@@ -187,7 +183,7 @@ scriptsValidateTransition = do
         Fails sss ->
           False
             ?!## ValidationTagMismatch
-              (getField @"isValidating" tx)
+              (getField @"isValid" tx)
               (FailedUnexpectedly sss)
         Passes -> pure ()
     Left info -> failBecause (CollectErrors info)
@@ -232,8 +228,8 @@ scriptsNotValidateTransition = do
   ei <- liftSTS $ asks epochInfo
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
-      case (evalScripts @era tx sLst) of
-        Passes -> False ?!## ValidationTagMismatch (getField @"isValidating" tx) PassedUnexpectedly
+      case evalScripts @era tx sLst of
+        Passes -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
         Fails _sss -> pure ()
     Left info -> failBecause (CollectErrors info)
   pure $
@@ -320,7 +316,7 @@ instance
   ) =>
   NoThunks (UtxosPredicateFailure era)
 
-data UtxosEvent era
+newtype UtxosEvent era
   = UpdateEvent (Event (Core.EraRule "PPUP" era))
 
 instance

@@ -6,7 +6,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Pretty where
@@ -197,37 +196,37 @@ import Shelley.Spec.Ledger.UTxO (UTxO (..))
 -- Named pretty printers for some simpe types
 
 ppString :: String -> Doc a
-ppString x = pretty x
+ppString = pretty
 
 ppDouble :: Double -> Doc a
-ppDouble x = viaShow x
+ppDouble = viaShow
 
 ppInteger :: Integer -> Doc a
-ppInteger x = viaShow x
+ppInteger = viaShow
 
 ppRational :: Rational -> Doc a
-ppRational x = viaShow x
+ppRational = viaShow
 
 ppFloat :: Float -> Doc a
-ppFloat x = viaShow x
+ppFloat = viaShow
 
 ppNatural :: Natural -> Doc a
-ppNatural x = viaShow x
+ppNatural = viaShow
 
 ppWord64 :: Word64 -> Doc a
-ppWord64 x = viaShow x
+ppWord64 = viaShow
 
 ppWord32 :: Word32 -> Doc a
-ppWord32 x = viaShow x
+ppWord32 = viaShow
 
 ppWord8 :: Word8 -> Doc a
-ppWord8 x = viaShow x
+ppWord8 = viaShow
 
 ppWord16 :: Word16 -> Doc a
-ppWord16 x = viaShow x
+ppWord16 = viaShow
 
 ppFixedPoint :: FixedPoint -> Doc a
-ppFixedPoint x = viaShow x
+ppFixedPoint = viaShow
 
 ppPair :: (t1 -> PDoc) -> (t2 -> PDoc) -> (t1, t2) -> PDoc
 ppPair pp1 pp2 (x, y) = ppSexp' mempty [pp1 x, pp2 y]
@@ -237,10 +236,10 @@ ppSignedDSIGN :: Show a => a -> PDoc
 ppSignedDSIGN x = reAnnotate (Width 5 :) (viaShow x)
 
 ppBool :: Bool -> Doc a
-ppBool x = viaShow x
+ppBool = viaShow
 
 ppInt :: Int -> Doc a
-ppInt x = viaShow x
+ppInt = viaShow
 
 -- =========================
 -- operations for pretty printing
@@ -252,14 +251,14 @@ isEmpty _ = False
 putDoc :: Doc ann -> IO ()
 putDoc = putDocW 80
 
-data PrettyAnn = Width Int
+newtype PrettyAnn = Width Int
 
 type Ann = [PrettyAnn]
 
 type PDoc = Doc Ann
 
 text :: Text -> Doc ann
-text x = pretty x
+text = pretty
 
 -- ======================
 -- Byte Strings in Bech32 format
@@ -288,9 +287,11 @@ ppLong x = text (long_bech32 x)
 ppLazy :: Lazy.ByteString -> PDoc
 ppLazy x = text (lazy_bech32 x)
 
-instance PrettyA Long.ByteString where prettyA = ppLong
+instance PrettyA Long.ByteString where
+  prettyA = ppLong
 
-instance PrettyA Lazy.ByteString where prettyA = ppLazy
+instance PrettyA Lazy.ByteString where
+  prettyA = ppLazy
 
 -- ================================
 -- Combinators for common patterns of layout
@@ -305,7 +306,7 @@ arrow (x, y) = group (flatAlt (hang 2 (sep [x <+> text "->", y])) (hsep [x, text
 
 -- | ppSexp x [w,y,z] --> (x w y z)
 ppSexp :: Text -> [PDoc] -> PDoc
-ppSexp con fields = ppSexp' (text con) fields
+ppSexp con = ppSexp' (text con)
 
 ppSexp' :: PDoc -> [PDoc] -> PDoc
 ppSexp' con fields =
@@ -314,18 +315,18 @@ ppSexp' con fields =
       (hang 2 (encloseSep lparen rparen space docs))
       (encloseSep lparen rparen space docs)
   where
-    docs = if isEmpty con then fields else (con : fields)
+    docs = if isEmpty con then fields else con : fields
 
 -- | ppRecord name [("a",x),("b",y),("c",z)] --> name { a = x, b = y, c = z }
 ppRecord :: Text -> [(Text, PDoc)] -> PDoc
-ppRecord con fields = ppRecord' (text con) fields
+ppRecord con = ppRecord' (text con)
 
 ppRecord' :: PDoc -> [(Text, PDoc)] -> PDoc
 ppRecord' con fields =
   group $
     flatAlt
       (hang 1 (vcat [con, puncLeft lbrace (map (\(x, y) -> equate (text x) y) fields) comma rbrace]))
-      (con <> (encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) (map (\(x, y) -> equate (text x) y) fields)))
+      (con <> encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) (map (\(x, y) -> equate (text x) y) fields))
 
 -- | Vertical layout with commas aligned on the left hand side
 puncLeft :: Doc ann -> [Doc ann] -> Doc ann -> Doc ann -> Doc ann
@@ -335,7 +336,7 @@ puncLeft open (x : xs) coma close = align (sep ((open <+> x) : help xs))
   where
     help [] = mempty
     help [y] = [hsep [coma, y, close]]
-    help (y : ys) = ((coma <+> y) : help ys)
+    help (y : ys) = (coma <+> y) : help ys
 
 ppSet :: (x -> Doc ann) -> Set x -> Doc ann
 ppSet p xs = encloseSep lbrace rbrace comma (map p (toList xs))
@@ -363,15 +364,15 @@ ppMap' name kf vf m =
   let docs = fmap (\(k, v) -> arrow (kf k, vf v)) (Map.toList m)
       vertical =
         if isEmpty name
-          then (hang 1 (puncLeft lbrace docs comma rbrace))
-          else (hang 1 (vcat [name, puncLeft lbrace docs comma rbrace]))
+          then hang 1 (puncLeft lbrace docs comma rbrace)
+          else hang 1 (vcat [name, puncLeft lbrace docs comma rbrace])
    in group $
         flatAlt
           vertical
-          (name <> (encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) docs))
+          (name <> encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) docs)
 
 ppMap :: (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
-ppMap kf vf m = ppMap' (text "Map") kf vf m
+ppMap = ppMap' (text "Map")
 
 class PrettyA t where
   prettyA :: t -> PDoc
@@ -409,17 +410,21 @@ ppLastAppliedBlock (LastAppliedBlock blkNo slotNo hh) =
 ppHashHeader :: HashHeader c -> PDoc
 ppHashHeader (HashHeader x) = ppHash x
 
-ppWithOrigin :: (t -> PDoc) -> (WithOrigin t) -> PDoc
+ppWithOrigin :: (t -> PDoc) -> WithOrigin t -> PDoc
 ppWithOrigin _ Origin = ppString "Origin"
 ppWithOrigin pp (At t) = ppSexp "At" [pp t]
 
-instance CanPrettyPrintLedgerState era => PrettyA (ChainState era) where prettyA = ppChainState
+instance CanPrettyPrintLedgerState era => PrettyA (ChainState era) where
+  prettyA = ppChainState
 
-instance PrettyA (LastAppliedBlock c) where prettyA = ppLastAppliedBlock
+instance PrettyA (LastAppliedBlock c) where
+  prettyA = ppLastAppliedBlock
 
-instance PrettyA (HashHeader c) where prettyA = ppHashHeader
+instance PrettyA (HashHeader c) where
+  prettyA = ppHashHeader
 
-instance PrettyA t => PrettyA (WithOrigin t) where prettyA = ppWithOrigin prettyA
+instance PrettyA t => PrettyA (WithOrigin t) where
+  prettyA = ppWithOrigin prettyA
 
 ppBHBody :: Crypto c => BHBody c -> PDoc
 ppBHBody (BHBody bn sn prev vk vrfvk eta l size hash ocert protver) =
@@ -458,13 +463,17 @@ ppBlock (Block' bh seqx _) =
       ("TxSeq", prettyA seqx)
     ]
 
-instance Crypto c => PrettyA (BHBody c) where prettyA = ppBHBody
+instance Crypto c => PrettyA (BHBody c) where
+  prettyA = ppBHBody
 
-instance Crypto c => PrettyA (BHeader c) where prettyA = ppBHeader
+instance Crypto c => PrettyA (BHeader c) where
+  prettyA = ppBHeader
 
-instance PrettyA (PrevHash c) where prettyA = ppPrevHash
+instance PrettyA (PrevHash c) where
+  prettyA = ppPrevHash
 
-instance (Era era, PrettyA (Era.TxSeq era)) => PrettyA (Block era) where prettyA = ppBlock
+instance (Era era, PrettyA (Era.TxSeq era)) => PrettyA (Block era) where
+  prettyA = ppBlock
 
 -- =================================
 -- Shelley.Spec.Ledger.LedgerState.Delegation.Certificates
@@ -480,9 +489,11 @@ ppIndividualPoolStake (IndividualPoolStake r1 h) =
       ("stakeVrf", ppHash h)
     ]
 
-instance PrettyA (PoolDistr c) where prettyA = ppPoolDistr
+instance PrettyA (PoolDistr c) where
+  prettyA = ppPoolDistr
 
-instance PrettyA (IndividualPoolStake c) where prettyA = ppIndividualPoolStake
+instance PrettyA (IndividualPoolStake c) where
+  prettyA = ppIndividualPoolStake
 
 -- ================================
 -- Shelley.Spec.Ledger.RewardUpdate
@@ -538,8 +549,8 @@ ppAns :: RewardAns crypto -> PDoc
 ppAns (RewardAns x y) =
   ppSexp'
     mempty
-    [ (ppMap ppCredential (ppSet ppReward)) x,
-      (ppMap ppKeyHash ppLikelihood) y
+    [ ppMap ppCredential (ppSet ppReward) x,
+      ppMap ppKeyHash ppLikelihood y
     ]
 
 ppRewardPulser :: Pulser crypto -> PDoc
@@ -558,15 +569,20 @@ ppPulsingRewUpdate (Pulsing snap pulser) =
 ppPulsingRewUpdate (Complete rewup) =
   ppSexp "Complete" [ppRewardUpdate rewup]
 
-instance PrettyA (RewardSnapShot crypto) where prettyA = ppRewardSnapShot
+instance PrettyA (RewardSnapShot crypto) where
+  prettyA = ppRewardSnapShot
 
-instance PrettyA (FreeVars crypto) where prettyA = ppFreeVars
+instance PrettyA (FreeVars crypto) where
+  prettyA = ppFreeVars
 
-instance PrettyA (Pulser crypto) where prettyA = ppRewardPulser
+instance PrettyA (Pulser crypto) where
+  prettyA = ppRewardPulser
 
-instance PrettyA (PulsingRewUpdate crypto) where prettyA = ppPulsingRewUpdate
+instance PrettyA (PulsingRewUpdate crypto) where
+  prettyA = ppPulsingRewUpdate
 
-instance PrettyA (RewardUpdate crypto) where prettyA = ppRewardUpdate
+instance PrettyA (RewardUpdate crypto) where
+  prettyA = ppRewardUpdate
 
 -- =================================
 -- Shelley.Spec.Ledger.LedgerState
@@ -620,7 +636,7 @@ ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
     ]
 
 ppIx :: Ix -> PDoc
-ppIx x = viaShow x
+ppIx = viaShow
 
 ppPPUPState :: PrettyA (PParamsDelta era) => PPUPState era -> PDoc
 ppPPUPState (PPUPState p fp) =
@@ -640,7 +656,7 @@ ppPState (PState par fpar ret) =
     ]
 
 ppRewardAccounts :: Map.Map (Credential 'Staking crypto) Coin -> PDoc
-ppRewardAccounts m = ppMap' (text "RewardAccounts") ppCredential ppCoin m
+ppRewardAccounts = ppMap' (text "RewardAccounts") ppCredential ppCoin
 
 ppRewardType :: RewardType -> PDoc
 ppRewardType MemberReward = text "MemberReward"
@@ -703,11 +719,14 @@ ppLedgerState (LedgerState u d) =
       ("delegationState", ppDPState d)
     ]
 
-instance PrettyA (AccountState) where prettyA = ppAccountState
+instance PrettyA AccountState where
+  prettyA = ppAccountState
 
-instance PrettyA (DPState crypto) where prettyA = ppDPState
+instance PrettyA (DPState crypto) where
+  prettyA = ppDPState
 
-instance PrettyA (DState crypto) where prettyA = ppDState
+instance PrettyA (DState crypto) where
+  prettyA = ppDState
 
 instance
   ( Era era,
@@ -725,9 +744,11 @@ instance
   where
   prettyA x = ppNewEpochState x
 
-instance PrettyA (FutureGenDeleg crypto) where prettyA = ppFutureGenDeleg
+instance PrettyA (FutureGenDeleg crypto) where
+  prettyA = ppFutureGenDeleg
 
-instance PrettyA (InstantaneousRewards crypto) where prettyA = ppInstantaneousRewards
+instance PrettyA (InstantaneousRewards crypto) where
+  prettyA = ppInstantaneousRewards
 
 instance
   ( Era era,
@@ -743,7 +764,8 @@ instance
   where
   prettyA = ppPPUPState
 
-instance PrettyA (PState crypto) where prettyA = ppPState
+instance PrettyA (PState crypto) where
+  prettyA = ppPState
 
 instance
   ( Era era,
@@ -779,15 +801,20 @@ ppLogWeight (LogWeight n) = ppSexp "LogWeight" [ppFloat n]
 ppLikelihood :: Likelihood -> PDoc
 ppLikelihood (Likelihood ns) = ppSexp "Likelihood" [ppStrictSeq ppLogWeight ns]
 
-instance PrettyA PerformanceEstimate where prettyA = ppPerformanceEstimate
+instance PrettyA PerformanceEstimate where
+  prettyA = ppPerformanceEstimate
 
-instance PrettyA StakeShare where prettyA = ppStakeShare
+instance PrettyA StakeShare where
+  prettyA = ppStakeShare
 
-instance PrettyA Histogram where prettyA = ppHistogram
+instance PrettyA Histogram where
+  prettyA = ppHistogram
 
-instance PrettyA LogWeight where prettyA = ppLogWeight
+instance PrettyA LogWeight where
+  prettyA = ppLogWeight
 
-instance PrettyA Likelihood where prettyA = ppLikelihood
+instance PrettyA Likelihood where
+  prettyA = ppLikelihood
 
 -- =================================
 -- Shelley.Spec.Ledger.EpochBoundary
@@ -817,13 +844,17 @@ ppSnapShots (SnapShots mark set go fees) =
       ("fee", ppCoin fees)
     ]
 
-instance PrettyA (Stake crypto) where prettyA = ppStake
+instance PrettyA (Stake crypto) where
+  prettyA = ppStake
 
-instance PrettyA (BlocksMade crypto) where prettyA = ppBlocksMade
+instance PrettyA (BlocksMade crypto) where
+  prettyA = ppBlocksMade
 
-instance PrettyA (SnapShot crypto) where prettyA = ppSnapShot
+instance PrettyA (SnapShot crypto) where
+  prettyA = ppSnapShot
 
-instance PrettyA (SnapShots crypto) where prettyA = ppSnapShots
+instance PrettyA (SnapShots crypto) where
+  prettyA = ppSnapShots
 
 -- ============================
 -- Shelley.Spec.Ledger.UTxO
@@ -861,9 +892,11 @@ ppMetadatum (S txt) = ppSexp "S" [text txt]
 ppMetadata :: Metadata era -> PDoc
 ppMetadata (Metadata m) = ppMap' (text "Metadata") ppWord64 ppMetadatum m
 
-instance PrettyA Metadatum where prettyA = ppMetadatum
+instance PrettyA Metadatum where
+  prettyA = ppMetadatum
 
-instance PrettyA (Metadata era) where prettyA = ppMetadata
+instance PrettyA (Metadata era) where
+  prettyA = ppMetadata
 
 -- ============================
 -- Shelley.Spec.Ledger.Tx
@@ -913,9 +946,11 @@ instance
   where
   prettyA = ppTx
 
-instance Crypto crypto => PrettyA (BootstrapWitness crypto) where prettyA = ppBootstrapWitness
+instance Crypto crypto => PrettyA (BootstrapWitness crypto) where
+  prettyA = ppBootstrapWitness
 
-instance (Era era, PrettyA (Core.Script era)) => PrettyA (WitnessSetHKD Identity era) where prettyA = ppWitnessSetHKD
+instance (Era era, PrettyA (Core.Script era)) => PrettyA (WitnessSetHKD Identity era) where
+  prettyA = ppWitnessSetHKD
 
 -- ============================
 --  Cardano.Ledger.AuxiliaryData
@@ -926,9 +961,11 @@ ppSafeHash x = ppHash (extractHash x)
 ppAuxiliaryDataHash :: AuxiliaryDataHash c -> PDoc
 ppAuxiliaryDataHash (AuxiliaryDataHash h) = ppSexp "AuxiliaryDataHash" [ppSafeHash h]
 
-instance PrettyA (AuxiliaryDataHash c) where prettyA = ppAuxiliaryDataHash
+instance PrettyA (AuxiliaryDataHash c) where
+  prettyA = ppAuxiliaryDataHash
 
-instance PrettyA (SafeHash c i) where prettyA = ppSafeHash
+instance PrettyA (SafeHash c i) where
+  prettyA = ppSafeHash
 
 -- ============================
 --  Cardano.Ledger.Compactible
@@ -936,20 +973,22 @@ instance PrettyA (SafeHash c i) where prettyA = ppSafeHash
 ppCompactForm :: (Compactible a) => (a -> PDoc) -> CompactForm a -> PDoc
 ppCompactForm cf x = cf (fromCompact x)
 
-instance (Compactible a, PrettyA a) => PrettyA (CompactForm a) where prettyA = ppCompactForm prettyA
+instance (Compactible a, PrettyA a) => PrettyA (CompactForm a) where
+  prettyA = ppCompactForm prettyA
 
 -- ============================
 -- Shelley.Spec.Ledger.TxBody
 
 ppDelegation :: Delegation c -> PDoc
-ppDelegation (Delegation orx ee) = ppRecord "Delegation" [("delegator", ppCredential orx), ("delegatee", ppKeyHash ee)]
+ppDelegation (Delegation orx ee) =
+  ppRecord "Delegation" [("delegator", ppCredential orx), ("delegatee", ppKeyHash ee)]
 
 ppPoolMetadata :: PoolMetadata -> PDoc
 ppPoolMetadata (PoolMetadata url hsh) =
   ppRecord
     "PoolMetadata"
     [ ("url", ppUrl url),
-      ("hash", (text "#" <> reAnnotate (Width 5 :) (ppLong hsh)))
+      ("hash", text "#" <> reAnnotate (Width 5 :) (ppLong hsh))
     ]
 
 ppStakePoolRelay :: StakePoolRelay -> PDoc
@@ -1037,33 +1076,47 @@ ppWitVKey (WitVKey key sig) = ppRecord "WitVKey" [("key", ppVKey key), ("signatu
 ppStakeCreds :: StakeCreds c -> PDoc
 ppStakeCreds (StakeCreds m) = ppSexp "" [ppMap' (text "StakeCreds") ppCredential ppSlotNo m]
 
-instance PrettyA (Delegation c) where prettyA = ppDelegation
+instance PrettyA (Delegation c) where
+  prettyA = ppDelegation
 
-instance PrettyA PoolMetadata where prettyA = ppPoolMetadata
+instance PrettyA PoolMetadata where
+  prettyA = ppPoolMetadata
 
-instance PrettyA StakePoolRelay where prettyA = ppStakePoolRelay
+instance PrettyA StakePoolRelay where
+  prettyA = ppStakePoolRelay
 
-instance PrettyA (PoolParams c) where prettyA = ppPoolParams
+instance PrettyA (PoolParams c) where
+  prettyA = ppPoolParams
 
-instance PrettyA (Wdrl c) where prettyA = ppWdrl
+instance PrettyA (Wdrl c) where
+  prettyA = ppWdrl
 
-instance PrettyA (TxId c) where prettyA = ppTxId
+instance PrettyA (TxId c) where
+  prettyA = ppTxId
 
-instance PrettyA (TxIn c) where prettyA = ppTxIn
+instance PrettyA (TxIn c) where
+  prettyA = ppTxIn
 
-instance (Era era, PrettyA (Core.Value era)) => PrettyA (TxOut era) where prettyA = ppTxOut
+instance (Era era, PrettyA (Core.Value era)) => PrettyA (TxOut era) where
+  prettyA = ppTxOut
 
-instance PrettyA (DelegCert c) where prettyA = ppDelegCert
+instance PrettyA (DelegCert c) where
+  prettyA = ppDelegCert
 
-instance PrettyA (PoolCert c) where prettyA = ppPoolCert
+instance PrettyA (PoolCert c) where
+  prettyA = ppPoolCert
 
-instance PrettyA (GenesisDelegCert c) where prettyA = ppGenesisDelegCert
+instance PrettyA (GenesisDelegCert c) where
+  prettyA = ppGenesisDelegCert
 
-instance PrettyA MIRPot where prettyA = ppMIRPot
+instance PrettyA MIRPot where
+  prettyA = ppMIRPot
 
-instance PrettyA (MIRCert c) where prettyA = ppMIRCert
+instance PrettyA (MIRCert c) where
+  prettyA = ppMIRCert
 
-instance PrettyA (DCert c) where prettyA = ppDCert
+instance PrettyA (DCert c) where
+  prettyA = ppDCert
 
 instance
   (PrettyA (Core.TxOut era), PrettyA (PParamsDelta era)) =>
@@ -1071,21 +1124,25 @@ instance
   where
   prettyA = ppTxBody
 
-instance (Typeable kr, Crypto c) => PrettyA (WitVKey kr c) where prettyA = ppWitVKey
+instance (Typeable kr, Crypto c) => PrettyA (WitVKey kr c) where
+  prettyA = ppWitVKey
 
-instance Crypto c => PrettyA (StakeCreds c) where prettyA = ppStakeCreds
+instance Crypto c => PrettyA (StakeCreds c) where
+  prettyA = ppStakeCreds
 
 -- ===========================================
 -- Data.IP
 ppIPv4 :: IPv4 -> PDoc
-ppIPv4 x = viaShow x
+ppIPv4 = viaShow
 
 ppIPv6 :: IPv6 -> PDoc
-ppIPv6 x = viaShow x
+ppIPv6 = viaShow
 
-instance PrettyA IPv4 where prettyA = ppIPv4
+instance PrettyA IPv4 where
+  prettyA = ppIPv4
 
-instance PrettyA IPv6 where prettyA = ppIPv6
+instance PrettyA IPv6 where
+  prettyA = ppIPv6
 
 -- ====================================================
 -- Shelley.Spec.Ledger.CompactAddr
@@ -1093,7 +1150,8 @@ instance PrettyA IPv6 where prettyA = ppIPv6
 ppCompactAddr :: Crypto c => CompactAddr c -> PDoc
 ppCompactAddr x = ppAddr (decompactAddr x)
 
-instance Crypto c => PrettyA (CompactAddr c) where prettyA = ppCompactAddr
+instance Crypto c => PrettyA (CompactAddr c) where
+  prettyA = ppCompactAddr
 
 -- ================================================
 -- Shelley.Spec.Ledger.PParams
@@ -1161,7 +1219,8 @@ ppPPUpdateEnv (PPUpdateEnv slot gd) =
     "PPUpdateEnv"
     [ppSlotNo slot, ppGenDelegs gd]
 
-instance PrettyA (PPUpdateEnv c) where prettyA = ppPPUpdateEnv
+instance PrettyA (PPUpdateEnv c) where
+  prettyA = ppPPUpdateEnv
 
 instance
   PrettyA (PParamsDelta e) =>
@@ -1169,13 +1228,17 @@ instance
   where
   prettyA = ppProposedPPUpdates
 
-instance PrettyA (PParamsDelta e) => PrettyA (Update e) where prettyA = ppUpdate
+instance PrettyA (PParamsDelta e) => PrettyA (Update e) where
+  prettyA = ppUpdate
 
-instance PrettyA (PParams' StrictMaybe e) where prettyA = ppPParamsUpdate
+instance PrettyA (PParams' StrictMaybe e) where
+  prettyA = ppPParamsUpdate
 
-instance PrettyA (PParams' Identity e) where prettyA = ppPParams
+instance PrettyA (PParams' Identity e) where
+  prettyA = ppPParams
 
-instance PrettyA ProtVer where prettyA = ppProtVer
+instance PrettyA ProtVer where
+  prettyA = ppProtVer
 
 -- ============================================
 -- Cardano.Ledger.Coin
@@ -1185,7 +1248,8 @@ ppCoin (Coin n) = ppSexp "Coin" [pretty n]
 ppDeltaCoin :: DeltaCoin -> PDoc
 ppDeltaCoin (DeltaCoin n) = ppSexp "DeltaCoin" [pretty n]
 
-instance PrettyA Coin where prettyA = ppCoin
+instance PrettyA Coin where
+  prettyA = ppCoin
 
 -- ===========================================
 -- Cardano.Chain.Common
@@ -1208,11 +1272,14 @@ ppNetworkMagic (NetworkTestnet n) = text "Testnet" <+> ppWord32 n
 ppUnparsedFields :: UnparsedFields -> PDoc
 ppUnparsedFields (UnparsedFields m) = ppMap' mempty ppWord8 ppLazy m
 
-instance PrettyA NetworkMagic where prettyA = ppNetworkMagic
+instance PrettyA NetworkMagic where
+  prettyA = ppNetworkMagic
 
-instance PrettyA (BootstrapAddress c) where prettyA = ppBootstrapAddress
+instance PrettyA (BootstrapAddress c) where
+  prettyA = ppBootstrapAddress
 
-instance PrettyA UnparsedFields where prettyA = ppUnparsedFields
+instance PrettyA UnparsedFields where
+  prettyA = ppUnparsedFields
 
 -- ===========================================
 -- Shelley.Spec.Ledger.Address
@@ -1227,9 +1294,11 @@ ppHDAddressPayload (HDAddressPayload x) = ppLong x
 ppRewardAcnt :: RewardAcnt c -> PDoc
 ppRewardAcnt (RewardAcnt net cred) = ppRecord "RewardAcnt" [("network", ppNetwork net), ("credential", ppCredential cred)]
 
-instance PrettyA (Addr c) where prettyA = ppAddr
+instance PrettyA (Addr c) where
+  prettyA = ppAddr
 
-instance PrettyA (RewardAcnt c) where prettyA = ppRewardAcnt
+instance PrettyA (RewardAcnt c) where
+  prettyA = ppRewardAcnt
 
 -- ===========================================
 -- Shelley.Spec.Ledger.Credential
@@ -1244,18 +1313,22 @@ ppPtr (Ptr slot n m) = ppSexp "Ptr" [ppSlotNo slot, pretty n, pretty m]
 ppStakeReference :: StakeReference c -> PDoc
 ppStakeReference (StakeRefBase x) = ppSexp "BaseRef" [ppCredential x]
 ppStakeReference (StakeRefPtr x) = ppSexp "PtrRef" [ppPtr x]
-ppStakeReference (StakeRefNull) = text "NullRef"
+ppStakeReference StakeRefNull = text "NullRef"
 
 ppGenesisCredential :: GenesisCredential c -> PDoc
 ppGenesisCredential (GenesisCredential (KeyHash x)) = ppSexp "GenesisCredential" [ppHash x]
 
-instance PrettyA (Credential r c) where prettyA = ppCredential
+instance PrettyA (Credential r c) where
+  prettyA = ppCredential
 
-instance PrettyA (StakeReference c) where prettyA = ppStakeReference
+instance PrettyA (StakeReference c) where
+  prettyA = ppStakeReference
 
-instance PrettyA (GenesisCredential c) where prettyA = ppGenesisCredential
+instance PrettyA (GenesisCredential c) where
+  prettyA = ppGenesisCredential
 
-instance PrettyA Ptr where prettyA = ppPtr
+instance PrettyA Ptr where
+  prettyA = ppPtr
 
 -- ===========================================
 -- Shelley.Spec.Ledger.Scripts
@@ -1269,9 +1342,11 @@ ppMultiSig (RequireMOf m ps) = ppSexp "MOf" (pretty m : map ppMultiSig ps)
 ppScriptHash :: ScriptHash crypto -> PDoc
 ppScriptHash (ScriptHash h) = ppSexp "ScriptHash" [ppHash h]
 
-instance PrettyA (ScriptHash c) where prettyA = ppScriptHash
+instance PrettyA (ScriptHash c) where
+  prettyA = ppScriptHash
 
-instance Crypto c => PrettyA (MultiSig c) where prettyA = ppMultiSig
+instance Crypto c => PrettyA (MultiSig c) where
+  prettyA = ppMultiSig
 
 -- ====================================================
 -- Shelley.Spec.Ledger.Slot
@@ -1291,15 +1366,20 @@ ppEpochSize (EpochSize x) = text "EpochSize" <+> pretty x
 ppBlockNo :: BlockNo -> Doc ann
 ppBlockNo (BlockNo x) = text "BlockNo" <+> pretty x
 
-instance PrettyA SlotNo where prettyA = ppSlotNo
+instance PrettyA SlotNo where
+  prettyA = ppSlotNo
 
-instance PrettyA Duration where prettyA = ppDuration
+instance PrettyA Duration where
+  prettyA = ppDuration
 
-instance PrettyA EpochNo where prettyA = ppEpochNo
+instance PrettyA EpochNo where
+  prettyA = ppEpochNo
 
-instance PrettyA EpochSize where prettyA = ppEpochSize
+instance PrettyA EpochSize where
+  prettyA = ppEpochSize
 
-instance PrettyA BlockNo where prettyA = ppBlockNo
+instance PrettyA BlockNo where
+  prettyA = ppBlockNo
 
 -- ===================================================
 -- Shelley.Spec.Ledger.OCert
@@ -1326,15 +1406,20 @@ ppOCert (OCert vk n per sig) =
     ]
 
 ppOCertSignable :: forall crypto. Crypto crypto => OCertSignable crypto -> PDoc
-ppOCertSignable (OCertSignable verkes w per) = ppSexp "OCertSignable" [ppVerKeyKES (Proxy @crypto) verkes, pretty w, ppKESPeriod per]
+ppOCertSignable (OCertSignable verkes w per) =
+  ppSexp "OCertSignable" [ppVerKeyKES (Proxy @crypto) verkes, pretty w, ppKESPeriod per]
 
-instance PrettyA KESPeriod where prettyA = ppKESPeriod
+instance PrettyA KESPeriod where
+  prettyA = ppKESPeriod
 
-instance PrettyA (OCertEnv c) where prettyA = ppOCertEnv
+instance PrettyA (OCertEnv c) where
+  prettyA = ppOCertEnv
 
-instance Crypto c => PrettyA (OCert c) where prettyA = ppOCert
+instance Crypto c => PrettyA (OCert c) where
+  prettyA = ppOCert
 
-instance Crypto c => PrettyA (OCertSignable c) where prettyA = ppOCertSignable
+instance Crypto c => PrettyA (OCertSignable c) where
+  prettyA = ppOCertSignable
 
 -- ==========================================
 --  Cardano.Crypto.Hash
@@ -1342,17 +1427,18 @@ instance Crypto c => PrettyA (OCertSignable c) where prettyA = ppOCertSignable
 ppHash :: Hash.Hash a b -> PDoc
 ppHash x = text "#" <> reAnnotate (Width 5 :) (viaShow x)
 
-instance PrettyA (Hash.Hash a b) where prettyA = ppHash
+instance PrettyA (Hash.Hash a b) where
+  prettyA = ppHash
 
 -- ==========================================
 -- Shelley.Spec.Ledger.BaseTypes
 
 ppUnitInterval :: UnitInterval -> PDoc
-ppUnitInterval z = viaShow z
+ppUnitInterval = viaShow
 
 ppNonce :: Nonce -> PDoc
 ppNonce (Nonce h) = text "Nonce" <+> ppHash h
-ppNonce (NeutralNonce) = text "NeutralNonce"
+ppNonce NeutralNonce = text "NeutralNonce"
 
 ppActiveSlotCoeff :: ActiveSlotCoeff -> PDoc
 ppActiveSlotCoeff x =
@@ -1410,29 +1496,37 @@ ppPort (Port n) = ppSexp "Port" [ppWord16 n]
 ppDnsName :: DnsName -> PDoc
 ppDnsName x = ppSexp "DnsName" [text (dnsToText x)]
 
-instance PrettyA Url where prettyA = ppUrl
+instance PrettyA Url where
+  prettyA = ppUrl
 
-instance PrettyA Network where prettyA = ppNetwork
+instance PrettyA Network where
+  prettyA = ppNetwork
 
-instance PrettyA Globals where prettyA = ppGlobals
+instance PrettyA Globals where
+  prettyA = ppGlobals
 
-instance PrettyA ActiveSlotCoeff where prettyA = ppActiveSlotCoeff
+instance PrettyA ActiveSlotCoeff where
+  prettyA = ppActiveSlotCoeff
 
-instance PrettyA Nonce where prettyA = ppNonce
+instance PrettyA Nonce where
+  prettyA = ppNonce
 
-instance PrettyA UnitInterval where prettyA = ppUnitInterval
+instance PrettyA UnitInterval where
+  prettyA = ppUnitInterval
 
-instance PrettyA Port where prettyA = ppPort
+instance PrettyA Port where
+  prettyA = ppPort
 
-instance PrettyA DnsName where prettyA = ppDnsName
+instance PrettyA DnsName where
+  prettyA = ppDnsName
 
 -- ===========================================
 -- Shelley.Spec.Ledger.Keys
 
-ppVKey :: Crypto c => (VKey r c) -> PDoc
+ppVKey :: Crypto c => VKey r c -> PDoc
 ppVKey (VKey x) = reAnnotate (Width 5 :) (viaShow x)
 
-ppKeyPair :: Crypto c => (KeyPair r c) -> PDoc
+ppKeyPair :: Crypto c => KeyPair r c -> PDoc
 ppKeyPair (KeyPair x y) =
   ppRecord "KeyPair" [("vKey", ppVKey x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
 
@@ -1452,17 +1546,23 @@ ppVerKeyKES Proxy x = reAnnotate (Width 5 :) (viaShow x)
 ppGenDelegs :: GenDelegs c -> PDoc
 ppGenDelegs (GenDelegs m) = ppSexp "GenDelegs" [ppMap ppKeyHash ppGenDelegPair m]
 
-instance Crypto c => PrettyA (VKey r c) where prettyA = ppVKey
+instance Crypto c => PrettyA (VKey r c) where
+  prettyA = ppVKey
 
-instance Crypto c => PrettyA (KeyPair r c) where prettyA = ppKeyPair
+instance Crypto c => PrettyA (KeyPair r c) where
+  prettyA = ppKeyPair
 
-instance PrettyA (KeyHash x c) where prettyA = ppKeyHash
+instance PrettyA (KeyHash x c) where
+  prettyA = ppKeyHash
 
-instance Crypto c => PrettyA (GKeys c) where prettyA = ppGKeys
+instance Crypto c => PrettyA (GKeys c) where
+  prettyA = ppGKeys
 
-instance PrettyA (GenDelegPair c) where prettyA = ppGenDelegPair
+instance PrettyA (GenDelegPair c) where
+  prettyA = ppGenDelegPair
 
-instance PrettyA (GenDelegs c) where prettyA = ppGenDelegs
+instance PrettyA (GenDelegs c) where
+  prettyA = ppGenDelegs
 
 -- ======================================================
 
@@ -1490,26 +1590,38 @@ instance PrettyA t => Show (Nice t) where
 instance Eq t => Eq (Nice t) where
   (Nice x) == (Nice y) = x == y
 
-instance PrettyA String where prettyA = ppString
+instance PrettyA String where
+  prettyA = ppString
 
-instance PrettyA Double where prettyA = ppDouble
+instance PrettyA Double where
+  prettyA = ppDouble
 
-instance PrettyA Integer where prettyA = ppInteger
+instance PrettyA Integer where
+  prettyA = ppInteger
 
-instance PrettyA Float where prettyA = ppFloat
+instance PrettyA Float where
+  prettyA = ppFloat
 
-instance PrettyA Natural where prettyA = ppNatural
+instance PrettyA Natural where
+  prettyA = ppNatural
 
-instance PrettyA Word64 where prettyA = ppWord64
+instance PrettyA Word64 where
+  prettyA = ppWord64
 
-instance PrettyA Word32 where prettyA = ppWord32
+instance PrettyA Word32 where
+  prettyA = ppWord32
 
-instance PrettyA Word16 where prettyA = ppWord16
+instance PrettyA Word16 where
+  prettyA = ppWord16
 
-instance PrettyA Word8 where prettyA = ppWord8
+instance PrettyA Word8 where
+  prettyA = ppWord8
 
-instance PrettyA FixedPoint where prettyA = ppFixedPoint
+instance PrettyA FixedPoint where
+  prettyA = ppFixedPoint
 
-instance PrettyA Bool where prettyA = ppBool
+instance PrettyA Bool where
+  prettyA = ppBool
 
-instance PrettyA Int where prettyA = ppInt
+instance PrettyA Int where
+  prettyA = ppInt

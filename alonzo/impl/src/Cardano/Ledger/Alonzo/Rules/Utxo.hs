@@ -3,10 +3,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -216,7 +214,7 @@ instance
   ) =>
   NoThunks (UtxoPredicateFailure era)
 
-data UtxoEvent era
+newtype UtxoEvent era
   = UtxosEvent (Event (Core.EraRule "UTXOS" era))
 
 -- | Returns true for VKey locked addresses, and false for any kind of
@@ -341,7 +339,7 @@ utxoTransition = do
   ei <- liftSTS $ asks epochInfoWithErr
   case i_f of
     SNothing -> pure ()
-    SJust ifj -> case (epochInfoSlotToUTCTime ei sysSt ifj) of
+    SJust ifj -> case epochInfoSlotToUTCTime ei sysSt ifj of
       -- if tx has non-native scripts, end of validity interval must translate to time
       Left _ -> (nullRedeemers . txrdmrs' . wits $ tx) ?! OutsideForecast ifj
       Right _ -> pure ()
@@ -534,7 +532,7 @@ encFail (OutsideValidityIntervalUTxO a b) =
   Sum OutsideValidityIntervalUTxO 1 !> To a !> To b
 encFail (MaxTxSizeUTxO a b) =
   Sum MaxTxSizeUTxO 2 !> To a !> To b
-encFail (InputSetEmptyUTxO) =
+encFail InputSetEmptyUTxO =
   Sum InputSetEmptyUTxO 3
 encFail (FeeTooSmallUTxO a b) =
   Sum FeeTooSmallUTxO 4 !> To a !> To b
@@ -550,7 +548,7 @@ encFail (WrongNetworkWithdrawal right wrongs) =
   Sum (WrongNetworkWithdrawal @era) 9 !> To right !> E encodeFoldable wrongs
 encFail (OutputBootAddrAttrsTooBig outs) =
   Sum (OutputBootAddrAttrsTooBig @era) 10 !> E encodeFoldable outs
-encFail (TriesToForgeADA) =
+encFail TriesToForgeADA =
   Sum TriesToForgeADA 11
 encFail (OutputTooBigUTxO outs) =
   Sum (OutputTooBigUTxO @era) 12 !> E encodeFoldable outs
@@ -579,19 +577,19 @@ decFail ::
   ) =>
   Word ->
   Decode 'Open (UtxoPredicateFailure era)
-decFail 0 = SumD (BadInputsUTxO) <! D (decodeSet fromCBOR)
+decFail 0 = SumD BadInputsUTxO <! D (decodeSet fromCBOR)
 decFail 1 = SumD OutsideValidityIntervalUTxO <! From <! From
 decFail 2 = SumD MaxTxSizeUTxO <! From <! From
 decFail 3 = SumD InputSetEmptyUTxO
 decFail 4 = SumD FeeTooSmallUTxO <! From <! From
-decFail 5 = SumD (ValueNotConservedUTxO) <! From <! From
-decFail 6 = SumD (OutputTooSmallUTxO) <! D (decodeList fromCBOR)
-decFail 7 = SumD (UtxosFailure) <! From
-decFail 8 = SumD (WrongNetwork) <! From <! D (decodeSet fromCBOR)
-decFail 9 = SumD (WrongNetworkWithdrawal) <! From <! D (decodeSet fromCBOR)
-decFail 10 = SumD (OutputBootAddrAttrsTooBig) <! D (decodeList fromCBOR)
+decFail 5 = SumD ValueNotConservedUTxO <! From <! From
+decFail 6 = SumD OutputTooSmallUTxO <! D (decodeList fromCBOR)
+decFail 7 = SumD UtxosFailure <! From
+decFail 8 = SumD WrongNetwork <! From <! D (decodeSet fromCBOR)
+decFail 9 = SumD WrongNetworkWithdrawal <! From <! D (decodeSet fromCBOR)
+decFail 10 = SumD OutputBootAddrAttrsTooBig <! D (decodeList fromCBOR)
 decFail 11 = SumD TriesToForgeADA
-decFail 12 = SumD (OutputTooBigUTxO) <! D (decodeList fromCBOR)
+decFail 12 = SumD OutputTooBigUTxO <! D (decodeList fromCBOR)
 decFail 13 = SumD InsufficientCollateral <! From <! From
 decFail 14 = SumD ScriptsNotPaidUTxO <! From
 decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From

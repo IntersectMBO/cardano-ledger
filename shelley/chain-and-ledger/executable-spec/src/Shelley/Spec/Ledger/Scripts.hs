@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -132,5 +131,5 @@ instance
       3 -> do
         m <- fromCBOR
         multiSigs <- sequence <$> decodeList fromCBOR
-        pure $ (3, RequireMOf' m <$> multiSigs)
+        pure (3, RequireMOf' m <$> multiSigs)
       k -> invalidKey k

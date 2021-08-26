@@ -1,6 +1,4 @@
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 -- | This module provides data structures and operations for talking about
 --     Non-native Script languages. It is expected that new languages (or new

@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -38,7 +37,15 @@ import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.EpochBoundary (SnapShots (_pstakeMark))
-import Shelley.Spec.Ledger.LedgerState (DPState (..), DState (..), EpochState (..), FutureGenDeleg (..), LedgerState (..), NewEpochState (..), PulsingRewUpdate)
+import Shelley.Spec.Ledger.LedgerState
+  ( DPState (..),
+    DState (..),
+    EpochState (..),
+    FutureGenDeleg (..),
+    LedgerState (..),
+    NewEpochState (..),
+    PulsingRewUpdate,
+  )
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH, NewEpochEvent, NewEpochPredicateFailure)
 import Shelley.Spec.Ledger.STS.Rupd (RUPD, RupdEnv (..), RupdPredicateFailure)
 

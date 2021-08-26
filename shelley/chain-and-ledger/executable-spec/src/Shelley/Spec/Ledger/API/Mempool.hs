@@ -1,7 +1,6 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
-{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -40,7 +39,13 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, PreviousEra, TranslateEra (translateEra), TranslationContext, TranslationError)
+import Cardano.Ledger.Era
+  ( Crypto,
+    PreviousEra,
+    TranslateEra (translateEra),
+    TranslationContext,
+    TranslationError,
+  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Slot (SlotNo)
@@ -225,7 +230,7 @@ mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
         LedgerState._delegationState
       } = LedgerState.esLState nesEs
 
-data ApplyTxError era = ApplyTxError [PredicateFailure (Core.EraRule "LEDGER" era)]
+newtype ApplyTxError era = ApplyTxError [PredicateFailure (Core.EraRule "LEDGER" era)]
 
 deriving stock instance
   (Eq (PredicateFailure (Core.EraRule "LEDGER" era))) =>

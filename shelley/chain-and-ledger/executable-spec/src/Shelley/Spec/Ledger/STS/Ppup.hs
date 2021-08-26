@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -81,8 +80,7 @@ data PpupPredicateFailure era
 
 instance NoThunks (PpupPredicateFailure era)
 
-data PpupEvent era
-  = NewEpoch EpochNo
+newtype PpupEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
@@ -170,7 +168,7 @@ ppupTransitionNonEmpty = do
         let newEpochNo = EpochNo $ e + 1
         tellEvent $ NewEpoch newEpochNo
         liftSTS $ epochInfoFirst ei newEpochNo
-      let tooLate = firstSlotNextEpoch *- (Duration (2 * sp))
+      let tooLate = firstSlotNextEpoch *- Duration (2 * sp)
 
       currentEpoch <- liftSTS $ do
         ei <- asks epochInfo

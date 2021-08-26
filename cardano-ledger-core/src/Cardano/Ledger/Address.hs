@@ -1,13 +1,11 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -432,7 +430,7 @@ putVariableLengthWord64 = putWord7s . word64ToWord7s
 word7sToWord64 :: [Word7] -> Word64
 word7sToWord64 = foldl' f 0
   where
-    f n (Word7 r) = shiftL n 7 .|. (fromIntegral r)
+    f n (Word7 r) = shiftL n 7 .|. fromIntegral r
 
 getVariableLengthWord64 :: Get Word64
 getVariableLengthWord64 = word7sToWord64 <$> getWord7s

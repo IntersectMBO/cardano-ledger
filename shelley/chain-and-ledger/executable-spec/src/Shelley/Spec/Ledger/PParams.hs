@@ -1,15 +1,12 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -193,35 +190,31 @@ instance ToCBORGroup ProtVer where
   listLenBound _ = 2
 
 instance FromCBORGroup ProtVer where
-  fromCBORGroup = do
-    x <- fromCBOR
-    y <- fromCBOR
-    pure $ ProtVer x y
+  fromCBORGroup = ProtVer <$> fromCBOR <*> fromCBOR
 
 instance NoThunks (PParams era)
 
 instance (Era era) => ToCBOR (PParams era) where
   toCBOR
-    ( PParams
-        { _minfeeA = minfeeA',
-          _minfeeB = minfeeB',
-          _maxBBSize = maxBBSize',
-          _maxTxSize = maxTxSize',
-          _maxBHSize = maxBHSize',
-          _keyDeposit = keyDeposit',
-          _poolDeposit = poolDeposit',
-          _eMax = eMax',
-          _nOpt = nOpt',
-          _a0 = a0',
-          _rho = rho',
-          _tau = tau',
-          _d = d',
-          _extraEntropy = extraEntropy',
-          _protocolVersion = protocolVersion',
-          _minUTxOValue = minUTxOValue',
-          _minPoolCost = minPoolCost'
-        }
-      ) =
+    PParams
+      { _minfeeA = minfeeA',
+        _minfeeB = minfeeB',
+        _maxBBSize = maxBBSize',
+        _maxTxSize = maxTxSize',
+        _maxBHSize = maxBHSize',
+        _keyDeposit = keyDeposit',
+        _poolDeposit = poolDeposit',
+        _eMax = eMax',
+        _nOpt = nOpt',
+        _a0 = a0',
+        _rho = rho',
+        _tau = tau',
+        _d = d',
+        _extraEntropy = extraEntropy',
+        _protocolVersion = protocolVersion',
+        _minUTxOValue = minUTxOValue',
+        _minPoolCost = minPoolCost'
+      } =
       encodeListLen 18
         <> toCBOR minfeeA'
         <> toCBOR minfeeB'

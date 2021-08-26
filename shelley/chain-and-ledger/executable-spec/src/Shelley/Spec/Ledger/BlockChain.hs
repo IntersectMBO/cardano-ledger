@@ -2,9 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -13,7 +11,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -359,7 +357,7 @@ instance
     decodeRecordNamed "Header" (const 2) $ do
       bhb <- fromCBOR
       sig <- decodeSignedKES
-      pure $ BHeader' <$> pure bhb <*> pure sig
+      pure $ pure $ BHeader' bhb sig
 
 -- | The previous hash of a block
 data PrevHash crypto = GenesisHash | BlockHash !(HashHeader crypto)
@@ -827,7 +825,7 @@ checkLeaderValue certVRF σ f =
     c, recip_q, x :: FixedPoint
     c = activeSlotLog f
     recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
-    x = (- fromRational σ * c)
+    x = - fromRational σ * c
     certNat :: Natural
     certNat = VRF.getOutputVRFNatural certVRF
 

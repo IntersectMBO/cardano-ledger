@@ -145,8 +145,8 @@ instance
   where
   toCBOR x = encode (encodePredFail x)
 
-data AlonzoEvent era
-  = WrappedShelleyEraEvent !(UtxowEvent era)
+newtype AlonzoEvent era
+  = WrappedShelleyEraEvent (UtxowEvent era)
 
 encodePredFail ::
   ( Era era,
@@ -431,7 +431,7 @@ witsVKeyNeeded utxo' tx genDelegs =
 extSymmetricDifference :: (Ord k) => [a] -> (a -> k) -> [b] -> (b -> k) -> ([a], [b])
 extSymmetricDifference as fa bs fb = (extraA, extraB)
   where
-    intersection = (Set.fromList $ map fa as) `Set.intersection` (Set.fromList $ map fb bs)
+    intersection = Set.fromList (map fa as) `Set.intersection` Set.fromList (map fb bs)
     extraA = filter (\x -> not $ fa x `Set.member` intersection) as
     extraB = filter (\x -> not $ fb x `Set.member` intersection) bs
 

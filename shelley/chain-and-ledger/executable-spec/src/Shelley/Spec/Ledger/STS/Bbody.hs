@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -94,7 +93,7 @@ data BbodyPredicateFailure era
   | LedgersFailure (PredicateFailure (Core.EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
-data BbodyEvent era
+newtype BbodyEvent era
   = LedgersEvent (Event (Core.EraRule "LEDGERS" era))
 
 deriving stock instance
