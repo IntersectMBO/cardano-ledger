@@ -42,6 +42,7 @@ library
     Test.Cardano.Ledger.Generic.Updaters
     Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.Alonzo.Tools
+    Test.Cardano.Ledger.Alonzo.CompactMap
   build-depends:
     aeson,
     array,
@@ -52,12 +53,15 @@ library
     cardano-ledger-alonzo-test,
     cardano-ledger-core,
     cardano-ledger-shelley-ma,
+    cardano-ledger-shelley-ma-test,
+    cardano-prelude,
     cardano-slotting,
     containers,
     data-default-class,
     genvalidity,
     genvalidity-scientific,
     plutus-ledger-api,
+    primitive,
     scientific,
     shelley-spec-ledger,
     shelley-spec-ledger-test,
@@ -67,6 +71,7 @@ library
     tasty,
     tasty-hunit,
     tasty-quickcheck,
+    text,
     time,
     QuickCheck,
 

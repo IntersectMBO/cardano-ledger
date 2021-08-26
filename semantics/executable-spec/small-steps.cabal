@@ -48,23 +48,32 @@ library
                      , Data.CanonicalMaps
                      , Data.MemoBytes
                      , Data.Coders
+		     , Data.CompactMap
+		     , Data.DeltaState
                      , Data.Pulse
+		     , Data.Messages
+		     , Data.BeTree
                      , Control.Provenance
                      , Control.Iterate.SetAlgebra
                      , Control.Iterate.Collect
                      , Control.SetAlgebra
   build-depends:       aeson
                      , ansi-wl-pprint
+		     , array
                      , base >=4.11 && <5
                      , bytestring
+		     , cardano-binary
+		     , cardano-prelude
                      , cborg
                      , containers
                      , cryptonite
                      , data-default-class
                      , deepseq
+		     , fingertree
                      , formatting
                      , free
                      , mtl
+		     , primitive
                      , nothunks
                      , strict-containers
                      , text

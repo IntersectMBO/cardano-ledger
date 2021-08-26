@@ -45,6 +45,7 @@ library
   exposed-modules:
     Test.Cardano.Crypto.VRF.Fake
     Test.Shelley.Spec.Ledger.BenchmarkFunctions
+    Test.Shelley.Spec.Ledger.BeTreeTests
     Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
     Test.Shelley.Spec.Ledger.Examples.Cast
     Test.Shelley.Spec.Ledger.Examples.Consensus
@@ -63,6 +64,7 @@ library
     Test.Shelley.Spec.Ledger.Generator.ScriptClass
     Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen
     Test.Shelley.Spec.Ledger.Orphans
+    Test.Shelley.Spec.Ledger.PackedBytes
     Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
     Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
     Test.Shelley.Spec.Ledger.Serialisation.Generators
@@ -101,6 +103,7 @@ library
     cborg,
     containers,
     data-default-class,
+    deepseq,
     directory,
     generic-random,
     hashable,
@@ -108,8 +111,10 @@ library
     hedgehog >= 1.0.4,
     iproute,
     nothunks,
+    primitive,
     process-extras,
     plutus-ledger-api,
+    prettyprinter,
     QuickCheck >= 2.13.2,
     serialise,
     shelley-spec-ledger,
