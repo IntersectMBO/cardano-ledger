@@ -21,6 +21,7 @@ where
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.Val ((<+>), (<->))
@@ -75,7 +76,8 @@ instance
   ( Typeable era,
     Default (PoolreapState era),
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_keyDeposit" (Core.PParams era) Coin
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    CC.Crypto (Crypto era)
   ) =>
   STS (POOLREAP era)
   where
@@ -101,7 +103,9 @@ instance
     ]
 
 poolReapTransition ::
-  HasField "_poolDeposit" (Core.PParams era) Coin =>
+  ( HasField "_poolDeposit" (Core.PParams era) Coin,
+    CC.Crypto (Crypto era)
+  ) =>
   TransitionRule (POOLREAP era)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext

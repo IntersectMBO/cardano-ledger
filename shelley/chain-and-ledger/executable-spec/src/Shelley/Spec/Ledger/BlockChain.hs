@@ -75,6 +75,7 @@ import Cardano.Binary
     withSlice,
     withWordSize,
   )
+import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
@@ -155,8 +156,16 @@ import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- | The hash of a Block Header
 newtype HashHeader crypto = HashHeader {unHashHeader :: Hash crypto (BHeader crypto)}
-  deriving stock (Show, Eq, Generic, Ord)
-  deriving newtype (NFData, NoThunks)
+  deriving stock Generic
+
+type HashConstraint crypto = Hash.HashAlgorithm (CC.HASH crypto)
+
+deriving stock instance HashConstraint crypto => Show (HashHeader crypto)
+deriving stock instance HashConstraint crypto => Eq (HashHeader crypto)
+deriving stock instance HashConstraint crypto => Ord (HashHeader crypto)
+
+deriving newtype instance HashConstraint crypto => NoThunks (HashHeader crypto)
+deriving newtype instance HashConstraint crypto => NFData (HashHeader crypto)
 
 deriving newtype instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
 
@@ -302,7 +311,7 @@ bbHash (TxSeq' _ bodies wits md) =
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
 -- | HashHeader to Nonce
-hashHeaderToNonce :: HashHeader crypto -> Nonce
+hashHeaderToNonce :: CC.HASH crypto ~ Blake2b_256 => HashHeader crypto -> Nonce
 hashHeaderToNonce = Nonce . coerce
 
 data BHeader crypto = BHeader'
@@ -361,7 +370,11 @@ instance
 
 -- | The previous hash of a block
 data PrevHash crypto = GenesisHash | BlockHash !(HashHeader crypto)
-  deriving (Show, Eq, Generic, Ord)
+  deriving Generic
+
+deriving instance HashConstraint crypto => Show (PrevHash crypto)
+deriving instance HashConstraint crypto => Eq (PrevHash crypto)
+deriving instance HashConstraint crypto => Ord (PrevHash crypto)
 
 instance CC.Crypto crypto => NoThunks (PrevHash crypto)
 
@@ -401,6 +414,7 @@ instance
       _ -> BlockHash <$> fromCBOR
 
 prevHashToNonce ::
+  CC.HASH crypto ~ Blake2b_256 =>
   PrevHash crypto ->
   Nonce
 prevHashToNonce = \case
@@ -417,11 +431,14 @@ data LastAppliedBlock crypto = LastAppliedBlock
     labSlotNo :: !SlotNo,
     labHash :: !(HashHeader crypto)
   }
-  deriving (Show, Eq, Generic)
+  deriving Generic
+
+deriving instance HashConstraint crypto => Show (LastAppliedBlock crypto)
+deriving instance HashConstraint crypto => Eq (LastAppliedBlock crypto)
 
 instance CC.Crypto crypto => NoThunks (LastAppliedBlock crypto)
 
-instance NFData (LastAppliedBlock crypto)
+instance HashConstraint crypto => NFData (LastAppliedBlock crypto)
 
 instance CC.Crypto crypto => ToCBOR (LastAppliedBlock crypto) where
   toCBOR (LastAppliedBlock b s h) =
@@ -839,6 +856,7 @@ hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize
 
 incrBlocks ::
+  CC.Crypto crypto =>
   Bool ->
   KeyHash 'StakePool crypto ->
   BlocksMade crypto ->

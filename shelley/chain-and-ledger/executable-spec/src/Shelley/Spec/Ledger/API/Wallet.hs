@@ -26,6 +26,7 @@ where
 
 import Cardano.Binary (ToCBOR (..), decodeFull, decodeFullDecoder, serialize)
 import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Globals (..), NonNegativeInterval, Seed, UnitInterval, epochInfo)
@@ -33,7 +34,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN, VRF)
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto, HASH)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -238,7 +239,9 @@ getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era)) =>
+  ( HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era)),
+    HashAlgorithm (CC.ADDRHASH (Crypto era))
+  ) =>
   NewEpochState era ->
   Set (Addr (Crypto era)) ->
   UTxO era
@@ -254,6 +257,7 @@ getFilteredUTxO ss addrs =
     addrSBSs = Set.map compactAddr addrs
 
 getUTxOSubset ::
+  HashAlgorithm (CC.HASH (Crypto era)) =>
   NewEpochState era ->
   Set (TxIn (Crypto era)) ->
   UTxO era
@@ -309,6 +313,7 @@ getPools = Map.keysSet . f
 -- stake pools. The result map will contain entries for all the given stake
 -- pools that are currently registered.
 getPoolParameters ::
+  CC.Crypto (Crypto era) =>
   NewEpochState era ->
   Set (KeyHash 'StakePool (Crypto era)) ->
   Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
@@ -323,7 +328,8 @@ getRewardInfo ::
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval
+    HasField "_tau" (Core.PParams era) UnitInterval,
+    CC.Crypto (Crypto era)
   ) =>
   Globals ->
   NewEpochState era ->

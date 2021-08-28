@@ -51,8 +51,8 @@ import Cardano.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Era as Era (TxSeq)
 import Cardano.Ledger.Keys
   ( GKeys (..),
@@ -385,7 +385,13 @@ class PrettyA t where
 -- Shelley.Spec.Ledger.STS.Chain(ChainState(..))
 -- import Shelley.Spec.Ledger.BlockChain(LastAppliedBlock(..),HashHeader(..))
 
-ppChainState :: CanPrettyPrintLedgerState era => ChainState era -> PDoc
+ppChainState ::
+  ( CanPrettyPrintLedgerState era,
+    Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    Hash.HashAlgorithm (CC.HASH (Crypto era))
+  )
+  => ChainState era
+  -> PDoc
 ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce lastab) =
   ppRecord
     "ChainState"
@@ -398,7 +404,7 @@ ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce la
       ("lastApplidBlock", ppWithOrigin ppLastAppliedBlock lastab)
     ]
 
-ppLastAppliedBlock :: LastAppliedBlock c -> PDoc
+ppLastAppliedBlock :: Hash.HashAlgorithm (CC.HASH c) => LastAppliedBlock c -> PDoc
 ppLastAppliedBlock (LastAppliedBlock blkNo slotNo hh) =
   ppRecord
     "LastAppliedBlock"
@@ -407,26 +413,29 @@ ppLastAppliedBlock (LastAppliedBlock blkNo slotNo hh) =
       ("hash", ppHashHeader hh)
     ]
 
-ppHashHeader :: HashHeader c -> PDoc
+ppHashHeader :: Hash.HashAlgorithm (CC.HASH c) => HashHeader c -> PDoc
 ppHashHeader (HashHeader x) = ppHash x
 
 ppWithOrigin :: (t -> PDoc) -> WithOrigin t -> PDoc
 ppWithOrigin _ Origin = ppString "Origin"
 ppWithOrigin pp (At t) = ppSexp "At" [pp t]
 
-instance CanPrettyPrintLedgerState era => PrettyA (ChainState era) where
+instance ( CanPrettyPrintLedgerState era,
+           Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+           Hash.HashAlgorithm (CC.HASH (Crypto era))
+         ) => PrettyA (ChainState era) where
   prettyA = ppChainState
 
-instance PrettyA (LastAppliedBlock c) where
+instance Hash.HashAlgorithm (CC.HASH c) => PrettyA (LastAppliedBlock c) where
   prettyA = ppLastAppliedBlock
 
-instance PrettyA (HashHeader c) where
+instance Hash.HashAlgorithm (CC.HASH c) => PrettyA (HashHeader c) where
   prettyA = ppHashHeader
 
 instance PrettyA t => PrettyA (WithOrigin t) where
   prettyA = ppWithOrigin prettyA
 
-ppBHBody :: Crypto c => BHBody c -> PDoc
+ppBHBody :: CC.Crypto c => BHBody c -> PDoc
 ppBHBody (BHBody bn sn prev vk vrfvk eta l size hash ocert protver) =
   ppRecord
     "BHBody"
@@ -443,11 +452,11 @@ ppBHBody (BHBody bn sn prev vk vrfvk eta l size hash ocert protver) =
       ("ProtVersion", ppProtVer protver)
     ]
 
-ppPrevHash :: PrevHash c -> PDoc
+ppPrevHash :: Hash.HashAlgorithm (CC.HASH c) => PrevHash c -> PDoc
 ppPrevHash GenesisHash = ppString "GenesisHash"
 ppPrevHash (BlockHash x) = ppSexp "BlockHashppHashHeader" [ppHashHeader x]
 
-ppBHeader :: Crypto c => BHeader c -> PDoc
+ppBHeader :: CC.Crypto c => BHeader c -> PDoc
 ppBHeader (BHeader bh sig) =
   ppRecord
     "BHeader"
@@ -463,13 +472,13 @@ ppBlock (Block' bh seqx _) =
       ("TxSeq", prettyA seqx)
     ]
 
-instance Crypto c => PrettyA (BHBody c) where
+instance CC.Crypto c => PrettyA (BHBody c) where
   prettyA = ppBHBody
 
-instance Crypto c => PrettyA (BHeader c) where
+instance CC.Crypto c => PrettyA (BHeader c) where
   prettyA = ppBHeader
 
-instance PrettyA (PrevHash c) where
+instance Hash.HashAlgorithm (CC.HASH c) => PrettyA (PrevHash c) where
   prettyA = ppPrevHash
 
 instance (Era era, PrettyA (Era.TxSeq era)) => PrettyA (Block era) where
@@ -478,10 +487,15 @@ instance (Era era, PrettyA (Era.TxSeq era)) => PrettyA (Block era) where
 -- =================================
 -- Shelley.Spec.Ledger.LedgerState.Delegation.Certificates
 
-ppPoolDistr :: PoolDistr c -> PDoc
+ppPoolDistr ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => PoolDistr c
+  -> PDoc
 ppPoolDistr (PoolDistr mp) = ppSexp "PoolDistr" [ppMap ppKeyHash ppIndividualPoolStake mp]
 
-ppIndividualPoolStake :: IndividualPoolStake c -> PDoc
+ppIndividualPoolStake :: Hash.HashAlgorithm (CC.HASH c) => IndividualPoolStake c -> PDoc
 ppIndividualPoolStake (IndividualPoolStake r1 h) =
   ppRecord
     "IndividualPoolStake"
@@ -489,16 +503,18 @@ ppIndividualPoolStake (IndividualPoolStake r1 h) =
       ("stakeVrf", ppHash h)
     ]
 
-instance PrettyA (PoolDistr c) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH c),
+           Hash.HashAlgorithm (CC.HASH c)
+         ) => PrettyA (PoolDistr c) where
   prettyA = ppPoolDistr
 
-instance PrettyA (IndividualPoolStake c) where
+instance Hash.HashAlgorithm (CC.HASH c) => PrettyA (IndividualPoolStake c) where
   prettyA = ppIndividualPoolStake
 
 -- ================================
 -- Shelley.Spec.Ledger.RewardUpdate
 
-ppRewardUpdate :: RewardUpdate crypto -> PDoc
+ppRewardUpdate :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => RewardUpdate crypto -> PDoc
 ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
   ppRecord
     "RewardUpdate"
@@ -509,7 +525,12 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
       ("nonMyopic", ppNonMyopic nonmyop)
     ]
 
-ppRewardSnapShot :: RewardSnapShot crypto -> PDoc
+ppRewardSnapShot ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+    Hash.HashAlgorithm (CC.HASH crypto)
+  )
+  => RewardSnapShot crypto
+  -> PDoc
 ppRewardSnapShot (RewardSnapShot snaps a0 nopt ver non deltaR1 rR deltaT1 total pot) =
   ppRecord
     "RewardSnapShot"
@@ -525,7 +546,7 @@ ppRewardSnapShot (RewardSnapShot snaps a0 nopt ver non deltaR1 rR deltaT1 total 
       ("rewardPot", ppCoin pot)
     ]
 
-ppFreeVars :: FreeVars crypto -> PDoc
+ppFreeVars :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => FreeVars crypto -> PDoc
 ppFreeVars (FreeVars b1 del stake1 addrs total active asc1 blocks r1 slots d a0 nOpt mv) =
   ppRecord
     "FreeVars"
@@ -545,7 +566,7 @@ ppFreeVars (FreeVars b1 del stake1 addrs total active asc1 blocks r1 slots d a0 
       ("mv", ppNatural mv)
     ]
 
-ppAns :: RewardAns crypto -> PDoc
+ppAns :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => RewardAns crypto -> PDoc
 ppAns (RewardAns x y) =
   ppSexp'
     mempty
@@ -553,7 +574,12 @@ ppAns (RewardAns x y) =
       ppMap ppKeyHash ppLikelihood y
     ]
 
-ppRewardPulser :: Pulser crypto -> PDoc
+ppRewardPulser ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+    Hash.HashAlgorithm (CC.HASH crypto)
+  )
+  => Pulser crypto
+  -> PDoc
 ppRewardPulser (RSLP n free items ans) =
   ppSexp
     "RewardPulser"
@@ -563,25 +589,36 @@ ppRewardPulser (RSLP n free items ans) =
       ppAns ans
     ]
 
-ppPulsingRewUpdate :: PulsingRewUpdate crypto -> PDoc
+ppPulsingRewUpdate ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+    Hash.HashAlgorithm (CC.HASH crypto)
+  )
+  => PulsingRewUpdate crypto
+  -> PDoc
 ppPulsingRewUpdate (Pulsing snap pulser) =
   ppSexp "Pulsing" [ppRewardSnapShot snap, ppRewardPulser pulser]
 ppPulsingRewUpdate (Complete rewup) =
   ppSexp "Complete" [ppRewardUpdate rewup]
 
-instance PrettyA (RewardSnapShot crypto) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+           Hash.HashAlgorithm (CC.HASH crypto)
+         ) => PrettyA (RewardSnapShot crypto) where
   prettyA = ppRewardSnapShot
 
-instance PrettyA (FreeVars crypto) where
+instance Hash.HashAlgorithm (CC.ADDRHASH crypto) => PrettyA (FreeVars crypto) where
   prettyA = ppFreeVars
 
-instance PrettyA (Pulser crypto) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+           Hash.HashAlgorithm (CC.HASH crypto)
+         ) => PrettyA (Pulser crypto) where
   prettyA = ppRewardPulser
 
-instance PrettyA (PulsingRewUpdate crypto) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+           Hash.HashAlgorithm (CC.HASH crypto)
+         ) => PrettyA (PulsingRewUpdate crypto) where
   prettyA = ppPulsingRewUpdate
 
-instance PrettyA (RewardUpdate crypto) where
+instance Hash.HashAlgorithm (CC.ADDRHASH crypto) => PrettyA (RewardUpdate crypto) where
   prettyA = ppRewardUpdate
 
 -- =================================
@@ -602,10 +639,20 @@ ppAccountState (AccountState tr re) =
       ("reserves", ppCoin re)
     ]
 
-ppDPState :: DPState crypto -> PDoc
+ppDPState ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+    Hash.HashAlgorithm (CC.HASH crypto)
+  )
+  => DPState crypto
+  -> PDoc
 ppDPState (DPState d p) = ppRecord "DPState" [("dstate", ppDState d), ("pstate", ppPState p)]
 
-ppDState :: DState crypto -> PDoc
+ppDState ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+    Hash.HashAlgorithm (CC.HASH crypto)
+  )
+  => DState crypto
+  -> PDoc
 ppDState (DState r1 ds ptrs future gen irwd) =
   ppRecord
     "DState"
@@ -617,7 +664,7 @@ ppDState (DState r1 ds ptrs future gen irwd) =
       ("instantaeousrewards", ppInstantaneousRewards irwd)
     ]
 
-ppFutureGenDeleg :: FutureGenDeleg crypto -> PDoc
+ppFutureGenDeleg :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => FutureGenDeleg crypto -> PDoc
 ppFutureGenDeleg (FutureGenDeleg sl kh) =
   ppRecord
     "FutureGenDeleg"
@@ -625,7 +672,10 @@ ppFutureGenDeleg (FutureGenDeleg sl kh) =
       ("keyhash", ppKeyHash kh)
     ]
 
-ppInstantaneousRewards :: InstantaneousRewards crypto -> PDoc
+ppInstantaneousRewards ::
+  Hash.HashAlgorithm (CC.ADDRHASH crypto) =>
+  InstantaneousRewards crypto
+  -> PDoc
 ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
   ppRecord
     "InstantaneousRewards"
@@ -638,7 +688,12 @@ ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
 ppIx :: Ix -> PDoc
 ppIx = viaShow
 
-ppPPUPState :: PrettyA (PParamsDelta era) => PPUPState era -> PDoc
+ppPPUPState ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    PrettyA (PParamsDelta era)
+  )
+  => PPUPState era
+  -> PDoc
 ppPPUPState (PPUPState p fp) =
   ppRecord
     "Proposed PPUPState"
@@ -646,7 +701,12 @@ ppPPUPState (PPUPState p fp) =
       ("futureProposals", ppProposedPPUpdates fp)
     ]
 
-ppPState :: PState crypto -> PDoc
+ppPState ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+    Hash.HashAlgorithm (CC.HASH crypto)
+  )
+  => PState crypto
+  -> PDoc
 ppPState (PState par fpar ret) =
   ppRecord
     "PState"
@@ -655,14 +715,17 @@ ppPState (PState par fpar ret) =
       ("retiring", ppMap' mempty ppKeyHash ppEpochNo ret)
     ]
 
-ppRewardAccounts :: Map.Map (Credential 'Staking crypto) Coin -> PDoc
+ppRewardAccounts ::
+  Hash.HashAlgorithm (CC.ADDRHASH crypto)
+  => Map.Map (Credential 'Staking crypto) Coin
+  -> PDoc
 ppRewardAccounts = ppMap' (text "RewardAccounts") ppCredential ppCoin
 
 ppRewardType :: RewardType -> PDoc
 ppRewardType MemberReward = text "MemberReward"
 ppRewardType LeaderReward = text "LeaderReward"
 
-ppReward :: Reward crypto -> PDoc
+ppReward :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => Reward crypto -> PDoc
 ppReward (Reward rt pool amt) =
   ppRecord
     "Reward"
@@ -673,6 +736,7 @@ ppReward (Reward rt pool amt) =
 
 ppUTxOState ::
   CanPrettyPrintLedgerState era =>
+  Hash.HashAlgorithm (CC.HASH (Crypto era)) =>
   UTxOState era ->
   PDoc
 ppUTxOState (UTxOState u dep fee ppup) =
@@ -684,7 +748,13 @@ ppUTxOState (UTxOState u dep fee ppup) =
       ("ppups", prettyA ppup)
     ]
 
-ppEpochState :: CanPrettyPrintLedgerState era => EpochState era -> PDoc
+ppEpochState ::
+  ( CanPrettyPrintLedgerState era,
+    Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    Hash.HashAlgorithm (CC.HASH (Crypto era))
+  )
+  => EpochState era
+  -> PDoc
 ppEpochState (EpochState acnt snap ls prev pp non) =
   ppRecord
     "EpochState"
@@ -696,7 +766,12 @@ ppEpochState (EpochState acnt snap ls prev pp non) =
       ("nonMyopic", ppNonMyopic non)
     ]
 
-ppNewEpochState :: CanPrettyPrintLedgerState era => NewEpochState era -> PDoc
+ppNewEpochState ::
+  ( CanPrettyPrintLedgerState era,
+    Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    Hash.HashAlgorithm (CC.HASH (Crypto era))
+  )
+  => NewEpochState era -> PDoc
 ppNewEpochState (NewEpochState enum prevB curB es rewup pool) =
   ppRecord
     "NewEpochState"
@@ -709,7 +784,11 @@ ppNewEpochState (NewEpochState enum prevB curB es rewup pool) =
     ]
 
 ppLedgerState ::
-  CanPrettyPrintLedgerState era =>
+  ( CanPrettyPrintLedgerState era,
+    Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    Hash.HashAlgorithm (CC.HASH (Crypto era))
+  )
+  =>
   LedgerState era ->
   PDoc
 ppLedgerState (LedgerState u d) =
@@ -722,10 +801,14 @@ ppLedgerState (LedgerState u d) =
 instance PrettyA AccountState where
   prettyA = ppAccountState
 
-instance PrettyA (DPState crypto) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+           Hash.HashAlgorithm (CC.HASH crypto)
+         ) => PrettyA (DPState crypto) where
   prettyA = ppDPState
 
-instance PrettyA (DState crypto) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+           Hash.HashAlgorithm (CC.HASH crypto)
+         ) => PrettyA (DState crypto) where
   prettyA = ppDState
 
 instance
@@ -744,10 +827,10 @@ instance
   where
   prettyA x = ppNewEpochState x
 
-instance PrettyA (FutureGenDeleg crypto) where
+instance Hash.HashAlgorithm (CC.ADDRHASH crypto) => PrettyA (FutureGenDeleg crypto) where
   prettyA = ppFutureGenDeleg
 
-instance PrettyA (InstantaneousRewards crypto) where
+instance Hash.HashAlgorithm (CC.ADDRHASH crypto) => PrettyA (InstantaneousRewards crypto) where
   prettyA = ppInstantaneousRewards
 
 instance
@@ -759,12 +842,16 @@ instance
   prettyA = ppLedgerState
 
 instance
-  PrettyA (PParamsDelta era) =>
+  ( Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    PrettyA (PParamsDelta era)
+  ) =>
   PrettyA (PPUPState era)
   where
   prettyA = ppPPUPState
 
-instance PrettyA (PState crypto) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+           Hash.HashAlgorithm (CC.HASH crypto)
+         ) => PrettyA (PState crypto) where
   prettyA = ppPState
 
 instance
@@ -781,7 +868,7 @@ instance
 ppPerformanceEstimate :: PerformanceEstimate -> PDoc
 ppPerformanceEstimate (PerformanceEstimate n) = ppSexp "PerformanceEstimate" [ppDouble n]
 
-ppNonMyopic :: NonMyopic crypto -> PDoc
+ppNonMyopic :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => NonMyopic crypto -> PDoc
 ppNonMyopic (NonMyopic m c) =
   ppRecord
     "NonMyopic"
@@ -819,13 +906,18 @@ instance PrettyA Likelihood where
 -- =================================
 -- Shelley.Spec.Ledger.EpochBoundary
 
-ppStake :: Stake crypto -> PDoc
+ppStake :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => Stake crypto -> PDoc
 ppStake (Stake m) = ppMap' (text "Stake") ppCredential ppCoin m
 
-ppBlocksMade :: BlocksMade crypto -> PDoc
+ppBlocksMade :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => BlocksMade crypto -> PDoc
 ppBlocksMade (BlocksMade m) = ppMap' (text "BlocksMade") ppKeyHash ppNatural m
 
-ppSnapShot :: SnapShot crypto -> PDoc
+ppSnapShot ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+    Hash.HashAlgorithm (CC.HASH crypto)
+  )
+  => SnapShot crypto
+  -> PDoc
 ppSnapShot (SnapShot st deleg params) =
   ppRecord
     "SnapShot"
@@ -834,7 +926,12 @@ ppSnapShot (SnapShot st deleg params) =
       ("poolParams", ppMap ppKeyHash ppPoolParams params)
     ]
 
-ppSnapShots :: SnapShots crypto -> PDoc
+ppSnapShots ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+    Hash.HashAlgorithm (CC.HASH crypto)
+  )
+  => SnapShots crypto
+  -> PDoc
 ppSnapShots (SnapShots mark set go fees) =
   ppRecord
     "SnapShots"
@@ -844,16 +941,20 @@ ppSnapShots (SnapShots mark set go fees) =
       ("fee", ppCoin fees)
     ]
 
-instance PrettyA (Stake crypto) where
+instance Hash.HashAlgorithm (CC.ADDRHASH crypto) => PrettyA (Stake crypto) where
   prettyA = ppStake
 
-instance PrettyA (BlocksMade crypto) where
+instance Hash.HashAlgorithm (CC.ADDRHASH crypto) => PrettyA (BlocksMade crypto) where
   prettyA = ppBlocksMade
 
-instance PrettyA (SnapShot crypto) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+           Hash.HashAlgorithm (CC.HASH crypto)
+         ) => PrettyA (SnapShot crypto) where
   prettyA = ppSnapShot
 
-instance PrettyA (SnapShots crypto) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH crypto),
+           Hash.HashAlgorithm (CC.HASH crypto)
+         ) => PrettyA (SnapShots crypto) where
   prettyA = ppSnapShots
 
 -- ============================
@@ -861,13 +962,15 @@ instance PrettyA (SnapShots crypto) where
 
 ppUTxO ::
   PrettyA (Core.TxOut era) =>
+  Hash.HashAlgorithm (CC.HASH (Crypto era)) =>
   UTxO era ->
   PDoc
 ppUTxO (UTxO m) = ppMap' (text "UTxO") ppTxIn prettyA m
 
 instance
-  PrettyA (Core.TxOut era) =>
-  PrettyA (UTxO era)
+  ( PrettyA (Core.TxOut era),
+    Hash.HashAlgorithm (CC.HASH (Crypto era))
+  ) => PrettyA (UTxO era)
   where
   prettyA = ppUTxO
 
@@ -916,7 +1019,7 @@ ppTx tx =
       ("metadata", ppStrictMaybe prettyA $ getField @"auxiliaryData" tx)
     ]
 
-ppBootstrapWitness :: Crypto crypto => BootstrapWitness crypto -> PDoc
+ppBootstrapWitness :: CC.Crypto crypto => BootstrapWitness crypto -> PDoc
 ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
   ppRecord
     "BootstrapWitness"
@@ -946,7 +1049,7 @@ instance
   where
   prettyA = ppTx
 
-instance Crypto crypto => PrettyA (BootstrapWitness crypto) where
+instance CC.Crypto crypto => PrettyA (BootstrapWitness crypto) where
   prettyA = ppBootstrapWitness
 
 instance (Era era, PrettyA (Core.Script era)) => PrettyA (WitnessSetHKD Identity era) where
@@ -955,16 +1058,16 @@ instance (Era era, PrettyA (Core.Script era)) => PrettyA (WitnessSetHKD Identity
 -- ============================
 --  Cardano.Ledger.AuxiliaryData
 
-ppSafeHash :: SafeHash crypto index -> PDoc
+ppSafeHash :: Hash.HashAlgorithm (CC.HASH crypto) => SafeHash crypto index -> PDoc
 ppSafeHash x = ppHash (extractHash x)
 
-ppAuxiliaryDataHash :: AuxiliaryDataHash c -> PDoc
+ppAuxiliaryDataHash :: Hash.HashAlgorithm (CC.HASH c) => AuxiliaryDataHash c -> PDoc
 ppAuxiliaryDataHash (AuxiliaryDataHash h) = ppSexp "AuxiliaryDataHash" [ppSafeHash h]
 
-instance PrettyA (AuxiliaryDataHash c) where
+instance Hash.HashAlgorithm (CC.HASH c) => PrettyA (AuxiliaryDataHash c) where
   prettyA = ppAuxiliaryDataHash
 
-instance PrettyA (SafeHash c i) where
+instance Hash.HashAlgorithm (CC.HASH c) => PrettyA (SafeHash c i) where
   prettyA = ppSafeHash
 
 -- ============================
@@ -979,7 +1082,7 @@ instance (Compactible a, PrettyA a) => PrettyA (CompactForm a) where
 -- ============================
 -- Shelley.Spec.Ledger.TxBody
 
-ppDelegation :: Delegation c -> PDoc
+ppDelegation :: Hash.HashAlgorithm (CC.ADDRHASH c) => Delegation c -> PDoc
 ppDelegation (Delegation orx ee) =
   ppRecord "Delegation" [("delegator", ppCredential orx), ("delegatee", ppKeyHash ee)]
 
@@ -996,7 +1099,12 @@ ppStakePoolRelay (SingleHostAddr port ip4 ip6) = ppSexp "SingleHostAddr" [ppStri
 ppStakePoolRelay (SingleHostName port dns) = ppSexp "SingleHostName" [ppStrictMaybe ppPort port, ppDnsName dns]
 ppStakePoolRelay (MultiHostName dns) = ppSexp "MultiHostName" [ppDnsName dns]
 
-ppPoolParams :: PoolParams c -> PDoc
+ppPoolParams ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => PoolParams c
+  -> PDoc
 ppPoolParams (PoolParams idx vrf pledge cost margin acnt owners relays md) =
   ppRecord
     "PoolParams"
@@ -1011,42 +1119,57 @@ ppPoolParams (PoolParams idx vrf pledge cost margin acnt owners relays md) =
       ("Metadata", ppStrictMaybe ppPoolMetadata md)
     ]
 
-ppWdrl :: Wdrl c -> PDoc
+ppWdrl :: Hash.HashAlgorithm (CC.ADDRHASH c) => Wdrl c -> PDoc
 ppWdrl (Wdrl m) = ppSexp "" [ppMap' (text "Wdr") ppRewardAcnt ppCoin m]
 
-ppTxId :: TxId c -> PDoc
+ppTxId :: Hash.HashAlgorithm (CC.HASH c) => TxId c -> PDoc
 ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
 
-ppTxIn :: TxIn c -> PDoc
+ppTxIn ::  Hash.HashAlgorithm (CC.HASH c) =>TxIn c -> PDoc
 ppTxIn (TxInCompact txid word) = ppSexp "TxIn" [ppTxId txid, ppWord64 word]
 
 ppTxOut :: (Era era, PrettyA (Core.Value era)) => TxOut era -> PDoc
 ppTxOut (TxOutCompact caddr cval) = ppSexp "TxOut" [ppCompactAddr caddr, ppCompactForm prettyA cval]
 
-ppDelegCert :: DelegCert c -> PDoc
+ppDelegCert :: Hash.HashAlgorithm (CC.ADDRHASH c) => DelegCert c -> PDoc
 ppDelegCert (RegKey x) = ppSexp "RegKey" [ppCredential x]
 ppDelegCert (DeRegKey x) = ppSexp "DeRegKey" [ppCredential x]
 ppDelegCert (Delegate x) = ppSexp "Delegate" [ppDelegation x]
 
-ppPoolCert :: PoolCert c -> PDoc
+ppPoolCert ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => PoolCert c
+  -> PDoc
 ppPoolCert (RegPool x) = ppSexp "RegPool" [ppPoolParams x]
 ppPoolCert (RetirePool x y) = ppSexp "RetirePool" [ppKeyHash x, ppEpochNo y]
 
-ppGenesisDelegCert :: GenesisDelegCert c -> PDoc
+ppGenesisDelegCert ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => GenesisDelegCert c
+  -> PDoc
 ppGenesisDelegCert (GenesisDelegCert a b1 c) = ppSexp "GenesisDelgCert" [ppKeyHash a, ppKeyHash b1, ppHash c]
 
 ppMIRPot :: MIRPot -> PDoc
 ppMIRPot ReservesMIR = text "Reserves"
 ppMIRPot TreasuryMIR = text "Treasury"
 
-ppMIRTarget :: MIRTarget c -> PDoc
+ppMIRTarget :: Hash.HashAlgorithm (CC.ADDRHASH c) => MIRTarget c -> PDoc
 ppMIRTarget (StakeAddressesMIR rews) = ppMap ppCredential ppDeltaCoin rews
 ppMIRTarget (SendToOppositePotMIR c) = ppCoin c
 
-ppMIRCert :: MIRCert c -> PDoc
+ppMIRCert :: Hash.HashAlgorithm (CC.ADDRHASH c) => MIRCert c -> PDoc
 ppMIRCert (MIRCert pot vs) = ppSexp "MirCert" [ppMIRPot pot, ppMIRTarget vs]
 
-ppDCert :: DCert c -> PDoc
+ppDCert ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => DCert c
+  -> PDoc
 ppDCert (DCertDeleg x) = ppSexp "DCertDeleg" [ppDelegCert x]
 ppDCert (DCertPool x) = ppSexp "DCertPool" [ppPoolCert x]
 ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppGenesisDelegCert x]
@@ -1055,6 +1178,8 @@ ppDCert (DCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
 ppTxBody ::
   PrettyA (Core.TxOut era) =>
   PrettyA (PParamsDelta era) =>
+  Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)) =>
+  Hash.HashAlgorithm (CC.HASH (Crypto era)) =>
   TxBody era ->
   PDoc
 ppTxBody (TxBodyConstr (Memo (TxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
@@ -1070,13 +1195,13 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
       ("metadatahash", ppStrictMaybe ppAuxiliaryDataHash mdh)
     ]
 
-ppWitVKey :: (Typeable kr, Crypto c) => WitVKey kr c -> PDoc
+ppWitVKey :: (Typeable kr, CC.Crypto c) => WitVKey kr c -> PDoc
 ppWitVKey (WitVKey key sig) = ppRecord "WitVKey" [("key", ppVKey key), ("signature", ppSignedDSIGN sig)]
 
-ppStakeCreds :: StakeCreds c -> PDoc
+ppStakeCreds :: Hash.HashAlgorithm (CC.ADDRHASH c) => StakeCreds c -> PDoc
 ppStakeCreds (StakeCreds m) = ppSexp "" [ppMap' (text "StakeCreds") ppCredential ppSlotNo m]
 
-instance PrettyA (Delegation c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (Delegation c) where
   prettyA = ppDelegation
 
 instance PrettyA PoolMetadata where
@@ -1085,49 +1210,59 @@ instance PrettyA PoolMetadata where
 instance PrettyA StakePoolRelay where
   prettyA = ppStakePoolRelay
 
-instance PrettyA (PoolParams c) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH c),
+           Hash.HashAlgorithm (CC.HASH c)
+         ) => PrettyA (PoolParams c) where
   prettyA = ppPoolParams
 
-instance PrettyA (Wdrl c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (Wdrl c) where
   prettyA = ppWdrl
 
-instance PrettyA (TxId c) where
+instance Hash.HashAlgorithm (CC.HASH c) => PrettyA (TxId c) where
   prettyA = ppTxId
 
-instance PrettyA (TxIn c) where
+instance Hash.HashAlgorithm (CC.HASH c) => PrettyA (TxIn c) where
   prettyA = ppTxIn
 
 instance (Era era, PrettyA (Core.Value era)) => PrettyA (TxOut era) where
   prettyA = ppTxOut
 
-instance PrettyA (DelegCert c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (DelegCert c) where
   prettyA = ppDelegCert
 
-instance PrettyA (PoolCert c) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH c),
+           Hash.HashAlgorithm (CC.HASH c)
+         ) => PrettyA (PoolCert c) where
   prettyA = ppPoolCert
 
-instance PrettyA (GenesisDelegCert c) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH c),
+           Hash.HashAlgorithm (CC.HASH c)
+         ) => PrettyA (GenesisDelegCert c) where
   prettyA = ppGenesisDelegCert
 
 instance PrettyA MIRPot where
   prettyA = ppMIRPot
 
-instance PrettyA (MIRCert c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (MIRCert c) where
   prettyA = ppMIRCert
 
-instance PrettyA (DCert c) where
+instance ( Hash.HashAlgorithm (CC.ADDRHASH c),
+           Hash.HashAlgorithm (CC.HASH c)
+         ) => PrettyA (DCert c) where
   prettyA = ppDCert
 
 instance
-  (PrettyA (Core.TxOut era), PrettyA (PParamsDelta era)) =>
-  PrettyA (TxBody era)
+  ( PrettyA (Core.TxOut era), PrettyA (PParamsDelta era),
+    Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    Hash.HashAlgorithm (CC.HASH (Crypto era))
+  ) => PrettyA (TxBody era)
   where
   prettyA = ppTxBody
 
-instance (Typeable kr, Crypto c) => PrettyA (WitVKey kr c) where
+instance (Typeable kr, CC.Crypto c) => PrettyA (WitVKey kr c) where
   prettyA = ppWitVKey
 
-instance Crypto c => PrettyA (StakeCreds c) where
+instance CC.Crypto c => PrettyA (StakeCreds c) where
   prettyA = ppStakeCreds
 
 -- ===========================================
@@ -1147,10 +1282,10 @@ instance PrettyA IPv6 where
 -- ====================================================
 -- Shelley.Spec.Ledger.CompactAddr
 
-ppCompactAddr :: Crypto c => CompactAddr c -> PDoc
+ppCompactAddr :: CC.Crypto c => CompactAddr c -> PDoc
 ppCompactAddr x = ppAddr (decompactAddr x)
 
-instance Crypto c => PrettyA (CompactAddr c) where
+instance CC.Crypto c => PrettyA (CompactAddr c) where
   prettyA = ppCompactAddr
 
 -- ================================================
@@ -1207,28 +1342,51 @@ ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mu
   where
     lift pp x = ppStrictMaybe pp x
 
-ppUpdate :: PrettyA (PParamsDelta era) => Update era -> PDoc
+ppUpdate ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    PrettyA (PParamsDelta era)
+  )
+  => Update era
+  -> PDoc
 ppUpdate (Update prop epn) = ppSexp "Update" [ppProposedPPUpdates prop, ppEpochNo epn]
 
-ppProposedPPUpdates :: PrettyA (PParamsDelta era) => ProposedPPUpdates era -> PDoc
+ppProposedPPUpdates ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH (Crypto era)),
+    PrettyA (PParamsDelta era)
+  )
+  => ProposedPPUpdates era
+  -> PDoc
 ppProposedPPUpdates (ProposedPPUpdates m) = ppMap ppKeyHash prettyA m
 
-ppPPUpdateEnv :: PPUpdateEnv c -> PDoc
+ppPPUpdateEnv ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => PPUpdateEnv c
+  -> PDoc
 ppPPUpdateEnv (PPUpdateEnv slot gd) =
   ppSexp
     "PPUpdateEnv"
     [ppSlotNo slot, ppGenDelegs gd]
 
-instance PrettyA (PPUpdateEnv c) where
+instance
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  ) => PrettyA (PPUpdateEnv c) where
   prettyA = ppPPUpdateEnv
 
 instance
-  PrettyA (PParamsDelta e) =>
+  ( Hash.HashAlgorithm (CC.ADDRHASH (Crypto e)),
+    PrettyA (PParamsDelta e)
+  ) =>
   PrettyA (ProposedPPUpdates e)
   where
   prettyA = ppProposedPPUpdates
 
-instance PrettyA (PParamsDelta e) => PrettyA (Update e) where
+instance
+  ( Hash.HashAlgorithm (CC.ADDRHASH (Crypto e)),
+    PrettyA (PParamsDelta e)
+  ) => PrettyA (Update e) where
   prettyA = ppUpdate
 
 instance PrettyA (PParams' StrictMaybe e) where
@@ -1284,47 +1442,47 @@ instance PrettyA UnparsedFields where
 -- ===========================================
 -- Shelley.Spec.Ledger.Address
 
-ppAddr :: Addr c -> PDoc
+ppAddr :: Hash.HashAlgorithm (CC.ADDRHASH c) => Addr c -> PDoc
 ppAddr (Addr net cred ref) = ppSexp "Addr" [ppNetwork net, ppCredential cred, ppStakeReference ref]
 ppAddr (AddrBootstrap x) = ppSexp' mempty [ppBootstrapAddress x]
 
 ppHDAddressPayload :: HDAddressPayload -> PDoc
 ppHDAddressPayload (HDAddressPayload x) = ppLong x
 
-ppRewardAcnt :: RewardAcnt c -> PDoc
+ppRewardAcnt :: Hash.HashAlgorithm (CC.ADDRHASH c) => RewardAcnt c -> PDoc
 ppRewardAcnt (RewardAcnt net cred) = ppRecord "RewardAcnt" [("network", ppNetwork net), ("credential", ppCredential cred)]
 
-instance PrettyA (Addr c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (Addr c) where
   prettyA = ppAddr
 
-instance PrettyA (RewardAcnt c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (RewardAcnt c) where
   prettyA = ppRewardAcnt
 
 -- ===========================================
 -- Shelley.Spec.Ledger.Credential
 
-ppCredential :: Credential keyrole c -> PDoc
+ppCredential :: Hash.HashAlgorithm (CC.ADDRHASH c) => Credential keyrole c -> PDoc
 ppCredential (ScriptHashObj (ScriptHash x)) = ppSexp "ScriptCred" [ppHash x]
 ppCredential (KeyHashObj (KeyHash x)) = ppSexp "KeyCred" [ppHash x]
 
 ppPtr :: Ptr -> PDoc
 ppPtr (Ptr slot n m) = ppSexp "Ptr" [ppSlotNo slot, pretty n, pretty m]
 
-ppStakeReference :: StakeReference c -> PDoc
+ppStakeReference :: Hash.HashAlgorithm (CC.ADDRHASH c) => StakeReference c -> PDoc
 ppStakeReference (StakeRefBase x) = ppSexp "BaseRef" [ppCredential x]
 ppStakeReference (StakeRefPtr x) = ppSexp "PtrRef" [ppPtr x]
 ppStakeReference StakeRefNull = text "NullRef"
 
-ppGenesisCredential :: GenesisCredential c -> PDoc
+ppGenesisCredential :: Hash.HashAlgorithm (CC.ADDRHASH c) => GenesisCredential c -> PDoc
 ppGenesisCredential (GenesisCredential (KeyHash x)) = ppSexp "GenesisCredential" [ppHash x]
 
-instance PrettyA (Credential r c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (Credential r c) where
   prettyA = ppCredential
 
-instance PrettyA (StakeReference c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (StakeReference c) where
   prettyA = ppStakeReference
 
-instance PrettyA (GenesisCredential c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (GenesisCredential c) where
   prettyA = ppGenesisCredential
 
 instance PrettyA Ptr where
@@ -1333,19 +1491,19 @@ instance PrettyA Ptr where
 -- ===========================================
 -- Shelley.Spec.Ledger.Scripts
 
-ppMultiSig :: Crypto crypto => MultiSig crypto -> PDoc
+ppMultiSig :: CC.Crypto crypto => MultiSig crypto -> PDoc
 ppMultiSig (RequireSignature hk) = ppSexp "Require" [ppKeyHash hk]
 ppMultiSig (RequireAllOf ps) = ppSexp "AllOf" (map ppMultiSig ps)
 ppMultiSig (RequireAnyOf ps) = ppSexp "AnyOf" (map ppMultiSig ps)
 ppMultiSig (RequireMOf m ps) = ppSexp "MOf" (pretty m : map ppMultiSig ps)
 
-ppScriptHash :: ScriptHash crypto -> PDoc
+ppScriptHash :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => ScriptHash crypto -> PDoc
 ppScriptHash (ScriptHash h) = ppSexp "ScriptHash" [ppHash h]
 
-instance PrettyA (ScriptHash c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (ScriptHash c) where
   prettyA = ppScriptHash
 
-instance Crypto c => PrettyA (MultiSig c) where
+instance CC.Crypto c => PrettyA (MultiSig c) where
   prettyA = ppMultiSig
 
 -- ====================================================
@@ -1387,7 +1545,7 @@ instance PrettyA BlockNo where
 ppKESPeriod :: KESPeriod -> PDoc
 ppKESPeriod (KESPeriod x) = text "KESPeriod" <+> pretty x
 
-ppOCertEnv :: OCertEnv crypto -> PDoc
+ppOCertEnv :: Hash.HashAlgorithm (CC.ADDRHASH crypto) => OCertEnv crypto -> PDoc
 ppOCertEnv (OCertEnv ps ds) =
   ppRecord
     "OCertEnv"
@@ -1395,7 +1553,7 @@ ppOCertEnv (OCertEnv ps ds) =
       ("ocertEnvGenDelegs", ppSet ppKeyHash ds)
     ]
 
-ppOCert :: forall crypto. Crypto crypto => OCert crypto -> PDoc
+ppOCert :: forall crypto. CC.Crypto crypto => OCert crypto -> PDoc
 ppOCert (OCert vk n per sig) =
   ppRecord
     "OCert"
@@ -1405,29 +1563,29 @@ ppOCert (OCert vk n per sig) =
       ("ocertSigma", ppSignedDSIGN sig)
     ]
 
-ppOCertSignable :: forall crypto. Crypto crypto => OCertSignable crypto -> PDoc
+ppOCertSignable :: forall crypto. CC.Crypto crypto => OCertSignable crypto -> PDoc
 ppOCertSignable (OCertSignable verkes w per) =
   ppSexp "OCertSignable" [ppVerKeyKES (Proxy @crypto) verkes, pretty w, ppKESPeriod per]
 
 instance PrettyA KESPeriod where
   prettyA = ppKESPeriod
 
-instance PrettyA (OCertEnv c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (OCertEnv c) where
   prettyA = ppOCertEnv
 
-instance Crypto c => PrettyA (OCert c) where
+instance CC.Crypto c => PrettyA (OCert c) where
   prettyA = ppOCert
 
-instance Crypto c => PrettyA (OCertSignable c) where
+instance CC.Crypto c => PrettyA (OCertSignable c) where
   prettyA = ppOCertSignable
 
 -- ==========================================
 --  Cardano.Crypto.Hash
 
-ppHash :: Hash.Hash a b -> PDoc
+ppHash :: Hash.HashAlgorithm a => Hash.Hash a b -> PDoc
 ppHash x = text "#" <> reAnnotate (Width 5 :) (viaShow x)
 
-instance PrettyA (Hash.Hash a b) where
+instance Hash.HashAlgorithm a => PrettyA (Hash.Hash a b) where
   prettyA = ppHash
 
 -- ==========================================
@@ -1523,45 +1681,63 @@ instance PrettyA DnsName where
 -- ===========================================
 -- Shelley.Spec.Ledger.Keys
 
-ppVKey :: Crypto c => VKey r c -> PDoc
+ppVKey :: CC.Crypto c => VKey r c -> PDoc
 ppVKey (VKey x) = reAnnotate (Width 5 :) (viaShow x)
 
-ppKeyPair :: Crypto c => KeyPair r c -> PDoc
+ppKeyPair :: CC.Crypto c => KeyPair r c -> PDoc
 ppKeyPair (KeyPair x y) =
   ppRecord "KeyPair" [("vKey", ppVKey x), ("sKey", reAnnotate (Width 5 :) (viaShow y))]
 
-ppKeyHash :: KeyHash x c -> PDoc
+ppKeyHash :: Hash.HashAlgorithm (CC.ADDRHASH c) => KeyHash x c -> PDoc
 ppKeyHash (KeyHash x) = ppSexp "KeyHash" [ppHash x]
 
-ppGenDelegPair :: GenDelegPair c -> PDoc
+ppGenDelegPair ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => GenDelegPair c
+  -> PDoc
 ppGenDelegPair (GenDelegPair (KeyHash x) y) =
   ppRecord "GenDelegPair" [("KeyHash", ppHash x), ("VrfHash", ppHash y)]
 
-ppGKeys :: Crypto c => GKeys c -> PDoc
+ppGKeys :: CC.Crypto c => GKeys c -> PDoc
 ppGKeys (GKeys x) = ppSexp "GKeys" [ppSet ppVKey x]
 
-ppVerKeyKES :: forall crypto. Crypto crypto => Proxy crypto -> VerKeyKES crypto -> PDoc
+ppVerKeyKES :: forall crypto. CC.Crypto crypto => Proxy crypto -> VerKeyKES crypto -> PDoc
 ppVerKeyKES Proxy x = reAnnotate (Width 5 :) (viaShow x)
 
-ppGenDelegs :: GenDelegs c -> PDoc
+ppGenDelegs ::
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => GenDelegs c
+  -> PDoc
 ppGenDelegs (GenDelegs m) = ppSexp "GenDelegs" [ppMap ppKeyHash ppGenDelegPair m]
 
-instance Crypto c => PrettyA (VKey r c) where
+instance CC.Crypto c => PrettyA (VKey r c) where
   prettyA = ppVKey
 
-instance Crypto c => PrettyA (KeyPair r c) where
+instance CC.Crypto c => PrettyA (KeyPair r c) where
   prettyA = ppKeyPair
 
-instance PrettyA (KeyHash x c) where
+instance Hash.HashAlgorithm (CC.ADDRHASH c) => PrettyA (KeyHash x c) where
   prettyA = ppKeyHash
 
-instance Crypto c => PrettyA (GKeys c) where
+instance CC.Crypto c => PrettyA (GKeys c) where
   prettyA = ppGKeys
 
-instance PrettyA (GenDelegPair c) where
+instance
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => PrettyA (GenDelegPair c) where
   prettyA = ppGenDelegPair
 
-instance PrettyA (GenDelegs c) where
+instance
+  ( Hash.HashAlgorithm (CC.ADDRHASH c),
+    Hash.HashAlgorithm (CC.HASH c)
+  )
+  => PrettyA (GenDelegs c) where
   prettyA = ppGenDelegs
 
 -- ======================================================

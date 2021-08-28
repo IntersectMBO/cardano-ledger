@@ -19,6 +19,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, addDeltaCoin)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (dom, eval, (∪+), (◁))
@@ -68,7 +69,10 @@ data MirEvent era
 
 instance NoThunks (MirPredicateFailure era)
 
-instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
+instance ( Typeable era,
+           Default (EpochState era),
+           CC.Crypto (Crypto era)
+         ) => STS (MIR era) where
   type State (MIR era) = EpochState era
   type Signal (MIR era) = ()
   type Environment (MIR era) = ()
@@ -87,7 +91,7 @@ instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
         )
     ]
 
-mirTransition :: forall era. TransitionRule (MIR era)
+mirTransition :: forall era. CC.Crypto (Crypto era) => TransitionRule (MIR era)
 mirTransition = do
   TRC
     ( _,

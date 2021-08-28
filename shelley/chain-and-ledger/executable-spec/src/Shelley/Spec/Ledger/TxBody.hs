@@ -109,7 +109,7 @@ import Cardano.Ledger.Credential
     Ptr (..),
     StakeCredential,
   )
-import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, Crypto)
+import qualified Cardano.Ledger.Crypto as CC (ADDRHASH, HASH, Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Keys
@@ -209,7 +209,7 @@ import Shelley.Spec.Ledger.PParams (Update)
 
 -- ========================================================================
 
-instance HasExp (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
+instance CC.Crypto era => HasExp (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
   toExp (StakeCreds x) = Base MapR x
 
 instance Embed (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
@@ -223,7 +223,7 @@ data Delegation crypto = Delegation
   }
   deriving (Eq, Generic, Show, NFData)
 
-instance NoThunks (Delegation crypto)
+instance CC.Crypto crypto => NoThunks (Delegation crypto)
 
 data PoolMetadata = PoolMetadata
   { _poolMDUrl :: !Url,
@@ -367,9 +367,9 @@ data PoolParams crypto = PoolParams
   deriving (ToCBOR) via CBORGroup (PoolParams crypto)
   deriving (FromCBOR) via CBORGroup (PoolParams crypto)
 
-instance NoThunks (PoolParams crypto)
+instance CC.Crypto crypto => NoThunks (PoolParams crypto)
 
-deriving instance NFData (PoolParams crypto)
+deriving instance CC.Crypto crypto => NFData (PoolParams crypto)
 
 newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
   deriving (Show, Eq, Generic)
@@ -421,8 +421,16 @@ instance CC.Crypto crypto => FromJSON (PoolParams crypto) where
 
 -- | A unique ID of a transaction, which is computable from the transaction.
 newtype TxId crypto = TxId {_unTxId :: SafeHash crypto EraIndependentTxBody}
-  deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks, HeapWords)
+  deriving (Generic)
+
+type HashConstraint crypto = HS.HashAlgorithm (CC.HASH crypto)
+
+deriving instance HashConstraint crypto => Show (TxId crypto)
+deriving instance HashConstraint crypto => Eq (TxId crypto)
+deriving instance HashConstraint crypto => Ord (TxId crypto)
+
+deriving newtype instance HashConstraint crypto => NoThunks (TxId crypto)
+deriving newtype instance HashConstraint crypto => HeapWords (TxId crypto)
 
 deriving newtype instance CC.Crypto crypto => ToCBOR (TxId crypto)
 
@@ -430,7 +438,7 @@ deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
 
 deriving newtype instance CC.Crypto crypto => NFData (TxId crypto)
 
-instance HeapWords (TxIn crypto) where
+instance HashConstraint crypto => HeapWords (TxIn crypto) where
   heapWords (TxInCompact txid ix) = 3 + HW.heapWordsUnpacked txid + HW.heapWordsUnpacked ix
 
 type TransTxId (c :: Type -> Constraint) era =
@@ -445,7 +453,7 @@ type TransTxId (c :: Type -> Constraint) era =
   )
 
 -- | The input of a UTxO.
-data TxIn crypto = TxInCompact {-# UNPACK #-} !(TxId crypto) {-# UNPACK #-} !Word64
+data TxIn crypto = TxInCompact !(TxId crypto) {-# UNPACK #-} !Word64
   deriving (Generic)
 
 pattern TxIn ::
@@ -461,15 +469,15 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
-deriving instance Ord (TxIn crypto)
+deriving instance HashConstraint crypto => Ord (TxIn crypto)
 
-deriving instance Eq (TxIn crypto)
+deriving instance HashConstraint crypto => Eq (TxIn crypto)
 
-deriving instance Show (TxIn crypto)
+deriving instance HashConstraint crypto => Show (TxIn crypto)
 
-deriving instance CC.Crypto crypto => NFData (TxIn crypto)
+deriving instance HashConstraint crypto => CC.Crypto crypto => NFData (TxIn crypto)
 
-instance NoThunks (TxIn crypto)
+instance HashConstraint crypto => NoThunks (TxIn crypto)
 
 -- | The output of a UTxO.
 data TxOut era
@@ -605,7 +613,7 @@ data MIRTarget crypto
   | SendToOppositePotMIR Coin
   deriving (Show, Generic, Eq, NFData)
 
-deriving instance NoThunks (MIRTarget crypto)
+deriving instance CC.Crypto crypto => NoThunks (MIRTarget crypto)
 
 instance
   CC.Crypto crypto =>
@@ -656,15 +664,15 @@ data DCert crypto
   | DCertMir !(MIRCert crypto)
   deriving (Show, Generic, Eq, NFData)
 
-instance NoThunks (DelegCert crypto)
+instance CC.Crypto crypto => NoThunks (DelegCert crypto)
 
-instance NoThunks (PoolCert crypto)
+instance CC.Crypto crypto => NoThunks (PoolCert crypto)
 
-instance NoThunks (GenesisDelegCert crypto)
+instance CC.Crypto crypto => NoThunks (GenesisDelegCert crypto)
 
-instance NoThunks (MIRCert crypto)
+instance CC.Crypto crypto => NoThunks (MIRCert crypto)
 
-instance NoThunks (DCert crypto)
+instance CC.Crypto crypto => NoThunks (DCert crypto)
 
 -- ==============================
 -- The underlying type for TxBody
@@ -681,7 +689,7 @@ data TxBodyRaw era = TxBodyRaw
   }
   deriving (Generic, Typeable)
 
-deriving instance TransTxBody NoThunks era => NoThunks (TxBodyRaw era)
+deriving instance CC.Crypto (Crypto era) => TransTxBody NoThunks era => NoThunks (TxBodyRaw era)
 
 type TransTxBody (c :: Type -> Constraint) era =
   ( c (Core.TxOut era),
@@ -806,6 +814,7 @@ newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving newtype (SafeToHash)
 
 deriving newtype instance
+  CC.Crypto (Crypto era) =>
   (TransTxBody NoThunks era, Typeable era) => NoThunks (TxBody era)
 
 deriving newtype instance

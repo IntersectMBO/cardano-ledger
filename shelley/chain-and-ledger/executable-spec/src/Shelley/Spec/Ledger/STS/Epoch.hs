@@ -22,6 +22,7 @@ where
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Slot (EpochNo)
@@ -145,7 +146,8 @@ epochTransition ::
     State (Core.EraRule "UPEC" era) ~ UpecState era,
     Signal (Core.EraRule "UPEC" era) ~ (),
     HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    CC.Crypto (Crypto era)
   ) =>
   TransitionRule (EPOCH era)
 epochTransition = do

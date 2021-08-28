@@ -230,8 +230,14 @@ hashSignature = Hash.hashWith (DSIGN.rawSerialiseSigDSIGN . coerce)
 -- | Discriminated hash of public Key
 newtype KeyHash (discriminator :: KeyRole) crypto
   = KeyHash (Hash.Hash (ADDRHASH crypto) (DSIGN.VerKeyDSIGN (DSIGN crypto)))
-  deriving (Show, Eq, Ord)
-  deriving newtype (NFData, NoThunks, Generic)
+  deriving (Generic)
+
+deriving instance Crypto crypto => Show (KeyHash disc crypto)
+deriving instance Crypto crypto => Eq (KeyHash disc crypto)
+deriving instance Crypto crypto => Ord (KeyHash disc crypto)
+
+deriving newtype instance Crypto crypto => NFData (KeyHash disc crypto)
+deriving newtype instance Crypto crypto => NoThunks (KeyHash disc crypto)
 
 deriving instance
   (Crypto crypto, Typeable disc) =>
@@ -241,13 +247,17 @@ deriving instance
   (Crypto crypto, Typeable disc) =>
   FromCBOR (KeyHash disc crypto)
 
-deriving newtype instance ToJSONKey (KeyHash disc crypto)
+deriving newtype instance
+  (Crypto crypto) =>
+  ToJSONKey (KeyHash disc crypto)
 
 deriving newtype instance
   (Crypto crypto) =>
   FromJSONKey (KeyHash disc crypto)
 
-deriving newtype instance ToJSON (KeyHash disc crypto)
+deriving newtype instance
+  (Crypto crypto) =>
+  ToJSON (KeyHash disc crypto)
 
 deriving newtype instance
   (Crypto crypto) =>
@@ -274,10 +284,6 @@ type KESignable c = KES.Signable (KES c)
 --------------------------------------------------------------------------------
 
 type VRFSignable c = VRF.Signable (VRF c)
-
---------------------------------------------------------------------------------
--- Genesis delegation
---
 -- TODO should this really live in here?
 --------------------------------------------------------------------------------
 
@@ -285,11 +291,15 @@ data GenDelegPair crypto = GenDelegPair
   { genDelegKeyHash :: !(KeyHash 'GenesisDelegate crypto),
     genDelegVrfHash :: !(Hash crypto (VerKeyVRF crypto))
   }
-  deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (GenDelegPair crypto)
+deriving instance Crypto crypto => Show (GenDelegPair crypto)
+deriving instance Crypto crypto => Eq (GenDelegPair crypto)
+deriving instance Crypto crypto => Ord (GenDelegPair crypto)
+deriving instance Crypto crypto => Generic (GenDelegPair crypto)
 
-instance NFData (GenDelegPair crypto)
+instance Crypto crypto => NoThunks (GenDelegPair crypto)
+
+instance Crypto crypto => NFData (GenDelegPair crypto)
 
 instance Crypto crypto => ToCBOR (GenDelegPair crypto) where
   toCBOR (GenDelegPair hk vrf) =
@@ -319,8 +329,16 @@ instance Crypto crypto => FromJSON (GenDelegPair crypto) where
 newtype GenDelegs crypto = GenDelegs
   { unGenDelegs :: Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
   }
-  deriving (Eq, FromCBOR, NoThunks, NFData, Generic)
+  deriving (Eq, FromCBOR, Generic)
   deriving (Show) via Quiet (GenDelegs crypto)
+
+deriving instance
+  (Crypto crypto) =>
+  NoThunks (GenDelegs crypto)
+
+deriving instance
+  (Crypto crypto) =>
+  NFData (GenDelegs crypto)
 
 deriving instance
   (Crypto crypto) =>

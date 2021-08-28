@@ -34,6 +34,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
@@ -110,12 +111,14 @@ data DelegsPredicateFailure era
 newtype DelegsEvent era = DelplEvent (Event (Core.EraRule "DELPL" era))
 
 deriving stock instance
-  ( Show (PredicateFailure (Core.EraRule "DELPL" era))
+  ( Show (PredicateFailure (Core.EraRule "DELPL" era)),
+    CC.Crypto (Crypto era)
   ) =>
   Show (DelegsPredicateFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (Core.EraRule "DELPL" era))
+  ( Eq (PredicateFailure (Core.EraRule "DELPL" era)),
+    CC.Crypto (Crypto era)
   ) =>
   Eq (DelegsPredicateFailure era)
 
@@ -125,7 +128,8 @@ instance
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
+    CC.Crypto (Crypto era)
   ) =>
   STS (DELEGS era)
   where
@@ -141,7 +145,8 @@ instance
   transitionRules = [delegsTransition]
 
 instance
-  ( NoThunks (PredicateFailure (Core.EraRule "DELPL" era))
+  ( NoThunks (PredicateFailure (Core.EraRule "DELPL" era)),
+    CC.Crypto (Crypto era)
   ) =>
   NoThunks (DelegsPredicateFailure era)
 

@@ -42,6 +42,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
@@ -127,7 +128,7 @@ data UtxoEnv era
       (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
       (GenDelegs (Crypto era))
 
-deriving instance Show (Core.PParams era) => Show (UtxoEnv era)
+deriving instance (CC.Crypto (Crypto era), Show (Core.PParams era)) => Show (UtxoEnv era)
 
 data UtxoEvent era
   = TotalDeposits Coin

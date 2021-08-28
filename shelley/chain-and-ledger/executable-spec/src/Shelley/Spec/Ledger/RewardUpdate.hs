@@ -96,7 +96,7 @@ data RewardAns c
   deriving (Show, Eq, Generic)
   deriving (NFData)
 
-instance NoThunks (RewardAns crypto)
+instance CC.Crypto crypto => NoThunks (RewardAns crypto)
 
 instance CC.Crypto c => ToCBOR (RewardAns c) where
   toCBOR (RewardAns x y) = toCBOR (x, y)
@@ -123,9 +123,9 @@ data RewardUpdate crypto = RewardUpdate
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (RewardUpdate crypto)
+instance CC.Crypto crypto => NoThunks (RewardUpdate crypto)
 
-instance NFData (RewardUpdate crypto)
+instance CC.Crypto crypto => NFData (RewardUpdate crypto)
 
 instance
   CC.Crypto crypto =>
@@ -173,9 +173,9 @@ data RewardSnapShot crypto = RewardSnapShot
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (RewardSnapShot crypto)
+instance CC.Crypto crypto => NoThunks (RewardSnapShot crypto)
 
-instance NFData (RewardSnapShot crypto)
+instance CC.Crypto crypto => NFData (RewardSnapShot crypto)
 
 instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
   toCBOR (RewardSnapShot ss a0 nopt ver nm dr1 r dt1 tot pot) =
@@ -229,7 +229,7 @@ data FreeVars crypto = FreeVars
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
 
-instance NFData (FreeVars crypto)
+instance CC.Crypto crypto => NFData (FreeVars crypto)
 
 instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
   toCBOR
@@ -283,7 +283,7 @@ instance (CC.Crypto crypto) => FromCBOR (FreeVars crypto) where
 
 -- | The function to call on each reward update pulse. Called by the pulser.
 rewardStakePool ::
-  Monad m =>
+  (CC.Crypto c, Monad m) =>
   FreeVars c ->
   RewardAns c ->
   PoolParams c ->
@@ -346,7 +346,7 @@ data RewardPulser c (m :: Type -> Type) ans where
 -- type:  (RewardPulser c (ProvM (KeyHashPoolProvenance c) ShelleyBase) (RewardAns c))
 -- All of the instances are at that type. Though only the CBOR instances need make that explicit.
 
-instance Pulsable (RewardPulser crypto) where
+instance CC.Crypto crypto => Pulsable (RewardPulser crypto) where
   done (RSLP _n _free zs _ans) = null zs
   current (RSLP _ _ _ ans) = ans
   pulseM ll@(RSLP _ _ StrictSeq.Empty _) = pure ll
@@ -356,11 +356,11 @@ instance Pulsable (RewardPulser crypto) where
     pure (RSLP n free balance' ans')
   completeM (RSLP _ free balance ans) = foldlM' (rewardStakePool free) ans balance
 
-deriving instance Eq ans => Eq (RewardPulser c m ans)
+deriving instance (CC.Crypto c, Eq ans) => Eq (RewardPulser c m ans)
 
-deriving instance Show ans => Show (RewardPulser c m ans)
+deriving instance (CC.Crypto c, Show ans) => Show (RewardPulser c m ans)
 
-instance NoThunks (Pulser c) where
+instance CC.Crypto c => NoThunks (Pulser c) where
   showTypeOf _ = "RewardPulser"
   wNoThunks ctxt (RSLP n free balance ans) =
     allNoThunks
@@ -370,7 +370,7 @@ instance NoThunks (Pulser c) where
         noThunks ctxt ans
       ]
 
-instance NFData (Pulser c) where
+instance CC.Crypto c => NFData (Pulser c) where
   rnf (RSLP n1 c1 b1 a1) = seq (rnf n1) (seq (rnf c1) (seq (rnf b1) (rnf a1)))
 
 instance (CC.Crypto c) => ToCBOR (Pulser c) where
@@ -402,7 +402,7 @@ instance (CC.Crypto crypto) => FromCBOR (PulsingRewUpdate crypto) where
       decPS 1 = SumD Complete <! From
       decPS n = Invalid n
 
-instance NFData (PulsingRewUpdate crypto)
+instance CC.Crypto crypto => NFData (PulsingRewUpdate crypto)
 
 -- ====================================================================
 -- Some generic lifting functions to lift one provenance computation
@@ -420,11 +420,15 @@ pulseProvM initial combine tma = liftProv (pulseM tma) initial (\_ s1 s2 -> comb
 
 -- | lift a pulseM function from (KeyHashPoolProvenance (Crypto era))
 --   provenance to (RewardProvenance (Crypto er)) provenance
-pulseOther :: Pulser crypto -> ProvM (RP.RewardProvenance crypto) ShelleyBase (Pulser crypto)
+pulseOther ::
+  CC.Crypto crypto =>
+  Pulser crypto ->
+  ProvM (RP.RewardProvenance crypto) ShelleyBase (Pulser crypto)
 pulseOther = pulseProvM Map.empty incrementProvenance
 
 -- | How to merge KeyHashPoolProvenance into RewardProvenance
 incrementProvenance ::
+  CC.Crypto crypto =>
   KeyHashPoolProvenance crypto ->
   RP.RewardProvenance crypto ->
   RP.RewardProvenance crypto

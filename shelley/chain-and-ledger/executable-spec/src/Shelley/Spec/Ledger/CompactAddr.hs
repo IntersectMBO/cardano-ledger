@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -61,7 +62,7 @@ newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
 instance CC.Crypto c => Show (CompactAddr c) where
   show c = show (decompactAddr c)
 
-compactAddr :: Addr crypto -> CompactAddr crypto
+compactAddr :: Hash.HashAlgorithm (ADDRHASH crypto) => Addr crypto -> CompactAddr crypto
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 
 decompactAddr :: forall crypto. CC.Crypto crypto => CompactAddr crypto -> Addr crypto

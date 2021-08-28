@@ -111,7 +111,7 @@ import Shelley.Spec.Ledger.TxBody
 -- ===============================================
 
 instance
-  (Crypto era ~ crypto, Core.TxOut era ~ out) =>
+  (Crypto era ~ crypto, CH.HashAlgorithm (CC.HASH crypto), Core.TxOut era ~ out) =>
   HasExp (UTxO era) (Map (TxIn crypto) out)
   where
   toExp (UTxO x) = Base MapR x
@@ -134,7 +134,7 @@ deriving instance TransUTxO NoThunks era => NoThunks (UTxO era)
 deriving instance (Era era, NFData (Core.TxOut era)) => NFData (UTxO era)
 
 deriving newtype instance
-  Eq (Core.TxOut era) =>
+  (CH.HashAlgorithm (CC.HASH (Crypto era)), Eq (Core.TxOut era)) =>
   Eq (UTxO era)
 
 deriving newtype instance
@@ -148,7 +148,7 @@ deriving newtype instance
 deriving via
   Quiet (UTxO era)
   instance
-    Show (Core.TxOut era) =>
+    (CH.HashAlgorithm (CC.HASH (Crypto era)), Show (Core.TxOut era)) =>
     Show (UTxO era)
 
 -- | Compute the id of a transaction.
@@ -191,6 +191,7 @@ txouts tx =
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::
+  CH.HashAlgorithm (CC.HASH (Crypto era)) =>
   TxIn (Crypto era) ->
   UTxO era ->
   Maybe (Core.TxOut era)
@@ -263,7 +264,8 @@ balance (UTxO utxo) = Map.foldl' addTxOuts zero utxo
 -- registration certificates would be invalid.
 totalDeposits ::
   ( HasField "_poolDeposit" pp Coin,
-    HasField "_keyDeposit" pp Coin
+    HasField "_keyDeposit" pp Coin,
+    CC.Crypto crypto
   ) =>
   pp ->
   (KeyHash 'StakePool crypto -> Bool) ->
@@ -348,7 +350,9 @@ scriptsNeeded u tx =
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScript ::
-  (HasField "address" (Core.TxOut era) (Addr crypto0)) =>
+  ( HasField "address" (Core.TxOut era) (Addr crypto0),
+    CH.HashAlgorithm (CC.HASH (Crypto era))
+  ) =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Set (TxIn (Crypto era))

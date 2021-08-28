@@ -84,7 +84,7 @@ data OverlayEnv crypto
       Nonce
   deriving (Generic)
 
-instance NoThunks (OverlayEnv crypto)
+instance Crypto crypto => NoThunks (OverlayEnv crypto)
 
 data OverlayPredicateFailure crypto
   = VRFKeyUnknown
@@ -146,11 +146,11 @@ instance
   transitionRules = [overlayTransition]
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
+  (Crypto crypto, VRF.VRFAlgorithm (VRF crypto)) =>
   Show (OverlayPredicateFailure crypto)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
+  (Crypto crypto, VRF.VRFAlgorithm (VRF crypto)) =>
   Eq (OverlayPredicateFailure crypto)
 
 vrfChecks ::
@@ -279,7 +279,7 @@ overlayTransition =
         trans @(OCERT crypto) $ TRC (oce, cs, bh)
 
 instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
+  (Crypto crypto, VRF.VRFAlgorithm (VRF crypto)) =>
   NoThunks (OverlayPredicateFailure crypto)
 
 instance

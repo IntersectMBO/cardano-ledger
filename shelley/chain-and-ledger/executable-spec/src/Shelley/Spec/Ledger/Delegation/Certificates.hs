@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -8,6 +9,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -37,6 +39,7 @@ module Shelley.Spec.Ledger.Delegation.Certificates
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
@@ -65,6 +68,7 @@ import Shelley.Spec.Ledger.TxBody
   )
 
 instance
+  CC.Crypto crypto =>
   HasExp
     (PoolDistr crypto)
     ( Map
@@ -139,8 +143,15 @@ data IndividualPoolStake crypto = IndividualPoolStake
   { individualPoolStake :: !Rational,
     individualPoolStakeVrf :: !(Hash crypto (VerKeyVRF crypto))
   }
-  deriving stock (Show, Eq, Generic)
-  deriving anyclass (NFData, NoThunks)
+  deriving stock Generic
+
+type HashConstraint crypto = HS.HashAlgorithm (CC.HASH crypto)
+
+deriving stock instance HashConstraint crypto => Show (IndividualPoolStake crypto)
+deriving stock instance HashConstraint crypto => Eq (IndividualPoolStake crypto)
+
+deriving anyclass instance HashConstraint crypto => NFData (IndividualPoolStake crypto)
+deriving anyclass instance HashConstraint crypto => NoThunks (IndividualPoolStake crypto)
 
 instance CC.Crypto crypto => ToCBOR (IndividualPoolStake crypto) where
   toCBOR (IndividualPoolStake stake vrf) =

@@ -37,6 +37,7 @@ module Shelley.Spec.Ledger.API.Protocol
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Ledger.BaseTypes
   ( Globals,
     Nonce (NeutralNonce),
@@ -46,7 +47,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
+import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH, StandardCrypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
@@ -174,7 +175,7 @@ data LedgerView crypto = LedgerView
   }
   deriving (Eq, Show, Generic)
 
-instance NoThunks (LedgerView crypto)
+instance CC.Crypto crypto => NoThunks (LedgerView crypto)
 
 -- | Construct a protocol environment from the ledger view, along with the
 -- current slot and a marker indicating whether this is the first block in a new
@@ -311,6 +312,7 @@ data ChainDepState crypto = ChainDepState
 -- | Construct an initial chain state given an initial nonce and a set of
 -- genesis delegates.
 initialChainDepState ::
+  CC.Crypto crypto =>
   Nonce ->
   Map (KeyHash 'Genesis crypto) (GenDelegPair crypto) ->
   ChainDepState crypto
@@ -407,7 +409,8 @@ tickChainDepState
 updateChainDepState ::
   forall crypto m.
   ( PraosCrypto crypto,
-    MonadError (ChainTransitionError crypto) m
+    MonadError (ChainTransitionError crypto) m,
+    CC.HASH crypto ~ Blake2b_256
   ) =>
   Globals ->
   LedgerView crypto ->
@@ -447,7 +450,7 @@ updateChainDepState
 --   that this is valid through having previously applied it.
 reupdateChainDepState ::
   forall crypto.
-  PraosCrypto crypto =>
+  (PraosCrypto crypto, CC.HASH crypto ~ Blake2b_256) =>
   Globals ->
   LedgerView crypto ->
   BHeader crypto ->

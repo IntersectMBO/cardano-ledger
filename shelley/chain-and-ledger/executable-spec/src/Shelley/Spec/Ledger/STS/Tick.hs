@@ -25,6 +25,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
@@ -111,6 +112,7 @@ instance
   transitionRules = [bheadTransition]
 
 adoptGenesisDelegs ::
+  CC.Crypto (Crypto era) =>
   EpochState era ->
   SlotNo ->
   EpochState era
@@ -149,7 +151,8 @@ validatingTickTransition ::
     BaseM (tick era) ~ ShelleyBase,
     Environment (Core.EraRule "NEWEPOCH" era) ~ (),
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
-    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
+    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo,
+    CC.Crypto (Crypto era)
   ) =>
   NewEpochState era ->
   SlotNo ->
@@ -176,7 +179,8 @@ bheadTransition ::
     Signal (Core.EraRule "RUPD" era) ~ SlotNo,
     Environment (Core.EraRule "NEWEPOCH" era) ~ (),
     State (Core.EraRule "NEWEPOCH" era) ~ NewEpochState era,
-    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo
+    Signal (Core.EraRule "NEWEPOCH" era) ~ EpochNo,
+    CC.Crypto (Crypto era)
   ) =>
   TransitionRule (TICK era)
 bheadTransition = do

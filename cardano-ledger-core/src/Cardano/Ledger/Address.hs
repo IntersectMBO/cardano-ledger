@@ -2,12 +2,14 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Address
   ( mkVKeyRwdAcnt,
@@ -133,7 +135,7 @@ toCred ::
 toCred k = KeyHashObj . hashKey $ vKey k
 
 -- | Serialise an address to the external format.
-serialiseAddr :: Addr crypto -> ByteString
+serialiseAddr :: Hash.HashAlgorithm (ADDRHASH crypto) => Addr crypto -> ByteString
 serialiseAddr = BSL.toStrict . B.runPut . putAddr
 
 -- | Deserialise an address from the external format. This will fail if the
@@ -151,7 +153,7 @@ deserialiseAddrStakeRef bs = case B.runGetOrFail getAddrStakeReference (BSL.from
   Right (_remaining, _offset, result) -> result
 
 -- | Serialise a reward account to the external format.
-serialiseRewardAcnt :: RewardAcnt crypto -> ByteString
+serialiseRewardAcnt :: Hash.HashAlgorithm (ADDRHASH crypto) => RewardAcnt crypto -> ByteString
 serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
 
 -- | Deserialise an reward account from the external format. This will fail if the
@@ -174,7 +176,7 @@ getNetwork (AddrBootstrap (BootstrapAddress byronAddr)) =
     Byron.NetworkMainOrStage -> Mainnet
     Byron.NetworkTestnet _ -> Testnet
 
-instance NoThunks (Addr crypto)
+instance CC.Crypto crypto => NoThunks (Addr crypto)
 
 -- | An account based address for rewards
 data RewardAcnt crypto = RewardAcnt
@@ -183,7 +185,7 @@ data RewardAcnt crypto = RewardAcnt
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
-instance ToJSON (RewardAcnt crypto) where
+instance CC.Crypto crypto => ToJSON (RewardAcnt crypto) where
   toJSON ra =
     Aeson.object
       [ "network" .= getRwdNetwork ra,
@@ -197,21 +199,21 @@ instance CC.Crypto crypto => FromJSON (RewardAcnt crypto) where
         <$> obj .: "network"
         <*> obj .: "credential"
 
-instance NoThunks (RewardAcnt crypto)
+instance CC.Crypto crypto => NoThunks (RewardAcnt crypto)
 
-instance ToJSONKey (Addr crypto) where
+instance Hash.HashAlgorithm (ADDRHASH crypto) => ToJSONKey (Addr crypto) where
   toJSONKey = Aeson.ToJSONKeyText addrToText (Aeson.text . addrToText)
 
 instance CC.Crypto crypto => FromJSONKey (Addr crypto) where
   fromJSONKey = Aeson.FromJSONKeyTextParser parseAddr
 
-instance ToJSON (Addr crypto) where
+instance Hash.HashAlgorithm (ADDRHASH crypto) => ToJSON (Addr crypto) where
   toJSON = toJSON . addrToText
 
 instance CC.Crypto crypto => FromJSON (Addr crypto) where
   parseJSON = Aeson.withText "address" parseAddr
 
-addrToText :: Addr crypto -> Text
+addrToText :: Hash.HashAlgorithm (ADDRHASH crypto) => Addr crypto -> Text
 addrToText = Text.decodeLatin1 . B16.encode . serialiseAddr
 
 parseAddr :: CC.Crypto crypto => Text -> Aeson.Parser (Addr crypto)
@@ -240,7 +242,7 @@ payCredIsScript = 4
 rewardCredIsScript :: Int
 rewardCredIsScript = 4
 
-putAddr :: Addr crypto -> Put
+putAddr :: Hash.HashAlgorithm (ADDRHASH crypto) => Addr crypto -> Put
 putAddr (AddrBootstrap (BootstrapAddress byronAddr)) = B.putLazyByteString (serialize byronAddr)
 putAddr (Addr network pc sr) =
   let setPayCredBit = case pc of
@@ -290,7 +292,7 @@ getAddrStakeReference = do
     then pure Nothing
     else skipHash ([] @(ADDRHASH crypto)) >> Just <$> getStakeReference header
 
-putRewardAcnt :: RewardAcnt crypto -> Put
+putRewardAcnt :: Hash.HashAlgorithm (ADDRHASH crypto) => RewardAcnt crypto -> Put
 putRewardAcnt (RewardAcnt network cred) = do
   let setPayCredBit = case cred of
         ScriptHashObj _ -> flip setBit payCredIsScript
@@ -328,7 +330,7 @@ getHash = do
     Nothing -> fail "getHash: implausible hash length mismatch"
     Just h -> pure h
 
-putHash :: Hash.Hash h a -> Put
+putHash :: Hash.HashAlgorithm h => Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
 
 getPayCred :: CC.Crypto crypto => Word8 -> Get (PaymentCredential crypto)
@@ -351,7 +353,7 @@ getStakeReference header = case testBit header notBaseAddr of
     True -> StakeRefBase <$> getScriptHash
     False -> StakeRefBase <$> getKeyHash
 
-putCredential :: Credential kr crypto -> Put
+putCredential :: Hash.HashAlgorithm (ADDRHASH crypto) => Credential kr crypto -> Put
 putCredential (ScriptHashObj (ScriptHash h)) = putHash h
 putCredential (KeyHashObj (KeyHash h)) = putHash h
 

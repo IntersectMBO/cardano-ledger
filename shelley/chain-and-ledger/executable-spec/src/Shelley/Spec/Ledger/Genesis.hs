@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -95,7 +96,7 @@ data ShelleyGenesisStaking crypto = ShelleyGenesisStaking
   }
   deriving stock (Eq, Show, Generic)
 
-instance NoThunks (ShelleyGenesisStaking crypto)
+instance CC.Crypto crypto => NoThunks (ShelleyGenesisStaking crypto)
 
 instance CC.Crypto crypto => ToCBOR (ShelleyGenesisStaking crypto) where
   toCBOR (ShelleyGenesisStaking pools stake) =
@@ -139,9 +140,14 @@ data ShelleyGenesis era = ShelleyGenesis
     sgInitialFunds :: !(Map (Addr (Crypto era)) Coin),
     sgStaking :: !(ShelleyGenesisStaking (Crypto era))
   }
-  deriving stock (Eq, Show, Generic)
+  deriving stock Generic
 
-deriving instance Era era => NoThunks (ShelleyGenesis era)
+type HashConstraint crypto = CC.Crypto (Crypto crypto)
+
+deriving stock instance HashConstraint crypto => Show (ShelleyGenesis crypto)
+deriving stock instance HashConstraint crypto => Eq (ShelleyGenesis crypto)
+
+deriving instance (Era era, CC.Crypto era) => NoThunks (ShelleyGenesis era)
 
 sgActiveSlotCoeff :: ShelleyGenesis era -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff

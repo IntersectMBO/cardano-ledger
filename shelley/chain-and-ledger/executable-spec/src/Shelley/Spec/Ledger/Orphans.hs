@@ -1,17 +1,21 @@
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Shelley.Spec.Ledger.Orphans where
 
 import Cardano.Binary (FromCBOR, ToCBOR)
 import Cardano.Crypto.Hash (Hash (..))
+
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.Crypto (ADDRHASH)
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (BlockNo, EpochNo)
 import Cardano.Prelude (HeapWords (..), readEither)
@@ -77,7 +81,7 @@ instance NoThunks WC.XSignature where
   wNoThunks ctxt s = wNoThunks ctxt (WC.unXSignature s)
   showTypeOf _proxy = "XSignature"
 
-instance SignableRepresentation (Hash.Hash a b) where
+instance HS.HashAlgorithm a => SignableRepresentation (Hash.Hash a b) where
   getSignableRepresentation = Hash.hashToBytes
 
 -- ===============================================
@@ -86,7 +90,7 @@ instance SignableRepresentation (Hash.Hash a b) where
 instance Default Network where
   def = Mainnet
 
-instance Default (KeyHash a b) where
+instance HS.HashAlgorithm (ADDRHASH b) => Default (KeyHash a b) where
   def = KeyHash def
 
 instance Default (SS.StrictSeq t) where
@@ -101,13 +105,14 @@ instance Default Long.ByteString where
 instance Default Lazy.ByteString where
   def = Lazy.empty
 
-instance Default (Hash a b) where
+instance HS.HashAlgorithm a => Default (Hash a b) where
   def = UnsafeHash def
 
 instance Default Bool where
   def = False
 
-deriving newtype instance HeapWords (HS.Hash h a)
+instance HS.HashAlgorithm h => HeapWords (HS.Hash h a) where
+  heapWords (HS.UnsafeHash r) = heapWords r
 
 deriving newtype instance ToCBOR EpochSize
 

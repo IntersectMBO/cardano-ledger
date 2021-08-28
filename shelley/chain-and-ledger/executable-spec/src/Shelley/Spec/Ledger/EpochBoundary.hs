@@ -126,6 +126,7 @@ aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
 
 -- | Get stake of one pool
 poolStake ::
+  CC.Crypto crypto =>
   KeyHash 'StakePool crypto ->
   Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
   Stake crypto ->
@@ -184,9 +185,9 @@ data SnapShot crypto = SnapShot
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (SnapShot crypto)
+instance CC.Crypto crypto => NoThunks (SnapShot crypto)
 
-instance NFData (SnapShot crypto)
+instance CC.Crypto crypto => NFData (SnapShot crypto)
 
 instance
   CC.Crypto crypto =>
@@ -217,9 +218,9 @@ data SnapShots crypto = SnapShots
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (SnapShots crypto)
+instance CC.Crypto crypto => NoThunks (SnapShots crypto)
 
-instance NFData (SnapShots crypto)
+instance CC.Crypto crypto => NFData (SnapShots crypto)
 
 instance
   CC.Crypto crypto =>

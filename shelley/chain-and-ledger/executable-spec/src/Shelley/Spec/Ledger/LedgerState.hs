@@ -264,9 +264,9 @@ data FutureGenDeleg crypto = FutureGenDeleg
   }
   deriving (Show, Eq, Ord, Generic)
 
-instance NoThunks (FutureGenDeleg crypto)
+instance CC.Crypto crypto => NoThunks (FutureGenDeleg crypto)
 
-instance NFData (FutureGenDeleg crypto)
+instance CC.Crypto crypto => NFData (FutureGenDeleg crypto)
 
 instance CC.Crypto crypto => ToCBOR (FutureGenDeleg crypto) where
   toCBOR (FutureGenDeleg a b) =
@@ -302,9 +302,9 @@ availableAfterMIR ReservesMIR as ir =
 availableAfterMIR TreasuryMIR as ir =
   _treasury as `addDeltaCoin` deltaTreasury ir <-> fold (iRTreasury ir)
 
-instance NoThunks (InstantaneousRewards crypto)
+instance CC.Crypto crypto => NoThunks (InstantaneousRewards crypto)
 
-instance NFData (InstantaneousRewards crypto)
+instance CC.Crypto crypto => NFData (InstantaneousRewards crypto)
 
 instance CC.Crypto crypto => ToCBOR (InstantaneousRewards crypto) where
   toCBOR (InstantaneousRewards irR irT dR dT) =
@@ -336,9 +336,9 @@ data DState crypto = DState
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (DState crypto)
+instance CC.Crypto crypto => NoThunks (DState crypto)
 
-instance NFData (DState crypto)
+instance CC.Crypto crypto => NFData (DState crypto)
 
 instance CC.Crypto crypto => ToCBOR (DState crypto) where
   toCBOR (DState rw dlg p fgs gs ir) =
@@ -372,9 +372,9 @@ data PState crypto = PState
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (PState crypto)
+instance CC.Crypto crypto => NoThunks (PState crypto)
 
-instance NFData (PState crypto)
+instance CC.Crypto crypto => NFData (PState crypto)
 
 instance CC.Crypto crypto => ToCBOR (PState crypto) where
   toCBOR (PState a b c) =
@@ -392,9 +392,9 @@ data DPState crypto = DPState
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (DPState crypto)
+instance CC.Crypto crypto => NoThunks (DPState crypto)
 
-instance NFData (DPState crypto)
+instance CC.Crypto crypto => NFData (DPState crypto)
 
 instance
   CC.Crypto crypto =>
@@ -502,13 +502,13 @@ data PPUPState era = PPUPState
   }
   deriving (Generic)
 
-deriving instance Show (PParamsDelta era) => Show (PPUPState era)
+deriving instance (Show (PParamsDelta era), CC.Crypto (Crypto era)) => Show (PPUPState era)
 
-deriving instance Eq (PParamsDelta era) => Eq (PPUPState era)
+deriving instance (Eq (PParamsDelta era), CC.Crypto (Crypto era)) => Eq (PPUPState era)
 
-deriving instance NFData (PParamsDelta era) => NFData (PPUPState era)
+deriving instance (NFData (PParamsDelta era), CC.Crypto (Crypto era)) => NFData (PPUPState era)
 
-instance NoThunks (PParamsDelta era) => NoThunks (PPUPState era)
+instance (NoThunks (PParamsDelta era), CC.Crypto (Crypto era)) => NoThunks (PPUPState era)
 
 instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (PPUPState era) where
   toCBOR (PPUPState ppup fppup) =
@@ -811,14 +811,14 @@ newtype WitHashes crypto = WitHashes
   deriving (Eq, Generic)
   deriving (Show) via Quiet (WitHashes crypto)
 
-instance NoThunks (WitHashes crypto)
+instance CC.Crypto crypto => NoThunks (WitHashes crypto)
 
 -- | Check if a set of witness hashes is empty.
 nullWitHashes :: WitHashes crypto -> Bool
 nullWitHashes (WitHashes a) = Set.null a
 
 -- | Extract the difference between two sets of witness hashes.
-diffWitHashes :: WitHashes crypto -> WitHashes crypto -> WitHashes crypto
+diffWitHashes :: CC.Crypto crypto => WitHashes crypto -> WitHashes crypto -> WitHashes crypto
 diffWitHashes (WitHashes x) (WitHashes x') =
   WitHashes (x `Set.difference` x')
 
@@ -943,6 +943,7 @@ verifiedWits tx =
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
+  CC.Crypto (Crypto era) =>
   Maybe (Update era) ->
   GenDelegs (Crypto era) ->
   Set (KeyHash 'Witness (Crypto era))
@@ -957,7 +958,8 @@ propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    CC.Crypto (Crypto era)
   ) =>
   LedgerState era ->
   PParams era ->
@@ -976,6 +978,7 @@ depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
     txRefunds = keyRefunds pp tx
 
 reapRewards ::
+  CC.Crypto crypto =>
   RewardAccounts crypto ->
   RewardAccounts crypto ->
   RewardAccounts crypto
@@ -1010,7 +1013,8 @@ stakeDistr u ds ps =
 
 -- | Apply a reward update
 applyRUpd ::
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    CC.Crypto (Crypto era)
   ) =>
   RewardUpdate (Crypto era) ->
   EpochState era ->
@@ -1020,7 +1024,8 @@ applyRUpd ru es =
    in es'
 
 applyRUpd' ::
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    CC.Crypto (Crypto era)
   ) =>
   RewardUpdate (Crypto era) ->
   EpochState era ->
@@ -1059,6 +1064,7 @@ decayFactor :: Float
 decayFactor = 0.9
 
 updateNonMyopic ::
+  CC.Crypto crypto =>
   NonMyopic crypto ->
   Coin ->
   Map (KeyHash 'StakePool crypto) Likelihood ->
@@ -1179,6 +1185,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
 
 -- | Run the pulser for a bit. If is has nothing left to do, complete it.
 pulseStep ::
+  CC.Crypto crypto =>
   PulsingRewUpdate crypto ->
   ProvM (RewardProvenance crypto) ShelleyBase (PulsingRewUpdate crypto)
 pulseStep (Complete r) = pure (Complete r)
@@ -1192,6 +1199,7 @@ pulseStep (Pulsing rewsnap pulser) = do
 -- Phase 3
 
 completeStep ::
+  CC.Crypto crypto =>
   PulsingRewUpdate crypto ->
   ProvM (RewardProvenance crypto) ShelleyBase (PulsingRewUpdate crypto)
 completeStep (Complete r) = pure (Complete r)
@@ -1204,6 +1212,7 @@ completeStep (Pulsing rewsnap pulser) = do
 --   b) Combine the pulser provenance with the RewardProvenance
 --   c) Construct the final RewardUpdate
 completeRupd ::
+  CC.Crypto crypto =>
   PulsingRewUpdate crypto ->
   ProvM (RewardProvenance crypto) ShelleyBase (RewardUpdate crypto)
 completeRupd (Complete x) = pure x
@@ -1257,7 +1266,7 @@ completeRupd
 -- | To create a reward update, run all 3 phases
 createRUpd ::
   forall era.
-  (UsesPP era) =>
+  (UsesPP era, CC.Crypto (Crypto era)) =>
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->

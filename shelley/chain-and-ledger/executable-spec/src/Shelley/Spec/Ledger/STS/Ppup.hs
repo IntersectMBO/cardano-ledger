@@ -5,6 +5,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -28,6 +29,7 @@ import Cardano.Binary
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Serialization (decodeRecordSum)
@@ -76,16 +78,20 @@ data PpupPredicateFailure era
       !VotingPeriod -- voting period within the epoch
   | PVCannotFollowPPUP
       !ProtVer -- the first bad protocol version
-  deriving (Show, Eq, Generic)
+  deriving Generic
 
-instance NoThunks (PpupPredicateFailure era)
+deriving instance CC.Crypto (Crypto era) => Show (PpupPredicateFailure era)
+deriving instance CC.Crypto (Crypto era) => Eq (PpupPredicateFailure era)
+
+instance CC.Crypto (Crypto era) => NoThunks (PpupPredicateFailure era)
 
 newtype PpupEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer),
+    CC.Crypto (Crypto era)
   ) =>
   STS (PPUP era)
   where
@@ -137,7 +143,8 @@ instance
 ppupTransitionNonEmpty ::
   ( Typeable era,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer),
+    CC.Crypto (Crypto era)
   ) =>
   TransitionRule (PPUP era)
 ppupTransitionNonEmpty = do

@@ -23,6 +23,7 @@ where
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyRole (Staking))
@@ -57,19 +58,22 @@ data NewEpochPredicateFailure era
 
 deriving stock instance
   ( Show (PredicateFailure (Core.EraRule "EPOCH" era)),
-    Show (PredicateFailure (Core.EraRule "MIR" era))
+    Show (PredicateFailure (Core.EraRule "MIR" era)),
+    CC.Crypto (Crypto era)
   ) =>
   Show (NewEpochPredicateFailure era)
 
 deriving stock instance
   ( Eq (PredicateFailure (Core.EraRule "EPOCH" era)),
-    Eq (PredicateFailure (Core.EraRule "MIR" era))
+    Eq (PredicateFailure (Core.EraRule "MIR" era)),
+    CC.Crypto (Crypto era)
   ) =>
   Eq (NewEpochPredicateFailure era)
 
 instance
   ( NoThunks (PredicateFailure (Core.EraRule "EPOCH" era)),
-    NoThunks (PredicateFailure (Core.EraRule "MIR" era))
+    NoThunks (PredicateFailure (Core.EraRule "MIR" era)),
+    CC.Crypto (Crypto era)
   ) =>
   NoThunks (NewEpochPredicateFailure era)
 
@@ -169,7 +173,7 @@ newEpochTransition = do
           SNothing
           pd'
 
-calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
+calculatePoolDistr :: CC.Crypto crypto => SnapShot crypto -> PoolDistr crypto
 calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
   let Coin total = Map.foldl' (<>) mempty stake
       sd =

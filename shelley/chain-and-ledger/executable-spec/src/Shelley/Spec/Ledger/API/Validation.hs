@@ -25,6 +25,7 @@ where
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Slot (SlotNo)
@@ -186,7 +187,7 @@ applyBlock =
         asoEvents = EPDiscard
       }
 
-instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
+instance (CC.Crypto (ShelleyEra crypto), PraosCrypto crypto) => ApplyBlock (ShelleyEra crypto)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks

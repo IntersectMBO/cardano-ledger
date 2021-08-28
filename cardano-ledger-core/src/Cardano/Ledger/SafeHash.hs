@@ -49,7 +49,15 @@ import NoThunks.Class (NoThunks (..))
 --     that limit their application to types which preserve their original serialization
 --     bytes.
 newtype SafeHash crypto index = SafeHash (Hash.Hash (CC.HASH crypto) index)
-  deriving (Show, Eq, Ord, SafeToHash, NoThunks, NFData)
+
+type HashConstraint c = Hash.HashAlgorithm (CC.HASH c)
+
+deriving instance HashConstraint c => Show (SafeHash c i)
+deriving instance HashConstraint c => Eq (SafeHash c i)
+deriving instance HashConstraint c => Ord (SafeHash c i)
+deriving instance HashConstraint c => SafeToHash (SafeHash c i)
+deriving instance HashConstraint c => NoThunks (SafeHash c i)
+deriving instance HashConstraint c => NFData (SafeHash c i)
 
 deriving newtype instance HeapWords (Hash.Hash (CC.HASH c) i) => HeapWords (SafeHash c i)
 
@@ -63,7 +71,7 @@ extractHash :: SafeHash crypto i -> Hash.Hash (CC.HASH crypto) i
 extractHash (SafeHash h) = h
 
 -- | To change the index parameter of SafeHash (which is a phantom type) use castSafeHash
-castSafeHash :: forall i j c. SafeHash c i -> SafeHash c j
+castSafeHash :: forall i j c. HashConstraint c => SafeHash c i -> SafeHash c j
 castSafeHash (SafeHash h) = SafeHash (Hash.castHash h)
 
 -- Don't use this except in Testing to make Arbitrary instances, etc.
@@ -103,7 +111,7 @@ instance SafeToHash ByteString where
 -- derive that it is SafeToHash. We can derive this instance because SafeHash is
 -- a newtype around (Hash.Hash c i) which is a primitive SafeToHash type.
 
-instance SafeToHash (Hash.Hash c i) where
+instance (Hash.HashAlgorithm c) => SafeToHash (Hash.Hash c i) where
   originalBytes (Hash.UnsafeHash b) = fromShort b
 
 -- =====================================================================

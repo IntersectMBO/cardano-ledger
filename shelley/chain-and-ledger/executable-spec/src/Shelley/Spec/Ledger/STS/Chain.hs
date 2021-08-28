@@ -31,6 +31,7 @@ module Shelley.Spec.Ledger.STS.Chain
   )
 where
 
+import Cardano.Crypto.Hash.Blake2b (Blake2b_256)
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Nonce (..),
@@ -40,6 +41,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys
@@ -191,7 +193,8 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  ( Default (State (Core.EraRule "PPUP" era))
+  ( Default (State (Core.EraRule "PPUP" era)),
+    CC.Crypto (Crypto era)
   ) =>
   WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->
@@ -260,7 +263,8 @@ instance
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_extraEntropy" (Core.PParams era) Nonce,
     HasField "_d" (Core.PParams era) UnitInterval,
-    ToCBORGroup (Era.TxSeq era)
+    ToCBORGroup (Era.TxSeq era),
+    CC.HASH (Crypto era) ~ Blake2b_256
   ) =>
   STS (CHAIN era)
   where
@@ -343,7 +347,8 @@ chainTransition ::
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_extraEntropy" (Core.PParams era) Nonce,
     HasField "_d" (Core.PParams era) UnitInterval,
-    ToCBORGroup (Era.TxSeq era)
+    ToCBORGroup (Era.TxSeq era),
+    CC.HASH (Crypto era) ~ Blake2b_256
   ) =>
   TransitionRule (CHAIN era)
 chainTransition =

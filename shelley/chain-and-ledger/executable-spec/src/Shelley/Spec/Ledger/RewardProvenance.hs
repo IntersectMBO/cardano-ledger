@@ -19,6 +19,7 @@ import Cardano.Binary
     decodeDouble,
     encodeDouble,
   )
+import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -76,16 +77,19 @@ data RewardProvenancePool crypto = RewardProvenancePool
   }
   deriving (Eq, Generic)
 
-instance NoThunks (RewardProvenancePool crypto)
+instance CC.Crypto crypto => NoThunks (RewardProvenancePool crypto)
 
-instance NFData (RewardProvenancePool crypto)
+instance CC.Crypto crypto => NFData (RewardProvenancePool crypto)
 
 deriving instance (CC.Crypto crypto) => FromJSON (RewardProvenancePool crypto)
 
 deriving instance (CC.Crypto crypto) => ToJSON (RewardProvenancePool crypto)
 
-instance Default (RewardProvenancePool crypto) where
-  def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
+instance ( HS.HashAlgorithm (CC.ADDRHASH crypto),
+           HS.HashAlgorithm (CC.HASH crypto)
+         ) => Default (RewardProvenancePool crypto)
+         where
+         def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
 
 -- | The desirability score of a stake pool, as described
 -- in <https://arxiv.org/abs/1807.11218 "Reward Sharing Schemes for Stake Pools">.
@@ -169,9 +173,9 @@ deriving instance (CC.Crypto crypto) => FromJSON (RewardProvenance crypto)
 
 deriving instance (CC.Crypto crypto) => ToJSON (RewardProvenance crypto)
 
-instance NoThunks (RewardProvenance crypto)
+instance CC.Crypto crypto => NoThunks (RewardProvenance crypto)
 
-instance NFData (RewardProvenance crypto)
+instance CC.Crypto crypto => NFData (RewardProvenance crypto)
 
 instance Default (RewardProvenance crypto) where
   def =
@@ -193,16 +197,19 @@ instance Default (RewardProvenance crypto) where
       def
       def
 
-instance Default (PoolParams crypto) where
-  def = PoolParams def def (Coin 0) (Coin 0) def def def def def
+instance ( HS.HashAlgorithm (CC.ADDRHASH crypto),
+           HS.HashAlgorithm (CC.HASH crypto)
+         ) => Default (PoolParams crypto)
+         where
+         def = PoolParams def def (Coin 0) (Coin 0) def def def def def
 
-instance Default (Credential r e) where
+instance HS.HashAlgorithm (CC.ADDRHASH e) => Default (Credential r e) where
   def = KeyHashObj def
 
-instance Default (RewardAcnt crypto) where
+instance HS.HashAlgorithm (CC.ADDRHASH crypto) => Default (RewardAcnt crypto) where
   def = RewardAcnt def def
 
-instance Default (SafeHash c i) where
+instance HS.HashAlgorithm (CC.HASH c) => Default (SafeHash c i) where
   def = unsafeMakeSafeHash def
 
 -- =======================================================
@@ -211,7 +218,7 @@ instance Default (SafeHash c i) where
 mylines :: Int -> [String] -> String
 mylines n xs = unlines (map (replicate n ' ' ++) xs)
 
-instance Show (RewardProvenancePool crypto) where
+instance CC.Crypto crypto => Show (RewardProvenancePool crypto) where
   show t =
     "RewardProvenancePool\n"
       ++ mylines
@@ -228,7 +235,7 @@ instance Show (RewardProvenancePool crypto) where
           "lReward = " ++ show (lRewardP t)
         ]
 
-showPoolParams :: PoolParams crypto -> String
+showPoolParams :: CC.Crypto crypto => PoolParams crypto -> String
 showPoolParams x =
   "PoolParams\n"
     ++ mylines
@@ -244,7 +251,7 @@ showPoolParams x =
         "poolMD = " ++ show (_poolMD x)
       ]
 
-instance Show (RewardProvenance crypto) where
+instance CC.Crypto crypto => Show (RewardProvenance crypto) where
   show t =
     "RewardProvenance\n"
       ++ mylines

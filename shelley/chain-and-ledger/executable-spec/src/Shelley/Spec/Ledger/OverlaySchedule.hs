@@ -62,9 +62,9 @@ instance
         pure NonActiveSlot
       _ -> ActiveSlot <$> fromCBOR
 
-instance NoThunks (OBftSlot crypto)
+instance Crypto crypto => NoThunks (OBftSlot crypto)
 
-instance NFData (OBftSlot crypto)
+instance Crypto crypto => NFData (OBftSlot crypto)
 
 isOverlaySlot ::
   SlotNo -> -- starting slot

@@ -256,9 +256,9 @@ data NonMyopic crypto = NonMyopic
 instance Default (NonMyopic crypto) where
   def = NonMyopic Map.empty (Coin 0)
 
-instance NoThunks (NonMyopic crypto)
+instance CC.Crypto crypto => NoThunks (NonMyopic crypto)
 
-instance NFData (NonMyopic crypto)
+instance CC.Crypto crypto => NFData (NonMyopic crypto)
 
 instance CC.Crypto crypto => ToCBOR (NonMyopic crypto) where
   toCBOR
@@ -310,7 +310,10 @@ desirability (a0, nOpt) r pool (PerformanceEstimate p) (Coin totalStake) =
 -- corresponding to section 5.6.1 of
 -- "Design Specification for Delegation and Incentives in Cardano"
 getTopRankedPools ::
-  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  ( HasField "_a0" pp NonNegativeInterval,
+    HasField "_nOpt" pp Natural,
+    CC.Crypto crypto
+  ) =>
   Coin ->
   Coin ->
   pp ->
@@ -411,14 +414,14 @@ data Reward crypto = Reward
 --  with the Allegra reward aggregation, as given by the
 --  function 'aggregateRewards' so that 'Set.findMax' returns
 --  the expected value.
-instance Ord (Reward crypto) where
+instance CC.Crypto crypto => Ord (Reward crypto) where
   compare (Reward MemberReward _ _) (Reward LeaderReward _ _) = GT
   compare (Reward LeaderReward _ _) (Reward MemberReward _ _) = LT
   compare (Reward _ pool1 _) (Reward _ pool2 _) = compare pool1 pool2
 
-instance NoThunks (Reward crypto)
+instance CC.Crypto crypto => NoThunks (Reward crypto)
 
-instance NFData (Reward crypto)
+instance CC.Crypto crypto => NFData (Reward crypto)
 
 instance CC.Crypto crypto => ToCBOR (Reward crypto) where
   toCBOR (Reward rt pool c) =
@@ -459,7 +462,7 @@ aggregateRewards pp rewards =
 --     }
 rewardOnePool ::
   forall c m.
-  Monad m =>
+  (CC.Crypto c, Monad m) =>
   (UnitInterval, NonNegativeInterval, Natural, Natural) ->
   Coin ->
   Natural ->
@@ -571,7 +574,7 @@ rewardOnePool
 --   Additionally, instead of passing a rank r to compare with k,
 --   we pass the top k desirable pools and check for membership.
 nonMyopicStake ::
-  HasField "_nOpt" pp Natural =>
+  (HasField "_nOpt" pp Natural, CC.Crypto c) =>
   pp ->
   StakeShare ->
   StakeShare ->
@@ -595,7 +598,8 @@ nonMyopicStake pp (StakeShare s) (StakeShare sigma) (StakeShare t) kh topPools =
 --   check for membership.
 nonMyopicMemberRew ::
   ( HasField "_a0" pp NonNegativeInterval,
-    HasField "_nOpt" pp Natural
+    HasField "_nOpt" pp Natural,
+    CC.Crypto c
   ) =>
   pp ->
   Coin ->

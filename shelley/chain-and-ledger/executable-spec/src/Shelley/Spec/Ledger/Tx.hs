@@ -559,6 +559,7 @@ txwitsScript = getField @"scriptWits"
 
 extractKeyHashWitnessSet ::
   forall (r :: KeyRole) crypto.
+  CC.Crypto crypto =>
   [Credential r crypto] ->
   Set (KeyHash 'Witness crypto)
 extractKeyHashWitnessSet = foldr accum Set.empty

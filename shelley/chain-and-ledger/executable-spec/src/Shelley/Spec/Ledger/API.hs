@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 -- | API to the Shelley ledger
@@ -12,6 +13,7 @@ where
 
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints
@@ -48,4 +50,5 @@ class
   ) =>
   ShelleyBasedEra era
 
-instance PraosCrypto crypto => ShelleyBasedEra (ShelleyEra crypto)
+instance (CC.Crypto (ShelleyEra crypto), PraosCrypto crypto) =>
+  ShelleyBasedEra (ShelleyEra crypto)

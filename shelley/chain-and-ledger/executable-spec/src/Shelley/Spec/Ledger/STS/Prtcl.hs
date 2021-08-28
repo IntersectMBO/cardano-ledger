@@ -27,6 +27,7 @@ import Cardano.Binary
     ToCBOR (toCBOR),
     encodeListLen,
   )
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
   ( Nonce,
@@ -34,7 +35,7 @@ import Cardano.Ledger.BaseTypes
     ShelleyBase,
     UnitInterval,
   )
-import Cardano.Ledger.Crypto (Crypto, VRF)
+import Cardano.Ledger.Crypto (Crypto, HASH, VRF)
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegs (..),
@@ -110,7 +111,7 @@ data PrtclEnv crypto
       Nonce
   deriving (Generic)
 
-instance NoThunks (PrtclEnv crypto)
+instance Crypto crypto => NoThunks (PrtclEnv crypto)
 
 data PrtclPredicateFailure crypto
   = OverlayFailure (PredicateFailure (OVERLAY crypto)) -- Subtransition Failures
@@ -122,11 +123,11 @@ data PrtclEvent crypto
   | NoEvent Void
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
+  (Crypto crypto, VRF.VRFAlgorithm (VRF crypto)) =>
   Show (PrtclPredicateFailure crypto)
 
 deriving instance
-  (VRF.VRFAlgorithm (VRF crypto)) =>
+  (Crypto crypto, VRF.VRFAlgorithm (VRF crypto)) =>
   Eq (PrtclPredicateFailure crypto)
 
 instance
@@ -233,7 +234,10 @@ data PrtlSeqFailure crypto
       -- ^ Last applied hash
       (PrevHash crypto)
       -- ^ Current block's previous hash
-  deriving (Show, Eq, Generic)
+  deriving Generic
+
+deriving instance HashAlgorithm (HASH crypto) => Show (PrtlSeqFailure crypto)
+deriving instance HashAlgorithm (HASH crypto) => Eq (PrtlSeqFailure crypto)
 
 instance Crypto crypto => NoThunks (PrtlSeqFailure crypto)
 

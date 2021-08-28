@@ -29,6 +29,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
@@ -135,13 +136,17 @@ data DelegPredicateFailure era
       !Coin -- amount attempted to transfer
       !Coin -- amount available
   | MIRProducesNegativeUpdate
-  deriving (Show, Eq, Generic)
+  deriving Generic
+
+deriving instance CC.Crypto (Crypto era) => Show (DelegPredicateFailure era)
+deriving instance CC.Crypto (Crypto era) => Eq (DelegPredicateFailure era)
 
 newtype DelegEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    CC.Crypto (Crypto era)
   ) =>
   STS (DELEG era)
   where
@@ -154,7 +159,7 @@ instance
 
   transitionRules = [delegationTransition]
 
-instance NoThunks (DelegPredicateFailure era)
+instance CC.Crypto (Crypto era) => NoThunks (DelegPredicateFailure era)
 
 instance
   (Typeable era, Era era, Typeable (Core.Script era)) =>
@@ -254,7 +259,8 @@ instance
 
 delegationTransition ::
   ( Typeable era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    CC.Crypto (Crypto era)
   ) =>
   TransitionRule (DELEG era)
 delegationTransition = do

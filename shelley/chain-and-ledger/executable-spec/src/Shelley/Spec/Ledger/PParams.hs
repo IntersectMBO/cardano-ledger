@@ -46,6 +46,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
@@ -192,7 +193,7 @@ instance ToCBORGroup ProtVer where
 instance FromCBORGroup ProtVer where
   fromCBORGroup = ProtVer <$> fromCBOR <*> fromCBOR
 
-instance NoThunks (PParams era)
+instance CC.Crypto era => NoThunks (PParams era)
 
 instance (Era era) => ToCBOR (PParams era) where
   toCBOR
@@ -331,15 +332,15 @@ data Update era
   = Update !(ProposedPPUpdates era) !EpochNo
   deriving (Generic)
 
-deriving instance Eq (PParamsDelta era) => Eq (Update era)
+deriving instance (CC.Crypto (Crypto era), Eq (PParamsDelta era)) => Eq (Update era)
 
-deriving instance NFData (PParamsDelta era) => NFData (Update era)
+deriving instance (CC.Crypto (Crypto era), NFData (PParamsDelta era)) => NFData (Update era)
 
-deriving instance Show (PParamsDelta era) => Show (Update era)
+deriving instance (CC.Crypto (Crypto era), Show (PParamsDelta era)) => Show (Update era)
 
-instance NoThunks (PParamsDelta era) => NoThunks (Update era)
+instance (CC.Crypto (Crypto era), NoThunks (PParamsDelta era)) => NoThunks (Update era)
 
-instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (Update era) where
+instance (Era era, CC.Crypto (Crypto era), ToCBOR (PParamsDelta era)) => ToCBOR (Update era) where
   toCBOR (Update ppUpdate e) =
     encodeListLen 2 <> toCBOR ppUpdate <> toCBOR e
 
@@ -352,7 +353,7 @@ instance
 data PPUpdateEnv era = PPUpdateEnv SlotNo (GenDelegs era)
   deriving (Show, Eq, Generic)
 
-instance NoThunks (PPUpdateEnv era)
+instance CC.Crypto era => NoThunks (PPUpdateEnv era)
 
 type PParamsUpdate era = PParams' StrictMaybe era
 
@@ -450,13 +451,13 @@ newtype ProposedPPUpdates era
   = ProposedPPUpdates (Map (KeyHash 'Genesis (Crypto era)) (PParamsDelta era))
   deriving (Generic)
 
-deriving instance Eq (PParamsDelta era) => Eq (ProposedPPUpdates era)
+deriving instance (CC.Crypto (Crypto era), Eq (PParamsDelta era)) => Eq (ProposedPPUpdates era)
 
-deriving instance NFData (PParamsDelta era) => NFData (ProposedPPUpdates era)
+deriving instance (CC.Crypto (Crypto era), NFData (PParamsDelta era)) => NFData (ProposedPPUpdates era)
 
-deriving instance Show (PParamsDelta era) => Show (ProposedPPUpdates era)
+deriving instance (CC.Crypto (Crypto era), Show (PParamsDelta era)) => Show (ProposedPPUpdates era)
 
-instance NoThunks (PParamsDelta era) => NoThunks (ProposedPPUpdates era)
+instance (CC.Crypto (Crypto era), NoThunks (PParamsDelta era)) => NoThunks (ProposedPPUpdates era)
 
 instance
   (Era era, ToCBOR (PParamsDelta era)) =>

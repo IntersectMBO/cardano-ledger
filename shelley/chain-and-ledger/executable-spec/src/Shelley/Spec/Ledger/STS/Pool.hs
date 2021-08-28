@@ -102,9 +102,12 @@ data PoolPredicateFailure era
   | PoolMedataHashTooBig
       !(KeyHash 'StakePool (Crypto era)) -- Stake Pool ID
       !Int -- Size of the metadata hash
-  deriving (Show, Eq, Generic)
+  deriving Generic
 
-instance NoThunks (PoolPredicateFailure era)
+deriving instance CC.Crypto (Crypto era) => Show (PoolPredicateFailure era)
+deriving instance CC.Crypto (Crypto era) => Eq (PoolPredicateFailure era)
+
+instance CC.Crypto (Crypto era) => NoThunks (PoolPredicateFailure era)
 
 instance
   ( Era era,

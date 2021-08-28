@@ -52,7 +52,7 @@ data OcertPredicateFailure crypto
       !(KeyHash 'BlockIssuer crypto) -- stake pool key hash
   deriving (Show, Eq, Generic)
 
-instance NoThunks (OcertPredicateFailure crypto)
+instance Crypto crypto => NoThunks (OcertPredicateFailure crypto)
 
 instance
   ( Crypto crypto,

@@ -1,7 +1,10 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 -- | Various identifiers in the ledger are hashes of particular structures.
 -- While the structures may change from era to era, the hash will remain the
@@ -72,8 +75,16 @@ type EraIndependentWitnessPPData = EraIndependentScriptIntegrity
 
 newtype ScriptHash crypto
   = ScriptHash (Hash.Hash (ADDRHASH crypto) EraIndependentScript)
-  deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NFData, NoThunks)
+  deriving (Generic)
+
+type HashConstraint crypto = Hash.HashAlgorithm (ADDRHASH crypto)
+
+deriving instance HashConstraint crypto => Show (ScriptHash crypto)
+deriving instance HashConstraint crypto => Eq (ScriptHash crypto)
+deriving instance HashConstraint crypto => Ord (ScriptHash crypto)
+
+deriving newtype instance HashConstraint crypto => NFData (ScriptHash crypto)
+deriving newtype instance HashConstraint crypto => NoThunks (ScriptHash crypto)
 
 deriving newtype instance
   CC.Crypto crypto =>
@@ -83,6 +94,6 @@ deriving newtype instance
   CC.Crypto crypto =>
   FromCBOR (ScriptHash crypto)
 
-deriving newtype instance ToJSON (ScriptHash crypto)
+deriving newtype instance CC.Crypto crypto => ToJSON (ScriptHash crypto)
 
 deriving newtype instance CC.Crypto crypto => FromJSON (ScriptHash crypto)

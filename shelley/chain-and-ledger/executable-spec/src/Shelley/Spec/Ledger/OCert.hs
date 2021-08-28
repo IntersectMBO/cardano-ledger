@@ -65,6 +65,7 @@ data OCertEnv crypto = OCertEnv
   deriving (Show, Eq)
 
 currentIssueNo ::
+  Crypto crypto =>
   OCertEnv crypto ->
   Map (KeyHash 'BlockIssuer crypto) Word64 ->
   -- | Pool hash
