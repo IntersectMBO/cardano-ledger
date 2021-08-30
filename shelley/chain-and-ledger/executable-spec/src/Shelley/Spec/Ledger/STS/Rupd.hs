@@ -131,6 +131,6 @@ rupdTransition = do
     -- More blocks to come, get things started or take a step
     False ->
       case ru of
-        SNothing -> liftSTS $ runProvM $ pure $ SJust $ startStep slotsPerEpoch b es maxsupply asc k
-        (SJust p@(Pulsing _ _)) -> liftSTS $ runProvM (SJust <$> pulseStep p)
+        SNothing -> liftSTS $ runProvM $ pure $ SJust $ fst $ startStep slotsPerEpoch b es maxsupply asc k
+        (SJust p@(Pulsing _ _)) -> liftSTS $ runProvM $ (SJust <$> pulseStep p)
         (SJust p@(Complete _)) -> pure (SJust p)

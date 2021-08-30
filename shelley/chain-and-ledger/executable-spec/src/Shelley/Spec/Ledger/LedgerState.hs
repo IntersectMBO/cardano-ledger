@@ -147,7 +147,7 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
-import Control.Provenance (ProvM, liftProv)
+import Control.Provenance (ProvM, liftProv, modifyM)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
 import Control.State.Transition (STS (State))
 import Data.Coders
@@ -208,6 +208,7 @@ import Shelley.Spec.Ledger.PParams
     emptyPPPUpdates,
   )
 import Shelley.Spec.Ledger.RewardProvenance (Desirability (..), RewardProvenance (..))
+import qualified Shelley.Spec.Ledger.RewardProvenance as RP
 import Shelley.Spec.Ledger.RewardUpdate
   ( FreeVars (..),
     Pulser,
@@ -1124,7 +1125,7 @@ startStep ::
   Coin ->
   ActiveSlotCoeff ->
   Word64 ->
-  PulsingRewUpdate (Crypto era)
+  (PulsingRewUpdate (Crypto era), RewardProvenance (Crypto era))
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       f, numPools, k :: Rational
@@ -1168,6 +1169,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
             rewTotalStake = totalStake,
             rewRPot = Coin rPot
           }
+      activestake = fold . unStake $ stake'
       free =
         FreeVars
           (unBlocksMade b)
@@ -1175,7 +1177,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           stake'
           (Map.keysSet $ _rewards ds)
           (unCoin totalStake)
-          (unCoin (fold . unStake $ stake'))
+          (unCoin activestake)
           asc
           (sum (unBlocksMade b))
           _R
@@ -1191,7 +1193,27 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           free
           (StrictSeq.fromList $ Map.elems poolParams)
           (RewardAns Map.empty Map.empty)
-   in Pulsing rewsnap pulser
+      provenance =
+        def
+          { spe = case slotsPerEpoch of EpochSize n -> n,
+            blocks = b,
+            blocksCount = blocksMade,
+            maxLL = maxSupply,
+            deltaR1 = deltaR1,
+            RP.r = _R,
+            RP.totalStake = totalStake,
+            RP.activeStake = activestake,
+            d = d,
+            expBlocks = expectedBlocks,
+            eta = eta,
+            rPot = (Coin rPot),
+            deltaT1 = (Coin deltaT1)
+            -- Fields not initialized here, but filled in in completeRupd
+            --   deltaR2
+            --   pools
+            --   desireabilities
+          }
+   in (Pulsing rewsnap pulser, provenance)
 
 -- Phase 2
 
@@ -1285,7 +1307,8 @@ createRUpd ::
   Word64 ->
   ProvM (RewardProvenance (Crypto era)) ShelleyBase (RewardUpdate (Crypto era))
 createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
-  let step1 = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
+  let (step1, initialProvenance) = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
+  modifyM (\_ -> initialProvenance)
   step2 <- pulseStep step1
   case step2 of
     (Complete r) -> pure r
