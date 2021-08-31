@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.PParams
     PParamsUpdate,
     updatePParams,
   )
-import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
+import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY, AlonzoBbodyEvent (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)

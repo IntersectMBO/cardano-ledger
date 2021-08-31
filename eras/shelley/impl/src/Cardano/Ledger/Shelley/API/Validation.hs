@@ -20,7 +20,6 @@ module Cardano.Ledger.Shelley.API.Validation
     BlockTransitionError (..),
     chainChecks,
     annotateBlock,
-    applyBlockOptsAnnotated,
     AnnotatedBlock (..),
   )
 where
@@ -38,17 +37,18 @@ import Cardano.Ledger.Shelley.API.Protocol (PraosCrypto)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.Rules.Bbody (AnnotatedBlock (..))
 import qualified Cardano.Ledger.Shelley.Rules.Bbody as STS
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Slotting.EpochInfo (epochInfoFirst, epochInfoSlotToUTCTime)
-import Cardano.Slotting.Slot (EpochNo, EpochSize)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Identity (runIdentity)
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
-import Data.Time (UTCTime)
+import Data.Bifunctor (second)
+import Data.Coerce (Coercible, coerce)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -71,7 +71,8 @@ class
     Environment (Core.EraRule "BBODY" era) ~ STS.BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ STS.BbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
-    ToCBORGroup (TxSeq era)
+    ToCBORGroup (TxSeq era),
+    Coercible (Event (Core.EraRule "BBODY" era)) (STS.BbodyEvent era)
   ) =>
   ApplyBlock era
   where
@@ -111,20 +112,30 @@ class
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
   default applyBlockOpts ::
     forall ep m.
-    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m) =>
+    ( EventReturnTypeRep ep,
+      MonadError (BlockTransitionError era) m
+    ) =>
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
     (Block BHeaderView era) ->
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
-  applyBlockOpts opts globals state blk =
-    liftEither
-      . left BlockTransitionError
-      . right
-        ( mapEventReturn @ep @(Core.EraRule "BBODY" era) $
-            updateNewEpochState state
-        )
-      $ res
+  applyBlockOpts opts globals state blk = do
+    res' <-
+      liftEither
+        . left BlockTransitionError
+        . right
+          ( mapEventReturn @ep @(Core.EraRule "BBODY" era) $
+              updateNewEpochState state
+          )
+        $ res
+    case asoEvents opts of
+      EPDiscard -> pure res'
+      EPReturn -> do
+        let ann = annotateBlock globals state blk
+        let annEv :: STS.BbodyEvent era
+            annEv = STS.AnnotatedBlockEvent ann
+        pure $ second (<> [coerce annEv]) res'
     where
       res =
         flip runReader globals
@@ -262,24 +273,13 @@ instance
   (NoThunks (STS.PredicateFailure (Core.EraRule "BBODY" era))) =>
   NoThunks (BlockTransitionError era)
 
-data AnnotatedBlock = AnnotatedBlock
-  { -- abEra :: !Era
-    abEpochNo :: !EpochNo,
-    abSlotNo :: !SlotNo,
-    abEpochSlot :: !SlotNo, -- The slot within the epoch (starts at 0 for first slot of each epoch
-    abTimeStamp :: !UTCTime, -- The slot number converted to UTCTime
-    abEpochSize :: !EpochSize -- Number of slots in current epoch
-    -- , abTxs :: [AnnotatedTx]   -- All fields in the superset of all block types
-  }
-
 annotateBlock ::
-  (Applicative f) =>
   Globals ->
   NewEpochState era ->
-  Block BHeaderView era ->
-  f AnnotatedBlock
-annotateBlock globals state _blk@(Block' bheader _ _) = do
-  let slotNo = bhviewSlot bheader
+  (Block BHeaderView era) ->
+  AnnotatedBlock
+annotateBlock globals state (Block' bheaderView _ _) = do
+  let slotNo = bhviewSlot bheaderView
       epochNo = nesEL state
       ann =
         AnnotatedBlock
@@ -289,16 +289,5 @@ annotateBlock globals state _blk@(Block' bheader _ _) = do
             abTimeStamp = runIdentity $ epochInfoSlotToUTCTime (epochInfo globals) (systemStart globals) slotNo,
             abEpochSize = runReader (epochInfoSize (epochInfo globals) epochNo) globals
           }
-  pure ann
+  ann
 
-applyBlockOptsAnnotated ::
-  forall ep m era.
-  (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m, ApplyBlock era) =>
-  ApplySTSOpts ep ->
-  Globals ->
-  NewEpochState era ->
-  Block BHeaderView era ->
-  m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era), AnnotatedBlock)
-applyBlockOptsAnnotated opts globals state blk = do
-  (,) <$> applyBlockOpts opts globals state blk
-    <*> annotateBlock globals state blk

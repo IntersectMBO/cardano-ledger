@@ -18,6 +18,7 @@ module Cardano.Ledger.Shelley.Rules.Bbody
     BbodyEvent (..),
     PredicateFailure,
     State,
+    AnnotatedBlock (..),
   )
 where
 
@@ -39,7 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersEnv (..))
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
-import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Cardano.Ledger.Slot (EpochNo, EpochSize, SlotNo, epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -53,6 +54,7 @@ import Control.State.Transition
   )
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Time (UTCTime)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -85,8 +87,19 @@ data BbodyPredicateFailure era
   | LedgersFailure (PredicateFailure (Core.EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
-newtype BbodyEvent era
+data AnnotatedBlock = AnnotatedBlock
+  { -- abEra :: !Era
+    abEpochNo :: !EpochNo,
+    abSlotNo :: !SlotNo,
+    abEpochSlot :: !SlotNo, -- The slot within the epoch (starts at 0 for first slot of each epoch
+    abTimeStamp :: !UTCTime, -- The slot number converted to UTCTime
+    abEpochSize :: !EpochSize -- Number of slots in current epoch
+    -- , abTxs :: [AnnotatedTx]   -- All fields in the superset of all block types
+  }
+
+data BbodyEvent era
   = LedgersEvent (Event (Core.EraRule "LEDGERS" era))
+  | AnnotatedBlockEvent AnnotatedBlock
 
 deriving stock instance
   ( Era era,

@@ -52,6 +52,7 @@ module Control.State.Transition.Extended
     tellEvents,
     EventReturnTypeRep,
     mapEventReturn,
+    discardEvents,
 
     -- * Apply STS
     AssertionPolicy (..),
