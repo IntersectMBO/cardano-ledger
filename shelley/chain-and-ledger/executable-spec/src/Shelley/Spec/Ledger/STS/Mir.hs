@@ -117,7 +117,7 @@ mirTransition = do
 
   if totR <= availableReserves && totT <= availableTreasury
     then do
-      tellEvent $ MirTransfer (_irwd ds)
+      tellEvent $ MirTransfer ((_irwd ds) {iRReserves = irwdR, iRTreasury = irwdT})
       pure $
         EpochState
           acnt
@@ -139,7 +139,11 @@ mirTransition = do
           pp
           nm
     else do
-      tellEvent $ NoMirTransfer (_irwd ds) availableReserves availableTreasury
+      tellEvent $
+        NoMirTransfer
+          ((_irwd ds) {iRReserves = irwdR, iRTreasury = irwdT})
+          availableReserves
+          availableTreasury
       pure $
         EpochState
           acnt
