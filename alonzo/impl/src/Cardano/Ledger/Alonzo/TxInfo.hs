@@ -29,7 +29,7 @@ import Cardano.Ledger.Alonzo.TxBody
     wdrls',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (TxBody, TxOut, Value)
@@ -62,8 +62,9 @@ import Data.Coders
 import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import qualified Data.Set as Set
--- Instances only
 import Data.Text (Text, pack)
 import Data.Text.Prettyprint.Doc (Pretty (..))
 import Data.Time.Clock (nominalDiffTimeToSeconds)
@@ -73,50 +74,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
 import qualified Plutus.V1.Ledger.Api as P
-  ( Address (..),
-    BuiltinByteString,
-    Credential (..),
-    CurrencySymbol (..),
-    DCert (..),
-    Data (..),
-    Datum (..),
-    DatumHash (..),
-    EvaluationError (..),
-    ExBudget (..),
-    ExCPU (..),
-    ExMemory (..),
-    Interval (..),
-    POSIXTime (..),
-    POSIXTimeRange,
-    PubKeyHash (..),
-    ScriptContext (..),
-    ScriptPurpose (..),
-    StakingCredential (..),
-    TokenName (..),
-    TxId (..),
-    TxInInfo (..),
-    TxInfo (..),
-    TxOut (..),
-    TxOutRef (..),
-    ValidatorHash (..),
-    Value (..),
-    VerboseMode (..),
-    adaSymbol,
-    adaToken,
-    always,
-    dataToBuiltinData,
-    evaluateScriptRestricting,
-    from,
-    fromData,
-    lowerBound,
-    singleton,
-    strictUpperBound,
-    to,
-    toBuiltin,
-    toData,
-    unionWith,
-    validateScript,
-  )
 import Plutus.V1.Ledger.Contexts ()
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
@@ -315,6 +272,23 @@ getWitVKeyHash =
 transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
 transDataPair (x, y) = (transDataHash' x, P.Datum (P.dataToBuiltinData (getPlutusData y)))
 
+transRedeemer :: Data era -> P.Redeemer
+transRedeemer = P.Redeemer . P.dataToBuiltinData . getPlutusData
+
+transRedeemerPtr ::
+  ( Era era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  ) =>
+  (Core.TxBody era) ->
+  (RdmrPtr, (Data era, ExUnits)) ->
+  Maybe (P.ScriptPurpose, P.Redeemer)
+transRedeemerPtr txb (ptr, (d, _)) =
+  case rdptrInv txb ptr of
+    SNothing -> Nothing
+    SJust sp -> Just (transScriptPurpose sp, transRedeemer d)
+
 transExUnits :: ExUnits -> P.ExBudget
 transExUnits (ExUnits mem steps) =
   P.ExBudget (P.ExCPU (fromIntegral steps)) (P.ExMemory (fromIntegral mem))
@@ -370,8 +344,7 @@ txInfo ei sysS utxo tx = do
         P.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
         P.txInfoValidRange = timeRange,
         P.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
-        -- The type of txInfoRedeemers is [(ScriptPurpose, Redeemer)]
-        P.txInfoRedeemers = undefined,
+        P.txInfoRedeemers = mapMaybe (transRedeemerPtr tbody) rdmrs,
         P.txInfoData = map transDataPair datpairs,
         P.txInfoId = P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
       }
@@ -383,6 +356,7 @@ txInfo ei sysS utxo tx = do
     forge = mint' tbody
     interval = vldt' tbody
     datpairs = Map.toList (unTxDats $ txdats' _witnesses)
+    rdmrs = Map.toList (unRedeemers $ txrdmrs' _witnesses)
 
 -- ===============================================================
 -- From the specification, Figure 7 "Script Validation, cont."
