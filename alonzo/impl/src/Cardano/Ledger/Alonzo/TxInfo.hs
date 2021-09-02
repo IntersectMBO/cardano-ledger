@@ -370,6 +370,8 @@ txInfo ei sysS utxo tx = do
         P.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
         P.txInfoValidRange = timeRange,
         P.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
+        -- The type of txInfoRedeemers is [(ScriptPurpose, Redeemer)]
+        P.txInfoRedeemers = undefined,
         P.txInfoData = map transDataPair datpairs,
         P.txInfoId = P.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
       }
