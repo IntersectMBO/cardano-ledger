@@ -72,6 +72,20 @@ import Cardano.Ledger.Slot
     EpochSize (..),
     SlotNo (..),
   )
+import Cardano.Protocol.TPraos (IndividualPoolStake (..), PoolDistr (..))
+import Cardano.Protocol.TPraos.BHeader
+  ( BHBody (..),
+    BHeader (BHeader),
+    HashHeader (..),
+    LastAppliedBlock (..),
+    PrevHash (..),
+  )
+import Cardano.Protocol.TPraos.OCert
+  ( KESPeriod (..),
+    OCert (..),
+    OCertEnv (..),
+    OCertSignable (..),
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
@@ -95,16 +109,8 @@ import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Shelley.Spec.Ledger.BlockChain
-  ( BHBody (..),
-    BHeader (..),
-    Block (..),
-    HashHeader (..),
-    LastAppliedBlock (..),
-    PrevHash (..),
-  )
+import Shelley.Spec.Ledger.BlockChain (Block (..))
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), decompactAddr)
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..), PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
     PulsingStakeDistr (..),
@@ -127,12 +133,6 @@ import Shelley.Spec.Ledger.LedgerState
     UTxOState (..),
   )
 import Shelley.Spec.Ledger.Metadata (Metadata (..), Metadatum (..))
-import Shelley.Spec.Ledger.OCert
-  ( KESPeriod (..),
-    OCert (..),
-    OCertEnv (..),
-    OCertSignable (..),
-  )
 import Shelley.Spec.Ledger.PParams
   ( PPUpdateEnv (..),
     PParams' (..),

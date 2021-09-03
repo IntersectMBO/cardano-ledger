@@ -67,6 +67,8 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
+import Cardano.Protocol.TPraos (IndividualPoolStake (..))
+import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)
@@ -90,7 +92,6 @@ import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API hiding (SignedDSIGN, TxBody (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (ChainCode (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), PulsingStakeDistr (..), StakeDistrPulser (..))
 import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg)
 import qualified Shelley.Spec.Ledger.Metadata as MD
@@ -121,7 +122,6 @@ import qualified Shelley.Spec.Ledger.STS.Ledger as STS
 import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
 import qualified Shelley.Spec.Ledger.STS.Pool as STS
 import qualified Shelley.Spec.Ledger.STS.Ppup as STS
-import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS
 import qualified Shelley.Spec.Ledger.STS.Utxow as STS
 import Shelley.Spec.Ledger.Tx (WitnessSetHKD (WitnessSet), hashScript)

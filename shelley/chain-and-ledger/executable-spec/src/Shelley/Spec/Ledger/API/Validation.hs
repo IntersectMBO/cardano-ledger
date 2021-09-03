@@ -28,6 +28,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -35,7 +36,7 @@ import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.API.Protocol (PraosCrypto)
-import Shelley.Spec.Ledger.BlockChain (BHeader, Block)
+import Shelley.Spec.Ledger.BlockChain (Block)
 import Shelley.Spec.Ledger.LedgerState (NewEpochState)
 import qualified Shelley.Spec.Ledger.LedgerState as LedgerState
 import Shelley.Spec.Ledger.PParams (PParams' (..))

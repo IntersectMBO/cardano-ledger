@@ -60,11 +60,11 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
   )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.TxBody
   ( PoolMetadata (..),
     PoolParams (..),

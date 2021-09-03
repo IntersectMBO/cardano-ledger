@@ -13,7 +13,7 @@ import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Keys (KeyHash (..))
-import Cardano.Ledger.Slot (BlockNo, EpochNo)
+import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Prelude (HeapWords (..), readEither)
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Control.DeepSeq (NFData (rnf))
@@ -70,8 +70,6 @@ instance NFData (StrictSeq a) where
 -- By defintion it is strict, so as long as the (hidden) constructor is evident, it is in normal form
 
 instance NFData a => NFData (WithOrigin a)
-
-instance NFData BlockNo
 
 instance NoThunks WC.XSignature where
   wNoThunks ctxt s = wNoThunks ctxt (WC.unXSignature s)

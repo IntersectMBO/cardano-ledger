@@ -33,6 +33,10 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos.BHeader
+  ( LastAppliedBlock (..),
+    hashHeaderToNonce,
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -54,10 +58,6 @@ import Data.Set (Set)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.BlockChain
-  ( LastAppliedBlock (..),
-    hashHeaderToNonce,
-  )
 import Shelley.Spec.Ledger.EpochBoundary (PulsingStakeDistr (..))
 import Shelley.Spec.Ledger.LedgerState (stakeDistr)
 import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv, BbodyState)

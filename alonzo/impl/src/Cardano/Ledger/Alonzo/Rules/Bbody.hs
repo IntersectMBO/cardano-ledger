@@ -31,6 +31,13 @@ import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Cardano.Protocol.TPraos.BHeader
+  ( BHBody (bhash, bheaderSlotNo),
+    BHeader (..),
+    hBbsize,
+    issuerIDfromBHBody,
+  )
+import Cardano.Protocol.TPraos.Rules.Overlay (isOverlaySlot)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -51,16 +58,11 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BlockChain
-  ( BHBody (bhash, bheaderSlotNo),
-    BHeader (..),
-    Block (..),
+  ( Block (..),
     bBodySize,
-    hBbsize,
     incrBlocks,
-    issuerIDfromBHBody,
   )
 import Shelley.Spec.Ledger.LedgerState (LedgerState)
-import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Bbody
   ( BbodyEnv (..),
     BbodyEvent (..),

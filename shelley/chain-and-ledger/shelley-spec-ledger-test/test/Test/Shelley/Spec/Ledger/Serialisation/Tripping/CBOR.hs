@@ -50,6 +50,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
+import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
 import Codec.CBOR.Read (deserialiseFromBytes)
@@ -61,14 +62,12 @@ import Shelley.Spec.Ledger.Genesis (ShelleyGenesis)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.RewardUpdate
   ( FreeVars (..),
-    -- RewardPulser(..),
     Pulser,
     PulsingRewUpdate (..),
     RewardSnapShot (..),
     RewardUpdate (..),
   )
 import qualified Shelley.Spec.Ledger.STS.Ledgers as STS
-import qualified Shelley.Spec.Ledger.STS.Prtcl as STS (PrtclState)
 import qualified Test.Shelley.Spec.Ledger.ConcreteCryptoTypes as Mock
 import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()

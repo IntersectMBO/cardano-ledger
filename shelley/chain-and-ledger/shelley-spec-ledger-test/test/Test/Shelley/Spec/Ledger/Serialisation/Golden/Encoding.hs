@@ -75,6 +75,33 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Prelude (LByteString)
+import Cardano.Protocol.TPraos (PoolDistr (..))
+import Cardano.Protocol.TPraos.BHeader
+  ( BHBody (..),
+    BHeader (..),
+    HashHeader (..),
+    PrevHash (..),
+    bhash,
+    bheaderBlockNo,
+    bheaderEta,
+    bheaderL,
+    bheaderOCert,
+    bheaderPrev,
+    bheaderSlotNo,
+    bheaderVk,
+    bheaderVrfVk,
+    bprotver,
+    bsize,
+    mkSeed,
+    seedEta,
+    seedL,
+  )
+import Cardano.Protocol.TPraos.OCert
+  ( KESPeriod (..),
+    OCert,
+    OCertSignable (..),
+    pattern OCert,
+  )
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -93,34 +120,15 @@ import Shelley.Spec.Ledger.API
     ScriptHash,
   )
 import Shelley.Spec.Ledger.BlockChain
-  ( BHBody (..),
-    BHeader (..),
-    Block (..),
-    HashHeader (..),
-    PrevHash (..),
+  ( Block (..),
     TxSeq (..),
     bbHash,
-    bhash,
-    bheaderBlockNo,
-    bheaderEta,
-    bheaderL,
-    bheaderOCert,
-    bheaderPrev,
-    bheaderSlotNo,
-    bheaderVk,
-    bheaderVrfVk,
-    bprotver,
-    bsize,
-    mkSeed,
-    seedEta,
-    seedL,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( pattern DeRegKey,
     pattern Delegate,
     pattern GenesisDelegCert,
     pattern MIRCert,
-    pattern PoolDistr,
     pattern RegKey,
     pattern RegPool,
     pattern RetirePool,
@@ -140,12 +148,6 @@ import Shelley.Spec.Ledger.LedgerState
     RewardUpdate (..),
   )
 import qualified Shelley.Spec.Ledger.Metadata as MD
-import Shelley.Spec.Ledger.OCert
-  ( KESPeriod (..),
-    OCert,
-    OCertSignable (..),
-    pattern OCert,
-  )
 import Shelley.Spec.Ledger.PParams
   ( PParams' (..),
     PParamsUpdate,

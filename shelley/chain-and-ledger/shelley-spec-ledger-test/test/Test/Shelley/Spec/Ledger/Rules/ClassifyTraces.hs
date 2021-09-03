@@ -25,6 +25,10 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
+import Cardano.Protocol.TPraos.BHeader
+  ( bhbody,
+    bheaderSlotNo,
+  )
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.State.Transition (STS (State))
 import Control.State.Transition.Extended (Environment, Signal)
@@ -56,12 +60,7 @@ import Shelley.Spec.Ledger.API
     Delegation (..),
     LEDGER,
   )
-import Shelley.Spec.Ledger.BlockChain
-  ( Block (..),
-    bhbody,
-    bheader,
-    bheaderSlotNo,
-  )
+import Shelley.Spec.Ledger.BlockChain (Block (..), bheader)
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( isDeRegKey,
     isDelegation,

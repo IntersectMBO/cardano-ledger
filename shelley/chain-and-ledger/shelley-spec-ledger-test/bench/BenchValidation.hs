@@ -33,6 +33,8 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Prelude (NFData (rnf))
+import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..))
+import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
 import Control.State.Transition (STS (State))
@@ -49,19 +51,13 @@ import Shelley.Spec.Ledger.API.Protocol
     updateChainDepState,
   )
 import Shelley.Spec.Ledger.Bench.Gen (genBlock, genChainState)
-import Shelley.Spec.Ledger.BlockChain
-  ( BHeader (..),
-    Block (..),
-    LastAppliedBlock (..),
-    slotToNonce,
-  )
+import Shelley.Spec.Ledger.BlockChain (Block (..), slotToNonce)
 import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
 import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState,
     nesBcur,
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.STS.Prtcl (PrtclState (..))
 import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
 import Shelley.Spec.Ledger.TxBody (TransTxBody, TransTxId)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)

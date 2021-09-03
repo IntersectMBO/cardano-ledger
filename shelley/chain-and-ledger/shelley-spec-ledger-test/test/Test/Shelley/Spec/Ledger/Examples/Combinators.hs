@@ -62,6 +62,8 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Protocol.TPraos (PoolDistr (..))
+import Cardano.Protocol.TPraos.BHeader (BHBody (..), LastAppliedBlock (..), bhHash, bhbody, lastAppliedHash, prevHashToNonce)
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
 import Control.State.Transition (STS (State))
@@ -73,16 +75,9 @@ import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.BlockChain
-  ( BHBody (..),
-    Block (..),
-    LastAppliedBlock (..),
-    bhHash,
-    bhbody,
+  ( Block (..),
     bheader,
-    lastAppliedHash,
-    prevHashToNonce,
   )
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
     PulsingStakeDistr (..),

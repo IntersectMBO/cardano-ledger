@@ -29,6 +29,7 @@ import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Slot
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos (IndividualPoolStake (..), PoolDistr (..))
 import Control.Provenance (runProvM)
 import Control.State.Transition
 import Data.Default.Class (Default, def)
@@ -37,7 +38,6 @@ import Data.Maybe (catMaybes)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams (ProtVer)

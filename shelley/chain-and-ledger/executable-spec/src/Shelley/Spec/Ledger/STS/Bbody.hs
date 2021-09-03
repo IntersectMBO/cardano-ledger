@@ -30,6 +30,14 @@ import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Cardano.Protocol.TPraos.BHeader
+  ( BHBody (..),
+    BHeader (BHeader),
+    bhash,
+    hBbsize,
+    issuerIDfromBHBody,
+  )
+import Cardano.Protocol.TPraos.Rules.Overlay (isOverlaySlot)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -47,13 +55,9 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Shelley.Spec.Ledger.BlockChain
-  ( BHBody (..),
-    BHeader (..),
-    Block (..),
+  ( Block (..),
     bBodySize,
-    hBbsize,
     incrBlocks,
-    issuerIDfromBHBody,
   )
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade)
 import Shelley.Spec.Ledger.LedgerState
@@ -61,7 +65,6 @@ import Shelley.Spec.Ledger.LedgerState
     LedgerState,
     TransLedgerState,
   )
-import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
 import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 

@@ -32,11 +32,11 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Test.Shelley.Spec.Ledger.Generator.Constants
   ( Constants (..),
     defaultConstants,

@@ -114,6 +114,22 @@ import Cardano.Ledger.Slot
     epochInfoFirst,
     (*-),
   )
+import Cardano.Protocol.TPraos.BHeader
+  ( BHeader,
+    HashHeader,
+    mkSeed,
+    seedEta,
+    seedL,
+    pattern BHBody,
+    pattern BHeader,
+    pattern BlockHash,
+  )
+import Cardano.Protocol.TPraos.OCert
+  ( KESPeriod (..),
+    OCert,
+    OCertSignable (..),
+    pattern OCert,
+  )
 import Codec.Serialise (serialise)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
@@ -133,17 +149,9 @@ import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as Plutus
 import Shelley.Spec.Ledger.BlockChain
-  ( BHeader (BHeader),
-    Block (Block),
-    HashHeader,
+  ( Block (Block),
     bBodySize,
-    mkSeed,
-    seedEta,
-    seedL,
-    pattern BHBody,
-    pattern BHeader,
     pattern Block,
-    pattern BlockHash,
   )
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -158,12 +166,6 @@ import Shelley.Spec.Ledger.LedgerState
     _rewards,
     _utxo,
     _utxoState,
-  )
-import Shelley.Spec.Ledger.OCert
-  ( KESPeriod (..),
-    OCert,
-    OCertSignable (..),
-    pattern OCert,
   )
 import Shelley.Spec.Ledger.PParams
   ( PParams,

@@ -22,6 +22,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
 import qualified Data.ByteString.Lazy as BSL
 import Shelley.Spec.Ledger.API
   ( Credential,
@@ -33,11 +34,7 @@ import Shelley.Spec.Ledger.API
     Update,
   )
 import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.BlockChain
-  ( BHBody,
-    BHeader,
-    LaxBlock,
-  )
+import Shelley.Spec.Ledger.BlockChain (LaxBlock)
 import Shelley.Spec.Ledger.Metadata (Metadata)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.TxBody

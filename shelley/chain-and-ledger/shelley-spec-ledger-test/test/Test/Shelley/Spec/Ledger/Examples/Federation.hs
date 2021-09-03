@@ -34,13 +34,16 @@ import Cardano.Ledger.Keys
     vKey,
   )
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
+import Cardano.Protocol.TPraos.Rules.Overlay
+  ( OBftSlot (..),
+    lookupInOverlaySchedule,
+  )
 import qualified Data.List
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Word (Word64)
 import GHC.Stack (HasCallStack)
-import Shelley.Spec.Ledger.OCert (KESPeriod (..))
-import Shelley.Spec.Ledger.OverlaySchedule
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..))
 import Test.Shelley.Spec.Ledger.Generator.Core
   ( AllIssuerKeys (..),

@@ -57,6 +57,7 @@ library
     cardano-crypto-class,
     cardano-ledger-core,
     cardano-prelude,
+    cardano-protocol-tpraos,
     cardano-slotting,
     cborg,
     containers,

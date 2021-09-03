@@ -19,76 +19,62 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Shelley.Spec.Ledger.BlockChain
-  ( HashHeader (..),
-    PrevHash (..),
-    LastAppliedBlock (..),
-    lastAppliedHash,
-    BHBody (..),
-    poolIDfromBHBody,
-    issuerIDfromBHBody,
-    BHeader (BHeader),
-    Block (Block, Block'),
+  ( Block (Block, Block'),
     LaxBlock (..),
     TxSeq (TxSeq, txSeqTxns', TxSeq'),
     constructMetadata,
     txSeqTxns,
-    bhHash,
     bbHash,
+    bBodySize,
+    slotToNonce,
+    -- accessor functions
+    bheader,
+    bbody,
+    --
+    incrBlocks,
+    coreAuxDataBytes,
+    -- deprecated
+    HashHeader,
+    PrevHash,
+    BHBody,
+    BHeader,
+    LastAppliedBlock,
+    checkLeaderValue,
+    bhHash,
+    bnonce,
     hashHeaderToNonce,
     prevHashToNonce,
     bHeaderSize,
-    bBodySize,
-    slotToNonce,
-    hBbsize,
-    -- accessor functions
-    bheader,
     bhbody,
-    bbody,
-    bnonce,
-    --
+    hBbsize,
+    issuerIDfromBHBody,
     seedEta,
     seedL,
-    incrBlocks,
     mkSeed,
-    checkLeaderValue,
-    coreAuxDataBytes,
+    lastAppliedHash,
   )
 where
 
 import Cardano.Binary
   ( Annotator (..),
-    Case (..),
     Decoder,
     FromCBOR (fromCBOR),
     ToCBOR (..),
-    TokenType (TypeNull),
     annotatorSlice,
-    decodeNull,
     encodeListLen,
-    encodeNull,
     encodePreEncoded,
-    peekTokenType,
-    serialize',
     serializeEncoding,
     serializeEncoding',
-    szCases,
     withSlice,
-    withWordSize,
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
-import qualified Cardano.Crypto.KES as KES
-import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
-    FixedPoint,
     Nonce (..),
     Seed (..),
     StrictMaybe (..),
-    activeSlotLog,
-    activeSlotVal,
     mkNonceFromNumber,
-    mkNonceFromOutputVRF,
     strictMaybeToMaybe,
   )
 import qualified Cardano.Ledger.Core as Core
@@ -96,71 +82,37 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
-import Cardano.Ledger.Keys
-  ( CertifiedVRF,
-    Hash,
-    KeyHash,
-    KeyRole (..),
-    SignedKES,
-    VKey,
-    VerKeyVRF,
-    decodeSignedKES,
-    decodeVerKeyVRF,
-    encodeSignedKES,
-    encodeVerKeyVRF,
-    hashKey,
-  )
+import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
+  ( ToCBORGroup (..),
     decodeMap,
     decodeRecordNamed,
     decodeSeq,
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
-    listLenInt,
-    runByteBuilder,
   )
-import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
+import qualified Cardano.Protocol.TPraos.BHeader as TP
 import Cardano.Slotting.Slot (WithOrigin (..))
-import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
-import qualified Data.ByteString.Builder as BS
-import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Ratio ((%))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable
-import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import Shelley.Spec.Ledger.OCert (OCert (..))
-import Shelley.Spec.Ledger.PParams (ProtVer (..))
 import Shelley.Spec.Ledger.Tx (Tx, segwitTx)
-import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
-
--- =======================================================
-
--- | The hash of a Block Header
-newtype HashHeader crypto = HashHeader {unHashHeader :: Hash crypto (BHeader crypto)}
-  deriving stock (Show, Eq, Generic, Ord)
-  deriving newtype (NFData, NoThunks)
-
-deriving newtype instance CC.Crypto crypto => ToCBOR (HashHeader crypto)
-
-deriving newtype instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
 
 data TxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx era)),
@@ -275,14 +227,6 @@ instance
   listLen _ = 3
   listLenBound _ = 3
 
--- | Hash a given block header
-bhHash ::
-  forall crypto.
-  CC.Crypto crypto =>
-  BHeader crypto ->
-  HashHeader crypto
-bhHash = HashHeader . Hash.hashWithSerialiser @(CC.HASH crypto) toCBOR
-
 -- | Hash a given block body
 bbHash ::
   forall era.
@@ -301,277 +245,8 @@ bbHash (TxSeq' _ bodies wits md) =
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
--- | HashHeader to Nonce
-hashHeaderToNonce :: HashHeader crypto -> Nonce
-hashHeaderToNonce = Nonce . coerce
-
-data BHeader crypto = BHeader'
-  { bHeaderBody' :: !(BHBody crypto),
-    bHeaderSig' :: !(SignedKES crypto (BHBody crypto)),
-    bHeaderBytes :: !BSL.ByteString
-  }
-  deriving (Generic)
-
-deriving via
-  AllowThunksIn '["bHeaderBytes"] (BHeader crypto)
-  instance
-    CC.Crypto crypto => NoThunks (BHeader crypto)
-
-deriving instance CC.Crypto crypto => Eq (BHeader crypto)
-
-deriving instance CC.Crypto crypto => Show (BHeader crypto)
-
-pattern BHeader ::
-  CC.Crypto crypto =>
-  BHBody crypto ->
-  SignedKES crypto (BHBody crypto) ->
-  BHeader crypto
-pattern BHeader bHeaderBody' bHeaderSig' <-
-  BHeader' {bHeaderBody', bHeaderSig'}
-  where
-    BHeader body sig =
-      let mkBytes bhBody kESig =
-            serializeEncoding $
-              encodeListLen 2
-                <> toCBOR bhBody
-                <> encodeSignedKES kESig
-       in BHeader' body sig (mkBytes body sig)
-
-{-# COMPLETE BHeader #-}
-
-instance
-  CC.Crypto crypto =>
-  ToCBOR (BHeader crypto)
-  where
-  toCBOR (BHeader' _ _ bytes) = encodePreEncoded (BSL.toStrict bytes)
-  encodedSizeExpr size proxy =
-    1
-      + encodedSizeExpr size (bHeaderBody' <$> proxy)
-      + KES.encodedSigKESSizeExpr (KES.getSig . bHeaderSig' <$> proxy)
-
-instance
-  CC.Crypto crypto =>
-  FromCBOR (Annotator (BHeader crypto))
-  where
-  fromCBOR = annotatorSlice $
-    decodeRecordNamed "Header" (const 2) $ do
-      bhb <- fromCBOR
-      sig <- decodeSignedKES
-      pure $ pure $ BHeader' bhb sig
-
--- | The previous hash of a block
-data PrevHash crypto = GenesisHash | BlockHash !(HashHeader crypto)
-  deriving (Show, Eq, Generic, Ord)
-
-instance CC.Crypto crypto => NoThunks (PrevHash crypto)
-
-instance
-  CC.Crypto crypto =>
-  ToCBOR (PrevHash crypto)
-  where
-  toCBOR GenesisHash = encodeNull
-  toCBOR (BlockHash h) = toCBOR h
-  encodedSizeExpr size proxy =
-    szCases
-      [ Case "GenesisHash" 1,
-        Case
-          "BlockHash"
-          ( encodedSizeExpr
-              size
-              ( ( \case
-                    -- we are mapping a 'Proxy', so nothing can
-                    -- go wrong here
-                    GenesisHash -> error "impossible happend"
-                    BlockHash h -> h
-                )
-                  <$> proxy
-              )
-          )
-      ]
-
-instance
-  CC.Crypto crypto =>
-  FromCBOR (PrevHash crypto)
-  where
-  fromCBOR = do
-    peekTokenType >>= \case
-      TypeNull -> do
-        decodeNull
-        pure GenesisHash
-      _ -> BlockHash <$> fromCBOR
-
-prevHashToNonce ::
-  PrevHash crypto ->
-  Nonce
-prevHashToNonce = \case
-  GenesisHash -> NeutralNonce -- This case can only happen when starting Shelley from genesis,
-  -- setting the intial chain state to some epoch e,
-  -- and having the first block be in epoch e+1.
-  -- In this edge case there is no need to add any extra
-  -- entropy via the previous header hash to the next epoch nonce,
-  -- so using the neutral nonce is appropriate.
-  BlockHash ph -> hashHeaderToNonce ph
-
-data LastAppliedBlock crypto = LastAppliedBlock
-  { labBlockNo :: !BlockNo,
-    labSlotNo :: !SlotNo,
-    labHash :: !(HashHeader crypto)
-  }
-  deriving (Show, Eq, Generic)
-
-instance CC.Crypto crypto => NoThunks (LastAppliedBlock crypto)
-
-instance NFData (LastAppliedBlock crypto)
-
-instance CC.Crypto crypto => ToCBOR (LastAppliedBlock crypto) where
-  toCBOR (LastAppliedBlock b s h) =
-    encodeListLen 3 <> toCBOR b <> toCBOR s <> toCBOR h
-
-instance CC.Crypto crypto => FromCBOR (LastAppliedBlock crypto) where
-  fromCBOR =
-    decodeRecordNamed
-      "lastAppliedBlock"
-      (const 3)
-      ( LastAppliedBlock
-          <$> fromCBOR
-          <*> fromCBOR
-          <*> fromCBOR
-      )
-
-lastAppliedHash :: WithOrigin (LastAppliedBlock crypto) -> PrevHash crypto
-lastAppliedHash Origin = GenesisHash
-lastAppliedHash (At lab) = BlockHash $ labHash lab
-
-data BHBody crypto = BHBody
-  { -- | block number
-    bheaderBlockNo :: !BlockNo,
-    -- | block slot
-    bheaderSlotNo :: !SlotNo,
-    -- | Hash of the previous block header
-    bheaderPrev :: !(PrevHash crypto),
-    -- | verification key of block issuer
-    bheaderVk :: !(VKey 'BlockIssuer crypto),
-    -- | VRF verification key for block issuer
-    bheaderVrfVk :: !(VerKeyVRF crypto),
-    -- | block nonce
-    bheaderEta :: !(CertifiedVRF crypto Nonce),
-    -- | leader election value
-    bheaderL :: !(CertifiedVRF crypto Natural),
-    -- | Size of the block body
-    bsize :: !Natural,
-    -- | Hash of block body
-    bhash :: !(Hash crypto EraIndependentBlockBody),
-    -- | operational certificate
-    bheaderOCert :: !(OCert crypto),
-    -- | protocol version
-    bprotver :: !ProtVer
-  }
-  deriving (Generic)
-
-deriving instance CC.Crypto crypto => Show (BHBody crypto)
-
-deriving instance CC.Crypto crypto => Eq (BHBody crypto)
-
-instance
-  CC.Crypto crypto =>
-  SignableRepresentation (BHBody crypto)
-  where
-  getSignableRepresentation = serialize'
-
-instance
-  CC.Crypto crypto =>
-  NoThunks (BHBody crypto)
-
-instance
-  CC.Crypto crypto =>
-  ToCBOR (BHBody crypto)
-  where
-  toCBOR bhBody =
-    encodeListLen (9 + listLen oc + listLen pv)
-      <> toCBOR (bheaderBlockNo bhBody)
-      <> toCBOR (bheaderSlotNo bhBody)
-      <> toCBOR (bheaderPrev bhBody)
-      <> toCBOR (bheaderVk bhBody)
-      <> encodeVerKeyVRF (bheaderVrfVk bhBody)
-      <> toCBOR (bheaderEta bhBody)
-      <> toCBOR (bheaderL bhBody)
-      <> toCBOR (bsize bhBody)
-      <> toCBOR (bhash bhBody)
-      <> toCBORGroup oc
-      <> toCBORGroup pv
-    where
-      oc = bheaderOCert bhBody
-      pv = bprotver bhBody
-
-  encodedSizeExpr size proxy =
-    fromInteger (withWordSize $ 9 + listLenBound oc + listLenBound pv)
-      + encodedSizeExpr size (bheaderBlockNo <$> proxy)
-      + encodedSizeExpr size (bheaderSlotNo <$> proxy)
-      + encodedSizeExpr size (bheaderPrev <$> proxy)
-      + encodedSizeExpr size (bheaderVk <$> proxy)
-      + VRF.encodedVerKeyVRFSizeExpr (bheaderVrfVk <$> proxy)
-      + encodedSizeExpr size (bheaderEta <$> proxy)
-      + encodedSizeExpr size (bheaderL <$> proxy)
-      + encodedSizeExpr size (toWord64 . bsize <$> proxy)
-      + encodedSizeExpr size (bhash <$> proxy)
-      + encodedSizeExpr size (bheaderOCert <$> proxy)
-      + encodedSizeExpr size (bprotver <$> proxy)
-    where
-      oc = bheaderOCert <$> proxy
-      pv = bprotver <$> proxy
-      toWord64 :: Natural -> Word64
-      toWord64 = fromIntegral
-
-instance
-  CC.Crypto crypto =>
-  FromCBOR (BHBody crypto)
-  where
-  fromCBOR = decodeRecordNamed "BHBody" bhBodySize $ do
-    bheaderBlockNo <- fromCBOR
-    bheaderSlotNo <- fromCBOR
-    bheaderPrev <- fromCBOR
-    bheaderVk <- fromCBOR
-    bheaderVrfVk <- decodeVerKeyVRF
-    bheaderEta <- fromCBOR
-    bheaderL <- fromCBOR
-    bsize <- fromCBOR
-    bhash <- fromCBOR
-    bheaderOCert <- fromCBORGroup
-    bprotver <- fromCBORGroup
-    pure $
-      BHBody
-        { bheaderBlockNo,
-          bheaderSlotNo,
-          bheaderPrev,
-          bheaderVk,
-          bheaderVrfVk,
-          bheaderEta,
-          bheaderL,
-          bsize,
-          bhash,
-          bheaderOCert,
-          bprotver
-        }
-    where
-      bhBodySize body = 9 + listLenInt (bheaderOCert body) + listLenInt (bprotver body)
-
--- | Retrieve the pool id (the hash of the pool operator's cold key)
--- from the body of the block header.
-poolIDfromBHBody :: CC.Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
-poolIDfromBHBody = hashKey . bheaderVk
-{-# DEPRECATED poolIDfromBHBody "poolIDfromBHBody has been deprecated (the name is misleading), use issuerIDfromBHBody" #-}
-
--- | Retrieve the issuer id (the hash of the cold key) from the body of the block header.
--- This corresponds to either a genesis/core node or a stake pool.
-issuerIDfromBHBody :: CC.Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
-issuerIDfromBHBody = hashKey . bheaderVk
-
--- | Retrieve the new nonce from the block header body.
-bnonce :: BHBody crypto -> Nonce
-bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
-
 data Block era
-  = Block' !(BHeader (Crypto era)) !(Era.TxSeq era) BSL.ByteString
+  = Block' !(TP.BHeader (Crypto era)) !(Era.TxSeq era) BSL.ByteString
   deriving (Generic)
 
 deriving stock instance
@@ -588,7 +263,7 @@ deriving anyclass instance
 
 pattern Block ::
   (Era era, ToCBORGroup (Era.TxSeq era)) =>
-  BHeader (Crypto era) ->
+  TP.BHeader (Crypto era) ->
   Era.TxSeq era ->
   Block era
 pattern Block h txns <-
@@ -725,13 +400,6 @@ instance
   where
   fromCBOR = fmap LaxBlock <$> blockDecoder True
 
-bHeaderSize ::
-  forall crypto.
-  (CC.Crypto crypto) =>
-  BHeader crypto ->
-  Int
-bHeaderSize = BS.length . serialize'
-
 bBodySize ::
   ToCBORGroup txSeq => txSeq -> Int
 bBodySize = BS.length . serializeEncoding' . toCBORGroup
@@ -741,102 +409,11 @@ slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 bheader ::
   Block era ->
-  BHeader (Crypto era)
+  TP.BHeader (Crypto era)
 bheader (Block' bh _ _) = bh
 
 bbody :: Block era -> Era.TxSeq era
 bbody (Block' _ txs _) = txs
-
-bhbody ::
-  CC.Crypto crypto =>
-  BHeader crypto ->
-  BHBody crypto
-bhbody (BHeader b _) = b
-
--- | Construct a seed to use in the VRF computation.
-mkSeed ::
-  -- | Universal constant
-  Nonce ->
-  SlotNo ->
-  -- | Epoch nonce
-  Nonce ->
-  Seed
-mkSeed ucNonce (SlotNo slot) eNonce =
-  Seed
-    . ( case ucNonce of
-          NeutralNonce -> id
-          Nonce h -> Hash.xor (Hash.castHash h)
-      )
-    . Hash.castHash
-    . Hash.hashWith id
-    . runByteBuilder (8 + 32)
-    $ BS.word64BE slot
-      <> ( case eNonce of
-             NeutralNonce -> mempty
-             Nonce h -> BS.byteStringCopy (Hash.hashToBytes h)
-         )
-
--- | Check that the certified input natural is valid for being slot leader. This
--- means we check that
---
--- p < 1 - (1 - f)^σ
---
--- where p = certNat / certNatMax.
---
--- The calculation is done using the following optimization:
---
--- let q = 1 - p and c = ln(1 - f)
---
--- then           p < 1 - (1 - f)^σ
--- <=>  1 / (1 - p) < exp(-σ * c)
--- <=>  1 / q       < exp(-σ * c)
---
--- This can be efficiently be computed by `taylorExpCmp` which returns `ABOVE`
--- in case the reference value `1 / (1 - p)` is above the exponential function
--- at `-σ * c`, `BELOW` if it is below or `MaxReached` if it couldn't
--- conclusively compute this within the given iteration bounds.
---
--- Note that  1       1               1                         certNatMax
---           --- =  ----- = ---------------------------- = ----------------------
---            q     1 - p    1 - (certNat / certNatMax)    (certNatMax - certNat)
-checkLeaderValue ::
-  forall v.
-  (VRF.VRFAlgorithm v) =>
-  VRF.OutputVRF v ->
-  Rational ->
-  ActiveSlotCoeff ->
-  Bool
-checkLeaderValue certVRF σ f =
-  if activeSlotVal f == maxBound
-    then -- If the active slot coefficient is equal to one,
-    -- then nearly every stake pool can produce a block every slot.
-    -- In this degenerate case, where ln (1-f) is not defined,
-    -- we let the VRF leader check always succeed.
-    -- This is a testing convenience, the active slot coefficient should not
-    -- bet set above one half otherwise.
-      True
-    else case taylorExpCmp 3 recip_q x of
-      ABOVE _ _ -> False
-      BELOW _ _ -> True
-      MaxReached _ -> False
-  where
-    certNatMax :: Natural
-    certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF (Proxy @v))
-    c, recip_q, x :: FixedPoint
-    c = activeSlotLog f
-    recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
-    x = - fromRational σ * c
-    certNat :: Natural
-    certNat = VRF.getOutputVRFNatural certVRF
-
-seedEta :: Nonce
-seedEta = mkNonceFromNumber 0
-
-seedL :: Nonce
-seedL = mkNonceFromNumber 1
-
-hBbsize :: BHBody crypto -> Natural
-hBbsize = bsize
 
 incrBlocks ::
   Bool ->
@@ -850,3 +427,83 @@ incrBlocks isOverlay hk b'@(BlocksMade b)
     Just n -> Map.insert hk (n + 1) b
   where
     hkVal = Map.lookup hk b
+
+-- DEPRECATED
+
+{-# DEPRECATED HashHeader "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+
+type HashHeader = TP.HashHeader
+
+{-# DEPRECATED PrevHash "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+
+type PrevHash = TP.PrevHash
+
+{-# DEPRECATED BHBody "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+
+type BHBody = TP.BHBody
+
+{-# DEPRECATED BHeader "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+
+type BHeader = TP.BHeader
+
+{-# DEPRECATED LastAppliedBlock "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+
+type LastAppliedBlock = TP.LastAppliedBlock
+
+{-# DEPRECATED checkLeaderValue "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+checkLeaderValue ::
+  forall v.
+  (VRF.VRFAlgorithm v) =>
+  VRF.OutputVRF v ->
+  Rational ->
+  ActiveSlotCoeff ->
+  Bool
+checkLeaderValue = TP.checkLeaderValue
+
+{-# DEPRECATED bhHash "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+bhHash :: CC.Crypto crypto => TP.BHeader crypto -> TP.HashHeader crypto
+bhHash = TP.bhHash
+
+{-# DEPRECATED hashHeaderToNonce "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+hashHeaderToNonce :: TP.HashHeader crypto -> Nonce
+hashHeaderToNonce = TP.hashHeaderToNonce
+
+{-# DEPRECATED prevHashToNonce "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+prevHashToNonce :: TP.PrevHash crypto -> Nonce
+prevHashToNonce = TP.prevHashToNonce
+
+{-# DEPRECATED issuerIDfromBHBody "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+issuerIDfromBHBody :: CC.Crypto crypto => TP.BHBody crypto -> KeyHash 'BlockIssuer crypto
+issuerIDfromBHBody = TP.issuerIDfromBHBody
+
+{-# DEPRECATED bHeaderSize "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+bHeaderSize :: forall crypto. (CC.Crypto crypto) => TP.BHeader crypto -> Int
+bHeaderSize = TP.bHeaderSize
+
+{-# DEPRECATED bhbody "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+bhbody :: CC.Crypto crypto => TP.BHeader crypto -> TP.BHBody crypto
+bhbody = TP.bhbody
+
+{-# DEPRECATED hBbsize "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+hBbsize :: TP.BHBody crypto -> Natural
+hBbsize = TP.hBbsize
+
+{-# DEPRECATED seedEta "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+seedEta :: Nonce
+seedEta = TP.seedEta
+
+{-# DEPRECATED seedL "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+seedL :: Nonce
+seedL = TP.seedL
+
+{-# DEPRECATED mkSeed "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+mkSeed :: Nonce -> SlotNo -> Nonce -> Seed
+mkSeed = TP.mkSeed
+
+{-# DEPRECATED lastAppliedHash "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+lastAppliedHash :: WithOrigin (TP.LastAppliedBlock crypto) -> TP.PrevHash crypto
+lastAppliedHash = TP.lastAppliedHash
+
+{-# DEPRECATED bnonce "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
+bnonce :: TP.BHBody crypto -> Nonce
+bnonce = TP.bnonce

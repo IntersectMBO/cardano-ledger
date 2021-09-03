@@ -146,6 +146,7 @@ import Cardano.Ledger.Slot
   )
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos (PoolDistr (..))
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, liftProv, modifyM)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
@@ -183,7 +184,6 @@ import Shelley.Spec.Ledger.Address.Bootstrap
   )
 import Shelley.Spec.Ledger.Delegation.Certificates
   ( DCert (..),
-    PoolDistr (..),
     delegCWitness,
     genesisCWitness,
     isDeRegKey,

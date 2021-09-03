@@ -7,6 +7,8 @@ module Shelley.Spec.Ledger.STS.EraMapping () where
 
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Protocol.TPraos.Rules.OCert (OCERT)
+import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY)
 import Shelley.Spec.Ledger.STS.Bbody (BBODY)
 import Shelley.Spec.Ledger.STS.Deleg (DELEG)
 import Shelley.Spec.Ledger.STS.Delegs (DELEGS)
@@ -17,8 +19,6 @@ import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
 import Shelley.Spec.Ledger.STS.Mir (MIR)
 import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
 import Shelley.Spec.Ledger.STS.Newpp (NEWPP)
-import Shelley.Spec.Ledger.STS.Ocert (OCERT)
-import Shelley.Spec.Ledger.STS.Overlay (OVERLAY)
 import Shelley.Spec.Ledger.STS.Pool (POOL)
 import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP)
 import Shelley.Spec.Ledger.STS.Ppup (PPUP)

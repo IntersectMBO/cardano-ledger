@@ -7,13 +7,13 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO)
 import Cardano.Ledger.ShelleyMA.Rules.Utxow (UTXOW)
+import qualified Cardano.Protocol.TPraos.Rules.OCert as Shelley
+import qualified Cardano.Protocol.TPraos.Rules.Overlay as Shelley
 import qualified Shelley.Spec.Ledger.API as Shelley
 import qualified Shelley.Spec.Ledger.STS.Bbody as Shelley
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
 import qualified Shelley.Spec.Ledger.STS.Mir as Shelley
 import qualified Shelley.Spec.Ledger.STS.Newpp as Shelley
-import qualified Shelley.Spec.Ledger.STS.Ocert as Shelley
-import qualified Shelley.Spec.Ledger.STS.Overlay as Shelley
 import qualified Shelley.Spec.Ledger.STS.Rupd as Shelley
 import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
 import qualified Shelley.Spec.Ledger.STS.Tick as Shelley

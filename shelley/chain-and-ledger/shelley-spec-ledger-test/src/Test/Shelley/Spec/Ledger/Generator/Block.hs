@@ -22,6 +22,13 @@ import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxSeq))
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.TPraos.BHeader
+  ( LastAppliedBlock (..),
+    hashHeaderToNonce,
+    mkSeed,
+    seedL,
+  )
+import Cardano.Protocol.TPraos.OCert (currentIssueNo, kesPeriod)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.SetAlgebra (dom, eval)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)
@@ -35,13 +42,6 @@ import Data.Sequence (Seq)
 import qualified Data.Set as Set
 import GHC.Records (HasField (getField))
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.BlockChain
-  ( LastAppliedBlock (..),
-    hashHeaderToNonce,
-    mkSeed,
-    seedL,
-  )
-import Shelley.Spec.Ledger.OCert (currentIssueNo, kesPeriod)
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes

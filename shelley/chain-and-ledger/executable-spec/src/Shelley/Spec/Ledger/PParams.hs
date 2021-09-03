@@ -16,7 +16,7 @@ module Shelley.Spec.Ledger.PParams
     PParams,
     emptyPParams,
     HKD,
-    ProtVer (..),
+    ProtVer (..), --TODO remove the re-export
     PPUpdateEnv (..),
     ProposedPPUpdates (..),
     emptyPPPUpdates,
@@ -49,8 +49,7 @@ import Cardano.Ledger.Core (PParamsDelta)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
-  ( CBORGroup (..),
-    FromCBORGroup (..),
+  ( FromCBORGroup (..),
     ToCBORGroup (..),
     decodeMapContents,
     decodeRecordNamed,
@@ -58,6 +57,7 @@ import Cardano.Ledger.Serialization
     mapToCBOR,
   )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Protocol.TPraos (ProtVer (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -155,42 +155,6 @@ deriving instance Eq (PParams' Identity era)
 deriving instance Show (PParams' Identity era)
 
 deriving instance NFData (PParams' Identity era)
-
-data ProtVer = ProtVer {pvMajor :: !Natural, pvMinor :: !Natural}
-  deriving (Show, Eq, Generic, Ord, NFData)
-  deriving (ToCBOR) via (CBORGroup ProtVer)
-  deriving (FromCBOR) via (CBORGroup ProtVer)
-
-instance NoThunks ProtVer
-
-instance ToJSON ProtVer where
-  toJSON (ProtVer major minor) =
-    Aeson.object
-      [ "major" .= major,
-        "minor" .= minor
-      ]
-
-instance FromJSON ProtVer where
-  parseJSON =
-    Aeson.withObject "ProtVer" $ \obj ->
-      ProtVer
-        <$> obj .: "major"
-        <*> obj .: "minor"
-
-instance ToCBORGroup ProtVer where
-  toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
-  encodedGroupSizeExpr size proxy =
-    encodedSizeExpr size ((\(ProtVer x _) -> toWord x) <$> proxy)
-      + encodedSizeExpr size ((\(ProtVer _ y) -> toWord y) <$> proxy)
-    where
-      toWord :: Natural -> Word
-      toWord = fromIntegral
-
-  listLen _ = 2
-  listLenBound _ = 2
-
-instance FromCBORGroup ProtVer where
-  fromCBORGroup = ProtVer <$> fromCBOR <*> fromCBOR
 
 instance NoThunks (PParams era)
 
