@@ -6,28 +6,38 @@ in addition to those that are already defined in the Shelley specification~\cite
 
 \vspace{12pt}
 \begin{tabular}{lp{5in}}
+  $\CostMod$ &
+  $c\in\CostMod$ is the vector of coefficients that are used to compute
+  a value $exu\in\ExUnits$ given a vector of some resource primitives. The mapping is defined
+  concretely by the specific version of the Plutus interpreter that is associated with $\Language$.
+  We keep this type as abstract in the specification, see \cite{plutuscore} and \cite{plutustech}
+  for details.
+  \\
   $\Language$ &
-  This represents the language name/tag, including the
-  version number.
+  This represents phase-2 language types. Currently there is only $\PlutusVI$.
+  \\
+  $\Prices$ &
+  $\var{(pr_{mem}, pr_{steps})}\in \Prices$ consists of two rational numbers
+  that correspond to the components of $\ExUnits$:
+  $pr_{mem}$ is the price per unit of memory, and $pr_{steps}$ is the price per
+  reduction step. This is used to calculate the cost for a specific script execution.
   \\
   $\ExUnits$ &
-  A term of this type contains two integer values,
-  $(mem, steps)$.
+  $(mem, steps)\in \ExUnits$ is made up of two integer values.
   These represent abstract notions of the relative memory usage and script execution steps,
   respectively.
   \\
-  $\CostMod$ &
-  A term of this type represents the vector of coefficients that are used to generate
-  a term of type $\ExUnits$ given a vector of some resource primitives. The mapping is defined
-  concretely by the specific version of the Plutus interpreter that is associated with $\Language$.
-  We keep this type as abstract in the specification.
-  \\
-  $\Prices$ &
-  A term of this type comprises two integer values that correspond to the components of $\ExUnits$,
-  $\var{(pr_{mem}, pr_{steps})}$:
-  $pr_{mem}$ is the price (in Ada) per unit of memory, and $pr_{steps}$ is the price (in Ada) per
-  reduction step. This is used to calculate the Ada cost for a specific script execution.
+  $\LangDepView$ &
+  A pair of two byte strings, where the first represents the serialized language tag (eg. the tag for $\PlutusVI$),
+  and the second, the protocol parameters that must be fixed (by the transaction) when carrying a phase-2 script
+  in that language.
 \end{tabular}
+
+The function $\fun{serialize}$ is left abstract, as
+these is an implementation-dependent serialization function. It must
+be implemented for all serializable types, including all
+collections of protocol parameters needed to construct a $\LangDepView$ for
+each existing language.
 
 \subsection{Language Versions and Backwards Compatibility Requirements}
 \label{sec:versions}
@@ -58,13 +68,16 @@ The transaction body therefore includes a hash of any such data that is not uniq
 When the transaction is processed, as part of the UTXOW rule, this hash is compared with a hash of the data that is passed to the interpreter. This
 ensures that scripts are only executed if they have been provided with the intended data.
 
-The $\fun{getLanguageView}$ function (Figure~\ref{fig:defs:protocol-parameters}) filters the data relvant
-to a given language from the protocol parameters. Recall here that $\Tppm$ is the type of the
-protocol parameter $\var{ppm}~\in~\Ppm$, and that $\PParams~=~\Ppm~\mapsto~\Tppm$.
-The type $\LangDepView$ is a subrecord of $\PParams$.
-%
-At the time of writing, the only parameter that needs to be passed to the $\PlutusVI$
-interpreter is the cost model, specifically only the cost model for the $\PlutusVI$ language.
+The $\fun{getLanguageView}$ function is used in the computation of this integrity hash.
+Shown in (Figure~\ref{fig:defs:protocol-parameters}), it filters the data relvant
+to a given language from the protocol parameters, and returns a pair of byte strings :
+the serialized representation of
+the language tag, and the serialized representation of the relevant data in the protocol
+parameters, which, for
+$\PlutusVI$, is just its cost model, $\fun{costmdls}~{pp}~\{\PlutusVI\}$.
+This function must be defined for all
+existing script languages that require a cost model (are phase-2), which, in Alonzo, is only $\PlutusVI$.
+The only relevant parameter for $\PlutusVI$ is the cost model for this language.
 
 \subsection{Script Evaluation Cost Model and Prices}
 \label{sec:cost-mod}
@@ -126,7 +139,7 @@ signatures that must be checked during validation.
       \\
       \var{(pr_{mem}, pr_{steps})}
       & \Prices
-      & \Coin \times \Coin
+      & \mathsf{Rational} \times \mathsf{Rational}
       & \text {Coefficients for $\ExUnits$ prices}
       \\
       \var{(mem, steps)}
@@ -136,8 +149,8 @@ signatures that must be checked during validation.
       \\
       \var{ldv}
       & \LangDepView
-      & \Ppm~\mapsto~\Tppm
-      & \text{PParams view}
+      & \ByteString~\times~\ByteString
+      & \text{Language Tag and PParams view}
     \end{array}
   \end{equation*}
   %
@@ -182,9 +195,8 @@ signatures that must be checked during validation.
   %
   \begin{align*}
     & \fun{getLanguageView} \in \PParams \to \Language \to \LangDepView \\
-    & \fun{getLanguageView}~\var{pp}~\PlutusVI = \var{costmdls}~\mapsto~ (\fun{costmdls}~{pp}~\{\PlutusVI\})
+    & \fun{getLanguageView}~\var{pp}~\PlutusVI = (\fun{serialize}~\PlutusVI, ~ (\fun{serialize}~(\fun{costmdls}~{pp}~\{\PlutusVI\})))
   \end{align*}
-  %
   \caption{Definitions Used in Protocol Parameters}
   \label{fig:defs:protocol-parameters}
 \end{figure*}
