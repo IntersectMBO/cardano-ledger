@@ -41,7 +41,7 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (forM, join, replicateM)
 import Control.Monad.State.Strict (MonadState (..), modify)
 import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.RWS.Strict (RWST (..), ask, evalRWST)
+import Control.Monad.Trans.RWS.Strict (RWST (..), ask)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
 import Data.Coerce
@@ -69,6 +69,7 @@ import Shelley.Spec.Ledger.API
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
+import Shelley.Spec.Ledger.TxBody (DCert (..), DelegCert (..), Delegation (..))
 import Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.QuickCheck
@@ -105,7 +106,7 @@ data GenState = GenState
   { gsKeys :: Map (KeyHash 'Witness C_Crypto) (KeyPair 'Witness C_Crypto),
     gsScripts :: Map (ScriptHash C_Crypto) (StrictMaybe (Tag, IsValid), Script A),
     gsDatums :: Map (DataHash C_Crypto) (Data A)
-  }
+  } deriving (Show)
 
 instance Semigroup GenState where
   ts1 <> ts2 =
@@ -139,73 +140,72 @@ genExUnits n = do
       | maxVal == 0 = pure $ replicate n 0
       | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
 
--- genTxPlutusWitness :: ExUnits -> Int -> DataHash C_Crypto -> GenRS (TxWitness A)
--- genTxPlutusWitness txIx datumHash exUnits = do
---   (tag, datum) <- lookupByHashM "datum" datumHash gsDatums
---   let rPtr = RdmrPtr tag (fromIntegral txIx)
---   pure $
---     mempty
---       { txrdmrs = Redeemers $ Map.singleton rPtr (datum, exUnits),
---         txdats = TxDats $ Map.singleton datumHash datum
---       }
+genCredTimelocKeyWit ::
+  Credential k C_Crypto ->
+  GenRS (SafeHash C_Crypto EraIndependentTxBody -> TxWitness A)
+genCredTimelocKeyWit = mkWitVKey
+  where
+    mkWitVKey ::
+      Credential kr C_Crypto ->
+      GenRS (SafeHash C_Crypto EraIndependentTxBody -> TxWitness A)
+    mkWitVKey (KeyHashObj keyHash) = do
+      keyPair <- lookupByHashM "credential" (coerceKeyRole keyHash) gsKeys
+      pure $ \bodyHash ->
+        mempty {txwitsVKey = Set.singleton $ makeWitnessVKey bodyHash keyPair}
+    mkWitVKey (ScriptHashObj scriptHash) = do
+      s@(mPlutusScriptTag, script) <- lookupByHashM "script" scriptHash gsScripts
+      let scriptWit = mempty {txscripts = Map.singleton scriptHash script}
+      case script of
+        TimelockScript timelock
+          | SNothing <- mPlutusScriptTag -> do
+            timelockWit <- mkTimelockWit timelock
+            pure $ \bodyHash -> timelockWit bodyHash <> scriptWit
+        PlutusScript _ps
+          | SJust _ <- mPlutusScriptTag -> pure $ const scriptWit
+        _ -> error $ "Impossible: Mismatch in generated script: " ++ show s
+    mkTimelockWit =
+      \case
+        RequireSignature keyHash -> mkWitVKey (KeyHashObj keyHash)
+        RequireAllOf timelocks -> F.fold <$> mapM mkTimelockWit timelocks
+        RequireAnyOf timelocks
+          | F.null timelocks -> pure mempty
+          | otherwise -> mkTimelockWit =<< lift (elements (F.toList timelocks))
+        RequireMOf m timelocks -> do
+          ts <- take m <$> lift (shuffle (F.toList timelocks))
+          F.fold <$> mapM mkTimelockWit ts
+        RequireTimeStart _ -> pure mempty
+        RequireTimeExpire _ -> pure mempty
+
+makeDatumWitness :: TxOut A -> GenRS (TxWitness A)
+makeDatumWitness (TxOut _ _ mDatum) = mkDatumWit mDatum
+  where
+    mkDatumWit SNothing = pure mempty
+    mkDatumWit (SJust datumHash) = do
+      datum <- lookupByHashM "datum" datumHash gsDatums
+      pure $ mempty {txdats = TxDats $ Map.singleton datumHash datum}
 
 -- | Generator for witnesses needed for Timelock scripts and Key
 -- credentials. Because of the latter produced function requires a body hash for
 -- an acutal witness to be constructed.
-genTimelockKeyWitness ::
+genTxOutTimelockKeyWitness ::
   TxOut A -> GenRS (SafeHash C_Crypto EraIndependentTxBody -> TxWitness A)
-genTimelockKeyWitness (TxOut addr _ _) = do
+genTxOutTimelockKeyWitness (TxOut addr _ _) = do
   case addr of
     AddrBootstrap baddr ->
       error $ "Can't authorize bootstrap address: " ++ show baddr
     Addr _ payCred stakeCred -> do
-      let mkWitVKey ::
-            Credential kr C_Crypto ->
-            GenRS (SafeHash C_Crypto EraIndependentTxBody -> TxWitness A)
-          mkWitVKey (KeyHashObj keyHash) = do
-            cred <- lookupByHashM "credential" (coerceKeyRole keyHash) gsKeys
-            pure $ \bodyHash ->
-              mempty
-                { txwitsVKey = Set.singleton $ makeWitnessVKey bodyHash cred
-                }
-          mkWitVKey (ScriptHashObj scriptHash) = do
-            s@(mDatumHash, script) <-
-              lookupByHashM "script" scriptHash gsScripts
-            let scriptWit = mempty {txscripts = Map.singleton scriptHash script}
-            case script of
-              TimelockScript timelock
-                | SNothing <- mDatumHash -> do
-                  timelockWit <- mkTimelockWit timelock
-                  pure $ \bodyHash -> timelockWit bodyHash <> scriptWit
-              PlutusScript _ps
-                | SJust (_datumHash, _) <- mDatumHash -> pure $ const scriptWit
-              _ ->
-                error $ "Impossible: Mismatch in generated script: " ++ show s
-          mkTimelockWit =
-            \case
-              RequireSignature keyHash -> mkWitVKey (KeyHashObj keyHash)
-              RequireAllOf timelocks -> F.fold <$> mapM mkTimelockWit timelocks
-              RequireAnyOf timelocks
-                | F.null timelocks -> pure mempty
-                | otherwise ->
-                  mkTimelockWit =<< lift (elements (F.toList timelocks))
-              RequireMOf m timelocks -> do
-                ts <- take m <$> lift (shuffle (F.toList timelocks))
-                F.fold <$> mapM mkTimelockWit ts
-              RequireTimeStart _ -> pure mempty
-              RequireTimeExpire _ -> pure mempty
-          mkStakeWit (StakeRefBase cred) = mkWitVKey cred
+      let mkStakeWit (StakeRefBase cred) = genCredTimelocKeyWit cred
           mkStakeWit _ = pure mempty
-      witVKey <- mkWitVKey payCred
+      witVKey <- genCredTimelocKeyWit payCred
       stakeWitVKey <- mkStakeWit stakeCred
       pure $ witVKey <> stakeWitVKey
 
-genKeyHash :: GenRS (KeyHash 'Witness C_Crypto)
+genKeyHash :: GenRS (KeyHash kr C_Crypto)
 genKeyHash = do
   keyPair <- lift arbitrary
   let keyHash = hashKey $ vKey keyPair
   modify $ \ts@GenState {gsKeys} -> ts {gsKeys = Map.insert keyHash keyPair gsKeys}
-  pure keyHash
+  pure $ coerceKeyRole keyHash
 
 genTimelock :: GenRS (Timelock C_Crypto)
 genTimelock = do
@@ -254,9 +254,11 @@ genScript tag =
     genPlutusScript = do
       isValid <- lift $ frequency [(5, pure False), (95, pure True)]
       -- Plutus scripts expect exactly 3 arguments to work properly.
-      let script
-            | isValid = alwaysSucceeds 3
-            | otherwise = alwaysFails 3
+      let numArgs | tag == Spend = 3
+                  | otherwise = 2
+          script
+            | isValid = alwaysSucceeds numArgs
+            | otherwise = alwaysFails numArgs
       pure (SJust (tag, IsValid isValid), script)
     toScriptHash s@(_, script) = do
       let scriptHash = hashScript @A script
@@ -286,10 +288,10 @@ lookupPlutusScript (ScriptHashObj scriptHash) =
     (SJust (tag, isValid), _) -> Just (tag, isValid)
     _ -> Nothing
 
-plutusWitnessMaker ::
-  [Maybe (GenRS (DataHash C_Crypto, Data A), Credential k C_Crypto)] ->
+redeemerWitnessMaker ::
+  [Maybe (GenRS (Data A), Credential k C_Crypto)] ->
   GenRS (IsValid, [ExUnits -> TxWitness A])
-plutusWitnessMaker listWithCred =
+redeemerWitnessMaker listWithCred =
   let creds =
         [ (ix, genDat, cred)
           | (ix, mCred) <- zip [0 ..] listWithCred,
@@ -301,40 +303,42 @@ plutusWitnessMaker listWithCred =
           lookupPlutusScript cred >>= \case
             Nothing -> pure Nothing
             Just (tag, isValid) -> do
-              (datumHash, datum) <- genDat
+              datum <- genDat
               let rPtr = RdmrPtr tag ix
                   mkWit exUnits =
                     mempty
-                      { txrdmrs = Redeemers $ Map.singleton rPtr (datum, exUnits),
-                        txdats = TxDats $ Map.singleton datumHash datum
+                      { txrdmrs = Redeemers $ Map.singleton rPtr (datum, exUnits)
                       }
               pure $ Just (isValid, mkWit)
 
 genNoScriptRecipient :: GenRS (Addr C_Crypto)
 genNoScriptRecipient = do
-  paymentCred <- coerceKeyRole . KeyHashObj <$> genKeyHash
-  stakeCred <- StakeRefBase . coerceKeyRole . KeyHashObj <$> genKeyHash
+  paymentCred <- KeyHashObj <$> genKeyHash
+  stakeCred <- StakeRefBase . KeyHashObj <$> genKeyHash
   pure (Addr Testnet paymentCred stakeCred)
 
 genCredential :: Tag -> GenRS (Credential kr C_Crypto)
 genCredential tag =
   elementsT
-    [ coerceKeyRole . KeyHashObj <$> genKeyHash,
+    [ KeyHashObj <$> genKeyHash,
       ScriptHashObj <$> genScript tag
     ]
 
 genRecipient :: GenRS (Addr C_Crypto)
 genRecipient = do
   paymentCred <- genCredential Spend
-  stakeCred <- coerceKeyRole . KeyHashObj <$> genKeyHash
+  stakeCred <- KeyHashObj <$> genKeyHash
   --stakeCred <- genCredential Rewrd
   pure (Addr Testnet paymentCred (StakeRefBase stakeCred))
 
 genDatumHash :: GenRS (DataHash C_Crypto)
-genDatumHash = fst <$> genDatum
+genDatumHash = fst <$> genDatumWithHash
 
-genDatum :: GenRS (DataHash C_Crypto, Data A)
-genDatum = do
+genDatum :: GenRS (Data A)
+genDatum = snd <$> genDatumWithHash
+
+genDatumWithHash :: GenRS (DataHash C_Crypto, Data A)
+genDatumWithHash = do
   datum <- lift arbitrary
   let datumHash = hashData datum
   modify $ \ts@GenState {gsDatums} -> ts {gsDatums = Map.insert datumHash datum gsDatums}
@@ -360,6 +364,22 @@ genUTxO = do
   UTxO <$> sequence (Map.fromSet (const genOut) (Set.fromList ins))
   where
     genOut = genTxOut =<< lift genVal
+
+genDCert :: GenRS (DCert C_Crypto)
+genDCert = do
+  elementsT
+    [ DCertDeleg
+        <$> elementsT
+          [ RegKey <$> genCredential Cert,
+            DeRegKey <$> genCredential Cert,
+            Delegate <$> (Delegation <$> genCredential Cert <*> genKeyHash)
+          ]
+    ]
+
+genDCerts :: GenRS [DCert C_Crypto]
+genDCerts = do
+  NonNegative n <- lift arbitrary
+  replicateM n genDCert
 
 genCollateralUTxO ::
   HasCallStack =>
@@ -432,6 +452,17 @@ genRecipientsFrom txOuts = do
           else pure (r : rs)
   goNew extra txOuts []
 
+getDCertCredential :: DCert crypto -> Maybe (Credential 'Staking crypto)
+getDCertCredential = \case
+  DCertDeleg d ->
+    case d of
+      RegKey _rk -> Nothing -- we don't require witnesses for RegKey
+      DeRegKey drk -> Just drk
+      Delegate (Delegation dk _) -> Just dk
+  DCertPool _p -> Nothing
+  DCertGenesis _g -> Nothing
+  DCertMir _m -> Nothing
+
 genValidatedTx :: GenRS (UTxO A, ValidatedTx A)
 genValidatedTx = do
   GenEnv {geValidityInterval, gePParams} <- ask
@@ -447,21 +478,27 @@ genValidatedTx = do
   -- 3. Generate all recipients and witnesses needed for spending Plutus scripts
   recipients <- genRecipientsFrom toSpendNoCollateralTxOuts
   (IsValid v1, mkPaymentWits) <-
-    plutusWitnessMaker
-      [ (\dh c -> ((,) dh <$> lookupByHashM "datum" dh gsDatums, c))
+    redeemerWitnessMaker
+      [ (\dh c -> (lookupByHashM "datum" dh gsDatums, c))
           <$> strictMaybeToMaybe mDatumHash <*> paymentCredAddr addr
         | (_, TxOut addr _ mDatumHash) <- Map.toAscList toSpendNoCollateral
       ]
   (IsValid v2, mkStakingWits) <-
-    plutusWitnessMaker
+    redeemerWitnessMaker
       [ (,) genDatum <$> stakeCredAddr addr
         | (_, TxOut addr _ _) <- Map.toAscList toSpendNoCollateral
       ]
-  let isValid = IsValid (v1 && v2)
-  exUnits <- genExUnits (length mkPaymentWits + length mkStakingWits)
-  let redeemerWitsList = zipWith ($) (mkPaymentWits ++ mkStakingWits) exUnits
+  dcerts <- genDCerts
+  let dcertCreds = map getDCertCredential dcerts
+  (IsValid v3, mkCertsWits) <- redeemerWitnessMaker $ map ((,) genDatum <$>) dcertCreds
+  let isValid = IsValid (v1 && v2 && v3)
+      mkWits = mkPaymentWits ++ mkStakingWits ++ mkCertsWits
+  exUnits <- genExUnits (length mkWits)
+  let redeemerWitsList = zipWith ($) mkWits exUnits
+  datumWitsList <- mapM makeDatumWitness (Map.elems toSpendNoCollateral)
 
-  keyWitsMakers <- mapM genTimelockKeyWitness toSpendNoCollateralTxOuts
+  keyWitsMakers <- mapM genTxOutTimelockKeyWitness toSpendNoCollateralTxOuts
+  dcertWitsMakers <- mapM genCredTimelocKeyWit $ catMaybes dcertCreds
   -- 4. Estimate inputs that will be used as collateral
   maxCollateralCount <-
     lift $ chooseInt (1, fromIntegral (_maxCollateralInputs gePParams))
@@ -474,10 +511,10 @@ genValidatedTx = do
   collateralAddresses <- replicateM maxCollateralCount genNoScriptRecipient
   bogusCollateralKeyWitsMakers <-
     forM collateralAddresses $ \a ->
-      genTimelockKeyWitness $ TxOut a (inject maxCoin) SNothing
+      genTxOutTimelockKeyWitness $ TxOut a (inject maxCoin) SNothing
   networkId <- lift $ elements [SNothing, SJust Testnet]
   -- 5. Estimate the fee
-  let redeemerWits = mconcat redeemerWitsList
+  let redeemerDatumWits = mconcat (redeemerWitsList ++ datumWitsList)
       mIntegrityHash =
         hashScriptIntegrity
           gePParams
@@ -485,14 +522,14 @@ genValidatedTx = do
               then Set.empty
               else Set.singleton PlutusV1
           )
-          (txrdmrs redeemerWits)
-          (txdats redeemerWits)
+          (txrdmrs redeemerDatumWits)
+          (txdats redeemerDatumWits)
       txBodyNoFee =
         TxBody
           { inputs = Map.keysSet toSpendNoCollateral,
             collateral = bogusCollateralTxIns,
             outputs = Seq.fromList recipients, -- has scripts
-            txcerts = mempty, -- has scripts
+            txcerts = Seq.fromList dcerts, -- has scripts
             txwdrls = Wdrl mempty, -- has scripts
             txfee = maxCoin,
             txvldt = geValidityInterval,
@@ -505,10 +542,10 @@ genValidatedTx = do
           }
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
       noFeeWits =
-        redeemerWits
+        redeemerDatumWits
           <> foldMap
             ($ txBodyNoFeeHash)
-            (keyWitsMakers ++ bogusCollateralKeyWitsMakers)
+            (keyWitsMakers ++ dcertWitsMakers ++ bogusCollateralKeyWitsMakers)
       bogusTxForFeeCalc = ValidatedTx txBodyNoFee noFeeWits isValid SNothing
       fee = minfee gePParams bogusTxForFeeCalc
   -- 6. Crank up the amount in one of outputs to account for the fee. Note this is
@@ -520,17 +557,17 @@ genValidatedTx = do
         UTxO $ Map.update (Just . injectFee) feeKey utxoNoCollateral
   -- 7. Generate utxos that will be used as collateral
   (utxo, collMap) <- genCollateralUTxO collateralAddresses fee utxoFeeAdjusted
-  collateralKeyWitsMakers <- mapM genTimelockKeyWitness $ Map.elems collMap
+  collateralKeyWitsMakers <- mapM genTxOutTimelockKeyWitness $ Map.elems collMap
   -- 8. Construct the correct Tx with valid fee and collaterals
   let txBody = txBodyNoFee {txfee = fee, collateral = Map.keysSet collMap}
       txBodyHash = hashAnnotated txBody
       wits =
-        redeemerWits
-          <> foldMap ($ txBodyHash) (keyWitsMakers ++ collateralKeyWitsMakers)
+        redeemerDatumWits
+          <> foldMap ($ txBodyHash) (keyWitsMakers ++ dcertWitsMakers ++ collateralKeyWitsMakers)
       validTx = ValidatedTx txBody wits isValid SNothing
   pure (utxo, validTx)
 
-genTxAndUTXOState :: Gen (TRC (AlonzoUTXOW A))
+genTxAndUTXOState :: Gen (TRC (AlonzoUTXOW A), GenState)
 genTxAndUTXOState = do
   maxTxExUnits <- arbitrary
   Positive maxCollateralInputs <- arbitrary
@@ -562,13 +599,14 @@ genTxAndUTXOState = do
           { geValidityInterval = ValidityInterval (SlotNo <$> minSlotNo) (SlotNo <$> maxSlotNo),
             gePParams = pp
           }
-  fst <$> evalRWST genT env mempty
+  (trc, s, _) <- runRWST genT env mempty
+  pure (trc, s)
 
 totalAda :: UTxOState A -> Coin
 totalAda (UTxOState utxo f d _) = f <> d <> coin (balance utxo)
 
-testTxValidForUTXOW :: TRC (AlonzoUTXOW A) -> Property
-testTxValidForUTXOW trc@(TRC (UtxoEnv _ _pp _ _, utxoState, vtx)) =
+testTxValidForUTXOW :: (TRC (AlonzoUTXOW A), GenState) -> Property
+testTxValidForUTXOW (trc@(TRC (UtxoEnv _ _pp _ _, utxoState, vtx)), _) =
   case runShelleyBase $ applySTSTest trc of
     Right utxoState' ->
       classify (coerce (isValid vtx)) "TxValid" $
