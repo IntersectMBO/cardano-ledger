@@ -1018,6 +1018,61 @@ utxoStEx10 ::
   UTxOState era
 utxoStEx10 pf = UTxOState (utxoEx10 pf) (Coin 0) (Coin 5) def
 
+-- ====================================================================================
+--  Example 11: A transaction with multiple identical certificates
+-- ====================================================================================
+
+multipleEqualCertsRedeemers :: Era era => Redeemers era
+multipleEqualCertsRedeemers =
+  Redeemers $
+    Map.fromList
+      [ (RdmrPtr Tag.Cert 0, (redeemerExample3, ExUnits 5000 5000))
+      ]
+
+multipleEqualCertsBody :: Scriptic era => Proof era -> Core.TxBody era
+multipleEqualCertsBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 3],
+      Collateral [TxIn genesisId 13],
+      Outputs [outEx3 pf],
+      Certs
+        [ DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf),
+          DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
+        ],
+      Txfee (Coin 5),
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] multipleEqualCertsRedeemers mempty)
+    ]
+
+multipleEqualCertsTx ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+multipleEqualCertsTx pf =
+  newTx
+    Override
+    pf
+    [ Body (multipleEqualCertsBody pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (multipleEqualCertsBody pf)) (someKeys pf)],
+          ScriptWits [always 2 pf],
+          RdmrWits multipleEqualCertsRedeemers
+        ]
+    ]
+
+utxoEx11 :: PostShelley era => Proof era -> UTxO era
+utxoEx11 pf = expectedUTxO pf (ExpectSuccess (multipleEqualCertsBody pf) (outEx3 pf)) 3
+
+utxoStEx11 ::
+  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  Proof era ->
+  UTxOState era
+utxoStEx11 pf = UTxOState (utxoEx11 pf) (Coin 0) (Coin 5) def
+
 -- =======================
 -- Invalid Transactions
 -- =======================
@@ -1443,6 +1498,49 @@ poolMDHTooBigTx pf =
         ]
     ]
 
+multipleEqualCertsRedeemersInvalid :: Era era => Redeemers era
+multipleEqualCertsRedeemersInvalid =
+  Redeemers $
+    Map.fromList
+      [ (RdmrPtr Tag.Cert 0, (redeemerExample3, ExUnits 5000 5000)),
+        (RdmrPtr Tag.Cert 1, (redeemerExample3, ExUnits 5000 5000))
+      ]
+
+multipleEqualCertsBodyInvalid :: Scriptic era => Proof era -> Core.TxBody era
+multipleEqualCertsBodyInvalid pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 3],
+      Collateral [TxIn genesisId 13],
+      Outputs [outEx3 pf],
+      Certs
+        [ DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf),
+          DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf) -- not allowed by DELEG, but here is fine
+        ],
+      Txfee (Coin 5),
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] multipleEqualCertsRedeemersInvalid mempty)
+    ]
+
+multipleEqualCertsTxInvalid ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+multipleEqualCertsTxInvalid pf =
+  newTx
+    Override
+    pf
+    [ Body (multipleEqualCertsBodyInvalid pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (multipleEqualCertsBodyInvalid pf)) (someKeys pf)],
+          ScriptWits [always 2 pf],
+          RdmrWits multipleEqualCertsRedeemersInvalid
+        ]
+    ]
+
 -- =======================
 -- Alonzo UTXOW Tests
 -- =======================
@@ -1562,7 +1660,12 @@ alonzoUTXOWexamples =
             testUTXOW
               (pp pf)
               (trustMe True $ okSupplimentaryDatumTx pf)
-              (Right . utxoStEx10 $ pf)
+              (Right . utxoStEx10 $ pf),
+          testCase "multiple identical certificates" $
+            testUTXOW
+              (pp pf)
+              (trustMe True $ multipleEqualCertsTx pf)
+              (Right . utxoStEx11 $ pf)
         ],
       testGroup
         "invalid transactions"
@@ -1779,6 +1882,14 @@ alonzoUTXOWexamples =
               ( Left
                   [ ExtraRedeemers
                       [RdmrPtr Tag.Spend 7]
+                  ]
+              ),
+          testCase "multiple equal plutus-locked certs" $
+            testUTXOW
+              (pp pf)
+              (trustMe True $ multipleEqualCertsTxInvalid pf)
+              ( Left
+                  [ ExtraRedeemers [RdmrPtr Tag.Cert 1]
                   ]
               )
         ]
