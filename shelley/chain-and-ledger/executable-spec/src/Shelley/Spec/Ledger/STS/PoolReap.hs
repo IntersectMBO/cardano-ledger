@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -36,7 +35,6 @@ import Control.State.Transition
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
@@ -108,9 +106,9 @@ poolReapTransition ::
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext
 
-  let retired = eval (dom ((_retiring ps) ▷ setSingleton e))
-      pr = Map.fromList $ fmap (\kh -> (kh, getField @"_poolDeposit" pp)) (Set.toList retired)
-      rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ (_pParams ps))
+  let retired = eval (dom (_retiring ps ▷ setSingleton e))
+      pr = Map.fromSet (const (getField @"_poolDeposit" pp)) retired
+      rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ _pParams ps)
       rewardAcnts' =
         Map.fromListWith (<+>)
           . Map.elems

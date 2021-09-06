@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure)
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent, UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
@@ -75,6 +75,7 @@ import Shelley.Spec.Ledger.PParams (Update)
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.STS.Utxow
   ( ShelleyStyleWitnessNeeds,
+    UtxowEvent (UtxoEvent),
     UtxowPredicateFailure (..),
     shelleyStyleWitness,
   )
@@ -143,6 +144,9 @@ instance
   ToCBOR (AlonzoPredFail era)
   where
   toCBOR x = encode (encodePredFail x)
+
+newtype AlonzoEvent era
+  = WrappedShelleyEraEvent (UtxowEvent era)
 
 encodePredFail ::
   ( Era era,
@@ -356,8 +360,7 @@ witsVKeyNeeded ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   UTxO era ->
   tx ->
@@ -427,7 +430,7 @@ witsVKeyNeeded utxo' tx genDelegs =
 extSymmetricDifference :: (Ord k) => [a] -> (a -> k) -> [b] -> (b -> k) -> ([a], [b])
 extSymmetricDifference as fa bs fb = (extraA, extraB)
   where
-    intersection = (Set.fromList $ map fa as) `Set.intersection` (Set.fromList $ map fb bs)
+    intersection = Set.fromList (map fa as) `Set.intersection` Set.fromList (map fb bs)
     extraA = filter (\x -> not $ fa x `Set.member` intersection) as
     extraB = filter (\x -> not $ fb x `Set.member` intersection) bs
 
@@ -461,9 +464,8 @@ instance
   type Signal (AlonzoUTXOW era) = ValidatedTx era
   type Environment (AlonzoUTXOW era) = UtxoEnv era
   type BaseM (AlonzoUTXOW era) = ShelleyBase
-  type
-    PredicateFailure (AlonzoUTXOW era) =
-      AlonzoPredFail era
+  type PredicateFailure (AlonzoUTXOW era) = AlonzoPredFail era
+  type Event (AlonzoUTXOW era) = AlonzoEvent era
   transitionRules = [alonzoStyleWitness]
   initialRules = []
 
@@ -471,9 +473,12 @@ instance
   ( Era era,
     STS (AlonzoUTXO era),
     PredicateFailure (Core.EraRule "UTXO" era) ~ Alonzo.UtxoPredicateFailure era,
+    Event (Core.EraRule "UTXO" era) ~ Alonzo.UtxoEvent era,
     BaseM (AlonzoUTXOW era) ~ ShelleyBase,
-    PredicateFailure (AlonzoUTXOW era) ~ AlonzoPredFail era
+    PredicateFailure (AlonzoUTXOW era) ~ AlonzoPredFail era,
+    Event (AlonzoUTXOW era) ~ AlonzoEvent era
   ) =>
   Embed (AlonzoUTXO era) (AlonzoUTXOW era)
   where
   wrapFailed = WrappedShelleyEraFailure . UtxoFailure
+  wrapEvent = WrappedShelleyEraEvent . UtxoEvent

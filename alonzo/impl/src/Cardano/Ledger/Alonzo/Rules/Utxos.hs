@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -15,6 +16,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos
     UtxosPredicateFailure (..),
     constructValidated,
     lbl2Phase,
+    TagMismatchDescription (..),
   )
 where
 
@@ -34,7 +36,7 @@ import Cardano.Ledger.Alonzo.Tx
     txouts,
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
-import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..))
+import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), ScriptResult (..))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.BaseTypes
   ( Globals,
@@ -49,7 +51,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import qualified Cardano.Ledger.Val as Val
+import Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Trans.Reader (asks)
@@ -59,7 +61,6 @@ import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import Data.Text
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
@@ -105,6 +106,7 @@ instance
   type State (UTXOS era) = UTxOState era
   type Signal (UTXOS era) = ValidatedTx era
   type PredicateFailure (UTXOS era) = UtxosPredicateFailure era
+  type Event (UTXOS era) = UtxosEvent era
 
   transitionRules = [utxosTransition]
 
@@ -170,19 +172,19 @@ scriptsValidateTransition = do
     judgmentContext
   let txb = body tx
       refunded = keyRefunds pp txb
+      txcerts = toList $ getField @"certs" txb
       depositChange =
-        ( totalDeposits
-            pp
-            (`Map.notMember` poolParams)
-            (toList $ getField @"certs" txb)
-        )
-          Val.<-> refunded
+        totalDeposits pp (`Map.notMember` poolParams) txcerts <-> refunded
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       case evalScripts @era tx sLst of
-        Fails sss -> False ?!## ValidationTagMismatch (getField @"isValidating" tx) (pack (Prelude.unlines sss))
+        Fails sss ->
+          False
+            ?!## ValidationTagMismatch
+              (getField @"isValid" tx)
+              (FailedUnexpectedly sss)
         Passes -> pure ()
     Left info -> failBecause (CollectErrors info)
   pup' <-
@@ -226,8 +228,8 @@ scriptsNotValidateTransition = do
   ei <- liftSTS $ asks epochInfo
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
-      case (evalScripts @era tx sLst) of
-        Passes -> False ?!## ValidationTagMismatch (getField @"isValidating" tx) (pack ("Script expected to fail, passes."))
+      case evalScripts @era tx sLst of
+        Passes -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
         Fails _sss -> pure ()
     Left info -> failBecause (CollectErrors info)
   pure $
@@ -236,11 +238,27 @@ scriptsNotValidateTransition = do
         _fees = fees <> Val.coin (balance @era (eval (getField @"collateral" txb ◁ utxo)))
       }
 
+data TagMismatchDescription
+  = PassedUnexpectedly
+  | FailedUnexpectedly [FailureDescription]
+  deriving (Show, Eq, Generic, NoThunks)
+
+instance ToCBOR TagMismatchDescription where
+  toCBOR PassedUnexpectedly = encode (Sum PassedUnexpectedly 0)
+  toCBOR (FailedUnexpectedly fs) = encode (Sum FailedUnexpectedly 1 !> To fs)
+
+instance FromCBOR TagMismatchDescription where
+  fromCBOR = decode (Summands "TagMismatchDescription" dec)
+    where
+      dec 0 = SumD PassedUnexpectedly
+      dec 1 = SumD FailedUnexpectedly <! From
+      dec n = Invalid n
+
 data UtxosPredicateFailure era
   = -- | The 'isValid' tag on the transaction is incorrect. The tag given
     --   here is that provided on the transaction (whereas evaluation of the
     --   scripts gives the opposite.). The Text tries to explain why it failed.
-    ValidationTagMismatch IsValid Text
+    ValidationTagMismatch IsValid TagMismatchDescription
   | -- | We could not find all the necessary inputs for a Plutus Script.
     --         Previous PredicateFailure tests should make this impossible, but the
     --         consequences of not detecting this means scripts get dropped, so things
@@ -257,7 +275,7 @@ instance
   ) =>
   ToCBOR (UtxosPredicateFailure era)
   where
-  toCBOR (ValidationTagMismatch v txt) = encode (Sum ValidationTagMismatch 0 !> To v !> To txt)
+  toCBOR (ValidationTagMismatch v descr) = encode (Sum ValidationTagMismatch 0 !> To v !> To descr)
   toCBOR (CollectErrors cs) =
     encode (Sum (CollectErrors @era) 1 !> To cs)
   toCBOR (UpdateFailure pf) = encode (Sum (UpdateFailure @era) 2 !> To pf)
@@ -287,7 +305,7 @@ instance
   ) =>
   Eq (UtxosPredicateFailure era)
   where
-  (ValidationTagMismatch a _) == (ValidationTagMismatch b _) = a == b -- Do not compare the Text in an Eq check.
+  (ValidationTagMismatch a x) == (ValidationTagMismatch b y) = a == b && x == y
   (CollectErrors x) == (CollectErrors y) = x == y
   (UpdateFailure x) == (UpdateFailure y) = x == y
   _ == _ = False
@@ -298,14 +316,19 @@ instance
   ) =>
   NoThunks (UtxosPredicateFailure era)
 
+newtype UtxosEvent era
+  = UpdateEvent (Event (Core.EraRule "PPUP" era))
+
 instance
   ( Era era,
     STS (PPUP era),
-    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
+    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era,
+    Event (Core.EraRule "PPUP" era) ~ Event (PPUP era)
   ) =>
   Embed (PPUP era) (UTXOS era)
   where
   wrapFailed = UpdateFailure
+  wrapEvent = UpdateEvent
 
 -- =================================================================
 

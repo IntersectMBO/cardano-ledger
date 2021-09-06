@@ -19,7 +19,19 @@ import Cardano.Binary
     decodeFull',
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..), Word7 (..), byron, isEnterpriseAddr, notBaseAddr, payCredIsScript, serialiseAddr, stakeCredIsScript, toWord7, word7sToWord64)
+import Cardano.Ledger.Address
+  ( Addr (..),
+    BootstrapAddress (..),
+    Word7 (..),
+    byron,
+    isEnterpriseAddr,
+    notBaseAddr,
+    payCredIsScript,
+    serialiseAddr,
+    stakeCredIsScript,
+    toWord7,
+    word7sToWord64,
+  )
 import Cardano.Ledger.BaseTypes (word8ToNetwork)
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
@@ -148,7 +160,7 @@ getRemainingAsByteString :: GetShort ByteString
 getRemainingAsByteString = GetShort $ \i sbs ->
   let l = SBS.length sbs
    in if i < l
-        then Just $ (l, SBS.fromShort $ substring sbs i l)
+        then Just (l, SBS.fromShort $ substring sbs i l)
         else Nothing
 
 skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> GetShort ()

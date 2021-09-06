@@ -2,7 +2,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -14,7 +13,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -441,7 +439,7 @@ segwitTx
           Nothing -> serializeEncoding encodeNull
           Just b -> serialize b
         fullBytes =
-          (serializeEncoding $ encodeListLen 3)
+          serializeEncoding (encodeListLen 3)
             <> serialize body'
             <> serialize witnessSet
             <> wrappedMetadataBytes
@@ -460,6 +458,12 @@ instance
   where
   fromCBOR = decodeWits
 
+newtype IgnoreSigOrd kr crypto = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr crypto}
+  deriving (Eq)
+
+instance (Typeable kr, CC.Crypto crypto) => Ord (IgnoreSigOrd kr crypto) where
+  compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witKeyHash w1) (witKeyHash w2)
+
 decodeWits ::
   forall era s.
   ( FromCBOR (Annotator (Core.Script era)),
@@ -473,7 +477,13 @@ decodeWits = do
         decodeWord >>= \case
           0 ->
             decodeList fromCBOR >>= \x ->
-              pure (\ws -> ws {addrWits' = Set.fromList <$> sequence x})
+              pure
+                ( \ws ->
+                    ws
+                      { addrWits' =
+                          Set.map unIgnoreSigOrd . Set.fromList . fmap IgnoreSigOrd <$> sequence x
+                      }
+                )
           1 ->
             decodeList fromCBOR >>= \x ->
               pure (\ws -> ws {scriptWits' = keyBy (hashScript @era) <$> sequence x})

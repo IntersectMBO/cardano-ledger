@@ -18,10 +18,12 @@ module Test.Shelley.Spec.Ledger.Examples.PoolLifetime
 where
 
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( BoundedRational (..),
+    Globals (..),
     Network (..),
     Nonce,
     StrictMaybe (..),
+    epochInfo,
     (⭒),
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
@@ -34,7 +36,9 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
+    EpochSize (unEpochSize),
     SlotNo (..),
+    epochInfoSize,
   )
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
@@ -46,6 +50,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
+import Shelley.Spec.Ledger.API (getRewardInfo)
 import Shelley.Spec.Ledger.BlockChain
   ( Block,
     bhHash,
@@ -67,14 +72,18 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
+import qualified Shelley.Spec.Ledger.RewardProvenance as RP
 import Shelley.Spec.Ledger.Rewards
   ( Likelihood (..),
     NonMyopic (..),
+    PerformanceEstimate (unPerformanceEstimate),
     Reward (..),
     RewardType (..),
     applyDecay,
+    desirability,
     leaderProbability,
     likelihood,
+    percentile',
   )
 import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
 import Shelley.Spec.Ledger.Tx
@@ -97,7 +106,7 @@ import Shelley.Spec.Ledger.TxBody
     Wdrl (..),
   )
 import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (ExMock)
+import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto, ExMock)
 import Test.Shelley.Spec.Ledger.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Shelley.Spec.Ledger.Examples.Cast as Cast
 import qualified Test.Shelley.Spec.Ledger.Examples.Combinators as C
@@ -124,10 +133,11 @@ import Test.Shelley.Spec.Ledger.Utils
   ( epochSize,
     getBlockNonce,
     maxLLSupply,
+    runShelleyBase,
     testGlobals,
   )
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase)
+import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
@@ -328,14 +338,16 @@ makePulser ::
   EB.BlocksMade (Crypto era) ->
   ChainState era ->
   PulsingRewUpdate (Crypto era)
-makePulser bs cs =
-  startStep
-    (epochSize $ EpochNo 0)
-    bs
-    (nesEs . chainNes $ cs)
-    maxLLSupply
-    (activeSlotCoeff testGlobals)
-    (securityParameter testGlobals)
+makePulser bs cs = p
+  where
+    (p, _) =
+      startStep
+        (epochSize $ EpochNo 0)
+        bs
+        (nesEs . chainNes $ cs)
+        maxLLSupply
+        (activeSlotCoeff testGlobals)
+        (securityParameter testGlobals)
 
 makePulser' ::
   forall era.
@@ -694,8 +706,11 @@ aliceRAcnt8 = Coin 11654787878
 bobRAcnt8 :: Coin
 bobRAcnt8 = Coin 1038545454
 
+deltaT8' :: Coin
+deltaT8' = Coin 317333333333
+
 deltaT8 :: DeltaCoin
-deltaT8 = DeltaCoin 317333333333
+deltaT8 = toDeltaCoin deltaT8'
 
 deltaR8 :: DeltaCoin
 deltaR8 = DeltaCoin (-330026666665)
@@ -758,6 +773,69 @@ expectedStEx8 =
 -- Create the first non-trivial reward update.
 poolLifetime8 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
 poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
+
+rewardInfoEx8 :: RP.RewardProvenance C_Crypto
+rewardInfoEx8 = snd $ getRewardInfo testGlobals (chainNes expectedStEx8)
+
+rewardInfoTest :: Assertion
+rewardInfoTest = rewardInfoEx8 @?= expected
+  where
+    expected =
+      RP.RewardProvenance
+        { RP.spe = unEpochSize . runShelleyBase $ epochInfoSize (epochInfo testGlobals) (EpochNo 0),
+          RP.blocks =
+            EB.BlocksMade $
+              Map.singleton (_poolId $ Cast.alicePoolParams) 1,
+          RP.maxLL = supply,
+          RP.deltaR1 = rpot,
+          RP.deltaR2 = Coin 1256640000001,
+          RP.r = rewardPot8,
+          RP.totalStake = totstake,
+          RP.blocksCount = 1,
+          RP.d = unboundRational $ _d ppEx,
+          RP.expBlocks = 45,
+          RP.eta = 1 % 45,
+          RP.rPot = rpot,
+          RP.deltaT1 = deltaT8',
+          RP.activeStake = activestake,
+          RP.pools =
+            Map.singleton
+              (_poolId $ Cast.alicePoolParams)
+              ( RP.RewardProvenancePool
+                  { RP.poolBlocksP = 1,
+                    RP.sigmaP = (unCoin activestake) % (unCoin totstake),
+                    RP.sigmaAP = 1,
+                    RP.ownerStakeP = aliceCoinEx2Base <> aliceCoinEx2Ptr,
+                    RP.poolParamsP = Cast.alicePoolParams,
+                    RP.pledgeRatioP =
+                      (unCoin . _poolPledge $ Cast.alicePoolParams @C_Crypto)
+                        % (unCoin totstake),
+                    RP.maxPP = Coin 12693333333,
+                    RP.appPerfP = 1,
+                    RP.poolRP = Coin 12693333333,
+                    RP.lRewardP = aliceRAcnt8
+                  }
+              ),
+          RP.desirabilities =
+            Map.singleton
+              (_poolId $ Cast.alicePoolParams)
+              ( RP.Desirability
+                  { RP.hitRateEstimate = unPerformanceEstimate estimate,
+                    RP.desirabilityScore =
+                      desirability
+                        (_a0 ppEx, _nOpt ppEx)
+                        rpot
+                        (Cast.alicePoolParams @C_Crypto)
+                        estimate
+                        totstake
+                  }
+              )
+        }
+    rpot = Coin 1586666666666
+    estimate = percentile' alicePerfEx8
+    supply = Coin . fromIntegral . maxLovelaceSupply $ testGlobals
+    totstake = supply <-> reserves7
+    activestake = aliceCoinEx2Base <> aliceCoinEx2Ptr <> bobInitCoin
 
 --
 -- Block 9, Slot 410, Epoch 4
@@ -1056,5 +1134,6 @@ poolLifetimeExample =
       testCase "apply a nontrivial rewards" $ testCHAINExample poolLifetime9,
       testCase "drain reward account and deregister" $ testCHAINExample poolLifetime10,
       testCase "stage stake pool retirement" $ testCHAINExample poolLifetime11,
-      testCase "reap stake pool" $ testCHAINExample poolLifetime12
+      testCase "reap stake pool" $ testCHAINExample poolLifetime12,
+      testCase "reward info" rewardInfoTest
     ]

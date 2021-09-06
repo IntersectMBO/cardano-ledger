@@ -2,7 +2,6 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -44,7 +43,6 @@ import Control.State.Transition
     (?!),
   )
 import Data.Coders
-import Data.Foldable (fold)
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -84,7 +82,7 @@ data AlonzoBbodyPredFail era
       -- ^ Maximum allowed by protocal parameters
   deriving (Generic)
 
-data AlonzoBbodyEvent era
+newtype AlonzoBbodyEvent era
   = ShelleyInAlonzoEvent (BbodyEvent era)
 
 deriving instance
@@ -192,7 +190,7 @@ bbodyTransition =
 
         {- ∑(tx ∈ txs)(totExunits tx) ≤ maxBlockExUnits pp  -}
         let txTotal, ppMax :: ExUnits
-            txTotal = fold (fmap Alonzo.totExUnits txs)
+            txTotal = foldMap Alonzo.totExUnits txs
             ppMax = getField @"_maxBlockExUnits" pp
         pointWiseExUnits (<=) txTotal ppMax ?! TooManyExUnits txTotal ppMax
 

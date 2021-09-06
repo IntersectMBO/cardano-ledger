@@ -4,6 +4,7 @@
 
 import Cardano.Crypto.Libsodium (sodiumInit)
 import Shelley.Spec.Ledger.PParams (PParams' (..))
+import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
 import Test.Shelley.Spec.Ledger.Pretty (prettyTest)
@@ -26,7 +27,7 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Ledger with Delegation"
-    [ minimalPropertyTests @C,
+    [ minimalPropertyTests @C @(LEDGER C),
       rewardTests,
       Serialisation.tests 5,
       chainExamples,
@@ -41,7 +42,7 @@ nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Ledger with Delegation nightly"
-    [ propertyTests @C,
+    [ propertyTests @C @(LEDGER C),
       Serialisation.tests 50
     ]
 

@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -15,6 +14,7 @@
 module Shelley.Spec.Ledger.STS.Epoch
   ( EPOCH,
     EpochPredicateFailure (..),
+    EpochEvent (..),
     PredicateFailure,
   )
 where
@@ -22,7 +22,7 @@ where
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Slot (EpochNo)
 import Control.SetAlgebra (eval, (⨃))
@@ -36,6 +36,7 @@ import Control.State.Transition
   )
 import Data.Default.Class (Default)
 import qualified Data.Map.Strict as Map
+import Data.Void (Void)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -87,13 +88,18 @@ deriving stock instance
   ) =>
   Show (EpochPredicateFailure era)
 
+data EpochEvent era
+  = PoolReapEvent (Event (Core.EraRule "POOLREAP" era))
+  | SnapEvent (Event (Core.EraRule "SNAP" era))
+  | UpecEvent (Event (Core.EraRule "UPEC" era))
+
 instance
   ( UsesTxOut era,
     UsesValue era,
     Embed (Core.EraRule "SNAP" era) (EPOCH era),
     Environment (Core.EraRule "SNAP" era) ~ LedgerState era,
-    State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
-    Signal (Core.EraRule "SNAP" era) ~ (),
+    State (Core.EraRule "SNAP" era) ~ SnapShots era,
+    Signal (Core.EraRule "SNAP" era) ~ EpochNo,
     Embed (Core.EraRule "POOLREAP" era) (EPOCH era),
     Environment (Core.EraRule "POOLREAP" era) ~ Core.PParams era,
     State (Core.EraRule "POOLREAP" era) ~ PoolreapState era,
@@ -114,6 +120,7 @@ instance
   type Environment (EPOCH era) = ()
   type BaseM (EPOCH era) = ShelleyBase
   type PredicateFailure (EPOCH era) = EpochPredicateFailure era
+  type Event (EPOCH era) = EpochEvent era
   transitionRules = [epochTransition]
 
 instance
@@ -127,8 +134,8 @@ epochTransition ::
   forall era.
   ( Embed (Core.EraRule "SNAP" era) (EPOCH era),
     Environment (Core.EraRule "SNAP" era) ~ LedgerState era,
-    State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
-    Signal (Core.EraRule "SNAP" era) ~ (),
+    State (Core.EraRule "SNAP" era) ~ SnapShots era,
+    Signal (Core.EraRule "SNAP" era) ~ EpochNo,
     Embed (Core.EraRule "POOLREAP" era) (EPOCH era),
     Environment (Core.EraRule "POOLREAP" era) ~ Core.PParams era,
     State (Core.EraRule "POOLREAP" era) ~ PoolreapState era,
@@ -143,7 +150,7 @@ epochTransition ::
   TransitionRule (EPOCH era)
 epochTransition = do
   TRC
-    ( _,
+    ( (),
       EpochState
         { esAccountState = acnt,
           esSnapshots = ss,
@@ -158,7 +165,7 @@ epochTransition = do
   let utxoSt = _utxoState ls
   let DPState dstate pstate = _delegationState ls
   ss' <-
-    trans @(Core.EraRule "SNAP" era) $ TRC (ls, ss, ())
+    trans @(Core.EraRule "SNAP" era) $ TRC (ls, ss, e)
 
   let PState pParams fPParams _ = pstate
       ppp = eval (pParams ⨃ fPParams)
@@ -201,26 +208,32 @@ epochTransition = do
 instance
   ( UsesTxOut era,
     UsesValue era,
-    PredicateFailure (Core.EraRule "SNAP" era) ~ SnapPredicateFailure era
+    PredicateFailure (Core.EraRule "SNAP" era) ~ SnapPredicateFailure era,
+    Event (Core.EraRule "SNAP" era) ~ Void
   ) =>
   Embed (SNAP era) (EPOCH era)
   where
   wrapFailed = SnapFailure
+  wrapEvent = SnapEvent
 
 instance
   ( Era era,
     STS (POOLREAP era),
-    PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era
+    PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era,
+    Event (Core.EraRule "POOLREAP" era) ~ Void
   ) =>
   Embed (POOLREAP era) (EPOCH era)
   where
   wrapFailed = PoolReapFailure
+  wrapEvent = PoolReapEvent
 
 instance
   ( Era era,
     STS (UPEC era),
-    PredicateFailure (Core.EraRule "UPEC" era) ~ UpecPredicateFailure era
+    PredicateFailure (Core.EraRule "UPEC" era) ~ UpecPredicateFailure era,
+    Event (Core.EraRule "UPEC" era) ~ Void
   ) =>
   Embed (UPEC era) (EPOCH era)
   where
   wrapFailed = UpecFailure
+  wrapEvent = UpecEvent

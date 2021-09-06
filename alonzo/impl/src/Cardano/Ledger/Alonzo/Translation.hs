@@ -1,14 +1,8 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -47,6 +41,7 @@ import Shelley.Spec.Ledger.API
     StrictMaybe (..),
   )
 import qualified Shelley.Spec.Ledger.API as API
+import Shelley.Spec.Ledger.EpochBoundary (translateSnapShots)
 import qualified Shelley.Spec.Ledger.PParams as Shelley
 import qualified Shelley.Spec.Ledger.Tx as LTX
 import qualified Shelley.Spec.Ledger.TxBody as Shelley
@@ -145,7 +140,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
     return
       EpochState
         { esAccountState = esAccountState es,
-          esSnapshots = esSnapshots es,
+          esSnapshots = translateSnapShots (esSnapshots es),
           esLState = translateEra' ctxt $ esLState es,
           esPrevPp = translatePParams ctxt $ esPrevPp es,
           esPp = translatePParams ctxt $ esPp es,
@@ -172,7 +167,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
   translateEra _ctxt utxo =
-    return $ API.UTxO $ fmap translateTxOut $ API.unUTxO utxo
+    return $ API.UTxO $ translateTxOut <$> API.unUTxO utxo
 
 instance Crypto c => TranslateEra (AlonzoEra c) API.PPUPState where
   translateEra ctxt ps =
@@ -188,8 +183,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where
 
 translateTxOut ::
   Core.TxOut (MaryEra c) -> Core.TxOut (AlonzoEra c)
-translateTxOut (Shelley.TxOutCompact addr value) =
-  TxOutCompact addr value SNothing
+translateTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
 
 -- extendPP with type: extendPP :: Shelley.PParams' f era1 -> ... -> PParams' f era2
 -- Is general enough to work for both

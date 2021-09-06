@@ -54,6 +54,7 @@ library
   build-depends:
     array,
     base-deriving-via,
+    base64-bytestring,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
@@ -77,6 +78,7 @@ library
     strict-containers,
     text,
     time,
-    transformers
+    transformers,
+    utf8-string,
   hs-source-dirs:
     src

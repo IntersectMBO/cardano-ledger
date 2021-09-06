@@ -25,6 +25,7 @@ import qualified Shelley.Spec.Ledger.STS.Ledger as Shelley
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
 import Shelley.Spec.Ledger.STS.Utxow
   ( ShelleyStyleWitnessNeeds,
+    UtxowEvent (..),
     UtxowPredicateFailure (..),
     shelleyStyleWitness,
   )
@@ -63,9 +64,8 @@ instance
   type Signal (UTXOW era) = Core.Tx era
   type Environment (UTXOW era) = UtxoEnv era
   type BaseM (UTXOW era) = ShelleyBase
-  type
-    PredicateFailure (UTXOW era) =
-      UtxowPredicateFailure era
+  type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
+  type Event (UTXOW era) = UtxowEvent era
 
   transitionRules = [shelleyStyleWitness witsVKeyNeeded id]
 
@@ -76,11 +76,13 @@ instance
 instance
   ( Era era,
     STS (UTXO era),
-    PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era
+    PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era,
+    Event (Core.EraRule "UTXO" era) ~ Event (UTXO era)
   ) =>
   Embed (UTXO era) (UTXOW era)
   where
   wrapFailed = UtxoFailure
+  wrapEvent = UtxoEvent
 
 instance
   ( Era era,

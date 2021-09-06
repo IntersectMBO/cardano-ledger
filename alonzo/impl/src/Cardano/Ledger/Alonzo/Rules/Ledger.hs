@@ -1,14 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,7 +17,7 @@ module Cardano.Ledger.Alonzo.Rules.Ledger
   )
 where
 
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail, AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent, AlonzoPredFail, AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
@@ -42,7 +38,6 @@ import Data.Kind (Type)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Void (Void)
 import GHC.Records (HasField, getField)
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState
@@ -181,7 +176,7 @@ instance
   ( Era era,
     STS (AlonzoUTXOW era),
     PredicateFailure (Core.EraRule "UTXOW" era) ~ AlonzoPredFail era,
-    Event (Core.EraRule "UTXOW" era) ~ Void
+    Event (Core.EraRule "UTXOW" era) ~ AlonzoEvent era
   ) =>
   Embed (AlonzoUTXOW era) (AlonzoLEDGER era)
   where

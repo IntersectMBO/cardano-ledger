@@ -83,7 +83,7 @@ instance
     )
   where
   toBase (PoolDistr x) = x
-  fromBase x = (PoolDistr x)
+  fromBase = PoolDistr
 
 -- | Determine the certificate author
 delegCWitness :: DelegCert crypto -> Credential 'Staking crypto
@@ -115,7 +115,7 @@ isDelegation _ = False
 
 -- | Check for 'GenesisDelegate' constructor
 isGenesisDelegation :: DCert crypto -> Bool
-isGenesisDelegation (DCertGenesis (GenesisDelegCert {})) = True
+isGenesisDelegation (DCertGenesis GenesisDelegCert {}) = True
 isGenesisDelegation _ = False
 
 -- | Check for 'RegPool' constructor

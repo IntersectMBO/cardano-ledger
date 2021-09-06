@@ -1,12 +1,10 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -14,12 +12,13 @@ module Shelley.Spec.Ledger.STS.Mir
   ( MIR,
     PredicateFailure,
     MirPredicateFailure,
+    MirEvent (..),
     emptyInstantaneousRewards,
   )
 where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import Cardano.Ledger.Coin (addDeltaCoin)
+import Cardano.Ledger.Coin (Coin, addDeltaCoin)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Val ((<->))
 import Control.SetAlgebra (dom, eval, (∪+), (◁))
@@ -29,6 +28,7 @@ import Control.State.Transition
     TRC (..),
     TransitionRule,
     judgmentContext,
+    tellEvent,
   )
 import Data.Default.Class (Default)
 import Data.Foldable (fold)
@@ -59,6 +59,13 @@ data MIR era
 data MirPredicateFailure era
   deriving (Show, Generic, Eq)
 
+data MirEvent era
+  = MirTransfer (InstantaneousRewards (Crypto era))
+  | -- | We were not able to perform an MIR transfer due to insufficient funds.
+    --   This event gives the rewards we wanted to pay, plus the available
+    --   reserves and treasury.
+    NoMirTransfer (InstantaneousRewards (Crypto era)) Coin Coin
+
 instance NoThunks (MirPredicateFailure era)
 
 instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
@@ -66,6 +73,7 @@ instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
   type Signal (MIR era) = ()
   type Environment (MIR era) = ()
   type BaseM (MIR era) = ShelleyBase
+  type Event (MIR era) = MirEvent era
   type PredicateFailure (MIR era) = MirPredicateFailure era
 
   transitionRules = [mirTransition]
@@ -99,16 +107,17 @@ mirTransition = do
       rewards = _rewards ds
       reserves = _reserves acnt
       treasury = _treasury acnt
-      irwdR = eval $ (dom rewards) ◁ (iRReserves $ _irwd ds) :: RewardAccounts (Crypto era)
-      irwdT = eval $ (dom rewards) ◁ (iRTreasury $ _irwd ds) :: RewardAccounts (Crypto era)
+      irwdR = eval $ dom rewards ◁ iRReserves (_irwd ds) :: RewardAccounts (Crypto era)
+      irwdT = eval $ dom rewards ◁ iRTreasury (_irwd ds) :: RewardAccounts (Crypto era)
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` (deltaReserves . _irwd $ ds)
       availableTreasury = treasury `addDeltaCoin` (deltaTreasury . _irwd $ ds)
-      update = (eval (irwdR ∪+ irwdT)) :: RewardAccounts (Crypto era)
+      update = eval (irwdR ∪+ irwdT) :: RewardAccounts (Crypto era)
 
   if totR <= availableReserves && totT <= availableTreasury
-    then
+    then do
+      tellEvent $ MirTransfer ((_irwd ds) {iRReserves = irwdR, iRTreasury = irwdT})
       pure $
         EpochState
           acnt
@@ -121,7 +130,7 @@ mirTransition = do
                 dpState
                   { _dstate =
                       ds
-                        { _rewards = eval ((_rewards ds) ∪+ update),
+                        { _rewards = eval (_rewards ds ∪+ update),
                           _irwd = emptyInstantaneousRewards
                         }
                   }
@@ -129,7 +138,12 @@ mirTransition = do
           pr
           pp
           nm
-    else
+    else do
+      tellEvent $
+        NoMirTransfer
+          ((_irwd ds) {iRReserves = irwdR, iRTreasury = irwdT})
+          availableReserves
+          availableTreasury
       pure $
         EpochState
           acnt

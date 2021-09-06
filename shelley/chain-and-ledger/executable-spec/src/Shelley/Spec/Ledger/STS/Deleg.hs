@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -138,6 +137,8 @@ data DelegPredicateFailure era
   | MIRProducesNegativeUpdate
   deriving (Show, Eq, Generic)
 
+newtype DelegEvent era = NewEpoch EpochNo
+
 instance
   ( Typeable era,
     HasField "_protocolVersion" (Core.PParams era) ProtVer
@@ -149,6 +150,7 @@ instance
   type Environment (DELEG era) = DelegEnv era
   type BaseM (DELEG era) = ShelleyBase
   type PredicateFailure (DELEG era) = DelegPredicateFailure era
+  type Event (DELEG era) = DelegEvent era
 
   transitionRules = [delegationTransition]
 
@@ -263,8 +265,8 @@ delegationTransition = do
 
       pure $
         ds
-          { _rewards = eval (_rewards ds ∪ (singleton hk mempty)),
-            _ptrs = eval (_ptrs ds ∪ (singleton ptr hk))
+          { _rewards = eval (_rewards ds ∪ singleton hk mempty),
+            _ptrs = eval (_ptrs ds ∪ singleton ptr hk)
           }
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
@@ -285,7 +287,7 @@ delegationTransition = do
 
       pure $
         ds
-          { _delegations = eval (_delegations ds ⨃ (singleton hk dpool))
+          { _delegations = eval (_delegations ds ⨃ singleton hk dpool)
           }
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
@@ -314,16 +316,17 @@ delegationTransition = do
 
       pure $
         ds
-          { _fGenDelegs = eval ((_fGenDelegs ds) ⨃ (singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf)))
+          { _fGenDelegs = eval (_fGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
           }
     DCertMir (MIRCert targetPot (StakeAddressesMIR credCoinMap)) -> do
       if HardForks.allowMIRTransfer pp
         then do
           sp <- liftSTS $ asks stabilityWindow
-          firstSlot <- liftSTS $ do
-            ei <- asks epochInfo
-            EpochNo currEpoch <- epochInfoEpoch ei slot
-            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          ei <- liftSTS $ asks epochInfo
+          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
+          let newEpoch = EpochNo (currEpoch + 1)
+          tellEvent (NewEpoch newEpoch)
+          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
           slot < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
@@ -347,10 +350,11 @@ delegationTransition = do
             TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
         else do
           sp <- liftSTS $ asks stabilityWindow
-          firstSlot <- liftSTS $ do
-            ei <- asks epochInfo
-            EpochNo currEpoch <- epochInfoEpoch ei slot
-            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          ei <- liftSTS $ asks epochInfo
+          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
+          let newEpoch = EpochNo (currEpoch + 1)
+          tellEvent (NewEpoch newEpoch)
+          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
           slot < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
@@ -374,10 +378,11 @@ delegationTransition = do
       if HardForks.allowMIRTransfer pp
         then do
           sp <- liftSTS $ asks stabilityWindow
-          firstSlot <- liftSTS $ do
-            ei <- asks epochInfo
-            EpochNo currEpoch <- epochInfoEpoch ei slot
-            epochInfoFirst ei $ EpochNo (currEpoch + 1)
+          ei <- liftSTS $ asks epochInfo
+          EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
+          let newEpoch = EpochNo (currEpoch + 1)
+          tellEvent (NewEpoch newEpoch)
+          firstSlot <- liftSTS $ epochInfoFirst ei newEpoch
           let tooLate = firstSlot *- Duration sp
           slot < tooLate
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
@@ -395,8 +400,8 @@ delegationTransition = do
                 ds
                   { _irwd =
                       ir
-                        { deltaReserves = dr <> (invert $ toDeltaCoin coin),
-                          deltaTreasury = dt <> (toDeltaCoin coin)
+                        { deltaReserves = dr <> invert (toDeltaCoin coin),
+                          deltaTreasury = dt <> toDeltaCoin coin
                         }
                   }
             TreasuryMIR ->
@@ -404,8 +409,8 @@ delegationTransition = do
                 ds
                   { _irwd =
                       ir
-                        { deltaReserves = dr <> (toDeltaCoin coin),
-                          deltaTreasury = dt <> (invert $ toDeltaCoin coin)
+                        { deltaReserves = dr <> toDeltaCoin coin,
+                          deltaTreasury = dt <> invert (toDeltaCoin coin)
                         }
                   }
         else do

@@ -1,10 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -54,6 +52,7 @@ import Cardano.Ledger.Serialization
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
+import Data.ByteString.Short (fromShort)
 import Data.Coders
   ( decodeList,
     decodeMap,
@@ -180,16 +179,18 @@ hashTxSeq ::
   Hash (Crypto era) EraIndependentBlockBody
 hashTxSeq (TxSeq' _ bodies ws md vs) =
   coerce $
-    hashStrict
-      ( hashPart bodies
-          <> hashPart ws
-          <> hashPart md
-          <> hashPart vs
-      )
+    hashStrict $
+      fromShort $
+        mconcat
+          [ hashPart bodies,
+            hashPart ws,
+            hashPart md,
+            hashPart vs
+          ]
   where
     hashStrict :: ByteString -> Hash (Crypto era) ByteString
     hashStrict = Hash.hashWith id
-    hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
+    hashPart = Hash.hashToBytesShort . hashStrict . BSL.toStrict
 
 instance
   ( FromCBOR (Annotator (Core.AuxiliaryData era)),

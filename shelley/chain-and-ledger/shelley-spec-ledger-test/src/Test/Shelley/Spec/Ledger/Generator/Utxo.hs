@@ -65,6 +65,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Vector as V
 -- Instances only
 
 import Debug.Trace (trace)
@@ -161,7 +162,7 @@ showBalance
 -- need to be discarded. In that case we try to compute a Delta, that when
 -- added (applyDelta) to the transaction, repairs it. The repair is made
 -- by adding additional inputs from which more Ada can flow into the fee.
--- If that doesn't fix it, we add add more inputs to the Delta.
+-- If that doesn't fix it, we add more inputs to the Delta.
 -- Experience shows that this converges quite quickly (in traces we never saw
 -- more than 3 iterations).
 
@@ -615,9 +616,10 @@ ruffle :: Int -> [a] -> Gen [a]
 ruffle _ [] = pure []
 ruffle k items = do
   indices <- nub <$> QC.vectorOf k pickIndex
-  pure $ map (items !!) indices
+  pure $ map (itemsV V.!) indices
   where
-    pickIndex = QC.choose (0, length items - 1)
+    itemsV = V.fromList items
+    pickIndex = QC.choose (0, length itemsV - 1)
 
 -- | Return 'num' random pairs from the map 'm'. If the size of 'm' is less than 'num' return 'size m' pairs.
 getNRandomPairs :: Ord k => Int -> Map.Map k t -> Gen [(k, t)]

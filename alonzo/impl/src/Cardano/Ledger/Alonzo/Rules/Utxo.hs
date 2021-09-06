@@ -3,10 +3,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -56,10 +54,10 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), inInterval)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (HeapWords (..))
 import Cardano.Slotting.EpochInfo.API (epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (⊆), (◁), (➖))
+import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
@@ -100,34 +98,17 @@ import Shelley.Spec.Ledger.UTxO
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
 utxoEntrySize :: Era era => TxOut era -> Integer
-utxoEntrySize txout
-  | Val.adaOnly v =
-    -- no non-ada assets, no hash datum case
-    case dh of
-      SNothing -> adaOnlyUTxOSize
-      SJust _ -> adaOnlyUTxOSize + dataHashSize dh
-  -- add the size of Value and the size of datum hash (if present) to base UTxO size
-  -- max function is a safeguard (in case calculation returns a smaller size than an ada-only entry)
-  | otherwise = max adaOnlyUTxOSize (utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh)
+utxoEntrySize txout = utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh
   where
     v = getField @"value" txout
     dh = getField @"datahash" txout
     -- lengths obtained from tracing on HeapWords of inputs and outputs
     -- obtained experimentally, and number used here
     -- units are Word64s
-    txoutLenNoVal = 14
-    txinLen = 7
-
-    -- unpacked CompactCoin Word64 size in Word64s
-    coinSize :: Integer
-    coinSize = fromIntegral $ heapWords (CompactCoin 0)
 
     -- size of UTxO entry excluding the Value part
     utxoEntrySizeWithoutVal :: Integer
-    utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen
-
-    -- size of commont UTxO with only ada and no datum
-    adaOnlyUTxOSize = utxoEntrySizeWithoutVal + coinSize
+    utxoEntrySizeWithoutVal = 27 -- 6 + txoutLenNoVal [14] + txinLen [7]
 
 -- ============================================
 
@@ -233,6 +214,9 @@ instance
   ) =>
   NoThunks (UtxoPredicateFailure era)
 
+newtype UtxoEvent era
+  = UtxosEvent (Event (Core.EraRule "UTXOS" era))
+
 -- | Returns true for VKey locked addresses, and false for any kind of
 -- script-locked address.
 isKeyHashAddr :: Addr crypto -> Bool
@@ -284,23 +268,20 @@ feesOK pp tx (UTxO m) = do
   -- Part 1
   (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
   -- Part 2
-  if nullRedeemers . txrdmrs' . wits $ tx
-    then pure ()
-    else do
-      -- Part 3
-      all vKeyLocked utxoCollateral
-        ?! ScriptsNotPaidUTxO
-          (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
-      -- Part 4
-      (Val.scale (100 :: Natural) (Val.coin bal) >= Val.scale collPerc theFee)
-        ?! InsufficientCollateral
-          (Val.coin bal)
-          (rationalToCoinViaCeiling $ (fromIntegral collPerc * (unCoin theFee)) % 100)
-      -- Part 5
-      Val.inject (Val.coin bal) == bal ?! CollateralContainsNonADA bal
-      -- Part 6
-      (not $ null utxoCollateral) ?! NoCollateralInputs
-      pure ()
+  unless (nullRedeemers . txrdmrs' . wits $ tx) $ do
+    -- Part 3
+    all vKeyLocked utxoCollateral
+      ?! ScriptsNotPaidUTxO
+        (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
+    -- Part 4
+    (Val.scale (100 :: Natural) (Val.coin bal) >= Val.scale collPerc theFee)
+      ?! InsufficientCollateral
+        (Val.coin bal)
+        (rationalToCoinViaCeiling $ (fromIntegral collPerc * unCoin theFee) % 100)
+    -- Part 5
+    Val.inject (Val.coin bal) == bal ?! CollateralContainsNonADA bal
+    -- Part 6
+    not (null utxoCollateral) ?! NoCollateralInputs
 
 -- ================================================================
 
@@ -358,7 +339,7 @@ utxoTransition = do
   ei <- liftSTS $ asks epochInfoWithErr
   case i_f of
     SNothing -> pure ()
-    SJust ifj -> case (epochInfoSlotToUTCTime ei sysSt ifj) of
+    SJust ifj -> case epochInfoSlotToUTCTime ei sysSt ifj of
       -- if tx has non-native scripts, end of validity interval must translate to time
       Left _ -> (nullRedeemers . txrdmrs' . wits $ tx) ?! OutsideForecast ifj
       Right _ -> pure ()
@@ -502,13 +483,10 @@ instance
   where
   type State (AlonzoUTXO era) = Shelley.UTxOState era
   type Signal (AlonzoUTXO era) = ValidatedTx era
-  type
-    Environment (AlonzoUTXO era) =
-      Shelley.UtxoEnv era
+  type Environment (AlonzoUTXO era) = Shelley.UtxoEnv era
   type BaseM (AlonzoUTXO era) = ShelleyBase
-  type
-    PredicateFailure (AlonzoUTXO era) =
-      UtxoPredicateFailure era
+  type PredicateFailure (AlonzoUTXO era) = UtxoPredicateFailure era
+  type Event (AlonzoUTXO era) = UtxoEvent era
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -516,11 +494,13 @@ instance
 instance
   ( Era era,
     STS (UTXOS era),
-    PredicateFailure (Core.EraRule "UTXOS" era) ~ UtxosPredicateFailure era
+    PredicateFailure (Core.EraRule "UTXOS" era) ~ UtxosPredicateFailure era,
+    Event (Core.EraRule "UTXOS" era) ~ Event (UTXOS era)
   ) =>
   Embed (UTXOS era) (AlonzoUTXO era)
   where
   wrapFailed = UtxosFailure
+  wrapEvent = UtxosEvent
 
 --------------------------------------------------------------------------------
 -- Serialisation
@@ -552,7 +532,7 @@ encFail (OutsideValidityIntervalUTxO a b) =
   Sum OutsideValidityIntervalUTxO 1 !> To a !> To b
 encFail (MaxTxSizeUTxO a b) =
   Sum MaxTxSizeUTxO 2 !> To a !> To b
-encFail (InputSetEmptyUTxO) =
+encFail InputSetEmptyUTxO =
   Sum InputSetEmptyUTxO 3
 encFail (FeeTooSmallUTxO a b) =
   Sum FeeTooSmallUTxO 4 !> To a !> To b
@@ -568,7 +548,7 @@ encFail (WrongNetworkWithdrawal right wrongs) =
   Sum (WrongNetworkWithdrawal @era) 9 !> To right !> E encodeFoldable wrongs
 encFail (OutputBootAddrAttrsTooBig outs) =
   Sum (OutputBootAddrAttrsTooBig @era) 10 !> E encodeFoldable outs
-encFail (TriesToForgeADA) =
+encFail TriesToForgeADA =
   Sum TriesToForgeADA 11
 encFail (OutputTooBigUTxO outs) =
   Sum (OutputTooBigUTxO @era) 12 !> E encodeFoldable outs
@@ -597,19 +577,19 @@ decFail ::
   ) =>
   Word ->
   Decode 'Open (UtxoPredicateFailure era)
-decFail 0 = SumD (BadInputsUTxO) <! D (decodeSet fromCBOR)
+decFail 0 = SumD BadInputsUTxO <! D (decodeSet fromCBOR)
 decFail 1 = SumD OutsideValidityIntervalUTxO <! From <! From
 decFail 2 = SumD MaxTxSizeUTxO <! From <! From
 decFail 3 = SumD InputSetEmptyUTxO
 decFail 4 = SumD FeeTooSmallUTxO <! From <! From
-decFail 5 = SumD (ValueNotConservedUTxO) <! From <! From
-decFail 6 = SumD (OutputTooSmallUTxO) <! D (decodeList fromCBOR)
-decFail 7 = SumD (UtxosFailure) <! From
-decFail 8 = SumD (WrongNetwork) <! From <! D (decodeSet fromCBOR)
-decFail 9 = SumD (WrongNetworkWithdrawal) <! From <! D (decodeSet fromCBOR)
-decFail 10 = SumD (OutputBootAddrAttrsTooBig) <! D (decodeList fromCBOR)
+decFail 5 = SumD ValueNotConservedUTxO <! From <! From
+decFail 6 = SumD OutputTooSmallUTxO <! D (decodeList fromCBOR)
+decFail 7 = SumD UtxosFailure <! From
+decFail 8 = SumD WrongNetwork <! From <! D (decodeSet fromCBOR)
+decFail 9 = SumD WrongNetworkWithdrawal <! From <! D (decodeSet fromCBOR)
+decFail 10 = SumD OutputBootAddrAttrsTooBig <! D (decodeList fromCBOR)
 decFail 11 = SumD TriesToForgeADA
-decFail 12 = SumD (OutputTooBigUTxO) <! D (decodeList fromCBOR)
+decFail 12 = SumD OutputTooBigUTxO <! D (decodeList fromCBOR)
 decFail 13 = SumD InsufficientCollateral <! From <! From
 decFail 14 = SumD ScriptsNotPaidUTxO <! From
 decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From

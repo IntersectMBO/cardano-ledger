@@ -1,14 +1,10 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -195,12 +191,8 @@ newtype TxWitness era = TxWitnessConstr (MemoBytes (TxWitnessRaw era))
   deriving newtype (SafeToHash, ToCBOR)
 
 instance (Era era, Core.Script era ~ Script era) => Semigroup (TxWitness era) where
-  (<>) (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)) y
-    | (Set.null a && Set.null b && Map.null c && nullDats d && Map.null e) =
-      y
-  (<>) y (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _))
-    | (Set.null a && Set.null b && Map.null c && nullDats d && Map.null e) =
-      y
+  (<>) x y | isEmptyTxWitness x = y
+  (<>) x y | isEmptyTxWitness y = x
   (<>)
     (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _))
     (TxWitnessConstr (Memo (TxWitnessRaw u v w x (Redeemers' y)) _)) =
@@ -208,6 +200,10 @@ instance (Era era, Core.Script era ~ Script era) => Semigroup (TxWitness era) wh
 
 instance (Era era, Core.Script era ~ Script era) => Monoid (TxWitness era) where
   mempty = TxWitness mempty mempty mempty mempty (Redeemers mempty)
+
+isEmptyTxWitness :: TxWitness era -> Bool
+isEmptyTxWitness (TxWitnessConstr (Memo (TxWitnessRaw a b c d (Redeemers' e)) _)) =
+  Set.null a && Set.null b && Map.null c && nullDats d && Map.null e
 
 -- =====================================================
 newtype TxDatsRaw era = TxDatsRaw (Map (DataHash (Crypto era)) (Data era))
@@ -218,7 +214,7 @@ encodeTxDatsRaw ::
   ToCBOR (Data era) =>
   TxDatsRaw era ->
   Encode ('Closed 'Dense) (TxDatsRaw era)
-encodeTxDatsRaw t = E (encodeFoldable . Map.elems . unTxDatsRaw) t
+encodeTxDatsRaw = E (encodeFoldable . Map.elems . unTxDatsRaw)
   where
     unTxDatsRaw (TxDatsRaw m) = m
 
@@ -393,7 +389,7 @@ instance
             dat <- fromCBOR
             ex <- fromCBOR
             let f x y z = (x, (y, z))
-            pure $ f <$> pure rdmrPtr <*> dat <*> pure ex
+            pure $ f rdmrPtr <$> dat <*> pure ex
         pure $ Map.fromList <$> entries
 
 deriving via

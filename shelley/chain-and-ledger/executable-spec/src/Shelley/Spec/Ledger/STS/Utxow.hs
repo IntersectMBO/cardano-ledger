@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -18,6 +17,7 @@
 module Shelley.Spec.Ledger.STS.Utxow
   ( UTXOW,
     UtxowPredicateFailure (..),
+    UtxowEvent (..),
     PredicateFailure,
     shelleyStyleWitness,
     ShelleyStyleWitnessNeeds,
@@ -103,7 +103,7 @@ import Shelley.Spec.Ledger.LedgerState
     witsVKeyNeeded,
   )
 import Shelley.Spec.Ledger.PParams (ProtVer, Update)
-import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..), UtxoPredicateFailure)
+import Shelley.Spec.Ledger.STS.Utxo (UTXO, UtxoEnv (..), UtxoEvent, UtxoPredicateFailure)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import qualified Shelley.Spec.Ledger.SoftForks as SoftForks
 import Shelley.Spec.Ledger.Tx
@@ -144,8 +144,8 @@ data UtxowPredicateFailure era
   | InvalidMetadata
   deriving (Generic)
 
-data UtxowEvent era
-  = UtxoEvent (Event (UTXO era))
+newtype UtxowEvent era
+  = UtxoEvent (Event (Core.EraRule "UTXO" era))
 
 instance
   ( NoThunks (PredicateFailure (Core.EraRule "UTXO" era)),
@@ -375,10 +375,10 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
 
   {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   coreNodeQuorum <- liftSTS $ asks quorum
-  ( (not $ null mirCerts)
+  ( not (null mirCerts)
       ==> Set.size genSig >= fromIntegral coreNodeQuorum
     )
-    ?! (embed (MIRInsufficientGenesisSigsUTXOW genSig))
+    ?! embed (MIRInsufficientGenesisSigsUTXOW genSig)
 
   trans @(Core.EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
@@ -386,7 +386,8 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
 instance
   ( Era era,
     STS (UTXO era),
-    PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era
+    PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era,
+    Event (Core.EraRule "UTXO" era) ~ UtxoEvent era
   ) =>
   Embed (UTXO era) (UTXOW era)
   where

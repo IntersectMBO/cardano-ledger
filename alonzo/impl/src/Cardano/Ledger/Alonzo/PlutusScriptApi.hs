@@ -15,7 +15,6 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
     -- Figure 12
     scriptsNeeded,
     scriptsNeededFromBody,
-    checkScriptData,
     language,
     CollectError (..),
     collectTwoPhaseScriptInputs,
@@ -23,7 +22,6 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
@@ -32,33 +30,39 @@ import Cardano.Ledger.Alonzo.Tx
   ( Data,
     DataHash,
     ScriptPurpose (..),
-    ValidatedTx (..),
-    getValidatorHash,
     indexedRdmrs,
     txdats',
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
-import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..), andResult, runPLCScript, txInfo, valContext)
+import Cardano.Ledger.Alonzo.TxInfo
+  ( FailureDescription (..),
+    ScriptResult (..),
+    andResult,
+    runPLCScript,
+    txInfo,
+    valContext,
+  )
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts', unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Coders
+import Data.Foldable (foldl')
 import Data.Functor.Identity (Identity, runIdentity)
-import Data.List (foldl')
 import qualified Data.Map as Map
-import Data.Maybe (isJust)
+import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (pack)
 import GHC.Generics
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
@@ -72,7 +76,7 @@ import Shelley.Spec.Ledger.TxBody
     getRwdCred,
     witKeyHash,
   )
-import Shelley.Spec.Ledger.UTxO (UTxO (..))
+import Shelley.Spec.Ledger.UTxO (UTxO (..), getScriptHash, scriptCred)
 
 -- ===============================================================
 -- From the specification, Figure 8 "Scripts and their Arguments"
@@ -171,7 +175,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
     -- by use of the (partial) language function, which is not defined
     -- on 1-phase scripts.
     knownToNotBe1Phase (_, sh) =
-      case sh `Map.lookup` (txscripts' $ getField @"wits" tx) of
+      case sh `Map.lookup` txscripts' (getField @"wits" tx) of
         Just (AlonzoScript.PlutusScript _) -> True
         Just (AlonzoScript.TimelockScript _) -> False
         Nothing -> True
@@ -180,7 +184,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
         Just (d, eu) -> Right (sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
     getscript (_, hash) =
-      case Map.lookup hash (txscripts' (getField @"wits" tx)) of
+      case hash `Map.lookup` txscripts' (getField @"wits" tx) of
         Just script -> Right script
         Nothing -> Left (NoWitness hash)
     apply cost (sp, d, eu) script =
@@ -224,50 +228,24 @@ evalScripts ::
   ScriptResult
 evalScripts _tx [] = Passes
 evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
-  (lift $ evalTimelock vhks (Alonzo.vldt' (getField @"body" tx)) timelock) `andResult` evalScripts tx rest
+  lift (evalTimelock vhks (Alonzo.vldt' (getField @"body" tx)) timelock)
+    `andResult` evalScripts tx rest
   where
     vhks = Set.map witKeyHash (txwitsVKey' (getField @"wits" tx))
     lift True = Passes
-    lift False = Fails ["Timelock: " ++ show timelock ++ " fails."]
+    lift False = Fails [OnePhaseFailure . pack . show $ timelock]
 evalScripts tx ((AlonzoScript.PlutusScript pscript, ds, units, cost) : rest) =
-  runPLCScript (Proxy @era) cost pscript units (map getPlutusData ds) `andResult` evalScripts tx rest
-
--- ===================================================================
--- From Specification, Figure 12 "UTXOW helper functions"
-
--- This is called checkRedeemers in the Specification
-
--- | Check that a script has whatever associated Data that it requires.
---     There are several things need to test this:
---     1) The hash appears in the script map in the Witnesses
---     2) The script is Not a twoPhase script, so it doesn't need any data
---     3) The script is a twoPhase script, and the _txrdmrs Map of the TxWitness,
---        contains Data for the script.
-checkScriptData ::
-  forall era.
-  ( ValidateScript era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
-  ) =>
-  ValidatedTx era ->
-  (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
-  Bool
-checkScriptData tx (sp, h) =
-  case Map.lookup h (txscripts' (getField @"wits" tx)) of
-    Nothing -> False
-    Just s -> if isNativeScript @era s then True else isJust (indexedRdmrs tx sp)
-
--- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
+  runPLCScript (Proxy @era) cost pscript units (map getPlutusData ds)
+    `andResult` evalScripts tx rest
 
 -- Collect information (purpose and hash) about all the scripts in a Tx.
+-- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
 scriptsNeeded ::
   forall era tx.
   ( Era era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "body" tx (Core.TxBody era)
   ) =>
   UTxO era ->
@@ -292,33 +270,28 @@ scriptsNeededFromBody ::
   ( Era era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   UTxO era ->
   Core.TxBody era ->
   [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-scriptsNeededFromBody (UTxO utxomap) txb = spend ++ reward ++ cert ++ minted
+scriptsNeededFromBody (UTxO u) txb = spend ++ reward ++ cert ++ minted
   where
-    !spend = foldl' accum [] (getField @"inputs" txb)
+    !spend = mapMaybe collect (Set.toList $ getField @"inputs" txb)
       where
-        accum !ans !i =
-          case Map.lookup i utxomap of
-            Nothing -> ans
-            Just txout ->
-              case getValidatorHash (getField @"address" txout) of
-                Nothing -> ans
-                Just hash -> (Spending i, hash) : ans
+        collect :: TxIn (Crypto era) -> Maybe (ScriptPurpose (Crypto era), ScriptHash (Crypto era))
+        collect !i = do
+          addr <- getField @"address" <$> Map.lookup i u
+          hash <- getScriptHash addr
+          return (Spending i, hash)
 
-    !reward = foldl' accum [] (Map.keys m2)
+    !reward = mapMaybe fromRwd (Map.keys withdrawals)
       where
-        (Wdrl m2) = getField @"wdrls" txb
-        accum !ans !accnt = case getRwdCred accnt of
-          (ScriptHashObj hash) -> (Rewarding accnt, hash) : ans
-          _ -> ans
+        withdrawals = unWdrl $ getField @"wdrls" txb
+        fromRwd accnt = do
+          hash <- scriptCred $ getRwdCred accnt
+          return (Rewarding accnt, hash)
 
-    !cert = foldl addOnlyCwitness [] (getField @"certs" txb)
+    !cert = foldl' addOnlyCwitness [] (getField @"certs" txb)
 
-    !minted = foldr (\hash ans -> (Minting (PolicyID hash), hash) : ans) [] valuePolicyHashes
-      where
-        valuePolicyHashes = getField @"minted" txb
+    !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ getField @"minted" txb

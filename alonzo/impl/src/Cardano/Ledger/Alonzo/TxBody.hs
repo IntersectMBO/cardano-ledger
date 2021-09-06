@@ -1,7 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -13,7 +12,6 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -142,8 +140,10 @@ data TxOut era
   = TxOutCompact
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
-      !(StrictMaybe (DataHash (Crypto era)))
-  deriving (Generic)
+  | TxOutCompactDH
+      {-# UNPACK #-} !(CompactAddr (Crypto era))
+      !(CompactForm (Core.Value era))
+      {-# UNPACK #-} !(DataHash (Crypto era))
 
 deriving stock instance
   ( Eq (Core.Value era),
@@ -156,7 +156,11 @@ viewCompactTxOut ::
   (Era era) =>
   TxOut era ->
   (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
-viewCompactTxOut (TxOutCompact bs c dh) = (addr, val, dh)
+viewCompactTxOut (TxOutCompact bs c) = (addr, val, SNothing)
+  where
+    addr = decompactAddr bs
+    val = fromCompact c
+viewCompactTxOut (TxOutCompactDH bs c dh) = (addr, val, SJust dh)
   where
     addr = decompactAddr bs
     val = fromCompact c
@@ -183,15 +187,14 @@ pattern TxOut ::
   StrictMaybe (DataHash (Crypto era)) ->
   TxOut era
 pattern TxOut addr vl dh <-
-  TxOutCompact (decompactAddr -> addr) (fromCompact -> vl) dh
+  (viewCompactTxOut -> (addr, vl, dh))
   where
-    TxOut addr vl dh =
-      TxOutCompact
-        (compactAddr addr)
-        ( fromMaybe (error $ "Illegal value in txout: " <> show vl) $
-            toCompact vl
-        )
-        dh
+    TxOut addr vl mdh =
+      let v = fromMaybe (error $ "Illegal value in txout: " <> show vl) $ toCompact vl
+          a = compactAddr addr
+       in case mdh of
+            SNothing -> TxOutCompact a v
+            SJust dh -> TxOutCompactDH a v dh
 
 {-# COMPLETE TxOut #-}
 
@@ -305,7 +308,7 @@ pattern TxBody ::
   Value (Crypto era) ->
   StrictMaybe (ScriptIntegrityHash (Crypto era)) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  StrictMaybe (Network) ->
+  StrictMaybe Network ->
   TxBody era
 pattern TxBody
   { inputs,
@@ -435,17 +438,15 @@ instance
   ) =>
   ToCBOR (TxOut era)
   where
-  toCBOR (TxOutCompact addr cv mdh) =
-    case mdh of
-      SNothing ->
-        encodeListLen 2
-          <> toCBOR addr
-          <> toCBOR cv
-      SJust dh ->
-        encodeListLen 3
-          <> toCBOR addr
-          <> toCBOR cv
-          <> toCBOR dh
+  toCBOR (TxOutCompact addr cv) =
+    encodeListLen 2
+      <> toCBOR addr
+      <> toCBOR cv
+  toCBOR (TxOutCompactDH addr cv dh) =
+    encodeListLen 3
+      <> toCBOR addr
+      <> toCBOR cv
+      <> toCBOR dh
 
 instance
   ( Era era,
@@ -462,22 +463,21 @@ instance
         a <- fromCBOR
         cv <- decodeNonNegative
         decodeBreakOr >>= \case
-          True -> pure $ TxOutCompact a cv SNothing
+          True -> pure $ TxOutCompact a cv
           False -> do
             dh <- fromCBOR
             decodeBreakOr >>= \case
-              True -> pure $ TxOutCompact a cv (SJust dh)
+              True -> pure $ TxOutCompactDH a cv dh
               False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
       Just 2 ->
         TxOutCompact
           <$> fromCBOR
           <*> decodeNonNegative
-          <*> pure SNothing
       Just 3 ->
-        TxOutCompact
+        TxOutCompactDH
           <$> fromCBOR
           <*> decodeNonNegative
-          <*> (SJust <$> fromCBOR)
+          <*> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
 encodeTxBodyRaw ::
@@ -661,20 +661,20 @@ instance HasField "vldt" (TxBody era) ValidityInterval where
   getField (TxBodyConstr (Memo m _)) = _vldt m
 
 instance
-  c ~ (Crypto era) =>
+  c ~ Crypto era =>
   HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash c))
   where
   getField (TxBodyConstr (Memo m _)) = _adHash m
 
 -- | TODO deprecated
 instance
-  c ~ (Crypto era) =>
+  c ~ Crypto era =>
   HasField "wppHash" (TxBody era) (StrictMaybe (ScriptIntegrityHash c))
   where
   getField (TxBodyConstr (Memo m _)) = _scriptIntegrityHash m
 
 instance
-  c ~ (Crypto era) =>
+  c ~ Crypto era =>
   HasField "scriptIntegrityHash" (TxBody era) (StrictMaybe (ScriptIntegrityHash c))
   where
   getField (TxBodyConstr (Memo m _)) = _scriptIntegrityHash m
@@ -683,16 +683,20 @@ instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
   getField (TxBodyConstr (Memo m _)) = _txnetworkid m
 
 instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
-  getField (TxOutCompact a _ _) = a
+  getField (TxOutCompact a _) = a
+  getField (TxOutCompactDH a _ _) = a
 
 instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
-  getField (TxOutCompact a _ _) = decompactAddr a
-
-instance c ~ (Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
-  getField (TxOutCompact _ _ datahash) = datahash
+  getField (TxOutCompact a _) = decompactAddr a
+  getField (TxOutCompactDH a _ _) = decompactAddr a
 
 instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
-  getField (TxOutCompact _ v _) = fromCompact v
+  getField (TxOutCompact _ v) = fromCompact v
+  getField (TxOutCompactDH _ v _) = fromCompact v
+
+instance c ~ Crypto era => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
+  getField (TxOutCompact _ _) = SNothing
+  getField (TxOutCompactDH _ _ d) = SJust d
 
 -- ===================================================
 

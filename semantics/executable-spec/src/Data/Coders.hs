@@ -67,6 +67,7 @@ module Data.Coders
     encodeMap,
     wrapCBORMap,
     decodeMap,
+    decodeMapByKey,
     decodeMapContents,
     decodeMapTraverse,
     decodeMapContentsTraverse,
@@ -285,11 +286,17 @@ wrapCBORMap len contents =
     else encodeMapLenIndef <> contents <> encodeBreak
 
 decodeMap :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
-decodeMap decodeKey decodeValue =
+decodeMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
+
+decodeMapByKey :: Ord a => Decoder s a -> (a -> Decoder s b) -> Decoder s (Map.Map a b)
+decodeMapByKey decodeKey decodeValueFor =
   Map.fromList
     <$> decodeMapContents decodeInlinedPair
   where
-    decodeInlinedPair = (,) <$> decodeKey <*> decodeValue
+    decodeInlinedPair = do
+      key <- decodeKey
+      value <- decodeValueFor key
+      pure (key, value)
 
 decodeMapContents :: Decoder s a -> Decoder s [a]
 decodeMapContents = decodeCollection decodeMapLenOrIndef

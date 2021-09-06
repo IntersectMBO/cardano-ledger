@@ -13,14 +13,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 
--- |
--- Module      : UTxO
--- Description : Simple UTxO Ledger
---
--- This module defines the types and functions for a simple UTxO Ledger
--- as specified in /A Simplified Formal Specification of a UTxO Ledger/.
 module Shelley.Spec.Ledger.UTxO
   ( -- * Primitives
     UTxO (..),
@@ -128,7 +121,7 @@ instance
   Embed (UTxO era) (Map (TxIn crypto) out)
   where
   toBase (UTxO x) = x
-  fromBase x = (UTxO x)
+  fromBase = UTxO
 
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: Map (TxIn (Crypto era)) (Core.TxOut era)}
@@ -258,7 +251,7 @@ balance ::
   Core.Value era
 balance (UTxO utxo) = Map.foldl' addTxOuts zero utxo
   where
-    addTxOuts !b out = (getField @"value" out) <+> b
+    addTxOuts !b out = getField @"value" out <+> b
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
@@ -328,8 +321,7 @@ scriptsNeeded ::
     HasField "body" tx (Core.TxBody era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   UTxO era ->
   tx ->
@@ -348,9 +340,9 @@ scriptsNeeded u tx =
     `Set.union` getField @"minted" txbody -- This might be Set.empty in some Eras.
   where
     txbody = getField @"body" tx
-    withdrawals = unWdrl $ getField @"wdrls" $ txbody
-    u'' = eval ((txinsScript (getField @"inputs" $ txbody) u) ◁ u)
-    certificates = (toList . getField @"certs") txbody
+    withdrawals = unWdrl (getField @"wdrls" txbody)
+    u'' = eval (txinsScript (getField @"inputs" txbody) u ◁ u)
+    certificates = toList (getField @"certs" txbody)
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.

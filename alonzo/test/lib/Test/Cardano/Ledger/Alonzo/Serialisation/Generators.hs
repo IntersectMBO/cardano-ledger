@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..))
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
@@ -33,18 +33,19 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
   )
+import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), ScriptResult (..))
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe (fromMaybe)
 import qualified Data.Set as Set
 import Data.Text (pack)
-import qualified Data.Text as T (pack)
 import Numeric.Natural (Natural)
+import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
@@ -129,9 +130,6 @@ genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Core.Script era])
 genData :: forall era. Era era => Gen (TxDats era)
 genData = TxDats <$> keyBy hashData <$> arbitrary
 
-instance HasAlgorithm c => Arbitrary (SafeHash c i) where
-  arbitrary = unsafeMakeSafeHash <$> arbitrary
-
 instance
   ( Era era,
     UsesValue era,
@@ -194,14 +192,10 @@ instance Arbitrary Language where
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
-newtype AlphaString = AlphaString {unAlphaString :: String}
-  deriving (Show, Eq, Ord)
-
-instance Arbitrary AlphaString where
-  arbitrary = AlphaString <$> listOf (elements ['a' .. 'z'])
-
 instance Arbitrary CostModel where
-  arbitrary = (CostModel . (Map.mapKeys (T.pack . unAlphaString))) <$> arbitrary
+  arbitrary = CostModel <$> traverse (const arbitrary) dcmp
+    where
+      dcmp = fromMaybe (error "Corrupt default cost model") defaultCostModelParams
 
 instance Arbitrary (PParams era) where
   arbitrary =
@@ -259,10 +253,25 @@ instance Arbitrary (PParamsUpdate era) where
       <*> arbitrary
       <*> arbitrary
 
+instance Arbitrary FailureDescription where
+  arbitrary =
+    oneof
+      [ (OnePhaseFailure . pack) <$> arbitrary,
+        PlutusFailure <$> (pack <$> arbitrary) <*> arbitrary
+      ]
+
+instance Arbitrary ScriptResult where
+  arbitrary =
+    oneof [pure Passes, Fails <$> arbitrary]
+
+instance Arbitrary TagMismatchDescription where
+  arbitrary =
+    oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> arbitrary]
+
 instance Mock c => Arbitrary (UtxosPredicateFailure (AlonzoEra c)) where
   arbitrary =
     oneof
-      [ ValidationTagMismatch <$> arbitrary <*> (pack <$> arbitrary),
+      [ ValidationTagMismatch <$> arbitrary <*> arbitrary,
         UpdateFailure <$> arbitrary
       ]
 

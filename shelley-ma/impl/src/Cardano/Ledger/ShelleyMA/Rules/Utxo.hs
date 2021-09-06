@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (heapWordsUnpacked)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Iterate.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁))
 import Control.Monad.Trans.Reader (asks)
@@ -125,7 +124,7 @@ scaledMinDeposit v (Coin mv)
 
     -- unpacked CompactCoin Word64 size in Word64s
     coinSize :: Integer
-    coinSize = fromIntegral $ heapWordsUnpacked (CompactCoin 0)
+    coinSize = 0
 
     utxoEntrySizeWithoutVal :: Integer
     utxoEntrySizeWithoutVal = 6 + txoutLenNoVal + txinLen
@@ -188,6 +187,9 @@ instance
     NoThunks (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   NoThunks (UtxoPredicateFailure era)
+
+data UtxoEvent era
+  = UpdateEvent !(Event (Core.EraRule "PPUP" era))
 
 -- | Calculate the value consumed by the transation.
 --
@@ -371,13 +373,10 @@ instance
   where
   type State (UTXO era) = Shelley.UTxOState era
   type Signal (UTXO era) = Tx era
-  type
-    Environment (UTXO era) =
-      Shelley.UtxoEnv era
+  type Environment (UTXO era) = Shelley.UtxoEnv era
   type BaseM (UTXO era) = ShelleyBase
-  type
-    PredicateFailure (UTXO era) =
-      UtxoPredicateFailure era
+  type PredicateFailure (UTXO era) = UtxoPredicateFailure era
+  type Event (UTXO era) = UtxoEvent era
 
   initialRules = []
   transitionRules = [utxoTransition]
@@ -385,11 +384,13 @@ instance
 instance
   ( Era era,
     STS (PPUP era),
-    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era
+    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era,
+    Event (Core.EraRule "PPUP" era) ~ Event (PPUP era)
   ) =>
   Embed (PPUP era) (UTXO era)
   where
   wrapFailed = UpdateFailure
+  wrapEvent = UpdateEvent
 
 --------------------------------------------------------------------------------
 -- Serialisation

@@ -10,7 +10,7 @@ Figure \ref{fig:defs:utxo-shelley-1} gives the modified transaction types and he
 We make the following changes and additions:
 
 \begin{itemize}
-  \item $\WitnessPPDataHash$ is the type of a hash of script execution
+  \item $\ScriptIntegrityHash$ is the type of a hash of script execution
   related data. It is the hash of $\fun{txrdmrs}$ and relevant protocol parameters.
 
   \item $\ScriptPhOne$ is the type of phase-1 scripts.
@@ -60,7 +60,7 @@ We add the following helper functions:
   \item $\fun{language}$ selects the language of a phase-2 script, and $\Nothing$ in case
   the script is phase-1.
   \item $\fun{hashData}$ hashes a value of type $\Data$.
-  \item $\fun{hashWitnessPPData}$ hashes the protocol parameters and data relevant to script execution.
+  \item $\fun{hashScriptIntegrity}$ hashes the protocol parameters and data relevant to script execution.
   In particular, the redeemer structure, and the datum objects.
 \end{itemize}
 
@@ -69,7 +69,7 @@ We add the following helper functions:
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
-      \var{wph} &\WitnessPPDataHash & \text{Script data hash}\\
+      \var{wph} &\ScriptIntegrityHash & \text{Script data hash}\\
       \var{plc} & \ScriptPlutus & \text{Plutus core scripts} \\
       \var{d} & \Data & \text{Generic script data}
     \end{array}
@@ -123,9 +123,9 @@ We add the following helper functions:
   \end{align*}
   %
   \begin{align*}
-  &\fun{hashWitnessPPData} \in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits) \\
-  &~~~~ \to (\DataHash \mapsto \Datum) \to \WitnessPPDataHash^? \\
-  &\fun{hashWitnessPPData}~{pp}~{langs}~{rdmrs}~{dats}~=~ \\
+  &\fun{hashScriptIntegrity} \in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits) \\
+  &~~~~ \to (\DataHash \mapsto \Datum) \to \ScriptIntegrityHash^? \\
+  &\fun{hashScriptIntegrity}~{pp}~{langs}~{rdmrs}~{dats}~=~ \\
                     &~~~~ \begin{cases}
                           \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \land dats~=~\emptyset \\
                           \fun{hash} (rdmrs, dats, \{ \fun{getLanguageView}~pp~l \mid l \in langs \}) & \text{otherwise}
@@ -162,7 +162,7 @@ We add the following helper functions:
        & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
        & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
        & \times ~\hldiff{\powerset{\KeyHash}} & \hldiff{\fun{reqSignerHashes}} & \text{Hashes of VKeys passed to scripts}\\
-       & \times ~\hldiff{\WitnessPPDataHash^?} & \hldiff{\fun{wppHash}} & \text{Hash of script-related data}\\
+       & \times ~\hldiff{\ScriptIntegrityHash^?} & \hldiff{\fun{scriptIntegrityHash}} & \text{Hash of script-related data}\\
        & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{Auxiliary data hash}\\
        & \times ~\hldiff{\Network^?} & \hldiff{\fun{txnetworkid}} & \text{Tx network ID}\\
     \end{array}
@@ -246,7 +246,7 @@ the body of the transaction:
   the transaction and the ledger are otherwise unaware of what signatures are expected by these scripts.
 
   \item We include a hash of some script-related data, specifically the redeemers and protocol parameters,
-    with accessor $\fun{wppHash}$.
+    with accessor $\fun{scriptIntegrityHash}$.
 
   \item We include the ID of the network on which the transaction lives, $\fun{txnetworkid}$.
   This is in addition to the network ID's already included in the reward and output addresses.

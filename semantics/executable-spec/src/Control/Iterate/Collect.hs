@@ -1,4 +1,4 @@
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 {-# OPTIONS_GHC -Wno-unused-matches #-}
@@ -14,7 +14,7 @@ import qualified Data.Map.Strict as Map
 -- we put it here since it is the simplest continuation monad, and studying
 -- it, helped me define the Collect monad.
 
-newtype Cont ans x = Cont {runCont :: ((x -> ans) -> ans)} -- ans is the final result type of the whole computation
+newtype Cont ans x = Cont {runCont :: (x -> ans) -> ans} -- ans is the final result type of the whole computation
 
 instance Functor (Cont ans) where
   fmap f (Cont k2) = Cont (\k1 -> k2 (k1 . f))
@@ -31,7 +31,7 @@ instance Monad (Cont r) where
 -- Now we want to make the following, more complicated continuation a Monad
 -- Here the answer type is completely abstract.
 
-newtype Collect tuple = Collect {runCollect :: (forall ans. ans -> (tuple -> ans -> ans) -> ans)}
+newtype Collect tuple = Collect {runCollect :: forall ans. ans -> (tuple -> ans -> ans) -> ans}
 
 instance Functor Collect where
   fmap f (Collect g) = Collect (\x c -> g x (\t a -> c (f t) a))
@@ -121,7 +121,9 @@ instance Show t => Show (Collect t) where
 -- =======================================================
 -- Collection with mplus
 
-newtype ColPlus tuple = ColPlus {runColPlus :: (forall ans. ans -> (tuple -> ans -> ans) -> (ans -> ans -> ans) -> ans)}
+newtype ColPlus tuple = ColPlus
+  { runColPlus :: forall ans. ans -> (tuple -> ans -> ans) -> (ans -> ans -> ans) -> ans
+  }
 
 instance Functor ColPlus where
   fmap f (ColPlus g) = ColPlus (\x c m -> g x (\t a -> c (f t) a) m)
@@ -133,7 +135,7 @@ instance Applicative ColPlus where
 instance Monad ColPlus where
   (ColPlus g) >>= f = ColPlus (\x c m -> g x (\t a -> runColPlus (f t) a c m) m)
 
-runPlus :: Monoid a => (ColPlus t) -> a -> (t -> a -> a) -> a
+runPlus :: Monoid a => ColPlus t -> a -> (t -> a -> a) -> a
 runPlus (ColPlus g) a f = g a f mappend
 
 instance AP.Alternative ColPlus where

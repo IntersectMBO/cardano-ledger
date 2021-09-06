@@ -1,10 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Rank2Types #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Shelley.Spec.Ledger.STS.Updn
@@ -39,6 +35,8 @@ data UpdnPredicateFailure crypto -- No predicate failures
 
 instance NoThunks (UpdnPredicateFailure crypto)
 
+newtype UpdnEvent crypto = NewEpoch EpochNo
+
 instance
   (Crypto crypto) =>
   STS (UPDN crypto)
@@ -48,6 +46,7 @@ instance
   type Environment (UPDN crypto) = UpdnEnv
   type BaseM (UPDN crypto) = ShelleyBase
   type PredicateFailure (UPDN crypto) = UpdnPredicateFailure crypto
+  type Event (UPDN crypto) = UpdnEvent crypto
   initialRules =
     [ pure
         ( UpdnState
@@ -65,7 +64,9 @@ updTransition = do
   ei <- liftSTS $ asks epochInfo
   sp <- liftSTS $ asks stabilityWindow
   EpochNo e <- liftSTS $ epochInfoEpoch ei s
-  firstSlotNextEpoch <- liftSTS $ epochInfoFirst ei (EpochNo (e + 1))
+  let newEpochNo = EpochNo (e + 1)
+  firstSlotNextEpoch <- liftSTS $ epochInfoFirst ei newEpochNo
+  tellEvent $ NewEpoch newEpochNo
   pure $
     UpdnState
       (eta_v ⭒ eta)

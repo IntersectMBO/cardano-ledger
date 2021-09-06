@@ -341,7 +341,7 @@ exampleNewEpochState value ppp pp =
             (StakeRefBase (keyToCredential exampleStakeKey))
 
     rewardUpdate :: PulsingRewUpdate (Cardano.Ledger.Era.Crypto era)
-    rewardUpdate =
+    (rewardUpdate, _) =
       startStep @era
         (EpochSize 432000)
         (BlocksMade (Map.singleton (mkKeyHash 1) 10))

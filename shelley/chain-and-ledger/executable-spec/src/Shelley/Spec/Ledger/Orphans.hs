@@ -102,7 +102,7 @@ instance Default Lazy.ByteString where
   def = Lazy.empty
 
 instance Default (Hash a b) where
-  def = (UnsafeHash def)
+  def = UnsafeHash def
 
 instance Default Bool where
   def = False

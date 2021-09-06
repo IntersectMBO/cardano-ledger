@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -51,6 +50,7 @@ import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
 import Control.State.Transition
 import Data.Map.Strict (Map)
+import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -117,6 +117,10 @@ data PrtclPredicateFailure crypto
   | UpdnFailure (PredicateFailure (UPDN crypto)) -- Subtransition Failures
   deriving (Generic)
 
+data PrtclEvent crypto
+  = UpdnEvent (Event (UPDN crypto)) -- Subtransition Failures
+  | NoEvent Void
+
 deriving instance
   (VRF.VRFAlgorithm (VRF crypto)) =>
   Show (PrtclPredicateFailure crypto)
@@ -147,6 +151,7 @@ instance
 
   type BaseM (PRTCL crypto) = ShelleyBase
   type PredicateFailure (PRTCL crypto) = PrtclPredicateFailure crypto
+  type Event (PRTCL crypto) = PrtclEvent crypto
 
   initialRules = []
 
@@ -199,6 +204,7 @@ instance
   Embed (OVERLAY crypto) (PRTCL crypto)
   where
   wrapFailed = OverlayFailure
+  wrapEvent = NoEvent
 
 instance
   ( Crypto crypto,
@@ -209,6 +215,7 @@ instance
   Embed (UPDN crypto) (PRTCL crypto)
   where
   wrapFailed = UpdnFailure
+  wrapEvent = UpdnEvent
 
 data PrtlSeqFailure crypto
   = WrongSlotIntervalPrtclSeq

@@ -1,11 +1,6 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -95,7 +90,7 @@ adaOnly :: Val v => v -> Bool
 adaOnly v = (inject . coin) v == v
 
 instance Val Coin where
-  n <×> (Coin x) = Coin $ (fromIntegral n) * x
+  n <×> (Coin x) = Coin $ fromIntegral n * x
   coin = id
   inject = id
   size _ = 1

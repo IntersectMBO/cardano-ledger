@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyDataDecls #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
@@ -85,7 +84,6 @@ import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Void (Void)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -101,7 +99,7 @@ import Shelley.Spec.Ledger.LedgerState
     produced,
   )
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
-import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
+import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupEvent, PpupPredicateFailure)
 import Shelley.Spec.Ledger.Tx (Tx (..), TxIn)
 import Shelley.Spec.Ledger.TxBody
   ( DCert,
@@ -446,7 +444,7 @@ instance
   ( Era era,
     STS (PPUP era),
     PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era,
-    Event (Core.EraRule "PPUP" era) ~ Void
+    Event (Core.EraRule "PPUP" era) ~ PpupEvent era
   ) =>
   Embed (PPUP era) (UTXO era)
   where

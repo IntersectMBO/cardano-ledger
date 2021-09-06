@@ -6,7 +6,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE Rank2Types #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -43,7 +43,17 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppCoin, ppInteger, ppList, ppLong, ppScriptHash, ppSexp, ppString)
+import Cardano.Ledger.Pretty
+  ( PDoc,
+    PrettyA (..),
+    ppCoin,
+    ppInteger,
+    ppList,
+    ppLong,
+    ppScriptHash,
+    ppSexp,
+    ppString,
+  )
 import Cardano.Ledger.Serialization (decodeMap, encodeMap)
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -51,7 +61,7 @@ import Cardano.Ledger.Val
     EncodeMint (..),
     Val (..),
   )
-import Cardano.Prelude (HeapWords (..), cborError)
+import Cardano.Prelude (cborError)
 import Control.DeepSeq (NFData (..))
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
@@ -88,7 +98,7 @@ import Data.Ord (Down (..), comparing)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
-import Data.Text.Encoding (decodeUtf8)
+import Data.Text.Encoding (decodeLatin1)
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
@@ -112,7 +122,7 @@ instance FromCBOR AssetName where
   fromCBOR = do
     an <- fromCBOR
     if BS.length an > 32
-      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeUtf8 $ BS16.encode an)
+      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeLatin1 $ BS16.encode an)
       else pure . AssetName $ an
 
 -- | Policy ID
@@ -163,7 +173,11 @@ instance CC.Crypto crypto => Val (Value crypto) where
   -- returns the size, in Word64's, of the CompactValue representation of Value
   size vv@(Value _ v)
     -- when Value contains only ada
-    | v == mempty = fromIntegral $ adaWords
+    -- !WARNING! This branch is INCORRECT in the Mary era and should ONLY be
+    -- used in the Alonzo ERA.
+    -- TODO - find a better way to reconcile the mistakes in Mary with what needs
+    -- to be the case in Alonzo.
+    | v == mempty = 2
     -- when Value contains ada as well as other tokens
     -- sums up :
     -- i) adaWords : the space taken up by the ada amount
@@ -173,9 +187,6 @@ instance CC.Crypto crypto => Val (Value crypto) where
       fromIntegral $
         (roundupBytesToWords $ representationSize (snd $ gettriples vv))
           + repOverhead
-
-instance CC.Crypto crypto => HeapWords (Value crypto) where
-  heapWords v = fromIntegral $ size v
 
 -- space (in Word64s) taken up by the ada amount
 adaWords :: Int

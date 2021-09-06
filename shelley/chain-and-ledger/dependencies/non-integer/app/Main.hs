@@ -1,5 +1,3 @@
-{-# LANGUAGE EmptyDataDecls #-}
-
 module Main where
 
 import qualified Data.Fixed as FP

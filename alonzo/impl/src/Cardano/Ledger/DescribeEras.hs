@@ -3,8 +3,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.DescribeEras
@@ -75,16 +75,16 @@ class Checks era where
   checks :: Witness era -> Bool
 
 instance DescribesShelley (Shelley.Self c) => Checks (Shelley.Self c) where
-  checks (Shelley) = True
+  checks Shelley = True
 
 instance DescribesAllegra (Allegra.Self c) => Checks (Allegra.Self c) where
-  checks (Allegra) = True
+  checks Allegra = True
 
 instance DescribesMary (Mary.Self c) => Checks (Mary.Self c) where
-  checks (Mary) = True
+  checks Mary = True
 
 instance DescribesAlonzo (Alonzo.Self c) => Checks (Alonzo.Self c) where
-  checks (Alonzo) = True
+  checks Alonzo = True
 
 -- ==========================================================
 
@@ -96,7 +96,8 @@ data Witness era where
   Alonzo :: Witness (Alonzo.AlonzoEra StandardCrypto)
 
 instance Show (Witness e) where
-  show (Shelley) = "Shelley"
-  show (Allegra) = "Allegra"
-  show (Mary) = "Mary"
-  show (Alonzo) = "Alonzo"
+  show = \case
+    Shelley -> "Shelley"
+    Allegra -> "Allegra"
+    Mary -> "Mary"
+    Alonzo -> "Alonzo"

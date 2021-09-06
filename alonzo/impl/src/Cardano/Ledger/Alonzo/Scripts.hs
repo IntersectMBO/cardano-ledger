@@ -3,12 +3,10 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -37,6 +35,8 @@ module Cardano.Ledger.Alonzo.Scripts
     ppExUnits,
     ppCostModel,
     ppPrices,
+    decodeCostModelMap,
+    decodeCostModel,
 
     -- * Deprecated
     defaultCostModel,
@@ -44,6 +44,7 @@ module Cardano.Ledger.Alonzo.Scripts
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -67,14 +68,17 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash (..),
   )
-import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Control.DeepSeq (NFData (..))
+import Control.Monad (when)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Map (Map)
+import qualified Data.Map as Map
 import Data.Measure (BoundedMeasure, Measure)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word64, Word8)
@@ -82,7 +86,10 @@ import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams, validateCostModelParams)
-import qualified Plutus.V1.Ledger.Examples as Plutus (alwaysFailingNAryFunction, alwaysSucceedingNAryFunction)
+import qualified Plutus.V1.Ledger.Examples as Plutus
+  ( alwaysFailingNAryFunction,
+    alwaysSucceedingNAryFunction,
+  )
 import qualified Prettyprinter as PP
 
 -- | Marker indicating the part of a transaction for which this script is acting
@@ -105,12 +112,12 @@ instance NoThunks Tag
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
 data Script era
   = TimelockScript (Timelock (Crypto era))
-  | PlutusScript (ShortByteString) -- A Plutus.V1.Ledger.Scripts(Script) that has been 'CBOR' encoded
+  | PlutusScript ShortByteString -- A Plutus.V1.Ledger.Scripts(Script) that has been 'CBOR' encoded
   deriving (Eq, Generic, Ord)
 
 instance (ValidateScript era, Core.Script era ~ Script era) => Show (Script era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
-  show (s@(PlutusScript _)) = "PlutusScript " ++ show (hashScript @era s)
+  show s@(PlutusScript _) = "PlutusScript " ++ show (hashScript @era s)
 
 deriving via
   InspectHeapNamed "Script" (Script era)
@@ -139,7 +146,8 @@ data ExUnits = ExUnits
   { exUnitsMem :: !Word64,
     exUnitsSteps :: !Word64
   }
-  deriving (Eq, Generic, Show) -- It is deliberate that there is NO ORD instance.
+  deriving (Eq, Generic, Show)
+  -- It is deliberate that there is no Ord instance, use `pointWiseExUnits` instead.
   deriving
     (BoundedMeasure, Measure)
     via (InstantiatedAt Generic ExUnits)
@@ -151,8 +159,8 @@ instance NoThunks ExUnits
 
 instance NFData ExUnits
 
--- | It is deliberate that there is no ORD instace for EXUnits. Use this function
---   to compare if one ExUnit is pointwise compareable to another.
+-- | It is deliberate that there is no `Ord` instance for `ExUnits`. Use this function
+--   to compare if one `ExUnit` is pointwise compareable to another.
 pointWiseExUnits :: (Word64 -> Word64 -> Bool) -> ExUnits -> ExUnits -> Bool
 pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `oper` s2)
 
@@ -163,7 +171,8 @@ newtype CostModel = CostModel (Map Text Integer)
 
 -- NOTE: Since cost model serializations need to be independently reproduced,
 -- we use the 'canonical' serialization approach used in Byron.
-deriving instance ToCBOR CostModel
+instance ToCBOR CostModel where
+  toCBOR (CostModel cm) = toCBOR $ Map.elems cm
 
 instance SafeToHash CostModel where
   originalBytes = serialize'
@@ -187,8 +196,31 @@ checkCostModel cm =
 defaultCostModel :: Maybe CostModel
 defaultCostModel = CostModel <$> defaultCostModelParams
 
-instance FromCBOR CostModel where
-  fromCBOR = decode $ SumD checkCostModel <? (D mapFromCBOR)
+decodeCostModelMap :: Decoder s (Map Language CostModel)
+decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel
+
+decodeCostModel :: Language -> Decoder s CostModel
+decodeCostModel PlutusV1 =
+  case defaultCostModelParams of
+    Nothing -> fail "Default Plutus Cost Model is corrupt."
+    Just dcm -> do
+      checked <- checkCostModel <$> decodeArrayAsMap (Map.keysSet dcm) fromCBOR
+      case checked of
+        Left e -> fail e
+        Right cm -> pure cm
+
+decodeArrayAsMap :: Ord a => Set a -> Decoder s b -> Decoder s (Map a b)
+decodeArrayAsMap keys decodeValue = do
+  values <- decodeList decodeValue
+  let numValues = length values
+      numKeys = Set.size keys
+  when (numValues /= numKeys) $
+    fail $
+      "Expected array with " <> show numKeys
+        <> " entries, but encoded array has "
+        <> show numValues
+        <> " entries."
+  pure $ Map.fromList $ zip (Set.toAscList keys) values
 
 -- CostModel is not parameterized by Crypto or Era so we use the
 -- hashWithCrypto function, rather than hashAnnotated
@@ -284,7 +316,7 @@ ppTag x = ppString (show x)
 instance PrettyA Tag where prettyA = ppTag
 
 ppScript :: forall era. (ValidateScript era, Core.Script era ~ Script era) => Script era -> PDoc
-ppScript (s@(PlutusScript _)) = ppString "PlutusScript " PP.<+> ppScriptHash (hashScript @era s)
+ppScript s@(PlutusScript _) = ppString "PlutusScript " PP.<+> ppScriptHash (hashScript @era s)
 ppScript (TimelockScript x) = ppTimelock x
 
 instance (ValidateScript era, Core.Script era ~ Script era) => PrettyA (Script era) where prettyA = ppScript
