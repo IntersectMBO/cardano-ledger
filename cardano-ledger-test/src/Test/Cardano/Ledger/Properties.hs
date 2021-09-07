@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -13,6 +14,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra, Value)
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
+import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx
@@ -22,8 +24,17 @@ import Cardano.Ledger.Alonzo.Tx
     minfee,
   )
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
-import Cardano.Ledger.BaseTypes (Network (Testnet), StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.Alonzo.TxWitness
+  ( RdmrPtr (..),
+    Redeemers (..),
+    TxDats (..),
+    TxWitness (..),
+  )
+import Cardano.Ledger.BaseTypes
+  ( Network (..),
+    StrictMaybe (..),
+    strictMaybeToMaybe,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys
@@ -61,15 +72,25 @@ import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import Shelley.Spec.Ledger.API
   ( Addr (..),
     Credential (..),
+    LedgerEnv (LedgerEnv),
+    RewardAcnt (..),
     StakeReference (..),
     TxIn (..),
     UTxO (..),
     Wdrl (..),
   )
-import Shelley.Spec.Ledger.LedgerState (UTxOState (..))
+import Shelley.Spec.Ledger.EpochBoundary (obligation)
+import Shelley.Spec.Ledger.LedgerState
+  ( AccountState (..),
+    DPState (..),
+    DState (..),
+    PState (..),
+    RewardAccounts,
+    UTxOState (..),
+  )
 import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
 import Shelley.Spec.Ledger.Tx (hashScript)
-import Shelley.Spec.Ledger.TxBody (DCert (..), DelegCert (..), Delegation (..))
+import Shelley.Spec.Ledger.TxBody (DCert (..), DelegCert (..), Delegation (..), PoolParams (..))
 import Shelley.Spec.Ledger.UTxO (balance, makeWitnessVKey)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.QuickCheck
@@ -81,15 +102,28 @@ import Test.Tasty.QuickCheck (testProperty)
 
 type A = AlonzoEra C_Crypto
 
+genMapElem :: Map k a -> Gen (Maybe (k, a))
+genMapElem m
+  | n == 0 = pure Nothing
+  | otherwise = do
+    i <- choose (0, n - 1)
+    pure $ Just $ Map.elemAt i m
+  where
+    n = Map.size m
+
+-- | Generate a non-zero value
+genPositiveVal :: Val v => Gen v
+genPositiveVal = inject . Coin . getPositive <$> arbitrary
+
 elementsT :: (Monad (t Gen), MonadTrans t) => [t Gen b] -> t Gen b
 elementsT = join . lift . elements
 
 frequencyT :: (Monad (t Gen), MonadTrans t) => [(Int, t Gen b)] -> t Gen b
 frequencyT = join . lift . frequency . map (pure <$>)
 
-lookupByHashM ::
+lookupByKeyM ::
   (MonadState s m, Ord k, Show k) => String -> k -> (s -> Map.Map k v) -> m v
-lookupByHashM name k getMap = do
+lookupByKeyM name k getMap = do
   m <- getMap <$> get
   case Map.lookup k m of
     Nothing ->
@@ -104,19 +138,27 @@ data GenEnv = GenEnv
 
 data GenState = GenState
   { gsKeys :: Map (KeyHash 'Witness C_Crypto) (KeyPair 'Witness C_Crypto),
-    gsScripts :: Map (ScriptHash C_Crypto) (StrictMaybe (Tag, IsValid), Script A),
-    gsDatums :: Map (DataHash C_Crypto) (Data A)
-  } deriving (Show)
+    gsScripts :: Map (ScriptHash C_Crypto) (Script A),
+    gsPlutusScripts :: Map (ScriptHash C_Crypto, Tag) (IsValid, Script A),
+    gsDatums :: Map (DataHash C_Crypto) (Data A),
+    gsDPState :: DPState C_Crypto
+  }
+  deriving (Show)
 
-instance Semigroup GenState where
-  ts1 <> ts2 =
-    GenState
-      (gsKeys ts1 <> gsKeys ts2)
-      (gsScripts ts1 <> gsScripts ts2)
-      (gsDatums ts1 <> gsDatums ts2)
+modifyDPState :: MonadState GenState m => (DPState C_Crypto -> DPState C_Crypto) -> m ()
+modifyDPState f =
+  modify $ \s@GenState {gsDPState = dps} -> s {gsDPState = f dps}
 
-instance Monoid GenState where
-  mempty = GenState mempty mempty mempty
+modifyDState :: MonadState GenState m => (DState C_Crypto -> DState C_Crypto) -> m ()
+modifyDState f =
+  modifyDPState $ \dp@DPState {_dstate = ds} -> dp {_dstate = f ds}
+
+modifyPState :: MonadState GenState m => (PState C_Crypto -> PState C_Crypto) -> m ()
+modifyPState f =
+  modifyDPState $ \dp@DPState {_pstate = ps} -> dp {_pstate = f ps}
+
+emptyGenState :: GenState
+emptyGenState = GenState mempty mempty mempty mempty def
 
 type GenRS = RWST GenEnv () GenState Gen
 
@@ -140,29 +182,45 @@ genExUnits n = do
       | maxVal == 0 = pure $ replicate n 0
       | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
 
-genCredTimelocKeyWit ::
+-- | Same as `genCredTimelockKeyWit`, but for `TxOuts`
+genTxOutTimelockKeyWitness ::
+  Maybe Tag -> TxOut A -> GenRS (SafeHash C_Crypto EraIndependentTxBody -> TxWitness A)
+genTxOutTimelockKeyWitness mTag (TxOut addr _ _) = do
+  case addr of
+    AddrBootstrap baddr ->
+      error $ "Can't authorize bootstrap address: " ++ show baddr
+    Addr _ payCred _ -> genCredTimelockKeyWit mTag payCred
+
+-- | Generator for witnesses necessary for Timelock scripts and Key
+-- credentials. Because of the Key credentials produced function requires a body
+-- hash for an acutal witness to be constructed. In order to be able to estimate
+-- fees and collateral needed we will use produced witness generators twice: one
+-- time with bogus body hash for estimation, and the second time with an actual
+-- body hash.
+genCredTimelockKeyWit ::
+  Maybe Tag ->
   Credential k C_Crypto ->
   GenRS (SafeHash C_Crypto EraIndependentTxBody -> TxWitness A)
-genCredTimelocKeyWit = mkWitVKey
+genCredTimelockKeyWit mTag = mkWitVKey
   where
     mkWitVKey ::
       Credential kr C_Crypto ->
       GenRS (SafeHash C_Crypto EraIndependentTxBody -> TxWitness A)
     mkWitVKey (KeyHashObj keyHash) = do
-      keyPair <- lookupByHashM "credential" (coerceKeyRole keyHash) gsKeys
+      keyPair <- lookupByKeyM "credential" (coerceKeyRole keyHash) gsKeys
       pure $ \bodyHash ->
         mempty {txwitsVKey = Set.singleton $ makeWitnessVKey bodyHash keyPair}
-    mkWitVKey (ScriptHashObj scriptHash) = do
-      s@(mPlutusScriptTag, script) <- lookupByHashM "script" scriptHash gsScripts
-      let scriptWit = mempty {txscripts = Map.singleton scriptHash script}
-      case script of
-        TimelockScript timelock
-          | SNothing <- mPlutusScriptTag -> do
-            timelockWit <- mkTimelockWit timelock
-            pure $ \bodyHash -> timelockWit bodyHash <> scriptWit
-        PlutusScript _ps
-          | SJust _ <- mPlutusScriptTag -> pure $ const scriptWit
-        _ -> error $ "Impossible: Mismatch in generated script: " ++ show s
+    mkWitVKey (ScriptHashObj scriptHash) =
+      lookupScript scriptHash mTag >>= \case
+        Nothing ->
+          error $ "Impossible: Cannot find script with hash " ++ show scriptHash
+        Just script -> do
+          let scriptWit = mempty {txscripts = Map.singleton scriptHash script}
+          case script of
+            TimelockScript timelock -> do
+              timelockWit <- mkTimelockWit timelock
+              pure $ \bodyHash -> timelockWit bodyHash <> scriptWit
+            PlutusScript _ps -> pure $ const scriptWit
     mkTimelockWit =
       \case
         RequireSignature keyHash -> mkWitVKey (KeyHashObj keyHash)
@@ -181,24 +239,8 @@ makeDatumWitness (TxOut _ _ mDatum) = mkDatumWit mDatum
   where
     mkDatumWit SNothing = pure mempty
     mkDatumWit (SJust datumHash) = do
-      datum <- lookupByHashM "datum" datumHash gsDatums
+      datum <- lookupByKeyM "datum" datumHash gsDatums
       pure $ mempty {txdats = TxDats $ Map.singleton datumHash datum}
-
--- | Generator for witnesses needed for Timelock scripts and Key
--- credentials. Because of the latter produced function requires a body hash for
--- an acutal witness to be constructed.
-genTxOutTimelockKeyWitness ::
-  TxOut A -> GenRS (SafeHash C_Crypto EraIndependentTxBody -> TxWitness A)
-genTxOutTimelockKeyWitness (TxOut addr _ _) = do
-  case addr of
-    AddrBootstrap baddr ->
-      error $ "Can't authorize bootstrap address: " ++ show baddr
-    Addr _ payCred stakeCred -> do
-      let mkStakeWit (StakeRefBase cred) = genCredTimelocKeyWit cred
-          mkStakeWit _ = pure mempty
-      witVKey <- genCredTimelocKeyWit payCred
-      stakeWitVKey <- mkStakeWit stakeCred
-      pure $ witVKey <> stakeWitVKey
 
 genKeyHash :: GenRS (KeyHash kr C_Crypto)
 genKeyHash = do
@@ -207,8 +249,8 @@ genKeyHash = do
   modify $ \ts@GenState {gsKeys} -> ts {gsKeys = Map.insert keyHash keyPair gsKeys}
   pure $ coerceKeyRole keyHash
 
-genTimelock :: GenRS (Timelock C_Crypto)
-genTimelock = do
+genTimelockScript :: GenRS (ScriptHash C_Crypto)
+genTimelockScript = do
   GenEnv {geValidityInterval = ValidityInterval mBefore mAfter} <- ask
   -- We need to limit how deep these timelocks can go, otherwise this generator will
   -- diverge. It also has to stay very shallow because it grows too fast.
@@ -242,33 +284,32 @@ genTimelock = do
       requireTimeExpire (SlotNo validTill) = do
         maxSlotNo <- lift $ choose (validTill, maxBound)
         pure $ RequireTimeExpire (SlotNo maxSlotNo)
-  genNestedTimelock (2 :: Natural)
+  script <- TimelockScript <$> genNestedTimelock (2 :: Natural)
+  let scriptHash = hashScript @A script
+  modify $ \ts@GenState {gsScripts} -> ts {gsScripts = Map.insert scriptHash script gsScripts}
+  pure scriptHash
+
+genPlutusScript :: Tag -> GenRS (ScriptHash C_Crypto)
+genPlutusScript tag = do
+  isValid <- lift $ frequency [(5, pure False), (95, pure True)]
+  -- Plutus scripts alwaysSucceeds needs at least numArgs, while
+  -- alwaysFails needs exactly numArgs to have the desired affect.
+  let numArgs
+        | tag == Spend = 3
+        | otherwise = 2
+  -- While using varying number of arguments for alwaysSucceeds we get
+  -- varying script hashes, which helps with the fuzziness
+  script <-
+    if isValid
+      then alwaysSucceeds . (+ numArgs) . getNonNegative <$> lift arbitrary
+      else pure $ alwaysFails numArgs
+  let scriptHash = hashScript @A script
+  modify $ \ts@GenState {gsPlutusScripts} ->
+    ts {gsPlutusScripts = Map.insert (scriptHash, tag) (IsValid isValid, script) gsPlutusScripts}
+  pure scriptHash
 
 genScript :: Tag -> GenRS (ScriptHash C_Crypto)
-genScript tag =
-  elementsT
-    [ toScriptHash . (,) SNothing . TimelockScript =<< genTimelock,
-      toScriptHash =<< genPlutusScript
-    ]
-  where
-    genPlutusScript = do
-      isValid <- lift $ frequency [(5, pure False), (95, pure True)]
-      -- Plutus scripts expect exactly 3 arguments to work properly.
-      let numArgs | tag == Spend = 3
-                  | otherwise = 2
-          script
-            | isValid = alwaysSucceeds numArgs
-            | otherwise = alwaysFails numArgs
-      pure (SJust (tag, IsValid isValid), script)
-    toScriptHash s@(_, script) = do
-      let scriptHash = hashScript @A script
-      modify $ \ts@GenState {gsScripts} -> ts {gsScripts = Map.insert scriptHash s gsScripts}
-      pure scriptHash
-
-lookupScriptValidity :: MonadState GenState m => Addr C_Crypto -> m (StrictMaybe IsValid)
-lookupScriptValidity (Addr _ (ScriptHashObj scriptHash) _) =
-  fmap snd . fst <$> lookupByHashM "script" scriptHash gsScripts
-lookupScriptValidity _ = pure SNothing
+genScript tag = elementsT [genTimelockScript, genPlutusScript tag]
 
 paymentCredAddr :: Addr C_Crypto -> Maybe (Credential 'Payment C_Crypto)
 paymentCredAddr (Addr _ cred _) = Just cred
@@ -278,20 +319,36 @@ stakeCredAddr :: Addr C_Crypto -> Maybe (Credential 'Staking C_Crypto)
 stakeCredAddr (Addr _ _ (StakeRefBase cred)) = Just cred
 stakeCredAddr _ = Nothing
 
+lookupScript ::
+  MonadState GenState m =>
+  ScriptHash C_Crypto ->
+  Maybe Tag ->
+  m (Maybe (Script A))
+lookupScript scriptHash mTag = do
+  m <- gsScripts <$> get
+  case Map.lookup scriptHash m of
+    Just script -> pure $ Just script
+    Nothing
+      | Just tag <- mTag ->
+        Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
+    _ -> pure Nothing
+
 lookupPlutusScript ::
   MonadState GenState m =>
   Credential k C_Crypto ->
-  m (Maybe (Tag, IsValid))
-lookupPlutusScript (KeyHashObj _) = pure Nothing
-lookupPlutusScript (ScriptHashObj scriptHash) =
-  lookupByHashM "script" scriptHash gsScripts <&> \case
-    (SJust (tag, isValid), _) -> Just (tag, isValid)
-    _ -> Nothing
+  Tag ->
+  m (Maybe (IsValid, ScriptHash C_Crypto))
+lookupPlutusScript (KeyHashObj _) _ = pure Nothing
+lookupPlutusScript (ScriptHashObj scriptHash) tag =
+  fmap (Map.lookup (scriptHash, tag) . gsPlutusScripts) get <&> \case
+    Nothing -> Nothing
+    Just (isValid, _) -> Just (isValid, scriptHash)
 
 redeemerWitnessMaker ::
+  Tag ->
   [Maybe (GenRS (Data A), Credential k C_Crypto)] ->
   GenRS (IsValid, [ExUnits -> TxWitness A])
-redeemerWitnessMaker listWithCred =
+redeemerWitnessMaker tag listWithCred =
   let creds =
         [ (ix, genDat, cred)
           | (ix, mCred) <- zip [0 ..] listWithCred,
@@ -300,9 +357,9 @@ redeemerWitnessMaker listWithCred =
       allValid = IsValid . getAll . foldMap (\(IsValid v) -> All v)
    in fmap (first allValid . unzip . catMaybes) $
         forM creds $ \(ix, genDat, cred) ->
-          lookupPlutusScript cred >>= \case
+          lookupPlutusScript cred tag >>= \case
             Nothing -> pure Nothing
-            Just (tag, isValid) -> do
+            Just (isValid, _) -> do
               datum <- genDat
               let rPtr = RdmrPtr tag ix
                   mkWit exUnits =
@@ -311,28 +368,51 @@ redeemerWitnessMaker listWithCred =
                       }
               pure $ Just (isValid, mkWit)
 
+-- | Collaterals can't have scripts, this is where this generator is needed.
 genNoScriptRecipient :: GenRS (Addr C_Crypto)
 genNoScriptRecipient = do
   paymentCred <- KeyHashObj <$> genKeyHash
   stakeCred <- StakeRefBase . KeyHashObj <$> genKeyHash
   pure (Addr Testnet paymentCred stakeCred)
 
+-- | Generate a credential that can be used for supplied purpose (in case of
+-- plutus scripts), while occasianally picking out randomly from previously
+-- generated set.
 genCredential :: Tag -> GenRS (Credential kr C_Crypto)
 genCredential tag =
-  elementsT
-    [ KeyHashObj <$> genKeyHash,
-      ScriptHashObj <$> genScript tag
+  frequencyT
+    [ (35, KeyHashObj <$> genKeyHash),
+      (35, ScriptHashObj <$> genScript tag),
+      (10, pickExistingKeyHash),
+      (20, pickExistingScript)
     ]
+  where
+    pickExistingKeyHash =
+      KeyHashObj <$> do
+        keysMap <- gsKeys <$> get
+        lift (genMapElem keysMap) >>= \case
+          Just (k, _) -> pure $ coerceKeyRole k
+          Nothing -> genKeyHash
+    pickExistingScript =
+      ScriptHashObj
+        <$> elementsT [pickExistingPlutusScript, pickExistingTimelockScript]
+    pickExistingPlutusScript = do
+      plutusScriptsMap <-
+        Map.filterWithKey (\(_, t) _ -> t == tag) . gsPlutusScripts <$> get
+      lift (genMapElem plutusScriptsMap) >>= \case
+        Just ((h, _), _) -> pure h
+        Nothing -> genScript tag
+    pickExistingTimelockScript = do
+      timelockScriptsMap <- gsScripts <$> get
+      lift (genMapElem timelockScriptsMap) >>= \case
+        Just (h, _) -> pure h
+        Nothing -> genScript tag
 
 genRecipient :: GenRS (Addr C_Crypto)
 genRecipient = do
   paymentCred <- genCredential Spend
-  stakeCred <- KeyHashObj <$> genKeyHash
-  --stakeCred <- genCredential Rewrd
+  stakeCred <- genCredential Cert
   pure (Addr Testnet paymentCred (StakeRefBase stakeCred))
-
-genDatumHash :: GenRS (DataHash C_Crypto)
-genDatumHash = fst <$> genDatumWithHash
 
 genDatum :: GenRS (Data A)
 genDatum = snd <$> genDatumWithHash
@@ -346,40 +426,102 @@ genDatumWithHash = do
 
 genTxOut :: Value A -> GenRS (TxOut A)
 genTxOut val = do
-  addr <- genRecipient --frequencyT [(80, genRecipient), (20, pickExistingRecipient)]
+  addr <- genRecipient
   cred <- maybe (error "BootstrapAddress encountered") pure $ paymentCredAddr addr
   mDatumHash <-
-    lookupPlutusScript cred >>= \case
-      Nothing -> pure SNothing
-      Just _ -> SJust <$> genDatumHash
+    case cred of
+      KeyHashObj _ -> pure SNothing
+      ScriptHashObj scriptHash ->
+        lookupScript scriptHash (Just Spend) >>= \case
+          Just (PlutusScript _) -> SJust . fst <$> genDatumWithHash
+          _ -> pure SNothing
   pure $ TxOut addr val mDatumHash
-
--- | Generate a non-zero value
-genVal :: Val v => Gen v
-genVal = inject . Coin . getPositive <$> arbitrary
 
 genUTxO :: GenRS (UTxO A)
 genUTxO = do
   NonEmpty ins <- lift $ resize 10 arbitrary
   UTxO <$> sequence (Map.fromSet (const genOut) (Set.fromList ins))
   where
-    genOut = genTxOut =<< lift genVal
+    genOut = genTxOut =<< lift genPositiveVal
+
+genPool :: GenRS (KeyHash 'StakePool C_Crypto)
+genPool = frequencyT [(10, genNewPool), (90, pickExisting)]
+  where
+    pickExisting = do
+      DPState {_pstate = PState {_pParams}} <- gsDPState <$> get
+      lift (genMapElem _pParams) >>= \case
+        Nothing -> genNewPool
+        Just poolId -> pure $ fst poolId
+    genNewPool = do
+      poolId <- genKeyHash
+      pp <- genPoolParams poolId
+      modifyPState $ \ps -> ps {_pParams = Map.insert poolId pp (_pParams ps)}
+      pure poolId
+    genPoolParams _poolId = do
+      _poolVrf <- lift arbitrary
+      _poolPledge <- lift genPositiveVal
+      _poolCost <- lift genPositiveVal
+      _poolMargin <- lift arbitrary
+      _poolRAcnt <- RewardAcnt Testnet <$> genCredential Rewrd
+      let _poolOwners = mempty
+      let _poolRelays = mempty
+      let _poolMD = SNothing
+      pure PoolParams {..}
 
 genDCert :: GenRS (DCert C_Crypto)
-genDCert = do
+genDCert =
   elementsT
     [ DCertDeleg
         <$> elementsT
           [ RegKey <$> genCredential Cert,
             DeRegKey <$> genCredential Cert,
-            Delegate <$> (Delegation <$> genCredential Cert <*> genKeyHash)
+            Delegate <$> genDelegation
           ]
     ]
+  where
+    genDelegation = do
+      rewardAccount <- genCredential Cert
+      poolId <- genPool
+      pure $ Delegation {_delegator = rewardAccount, _delegatee = poolId}
 
 genDCerts :: GenRS [DCert C_Crypto]
 genDCerts = do
+  let genUniqueScript (!dcs, !ss, !regCreds) _ = do
+        dc <- genDCert
+        -- Workaround a misfeature where duplicate plutus scripts in DCert are ignored
+        let insertIfNotPresent dcs' regCreds' mKey mScriptHash
+              | Just (_, scriptHash) <- mScriptHash =
+                if (scriptHash, mKey) `Set.member` ss
+                  then (dcs, ss, regCreds)
+                  else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
+              | otherwise = (dc : dcs', ss, regCreds')
+        -- Generate registration and de-registration delegation certificates,
+        -- while ensuring the proper registered/unregestered state in DState
+        case dc of
+          DCertDeleg d
+            | RegKey regCred <- d ->
+              if regCred `Set.member` regCreds
+                then pure (dcs, ss, regCreds)
+                else pure (dc : dcs, ss, Set.insert regCred regCreds)
+            | DeRegKey deregCred <- d ->
+              if deregCred `Set.member` regCreds
+                then
+                  insertIfNotPresent dcs (Set.delete deregCred regCreds) Nothing
+                    <$> lookupPlutusScript deregCred Cert
+                else pure (dcs, ss, regCreds)
+            | Delegate (Delegation delegCred delegKey) <- d ->
+              let (dcs', regCreds')
+                    | delegCred `Set.member` regCreds = (dcs, regCreds)
+                    | otherwise =
+                      (DCertDeleg (RegKey delegCred) : dcs, Set.insert delegCred regCreds)
+               in insertIfNotPresent dcs' regCreds' (Just delegKey)
+                    <$> lookupPlutusScript delegCred Cert
+          _ -> pure (dc : dcs, ss, regCreds)
   NonNegative n <- lift arbitrary
-  replicateM n genDCert
+  DPState {_dstate = DState {_rewards}} <- gsDPState <$> get
+  let initSets = ([], Set.empty, Map.keysSet _rewards)
+  (dcs, _, _) <- F.foldlM genUniqueScript initSets [1 :: Int .. n]
+  pure $ reverse dcs
 
 genCollateralUTxO ::
   HasCallStack =>
@@ -399,7 +541,7 @@ genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxoMap) = do
           else pure (um, Map.insert txIn (TxOut addr (inject c) SNothing) coll, c)
       -- Either pick a collateral from a map or generate a completely new one
       genCollateral addr coll um
-        | Map.null um = genNewCollateral addr coll um =<< lift genVal
+        | Map.null um = genNewCollateral addr coll um =<< lift genPositiveVal
         | otherwise = do
           i <- lift $ chooseInt (0, Map.size um - 1)
           let (txIn, txOut@(TxOut _ val _)) = Map.elemAt i um
@@ -423,8 +565,11 @@ genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxoMap) = do
     spendOnly _ = True
 
 genUTxOState :: UTxO A -> GenRS (UTxOState A)
-genUTxOState utxo =
-  lift (UTxOState utxo <$> arbitrary <*> arbitrary <*> pure def)
+genUTxOState utxo = do
+  GenEnv {gePParams} <- ask
+  DPState {_dstate, _pstate} <- gsDPState <$> get
+  let deposited = obligation gePParams (_rewards _dstate) (_pParams _pstate)
+  lift (UTxOState utxo deposited <$> arbitrary <*> pure def)
 
 genRecipientsFrom :: [TxOut A] -> GenRS [TxOut A]
 genRecipientsFrom txOuts = do
@@ -447,7 +592,7 @@ genRecipientsFrom txOuts = do
         r <- genTxOut (s <+> inject c)
         if c < coin v
           then
-            let change = TxOut addr (v <-> inject c) d
+            let !change = TxOut addr (v <-> inject c) d
              in pure (r : change : rs)
           else pure (r : rs)
   goNew extra txOuts []
@@ -462,6 +607,20 @@ getDCertCredential = \case
   DCertPool _p -> Nothing
   DCertGenesis _g -> Nothing
   DCertMir _m -> Nothing
+
+genRewards :: GenRS (RewardAccounts C_Crypto)
+genRewards = do
+  NonNegative n <- lift arbitrary
+  rewards <-
+    Map.fromList <$> replicateM n ((,) <$> genCredential Rewrd <*> lift genPositiveVal)
+  modifyDState $ \ds -> ds {_rewards = rewards `Map.union` _rewards ds}
+  pure rewards
+
+genWithdrawals :: GenRS (Wdrl C_Crypto)
+genWithdrawals = do
+  let networkId = Testnet
+  rewards <- genRewards
+  pure $ Wdrl $ Map.fromList $ map (first (RewardAcnt networkId)) $ Map.toList rewards
 
 genValidatedTx :: GenRS (UTxO A, ValidatedTx A)
 genValidatedTx = do
@@ -479,26 +638,32 @@ genValidatedTx = do
   recipients <- genRecipientsFrom toSpendNoCollateralTxOuts
   (IsValid v1, mkPaymentWits) <-
     redeemerWitnessMaker
-      [ (\dh c -> (lookupByHashM "datum" dh gsDatums, c))
-          <$> strictMaybeToMaybe mDatumHash <*> paymentCredAddr addr
+      Spend
+      [ (\dh c -> (lookupByKeyM "datum" dh gsDatums, c))
+          <$> strictMaybeToMaybe mDatumHash
+          <*> paymentCredAddr addr
         | (_, TxOut addr _ mDatumHash) <- Map.toAscList toSpendNoCollateral
       ]
-  (IsValid v2, mkStakingWits) <-
-    redeemerWitnessMaker
-      [ (,) genDatum <$> stakeCredAddr addr
-        | (_, TxOut addr _ _) <- Map.toAscList toSpendNoCollateral
-      ]
+
+  wdrls@(Wdrl wdrlMap) <- genWithdrawals
+  rewardsWithdrawalTxOut <- genTxOut $ inject $ F.fold wdrlMap
+  let wdrlCreds = map (getRwdCred . fst) $ Map.toAscList wdrlMap
+  (IsValid v2, mkWdrlWits) <-
+    redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
+
   dcerts <- genDCerts
   let dcertCreds = map getDCertCredential dcerts
-  (IsValid v3, mkCertsWits) <- redeemerWitnessMaker $ map ((,) genDatum <$>) dcertCreds
+  (IsValid v3, mkCertsWits) <-
+    redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
+
   let isValid = IsValid (v1 && v2 && v3)
-      mkWits = mkPaymentWits ++ mkStakingWits ++ mkCertsWits
+      mkWits = mkPaymentWits ++ mkCertsWits ++ mkWdrlWits
   exUnits <- genExUnits (length mkWits)
   let redeemerWitsList = zipWith ($) mkWits exUnits
   datumWitsList <- mapM makeDatumWitness (Map.elems toSpendNoCollateral)
-
-  keyWitsMakers <- mapM genTxOutTimelockKeyWitness toSpendNoCollateralTxOuts
-  dcertWitsMakers <- mapM genCredTimelocKeyWit $ catMaybes dcertCreds
+  keyWitsMakers <- mapM (genTxOutTimelockKeyWitness (Just Spend)) toSpendNoCollateralTxOuts
+  dcertWitsMakers <- mapM (genCredTimelockKeyWit (Just Cert)) $ catMaybes dcertCreds
+  rwdrsWitsMakers <- mapM (genCredTimelockKeyWit (Just Rewrd)) wdrlCreds
   -- 4. Estimate inputs that will be used as collateral
   maxCollateralCount <-
     lift $ chooseInt (1, fromIntegral (_maxCollateralInputs gePParams))
@@ -511,7 +676,7 @@ genValidatedTx = do
   collateralAddresses <- replicateM maxCollateralCount genNoScriptRecipient
   bogusCollateralKeyWitsMakers <-
     forM collateralAddresses $ \a ->
-      genTxOutTimelockKeyWitness $ TxOut a (inject maxCoin) SNothing
+      genTxOutTimelockKeyWitness Nothing $ TxOut a (inject maxCoin) SNothing
   networkId <- lift $ elements [SNothing, SJust Testnet]
   -- 5. Estimate the fee
   let redeemerDatumWits = mconcat (redeemerWitsList ++ datumWitsList)
@@ -528,9 +693,9 @@ genValidatedTx = do
         TxBody
           { inputs = Map.keysSet toSpendNoCollateral,
             collateral = bogusCollateralTxIns,
-            outputs = Seq.fromList recipients, -- has scripts
-            txcerts = Seq.fromList dcerts, -- has scripts
-            txwdrls = Wdrl mempty, -- has scripts
+            outputs = Seq.fromList (rewardsWithdrawalTxOut : recipients),
+            txcerts = Seq.fromList dcerts,
+            txwdrls = wdrls,
             txfee = maxCoin,
             txvldt = geValidityInterval,
             txUpdates = SNothing,
@@ -541,11 +706,10 @@ genValidatedTx = do
             txnetworkid = networkId
           }
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
+      witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
       noFeeWits =
         redeemerDatumWits
-          <> foldMap
-            ($ txBodyNoFeeHash)
-            (keyWitsMakers ++ dcertWitsMakers ++ bogusCollateralKeyWitsMakers)
+          <> foldMap ($ txBodyNoFeeHash) (witsMakers ++ bogusCollateralKeyWitsMakers)
       bogusTxForFeeCalc = ValidatedTx txBodyNoFee noFeeWits isValid SNothing
       fee = minfee gePParams bogusTxForFeeCalc
   -- 6. Crank up the amount in one of outputs to account for the fee. Note this is
@@ -557,18 +721,25 @@ genValidatedTx = do
         UTxO $ Map.update (Just . injectFee) feeKey utxoNoCollateral
   -- 7. Generate utxos that will be used as collateral
   (utxo, collMap) <- genCollateralUTxO collateralAddresses fee utxoFeeAdjusted
-  collateralKeyWitsMakers <- mapM genTxOutTimelockKeyWitness $ Map.elems collMap
+  collateralKeyWitsMakers <- mapM (genTxOutTimelockKeyWitness Nothing) $ Map.elems collMap
   -- 8. Construct the correct Tx with valid fee and collaterals
   let txBody = txBodyNoFee {txfee = fee, collateral = Map.keysSet collMap}
       txBodyHash = hashAnnotated txBody
       wits =
         redeemerDatumWits
-          <> foldMap ($ txBodyHash) (keyWitsMakers ++ dcertWitsMakers ++ collateralKeyWitsMakers)
+          <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
       validTx = ValidatedTx txBody wits isValid SNothing
   pure (utxo, validTx)
 
 genTxAndUTXOState :: Gen (TRC (AlonzoUTXOW A), GenState)
 genTxAndUTXOState = do
+  (TRC (LedgerEnv slotNo _ pp _, (utxoState, _), vtx), genState) <-
+    genTxAndLEDGERState
+  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), utxoState, vtx), genState)
+
+genTxAndLEDGERState :: Gen (TRC (AlonzoLEDGER A), GenState)
+genTxAndLEDGERState = do
+  txIx <- arbitrary
   maxTxExUnits <- arbitrary
   Positive maxCollateralInputs <- arbitrary
   collateralPercentage <- fromIntegral <$> chooseInt (0, 10000)
@@ -577,7 +748,8 @@ genTxAndUTXOState = do
   let genT = do
         (utxo, tx) <- genValidatedTx
         utxoState <- genUTxOState utxo
-        pure $ TRC (utxoEnv, utxoState, tx)
+        dpState <- gsDPState <$> get
+        pure $ TRC (ledgerEnv, (utxoState, dpState), tx)
       pp :: PParams A
       pp =
         def
@@ -591,7 +763,7 @@ genTxAndUTXOState = do
             _maxCollateralInputs = maxCollateralInputs
           }
       slotNo = SlotNo 100000000
-      utxoEnv = UtxoEnv slotNo pp mempty (GenDelegs mempty)
+      ledgerEnv = LedgerEnv slotNo txIx pp (AccountState (Coin 0) (Coin 0))
   minSlotNo <- oneof [pure SNothing, SJust <$> choose (minBound, unSlotNo slotNo)]
   maxSlotNo <- oneof [pure SNothing, SJust <$> choose (unSlotNo slotNo + 1, maxBound)]
   let env =
@@ -599,26 +771,24 @@ genTxAndUTXOState = do
           { geValidityInterval = ValidityInterval (SlotNo <$> minSlotNo) (SlotNo <$> maxSlotNo),
             gePParams = pp
           }
-  (trc, s, _) <- runRWST genT env mempty
+  (trc, s, _) <- runRWST genT env emptyGenState
   pure (trc, s)
 
-totalAda :: UTxOState A -> Coin
-totalAda (UTxOState utxo f d _) = f <> d <> coin (balance utxo)
+totalAda :: UTxOState A -> DPState C_Crypto -> Coin
+totalAda (UTxOState utxo f d _) DPState {_dstate} =
+  f <> d <> coin (balance utxo) <> F.fold (_rewards _dstate)
 
-testTxValidForUTXOW :: (TRC (AlonzoUTXOW A), GenState) -> Property
-testTxValidForUTXOW (trc@(TRC (UtxoEnv _ _pp _ _, utxoState, vtx)), _) =
+testTxValidForLEDGER :: (TRC (AlonzoLEDGER A), GenState) -> Property
+testTxValidForLEDGER (trc@(TRC (_, (utxoState, dpstate), vtx)), _) =
   case runShelleyBase $ applySTSTest trc of
-    Right utxoState' ->
+    Right (utxoState', dpstate') ->
       classify (coerce (isValid vtx)) "TxValid" $
-        totalAda utxoState' === totalAda utxoState
+        totalAda utxoState' dpstate' === totalAda utxoState dpstate
     Left e -> counterexample (show e) (property False)
-
-testValidTxForUTXOW :: Property
-testValidTxForUTXOW = forAll genTxAndUTXOState testTxValidForUTXOW
 
 alonzoProperties :: TestTree
 alonzoProperties =
   testGroup
     "Alonzo UTXOW property tests"
-    [ testProperty "test ValidTx" testValidTxForUTXOW
+    [ testProperty "test ValidTx" $ forAll genTxAndLEDGERState testTxValidForLEDGER
     ]

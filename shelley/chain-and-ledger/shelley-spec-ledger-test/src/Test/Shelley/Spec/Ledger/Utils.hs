@@ -11,6 +11,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
 module Test.Shelley.Spec.Ledger.Utils
   ( mkSeedFromWords,
     mkCertifiedVRF,
