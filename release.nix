@@ -44,23 +44,25 @@ with pkgs.lib;
 
 let
   testsSupportedSystems = [ "x86_64-linux" ];
+  buildSupportedSystems = [ "x86_64-linux" "x86_64-darwin" ];
   # Recurse through an attrset, returning all test derivations in a list.
-  collectTests' = ds: filter (d: elem d.system testsSupportedSystems) (collect isDerivation ds);
+  collectJobs' = systems: ds: filter (d: elem d.system systems) (collect isDerivation ds);
   # Adds the package name to the test derivations for windows-testing-bundle.nix
   # (passthru.identifier.name does not survive mapTestOn)
-  collectTests = ds: concatLists (
+  collectJobs = systems: ds: concatLists (
     mapAttrsToList (packageName: package:
-      map (drv: drv // { inherit packageName; }) (collectTests' package)
+      map (drv: drv // { inherit packageName; }) (collectJobs' systems package)
     ) ds);
-
+  collectTests = collectJobs testsSupportedSystems;
+  collectBuild = collectJobs buildSupportedSystems;
   jobs = {
     native = mapTestOn (__trace (__toJSON (packagePlatforms project)) (packagePlatforms project));
   } // (mkRequiredJob (
-      collectTests jobs.native.libs ++
-      collectTests jobs.native.exes ++
+      collectBuild jobs.native.libs ++
+      collectBuild jobs.native.exes ++
       collectTests jobs.native.checks.tests ++
-      collectTests jobs.native.benchmarks ++
-      mapAttrsToList (_: spec: spec.x86_64-linux or null) jobs.native.specs
+      collectBuild jobs.native.benchmarks ++
+      collectBuild jobs.native.specs
     ))
 
   // {
