@@ -178,7 +178,7 @@ $\Coin$.
       \\
       \hldiff{\forall txout \in \txouts{txb},} \\
       \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~\mathsf{MaxValSize}} \\~\\
-      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \to \fun{bootstrapAttrsSize}~a \leq 64
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \Rightarrow \fun{bootstrapAttrsSize}~a \leq 64
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a =\NetworkId
       \\
