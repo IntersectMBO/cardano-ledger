@@ -17,7 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Alonzo.TxBody
-  ( TxOut (TxOut, TxOutCompact),
+  ( TxOut (TxOut, TxOutCompact, TxOutCompactDH),
     TxBody
       ( TxBody,
         inputs,
