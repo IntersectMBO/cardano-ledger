@@ -25,7 +25,7 @@ in addition to those that are already defined in the Shelley specification~\cite
   $\ExUnits$ &
   $(mem, steps)\in \ExUnits$ is made up of two integer values.
   These represent abstract notions of the relative memory usage and script execution steps,
-  respectively.
+  respectively. We give it the structure of a partially ordered monoid via its product structure, i.e. addition and comparisons are defined point-wise.
   \\
   $\LangDepView$ &
   A pair of two byte strings, where the first represents the serialized language tag (eg. the tag for $\PlutusVI$),
@@ -188,7 +188,8 @@ signatures that must be checked during validation.
   \emph{Accessor Functions}
   %
   \begin{center}
-  \fun{costmdls},~\fun{maxTxExUnits},~\fun{maxBlockExUnits},~\fun{prices}
+    \fun{costmdls},~\fun{prices},~\fun{maxTxExUnits},~\fun{maxBlockExUnits},~\fun{maxValSize},~\fun{coinsPerUTxOWord},\\
+    \fun{collateralPercent},~\fun{maxCollateralInputs}
   \end{center}
   %
   \emph{Helper Functions}
