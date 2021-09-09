@@ -100,6 +100,8 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Prelude (Coercible, asks)
+import Cardano.Protocol.TPraos.BHeader (BHBody (..), bhbody)
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Slotting.EpochInfo
   ( epochInfoEpoch,
     epochInfoFirst,
@@ -128,8 +130,7 @@ import Shelley.Spec.Ledger.API
     GetLedgerView,
     PParams,
   )
-import Shelley.Spec.Ledger.BlockChain (BHBody (..), Block, TxSeq, bhbody, bheader)
-import Shelley.Spec.Ledger.OCert (KESPeriod (..))
+import Shelley.Spec.Ledger.BlockChain (Block, TxSeq, bheader)
 import Shelley.Spec.Ledger.PParams (PParamsUpdate)
 import Shelley.Spec.Ledger.Tx (Tx, TxOut, WitnessSet)
 import Test.QuickCheck (Arbitrary (..))

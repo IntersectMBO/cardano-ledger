@@ -46,29 +46,48 @@ import Cardano.Ledger.Keys as X
     hashKey,
     hashVerKeyVRF,
   )
+import Cardano.Protocol.TPraos as X -- TODO deprecate these?
+  ( PoolDistr (..),
+    individualPoolStake,
+  )
+import Cardano.Protocol.TPraos.BHeader as X
+  ( BHBody (..),
+    BHeader (..),
+    HashHeader (..),
+    PrevHash (..),
+    bHeaderSize,
+    bhHash,
+    bhbody,
+  )
+import Cardano.Protocol.TPraos.OCert as X (KESPeriod (..), OCert (..))
+import Cardano.Protocol.TPraos.Rules.OCert as X (OCertEnv (..))
+import Cardano.Protocol.TPraos.Rules.Overlay as X
+  ( OBftSlot (..),
+    classifyOverlaySlot,
+    isOverlaySlot,
+    lookupInOverlaySchedule,
+  )
+import Cardano.Protocol.TPraos.Rules.Prtcl as X
+  ( PrtclEnv (..),
+    PrtclPredicateFailure (..),
+    PrtclState (..),
+    PrtlSeqFailure (..),
+    prtlSeqChecks,
+  )
 import Shelley.Spec.Ledger.Address.Bootstrap as X
   ( BootstrapWitness (..),
   )
 import Shelley.Spec.Ledger.BlockChain as X
-  ( BHBody (..),
-    BHeader (..),
-    Block (..),
-    HashHeader (..),
+  ( Block (..),
     LaxBlock (..),
-    PrevHash (..),
-    bHeaderSize,
     bbHash,
     bbody,
-    bhHash,
-    bhbody,
     bheader,
   )
 import Shelley.Spec.Ledger.Delegation.Certificates as X
   ( DCert (..),
     DelegCert (..),
     PoolCert (..),
-    PoolDistr (..),
-    individualPoolStake,
   )
 import Shelley.Spec.Ledger.EpochBoundary as X
   ( SnapShot (..),
@@ -95,13 +114,6 @@ import Shelley.Spec.Ledger.Metadata as X
   ( Metadata (..),
     Metadatum (..),
   )
-import Shelley.Spec.Ledger.OCert as X (KESPeriod (..), OCert (..))
-import Shelley.Spec.Ledger.OverlaySchedule as X
-  ( OBftSlot (..),
-    classifyOverlaySlot,
-    isOverlaySlot,
-    lookupInOverlaySchedule,
-  )
 import Shelley.Spec.Ledger.PParams as X
   ( PParams,
     PParams' (..),
@@ -126,17 +138,9 @@ import Shelley.Spec.Ledger.STS.NewEpoch as X
   ( NEWEPOCH,
     calculatePoolDistr,
   )
-import Shelley.Spec.Ledger.STS.Ocert as X (OCertEnv (..))
 import Shelley.Spec.Ledger.STS.Pool as X (POOL, PoolEnv (..))
 import Shelley.Spec.Ledger.STS.PoolReap as X (POOLREAP)
 import Shelley.Spec.Ledger.STS.Ppup as X (PPUP, PPUPEnv (..))
-import Shelley.Spec.Ledger.STS.Prtcl as X
-  ( PrtclEnv (..),
-    PrtclPredicateFailure (..),
-    PrtclState (..),
-    PrtlSeqFailure (..),
-    prtlSeqChecks,
-  )
 import Shelley.Spec.Ledger.STS.Tick as X (TICK)
 import Shelley.Spec.Ledger.STS.Tickn as X
   ( TICKN,

@@ -78,6 +78,8 @@ import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Slot (BlockNo (..))
 import Cardano.Ledger.Val (inject, (<+>))
+import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader (..), mkSeed, seedEta, seedL)
+import Cardano.Protocol.TPraos.OCert (OCert (..), OCertSignable (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
@@ -97,25 +99,21 @@ import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified Plutus.V1.Ledger.Api as Plutus
 import Shelley.Spec.Ledger.API
-  ( BHBody (..),
-    BHeader (..),
-    Block (..),
+  ( Block (..),
     CLI (..),
     DPState (..),
     DState (..),
     KESPeriod (..),
     LedgerState (..),
     Nonce (NeutralNonce),
-    OCert (..),
     PoolParams (..),
     PrevHash (GenesisHash),
     ProtVer (..),
     UTxO (..),
   )
-import Shelley.Spec.Ledger.BlockChain (bBodySize, mkSeed, seedEta, seedL)
+import Shelley.Spec.Ledger.BlockChain (bBodySize)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState (UTxOState (..), WitHashes (..))
-import Shelley.Spec.Ledger.OCert (OCertSignable (..))
 import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
 import Shelley.Spec.Ledger.STS.Delegs (DelegsPredicateFailure (..))
 import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure (..))

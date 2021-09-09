@@ -38,6 +38,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -56,7 +57,6 @@ import Shelley.Spec.Ledger.API
     LEDGER,
     LedgerEnv (..),
   )
-import Shelley.Spec.Ledger.BlockChain (checkLeaderValue)
 import Shelley.Spec.Ledger.Delegation.Certificates (pattern RegPool)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),

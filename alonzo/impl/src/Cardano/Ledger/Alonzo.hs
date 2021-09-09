@@ -62,6 +62,9 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
+import Cardano.Protocol.TPraos (PoolDistr (..))
+import qualified Cardano.Protocol.TPraos.Rules.OCert as Shelley
+import qualified Cardano.Protocol.TPraos.Rules.Overlay as Shelley
 import Control.Arrow (left)
 import Control.Monad.Except (liftEither)
 import Control.Monad.Reader (runReader)
@@ -71,7 +74,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import qualified Shelley.Spec.Ledger.API as API
-import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.Genesis (genesisUTxO, sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams)
 import Shelley.Spec.Ledger.LedgerState
@@ -87,8 +89,6 @@ import Shelley.Spec.Ledger.Metadata (validMetadatum)
 import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
 import qualified Shelley.Spec.Ledger.STS.Mir as Shelley
 import qualified Shelley.Spec.Ledger.STS.Newpp as Shelley
-import qualified Shelley.Spec.Ledger.STS.Ocert as Shelley
-import qualified Shelley.Spec.Ledger.STS.Overlay as Shelley
 import qualified Shelley.Spec.Ledger.STS.Rupd as Shelley
 import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
 import qualified Shelley.Spec.Ledger.STS.Tick as Shelley

@@ -63,6 +63,17 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Protocol.TPraos (PoolDistr)
+import Cardano.Protocol.TPraos.BHeader
+  ( BHBody,
+    BHeader,
+    bhbody,
+    bheaderPrev,
+    checkLeaderValue,
+    prevHashToNonce,
+  )
+import Cardano.Protocol.TPraos.OCert (OCertSignable)
+import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS.Prtcl
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -84,15 +95,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BlockChain
-  ( BHBody,
-    BHeader,
-    bhbody,
-    bheaderPrev,
-    checkLeaderValue,
-    prevHashToNonce,
-  )
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr)
 import Shelley.Spec.Ledger.LedgerState
   ( EpochState (..),
     NewEpochState (..),
@@ -100,11 +102,9 @@ import Shelley.Spec.Ledger.LedgerState
     _dstate,
     _genDelegs,
   )
-import Shelley.Spec.Ledger.OCert (OCertSignable)
 import Shelley.Spec.Ledger.PParams (PParams' (..), ProtVer)
 import Shelley.Spec.Ledger.STS.Chain (ChainChecksData, pparamsToChainChecksData)
 import Shelley.Spec.Ledger.STS.EraMapping ()
-import qualified Shelley.Spec.Ledger.STS.Prtcl as STS.Prtcl
 import Shelley.Spec.Ledger.STS.Tick (TickfPredicateFailure)
 import qualified Shelley.Spec.Ledger.STS.Tickn as STS.Tickn
 

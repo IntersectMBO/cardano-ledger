@@ -18,8 +18,6 @@ module Shelley.Spec.Ledger.Delegation.Certificates
     GenesisDelegCert (..),
     MIRCert (..),
     StakeCreds (..),
-    PoolDistr (..),
-    IndividualPoolStake (..),
     delegCWitness,
     poolCWitness,
     genesisCWitness,
@@ -33,25 +31,15 @@ module Shelley.Spec.Ledger.Delegation.Certificates
     isReservesMIRCert,
     isTreasuryMIRCert,
     requiresVKeyWitness,
+    --Deprecated
+    PoolDistr,
+    IndividualPoolStake,
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Credential (Credential (..))
-import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
-import Cardano.Ledger.Serialization (decodeRecordNamed)
-import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra
-  ( BaseRep (MapR),
-    Embed (..),
-    Exp (Base),
-    HasExp (toExp),
-  )
-import Data.Map.Strict (Map)
-import Data.Relation (Relation (..))
-import GHC.Generics (Generic)
-import NoThunks.Class (NoThunks (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import qualified Cardano.Protocol.TPraos as TP
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -63,27 +51,6 @@ import Shelley.Spec.Ledger.TxBody
     PoolParams (..),
     StakeCreds (..),
   )
-
-instance
-  HasExp
-    (PoolDistr crypto)
-    ( Map
-        (KeyHash 'StakePool crypto)
-        (IndividualPoolStake crypto)
-    )
-  where
-  toExp (PoolDistr x) = Base MapR x
-
-instance
-  Embed
-    (PoolDistr crypto)
-    ( Map
-        (KeyHash 'StakePool crypto)
-        (IndividualPoolStake crypto)
-    )
-  where
-  toBase (PoolDistr x) = x
-  fromBase = PoolDistr
 
 -- | Determine the certificate author
 delegCWitness :: DelegCert crypto -> Credential 'Staking crypto
@@ -128,35 +95,6 @@ isRetirePool :: DCert crypto -> Bool
 isRetirePool (DCertPool (RetirePool _ _)) = True
 isRetirePool _ = False
 
-newtype PoolDistr crypto = PoolDistr
-  { unPoolDistr ::
-      Map (KeyHash 'StakePool crypto) (IndividualPoolStake crypto)
-  }
-  deriving stock (Show, Eq)
-  deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks, Relation)
-
-data IndividualPoolStake crypto = IndividualPoolStake
-  { individualPoolStake :: !Rational,
-    individualPoolStakeVrf :: !(Hash crypto (VerKeyVRF crypto))
-  }
-  deriving stock (Show, Eq, Generic)
-  deriving anyclass (NFData, NoThunks)
-
-instance CC.Crypto crypto => ToCBOR (IndividualPoolStake crypto) where
-  toCBOR (IndividualPoolStake stake vrf) =
-    mconcat
-      [ encodeListLen 2,
-        toCBOR stake,
-        toCBOR vrf
-      ]
-
-instance CC.Crypto crypto => FromCBOR (IndividualPoolStake crypto) where
-  fromCBOR =
-    decodeRecordNamed "IndividualPoolStake" (const 2) $
-      IndividualPoolStake
-        <$> fromCBOR
-        <*> fromCBOR
-
 isInstantaneousRewards :: DCert crypto -> Bool
 isInstantaneousRewards (DCertMir _) = True
 isInstantaneousRewards _ = False
@@ -176,3 +114,13 @@ requiresVKeyWitness :: DCert crypto -> Bool
 requiresVKeyWitness (DCertMir (MIRCert _ _)) = False
 requiresVKeyWitness (DCertDeleg (RegKey _)) = False
 requiresVKeyWitness _ = True
+
+-- Deprecated
+
+{-# DEPRECATED PoolDistr "Import from Cardano.Protocol.TPraos instead" #-}
+
+type PoolDistr = TP.PoolDistr
+
+{-# DEPRECATED IndividualPoolStake "Import from Cardano.Protocol.TPraos instead" #-}
+
+type IndividualPoolStake = TP.IndividualPoolStake

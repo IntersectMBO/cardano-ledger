@@ -53,6 +53,26 @@ import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Slot (EpochNo)
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos (PoolDistr (..))
+import Cardano.Protocol.TPraos.BHeader
+  ( BHeader,
+    LastAppliedBlock (..),
+    bHeaderSize,
+    bhHash,
+    bhbody,
+    bheaderBlockNo,
+    bheaderSlotNo,
+    hBbsize,
+    lastAppliedHash,
+    prevHashToNonce,
+  )
+import Cardano.Protocol.TPraos.Rules.Prtcl
+  ( PRTCL,
+    PrtclEnv (..),
+    PrtclState (..),
+    PrtlSeqFailure,
+    prtlSeqChecks,
+  )
 import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
@@ -78,20 +98,7 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.BlockChain
-  ( BHeader,
-    Block (..),
-    LastAppliedBlock (..),
-    bHeaderSize,
-    bhHash,
-    bhbody,
-    bheaderBlockNo,
-    bheaderSlotNo,
-    hBbsize,
-    lastAppliedHash,
-    prevHashToNonce,
-  )
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import Shelley.Spec.Ledger.BlockChain (Block (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
@@ -108,13 +115,6 @@ import Shelley.Spec.Ledger.LedgerState
   )
 import Shelley.Spec.Ledger.PParams (ProtVer (..))
 import Shelley.Spec.Ledger.STS.Bbody (BBODY, BbodyEnv (..), BbodyPredicateFailure, BbodyState (..))
-import Shelley.Spec.Ledger.STS.Prtcl
-  ( PRTCL,
-    PrtclEnv (..),
-    PrtclState (..),
-    PrtlSeqFailure,
-    prtlSeqChecks,
-  )
 import Shelley.Spec.Ledger.STS.Tick (TICK, TickEvent, TickPredicateFailure)
 import Shelley.Spec.Ledger.STS.Tickn
 import Shelley.Spec.Ledger.UTxO (UTxO (..), balance)

@@ -36,6 +36,11 @@ import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))
+import Cardano.Protocol.TPraos.BHeader
+  ( BHeader (..),
+    bhbody,
+    bheaderSlotNo,
+  )
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.Provenance (runProvM)
@@ -69,12 +74,9 @@ import Shelley.Spec.Ledger.API
     GetLedgerView,
   )
 import Shelley.Spec.Ledger.BlockChain
-  ( BHeader (..),
-    Block (..),
+  ( Block (..),
     bbody,
-    bhbody,
     bheader,
-    bheaderSlotNo,
   )
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)

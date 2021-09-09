@@ -40,6 +40,12 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val ((<->))
+import Cardano.Protocol.TPraos
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
+import Cardano.Protocol.TPraos.BHeader (checkLeaderValue, mkSeed, seedL)
+import Cardano.Protocol.TPraos.Rules.Overlay (isOverlaySlot)
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
 import Control.Monad.Trans.Reader (runReader)
@@ -60,12 +66,7 @@ import qualified Data.Set as Set
 import GHC.Records (HasField (..), getField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API.Protocol (ChainDepState (..))
-import Shelley.Spec.Ledger.BlockChain (checkLeaderValue, mkSeed, seedL)
 import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr)
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.LedgerState
   ( DPState (..),
@@ -82,7 +83,6 @@ import Shelley.Spec.Ledger.LedgerState
     produced,
     stakeDistr,
   )
-import Shelley.Spec.Ledger.OverlaySchedule (isOverlaySlot)
 import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), ProtVer)
 import Shelley.Spec.Ledger.RewardProvenance (RewardProvenance)
 import Shelley.Spec.Ledger.Rewards

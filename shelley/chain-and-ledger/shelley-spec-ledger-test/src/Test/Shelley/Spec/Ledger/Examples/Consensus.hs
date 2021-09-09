@@ -25,6 +25,7 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Serialization
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Constraints
+import Cardano.Protocol.TPraos
 import Cardano.Slotting.Block
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot
@@ -46,7 +47,6 @@ import Data.Word (Word64, Word8)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.Delegation.Certificates
 import Shelley.Spec.Ledger.EpochBoundary
 import Shelley.Spec.Ledger.LedgerState
 import Shelley.Spec.Ledger.PParams

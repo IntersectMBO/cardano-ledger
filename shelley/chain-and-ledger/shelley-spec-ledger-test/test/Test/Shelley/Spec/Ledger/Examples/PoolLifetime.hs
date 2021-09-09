@@ -42,6 +42,12 @@ import Cardano.Ledger.Slot
   )
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
+import Cardano.Protocol.TPraos.BHeader (bhHash, hashHeaderToNonce)
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default.Class (def)
 import Data.Foldable (fold)
 import Data.Group (invert)
@@ -51,16 +57,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Shelley.Spec.Ledger.API (getRewardInfo)
-import Shelley.Spec.Ledger.BlockChain
-  ( Block,
-    bhHash,
-    bheader,
-    hashHeaderToNonce,
-  )
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
+import Shelley.Spec.Ledger.BlockChain (Block, bheader)
 import qualified Shelley.Spec.Ledger.EpochBoundary as EB
 import Shelley.Spec.Ledger.LedgerState
   ( NewEpochState (..),
@@ -70,7 +67,6 @@ import Shelley.Spec.Ledger.LedgerState
     emptyRewardUpdate,
     startStep,
   )
-import Shelley.Spec.Ledger.OCert (KESPeriod (..))
 import Shelley.Spec.Ledger.PParams (PParams' (..))
 import qualified Shelley.Spec.Ledger.RewardProvenance as RP
 import Shelley.Spec.Ledger.Rewards

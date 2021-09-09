@@ -30,12 +30,12 @@ import Cardano.Ledger.Slot
   )
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Slotting.Slot (WithOrigin (..))
-import Shelley.Spec.Ledger.BlockChain
+import Cardano.Protocol.TPraos.BHeader
   ( HashHeader (..),
     LastAppliedBlock (..),
     hashHeaderToNonce,
   )
+import Cardano.Slotting.Slot (WithOrigin (..))
 import Shelley.Spec.Ledger.PParams
   ( PParams,
     PParams' (..),
