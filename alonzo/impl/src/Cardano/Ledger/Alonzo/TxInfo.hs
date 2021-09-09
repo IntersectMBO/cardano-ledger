@@ -59,7 +59,6 @@ import Data.Coders
     (!>),
     (<!),
   )
-import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
@@ -179,10 +178,16 @@ slotToPOSIXTime ::
   EpochInfo m ->
   SystemStart ->
   SlotNo ->
-  m (P.POSIXTime)
+  m P.POSIXTime
 slotToPOSIXTime ei sysS s = do
-  P.POSIXTime . resolution . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
-    <$> (epochInfoSlotToUTCTime ei sysS s)
+  P.POSIXTime
+    -- Cut to whole number of milliseconds
+    . truncate
+    -- Convert to milliseconds
+    . (* fromInteger 1000)
+    . nominalDiffTimeToSeconds
+    . utcTimeToPOSIXSeconds
+    <$> epochInfoSlotToUTCTime ei sysS s
 
 -- | translate a validity interval to POSIX time
 transVITime ::
