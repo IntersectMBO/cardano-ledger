@@ -27,6 +27,7 @@ module Shelley.Spec.Ledger.BlockChain
     bbHash,
     bBodySize,
     slotToNonce,
+    neededTxInsForBlock,
     -- accessor functions
     bheader,
     bbody,
@@ -100,19 +101,23 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
+import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import Shelley.Spec.Ledger.Tx (Tx, segwitTx)
+import Shelley.Spec.Ledger.Tx (Tx, TxIn (..), segwitTx)
+import Shelley.Spec.Ledger.UTxO (txid)
 
 data TxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx era)),
@@ -427,6 +432,28 @@ incrBlocks isOverlay hk b'@(BlocksMade b)
     Just n -> Map.insert hk (n + 1) b
   where
     hkVal = Map.lookup hk b
+
+-- | The validity of any individual block depends only on a subset
+-- of the UTxO stored in the ledger state. This function returns
+-- the transaction inputs corresponding to the required UTxO for a
+-- given Block.
+--
+-- This function will be used by the consensus layer to enable storing
+-- the UTxO on disk. In particular, given a block, the consensus layer
+-- will use 'neededTxInsForBlock' to retrived the needed UTxO from disk
+-- and present only those to the ledger.
+neededTxInsForBlock ::
+  ( Era era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  Block era ->
+  Set (TxIn (Crypto era))
+neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
+  where
+    txBodies = map (getField @"body") $ toList $ Era.fromTxSeq txsSeq
+    allTxIns = Set.unions $ map (getField @"inputs") txBodies
+    newTxIds = Set.fromList $ map txid txBodies
+    isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
 
 -- DEPRECATED
 

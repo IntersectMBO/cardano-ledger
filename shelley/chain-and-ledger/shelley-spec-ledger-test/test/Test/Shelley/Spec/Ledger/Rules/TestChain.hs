@@ -77,6 +77,7 @@ import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     bbody,
     bheader,
+    neededTxInsForBlock,
   )
 import Shelley.Spec.Ledger.EpochBoundary (obligation)
 import Shelley.Spec.Ledger.LedgerState hiding (circulation)
@@ -90,8 +91,17 @@ import Shelley.Spec.Ledger.STS.Upec (votedValue)
 import Shelley.Spec.Ledger.Scripts (ScriptHash)
 import Shelley.Spec.Ledger.Tx
 import Shelley.Spec.Ledger.TxBody
-import Shelley.Spec.Ledger.UTxO (balance, totalDeposits, txins, txouts, pattern UTxO)
-import Test.QuickCheck (Property, Testable (..), conjoin, counterexample, withMaxSuccess, (.||.), (===))
+import Shelley.Spec.Ledger.UTxO (UTxO (..), balance, totalDeposits, txins, txouts, pattern UTxO)
+import Test.QuickCheck
+  ( Property,
+    Testable (..),
+    conjoin,
+    counterexample,
+    withMaxSuccess,
+    (.&&.),
+    (.||.),
+    (===),
+  )
 import Test.Shelley.Spec.Ledger.Generator.Block (tickChainState)
 import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
 import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..))
@@ -200,6 +210,7 @@ adaPreservationChain =
         map (preserveBalanceRestricted @era @ledger) ssts,
         map (preserveOutputsTx @era @ledger) ssts,
         map (potsRewardsDecreaseByWdrlsPerTx @era @ledger) ssts,
+        map (canRestrictUTxO @era @ledger) ssts,
         -- well formed deposits
         map nonNegativeDeposits ssts,
         -- non-epoch-boundary preservation properties
@@ -602,6 +613,28 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
        in property $
             hasFailedScripts tx || outs `Map.isSubmapOf` u'
 
+canRestrictUTxO ::
+  forall era ledger.
+  ( ChainProperty era,
+    TestingLedger era ledger,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  SourceSignalTarget (CHAIN era) ->
+  Property
+canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
+  conjoin $
+    map outputPreserved $
+      zip (sourceSignalTargets ledgerTrFull) (sourceSignalTargets ledgerTrRestr)
+  where
+    (_, ledgerTrFull) = ledgerTraceFromBlock @era @ledger chainSt block
+    (UTxO irrelevantUTxO, ledgerTrRestr) =
+      ledgerTraceFromBlockWithRestrictedUTxO @era @ledger chainSt block
+    outputPreserved
+      ( SourceSignalTarget {target = (UTxOState {_utxo = UTxO uFull}, _)},
+        SourceSignalTarget {target = (UTxOState {_utxo = UTxO uRestr}, _)}
+        ) =
+        (uRestr `Map.disjoint` irrelevantUTxO) .&&. uFull === (uRestr `Map.union` irrelevantUTxO)
+
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
   forall era ledger.
@@ -908,6 +941,31 @@ ledgerTraceFromBlock chainSt block =
   )
   where
     (tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
+
+-- | This function is nearly the same as ledgerTraceFromBlock, but
+-- it restricts the UTxO state to only those needed by the block.
+-- It also returns the unused UTxO for comparison later.
+ledgerTraceFromBlockWithRestrictedUTxO ::
+  forall era ledger.
+  ( ChainProperty era,
+    TestingLedger era ledger,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  ChainState era ->
+  Block era ->
+  (UTxO era, Trace ledger)
+ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
+  ( UTxO irrelevantUTxO,
+    runShelleyBase $
+      Trace.closure @ledger ledgerEnv ledgerSt0' txs
+  )
+  where
+    (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
+    txIns = neededTxInsForBlock block
+    (utxoSt, delegationSt) = ledgerSt0
+    utxo = unUTxO . _utxo $ utxoSt
+    (relevantUTxO, irrelevantUTxO) = Map.partitionWithKey (const . (`Set.member` txIns)) utxo
+    ledgerSt0' = (utxoSt {_utxo = UTxO relevantUTxO}, delegationSt)
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::
