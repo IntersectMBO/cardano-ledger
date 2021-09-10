@@ -13,6 +13,7 @@ where
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.PParams (_protocolVersion)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
@@ -72,6 +73,7 @@ evaluateTransactionExecutionUnits ::
   ( CC.Crypto c,
     Monad m
   ) =>
+  Core.PParams (AlonzoEra c) ->
   -- | The transaction.
   Core.Tx (AlonzoEra c) ->
   -- | The current UTxO set (or the relevant portion for the transaction).
@@ -85,8 +87,8 @@ evaluateTransactionExecutionUnits ::
   -- | A map from redeemer pointers to either a failure or a sufficient execution budget.
   --  The value is monadic, depending on the epoch info.
   m (Map RdmrPtr (Either (ScriptFailure c) ExUnits))
-evaluateTransactionExecutionUnits tx utxo ei sysS costModels = do
-  txinfo <- txInfo ei sysS utxo tx
+evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
+  txinfo <- txInfo pp ei sysS utxo tx
   pure $ Map.mapWithKey (findAndCount txinfo) (unRedeemers $ getField @"txrdmrs" ws)
   where
     txb = getField @"body" tx

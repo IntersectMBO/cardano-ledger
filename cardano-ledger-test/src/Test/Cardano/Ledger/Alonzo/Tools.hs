@@ -158,7 +158,7 @@ updateTxExUnits tx utxo ei ss costmdls err = do
   -- rdmrs :: Map RdmrPtr ExUnits
   rdmrs <-
     traverse (failLeft err)
-      =<< evaluateTransactionExecutionUnits tx utxo ei ss costmdls
+      =<< evaluateTransactionExecutionUnits pparams tx utxo ei ss costmdls
   pure (replaceRdmrs tx rdmrs)
 
 replaceRdmrs :: Core.Tx A -> Map RdmrPtr ExUnits -> Core.Tx A
