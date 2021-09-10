@@ -22,6 +22,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
+import Cardano.Ledger.Alonzo.PParams (ProtVer)
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( CollectError,
     collectTwoPhaseScriptInputs,
@@ -97,6 +98,7 @@ instance
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
   ) =>
   STS (UTXOS era)
@@ -130,6 +132,7 @@ utxosTransition ::
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
   TransitionRule (UTXOS era)
@@ -160,7 +163,8 @@ scriptsValidateTransition ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   TransitionRule (UTXOS era)
 scriptsValidateTransition = do
@@ -218,7 +222,8 @@ scriptsNotValidateTransition ::
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
@@ -351,6 +356,7 @@ constructValidated ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   Globals ->

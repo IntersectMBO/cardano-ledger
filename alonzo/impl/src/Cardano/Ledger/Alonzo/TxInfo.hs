@@ -16,6 +16,9 @@ import Cardano.Crypto.Hash.Class (Hash (UnsafeHash))
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
+-- Instances only
+
+import Cardano.Ledger.Alonzo.PParams (ProtVer)
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
@@ -32,7 +35,7 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core as Core (TxBody, TxOut, Value)
+import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
@@ -63,7 +66,6 @@ import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import qualified Data.Set as Set
--- Instances only
 import Data.Text (Text, pack)
 import Data.Text.Prettyprint.Doc (Pretty (..))
 import Data.Time.Clock (nominalDiffTimeToSeconds)
@@ -118,6 +120,9 @@ import qualified Plutus.V1.Ledger.Api as P
     validateScript,
   )
 import Plutus.V1.Ledger.Contexts ()
+import qualified Shelley.Spec.Ledger.HardForks as HardForks
+  ( translateTimeForPlutusScripts,
+  )
 import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
 import Shelley.Spec.Ledger.TxBody
   ( DCert (..),
@@ -180,32 +185,42 @@ transAddr (Addr _net object stake) = Just (P.Address (transCred object) (transSt
 transAddr (AddrBootstrap _bootaddr) = Nothing
 
 slotToPOSIXTime ::
-  Monad m =>
+  (Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
+  Core.PParams era ->
   EpochInfo m ->
   SystemStart ->
   SlotNo ->
   m P.POSIXTime
-slotToPOSIXTime ei sysS s = do
-  P.POSIXTime . resolution . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
+slotToPOSIXTime pp ei sysS s = do
+  P.POSIXTime . transTime . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
     <$> epochInfoSlotToUTCTime ei sysS s
+  where
+    transTime =
+      if HardForks.translateTimeForPlutusScripts pp
+        then
+          truncate
+            -- Convert to milliseconds
+            . (* fromInteger 1000)
+        else resolution
 
 -- | translate a validity interval to POSIX time
 transVITime ::
-  Monad m =>
+  (Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
+  Core.PParams era ->
   EpochInfo m ->
   SystemStart ->
   ValidityInterval ->
   m P.POSIXTimeRange
-transVITime _ _ (ValidityInterval SNothing SNothing) = pure P.always
-transVITime ei sysS (ValidityInterval (SJust i) SNothing) = do
-  t <- slotToPOSIXTime ei sysS i
+transVITime _ _ _ (ValidityInterval SNothing SNothing) = pure P.always
+transVITime pp ei sysS (ValidityInterval (SJust i) SNothing) = do
+  t <- slotToPOSIXTime pp ei sysS i
   pure $ P.from t
-transVITime ei sysS (ValidityInterval SNothing (SJust i)) = do
-  t <- slotToPOSIXTime ei sysS i
+transVITime pp ei sysS (ValidityInterval SNothing (SJust i)) = do
+  t <- slotToPOSIXTime pp ei sysS i
   pure $ P.to t
-transVITime ei sysS (ValidityInterval (SJust i) (SJust j)) = do
-  t1 <- slotToPOSIXTime ei sysS i
-  t2 <- slotToPOSIXTime ei sysS j
+transVITime pp ei sysS (ValidityInterval (SJust i) (SJust j)) = do
+  t1 <- slotToPOSIXTime pp ei sysS i
+  t2 <- slotToPOSIXTime pp ei sysS j
   pure $
     P.Interval
       (P.lowerBound t1)
@@ -351,15 +366,17 @@ txInfo ::
     Core.TxBody era ~ Alonzo.TxBody era,
     Value era ~ Mary.Value (Crypto era),
     HasField "body" tx (Core.TxBody era),
-    HasField "wits" tx (TxWitness era)
+    HasField "wits" tx (TxWitness era),
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
+  Core.PParams era ->
   EpochInfo m ->
   SystemStart ->
   UTxO era ->
   tx ->
   m P.TxInfo
-txInfo ei sysS utxo tx = do
-  timeRange <- transVITime ei sysS interval
+txInfo pp ei sysS utxo tx = do
+  timeRange <- transVITime pp ei sysS interval
   pure $
     P.TxInfo
       { P.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),

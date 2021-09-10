@@ -24,6 +24,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.PParams (ProtVer)
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..))
 import Cardano.Ledger.Alonzo.Tx
@@ -152,6 +153,7 @@ collectTwoPhaseScriptInputs ::
     Core.Value era ~ Mary.Value (Crypto era),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -169,7 +171,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
     Nothing -> Left [NoCostModel PlutusV1]
     Just cost -> merge (apply cost) (map redeemer needed) (map getscript needed) (Right [])
   where
-    txinfo = runIdentity $ txInfo ei sysS utxo tx
+    txinfo = runIdentity $ txInfo pp ei sysS utxo tx
     needed = filter knownToNotBe1Phase $ scriptsNeeded utxo tx
     -- The formal spec achieves the same filtering as knownToNotBe1Phase
     -- by use of the (partial) language function, which is not defined

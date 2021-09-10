@@ -7,6 +7,7 @@ module Shelley.Spec.Ledger.HardForks
     allowMIRTransfer,
     validatePoolRewardAccountNetID,
     allowScriptStakeCredsToEarnRewards,
+    translateTimeForPlutusScripts,
   )
 where
 
@@ -47,3 +48,11 @@ allowScriptStakeCredsToEarnRewards ::
   Natural ->
   Bool
 allowScriptStakeCredsToEarnRewards pvM = pvM > 4
+
+-- | Starting with protocol version 6, we translate slots to time correctly for
+-- Plutus scripts.
+translateTimeForPlutusScripts ::
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Bool
+translateTimeForPlutusScripts pp = pvMajor (getField @"_protocolVersion" pp) > 5
