@@ -51,8 +51,8 @@ import Quiet
 -- parameter is a phantom, however, so in actuality the instances will remain
 -- the same.
 data Credential (kr :: KeyRole) crypto
-  = ScriptHashObj {-# UNPACK #-} !(ScriptHash crypto)
-  | KeyHashObj {-# UNPACK #-} !(KeyHash kr crypto)
+  = ScriptHashObj !(ScriptHash crypto)
+  | KeyHashObj !(KeyHash kr crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 instance HasKeyRole Credential where
@@ -61,7 +61,7 @@ instance HasKeyRole Credential where
 
 instance NoThunks (Credential kr crypto)
 
-instance ToJSON (Credential kr crypto) where
+instance CC.Crypto crypto => ToJSON (Credential kr crypto) where
   toJSON (ScriptHashObj hash) =
     Aeson.object
       [ "script hash" .= hash
@@ -79,7 +79,7 @@ instance CC.Crypto crypto => FromJSON (Credential kr crypto) where
       parser1 obj = ScriptHashObj <$> obj .: "script hash"
       parser2 obj = KeyHashObj <$> obj .: "key hash"
 
-instance ToJSONKey (Credential kr crypto)
+instance CC.Crypto crypto => ToJSONKey (Credential kr crypto)
 
 instance CC.Crypto crypto => FromJSONKey (Credential kr crypto)
 
