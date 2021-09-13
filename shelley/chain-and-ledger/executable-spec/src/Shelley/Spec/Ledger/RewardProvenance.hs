@@ -84,7 +84,7 @@ deriving instance (CC.Crypto crypto) => FromJSON (RewardProvenancePool crypto)
 
 deriving instance (CC.Crypto crypto) => ToJSON (RewardProvenancePool crypto)
 
-instance Default (RewardProvenancePool crypto) where
+instance CC.Crypto crypto => Default (RewardProvenancePool crypto) where
   def = RewardProvenancePool 0 0 0 (Coin 0) def 0 (Coin 0) 0 (Coin 0) (Coin 0)
 
 -- | The desirability score of a stake pool, as described
@@ -193,16 +193,16 @@ instance Default (RewardProvenance crypto) where
       def
       def
 
-instance Default (PoolParams crypto) where
+instance CC.Crypto crypto => Default (PoolParams crypto) where
   def = PoolParams def def (Coin 0) (Coin 0) def def def def def
 
-instance Default (Credential r e) where
+instance CC.Crypto e => Default (Credential r e) where
   def = KeyHashObj def
 
-instance Default (RewardAcnt crypto) where
+instance CC.Crypto crypto => Default (RewardAcnt crypto) where
   def = RewardAcnt def def
 
-instance Default (SafeHash c i) where
+instance CC.Crypto c => Default (SafeHash c i) where
   def = unsafeMakeSafeHash def
 
 -- =======================================================

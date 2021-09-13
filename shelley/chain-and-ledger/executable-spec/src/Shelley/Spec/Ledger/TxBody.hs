@@ -445,7 +445,7 @@ type TransTxId (c :: Type -> Constraint) era =
   )
 
 -- | The input of a UTxO.
-data TxIn crypto = TxInCompact {-# UNPACK #-} !(TxId crypto) {-# UNPACK #-} !Word64
+data TxIn crypto = TxInCompact !(TxId crypto) {-# UNPACK #-} !Word64
   deriving (Generic)
 
 pattern TxIn ::

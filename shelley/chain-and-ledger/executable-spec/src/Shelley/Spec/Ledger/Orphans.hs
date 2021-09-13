@@ -12,9 +12,10 @@ import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Prelude (HeapWords (..), readEither)
+import Cardano.Prelude (readEither)
 import Cardano.Slotting.Slot (EpochSize (..), WithOrigin (..))
 import Control.DeepSeq (NFData (rnf))
 import Data.Aeson
@@ -84,7 +85,7 @@ instance SignableRepresentation (Hash.Hash a b) where
 instance Default Network where
   def = Mainnet
 
-instance Default (KeyHash a b) where
+instance Crypto b => Default (KeyHash a b) where
   def = KeyHash def
 
 instance Default (SS.StrictSeq t) where
@@ -99,13 +100,11 @@ instance Default Long.ByteString where
 instance Default Lazy.ByteString where
   def = Lazy.empty
 
-instance Default (Hash a b) where
+instance HS.HashAlgorithm a => Default (Hash a b) where
   def = UnsafeHash def
 
 instance Default Bool where
   def = False
-
-deriving newtype instance HeapWords (HS.Hash h a)
 
 deriving newtype instance ToCBOR EpochSize
 

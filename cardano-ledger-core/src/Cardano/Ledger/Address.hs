@@ -183,7 +183,7 @@ data RewardAcnt crypto = RewardAcnt
   }
   deriving (Show, Eq, Generic, Ord, NFData, ToJSONKey, FromJSONKey)
 
-instance ToJSON (RewardAcnt crypto) where
+instance CC.Crypto crypto => ToJSON (RewardAcnt crypto) where
   toJSON ra =
     Aeson.object
       [ "network" .= getRwdNetwork ra,

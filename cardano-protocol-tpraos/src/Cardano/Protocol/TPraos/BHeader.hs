@@ -97,11 +97,10 @@ import Cardano.Protocol.TPraos (ProtVer (..))
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
+import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coerce (coerce)
 import Data.Ratio ((%))
 import Data.Typeable
 import Data.Word (Word64)
@@ -157,8 +156,6 @@ instance
         decodeNull
         pure GenesisHash
       _ -> BlockHash <$> fromCBOR
-
-instance NFData BlockNo -- TODO remove once instance exists in cardano-base
 
 deriving newtype instance CC.Crypto crypto => FromCBOR (HashHeader crypto)
 
@@ -337,8 +334,17 @@ bhHash ::
 bhHash = HashHeader . Hash.hashWithSerialiser toCBOR
 
 -- | HashHeader to Nonce
+-- What is going on here?
+-- This is here because the surrounding code is parametrized in the hash algorithm used,
+-- but the nonce is hard-coded to Blake2b_256.
+-- We require the nonce to have the right length (the size of a Blake2b_256 hash), so
+-- if the hash size differs, we pad or remove bytes accordingly.
 hashHeaderToNonce :: HashHeader crypto -> Nonce
-hashHeaderToNonce = Nonce . coerce
+hashHeaderToNonce (HashHeader h) = case Hash.hashFromBytes bytes of
+  Nothing -> Nonce (Hash.castHash (Hash.hashWith id bytes))
+  Just hash -> Nonce hash
+  where
+    bytes = Hash.hashToBytes h
 
 prevHashToNonce ::
   PrevHash crypto ->
