@@ -253,7 +253,8 @@ initUTxO pf =
         ++ map (\i -> (TxIn genesisId i, someOutput pf)) [3 .. 8]
         ++ map (\i -> (TxIn genesisId i, collateralOutput pf)) [11 .. 18]
         ++ [ (TxIn genesisId 100, timelockOut pf),
-             (TxIn genesisId 101, unspendableOut pf)
+             (TxIn genesisId 101, unspendableOut pf),
+             (TxIn genesisId 102, alwaysSucceedsOutputV2 pf)
            ]
 
 initialUtxoSt ::
@@ -312,6 +313,16 @@ alwaysSucceedsOutput pf =
     Override
     pf
     [ Address (scriptAddr (always 3 pf) pf),
+      Amount (inject $ Coin 5000),
+      DHash [hashData $ datumExample1 @era]
+    ]
+
+alwaysSucceedsOutputV2 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+alwaysSucceedsOutputV2 pf =
+  newTxOut
+    Override
+    pf
+    [ Address (scriptAddr (alwaysAlt 3 pf) pf),
       Amount (inject $ Coin 5000),
       DHash [hashData $ datumExample1 @era]
     ]
@@ -1525,6 +1536,38 @@ multipleEqualCertsTxInvalid pf =
         ]
     ]
 
+noCostModelBody :: Scriptic era => Proof era -> Core.TxBody era
+noCostModelBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 102],
+      Collateral [TxIn genesisId 11],
+      Outputs [outEx1 pf],
+      Txfee (Coin 5),
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersEx1 txDatsExample1)
+    ]
+
+noCostModelTx ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+noCostModelTx pf =
+  newTx
+    Override
+    pf
+    [ Body (noCostModelBody pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (noCostModelBody pf)) (someKeys pf)],
+          ScriptWits [alwaysAlt 3 pf],
+          DataWits [datumExample1],
+          RdmrWits validatingRedeemersEx1
+        ]
+    ]
+
 -- =======================
 -- Alonzo UTXOW Tests
 -- =======================
@@ -1875,6 +1918,15 @@ alonzoUTXOWexamples =
               ( Left
                   [ ExtraRedeemers [RdmrPtr Tag.Cert 1]
                   ]
+              ),
+          testCase "no cost model" $
+            testUTXOW
+              (pp pf)
+              (trustMe True $ noCostModelTx pf)
+              ( Left
+                  [ WrappedShelleyEraFailure
+                      (UtxoFailure (UtxosFailure (CollectErrors [NoCostModel PlutusV2])))
+                  ]
               )
         ]
     ]
@@ -1897,7 +1949,15 @@ collectTwoPhaseScriptInputsOutputOrdering =
     apf = Alonzo Mock
     context =
       valContext
-        (runIdentity $ txInfo (pp apf) testEpochInfo testSystemStart (initUTxO apf) (validatingTx apf))
+        ( runIdentity $
+            txInfo
+              (pp apf)
+              PlutusV1
+              testEpochInfo
+              testSystemStart
+              (initUTxO apf)
+              (validatingTx apf)
+        )
         (Spending $ TxIn genesisId 1)
 
 collectOrderingAlonzo :: TestTree
@@ -1990,7 +2050,8 @@ example1UTxO =
         (TxIn genesisId 17, collateralOutput pf),
         (TxIn genesisId 8, someOutput pf),
         (TxIn genesisId 100, timelockOut pf),
-        (TxIn genesisId 101, unspendableOut pf)
+        (TxIn genesisId 101, unspendableOut pf),
+        (TxIn genesisId 102, alwaysSucceedsOutputV2 pf)
       ]
   where
     pf = Alonzo Mock

@@ -26,8 +26,6 @@ import Cardano.Ledger.Alonzo.Scripts
     Prices (..),
     Script (..),
     Tag (..),
-    alwaysFails,
-    alwaysSucceeds,
   )
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
@@ -39,6 +37,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
+import Data.Int (Int64)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
@@ -47,6 +46,7 @@ import Data.Text (pack)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified PlutusTx as Plutus
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
@@ -91,7 +91,9 @@ instance Arbitrary RdmrPtr where
   arbitrary = RdmrPtr <$> arbitrary <*> arbitrary
 
 instance Arbitrary ExUnits where
-  arbitrary = ExUnits <$> arbitrary <*> arbitrary
+  arbitrary = ExUnits <$> genUnit <*> genUnit
+    where
+      genUnit = fromIntegral <$> choose (0, maxBound :: Int64)
 
 instance (Era era) => Arbitrary (Redeemers era) where
   arbitrary = Redeemers <$> arbitrary
@@ -176,10 +178,11 @@ instance Mock c => Arbitrary (ValidatedTx (AlonzoEra c)) where
       <*> arbitrary
 
 instance Mock c => Arbitrary (Script (AlonzoEra c)) where
-  arbitrary =
+  arbitrary = do
+    lang <- arbitrary -- The language is not present in the Script serialization
     frequency
-      [ (1, pure (alwaysSucceeds 1)),
-        (1, pure (alwaysFails 1)),
+      [ (1, pure (alwaysSucceeds lang 1)),
+        (1, pure (alwaysFails lang 1)),
         (10, TimelockScript <$> arbitrary)
       ]
 
@@ -187,7 +190,7 @@ instance Mock c => Arbitrary (Script (AlonzoEra c)) where
 --
 
 instance Arbitrary Language where
-  arbitrary = elements [PlutusV1]
+  arbitrary = elements (Set.toList nonNativeLanguages)
 
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary

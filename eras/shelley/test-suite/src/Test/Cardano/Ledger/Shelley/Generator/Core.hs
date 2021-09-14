@@ -250,8 +250,8 @@ data TwoPhase3ArgInfo era = TwoPhase3ArgInfo
     -- | A Redeemer that will make it succeed
     getRedeemer3 ::
       ( Plutus.Data, -- The redeeming data
-        Word64, -- The ExUnits memory count
-        Word64 -- The ExUnits steps count
+        Natural, -- The ExUnits memory count
+        Natural -- The ExUnits steps count
       ),
     getSucceeds3 :: Bool
   }
@@ -264,8 +264,8 @@ data TwoPhase2ArgInfo era = TwoPhase2ArgInfo
     -- | A Redeemer that will make it succeed
     getRedeemer2 ::
       ( Plutus.Data, -- The redeeming data
-        Word64, -- The ExUnits memory count
-        Word64 -- The ExUnits steps count
+        Natural, -- The ExUnits memory count
+        Natural -- The ExUnits steps count
       ),
     getSucceeds2 :: Bool
   }

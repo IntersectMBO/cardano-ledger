@@ -95,7 +95,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
                 Left e -> error $ "Plutus script collection error: " <> show e
                 Right c -> c
             collectedScripts = Set.fromList $ map (\(s, _, _, _) -> s) collected
-            suppliedPScrpts = Set.fromList [PlutusScript s | PlutusScript s <- Map.elems allScripts]
+            suppliedPScrpts = Set.fromList [PlutusScript v s | PlutusScript v s <- Map.elems allScripts]
             expectedPScripts = collectedScripts == suppliedPScrpts
             allPlutusTrue = case evalScripts tx collected of
               Fails _ -> False

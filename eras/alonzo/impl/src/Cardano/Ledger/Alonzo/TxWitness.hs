@@ -51,6 +51,7 @@ import Cardano.Binary
     serializeEncoding',
   )
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData, ppData)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag, isPlutusScript, ppExUnits, ppTag)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript, hashScript)
@@ -356,7 +357,7 @@ encodeWitnessRaw ::
   Encode ('Closed 'Sparse) (TxWitnessRaw era)
 encodeWitnessRaw vkeys boots scripts dats rdmrs =
   Keyed
-    (\a b c d e f -> TxWitnessRaw a b (c <> d) e f)
+    (\a b c d e f g -> TxWitnessRaw a b (c <> d <> e) f g)
     !> Omit null (Key 0 $ setEncode vkeys)
     !> Omit null (Key 2 $ setEncode boots)
     !> Omit
@@ -364,14 +365,19 @@ encodeWitnessRaw vkeys boots scripts dats rdmrs =
       (Key 1 $ E (encodeFoldable . mapMaybe unwrapTS . Map.elems) timelocks)
     !> Omit
       null
-      (Key 3 $ E (encodeFoldable . mapMaybe unwrapPS . Map.elems) plutusScripts)
+      (Key 3 $ E (encodeFoldable . mapMaybe unwrapPS1 . Map.elems) plutusScripts)
+    !> Omit
+      null
+      (Key 6 $ E (encodeFoldable . mapMaybe unwrapPS2 . Map.elems) plutusScripts)
     !> Omit nullDats (Key 4 $ E toCBOR dats)
     !> Omit nullRedeemers (Key 5 $ To rdmrs)
   where
     unwrapTS (TimelockScript x) = Just x
     unwrapTS _ = Nothing
-    unwrapPS (PlutusScript x) = Just x
-    unwrapPS _ = Nothing
+    unwrapPS1 (PlutusScript PlutusV1 x) = Just x
+    unwrapPS1 _ = Nothing
+    unwrapPS2 (PlutusScript PlutusV2 x) = Just x
+    unwrapPS2 _ = Nothing
     (plutusScripts, timelocks) = Map.partition isPlutusScript scripts
 
 instance
@@ -434,12 +440,16 @@ instance
       txWitnessField 3 =
         fieldA
           addScripts
-          (fmap PlutusScript <$> listDecode)
+          (fmap (PlutusScript PlutusV1) <$> listDecode)
       txWitnessField 4 =
         fieldAA
           (\x wits -> wits {_txdats = x})
           From
       txWitnessField 5 = fieldAA (\x wits -> wits {_txrdmrs = x}) From
+      txWitnessField 6 =
+        fieldA
+          addScripts
+          (fmap (PlutusScript PlutusV2) <$> listDecode)
       txWitnessField n = field (\_ t -> t) (Invalid n)
 
       addScripts :: [Script era] -> TxWitnessRaw era -> TxWitnessRaw era
