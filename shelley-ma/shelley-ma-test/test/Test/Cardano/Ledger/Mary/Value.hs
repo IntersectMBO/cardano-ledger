@@ -7,7 +7,7 @@
 
 -- surpresses orphan warnings on Arbitray (Value era),  Arbitrary AssetName,  Arbitrary (PolicyID C)
 
-module Test.Cardano.Ledger.Mary.Value (valTests, ass, pol) where
+module Test.Cardano.Ledger.Mary.Value (valTests) where
 
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (fromCompact, toCompact)
@@ -29,7 +29,6 @@ import Data.CanonicalMaps
   )
 import Data.Map.Strict (empty, singleton)
 import qualified Data.Map.Strict as Map
-import System.IO.Unsafe (unsafePerformIO)
 import qualified Test.QuickCheck as QC
 import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
 import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
@@ -130,27 +129,11 @@ insertTests =
 genB :: Gen ByteString
 genB = resize 4 arbitrary
 
-genID :: Gen AssetName
-genID = fmap AssetName genB
-
--- we want a limited number of AssetName and (ScriptHash C)
-assetChoices :: [AssetName]
-assetChoices = unsafePerformIO (generate (vectorOf 8 genID))
-
-ass :: Int -> AssetName
-ass n = assetChoices !! n
-
-policyChoices :: [PolicyID C_Crypto]
-policyChoices = unsafePerformIO (generate (vectorOf 8 (PolicyID <$> arbitrary)))
-
-pol :: Int -> PolicyID C_Crypto
-pol n = policyChoices !! n
-
 genAssetName :: Gen AssetName
-genAssetName = oneof (map return assetChoices)
+genAssetName = fmap AssetName genB
 
 genPolicyID :: Gen (PolicyID C_Crypto)
-genPolicyID = oneof (map return policyChoices)
+genPolicyID = PolicyID <$> arbitrary
 
 genTriple :: Gen Integer -> Gen (PolicyID C_Crypto, AssetName, Integer)
 genTriple genAmount = (,,) <$> genPolicyID <*> genAssetName <*> genAmount
