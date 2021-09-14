@@ -64,7 +64,7 @@ canonicalMapUnion f (Bin _ k1 x1 l1 r1) t2 = case splitLookup k1 t2 of
         then link2 l1l2 r1r2
         else link k1 new l1l2 r1r2
       where
-        new = (f x1 x2)
+        new = f x1 x2
     where
       !l1l2 = canonicalMapUnion f l1 l2
       !r1r2 = canonicalMapUnion f r1 r2
@@ -97,7 +97,7 @@ canonicalInsert = go
 {-# INLINEABLE canonicalInsert #-}
 
 canonicalMap :: (Ord k, CanonicalZero a) => (a -> a) -> Map k a -> Map k a
-canonicalMap f m = Map.foldrWithKey accum Map.empty m
+canonicalMap f = Map.foldrWithKey accum Map.empty
   where
     accum k v ans = if new == zeroC then ans else Map.insert k new ans
       where
@@ -114,8 +114,8 @@ pointWise ::
   Map k v ->
   Bool
 pointWise _ Tip Tip = True
-pointWise p Tip (m@(Bin _ _ _ _ _)) = all (zeroC `p`) m
-pointWise p (m@(Bin _ _ _ _ _)) Tip = all (`p` zeroC) m
+pointWise p Tip m@Bin {} = all (zeroC `p`) m
+pointWise p m@Bin {} Tip = all (`p` zeroC) m
 pointWise p m (Bin _ k v2 ls rs) =
   case Map.splitLookup k m of
     (lm, Just v1, rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm

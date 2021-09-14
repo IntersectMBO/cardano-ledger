@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE NoMonoLocalBinds #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- surpresses orphan warnings on Arbitray (Value era),  Arbitrary AssetName,  Arbitrary (PolicyID C)
@@ -45,25 +46,51 @@ import Prelude hiding (lookup)
 
 -- Use canonicalUnion and canonicalInsert
 
-insert3 :: (Integer -> Integer -> Integer) -> PolicyID crypto -> AssetName -> Integer -> Value crypto -> Value crypto
+pickNew, pickOld :: a -> a -> a
+pickNew _o n = n
+pickOld o _n = o
+
+insert3 ::
+  (Integer -> Integer -> Integer) ->
+  PolicyID crypto ->
+  AssetName ->
+  Integer ->
+  Value crypto ->
+  Value crypto
 insert3 combine pid aid new (Value c m1) =
   case Map.lookup pid m1 of
-    Nothing -> Value c (canonicalInsert (canonicalMapUnion combine) pid (canonicalInsert combine aid new zeroC) m1)
+    Nothing ->
+      Value c $
+        canonicalInsert (canonicalMapUnion combine) pid (canonicalInsert combine aid new zeroC) m1
     Just m2 -> case Map.lookup aid m2 of
-      Nothing -> Value c (canonicalInsert (canonicalMapUnion combine) pid (singleton aid new) m1)
-      Just old -> Value c (canonicalInsert (\_o n -> n) pid (canonicalInsert (\_o n -> n) aid (combine old new) m2) m1)
+      Nothing ->
+        Value c $
+          canonicalInsert (canonicalMapUnion combine) pid (singleton aid new) m1
+      Just old ->
+        Value c $
+          canonicalInsert pickNew pid (canonicalInsert pickNew aid (combine old new) m2) m1
 
 -- | Make a Value with no coin, and just one token.
 unit :: PolicyID crypto -> AssetName -> Integer -> Value crypto
-unit pid aid n = Value 0 (canonicalInsert (\_old new -> new) pid (canonicalInsert (\_old new -> new) aid n empty) empty)
+unit pid aid n = Value 0 (canonicalInsert pickNew pid (canonicalInsert pickNew aid n empty) empty)
 
 -- Use <+> and <->
 
-insert2 :: CC.Crypto crypto => (Integer -> Integer -> Integer) -> PolicyID crypto -> AssetName -> Integer -> Value crypto -> Value crypto
+insert2 ::
+  CC.Crypto crypto =>
+  (Integer -> Integer -> Integer) ->
+  PolicyID crypto ->
+  AssetName ->
+  Integer ->
+  Value crypto ->
+  Value crypto
 insert2 combine pid aid new m1 =
-  case (lookup pid aid m1, new == 0) of -- The trick is to correctly not store a zero. Several ways to get a zero
-    (0, True) -> m1 -- input is zero, and its not in the map
-    (0, False) -> m1 <+> unit pid aid new -- input is not zero, its not in the map, so add it to the map
+  -- The trick is to correctly not store a zero. Several ways to get a zero
+  case (lookup pid aid m1, new == 0) of
+    -- input is zero, and its not in the map
+    (0, True) -> m1
+    -- input is not zero, its not in the map, so add it to the map
+    (0, False) -> m1 <+> unit pid aid new
     (old, _) ->
       let n = combine old new -- it is in the map, use combine to get the correct value
        in m1 <+> unit pid aid (n - old) -- make the correction
@@ -128,7 +155,8 @@ genPolicyID = oneof (map return policyChoices)
 genTriple :: Gen Integer -> Gen (PolicyID C_Crypto, AssetName, Integer)
 genTriple genAmount = (,,) <$> genPolicyID <*> genAssetName <*> genAmount
 
-genMap :: Gen Integer -> Gen [(PolicyID C_Crypto, AssetName, Integer)] -- Most maps have 1 or 2 Assets
+-- Most maps have 1 or 2 Assets
+genMap :: Gen Integer -> Gen [(PolicyID C_Crypto, AssetName, Integer)]
 genMap genAmount = do
   len <- frequency [(1, pure 0), (4, pure 1), (5, pure 2), (2, pure 3), (1, pure 4)]
   vectorOf len (genTriple genAmount)
@@ -162,8 +190,10 @@ albelianTests :: TestTree
 albelianTests =
   testGroup
     "albelian test"
-    [ testGroup "albelian Coin" (map (\(prop, name) -> testProperty name prop) (albelianlist @Coin)),
-      testGroup "albelian Value" (map (\(prop, name) -> testProperty name prop) (albelianlist @(Value C_Crypto)))
+    [ testGroup "albelian Coin" $
+        map (\(prop, name) -> testProperty name prop) (albelianlist @Coin),
+      testGroup "albelian Value" $
+        map (\(prop, name) -> testProperty name prop) (albelianlist @(Value C_Crypto))
     ]
 
 -- ===================================================================
@@ -219,52 +249,51 @@ polyValueTests = testGroup "polyValueTests" (map f (proplist @(Value C_Crypto)))
 -- Tests that hold only in the Value class.
 -- Testing that insert, lookup, and coin interact properly
 
-valuePropList :: [(Integer -> Integer -> Value C_Crypto -> PolicyID C_Crypto -> AssetName -> Bool, String)]
+valuePropList ::
+  [(Integer -> Integer -> Value C_Crypto -> PolicyID C_Crypto -> AssetName -> Bool, String)]
 valuePropList =
   [ (\_ _ x _ _ -> coin (modifyCoin f x) == modifyCoin f (coin x), "coinModify"),
-    (\_ _ _ p a -> insert (\old _new -> old) p a 0 zero == zero, "Nozeros"),
-    (\_ _ x p a -> insert (\old _new -> old) p a 0 x == insert2 (\old _new -> old) p a 0 x, "insert==insert2A"),
-    (\_ _ x p a -> insert (\_old new -> new) p a 0 x == insert2 (\_old new -> new) p a 0 x, "insert==insert2B"),
-    (\_ _ x p a -> insert (\old _new -> old) p a 0 x == insert3 (\old _new -> old) p a 0 x, "insert==insert3A"),
-    (\_ _ x p a -> insert (\_old new -> new) p a 0 x == insert3 (\_old new -> new) p a 0 x, "insert==insert3B"),
-    ( \n _ _ p a ->
-        insert (\_old new -> new) p a n zero
-          == insert (\old _new -> old) p a n zero,
+    (\_ _ _ p a -> insert pickOld p a 0 zero == zero, "Nozeros"),
+    (\_ _ x p a -> insert pickOld p a 0 x == insert2 pickOld p a 0 x, "insert==insert2A"),
+    (\_ _ x p a -> insert pickNew p a 0 x == insert2 pickNew p a 0 x, "insert==insert2B"),
+    (\_ _ x p a -> insert pickOld p a 0 x == insert3 pickOld p a 0 x, "insert==insert3A"),
+    (\_ _ x p a -> insert pickNew p a 0 x == insert3 pickNew p a 0 x, "insert==insert3B"),
+    ( \n _ _ p a -> insert pickNew p a n zero == insert pickOld p a n zero,
       "comb doesn't matter on zero"
     ),
     -- the following 4 laws only holds for non zero n and m, and when not(n==m).
     -- Zeros cause the inserts to be no-ops in that case.
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || (insert (\old _new -> old) p a m (insert (\_old new -> new) p a n zero))
-          == (insert (\_old new -> new) p a n zero),
+          || (insert pickOld p a m (insert pickNew p a n zero))
+          == (insert pickNew p a n zero),
       "retains-old"
     ),
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || (insert (\_old new -> new) p a m (insert (\_old new -> new) p a n zero))
-          == (insert (\_old new -> new) p a m zero),
+          || (insert pickNew p a m (insert pickNew p a n zero))
+          == (insert pickNew p a m zero),
       "new-overrides"
     ),
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || lookup p a (insert (\old _new -> old) p a m (insert (\_old new -> new) p a n zero)) == n,
+          || lookup p a (insert pickOld p a m (insert pickNew p a n zero)) == n,
       "oldVsNew"
     ),
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || lookup p a (insert (\_old new -> new) p a m (insert (\_old new -> new) p a n zero)) == m,
+          || lookup p a (insert pickNew p a m (insert pickNew p a n zero)) == m,
       "newVsOld"
     ),
-    (\n _ x p a -> lookup p a (insert (\_old new -> new) p a n x) == n, "lookup-insert-overwrite"),
+    (\n _ x p a -> lookup p a (insert pickNew p a n x) == n, "lookup-insert-overwrite"),
     ( \n _ x p a ->
         lookup p a x == 0
-          || lookup p a (insert (\old _new -> old) p a n x) == lookup p a x,
+          || lookup p a (insert pickOld p a n x) == lookup p a x,
       "lookup-insert-retain"
     ),
-    (\n _ x p a -> coin (insert (\old _new -> old) p a n x) == coin x, "coinIgnores1"),
-    (\n _ x p a -> coin (insert (\_old new -> new) p a n x) == coin x, "coinIgnores2"),
-    (\n _ x p a -> coin (insert (\old _new -> old + n) p a n x) == coin x, "coinIgnores3")
+    (\n _ x p a -> coin (insert pickOld p a n x) == coin x, "coinIgnores1"),
+    (\n _ x p a -> coin (insert pickNew p a n x) == coin x, "coinIgnores2"),
+    (\n _ x p a -> coin (insert (\o _n -> o + n) p a n x) == coin x, "coinIgnores3")
   ]
   where
     f (Coin n) = Coin (n + 3)
