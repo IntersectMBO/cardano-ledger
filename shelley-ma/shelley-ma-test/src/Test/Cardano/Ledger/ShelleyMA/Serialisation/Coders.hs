@@ -1,27 +1,10 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeOperators #-}
-{-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -fno-warn-missing-signatures #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# OPTIONS_GHC -fno-warn-unused-binds #-}
-{-# OPTIONS_GHC -fno-warn-unused-imports #-}
 
 module Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
   ( codersTest,
@@ -37,74 +20,39 @@ where
 
 import Cardano.Binary
   ( Annotator (..),
-    DecoderError (DecoderErrorCustom),
     FromCBOR (fromCBOR),
     FullByteString (Full),
     ToCBOR (toCBOR),
-    decodeBreakOr,
-    decodeListLenOrIndef,
-    decodeMapLenOrIndef,
-    decodeWord,
-    encodeBreak,
     encodeListLen,
-    encodeListLenIndef,
-    encodeMapLen,
     encodeWord,
-    matchSize,
   )
-import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
 import Codec.CBOR.FlatTerm (TermToken, toFlatTerm)
 import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
 import Codec.CBOR.Write (toLazyByteString)
-import Control.Monad (replicateM, unless)
-import Data.Array
 import qualified Data.ByteString.Lazy as Lazy
 import Data.Coders
-  ( Annotator (..),
-    Decode (..),
+  ( Decode (..),
     Density (..),
     Dual (..),
     Encode (..),
     Field,
     Wrapped (..),
     decode,
-    decodeCollection,
-    decodeCollectionWithLen,
     decodeList,
-    decodeRecordNamed,
     decodeRecordSum,
-    decodeSeq,
-    decodeSet,
     decodeStrictSeq,
-    dualList,
-    dualSeq,
-    dualSet,
-    dualStrictSeq,
-    dualText,
     encode,
     encodeFoldable,
-    encodeFoldableEncoder,
     field,
-    from,
     invalidKey,
     runE,
-    to,
-    wrapCBORArray,
     (!>),
     (<!),
-    (<*!),
   )
-import Data.Foldable (foldl')
-import Data.Sequence (Seq)
-import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq, fromList)
-import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set, insert, member)
-import qualified Data.Set as Set
 import Data.Text (Text, pack)
-import qualified Data.Text as Text
 import Data.Typeable
 import Test.Tasty
 import Test.Tasty.HUnit
@@ -122,7 +70,7 @@ roundTrip' enc dec t = deserialiseFromBytes dec (toLazyByteString (enc t))
 
 roundTripAnn :: (ToCBOR t, FromCBOR (Annotator t)) => t -> RoundTripResult t
 roundTripAnn s =
-  let bytes = (toLazyByteString (toCBOR s))
+  let bytes = toLazyByteString (toCBOR s)
    in case deserialiseFromBytes fromCBOR bytes of
         Left err -> Left err
         Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
@@ -136,7 +84,7 @@ embedTrip' enc dec s = deserialiseFromBytes dec (toLazyByteString (enc s))
 
 embedTripAnn :: forall s t. (ToCBOR t, FromCBOR (Annotator s)) => t -> RoundTripResult s
 embedTripAnn s =
-  let bytes = (toLazyByteString (toCBOR s))
+  let bytes = toLazyByteString (toCBOR s)
    in case deserialiseFromBytes fromCBOR bytes of
         Left err -> Left err
         Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
@@ -147,7 +95,7 @@ data TT = A Int | B Int Bool | G [Int] | H (StrictSeq Bool) deriving (Show)
 
 instance FromCBOR TT where
   fromCBOR = decodeRecordSum "TT" $
-    \n -> case n of
+    \case
       0 -> do i <- fromCBOR; pure (2, A i) -- Tag for A is 0
       1 -> do i <- fromCBOR; b <- fromCBOR; pure (3, B i b) -- Tag for B is 1
       2 -> do l <- decodeList fromCBOR; pure (2, G l) -- Tag for G is 2
@@ -201,9 +149,9 @@ data Two = Two Int Bool
 
 decTwo :: Decode ('Closed 'Dense) Two
 encTwo :: Two -> Encode ('Closed 'Dense) Two
-decTwo = (RecD Two <! From <! From)
+decTwo = RecD Two <! From <! From
 
-encTwo (Two a b) = (Rec Two !> To a !> To b)
+encTwo (Two a b) = Rec Two !> To a !> To b
 
 instance ToCBOR Two where
   toCBOR two = encode $ encTwo two
@@ -221,9 +169,9 @@ test1 = Test 3 (Two 9 True) 33
 
 decTestWithGroupForTwo :: Decode ('Closed 'Dense) Test
 encTestWithGroupForTwo :: Test -> Encode ('Closed 'Dense) Test
-decTestWithGroupForTwo = (RecD Test <! From <! decTwo <! From)
+decTestWithGroupForTwo = RecD Test <! From <! decTwo <! From
 
-encTestWithGroupForTwo (Test a b c) = (Rec Test !> To a !> encTwo b !> To c)
+encTestWithGroupForTwo (Test a b c) = Rec Test !> To a !> encTwo b !> To c
 
 instance ToCBOR Test where
   toCBOR = encode . encTestWithGroupForTwo
@@ -268,15 +216,15 @@ instance FromCBOR Three where
 -}
 
 decThree :: Word -> Decode 'Open Three
-decThree 0 = (SumD In <! From)
-decThree 1 = (SumD N <! From <! From)
-decThree 2 = (SumD F <! decTwo)
+decThree 0 = SumD In <! From
+decThree 1 = SumD N <! From <! From
+decThree 2 = SumD F <! decTwo
 decThree k = Invalid k
 
 encThree :: Three -> Encode 'Open Three
-encThree (In x) = (Sum In 0) !> To x
-encThree (N b i) = (Sum N 1) !> To b !> To i
-encThree (F t) = (Sum F 2) !> encTwo t
+encThree (In x) = Sum In 0 !> To x
+encThree (N b i) = Sum N 1 !> To b !> To i
+encThree (F t) = Sum F 2 !> encTwo t
 
 instance FromCBOR Three where
   fromCBOR = decode (Summands "Three" decThree)
@@ -352,6 +300,7 @@ decM 2 = SumD M <! From <! Emit [] <! From
 decM 3 = SumD M <! From <! From <! From
 decM n = Invalid n
 
+dualMvirtual :: Dual M
 dualMvirtual = Dual (encode . encM) (decode (Summands "M" decM))
 
 -- ================================================================================
@@ -375,10 +324,10 @@ boxM :: Word -> Field M
 boxM 0 = field update0 From
   where
     update0 n (M _ xs t) = M n xs t
-boxM 1 = field update1 (From)
+boxM 1 = field update1 From
   where
     update1 xs (M n _ t) = M n xs t
-boxM 2 = field update2 (From)
+boxM 2 = field update2 From
   where
     update2 t (M n xs _) = M n xs t
 boxM n = field (\_ t -> t) (Invalid n)
@@ -392,15 +341,17 @@ boxM n = field (\_ t -> t) (Invalid n)
 -- else, the intial values in the required fields might survive decoding. The list
 -- of required fields is checked.
 
-decodeM :: Decode ('Closed 'Dense) M
-decodeM = SparseKeyed "M" (M 0 [] (pack "a")) boxM [(2, "Stringpart")] -- Only the field with Key 2 is required
+decodeM :: Decode ('Closed 'Dense) M -- Only the field with Key 2 is required
+decodeM = SparseKeyed "M" (M 0 [] (pack "a")) boxM [(2, "Stringpart")]
 
+dualM :: Dual M
 dualM = Dual (encode . baz) (decode decodeM)
 
 type Answer t = Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
 
-testM :: M -> Answer M
-testM m = roundTrip' (encode . baz) (decode decodeM) m
+-- FIXME: why is it unused
+_testM :: M -> Answer M
+_testM = roundTrip' (encode . baz) (decode decodeM)
 
 roundtrip :: Show t => String -> Dual t -> t -> TestTree
 roundtrip name (Dual enc dec) v =
@@ -408,7 +359,7 @@ roundtrip name (Dual enc dec) v =
     ("roundtrip " ++ name ++ " =(" ++ show v ++ ")")
     ( assertBool
         name
-        ( case (roundTrip' enc dec v) of
+        ( case roundTrip' enc dec v of
             Right _ -> True
             Left s -> error (show s)
         )
@@ -431,13 +382,14 @@ deCodeTest name sym =
 -- Some tests
 
 q0, q1, q2, q3 :: Answer M
-q0 = roundTrip' (\x -> encode (baz x)) (decode decodeM) (M 0 [] (pack "MBC"))
-q1 = roundTrip' (\x -> encode (baz x)) (decode decodeM) (M 0 [True] (pack "MBC"))
-q2 = roundTrip' (\x -> encode (baz x)) (decode decodeM) (M 42 [] (pack "MBC"))
-q3 = roundTrip' (\x -> encode (baz x)) (decode decodeM) (M 9 [True, False] (pack "MBC"))
+q0 = roundTrip' (encode . baz) (decode decodeM) (M 0 [] (pack "MBC"))
+q1 = roundTrip' (encode . baz) (decode decodeM) (M 0 [True] (pack "MBC"))
+q2 = roundTrip' (encode . baz) (decode decodeM) (M 42 [] (pack "MBC"))
+q3 = roundTrip' (encode . baz) (decode decodeM) (M 9 [True, False] (pack "MBC"))
 
-ok :: Bool
-ok = all isRight [q0, q1, q2, q3]
+-- FIXME: Why is this unused?
+_ok :: Bool
+_ok = all isRight [q0, q1, q2, q3]
   where
     isRight (Right _) = True
     isRight (Left _) = False
@@ -445,13 +397,13 @@ ok = all isRight [q0, q1, q2, q3]
 -- In the examples Let  Int and C have ToCBOR instances, and dualB :: Dual B
 -- An example with 1 constructor (a record) uses Rec and RecD
 
-data C = C Text deriving (Show)
+newtype C = C Text deriving (Show)
 
 instance ToCBOR C where toCBOR (C t) = toCBOR t
 
 instance FromCBOR C where fromCBOR = C <$> fromCBOR
 
-data BB = BB Text deriving (Show)
+newtype BB = BB Text deriving (Show)
 
 dualBB :: Dual BB
 dualBB = Dual (\(BB t) -> toCBOR t) (BB <$> fromCBOR)
@@ -470,8 +422,10 @@ instance ToCBOR A where toCBOR x = encode (encodeA x)
 
 instance FromCBOR A where fromCBOR = decode decodeA
 
+dualA :: Dual A
 dualA = Dual (encode . encodeA) (decode decodeA)
 
+recordTests :: TestTree
 recordTests =
   testGroup
     "Record tests"
@@ -496,6 +450,7 @@ decodeN = Summands "N" decodeNx
     decodeNx 2 = SumD N3 <! From
     decodeNx k = Invalid k
 
+dualN :: Dual N
 dualN = Dual (encode . encodeN) (decode decodeN)
 
 -- ============================================================

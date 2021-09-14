@@ -93,7 +93,7 @@ assetName3 = BS.pack "a3"
 -- ===========================================
 
 testGKeyHash :: KeyHash 'Genesis TestCrypto
-testGKeyHash = hashKey . snd . mkGenKey $ (RawSeed 0 0 0 0 0)
+testGKeyHash = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0
 
 testAddrE :: Addr TestCrypto
 testAddrE =
@@ -149,8 +149,8 @@ testUpdate =
 
 scriptGoldenTest :: forall era. (Era era) => TestTree
 scriptGoldenTest =
-  let kh0 = hashKey . snd . mkGenKey $ (RawSeed 0 0 0 0 0) :: KeyHash 'Witness (Crypto era)
-      kh1 = hashKey . snd . mkGenKey $ (RawSeed 1 1 1 1 1) :: KeyHash 'Witness (Crypto era)
+  let kh0 = hashKey . snd . mkGenKey $ RawSeed 0 0 0 0 0 :: KeyHash 'Witness (Crypto era)
+      kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness (Crypto era)
    in checkEncodingCBORAnnotated
         "timelock_script"
         ( RequireAllOf @(Crypto era)

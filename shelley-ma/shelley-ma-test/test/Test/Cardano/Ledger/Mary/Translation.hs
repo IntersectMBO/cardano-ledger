@@ -72,4 +72,4 @@ test ::
   ) =>
   f Allegra ->
   Bool
-test x = translationCompatToCBOR ([] :: [Mary]) () x
+test = translationCompatToCBOR ([] :: [Mary]) ()

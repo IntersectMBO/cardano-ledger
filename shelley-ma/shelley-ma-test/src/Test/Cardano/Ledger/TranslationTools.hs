@@ -36,7 +36,7 @@ translate ::
   f era
 translate tc fe = right . runExcept $ translateEra @era tc fe
   where
-    right = either (\x -> (error $ "translation failure: " <> show x)) id
+    right = either (\x -> error $ "translation failure: " <> show x) id
 
 -- Tests that the serializing before translation or after translating
 -- does not change the result
@@ -49,8 +49,8 @@ translationCompat ::
   f (PreviousEra era) ->
   Bool
 translationCompat tc encodeThisEra encodePreviousEra x =
-  (serializeEncoding $ encodePreviousEra x)
-    == (serializeEncoding . encodeThisEra $ translate @era tc x)
+  serializeEncoding (encodePreviousEra x)
+    == serializeEncoding (encodeThisEra $ translate @era tc x)
 
 -- Tests that the serializing before translation or after translating
 -- does not change the result

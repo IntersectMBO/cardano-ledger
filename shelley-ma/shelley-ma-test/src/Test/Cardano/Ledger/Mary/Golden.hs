@@ -148,10 +148,10 @@ goldenScaledMinDeposit =
           ( Value 1592591 $
               Map.fromList
                 [ ( pid1,
-                    (Map.fromList [(smallestName, 1)])
+                    Map.fromList [(smallestName, 1)]
                   ),
                   ( pid2,
-                    (Map.fromList [(smallestName, 1)])
+                    Map.fromList [(smallestName, 1)]
                   )
                 ]
           )
@@ -162,10 +162,10 @@ goldenScaledMinDeposit =
           ( Value 1629628 $
               Map.fromList
                 [ ( pid1,
-                    (Map.fromList [(smallName '1', 1)])
+                    Map.fromList [(smallName '1', 1)]
                   ),
                   ( pid2,
-                    (Map.fromList [(smallName '2', 1)])
+                    Map.fromList [(smallName '2', 1)]
                   )
                 ]
           )
@@ -176,13 +176,13 @@ goldenScaledMinDeposit =
           ( Value 7407400 $
               Map.fromList
                 [ ( pid1,
-                    (Map.fromList $ map ((,1) . smallName . chr) [32 .. 63])
+                    Map.fromList $ map ((,1) . smallName . chr) [32 .. 63]
                   ),
                   ( pid2,
-                    (Map.fromList $ map ((,1) . smallName . chr) [64 .. 95])
+                    Map.fromList $ map ((,1) . smallName . chr) [64 .. 95]
                   ),
                   ( pid3,
-                    (Map.fromList $ map ((,1) . smallName . chr) [96 .. 127])
+                    Map.fromList $ map ((,1) . smallName . chr) [96 .. 127]
                   )
                 ]
           )

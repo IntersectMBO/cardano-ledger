@@ -47,4 +47,4 @@ testMaryNoDelegLEDGER utxo tx env (Right expectedUTxO) = do
     expectedSt' = (def {_utxo = expectedUTxO, _fees = txFee}, def)
 testMaryNoDelegLEDGER utxo tx env predicateFailure@(Left _) = do
   let st = runShelleyBase $ applySTSTest @(LEDGER MaryTest) (TRC (env, (def {_utxo = utxo}, def), tx))
-  (ignoreAllButUTxO st) @?= predicateFailure
+  ignoreAllButUTxO st @?= predicateFailure

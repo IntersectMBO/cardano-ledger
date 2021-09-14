@@ -120,8 +120,9 @@ maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal
 --  They are trivial in the sense that they require no
 --  signature and can be submitted at any time.
 trivialPolicy :: CryptoClass.Crypto c => Int -> Timelock c
-trivialPolicy i | i == 0 = RequireAllOf (StrictSeq.fromList [])
-trivialPolicy i | otherwise = RequireAllOf (StrictSeq.fromList [trivialPolicy (i -1)])
+trivialPolicy i
+  | i == 0 = RequireAllOf (StrictSeq.fromList [])
+  | otherwise = RequireAllOf (StrictSeq.fromList [trivialPolicy (i -1)])
 
 coloredCoinMinMint :: Integer
 coloredCoinMinMint = 1000
@@ -179,7 +180,7 @@ genBlue = do
     genSingleBlue = do
       n <- genInteger coloredCoinMinMint coloredCoinMaxMint
       a <- arbitrary
-      pure $ (AssetName a, n)
+      pure (AssetName a, n)
 
 --------------------------------------------------------
 -- Yellow Coins                                       --
@@ -206,7 +207,7 @@ genYellow = do
     genSingleYellow x = do
       y <- genInteger coloredCoinMinMint coloredCoinMaxMint
       let an = AssetName . BS.pack $ "yellow" <> show x
-      pure $ (an, y)
+      pure (an, y)
 
 -- | Carefully crafted to apply in any Era where Core.Value is Value
 -- | This map allows us to lookup a minting policy by the policy ID.
@@ -268,7 +269,7 @@ addTokens proxy tooLittleLovelace pparams ts (txout :<| os) =
   let v = getField @"value" txout
    in if Val.coin v < scaledMinDeposit v (getField @"_minUTxOValue" pparams)
         then addTokens proxy (txout :<| tooLittleLovelace) pparams ts os
-        else (Just $ tooLittleLovelace >< addValToTxOut @era ts txout <| os)
+        else Just $ tooLittleLovelace >< addValToTxOut @era ts txout <| os
 addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 
 -- | This function is only good in the Mary Era
@@ -295,8 +296,10 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   let (mint', outs') = case addTokens (Proxy @era) StrictSeq.Empty pparams mint outs of
         Nothing -> (mempty, outs)
         Just os -> (mint, os)
-      ps = map (\p -> (Map.!) policyIndex p) (Set.toList $ policies mint)
-  pure $
+      ps =
+        map (\k -> Map.findWithDefault (error $ "Cannot find policy: " ++ show k) k policyIndex) $
+          Set.toList $ policies mint
+  pure
     ( TxBody
         ins
         outs'
@@ -315,12 +318,12 @@ instance Split (Value era) where
   vsplit (Value n mp) m
     | m Prelude.<= 0 = error "must split coins into positive parts"
     | otherwise =
-      ( take (fromIntegral m) ((Value (n `div` m) mp) : (repeat (Value (n `div` m) Map.empty))),
+      ( take (fromIntegral m) (Value (n `div` m) mp : repeat (Value (n `div` m) Map.empty)),
         Coin (n `rem` m)
       )
 
 instance Mock c => MinGenTxout (MaryEra c) where
-  calcEraMinUTxO _txout pp = (_minUTxOValue pp)
+  calcEraMinUTxO _txout pp = _minUTxOValue pp
   addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal

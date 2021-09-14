@@ -92,9 +92,9 @@ insertTests :: TestTree
 insertTests =
   testGroup
     "insert == insert2 == insert3"
-    [ testProperty "insert=insert2" $ \vs c -> (valueFromList vs c === valueFromList2 vs c),
-      testProperty "insert=insert3" $ \vs c -> (valueFromList vs c === valueFromList3 vs c),
-      testProperty "insert2=insert3" $ \vs c -> (valueFromList2 vs c === valueFromList3 vs c)
+    [ testProperty "insert=insert2" $ \vs c -> valueFromList vs c === valueFromList2 vs c,
+      testProperty "insert=insert3" $ \vs c -> valueFromList vs c === valueFromList3 vs c,
+      testProperty "insert2=insert3" $ \vs c -> valueFromList2 vs c === valueFromList3 vs c
     ]
 
 -- ============================================================================================
@@ -173,7 +173,7 @@ albelianTests =
 proplist :: forall v. Val v => [(Integer -> Integer -> v -> v -> v -> Bool, String)]
 proplist =
   -- (\ r s x y z -> prop , name)
-  [ (\_ _ x y _ -> x <-> y == x <+> (invert y), "defMinus"),
+  [ (\_ _ x y _ -> x <-> y == x <+> invert y, "defMinus"),
     (\_ _ x _ _ -> invert x == (-1 :: Integer) <×> x, "defInvert"),
     (\_ _ x y _ -> x <+> y == y <+> x, "commute"),
     (\_ _ x y z -> x <+> (y <+> z) == (y <+> x) <+> z, "assoc"),
@@ -186,22 +186,22 @@ proplist =
     (\_ _ x _ _ -> (1 :: Integer) <×> x == x, "scaleIdenity"),
     (\_ _ x _ _ -> (x <-> x) == zero, "minusCancel"),
     (\_ _ x y _ -> ((x <+> y) <-> y == x <+> (y <-> y)) && (x <+> (y <-> y) == x), "plusMinusAssoc"),
-    (\_ _ x _ _ -> (x <+> (invert x) == (x <-> x)) && (x <-> x == zero), "plusInvertCancel"),
+    (\_ _ x _ _ -> (x <+> invert x == (x <-> x)) && (x <-> x == zero), "plusInvertCancel"),
     (\_ _ x _ _ -> (x <-> zero) == x, "minusZero"),
     (\_ _ x _ _ -> (zero <-> x) == invert x, "zeroMinus"),
     (\_ _ x _ _ -> invert x == (-1 :: Integer) <×> x, "invertScale"),
     (\_ _ x _ _ -> (0 :: Integer) <×> x == zero, "scaleZero"),
     (\r _ _ _ _ -> r <×> zero @v == zero @v, "zeroScale"),
-    (\r s _ _ _ -> r <×> (inject @v (Coin s)) == inject @v (r <×> (Coin s)), "scaleInject"),
+    (\r s _ _ _ -> r <×> inject @v (Coin s) == inject @v (r <×> Coin s), "scaleInject"),
     (\_ _ x _ _ -> (1 :: Integer) <×> x == x, "scaleOne"),
     (\r _ x y _ -> r <×> (x <+> y) == (r <×> x) <+> (r <×> y), "scalePlus"),
     (\r s x _ _ -> r <×> (s <×> x) == (r * s) <×> x, "scaleScale"),
-    (\r _ x _ _ -> r <×> (coin x) == coin (r <×> x), "scaleCoin"),
+    (\r _ x _ _ -> r <×> coin x == coin (r <×> x), "scaleCoin"),
     (\_ _ x _ _ -> (3 :: Integer) <×> x == x <+> x <+> x, "unfoldScale"),
     (\_ _ _ _ _ -> coin (zero @v) == zero, "coinZero"),
     (\_ _ x y _ -> coin (x <+> y) == coin x <+> coin y, "coinPlus"),
-    (\r _ x _ _ -> coin (r <×> x) == r <×> (coin x), "coinScale"),
-    (\r _ _ _ _ -> coin @v (inject @v (Coin r)) == (Coin r), "coinInject"),
+    (\r _ x _ _ -> coin (r <×> x) == r <×> coin x, "coinScale"),
+    (\r _ _ _ _ -> coin @v (inject @v (Coin r)) == Coin r, "coinInject"),
     (\_ _ _ _ _ -> pointwise (==) (zero @v) zero, "pointwise zero")
   ]
 
@@ -299,7 +299,7 @@ compactRoundTrip = forAll gen $ \v ->
         pid <- QC.oneof pids
         an <- QC.oneof ans
         q <- QC.choose (0, 100)
-        pure ((pid, an, q))
+        pure (pid, an, q)
       q <- QC.choose (0, 100)
       pure (valueFromList triples q)
 

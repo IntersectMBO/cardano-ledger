@@ -1,13 +1,10 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -87,10 +84,10 @@ sizedTimelock ::
   CC.Crypto crypto =>
   Int ->
   Gen (Timelock crypto)
-sizedTimelock 0 = (MA.RequireSignature . KeyHash . mkDummyHash) <$> arbitrary
+sizedTimelock 0 = MA.RequireSignature . KeyHash . mkDummyHash <$> arbitrary
 sizedTimelock n =
   oneof
-    [ (MA.RequireSignature . KeyHash . mkDummyHash) <$> arbitrary,
+    [ MA.RequireSignature . KeyHash . mkDummyHash <$> arbitrary,
       MA.RequireAllOf
         <$> ( fromList
                 <$> resize
