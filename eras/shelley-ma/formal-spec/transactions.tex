@@ -83,19 +83,16 @@ $\TxOut$ now contains an element of $\ValMonoid$ (which
 could be a $\Coin$, $\Value$, or another type, see Section \ref{sec:coin-ma}),
 rather than only $\Coin$.
 
-In the Allegra era, the $\ValMonoid$ is $\Coin$, so there is no
-multi-asset support in the UTxO or the transactions. In the Mary era, it
-is changed to $\Value$ in order to add multi-asset support.
-
 \subsection*{New Script Type}
 
 The multi-signature scripting language has been renamed to $\ScriptNI$ and
 the type $\Script$ has been extended to include a new scripting language,
-$\Timelock$. We specify the evaluation
-function for the new script type in section~\ref{sec:timelock-lang}.
+$\Timelock$, that is backwards compatible with the multi signature scripting
+language, see Section~\ref{sec:chain}. We specify the evaluation
+function for the new script type in Section~\ref{sec:timelock-lang}.
 
 The new type of scripts can be used for all the same purposes, which means, for this
-spec, as
+specification, as
 
 \begin{itemize}
   \item output-locking scripts,

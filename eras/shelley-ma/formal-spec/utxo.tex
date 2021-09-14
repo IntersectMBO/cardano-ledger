@@ -7,7 +7,7 @@
   \emph{Type Definition}
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{mest} & \MemoryEstimate & \Integer
+      \var{mest} & \MemoryEstimate & \N
     \end{array}
   \end{equation*}
   %
@@ -32,6 +32,9 @@
     \nextdef
     & \fun{ubalance} \in \UTxO \to \hldiff{\ValMonoid} \\
     & \fun{ubalance} ~ utxo = \hldiff{\sum_{\wcard\mapsto\var{u}\in~\var{utxo}} \fun{getValue}~\var{u}}
+    \nextdef
+    & \fun{adaOnly} ~\in~ \mathsf{ValType} \to \Bool \\
+    & \fun{adaOnly}~v = v \in \range \fun{inject}
     \nextdef
     & \fun{scaledMinDeposit} \in \ValMonoid \to \Coin \to \Coin \\
     & \fun{scaledMinDeposit}~\var{v}~\var{mv} ~=~
@@ -89,7 +92,7 @@ UTxO transition system with multi-assets:
 \subsection*{Minting and the Preservation of Value}
 What does it mean to preserve the value of non-Ada assets, since they
 are put in and taken out of circulation by the users themselves? This
-question becomes relevant when we pick a $\ValMonoid$ that can represent
+question becomes relevant when we pick a Token algebra that can represent
 assets other than Ada.
 
 If a transaction $\var{tx}$ has an empty $\fun{mint}$ field, the preservation
@@ -141,7 +144,7 @@ of this rule as compared to the original Shelley UTXO rule:
     Note that this check implies that no quantity of any asset appearing in that output can be
     negative.
 
-    In the case that $\ValMonoid$ is set to $\Coin$, this constraint exactly mimics
+    In the case that $\ValMonoid = \Coin$, this constraint exactly mimics
     the $\fun{minUTxOValue}$ constraint in Shelley, see \ref{sec:min-value}.
 
     \item The serialized size of the $\ValMonoid$ element in each output is no greater than $\mathsf{MaxValSize}$
@@ -149,7 +152,7 @@ of this rule as compared to the original Shelley UTXO rule:
     This ensures that each individual output is never so large that any transaction carrying all the
     witness data (eg. large scripts, etc.) necessary for spending such an output will exceed the transaction size limit.
     See Section~\ref{sec:value-size} for details. Note that this precondition can be assumed to
-    hold for the $\ValMonoid$ $\Coin$, as it is a single integer.
+    hold for the Token algebra $\Coin$, as it is a single integer.
 \end{itemize}
 
 Note that updating the $\UTxO$ with the inputs and the outputs of the transaction
@@ -184,8 +187,8 @@ $\Coin$.
       \\
       \hldiff{\fun{coin}~(\fun{mint}~txb)~=~0} \\
       ~\\
-      \hldiff{\forall txout \in \txouts{txb},~\fun{getValue}~txout \geq} \\
-      \hldiff{\fun{inject}~(\fun{scaledMinDeposit}~v~(\fun{minUTxOValue}~pp))} \\~
+      \hldiff{\forall txout \in \txouts{txb},} \\
+      \hldiff{\fun{getValue}~txout \geq \fun{inject}~(\fun{scaledMinDeposit}~v~(\fun{minUTxOValue}~pp))} \\~
       \\
       \hldiff{\forall txout \in \txouts{txb},} \\
       \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~\mathsf{MaxValSize}} \\~\\

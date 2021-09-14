@@ -1,105 +1,63 @@
-\section{Coin and Multi-Asset Bundles}
+\section{Coin and Multi-Asset Token algebras}
 \label{sec:coin-ma}
 
-In this chapter we introduce an algebraic structure, $\ValMonoid$,
-which we define to be a partially ordered abelian group with several additional functions.
-The group structure and additional functions represent the
-features required in order to treat elements as \emph{assets} (or bundles thereof),
-which includes the ability to do certain accounting operations on them (addition, etc.),
-as well as some other operations (see below).
-These operations are used to describe the ShelleyMA transaction processing rules
-without fixing a concrete underlying $\ValMonoid$.
+In this chapter we introduce the concept of a \emph{Token algebra},
+which is an abstraction used to generalize this specification to two
+different eras depending on the Token algebra chosen.
 
-In order to give a concrete ledger specification, a specific type
-endowed with $\ValMonoid$ structure must be used in its place.
-Depending on the concrete type selected for this purpose,
-we obtain distinct ledgers. In particular, we get
-
-\begin{itemize}
-  \item the Allegra ledger rules with $\Coin$, and
-  \item the Mary ledger rules with $\Value$ (a type that represents a heterogeneous collection of assets via
-  single element)
-\end{itemize}
-
-Below we give the definitions of all the functions that must be defined on
-$\Coin$ and $\Value$ in order for them to have the structure of a $\ValMonoid$.
-In Section \ref{sec:other-valmonoids} we give several other types which we can meaningfully
-support the definition of the required functions (addition, size, etc.), including
-an optimized representation that more accurately represents the ledger implementation
-of the multi-asset type.
-These types are convertible to and from the $\Value$ type, and appear in other
-parts of the system as a multi-asset representation which is more suitable in particular
-usecases.
-
-\subsection{$\ValMonoid$}
-
-Figure \ref{fig:ValMonoid} gives names and types of functions which
-make up the $\ValMonoid$ structure. The functions $\fun{zero}$ and $(+)$ are
-part of the abelian group structure, but we include them here to give the
-complete $\ValMonoid$ structure. The partial order is given by $\fun{pointwise}~\leq$.
-
-Note that we use overloaded notation
-for partial order comparisons of $\ValMonoid$ elements elsewhere in the spec. That is,
-we use the comparison operators $=,~<,~>,~\leq,~\geq$ in place the following pointwise comparisons, respectively
-
-\[ \fun{pointwise}~(=),~\fun{pointwise}~(<),~\fun{pointwise}~(>),~\fun{pointwise}~(\leq),~\fun{pointwise}~(\geq) \]
+\begin{definition}[Token algebra]
+  A \emph{Token algebra} is a partially ordered commutative monoid
+  $T$, written additively, (i.e. a commutative monoid together with a
+  partial order, such that addition is monotonic in both variables)
+  together with the functions and properties as described in Figure
+  \ref{fig:TokenAlgebra}.
+\end{definition}
 
 %%
 %% Figure ValMonoid and its Functions
 %%
 \begin{figure}[htb]
+  %
+  \emph{Functions}
+  %
   \begin{align*}
-      & \mathsf{ValType} ~\in~ \mathsf{Type}  \\
-      & \text{A type}
-      \nextdef
-      %
-      & \fun{zero} ~\in~ \mathsf{ValType} \\
-      & \text{Additive identity of $\mathsf{ValType}$}
-      \nextdef
-      %
-      & (+) ~\in~ \mathsf{ValType} \to \mathsf{ValType} \to \mathsf{ValType}\\
-      & \text{Addition on $\mathsf{ValType}$}
-      \nextdef
-      %
-      & (*) ~\in~ \mathsf{Integer} \to \mathsf{ValType} \to \mathsf{ValType}\\
-      & \text{Scale $\mathsf{ValType}$ value by integral constant}
-      \nextdef
-      %
-      & \fun{coin} ~\in~ \mathsf{ValType} \to \Coin\\
+      & \fun{coin} ~\in~ T \to \Coin\\
       & \text{Return the Ada contained inside the $\mathsf{ValType}$ element}
       \nextdef
       %
-      & \fun{inject} ~\in~ \Coin \to \mathsf{ValType}\\
+      & \fun{inject} ~\in~ \Coin \to T\\
       & \text{Create a $\mathsf{ValType}$ element containing only this amount of Ada}
       \nextdef
       %
-      & \fun{adaOnly} ~\in~ \mathsf{ValType} \to \Bool \\
-      & \fun{adaOnly} =
-        \begin{cases}
-          \True & \fun{inject} \circ \fun{coin}~ = ~\fun{id}_{\mathsf{ValType}} \\
-          \False & \text{otherwise}
-        \end{cases} \\
-      & \text{Check if a given $\mathsf{ValType}$ element contains only Ada}
+      & \fun{policies} ~\in~ T \to \powerset{\PolicyID} \\
+      & \text{The set of policy IDs required for minting}
       \nextdef
       %
-      & \fun{size} ~\in~ \mathsf{ValType} \to \MemoryEstimate\\
+      & \fun{size} ~\in~ T \to \MemoryEstimate\\
       & \text{Return the size, in words, of a $\mathsf{ValType}$ element}
-      \nextdef
-      %
-      & \fun{pointwise} ~\in~ (\Integer \to \Integer \to \Bool) \to (\mathsf{ValType} \to \mathsf{ValType} \to \Bool)\\
-      & \text{Pointwise comparison of two $\mathsf{ValType}$ elements}
   \end{align*}
-  \caption{The $\ValMonoid$ Structure}
-  \label{fig:ValMonoid}
+  %
+  \emph{Properties}
+  %
+  \begin{align*}
+      & \fun{coin} \circ \fun{inject} = \fun{id}_{\Coin}
+  \end{align*}
+  \caption{Additional functions and properties required for a Token algebra}
+  \label{fig:TokenAlgebra}
 \end{figure}
 
-\subsection{$\Coin$ in the Allegra era}
+A Token algebra is precisely the structure required to generalize the
+$\Coin$ type of the Shelley specification in transaction outputs for
+this ledger. We can then describe the ShelleyMA
+transaction processing rules without fixing a concrete Token algebra.
 
-For the Allegra era, we require the $\ValMonoid$ asset representation to support
-only a single asset, Ada, represented via $\Coin$. This section defines the
-$\ValMonoid$ functions for the $\Coin$ type, see Figure
-\ref{fig:coin}. Addition and multiplication are defined in the usual way
-(as on $\Integer$).
+Depending on the Token algebra chosen, we obtain distinct ledgers. In
+particular, we get
+
+\begin{itemize}
+  \item the Allegra ledger rules with $\Coin$, and
+  \item the Mary ledger rules with $\Value$ (defined below).
+\end{itemize}
 
 When multi-asset support on the ledger is introduced, Ada ($\Coin$) will still be
 the most common type of asset on the ledger, as the ledger rules enforce that
@@ -107,107 +65,92 @@ some quantity of it (specified via
 the $\fun{coinsPerUTxOWord}$ protocol parameter) must
 be contained in every UTxO on the ledger.
 It is the only
-type of asset that can be used for all non-UTxO ledger accounting, including deposits,
+type of asset used for all non-UTxO ledger accounting, including deposits,
 fees, rewards, treasury, and the proof of stake protocol. For this reason, not
 all occurrences of $\Coin$ inside a transaction or in the ledger state can or
-should be replaced with the abstract $\ValMonoid$.
+should be replaced by the chosen Token algebra.
 
-For the Allegra version of the function $\fun{policies}$, which operates on $\Coin$ as the
-$\ValMonoid$. No policies are associated with $\Coin$, since minting of Ada is not allowed.
+Below we give the definitions of all the functions that must be defined on
+$\Coin$ and $\Value$ in order for them to have the structure of a Token algebra.
+In Section \ref{sec:other-valmonoids} we give several other types which we can meaningfully
+support the definition of the required functions (addition, size, etc.), including
+an optimized representation that more accurately represents the implementation
+used in the Haskell implementation of the multi-asset type.
+These types are convertible to and from the $\Value$ type, and appear in other
+parts of the system as a multi-asset representation which is more suitable in particular
+use cases.
+
+\subsection{$\Coin$ as a Token algebra}
+
+This section defines the Token algebra structure for the $\Coin$ type,
+see Figure \ref{fig:coin}. The structure of a partially ordered monoid
+is inherited from the (additive) integers.
+
+For $\Coin$, no policies are associated with $\Coin$, since minting of Ada is not allowed.
 
 %%
 %% Figure Coin Functions
 %%
 \begin{figure}[htb]
   \begin{align*}
-      & \fun{policies} ~=~ \Nothing
-      \nextdef
-      & \fun{zero} ~=~ 0
+      & \fun{coin} = \fun{id}_{\Coin}
       \nextdef
       %
-      & \fun{coin} ~=~ \fun{id}_{\Coin}
+      & \fun{inject} = \fun{id}_{\Coin}
       \nextdef
       %
-      & \fun{inject} ~=~ \fun{id}_{\Coin}
+      & \fun{policies}~v = \emptyset
       \nextdef
       %
-      & \fun{size}~\wcard ~=~ 0
-      \nextdef
-      %
-      & \fun{pointwise} ~=~ \fun{id}_{(\Integer \to \Integer \to \Bool)}
+      & \fun{size}~v = 0
   \end{align*}
-  \caption{$\ValMonoid$ structure with $\Coin$}
+  \caption{The Token algebra structure of $\Coin$}
   \label{fig:coin}
 \end{figure}
 
 
-
-\noindent \textbf{Relation between $\fun{inject}$ and $\fun{coin}$.}
-When composed as
-
-\[\fun{coin} \circ \fun{inject} = \fun{id}_{\Coin}\]
-
-these functions give the identity on $\Coin$, but composed in the opposite order as
-
-\[\fun{inject} \circ \fun{coin}\]
-
-they return an element of $\ValMonoid$ containing only the Ada contained in the original $\ValMonoid$ element.
-
-\subsection{Multi-assets and $\Value$ in the Mary Era}
+\subsection{Multi-assets and the Token algebra $\Value$}
 
 Elements of $\Value$ represent heterogeneous collections of assets,
-both user-defined, and Ada. The Mary era ledger fixes the underlying $\ValMonoid$ to
-$\Value$ in order to introduce multi-asset support.
-This section describes the type $\Value$, the operations required on
-it, its relation to $\Coin$. It also as gives the definitions of the
-$\ValMonoid$ functions for $\Value$.
-
-Figure \ref{fig:defs:value} introduces the basic types that make up the $\Value$ type,
-as well as defining the functions required to for $\Value$ to be a $\ValMonoid$.
+both user-defined and Ada. The Mary era ledger uses $\Value$ as its Token algebra
+in order to support multi-assets.
+$\Value$ and its Token algebra structure are given in Figure \ref{fig:defs:value}.
 
 \begin{figure*}[t!]
   \emph{Derived types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{aname} & ~\AssetName & \mathsf{ByteString} \\
+      \var{aname} & \AssetName & \mathsf{ByteString} \\
       \var{pid} & \PolicyID & \ScriptHash \\
-      \var{adaID} & ~\AdaIDType & \{~\mathsf{AdaID}~\} \\
+      \var{adaID} & \AdaIDType & \{~\mathsf{AdaID}~\} \\
       \var{aid} & \AssetID & \AdaIDType \uniondistinct (\PolicyID \times \AssetName) \\
       \var{quan} & \Quantity & \Z \\
       \var{v}, \var{w} & \Value & \AssetID \mapsto_0 \Quantity
     \end{array}
   \end{equation*}
   %
-  \emph{$\ValMonoid$ and auxiliary functions for $\Value$}
+  \emph{Token algebra structure of $\Value$}
   %
   \begin{align*}
-    & \fun{policies} ~\in~ \Value \to \powerset{\PolicyID} \\
-    & \fun{policies}~v ~=~ \{~\var{pid}~\vert~(\var{pid,~\wcard})~\in~\supp{~v}~\}
+    & \fun{coin}~\var{v} = \var{v}~\mathsf{AdaID}
     \nextdef
     %
-    & \fun{anames} ~\in~ \Value \to \powerset{\AssetName} \\
-    & \fun{anames}~v ~=~ \{~\var{aname}~\vert~(\var{\wcard,~aname})~\in~\supp{~v}~\}
+    & \fun{inject}~c  = \mathsf{AdaID}~\mapsto_0~\var{c}
     \nextdef
     %
-    & \fun{zero} ~=~ \Nothing
-    \nextdef
-    %
-    & \fun{coin}~\var{v} ~=~ \var{v}~\mathsf{AdaID}
-    \nextdef
-    %
-    & \fun{inject}~c  ~=~ \mathsf{AdaID}~\mapsto_0~\var{c}
+    & \fun{policies}~v = \{~\var{pid}~\vert~(\var{pid,~\wcard}) \in \supp v~\}
     \nextdef
     %
     & \fun{size} ~~~ \text{see Section \ref{sec:value-size}}
   \end{align*}
-  \caption{$\ValMonoid$ Function Definitions and Auxiliary Functions for Value}
+  \caption{$\Value$ and its Token algebra structure}
   \label{fig:defs:value}
 \end{figure*}
 
 \begin{itemize}
   \item $\PolicyID$ identifies monetary policies. A policy ID $\var{pid}$ is associated with a script
-    $s$ such that $\fun{hashScript}~s~=~pid$. When a transaction attempts to create or destroy assets
+    $s$ such that $\fun{hashScript}~s=pid$. When a transaction attempts to create or destroy assets
     that fall under the policy ID $\var{pid}$,
     $s$ verifies that the transaction
     respects the restrictions that are imposed by the monetary policy.
@@ -217,7 +160,7 @@ as well as defining the functions required to for $\Value$ to be a $\ValMonoid$.
     Each $aname$ identifies a particular kind of asset out of all the assets under the
     $\var{pid}$ policy (but not necessarily among assets under other policies).
     The maximum length of this
-    byte string is 32 bytes (this is not explicitly enforced in this spec).
+    byte string is 32 bytes (this is not explicitly enforced in this specification).
 
   \item $\AssetID$ is either $\mathsf{AdaID}$ or a pair of a policy ID and an asset name.
   It is a unique and permanent
@@ -244,15 +187,23 @@ as well as defining the functions required to for $\Value$ to be a $\ValMonoid$.
     the quantity of assets with that assed ID contained in $v$ is $v~\var{aid}$.
     Elements of $\Value$ are sometimes also referred to as
     \emph{asset bundles}.
-
-  \item $\fun{inject}$ takes a $\Coin$ amount and returns a $\Value$ containing
-  that amount of Ada, ie. assets associated with the $\mathsf{AdaID}$ asset ID.
-
-  \item $\fun{coin}$ returns the amount of Ada contained in an element of $\Value$ (ie.
-  the amount of assets associated with the $\mathsf{AdaID}$ asset ID).
 \end{itemize}
 
-\noindent \textbf{Special Ada representation.}
+To give $\Value$ the structure of a partially ordered monoid, we define the
+required operations
+pointwise, in accordance with the usual definitions of these operations on
+finitely supported maps. See Figure \ref{fig:pointwise}.
+
+\begin{figure*}[t!]
+  \begin{align*}
+    v + w    &= \{~ aid \mapsto v~\var{aid} + w~\var{aid} ~\vert~ \var{aid} \in \fun{dom}~v \cup \fun{dom}~w ~\} \\
+    v \leq w &\Leftrightarrow \forall~\var{aid} \in \AssetID, v~\var{aid} \leq w~\var{aid}
+  \end{align*}
+  \caption{Pointwise operations on Value}
+  \label{fig:pointwise}
+\end{figure*}
+
+\subsection{Special Ada representation}
 Although all assets are native on the Cardano ledger (ie. the accounting and
 transfer logic for them is done directly by the ledger), Ada is still treated in a
 special way by the ledger rules, and is the most common type of asset on the ledger.
@@ -272,26 +223,11 @@ Additionally, not giving Ada an actual policy ID
 (that could have a hash-associated policy) eliminates the possibility
 certain cryptographic attacks.
 We sometimes refer to Ada as the primary or principal currency. Ada does not,
-for the purposes of the Mary ledger spec, have a $\PolicyID$ or an $\AssetName$.
+for the purposes of the Mary ledger specification, have a $\PolicyID$ or an $\AssetName$.
 
-\subsection{Pointwise Value Operations and Partial Order}
+\subsection{Fixing a Token algebra}
 
-We have a number of operations on $\Value$ left to define for it to have
-$\ValMonoid$ structure. These are binary relations, addition, and
-scalar multiplication. These are all done
-pointwise in accordance with the usual definitions of these operations on
-finitely supported maps, see Figure \ref{fig:pointwise}.
-
-\begin{figure*}[t!]
-  \begin{align*}
-    & v~+~w =& \{~ aid~\mapsto_0 ~((v~\var{aid})~*~(w~\var{aid})) ~\vert~ \var{aid} \in (\fun{dom}~v)\cup(\fun{dom}~w) ~\}
-    \nextdef
-    %
-    & q~*~v =& \{~ aid~\mapsto_0 ~(q~*~(v~\var{aid})) ~\vert~ \var{aid} \in \fun{dom}~v~\}
-    \nextdef
-    %
-    & \fun{pointwise}~R~v~w =& \forall~\var{aid} ~\in ~(\fun{dom}~v~\cup~\fun{dom}~w),~R~(v~\var{aid})~(w~\var{aid})
-  \end{align*}
-  \caption{Pointwise operations on Value}
-  \label{fig:pointwise}
-\end{figure*}
+For the remainder of this specification, let $\ValMonoid$ be an
+arbitrary but fixed Token algebra. As described above, choosing
+$\Coin$ results in the Allegra ledger, and choosing $\Value$ results
+in the Mary ledger.
