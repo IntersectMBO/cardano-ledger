@@ -1,9 +1,9 @@
-\section{Other $\ValMonoid$ Examples}
+\section{Other Token algebra Examples}
 \label{sec:other-valmonoids}
 
-We give examples here of $\ValMonoid$-structured types
-that are types similar to $\Value$ asset bundles in spirit, and are used elsewhere
-in the system (eg. the wallet).
+We give examples here of Token algebras
+that are similar to $\Value$ asset bundles in spirit, and are used elsewhere
+in the system (eg. the wallet) or are otherwise relevant.
 
 \subsection{No Special Case for Ada}
 
@@ -14,7 +14,7 @@ While it does not define any special cases of definitions of its multi-assets at
 it does not prohibit the possibility of customizing the ledger rules to introduce
 some special treatment of any specific asset if needed.
 
-In Figure \ref{fig:no-special-ada}, we give the $\ValMonoid$ functions for
+In Figure \ref{fig:no-special-ada}, we give the Token algebra structure for
 the $\Value'$ type, which has no special case for Ada. That is, the policy ID and
 asset name for it are chosen to be of the corresponding types,
 $\PolicyID$ and $\AssetName$. This means
@@ -23,7 +23,7 @@ Such a policy must be specified in
 order to implement this version of asset bundles, but we leave it abstract here.
 Ada could potentially have several asset names scoped under this policy, although
 practically this would not line up with the current ledger conception of Ada.
-We call Ada's asset name $\mathsf{AdaName}$, and leave it unspecified here. \\~\\
+We call Ada's asset name $\mathsf{AdaName}$, and leave it unspecified here.
 
 \begin{figure*}[t!]
   \emph{Constants}
@@ -43,24 +43,21 @@ We call Ada's asset name $\mathsf{AdaName}$, and leave it unspecified here. \\~\
     \end{array}
   \end{equation*}
   %
-  \emph{$\ValMonoid$ and auxiliary functions for $\Value'$}
+  \emph{The Token algebra structure of $\Value'$}
   %
   \begin{align*}
-    & \fun{policies}~v ~=~ \supp{~v}
+    & \fun{coin}~v = v~\mathsf{AdaPolicyID}~\mathsf{AdaName}
     \nextdef
     %
-    & \fun{anames}~v ~=~ \bigcup_{pid \in\fun{policies}{~v}} \supp{(v~pid)}
+    & \fun{inject}~c  = \mathsf{AdaPolicyID} \mapsto_0 (\mathsf{AdaName} \mapsto_0 c)
     \nextdef
     %
-    & \fun{zero} ~=~ \Nothing
+    & \fun{policies}~v = \supp v
     \nextdef
     %
-    & \fun{coin}~v ~=~ v~\mathsf{AdaPolicyID}~\mathsf{AdaName}
-    \nextdef
-    %
-    & \fun{inject}~c  ~=~ \mathsf{AdaPolicyID}~\mapsto_0~(\mathsf{AdaName}~\mapsto_0~c)
+    & \fun{size} ~~~ \text{see Section \ref{sec:value-size}}
   \end{align*}
-  \caption{$\ValMonoid$ Function Definitions and Auxiliary Functions for $\Value'$}
+  \caption{$\Value'$ and its Token algebra structure}
   \label{fig:no-special-ada}
 \end{figure*}
 
@@ -69,16 +66,15 @@ We call Ada's asset name $\mathsf{AdaName}$, and leave it unspecified here. \\~\
 \label{sec:coin-value}
 
 The $\Value_C$ type and the associated functions, shown in Figure \ref{fig:special-ada},
-give a $\ValMonoid$ which is isomorphic to the $\Value$ we defined in
+give a Token algebra which is isomorphic to the $\Value$ we defined in
 Section \ref{sec:coin-ma}. Both constructs
 specify all non-Ada assets via the unique identifier $(\PolicyID \times \AssetName)$, and
 have a special case for Ada. Neither asset bundle definition
 admits a minting policy or an asset name for Ada.
 
-The isomorphism between the two types is defined in Figure \ref{fig:iso-v}.
-All $\ValMonoid$ operations on the $\Value$ and $\Value_C$ types commute with this
-isomorphism. $\Value$ is a user-facing representation, whereas $\Value_C$
-is an optimized internal representation.
+The isomorphism between the two types is given in Figure \ref{fig:iso-v}.
+All Token algebra operations on the $\Value$ and $\Value_C$ types commute with this
+isomorphism.
 
 \begin{figure*}[t!]
   \emph{Derived types}
@@ -90,50 +86,44 @@ is an optimized internal representation.
     \end{array}
   \end{equation*}
   %
-  \emph{$\ValMonoid$ and auxiliary functions for $\Value_C$}
+  \emph{The Token algebra structure of $\Value_C$}
   %
   \begin{align*}
-    & \fun{policies}~(c,~v) ~=~ \supp{~v}
+    & \fun{coin}~(\var{c}, \wcard) = \var{c}
     \nextdef
     %
-    & \fun{anames}~(c, ~v) ~=~ \bigcup_{pid \in\fun{policies}{~v}} \supp{(v~pid)}
+    & \fun{inject}~c  = (c, \Nothing)
     \nextdef
     %
-    & \fun{zero} ~=~ (0, \Nothing)
-    \nextdef
-    %
-    & \fun{coin}~(\var{c}, \wcard) ~=~ \var{c}
-    \nextdef
-    %
-    & \fun{inject}~c  ~=~ (c, \Nothing)
+    & \fun{policies}~(c,~v) = \supp{~v}
     \nextdef
     %
     & \fun{size} ~~~ \text{see Section \ref{sec:value-size}}
   \end{align*}
-  \caption{$\ValMonoid$ Function Definitions and Auxiliary Functions for $\Value_C$}
+  \caption{$\Value_C$ and its Token algebra structure}
   \label{fig:special-ada}
 \end{figure*}
 
 \begin{figure*}[t!]
   \begin{align*}
-    & \fun{iso_v} ~\in~ \Value \to \Value_C \\
-    & \fun{iso_v}~v ~=~(\var{v}~\mathsf{AdaID},~\{~\var{pid}~\mapsto_0~(\var{aname}~\mapsto_0~\var{q})~
-    \vert~(\var{pid},~\var{aname})~\in~\fun{dom}~{v}~\})
+    & \fun{iso_v} \in \Value \to \Value_C \\
+    & \fun{iso_v}~v =(\var{v}~\mathsf{AdaID},~\{~\var{pid}\mapsto_0(\var{aname}\mapsto_0\var{q})~
+    \vert~(\var{pid},~\var{aname})\in\fun{dom}~{v}~\})
     \nextdef
     %
-    & \fun{iso}_{vc} ~\in~ \Value_C \to \Value \\
-    & \fun{iso}_{vc}~(c, ~v) ~=~ \{~\mathsf{AdaID}~\mapsto_0~c~\}~\cup~
-     \{~(\var{pid},~\var{aname})~\mapsto_0~q~\vert~\var{pid}~\mapsto_0~(\var{aname}~\mapsto_0~q)~ \in~\var{v}~\}
+    & \fun{iso}_{vc} \in \Value_C \to \Value \\
+    & \fun{iso}_{vc}~(c, ~v) = \{~\mathsf{AdaID}\mapsto_0c~\}\cup
+     \{~(\var{pid},~\var{aname})\mapsto_0q~\vert~\var{pid}\mapsto_0(\var{aname}\mapsto_0q)~ \in \var{v}~\}
   \end{align*}
   \caption{Isomorphism maps between the $\Value$ and $\Value_C$ types}
   \label{fig:iso-v}
 \end{figure*}
 
-\noindent \textbf{$\mathsf{CompactValue}$ Representation.}
-The type $\mathsf{CompactValue}$ is a compressed representation of $\Value_C$.
-We do not give the implementation details of this compression here.
-This representation of multi-assets is isomorphic to $\Value$ and $\Value_C$.
-It is used in the implementation to save memory, but the all operations on
-this $\ValMonoid$ type are are defined directly in terms of $\Value_C$ operations,
+\subsection{$\mathsf{CompactValue}$ representation}
+The type $\mathsf{CompactValue}$ is a compressed representation of $\Value_C$,
+which we do not give the implementation details of this compression here.
+This representation of multi-assets is isomorphic to $\Value$ and $\Value_C$
+and is used in the implementation to save memory. Its Token algebra structure
+is defined via a bijection between it and $\Value_C$,
 so that they first require de-compression to be performed, as well as compression
-as the final step in the cases the output type contains $\Value_C$.
+as the final step in the cases the output type contains $\mathsf{CompactValue}$.
