@@ -12,13 +12,15 @@ module Test.Cardano.Ledger.Properties where
 
 import Cardano.Ledger.Alonzo (AlonzoEra, Value)
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
-import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
+import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW)
-import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Alonzo.Scripts hiding (alwaysFails, alwaysSucceeds)
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
+    ScriptPurpose (..),
     ValidatedTx (..),
     hashScriptIntegrity,
     minfee,
@@ -84,16 +86,19 @@ import qualified Data.Foldable as F
 import Data.Functor
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (catMaybes, fromJust)
+import Data.Maybe (catMaybes, fromJust, mapMaybe)
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as Seq
+import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack
 import Numeric.Natural
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.QuickCheck
@@ -176,7 +181,7 @@ genExUnits n = do
     genUpTo maxVal (!totalLeft, !acc) _
       | totalLeft == 0 = pure (0, 0 : acc)
       | otherwise = do
-        x <- min totalLeft . round . (% un) <$> choose (0, maxVal)
+        x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
         pure (totalLeft - x, x : acc)
     genSequenceSum maxVal
       | maxVal == 0 = pure $ replicate n 0
@@ -220,7 +225,7 @@ genCredTimelockKeyWit mTag = mkWitVKey
             TimelockScript timelock -> do
               timelockWit <- mkTimelockWit timelock
               pure $ \bodyHash -> timelockWit bodyHash <> scriptWit
-            PlutusScript _ps -> pure $ const scriptWit
+            PlutusScript _ _ps -> pure $ const scriptWit
     mkTimelockWit =
       \case
         RequireSignature keyHash -> mkWitVKey (KeyHashObj keyHash)
@@ -299,10 +304,11 @@ genPlutusScript tag = do
         | otherwise = 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
+  language <- lift $ elements (Set.toList nonNativeLanguages)
   script <-
     if isValid
-      then alwaysSucceeds . (+ numArgs) . getNonNegative <$> lift arbitrary
-      else pure $ alwaysFails numArgs
+      then alwaysSucceeds language . (+ numArgs) . getNonNegative <$> lift arbitrary
+      else pure $ alwaysFails language numArgs
   let scriptHash = hashScript @A script
   modify $ \ts@GenState {gsPlutusScripts} ->
     ts {gsPlutusScripts = Map.insert (scriptHash, tag) (IsValid isValid, script) gsPlutusScripts}
@@ -433,7 +439,7 @@ genTxOut val = do
       KeyHashObj _ -> pure SNothing
       ScriptHashObj scriptHash ->
         lookupScript scriptHash (Just Spend) >>= \case
-          Just (PlutusScript _) -> SJust . fst <$> genDatumWithHash
+          Just (PlutusScript _ _) -> SJust . fst <$> genDatumWithHash
           _ -> pure SNothing
   pure $ TxOut addr val mDatumHash
 
@@ -622,6 +628,20 @@ genWithdrawals = do
   rewards <- genRewards
   pure $ Wdrl $ Map.fromList $ map (first (RewardAcnt networkId)) $ Map.toList rewards
 
+languagesUsed ::
+  ValidatedTx A ->
+  UTxO A ->
+  Map (ScriptHash C_Crypto, Tag) (IsValid, Script A) ->
+  Set Language
+languagesUsed tx utxo plutusScripts =
+  Set.fromList [lang | (_, PlutusScript lang _) <- mapMaybe lookupPlutus needed]
+  where
+    needed = scriptsNeeded utxo tx
+    lookupPlutus ((Spending _), sh) = Map.lookup (sh, Spend) plutusScripts
+    lookupPlutus ((Rewarding _), sh) = Map.lookup (sh, Rewrd) plutusScripts
+    lookupPlutus ((Certifying _), sh) = Map.lookup (sh, Cert) plutusScripts
+    lookupPlutus ((Minting _), sh) = Map.lookup (sh, Mint) plutusScripts
+
 genValidatedTx :: GenRS (UTxO A, ValidatedTx A)
 genValidatedTx = do
   GenEnv {geValidityInterval, gePParams} <- ask
@@ -680,15 +700,7 @@ genValidatedTx = do
   networkId <- lift $ elements [SNothing, SJust Testnet]
   -- 5. Estimate the fee
   let redeemerDatumWits = mconcat (redeemerWitsList ++ datumWitsList)
-      mIntegrityHash =
-        hashScriptIntegrity
-          gePParams
-          ( if null redeemerWitsList
-              then Set.empty
-              else Set.singleton PlutusV1
-          )
-          (txrdmrs redeemerDatumWits)
-          (txdats redeemerDatumWits)
+      bogusIntegrityHash = hashScriptIntegrity gePParams mempty (Redeemers mempty) mempty
       txBodyNoFee =
         TxBody
           { inputs = Map.keysSet toSpendNoCollateral,
@@ -701,7 +713,7 @@ genValidatedTx = do
             txUpdates = SNothing,
             reqSignerHashes = mempty,
             mint = mempty,
-            scriptIntegrityHash = mIntegrityHash,
+            scriptIntegrityHash = bogusIntegrityHash,
             adHash = SNothing,
             txnetworkid = networkId
           }
@@ -723,7 +735,19 @@ genValidatedTx = do
   (utxo, collMap) <- genCollateralUTxO collateralAddresses fee utxoFeeAdjusted
   collateralKeyWitsMakers <- mapM (genTxOutTimelockKeyWitness Nothing) $ Map.elems collMap
   -- 8. Construct the correct Tx with valid fee and collaterals
-  let txBody = txBodyNoFee {txfee = fee, collateral = Map.keysSet collMap}
+  allPlutusScripts <- gsPlutusScripts <$> get
+  let mIntegrityHash =
+        hashScriptIntegrity
+          gePParams
+          (languagesUsed bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts)
+          (txrdmrs redeemerDatumWits)
+          (txdats redeemerDatumWits)
+      txBody =
+        txBodyNoFee
+          { txfee = fee,
+            collateral = Map.keysSet collMap,
+            scriptIntegrityHash = mIntegrityHash
+          }
       txBodyHash = hashAnnotated txBody
       wits =
         redeemerDatumWits
@@ -755,7 +779,11 @@ genTxAndLEDGERState = do
         def
           { _minfeeA = minfeeA,
             _minfeeB = minfeeB,
-            _costmdls = Map.singleton PlutusV1 $ CostModel $ 0 <$ fromJust defaultCostModelParams,
+            _costmdls =
+              Map.fromList
+                [ (PlutusV1, CostModel $ 0 <$ fromJust defaultCostModelParams),
+                  (PlutusV2, CostModel $ 0 <$ fromJust defaultCostModelParams)
+                ],
             _maxValSize = 1000,
             _maxTxSize = fromIntegral (maxBound :: Int),
             _maxTxExUnits = maxTxExUnits,

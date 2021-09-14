@@ -23,6 +23,7 @@ where
 
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
 import Cardano.Ledger.Alonzo.Genesis
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
   ( PParams,
     PParams' (..),
@@ -125,11 +126,12 @@ instance (API.PraosCrypto c) => API.GetLedgerView (AlonzoEra c)
 instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
   isNativeScript x = not (isPlutusScript x)
   scriptPrefixTag script =
-    if isPlutusScript script
-      then "\x01"
-      else nativeMultiSigTag -- "\x00"
+    case script of
+      (TimelockScript _) -> nativeMultiSigTag -- "\x00"
+      (PlutusScript PlutusV1 _) -> "\x01"
+      (PlutusScript PlutusV2 _) -> "\x02"
   validateScript (TimelockScript script) tx = validateTimelock @(AlonzoEra c) script tx
-  validateScript (PlutusScript _) _tx = True
+  validateScript (PlutusScript _ _) _tx = True
 
 -- To run a PlutusScript use Cardano.Ledger.Alonzo.TxInfo(runPLCScript)
 -- To run any Alonzo Script use Cardano.Ledger.Alonzo.PlutusScriptApi(evalScripts)
