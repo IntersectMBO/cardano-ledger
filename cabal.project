@@ -12,6 +12,7 @@ packages:
   cardano-ledger-core
   cardano-ledger-test
   cardano-protocol-tpraos
+  libraries/cardano-ledger-example-shelley
   libraries/plutus-preprocessor
   libraries/small-steps
   libraries/small-steps-test
@@ -20,7 +21,6 @@ packages:
   shelley/chain-and-ledger/shelley-spec-ledger-test
   shelley-ma/impl
   shelley-ma/test-suite
-  example-shelley/
 
 -- Always write GHC env files, because they are needed by the doctests.
 write-ghc-environment-files: always
