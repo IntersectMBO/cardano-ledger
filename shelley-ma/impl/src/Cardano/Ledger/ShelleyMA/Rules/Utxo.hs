@@ -188,8 +188,8 @@ instance
   ) =>
   NoThunks (UtxoPredicateFailure era)
 
-data UtxoEvent era
-  = UpdateEvent !(Event (Core.EraRule "PPUP" era))
+newtype UtxoEvent era
+  = UpdateEvent (Event (Core.EraRule "PPUP" era))
 
 -- | Calculate the value consumed by the transation.
 --
@@ -216,7 +216,7 @@ consumed ::
 consumed pp u tx =
   balance @era (eval (txins @era tx ◁ u))
     <> getField @"mint" tx
-    <> (Val.inject $ refunds <> withdrawals)
+    <> Val.inject (refunds <> withdrawals)
   where
     -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
     refunds = Shelley.keyRefunds pp tx

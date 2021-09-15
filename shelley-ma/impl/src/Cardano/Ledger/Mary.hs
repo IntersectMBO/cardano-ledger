@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -42,11 +41,7 @@ instance PraosCrypto c => ApplyBlock (MaryEra c)
 
 instance PraosCrypto c => GetLedgerView (MaryEra c)
 
-instance
-  ( Crypto c
-  ) =>
-  CanStartFromGenesis (MaryEra c)
-  where
+instance Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState sg () =
     NewEpochState
       initialEpochNo

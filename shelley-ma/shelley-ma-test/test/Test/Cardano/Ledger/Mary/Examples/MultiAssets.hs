@@ -172,7 +172,7 @@ aliceCoinSimpleEx1 :: Coin
 aliceCoinSimpleEx1 = aliceInitCoin <-> feeEx
 
 tokensSimpleEx1 :: Value TestCrypto
-tokensSimpleEx1 = mintSimpleEx1 <+> (Val.inject aliceCoinSimpleEx1)
+tokensSimpleEx1 = mintSimpleEx1 <+> Val.inject aliceCoinSimpleEx1
 
 -- Mint a purple token bundle, consisting of thirteen plums and two amethysts.
 -- Give the bundle to Alice.
@@ -296,7 +296,7 @@ aliceCoinsTimeEx1 :: Coin
 aliceCoinsTimeEx1 = aliceInitCoin <-> feeEx
 
 tokensTimeEx1 :: Value TestCrypto
-tokensTimeEx1 = mintTimeEx1 <+> (Val.inject aliceCoinsTimeEx1)
+tokensTimeEx1 = mintTimeEx1 <+> Val.inject aliceCoinsTimeEx1
 
 -- Mint tokens
 txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody MaryTest
@@ -417,7 +417,7 @@ bobCoinsSingWitEx1 :: Coin
 bobCoinsSingWitEx1 = bobInitCoin <-> feeEx
 
 tokensSingWitEx1 :: Value TestCrypto
-tokensSingWitEx1 = mintSingWitEx1 <+> (Val.inject bobCoinsSingWitEx1)
+tokensSingWitEx1 = mintSingWitEx1 <+> Val.inject bobCoinsSingWitEx1
 
 -- Bob pays the fees, but only alice can witness the minting
 txbodySingWitEx1 :: TxBody MaryTest
@@ -520,7 +520,7 @@ mintNegEx2 =
 aliceTokensNegEx2 :: Value TestCrypto
 aliceTokensNegEx2 =
   Value (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
-    Map.singleton purplePolicyId (Map.fromList [(plum, (-1)), (amethyst, 2)])
+    Map.singleton purplePolicyId (Map.fromList [(plum, -1), (amethyst, 2)])
 
 -- Mint negative valued tokens
 txbodyNegEx2 :: TxBody MaryTest
@@ -536,7 +536,7 @@ testNegEx2 = do
   r <- try (evaluate $ txbodyNegEx2 == txbodyNegEx2)
   case r of
     Left (ErrorCall _) -> pure ()
-    Right _ -> assertFailure $ "constructed negative TxOut Value"
+    Right _ -> assertFailure "constructed negative TxOut Value"
 
 --
 -- Create a Value that is too big
@@ -551,7 +551,8 @@ smallValue =
     Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
 
 smallOut :: TxOut MaryTest
-smallOut = TxOut Cast.aliceAddr $ smallValue <+> (Val.inject (aliceInitCoin <-> (feeEx <+> minUtxoBigEx)))
+smallOut =
+  TxOut Cast.aliceAddr $ smallValue <+> Val.inject (aliceInitCoin <-> (feeEx <+> minUtxoBigEx))
 
 numAssets :: Int
 numAssets = 1000
@@ -561,10 +562,10 @@ bigValue =
   Value 0 $
     Map.singleton
       purplePolicyId
-      (Map.fromList $ map (\x -> ((AssetName . BS.pack . show $ x), 1)) [1 .. numAssets])
+      (Map.fromList $ map (\x -> (AssetName . BS.pack $ show x, 1)) [1 .. numAssets])
 
 bigOut :: TxOut MaryTest
-bigOut = TxOut Cast.aliceAddr $ bigValue <+> (Val.inject minUtxoBigEx)
+bigOut = TxOut Cast.aliceAddr $ bigValue <+> Val.inject minUtxoBigEx
 
 txbodyWithBigValue :: TxBody MaryTest
 txbodyWithBigValue =

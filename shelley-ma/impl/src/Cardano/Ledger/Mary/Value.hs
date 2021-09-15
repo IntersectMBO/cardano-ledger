@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
@@ -84,7 +83,7 @@ import Data.Coders
   )
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
-import Data.List (nub, sort, sortBy)
+import Data.List (nub, sort, sortOn)
 import Data.Map.Internal
   ( Map (..),
     link,
@@ -94,7 +93,7 @@ import Data.Map.Internal
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
-import Data.Ord (Down (..), comparing)
+import Data.Ord (Down (..))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
@@ -122,7 +121,9 @@ instance FromCBOR AssetName where
   fromCBOR = do
     an <- fromCBOR
     if BS.length an > 32
-      then cborError $ DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeLatin1 $ BS16.encode an)
+      then
+        cborError $
+          DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeLatin1 $ BS16.encode an)
       else pure . AssetName $ an
 
 -- | Policy ID
@@ -163,12 +164,12 @@ instance CC.Crypto crypto => Val (Value crypto) where
   s <×> (Value c v) =
     Value
       (fromIntegral s * c)
-      (canonicalMap (canonicalMap ((fromIntegral s) *)) v)
+      (canonicalMap (canonicalMap (fromIntegral s *)) v)
   isZero (Value c v) = c == 0 && Map.null v
   coin (Value c _) = Coin c
   inject (Coin c) = Value c mempty
   modifyCoin f (Value c m) = Value n m where (Coin n) = f (Coin c)
-  pointwise p (Value c x) (Value d y) = (p c d) && (pointWise (pointWise p) x y)
+  pointwise p (Value c x) (Value d y) = p c d && pointWise (pointWise p) x y
 
   -- returns the size, in Word64's, of the CompactValue representation of Value
   size vv@(Value _ v)
@@ -181,12 +182,15 @@ instance CC.Crypto crypto => Val (Value crypto) where
     -- when Value contains ada as well as other tokens
     -- sums up :
     -- i) adaWords : the space taken up by the ada amount
-    -- ii) numberMulAssets : the space taken by number of words used to store number of non-ada assets in a value
-    -- iii) the space taken up by the rest of the representation (quantities, PIDs, AssetNames, indeces)
+    -- ii) numberMulAssets : the space taken by number of words used to store
+    --    number of non-ada assets in a value
+    -- iii) the space taken up by the rest of the representation (quantities,
+    --    PIDs, AssetNames, indeces)
     | otherwise =
-      fromIntegral $
-        (roundupBytesToWords $ representationSize (snd $ gettriples vv))
-          + repOverhead
+      fromIntegral
+        ( roundupBytesToWords (representationSize (snd $ gettriples vv))
+            + repOverhead
+        )
 
 -- space (in Word64s) taken up by the ada amount
 adaWords :: Int
@@ -495,9 +499,7 @@ to v = do
   -- If any of the quantities out of bounds, this will produce Nothing.
   -- The triples are ordered by asset name in descending order.
   preparedTriples <-
-    zip [0 ..]
-      . sortBy (comparing (\(_, x, _) -> x))
-      <$> traverse prepare triples
+    zip [0 ..] . sortOn (\(_, x, _) -> x) <$> traverse prepare triples
   pure $
     CompactValueMultiAsset c (fromIntegral numTriples) $
       runST $ do
@@ -581,7 +583,7 @@ to v = do
 
     -- Putting asset names in (comparing Down) order ensures that the empty string
     -- is last, so the associated offset is pointing to the end of the array
-    assetNames = nub $ sortBy (comparing Down) $ (\(_, an, _) -> an) <$> triples
+    assetNames = nub $ sortOn Down $ (\(_, an, _) -> an) <$> triples
 
     assetNameLengths = fromIntegral . BS.length . assetName <$> assetNames
 
@@ -722,7 +724,7 @@ insert combine pid aid new (Value cn m1) =
         (v1, Just old, v2) ->
           if n == 0
             then
-              let m3 = (link2 v1 v2)
+              let m3 = link2 v1 v2
                in if Map.null m3
                     then Value cn (link2 l1 l2)
                     else Value cn (link pid m3 l1 l2)
@@ -736,7 +738,7 @@ insert combine pid aid new (Value cn m1) =
                 pid
                 ( if new == 0
                     then m2
-                    else (Map.insert aid new m2)
+                    else Map.insert aid new m2
                 )
                 l1
                 l2

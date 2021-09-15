@@ -55,7 +55,6 @@ library
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
   -- other-extensions:
   build-depends:
-    array,
     base >=4.9 && <4.15,
     base16-bytestring,
     bytestring,

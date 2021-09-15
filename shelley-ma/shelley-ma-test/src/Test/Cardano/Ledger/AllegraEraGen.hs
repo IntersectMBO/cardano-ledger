@@ -113,7 +113,7 @@ genTxBody ::
 genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   let mint = zero -- the mint field is always empty for an Allegra TxBody
-  pure $
+  pure
     ( TxBody
         ins
         outs
@@ -128,7 +128,7 @@ genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
     )
 
 instance Mock c => MinGenTxout (AllegraEra c) where
-  calcEraMinUTxO _txout pp = (_minUTxOValue pp)
+  calcEraMinUTxO _txout pp = _minUTxOValue pp
   addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal
