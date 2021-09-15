@@ -25,7 +25,7 @@ in addition to those that are already defined in the Shelley specification~\cite
   $\ExUnits$ &
   $(mem, steps)\in \ExUnits$ is made up of two integer values.
   These represent abstract notions of the relative memory usage and script execution steps,
-  respectively.
+  respectively. We give it the structure of a partially ordered monoid via its product structure, i.e. addition and comparisons are defined point-wise.
   \\
   $\LangDepView$ &
   A pair of two byte strings, where the first represents the serialized language tag (eg. the tag for $\PlutusVI$),
@@ -104,19 +104,19 @@ The parameters are used to ensure that the time and memory that are required to 
 
 \textbf{Value size limit as a protocol parameter.}
 The new parameter $\var{maxValSize}$ replaces the constant $\mathsf{maxValSize}$
-used (in the ShelleyMA era) to limit the size of the the $\Value$ part of an output in a
+used (in the ShelleyMA era) to limit the size of the $\Value$ part of an output in a
 serialised transaction.
 
 \textbf{Collateral inputs.}
 Collateral inputs in a transaction are used to cover the transaction fees in the case
 that a phase-2 script fails (see Section~\ref{sec:transctions}).
-The term \emph{collateral} refers to the total ada contained in the UTxOs referenced
+The term \emph{collateral} refers to the total Ada contained in the UTxOs referenced
 by collateral inputs.
 
 The parameter $\var{collateralPercent}$ is used to specify the percentage of
 the total transaction fee its collateral must (at minimum) cover. The
 collateral inputs must not themselves be locked by a script. That is, they must
-be VK inputs. The parameter $\var{maxCollInputs}$ is used to limit, additionally,
+be VKey inputs. The parameter $\var{maxCollateralInputs}$ is used to limit, additionally,
 the total number of collateral inputs, and thus the total number of additional
 signatures that must be checked during validation.
 
@@ -158,7 +158,7 @@ signatures that must be checked during validation.
   %
   \begin{equation*}
       \begin{array}{r@{~\in~}l@{\qquad}r}
-        \var{minUTxOValue} \mapsto \Coin & \PParams & \text{Min. amount of ada each UTxO must contain}
+        \var{minUTxOValue} \mapsto \Coin & \PParams & \text{Min. amount of Ada each UTxO must contain}
       \end{array}
   \end{equation*}
   %
@@ -177,10 +177,10 @@ signatures that must be checked during validation.
         \var{maxValSize} \mapsto \N & \PParams \\
         % & \text{Max size a value can be}\\
         \var{coinsPerUTxOWord} \mapsto \Coin & \PParams \\
-        % & \text{Min. lovelace per word (8 bytes) a UTxO entry must contain}
+        % & \text{Min. Lovelace per word (8 bytes) a UTxO entry must contain}
         \var{collateralPercent} \mapsto \N & \PParams \\
         % & \text{Percentage of Tx fee which collateral must cover}
-        \var{maxCollInputs} \mapsto \N & \PParams \\
+        \var{maxCollateralInputs} \mapsto \N & \PParams \\
         % & \text{Maximum number of VK inputs that can be used to cover collateral}
       \end{array}
   \end{equation*}
@@ -188,7 +188,8 @@ signatures that must be checked during validation.
   \emph{Accessor Functions}
   %
   \begin{center}
-  \fun{costmdls},~\fun{maxTxExUnits},~\fun{maxBlockExUnits},~\fun{prices}
+    \fun{costmdls},~\fun{prices},~\fun{maxTxExUnits},~\fun{maxBlockExUnits},~\fun{maxValSize},~\fun{coinsPerUTxOWord},\\
+    \fun{collateralPercent},~\fun{maxCollateralInputs}
   \end{center}
   %
   \emph{Helper Functions}

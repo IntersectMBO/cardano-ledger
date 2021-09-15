@@ -182,7 +182,7 @@ We add the following helper functions:
 \end{figure*}
 
 \textbf{Auxiliary Data. } The auxiliary data in an Alonzo transaction has the same structure as
-in a ShelleMA transaction, but can additionally contain phase-2 scripts.
+in a ShelleyMA transaction, but can additionally contain phase-2 scripts.
 
 \subsection{Witnessing}
 Figure \ref{fig:defs:utxo-shelley-2} defines the witness type, $\TxWitness$.  This contains everything
@@ -206,7 +206,7 @@ a transaction (as a set) versus how redeemers are included
   [Hash reference (script/datum object):]
   Scripts and datum objects are referred to explicitly via their hashes,
   which are included in the $\UTxO$ or the transaction. Thus, they can be
-  looked up in the tranasaction without any key in the data structure.
+  looked up in the transaction without any key in the data structure.
 
   \item[No hash reference (redeemers):] For redeemers,
   we use a reverse pointer approach and
@@ -226,7 +226,7 @@ the body of the transaction:
     \emph{in case the transaction contains failing phase-2 scripts}. They are not collected otherwise.
     The purpose of these is to cover the resource use costs incurred by block producers running not only
     scripts that validate, but the failing one also. Only the inputs that are locked by VKeys can
-    be used for collateral, and they must only contain ada.
+    be used for collateral, and they must only contain Ada.
 
     It is permitted to use the same inputs as both collateral and a regular inputs, as exactly
     one set of inputs is ever collected : collateral ones in the case of script failure, and regular inputs
