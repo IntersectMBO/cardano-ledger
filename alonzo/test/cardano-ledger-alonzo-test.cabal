@@ -62,7 +62,7 @@ library
     strict-containers,
     text,
   hs-source-dirs:
-    lib
+    src
 
 test-suite cardano-ledger-alonzo-test
   import:             base, project-config
