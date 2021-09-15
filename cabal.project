@@ -17,8 +17,8 @@ packages:
   libraries/small-steps
   libraries/small-steps-test
   shelley/chain-and-ledger/dependencies/non-integer
-  shelley/chain-and-ledger/executable-spec
-  shelley/chain-and-ledger/shelley-spec-ledger-test
+  shelley/impl
+  shelley/test-suite
   shelley-ma/impl
   shelley-ma/test-suite
 
