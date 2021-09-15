@@ -91,7 +91,6 @@ import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API hiding (SignedDSIGN, TxBody (..))
 import Shelley.Spec.Ledger.Address.Bootstrap (ChainCode (..))
-import Shelley.Spec.Ledger.Delegation.Certificates (IndividualPoolStake (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
 import Shelley.Spec.Ledger.LedgerState (FutureGenDeleg)
 import qualified Shelley.Spec.Ledger.Metadata as MD

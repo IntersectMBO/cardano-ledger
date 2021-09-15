@@ -78,7 +78,6 @@ import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     bheader,
   )
-import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
 import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),

@@ -58,10 +58,6 @@ import Data.Set (Set)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.BlockChain
-  ( LastAppliedBlock (..),
-    hashHeaderToNonce,
-  )
 import Shelley.Spec.Ledger.LedgerState (stakeDistr)
 import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv, BbodyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
