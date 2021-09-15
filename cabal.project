@@ -9,10 +9,10 @@ packages:
   byron/ledger/impl/test
   byron/crypto
   byron/crypto/test
-  cardano-ledger-core
-  cardano-ledger-test
-  cardano-protocol-tpraos
+  libraries/cardano-ledger-core
   libraries/cardano-ledger-example-shelley
+  libraries/cardano-ledger-test
+  libraries/cardano-protocol-tpraos
   libraries/plutus-preprocessor
   libraries/shelley-spec-non-integral
   libraries/small-steps
