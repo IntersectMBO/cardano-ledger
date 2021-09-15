@@ -64,7 +64,7 @@ let
       shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec/default.nix {};
       alonzo-ledger = pkgs.callPackage ./alonzo/formal-spec/default.nix {};
       delegation-design = pkgs.callPackage ./shelley/design-spec/default.nix {};
-      non-integer-calculations = pkgs.callPackage ./shelley/chain-and-ledger/dependencies/non-integer/doc/default.nix {};
+      non-integer-calculations = pkgs.callPackage ./docs/non-integer-calculations/default.nix {};
       blocks-cddl = pkgs.callPackage ./byron/cddl-spec/default.nix {};
     };
 

@@ -14,9 +14,9 @@ packages:
   cardano-protocol-tpraos
   libraries/cardano-ledger-example-shelley
   libraries/plutus-preprocessor
+  libraries/shelley-spec-non-integral
   libraries/small-steps
   libraries/small-steps-test
-  shelley/chain-and-ledger/dependencies/non-integer
   shelley/impl
   shelley/test-suite
   shelley-ma/impl
