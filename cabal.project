@@ -12,7 +12,7 @@ packages:
   cardano-ledger-core
   cardano-ledger-test
   cardano-protocol-tpraos
-  plutus-preprocessor
+  libraries/plutus-preprocessor
   semantics/executable-spec
   semantics/small-steps-test
   shelley/chain-and-ledger/dependencies/non-integer
