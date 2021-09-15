@@ -13,8 +13,8 @@ packages:
   cardano-ledger-test
   cardano-protocol-tpraos
   libraries/plutus-preprocessor
-  semantics/executable-spec
-  semantics/small-steps-test
+  libraries/small-steps
+  libraries/small-steps-test
   shelley/chain-and-ledger/dependencies/non-integer
   shelley/chain-and-ledger/executable-spec
   shelley/chain-and-ledger/shelley-spec-ledger-test
