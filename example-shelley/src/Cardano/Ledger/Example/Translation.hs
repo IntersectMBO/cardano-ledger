@@ -32,7 +32,6 @@ import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.EpochBoundary (translateSnapShots)
 import Shelley.Spec.Ledger.PParams ()
 import Shelley.Spec.Ledger.Tx (decodeWits)
 
@@ -169,7 +168,7 @@ instance Crypto c => TranslateEra (ExampleEra c) EpochState where
     return
       EpochState
         { esAccountState = esAccountState es,
-          esSnapshots = translateSnapShots (esSnapshots es),
+          esSnapshots = esSnapshots es,
           esLState = translateEra' ctxt $ esLState es,
           esPrevPp = translateEra' ctxt $ esPrevPp es,
           esPp = translateEra' ctxt $ esPp es,

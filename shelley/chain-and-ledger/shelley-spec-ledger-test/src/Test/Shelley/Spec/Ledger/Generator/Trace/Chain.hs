@@ -58,7 +58,10 @@ import Data.Set (Set)
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
 import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.EpochBoundary (PulsingStakeDistr (..))
+import Shelley.Spec.Ledger.BlockChain
+  ( LastAppliedBlock (..),
+    hashHeaderToNonce,
+  )
 import Shelley.Spec.Ledger.LedgerState (stakeDistr)
 import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv, BbodyState)
 import qualified Shelley.Spec.Ledger.STS.Chain as STS (ChainState (ChainState))
@@ -192,7 +195,9 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  Era era =>
+  ( Era era,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+  ) =>
   ShelleyGenesisStaking (Crypto era) ->
   ChainState era ->
   ChainState era
@@ -222,7 +227,7 @@ registerGenesisStaking
           { esLState = newLedgerState,
             esSnapshots =
               (esSnapshots oldEpochState)
-                { _pstakeMark = (Completed initSnapShot)
+                { _pstakeMark = initSnapShot
                 }
           }
       newLedgerState =

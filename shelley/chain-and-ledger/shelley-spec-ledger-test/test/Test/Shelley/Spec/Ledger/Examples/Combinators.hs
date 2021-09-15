@@ -78,13 +78,8 @@ import Shelley.Spec.Ledger.BlockChain
   ( Block (..),
     bheader,
   )
-import Shelley.Spec.Ledger.EpochBoundary
-  ( BlocksMade (..),
-    PulsingStakeDistr (..),
-    SnapShot,
-    SnapShots (..),
-    runToCompletion,
-  )
+import Shelley.Spec.Ledger.Delegation.Certificates (PoolDistr (..))
+import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
 import Shelley.Spec.Ledger.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -533,7 +528,6 @@ applyRewardUpdate ru cs = cs {chainNes = nes'}
 -- Add a new snapshot and rotate the others
 newSnapshot ::
   forall era.
-  Era era =>
   SnapShot (Crypto era) ->
   Coin ->
   ChainState era ->
@@ -548,8 +542,8 @@ newSnapshot snap fee cs = cs {chainNes = nes'}
       } = esSnapshots es
     snaps =
       SnapShots
-        { _pstakeMark = Completed snap,
-          _pstakeSet = runToCompletion ssMark,
+        { _pstakeMark = snap,
+          _pstakeSet = ssMark,
           _pstakeGo = ssSet,
           _feeSS = fee
         }

@@ -135,7 +135,6 @@ import Shelley.Spec.Ledger.Delegation.Certificates
   )
 import Shelley.Spec.Ledger.EpochBoundary
   ( BlocksMade (..),
-    PulsingStakeDistr (..),
     SnapShot (..),
     SnapShots (..),
     Stake (..),
@@ -1217,12 +1216,11 @@ tests =
                 <> S (testStakeCred @C_Crypto)
                 <> S (Coin 13)
             ),
-      let mark' =
+      let mark =
             SnapShot
               (Stake $ Map.singleton (testStakeCred @C_Crypto) (Coin 11))
               (Map.singleton (testStakeCred @C_Crypto) (hashKey $ vKey testStakePoolKey))
               ps
-          mark = Completed mark'
           set =
             SnapShot
               (Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22))
@@ -1254,9 +1252,9 @@ tests =
           fs = Coin 123
        in checkEncodingCBOR
             "snapshots"
-            ((SnapShots mark set go fs) :: (SnapShots C))
+            (SnapShots mark set go fs)
             ( T (TkListLen 4)
-                <> S mark'
+                <> S mark
                 <> S set
                 <> S go
                 <> S fs
@@ -1297,7 +1295,7 @@ tests =
               }
           ps = Map.singleton (hashKey $ vKey testStakePoolKey) params
           fs = Coin 123
-          ss = SnapShots (Completed mark) set go fs
+          ss = SnapShots mark set go fs
           ls = def
           pps = emptyPParams
           bs = Map.singleton (hashKey $ vKey testStakePoolKey) 1

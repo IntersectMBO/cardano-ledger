@@ -38,8 +38,9 @@ import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Shelley.Spec.Ledger.API hiding (Metadata, TxBody)
-import Shelley.Spec.Ledger.EpochBoundary (translateSnapShots)
-import Shelley.Spec.Ledger.Tx (decodeWits)
+import Shelley.Spec.Ledger.Tx
+  ( decodeWits,
+  )
 
 --------------------------------------------------------------------------------
 -- Translation from Allegra to Mary
@@ -117,7 +118,7 @@ instance Crypto c => TranslateEra (MaryEra c) EpochState where
     return
       EpochState
         { esAccountState = esAccountState es,
-          esSnapshots = translateSnapShots (esSnapshots es),
+          esSnapshots = esSnapshots es,
           esLState = translateEra' ctxt $ esLState es,
           esPrevPp = translateEra' ctxt $ esPrevPp es,
           esPp = translateEra' ctxt $ esPp es,
