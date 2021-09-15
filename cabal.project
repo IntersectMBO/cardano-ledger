@@ -2,7 +2,7 @@ index-state: 2021-02-15T00:00:00Z
 
 packages:
   alonzo/impl
-  alonzo/test
+  alonzo/test-suite
   byron/chain/executable-spec
   byron/ledger/executable-spec
   byron/ledger/impl
