@@ -28,28 +28,41 @@ import Cardano.Ledger.BHeaderView (BHeaderView (bhviewSlot))
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, epochInfo)
 import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Chain as STS
+import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, TxSeq)
+import Cardano.Ledger.Era (Crypto, Era, TxSeq, WellFormed, fromTxSeq)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Protocol (PraosCrypto)
-import Cardano.Ledger.Shelley.LedgerState (NewEpochState (..))
+import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
+import Cardano.Ledger.Shelley.LedgerState (EpochState (esPp), NewEpochState (..), esLState, keyRefunds, _delegationState, _pParams, _pstate, _utxo, _utxoState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Bbody (AnnotatedBlock (..))
 import qualified Cardano.Ledger.Shelley.Rules.Bbody as STS
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
+import Cardano.Ledger.Shelley.TxBody (Wdrl (unWdrl))
+import Cardano.Ledger.Shelley.UTxO (balance, totalDeposits, txouts)
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
+import Cardano.Ledger.TxIn (TxIn)
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (epochInfoFirst, epochInfoSlotToUTCTime)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Identity (runIdentity)
 import Control.Monad.Trans.Reader (runReader)
+import Control.SetAlgebra (eval, (<|))
 import Control.State.Transition.Extended
 import Data.Bifunctor (second)
 import Data.Coerce (Coercible, coerce)
+import Data.Foldable (fold)
+import qualified Data.Foldable as Foldable (toList)
+import qualified Data.Map.Strict as Map
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import GHC.Generics (Generic)
+import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 
 {-------------------------------------------------------------------------------
@@ -113,7 +126,13 @@ class
   default applyBlockOpts ::
     forall ep m.
     ( EventReturnTypeRep ep,
-      MonadError (BlockTransitionError era) m
+      MonadError (BlockTransitionError era) m,
+      Era era,
+      HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+      HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+      HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+      HasField "_keyDeposit" (Core.PParams era) Coin,
+      HasField "_poolDeposit" (Core.PParams era) Coin
     ) =>
     ApplySTSOpts ep ->
     Globals ->
@@ -274,20 +293,49 @@ instance
   NoThunks (BlockTransitionError era)
 
 annotateBlock ::
+  forall era.
+  ( WellFormed era,
+    Era era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin
+  ) =>
   Globals ->
   NewEpochState era ->
   (Block BHeaderView era) ->
   AnnotatedBlock
-annotateBlock globals state (Block' bheaderView _ _) = do
-  let slotNo = bhviewSlot bheaderView
-      epochNo = nesEL state
-      ann =
-        AnnotatedBlock
-          { abEpochNo = epochNo,
-            abSlotNo = slotNo,
-            abEpochSlot = runIdentity $ (epochInfoFirst $ epochInfo globals) epochNo,
-            abTimeStamp = runIdentity $ epochInfoSlotToUTCTime (epochInfo globals) (systemStart globals) slotNo,
-            abEpochSize = runReader (epochInfoSize (epochInfo globals) epochNo) globals
-          }
-  ann
-
+annotateBlock globals state (Block' bheaderView txseq _) =
+  AnnotatedBlock
+    { abEpochNo = epochNo,
+      abSlotNo = slotNo,
+      abEpochSlot = runIdentity $ (epochInfoFirst $ epochInfo globals) epochNo,
+      abTimeStamp = runIdentity $ epochInfoSlotToUTCTime (epochInfo globals) (systemStart globals) slotNo,
+      abEpochSize = runReader (epochInfoSize (epochInfo globals) epochNo) globals,
+      abTxs = fmap annotateTx $ Foldable.toList $ fromTxSeq txseq
+    }
+  where
+    slotNo = bhviewSlot bheaderView
+    epochNo = nesEL state
+    annotateTx :: Core.Tx era -> STS.AnnotatedTx
+    annotateTx tx =
+      let txBody = getField @"body" tx
+          ledgerState = esLState $ nesEs state
+          pp_ = esPp $ nesEs state
+          u = _utxoState ledgerState
+          pools = _pParams $ _pstate $ _delegationState $ ledgerState
+          certs = Foldable.toList (getField @"certs" txBody)
+          ins =
+            Val.coin (balance @era (eval ((getField @"inputs" txBody) <| _utxo u)))
+              <> keyRefunds pp_ txBody
+              <> fold (unWdrl (getField @"wdrls" txBody))
+          outs =
+            Val.coin (balance (txouts @era txBody))
+              <> getField @"txfee" txBody
+              <> totalDeposits pp_ (`Map.notMember` pools) certs
+       in STS.AnnotatedTx
+            { STS.atInputSum = ins,
+              STS.atOutSum = outs,
+              STS.txFees = getField @"txfee" txBody
+            }

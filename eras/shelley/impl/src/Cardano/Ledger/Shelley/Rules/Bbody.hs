@@ -19,12 +19,14 @@ module Cardano.Ledger.Shelley.Rules.Bbody
     PredicateFailure,
     State,
     AnnotatedBlock (..),
+    AnnotatedTx (..),
   )
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfo)
 import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
 import qualified Cardano.Ledger.Era as Era
@@ -93,8 +95,14 @@ data AnnotatedBlock = AnnotatedBlock
     abSlotNo :: !SlotNo,
     abEpochSlot :: !SlotNo, -- The slot within the epoch (starts at 0 for first slot of each epoch
     abTimeStamp :: !UTCTime, -- The slot number converted to UTCTime
-    abEpochSize :: !EpochSize -- Number of slots in current epoch
-    -- , abTxs :: [AnnotatedTx]   -- All fields in the superset of all block types
+    abEpochSize :: !EpochSize, -- Number of slots in current epoch
+    abTxs :: [AnnotatedTx] -- All fields in the superset of all block types
+  }
+
+data AnnotatedTx = AnnotatedTx
+  { atInputSum :: !Coin, -- Sum of the tx inputs
+    atOutSum :: !Coin, -- Sum of the tx outputs
+    txFees :: !Coin -- All fields in the superset of all tx types
   }
 
 data BbodyEvent era
