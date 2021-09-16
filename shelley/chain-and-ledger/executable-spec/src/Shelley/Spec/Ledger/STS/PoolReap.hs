@@ -144,7 +144,7 @@ poolReapTransition = do
     let rewardAcntsWithPool =
           Map.foldlWithKey'
             ( \acc sp (ra, coin) ->
-                Map.insertWith (<>) (getRwdCred ra) (Map.singleton sp coin) acc
+                Map.insertWith (Map.unionWith (<>)) (getRwdCred ra) (Map.singleton sp coin) acc
             )
             Map.empty
             rewardAcnts_
