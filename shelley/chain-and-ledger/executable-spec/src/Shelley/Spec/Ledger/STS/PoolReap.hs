@@ -71,8 +71,8 @@ data PoolreapPredicateFailure era -- No predicate failures
   deriving (Show, Eq, Generic)
 
 data PoolreapEvent era = RetiredPools
-  { refundPools :: Map.Map (KeyHash 'StakePool (Crypto era)) Coin,
-    unclaimedPools :: Map.Map (KeyHash 'StakePool (Crypto era)) Coin
+  { refundPools :: Map.Map (Credential 'Staking (Crypto era)) (Map.Map (KeyHash 'StakePool (Crypto era)) Coin),
+    unclaimedPools :: Map.Map (Credential 'Staking (Crypto era)) (Map.Map (KeyHash 'StakePool (Crypto era)) Coin)
   }
 
 instance NoThunks (PoolreapPredicateFailure era)
@@ -124,11 +124,13 @@ poolReapTransition = do
       pr = Map.fromSet (const (getField @"_poolDeposit" pp)) retired
       rewardAcnts :: Map.Map (KeyHash 'StakePool (Crypto era)) (RewardAcnt (Crypto era))
       rewardAcnts = Map.map _poolRAcnt $ eval (retired ◁ _pParams ps)
+      rewardAcnts_ :: Map.Map (KeyHash 'StakePool (Crypto era)) (RewardAcnt (Crypto era), Coin)
+      rewardAcnts_ = Map.intersectionWith (,) rewardAcnts pr
       rewardAcnts' :: Map.Map (RewardAcnt (Crypto era)) Coin
       rewardAcnts' =
         Map.fromListWith (<+>)
           . Map.elems
-          $ Map.intersectionWith (,) rewardAcnts pr
+          $ rewardAcnts_
       refunds :: Map.Map (Credential 'Staking (Crypto era)) Coin
       mRefunds :: Map.Map (Credential 'Staking (Crypto era)) Coin
       (refunds, mRefunds) =
@@ -139,8 +141,17 @@ poolReapTransition = do
       unclaimed = fold $ Map.elems mRefunds
 
   tellEvent $
-    let refundPools' = Map.mapMaybe (\ra -> Map.lookup (getRwdCred ra) refunds) rewardAcnts
-        unclaimedPools' = Map.mapMaybe (\ra -> Map.lookup (getRwdCred ra) mRefunds) rewardAcnts
+    let rewardAcntsWithPool =
+          Map.foldlWithKey'
+            ( \acc sp (ra, coin) ->
+                Map.insertWith (<>) (getRwdCred ra) (Map.singleton sp coin) acc
+            )
+            Map.empty
+            rewardAcnts_
+        (refundPools', unclaimedPools') =
+          Map.partitionWithKey
+            (\k _ -> eval (k ∈ dom (_rewards ds)))
+            rewardAcntsWithPool
      in RetiredPools
           { refundPools = refundPools',
             unclaimedPools = unclaimedPools'
