@@ -119,7 +119,6 @@ instance
 
   transitionRules = [newEpochTransition]
 
--- | The transition function.
 newEpochTransition ::
   forall era.
   ( Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
@@ -139,7 +138,7 @@ newEpochTransition ::
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
-    ( (),
+    ( _,
       src@(NewEpochState (EpochNo eL) _ bcur es ru _pd),
       e@(EpochNo e_)
       ) <-

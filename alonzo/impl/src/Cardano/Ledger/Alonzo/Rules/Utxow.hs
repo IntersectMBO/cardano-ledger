@@ -360,7 +360,8 @@ witsVKeyNeeded ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   UTxO era ->
   tx ->
