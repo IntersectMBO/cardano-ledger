@@ -13,8 +13,8 @@ import Cardano.Ledger.Mary.Value
 import qualified Data.Map.Strict as Map (singleton)
 import Data.Proxy
 import Test.Cardano.Ledger.Allegra.Examples.Consensus
-import Test.Shelley.Spec.Ledger.Examples.Consensus
-import Test.Shelley.Spec.Ledger.Orphans ()
+import Test.Cardano.Ledger.Shelley.Examples.Consensus
+import Test.Cardano.Ledger.Shelley.Orphans ()
 
 type StandardMary = MaryEra StandardCrypto
 

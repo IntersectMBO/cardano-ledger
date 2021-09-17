@@ -28,12 +28,12 @@ import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Example (ExampleEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.PParams ()
+import Cardano.Ledger.Shelley.Tx (decodeWits)
 import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
-import Shelley.Spec.Ledger.API
-import Shelley.Spec.Ledger.PParams ()
-import Shelley.Spec.Ledger.Tx (decodeWits)
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Example

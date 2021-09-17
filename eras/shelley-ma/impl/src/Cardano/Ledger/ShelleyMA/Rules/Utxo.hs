@@ -39,6 +39,28 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
+import Cardano.Ledger.Shelley.LedgerState (PPUPState)
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
+import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
+import Cardano.Ledger.Shelley.Tx (Tx (..), TxIn, TxOut)
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert,
+    RewardAcnt (getRwdNetwork),
+    Wdrl,
+    unWdrl,
+  )
+import Cardano.Ledger.Shelley.UTxO
+  ( UTxO,
+    balance,
+    totalDeposits,
+    txins,
+    txouts,
+    txup,
+    unUTxO,
+  )
+import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
 import qualified Cardano.Ledger.Val as Val
@@ -65,28 +87,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import Shelley.Spec.Ledger.LedgerState (PPUPState)
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), Update)
-import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
-import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
-import Shelley.Spec.Ledger.Tx (Tx (..), TxIn, TxOut)
-import Shelley.Spec.Ledger.TxBody
-  ( DCert,
-    RewardAcnt (getRwdNetwork),
-    Wdrl,
-    unWdrl,
-  )
-import Shelley.Spec.Ledger.UTxO
-  ( UTxO,
-    balance,
-    totalDeposits,
-    txins,
-    txouts,
-    txup,
-    unUTxO,
-  )
-import qualified Shelley.Spec.Ledger.UTxO as Shelley
 
 {- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
 (passed to it as Coin mv) as a specification of "the cost of

@@ -54,11 +54,33 @@ import Cardano.Ledger.Rules.ValidationMode
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
+import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
     UsesTxOut (..),
     UsesValue,
   )
+import Cardano.Ledger.Shelley.EpochBoundary
+import Cardano.Ledger.Shelley.Genesis (genesisUTxO, sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams)
+import Cardano.Ledger.Shelley.LedgerState
+  ( AccountState (..),
+    DPState (..),
+    EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    UTxOState (..),
+    _genDelegs,
+  )
+import Cardano.Ledger.Shelley.Metadata (validMetadatum)
+import qualified Cardano.Ledger.Shelley.Rules.Epoch as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Mir as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Newpp as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Rupd as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Snap as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Tick as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Upec as Shelley
+import qualified Cardano.Ledger.Shelley.Tx as Shelley
+import Cardano.Ledger.Shelley.UTxO (balance)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
@@ -73,28 +95,6 @@ import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
-import qualified Shelley.Spec.Ledger.API as API
-import Shelley.Spec.Ledger.EpochBoundary
-import Shelley.Spec.Ledger.Genesis (genesisUTxO, sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams)
-import Shelley.Spec.Ledger.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    UTxOState (..),
-    _genDelegs,
-  )
-import Shelley.Spec.Ledger.Metadata (validMetadatum)
-import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
-import qualified Shelley.Spec.Ledger.STS.Mir as Shelley
-import qualified Shelley.Spec.Ledger.STS.Newpp as Shelley
-import qualified Shelley.Spec.Ledger.STS.Rupd as Shelley
-import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
-import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
-import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
-import qualified Shelley.Spec.Ledger.Tx as Shelley
-import Shelley.Spec.Ledger.UTxO (balance)
 
 -- =====================================================
 

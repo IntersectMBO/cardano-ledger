@@ -24,6 +24,10 @@ import Cardano.Ledger.SafeHash
   ( SafeToHash (makeHashWithExplicitProxys),
     castSafeHash,
   )
+import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
+import Cardano.Ledger.Shelley.EpochBoundary (aggregateUtxoCoinByCredential)
+import Cardano.Ledger.Shelley.TxBody (TxId (..), TxIn (TxInCompact), TxOut (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.ShelleyMA ()
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import qualified Cardano.Ledger.Val as Val
@@ -37,10 +41,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.CompactAddr (compactAddr)
-import Shelley.Spec.Ledger.EpochBoundary (aggregateUtxoCoinByCredential)
-import Shelley.Spec.Ledger.TxBody (TxId (..), TxIn (TxInCompact), TxOut (..))
-import Shelley.Spec.Ledger.UTxO (UTxO (UTxO))
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 
 type TestEra = MaryEra TestCrypto

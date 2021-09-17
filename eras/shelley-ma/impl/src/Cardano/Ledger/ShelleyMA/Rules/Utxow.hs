@@ -12,30 +12,30 @@ import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
-import Cardano.Ledger.ShelleyMA.TxBody ()
-import Control.State.Transition.Extended
-import GHC.Records (HasField)
-import Shelley.Spec.Ledger.LedgerState
+import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState,
     witsVKeyNeeded,
   )
-import qualified Shelley.Spec.Ledger.STS.Ledger as Shelley
-import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
-import Shelley.Spec.Ledger.STS.Utxow
+import qualified Cardano.Ledger.Shelley.Rules.Ledger as Shelley
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
+import Cardano.Ledger.Shelley.Rules.Utxow
   ( ShelleyStyleWitnessNeeds,
     UtxowEvent (..),
     UtxowPredicateFailure (..),
     shelleyStyleWitness,
   )
-import Shelley.Spec.Ledger.Tx (WitnessSet)
+import Cardano.Ledger.Shelley.Tx (WitnessSet)
+import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
+import Cardano.Ledger.ShelleyMA.TxBody ()
+import Control.State.Transition.Extended
+import GHC.Records (HasField)
 
 -- ==============================================================================
 --   We want to reuse the same rules for Mary and Allegra. We accomplish this
 --   by adding: HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era)))
 --   to the (WellFormed era) constraint, and adjusting UTxO.(ScriptsNeeded) to
 --   add this set to its output. In the Shelley and Allegra Era, this is the empty set.
---   With this generalization, Shelley.Spec.Ledger.STS.Utxow(shelleyStyleWitness)
+--   With this generalization, Cardano.Ledger.Shelley.Rules.Utxow(shelleyStyleWitness)
 --   can still be used in Allegra and Mary, because they use the same Shelley style rules.
 
 --------------------------------------------------------------------------------

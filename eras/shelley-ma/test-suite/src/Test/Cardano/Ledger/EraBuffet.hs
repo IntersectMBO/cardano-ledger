@@ -34,7 +34,7 @@ import Cardano.Ledger.Core (AuxiliaryData, Script, TxBody, Value)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (StandardCrypto, TestCrypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (StandardCrypto, TestCrypto)
 
 {------------------------------------------------------------------------------
  Example concrete Eras:

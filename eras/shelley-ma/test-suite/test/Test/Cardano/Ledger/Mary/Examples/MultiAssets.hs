@@ -20,6 +20,23 @@ import Cardano.Ledger.Mary.Value
     Value (..),
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Shelley.API (LEDGER, LedgerEnv (..))
+import Cardano.Ledger.Shelley.LedgerState (AccountState (..))
+import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), emptyPParams)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
+import Cardano.Ledger.Shelley.Tx
+  ( Tx (..),
+    WitnessSetHKD (..),
+    hashScript,
+  )
+import Cardano.Ledger.Shelley.TxBody
+  ( TxId,
+    TxIn (..),
+    TxOut (..),
+    Wdrl (..),
+  )
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
@@ -32,23 +49,6 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import Shelley.Spec.Ledger.API (LEDGER, LedgerEnv (..))
-import Shelley.Spec.Ledger.LedgerState (AccountState (..))
-import Shelley.Spec.Ledger.PParams (PParams, PParams' (..), emptyPParams)
-import Shelley.Spec.Ledger.STS.Ledger (LedgerPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Shelley.Spec.Ledger.Tx
-  ( Tx (..),
-    WitnessSetHKD (..),
-    hashScript,
-  )
-import Shelley.Spec.Ledger.TxBody
-  ( TxId,
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
-import Shelley.Spec.Ledger.UTxO (UTxO (..), makeWitnessesVKey, txid)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Mary.Examples (testMaryNoDelegLEDGER)
 import qualified Test.Cardano.Ledger.Mary.Examples.Cast as Cast

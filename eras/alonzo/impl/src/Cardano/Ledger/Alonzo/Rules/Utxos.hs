@@ -52,6 +52,13 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyRefunds)
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.TxBody (DCert, TxIn (..), Wdrl)
+import Cardano.Ledger.Shelley.UTxO (balance, totalDeposits)
 import Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.Monad.Except (MonadError (throwError))
@@ -65,13 +72,6 @@ import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.LedgerState (PPUPState (..), UTxOState (..), keyRefunds)
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.STS.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
-import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
-import Shelley.Spec.Ledger.TxBody (DCert, TxIn (..), Wdrl)
-import Shelley.Spec.Ledger.UTxO (balance, totalDeposits)
 
 --------------------------------------------------------------------------------
 -- The UTXOS transition system

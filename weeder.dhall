@@ -1,5 +1,5 @@
 { roots =
-  [ "^Shelley.Spec.Ledger.API.*$"
+  [ "^Cardano.Ledger.Shelley.API.*$"
   , "^Cardano.Chain.Byron.API.*$"
   , "^Main.main$"
   , "^Tests.main$"
@@ -8,11 +8,11 @@
   , "^Test.Cardano.Chain.*$"
   , "^Test.Cardano.Crypto.*$"
 
-  , "^Test.Shelley.Spec.Ledger.*$"
+  , "^Test.Cardano.Ledger.Shelley.*$"
     -- Called in ouroboros-node
-  , "^Shelley.Spec.Ledger.Genesis.*"
-  , "^Shelley.Spec.Ledger.TxData.TxOut$"
-  , "^Shelley.Spec.Ledger.Scripts.hashAnyScript$"
+  , "^Cardano.Ledger.Shelley.Genesis.*"
+  , "^Cardano.Ledger.Shelley.TxData.TxOut$"
+  , "^Cardano.Ledger.Shelley.Scripts.hashAnyScript$"
 
     -- Things we're not interested in
   , "^Test.Goblin.*"

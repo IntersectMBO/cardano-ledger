@@ -24,6 +24,20 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (DSignable, Hash)
+import Cardano.Ledger.Shelley.EpochBoundary (obligation)
+import Cardano.Ledger.Shelley.LedgerState
+  ( DPState (..),
+    DState (..),
+    PState (..),
+    UTxOState (..),
+  )
+import Cardano.Ledger.Shelley.Rules.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (..))
+import qualified Cardano.Ledger.Shelley.Rules.Ledgers as Shelley
+import Cardano.Ledger.Shelley.Rules.Utxo
+  ( UtxoEnv (..),
+  )
+import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -39,20 +53,6 @@ import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Records (HasField, getField)
-import Shelley.Spec.Ledger.EpochBoundary (obligation)
-import Shelley.Spec.Ledger.LedgerState
-  ( DPState (..),
-    DState (..),
-    PState (..),
-    UTxOState (..),
-  )
-import Shelley.Spec.Ledger.STS.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
-import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (..))
-import qualified Shelley.Spec.Ledger.STS.Ledgers as Shelley
-import Shelley.Spec.Ledger.STS.Utxo
-  ( UtxoEnv (..),
-  )
-import Shelley.Spec.Ledger.TxBody (DCert, EraIndependentTxBody)
 
 -- =======================================
 

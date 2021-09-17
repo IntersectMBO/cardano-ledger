@@ -4,12 +4,12 @@
 module Main where
 
 import Cardano.Ledger.Example (ExampleEra)
-import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.RewardUpdate ()
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.RewardUpdate ()
+import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER)
 import Test.Cardano.Ledger.Example ()
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
-import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Tasty
 import Test.Tasty.HUnit ()
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)

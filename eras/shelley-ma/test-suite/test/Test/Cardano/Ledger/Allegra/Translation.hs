@@ -14,20 +14,20 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
+import qualified Cardano.Ledger.Shelley.API as S
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
-import qualified Shelley.Spec.Ledger.API as S
 import Test.Cardano.Ledger.EraBuffet
   ( AllegraEra,
     ShelleyEra,
     StandardCrypto,
   )
+-- instance EraGen ShelleyEra
+import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.TranslationTools
   ( decodeTestAnn,
     translationCompatToCBOR,
   )
--- instance EraGen ShelleyEra
-import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
-import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 

@@ -3,8 +3,8 @@
 
 module Main where
 
-import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER)
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.AllegraEraGen ()
@@ -14,8 +14,8 @@ import Test.Cardano.Ledger.Mary.Golden (goldenScaledMinDeposit)
 import Test.Cardano.Ledger.Mary.Translation (maryTranslationTests)
 import Test.Cardano.Ledger.Mary.Value (valTests)
 import Test.Cardano.Ledger.MaryEraGen ()
+import Test.Cardano.Ledger.Shelley.PropertyTests (minimalPropertyTests, propertyTests)
 import qualified Test.Cardano.Ledger.ShelleyMA.Serialisation as Serialisation
-import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
 import Test.Tasty
 import Test.Tasty.HUnit ()
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)

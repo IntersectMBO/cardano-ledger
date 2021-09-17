@@ -21,6 +21,22 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto (..), ValidateScript (hashScript))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Mary.Value (AssetName (..), PolicyID (..), Value (..))
+import qualified Cardano.Ledger.Shelley.Metadata as SMD
+import Cardano.Ledger.Shelley.PParams
+  ( PParams' (..),
+    PParamsUpdate,
+    Update,
+    pattern ProposedPPUpdates,
+    pattern Update,
+  )
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (..),
+    DelegCert (..),
+    RewardAcnt (..),
+    TxIn (..),
+    TxOut (..),
+    Wdrl (..),
+  )
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
@@ -34,31 +50,15 @@ import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import qualified Shelley.Spec.Ledger.Metadata as SMD
-import Shelley.Spec.Ledger.PParams
-  ( PParams' (..),
-    PParamsUpdate,
-    Update,
-    pattern ProposedPPUpdates,
-    pattern Update,
-  )
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    RewardAcnt (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
 import Test.Cardano.Ledger.EraBuffet (AllegraEra, MaryEra, TestCrypto)
-import Test.Cardano.Ledger.TranslationTools (expectDecodeFailure)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
-import Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
+import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
   ( ToTokens (..),
     checkEncodingCBOR,
     checkEncodingCBORAnnotated,
   )
-import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), mkGenKey, mkKeyPair)
+import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkGenKey, mkKeyPair)
+import Test.Cardano.Ledger.TranslationTools (expectDecodeFailure)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase)
 

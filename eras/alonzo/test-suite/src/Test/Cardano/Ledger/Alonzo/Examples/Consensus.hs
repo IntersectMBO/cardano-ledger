@@ -19,15 +19,7 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era (ValidateScript (hashScript))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
-import Data.Default.Class (def)
-import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
-import qualified Data.Sequence.Strict as StrictSeq
-import qualified Data.Set as Set
-import qualified PlutusTx as Plutus
-import Shelley.Spec.Ledger.API
+import Cardano.Ledger.Shelley.API
   ( ApplyTxError (..),
     Credential (..),
     Network (..),
@@ -39,14 +31,22 @@ import Shelley.Spec.Ledger.API
     Update (..),
     Wdrl (..),
   )
-import Shelley.Spec.Ledger.STS.Delegs (DelegsPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Ledger (LedgerPredicateFailure (..))
-import Shelley.Spec.Ledger.Tx (Tx (..))
-import Shelley.Spec.Ledger.UTxO (makeWitnessesVKey)
+import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
+import Cardano.Ledger.Shelley.Tx (Tx (..))
+import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Data.Default.Class (def)
+import qualified Data.Map.Strict as Map
+import Data.Proxy (Proxy (..))
+import qualified Data.Sequence.Strict as StrictSeq
+import qualified Data.Set as Set
+import qualified PlutusTx as Plutus
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
-import qualified Test.Shelley.Spec.Ledger.Examples.Consensus as SLE
-import Test.Shelley.Spec.Ledger.Orphans ()
-import Test.Shelley.Spec.Ledger.Utils (mkAddr)
+import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
+import Test.Cardano.Ledger.Shelley.Orphans ()
+import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
 
 type StandardAlonzo = AlonzoEra StandardCrypto
 

@@ -7,6 +7,11 @@ where
 
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
+import qualified Cardano.Ledger.Shelley.API as S
+import Cardano.Ledger.Shelley.LedgerState ()
+import Cardano.Ledger.Shelley.PParams (emptyPParams)
+import Cardano.Ledger.Shelley.Tx (hashScript, scriptWits)
+import Cardano.Ledger.Shelley.UTxO (txid)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)
@@ -15,17 +20,12 @@ import Data.Default.Class (def)
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import qualified Shelley.Spec.Ledger.API as S
-import Shelley.Spec.Ledger.LedgerState ()
-import Shelley.Spec.Ledger.PParams (emptyPParams)
-import Shelley.Spec.Ledger.Tx (hashScript, scriptWits)
-import Shelley.Spec.Ledger.UTxO (txid)
 import Test.Cardano.Ledger.EraBuffet
   ( AllegraEra,
     ShelleyEra,
     StandardCrypto,
   )
-import Test.Shelley.Spec.Ledger.Utils (applySTSTest, runShelleyBase)
+import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (testCase)
 

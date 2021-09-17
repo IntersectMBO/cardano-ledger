@@ -8,20 +8,20 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 
 import Cardano.Binary (Annotator (..), FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
 import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
-import Shelley.Spec.Ledger.API (ApplyTx, ApplyTxError)
 import Test.Cardano.Ledger.EraBuffet
+import Test.Cardano.Ledger.Shelley.Generator.Metadata ()
+import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
   ( roundTrip,
     roundTripAnn,
   )
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (Arbitrary, Property, counterexample, (===))
-import Test.Shelley.Spec.Ledger.Generator.Metadata ()
-import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 

@@ -27,6 +27,8 @@ import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Shelley.Tx (TxIn)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Array (Array, (!))
@@ -34,8 +36,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as P
-import Shelley.Spec.Ledger.Tx (TxIn)
-import Shelley.Spec.Ledger.UTxO (UTxO (..), unUTxO)
 
 -- | Failures that can be returned by 'evaluateTransactionExecutionUnits'.
 data ScriptFailure c

@@ -27,47 +27,47 @@ import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Example (ExampleEra)
+import Cardano.Ledger.Shelley.API
+  ( Coin (..),
+    DCert,
+    PraosCrypto,
+    Update,
+  )
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.Rules.EraMapping ()
+import qualified Cardano.Ledger.Shelley.Rules.Utxo as STS
+import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
+import Cardano.Ledger.Shelley.Tx
+  ( TxIn (..),
+    TxOut (..),
+    WitnessSetHKD (WitnessSet),
+    pattern Tx,
+  )
+import Cardano.Ledger.Shelley.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>))
 import Control.Monad (replicateM)
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import Data.Set (Set)
 import Generic.Random (genericArbitraryU)
-import Shelley.Spec.Ledger.API
-  ( Coin (..),
-    DCert,
-    PraosCrypto,
-    Update,
-  )
-import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.STS.EraMapping ()
-import qualified Shelley.Spec.Ledger.STS.Utxo as STS
-import Shelley.Spec.Ledger.Scripts (MultiSig (..))
-import Shelley.Spec.Ledger.Tx
-  ( TxIn (..),
-    TxOut (..),
-    WitnessSetHKD (WitnessSet),
-    pattern Tx,
-  )
-import Shelley.Spec.Ledger.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
-import Test.QuickCheck
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
+import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Generator.Core
   ( GenEnv (..),
     genCoin,
     genNatural,
   )
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), MinGenTxout (..))
-import Test.Shelley.Spec.Ledger.Generator.Metadata (genMetadata)
-import Test.Shelley.Spec.Ledger.Generator.ScriptClass
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinGenTxout (..))
+import Test.Cardano.Ledger.Shelley.Generator.Metadata (genMetadata)
+import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
-import Test.Shelley.Spec.Ledger.Generator.Trace.Chain ()
-import Test.Shelley.Spec.Ledger.Generator.Update (genPParams, genShelleyPParamsDelta)
-import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain ()
+import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsDelta)
+import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
+import Test.QuickCheck
 
 {------------------------------------------------------------------------------
   ExampleEra instances for EraGen and ScriptClass

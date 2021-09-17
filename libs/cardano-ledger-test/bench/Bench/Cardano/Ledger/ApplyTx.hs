@@ -18,16 +18,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, ValidateScript)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Slot (SlotNo (SlotNo))
-import Control.DeepSeq (NFData (..))
-import Criterion
-import qualified Data.ByteString.Lazy as BSL
-import Data.Default.Class (Default, def)
-import Data.Proxy (Proxy (..))
-import qualified Data.Sequence as Seq
-import Data.Typeable (typeRep)
-import GHC.Generics (Generic)
-import Shelley.Spec.Ledger.API
+import Cardano.Ledger.Shelley.API
   ( AccountState (..),
     ApplyTx,
     Coin (..),
@@ -38,8 +29,17 @@ import Shelley.Spec.Ledger.API
     Tx,
     applyTxsTransition,
   )
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
-import Test.Shelley.Spec.Ledger.Utils (testGlobals)
+import Cardano.Ledger.Slot (SlotNo (SlotNo))
+import Control.DeepSeq (NFData (..))
+import Criterion
+import qualified Data.ByteString.Lazy as BSL
+import Data.Default.Class (Default, def)
+import Data.Proxy (Proxy (..))
+import qualified Data.Sequence as Seq
+import Data.Typeable (typeRep)
+import GHC.Generics (Generic)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
 type ShelleyBench = ShelleyEra C_Crypto
 

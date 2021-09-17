@@ -44,46 +44,46 @@ library
                       test
   exposed-modules:
     Test.Cardano.Crypto.VRF.Fake
-    Test.Shelley.Spec.Ledger.BenchmarkFunctions
-    Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
-    Test.Shelley.Spec.Ledger.Examples.Cast
-    Test.Shelley.Spec.Ledger.Examples.Consensus
-    Test.Shelley.Spec.Ledger.Generator.Block
-    Test.Shelley.Spec.Ledger.Generator.Constants
-    Test.Shelley.Spec.Ledger.Generator.Core
-    Test.Shelley.Spec.Ledger.Generator.Delegation
-    Test.Shelley.Spec.Ledger.Generator.Metadata
-    Test.Shelley.Spec.Ledger.Generator.Presets
-    Test.Shelley.Spec.Ledger.Generator.Trace.Chain
-    Test.Shelley.Spec.Ledger.Generator.Trace.DCert
-    Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
-    Test.Shelley.Spec.Ledger.Generator.Update
-    Test.Shelley.Spec.Ledger.Generator.Utxo
-    Test.Shelley.Spec.Ledger.Generator.EraGen
-    Test.Shelley.Spec.Ledger.Generator.ScriptClass
-    Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen
-    Test.Shelley.Spec.Ledger.Orphans
-    Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
-    Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
-    Test.Shelley.Spec.Ledger.Serialisation.Generators
-    Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators
-    Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
-    Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
-    Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
-    Test.Shelley.Spec.Ledger.Shrinkers
-    Test.Shelley.Spec.Ledger.Utils
-    Test.Shelley.Spec.Ledger.PropertyTests
-    Test.Shelley.Spec.Ledger.Rules.TestChain
+    Test.Cardano.Ledger.Shelley.BenchmarkFunctions
+    Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
+    Test.Cardano.Ledger.Shelley.Examples.Cast
+    Test.Cardano.Ledger.Shelley.Examples.Consensus
+    Test.Cardano.Ledger.Shelley.Generator.Block
+    Test.Cardano.Ledger.Shelley.Generator.Constants
+    Test.Cardano.Ledger.Shelley.Generator.Core
+    Test.Cardano.Ledger.Shelley.Generator.Delegation
+    Test.Cardano.Ledger.Shelley.Generator.Metadata
+    Test.Cardano.Ledger.Shelley.Generator.Presets
+    Test.Cardano.Ledger.Shelley.Generator.Trace.Chain
+    Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
+    Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger
+    Test.Cardano.Ledger.Shelley.Generator.Update
+    Test.Cardano.Ledger.Shelley.Generator.Utxo
+    Test.Cardano.Ledger.Shelley.Generator.EraGen
+    Test.Cardano.Ledger.Shelley.Generator.ScriptClass
+    Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen
+    Test.Cardano.Ledger.Shelley.Orphans
+    Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
+    Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
+    Test.Cardano.Ledger.Shelley.Serialisation.Generators
+    Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
+    Test.Cardano.Ledger.Shelley.Serialisation.Generators.Bootstrap
+    Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis
+    Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
+    Test.Cardano.Ledger.Shelley.Shrinkers
+    Test.Cardano.Ledger.Shelley.Utils
+    Test.Cardano.Ledger.Shelley.PropertyTests
+    Test.Cardano.Ledger.Shelley.Rules.TestChain
     Test.TestScenario
   other-modules:
-      Test.Shelley.Spec.Ledger.Address.Bootstrap
-      Test.Shelley.Spec.Ledger.Address.CompactAddr
-      Test.Shelley.Spec.Ledger.ByronTranslation
-      Test.Shelley.Spec.Ledger.Examples.Federation
-      Test.Shelley.Spec.Ledger.Rules.TestDeleg
-      Test.Shelley.Spec.Ledger.Rules.TestPool
-      Test.Shelley.Spec.Ledger.Rules.TestPoolreap
-      Test.Shelley.Spec.Ledger.ShelleyTranslation
+      Test.Cardano.Ledger.Shelley.Address.Bootstrap
+      Test.Cardano.Ledger.Shelley.Address.CompactAddr
+      Test.Cardano.Ledger.Shelley.ByronTranslation
+      Test.Cardano.Ledger.Shelley.Examples.Federation
+      Test.Cardano.Ledger.Shelley.Rules.TestDeleg
+      Test.Cardano.Ledger.Shelley.Rules.TestPool
+      Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
+      Test.Cardano.Ledger.Shelley.ShelleyTranslation
   build-depends:
     base16-bytestring >= 1,
     bytestring,
@@ -133,44 +133,44 @@ test-suite shelley-spec-ledger-test
   main-is:             Tests.hs
   other-modules:
       Test.Control.Iterate.SetAlgebra
-      Test.Shelley.Spec.Ledger.Address.Bootstrap
-      Test.Shelley.Spec.Ledger.Address.CompactAddr
-      Test.Shelley.Spec.Ledger.ByronTranslation
-      Test.Shelley.Spec.Ledger.Examples
-      Test.Shelley.Spec.Ledger.Examples.Cast
-      Test.Shelley.Spec.Ledger.Examples.Combinators
-      Test.Shelley.Spec.Ledger.Examples.EmptyBlock
-      Test.Shelley.Spec.Ledger.Examples.Federation
-      Test.Shelley.Spec.Ledger.Examples.Init
-      Test.Shelley.Spec.Ledger.Examples.GenesisDelegation
-      Test.Shelley.Spec.Ledger.Examples.NetworkID
-      Test.Shelley.Spec.Ledger.Examples.Mir
-      Test.Shelley.Spec.Ledger.Examples.MirTransfer
-      Test.Shelley.Spec.Ledger.Examples.PoolLifetime
-      Test.Shelley.Spec.Ledger.Examples.PoolReReg
-      Test.Shelley.Spec.Ledger.Examples.TwoPools
-      Test.Shelley.Spec.Ledger.Examples.Updates
-      Test.Shelley.Spec.Ledger.Fees
-      Test.Shelley.Spec.Ledger.MultiSigExamples
-      Test.Shelley.Spec.Ledger.Pretty
-      Test.Shelley.Spec.Ledger.PropertyTests
-      Test.Shelley.Spec.Ledger.Rewards
-      Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
-      Test.Shelley.Spec.Ledger.Rules.TestChain
-      Test.Shelley.Spec.Ledger.Rules.TestDeleg
-      Test.Shelley.Spec.Ledger.Rules.TestPool
-      Test.Shelley.Spec.Ledger.Rules.TestPoolreap
-      Test.Shelley.Spec.Ledger.SafeHash
-      Test.Shelley.Spec.Ledger.Serialisation
-      Test.Shelley.Spec.Ledger.Serialisation.CDDL
-      Test.Shelley.Spec.Ledger.Serialisation.Golden.Address
-      Test.Shelley.Spec.Ledger.Serialisation.Golden.Encoding
-      Test.Shelley.Spec.Ledger.Serialisation.Golden.Genesis
-      Test.Shelley.Spec.Ledger.Serialisation.Tripping.CBOR
-      Test.Shelley.Spec.Ledger.Serialisation.Tripping.JSON
-      Test.Shelley.Spec.Ledger.ShelleyTranslation
-      Test.Shelley.Spec.Ledger.STSTests
-      Test.Shelley.Spec.Ledger.UnitTests
+      Test.Cardano.Ledger.Shelley.Address.Bootstrap
+      Test.Cardano.Ledger.Shelley.Address.CompactAddr
+      Test.Cardano.Ledger.Shelley.ByronTranslation
+      Test.Cardano.Ledger.Shelley.Examples
+      Test.Cardano.Ledger.Shelley.Examples.Cast
+      Test.Cardano.Ledger.Shelley.Examples.Combinators
+      Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
+      Test.Cardano.Ledger.Shelley.Examples.Federation
+      Test.Cardano.Ledger.Shelley.Examples.Init
+      Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation
+      Test.Cardano.Ledger.Shelley.Examples.NetworkID
+      Test.Cardano.Ledger.Shelley.Examples.Mir
+      Test.Cardano.Ledger.Shelley.Examples.MirTransfer
+      Test.Cardano.Ledger.Shelley.Examples.PoolLifetime
+      Test.Cardano.Ledger.Shelley.Examples.PoolReReg
+      Test.Cardano.Ledger.Shelley.Examples.TwoPools
+      Test.Cardano.Ledger.Shelley.Examples.Updates
+      Test.Cardano.Ledger.Shelley.Fees
+      Test.Cardano.Ledger.Shelley.MultiSigExamples
+      Test.Cardano.Ledger.Shelley.Pretty
+      Test.Cardano.Ledger.Shelley.PropertyTests
+      Test.Cardano.Ledger.Shelley.Rewards
+      Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
+      Test.Cardano.Ledger.Shelley.Rules.TestChain
+      Test.Cardano.Ledger.Shelley.Rules.TestDeleg
+      Test.Cardano.Ledger.Shelley.Rules.TestPool
+      Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
+      Test.Cardano.Ledger.Shelley.SafeHash
+      Test.Cardano.Ledger.Shelley.Serialisation
+      Test.Cardano.Ledger.Shelley.Serialisation.CDDL
+      Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address
+      Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding
+      Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
+      Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR
+      Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
+      Test.Cardano.Ledger.Shelley.ShelleyTranslation
+      Test.Cardano.Ledger.Shelley.RulesTests
+      Test.Cardano.Ledger.Shelley.UnitTests
       Test.TestScenario
 
   hs-source-dirs:      test
@@ -238,9 +238,9 @@ benchmark mainbench
     Bench.Control.Iterate.SetAlgebra.Bimap,
     BenchUTxOAggregate,
     BenchValidation,
-    Shelley.Spec.Ledger.Bench.Gen
-    Shelley.Spec.Ledger.Bench.Rewards
-    Test.Shelley.Spec.Ledger.Examples.Cast
+    Cardano.Ledger.Shelley.Bench.Gen
+    Cardano.Ledger.Shelley.Bench.Rewards
+    Test.Cardano.Ledger.Shelley.Examples.Cast
 
   build-depends:
     bytestring,

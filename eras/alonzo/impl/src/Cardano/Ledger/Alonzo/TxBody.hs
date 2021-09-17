@@ -109,6 +109,11 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
+import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAddr)
+import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
+import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.Scripts (ScriptHash)
+import Cardano.Ledger.Shelley.TxBody (TxIn (..), Wdrl (Wdrl), unWdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
@@ -129,11 +134,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
-import Shelley.Spec.Ledger.CompactAddr (CompactAddr, compactAddr, decompactAddr)
-import Shelley.Spec.Ledger.Delegation.Certificates (DCert)
-import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.TxBody (TxIn (..), Wdrl (Wdrl), unWdrl)
 import Prelude hiding (lookup)
 
 data TxOut era

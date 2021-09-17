@@ -11,6 +11,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
+import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.ShelleyMA
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
 import Cardano.Ledger.ShelleyMA.Timelocks
@@ -18,10 +19,9 @@ import Cardano.Ledger.ShelleyMA.TxBody
 import Cardano.Slotting.Slot
 import Data.Proxy
 import qualified Data.Sequence.Strict as StrictSeq
-import Shelley.Spec.Ledger.API
-import Test.Shelley.Spec.Ledger.Examples.Consensus
-import Test.Shelley.Spec.Ledger.Orphans ()
-import Test.Shelley.Spec.Ledger.Utils hiding (mkVRFKeyPair)
+import Test.Cardano.Ledger.Shelley.Examples.Consensus
+import Test.Cardano.Ledger.Shelley.Orphans ()
+import Test.Cardano.Ledger.Shelley.Utils hiding (mkVRFKeyPair)
 
 type StandardAllegra = AllegraEra StandardCrypto
 

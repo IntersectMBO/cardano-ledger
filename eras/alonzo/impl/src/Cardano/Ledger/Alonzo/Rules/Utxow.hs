@@ -46,6 +46,37 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
+import Cardano.Ledger.Shelley.Delegation.Certificates
+  ( delegCWitness,
+    genesisCWitness,
+    poolCWitness,
+    requiresVKeyWitness,
+  )
+import Cardano.Ledger.Shelley.LedgerState
+  ( UTxOState (..),
+    WitHashes (..),
+    propWits,
+    unWitHashes,
+    witsFromTxWitnesses,
+  )
+import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxow
+  ( ShelleyStyleWitnessNeeds,
+    UtxowEvent (UtxoEvent),
+    UtxowPredicateFailure (..),
+    shelleyStyleWitness,
+  )
+import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
+import Cardano.Ledger.Shelley.Tx (TxIn (..), extractKeyHashWitnessSet)
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (DCertDeleg, DCertGenesis, DCertPool),
+    PoolCert (RegPool),
+    PoolParams (..),
+    Wdrl,
+    unWdrl,
+  )
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), txinLookup)
 import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
@@ -58,37 +89,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
-import Shelley.Spec.Ledger.Delegation.Certificates
-  ( delegCWitness,
-    genesisCWitness,
-    poolCWitness,
-    requiresVKeyWitness,
-  )
-import Shelley.Spec.Ledger.LedgerState
-  ( UTxOState (..),
-    WitHashes (..),
-    propWits,
-    unWitHashes,
-    witsFromTxWitnesses,
-  )
-import Shelley.Spec.Ledger.PParams (Update)
-import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
-import Shelley.Spec.Ledger.STS.Utxow
-  ( ShelleyStyleWitnessNeeds,
-    UtxowEvent (UtxoEvent),
-    UtxowPredicateFailure (..),
-    shelleyStyleWitness,
-  )
-import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.Tx (TxIn (..), extractKeyHashWitnessSet)
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (DCertDeleg, DCertGenesis, DCertPool),
-    PoolCert (RegPool),
-    PoolParams (..),
-    Wdrl,
-    unWdrl,
-  )
-import Shelley.Spec.Ledger.UTxO (UTxO (..), txinLookup)
 
 -- =================================================
 

@@ -3,17 +3,17 @@
 {-# LANGUAGE TypeApplications #-}
 
 import Cardano.Crypto.Libsodium (sodiumInit)
-import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
+import Test.Cardano.Ledger.Shelley.Pretty (prettyTest)
+import Test.Cardano.Ledger.Shelley.PropertyTests (minimalPropertyTests, propertyTests)
+import Test.Cardano.Ledger.Shelley.Rewards (rewardTests)
+import Test.Cardano.Ledger.Shelley.RulesTests (chainExamples, multisigExamples)
+import Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest)
+import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
+import Test.Cardano.Ledger.Shelley.UnitTests (unitTests)
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C)
-import Test.Shelley.Spec.Ledger.Pretty (prettyTest)
-import Test.Shelley.Spec.Ledger.PropertyTests (minimalPropertyTests, propertyTests)
-import Test.Shelley.Spec.Ledger.Rewards (rewardTests)
-import Test.Shelley.Spec.Ledger.STSTests (chainExamples, multisigExamples)
-import Test.Shelley.Spec.Ledger.SafeHash (safeHashTest)
-import qualified Test.Shelley.Spec.Ledger.Serialisation as Serialisation
-import Test.Shelley.Spec.Ledger.UnitTests (unitTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 

@@ -19,6 +19,22 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
+import Cardano.Ledger.Shelley.LedgerState
+  ( DState (..),
+    InstantaneousRewards (..),
+    PState (..),
+  )
+import Cardano.Ledger.Shelley.Scripts ()
+import Cardano.Ledger.Shelley.TxBody
+  ( PoolParams (..),
+    TxId (..),
+    TxIn (..),
+    TxOut (..),
+  )
+import Cardano.Ledger.Shelley.UTxO
+  ( UTxO (..),
+  )
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.Monad (replicateM)
@@ -27,27 +43,11 @@ import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence as Seq
-import Shelley.Spec.Ledger.CompactAddr (compactAddr)
-import Shelley.Spec.Ledger.LedgerState
-  ( DState (..),
-    InstantaneousRewards (..),
-    PState (..),
-  )
-import Shelley.Spec.Ledger.Scripts ()
-import Shelley.Spec.Ledger.TxBody
-  ( PoolParams (..),
-    TxId (..),
-    TxIn (..),
-    TxOut (..),
-  )
-import Shelley.Spec.Ledger.UTxO
-  ( UTxO (..),
-  )
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
+import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePoolParams)
+import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators (mkDummyHash)
+import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.QuickCheck
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C, C_Crypto)
-import Test.Shelley.Spec.Ledger.Examples.Cast (alicePoolParams)
-import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators (mkDummyHash)
-import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 
 genTestCase ::
   Int -> -- The size of the utxo

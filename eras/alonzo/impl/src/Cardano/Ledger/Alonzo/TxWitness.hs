@@ -71,6 +71,9 @@ import Cardano.Ledger.Pretty
   )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
+import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.Shelley.Scripts (ScriptHash)
+import Cardano.Ledger.Shelley.TxBody (WitVKey)
 import qualified Data.ByteString.Short as SBS
 import Data.Coders
 import Data.Map.Strict (Map)
@@ -85,9 +88,6 @@ import Data.Word (Word64)
 import GHC.Generics
 import GHC.Records
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness)
-import Shelley.Spec.Ledger.Scripts (ScriptHash)
-import Shelley.Spec.Ledger.TxBody (WitVKey)
 
 -- ==========================================
 

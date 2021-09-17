@@ -35,6 +35,7 @@ import Cardano.Ledger.Pretty
   )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
+import Cardano.Ledger.Shelley.Metadata (Metadatum)
 import Codec.CBOR.Decoding
   ( TokenType
       ( TypeListLen,
@@ -54,7 +55,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class
-import Shelley.Spec.Ledger.Metadata (Metadatum)
 
 -- =======================================
 

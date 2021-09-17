@@ -1,7 +1,7 @@
 -- | Defines the requirements on an era to be testable
 module Test.Cardano.Ledger.TestableEra where
 
-import Shelley.Spec.Ledger.API
+import Cardano.Ledger.Shelley.API
 
 class
   ( ApplyBlock era,

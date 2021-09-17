@@ -266,8 +266,8 @@ type WellFormed era =
 {-  TODO, there are a few other constraints which are WellFormed and we should add
 them when time permits. Some are not added because the types they mentions reside
 in files that cause circular import dependencies.
-   -- import Shelley.Spec.Ledger.TxBody(DCert,Wdrl,WitVKey)
-   -- import Shelley.Spec.Ledger.Tx(TxIn)
+   -- import Cardano.Ledger.Shelley.TxBody(DCert,Wdrl,WitVKey)
+   -- import Cardano.Ledger.Shelley.Tx(TxIn)
 These would have to be moved into a module such as Cardano.Ledger.TxBase(TxIn,DCert,Wdrl)
    -- HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),       -- all possible inputs
    -- HasField "txinputs_fee" (Core.TxBody era) (Set (TxIn (Crypto era)))  -- inputs that can be used to pay fees
@@ -275,8 +275,8 @@ These would have to be moved into a module such as Cardano.Ledger.TxBase(TxIn,DC
    -- HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
    -- HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era)))
 others where the concrete type (Update and WitnessSet) will have to be made into a type family
-   -- import Shelley.Spec.Ledger.PParams (Update)
-   -- import Shelley.Spec.Ledger.Tx(WitnessSet)
+   -- import Cardano.Ledger.Shelley.PParams (Update)
+   -- import Cardano.Ledger.Shelley.Tx(WitnessSet)
    -- import Cardano.Ledger.Alonzo.Scripts (ExUnits)
    -- HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
    -- HasField "wits" (Core.Tx era) (WitnessSet era),

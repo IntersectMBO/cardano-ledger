@@ -4,20 +4,20 @@
 module Cardano.Ledger.ShelleyMA.Rules.EraMapping () where
 
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Shelley.API as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Bbody as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Epoch as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Mir as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Newpp as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Rupd as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Snap as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Tick as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Upec as Shelley
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO)
 import Cardano.Ledger.ShelleyMA.Rules.Utxow (UTXOW)
 import qualified Cardano.Protocol.TPraos.Rules.OCert as Shelley
 import qualified Cardano.Protocol.TPraos.Rules.Overlay as Shelley
-import qualified Shelley.Spec.Ledger.API as Shelley
-import qualified Shelley.Spec.Ledger.STS.Bbody as Shelley
-import qualified Shelley.Spec.Ledger.STS.Epoch as Shelley
-import qualified Shelley.Spec.Ledger.STS.Mir as Shelley
-import qualified Shelley.Spec.Ledger.STS.Newpp as Shelley
-import qualified Shelley.Spec.Ledger.STS.Rupd as Shelley
-import qualified Shelley.Spec.Ledger.STS.Snap as Shelley
-import qualified Shelley.Spec.Ledger.STS.Tick as Shelley
-import qualified Shelley.Spec.Ledger.STS.Upec as Shelley
 
 -- These rules are all inherited from Shelley
 

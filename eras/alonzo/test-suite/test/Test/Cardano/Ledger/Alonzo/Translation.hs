@@ -24,24 +24,24 @@ import Cardano.Ledger.Alonzo.Tx (toCBORForSizeComputation)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (TranslateEra (..))
+import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA
 import Data.Typeable (Typeable)
-import qualified Shelley.Spec.Ledger.API as API
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.EraBuffet
   ( MaryEra,
     StandardCrypto,
   )
+import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
+import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Cardano.Ledger.TranslationTools
   ( decodeTestAnn,
     translationCompat,
     translationCompatToCBOR,
   )
-import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
-import Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators ()
-import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (Arbitrary, testProperty)
 

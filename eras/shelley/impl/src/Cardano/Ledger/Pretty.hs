@@ -65,6 +65,85 @@ import Cardano.Ledger.Keys
     VerKeyKES,
   )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
+import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
+import Cardano.Ledger.Shelley.BlockChain (Block (..))
+import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (..), decompactAddr)
+import Cardano.Ledger.Shelley.EpochBoundary
+  ( BlocksMade (..),
+    SnapShot (..),
+    SnapShots (..),
+    Stake (..),
+  )
+import Cardano.Ledger.Shelley.LedgerState
+  ( AccountState (..),
+    DPState (..),
+    DState (..),
+    EpochState (..),
+    FutureGenDeleg (..),
+    InstantaneousRewards (..),
+    Ix,
+    LedgerState (..),
+    NewEpochState (..),
+    PPUPState (..),
+    PState (..),
+    UTxOState (..),
+  )
+import Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
+import Cardano.Ledger.Shelley.PParams
+  ( PPUpdateEnv (..),
+    PParams' (..),
+    ProposedPPUpdates (..),
+    ProtVer (..),
+    Update (..),
+  )
+import Cardano.Ledger.Shelley.RewardUpdate
+  ( FreeVars (..),
+    Pulser,
+    PulsingRewUpdate (..),
+    RewardAns (..),
+    RewardPulser (..),
+    RewardSnapShot (..),
+    RewardUpdate (..),
+  )
+import Cardano.Ledger.Shelley.Rewards
+  ( Histogram (..),
+    Likelihood (..),
+    LogWeight (..),
+    NonMyopic (..),
+    PerformanceEstimate (..),
+    Reward (..),
+    RewardType (..),
+    StakeShare (..),
+  )
+import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
+import Cardano.Ledger.Shelley.Scripts (MultiSig (..), ScriptHash (..))
+import Cardano.Ledger.Shelley.Tx
+  ( Tx (..),
+    WitnessSetHKD,
+    prettyWitnessSetParts,
+  )
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    GenesisDelegCert (..),
+    MIRCert (..),
+    MIRPot (..),
+    MIRTarget (..),
+    PoolCert (..),
+    PoolMetadata (..),
+    PoolParams (..),
+    StakeCreds (..),
+    StakePoolRelay (..),
+    TxBody (..),
+    TxBodyRaw (..),
+    TxId (..),
+    TxIn (..),
+    TxOut (..),
+    Wdrl (..),
+    WitVKey (..),
+  )
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     Duration (..),
@@ -108,85 +187,6 @@ import GHC.Records
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
-import Shelley.Spec.Ledger.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Shelley.Spec.Ledger.BlockChain (Block (..))
-import Shelley.Spec.Ledger.CompactAddr (CompactAddr (..), decompactAddr)
-import Shelley.Spec.Ledger.EpochBoundary
-  ( BlocksMade (..),
-    SnapShot (..),
-    SnapShots (..),
-    Stake (..),
-  )
-import Shelley.Spec.Ledger.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState (..),
-    EpochState (..),
-    FutureGenDeleg (..),
-    InstantaneousRewards (..),
-    Ix,
-    LedgerState (..),
-    NewEpochState (..),
-    PPUPState (..),
-    PState (..),
-    UTxOState (..),
-  )
-import Shelley.Spec.Ledger.Metadata (Metadata (..), Metadatum (..))
-import Shelley.Spec.Ledger.PParams
-  ( PPUpdateEnv (..),
-    PParams' (..),
-    ProposedPPUpdates (..),
-    ProtVer (..),
-    Update (..),
-  )
-import Shelley.Spec.Ledger.RewardUpdate
-  ( FreeVars (..),
-    Pulser,
-    PulsingRewUpdate (..),
-    RewardAns (..),
-    RewardPulser (..),
-    RewardSnapShot (..),
-    RewardUpdate (..),
-  )
-import Shelley.Spec.Ledger.Rewards
-  ( Histogram (..),
-    Likelihood (..),
-    LogWeight (..),
-    NonMyopic (..),
-    PerformanceEstimate (..),
-    Reward (..),
-    RewardType (..),
-    StakeShare (..),
-  )
-import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.Scripts (MultiSig (..), ScriptHash (..))
-import Shelley.Spec.Ledger.Tx
-  ( Tx (..),
-    WitnessSetHKD,
-    prettyWitnessSetParts,
-  )
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    GenesisDelegCert (..),
-    MIRCert (..),
-    MIRPot (..),
-    MIRTarget (..),
-    PoolCert (..),
-    PoolMetadata (..),
-    PoolParams (..),
-    StakeCreds (..),
-    StakePoolRelay (..),
-    TxBody (..),
-    TxBodyRaw (..),
-    TxId (..),
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-    WitVKey (..),
-  )
-import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- =====================================================================================================
 -- HELPER FUNCTIONS
@@ -382,8 +382,8 @@ class PrettyA t where
 -- ================================= ====================================================================
 
 -- ================================
--- Shelley.Spec.Ledger.STS.Chain(ChainState(..))
--- import Shelley.Spec.Ledger.BlockChain(LastAppliedBlock(..),HashHeader(..))
+-- Cardano.Ledger.Shelley.Rules.Chain(ChainState(..))
+-- import Cardano.Ledger.Shelley.BlockChain(LastAppliedBlock(..),HashHeader(..))
 
 ppChainState :: CanPrettyPrintLedgerState era => ChainState era -> PDoc
 ppChainState (ChainState nes ocert epochnonce evolvenonce prevnonce candnonce lastab) =
@@ -476,7 +476,7 @@ instance (Era era, PrettyA (Era.TxSeq era)) => PrettyA (Block era) where
   prettyA = ppBlock
 
 -- =================================
--- Shelley.Spec.Ledger.LedgerState.Delegation.Certificates
+-- Cardano.Ledger.Shelley.LedgerState.Delegation.Certificates
 
 ppPoolDistr :: PoolDistr c -> PDoc
 ppPoolDistr (PoolDistr mp) = ppSexp "PoolDistr" [ppMap ppKeyHash ppIndividualPoolStake mp]
@@ -496,7 +496,7 @@ instance PrettyA (IndividualPoolStake c) where
   prettyA = ppIndividualPoolStake
 
 -- ================================
--- Shelley.Spec.Ledger.RewardUpdate
+-- Cardano.Ledger.Shelley.RewardUpdate
 
 ppRewardUpdate :: RewardUpdate crypto -> PDoc
 ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
@@ -585,7 +585,7 @@ instance PrettyA (RewardUpdate crypto) where
   prettyA = ppRewardUpdate
 
 -- =================================
--- Shelley.Spec.Ledger.LedgerState
+-- Cardano.Ledger.Shelley.LedgerState
 
 -- | Constraints needed to ensure that the ledger state can be pretty printed.
 type CanPrettyPrintLedgerState era =
@@ -776,7 +776,7 @@ instance
   prettyA = ppUTxOState
 
 -- =================================
--- Shelley.Spec.Ledger.Rewards
+-- Cardano.Ledger.Shelley.Rewards
 
 ppPerformanceEstimate :: PerformanceEstimate -> PDoc
 ppPerformanceEstimate (PerformanceEstimate n) = ppSexp "PerformanceEstimate" [ppDouble n]
@@ -817,7 +817,7 @@ instance PrettyA Likelihood where
   prettyA = ppLikelihood
 
 -- =================================
--- Shelley.Spec.Ledger.EpochBoundary
+-- Cardano.Ledger.Shelley.EpochBoundary
 
 ppStake :: Stake crypto -> PDoc
 ppStake (Stake m) = ppMap' (text "Stake") ppCredential ppCoin m
@@ -857,7 +857,7 @@ instance PrettyA (SnapShots crypto) where
   prettyA = ppSnapShots
 
 -- ============================
--- Shelley.Spec.Ledger.UTxO
+-- Cardano.Ledger.Shelley.UTxO
 
 ppUTxO ::
   PrettyA (Core.TxOut era) =>
@@ -899,7 +899,7 @@ instance PrettyA (Metadata era) where
   prettyA = ppMetadata
 
 -- ============================
--- Shelley.Spec.Ledger.Tx
+-- Cardano.Ledger.Shelley.Tx
 
 ppTx ::
   ( PrettyA (Core.TxBody era),
@@ -977,7 +977,7 @@ instance (Compactible a, PrettyA a) => PrettyA (CompactForm a) where
   prettyA = ppCompactForm prettyA
 
 -- ============================
--- Shelley.Spec.Ledger.TxBody
+-- Cardano.Ledger.Shelley.TxBody
 
 ppDelegation :: Delegation c -> PDoc
 ppDelegation (Delegation orx ee) =
@@ -1145,7 +1145,7 @@ instance PrettyA IPv6 where
   prettyA = ppIPv6
 
 -- ====================================================
--- Shelley.Spec.Ledger.CompactAddr
+-- Cardano.Ledger.Shelley.CompactAddr
 
 ppCompactAddr :: Crypto c => CompactAddr c -> PDoc
 ppCompactAddr x = ppAddr (decompactAddr x)
@@ -1154,7 +1154,7 @@ instance Crypto c => PrettyA (CompactAddr c) where
   prettyA = ppCompactAddr
 
 -- ================================================
--- Shelley.Spec.Ledger.PParams
+-- Cardano.Ledger.Shelley.PParams
 
 ppProtVer :: ProtVer -> PDoc
 ppProtVer (ProtVer maj mi) = ppRecord "Version" [("major", ppNatural maj), ("minor", ppNatural mi)]
@@ -1282,7 +1282,7 @@ instance PrettyA UnparsedFields where
   prettyA = ppUnparsedFields
 
 -- ===========================================
--- Shelley.Spec.Ledger.Address
+-- Cardano.Ledger.Shelley.Address
 
 ppAddr :: Addr c -> PDoc
 ppAddr (Addr net cred ref) = ppSexp "Addr" [ppNetwork net, ppCredential cred, ppStakeReference ref]
@@ -1301,7 +1301,7 @@ instance PrettyA (RewardAcnt c) where
   prettyA = ppRewardAcnt
 
 -- ===========================================
--- Shelley.Spec.Ledger.Credential
+-- Cardano.Ledger.Shelley.Credential
 
 ppCredential :: Credential keyrole c -> PDoc
 ppCredential (ScriptHashObj (ScriptHash x)) = ppSexp "ScriptCred" [ppHash x]
@@ -1331,7 +1331,7 @@ instance PrettyA Ptr where
   prettyA = ppPtr
 
 -- ===========================================
--- Shelley.Spec.Ledger.Scripts
+-- Cardano.Ledger.Shelley.Scripts
 
 ppMultiSig :: Crypto crypto => MultiSig crypto -> PDoc
 ppMultiSig (RequireSignature hk) = ppSexp "Require" [ppKeyHash hk]
@@ -1349,7 +1349,7 @@ instance Crypto c => PrettyA (MultiSig c) where
   prettyA = ppMultiSig
 
 -- ====================================================
--- Shelley.Spec.Ledger.Slot
+-- Cardano.Ledger.Shelley.Slot
 
 ppSlotNo :: SlotNo -> Doc ann
 ppSlotNo (SlotNo x) = text "SlotNo" <+> pretty x
@@ -1382,7 +1382,7 @@ instance PrettyA BlockNo where
   prettyA = ppBlockNo
 
 -- ===================================================
--- Shelley.Spec.Ledger.OCert
+-- Cardano.Ledger.Shelley.OCert
 
 ppKESPeriod :: KESPeriod -> PDoc
 ppKESPeriod (KESPeriod x) = text "KESPeriod" <+> pretty x
@@ -1431,7 +1431,7 @@ instance PrettyA (Hash.Hash a b) where
   prettyA = ppHash
 
 -- ==========================================
--- Shelley.Spec.Ledger.BaseTypes
+-- Cardano.Ledger.Shelley.BaseTypes
 
 ppUnitInterval :: UnitInterval -> PDoc
 ppUnitInterval = viaShow
@@ -1521,7 +1521,7 @@ instance PrettyA DnsName where
   prettyA = ppDnsName
 
 -- ===========================================
--- Shelley.Spec.Ledger.Keys
+-- Cardano.Ledger.Shelley.Keys
 
 ppVKey :: Crypto c => VKey r c -> PDoc
 ppVKey (VKey x) = reAnnotate (Width 5 :) (viaShow x)

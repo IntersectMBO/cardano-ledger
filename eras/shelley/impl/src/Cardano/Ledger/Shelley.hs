@@ -9,7 +9,7 @@
 
 -- | Definition of the shelley era, along with instances ot the @Core@ types
 -- defined in @module Cardano.Ledger.Core@, and instances of the @API@ classes
--- exposed in @module Shelley.Spec.Ledger.API@.
+-- exposed in @module Cardano.Ledger.Shelley.API@.
 module Cardano.Ledger.Shelley
   ( ShelleyEra,
     Self,
@@ -37,27 +37,27 @@ import Cardano.Ledger.Era (SupportsSegWit (..), ValidateScript (..))
 import qualified Cardano.Ledger.Era as E (Era (Crypto), TranslationContext)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
+import Cardano.Ledger.Shelley.BlockChain (bbHash)
+import qualified Cardano.Ledger.Shelley.BlockChain as Shelley
+  ( TxSeq (..),
+    txSeqTxns,
+  )
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
     UsesTxBody,
     UsesTxOut (..),
     UsesValue,
   )
-import qualified Data.ByteString as BS
-import Data.Proxy
-import Shelley.Spec.Ledger.BlockChain (bbHash)
-import qualified Shelley.Spec.Ledger.BlockChain as Shelley
-  ( TxSeq (..),
-    txSeqTxns,
-  )
-import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
-import Shelley.Spec.Ledger.PParams (PParams, PParamsUpdate, updatePParams)
-import Shelley.Spec.Ledger.Scripts (MultiSig)
-import Shelley.Spec.Ledger.Tx
+import Cardano.Ledger.Shelley.Metadata (Metadata (Metadata), validMetadatum)
+import Cardano.Ledger.Shelley.PParams (PParams, PParamsUpdate, updatePParams)
+import Cardano.Ledger.Shelley.Scripts (MultiSig)
+import Cardano.Ledger.Shelley.Tx
   ( WitnessSet,
     validateNativeMultiSigScript,
   )
-import qualified Shelley.Spec.Ledger.Tx as STx (Tx, TxBody, TxOut (..))
+import qualified Cardano.Ledger.Shelley.Tx as STx (Tx, TxBody, TxOut (..))
+import qualified Data.ByteString as BS
+import Data.Proxy
 
 data ShelleyEra c
 

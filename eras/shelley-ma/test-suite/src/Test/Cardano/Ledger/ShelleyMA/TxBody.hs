@@ -24,6 +24,8 @@ import Cardano.Ledger.Mary.Value
     PolicyID (..),
     Value (..),
   )
+import Cardano.Ledger.Shelley.Tx (hashScript)
+import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -36,10 +38,8 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (empty)
 import Data.String (fromString)
 import GHC.Records
-import Shelley.Spec.Ledger.Tx (hashScript)
-import Shelley.Spec.Ledger.TxBody (Wdrl (..))
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
-import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
+import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.HUnit
 

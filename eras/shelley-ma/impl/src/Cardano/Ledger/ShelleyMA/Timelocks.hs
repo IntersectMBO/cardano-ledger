@@ -58,6 +58,11 @@ import Cardano.Ledger.Serialization
     encodeFoldable,
   )
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
+import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes)
+import Cardano.Ledger.Shelley.Tx (WitVKey)
+import Cardano.Ledger.Shelley.TxBody
+  ( witKeyHash,
+  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))
@@ -86,11 +91,6 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
-import Shelley.Spec.Ledger.Tx (WitVKey)
-import Shelley.Spec.Ledger.TxBody
-  ( witKeyHash,
-  )
 
 -- =================================================================
 -- We translate a MultiSig by deserializing its bytes as a Timelock

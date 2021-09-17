@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
 where
 
 import Cardano.Binary (Annotator (..), FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
     showTimelock,
@@ -23,11 +24,10 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Lazy as Lazy
 import Data.MemoBytes (MemoBytes (Memo))
 import Data.Sequence.Strict (fromList)
-import Shelley.Spec.Ledger.Scripts (MultiSig, getMultiSigBytes)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (embedTripAnn, roundTripAnn)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck (testProperty)
 

@@ -28,7 +28,7 @@ import Test.Cardano.Ledger.Mary.Golden
     smallName,
     smallestName,
   )
-import Test.Shelley.Spec.Ledger.Examples.Cast (aliceAddr, bobAddr, carlAddr)
+import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 

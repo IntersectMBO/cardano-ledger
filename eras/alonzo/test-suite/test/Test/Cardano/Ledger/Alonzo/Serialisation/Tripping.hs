@@ -16,15 +16,15 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
 import Cardano.Ledger.Alonzo.Scripts (Script, decodeCostModel)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Shelley.BlockChain (Block)
+import Cardano.Ledger.Shelley.Metadata (Metadata)
+import qualified Cardano.Ledger.Shelley.Tx as LTX
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import Shelley.Spec.Ledger.BlockChain (Block)
-import Shelley.Spec.Ledger.Metadata (Metadata)
-import qualified Shelley.Spec.Ledger.Tx as LTX
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (roundTrip, roundTrip', roundTripAnn)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

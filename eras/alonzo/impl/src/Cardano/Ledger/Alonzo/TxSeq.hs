@@ -49,6 +49,7 @@ import Cardano.Ledger.Serialization
   ( ToCBORGroup (..),
     encodeFoldableMapEncoder,
   )
+import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as BSL
@@ -71,7 +72,6 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (AllowThunksIn (..), NoThunks)
-import Shelley.Spec.Ledger.BlockChain (constructMetadata)
 
 -- =================================================
 

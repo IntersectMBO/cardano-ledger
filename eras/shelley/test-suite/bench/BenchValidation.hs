@@ -31,7 +31,26 @@ import Cardano.Ledger.BaseTypes (Globals (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
+import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.API.Protocol
+  ( ChainDepState (..),
+    ChainTransitionError,
+    LedgerView (..),
+    currentLedgerView,
+    tickChainDepState,
+    updateChainDepState,
+  )
+import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
+import Cardano.Ledger.Shelley.BlockChain (Block (..), slotToNonce)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
+import Cardano.Ledger.Shelley.EpochBoundary (unBlocksMade)
+import Cardano.Ledger.Shelley.LedgerState
+  ( NewEpochState,
+    nesBcur,
+  )
+import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
+import Cardano.Ledger.Shelley.Rules.Tickn (TicknState (..))
+import Cardano.Ledger.Shelley.TxBody (TransTxBody, TransTxId)
 import Cardano.Prelude (NFData (rnf))
 import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..))
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
@@ -41,32 +60,13 @@ import Control.State.Transition (STS (State))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.Map as Map
 import Data.Proxy
-import qualified Shelley.Spec.Ledger.API as API
-import Shelley.Spec.Ledger.API.Protocol
-  ( ChainDepState (..),
-    ChainTransitionError,
-    LedgerView (..),
-    currentLedgerView,
-    tickChainDepState,
-    updateChainDepState,
-  )
-import Shelley.Spec.Ledger.Bench.Gen (genBlock, genChainState)
-import Shelley.Spec.Ledger.BlockChain (Block (..), slotToNonce)
-import Shelley.Spec.Ledger.EpochBoundary (unBlocksMade)
-import Shelley.Spec.Ledger.LedgerState
-  ( NewEpochState,
-    nesBcur,
-  )
-import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.STS.Tickn (TicknState (..))
-import Shelley.Spec.Ledger.TxBody (TransTxBody, TransTxId)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 -- Use Another constraint, so this works in all Eras
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen, MinLEDGER_STS)
-import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
-import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
+import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
+import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 
 data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
 

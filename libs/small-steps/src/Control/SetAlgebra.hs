@@ -47,7 +47,7 @@ module Control.SetAlgebra
     (➖),
     -- The only exported concrete Constructor of Set Algebra Expressons. Needed to make 'HasExp' and 'Embed'
     -- instances of new kinds of sets (Basically,  Data.Map's wrapped in a newtype).
-    -- See: Shelley.Spec.Ledger.TxBody and Shelley/Spec/Ledger/UTxO.hs and helley/Spec/Ledger/Delegation/Certificates.hs
+    -- See: Cardano.Ledger.Shelley.TxBody and Cardano.Ledger.Shelley/UTxO.hs and helley/Spec/Ledger/Delegation/Certificates.hs
     -- for example uses of this.
     Exp (Base),
     -- Evaluate an abstract Set Algebra Expression to the Set (Map) it represents.

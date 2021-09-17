@@ -10,8 +10,8 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Mary (MaryEra)
 import qualified Data.ByteString.Lazy as BSL
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
-import Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   ( cddlTest,
     cddlTest',
   )

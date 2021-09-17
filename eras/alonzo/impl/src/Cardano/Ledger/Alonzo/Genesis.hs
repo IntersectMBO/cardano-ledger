@@ -16,13 +16,13 @@ import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Coin
+import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import Data.Coders
 import Data.Functor.Identity
 import Data.Map.Strict
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural
-import qualified Shelley.Spec.Ledger.PParams as Shelley
 
 data AlonzoGenesis = AlonzoGenesis
   { coinsPerUTxOWord :: !Coin,

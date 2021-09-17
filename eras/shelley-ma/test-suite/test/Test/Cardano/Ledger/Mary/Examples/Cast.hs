@@ -27,7 +27,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
   )
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
-import Test.Shelley.Spec.Ledger.Utils (RawSeed (..), mkAddr, mkKeyPair)
+import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkAddr, mkKeyPair)
 
 -- | Alice's payment key pair
 alicePay :: KeyPair 'Payment TestCrypto

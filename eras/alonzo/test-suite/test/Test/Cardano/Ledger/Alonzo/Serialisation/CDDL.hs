@@ -15,8 +15,8 @@ import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Data.ByteString.Lazy as BSL
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
-import Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   ( cddlTest,
     cddlTest',
   )

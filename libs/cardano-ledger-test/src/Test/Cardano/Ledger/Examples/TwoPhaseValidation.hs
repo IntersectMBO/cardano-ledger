@@ -75,6 +75,40 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (ToCBORGroup)
+import Cardano.Ledger.Shelley.API
+  ( Block (..),
+    CLI (..),
+    DPState (..),
+    DState (..),
+    KESPeriod (..),
+    LedgerState (..),
+    Nonce (NeutralNonce),
+    PoolParams (..),
+    PrevHash (GenesisHash),
+    ProtVer (..),
+    UTxO (..),
+  )
+import Cardano.Ledger.Shelley.BlockChain (bBodySize)
+import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
+import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), WitHashes (..))
+import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
+import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Delpl (DelplPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Pool (PoolPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (..),
+    DelegCert (..),
+    PoolCert (..),
+    PoolMetadata (..),
+    RewardAcnt (..),
+    TxIn (..),
+    Wdrl (..),
+  )
+import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey, txid)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Slot (BlockNo (..))
 import Cardano.Ledger.Val (inject, (<+>))
@@ -98,46 +132,12 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified Plutus.V1.Ledger.Api as Plutus
-import Shelley.Spec.Ledger.API
-  ( Block (..),
-    CLI (..),
-    DPState (..),
-    DState (..),
-    KESPeriod (..),
-    LedgerState (..),
-    Nonce (NeutralNonce),
-    PoolParams (..),
-    PrevHash (GenesisHash),
-    ProtVer (..),
-    UTxO (..),
-  )
-import Shelley.Spec.Ledger.BlockChain (bBodySize)
-import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..))
-import Shelley.Spec.Ledger.LedgerState (UTxOState (..), WitHashes (..))
-import Shelley.Spec.Ledger.STS.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
-import Shelley.Spec.Ledger.STS.Delegs (DelegsPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Delpl (DelplPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Ledger (LedgerPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Ledgers (LedgersPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Pool (PoolPredicateFailure (..))
-import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv (..))
-import Shelley.Spec.Ledger.STS.Utxow (UtxowPredicateFailure (..))
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    PoolCert (..),
-    PoolMetadata (..),
-    RewardAcnt (..),
-    TxIn (..),
-    Wdrl (..),
-  )
-import Shelley.Spec.Ledger.UTxO (makeWitnessVKey, txid)
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (genesisId)
-import Test.Shelley.Spec.Ledger.Utils
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
+import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
     applySTSTest,
     mkKESKeyPair,

@@ -24,6 +24,23 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.API (PraosCrypto)
+import Cardano.Ledger.Shelley.Bench.Gen
+  ( genBlock,
+    genTriple,
+  )
+import Cardano.Ledger.Shelley.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
+import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
+import Cardano.Ledger.Shelley.LedgerState
+  ( DPState (..),
+    DState (..),
+    PState (..),
+    UTxOState (..),
+    stakeDistr,
+  )
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.Rewards (likelihood)
+import Cardano.Ledger.Shelley.UTxO (UTxO)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (compile, compute, run)
@@ -43,26 +60,7 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
-import Shelley.Spec.Ledger.API (PraosCrypto)
-import Shelley.Spec.Ledger.Bench.Gen
-  ( genBlock,
-    genTriple,
-  )
-import Shelley.Spec.Ledger.Bench.Rewards (createRUpd, createRUpdWithProv, genChainInEpoch)
-import qualified Shelley.Spec.Ledger.EpochBoundary as EB
-import Shelley.Spec.Ledger.LedgerState
-  ( DPState (..),
-    DState (..),
-    PState (..),
-    UTxOState (..),
-    stakeDistr,
-  )
-import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.Rewards (likelihood)
-import Shelley.Spec.Ledger.UTxO (UTxO)
-import Test.QuickCheck (arbitrary)
-import Test.QuickCheck.Gen as QC
-import Test.Shelley.Spec.Ledger.BenchmarkFunctions
+import Test.Cardano.Ledger.Shelley.BenchmarkFunctions
   ( initUTxO,
     ledgerDeRegisterStakeKeys,
     ledgerDelegateManyKeysOnePool,
@@ -77,7 +75,9 @@ import Test.Shelley.Spec.Ledger.BenchmarkFunctions
     ledgerStateWithNregisteredKeys,
     ledgerStateWithNregisteredPools,
   )
-import Test.Shelley.Spec.Ledger.Utils (ShelleyTest, testGlobals)
+import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
+import Test.QuickCheck (arbitrary)
+import Test.QuickCheck.Gen as QC
 
 -- Generator for coin. This is required, but its ouput is completely discarded.
 -- What is going on here?
@@ -168,7 +168,7 @@ profileUTxO = do
 touchDPState :: DPState crypto -> Int
 touchDPState (DPState _x _y) = 1
 
-touchUTxOState :: Shelley.Spec.Ledger.LedgerState.UTxOState cryto -> Int
+touchUTxOState :: Cardano.Ledger.Shelley.LedgerState.UTxOState cryto -> Int
 touchUTxOState (UTxOState _utxo _deposited _fees _ppups) = 2
 
 profileCreateRegKeys :: IO ()

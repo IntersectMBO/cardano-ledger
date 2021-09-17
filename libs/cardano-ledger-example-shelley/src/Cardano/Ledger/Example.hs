@@ -22,15 +22,7 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
-import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesTxBody, UsesTxOut (..), UsesValue)
-import Cardano.Ledger.Val (Val ((<->)))
-import Cardano.Protocol.TPraos.Rules.OCert (OCERT)
-import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY)
-import qualified Data.ByteString as BS
-import Data.Default.Class (def)
-import qualified Data.Map.Strict as Map
-import Data.Proxy
-import Shelley.Spec.Ledger.API
+import Cardano.Ledger.Shelley.API
   ( AccountState (AccountState),
     ApplyBlock,
     ApplyTx,
@@ -54,43 +46,51 @@ import Shelley.Spec.Ledger.API
     genesisUTxO,
     word64ToCoin,
   )
-import qualified Shelley.Spec.Ledger.BlockChain as Shelley
+import qualified Cardano.Ledger.Shelley.BlockChain as Shelley
   ( TxSeq (..),
     bbHash,
     txSeqTxns,
   )
-import Shelley.Spec.Ledger.EpochBoundary (BlocksMade (..), emptySnapShots)
-import Shelley.Spec.Ledger.Metadata (Metadata (Metadata), validMetadatum)
-import Shelley.Spec.Ledger.PParams ()
-import Shelley.Spec.Ledger.PParams as Shelley
-import qualified Shelley.Spec.Ledger.PParams as SPP
-import Shelley.Spec.Ledger.STS.Bbody (BBODY)
-import Shelley.Spec.Ledger.STS.Deleg (DELEG)
-import Shelley.Spec.Ledger.STS.Delegs (DELEGS)
-import Shelley.Spec.Ledger.STS.Delpl (DELPL)
-import Shelley.Spec.Ledger.STS.Epoch (EPOCH)
-import Shelley.Spec.Ledger.STS.Ledger (LEDGER)
-import Shelley.Spec.Ledger.STS.Ledgers (LEDGERS)
-import Shelley.Spec.Ledger.STS.Mir (MIR)
-import Shelley.Spec.Ledger.STS.NewEpoch (NEWEPOCH)
-import Shelley.Spec.Ledger.STS.Newpp (NEWPP)
-import Shelley.Spec.Ledger.STS.Pool (POOL)
-import Shelley.Spec.Ledger.STS.PoolReap (POOLREAP)
-import Shelley.Spec.Ledger.STS.Ppup (PPUP)
-import Shelley.Spec.Ledger.STS.Rupd (RUPD)
-import Shelley.Spec.Ledger.STS.Snap (SNAP)
-import Shelley.Spec.Ledger.STS.Tick (TICK, TICKF)
-import Shelley.Spec.Ledger.STS.Tickn (TICKN)
-import Shelley.Spec.Ledger.STS.Upec (UPEC)
-import Shelley.Spec.Ledger.STS.Utxo (UTXO)
-import Shelley.Spec.Ledger.STS.Utxow (UTXOW)
-import Shelley.Spec.Ledger.Scripts (MultiSig)
-import Shelley.Spec.Ledger.Tx
+import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesTxBody, UsesTxOut (..), UsesValue)
+import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Cardano.Ledger.Shelley.Metadata (Metadata (Metadata), validMetadatum)
+import Cardano.Ledger.Shelley.PParams ()
+import Cardano.Ledger.Shelley.PParams as Shelley
+import qualified Cardano.Ledger.Shelley.PParams as SPP
+import Cardano.Ledger.Shelley.Rules.Bbody (BBODY)
+import Cardano.Ledger.Shelley.Rules.Deleg (DELEG)
+import Cardano.Ledger.Shelley.Rules.Delegs (DELEGS)
+import Cardano.Ledger.Shelley.Rules.Delpl (DELPL)
+import Cardano.Ledger.Shelley.Rules.Epoch (EPOCH)
+import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER)
+import Cardano.Ledger.Shelley.Rules.Ledgers (LEDGERS)
+import Cardano.Ledger.Shelley.Rules.Mir (MIR)
+import Cardano.Ledger.Shelley.Rules.NewEpoch (NEWEPOCH)
+import Cardano.Ledger.Shelley.Rules.Newpp (NEWPP)
+import Cardano.Ledger.Shelley.Rules.Pool (POOL)
+import Cardano.Ledger.Shelley.Rules.PoolReap (POOLREAP)
+import Cardano.Ledger.Shelley.Rules.Ppup (PPUP)
+import Cardano.Ledger.Shelley.Rules.Rupd (RUPD)
+import Cardano.Ledger.Shelley.Rules.Snap (SNAP)
+import Cardano.Ledger.Shelley.Rules.Tick (TICK, TICKF)
+import Cardano.Ledger.Shelley.Rules.Tickn (TICKN)
+import Cardano.Ledger.Shelley.Rules.Upec (UPEC)
+import Cardano.Ledger.Shelley.Rules.Utxo (UTXO)
+import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW)
+import Cardano.Ledger.Shelley.Scripts (MultiSig)
+import Cardano.Ledger.Shelley.Tx
   ( Tx,
     WitnessSet,
     validateNativeMultiSigScript,
   )
-import Shelley.Spec.Ledger.TxBody (TxBody (..))
+import Cardano.Ledger.Shelley.TxBody (TxBody (..))
+import Cardano.Ledger.Val (Val ((<->)))
+import Cardano.Protocol.TPraos.Rules.OCert (OCERT)
+import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY)
+import qualified Data.ByteString as BS
+import Data.Default.Class (def)
+import qualified Data.Map.Strict as Map
+import Data.Proxy
 
 data ExampleEra c
 

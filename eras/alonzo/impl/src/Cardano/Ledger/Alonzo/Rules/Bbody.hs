@@ -30,6 +30,20 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
+import Cardano.Ledger.Shelley.BlockChain
+  ( Block (..),
+    bBodySize,
+    incrBlocks,
+  )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.Rules.Bbody
+  ( BbodyEnv (..),
+    BbodyEvent (..),
+    BbodyPredicateFailure (..),
+    BbodyState (..),
+  )
+import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersEnv (..))
+import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (bhash, bheaderSlotNo),
@@ -57,20 +71,6 @@ import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Shelley.Spec.Ledger.BlockChain
-  ( Block (..),
-    bBodySize,
-    incrBlocks,
-  )
-import Shelley.Spec.Ledger.LedgerState (LedgerState)
-import Shelley.Spec.Ledger.STS.Bbody
-  ( BbodyEnv (..),
-    BbodyEvent (..),
-    BbodyPredicateFailure (..),
-    BbodyState (..),
-  )
-import Shelley.Spec.Ledger.STS.Ledgers (LedgersEnv (..))
-import Shelley.Spec.Ledger.TxBody (EraIndependentTxBody)
 
 -- =======================================
 -- A new PredicateFailure type

@@ -67,6 +67,7 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Ledger.Serialization (mapFromCBOR)
+import Cardano.Ledger.Shelley.Metadata (Metadatum)
 import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Data.ByteString.Lazy (toStrict)
@@ -84,7 +85,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import qualified Plutus.V1.Ledger.Api as Plutus
-import Shelley.Spec.Ledger.Metadata (Metadatum)
 
 -- =====================================================================
 -- Plutus.Data is the type that Plutus expects as data.

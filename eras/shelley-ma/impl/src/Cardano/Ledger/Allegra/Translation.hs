@@ -20,14 +20,14 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.API
+import qualified Cardano.Ledger.Shelley.LedgerState as LS
+  ( returnRedeemAddrsToReserves,
+  )
+import Cardano.Ledger.Shelley.Tx (decodeWits)
 import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
 import qualified Data.Map.Strict as Map
-import Shelley.Spec.Ledger.API
-import qualified Shelley.Spec.Ledger.LedgerState as LS
-  ( returnRedeemAddrsToReserves,
-  )
-import Shelley.Spec.Ledger.Tx (decodeWits)
 
 --------------------------------------------------------------------------------
 -- Translation from Shelley to Allegra

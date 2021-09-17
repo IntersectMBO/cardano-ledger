@@ -65,6 +65,7 @@ import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.BlockChain (Block)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -72,6 +73,23 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
+import Cardano.Ledger.Shelley.LedgerState
+  ( AccountState (..),
+    DPState (..),
+    DState,
+    EpochState (..),
+    LedgerState (..),
+    NewEpochState (..),
+    PState,
+    UTxOState,
+  )
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
+import Cardano.Ledger.Shelley.Rules.Delegs (DelegsEnv)
+import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv, DelplPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
+import Cardano.Ledger.Shelley.TxBody (DCert, TxIn)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -85,40 +103,22 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField)
 import qualified PlutusTx as P (Data (..))
-import Shelley.Spec.Ledger.BlockChain (Block)
-import Shelley.Spec.Ledger.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    DState,
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    PState,
-    UTxOState,
-  )
-import Shelley.Spec.Ledger.PParams (PParams' (..))
-import Shelley.Spec.Ledger.STS.Chain (ChainState (..))
-import Shelley.Spec.Ledger.STS.Delegs (DelegsEnv)
-import Shelley.Spec.Ledger.STS.Delpl (DelplEnv, DelplPredicateFailure)
-import Shelley.Spec.Ledger.STS.Ledger (LedgerEnv (..))
-import Shelley.Spec.Ledger.STS.Utxo (UtxoEnv)
-import Shelley.Spec.Ledger.TxBody (DCert, TxIn)
 import System.Timeout
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import qualified Test.Cardano.Ledger.Alonzo.PropertyTests as Alonzo
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (Mock)
-import Test.Shelley.Spec.Ledger.Generator.Block (genBlock)
-import Test.Shelley.Spec.Ledger.Generator.Constants (Constants (..))
-import Test.Shelley.Spec.Ledger.Generator.Core (GenEnv (..), KeySpace (..), ScriptSpace (..), hashData)
-import Test.Shelley.Spec.Ledger.Generator.EraGen (EraGen (..), MinLEDGER_STS, allScripts, genUtxo0)
-import Test.Shelley.Spec.Ledger.Generator.Presets (genEnv)
-import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
-import Test.Shelley.Spec.Ledger.Generator.Trace.Chain (mkGenesisChainState)
-import Test.Shelley.Spec.Ledger.Generator.Trace.DCert (CERTS)
-import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger (genAccountState)
-import Test.Shelley.Spec.Ledger.Generator.Utxo (genTx)
-import Test.Shelley.Spec.Ledger.PropertyTests
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
+import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
+import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), KeySpace (..), ScriptSpace (..), hashData)
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS, allScripts, genUtxo0)
+import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
+import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS)
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (genAccountState)
+import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
+import Test.Cardano.Ledger.Shelley.PropertyTests
   ( adaPreservationChain,
     collisionFreeComplete,
     delegProperties,
@@ -153,7 +153,7 @@ genstuff ::
     EpochState era ->
     LedgerState era ->
     Core.PParams era ->
-    Shelley.Spec.Ledger.LedgerState.UTxOState era ->
+    Cardano.Ledger.Shelley.LedgerState.UTxOState era ->
     DPState (Crypto era) ->
     DState (Crypto era) ->
     PState (Crypto era) ->

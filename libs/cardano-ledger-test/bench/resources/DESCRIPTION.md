@@ -18,19 +18,19 @@ import Cardano.Binary
 import Control.State.Transition.Trace
 import Control.State.Transition.Trace.Generator.QuickCheck
 import qualified Data.ByteString as BS
-import Shelley.Spec.Ledger.STS.Ledger
+import Cardano.Ledger.Shelley.Rules.Ledger
 import Cardano.Ledger.Shelley
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
 
-import Test.Shelley.Spec.Ledger.Utils
-import Test.Shelley.Spec.Ledger.Generator.Presets
-import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger ()
-import Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen ()
-import Shelley.Spec.Ledger.PParams (PParams'(..))
+import Test.Cardano.Ledger.Shelley.Utils
+import Test.Cardano.Ledger.Shelley.Generator.Presets
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger ()
+import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Cardano.Ledger.Shelley.PParams (PParams'(..))
 
 import Test.QuickCheck (generate)
 
-import Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
+import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger
 
 let ge = genEnv (Proxy @(ShelleyEra C_Crypto))
 initLs <- generate $ mkGenesisLedgerState @([[LedgerPredicateFailure (ShelleyEra C_Crypto)]]) ge undefined

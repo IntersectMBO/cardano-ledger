@@ -42,6 +42,22 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash (..), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.SafeHash
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+  ( translateTimeForPlutusScripts,
+  )
+import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    PoolCert (..),
+    PoolParams (..),
+    TxId (..),
+    TxIn (..),
+    Wdrl (..),
+    WitVKey (..),
+  )
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
@@ -120,22 +136,6 @@ import qualified Plutus.V1.Ledger.Api as P
     validateScript,
   )
 import Plutus.V1.Ledger.Contexts ()
-import qualified Shelley.Spec.Ledger.HardForks as HardForks
-  ( translateTimeForPlutusScripts,
-  )
-import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.TxBody
-  ( DCert (..),
-    DelegCert (..),
-    Delegation (..),
-    PoolCert (..),
-    PoolParams (..),
-    TxId (..),
-    TxIn (..),
-    Wdrl (..),
-    WitVKey (..),
-  )
-import Shelley.Spec.Ledger.UTxO (UTxO (..))
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.

@@ -15,7 +15,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Test.Shelley.Spec.Ledger.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 
 -- =================================================
 -- GADTs for witnessing Crypto and Era

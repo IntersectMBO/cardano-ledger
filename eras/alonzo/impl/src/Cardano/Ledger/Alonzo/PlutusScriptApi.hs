@@ -52,6 +52,17 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
+import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
+import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
+import Cardano.Ledger.Shelley.TxBody
+  ( DelegCert (..),
+    Delegation (..),
+    TxIn (..),
+    Wdrl (..),
+    getRwdCred,
+    witKeyHash,
+  )
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), getScriptHash, scriptCred)
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -68,17 +79,6 @@ import Data.Text (pack)
 import GHC.Generics
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
-import Shelley.Spec.Ledger.Delegation.Certificates (DCert (..))
-import Shelley.Spec.Ledger.Scripts (ScriptHash (..))
-import Shelley.Spec.Ledger.TxBody
-  ( DelegCert (..),
-    Delegation (..),
-    TxIn (..),
-    Wdrl (..),
-    getRwdCred,
-    witKeyHash,
-  )
-import Shelley.Spec.Ledger.UTxO (UTxO (..), getScriptHash, scriptCred)
 
 -- ===============================================================
 -- From the specification, Figure 8 "Scripts and their Arguments"

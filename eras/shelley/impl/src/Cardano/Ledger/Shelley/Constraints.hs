@@ -25,11 +25,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (HashAnnotated)
+import Cardano.Ledger.Shelley.CompactAddr (CompactAddr)
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
 import GHC.Records (HasField)
-import Shelley.Spec.Ledger.CompactAddr (CompactAddr)
 
 --------------------------------------------------------------------------------
 -- Shelley Era

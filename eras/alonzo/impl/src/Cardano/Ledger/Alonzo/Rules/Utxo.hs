@@ -51,6 +51,16 @@ import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams,
   )
+import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
+import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
+import Cardano.Ledger.Shelley.Tx (TxIn)
+import Cardano.Ledger.Shelley.TxBody (unWdrl)
+import Cardano.Ledger.Shelley.UTxO
+  ( UTxO (..),
+    balance,
+    txouts,
+    unUTxO,
+  )
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), inInterval)
 import qualified Cardano.Ledger.Val as Val
@@ -84,16 +94,6 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import qualified Shelley.Spec.Ledger.LedgerState as Shelley
-import qualified Shelley.Spec.Ledger.STS.Utxo as Shelley
-import Shelley.Spec.Ledger.Tx (TxIn)
-import Shelley.Spec.Ledger.TxBody (unWdrl)
-import Shelley.Spec.Ledger.UTxO
-  ( UTxO (..),
-    balance,
-    txouts,
-    unUTxO,
-  )
 
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
