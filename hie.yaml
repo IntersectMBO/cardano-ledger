@@ -37,10 +37,10 @@ cradle:
       component: "lib:cardano-ledger-core"
 
     - path: "shelley/chain-and-ledger/dependencies/non-integer/src"
-      component: "lib:shelley-spec-non-integral"
+      component: "lib:non-integral"
 
     - path: "shelley/chain-and-ledger/dependencies/non-integer/test"
-      component: "shelley-spec-non-integral:test:shelley-spec-non-integral-test"
+      component: "non-integral:test:non-integral-test"
 
     - path: "shelley/chain-and-ledger/executable-spec/src"
       component: "lib:cardano-ledger-shelley"

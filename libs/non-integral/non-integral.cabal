@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
-name:                shelley-spec-non-integral
+name:                non-integral
 version:             0.1.0.0
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
@@ -42,7 +42,7 @@ library
   exposed-modules:    Shelley.Spec.NonIntegral
   hs-source-dirs:     src
 
-test-suite shelley-spec-non-integral-test
+test-suite non-integral-test
   import:             base, project-config
   type:               exitcode-stdio-1.0
   main-is:            Tests.hs
@@ -53,5 +53,5 @@ test-suite shelley-spec-non-integral-test
                       -rtsopts
                       -with-rtsopts=-N
 
-  build-depends:      shelley-spec-non-integral
+  build-depends:      non-integral
                     , QuickCheck

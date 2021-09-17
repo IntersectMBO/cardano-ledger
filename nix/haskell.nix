@@ -32,7 +32,7 @@ let
         packages.byron-spec-chain.configureFlags = [ "--ghc-option=-Werror" ];
         packages.byron-spec-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];
-        packages.shelley-spec-non-integral.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.non-integral.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cardano-ledger-shelley.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cardano-ledger-shelley-ma.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cardano-ledger-shelley-ma-test.configureFlags = [ "--ghc-option=-Werror" ];

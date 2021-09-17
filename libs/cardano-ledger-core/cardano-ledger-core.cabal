@@ -80,7 +80,7 @@ library
     partial-order,
     quiet,
     scientific,
-    shelley-spec-non-integral,
+    non-integral,
     small-steps,
     strict-containers,
     text,
