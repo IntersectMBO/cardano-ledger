@@ -11,6 +11,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..))
 import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (Fails, Passes), runPLCScript)
 import Data.ByteString.Short (ShortByteString)
+import Data.Functor (void)
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import Debug.Trace
@@ -58,7 +59,7 @@ directPlutusTest expectation script ds =
     evalWithTightBudget :: ShortByteString -> [P.Data] -> Either P.EvaluationError ()
     evalWithTightBudget scr datums = do
       budget <- snd $ P.evaluateScriptCounting P.Quiet costModel scr datums
-      snd $ P.evaluateScriptRestricting P.Verbose costModel budget scr datums
+      void $ snd $ P.evaluateScriptRestricting P.Verbose costModel budget scr datums
 
 -- | Expects 3 args (data, redeemer, context)
 guessTheNumber3 :: ShortByteString
