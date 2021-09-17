@@ -13,6 +13,7 @@ block =
 transaction =
   [ transaction_body
   , transaction_witness_set
+  , bool
   , auxiliary_data / null
   ]
 
