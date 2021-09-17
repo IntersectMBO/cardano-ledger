@@ -7,7 +7,7 @@ Shelley era ledger state and transaction for benchmarking of transaction
 application.
 
 ## Generation
-These examples were generated using the following script (executed in `cabal repl shelley-spec-ledger-test`)
+These examples were generated using the following script (executed in `cabal repl cardano-ledger-shelley-test`)
 
 ```
 :set -XTypeApplications

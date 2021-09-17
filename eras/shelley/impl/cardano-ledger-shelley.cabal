@@ -1,6 +1,6 @@
 cabal-version: 2.2
 
-name:                shelley-spec-ledger
+name:                cardano-ledger-shelley
 version:             0.1.0.0
 description:         Shelley Ledger Executable Model
 license:             Apache-2.0

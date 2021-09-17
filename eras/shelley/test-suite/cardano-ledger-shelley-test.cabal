@@ -1,8 +1,8 @@
 cabal-version: 2.2
 
-name:                shelley-spec-ledger-test
+name:                cardano-ledger-shelley-test
 version:             0.1.0.0
-description:         Test helpers from shelley-spec-ledger exposed to other packages
+description:         Test helpers from cardano-ledger-shelley exposed to other packages
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
@@ -113,7 +113,7 @@ library
     plutus-ledger-api,
     QuickCheck >= 2.13.2,
     serialise,
-    shelley-spec-ledger,
+    cardano-ledger-shelley,
     small-steps-test,
     small-steps,
     strict-containers,
@@ -126,7 +126,7 @@ library
     tree-diff,
     vector
 
-test-suite shelley-spec-ledger-test
+test-suite cardano-ledger-shelley-test
   import:             base, project-config
 
   type:                exitcode-stdio-1.0
@@ -212,8 +212,8 @@ test-suite shelley-spec-ledger-test
       prettyprinter,
       QuickCheck,
       scientific,
-      shelley-spec-ledger-test,
-      shelley-spec-ledger,
+      cardano-ledger-shelley-test,
+      cardano-ledger-shelley,
       small-steps-test,
       small-steps,
       strict-containers,
@@ -256,8 +256,8 @@ benchmark mainbench
     deepseq,
     mtl,
     QuickCheck,
-    shelley-spec-ledger-test,
-    shelley-spec-ledger,
+    cardano-ledger-shelley-test,
+    cardano-ledger-shelley,
     small-steps,
     small-steps-test,
     strict-containers,

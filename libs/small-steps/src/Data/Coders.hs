@@ -384,7 +384,7 @@ instance FromCBOR N where fromCBOR = decode decodeN
 -}
 -- For more examples writing CBOR instances using Encode and Decode, including
 -- ones using Sparse encoding, see the test file
--- shelley-spec-ledger-test/test/Test/Cardano.Ledger.Shelley/Coders.hs
+-- cardano-ledger-shelley-test/test/Test/Cardano/Ledger/Shelley/Coders.hs
 
 -- ========================================================
 -- Subsidary classes and datatype used in the Coders scheme

@@ -43,16 +43,16 @@ cradle:
       component: "shelley-spec-non-integral:test:shelley-spec-non-integral-test"
 
     - path: "shelley/chain-and-ledger/executable-spec/src"
-      component: "lib:shelley-spec-ledger"
+      component: "lib:cardano-ledger-shelley"
 
-    - path: "shelley/chain-and-ledger/shelley-spec-ledger-test/src"
-      component: "lib:shelley-spec-ledger-test"
+    - path: "shelley/chain-and-ledger/cardano-ledger-shelley-test/src"
+      component: "lib:cardano-ledger-shelley-test"
 
-    - path: "shelley/chain-and-ledger/shelley-spec-ledger-test/test"
-      component: "shelley-spec-ledger-test:test:shelley-spec-ledger-test"
+    - path: "shelley/chain-and-ledger/cardano-ledger-shelley-test/test"
+      component: "cardano-ledger-shelley-test:test:cardano-ledger-shelley-test"
 
-    - path: "shelley/chain-and-ledger/shelley-spec-ledger-test/bench"
-      component: "shelley-spec-ledger-test:bench:mainbench"
+    - path: "shelley/chain-and-ledger/cardano-ledger-shelley-test/bench"
+      component: "cardano-ledger-shelley-test:bench:mainbench"
 
     - path: "shelley-ma/impl/src"
       component: "lib:cardano-ledger-shelley-ma"

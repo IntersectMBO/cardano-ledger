@@ -74,7 +74,7 @@ library
     plutus-core,
     prettyprinter,
     serialise,
-    shelley-spec-ledger,
+    cardano-ledger-shelley,
     small-steps,
     strict-containers,
     text,

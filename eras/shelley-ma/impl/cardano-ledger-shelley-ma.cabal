@@ -68,7 +68,7 @@ library
     nothunks,
     prettyprinter,
     primitive,
-    shelley-spec-ledger,
+    cardano-ledger-shelley,
     small-steps,
     strict-containers,
     text,

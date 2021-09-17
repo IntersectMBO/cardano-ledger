@@ -62,8 +62,8 @@ library
     mtl,
     plutus-ledger-api,
     scientific,
-    shelley-spec-ledger,
-    shelley-spec-ledger-test,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-test,
     small-steps,
     small-steps-test,
     strict-containers,
@@ -84,7 +84,7 @@ test-suite cardano-ledger-test
   other-modules:
   build-depends:
     cardano-ledger-test,
-    shelley-spec-ledger-test,
+    cardano-ledger-shelley-test,
     tasty,
 
 
@@ -114,8 +114,8 @@ benchmark bench
     deepseq,
     QuickCheck,
     small-steps,
-    shelley-spec-ledger,
-    shelley-spec-ledger-test,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-test,
     tasty-quickcheck,
     tasty
   ghc-options:
@@ -138,8 +138,8 @@ benchmark benchProperty
     cardano-ledger-shelley-ma-test,
     QuickCheck,
     small-steps,
-    shelley-spec-ledger,
-    shelley-spec-ledger-test,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-test,
     tasty-quickcheck,
     tasty
   ghc-options:

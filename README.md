@@ -18,7 +18,7 @@ following links:
 Era | Design Documents | Formal Specification | CDDL
 ----|------------------|----------------------|-----
 Byron | | [Chain Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronChainSpec/latest/download-by-type/doc-pdf/blockchain-spec "Specification of the Blockchain Layer"), [Ledger Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec "A Formal Specification of the Cardano Ledger") | [CDDL](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/blocksCDDLSpec/latest/download-by-type/doc-pdf/binary)
-Shelley | [Design](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files)
+Shelley | [Design](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/cardano-ledger-shelley-test/cddl-files)
 Allegra & Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.shelley-ma/latest/download-by-type/doc-pdf/shelley-ma "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley-ma/shelley-ma-test/cddl-files)
 Alonzo | [eUTXO](https://iohk.io/en/research/library/papers/the-extended-utxo-model/ "The Extended UTXO Model")| [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.alonzo-ledger/latest/download-by-type/doc-pdf/alonzo-changes "A Formal Specification of the Cardano Ledger integrating Plutus Core") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/alonzo/test/cddl-files)
 
@@ -47,9 +47,9 @@ The directory structure of this repository is as follows:
   - [chain-and-ledger](./shelley/chain-and-ledger) (specs are combined in Shelley era)
     - [formal-spec](./shelley/chain-and-ledger/formal-spec)
     - [implementation](./shelley/chain-and-ledger/executable-spec)
-    - [tests](./shelley/chain-and-ledger/shelley-spec-ledger-test)
+    - [tests](./shelley/chain-and-ledger/cardano-ledger-shelley-test)
     - [dependencies](./shelley/chain-and-ledger/dependencies)
-  - [cddl](./shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files)
+  - [cddl](./shelley/chain-and-ledger/cardano-ledger-shelley-test/cddl-files)
 - [Timelocks and Multi-Assets](./shelley-ma)
     - [formal-spec](./shelley-ma/formal-spec)
     - [implementation](./shelley-ma/impl)
@@ -132,10 +132,10 @@ The tests can be run with cabal.
 For example the Shelley tests can be run with:
 
 ```shell
-cabal test shelley-spec-ledger-test
+cabal test cardano-ledger-shelley-test
 ```
 
-**Note** that the tests in `shelley-spec-ledger-test` require two Ruby gems,
+**Note** that the tests in `cardano-ledger-shelley-test` require two Ruby gems,
 [cbor-diag](https://rubygems.org/gems/cbor-diag) and
 [cddl](https://rubygems.org/gems/cddl).
 
@@ -143,7 +143,7 @@ It can be helpful to use the `--test-show-details=streaming` option for seeing
 the output of the tests while they run:
 
 ```shell
-cabal test shelley-spec-ledger-test --test-show-details=streaming
+cabal test cardano-ledger-shelley-test --test-show-details=streaming
 ```
 
 ### Running Specific Tests
@@ -155,13 +155,13 @@ You can alternatively use the `TASTY_PATTERN` environment variable with a patter
 For example, the Shelley golden tests can be run with:
 
 ```shell
-cabal test shelley-spec-ledger-test --test-options="-p golden"
+cabal test cardano-ledger-shelley-test --test-options="-p golden"
 ```
 
 or
 
 ```shell
-TASTY_PATTERN=golden cabal test shelley-spec-ledger-test
+TASTY_PATTERN=golden cabal test cardano-ledger-shelley-test
 ```
 
 `Tasty` allows for more
@@ -184,7 +184,7 @@ When a QuickCheck test fails, the seed which produced the failure is reported.
 The failure can be replayed with:
 
 ```shell
-cabal test shelley-spec-ledger-test --test-options "--quickcheck-replay=42"
+cabal test cardano-ledger-shelley-test --test-options "--quickcheck-replay=42"
 ```
 (where 42 is an example seed).
 
@@ -196,7 +196,7 @@ For example, the Shelley test suite contains
 which can be run with the `--scenario` flag. For example:
 
 ```shell
-cabal test shelley-spec-ledger-test --test-options --scenario=Fast
+cabal test cardano-ledger-shelley-test --test-options --scenario=Fast
 ```
 
 ### ghcid
