@@ -58,12 +58,12 @@ let
     specs = recurseIntoAttrs {
       byron-ledger = pkgs.callPackage ./byron/ledger/formal-spec/default.nix {};
       byron-chain = pkgs.callPackage ./byron/chain/formal-spec/default.nix {};
-      small-step-semantics = pkgs.callPackage ./semantics/formal-spec/default.nix {};
       shelley-ledger = pkgs.callPackage ./shelley/chain-and-ledger/formal-spec/default.nix {};
-      pool-ranking = pkgs.callPackage ./shelley/pool-ranking/default.nix {};
       shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec/default.nix {};
       alonzo-ledger = pkgs.callPackage ./alonzo/formal-spec/default.nix {};
       delegation-design = pkgs.callPackage ./shelley/design-spec/default.nix {};
+      small-step-semantics = pkgs.callPackage ./docs/small-step-semantics/default.nix {};
+      pool-ranking = pkgs.callPackage ./docs/pool-ranking/default.nix {};
       non-integer-calculations = pkgs.callPackage ./docs/non-integer-calculations/default.nix {};
       blocks-cddl = pkgs.callPackage ./byron/cddl-spec/default.nix {};
     };
