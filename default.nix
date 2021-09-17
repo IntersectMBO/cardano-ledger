@@ -58,7 +58,7 @@ let
     specs = recurseIntoAttrs {
       byron-ledger = pkgs.callPackage ./byron/ledger/formal-spec/default.nix {};
       byron-chain = pkgs.callPackage ./byron/chain/formal-spec/default.nix {};
-      shelley-ledger = pkgs.callPackage ./shelley/chain-and-ledger/formal-spec/default.nix {};
+      shelley-ledger = pkgs.callPackage ./shelley/formal-spec/default.nix {};
       shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec/default.nix {};
       alonzo-ledger = pkgs.callPackage ./alonzo/formal-spec/default.nix {};
       delegation-design = pkgs.callPackage ./shelley/design-spec/default.nix {};
