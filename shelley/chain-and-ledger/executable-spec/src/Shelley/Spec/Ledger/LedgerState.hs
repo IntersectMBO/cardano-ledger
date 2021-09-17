@@ -328,7 +328,7 @@ data DState crypto = DState
     _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
     -- | The pointed to hash keys.
     _ptrs :: !(Bimap Ptr (Credential 'Staking crypto)),
-    -- | future genesis key delegations
+    -- | Future genesis key delegations
     _fGenDelegs :: !(Map (FutureGenDeleg crypto) (GenDelegPair crypto)),
     -- | Genesis key delegations
     _genDelegs :: !(GenDelegs crypto),

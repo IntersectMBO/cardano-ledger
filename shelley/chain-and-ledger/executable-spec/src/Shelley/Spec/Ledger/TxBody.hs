@@ -599,7 +599,7 @@ instance FromCBOR MIRPot where
 
 -- | MIRTarget specifies if funds from either the reserves
 -- or the treasury are to be handed out to a collection of
--- reward accounts or instead transfered to the oppososite pot.
+-- reward accounts or instead transfered to the opposite pot.
 data MIRTarget crypto
   = StakeAddressesMIR (Map (Credential 'Staking crypto) DeltaCoin)
   | SendToOppositePotMIR Coin

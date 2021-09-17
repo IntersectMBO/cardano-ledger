@@ -395,7 +395,7 @@ class
     Core.PParams era ->
     -- | The transaction.
     Core.Tx era ->
-    -- | The number of key witnesses still be be added to the transaction.
+    -- | The number of key witnesses still to be added to the transaction.
     Word ->
     -- | The required fee.
     Coin
