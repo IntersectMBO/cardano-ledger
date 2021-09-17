@@ -1,14 +1,18 @@
 index-state: 2021-02-15T00:00:00Z
 
 packages:
-  alonzo/impl
-  alonzo/test-suite
-  byron/chain/executable-spec
-  byron/ledger/executable-spec
-  byron/ledger/impl
-  byron/ledger/impl/test
-  byron/crypto
-  byron/crypto/test
+  eras/alonzo/impl
+  eras/alonzo/test-suite
+  eras/byron/chain/executable-spec
+  eras/byron/ledger/executable-spec
+  eras/byron/ledger/impl
+  eras/byron/ledger/impl/test
+  eras/byron/crypto
+  eras/byron/crypto/test
+  eras/shelley/impl
+  eras/shelley/test-suite
+  eras/shelley-ma/impl
+  eras/shelley-ma/test-suite
   libraries/cardano-ledger-core
   libraries/cardano-ledger-example-shelley
   libraries/cardano-ledger-test
@@ -17,10 +21,6 @@ packages:
   libraries/shelley-spec-non-integral
   libraries/small-steps
   libraries/small-steps-test
-  shelley/impl
-  shelley/test-suite
-  shelley-ma/impl
-  shelley-ma/test-suite
 
 -- Always write GHC env files, because they are needed by the doctests.
 write-ghc-environment-files: always

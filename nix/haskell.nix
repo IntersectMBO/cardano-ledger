@@ -52,7 +52,7 @@ let
             tests.cardano-ledger-byron-test = {
               preCheck = ''
                 export CARDANO_MAINNET_MIRROR="${cardano-mainnet-mirror}/epochs"
-                cp ${../byron/ledger/impl/mainnet-genesis.json} ./mainnet-genesis.json
+                cp ${../eras/byron/ledger/impl/mainnet-genesis.json} ./mainnet-genesis.json
               '';
               build-tools = [ pkgs.makeWrapper ];
               testFlags = [ "--scenario=ContinuousIntegration" ];

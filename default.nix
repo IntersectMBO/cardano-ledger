@@ -56,16 +56,16 @@ let
     #  nix-build -A specs -o spec
     #
     specs = recurseIntoAttrs {
-      byron-ledger = pkgs.callPackage ./byron/ledger/formal-spec/default.nix {};
-      byron-chain = pkgs.callPackage ./byron/chain/formal-spec/default.nix {};
-      shelley-ledger = pkgs.callPackage ./shelley/formal-spec/default.nix {};
-      shelley-ma = pkgs.callPackage ./shelley-ma/formal-spec/default.nix {};
-      alonzo-ledger = pkgs.callPackage ./alonzo/formal-spec/default.nix {};
-      delegation-design = pkgs.callPackage ./shelley/design-spec/default.nix {};
+      byron-ledger = pkgs.callPackage ./eras/byron/ledger/formal-spec/default.nix {};
+      byron-chain = pkgs.callPackage ./eras/byron/chain/formal-spec/default.nix {};
+      shelley-ledger = pkgs.callPackage ./eras/shelley/formal-spec/default.nix {};
+      shelley-ma = pkgs.callPackage ./eras/shelley-ma/formal-spec/default.nix {};
+      alonzo-ledger = pkgs.callPackage ./eras/alonzo/formal-spec/default.nix {};
+      delegation-design = pkgs.callPackage ./eras/shelley/design-spec/default.nix {};
       small-step-semantics = pkgs.callPackage ./docs/small-step-semantics/default.nix {};
       pool-ranking = pkgs.callPackage ./docs/pool-ranking/default.nix {};
       non-integer-calculations = pkgs.callPackage ./docs/non-integer-calculations/default.nix {};
-      blocks-cddl = pkgs.callPackage ./byron/cddl-spec/default.nix {};
+      blocks-cddl = pkgs.callPackage ./eras/byron/cddl-spec/default.nix {};
     };
 
     doc = {

@@ -17,7 +17,7 @@
 
 -- | This module exports implementations of many of the functions outlined in the Alonzo specification.
 --     The link to source of the specification
---       https://github.com/input-output-hk/cardano-ledger-specs/tree/master/alonzo/formal-spec
+--       https://github.com/input-output-hk/cardano-ledger-specs/tree/master/eras/alonzo/formal-spec
 --     The most recent version of the document can be found here:
 --       https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.alonzo-ledger/latest/download-by-type/doc-pdf/alonzo-changes
 --     The functions can be found in Figures in that document, and sections of this code refer to those figures.

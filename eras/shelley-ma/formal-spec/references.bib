@@ -38,12 +38,10 @@
   year    = {2018},
 }
 
-@techreport{cardano_consensus,
-     title = {{The Cardano Consensus and Storage Layer}},
-     author = {Edsko de Vries and Thomas Winant and Duncan Coutts},
-     year = {2021},
-     institution = {IOHK},
-     url = {https://hydra.iohk.io/build/5265971/download/1/report.pdf}
+@article{shelley_consensus,
+  author = {{Formal Methods Team, IOHK}},
+  title   = {{?? - Shelley Consensus}},
+  year    = {TODO},
 }
 
 @misc{shelley_spec,
@@ -51,15 +49,7 @@
   author = {{Formal Methods Team, IOHK}},
   title  = {{A Formal Specification of the Cardano Ledger}},
   year   = {2019},
-  url = {https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/formal-spec/ledger-spec.tex}
-}
-
-@misc{shelley_ma_spec,
-  label = {CdoLedger},
-  author = {{Formal Methods Team, IOHK}},
-  title  = {{A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation}},
-  year   = {2019},
-  url = {https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley-ma/formal-spec/shelley-ma.tex}
+  url = {https://github.com/input-output-hk/cardano-ledger-specs/tree/master/eras/shelley/formal-spec/ledger-spec.tex}
 }
 
 @misc{ouroboros,
@@ -86,7 +76,13 @@ label = {CdoFMCUR},
 author = {{Plutus Team, Ledger Team, IOHK}},
 title = {{A Formal Specification of a UTxO Ledger with Scripts and Multi-Currency}},
 year  = {2019},
-url = {https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shelley/chain-and-ledger/formal-spec/scripts-multicurrency.tex}
+url = {https://github.com/input-output-hk/cardano-ledger-specs/blob/master/eras/shelley/formal-spec/scripts-multicurrency.tex}
+}
+
+@misc{utxo_ma,
+author = {{Plutus Team, IOHK}},
+title = {{$UTXO_{ma}$: UTXO with Multi-Asset Support}},
+year = {2020}}
 }
 
 @misc{multi_sig,
@@ -94,7 +90,7 @@ url = {https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shell
   author = {{Formal Methods Team, IOHK}},
   title = {{A Formal Specification of a Multi-Signature Scheme using Scripts}},
   year  = {2019},
-  url = {https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shelley/chain-and-ledger/formal-spec/multi-sig.tex}
+  url = {https://github.com/input-output-hk/cardano-ledger-specs/blob/master/eras/shelley/formal-spec/multi-sig.tex}
 }
 
 @misc{non_int,
@@ -103,18 +99,4 @@ url = {https://github.com/input-output-hk/cardano-ledger-specs/blob/master/shell
   title = {{A Specification of the Non-Integral Calculations in the Ledger}},
   year  = {2019},
   url = {https://hydra.iohk.io/build/779843/download/1/non-integer-calculations.pdf}
-}
-
-@misc{plutustech,
-  author = {{Plutus Team}},
-  title = {{The Plutus Platform: An IOHK technical report}},
-  year  = {2021},
-  url = {https://hydra.iohk.io/build/7244348/download/1/plutus.pdf}
-}
-
-@misc{plutuscore,
-  author = {{Plutus Team}},
-  title = {{Formal Specification of the Plutus Core Language}},
-  year  = {2021},
-  url = {https://hydra.iohk.io/build/7244320/download/1/plutus-core-specification.pdf}
 }
