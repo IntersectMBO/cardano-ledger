@@ -13,14 +13,14 @@ packages:
   eras/shelley/test-suite
   eras/shelley-ma/impl
   eras/shelley-ma/test-suite
-  libraries/cardano-ledger-core
-  libraries/cardano-ledger-example-shelley
-  libraries/cardano-ledger-test
-  libraries/cardano-protocol-tpraos
-  libraries/plutus-preprocessor
-  libraries/shelley-spec-non-integral
-  libraries/small-steps
-  libraries/small-steps-test
+  libs/cardano-ledger-core
+  libs/cardano-ledger-example-shelley
+  libs/cardano-ledger-test
+  libs/cardano-protocol-tpraos
+  libs/plutus-preprocessor
+  libs/shelley-spec-non-integral
+  libs/small-steps
+  libs/small-steps-test
 
 -- Always write GHC env files, because they are needed by the doctests.
 write-ghc-environment-files: always
