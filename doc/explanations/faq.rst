@@ -48,7 +48,7 @@ so anyway to avoid having unusable tokens in their wallet.
 What is a minting transaction?
 ********************************************************************************
 
-Transactions have different structure in the Shelley, ShelleyMA, and Goguen eras, but this structure is the same within a single er The Shelley+MA and Goguen transactions can carry data that specifies what tokens they are minting. The transactions where this piece of transaction data (called the mint field) is non-empty are called minting transactions. These transactions must also carry the minting policies for the tokens they are minting, so that they can be checked during validation.
+Transactions have different structure in the Shelley, ShelleyMA, and Goguen eras, but this structure is the same within a single era. The Shelley+MA and Goguen transactions can carry data that specifies what tokens they are minting. The transactions where this piece of transaction data (called the mint field) is non-empty are called minting transactions. These transactions must also carry the minting policies for the tokens they are minting, so that they can be checked during validation.
 
 The result of processing a minting transaction is that the ledger will now additionally contain the assets included in the mint field (minting field) of the transaction.
 If the quantity of a particular asset in the mint field is negative, the result is that after processing the transaction, the total quantity of that specific asset on the ledger will be reduced by the amount reflected in the mint field.
