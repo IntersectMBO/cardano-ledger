@@ -25,6 +25,7 @@ packages:
   -- Deprecations
   eras/shelley/chain-and-ledger/executable-spec
   eras/shelley/chain-and-ledger/shelley-spec-ledger-test
+  eras/shelley/chain-and-ledger/dependencies/non-integer
 
 
 -- Always write GHC env files, because they are needed by the doctests.

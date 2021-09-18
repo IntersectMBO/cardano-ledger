@@ -2,10 +2,10 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-module Tests.Shelley.Spec.NonIntegral where
+module Tests.Cardano.Ledger.NonIntegral where
 
+import Cardano.Ledger.NonIntegral
 import qualified Data.Fixed as FP
-import Shelley.Spec.NonIntegral
 import Test.QuickCheck
 
 data E34

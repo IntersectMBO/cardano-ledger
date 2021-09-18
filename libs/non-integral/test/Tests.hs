@@ -2,7 +2,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
-import Tests.Shelley.Spec.NonIntegral
+import Tests.Cardano.Ledger.NonIntegral
 
 main :: IO ()
 main = do

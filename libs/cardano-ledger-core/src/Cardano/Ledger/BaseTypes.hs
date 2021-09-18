@@ -64,6 +64,7 @@ import Cardano.Binary
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.NonIntegral (ln')
 import Cardano.Ledger.Serialization (decodeRecordSum, ratioFromCBOR, ratioToCBOR)
 import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
@@ -91,7 +92,6 @@ import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.NonIntegral (ln')
 
 data E34
 

@@ -15,7 +15,7 @@ extra-source-files:
 source-repository head
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs.git
-  subdir:   dependencies/non-integer
+  subdir:   libs/non-integral
 
 flag development
     description: Disable '-Werror'
@@ -39,14 +39,14 @@ common project-config
 
 library
   import:             base, project-config
-  exposed-modules:    Shelley.Spec.NonIntegral
+  exposed-modules:    Cardano.Ledger.NonIntegral
   hs-source-dirs:     src
 
 test-suite non-integral-test
   import:             base, project-config
   type:               exitcode-stdio-1.0
   main-is:            Tests.hs
-  other-modules:      Tests.Shelley.Spec.NonIntegral
+  other-modules:      Tests.Cardano.Ledger.NonIntegral
   hs-source-dirs:     test
   ghc-options:        -O2
                       -threaded

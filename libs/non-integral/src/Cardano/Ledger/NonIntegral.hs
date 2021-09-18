@@ -1,4 +1,4 @@
-module Shelley.Spec.NonIntegral
+module Cardano.Ledger.NonIntegral
   ( (***),
     exp',
     ln',

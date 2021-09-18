@@ -85,6 +85,7 @@ import Cardano.Ledger.Keys
     encodeVerKeyVRF,
     hashKey,
   )
+import Cardano.Ledger.NonIntegral (CompareResult (..), taylorExpCmp)
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -107,7 +108,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
-import Shelley.Spec.NonIntegral (CompareResult (..), taylorExpCmp)
 
 -- | The hash of a Block Header
 newtype HashHeader crypto = HashHeader {unHashHeader :: Hash crypto (BHeader crypto)}
