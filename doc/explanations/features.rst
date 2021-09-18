@@ -25,19 +25,15 @@ Terminology
 +-----------------+-------------------------------------------------------+-----------------------------------------------------------+
 |Token bundle     | Another word for Value.                               |                                                           |
 +-----------------+-------------------------------------------------------+-----------------------------------------------------------+
-|Script           | A piece of code which runs on the Cardano blockchain. |                                                           |
+|Script           | A piece of code which runs on the Cardano blockchain. |  A multisig script stating that the transaction is        |
 |                 |                                                       |                                                           |
-|                 | Used to support “smart contracts”.                    |                                                           |
+|                 | Used to support “smart contracts”.                    |  authorized if it is signed by both Alice and Bob.        |
 |                 |                                                       |                                                           |
 |                 | Cardano will support several scripting languages: in  |                                                           |
 |                 |                                                       |                                                           |
 |                 | Mary this will just be the multisig language, in      |                                                           |
 |                 |                                                       |                                                           |
 |                 | subsequent eras, it will include Plutus Core as well. |                                                           |
-|                 |                                                       |                                                           |
-|                 | A multisig script stating that the transaction is     |                                                           |
-|                 |                                                       |                                                           |
-|                 | authorized if it is signed by both Alice and Bob.     |                                                           |
 +-----------------+-------------------------------------------------------+-----------------------------------------------------------+
 |Minting policy   | A script which determines whether a transaction is    | A multisig script stating the minting (burning) is        |
 |                 |                                                       |                                                           |
