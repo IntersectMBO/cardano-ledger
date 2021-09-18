@@ -1,79 +1,79 @@
 cradle:
   cabal:
-    - path: "byron/chain/executable-spec/src"
+    - path: "eras/byron/chain/executable-spec/src"
       component: "lib:byron-spec-chain"
 
-    - path: "byron/chain/executable-spec/test"
+    - path: "eras/byron/chain/executable-spec/test"
       component: "byron-spec-chain:test:chain-rules-test"
 
-    - path: "byron/crypto/src"
+    - path: "eras/byron/crypto/src"
       component: "lib:cardano-crypto-wrapper"
 
-    - path: "byron/crypto/test/"
+    - path: "eras/byron/crypto/test/"
       component: "lib:cardano-crypto-test"
 
-    - path: "byron/ledger/executable-spec/src"
+    - path: "eras/byron/ledger/executable-spec/src"
       component: "lib:byron-spec-ledger"
 
-    - path: "byron/ledger/executable-spec/test"
+    - path: "eras/byron/ledger/executable-spec/test"
       component: "byron-spec-ledger:test:byron-spec-ledger-test"
 
-    - path: "byron/ledger/impl/src"
+    - path: "eras/byron/ledger/impl/src"
       component: "lib:cardano-ledger-byron"
 
-    - path: "byron/ledger/impl/test"
+    - path: "eras/byron/ledger/impl/test"
       component: "cardano-ledger-byron:test:cardano-ledger-byron-test"
 
-    - path: "semantics/executable-spec/src"
-      component: "lib:small-steps"
-
-    - path: "semantics/small-steps-test/src"
-      component: "lib:small-steps-test"
-
-    - path: "semantics/small-steps-test/test"
-      component: "small-steps-test:test:examples"
-
-    - path: "cardano-ledger-core/src"
-      component: "lib:cardano-ledger-core"
-
-    - path: "shelley/chain-and-ledger/dependencies/non-integer/src"
-      component: "lib:non-integral"
-
-    - path: "shelley/chain-and-ledger/dependencies/non-integer/test"
-      component: "non-integral:test:non-integral-test"
-
-    - path: "shelley/chain-and-ledger/executable-spec/src"
+    - path: "eras/shelley/impl/src"
       component: "lib:cardano-ledger-shelley"
 
-    - path: "shelley/chain-and-ledger/cardano-ledger-shelley-test/src"
+    - path: "eras/shelley/test-suite/src"
       component: "lib:cardano-ledger-shelley-test"
 
-    - path: "shelley/chain-and-ledger/cardano-ledger-shelley-test/test"
+    - path: "eras/shelley/test-suite/test"
       component: "cardano-ledger-shelley-test:test:cardano-ledger-shelley-test"
 
-    - path: "shelley/chain-and-ledger/cardano-ledger-shelley-test/bench"
+    - path: "eras/shelley/test-suite/bench"
       component: "cardano-ledger-shelley-test:bench:mainbench"
 
-    - path: "shelley-ma/impl/src"
+    - path: "eras/shelley-ma/impl/src"
       component: "lib:cardano-ledger-shelley-ma"
 
-    - path: "shelley-ma/shelley-ma-test/src"
+    - path: "eras/shelley-ma/test-suite/src"
       component: "lib:cardano-ledger-shelley-ma-test"
 
-    - path: "shelley-ma/shelley-ma-test/test"
+    - path: "eras/shelley-ma/test-suite/test"
       component: "cardano-ledger-shelley-ma-test:bench:bench"
 
-    - path: "alonzo/impl/src"
+    - path: "eras/alonzo/impl/src"
       component: "lib:cardano-ledger-alonzo"
 
-    - path: "alonzo/test/lib"
+    - path: "eras/alonzo/test-suite/lib"
       component: "cardano-ledger-alonzo-test"
 
-    - path: "alonzo/test/test"
+    - path: "eras/alonzo/test-suite/test"
       component: "cardano-ledger-alonzo-test:test:cardano-ledger-alonzo-test"
 
-    - path: "cardano-ledger-test/src"
+    - path: "libs/cardano-ledger-test/src"
       component: "lib:cardano-ledger-test"
 
-    - path: "cardano-ledger-test/bench"
+    - path: "libs/cardano-ledger-test/bench"
       component: "cardano-ledger-test:bench:bench"
+
+    - path: "libs/small-steps/src"
+      component: "lib:small-steps"
+
+    - path: "libs/small-steps/src"
+      component: "lib:small-steps-test"
+
+    - path: "libs/small-steps-test/test"
+      component: "small-steps-test:test:examples"
+
+    - path: "libs/cardano-ledger-core/src"
+      component: "lib:cardano-ledger-core"
+
+    - path: "libs/non-integral/src"
+      component: "lib:non-integral"
+
+    - path: "libs/non-integral/test"
+      component: "non-integral:test:non-integral-test"
