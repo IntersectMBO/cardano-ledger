@@ -72,7 +72,8 @@ data PoolreapPredicateFailure era -- No predicate failures
 
 data PoolreapEvent era = RetiredPools
   { refundPools :: Map.Map (Credential 'Staking (Crypto era)) (Map.Map (KeyHash 'StakePool (Crypto era)) Coin),
-    unclaimedPools :: Map.Map (Credential 'Staking (Crypto era)) (Map.Map (KeyHash 'StakePool (Crypto era)) Coin)
+    unclaimedPools :: Map.Map (Credential 'Staking (Crypto era)) (Map.Map (KeyHash 'StakePool (Crypto era)) Coin),
+    epochNo :: EpochNo
   }
 
 instance NoThunks (PoolreapPredicateFailure era)
@@ -154,7 +155,8 @@ poolReapTransition = do
             rewardAcntsWithPool
      in RetiredPools
           { refundPools = refundPools',
-            unclaimedPools = unclaimedPools'
+            unclaimedPools = unclaimedPools',
+            epochNo = e
           }
 
   pure $
