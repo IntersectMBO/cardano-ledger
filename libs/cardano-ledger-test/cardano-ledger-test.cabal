@@ -105,7 +105,6 @@ benchmark bench
     cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-core,
-    cardano-ledger-alonzo-test,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
     containers,
@@ -113,11 +112,8 @@ benchmark bench
     data-default-class,
     deepseq,
     QuickCheck,
-    small-steps,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
-    tasty-quickcheck,
-    tasty
   ghc-options:
       -threaded
       -rtsopts
