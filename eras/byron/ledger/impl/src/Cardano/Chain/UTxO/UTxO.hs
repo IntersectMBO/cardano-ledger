@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
 module Cardano.Chain.UTxO.UTxO
   ( UTxO (..),

@@ -8,6 +8,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
 module Cardano.Chain.Genesis.Delegation
   ( GenesisDelegation (..),
