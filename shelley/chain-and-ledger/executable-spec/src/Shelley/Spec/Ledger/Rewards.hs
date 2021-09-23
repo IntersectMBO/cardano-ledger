@@ -489,12 +489,12 @@ rewardOnePool
     where
       Coin ostake =
         Set.foldl'
-          (\c o -> c <> fromMaybe mempty (Map.lookup (KeyHashObj o) stake))
+          (\c o -> c <> Map.findWithDefault mempty (KeyHashObj o) stake)
           mempty
           (_poolOwners pool)
       Coin pledge = _poolPledge pool
       pr = fromIntegral pledge % fromIntegral totalStake
-      (Coin maxP) =
+      Coin maxP =
         if pledge <= ostake
           then maxPool' pp_a0 pp_nOpt r sigma pr
           else mempty
