@@ -13,11 +13,6 @@ source-repository head
   location: https://github.com/input-output-hk/cardano-ledger-specs.git
   subdir:   hs
 
-flag development
-    description: Disable '-Werror'
-    default: False
-    manual: True
-
 common base
   build-depends:      base >= 4.12 && < 4.15
 
@@ -31,9 +26,6 @@ common project-config
                       -Wredundant-constraints
                       -Wpartial-fields
                       -Wunused-packages
-
-  if (!flag(development))
-    ghc-options:      -Werror
 
 library
   import:             base, project-config

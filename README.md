@@ -129,6 +129,17 @@ For a continuous compilation of the `LaTeX` file run:
 nix-shell --pure --run "make watch"
 ```
 
+## Development
+
+While building most compilation warnings will be turned into an error due to
+`-Werror` flag. However during development it might be a bit inconvenient thus
+can be disabled on per project basis:
+
+```shell
+cabal configure <package-name> --ghc-options="-Wwarn"
+cabal build <package-name>
+```
+
 ## Testing the Haskell programs
 
 The tests can be run with cabal.

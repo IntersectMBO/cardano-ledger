@@ -11,11 +11,6 @@ category:            Control
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
-flag development
-    description: Disable '-Werror'
-    default: False
-    manual: True
-
 flag sts_assert
     description: Enable STS assertions by default
     default: False
@@ -33,9 +28,6 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
                       -Wunused-packages
-
-  if (!flag(development))
-    ghc-options:      -Werror
 
 library
   import:             base, project-config

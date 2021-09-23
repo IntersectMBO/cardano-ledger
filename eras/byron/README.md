@@ -69,9 +69,9 @@ Example, while in the `byron/ledger/executable-spec` directory one can run:
 nix-shell --pure --run "cabal new-test ledger-delegation-test"
 ```
 
-To have the warnings not being treated as errors the `development` flag can be
-used, e.g.:
+To have the warnings not being treated as errors the `-Wwarn` ghc flag can be
+used to negate the effect of `-Werror`, e.g.:
 
 ```sh
-nix-shell --pure --run "cabal new-test ledger-delegation-test -fdevelopment"
+nix-shell --pure --run "cabal new-test ledger-delegation-test --ghc-options='-Wwarn'"
 ```
