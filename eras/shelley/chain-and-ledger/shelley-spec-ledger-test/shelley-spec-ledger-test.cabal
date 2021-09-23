@@ -1,0 +1,73 @@
+cabal-version: 2.2
+
+name:                shelley-spec-ledger-test
+version:             0.1.0.0
+description:         Test helpers from shelley-spec-ledger exposed to other packages
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+build-type:          Simple
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
+library
+  import:             base, project-config
+  hs-source-dirs:     src
+  reexported-modules:
+    Test.Cardano.Crypto.VRF.Fake
+  exposed-modules:
+    Test.Shelley.Spec.Ledger.BenchmarkFunctions
+    Test.Shelley.Spec.Ledger.ConcreteCryptoTypes
+    Test.Shelley.Spec.Ledger.Examples.Cast
+    Test.Shelley.Spec.Ledger.Examples.Consensus
+    Test.Shelley.Spec.Ledger.Generator.Block
+    Test.Shelley.Spec.Ledger.Generator.Constants
+    Test.Shelley.Spec.Ledger.Generator.Core
+    Test.Shelley.Spec.Ledger.Generator.Delegation
+    Test.Shelley.Spec.Ledger.Generator.Metadata
+    Test.Shelley.Spec.Ledger.Generator.Presets
+    Test.Shelley.Spec.Ledger.Generator.Trace.Chain
+    Test.Shelley.Spec.Ledger.Generator.Trace.DCert
+    Test.Shelley.Spec.Ledger.Generator.Trace.Ledger
+    Test.Shelley.Spec.Ledger.Generator.Update
+    Test.Shelley.Spec.Ledger.Generator.Utxo
+    Test.Shelley.Spec.Ledger.Generator.EraGen
+    Test.Shelley.Spec.Ledger.Generator.ScriptClass
+    Test.Shelley.Spec.Ledger.Generator.ShelleyEraGen
+    Test.Shelley.Spec.Ledger.Orphans
+    Test.Shelley.Spec.Ledger.Rules.ClassifyTraces
+    Test.Shelley.Spec.Ledger.Rules.TestChain
+    Test.Shelley.Spec.Ledger.Serialisation.CDDLUtils
+    Test.Shelley.Spec.Ledger.Serialisation.Generators
+    Test.Shelley.Spec.Ledger.Serialisation.EraIndepGenerators
+    Test.Shelley.Spec.Ledger.Serialisation.Generators.Bootstrap
+    Test.Shelley.Spec.Ledger.Serialisation.Generators.Genesis
+    Test.Shelley.Spec.Ledger.Serialisation.GoldenUtils
+    Test.Shelley.Spec.Ledger.Shrinkers
+    Test.Shelley.Spec.Ledger.Utils
+    Test.Shelley.Spec.Ledger.PropertyTests
+  build-depends:
+    cardano-ledger-shelley-test

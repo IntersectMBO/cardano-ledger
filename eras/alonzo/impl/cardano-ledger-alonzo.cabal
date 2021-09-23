@@ -1,0 +1,85 @@
+cabal-version: 3.0
+
+name:                cardano-ledger-alonzo
+version:             0.1.0.0
+synopsis:            Cardano ledger introducing Plutus Core
+description:
+  This package builds upon the Mary ledger with support for extended UTxO
+  via Plutus Core.
+bug-reports:         https://github.com/input-output-hk/cardano-ledger-specs/issues
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+copyright:           2020 Input Output (Hong Kong) Ltd.
+category:            Network
+build-type:          Simple
+
+
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+  exposed-modules:
+    Cardano.Ledger.Alonzo
+    Cardano.Ledger.Alonzo.Data
+    Cardano.Ledger.Alonzo.Genesis
+    Cardano.Ledger.Alonzo.Language
+    Cardano.Ledger.Alonzo.PlutusScriptApi
+    Cardano.Ledger.Alonzo.PParams
+    Cardano.Ledger.Alonzo.Rules.Bbody
+    Cardano.Ledger.Alonzo.Rules.Ledger
+    Cardano.Ledger.Alonzo.Rules.Utxo
+    Cardano.Ledger.Alonzo.Rules.Utxos
+    Cardano.Ledger.Alonzo.Rules.Utxow
+    Cardano.Ledger.Alonzo.Scripts
+    Cardano.Ledger.Alonzo.Tools
+    Cardano.Ledger.Alonzo.Translation
+    Cardano.Ledger.Alonzo.Tx
+    Cardano.Ledger.Alonzo.TxBody
+    Cardano.Ledger.Alonzo.TxInfo
+    Cardano.Ledger.Alonzo.TxSeq
+    Cardano.Ledger.Alonzo.TxWitness
+    Cardano.Ledger.DescribeEras
+  build-depends:
+    array,
+    base-deriving-via,
+    base64-bytestring,
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-core,
+    cardano-ledger-shelley-ma,
+    cardano-prelude,
+    cardano-protocol-tpraos,
+    cardano-slotting,
+    containers,
+    data-default,
+    deepseq,
+    measures,
+    mtl,
+    nothunks,
+    plutus-ledger-api,
+    plutus-tx,
+    plutus-core,
+    prettyprinter,
+    serialise,
+    cardano-ledger-shelley,
+    small-steps,
+    strict-containers,
+    text,
+    time,
+    transformers,
+    utf8-string,
+  hs-source-dirs:
+    src

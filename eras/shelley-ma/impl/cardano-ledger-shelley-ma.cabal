@@ -1,0 +1,76 @@
+cabal-version: 2.2
+
+name:                cardano-ledger-shelley-ma
+version:             0.1.0.0
+synopsis:            Shelley ledger with multiasset and time lock support.
+description:
+  This package extends the Shelley ledger with support for
+  native tokens and timelocks.
+bug-reports:         https://github.com/input-output-hk/cardano-ledger-specs/issues
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+copyright:           2020 Input Output (Hong Kong) Ltd.
+category:            Network
+build-type:          Simple
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wpartial-fields
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+
+  exposed-modules:
+    Cardano.Ledger.Allegra
+    Cardano.Ledger.Allegra.Translation
+    Cardano.Ledger.Mary
+    Cardano.Ledger.Mary.Translation
+    Cardano.Ledger.Mary.Value
+    Cardano.Ledger.ShelleyMA
+    Cardano.Ledger.ShelleyMA.AuxiliaryData
+    Cardano.Ledger.ShelleyMA.Rules.EraMapping
+    Cardano.Ledger.ShelleyMA.Rules.Utxo
+    Cardano.Ledger.ShelleyMA.Rules.Utxow
+    Cardano.Ledger.ShelleyMA.Timelocks
+    Cardano.Ledger.ShelleyMA.TxBody
+
+  -- other-extensions:
+  build-depends:
+    bytestring,
+    base16-bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-core,
+    cardano-prelude,
+    cardano-protocol-tpraos,
+    cardano-slotting,
+    cborg,
+    containers,
+    data-default-class,
+    deepseq,
+    groups,
+    mtl,
+    nothunks,
+    prettyprinter,
+    primitive,
+    cardano-ledger-shelley,
+    small-steps,
+    strict-containers,
+    text,
+    transformers
+  hs-source-dirs: src

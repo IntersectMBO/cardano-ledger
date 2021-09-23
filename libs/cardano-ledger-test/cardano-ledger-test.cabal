@@ -1,0 +1,149 @@
+cabal-version: 3.0
+
+name:                cardano-ledger-test
+version:             0.1.0.0
+synopsis:
+  Testing harness, tests and benchmarks for Shelley style cardano ledgers
+-- description:
+-- bug-reports:
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          nicholas.clarke@iohk.io
+copyright:           2020 Input Output (Hong Kong) Ltd.
+-- category:
+build-type:          Simple
+extra-source-files:
+  CHANGELOG.md
+  bench/resources/0_ledgerstate.cbor
+  bench/resources/0_tx.cbor
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+  hs-source-dirs:     src
+  exposed-modules:
+    Test.Cardano.Ledger.BaseTypes
+    Test.Cardano.Ledger.Examples.TwoPhaseValidation
+    Test.Cardano.Ledger.Generic.Proof
+    Test.Cardano.Ledger.Generic.Indexed
+    Test.Cardano.Ledger.Generic.Updaters
+    Test.Cardano.Ledger.Properties
+    Test.Cardano.Ledger.TestableEra
+    Test.Cardano.Ledger.Alonzo.Tools
+  build-depends:
+    aeson,
+    array,
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-alonzo,
+    cardano-ledger-alonzo-test,
+    cardano-ledger-core,
+    cardano-ledger-shelley-ma,
+    cardano-protocol-tpraos,
+    cardano-slotting,
+    containers,
+    data-default-class,
+    genvalidity,
+    genvalidity-scientific,
+    mtl,
+    plutus-ledger-api,
+    scientific,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-test,
+    small-steps,
+    small-steps-test,
+    strict-containers,
+    tasty,
+    tasty-hunit,
+    tasty-quickcheck,
+    time,
+    transformers,
+    QuickCheck,
+
+
+test-suite cardano-ledger-test
+  import:             base, project-config
+
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  hs-source-dirs:      test
+  other-modules:
+  build-depends:
+    cardano-ledger-test,
+    cardano-ledger-shelley-test,
+    tasty,
+
+
+benchmark bench
+  import:             base, project-config
+
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:
+    bench
+  main-is:          Main.hs
+  other-modules:
+    Bench.Cardano.Ledger.ApplyTx
+    Bench.Cardano.Ledger.EpochBoundary
+    Bench.Cardano.Ledger.Serialisation.Generators
+  build-depends:
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-alonzo,
+    cardano-ledger-core,
+    cardano-ledger-alonzo-test,
+    cardano-ledger-shelley-ma-test,
+    cardano-ledger-shelley-ma,
+    containers,
+    criterion,
+    data-default-class,
+    deepseq,
+    QuickCheck,
+    small-steps,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-test,
+    tasty-quickcheck,
+    tasty
+  ghc-options:
+      -threaded
+      -rtsopts
+      -with-rtsopts=-N
+      -O2
+
+benchmark benchProperty
+  import:             base, project-config
+
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:
+    benchProperty
+  main-is:          Main.hs
+  other-modules:
+  build-depends:
+    cardano-ledger-alonzo,
+    cardano-ledger-alonzo-test,
+    cardano-ledger-shelley-ma-test,
+    QuickCheck,
+    small-steps,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-test,
+    tasty-quickcheck,
+    tasty
+  ghc-options:
+      -threaded
+      -rtsopts
+      -with-rtsopts=-N
+      -O2

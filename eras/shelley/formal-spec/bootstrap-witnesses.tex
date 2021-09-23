@@ -1,0 +1,55 @@
+\section{Bootstrap Witnesses}
+\label{sec:bootstrap-witnesses}
+
+\subsection{Bootstrap Witnesses CBOR Specification}
+
+In the Byron era of Cardano, public keys are transmitted
+on chain as extended public keys as specified in \cite{bip32}.
+The Shelley era of Cardano does not use extended public keys,
+but does use the same cryptographic signing algorithm,
+namely Ed25519.
+
+The extended public key consists of 64 bytes,
+the first 32 of which corresponds to the public key,
+the second 32 of which correpsonds to something called the chain code:
+
+$$\mathsf{extended\_pubkey} = \mathsf{pubkey}|\mathsf{chain\_code}$$
+
+The chaincode is required for constructing bootstrap witnesses.
+
+The CBOR specification of bootstrap witnesses,
+named $\mathsf{bootstrap\_witness}$,
+is given in
+\url{https://github.com/input-output-hk/cardano-ledger-specs/tree/master/eras/shelley/impl/cddl-files}.
+
+In the Shelley era, only pubkey address are supported,
+and are named bootstrap addresses.
+
+The bootstrap witness consists of the public key, the signature,
+the chain code, and the address attributes.
+As explained above, the public key and the signature format
+are the same as for all other witnesses in the Shelley era.
+The address attributes has the same format as from the Byron era address,
+as specified by $\mathsf{addrattr}$ in
+\url{https://github.com/input-output-hk/cardano-ledger-specs/blob/master/eras/byron/cddl-spec/byron.cddl}.
+
+
+\subsection{Bootstrap Address ID Recovery}
+
+The bootstrap address ID, named $\mathsf{addressid}$ in the Byron CDDL
+specification above, can be computed as follows.
+
+First construct the following byte string:
+
+$$\mathsf{b} =
+  \mathsf{0x830082005840}
+  | \mathsf{pubkey\_bytes}
+  | \mathsf{chain\_code\_bytes}
+  | \mathsf{attributes\_bytes}
+$$
+
+The address ID is then obtained by first applying
+sha3 256 to $\mathsf{b}$ and then applying blake2b44 to the result.
+$$\mathsf{address\_id} =
+  \mathsf{blake2b44}(\mathsf{sha3\_256}~\mathsf{b})
+$$

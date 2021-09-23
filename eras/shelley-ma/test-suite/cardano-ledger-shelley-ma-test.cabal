@@ -1,0 +1,129 @@
+cabal-version: 2.2
+
+name:                cardano-ledger-shelley-ma-test
+version:             0.1.0.0
+synopsis:            Shelley ledger with multiasset and time lock support.
+description:
+  This package extends the Shelley ledger with support for
+  native tokens and timelocks.
+bug-reports:         https://github.com/input-output-hk/cardano-ledger-specs/issues
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+copyright:           2020 Input Output (Hong Kong) Ltd.
+category:            Network
+build-type:          Simple
+
+extra-source-files:
+  cddl-files/shelley-ma.cddl
+  cddl-files/mock/crypto.cddl
+  cddl-files/mock/extras.cddl
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Werror
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+
+  exposed-modules:
+    Test.Cardano.Ledger.TranslationTools
+    Test.Cardano.Ledger.EraBuffet
+    Test.Cardano.Ledger.MaryEraGen
+    Test.Cardano.Ledger.Mary.Golden
+    Test.Cardano.Ledger.Mary.Examples.Consensus
+    Test.Cardano.Ledger.AllegraEraGen
+    Test.Cardano.Ledger.Allegra.Examples.Consensus
+    Test.Cardano.Ledger.ShelleyMA.TxBody
+    Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
+    Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
+    Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
+  -- other-extensions:
+  build-depends:
+    base >=4.9 && <4.15,
+    base16-bytestring,
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-core,
+    cardano-ledger-shelley-ma,
+    cardano-slotting,
+    cborg,
+    containers,
+    generic-random,
+    hashable,
+    mtl,
+    QuickCheck >= 2.13.2,
+    cardano-ledger-shelley-test,
+    cardano-ledger-shelley,
+    small-steps,
+    strict-containers,
+    tasty-hunit,
+    tasty-quickcheck,
+    tasty,
+    text
+  hs-source-dirs: src
+
+test-suite cardano-ledger-shelley-ma-test
+  import:             base, project-config
+
+  type:               exitcode-stdio-1.0
+  main-is:            Tests.hs
+  hs-source-dirs:     test
+  other-modules:
+      Test.Cardano.Ledger.Mary.Examples
+      Test.Cardano.Ledger.Mary.Examples.Cast
+      Test.Cardano.Ledger.Mary.Examples.MultiAssets
+      Test.Cardano.Ledger.Mary.Translation
+      Test.Cardano.Ledger.Mary.Value
+      Test.Cardano.Ledger.Allegra.Translation
+      Test.Cardano.Ledger.Allegra.ScriptTranslation
+      Test.Cardano.Ledger.ShelleyMA.Serialisation
+      Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
+      Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding
+      Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
+  -- We set a bound here so that we're alerted of potential space
+  -- leaks in our generators (or test) code.
+  --
+  -- The 4 megabytes stack bound and 200 megabytes heap bound were
+  -- determined ad-hoc.
+  ghc-options:        -threaded
+                      -rtsopts
+                      -with-rtsopts=-N
+                      "-with-rtsopts=-K4m -M250m"
+  build-depends:
+      base >=4.9 && <4.15,
+      bytestring,
+      cardano-binary,
+      cardano-ledger-core,
+      cardano-ledger-shelley-ma-test,
+      cardano-ledger-shelley-ma,
+      cardano-slotting,
+      cborg,
+      containers,
+      data-default-class,
+      mtl,
+      QuickCheck,
+      cardano-ledger-shelley-test,
+      cardano-ledger-shelley,
+      small-steps-test,
+      small-steps,
+      strict-containers,
+      tasty-hunit,
+      tasty-quickcheck,
+      tasty,

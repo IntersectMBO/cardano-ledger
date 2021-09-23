@@ -2,21 +2,21 @@
 set -e
 
 nix build -f `dirname $0`/.. haskellPackages.cardano-ledger-alonzo-test.components.tests.cardano-ledger-alonzo-test -o cardano-ledger-alonzo-test
-pushd alonzo/test/
+pushd eras/alonzo/test-suite/
 nix-shell ../../shell.nix --run \
   "../../cardano-ledger-alonzo-test/bin/cardano-ledger-alonzo-test --scenario=Nightly"
 popd
 
 nix build -f `dirname $0`/.. haskellPackages.cardano-ledger-shelley-ma-test.components.tests.cardano-ledger-shelley-ma-test -o cardano-ledger-shelley-ma-test
-pushd shelley-ma/shelley-ma-test/
+pushd eras/shelley-ma/test-suite/
 nix-shell ../../shell.nix --run \
   "../../cardano-ledger-shelley-ma-test/bin/cardano-ledger-shelley-ma-test --scenario=Nightly"
 popd
 
-nix build -f `dirname $0`/.. haskellPackages.shelley-spec-ledger-test.components.tests.shelley-spec-ledger-test -o shelley-spec-ledger-test
-pushd shelley/chain-and-ledger/shelley-spec-ledger-test/
+nix build -f `dirname $0`/.. haskellPackages.cardano-ledger-shelley-test.components.tests.cardano-ledger-shelley-test -o cardano-ledger-shelley-test
+pushd eras/shelley/test-suite/
 nix-shell ../../../shell.nix --run \
-  "../../../shelley-spec-ledger-test/bin/shelley-spec-ledger-test --scenario=Nightly"
+  "../../../cardano-ledger-shelley-test/bin/cardano-ledger-shelley-test --scenario=Nightly"
 popd
 
 #nix build -f `dirname $0`/.. haskellPackages.cardano-ledger-byron.components.tests.cardano-ledger-byron-test -o cardano-ledger-byron-test

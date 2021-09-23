@@ -1,0 +1,269 @@
+cabal-version: 2.2
+
+name:                cardano-ledger-shelley-test
+version:             0.1.0.0
+description:         Test helpers from cardano-ledger-shelley exposed to other packages
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+build-type:          Simple
+
+extra-source-files:
+  cddl-files/shelley.cddl
+  cddl-files/real/crypto.cddl
+  cddl-files/mock/extras.cddl
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
+library
+  import:             base, project-config
+  hs-source-dirs:     src
+                      test
+  exposed-modules:
+    Test.Cardano.Crypto.VRF.Fake
+    Test.Cardano.Ledger.Shelley.BenchmarkFunctions
+    Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
+    Test.Cardano.Ledger.Shelley.Examples.Cast
+    Test.Cardano.Ledger.Shelley.Examples.Consensus
+    Test.Cardano.Ledger.Shelley.Generator.Block
+    Test.Cardano.Ledger.Shelley.Generator.Constants
+    Test.Cardano.Ledger.Shelley.Generator.Core
+    Test.Cardano.Ledger.Shelley.Generator.Delegation
+    Test.Cardano.Ledger.Shelley.Generator.Metadata
+    Test.Cardano.Ledger.Shelley.Generator.Presets
+    Test.Cardano.Ledger.Shelley.Generator.Trace.Chain
+    Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
+    Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger
+    Test.Cardano.Ledger.Shelley.Generator.Update
+    Test.Cardano.Ledger.Shelley.Generator.Utxo
+    Test.Cardano.Ledger.Shelley.Generator.EraGen
+    Test.Cardano.Ledger.Shelley.Generator.ScriptClass
+    Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen
+    Test.Cardano.Ledger.Shelley.Orphans
+    Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
+    Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
+    Test.Cardano.Ledger.Shelley.Serialisation.Generators
+    Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
+    Test.Cardano.Ledger.Shelley.Serialisation.Generators.Bootstrap
+    Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis
+    Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
+    Test.Cardano.Ledger.Shelley.Shrinkers
+    Test.Cardano.Ledger.Shelley.Utils
+    Test.Cardano.Ledger.Shelley.PropertyTests
+    Test.Cardano.Ledger.Shelley.Rules.TestChain
+    Test.TestScenario
+  other-modules:
+      Test.Cardano.Ledger.Shelley.Address.Bootstrap
+      Test.Cardano.Ledger.Shelley.Address.CompactAddr
+      Test.Cardano.Ledger.Shelley.ByronTranslation
+      Test.Cardano.Ledger.Shelley.Examples.Federation
+      Test.Cardano.Ledger.Shelley.Rules.TestDeleg
+      Test.Cardano.Ledger.Shelley.Rules.TestPool
+      Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
+      Test.Cardano.Ledger.Shelley.ShelleyTranslation
+  build-depends:
+    base16-bytestring >= 1,
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-crypto-test,
+    cardano-crypto-wrapper,
+    cardano-crypto,
+    cardano-ledger-byron,
+    cardano-ledger-byron-test,
+    cardano-ledger-core,
+    cardano-prelude-test,
+    cardano-prelude,
+    cardano-protocol-tpraos,
+    cardano-slotting,
+    cborg,
+    containers,
+    data-default-class,
+    directory,
+    generic-random,
+    hashable,
+    hedgehog-quickcheck,
+    hedgehog >= 1.0.4,
+    iproute,
+    nothunks,
+    process-extras,
+    plutus-ledger-api,
+    QuickCheck >= 2.13.2,
+    serialise,
+    cardano-ledger-shelley,
+    small-steps-test,
+    small-steps,
+    strict-containers,
+    tasty-hunit,
+    tasty-quickcheck,
+    tasty,
+    text,
+    time,
+    transformers,
+    tree-diff,
+    vector
+
+test-suite cardano-ledger-shelley-test
+  import:             base, project-config
+
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  other-modules:
+      Test.Control.Iterate.SetAlgebra
+      Test.Cardano.Ledger.Shelley.Address.Bootstrap
+      Test.Cardano.Ledger.Shelley.Address.CompactAddr
+      Test.Cardano.Ledger.Shelley.ByronTranslation
+      Test.Cardano.Ledger.Shelley.Examples
+      Test.Cardano.Ledger.Shelley.Examples.Cast
+      Test.Cardano.Ledger.Shelley.Examples.Combinators
+      Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
+      Test.Cardano.Ledger.Shelley.Examples.Federation
+      Test.Cardano.Ledger.Shelley.Examples.Init
+      Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation
+      Test.Cardano.Ledger.Shelley.Examples.NetworkID
+      Test.Cardano.Ledger.Shelley.Examples.Mir
+      Test.Cardano.Ledger.Shelley.Examples.MirTransfer
+      Test.Cardano.Ledger.Shelley.Examples.PoolLifetime
+      Test.Cardano.Ledger.Shelley.Examples.PoolReReg
+      Test.Cardano.Ledger.Shelley.Examples.TwoPools
+      Test.Cardano.Ledger.Shelley.Examples.Updates
+      Test.Cardano.Ledger.Shelley.Fees
+      Test.Cardano.Ledger.Shelley.MultiSigExamples
+      Test.Cardano.Ledger.Shelley.Pretty
+      Test.Cardano.Ledger.Shelley.PropertyTests
+      Test.Cardano.Ledger.Shelley.Rewards
+      Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
+      Test.Cardano.Ledger.Shelley.Rules.TestChain
+      Test.Cardano.Ledger.Shelley.Rules.TestDeleg
+      Test.Cardano.Ledger.Shelley.Rules.TestPool
+      Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
+      Test.Cardano.Ledger.Shelley.SafeHash
+      Test.Cardano.Ledger.Shelley.Serialisation
+      Test.Cardano.Ledger.Shelley.Serialisation.CDDL
+      Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address
+      Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding
+      Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
+      Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR
+      Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
+      Test.Cardano.Ledger.Shelley.ShelleyTranslation
+      Test.Cardano.Ledger.Shelley.RulesTests
+      Test.Cardano.Ledger.Shelley.UnitTests
+      Test.TestScenario
+
+  hs-source-dirs:      test
+  ghc-options:
+      -threaded
+      -rtsopts
+      -with-rtsopts=-N
+      -- We set a bound here so that we're alerted of potential space
+      -- leaks in our generators (or test) code.
+      --
+      -- The 4 megabytes stack bound and 200 megabytes heap bound were
+      -- determined ad-hoc.
+      "-with-rtsopts=-K4m -M250m"
+  build-depends:
+      aeson,
+      base16-bytestring >= 1,
+      binary,
+      bytestring,
+      cardano-binary,
+      cardano-crypto-class,
+      cardano-crypto-praos,
+      cardano-crypto-test,
+      cardano-crypto-wrapper,
+      cardano-crypto,
+      cardano-ledger-byron-test,
+      cardano-ledger-byron,
+      cardano-ledger-core,
+      cardano-prelude-test,
+      cardano-prelude,
+      cardano-protocol-tpraos,
+      cardano-slotting,
+      cborg,
+      containers,
+      data-default-class,
+      groups,
+      hedgehog >= 1.0.4,
+      hedgehog-quickcheck,
+      iproute,
+      prettyprinter,
+      QuickCheck,
+      scientific,
+      cardano-ledger-shelley-test,
+      cardano-ledger-shelley,
+      small-steps-test,
+      small-steps,
+      strict-containers,
+      tasty-hedgehog,
+      tasty-hunit,
+      tasty-quickcheck,
+      tasty,
+      time,
+      transformers,
+      tree-diff
+
+
+benchmark mainbench
+  import:             base, project-config
+
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:
+    bench
+    test
+  main-is:          Main.hs
+  other-modules:
+    Bench.Control.Iterate.SetAlgebra.Bimap,
+    BenchUTxOAggregate,
+    BenchValidation,
+    Cardano.Ledger.Shelley.Bench.Gen
+    Cardano.Ledger.Shelley.Bench.Rewards
+    Test.Cardano.Ledger.Shelley.Examples.Cast
+
+  build-depends:
+    bytestring,
+    cardano-crypto-class,
+    cardano-crypto-praos,
+    cardano-ledger-core,
+    cardano-prelude,
+    cardano-protocol-tpraos,
+    cardano-slotting,
+    containers,
+    criterion,
+    data-default-class,
+    deepseq,
+    mtl,
+    QuickCheck,
+    cardano-ledger-shelley-test,
+    cardano-ledger-shelley,
+    small-steps,
+    small-steps-test,
+    strict-containers,
+    transformers
+  ghc-options:
+      -threaded
+      -rtsopts
+      -with-rtsopts=-N
+      -O

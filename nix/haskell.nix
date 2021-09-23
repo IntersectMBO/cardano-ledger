@@ -32,13 +32,13 @@ let
         packages.byron-spec-chain.configureFlags = [ "--ghc-option=-Werror" ];
         packages.byron-spec-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];
-        packages.shelley-spec-non-integral.configureFlags = [ "--ghc-option=-Werror" ];
-        packages.shelley-spec-ledger.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.non-integral.configureFlags = [ "--ghc-option=-Werror" ];
+        packages.cardano-ledger-shelley.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cardano-ledger-shelley-ma.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cardano-ledger-shelley-ma-test.configureFlags = [ "--ghc-option=-Werror" ];
         packages.cardano-ledger-shelley-ma-test.components.tests.cardano-ledger-shelley-ma-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         packages.small-steps.configureFlags = [ "--ghc-option=-Werror" ];
-        packages.shelley-spec-ledger-test.components.tests.shelley-spec-ledger-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
+        packages.cardano-ledger-shelley-test.components.tests.cardano-ledger-shelley-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         packages.cardano-ledger-alonzo-test.components.tests.cardano-ledger-alonzo-test.build-tools = [pkgs.cddl pkgs.cbor-diag];
         enableLibraryProfiling = profiling;
         # Disable doctests for now (waiting for https://github.com/input-output-hk/haskell.nix/pull/427):
@@ -52,7 +52,7 @@ let
             tests.cardano-ledger-byron-test = {
               preCheck = ''
                 export CARDANO_MAINNET_MIRROR="${cardano-mainnet-mirror}/epochs"
-                cp ${../byron/ledger/impl/mainnet-genesis.json} ./mainnet-genesis.json
+                cp ${../eras/byron/ledger/impl/mainnet-genesis.json} ./mainnet-genesis.json
               '';
               build-tools = [ pkgs.makeWrapper ];
               testFlags = [ "--scenario=ContinuousIntegration" ];

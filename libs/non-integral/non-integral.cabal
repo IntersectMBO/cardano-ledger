@@ -1,0 +1,57 @@
+cabal-version: 2.2
+
+name:                non-integral
+version:             0.1.0.0
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+description:         Implementation decision for non-integer calculations
+build-type:          Simple
+
+extra-source-files:
+  README.md
+  ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+  subdir:   libs/non-integral
+
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
+common base                         { build-depends: base                             >= 4.7        && < 5        }
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
+library
+  import:             base, project-config
+  exposed-modules:    Cardano.Ledger.NonIntegral
+  hs-source-dirs:     src
+
+test-suite non-integral-test
+  import:             base, project-config
+  type:               exitcode-stdio-1.0
+  main-is:            Tests.hs
+  other-modules:      Tests.Cardano.Ledger.NonIntegral
+  hs-source-dirs:     test
+  ghc-options:        -O2
+                      -threaded
+                      -rtsopts
+                      -with-rtsopts=-N
+
+  build-depends:      non-integral
+                    , QuickCheck

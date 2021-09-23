@@ -1,24 +1,24 @@
 # code owners are automatically assigned to review PRs
 
 # Shelley Design Spec
-shelley/design_spec/ @kantp @brunjlar @dcoutts
+eras/shelley/design-spec/ @kantp @brunjlar @dcoutts
 
 # Formal Specs
-shelley/chain-and-ledger/formal-spec/ @jcorduan @polinavino
-shelley-ma/formal-spec/ @polinavino @WhatisRT
-alonzo/formal-spec/ @polinavino @WhatisRT
+eras/shelley/formal-spec/ @jcorduan @polinavino
+eras/shelley-ma/formal-spec/ @polinavino @WhatisRT
+eras/alonzo/formal-spec/ @polinavino @WhatisRT
 
 # CDDL
-shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files/ @redxaxder
-shelley-ma/shelley-ma-test/cddl-files/                        @redxaxder
+eras/shelley/cardano-ledger-shelley-test/cddl-files/ @redxaxder
+eras/shelley-ma/shelley-ma-test/cddl-files/          @redxaxder
 
 # Set Algebra
-semantics/executable-spec/src/Control/Iterate/      @TimSheard
-semantics/executable-spec/src/Control/Provenance.hs @TimSheard
-semantics/executable-spec/src/Control/SetAlgebra.hs @TimSheard
+libs/small-steps/src/Control/Iterate/      @TimSheard
+libs/small-steps/src/Control/Provenance.hs @TimSheard
+libs/small-steps/src/Control/SetAlgebra.hs @TimSheard
 
 # Coders library for CBOR encoding and decoding
-semantics/executable-spec/src/Data/Coders.hs @TimSheard
+libs/small-steps/src/Data/Coders.hs @TimSheard
 
 # Devops
 .buildkite @devops

@@ -1,0 +1,110 @@
+cabal-version: 2.2
+
+name:                shelley-spec-ledger
+version:             0.1.0.0
+description:         Shelley Ledger Executable Model
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+build-type:          Simple
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+  subdir:   hs
+
+flag development
+    description: Disable '-Werror'
+    default: False
+    manual: True
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wpartial-fields
+                      -Wunused-packages
+
+  if (!flag(development))
+    ghc-options:      -Werror
+
+library
+  import:             base, project-config
+  reexported-modules:
+    Cardano.Ledger.Pretty,
+    Cardano.Ledger.Shelley,
+    Cardano.Ledger.Shelley.Constraints
+  exposed-modules:
+    Shelley.Spec.Ledger.Address
+    Shelley.Spec.Ledger.Address.Bootstrap
+    Shelley.Spec.Ledger.API
+    Shelley.Spec.Ledger.API.ByronTranslation
+    Shelley.Spec.Ledger.API.Genesis
+    Shelley.Spec.Ledger.API.Protocol
+    Shelley.Spec.Ledger.API.Validation
+    Shelley.Spec.Ledger.API.Wallet
+    Shelley.Spec.Ledger.API.Mempool
+    Shelley.Spec.Ledger.BaseTypes
+    Shelley.Spec.Ledger.BlockChain
+    Shelley.Spec.Ledger.CompactAddr
+    Shelley.Spec.Ledger.Credential
+    Shelley.Spec.Ledger.Delegation.Certificates
+    Shelley.Spec.Ledger.Delegation.PoolParams
+    Shelley.Spec.Ledger.EpochBoundary
+    Shelley.Spec.Ledger.Genesis
+    Shelley.Spec.Ledger.HardForks
+    Shelley.Spec.Ledger.Keys
+    Shelley.Spec.Ledger.LedgerState
+    Shelley.Spec.Ledger.Metadata
+    Shelley.Spec.Ledger.OCert
+    Shelley.Spec.Ledger.Orphans
+    Shelley.Spec.Ledger.OverlaySchedule
+    Shelley.Spec.Ledger.PParams
+    Shelley.Spec.Ledger.Rewards
+    Shelley.Spec.Ledger.RewardProvenance
+    Shelley.Spec.Ledger.RewardUpdate
+    Shelley.Spec.Ledger.Scripts
+    Shelley.Spec.Ledger.Slot
+    Shelley.Spec.Ledger.SoftForks
+    Shelley.Spec.Ledger.StabilityWindow
+    Shelley.Spec.Ledger.STS.Bbody
+    Shelley.Spec.Ledger.STS.Chain
+    Shelley.Spec.Ledger.STS.Deleg
+    Shelley.Spec.Ledger.STS.Delegs
+    Shelley.Spec.Ledger.STS.Delpl
+    Shelley.Spec.Ledger.STS.Epoch
+    Shelley.Spec.Ledger.STS.EraMapping
+    Shelley.Spec.Ledger.STS.Ledger
+    Shelley.Spec.Ledger.STS.Ledgers
+    Shelley.Spec.Ledger.STS.Mir
+    Shelley.Spec.Ledger.STS.NewEpoch
+    Shelley.Spec.Ledger.STS.Newpp
+    Shelley.Spec.Ledger.STS.Ocert
+    Shelley.Spec.Ledger.STS.Overlay
+    Shelley.Spec.Ledger.STS.Pool
+    Shelley.Spec.Ledger.STS.PoolReap
+    Shelley.Spec.Ledger.STS.Ppup
+    Shelley.Spec.Ledger.STS.Prtcl
+    Shelley.Spec.Ledger.STS.Rupd
+    Shelley.Spec.Ledger.STS.Snap
+    Shelley.Spec.Ledger.STS.Tick
+    Shelley.Spec.Ledger.STS.Tickn
+    Shelley.Spec.Ledger.STS.Updn
+    Shelley.Spec.Ledger.STS.Upec
+    Shelley.Spec.Ledger.STS.Utxo
+    Shelley.Spec.Ledger.STS.Utxow
+    Shelley.Spec.Ledger.Tx
+    Shelley.Spec.Ledger.TxBody
+    Shelley.Spec.Ledger.UTxO
+  hs-source-dirs: src
+  build-depends:
+    cardano-ledger-core,
+    cardano-ledger-shelley,
+    cardano-protocol-tpraos

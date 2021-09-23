@@ -1,0 +1,88 @@
+cabal-version:      2.4
+name:               cardano-ledger-core
+version:            0.1.0.0
+synopsis:           Core components of Cardano ledgers from the Shelley release on.
+description:
+  Cardano ledgers from the Shelley release onwards share a core basis rooted in
+  the Shelley ledger specification. This package abstracts a number of components
+  which we expect to be shared amongst all future ledgers implemented around this base.
+bug-reports:        https://github.com/input-output-hk/cardano-ledger-specs/issues
+
+license:            Apache-2.0
+author:             IOHK Formal Methods Team
+maintainer:         formal.methods@iohk.io
+copyright:          2021 Input Output (Hong Kong) Ltd.
+
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+
+common base
+  build-depends:
+    base >= 4.12 && < 4.15
+
+common project-config
+  default-language: Haskell2010
+
+  ghc-options:
+    -Wall
+    -Wcompat
+    -Wincomplete-record-updates
+    -Wincomplete-uni-patterns
+    -Wredundant-constraints
+    -Wpartial-fields
+    -Wunused-packages
+
+library
+  import:
+    base, project-config
+
+  hs-source-dirs: src
+
+  exposed-modules:
+    Cardano.Ledger.Address
+    Cardano.Ledger.AuxiliaryData
+    Cardano.Ledger.BaseTypes
+    Cardano.Ledger.Coin
+    Cardano.Ledger.Compactible
+    Cardano.Ledger.Core
+    Cardano.Ledger.Credential
+    Cardano.Ledger.Crypto
+    Cardano.Ledger.Era
+    Cardano.Ledger.Keys
+    Cardano.Ledger.Hashes
+    Cardano.Ledger.Rules.ValidationMode
+    Cardano.Ledger.SafeHash
+    Cardano.Ledger.Serialization
+    Cardano.Ledger.Slot
+    Cardano.Ledger.Val
+
+  build-depends:
+    aeson,
+    base16-bytestring,
+    binary,
+    bytestring,
+    cardano-binary,
+    cardano-crypto-class,
+    cardano-crypto-praos,
+    cardano-crypto-wrapper,
+    cardano-ledger-byron,
+    cardano-prelude,
+    cardano-slotting,
+    containers,
+    data-default-class,
+    deepseq,
+    groups,
+    iproute,
+    mtl,
+    network,
+    nothunks,
+    partial-order,
+    quiet,
+    scientific,
+    non-integral,
+    small-steps,
+    strict-containers,
+    text,
+    time,
+    transformers

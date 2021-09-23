@@ -5,12 +5,12 @@ set -euC
 SNAME=cardano-ledger-ghcid
 
 PACKAGES=(
-  semantics/executable-spec
-  semantics/small-steps-test
-  shelley/chain-and-ledger/executable-spec
-  shelley/chain-and-ledger/shelley-spec-ledger-test
-  shelley-ma/impl
-  shelley-ma/shelley-ma-test
+  libs/small-steps
+  libs/small-steps-test
+  eras/shelley/impl
+  eras/shelley/test-suite
+  eras/shelley-ma/impl
+  eras/shelley-ma/shelley-ma-test
 )
 
 ghcid_for_package () {

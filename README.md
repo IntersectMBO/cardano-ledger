@@ -18,9 +18,9 @@ following links:
 Era | Design Documents | Formal Specification | CDDL
 ----|------------------|----------------------|-----
 Byron | | [Chain Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronChainSpec/latest/download-by-type/doc-pdf/blockchain-spec "Specification of the Blockchain Layer"), [Ledger Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/byronLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec "A Formal Specification of the Cardano Ledger") | [CDDL](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/blocksCDDLSpec/latest/download-by-type/doc-pdf/binary)
-Shelley | [Design](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files)
-Allegra & Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.shelley-ma/latest/download-by-type/doc-pdf/shelley-ma "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/shelley-ma/shelley-ma-test/cddl-files)
-Alonzo | [eUTXO](https://iohk.io/en/research/library/papers/the-extended-utxo-model/ "The Extended UTXO Model")| [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.alonzo-ledger/latest/download-by-type/doc-pdf/alonzo-changes "A Formal Specification of the Cardano Ledger integrating Plutus Core") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/alonzo/test/cddl-files)
+Shelley | [Design](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec "Design Specification for Delegation and Incentives in Cardano") | [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec "A Formal Specification of the Cardano Ledger") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/eras/shelley/test-suite/cddl-files)
+Allegra & Mary | [Multi-Currency](https://eprint.iacr.org/2020/895 "Multi-Currency Ledgers"), [UTXOma](https://iohk.io/en/research/library/papers/utxoma-utxo-with-multi-asset-support/ "UTXOma:UTXO with Multi-Asset Support") | [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.shelley-ma/latest/download-by-type/doc-pdf/shelley-ma "A Formal Specification of the Cardano Ledger with a Native Multi-Asset Implementation") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/eras/shelley-ma/test-suite/cddl-files)
+Alonzo | [eUTXO](https://iohk.io/en/research/library/papers/the-extended-utxo-model/ "The Extended UTXO Model")| [Spec](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.alonzo-ledger/latest/download-by-type/doc-pdf/alonzo-changes "A Formal Specification of the Cardano Ledger integrating Plutus Core") | [CDDL](https://github.com/input-output-hk/cardano-ledger-specs/tree/master/eras/alonzo/test/cddl-files)
 
 Other Documents:
 - [Non-integer calculations specification](https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/nonIntegerCalculations/latest/download-by-type/doc-pdf/non-integer-calculations): details on the parts of the Shelley specification that use real numbers.
@@ -33,27 +33,30 @@ In addition, there is a formalization of the Ledger Specification in Isabelle/HO
 
 The directory structure of this repository is as follows:
 
-- [byron](./byron)
-  - [ledger](./byron/ledger)
-    - [formal-spec](./byron/ledger/formal-spec)
-    - [executable-spec](./byron/ledger/executable-spec)
-    - [implementation](./byron/ledger/impl)
-  - [chain](./byron/chain)
-    - [formal-spec](./byron/chain/formal-spec)
-    - [executable-spec](./byron/chain/executable-spec)
-  - [cddl](./byron/cddl-spec)
-- [shelley](./shelley)
-  - [design-spec](./shelley/design-spec)
-  - [chain-and-ledger](./shelley/chain-and-ledger) (specs are combined in Shelley era)
-    - [formal-spec](./shelley/chain-and-ledger/formal-spec)
-    - [implementation](./shelley/chain-and-ledger/executable-spec)
-    - [tests](./shelley/chain-and-ledger/shelley-spec-ledger-test)
-    - [dependencies](./shelley/chain-and-ledger/dependencies)
-  - [cddl](./shelley/chain-and-ledger/shelley-spec-ledger-test/cddl-files)
-- [Timelocks and Multi-Assets](./shelley-ma)
-    - [formal-spec](./shelley-ma/formal-spec)
-    - [implementation](./shelley-ma/impl)
-    - [tests](./shelley-ma/shelley-ma-test)
+- [byron](./eras/byron)
+  - [ledger](./eras/byron/ledger)
+    - [formal-spec](./eras/byron/ledger/formal-spec)
+    - [executable-spec](./eras/byron/ledger/executable-spec)
+    - [implementation](./eras/byron/ledger/impl)
+  - [chain](./eras/byron/chain)
+    - [formal-spec](./eras/byron/chain/formal-spec)
+    - [executable-spec](./eras/byron/chain/executable-spec)
+  - [cddl](./eras/byron/cddl-spec)
+- [shelley](./eras/shelley)
+  - [design-spec](./eras/shelley/design-spec)
+  - [formal-spec](./eras/shelley/formal-spec)
+  - [implementation](./eras/shelley/impl)
+  - [tests](./eras/shelley/test-suite)
+  - [cddl](./eras/shelley/test-suite/cddl-files)
+- [Timelocks and Multi-Assets](./eras/shelley-ma)
+    - [formal-spec](./eras/shelley-ma/formal-spec)
+    - [implementation](./eras/shelley-ma/impl)
+    - [tests](./eras/shelley-ma/test-suite)
+- [Smart Contracts](./eras/alonzo)
+    - [formal-spec](./eras/alonzo/formal-spec)
+    - [implementation](./eras/alonzo/impl)
+    - [tests](./eras/alonzo/test-suite)
+- [Libraries](./libs)
 
 ## Build tools
 
@@ -111,9 +114,9 @@ result/blockchain-spec.pdf
 ## Building individual LaTeX documents
 
 
-Change to the latex directory where the latex document is (e.g. `shelley/chain-and-ledger/formal-spec`
+Change to the latex directory where the latex document is (e.g. `eras/shelley/formal-spec`
 for the ledger specification corresponding to the Shelley release, or
-`byron/ledger/formal-spec` for the ledger specification corresponding to
+`eras/byron/ledger/formal-spec` for the ledger specification corresponding to
 the Byron release). Then, build the latex document by running:
 
 ```shell
@@ -132,10 +135,10 @@ The tests can be run with cabal.
 For example the Shelley tests can be run with:
 
 ```shell
-cabal test shelley-spec-ledger-test
+cabal test cardano-ledger-shelley-test
 ```
 
-**Note** that the tests in `shelley-spec-ledger-test` require two Ruby gems,
+**Note** that the tests in `cardano-ledger-shelley-test` require two Ruby gems,
 [cbor-diag](https://rubygems.org/gems/cbor-diag) and
 [cddl](https://rubygems.org/gems/cddl).
 
@@ -143,7 +146,7 @@ It can be helpful to use the `--test-show-details=streaming` option for seeing
 the output of the tests while they run:
 
 ```shell
-cabal test shelley-spec-ledger-test --test-show-details=streaming
+cabal test cardano-ledger-shelley-test --test-show-details=streaming
 ```
 
 ### Running Specific Tests
@@ -155,13 +158,13 @@ You can alternatively use the `TASTY_PATTERN` environment variable with a patter
 For example, the Shelley golden tests can be run with:
 
 ```shell
-cabal test shelley-spec-ledger-test --test-options="-p golden"
+cabal test cardano-ledger-shelley-test --test-options="-p golden"
 ```
 
 or
 
 ```shell
-TASTY_PATTERN=golden cabal test shelley-spec-ledger-test
+TASTY_PATTERN=golden cabal test cardano-ledger-shelley-test
 ```
 
 `Tasty` allows for more
@@ -184,7 +187,7 @@ When a QuickCheck test fails, the seed which produced the failure is reported.
 The failure can be replayed with:
 
 ```shell
-cabal test shelley-spec-ledger-test --test-options "--quickcheck-replay=42"
+cabal test cardano-ledger-shelley-test --test-options "--quickcheck-replay=42"
 ```
 (where 42 is an example seed).
 
@@ -196,7 +199,7 @@ For example, the Shelley test suite contains
 which can be run with the `--scenario` flag. For example:
 
 ```shell
-cabal test shelley-spec-ledger-test --test-options --scenario=Fast
+cabal test cardano-ledger-shelley-test --test-options --scenario=Fast
 ```
 
 ### ghcid
@@ -212,7 +215,7 @@ For example:
 
 ```shell
 nix-shell
-cd shelley/chain-and-ledger/executable-spec/
+cd eras/shelley/impl/
 ghcid
 ```
 
@@ -252,7 +255,7 @@ To add a new Haskell project, you should do the following:
 
 To add a new LaTeX specification, the easiest way is to copy from one of the
 existing specifications. You will want the `Makefile` and `default.nix` (say
-from [the Shelley ledger spec](./shelley/chain-and-ledger/formal-spec)).
+from [the Shelley ledger spec](./eras/shelley/formal-spec)).
 
 1. Copy these files into the root of your new LaTeX specification.
 2. Modify the `DOCNAME` in the `Makefile`.

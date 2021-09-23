@@ -1,0 +1,109 @@
+cabal-version: 3.0
+
+name:                cardano-ledger-alonzo-test
+version:             0.1.0.0
+synopsis:            Tests for Cardano ledger introducing Plutus Core
+description:
+  This package builds upon the Mary ledger with support for extended UTxO
+  via Plutus Core.
+bug-reports:         https://github.com/input-output-hk/cardano-ledger-specs/issues
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+copyright:           2020 Input Output (Hong Kong) Ltd.
+category:            Network
+build-type:          Simple
+
+
+extra-source-files:
+  cddl-files/alonzo.cddl
+  cddl-files/mock/crypto.cddl
+  cddl-files/mock/extras.cddl
+
+common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wpartial-fields
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+
+  exposed-modules:
+    Test.Cardano.Ledger.Alonzo.Examples.Consensus
+    Test.Cardano.Ledger.Alonzo.Serialisation.Generators
+    Test.Cardano.Ledger.Alonzo.AlonzoEraGen
+    Test.Cardano.Ledger.Alonzo.Trace
+    Test.Cardano.Ledger.Alonzo.PlutusScripts
+  build-depends:
+    bytestring,
+    cardano-binary,
+    cardano-ledger-alonzo,
+    cardano-ledger-core,
+    cardano-ledger-shelley-ma-test,
+    cardano-ledger-shelley-ma,
+    cardano-slotting,
+    containers,
+    data-default-class,
+    hashable,
+    plutus-tx,
+    plutus-ledger-api,
+    QuickCheck,
+    cardano-ledger-shelley-test,
+    cardano-ledger-shelley,
+    small-steps,
+    strict-containers,
+    text,
+  hs-source-dirs:
+    src
+
+test-suite cardano-ledger-alonzo-test
+  import:             base, project-config
+
+  type:                exitcode-stdio-1.0
+  main-is:             Tests.hs
+  hs-source-dirs:
+    test
+  other-modules:
+    Test.Cardano.Ledger.Alonzo.Examples
+    Test.Cardano.Ledger.Alonzo.Golden
+    Test.Cardano.Ledger.Alonzo.PropertyTests
+    Test.Cardano.Ledger.Alonzo.Serialisation.Canonical
+    Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
+    Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
+    Test.Cardano.Ledger.Alonzo.Translation
+    Test.Cardano.Ledger.Alonzo.Trials
+    Test.Cardano.Ledger.Alonzo.Trials
+  build-depends:
+    base16-bytestring,
+    bytestring,
+    cardano-binary,
+    cardano-ledger-alonzo,
+    cardano-ledger-alonzo-test,
+    cardano-ledger-shelley-ma,
+    cardano-ledger-core,
+    cardano-ledger-shelley-ma-test,
+    cardano-slotting,
+    containers,
+    data-default-class,
+    plutus-core,
+    plutus-tx,
+    plutus-ledger-api,
+    QuickCheck,
+    small-steps,
+    small-steps-test,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-test,
+    strict-containers,
+    tasty,
+    tasty-hunit,
+    tasty-quickcheck,
+    time,
+    transformers,
