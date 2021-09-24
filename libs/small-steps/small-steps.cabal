@@ -11,6 +11,11 @@ category:            Control
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   libs/small-steps
+
 flag sts_assert
     description: Enable STS assertions by default
     default: False

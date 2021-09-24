@@ -17,6 +17,11 @@ extra-source-files:
   bench/resources/0_ledgerstate.cbor
   bench/resources/0_tx.cbor
 
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   libs/cardano-ledger-test
+
 common base
   build-depends:      base >= 4.12 && < 4.15
 

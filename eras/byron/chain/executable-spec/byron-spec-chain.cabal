@@ -13,7 +13,8 @@ category:            Testing
 build-type:          Simple
 extra-source-files:  ChangeLog.md
 
-common base                         { build-depends: base                             >= 4.11       && < 4.15     }
+common base
+  build-depends:      base >= 4.12 && < 4.15
 
 common project-config
   default-language:   Haskell2010

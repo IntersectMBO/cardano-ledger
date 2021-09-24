@@ -14,13 +14,18 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
-
 extra-source-files:
   cddl-files/alonzo.cddl
   cddl-files/mock/crypto.cddl
   cddl-files/mock/extras.cddl
 
-common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   eras/alonzo/test-suite
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
 
 common project-config
   default-language:   Haskell2010

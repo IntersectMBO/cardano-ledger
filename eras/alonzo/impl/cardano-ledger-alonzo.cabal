@@ -14,8 +14,13 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   eras/alonzo/impl
 
-common base                         { build-depends: base                             >= 4.12       && < 4.15     }
+common base
+  build-depends:      base >= 4.12 && < 4.15
 
 common project-config
   default-language:   Haskell2010
