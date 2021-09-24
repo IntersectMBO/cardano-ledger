@@ -143,7 +143,7 @@ data TxOut era
   | TxOutCompactDH
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
-      {-# UNPACK #-} !(DataHash (Crypto era))
+      !(DataHash (Crypto era))
 
 deriving stock instance
   ( Eq (Core.Value era),

@@ -11,11 +11,6 @@ copyright:           2018 IOHK
 category:            Currency
 build-type:          Simple
 
-flag development
-    description: Disable `-Werror`
-    default: False
-    manual: True
-
 common base
   build-depends:      base >= 4.12 && < 4.15
 
@@ -33,9 +28,6 @@ common project-config
                       -Wno-safe
                       -Wno-unsafe
                       -Wunused-packages
-
-  if (!flag(development))
-    ghc-options:      -Werror
 
 library
   import:             base, project-config

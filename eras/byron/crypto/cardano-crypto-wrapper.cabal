@@ -12,11 +12,6 @@ category:            Currency
 build-type:          Simple
 extra-source-files:  README.md
 
-flag development
-    description: Disable `-Werror`
-    default: False
-    manual: True
-
 common base
   build-depends:      base >= 4.12 && < 4.15
 
@@ -33,9 +28,6 @@ common project-config
                       -Wno-safe
                       -Wno-unsafe
                       -Wunused-packages
-
-  if (!flag(development))
-    ghc-options:      -Werror
 
 library
   import:             base, project-config

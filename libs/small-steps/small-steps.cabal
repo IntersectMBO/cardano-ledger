@@ -11,10 +11,10 @@ category:            Control
 build-type:          Simple
 extra-source-files:  CHANGELOG.md
 
-flag development
-    description: Disable '-Werror'
-    default: False
-    manual: True
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   libs/small-steps
 
 flag sts_assert
     description: Enable STS assertions by default
@@ -33,9 +33,6 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
                       -Wunused-packages
-
-  if (!flag(development))
-    ghc-options:      -Werror
 
 library
   import:             base, project-config

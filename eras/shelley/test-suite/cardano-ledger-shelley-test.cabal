@@ -16,11 +16,7 @@ extra-source-files:
 source-repository head
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs.git
-
-flag development
-    description: Disable '-Werror'
-    default: False
-    manual: True
+  subdir:   eras/shelley/test-suite
 
 common base
   build-depends:      base >= 4.12 && < 4.15
@@ -35,19 +31,19 @@ common project-config
                       -Wredundant-constraints
                       -Wunused-packages
 
-  if (!flag(development))
-    ghc-options:      -Werror
-
 library
   import:             base, project-config
   hs-source-dirs:     src
-                      test
   exposed-modules:
     Test.Cardano.Crypto.VRF.Fake
+    Test.Cardano.Ledger.Shelley.Address.Bootstrap
+    Test.Cardano.Ledger.Shelley.Address.CompactAddr
     Test.Cardano.Ledger.Shelley.BenchmarkFunctions
+    Test.Cardano.Ledger.Shelley.ByronTranslation
     Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
     Test.Cardano.Ledger.Shelley.Examples.Cast
     Test.Cardano.Ledger.Shelley.Examples.Consensus
+    Test.Cardano.Ledger.Shelley.Examples.Federation
     Test.Cardano.Ledger.Shelley.Generator.Block
     Test.Cardano.Ledger.Shelley.Generator.Constants
     Test.Cardano.Ledger.Shelley.Generator.Core
@@ -63,27 +59,22 @@ library
     Test.Cardano.Ledger.Shelley.Generator.ScriptClass
     Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen
     Test.Cardano.Ledger.Shelley.Orphans
+    Test.Cardano.Ledger.Shelley.PropertyTests
     Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
+    Test.Cardano.Ledger.Shelley.Rules.TestChain
+    Test.Cardano.Ledger.Shelley.Rules.TestDeleg
+    Test.Cardano.Ledger.Shelley.Rules.TestPool
+    Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
     Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
     Test.Cardano.Ledger.Shelley.Serialisation.Generators
     Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators
     Test.Cardano.Ledger.Shelley.Serialisation.Generators.Bootstrap
     Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis
     Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
+    Test.Cardano.Ledger.Shelley.ShelleyTranslation
     Test.Cardano.Ledger.Shelley.Shrinkers
     Test.Cardano.Ledger.Shelley.Utils
-    Test.Cardano.Ledger.Shelley.PropertyTests
-    Test.Cardano.Ledger.Shelley.Rules.TestChain
     Test.TestScenario
-  other-modules:
-      Test.Cardano.Ledger.Shelley.Address.Bootstrap
-      Test.Cardano.Ledger.Shelley.Address.CompactAddr
-      Test.Cardano.Ledger.Shelley.ByronTranslation
-      Test.Cardano.Ledger.Shelley.Examples.Federation
-      Test.Cardano.Ledger.Shelley.Rules.TestDeleg
-      Test.Cardano.Ledger.Shelley.Rules.TestPool
-      Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
-      Test.Cardano.Ledger.Shelley.ShelleyTranslation
   build-depends:
     base16-bytestring >= 1,
     bytestring,
@@ -133,14 +124,9 @@ test-suite cardano-ledger-shelley-test
   main-is:             Tests.hs
   other-modules:
       Test.Control.Iterate.SetAlgebra
-      Test.Cardano.Ledger.Shelley.Address.Bootstrap
-      Test.Cardano.Ledger.Shelley.Address.CompactAddr
-      Test.Cardano.Ledger.Shelley.ByronTranslation
       Test.Cardano.Ledger.Shelley.Examples
-      Test.Cardano.Ledger.Shelley.Examples.Cast
       Test.Cardano.Ledger.Shelley.Examples.Combinators
       Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
-      Test.Cardano.Ledger.Shelley.Examples.Federation
       Test.Cardano.Ledger.Shelley.Examples.Init
       Test.Cardano.Ledger.Shelley.Examples.GenesisDelegation
       Test.Cardano.Ledger.Shelley.Examples.NetworkID
@@ -153,13 +139,7 @@ test-suite cardano-ledger-shelley-test
       Test.Cardano.Ledger.Shelley.Fees
       Test.Cardano.Ledger.Shelley.MultiSigExamples
       Test.Cardano.Ledger.Shelley.Pretty
-      Test.Cardano.Ledger.Shelley.PropertyTests
       Test.Cardano.Ledger.Shelley.Rewards
-      Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
-      Test.Cardano.Ledger.Shelley.Rules.TestChain
-      Test.Cardano.Ledger.Shelley.Rules.TestDeleg
-      Test.Cardano.Ledger.Shelley.Rules.TestPool
-      Test.Cardano.Ledger.Shelley.Rules.TestPoolreap
       Test.Cardano.Ledger.Shelley.SafeHash
       Test.Cardano.Ledger.Shelley.Serialisation
       Test.Cardano.Ledger.Shelley.Serialisation.CDDL
@@ -168,10 +148,8 @@ test-suite cardano-ledger-shelley-test
       Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
       Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR
       Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
-      Test.Cardano.Ledger.Shelley.ShelleyTranslation
       Test.Cardano.Ledger.Shelley.RulesTests
       Test.Cardano.Ledger.Shelley.UnitTests
-      Test.TestScenario
 
   hs-source-dirs:      test
   ghc-options:
@@ -192,10 +170,6 @@ test-suite cardano-ledger-shelley-test
       cardano-binary,
       cardano-crypto-class,
       cardano-crypto-praos,
-      cardano-crypto-test,
-      cardano-crypto-wrapper,
-      cardano-crypto,
-      cardano-ledger-byron-test,
       cardano-ledger-byron,
       cardano-ledger-core,
       cardano-prelude-test,
@@ -207,7 +181,6 @@ test-suite cardano-ledger-shelley-test
       data-default-class,
       groups,
       hedgehog >= 1.0.4,
-      hedgehog-quickcheck,
       iproute,
       prettyprinter,
       QuickCheck,
@@ -223,7 +196,6 @@ test-suite cardano-ledger-shelley-test
       tasty,
       time,
       transformers,
-      tree-diff
 
 
 benchmark mainbench
@@ -232,7 +204,6 @@ benchmark mainbench
   type:             exitcode-stdio-1.0
   hs-source-dirs:
     bench
-    test
   main-is:          Main.hs
   other-modules:
     Bench.Control.Iterate.SetAlgebra.Bimap,
@@ -240,10 +211,8 @@ benchmark mainbench
     BenchValidation,
     Cardano.Ledger.Shelley.Bench.Gen
     Cardano.Ledger.Shelley.Bench.Rewards
-    Test.Cardano.Ledger.Shelley.Examples.Cast
 
   build-depends:
-    bytestring,
     cardano-crypto-class,
     cardano-crypto-praos,
     cardano-ledger-core,

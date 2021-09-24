@@ -16,6 +16,11 @@ category:            Network
 
 extra-source-files: CHANGELOG.md
 
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   libs/plutus-preprocessor
+
 executable plutus-preprocessor
     main-is:          Main.hs
 

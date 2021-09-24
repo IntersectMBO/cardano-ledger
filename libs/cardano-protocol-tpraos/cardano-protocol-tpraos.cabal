@@ -12,6 +12,7 @@ copyright:          2021 Input Output (Hong Kong) Ltd.
 source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   libs/cardano-protocol-tpraos
 
 common base
   build-depends:

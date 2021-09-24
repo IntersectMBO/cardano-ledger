@@ -3,20 +3,18 @@ cabal-version: 2.2
 name:                small-steps-test
 version:             0.1.0.0
 synopsis:            Small step semantics testing library
--- description:
 homepage:            https://github.com/input-output-hk/cardano-legder-specs
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
--- copyright:
 category:            Control
 build-type:          Simple
 extra-source-files:
 
-flag development
-    description: Disable '-Werror'
-    default: False
-    manual: True
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   libs/small-steps-test
 
 common base
   build-depends:      base >= 4.12 && < 4.15
@@ -30,9 +28,6 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
                       -Wunused-packages
-
-  if (!flag(development))
-    ghc-options:      -Werror
 
 library
   import:             base, project-config

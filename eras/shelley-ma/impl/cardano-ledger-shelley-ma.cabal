@@ -17,6 +17,7 @@ build-type:          Simple
 source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   eras/shelley-ma/impl
 
 common base
   build-depends:      base >= 4.12 && < 4.15

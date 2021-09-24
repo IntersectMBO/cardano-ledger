@@ -6,6 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-missed-specialisations #-}
 
 module Cardano.Chain.Genesis.KeyHashes
   ( GenesisKeyHashes (..),

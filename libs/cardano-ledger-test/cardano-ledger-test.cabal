@@ -17,6 +17,11 @@ extra-source-files:
   bench/resources/0_ledgerstate.cbor
   bench/resources/0_tx.cbor
 
+source-repository head
+  type:     git
+  location: https://github.com/input-output-hk/cardano-ledger-specs
+  subdir:   libs/cardano-ledger-test
+
 common base
   build-depends:      base >= 4.12 && < 4.15
 
@@ -105,7 +110,6 @@ benchmark bench
     cardano-crypto-class,
     cardano-ledger-alonzo,
     cardano-ledger-core,
-    cardano-ledger-alonzo-test,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
     containers,
@@ -113,11 +117,8 @@ benchmark bench
     data-default-class,
     deepseq,
     QuickCheck,
-    small-steps,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
-    tasty-quickcheck,
-    tasty
   ghc-options:
       -threaded
       -rtsopts

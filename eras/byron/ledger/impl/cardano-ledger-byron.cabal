@@ -12,11 +12,6 @@ category:            Currency
 build-type:          Simple
 extra-source-files:  README.md
 
-flag development
-    description: Disable `-Werror`
-    default: False
-    manual: True
-
 flag test-normal-form
     description: Test ledger state normal form during epoch validation
     default: False
@@ -38,9 +33,6 @@ common project-config
                       -Wno-safe
                       -Wno-unsafe
                       -Wunused-packages
-
-  if (!flag(development))
-    ghc-options:      -Werror
 
 library
   import:             base, project-config
