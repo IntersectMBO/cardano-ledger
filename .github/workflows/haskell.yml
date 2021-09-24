@@ -125,3 +125,26 @@ jobs:
       run: |
         export CARDANO_MAINNET_MIRROR="$(pwd)/cardano-mainnet-mirror/epochs"
         cabal test all
+
+  ormolu:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        shell: bash
+
+    strategy:
+      fail-fast: false
+
+    steps:
+    - uses: actions/checkout@v1
+
+    - name: Install ormolu
+      run: |
+        mkdir -p "$HOME/.local/bin"
+        curl -sL https://github.com/tweag/ormolu/releases/download/0.1.4.1/ormolu-Linux -o "$HOME/.local/bin/ormolu"
+        chmod a+x "$HOME/.local/bin/ormolu"
+        echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+    - name: Run ormolu
+      run: ./scripts/ormolise.sh
