@@ -26,7 +26,7 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
 import Cardano.Ledger.Shelley.EpochBoundary (aggregateUtxoCoinByCredential)
-import Cardano.Ledger.Shelley.TxBody (TxId (..), TxIn (TxInCompact), TxOut (..))
+import Cardano.Ledger.Shelley.TxBody (TxId (..), TxIn (..), TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.ShelleyMA ()
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
@@ -50,7 +50,7 @@ payCred = KeyHashObj (hashKey . VKey $ VerKeyMockDSIGN 0)
 
 -- | Infinite list of transaction inputs
 txIns :: [TxIn TestCrypto]
-txIns = [0 ..] <&> TxInCompact txId
+txIns = [0 ..] <&> TxIn txId
   where
     txId =
       TxId . castSafeHash $
