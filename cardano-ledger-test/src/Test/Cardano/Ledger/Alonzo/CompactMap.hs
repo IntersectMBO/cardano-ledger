@@ -9,6 +9,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UnboxedTuples #-}
+{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FunctionalDependencies #-}
+
 {-# OPTIONS_GHC -Wno-orphans #-}
 {-# OPTIONS_GHC -Wno-unused-imports #-}
 
@@ -95,6 +98,7 @@ import Test.QuickCheck.Gen (frequency, vectorOf)
 import Test.Shelley.Spec.Ledger.PackedBytes (PackedBytes (..), packBytes)
 import Test.Shelley.Spec.Ledger.Serialisation.Generators ()
 import Test.Tasty.QuickCheck (Arbitrary (..), Gen, generate, vector)
+import qualified Data.Primitive.Array as PA
 
 -- import Test.Tasty
 -- import Cardano.Binary.Deserialize(unsafeDeserialize)
@@ -105,6 +109,36 @@ import Test.Tasty.QuickCheck (Arbitrary (..), Gen, generate, vector)
 -- import qualified Data.Vector.Generic as VGen
 -- import qualified Data.Vector.Unboxed as VUnbox
 -- import Data.Primitive.ByteArray
+
+-- ================================================
+
+class Indexable arr a => MutIndexable arr marr a | marr -> arr where
+  mindex :: marr s a -> Int -> ST s a
+  msize :: marr s a -> Int
+  mnew :: Int -> ST s (marr s a)
+  mfreeze :: marr s a -> ST s (arr a)
+
+instance Indexable PA.Array x where
+  index = PA.indexArray
+  isize = PA.sizeofArray
+  fromlist = PA.arrayFromList
+  tolist arr = foldr (:) [] arr
+
+instance MutIndexable PA.Array PA.MutableArray a where
+  msize = PA.sizeofMutableArray 
+  mindex = PA.readArray
+  mnew n = PA.newArray n undefined
+  mfreeze = PA.unsafeFreezeArray 
+
+
+instance Prim a => MutIndexable PrimArray MutablePrimArray a where
+  msize = sizeofMutablePrimArray
+  mindex = readPrimArray
+  mnew = newPrimArray  
+  mfreeze = unsafeFreezePrimArray 
+
+-- MutA.newArray_ (0, valsize - 1)
+-- newPrimArray primsize
 
 withSTArray :: Int -> (forall s. STArray s Int a -> ST s x) -> (A.Array Int a, x)
 withSTArray _size process = runST $ do
@@ -133,6 +167,21 @@ withBoth primsize normsize process = runST $ do
   arr3 <- unsafeFreezePrimArray arr1
   arr4 <- MutA.freeze arr2
   pure (arr3, arr4)
+
+
+withParallel :: (MutIndexable arr1 marr1 k,MutIndexable arr2 marr2 v) =>
+   Int ->
+   Int ->
+   (forall s x. marr1 s k -> marr2 s v -> ST s x) ->
+   (arr1 k, arr2 v)
+withParallel keysize valsize process = runST $ do
+  arr1 <- mnew keysize
+  arr2 <- mnew valsize
+  process arr1 arr2
+  arr3 <- mfreeze arr1
+  arr4 <- mfreeze arr2
+  pure (arr3, arr4)
+
 
 -- ==============================
 
@@ -945,3 +994,60 @@ a4 = pushD a3 9
 a20 = fromlist [2, 6, 8, 23, 6, 45, 9, 12, 99, 132, 44, 15, 2]
 
 -- =============================================================
+
+
+mergeArrWithCont ::
+   forall t ans. (Ord t, Prim t) =>
+      Int ->
+      Int ->
+      PrimArray t ->
+      PrimArray t -> ans -> (ans -> t -> Either Int Int -> ans) -> ans
+mergeArrWithCont size1 size2 arr1 arr2 !ans cont = loop 0 0 0 ans
+  where
+    totsize = size1 + size2
+    loop :: Int -> Int -> Int -> ans -> ans
+    loop i1 i2 next answer =
+      case (i1 < size1, i2 < size2, next < totsize) of
+        (True, True, True) ->
+          let x1 = index arr1 i1
+              x2 = index arr2 i2
+          in case compare x1 x2 of
+               LT -> loop (i1 + 1) i2 (next + 1) (cont answer x1 (Left i1))
+               GT -> loop i1 (i2 + 1) (next + 1) (cont answer x2 (Right i2))
+               EQ -> error ("Duplicates in mergeArrWithCont.")
+        (True, False, True) -> loop (i1 + 1) i2 (next + 1) (cont answer (index arr1 i1) (Left i1))
+        (False, True, True) -> loop i1 (i2 + 1) (next + 1) (cont answer (index arr2 i2) (Right i2))
+        _ -> answer
+
+
+
+mergeParallel size1 size2 keys1 keys2 vals1 vals2 =
+   withBoth (size1+size2) (size1+size2) $
+   (\ m1 m2 -> const () <$> mergeArrWithCont size1 size2 keys1 keys2 (pure 0) (action vals1 vals2 m1 m2))
+
+getEither v1 v2 (Left i)  = index v1 i
+getEither v1 v2 (Right i) = index v2 i
+
+action:: (Show k, Show v,Prim k) => A.Array Int v -> A.Array Int v ->
+         MutablePrimArray s k -> STArray s Int v ->
+         ST s Int -> k -> Either Int Int -> ST s Int
+action v1 v2 mkeys mvals indexM k eitheri =
+          do !index <- indexM
+             trace ("Action "++show(index,k,eitheri,sizeofMutablePrimArray mkeys)) $ writePrimArray mkeys index k
+             MutA.writeArray mvals index (getEither v1 v2 eitheri)
+             pure(index + 1)
+
+
+mergePrim :: forall t. (Ord t, Prim t) => Int -> Int -> PrimArray t -> PrimArray t -> (PrimArray t,Int)
+mergePrim size1 size2 arr1 arr2 =
+    withPrimArray (size1+size2) (mergeArrWithCont size1 size2 arr1 arr2 (pure 0) . action)
+  where action marr indexM t eitheri =
+          do !index <- indexM
+             writePrimArray marr index t
+             pure(index + 1)
+
+
+(.*.) f g x y = f (g x y)
+
+
+qqq = mergeParallel 2 3 (fromlist [2::Int,8]) (fromlist [3,6,9]) (fromlist ["two"::String,"eight"]) (fromlist ["three","six","nine"])
