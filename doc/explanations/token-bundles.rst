@@ -100,6 +100,7 @@ How and where are token bundles stored?
 ********************************************
 
 Token bundles can be found:
+
 * As the mint field of a transaction, indicating that the transaction is minting the tokens in the bundle.
 * In an output of a transaction or an output in the current UTXO tracked by the ledger, alongside the address of the output, ie.
 
