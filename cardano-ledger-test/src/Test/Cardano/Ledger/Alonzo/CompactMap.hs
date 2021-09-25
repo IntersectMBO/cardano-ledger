@@ -939,6 +939,12 @@ ss7 = insertElem 71 ss6
 ss8 = insertElem 81 ss7
 ss9 = insertElem 51 ss8
 
+makeSet :: (Ord t,Prim t) => [t] -> CompactPrimSet t
+makeSet ts = CompactPrimSet (map node nodes) where
+    nodes = pieces ts
+    node (n, ps) = SetNode n (primArrayFromList (sort ps))  
+      
+
 -- ---------------------------------------------------
 
 data ArrayNode t where
@@ -1051,3 +1057,48 @@ mergePrim size1 size2 arr1 arr2 =
 
 
 qqq = mergeParallel 2 3 (fromlist [2::Int,8]) (fromlist [3,6,9]) (fromlist ["two"::String,"eight"]) (fromlist ["three","six","nine"])
+
+-- ================================================================
+
+smallest :: (a -> a -> Bool) -> a -> [a] -> [a] -> (a, [a])
+smallest _ x [] larger = (x,larger)
+smallest smaller x (y:ys) larger =
+   if smaller x y
+      then smallest smaller x ys (y:larger)
+      else smallest smaller y ys (x:larger)
+
+
+inOrder :: 
+   (t -> t -> Bool) ->
+   (t -> Maybe t) ->
+   (ans -> t -> ans) ->
+   [t] -> ans -> ans  
+inOrder smaller done action items ans = loop items ans where
+   loop [] ans = ans
+   loop (x:xs) ans = 
+     case smallest smaller x xs [] of
+       (small,larger) -> case done small of
+          Nothing ->  loop larger (action ans small)
+          Just more -> loop (more:larger) (action ans small)
+
+rrr = inOrder smaller done action [[1,4,7],[3],[11,34,78,99,145],[2,6,8,9]] []
+  where smaller (x:xs) (y:ys) = x < y
+        done (x:y:zs) = Just(y:zs)
+        done _ = Nothing
+        action ans (x:_) = x:ans
+
+mergeMany :: Ord t => [(Int, SetNode t)] -> MutablePrimArray s t -> ST s Int
+mergeMany xs arr = inOrder smaller done action xs (pure (0::Int)) where
+  smaller (i,SetNode _ xs) (j,SetNode _ ys) = index xs i < index ys j
+  done (i,node@(SetNode size _)) = if i+1 < size then Just(i+1,node) else Nothing
+  action n (i,SetNode _ xs) = do { count <- n; writePrimArray arr count (index xs i); pure(count+1)}
+
+mergeNodes :: (Prim t, Ord t) => [SetNode t] -> (PrimArray t, Int)
+mergeNodes ns = withPrimArray (sum (map getsize ns)) (mergeMany (map start ns))
+  where start x = (0,x)
+        getsize (SetNode n _) = n
+
+ttt = CompactPrimSet [SetNode n arr]
+  where  CompactPrimSet nodes = makeSet [7::Int,2,1,4,3,6,5]
+         (arr,n) = mergeNodes nodes
+    
