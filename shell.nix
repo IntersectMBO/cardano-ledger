@@ -52,7 +52,7 @@ let
   devops = pkgs.stdenv.mkDerivation {
     name = "devops-shell";
     buildInputs = [
-      niv
+      niv zlib
     ];
     shellHook = ''
       echo "DevOps Tools" \
