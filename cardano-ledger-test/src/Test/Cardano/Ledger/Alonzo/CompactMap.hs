@@ -1081,6 +1081,7 @@ inOrder smaller done action items ans = loop items ans where
           Nothing ->  loop larger (action ans small)
           Just more -> loop (more:larger) (action ans small)
 
+rrr :: [Int]
 rrr = inOrder smaller done action [[1,4,7],[3],[11,34,78,99,145],[2,6,8,9]] []
   where smaller (x:xs) (y:ys) = x < y
         done (x:y:zs) = Just(y:zs)
