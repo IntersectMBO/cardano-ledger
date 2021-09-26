@@ -21,6 +21,7 @@ packages:
   libs/non-integral
   libs/small-steps
   libs/small-steps-test
+  libs/ledger-state
 
   -- Deprecations
   eras/shelley/chain-and-ledger/executable-spec
@@ -85,6 +86,14 @@ source-repository-package
     plutus-core
     prettyprinter-configurable
     word-array
+
+source-repository-package
+  type: git
+  location: https://github.com/lehins/cardano-addresses
+  tag: 7911d2efbb12932c5156d3a5fd4dd1fbbcff9802
+  --sha256: 0b9cz2f71nc22c9f726a05afhrnpz42nicm5b3qkxvxmj1a0n0pr
+  subdir:
+    core
 
 -- https://github.com/Quid2/flat/pull/22 fixes a potential exception
 -- when decoding invalid (e.g. malicious) text literals.

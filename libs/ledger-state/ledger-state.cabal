@@ -1,0 +1,69 @@
+cabal-version: 2.2
+
+name:                ledger-state
+version:             0.1.0.0
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+description:         This is a tool that helps us experiment with the UTxO map
+build-type:          Simple
+
+extra-source-files:
+  README.md
+  ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+  subdir:   libs/utxo-state
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+  build-depends:      aeson
+                    , attoparsec
+                    , bytestring
+                    , base16-bytestring
+                    , cardano-addresses
+                    , cardano-crypto-class
+                    , cardano-crypto-wrapper
+                    , cardano-ledger-core
+                    , cardano-ledger-alonzo
+                    , cardano-ledger-byron
+                    , cardano-ledger-shelley
+                    , cardano-ledger-shelley-ma
+                    , cardano-prelude
+                    , conduit
+                    , conduit-extra
+                    , containers
+                    , persistent
+                    , persistent-sqlite
+                    , strict-containers
+                    , text
+                    , optparse-applicative
+                    , heapsize
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+  exposed-modules:    Cardano.Ledger.State
+                    , Cardano.Ledger.State.UTxO
+                    , Cardano.Ledger.State.Schema
+  hs-source-dirs:     src
+
+executable ledger-state
+  import:              base
+                     , project-config
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -Wall -O2 -threaded
+  build-depends:       optparse-applicative
+                     , ledger-state
