@@ -1,4 +1,5 @@
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- HeapWords for Array and PrimArray
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -20,14 +22,25 @@ import Data.Primitive.PrimArray
  ( PrimArray, indexPrimArray, primArrayFromList, primArrayToList, sizeofPrimArray,
    MutablePrimArray,unsafeFreezePrimArray , newPrimArray,sizeofMutablePrimArray, readPrimArray, writePrimArray,
  )
-import Data.ByteString (ByteString)
-import Data.Foldable (foldr')
+import Data.ByteString.Short (ShortByteString,toShort)
+import Data.Foldable (foldr',foldl')
 import Data.Primitive.Types (Prim (..))
 import Cardano.Prelude (HeapWords (..))
 import GHC.Exts( IsList (toList) )
 import Control.Monad.ST (ST, runST)
-import Data.List(sort)
+import Data.List(sort,sortBy)
+import Debug.Trace(trace)
+import Cardano.Binary
+  ( Encoding,
+    FromCBOR (..),
+    ToCBOR (..),
+    serialize',
+    unsafeDeserialize',
+  )
+import Data.Text(Text,pack)  
 
+shorten :: ToCBOR t => t -> ShortByteString
+shorten x = toShort (serialize' x)
 -- ============================================================================================
 -- Arrays that support Binary search
 
@@ -49,10 +62,6 @@ binsearch lo hi k v = (if index v mid > k then binsearch lo mid k v else binsear
   where
     mid = lo + (div (hi - lo) 2)
 
-
--- | Find the index of 'target'
-search :: (Ord k, Indexable arr k) => k -> arr k -> Maybe Int
-search key v = binsearch 0 (isize v - 1) key v
 
 -- | Find the index and the value at the least upper bound of 'target'
 alub :: (Ord t1, Indexable t2 t1) => (Int, Int) -> t2 t1 -> t1 -> Maybe (Int, t1)
@@ -84,6 +93,32 @@ instance Indexable (A.Array Int) a where
   isize arr = (hi - lo) + 1 where (lo, hi) = A.bounds arr
   fromlist xs = (A.listArray (0, length xs -1) xs)
   tolist arr = foldr (:) [] arr
+
+-- =======================================================
+-- Abtract Searchable types
+
+class Ord key => Search t key where
+  search :: key -> t -> Maybe Int
+
+instance Ord key => Search (PA.Array key) key
+   where search key v = binsearch 0 (isize v - 1) key v
+instance (Prim key,Ord key) => Search (PrimArray key) key
+   where search key v = binsearch 0 (isize v - 1) key v
+instance Ord key => Search (A.Array Int key) key
+   where search key v = binsearch 0 (isize v - 1) key v
+
+instance Search t key => Search [t] key where
+   search _ [] = Nothing
+   search key (x:xs) =
+     case search key x of
+       Nothing -> search key xs
+       Just i -> Just i
+
+instance Search t key => Search (Node t) key where
+   search key (Node _ x) = search key x
+
+instance Search t key => Search (t,x)  key where
+  search key (t,x) = search key t
 
 -- ========================================================
 -- Pairs of Mutable Arrays and ImMutable Arrays that can be converted
@@ -118,7 +153,60 @@ instance ArrayPair (A.Array Int) MutArray a where
   mfreeze (MutArray arr) = unsafeFreezeSTArray arr
   mwrite (MutArray arr) i a = MutA.writeArray arr i a
 
+-- ============================================================
+
+-- | An array where some indices have been nix'ed, or marked as deleted
+data NixArr arr k where
+  NixArr :: Indexable arr k => {-# UNPACK #-} !Int  -> -- Actual elements (size arr - size delete-set)
+                               !(arr k) ->
+                               !(CompactPrimSet Int) ->
+                               NixArr arr k
+
+instance (Show k,Indexable arr k) => Show (NixArr arr k) where
+  show x = show (tolist x)
+
+instance Search (arr k) k => Search (NixArr arr k) k where
+  search key (NixArr _ arr del) =
+    case search key arr of
+      Nothing -> Nothing
+      Just i -> if hasElem i del then Nothing else (Just i)
+
+instance (Indexable arr k) => Indexable (NixArr arr) k where
+  index (NixArr _ arr del) k = index arr k 
+  isize (NixArr _ arr del) = isize arr
+  fromlist xs =  NixArr (length xs) (fromlist xs) emptyset
+  tolist (NixArr _ arr del) = removeNixedIndices del arr
+
+removeNixedIndices del xs = help (zip [0..] (tolist xs))
+   where help ((i,x):more) = if hasElem i del then help more else x : help more
+         help [] = []
+
+narr1 :: NixArr PrimArray Int
+narr1@(NixArr nsize1 ys _) = fromlist [ i | i <- [0..8]]
+narr2 = NixArr (nsize1 - 2) ys (makeSet [3,6])
+
+
+-- ===========================================================================
+-- An array where the elements are stored serialized in groups of fixed size
+
+data SerialArray arr v where
+   SerialArray:: (Indexable arr ShortByteString,FromCBOR v) =>
+       {-# UNPACK #-} !Int -> -- Actual size of the arr
+       {-# UNPACK #-} !Int -> -- groupsize, so indices run from 0 to (size * groupsize - 1)
+       v ->
+       arr ShortByteString ->
+       SerialArray arr v
+
+
+-- sa1 :: SerialArray (A.Array Int) Text
+sa1@(SerialArray arrsize groupsize _ sarr) =
+   SerialArray 5 3 (pack "") (fromlist @(A.Array  Int) [ shorten $ map (pack . show) [i,i+1,i+2] | i <- [1,4..15]])
+   
+
+
 -- ================================================================
+-- Functions for using mutable initialization in a safe manner.
+-- Using these functions is the safe way to use the method 'mfreeze'
 
 withMutArray:: ArrayPair arr marr a => Int -> (forall s. marr s a -> ST s x) -> (arr a,x)
 withMutArray n process = runST $ do
@@ -141,75 +229,15 @@ with2MutArray size1 size2 process = runST $ do
   arr4 <- mfreeze arr2
   pure (arr3, arr4, x)
 
--- ========================================================
--- efficient merge of sorted arrays
-
--- Mergeing two arrays using an abstract 'cont' to add things
-mergeArrWithCont ::
-   forall t arr ans. (Ord t,Indexable arr t) =>
-      Int ->
-      Int ->
-      arr t ->
-      arr t -> ans -> (ans -> t -> Either Int Int -> ans) -> ans
-mergeArrWithCont size1 size2 arr1 arr2 !ans cont = loop 0 0 0 ans
-  where
-    totsize = size1 + size2
-    loop :: Int -> Int -> Int -> ans -> ans
-    loop i1 i2 next answer =
-      case (i1 < size1, i2 < size2, next < totsize) of
-        (True, True, True) ->
-          let x1 = index arr1 i1
-              x2 = index arr2 i2
-          in case compare x1 x2 of
-               LT -> loop (i1 + 1) i2 (next + 1) (cont answer x1 (Left i1))
-               GT -> loop i1 (i2 + 1) (next + 1) (cont answer x2 (Right i2))
-               EQ -> error ("Duplicates in mergeArrWithCont.")
-        (True, False, True) -> loop (i1 + 1) i2 (next + 1) (cont answer (index arr1 i1) (Left i1))
-        (False, True, True) -> loop i1 (i2 + 1) (next + 1) (cont answer (index arr2 i2) (Right i2))
-        _ -> answer
-
-mergeParallel :: (ArrayPair vals mvals v, ArrayPair keys mkeys key, Ord key,Indexable arr key) =>
-     Int ->
-     Int -> 
-     arr key ->
-     arr key ->
-     vals v ->
-     vals v ->
-     (keys key, vals v, ())
-mergeParallel size1 size2 keys1 keys2 vals1 vals2 =
-   with2MutArray (size1+size2) (size1+size2) $
-   (\ m1 m2 -> const () <$> mergeArrWithCont size1 size2 keys1 keys2 (pure 0) (action vals1 vals2 m1 m2))
-
-getEither:: (Indexable t1 p) => t1 p -> t1 p -> Either Int Int -> p
-getEither v1 v2 (Left i)  = index v1 i
-getEither v1 v2 (Right i) = index v2 i
-
-action :: (ArrayPair keys mkeys key, ArrayPair vals mvals v) =>
-  vals v ->
-  vals v ->
-  mkeys s key ->
-  mvals s v ->
-  ST s Int ->
-  key ->
-  Either Int Int ->
-  ST s Int    
-action v1 v2 mkeys mvals indexM k eitheri = do
-   !index <- indexM
-   mwrite mkeys index k
-   mwrite mvals index (getEither v1 v2 eitheri)
-   pure(index + 1)
 
 -- ================================================
 -- Merging N-sorted arrays
 
-data Node t = Node Int t
+-- | A node carries a 'size' and some array-like type 'arr'
+data Node arr = Node {-# UNPACK #-} !Int arr
+  deriving Show
 
-mergeMany:: (ArrayPair arr marr k, Ord k) => [(Int, Node (arr k))] -> marr s k -> ST s Int
-mergeMany xs arr = inOrder smaller done action xs (pure (0::Int)) where
-  smaller (i,Node _ xs) (j,Node _ ys) = index xs i < index ys j
-  done (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
-  action n (i,Node _ xs) = do { count <- n; mwrite arr count (index xs i); pure(count+1)}
-
+-- | Split a list into (smallest-element, larger-elements). 'x' is the smallest seen so far.
 smallest :: (a -> a -> Bool) -> a -> [a] -> [a] -> (a, [a])
 smallest _ x [] larger = (x,larger)
 smallest smaller x (y:ys) larger =
@@ -217,6 +245,9 @@ smallest smaller x (y:ys) larger =
       then smallest smaller x ys (y:larger)
       else smallest smaller y ys (x:larger)
 
+-- | Build an 'ans' by applying 'action' in ascending order of 't'.
+--   Works by choosing the smallest 't' in each pass (call). The 'done' function
+--   returns (Just more) when the 't' object has more things to process.
 inOrder :: 
    (t -> t -> Bool) ->
    (t -> Maybe t) ->
@@ -230,6 +261,88 @@ inOrder smaller done action items ans = loop items ans where
           Nothing ->  loop larger (action ans small)
           Just more -> loop (more:larger) (action ans small)
 
+-- =========================
+
+-- | Merge many Nodes into 1 Node. In the pattern (i,Node size arr). 'i' is the next entry in 'arr'
+--   that is ready to be merged into the output.
+mergeMany:: (ArrayPair arr marr k, Ord k) => [(Int, Node (arr k))] -> marr s k -> ST s Int
+mergeMany xs arr = inOrder smaller done action xs (pure (0::Int)) where
+  smaller (i,Node _ xs) (j,Node _ ys) = index xs i < index ys j
+  done (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
+  action n (i,Node _ xs) = do { count <- n; mwrite arr count (index xs i); pure(count+1)}
+
+-- | Merge 'ns' into one Node with 'size' entries.
+mergeNodes ::
+  ( ArrayPair arr marr key,
+    Ord key
+  ) => Int -> [Node (arr key)] -> Node (arr key)
+mergeNodes size ns = Node size (fst(withMutArray size (mergeMany (map start ns))))
+  where start x = (0,x)
+
+-- =========================
+
+-- | Merge many Nodes into 1 Node. Each node carries a set of parallel arrays.
+--   In the pattern (i,Node size (keys,vals)). 'i' is the next entry
+--   in 'keys' and 'vals' that is ready to be merged into the output.
+mergeManyParallel::
+  ( ArrayPair arr1 marr1 k,
+    ArrayPair arr2 marr2 v,
+    Ord k,
+    Prim k
+  ) =>
+  [(Int, Node (arr1 k, arr2 v))] -> marr1 s k -> marr2 s v -> ST s Int
+mergeManyParallel xs marr1 marr2 = inOrder smaller done action xs (pure (0::Int)) where
+  smaller (i,Node _ (xs,_)) (j,Node _ (ys,_)) = index xs i < index ys j
+  done (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
+  action n (i,Node _ (keys,vals)) =
+     do { count <- n
+        ; mwrite marr1 count (index keys i)
+        ; mwrite marr2 count (index vals i)
+        ; pure(count+1)}
+
+-- | Merge 'ns' (which carry parallel arrays) into one Node with 'size' entries.
+mergeParallel ::
+  ( ArrayPair arr1 marr1 k,
+    ArrayPair arr2 marr2 v,
+    Ord k,
+    Prim k
+  ) => Int -> [Node (arr1 k, arr2 v)] -> Node (arr1 k, arr2 v)
+mergeParallel size ns = Node size (project(with2MutArray size size (mergeManyParallel (map start ns))))
+    where start x = (0,x)
+          project (x,y,_) = (x,y)
+
+-- =========================
+
+mergeManyNixParallel::
+  ( ArrayPair arr1 marr1 k,
+    ArrayPair arr2 marr2 v,
+    Ord k,
+    Prim k
+  ) =>
+  [(Int, Node (NixArr arr1 k, arr2 v))] -> marr1 s k -> marr2 s v -> ST s Int
+mergeManyNixParallel xs marr1 marr2 = inOrder smaller done action xs (pure (0::Int)) where
+  smaller (i,Node _ (NixArr _ xs d1,_)) (j,Node _ (NixArr _ ys d2,_)) = index xs i < index ys j
+  done (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
+  action n (i,Node _ (NixArr size keys del,vals)) =
+     do { count <- n
+        ; if hasElem count del
+             then pure count
+             else do { mwrite marr1 count (index keys i)
+                     ; mwrite marr2 count (index vals i)
+                     ; pure(count+1) } }
+
+mergeNixParallel ::
+  ( ArrayPair arr1 marr1 k,
+    ArrayPair arr2 marr2 v,
+    Ord k,
+    Prim k
+  ) => Int -> [Node (NixArr arr1 k, arr2 v)] -> Node (NixArr arr1 k, arr2 v)
+mergeNixParallel size ns = Node size (project(with2MutArray size size (mergeManyNixParallel (map start ns))))
+    where start x = (0,x)
+          actualSize = sum(map (\ (Node _ (NixArr size _ _,_)) -> size) ns)
+          project (x,y,_) = (NixArr actualSize x emptyset,y)
+
+-- A simple test
 rrr :: [Int]
 rrr = inOrder smaller done action [[1,4,7],[3],[11,34,78,99,145],[2,6,8,9]] []
   where smaller (x:xs) (y:ys) = x < y
@@ -238,29 +351,147 @@ rrr = inOrder smaller done action [[1,4,7],[3],[11,34,78,99,145],[2,6,8,9]] []
         action ans (x:_) = x:ans
 
 
-mergeNodes :: (ArrayPair arr marr key, Ord key) => [Node (arr key)] -> (arr key, Int)
-mergeNodes ns = withMutArray (sum (map getsize ns)) (mergeMany (map start ns))
-  where start x = (0,x)
-        getsize (Node n _) = n
-
--- ============================================================
+        
+-- ================================================================================
+-- Sets of objects as lists of nodes of ascending size. Each size is a power of 2.
+-- In each (Node size primarray) the 'primarray' has 'size' components. The sum
+-- of the sizes is the total number of elements in the set. 
 
 newtype CompactPrimSet t = CompactPrimSet [Node (PrimArray t)]
 
+instance (Prim t,Show t) => Show(CompactPrimSet t) where
+  show (CompactPrimSet ts) = show(map unNode ts)
+    where unNode(Node _ xs) = tolist xs
+
+emptyset :: CompactPrimSet t
+emptyset = CompactPrimSet []
 
 hasElem :: (Prim t,Ord t) => t -> CompactPrimSet t -> Bool
-hasElem _t (CompactPrimSet []) = False
-hasElem t (CompactPrimSet ((Node siz arr) : more)) =
-  case binsearch 0 (siz -1) t arr of
-    Nothing -> hasElem t (CompactPrimSet more)
+hasElem t (CompactPrimSet xs) =
+  case search t xs of
+    Nothing -> False
     Just _ -> True
 
 insertElem :: (Prim t, Ord t) => t -> CompactPrimSet t -> CompactPrimSet t
 insertElem t (set@(CompactPrimSet nodes)) =
   if hasElem t set
-    then set
-    else CompactPrimSet (addSetNode (Node 1 (fromlist [t])) nodes)
+     then set
+     else case splitAtFullPrefix 1 (Node 1 (fromlist [t])) nodes of
+           (size,prefix,tail) -> CompactPrimSet ((mergeNodes size prefix):tail)
 
+makeSet :: (Ord t,Prim t) => [t] -> CompactPrimSet t
+makeSet ts = CompactPrimSet (map node nodes) where
+    nodes = pieces ts
+    node (n, ps) = Node n (fromlist (sort ps))  
+
+
+ss1, ss2, ss3, ss4, ss5, ss6, ss7, ss8, ss9 :: CompactPrimSet Int
+ss1 = CompactPrimSet []
+ss2 = insertElem 99 ss1
+ss3 = insertElem 33 ss2
+ss4 = insertElem 12 ss3
+ss5 = insertElem 6 ss4
+ss6 = insertElem 22 ss5
+ss7 = insertElem 71 ss6
+ss8 = insertElem 81 ss7
+ss9 = insertElem 51 ss8
+
+-- ==============================================================
+-- Overloaded operations on (Map k v)
+
+class Maplike m k v where
+  makemap :: [(k,v)] -> m k v
+  lookupmap :: Ord k => k -> m k v -> Maybe v
+  insertmap :: Ord k => k -> v -> m k v -> m k v
+
+-- ===========================================================
+-- (Map key value) as lists of nodes of ascending size. Each size is a power of 2.
+-- In each (Node size (keyArr,valArr)) the 'keyArr' and 'valArr' have 'size' components.
+-- These are parallel arrays. The key at index i keyArr, has its associated value at index i valArr
+-- The sum of the sizes is the total number of elements in the set. 
+
+newtype PrimMap key val = PrimMap [Node (PrimArray key,PA.Array val)]
+
+instance (Prim k,Show k,Show v) => Show(PrimMap k v) where
+  show (PrimMap ts) = "PrimMap\n   "++show keys++"\n   "++show vals
+    where unNode(Node _ (x,y)) = (tolist x, tolist y)
+          pairs = map unNode ts
+          (keys,vals) = unzip pairs
+
+instance (Ord k,Prim k) => Maplike PrimMap k v where
+   lookupmap key (PrimMap []) = Nothing
+   lookupmap key (PrimMap (Node _ (ks,vs) : more)) =
+     case search key ks of
+       Nothing -> lookupmap key (PrimMap more)
+       Just i -> Just(index vs i)
+
+   insertmap k v (PrimMap nodes) =
+      case splitAtFullPrefix 1 (Node 1 (fromlist [k],fromlist[v])) nodes of
+         (size,prefix,tail) -> PrimMap ((mergeParallel size prefix):tail)
+
+   makemap = makeMap
+
+makeMap :: (Prim k,Ord k) => [(k,v)] -> PrimMap k v
+makeMap pairs = PrimMap (map node nodes) where
+    nodes = pieces pairs
+    node (n, ps) = Node n (fromlist ks, fromlist vs)
+      where (ks,vs) = unzip (sortBy (\ (k1,_) (k2,_) -> compare k1 k2) ps)
+
+m2,m3 :: PrimMap Int String
+m2 = makeMap [(i,show i) | i <- [1..21]]
+m3 = foldl accum (PrimMap []) (reverse [(i,show i) | i <- [1..21 ::Int]])
+  where accum ans (k,v) = insertmap k v ans
+
+-- =====================================================================
+-- NixMap supports deletion, and overwriting insertion
+
+newtype NixMap k v = NixMap [Node (NixArr PrimArray k,PA.Array v)]
+
+instance (Prim k,Show k,Show v) => Show(NixMap k v) where
+  show (NixMap ts) = "NixMap\n   "++show keys++"\n   "++show vals
+    where unNode(Node _ (x@(NixArr _ _ ds),y)) = (tolist x,removeNixedIndices ds y)
+          pairs = map unNode ts
+          (keys,vals) = unzip pairs
+
+instance (Ord k,Prim k) => Maplike NixMap k v where
+   makemap = makeNixMap
+   lookupmap k (NixMap []) = Nothing
+   lookupmap k (NixMap ((Node _ (NixArr _ keys ds,vals)):more)) =
+      case search k keys of
+        Nothing -> lookupmap k (NixMap more)
+        Just i -> if hasElem i ds
+                     then Nothing
+                     else Just(index vals i)
+   insertmap = insertNixMap
+
+makeNixMap :: (Prim k,Ord k) => [(k,v)] -> NixMap k v
+makeNixMap pairs = NixMap (map node nodes) where
+    nodes = pieces pairs
+    node (n, ps) = Node n (fromlist ks, fromlist vs)
+      where (ks,vs) = unzip (sortBy (\ (k1,_) (k2,_) -> compare k1 k2) ps)
+
+insertNixMap :: (Prim k,Ord k) => k -> v -> NixMap k v -> NixMap k v
+insertNixMap k v (NixMap nodes) =
+   case splitAtFullPrefix 1 (Node 1 (fromlist [k],fromlist[v])) (findAndMark k nodes) of
+         (size,prefix,tail) -> NixMap ((mergeNixParallel size prefix):tail)
+  
+deleteNixMap :: (Prim k, Ord k) => k -> NixMap k v -> NixMap k v
+deleteNixMap k (NixMap nodes) = NixMap(findAndMark k nodes)
+
+findAndMark :: (Search (arr1 k) k) => k -> [Node (NixArr arr1 k,arr2 v)] -> [Node (NixArr arr1 k,arr2 v)]
+findAndMark k [] = []
+findAndMark k (nodes@(node@(Node n (NixArr m ks ds,vs)) : more )) =
+  case search k ks of
+    Nothing -> node : findAndMark k more
+    Just i -> if hasElem i ds
+                 then nodes
+                 else (Node n (NixArr (m+1) ks (insertElem i ds),vs)) : more
+
+nm1 :: NixMap Int String
+nm1 = makemap [(i,show i) | i <- [1..7]]
+
+-- ============================================================
+-- Code for binary merging of adjacent nodes, instead of n-ary
 
 addSetNode :: (Ord t, Prim t) => Node (PrimArray t) -> [Node (PrimArray t)] -> [Node (PrimArray t)]
 addSetNode node [] = [node]
@@ -289,34 +520,6 @@ mergeSetNodes size1 size2 arr1 arr2 = Node totsize (fst (withMutArray totsize ma
             (True, False, True) -> do writePrimArray marr next (index arr1 i1); loop (i1 + 1) i2 (next + 1)
             (False, True, True) -> do writePrimArray marr next (index arr2 i2); loop i1 (i2 + 1) (next + 1)
             _ -> pure ()
-
-
-
-ss1, ss2, ss3, ss4, ss5, ss6, ss7, ss8, ss9 :: CompactPrimSet Int
-ss1 = CompactPrimSet []
-ss2 = insertElem 99 ss1
-ss3 = insertElem 33 ss2
-ss4 = insertElem 12 ss3
-ss5 = insertElem 6 ss4
-ss6 = insertElem 22 ss5
-ss7 = insertElem 71 ss6
-ss8 = insertElem 81 ss7
-ss9 = insertElem 51 ss8
-
-makeSet :: (Ord t,Prim t) => [t] -> CompactPrimSet t
-makeSet ts = CompactPrimSet (map node nodes) where
-    nodes = pieces ts
-    node (n, ps) = Node n (fromlist (sort ps))  
-      
-
-
-
-{-
-ttt = CompactPrimSet [Node n arr]
-  where  CompactPrimSet nodes = makeSet [7::Int,2,1,4,3,6,5]
-         (arr,n) = mergeNodes nodes
--}    
-
 
 -- =======================================================
 -- Encoding lists with the structure of binary numbers
@@ -360,3 +563,82 @@ instance (HeapWords v) => HeapWords (A.Array Int v) where
 
 instance (Prim a, HeapWords a) => HeapWords (PrimArray a) where
   heapWords arr = 2 + (sizeofPrimArray arr * heapWords (index arr 0))
+
+-- =================================================
+
+-- | Looking for a full prefix, i.e. a prefix which has contiguous powers of two
+--   for example: splitAtFullPrefix 1 (Node 1 1) [Node 1 1,Node 2 2, Node 4 4, Node 8 8,Node 32 32,Node 128 128]
+--   returns (16, [Node 1 1,Node 1 1,Node 2 2,Node 4 4,Node 8 8], [Node 32 32,Node 128 128])
+--   because [1,2,4,8] is the longest contiguous prefix consisting of adjacent powers of 2.
+splitAtFullPrefix :: Int -> Node a -> [Node a] -> (Int,[Node a],[Node a])
+splitAtFullPrefix next (node@(Node n _)) [] = (n,[node],[])
+splitAtFullPrefix next (node1@(Node n _)) ((node2@(Node m _)):more) =
+  if next==m
+     then case splitAtFullPrefix (next*2) node2 more of
+            (count,prefix,rest) -> (count+n, node1:prefix, rest)
+     else (n,[node1],node2:more)
+
+sp1 = splitAtFullPrefix 1 (Node 1 1) [Node 1 1,Node 2 2, Node 4 4, Node 8 8,Node 32 32,Node 128 128]
+
+
+
+
+
+
+-- ========================================================
+-- efficient merge of 2 sorted arrays
+
+-- Mergeing two arrays using an abstract 'cont' to add things
+mergeArrWithCont ::
+   forall t arr ans. (Ord t,Indexable arr t) =>
+      Int ->
+      Int ->
+      arr t ->
+      arr t -> ans -> (ans -> t -> Either Int Int -> ans) -> ans
+mergeArrWithCont size1 size2 arr1 arr2 !ans cont = loop 0 0 0 ans
+  where
+    totsize = size1 + size2
+    loop :: Int -> Int -> Int -> ans -> ans
+    loop i1 i2 next answer =
+      case (i1 < size1, i2 < size2, next < totsize) of
+        (True, True, True) ->
+          let x1 = index arr1 i1
+              x2 = index arr2 i2
+          in case compare x1 x2 of
+               LT -> loop (i1 + 1) i2 (next + 1) (cont answer x1 (Left i1))
+               GT -> loop i1 (i2 + 1) (next + 1) (cont answer x2 (Right i2))
+               EQ -> error ("Duplicates in mergeArrWithCont.")
+        (True, False, True) -> loop (i1 + 1) i2 (next + 1) (cont answer (index arr1 i1) (Left i1))
+        (False, True, True) -> loop i1 (i2 + 1) (next + 1) (cont answer (index arr2 i2) (Right i2))
+        _ -> answer
+
+mergeParallel2 :: (ArrayPair vals mvals v, ArrayPair keys mkeys key, Ord key,Indexable arr key) =>
+     Int ->
+     Int -> 
+     arr key ->
+     arr key ->
+     vals v ->
+     vals v ->
+     (keys key, vals v, ())
+mergeParallel2 size1 size2 keys1 keys2 vals1 vals2 =
+   with2MutArray (size1+size2) (size1+size2) $
+   (\ m1 m2 -> const () <$> mergeArrWithCont size1 size2 keys1 keys2 (pure 0) (action vals1 vals2 m1 m2))
+
+getEither:: (Indexable t1 p) => t1 p -> t1 p -> Either Int Int -> p
+getEither v1 v2 (Left i)  = index v1 i
+getEither v1 v2 (Right i) = index v2 i
+
+action :: (ArrayPair keys mkeys key, ArrayPair vals mvals v) =>
+  vals v ->
+  vals v ->
+  mkeys s key ->
+  mvals s v ->
+  ST s Int ->
+  key ->
+  Either Int Int ->
+  ST s Int    
+action v1 v2 mkeys mvals indexM k eitheri = do
+   !index <- indexM
+   mwrite mkeys index k
+   mwrite mvals index (getEither v1 v2 eitheri)
+   pure(index + 1)
