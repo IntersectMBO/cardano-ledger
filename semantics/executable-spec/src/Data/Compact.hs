@@ -22,7 +22,8 @@ import Data.Primitive.PrimArray
  ( PrimArray, indexPrimArray, primArrayFromList, primArrayToList, sizeofPrimArray,
    MutablePrimArray,unsafeFreezePrimArray , newPrimArray,sizeofMutablePrimArray, readPrimArray, writePrimArray,
  )
-import Data.ByteString.Short (ShortByteString,toShort)
+import Data.ByteString.Short (ShortByteString,toShort,fromShort)
+import Data.ByteString(ByteString)
 import Data.Foldable (foldr',foldl')
 import Data.Primitive.Types (Prim (..))
 import Cardano.Prelude (HeapWords (..))
@@ -189,20 +190,75 @@ narr2 = NixArr (nsize1 - 2) ys (makeSet [3,6])
 -- ===========================================================================
 -- An array where the elements are stored serialized in groups of fixed size
 
+-- These two functions control how to serialize
+toBytes :: ToCBOR a => a -> ShortByteString
+toBytes x = toShort (serialize' x)
+
+fromBytes :: FromCBOR a => ShortByteString -> a
+fromBytes x = (unsafeDeserialize' (fromShort x))
+
+-- | How many slots do you need to store 'nominalsize' elements if they are serialized into
+--   groups, where each group is a list of length 'groupsize'. The last group may have fewer items.
+serialSize nominalsize groupsize = (nominalsize `div` groupsize) + fix
+  where fix = if (nominalsize `mod` groupsize)==0 then 0 else 1
+
+-- | Chop a list into 'groupsize' sub lists
+--   Invariant: (length (chopN groupsize xs) == serialSize (length xs))
+chopN :: Int -> [t] -> [[t]]
+chopN groupsize [] = []
+chopN groupsize xs = take groupsize xs : chopN groupsize (drop groupsize xs)
+
 data SerialArray arr v where
    SerialArray:: (Indexable arr ShortByteString,FromCBOR v) =>
-       {-# UNPACK #-} !Int -> -- Actual size of the arr
-       {-# UNPACK #-} !Int -> -- groupsize, so indices run from 0 to (size * groupsize - 1)
-       v ->
+       {-# UNPACK #-} !Int -> -- Nominal size of the arr. Indices run from [0..nominal -1]
+       {-# UNPACK #-} !Int -> -- groupsize, so the actual size of the array is (serialSize nominalsize groupsize)
        arr ShortByteString ->
        SerialArray arr v
 
+instance Show t => Show (SerialArray arr t) where
+   show (SerialArray nominal group arr) = show bytes
+     where bytes = concat $ map (fromBytes @[t]) (tolist arr)
 
--- sa1 :: SerialArray (A.Array Int) Text
-sa1@(SerialArray arrsize groupsize _ sarr) =
-   SerialArray 5 3 (pack "") (fromlist @(A.Array  Int) [ shorten $ map (pack . show) [i,i+1,i+2] | i <- [1,4..15]])
-   
+instance (Indexable arr ShortByteString,ToCBOR t, FromCBOR t) => Indexable (SerialArray arr) t where
+   isize (SerialArray nominal _ _) = nominal
+   index (SerialArray nominal groupsize arr) i =
+     if (i >=0) && (i < nominal)
+        then (fromBytes (index arr (i `div` groupsize))) !! (i `mod` groupsize)
+        else error ("index "++show i++" out of SerialArray nominal range (0,"++show(nominal-1)++").")
+   fromlist = serialArrayFromlist @t 10
+   tolist (SerialArray _ _ arr) = concat (map (fromBytes @[t]) (tolist arr))
 
+
+serialArrayFromlist :: forall t arr. (ToCBOR t,FromCBOR t,Indexable arr ShortByteString) => Int -> [t] -> SerialArray arr t
+serialArrayFromlist groupsize ts = SerialArray nominalsize groupsize arr
+  where nominalsize = length ts
+        arr = fromlist (map (toBytes @[t]) (chopN groupsize ts))
+
+sa2 :: SerialArray (A.Array Int) Text
+sa2 = serialArrayFromlist 4 (map (pack . show) [1..15])
+
+
+mergeParSerialNodes ::
+  ( ArrayPair arr2 marr2 ShortByteString,
+    ArrayPair arr1 marr1 k,
+    MergeParallel arr1 k,
+    Ord k,
+    ToCBOR v
+  ) =>
+  [(Int, Node (arr1 k, SerialArray arr2 v))] ->
+  Int ->
+  Int ->
+  (arr1 k, arr2 ShortByteString, (Int, Int, [v]))
+mergeParSerialNodes xs s1 s2 = with2MutArray s1 s2 (builder xs) where
+  builder xs marr1 marr2 = inOrder smallerP doneP (action marr1 marr2) xs (pure(0,0,[]))
+  action marr1 marr2 comp (_size,Node _ (keys,vals@(SerialArray _ _ _))) =
+     do { (i,j,vs) <- comp
+        ; mwrite marr1 i (index keys i)
+        ; let vs2 = (index vals i) : vs
+        ; if length vs == 10 {- group size might vary -}
+             then do { mwrite marr2 j (toBytes (reverse vs)); pure(i+1,j+1,[]) }
+             else pure(i+1,j,vs2) }
+            
 
 -- ================================================================
 -- Functions for using mutable initialization in a safe manner.
@@ -228,6 +284,25 @@ with2MutArray size1 size2 process = runST $ do
   arr3 <- mfreeze arr1
   arr4 <- mfreeze arr2
   pure (arr3, arr4, x)
+
+-- ================================================
+-- Merging sorted arrays
+
+class Indexable t a => MergeVector t a where
+  smallerV:: Ord a => (Int,Node (t a)) -> (Int,Node (t a)) -> Bool
+  smallerV (i1,Node _ arr1) (i2,Node _ arr2) = index arr1 i1 < index arr2 i1
+  doneV:: (Int,Node (t a)) -> Maybe (Int,Node (t a))
+  doneV (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
+  actionV:: ans -> (Int,Node (t a)) -> ans
+  actionV ans _ = ans
+
+class Indexable t a => MergeParallel t a where
+  smallerP:: Ord a => (Int,Node (t a,b)) -> (Int,Node (t a,b)) -> Bool
+  smallerP (i1,Node _ (arr1,_)) (i2,Node _ (arr2,_)) = index arr1 i1 < index arr2 i1
+  doneP:: (Int,Node (t a,b)) -> Maybe (Int,Node (t a,b))
+  doneP (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
+  actionP:: ans -> (Int,Node (t a,b)) -> ans
+  actionP ans _ = ans
 
 
 -- ================================================
@@ -276,8 +351,9 @@ mergeNodes ::
   ( ArrayPair arr marr key,
     Ord key
   ) => Int -> [Node (arr key)] -> Node (arr key)
-mergeNodes size ns = Node size (fst(withMutArray size (mergeMany (map start ns))))
+mergeNodes size ns = Node size (project(withMutArray size (mergeMany (map start ns))))
   where start x = (0,x)
+        project (x,_) = x
 
 -- =========================
 
@@ -549,8 +625,10 @@ pieces :: [a] -> [(Int, [a])]
 pieces xs = chop parts xs
   where
     parts = sparseBinary (length xs)
-    chop [] _zs = []
-    chop ((_, n) : ys) zs = (n, take n zs) : chop ys (drop n zs)
+
+
+chop [] _zs = []
+chop ((_, n) : ys) zs = (n, take n zs) : chop ys (drop n zs)
 
 -- =========================================================
 -- HeapWords instances
