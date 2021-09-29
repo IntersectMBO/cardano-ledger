@@ -3,7 +3,10 @@ module Main where
 import Options.Applicative
 import System.IO
 import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.State.Massiv
 import Control.Monad
+import Data.IORef
+import System.Mem
 
 data Opts = Opts
   { -- | Json file to import UTxO state from.
@@ -38,9 +41,13 @@ main = do
         )
         (header "ledger-state - Tool for analyzing ledger state")
   print opts
+  ref <- newIORef Nothing
   forM_ (optsUtxoJsonFile opts) $ \fp -> do
-    _utxo <- loadUTxO fp
+    utxo <- loadMassivUTxOs fp
     putStrLn "Loaded"
+    performGC
+    getChar
+    writeIORef ref $ Just utxo
     -- collectStats fp
     -- -- putStrLn $ "Counted: " ++ show (length utxo) ++ " entries"
     --putStrLn $ "Total ADA: " ++ show (totalADA utxo) ++ " entries"
