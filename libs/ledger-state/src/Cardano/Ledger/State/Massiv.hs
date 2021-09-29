@@ -77,19 +77,23 @@ loadMassivUTxO fp = do
 --     quicksortByM_ (\(MapElt txIn1 _) (MapElt txIn2 _) ->
 --                      pure (compare txIn1 txIn2)) scheduler ma
 --   ArrayMap <$> A.unsafeFreeze Par ma
-
 data CredRef
   = CredKeyRef !(Keys.KeyHash 'Shelley.Witness C)
   | CredScriptRef !(Shelley.ScriptHash C)
   deriving Eq
 
-data StakeRef = StakeRef !CredRef
-              | StakePtr !Ptr
-              | StakeNull
+data CredIx
+  = CredKeyIx !Ix1
+  | CredScriptIx !Ix1
+  deriving Eq
+
+data StakeIx = StakeIx !CredIx
+             | StakePtr !Ptr
+             | StakeNull
 
 data Addr'
   = AddrBoot' !(CompactAddr C)
-  | Addr' !Network !CredRef !StakeRef
+  | Addr' !Network !CredIx !StakeIx
 
 data TxOut'
   = TxOut' !Addr' !(CompactForm (Mary.Value C))
@@ -122,10 +126,12 @@ loadMassivUTxOv' (ArrayMap v) = do
   ArrayMap $ compute (sunfoldrN (size v) collect (0, Nothing))
 
 
+
+
 loadMassivUTxOs :: FilePath -> IO UTxOs
 loadMassivUTxOs fp = do
   ArrayMap vTxOut <- loadMassivUTxO fp
-  putStrLn "Starting to fold"
+  A.map
   u <-
     case foldrS convertToRef (mempty, mempty, mempty, mempty) vTxOut of
       (!khMap, !shMap, !dhMap, vec) -> do
@@ -138,48 +144,24 @@ loadMassivUTxOs fp = do
           , utxoScriptHashSet = refSetFromMap shMap
           , utxoDataHashSet = refSetFromMap dhMap
           }
-  putStrLn $ unlines
-    [ "utxoMap: " <> show (A.size (unArrayMap (utxoMap u)))
-    , "utxoKeyHashSet: " <> show (A.size (unRefSet (utxoKeyHashSet u)))
-    , "utxoScriptHashSet: " <> show (A.size (unRefSet (utxoScriptHashSet u)))
-    , "utxoDataHashSet: " <> show (A.size (unRefSet (utxoDataHashSet u)))
-    ]
   pure u
   where
-    insertCredential cred khmap shmap =
-      case cred of
-        KeyHashObj kh
-          | (khRef, khmap') <- insertRefMap (Keys.coerceKeyRole kh) khmap ->
-            (CredKeyRef khRef, khmap', shmap)
-        ScriptHashObj sh
-          | (shRef, shmap') <- insertRefMap sh shmap ->
-            (CredScriptRef shRef, khmap, shmap')
-    convertToRef ::
-         MapElt (TxIn C) (Alonzo.TxOut CurrentEra)
-      -> ( Map.Map (Shelley.KeyHash 'Shelley.Witness C) Int
-         , Map.Map (Shelley.ScriptHash C) Int
-         , Map.Map (DataHash C) Int
-         , Vector DL (MapElt (TxIn C) TxOut'))
-      -> ( Map.Map (Shelley.KeyHash 'Shelley.Witness C) Int
-         , Map.Map (Shelley.ScriptHash C) Int
-         , Map.Map (DataHash C) Int
-         , Vector DL (MapElt (TxIn C) TxOut'))
-    convertToRef (MapElt txIn txOut) (!khMap, !shMap, !dhMap, vec) =
-      let (!cAddr', !mkTxOut', !dhMap') =
+    getCredential = \case
+        KeyHashObj kh -> (Just (Keys.coerceKeyRole kh), Nothing)
+        ScriptHashObj sh -> (Nothing, Just sh)
+    getRefs (MapElt txIn txOut) =
+      let (!cAddr', !cVal', !mDataHash) =
             case txOut of
-              Alonzo.TxOutCompact cAddr cVal ->
-                (cAddr, \a -> TxOut' a cVal, dhMap)
-              Alonzo.TxOutCompactDH cAddr cVal dh
-                | (dhRef, dhmap) <- insertRefMap dh dhMap ->
-                  (cAddr, \a -> TxOutDH' a cVal dhRef, dhmap)
-          (!addr', !khMap', !shMap') =
+              Alonzo.TxOutCompact cAddr cVal -> (cAddr, cVal, Nothing)
+              Alonzo.TxOutCompactDH cAddr cVal dh -> (cAddr, cVal, Just dh)
+          !addr' =
             case decompactAddr cAddr' of
-              AddrBootstrap _ -> (AddrBoot' cAddr', khMap, shMap)
+              AddrBootstrap _ -> (AddrBoot' cAddr', Nothing, Nothing, Nothing, Nothing)
               Addr ni pc sr ->
-                let (!pcRef, !khmap, !shmap) = insertCredential pc khMap shMap
-                    mkAddr' = Addr' ni pcRef
+                let mkAddr' = Addr' ni pcRef
+                    (pck, pcs) = getCredential pc
                  in case sr of
-                      StakeRefBase cred
+                      StakeRefBase cred -> getCredential cred
                         | (!credRef, !khmap', !shmap') <- insertCredential cred khmap shmap ->
                           (mkAddr' (StakeRef credRef), khmap', shmap')
                       StakeRefPtr ptr -> (mkAddr' (StakePtr ptr), khmap, shmap)
@@ -188,6 +170,8 @@ loadMassivUTxOs fp = do
           vec' :: Vector DL (MapElt (TxIn C) TxOut')
           vec' = cons elt vec
        in (khMap', shMap', dhMap', vec')
+
+
 
 data MapElt k v =
   MapElt
@@ -207,8 +191,8 @@ lookupArrayMap k (ArrayMap vec) =
 
 data SetElt v =
   SetElt
-    { setEltRef :: !v
-    , setEltRefCounter :: !Int
+    { setElt :: !v
+    , setEltCounter :: !Int
     }
 
 newtype RefSet v =
@@ -223,6 +207,7 @@ refSetFromMap m =
   compute $
   smap (uncurry SetElt) $ sfromListN (Sz1 (Map.size m)) $ Map.toAscList m
 
+
 insertRefMap :: Ord v => v -> Map.Map v Int -> (v, Map.Map v Int)
 insertRefMap v m =
   case Map.lookupIndex v m of
@@ -233,8 +218,8 @@ insertRefMap v m =
 lookupRefSet :: Ord v => v -> RefSet v -> Maybe v
 lookupRefSet k (RefSet vec) = setEltRef <$> lookupSortedOn setEltRef k vec
 
-lookupSortedOn :: (Manifest r a, Ord b) => (a -> b) -> b -> Vector r a -> Maybe a
-lookupSortedOn f e v = go (k `div` 2) k
+lookupSortedIxOn :: (Manifest r a, Ord b) => (a -> b) -> b -> Vector r a -> Maybe Ix1
+lookupSortedIxOn f e v = go (k `div` 2) k
   where
     Sz k = size v
     go !i !n = do
@@ -243,7 +228,7 @@ lookupSortedOn f e v = go (k `div` 2) k
       case compare e (f b) of
         LT -> go (i `div` 2) i
         GT -> go ((n - i) `div` 2) n
-        EQ -> Just b
+        EQ -> Just i
 
 
 -- loadMassivUTxO'' :: FilePath -> IO UTxOv
@@ -254,80 +239,69 @@ lookupSortedOn f e v = go (k `div` 2) k
 --   UTxOv <$> A.unsafeFreeze Par ma
 
 
--- rebalanceM_ ma =
---   withMassivScheduler_ Par $ \ scheduler ->
---     quicksortByM'_ (\x y -> pure (compare (fst x) (fst y))) scheduler ma
-
-
--- quicksortCustomM_ ::
---      (Manifest r e, MonadPrimBase s m)
---   => (e -> e -> m Bool)
---   -> (e -> e -> m Bool)
---   -> Scheduler s ()
---   -> MVector s r e
---   -> m ()
--- quicksortCustomM_ fLT fEQ scheduler marr =
---   scheduleWork scheduler $ qsort (numWorkers scheduler) 0 (unSz (sizeOfMArray marr) - 1)
+-- loadMassivUTxOs :: FilePath -> IO UTxOs
+-- loadMassivUTxOs fp = do
+--   ArrayMap vTxOut <- loadMassivUTxO fp
+--   putStrLn "Starting to fold"
+--   u <-
+--     case foldrS convertToRef (mempty, mempty, mempty, mempty) vTxOut of
+--       (!khMap, !shMap, !dhMap, vec) -> do
+--         putStrLn "Done to folding, starting to compute"
+--         arrMap <- computeIO vec
+--         putStrLn "Computed"
+--         pure $! UTxOs
+--           { utxoMap = loadMassivUTxOv' $ ArrayMap arrMap
+--           , utxoKeyHashSet = refSetFromMap khMap
+--           , utxoScriptHashSet = refSetFromMap shMap
+--           , utxoDataHashSet = refSetFromMap dhMap
+--           }
+--   putStrLn $ unlines
+--     [ "utxoMap: " <> show (A.size (unArrayMap (utxoMap u)))
+--     , "utxoKeyHashSet: " <> show (A.size (unRefSet (utxoKeyHashSet u)))
+--     , "utxoScriptHashSet: " <> show (A.size (unRefSet (utxoScriptHashSet u)))
+--     , "utxoDataHashSet: " <> show (A.size (unRefSet (utxoDataHashSet u)))
+--     ]
+--   pure u
 --   where
---     ltSwap i j = do
---       ei <- unsafeLinearRead marr i
---       ej <- unsafeLinearRead marr j
---       lt <- fLT ei ej
---       if lt
---         then do
---           unsafeLinearWrite marr i ej
---           unsafeLinearWrite marr j ei
---           pure ei
---         else pure ej
---     {-# INLINE ltSwap #-}
---     getPivot lo hi = do
---       let !mid = (hi + lo) `div` 2
---       _ <- ltSwap mid lo
---       _ <- ltSwap hi lo
---       ltSwap mid hi
---     {-# INLINE getPivot #-}
---     qsort !n !lo !hi =
---       when (lo < hi) $ do
---         p <- getPivot lo hi
---         l <- unsafeUnstablePartitionRegionM marr (`fLT` p) lo (hi - 1)
---         h <- unsafeUnstablePartitionRegionM marr (`fEQ` p) l hi
---         if n > 0
---           then do
---             let !n' = n - 1
---             scheduleWork scheduler $ qsort n' lo (l - 1)
---             scheduleWork scheduler $ qsort n' h hi
---           else do
---             qsort n lo (l - 1)
---             qsort n h hi
--- {-# INLINE quicksortInternalM_ #-}
-
-
--- unsafeUnstablePartitionRegionCustomM ::
---      forall r e m. (Manifest r e, PrimMonad m)
---   => MVector (PrimState m) r e
---   -> (e -> m Bool)
---   -> Ix1 -- ^ Start index of the region
---   -> Ix1 -- ^ End index of the region
---   -> m Ix1
--- unsafeUnstablePartitionRegionCustomM marr f start end = fromLeft start (end + 1)
---   where
---     fromLeft i j
---       | i == j = pure i
---       | otherwise = do
---         e <- f =<< unsafeLinearRead marr i
---         if e
---           then fromLeft (i + 1) j
---           else fromRight i (j - 1)
---     fromRight i j
---       | i == j = pure i
---       | otherwise = do
---         x <- unsafeLinearRead marr j
---         e <- f x
---         if e
---           then do
---             unsafeLinearWrite marr j =<< unsafeLinearRead marr i
---             unsafeLinearWrite marr i x
---             fromLeft (i + 1) j
---           else fromRight i (j - 1)
--- {-# INLINE unsafeUnstablePartitionRegionM #-}
-
+--     insertCredential cred khmap shmap =
+--       case cred of
+--         KeyHashObj kh
+--           | (khRef, khmap') <- insertRefMap (Keys.coerceKeyRole kh) khmap ->
+--             (CredKeyRef khRef, khmap', shmap)
+--         ScriptHashObj sh
+--           | (shRef, shmap') <- insertRefMap sh shmap ->
+--             (CredScriptRef shRef, khmap, shmap')
+--     convertToRef ::
+--          MapElt (TxIn C) (Alonzo.TxOut CurrentEra)
+--       -> ( Map.Map (Shelley.KeyHash 'Shelley.Witness C) Int
+--          , Map.Map (Shelley.ScriptHash C) Int
+--          , Map.Map (DataHash C) Int
+--          , Vector DL (MapElt (TxIn C) TxOut'))
+--       -> ( Map.Map (Shelley.KeyHash 'Shelley.Witness C) Int
+--          , Map.Map (Shelley.ScriptHash C) Int
+--          , Map.Map (DataHash C) Int
+--          , Vector DL (MapElt (TxIn C) TxOut'))
+--     convertToRef (MapElt txIn txOut) (!khMap, !shMap, !dhMap, vec) =
+--       let (!cAddr', !mkTxOut', !dhMap') =
+--             case txOut of
+--               Alonzo.TxOutCompact cAddr cVal ->
+--                 (cAddr, \a -> TxOut' a cVal, dhMap)
+--               Alonzo.TxOutCompactDH cAddr cVal dh
+--                 | (dhRef, dhmap) <- insertRefMap dh dhMap ->
+--                   (cAddr, \a -> TxOutDH' a cVal dhRef, dhmap)
+--           (!addr', !khMap', !shMap') =
+--             case decompactAddr cAddr' of
+--               AddrBootstrap _ -> (AddrBoot' cAddr', khMap, shMap)
+--               Addr ni pc sr ->
+--                 let (!pcRef, !khmap, !shmap) = insertCredential pc khMap shMap
+--                     mkAddr' = Addr' ni pcRef
+--                  in case sr of
+--                       StakeRefBase cred
+--                         | (!credRef, !khmap', !shmap') <- insertCredential cred khmap shmap ->
+--                           (mkAddr' (StakeRef credRef), khmap', shmap')
+--                       StakeRefPtr ptr -> (mkAddr' (StakePtr ptr), khmap, shmap)
+--                       StakeRefNull -> (mkAddr' StakeNull, khmap, shmap)
+--           !elt = MapElt txIn (mkTxOut' addr')
+--           vec' :: Vector DL (MapElt (TxIn C) TxOut')
+--           vec' = cons elt vec
+--        in (khMap', shMap', dhMap', vec')
