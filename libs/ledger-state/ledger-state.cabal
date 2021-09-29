@@ -44,6 +44,7 @@ common project-config
                     , text
                     , optparse-applicative
                     , heapsize
+                    , massiv >= 1.0
 
   ghc-options:        -Wall
                       -Wcompat
@@ -56,6 +57,7 @@ library
   import:             base, project-config
   exposed-modules:    Cardano.Ledger.State
                     , Cardano.Ledger.State.UTxO
+                    , Cardano.Ledger.State.Massiv
                     , Cardano.Ledger.State.Schema
   hs-source-dirs:     src
 
@@ -64,6 +66,8 @@ executable ledger-state
                      , project-config
   hs-source-dirs:      app
   main-is:             Main.hs
-  ghc-options:         -Wall -O2 -threaded
+  ghc-options:         -Wall
+                       -O2
+                       -threaded
   build-depends:       optparse-applicative
                      , ledger-state
