@@ -5,7 +5,7 @@
 module Cardano.Ledger.State.Massiv where
 
 import Cardano.Ledger.State.UTxO
-
+import Control.Monad
 import Cardano.Ledger.Compactible
 import Data.ByteString.Short
 import qualified Cardano.Address.Style.Byron as AB
@@ -79,16 +79,13 @@ loadMassivUTxO fp = do
 --   ArrayMap <$> A.unsafeFreeze Par ma
 
 data CredRef
-  = CredKeyRef !(Ref (Keys.KeyHash 'Shelley.Witness C))
-  | CredScriptRef !(Ref (Shelley.ScriptHash C))
+  = CredKeyRef !(Keys.KeyHash 'Shelley.Witness C)
+  | CredScriptRef !(Shelley.ScriptHash C)
   deriving Eq
 
 data StakeRef = StakeRef !CredRef
               | StakePtr !Ptr
               | StakeNull
-
-newtype Ref a = Ref { unRef :: a }
-  deriving (Eq, Ord)
 
 data Addr'
   = AddrBoot' !(CompactAddr C)
@@ -96,7 +93,7 @@ data Addr'
 
 data TxOut'
   = TxOut' !Addr' !(CompactForm (Mary.Value C))
-  | TxOutDH' !Addr' !(CompactForm (Mary.Value C)) !(Ref (DataHash C))
+  | TxOutDH' !Addr' !(CompactForm (Mary.Value C)) !(DataHash C)
 
 
 data UTxOs = UTxOs
@@ -210,13 +207,9 @@ lookupArrayMap k (ArrayMap vec) =
 
 data SetElt v =
   SetElt
-    { setEltRef :: !(Ref v)
+    { setEltRef :: !v
     , setEltRefCounter :: !Int
     }
-
-mkSetElt :: v -> Int -> SetElt v
-mkSetElt v = SetElt (Ref v)
-
 
 newtype RefSet v =
   RefSet
@@ -228,23 +221,24 @@ refSetFromMap :: Map.Map v Int -> RefSet v
 refSetFromMap m =
   RefSet $
   compute $
-  smap (uncurry mkSetElt) $ sfromListN (Sz1 (Map.size m)) $ Map.toAscList m
+  smap (uncurry SetElt) $ sfromListN (Sz1 (Map.size m)) $ Map.toAscList m
 
-insertRefMap :: Ord v => v -> Map.Map v Int -> (Ref v, Map.Map v Int)
+insertRefMap :: Ord v => v -> Map.Map v Int -> (v, Map.Map v Int)
 insertRefMap v m =
   case Map.lookupIndex v m of
-    Nothing -> (Ref v, Map.insert v 1 m)
+    Nothing -> (v, Map.insert v 1 m)
     Just i
-      | (v', _) <- Map.elemAt i m -> (Ref v', Map.adjust (+ 1) v' m)
+      | (v', _) <- Map.elemAt i m -> (v', Map.adjust (+ 1) v' m)
 
-lookupRefSet :: Ord v => v -> RefSet v -> Maybe (Ref v)
-lookupRefSet k (RefSet vec) = setEltRef <$> lookupSortedOn setEltRef (Ref k) vec
+lookupRefSet :: Ord v => v -> RefSet v -> Maybe v
+lookupRefSet k (RefSet vec) = setEltRef <$> lookupSortedOn setEltRef k vec
 
 lookupSortedOn :: (Manifest r a, Ord b) => (a -> b) -> b -> Vector r a -> Maybe a
 lookupSortedOn f e v = go (k `div` 2) k
   where
     Sz k = size v
     go !i !n = do
+      guard (i /= n)
       b <- indexM v i
       case compare e (f b) of
         LT -> go (i `div` 2) i
