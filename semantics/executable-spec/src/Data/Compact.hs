@@ -19,7 +19,7 @@ import qualified Data.Primitive.Array as PA
 import qualified Data.Array.MArray as MutA
 import GHC.Arr(STArray(..),unsafeFreezeSTArray)
 import Data.Primitive.PrimArray
- ( PrimArray, indexPrimArray, primArrayFromList, primArrayToList, sizeofPrimArray,
+ ( PrimArray, indexPrimArray, primArrayFromList, primArrayToList, sizeofPrimArray, copyPrimArray,
    MutablePrimArray,unsafeFreezePrimArray , newPrimArray,sizeofMutablePrimArray, readPrimArray, writePrimArray,
  )
 import Data.ByteString.Short (ShortByteString,toShort,fromShort)
@@ -38,10 +38,45 @@ import Cardano.Binary
     serialize',
     unsafeDeserialize',
   )
-import Data.Text(Text,pack)  
+import Data.Text(Text,pack)
+import Data.STRef(STRef,newSTRef,readSTRef,writeSTRef)
 
 shorten :: ToCBOR t => t -> ShortByteString
 shorten x = toShort (serialize' x)
+
+-- =======================================================
+-- Encoding lists with the structure of binary numbers
+
+-- | binary encoding of 'n', least significant bit on the front of the list
+binary :: Int -> [Int]
+binary 0 = []
+binary 1 = [(1)]
+binary n = (mod n 2) : binary (div n 2)
+
+-- | Compute a sparse list of non-zero Binary digits and their positional weights to represent 'n'
+--   For example (sparseBinary 25) returns [(1,1),(1,8),(1,16)], I.e. we need: 1 one,
+--   1 eight, and 1 sixteen.  Since this is binary, and we don't store the 0's, the digits are aways 1.
+--   and the weights are powers of 2.
+sparseBinary :: Int -> [(Int, Int)]
+sparseBinary n = fix 1 (binary n)
+  where
+    fix _ [] = []
+    fix m (x : xs) =
+      if x == 0
+        then fix (m * 2) xs
+        else (x, m) : fix (m * 2) xs
+
+-- | Split a list of length 'n' into pieces, each piece has a power of two as its length.
+-- For example:  pieces [1..11]  -->  [(1,[1]), (2,[2,3]), (8,[4,5,6,7,8,9,10,11])]
+pieces :: [a] -> [(Int, [a])]
+pieces xs = chop parts xs
+  where
+    parts = sparseBinary (length xs)
+
+
+chop [] _zs = []
+chop ((_, n) : ys) zs = (n, take n zs) : chop ys (drop n zs)
+
 -- ============================================================================================
 -- Arrays that support Binary search
 
@@ -50,7 +85,7 @@ class Indexable t a where
   isize :: t a -> Int
   fromlist :: [a] -> t a
   tolist :: t a -> [a]
-
+ 
 -- | Find the index of 'k'. Use 'lo' and 'hi' to narrow the scope where 'k' may occur
 --   This is possible because we assume 'arr' is maintained in ascending order of keys.
 binsearch :: (Ord k, Indexable arr k) => Int -> Int -> k -> arr k -> Maybe Int
@@ -82,6 +117,7 @@ instance Indexable PA.Array x where
   isize = PA.sizeofArray
   fromlist = PA.arrayFromList
   tolist arr = foldr (:) [] arr
+ 
 
 instance Prim a => Indexable PrimArray a where
   index = indexPrimArray
@@ -95,34 +131,9 @@ instance Indexable (A.Array Int) a where
   fromlist xs = (A.listArray (0, length xs -1) xs)
   tolist arr = foldr (:) [] arr
 
--- =======================================================
--- Abtract Searchable types
-
-class Ord key => Search t key where
-  search :: key -> t -> Maybe Int
-
-instance Ord key => Search (PA.Array key) key
-   where search key v = binsearch 0 (isize v - 1) key v
-instance (Prim key,Ord key) => Search (PrimArray key) key
-   where search key v = binsearch 0 (isize v - 1) key v
-instance Ord key => Search (A.Array Int key) key
-   where search key v = binsearch 0 (isize v - 1) key v
-
-instance Search t key => Search [t] key where
-   search _ [] = Nothing
-   search key (x:xs) =
-     case search key x of
-       Nothing -> search key xs
-       Just i -> Just i
-
-instance Search t key => Search (Node t) key where
-   search key (Node _ x) = search key x
-
-instance Search t key => Search (t,x)  key where
-  search key (t,x) = search key t
-
--- ========================================================
+-- ========================================================================
 -- Pairs of Mutable Arrays and ImMutable Arrays that can be converted
+-- ========================================================================
 
 class Indexable arr a => ArrayPair arr marr a | marr -> arr, arr -> marr where
   mindex :: marr s a -> Int -> ST s a
@@ -130,6 +141,8 @@ class Indexable arr a => ArrayPair arr marr a | marr -> arr, arr -> marr where
   mnew :: Int -> ST s (marr s a)
   mfreeze :: marr s a -> ST s (arr a) -- This should be the unsafe version that does not copy
   mwrite :: marr s a -> Int -> a -> ST s ()
+  mcopy :: forall s. marr s a -> Int -> arr a -> Int -> Int -> ST s ()
+
 
 instance ArrayPair PA.Array PA.MutableArray a where
   msize = PA.sizeofMutableArray 
@@ -137,6 +150,7 @@ instance ArrayPair PA.Array PA.MutableArray a where
   mnew n = PA.newArray n undefined
   mfreeze = PA.unsafeFreezeArray
   mwrite = PA.writeArray
+  mcopy = PA.copyArray
 
 instance Prim a => ArrayPair PrimArray MutablePrimArray a where
   msize = sizeofMutablePrimArray
@@ -144,6 +158,7 @@ instance Prim a => ArrayPair PrimArray MutablePrimArray a where
   mnew = newPrimArray  
   mfreeze = unsafeFreezePrimArray
   mwrite = writePrimArray
+  mcopy = copyPrimArray
 
 newtype MutArray s t = MutArray (STArray s Int t)
 
@@ -153,112 +168,40 @@ instance ArrayPair (A.Array Int) MutArray a where
   mnew n = MutArray <$> (MutA.newArray_ (0,n-1))
   mfreeze (MutArray arr) = unsafeFreezeSTArray arr
   mwrite (MutArray arr) i a = MutA.writeArray arr i a
+  mcopy marr startm arr start count = go startm start count
+    where go i j 0 = pure ()
+          go i j n = do
+             mwrite marr i (index arr j)
+             go (i+1) (j+1) (n-1)
 
--- ============================================================
+catArray :: ArrayPair arr marr a => [arr a] -> arr a
+catArray xs = fst(withMutArray total (build 0 xs))
+  where total = sum(map isize xs)
+        build next [] marr = pure ()
+        build next (arr: arrs) marr =
+           do let size = isize arr
+              mcopy marr next arr 0 size
+              build (next+size) arrs marr
 
--- | An array where some indices have been nix'ed, or marked as deleted
-data NixArr arr k where
-  NixArr :: Indexable arr k => {-# UNPACK #-} !Int  -> -- Actual elements (size arr - size delete-set)
-                               !(arr k) ->
-                               !(CompactPrimSet Int) ->
-                               NixArr arr k
-
-instance (Show k,Indexable arr k) => Show (NixArr arr k) where
-  show x = show (tolist x)
-
-instance Search (arr k) k => Search (NixArr arr k) k where
-  search key (NixArr _ arr del) =
-    case search key arr of
-      Nothing -> Nothing
-      Just i -> if hasElem i del then Nothing else (Just i)
-
-instance (Indexable arr k) => Indexable (NixArr arr) k where
-  index (NixArr _ arr del) k = index arr k 
-  isize (NixArr _ arr del) = isize arr
-  fromlist xs =  NixArr (length xs) (fromlist xs) emptyset
-  tolist (NixArr _ arr del) = removeNixedIndices del arr
-
-removeNixedIndices del xs = help (zip [0..] (tolist xs))
-   where help ((i,x):more) = if hasElem i del then help more else x : help more
-         help [] = []
-
-narr1 :: NixArr PrimArray Int
-narr1@(NixArr nsize1 ys _) = fromlist [ i | i <- [0..8]]
-narr2 = NixArr (nsize1 - 2) ys (makeSet [3,6])
+testmcopy = catArray xs where
+   xs :: [A.Array Int Int]
+   xs = map fromlist [[2,6],[2,6,9,8],[],[1]]
 
 
--- ===========================================================================
--- An array where the elements are stored serialized in groups of fixed size
+-- | Look for a full prefix, i.e. a prefix which has contiguous powers of two
+--   for example: splitAtFullPrefix 1 (Node 1 1)
+--                      [Node 1 1,Node 2 2, Node 4 4, Node 8 8,Node 32 32,Node 128 128]
+--   returns (16, [Node 1 1,Node 1 1,Node 2 2,Node 4 4,Node 8 8], [Node 32 32,Node 128 128])
+--   because [1,2,4,8] is the longest contiguous prefix consisting of adjacent powers of 2.
+splitAtFullPrefix :: Int -> Node a -> [Node a] -> (Int,[Node a],[Node a])
+splitAtFullPrefix next (node@(Node n _)) [] = (n,[node],[])
+splitAtFullPrefix next (node1@(Node n _)) ((node2@(Node m _)):more) =
+  if next==m
+     then case splitAtFullPrefix (next*2) node2 more of
+            (count,prefix,rest) -> (count+n, node1:prefix, rest)
+     else (n,[node1],node2:more)
 
--- These two functions control how to serialize
-toBytes :: ToCBOR a => a -> ShortByteString
-toBytes x = toShort (serialize' x)
-
-fromBytes :: FromCBOR a => ShortByteString -> a
-fromBytes x = (unsafeDeserialize' (fromShort x))
-
--- | How many slots do you need to store 'nominalsize' elements if they are serialized into
---   groups, where each group is a list of length 'groupsize'. The last group may have fewer items.
-serialSize nominalsize groupsize = (nominalsize `div` groupsize) + fix
-  where fix = if (nominalsize `mod` groupsize)==0 then 0 else 1
-
--- | Chop a list into 'groupsize' sub lists
---   Invariant: (length (chopN groupsize xs) == serialSize (length xs))
-chopN :: Int -> [t] -> [[t]]
-chopN groupsize [] = []
-chopN groupsize xs = take groupsize xs : chopN groupsize (drop groupsize xs)
-
-data SerialArray arr v where
-   SerialArray:: (Indexable arr ShortByteString,FromCBOR v) =>
-       {-# UNPACK #-} !Int -> -- Nominal size of the arr. Indices run from [0..nominal -1]
-       {-# UNPACK #-} !Int -> -- groupsize, so the actual size of the array is (serialSize nominalsize groupsize)
-       arr ShortByteString ->
-       SerialArray arr v
-
-instance Show t => Show (SerialArray arr t) where
-   show (SerialArray nominal group arr) = show bytes
-     where bytes = concat $ map (fromBytes @[t]) (tolist arr)
-
-instance (Indexable arr ShortByteString,ToCBOR t, FromCBOR t) => Indexable (SerialArray arr) t where
-   isize (SerialArray nominal _ _) = nominal
-   index (SerialArray nominal groupsize arr) i =
-     if (i >=0) && (i < nominal)
-        then (fromBytes (index arr (i `div` groupsize))) !! (i `mod` groupsize)
-        else error ("index "++show i++" out of SerialArray nominal range (0,"++show(nominal-1)++").")
-   fromlist = serialArrayFromlist @t 10
-   tolist (SerialArray _ _ arr) = concat (map (fromBytes @[t]) (tolist arr))
-
-
-serialArrayFromlist :: forall t arr. (ToCBOR t,FromCBOR t,Indexable arr ShortByteString) => Int -> [t] -> SerialArray arr t
-serialArrayFromlist groupsize ts = SerialArray nominalsize groupsize arr
-  where nominalsize = length ts
-        arr = fromlist (map (toBytes @[t]) (chopN groupsize ts))
-
-sa2 :: SerialArray (A.Array Int) Text
-sa2 = serialArrayFromlist 4 (map (pack . show) [1..15])
-
-
-mergeParSerialNodes ::
-  ( ArrayPair arr2 marr2 ShortByteString,
-    ArrayPair arr1 marr1 k,
-    MergeParallel arr1 k,
-    Ord k,
-    ToCBOR v
-  ) =>
-  [(Int, Node (arr1 k, SerialArray arr2 v))] ->
-  Int ->
-  Int ->
-  (arr1 k, arr2 ShortByteString, (Int, Int, [v]))
-mergeParSerialNodes xs s1 s2 = with2MutArray s1 s2 (builder xs) where
-  builder xs marr1 marr2 = inOrder smallerP doneP (action marr1 marr2) xs (pure(0,0,[]))
-  action marr1 marr2 comp (_size,Node _ (keys,vals@(SerialArray _ _ _))) =
-     do { (i,j,vs) <- comp
-        ; mwrite marr1 i (index keys i)
-        ; let vs2 = (index vals i) : vs
-        ; if length vs == 10 {- group size might vary -}
-             then do { mwrite marr2 j (toBytes (reverse vs)); pure(i+1,j+1,[]) }
-             else pure(i+1,j,vs2) }
-            
+sp1 = splitAtFullPrefix 1 (Node 1 1) [Node 1 1,Node 2 2, Node 4 4, Node 8 8,Node 32 32,Node 128 128]
 
 -- ================================================================
 -- Functions for using mutable initialization in a safe manner.
@@ -285,32 +228,55 @@ with2MutArray size1 size2 process = runST $ do
   arr4 <- mfreeze arr2
   pure (arr3, arr4, x)
 
+
+-- =====================================================
+-- Arrays which store their elements in sorted order.
+-- Usefull for searchin using binary search.
+-- =====================================================
+
+-- =======================================================
+-- Abtract Searchable types (Arrays stored in ascending order)
+-- These will be very usefull when we create maps as parallel arrays
+-- the first sorted on key, and the second holdingthe associated value at the
+-- same index as it's key.
+
+class Ord key => Search t key where
+  search :: key -> t -> Maybe Int
+
+instance Ord key => Search (PA.Array key) key
+   where search key v = binsearch 0 (isize v - 1) key v
+
+instance (Prim key,Ord key) => Search (PrimArray key) key
+   where search key v = binsearch 0 (isize v - 1) key v
+
+instance Ord key => Search (A.Array Int key) key
+   where search key v = binsearch 0 (isize v - 1) key v
+
+instance (Indexable arr key,Ord key) => Search (FlexArray arr key) key
+   where search key v = binsearch 0 (isize v - 1) key v   
+
+instance Search (arr k) k => Search (NixArr arr k) k where
+  search key (NixArr _ arr del) =
+    case search key arr of
+      Nothing -> Nothing
+      Just i -> if hasElem i del then Nothing else (Just i)
+      
+
+instance (Show key,Show t,Search t key) => Search [t] key where
+   search _ [] = Nothing
+   search key (x:xs) = trace ("Search "++show(key,x)) $
+     case search key x of
+       Nothing -> search key xs
+       Just i -> Just i
+
+instance Search t key => Search (Node t) key where
+   search key (Node _ x) = search key x
+
+instance Search t key => Search (t,x)  key where
+  search key (t,x) = search key t
+
 -- ================================================
--- Merging sorted arrays
-
-class Indexable t a => MergeVector t a where
-  smallerV:: Ord a => (Int,Node (t a)) -> (Int,Node (t a)) -> Bool
-  smallerV (i1,Node _ arr1) (i2,Node _ arr2) = index arr1 i1 < index arr2 i1
-  doneV:: (Int,Node (t a)) -> Maybe (Int,Node (t a))
-  doneV (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
-  actionV:: ans -> (Int,Node (t a)) -> ans
-  actionV ans _ = ans
-
-class Indexable t a => MergeParallel t a where
-  smallerP:: Ord a => (Int,Node (t a,b)) -> (Int,Node (t a,b)) -> Bool
-  smallerP (i1,Node _ (arr1,_)) (i2,Node _ (arr2,_)) = index arr1 i1 < index arr2 i1
-  doneP:: (Int,Node (t a,b)) -> Maybe (Int,Node (t a,b))
-  doneP (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
-  actionP:: ans -> (Int,Node (t a,b)) -> ans
-  actionP ans _ = ans
-
-
--- ================================================
--- Merging N-sorted arrays
-
--- | A node carries a 'size' and some array-like type 'arr'
-data Node arr = Node {-# UNPACK #-} !Int arr
-  deriving Show
+-- Merging N-sorted arrays into 1 sorted array.
 
 -- | Split a list into (smallest-element, larger-elements). 'x' is the smallest seen so far.
 smallest :: (a -> a -> Bool) -> a -> [a] -> [a] -> (a, [a])
@@ -336,9 +302,62 @@ inOrder smaller done action items ans = loop items ans where
           Nothing ->  loop larger (action ans small)
           Just more -> loop (more:larger) (action ans small)
 
--- =========================
+inOrder2 :: Show t =>
+   (t -> t -> Bool) ->
+   (t -> Maybe t) ->
+   (state -> t -> ST s state) ->
+   state -> [t] -> ST s state
+inOrder2 smaller done action state items = loop items state where
+    loop [] state = pure state
+    loop (x:xs) state =
+       trace ("LOOP "++show (x:xs)) $
+       case smallest smaller x xs [] of
+         (small,larger) -> do
+              state' <- action state small
+              case done small of
+                Nothing -> loop larger state'
+                Just more -> loop (more:larger) state'
 
--- | Merge many Nodes into 1 Node. In the pattern (i,Node size arr). 'i' is the next entry in 'arr'
+-- ================================================================================
+-- Sets of objects as lists of Nodes. The array in the Node stores its elements
+-- in ascneding order. The Nodes are stored in order of ascending size.
+-- Each size is a power of 2. In each (Node size primarray) the 'primarray' has
+-- 'size' components. The sum of the sizes is the total number of elements in the set.
+-- This trick of using a list of ascending size arrays supports efficient insert.
+
+newtype CompactPrimSet t = CompactPrimSet [Node (PrimArray t)]
+
+instance (Prim t,Show t) => Show(CompactPrimSet t) where
+  show (CompactPrimSet ts) = show(map unNode ts)
+    where unNode(Node _ xs) = tolist xs
+
+emptyset :: CompactPrimSet t
+emptyset = CompactPrimSet []
+
+hasElem :: (Show t,Prim t,Ord t) => t -> CompactPrimSet t -> Bool
+hasElem t (CompactPrimSet xs) =
+  case search t xs of
+    Nothing -> False
+    Just _ -> True
+
+insertElem :: (Show t,Prim t, Ord t) => t -> CompactPrimSet t -> CompactPrimSet t
+insertElem t (set@(CompactPrimSet nodes)) =
+  if hasElem t set
+     then set
+     else case splitAtFullPrefix 1 (Node 1 (fromlist [t])) nodes of
+           (size,prefix,tail) -> CompactPrimSet ((mergeNodes size prefix):tail)
+
+makeSet :: (Show t,Ord t,Prim t) => [t] -> CompactPrimSet t
+makeSet ts = CompactPrimSet (map node nodes) where
+    nodes = pieces ts
+    node (n, ps) = Node n (fromlist (sort ps))  
+
+
+-- | Merge many sorted Nodes into 1 sorted Node. In some ways this is analgous to catArray
+--   but instead of preserving phyical order, it preserves sorted order.
+--   catNodes  [[1,6],[2],[3,5,12]] --> [1,6,2,3,5,12]
+--   mergeMany [[1,6],[2],[3,5,12]] --> [1,2,3,5,6,12]
+--   In the pattern (i,Node size arr). 'i' is the next entry in 'arr'
 --   that is ready to be merged into the output.
 mergeMany:: (ArrayPair arr marr k, Ord k) => [(Int, Node (arr k))] -> marr s k -> ST s Int
 mergeMany xs arr = inOrder smaller done action xs (pure (0::Int)) where
@@ -354,6 +373,312 @@ mergeNodes ::
 mergeNodes size ns = Node size (project(withMutArray size (mergeMany (map start ns))))
   where start x = (0,x)
         project (x,_) = x
+
+
+ss1, ss2, ss3, ss4, ss5, ss6, ss7, ss8, ss9 :: CompactPrimSet Int
+ss1 = CompactPrimSet []
+ss2 = insertElem 99 ss1
+ss3 = insertElem 33 ss2
+ss4 = insertElem 12 ss3
+ss5 = insertElem 6 ss4
+ss6 = insertElem 22 ss5
+ss7 = insertElem 71 ss6
+ss8 = insertElem 81 ss7
+ss9 = insertElem 51 ss8
+
+
+-- ============================================================
+--  Compound Arrays that are constructed from simpler Arrays
+-- ============================================================
+
+-- ============================================================
+-- FlexArray. A list of arrays with exponentially increasing sizes
+-- the size of each array is a power of 2. This allows FlexArrays to grow
+-- gracefully by pushing an element on the end. By pushing on the end
+-- the index of each element stays the same as the array grows.
+
+-- | A node carries a 'size' and some array-like type 'arr'
+data Node arr = Node {-# UNPACK #-} !Int arr
+  deriving Show
+
+arrayPart (Node _ arr) = arr
+
+data FlexArray arr t where
+  FlexArray:: Indexable arr t =>
+              {-# UNPACK #-} !Int ->
+              [Node(arr t)] ->
+              FlexArray arr t
+
+instance (Indexable arr t,Show t) => Show (FlexArray arr t) where
+  show (FlexArray _ ns) = concat (map showNode (reverse ns))
+    where showNode (Node _ arr) = show (reverse (tolist arr))
+
+instance Indexable arr t => Indexable (FlexArray arr) t where
+  index (FlexArray n nodes) i = indexL nodes ((n - i) + 1)
+  isize (FlexArray _ nodes) = isizeL nodes
+  fromlist xs = FlexArray (length xs) (fromlistL xs)
+  tolist (FlexArray n nodes) = tolistL nodes
+
+indexL :: Indexable arr t => [Node(arr t)] -> Int -> t
+indexL [] i = error ("Index, "++show i++", out of bounds on empty [Node (arr t)]")
+indexL ((Node n arr):more) i = if i < n then index arr i else indexL more (i - n)
+
+isizeL :: Indexable arr t => [Node(arr t)] -> Int
+isizeL xs = sum(map (\ (Node n _) -> n) xs)
+
+fromlistL :: Indexable t a => [a] -> [Node (t a)]
+fromlistL xs = map node pairs
+   where pairs = pieces (reverse xs)
+         node (n,ys) = Node n (fromlist ys)
+
+tolistL :: Indexable t a => [Node (t a)] -> [a]
+tolistL xs = concat(map (tolist . arrayPart) xs)
+
+pushD :: (ArrayPair arr marr t,Indexable arr t) => FlexArray arr t -> t -> FlexArray arr t
+pushD (FlexArray _ []) t = fromlist [t]
+pushD (FlexArray siz nodes) t =
+   case splitAtFullPrefix 1 (Node 1 (fromlist [t])) nodes of
+     (size,prefix,tail) -> FlexArray siz (Node size (catArray (map arrayPart prefix)):tail)
+
+flex10, flex11, flex12 :: FlexArray PrimArray Int
+flex10 = fromlist [1..19] 
+flex11 = pushD flex10 20
+flex12 = pushD flex11 21
+flex13 = pushD flex12 22
+flex14 = pushD flex13 23
+flex15 = pushD flex14 24
+
+-- ===========================================================================
+-- NixArray. an Array where some indices have been nix'ed, or marked as deleted
+-- Convenient since we can both insert, overwrite, and delete efficiently, by
+-- using the delete set.
+
+data NixArr arr k where
+  NixArr :: Indexable arr k => {-# UNPACK #-} !Int  -> -- Actual elements (size arr - size delete-set)
+                               !(arr k) ->
+                               !(CompactPrimSet Int) ->
+                               NixArr arr k
+
+instance (Show k,Indexable arr k) => Show (NixArr arr k) where
+  show x = show (tolist x)
+
+instance (Indexable arr k) => Indexable (NixArr arr) k where
+  index (NixArr _ arr del) k = index arr k 
+  isize (NixArr _ arr del) = isize arr
+  fromlist xs =  NixArr (length xs) (fromlist xs) emptyset
+  tolist (NixArr _ arr del) = removeNixedIndices del arr
+
+removeNixedIndices del xs = help (zip [0..] (tolist xs))
+   where help ((i,x):more) = if hasElem i del then help more else x : help more
+         help [] = []
+
+narr1 :: NixArr PrimArray Int
+narr1@(NixArr nsize1 ys _) = fromlist [ i | i <- [0..8]]
+narr2 = NixArr (nsize1 - 2) ys (makeSet [3,6])
+
+{-
+insertNixMap :: (Prim k,Ord k) => k -> v -> NixMap k v -> NixMap k v
+insertNixMap k v (NixMap nodes) =
+   case splitAtFullPrefix 1 (Node 1 (fromlist [k],fromlist[v])) (findAndMark k nodes) of
+         (size,prefix,tail) -> NixMap ((mergeNixParallel size prefix):tail)
+  
+deleteNixMap :: (Prim k, Ord k) => k -> NixMap k v -> NixMap k v
+deleteNixMap k (NixMap nodes) = NixMap(findAndMark k nodes)
+
+findAndMark :: (Search (arr1 k) k) => k -> [Node (NixArr arr1 k,arr2 v)] -> [Node (NixArr arr1 k,arr2 v)]
+findAndMark k [] = []
+findAndMark k (nodes@(node@(Node n (NixArr m ks ds,vs)) : more )) =
+  case search k ks of
+    Nothing -> node : findAndMark k more
+    Just i -> if hasElem i ds
+                 then nodes
+                 else (Node n (NixArr (m+1) ks (insertElem i ds),vs)) : more
+
+nm1 :: NixMap Int String
+nm1 = makemap [(i,show i) | i <- [1..7]]
+-}
+
+-- =======================================================================================
+-- SerialArray. An array where the elements are stored serialized in groups of fixed size
+
+data SerialArray arr v where
+   SerialArray:: (Indexable arr ShortByteString,FromCBOR v) =>
+       {-# UNPACK #-} !Int -> -- Nominal size of the arr. Indices run from [0..nominal -1]
+       {-# UNPACK #-} !Int -> -- groupsize, so the actual size of the array is (serialSize nominalsize groupsize)
+       arr ShortByteString ->
+       SerialArray arr v
+       
+-- These two functions control how to serialize
+toBytes :: ToCBOR a => a -> ShortByteString
+toBytes x = toShort (serialize' x)
+
+fromBytes :: FromCBOR a => ShortByteString -> a
+fromBytes x = (unsafeDeserialize' (fromShort x))
+
+-- | How many slots do you need to store 'nominalsize' elements if they are serialized into
+--   groups, where each group is a list of length 'groupsize'. The last group may have fewer items.
+serialSize nominalsize groupsize = (nominalsize `div` groupsize) + fix
+  where fix = if (nominalsize `mod` groupsize)==0 then 0 else 1
+
+-- | Chop a list into 'groupsize' sub lists
+--   Invariant: (length (chopN groupsize xs) == serialSize (length xs))
+chopN :: Int -> [t] -> [[t]]
+chopN groupsize [] = []
+chopN groupsize xs = take groupsize xs : chopN groupsize (drop groupsize xs)
+
+instance Show t => Show (SerialArray arr t) where
+   show (SerialArray nominal group arr) = show bytes
+     where bytes = concat $ map (fromBytes @[t]) (tolist arr)
+
+instance (Indexable arr ShortByteString,ToCBOR t, FromCBOR t) => Indexable (SerialArray arr) t where
+   isize (SerialArray nominal _ _) = nominal
+   index (SerialArray nominal groupsize arr) i =
+     if (i >=0) && (i < nominal)
+        then (fromBytes (index arr (i `div` groupsize))) !! (i `mod` groupsize)
+        else error ("index "++show i++" out of SerialArray nominal range (0,"++show(nominal-1)++").")
+   fromlist = serialArrayFromlist @t 10
+   tolist (SerialArray _ _ arr) = concat (map (fromBytes @[t]) (tolist arr))
+
+serialArrayFromlist :: forall t arr. (ToCBOR t,FromCBOR t,Indexable arr ShortByteString) => Int -> [t] -> SerialArray arr t
+serialArrayFromlist groupsize ts = SerialArray nominalsize groupsize arr
+  where nominalsize = length ts
+        arr = fromlist (map (toBytes @[t]) (chopN groupsize ts))
+
+{-
+-- ==================================
+-- =================================4
+-- ==================================
+
+-- ====================================
+groupSize :: Int
+groupSize = 4
+sa2 :: SerialArray (A.Array Int) Text
+sa2 = serialArrayFromlist groupSize (map (pack . show) [8..16])
+
+sa3 :: SerialArray (A.Array Int) Text
+sa3@(SerialArray  _ _ bs3) = serialArrayFromlist groupSize (map (pack . show) [2,5,17,21,50,60])
+
+
+n = isize sa2
+m = isize sa3
+
+salist ::  [(Int, Node (PrimArray Int, SerialArray (A.Array Int) Text))]
+salist = [(0,Node n (fromlist[1,3,5,7,9,11,13,15,17],sa2)),(0,Node m (fromlist[2,4,6,8,10,12],sa3))]
+satest = mergeParSerialNodes salist (n+m) (serialSize groupSize (n+m))
+instance (MergeParallel PrimArray Int) where
+
+
+
+-- =======================================
+
+{-
+inOrder2 :: 
+   (t -> t -> Bool) ->
+   (t -> Maybe t) ->
+   (state -> t -> ST s state) ->
+   state -> [t] -> ST s state
+
+
+satest2 = mergeSerialNodes [(0,Node n sa2),(0,Node m sa3)] 
+
+
+mergeSerialNodes :: forall arr1 marr1 v.
+  ( ArrayPair arr1 marr1 ShortByteString,
+    Ord v,
+    ToCBOR v,
+    FromCBOR v,
+    Show v
+  ) =>
+  [Node (SerialArray arr1 v)] ->
+  (arr1 ShortByteString,())
+mergeSerialNodes xs = withMutArray (serialSize groupSize total) builder where
+  total = sum (map (\ (_,Node n _) -> n) xs)
+  builder :: forall s. marr1 s ShortByteString -> ST s ()
+  builder marr1 = loop1 xs (0,[])
+    where loop1 [] (j,group) = mwrite marr1 j group
+          loop1 ((Node n (SerialArray _ _ arr)):more) state =
+              do state2 <- loop2 (0,serialSize n groupSize) state
+                 loop1 more state2
+          loop2 (i,size,arr) vs | i < size =
+             do let vs = index 
+-}
+
+-- builder :: forall s. marr1 s ShortByteString -> ST s (Int,Int,[v])
+-- builder marr1 = inOrder2 smallerS doneS (actionS marr1) (0,0,[]) xs 
+
+smallerS (i,Node _ sarr1) (j,Node _ sarr2) =
+    trace ("SMALLER "++show(i,sarr1,j,sarr2)++" "++show(index sarr1 i < index sarr2 j)) $
+    index sarr1 i < index sarr2 j
+doneS (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
+actionS marr1  (i,j,vs) (_size,Node _ (vals@(SerialArray _ _ _))) =
+     -- trace ("ACTION "++show (i,j,vs)++"  "++show vals) $
+     do { let vs2 = (index vals i) : vs
+        ; if length vs == groupSize {- group size might vary -}
+             then do { mwrite marr1 j (toBytes (reverse vs)); pure(i+1,j+1,[]) }
+             else pure(i+1,j,vs2) }
+
+
+{-
+class Foo arr a v where
+  smallerF :: (Ord a, Indexable arr a) => (Int, Node (arr a)) -> (Int, Node (arr a)) -> Bool
+  doneF :: (Int, Node (arr a)) -> Maybe (Int, Node (arr a))
+  actionF :: forall s marr state. ArrayPair arr marr a =>
+    marr s v -> state -> (Int,Node (arr a)) -> ST s state
+
+instance
+   ( -- Indexable arr ShortByteString,
+     Ord v,
+     ToCBOR v,
+     FromCBOR v
+   ) => Foo (SerialArray arr) v ShortByteString where
+  smallerF = smallerS
+  doneF = (doneS @v)
+  actionF = (actionS @v)
+-}  
+
+mergeParSerialNodes ::
+  ( ArrayPair arr2 marr2 ShortByteString,
+    ArrayPair arr1 marr1 k,
+    MergeParallel arr1 k,
+    Ord k,
+    ToCBOR v
+  ) =>
+  [(Int, Node (arr1 k, SerialArray arr2 v))] ->
+  Int ->
+  Int ->
+  (arr1 k, arr2 ShortByteString, (Int, Int, [v]))
+mergeParSerialNodes xs s1 s2 = with2MutArray s1 s2 (builder xs) where
+  builder xs marr1 marr2 = inOrder smallerP doneP (action marr1 marr2) xs (pure(0,0,[]))
+  action marr1 marr2 comp (_size,Node _ (keys,vals@(SerialArray _ _ _))) =
+     do { (i,j,vs) <- comp
+        ; mwrite marr1 i (index keys i)
+        ; let vs2 = (index vals i) : vs
+        ; if length vs == groupSize {- group size might vary -}
+             then do { mwrite marr2 j (toBytes (reverse vs)); pure(i+1,j+1,[]) }
+             else pure(i+1,j,vs2) }
+            
+
+-- ================================================
+-- Merging sorted arrays
+
+class Indexable t a => MergeVector t a where
+  smallerV:: Ord a => (Int,Node (t a)) -> (Int,Node (t a)) -> Bool
+  smallerV (i1,Node _ arr1) (i2,Node _ arr2) = index arr1 i1 < index arr2 i1
+  doneV:: (Int,Node (t a)) -> Maybe (Int,Node (t a))
+  doneV (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
+  actionV:: ans -> (Int,Node (t a)) -> ans
+  actionV ans _ = ans
+
+class Indexable t a => MergeParallel t a where
+  smallerP:: Ord a => (Int,Node (t a,b)) -> (Int,Node (t a,b)) -> Bool
+  smallerP (i1,Node _ (arr1,_)) (i2,Node _ (arr2,_)) = index arr1 i1 < index arr2 i1
+  doneP:: (Int,Node (t a,b)) -> Maybe (Int,Node (t a,b))
+  doneP (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
+  actionP:: ans -> (Int,Node (t a,b)) -> ans
+  actionP ans _ = ans
+
+
+
 
 -- =========================
 
@@ -425,52 +750,6 @@ rrr = inOrder smaller done action [[1,4,7],[3],[11,34,78,99,145],[2,6,8,9]] []
         done (x:y:zs) = Just(y:zs)
         done _ = Nothing
         action ans (x:_) = x:ans
-
-
-        
--- ================================================================================
--- Sets of objects as lists of nodes of ascending size. Each size is a power of 2.
--- In each (Node size primarray) the 'primarray' has 'size' components. The sum
--- of the sizes is the total number of elements in the set. 
-
-newtype CompactPrimSet t = CompactPrimSet [Node (PrimArray t)]
-
-instance (Prim t,Show t) => Show(CompactPrimSet t) where
-  show (CompactPrimSet ts) = show(map unNode ts)
-    where unNode(Node _ xs) = tolist xs
-
-emptyset :: CompactPrimSet t
-emptyset = CompactPrimSet []
-
-hasElem :: (Prim t,Ord t) => t -> CompactPrimSet t -> Bool
-hasElem t (CompactPrimSet xs) =
-  case search t xs of
-    Nothing -> False
-    Just _ -> True
-
-insertElem :: (Prim t, Ord t) => t -> CompactPrimSet t -> CompactPrimSet t
-insertElem t (set@(CompactPrimSet nodes)) =
-  if hasElem t set
-     then set
-     else case splitAtFullPrefix 1 (Node 1 (fromlist [t])) nodes of
-           (size,prefix,tail) -> CompactPrimSet ((mergeNodes size prefix):tail)
-
-makeSet :: (Ord t,Prim t) => [t] -> CompactPrimSet t
-makeSet ts = CompactPrimSet (map node nodes) where
-    nodes = pieces ts
-    node (n, ps) = Node n (fromlist (sort ps))  
-
-
-ss1, ss2, ss3, ss4, ss5, ss6, ss7, ss8, ss9 :: CompactPrimSet Int
-ss1 = CompactPrimSet []
-ss2 = insertElem 99 ss1
-ss3 = insertElem 33 ss2
-ss4 = insertElem 12 ss3
-ss5 = insertElem 6 ss4
-ss6 = insertElem 22 ss5
-ss7 = insertElem 71 ss6
-ss8 = insertElem 81 ss7
-ss9 = insertElem 51 ss8
 
 -- ==============================================================
 -- Overloaded operations on (Map k v)
@@ -546,25 +825,6 @@ makeNixMap pairs = NixMap (map node nodes) where
     node (n, ps) = Node n (fromlist ks, fromlist vs)
       where (ks,vs) = unzip (sortBy (\ (k1,_) (k2,_) -> compare k1 k2) ps)
 
-insertNixMap :: (Prim k,Ord k) => k -> v -> NixMap k v -> NixMap k v
-insertNixMap k v (NixMap nodes) =
-   case splitAtFullPrefix 1 (Node 1 (fromlist [k],fromlist[v])) (findAndMark k nodes) of
-         (size,prefix,tail) -> NixMap ((mergeNixParallel size prefix):tail)
-  
-deleteNixMap :: (Prim k, Ord k) => k -> NixMap k v -> NixMap k v
-deleteNixMap k (NixMap nodes) = NixMap(findAndMark k nodes)
-
-findAndMark :: (Search (arr1 k) k) => k -> [Node (NixArr arr1 k,arr2 v)] -> [Node (NixArr arr1 k,arr2 v)]
-findAndMark k [] = []
-findAndMark k (nodes@(node@(Node n (NixArr m ks ds,vs)) : more )) =
-  case search k ks of
-    Nothing -> node : findAndMark k more
-    Just i -> if hasElem i ds
-                 then nodes
-                 else (Node n (NixArr (m+1) ks (insertElem i ds),vs)) : more
-
-nm1 :: NixMap Int String
-nm1 = makemap [(i,show i) | i <- [1..7]]
 
 -- ============================================================
 -- Code for binary merging of adjacent nodes, instead of n-ary
@@ -597,38 +857,6 @@ mergeSetNodes size1 size2 arr1 arr2 = Node totsize (fst (withMutArray totsize ma
             (False, True, True) -> do writePrimArray marr next (index arr2 i2); loop i1 (i2 + 1) (next + 1)
             _ -> pure ()
 
--- =======================================================
--- Encoding lists with the structure of binary numbers
-
--- | binary encoding of 'n', least significant bit on the front of the list
-binary :: Int -> [Int]
-binary 0 = []
-binary 1 = [(1)]
-binary n = (mod n 2) : binary (div n 2)
-
--- | Compute a sparse list of non-zero Binary digits and their positional weights to represent 'n'
---   For example (sparseBinary 25) returns [(1,1),(1,8),(1,16)], I.e. we need: 1 one,
---   1 eight, and 1 sixteen.  Since this is binary, and we don't store the 0's, the digits are aways 1.
---   and the weights are powers of 2.
-sparseBinary :: Int -> [(Int, Int)]
-sparseBinary n = fix 1 (binary n)
-  where
-    fix _ [] = []
-    fix m (x : xs) =
-      if x == 0
-        then fix (m * 2) xs
-        else (x, m) : fix (m * 2) xs
-
--- | Split a list of length 'n' into pieces, each piece has a power of two as its length.
--- For example:  pieces [1..11]  -->  [(1,[1]), (2,[2,3]), (8,[4,5,6,7,8,9,10,11])]
-pieces :: [a] -> [(Int, [a])]
-pieces xs = chop parts xs
-  where
-    parts = sparseBinary (length xs)
-
-
-chop [] _zs = []
-chop ((_, n) : ys) zs = (n, take n zs) : chop ys (drop n zs)
 
 -- =========================================================
 -- HeapWords instances
@@ -643,20 +871,6 @@ instance (Prim a, HeapWords a) => HeapWords (PrimArray a) where
   heapWords arr = 2 + (sizeofPrimArray arr * heapWords (index arr 0))
 
 -- =================================================
-
--- | Looking for a full prefix, i.e. a prefix which has contiguous powers of two
---   for example: splitAtFullPrefix 1 (Node 1 1) [Node 1 1,Node 2 2, Node 4 4, Node 8 8,Node 32 32,Node 128 128]
---   returns (16, [Node 1 1,Node 1 1,Node 2 2,Node 4 4,Node 8 8], [Node 32 32,Node 128 128])
---   because [1,2,4,8] is the longest contiguous prefix consisting of adjacent powers of 2.
-splitAtFullPrefix :: Int -> Node a -> [Node a] -> (Int,[Node a],[Node a])
-splitAtFullPrefix next (node@(Node n _)) [] = (n,[node],[])
-splitAtFullPrefix next (node1@(Node n _)) ((node2@(Node m _)):more) =
-  if next==m
-     then case splitAtFullPrefix (next*2) node2 more of
-            (count,prefix,rest) -> (count+n, node1:prefix, rest)
-     else (n,[node1],node2:more)
-
-sp1 = splitAtFullPrefix 1 (Node 1 1) [Node 1 1,Node 2 2, Node 4 4, Node 8 8,Node 32 32,Node 128 128]
 
 
 
@@ -720,3 +934,5 @@ action v1 v2 mkeys mvals indexM k eitheri = do
    mwrite mkeys index k
    mwrite mvals index (getEither v1 v2 eitheri)
    pure(index + 1)
+
+-}
