@@ -24,7 +24,7 @@
 \newcommand{\stakeDistr}[3]{\fun{stakeDistr}~ \var{#1}~ \var{#2}~ \var{#3}}
 \newcommand{\lReward}[4]{\fun{r_{operator}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
 \newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
-\newcommand{\mkApparentPerformance}[4]{\fun{mkApparentPerformance}~\var{#1}~{#2}~\var{#3}~\var{#4}}
+\newcommand{\mkApparentPerformance}[3]{\fun{mkApparentPerformance}~{#1}~\var{#2}~\var{#3}}
 \newcommand{\createRUpd}[4]{\fun{createRUpd}~\var{#1}~\var{#2}~\var{#3}~\var{#4}}
 \newcommand{\getIR}[1]{\fun{getIR}~\var{#1}}
 
@@ -1099,11 +1099,7 @@ Figure~\ref{fig:functions:rewards} defines the pool reward as described in secti
   %
   \begin{align*}
       & \fun{mkApparentPerformance} \in \unitInterval \to \unitInterval \to \N \to \N \to \Q \\
-      & \mkApparentPerformance{d}{\sigma}{n}{\overline{N}} =
-        \begin{cases}
-          \frac{\beta}{\sigma} & \text{if } d < 0.8 \\
-          1 & \text{otherwise}
-        \end{cases} \\
+      & \mkApparentPerformance{\sigma}{n}{\overline{N}} = \frac{\beta}{\sigma} \\
       & ~~~\where \\
       & ~~~~~~~\beta = \frac{n}{\max(1, \overline{N})} \\
   \end{align*}
@@ -1217,7 +1213,7 @@ The calculation is done pool-by-pool.
         \var{pledge} \leq \var{ostake}\\
         0 & \text{otherwise.}
       \end{cases} \\
-      & ~~~~~~~\var{appPerf} = \mkApparentPerformance{(\fun{d}~pp)}{\sigma_a}{n}{\overline{N}} \\
+      & ~~~~~~~\var{appPerf} = \mkApparentPerformance{\sigma_a}{n}{\overline{N}} \\
       & ~~~~~~~\var{poolR} = \floor{\var{appPerf}\cdot\var{maxP}} \\
       & ~~~~~~~\var{mRewards} = \\
       & ~~~~~~~~~~\left\{
@@ -1446,11 +1442,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \var{reserves}}
     \\
     & ~~~~~~~\eta =
-      \begin{cases}
-        1 & (\fun{d}~\var{prevPp})\geq 0.8 \\
-        \frac{blocksMade}{\floor{(1-\fun{d}~\var{prevPp})\cdot\var{slotsPerEpoch} \cdot \ActiveSlotCoeff}}
-          & \text{otherwise} \\
-      \end{cases} \\
+        \frac{blocksMade}{\floor{{slotsPerEpoch} \cdot \ActiveSlotCoeff}} \\
     & ~~~~~~~\var{rewardPot} = \var{feeSS} + \Delta r_1 \\
     & ~~~~~~~\Delta t_1 = \floor*{(\fun{tau}~\var{prevPp}) \cdot \var{rewardPot}} \\
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
