@@ -44,6 +44,7 @@ library
     Cardano.Ledger.Address
     Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.BaseTypes
+    Cardano.Ledger.BHeaderView
     Cardano.Ledger.Coin
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core

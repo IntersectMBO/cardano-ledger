@@ -9,6 +9,7 @@ import Cardano.Ledger.Address as X
   ( Addr (..),
     RewardAcnt (..),
   )
+import Cardano.Ledger.BHeaderView as X (isOverlaySlot)
 import Cardano.Ledger.BaseTypes as X
   ( Globals (..),
     Network (..),
@@ -168,7 +169,6 @@ import Cardano.Protocol.TPraos.Rules.OCert as X (OCertEnv (..))
 import Cardano.Protocol.TPraos.Rules.Overlay as X
   ( OBftSlot (..),
     classifyOverlaySlot,
-    isOverlaySlot,
     lookupInOverlaySchedule,
   )
 import Cardano.Protocol.TPraos.Rules.Prtcl as X

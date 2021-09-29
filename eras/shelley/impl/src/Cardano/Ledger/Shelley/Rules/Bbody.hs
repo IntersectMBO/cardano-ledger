@@ -21,6 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Bbody
   )
 where
 
+import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
@@ -28,11 +29,7 @@ import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (..),
-    bBodySize,
-    incrBlocks,
-  )
+import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade)
 import Cardano.Ledger.Shelley.LedgerState
@@ -43,14 +40,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersEnv (..))
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
-import Cardano.Protocol.TPraos.BHeader
-  ( BHBody (..),
-    BHeader (BHeader),
-    bhash,
-    hBbsize,
-    issuerIDfromBHBody,
-  )
-import Cardano.Protocol.TPraos.Rules.Overlay (isOverlaySlot)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -136,7 +125,7 @@ instance
 
   type
     Signal (BBODY era) =
-      Block era
+      (BHeaderView (Crypto era), Era.TxSeq era)
 
   type Environment (BBODY era) = BbodyEnv era
 
@@ -166,27 +155,27 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account,
                BbodyState ls b,
-               Block (BHeader bhb _) txsSeq
+               (bhview, txsSeq)
                )
            ) -> do
         let txs = fromTxSeq @era txsSeq
             actualBodySize = bBodySize txsSeq
             actualBodyHash = hashTxSeq @era txsSeq
 
-        actualBodySize == fromIntegral (hBbsize bhb)
-          ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ hBbsize bhb)
+        actualBodySize == fromIntegral (bhviewBSize bhview)
+          ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bhview)
 
-        actualBodyHash == bhash bhb ?! InvalidBodyHashBBODY actualBodyHash (bhash bhb)
+        actualBodyHash == bhviewBHash bhview ?! InvalidBodyHashBBODY actualBodyHash (bhviewBHash bhview)
 
         ls' <-
           trans @(Core.EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bheaderSlotNo bhb) pp account, ls, StrictSeq.fromStrict txs)
+            TRC (LedgersEnv (bhviewSlot bhview) pp account, ls, StrictSeq.fromStrict txs)
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's
         -- easier than differentiating here.
-        let hkAsStakePool = coerceKeyRole . issuerIDfromBHBody $ bhb
-            slot = bheaderSlotNo bhb
+        let hkAsStakePool = coerceKeyRole . bhviewID $ bhview
+            slot = bhviewSlot bhview
         firstSlotNo <- liftSTS $ do
           ei <- asks epochInfo
           e <- epochInfoEpoch ei slot

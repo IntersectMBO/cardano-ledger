@@ -22,7 +22,7 @@ where
 import Cardano.Binary (ToCBOR, serialize')
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfo)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
+import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq), TxSeq)
 import Cardano.Ledger.Shelley.API
   ( Addr (..),
     Credential (..),
@@ -399,8 +399,8 @@ onlyValidChainSignalsAreGenerated ::
   forall era.
   ( EraGen era,
     Default (State (Core.EraRule "PPUP" era)),
-    ChainProperty era,
-    QC.HasTrace (CHAIN era) (GenEnv era)
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Show (TxSeq era)
   ) =>
   Property
 onlyValidChainSignalsAreGenerated =

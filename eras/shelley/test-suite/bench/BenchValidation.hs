@@ -50,7 +50,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.TxBody (TransTxBody, TransTxId)
 import Cardano.Prelude (NFData (rnf))
-import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..))
+import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..), makeHeaderView)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (withOriginToMaybe)
@@ -110,11 +110,11 @@ genValidateInput n = do
 
 benchValidate ::
   forall era.
-  API.ApplyBlock era =>
+  (Era era, API.ApplyBlock era) =>
   ValidateInput era ->
   IO (NewEpochState era)
-benchValidate (ValidateInput globals state block) =
-  case API.applyBlock @era globals state block of
+benchValidate (ValidateInput globals state (Block bh txs)) =
+  case API.applyBlock @era globals state (makeHeaderView bh, txs) of
     Right x -> pure x
     Left x -> error (show x)
 
@@ -130,18 +130,17 @@ applyBlock ::
   ValidateInput era ->
   Int ->
   Int
-applyBlock (ValidateInput globals state block) n =
-  case API.applyBlock @era globals state block of
+applyBlock (ValidateInput globals state (Block bh txs)) n =
+  case API.applyBlock @era globals state (makeHeaderView bh, txs) of
     Right x -> seq (rnf x) (n + 1)
     Left x -> error (show x)
 
 benchreValidate ::
-  ( API.ApplyBlock era
-  ) =>
+  (Era era, API.ApplyBlock era) =>
   ValidateInput era ->
   NewEpochState era
-benchreValidate (ValidateInput globals state block) =
-  API.reapplyBlock globals state block
+benchreValidate (ValidateInput globals state (Block bh txs)) =
+  API.reapplyBlock globals state (makeHeaderView bh, txs)
 
 -- ==============================================================
 

@@ -26,6 +26,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Chain
   )
 where
 
+import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Nonce (..),
@@ -85,6 +86,7 @@ import Cardano.Protocol.TPraos.BHeader
     bheaderBlockNo,
     bheaderSlotNo,
     lastAppliedHash,
+    makeHeaderView,
     prevHashToNonce,
   )
 import Cardano.Protocol.TPraos.Rules.Prtcl
@@ -236,7 +238,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block era,
+    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), Era.TxSeq era),
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -279,7 +281,7 @@ chainTransition ::
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block era,
+    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), Era.TxSeq era),
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -309,7 +311,7 @@ chainTransition =
                  etaC
                  etaH
                  lab,
-               block@(Block bh _)
+               (Block bh txs)
                )
            ) -> do
         case prtlSeqChecks lab bh of
@@ -318,9 +320,10 @@ chainTransition =
 
         let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ = nes
             chainChecksData = pparamsToChainChecksPParams pp
+            bhView = makeHeaderView bh
 
         maxpv <- liftSTS $ asks maxMajorPV
-        case chainChecks maxpv chainChecksData bh of
+        case chainChecks maxpv chainChecksData bhView of
           Right () -> pure ()
           Left e -> failBecause (RealChainPredicateFailure e)
 
@@ -354,7 +357,7 @@ chainTransition =
 
         BbodyState ls' bcur' <-
           trans @(Core.EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, block)
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, (bhView, txs))
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh

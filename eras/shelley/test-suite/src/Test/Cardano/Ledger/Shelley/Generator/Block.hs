@@ -19,8 +19,7 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (VRF)
-import Cardano.Ledger.Era (Crypto, SupportsSegWit (TxSeq))
-import Cardano.Ledger.Serialization (ToCBORGroup)
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.BHeader
@@ -80,7 +79,6 @@ type TxGen era =
 genBlock ::
   forall era.
   ( MinLEDGER_STS era,
-    ToCBORGroup (TxSeq era),
     ApplyBlock era,
     Mock (Crypto era),
     GetLedgerView era,
@@ -100,8 +98,7 @@ genBlock ge = genBlockWithTxGen genTxs ge
 
 genBlockWithTxGen ::
   forall era.
-  ( ToCBORGroup (TxSeq era),
-    Mock (Crypto era),
+  ( Mock (Crypto era),
     GetLedgerView era,
     ApplyBlock era,
     EraGen era
