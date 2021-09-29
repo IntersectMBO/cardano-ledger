@@ -23,12 +23,12 @@ import Cardano.Ledger.Shelley.Rules.Ppup (PPUP)
 import Cardano.Ledger.Shelley.Rules.Rupd (RUPD)
 import Cardano.Ledger.Shelley.Rules.Snap (SNAP)
 import Cardano.Ledger.Shelley.Rules.Tick (TICK, TICKF)
-import Cardano.Ledger.Shelley.Rules.Tickn (TICKN)
 import Cardano.Ledger.Shelley.Rules.Upec (UPEC)
 import Cardano.Ledger.Shelley.Rules.Utxo (UTXO)
 import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW)
 import Cardano.Protocol.TPraos.Rules.OCert (OCERT)
 import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY)
+import Cardano.Protocol.TPraos.Rules.Tickn (TICKN)
 
 type instance Core.EraRule "BBODY" (ShelleyEra c) = BBODY (ShelleyEra c)
 

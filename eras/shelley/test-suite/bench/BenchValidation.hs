@@ -48,12 +48,11 @@ import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState,
     nesBcur,
   )
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Cardano.Ledger.Shelley.Rules.Tickn (TicknState (..))
 import Cardano.Ledger.Shelley.TxBody (TransTxBody, TransTxId)
 import Cardano.Prelude (NFData (rnf))
 import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..))
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
+import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
 import Control.State.Transition (STS (State))
@@ -65,6 +64,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 -- Use Another constraint, so this works in all Eras
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen, MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 

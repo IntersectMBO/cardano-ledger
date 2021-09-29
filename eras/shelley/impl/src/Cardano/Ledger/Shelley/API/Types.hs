@@ -98,11 +98,6 @@ import Cardano.Ledger.Shelley.PParams as X
 import Cardano.Ledger.Shelley.Rewards as X
   ( NonMyopic,
   )
-import Cardano.Ledger.Shelley.Rules.Chain as X
-  ( CHAIN,
-    ChainState (..),
-    initialShelleyState,
-  )
 import Cardano.Ledger.Shelley.Rules.Deleg as X (DELEG, DelegEnv (..))
 import Cardano.Ledger.Shelley.Rules.Delegs as X (DELEGS, DelegsEnv (..))
 import Cardano.Ledger.Shelley.Rules.Delpl as X (DELPL, DelplEnv (..))
@@ -116,12 +111,6 @@ import Cardano.Ledger.Shelley.Rules.Pool as X (POOL, PoolEnv (..))
 import Cardano.Ledger.Shelley.Rules.PoolReap as X (POOLREAP)
 import Cardano.Ledger.Shelley.Rules.Ppup as X (PPUP, PPUPEnv (..))
 import Cardano.Ledger.Shelley.Rules.Tick as X (TICK)
-import Cardano.Ledger.Shelley.Rules.Tickn as X
-  ( TICKN,
-    TicknEnv (..),
-    TicknPredicateFailure,
-    TicknState (..),
-  )
 import Cardano.Ledger.Shelley.Rules.Utxo as X
   ( UTXO,
     UtxoEnv (..),
@@ -188,4 +177,10 @@ import Cardano.Protocol.TPraos.Rules.Prtcl as X
     PrtclState (..),
     PrtlSeqFailure (..),
     prtlSeqChecks,
+  )
+import Cardano.Protocol.TPraos.Rules.Tickn as X
+  ( TICKN,
+    TicknEnv (..),
+    TicknPredicateFailure,
+    TicknState (..),
   )

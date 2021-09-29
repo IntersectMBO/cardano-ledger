@@ -34,7 +34,7 @@ import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash, KeyRole (Witness))
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.API (CHAIN, DPState, PPUPState, UTxOState)
+import Cardano.Ledger.Shelley.API (DPState, PPUPState, UTxOState)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
@@ -63,6 +63,7 @@ import Test.Cardano.Ledger.Shelley.Address.CompactAddr
 import Test.Cardano.Ledger.Shelley.ByronTranslation (testGroupByronTranslation)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
   ( onlyValidChainSignalsAreGenerated,
     onlyValidLedgerSignalsAreGenerated,

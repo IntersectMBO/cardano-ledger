@@ -96,7 +96,6 @@ import Cardano.Ledger.Shelley.Rewards
     mkApparentPerformance,
     sumRewards,
   )
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (invert, (<+>), (<->))
@@ -122,6 +121,7 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()

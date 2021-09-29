@@ -23,6 +23,7 @@ module Cardano.Ledger.Shelley.API.Validation
 where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -33,7 +34,6 @@ import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import qualified Cardano.Ledger.Shelley.Rules.Bbody as STS
-import qualified Cardano.Ledger.Shelley.Rules.Chain as STS
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
@@ -56,7 +56,7 @@ class
     ChainData (NewEpochState era),
     SerialisableData (NewEpochState era),
     ChainData (BlockTransitionError era),
-    ChainData (STS.PredicateFailure (STS.CHAIN era)),
+    ChainData (STS.ChainPredicateFailure era),
     STS (Core.EraRule "TICK" era),
     BaseM (Core.EraRule "TICK" era) ~ ShelleyBase,
     Environment (Core.EraRule "TICK" era) ~ (),
@@ -196,10 +196,10 @@ instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
 chainChecks ::
   forall era m.
   ( Era era,
-    MonadError (STS.PredicateFailure (STS.CHAIN era)) m
+    MonadError (STS.ChainPredicateFailure era) m
   ) =>
   Globals ->
-  STS.ChainChecksData ->
+  STS.ChainChecksPParams ->
   BHeader (Crypto era) ->
   m ()
 chainChecks globals ccd bh = STS.chainChecks (maxMajorPV globals) ccd bh

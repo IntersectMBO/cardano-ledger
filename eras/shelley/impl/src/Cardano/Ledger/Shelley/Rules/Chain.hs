@@ -1,4 +1,4 @@
-module Shelley.Spec.Ledger.STS.Chain
+module Cardano.Ledger.Shelley.Rules.Chain
   {-# DEPRECATED "Use 'import Test.Cardano.Ledger.Shelley.Rules.Chain' for the CHAIN rule, use 'import Cardano.Ledger.Chain' for chainChecks, and use 'import Cardano.Ledger.Shelley.API.Wallet' for AdaPots." #-}
   (module X)
 where

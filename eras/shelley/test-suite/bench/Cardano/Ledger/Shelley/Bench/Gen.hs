@@ -18,7 +18,6 @@ import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.API
   ( ApplyBlock,
     Block,
-    ChainState (..),
     DCert,
     DPState,
     DelplEnv,
@@ -55,6 +54,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.DCert (CERTS)
 import Test.Cardano.Ledger.Shelley.Generator.Utxo (genTx)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.QuickCheck (generate)

@@ -39,11 +39,11 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW)
-import Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainEvent (..), ChainPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER, LedgerEvent (UtxowEvent), LedgerPredicateFailure (UtxowFailure))
 import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainEvent (..), TestChainPredicateFailure (..))
 import Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces (relevantCasesAreCovered)
 import qualified Test.Tasty as T
 import Test.Tasty.QuickCheck

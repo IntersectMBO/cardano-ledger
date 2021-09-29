@@ -58,7 +58,6 @@ import Cardano.Ledger.Shelley.Rewards
     likelihood,
     percentile',
   )
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Cardano.Ledger.Shelley.Tx
   ( Tx (..),
     WitnessSetHKD (..),
@@ -125,6 +124,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
   )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils
   ( epochSize,
     getBlockNonce,

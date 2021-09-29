@@ -58,7 +58,6 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (ProtVer, Update)
-import Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.Tx (TxId (TxId))
 import Cardano.Ledger.Shelley.TxBody (DCert, TxIn, Wdrl, WitVKey)
@@ -85,6 +84,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
     genesisCoins,
   )
 import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (ScriptClass, baseScripts, combinedScripts, keyPairs)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState)
 import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Gen, choose, shuffle)
 

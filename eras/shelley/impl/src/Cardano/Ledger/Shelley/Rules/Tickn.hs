@@ -1,4 +1,4 @@
-module Shelley.Spec.Ledger.STS.Tickn
+module Cardano.Ledger.Shelley.Rules.Tickn
   {-# DEPRECATED "Use 'import Cardano.Protocol.TPraos.Rules.Tickn' instead." #-}
   (module X)
 where

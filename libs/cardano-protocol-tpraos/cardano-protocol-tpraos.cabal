@@ -43,6 +43,7 @@ library
     Cardano.Protocol.TPraos.Rules.OCert
     Cardano.Protocol.TPraos.Rules.Overlay
     Cardano.Protocol.TPraos.Rules.Prtcl
+    Cardano.Protocol.TPraos.Rules.Tickn
     Cardano.Protocol.TPraos.Rules.Updn
 
   build-depends:

@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.BlockChain (Block, bheader)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Cardano.Ledger.Shelley.Tx
   ( Tx (..),
     WitnessSetHKD (..),
@@ -76,6 +75,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
   )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (getBlockNonce, testGlobals)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase)

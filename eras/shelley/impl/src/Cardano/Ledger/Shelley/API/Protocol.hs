@@ -44,6 +44,7 @@ import Cardano.Ledger.BaseTypes
     ShelleyBase,
     UnitInterval,
   )
+import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
@@ -70,10 +71,8 @@ import Cardano.Ledger.Shelley.LedgerState
     _genDelegs,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..), ProtVer)
-import Cardano.Ledger.Shelley.Rules.Chain (ChainChecksData, pparamsToChainChecksData)
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.Rules.Tick (TickfPredicateFailure)
-import qualified Cardano.Ledger.Shelley.Rules.Tickn as STS.Tickn
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Protocol.TPraos (PoolDistr)
 import Cardano.Protocol.TPraos.BHeader
@@ -86,13 +85,13 @@ import Cardano.Protocol.TPraos.BHeader
   )
 import Cardano.Protocol.TPraos.OCert (OCertSignable)
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS.Prtcl
+import Cardano.Protocol.TPraos.Rules.Tickn as STS.Tickn
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
   ( BaseM,
     Environment,
-    PredicateFailure,
     STS,
     Signal,
     State,
@@ -170,7 +169,7 @@ data LedgerView crypto = LedgerView
     lvExtraEntropy :: Nonce,
     lvPoolDistr :: PoolDistr crypto,
     lvGenDelegs :: GenDelegs crypto,
-    lvChainChecks :: ChainChecksData
+    lvChainChecks :: ChainChecksPParams
   }
   deriving (Eq, Show, Generic)
 
@@ -217,7 +216,7 @@ view
           _genDelegs . _dstate
             . _delegationState
             $ esLState nesEs,
-        lvChainChecks = pparamsToChainChecksData . esPp $ nesEs
+        lvChainChecks = pparamsToChainChecksPParams . esPp $ nesEs
       }
 
 -- $timetravel

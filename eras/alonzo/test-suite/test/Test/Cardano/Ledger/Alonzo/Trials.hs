@@ -84,7 +84,6 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsEnv)
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv, DelplPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
@@ -134,6 +133,7 @@ import Test.Cardano.Ledger.Shelley.PropertyTests
     relevantCasesAreCovered,
     removedAfterPoolreap,
   )
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Tasty
 import Test.Tasty.QuickCheck
 

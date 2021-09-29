@@ -33,7 +33,6 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.Shelley.LedgerState (stakeDistr)
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv, BbodyState)
-import qualified Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
@@ -73,6 +72,8 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen
     genUtxo0,
   )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genesisDelegs0)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..), initialShelleyState)
+import qualified Test.Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
 import Test.Cardano.Ledger.Shelley.Utils
   ( maxLLSupply,
     mkHash,

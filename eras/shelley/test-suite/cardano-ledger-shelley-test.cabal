@@ -60,6 +60,7 @@ library
     Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen
     Test.Cardano.Ledger.Shelley.Orphans
     Test.Cardano.Ledger.Shelley.PropertyTests
+    Test.Cardano.Ledger.Shelley.Rules.Chain
     Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
     Test.Cardano.Ledger.Shelley.Rules.TestChain
     Test.Cardano.Ledger.Shelley.Rules.TestDeleg
@@ -93,12 +94,14 @@ library
     cborg,
     containers,
     data-default-class,
+    deepseq,
     directory,
     generic-random,
     hashable,
     hedgehog-quickcheck,
     hedgehog >= 1.0.4,
     iproute,
+    mtl,
     nothunks,
     process-extras,
     plutus-ledger-api,

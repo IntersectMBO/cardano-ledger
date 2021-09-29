@@ -28,10 +28,6 @@ import Cardano.Ledger.Shelley.PParams
     PParams' (..),
     emptyPParams,
   )
-import Cardano.Ledger.Shelley.Rules.Chain
-  ( ChainState (..),
-    initialShelleyState,
-  )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Slot
   ( BlockNo (..),
@@ -47,6 +43,10 @@ import Cardano.Protocol.TPraos.BHeader
   )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Test.Cardano.Ledger.Shelley.Examples.Federation (genDelegs)
+import Test.Cardano.Ledger.Shelley.Rules.Chain
+  ( ChainState (..),
+    initialShelleyState,
+  )
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, maxLLSupply, mkHash, unsafeBoundRational)
 
 -- === Initial Protocol Parameters
