@@ -9,12 +9,12 @@ where
 import Cardano.Ledger.Shelley ()
 import Cardano.Ledger.Shelley.BlockChain (Block)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, totalAda)
 import Cardano.Ledger.Shelley.Scripts ()
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Orphans ()
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, totalAda)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, maxLLSupply, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
 

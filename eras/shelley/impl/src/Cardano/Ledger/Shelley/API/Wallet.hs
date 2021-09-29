@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -21,6 +22,10 @@ module Cardano.Ledger.Shelley.API.Wallet
     getRewardInfo,
     CLI (..),
     addShelleyKeyWitnesses,
+    -- | Ada Pots
+    AdaPots (..),
+    totalAdaES,
+    totalAdaPotsES,
   )
 where
 
@@ -42,7 +47,9 @@ import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
-  ( DPState (..),
+  ( AccountState (..),
+    DPState (..),
+    DState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
@@ -66,18 +73,19 @@ import Cardano.Ledger.Shelley.Rewards
     percentile',
   )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
-import Cardano.Ledger.Shelley.Rules.Tickn (TicknState (..))
 import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody (DCert, PoolParams (..), TxIn (..), WitVKey (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val ((<->))
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue, mkSeed, seedL)
 import Cardano.Protocol.TPraos.Rules.Overlay (isOverlaySlot)
+import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
 import Control.Monad.Trans.Reader (runReader)
@@ -449,3 +457,52 @@ instance CC.Crypto c => CLI (ShelleyEra c) where
   addKeyWitnesses = addShelleyKeyWitnesses
 
   evaluateMinLovelaceOutput pp _out = _minUTxOValue pp
+
+data AdaPots = AdaPots
+  { treasuryAdaPot :: Coin,
+    reservesAdaPot :: Coin,
+    rewardsAdaPot :: Coin,
+    utxoAdaPot :: Coin,
+    depositsAdaPot :: Coin,
+    feesAdaPot :: Coin
+  }
+  deriving (Show, Eq)
+
+-- | Calculate the total ada pots in the epoch state
+totalAdaPotsES ::
+  UsesValue era =>
+  EpochState era ->
+  AdaPots
+totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
+  AdaPots
+    { treasuryAdaPot = treasury_,
+      reservesAdaPot = reserves_,
+      rewardsAdaPot = rewards_,
+      utxoAdaPot = coins,
+      depositsAdaPot = deposits,
+      feesAdaPot = fees_
+    }
+  where
+    (UTxOState u deposits fees_ _) = _utxoState ls
+    (DPState ds _) = _delegationState ls
+    rewards_ = fold (Map.elems (_rewards ds))
+    coins = Val.coin $ balance u
+
+-- | Calculate the total ada in the epoch state
+totalAdaES :: UsesValue era => EpochState era -> Coin
+totalAdaES cs =
+  treasuryAdaPot
+    <> reservesAdaPot
+    <> rewardsAdaPot
+    <> utxoAdaPot
+    <> depositsAdaPot
+    <> feesAdaPot
+  where
+    AdaPots
+      { treasuryAdaPot,
+        reservesAdaPot,
+        rewardsAdaPot,
+        utxoAdaPot,
+        depositsAdaPot,
+        feesAdaPot
+      } = totalAdaPotsES cs

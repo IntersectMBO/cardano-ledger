@@ -21,7 +21,6 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..))
 import Cardano.Ledger.Era (ValidateScript (..))
 import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
-import Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainEvent (..), ChainPredicateFailure (..), ChainState (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
@@ -35,6 +34,12 @@ import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import Test.Cardano.Ledger.Shelley.Rules.Chain
+  ( CHAIN,
+    ChainEvent (..),
+    ChainState (..),
+    TestChainPredicateFailure (..),
+  )
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace, ledgerTraceFromBlock)
 import Test.QuickCheck (Property, conjoin, counterexample, (.&&.))
 import Test.Tasty (TestTree)

@@ -34,7 +34,6 @@ import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Shelley.API
   ( ApplyBlock,
-    CHAIN,
     DELEG,
     GetLedgerView,
   )
@@ -49,7 +48,6 @@ import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
 import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..), totalAda, totalAdaPots)
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Pool (POOL, PoolEnv (..))
@@ -100,6 +98,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass (scriptKeyCombinations)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Orphans ()
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..), totalAda, totalAdaPots)
 import qualified Test.Cardano.Ledger.Shelley.Rules.TestDeleg as TestDeleg
   ( checkInstantaneousRewards,
     keyDeRegistration,

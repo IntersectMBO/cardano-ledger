@@ -25,7 +25,6 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Shelley.API
   ( Addr (..),
-    CHAIN,
     Credential (..),
     DCert (..),
     DelegCert (..),
@@ -89,6 +88,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Presets (genEnv)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain (mkGenesisChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger (mkGenesisLedgerState)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN)
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck
   ( Property,

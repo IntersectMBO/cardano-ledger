@@ -99,11 +99,11 @@ import qualified Cardano.Ledger.Shelley.Rules.Ledger as STS
 import qualified Cardano.Ledger.Shelley.Rules.Ledgers as STS
 import qualified Cardano.Ledger.Shelley.Rules.Pool as STS
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as STS
-import qualified Cardano.Ledger.Shelley.Rules.Tickn as STS
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as STS
 import Cardano.Ledger.Shelley.Tx (WitnessSetHKD (WitnessSet), hashScript)
 import Cardano.Protocol.TPraos (IndividualPoolStake (..))
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
+import qualified Cardano.Protocol.TPraos.Rules.Tickn as STS
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.SetAlgebra (biMapFromList)

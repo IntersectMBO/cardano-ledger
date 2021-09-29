@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
-import Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, chainNes, totalAda)
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo
@@ -64,6 +63,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain
   ( mkGenesisChainState,
     registerGenesisStaking,
   )
+import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, chainNes, totalAda)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck (Gen)
 

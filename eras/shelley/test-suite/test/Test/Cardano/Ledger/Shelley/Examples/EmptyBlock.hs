@@ -13,7 +13,6 @@ where
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Shelley.BlockChain (Block)
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
   ( BlockNo (..),
@@ -41,6 +40,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
     mkBlockFakeVRF,
     mkOCert,
   )
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, getBlockNonce)
 
 -- =============================================================

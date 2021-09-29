@@ -55,6 +55,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
   )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..), MinLEDGER_STS)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger ()
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils
   ( epochFromSlotNo,
     maxKESIterations,

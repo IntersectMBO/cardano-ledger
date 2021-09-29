@@ -83,7 +83,6 @@ import Cardano.Ledger.Shelley.LedgerState
     applyRUpd,
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates, ProtVer)
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Cardano.Ledger.Shelley.Rules.Mir (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
@@ -101,6 +100,7 @@ import Data.Set (Set)
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, getBlockNonce)
 
 -- ==================================================

@@ -37,7 +37,6 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.BlockChain (Block, bheader)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -80,6 +79,7 @@ import Test.Cardano.Ledger.Shelley.Generator.Core
   )
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
     ShelleyTest,

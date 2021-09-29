@@ -18,6 +18,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
+import Cardano.Ledger.Chain (pparamsToChainChecksPParams)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -26,7 +27,6 @@ import Cardano.Ledger.Shelley.API.Protocol
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (UnsafeCompactAddr))
 import Cardano.Ledger.Shelley.EpochBoundary
-import Cardano.Ledger.Shelley.Rules.Chain (pparamsToChainChecksData)
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
@@ -168,5 +168,5 @@ mkInitialShelleyLedgerView genesisShelley =
       lvExtraEntropy = _extraEntropy . sgProtocolParams $ genesisShelley,
       lvPoolDistr = PoolDistr Map.empty,
       lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
-      lvChainChecks = pparamsToChainChecksData . sgProtocolParams $ genesisShelley
+      lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
     }

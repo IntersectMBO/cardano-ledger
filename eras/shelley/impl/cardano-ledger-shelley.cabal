@@ -30,6 +30,7 @@ common project-config
 library
   import:             base, project-config
   exposed-modules:
+    Cardano.Ledger.Chain
     Cardano.Ledger.Pretty
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
