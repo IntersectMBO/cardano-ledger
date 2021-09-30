@@ -48,6 +48,7 @@ library
                      , Data.CanonicalMaps
                      , Data.MemoBytes
                      , Data.Coders
+                     , Data.Compact.Class
 		     , Data.CompactMap
 		     , Data.DeltaState
                      , Data.Pulse
