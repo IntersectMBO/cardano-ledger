@@ -41,7 +41,7 @@ main = do
         )
         (header "ledger-state - Tool for analyzing ledger state")
   forM_ (optsUtxoJsonFile opts) $ \fp -> do
-    _ <- observeMemoryOriginalMap fp
+    _ <- observeMemory fp
     pure ()
     -- getChar
     -- ---collectStats fp
@@ -51,7 +51,7 @@ main = do
 
 observeMemoryOriginalMap fp = do
   ref <- newIORef Nothing
-  utxo <- loadUTxO fp
+  utxo <- loadUTxOn fp
   utxo `seq` putStrLn "Loaded"
   performGC
   _ <- getChar
