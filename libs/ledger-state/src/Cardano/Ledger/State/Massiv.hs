@@ -6,6 +6,7 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -55,20 +56,44 @@ import qualified Data.Text.Read as T
 import Data.Word
 import Debug.Trace
 
-loadMassivUTxO ::
-  FilePath ->
-  IO UTxOs
-loadMassivUTxO fp = do
+
+
+loadMassivUTxO :: FilePath -> IO UTxOs
+loadMassivUTxO fp = consumeUTxO fp sinkMassivUTxO
+
+utxoFromMap :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> IO UTxOs
+utxoFromMap m = C.runConduit $ C.sourceList (Map.toList m) C..| sinkMassivUTxO
+
+sinkMassivUTxO :: C.ConduitT (TxIn C, Alonzo.TxOut CurrentEra) C.Void IO UTxOs
+sinkMassivUTxO = do
   let consTxOut txId txOut Nothing = Just $! A.singleton $ KVPair txId txOut
       consTxOut txId txOut (Just a) = Just $! A.cons (KVPair txId txOut) a
   das <-
-    consumeUTxO fp $
-      C.foldlC
-        ( \im (!(TxIn txId txIx), !txOut) ->
-            IntMap.alter (consTxOut txId txOut) (fromIntegral txIx) im
-        )
-        mempty
-  constructMassivUTxO . fromIntMap <$> traverse (\da -> withLoadMArray_ da quicksortKVMArray_) das
+    C.foldlC
+      (\im (!(TxIn txId txIx), !txOut) ->
+         IntMap.alter (consTxOut txId txOut) (fromIntegral txIx) im)
+      mempty
+  C.lift $
+    constructMassivUTxO . fromIntMap <$>
+    traverse (\da -> withLoadMArray_ da quicksortKVMArray_) das
+
+testMassivUTxO :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> UTxOs -> IO ()
+testMassivUTxO m utxo@UTxOs{..} =
+  Control.Monad.forM_ (Map.toList m) $ \(txIn@(TxIn txId txIx), txOut) -> do
+    -- case lookupSortedKVArray (fromIntegral txIx) utxoMap of
+    --   Nothing -> error $ "Could not find TxIx: " <> show txIx
+    --   Just v ->
+    --     case lookupSortedKVArray txId v of
+    --       Nothing -> error $ "Could not find TxId: " <> show txId
+    --       Just _ -> pure ()
+    case lookupUTxOs txIn utxo of
+      Nothing -> error $ "Could not find: " <> show txIn
+      Just txOut' ->
+        when (txOut' /= txOut) $
+        error $
+        unlines
+          ["Recovered txOut doesn match: ", show txOut', " /= ", show txOut]
+
 
 collectSharedKeys ::
   Vector B (Vector (KV S B) (KVPair (TxId C) TxOut')) ->
@@ -86,7 +111,9 @@ collectSharedKeys txOutVec =
       collectKeys !accVec =
         \case
           TxOut' addr _ -> extractKeyHashes accVec addr
+          TxOutMA' addr _ _ _ -> extractKeyHashes accVec addr
           TxOutDH' addr _ _ -> extractKeyHashes accVec addr
+          TxOutMADH' addr _ _ _ _ -> extractKeyHashes accVec addr
       collectHashes !a (KVArray _ vals) = A.foldlS collectKeys a vals
       vectorWithKeyHashes :: Vector S (Keys.KeyHash 'Shelley.Witness C)
       vectorWithKeyHashes = A.compute $ foldlS collectHashes A.empty txOutVec
@@ -102,14 +129,18 @@ constructMassivUTxO (KVArray txIxs txOutVec) =
   let !sharedKeyHashes =
         trace "done creating sharedKeyHashes" $ collectSharedKeys utxoNoSharing
       lookupKeyHashIx :: Shelley.KeyHash kr C -> Maybe Ix1
-      lookupKeyHashIx kh = lookupIxSortedKVArray (Keys.asWitness kh) sharedKeyHashes
-      !utxoWithSharing = KVArray txIxs $ A.compute $ A.map applySharing utxoNoSharing
+      lookupKeyHashIx kh =
+        lookupIxSortedKVArray (Keys.asWitness kh) sharedKeyHashes
+      !utxoWithSharing =
+        KVArray txIxs $ A.compute $ A.map applySharing utxoNoSharing
       applySharing (KVArray keys values) =
         let !values' = A.compute $ A.map applyTxOutSharing values
             applyTxOutSharing =
               \case
-                TxOut' addr cVal -> TxOut' (applyAddrSharing addr) cVal
-                TxOutDH' addr cVal mData -> TxOutDH' (applyAddrSharing addr) cVal mData
+                TxOut' addr ada -> TxOut' (applyAddrSharing addr) ada
+                TxOutMA' addr ada ma rep -> TxOutMA' (applyAddrSharing addr) ada ma rep
+                TxOutDH' addr ada dh -> TxOutDH' (applyAddrSharing addr) ada dh
+                TxOutMADH' addr ada ma rep dh -> TxOutMADH' (applyAddrSharing addr) ada ma rep dh
             applyStakeSharing =
               \case
                 StakeKeyHash skh
@@ -126,14 +157,24 @@ constructMassivUTxO (KVArray txIxs txOutVec) =
                 addr -> addr
          in KVArray keys values'
       !utxoNoSharing = A.compute $ A.map applyRestructure txOutVec
+      applyRestructure ::
+           Vector (KV S B) (KVPair (TxId C) (Alonzo.TxOut CurrentEra))
+        -> Vector (KV S B) (KVPair (TxId C) TxOut')
       applyRestructure (KVArray txIds txOuts) =
         let !txOuts' = A.compute $ A.map restructureTxOut txOuts
+            restructureTxOut :: Alonzo.TxOut CurrentEra -> TxOut'
             restructureTxOut =
               \case
-                Alonzo.TxOutCompact cAddr cVal ->
-                  TxOut' (restructureAddr cAddr) cVal
-                Alonzo.TxOutCompactDH cAddr cVal mData ->
-                  TxOutDH' (restructureAddr cAddr) cVal mData
+                Alonzo.TxOutCompact cAddr cVal
+                  | Mary.CompactValue (Mary.CompactValueAdaOnly ada) <- cVal ->
+                    TxOut' (restructureAddr cAddr) ada
+                  | Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep) <- cVal ->
+                    TxOutMA' (restructureAddr cAddr) ada ma rep
+                Alonzo.TxOutCompactDH cAddr cVal dh
+                  | Mary.CompactValue (Mary.CompactValueAdaOnly ada) <- cVal ->
+                    TxOutDH' (restructureAddr cAddr) ada dh
+                  | Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep) <- cVal ->
+                    TxOutMADH' (restructureAddr cAddr) ada ma rep dh
             restructureAddr cAddr =
               case decompactAddr cAddr of
                 AddrBootstrap _ -> AddrBoot' cAddr
@@ -169,14 +210,63 @@ data Addr'
   | AddrBoot' !(CompactAddr C)
 
 data TxOut'
-  = TxOut' !Addr' !(CompactForm (Mary.Value C))
-  | TxOutDH' !Addr' !(CompactForm (Mary.Value C)) !(DataHash C)
+  = TxOut' !Addr' !Word64
+  | TxOutMA' !Addr' !Word64 !Word32 !ShortByteString
+  | TxOutDH' !Addr' !Word64 !(DataHash C)
+  | TxOutMADH' !Addr' !Word64 !Word32 !ShortByteString !(DataHash C)
 
 data UTxOs = UTxOs
   { utxoMap :: !(Vector (KV P B) (KVPair Int (Vector (KV S B) (KVPair (TxId C) TxOut')))),
     -- | Set of all key hashes and their usage counter.
     utxoSharedKeyHashes :: !(Vector (KV S S) (KVPair (Keys.KeyHash 'Shelley.Witness C) Word32))
   }
+
+lookupUTxOs :: TxIn C -> UTxOs -> Maybe (Alonzo.TxOut CurrentEra)
+lookupUTxOs (TxIn txId txIx) UTxOs {..} = do
+  txOut' <-
+    lookupSortedKVArray txId =<< lookupSortedKVArray (fromIntegral txIx) utxoMap
+  let toStakeRef =
+        \case
+          StakeKeyIx ix -> StakeRefBase <$> lookupCredential ix
+          StakeKeyHash kh -> pure $ StakeRefBase $ KeyHashObj kh
+          StakeCredScript sh -> pure $ StakeRefBase $ ScriptHashObj sh
+          StakePtr ptr -> pure $ StakeRefPtr ptr
+          StakeNull -> pure StakeRefNull
+      lookupCredential :: Ix1 -> Maybe (Credential kr C)
+      lookupCredential khIx =
+        KeyHashObj . Keys.coerceKeyRole <$>
+        indexM (keysArray utxoSharedKeyHashes) khIx
+      toCompactAddr' =
+        \case
+          AddrKeyIx' ni ix stakeIx -> do
+            sr <- toStakeRef stakeIx
+            pc <- lookupCredential ix
+            pure $ compactAddr $ Addr ni pc sr
+          AddrKeyHash' ni kh stakeIx -> do
+            sr <- toStakeRef stakeIx
+            pure $ compactAddr $ Addr ni (KeyHashObj kh) sr
+          AddrScript' ni sh stakeIx -> do
+            sr <- toStakeRef stakeIx
+            pure $ compactAddr $ Addr ni (ScriptHashObj sh) sr
+          AddrBoot' bootAddr -> pure bootAddr
+  case txOut' of
+    TxOut' addr' ada -> do
+      addr <- toCompactAddr' addr'
+      let cv = Mary.CompactValue (Mary.CompactValueAdaOnly ada)
+      pure $ Alonzo.TxOutCompact addr cv
+    TxOutMA' addr' ada ma rep -> do
+      addr <- toCompactAddr' addr'
+      let cv = Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep)
+      pure $ Alonzo.TxOutCompact addr cv
+    TxOutDH' addr' ada dh -> do
+      addr <- toCompactAddr' addr'
+      let cv = Mary.CompactValue (Mary.CompactValueAdaOnly ada)
+      pure $ Alonzo.TxOutCompactDH addr cv dh
+    TxOutMADH' addr' ada ma rep dh -> do
+      addr <- toCompactAddr' addr'
+      let cv = Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep)
+      pure $ Alonzo.TxOutCompactDH addr cv dh
+
 
 printStats :: UTxOs -> IO ()
 printStats UTxOs {..} = do
@@ -213,6 +303,27 @@ fromIntMap = fromAscList . IntMap.toAscList
 
 fromAscList :: (Manifest vr v, Manifest kr k) => [(k, v)] -> Vector (KV kr vr) (KVPair k v)
 fromAscList = A.compute . A.smap (\(k, v) -> KVPair k v) . A.sfromList
+
+
+lookupIxSortedKVArray ::
+  (Manifest kr k, Ord k) => k -> Vector (KV kr vr) (KVPair k v) -> Maybe Ix1
+lookupIxSortedKVArray key (KVArray keys _) = go 0 (elemsCount keys)
+  where
+    go !l !u = do
+      guard (l < u)
+      let !i = ((u - l) `div` 2) + l
+      key' <- indexM keys i
+      case compare key key' of
+        LT -> go l i
+        GT -> go (i + 1) u
+        EQ -> Just i
+
+lookupSortedKVArray ::
+  (Manifest kr k, Manifest vr v, Ord k) => k -> Vector (KV kr vr) (KVPair k v) -> Maybe v
+lookupSortedKVArray key kv@(KVArray _ values) = do
+  i <- lookupIxSortedKVArray key kv
+  indexM values i
+
 
 data KV kr vr = KV !kr !vr
 
@@ -313,28 +424,7 @@ instance (Manifest kr k, Manifest vr v) => Manifest (KV kr vr) (KVPair k v) wher
     KVMArray <$> unsafeLinearGrow keys sz <*> unsafeLinearGrow vals sz
   {-# INLINE unsafeLinearGrow #-}
 
-lookupIxSortedKVArray ::
-  (Manifest kr k, Ord k) => k -> Vector (KV kr vr) (KVPair k v) -> Maybe Ix1
-lookupIxSortedKVArray key (KVArray keys _) = go 0 (elemsCount keys)
-  where
-    go !l !u = do
-      guard (False && l < u)
-      let !i = ((u - l) `div` 2) + l
-      key' <- indexM keys i
-      case compare key key' of
-        LT -> go l i
-        GT -> go (i + 1) u
-        EQ -> Just i
 
--- getIxSortedKVArray ::
---   (Manifest kr a, Ord a, Show a) =>
---   a ->
---   Vector (KV kr vr) (KVPair a v) ->
---   Ix1
--- getIxSortedKVArray key arr =
---   case lookupIxSortedKVArray key arr of
---     Nothing -> error $ "Cannot find index for key: " ++ show key
---     Just i -> i
 
 -- Using lists, seems to be more memory hungry
 -- collectSharedKeys ::

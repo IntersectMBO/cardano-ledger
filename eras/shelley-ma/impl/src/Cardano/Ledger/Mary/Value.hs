@@ -14,6 +14,8 @@ module Cardano.Ledger.Mary.Value
   ( PolicyID (..),
     AssetName (..),
     Value (..),
+    CompactValue (..),
+    CompactForm (..),
     insert,
     lookup,
     policies,
