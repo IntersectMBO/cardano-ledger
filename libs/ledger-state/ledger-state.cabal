@@ -72,3 +72,4 @@ executable ledger-state
                        -threaded
   build-depends:       optparse-applicative
                      , ledger-state
+                     , deepseq

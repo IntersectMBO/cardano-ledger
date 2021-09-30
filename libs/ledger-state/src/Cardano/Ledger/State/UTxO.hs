@@ -1,10 +1,11 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fno-warn-orphans -funbox-strict-fields #-}
 
 module Cardano.Ledger.State.UTxO where
 
@@ -310,7 +311,7 @@ loadUTxOn :: FilePath -> IO (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut Curre
 loadUTxOn fp =
   foldlUTxO fp nestedInsert mempty
   where
-    nestedInsert m (TxIn txId txIx, v) =
+    nestedInsert !m (TxIn txId txIx, !v) =
       Map.insertWith (<>) txId (IntMap.singleton (fromIntegral txIx) v) m
 
 totalADA :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> Mary.Value C
