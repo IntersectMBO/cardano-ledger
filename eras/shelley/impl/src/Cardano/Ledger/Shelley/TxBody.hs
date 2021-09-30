@@ -492,7 +492,7 @@ viewTxIn (TxInCompact32 a b c d i) = (txid, fromIntegral i)
 instance Show (TxIn crypto) where
   showsPrec d (viewTxIn -> (txid, ix)) =
     showParen (d > app_prec) $
-      showString "TxId "
+      showString "TxIn "
         . showsPrec (app_prec + 1) txid
         . showString " "
         . showsPrec (app_prec + 1) ix
