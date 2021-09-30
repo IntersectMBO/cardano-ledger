@@ -40,20 +40,45 @@ main = do
               (long "help" <> short 'h' <> help "Display this message.")
         )
         (header "ledger-state - Tool for analyzing ledger state")
-  print opts
-  --ref <- newIORef Nothing
   forM_ (optsUtxoJsonFile opts) $ \fp -> do
-    utxo <- loadMassivUTxO fp
-    utxo `seq` putStrLn "Loaded"
-    printStats utxo
-    performGC
+    _ <- observeMemoryOriginalMap fp
+    pure ()
     -- getChar
-    --writeIORef ref $ Just utxo
-    getChar
-    ---collectStats fp
-    -- -- putStrLn $ "Counted: " ++ show (length utxo) ++ " entries"
-    --putStrLn $ "Total ADA: " ++ show (totalADA utxo) ++ " entries"
-    -- collectStats fp
+    -- ---collectStats fp
+    -- -- -- putStrLn $ "Counted: " ++ show (length utxo) ++ " entries"
+    -- --putStrLn $ "Total ADA: " ++ show (totalADA utxo) ++ " entries"
+    -- -- collectStats fp
+
+observeMemoryOriginalMap fp = do
+  ref <- newIORef Nothing
+  utxo <- loadUTxO fp
+  utxo `seq` putStrLn "Loaded"
+  performGC
+  _ <- getChar
+  writeIORef ref $ Just utxo -- ensure utxo doesn't GCed
+  pure ref
+
+
+observeMemory :: FilePath -> IO (IORef (Maybe UTxOs))
+observeMemory fp = do
+  ref <- newIORef Nothing
+  utxo <- loadMassivUTxO fp
+  utxo `seq` putStrLn "Loaded"
+  printStats utxo
+  performGC
+  _ <- getChar
+  writeIORef ref $ Just utxo -- ensure utxo doesn't GCed
+  pure ref
+
+testRoundTrip :: [Char] -> IO ()
+testRoundTrip fp = do
+  putStrLn $ "Loading file: " <> fp
+  utxoOriginalMap <- loadUTxO fp
+  putStrLn "Loaded"
+  utxo <- utxoFromMap utxoOriginalMap
+  putStrLn "Converted"
+  testMassivUTxO utxoOriginalMap utxo
+  putStrLn "Tested"
 
 
 -- $ cabal build ledger-state && cabal exec -- ledger-state --utxo-json="/path/to/mainnet-utxo-2021-09-15.json" +RTS -s
