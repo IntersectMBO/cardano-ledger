@@ -14,6 +14,7 @@
 module Cardano.Ledger.State.Massiv where
 
 import Control.Monad
+import Control.DeepSeq
 import qualified Cardano.Address.Style.Byron as AB
 import qualified Cardano.Address.Style.Icarus as AI
 import qualified Cardano.Address.Style.Shelley as AS
@@ -78,8 +79,8 @@ sinkMassivUTxO = do
     traverse (\da -> withLoadMArray_ da quicksortKVMArray_) das
 
 testMassivUTxO :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> UTxOs -> IO ()
-testMassivUTxO m utxo@UTxOs{..} =
-  Control.Monad.forM_ (Map.toList m) $ \(txIn@(TxIn txId txIx), txOut) -> do
+testMassivUTxO m utxo@UTxOs{} =
+  Control.Monad.forM_ (Map.toList m) $ \(txIn@(TxIn _txId _txIx), txOut) -> do
     -- case lookupSortedKVArray (fromIntegral txIx) utxoMap of
     --   Nothing -> error $ "Could not find TxIx: " <> show txIx
     --   Just v ->
@@ -203,11 +204,26 @@ data StakeIx
   | StakePtr !Ptr
   | StakeNull
 
+instance NFData StakeIx where
+  rnf = \case
+    StakeKeyIx _ -> ()
+    StakeKeyHash kh -> rnf kh
+    StakeCredScript sh -> rnf sh
+    StakePtr ptr -> rnf ptr
+    StakeNull -> ()
+
 data Addr'
   = AddrKeyIx' !Network !Ix1 !StakeIx
   | AddrKeyHash' !Network !(Keys.KeyHash 'Shelley.Payment C) !StakeIx
   | AddrScript' !Network !(Shelley.ScriptHash C) !StakeIx
   | AddrBoot' !(CompactAddr C)
+
+instance NFData Addr' where
+  rnf = \case
+    AddrKeyIx' !_ !_ si -> rnf si
+    AddrKeyHash' !_ !kh si -> kh `deepseq` rnf si
+    AddrScript' !_ !sh  si -> sh `deepseq` rnf si
+    AddrBoot' !_ -> ()
 
 data TxOut'
   = TxOut' !Addr' !Word64
@@ -215,8 +231,16 @@ data TxOut'
   | TxOutDH' !Addr' !Word64 !(DataHash C)
   | TxOutMADH' !Addr' !Word64 !Word32 !ShortByteString !(DataHash C)
 
+instance NFData TxOut' where
+  rnf = \case
+    TxOut' a !_ -> rnf a
+    TxOutMA' a !_ !_ !_ -> rnf a
+    TxOutDH' a !_ dh -> a `deepseq` rnf dh
+    TxOutMADH' a !_ !_ !_ dh -> a `deepseq` rnf dh
+
+
 data UTxOs = UTxOs
-  { utxoMap :: !(Vector (KV P B) (KVPair Int (Vector (KV S B) (KVPair (TxId C) TxOut')))),
+  { utxoMap :: !(Vector (KV P BN) (KVPair Int (Vector (KV S BN) (KVPair (TxId C) TxOut')))),
     -- | Set of all key hashes and their usage counter.
     utxoSharedKeyHashes :: !(Vector (KV S S) (KVPair (Keys.KeyHash 'Shelley.Witness C) Word32))
   }
@@ -284,15 +308,16 @@ printStats UTxOs {..} = do
       ]
   A.mapM_ printUTxO $ utxoMap
   where
-    printUTxO :: KVPair Int (Vector (KV S B) (KVPair (TxId C) TxOut')) -> IO ()
+    printUTxO :: KVPair Int (Vector (KV S BN) (KVPair (TxId C) TxOut')) -> IO ()
     printUTxO (KVPair txIx v) =
       putStrLn $
       "<TxIx: " <> show txIx <> "> - TxOuts: " <> show (A.elemsCount v)
 
 quicksortKVMArray_ ::
-  Scheduler RealWorld () ->
-  MVector RealWorld (KV S B) (KVPair (TxId C) (Alonzo.TxOut CurrentEra)) ->
-  IO ()
+     (Manifest kr k, Manifest kv v, Ord k)
+  => Scheduler RealWorld ()
+  -> MVector RealWorld (KV kr kv) (KVPair k v)
+  -> IO ()
 quicksortKVMArray_ = quicksortByM_ (\(KVPair k1 _) (KVPair k2 _) -> pure (compare k1 k2))
 
 fromMap :: (Manifest vr v, Manifest kr k) => Map.Map k v -> Vector (KV kr vr) (KVPair k v)
@@ -341,6 +366,10 @@ data instance Array (KV kr vr) ix e = KVArray
   { keysArray :: !(Array kr ix (KVKey e)),
     valsArray :: !(Array vr ix (KVValue e))
   }
+
+instance (NFData (Array kr ix k), (NFData (Array kv ix v))) =>
+         NFData (Array (KV kr kv) ix (KVPair k v)) where
+  rnf KVArray {..} = keysArray `deepseq` valsArray `deepseq` ()
 
 instance (Size kr, Size vr) => Size (KV kr vr) where
   size (KVArray k _) = size k

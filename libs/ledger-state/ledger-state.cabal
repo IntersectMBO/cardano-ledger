@@ -38,6 +38,7 @@ common project-config
                     , conduit
                     , conduit-extra
                     , containers
+                    , deepseq
                     , persistent
                     , persistent-sqlite
                     , strict-containers
