@@ -41,14 +41,16 @@ main = do
         )
         (header "ledger-state - Tool for analyzing ledger state")
   print opts
-  ref <- newIORef Nothing
+  --ref <- newIORef Nothing
   forM_ (optsUtxoJsonFile opts) $ \fp -> do
-    utxo <- loadMassivUTxOs fp
-    putStrLn "Loaded"
+    utxo <- loadMassivUTxO fp
+    utxo `seq` putStrLn "Loaded"
+    printStats utxo
     performGC
+    -- getChar
+    --writeIORef ref $ Just utxo
     getChar
-    writeIORef ref $ Just utxo
-    -- collectStats fp
+    ---collectStats fp
     -- -- putStrLn $ "Counted: " ++ show (length utxo) ++ " entries"
     --putStrLn $ "Total ADA: " ++ show (totalADA utxo) ++ " entries"
     -- collectStats fp

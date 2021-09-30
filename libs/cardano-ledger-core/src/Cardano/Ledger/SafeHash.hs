@@ -37,6 +37,7 @@ import Data.Foldable (fold)
 import Data.MemoBytes (MemoBytes (..))
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))
+import Foreign.Storable (Storable)
 
 -- ==========================================================
 
@@ -50,6 +51,8 @@ import NoThunks.Class (NoThunks (..))
 --     bytes.
 newtype SafeHash crypto index = SafeHash (Hash.Hash (CC.HASH crypto) index)
   deriving (Show, Eq, Ord, NoThunks, NFData)
+
+deriving instance Hash.HashAlgorithm (CC.HASH crypto) => Storable (SafeHash crypto index)
 
 deriving newtype instance
   Hash.HashAlgorithm (CC.HASH crypto) =>

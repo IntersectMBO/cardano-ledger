@@ -9,6 +9,7 @@
 module Cardano.Ledger.State.UTxO where
 
 --import Cardano.Prelude (heapWords)
+import Numeric.Natural
 import qualified Cardano.Address as A
 import qualified Cardano.Address.Style.Byron as AB
 import qualified Cardano.Address.Style.Icarus as AI
@@ -320,29 +321,26 @@ collectStats fp =
   foldlUTxO fp collect (emptyUniques, initStats) >>= uncurry reportStats
   where
     collect ::
-      (UTxOUniques, UTxOStats) ->
-      (TxIn C, Alonzo.TxOut CurrentEra) ->
-      (UTxOUniques, UTxOStats)
-    collect (u@UTxOUniques {..}, s@UTxOStats {..}) (TxIn txId _txIx, Alonzo.TxOut addr _val _datum) =
-      let u' = u {txIds = Set.insert txId txIds}
+         (UTxOUniques, UTxOStats)
+      -> (TxIn C, Alonzo.TxOut CurrentEra)
+      -> (UTxOUniques, UTxOStats)
+    collect (u@UTxOUniques {..}, s@UTxOStats {..}) (TxIn txId txIx, Alonzo.TxOut addr _val _datum) =
+      let u' = u {txIds = Set.insert txId txIds, txIxs = Set.insert txIx txIxs}
           s' = s {statsTotalTxOuts = statsTotalTxOuts + 1}
           updateStakingStats sr (su, ss) =
             case sr of
               StakeRefNull ->
                 (su, ss {stateTotalStakeNulls = stateTotalStakeNulls + 1})
               StakeRefPtr ptr ->
-                ( su {stakePtrs = Set.insert ptr stakePtrs},
-                  ss {statsTotalStakePtrs = statsTotalStakePtrs + 1}
-                )
+                ( su {stakePtrs = Set.insert ptr stakePtrs}
+                , ss {statsTotalStakePtrs = statsTotalStakePtrs + 1})
               StakeRefBase a
                 | KeyHashObj kh <- a ->
-                  ( su {stakeKeys = Set.insert kh stakeKeys},
-                    ss {statsTotalStakeKeys = statsTotalStakeKeys + 1}
-                  )
+                  ( su {stakeKeys = Set.insert kh stakeKeys}
+                  , ss {statsTotalStakeKeys = statsTotalStakeKeys + 1})
                 | ScriptHashObj sh <- a ->
-                  ( su {stakeScripts = Set.insert sh stakeScripts},
-                    ss {statsTotalStakeScripts = statsTotalStakeScripts + 1}
-                  )
+                  ( su {stakeScripts = Set.insert sh stakeScripts}
+                  , ss {statsTotalStakeScripts = statsTotalStakeScripts + 1})
        in case addr of
             AddrBootstrap _ ->
               (u', s' {statsByronTxOuts = statsByronTxOuts + 1})
@@ -350,15 +348,13 @@ collectStats fp =
               | KeyHashObj kh <- pc ->
                 updateStakingStats
                   sr
-                  ( u' {paymentKeys = Set.insert kh paymentKeys},
-                    s' {statsTotalPaymentKeys = statsTotalPaymentKeys + 1}
-                  )
+                  ( u' {paymentKeys = Set.insert kh paymentKeys}
+                  , s' {statsTotalPaymentKeys = statsTotalPaymentKeys + 1})
               | ScriptHashObj kh <- pc ->
                 updateStakingStats
                   sr
-                  ( u' {paymentScripts = Set.insert kh paymentScripts},
-                    s' {statsTotalPaymentScripts = statsTotalPaymentScripts + 1}
-                  )
+                  ( u' {paymentScripts = Set.insert kh paymentScripts}
+                  , s' {statsTotalPaymentScripts = statsTotalPaymentScripts + 1})
 
 reportStats :: UTxOUniques -> UTxOStats -> IO ()
 reportStats UTxOUniques {..} UTxOStats {..} = do
@@ -373,6 +369,7 @@ reportStats UTxOUniques {..} UTxOStats {..} = do
       [ "Total TxOuts = " <> show statsTotalTxOuts,
         "Byron TxOuts = " <> showPercent statsByronTxOuts statsTotalTxOuts,
         "Unique TxIds = " <> showPercent (Set.size txIds) statsTotalTxOuts,
+        "Unique TxIxs = " <> showPercent (Set.size txIxs) statsTotalTxOuts,
         "Shelley Total Payment Keys = " <> show statsTotalPaymentKeys,
         "Shelley Unique Payment Keys = " <> showPercent (Set.size paymentKeys) statsTotalPaymentKeys,
         "Shelley Total Payment Scripts = " <> show statsTotalPaymentScripts,
@@ -394,11 +391,12 @@ data UTxOUniques = UTxOUniques
     stakeScripts :: !(Set.Set (Shelley.ScriptHash C)),
     stakePtrs :: !(Set.Set Shelley.Ptr),
     scripts :: !(Set.Set (Shelley.ScriptHash C)),
-    txIds :: !(Set.Set (TxId C))
+    txIds :: !(Set.Set (TxId C)),
+    txIxs :: !(Set.Set Natural)
   }
 
 emptyUniques :: UTxOUniques
-emptyUniques = UTxOUniques mempty mempty mempty mempty mempty mempty mempty
+emptyUniques = UTxOUniques mempty mempty mempty mempty mempty mempty mempty mempty
 
 data UTxOStats = UTxOStats
   { statsTotalTxOuts :: !Int,
