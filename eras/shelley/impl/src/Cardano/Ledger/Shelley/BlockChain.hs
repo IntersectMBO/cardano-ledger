@@ -250,27 +250,33 @@ bbHash (TxSeq' _ bodies wits md) =
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
-data Block era
-  = Block' !(TP.BHeader (Crypto era)) !(Era.TxSeq era) BSL.ByteString
+data Block h era
+  = Block' !(h (Crypto era)) !(Era.TxSeq era) BSL.ByteString
   deriving (Generic)
 
 deriving stock instance
-  (Era era, Show (Era.TxSeq era)) =>
-  Show (Block era)
+  (Era era, Show (Era.TxSeq era), Show (h (Crypto era))) =>
+  Show (Block h era)
 
 deriving stock instance
-  (Era era, Eq (Era.TxSeq era)) =>
-  Eq (Block era)
+  (Era era, Eq (Era.TxSeq era), Eq (h (Crypto era))) =>
+  Eq (Block h era)
 
 deriving anyclass instance
-  (Era era, NoThunks (Era.TxSeq era)) =>
-  NoThunks (Block era)
+  ( Era era,
+    NoThunks (Era.TxSeq era),
+    NoThunks (h (Crypto era))
+  ) =>
+  NoThunks (Block h era)
 
 pattern Block ::
-  (Era era, ToCBORGroup (Era.TxSeq era)) =>
-  TP.BHeader (Crypto era) ->
+  ( Era era,
+    ToCBORGroup (Era.TxSeq era),
+    ToCBOR (h (Crypto era))
+  ) =>
+  h (Crypto era) ->
   Era.TxSeq era ->
-  Block era
+  Block h era
 pattern Block h txns <-
   Block' h txns _
   where
@@ -293,8 +299,8 @@ constructMetadata ::
 constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
 
 instance
-  Era era =>
-  ToCBOR (Block era)
+  (Era era, Typeable h) =>
+  ToCBOR (Block h era)
   where
   toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
 
@@ -352,13 +358,15 @@ instance
   fromCBOR = txSeqDecoder False
 
 instance
-  forall era.
+  forall h era.
   ( BlockAnn era,
     ValidateScript era,
     Era.SupportsSegWit era,
-    FromCBOR (Annotator (Era.TxSeq era))
+    FromCBOR (Annotator (Era.TxSeq era)),
+    FromCBOR (Annotator (h (Crypto era))),
+    Typeable h
   ) =>
-  FromCBOR (Annotator (Block era))
+  FromCBOR (Annotator (Block h era))
   where
   fromCBOR = annotatorSlice $
     decodeRecordNamed "Block" (const blockSize) $ do
@@ -373,35 +381,37 @@ instance
 -- | A block in which we do not validate the matched encoding of parts of the
 --   segwit. TODO This is purely a test concern, and as such should be moved out
 --   of the library.
-newtype LaxBlock era = LaxBlock (Block era)
+newtype LaxBlock h era = LaxBlock (Block h era)
 
 blockDecoder ::
   ( BlockAnn era,
-    ValidateScript era,
-    Era.TxSeq era ~ TxSeq era
+    Era.TxSeq era ~ TxSeq era,
+    FromCBOR (Annotator (h (Crypto era)))
   ) =>
   Bool ->
-  forall s. Decoder s (Annotator (Block era))
+  forall s. Decoder s (Annotator (Block h era))
 blockDecoder lax = annotatorSlice $
   decodeRecordNamed "Block" (const 4) $ do
     header <- fromCBOR
     txns <- txSeqDecoder lax
     pure $ Block' <$> header <*> txns
 
-instance (Era era, Typeable era) => ToCBOR (LaxBlock era) where
+instance (Era era, Typeable era, Typeable h) => ToCBOR (LaxBlock h era) where
   toCBOR (LaxBlock x) = toCBOR x
 
 deriving stock instance
-  (Era era, Show (Era.TxSeq era)) =>
-  Show (LaxBlock era)
+  (Era era, Show (Era.TxSeq era), Show (h (Crypto era))) =>
+  Show (LaxBlock h era)
 
 instance
   ( Era era,
+    Typeable h,
     BlockAnn era,
     ValidateScript era,
-    Era.TxSeq era ~ TxSeq era
+    Era.TxSeq era ~ TxSeq era,
+    FromCBOR (Annotator (h (Crypto era)))
   ) =>
-  FromCBOR (Annotator (LaxBlock era))
+  FromCBOR (Annotator (LaxBlock h era))
   where
   fromCBOR = fmap LaxBlock <$> blockDecoder True
 
@@ -413,11 +423,11 @@ slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
 
 bheader ::
-  Block era ->
-  TP.BHeader (Crypto era)
+  Block h era ->
+  h (Crypto era)
 bheader (Block' bh _ _) = bh
 
-bbody :: Block era -> Era.TxSeq era
+bbody :: Block h era -> Era.TxSeq era
 bbody (Block' _ txs _) = txs
 
 incrBlocks ::
@@ -446,7 +456,7 @@ neededTxInsForBlock ::
   ( Era era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
-  Block era ->
+  Block h era ->
   Set (TxIn (Crypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where

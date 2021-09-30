@@ -18,6 +18,7 @@ import Cardano.Ledger.Slot
   ( BlockNo (..),
     SlotNo (..),
   )
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
@@ -54,7 +55,7 @@ blockEx1 ::
     ShelleyTest era,
     ExMock (Crypto era)
   ) =>
-  Block era
+  Block BHeader era
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -95,5 +96,5 @@ expectedStEx1 =
 --
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
-exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era), PreAlonzo era) => CHAINExample era
+exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era), PreAlonzo era) => CHAINExample BHeader era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

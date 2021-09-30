@@ -63,6 +63,7 @@ import Cardano.Ledger.Shelley.Tx (TxId (TxId))
 import Cardano.Ledger.Shelley.TxBody (DCert, TxIn, Wdrl, WitVKey)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
 import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Slotting.Slot (SlotNo)
 import Control.State.Transition.Extended (STS (..))
 import Data.Coerce (coerce)
@@ -137,7 +138,7 @@ type MinCHAIN_STS era =
     BaseM (CHAIN era) ~ ShelleyBase,
     Environment (CHAIN era) ~ (),
     State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block era
+    Signal (CHAIN era) ~ Block BHeader era
   )
 
 -- | Minimal requirements on the UTxO instances

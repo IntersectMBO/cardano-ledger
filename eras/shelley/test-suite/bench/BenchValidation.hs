@@ -68,7 +68,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 
-data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
+data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block BHeader era)
 
 sizes :: ValidateInput era -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))

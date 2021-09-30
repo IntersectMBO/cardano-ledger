@@ -59,7 +59,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos.BHeader (bhHash)
+import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
@@ -179,7 +179,7 @@ blockEx1' ::
   (ExMock (Crypto (ShelleyEra c))) =>
   [KeyPair 'Witness (Crypto (ShelleyEra c))] ->
   MIRPot ->
-  Block (ShelleyEra c)
+  Block BHeader (ShelleyEra c)
 blockEx1' txwits pot =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -198,7 +198,7 @@ blockEx1 ::
   forall c.
   (ExMock (Crypto (ShelleyEra c))) =>
   MIRPot ->
-  Block (ShelleyEra c)
+  Block BHeader (ShelleyEra c)
 blockEx1 = blockEx1' sufficientMIRWits
 
 expectedStEx1' ::
@@ -226,7 +226,7 @@ expectedStEx1 = expectedStEx1' sufficientMIRWits
 -- === Block 1, Slot 10, Epoch 0, Successful MIR Reserves Example
 --
 -- In the first block, submit a MIR cert drawing from the reserves.
-mir1 :: (ExMock (Crypto (ShelleyEra c))) => MIRPot -> CHAINExample (ShelleyEra c)
+mir1 :: (ExMock (Crypto (ShelleyEra c))) => MIRPot -> CHAINExample BHeader (ShelleyEra c)
 mir1 pot =
   CHAINExample
     (initStMIR (Coin 1000))
@@ -241,7 +241,7 @@ mirFailWits ::
   ( ExMock (Crypto (ShelleyEra c))
   ) =>
   MIRPot ->
-  CHAINExample (ShelleyEra c)
+  CHAINExample BHeader (ShelleyEra c)
 mirFailWits pot =
   CHAINExample
     (initStMIR (Coin 1000))
@@ -269,7 +269,7 @@ mirFailFunds ::
   Coin ->
   Coin ->
   Coin ->
-  CHAINExample (ShelleyEra c)
+  CHAINExample BHeader (ShelleyEra c)
 mirFailFunds pot treasury llNeeded llReceived =
   CHAINExample
     (initStMIR treasury)
@@ -301,10 +301,10 @@ blockEx2 ::
   forall c.
   (ExMock (Crypto (ShelleyEra c))) =>
   MIRPot ->
-  Block (ShelleyEra c)
+  Block BHeader (ShelleyEra c)
 blockEx2 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) (blockEx1 pot))
+    (bhHash $ bheader @BHeader @(ShelleyEra c) (blockEx1 pot))
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 50)
     []
     (SlotNo 50)
@@ -340,7 +340,7 @@ expectedStEx2 pot =
 mir2 ::
   (ExMock (Crypto (ShelleyEra c))) =>
   MIRPot ->
-  CHAINExample (ShelleyEra c)
+  CHAINExample BHeader (ShelleyEra c)
 mir2 pot =
   CHAINExample
     (expectedStEx1 pot)
@@ -362,10 +362,10 @@ blockEx3 ::
   forall c.
   (ExMock (Crypto (ShelleyEra c))) =>
   MIRPot ->
-  Block (ShelleyEra c)
+  Block BHeader (ShelleyEra c)
 blockEx3 pot =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) (blockEx2 pot))
+    (bhHash $ bheader @BHeader @(ShelleyEra c) (blockEx2 pot))
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110)
     []
     (SlotNo 110)
@@ -392,7 +392,7 @@ expectedStEx3 pot =
 -- === Block 3, Slot 110, Epoch 1
 --
 -- Submit an empty block in the next epoch to apply the MIR rewards.
-mir3 :: (ExMock (Crypto (ShelleyEra c))) => MIRPot -> CHAINExample (ShelleyEra c)
+mir3 :: (ExMock (Crypto (ShelleyEra c))) => MIRPot -> CHAINExample BHeader (ShelleyEra c)
 mir3 pot = CHAINExample (expectedStEx2 pot) (blockEx3 pot) (Right $ expectedStEx3 pot)
 
 --

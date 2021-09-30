@@ -91,7 +91,7 @@ import Cardano.Protocol.TPraos
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
-import Cardano.Protocol.TPraos.BHeader (bhHash, hashHeaderToNonce)
+import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default.Class (def)
 import Data.Foldable (fold)
@@ -224,7 +224,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. (HasCallStack, ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx1 :: forall c. (HasCallStack, ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -259,7 +259,7 @@ expectedStEx1 =
 -- all register stake credentials, and Alice registers a stake pool.
 -- Additionally, a MIR certificate is issued to draw from the reserves
 -- and give Carl and Daria (who is unregistered) rewards.
-poolLifetime1 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime1 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime1 = CHAINExample initStPoolLifetime blockEx1 (Right expectedStEx1)
 
 --
@@ -313,10 +313,10 @@ txEx2 =
       }
     SNothing
 
-blockEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx1)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx1)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 90)
     [txEx2]
     (SlotNo 90)
@@ -372,7 +372,7 @@ expectedStEx2 =
 -- === Block 2, Slot 90, Epoch 0
 --
 -- In the second block Alice and Bob both delegation to Alice's Pool.
-poolLifetime2 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime2 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
@@ -382,10 +382,10 @@ poolLifetime2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 epoch1Nonce :: forall c. (ExMock (Crypto (ShelleyEra c))) => Nonce
 epoch1Nonce = chainCandidateNonce (expectedStEx2 @c)
 
-blockEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx2)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx2)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110)
     []
     (SlotNo 110)
@@ -429,7 +429,7 @@ expectedStEx3 =
 --
 -- In the third block, an empty block in a new epoch, the first snapshot is created.
 -- The rewards accounts from the MIR certificate in block 1 are now increased.
-poolLifetime3 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime3 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
@@ -469,10 +469,10 @@ txEx4 =
       }
     SNothing
 
-blockEx4 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx4 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx3)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx3)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 190)
     [txEx4]
     (SlotNo 190)
@@ -515,7 +515,7 @@ expectedStEx4 =
 -- We process a block late enough in the epoch in order to create a second reward update,
 -- preparing the way for the first non-empty pool distribution in this running example.
 -- Additionally, in order to have the stake distribution change, Carl delegates his stake.
-poolLifetime4 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime4 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 epoch2Nonce :: forall c. (ExMock (Crypto (ShelleyEra c))) => Nonce
@@ -527,10 +527,10 @@ epoch2Nonce =
 -- Block 5, Slot 220, Epoch 2
 --
 
-blockEx5 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx5 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx5 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx4)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx4)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 220)
     []
     (SlotNo 220)
@@ -586,17 +586,17 @@ expectedStEx5 =
 --
 -- Create the first non-empty pool distribution
 -- by creating a block in the third epoch of this running example.
-poolLifetime5 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime5 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 
 --
 -- Block 6, Slot 295, Epoch 2
 --
 
-blockEx6 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx6 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx6 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx5)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx5)
     Cast.alicePoolKeys
     []
     (SlotNo 295) -- odd slots open for decentralization
@@ -633,7 +633,7 @@ expectedStEx6 =
 -- === Block 6, Slot 295, Epoch 2
 --
 -- Create a decentralized Praos block (ie one not in the overlay schedule)
-poolLifetime6 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime6 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime6 = CHAINExample expectedStEx5 blockEx6 (Right expectedStEx6)
 
 --
@@ -645,10 +645,10 @@ epoch3Nonce =
   chainCandidateNonce (expectedStEx6 @c)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx4 @c))
 
-blockEx7 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx7 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx7 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx6)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx6)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 310)
     []
     (SlotNo 310)
@@ -674,17 +674,17 @@ expectedStEx7 =
 --
 -- Create an empty block in the next epoch
 -- to prepare the way for the first non-trivial reward update
-poolLifetime7 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime7 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 --
 -- Block 8, Slot 390, Epoch 3
 --
 
-blockEx8 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx8 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx8 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx7)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx7)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 390)
     []
     (SlotNo 390)
@@ -767,7 +767,7 @@ expectedStEx8 =
 -- === Block 8, Slot 390, Epoch 3
 --
 -- Create the first non-trivial reward update.
-poolLifetime8 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime8 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 
 rewardInfoEx8 :: RP.RewardProvenance C_Crypto
@@ -842,10 +842,10 @@ epoch4Nonce =
   chainCandidateNonce (expectedStEx8 @c)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx6 @c))
 
-blockEx9 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx9 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx9 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx8)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx8)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 410)
     []
     (SlotNo 410)
@@ -882,7 +882,7 @@ expectedStEx9 =
 -- === Block 9, Slot 410, Epoch 4
 --
 -- Apply the first non-trivial reward update.
-poolLifetime9 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime9 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime9 = CHAINExample expectedStEx8 blockEx9 (Right expectedStEx9)
 
 --
@@ -921,10 +921,10 @@ txEx10 =
       }
     SNothing
 
-blockEx10 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx10 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx10 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx9)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx9)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 420)
     [txEx10]
     (SlotNo 420)
@@ -948,7 +948,7 @@ expectedStEx10 =
 -- === Block 10, Slot 420, Epoch 4
 --
 -- Drain Bob's reward account and de-register Bob's stake key.
-poolLifetime10 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime10 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime10 = CHAINExample expectedStEx9 blockEx10 (Right expectedStEx10)
 
 --
@@ -990,10 +990,10 @@ txEx11 =
       }
     SNothing
 
-blockEx11 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx11 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx11 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx10)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx10)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 490)
     [txEx11]
     (SlotNo 490)
@@ -1051,7 +1051,7 @@ expectedStEx11 =
 -- === Block 11, Slot 490, Epoch 4
 --
 -- Stage the retirement of Alice's stake pool.
-poolLifetime11 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime11 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime11 = CHAINExample expectedStEx10 blockEx11 (Right expectedStEx11)
 
 --
@@ -1063,10 +1063,10 @@ epoch5Nonce =
   chainCandidateNonce (expectedStEx11 @c)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx8 @c))
 
-blockEx12 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (ShelleyEra c)
+blockEx12 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
 blockEx12 =
   mkBlockFakeVRF
-    (bhHash $ bheader @(ShelleyEra c) blockEx11)
+    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx11)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 510)
     []
     (SlotNo 510)
@@ -1108,7 +1108,7 @@ expectedStEx12 =
 -- === Block 12, Slot 510, Epoch 5
 --
 -- Reap Alice's stake pool.
-poolLifetime12 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (ShelleyEra c)
+poolLifetime12 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
 poolLifetime12 = CHAINExample expectedStEx11 blockEx12 (Right expectedStEx12)
 
 --

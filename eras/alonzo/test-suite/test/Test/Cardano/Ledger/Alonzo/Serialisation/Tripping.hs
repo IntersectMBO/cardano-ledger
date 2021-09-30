@@ -19,6 +19,7 @@ import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.Shelley.BlockChain (Block)
 import Cardano.Ledger.Shelley.Metadata (Metadata)
 import qualified Cardano.Ledger.Shelley.Tx as LTX
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -99,5 +100,5 @@ tests =
       testProperty "alonzo/Tx" $
         trippingAnn @(LTX.Tx (AlonzoEra C_Crypto)),
       testProperty "alonzo/Block" $
-        trippingAnn @(Block (AlonzoEra C_Crypto))
+        trippingAnn @(Block BHeader (AlonzoEra C_Crypto))
     ]

@@ -80,7 +80,8 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Protocol.TPraos (PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader
-  ( LastAppliedBlock (..),
+  ( BHeader,
+    LastAppliedBlock (..),
     bhHash,
     bhbody,
     bheaderBlockNo,
@@ -263,7 +264,7 @@ instance
 
   type
     Signal (CHAIN era) =
-      Block era
+      Block BHeader era
 
   type Environment (CHAIN era) = ()
   type BaseM (CHAIN era) = ShelleyBase

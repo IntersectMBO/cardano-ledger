@@ -57,7 +57,8 @@ import Cardano.Ledger.Shelley.PParams as PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (TxIn, Wdrl (..))
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
 import Cardano.Protocol.TPraos.BHeader
-  ( bhbody,
+  ( BHeader,
+    bhbody,
     bheaderSlotNo,
   )
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -136,7 +137,7 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block era -> [Core.Tx era]
+  let blockTxs :: Block BHeader era -> [Core.Tx era]
       blockTxs (Block' _ txSeq _) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
@@ -416,7 +417,7 @@ onlyValidChainSignalsAreGenerated =
     genesisChainSt = Just $ mkGenesisChainState (genEnv p)
 
 -- | Counts the epochs spanned by this trace
-epochsInTrace :: forall era. Era era => [Block era] -> Int
+epochsInTrace :: forall era. Era era => [Block BHeader era] -> Int
 epochsInTrace [] = 0
 epochsInTrace bs =
   fromIntegral $ toEpoch - fromEpoch + 1

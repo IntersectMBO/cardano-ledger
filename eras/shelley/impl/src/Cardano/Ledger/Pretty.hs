@@ -54,6 +54,7 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Era as E (Crypto)
 import qualified Cardano.Ledger.Era as Era (TxSeq)
 import Cardano.Ledger.Keys
   ( GKeys (..),
@@ -436,11 +437,11 @@ ppBHeader (BHeader bh sig) =
       ("Sig", viaShow sig)
     ]
 
-ppBlock :: (Era era, PrettyA (Era.TxSeq era)) => Block era -> PDoc
+ppBlock :: (PrettyA (Era.TxSeq era), PrettyA (h (E.Crypto era))) => Block h era -> PDoc
 ppBlock (Block' bh seqx _) =
   ppRecord
     "Block"
-    [ ("Header", ppBHeader bh),
+    [ ("Header", prettyA bh),
       ("TxSeq", prettyA seqx)
     ]
 
@@ -453,7 +454,7 @@ instance Crypto c => PrettyA (BHeader c) where
 instance PrettyA (PrevHash c) where
   prettyA = ppPrevHash
 
-instance (Era era, PrettyA (Era.TxSeq era)) => PrettyA (Block era) where
+instance (Era era, PrettyA (Era.TxSeq era), PrettyA (h (E.Crypto era))) => PrettyA (Block h era) where
   prettyA = ppBlock
 
 -- =================================

@@ -89,7 +89,15 @@ import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (
 import Cardano.Ledger.Shelley.UTxO (txins, txouts)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos (PoolDistr (..))
-import Cardano.Protocol.TPraos.BHeader (BHBody (..), LastAppliedBlock (..), bhHash, bhbody, lastAppliedHash, prevHashToNonce)
+import Cardano.Protocol.TPraos.BHeader
+  ( BHBody (..),
+    BHeader,
+    LastAppliedBlock (..),
+    bhHash,
+    bhbody,
+    lastAppliedHash,
+    prevHashToNonce,
+  )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
 import Control.State.Transition (STS (State))
@@ -145,7 +153,7 @@ evolveNonceUnfrozen n cs =
 newLab ::
   forall era.
   (Era era) =>
-  Block era ->
+  Block BHeader era ->
   ChainState era ->
   ChainState era
 newLab b cs =
@@ -600,7 +608,7 @@ newEpoch ::
   forall era.
   (Core.PParams era ~ PParams era) =>
   Era era =>
-  Block era ->
+  Block BHeader era ->
   ChainState era ->
   ChainState era
 newEpoch b cs = cs'

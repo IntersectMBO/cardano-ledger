@@ -110,7 +110,7 @@ import Cardano.Ledger.Shelley.PParams (PParamsUpdate)
 import Cardano.Ledger.Shelley.Tx (Tx, TxOut, WitnessSet)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Prelude (Coercible, asks)
-import Cardano.Protocol.TPraos.BHeader (BHBody (..), bhbody)
+import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Slotting.EpochInfo
   ( epochInfoEpoch,
@@ -352,6 +352,6 @@ testSTS env initSt sig predicateFailure@(Left _) = do
 mkHash :: forall a h. HashAlgorithm h => Int -> Hash h a
 mkHash i = coerce (hashWithSerialiser @h toCBOR i)
 
-getBlockNonce :: forall era. Era era => Block era -> Nonce
+getBlockNonce :: forall era. Era era => Block BHeader era -> Nonce
 getBlockNonce =
   mkNonceFromOutputVRF . certifiedOutput . bheaderEta . bhbody . bheader

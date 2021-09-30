@@ -30,8 +30,8 @@ import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.QuickCheck (shrinkIntegral, shrinkList)
 
 shrinkBlock ::
-  Block h ->
-  [Block h]
+  Block h era ->
+  [Block h era]
 shrinkBlock _ = []
 
 shrinkTx ::
