@@ -1,5 +1,6 @@
 module Main where
 
+import Control.DeepSeq
 import Options.Applicative
 import System.IO
 import Cardano.Ledger.State.UTxO
@@ -63,11 +64,10 @@ observeMemory :: FilePath -> IO (IORef (Maybe UTxOs))
 observeMemory fp = do
   ref <- newIORef Nothing
   utxo <- loadMassivUTxO fp
-  utxo `seq` putStrLn "Loaded"
-  printStats utxo
+  utxo `deepseq` putStrLn "Loaded"
   performGC
   _ <- getChar
-  writeIORef ref $ Just utxo -- ensure utxo doesn't GCed
+  printStats utxo
   pure ref
 
 testRoundTrip :: [Char] -> IO ()

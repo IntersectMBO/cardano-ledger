@@ -8,6 +8,7 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -97,8 +98,8 @@ testMassivUTxO m utxo@UTxOs{} =
 
 
 collectSharedKeys ::
-  Vector B (Vector (KV S B) (KVPair (TxId C) TxOut')) ->
-  Vector (KV S S) (KVPair (Keys.KeyHash 'Shelley.Witness C) Word32)
+  Vector B (Vector (KV S BN) (KVPair (TxId C) TxOut')) ->
+  Vector S (Keys.KeyHash 'Shelley.Witness C)
 collectSharedKeys txOutVec =
   let extractKeyHashes !accVec =
         \case
@@ -118,8 +119,9 @@ collectSharedKeys txOutVec =
       collectHashes !a (KVArray _ vals) = A.foldlS collectKeys a vals
       vectorWithKeyHashes :: Vector S (Keys.KeyHash 'Shelley.Witness C)
       vectorWithKeyHashes = A.compute $ foldlS collectHashes A.empty txOutVec
-   in A.compute $
-      A.smapMaybe (\(k, c) -> guard (c > 1) >> Just (KVPair k (fromIntegral c))) $
+   in A.clone $ -- in order to free up leftover memory allocated while vector was growing
+      A.compute $
+      A.smapMaybe (\(k, c) -> guard (c > 1) >> Just k) $
       A.tally vectorWithKeyHashes
 
 
@@ -127,11 +129,11 @@ constructMassivUTxO ::
   Vector (KV P B) (KVPair Int (Vector (KV S B) (KVPair (TxId C) (Alonzo.TxOut CurrentEra)))) ->
   UTxOs
 constructMassivUTxO (KVArray txIxs txOutVec) =
-  let !sharedKeyHashes =
-        trace "done creating sharedKeyHashes" $ collectSharedKeys utxoNoSharing
+  let !sharedKeyHashes = -- A.compute (A.empty @DL)
+        collectSharedKeys utxoNoSharing
       lookupKeyHashIx :: Shelley.KeyHash kr C -> Maybe Ix1
       lookupKeyHashIx kh =
-        lookupIxSortedKVArray (Keys.asWitness kh) sharedKeyHashes
+        lookupIxSortedArray (Keys.asWitness kh) sharedKeyHashes
       !utxoWithSharing =
         KVArray txIxs $ A.compute $ A.map applySharing utxoNoSharing
       applySharing (KVArray keys values) =
@@ -160,7 +162,7 @@ constructMassivUTxO (KVArray txIxs txOutVec) =
       !utxoNoSharing = A.compute $ A.map applyRestructure txOutVec
       applyRestructure ::
            Vector (KV S B) (KVPair (TxId C) (Alonzo.TxOut CurrentEra))
-        -> Vector (KV S B) (KVPair (TxId C) TxOut')
+        -> Vector (KV S BN) (KVPair (TxId C) TxOut')
       applyRestructure (KVArray txIds txOuts) =
         let !txOuts' = A.compute $ A.map restructureTxOut txOuts
             restructureTxOut :: Alonzo.TxOut CurrentEra -> TxOut'
@@ -222,7 +224,7 @@ instance NFData Addr' where
   rnf = \case
     AddrKeyIx' !_ !_ si -> rnf si
     AddrKeyHash' !_ !kh si -> kh `deepseq` rnf si
-    AddrScript' !_ !sh  si -> sh `deepseq` rnf si
+    AddrScript' !_ !sh si -> sh `deepseq` rnf si
     AddrBoot' !_ -> ()
 
 data TxOut'
@@ -242,8 +244,11 @@ instance NFData TxOut' where
 data UTxOs = UTxOs
   { utxoMap :: !(Vector (KV P BN) (KVPair Int (Vector (KV S BN) (KVPair (TxId C) TxOut')))),
     -- | Set of all key hashes and their usage counter.
-    utxoSharedKeyHashes :: !(Vector (KV S S) (KVPair (Keys.KeyHash 'Shelley.Witness C) Word32))
+    utxoSharedKeyHashes :: !(Vector S (Keys.KeyHash 'Shelley.Witness C))
   }
+
+instance NFData UTxOs where
+  rnf UTxOs {..} = utxoMap `deepseq` utxoSharedKeyHashes `deepseq` ()
 
 lookupUTxOs :: TxIn C -> UTxOs -> Maybe (Alonzo.TxOut CurrentEra)
 lookupUTxOs (TxIn txId txIx) UTxOs {..} = do
@@ -259,7 +264,7 @@ lookupUTxOs (TxIn txId txIx) UTxOs {..} = do
       lookupCredential :: Ix1 -> Maybe (Credential kr C)
       lookupCredential khIx =
         KeyHashObj . Keys.coerceKeyRole <$>
-        indexM (keysArray utxoSharedKeyHashes) khIx
+        indexM utxoSharedKeyHashes khIx
       toCompactAddr' =
         \case
           AddrKeyIx' ni ix stakeIx -> do
@@ -293,18 +298,12 @@ lookupUTxOs (TxIn txId txIx) UTxOs {..} = do
 
 
 printStats :: UTxOs -> IO ()
-printStats UTxOs {..} = do
+printStats utxo@UTxOs {..} = do
   putStrLn $
     unlines
       [ "KeyHashSet size: " <> show (A.elemsCount utxoSharedKeyHashes)
-      , "KeyHashSet total duplicate count: " <>
-        show (A.sum $ A.map (subtract 1) $ valsArray utxoSharedKeyHashes)
-      , "Max shares: " <>
-        show
-          (A.stake
-             40
-             (quicksortBy (\x y -> compare y x) (valsArray utxoSharedKeyHashes)))
       , "Number of unique txIxs: " <> show (A.elemsCount utxoMap)
+      , "Total shared keys found: " <> show (countSharedKeys utxo)
       ]
   A.mapM_ printUTxO $ utxoMap
   where
@@ -312,6 +311,27 @@ printStats UTxOs {..} = do
     printUTxO (KVPair txIx v) =
       putStrLn $
       "<TxIx: " <> show txIx <> "> - TxOuts: " <> show (A.elemsCount v)
+
+countSharedKeys :: UTxOs -> Int
+countSharedKeys UTxOs {..} = foldlS countOuter 0 $ valsArray utxoMap
+  where
+    countOuter acc (KVArray _ vs) = foldlS countInner acc vs
+    countInner acc =
+      \case
+        TxOut' addr' _ -> acc + countAddr' addr'
+        TxOutMA' addr' _ _ _ -> acc + countAddr' addr'
+        TxOutDH' addr' _ _ -> acc + countAddr' addr'
+        TxOutMADH' addr' _ _ _ _ -> acc + countAddr' addr'
+    countAddr' =
+      \case
+        AddrKeyIx' _ _ stakeIx -> 1 + countStakeIx stakeIx
+        AddrKeyHash' _ _ stakeIx -> countStakeIx stakeIx
+        AddrScript' _ _ stakeIx -> countStakeIx stakeIx
+        AddrBoot' _ -> 0
+    countStakeIx =
+      \case
+        StakeKeyIx _ -> 1
+        _ -> 0
 
 quicksortKVMArray_ ::
      (Manifest kr k, Manifest kv v, Ord k)
@@ -326,13 +346,21 @@ fromMap = fromAscList . Map.toAscList
 fromIntMap :: Manifest vr v => IntMap.IntMap v -> Vector (KV P vr) (KVPair Int v)
 fromIntMap = fromAscList . IntMap.toAscList
 
+toIntMap :: Manifest vr v => Vector (KV P vr) (KVPair Int v) -> IntMap.IntMap v
+toIntMap = IntMap.fromAscList . toAscList
+
 fromAscList :: (Manifest vr v, Manifest kr k) => [(k, v)] -> Vector (KV kr vr) (KVPair k v)
 fromAscList = A.compute . A.smap (\(k, v) -> KVPair k v) . A.sfromList
 
+toAscList :: (Manifest vr v, Manifest kr k) => Vector (KV kr vr) (KVPair k v) -> [(k, v)]
+toAscList = A.toList . A.map (\(KVPair k v) -> (k, v))
 
-lookupIxSortedKVArray ::
-  (Manifest kr k, Ord k) => k -> Vector (KV kr vr) (KVPair k v) -> Maybe Ix1
-lookupIxSortedKVArray key (KVArray keys _) = go 0 (elemsCount keys)
+
+
+
+lookupIxSortedArray ::
+  (Manifest kr k, Ord k) => k -> Vector kr k -> Maybe Ix1
+lookupIxSortedArray key keys = go 0 (elemsCount keys)
   where
     go !l !u = do
       guard (l < u)
@@ -345,8 +373,8 @@ lookupIxSortedKVArray key (KVArray keys _) = go 0 (elemsCount keys)
 
 lookupSortedKVArray ::
   (Manifest kr k, Manifest vr v, Ord k) => k -> Vector (KV kr vr) (KVPair k v) -> Maybe v
-lookupSortedKVArray key kv@(KVArray _ values) = do
-  i <- lookupIxSortedKVArray key kv
+lookupSortedKVArray key (KVArray keys values) = do
+  i <- lookupIxSortedArray key keys
   indexM values i
 
 
