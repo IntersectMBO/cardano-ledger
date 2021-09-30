@@ -7,6 +7,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Pretty where
 
@@ -141,6 +142,7 @@ import Cardano.Ledger.Shelley.TxBody
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
+    viewTxIn,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
@@ -997,7 +999,7 @@ ppTxId :: TxId c -> PDoc
 ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
 
 ppTxIn :: TxIn c -> PDoc
-ppTxIn (TxInCompact txid word) = ppSexp "TxIn" [ppTxId txid, ppWord64 word]
+ppTxIn (viewTxIn -> (txid, index)) = ppSexp "TxIn" [ppTxId txid, ppNatural index]
 
 ppTxOut :: (Era era, PrettyA (Core.Value era)) => TxOut era -> PDoc
 ppTxOut (TxOutCompact caddr cval) = ppSexp "TxOut" [ppCompactAddr caddr, ppCompactForm prettyA cval]

@@ -67,7 +67,7 @@ translateCompactTxInByronToShelley ::
   Byron.CompactTxIn ->
   TxIn c
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
-  TxInCompact
+  TxIn
     (translateTxIdByronToShelley (Byron.fromCompactTxId compactTxId))
     (fromIntegral idx)
 
