@@ -49,6 +49,8 @@ library
                      , Data.MemoBytes
                      , Data.Coders
                      , Data.Compact.Class
+                     , Data.Compact.Arrays
+                     , Data.Compact.Set
 		     , Data.CompactMap
 		     , Data.DeltaState
                      , Data.Pulse

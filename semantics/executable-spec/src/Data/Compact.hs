@@ -198,16 +198,6 @@ instance Search (arr k) k => Search (NixArr arr k) k where
       Just i -> if hasElem i del then Nothing else (Just i)
       
 
-instance (Show key,Show t,Search t key) => Search [t] key where
-   search _ [] = Nothing
-   search key (x:xs) = trace ("Search "++show(key,x)) $
-     case search key x of
-       Nothing -> search key xs
-       Just i -> Just i
-
-instance Search t key => Search (Node t) key where
-   search key (Node _ x) = search key x
-
 instance Search t key => Search (t,x)  key where
   search key (t,x) = search key t
 
@@ -254,32 +244,6 @@ inOrder2 smaller done action state items = loop items state where
                 Nothing -> loop larger state'
                 Just more -> loop (more:larger) state'
 
-smallestIndex :: ArrayPair arr marr t => (t -> t -> Bool) ->  marr s t -> (Int,t) ->Int -> Int -> ST s (Int,t)
-smallestIndex smaller marr pair lo hi = loop pair lo where
-   loop (pair@(i,t)) lo | lo > hi = pure pair
-   loop (pair@(i,t)) lo = do 
-     t2 <- mindex marr lo
-     if smaller t t2
-         then loop pair (lo+1) 
-         else loop (lo,t2) (lo+1)
-
-inOrder3 :: (Show t) =>
-   (Int -> t -> Int -> t -> MutArray s t -> ST s Int) ->
-   (t -> t -> Bool) ->
-   state ->
-   Int ->
-   Int ->
-   (state -> t -> ST s state) ->
-   MutArray s t ->  -- array of items to be merged, This should be small. At most 20 or so.
-   ST s state
-inOrder3 markIfDone smaller state lo hi action marr = loop lo state where
-   loop lo  _state | lo > hi = pure state
-   loop lo state =
-      do t <- mindex marr lo
-         (i,small) <- smallestIndex smaller marr (lo,t) (lo+1) hi
-         state' <- action state small
-         lo' <- markIfDone lo t i small marr
-         loop lo' state'
 
 mark1:: (Indexable arr t) =>
         Int -> (Int,arr t) -> Int -> (Int,arr t) -> MutArray s (Int,arr t) -> ST s Int
@@ -394,74 +358,6 @@ pairs = [(i,show i) | i <- [14:: Int,13..0]]
 fl1 :: FlexMap PrimArray PA.Array Int String
 fl1@(FlexMap nnn) = makemap pairs
       
--- ================================================================================
--- Sets of objects as lists of Nodes. The array in the Node stores its elements
--- in ascneding order. The Nodes are stored in order of ascending size.
--- Each size is a power of 2. In each (Node size primarray) the 'primarray' has
--- 'size' components. The sum of the sizes is the total number of elements in the set.
--- This trick of using a list of ascending size arrays supports efficient insert.
-
-newtype CompactPrimSet t = CompactPrimSet [Node (PrimArray t)]
-
-instance (Prim t,Show t) => Show(CompactPrimSet t) where
-  show (CompactPrimSet ts) = show(map unNode ts)
-    where unNode(Node _ xs) = tolist xs
-
-emptyset :: CompactPrimSet t
-emptyset = CompactPrimSet []
-
-hasElem :: (Show t,Prim t,Ord t) => t -> CompactPrimSet t -> Bool
-hasElem t (CompactPrimSet xs) =
-  case search t xs of
-    Nothing -> False
-    Just _ -> True
-
-insertElem :: (Show t,Prim t, Ord t) => t -> CompactPrimSet t -> CompactPrimSet t
-insertElem t (set@(CompactPrimSet nodes)) =
-  if hasElem t set
-     then set
-     else case splitAtFullPrefix nodesize 1 (Node 1 (fromlist [t])) nodes of
-           (size,prefix,tail) -> CompactPrimSet ((mergeNodes size prefix):tail)
-
-makeSet :: (Show t,Ord t,Prim t) => [t] -> CompactPrimSet t
-makeSet ts = CompactPrimSet (map node nodes) where
-    nodes = pieces ts
-    node (n, ps) = Node n (fromlist (sort ps))  
-
-
--- | Merge many sorted Nodes into 1 sorted Node. In some ways this is analgous to catArray
---   but instead of preserving phyical order, it preserves sorted order.
---   catNodes  [[1,6],[2],[3,5,12]] --> [1,6,2,3,5,12]
---   mergeMany [[1,6],[2],[3,5,12]] --> [1,2,3,5,6,12]
---   In the pattern (i,Node size arr). 'i' is the next entry in 'arr'
---   that is ready to be merged into the output.
-mergeMany:: (ArrayPair arr marr k, Ord k) => [(Int, Node (arr k))] -> marr s k -> ST s Int
-mergeMany xs arr = inOrder smaller done action xs (pure (0::Int)) where
-  smaller (i,Node _ xs) (j,Node _ ys) = index xs i < index ys j
-  done (i,node@(Node size _)) = if i+1 < size then Just(i+1,node) else Nothing
-  action n (i,Node _ xs) = do { count <- n; mwrite arr count (index xs i); pure(count+1)}
-
--- | Merge 'ns' into one Node with 'size' entries.
-mergeNodes ::
-  ( ArrayPair arr marr key,
-    Ord key
-  ) => Int -> [Node (arr key)] -> Node (arr key)
-mergeNodes size ns = Node size (project(withMutArray size (mergeMany (map start ns))))
-  where start x = (0,x)
-        project (x,_) = x
-
-
-ss1, ss2, ss3, ss4, ss5, ss6, ss7, ss8, ss9 :: CompactPrimSet Int
-ss1 = CompactPrimSet []
-ss2 = insertElem 99 ss1
-ss3 = insertElem 33 ss2
-ss4 = insertElem 12 ss3
-ss5 = insertElem 6 ss4
-ss6 = insertElem 22 ss5
-ss7 = insertElem 71 ss6
-ss8 = insertElem 81 ss7
-ss9 = insertElem 51 ss8
-
 
 -- ============================================================
 --  Compound Arrays that are constructed from simpler Arrays
