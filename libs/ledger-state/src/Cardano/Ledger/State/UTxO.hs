@@ -308,11 +308,18 @@ loadUTxO fp = do
   pure utxo
 
 loadUTxOn :: FilePath -> IO (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
-loadUTxOn fp =
-  foldlUTxO fp nestedInsert mempty
+loadUTxOn fp = foldlUTxO fp nestedInsert mempty
   where
     nestedInsert !m (TxIn txId txIx, !v) =
-      Map.insertWith (<>) txId (IntMap.singleton (fromIntegral txIx) v) m
+      let !e = IntMap.singleton (fromIntegral txIx) v
+       in Map.insertWith (<>) txId e m
+
+loadUTxOni :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) (Alonzo.TxOut CurrentEra)))
+loadUTxOni fp = foldlUTxO fp nestedInsert mempty
+  where
+    nestedInsert !m (TxIn txId txIx, !v) =
+      let !e = Map.singleton txId v
+       in IntMap.insertWith (<>) (fromIntegral txIx) e m
 
 totalADA :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> Mary.Value C
 totalADA = foldMap (\(Alonzo.TxOut _ v _) -> v)
