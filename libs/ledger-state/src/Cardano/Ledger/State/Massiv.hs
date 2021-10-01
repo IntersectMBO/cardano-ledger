@@ -81,13 +81,7 @@ sinkMassivUTxO = do
 
 testMassivUTxO :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> UTxOs -> IO ()
 testMassivUTxO m utxo@UTxOs{} =
-  Control.Monad.forM_ (Map.toList m) $ \(txIn@(TxIn _txId _txIx), txOut) -> do
-    -- case lookupSortedKVArray (fromIntegral txIx) utxoMap of
-    --   Nothing -> error $ "Could not find TxIx: " <> show txIx
-    --   Just v ->
-    --     case lookupSortedKVArray txId v of
-    --       Nothing -> error $ "Could not find TxId: " <> show txId
-    --       Just _ -> pure ()
+  Control.Monad.forM_ (Map.toList m) $ \(txIn, txOut) -> do
     case lookupUTxOs txIn utxo of
       Nothing -> error $ "Could not find: " <> show txIn
       Just txOut' ->
@@ -129,8 +123,7 @@ constructMassivUTxO ::
   Vector (KV P B) (KVPair Int (Vector (KV S B) (KVPair (TxId C) (Alonzo.TxOut CurrentEra)))) ->
   UTxOs
 constructMassivUTxO (KVArray txIxs txOutVec) =
-  let !sharedKeyHashes = -- A.compute (A.empty @DL)
-        collectSharedKeys utxoNoSharing
+  let !sharedKeyHashes = collectSharedKeys utxoNoSharing
       lookupKeyHashIx :: Shelley.KeyHash kr C -> Maybe Ix1
       lookupKeyHashIx kh =
         lookupIxSortedArray (Keys.asWitness kh) sharedKeyHashes
@@ -480,31 +473,5 @@ instance (Manifest kr k, Manifest vr v) => Manifest (KV kr vr) (KVPair k v) wher
   unsafeLinearGrow (KVMArray keys vals) sz =
     KVMArray <$> unsafeLinearGrow keys sz <*> unsafeLinearGrow vals sz
   {-# INLINE unsafeLinearGrow #-}
-
-
-
--- Using lists, seems to be more memory hungry
--- collectSharedKeys ::
---   IntMap.IntMap (Vector (KV S B) (KVPair (TxId C) TxOut')) ->
---   Vector (KV S S) (KVPair (Keys.KeyHash 'Shelley.Witness C) Word32)
--- collectSharedKeys im =
---   let extractKeyHashes !accVec =
---         \case
---           AddrKeyIx' _ _ (StakeKeyHash skh) -> Keys.asWitness skh : accVec
---           AddrKeyHash' _ kh (StakeKeyHash skh) ->
---             let !accVec' = Keys.asWitness skh : accVec
---             in Keys.asWitness kh : accVec'
---           AddrScript' _ _ (StakeKeyHash skh) -> Keys.asWitness skh : accVec
---           _ -> accVec
---       collectKeys !accVec =
---         \case
---           TxOut' addr _ -> extractKeyHashes accVec addr
---           TxOutDH' addr _ _ -> extractKeyHashes accVec addr
---       collectHashes !a (KVArray _ vals) = A.foldlS collectKeys a vals
---       vectorWithKeyHashes :: Vector S (Keys.KeyHash 'Shelley.Witness C)
---       vectorWithKeyHashes = A.compute $ sfromList $ IntMap.foldl' collectHashes [] im
---    in A.compute $
---         A.smap (\(k, c) -> KVPair k (fromIntegral c)) $ A.tally vectorWithKeyHashes
-
 
 
