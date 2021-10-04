@@ -64,21 +64,21 @@ observeMemory :: FilePath -> IO (IORef (Maybe UTxOs))
 observeMemory fp = do
   ref <- newIORef Nothing
   utxo <- loadMassivUTxO fp
-  utxo `deepseq` putStrLn "Loaded"
+  utxo `seq` putStrLn "Loaded"
   performGC
   _ <- getChar
   printStats utxo
   pure ref
 
-testRoundTrip :: [Char] -> IO ()
-testRoundTrip fp = do
-  putStrLn $ "Loading file: " <> fp
-  utxoOriginalMap <- loadUTxO fp
-  putStrLn "Loaded"
-  utxo <- utxoFromMap utxoOriginalMap
-  putStrLn "Converted"
-  testMassivUTxO utxoOriginalMap utxo
-  putStrLn "Tested"
+-- testRoundTrip :: [Char] -> IO ()
+-- testRoundTrip fp = do
+--   putStrLn $ "Loading file: " <> fp
+--   utxoOriginalMap <- loadUTxO fp
+--   putStrLn "Loaded"
+--   utxo <- utxoFromMap utxoOriginalMap
+--   putStrLn "Converted"
+--   testMassivUTxO utxoOriginalMap utxo
+--   putStrLn "Tested"
 
 
 -- $ cabal build ledger-state && cabal exec -- ledger-state --utxo-json="/path/to/mainnet-utxo-2021-09-15.json" +RTS -s
