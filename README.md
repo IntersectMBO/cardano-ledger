@@ -1,11 +1,8 @@
 <h1 align="center">Cardano Ledger</h1>
 
 <p align="center">
-  <a href="https://buildkite.com/input-output-hk/cardano-ledger-specs">
-    <img alt="Build Status" src="https://img.shields.io/buildkite/a94c23758aeb2858869d5e256e466fc78e03a5baf1954cb8cc.svg?style=for-the-badge"/>
-  </a>
-  <a href="https://coveralls.io/github/input-output-hk/cardano-ledger-specs?branch=master">
-    <img alt="Coverage Status" src="https://img.shields.io/coveralls/github/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/>
+  <a href="https://github.com/input-output-hk/cardano-ledger-specs/actions/workflows/haskell.yml">
+    <img alt="GitHub Workflow Status (master)" src="https://img.shields.io/github/workflow/status/input-output-hk/cardano-ledger-specs/Haskell%20CI/master.svg?style=for-the-badge" />
   </a>
 </p>
 
