@@ -73,8 +73,7 @@ sinkMassivUTxO = do
   das <-
     C.foldlC
       (\im (!(TxIn txId txIx), !txOut) ->
-         let !txOut' = restructureTxOut txOut
-             !vec = txOut' `deepseq` consTxOut txId txOut'
+         let !vec = consTxOut txId txOut
          in IntMap.alter vec (fromIntegral txIx) im)
       mempty
   C.lift $
@@ -109,20 +108,20 @@ restructureTxOut =
         StakeRefNull -> StakeNull
 
 
-testMassivUTxO :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> UTxOs -> IO ()
-testMassivUTxO m utxo@UTxOs{} =
-  Control.Monad.forM_ (Map.toList m) $ \(txIn, txOut) -> do
-    case lookupUTxOs txIn utxo of
-      Nothing -> error $ "Could not find: " <> show txIn
-      Just txOut' ->
-        when (txOut' /= txOut) $
-        error $
-        unlines
-          ["Recovered txOut doesn match: ", show txOut', " /= ", show txOut]
+-- testMassivUTxO :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> UTxOs -> IO ()
+-- testMassivUTxO m utxo@UTxOs{} =
+--   Control.Monad.forM_ (Map.toList m) $ \(txIn, txOut) -> do
+--     case lookupUTxOs txIn utxo of
+--       Nothing -> error $ "Could not find: " <> show txIn
+--       Just txOut' ->
+--         when (txOut' /= txOut) $
+--         error $
+--         unlines
+--           ["Recovered txOut doesn match: ", show txOut', " /= ", show txOut]
 
 
 collectSharedKeys ::
-  Vector B (Vector (KV S BN) (KVPair (TxId C) TxOut')) ->
+  Vector B (Vector (KV S B) (KVPair (TxId C) TxOut')) ->
   Vector S (Keys.KeyHash 'Shelley.Witness C)
 collectSharedKeys txOutVec =
   let extractKeyHashes !accVec =
@@ -222,49 +221,50 @@ instance NFData TxOut' where
     TxOutMADH' a !_ !_ !_ dh -> a `deepseq` rnf dh
 
 
-newtype UTxOs = UTxOs
-  { utxoMap :: Vector (KV P BN) (KVPair Int (Vector (KV S BN) (KVPair (TxId C) TxOut')))
-  }
+newtype UTxOs =
+  UTxOs
+    { utxoMap :: Vector (KV P B) (KVPair Int (Vector (KV S B) (KVPair (TxId C) (Alonzo.TxOut CurrentEra))))
+    }
 
-instance NFData UTxOs where
-  rnf UTxOs {..} = rnf utxoMap
+-- instance NFData UTxOs where
+--   rnf UTxOs {..} = rnf utxoMap
 
-lookupUTxOs :: TxIn C -> UTxOs -> Maybe (Alonzo.TxOut CurrentEra)
-lookupUTxOs (TxIn txId txIx) UTxOs {..} = do
-  txOut' <-
-    lookupSortedKVArray txId =<< lookupSortedKVArray (fromIntegral txIx) utxoMap
-  let toStakeRef =
-        \case
-          StakeKeyHash kh -> pure $ StakeRefBase $ KeyHashObj kh
-          StakeCredScript sh -> pure $ StakeRefBase $ ScriptHashObj sh
-          StakePtr ptr -> pure $ StakeRefPtr ptr
-          StakeNull -> pure StakeRefNull
-      toCompactAddr' =
-        \case
-          AddrKeyHash' ni kh stakeIx -> do
-            sr <- toStakeRef stakeIx
-            pure $ compactAddr $ Addr ni (KeyHashObj kh) sr
-          AddrScript' ni sh stakeIx -> do
-            sr <- toStakeRef stakeIx
-            pure $ compactAddr $ Addr ni (ScriptHashObj sh) sr
-          AddrBoot' bootAddr -> pure bootAddr
-  case txOut' of
-    TxOut' addr' ada -> do
-      addr <- toCompactAddr' addr'
-      let cv = Mary.CompactValue (Mary.CompactValueAdaOnly ada)
-      pure $ Alonzo.TxOutCompact addr cv
-    TxOutMA' addr' ada ma rep -> do
-      addr <- toCompactAddr' addr'
-      let cv = Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep)
-      pure $ Alonzo.TxOutCompact addr cv
-    TxOutDH' addr' ada dh -> do
-      addr <- toCompactAddr' addr'
-      let cv = Mary.CompactValue (Mary.CompactValueAdaOnly ada)
-      pure $ Alonzo.TxOutCompactDH addr cv dh
-    TxOutMADH' addr' ada ma rep dh -> do
-      addr <- toCompactAddr' addr'
-      let cv = Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep)
-      pure $ Alonzo.TxOutCompactDH addr cv dh
+-- lookupUTxOs :: TxIn C -> UTxOs -> Maybe (Alonzo.TxOut CurrentEra)
+-- lookupUTxOs (TxIn txId txIx) UTxOs {..} = do
+--   txOut' <-
+--     lookupSortedKVArray txId =<< lookupSortedKVArray (fromIntegral txIx) utxoMap
+--   let toStakeRef =
+--         \case
+--           StakeKeyHash kh -> pure $ StakeRefBase $ KeyHashObj kh
+--           StakeCredScript sh -> pure $ StakeRefBase $ ScriptHashObj sh
+--           StakePtr ptr -> pure $ StakeRefPtr ptr
+--           StakeNull -> pure StakeRefNull
+--       toCompactAddr' =
+--         \case
+--           AddrKeyHash' ni kh stakeIx -> do
+--             sr <- toStakeRef stakeIx
+--             pure $ compactAddr $ Addr ni (KeyHashObj kh) sr
+--           AddrScript' ni sh stakeIx -> do
+--             sr <- toStakeRef stakeIx
+--             pure $ compactAddr $ Addr ni (ScriptHashObj sh) sr
+--           AddrBoot' bootAddr -> pure bootAddr
+--   case txOut' of
+--     TxOut' addr' ada -> do
+--       addr <- toCompactAddr' addr'
+--       let cv = Mary.CompactValue (Mary.CompactValueAdaOnly ada)
+--       pure $ Alonzo.TxOutCompact addr cv
+--     TxOutMA' addr' ada ma rep -> do
+--       addr <- toCompactAddr' addr'
+--       let cv = Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep)
+--       pure $ Alonzo.TxOutCompact addr cv
+--     TxOutDH' addr' ada dh -> do
+--       addr <- toCompactAddr' addr'
+--       let cv = Mary.CompactValue (Mary.CompactValueAdaOnly ada)
+--       pure $ Alonzo.TxOutCompactDH addr cv dh
+--     TxOutMADH' addr' ada ma rep dh -> do
+--       addr <- toCompactAddr' addr'
+--       let cv = Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep)
+--       pure $ Alonzo.TxOutCompactDH addr cv dh
 
 
 printStats :: UTxOs -> IO ()
@@ -273,12 +273,12 @@ printStats UTxOs {..} = do
     unlines
       [ "Number of unique txIxs: " <> show (A.elemsCount utxoMap)
       ]
-  A.mapM_ printUTxO $ utxoMap
-  where
-    printUTxO :: KVPair Int (Vector (KV S BN) (KVPair (TxId C) TxOut')) -> IO ()
-    printUTxO (KVPair txIx v) =
-      putStrLn $
-      "<TxIx: " <> show txIx <> "> - TxOuts: " <> show (A.elemsCount v)
+  -- A.mapM_ printUTxO $ utxoMap
+  -- where
+  --   printUTxO :: KVPair Int (Vector (KV S BN) (KVPair (TxId C) TxOut')) -> IO ()
+  --   printUTxO (KVPair txIx v) =
+  --     putStrLn $
+  --     "<TxIx: " <> show txIx <> "> - TxOuts: " <> show (A.elemsCount v)
 
 quicksortKVMArray_ ::
      (Manifest kr k, Manifest kv v, Ord k)
