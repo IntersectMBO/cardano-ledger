@@ -1,125 +1,233 @@
-\section{Coin and Multi-Asset Tokens}
+\section{Coin and Multi-Asset Token algebras}
 \label{sec:coin-ma}
 
-This section describes the type $\Value$, the operations required on
-it, and its relation to $\Coin$.
+In this chapter we introduce the concept of a \emph{Token algebra},
+which is an abstraction used to generalize this specification to two
+different eras depending on the Token algebra chosen.
 
-When multi-asset support on the ledger is introduced, Ada is still expected to be
-the most common type of token on the ledger.
-The $\Coin$ type is used to represent an amount of Ada.
-It is the only
-type of token that can be used for all non-UTxO ledger accounting, including deposits,
-fees, rewards, treasury, and the proof of stake protocol.
+\begin{definition}[Token algebra]
+  A \emph{Token algebra} is a partially ordered commutative monoid
+  $T$, written additively, (i.e. a commutative monoid together with a
+  partial order, such that addition is monotonic in both variables)
+  together with the functions and properties as described in Figure
+  \ref{fig:TokenAlgebra}.
+\end{definition}
 
-\begin{figure*}[t!]
-  \emph{Abstract Types}
+%%
+%% Figure ValMonoid and its Functions
+%%
+\begin{figure}[htb]
+  %
+  \emph{Functions}
   %
   \begin{align*}
-    \var{aname} \in& ~\AssetName & \text{Asset Names}
+      & \fun{coin} ~\in~ T \to \Coin\\
+      & \text{Return the Ada contained inside the $\mathsf{ValType}$ element}
+      \nextdef
+      %
+      & \fun{inject} ~\in~ \Coin \to T\\
+      & \text{Create a $\mathsf{ValType}$ element containing only this amount of Ada}
+      \nextdef
+      %
+      & \fun{policies} ~\in~ T \to \powerset{\PolicyID} \\
+      & \text{The set of policy IDs required for minting}
+      \nextdef
+      %
+      & \fun{size} ~\in~ T \to \MemoryEstimate\\
+      & \text{Return the size, in words, of a $\mathsf{ValType}$ element}
   \end{align*}
   %
+  \emph{Properties}
+  %
+  \begin{align*}
+      & \fun{coin} \circ \fun{inject} = \fun{id}_{\Coin}
+  \end{align*}
+  \caption{Additional functions and properties required for a Token algebra}
+  \label{fig:TokenAlgebra}
+\end{figure}
+
+A Token algebra is precisely the structure required to generalize the
+$\Coin$ type of the Shelley specification in transaction outputs for
+this ledger. We can then describe the ShelleyMA
+transaction processing rules without fixing a concrete Token algebra.
+
+Depending on the Token algebra chosen, we obtain distinct ledgers. In
+particular, we get
+
+\begin{itemize}
+  \item the Allegra ledger rules with $\Coin$, and
+  \item the Mary ledger rules with $\Value$ (defined below).
+\end{itemize}
+
+When multi-asset support on the ledger is introduced, Ada ($\Coin$) will still be
+the most common type of asset on the ledger, as the ledger rules enforce that
+some quantity of it (specified via
+the $\fun{coinsPerUTxOWord}$ protocol parameter) must
+be contained in every UTxO on the ledger.
+It is the only
+type of asset used for all non-UTxO ledger accounting, including deposits,
+fees, rewards, treasury, and the proof of stake protocol. For this reason, not
+all occurrences of $\Coin$ inside a transaction or in the ledger state can or
+should be replaced by the chosen Token algebra.
+
+Below we give the definitions of all the functions that must be defined on
+$\Coin$ and $\Value$ in order for them to have the structure of a Token algebra.
+In Section \ref{sec:other-valmonoids} we give several other types which we can meaningfully
+support the definition of the required functions (addition, size, etc.), including
+an optimized representation that more accurately represents the implementation
+used in the Haskell implementation of the multi-asset type.
+These types are convertible to and from the $\Value$ type, and appear in other
+parts of the system as a multi-asset representation which is more suitable in particular
+use cases.
+
+\subsection{$\Coin$ as a Token algebra}
+
+This section defines the Token algebra structure for the $\Coin$ type,
+see Figure \ref{fig:coin}. The structure of a partially ordered monoid
+is inherited from the (additive) integers.
+
+For $\Coin$, no policies are associated with $\Coin$, since minting of Ada is not allowed.
+
+%%
+%% Figure Coin Functions
+%%
+\begin{figure}[htb]
+  \begin{align*}
+      & \fun{coin} = \fun{id}_{\Coin}
+      \nextdef
+      %
+      & \fun{inject} = \fun{id}_{\Coin}
+      \nextdef
+      %
+      & \fun{policies}~v = \emptyset
+      \nextdef
+      %
+      & \fun{size}~v = 0
+  \end{align*}
+  \caption{The Token algebra structure of $\Coin$}
+  \label{fig:coin}
+\end{figure}
+
+
+\subsection{Multi-assets and the Token algebra $\Value$}
+
+Elements of $\Value$ represent heterogeneous collections of assets,
+both user-defined and Ada. The Mary era ledger uses $\Value$ as its Token algebra
+in order to support multi-assets.
+$\Value$ and its Token algebra structure are given in Figure \ref{fig:defs:value}.
+
+\begin{figure*}[t!]
   \emph{Derived types}
   %
   \begin{equation*}
     \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
+      \var{aname} & \AssetName & \mathsf{ByteString} \\
       \var{pid} & \PolicyID & \ScriptHash \\
+      \var{adaID} & \AdaIDType & \{~\mathsf{AdaID}~\} \\
+      \var{aid} & \AssetID & \AdaIDType \uniondistinct (\PolicyID \times \AssetName) \\
       \var{quan} & \Quantity & \Z \\
-      %\text{quantity of a token}\\
-      \var{v}, \var{w} & \Value
-      & \PolicyID \to_0 ( \AssetName \to_0 \Quantity )
-%      & \text{a collection of tokens}
+      \var{v}, \var{w} & \Value & \AssetID \mapsto_0 \Quantity
     \end{array}
   \end{equation*}
   %
-  \emph{Abstract Functions and Values}
+  \emph{Token algebra structure of $\Value$}
   %
   \begin{align*}
-    \mathsf{adaPolicy} \in& ~\PolicyID & \text{Ada Policy ID} \\
-    \mathsf{adaName} \in& ~\AssetName & \text{Ada Asset Name} \\
-    \mathsf{size} \in& ~\Value\to\MemoryEstimate & \text{the size of a Value}
-  \end{align*}
-  \emph{Helper Functions}
-  %
-  \begin{align*}
-    & \fun{inject} \in \Coin\to \Value \\
-    & \fun{inject}~c = \lambda~\var{pid}~\var{aname}.
-      \begin{cases}
-        c & \var{pid} = \mathsf{adaPolicy}~\text{and}~\var{aname} = \mathsf{adaName} \\
-        0 & \text{otherwise}
-      \end{cases}
+    & \fun{coin}~\var{v} = \var{v}~\mathsf{AdaID}
     \nextdef
-    & \fun{coin} \in \Value \to \Coin \\
-    & \fun{coin}~v = v~\mathsf{adaPolicy}~\mathsf{adaName}
-    \nextdef \fun{inject} \circ \fun{coin}
-    & \fun{adaOnly} \in \Value \to \Bool \\
-    & \fun{adaOnly}~v =
-      \begin{cases}
-        \True & \fun{inject} \circ \fun{coin} = \fun{id}_{\Value} \\
-        \False & \text{otherwise}
-      \end{cases}
+    %
+    & \fun{inject}~c  = \mathsf{AdaID}~\mapsto_0~\var{c}
+    \nextdef
+    %
+    & \fun{policies}~v = \{~\var{pid}~\vert~(\var{pid,~\wcard}) \in \supp v~\}
+    \nextdef
+    %
+    & \fun{size} ~~~ \text{see Section \ref{sec:value-size}}
   \end{align*}
-  \caption{Type Definitions and auxiliary functions for Value}
+  \caption{$\Value$ and its Token algebra structure}
   \label{fig:defs:value}
 \end{figure*}
 
-\subsection*{Representing Multi-asset Types and Values}
-We will refer to a pair of a $\PolicyID$ and an
-$\AssetName$ as an $\AssetID$. The $\AssetID$ for Ada is $(\mathsf{adaPolicy}, \mathsf{adaName})$.
-This is symbolic only, no actual minting policy for Ada exists.
-
-The set of tokens that are referred to by the underlying monetary
-policy represents the coinage that the asset supports. A multi-asset
-value, $\Value$ is a finitely supported function of two variables,
-$\PolicyID$ and $\AssetName$ to $\Quantity$.
-
 \begin{itemize}
   \item $\PolicyID$ identifies monetary policies. A policy ID $\var{pid}$ is associated with a script
-    $s$ such that $\fun{hashScript}~s~=~pid$. When a transaction attempts to create or destroy tokens
+    $s$ such that $\fun{hashScript}~s=pid$. When a transaction attempts to create or destroy assets
     that fall under the policy ID $\var{pid}$,
     $s$ verifies that the transaction
     respects the restrictions that are imposed by the monetary policy.
     See sections \ref{sec:transactions} and \ref{sec:utxo} for details.
 
-  \item $\AssetName$ is a type used to distinguish different tokens with the same $\PolicyID$.
-    Each $aname$ identifies a unique kind of token in $\var{pid}$.
+  \item $\AssetName$ is a byte string used to distinguish different assets with the same $\PolicyID$.
+    Each $aname$ identifies a particular kind of asset out of all the assets under the
+    $\var{pid}$ policy (but not necessarily among assets under other policies).
+    The maximum length of this
+    byte string is 32 bytes (this is not explicitly enforced in this specification).
+
+  \item $\AssetID$ is either $\mathsf{AdaID}$ or a pair of a policy ID and an asset name.
+  It is a unique and permanent
+  identifier of an asset. That is, there are is no mechanism to change it or
+  any part of it for any assets.
+
+  Mary MA assets are fungible with each other if and only if they have to the same $\AssetID$.
+  The reason the unique identifier is a pair of two elements (except for the non-mintable Ada case) is to allow
+  minting arbitrary collections of unique assets under a single policy.
+
+  \item $\mathsf{AdaID}$ is a special asset ID for Ada, different than all other asset IDs.
+  It is a term of the single-term type $\AdaIDType$.
+  It does not include a policy, so instead, the validation outcome in the presence
+  of Ada in the $\fun{mint}$ field of the transaction is specified in the UTXO
+  ledger rule. The rule disallows the $\fun{mint}$ field to contain Ada.
 
   \item $\Quantity$ is an integer type that represents an amount of a specific $\AssetName$. We associate
-    a term $q\in\Quantity$ with a specific token to track how much of that token is contained in a given asset value.
+    a $q\in\Quantity$ with a specific asset to track how much of that asset is contained in a given asset value.
 
   \item $\Value$ is the multi-asset type that is used to represent
-    a collection of tokens, including Ada. If $(\var{pid}, \var{aname})$ is an $\AssetID$ and $v \in \Value$,
-    the quantity in $v$ belonging to that $\AssetID$ is $v~\var{pid}~\var{aname}$.
-    Tokens are fungible with each other if and only if they belong to the same $\AssetID$,
-    i.e. they have the same $\PolicyID$ and $\AssetName$. Terms of type $\Value$ are sometimes also referred to as
-    \emph{token bundles}.
+    a collection of assets, including Ada. This type is a finitely supported map.
 
-  \item $\mathsf{adaPolicy}$ and $\mathsf{adaName}$ are the $\PolicyID$ and $\AssetName$ of Ada respectively.
-    It is not possible to mint any token with the $\PolicyID$ $\mathsf{adaPolicy}$, which means that every
-    token in the UTxO belonging to $\mathsf{adaPolicy}$ will have $\AssetName$ $\mathsf{adaName}$.
-
-  \item $\mathsf{size}$ returns the size (in units of memory, eg. bytes or words) of a $\Value$.
-  We give this function, alongside implementation-specific constants we have used in it in Section \ref{sec:value-size}.
-
-  \item $\fun{inject}$ and $\fun{coin}$ convert between the two types,
-  by building a $\Value$ that only contains Ada given by the input, and extracting
-  the amount of Ada as (a $\Coin$) from a $\Value$ respectively.
-  Note that composed as
-
-  \[\fun{coin} \circ \fun{inject} = \fun{id}_{\Coin}\]
-
-  these functions give the identity on $\Coin$, but composed in the opposite order as
-
-  \[\fun{inject} \circ \fun{coin}\]
-
-  they return a $\Value$ containing only the Ada tokens contained in the original $\Value$.
-
-  \item $\fun{adaOnly}$ returns $\True$ if a given $\Value$ contains only Ada.
+    If $\var{aid}$ is an $\AssetID$ and $v \in \Value$,
+    the quantity of assets with that assed ID contained in $v$ is $v~\var{aid}$.
+    Elements of $\Value$ are sometimes also referred to as
+    \emph{asset bundles}.
 \end{itemize}
 
-\subsection*{Value Operations and Partial Order}
-We require some operations on $\Value$, including equality, addition and $\leq$ comparison.
+To give $\Value$ the structure of a partially ordered monoid, we define the
+required operations
+pointwise, in accordance with the usual definitions of these operations on
+finitely supported maps. See Figure \ref{fig:pointwise}.
 
-Addition and binary relations are extended pointwise from $\Coin$ to $\Value$, so if $R$ is a binary relation defined on $\Coin$, like $=$ or $\leq$, and $v, w$ are values, we define
+\begin{figure*}[t!]
+  \begin{align*}
+    v + w    &= \{~ aid \mapsto v~\var{aid} + w~\var{aid} ~\vert~ \var{aid} \in \fun{dom}~v \cup \fun{dom}~w ~\} \\
+    v \leq w &\Leftrightarrow \forall~\var{aid} \in \AssetID, v~\var{aid} \leq w~\var{aid}
+  \end{align*}
+  \caption{Pointwise operations on Value}
+  \label{fig:pointwise}
+\end{figure*}
 
-\[ v~R~w :\Leftrightarrow \forall~\var{pid}~\var{aname}, (v~\var{pid}~\var{aname})~R~(w~\var{pid}~\var{aname}) \]
-\[ (v + w)~\var{pid}~\var{aname} := (v~\var{pid}~\var{aname}) + (w~\var{pid}~\var{aname}). \]
+\subsection{Special Ada representation}
+Although all assets are native on the Cardano ledger (ie. the accounting and
+transfer logic for them is done directly by the ledger), Ada is still treated in a
+special way by the ledger rules, and is the most common type of asset on the ledger.
+It can
+be used for special purposes (such as fees) for which other assets cannot be used.
+The underlying consensus algorithm relies on Ada in a way that
+cannot be extended to user-defined assets.
+Ada can also neither be minted nor burned.
+
+Note that in the $\Value$ definition above, we pick a special asset ID for Ada, that
+is not part of the type which represents the asset IDs for all other assets.
+Combining the asset name and policy for Ada gives a type-level guarantee that there is exactly
+one kind of asset that is associated with it in any way, rather than
+deriving this guarantee as an emergent property of minting rules.
+
+Additionally, not giving Ada an actual policy ID
+(that could have a hash-associated policy) eliminates the possibility
+certain cryptographic attacks.
+We sometimes refer to Ada as the primary or principal currency. Ada does not,
+for the purposes of the Mary ledger specification, have a $\PolicyID$ or an $\AssetName$.
+
+\subsection{Fixing a Token algebra}
+
+For the remainder of this specification, let $\ValMonoid$ be an
+arbitrary but fixed Token algebra. As described above, choosing
+$\Coin$ results in the Allegra ledger, and choosing $\Value$ results
+in the Mary ledger.
