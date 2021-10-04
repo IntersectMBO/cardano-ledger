@@ -208,6 +208,7 @@ import NoThunks.Class
     NoThunks (..),
   )
 import Quiet
+import Foreign.Ptr (castPtr)
 
 -- ========================================================================
 
