@@ -45,6 +45,8 @@ import Cardano.Prelude (HeapWords (..))
 import qualified Cardano.Prelude as HW
 import Control.DeepSeq (NFData (rnf))
 import Data.Word (Word64)
+import Foreign.Ptr (castPtr)
+import Foreign.Storable
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), noThunksInValues)
 import Numeric.Natural (Natural)
@@ -78,6 +80,8 @@ deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
 
 deriving newtype instance CC.Crypto crypto => NFData (TxId crypto)
 
+deriving newtype instance HS.HashAlgorithm (CC.HASH crypto) => Storable (TxId crypto)
+
 instance HeapWords (TxIn crypto) where
   heapWords (TxInCompact32 a _ _ _ ix) =
     6 + (4 * HW.heapWordsUnpacked a) + HW.heapWordsUnpacked ix
@@ -110,6 +114,23 @@ pattern TxIn tid index <-
         HS.ViewHash32 a b c d -> TxInCompact32 a b c d (fromIntegral index)
 
 {-# COMPLETE TxIn #-}
+
+type TxIxCompact = Word64
+
+instance (CC.Crypto crypto, HS.HashAlgorithm (CC.HASH crypto)) => Storable (TxIn crypto) where
+  sizeOf _ =
+    sizeOf (undefined :: SafeHash crypto EraIndependentTxBody)
+      + sizeOf (undefined :: TxIxCompact)
+  alignment _ =
+    alignment (undefined :: SafeHash crypto EraIndependentTxBody)
+      + alignment (undefined :: TxIxCompact)
+  peek ptr = do
+    txId <- peek (castPtr ptr)
+    txIx :: TxIxCompact <- peekByteOff ptr (sizeOf txId)
+    pure $ TxIn txId (fromIntegral txIx)
+  poke ptr (TxIn txId txIx) = do
+    poke (castPtr ptr) txId
+    pokeByteOff ptr (sizeOf txId) (fromIntegral txIx :: TxIxCompact)
 
 viewTxIn :: TxIn crypto -> (TxId crypto, Natural)
 viewTxIn (TxInCompactOther tid i) = (tid, fromIntegral i)
