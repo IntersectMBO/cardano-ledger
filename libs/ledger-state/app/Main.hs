@@ -42,7 +42,7 @@ main = do
         )
         (header "ledger-state - Tool for analyzing ledger state")
   forM_ (optsUtxoJsonFile opts) $ \fp -> do
-    _ <- observeMemoryOriginalMap fp
+    _ <- observeMemory fp
     pure ()
     -- getChar
     -- ---collectStats fp
