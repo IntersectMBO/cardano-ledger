@@ -73,7 +73,7 @@ transaction_input = [ transaction_id : $hash32
 transaction_output =
   [ address
   , amount : value
-  , ? data_hash : $hash32 ; New
+  , ? datum_hash : $hash32 ; New
   ]
 
 script_data_hash = $hash32 ; New
