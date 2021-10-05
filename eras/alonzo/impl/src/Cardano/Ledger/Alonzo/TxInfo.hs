@@ -12,7 +12,7 @@ module Cardano.Ledger.Alonzo.TxInfo where
 -- =============================================
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull', serialize')
-import Cardano.Crypto.Hash.Class (Hash (UnsafeHash), HashAlgorithm)
+import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
@@ -67,7 +67,7 @@ import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
 import qualified Data.ByteString.Base64 as B64
-import Data.ByteString.Short as SBS (ShortByteString, fromShort)
+import Data.ByteString.Short as SBS (ShortByteString)
 import qualified Data.ByteString.UTF8 as BSU
 import Data.Coders
   ( Decode (..),
@@ -140,47 +140,47 @@ import Plutus.V1.Ledger.Contexts ()
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
 
-transDataHash :: CC.Crypto c => StrictMaybe (DataHash c) -> Maybe P.DatumHash
+transDataHash :: StrictMaybe (DataHash c) -> Maybe P.DatumHash
 transDataHash (SJust safe) = Just (transDataHash' safe)
 transDataHash SNothing = Nothing
 
-transDataHash' :: CC.Crypto c => DataHash c -> P.DatumHash
+transDataHash' :: DataHash c -> P.DatumHash
 transDataHash' safe = P.DatumHash (transSafeHash safe)
 
-transKeyHash :: CC.Crypto c => KeyHash d c -> P.PubKeyHash
-transKeyHash (KeyHash (UnsafeHash h)) = P.PubKeyHash (P.toBuiltin (fromShort h))
+transKeyHash :: KeyHash d c -> P.PubKeyHash
+transKeyHash (KeyHash h) = P.PubKeyHash (P.toBuiltin (hashToBytes h))
 
-transScriptHash :: CC.Crypto c => ScriptHash c -> P.ValidatorHash
-transScriptHash (ScriptHash (UnsafeHash h)) = P.ValidatorHash (P.toBuiltin (fromShort h))
+transScriptHash :: ScriptHash c -> P.ValidatorHash
+transScriptHash (ScriptHash h) = P.ValidatorHash (P.toBuiltin (hashToBytes h))
 
-transSafeHash :: CC.Crypto c => SafeHash c i -> P.BuiltinByteString
-transSafeHash safe = case extractHash safe of UnsafeHash b -> P.toBuiltin (fromShort b)
+transSafeHash :: SafeHash c i -> P.BuiltinByteString
+transSafeHash = P.toBuiltin . hashToBytes . extractHash
 
-transHash :: HashAlgorithm h => Hash h a -> BS.ByteString
-transHash (UnsafeHash h) = fromShort h
+transHash :: Hash h a -> BS.ByteString
+transHash = hashToBytes
 
-txInfoId :: CC.Crypto crypto => TxId crypto -> P.TxId
+txInfoId :: TxId crypto -> P.TxId
 txInfoId (TxId safe) = P.TxId (transSafeHash safe)
 
-transStakeCred :: CC.Crypto crypto => Credential keyrole crypto -> P.Credential
-transStakeCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) =
-  P.ScriptCredential (P.ValidatorHash (P.toBuiltin (fromShort kh)))
-transStakeCred (KeyHashObj (KeyHash (UnsafeHash kh))) =
-  P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (fromShort kh)))
+transStakeCred :: Credential keyrole crypto -> P.Credential
+transStakeCred (ScriptHashObj (ScriptHash kh)) =
+  P.ScriptCredential (P.ValidatorHash (P.toBuiltin (hashToBytes kh)))
+transStakeCred (KeyHashObj (KeyHash kh)) =
+  P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (hashToBytes kh)))
 
-transStakeReference :: CC.Crypto crypto => StakeReference crypto -> Maybe P.StakingCredential
+transStakeReference :: StakeReference crypto -> Maybe P.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (P.StakingHash (transStakeCred cred))
 transStakeReference (StakeRefPtr (Ptr (SlotNo slot) i1 i2)) =
   Just (P.StakingPtr (fromIntegral slot) (fromIntegral i1) (fromIntegral i2))
 transStakeReference StakeRefNull = Nothing
 
-transCred :: CC.Crypto crypto => Credential keyrole crypto -> P.Credential
-transCred (KeyHashObj (KeyHash (UnsafeHash kh))) =
-  P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (fromShort kh)))
-transCred (ScriptHashObj (ScriptHash (UnsafeHash kh))) =
-  P.ScriptCredential (P.ValidatorHash (P.toBuiltin (fromShort kh)))
+transCred :: Credential keyrole crypto -> P.Credential
+transCred (KeyHashObj (KeyHash kh)) =
+  P.PubKeyCredential (P.PubKeyHash (P.toBuiltin (hashToBytes kh)))
+transCred (ScriptHashObj (ScriptHash kh)) =
+  P.ScriptCredential (P.ValidatorHash (P.toBuiltin (hashToBytes kh)))
 
-transAddr :: CC.Crypto crypto => Addr crypto -> Maybe P.Address
+transAddr :: Addr crypto -> Maybe P.Address
 transAddr (Addr _net object stake) = Just (P.Address (transCred object) (transStakeReference stake))
 transAddr (AddrBootstrap _bootaddr) = Nothing
 
@@ -274,13 +274,13 @@ txInfoOut (Alonzo.TxOut addr val datahash) =
 -- ==================================
 -- translate Values
 
-transPolicyID :: CC.Crypto crypto => Mary.PolicyID crypto -> P.CurrencySymbol
-transPolicyID (Mary.PolicyID (ScriptHash (UnsafeHash x))) = P.CurrencySymbol (P.toBuiltin (fromShort x))
+transPolicyID :: Mary.PolicyID crypto -> P.CurrencySymbol
+transPolicyID (Mary.PolicyID (ScriptHash x)) = P.CurrencySymbol (P.toBuiltin (hashToBytes x))
 
 transAssetName :: Mary.AssetName -> P.TokenName
 transAssetName (Mary.AssetName bs) = P.TokenName (P.toBuiltin bs)
 
-transValue :: forall c. CC.Crypto c => Mary.Value c -> P.Value
+transValue :: Mary.Value c -> P.Value
 transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp
   where
     accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
@@ -295,7 +295,7 @@ transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp
 -- =============================================
 -- translate fileds like DCert, Wdrl, and similar
 
-transDCert :: CC.Crypto c => DCert c -> P.DCert
+transDCert :: DCert c -> P.DCert
 transDCert (DCertDeleg (RegKey stkcred)) =
   P.DCertDelegRegKey (P.StakingHash (transStakeCred stkcred))
 transDCert (DCertDeleg (DeRegKey stkcred)) =
@@ -311,7 +311,7 @@ transDCert (DCertPool (RetirePool keyhash (EpochNo i))) =
 transDCert (DCertGenesis _) = P.DCertGenesis
 transDCert (DCertMir _) = P.DCertMir
 
-transWdrl :: CC.Crypto crypto => Wdrl crypto -> Map.Map P.StakingCredential Integer
+transWdrl :: Wdrl crypto -> Map.Map P.StakingCredential Integer
 transWdrl (Wdrl mp) = Map.foldlWithKey' accum Map.empty mp
   where
     accum ans (RewardAcnt _network cred) (Coin n) =
@@ -321,13 +321,12 @@ getWitVKeyHash :: (CC.Crypto crypto, Typeable kr) => WitVKey kr crypto -> P.PubK
 getWitVKeyHash =
   P.PubKeyHash
     . P.toBuiltin
-    . fromShort
-    . (\(UnsafeHash x) -> x)
+    . hashToBytes
     . (\(KeyHash x) -> x)
     . hashKey
     . (\(WitVKey x _) -> x)
 
-transDataPair :: CC.Crypto c => (DataHash c, Data era) -> (P.DatumHash, P.Datum)
+transDataPair :: (DataHash c, Data era) -> (P.DatumHash, P.Datum)
 transDataPair (x, y) = (transDataHash' x, P.Datum (P.dataToBuiltinData (getPlutusData y)))
 
 transExUnits :: ExUnits -> P.ExBudget

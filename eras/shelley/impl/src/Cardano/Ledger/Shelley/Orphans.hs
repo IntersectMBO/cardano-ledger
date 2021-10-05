@@ -1,5 +1,6 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -21,10 +22,11 @@ import Control.DeepSeq (NFData (rnf))
 import Data.Aeson
 import qualified Data.ByteString as Long (ByteString, empty)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, empty)
-import qualified Data.ByteString.Short as Short (ShortByteString, empty)
+import qualified Data.ByteString.Short as Short (ShortByteString, empty, pack)
 import Data.Default.Class (Default (..))
 import Data.Foldable
 import Data.IP (IPv4, IPv6)
+import Data.Proxy
 import Data.Sequence.Strict (StrictSeq, fromList, fromStrict)
 import qualified Data.Sequence.Strict as SS
 import qualified Data.Text as Text
@@ -100,8 +102,10 @@ instance Default Long.ByteString where
 instance Default Lazy.ByteString where
   def = Lazy.empty
 
-instance HS.HashAlgorithm a => Default (Hash a b) where
-  def = UnsafeHash def
+instance HS.HashAlgorithm h => Default (Hash h b) where
+  def =
+    UnsafeHash $
+      Short.pack $ replicate (fromIntegral (Hash.sizeHash (Proxy :: Proxy h))) 0
 
 instance Default Bool where
   def = False
