@@ -537,8 +537,8 @@ to v = do
             BA.writeByteArray byteArray (5 * numTriples + i) anoff
 
         forM_ (Map.toList pidOffsetMap) $
-          \(pid, offset) ->
-            let PolicyID (ScriptHash (Hash.UnsafeHash pidBytes)) = pid
+          \(PolicyID (ScriptHash sh), offset) ->
+            let pidBytes = Hash.hashToBytesShort sh
              in BA.copyByteArray
                   byteArray
                   (fromIntegral offset)

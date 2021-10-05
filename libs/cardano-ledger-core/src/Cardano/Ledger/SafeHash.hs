@@ -108,7 +108,7 @@ instance SafeToHash ByteString where
 -- a newtype around (Hash.Hash c i) which is a primitive SafeToHash type.
 
 instance Hash.HashAlgorithm c => SafeToHash (Hash.Hash c i) where
-  originalBytes (Hash.UnsafeHash b) = fromShort b
+  originalBytes = Hash.hashToBytes
 
 -- =====================================================================
 {- Types that are SafeToHash, AND have both of the following two invariants,

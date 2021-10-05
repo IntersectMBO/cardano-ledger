@@ -171,7 +171,9 @@ getHash = GetShort $ \i sbs ->
   let hashLen = Hash.sizeHash ([] @h)
       offsetStop = i + fromIntegral hashLen
    in if offsetStop <= SBS.length sbs
-        then Just (offsetStop, Hash.UnsafeHash (substring sbs i offsetStop))
+        then do
+          hash <- Hash.hashFromBytesShort $ substring sbs i offsetStop
+          Just (offsetStop, hash)
         else Nothing
 
 -- start is the first index copied

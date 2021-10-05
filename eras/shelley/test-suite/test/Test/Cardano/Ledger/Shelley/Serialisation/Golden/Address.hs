@@ -14,7 +14,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Address
 where
 
 import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.Hash (Hash (..), HashAlgorithm (..), hashFromBytes, sizeHash)
+import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex, sizeHash)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes (Network (..))
@@ -37,9 +37,7 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as LB16
 import qualified Data.ByteString.Lazy as LBS
-import qualified Data.ByteString.Short as SBS
-import Data.Either
-import Data.Maybe (fromJust)
+import Data.Maybe (fromJust, fromMaybe)
 import Data.Proxy (Proxy (..))
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
@@ -70,69 +68,73 @@ goldenTests_MockCrypto :: TestTree
 goldenTests_MockCrypto =
   T.testGroup
     "MockCrypto golden tests"
-    [ golden "keyHash" putCredential keyHash "01020304",
-      golden "scriptHash" putCredential scriptHash "05060708",
+    [ golden "keyHash" putCredential keyHash "01020304a1a2a3a4",
+      golden "scriptHash" putCredential scriptHash "05060708b5b6b7b8",
       golden "ptr" putPtr ptr "81000203",
       golden
         "addrBaseKK"
         putAddr
         (Addr Testnet keyHash (StakeRefBase keyHash))
-        "000102030401020304",
+        "0001020304a1a2a3a401020304a1a2a3a4",
       golden
         "addrBaseSK"
         putAddr
         (Addr Testnet scriptHash (StakeRefBase keyHash))
-        "100506070801020304",
+        "1005060708b5b6b7b801020304a1a2a3a4",
       golden
         "addrBaseKS"
         putAddr
         (Addr Testnet keyHash (StakeRefBase scriptHash))
-        "200102030405060708",
+        "2001020304a1a2a3a405060708b5b6b7b8",
       golden
         "addrBaseSS"
         putAddr
         (Addr Testnet scriptHash (StakeRefBase scriptHash))
-        "300506070805060708",
+        "3005060708b5b6b7b805060708b5b6b7b8",
       golden
         "addrPtrK"
         putAddr
         (Addr Testnet keyHash (StakeRefPtr ptr))
-        "400102030481000203",
+        "4001020304a1a2a3a481000203",
       golden
         "addrPtrS"
         putAddr
         (Addr Testnet scriptHash (StakeRefPtr ptr))
-        "500506070881000203",
+        "5005060708b5b6b7b881000203",
       golden
         "addrEnterpriseK"
         putAddr
         (Addr Testnet keyHash StakeRefNull)
-        "6001020304",
+        "6001020304a1a2a3a4",
       golden
         "addrEnterpriseS"
         putAddr
         (Addr Testnet scriptHash StakeRefNull)
-        "7005060708",
+        "7005060708b5b6b7b8",
       golden
         "rewardAcntK"
         putRewardAcnt
         (RewardAcnt Testnet keyHash)
-        "e001020304",
+        "e001020304a1a2a3a4",
       golden
         "rewardAcntS"
         putRewardAcnt
         (RewardAcnt Testnet scriptHash)
-        "f005060708"
+        "f005060708b5b6b7b8"
     ]
   where
     keyHash :: Credential kh C_Crypto
     keyHash =
-      KeyHashObj . KeyHash . UnsafeHash $
-        SBS.toShort . fromRight (error "Unable to decode") . B16.decode $ "01020304"
+      KeyHashObj . KeyHash
+        . fromMaybe (error "Unable to decode")
+        . hashFromTextAsHex
+        $ "01020304a1a2a3a4"
     scriptHash :: Credential kh C_Crypto
     scriptHash =
-      ScriptHashObj . ScriptHash . UnsafeHash $
-        SBS.toShort . fromRight (error "Unable to decode") . B16.decode $ "05060708"
+      ScriptHashObj . ScriptHash
+        . fromMaybe (error "Unable to decode")
+        . hashFromTextAsHex
+        $ "05060708b5b6b7b8"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
 
@@ -225,7 +227,7 @@ goldenTests_ShelleyCrypto =
             ++ ", but expected to be "
             ++ show expectedLength
 
-golden :: String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
+golden :: HasCallStack => String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
 golden name put value expected =
   T.testCase name $
     T.assertEqual name expected (LB16.encode . B.runPut . put $ value)
