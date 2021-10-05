@@ -191,12 +191,6 @@ instance (Prim key,Ord key) => Search (PrimArray key) key
 instance Ord key => Search (A.Array Int key) key
    where search key v = binsearch 0 (isize v - 1) key v
 
-instance Search (arr k) k => Search (NixArr arr k) k where
-  search key (NixArr _ arr del) =
-    case search key arr of
-      Nothing -> Nothing
-      Just i -> if hasElem i del then Nothing else (Just i)
-      
 
 instance Search t key => Search (t,x)  key where
   search key (t,x) = search key t
@@ -245,16 +239,6 @@ inOrder2 smaller done action state items = loop items state where
                 Just more -> loop (more:larger) state'
 
 
-mark1:: (Indexable arr t) =>
-        Int -> (Int,arr t) -> Int -> (Int,arr t) -> MutArray s (Int,arr t) -> ST s Int
-mark1 lo t i (next,arr) marr =
-  do let next' = next+1
-     if next' < isize arr
-        then mwrite marr i (next',arr) >> pure lo
-        else mwrite marr i t >> pure(lo+1)
-
-smaller1 :: (Ord a, Indexable arr a) => (Int, arr a) -> (Int, arr a) -> Bool
-smaller1 (i,arr1) (j,arr2) = index arr1 i < index arr2 j
 
 mergeArray :: forall a arr marr.
   ( ArrayPair arr marr a,
@@ -272,35 +256,8 @@ mergeArray size inputs action = fst $ withMutArray size build where
      minputs <- mfromlist (map (\ x -> (0,x)) inputs)
      inOrder3 mark1 smaller1 (0::Int) 0 (size-1) (action moutput) minputs
 
-mergeArray2 :: forall a arr marr arr2 marr2 v.
-  ( ArrayPair arr marr a,
-    Indexable arr2 v,
-    ArrayPair arr2 marr2 v,
-    Show (arr a),
-    Ord a
-  ) =>
-  Int ->
-  [arr a] ->
-  (forall s. marr s a -> marr2 s v -> Int -> (Int,arr a) -> ST s Int) ->
-  MapNode arr arr2 a v
-mergeArray2 size inputs action = node (with2MutArray size size build) where
-  node (arr1,arr2,_) = MapNode size arr1 arr2
-  build:: forall s. marr s a -> marr2 s v -> ST s Int
-  build mkeys mvals = do
-     minputs <- mfromlist (map (\ x -> (0,x)) inputs)
-     inOrder3 mark1 smaller1 (0::Int) 0 (size-1) (action mkeys mvals) minputs
+ 
 
-
-mergeMapNode :: forall karr varr marr marr2 k v.
- ( ArrayPair karr marr k,
-   ArrayPair varr marr2 v,
-   Show (karr k),
-   Ord k
-  ) => Int -> [MapNode karr varr k v] -> MapNode karr varr k v
-mergeMapNode size nodes = mergeArray2 size inputs action where
-   (inputs,vals) = unzip (map (\ (MapNode _ ks vs) -> (ks,vs)) nodes)
-   action:: forall s. marr s k -> marr2 s v -> Int -> (Int,karr k) -> ST s Int
-   action mkeys mvals i (n,arrkeys) = undefined
 
 -- ==============================================================
 -- Overloaded operations on (Map k v)
@@ -414,51 +371,6 @@ nm1 :: NixMap Int String
 nm1 = makemap [(i,show i) | i <- [1..7]]
 -}
 
--- =======================================================================================
--- SerialArray. An array where the elements are stored serialized in groups of fixed size
-
-data SerialArray arr v where
-   SerialArray:: (Indexable arr ShortByteString,FromCBOR v) =>
-       {-# UNPACK #-} !Int -> -- Nominal size of the arr. Indices run from [0..nominal -1]
-       {-# UNPACK #-} !Int -> -- groupsize, so the actual size of the array is (serialSize nominalsize groupsize)
-       arr ShortByteString ->
-       SerialArray arr v
-       
--- These two functions control how to serialize
-toBytes :: ToCBOR a => a -> ShortByteString
-toBytes x = toShort (serialize' x)
-
-fromBytes :: FromCBOR a => ShortByteString -> a
-fromBytes x = (unsafeDeserialize' (fromShort x))
-
--- | How many slots do you need to store 'nominalsize' elements if they are serialized into
---   groups, where each group is a list of length 'groupsize'. The last group may have fewer items.
-serialSize nominalsize groupsize = (nominalsize `div` groupsize) + fix
-  where fix = if (nominalsize `mod` groupsize)==0 then 0 else 1
-
--- | Chop a list into 'groupsize' sub lists
---   Invariant: (length (chopN groupsize xs) == serialSize (length xs))
-chopN :: Int -> [t] -> [[t]]
-chopN groupsize [] = []
-chopN groupsize xs = take groupsize xs : chopN groupsize (drop groupsize xs)
-
-instance Show t => Show (SerialArray arr t) where
-   show (SerialArray nominal group arr) = show bytes
-     where bytes = concat $ map (fromBytes @[t]) (tolist arr)
-
-instance (Indexable arr ShortByteString,ToCBOR t, FromCBOR t) => Indexable (SerialArray arr) t where
-   isize (SerialArray nominal _ _) = nominal
-   index (SerialArray nominal groupsize arr) i =
-     if (i >=0) && (i < nominal)
-        then (fromBytes (index arr (i `div` groupsize))) !! (i `mod` groupsize)
-        else error ("index "++show i++" out of SerialArray nominal range (0,"++show(nominal-1)++").")
-   fromlist = serialArrayFromlist @t 10
-   tolist (SerialArray _ _ arr) = concat (map (fromBytes @[t]) (tolist arr))
-
-serialArrayFromlist :: forall t arr. (ToCBOR t,FromCBOR t,Indexable arr ShortByteString) => Int -> [t] -> SerialArray arr t
-serialArrayFromlist groupsize ts = SerialArray nominalsize groupsize arr
-  where nominalsize = length ts
-        arr = fromlist (map (toBytes @[t]) (chopN groupsize ts))
 
 {-
 -- ==================================

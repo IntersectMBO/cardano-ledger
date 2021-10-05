@@ -21,6 +21,7 @@ import GHC.Arr(STArray(..),unsafeFreezeSTArray)
 import Control.Monad.ST (ST, runST)
 import Cardano.Prelude (HeapWords (..))
 
+
 -- ============================================================================================
 -- Array like objects which can access elements by their index
 
@@ -29,6 +30,8 @@ class Indexable t a where
   isize :: t a -> Int
   fromlist :: [a] -> t a
   tolist :: t a -> [a]
+  catenate :: Int -> [t a] -> t a
+  merge :: Ord a => Int -> [t a] -> t a
 
 -- Array like objects that store their elements in ascending order dupport Binary search
 
@@ -56,29 +59,46 @@ alub (lo, hi) arr target
   where
     mid = lo + (div (hi - lo) 2)
 
+boundsCheck :: Indexable t1 a => (t1 a -> Int -> t2) -> t1 a -> Int -> t2
+boundsCheck indexf arr i | i>=0 && i < isize arr = indexf arr i
+boundsCheck _ arr i = error ("boundscheck error, "++show i++", not in bounds (0.."++show (isize arr -1)++").")
+
 -- Built in type Instances
 
 instance Indexable PA.Array x where
-  index = PA.indexArray
+  index = boundsCheck PA.indexArray
   isize = PA.sizeofArray
   fromlist = PA.arrayFromList
   tolist arr = foldr (:) [] arr
- 
+  catenate = catArray
+  merge = mergeArray
+  
 instance Prim a => Indexable PrimArray a where
-  index = indexPrimArray
+  index = boundsCheck indexPrimArray
   isize = sizeofPrimArray
   fromlist = primArrayFromList
   tolist = primArrayToList
+  catenate = catArray
+  merge = mergeArray  
 
 instance Indexable (A.Array Int) a where
   index = (A.!)
   isize arr = (hi - lo) + 1 where (lo, hi) = A.bounds arr
   fromlist xs = (A.listArray (0, length xs -1) xs)
   tolist arr = foldr (:) [] arr
+  catenate = catArray
+  merge = mergeArray
 
 -- ========================================================================
 -- Pairs of Mutable Arrays and ImMutable Arrays that can be converted safely
 -- ========================================================================
+
+
+mboundsCheck :: (ArrayPair arr marr a) =>
+                (marr s a -> Int -> ST s a) -> marr s a -> Int -> ST s a
+mboundsCheck indexf arr i | i>=0 && i < msize arr = indexf arr i
+mboundsCheck _ arr i = error ("mboundscheck error, "++show i++", not in bounds (0.."++show (msize arr -1)++").")
+
 
 class Indexable arr a => ArrayPair arr marr a | marr -> arr, arr -> marr where
   mindex :: marr s a -> Int -> ST s a
@@ -92,7 +112,7 @@ class Indexable arr a => ArrayPair arr marr a | marr -> arr, arr -> marr where
 
 instance ArrayPair PA.Array PA.MutableArray a where
   msize = PA.sizeofMutableArray 
-  mindex = PA.readArray
+  mindex = mboundsCheck PA.readArray
   mnew n = PA.newArray n undefined
   mfreeze = PA.unsafeFreezeArray
   mwrite = PA.writeArray
@@ -100,7 +120,7 @@ instance ArrayPair PA.Array PA.MutableArray a where
 
 instance Prim a => ArrayPair PrimArray MutablePrimArray a where
   msize = sizeofMutablePrimArray
-  mindex = readPrimArray
+  mindex = mboundsCheck readPrimArray
   mnew = newPrimArray  
   mfreeze = unsafeFreezePrimArray
   mwrite = writePrimArray
@@ -138,10 +158,9 @@ mfromlist xs = do
 --   catArray maintains index order, but mergeArray maintains ascending oder.
 --   catArray   [[2,1],[14],[6,5,11]]  --> [2,1,14,6,5,11]
 --   mergeArray [[1,2],[14],[5,6,11]]  --> [1,2,5,6,11,14]
-catArray :: ArrayPair arr marr a => [arr a] -> arr a
-catArray xs = fst(withMutArray total (build 0 xs))
-  where total = sum(map isize xs)
-        build _next [] _marr = pure ()
+catArray :: ArrayPair arr marr a => Int -> [arr a] -> arr a
+catArray totalsize xs = fst(withMutArray totalsize (build 0 xs))
+  where build _next [] _marr = pure ()
         build next (arr: arrs) marr =
            do let size = isize arr
               mcopy marr next arr 0 size
@@ -155,6 +174,12 @@ swap marr i j = do
   tj <- mindex marr j;
   mwrite marr i tj
   mwrite marr j ti
+
+mToList :: ArrayPair arr marr a => Int -> marr s a -> ST s [a]
+mToList first marr = loop first []
+  where hi = (msize marr - 1)
+        loop lo xs | lo > hi = pure(reverse xs)
+        loop lo xs = do {x <- mindex marr lo; loop (lo+1) (x:xs)}
 
 -- ================================================================
 -- Functions for using mutable initialization in a safe manner.
@@ -242,7 +267,7 @@ instance (Prim a, HeapWords a) => HeapWords (PrimArray a) where
 -- Encoding lists with the structure of binary numbers
 
 -- | binary encoding of 'n', least significant bit on the front of the list
-binary :: Int -> [Int]
+binary :: Integral n => n -> [n]
 binary 0 = []
 binary 1 = [(1)]
 binary n = (mod n 2) : binary (div n 2)
@@ -311,7 +336,7 @@ nodesize (Node i _) = i
 smallestIndex ::(ArrayPair arr marr t) => (t -> t -> Bool) ->  marr s t -> (Int,t) ->Int -> Int -> ST s (Int,t)
 smallestIndex smaller marr initpair initlo hi = loop initpair initlo where
    loop pair lo | lo > hi = pure pair
-   loop (pair@(_i,t)) lo = do 
+   loop (pair@(_i,t)) lo = do
      t2 <- mindex marr lo
      if smaller t t2
          then loop pair (lo+1) 
@@ -321,7 +346,7 @@ smallestIndex smaller marr initpair initlo hi = loop initpair initlo where
 --  'state' is the current state, and 'lo' and 'hi' limit the bounds of where to look.
 --  'markIfDone' might alter 'marr' and return a new 'lo' limit, if the 'lo' index in
 --  'marr' has no more 't' objects to offer.
-inOrder ::
+inOrder :: 
    (Int -> Int -> t -> PA.MutableArray s t -> ST s Int) ->
    (t -> t -> Bool) ->
    state ->
@@ -333,7 +358,7 @@ inOrder ::
 inOrder markIfDone smaller initstate initlo hi action marr = loop initlo initstate where
    loop lo  state | lo > hi = pure state
    loop lo state = 
-      do t <- mindex marr lo
+      do t <-  mindex marr lo
          (i,small) <- smallestIndex smaller marr (lo,t) (lo+1) hi
          state' <- action state small
          lo' <- markIfDone lo i small marr
@@ -382,11 +407,12 @@ mergeWithAction size inputs action = fst $ withMutArray size build where
 --   mergeArray [[1,2],[14],[5,6,11]]  --> [1,2,5,6,11,14]
 --   catArray [[2,1],[14],[6,5,11]]  --> [2,1,14,6,5,11]
 
-mergeArray :: (Ord a,ArrayPair arr marr a) => [arr a] -> arr a
-mergeArray xs = mergeWithAction (sum(map isize xs)) xs action1
+mergeArray :: (Ord a,ArrayPair arr marr a) => Int -> [arr a] -> arr a
+mergeArray size xs = mergeWithAction size xs action1
 
 testmerge :: PrimArray Int
-testmerge = mergeArray [fromlist[2,7], fromlist[1,6,19], fromlist[4,9], fromlist[3,8,12,17]]
+testmerge = mergeArray (sum(map isize xs)) xs
+  where xs = [fromlist[2,7], fromlist[1,6,19], fromlist[4,9], fromlist[3,8,12,17]]
 
 {-
 -- | Merge 2 parallel arrays with 'action'. The order of merging depends only on

@@ -739,8 +739,8 @@ binary 1 = [(1)]
 binary n = (mod n 2) : binary (div n 2)
 
 -- | Compute a sparse list of non-zero Binary digits and their positional weights to represent 'n'
---   For eample (sparseBinary 25) returns [(1,1),(1,8),(1,16)], I.e. we need: 1 one,
---   1 eight, and 1 sixteen.  Since this is binary, and we don't store the 0's, the digits are aways 1.
+--   For eample (sparseBinaryg 25) returns [(1,1),(1,8),(1,16)], I.e. we need: 1 one,
+--   1 eight, and 1 sixteen.  Since this is binary, and we don't store thse 0's, the digits are aways 1.
 --   and the weights are powers of 2.
 sparseBinary :: Int -> [(Int, Int)]
 sparseBinary n = fix 1 (binary n)
