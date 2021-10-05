@@ -24,14 +24,9 @@ module Cardano.Ledger.Chain
   )
 where
 
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.PParams (ProtVer (..))
-import Cardano.Protocol.TPraos.BHeader
-  ( BHeader,
-    bHeaderSize,
-    bhbody,
-    hBbsize,
-  )
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
 import GHC.Generics (Generic)
@@ -89,20 +84,18 @@ data ChainPredicateFailure era
 instance NoThunks (ChainPredicateFailure era)
 
 chainChecks ::
-  ( Era era,
-    MonadError (ChainPredicateFailure era) m
-  ) =>
+  MonadError (ChainPredicateFailure era) m =>
   Natural ->
   ChainChecksPParams ->
-  BHeader (Crypto era) ->
+  BHeaderView (Crypto era) ->
   m ()
-chainChecks maxpv ccd bh = do
+chainChecks maxpv ccd bhv = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)
-  unless (fromIntegral (bHeaderSize bh) <= ccMaxBHSize ccd) $
+  unless (fromIntegral (bhviewHSize bhv) <= ccMaxBHSize ccd) $
     throwError $
-      HeaderSizeTooLargeCHAIN (fromIntegral $ bHeaderSize bh) (ccMaxBHSize ccd)
-  unless (hBbsize (bhbody bh) <= ccMaxBBSize ccd) $
+      HeaderSizeTooLargeCHAIN (fromIntegral $ bhviewHSize bhv) (ccMaxBHSize ccd)
+  unless (bhviewBSize bhv <= ccMaxBBSize ccd) $
     throwError $
-      BlockSizeTooLargeCHAIN (hBbsize (bhbody bh)) (ccMaxBBSize ccd)
+      BlockSizeTooLargeCHAIN (bhviewBSize bhv) (ccMaxBBSize ccd)
   where
     (ProtVer m _) = ccProtocolVersion ccd

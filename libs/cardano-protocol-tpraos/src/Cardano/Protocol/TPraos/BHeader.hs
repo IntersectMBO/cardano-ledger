@@ -35,6 +35,7 @@ module Cardano.Protocol.TPraos.BHeader
     seedL,
     mkSeed,
     bnonce,
+    makeHeaderView,
   )
 where
 
@@ -59,6 +60,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     FixedPoint,
@@ -494,3 +496,14 @@ lastAppliedHash (At lab) = BlockHash $ labHash lab
 -- | Retrieve the new nonce from the block header body.
 bnonce :: BHBody crypto -> Nonce
 bnonce = mkNonceFromOutputVRF . VRF.certifiedOutput . bheaderEta
+
+makeHeaderView :: CC.Crypto crypto => BHeader crypto -> BHeaderView crypto
+makeHeaderView bh =
+  BHeaderView
+    (hashKey . bheaderVk $ bhb)
+    (bsize $ bhb)
+    (bHeaderSize bh)
+    (bhash bhb)
+    (bheaderSlotNo bhb)
+  where
+    bhb = bHeaderBody' bh

@@ -16,7 +16,6 @@ module Cardano.Protocol.TPraos.Rules.Overlay
     OverlayEnv (..),
     OverlayPredicateFailure (..),
     OBftSlot (..),
-    isOverlaySlot,
     classifyOverlaySlot,
     lookupInOverlaySchedule,
     overlaySlots,
@@ -32,6 +31,7 @@ import Cardano.Binary
     peekTokenType,
   )
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     BoundedRational (..),
@@ -333,18 +333,6 @@ instance
 instance NoThunks (OBftSlot crypto)
 
 instance NFData (OBftSlot crypto)
-
-isOverlaySlot ::
-  SlotNo -> -- starting slot
-  UnitInterval -> -- decentralization parameter
-  SlotNo -> -- slot to check
-  Bool
-isOverlaySlot firstSlotNo dval slot = step s < step (s + 1)
-  where
-    s = fromIntegral $ slot -* firstSlotNo
-    d = unboundRational dval
-    step :: Rational -> Integer
-    step x = ceiling (x * d)
 
 classifyOverlaySlot ::
   SlotNo -> -- first slot of the epoch

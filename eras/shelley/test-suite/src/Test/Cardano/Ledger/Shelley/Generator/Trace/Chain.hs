@@ -20,10 +20,10 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 
 -- import Test.Cardano.Ledger.Shelley.Shrinkers (shrinkBlock) -- TODO FIX ME
 
+import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (TxSeq))
-import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
@@ -85,11 +85,11 @@ import Test.QuickCheck (Gen)
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
-  ( EraGen era,
+  ( Era era,
+    EraGen era,
     UsesTxBody era,
     UsesTxOut era,
     UsesValue era,
-    ToCBORGroup (TxSeq era),
     UsesAuxiliary era,
     Mock (Crypto era),
     ApplyBlock era,
@@ -99,7 +99,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block era,
+    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), TxSeq era),
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,

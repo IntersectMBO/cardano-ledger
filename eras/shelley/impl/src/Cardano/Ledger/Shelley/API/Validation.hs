@@ -22,21 +22,21 @@ module Cardano.Ledger.Shelley.API.Validation
   )
 where
 
+import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import qualified Cardano.Ledger.Chain as STS
-import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
+import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, TxSeq)
+import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Protocol (PraosCrypto)
-import Cardano.Ledger.Shelley.BlockChain (Block)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import qualified Cardano.Ledger.Shelley.Rules.Bbody as STS
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -49,11 +49,7 @@ import NoThunks.Class (NoThunks (..))
 -------------------------------------------------------------------------------}
 
 class
-  ( ChainData (Block era),
-    AnnotatedData (Block era),
-    ChainData (BHeader (Crypto era)),
-    AnnotatedData (BHeader (Crypto era)),
-    ChainData (NewEpochState era),
+  ( ChainData (NewEpochState era),
     SerialisableData (NewEpochState era),
     ChainData (BlockTransitionError era),
     ChainData (STS.ChainPredicateFailure era),
@@ -66,7 +62,8 @@ class
     BaseM (Core.EraRule "BBODY" era) ~ ShelleyBase,
     Environment (Core.EraRule "BBODY" era) ~ STS.BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ STS.BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block era
+    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), TxSeq era),
+    ToCBORGroup (TxSeq era)
   ) =>
   ApplyBlock era
   where
@@ -102,7 +99,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    Block era ->
+    (BHeaderView (Crypto era), TxSeq era) ->
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
   default applyBlockOpts ::
     forall ep m.
@@ -110,7 +107,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    Block era ->
+    (BHeaderView (Crypto era), TxSeq era) ->
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
@@ -139,12 +136,12 @@ class
   reapplyBlock ::
     Globals ->
     NewEpochState era ->
-    Block era ->
+    (BHeaderView (Crypto era), TxSeq era) ->
     NewEpochState era
   default reapplyBlock ::
     Globals ->
     NewEpochState era ->
-    Block era ->
+    (BHeaderView (Crypto era), TxSeq era) ->
     NewEpochState era
   reapplyBlock globals state blk =
     updateNewEpochState state res
@@ -177,7 +174,7 @@ applyBlock ::
   ) =>
   Globals ->
   NewEpochState era ->
-  Block era ->
+  (BHeaderView (Crypto era), TxSeq era) ->
   m (NewEpochState era)
 applyBlock =
   applyBlockOpts $
@@ -195,12 +192,10 @@ instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
 
 chainChecks ::
   forall era m.
-  ( Era era,
-    MonadError (STS.ChainPredicateFailure era) m
-  ) =>
+  MonadError (STS.ChainPredicateFailure era) m =>
   Globals ->
   STS.ChainChecksPParams ->
-  BHeader (Crypto era) ->
+  BHeaderView (Crypto era) ->
   m ()
 chainChecks globals ccd bh = STS.chainChecks (maxMajorPV globals) ccd bh
 

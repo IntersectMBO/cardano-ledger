@@ -33,6 +33,7 @@ import Cardano.Binary (ToCBOR (..), decodeFull, decodeFullDecoder, serialize)
 import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes (Globals (..), NonNegativeInterval, Seed, UnitInterval, epochInfo)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -84,7 +85,6 @@ import Cardano.Protocol.TPraos
     PoolDistr (..),
   )
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue, mkSeed, seedL)
-import Cardano.Protocol.TPraos.Rules.Overlay (isOverlaySlot)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)

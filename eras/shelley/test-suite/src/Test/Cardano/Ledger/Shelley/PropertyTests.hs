@@ -30,7 +30,7 @@ where
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (Crypto), TxSeq)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash, KeyRole (Witness))
 import Cardano.Ledger.SafeHash (SafeHash)
@@ -113,7 +113,8 @@ minimalPropertyTests ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    Show (TxSeq era)
   ) =>
   TestTree
 minimalPropertyTests =
@@ -155,7 +156,8 @@ propertyTests ::
     QC.BaseEnv ledger ~ Globals,
     BaseM ledger ~ ReaderT Globals Identity,
     State ledger ~ (UTxOState era, DPState (Crypto era)),
-    Signal ledger ~ Core.Tx era
+    Signal ledger ~ Core.Tx era,
+    Show (TxSeq era)
   ) =>
   TestTree
 propertyTests =

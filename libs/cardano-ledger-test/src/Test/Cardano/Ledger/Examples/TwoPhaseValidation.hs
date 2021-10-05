@@ -22,9 +22,6 @@ module Test.Cardano.Ledger.Examples.TwoPhaseValidation where
 import Cardano.Crypto.DSIGN.Class (Signable)
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Crypto.Hash.Class (sizeHash)
-import qualified Cardano.Crypto.KES.Class as KES
-import Cardano.Crypto.VRF (evalCertified)
-import qualified Cardano.Crypto.VRF.Class as VRF
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
@@ -49,7 +46,8 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
-import Cardano.Ledger.BaseTypes (Network (..), Seed, StrictMaybe (..), textToUrl)
+import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), textToUrl)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
@@ -70,21 +68,15 @@ import Cardano.Ledger.Keys
     coerceKeyRole,
     hashKey,
     hashVerKeyVRF,
-    signedDSIGN,
-    signedKES,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API
-  ( Block (..),
-    CLI (..),
+  ( CLI (..),
     DPState (..),
     DState (..),
-    KESPeriod (..),
     LedgerState (..),
-    Nonce (NeutralNonce),
     PoolParams (..),
-    PrevHash (GenesisHash),
     ProtVer (..),
     UTxO (..),
   )
@@ -110,17 +102,13 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey, txid)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
-import Cardano.Ledger.Slot (BlockNo (..))
 import Cardano.Ledger.Val (inject, (<+>))
-import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader (..), mkSeed, seedEta, seedL)
-import Cardano.Protocol.TPraos.OCert (OCert (..), OCertSignable (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString as BS (replicate)
-import Data.Coerce (coerce)
 import Data.Default.Class (Default (..))
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Map (Map)
@@ -140,7 +128,6 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
     applySTSTest,
-    mkKESKeyPair,
     mkKeyPair,
     mkVRFKeyPair,
     runShelleyBase,
@@ -1950,45 +1937,23 @@ coldKeys = KeyPair vk sk
 makeNaiveBlock ::
   forall era.
   ( Era era,
-    ToCBORGroup (TxSeq era),
-    VRF.Signable (CC.VRF (Crypto era)) Seed,
-    Signable (CC.DSIGN (Crypto era)) (OCertSignable (Crypto era)),
-    KES.Signable (CC.KES (Crypto era)) (BHBody (Crypto era))
+    ToCBORGroup (TxSeq era)
   ) =>
   [Core.Tx era] ->
-  Block era
-makeNaiveBlock txs = Block (BHeader bhb sig) txs'
+  (BHeaderView (Crypto era), TxSeq era)
+makeNaiveBlock txs = (bhView, txs')
   where
-    bhb =
-      BHBody
-        { bheaderBlockNo = BlockNo 0,
-          bheaderSlotNo = SlotNo 0,
-          bheaderPrev = GenesisHash,
-          bheaderVk = vKey coldKeys,
-          bheaderVrfVk = vvrf,
-          bheaderEta = coerce $ evalCertified () nonceNonce svrf,
-          bheaderL = coerce $ evalCertified () leaderNonce svrf,
-          bsize = fromIntegral $ bBodySize txs',
-          bhash = hashTxSeq @era txs',
-          bheaderOCert =
-            OCert
-              vkes
-              0
-              (KESPeriod 0)
-              ( signedDSIGN @(Crypto era)
-                  (sKey $ coldKeys @(Crypto era))
-                  (OCertSignable vkes 0 (KESPeriod 0))
-              ),
-          bprotver = ProtVer 5 0
+    bhView =
+      BHeaderView
+        { bhviewID = hashKey (vKey coldKeys),
+          bhviewBSize = fromIntegral $ bBodySize txs',
+          bhviewHSize = 0,
+          bhviewBHash = hashTxSeq @era txs',
+          bhviewSlot = SlotNo 0
         }
-    sig = signedKES @(CC.KES (Crypto era)) () 0 bhb skes
-    nonceNonce = mkSeed seedEta (SlotNo 0) NeutralNonce
-    leaderNonce = mkSeed seedL (SlotNo 0) NeutralNonce
     txs' = (toTxSeq @era) . StrictSeq.fromList $ txs
-    (svrf, vvrf) = mkVRFKeyPair (RawSeed 0 0 0 0 2)
-    (skes, vkes) = mkKESKeyPair (RawSeed 0 0 0 0 3)
 
-testAlonzoBlock :: Block A
+testAlonzoBlock :: (BHeaderView C_Crypto, TxSeq A)
 testAlonzoBlock =
   makeNaiveBlock
     [ trustMe True $ validatingTx pf,
@@ -2003,7 +1968,7 @@ testAlonzoBlock =
   where
     pf = Alonzo Mock
 
-testAlonzoBadPMDHBlock :: Block A
+testAlonzoBadPMDHBlock :: (BHeaderView C_Crypto, TxSeq A)
 testAlonzoBadPMDHBlock = makeNaiveBlock [trustMe True $ poolMDHTooBigTx pf]
   where
     pf = Alonzo Mock
@@ -2041,7 +2006,7 @@ example1BBodyState =
 
 testBBODY ::
   BbodyState A ->
-  Block A ->
+  (BHeaderView C_Crypto, TxSeq A) ->
   Either [PredicateFailure (AlonzoBBODY A)] (BbodyState A) ->
   Assertion
 testBBODY initialSt block (Right expectedSt) =
