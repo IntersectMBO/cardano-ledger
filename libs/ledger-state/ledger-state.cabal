@@ -70,6 +70,7 @@ executable ledger-state
   ghc-options:         -Wall
                        -O2
                        -threaded
+                       -rtsopts
   build-depends:       optparse-applicative
                      , ledger-state
                      , deepseq

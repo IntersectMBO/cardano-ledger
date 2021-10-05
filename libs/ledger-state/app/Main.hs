@@ -68,6 +68,7 @@ observeMemory fp = do
   performGC
   _ <- getChar
   printStats utxo
+  writeIORef ref $ Just utxo -- ensure utxo doesn't get GCed
   pure ref
 
 -- testRoundTrip :: [Char] -> IO ()
