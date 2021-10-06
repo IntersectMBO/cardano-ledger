@@ -11,18 +11,24 @@
 
 module Cardano.Ledger.Shelley.API.Wallet
   ( getNonMyopicMemberRewards,
+    -- * UTxOs
     getUTxO,
     getUTxOSubset,
     getFilteredUTxO,
+    -- * Stake Pools
     getLeaderSchedule,
     getPools,
     getPoolParameters,
     getTotalStake,
     poolsByTotalStakeFraction,
+    RewardInfoPool (..),
+    RewardParams (..),
+    getRewardInfoPools,
     getRewardInfo,
+    -- * Transaction helpers
     CLI (..),
     addShelleyKeyWitnesses,
-    -- | Ada Pots
+    -- * Ada Pots
     AdaPots (..),
     totalAdaES,
     totalAdaPotsES,
@@ -68,6 +74,7 @@ import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProtVer)
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards
   ( NonMyopic (..),
+    PerformanceEstimate (..),
     StakeShare (..),
     getTopRankedPools,
     nonMyopicMemberRew,
@@ -105,6 +112,66 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..), getField)
 import Numeric.Natural (Natural)
+
+--------------------------------------------------------------------------------
+-- UTxOs
+--------------------------------------------------------------------------------
+-- | Get the full UTxO.
+getUTxO ::
+  NewEpochState era ->
+  UTxO era
+getUTxO = _utxo . _utxoState . esLState . nesEs
+
+-- | Get the UTxO filtered by address.
+getFilteredUTxO ::
+  HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era)) =>
+  NewEpochState era ->
+  Set (Addr (Crypto era)) ->
+  UTxO era
+getFilteredUTxO ss addrs =
+  UTxO $
+    Map.filter
+      (\out -> getField @"compactAddress" out `Set.member` addrSBSs)
+      fullUTxO
+  where
+    UTxO fullUTxO = getUTxO ss
+    -- Instead of decompacting each address in the huge UTxO, compact each
+    -- address in the small set of address.
+    addrSBSs = Set.map compactAddr addrs
+
+getUTxOSubset ::
+  NewEpochState era ->
+  Set (TxIn (Crypto era)) ->
+  UTxO era
+getUTxOSubset ss txins =
+  UTxO $
+    fullUTxO `Map.restrictKeys` txins
+  where
+    UTxO fullUTxO = getUTxO ss
+
+--------------------------------------------------------------------------------
+-- Stake pools and pool rewards
+--------------------------------------------------------------------------------
+-- | Get the /current/ registered stake pool parameters for a given set of
+-- stake pools. The result map will contain entries for all the given stake
+-- pools that are currently registered.
+getPools ::
+  NewEpochState era ->
+  Set (KeyHash 'StakePool (Crypto era))
+getPools = Map.keysSet . f
+  where
+    f = _pParams . _pstate . _delegationState . esLState . nesEs
+
+-- | Get the /current/ registered stake pool parameters for a given set of
+-- stake pools. The result map will contain entries for all the given stake
+-- pools that are currently registered.
+getPoolParameters ::
+  NewEpochState era ->
+  Set (KeyHash 'StakePool (Crypto era)) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
+getPoolParameters = Map.restrictKeys . f
+  where
+    f = _pParams . _pstate . _delegationState . esLState . nesEs
 
 -- | Get pool sizes, but in terms of total stake
 --
@@ -238,38 +305,121 @@ currentSnapshot ss =
     dstate = _dstate . _delegationState . esLState $ es
     pstate = _pstate . _delegationState . esLState $ es
 
--- | Get the full UTxO.
-getUTxO ::
-  NewEpochState era ->
-  UTxO era
-getUTxO = _utxo . _utxoState . esLState . nesEs
+-- | Information about a stake pool 
+data RewardInfoPool = RewardInfoPool
+  { stake :: Coin -- ^ Absolute stake delegated to this pool
+  , ownerPledge :: Coin -- ^ Pledge of pool owner(s)
+  , ownerStake :: Coin -- ^ Absolute stake delegated by pool owner(s)
+  , cost :: Coin  -- ^ Pool cost
+  , margin :: UnitInterval -- ^ Pool margin
+  , performanceEstimate :: Double
+    -- ^ Number of blocks produced divided by expected number of blocks.
+    -- Can be larger than @1.0@ for pool that gets lucky.
+    -- (If some pools get unlucky, some pools must get lucky.)
+  }
+-- | Global information that influences stake pool rewards
+data RewardParams = RewardParams
+  { nOpt :: Natural -- ^ Desired number of stake pools
+  , a0   :: NonNegativeInterval -- ^ Influence of the pool owner's pledge on rewards
+  , rPot :: Coin -- ^ Total rewards available for the given epoch
+  , totalStake :: Coin -- ^ Maximum lovelace supply minus treasury
+  }
 
--- | Get the UTxO filtered by address.
-getFilteredUTxO ::
-  HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era)) =>
+-- | Retrieve the information necessary to calculate stake pool member rewards
+-- from the /current/ stake distribution.
+--
+-- This information includes the current stake distribution aggregated
+-- by stake pools and pool owners,
+-- the `current` pool costs and margins,
+-- and performance estimates.
+-- Also included are global information such as
+-- the total stake or protocol parameters.
+getRewardInfoPools ::
+  ( UsesValue era,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+  ) =>
+  Globals ->
   NewEpochState era ->
-  Set (Addr (Crypto era)) ->
-  UTxO era
-getFilteredUTxO ss addrs =
-  UTxO $
-    Map.filter
-      (\out -> getField @"compactAddress" out `Set.member` addrSBSs)
-      fullUTxO
+  ( RewardParams, Map (KeyHash 'StakePool (Crypto era)) RewardInfoPool )
+getRewardInfoPools globals ss =
+  ( mkRewardParams, Map.mapWithKey mkRewardInfoPool poolParams )
   where
-    UTxO fullUTxO = getUTxO ss
-    -- Instead of decompacting each address in the huge UTxO, compact each
-    -- address in the small set of address.
-    addrSBSs = Set.map compactAddr addrs
+    maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
+    totalStake = circulation es maxSupply
+    
+    es = nesEs ss
+    pp = esPp es
+    NonMyopic
+      { likelihoodsNM = ls,
+        rewardPotNM = rPot
+      } = esNonMyopic es
+    histLookup key = fromMaybe mempty (Map.lookup key ls)
 
-getUTxOSubset ::
+    EB.SnapShot stake delegs poolParams = currentSnapshot ss
+
+    mkRewardParams = RewardParams
+      { a0 = getField @"_a0" pp
+      , nOpt = getField @"_nOpt" pp
+      , totalStake = totalStake
+      , rPot = rPot
+      }
+    mkRewardInfoPool key poolp = RewardInfoPool
+        { stake = pstake
+        , ownerStake = ostake
+        , ownerPledge = _poolPledge poolp
+        , margin = _poolMargin poolp
+        , cost = _poolCost poolp
+        , performanceEstimate =
+          unPerformanceEstimate $ percentile' $ histLookup key
+        }
+      where
+        pstake = fold . EB.unStake $ EB.poolStake key delegs stake
+        ostake =
+          Set.foldl'
+            (\c o -> c <> fromMaybe mempty
+              ( Map.lookup (KeyHashObj o) (EB.unStake stake) )
+            )
+            mempty
+            (_poolOwners poolp)
+
+-- | Calculate stake pool rewards from the snapshot labeled `go`.
+-- Also includes information on how the rewards were calculated
+-- ('RewardProvenance').
+--
+-- For a calculation of rewards based on the current stake distribution,
+-- see 'getRewardInfo'.
+getRewardInfo ::
+  forall era.
+  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval
+  ) =>
+  Globals ->
   NewEpochState era ->
-  Set (TxIn (Crypto era)) ->
-  UTxO era
-getUTxOSubset ss txins =
-  UTxO $
-    fullUTxO `Map.restrictKeys` txins
+  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
+getRewardInfo globals newepochstate =
+  runReader
+    ( runWithProvM def $
+        createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam
+    )
+    globals
   where
-    UTxO fullUTxO = getUTxO ss
+    epochstate = nesEs newepochstate
+    maxsupply :: Coin
+    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
+    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade = nesBprev newepochstate
+    epochnumber = nesEL newepochstate
+    slotsPerEpoch :: EpochSize
+    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
+    secparam = securityParameter globals
+
 
 -- | Get the (private) leader schedule for this epoch.
 --
@@ -303,57 +453,9 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
     epochSlots = Set.fromList [a .. b]
     (a, b) = runIdentity $ epochInfoRange ei currentEpoch
 
--- | Get the /current/ registered stake pool parameters for a given set of
--- stake pools. The result map will contain entries for all the given stake
--- pools that are currently registered.
-getPools ::
-  NewEpochState era ->
-  Set (KeyHash 'StakePool (Crypto era))
-getPools = Map.keysSet . f
-  where
-    f = _pParams . _pstate . _delegationState . esLState . nesEs
-
--- | Get the /current/ registered stake pool parameters for a given set of
--- stake pools. The result map will contain entries for all the given stake
--- pools that are currently registered.
-getPoolParameters ::
-  NewEpochState era ->
-  Set (KeyHash 'StakePool (Crypto era)) ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
-getPoolParameters = Map.restrictKeys . f
-  where
-    f = _pParams . _pstate . _delegationState . esLState . nesEs
-
-getRewardInfo ::
-  forall era.
-  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval
-  ) =>
-  Globals ->
-  NewEpochState era ->
-  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
-getRewardInfo globals newepochstate =
-  runReader
-    ( runWithProvM def $
-        createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam
-    )
-    globals
-  where
-    epochstate = nesEs newepochstate
-    maxsupply :: Coin
-    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
-    blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
-    slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    asc = activeSlotCoeff globals
-    secparam = securityParameter globals
-
+--------------------------------------------------------------------------------
+-- Transaction helpers
+--------------------------------------------------------------------------------
 -- | A collection of functons to help construction transactions
 --  from the cardano-cli.
 class
