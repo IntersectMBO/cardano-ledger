@@ -14,10 +14,12 @@
 
 module Cardano.Ledger.Shelley.API.Wallet
   ( getNonMyopicMemberRewards,
+
     -- * UTxOs
     getUTxO,
     getUTxOSubset,
     getFilteredUTxO,
+
     -- * Stake Pools
     getLeaderSchedule,
     getPools,
@@ -28,9 +30,11 @@ module Cardano.Ledger.Shelley.API.Wallet
     RewardParams (..),
     getRewardInfoPools,
     getRewardInfo,
+
     -- * Transaction helpers
     CLI (..),
     addShelleyKeyWitnesses,
+
     -- * Ada Pots
     AdaPots (..),
     totalAdaES,
@@ -101,8 +105,8 @@ import Cardano.Slotting.Slot (EpochSize, SlotNo)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
 import Control.Provenance (runWithProvM)
-import qualified Data.ByteString.Lazy as LBS
 import Data.Aeson (FromJSON, ToJSON)
+import qualified Data.ByteString.Lazy as LBS
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Foldable (fold)
@@ -115,14 +119,15 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Records (HasField (..), getField)
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..), getField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 --------------------------------------------------------------------------------
 -- UTxOs
 --------------------------------------------------------------------------------
+
 -- | Get the full UTxO.
 getUTxO ::
   NewEpochState era ->
@@ -159,6 +164,7 @@ getUTxOSubset ss txins =
 --------------------------------------------------------------------------------
 -- Stake pools and pool rewards
 --------------------------------------------------------------------------------
+
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
 -- pools that are currently registered.
@@ -312,39 +318,53 @@ currentSnapshot ss =
     dstate = _dstate . _delegationState . esLState $ es
     pstate = _pstate . _delegationState . esLState $ es
 
--- | Information about a stake pool 
+-- | Information about a stake pool
 data RewardInfoPool = RewardInfoPool
-  { stake :: Coin -- ^ Absolute stake delegated to this pool
-  , ownerPledge :: Coin -- ^ Pledge of pool owner(s)
-  , ownerStake :: Coin -- ^ Absolute stake delegated by pool owner(s)
-  , cost :: Coin  -- ^ Pool cost
-  , margin :: UnitInterval -- ^ Pool margin
-  , performanceEstimate :: Double
-    -- ^ Number of blocks produced divided by expected number of blocks.
+  { -- | Absolute stake delegated to this pool
+    stake :: Coin,
+    -- | Pledge of pool owner(s)
+    ownerPledge :: Coin,
+    -- | Absolute stake delegated by pool owner(s)
+    ownerStake :: Coin,
+    -- | Pool cost
+    cost :: Coin,
+    -- | Pool margin
+    margin :: UnitInterval,
+    -- | Number of blocks produced divided by expected number of blocks.
     -- Can be larger than @1.0@ for pool that gets lucky.
     -- (If some pools get unlucky, some pools must get lucky.)
+    performanceEstimate :: Double
   }
   deriving (Eq, Show, Generic)
 
 instance NoThunks RewardInfoPool
+
 instance NFData RewardInfoPool
+
 deriving instance FromJSON RewardInfoPool
+
 deriving instance ToJSON RewardInfoPool
 
 -- | Global information that influences stake pool rewards
 data RewardParams = RewardParams
-  { nOpt :: Natural -- ^ Desired number of stake pools
-  , a0   :: NonNegativeInterval -- ^ Influence of the pool owner's pledge on rewards
-  , rPot :: Coin -- ^ Total rewards available for the given epoch
-  , totalStake :: Coin -- ^ Maximum lovelace supply minus treasury
+  { -- | Desired number of stake pools
+    nOpt :: Natural,
+    -- | Influence of the pool owner's pledge on rewards
+    a0 :: NonNegativeInterval,
+    -- | Total rewards available for the given epoch
+    rPot :: Coin,
+    -- | Maximum lovelace supply minus treasury
+    totalStake :: Coin
   }
   deriving (Eq, Show, Generic)
 
 instance NoThunks RewardParams
-instance NFData RewardParams
-deriving instance FromJSON RewardParams
-deriving instance ToJSON RewardParams
 
+instance NFData RewardParams
+
+deriving instance FromJSON RewardParams
+
+deriving instance ToJSON RewardParams
 
 -- | Retrieve the information necessary to calculate stake pool member rewards
 -- from the /current/ stake distribution.
@@ -363,13 +383,13 @@ getRewardInfoPools ::
   ) =>
   Globals ->
   NewEpochState era ->
-  ( RewardParams, Map (KeyHash 'StakePool (Crypto era)) RewardInfoPool )
+  (RewardParams, Map (KeyHash 'StakePool (Crypto era)) RewardInfoPool)
 getRewardInfoPools globals ss =
-  ( mkRewardParams, Map.mapWithKey mkRewardInfoPool poolParams )
+  (mkRewardParams, Map.mapWithKey mkRewardInfoPool poolParams)
   where
     maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
     totalStake = circulation es maxSupply
-    
+
     es = nesEs ss
     pp = esPp es
     NonMyopic
@@ -380,27 +400,32 @@ getRewardInfoPools globals ss =
 
     EB.SnapShot stake delegs poolParams = currentSnapshot ss
 
-    mkRewardParams = RewardParams
-      { a0 = getField @"_a0" pp
-      , nOpt = getField @"_nOpt" pp
-      , totalStake = totalStake
-      , rPot = rPot
-      }
-    mkRewardInfoPool key poolp = RewardInfoPool
-        { stake = pstake
-        , ownerStake = ostake
-        , ownerPledge = _poolPledge poolp
-        , margin = _poolMargin poolp
-        , cost = _poolCost poolp
-        , performanceEstimate =
-          unPerformanceEstimate $ percentile' $ histLookup key
+    mkRewardParams =
+      RewardParams
+        { a0 = getField @"_a0" pp,
+          nOpt = getField @"_nOpt" pp,
+          totalStake = totalStake,
+          rPot = rPot
+        }
+    mkRewardInfoPool key poolp =
+      RewardInfoPool
+        { stake = pstake,
+          ownerStake = ostake,
+          ownerPledge = _poolPledge poolp,
+          margin = _poolMargin poolp,
+          cost = _poolCost poolp,
+          performanceEstimate =
+            unPerformanceEstimate $ percentile' $ histLookup key
         }
       where
         pstake = fold . EB.unStake $ EB.poolStake key delegs stake
         ostake =
           Set.foldl'
-            (\c o -> c <> fromMaybe mempty
-              ( Map.lookup (KeyHashObj o) (EB.unStake stake) )
+            ( \c o ->
+                c
+                  <> fromMaybe
+                    mempty
+                    (Map.lookup (KeyHashObj o) (EB.unStake stake))
             )
             mempty
             (_poolOwners poolp)
@@ -441,7 +466,6 @@ getRewardInfo globals newepochstate =
     asc = activeSlotCoeff globals
     secparam = securityParameter globals
 
-
 -- | Get the (private) leader schedule for this epoch.
 --
 --   Given a private VRF key, returns the set of slots in which this node is
@@ -477,6 +501,7 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
 --------------------------------------------------------------------------------
 -- Transaction helpers
 --------------------------------------------------------------------------------
+
 -- | A collection of functons to help construction transactions
 --  from the cardano-cli.
 class
