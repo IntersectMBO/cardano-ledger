@@ -1,10 +1,13 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -95,9 +98,11 @@ import Cardano.Protocol.TPraos.BHeader (checkLeaderValue, mkSeed, seedL)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
 import Control.Provenance (runWithProvM)
 import qualified Data.ByteString.Lazy as LBS
+import Data.Aeson (FromJSON, ToJSON)
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Foldable (fold)
@@ -111,6 +116,8 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..), getField)
+import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 --------------------------------------------------------------------------------
@@ -317,6 +324,13 @@ data RewardInfoPool = RewardInfoPool
     -- Can be larger than @1.0@ for pool that gets lucky.
     -- (If some pools get unlucky, some pools must get lucky.)
   }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks RewardInfoPool
+instance NFData RewardInfoPool
+deriving instance FromJSON RewardInfoPool
+deriving instance ToJSON RewardInfoPool
+
 -- | Global information that influences stake pool rewards
 data RewardParams = RewardParams
   { nOpt :: Natural -- ^ Desired number of stake pools
@@ -324,6 +338,13 @@ data RewardParams = RewardParams
   , rPot :: Coin -- ^ Total rewards available for the given epoch
   , totalStake :: Coin -- ^ Maximum lovelace supply minus treasury
   }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks RewardParams
+instance NFData RewardParams
+deriving instance FromJSON RewardParams
+deriving instance ToJSON RewardParams
+
 
 -- | Retrieve the information necessary to calculate stake pool member rewards
 -- from the /current/ stake distribution.
