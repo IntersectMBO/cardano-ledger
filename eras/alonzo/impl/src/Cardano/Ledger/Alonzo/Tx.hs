@@ -52,6 +52,7 @@ module Cardano.Ledger.Alonzo.Tx
     -- Figure 6
     txrdmrs,
     rdptr,
+    rdptrInv,
     getMapFromValue,
     indexedRdmrs,
     -- Pretty
@@ -408,21 +409,31 @@ instance (Typeable c, CC.Crypto c) => FromCBOR (ScriptPurpose c) where
 
 class Indexable elem container where
   indexOf :: elem -> container -> StrictMaybe Word64
+  fromIndex :: Word64 -> container -> StrictMaybe elem
 
 instance Ord k => Indexable k (Set k) where
   indexOf n set = case Set.lookupIndex n set of
     Just x -> SJust (fromIntegral x)
     Nothing -> SNothing
+  fromIndex i set =
+    if (fromIntegral i) < Set.size set
+      then SJust $ Set.elemAt (fromIntegral i) set
+      else SNothing
 
 instance Eq k => Indexable k (StrictSeq k) where
   indexOf n seqx = case StrictSeq.findIndexL (== n) seqx of
     Just m -> SJust (fromIntegral m)
     Nothing -> SNothing
+  fromIndex i seqx = maybeToStrictMaybe $ StrictSeq.lookup (fromIntegral i) seqx
 
 instance Ord k => Indexable k (Map.Map k v) where
   indexOf n mp = case Map.lookupIndex n mp of
     Just x -> SJust (fromIntegral x)
     Nothing -> SNothing
+  fromIndex i mp =
+    if (fromIntegral i) < Map.size mp
+      then SJust . fst $ Map.elemAt (fromIntegral i) mp
+      else SNothing
 
 rdptr ::
   forall era.
@@ -439,6 +450,25 @@ rdptr txb (Minting (PolicyID hash)) =
 rdptr txb (Spending txin) = RdmrPtr Spend <$> indexOf txin (getField @"inputs" txb)
 rdptr txb (Rewarding racnt) = RdmrPtr Rewrd <$> indexOf racnt (unWdrl (getField @"wdrls" txb))
 rdptr txb (Certifying d) = RdmrPtr Cert <$> indexOf d (getField @"certs" txb)
+
+rdptrInv ::
+  forall era.
+  ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era)))
+  ) =>
+  Core.TxBody era ->
+  RdmrPtr ->
+  StrictMaybe (ScriptPurpose (Crypto era))
+rdptrInv txb (RdmrPtr Mint idx) =
+  (Minting . PolicyID) <$> fromIndex idx (getField @"minted" txb)
+rdptrInv txb (RdmrPtr Spend idx) =
+  Spending <$> fromIndex idx (getField @"inputs" txb)
+rdptrInv txb (RdmrPtr Rewrd idx) =
+  Rewarding <$> fromIndex idx (unWdrl (getField @"wdrls" txb))
+rdptrInv txb (RdmrPtr Cert idx) =
+  Certifying <$> fromIndex idx (getField @"certs" txb)
 
 getMapFromValue :: Value crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
 getMapFromValue (Value _ m) = m

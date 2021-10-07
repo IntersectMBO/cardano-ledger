@@ -12,8 +12,8 @@ where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data, getPlutusData)
-import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (_protocolVersion)
+import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Alonzo.PParams (_maxTxExUnits, _protocolVersion)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
@@ -22,7 +22,13 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), ValidatedTx (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits, txInfo, valContext)
+import Cardano.Ledger.Alonzo.TxInfo
+  ( VersionedTxInfo (..),
+    exBudgetToExUnits,
+    transExUnits,
+    txInfo,
+    valContext,
+  )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
@@ -31,11 +37,14 @@ import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Data.Array (Array, (!))
+import Data.Array (Array, array, bounds, (!))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.Set as Set
+import Data.Text (Text)
 import GHC.Records (HasField (..))
-import qualified Plutus.V1.Ledger.Api as P
+import qualified Plutus.V1.Ledger.Api as PV1
+import qualified Plutus.V2.Ledger.Api as PV2
 
 -- | Failures that can be returned by 'evaluateTransactionExecutionUnits'.
 data ScriptFailure c
@@ -46,8 +55,10 @@ data ScriptFailure c
     MissingScript RdmrPtr
   | -- | Missing datum.
     MissingDatum (DataHash c)
-  | -- | Plutus evaluation error.
-    ValidationFailed P.EvaluationError
+  | -- | Plutus V1 evaluation error.
+    ValidationFailedV1 PV1.EvaluationError [Text]
+  | -- | Plutus V2 evaluation error.
+    ValidationFailedV2 PV2.EvaluationError [Text]
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
     UnknownTxIn (TxIn c)
@@ -56,7 +67,9 @@ data ScriptFailure c
     InvalidTxIn (TxIn c)
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
-    IncompatibleBudget P.ExBudget
+    IncompatibleBudget PV1.ExBudget
+  | -- | There was no cost model for given version of Plutus
+    NoCostModel Language
   deriving (Show)
 
 note :: e -> Maybe a -> Either e a
@@ -88,8 +101,9 @@ evaluateTransactionExecutionUnits ::
   --  The value is monadic, depending on the epoch info.
   m (Map RdmrPtr (Either (ScriptFailure c) ExUnits))
 evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
-  txinfo <- txInfo pp ei sysS utxo tx
-  pure $ Map.mapWithKey (findAndCount txinfo) (unRedeemers $ getField @"txrdmrs" ws)
+  let getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
+  txInfos <- array (PlutusV1, PlutusV2) <$> mapM getInfo (Set.toList nonNativeLanguages)
+  pure $ Map.mapWithKey (findAndCount pp txInfos) (unRedeemers $ getField @"txrdmrs" ws)
   where
     txb = getField @"body" tx
     ws = getField @"wits" tx
@@ -101,7 +115,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       msb <- case Map.lookup sh scripts of
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
-        Just (PlutusScript bytes) -> pure $ Just bytes
+        Just (PlutusScript v bytes) -> pure $ Just (bytes, v)
       pointer <- case rdptr @(AlonzoEra c) txb sp of
         SNothing -> []
         -- Since scriptsNeeded used the transaction to create script purposes,
@@ -109,16 +123,19 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         SJust p -> pure p
       pure (pointer, (sp, msb))
 
-    (CostModel costModel) = costModels ! PlutusV1
-
     findAndCount ::
-      P.TxInfo ->
+      Core.PParams (AlonzoEra c) ->
+      Array Language VersionedTxInfo ->
       RdmrPtr ->
       (Data (AlonzoEra c), ExUnits) ->
       Either (ScriptFailure c) ExUnits
-    findAndCount inf pointer (rdmr, _) = do
+    findAndCount pparams info pointer (rdmr, _) = do
       (sp, mscript) <- note (RedeemerNotNeeded pointer) $ Map.lookup pointer ptrToPlutusScript
-      script <- note (MissingScript pointer) mscript
+      (script, lang) <- note (MissingScript pointer) mscript
+      let inf = info ! lang
+      let (l1, l2) = bounds costModels
+      (CostModel costModel) <-
+        if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModel lang)
       args <- case sp of
         (Spending txin) -> do
           txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
@@ -129,6 +146,13 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         _ -> pure [rdmr, valContext inf sp]
       let pArgs = map getPlutusData args
 
-      case snd $ P.evaluateScriptCounting P.Quiet costModel script pArgs of
-        Left e -> Left $ ValidationFailed e
-        Right exBudget -> note (IncompatibleBudget exBudget) $ exBudgetToExUnits exBudget
+      case interpreter lang costModel maxBudget script pArgs of
+        (logs, Left e) -> case lang of
+          PlutusV1 -> Left $ ValidationFailedV1 e logs
+          PlutusV2 -> Left $ ValidationFailedV2 e logs
+        (_, Right exBudget) -> note (IncompatibleBudget exBudget) $ exBudgetToExUnits exBudget
+      where
+        maxBudget = transExUnits . _maxTxExUnits $ pparams
+        interpreter lang = case lang of
+          PlutusV1 -> PV1.evaluateScriptRestricting PV1.Verbose
+          PlutusV2 -> PV2.evaluateScriptRestricting PV2.Verbose

@@ -31,15 +31,15 @@ import Data.Default.Class (Default (..))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
-import Data.Word (Word64)
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (defaultCostModel)
+import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation (A, datumExample1, initUTxO, someKeys, testSystemStart, validatingBody, validatingRedeemersEx1)
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (assertFailure, testCase)
-import Test.Tasty.QuickCheck (Gen, Property, chooseBoundedIntegral, counterexample, testProperty)
+import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)
 
 tests :: TestTree
 tests =
@@ -48,20 +48,14 @@ tests =
       testCase "calculate ExUnits" exampleExUnitCalc
     ]
 
-genExUnits :: Gen ExUnits
-genExUnits = ExUnits <$> genUnit <*> genUnit
-  where
-    genUnit :: Gen Word64
-    genUnit = chooseBoundedIntegral (0, 2 ^ (63 :: Word64) - 1)
-
 -- ExUnits should remain intact when translating to and from the plutus type
 exUnitsTranslationRoundTrip :: Gen Property
 exUnitsTranslationRoundTrip = do
-  e <- genExUnits
+  e <- arbitrary
   let result = (exBudgetToExUnits . transExUnits) e
   pure $
     counterexample
-      ( "Before: " <> show (Just e)
+      ( "Before: " <> show e
           <> "\n After: "
           <> show result
       )

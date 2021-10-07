@@ -41,7 +41,7 @@ import Cardano.Binary
     serialize',
     serializeEncoding',
   )
-import Cardano.Ledger.Alonzo.Language (Language (PlutusV1), ppLanguage)
+import Cardano.Ledger.Alonzo.Language (Language (..), ppLanguage)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
@@ -514,6 +514,10 @@ getLanguageView ::
   Language ->
   LangDepView
 getLanguageView pp lang@PlutusV1 =
+  LangDepView
+    (serialize' lang)
+    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))
+getLanguageView pp lang@PlutusV2 =
   LangDepView
     (serialize' lang)
     (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))

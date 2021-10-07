@@ -34,10 +34,8 @@ module Cardano.Ledger.Alonzo.Data
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (..), peekTokenType, withSlice)
-import Cardano.Ledger.Alonzo.Scripts
-  ( Script (..),
-    isPlutusScript,
-  )
+import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
@@ -73,8 +71,7 @@ import qualified Codec.Serialise as Cborg (Serialise (..))
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (toShort)
 import Data.Coders
-import qualified Data.Foldable as Foldable
-import qualified Data.List as List
+import Data.Foldable (foldl')
 import Data.Map (Map)
 import Data.Maybe (mapMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -180,19 +177,21 @@ encodeRaw ::
 encodeRaw metadata allScripts =
   Tag 259 $
     Keyed
-      (\m tss pss -> AuxiliaryDataRaw m (StrictSeq.fromList $ tss <> pss))
+      (\m tss p1 p2 -> AuxiliaryDataRaw m (StrictSeq.fromList $ tss <> p1 <> p2))
       !> Omit null (Key 0 $ mapEncode metadata)
       !> Omit null (Key 1 $ E (encodeFoldable . mapMaybe getTimelock) timelocks)
-      !> Omit null (Key 2 $ E (encodeFoldable . mapMaybe getPlutus) plutusScripts)
+      !> Omit null (Key 2 $ E (encodeFoldable . mapMaybe getPlutus) plutusV1Scripts)
+      !> Omit null (Key 3 $ E (encodeFoldable . mapMaybe getPlutus) plutusV2Scripts)
   where
     getTimelock (TimelockScript x) = Just x
     getTimelock _ = Nothing
-    getPlutus (PlutusScript x) = Just x
+    getPlutus (PlutusScript _ x) = Just x
     getPlutus _ = Nothing
-    (plutusScripts, timelocks) =
-      List.partition
-        isPlutusScript
-        (Foldable.toList allScripts)
+    sortScripts (ts, v1, v2) s@(TimelockScript _) = (s : ts, v1, v2)
+    sortScripts (ts, v1, v2) s@(PlutusScript PlutusV1 _) = (ts, s : v1, v2)
+    sortScripts (ts, v1, v2) s@(PlutusScript PlutusV2 _) = (ts, v1, s : v2)
+    (timelocks, plutusV1Scripts, plutusV2Scripts) =
+      foldl' sortScripts (mempty, mempty, mempty) allScripts
 
 instance
   ( Era era,
@@ -243,7 +242,11 @@ instance
           (D (sequence <$> decodeStrictSeq fromCBOR))
       auxDataField 2 =
         fieldA
-          (\x ad -> ad {scripts' = scripts' ad <> (PlutusScript <$> x)})
+          (\x ad -> ad {scripts' = scripts' ad <> (PlutusScript PlutusV1 <$> x)})
+          (D (decodeStrictSeq fromCBOR))
+      auxDataField 3 =
+        fieldA
+          (\x ad -> ad {scripts' = scripts' ad <> (PlutusScript PlutusV2 <$> x)})
           (D (decodeStrictSeq fromCBOR))
       auxDataField n = field (\_ t -> t) (Invalid n)
 

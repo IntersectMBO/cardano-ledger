@@ -6,8 +6,9 @@ module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), AuxiliaryDataHash (..), Data (..), hashData)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..), emptyPParams, emptyPParamsUpdate)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), alwaysFails, alwaysSucceeds)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
@@ -43,6 +44,7 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified PlutusTx as Plutus
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()
@@ -135,7 +137,10 @@ exampleTx =
     ( TxWitness
         (makeWitnessesVKey (hashAnnotated exampleTxBodyAlonzo) [asWitness SLE.examplePayKey]) -- vkey
         mempty -- bootstrap
-        (Map.singleton (hashScript @StandardAlonzo $ alwaysSucceeds 3) (alwaysSucceeds 3)) -- txscripts
+        ( Map.singleton
+            (hashScript @StandardAlonzo $ alwaysSucceeds PlutusV1 3)
+            (alwaysSucceeds PlutusV1 3) -- txscripts
+        )
         (TxDats $ Map.singleton (hashData datumExample) datumExample)
         ( Redeemers $
             Map.singleton (RdmrPtr Tag.Spend 0) (redeemerExample, ExUnits 5000 5000)
@@ -144,7 +149,9 @@ exampleTx =
     ( SJust $
         AuxiliaryData
           SLE.exampleMetadataMap -- metadata
-          (StrictSeq.fromList [alwaysFails 2, TimelockScript $ RequireAllOf mempty]) -- Scripts
+          ( StrictSeq.fromList
+              [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
+          )
     )
 
 exampleTransactionInBlock :: ValidatedTx StandardAlonzo

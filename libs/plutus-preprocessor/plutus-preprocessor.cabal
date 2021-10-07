@@ -33,6 +33,7 @@ executable plutus-preprocessor
     build-depends:
       base,
       bytestring,
+      cardano-ledger-alonzo,
       flat,
       plutus-core,
       plutus-tx,
