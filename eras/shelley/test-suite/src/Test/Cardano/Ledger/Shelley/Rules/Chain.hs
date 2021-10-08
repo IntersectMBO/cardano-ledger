@@ -28,7 +28,8 @@ where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( BlocksMade (..),
+    Globals (..),
     Nonce (..),
     ShelleyBase,
     StrictMaybe (..),
@@ -59,7 +60,7 @@ import Cardano.Ledger.Shelley.API.Wallet
   )
 import Cardano.Ledger.Shelley.BlockChain (Block (..))
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),

@@ -72,6 +72,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     Nonce (..),
     Seed (..),
     StrictMaybe (..),
@@ -93,7 +94,6 @@ import Cardano.Ledger.Serialization
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
   )
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
 import Cardano.Ledger.Shelley.Tx (Tx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), txid)

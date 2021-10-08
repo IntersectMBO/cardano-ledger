@@ -23,7 +23,8 @@ module Cardano.Ledger.Shelley.Rules.Rupd
 where
 
 import Cardano.Ledger.BaseTypes
-  ( NonNegativeInterval,
+  ( BlocksMade,
+    NonNegativeInterval,
     ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
@@ -36,7 +37,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade)
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
     PulsingRewUpdate (..),

@@ -46,7 +46,14 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators
   )
 where
 
-import Cardano.Ledger.BaseTypes (NonNegativeInterval, Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
+import Cardano.Ledger.BaseTypes
+  ( BlocksMade (..),
+    NonNegativeInterval,
+    Nonce (..),
+    StrictMaybe (..),
+    UnitInterval,
+    (⭒),
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
@@ -65,7 +72,7 @@ import Cardano.Ledger.Shelley.BlockChain
     bheader,
   )
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),

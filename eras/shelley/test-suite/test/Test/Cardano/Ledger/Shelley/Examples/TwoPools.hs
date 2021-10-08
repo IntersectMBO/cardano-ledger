@@ -20,7 +20,8 @@ module Test.Cardano.Ledger.Shelley.Examples.TwoPools
 where
 
 import Cardano.Ledger.BaseTypes
-  ( BoundedRational (..),
+  ( BlocksMade (..),
+    BoundedRational (..),
     Globals (..),
     Network (..),
     Nonce,
@@ -40,7 +41,7 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.BlockChain (Block, bheader)
+import Cardano.Ledger.Block (Block, bheader)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( PulsingRewUpdate (..),
@@ -773,7 +774,7 @@ pulserEx9 ::
   PulsingRewUpdate (Crypto era)
 pulserEx9 pp =
   makePulser
-    ( EB.BlocksMade $
+    ( BlocksMade $
         Map.fromList
           [(hk Cast.alicePoolKeys, 2), (hk Cast.bobPoolKeys, 1)]
     )

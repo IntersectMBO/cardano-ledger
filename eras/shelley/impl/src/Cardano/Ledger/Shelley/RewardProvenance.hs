@@ -19,12 +19,12 @@ import Cardano.Binary
     decodeDouble,
     encodeDouble,
   )
+import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
 import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
 import Control.DeepSeq (NFData)

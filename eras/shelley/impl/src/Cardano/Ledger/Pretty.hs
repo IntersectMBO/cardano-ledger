@@ -28,6 +28,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     BoundedRational (..),
     DnsName,
     FixedPoint,
@@ -71,8 +72,7 @@ import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..), ChainCod
 import Cardano.Ledger.Shelley.BlockChain (Block (..))
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( BlocksMade (..),
-    SnapShot (..),
+  ( SnapShot (..),
     SnapShots (..),
     Stake (..),
   )

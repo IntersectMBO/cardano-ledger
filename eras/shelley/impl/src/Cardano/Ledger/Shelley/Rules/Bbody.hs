@@ -22,7 +22,7 @@ module Cardano.Ledger.Shelley.Rules.Bbody
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
+import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfo)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
 import qualified Cardano.Ledger.Era as Era
@@ -31,7 +31,6 @@ import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.BlockChain (Block (..), bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     LedgerState,

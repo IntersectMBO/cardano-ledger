@@ -19,7 +19,6 @@
 -- This modules implements the necessary functions for the changes that can happen at epoch boundaries.
 module Cardano.Ledger.Shelley.EpochBoundary
   ( Stake (..),
-    BlocksMade (..),
     SnapShot (..),
     SnapShots (..),
     emptySnapShot,
@@ -29,12 +28,16 @@ module Cardano.Ledger.Shelley.EpochBoundary
     obligation,
     maxPool,
     maxPool',
+
+    -- * Deprecated
+    BlocksMade,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
+import qualified Cardano.Ledger.BaseTypes as Core (BlocksMade)
 import Cardano.Ledger.Coin
   ( Coin (..),
     coinToRational,
@@ -52,7 +55,6 @@ import Cardano.Ledger.Val ((<+>), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
-import Data.Aeson
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -61,22 +63,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Quiet
-
--- | Blocks made
-newtype BlocksMade crypto = BlocksMade
-  { unBlocksMade :: Map (KeyHash 'StakePool crypto) Natural
-  }
-  deriving (Eq, NoThunks, Generic, NFData)
-  deriving (Show) via Quiet (BlocksMade crypto)
-
-deriving instance (CC.Crypto crypto) => ToJSON (BlocksMade crypto)
-
-deriving instance (CC.Crypto crypto) => FromJSON (BlocksMade crypto)
-
-deriving instance CC.Crypto crypto => ToCBOR (BlocksMade crypto)
-
-deriving instance CC.Crypto crypto => FromCBOR (BlocksMade crypto)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake crypto = Stake
@@ -252,3 +238,6 @@ emptySnapShot = SnapShot (Stake Map.empty) Map.empty Map.empty
 
 emptySnapShots :: SnapShots crypto
 emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
+
+{-# DEPRECATED BlocksMade "Import from Cardano.Ledger.BaseTypes instead" #-}
+type BlocksMade = Core.BlocksMade

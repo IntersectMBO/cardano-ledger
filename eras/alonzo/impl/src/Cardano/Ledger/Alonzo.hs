@@ -42,7 +42,7 @@ import Cardano.Ledger.Alonzo.TxInfo (validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
-import qualified Cardano.Ledger.BaseTypes as Shelley
+import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -176,7 +176,7 @@ instance
       pp = sgProtocolParams sg
 
 instance (CC.Crypto c) => UsesTxOut (AlonzoEra c) where
-  makeTxOut _proxy addr val = TxOut addr val Shelley.SNothing
+  makeTxOut _proxy addr val = TxOut addr val SNothing
 
 instance CC.Crypto c => API.CLI (AlonzoEra c) where
   evaluateMinFee = minfee

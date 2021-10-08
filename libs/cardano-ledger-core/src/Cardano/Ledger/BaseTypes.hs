@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -45,6 +46,7 @@ module Cardano.Ledger.BaseTypes
     activeSlotVal,
     activeSlotLog,
     module Data.Maybe.Strict,
+    BlocksMade (..),
 
     -- * STS Base
     Globals (..),
@@ -64,6 +66,7 @@ import Cardano.Binary
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
 import Cardano.Ledger.Serialization (decodeRecordSum, ratioFromCBOR, ratioToCBOR)
 import Cardano.Prelude (NFData, cborError)
@@ -589,3 +592,11 @@ instance FromCBOR Network where
     word8ToNetwork <$> fromCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
+
+-- | Blocks made
+newtype BlocksMade crypto = BlocksMade
+  { unBlocksMade :: Map (KeyHash 'StakePool crypto) Natural
+  }
+  deriving (Eq, Generic)
+  deriving (Show) via Quiet (BlocksMade crypto)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, ToCBOR, FromCBOR)

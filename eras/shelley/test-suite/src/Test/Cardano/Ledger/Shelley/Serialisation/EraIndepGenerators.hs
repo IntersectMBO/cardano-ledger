@@ -42,6 +42,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     DnsName,
     NonNegativeInterval,
     PositiveInterval,
@@ -69,7 +70,6 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.RewardProvenance

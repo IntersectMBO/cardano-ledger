@@ -103,6 +103,7 @@ import Cardano.Binary
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     BoundedRational (..),
     NonNegativeInterval,
     ShelleyBase,
@@ -152,8 +153,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     requiresVKeyWitness,
   )
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( BlocksMade (..),
-    SnapShot (..),
+  ( SnapShot (..),
     SnapShots (..),
     Stake (..),
     aggregateUtxoCoinByCredential,

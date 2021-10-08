@@ -21,6 +21,7 @@ import Cardano.Crypto.Seed (mkSeedFromBytes)
 import qualified Cardano.Crypto.VRF as Crypto
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     BoundedRational (..),
     Globals (..),
     Network (..),
@@ -50,14 +51,12 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Pretty (PrettyA (..))
 import Cardano.Ledger.Shelley.API.Wallet (getRewardInfo)
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( BlocksMade (..),
-    SnapShot (..),
+  ( SnapShot (..),
     SnapShots (..),
     Stake (..),
     maxPool,
     poolStake,
   )
-import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -412,7 +411,7 @@ justRewardInfo globals newepochstate =
     epochstate = nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (Crypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
@@ -446,7 +445,7 @@ nothingInNothingOut newepochstate =
     epochstate = nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (Crypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
@@ -469,7 +468,7 @@ justInJustOut newepochstate =
     epochstate = nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (Crypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
@@ -695,7 +694,7 @@ oldEqualsNew newepochstate =
     epochstate = nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (Crypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
@@ -716,7 +715,7 @@ oldEqualsNewOn newepochstate = old === new
     epochstate = nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (Crypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize

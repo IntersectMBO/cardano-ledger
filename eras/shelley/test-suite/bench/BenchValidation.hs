@@ -27,7 +27,8 @@ module BenchValidation
   )
 where
 
-import Cardano.Ledger.BaseTypes (Globals (..))
+import Cardano.Ledger.BaseTypes (Globals (..), unBlocksMade)
+import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
@@ -41,9 +42,8 @@ import Cardano.Ledger.Shelley.API.Protocol
     updateChainDepState,
   )
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
-import Cardano.Ledger.Shelley.BlockChain (Block (..), slotToNonce)
+import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
-import Cardano.Ledger.Shelley.EpochBoundary (unBlocksMade)
 import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState,
     nesBcur,

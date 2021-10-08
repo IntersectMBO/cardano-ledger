@@ -18,6 +18,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
+import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Chain (pparamsToChainChecksPParams)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import qualified Cardano.Ledger.Crypto as CC

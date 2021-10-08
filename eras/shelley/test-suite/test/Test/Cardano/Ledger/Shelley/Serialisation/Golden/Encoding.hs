@@ -29,7 +29,8 @@ import Cardano.Ledger.Address
   )
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import Cardano.Ledger.BaseTypes
-  ( BoundedRational (..),
+  ( BlocksMade (..),
+    BoundedRational (..),
     Network (..),
     Nonce (..),
     StrictMaybe (..),
@@ -92,8 +93,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     pattern RetirePool,
   )
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( BlocksMade (..),
-    SnapShot (..),
+  ( SnapShot (..),
     SnapShots (..),
     Stake (..),
   )
