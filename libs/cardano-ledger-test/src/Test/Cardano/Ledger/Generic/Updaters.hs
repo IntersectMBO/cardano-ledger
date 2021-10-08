@@ -61,10 +61,11 @@ import qualified Cardano.Ledger.Shelley.PParams as PP (PParams, PParams' (..), U
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.Shelley.Tx as Shelley (WitnessSetHKD (addrWits, bootWits, scriptWits), pattern WitnessSet)
 import qualified Cardano.Ledger.Shelley.Tx as Shelley (Tx (..))
-import Cardano.Ledger.Shelley.TxBody (DCert (..), TxIn (..), Wdrl (..), WitVKey (..))
+import Cardano.Ledger.Shelley.TxBody (DCert (..), Wdrl (..), WitVKey (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxBody (..), TxOut (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import qualified Data.ByteString.Char8 as BS

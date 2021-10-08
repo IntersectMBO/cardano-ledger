@@ -83,12 +83,11 @@ import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody
   ( TxBody (..),
-    TxId (..),
-    TxIn (..),
     TxOut (..),
     WitVKey (..),
     witKeyHash,
   )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import Data.Coders

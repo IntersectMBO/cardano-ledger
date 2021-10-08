@@ -68,7 +68,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     RewardAcnt (..),
     TxBody (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
     _poolCost,
@@ -83,6 +82,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (inject))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Default.Class (def)

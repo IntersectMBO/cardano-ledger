@@ -128,7 +128,6 @@ import Cardano.Ledger.Shelley.StabilityWindow as X
 import Cardano.Ledger.Shelley.Tx as X
   ( Tx (..),
     TxBody (..),
-    TxIn (..),
     TxOut (..),
     WitnessSet,
   )
@@ -143,7 +142,6 @@ import Cardano.Ledger.Shelley.TxBody as X
     Ptr (..),
     StakeCreds (..),
     StakePoolRelay (..),
-    TxId (..),
     Wdrl (..),
     WitVKey (..),
   )
@@ -151,6 +149,7 @@ import Cardano.Ledger.Shelley.UTxO as X
   ( UTxO (..),
     balance,
   )
+import Cardano.Ledger.TxIn as X (TxId (..), TxIn (..))
 import Cardano.Protocol.TPraos as X
   ( PoolDistr (..),
     individualPoolStake,

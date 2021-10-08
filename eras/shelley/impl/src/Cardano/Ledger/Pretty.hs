@@ -138,12 +138,9 @@ import Cardano.Ledger.Shelley.TxBody
     StakePoolRelay (..),
     TxBody (..),
     TxBodyRaw (..),
-    TxId (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
-    viewTxIn,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
@@ -153,6 +150,7 @@ import Cardano.Ledger.Slot
     EpochSize (..),
     SlotNo (..),
   )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), viewTxIn)
 import Cardano.Protocol.TPraos (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),

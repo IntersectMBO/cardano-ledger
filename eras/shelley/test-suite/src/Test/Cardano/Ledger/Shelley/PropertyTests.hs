@@ -39,8 +39,9 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
-import Cardano.Ledger.Shelley.TxBody (TxIn, Wdrl, WitVKey)
+import Cardano.Ledger.Shelley.TxBody (Wdrl, WitVKey)
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
+import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC

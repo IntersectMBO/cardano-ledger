@@ -79,7 +79,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     RewardAcnt (..),
     TxBody (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
@@ -89,6 +88,7 @@ import Cardano.Ledger.Slot
     EpochNo (..),
     SlotNo (..),
   )
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos

@@ -94,9 +94,9 @@ import Cardano.Ledger.Serialization
     encodeFoldableMapEncoder,
   )
 import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
-import Cardano.Ledger.Shelley.Tx (Tx, TxIn (..), segwitTx)
-import Cardano.Ledger.Shelley.UTxO (txid)
+import Cardano.Ledger.Shelley.Tx (Tx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn (..), txid)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)

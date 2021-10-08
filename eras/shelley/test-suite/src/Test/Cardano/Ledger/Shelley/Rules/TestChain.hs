@@ -53,9 +53,10 @@ import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Pool (POOL, PoolEnv (..))
 import Cardano.Ledger.Shelley.Rules.Upec (votedValue)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
-import Cardano.Ledger.Shelley.Tx
-import Cardano.Ledger.Shelley.TxBody
+import Cardano.Ledger.Shelley.Tx hiding (TxIn)
+import Cardano.Ledger.Shelley.TxBody hiding (TxIn)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits, txins, txouts, pattern UTxO)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))

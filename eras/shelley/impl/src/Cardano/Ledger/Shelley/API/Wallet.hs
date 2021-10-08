@@ -75,9 +75,10 @@ import Cardano.Ledger.Shelley.Rewards
   )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
-import Cardano.Ledger.Shelley.TxBody (DCert, PoolParams (..), TxIn (..), WitVKey (..))
+import Cardano.Ledger.Shelley.TxBody (DCert, PoolParams (..), WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Slot (epochInfoSize)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos

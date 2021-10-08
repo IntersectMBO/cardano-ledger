@@ -28,13 +28,12 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Ledger.Shelley.TxBody
   ( PoolParams (..),
-    TxId (..),
-    TxIn (..),
     TxOut (..),
   )
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
   )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.Monad (replicateM)

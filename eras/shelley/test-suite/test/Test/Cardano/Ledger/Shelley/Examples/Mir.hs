@@ -51,12 +51,12 @@ import Cardano.Ledger.Shelley.TxBody
     MIRPot (..),
     MIRTarget (..),
     TxBody (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)

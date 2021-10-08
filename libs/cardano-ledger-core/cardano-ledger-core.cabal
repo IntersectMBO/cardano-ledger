@@ -57,6 +57,7 @@ library
     Cardano.Ledger.SafeHash
     Cardano.Ledger.Serialization
     Cardano.Ledger.Slot
+    Cardano.Ledger.TxIn
     Cardano.Ledger.Val
 
   build-depends:

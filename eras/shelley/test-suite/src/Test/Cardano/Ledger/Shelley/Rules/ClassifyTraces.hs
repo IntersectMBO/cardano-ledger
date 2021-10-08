@@ -54,8 +54,9 @@ import Cardano.Ledger.Shelley.PParams
     pattern Update,
   )
 import Cardano.Ledger.Shelley.PParams as PParams (Update)
-import Cardano.Ledger.Shelley.TxBody (TxIn, Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader,
     bhbody,

@@ -49,9 +49,6 @@ module Cardano.Ledger.Shelley.TxBody
         _mdHash
       ),
     TxBodyRaw (..),
-    TxId (..),
-    TxIn (TxIn, ..),
-    viewTxIn,
     EraIndependentTxBody,
     -- eraIndTxBodyHash,
     TxOut (TxOut, TxOutCompact),
@@ -67,6 +64,10 @@ module Cardano.Ledger.Shelley.TxBody
     TransTxId,
     TransTxOut,
     TransTxBody,
+
+    -- * Deprecated
+    TxId,
+    TxIn,
   )
 where
 
@@ -127,13 +128,7 @@ import Cardano.Ledger.Keys
     hashKey,
     hashSignature,
   )
-import Cardano.Ledger.SafeHash
-  ( HashAnnotated,
-    SafeHash,
-    SafeToHash,
-    extractHash,
-    unsafeMakeSafeHash,
-  )
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization
   ( CBORGroup (..),
     CborSeq (..),
@@ -163,9 +158,9 @@ import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import qualified Cardano.Ledger.TxIn as Core
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude (HeapWords (..), panic)
-import qualified Cardano.Prelude as HW
 import Control.DeepSeq (NFData (rnf))
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
@@ -204,16 +199,14 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text.Encoding as Text
 import Data.Typeable (Typeable)
-import Data.Word (Word64, Word8)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
   ( AllowThunksIn (..),
     InspectHeapNamed (..),
     NoThunks (..),
-    noThunksInValues,
   )
-import Numeric.Natural (Natural)
 import Quiet
 
 -- ========================================================================
@@ -418,33 +411,6 @@ instance CC.Crypto crypto => FromJSON (PoolParams crypto) where
         <*> obj .: "relays"
         <*> obj .: "metadata"
 
--- ===================================================================================
--- Because we expect other Era's to import and use TxId, TxIn, TxOut, we use the weakest
--- constraint possible when deriving their instances. A Stronger constraint, Gathering
--- many constraints together, like:  type Strong = (C1 x, C2 x, ..., Cn x)
--- may make this file look systematic by having things like:
--- derving instance (Strong x) => Foo x,  for many Foo (Eq, Show, NfData, etc) BUT this
--- forces unnecessary requirements on any new Era which tries to embed one of these
--- types in their own datatypes, if they then try and derive (Foo TheirDataType).
--- ====================================================================================
-
--- | A unique ID of a transaction, which is computable from the transaction.
-newtype TxId crypto = TxId {_unTxId :: SafeHash crypto EraIndependentTxBody}
-  deriving (Show, Eq, Ord, Generic)
-  deriving newtype (NoThunks, HeapWords)
-
-deriving newtype instance CC.Crypto crypto => ToCBOR (TxId crypto)
-
-deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
-
-deriving newtype instance CC.Crypto crypto => NFData (TxId crypto)
-
-instance HeapWords (TxIn crypto) where
-  heapWords (TxInCompact32 a _ _ _ ix) =
-    6 + (4 * HW.heapWordsUnpacked a) + HW.heapWordsUnpacked ix
-  heapWords (TxInCompactOther txid ix) =
-    3 + HW.heapWords txid + HW.heapWordsUnpacked ix
-
 type TransTxId (c :: Type -> Constraint) era =
   -- Transaction Ids are the hash of a transaction body, which contains
   -- a Core.TxBody and Core.TxOut, hence the need for the ToCBOR instances
@@ -455,71 +421,6 @@ type TransTxId (c :: Type -> Constraint) era =
     TransValue ToCBOR era,
     TransValue c era
   )
-
--- | The input of a UTxO.
-data TxIn crypto where
-  TxInCompact32 ::
-    HS.SizeHash (CC.HASH crypto) ~ 32 =>
-    {-# UNPACK #-} !Word64 -> -- Hash part 1/4
-    {-# UNPACK #-} !Word64 -> -- Hash part 2/4
-    {-# UNPACK #-} !Word64 -> -- Hash part 3/4
-    {-# UNPACK #-} !Word64 -> -- Hash part 4/4
-    {-# UNPACK #-} !Word64 -> -- Index
-    TxIn crypto
-  TxInCompactOther :: !(TxId crypto) -> {-# UNPACK #-} !Word64 -> TxIn crypto
-
-pattern TxIn ::
-  CC.Crypto crypto =>
-  TxId crypto ->
-  Natural -> -- TODO We might want to change this to Word64 generally
-  TxIn crypto
-pattern TxIn txid index <-
-  (viewTxIn -> (txid, index))
-  where
-    TxIn txid@(TxId sh) index =
-      case HS.viewHash32 (extractHash sh) of
-        HS.ViewHashNot32 -> TxInCompactOther txid (fromIntegral index)
-        HS.ViewHash32 a b c d -> TxInCompact32 a b c d (fromIntegral index)
-
-{-# COMPLETE TxIn #-}
-
-viewTxIn :: TxIn crypto -> (TxId crypto, Natural)
-viewTxIn (TxInCompactOther txid i) = (txid, fromIntegral i)
-viewTxIn (TxInCompact32 a b c d i) = (txid, fromIntegral i)
-  where
-    txid = TxId (unsafeMakeSafeHash $ HS.unsafeMkHash32 a b c d)
-
-instance Show (TxIn crypto) where
-  showsPrec d (viewTxIn -> (txid, ix)) =
-    showParen (d > app_prec) $
-      showString "TxIn "
-        . showsPrec (app_prec + 1) txid
-        . showString " "
-        . showsPrec (app_prec + 1) ix
-    where
-      app_prec = 10
-
-instance Ord (TxIn crypto) where
-  compare (TxInCompact32 a1 b1 c1 d1 i1) (TxInCompact32 a2 b2 c2 d2 i2) =
-    compare a1 a2 <> compare b1 b2 <> compare c1 c2 <> compare d1 d2
-      <> compare i1 i2
-  compare (viewTxIn -> (id1, ix1)) (viewTxIn -> (id2, ix2)) =
-    compare id1 id2 <> compare ix1 ix2
-
-instance Eq (TxIn crypto) where
-  (==) (TxInCompact32 a1 b1 c1 d1 i1) (TxInCompact32 a2 b2 c2 d2 i2) =
-    (a1 == a2) && (b1 == b2) && (c1 == c2) && (d1 == d2) && (i1 == i2)
-  (==) (viewTxIn -> (id1, ix1)) (viewTxIn -> (id2, ix2)) =
-    (id1 == id2) && (ix1 == ix2)
-
-instance CC.Crypto crypto => NFData (TxIn crypto) where
-  rnf (TxInCompactOther txid _) = seq (rnf txid) ()
-  rnf (TxInCompact32 _ _ _ _ _) = ()
-
-instance NoThunks (TxIn crypto) where
-  showTypeOf _ = "TxIn"
-  wNoThunks c (TxInCompactOther txid _) = noThunksInValues c [txid]
-  wNoThunks _ (TxInCompact32 _ _ _ _ _) = pure Nothing -- always in normal form
 
 -- | The output of a UTxO.
 data TxOut era
@@ -720,7 +621,7 @@ instance NoThunks (DCert crypto)
 -- The underlying type for TxBody
 
 data TxBodyRaw era = TxBodyRaw
-  { _inputsX :: !(Set (TxIn (Crypto era))),
+  { _inputsX :: !(Set (Core.TxIn (Crypto era))),
     _outputsX :: !(StrictSeq (Core.TxOut era)),
     _certsX :: !(StrictSeq (DCert (Crypto era))),
     _wdrlsX :: !(Wdrl (Crypto era)),
@@ -879,7 +780,7 @@ deriving via
 -- | Pattern for use by external users
 pattern TxBody ::
   (Era era, FromCBOR (Core.PParamsDelta era), TransTxBody ToCBOR era) =>
-  Set (TxIn (Crypto era)) ->
+  Set (Core.TxIn (Crypto era)) ->
   StrictSeq (Core.TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
@@ -917,7 +818,7 @@ instance (Era era, c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentT
 instance (Era era) => ToCBOR (TxBody era) where
   toCBOR (TxBodyConstr memo) = toCBOR memo
 
-instance Crypto era ~ crypto => HasField "inputs" (TxBody era) (Set (TxIn crypto)) where
+instance Crypto era ~ crypto => HasField "inputs" (TxBody era) (Set (Core.TxIn crypto)) where
   getField (TxBodyConstr (Memo m _)) = getField @"_inputsX" m
 
 instance Core.TxOut era ~ out => HasField "outputs" (TxBody era) (StrictSeq out) where
@@ -949,7 +850,7 @@ instance c ~ Crypto era => HasField "minted" (TxBody era) (Set (ScriptHash c)) w
 
 instance
   c ~ Crypto era =>
-  HasField "txinputs_fee" (TxBody era) (Set (TxIn c))
+  HasField "txinputs_fee" (TxBody era) (Set (Core.TxIn c))
   where
   getField (TxBodyConstr (Memo m _)) = getField @"_inputsX" m
 
@@ -1103,28 +1004,6 @@ instance
         pure (2, DCertMir x)
       k -> invalidKey k
 
-instance
-  CC.Crypto crypto =>
-  ToCBOR (TxIn crypto)
-  where
-  toCBOR (viewTxIn -> (txId, index)) =
-    encodeListLen 2
-      <> toCBOR txId
-      <> toCBOR index
-
-instance
-  CC.Crypto crypto =>
-  FromCBOR (TxIn crypto)
-  where
-  fromCBOR =
-    decodeRecordNamed
-      "TxIn"
-      (const 2)
-      (TxIn <$> fromCBOR <*> fmap natural fromCBOR)
-    where
-      natural :: Word64 -> Natural
-      natural = fromIntegral
-
 instance-- use the weakest constraint necessary
 
   (Era era, TransTxOut ToCBOR era) =>
@@ -1253,3 +1132,13 @@ instance
           _poolRelays = relays,
           _poolMD = maybeToStrictMaybe md
         }
+
+-- DEPRECATED
+
+{-# DEPRECATED TxId "Import from Cardano.Ledger.TxIn instead" #-}
+
+type TxId = Core.TxId
+
+{-# DEPRECATED TxIn "Import from Cardano.Ledger.TxIn instead" #-}
+
+type TxIn = Core.TxIn

@@ -52,13 +52,12 @@ import Cardano.Ledger.Shelley.TxBody
     Delegation (..),
     PoolCert (..),
     PoolParams (..),
-    TxId (..),
-    TxIn (..),
     Wdrl (..),
     WitVKey (..),
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))

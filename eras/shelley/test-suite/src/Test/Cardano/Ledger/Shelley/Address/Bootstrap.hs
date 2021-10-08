@@ -68,8 +68,6 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxBody
   ( TxBody (..),
-    TxId (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
@@ -79,6 +77,7 @@ import Cardano.Ledger.Shelley.UTxO
 import Cardano.Ledger.Slot
   ( SlotNo (..),
   )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
   ( ByteString,

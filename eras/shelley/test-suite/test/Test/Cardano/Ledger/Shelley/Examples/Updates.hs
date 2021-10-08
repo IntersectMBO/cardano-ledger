@@ -42,16 +42,16 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxBody
   ( TxBody (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey, txid)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
     SlotNo (..),
   )
+import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)

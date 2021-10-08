@@ -73,11 +73,10 @@ import Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     RewardAcnt (..),
     TxBody (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey, txid)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
@@ -85,6 +84,7 @@ import Cardano.Ledger.Slot
     SlotNo (..),
     epochInfoSize,
   )
+import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos

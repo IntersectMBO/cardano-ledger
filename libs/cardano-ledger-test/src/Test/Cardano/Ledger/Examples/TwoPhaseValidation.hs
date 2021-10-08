@@ -97,11 +97,11 @@ import Cardano.Ledger.Shelley.TxBody
     PoolCert (..),
     PoolMetadata (..),
     RewardAcnt (..),
-    TxIn (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey, txid)
+import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))

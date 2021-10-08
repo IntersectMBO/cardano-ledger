@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.UTxO
     UTxO (..),
 
     -- * Functions
-    txid,
     txins,
     txinLookup,
     txouts,
@@ -38,6 +37,9 @@ module Cardano.Ledger.Shelley.UTxO
 
     -- * Utilities
     TransUTxO,
+
+    -- * Deprecated
+    txid,
   )
 where
 
@@ -60,7 +62,7 @@ import Cardano.Ledger.Keys
     signedDSIGN,
     verifySignedDSIGN,
   )
-import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
+import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
     isRegKey,
@@ -73,8 +75,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolCert (..),
     PoolParams (..),
     TransTxId,
-    TxId (..),
-    TxIn (..),
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
@@ -82,6 +82,8 @@ import Cardano.Ledger.Shelley.TxBody
     pattern Delegate,
     pattern Delegation,
   )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import qualified Cardano.Ledger.TxIn as Core (txid)
 import Cardano.Ledger.Val (zero, (<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra
@@ -151,13 +153,13 @@ deriving via
     Show (Core.TxOut era) =>
     Show (UTxO era)
 
--- | Compute the id of a transaction.
+{-# DEPRECATED txid "Import from Cardano.Ledger.TxIn instead" #-}
 txid ::
   forall era.
   Era era =>
   Core.TxBody era ->
   TxId (Crypto era)
-txid = TxId . hashAnnotated
+txid = Core.txid
 
 -- | Compute the UTxO inputs of a transaction.
 -- txins has the same problems as txouts, see notes below.
@@ -187,7 +189,7 @@ txouts tx =
         | (out, idx) <- zip (toList $ getField @"outputs" tx) [0 ..]
       ]
   where
-    transId = txid tx
+    transId = Core.txid tx
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::

@@ -122,8 +122,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolMetadata (..),
     StakePoolRelay (..),
     TxBody (..),
-    TxId,
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
@@ -148,6 +146,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
+import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Prelude (LByteString)
 import Cardano.Protocol.TPraos (PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader

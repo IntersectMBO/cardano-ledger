@@ -80,6 +80,7 @@ import Data.Coders (invalidKey)
 import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
+import Data.Map.Strict (Map)
 import Data.Maybe.Strict
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (Scientific, base10Exponent, coefficient, normalize, scientific)
@@ -92,6 +93,7 @@ import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+import Quiet
 
 data E34
 

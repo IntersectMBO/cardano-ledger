@@ -74,11 +74,11 @@ import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
     DecodeNonNegative,
