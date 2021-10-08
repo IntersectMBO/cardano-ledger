@@ -1,0 +1,46 @@
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{iohk}[2018/10/18]
+
+\RequirePackage{amssymb}
+\RequirePackage{extarrows}
+\RequirePackage{slashed}
+\RequirePackage[tikz]{bclogo}
+\RequirePackage{stmaryrd}
+
+\DeclareMathOperator{\dom}{dom}
+\DeclareMathOperator{\range}{range}
+
+\newcommand{\powerset}[1]{\ensuremath{\mathbb{P}~#1}}
+\newcommand{\restrictdom}{\ensuremath{\lhd}}
+\newcommand{\subtractdom}{\ensuremath{\mathbin{\slashed{\restrictdom}}}}
+\newcommand{\restrictrange}{\ensuremath{\rhd}}
+\newcommand{\subtractrange}{\ensuremath{\mathbin{\slashed{\restrictrange}}}}
+\newcommand{\union}{\ensuremath{\cup}}
+\newcommand{\unionoverrideRight}{\ensuremath{\mathbin{\underrightarrow\cup}}}
+\newcommand{\unionoverrideLeft}{\ensuremath{\mathbin{\underleftarrow\cup}}}
+\newcommand{\unionoverridePlus}{\ensuremath{\mathbin{\cup_{+}}}}
+\newcommand{\unionoverrideZero}{\ensuremath{\mathbin{\cup_{0}}}}
+\newcommand{\uniondistinct}{\ensuremath{\uplus}}
+\newcommand{\var}[1]{\ensuremath{\mathit{#1}}}
+\newcommand{\fun}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\type}[1]{\ensuremath{\mathsf{#1}}}
+\newcommand{\signed}[2]{\ensuremath{\llbracket #1 \rrbracket_{#2}}}
+\newcommand{\size}[1]{\ensuremath{\left| #1 \right|}}
+\newcommand{\trans}[2]{\ensuremath{\xlongrightarrow[\textsc{#1}]{#2}}}
+\newcommand{\seqof}[1]{\ensuremath{#1^{*}}}
+\newcommand{\nextdef}{\ensuremath{\\[1em]}}
+\newcommand{\where}{\ensuremath{~ ~ \mathbf{where}~ ~ }}
+
+\newcommand{\varUpdate}[1]{\boldsymbol{\color{Violet}#1}}
+
+\newenvironment{question}
+  {\begin{bclogo}[logo=\bcquestion, couleur=orange!10, arrondi=0.2]{ QUESTION}}
+  {\end{bclogo}}
+%\newenvironment{todo}
+%  {\begin{bclogo}[logo=\bcoutil, couleur=red!5, couleurBarre=red, arrondi=0.2]{ TODO}}
+%    {\end{bclogo}}
+\newenvironment{note}
+  {\begin{bclogo}[logo=\bcattention, couleur=orange!10, arrondi=0.2]{ NOTE}}
+  {\end{bclogo}}
+
+\endinput

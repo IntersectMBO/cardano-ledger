@@ -1,0 +1,26 @@
+\section{Transactions}
+\label{sec:transactions}
+
+\subsection{Transaction Body Changes}
+
+In $\TxBody$, replace
+
+\[\fun{reqSignerHashes} \in \powerset{\KeyHash} \]
+
+with
+
+\[ \fun{reqSignerHash} \in \type{Hash} \]
+
+Which is a hash of the set of keys in the map of keys to their signatures.
+For old style Alonzo transactions submitted in this this new era,
+$\fun{reqSignerHash}$ can be constructed from the wire-transmitted $\fun{reqSignerHashes}$
+at deserialization time. For an Alonzo-style transaction to be valid in this new era,
+all the non-collateral keys that sign must be listed in $\fun{reqSignerHashes}$.
+
+Also, in $\fun{txwits}$, add the field
+
+\[\fun{collateralSigs} \in (\VKey \mapsto \Sig)\]
+
+Note that there may be duplicate key-signature pairs in $\txwitsVKey{tx}$
+and $\fun{collateralSigs}~{tx}$. We could potentially optimize here at the CBOR
+encoding level to avoid duplication.

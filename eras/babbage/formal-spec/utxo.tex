@@ -1,0 +1,292 @@
+\section{UTxO}
+\label{sec:utxo}
+
+
+\subsection{Changes to Functions}
+
+We change $\fun{feesOK}$, in Figure \ref{fig:functions:utxo}.
+Check collateral is correct whenever there are either any scripts or there are more
+required signatures than the limit on the number of max allowed collateral sigs.
+Collateral is only required whenever there are lots of sigs to check.
+
+\begin{figure*}[htb]
+  \emph{Functions}
+    %
+  \begin{align*}
+    & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
+    & \fun{feesOK}~\var{pp}~tx~utxo~= \\
+    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge \\
+    &~~ \hldiff{((\fun{txscripts}~tx \neq \Nothing \vee \|\fun{txwitsVKey}~{tx}\| ~>~ \fun{maxCollInputs}~{pp})} \Rightarrow \\
+    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collateral}~{txb} \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
+    &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
+    &~~~~~~\wedge~ \var{balance} \geq \fun{quot}~(\txfee~{txb} * (\fun{collateralPercent}~pp))~100)) \\
+    &~~~~~~\wedge \fun{collateral}~{tx}~ \neq~\{\} \\
+    &~~      \where \\
+    & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
+    & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})
+  \end{align*}
+  \caption{Functions related to fees and collateral}
+  \label{fig:functions:utxo}
+\end{figure*}
+
+$\fun{evalScripts}$ already validates both (what used to be) phase-1 and phase-2 scripts, so
+no changes needed (Figure \ref{fig:functions:script2}).
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \fun{evalScripts}~\var{tx}~\epsilon = \True \\
+    & \fun{evalScripts}~\var{tx}~((\var{sc}, \var{d}, \var{eu}, \var{cm});\Gamma) = \\
+      & \begin{cases}
+        \llbracket sc \rrbracket_{cm,\var{eu}} d \land \fun{evalScripts}~\var{tx}~\Gamma & \var{sc}\in\ScriptPlutus \\
+        \fun{evalTimelock}~\var{tx}~\var{sc} \land \fun{evalScripts}~\var{tx}~\Gamma & \var{sc}\in\ScriptPhOne
+      \end{cases}
+  \end{align*}
+  \caption{Scripts and their arguments}
+  \label{fig:functions:script2}
+\end{figure}
+
+\subsection{UTXOS}
+
+
+Run all scripts AND check signatures in UTXOS rule
+(see \ref{fig:rules:utxo-state-upd}). No changes to UTXO rule.
+
+\begin{figure}[htb]
+  \begin{equation}
+    \inference[Scripts-Yes]
+    {
+    \var{txb}\leteq\txbody{tx} &
+    \var{sLst} := \fun{collectTwoPhaseScriptInputs}~\var{pp}~\var{tx}~\var{utxo}
+    \\
+    ~
+    \\
+    \hldiff{\fun{isValid}~\var{tx} \wedge \fun{evalScripts}~\var{tx}~\var{sLst}~ \wedge }\\
+    \hldiff{(\forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},~}
+    \hldiff{\mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma}) }\\
+    \\~\\
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+        \var{genDelegs} \\
+      \end{array}
+    }
+    \vdash \var{pup} \trans{\hyperref[fig:rules:update]{ppup}}{\fun{txup}~\var{tx}} \var{pup'}
+    \\~\\
+    \var{refunded} \leteq \keyRefunds{pp}{txb}
+    \\
+    \var{depositChange} \leteq
+      (\deposits{pp}~{poolParams}~{(\txcerts{txb})}) - \var{refunded}
+    }
+    {
+    \begin{array}{l}
+      \var{slot}\\
+      \var{pp}\\
+      \var{poolParams}\\
+      \var{genDelegs}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{pup} \\
+      \end{array}
+      \right)
+      \trans{utxos}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs~{txb}}}  \\
+        \varUpdate{\var{deposits} + \var{depositChange}} \\
+        \varUpdate{\var{fees} + \txfee{txb}} \\
+        \varUpdate{\var{pup'}} \\
+      \end{array}
+      \right) \\
+    }
+  \end{equation}
+  \begin{equation}
+    \inference[Scripts-No]
+    {
+    \var{txb}\leteq\txbody{tx} &
+    \var{sLst} := \fun{collectTwoPhaseScriptInputs}~\var{pp}~\var{tx}~\var{utxo}
+    \\
+    ~
+    \\
+    \hldiff{\fun{isValid}~\var{tx} = \False} \\
+    \hldiff{((\fun{evalScripts}~\var{tx}~\var{sLst} )~\wedge~ }
+    \hldiff{(\forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},}
+    \hldiff{\mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma}))~=~\False }\\
+    }
+    {
+    \begin{array}{l}
+      \var{slot}\\
+      \var{pp}\\
+      \var{poolParams}\\
+      \var{genDelegs}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{pup} \\
+      \end{array}
+      \right)
+      \trans{utxos}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{\fun{collateral}~{txb} \subtractdom \var{utxo}}}  \\
+        \var{deposits} \\
+        \varUpdate{\var{fees} + \fun{ubalance}~(\fun{collateral}~{txb}\restrictdom \var{utxo})} \\
+        \var{pup} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{State update rules}
+  \label{fig:rules:utxo-state-upd}
+\end{figure}
+
+\subsection{Burn Address}
+
+Adding a burn address, sending tokens to which allows users to burn any tokens other
+than Ada, requires the following changes:
+
+\begin{itemize}
+  \item in the UTXOS transition, the $\type{Scripts-Yes}$ rule, replace the UTxO update with
+
+  \[\var{utxo}~\mapsto~(\txins{txb} \subtractdom \var{utxo}) \cup \fun{outs}'~{txb})\]
+
+  where
+  \[\fun{outs}'~{txb}~=~(\fun{outs}~{txb})~\restrictrange~\{~(a,\wcard,\wcard)~\mid~\fun{validatorHash}~a~\neq~\type{BurnAddress}~\}\]
+
+  where $\type{BurnAddress}$ is a script address to which tokens are sent to be burned (and
+  not actually re-enter into the UTxO upon being spent).
+
+  \item in the UTXO transition, we must add the following check to make sure no Ada is burned:
+
+  \[ \forall \wcard\mapsto (a,v,\wcard)\in (\fun{txouts}~{txb}),\]
+  \[\fun{validatorHash}~a~=~\type{BurnAddress}~\Rightarrow~\fun{coin}~v~=~0  \]
+\end{itemize}
+
+\subsection{UTXOW}
+
+Dont need a separate check for $\fun{reqSignerHashes}$ because now all signatures
+are fixed and required (Figure \ref{fig:functions-witnesses}). Don't need to
+include key hashes of keys collateral inputs either.
+
+\begin{figure}[htb]
+  \begin{align*}
+    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\KeyHashGen\mapsto\VKey) \to
+      \powerset{\KeyHash} \\
+    & \text{required key hashes} \\
+    &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{genDelegs} = \\
+    & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{txinsVKey}~{tx} \} \\
+    \cup & ~~
+           \{\fun{stakeCred_r}~a\mid a\mapsto \wcard \in \AddrRWDVKey
+      \restrictdom \txwdrls{tx}\}\\
+    \cup & ~~(\AddrVKey \cap \fun{certWitsNeeded}~{tx}) \\
+    \cup & ~~\fun{propWits}~(\fun{txup}~\var{tx})~\var{genDelegs} \\
+    \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
+    & ~~\hldiff{\text{not including reqSignerHashes or collateral input keys!}}
+  \end{align*}
+  \caption{UTXOW helper functions}
+  \label{fig:functions-witnesses}
+\end{figure}
+
+Remove checking scripts from UTXOW rule, because we do them in UTXOS instead.
+Add a check that $\fun{reqSignerHash}$, if non-empty and signing key map is non-empty,
+must be the same as the computed hash of the keys of the key-signature map.
+
+Replace checking signatures for all keys (in $\fun{txwitsVKey}$) with checking
+signatures only in $\fun{collateralSigs}$. The rest of the sigs are checked in UTXOS.
+
+Make sure $\fun{collateralSigs}$ contains exactly the keys with which the
+inputs in $\fun{collateral}$ are locked.
+
+\textbf{No collateral is required when there are only a few non-collateral signatures. }
+If a $tx$ has fewer non-collateral signatures than the maximum number of collateral signatures
+allowed (specified in $\fun{maxCollInputs}~{pp}$), and there are no scripts, we
+do not require collateral. The $\fun{feesOK}$ function does not check
+collateral, and the $\IsValid$ tag must be set to $\True$.  
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:utxo-witness-inductive-alonzo}
+    \inference[UTxO-witG]
+    {
+      \var{txb}\leteq\txbody{tx} &
+      \var{txw}\leteq\fun{txwits}~{tx} \\
+      (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
+      \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
+      {\dom (\txwitsVKey{txw})\} }\\
+      {\var{inputHashes}\leteq \{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isTwoPhaseScriptAddress}~{tx}~{a}\}}   \\~\\
+      \hldiff{\text{do not check phase-1 scripts here, theyre checked in UTXOS}}\\~\\
+      {\{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~\var{tx}\} = \dom (\fun{txscripts}~{txw})} \\~\\
+      {\var{inputHashes} \subseteq \dom (\fun{txdats}~{txw})} \\~\\
+      {\dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup \{h~\mid~ (\wcard, \wcard, h)\in\fun{txouts}\}}
+      \\~\\
+      {\ \dom (\fun{txrdmrs}~tx) ~=~\{~\fun{rdptr}~txb~sp~
+       \vert~ (sp,h)~\in~\fun{scriptsNeeded}~\var{utxo}~\var{tx}, } \\
+      {h\mapsto s~\in~\fun{txscripts}~{txw}, s~\in~\ScriptPhTwo \}}
+      \\~\\
+      \hldiff{\forall \var{vk} \mapsto \sigma \in \fun{collateralSigs}~{txw},~}
+      \hldiff{\mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} }\\~\\
+      \hldiff{\fun{isValid}~{tx}~=~\False~\Rightarrow~}\\
+      \hldiff{\|\fun{txwitsVKey}~{tx}\| ~>~ \fun{maxCollInputs}~{pp}~\vee~\fun{txscripts}~{tx}~\neq~\Nothing}\\~\\
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}
+      \\~\\
+      \hldiff{\{~ \fun{hash}~{k}~\mid~k\mapsto\wcard~\in~\fun{collateralSigs}~{tx}~\}}~\\
+      \hldiff{=~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{collateral}~{tx} \}}
+      \\~\\
+      genSig \leteq
+      \left\{
+        \fun{hashKey}~gkey \vert gkey \in\dom{genDelegs}
+      \right\}
+      \cap
+      \var{witsKeyHashes}
+      \\
+      \left\{
+        c\in\txcerts{txb}~\cap\DCertMir
+      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
+      \fun{d}~\var{pp} > 0
+      \\~\\
+      \var{adh}\leteq\fun{txADhash}~\var{txb}
+      &
+      \var{ad}\leteq\fun{auxiliaryData}~\var{tx}
+      \\
+      (\var{adh}=\Nothing \land \var{ad}=\Nothing)
+      \lor
+      (\var{adh}=\fun{hashAD}~\var{ad})
+      \\~\\
+      {\fun{wppHash}~{txb}~=~\fun{hashWitnessPPData}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})~(\fun{txdats}~{txw})} \\
+      \hldiff{\fun{reqSignerHash}~{tx}~=~\fun{hash}~(\fun{dom}~(\txwitsVKey{tx}))~ \vee }\\
+      \hldiff{((\fun{reqSignerHash}~{tx}~=~\Nothing) \wedge (\fun{hash}~(\fun{dom}~(\txwitsVKey{tx})) = \emptyset)}\\
+      \hldiff{\wedge~ \fun{txrdmrs}~{tx}~=~\Nothing)}
+      \\~\\
+      {
+        \begin{array}{r}
+          \var{slot}\\
+          \var{pp}\\
+          \var{poolParams}\\
+          \var{genDelegs}\\
+        \end{array}
+      }
+      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{tx}
+      \var{utxoSt'}\\
+    }
+    {
+      \begin{array}{r}
+        \var{slot}\\
+        \var{pp}\\
+        \var{poolParams}\\
+        \var{genDelegs}\\
+      \end{array}
+      \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
+    }
+  \end{equation}
+  \caption{UTxO with witnesses inference rules for Tx}
+  \label{fig:rules:utxow-alonzo}
+\end{figure}
