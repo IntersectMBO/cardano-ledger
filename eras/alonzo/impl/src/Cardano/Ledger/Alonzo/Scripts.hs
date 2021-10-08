@@ -77,7 +77,7 @@ import Data.DerivingVia (InstantiatedAt (..))
 import Data.Int (Int64)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Measure (Measure)
+import Data.Measure (BoundedMeasure(..), Measure)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -160,6 +160,9 @@ data ExUnits = ExUnits
   deriving
     (Monoid, Semigroup)
     via (InstantiatedAt Measure ExUnits)
+
+instance BoundedMeasure ExUnits where
+  maxBound = ExUnits (fromIntegral $ Prelude.maxBound @Word64) (fromIntegral $ Prelude.maxBound @Word64)
 
 instance NoThunks ExUnits
 
