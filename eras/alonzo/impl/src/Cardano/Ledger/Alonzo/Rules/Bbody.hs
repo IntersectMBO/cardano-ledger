@@ -27,11 +27,12 @@ import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
+import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (Block (..), bBodySize, incrBlocks)
+import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules.Bbody
   ( BbodyEnv (..),

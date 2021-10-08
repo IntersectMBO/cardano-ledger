@@ -83,6 +83,7 @@ import Cardano.Ledger.BaseTypes
     mkActiveSlotCoeff,
     mkNonceFromOutputVRF,
   )
+import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -104,7 +105,7 @@ import Cardano.Ledger.Shelley.API
     GetLedgerView,
     PParams,
   )
-import Cardano.Ledger.Shelley.BlockChain (Block, TxSeq, bheader)
+import Cardano.Ledger.Shelley.BlockChain (TxSeq)
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Shelley.PParams (PParamsUpdate)
 import Cardano.Ledger.Shelley.Tx (Tx, TxOut, WitnessSet)

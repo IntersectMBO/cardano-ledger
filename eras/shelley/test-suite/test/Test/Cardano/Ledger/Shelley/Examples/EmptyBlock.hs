@@ -11,8 +11,8 @@ module Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
 where
 
 import Cardano.Ledger.BaseTypes (Nonce)
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Shelley.BlockChain (Block)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
   ( BlockNo (..),

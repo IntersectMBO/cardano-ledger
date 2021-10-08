@@ -48,6 +48,7 @@ import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), txInfo, valContext
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), StrictMaybe (..), textToUrl)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
@@ -80,7 +81,7 @@ import Cardano.Ledger.Shelley.API
     ProtVer (..),
     UTxO (..),
   )
-import Cardano.Ledger.Shelley.BlockChain (Block (..), bBodySize)
+import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), WitHashes (..))
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))

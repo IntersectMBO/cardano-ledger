@@ -54,6 +54,10 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     (⭒),
   )
+import Cardano.Ledger.Block
+  ( Block (..),
+    bheader,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
@@ -66,10 +70,6 @@ import Cardano.Ledger.Keys
     GenDelegs (..),
     KeyHash,
     KeyRole (..),
-  )
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (..),
-    bheader,
   )
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..))

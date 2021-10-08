@@ -6,8 +6,8 @@ module Test.Cardano.Ledger.Shelley.Examples
   )
 where
 
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley ()
-import Cardano.Ledger.Shelley.BlockChain (Block)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Protocol.TPraos.BHeader (BHeader)

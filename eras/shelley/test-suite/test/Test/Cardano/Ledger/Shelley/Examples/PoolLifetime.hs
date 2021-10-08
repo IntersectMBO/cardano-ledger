@@ -27,6 +27,7 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
     (⭒),
   )
+import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
@@ -35,7 +36,6 @@ import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (getRewardInfo)
-import Cardano.Ledger.Shelley.BlockChain (Block, bheader)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState (..),

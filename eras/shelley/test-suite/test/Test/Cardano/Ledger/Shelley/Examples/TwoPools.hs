@@ -29,6 +29,7 @@ import Cardano.Ledger.BaseTypes
     activeSlotVal,
     (⭒),
   )
+import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin
   ( Coin (..),
     DeltaCoin (..),
@@ -41,7 +42,6 @@ import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Block (Block, bheader)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( PulsingRewUpdate (..),

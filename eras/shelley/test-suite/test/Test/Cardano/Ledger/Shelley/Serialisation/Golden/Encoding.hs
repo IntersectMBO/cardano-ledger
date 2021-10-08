@@ -39,6 +39,7 @@ import Cardano.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -77,11 +78,7 @@ import Cardano.Ledger.Shelley.API
   ( MultiSig,
     ScriptHash,
   )
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (..),
-    TxSeq (..),
-    bbHash,
-  )
+import Cardano.Ledger.Shelley.BlockChain (TxSeq (..), bbHash)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( pattern DeRegKey,

@@ -21,6 +21,7 @@ where
 
 import Cardano.Binary (ToCBOR, serialize')
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfo)
+import Cardano.Ledger.Block (Block (..), bheader)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq), TxSeq)
 import Cardano.Ledger.Shelley.API
@@ -31,7 +32,6 @@ import Cardano.Ledger.Shelley.API
     Delegation (..),
     LEDGER,
   )
-import Cardano.Ledger.Shelley.BlockChain (Block (..), bheader)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( isDeRegKey,

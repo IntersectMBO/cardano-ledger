@@ -70,6 +70,7 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
     stabilityWindow,
   )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
@@ -103,11 +104,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (Block),
-    bBodySize,
-    pattern Block,
-  )
+import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesTxBody,
     UsesTxOut (..),

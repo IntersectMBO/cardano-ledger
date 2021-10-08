@@ -35,6 +35,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
   )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Chain
   ( ChainPredicateFailure (..),
     chainChecks,
@@ -58,7 +59,6 @@ import Cardano.Ledger.Shelley.API.Wallet
     totalAdaES,
     totalAdaPotsES,
   )
-import Cardano.Ledger.Shelley.BlockChain (Block (..))
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState

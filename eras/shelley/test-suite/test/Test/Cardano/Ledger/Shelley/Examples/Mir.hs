@@ -16,6 +16,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Mir
 where
 
 import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..))
+import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
@@ -27,7 +28,6 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.BlockChain (Block, bheader)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..), MIRCert (..))
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShot)
 import Cardano.Ledger.Shelley.LedgerState

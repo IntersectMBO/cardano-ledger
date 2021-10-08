@@ -16,7 +16,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
 import Cardano.Ledger.Alonzo.Scripts (Script, decodeCostModel)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
-import Cardano.Ledger.Shelley.BlockChain (Block)
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley.Metadata (Metadata)
 import qualified Cardano.Ledger.Shelley.Tx as LTX
 import Cardano.Protocol.TPraos.BHeader (BHeader)

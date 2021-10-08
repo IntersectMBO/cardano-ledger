@@ -240,4 +240,5 @@ emptySnapShots :: SnapShots crypto
 emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
 
 {-# DEPRECATED BlocksMade "Import from Cardano.Ledger.BaseTypes instead" #-}
+
 type BlocksMade = Core.BlocksMade

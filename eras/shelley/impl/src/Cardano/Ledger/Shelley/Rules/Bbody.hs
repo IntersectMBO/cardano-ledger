@@ -23,13 +23,14 @@ where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfo)
+import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
-import Cardano.Ledger.Shelley.BlockChain (Block (..), bBodySize, incrBlocks)
+import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,

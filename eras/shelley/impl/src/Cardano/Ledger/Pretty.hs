@@ -43,6 +43,7 @@ import Cardano.Ledger.BaseTypes
     activeSlotVal,
     dnsToText,
   )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (PParamsDelta)
@@ -69,7 +70,6 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Cardano.Ledger.Shelley.BlockChain (Block (..))
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),

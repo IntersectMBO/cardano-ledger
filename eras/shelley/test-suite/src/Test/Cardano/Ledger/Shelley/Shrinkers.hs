@@ -5,9 +5,9 @@
 
 module Test.Cardano.Ledger.Shelley.Shrinkers where
 
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Shelley.BlockChain
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.Tx hiding (TxIn)

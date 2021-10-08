@@ -32,17 +32,17 @@ import Cardano.Ledger.Shelley.API
     Update,
   )
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Shelley.BlockChain (LaxBlock)
 import Cardano.Ledger.Shelley.Metadata (Metadata)
 import Cardano.Ledger.Shelley.PParams (PParamsUpdate)
 import Cardano.Ledger.Shelley.TxBody
   ( StakePoolRelay,
     TxBody,
-    TxIn,
     TxOut,
   )
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
 import qualified Data.ByteString.Lazy as BSL
+import Test.Cardano.Ledger.Shelley.LaxBlock (LaxBlock)
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   ( cddlGroupTest,
     cddlTest,

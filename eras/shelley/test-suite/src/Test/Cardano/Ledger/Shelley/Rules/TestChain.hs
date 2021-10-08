@@ -28,6 +28,12 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain
 where
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..))
+import Cardano.Ledger.Block
+  ( Block (..),
+    bbody,
+    bheader,
+    neededTxInsForBlock,
+  )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
@@ -36,12 +42,6 @@ import Cardano.Ledger.Shelley.API
   ( ApplyBlock,
     DELEG,
     GetLedgerView,
-  )
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (..),
-    bbody,
-    bheader,
-    neededTxInsForBlock,
   )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
