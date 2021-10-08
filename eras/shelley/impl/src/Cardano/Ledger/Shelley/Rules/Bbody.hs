@@ -29,7 +29,7 @@ import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
-import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
+import Cardano.Ledger.Shelley.BlockChain (Block (..), bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade)
 import Cardano.Ledger.Shelley.LedgerState
@@ -125,7 +125,7 @@ instance
 
   type
     Signal (BBODY era) =
-      (BHeaderView (Crypto era), Era.TxSeq era)
+      Block BHeaderView era
 
   type Environment (BBODY era) = BbodyEnv era
 
@@ -155,7 +155,11 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account,
                BbodyState ls b,
-               (bhview, txsSeq)
+               (Block' bhview txsSeq _)
+               -- We avoid the Block pattern here in order to
+               -- not inherit the ToCBOR constraint on block headers.
+               -- The BBODY rule uses the BHeaderView for the block
+               -- header, which should not actually ever be serialized.
                )
            ) -> do
         let txs = fromTxSeq @era txsSeq

@@ -239,7 +239,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), Era.TxSeq era),
+    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -282,7 +282,7 @@ chainTransition ::
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), Era.TxSeq era),
+    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -356,9 +356,10 @@ chainTransition =
                 bh
               )
 
+        let thouShaltNot = error "A block with a header view should never be hashed"
         BbodyState ls' bcur' <-
           trans @(Core.EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, (bhView, txs))
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, (Block' bhView txs thouShaltNot))
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh

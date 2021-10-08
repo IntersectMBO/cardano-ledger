@@ -216,6 +216,7 @@ benchmark mainbench
     Cardano.Ledger.Shelley.Bench.Rewards
 
   build-depends:
+    bytestring,
     cardano-crypto-class,
     cardano-crypto-praos,
     cardano-ledger-core,

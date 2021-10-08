@@ -80,7 +80,7 @@ import Cardano.Ledger.Shelley.API
     ProtVer (..),
     UTxO (..),
   )
-import Cardano.Ledger.Shelley.BlockChain (bBodySize)
+import Cardano.Ledger.Shelley.BlockChain (Block (..), bBodySize)
 import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), WitHashes (..))
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
@@ -1940,9 +1940,10 @@ makeNaiveBlock ::
     ToCBORGroup (TxSeq era)
   ) =>
   [Core.Tx era] ->
-  (BHeaderView (Crypto era), TxSeq era)
-makeNaiveBlock txs = (bhView, txs')
+  (Block BHeaderView era)
+makeNaiveBlock txs = (Block' bhView txs' thouShaltNot)
   where
+    thouShaltNot = error "A block with a header view should never be hashed"
     bhView =
       BHeaderView
         { bhviewID = hashKey (vKey coldKeys),
@@ -1953,7 +1954,7 @@ makeNaiveBlock txs = (bhView, txs')
         }
     txs' = (toTxSeq @era) . StrictSeq.fromList $ txs
 
-testAlonzoBlock :: (BHeaderView C_Crypto, TxSeq A)
+testAlonzoBlock :: (Block BHeaderView A)
 testAlonzoBlock =
   makeNaiveBlock
     [ trustMe True $ validatingTx pf,
@@ -1968,7 +1969,7 @@ testAlonzoBlock =
   where
     pf = Alonzo Mock
 
-testAlonzoBadPMDHBlock :: (BHeaderView C_Crypto, TxSeq A)
+testAlonzoBadPMDHBlock :: (Block BHeaderView A)
 testAlonzoBadPMDHBlock = makeNaiveBlock [trustMe True $ poolMDHTooBigTx pf]
   where
     pf = Alonzo Mock
@@ -2006,7 +2007,7 @@ example1BBodyState =
 
 testBBODY ::
   BbodyState A ->
-  (BHeaderView C_Crypto, TxSeq A) ->
+  (Block BHeaderView A) ->
   Either [PredicateFailure (AlonzoBBODY A)] (BbodyState A) ->
   Assertion
 testBBODY initialSt block (Right expectedSt) =

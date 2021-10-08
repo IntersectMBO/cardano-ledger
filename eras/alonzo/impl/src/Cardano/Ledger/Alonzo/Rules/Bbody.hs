@@ -31,7 +31,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
-import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
+import Cardano.Ledger.Shelley.BlockChain (Block (..), bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Shelley.Rules.Bbody
   ( BbodyEnv (..),
@@ -120,7 +120,7 @@ bbodyTransition ::
   forall (someBBODY :: Type -> Type) era.
   ( -- Conditions that the Abstract someBBODY must meet
     STS (someBBODY era),
-    Signal (someBBODY era) ~ (BHeaderView (Crypto era), TxSeq era),
+    Signal (someBBODY era) ~ (Block BHeaderView era),
     PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFail era,
     BaseM (someBBODY era) ~ ShelleyBase,
     State (someBBODY era) ~ BbodyState era,
@@ -144,7 +144,11 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account,
                BbodyState ls b,
-               (bh, txsSeq)
+               (Block' bh txsSeq _)
+               -- We avoid the Block pattern here in order to
+               -- not inherit the ToCBOR constraint on block headers.
+               -- The BBODY rule uses the BHeaderView for the block
+               -- header, which should not actually ever be serialized.
                )
            ) -> do
         let txs = txSeqTxns txsSeq
@@ -218,7 +222,7 @@ instance
 
   type
     Signal (AlonzoBBODY era) =
-      (BHeaderView (Crypto era), TxSeq era)
+      (Block BHeaderView era)
 
   type Environment (AlonzoBBODY era) = BbodyEnv era
 
