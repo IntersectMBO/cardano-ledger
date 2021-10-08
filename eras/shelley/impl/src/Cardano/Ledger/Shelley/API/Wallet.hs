@@ -42,7 +42,15 @@ module Cardano.Ledger.Shelley.API.Wallet
   )
 where
 
-import Cardano.Binary (ToCBOR (..), decodeFull, decodeFullDecoder, serialize)
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeDouble,
+    decodeFull,
+    decodeFullDecoder,
+    encodeDouble,
+    serialize
+  )
 import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
@@ -107,6 +115,14 @@ import Control.Monad.Trans.Reader (runReader)
 import Control.Provenance (runWithProvM)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
+import Data.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Foldable (fold)
@@ -654,3 +670,46 @@ totalAdaES cs =
         depositsAdaPot,
         feesAdaPot
       } = totalAdaPotsES cs
+--------------------------------------------------------------------------------
+-- CBOR instances
+--------------------------------------------------------------------------------
+
+instance ToCBOR RewardParams where
+  toCBOR (RewardParams p1 p2 p3 p4) =
+    encode $
+      Rec RewardParams
+        !> To p1
+        !> To p2
+        !> To p3
+        !> To p4
+
+instance FromCBOR RewardParams where
+  fromCBOR =
+    decode $
+      RecD RewardParams
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance ToCBOR RewardInfoPool where
+  toCBOR (RewardInfoPool p1 p2 p3 p4 p5 d6) =
+    encode $
+      Rec RewardInfoPool
+        !> To p1
+        !> To p2
+        !> To p3
+        !> To p4
+        !> To p5
+        !> E encodeDouble d6
+
+instance FromCBOR RewardInfoPool where
+  fromCBOR =
+    decode $
+      RecD RewardInfoPool
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! D decodeDouble
