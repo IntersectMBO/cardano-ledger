@@ -49,7 +49,7 @@ import Cardano.Binary
     decodeFull,
     decodeFullDecoder,
     encodeDouble,
-    serialize
+    serialize,
   )
 import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
@@ -403,9 +403,6 @@ getRewardInfoPools ::
 getRewardInfoPools globals ss =
   (mkRewardParams, Map.mapWithKey mkRewardInfoPool poolParams)
   where
-    maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
-    totalStake = circulation es maxSupply
-
     es = nesEs ss
     pp = esPp es
     NonMyopic
@@ -414,13 +411,13 @@ getRewardInfoPools globals ss =
       } = esNonMyopic es
     histLookup key = fromMaybe mempty (Map.lookup key ls)
 
-    EB.SnapShot stake delegs poolParams = currentSnapshot ss
+    EB.SnapShot stakes delegs poolParams = currentSnapshot ss
 
     mkRewardParams =
       RewardParams
         { a0 = getField @"_a0" pp,
           nOpt = getField @"_nOpt" pp,
-          totalStake = totalStake,
+          totalStake = getTotalStake globals ss,
           rPot = rPot
         }
     mkRewardInfoPool key poolp =
@@ -434,14 +431,14 @@ getRewardInfoPools globals ss =
             unPerformanceEstimate $ percentile' $ histLookup key
         }
       where
-        pstake = fold . EB.unStake $ EB.poolStake key delegs stake
+        pstake = fold . EB.unStake $ EB.poolStake key delegs stakes
         ostake =
           Set.foldl'
             ( \c o ->
                 c
                   <> fromMaybe
                     mempty
-                    (Map.lookup (KeyHashObj o) (EB.unStake stake))
+                    (Map.lookup (KeyHashObj o) (EB.unStake stakes))
             )
             mempty
             (_poolOwners poolp)
@@ -670,6 +667,7 @@ totalAdaES cs =
         depositsAdaPot,
         feesAdaPot
       } = totalAdaPotsES cs
+
 --------------------------------------------------------------------------------
 -- CBOR instances
 --------------------------------------------------------------------------------
