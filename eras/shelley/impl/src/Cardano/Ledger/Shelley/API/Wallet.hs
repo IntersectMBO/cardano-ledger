@@ -27,6 +27,7 @@ module Cardano.Ledger.Shelley.API.Wallet
     RewardInfoPool (..),
     RewardParams (..),
     getRewardInfoPools,
+    getRewardProvenance,
     getRewardInfo,
     getNonMyopicMemberRewards,
 
@@ -440,12 +441,7 @@ getRewardInfoPools globals ss =
             mempty
             (_poolOwners poolp)
 
--- | Calculate stake pool rewards from the snapshot labeled `go`.
--- Also includes information on how the rewards were calculated
--- ('RewardProvenance').
---
--- For a calculation of rewards based on the current stake distribution,
--- see 'getRewardInfoPools'.
+{-# DEPRECATED getRewardInfo "Use 'getRewardProvenance' instead." #-}
 getRewardInfo ::
   forall era.
   ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
@@ -458,7 +454,31 @@ getRewardInfo ::
   Globals ->
   NewEpochState era ->
   (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
-getRewardInfo globals newepochstate =
+getRewardInfo = getRewardProvenance
+
+-- | Calculate stake pool rewards from the snapshot labeled `go`.
+-- Also includes information on how the rewards were calculated
+-- ('RewardProvenance').
+--
+-- For a calculation of rewards based on the current stake distribution,
+-- see 'getRewardInfoPools'.
+--
+-- TODO: Deprecate 'getRewardProvenance', because wallets are more
+-- likely to use 'getRewardInfoPools' for up-to-date information
+-- on stake pool rewards.
+getRewardProvenance ::
+  forall era.
+  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval
+  ) =>
+  Globals ->
+  NewEpochState era ->
+  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
+getRewardProvenance globals newepochstate =
   runReader
     ( runWithProvM def $
         createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam
