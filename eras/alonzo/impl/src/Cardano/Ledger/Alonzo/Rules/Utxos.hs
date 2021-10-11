@@ -22,7 +22,6 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
-import Cardano.Ledger.Alonzo.PParams (ProtVer)
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( CollectError,
     collectTwoPhaseScriptInputs,
@@ -41,6 +40,7 @@ import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), ScriptResult (..))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.BaseTypes
   ( Globals,
+    ProtVer,
     ShelleyBase,
     StrictMaybe (..),
     epochInfo,

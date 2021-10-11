@@ -26,6 +26,7 @@ import Cardano.Ledger.BaseTypes
   ( BoundedRational,
     NonNegativeInterval,
     Nonce (NeutralNonce),
+    ProtVer (..),
     StrictMaybe (..),
     UnitInterval,
     mkNonceFromNumber,
@@ -57,7 +58,6 @@ import Cardano.Ledger.Shelley.PParams
   ( PParams,
     PParams' (..),
     PParamsUpdate,
-    ProtVer (..),
     pattern ProposedPPUpdates,
     pattern Update,
   )

@@ -25,8 +25,8 @@ module Cardano.Ledger.Chain
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.PParams (ProtVer (..))
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
 import GHC.Generics (Generic)

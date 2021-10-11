@@ -36,13 +36,7 @@ import Cardano.Ledger.AuxiliaryData
     ValidateAuxiliaryData (..),
     hashAuxiliaryData,
   )
-import Cardano.Ledger.BaseTypes
-  ( ShelleyBase,
-    StrictMaybe (..),
-    invalidKey,
-    quorum,
-    (==>),
-  )
+import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe (..), invalidKey, quorum, (==>))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
@@ -73,7 +67,7 @@ import Cardano.Ledger.Shelley.LedgerState
     witsFromTxWitnesses,
     witsVKeyNeeded,
   )
-import Cardano.Ledger.Shelley.PParams (ProtVer, Update)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Utxo (UTXO, UtxoEnv (..), UtxoEvent, UtxoPredicateFailure)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks

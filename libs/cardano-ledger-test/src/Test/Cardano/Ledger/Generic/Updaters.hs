@@ -36,13 +36,7 @@ import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..), unTxDats)
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    NonNegativeInterval,
-    Nonce,
-    StrictMaybe (..),
-    UnitInterval,
-  )
+import Cardano.Ledger.BaseTypes (Network (..), NonNegativeInterval, Nonce, ProtVer (..), StrictMaybe (..), UnitInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -54,7 +48,6 @@ import Cardano.Ledger.Mary (MaryEra)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..))
-import Cardano.Ledger.Shelley.PParams (ProtVer (..))
 import qualified Cardano.Ledger.Shelley.PParams as PP (PParams, PParams' (..), Update)
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.Shelley.Tx as Shelley (WitnessSetHKD (addrWits, bootWits, scriptWits), pattern WitnessSet)

@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Shelley.Examples.NetworkID
   )
 where
 
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( DCert (..),
@@ -15,7 +16,6 @@ import Cardano.Ledger.Shelley.API
     PoolCert (..),
     PoolEnv (..),
     PoolParams (..),
-    ProtVer (..),
     RewardAcnt (..),
   )
 import Cardano.Ledger.Slot (SlotNo (..))

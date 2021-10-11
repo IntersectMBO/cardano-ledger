@@ -106,6 +106,7 @@ import Cardano.Ledger.BaseTypes
     BlocksMade (..),
     BoundedRational (..),
     NonNegativeInterval,
+    ProtVer (..),
     ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
@@ -136,6 +137,7 @@ import Cardano.Ledger.Keys
     VKey,
     asWitness,
   )
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Address.Bootstrap
@@ -162,7 +164,6 @@ import Cardano.Ledger.Shelley.PParams
   ( PParams,
     PParams' (..),
     ProposedPPUpdates (..),
-    ProtVer (..),
     Update (..),
     emptyPPPUpdates,
   )
@@ -221,7 +222,6 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos (PoolDistr (..))
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, liftProv, modifyM)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))

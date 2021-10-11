@@ -65,6 +65,7 @@ import Cardano.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
 import Cardano.Ledger.BaseTypes
   ( BoundedRational (..),
     Nonce (..),
+    ProtVer (..),
     StrictMaybe (..),
     UnitInterval,
     epochInfo,
@@ -123,10 +124,7 @@ import Cardano.Ledger.Shelley.LedgerState
     _utxo,
     _utxoState,
   )
-import Cardano.Ledger.Shelley.PParams
-  ( PParams,
-    ProtVer (..),
-  )
+import Cardano.Ledger.Shelley.PParams (PParams)
 import Cardano.Ledger.Shelley.Scripts
   ( ScriptHash,
   )

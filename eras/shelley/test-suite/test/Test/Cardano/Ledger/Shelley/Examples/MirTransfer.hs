@@ -6,6 +6,7 @@ module Test.Cardano.Ledger.Shelley.Examples.MirTransfer
   )
 where
 
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Keys
   ( KeyRole (..),
@@ -25,7 +26,7 @@ import Cardano.Ledger.Shelley.API
     MIRTarget (..),
     Ptr (..),
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..), ProtVer (..), emptyPParams)
+import Cardano.Ledger.Shelley.PParams (PParams' (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegPredicateFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)

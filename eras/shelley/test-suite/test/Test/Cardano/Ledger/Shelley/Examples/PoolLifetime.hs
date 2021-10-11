@@ -33,6 +33,10 @@ import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
+import Cardano.Ledger.PoolDistr
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API (getRewardProvenance)
@@ -88,10 +92,6 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Data.Default.Class (def)

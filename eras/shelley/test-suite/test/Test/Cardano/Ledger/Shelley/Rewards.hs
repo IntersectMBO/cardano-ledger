@@ -26,6 +26,7 @@ import Cardano.Ledger.BaseTypes
     Globals (..),
     Network (..),
     NonNegativeInterval,
+    ProtVer (..),
     ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
@@ -73,7 +74,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
   ( PParams,
     PParams' (..),
-    ProtVer (..),
     emptyPParams,
   )
 import Cardano.Ledger.Shelley.RewardUpdate

@@ -6,7 +6,7 @@
 module Test.Cardano.Ledger.Alonzo.Tools (tests, testExUnitCalculation) where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), ProtVer (..))
+import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS)
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxInfo (exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, Redeemers (..), txrdmrs)
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Keys (GenDelegs (..))

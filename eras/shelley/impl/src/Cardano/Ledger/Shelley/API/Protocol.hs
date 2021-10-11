@@ -40,6 +40,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.BaseTypes
   ( Globals,
     Nonce (NeutralNonce),
+    ProtVer,
     Seed,
     ShelleyBase,
     UnitInterval,
@@ -61,6 +62,7 @@ import Cardano.Ledger.Keys
     VRFSignable,
     coerceKeyRole,
   )
+import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState
@@ -70,11 +72,10 @@ import Cardano.Ledger.Shelley.LedgerState
     _dstate,
     _genDelegs,
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..), ProtVer)
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.Rules.Tick (TickfPredicateFailure)
 import Cardano.Ledger.Slot (SlotNo)
-import Cardano.Protocol.TPraos (PoolDistr)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody,
     BHeader,

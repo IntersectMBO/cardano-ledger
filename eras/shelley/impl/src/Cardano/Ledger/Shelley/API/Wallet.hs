@@ -59,6 +59,7 @@ import Cardano.Ledger.BaseTypes
   ( BlocksMade,
     Globals (..),
     NonNegativeInterval,
+    ProtVer,
     Seed,
     UnitInterval,
     epochInfo,
@@ -70,6 +71,10 @@ import Cardano.Ledger.Crypto (DSIGN, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
+import Cardano.Ledger.PoolDistr
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Protocol (ChainDepState (..))
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr)
@@ -92,7 +97,7 @@ import Cardano.Ledger.Shelley.LedgerState
     produced,
     stakeDistr,
   )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProtVer)
+import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards
   ( NonMyopic (..),
@@ -110,10 +115,6 @@ import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue, mkSeed, seedL)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.EpochInfo (epochInfoRange)
