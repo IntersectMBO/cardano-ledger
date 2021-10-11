@@ -181,9 +181,7 @@ getUTxOSubset ss txins =
 -- Stake pools and pool rewards
 --------------------------------------------------------------------------------
 
--- | Get the /current/ registered stake pool parameters for a given set of
--- stake pools. The result map will contain entries for all the given stake
--- pools that are currently registered.
+-- | Get the /current/ registered stake pools.
 getPools ::
   NewEpochState era ->
   Set (KeyHash 'StakePool (Crypto era))
@@ -448,7 +446,7 @@ getRewardInfoPools globals ss =
 -- ('RewardProvenance').
 --
 -- For a calculation of rewards based on the current stake distribution,
--- see 'getRewardInfo'.
+-- see 'getRewardInfoPools'.
 getRewardInfo ::
   forall era.
   ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
