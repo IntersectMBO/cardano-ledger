@@ -1,35 +1,56 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveAnyClass #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.API.Wallet
-  ( getNonMyopicMemberRewards,
+  ( -- * UTxOs
     getUTxO,
     getUTxOSubset,
     getFilteredUTxO,
+
+    -- * Stake Pools
     getLeaderSchedule,
     getPools,
     getPoolParameters,
     getTotalStake,
     poolsByTotalStakeFraction,
+    RewardInfoPool (..),
+    RewardParams (..),
+    getRewardInfoPools,
+    getRewardProvenance,
     getRewardInfo,
+    getNonMyopicMemberRewards,
+
+    -- * Transaction helpers
     CLI (..),
     addShelleyKeyWitnesses,
-    -- | Ada Pots
+
+    -- * Ada Pots
     AdaPots (..),
     totalAdaES,
     totalAdaPotsES,
   )
 where
 
-import Cardano.Binary (ToCBOR (..), decodeFull, decodeFullDecoder, serialize)
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    decodeDouble,
+    decodeFull,
+    decodeFullDecoder,
+    encodeDouble,
+    serialize,
+  )
 import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
@@ -68,6 +89,7 @@ import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProtVer)
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards
   ( NonMyopic (..),
+    PerformanceEstimate (..),
     StakeShare (..),
     getTopRankedPools,
     nonMyopicMemberRew,
@@ -88,9 +110,19 @@ import Cardano.Protocol.TPraos.BHeader (checkLeaderValue, mkSeed, seedL)
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
+import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
 import Control.Provenance (runWithProvM)
+import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
+import Data.Coders
+  ( Decode (..),
+    Encode (..),
+    decode,
+    encode,
+    (!>),
+    (<!),
+  )
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Foldable (fold)
@@ -103,8 +135,70 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import GHC.Generics (Generic)
 import GHC.Records (HasField (..), getField)
+import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+
+--------------------------------------------------------------------------------
+-- UTxOs
+--------------------------------------------------------------------------------
+
+-- | Get the full UTxO.
+getUTxO ::
+  NewEpochState era ->
+  UTxO era
+getUTxO = _utxo . _utxoState . esLState . nesEs
+
+-- | Get the UTxO filtered by address.
+getFilteredUTxO ::
+  HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era)) =>
+  NewEpochState era ->
+  Set (Addr (Crypto era)) ->
+  UTxO era
+getFilteredUTxO ss addrs =
+  UTxO $
+    Map.filter
+      (\out -> getField @"compactAddress" out `Set.member` addrSBSs)
+      fullUTxO
+  where
+    UTxO fullUTxO = getUTxO ss
+    -- Instead of decompacting each address in the huge UTxO, compact each
+    -- address in the small set of address.
+    addrSBSs = Set.map compactAddr addrs
+
+getUTxOSubset ::
+  NewEpochState era ->
+  Set (TxIn (Crypto era)) ->
+  UTxO era
+getUTxOSubset ss txins =
+  UTxO $
+    fullUTxO `Map.restrictKeys` txins
+  where
+    UTxO fullUTxO = getUTxO ss
+
+--------------------------------------------------------------------------------
+-- Stake pools and pool rewards
+--------------------------------------------------------------------------------
+
+-- | Get the /current/ registered stake pools.
+getPools ::
+  NewEpochState era ->
+  Set (KeyHash 'StakePool (Crypto era))
+getPools = Map.keysSet . f
+  where
+    f = _pParams . _pstate . _delegationState . esLState . nesEs
+
+-- | Get the /current/ registered stake pool parameters for a given set of
+-- stake pools. The result map will contain entries for all the given stake
+-- pools that are currently registered.
+getPoolParameters ::
+  NewEpochState era ->
+  Set (KeyHash 'StakePool (Crypto era)) ->
+  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
+getPoolParameters = Map.restrictKeys . f
+  where
+    f = _pParams . _pstate . _delegationState . esLState . nesEs
 
 -- | Get pool sizes, but in terms of total stake
 --
@@ -238,38 +332,169 @@ currentSnapshot ss =
     dstate = _dstate . _delegationState . esLState $ es
     pstate = _pstate . _delegationState . esLState $ es
 
--- | Get the full UTxO.
-getUTxO ::
-  NewEpochState era ->
-  UTxO era
-getUTxO = _utxo . _utxoState . esLState . nesEs
+-- | Information about a stake pool
+data RewardInfoPool = RewardInfoPool
+  { -- | Absolute stake delegated to this pool
+    stake :: Coin,
+    -- | Pledge of pool owner(s)
+    ownerPledge :: Coin,
+    -- | Absolute stake delegated by pool owner(s)
+    ownerStake :: Coin,
+    -- | Pool cost
+    cost :: Coin,
+    -- | Pool margin
+    margin :: UnitInterval,
+    -- | Number of blocks produced divided by expected number of blocks.
+    -- Can be larger than @1.0@ for pool that gets lucky.
+    -- (If some pools get unlucky, some pools must get lucky.)
+    performanceEstimate :: Double
+  }
+  deriving (Eq, Show, Generic)
 
--- | Get the UTxO filtered by address.
-getFilteredUTxO ::
-  HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era)) =>
-  NewEpochState era ->
-  Set (Addr (Crypto era)) ->
-  UTxO era
-getFilteredUTxO ss addrs =
-  UTxO $
-    Map.filter
-      (\out -> getField @"compactAddress" out `Set.member` addrSBSs)
-      fullUTxO
-  where
-    UTxO fullUTxO = getUTxO ss
-    -- Instead of decompacting each address in the huge UTxO, compact each
-    -- address in the small set of address.
-    addrSBSs = Set.map compactAddr addrs
+instance NoThunks RewardInfoPool
 
-getUTxOSubset ::
+instance NFData RewardInfoPool
+
+deriving instance FromJSON RewardInfoPool
+
+deriving instance ToJSON RewardInfoPool
+
+-- | Global information that influences stake pool rewards
+data RewardParams = RewardParams
+  { -- | Desired number of stake pools
+    nOpt :: Natural,
+    -- | Influence of the pool owner's pledge on rewards
+    a0 :: NonNegativeInterval,
+    -- | Total rewards available for the given epoch
+    rPot :: Coin,
+    -- | Maximum lovelace supply minus treasury
+    totalStake :: Coin
+  }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks RewardParams
+
+instance NFData RewardParams
+
+deriving instance FromJSON RewardParams
+
+deriving instance ToJSON RewardParams
+
+-- | Retrieve the information necessary to calculate stake pool member rewards
+-- from the /current/ stake distribution.
+--
+-- This information includes the current stake distribution aggregated
+-- by stake pools and pool owners,
+-- the `current` pool costs and margins,
+-- and performance estimates.
+-- Also included are global information such as
+-- the total stake or protocol parameters.
+getRewardInfoPools ::
+  ( UsesValue era,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+  ) =>
+  Globals ->
   NewEpochState era ->
-  Set (TxIn (Crypto era)) ->
-  UTxO era
-getUTxOSubset ss txins =
-  UTxO $
-    fullUTxO `Map.restrictKeys` txins
+  (RewardParams, Map (KeyHash 'StakePool (Crypto era)) RewardInfoPool)
+getRewardInfoPools globals ss =
+  (mkRewardParams, Map.mapWithKey mkRewardInfoPool poolParams)
   where
-    UTxO fullUTxO = getUTxO ss
+    es = nesEs ss
+    pp = esPp es
+    NonMyopic
+      { likelihoodsNM = ls,
+        rewardPotNM = rPot
+      } = esNonMyopic es
+    histLookup key = fromMaybe mempty (Map.lookup key ls)
+
+    EB.SnapShot stakes delegs poolParams = currentSnapshot ss
+
+    mkRewardParams =
+      RewardParams
+        { a0 = getField @"_a0" pp,
+          nOpt = getField @"_nOpt" pp,
+          totalStake = getTotalStake globals ss,
+          rPot = rPot
+        }
+    mkRewardInfoPool key poolp =
+      RewardInfoPool
+        { stake = pstake,
+          ownerStake = ostake,
+          ownerPledge = _poolPledge poolp,
+          margin = _poolMargin poolp,
+          cost = _poolCost poolp,
+          performanceEstimate =
+            unPerformanceEstimate $ percentile' $ histLookup key
+        }
+      where
+        pstake = fold . EB.unStake $ EB.poolStake key delegs stakes
+        ostake =
+          Set.foldl'
+            ( \c o ->
+                c
+                  <> fromMaybe
+                    mempty
+                    (Map.lookup (KeyHashObj o) (EB.unStake stakes))
+            )
+            mempty
+            (_poolOwners poolp)
+
+{-# DEPRECATED getRewardInfo "Use 'getRewardProvenance' instead." #-}
+getRewardInfo ::
+  forall era.
+  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval
+  ) =>
+  Globals ->
+  NewEpochState era ->
+  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
+getRewardInfo = getRewardProvenance
+
+-- | Calculate stake pool rewards from the snapshot labeled `go`.
+-- Also includes information on how the rewards were calculated
+-- ('RewardProvenance').
+--
+-- For a calculation of rewards based on the current stake distribution,
+-- see 'getRewardInfoPools'.
+--
+-- TODO: Deprecate 'getRewardProvenance', because wallets are more
+-- likely to use 'getRewardInfoPools' for up-to-date information
+-- on stake pool rewards.
+getRewardProvenance ::
+  forall era.
+  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval
+  ) =>
+  Globals ->
+  NewEpochState era ->
+  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
+getRewardProvenance globals newepochstate =
+  runReader
+    ( runWithProvM def $
+        createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam
+    )
+    globals
+  where
+    epochstate = nesEs newepochstate
+    maxsupply :: Coin
+    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
+    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade = nesBprev newepochstate
+    epochnumber = nesEL newepochstate
+    slotsPerEpoch :: EpochSize
+    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    asc = activeSlotCoeff globals
+    secparam = securityParameter globals
 
 -- | Get the (private) leader schedule for this epoch.
 --
@@ -303,56 +528,9 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
     epochSlots = Set.fromList [a .. b]
     (a, b) = runIdentity $ epochInfoRange ei currentEpoch
 
--- | Get the /current/ registered stake pool parameters for a given set of
--- stake pools. The result map will contain entries for all the given stake
--- pools that are currently registered.
-getPools ::
-  NewEpochState era ->
-  Set (KeyHash 'StakePool (Crypto era))
-getPools = Map.keysSet . f
-  where
-    f = _pParams . _pstate . _delegationState . esLState . nesEs
-
--- | Get the /current/ registered stake pool parameters for a given set of
--- stake pools. The result map will contain entries for all the given stake
--- pools that are currently registered.
-getPoolParameters ::
-  NewEpochState era ->
-  Set (KeyHash 'StakePool (Crypto era)) ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
-getPoolParameters = Map.restrictKeys . f
-  where
-    f = _pParams . _pstate . _delegationState . esLState . nesEs
-
-getRewardInfo ::
-  forall era.
-  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval
-  ) =>
-  Globals ->
-  NewEpochState era ->
-  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
-getRewardInfo globals newepochstate =
-  runReader
-    ( runWithProvM def $
-        createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam
-    )
-    globals
-  where
-    epochstate = nesEs newepochstate
-    maxsupply :: Coin
-    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
-    blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
-    slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
-    asc = activeSlotCoeff globals
-    secparam = securityParameter globals
+--------------------------------------------------------------------------------
+-- Transaction helpers
+--------------------------------------------------------------------------------
 
 -- | A collection of functons to help construction transactions
 --  from the cardano-cli.
@@ -506,3 +684,47 @@ totalAdaES cs =
         depositsAdaPot,
         feesAdaPot
       } = totalAdaPotsES cs
+
+--------------------------------------------------------------------------------
+-- CBOR instances
+--------------------------------------------------------------------------------
+
+instance ToCBOR RewardParams where
+  toCBOR (RewardParams p1 p2 p3 p4) =
+    encode $
+      Rec RewardParams
+        !> To p1
+        !> To p2
+        !> To p3
+        !> To p4
+
+instance FromCBOR RewardParams where
+  fromCBOR =
+    decode $
+      RecD RewardParams
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance ToCBOR RewardInfoPool where
+  toCBOR (RewardInfoPool p1 p2 p3 p4 p5 d6) =
+    encode $
+      Rec RewardInfoPool
+        !> To p1
+        !> To p2
+        !> To p3
+        !> To p4
+        !> To p5
+        !> E encodeDouble d6
+
+instance FromCBOR RewardInfoPool where
+  fromCBOR =
+    decode $
+      RecD RewardInfoPool
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! D decodeDouble
