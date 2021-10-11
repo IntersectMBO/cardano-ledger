@@ -1432,8 +1432,8 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
       \Delta t_1,-~\Delta r_1+\Delta r_2,~\var{rs},~-\var{feeSS}\right) \\
     & ~~~\where \\
     & ~~~~~~~(\var{acnt},~\var{ss},~\var{ls},~\var{prevPp},~\wcard) = \var{es} \\
-    & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{poolsSS},~\var{feeSS}) = \var{ss}\\
-    & ~~~~~~~(\var{stake},~\var{delegs}) = \var{pstate_{go}} \\
+    & ~~~~~~~(\wcard,~\wcard,~\var{pstake_{go}},~\var{feeSS}) = \var{ss}\\
+    & ~~~~~~~(\var{stake},~\var{delegs},~\var{poolParams}) = \var{pstate_{go}} \\
     & ~~~~~~~(\wcard,~\var{reserves}) = \var{acnt} \\
     & ~~~~~~~\left(
       \wcard,~
@@ -1456,7 +1456,7 @@ and $\fun{applyRUpd}$ will be used in Equation~\ref{eq:new-epoch}.
     & ~~~~~~~\var{R} = \var{rewardPot} - \Delta t_1 \\
     & ~~~~~~~\var{circulation} = \var{total} - \var{reserves} \\
     & ~~~~~~~\var{rs}
-      = \reward{prevPp}{b}{R}{(\dom{rewards})}{poolsSS}{stake}{delegs}{circulation} \\
+      = \reward{prevPp}{b}{R}{(\dom{rewards})}{poolParams}{stake}{delegs}{circulation} \\
     & ~~~~~~~\Delta r_{2} = R - \left(\sum\limits_{\_\mapsto c\in\var{rs}}c\right) \\
     & ~~~~~~~blocksMade = \sum_{\wcard \mapsto m \in b}m
   \end{align*}

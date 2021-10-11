@@ -35,6 +35,9 @@
           remove all mentions of deposit decay, sync varibale names with code.}
         \change{2021/08/27}{Jared Corduan}{FM (IOHK)}{Fixed definitions in the header-only validation properties.
           CHAIN transition did not need to use previous protocol parameters.}
+        \change{2021/10/08}{Jared Corduan}{FM (IOHK)}{The function createRUpd
+          should get the pool parameters from the go snapshot.
+          The TICKN rule was missing from the dependency diagram.}
       \end{changelog}
       \clearpage%
 \renewcommand{\thepage}{\arabic{page}}
@@ -66,6 +69,7 @@ and reward splitting.
 \label{acknowledgements}
 
 Nicol\'as Arqueros,
+Dan Bornside,
 Nicholas Clarke,
 Duncan Coutts,
 Ruslan Dudin,
