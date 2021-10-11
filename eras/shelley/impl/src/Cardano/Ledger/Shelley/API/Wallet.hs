@@ -13,9 +13,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.API.Wallet
-  ( getNonMyopicMemberRewards,
-
-    -- * UTxOs
+  ( -- * UTxOs
     getUTxO,
     getUTxOSubset,
     getFilteredUTxO,
@@ -30,6 +28,7 @@ module Cardano.Ledger.Shelley.API.Wallet
     RewardParams (..),
     getRewardInfoPools,
     getRewardInfo,
+    getNonMyopicMemberRewards,
 
     -- * Transaction helpers
     CLI (..),
