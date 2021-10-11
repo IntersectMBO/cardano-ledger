@@ -82,6 +82,14 @@ source-repository-package
   tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
   --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
 
+
+--source-repository-package    
+--  type: git    
+--  location: https://github.com/def-/ghc-datasize    
+--  tag: 620ac987d39f5c93a6d93e9fa91127318d585e1e    
+--  --sha256: 1mn7ivszn2652vqm8hbkw9fwawf70qh2mzn0lbqig6basc5xdr75
+
+
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,

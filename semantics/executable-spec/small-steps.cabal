@@ -52,6 +52,7 @@ library
                      , Data.Compact.Arrays
                      , Data.Compact.Set
 		     , Data.CompactMap
+                     , Data.Compact.KeyMap
 		     , Data.DeltaState
                      , Data.Pulse
 		     , Data.Messages
@@ -75,9 +76,11 @@ library
 		     , fingertree
                      , formatting
                      , free
+                     , ghc-prim
                      , mtl
 		     , primitive
                      , nothunks
+                     , random
                      , strict-containers
                      , text
                      , transformers >= 0.5

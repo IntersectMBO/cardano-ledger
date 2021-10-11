@@ -16,12 +16,16 @@ import Data.Primitive.PrimArray
  ( PrimArray, indexPrimArray, primArrayFromList, primArrayToList, sizeofPrimArray, copyPrimArray,
    MutablePrimArray,unsafeFreezePrimArray , newPrimArray,sizeofMutablePrimArray, readPrimArray, writePrimArray,
  )
+
+import qualified Data.Primitive.SmallArray as Small
+import Data.Primitive.SmallArray(SmallArray,SmallMutableArray)
+
 import Data.Primitive.Types (Prim (..))
 import GHC.Arr(STArray(..),unsafeFreezeSTArray)
 import Control.Monad.ST (ST, runST)
 import Cardano.Prelude (HeapWords (..))
 
-
+  
 -- ============================================================================================
 -- Array like objects which can access elements by their index
 
@@ -89,6 +93,14 @@ instance Indexable (A.Array Int) a where
   catenate = catArray
   merge = mergeArray
 
+instance Indexable SmallArray t where
+  index = Small.indexSmallArray
+  isize = Small.sizeofSmallArray 
+  fromlist = Small.smallArrayFromList
+  tolist arr = foldr (:) [] arr
+  catenate = catArray
+  merge = mergeArray
+
 -- ========================================================================
 -- Pairs of Mutable Arrays and ImMutable Arrays that can be converted safely
 -- ========================================================================
@@ -110,12 +122,25 @@ class Indexable arr a => ArrayPair arr marr a | marr -> arr, arr -> marr where
 
 -- Built in type instances
 
+instance ArrayPair SmallArray SmallMutableArray a where
+  mindex = mboundsCheck Small.readSmallArray
+  msize = Small.sizeofSmallMutableArray
+  mnew size = Small.newSmallArray size undefined
+  mfreeze = Small.unsafeFreezeSmallArray 
+  mwrite arr i a = if i>=0 && i<(msize arr)
+       then Small.writeSmallArray arr i a
+       else error ("mwrite error, "++show i++", not in bounds (0.."++show (msize arr -1)++").")
+  mcopy = Small.copySmallArray
+
 instance ArrayPair PA.Array PA.MutableArray a where
   msize = PA.sizeofMutableArray 
   mindex = mboundsCheck PA.readArray
   mnew n = PA.newArray n undefined
   mfreeze = PA.unsafeFreezeArray
-  mwrite = PA.writeArray
+  mwrite arr i a =
+    if i>=0 && i<(msize arr)
+       then  PA.writeArray arr i a
+       else error ("mwrite error, "++show i++", not in bounds (0.."++show (msize arr -1)++").")
   mcopy = PA.copyArray
 
 instance Prim a => ArrayPair PrimArray MutablePrimArray a where
@@ -123,7 +148,10 @@ instance Prim a => ArrayPair PrimArray MutablePrimArray a where
   mindex = mboundsCheck readPrimArray
   mnew = newPrimArray  
   mfreeze = unsafeFreezePrimArray
-  mwrite = writePrimArray
+  mwrite arr i a =
+    if i>=0 && i<(msize arr)
+       then writePrimArray arr i a
+       else error ("mwrite error, "++show i++", not in bounds (0.."++show (msize arr -1)++").")
   mcopy = copyPrimArray
 
 -- | MutArray fixes the index type to Int for the STArray type constructor
