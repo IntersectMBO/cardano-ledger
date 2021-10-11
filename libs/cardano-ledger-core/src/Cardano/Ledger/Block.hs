@@ -15,7 +15,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Block
-  ( Block (Block, Block'),
+  ( Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
     BlockAnn,
     bheader,
     bbody,
@@ -86,6 +86,34 @@ pattern Block h txns <-
        in Block' h txns bytes
 
 {-# COMPLETE Block #-}
+
+-- | Access a block without its serialised bytes. This is often useful when
+-- we're using a 'BHeaderView' in place of the concrete header.
+pattern UnserialisedBlock ::
+  h (Crypto era) ->
+  Era.TxSeq era ->
+  Block h era
+pattern UnserialisedBlock h txns <- Block' h txns _
+
+{-# COMPLETE UnserialisedBlock #-}
+
+-- | Unsafely construct a block without the ability to serialise its bytes.
+--
+--   Anyone calling this pattern must ensure that the resulting block is never
+--   serialised. Any uses of this pattern outside of testing code should be
+--   regarded with suspicion.
+pattern UnsafeUnserialisedBlock ::
+  h (Crypto era) ->
+  Era.TxSeq era ->
+  Block h era
+pattern UnsafeUnserialisedBlock h txns <-
+  Block' h txns _
+  where
+    UnsafeUnserialisedBlock h txns =
+      let bytes = error "`UnsafeUnserialisedBlock` used to construct a block which was later serialised."
+       in Block' h txns bytes
+
+{-# COMPLETE UnsafeUnserialisedBlock #-}
 
 instance
   (Era era, Typeable h) =>

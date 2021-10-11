@@ -436,7 +436,7 @@ ppBHeader (BHeader bh sig) =
     ]
 
 ppBlock :: (PrettyA (Era.TxSeq era), PrettyA (h (E.Crypto era))) => Block h era -> PDoc
-ppBlock (Block' bh seqx _) =
+ppBlock (UnserialisedBlock bh seqx) =
   ppRecord
     "Block"
     [ ("Header", prettyA bh),

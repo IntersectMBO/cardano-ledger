@@ -1941,9 +1941,8 @@ makeNaiveBlock ::
   ) =>
   [Core.Tx era] ->
   (Block BHeaderView era)
-makeNaiveBlock txs = (Block' bhView txs' thouShaltNot)
+makeNaiveBlock txs = (UnsafeUnserialisedBlock bhView txs')
   where
-    thouShaltNot = error "A block with a header view should never be hashed"
     bhView =
       BHeaderView
         { bhviewID = hashKey (vKey coldKeys),

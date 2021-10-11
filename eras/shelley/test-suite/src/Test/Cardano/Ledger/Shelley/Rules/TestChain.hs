@@ -761,7 +761,7 @@ withdrawals ::
   ) =>
   Block BHeader era ->
   Coin
-withdrawals (Block' _ txseq _) =
+withdrawals (UnserialisedBlock _ txseq) =
   foldl'
     ( \c tx ->
         let wdrls = unWdrl $ getField @"wdrls" (getField @"body" tx)
@@ -1051,7 +1051,7 @@ ledgerTraceBase chainSt block =
     txs
   )
   where
-    (Block' (BHeader bhb _) txSeq _) = block
+    (UnserialisedBlock (BHeader bhb _) txSeq) = block
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
@@ -1105,7 +1105,7 @@ removedAfterPoolreap =
     poolState = _pstate . _delegationState . esLState . nesEs . chainNes
 
     removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
-    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (Block' bh _ _)}) =
+    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =
       let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
        in TestPoolreap.removedAfterPoolreap (poolState source) (poolState target) e
 

@@ -57,7 +57,6 @@ import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
 import Control.State.Transition (STS (State))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
-import Data.ByteString.Lazy (ByteString)
 import qualified Data.Map as Map
 import Data.Proxy
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
@@ -109,16 +108,13 @@ genValidateInput n = do
   block <- genBlock ge chainstate
   pure (ValidateInput testGlobals (chainNes chainstate) block)
 
-bogusBlockHash :: ByteString
-bogusBlockHash = error "blocks with a header view should not be hashed"
-
 benchValidate ::
   forall era.
   (Era era, API.ApplyBlock era) =>
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
-  case API.applyBlock @era globals state (Block' (makeHeaderView bh) txs bogusBlockHash) of
+  case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
     Right x -> pure x
     Left x -> error (show x)
 
@@ -135,7 +131,7 @@ applyBlock ::
   Int ->
   Int
 applyBlock (ValidateInput globals state (Block bh txs)) n =
-  case API.applyBlock @era globals state (Block' (makeHeaderView bh) txs bogusBlockHash) of
+  case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
     Right x -> seq (rnf x) (n + 1)
     Left x -> error (show x)
 
@@ -144,7 +140,7 @@ benchreValidate ::
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
-  API.reapplyBlock globals state (Block' (makeHeaderView bh) txs bogusBlockHash)
+  API.reapplyBlock globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs)
 
 -- ==============================================================
 

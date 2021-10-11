@@ -155,11 +155,7 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account,
                BbodyState ls b,
-               (Block' bhview txsSeq _)
-               -- We avoid the Block pattern here in order to
-               -- not inherit the ToCBOR constraint on block headers.
-               -- The BBODY rule uses the BHeaderView for the block
-               -- header, which should not actually ever be serialized.
+               UnserialisedBlock bhview txsSeq
                )
            ) -> do
         let txs = fromTxSeq @era txsSeq
