@@ -40,8 +40,9 @@ import Cardano.Ledger.Shelley.Rules.Delpl (DELPL, DelplEnv, DelplPredicateFailur
 import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER, LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Ledgers (LEDGERS, LedgersEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
-import Cardano.Ledger.Shelley.TxBody (DCert, Ix, TxIn)
+import Cardano.Ledger.Shelley.TxBody (DCert, Ix)
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition

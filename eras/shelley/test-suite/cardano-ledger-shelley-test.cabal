@@ -58,6 +58,7 @@ library
     Test.Cardano.Ledger.Shelley.Generator.EraGen
     Test.Cardano.Ledger.Shelley.Generator.ScriptClass
     Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen
+    Test.Cardano.Ledger.Shelley.LaxBlock
     Test.Cardano.Ledger.Shelley.Orphans
     Test.Cardano.Ledger.Shelley.PropertyTests
     Test.Cardano.Ledger.Shelley.Rules.Chain

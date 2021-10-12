@@ -37,12 +37,13 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
 import Cardano.Ledger.Shelley.Tx (pattern Tx, pattern WitnessSet)
-import Cardano.Ledger.Shelley.TxBody (DCert, TxIn, TxOut (..), Wdrl)
+import Cardano.Ledger.Shelley.TxBody (DCert, TxOut (..), Wdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody
   ( TxBody (..),
     ValidityInterval (ValidityInterval),
   )
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (zero), (<+>))
 import Cardano.Slotting.Slot (SlotNo (SlotNo))
 import Control.Monad (replicateM)

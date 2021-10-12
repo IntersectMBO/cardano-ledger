@@ -87,7 +87,7 @@ genBlock ::
   ) =>
   GenEnv era ->
   ChainState era ->
-  Gen (Block era)
+  Gen (Block BHeader era)
 genBlock ge = genBlockWithTxGen genTxs ge
   where
     genTxs :: TxGen era
@@ -106,7 +106,7 @@ genBlockWithTxGen ::
   TxGen era ->
   GenEnv era ->
   ChainState era ->
-  Gen (Block era)
+  Gen (Block BHeader era)
 genBlockWithTxGen
   genTxs
   ge@(GenEnv KeySpace_ {ksStakePools, ksIndexedGenDelegates} _scriptspace _)

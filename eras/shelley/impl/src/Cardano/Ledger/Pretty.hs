@@ -28,6 +28,7 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     BoundedRational (..),
     DnsName,
     FixedPoint,
@@ -42,6 +43,7 @@ import Cardano.Ledger.BaseTypes
     activeSlotVal,
     dnsToText,
   )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (PParamsDelta)
@@ -54,6 +56,7 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era (Era)
+import qualified Cardano.Ledger.Era as E (Crypto)
 import qualified Cardano.Ledger.Era as Era (TxSeq)
 import Cardano.Ledger.Keys
   ( GKeys (..),
@@ -67,11 +70,9 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Cardano.Ledger.Shelley.BlockChain (Block (..))
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( BlocksMade (..),
-    SnapShot (..),
+  ( SnapShot (..),
     SnapShots (..),
     Stake (..),
   )
@@ -137,12 +138,9 @@ import Cardano.Ledger.Shelley.TxBody
     StakePoolRelay (..),
     TxBody (..),
     TxBodyRaw (..),
-    TxId (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
-    viewTxIn,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
@@ -152,6 +150,7 @@ import Cardano.Ledger.Slot
     EpochSize (..),
     SlotNo (..),
   )
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), viewTxIn)
 import Cardano.Protocol.TPraos (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
@@ -436,11 +435,11 @@ ppBHeader (BHeader bh sig) =
       ("Sig", viaShow sig)
     ]
 
-ppBlock :: (Era era, PrettyA (Era.TxSeq era)) => Block era -> PDoc
-ppBlock (Block' bh seqx _) =
+ppBlock :: (PrettyA (Era.TxSeq era), PrettyA (h (E.Crypto era))) => Block h era -> PDoc
+ppBlock (UnserialisedBlock bh seqx) =
   ppRecord
     "Block"
-    [ ("Header", ppBHeader bh),
+    [ ("Header", prettyA bh),
       ("TxSeq", prettyA seqx)
     ]
 
@@ -453,7 +452,7 @@ instance Crypto c => PrettyA (BHeader c) where
 instance PrettyA (PrevHash c) where
   prettyA = ppPrevHash
 
-instance (Era era, PrettyA (Era.TxSeq era)) => PrettyA (Block era) where
+instance (Era era, PrettyA (Era.TxSeq era), PrettyA (h (E.Crypto era))) => PrettyA (Block h era) where
   prettyA = ppBlock
 
 -- =================================

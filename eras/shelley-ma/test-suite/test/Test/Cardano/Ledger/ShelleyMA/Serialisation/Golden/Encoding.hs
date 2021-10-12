@@ -33,7 +33,6 @@ import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
     RewardAcnt (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
@@ -44,6 +43,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Codec.CBOR.Encoding (Tokens (..))
 import qualified Data.ByteString.Char8 as BS

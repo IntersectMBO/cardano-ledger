@@ -5,6 +5,7 @@
 
 module Cardano.Ledger.Shelley.API.Genesis where
 
+import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Core (EraRule)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -25,7 +26,7 @@ import Cardano.Ledger.Shelley.API.Types
     genesisUTxO,
     word64ToCoin,
   )
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Val (Val ((<->)))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)

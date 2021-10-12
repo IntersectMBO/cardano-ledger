@@ -103,6 +103,7 @@ import Cardano.Binary
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     BoundedRational (..),
     NonNegativeInterval,
     ShelleyBase,
@@ -152,8 +153,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     requiresVKeyWitness,
   )
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( BlocksMade (..),
-    SnapShot (..),
+  ( SnapShot (..),
     SnapShots (..),
     Stake (..),
     aggregateUtxoCoinByCredential,
@@ -199,7 +199,6 @@ import Cardano.Ledger.Shelley.TxBody
     Ptr (..),
     RewardAcnt (..),
     TransTxId,
-    TxIn (..),
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
@@ -219,6 +218,7 @@ import Cardano.Ledger.Slot
     EpochSize (..),
     SlotNo (..),
   )
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos (PoolDistr (..))

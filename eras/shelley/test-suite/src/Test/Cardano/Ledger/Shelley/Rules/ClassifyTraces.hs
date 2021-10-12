@@ -21,6 +21,7 @@ where
 
 import Cardano.Binary (ToCBOR, serialize')
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfo)
+import Cardano.Ledger.Block (Block (..), bheader)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq), TxSeq)
 import Cardano.Ledger.Shelley.API
@@ -31,7 +32,6 @@ import Cardano.Ledger.Shelley.API
     Delegation (..),
     LEDGER,
   )
-import Cardano.Ledger.Shelley.BlockChain (Block (..), bheader)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( isDeRegKey,
@@ -54,10 +54,12 @@ import Cardano.Ledger.Shelley.PParams
     pattern Update,
   )
 import Cardano.Ledger.Shelley.PParams as PParams (Update)
-import Cardano.Ledger.Shelley.TxBody (TxIn, Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.Slot (SlotNo (..), epochInfoSize)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Protocol.TPraos.BHeader
-  ( bhbody,
+  ( BHeader,
+    bhbody,
     bheaderSlotNo,
   )
 import Cardano.Slotting.Slot (EpochSize (..))
@@ -136,8 +138,8 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block era -> [Core.Tx era]
-      blockTxs (Block' _ txSeq _) = toList (fromTxSeq @era txSeq)
+  let blockTxs :: Block BHeader era -> [Core.Tx era]
+      blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
       certsByTx_ = certsByTx @era txs
@@ -416,7 +418,7 @@ onlyValidChainSignalsAreGenerated =
     genesisChainSt = Just $ mkGenesisChainState (genEnv p)
 
 -- | Counts the epochs spanned by this trace
-epochsInTrace :: forall era. Era era => [Block era] -> Int
+epochsInTrace :: forall era. Era era => [Block BHeader era] -> Int
 epochsInTrace [] = 0
 epochsInTrace bs =
   fromIntegral $ toEpoch - fromEpoch + 1

@@ -85,8 +85,9 @@ import Cardano.Ledger.Shelley.Tx
     hashScript,
     validateScript,
   )
-import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody, TxIn, Wdrl)
+import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO, scriptsNeeded)
+import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (∩))

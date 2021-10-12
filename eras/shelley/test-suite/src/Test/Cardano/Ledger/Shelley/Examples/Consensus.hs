@@ -76,7 +76,7 @@ data ShelleyResultExamples era = ShelleyResultExamples
   }
 
 data ShelleyLedgerExamples era = ShelleyLedgerExamples
-  { sleBlock :: Block era,
+  { sleBlock :: Block BHeader era,
     sleHashHeader :: HashHeader (Cardano.Ledger.Era.Crypto era),
     sleTx :: Core.Tx era,
     sleApplyTxError :: ApplyTxError era,
@@ -155,7 +155,7 @@ exampleShelleyLedgerBlock ::
   forall era.
   ShelleyBasedEra' era =>
   Core.Tx era ->
-  Block era
+  Block BHeader era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
   where
     keys :: AllIssuerKeys (Cardano.Ledger.Era.Crypto era) 'StakePool

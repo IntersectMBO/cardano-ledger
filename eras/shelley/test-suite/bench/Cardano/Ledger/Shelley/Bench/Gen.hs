@@ -31,6 +31,7 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
   )
 import Cardano.Ledger.Shelley.Tx (TxIn)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Either (fromRight)
@@ -98,7 +99,7 @@ genBlock ::
   ) =>
   GenEnv era ->
   ChainState era ->
-  IO (Block era)
+  IO (Block BHeader era)
 genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 -- The order one does this is important, since all these things must flow from the same

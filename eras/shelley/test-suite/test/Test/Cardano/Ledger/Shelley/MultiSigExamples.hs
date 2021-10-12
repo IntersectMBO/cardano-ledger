@@ -73,12 +73,12 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxBody
   ( TxBody (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey, txid)
+import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn (..), txid)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Foldable (fold)

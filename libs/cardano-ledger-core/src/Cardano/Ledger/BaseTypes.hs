@@ -1,6 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -45,6 +46,7 @@ module Cardano.Ledger.BaseTypes
     activeSlotVal,
     activeSlotLog,
     module Data.Maybe.Strict,
+    BlocksMade (..),
 
     -- * STS Base
     Globals (..),
@@ -64,6 +66,7 @@ import Cardano.Binary
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
 import Cardano.Ledger.Serialization (decodeRecordSum, ratioFromCBOR, ratioToCBOR)
 import Cardano.Prelude (NFData, cborError)
@@ -80,6 +83,7 @@ import Data.Coders (invalidKey)
 import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
+import Data.Map.Strict (Map)
 import Data.Maybe.Strict
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (Scientific, base10Exponent, coefficient, normalize, scientific)
@@ -92,6 +96,7 @@ import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+import Quiet
 
 data E34
 
@@ -587,3 +592,11 @@ instance FromCBOR Network where
     word8ToNetwork <$> fromCBOR >>= \case
       Nothing -> cborError $ DecoderErrorCustom "Network" "Unknown network id"
       Just n -> pure n
+
+-- | Blocks made
+newtype BlocksMade crypto = BlocksMade
+  { unBlocksMade :: Map (KeyHash 'StakePool crypto) Natural
+  }
+  deriving (Eq, Generic)
+  deriving (Show) via Quiet (BlocksMade crypto)
+  deriving newtype (NoThunks, NFData, ToJSON, FromJSON, ToCBOR, FromCBOR)

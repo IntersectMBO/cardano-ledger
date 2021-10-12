@@ -32,17 +32,17 @@ import Cardano.Ledger.Shelley.API
     Update,
   )
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Shelley.BlockChain (LaxBlock)
 import Cardano.Ledger.Shelley.Metadata (Metadata)
 import Cardano.Ledger.Shelley.PParams (PParamsUpdate)
 import Cardano.Ledger.Shelley.TxBody
   ( StakePoolRelay,
     TxBody,
-    TxIn,
     TxOut,
   )
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
 import qualified Data.ByteString.Lazy as BSL
+import Test.Cardano.Ledger.Shelley.LaxBlock (LaxBlock)
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   ( cddlGroupTest,
     cddlTest,
@@ -87,7 +87,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
       cddlTest @(PParamsUpdate ShelleyE) n "protocol_param_update",
       cddlTest' @(Tx ShelleyE) n "transaction",
-      cddlTest' @(LaxBlock ShelleyE) n "block"
+      cddlTest' @(LaxBlock BHeader ShelleyE) n "block"
     ]
       <*> pure cddl
 

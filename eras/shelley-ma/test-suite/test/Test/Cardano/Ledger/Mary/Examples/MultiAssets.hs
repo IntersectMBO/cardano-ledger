@@ -30,17 +30,13 @@ import Cardano.Ledger.Shelley.Tx
     WitnessSetHKD (..),
     hashScript,
   )
-import Cardano.Ledger.Shelley.TxBody
-  ( TxId,
-    TxIn (..),
-    TxOut (..),
-    Wdrl (..),
-  )
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey, txid)
+import Cardano.Ledger.Shelley.TxBody (TxOut (..), Wdrl (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.TxIn (TxId, TxIn (..), txid)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Exception (ErrorCall (ErrorCall), evaluate, try)

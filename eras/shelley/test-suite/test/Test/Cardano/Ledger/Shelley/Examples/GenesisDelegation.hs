@@ -19,6 +19,7 @@ import Cardano.Crypto.Hash (HashAlgorithm)
 import qualified Cardano.Crypto.Hash as Hash
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import qualified Cardano.Ledger.Crypto as CryptoClass
@@ -34,7 +35,6 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.BlockChain (Block, bheader)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
@@ -42,15 +42,15 @@ import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     GenesisDelegCert (..),
     TxBody (..),
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos.BHeader (bhHash)
+import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
@@ -179,7 +179,7 @@ txEx1 = Tx txbodyEx1 txwits SNothing
 blockEx1 ::
   forall c.
   (ExMock (Crypto (ShelleyEra c))) =>
-  Block (ShelleyEra c)
+  Block BHeader (ShelleyEra c)
 blockEx1 =
   mkBlockFakeVRF @(ShelleyEra c)
     lastByronHeaderHash
@@ -220,7 +220,7 @@ expectedStEx1 =
 -- In the first block, stage a new future genesis delegate
 genesisDelegation1 ::
   (ExMock c) =>
-  CHAINExample (ShelleyEra c)
+  CHAINExample BHeader (ShelleyEra c)
 genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStEx1)
 
 --
@@ -230,7 +230,7 @@ genesisDelegation1 = CHAINExample initStGenesisDeleg blockEx1 (Right expectedStE
 blockEx2 ::
   forall c.
   (ExMock (Crypto (ShelleyEra c))) =>
-  Block (ShelleyEra c)
+  Block BHeader (ShelleyEra c)
 blockEx2 =
   mkBlockFakeVRF @(ShelleyEra c)
     (bhHash $ bheader blockEx1)
@@ -264,7 +264,7 @@ expectedStEx2 =
 -- Submit an empty block to trigger adopting the genesis delegation.
 genesisDelegation2 ::
   (ExMock c, C.UsesPP (ShelleyEra c)) =>
-  CHAINExample (ShelleyEra c)
+  CHAINExample BHeader (ShelleyEra c)
 genesisDelegation2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --

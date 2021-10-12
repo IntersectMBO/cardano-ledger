@@ -55,7 +55,14 @@ import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDS
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
-import Cardano.Ledger.BaseTypes (Globals (..), NonNegativeInterval, Seed, UnitInterval, epochInfo)
+import Cardano.Ledger.BaseTypes
+  ( BlocksMade,
+    Globals (..),
+    NonNegativeInterval,
+    Seed,
+    UnitInterval,
+    epochInfo,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
@@ -97,9 +104,10 @@ import Cardano.Ledger.Shelley.Rewards
   )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
-import Cardano.Ledger.Shelley.TxBody (DCert, PoolParams (..), TxIn (..), WitVKey (..))
+import Cardano.Ledger.Shelley.TxBody (DCert, PoolParams (..), WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.Slot (epochInfoSize)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos
@@ -488,7 +496,7 @@ getRewardProvenance globals newepochstate =
     epochstate = nesEs newepochstate
     maxsupply :: Coin
     maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: EB.BlocksMade (Crypto era)
+    blocksmade :: BlocksMade (Crypto era)
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize

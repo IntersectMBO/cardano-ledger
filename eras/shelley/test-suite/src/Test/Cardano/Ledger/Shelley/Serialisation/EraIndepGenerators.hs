@@ -42,6 +42,7 @@ import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     DnsName,
     NonNegativeInterval,
     PositiveInterval,
@@ -69,7 +70,6 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.RewardProvenance
@@ -822,7 +822,7 @@ genBlock ::
     Mock (Crypto era),
     Arbitrary (Core.Tx era)
   ) =>
-  Gen (Block era)
+  Gen (Block BHeader era)
 genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 
 -- | For some purposes, a totally random block generator may not be suitable.
@@ -841,7 +841,7 @@ genCoherentBlock ::
     UsesTxBody era,
     Arbitrary (Core.Tx era)
   ) =>
-  Gen (Block era)
+  Gen (Block BHeader era)
 genCoherentBlock = do
   let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
   prevHash <- arbitrary :: Gen (HashHeader (Crypto era))
@@ -890,7 +890,7 @@ instance
     Mock (Crypto era),
     Arbitrary (Core.Tx era)
   ) =>
-  Arbitrary (Block era)
+  Arbitrary (Block BHeader era)
   where
   arbitrary = genBlock
 

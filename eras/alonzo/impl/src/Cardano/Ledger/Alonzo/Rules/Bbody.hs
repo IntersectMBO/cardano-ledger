@@ -27,6 +27,7 @@ import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
+import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..))
 import qualified Cardano.Ledger.Era as Era
@@ -120,7 +121,7 @@ bbodyTransition ::
   forall (someBBODY :: Type -> Type) era.
   ( -- Conditions that the Abstract someBBODY must meet
     STS (someBBODY era),
-    Signal (someBBODY era) ~ (BHeaderView (Crypto era), TxSeq era),
+    Signal (someBBODY era) ~ (Block BHeaderView era),
     PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFail era,
     BaseM (someBBODY era) ~ ShelleyBase,
     State (someBBODY era) ~ BbodyState era,
@@ -144,7 +145,7 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account,
                BbodyState ls b,
-               (bh, txsSeq)
+               (UnserialisedBlock bh txsSeq)
                )
            ) -> do
         let txs = txSeqTxns txsSeq
@@ -218,7 +219,7 @@ instance
 
   type
     Signal (AlonzoBBODY era) =
-      (BHeaderView (Crypto era), TxSeq era)
+      (Block BHeaderView era)
 
   type Environment (AlonzoBBODY era) = BbodyEnv era
 

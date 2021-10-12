@@ -19,11 +19,12 @@ module Cardano.Ledger.Allegra
   )
 where
 
+import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Crypto (Crypto)
 import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as E (Era (Crypto))
 import Cardano.Ledger.Shelley.API hiding (PParams, Tx, TxBody, TxOut, WitnessSet)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState (minfee)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParamsUpdate)
 import Cardano.Ledger.Shelley.Tx (WitnessSet)

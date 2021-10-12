@@ -29,7 +29,8 @@ import Cardano.Ledger.Address
   )
 import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
 import Cardano.Ledger.BaseTypes
-  ( BoundedRational (..),
+  ( BlocksMade (..),
+    BoundedRational (..),
     Network (..),
     Nonce (..),
     StrictMaybe (..),
@@ -38,6 +39,7 @@ import Cardano.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
@@ -76,11 +78,7 @@ import Cardano.Ledger.Shelley.API
   ( MultiSig,
     ScriptHash,
   )
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (..),
-    TxSeq (..),
-    bbHash,
-  )
+import Cardano.Ledger.Shelley.BlockChain (TxSeq (..), bbHash)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( pattern DeRegKey,
@@ -92,8 +90,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     pattern RetirePool,
   )
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( BlocksMade (..),
-    SnapShot (..),
+  ( SnapShot (..),
     SnapShots (..),
     Stake (..),
   )
@@ -122,8 +119,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolMetadata (..),
     StakePoolRelay (..),
     TxBody (..),
-    TxId,
-    TxIn (..),
     TxOut (..),
     Wdrl (..),
     WitVKey (..),
@@ -148,6 +143,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
+import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Prelude (LByteString)
 import Cardano.Protocol.TPraos (PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader

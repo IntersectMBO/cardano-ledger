@@ -27,7 +27,8 @@ module BenchValidation
   )
 where
 
-import Cardano.Ledger.BaseTypes (Globals (..))
+import Cardano.Ledger.BaseTypes (Globals (..), unBlocksMade)
+import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
@@ -41,9 +42,8 @@ import Cardano.Ledger.Shelley.API.Protocol
     updateChainDepState,
   )
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
-import Cardano.Ledger.Shelley.BlockChain (Block (..), slotToNonce)
+import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
-import Cardano.Ledger.Shelley.EpochBoundary (unBlocksMade)
 import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState,
     nesBcur,
@@ -68,7 +68,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 
-data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block era)
+data ValidateInput era = ValidateInput Globals (NewEpochState era) (Block BHeader era)
 
 sizes :: ValidateInput era -> String
 sizes (ValidateInput _gs ss _blk) = "blockMap size=" ++ show (Map.size (unBlocksMade (nesBcur ss)))
@@ -114,7 +114,7 @@ benchValidate ::
   ValidateInput era ->
   IO (NewEpochState era)
 benchValidate (ValidateInput globals state (Block bh txs)) =
-  case API.applyBlock @era globals state (makeHeaderView bh, txs) of
+  case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
     Right x -> pure x
     Left x -> error (show x)
 
@@ -131,7 +131,7 @@ applyBlock ::
   Int ->
   Int
 applyBlock (ValidateInput globals state (Block bh txs)) n =
-  case API.applyBlock @era globals state (makeHeaderView bh, txs) of
+  case API.applyBlock @era globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs) of
     Right x -> seq (rnf x) (n + 1)
     Left x -> error (show x)
 
@@ -140,7 +140,7 @@ benchreValidate ::
   ValidateInput era ->
   NewEpochState era
 benchreValidate (ValidateInput globals state (Block bh txs)) =
-  API.reapplyBlock globals state (makeHeaderView bh, txs)
+  API.reapplyBlock globals state (UnsafeUnserialisedBlock (makeHeaderView bh) txs)
 
 -- ==============================================================
 

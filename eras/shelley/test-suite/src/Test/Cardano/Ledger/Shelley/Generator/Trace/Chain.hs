@@ -23,7 +23,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (TxSeq))
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
@@ -99,7 +99,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), TxSeq era),
+    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,

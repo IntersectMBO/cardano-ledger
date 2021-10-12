@@ -135,8 +135,9 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
-import Cardano.Ledger.Shelley.TxBody (TxIn (..), Wdrl (..), WitVKey, unWdrl)
+import Cardano.Ledger.Shelley.TxBody (Wdrl (..), WitVKey, unWdrl)
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS

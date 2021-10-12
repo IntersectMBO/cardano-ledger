@@ -19,18 +19,12 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.BlockChain
-  ( Block (Block, Block'),
-    LaxBlock (..),
-    TxSeq (TxSeq, txSeqTxns', TxSeq'),
+  ( TxSeq (TxSeq, txSeqTxns', TxSeq'),
     constructMetadata,
     txSeqTxns,
     bbHash,
     bBodySize,
     slotToNonce,
-    neededTxInsForBlock,
-    -- accessor functions
-    bheader,
-    bbody,
     --
     incrBlocks,
     coreAuxDataBytes,
@@ -53,6 +47,12 @@ module Cardano.Ledger.Shelley.BlockChain
     seedL,
     mkSeed,
     lastAppliedHash,
+    --
+    Block,
+    bheader,
+    bbody,
+    neededTxInsForBlock,
+    txSeqDecoder,
   )
 where
 
@@ -61,8 +61,6 @@ import Cardano.Binary
     Decoder,
     FromCBOR (fromCBOR),
     ToCBOR (..),
-    annotatorSlice,
-    encodeListLen,
     encodePreEncoded,
     serializeEncoding,
     serializeEncoding',
@@ -72,15 +70,18 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
+    BlocksMade (..),
     Nonce (..),
     Seed (..),
     StrictMaybe (..),
     mkNonceFromNumber,
     strictMaybeToMaybe,
   )
+import Cardano.Ledger.Block (BlockAnn)
+import qualified Cardano.Ledger.Block as Core
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era)
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
@@ -88,15 +89,13 @@ import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization
   ( ToCBORGroup (..),
     decodeMap,
-    decodeRecordNamed,
     decodeSeq,
     encodeFoldableEncoder,
     encodeFoldableMapEncoder,
   )
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
-import Cardano.Ledger.Shelley.Tx (Tx, TxIn (..), segwitTx)
-import Cardano.Ledger.Shelley.UTxO (txid)
+import Cardano.Ledger.Shelley.Tx (Tx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
@@ -104,7 +103,6 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coerce (coerce)
-import Data.Foldable (toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
@@ -112,7 +110,6 @@ import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -250,38 +247,6 @@ bbHash (TxSeq' _ bodies wits md) =
     hashStrict = Hash.hashWith id
     hashPart = Hash.hashToBytes . hashStrict . BSL.toStrict
 
-data Block era
-  = Block' !(TP.BHeader (Crypto era)) !(Era.TxSeq era) BSL.ByteString
-  deriving (Generic)
-
-deriving stock instance
-  (Era era, Show (Era.TxSeq era)) =>
-  Show (Block era)
-
-deriving stock instance
-  (Era era, Eq (Era.TxSeq era)) =>
-  Eq (Block era)
-
-deriving anyclass instance
-  (Era era, NoThunks (Era.TxSeq era)) =>
-  NoThunks (Block era)
-
-pattern Block ::
-  (Era era, ToCBORGroup (Era.TxSeq era)) =>
-  TP.BHeader (Crypto era) ->
-  Era.TxSeq era ->
-  Block era
-pattern Block h txns <-
-  Block' h txns _
-  where
-    Block h txns =
-      let bytes =
-            serializeEncoding $
-              encodeListLen (1 + listLen txns) <> toCBOR h <> toCBORGroup txns
-       in Block' h txns bytes
-
-{-# COMPLETE Block #-}
-
 -- | Given a size and a mapping from indices to maybe metadata,
 --  return a sequence whose size is the size paramater and
 --  whose non-Nothing values correspond to the values in the mapping.
@@ -292,23 +257,8 @@ constructMetadata ::
   Seq (Maybe (Annotator (Core.AuxiliaryData era)))
 constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
 
-instance
-  Era era =>
-  ToCBOR (Block era)
-  where
-  toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
-
 -- | The parts of the Tx in Blocks that have to have FromCBOR(Annotator x) instances.
 --   These are exactly the parts that are SafeToHash.
-type BlockAnn era =
-  ( FromCBOR (Annotator (Core.TxBody era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era)),
-    FromCBOR (Annotator (Core.Witnesses era)),
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Witnesses era)
-  )
-
 -- | Decode a TxSeq, used in decoding a Block.
 txSeqDecoder ::
   forall era.
@@ -351,74 +301,12 @@ instance
   where
   fromCBOR = txSeqDecoder False
 
-instance
-  forall era.
-  ( BlockAnn era,
-    ValidateScript era,
-    Era.SupportsSegWit era,
-    FromCBOR (Annotator (Era.TxSeq era))
-  ) =>
-  FromCBOR (Annotator (Block era))
-  where
-  fromCBOR = annotatorSlice $
-    decodeRecordNamed "Block" (const blockSize) $ do
-      header <- fromCBOR
-      txns <- fromCBOR
-      pure $ Block' <$> header <*> txns
-    where
-      blockSize =
-        1 -- header
-          + fromIntegral (Era.numSegComponents @era)
-
--- | A block in which we do not validate the matched encoding of parts of the
---   segwit. TODO This is purely a test concern, and as such should be moved out
---   of the library.
-newtype LaxBlock era = LaxBlock (Block era)
-
-blockDecoder ::
-  ( BlockAnn era,
-    ValidateScript era,
-    Era.TxSeq era ~ TxSeq era
-  ) =>
-  Bool ->
-  forall s. Decoder s (Annotator (Block era))
-blockDecoder lax = annotatorSlice $
-  decodeRecordNamed "Block" (const 4) $ do
-    header <- fromCBOR
-    txns <- txSeqDecoder lax
-    pure $ Block' <$> header <*> txns
-
-instance (Era era, Typeable era) => ToCBOR (LaxBlock era) where
-  toCBOR (LaxBlock x) = toCBOR x
-
-deriving stock instance
-  (Era era, Show (Era.TxSeq era)) =>
-  Show (LaxBlock era)
-
-instance
-  ( Era era,
-    BlockAnn era,
-    ValidateScript era,
-    Era.TxSeq era ~ TxSeq era
-  ) =>
-  FromCBOR (Annotator (LaxBlock era))
-  where
-  fromCBOR = fmap LaxBlock <$> blockDecoder True
-
 bBodySize ::
   ToCBORGroup txSeq => txSeq -> Int
 bBodySize = BS.length . serializeEncoding' . toCBORGroup
 
 slotToNonce :: SlotNo -> Nonce
 slotToNonce (SlotNo s) = mkNonceFromNumber s
-
-bheader ::
-  Block era ->
-  TP.BHeader (Crypto era)
-bheader (Block' bh _ _) = bh
-
-bbody :: Block era -> Era.TxSeq era
-bbody (Block' _ txs _) = txs
 
 incrBlocks ::
   Bool ->
@@ -432,28 +320,6 @@ incrBlocks isOverlay hk b'@(BlocksMade b)
     Just n -> Map.insert hk (n + 1) b
   where
     hkVal = Map.lookup hk b
-
--- | The validity of any individual block depends only on a subset
--- of the UTxO stored in the ledger state. This function returns
--- the transaction inputs corresponding to the required UTxO for a
--- given Block.
---
--- This function will be used by the consensus layer to enable storing
--- the UTxO on disk. In particular, given a block, the consensus layer
--- will use 'neededTxInsForBlock' to retrived the needed UTxO from disk
--- and present only those to the ledger.
-neededTxInsForBlock ::
-  ( Era era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
-  Block era ->
-  Set (TxIn (Crypto era))
-neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
-  where
-    txBodies = map (getField @"body") $ toList $ Era.fromTxSeq txsSeq
-    allTxIns = Set.unions $ map (getField @"inputs") txBodies
-    newTxIds = Set.fromList $ map txid txBodies
-    isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
 
 -- DEPRECATED
 
@@ -534,3 +400,24 @@ lastAppliedHash = TP.lastAppliedHash
 {-# DEPRECATED bnonce "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
 bnonce :: TP.BHBody crypto -> Nonce
 bnonce = TP.bnonce
+
+{-# DEPRECATED Block "Import from Cardano.Ledger.Block instead" #-}
+
+type Block = Core.Block
+
+{-# DEPRECATED bheader "Import from Cardano.Ledger.Block instead" #-}
+bheader :: Block h era -> h (Crypto era)
+bheader = Core.bheader
+
+{-# DEPRECATED bbody "Import from Cardano.Ledger.Block instead" #-}
+bbody :: Block h era -> Era.TxSeq era
+bbody = Core.bbody
+
+{-# DEPRECATED neededTxInsForBlock "Import from Cardano.Ledger.Block instead" #-}
+neededTxInsForBlock ::
+  ( Era era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  Block h era ->
+  Set (TxIn (Crypto era))
+neededTxInsForBlock = Core.neededTxInsForBlock

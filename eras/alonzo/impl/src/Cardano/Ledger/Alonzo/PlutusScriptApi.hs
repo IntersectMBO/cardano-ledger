@@ -57,13 +57,13 @@ import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DelegCert (..),
     Delegation (..),
-    TxIn (..),
     Wdrl (..),
     getRwdCred,
     witKeyHash,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), getScriptHash, scriptCred)
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Coders

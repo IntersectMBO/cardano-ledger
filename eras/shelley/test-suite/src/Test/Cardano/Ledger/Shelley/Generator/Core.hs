@@ -70,6 +70,7 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
     stabilityWindow,
   )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
@@ -103,11 +104,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (Block),
-    bBodySize,
-    pattern Block,
-  )
+import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesTxBody,
     UsesTxOut (..),
@@ -601,7 +598,7 @@ mkBlock ::
   Word ->
   -- | Operational certificate
   OCert (Crypto era) ->
-  Block era
+  Block BHeader era
 mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
   let txseq = (toTxSeq @era . StrictSeq.fromList) txns
       bodySize = fromIntegral $ bBodySize $ txseq
@@ -638,7 +635,7 @@ mkBlockFakeVRF ::
   Word ->
   -- | Operational certificate
   OCert (Crypto era) ->
-  Block era
+  Block BHeader era
 mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
   let (_, (sHot, _)) = head $ hot pkeys
       KeyPair vKeyCold _ = cold pkeys

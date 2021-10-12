@@ -26,10 +26,11 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
 import Cardano.Ledger.Shelley.EpochBoundary (aggregateUtxoCoinByCredential)
-import Cardano.Ledger.Shelley.TxBody (TxId (..), TxIn (..), TxOut (..))
+import Cardano.Ledger.Shelley.TxBody (TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.ShelleyMA ()
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData (..))
 import Criterion

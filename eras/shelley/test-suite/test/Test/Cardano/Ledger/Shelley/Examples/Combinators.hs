@@ -46,7 +46,18 @@ module Test.Cardano.Ledger.Shelley.Examples.Combinators
   )
 where
 
-import Cardano.Ledger.BaseTypes (NonNegativeInterval, Nonce (..), StrictMaybe (..), UnitInterval, (⭒))
+import Cardano.Ledger.BaseTypes
+  ( BlocksMade (..),
+    NonNegativeInterval,
+    Nonce (..),
+    StrictMaybe (..),
+    UnitInterval,
+    (⭒),
+  )
+import Cardano.Ledger.Block
+  ( Block (..),
+    bheader,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
@@ -60,12 +71,8 @@ import Cardano.Ledger.Keys
     KeyHash,
     KeyRole (..),
   )
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (..),
-    bheader,
-  )
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..), SnapShot, SnapShots (..))
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -84,12 +91,20 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates, ProtVer)
 import Cardano.Ledger.Shelley.Rules.Mir (emptyInstantaneousRewards)
-import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.Shelley.UTxO (txins, txouts)
+import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos (PoolDistr (..))
-import Cardano.Protocol.TPraos.BHeader (BHBody (..), LastAppliedBlock (..), bhHash, bhbody, lastAppliedHash, prevHashToNonce)
+import Cardano.Protocol.TPraos.BHeader
+  ( BHBody (..),
+    BHeader,
+    LastAppliedBlock (..),
+    bhHash,
+    bhbody,
+    lastAppliedHash,
+    prevHashToNonce,
+  )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
 import Control.State.Transition (STS (State))
@@ -145,7 +160,7 @@ evolveNonceUnfrozen n cs =
 newLab ::
   forall era.
   (Era era) =>
-  Block era ->
+  Block BHeader era ->
   ChainState era ->
   ChainState era
 newLab b cs =
@@ -600,7 +615,7 @@ newEpoch ::
   forall era.
   (Core.PParams era ~ PParams era) =>
   Era era =>
-  Block era ->
+  Block BHeader era ->
   ChainState era ->
   ChainState era
 newEpoch b cs = cs'

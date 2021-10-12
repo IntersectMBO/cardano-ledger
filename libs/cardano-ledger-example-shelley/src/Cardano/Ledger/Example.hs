@@ -16,6 +16,7 @@ import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash (..),
     ValidateAuxiliaryData (..),
   )
+import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
@@ -52,7 +53,7 @@ import qualified Cardano.Ledger.Shelley.BlockChain as Shelley
     txSeqTxns,
   )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesTxBody, UsesTxOut (..), UsesValue)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.Metadata (Metadata (Metadata), validMetadatum)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.PParams as Shelley

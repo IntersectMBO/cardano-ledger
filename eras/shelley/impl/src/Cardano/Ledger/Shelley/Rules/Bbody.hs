@@ -22,7 +22,8 @@ module Cardano.Ledger.Shelley.Rules.Bbody
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
+import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfo)
+import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
 import qualified Cardano.Ledger.Era as Era
@@ -31,7 +32,6 @@ import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
 import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     LedgerState,
@@ -125,7 +125,7 @@ instance
 
   type
     Signal (BBODY era) =
-      (BHeaderView (Crypto era), Era.TxSeq era)
+      Block BHeaderView era
 
   type Environment (BBODY era) = BbodyEnv era
 
@@ -155,7 +155,7 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account,
                BbodyState ls b,
-               (bhview, txsSeq)
+               UnserialisedBlock bhview txsSeq
                )
            ) -> do
         let txs = fromTxSeq @era txsSeq

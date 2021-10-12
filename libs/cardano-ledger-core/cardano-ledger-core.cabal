@@ -45,6 +45,7 @@ library
     Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.BaseTypes
     Cardano.Ledger.BHeaderView
+    Cardano.Ledger.Block
     Cardano.Ledger.Coin
     Cardano.Ledger.Compactible
     Cardano.Ledger.Core
@@ -57,6 +58,7 @@ library
     Cardano.Ledger.SafeHash
     Cardano.Ledger.Serialization
     Cardano.Ledger.Slot
+    Cardano.Ledger.TxIn
     Cardano.Ledger.Val
 
   build-depends:

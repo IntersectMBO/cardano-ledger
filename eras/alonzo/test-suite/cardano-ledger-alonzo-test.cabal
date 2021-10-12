@@ -96,6 +96,7 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-shelley-ma,
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
+    cardano-protocol-tpraos,
     cardano-slotting,
     containers,
     data-default-class,

@@ -24,6 +24,7 @@ where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
+import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
@@ -62,7 +63,7 @@ class
     BaseM (Core.EraRule "BBODY" era) ~ ShelleyBase,
     Environment (Core.EraRule "BBODY" era) ~ STS.BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ STS.BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), TxSeq era),
+    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
     ToCBORGroup (TxSeq era)
   ) =>
   ApplyBlock era
@@ -99,7 +100,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    (BHeaderView (Crypto era), TxSeq era) ->
+    (Block BHeaderView era) ->
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
   default applyBlockOpts ::
     forall ep m.
@@ -107,7 +108,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    (BHeaderView (Crypto era), TxSeq era) ->
+    (Block BHeaderView era) ->
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
@@ -136,12 +137,12 @@ class
   reapplyBlock ::
     Globals ->
     NewEpochState era ->
-    (BHeaderView (Crypto era), TxSeq era) ->
+    (Block BHeaderView era) ->
     NewEpochState era
   default reapplyBlock ::
     Globals ->
     NewEpochState era ->
-    (BHeaderView (Crypto era), TxSeq era) ->
+    (Block BHeaderView era) ->
     NewEpochState era
   reapplyBlock globals state blk =
     updateNewEpochState state res
@@ -174,7 +175,7 @@ applyBlock ::
   ) =>
   Globals ->
   NewEpochState era ->
-  (BHeaderView (Crypto era), TxSeq era) ->
+  (Block BHeaderView era) ->
   m (NewEpochState era)
 applyBlock =
   applyBlockOpts $

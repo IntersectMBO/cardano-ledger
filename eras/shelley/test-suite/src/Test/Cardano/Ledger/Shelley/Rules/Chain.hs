@@ -28,12 +28,14 @@ where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( BlocksMade (..),
+    Globals (..),
     Nonce (..),
     ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
   )
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Chain
   ( ChainPredicateFailure (..),
     chainChecks,
@@ -57,9 +59,8 @@ import Cardano.Ledger.Shelley.API.Wallet
     totalAdaES,
     totalAdaPotsES,
   )
-import Cardano.Ledger.Shelley.BlockChain (Block (..))
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..), emptySnapShots)
+import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -80,7 +81,8 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Protocol.TPraos (PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader
-  ( LastAppliedBlock (..),
+  ( BHeader,
+    LastAppliedBlock (..),
     bhHash,
     bhbody,
     bheaderBlockNo,
@@ -238,7 +240,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), Era.TxSeq era),
+    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -263,7 +265,7 @@ instance
 
   type
     Signal (CHAIN era) =
-      Block era
+      Block BHeader era
 
   type Environment (CHAIN era) = ()
   type BaseM (CHAIN era) = ShelleyBase
@@ -281,7 +283,7 @@ chainTransition ::
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (BHeaderView (Crypto era), Era.TxSeq era),
+    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -355,9 +357,10 @@ chainTransition =
                 bh
               )
 
+        let thouShaltNot = error "A block with a header view should never be hashed"
         BbodyState ls' bcur' <-
           trans @(Core.EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, (bhView, txs))
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, (Block' bhView txs thouShaltNot))
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh

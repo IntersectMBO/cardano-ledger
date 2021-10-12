@@ -28,6 +28,12 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain
 where
 
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..))
+import Cardano.Ledger.Block
+  ( Block (..),
+    bbody,
+    bheader,
+    neededTxInsForBlock,
+  )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
@@ -36,12 +42,6 @@ import Cardano.Ledger.Shelley.API
   ( ApplyBlock,
     DELEG,
     GetLedgerView,
-  )
-import Cardano.Ledger.Shelley.BlockChain
-  ( Block (..),
-    bbody,
-    bheader,
-    neededTxInsForBlock,
   )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
@@ -53,9 +53,10 @@ import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Pool (POOL, PoolEnv (..))
 import Cardano.Ledger.Shelley.Rules.Upec (votedValue)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
-import Cardano.Ledger.Shelley.Tx
-import Cardano.Ledger.Shelley.TxBody
+import Cardano.Ledger.Shelley.Tx hiding (TxIn)
+import Cardano.Ledger.Shelley.TxBody hiding (TxIn)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits, txins, txouts, pattern UTxO)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))
@@ -758,9 +759,9 @@ withdrawals ::
   ( EraGen era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  Block era ->
+  Block BHeader era ->
   Coin
-withdrawals (Block' _ txseq _) =
+withdrawals (UnserialisedBlock _ txseq) =
   foldl'
     ( \c tx ->
         let wdrls = unWdrl $ getField @"wdrls" (getField @"body" tx)
@@ -931,7 +932,7 @@ ledgerTraceFromBlock ::
     TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block era ->
+  Block BHeader era ->
   (ChainState era, Trace ledger)
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt,
@@ -951,7 +952,7 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   ChainState era ->
-  Block era ->
+  Block BHeader era ->
   (UTxO era, Trace ledger)
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO,
@@ -975,7 +976,7 @@ poolTraceFromBlock ::
     HasField "_minPoolCost" (Core.PParams era) Coin
   ) =>
   ChainState era ->
-  Block era ->
+  Block BHeader era ->
   (ChainState era, Trace (POOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt,
@@ -1002,7 +1003,7 @@ delegTraceFromBlock ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   ChainState era ->
-  Block era ->
+  Block BHeader era ->
   (DelegEnv era, Trace (DELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv,
@@ -1037,7 +1038,7 @@ ledgerTraceBase ::
     ApplyBlock era
   ) =>
   ChainState era ->
-  Block era ->
+  Block BHeader era ->
   ( ChainState era,
     LedgerEnv era,
     (UTxOState era, DPState (Crypto era)),
@@ -1050,7 +1051,7 @@ ledgerTraceBase chainSt block =
     txs
   )
   where
-    (Block' (BHeader bhb _) txSeq _) = block
+    (UnserialisedBlock (BHeader bhb _) txSeq) = block
     slot = bheaderSlotNo bhb
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
@@ -1104,7 +1105,7 @@ removedAfterPoolreap =
     poolState = _pstate . _delegationState . esLState . nesEs . chainNes
 
     removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
-    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (Block' bh _ _)}) =
+    removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =
       let e = (epochFromSlotNo . bheaderSlotNo . bhbody) bh
        in TestPoolreap.removedAfterPoolreap (poolState source) (poolState target) e
 

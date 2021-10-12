@@ -18,6 +18,13 @@ import Cardano.Ledger.BaseTypes as X
     StrictMaybe (..),
     epochInfo,
   )
+-- TODO deprecate these?
+
+import Cardano.Ledger.Block as X
+  ( Block (..),
+    bbody,
+    bheader,
+  )
 import Cardano.Ledger.Coin as X
   ( Coin (..),
     word64ToCoin,
@@ -47,18 +54,10 @@ import Cardano.Ledger.Keys as X
     hashKey,
     hashVerKeyVRF,
   )
--- TODO deprecate these?
-
 import Cardano.Ledger.Shelley.Address.Bootstrap as X
   ( BootstrapWitness (..),
   )
-import Cardano.Ledger.Shelley.BlockChain as X
-  ( Block (..),
-    LaxBlock (..),
-    bbHash,
-    bbody,
-    bheader,
-  )
+import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates as X
   ( DCert (..),
     DelegCert (..),
@@ -128,7 +127,6 @@ import Cardano.Ledger.Shelley.StabilityWindow as X
 import Cardano.Ledger.Shelley.Tx as X
   ( Tx (..),
     TxBody (..),
-    TxIn (..),
     TxOut (..),
     WitnessSet,
   )
@@ -143,7 +141,6 @@ import Cardano.Ledger.Shelley.TxBody as X
     Ptr (..),
     StakeCreds (..),
     StakePoolRelay (..),
-    TxId (..),
     Wdrl (..),
     WitVKey (..),
   )
@@ -151,6 +148,7 @@ import Cardano.Ledger.Shelley.UTxO as X
   ( UTxO (..),
     balance,
   )
+import Cardano.Ledger.TxIn as X (TxId (..), TxIn (..))
 import Cardano.Protocol.TPraos as X
   ( PoolDistr (..),
     individualPoolStake,

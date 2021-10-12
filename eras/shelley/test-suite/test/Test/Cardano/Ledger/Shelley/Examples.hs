@@ -6,10 +6,11 @@ module Test.Cardano.Ledger.Shelley.Examples
   )
 where
 
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley ()
-import Cardano.Ledger.Shelley.BlockChain (Block)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Scripts ()
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
@@ -18,18 +19,18 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState, totalAda)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, maxLLSupply, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
 
-data CHAINExample h = CHAINExample
+data CHAINExample h era = CHAINExample
   { -- | State to start testing with
-    startState :: ChainState h,
+    startState :: ChainState era,
     -- | Block to run chain state transition system on
-    newBlock :: Block h,
+    newBlock :: Block h era,
     -- | type of fatal error, if failure expected and final chain state if success expected
-    intendedResult :: Either [PredicateFailure (CHAIN h)] (ChainState h)
+    intendedResult :: Either [PredicateFailure (CHAIN era)] (ChainState era)
   }
 
 -- | Runs example, applies chain state transition system rule (STS),
 --   and checks that trace ends with expected state or expected error.
-testCHAINExample :: CHAINExample C -> Assertion
+testCHAINExample :: CHAINExample BHeader C -> Assertion
 testCHAINExample (CHAINExample initSt block (Right expectedSt)) = do
   (checkTrace @(CHAIN C) runShelleyBase () $ pure initSt .- block .-> expectedSt)
     >> (totalAda expectedSt @?= maxLLSupply)

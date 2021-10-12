@@ -113,8 +113,9 @@ import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAd
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
-import Cardano.Ledger.Shelley.TxBody (TxIn (..), Wdrl (Wdrl), unWdrl)
+import Cardano.Ledger.Shelley.TxBody (Wdrl (Wdrl), unWdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     decodeMint,

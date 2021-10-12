@@ -47,7 +47,8 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..), textToUrl)
+import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), StrictMaybe (..), textToUrl)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
@@ -81,7 +82,6 @@ import Cardano.Ledger.Shelley.API
     UTxO (..),
   )
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
-import Cardano.Ledger.Shelley.EpochBoundary (BlocksMade (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), WitHashes (..))
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
@@ -97,11 +97,11 @@ import Cardano.Ledger.Shelley.TxBody
     PoolCert (..),
     PoolMetadata (..),
     RewardAcnt (..),
-    TxIn (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey, txid)
+import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
+import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -2000,8 +2000,8 @@ makeNaiveBlock ::
     ToCBORGroup (TxSeq era)
   ) =>
   [Core.Tx era] ->
-  (BHeaderView (Crypto era), TxSeq era)
-makeNaiveBlock txs = (bhView, txs')
+  (Block BHeaderView era)
+makeNaiveBlock txs = (UnsafeUnserialisedBlock bhView txs')
   where
     bhView =
       BHeaderView
@@ -2013,7 +2013,7 @@ makeNaiveBlock txs = (bhView, txs')
         }
     txs' = (toTxSeq @era) . StrictSeq.fromList $ txs
 
-testAlonzoBlock :: (BHeaderView C_Crypto, TxSeq A)
+testAlonzoBlock :: (Block BHeaderView A)
 testAlonzoBlock =
   makeNaiveBlock
     [ trustMe True $ validatingTx pf,
@@ -2028,7 +2028,7 @@ testAlonzoBlock =
   where
     pf = Alonzo Mock
 
-testAlonzoBadPMDHBlock :: (BHeaderView C_Crypto, TxSeq A)
+testAlonzoBadPMDHBlock :: (Block BHeaderView A)
 testAlonzoBadPMDHBlock = makeNaiveBlock [trustMe True $ poolMDHTooBigTx pf]
   where
     pf = Alonzo Mock
@@ -2067,7 +2067,7 @@ example1BBodyState =
 
 testBBODY ::
   BbodyState A ->
-  (BHeaderView C_Crypto, TxSeq A) ->
+  (Block BHeaderView A) ->
   Either [PredicateFailure (AlonzoBBODY A)] (BbodyState A) ->
   Assertion
 testBBODY initialSt block (Right expectedSt) =

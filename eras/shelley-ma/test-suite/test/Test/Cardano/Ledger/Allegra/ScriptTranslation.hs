@@ -11,7 +11,7 @@ import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.Shelley.LedgerState ()
 import Cardano.Ledger.Shelley.PParams (emptyPParams)
 import Cardano.Ledger.Shelley.Tx (hashScript, scriptWits)
-import Cardano.Ledger.Shelley.UTxO (txid)
+import Cardano.Ledger.TxIn (txid)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)

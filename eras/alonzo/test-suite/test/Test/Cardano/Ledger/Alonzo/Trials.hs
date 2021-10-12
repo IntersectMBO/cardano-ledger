@@ -58,6 +58,7 @@ import Cardano.Ledger.Alonzo.Scripts (ppScript)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx)
 import Cardano.Ledger.Alonzo.TxBody ()
 import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto))
@@ -65,7 +66,6 @@ import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.BlockChain (Block)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -88,7 +88,9 @@ import Cardano.Ledger.Shelley.Rules.Delegs (DelegsEnv)
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv, DelplPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
-import Cardano.Ledger.Shelley.TxBody (DCert, TxIn)
+import Cardano.Ledger.Shelley.TxBody (DCert)
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -239,7 +241,7 @@ ledgerEnv = LedgerEnv (SlotNo 0) 0 def (AccountState (Coin 0) (Coin 0))
 genAlonzoTx :: Gen (Core.Tx A)
 genAlonzoTx = genstuff ap (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (utxo, dp))
 
-genAlonzoBlock :: Gen (Block A)
+genAlonzoBlock :: Gen (Block BHeader A)
 genAlonzoBlock = genstuff ap (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
 
 genShelleyTx :: Gen (Core.Tx (ShelleyEra TestCrypto))
@@ -248,7 +250,7 @@ genShelleyTx =
     (Proxy @(ShelleyEra TestCrypto))
     (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (utxo, dp))
 
-genShelleyBlock :: Gen (Block (ShelleyEra TestCrypto))
+genShelleyBlock :: Gen (Block BHeader (ShelleyEra TestCrypto))
 genShelleyBlock = genstuff (Proxy @(ShelleyEra TestCrypto)) (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
 
 -- ==================================================================================================

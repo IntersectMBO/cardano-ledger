@@ -49,8 +49,9 @@ import Cardano.Ledger.Serialization
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.StabilityWindow
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..), TxId (..), TxIn (..))
+import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Shelley.UTxO
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
