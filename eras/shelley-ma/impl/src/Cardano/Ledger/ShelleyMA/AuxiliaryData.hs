@@ -14,8 +14,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.ShelleyMA.AuxiliaryData
-  ( AuxiliaryData (..),
-    pattern AuxiliaryData,
+  ( AuxiliaryData (AuxiliaryData, AuxiliaryData', ..),
   )
 where
 
@@ -23,16 +22,6 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppMap',
-    ppMetadatum,
-    ppRecord,
-    ppStrictSeq,
-    ppWord64,
-    text,
-  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Metadata (Metadatum)
@@ -113,6 +102,15 @@ pattern AuxiliaryData blob sp <-
 
 {-# COMPLETE AuxiliaryData #-}
 
+pattern AuxiliaryData' ::
+  Map Word64 Metadatum ->
+  StrictSeq (Core.Script era) ->
+  AuxiliaryData era
+pattern AuxiliaryData' blob sp <-
+  AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw blob sp) _)
+
+{-# COMPLETE AuxiliaryData' #-}
+
 --------------------------------------------------------------------------------
 -- Serialisation
 --------------------------------------------------------------------------------
@@ -161,17 +159,3 @@ deriving via
       Core.AnnotatedData (Core.Script era)
     ) =>
     FromCBOR (Annotator (AuxiliaryData era))
-
--- =================================
--- Pretty printers
-
-ppAuxiliaryData :: PrettyA (Core.Script era) => AuxiliaryData era -> PDoc
-ppAuxiliaryData (AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw m sp) _)) =
-  ppRecord
-    "AuxiliaryData"
-    [ ("metadata", ppMap' (text "Metadata") ppWord64 ppMetadatum m),
-      ("auxiliaryscripts", ppStrictSeq prettyA sp)
-    ]
-
-instance PrettyA (Core.Script era) => PrettyA (AuxiliaryData era) where
-  prettyA = ppAuxiliaryData

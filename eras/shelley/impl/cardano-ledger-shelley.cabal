@@ -31,7 +31,6 @@ library
   import:             base, project-config
   exposed-modules:
     Cardano.Ledger.Chain
-    Cardano.Ledger.Pretty
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
     Cardano.Ledger.Shelley.Address
@@ -100,7 +99,6 @@ library
   build-depends:
     aeson,
     base16-bytestring >= 1,
-    bech32,
     bytestring,
     cardano-binary,
     cardano-crypto,
@@ -120,7 +118,6 @@ library
     iproute,
     mtl,
     nothunks,
-    prettyprinter,
     primitive >= 0.7.1.0,
     quiet,
     small-steps,

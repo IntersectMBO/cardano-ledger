@@ -48,7 +48,15 @@ import Cardano.Binary
     encodeListLen,
     encodeWord,
   )
-import Cardano.Ledger.BaseTypes (ActiveSlotCoeff, BoundedRational (..), NonNegativeInterval, ProtVer, UnitInterval, activeSlotVal, invalidKey)
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    BoundedRational (..),
+    NonNegativeInterval,
+    ProtVer,
+    UnitInterval,
+    activeSlotVal,
+    invalidKey,
+  )
 import Cardano.Ledger.Coin
   ( Coin (..),
     coinToRational,

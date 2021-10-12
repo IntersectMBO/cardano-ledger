@@ -50,8 +50,6 @@ module Cardano.Ledger.Alonzo.TxBody
     AlonzoBody,
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
-    ppTxBody,
-    ppTxOut,
 
     -- * deprecated
     WitnessPPDataHash,
@@ -84,26 +82,8 @@ import Cardano.Ledger.Hashes
     EraIndependentTxBody,
   )
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Mary.Value (Value (..), policies, policyID, ppValue)
+import Cardano.Ledger.Mary.Value (Value (..), policies, policyID)
 import qualified Cardano.Ledger.Mary.Value as Mary
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppAddr,
-    ppCoin,
-    ppDCert,
-    ppKeyHash,
-    ppNetwork,
-    ppRecord,
-    ppSafeHash,
-    ppSet,
-    ppSexp,
-    ppStrictMaybe,
-    ppStrictSeq,
-    ppTxIn,
-    ppUpdate,
-    ppWdrl,
-  )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
@@ -114,7 +94,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (Wdrl), unWdrl)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
@@ -698,63 +678,3 @@ instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era)
 instance c ~ Crypto era => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField (TxOutCompact _ _) = SNothing
   getField (TxOutCompactDH _ _ d) = SJust d
-
--- ===================================================
-
-ppTxOut ::
-  ( Era era,
-    Show (Core.Value era),
-    PrettyA (Core.Value era)
-  ) =>
-  TxOut era ->
-  PDoc
-ppTxOut (TxOut addr val dhash) =
-  ppSexp "TxOut" [ppAddr addr, prettyA val, ppStrictMaybe ppSafeHash dhash]
-
-ppTxBody ::
-  ( Era era,
-    Show (Core.Value era),
-    PrettyA (Core.Value era),
-    PrettyA (PParamsDelta era)
-  ) =>
-  TxBody era ->
-  PDoc
-ppTxBody (TxBodyConstr (Memo (TxBodyRaw i ifee o c w fee vi u rsh mnt sdh axh ni) _)) =
-  ppRecord
-    "TxBody(Alonzo)"
-    [ ("inputs", ppSet ppTxIn i),
-      ("collateral", ppSet ppTxIn ifee),
-      ("outputs", ppStrictSeq ppTxOut o),
-      ("certificates", ppStrictSeq ppDCert c),
-      ("withdrawals", ppWdrl w),
-      ("txfee", ppCoin fee),
-      ("vldt", ppValidityInterval vi),
-      ("update", ppStrictMaybe ppUpdate u),
-      ("reqSignerHashes", ppSet ppKeyHash rsh),
-      ("mint", ppValue mnt),
-      ("scriptIntegrityHash", ppStrictMaybe ppSafeHash sdh),
-      ("adHash", ppStrictMaybe ppAuxDataHash axh),
-      ("txnetworkid", ppStrictMaybe ppNetwork ni)
-    ]
-
-ppAuxDataHash :: AuxiliaryDataHash crypto -> PDoc
-ppAuxDataHash (AuxiliaryDataHash axh) = ppSafeHash axh
-
-instance
-  ( Era era,
-    PrettyA (Core.Value era),
-    PrettyA (PParamsDelta era),
-    Show (Core.Value era)
-  ) =>
-  PrettyA (TxBody era)
-  where
-  prettyA = ppTxBody
-
-instance
-  ( Era era,
-    Show (Core.Value era),
-    PrettyA (Core.Value era)
-  ) =>
-  PrettyA (TxOut era)
-  where
-  prettyA x = ppTxOut x

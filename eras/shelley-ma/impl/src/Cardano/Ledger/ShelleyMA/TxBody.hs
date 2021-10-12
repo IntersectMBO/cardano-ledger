@@ -41,7 +41,6 @@ module Cardano.Ledger.ShelleyMA.TxBody
     fromSJust,
     ValidityInterval (..),
     initial,
-    ppTxBody,
   )
 where
 
@@ -53,21 +52,6 @@ import Cardano.Ledger.Core (PParamsDelta, Script, Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppAuxiliaryDataHash,
-    ppCoin,
-    ppDCert,
-    ppRecord,
-    ppSet,
-    ppStrictMaybe,
-    ppStrictSeq,
-    ppTxIn,
-    ppTxOut,
-    ppUpdate,
-    ppWdrl,
-  )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization (encodeFoldable)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
@@ -77,7 +61,7 @@ import Cardano.Ledger.Shelley.TxBody
     TxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), ppValidityInterval)
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -396,35 +380,3 @@ instance
 
 instance Value era ~ value => HasField "mint" (TxBody era) value where
   getField (TxBodyConstr (Memo m _)) = getField @"mint" m
-
--- ============================================
-
-ppTxBody ::
-  ( Era era,
-    PrettyA (Value era),
-    PrettyA (PParamsDelta era)
-  ) =>
-  TxBody era ->
-  PDoc
-ppTxBody (TxBodyConstr (Memo (TxBodyRaw i o d w fee vi u m mint) _)) =
-  ppRecord
-    "TxBody(Mary or Allegra)"
-    [ ("inputs", ppSet ppTxIn i),
-      ("outputs", ppStrictSeq ppTxOut o),
-      ("certificates", ppStrictSeq ppDCert d),
-      ("withdrawals", ppWdrl w),
-      ("txfee", ppCoin fee),
-      ("vldt", ppValidityInterval vi),
-      ("update", ppStrictMaybe ppUpdate u),
-      ("auxDataHash", ppStrictMaybe ppAuxiliaryDataHash m),
-      ("mint", prettyA mint)
-    ]
-
-instance
-  ( Era era,
-    PrettyA (Value era),
-    PrettyA (PParamsDelta era)
-  ) =>
-  PrettyA (TxBody era)
-  where
-  prettyA = ppTxBody

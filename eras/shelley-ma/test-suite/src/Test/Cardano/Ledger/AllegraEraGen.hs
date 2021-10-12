@@ -29,6 +29,7 @@ import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Keys (KeyHash)
+import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,

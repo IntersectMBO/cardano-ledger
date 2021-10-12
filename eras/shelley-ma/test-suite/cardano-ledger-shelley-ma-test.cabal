@@ -62,6 +62,7 @@ library
     cardano-binary,
     cardano-crypto-class,
     cardano-ledger-core,
+    cardano-ledger-pretty,
     cardano-ledger-shelley-ma,
     cardano-slotting,
     cborg,

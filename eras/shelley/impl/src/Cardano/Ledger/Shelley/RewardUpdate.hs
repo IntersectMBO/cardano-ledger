@@ -21,7 +21,15 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (ActiveSlotCoeff, NonNegativeInterval, ProtVer (..), ShelleyBase, UnitInterval, boundedRationalFromCBOR, boundedRationalToCBOR)
+import Cardano.Ledger.BaseTypes
+  ( ActiveSlotCoeff,
+    NonNegativeInterval,
+    ProtVer (..),
+    ShelleyBase,
+    UnitInterval,
+    boundedRationalFromCBOR,
+    boundedRationalToCBOR,
+  )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)

@@ -27,8 +27,6 @@ module Cardano.Ledger.Alonzo.PParams
     encodeLangViews,
     retractPP,
     extendPP,
-    ppPParams,
-    ppPParamsUpdate,
     -- Deprecated
     ProtVer,
     pvMajor,
@@ -44,19 +42,15 @@ import Cardano.Binary
     serialize',
     serializeEncoding',
   )
-import Cardano.Ledger.Alonzo.Language (Language (..), ppLanguage)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
     Prices (..),
     decodeCostModelMap,
-    ppCostModel,
-    ppExUnits,
-    ppPrices,
   )
 import Cardano.Ledger.BaseTypes
-  ( BoundedRational (unboundRational),
-    NonNegativeInterval,
+  ( NonNegativeInterval,
     Nonce (NeutralNonce),
     StrictMaybe (..),
     UnitInterval,
@@ -66,20 +60,6 @@ import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (prettyA),
-    ppCoin,
-    ppEpochNo,
-    ppMap,
-    ppNatural,
-    ppNonce,
-    ppProtVer,
-    ppRational,
-    ppRecord,
-    ppStrictMaybe,
-    ppUnitInterval,
-  )
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -562,77 +542,6 @@ extendPP
   col
   mxCol =
     PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP ada cost price mxTx mxBl mxV col mxCol
-
--- ======================================================
--- Pretty instances
-
-ppPParams :: PParams' Identity era -> PDoc
-ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
-  ppRecord
-    "PParams"
-    [ ("minfeeA", ppNatural feeA),
-      ("minfeeB", ppNatural feeB),
-      ("maxBBSize", ppNatural mbb),
-      ("maxTxSize", ppNatural mtx),
-      ("maxBHSize", ppNatural mbh),
-      ("keyDeposit", ppCoin kd),
-      ("poolDeposit", ppCoin pd),
-      ("eMax", ppEpochNo em),
-      ("nOpt", ppNatural no),
-      ("a0", ppRational (unboundRational a0)),
-      ("rho", ppUnitInterval rho),
-      ("tau", ppUnitInterval tau),
-      ("d", ppUnitInterval d),
-      ("extraEntropy", ppNonce ex),
-      ("protocolVersion", ppProtVer pv),
-      ("minPoolCost", ppCoin mpool),
-      ("adaPerWord", ppCoin ada),
-      ("costmdls", ppMap ppLanguage ppCostModel cost),
-      ("prices", ppPrices prices),
-      ("maxTxExUnits", ppExUnits mxEx),
-      ("maxBlockExUnits", ppExUnits mxBEx),
-      ("maxValSize", ppNatural mxV),
-      ("collateral%", ppNatural c),
-      ("maxCollateralInputs", ppNatural mxC)
-    ]
-
-instance PrettyA (PParams' Identity era) where
-  prettyA = ppPParams
-
-ppPParamsUpdate :: PParams' StrictMaybe era -> PDoc
-ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
-  ppRecord
-    "PParams"
-    [ ("minfeeA", lift ppNatural feeA),
-      ("minfeeB", lift ppNatural feeB),
-      ("maxBBSize", lift ppNatural mbb),
-      ("maxTxSize", lift ppNatural mtx),
-      ("maxBHSize", lift ppNatural mbh),
-      ("keyDeposit", lift ppCoin kd),
-      ("poolDeposit", lift ppCoin pd),
-      ("eMax", lift ppEpochNo em),
-      ("nOpt", lift ppNatural no),
-      ("a0", lift (ppRational . unboundRational) a0),
-      ("rho", lift ppUnitInterval rho),
-      ("tau", lift ppUnitInterval tau),
-      ("d", lift ppUnitInterval d),
-      ("extraEntropy", lift ppNonce ex),
-      ("protocolVersion", lift ppProtVer pv),
-      ("minPoolCost", lift ppCoin mpool),
-      ("adaPerWord", lift ppCoin ada),
-      ("costmdls", lift (ppMap ppLanguage ppCostModel) cost),
-      ("prices", lift ppPrices prices),
-      ("maxTxExUnits", lift ppExUnits mxEx),
-      ("maxBlockExUnits", lift ppExUnits mxBEx),
-      ("maxValSize", lift ppNatural mxV),
-      ("collateral%", lift ppNatural c),
-      ("maxCollateralInputs", lift ppNatural mxC)
-    ]
-  where
-    lift pp x = ppStrictMaybe pp x
-
-instance PrettyA (PParams' StrictMaybe era) where
-  prettyA = ppPParamsUpdate
 
 {-# DEPRECATED ProtVer "Import from Cardano.Ledger.BaseTypes instead" #-}
 

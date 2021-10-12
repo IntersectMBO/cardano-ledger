@@ -55,9 +55,6 @@ module Cardano.Ledger.Alonzo.Tx
     rdptrInv,
     getMapFromValue,
     indexedRdmrs,
-    -- Pretty
-    ppIsValid,
-    ppTx,
     -- Segwit
     segwitTx,
     -- Other
@@ -108,7 +105,6 @@ import Cardano.Ledger.Alonzo.TxWitness
     TxWitness (..),
     nullDats,
     nullRedeemers,
-    ppTxWitness,
     txrdmrs,
     unRedeemers,
     unTxDats,
@@ -120,13 +116,6 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (isNativeScript))
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Mary.Value (AssetName, PolicyID (..), Value (..))
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppRecord,
-    ppStrictMaybe,
-    ppString,
-  )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeToHash (..),
@@ -492,41 +481,6 @@ indexedRdmrs tx sp = case rdptr @era (getField @"body" tx) sp of
   SJust policyid -> Map.lookup policyid rdmrs
     where
       rdmrs = unRedeemers $ txrdmrs' . getField @"wits" $ tx
-
--- =======================================================
-
-ppIsValid :: IsValid -> PDoc
-ppIsValid (IsValid True) = ppString "True"
-ppIsValid (IsValid False) = ppString "False"
-
-instance PrettyA IsValid where prettyA = ppIsValid
-
-ppTx ::
-  ( Era era,
-    PrettyA (Core.Script era),
-    PrettyA (Core.TxBody era),
-    PrettyA (Core.AuxiliaryData era)
-  ) =>
-  ValidatedTx era ->
-  PDoc
-ppTx (ValidatedTx b w iv aux) =
-  ppRecord
-    "Tx"
-    [ ("body", prettyA b),
-      ("wits", ppTxWitness w),
-      ("isValid", ppIsValid iv),
-      ("auxiliaryData", ppStrictMaybe prettyA aux)
-    ]
-
-instance
-  ( Era era,
-    PrettyA (Core.Script era),
-    PrettyA (Core.TxBody era),
-    PrettyA (Core.AuxiliaryData era)
-  ) =>
-  PrettyA (ValidatedTx era)
-  where
-  prettyA = ppTx
 
 --------------------------------------------------------------------------------
 -- Serialisation

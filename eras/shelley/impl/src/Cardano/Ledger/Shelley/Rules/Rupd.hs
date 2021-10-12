@@ -22,7 +22,19 @@ module Cardano.Ledger.Shelley.Rules.Rupd
   )
 where
 
-import Cardano.Ledger.BaseTypes (BlocksMade, NonNegativeInterval, ProtVer, ShelleyBase, StrictMaybe (..), UnitInterval, activeSlotCoeff, epochInfo, maxLovelaceSupply, randomnessStabilisationWindow, securityParameter)
+import Cardano.Ledger.BaseTypes
+  ( BlocksMade,
+    NonNegativeInterval,
+    ProtVer,
+    ShelleyBase,
+    StrictMaybe (..),
+    UnitInterval,
+    activeSlotCoeff,
+    epochInfo,
+    maxLovelaceSupply,
+    randomnessStabilisationWindow,
+    securityParameter,
+  )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
