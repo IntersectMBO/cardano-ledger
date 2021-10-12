@@ -1,12 +1,15 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -26,7 +29,7 @@ module Cardano.Ledger.Alonzo.Scripts
 
     -- * Cost Model
     CostModel (..),
-    ExUnits (..),
+    ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
     Prices (..),
     hashCostModel,
     validateCostModelParams,
@@ -77,7 +80,7 @@ import Data.DerivingVia (InstantiatedAt (..))
 import Data.Int (Int64)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Measure (Measure)
+import Data.Measure (BoundedMeasure, Measure)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -147,23 +150,56 @@ isPlutusScript (TimelockScript _) = False
 
 -- ===========================================
 
--- | Arbitrary execution unit in which we measure the cost of scripts.
-data ExUnits = ExUnits
-  { exUnitsMem :: !Natural,
-    exUnitsSteps :: !Natural
+-- | Arbitrary execution unit in which we measure the cost of scripts in terms
+-- of space in memory and execution time.
+--
+-- The ledger itself uses 'ExUnits' Natural' exclusively, but the flexibility here
+-- alows the consensus layer to translate the execution units into something
+-- equivalent to 'ExUnits (Inf Natural)'. This is needed in order to provide
+-- a 'BoundedMeasure' instance, which itself is needed for the alonzo instance of
+-- 'TxLimits' (in consensus).
+data ExUnits' a = ExUnits'
+  { exUnitsMem' :: !a,
+    exUnitsSteps' :: !a
   }
-  deriving (Eq, Generic, Show)
+  deriving (Eq, Generic, Show, Functor)
   -- It is deliberate that there is no Ord instance, use `pointWiseExUnits` instead.
   deriving
-    (Measure)
-    via (InstantiatedAt Generic ExUnits)
+    (Measure, BoundedMeasure)
+    via (InstantiatedAt Generic (ExUnits' a))
   deriving
     (Monoid, Semigroup)
-    via (InstantiatedAt Measure ExUnits)
+    via (InstantiatedAt Measure (ExUnits' a))
+
+instance NoThunks a => NoThunks (ExUnits' a)
+
+instance NFData a => NFData (ExUnits' a)
+
+-- | This newtype wrapper of ExUnits' is used to hide
+--  an implementation detail inside the ExUnits pattern.
+newtype ExUnits = WrapExUnits {unWrap :: ExUnits' Natural}
+  deriving (Eq, Generic, Show)
+  deriving newtype (Monoid, Semigroup)
 
 instance NoThunks ExUnits
 
 instance NFData ExUnits
+
+-- | Arbitrary execution unit in which we measure the cost of scripts in terms
+-- of space in memory and execution time.
+--
+-- This pattern hides the fact that ExUnits' is parametric in the underlying type.
+-- The ledger itself uses 'ExUnits' Natural' exclusively.
+--
+-- We would have preferred to use a type alias for 'ExUnits' Natural',
+-- but this is not possible: https://gitlab.haskell.org/ghc/ghc/-/issues/19507.
+pattern ExUnits :: Natural -> Natural -> ExUnits
+pattern ExUnits {exUnitsMem, exUnitsSteps} <-
+  WrapExUnits (ExUnits' exUnitsMem exUnitsSteps)
+  where
+    ExUnits m s = WrapExUnits (ExUnits' m s)
+
+{-# COMPLETE ExUnits #-}
 
 -- | It is deliberate that there is no `Ord` instance for `ExUnits`. Use this function
 --   to compare if one `ExUnit` is pointwise compareable to another.
@@ -263,11 +299,11 @@ instance NFData Prices
 -- | Compute the cost of a script based upon prices and the number of execution
 -- units.
 txscriptfee :: Prices -> ExUnits -> Coin
-txscriptfee Prices {prMem, prSteps} ExUnits {exUnitsMem, exUnitsSteps} =
+txscriptfee Prices {prMem, prSteps} ExUnits {exUnitsMem = m, exUnitsSteps = s} =
   Coin $
     ceiling $
-      (fromIntegral exUnitsMem * unboundRational prMem)
-        + (fromIntegral exUnitsSteps * unboundRational prSteps)
+      (fromIntegral m * unboundRational prMem)
+        + (fromIntegral s * unboundRational prSteps)
 
 --------------------------------------------------------------------------------
 -- Serialisation
