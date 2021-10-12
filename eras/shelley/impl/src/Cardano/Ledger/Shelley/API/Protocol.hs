@@ -31,25 +31,29 @@ module Cardano.Ledger.Shelley.API.Protocol
     updateChainDepState,
     reupdateChainDepState,
     initialChainDepState,
-    -- Re-exports
+    -- Leader Schedule
     checkLeaderValue,
+    getLeaderSchedule,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
+import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes
-  ( Globals,
+  ( Globals (..),
     Nonce (NeutralNonce),
     ProtVer,
     Seed,
     ShelleyBase,
     UnitInterval,
+    epochInfo,
   )
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto)
-import Cardano.Ledger.Era (Crypto)
+import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto, VRF)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
   ( DSignable,
@@ -58,11 +62,12 @@ import Cardano.Ledger.Keys
     Hash,
     KESignable,
     KeyHash,
-    KeyRole (Genesis),
+    KeyRole (..),
+    SignKeyVRF,
     VRFSignable,
     coerceKeyRole,
   )
-import Cardano.Ledger.PoolDistr (PoolDistr)
+import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState
@@ -82,11 +87,14 @@ import Cardano.Protocol.TPraos.BHeader
     bhbody,
     bheaderPrev,
     checkLeaderValue,
+    mkSeed,
     prevHashToNonce,
+    seedL,
   )
 import Cardano.Protocol.TPraos.OCert (OCertSignable)
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS.Prtcl
 import Cardano.Protocol.TPraos.Rules.Tickn as STS.Tickn
+import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Control.Arrow (left, right)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
@@ -101,8 +109,11 @@ import Control.State.Transition.Extended
     reapplySTS,
   )
 import Data.Either (fromRight)
+import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
+import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -472,3 +483,36 @@ reupdateChainDepState
               bh
             )
       epochNonce = STS.Tickn.ticknStateEpochNonce csTickn
+
+-- | Get the (private) leader schedule for this epoch.
+--
+--   Given a private VRF key, returns the set of slots in which this node is
+--   eligible to lead.
+getLeaderSchedule ::
+  ( Era era,
+    VRF.Signable
+      (CC.VRF (Crypto era))
+      Seed,
+    HasField "_d" (Core.PParams era) UnitInterval
+  ) =>
+  Globals ->
+  NewEpochState era ->
+  ChainDepState (Crypto era) ->
+  KeyHash 'StakePool (Crypto era) ->
+  SignKeyVRF (Crypto era) ->
+  Core.PParams era ->
+  Set SlotNo
+getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlots
+  where
+    isLeader slotNo =
+      let y = VRF.evalCertified () (mkSeed seedL slotNo epochNonce) key
+       in not (isOverlaySlot a (getField @"_d" pp) slotNo)
+            && checkLeaderValue (VRF.certifiedOutput y) stake f
+    stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
+    poolDistr = unPoolDistr $ nesPd ss
+    STS.Tickn.TicknState epochNonce _ = csTickn cds
+    currentEpoch = nesEL ss
+    ei = epochInfo globals
+    f = activeSlotCoeff globals
+    epochSlots = Set.fromList [a .. b]
+    (a, b) = runIdentity $ epochInfoRange ei currentEpoch
