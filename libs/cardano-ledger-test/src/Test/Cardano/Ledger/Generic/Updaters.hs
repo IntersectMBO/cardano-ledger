@@ -31,8 +31,6 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     Prices (..),
     Script (..),
-    alwaysFails,
-    alwaysSucceeds,
   )
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
@@ -78,6 +76,7 @@ import qualified Data.Sequence.Strict as Seq (empty, fromList)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Numeric.Natural (Natural)
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Generic.Indexed
 import Test.Cardano.Ledger.Generic.Proof
 
@@ -86,6 +85,7 @@ import Test.Cardano.Ledger.Generic.Proof
 
 class (Era era, ValidateScript era) => Scriptic era where
   always :: Natural -> Proof era -> (Core.Script era)
+  alwaysAlt :: Natural -> Proof era -> (Core.Script era)
   never :: Natural -> Proof era -> (Core.Script era)
   require :: KeyHash 'Witness (Crypto era) -> Proof era -> (Core.Script era)
   allOf :: [Proof era -> (Core.Script era)] -> Proof era -> (Core.Script era)
@@ -102,6 +102,7 @@ class HasTokens era where
 instance CC.Crypto c => Scriptic (ShelleyEra c) where
   never _ (Shelley _) = Multi.RequireAnyOf mempty -- always False
   always _ (Shelley _) = Multi.RequireAllOf mempty -- always True
+  alwaysAlt _ (Shelley _) = Multi.RequireAllOf mempty -- always True
   require key (Shelley _) = Multi.RequireSignature key
   allOf xs (Shelley c) = (Multi.RequireAllOf (map ($ Shelley c) xs))
   anyOf xs (Shelley c) = (Multi.RequireAnyOf (map ($ Shelley c) xs))
@@ -112,6 +113,7 @@ instance CC.Crypto c => Scriptic (ShelleyEra c) where
 instance CC.Crypto c => Scriptic (AllegraEra c) where
   never _ (Allegra _) = RequireAnyOf mempty -- always False
   always _ (Allegra _) = RequireAllOf mempty -- always True
+  alwaysAlt _ (Allegra _) = RequireAllOf mempty -- always True
   require key (Allegra _) = RequireSignature key
   allOf xs (Allegra c) = (RequireAllOf (Seq.fromList (map ($ Allegra c) xs)))
   anyOf xs (Allegra c) = (RequireAnyOf (Seq.fromList (map ($ Allegra c) xs)))
@@ -126,6 +128,7 @@ instance CC.Crypto c => PostShelley (AllegraEra c) where
 instance CC.Crypto c => Scriptic (MaryEra c) where
   never _ (Mary _) = RequireAnyOf mempty -- always False
   always _ (Mary _) = RequireAllOf mempty -- always True
+  alwaysAlt _ (Mary _) = RequireAllOf mempty -- always True
   require key (Mary _) = RequireSignature key
   allOf xs (Mary c) = (RequireAllOf (Seq.fromList (map ($ Mary c) xs)))
   anyOf xs (Mary c) = (RequireAnyOf (Seq.fromList (map ($ Mary c) xs)))
@@ -153,13 +156,14 @@ instance forall c. CC.Crypto c => HasTokens (AlonzoEra c) where
 unTime :: CC.Crypto (Crypto era) => Proof era -> (Proof era -> Script era) -> Timelock (Crypto era)
 unTime wit f = case f wit of
   (TimelockScript x) -> x
-  (PlutusScript "\SOH\NUL\NUL \ACK\SOH") -> (RequireAnyOf mempty)
-  (PlutusScript "\SOH\NUL\NUL \STX\NUL\NUL\DC1") -> (RequireAllOf mempty)
-  (PlutusScript _) -> error ("Plutus script in Timelock context")
+  (PlutusScript _ "\SOH\NUL\NUL \ACK\SOH") -> (RequireAnyOf mempty)
+  (PlutusScript _ "\SOH\NUL\NUL \STX\NUL\NUL\DC1") -> (RequireAllOf mempty)
+  (PlutusScript _ _) -> error ("Plutus script in Timelock context")
 
 instance CC.Crypto c => Scriptic (AlonzoEra c) where
-  never n (Alonzo _) = alwaysFails n -- always False
-  always n (Alonzo _) = alwaysSucceeds n -- always True
+  never n (Alonzo _) = alwaysFails PlutusV1 n -- always False
+  always n (Alonzo _) = alwaysSucceeds PlutusV1 n -- always True
+  alwaysAlt n (Alonzo _) = alwaysSucceeds PlutusV2 n -- always True
   require key (Alonzo _) = TimelockScript (RequireSignature key)
   allOf xs (Alonzo c) = TimelockScript (RequireAllOf (Seq.fromList (map (unTime (Alonzo c)) xs)))
   anyOf xs (Alonzo c) = TimelockScript (RequireAnyOf (Seq.fromList (map (unTime (Alonzo c)) xs)))

@@ -49,7 +49,7 @@ import Cardano.Ledger.Keys
     vKey,
   )
 import Cardano.Ledger.Pretty (PrettyA (..))
-import Cardano.Ledger.Shelley.API.Wallet (getRewardInfo)
+import Cardano.Ledger.Shelley.API.Wallet (getRewardProvenance)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),
@@ -396,7 +396,7 @@ rewardsProvenance _ = do
               slotsPerEpoch
   pure (prov, bs)
 
--- Analog to getRewardInfo, but does not produce Provenance
+-- Analog to getRewardProvenance, but does not produce Provenance
 justRewardInfo ::
   forall era.
   (Core.PParams era ~ PParams era) =>
@@ -427,7 +427,7 @@ sameWithOrWithoutProvenance ::
   Property
 sameWithOrWithoutProvenance globals newepochstate = with === without
   where
-    (with, _) = getRewardInfo globals newepochstate
+    (with, _) = getRewardProvenance globals newepochstate
     without = justRewardInfo globals newepochstate
 
 nothingInNothingOut ::

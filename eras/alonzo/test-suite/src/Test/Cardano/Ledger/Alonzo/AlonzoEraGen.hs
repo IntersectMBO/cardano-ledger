@@ -16,7 +16,7 @@ import Cardano.Binary (ToCBOR (toCBOR), serializeEncoding')
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data as Alonzo (AuxiliaryData (..), Data (..), DataHash)
-import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams, extendPP, retractPP)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
@@ -28,8 +28,6 @@ import Cardano.Ledger.Alonzo.Scripts as Alonzo
     ExUnits (..),
     Prices (..),
     Script (..),
-    alwaysFails,
-    alwaysSucceeds,
   )
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
@@ -73,8 +71,8 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
-import Data.Word (Word64)
 import GHC.Records (HasField (..))
+import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
@@ -88,6 +86,7 @@ import Test.Cardano.Ledger.Alonzo.PlutusScripts
     redeemerIs102,
     sumsTo103,
   )
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.MaryEraGen (addTokens, genMint, maryGenesisValue, policyIndex)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
@@ -123,21 +122,53 @@ vKeyLocked txout =
 
 phase2scripts3Arg :: forall c. Mock c => [TwoPhase3ArgInfo (AlonzoEra c)]
 phase2scripts3Arg =
-  [ TwoPhase3ArgInfo (alwaysSucceeds 3) (hashScript @(AlonzoEra c) (alwaysSucceeds 3)) (P.I 1) (P.I 1, bigMem, bigStep) True,
+  [ TwoPhase3ArgInfo
+      (alwaysSucceeds PlutusV1 3)
+      (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV1 3))
+      (P.I 1)
+      (P.I 1, bigMem, bigStep)
+      True,
+    TwoPhase3ArgInfo
+      (alwaysSucceeds PlutusV2 3)
+      (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV2 3))
+      (P.I 1)
+      (P.I 1, bigMem, bigStep)
+      True,
     TwoPhase3ArgInfo guessTheNumber3 (hashScript @(AlonzoEra c) guessTheNumber3) (P.I 9) (P.I 9, bigMem, bigStep) True,
     TwoPhase3ArgInfo evendata3 (hashScript @(AlonzoEra c) evendata3) (P.I 8) (P.I 8, bigMem, bigStep) True,
     TwoPhase3ArgInfo odddata3 (hashScript @(AlonzoEra c) odddata3) (P.I 9) (P.I 9, bigMem, bigStep) True,
     TwoPhase3ArgInfo sumsTo103 (hashScript @(AlonzoEra c) sumsTo103) (P.I 1) (P.I 9, bigMem, bigStep) True,
-    TwoPhase3ArgInfo (alwaysFails 3) (hashScript @(AlonzoEra c) (alwaysFails 3)) (P.I 1) (P.I 1, bigMem, bigStep) False
+    TwoPhase3ArgInfo
+      (alwaysFails PlutusV1 3)
+      (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 3))
+      (P.I 1)
+      (P.I 1, bigMem, bigStep)
+      False,
+    TwoPhase3ArgInfo
+      (alwaysFails PlutusV2 3)
+      (hashScript @(AlonzoEra c) (alwaysFails PlutusV2 3))
+      (P.I 1)
+      (P.I 1, bigMem, bigStep)
+      False
   ]
 
 phase2scripts2Arg :: forall c. Mock c => [TwoPhase2ArgInfo (AlonzoEra c)]
 phase2scripts2Arg =
-  [ TwoPhase2ArgInfo (alwaysSucceeds 2) (hashScript @(AlonzoEra c) (alwaysSucceeds 2)) (P.I 1, bigMem, bigStep) True,
+  [ TwoPhase2ArgInfo
+      (alwaysSucceeds PlutusV1 2)
+      (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV1 2))
+      (P.I 1, bigMem, bigStep)
+      True,
+    TwoPhase2ArgInfo
+      (alwaysSucceeds PlutusV2 2)
+      (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV2 2))
+      (P.I 1, bigMem, bigStep)
+      True,
     TwoPhase2ArgInfo oddRedeemer2 (hashScript @(AlonzoEra c) oddRedeemer2) (P.I 13, bigMem, bigStep) True,
     TwoPhase2ArgInfo evenRedeemer2 (hashScript @(AlonzoEra c) evenRedeemer2) (P.I 14, bigMem, bigStep) True,
     TwoPhase2ArgInfo redeemerIs102 (hashScript @(AlonzoEra c) redeemerIs102) (P.I 10, bigMem, bigStep) True,
-    TwoPhase2ArgInfo (alwaysFails 2) (hashScript @(AlonzoEra c) (alwaysFails 2)) (P.I 1, bigMem, bigStep) False
+    TwoPhase2ArgInfo (alwaysFails PlutusV1 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 2)) (P.I 1, bigMem, bigStep) False,
+    TwoPhase2ArgInfo (alwaysFails PlutusV2 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV2 2)) (P.I 1, bigMem, bigStep) False
   ]
 
 phase2scripts3ArgSucceeds :: forall c. Mock c => Script (AlonzoEra c) -> Bool
@@ -216,16 +247,16 @@ instance CC.Crypto c => ScriptClass (AlonzoEra c) where
   -- basescript _ key = TimelockScript (basescript (Proxy @(MaryEra c)) key) -- The old style from Mary
   basescript proxy key = (someLeaf proxy key)
   isKey _ (TimelockScript x) = isKey (Proxy @(MaryEra c)) x
-  isKey _ (PlutusScript _) = Nothing
+  isKey _ (PlutusScript _ _) = Nothing
   isOnePhase _ (TimelockScript _) = True
-  isOnePhase _ (PlutusScript _) = False
+  isOnePhase _ (PlutusScript _ _) = False
   quantify _ (TimelockScript x) = fmap TimelockScript (quantify (Proxy @(MaryEra c)) x)
   quantify _ x = Leaf x
   unQuantify _ quant = TimelockScript $ unQuantify (Proxy @(MaryEra c)) (fmap unTime quant)
 
 unTime :: Alonzo.Script era -> Timelock (Crypto era)
 unTime (TimelockScript x) = x
-unTime (PlutusScript _) = error "Plutus in Timelock"
+unTime (PlutusScript _ _) = error "Plutus in Timelock"
 
 okAsCollateral :: forall c. Mock c => UTxO (AlonzoEra c) -> TxIn c -> Bool
 okAsCollateral utxo inputx =
@@ -295,11 +326,19 @@ genAlonzoPParamsDelta ::
 genAlonzoPParamsDelta constants pp = do
   shelleypp <- genShelleyPParamsDelta @(MaryEra c) constants (Alonzo.retractPP (Coin 100) pp)
   ada <- genM (Coin <$> choose (1, 5))
-  cost <- genM (pure (Map.singleton PlutusV1 freeCostModel)) -- TODO what is a better assumption for this?
+  cost <-
+    genM
+      ( pure
+          ( Map.fromList
+              [ (PlutusV1, freeCostModel),
+                (PlutusV2, freeCostModel)
+              ] -- TODO what is a better assumption for this?
+          )
+      )
   let genPrice = unsafeBoundRational . (% 100) <$> choose (0, 200)
   price <- genM (Prices <$> genPrice <*> genPrice)
   mxTx <- pure SNothing -- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  mxBl <- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
+  mxBl <- genM (ExUnits <$> (genNatural 100 5000) <*> (genNatural 100 5000))
   -- Not too small for mxV, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
   mxV <- genM (genNatural 4000 5000)
@@ -314,10 +353,16 @@ genAlonzoPParams ::
 genAlonzoPParams constants = do
   shelleypp <- Shelley.genPParams @(MaryEra c) constants -- This ensures that "_d" field is not 0.
   ada <- (Coin <$> choose (1, 5))
-  cost <- pure (Map.singleton PlutusV1 freeCostModel) -- There are no other Languages, and there must be something for PlutusV1
+  cost <-
+    pure
+      ( Map.fromList
+          [ (PlutusV1, freeCostModel),
+            (PlutusV2, freeCostModel)
+          ] -- TODO change the cost model?
+      )
   price <- pure (Prices minBound minBound) -- (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- pure (ExUnits (5 * bigMem + 1) (5 * bigStep + 1)) -- (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
-  mxBl <- (ExUnits <$> (choose ((20 * bigMem + 1), (30 * bigMem + 1))) <*> choose ((20 * bigStep + 1), (30 * bigStep + 1)))
+  mxBl <- (ExUnits <$> (genNatural (20 * bigMem + 1) (30 * bigMem + 1)) <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1))
   mxV <- (genNatural 4000 10000) -- This can't be too small. Shelley uses Hard coded 4000
   let c = 25 -- percent of fee in collateral
       mxC = 100 -- max number of inputs in collateral
@@ -327,9 +372,11 @@ genAlonzoPParams constants = do
 instance HasField "_minUTxOValue" (Alonzo.PParams (AlonzoEra c)) Coin where
   getField _ = Coin 4000
 
-bigStep, bigMem :: Word64
-bigStep = 99999 -- 999 -- 9999999990
-bigMem = 50000 -- 500 -- 50000000
+bigMem :: Natural
+bigMem = 50000
+
+bigStep :: Natural
+bigStep = 99999
 
 instance Mock c => EraGen (AlonzoEra c) where
   genEraAuxiliaryData = genAux
@@ -448,7 +495,7 @@ storageCost extra pp x = (extra + encodedLen x) <×> Coin (fromIntegral (getFiel
 addRedeemMap ::
   forall c.
   TxBody (AlonzoEra c) ->
-  (Plutus.Data, Word64, Word64) ->
+  (Plutus.Data, Natural, Natural) ->
   ScriptPurpose c ->
   Map RdmrPtr (Data (AlonzoEra c), ExUnits) ->
   Map RdmrPtr (Data (AlonzoEra c), ExUnits)

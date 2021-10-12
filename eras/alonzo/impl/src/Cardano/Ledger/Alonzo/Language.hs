@@ -8,14 +8,12 @@ module Cardano.Ledger.Alonzo.Language where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord64)
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppString)
 import Control.DeepSeq (NFData (..))
-import Data.Coders
 import Data.Ix (Ix)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
--- ==================================================================
--- Non-Native Script language. This is an Enumerated type.
+-- | Non-Native Script language. This is an Enumerated type.
 -- This is expected to be an open type. We will add new Constuctors
 -- to this type as additional Non-Native scripting language as are added.
 -- We use an enumerated type for two reasons.
@@ -23,8 +21,11 @@ import NoThunks.Class (NoThunks)
 -- 2) We will use DataKinds to make some datatypes  indexed by Language
 -- For now, the only Non-Native Scriting language is Plutus
 -- We might add new languages in the futures.
-
-data Language = PlutusV1 --    | ADD-NEW-LANGUAGES-HERE
+--
+-- Note that the the serialization of 'Language' depends on the ordering.
+data Language
+  = PlutusV1
+  | PlutusV2
   deriving (Eq, Generic, Show, Ord, Enum, Bounded, Ix)
 
 instance NoThunks Language
@@ -32,21 +33,18 @@ instance NoThunks Language
 instance NFData Language
 
 instance ToCBOR Language where
-  toCBOR PlutusV1 = toCBOR (0 :: Int)
+  toCBOR = toCBOR . fromEnum
 
 instance FromCBOR Language where
-  fromCBOR = do
-    n <- decodeWord64
-    case n of
-      0 -> pure PlutusV1
-      m -> invalidKey (fromIntegral m)
+  fromCBOR = toEnum . fromIntegral <$> decodeWord64
 
 nonNativeLanguages :: Set.Set Language
-nonNativeLanguages = Set.singleton PlutusV1
+nonNativeLanguages = Set.fromList [minBound .. maxBound]
 
 -- ==================================
 
 ppLanguage :: Language -> PDoc
 ppLanguage PlutusV1 = ppString "PlutusV1"
+ppLanguage PlutusV2 = ppString "PlutusV2"
 
 instance PrettyA Language where prettyA = ppLanguage

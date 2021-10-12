@@ -35,7 +35,7 @@ import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (getRewardInfo)
+import Cardano.Ledger.Shelley.API (getRewardProvenance)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState (..),
@@ -772,7 +772,7 @@ poolLifetime8 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (Shell
 poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 
 rewardInfoEx8 :: RP.RewardProvenance C_Crypto
-rewardInfoEx8 = snd $ getRewardInfo testGlobals (chainNes expectedStEx8)
+rewardInfoEx8 = snd $ getRewardProvenance testGlobals (chainNes expectedStEx8)
 
 rewardInfoTest :: Assertion
 rewardInfoTest = rewardInfoEx8 @?= expected

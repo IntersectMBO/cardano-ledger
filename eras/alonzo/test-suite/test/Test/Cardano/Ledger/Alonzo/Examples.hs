@@ -8,6 +8,7 @@
 module Test.Cardano.Ledger.Alonzo.Examples where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..))
 import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (Fails, Passes), runPLCScript)
 import Data.ByteString.Short (ShortByteString)
@@ -55,7 +56,7 @@ directPlutusTest expectation script ds =
   where
     costModel = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
     -- Evaluate a script with sufficient budget to run it.
-    evalWithTightBudget :: ShortByteString -> [P.Data] -> Either P.EvaluationError ()
+    evalWithTightBudget :: ShortByteString -> [P.Data] -> Either P.EvaluationError P.ExBudget
     evalWithTightBudget scr datums = do
       budget <- snd $ P.evaluateScriptCounting P.Quiet costModel scr datums
       snd $ P.evaluateScriptRestricting P.Verbose costModel budget scr datums
@@ -63,43 +64,43 @@ directPlutusTest expectation script ds =
 -- | Expects 3 args (data, redeemer, context)
 guessTheNumber3 :: ShortByteString
 guessTheNumber3 = case Generated.guessTheNumber3 of
-  PlutusScript sbs -> sbs
+  PlutusScript _ sbs -> sbs
   _ -> error ("Should not happen 'guessTheNumber3' is a plutus script")
 
 -- | Expects 2 args (data, redeemer)
 guessTheNumber2 :: ShortByteString
 guessTheNumber2 = case Generated.guessTheNumber2 of
-  PlutusScript sbs -> sbs
+  PlutusScript _ sbs -> sbs
   _ -> error ("Should not happen 'guessTheNumber2' is a plutus script")
 
 even3 :: ShortByteString
 even3 = case Generated.evendata3 of
-  PlutusScript sbs -> sbs
+  PlutusScript _ sbs -> sbs
   _ -> error ("Should not happen 'evendata3' is a plutus script")
 
 odd3 :: ShortByteString
 odd3 = case Generated.odddata3 of
-  PlutusScript sbs -> sbs
+  PlutusScript _ sbs -> sbs
   _ -> error ("Should not happen 'odddata3' is a plutus script")
 
 sum103 :: ShortByteString
 sum103 = case Generated.sumsTo103 of
-  PlutusScript sbs -> sbs
+  PlutusScript _ sbs -> sbs
   _ -> error ("Should not happen 'sumsTo1033' is a plutus script")
 
 evenRed2 :: ShortByteString
 evenRed2 = case Generated.evenRedeemer2 of
-  PlutusScript sbs -> sbs
+  PlutusScript _ sbs -> sbs
   _ -> error ("Should not happen 'evenredeemer2' is a plutus script")
 
 redeemer102 :: ShortByteString
 redeemer102 = case Generated.redeemerIs102 of
-  PlutusScript sbs -> sbs
+  PlutusScript _ sbs -> sbs
   _ -> error ("Should not happen 'redeemeris102' is a plutus script")
 
 oddredeemer2 :: ShortByteString
 oddredeemer2 = case Generated.oddRedeemer2 of
-  PlutusScript sbs -> sbs
+  PlutusScript _ sbs -> sbs
   _ -> error ("Should not happen 'oddredeemer2' is a plutus script")
 
 plutusScriptExamples :: TestTree
@@ -185,9 +186,9 @@ alonzo :: Proxy (AlonzoEra StandardCrypto)
 alonzo = Proxy
 
 explainTest :: Script (AlonzoEra StandardCrypto) -> ShouldSucceed -> [P.Data] -> Assertion
-explainTest (script@(PlutusScript bytes)) mode ds =
+explainTest (script@(PlutusScript _ bytes)) mode ds =
   let cost = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
-   in case (mode, runPLCScript alonzo (CostModel cost) bytes (ExUnits 100000000 10000000) ds) of
+   in case (mode, runPLCScript alonzo PlutusV1 (CostModel cost) bytes (ExUnits 100000000 10000000) ds) of
         (ShouldSucceed, Passes) -> assertBool "" True
         (ShouldSucceed, Fails xs) -> assertBool (show xs) (trace (show (head xs)) False)
         (ShouldFail, Passes) -> assertBool ("Test that should fail, passes: " ++ show script) False

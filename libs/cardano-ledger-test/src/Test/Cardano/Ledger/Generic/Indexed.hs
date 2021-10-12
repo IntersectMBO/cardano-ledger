@@ -17,7 +17,8 @@ module Test.Cardano.Ledger.Generic.Indexed where
 import Cardano.Crypto.DSIGN.Class ()
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Scripts (Script (..), alwaysFails, alwaysSucceeds)
+import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (Value)
 import qualified Cardano.Ledger.Core as Core
@@ -39,6 +40,7 @@ import Data.ByteString (ByteString, pack, unpack)
 import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as Seq (fromList)
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 
@@ -230,8 +232,8 @@ instance (ReflectC c, CC.Crypto c) => Fixed (Timelock c) where
 
 alonzoSimple :: forall era. [Script era]
 alonzoSimple =
-  [ alwaysFails 1, -- always False
-    alwaysSucceeds 1 -- always True
+  [ alwaysFails PlutusV1 1, -- always False
+    alwaysSucceeds PlutusV1 1 -- always True
   ]
 
 somealonzo :: Era era => Evidence (Crypto era) -> [Script era]
