@@ -155,7 +155,7 @@ $\fun{txValTag} = \True$.
 \begin{proof}
   With the same argument as previously, we only need to discuss the
   equivalent claim for the $\mathsf{UTXOS}$ transition. Under these
-  assumptions, $\var{sLst} := \fun{collectTwoPhaseScriptInputs}$ is an empty
+  assumptions, $\var{sLst}$ is an empty
   list. Thus $\fun{evalScripts}~sLst = \True$, and the transition rule
   had to be $\mathsf{Scripts{-}Yes}$.
 \end{proof}
@@ -274,7 +274,7 @@ function for that transaction.
   The following holds :
     \[\fun{txValTag}~tx ~=~ \fun{evalScripts}~{tx}~{sLst} \]
   where
-  \[ \var{sLst} \leteq \fun{collectTwoPhaseScriptInputs} ~\field_{pp}(s)~\var{tx}~ \Utxo(s) \]
+  \[ \var{sLst} \leteq \fun{collectTwoPhaseScriptInputs}~\mathsf{EI}~\mathsf{SysSt} ~\field_{pp}(s)~\var{tx}~ \Utxo(s) \]
 \end{lemma}
 \begin{proof}
   Inspecting the $\mathsf{Scripts{-}Yes}$ and the $\mathsf{Scripts{-}No}$ rules of the $\mathsf{UTXOS}$ transition,
@@ -363,9 +363,6 @@ For this property, we make some assumptions about things that are outside the sc
   also true in an implementation. In particular, the interpreter does not
   obtain any system randomness, etc.
 
-  \item We assume that constructing the validation context from $\TxInfo$ and
-  the $\ScriptPurpose$ by $\fun{valContext}$ is deterministic.
-
   \item We do not need to check here that the hashes that are the keys of the
   $\fun{txscripts}$ and $\fun{txdats}$ fields match the computed hashes of the scripts and
   datum objects they index. This is because these hashes must be computed as part of
@@ -413,9 +410,9 @@ We split this result into a lemma and its corollary :
 
   The following holds :
 
-  \[\fun{toSet}~(\fun{collectTwoPhaseScriptInputs} ~\field_{pp}(s)~\var{tx}~ \Utxo(s))\]
+  \[\fun{toSet}~(\fun{collectTwoPhaseScriptInputs}~\mathsf{EI}~\mathsf{SysSt} ~\field_{pp}(s)~\var{tx}~ \Utxo(s))\]
   \[ = \]
-  \[\fun{toSet}~(\fun{collectTwoPhaseScriptInputs} ~\field_{pp}(u)~\var{tx'}~ \Utxo(u))\]
+  \[\fun{toSet}~(\fun{collectTwoPhaseScriptInputs}~\mathsf{EI}~\mathsf{SysSt} ~\field_{pp}(u)~\var{tx'}~ \Utxo(u))\]
 
 \end{lemma}
 \begin{proof}
@@ -501,7 +498,7 @@ We split this result into a lemma and its corollary :
       will not match.
 
       \item $\fun{valContext}$ and $\fun{txInfo}$ :
-      The $\fun{valContext}$ function is assumed deterministic.
+      The $\fun{valContext}$ function is defined in \ref{sec:txinfo} and is pure.
       All fields of the $\TxInfo$
       structure, with the exceptions listed below,
       are straightforward translations of the corresponding transaction body fields (see \ref{sec:txinfo}) that
@@ -557,9 +554,9 @@ as in Lemma \ref{lem:inputs}.
   \end{equation*}
   The following holds :
 
-  \[\fun{evalScripts}~{tx}~ (\fun{collectTwoPhaseScriptInputs} ~\field_{pp}(s)~\var{tx}~ \Utxo(s))\]
+  \[\fun{evalScripts}~{tx}~ (\fun{collectTwoPhaseScriptInputs}~\mathsf{EI}~\mathsf{SysSt} ~\field_{pp}(s)~\var{tx}~ \Utxo(s))\]
   \[ = \]
-  \[\fun{evalScripts}~{tx'}~ (\fun{collectTwoPhaseScriptInputs} ~\field_{pp}(u)~\var{tx'}~ \Utxo(u))\]
+  \[\fun{evalScripts}~{tx'}~ (\fun{collectTwoPhaseScriptInputs}~\mathsf{EI}~\mathsf{SysSt} ~\field_{pp}(u)~\var{tx'}~ \Utxo(u))\]
 
 \end{corollary}
 
