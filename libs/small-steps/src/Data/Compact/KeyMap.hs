@@ -16,7 +16,9 @@ import Data.Foldable (foldl')
 import Cardano.Prelude (HeapWords (..),Generic,runST,ST)
 import Data.Word(Word64)
 import qualified Data.Primitive.Array as PA
-import Data.Bits (Bits,(.&.), (.|.), complement, popCount, unsafeShiftL,setBit,testBit,clearBit)
+import Data.Bits (Bits,(.&.), (.|.), complement, popCount,
+                  unsafeShiftL, unsafeShiftR,
+                  zeroBits,setBit,testBit,clearBit)
 import Data.Compact.Class
 import GHC.Exts ((==#), reallyUnsafePtrEquality#, isTrue# )
 import qualified Data.Map as Map
@@ -27,6 +29,8 @@ import System.Random(RandomGen,genWord64,mkStdGen)
 import Prettyprinter
 import Data.Text(Text,pack)
 import qualified Prettyprinter.Internal as Pretty
+import Data.Set(Set)
+import qualified Data.Set as Set
 
 -- type PArray = PA.Array
 type PArray = Small.SmallArray
@@ -167,7 +171,7 @@ instance HeapWords v => HeapWords (HashMap v) where
 -- ======================================================================
 -- Insertion
 
-insert' :: Show v => BitState -> v -> HashMap v -> HashMap v
+insert' :: BitState -> v -> HashMap v -> HashMap v
 insert' bs0 v0 m0 = go bs0 v0 m0
   where
     go !state !x Empty = Leaf (getBytes state) x
@@ -219,7 +223,7 @@ insert' bs0 v0 m0 = go bs0 v0 m0
              m = setBit 0 tagbits
              i = sparseIndex fullNodeMask m
 
-makeTwo :: Show v => BitState -> HashMap v -> BitState -> v -> HashMap v
+makeTwo :: BitState -> HashMap v -> BitState -> v -> HashMap v
 makeTwo state1 leaf1 state2 val2 
       | i1==i2 = One i1 (makeTwo state1' leaf1 state2' val2)
       | otherwise = -- trace ("MAKETWO (i1,i2)="++show(i1,i2)++"\n  state1="++show state1++"\n  state2="++show state2) $
@@ -229,7 +233,7 @@ makeTwo state1 leaf1 state2 val2
    where (i1,state1') = nextBits "makeTwo1" state1
          (i2,state2') = nextBits ("makeTwo2 "++"\n  "++show state1++"\n  "++show state2) state2
 
-insert :: Show v => Key -> v -> HashMap v -> HashMap v
+insert :: Key -> v -> HashMap v -> HashMap v
 insert bs v hashmap = insert' (initBitState bs) v hashmap            
 
 fromList :: Show v => [(Key,v)] -> HashMap v
@@ -316,8 +320,6 @@ foldWithKey accum ans0 (Full arr) = loop ans0 0
         loop ans i | i >= n = ans
         loop ans i = loop (foldWithKey accum ans (index arr i)) (i+1)        
 
-
-
 -- ==================================================================
 -- Lookup a key 
 
@@ -342,6 +344,41 @@ lookup' state (Full arr) = lookup' state' (index arr i)
 lookupHM :: Key -> HashMap v -> Maybe v
 lookupHM bytes mp = lookup' (initBitState bytes) mp
 
+
+splitHashMap :: BitState -> HashMap v -> (HashMap v,Maybe v,HashMap v)
+splitHashMap _ Empty = (Empty,Nothing,Empty)
+splitHashMap (BitState [] _) x = (x,Nothing,Empty)
+splitHashMap (BitState (i:is) k) (One j x) = (One j a,b,One j c)
+   where (a,b,c) = splitHashMap (BitState is k) x
+splitHashMap (BitState (i:is) k) (BitmapIndexed bmap arr) =
+   let splitpoint = sparseIndex bmap (setBit 0 i)
+   in case splitBitmap bmap i of
+        (less,True,greater) ->
+          let (h1,mv,h2) = splitHashMap (BitState is k) (index arr splitpoint)
+              (arr1,arr2) = splitArrayAt arr splitpoint h1 h2
+              in (BitmapIndexed less arr1,mv,BitmapIndexed greater arr2)
+        (less,False,greater) -> undefined
+
+-- splitArrayAt :: PArray a -> Int -> a -> a -> (PArray a, PArray a)
+
+{-
+splitHashMap (BitState (i:is) k) (Two bmap x y) =
+  case splitBitmap bmap i of
+    (0,True,greater) -> undefined
+    (less,True,0) -> undefined
+    (less,True,greater) -> undefined
+    (less,False,greater) -> undefined
+-}    
+
+domainRestrict :: HashMap v -> Set Key -> HashMap v
+domainRestrict hm s = Set.foldl' accum Empty s
+  where accum ans key =
+          case lookupHM key hm of
+            Nothing -> ans
+            Just v -> insert key v ans
+
+hmdr = fromList (take 10 pairs)
+set = Set.fromList [ bpairs !! 3, bpairs !! 8, bpairs !! 20]
 
 -- ==========================
 
@@ -378,6 +415,18 @@ bitmapIndexedOrFull b ary
 fullNodeMask :: Bitmap
 fullNodeMask = complement (complement 0 `unsafeShiftL` maxChildren)
 {-# INLINE fullNodeMask #-}
+
+-- | A Bitmap represents a set. Split it into 3 parts (set1,present,set2)
+--   where 'set1' is all elements in 'bm' less than 'i'
+--         'present' is if 'i' is in the set 'bm'
+--         'set2' is all elements in 'bm' greater than 'i'
+splitBitmap :: Bitmap -> Int -> (Bitmap,Bool,Bitmap)
+splitBitmap bm i = (unsafeShiftR (unsafeShiftL bm (64-i)) (64-i)
+                   ,testBit bm i
+                   ,unsafeShiftL (unsafeShiftR bm i) i)
+
+setBits :: [Int] -> Bitmap
+setBits xs = foldl' setBit 0 xs 
 
 
 -- =======================================================================
@@ -435,6 +484,22 @@ arrayOf n a =  runST $ do
   loop 0
   arr <- mfreeze marr
   pure arr
+
+
+-- | Split an array into 2 partial copies, where a1 appears at the last index 
+--   of the first copy and 'a2' appears at the 0th index of the second.
+--   splitArrAt (fromlist [0,1,2,3,4,5,6]) 4 44 45
+--   (fromlist [0,1,2,3,44],fromlist [45,5,6])
+splitArrayAt :: PArray a -> Int -> a -> a -> (PArray a, PArray a)
+splitArrayAt arr i a1 a2 = project (with2MutArray size1 size2 action)
+  where project (arr1,arr2, _state) = (arr1,arr2)
+        size1 = i + 1
+        size2 = isize arr - i
+        action marr1 marr2 = do
+           mcopy marr1 0 arr 0 i
+           mwrite marr1 i a1
+           mwrite marr2 0 a2
+           mcopy marr2 1 arr (i+1) (size2 - 1)
 
 -- =========================================================================
 
