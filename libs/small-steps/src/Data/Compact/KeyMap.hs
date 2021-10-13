@@ -16,7 +16,7 @@ import Data.Foldable (foldl')
 import Cardano.Prelude (HeapWords (..),Generic,runST,ST)
 import Data.Word(Word64)
 import qualified Data.Primitive.Array as PA
-import Data.Bits (Bits,(.&.), (.|.), complement, popCount, unsafeShiftL,setBit,testBit)
+import Data.Bits (Bits,(.&.), (.|.), complement, popCount, unsafeShiftL,setBit,testBit,clearBit)
 import Data.Compact.Class
 import GHC.Exts ((==#), reallyUnsafePtrEquality#, isTrue# )
 import qualified Data.Map as Map
@@ -165,7 +165,7 @@ instance HeapWords v => HeapWords (HashMap v) where
   heapWords (Two _ a b) = 4 + heapWords a + heapWords b                       
 
 -- ======================================================================
-
+-- Insertion
 
 insert' :: Show v => BitState -> v -> HashMap v -> HashMap v
 insert' bs0 v0 m0 = go bs0 v0 m0
@@ -236,6 +236,90 @@ fromList :: Show v => [(Key,v)] -> HashMap v
 fromList ps = foldl' accum Empty ps
   where accum ans (k,v) = insert k v ans
 
+-- =================================================================
+-- Deletion
+
+-- | Delete the Key encoded in the BitState from the HashMap
+delete' :: BitState -> HashMap v -> HashMap v
+delete' (BitState [] _) hm = hm -- Removing a bogus key, leaves 'hm' unchanged
+delete' _ Empty = Empty
+delete' (BitState _ k) (hm@(Leaf k2 _)) = if k==k2 then Empty else hm
+delete' (BitState(i:is) k) (hm@(One j x)) = if i==j then oneE j (delete' (BitState is k) x) else hm
+delete' (BitState(i:is) k) (hm@(Two bmap x y)) =
+   if testBit bmap i
+      then twoE bmap (delete' (BitState is k) x) (delete' (BitState is k) y)
+      else hm
+delete' (BitState(i:is) k) (hm@(BitmapIndexed bmap arr)) =
+   if testBit bmap i
+      then let m = setBit 0 i
+               j = sparseIndex bmap m
+               result = delete' (BitState is k) (index arr j)
+           -- Consume an upwards floating Empty by removing that element from the array
+           in case result of
+               Empty -> bitmapE (clearBit bmap i) (remove arr j)
+               _ -> BitmapIndexed bmap (update arr j result)
+      else hm
+delete' (BitState(i:is) k) (Full arr) =
+   let m = setBit 0 i
+       j = sparseIndex fullNodeMask m
+       result = delete' (BitState is k) (index arr j)
+   -- Consume an upwards floating Empty by removing that element from the array
+   in case result of
+        Empty -> BitmapIndexed (clearBit fullNodeMask i) (remove arr j)
+        _ -> Full(update arr j result)
+
+delete :: Key -> HashMap v -> HashMap v
+delete k hm = delete' (initBitState k) hm
+
+-- One of the invariants is that no Empty ever appears in any of the other
+-- constructors of KeyMap.  So we make "smart" constructors that remove Empty
+-- if it ever occurrs. This is necessary since 'delete' can turn a subtree
+-- into Empty. The strategy is to float 'Empty' up the tree, until it can be
+-- 'remove'd from one of the constructors with Array like components (One, Two, BitmapInded, Full).
+
+-- Float Empty up over One
+oneE :: Int -> HashMap v -> HashMap v
+oneE _ Empty = Empty
+oneE i x = One i x
+
+-- Float Empty's up over Two
+twoE :: Bitmap -> HashMap v -> HashMap v -> HashMap v
+twoE _ Empty Empty = Empty
+twoE bmap x Empty = oneE (ith bmap 0) x
+twoE bmap Empty x = oneE (ith bmap 1) x
+twoE bmap x y = Two bmap x y
+
+-- | Get the 'ith' element from a Bitmap
+ith :: Bitmap -> Int -> Int
+ith bmap i = (bitmapToList bmap !! i)
+
+-- Float Empty's up over BitmpIndexed, Note that if the size of the arr
+-- becomes 2, then rebuild with Two rather than BitmapIndexed
+bitmapE :: Bitmap -> PArray (HashMap v) -> HashMap v
+bitmapE bmap arr | isize arr == 2 = twoE bmap (index arr 0) (index arr 1)
+bitmapE bmap arr = BitmapIndexed bmap arr
+
+-- ================================================================
+-- aggregation in ascending order of keys
+
+foldWithKey :: (ans -> Key -> v -> ans) -> ans -> HashMap v -> ans  
+foldWithKey _ ans Empty = ans
+foldWithKey accum ans (Leaf k v) = accum ans k v
+foldWithKey accum ans (One _ x) = foldWithKey accum ans x
+foldWithKey accum ans (Two _ x y) = foldWithKey accum (foldWithKey accum ans x) y
+foldWithKey accum ans0 (BitmapIndexed _ arr) = loop ans0 0
+  where n = isize arr
+        loop ans i | i >= n = ans
+        loop ans i = loop (foldWithKey accum ans (index arr i)) (i+1)
+foldWithKey accum ans0 (Full arr) = loop ans0 0
+  where n = isize arr
+        loop ans i | i >= n = ans
+        loop ans i = loop (foldWithKey accum ans (index arr i)) (i+1)        
+
+
+
+-- ==================================================================
+-- Lookup a key 
 
 indexFromStateAndBitmap :: BitState -> Bitmap -> (BitState,Int)
 indexFromStateAndBitmap state bmap = (state1,sparseIndex bmap m)
@@ -243,7 +327,7 @@ indexFromStateAndBitmap state bmap = (state1,sparseIndex bmap m)
           m = setBit 0 bs
 
 
-lookup' :: PrettyA v => BitState -> HashMap v -> Maybe v
+lookup' :: BitState -> HashMap v -> Maybe v
 lookup' _ Empty = Nothing
 lookup' state (Leaf bs v) = if (getBytes state)==bs then Just v else Nothing
 lookup' state (One i x) = if i==j then lookup' state' x else Nothing
@@ -255,7 +339,7 @@ lookup' state (BitmapIndexed bm arr) = lookup' state' (index arr i)
 lookup' state (Full arr) = lookup' state' (index arr i)
   where (state',i) = indexFromStateAndBitmap state fullNodeMask    
 
-lookupHM :: PrettyA v => Key -> HashMap v -> Maybe v
+lookupHM :: Key -> HashMap v -> Maybe v
 lookupHM bytes mp = lookup' (initBitState bytes) mp
 
 
@@ -299,6 +383,16 @@ fullNodeMask = complement (complement 0 `unsafeShiftL` maxChildren)
 -- =======================================================================
 -- Operations to make new arrays out off old ones with small changes
 
+
+-- | /O(n)/ Make a copy of an Array that removes the 'i'th element. Decreasing the size by 1.
+remove :: ArrayPair arr marr a => arr a -> Int -> arr a
+remove arr i = fst(withMutArray n action)
+   where n = (isize arr) - 1
+         action marr = do
+            mcopy marr 0 arr 0 i
+            mcopy marr i arr (i+1) (n-i)
+
+
 -- | /O(n)/ Overwrite the element at the given position in this array,
 update :: PArray t -> Int -> t -> PArray t
 update arr i _t
@@ -331,7 +425,7 @@ insertM ary idx b
 insertAt :: PArray e -> Int -> e -> PArray e
 insertAt arr idx b = runST(insertM arr idx b)
 
-
+-- | Create a new Array of size 'n' filled with objects 'a'
 arrayOf :: Int -> a -> PArray a
 arrayOf n a =  runST $ do
   marr <- mnew n
@@ -571,4 +665,4 @@ ppHashMap p (Full arr) = ppSexp "F" [ppList q (zip (bitmapToList fullNodeMask) (
 
 instance PrettyA v => Show (HashMap v) where
    show x = show(ppHashMap prettyA x)
- 
+
