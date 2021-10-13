@@ -16,33 +16,11 @@ module Cardano.Ledger.State.Massiv where
 
 import Control.Monad
 import Control.DeepSeq
-import qualified Cardano.Address.Style.Byron as AB
-import qualified Cardano.Address.Style.Icarus as AI
-import qualified Cardano.Address.Style.Shelley as AS
-import qualified Cardano.Chain.Common as Byron
-import Cardano.Crypto.Hash.Class
-import qualified Cardano.Crypto.Hashing as Byron
-import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo
-import Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody as Alonzo
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Compactible
-import Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential
-import Cardano.Ledger.Crypto
-import qualified Cardano.Ledger.Hashes as Hashes
 import qualified Cardano.Ledger.Keys as Keys
-import qualified Cardano.Ledger.Mary.Value as Mary
-import qualified Cardano.Ledger.SafeHash as SafeHash
-import qualified Cardano.Ledger.Shelley.API as Shelley
-import Cardano.Ledger.Shelley.CompactAddr
 import Cardano.Ledger.Shelley.TxBody
-import Cardano.Ledger.Shelley.UTxO
 import Cardano.Ledger.State.UTxO
 import qualified Conduit as C
-import Control.Monad
-import Data.ByteString.Short
 import qualified Data.Conduit.List as C
 import qualified Data.IntMap.Strict as IntMap
 import Data.Kind
@@ -50,13 +28,6 @@ import qualified Data.Map.Strict as Map
 import Data.Massiv.Array as A
 import Data.Massiv.Array.Mutable.Algorithms as A
 import Data.Massiv.Array.Unsafe as A
-import Data.Proxy
-import qualified Data.Set as Set
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.Read as T
-import Data.Word
-import Debug.Trace
 
 
 

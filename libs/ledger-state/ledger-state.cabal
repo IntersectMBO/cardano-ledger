@@ -27,6 +27,7 @@ common project-config
                     , bytestring
                     , base16-bytestring
                     , cardano-addresses
+                    , cardano-binary
                     , cardano-crypto-class
                     , cardano-crypto-wrapper
                     , cardano-ledger-core
@@ -35,13 +36,17 @@ common project-config
                     , cardano-ledger-shelley
                     , cardano-ledger-shelley-ma
                     , cardano-prelude
+                    , cardano-protocol-tpraos
+                    , cborg
                     , conduit
                     , conduit-extra
                     , containers
                     , deepseq
                     , persistent
                     , persistent-sqlite
+                    , prettyprinter
                     , strict-containers
+                    , small-steps
                     , text
                     , optparse-applicative
                     , heapsize
