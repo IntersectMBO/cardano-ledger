@@ -18,7 +18,7 @@ import Data.Word(Word64)
 import qualified Data.Primitive.Array as PA
 import Data.Bits (Bits,(.&.), (.|.), complement, popCount, unsafeShiftL,setBit,testBit,clearBit)
 import Data.Compact.Class
-import GHC.Exts ((==#), reallyUnsafePtrEquality#, isTrue# )
+--import GHC.Exts ((==#), reallyUnsafePtrEquality#, isTrue# )
 import qualified Data.Map as Map
 import Control.DeepSeq (NFData(..))
 import qualified Data.Primitive.SmallArray as Small
@@ -348,7 +348,7 @@ lookupHM bytes mp = lookup' (initBitState bytes) mp
 -- | Check if two the two arguments are the same value.  N.B. This
 -- function might give false negatives (due to GC moving objects.)
 ptrEq :: a -> a -> Bool
-ptrEq x y = isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
+ptrEq _x _y = False --isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
 {-# INLINE ptrEq #-}
 
 bitsPerSubkey :: Int

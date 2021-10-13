@@ -11,6 +11,11 @@
 
 module Cardano.Ledger.State.UTxO where
 
+import Cardano.Prelude (HeapWords(..))
+import qualified Cardano.Crypto.Hash.Class as HS
+import qualified Data.Hashable as HM
+import qualified Data.HashMap.Strict as HM
+import Cardano.Ledger.TxIn
 import qualified Cardano.Address as A
 import qualified Cardano.Address.Style.Byron as AB
 import qualified Cardano.Address.Style.Icarus as AI
@@ -64,6 +69,7 @@ import Data.Typeable
 import Numeric.Natural
 import Prettyprinter
 import Text.Printf
+import Data.Compact.KeyMap as KeyMap hiding (Stat)
 
 type C = StandardCrypto
 
@@ -326,7 +332,7 @@ foldlUTxO fp f = consumeUTxO fp . foldlC f
 
 loadUTxO :: FilePath -> IO (Map.Map (TxIn C) (Alonzo.TxOut CurrentEra))
 loadUTxO fp = do
-  utxo <- foldlUTxO fp (\m (k, v) -> Map.insert k v m) mempty
+  utxo <- foldlUTxO fp (\ !m !(!k, !v) -> Map.insert k v m) mempty
   -- print $ heapWords utxo
   -- let ws = heapWords utxo
   -- putStrLn $ "cardano-prelude - HeapWords: " ++ show ws ++ " NumBytes: " ++ show (ws * 8)
@@ -335,18 +341,131 @@ loadUTxO fp = do
   pure utxo
 
 loadUTxOn :: FilePath -> IO (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
-loadUTxOn fp = foldlUTxO fp nestedInsert mempty
-  where
-    nestedInsert !m (TxIn txId txIx, !v) =
-      let !e = IntMap.singleton (fromIntegral txIx) v
-       in Map.insertWith (<>) txId e m
+loadUTxOn fp = foldlUTxO fp txIdNestedInsert mempty
+
+txIdNestedInsert ::
+     (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
+  -> (TxIn C, Alonzo.TxOut CurrentEra)
+  -> (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
+txIdNestedInsert !m (TxIn !txId !txIx, !v) =
+  let !e = IntMap.singleton (fromIntegral txIx) v
+   in Map.insertWith (<>) txId e m
 
 loadUTxOni :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) (Alonzo.TxOut CurrentEra)))
 loadUTxOni fp = foldlUTxO fp nestedInsert mempty
   where
-    nestedInsert !m (TxIn txId txIx, !v) =
-      let !e = Map.singleton txId v
-       in IntMap.insertWith (<>) (fromIntegral txIx) e m
+    nestedInsert !im (TxIn !txId !txIx, !v) =
+      let f =
+            \case
+              Nothing -> Just $! Map.singleton txId v
+              Just !m -> Just $! Map.insert txId v m
+       in IntMap.alter f (fromIntegral txIx) im
+
+loadUTxOhm :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra)))
+loadUTxOhm fp = foldlUTxO fp nestedInsert mempty
+  where
+    nestedInsert ::
+         IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra))
+      -> (TxIn C, Alonzo.TxOut CurrentEra)
+      -> IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra))
+    nestedInsert !m (TxInCompact32 x1 x2 x3 x4 txIx, !v) =
+      let !key = KeyMap.Key x1 x2 x3 x4
+          f =
+            \case
+              Nothing -> Just $! KeyMap.Leaf key v
+              Just hm -> Just $! KeyMap.insert key v hm
+       in IntMap.alter f (fromIntegral txIx) m
+
+instance HM.Hashable (TxIn C) where
+  hashWithSalt _salt (TxInCompact32 x1 _ _ _ _) = fromIntegral x1
+  hash (TxInCompact32 x1 _ _ _ _) = fromIntegral x1
+
+instance HM.Hashable (TxId C) where
+  hashWithSalt _salt = hashTxId
+  hash = hashTxId
+
+hashTxId :: TxId C -> Int
+hashTxId (TxId sh) =
+  case HS.viewHash32 (SafeHash.extractHash sh) of
+    HS.ViewHashNot32 -> error "irrelevant"
+    HS.ViewHash32 a _ _ _ -> fromIntegral a
+
+
+loadUTxOuhm' :: FilePath -> IO (HM.HashMap (TxIn C) ())
+loadUTxOuhm' fp = foldlUTxO fp (\ !m !(!k, _) -> HM.insert k () m) mempty
+
+
+loadUTxOuhm'' :: FilePath -> IO (IntMap.IntMap (HM.HashMap (TxId C) ()))
+loadUTxOuhm'' fp = foldlUTxO fp nestedInsert mempty
+  where
+    nestedInsert ::
+         IntMap.IntMap (HM.HashMap (TxId C) ())
+      -> (TxIn C, Alonzo.TxOut CurrentEra)
+      -> IntMap.IntMap (HM.HashMap (TxId C) ())
+    nestedInsert !m (TxIn txId txIx, _) =
+      let f =
+            \case
+              Nothing -> Just $! HM.singleton txId ()
+              Just hm -> Just $! HM.insert txId () hm
+       in IntMap.alter f (fromIntegral txIx) m
+
+
+loadUTxO' :: FilePath -> IO (Map.Map (TxIn C) ())
+loadUTxO' fp = foldlUTxO fp (\ !m !(!k, _) -> Map.insert k () m) mempty
+
+loadUTxOni' :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) ()))
+loadUTxOni' fp = foldlUTxO fp nestedInsertTxId' mempty
+
+nestedInsertTxId' ::
+     (IntMap.IntMap (Map.Map (TxId C) ()))
+  -> (TxIn C, Alonzo.TxOut CurrentEra)
+  -> (IntMap.IntMap (Map.Map (TxId C) ()))
+nestedInsertTxId' !im (TxIn !txId !txIx, _) =
+  let f =
+        \case
+          Nothing -> Just $! Map.singleton txId ()
+          Just !m -> Just $! Map.insert txId () m
+   in IntMap.alter f (fromIntegral txIx) im
+
+toIntMapMap' :: UTxO CurrentEra -> (IntMap.IntMap (Map.Map (TxId C) ()))
+toIntMapMap' = Map.foldlWithKey' (\m k a -> nestedInsertTxId' m (k, a)) mempty . unUTxO
+
+loadUTxOhm' :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap ()))
+loadUTxOhm' fp = foldlUTxO fp nestedInsert mempty
+  where
+    nestedInsert ::
+         IntMap.IntMap (KeyMap.HashMap ())
+      -> (TxIn C, Alonzo.TxOut CurrentEra)
+      -> IntMap.IntMap (KeyMap.HashMap ())
+    nestedInsert !m (TxInCompact32 x1 x2 x3 x4 txIx, _) =
+      let !key = KeyMap.Key x1 x2 x3 x4
+          f =
+            \case
+              Nothing -> Just $! KeyMap.Leaf key ()
+              Just hm -> Just $! KeyMap.insert key () hm
+       in IntMap.alter f (fromIntegral txIx) m
+
+
+loadUTxOihm' :: FilePath -> IO (KeyMap.HashMap (IntMap.IntMap ()))
+loadUTxOihm' fp = foldlUTxO fp nestedInsert KeyMap.Empty
+  where
+    nestedInsert ::
+         KeyMap.HashMap (IntMap.IntMap ())
+      -> (TxIn C, Alonzo.TxOut CurrentEra)
+      -> KeyMap.HashMap (IntMap.IntMap ())
+    nestedInsert !hm (TxInCompact32 x1 x2 x3 x4 txIx, _) =
+      let !key = KeyMap.Key x1 x2 x3 x4
+          f =
+            \case
+              Nothing -> Just $! KeyMap.Leaf key ()
+              Just hm -> Just $! KeyMap.insert key () hm
+       in case KeyMap.lookupHM key hm of
+            Nothing ->
+              let !v = IntMap.singleton (fromIntegral txIx) ()
+               in KeyMap.insert key v hm
+            Just im ->
+              let !v = IntMap.insert (fromIntegral txIx) () im
+               in KeyMap.insert key v $ KeyMap.delete key hm
 
 totalADA :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> Mary.Value C
 totalADA = foldMap (\(Alonzo.TxOut _ v _) -> v)
@@ -354,10 +473,11 @@ totalADA = foldMap (\(Alonzo.TxOut _ v _) -> v)
 collectStatsFromJSON :: FilePath -> IO ()
 collectStatsFromJSON fp = consumeUTxO fp collectStats
 
-st = do
-  ls <- loadLedgerState "/home/lehins/iohk/chain/mainnet/ledger-state.bin"
-  let UTxO u = _utxo $ _utxoState $ esLState $ nesEs ls
-  runConduit $ C.sourceList (Map.toList u) .| collectStats
+loadBinUTxO :: FilePath -> IO (UTxO CurrentEra)
+loadBinUTxO fp = do
+  ls <- loadLedgerState fp
+  pure $! _utxo $ _utxoState $ esLState $ nesEs ls
+  -- runConduit $ C.sourceList (Map.toList u) .| collectStats
 
 collectStats :: ConduitT (TxIn C, Alonzo.TxOut CurrentEra) Void IO ()
 collectStats = do

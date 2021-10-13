@@ -55,7 +55,7 @@ main = do
     ls <- loadLedgerState fp
     printNewEpochStateStats $ countNewEpochStateStats ls
   forM_ (optsUtxoJsonFile opts) $ \fp -> do
-    _ <- observeMemory fp
+    _ <- observeMemoryOriginalMap fp
     pure ()
 
 -- getChar
@@ -64,14 +64,14 @@ main = do
 -- --putStrLn $ "Total ADA: " ++ show (totalADA utxo) ++ " entries"
 -- -- collectStats fp
 
--- observeMemoryOriginalMap fp = do
---   ref <- newIORef Nothing
---   utxo <- loadUTxOni fp
---   utxo `seq` putStrLn "Loaded"
---   performGC
---   _ <- getChar
---   writeIORef ref $ Just utxo -- ensure utxo doesn't get GCed
---   pure ref
+observeMemoryOriginalMap fp = do
+  ref <- newIORef Nothing
+  utxo <- loadUTxOhm' fp
+  utxo `seq` putStrLn "Loaded"
+  performGC
+  _ <- getChar
+  writeIORef ref $ Just utxo -- ensure utxo doesn't get GCed
+  pure ref
 
 observeMemory :: FilePath -> IO (IORef (Maybe UTxOs))
 observeMemory fp = do

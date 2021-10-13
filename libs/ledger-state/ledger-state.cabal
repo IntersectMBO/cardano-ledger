@@ -51,6 +51,8 @@ common project-config
                     , optparse-applicative
                     , heapsize
                     , massiv >= 1.0
+                    , unordered-containers
+                    , hashable
 
   ghc-options:        -Wall
                       -Wcompat
@@ -79,3 +81,18 @@ executable ledger-state
   build-depends:       optparse-applicative
                      , ledger-state
                      , deepseq
+
+
+benchmark weigh
+  type:           exitcode-stdio-1.0
+  main-is:        Memory.hs
+  hs-source-dirs: bench
+  build-depends:  base
+                , weigh
+                , ledger-state
+  ghc-options:   -Wall
+                 -O2
+                 -threaded
+                 -rtsopts
+                 -with-rtsopts=-T
+  default-language:   Haskell2010
