@@ -30,6 +30,7 @@ module Cardano.Ledger.Alonzo.Scripts
     -- * Cost Model
     CostModel (..),
     ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
+    ExUnits',
     Prices (..),
     hashCostModel,
     validateCostModelParams,
@@ -177,7 +178,7 @@ instance NFData a => NFData (ExUnits' a)
 
 -- | This newtype wrapper of ExUnits' is used to hide
 --  an implementation detail inside the ExUnits pattern.
-newtype ExUnits = WrapExUnits {unWrap :: ExUnits' Natural}
+newtype ExUnits = WrapExUnits {unWrapExUnits :: ExUnits' Natural}
   deriving (Eq, Generic, Show)
   deriving newtype (Monoid, Semigroup)
 
