@@ -14,13 +14,14 @@
 
 module Cardano.Ledger.State.Massiv where
 
-import Control.Monad
-import Control.DeepSeq
 import Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Keys as Keys
-import Cardano.Ledger.Shelley.TxBody
+import Cardano.Ledger.Shelley.TxBody hiding (TxIn, TxId)
 import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.TxIn
 import qualified Conduit as C
+import Control.DeepSeq
+import Control.Monad
 import qualified Data.Conduit.List as C
 import qualified Data.IntMap.Strict as IntMap
 import Data.Kind
@@ -29,39 +30,57 @@ import Data.Massiv.Array as A
 import Data.Massiv.Array.Mutable.Algorithms as A
 import Data.Massiv.Array.Unsafe as A
 
-
-
-loadMassivUTxO :: FilePath -> IO UTxOs
+loadMassivUTxO :: FilePath -> IO (UTxOs (Alonzo.TxOut CurrentEra))
 loadMassivUTxO fp = consumeUTxO fp sinkMassivUTxO
 
-utxoFromMap :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> IO UTxOs
+utxoFromMap :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> IO (UTxOs (Alonzo.TxOut CurrentEra))
 utxoFromMap m = C.runConduit $ C.sourceList (Map.toList m) C..| sinkMassivUTxO
 
-sinkMassivUTxO :: C.ConduitT (TxIn C, Alonzo.TxOut CurrentEra) C.Void IO UTxOs
+sinkMassivUTxO ::
+     C.ConduitT (TxIn C, Alonzo.TxOut CurrentEra) C.Void IO (UTxOs (Alonzo.TxOut CurrentEra))
 sinkMassivUTxO = do
   let consTxOut txId txOut Nothing = Just $! A.singleton $ KVPair txId txOut
       consTxOut txId txOut (Just a) = Just $! A.cons (KVPair txId txOut) a
   das <-
     C.foldlC
-      (\im (!(TxIn txId txIx), !txOut) ->
-         let !vec = consTxOut txId txOut
-         in IntMap.alter vec (fromIntegral txIx) im)
+      ( \im (!(TxIn txId txIx), !txOut) ->
+          let !vec = consTxOut txId txOut
+           in IntMap.alter vec (fromIntegral txIx) im
+      )
       mempty
   C.lift $
-    UTxOs . fromIntMap <$>
-    traverse (\da -> withLoadMArray_ da quicksortKVMArray_) das
+    UTxOs . fromIntMap
+      <$> traverse (\da -> withLoadMArray_ da quicksortKVMArray_) das
+
+
+loadMassivUTxO' :: FilePath -> IO (UTxOs ())
+loadMassivUTxO' fp = consumeUTxO fp sinkMassivUTxO'
+
+sinkMassivUTxO' ::
+     C.ConduitT (TxIn C, Alonzo.TxOut CurrentEra) C.Void IO (UTxOs ())
+sinkMassivUTxO' = do
+  let consTxOut txId Nothing = Just $! A.singleton $ KVPair txId ()
+      consTxOut txId (Just a) = Just $! A.cons (KVPair txId ()) a
+  das <-
+    C.foldlC
+      ( \im (!(TxIn txId txIx), _) ->
+          let !vec = consTxOut txId
+           in IntMap.alter vec (fromIntegral txIx) im
+      )
+      mempty
+  C.lift $
+    UTxOs . fromIntMap
+      <$> traverse (\da -> withLoadMArray_ da quicksortKVMArray_) das
+
 
 deriving instance Storable (Keys.KeyHash kr C)
 
-newtype UTxOs =
-  UTxOs
-    { utxoMap :: Vector (KV P B) (KVPair Int (Vector (KV S B) (KVPair (TxId C) (Alonzo.TxOut CurrentEra))))
-    -- Vector (Int, Vector (TxId, TxOut))
-    }
+newtype UTxOs a = UTxOs
+  { utxoMap :: Vector (KV P B) (KVPair Int (Vector (KV S B) (KVPair (TxId C) a)))
+  }
 
-
--- instance NFData UTxOs where
---   rnf UTxOs {..} = rnf utxoMap
+instance NFData a => NFData (UTxOs a) where
+  rnf UTxOs {..} = rnf utxoMap
 
 -- lookupUTxOs :: TxIn C -> UTxOs -> Maybe (Alonzo.TxOut CurrentEra)
 -- lookupUTxOs (TxIn txId txIx) UTxOs {..} = do
@@ -100,25 +119,18 @@ newtype UTxOs =
 --       let cv = Mary.CompactValue (Mary.CompactValueMultiAsset ada ma rep)
 --       pure $ Alonzo.TxOutCompactDH addr cv dh
 
-
-printStats :: UTxOs -> IO ()
-printStats UTxOs {..} = do
-  putStrLn $
-    unlines
-      [ "Number of unique txIxs: " <> show (A.elemsCount utxoMap)
-      ]
-  -- A.mapM_ printUTxO $ utxoMap
-  -- where
-  --   printUTxO :: KVPair Int (Vector (KV S BN) (KVPair (TxId C) TxOut')) -> IO ()
-  --   printUTxO (KVPair txIx v) =
-  --     putStrLn $
-  --     "<TxIx: " <> show txIx <> "> - TxOuts: " <> show (A.elemsCount v)
+-- A.mapM_ printUTxO $ utxoMap
+-- where
+--   printUTxO :: KVPair Int (Vector (KV S BN) (KVPair (TxId C) TxOut')) -> IO ()
+--   printUTxO (KVPair txIx v) =
+--     putStrLn $
+--     "<TxIx: " <> show txIx <> "> - TxOuts: " <> show (A.elemsCount v)
 
 quicksortKVMArray_ ::
-     (Manifest kr k, Manifest kv v, Ord k)
-  => Scheduler RealWorld ()
-  -> MVector RealWorld (KV kr kv) (KVPair k v)
-  -> IO ()
+  (Manifest kr k, Manifest kv v, Ord k) =>
+  Scheduler RealWorld () ->
+  MVector RealWorld (KV kr kv) (KVPair k v) ->
+  IO ()
 quicksortKVMArray_ = quicksortByM_ (\(KVPair k1 _) (KVPair k2 _) -> pure (compare k1 k2))
 
 fromMap :: (Manifest vr v, Manifest kr k) => Map.Map k v -> Vector (KV kr vr) (KVPair k v)
@@ -139,9 +151,6 @@ fromAscListN n = A.compute . A.smap (\(k, v) -> KVPair k v) . A.sfromListN (Sz n
 toAscList :: (Manifest vr v, Manifest kr k) => Vector (KV kr vr) (KVPair k v) -> [(k, v)]
 toAscList = A.toList . A.map (\(KVPair k v) -> (k, v))
 
-
-
-
 lookupIxSortedArray ::
   (Manifest kr k, Ord k) => k -> Vector kr k -> Maybe Ix1
 lookupIxSortedArray key keys = go 0 (elemsCount keys)
@@ -161,7 +170,6 @@ lookupSortedKVArray key (KVArray keys values) = do
   i <- lookupIxSortedArray key keys
   indexM values i
 
-
 data KV kr vr = KV !kr !vr
 
 data KVPair k v = KVPair !k !v
@@ -179,8 +187,10 @@ data instance Array (KV kr vr) ix e = KVArray
     valsArray :: !(Array vr ix (KVValue e))
   }
 
-instance (NFData (Array kr ix k), (NFData (Array kv ix v))) =>
-         NFData (Array (KV kr kv) ix (KVPair k v)) where
+instance
+  (NFData (Array kr ix k), (NFData (Array kv ix v))) =>
+  NFData (Array (KV kr kv) ix (KVPair k v))
+  where
   rnf KVArray {..} = keysArray `deepseq` valsArray `deepseq` ()
 
 instance (Size kr, Size vr) => Size (KV kr vr) where
@@ -264,5 +274,3 @@ instance (Manifest kr k, Manifest vr v) => Manifest (KV kr vr) (KVPair k v) wher
   unsafeLinearGrow (KVMArray keys vals) sz =
     KVMArray <$> unsafeLinearGrow keys sz <*> unsafeLinearGrow vals sz
   {-# INLINE unsafeLinearGrow #-}
-
-
