@@ -1,17 +1,18 @@
 module Main where
 
-import Control.DeepSeq
-import Options.Applicative
-import System.IO
-import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.State.Massiv
+import Cardano.Ledger.State.UTxO
 import Control.Monad
 import Data.IORef
+import Options.Applicative
+import System.IO
 import System.Mem
 
 data Opts = Opts
   { -- | Json file to import UTxO state from.
     optsUtxoJsonFile :: Maybe FilePath,
+    -- | Path to the CBOR encoded NewEpochState data type
+    optsLedgerStateBinaryFile :: Maybe FilePath,
     -- | Path to Sqlite database file. Defaults to in memory.
     optsSqliteDbFile :: Maybe FilePath
   }
@@ -32,6 +33,15 @@ main = do
               )
             <*> option
               (Just <$> str)
+              ( long "ledger-state"
+                  <> value Nothing
+                  <> help
+                    ( "Path to the CBOR encoded NewEpochState data type. "
+                        <> "Can be produced by `cardano-cli query ledger-state` command"
+                    )
+              )
+            <*> option
+              (Just <$> str)
               ( long "sqlite-db"
                   <> value Nothing
                   <> help "Path to Sqlite database file. Default is in memory"
@@ -41,24 +51,27 @@ main = do
               (long "help" <> short 'h' <> help "Display this message.")
         )
         (header "ledger-state - Tool for analyzing ledger state")
+  forM_ (optsLedgerStateBinaryFile opts) $ \fp -> do
+    ls <- loadLedgerState fp
+    printNewEpochStateStats $ countNewEpochStateStats ls
   forM_ (optsUtxoJsonFile opts) $ \fp -> do
     _ <- observeMemory fp
     pure ()
-    -- getChar
-    -- ---collectStats fp
-    -- -- -- putStrLn $ "Counted: " ++ show (length utxo) ++ " entries"
-    -- --putStrLn $ "Total ADA: " ++ show (totalADA utxo) ++ " entries"
-    -- -- collectStats fp
 
-observeMemoryOriginalMap fp = do
-  ref <- newIORef Nothing
-  utxo <- loadUTxOni fp
-  utxo `seq` putStrLn "Loaded"
-  performGC
-  _ <- getChar
-  writeIORef ref $ Just utxo -- ensure utxo doesn't get GCed
-  pure ref
+-- getChar
+-- ---collectStats fp
+-- -- -- putStrLn $ "Counted: " ++ show (length utxo) ++ " entries"
+-- --putStrLn $ "Total ADA: " ++ show (totalADA utxo) ++ " entries"
+-- -- collectStats fp
 
+-- observeMemoryOriginalMap fp = do
+--   ref <- newIORef Nothing
+--   utxo <- loadUTxOni fp
+--   utxo `seq` putStrLn "Loaded"
+--   performGC
+--   _ <- getChar
+--   writeIORef ref $ Just utxo -- ensure utxo doesn't get GCed
+--   pure ref
 
 observeMemory :: FilePath -> IO (IORef (Maybe UTxOs))
 observeMemory fp = do
@@ -80,6 +93,5 @@ observeMemory fp = do
 --   putStrLn "Converted"
 --   testMassivUTxO utxoOriginalMap utxo
 --   putStrLn "Tested"
-
 
 -- $ cabal build ledger-state && cabal exec -- ledger-state --utxo-json="/path/to/mainnet-utxo-2021-09-15.json" +RTS -s
