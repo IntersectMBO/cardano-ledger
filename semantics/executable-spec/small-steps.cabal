@@ -78,6 +78,7 @@ library
                      , free
                      , ghc-prim
                      , mtl
+                     , prettyprinter
 		     , primitive
                      , nothunks
                      , random
