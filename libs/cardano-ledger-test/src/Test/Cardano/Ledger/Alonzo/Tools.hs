@@ -9,7 +9,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..), ProtVer (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS)
 import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
-import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Alonzo.Tools (BasicFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.Tx
   ( ValidatedTx (..),
   )
@@ -21,7 +21,7 @@ import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO, makeWitnessVKey)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart, mkSlotLength)
@@ -45,7 +45,8 @@ tests :: TestTree
 tests =
   testGroup "ExUnit tools" $
     [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip,
-      testCase "calculate ExUnits" exampleExUnitCalc
+      testCase "calculate ExUnits" exampleExUnitCalc,
+      testCase "attempt calculate ExUnits with invalid tx" exampleInvalidExUnitCalc
     ]
 
 -- ExUnits should remain intact when translating to and from the plutus type
@@ -93,6 +94,20 @@ exampleExUnitCalc =
     testSystemStart
     costmodels
     assertFailure
+
+exampleInvalidExUnitCalc :: IO ()
+exampleInvalidExUnitCalc = do
+  res <-
+    evaluateTransactionExecutionUnits
+      pparams
+      exampleTx
+      (UTxO mempty)
+      exampleEpochInfo
+      testSystemStart
+      costmodels
+  case res of
+    Left (UnknownTxIns _) -> pure ()
+    Right _ -> assertFailure "evaluateTransactionExecutionUnits should have failed"
 
 exampleTx :: Core.Tx A
 exampleTx =
@@ -149,11 +164,11 @@ updateTxExUnits ::
   (forall a. String -> m a) ->
   m (Core.Tx A)
 updateTxExUnits tx utxo ei ss costmdls err = do
-  -- rdmrs :: Map RdmrPtr ExUnits
-  rdmrs <-
-    traverse (failLeft err)
-      =<< evaluateTransactionExecutionUnits pparams tx utxo ei ss costmdls
-  pure (replaceRdmrs tx rdmrs)
+  res <- evaluateTransactionExecutionUnits pparams tx utxo ei ss costmdls
+  case res of
+    Left e -> err (show e)
+    -- rdmrs :: Map RdmrPtr ExUnits
+    Right rdmrs -> (replaceRdmrs tx) <$> traverse (failLeft err) rdmrs
 
 replaceRdmrs :: Core.Tx A -> Map RdmrPtr ExUnits -> Core.Tx A
 replaceRdmrs tx rdmrs = tx {wits = wits'}
