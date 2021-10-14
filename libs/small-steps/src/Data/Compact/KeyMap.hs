@@ -10,15 +10,21 @@
 
 module Data.Compact.KeyMap where
 
-
-
 import Data.Foldable (foldl')
 import Cardano.Prelude (HeapWords (..),Generic,runST,ST)
 import Data.Word(Word64)
 import qualified Data.Primitive.Array as PA
-import Data.Bits (Bits,(.&.), (.|.), complement, popCount,
-                  unsafeShiftL, unsafeShiftR,
-                  zeroBits,setBit,testBit,clearBit)
+import Data.Bits
+  ( Bits,(.&.),
+    (.|.),
+    complement,
+    popCount,
+    unsafeShiftL,
+    unsafeShiftR,
+    setBit,
+    testBit,
+    clearBit,
+  )
 import Data.Compact.Class
 import GHC.Exts ((==#), reallyUnsafePtrEquality#, isTrue# )
 import qualified Data.Map as Map
@@ -31,6 +37,7 @@ import Data.Text(Text,pack)
 import qualified Prettyprinter.Internal as Pretty
 import Data.Set(Set)
 import qualified Data.Set as Set
+-- import Debug.Trace
 
 -- type PArray = PA.Array
 type PArray = Small.SmallArray
@@ -228,15 +235,15 @@ makeTwo state1 leaf1 state2 val2
       | i1==i2 = One i1 (makeTwo state1' leaf1 state2' val2)
       | otherwise = -- trace ("MAKETWO (i1,i2)="++show(i1,i2)++"\n  state1="++show state1++"\n  state2="++show state2) $
                     if i1 < i2
-                       then Two (setBit (setBit 0 i1) i2) (Leaf (getBytes state1') val2) leaf1
-                       else Two (setBit (setBit 0 i1) i2) leaf1 (Leaf (getBytes state1') val2) 
+                       then Two (setBits [i1,i2]) (Leaf (getBytes state1') val2) leaf1
+                       else Two (setBits [i1,i2]) leaf1 (Leaf (getBytes state1') val2) 
    where (i1,state1') = nextBits "makeTwo1" state1
          (i2,state2') = nextBits ("makeTwo2 "++"\n  "++show state1++"\n  "++show state2) state2
 
 insert :: Key -> v -> HashMap v -> HashMap v
 insert bs v hashmap = insert' (initBitState bs) v hashmap            
 
-fromList :: Show v => [(Key,v)] -> HashMap v
+fromList :: [(Key,v)] -> HashMap v
 fromList ps = foldl' accum Empty ps
   where accum ans (k,v) = insert k v ans
 
@@ -297,11 +304,16 @@ twoE bmap x y = Two bmap x y
 ith :: Bitmap -> Int -> Int
 ith bmap i = (bitmapToList bmap !! i)
 
+
+-- | The first (smallest) Segment in a BitMap
+firstSeg :: Bitmap -> Segment
+firstSeg bmap = head(bitmapToList bmap)
+
 -- Float Empty's up over BitmpIndexed, Note that if the size of the arr
 -- becomes 2, then rebuild with Two rather than BitmapIndexed
 bitmapE :: Bitmap -> PArray (HashMap v) -> HashMap v
 bitmapE bmap arr | isize arr == 2 = twoE bmap (index arr 0) (index arr 1)
-bitmapE bmap arr = BitmapIndexed bmap arr
+bitmapE bmap arr = bitmapIndexedOrFull bmap arr
 
 -- ================================================================
 -- aggregation in ascending order of keys
@@ -345,31 +357,143 @@ lookupHM :: Key -> HashMap v -> Maybe v
 lookupHM bytes mp = lookup' (initBitState bytes) mp
 
 
-splitHashMap :: BitState -> HashMap v -> (HashMap v,Maybe v,HashMap v)
-splitHashMap _ Empty = (Empty,Nothing,Empty)
-splitHashMap (BitState [] _) x = (x,Nothing,Empty)
-splitHashMap (BitState (i:is) k) (One j x) = (One j a,b,One j c)
-   where (a,b,c) = splitHashMap (BitState is k) x
-splitHashMap (BitState (i:is) k) (BitmapIndexed bmap arr) =
-   let splitpoint = sparseIndex bmap (setBit 0 i)
-   in case splitBitmap bmap i of
-        (less,True,greater) ->
-          let (h1,mv,h2) = splitHashMap (BitState is k) (index arr splitpoint)
-              (arr1,arr2) = splitArrayAt arr splitpoint h1 h2
-              in (BitmapIndexed less arr1,mv,BitmapIndexed greater arr2)
-        (less,False,greater) -> undefined
+-- ==========================================================
+-- Split a HashMap into 3 parts
 
--- splitArrayAt :: PArray a -> Int -> a -> a -> (PArray a, PArray a)
+-- | return (smaller than 'key', has key?, greater than 'key')
+splitHashMap:: BitState -> HashMap v -> (HashMap v,Maybe v,HashMap v)
+splitHashMap (BitState [] _) hm = (hm,Nothing,Empty)
+splitHashMap (BitState (i:is) key) hm =
+  case splitBySegment i hm of
+    (less,x,greater) ->
+      case x of
+        Empty -> (build less,Nothing,build greater)
+        (Leaf k v) -> (build less,if key==k then (Just v) else Nothing,build greater)
+        other ->  (reconstruct i less less1,ans,reconstruct i greater greater1)
+          where (less1,ans,greater1) = splitHashMap (BitState is key) other
 
-{-
-splitHashMap (BitState (i:is) k) (Two bmap x y) =
-  case splitBitmap bmap i of
-    (0,True,greater) -> undefined
-    (less,True,0) -> undefined
-    (less,True,greater) -> undefined
-    (less,False,greater) -> undefined
--}    
+splitBySegment :: Segment -> HashMap v -> ([(Segment,HashMap v)],HashMap v, [(Segment,HashMap v)])
+splitBySegment i _x | i < 0 = ([],Empty,[])
+splitBySegment i _x | i > intSize =  ([],Empty,[])
+splitBySegment _ Empty = ([],Empty,[])
+splitBySegment _ (x@(Leaf _ _)) = ([],x,[])
+splitBySegment i (x@(One j y)) =
+   case compare i j of
+     LT -> ([],Empty,[(i,x)])
+     EQ -> ([],y,[])
+     GT -> ([(i,x)],Empty,[])
+splitBySegment i (Two bmap l h) = splitArrAtSeg i bmap (fromlist [l,h])
+splitBySegment i (BitmapIndexed bmap arr) = splitArrAtSeg i bmap arr
+splitBySegment i (Full arr) = splitArrAtSeg i fullNodeMask arr 
 
+-- | Split an PArray at a particular Segment.
+splitArrAtSeg:: Segment -> Bitmap -> PArray (HashMap v) -> ([(Int, HashMap v)], HashMap v, [(Int, HashMap v)])
+splitArrAtSeg i bmap arr = (takeWhile smaller ps, match, dropWhile tooSmall ps)
+    where ps = zip (bitmapToList bmap) (tolist arr)
+          smaller (j,_) = j < i
+          tooSmall (j,_) = j <= i
+          same (j,_) = i==j
+          match = case filter same ps of
+            [] -> Empty
+            ((_,x):_) -> x
+
+-- | reconstruct a HashMap from list of previous Segments, and a single HashMap from the next Segment 
+reconstruct :: Segment -> [(Segment, HashMap v)] -> HashMap v -> HashMap v
+reconstruct _ xs Empty = build xs
+reconstruct seg xs x = build (insertAscending (seg,x) xs)
+
+-- | insert a Segment pair in ascending order of Segments, Keep it sorted.
+insertAscending:: (Segment, HashMap v) -> [(Segment, HashMap v)] -> [(Segment, HashMap v)]
+insertAscending (i,x) [] = [(i,x)]
+insertAscending (i,x) (ws@((y@(j,_)):ys)) =
+  case compare i j of
+    LT -> (i,x):ws
+    GT -> y : insertAscending (i,x) ys
+    EQ -> (i,x):ys -- We know that the Segement i should never appear in the list
+
+-- | Build a HashMap out of a list of Segment pairs.
+build :: [(Segment, HashMap v)] -> HashMap v
+build [] = Empty
+build [(_,x)] = x
+build [(j,x),(k,y)] = Two (setBits [j,k]) x y
+build ps = bitmapIndexedOrFull (setBits (map fst ps)) (fromlist (map snd ps))
+
+
+testSplit2 :: Int -> IO ()
+testSplit2 i = putStrLn (unlines [show hm, " ",show pathx," ",show a, " ",show b, " ",show c])
+  where keys = makeKeys 99 1000
+        ps = zip (take 12 keys) [0..]
+        hm :: HashMap Int
+        hm = fromList ps
+        state@(BitState pathx _) = (initBitState (keys !! i))
+        (a,b,c) = splitHashMap state hm
+
+
+-- ===========================================================
+-- Maximum and Minimum Key
+
+-- | Get the smallest key, NOT the smallest value
+getMin :: HashMap v -> Maybe (Key,v)
+getMin Empty = Nothing
+getMin (Leaf k v) = Just (k,v)
+getMin (One _ x) = getMin x
+getMin (Two _ x _) = getMin x
+getMin (BitmapIndexed _ arr) = getMin (index arr 0)
+getMin (Full arr) = getMin (index arr 0)
+
+-- | Get the largest key, NOT the largest value
+getMax :: HashMap v -> Maybe (Key,v)
+getMax Empty = Nothing
+getMax (Leaf k v) = Just (k,v)
+getMax (One _ x) = getMax x
+getMax (Two _ _ y) = getMax y
+getMax (BitmapIndexed _ arr) = getMax (index arr (isize arr - 1))
+getMax (Full arr) = getMax (index arr (isize arr - 1))
+
+-- ==================================================
+
+-- | The (key,value) pairs (subset) of 'h1' where key is in the domain of both 'h1' and 'h2'
+intersect :: HashMap v -> HashMap v -> HashMap v
+intersect map1 map2 =
+   case next map1 map2 of
+     Nothing -> Empty
+     Just k -> leapfrog k map1 map2 Empty
+
+leapfrog :: Key -> HashMap v -> HashMap v -> HashMap v -> HashMap v
+leapfrog k x y ans =
+  case (lub k x,lub k y) of
+       (Just(k1,v1,h1),Just(k2,_,h2)) ->
+          case next h1 h2 of
+            Just k3 -> leapfrog k3 h1 h2 (if k1==k2 then insert k1 v1 ans else ans)
+            Nothing -> (if k1==k2 then insert k1 v1 ans else ans)
+       _ -> ans
+
+-- | Find the smallest key <= 'key', and a HashMap of everything bigger than 'key'
+lub :: Key -> HashMap v -> Maybe (Key, v, HashMap v)
+lub key hm =
+  case splitHashMap (initBitState key) hm of
+    (_,Just _,Empty) -> Nothing
+    (_,Just v,hm2) -> Just(key,v,hm2)
+    (_,Nothing,hm1) ->
+       case getMin hm1 of
+         Just (k,v) -> Just(k,v,hm1) 
+         Nothing -> Nothing
+
+next :: HashMap v1 -> HashMap v2 -> Maybe Key
+next x y = case (getMin x,getMin y) of
+            (Just (k1,_),Just (k2,_)) -> Just(max k1 k2)
+            _ -> Nothing
+
+testIntersect :: HashMap Int
+testIntersect = intersect h1x h2x
+
+h1x, h2x :: HashMap Int
+h1x = fromList [pairs !! 3,pairs !! 5, pairs !! 11, pairs !! 6, pairs !! 4]
+h2x = fromList [pairs !! 3,pairs !! 7, pairs !! 4, pairs !! 6, pairs !! 8] 
+-- =========================================================
+
+-- | Domain restrict 'hkm' to those Keys found in 's'. This algorithm
+--   assumes the set 's' is small compared to 'hm'.
 domainRestrict :: HashMap v -> Set Key -> HashMap v
 domainRestrict hm s = Set.foldl' accum Empty s
   where accum ans key =
@@ -377,10 +501,14 @@ domainRestrict hm s = Set.foldl' accum Empty s
             Nothing -> ans
             Just v -> insert key v ans
 
+hmdr :: HashMap Int
 hmdr = fromList (take 10 pairs)
+
+set:: Set Key
 set = Set.fromList [ bpairs !! 3, bpairs !! 8, bpairs !! 20]
 
--- ==========================
+-- ==========================================
+-- Operations on Bits and Bitmaps
 
 -- | Check if two the two arguments are the same value.  N.B. This
 -- function might give false negatives (due to GC moving objects.)
@@ -421,9 +549,10 @@ fullNodeMask = complement (complement 0 `unsafeShiftL` maxChildren)
 --         'present' is if 'i' is in the set 'bm'
 --         'set2' is all elements in 'bm' greater than 'i'
 splitBitmap :: Bitmap -> Int -> (Bitmap,Bool,Bitmap)
+splitBitmap bm 0 = (0,testBit bm 0, clearBit bm 0)
 splitBitmap bm i = (unsafeShiftR (unsafeShiftL bm (64-i)) (64-i)
                    ,testBit bm i
-                   ,unsafeShiftL (unsafeShiftR bm i) i)
+                   ,unsafeShiftL (unsafeShiftR bm (i+1)) (i+1))
 
 setBits :: [Int] -> Bitmap
 setBits xs = foldl' setBit 0 xs 
@@ -431,7 +560,6 @@ setBits xs = foldl' setBit 0 xs
 
 -- =======================================================================
 -- Operations to make new arrays out off old ones with small changes
-
 
 -- | /O(n)/ Make a copy of an Array that removes the 'i'th element. Decreasing the size by 1.
 remove :: ArrayPair arr marr a => arr a -> Int -> arr a
@@ -473,6 +601,7 @@ insertM ary idx b
 -- increasing its size by one.
 insertAt :: PArray e -> Int -> e -> PArray e
 insertAt arr idx b = runST(insertM arr idx b)
+{-# INLINE insertAt #-}
 
 -- | Create a new Array of size 'n' filled with objects 'a'
 arrayOf :: Int -> a -> PArray a
@@ -484,6 +613,15 @@ arrayOf n a =  runST $ do
   loop 0
   arr <- mfreeze marr
   pure arr
+{-# INLINE arrayOf #-}
+
+-- | Extract a slice from an array
+subarray :: ArrayPair arr2 marr a => Int -> Int -> arr2 a -> arr2 a
+subarray 0 hi arr | hi == (isize arr -1) = arr
+subarray lo hi arr = fst(withMutArray size action)
+  where size = max (hi - lo + 1) 0
+        action marr = mcopy marr 0 arr lo size
+{-# INLINE subarray #-}
 
 
 -- | Split an array into 2 partial copies, where a1 appears at the last index 
@@ -730,4 +868,5 @@ ppHashMap p (Full arr) = ppSexp "F" [ppList q (zip (bitmapToList fullNodeMask) (
 
 instance PrettyA v => Show (HashMap v) where
    show x = show(ppHashMap prettyA x)
+   showList xs x = unlines (map (\ y -> "\n"++ show(ppHashMap prettyA y)) xs) ++ x
 
