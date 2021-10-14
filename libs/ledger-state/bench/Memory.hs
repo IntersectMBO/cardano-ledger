@@ -15,14 +15,15 @@ main = do
       db = "/home/lehins/iohk/cardano-ledger-specs/ledger-state.sqlite" :: T.Text
   let cols = [Case, Max, MaxOS, Live, Allocated, GCs, Check]
   -- utxo <- loadBinUTxO fp
+  !_ <- foldUTxO nestedInsertHM' mempty db
   mainWith $ do
     setColumns cols
     -- action "loadLedgerState" $ do
     --   !_ <- loadLedgerState "/home/lehins/iohk/chain/mainnet/ledger-state.bin"
     --   pure ()
-    io "UTxO (Map TxIn ())" (foldUTxO (\ !m !(!k, _) -> Map.insert k () m) mempty) db
-    io "UTxO (IntMap (Map TxId ())" (foldUTxO nestedInsertTxId' mempty) db
-    -- io "UTxO (IntMap (HashMap TxId ())" (foldUTxO nestedInsertHM' mempty) db
+    -- io "UTxO (Map TxIn ())" (foldUTxO (\ !m !(!k, _) -> Map.insert k () m) mempty) db
+    -- io "UTxO (IntMap (Map TxId ())" (foldUTxO nestedInsertTxId' mempty) db
+    io "UTxO (IntMap (HashMap TxId ())" (foldUTxO nestedInsertHM' mempty) db
     -- io "UTxO (Map TxIn ())" (loadUTxO') fp
     -- io "UTxO (IntMap (Map TxId ())" loadUTxOni' fp
     -- io "UTxO (IntMap (HashMap TxId ())" loadUTxOhm' fp

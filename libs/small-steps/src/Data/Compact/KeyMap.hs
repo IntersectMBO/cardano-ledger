@@ -27,7 +27,7 @@ import Data.Bits
     zeroBits,
   )
 import Data.Compact.Class
---import GHC.Exts ((==#), reallyUnsafePtrEquality#, isTrue# )
+import GHC.Exts ((==#), reallyUnsafePtrEquality#, isTrue# )
 import qualified Data.Map as Map
 import Control.DeepSeq (NFData(..))
 import qualified Data.Primitive.SmallArray as Small
@@ -595,7 +595,7 @@ set = Set.fromList [ bpairs !! 3, bpairs !! 8, bpairs !! 20]
 -- | Check if two the two arguments are the same value.  N.B. This
 -- function might give false negatives (due to GC moving objects.)
 ptrEq :: a -> a -> Bool
-ptrEq _x _y = False --isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
+ptrEq x y = isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
 {-# INLINE ptrEq #-}
 
 bitsPerSubkey :: Int

@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 module Main where
 
@@ -53,6 +54,7 @@ main = do
               (long "help" <> short 'h' <> help "Display this message.")
         )
         (header "ledger-state - Tool for analyzing ledger state")
+  -- !_ <- foldUTxO nestedInsertHM' mempty "/home/lehins/iohk/cardano-ledger-specs/ledger-state.sqlite"
   forM_ (optsLedgerStateBinaryFile opts) $ \fp -> do
     ls <- loadLedgerState fp
     storeLedgerState "ledger-state.sqlite" ls
