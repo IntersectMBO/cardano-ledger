@@ -460,10 +460,6 @@ loadUTxOihm' fp = foldlUTxO fp nestedInsert KeyMap.Empty
       -> KeyMap.HashMap (IntMap.IntMap ())
     nestedInsert !hm (TxInCompact32 x1 x2 x3 x4 txIx, _) =
       let !key = KeyMap.Key x1 x2 x3 x4
-          f =
-            \case
-              Nothing -> Just $! KeyMap.Leaf key ()
-              Just hm -> Just $! KeyMap.insert key () hm
        in case KeyMap.lookupHM key hm of
             Nothing ->
               let !v = IntMap.singleton (fromIntegral txIx) ()

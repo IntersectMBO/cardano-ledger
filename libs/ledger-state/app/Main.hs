@@ -70,7 +70,7 @@ main = do
 
 observeMemoryOriginalMap fp = do
   ref <- newIORef Nothing
-  utxo <- loadUTxOhm' fp
+  utxo <- loadUTxOihm' fp
   utxo `seq` putStrLn "Loaded"
   performGC
   _ <- getChar
