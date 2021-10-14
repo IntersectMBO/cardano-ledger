@@ -121,12 +121,8 @@ initBitState key = BitState (path key) key
 getBytes :: BitState -> Key
 getBytes (BitState _ bs) = bs
 
--- | Consume the next segment from a path 
-nextBits :: String -> BitState -> (Int,BitState)
-nextBits _ (BitState (x:xs) key) = (x,BitState xs key)
-nextBits message (BitState [] key) =
-   error ("NextBits out of bounds. The key "++show key++" has run out of bits."++message)
- 
+-- | Make a new BitState from a Key, using the old BitState to figure out
+--   how far down the path have we already gone.
 next2 :: BitState -> Key -> BitState
 next2 (BitState ps _) key = (BitState (drop n (path key)) key)
    where n = (fromIntegral keyPathSize) - length ps 
@@ -178,67 +174,63 @@ instance HeapWords v => HeapWords (HashMap v) where
 -- ======================================================================
 -- Insertion
 
+indexFromSegment :: Bitmap -> Int -> Int
+indexFromSegment bmap j = sparseIndex bmap (setBit 0 j)
+
 insert' :: BitState -> v -> HashMap v -> HashMap v
 insert' bs0 v0 m0 = go bs0 v0 m0
   where
     go !state !x Empty = Leaf (getBytes state) x
-    go !state x (One j node) =
-        case (nextBits "One" state) of
-          (i,state1) ->
-            case compare j i of
-              EQ -> One j (go state1 x node)
-              LT -> Two (setBit (setBit 0 i) j) node (go state1 x Empty)
-              GT -> Two (setBit (setBit 0 i) j) (go state1 x Empty) node
+    go (BitState [] k) _ _ = error ("In insert', ran out of bits for key "++show k)
+    go (BitState (i:is) k) x (One j node) =
+       case compare j i of
+         EQ -> One j (go (BitState is k) x node)
+         LT -> Two (setBits [i,j]) node (go (BitState is k) x Empty)
+         GT -> Two (setBits [i,j]) (go (BitState is k) x Empty) node
     go state x t@(Leaf bs1 y)
       | getBytes state == bs1 = if x `ptrEq` y then t else (Leaf bs1 x)
       | otherwise =  makeTwo state t (next2 state bs1) x
-    go state x t@(BitmapIndexed bmap arr)
-        | not(testBit bmap tagbits) =
-            let !arr' = insertAt arr i $! (Leaf (getBytes state) x)
-            in bitmapIndexedOrFull (bmap .|. m) arr'
+    go (BitState (j:js) k)  x t@(BitmapIndexed bmap arr)
+        | not(testBit bmap j) =
+            let !arr' = insertAt arr i $! (Leaf k x)
+            in bitmapIndexedOrFull (bmap .|. (setBit 0 j)) arr'
         | otherwise = 
             let !st = index arr i
-                !st' = go state1 x st
+                !st' = go (BitState js k) x st
             in if st' `ptrEq` st
                   then t
                   else BitmapIndexed bmap (update arr i st') 
-       where (!tagbits,!state1) = nextBits "BitmapIndexed" state
-             m = setBit 0 tagbits
-             i = sparseIndex bmap m
-    go state x t@(Two bmap x0 x1)
-        | not(testBit bmap tagbits) =
-            let !arr' = insertAt (fromlist [x0,x1]) i $! (Leaf (getBytes state) x)
-            in bitmapIndexedOrFull (bmap .|. m) arr'
+       where i = indexFromSegment bmap j
+    go (BitState (j:js) k) x t@(Two bmap x0 x1)
+        | not(testBit bmap j) =
+            let !arr' = insertAt (fromlist [x0,x1]) i $! (Leaf k x)
+            in bitmapIndexedOrFull (bmap .|. (setBit 0 j)) arr'
         | otherwise =
-            let !st = if i==0 then x0 else x1 -- index arr i
-                !st' = go state1 x st
+            let !st = if i==0 then x0 else x1  
+                !st' = go (BitState js k) x st
             in if st' `ptrEq` st
                   then t
                   else if i==0
                           then Two bmap st' x1
                           else Two bmap x0 st'
-       where (!tagbits,!state1) = nextBits "Two" state
-             m = setBit 0 tagbits
-             i = sparseIndex bmap m
-    go state x t@(Full arr) =
+       where i = indexFromSegment bmap j
+    go (BitState (j:js) k) x t@(Full arr) =
         let !st = index arr i
-            !st' = go state1 x st
+            !st' = go (BitState js k) x st
         in if st' `ptrEq` st
               then t
               else Full (update arr i st') 
-       where (!tagbits,!state1) = nextBits "Full" state
-             m = setBit 0 tagbits
-             i = sparseIndex fullNodeMask m
+       where i = indexFromSegment fullNodeMask j
 
 makeTwo :: BitState -> HashMap v -> BitState -> v -> HashMap v
-makeTwo state1 leaf1 state2 val2 
-      | i1==i2 = One i1 (makeTwo state1' leaf1 state2' val2)
-      | otherwise = -- trace ("MAKETWO (i1,i2)="++show(i1,i2)++"\n  state1="++show state1++"\n  state2="++show state2) $
-                    if i1 < i2
-                       then Two (setBits [i1,i2]) (Leaf (getBytes state1') val2) leaf1
-                       else Two (setBits [i1,i2]) leaf1 (Leaf (getBytes state1') val2) 
-   where (i1,state1') = nextBits "makeTwo1" state1
-         (i2,state2') = nextBits ("makeTwo2 "++"\n  "++show state1++"\n  "++show state2) state2
+makeTwo (BitState [] k) _leaf _state _val = error ("Case 1. In makeTwo, out of bits for key "++show k)
+makeTwo _state _leaf (BitState [] k) _val = error ("Case 2. In makeTwo, out of bits for key "++show k)
+makeTwo (BitState (i:is) k1) leaf1 (BitState (j:js) k2) val2 
+      | i==j = One i (makeTwo (BitState is k1) leaf1 (BitState js k2) val2)
+      | otherwise = if i < j
+                       then Two (setBits [i,j]) (Leaf k1 val2) leaf1
+                       else Two (setBits [i,j]) leaf1 (Leaf k1 val2) 
+ 
 
 insert :: Key -> v -> HashMap v -> HashMap v
 insert bs v hashmap = insert' (initBitState bs) v hashmap            
@@ -335,23 +327,17 @@ foldWithKey accum ans0 (Full arr) = loop ans0 0
 -- ==================================================================
 -- Lookup a key 
 
-indexFromStateAndBitmap :: BitState -> Bitmap -> (BitState,Int)
-indexFromStateAndBitmap state bmap = (state1,sparseIndex bmap m)
-   where  (!bs,!state1) = nextBits "indexFromStateAndBitmap" state
-          m = setBit 0 bs
-
-
 lookup' :: BitState -> HashMap v -> Maybe v
 lookup' _ Empty = Nothing
 lookup' state (Leaf bs v) = if (getBytes state)==bs then Just v else Nothing
-lookup' state (One i x) = if i==j then lookup' state' x else Nothing
-  where (j,state') = nextBits "ONE in lookup" state
-lookup' state (Two bm x0 x1) = if i==0 then lookup' state' x0 else lookup' state' x1
-  where (state',i) = indexFromStateAndBitmap state bm
-lookup' state (BitmapIndexed bm arr) = lookup' state' (index arr i)
-  where (state',i) = indexFromStateAndBitmap state bm
-lookup' state (Full arr) = lookup' state' (index arr i)
-  where (state',i) = indexFromStateAndBitmap state fullNodeMask    
+lookup' (BitState [] k) _ = error ("lookup', out of bits for key "++show k)
+lookup' (BitState (j:js) k) (One i x) = if i==j then lookup' (BitState js k) x else Nothing
+lookup' (BitState (j:js) k) (Two bm x0 x1) = if i==0 then lookup' (BitState js k) x0 else lookup' (BitState js k) x1
+  where i = indexFromSegment bm j
+lookup' (BitState (j:js) k) (BitmapIndexed bm arr) = lookup' (BitState js k) (index arr i)
+  where i = indexFromSegment bm j
+lookup'  (BitState (j:js) k) (Full arr) = lookup'  (BitState js k) (index arr i)
+  where i = indexFromSegment fullNodeMask j
 
 lookupHM :: Key -> HashMap v -> Maybe v
 lookupHM bytes mp = lookup' (initBitState bytes) mp
