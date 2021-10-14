@@ -121,7 +121,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Init
     nonce0,
     ppEx,
   )
-import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makePulser)
+import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser)
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -773,7 +773,7 @@ pulserEx9 ::
   PParams era ->
   PulsingRewUpdate (Crypto era)
 pulserEx9 pp =
-  makePulser
+  makeCompletedPulser
     ( BlocksMade $
         Map.fromList
           [(hk Cast.alicePoolKeys, 2), (hk Cast.bobPoolKeys, 1)]

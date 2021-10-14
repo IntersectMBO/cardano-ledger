@@ -102,6 +102,18 @@ instance
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
+-- | The Goldilocks labeling of when to do the reward calculation.
+data RewardTiming = RewardsTooEarly | RewardsJustRight | RewardsTooLate
+
+determineRewardTiming :: SlotNo -> SlotNo -> SlotNo -> RewardTiming
+determineRewardTiming currentSlot startAftterSlot endSlot =
+  if currentSlot > endSlot
+    then RewardsTooLate
+    else
+      if currentSlot <= startAftterSlot
+        then RewardsTooEarly
+        else RewardsJustRight
+
 rupdTransition ::
   ( Era era,
     HasField "_a0" (Core.PParams era) NonNegativeInterval,
@@ -114,7 +126,7 @@ rupdTransition ::
   TransitionRule (RUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
-  (slotsPerEpoch, slot, maxLL, asc, k) <- liftSTS $ do
+  (slotsPerEpoch, slot, slotForce, maxLL, asc, k) <- liftSTS $ do
     ei <- asks epochInfo
     sr <- asks randomnessStabilisationWindow
     e <- epochInfoEpoch ei s
@@ -123,14 +135,21 @@ rupdTransition = do
     maxLL <- asks maxLovelaceSupply
     asc <- asks activeSlotCoeff
     k <- asks securityParameter -- Maximum number of blocks we are allowed to roll back
-    return (slotsPerEpoch, slot, maxLL, asc, k)
+    return (slotsPerEpoch, slot, (slot +* Duration sr), maxLL, asc, k)
   let maxsupply = Coin (fromIntegral maxLL)
-  case s <= slot of
+  case determineRewardTiming s slot slotForce of
     -- Waiting for the stabiliy point, do nothing, keep waiting
-    True -> pure SNothing
+    RewardsTooEarly -> pure SNothing
     -- More blocks to come, get things started or take a step
-    False ->
+    RewardsJustRight ->
       case ru of
         SNothing -> liftSTS $ runProvM $ pure $ SJust $ fst $ startStep slotsPerEpoch b es maxsupply asc k
         (SJust p@(Pulsing _ _)) -> liftSTS $ runProvM $ (SJust <$> pulseStep p)
         (SJust p@(Complete _)) -> pure (SJust p)
+    -- Time to force the completion of the pulser so that downstream tools such as db-sync
+    -- have time to see the reward update before the epoch boundary rollover.
+    RewardsTooLate ->
+      case ru of
+        SNothing -> SJust <$> (liftSTS . runProvM . completeStep . fst $ startStep slotsPerEpoch b es maxsupply asc k)
+        SJust p@(Pulsing _ _) -> SJust <$> (liftSTS . runProvM . completeStep $ p)
+        complete@(SJust (Complete _)) -> pure complete
