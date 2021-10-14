@@ -1,7 +1,9 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Main where
 
 import Cardano.Ledger.State.Massiv
 import Cardano.Ledger.State.UTxO
+import Cardano.Ledger.State.Query
 import Control.Monad
 import Data.IORef
 import Options.Applicative
@@ -53,7 +55,9 @@ main = do
         (header "ledger-state - Tool for analyzing ledger state")
   forM_ (optsLedgerStateBinaryFile opts) $ \fp -> do
     ls <- loadLedgerState fp
-    printNewEpochStateStats $ countNewEpochStateStats ls
+    storeLedgerState "ledger-state.sqlite" ls
+    -- nes <- loadNewEpochState fp
+    -- printNewEpochStateStats $ countNewEpochStateStats ls
   forM_ (optsUtxoJsonFile opts) $ \fp -> do
     _ <- observeMemoryOriginalMap fp
     pure ()
@@ -73,14 +77,13 @@ observeMemoryOriginalMap fp = do
   writeIORef ref $ Just utxo -- ensure utxo doesn't get GCed
   pure ref
 
-observeMemory :: FilePath -> IO (IORef (Maybe UTxOs))
+--observeMemory :: FilePath -> IO (IORef (Maybe UTxOs))
 observeMemory fp = do
   ref <- newIORef Nothing
   utxo <- loadMassivUTxO fp
   utxo `seq` putStrLn "Loaded"
   performGC
   _ <- getChar
-  printStats utxo
   writeIORef ref $ Just utxo -- ensure utxo doesn't get GCed
   pure ref
 

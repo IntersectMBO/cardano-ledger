@@ -44,15 +44,18 @@ common project-config
                     , deepseq
                     , persistent
                     , persistent-sqlite
+                    , persistent-template
                     , prettyprinter
                     , strict-containers
                     , small-steps
                     , text
+                    , transformers
                     , optparse-applicative
                     , heapsize
                     , massiv >= 1.0
                     , unordered-containers
                     , hashable
+                    , monad-logger
 
   ghc-options:        -Wall
                       -Wcompat
@@ -65,8 +68,10 @@ library
   import:             base, project-config
   exposed-modules:    Cardano.Ledger.State
                     , Cardano.Ledger.State.UTxO
+                    , Cardano.Ledger.State.Orphans
                     , Cardano.Ledger.State.Massiv
                     , Cardano.Ledger.State.Schema
+                    , Cardano.Ledger.State.Query
   hs-source-dirs:     src
 
 executable ledger-state
@@ -90,6 +95,8 @@ benchmark weigh
   build-depends:  base
                 , weigh
                 , ledger-state
+                , containers
+                , text
   ghc-options:   -Wall
                  -O2
                  -threaded
