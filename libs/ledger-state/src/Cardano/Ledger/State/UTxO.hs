@@ -307,18 +307,22 @@ skipSpace = Atto.skipWhile $ \w -> w == 0x20 || w == 0x0a || w == 0x0d || w == 0
 
 --- Loading
 
-loadLedgerState :: FilePath -> IO (NewEpochState CurrentEra)
-loadLedgerState fp =
+loadNewEpochState :: FilePath -> IO (NewEpochState CurrentEra)
+loadNewEpochState fp =
   LBS.readFile fp <&> deserialiseFromBytes fromCBOR >>= \case
     Left exc -> throwIO exc
-    Right (extra, ledgerState) -> do
+    Right (extra, newEpochState) -> do
       unless (LBS.null extra) $
         putStrLn $
           "Unexpected leftover: "
             <> case LBS.splitAt 50 extra of
               (_, "") -> show extra
               (extraCut, _) -> show (extraCut <> "...")
-      pure ledgerState
+      pure newEpochState
+
+loadLedgerState :: FilePath -> IO (LedgerState CurrentEra)
+loadLedgerState fp = esLState . nesEs <$> loadNewEpochState fp
+
 
 consumeUTxO :: FilePath -> ConduitT (TxIn C, Alonzo.TxOut CurrentEra) Void IO b -> IO b
 consumeUTxO fp sink = do
@@ -431,19 +435,20 @@ toIntMapMap' :: UTxO CurrentEra -> (IntMap.IntMap (Map.Map (TxId C) ()))
 toIntMapMap' = Map.foldlWithKey' (\m k a -> nestedInsertTxId' m (k, a)) mempty . unUTxO
 
 loadUTxOhm' :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap ()))
-loadUTxOhm' fp = foldlUTxO fp nestedInsert mempty
-  where
-    nestedInsert ::
-         IntMap.IntMap (KeyMap.HashMap ())
-      -> (TxIn C, Alonzo.TxOut CurrentEra)
-      -> IntMap.IntMap (KeyMap.HashMap ())
-    nestedInsert !m (TxInCompact32 x1 x2 x3 x4 txIx, _) =
-      let !key = KeyMap.Key x1 x2 x3 x4
-          f =
-            \case
-              Nothing -> Just $! KeyMap.Leaf key ()
-              Just hm -> Just $! KeyMap.insert key () hm
-       in IntMap.alter f (fromIntegral txIx) m
+loadUTxOhm' fp = foldlUTxO fp nestedInsertHM' mempty
+
+
+nestedInsertHM' ::
+     IntMap.IntMap (KeyMap.HashMap ())
+  -> (TxIn C, Alonzo.TxOut CurrentEra)
+  -> IntMap.IntMap (KeyMap.HashMap ())
+nestedInsertHM' !m (TxInCompact32 x1 x2 x3 x4 txIx, _) =
+  let !key = KeyMap.Key x1 x2 x3 x4
+      f =
+        \case
+          Nothing -> Just $! KeyMap.Leaf key ()
+          Just hm -> Just $! KeyMap.insert key () hm
+   in IntMap.alter f (fromIntegral txIx) m
 
 
 loadUTxOihm' :: FilePath -> IO (KeyMap.HashMap (IntMap.IntMap ()))
@@ -475,7 +480,7 @@ collectStatsFromJSON fp = consumeUTxO fp collectStats
 
 loadBinUTxO :: FilePath -> IO (UTxO CurrentEra)
 loadBinUTxO fp = do
-  ls <- loadLedgerState fp
+  ls <- loadNewEpochState fp
   pure $! _utxo $ _utxoState $ esLState $ nesEs ls
   -- runConduit $ C.sourceList (Map.toList u) .| collectStats
 
