@@ -365,13 +365,13 @@ loadUTxOni fp = foldlUTxO fp nestedInsert mempty
               Just !m -> Just $! Map.insert txId v m
        in IntMap.alter f (fromIntegral txIx) im
 
-loadUTxOhm :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra)))
+loadUTxOhm :: FilePath -> IO (IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra)))
 loadUTxOhm fp = foldlUTxO fp nestedInsert mempty
   where
     nestedInsert ::
-         IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra))
+         IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
       -> (TxIn C, Alonzo.TxOut CurrentEra)
-      -> IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra))
+      -> IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
     nestedInsert !m (TxInCompact32 x1 x2 x3 x4 txIx, !v) =
       let !key = KeyMap.Key x1 x2 x3 x4
           f =
@@ -434,14 +434,14 @@ nestedInsertTxId' !im (TxIn !txId !txIx, _) =
 toIntMapMap' :: UTxO CurrentEra -> (IntMap.IntMap (Map.Map (TxId C) ()))
 toIntMapMap' = Map.foldlWithKey' (\m k a -> nestedInsertTxId' m (k, a)) mempty . unUTxO
 
-loadUTxOhm' :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap ()))
+loadUTxOhm' :: FilePath -> IO (IntMap.IntMap (KeyMap.KeyMap ()))
 loadUTxOhm' fp = foldlUTxO fp nestedInsertHM' mempty
 
 
 nestedInsertHM' ::
-     IntMap.IntMap (KeyMap.HashMap ())
+     IntMap.IntMap (KeyMap.KeyMap ())
   -> (TxIn C, Alonzo.TxOut CurrentEra)
-  -> IntMap.IntMap (KeyMap.HashMap ())
+  -> IntMap.IntMap (KeyMap.KeyMap ())
 nestedInsertHM' !m (TxInCompact32 x1 x2 x3 x4 txIx, _) =
   let !key = KeyMap.Key x1 x2 x3 x4
       f =
@@ -451,13 +451,13 @@ nestedInsertHM' !m (TxInCompact32 x1 x2 x3 x4 txIx, _) =
    in IntMap.alter f (fromIntegral txIx) m
 
 
-loadUTxOihm' :: FilePath -> IO (KeyMap.HashMap (IntMap.IntMap ()))
+loadUTxOihm' :: FilePath -> IO (KeyMap.KeyMap (IntMap.IntMap ()))
 loadUTxOihm' fp = foldlUTxO fp nestedInsert KeyMap.Empty
   where
     nestedInsert ::
-         KeyMap.HashMap (IntMap.IntMap ())
+         KeyMap.KeyMap (IntMap.IntMap ())
       -> (TxIn C, Alonzo.TxOut CurrentEra)
-      -> KeyMap.HashMap (IntMap.IntMap ())
+      -> KeyMap.KeyMap (IntMap.IntMap ())
     nestedInsert !hm (TxInCompact32 x1 x2 x3 x4 txIx, _) =
       let !key = KeyMap.Key x1 x2 x3 x4
        in case KeyMap.lookupHM key hm of
