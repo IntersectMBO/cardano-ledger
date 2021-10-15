@@ -209,6 +209,15 @@ mToList first marr = loop first []
         loop lo xs | lo > hi = pure(reverse xs)
         loop lo xs = do {x <- mindex marr lo; loop (lo+1) (x:xs)}
 
+
+-- | Extract a slice from an array
+slice :: ArrayPair arr2 marr a => Int -> Int -> arr2 a -> arr2 a
+slice 0 hi arr | hi == (isize arr -1) = arr
+slice lo hi arr = fst(withMutArray size action)
+  where size = max (hi - lo + 1) 0
+        action marr = mcopy marr 0 arr lo size
+{-# INLINE slice #-}
+
 -- ================================================================
 -- Functions for using mutable initialization in a safe manner.
 -- Using these functions is the safe way to use the method 'mfreeze'
