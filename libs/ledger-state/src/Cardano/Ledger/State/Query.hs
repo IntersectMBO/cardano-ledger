@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -8,6 +9,7 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.State.Schema
+import Cardano.Ledger.State.Transform
 import Cardano.Ledger.State.UTxO
 import qualified Cardano.Ledger.TxIn as TxIn
 import Conduit
@@ -71,6 +73,59 @@ foldUTxO ::
   -> Text -- ^ Path to Sqlite db
   -> m a
 foldUTxO f m fp = runSqlite fp (runConduit (sourceUTxO .| foldlC f m))
+
+getLedgerState ::
+     MonadIO m
+  => Shelley.UTxO CurrentEra
+  -> ReaderT SqlBackend m (Shelley.LedgerState CurrentEra)
+getLedgerState u = do
+  Entity _ LedgerState {..} <- Prelude.head <$> selectList [] []
+  UtxoState {..} <- getJust ledgerStateUtxo
+  pure
+    Shelley.LedgerState
+      { Shelley._utxoState =
+          Shelley.UTxOState
+            { Shelley._utxo = u
+            , Shelley._deposited = utxoStateDeposited
+            , Shelley._fees = utxoStateFees
+            , Shelley._ppups = utxoStatePpups
+            }
+      , Shelley._delegationState =
+          Shelley.DPState
+            { Shelley._dstate = ledgerStateDstate
+            , Shelley._pstate = ledgerStatePstate
+            }
+      }
+
+loadClassicLedgerState ::
+     MonadUnliftIO m => Text -> m (Shelley.LedgerState CurrentEra)
+loadClassicLedgerState fp =
+  runSqlite fp $ do
+    m <-
+      runConduit
+        (sourceUTxO .| foldlC (\ !m !(!k, !v) -> Map.insert k v m) mempty)
+    ls <- getLedgerState $ Shelley.UTxO m
+    pure ls
+
+loadSharedLedgerState ::
+     MonadUnliftIO m
+  => Text
+  -> m (Shelley.LedgerState CurrentEra, Map.Map (TxIn.TxIn C) TxOut')
+loadSharedLedgerState fp =
+  runSqlite fp $ do
+    ls <- getLedgerState $ Shelley.UTxO mempty
+    let stakeCredentials =
+          Shelley._rewards $ Shelley._dstate $ Shelley._delegationState ls
+    m <-
+      runConduit
+        (sourceUTxO .|
+         foldlC
+           (\ !m !(!k, !v) ->
+              let !v' = toTxOut' stakeCredentials v
+               in Map.insert k v' m)
+           mempty)
+    pure (ls, m)
+
 
 storeLedgerState ::
      MonadUnliftIO m => Text -> Shelley.LedgerState CurrentEra -> m ()

@@ -203,4 +203,3 @@ package small-steps-test
 
 package small-steps
   ghc-options: -Werror
-

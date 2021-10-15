@@ -356,9 +356,13 @@ txIdNestedInsert !m (TxIn !txId !txIx, !v) =
    in Map.insertWith (<>) txId e m
 
 loadUTxOni :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) (Alonzo.TxOut CurrentEra)))
-loadUTxOni fp = foldlUTxO fp nestedInsert mempty
-  where
-    nestedInsert !im (TxIn !txId !txIx, !v) =
+loadUTxOni fp = foldlUTxO fp nestedInsertTxId mempty
+
+nestedInsertTxId ::
+     IntMap.IntMap (Map.Map (TxId C) a)
+  -> (TxIn C, a)
+  -> IntMap.IntMap (Map.Map (TxId C) a)
+nestedInsertTxId !im (TxIn !txId !txIx, !v) =
       let f =
             \case
               Nothing -> Just $! Map.singleton txId v
@@ -418,21 +422,7 @@ loadUTxO' :: FilePath -> IO (Map.Map (TxIn C) ())
 loadUTxO' fp = foldlUTxO fp (\ !m !(!k, _) -> Map.insert k () m) mempty
 
 loadUTxOni' :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) ()))
-loadUTxOni' fp = foldlUTxO fp nestedInsertTxId' mempty
-
-nestedInsertTxId' ::
-     (IntMap.IntMap (Map.Map (TxId C) ()))
-  -> (TxIn C, Alonzo.TxOut CurrentEra)
-  -> (IntMap.IntMap (Map.Map (TxId C) ()))
-nestedInsertTxId' !im (TxIn !txId !txIx, _) =
-  let f =
-        \case
-          Nothing -> Just $! Map.singleton txId ()
-          Just !m -> Just $! Map.insert txId () m
-   in IntMap.alter f (fromIntegral txIx) im
-
-toIntMapMap' :: UTxO CurrentEra -> (IntMap.IntMap (Map.Map (TxId C) ()))
-toIntMapMap' = Map.foldlWithKey' (\m k a -> nestedInsertTxId' m (k, a)) mempty . unUTxO
+loadUTxOni' fp = foldlUTxO fp (\m txin -> nestedInsertTxId m (() <$ txin)) mempty
 
 loadUTxOhm' :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap ()))
 loadUTxOhm' fp = foldlUTxO fp nestedInsertHM' mempty

@@ -1,10 +1,13 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.State.Orphans where
 
+import Control.DeepSeq
 import Cardano.Binary
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Alonzo.TxBody
@@ -46,6 +49,11 @@ instance PersistField Coin where
 
 instance PersistFieldSql Coin where
   sqlType _ = SqlInt64
+
+instance NFData (TxOut CurrentEra) where
+  rnf = \case
+    TxOutCompact _ _ -> ()
+    TxOutCompactDH _ _ _ -> ()
 
 instance PersistField (TxOut CurrentEra) where
   toPersistValue = PersistByteString . serialize'
