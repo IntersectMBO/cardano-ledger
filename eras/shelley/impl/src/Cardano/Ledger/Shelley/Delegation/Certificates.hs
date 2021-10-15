@@ -39,6 +39,7 @@ where
 
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import qualified Cardano.Ledger.PoolDistr as PD
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -50,7 +51,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     StakeCreds (..),
   )
-import qualified Cardano.Protocol.TPraos as TP
 
 -- | Determine the certificate author
 delegCWitness :: DelegCert crypto -> Credential 'Staking crypto
@@ -117,10 +117,10 @@ requiresVKeyWitness _ = True
 
 -- Deprecated
 
-{-# DEPRECATED PoolDistr "Import from Cardano.Protocol.TPraos instead" #-}
+{-# DEPRECATED PoolDistr "Import from Cardano.Ledger.PoolDistr instead" #-}
 
-type PoolDistr = TP.PoolDistr
+type PoolDistr = PD.PoolDistr
 
-{-# DEPRECATED IndividualPoolStake "Import from Cardano.Protocol.TPraos instead" #-}
+{-# DEPRECATED IndividualPoolStake "Import from Cardano.Ledger.PoolDistr instead" #-}
 
-type IndividualPoolStake = TP.IndividualPoolStake
+type IndividualPoolStake = PD.IndividualPoolStake

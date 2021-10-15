@@ -67,7 +67,6 @@ library
     groups,
     mtl,
     nothunks,
-    prettyprinter,
     primitive,
     cardano-ledger-shelley,
     small-steps,

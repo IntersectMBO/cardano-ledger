@@ -43,9 +43,9 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     VRFSignable,
   )
+import Cardano.Ledger.PoolDistr (PoolDistr)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Slot (BlockNo, SlotNo)
-import Cardano.Protocol.TPraos (PoolDistr)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (..),

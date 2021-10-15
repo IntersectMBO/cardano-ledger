@@ -17,6 +17,7 @@ module Test.Cardano.Ledger.Shelley.Rules.TestDeleg
   )
 where
 
+import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Coin (addDeltaCoin, pattern Coin)
 import qualified Cardano.Ledger.Core as Core (PParams)
 import Cardano.Ledger.Shelley.API (DELEG)
@@ -25,7 +26,6 @@ import Cardano.Ledger.Shelley.LedgerState
   ( DState (..),
     InstantaneousRewards (..),
   )
-import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),

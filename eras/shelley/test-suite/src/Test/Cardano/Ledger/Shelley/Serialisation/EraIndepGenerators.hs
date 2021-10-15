@@ -60,6 +60,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript)
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody (..))
@@ -101,7 +102,6 @@ import qualified Cardano.Ledger.Shelley.Rules.Pool as STS
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as STS
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as STS
 import Cardano.Ledger.Shelley.Tx (WitnessSetHKD (WitnessSet), hashScript)
-import Cardano.Protocol.TPraos (IndividualPoolStake (..))
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as STS
 import Cardano.Slotting.Block (BlockNo (..))

@@ -22,8 +22,6 @@ module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
     Script (TimelockScript, PlutusScript),
     txscriptfee,
-    ppTag,
-    ppScript,
     isPlutusScript,
     pointWiseExUnits,
 
@@ -33,9 +31,6 @@ module Cardano.Ledger.Alonzo.Scripts
     Prices (..),
     hashCostModel,
     validateCostModelParams,
-    ppExUnits,
-    ppCostModel,
-    ppPrices,
     decodeCostModelMap,
     decodeCostModel,
 
@@ -53,19 +48,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript (hashScript))
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppInteger,
-    ppMap,
-    ppNatural,
-    ppRational,
-    ppRecord,
-    ppScriptHash,
-    ppSexp,
-    ppString,
-    text,
-  )
 import Cardano.Ledger.SafeHash
   ( HashWithCrypto (..),
     SafeHash,
@@ -95,7 +77,6 @@ import qualified Plutus.V1.Ledger.Examples as Plutus
     alwaysSucceedingNAryFunction,
   )
 import Plutus.V2.Ledger.Api as PV2 hiding (Map, Script)
-import qualified Prettyprinter as PP
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -370,39 +351,3 @@ instance
       decodeScript 1 = Ann (SumD $ PlutusScript PlutusV1) <*! Ann From
       decodeScript 2 = Ann (SumD $ PlutusScript PlutusV2) <*! Ann From
       decodeScript n = Invalid n
-
--- ============================================================
--- Pretty printing versions
-
-ppTag :: Tag -> PDoc
-ppTag x = ppString (show x)
-
-instance PrettyA Tag where prettyA = ppTag
-
-ppScript :: forall era. (ValidateScript era, Core.Script era ~ Script era) => Script era -> PDoc
-ppScript s@(PlutusScript v _) = ppString ("PlutusScript " <> show v <> " ") PP.<+> ppScriptHash (hashScript @era s)
-ppScript (TimelockScript x) = ppTimelock x
-
-instance (ValidateScript era, Core.Script era ~ Script era) => PrettyA (Script era) where prettyA = ppScript
-
-ppExUnits :: ExUnits -> PDoc
-ppExUnits (ExUnits mem step) =
-  ppRecord "ExUnits" [("memory", ppNatural mem), ("steps", ppNatural step)]
-
-instance PrettyA ExUnits where prettyA = ppExUnits
-
-ppCostModel :: CostModel -> PDoc
-ppCostModel (CostModel m) =
-  ppSexp "CostModel" [ppMap text ppInteger m]
-
-instance PrettyA CostModel where prettyA = ppCostModel
-
-ppPrices :: Prices -> PDoc
-ppPrices Prices {prMem, prSteps} =
-  ppRecord
-    "Prices"
-    [ ("prMem", ppRational $ unboundRational prMem),
-      ("prSteps", ppRational $ unboundRational prSteps)
-    ]
-
-instance PrettyA Prices where prettyA = ppPrices

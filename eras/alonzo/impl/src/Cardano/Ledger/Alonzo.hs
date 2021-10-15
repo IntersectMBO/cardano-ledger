@@ -50,6 +50,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as EraModule
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
 import qualified Cardano.Ledger.Mary.Value as V (Value)
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Rules.ValidationMode
   ( applySTSNonStatic,
   )
@@ -85,7 +86,6 @@ import Cardano.Ledger.Shelley.UTxO (balance)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
-import Cardano.Protocol.TPraos (PoolDistr (..))
 import qualified Cardano.Protocol.TPraos.Rules.OCert as Shelley
 import qualified Cardano.Protocol.TPraos.Rules.Overlay as Shelley
 import Control.Arrow (left)

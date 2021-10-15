@@ -6,7 +6,6 @@
 module Cardano.Ledger.Alonzo.Language where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord64)
-import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppString)
 import Control.DeepSeq (NFData (..))
 import Data.Ix (Ix)
 import qualified Data.Set as Set
@@ -40,11 +39,3 @@ instance FromCBOR Language where
 
 nonNativeLanguages :: Set.Set Language
 nonNativeLanguages = Set.fromList [minBound .. maxBound]
-
--- ==================================
-
-ppLanguage :: Language -> PDoc
-ppLanguage PlutusV1 = ppString "PlutusV1"
-ppLanguage PlutusV2 = ppString "PlutusV2"
-
-instance PrettyA Language where prettyA = ppLanguage

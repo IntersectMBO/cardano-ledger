@@ -11,7 +11,7 @@ module Cardano.Ledger.Shelley.HardForks
   )
 where
 
-import Cardano.Ledger.Shelley.PParams (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import GHC.Records
 import Numeric.Natural (Natural)
 

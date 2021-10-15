@@ -32,18 +32,12 @@ import Cardano.Binary
   )
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), ppTx, segwitTx)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), segwitTx)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (Hash)
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (prettyA),
-    ppSexp,
-    ppStrictSeq,
-  )
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
 import Cardano.Ledger.Serialization
   ( ToCBORGroup (..),
@@ -130,6 +124,8 @@ pattern TxSeq xs <-
               txSeqIsValidBytes =
                 serializeEncoding $ encodeFoldable $ nonValidatingIndices txns
             }
+
+{-# COMPLETE TxSeq #-}
 
 deriving via
   AllowThunksIn
@@ -288,27 +284,3 @@ alignedValidFlags = alignedValidFlags' (-1)
       Seq.replicate (x - prev - 1) (IsValid True)
         Seq.>< IsValid False
         Seq.<| alignedValidFlags' x (n - (x - prev)) xs
-
--- =======================================
--- Pretty instances
-
-ppTxSeq ::
-  ( PrettyA (Core.Script era),
-    Era era,
-    PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.TxBody era)
-  ) =>
-  TxSeq era ->
-  PDoc
-ppTxSeq (TxSeq' xs _ _ _ _) =
-  ppSexp "Alonzo TxSeq" [ppStrictSeq ppTx xs]
-
-instance
-  ( PrettyA (Core.Script era),
-    Era era,
-    PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.TxBody era)
-  ) =>
-  PrettyA (TxSeq era)
-  where
-  prettyA = ppTxSeq

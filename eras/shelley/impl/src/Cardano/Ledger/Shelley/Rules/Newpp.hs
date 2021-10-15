@@ -16,7 +16,7 @@ module Cardano.Ledger.Shelley.Rules.Newpp
   )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe)
+import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -35,7 +35,6 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.PParams
   ( ProposedPPUpdates (..),
-    ProtVer,
     emptyPPPUpdates,
   )
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))

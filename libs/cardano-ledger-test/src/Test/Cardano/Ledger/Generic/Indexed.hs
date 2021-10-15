@@ -29,6 +29,8 @@ import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.Pretty (PrettyA (..), ppPair, ppString)
+import Cardano.Ledger.Pretty.Alonzo ()
+import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Scripts (MultiSig)
 import qualified Cardano.Ledger.Shelley.Scripts as Multi

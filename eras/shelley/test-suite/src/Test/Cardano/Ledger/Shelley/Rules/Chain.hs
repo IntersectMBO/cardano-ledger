@@ -27,14 +27,7 @@ module Test.Cardano.Ledger.Shelley.Rules.Chain
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
-import Cardano.Ledger.BaseTypes
-  ( BlocksMade (..),
-    Globals (..),
-    Nonce (..),
-    ShelleyBase,
-    StrictMaybe (..),
-    UnitInterval,
-  )
+import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..), Nonce (..), ProtVer (..), ShelleyBase, StrictMaybe (..), UnitInterval)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Chain
   ( ChainPredicateFailure (..),
@@ -52,6 +45,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import qualified Cardano.Ledger.Pretty as PP
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API.Wallet
@@ -74,12 +68,10 @@ import Cardano.Ledger.Shelley.LedgerState
     updateNES,
     _genDelegs,
   )
-import Cardano.Ledger.Shelley.PParams (ProtVer (..))
 import Cardano.Ledger.Shelley.Rules.Bbody (BBODY, BbodyEnv (..), BbodyPredicateFailure, BbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Tick (TICK, TickEvent, TickPredicateFailure)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo)
-import Cardano.Protocol.TPraos (PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader,
     LastAppliedBlock (..),

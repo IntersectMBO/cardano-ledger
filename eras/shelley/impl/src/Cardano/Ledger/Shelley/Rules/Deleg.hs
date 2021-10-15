@@ -21,12 +21,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes
-  ( Globals (..),
-    ShelleyBase,
-    epochInfo,
-    invalidKey,
-  )
+import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, epochInfo, invalidKey)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential)
@@ -54,7 +49,6 @@ import Cardano.Ledger.Shelley.LedgerState
     _ptrs,
     _rewards,
   )
-import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),

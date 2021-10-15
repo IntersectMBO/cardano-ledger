@@ -57,11 +57,11 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
-import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
-import Cardano.Protocol.TPraos
+import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
+import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst, (-*))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (BHeader),

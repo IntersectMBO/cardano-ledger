@@ -65,6 +65,7 @@ import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     FixedPoint,
     Nonce (..),
+    ProtVer (..),
     Seed (..),
     activeSlotLog,
     activeSlotVal,
@@ -96,7 +97,6 @@ import Cardano.Ledger.Serialization
     runByteBuilder,
   )
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Protocol.TPraos (ProtVer (..))
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)

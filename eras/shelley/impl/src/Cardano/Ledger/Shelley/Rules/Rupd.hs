@@ -25,6 +25,7 @@ where
 import Cardano.Ledger.BaseTypes
   ( BlocksMade,
     NonNegativeInterval,
+    ProtVer,
     ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
@@ -45,7 +46,6 @@ import Cardano.Ledger.Shelley.LedgerState
     pulseStep,
     startStep,
   )
-import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Slot
   ( Duration (..),
     SlotNo,

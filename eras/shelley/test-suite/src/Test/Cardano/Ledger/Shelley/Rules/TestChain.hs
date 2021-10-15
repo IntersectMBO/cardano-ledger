@@ -27,7 +27,7 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain
   )
 where
 
-import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Globals, ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Block
   ( Block (..),
     bbody,
@@ -46,7 +46,6 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
-import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))

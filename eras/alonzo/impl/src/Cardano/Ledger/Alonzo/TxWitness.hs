@@ -37,8 +37,6 @@ module Cardano.Ledger.Alonzo.TxWitness
         txdats',
         txrdmrs'
       ),
-    ppRdmrPtr,
-    ppTxWitness,
     unTxDats,
     nullDats,
   )
@@ -50,26 +48,12 @@ import Cardano.Binary
     encodeListLen,
     serializeEncoding',
   )
-import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData, ppData)
+import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag, isPlutusScript, ppExUnits, ppTag)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag, isPlutusScript)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript, hashScript)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppBootstrapWitness,
-    ppMap,
-    ppPair,
-    ppRecord,
-    ppSafeHash,
-    ppScriptHash,
-    ppSet,
-    ppSexp,
-    ppWitVKey,
-    ppWord64,
-  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
@@ -473,28 +457,3 @@ deriving via
       Core.Script era ~ Script era
     ) =>
     FromCBOR (Annotator (TxWitness era))
-
--- ============================================================
--- Pretty Printing
-
-ppRdmrPtr :: RdmrPtr -> PDoc
-ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [ppTag tag, ppWord64 w]
-
-instance PrettyA RdmrPtr where prettyA = ppRdmrPtr
-
-ppTxWitness :: (Era era, PrettyA (Core.Script era)) => TxWitness era -> PDoc
-ppTxWitness (TxWitnessConstr (Memo (TxWitnessRaw vk wb sc da (Redeemers rd)) _)) =
-  ppRecord
-    "TxWitness"
-    [ ("txwitsVKey", ppSet ppWitVKey vk),
-      ("txwitsBoot", ppSet ppBootstrapWitness wb),
-      ("txscripts", ppMap ppScriptHash prettyA sc),
-      ("txdats", ppMap ppSafeHash ppData (unTxDats da)),
-      ("txrdmrs", ppMap ppRdmrPtr (ppPair ppData ppExUnits) rd)
-    ]
-
-instance
-  (Era era, PrettyA (Core.Script era)) =>
-  PrettyA (TxWitness era)
-  where
-  prettyA = ppTxWitness

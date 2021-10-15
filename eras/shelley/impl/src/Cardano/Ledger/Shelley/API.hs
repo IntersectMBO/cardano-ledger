@@ -20,7 +20,7 @@ import Cardano.Ledger.Shelley.API.Mempool as X
 import Cardano.Ledger.Shelley.API.Protocol as X
 import Cardano.Ledger.Shelley.API.Types as X
 import Cardano.Ledger.Shelley.API.Validation as X
-import Cardano.Ledger.Shelley.API.Wallet as X
+import Cardano.Ledger.Shelley.API.Wallet as X hiding (getLeaderSchedule)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesAuxiliary,
     UsesPParams,

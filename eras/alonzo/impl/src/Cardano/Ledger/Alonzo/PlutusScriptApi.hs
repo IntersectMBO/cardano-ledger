@@ -25,7 +25,6 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (ProtVer)
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..))
 import Cardano.Ledger.Alonzo.Tx
@@ -45,7 +44,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     valContext,
   )
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts', unTxDats)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)

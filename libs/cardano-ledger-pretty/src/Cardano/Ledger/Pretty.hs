@@ -36,6 +36,7 @@ import Cardano.Ledger.BaseTypes
     Network (..),
     Nonce (..),
     Port (..),
+    ProtVer (..),
     StrictMaybe (..),
     UnitInterval,
     Url (..),
@@ -68,6 +69,7 @@ import Cardano.Ledger.Keys
     VKey (..),
     VerKeyKES,
   )
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (..), decompactAddr)
@@ -95,7 +97,6 @@ import Cardano.Ledger.Shelley.PParams
   ( PPUpdateEnv (..),
     PParams' (..),
     ProposedPPUpdates (..),
-    ProtVer (..),
     Update (..),
   )
 import Cardano.Ledger.Shelley.RewardUpdate
@@ -151,7 +152,6 @@ import Cardano.Ledger.Slot
     SlotNo (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), viewTxIn)
-import Cardano.Protocol.TPraos (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (BHeader),

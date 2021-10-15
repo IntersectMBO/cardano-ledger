@@ -26,17 +26,16 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyRole (Staking))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
 import Cardano.Ledger.Shelley.Rules.Mir
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Slot
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos (IndividualPoolStake (..), PoolDistr (..))
 import Control.Provenance (runProvM)
 import Control.State.Transition
 import Data.Default.Class (Default, def)

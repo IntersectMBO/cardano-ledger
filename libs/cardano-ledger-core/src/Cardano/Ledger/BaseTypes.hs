@@ -14,7 +14,8 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.BaseTypes
-  ( FixedPoint,
+  ( ProtVer (..),
+    FixedPoint,
     (==>),
     (⭒),
     Network (..),
@@ -62,20 +63,29 @@ import Cardano.Binary
     FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     encodeListLen,
+    encodedSizeExpr,
   )
 import Cardano.Crypto.Hash
 import Cardano.Crypto.Util (SignableRepresentation (..))
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.NonIntegral (ln')
-import Cardano.Ledger.Serialization (decodeRecordSum, ratioFromCBOR, ratioToCBOR)
+import Cardano.Ledger.Serialization
+  ( CBORGroup (..),
+    FromCBORGroup (..),
+    ToCBORGroup (..),
+    decodeRecordSum,
+    ratioFromCBOR,
+    ratioToCBOR,
+  )
 import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Time (SystemStart)
 import Control.Exception (throw)
 import Control.Monad (when, (<=<))
 import Control.Monad.Trans.Reader (ReaderT)
-import Data.Aeson (FromJSON (..), ToJSON (..))
+import Data.Aeson (FromJSON (..), ToJSON (..), (.:), (.=))
+import qualified Data.Aeson as Aeson
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -97,6 +107,42 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
+
+data ProtVer = ProtVer {pvMajor :: !Natural, pvMinor :: !Natural}
+  deriving (Show, Eq, Generic, Ord, NFData)
+  deriving (ToCBOR) via (CBORGroup ProtVer)
+  deriving (FromCBOR) via (CBORGroup ProtVer)
+
+instance NoThunks ProtVer
+
+instance ToJSON ProtVer where
+  toJSON (ProtVer major minor) =
+    Aeson.object
+      [ "major" .= major,
+        "minor" .= minor
+      ]
+
+instance FromJSON ProtVer where
+  parseJSON =
+    Aeson.withObject "ProtVer" $ \obj ->
+      ProtVer
+        <$> obj .: "major"
+        <*> obj .: "minor"
+
+instance ToCBORGroup ProtVer where
+  toCBORGroup (ProtVer x y) = toCBOR x <> toCBOR y
+  encodedGroupSizeExpr l proxy =
+    encodedSizeExpr l ((\(ProtVer x _) -> toWord x) <$> proxy)
+      + encodedSizeExpr l ((\(ProtVer _ y) -> toWord y) <$> proxy)
+    where
+      toWord :: Natural -> Word
+      toWord = fromIntegral
+
+  listLen _ = 2
+  listLenBound _ = 2
+
+instance FromCBORGroup ProtVer where
+  fromCBORGroup = ProtVer <$> fromCBOR <*> fromCBOR
 
 data E34
 

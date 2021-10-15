@@ -52,6 +52,7 @@ import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     BoundedRational (..),
     NonNegativeInterval,
+    ProtVer,
     UnitInterval,
     activeSlotVal,
     invalidKey,
@@ -76,7 +77,6 @@ import Cardano.Ledger.Shelley.EpochBoundary
     maxPool',
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenancePool (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), getRwdCred)
 import Cardano.Ledger.Val ((<->))
