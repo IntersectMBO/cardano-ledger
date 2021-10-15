@@ -11,6 +11,7 @@
 
 module Cardano.Ledger.State.UTxO where
 
+import Data.Word
 import Cardano.Prelude (HeapWords(..))
 import qualified Cardano.Crypto.Hash.Class as HS
 import qualified Data.Hashable as HM
@@ -424,22 +425,36 @@ loadUTxO' fp = foldlUTxO fp (\ !m !(!k, _) -> Map.insert k () m) mempty
 loadUTxOni' :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) ()))
 loadUTxOni' fp = foldlUTxO fp (\m txin -> nestedInsertTxId m (() <$ txin)) mempty
 
-loadUTxOhm' :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap ()))
-loadUTxOhm' fp = foldlUTxO fp nestedInsertHM' mempty
+-- loadUTxOhm' :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap ()))
+-- loadUTxOhm' fp = foldlUTxO fp nestedInsertHM' mempty
+
+
+-- nestedInsertHM' ::
+--      IntMap.IntMap (Map.Map (Word64, Word64, Word64, Word64) ())
+--   -> (TxIn C, Alonzo.TxOut CurrentEra)
+--   -> IntMap.IntMap (Map.Map (Word64, Word64, Word64, Word64) ())
+-- nestedInsertHM' !m (TxInCompact32 x1 x2 x3 x4 txIx, _) =
+--   let !key = (x1, x2, x3, x4)
+--       f =
+--         \case
+--           Nothing -> Just $! Map.singleton key ()
+--           Just hm -> Just $! Map.insert key () hm
+--    in IntMap.alter f (fromIntegral txIx) m
 
 
 nestedInsertHM' ::
      IntMap.IntMap (KeyMap.HashMap ())
   -> (TxIn C, Alonzo.TxOut CurrentEra)
   -> IntMap.IntMap (KeyMap.HashMap ())
-nestedInsertHM' !m (TxInCompact32 x1 x2 x3 x4 txIx, _) =
-  let !key = KeyMap.Key x1 x2 x3 x4
-      f =
-        \case
-          Nothing -> Just $! KeyMap.Leaf key ()
-          Just hm -> Just $! KeyMap.insert key () hm
-   in IntMap.alter f (fromIntegral txIx) m
-
+nestedInsertHM' !m (TxInCompact32 x1 x2 x3 x4 txIx, _)
+  | txIx == 0 =
+    let !key = KeyMap.Key x1 x2 x3 x4
+        f =
+          \case
+            Nothing -> Just $! KeyMap.Leaf key ()
+            Just hm -> Just $! KeyMap.insert key () hm
+     in IntMap.alter f (fromIntegral txIx) m
+  | otherwise = m
 
 loadUTxOihm' :: FilePath -> IO (KeyMap.HashMap (IntMap.IntMap ()))
 loadUTxOihm' fp = foldlUTxO fp nestedInsert KeyMap.Empty

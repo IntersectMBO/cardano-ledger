@@ -20,6 +20,8 @@ import qualified Data.IntMap.Strict as IntMap
 import Database.Persist.Sqlite
 import Control.Monad.Logger (NoLoggingT(..))
 import Data.Text as T
+import Data.Int
+
 
 insertUTxOState ::
   MonadIO m =>
@@ -65,6 +67,13 @@ sourceUTxO =
   selectSource [] []
     .| mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId (fromIntegral txInIx), txOut))
 
+sourceUTxOr ::
+     MonadResource m
+  => Int64 -> Int64 -> ConduitM () (TxIn.TxIn C, Alonzo.TxOut CurrentEra) (ReaderT SqlBackend m) ()
+sourceUTxOr b t =
+  selectSource [TxId >. TxKey (SqlBackendKey b) , TxId <. TxKey (SqlBackendKey t)] [] .|
+  mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId (fromIntegral txInIx), txOut))
+
 
 foldUTxO ::
      MonadUnliftIO m
@@ -73,6 +82,16 @@ foldUTxO ::
   -> Text -- ^ Path to Sqlite db
   -> m a
 foldUTxO f m fp = runSqlite fp (runConduit (sourceUTxO .| foldlC f m))
+
+foldUTxOr ::
+     MonadUnliftIO m
+  => Int64
+  -> Int64
+  -> (a -> (TxIn.TxIn C, Alonzo.TxOut CurrentEra) -> a) -- ^ Folding function
+  -> a -- ^ Empty acc
+  -> Text -- ^ Path to Sqlite db
+  -> m a
+foldUTxOr b t f m fp = runSqlite fp (runConduit (sourceUTxOr b t .| foldlC f m))
 
 getLedgerState ::
      MonadIO m
