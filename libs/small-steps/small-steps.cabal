@@ -47,6 +47,7 @@ library
                      , Data.Coders
                      , Data.Compact.Class
                      , Data.Compact.KeyMap
+                     , Data.Compact.HashMap
                      , Data.Pulse
                      , Control.Provenance
                      , Control.Iterate.SetAlgebra
