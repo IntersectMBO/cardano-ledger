@@ -64,7 +64,7 @@ transaction_body =
  , ? 15 : network_id             ; New
  }
 
-required_signers = set<$vkey>
+required_signers = set<$addr_keyhash>
 
 transaction_input = [ transaction_id : $hash32
                     , index : uint
