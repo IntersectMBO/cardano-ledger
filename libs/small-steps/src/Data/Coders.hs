@@ -148,7 +148,7 @@ decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder = do
   lenOrIndef <- decodeListLenOrIndef
   x <- decoder
-  case lenOrIndef of
+  !_ <- case lenOrIndef of
     Just n -> matchSize (Text.pack "\nRecord " <> name) n (getRecordSize x)
     Nothing -> do
       isBreak <- decodeBreakOr
@@ -160,7 +160,7 @@ decodeRecordSum name decoder = do
   lenOrIndef <- decodeListLenOrIndef
   tag <- decodeWord
   (size, x) <- decoder tag -- we decode all the stuff we want
-  case lenOrIndef of
+  !_ <- case lenOrIndef of
     Just n -> matchSize (Text.pack ("\nSum " ++ name ++ "\nreturned=" ++ show size ++ " actually read= " ++ show n)) size n
     Nothing -> do
       isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
