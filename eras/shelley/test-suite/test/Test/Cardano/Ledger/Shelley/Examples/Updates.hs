@@ -15,7 +15,8 @@ module Test.Cardano.Ledger.Shelley.Examples.Updates
 where
 
 import Cardano.Ledger.BaseTypes
-  ( Nonce,
+  ( BlocksMade (..),
+    Nonce,
     StrictMaybe (..),
     mkNonceFromNumber,
     (⭒),
@@ -74,7 +75,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Init
     nonce0,
     ppEx,
   )
-import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makePulser')
+import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser)
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -353,7 +354,7 @@ blockEx3 =
     (mkOCert (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 80) 0 (KESPeriod 0))
 
 pulserEx3 :: forall c. (ExMock c) => PulsingRewUpdate c
-pulserEx3 = makePulser' expectedStEx2
+pulserEx3 = makeCompletedPulser (BlocksMade mempty) expectedStEx2
 
 expectedStEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx3 =

@@ -16,7 +16,8 @@ module Test.Cardano.Ledger.Shelley.Examples.PoolReReg
 where
 
 import Cardano.Ledger.BaseTypes
-  ( Globals (..),
+  ( BlocksMade (..),
+    Globals (..),
     Nonce,
     StrictMaybe (..),
   )
@@ -65,7 +66,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Init
     nonce0,
     ppEx,
   )
-import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makePulser')
+import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser)
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -249,7 +250,7 @@ poolReReg2A :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (Shelley
 poolReReg2A = CHAINExample expectedStEx1 blockEx2A (Right expectedStEx2A)
 
 pulserEx2 :: forall c. (ExMock c) => PulsingRewUpdate c
-pulserEx2 = makePulser' expectedStEx2
+pulserEx2 = makeCompletedPulser (BlocksMade mempty) expectedStEx2
 
 expectedStEx2B :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
 expectedStEx2B =

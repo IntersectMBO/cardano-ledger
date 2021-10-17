@@ -1115,7 +1115,20 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       numPools = fromIntegral (Map.size poolParams)
       k = fromIntegral secparam
       f = unboundRational (activeSlotVal asc)
-      pulseSize = max 1 (ceiling ((numPools * f) / (6 * k)))
+
+      -- We expect approximately (10k/f)-many blocks to be produced each epoch.
+      -- The reward calculation begins (4k/f)-many slots into the epoch,
+      -- and we guarantee that it ends (2k/f)-many slots before the end
+      -- of the epoch (to allow tools such as db-sync to see the reward
+      -- values in advance of them being applied to the ledger state).
+      --
+      -- Therefore to evenly space out the reward calculation, we divide
+      -- the number of stake pools by 4k/f in order to determine how many
+      -- stake pools' rewards we should calculate each block.
+      -- If it does not finish in this amount of time, the calculation is
+      -- forced to completion.
+      pulseSize = max 1 (ceiling ((numPools * f) / (4 * k)))
+
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
       -- reserves and rewards change
