@@ -86,8 +86,6 @@ import Cardano.Ledger.Shelley.UTxO (balance)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
-import qualified Cardano.Protocol.TPraos.Rules.OCert as Shelley
-import qualified Cardano.Protocol.TPraos.Rules.Overlay as Shelley
 import Control.Arrow (left)
 import Control.Monad.Except (liftEither)
 import Control.Monad.Reader (runReader)
@@ -264,10 +262,6 @@ type instance Core.EraRule "NEWEPOCH" (AlonzoEra c) = API.NEWEPOCH (AlonzoEra c)
 
 type instance Core.EraRule "NEWPP" (AlonzoEra c) = Shelley.NEWPP (AlonzoEra c)
 
-type instance Core.EraRule "OCERT" (AlonzoEra c) = Shelley.OCERT (AlonzoEra c)
-
-type instance Core.EraRule "OVERLAY" (AlonzoEra c) = Shelley.OVERLAY (AlonzoEra c)
-
 type instance Core.EraRule "POOL" (AlonzoEra c) = API.POOL (AlonzoEra c)
 
 type instance Core.EraRule "POOLREAP" (AlonzoEra c) = API.POOLREAP (AlonzoEra c)
@@ -281,8 +275,6 @@ type instance Core.EraRule "SNAP" (AlonzoEra c) = Shelley.SNAP (AlonzoEra c)
 type instance Core.EraRule "TICK" (AlonzoEra c) = Shelley.TICK (AlonzoEra c)
 
 type instance Core.EraRule "TICKF" (AlonzoEra c) = Shelley.TICKF (AlonzoEra c)
-
-type instance Core.EraRule "TICKN" (AlonzoEra _c) = API.TICKN
 
 type instance Core.EraRule "UPEC" (AlonzoEra c) = Shelley.UPEC (AlonzoEra c)
 

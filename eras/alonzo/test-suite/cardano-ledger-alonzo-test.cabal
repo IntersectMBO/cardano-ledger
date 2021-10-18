@@ -42,6 +42,7 @@ library
   import:             base, project-config
 
   exposed-modules:
+    Test.Cardano.Ledger.Alonzo.EraMapping
     Test.Cardano.Ledger.Alonzo.Examples.Consensus
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
     Test.Cardano.Ledger.Alonzo.AlonzoEraGen
@@ -56,6 +57,7 @@ library
     cardano-ledger-pretty,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
+    cardano-protocol-tpraos,
     cardano-slotting,
     containers,
     data-default-class,

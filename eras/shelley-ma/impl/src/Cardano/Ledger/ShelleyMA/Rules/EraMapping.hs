@@ -16,8 +16,6 @@ import qualified Cardano.Ledger.Shelley.Rules.Upec as Shelley
 import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO)
 import Cardano.Ledger.ShelleyMA.Rules.Utxow (UTXOW)
-import qualified Cardano.Protocol.TPraos.Rules.OCert as Shelley
-import qualified Cardano.Protocol.TPraos.Rules.Overlay as Shelley
 
 -- These rules are all inherited from Shelley
 
@@ -40,10 +38,6 @@ type instance Core.EraRule "MIR" (ShelleyMAEra ma c) = Shelley.MIR (ShelleyMAEra
 type instance Core.EraRule "NEWEPOCH" (ShelleyMAEra ma c) = Shelley.NEWEPOCH (ShelleyMAEra ma c)
 
 type instance Core.EraRule "NEWPP" (ShelleyMAEra ma c) = Shelley.NEWPP (ShelleyMAEra ma c)
-
-type instance Core.EraRule "OCERT" (ShelleyMAEra ma c) = Shelley.OCERT (ShelleyMAEra ma c)
-
-type instance Core.EraRule "OVERLAY" (ShelleyMAEra ma c) = Shelley.OVERLAY (ShelleyMAEra ma c)
 
 type instance Core.EraRule "POOL" (ShelleyMAEra ma c) = Shelley.POOL (ShelleyMAEra ma c)
 

@@ -33,6 +33,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
+import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Rules.Chain
   ( CHAIN,

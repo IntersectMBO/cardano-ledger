@@ -48,6 +48,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import qualified Cardano.Ledger.Pretty as PP
 import Cardano.Ledger.Serialization (ToCBORGroup)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Wallet
   ( AdaPots (..),
     totalAdaES,
@@ -113,6 +114,8 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+
+type instance Core.EraRule "TICKN" (ShelleyEra c) = TICKN
 
 data CHAIN era
 
