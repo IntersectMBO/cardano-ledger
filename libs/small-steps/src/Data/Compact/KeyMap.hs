@@ -38,7 +38,7 @@ import Data.Text(Text,pack)
 import qualified Prettyprinter.Internal as Pretty
 import Data.Set(Set)
 import qualified Data.Set as Set
--- import Debug.Trace
+ 
 
 -- type PArray = PA.Array
 type PArray = Small.SmallArray
@@ -55,7 +55,7 @@ type Bitmap = Word64
 -- | The number of bits in a segment. Can't be more than 6, because using Word64
 --   as Bitmap can only accomodate 2^6 = 64 bits
 bits :: Int  
-bits = 6
+bits = 4
 
 -- | Ints in the range [0..63], represents 'bits' wide portion of a key
 type Segment = Int
@@ -172,6 +172,17 @@ instance HeapWords v => HeapWords (KeyMap v) where
   heapWords (Full arr) = foldl' heapPlus 1 arr
   heapWords (Two _ a b) = 4 + heapWords a + heapWords b                       
 
+instance HeapWords () where
+  heapWords () = 1
+
+tag :: KeyMap v -> String
+tag Empty = "Empty"
+tag (One _ _xs) = "One"
+tag (Leaf _ _v) = "Leaf"
+tag (BitmapIndexed _ _arr) = "BitmapedIndexed"
+tag (Full _arr) = "Full"
+tag (Two _ _a _b) = "Two"
+  
 -- ======================================================================
 -- Insertion
 
@@ -182,27 +193,28 @@ insert' :: BitState -> v -> KeyMap v -> KeyMap v
 insert' state v m = insertWithKey (\ _k new _old -> new) state v m
 
 insertWithKey :: (Key -> v -> v -> v) -> BitState -> v -> KeyMap v -> KeyMap v
-insertWithKey combine bs0 v0 m0 = go bs0 v0 m0
+insertWithKey combine bs0 v0 m0 = goR bs0 v0 m0
   where
+    goR state val mp = (go state val mp)
     go (BitState _ k) !x Empty = Leaf k x
     go (BitState [] k) _ _ = error ("In insert', ran out of bits for key "++show k)
     go (BitState (i:is) k) x (One j node) =
        case compare j i of
-         EQ -> One j (go (BitState is k) x node)
-         LT -> Two (setBits [i,j]) node (go (BitState is k) x Empty)
-         GT -> Two (setBits [i,j]) (go (BitState is k) x Empty) node
+         EQ -> One j (goR (BitState is k) x node)
+         LT -> Two (setBits [i,j]) node (goR (BitState is k) x Empty)
+         GT -> Two (setBits [i,j]) (goR (BitState is k) x Empty) node
     go (state@(BitState _ k1)) x t@(Leaf k2 y)
       | k1 == k2 = if x `ptrEq` y
                     then t
                     else (Leaf k2 (combine k2 x y))
-      | otherwise =  makeTwo state t (next2 state k2) x
+      | otherwise = makeTwo state t (next2 state k2) x
     go (BitState (j:js) k)  x t@(BitmapIndexed bmap arr)
         | not(testBit bmap j) =
             let !arr' = insertAt arr i $! (Leaf k x)
             in bitmapIndexedOrFull (bmap .|. (setBit 0 j)) arr'
         | otherwise = 
             let !st = index arr i
-                !st' = go (BitState js k) x st
+                !st' = goR (BitState js k) x st
             in if st' `ptrEq` st
                   then t
                   else BitmapIndexed bmap (update arr i st') 
@@ -213,7 +225,7 @@ insertWithKey combine bs0 v0 m0 = go bs0 v0 m0
             in bitmapIndexedOrFull (bmap .|. (setBit 0 j)) arr'
         | otherwise =
             let !st = if i==0 then x0 else x1  
-                !st' = go (BitState js k) x st
+                !st' = goR (BitState js k) x st
             in if st' `ptrEq` st
                   then t
                   else if i==0
@@ -222,7 +234,7 @@ insertWithKey combine bs0 v0 m0 = go bs0 v0 m0
        where i = indexFromSegment bmap j
     go (BitState (j:js) k) x t@(Full arr) =
         let !st = index arr i
-            !st' = go (BitState js k) x st
+            !st' = goR (BitState js k) x st
         in if st' `ptrEq` st
               then t
               else Full (update arr i st') 
@@ -234,12 +246,14 @@ makeTwo _state _leaf (BitState [] k) _val = error ("Case 2. In makeTwo, out of b
 makeTwo (BitState (i:is) k1) leaf1 (BitState (j:js) k2) val2 
       | i==j = One i (makeTwo (BitState is k1) leaf1 (BitState js k2) val2)
       | otherwise = if i < j
-                       then Two (setBits [i,j]) (Leaf k1 val2) leaf1
+                       then Two (setBits [i,j]) (Leaf k1 val2) leaf1 
                        else Two (setBits [i,j]) leaf1 (Leaf k1 val2) 
- 
+
+foo :: String -> a -> String
+foo s !_ = s
 
 insert :: Key -> v -> KeyMap v -> KeyMap v
-insert bs v hashmap = insert' (initBitState bs) v hashmap            
+insert bs v hashmap = insert' (initBitState bs) v hashmap -- (trace  ("INSERT "++show bs) hashmap)            
 
 fromList :: [(Key,v)] -> KeyMap v
 fromList ps = foldl' accum Empty ps
@@ -336,11 +350,18 @@ lookup' _ Empty = Nothing
 lookup' (BitState _ k1) (Leaf k2 v) = if k1==k2 then Just v else Nothing
 lookup' (BitState [] k) _ = error ("lookup', out of bits for key "++show k)
 lookup' (BitState (j:js) k) (One i x) = if i==j then lookup' (BitState js k) x else Nothing
-lookup' (BitState (j:js) k) (Two bm x0 x1) = if i==0 then lookup' (BitState js k) x0 else lookup' (BitState js k) x1
+lookup' (BitState (j:js) k) (Two bm x0 x1) =
+    if testBit bm j
+       then (if i==0 then lookup' (BitState js k) x0 else lookup' (BitState js k) x1)
+       else Nothing
   where i = indexFromSegment bm j
-lookup' (BitState (j:js) k) (BitmapIndexed bm arr) = lookup' (BitState js k) (index arr i)
+lookup' (BitState (j:js) k) (BitmapIndexed bm arr) =
+    if testBit bm j
+       then lookup' (BitState js k) (index arr i)
+       else Nothing
   where i = indexFromSegment bm j
-lookup'  (BitState (j:js) k) (Full arr) = lookup'  (BitState js k) (index arr i)
+lookup' (BitState (j:js) k) (Full arr) = -- Every possible bit is set, to no testBit call necessary
+    lookup'  (BitState js k) (index arr i)
   where i = indexFromSegment fullNodeMask j
 
 lookupHM :: Key -> KeyMap v -> Maybe v
@@ -604,7 +625,7 @@ testsplitBitmap i = (bitmapToList l,b,bitmapToList g)
 
 -- | /O(n)/ Make a copy of an Array that removes the 'i'th element. Decreasing the size by 1.
 remove :: PArray a -> Int -> PArray a
-remove arr i = if i<0 || i >= n
+remove arr i = if i<0 || i > n
         then error ("index out of bounds in 'remove' "++show i++" not in range (0,"++show (isize arr -1)++")")
         else  fst(withMutArray n action)
    where n = (isize arr) - 1
@@ -705,8 +726,25 @@ count x = go 0 x (0,0,0,mempty,mempty,0)
           foldr (go (length arr + d)) (e,o,t,l,add (length arr) b,f) arr
         go d (Full arr) (e,o,t,l,b,f) = foldr  (go (length arr + d)) (e,o,t,l,b,f+1) arr
 
-
-
+countIO:: HeapWords a => KeyMap a -> IO ()
+countIO hashmap = do
+   putStrLn $ unlines
+      [ "bits per level = "++show bits
+      , "num levels = "++show keyPathSize
+      , "empty = "++show empty
+      , "leaf  = "++show leaf
+      , "one   = "++show one
+      , "two   = "++show two
+      , "bits  = "++show bit     
+      , "full  = "++show full
+      , "hwords = "++show hwords
+      , "depth = "++show (hdepth hashmap)
+      , "histogram ="++show hist
+      ]
+  where (empty,one,two,leaf,bit,full) = count hashmap
+        hist = histo hashmap
+        hwords = heapWords hashmap
+        
 hdepth :: KeyMap v -> Int
 hdepth Empty = 0
 hdepth (One _ x) = 1 + hdepth x
@@ -885,3 +923,23 @@ instance PrettyA v => Show (KeyMap v) where
    show x = show(ppKeyMap prettyA x)
    showList xs x = unlines (map (\ y -> "\n"++ show(ppKeyMap prettyA y)) xs) ++ x
 
+
+keysX :: [Key]
+keysX =
+    [ Key 17900508425448557813 1425228445697650578 4096886001776694930 5607342842136005805
+    , Key 6883900645186699936 13296170193789961158 4397314084330617059 8869821626379988209
+    , Key 10500005495319713790 2912085157004832622 13426000237053837606 12059657784398898378
+    , Key 3923906598994021794 12765791139276487287 816482653431531599 7003511147053802144
+    , Key 5166915752834780615 7133194944084009196 13810062108841219641 296498671410031824
+    , Key 18030165020800047584 18085286706182838302 16232822895209986816 17388829728381408048
+    , Key 5142157305423936627 7231225143269744777 15250651091019539686 14241693248962825662
+    , Key 13428671722466854389 16561117437870591512 11235927355594486308 16930552725399654134
+    , Key 4838981082210206139 12557487373235351610 6348966276768033248 1499713340968517390
+    , Key 336475062096603304 6399910448856822947 3425786324025245994 16363487473709422408
+    , Key 16607855275778415913 15113927333656355571 16111805289570157530 7151802073429851699
+    , Key 10517657211907470890 1089616862122803787 13992791218083853691 13236284657137382314
+    , Key 1782840219730873272 5422922922394198551 6207884257158004626 16093772551099792787
+    , Key 17216197724774766219 6382375034658581036 883871178158682222 6551207497782514085
+    , Key 292346888039769756 7462467761555063764 6493768272219444322 7737867387963351907
+    , Key 6067080276442487773 97011115971541225 17793222466254767399 16164726605331358005
+    ]
