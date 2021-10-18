@@ -38,7 +38,7 @@ intersection:: HashMap k v -> HashMap k v -> HashMap k v
 intersection (HashMap m1) (HashMap m2) = HashMap(KM.intersect m1 m2)
 
 foldlWithKey' :: (ans -> k -> v -> ans) -> ans -> HashMap k v -> ans
-foldlWithKey' accum a (HashMap m) = KM.foldWithKey accum2 a m
+foldlWithKey' accum a (HashMap m) = KM.foldWithAscKey accum2 a m
    where accum2 ans k v = accum ans (fromKey k) v
 
 size :: HashMap k v -> Int
@@ -48,7 +48,7 @@ fromList :: Keyed k => [(k, v)] -> HashMap k v
 fromList xs = HashMap(KM.fromList (map (\ (k,v) -> (toKey k,v)) xs))
 
 toList :: HashMap k v -> [(k, v)]
-toList (HashMap m) =  KM.foldWithKey (\ ans k v -> (fromKey k,v):ans) [] m
+toList (HashMap m) =  KM.foldWithAscKey (\ ans k v -> (fromKey k,v):ans) [] m
 
 mapWithKey :: (k -> v -> u) -> HashMap k v -> HashMap k u
 mapWithKey f (HashMap m) = HashMap (KM.mapWithKey (\ key v -> f (fromKey key) v) m)
