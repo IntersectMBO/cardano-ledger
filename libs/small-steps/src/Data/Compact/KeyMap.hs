@@ -55,7 +55,7 @@ type Bitmap = Word64
 -- | The number of bits in a segment. Can't be more than 6, because using Word64
 --   as Bitmap can only accomodate 2^6 = 64 bits
 bits :: Int  
-bits = 4
+bits = 6
 
 -- | Ints in the range [0..63], represents 'bits' wide portion of a key
 type Segment = Int
@@ -259,6 +259,10 @@ fromList :: [(Key,v)] -> KeyMap v
 fromList ps = foldl' accum Empty ps
   where accum ans (k,v) = insert k v ans
 
+toList :: KeyMap v -> [(Key,v)]
+toList km = foldWithDescKey accum [] km
+  where accum k v ans = (k,v):ans
+
 -- =================================================================
 -- Deletion
 
@@ -325,22 +329,39 @@ bitmapE bmap arr = bitmapIndexedOrFull bmap arr
 -- ================================================================
 -- aggregation in ascending order of keys
 
-foldWithKey :: (ans -> Key -> v -> ans) -> ans -> KeyMap v -> ans  
-foldWithKey _ !ans Empty = ans
-foldWithKey accum !ans (Leaf k v) = accum ans k v
-foldWithKey accum !ans (One _ x) = foldWithKey accum ans x
-foldWithKey accum !ans (Two _ x y) = foldWithKey accum (foldWithKey accum ans x) y
-foldWithKey accum !ans0 (BitmapIndexed _ arr) = loop ans0 0
+foldWithAscKey :: (ans -> Key -> v -> ans) -> ans -> KeyMap v -> ans  
+foldWithAscKey _ !ans Empty = ans
+foldWithAscKey accum !ans (Leaf k v) = accum ans k v
+foldWithAscKey accum !ans (One _ x) = foldWithAscKey accum ans x
+foldWithAscKey accum !ans (Two _ x y) = foldWithAscKey accum (foldWithAscKey accum ans x) y
+foldWithAscKey accum !ans0 (BitmapIndexed _ arr) = loop ans0 0
   where n = isize arr
         loop !ans i | i >= n = ans
-        loop !ans i = loop (foldWithKey accum ans (index arr i)) (i+1)
-foldWithKey accum !ans0 (Full arr) = loop ans0 0
+        loop !ans i = loop (foldWithAscKey accum ans (index arr i)) (i+1)
+foldWithAscKey accum !ans0 (Full arr) = loop ans0 0
   where n = isize arr
         loop !ans i | i >= n = ans
-        loop !ans i = loop (foldWithKey accum ans (index arr i)) (i+1)        
+        loop !ans i = loop (foldWithAscKey accum ans (index arr i)) (i+1)        
 
 sizeKeyMap :: KeyMap v -> Int
-sizeKeyMap x = foldWithKey (\ ans _k _v -> ans+1) 0 x
+sizeKeyMap x = foldWithAscKey (\ ans _k _v -> ans+1) 0 x
+
+-- ================================================================
+-- aggregation in descending order of keys
+
+foldWithDescKey :: (Key -> v -> ans -> ans) -> ans -> KeyMap v -> ans  
+foldWithDescKey _ !ans Empty = ans
+foldWithDescKey accum !ans (Leaf k v) = accum k v ans
+foldWithDescKey accum !ans (One _ x) = foldWithDescKey accum ans x
+foldWithDescKey accum !ans (Two _ x y) = foldWithDescKey accum (foldWithDescKey accum ans y) x
+foldWithDescKey accum !ans0 (BitmapIndexed _ arr) = loop ans0 (n-1)
+  where n = isize arr
+        loop !ans i | i < 0 = ans
+        loop !ans i = loop (foldWithDescKey accum ans (index arr i)) (i-1)
+foldWithDescKey accum !ans0 (Full arr) = loop ans0 (n-1)
+  where n = isize arr
+        loop !ans i | i < 0 = ans
+        loop !ans i = loop (foldWithDescKey accum ans (index arr i)) (i-1)      
 
 -- ==================================================================
 -- Lookup a key 
@@ -451,6 +472,43 @@ testSplit2 i = putStrLn (unlines [show hm, " ",show pathx," ",show a, " ",show b
         hm = fromList ps
         state@(BitState pathx _) = (initBitState (keys !! i))
         (a,b,c) = splitKeyMap state hm
+
+-- =========================================================
+-- UnionWith
+
+toListOfSegments :: KeyMap v -> [(Segment,KeyMap v)]
+toListOfSegments Empty = []       -- toListOfSegments is never called with Empty nodes.
+toListOfSegments (Leaf _ _) = []  -- toListOfSegments is never called with Leaf nodes.
+toListOfSegments (One i x) = [(i,x)]
+toListOfSegments (Two bm x y) = zip (bitmapToList bm) [x,y]
+toListOfSegments (BitmapIndexed bm arr) = zip (bitmapToList bm) (tolist arr)
+toListOfSegments (Full arr) = zip (bitmapToList fullNodeMask) (tolist arr)
+
+
+mergeWith:: (KeyMap v -> KeyMap v -> KeyMap v) -> [(Segment,KeyMap v)] -> [(Segment,KeyMap v)] -> [(Segment,KeyMap v)]
+mergeWith combine [] [] = []
+mergeWith combine xs [] = xs
+mergeWith combine [] ys = ys
+mergeWith combine (allxs@((i,x):xs)) (allys@((j,y):ys)) =
+  case compare i j of
+    EQ -> (i,combine x y) : mergeWith combine xs ys
+    LT -> (i,x) : mergeWith combine xs allys
+    GT -> (j,y) : mergeWith combine allxs ys
+
+unionWith :: (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
+unionWith combine Empty Empty = Empty
+unionWith combine x Empty = x
+unionWith combine Empty y = y
+unionWith combine (Leaf k1 v1) (Leaf k2 v2) | k1==k2 = Leaf k1 (combine k1 v1 v2)
+unionWith combine (Leaf k v) y = insertWithKey combine (BitState (path k) k) v y
+unionWith combine x (Leaf k v) = insertWithKey combine (BitState (path k) k) v x
+unionWith combine x y = build (mergeWith (unionWith combine) xpairs ypairs)
+  where xpairs = toListOfSegments x
+        ypairs = toListOfSegments y
+
+hm10 = fromList (take 5 pairs)
+hm11 = fromList (take 5 (drop 4 pairs))
+hm12 = unionWith (\ k x y -> x+y) hm10 hm11
 
 
 -- ===========================================================
