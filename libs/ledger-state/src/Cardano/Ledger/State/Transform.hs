@@ -52,19 +52,19 @@ toTxOut' m txOut =
     restructureAddr cAddr =
       case decompactAddr cAddr of
         Addr ni pc (StakeRefBase sr) ->
-          Just (compactAddr (Addr ni pc StakeRefNull), intern' sr m)
+          Just (compactAddr (Addr ni pc StakeRefNull), intern sr m)
         _ -> Nothing
 
 intern' :: (Show k, Ord k) => k -> Map k a -> k
 intern' k m =
   case Map.lookupIndex k m of
-    Nothing -> trace ("Did not find: " ++ show k) k
+    Nothing -> k
     Just ix -> fst $ Map.elemAt ix m
 
 intern :: (Show k, Ord k) => k -> Map k a -> k
 intern !k = go
   where
-    go Tip = error $ "Did not find: " ++ show k
+    go Tip = k
     go (Bin _ kx _ l r) =
       case compare k kx of
         LT -> go l

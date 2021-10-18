@@ -1,3 +1,4 @@
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -7,7 +8,7 @@
 
 module Cardano.Ledger.State.Orphans where
 
-import Control.DeepSeq
+import Data.Typeable
 import Cardano.Binary
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Alonzo.TxBody
@@ -18,10 +19,13 @@ import Cardano.Ledger.Shelley.CompactAddr
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.TxIn
+import Control.DeepSeq
 import Data.ByteString.Short
 import qualified Data.Text as T
 import Database.Persist
 import Database.Persist.Sqlite
+import Cardano.Ledger.Keys
+import Cardano.Ledger.Credential
 
 instance PersistField ShortByteString where
   toPersistValue = PersistByteString . fromShort
@@ -50,37 +54,26 @@ instance PersistField Coin where
 instance PersistFieldSql Coin where
   sqlType _ = SqlInt64
 
+instance PersistField DeltaCoin where
+  toPersistValue (DeltaCoin dc) = PersistInt64 $ fromIntegral dc
+  fromPersistValue (PersistInt64 i64) = Right $ DeltaCoin $ fromIntegral i64
+  fromPersistValue _ = Left "Unexpected type"
+
+instance PersistFieldSql DeltaCoin where
+  sqlType _ = SqlInt64
+
 instance NFData (TxOut CurrentEra) where
   rnf = \case
     TxOutCompact _ _ -> ()
     TxOutCompactDH _ _ _ -> ()
 
-instance PersistField (TxOut CurrentEra) where
-  toPersistValue = PersistByteString . serialize'
-  fromPersistValue = decodePersistValue
+newtype Enc a = Enc {unEnc :: a}
 
-instance PersistFieldSql (TxOut CurrentEra) where
-  sqlType _ = SqlBlob
+instance (ToCBOR a, FromCBOR a) => PersistField (Enc a) where
+  toPersistValue = PersistByteString . serialize' . unEnc
+  fromPersistValue = fmap Enc . decodePersistValue
 
-instance PersistField (PPUPState CurrentEra) where
-  toPersistValue = PersistByteString . serialize'
-  fromPersistValue = decodePersistValue
-
-instance PersistFieldSql (PPUPState CurrentEra) where
-  sqlType _ = SqlBlob
-
-instance PersistField (PState C) where
-  toPersistValue = PersistByteString . serialize'
-  fromPersistValue = decodePersistValue
-
-instance PersistFieldSql (PState C) where
-  sqlType _ = SqlBlob
-
-instance PersistField (DState C) where
-  toPersistValue = PersistByteString . serialize'
-  fromPersistValue = decodePersistValue
-
-instance PersistFieldSql (DState C) where
+instance (ToCBOR a, FromCBOR a) => PersistFieldSql (Enc a) where
   sqlType _ = SqlBlob
 
 decodePersistValue :: FromCBOR b => PersistValue -> Either T.Text b
@@ -89,3 +82,46 @@ decodePersistValue (PersistByteString bs) =
     Left err -> Left $ "Could not decode: " <> T.pack (show err)
     Right v -> Right v
 decodePersistValue _ = Left "Unexpected type"
+
+
+
+deriving via Enc (KeyHash r C) instance
+         Typeable r => PersistField (KeyHash r C)
+deriving via Enc (KeyHash r C) instance
+         Typeable r => PersistFieldSql (KeyHash r C)
+
+deriving via Enc (Credential r C) instance
+         Typeable r => PersistField (Credential r C)
+deriving via Enc (Credential r C) instance
+         Typeable r => PersistFieldSql (Credential r C)
+
+deriving via Enc Ptr instance
+         PersistField Ptr
+deriving via Enc Ptr instance
+         PersistFieldSql Ptr
+
+deriving via Enc (PPUPState CurrentEra) instance
+         PersistField (PPUPState CurrentEra)
+deriving via Enc (PPUPState CurrentEra) instance
+         PersistFieldSql (PPUPState CurrentEra)
+
+deriving via Enc (TxOut CurrentEra) instance
+         PersistField (TxOut CurrentEra)
+deriving via Enc (TxOut CurrentEra) instance
+         PersistFieldSql (TxOut CurrentEra)
+
+deriving via Enc (DState C) instance
+         PersistField (DState C)
+deriving via Enc (DState C) instance
+         PersistFieldSql (DState C)
+
+deriving via Enc (PState C) instance
+         PersistField (PState C)
+deriving via Enc (PState C) instance
+         PersistFieldSql (PState C)
+
+deriving via Enc (GenDelegs C) instance
+         PersistField (GenDelegs C)
+deriving via Enc (GenDelegs C) instance
+         PersistFieldSql (GenDelegs C)
+

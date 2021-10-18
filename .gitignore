@@ -51,4 +51,3 @@ specs/**/.ghc.environment.x86_64-linux-*
 
 *.pdf
 .envrc
-ledger-state.sqlite

@@ -54,10 +54,10 @@ main = do
               (long "help" <> short 'h' <> help "Display this message.")
         )
         (header "ledger-state - Tool for analyzing ledger state")
-  !_ <- foldUTxOr 226500 231100 nestedInsertHM' mempty "/home/lehins/iohk/cardano-ledger-specs/ledger-state.sqlite"
+  -- !_ <- foldUTxOr 226500 231100 nestedInsertHM' mempty "/home/lehins/iohk/chain/ledger-state.sqlite"
   forM_ (optsLedgerStateBinaryFile opts) $ \fp -> do
     ls <- loadLedgerState fp
-    storeLedgerState "ledger-state.sqlite" ls
+    storeLedgerState "/home/lehins/iohk/chain/ledger-state.sqlite" ls
     -- nes <- loadNewEpochState fp
     -- printNewEpochStateStats $ countNewEpochStateStats ls
   forM_ (optsUtxoJsonFile opts) $ \fp -> do

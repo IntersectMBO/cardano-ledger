@@ -24,7 +24,7 @@ import Cardano.Binary
     dropMap,
   )
 import Codec.CBOR.Encoding (encodeListLen)
-import Control.DeepSeq (NFData (rnf))
+import Control.DeepSeq (NFData (rnf), deepseq)
 import Control.Iterate.Collect
 import Control.Monad (void)
 import Data.Coders (invalidKey)
@@ -145,6 +145,9 @@ mapflip f = (\old new -> f new old)
 
 data BiMap v a b where MkBiMap :: (v ~ b) => !(Map.Map a b) -> !(Map.Map b (Set.Set a)) -> BiMap v a b
 
+biMapToMap :: BiMap v a b -> Map a b
+biMapToMap (MkBiMap m _) = m
+
 --  ^   the 1st and 3rd parameter must be the same:             ^   ^
 
 -- ============== begin necessary Cardano.Binary instances ===============
@@ -182,8 +185,8 @@ instance (NoThunks a, NoThunks b) => NoThunks (BiMap v a b) where
   showTypeOf _ = "BiMap"
   wNoThunks ctxt (MkBiMap l r) = wNoThunks ctxt (l, r)
 
-instance NFData (BiMap v a b) where
-  rnf (MkBiMap l r) = seq l (seq r ())
+instance (NFData v, NFData a) => NFData (BiMap v a b) where
+  rnf (MkBiMap l r) = deepseq l (deepseq r ())
 
 -- ============== end Necessary Cardano.Binary instances ===================
 
