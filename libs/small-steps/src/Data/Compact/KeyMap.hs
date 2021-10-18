@@ -38,7 +38,7 @@ import Data.Text(Text,pack)
 import qualified Prettyprinter.Internal as Pretty
 import Data.Set(Set)
 import qualified Data.Set as Set
-import Debug.Trace
+ 
 
 -- type PArray = PA.Array
 type PArray = Small.SmallArray
@@ -252,7 +252,7 @@ foo :: String -> a -> String
 foo s !_ = s
 
 insert :: Key -> v -> KeyMap v -> KeyMap v
-insert bs v hashmap = insert' (initBitState bs) v (trace  ("INSERT "++show bs) hashmap)            
+insert bs v hashmap = insert' (initBitState bs) v hashmap -- (trace  ("INSERT "++show bs) hashmap)            
 
 fromList :: [(Key,v)] -> KeyMap v
 fromList ps = foldl' accum Empty ps
@@ -349,11 +349,18 @@ lookup' _ Empty = Nothing
 lookup' (BitState _ k1) (Leaf k2 v) = if k1==k2 then Just v else Nothing
 lookup' (BitState [] k) _ = error ("lookup', out of bits for key "++show k)
 lookup' (BitState (j:js) k) (One i x) = if i==j then lookup' (BitState js k) x else Nothing
-lookup' (BitState (j:js) k) (Two bm x0 x1) = if i==0 then lookup' (BitState js k) x0 else lookup' (BitState js k) x1
+lookup' (BitState (j:js) k) (Two bm x0 x1) =
+    if testBit bm j
+       then (if i==0 then lookup' (BitState js k) x0 else lookup' (BitState js k) x1)
+       else Nothing
   where i = indexFromSegment bm j
-lookup' (BitState (j:js) k) (BitmapIndexed bm arr) = lookup' (BitState js k) (index arr i)
+lookup' (BitState (j:js) k) (BitmapIndexed bm arr) =
+    if testBit bm j
+       then lookup' (BitState js k) (index arr i)
+       else Nothing
   where i = indexFromSegment bm j
-lookup'  (BitState (j:js) k) (Full arr) = lookup'  (BitState js k) (index arr i)
+lookup' (BitState (j:js) k) (Full arr) = -- Every possible bit is set, to no testBit call necessary
+    lookup'  (BitState js k) (index arr i)
   where i = indexFromSegment fullNodeMask j
 
 lookupHM :: Key -> KeyMap v -> Maybe v
@@ -617,7 +624,7 @@ testsplitBitmap i = (bitmapToList l,b,bitmapToList g)
 
 -- | /O(n)/ Make a copy of an Array that removes the 'i'th element. Decreasing the size by 1.
 remove :: PArray a -> Int -> PArray a
-remove arr i = if i<0 || i >= n
+remove arr i = if i<0 || i > n
         then error ("index out of bounds in 'remove' "++show i++" not in range (0,"++show (isize arr -1)++")")
         else  fst(withMutArray n action)
    where n = (isize arr) - 1

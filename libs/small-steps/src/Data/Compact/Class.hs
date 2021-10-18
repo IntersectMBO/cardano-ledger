@@ -94,7 +94,7 @@ instance Indexable (A.Array Int) a where
   merge = mergeArray
 
 instance Indexable SmallArray t where
-  index = Small.indexSmallArray
+  index = boundsCheck Small.indexSmallArray
   isize = Small.sizeofSmallArray 
   fromlist = Small.smallArrayFromList
   tolist arr = foldr (:) [] arr
