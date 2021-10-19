@@ -476,39 +476,46 @@ testSplit2 i = putStrLn (unlines [show hm, " ",show pathx," ",show a, " ",show b
 -- =========================================================
 -- UnionWith
 
-toListOfSegments :: KeyMap v -> [(Segment,KeyMap v)]
-toListOfSegments Empty = []       -- toListOfSegments is never called with Empty nodes.
-toListOfSegments (Leaf _ _) = []  -- toListOfSegments is never called with Leaf nodes.
-toListOfSegments (One i x) = [(i,x)]
-toListOfSegments (Two bm x y) = zip (bitmapToList bm) [x,y]
-toListOfSegments (BitmapIndexed bm arr) = zip (bitmapToList bm) (tolist arr)
-toListOfSegments (Full arr) = zip (bitmapToList fullNodeMask) (tolist arr)
+toListOfSegments :: Int -> KeyMap v -> [(Segment,KeyMap v)]
+toListOfSegments _ Empty = []       
+toListOfSegments n (l@(Leaf k _)) = [(path k !! n,l)]
+toListOfSegments _ (One i x) = [(i,x)]
+toListOfSegments _ (Two bm x y) = zip (bitmapToList bm) [x,y]
+toListOfSegments _ (BitmapIndexed bm arr) = zip (bitmapToList bm) (tolist arr)
+toListOfSegments _ (Full arr) = zip (bitmapToList fullNodeMask) (tolist arr)
 
 
 mergeWith:: (KeyMap v -> KeyMap v -> KeyMap v) -> [(Segment,KeyMap v)] -> [(Segment,KeyMap v)] -> [(Segment,KeyMap v)]
-mergeWith combine [] [] = []
-mergeWith combine xs [] = xs
-mergeWith combine [] ys = ys
+mergeWith _combine [] [] = []
+mergeWith _combine xs [] = xs
+mergeWith _combine [] ys = ys
 mergeWith combine (allxs@((i,x):xs)) (allys@((j,y):ys)) =
   case compare i j of
     EQ -> (i,combine x y) : mergeWith combine xs ys
     LT -> (i,x) : mergeWith combine xs allys
     GT -> (j,y) : mergeWith combine allxs ys
 
-unionWith :: (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
-unionWith combine Empty Empty = Empty
-unionWith combine x Empty = x
-unionWith combine Empty y = y
-unionWith combine (Leaf k1 v1) (Leaf k2 v2) | k1==k2 = Leaf k1 (combine k1 v1 v2)
-unionWith combine (Leaf k v) y = insertWithKey combine (BitState (path k) k) v y
-unionWith combine x (Leaf k v) = insertWithKey combine (BitState (path k) k) v x
-unionWith combine x y = build (mergeWith (unionWith combine) xpairs ypairs)
-  where xpairs = toListOfSegments x
-        ypairs = toListOfSegments y
+unionWithN :: Int -> (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
+unionWithN _ _ Empty Empty = Empty
+unionWithN _ _ x Empty = x
+unionWithN _ _ Empty y = y
+unionWithN _ combine (Leaf k1 v1) (Leaf k2 v2) | k1==k2 = Leaf k1 (combine k1 v1 v2)
+unionWithN _ combine (Leaf k v) y = insertWithKey combine (BitState (path k) k) v y
+unionWithN _ combine x (Leaf k v) = insertWithKey combine (BitState (path k) k) v x
+unionWithN n combine x y = build (mergeWith (unionWithN (n+1) combine) xpairs ypairs)
+  where xpairs = toListOfSegments n x
+        ypairs = toListOfSegments n y
 
+unionWithKey :: (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
+unionWithKey comb x y = unionWithN 0 comb x y
+
+unionWith :: (v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
+unionWith comb x y = unionWithN 0 (\ _k a b -> comb a b) x y
+
+hm10, hm11, hm12 :: KeyMap Int
 hm10 = fromList (take 5 pairs)
 hm11 = fromList (take 5 (drop 4 pairs))
-hm12 = unionWith (\ k x y -> x+y) hm10 hm11
+hm12 = unionWith (+) hm10 hm11
 
 
 -- ===========================================================
