@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE FlexibleContexts  #-}
 
 
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -38,6 +39,7 @@ import Data.Text(Text,pack)
 import qualified Prettyprinter.Internal as Pretty
 import Data.Set(Set)
 import qualified Data.Set as Set
+import Debug.Trace
  
 
 -- type PArray = PA.Array
@@ -492,17 +494,45 @@ testSplit2 i = putStrLn (unlines [show hm, " ",show pathx," ",show a, " ",show b
 -- =========================================================
 -- UnionWith
 
--- TODO  a function that does not use lists
-mergeArray :: (v -> v -> v) -> Bitmap -> PArray v -> Bitmap -> PArray v -> (Bitmap,PArray v)
-mergeArray combine bm1 arr1 bm2 arr2 = (bmBoth,fst (withMutArray size action))
-   where bmBoth = bm1 .&. bm2
+-- | Make an array of size 1, with 'x' stored at index 0.
+array1 :: a -> PArray a
+array1 x = fst(withMutArray 1 (\ marr -> mwrite marr 0 x))
+
+-- | Make an array of size 2, with 'x' stored at index 0.
+array2 :: a -> a -> PArray a
+array2 x y = fst(withMutArray 2 (\ marr -> mwrite marr 0 x >> mwrite marr 1 y))
+
+
+-- | Turn a (KeyMap v) into a BitMap and an PArray (KeyMap v)
+toSegArray :: Int -> KeyMap v -> (Bitmap,PArray (KeyMap v))
+toSegArray _ Empty = error ("not possible: Empty in toSegArray")      
+toSegArray n (l@(Leaf k _)) = (setBit 0 (path k !! n),array1 l)
+toSegArray _ (One i x) = (setBits [i],array1 x)
+toSegArray _ (Two bm x y) = (bm, array2 x y)
+toSegArray _ (BitmapIndexed bm arr) = (bm,arr)
+toSegArray _ (Full arr) = (fullNodeMask,arr)
+
+union2 :: Int -> (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
+union2 _ _ Empty Empty = Empty
+union2 _ _ x Empty = x
+union2 _ _ Empty y = y
+union2 n combine x y = bitmapIndexedOrFull bmap arrAll
+  where (bmx,arrx) = toSegArray n x
+        (bmy,arry) = toSegArray n y
+        (bmap,arrAll) = mergeArrayWithBitMaps union3 bmx arrx bmy arry
+        union3 (Leaf k1 v1) (Leaf k2 v2) | k1==k2 = Leaf k1 (combine k1 v1 v2)
+        union3 x y = union2 (n+1) combine x y
+
+mergeArrayWithBitMaps :: (v -> v -> v) -> Bitmap -> PArray v -> Bitmap -> PArray v -> (Bitmap,PArray v)
+mergeArrayWithBitMaps combine bm1 arr1 bm2 arr2 = (bmBoth,fst (withMutArray size action))
+   where bmBoth = bm1 .|. bm2
          size = popCount bmBoth
          segments = bitmapToList bmBoth
-         action marr3 = loop segments
+         action marr3 = (loop segments)
            where loop [] = pure ()
                  loop (i:is) = do
-                   let j1 = indexFromSegment bm1 i
-                       j2 = indexFromSegment bm2 i
+                   let j1 = (indexFromSegment bm1 i)
+                       j2 = (indexFromSegment bm2 i)
                        j3 = indexFromSegment bmBoth i
                    case (testBit bm1 i, testBit bm2 i) of
                      (True, True) -> mwrite marr3 j3 (combine (index arr1 j1) (index arr2 j2))
@@ -518,48 +548,18 @@ bmapB = setBits [1,3,5,9,11,14]
 arrA, arrB :: PArray Int
 arrA = fromlist [0,3,6,11,15]
 arrB = fromlist [1,3,5,9,11,14]
-
-toListOfSegments :: Int -> KeyMap v -> [(Segment,KeyMap v)]
-toListOfSegments _ Empty = []       
-toListOfSegments n (l@(Leaf k _)) = [(path k !! n,l)]
-toListOfSegments _ (One i x) = [(i,x)]
-toListOfSegments _ (Two bm x y) = zip (bitmapToList bm) [x,y]
-toListOfSegments _ (BitmapIndexed bm arr) = zip (bitmapToList bm) (tolist arr)
-toListOfSegments _ (Full arr) = zip (bitmapToList fullNodeMask) (tolist arr)
-
-
-mergeWith:: (KeyMap v -> KeyMap v -> KeyMap v) -> [(Segment,KeyMap v)] -> [(Segment,KeyMap v)] -> [(Segment,KeyMap v)]
-mergeWith _combine [] [] = []
-mergeWith _combine xs [] = xs
-mergeWith _combine [] ys = ys
-mergeWith combine (allxs@((i,x):xs)) (allys@((j,y):ys)) =
-  case compare i j of
-    EQ -> (i,combine x y) : mergeWith combine xs ys
-    LT -> (i,x) : mergeWith combine xs allys
-    GT -> (j,y) : mergeWith combine allxs ys
-
-unionWithN :: Int -> (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
-unionWithN _ _ Empty Empty = Empty
-unionWithN _ _ x Empty = x
-unionWithN _ _ Empty y = y
-unionWithN _ combine (Leaf k1 v1) (Leaf k2 v2) | k1==k2 = Leaf k1 (combine k1 v1 v2)
-unionWithN _ combine (Leaf k v) y = insertWithKey combine (BitState (path k) k) v y
-unionWithN _ combine x (Leaf k v) = insertWithKey combine (BitState (path k) k) v x
-unionWithN n combine x y = build (mergeWith (unionWithN (n+1) combine) xpairs ypairs)
-  where xpairs = toListOfSegments n x
-        ypairs = toListOfSegments n y
+testmergeBm = mergeArrayWithBitMaps (+) bmapA arrA bmapB arrB
 
 unionWithKey :: (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
-unionWithKey comb x y = unionWithN 0 comb x y
+unionWithKey comb x y = union2 0 comb x y
 
 unionWith :: (v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
-unionWith comb x y = unionWithN 0 (\ _k a b -> comb a b) x y
+unionWith comb x y = union2 0 (\ _k a b -> comb a b) x y
 
-hm10, hm11, hm12 :: KeyMap Int
+hm10, hm11, hm12:: KeyMap Int
 hm10 = fromList (take 5 pairs)
 hm11 = fromList (take 5 (drop 4 pairs))
 hm12 = unionWith (+) hm10 hm11
-
 
 -- ===========================================================
 -- Maximum and Minimum Key
@@ -662,9 +662,12 @@ sparseIndex b m = popCount (b .&. (m - 1))
 
 -- | Create a 'BitmapIndexed' or 'Full' node.
 bitmapIndexedOrFull :: Bitmap -> PArray (KeyMap v) -> KeyMap v
-bitmapIndexedOrFull b ary
-    | b == fullNodeMask = Full ary
-    | otherwise         = BitmapIndexed b ary
+bitmapIndexedOrFull b arr | isize arr == 0 = Empty
+bitmapIndexedOrFull b arr | isize arr == 1 = One (head (bitmapToList b)) (index arr 0)
+bitmapIndexedOrFull b arr | isize arr == 2 = Two b (index arr 0) (index arr 1)
+bitmapIndexedOrFull b arr
+    | b == fullNodeMask = Full arr
+    | otherwise         = BitmapIndexed b arr
 {-# INLINE bitmapIndexedOrFull #-}
 
 -- | A bitmask with the 'bitsPerSegment' least significant bits set.
@@ -953,6 +956,9 @@ instance PrettyA Int where
 
 instance PrettyA Word64 where
   prettyA = ppWord64
+
+instance PrettyA v => PrettyA (KeyMap v) where
+  prettyA km = ppKeyMap prettyA km
   
 ppWord64 :: Word64 -> Doc a
 ppWord64 = viaShow
