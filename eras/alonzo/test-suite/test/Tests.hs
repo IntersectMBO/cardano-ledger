@@ -36,6 +36,7 @@ mainTests =
       Canonical.tests,
       CDDL.tests 5,
       Golden.goldenUTxOEntryMinAda,
+      Golden.goldenSerialization,
       plutusScriptExamples
     ]
 
@@ -47,6 +48,7 @@ fastTests =
       Translation.tests,
       CDDL.tests 1,
       Golden.goldenUTxOEntryMinAda,
+      Golden.goldenSerialization,
       plutusScriptExamples
     ]
 

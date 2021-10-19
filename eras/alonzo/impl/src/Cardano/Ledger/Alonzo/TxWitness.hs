@@ -50,7 +50,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag, isPlutusScript)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript, hashScript)
 import Cardano.Ledger.Keys
@@ -346,13 +346,25 @@ encodeWitnessRaw vkeys boots scripts dats rdmrs =
     !> Omit null (Key 2 $ setEncode boots)
     !> Omit
       null
-      (Key 1 $ E (encodeFoldable . mapMaybe unwrapTS . Map.elems) timelocks)
+      ( Key 1 $
+          E
+            (encodeFoldable . mapMaybe unwrapTS . Map.elems)
+            (Map.filter isTimelock scripts)
+      )
     !> Omit
       null
-      (Key 3 $ E (encodeFoldable . mapMaybe unwrapPS1 . Map.elems) plutusScripts)
+      ( Key 3 $
+          E
+            (encodeFoldable . mapMaybe unwrapPS1 . Map.elems)
+            (Map.filter (isPlutus PlutusV1) scripts)
+      )
     !> Omit
       null
-      (Key 6 $ E (encodeFoldable . mapMaybe unwrapPS2 . Map.elems) plutusScripts)
+      ( Key 6 $
+          E
+            (encodeFoldable . mapMaybe unwrapPS2 . Map.elems)
+            (Map.filter (isPlutus PlutusV2) scripts)
+      )
     !> Omit nullDats (Key 4 $ E toCBOR dats)
     !> Omit nullRedeemers (Key 5 $ To rdmrs)
   where
@@ -362,7 +374,12 @@ encodeWitnessRaw vkeys boots scripts dats rdmrs =
     unwrapPS1 _ = Nothing
     unwrapPS2 (PlutusScript PlutusV2 x) = Just x
     unwrapPS2 _ = Nothing
-    (plutusScripts, timelocks) = Map.partition isPlutusScript scripts
+
+    isTimelock (TimelockScript _) = True
+    isTimelock (PlutusScript _ _) = False
+
+    isPlutus _ (TimelockScript _) = True
+    isPlutus lang (PlutusScript l _) = lang == l
 
 instance
   (Era era) =>
