@@ -6,9 +6,11 @@
 -- Description : Golden Tests for the Mary era
 module Test.Cardano.Ledger.Alonzo.Golden
   ( goldenUTxOEntryMinAda,
+    goldenSerialization,
   )
 where
 
+import Cardano.Binary (serialize)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
@@ -16,8 +18,10 @@ import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (Value (..), valueFromList)
+import qualified Data.ByteString.Lazy as BSL
 import Data.Char (chr)
 import Plutus.V1.Ledger.Api (Data (..))
+import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Mary.Golden
   ( largestName,
@@ -29,6 +33,7 @@ import Test.Cardano.Ledger.Mary.Golden
     smallestName,
   )
 import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
+import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (testCase, (@?=))
 
@@ -156,4 +161,16 @@ goldenUTxOEntryMinAda =
         -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
         -- we can divide minUTxOValue by 29 and round.
         utxoEntrySize @(AlonzoEra StandardCrypto) (TxOut aliceAddr (Value 0 mempty) SNothing) @?= 29
+    ]
+
+goldenSerialization :: TestTree
+goldenSerialization =
+  testGroup
+    "golden tests - serialization"
+    [ testCase "Alonzo Block" $ do
+        expected <- (BSL.readFile "golden/block.cbor")
+        serialize (SLE.sleBlock ledgerExamplesAlonzo) @?= expected,
+      testCase "Alonzo Tx" $ do
+        expected <- (BSL.readFile "golden/tx.cbor")
+        serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
