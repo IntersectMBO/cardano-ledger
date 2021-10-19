@@ -68,10 +68,10 @@ bitsPerSegment = 6
 {-# INLINE bitsPerSegment #-}
 
 
--- | Ints in the range [0..63], represents 'bits' wide portion of a key
+-- | Ints in the range [0.. intSize], represents one 'bitsPerSegment' wide portion of a key
 type Segment = Int
 
--- | Represents a list of 'bits', which when combined is in 1-1 correspondance with a Key
+-- | Represents a list of 'Segment', which when combined is in 1-1 correspondance with a Key
 type Path = [Segment]
 
 -- | The maximum value of a segment, as an Int
@@ -490,7 +490,31 @@ testSplit2 i = putStrLn (unlines [show hm, " ",show pathx," ",show a, " ",show b
 -- UnionWith
 
 -- TODO  a function that does not use lists
--- mergeArray :: (v -> v -> v) -> Bitmap -> PArray v -> Bitmap -> PArray v -> (Bitmap,PArray v)
+mergeArray :: (v -> v -> v) -> Bitmap -> PArray v -> Bitmap -> PArray v -> (Bitmap,PArray v)
+mergeArray combine bm1 arr1 bm2 arr2 = (bmBoth,fst (withMutArray size action))
+   where bmBoth = bm1 .&. bm2
+         size = popCount bmBoth
+         segments = bitmapToList bmBoth
+         action marr3 = loop segments
+           where loop [] = pure ()
+                 loop (i:is) = do
+                   let j1 = indexFromSegment bm1 i
+                       j2 = indexFromSegment bm2 i
+                       j3 = indexFromSegment bmBoth i
+                   case (testBit bm1 i, testBit bm2 i) of
+                     (True, True) -> mwrite marr3 j3 (combine (index arr1 j1) (index arr2 j2))
+                     (True,False) -> mwrite marr3 j3 (index arr1 j1)
+                     (False,True) -> mwrite marr3 j3 (index arr2 j2)
+                     (False,False) -> pure ()
+                   loop is
+
+bmapA, bmapB :: Bitmap
+bmapA = setBits [0,3,6,11,15]
+bmapB = setBits [1,3,5,9,11,14]
+
+arrA, arrB :: PArray Int
+arrA = fromlist [0,3,6,11,15]
+arrB = fromlist [1,3,5,9,11,14]
 
 toListOfSegments :: Int -> KeyMap v -> [(Segment,KeyMap v)]
 toListOfSegments _ Empty = []       
