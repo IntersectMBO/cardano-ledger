@@ -42,6 +42,7 @@ common project-config
                     , conduit-extra
                     , containers
                     , deepseq
+                    , foldl
                     , persistent
                     , persistent-sqlite
                     , persistent-template
@@ -84,8 +85,7 @@ executable ledger-state
                        -O2
                        -threaded
                        -rtsopts
-  build-depends:       optparse-applicative
-                     , ledger-state
+  build-depends:       ledger-state
                      , deepseq
 
 
@@ -96,6 +96,7 @@ benchmark memory
   build-depends:  base
                 , weigh
                 , ledger-state
+                , optparse-applicative
                 , containers
                 , text
   ghc-options:   -Wall

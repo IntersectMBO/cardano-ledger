@@ -16,7 +16,6 @@ import Cardano.Ledger.State.Orphans
 import Cardano.Ledger.State.UTxO
 import qualified Cardano.Ledger.TxIn as TxIn
 import Conduit
-import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
 import qualified Data.Map.Strict as Map
 import qualified Data.IntMap.Strict as IntMap
@@ -24,6 +23,7 @@ import Database.Persist.Sqlite
 import Data.Text as T
 import Data.Int
 import qualified Cardano.Ledger.Keys as Keys
+import qualified Data.Compact.KeyMap as KeyMap
 
 -- Populate database
 
@@ -107,31 +107,31 @@ sourceUTxO =
   selectSource [] []
     .| mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId (fromIntegral txInIx), txOut))
 
-sourceUTxOr ::
-     MonadResource m
-  => Int64 -> Int64 -> ConduitM () (TxIn.TxIn C, Alonzo.TxOut CurrentEra) (ReaderT SqlBackend m) ()
-sourceUTxOr b t =
-  selectSource [TxId >. TxKey (SqlBackendKey b) , TxId <. TxKey (SqlBackendKey t)] [] .|
-  mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId (fromIntegral txInIx), txOut))
-
-
-foldUTxO ::
+foldDbUTxO ::
      MonadUnliftIO m
   => (a -> (TxIn.TxIn C, Alonzo.TxOut CurrentEra) -> a) -- ^ Folding function
   -> a -- ^ Empty acc
   -> Text -- ^ Path to Sqlite db
   -> m a
-foldUTxO f m fp = runSqlite fp (runConduit (sourceUTxO .| foldlC f m))
+foldDbUTxO f m fp = runSqlite fp (runConduit (sourceUTxO .| foldlC f m))
 
-foldUTxOr ::
-     MonadUnliftIO m
-  => Int64
-  -> Int64
-  -> (a -> (TxIn.TxIn C, Alonzo.TxOut CurrentEra) -> a) -- ^ Folding function
-  -> a -- ^ Empty acc
-  -> Text -- ^ Path to Sqlite db
-  -> m a
-foldUTxOr b t f m fp = runSqlite fp (runConduit (sourceUTxOr b t .| foldlC f m))
+
+-- sourceUTxOr ::
+--      MonadResource m
+--   => Int64 -> Int64 -> ConduitM () (TxIn.TxIn C, Alonzo.TxOut CurrentEra) (ReaderT SqlBackend m) ()
+-- sourceUTxOr b t =
+--   selectSource [TxId >. TxKey (SqlBackendKey b) , TxId <. TxKey (SqlBackendKey t)] [] .|
+--   mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId (fromIntegral txInIx), txOut))
+
+-- foldDbUTxOr ::
+--      MonadUnliftIO m
+--   => Int64
+--   -> Int64
+--   -> (a -> (TxIn.TxIn C, Alonzo.TxOut CurrentEra) -> a) -- ^ Folding function
+--   -> a -- ^ Empty acc
+--   -> Text -- ^ Path to Sqlite db
+--   -> m a
+-- foldDbUTxOr b t f m fp = runSqlite fp (runConduit (sourceUTxOr b t .| foldlC f m))
 
 lsid :: Key LedgerState
 lsid = LedgerStateKey (SqlBackendKey 1)
@@ -310,10 +310,39 @@ getLedgerStateWithSharing fp =
            mempty)
     pure (ls, m)
 
+getLedgerStateSomeSharingKeyMap ::
+     MonadUnliftIO m
+  => Text
+  -> m ( Shelley.LedgerState CurrentEra
+       , IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra)))
+getLedgerStateSomeSharingKeyMap fp =
+  runSqlite fp $ do
+    ledgerState@LedgerState {..} <- getJust lsid
+    dstate <- getDStateWithSharing ledgerStateDstate
+    m <-
+      runConduit
+        (sourceUTxO .| foldlC nestedInsertHM mempty)
+    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
+    pure (ls, m)
+
+
+getLedgerStateSomeSharingKeyMap' ::
+     MonadUnliftIO m
+  => Text
+  -> m ( Shelley.LedgerState CurrentEra
+       , KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
+getLedgerStateSomeSharingKeyMap' fp =
+  runSqlite fp $ do
+    ledgerState@LedgerState {..} <- getJust lsid
+    dstate <- getDStateWithSharing ledgerStateDstate
+    m <- runConduit (sourceUTxO .| foldlC nestedInsertHM' KeyMap.Empty)
+    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
+    pure (ls, m)
+
 
 storeLedgerState ::
-     MonadUnliftIO m => Text -> Shelley.LedgerState CurrentEra -> m ()
-storeLedgerState fp ls = runSqlite fp $ do
-  runMigration migrateAll
-  insertLedgerState ls
-
+     MonadUnliftIO m => FilePath -> Shelley.LedgerState CurrentEra -> m ()
+storeLedgerState fp ls =
+  runSqlite (T.pack fp) $ do
+    runMigration migrateAll
+    insertLedgerState ls

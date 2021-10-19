@@ -11,6 +11,7 @@
 
 module Cardano.Ledger.State.UTxO where
 
+import Control.Foldl (Fold (..))
 import Data.Word
 import Cardano.Prelude (HeapWords(..))
 import qualified Cardano.Crypto.Hash.Class as HS
@@ -324,66 +325,114 @@ loadNewEpochState fp =
 loadLedgerState :: FilePath -> IO (LedgerState CurrentEra)
 loadLedgerState fp = esLState . nesEs <$> loadNewEpochState fp
 
-
 consumeUTxO :: FilePath -> ConduitT (TxIn C, Alonzo.TxOut CurrentEra) Void IO b -> IO b
 consumeUTxO fp sink = do
   withSourceFile fp $ \c -> runConduit $ c .| (sinkParser prefixParser *> parseUTxO) .| sink
 
-loadUTxO_ :: FilePath -> IO ()
-loadUTxO_ fp = (consumeUTxO fp lengthC :: IO Int) >>= print
+loadJsonUTxO :: UTxOFold a -> FilePath -> IO a
+loadJsonUTxO (Fold f e g) fp = consumeUTxO fp (g <$> foldlC f e)
 
-foldlUTxO :: FilePath -> (a -> (TxIn C, Alonzo.TxOut CurrentEra) -> a) -> a -> IO a
-foldlUTxO fp f = consumeUTxO fp . foldlC f
+type UTxOFold b = Fold (TxIn C, Alonzo.TxOut CurrentEra) b
 
-loadUTxO :: FilePath -> IO (Map.Map (TxIn C) (Alonzo.TxOut CurrentEra))
-loadUTxO fp = do
-  utxo <- foldlUTxO fp (\ !m !(!k, !v) -> Map.insert k v m) mempty
-  -- print $ heapWords utxo
-  -- let ws = heapWords utxo
-  -- putStrLn $ "cardano-prelude - HeapWords: " ++ show ws ++ " NumBytes: " ++ show (ws * 8)
-  -- sz <- runHeapsize 100 (recursiveSize utxo)
-  -- putStrLn $ "heapsize - NumBytes: " ++ show sz
-  pure utxo
+noSharing :: UTxOFold (Map.Map (TxIn C) (Alonzo.TxOut CurrentEra))
+noSharing = Fold (\ !m !(!k, !v) -> Map.insert k v m) mempty id
 
-loadUTxOn :: FilePath -> IO (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
-loadUTxOn fp = foldlUTxO fp txIdNestedInsert mempty
+noSharing_ :: UTxOFold (Map.Map (TxIn C) ())
+noSharing_ = Fold (\ !m !(!k, _) -> Map.insert k () m) mempty id
+
+txIdSharing ::
+     UTxOFold (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
+txIdSharing = Fold txIdNestedInsert mempty id
+
+txIdSharing_ :: UTxOFold (Map.Map (TxId C) (IntMap.IntMap ()))
+txIdSharing_ = Fold (\a v -> txIdNestedInsert a (() <$ v)) mempty id
 
 txIdNestedInsert ::
-     (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
-  -> (TxIn C, Alonzo.TxOut CurrentEra)
-  -> (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
+     Map.Map (TxId C) (IntMap.IntMap a)
+  -> (TxIn C, a)
+  -> Map.Map (TxId C) (IntMap.IntMap a)
 txIdNestedInsert !m (TxIn !txId !txIx, !v) =
   let !e = IntMap.singleton (fromIntegral txIx) v
    in Map.insertWith (<>) txId e m
 
-loadUTxOni :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) (Alonzo.TxOut CurrentEra)))
-loadUTxOni fp = foldlUTxO fp nestedInsertTxId mempty
+txIxSharing ::
+     UTxOFold (IntMap.IntMap (Map.Map (TxId C) (Alonzo.TxOut CurrentEra)))
+txIxSharing = Fold txIxNestedInsert mempty id
 
-nestedInsertTxId ::
+txIxSharing_ :: UTxOFold (IntMap.IntMap (Map.Map (TxId C) ()))
+txIxSharing_ = Fold (\a v -> txIxNestedInsert a (() <$ v)) mempty id
+
+txIxNestedInsert ::
      IntMap.IntMap (Map.Map (TxId C) a)
   -> (TxIn C, a)
   -> IntMap.IntMap (Map.Map (TxId C) a)
-nestedInsertTxId !im (TxIn !txId !txIx, !v) =
-      let f =
-            \case
-              Nothing -> Just $! Map.singleton txId v
-              Just !m -> Just $! Map.insert txId v m
-       in IntMap.alter f (fromIntegral txIx) im
+txIxNestedInsert !im (TxIn !txId !txIx, !v) =
+  let f =
+        \case
+          Nothing -> Just $! Map.singleton txId v
+          Just !m -> Just $! Map.insert txId v m
+   in IntMap.alter f (fromIntegral txIx) im
 
-loadUTxOhm :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra)))
-loadUTxOhm fp = foldlUTxO fp nestedInsert mempty
-  where
-    nestedInsert ::
-         IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra))
-      -> (TxIn C, Alonzo.TxOut CurrentEra)
-      -> IntMap.IntMap (KeyMap.HashMap (Alonzo.TxOut CurrentEra))
-    nestedInsert !m (TxInCompact32 x1 x2 x3 x4 txIx, !v) =
-      let !key = KeyMap.Key x1 x2 x3 x4
-          f =
-            \case
-              Nothing -> Just $! KeyMap.Leaf key v
-              Just hm -> Just $! KeyMap.insert key v hm
-       in IntMap.alter f (fromIntegral txIx) m
+
+
+txIxSharingKeyMap ::
+     UTxOFold (IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra)))
+txIxSharingKeyMap = Fold txIxNestedInsertKeyMap mempty id
+
+txIxSharingKeyMap_ :: UTxOFold (IntMap.IntMap (KeyMap.KeyMap ()))
+txIxSharingKeyMap_ = Fold (\a v -> txIxNestedInsertKeyMap a (() <$ v)) mempty id
+
+txIxNestedInsertKeyMap ::
+     IntMap.IntMap (KeyMap.KeyMap a)
+  -> (TxIn C, a)
+  -> IntMap.IntMap (KeyMap.KeyMap a)
+txIxNestedInsertKeyMap !m (TxInCompact32 x1 x2 x3 x4 txIx, !v) =
+  let !key = KeyMap.Key x1 x2 x3 x4
+      f =
+        \case
+          Nothing -> Just $! KeyMap.Leaf key v
+          Just hm -> Just $! KeyMap.insert key v hm
+   in IntMap.alter f (fromIntegral txIx) m
+
+
+txIdSharingKeyMap ::
+     UTxOFold (KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
+txIdSharingKeyMap = Fold txIdNestedInsertKeyMap KeyMap.Empty id
+
+txIdSharingKeyMap_ :: UTxOFold (KeyMap.KeyMap (IntMap.IntMap ()))
+txIdSharingKeyMap_ = Fold (\a v -> txIdNestedInsertKeyMap a (() <$ v)) KeyMap.Empty id
+
+txIdNestedInsertKeyMap ::
+     KeyMap.KeyMap (IntMap.IntMap a)
+  -> (TxIn C, a)
+  -> KeyMap.KeyMap (IntMap.IntMap a)
+txIdNestedInsertKeyMap !m (TxInCompact32 x1 x2 x3 x4 txIx, !a) =
+  let !key = KeyMap.Key x1 x2 x3 x4
+   in case KeyMap.lookupHM key m of
+        Nothing ->
+          let !v = IntMap.singleton (fromIntegral txIx) a
+           in KeyMap.insert key v m
+        Just im ->
+          let !v = IntMap.insert (fromIntegral txIx) a im
+           in KeyMap.insert key v $ KeyMap.delete key m
+
+
+-- nestedInsertHM' ::
+--      KeyMap.KeyMap (IntMap.IntMap a)
+--   -> (TxIn C, a)
+--   -> KeyMap.KeyMap (IntMap.IntMap a)
+-- nestedInsertHM' !hm (TxInCompact32 x1 x2 x3 x4 txIx, !a) =
+--   let !key = KeyMap.Key x1 x2 x3 x4
+--    in case KeyMap.lookupHM key hm of
+--         Nothing ->
+--           let !v = IntMap.singleton (fromIntegral txIx) a
+--            in KeyMap.insert key v hm
+--         Just im ->
+--           let !v = IntMap.insert (fromIntegral txIx) a im
+--            in KeyMap.insert key v $ KeyMap.delete key hm
+
+
+
 
 instance HM.Hashable (TxIn C) where
   hashWithSalt _salt (TxInCompact32 x1 _ _ _ _) = fromIntegral x1
@@ -400,78 +449,61 @@ hashTxId (TxId sh) =
     HS.ViewHash32 a _ _ _ -> fromIntegral a
 
 
-loadUTxOuhm' :: FilePath -> IO (HM.HashMap (TxIn C) ())
-loadUTxOuhm' fp = foldlUTxO fp (\ !m !(!k, _) -> HM.insert k () m) mempty
+-- loadUTxOuhm' :: FilePath -> IO (HM.HashMap (TxIn C) ())
+-- loadUTxOuhm' fp = foldlUTxO fp (\ !m !(!k, _) -> HM.insert k () m) mempty
 
 
-loadUTxOuhm'' :: FilePath -> IO (IntMap.IntMap (HM.HashMap (TxId C) ()))
-loadUTxOuhm'' fp = foldlUTxO fp nestedInsert mempty
-  where
-    nestedInsert ::
-         IntMap.IntMap (HM.HashMap (TxId C) ())
-      -> (TxIn C, Alonzo.TxOut CurrentEra)
-      -> IntMap.IntMap (HM.HashMap (TxId C) ())
-    nestedInsert !m (TxIn txId txIx, _) =
-      let f =
-            \case
-              Nothing -> Just $! HM.singleton txId ()
-              Just hm -> Just $! HM.insert txId () hm
-       in IntMap.alter f (fromIntegral txIx) m
+-- loadUTxOuhm'' :: FilePath -> IO (IntMap.IntMap (HM.HashMap (TxId C) ()))
+-- loadUTxOuhm'' fp = foldlUTxO fp nestedInsert mempty
+--   where
+--     nestedInsert ::
+--          IntMap.IntMap (HM.HashMap (TxId C) ())
+--       -> (TxIn C, Alonzo.TxOut CurrentEra)
+--       -> IntMap.IntMap (HM.HashMap (TxId C) ())
+--     nestedInsert !m (TxIn txId txIx, _) =
+--       let f =
+--             \case
+--               Nothing -> Just $! HM.singleton txId ()
+--               Just hm -> Just $! HM.insert txId () hm
+--        in IntMap.alter f (fromIntegral txIx) m
 
 
-loadUTxO' :: FilePath -> IO (Map.Map (TxIn C) ())
-loadUTxO' fp = foldlUTxO fp (\ !m !(!k, _) -> Map.insert k () m) mempty
+-- loadUTxO' :: FilePath -> IO (Map.Map (TxIn C) ())
+-- loadUTxO' fp = foldlUTxO fp (\ !m !(!k, _) -> Map.insert k () m) mempty
 
-loadUTxOni' :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) ()))
-loadUTxOni' fp = foldlUTxO fp (\m txin -> nestedInsertTxId m (() <$ txin)) mempty
-
--- loadUTxOhm' :: FilePath -> IO (IntMap.IntMap (KeyMap.HashMap ()))
--- loadUTxOhm' fp = foldlUTxO fp nestedInsertHM' mempty
+-- loadUTxOni' :: FilePath -> IO (IntMap.IntMap (Map.Map (TxId C) ()))
+-- loadUTxOni' fp = foldlUTxO fp (\m txin -> nestedInsertTxId m (() <$ txin)) mempty
 
 
--- nestedInsertHM' ::
---      IntMap.IntMap (Map.Map (Word64, Word64, Word64, Word64) ())
---   -> (TxIn C, Alonzo.TxOut CurrentEra)
---   -> IntMap.IntMap (Map.Map (Word64, Word64, Word64, Word64) ())
--- nestedInsertHM' !m (TxInCompact32 x1 x2 x3 x4 txIx, _) =
---   let !key = (x1, x2, x3, x4)
---       f =
---         \case
---           Nothing -> Just $! Map.singleton key ()
---           Just hm -> Just $! Map.insert key () hm
---    in IntMap.alter f (fromIntegral txIx) m
+nestedInsertHM ::
+     IntMap.IntMap (KeyMap.KeyMap a)
+  -> (TxIn C, a)
+  -> IntMap.IntMap (KeyMap.KeyMap a)
+nestedInsertHM !m (TxInCompact32 x1 x2 x3 x4 txIx, !v) =
+  let !key = KeyMap.Key x1 x2 x3 x4
+      f =
+        \case
+          Nothing -> Just $! KeyMap.Leaf key v
+          Just hm -> Just $! KeyMap.insert key v hm
+   in IntMap.alter f (fromIntegral txIx) m
+
+-- loadUTxOihm' :: FilePath -> IO (KeyMap.KeyMap (IntMap.IntMap ()))
+-- loadUTxOihm' fp = foldlUTxO fp (\k v -> nestedInsertHM' k (() <$ v)) KeyMap.Empty
 
 
 nestedInsertHM' ::
-     IntMap.IntMap (KeyMap.HashMap ())
-  -> (TxIn C, Alonzo.TxOut CurrentEra)
-  -> IntMap.IntMap (KeyMap.HashMap ())
-nestedInsertHM' !m (TxInCompact32 x1 x2 x3 x4 txIx, _)
-  | txIx == 0 =
-    let !key = KeyMap.Key x1 x2 x3 x4
-        f =
-          \case
-            Nothing -> Just $! KeyMap.Leaf key ()
-            Just hm -> Just $! KeyMap.insert key () hm
-     in IntMap.alter f (fromIntegral txIx) m
-  | otherwise = m
-
-loadUTxOihm' :: FilePath -> IO (KeyMap.HashMap (IntMap.IntMap ()))
-loadUTxOihm' fp = foldlUTxO fp nestedInsert KeyMap.Empty
-  where
-    nestedInsert ::
-         KeyMap.HashMap (IntMap.IntMap ())
-      -> (TxIn C, Alonzo.TxOut CurrentEra)
-      -> KeyMap.HashMap (IntMap.IntMap ())
-    nestedInsert !hm (TxInCompact32 x1 x2 x3 x4 txIx, _) =
-      let !key = KeyMap.Key x1 x2 x3 x4
-       in case KeyMap.lookupHM key hm of
-            Nothing ->
-              let !v = IntMap.singleton (fromIntegral txIx) ()
-               in KeyMap.insert key v hm
-            Just im ->
-              let !v = IntMap.insert (fromIntegral txIx) () im
-               in KeyMap.insert key v $ KeyMap.delete key hm
+     KeyMap.KeyMap (IntMap.IntMap a)
+  -> (TxIn C, a)
+  -> KeyMap.KeyMap (IntMap.IntMap a)
+nestedInsertHM' !hm (TxInCompact32 x1 x2 x3 x4 txIx, !a) =
+  let !key = KeyMap.Key x1 x2 x3 x4
+   in case KeyMap.lookupHM key hm of
+        Nothing ->
+          let !v = IntMap.singleton (fromIntegral txIx) a
+           in KeyMap.insert key v hm
+        Just im ->
+          let !v = IntMap.insert (fromIntegral txIx) a im
+           in KeyMap.insert key v $ KeyMap.delete key hm
 
 totalADA :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> Mary.Value C
 totalADA = foldMap (\(Alonzo.TxOut _ v _) -> v)
