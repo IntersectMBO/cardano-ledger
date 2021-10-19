@@ -168,6 +168,9 @@ data KeyMap v
     | Full {-# UNPACK #-} !(Small.SmallArray (KeyMap v))           -- intSize subtrees
   deriving (NFData,Generic)
 
+instance Eq v => Eq (KeyMap v) where
+  (==) = undefined
+
 heapAdd :: HeapWords a => a -> Int -> Int
 heapAdd x ans = heapWords x + ans
 
