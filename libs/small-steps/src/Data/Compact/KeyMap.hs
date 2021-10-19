@@ -476,6 +476,9 @@ testSplit2 i = putStrLn (unlines [show hm, " ",show pathx," ",show a, " ",show b
 -- =========================================================
 -- UnionWith
 
+-- TODO  a function that does not use lists
+-- mergeArray :: (v -> v -> v) -> Bitmap -> PArray v -> Bitmap -> PArray v -> (Bitmap,PArray v)
+
 toListOfSegments :: Int -> KeyMap v -> [(Segment,KeyMap v)]
 toListOfSegments _ Empty = []       
 toListOfSegments n (l@(Leaf k _)) = [(path k !! n,l)]
