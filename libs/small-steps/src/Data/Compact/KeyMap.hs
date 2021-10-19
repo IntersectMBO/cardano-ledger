@@ -46,16 +46,27 @@ type PArray = Small.SmallArray
 bin :: Integral n => n -> [n]
 bin x = reverse (binary x)
 
+{-
+myindex :: String -> PArray v -> Int -> v
+myindex message arr i =
+     if i >= 0 && i < size
+        then index arr i
+        else error ("myindex error\n  "++message++"\n  index "++show i++" not in range (0 .. "++show (size-1)++").")
+  where size = isize arr 
+-}
+
 -- ==========================================================================
--- bits, Segments, Paths. Breaking a Key into a sequence of small components
+-- bitsPerSegment, Segments, Paths. Breaking a Key into a sequence of small components
 
 -- | Represent a set of small integers, they can range from 0 to 63
 type Bitmap = Word64
 
 -- | The number of bits in a segment. Can't be more than 6, because using Word64
 --   as Bitmap can only accomodate 2^6 = 64 bits
-bits :: Int  
-bits = 6
+bitsPerSegment :: Int  
+bitsPerSegment = 6
+{-# INLINE bitsPerSegment #-}
+
 
 -- | Ints in the range [0..63], represents 'bits' wide portion of a key
 type Segment = Int
@@ -65,16 +76,18 @@ type Path = [Segment]
 
 -- | The maximum value of a segment, as an Int
 intSize :: Int     
-intSize = 2 ^ bits
+intSize = 2 ^ bitsPerSegment
+{-# INLINE intSize #-}
 
 -- | The maximum value of a segment, as a Word64
 wordSize :: Word64
-wordSize = 2 ^ ((fromIntegral bits)::Word64)
+wordSize = 2 ^ ((fromIntegral bitsPerSegment)::Word64)
+{-# INLINE wordSize #-}
 
--- | The length of a list of segments representing a key. Need to be carefull if a Key isn't evenly divisible by bits
+-- | The length of a list of segments representing a key. Need to be carefull if a Key isn't evenly divisible by bitsPerSegment
 pathSize :: Word64
 pathSize = (if (mod 64 wbits)==0 then (div 64 wbits) else (div 64 wbits) + 1)
-  where wbits = fromIntegral bits :: Word64
+  where wbits = fromIntegral bitsPerSegment :: Word64
 
 -- | Break up a Word64 into a Path
 getpath :: Word64 -> Path
@@ -233,7 +246,7 @@ insertWithKey combine bs0 v0 m0 = goR bs0 v0 m0
                           else Two bmap x0 st'
        where i = indexFromSegment bmap j
     go (BitState (j:js) k) x t@(Full arr) =
-        let !st = index arr i
+        let !st =  index arr i
             !st' = goR (BitState js k) x st
         in if st' `ptrEq` st
               then t
@@ -476,39 +489,49 @@ testSplit2 i = putStrLn (unlines [show hm, " ",show pathx," ",show a, " ",show b
 -- =========================================================
 -- UnionWith
 
-toListOfSegments :: KeyMap v -> [(Segment,KeyMap v)]
-toListOfSegments Empty = []       -- toListOfSegments is never called with Empty nodes.
-toListOfSegments (Leaf _ _) = []  -- toListOfSegments is never called with Leaf nodes.
-toListOfSegments (One i x) = [(i,x)]
-toListOfSegments (Two bm x y) = zip (bitmapToList bm) [x,y]
-toListOfSegments (BitmapIndexed bm arr) = zip (bitmapToList bm) (tolist arr)
-toListOfSegments (Full arr) = zip (bitmapToList fullNodeMask) (tolist arr)
+-- TODO  a function that does not use lists
+-- mergeArray :: (v -> v -> v) -> Bitmap -> PArray v -> Bitmap -> PArray v -> (Bitmap,PArray v)
+
+toListOfSegments :: Int -> KeyMap v -> [(Segment,KeyMap v)]
+toListOfSegments _ Empty = []       
+toListOfSegments n (l@(Leaf k _)) = [(path k !! n,l)]
+toListOfSegments _ (One i x) = [(i,x)]
+toListOfSegments _ (Two bm x y) = zip (bitmapToList bm) [x,y]
+toListOfSegments _ (BitmapIndexed bm arr) = zip (bitmapToList bm) (tolist arr)
+toListOfSegments _ (Full arr) = zip (bitmapToList fullNodeMask) (tolist arr)
 
 
 mergeWith:: (KeyMap v -> KeyMap v -> KeyMap v) -> [(Segment,KeyMap v)] -> [(Segment,KeyMap v)] -> [(Segment,KeyMap v)]
-mergeWith combine [] [] = []
-mergeWith combine xs [] = xs
-mergeWith combine [] ys = ys
+mergeWith _combine [] [] = []
+mergeWith _combine xs [] = xs
+mergeWith _combine [] ys = ys
 mergeWith combine (allxs@((i,x):xs)) (allys@((j,y):ys)) =
   case compare i j of
     EQ -> (i,combine x y) : mergeWith combine xs ys
     LT -> (i,x) : mergeWith combine xs allys
     GT -> (j,y) : mergeWith combine allxs ys
 
-unionWith :: (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
-unionWith combine Empty Empty = Empty
-unionWith combine x Empty = x
-unionWith combine Empty y = y
-unionWith combine (Leaf k1 v1) (Leaf k2 v2) | k1==k2 = Leaf k1 (combine k1 v1 v2)
-unionWith combine (Leaf k v) y = insertWithKey combine (BitState (path k) k) v y
-unionWith combine x (Leaf k v) = insertWithKey combine (BitState (path k) k) v x
-unionWith combine x y = build (mergeWith (unionWith combine) xpairs ypairs)
-  where xpairs = toListOfSegments x
-        ypairs = toListOfSegments y
+unionWithN :: Int -> (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
+unionWithN _ _ Empty Empty = Empty
+unionWithN _ _ x Empty = x
+unionWithN _ _ Empty y = y
+unionWithN _ combine (Leaf k1 v1) (Leaf k2 v2) | k1==k2 = Leaf k1 (combine k1 v1 v2)
+unionWithN _ combine (Leaf k v) y = insertWithKey combine (BitState (path k) k) v y
+unionWithN _ combine x (Leaf k v) = insertWithKey combine (BitState (path k) k) v x
+unionWithN n combine x y = build (mergeWith (unionWithN (n+1) combine) xpairs ypairs)
+  where xpairs = toListOfSegments n x
+        ypairs = toListOfSegments n y
 
+unionWithKey :: (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
+unionWithKey comb x y = unionWithN 0 comb x y
+
+unionWith :: (v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
+unionWith comb x y = unionWithN 0 (\ _k a b -> comb a b) x y
+
+hm10, hm11, hm12 :: KeyMap Int
 hm10 = fromList (take 5 pairs)
 hm11 = fromList (take 5 (drop 4 pairs))
-hm12 = unionWith (\ k x y -> x+y) hm10 hm11
+hm12 = unionWith (+) hm10 hm11
 
 
 -- ===========================================================
@@ -598,16 +621,12 @@ ptrEq :: a -> a -> Bool
 ptrEq x y = isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
 {-# INLINE ptrEq #-}
 
-bitsPerSubkey :: Int
-bitsPerSubkey = 4
-{-# INLINE bitsPerSubkey #-}
-
 maxChildren :: Int
-maxChildren = 1 `unsafeShiftL` bitsPerSubkey
+maxChildren = 1 `unsafeShiftL` bitsPerSegment
 {-# INLINE maxChildren #-}
 
 subkeyMask :: Bitmap
-subkeyMask = 1 `unsafeShiftL` bitsPerSubkey - 1
+subkeyMask = 1 `unsafeShiftL` bitsPerSegment - 1
 {-# INLINE subkeyMask #-}
 
 sparseIndex :: Bitmap -> Bitmap -> Int
@@ -621,7 +640,7 @@ bitmapIndexedOrFull b ary
     | otherwise         = BitmapIndexed b ary
 {-# INLINE bitmapIndexedOrFull #-}
 
--- | A bitmask with the 'bitsPerSubkey' least significant bits set.
+-- | A bitmask with the 'bitsPerSegment' least significant bits set.
 fullNodeMask :: Bitmap
 fullNodeMask = complement (complement 0 `unsafeShiftL` maxChildren)
 {-# INLINE fullNodeMask #-}
@@ -755,7 +774,7 @@ testt n = do
 
 tests :: Int -> (KeyMap Int, String)
 tests n = (hashmap,unlines
-      [ "bits per level = "++show bits
+      [ "bits per level = "++show bitsPerSegment
       , "num levels = "++show keyPathSize
       , "empty = "++show empty
       , "leaf  = "++show leaf
@@ -787,7 +806,7 @@ count x = go 0 x (0,0,0,mempty,mempty,0)
 countIO:: HeapWords a => KeyMap a -> IO ()
 countIO hashmap = do
    putStrLn $ unlines
-      [ "bits per level = "++show bits
+      [ "bits per level = "++show bitsPerSegment
       , "num levels = "++show keyPathSize
       , "empty = "++show empty
       , "leaf  = "++show leaf
