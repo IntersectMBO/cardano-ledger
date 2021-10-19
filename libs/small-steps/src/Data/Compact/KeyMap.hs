@@ -46,16 +46,27 @@ type PArray = Small.SmallArray
 bin :: Integral n => n -> [n]
 bin x = reverse (binary x)
 
+{-
+myindex :: String -> PArray v -> Int -> v
+myindex message arr i =
+     if i >= 0 && i < size
+        then index arr i
+        else error ("myindex error\n  "++message++"\n  index "++show i++" not in range (0 .. "++show (size-1)++").")
+  where size = isize arr 
+-}
+
 -- ==========================================================================
--- bits, Segments, Paths. Breaking a Key into a sequence of small components
+-- bitsPerSegment, Segments, Paths. Breaking a Key into a sequence of small components
 
 -- | Represent a set of small integers, they can range from 0 to 63
 type Bitmap = Word64
 
 -- | The number of bits in a segment. Can't be more than 6, because using Word64
 --   as Bitmap can only accomodate 2^6 = 64 bits
-bits :: Int  
-bits = 6
+bitsPerSegment :: Int  
+bitsPerSegment = 6
+{-# INLINE bitsPerSegment #-}
+
 
 -- | Ints in the range [0..63], represents 'bits' wide portion of a key
 type Segment = Int
@@ -65,16 +76,18 @@ type Path = [Segment]
 
 -- | The maximum value of a segment, as an Int
 intSize :: Int     
-intSize = 2 ^ bits
+intSize = 2 ^ bitsPerSegment
+{-# INLINE intSize #-}
 
 -- | The maximum value of a segment, as a Word64
 wordSize :: Word64
-wordSize = 2 ^ ((fromIntegral bits)::Word64)
+wordSize = 2 ^ ((fromIntegral bitsPerSegment)::Word64)
+{-# INLINE wordSize #-}
 
--- | The length of a list of segments representing a key. Need to be carefull if a Key isn't evenly divisible by bits
+-- | The length of a list of segments representing a key. Need to be carefull if a Key isn't evenly divisible by bitsPerSegment
 pathSize :: Word64
 pathSize = (if (mod 64 wbits)==0 then (div 64 wbits) else (div 64 wbits) + 1)
-  where wbits = fromIntegral bits :: Word64
+  where wbits = fromIntegral bitsPerSegment :: Word64
 
 -- | Break up a Word64 into a Path
 getpath :: Word64 -> Path
@@ -233,7 +246,7 @@ insertWithKey combine bs0 v0 m0 = goR bs0 v0 m0
                           else Two bmap x0 st'
        where i = indexFromSegment bmap j
     go (BitState (j:js) k) x t@(Full arr) =
-        let !st = index arr i
+        let !st =  index arr i
             !st' = goR (BitState js k) x st
         in if st' `ptrEq` st
               then t
@@ -608,16 +621,12 @@ ptrEq :: a -> a -> Bool
 ptrEq x y = isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
 {-# INLINE ptrEq #-}
 
-bitsPerSubkey :: Int
-bitsPerSubkey = 4
-{-# INLINE bitsPerSubkey #-}
-
 maxChildren :: Int
-maxChildren = 1 `unsafeShiftL` bitsPerSubkey
+maxChildren = 1 `unsafeShiftL` bitsPerSegment
 {-# INLINE maxChildren #-}
 
 subkeyMask :: Bitmap
-subkeyMask = 1 `unsafeShiftL` bitsPerSubkey - 1
+subkeyMask = 1 `unsafeShiftL` bitsPerSegment - 1
 {-# INLINE subkeyMask #-}
 
 sparseIndex :: Bitmap -> Bitmap -> Int
@@ -631,7 +640,7 @@ bitmapIndexedOrFull b ary
     | otherwise         = BitmapIndexed b ary
 {-# INLINE bitmapIndexedOrFull #-}
 
--- | A bitmask with the 'bitsPerSubkey' least significant bits set.
+-- | A bitmask with the 'bitsPerSegment' least significant bits set.
 fullNodeMask :: Bitmap
 fullNodeMask = complement (complement 0 `unsafeShiftL` maxChildren)
 {-# INLINE fullNodeMask #-}
@@ -765,7 +774,7 @@ testt n = do
 
 tests :: Int -> (KeyMap Int, String)
 tests n = (hashmap,unlines
-      [ "bits per level = "++show bits
+      [ "bits per level = "++show bitsPerSegment
       , "num levels = "++show keyPathSize
       , "empty = "++show empty
       , "leaf  = "++show leaf
@@ -797,7 +806,7 @@ count x = go 0 x (0,0,0,mempty,mempty,0)
 countIO:: HeapWords a => KeyMap a -> IO ()
 countIO hashmap = do
    putStrLn $ unlines
-      [ "bits per level = "++show bits
+      [ "bits per level = "++show bitsPerSegment
       , "num levels = "++show keyPathSize
       , "empty = "++show empty
       , "leaf  = "++show leaf
