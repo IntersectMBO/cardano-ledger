@@ -378,7 +378,7 @@ encodeWitnessRaw vkeys boots scripts dats rdmrs =
     isTimelock (TimelockScript _) = True
     isTimelock (PlutusScript _ _) = False
 
-    isPlutus _ (TimelockScript _) = True
+    isPlutus _ (TimelockScript _) = False
     isPlutus lang (PlutusScript l _) = lang == l
 
 instance
