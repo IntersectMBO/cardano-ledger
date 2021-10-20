@@ -23,9 +23,8 @@ insert :: k -> v -> HashMap k v -> HashMap k v
 insert k v (HashMap m) = HashMap(KM.insert (toKey k) v m)
 
 insertWithKey :: (k -> v -> v -> v) -> k -> v -> HashMap k v -> HashMap k v
-insertWithKey combine key v (HashMap m) = HashMap(KM.insertWithKey comb state v m)
-   where comb k v1 v2 = combine (fromKey k) v1 v2
-         state = (KM.initBitState (toKey key))
+insertWithKey combine key v (HashMap m) = HashMap(KM.insertWithKey comb (toKey key) v m)
+   where comb k v1 v2 = combine (fromKey k) v1 v2          
 
 restrictKeys :: HashMap k v -> Set k -> HashMap k v
 restrictKeys (HashMap m) set = HashMap(KM.domainRestrict m (Set.map toKey set))

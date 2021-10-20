@@ -39,7 +39,7 @@ import Data.Text(Text,pack)
 import qualified Prettyprinter.Internal as Pretty
 import Data.Set(Set)
 import qualified Data.Set as Set
-import Debug.Trace
+import Data.List(sortBy)
  
 
 -- type PArray = PA.Array
@@ -123,15 +123,15 @@ genKey g = (Key w0 w1 w2 w3,g4)
         (w3,g4) = genWord64 g3        
 
 -- | Break up a Key into a Path
-path :: Key -> Path
-path (Key w0 w1 w2 w3) = getpath w0 ++ getpath w1 ++ getpath w2 ++ getpath w3
+keyPath :: Key -> Path
+keyPath (Key w0 w1 w2 w3) = getpath w0 ++ getpath w1 ++ getpath w2 ++ getpath w3
 
 -- | A pair of a Key and its equivalent Path
 data BitState = BitState Path !Key
 
 -- Initialize a BitState from a Key
 initBitState :: Key -> BitState
-initBitState key = BitState (path key) key
+initBitState key = BitState (keyPath key) key
 
 -- | Obtain the Key from a BitState
 getBytes :: BitState -> Key
@@ -140,7 +140,7 @@ getBytes (BitState _ bs) = bs
 -- | Make a new BitState from a Key, using the old BitState to figure out
 --   how far down the path have we already gone.
 next2 :: BitState -> Key -> BitState
-next2 (BitState ps _) key = (BitState (drop n (path key)) key)
+next2 (BitState ps _) key = (BitState (drop n (keyPath key)) key)
    where n = (fromIntegral keyPathSize) - length ps 
 
 showBM :: Bitmap -> String
@@ -157,21 +157,20 @@ instance HeapWords Key where
 instance Show BitState where
   show (BitState p key) = "(BitState "++show p++" "++show key++")"
 
-
 -- ===============================================================
 
 data KeyMap v
     = Empty
-    | Leaf {-# UNPACK #-} !Key v
-    | One {-# UNPACK #-} !Int (KeyMap v)                           -- 1 subtree
-    | Two {-# UNPACK #-} !Bitmap (KeyMap v) (KeyMap v)            -- 2 subtrees
-    | BitmapIndexed {-# UNPACK #-} !Bitmap                          -- 3 - (intSize - 1) subtrees
+    | Leaf {-# UNPACK #-} !Key !v
+    | One {-# UNPACK #-} !Int !(KeyMap v)                          -- 1 subtree
+    | Two {-# UNPACK #-} !Bitmap !(KeyMap v) !(KeyMap v)           -- 2 subtrees
+    | BitmapIndexed {-# UNPACK #-} !Bitmap                         -- 3 - (intSize - 1) subtrees
                     {-# UNPACK #-} !(Small.SmallArray (KeyMap v))  
     | Full {-# UNPACK #-} !(Small.SmallArray (KeyMap v))           -- intSize subtrees
   deriving (NFData,Generic)
 
 instance Eq v => Eq (KeyMap v) where
-  (==) = undefined
+  (==) x y = toList x == toList y
 
 heapAdd :: HeapWords a => a -> Int -> Int
 heapAdd x ans = heapWords x + ans
@@ -207,71 +206,73 @@ tag (Two _ _a _b) = "Two"
 indexFromSegment :: Bitmap -> Int -> Int
 indexFromSegment bmap j = sparseIndex bmap (setBit 0 j)
 
-insert' :: BitState -> v -> KeyMap v -> KeyMap v
-insert' state v m = insertWithKey (\ _k new _old -> new) state v m
-
-insertWithKey :: (Key -> v -> v -> v) -> BitState -> v -> KeyMap v -> KeyMap v
-insertWithKey combine bs0 v0 m0 = goR bs0 v0 m0
+insertWithKey' :: (Key -> v -> v -> v) -> Path -> Key -> v -> KeyMap v -> KeyMap v
+insertWithKey' combine path k x kmap = go 0 kmap
   where
-    goR state val mp = (go state val mp)
-    go (BitState _ k) !x Empty = Leaf k x
-    go (BitState [] k) _ _ = error ("In insert', ran out of bits for key "++show k)
-    go (BitState (i:is) k) x (One j node) =
-       case compare j i of
-         EQ -> One j (goR (BitState is k) x node)
-         LT -> Two (setBits [i,j]) node (goR (BitState is k) x Empty)
-         GT -> Two (setBits [i,j]) (goR (BitState is k) x Empty) node
-    go (state@(BitState _ k1)) x t@(Leaf k2 y)
-      | k1 == k2 = if x `ptrEq` y
-                    then t
-                    else (Leaf k2 (combine k2 x y))
-      | otherwise = makeTwo state t (next2 state k2) x
-    go (BitState (j:js) k)  x t@(BitmapIndexed bmap arr)
+    go _ Empty = Leaf k x
+    go n (One j node) =
+        case compare j i of
+          EQ -> One j (go (n+1) node)
+          LT -> Two (setBits [i,j]) node (go (n+1) Empty)
+          GT -> Two (setBits [i,j]) (go (n+1) Empty) node
+      where i = path !! n
+    go n t@(Leaf k2 y)
+      | k == k2 = if x `ptrEq` y
+                     then t
+                     else (Leaf k (combine k x y))
+      | otherwise = twoLeaf (drop n (keyPath k2)) t (drop n path) k x
+    go n t@(BitmapIndexed bmap arr)
         | not(testBit bmap j) =
             let !arr' = insertAt arr i $! (Leaf k x)
             in bitmapIndexedOrFull (bmap .|. (setBit 0 j)) arr'
         | otherwise = 
             let !st = index arr i
-                !st' = goR (BitState js k) x st
+                !st' = go (n+1) st
             in if st' `ptrEq` st
                   then t
                   else BitmapIndexed bmap (update arr i st') 
        where i = indexFromSegment bmap j
-    go (BitState (j:js) k) x t@(Two bmap x0 x1)
+             j = (path !! n)
+    go n t@(Two bmap x0 x1)
         | not(testBit bmap j) =
             let !arr' = insertAt (fromlist [x0,x1]) i $! (Leaf k x)
             in bitmapIndexedOrFull (bmap .|. (setBit 0 j)) arr'
         | otherwise =
             let !st = if i==0 then x0 else x1  
-                !st' = goR (BitState js k) x st
+                !st' = go (n+1) st
             in if st' `ptrEq` st
                   then t
                   else if i==0
                           then Two bmap st' x1
                           else Two bmap x0 st'
        where i = indexFromSegment bmap j
-    go (BitState (j:js) k) x t@(Full arr) =
+             j = path !! n         
+    go n t@(Full arr) =
         let !st =  index arr i
-            !st' = goR (BitState js k) x st
+            !st' = go (n+1) st
         in if st' `ptrEq` st
               then t
               else Full (update arr i st') 
        where i = indexFromSegment fullNodeMask j
+             j = path !! n
 
-makeTwo :: BitState -> KeyMap v -> BitState -> v -> KeyMap v
-makeTwo (BitState [] k) _leaf _state _val = error ("Case 1. In makeTwo, out of bits for key "++show k)
-makeTwo _state _leaf (BitState [] k) _val = error ("Case 2. In makeTwo, out of bits for key "++show k)
-makeTwo (BitState (i:is) k1) leaf1 (BitState (j:js) k2) val2 
-      | i==j = One i (makeTwo (BitState is k1) leaf1 (BitState js k2) val2)
+twoLeaf :: Path -> KeyMap v -> Path -> Key -> v -> KeyMap v
+twoLeaf [] _ _ _ _ = error ("the path ran out of segments in twoLeaf case 1.")
+twoLeaf _ _ [] _ _ = error ("the path ran out of segments in twoLeaf case 1.")
+twoLeaf (i:is) leaf1 (j:js) k2 v2 
+      | i==j = One i (twoLeaf is leaf1 js k2 v2)
       | otherwise = if i < j
-                       then Two (setBits [i,j]) (Leaf k1 val2) leaf1 
-                       else Two (setBits [i,j]) leaf1 (Leaf k1 val2) 
+                       then Two (setBits [i,j]) leaf1 (Leaf k2 v2)
+                       else Two (setBits [i,j]) (Leaf k2 v2) leaf1
 
-foo :: String -> a -> String
-foo s !_ = s
+insertWithKey :: (Key -> v -> v -> v) -> Key -> v -> KeyMap v -> KeyMap v
+insertWithKey f k v m = insertWithKey' f (keyPath k) k v m
+
+insertWith :: (t -> t -> t) -> Key -> t -> KeyMap t -> KeyMap t
+insertWith f k v m = insertWithKey' (\ _ key val -> f key val) (keyPath k) k v m
 
 insert :: Key -> v -> KeyMap v -> KeyMap v
-insert bs v hashmap = insert' (initBitState bs) v hashmap -- (trace  ("INSERT "++show bs) hashmap)            
+insert k v m = insertWithKey' (\ _key new _old -> new) (keyPath k) k v m
 
 fromList :: [(Key,v)] -> KeyMap v
 fromList ps = foldl' accum Empty ps
@@ -384,28 +385,28 @@ foldWithDescKey accum !ans0 (Full arr) = loop ans0 (n-1)
 -- ==================================================================
 -- Lookup a key 
 
-lookup' :: BitState -> KeyMap v -> Maybe v
-lookup' _ Empty = Nothing
-lookup' (BitState _ k1) (Leaf k2 v) = if k1==k2 then Just v else Nothing
-lookup' (BitState [] k) _ = error ("lookup', out of bits for key "++show k)
-lookup' (BitState (j:js) k) (One i x) = if i==j then lookup' (BitState js k) x else Nothing
-lookup' (BitState (j:js) k) (Two bm x0 x1) =
-    if testBit bm j
-       then (if i==0 then lookup' (BitState js k) x0 else lookup' (BitState js k) x1)
-       else Nothing
-  where i = indexFromSegment bm j
-lookup' (BitState (j:js) k) (BitmapIndexed bm arr) =
-    if testBit bm j
-       then lookup' (BitState js k) (index arr i)
-       else Nothing
-  where i = indexFromSegment bm j
-lookup' (BitState (j:js) k) (Full arr) = -- Every possible bit is set, to no testBit call necessary
-    lookup'  (BitState js k) (index arr i)
-  where i = indexFromSegment fullNodeMask j
-
-lookupHM :: Key -> KeyMap v -> Maybe v
-lookupHM bytes mp = lookup' (initBitState bytes) mp
-
+lookupHM :: Key-> KeyMap v -> Maybe v
+lookupHM key km = go (keyPath key) km
+  where go _ Empty = Nothing
+        go _ (Leaf key2 v) = if key == key2 then Just v else Nothing
+        go [] _ = Nothing -- Path is empty, we will never find it.
+        go (j:js) (One i x) = if i==j then go js x else Nothing
+        go (j:js) (Two bm x0 x1) =
+           if testBit bm j
+              then (if i==0 then go js x0 else go js x1)
+              else Nothing
+          where i = indexFromSegment bm j
+               
+        go (j:js) (BitmapIndexed bm arr) =
+           if testBit bm j
+              then go js (index arr i)
+              else Nothing
+          where i = indexFromSegment bm j
+       
+        go (j:js) (Full arr) = -- Every possible bit is set, so no testBit call necessary
+           go js (index arr i)
+          where i = indexFromSegment fullNodeMask j
+  
 -- =========================================================
 -- map
 
@@ -506,7 +507,7 @@ array2 x y = fst(withMutArray 2 (\ marr -> mwrite marr 0 x >> mwrite marr 1 y))
 -- | Turn a (KeyMap v) into a BitMap and an PArray (KeyMap v)
 toSegArray :: Int -> KeyMap v -> (Bitmap,PArray (KeyMap v))
 toSegArray _ Empty = error ("not possible: Empty in toSegArray")      
-toSegArray n (l@(Leaf k _)) = (setBit 0 (path k !! n),array1 l)
+toSegArray n (l@(Leaf k _)) = (setBit 0 (keyPath k !! n),array1 l)
 toSegArray _ (One i x) = (setBits [i],array1 x)
 toSegArray _ (Two bm x y) = (bm, array2 x y)
 toSegArray _ (BitmapIndexed bm arr) = (bm,arr)
@@ -521,7 +522,7 @@ union2 n combine x y = bitmapIndexedOrFull bmap arrAll
         (bmy,arry) = toSegArray n y
         (bmap,arrAll) = mergeArrayWithBitMaps union3 bmx arrx bmy arry
         union3 (Leaf k1 v1) (Leaf k2 v2) | k1==k2 = Leaf k1 (combine k1 v1 v2)
-        union3 x y = union2 (n+1) combine x y
+        union3 a b = union2 (n+1) combine a b
 
 mergeArrayWithBitMaps :: (v -> v -> v) -> Bitmap -> PArray v -> Bitmap -> PArray v -> (Bitmap,PArray v)
 mergeArrayWithBitMaps combine bm1 arr1 bm2 arr2 = (bmBoth,fst (withMutArray size action))
@@ -548,6 +549,8 @@ bmapB = setBits [1,3,5,9,11,14]
 arrA, arrB :: PArray Int
 arrA = fromlist [0,3,6,11,15]
 arrB = fromlist [1,3,5,9,11,14]
+
+testmergeBm :: (Bitmap, PArray Int)
 testmergeBm = mergeArrayWithBitMaps (+) bmapA arrA bmapB arrB
 
 unionWithKey :: (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
@@ -662,7 +665,7 @@ sparseIndex b m = popCount (b .&. (m - 1))
 
 -- | Create a 'BitmapIndexed' or 'Full' node.
 bitmapIndexedOrFull :: Bitmap -> PArray (KeyMap v) -> KeyMap v
-bitmapIndexedOrFull b arr | isize arr == 0 = Empty
+bitmapIndexedOrFull _ arr | isize arr == 0 = Empty
 bitmapIndexedOrFull b arr | isize arr == 1 = One (head (bitmapToList b)) (index arr 0)
 bitmapIndexedOrFull b arr | isize arr == 2 = Two b (index arr 0) (index arr 1)
 bitmapIndexedOrFull b arr
@@ -915,7 +918,7 @@ add n stat = (Stat 1 n (Just n) (Just n)) <> stat
 bug :: Int -> IO (KeyMap Int)
 bug n = do
    let ps = take n pairs -- zip (makeKeys 3 n) [0..]
-       hh (k@(Key m0 m1 _ _ ),v) = show m0++" "++show m1++" "++show (path k)++" "++show v
+       hh (k@(Key m0 m1 _ _ ),v) = show m0++" "++show m1++" "++show (keyPath k)++" "++show v
    putStrLn (unlines (map hh ps))
 
    -- putStrLn (show (fromList ps))
@@ -923,7 +926,7 @@ bug n = do
 
 try :: [(Key,Int)] -> IO ()
 try ps = do
-   let  hh (k@(Key m0 m1 _ _),v) = show m0++" "++show m1++" "++show (path k)++" "++show v
+   let  hh (k@(Key m0 m1 _ _),v) = show m0++" "++show m1++" "++show (keyPath k)++" "++show v
    putStrLn (unlines (map hh ps))
    putStrLn (show (fromList ps))
 
@@ -936,7 +939,7 @@ testlookup seed n = all ok results
         results = [ (i,lookupHM (fst(ps !! i)) keymap) | i <- [0..(n-1)]]
         ok (_,Just _) = True
         ok (i,Nothing) = error ("testlookup failure: "++show i++"   "++show pair++"\n"++
-                                show (path (fst pair))++"\n  "++show keymap)
+                                show (keyPath (fst pair))++"\n  "++show keymap)
           where pair = (ps !! i)
 
 -- ======================================================================================
@@ -1033,23 +1036,95 @@ instance PrettyA v => Show (KeyMap v) where
    show x = show(ppKeyMap prettyA x)
    showList xs x = unlines (map (\ y -> "\n"++ show(ppKeyMap prettyA y)) xs) ++ x
 
+-- ====================================================================
+-- Bulk insert
 
-keysX :: [Key]
-keysX =
-    [ Key 17900508425448557813 1425228445697650578 4096886001776694930 5607342842136005805
-    , Key 6883900645186699936 13296170193789961158 4397314084330617059 8869821626379988209
-    , Key 10500005495319713790 2912085157004832622 13426000237053837606 12059657784398898378
-    , Key 3923906598994021794 12765791139276487287 816482653431531599 7003511147053802144
-    , Key 5166915752834780615 7133194944084009196 13810062108841219641 296498671410031824
-    , Key 18030165020800047584 18085286706182838302 16232822895209986816 17388829728381408048
-    , Key 5142157305423936627 7231225143269744777 15250651091019539686 14241693248962825662
-    , Key 13428671722466854389 16561117437870591512 11235927355594486308 16930552725399654134
-    , Key 4838981082210206139 12557487373235351610 6348966276768033248 1499713340968517390
-    , Key 336475062096603304 6399910448856822947 3425786324025245994 16363487473709422408
-    , Key 16607855275778415913 15113927333656355571 16111805289570157530 7151802073429851699
-    , Key 10517657211907470890 1089616862122803787 13992791218083853691 13236284657137382314
-    , Key 1782840219730873272 5422922922394198551 6207884257158004626 16093772551099792787
-    , Key 17216197724774766219 6382375034658581036 883871178158682222 6551207497782514085
-    , Key 292346888039769756 7462467761555063764 6493768272219444322 7737867387963351907
-    , Key 6067080276442487773 97011115971541225 17793222466254767399 16164726605331358005
-    ]
+bulkInsert :: Int -> PArray (Path,KeyMap v) -> Int -> Int -> KeyMap v
+bulkInsert _n arr lo hi | lo < 0 || lo > n || hi <0 || hi > n =
+      error ("lo or hi out of bounds (0 .. "++show n++") lo="++show lo++" hi="++show hi)
+   where n = isize arr - 1
+bulkInsert _n arr lo hi | lo==hi = snd (index arr lo)
+bulkInsert n arr lo hi = -- trace ("BulkInsert n="++show n++" lo="++show lo++" hi="++show hi++" segements="++show segmentRanges) $
+                         BitmapIndexed bmap (fst(withMutArray size (action 0 segmentRanges)))
+  where (size,segments,bmap) = getBitmap n arr lo hi
+        segmentRanges = ranges n arr lo hi segments
+        action _j [] _marr = pure ()
+        action j ((lox,hix):more) marr = do
+           mwrite marr j (bulkInsert (n+1) arr lox hix)
+           action (j+1) more marr
+
+getBitmap :: Int -> PArray (Path,KeyMap v) -> Int -> Int -> (Int,[Segment],Bitmap)
+getBitmap n arr lo hi = (size,segments,bitmap)
+  where accum bm (path,_) = setBit bm (path !! n)
+        bitmap = foldRange accum 0 arr lo hi
+        segments = bitmapToList bitmap
+        size = length segments
+
+-- | given starting row 'i' find the last row 'j', such that column 'n' has 'val' in all rows 'i' to 'j'
+contiguous :: Int -> Int -> Int -> Int -> PArray ([Int], b) -> Int
+contiguous _n _val i _maxi _arr | i < 0 = i
+contiguous _n _val i _maxi arr | i >= isize arr = isize arr - 1
+contiguous _n _val i maxi _arr | i > maxi = i-1  -- Do not look outside the valid range for matching val
+contiguous n val i maxi arr = if (fst(index arr i) !! n) == val then contiguous n val (i+1) maxi arr else (i-1)
+
+-- | compute the row range where the 'n' column has the same value 'val', we assume the rows are sorted
+--   in ascending order, and so is the list of 'vals'
+
+ranges :: Int -> PArray ([Int], b) -> Int -> Int -> [Int] -> [(Int, Int)]
+ranges _n _arr _i _hi [] = []
+ranges n arr i hi (val:vals) = (i,j) : ranges n arr (j+1) hi vals
+  where j = contiguous n val i hi arr
+
+foldRange ::  (ans -> t -> ans) -> ans -> PArray t -> Int -> Int -> ans
+foldRange _accum ans _arr lo hi | lo > hi = ans
+foldRange accum ans arr lo hi = foldRange accum (accum ans (index arr lo)) arr (lo+1) hi
+
+-- ==========================================
+-- test that incremental and bulk loading create the same KeyMap
+
+testbulk :: Int -> Int -> Bool
+testbulk seed n = (bulk == incremental)
+   where keys = makeKeys seed n
+         pairsb = zip keys [0..]
+         paths:: [(Path,KeyMap Int)]
+         paths = sortBy cmp $ map f pairsb
+         f (k,v) = (keyPath k,Leaf k v)
+         cmp (p1,_) (p2,_) = compare p1 p2
+         pathArr = fromlist paths
+         incremental = fromList pairsb
+         bulk = bulkInsert 0 pathArr 0 (isize pathArr - 1)
+
+
+-- ===================================================
+-- try and measure that bulk loading allocates less memory
+-- Does not count the creation and sorting of the array
+-- TODO can we do something kike this with a list rather than an array?
+-- or sort the array in place?
+
+
+keysbulk :: [Key]
+keysbulk = makeKeys 199 50000
+
+pairsbulk :: [(Key,Int)] 
+pairsbulk = zip keysbulk [0..]
+
+pathsbulk :: [(Path,KeyMap Int)]
+pathsbulk = sortBy cmpbulk $ map fbulk pairsbulk
+   where fbulk (k,v) = (keyPath k,Leaf k v)
+         cmpbulk (p1,_) (p2,_) = compare p1 p2
+
+-- use the ghci command   :set +s   to enable statistics
+-- (2.30 secs, 1,159,454,816 bytes) size = 10000
+-- (13.16 secs, 6,829,808,992 bytes) size = 50000
+-- (1.74 secs, 1,623,304,184 bytes)  size = 50000, no print
+tryincremental :: Int
+tryincremental = sizeKeyMap(fromList pairsbulk)
+
+-- (1.93 secs, 968,147,688 bytes) size = 10000
+-- (11.96 secs, 5,937,089,424 bytes) size = 50000
+-- (0.94 secs, 661,637,584 bytes) size = 50000, no print
+trybulk :: Int
+trybulk = sizeKeyMap(bulkInsert 0 pathArr 0 (isize pathArr - 1))
+   where pathArr :: PArray (Path,KeyMap Int)
+         pathArr = fromlist pathsbulk
+         
