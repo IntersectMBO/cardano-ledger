@@ -28,8 +28,9 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (DSignable, Hash)
@@ -48,6 +49,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo
   ( UtxoEnv (..),
   )
 import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW, UtxowPredicateFailure)
+import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody)
 import Cardano.Ledger.Slot (SlotNo)
 import Control.State.Transition
@@ -63,10 +65,13 @@ import Control.State.Transition
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
+import Data.Set (Set)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
+
+-- ========================================================
 
 data LEDGER era
 
@@ -141,6 +146,8 @@ instance
 instance
   ( Show (Core.PParams era),
     Show (Core.Tx era),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),
@@ -189,7 +196,8 @@ instance
 
 ledgerTransition ::
   forall era.
-  ( Embed (Core.EraRule "DELEGS" era) (LEDGER era),
+  ( Era era,
+    Embed (Core.EraRule "DELEGS" era) (LEDGER era),
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
@@ -197,8 +205,7 @@ ledgerTransition ::
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXOW" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "body" (Core.Tx era) (Core.TxBody era)
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do
@@ -246,3 +253,5 @@ instance
   where
   wrapFailed = UtxowFailure
   wrapEvent = UtxowEvent
+
+-- =============================================================

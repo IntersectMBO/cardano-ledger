@@ -24,6 +24,9 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain
     ledgerTraceFromBlock,
     -- Helper Constraints
     TestingLedger,
+    -- Incremental Stake Comp
+    stakeIncrTest,
+    incrementalStakeProp,
   )
 where
 
@@ -35,6 +38,7 @@ import Cardano.Ledger.Block
     neededTxInsForBlock,
   )
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
@@ -44,7 +48,7 @@ import Cardano.Ledger.Shelley.API
     GetLedgerView,
   )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
-import Cardano.Ledger.Shelley.EpochBoundary (obligation)
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (..), Stake (..), obligation)
 import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
@@ -79,6 +83,7 @@ import Control.State.Transition.Trace
 import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default)
 import Data.Foldable (fold, foldl', toList)
 import Data.Functor.Identity (Identity)
@@ -118,6 +123,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     runShelleyBase,
     testGlobals,
   )
+import Test.Cardano.Ledger.TerseTools (tersemapdiffs)
 import Test.QuickCheck
   ( Property,
     Testable (..),
@@ -181,6 +187,74 @@ collisionFreeComplete =
         -- tx signatures
         map (requiredMSigSignaturesSubset @era @ledger) ssts
       ]
+
+-- | STAKE INCR
+stakeIncrTest ::
+  forall era ledger.
+  ( EraGen era,
+    TestingLedger era ledger,
+    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    ChainProperty era,
+    QC.HasTrace (CHAIN era) (GenEnv era)
+  ) =>
+  Property
+stakeIncrTest =
+  forAllChainTrace @era longTraceLen $ \tr -> do
+    let ssts = sourceSignalTargets tr
+
+    conjoin . concat $
+      [ -- preservation properties
+        map (incrStakeComp @era @ledger) ssts
+      ]
+
+incrStakeComp ::
+  forall era ledger.
+  ( ChainProperty era,
+    TestingLedger era ledger
+  ) =>
+  SourceSignalTarget (CHAIN era) ->
+  Property
+incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
+  conjoin $
+    map checkIncrStakeComp $
+      sourceSignalTargets ledgerTr
+  where
+    (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
+    checkIncrStakeComp :: SourceSignalTarget ledger -> Property
+    checkIncrStakeComp
+      SourceSignalTarget
+        { source = (UTxOState {_utxo = u, _stakeDistro = sd}, dp),
+          signal = tx,
+          target = (UTxOState {_utxo = u', _stakeDistro = sd'}, dp')
+        } =
+        counterexample
+          ( mconcat
+              ( [ "\nDetails:\n",
+                  "\ntx\n",
+                  show tx,
+                  "\nsize original utxo\n",
+                  show (Map.size $ unUTxO u),
+                  "\noriginal utxo\n",
+                  show u,
+                  "\noriginal sd\n",
+                  show sd,
+                  "\nfinal utxo\n",
+                  show u',
+                  "\nfinal sd\n",
+                  show sd',
+                  "\noriginal ptrs\n",
+                  show ptrs,
+                  "\nfinal ptrs\n",
+                  show ptrs'
+                ]
+              )
+          )
+          $ utxoBal === incrStakeBal
+        where
+          utxoBal = Val.coin $ balance u'
+          incrStakeBal = fold (credMap sd') <> fold (ptrMap sd')
+          ptrs = _ptrs . _dstate $ dp
+          ptrs' = _ptrs . _dstate $ dp'
 
 -- | Various preservation propertiesC
 adaPreservationChain ::
@@ -1141,3 +1215,58 @@ sameEpoch SourceSignalTarget {source, target} =
   epoch source == epoch target
   where
     epoch = nesEL . chainNes
+
+-- ============================================================
+-- Properties for Incremental Stake Distribution  Calculation
+
+atEpoch ::
+  forall era prop.
+  ( EraGen era,
+    Testable prop,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Default (State (Core.EraRule "PPUP" era))
+  ) =>
+  (LedgerState era -> LedgerState era -> prop) ->
+  Property
+atEpoch f =
+  forAllChainTrace traceLen $ \tr ->
+    conjoin $
+      map g $
+        filter (not . sameEpoch) (sourceSignalTargets tr)
+  where
+    g (SourceSignalTarget s1 s2 _) = f (ledgerStateFromChainState s1) (ledgerStateFromChainState s2)
+
+ledgerStateFromChainState :: ChainState era -> LedgerState era
+ledgerStateFromChainState = esLState . nesEs . chainNes
+
+testIncrementalStake ::
+  forall era.
+  (Era era) =>
+  LedgerState era ->
+  LedgerState era ->
+  Property
+testIncrementalStake _ (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate)) =
+  let stake = stakeDistr @era utxo dstate pstate
+
+      istake = incrementalStakeDistr @era incStake dstate pstate
+   in counterexample
+        ( "\nIncremental stake distribution does not match old style stake distribution"
+            ++ tersediffincremental "differences: Old vs Incremental" (_stake stake) (_stake istake)
+        )
+        (stake === istake)
+
+incrementalStakeProp ::
+  forall era.
+  ( EraGen era,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Default (State (Core.EraRule "PPUP" era))
+  ) =>
+  Proxy era ->
+  Property
+incrementalStakeProp Proxy = atEpoch @era (testIncrementalStake @era)
+
+tersediffincremental :: String -> Stake crypto -> Stake crypto -> String
+tersediffincremental message (Stake a) (Stake c) =
+  tersemapdiffs (message ++ " " ++ "hashes") (mp a) (mp c)
+  where
+    mp = (Map.map fromCompact) . VMap.toMap

@@ -53,13 +53,13 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
-import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyRefunds)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyRefunds, updateStakeDistribution)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.Shelley.UTxO (balance, totalDeposits)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val as Val
 import Control.Monad.Except (MonadError (throwError))
@@ -174,7 +174,7 @@ scriptsValidateTransition ::
 scriptsValidateTransition = do
   TRC
     ( UtxoEnv slot pp poolParams genDelegs,
-      UTxOState utxo deposited fees pup,
+      UTxOState utxo deposited fees pup incStake,
       tx
       ) <-
     judgmentContext
@@ -217,12 +217,18 @@ scriptsValidateTransition = do
     trans @(Core.EraRule "PPUP" era) $
       TRC
         (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ getField @"update" txb)
+
+  let utxoAdd = txouts @era txb -- These will be inserted into the UTxO
+  let utxoDel = eval (getField @"inputs" txb ◁ utxo) -- These will be deleted fromthe UTxO
+  let newIncStakeDistro = updateStakeDistribution @era incStake utxoDel utxoAdd
+
   pure $
     UTxOState
-      { _utxo = eval ((getField @"inputs" txb ⋪ utxo) ∪ txouts @era txb),
+      { _utxo = eval ((getField @"inputs" txb ⋪ utxo) ∪ utxoAdd),
         _deposited = deposited <> depositChange,
         _fees = fees <> getField @"txfee" txb,
-        _ppups = pup'
+        _ppups = pup',
+        _stakeDistro = newIncStakeDistro
       }
 
 scriptsNotValidateTransition ::
@@ -249,7 +255,7 @@ scriptsNotValidateTransition ::
   ) =>
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
-  TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _), tx) <- judgmentContext
+  TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   let txb = body tx
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
@@ -280,7 +286,12 @@ scriptsNotValidateTransition = do
   pure $
     us
       { _utxo = eval (getField @"collateral" txb ⋪ utxo),
-        _fees = fees <> Val.coin (balance @era (eval (getField @"collateral" txb ◁ utxo)))
+        _fees = fees <> Val.coin (balance @era (eval (getField @"collateral" txb ◁ utxo))),
+        _stakeDistro =
+          updateStakeDistribution @era
+            (_stakeDistro us)
+            (eval (getField @"collateral" txb ◁ utxo))
+            (UTxO Map.empty)
       }
 
 data TagMismatchDescription

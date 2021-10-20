@@ -169,7 +169,7 @@ touchDPState :: DPState crypto -> Int
 touchDPState (DPState _x _y) = 1
 
 touchUTxOState :: Cardano.Ledger.Shelley.LedgerState.UTxOState cryto -> Int
-touchUTxOState (UTxOState _utxo _deposited _fees _ppups) = 2
+touchUTxOState (UTxOState _utxo _deposited _fees _ppups _) = 2
 
 profileCreateRegKeys :: IO ()
 profileCreateRegKeys = do

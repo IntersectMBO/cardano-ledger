@@ -45,6 +45,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates (pattern RegPool)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
+    IncrementalStake (..),
     UTxOState (..),
     WitHashes (..),
     _dstate,
@@ -375,6 +376,7 @@ utxoState =
     (Coin 0)
     (Coin 0)
     def
+    (IStake mempty mempty)
 
 dpState :: DPState C_Crypto
 dpState = DPState def def

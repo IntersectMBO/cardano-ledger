@@ -460,7 +460,7 @@ instance Mock c => EraGen (AlonzoEra c) where
         minimumFee = minfee @(AlonzoEra c) pp tx
      in if (minimumFee <= theFee)
           then (pure tx)
-          else myDiscard "MinFeee violation: genEraDne: AlonzoEraGem.hs"
+          else myDiscard "MinFeee violation: genEraDne: AlonzoEraGen.hs"
 
   genEraTweakBlock pp txns =
     let txTotal, ppMax :: ExUnits
@@ -468,7 +468,7 @@ instance Mock c => EraGen (AlonzoEra c) where
         ppMax = getField @"_maxBlockExUnits" pp
      in if pointWiseExUnits (<=) txTotal ppMax
           then pure txns
-          else myDiscard "TotExUnits violation: genEraTweakBlock: AlonzoEraGem.hs"
+          else myDiscard "TotExUnits violation: genEraTweakBlock: AlonzoEraGen.hs"
 
   hasFailedScripts = (== IsValid False) . (getField @"isValid")
 

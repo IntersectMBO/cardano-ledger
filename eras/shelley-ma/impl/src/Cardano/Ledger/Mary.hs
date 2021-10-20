@@ -57,6 +57,7 @@ instance Crypto c => CanStartFromGenesis (MaryEra c) where
                   (Coin 0)
                   (Coin 0)
                   def
+                  (IStake mempty mempty)
               )
               (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
           )
