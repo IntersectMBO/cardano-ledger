@@ -59,7 +59,6 @@ library
     cardano-ledger-core,
     cardano-ledger-pretty,
     cardano-ledger-shelley-ma,
-    cardano-protocol-tpraos,
     cardano-slotting,
     containers,
     data-default-class,
