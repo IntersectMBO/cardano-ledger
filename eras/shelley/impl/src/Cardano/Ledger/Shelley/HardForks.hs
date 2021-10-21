@@ -59,7 +59,7 @@ translateTimeForPlutusScripts ::
 translateTimeForPlutusScripts pp = pvMajor (getField @"_protocolVersion" pp) > 5
 
 -- | Starting with protocol version 7, the UTXO rule predicate failure
--- MissingScriptWitnessesUTXOW will not be used for unnecessary scripts
+-- MissingScriptWitnessesUTXOW will not be used for extraneous scripts
 missingScriptsSymmetricDifference ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
