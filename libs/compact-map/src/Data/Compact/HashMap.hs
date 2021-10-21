@@ -31,7 +31,8 @@ restrictKeys (HashMap m) set = HashMap(KM.domainRestrict m (Set.map toKey set))
 
 splitLookup:: k -> HashMap k a -> (HashMap k a, Maybe a, HashMap k a)
 splitLookup k (HashMap m) = (HashMap a,b,HashMap c)
-  where (a,b,c) = KM.splitKeyMap (KM.initBitState (toKey k)) m
+  where (a,b,c) = KM.splitKeyMap (KM.keyPath key) key m
+        key = toKey k
 
 intersection:: HashMap k v -> HashMap k v -> HashMap k v
 intersection (HashMap m1) (HashMap m2) = HashMap(KM.intersect m1 m2)
