@@ -90,7 +90,7 @@ instance Show h => Show (Attributes h) where
             ""
           | otherwise =
             ", remain: <" <> show (unknownAttributesLength attr) <> " bytes>"
-     in mconcat ["Attributes { data: ", show (attrData attr), remain, " }"]
+     in mconcat ["Attributes { data_ = ", show (attrData attr), remain, " }"]
 
 instance {-# OVERLAPPABLE #-} Buildable h => Buildable (Attributes h) where
   build attr =
