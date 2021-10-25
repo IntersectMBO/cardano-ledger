@@ -33,6 +33,7 @@ import Cardano.Prelude (HeapWords (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
+import Data.Compact.HashMap (Keyed)
 import Data.Foldable (fold)
 import Data.MemoBytes (MemoBytes (..))
 import Data.Typeable
@@ -54,6 +55,8 @@ newtype SafeHash crypto index = SafeHash (Hash.Hash (CC.HASH crypto) index)
 deriving newtype instance
   Hash.HashAlgorithm (CC.HASH crypto) =>
   SafeToHash (SafeHash crypto index)
+
+deriving newtype instance CC.Crypto crypto => Keyed (SafeHash crypto index)
 
 deriving newtype instance HeapWords (Hash.Hash (CC.HASH c) i) => HeapWords (SafeHash c i)
 

@@ -36,10 +36,7 @@ import Cardano.Ledger.Core (TxBody)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.SafeHash
-  ( SafeHash,
-    hashAnnotated,
-  )
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Prelude (HeapWords (..), NFData, cborError)
 import qualified Cardano.Prelude as HW
@@ -74,6 +71,8 @@ newtype TxId crypto = TxId {_unTxId :: SafeHash crypto EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, HeapWords)
 
+deriving newtype instance CC.Crypto crypto => Keyed (TxId crypto)
+
 deriving newtype instance CC.Crypto crypto => ToCBOR (TxId crypto)
 
 deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
@@ -90,7 +89,7 @@ data TxIn crypto = TxInCompact !(TxId crypto) {-# UNPACK #-} !Int
 
 pattern TxIn ::
   TxId crypto ->
-  Natural -> -- TODO We might want to change this to Word64 generally
+  Natural -> -- TODO We might want to change this to Int generally
   TxIn crypto
 pattern TxIn addr index <-
   TxInCompact addr (fromIntegral -> index)

@@ -19,12 +19,17 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData (..))
+import Data.Compact.HashMap (Keyed)
 import NoThunks.Class (NoThunks (..))
 
 newtype AuxiliaryDataHash crypto = AuxiliaryDataHash
   { unsafeAuxiliaryDataHash :: SafeHash crypto EraIndependentAuxiliaryData
   }
   deriving (Show, Eq, Ord, NoThunks, NFData)
+
+deriving newtype instance
+  CC.Crypto crypto =>
+  Keyed (AuxiliaryDataHash crypto)
 
 deriving instance
   CC.Crypto crypto =>
