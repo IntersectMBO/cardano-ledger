@@ -35,6 +35,7 @@ library
   build-depends:       base >=4.11 && <5
                      , array
                      , containers
+                     , cardano-crypto-class
                      , deepseq
                      , prettyprinter
                      , primitive
