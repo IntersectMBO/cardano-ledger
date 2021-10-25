@@ -52,8 +52,9 @@ library
     Cardano.Ledger.Credential
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
-    Cardano.Ledger.Keys
     Cardano.Ledger.Hashes
+    Cardano.Ledger.Keys
+    Cardano.Ledger.PoolDistr
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash
     Cardano.Ledger.Serialization

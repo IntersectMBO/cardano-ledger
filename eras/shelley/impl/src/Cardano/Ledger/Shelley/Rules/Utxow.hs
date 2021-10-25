@@ -36,13 +36,7 @@ import Cardano.Ledger.AuxiliaryData
     ValidateAuxiliaryData (..),
     hashAuxiliaryData,
   )
-import Cardano.Ledger.BaseTypes
-  ( ShelleyBase,
-    StrictMaybe (..),
-    invalidKey,
-    quorum,
-    (==>),
-  )
+import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe (..), invalidKey, quorum, (==>))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
@@ -64,6 +58,7 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley.Delegation.Certificates (isInstantaneousRewards)
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState (..),
     WitHashes (..),
@@ -73,7 +68,7 @@ import Cardano.Ledger.Shelley.LedgerState
     witsFromTxWitnesses,
     witsVKeyNeeded,
   )
-import Cardano.Ledger.Shelley.PParams (ProtVer, Update)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Utxo (UTXO, UtxoEnv (..), UtxoEvent, UtxoPredicateFailure)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
@@ -143,6 +138,8 @@ data UtxowPredicateFailure era
       !(AuxiliaryDataHash (Crypto era)) -- hash of the full metadata
       -- Contains out of range values (strings too long)
   | InvalidMetadata
+  | ExtraneousScriptWitnessesUTXOW
+      !(Set (ScriptHash (Crypto era))) -- extraneous scripts
   deriving (Generic)
 
 newtype UtxowEvent era
@@ -199,6 +196,9 @@ instance
       encodeListLen 3 <> toCBOR (8 :: Word8) <> toCBOR bodyHash <> toCBOR fullMDHash
     InvalidMetadata ->
       encodeListLen 1 <> toCBOR (9 :: Word8)
+    ExtraneousScriptWitnessesUTXOW ss ->
+      encodeListLen 2 <> toCBOR (10 :: Word8)
+        <> encodeFoldable ss
 
 instance
   ( Era era,
@@ -239,6 +239,9 @@ instance
         fullMDHash <- fromCBOR
         pure (3, ConflictingMetadataHash bodyHash fullMDHash)
       9 -> pure (1, InvalidMetadata)
+      10 -> do
+        ss <- decodeSet fromCBOR
+        pure (2, ExtraneousScriptWitnessesUTXOW ss)
       k -> invalidKey k
 
 -- =================================================
@@ -326,8 +329,15 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   let sNeeded = scriptsNeeded utxo tx
       sReceived = Map.keysSet (getField @"scriptWits" tx)
-  sNeeded == sReceived
-    ?! embed (MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived))
+  if HardForks.missingScriptsSymmetricDifference pp
+    then do
+      sNeeded `Set.isSubsetOf` sReceived
+        ?! embed (MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived))
+      sReceived `Set.isSubsetOf` sNeeded
+        ?! embed (ExtraneousScriptWitnessesUTXOW (sReceived `Set.difference` sNeeded))
+    else
+      sNeeded == sReceived
+        ?! embed (MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived))
 
   -- check VKey witnesses
 

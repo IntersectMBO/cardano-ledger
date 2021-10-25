@@ -21,6 +21,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys
+import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Serialization
 import Cardano.Ledger.Shelley (ShelleyEra)
@@ -28,12 +29,11 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Shelley.PParams hiding (ProtVer)
 import Cardano.Ledger.Shelley.Rules.Delegs
 import Cardano.Ledger.Shelley.Rules.Ledger
 import Cardano.Ledger.Shelley.Tx
 import Cardano.Ledger.Shelley.UTxO
-import Cardano.Protocol.TPraos
 import Cardano.Slotting.Block
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot

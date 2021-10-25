@@ -15,6 +15,7 @@ import Cardano.Ledger.BaseTypes as X
     Network (..),
     Nonce (..),
     Port (..),
+    ProtVer (..),
     StrictMaybe (..),
     epochInfo,
   )
@@ -54,6 +55,10 @@ import Cardano.Ledger.Keys as X
     hashKey,
     hashVerKeyVRF,
   )
+import Cardano.Ledger.PoolDistr as X
+  ( PoolDistr (..),
+    individualPoolStake,
+  )
 import Cardano.Ledger.Shelley.Address.Bootstrap as X
   ( BootstrapWitness (..),
   )
@@ -92,7 +97,6 @@ import Cardano.Ledger.Shelley.PParams as X
   ( PParams,
     PParams' (..),
     ProposedPPUpdates (..),
-    ProtVer (..),
     Update (..),
   )
 import Cardano.Ledger.Shelley.Rewards as X
@@ -149,10 +153,6 @@ import Cardano.Ledger.Shelley.UTxO as X
     balance,
   )
 import Cardano.Ledger.TxIn as X (TxId (..), TxIn (..))
-import Cardano.Protocol.TPraos as X
-  ( PoolDistr (..),
-    individualPoolStake,
-  )
 import Cardano.Protocol.TPraos.BHeader as X
   ( BHBody (..),
     BHeader (..),

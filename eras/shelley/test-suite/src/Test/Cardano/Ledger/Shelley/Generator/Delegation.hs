@@ -20,7 +20,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Delegation
 where
 
 import Cardano.Ledger.Address (mkRwdAcnt)
-import Cardano.Ledger.BaseTypes (UnitInterval)
+import Cardano.Ledger.BaseTypes (ProtVer, UnitInterval)
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -60,7 +60,6 @@ import Cardano.Ledger.Shelley.API
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
-import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))

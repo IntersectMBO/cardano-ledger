@@ -26,9 +26,6 @@ import Cardano.Ledger.Shelley.Rules.Tick (TICK, TICKF)
 import Cardano.Ledger.Shelley.Rules.Upec (UPEC)
 import Cardano.Ledger.Shelley.Rules.Utxo (UTXO)
 import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW)
-import Cardano.Protocol.TPraos.Rules.OCert (OCERT)
-import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY)
-import Cardano.Protocol.TPraos.Rules.Tickn (TICKN)
 
 type instance Core.EraRule "BBODY" (ShelleyEra c) = BBODY (ShelleyEra c)
 
@@ -50,10 +47,6 @@ type instance Core.EraRule "NEWEPOCH" (ShelleyEra c) = NEWEPOCH (ShelleyEra c)
 
 type instance Core.EraRule "NEWPP" (ShelleyEra c) = NEWPP (ShelleyEra c)
 
-type instance Core.EraRule "OCERT" (ShelleyEra c) = OCERT (ShelleyEra c)
-
-type instance Core.EraRule "OVERLAY" (ShelleyEra c) = OVERLAY (ShelleyEra c)
-
 type instance Core.EraRule "POOL" (ShelleyEra c) = POOL (ShelleyEra c)
 
 type instance Core.EraRule "POOLREAP" (ShelleyEra c) = POOLREAP (ShelleyEra c)
@@ -67,8 +60,6 @@ type instance Core.EraRule "SNAP" (ShelleyEra c) = SNAP (ShelleyEra c)
 type instance Core.EraRule "TICK" (ShelleyEra c) = TICK (ShelleyEra c)
 
 type instance Core.EraRule "TICKF" (ShelleyEra c) = TICKF (ShelleyEra c)
-
-type instance Core.EraRule "TICKN" (ShelleyEra c) = TICKN
 
 type instance Core.EraRule "UPEC" (ShelleyEra c) = UPEC (ShelleyEra c)
 

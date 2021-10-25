@@ -12,6 +12,7 @@ import qualified Test.Cardano.Chain.Block.ValidationMode
 import qualified Test.Cardano.Chain.Buildable
 import qualified Test.Cardano.Chain.Byron.API
 import qualified Test.Cardano.Chain.Common.Address
+import qualified Test.Cardano.Chain.Common.Attributes
 import qualified Test.Cardano.Chain.Common.CBOR
 import qualified Test.Cardano.Chain.Common.Compact
 import qualified Test.Cardano.Chain.Common.Lovelace
@@ -47,6 +48,7 @@ main =
               Test.Cardano.Chain.Block.ValidationMode.tests,
               Test.Cardano.Chain.Buildable.tests,
               Test.Cardano.Chain.Common.Address.tests,
+              Test.Cardano.Chain.Common.Attributes.tests,
               Test.Cardano.Chain.Common.CBOR.tests,
               Test.Cardano.Chain.Common.Compact.tests,
               Test.Cardano.Chain.Common.Lovelace.tests,

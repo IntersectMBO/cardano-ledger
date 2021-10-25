@@ -8,7 +8,7 @@ module Cardano.Ledger.Shelley.SoftForks
   )
 where
 
-import Cardano.Ledger.Shelley.PParams (ProtVer (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import GHC.Records
 
 validMetadata ::

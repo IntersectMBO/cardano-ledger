@@ -19,7 +19,6 @@ module Cardano.Ledger.Shelley.API.Wallet
     getFilteredUTxO,
 
     -- * Stake Pools
-    getLeaderSchedule,
     getPools,
     getPoolParameters,
     getTotalStake,
@@ -28,7 +27,6 @@ module Cardano.Ledger.Shelley.API.Wallet
     RewardParams (..),
     getRewardInfoPools,
     getRewardProvenance,
-    getRewardInfo,
     getNonMyopicMemberRewards,
 
     -- * Transaction helpers
@@ -39,6 +37,10 @@ module Cardano.Ledger.Shelley.API.Wallet
     AdaPots (..),
     totalAdaES,
     totalAdaPotsES,
+
+    -- * Deprecated
+    getRewardInfo,
+    getLeaderSchedule,
   )
 where
 
@@ -54,11 +56,11 @@ import Cardano.Binary
 import Cardano.Crypto.DSIGN.Class (decodeSignedDSIGN, sizeSigDSIGN, sizeVerKeyDSIGN)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes
   ( BlocksMade,
     Globals (..),
     NonNegativeInterval,
+    ProtVer,
     Seed,
     UnitInterval,
     epochInfo,
@@ -70,8 +72,12 @@ import Cardano.Ledger.Crypto (DSIGN, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..), SignKeyVRF)
+import Cardano.Ledger.PoolDistr
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Protocol (ChainDepState (..))
+import qualified Cardano.Ledger.Shelley.API.Protocol as TP (ChainDepState, getLeaderSchedule)
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
@@ -92,7 +98,7 @@ import Cardano.Ledger.Shelley.LedgerState
     produced,
     stakeDistr,
   )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProtVer)
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards
   ( NonMyopic (..),
@@ -110,13 +116,6 @@ import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
-import Cardano.Protocol.TPraos.BHeader (checkLeaderValue, mkSeed, seedL)
-import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
-import Cardano.Slotting.EpochInfo (epochInfoRange)
 import Cardano.Slotting.Slot (EpochSize, SlotNo)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
@@ -134,7 +133,6 @@ import Data.Coders
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Foldable (fold)
-import Data.Functor.Identity (runIdentity)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -504,37 +502,22 @@ getRewardProvenance globals newepochstate =
     asc = activeSlotCoeff globals
     secparam = securityParameter globals
 
--- | Get the (private) leader schedule for this epoch.
---
---   Given a private VRF key, returns the set of slots in which this node is
---   eligible to lead.
+{-# DEPRECATED getLeaderSchedule "import from Cardano.Ledger.Shelley.API.Protocol instead." #-}
 getLeaderSchedule ::
   ( Era era,
     VRF.Signable
       (VRF (Crypto era))
-      Seed
+      Seed,
+    HasField "_d" (Core.PParams era) UnitInterval
   ) =>
   Globals ->
   NewEpochState era ->
-  ChainDepState (Crypto era) ->
+  TP.ChainDepState (Crypto era) ->
   KeyHash 'StakePool (Crypto era) ->
   SignKeyVRF (Crypto era) ->
-  PParams era ->
+  Core.PParams era ->
   Set SlotNo
-getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlots
-  where
-    isLeader slotNo =
-      let y = VRF.evalCertified () (mkSeed seedL slotNo epochNonce) key
-       in not (isOverlaySlot a (_d pp) slotNo)
-            && checkLeaderValue (VRF.certifiedOutput y) stake f
-    stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
-    poolDistr = unPoolDistr $ nesPd ss
-    TicknState epochNonce _ = csTickn cds
-    currentEpoch = nesEL ss
-    ei = epochInfo globals
-    f = activeSlotCoeff globals
-    epochSlots = Set.fromList [a .. b]
-    (a, b) = runIdentity $ epochInfoRange ei currentEpoch
+getLeaderSchedule = TP.getLeaderSchedule
 
 --------------------------------------------------------------------------------
 -- Transaction helpers

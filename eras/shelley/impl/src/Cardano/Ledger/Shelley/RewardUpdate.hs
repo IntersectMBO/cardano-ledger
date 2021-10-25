@@ -24,6 +24,7 @@ import Cardano.Binary
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     NonNegativeInterval,
+    ProtVer (..),
     ShelleyBase,
     UnitInterval,
     boundedRationalFromCBOR,
@@ -39,7 +40,6 @@ import Cardano.Ledger.Shelley.EpochBoundary
     Stake (..),
     poolStake,
   )
-import Cardano.Ledger.Shelley.PParams (ProtVer (..))
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenancePool (..))
 import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
 import Cardano.Ledger.Shelley.Rewards

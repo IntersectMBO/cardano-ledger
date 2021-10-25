@@ -18,7 +18,6 @@ import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 -- Instances only
 
-import Cardano.Ledger.Alonzo.PParams (ProtVer)
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
@@ -33,7 +32,7 @@ import Cardano.Ledger.Alonzo.TxBody
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))

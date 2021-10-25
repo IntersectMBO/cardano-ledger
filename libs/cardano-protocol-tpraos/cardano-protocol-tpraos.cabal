@@ -47,7 +47,6 @@ library
     Cardano.Protocol.TPraos.Rules.Updn
 
   build-depends:
-    aeson,
     bytestring,
     cardano-binary,
     cardano-crypto-class,

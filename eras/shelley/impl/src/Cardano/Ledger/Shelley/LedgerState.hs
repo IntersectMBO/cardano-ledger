@@ -106,6 +106,7 @@ import Cardano.Ledger.BaseTypes
     BlocksMade (..),
     BoundedRational (..),
     NonNegativeInterval,
+    ProtVer (..),
     ShelleyBase,
     StrictMaybe (..),
     UnitInterval,
@@ -136,6 +137,7 @@ import Cardano.Ledger.Keys
     VKey,
     asWitness,
   )
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Address.Bootstrap
@@ -162,7 +164,6 @@ import Cardano.Ledger.Shelley.PParams
   ( PParams,
     PParams' (..),
     ProposedPPUpdates (..),
-    ProtVer (..),
     Update (..),
     emptyPPPUpdates,
   )
@@ -221,7 +222,6 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos (PoolDistr (..))
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, liftProv, modifyM)
 import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
@@ -1115,7 +1115,20 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       numPools = fromIntegral (Map.size poolParams)
       k = fromIntegral secparam
       f = unboundRational (activeSlotVal asc)
-      pulseSize = max 1 (ceiling ((numPools * f) / (6 * k)))
+
+      -- We expect approximately (10k/f)-many blocks to be produced each epoch.
+      -- The reward calculation begins (4k/f)-many slots into the epoch,
+      -- and we guarantee that it ends (2k/f)-many slots before the end
+      -- of the epoch (to allow tools such as db-sync to see the reward
+      -- values in advance of them being applied to the ledger state).
+      --
+      -- Therefore to evenly space out the reward calculation, we divide
+      -- the number of stake pools by 4k/f in order to determine how many
+      -- stake pools' rewards we should calculate each block.
+      -- If it does not finish in this amount of time, the calculation is
+      -- forced to completion.
+      pulseSize = max 1 (ceiling ((numPools * f) / (4 * k)))
+
       Coin reserves = _reserves acnt
       ds = _dstate $ _delegationState ls
       -- reserves and rewards change

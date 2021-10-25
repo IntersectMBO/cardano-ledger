@@ -1,0 +1,58 @@
+cabal-version: 2.2
+
+name:                cardano-ledger-pretty
+version:             0.1.0.0
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+description:         Pretty Printers for the Cardano Ledger
+build-type:          Simple
+
+extra-source-files:
+  README.md
+  ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+  subdir:   libs/cardano-ledger-pretty
+
+common base
+  build-depends:      base >= 4.12 && < 4.15
+
+common project-config
+  default-language:   Haskell2010
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             base, project-config
+  hs-source-dirs:     src
+  exposed-modules:
+    Cardano.Ledger.Pretty
+    Cardano.Ledger.Pretty.Alonzo
+    Cardano.Ledger.Pretty.Mary
+  build-depends:
+    bech32,
+    bytestring,
+    cardano-ledger-alonzo,
+    cardano-ledger-shelley,
+    cardano-ledger-shelley-ma,
+    cardano-crypto-class,
+    cardano-ledger-byron,
+    cardano-protocol-tpraos,
+    cardano-slotting,
+    containers,
+    iproute,
+    mtl,
+    plutus-ledger-api,
+    prettyprinter,
+    small-steps,
+    cardano-ledger-core,
+    strict-containers,
+    text,

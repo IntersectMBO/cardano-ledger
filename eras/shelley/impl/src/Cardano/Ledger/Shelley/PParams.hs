@@ -16,7 +16,6 @@ module Cardano.Ledger.Shelley.PParams
     PParams,
     emptyPParams,
     HKD,
-    ProtVer (..), --TODO remove the re-export
     PPUpdateEnv (..),
     ProposedPPUpdates (..),
     emptyPPPUpdates,
@@ -24,6 +23,10 @@ module Cardano.Ledger.Shelley.PParams
     emptyPParamsUpdate,
     Update (..),
     updatePParams,
+    -- DEPRECATED
+    ProtVer,
+    pvMajor,
+    pvMinor,
   )
 where
 
@@ -44,6 +47,7 @@ import Cardano.Ledger.BaseTypes
     invalidKey,
     strictMaybeToMaybe,
   )
+import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import Cardano.Ledger.Era
@@ -58,7 +62,6 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Protocol.TPraos (ProtVer (..))
 import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -140,7 +143,7 @@ data PParams' f era = PParams
     -- | Extra entropy
     _extraEntropy :: !(HKD f Nonce),
     -- | Protocol version
-    _protocolVersion :: !(HKD f ProtVer),
+    _protocolVersion :: !(HKD f BT.ProtVer),
     -- | Minimum UTxO value
     _minUTxOValue :: !(HKD f Coin),
     -- | Minimum Stake Pool Cost
@@ -285,7 +288,7 @@ emptyPParams =
       _tau = minBound,
       _d = minBound,
       _extraEntropy = NeutralNonce,
-      _protocolVersion = ProtVer 0 0,
+      _protocolVersion = BT.ProtVer 0 0,
       _minUTxOValue = mempty,
       _minPoolCost = mempty
     }
@@ -458,3 +461,15 @@ updatePParams pp ppup =
       _minUTxOValue = fromSMaybe (_minUTxOValue pp) (_minUTxOValue ppup),
       _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup)
     }
+
+{-# DEPRECATED ProtVer "Import from Cardano.Ledger.BaseTypes instead" #-}
+
+type ProtVer = BT.ProtVer
+
+{-# DEPRECATED pvMajor "Import from Cardano.Ledger.BaseTypes instead" #-}
+pvMajor :: ProtVer -> Natural
+pvMajor = BT.pvMajor
+
+{-# DEPRECATED pvMinor "Import from Cardano.Ledger.BaseTypes instead" #-}
+pvMinor :: ProtVer -> Natural
+pvMinor = BT.pvMinor

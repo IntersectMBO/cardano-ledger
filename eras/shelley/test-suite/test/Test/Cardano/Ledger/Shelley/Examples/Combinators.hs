@@ -50,6 +50,7 @@ import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     NonNegativeInterval,
     Nonce (..),
+    ProtVer,
     StrictMaybe (..),
     UnitInterval,
     (⭒),
@@ -71,6 +72,7 @@ import Cardano.Ledger.Keys
     KeyHash,
     KeyRole (..),
   )
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
@@ -89,13 +91,12 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     applyRUpd,
   )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates, ProtVer)
+import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules.Mir (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.Shelley.UTxO (txins, txouts)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>), (<->))
-import Cardano.Protocol.TPraos (PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader,

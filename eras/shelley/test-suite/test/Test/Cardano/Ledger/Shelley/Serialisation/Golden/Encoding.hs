@@ -33,6 +33,7 @@ import Cardano.Ledger.BaseTypes
     BoundedRational (..),
     Network (..),
     Nonce (..),
+    ProtVer (..),
     StrictMaybe (..),
     UnitInterval,
     mkNonceFromNumber,
@@ -66,6 +67,7 @@ import Cardano.Ledger.Keys
     signedKES,
     vKey,
   )
+import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
@@ -105,7 +107,6 @@ import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PParams
   ( PParams' (..),
     PParamsUpdate,
-    ProtVer (..),
     emptyPParams,
     pattern ProposedPPUpdates,
     pattern Update,
@@ -145,7 +146,6 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Prelude (LByteString)
-import Cardano.Protocol.TPraos (PoolDistr (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (..),

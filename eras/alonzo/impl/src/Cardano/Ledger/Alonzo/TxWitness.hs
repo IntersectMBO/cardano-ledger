@@ -37,8 +37,6 @@ module Cardano.Ledger.Alonzo.TxWitness
         txdats',
         txrdmrs'
       ),
-    ppRdmrPtr,
-    ppTxWitness,
     unTxDats,
     nullDats,
   )
@@ -50,26 +48,12 @@ import Cardano.Binary
     encodeListLen,
     serializeEncoding',
   )
-import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData, ppData)
+import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag, isPlutusScript, ppExUnits, ppTag)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript, hashScript)
 import Cardano.Ledger.Keys
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppBootstrapWitness,
-    ppMap,
-    ppPair,
-    ppRecord,
-    ppSafeHash,
-    ppScriptHash,
-    ppSet,
-    ppSexp,
-    ppWitVKey,
-    ppWord64,
-  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
@@ -362,13 +346,25 @@ encodeWitnessRaw vkeys boots scripts dats rdmrs =
     !> Omit null (Key 2 $ setEncode boots)
     !> Omit
       null
-      (Key 1 $ E (encodeFoldable . mapMaybe unwrapTS . Map.elems) timelocks)
+      ( Key 1 $
+          E
+            (encodeFoldable . mapMaybe unwrapTS . Map.elems)
+            (Map.filter isTimelock scripts)
+      )
     !> Omit
       null
-      (Key 3 $ E (encodeFoldable . mapMaybe unwrapPS1 . Map.elems) plutusScripts)
+      ( Key 3 $
+          E
+            (encodeFoldable . mapMaybe unwrapPS1 . Map.elems)
+            (Map.filter (isPlutus PlutusV1) scripts)
+      )
     !> Omit
       null
-      (Key 6 $ E (encodeFoldable . mapMaybe unwrapPS2 . Map.elems) plutusScripts)
+      ( Key 6 $
+          E
+            (encodeFoldable . mapMaybe unwrapPS2 . Map.elems)
+            (Map.filter (isPlutus PlutusV2) scripts)
+      )
     !> Omit nullDats (Key 4 $ E toCBOR dats)
     !> Omit nullRedeemers (Key 5 $ To rdmrs)
   where
@@ -378,7 +374,12 @@ encodeWitnessRaw vkeys boots scripts dats rdmrs =
     unwrapPS1 _ = Nothing
     unwrapPS2 (PlutusScript PlutusV2 x) = Just x
     unwrapPS2 _ = Nothing
-    (plutusScripts, timelocks) = Map.partition isPlutusScript scripts
+
+    isTimelock (TimelockScript _) = True
+    isTimelock (PlutusScript _ _) = False
+
+    isPlutus _ (TimelockScript _) = False
+    isPlutus lang (PlutusScript l _) = lang == l
 
 instance
   (Era era) =>
@@ -473,28 +474,3 @@ deriving via
       Core.Script era ~ Script era
     ) =>
     FromCBOR (Annotator (TxWitness era))
-
--- ============================================================
--- Pretty Printing
-
-ppRdmrPtr :: RdmrPtr -> PDoc
-ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [ppTag tag, ppWord64 w]
-
-instance PrettyA RdmrPtr where prettyA = ppRdmrPtr
-
-ppTxWitness :: (Era era, PrettyA (Core.Script era)) => TxWitness era -> PDoc
-ppTxWitness (TxWitnessConstr (Memo (TxWitnessRaw vk wb sc da (Redeemers rd)) _)) =
-  ppRecord
-    "TxWitness"
-    [ ("txwitsVKey", ppSet ppWitVKey vk),
-      ("txwitsBoot", ppSet ppBootstrapWitness wb),
-      ("txscripts", ppMap ppScriptHash prettyA sc),
-      ("txdats", ppMap ppSafeHash ppData (unTxDats da)),
-      ("txrdmrs", ppMap ppRdmrPtr (ppPair ppData ppExUnits) rd)
-    ]
-
-instance
-  (Era era, PrettyA (Core.Script era)) =>
-  PrettyA (TxWitness era)
-  where
-  prettyA = ppTxWitness

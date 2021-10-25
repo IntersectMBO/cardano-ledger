@@ -21,7 +21,7 @@ module Cardano.Ledger.Mary.Value
     representationSize,
     showValue,
     valueFromList,
-    ppValue,
+    gettriples',
   )
 where
 
@@ -42,17 +42,6 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Coin (Coin (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppCoin,
-    ppInteger,
-    ppList,
-    ppLong,
-    ppScriptHash,
-    ppSexp,
-    ppString,
-  )
 import Cardano.Ledger.Serialization (decodeMap, encodeMap)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Val
@@ -103,7 +92,6 @@ import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
-import Prettyprinter (hsep)
 import Prelude hiding (lookup)
 
 -- | Asset Name
@@ -795,25 +783,3 @@ gettriples' (Value c m1) = (c, triples, bad)
 gettriples :: Value crypto -> (Integer, [(PolicyID crypto, AssetName, Integer)])
 gettriples v = case gettriples' v of
   (a, b, _) -> (a, b)
-
--- =====================================
--- Pretty printing functions
-
-ppValue :: Value crypto -> PDoc
-ppValue v = case gettriples' v of
-  (n, triples, []) -> ppSexp "Value" [ppCoin (Coin n), ppList pptriple triples]
-  (n, triples, bad) -> ppSexp "Value" [ppCoin (Coin n), ppList pptriple triples, ppString "Bad " <> ppList ppPolicyID bad]
-  where
-    pptriple (i, asset, num) = hsep [ppPolicyID i, ppAssetName asset, ppInteger num]
-
-ppPolicyID :: PolicyID crypto -> PDoc
-ppPolicyID (PolicyID sh) = ppScriptHash sh
-
-ppAssetName :: AssetName -> PDoc
-ppAssetName (AssetName bs) = ppLong bs
-
-instance PrettyA (Value crypto) where prettyA = ppValue
-
-instance PrettyA (PolicyID crypto) where prettyA x = ppSexp "PolicyID" [ppPolicyID x]
-
-instance PrettyA AssetName where prettyA x = ppSexp "AssetName" [ppAssetName x]

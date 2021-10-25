@@ -26,7 +26,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Serialization (decodeRecordSum)
@@ -38,7 +38,6 @@ import Cardano.Ledger.Shelley.LedgerState
     _dstate,
     _pstate,
   )
-import Cardano.Ledger.Shelley.PParams (ProtVer)
 import Cardano.Ledger.Shelley.Rules.Deleg (DELEG, DelegEnv (..), DelegPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Pool (POOL, PoolEnv (..), PoolPredicateFailure)
 import Cardano.Ledger.Shelley.TxBody

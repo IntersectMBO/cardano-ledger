@@ -14,7 +14,7 @@
 -- handles the epoch transitions.
 module Cardano.Ledger.Shelley.Rules.Upec where
 
-import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase, StrictMaybe)
+import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.Constraints
@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState
     pattern DPState,
     pattern EpochState,
   )
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..), ProtVer)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (..))
 import Cardano.Ledger.Shelley.Rules.Newpp (NEWPP, NewppEnv (..), NewppState (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition

@@ -25,6 +25,7 @@ import Cardano.Ledger.BaseTypes
     Globals (..),
     Network (..),
     Nonce,
+    ProtVer (..),
     StrictMaybe (..),
     activeSlotVal,
     (⭒),
@@ -41,6 +42,10 @@ import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
+import Cardano.Ledger.PoolDistr
+  ( IndividualPoolStake (..),
+    PoolDistr (..),
+  )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
@@ -52,7 +57,6 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
   ( PParams,
     PParams' (..),
-    ProtVer (..),
   )
 import Cardano.Ledger.Shelley.Rewards
   ( Likelihood (..),
@@ -92,10 +96,6 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Protocol.TPraos
-  ( IndividualPoolStake (..),
-    PoolDistr (..),
-  )
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Control.Provenance (runProvM)
@@ -121,7 +121,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Init
     nonce0,
     ppEx,
   )
-import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makePulser)
+import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser)
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -773,7 +773,7 @@ pulserEx9 ::
   PParams era ->
   PulsingRewUpdate (Crypto era)
 pulserEx9 pp =
-  makePulser
+  makeCompletedPulser
     ( BlocksMade $
         Map.fromList
           [(hk Cast.alicePoolKeys, 2), (hk Cast.bobPoolKeys, 1)]

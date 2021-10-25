@@ -35,7 +35,7 @@ import Cardano.Binary (Annotator, FromCBOR, ToCBOR (toCBOR), serializeEncoding')
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (toAddr)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData (..))
-import Cardano.Ledger.BaseTypes (Network (..), ShelleyBase, StrictMaybe, UnitInterval)
+import Cardano.Ledger.BaseTypes (Network (..), ProtVer, ShelleyBase, StrictMaybe, UnitInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -57,7 +57,7 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
-import Cardano.Ledger.Shelley.PParams (ProtVer, Update)
+import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl, WitVKey)
 import Cardano.Ledger.Shelley.UTxO (UTxO)

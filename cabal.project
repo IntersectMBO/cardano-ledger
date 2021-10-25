@@ -15,6 +15,7 @@ packages:
   eras/shelley-ma/test-suite
   libs/cardano-ledger-core
   libs/cardano-ledger-example-shelley
+  libs/cardano-ledger-pretty
   libs/cardano-ledger-test
   libs/cardano-protocol-tpraos
   libs/plutus-preprocessor
@@ -160,6 +161,9 @@ package cardano-ledger-core
   ghc-options: -Werror
 
 package cardano-ledger-example-shelley
+  ghc-options: -Werror
+
+package cardano-ledger-pretty
   ghc-options: -Werror
 
 package cardano-ledger-test

@@ -24,12 +24,8 @@ module Cardano.Ledger.Alonzo.Data
     getPlutusData,
     dataHashSize,
     -- $
-    AuxiliaryData (AuxiliaryData, scripts, txMD),
+    AuxiliaryData (AuxiliaryData, AuxiliaryData', scripts, txMD),
     AuxiliaryDataHash (..),
-    -- $
-    ppPlutusData,
-    ppData,
-    ppAuxiliaryData,
   )
 where
 
@@ -44,19 +40,6 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
   ( EraIndependentAuxiliaryData,
     EraIndependentData,
-  )
-import Cardano.Ledger.Pretty
-  ( PDoc,
-    PrettyA (..),
-    ppInteger,
-    ppList,
-    ppLong,
-    ppMap,
-    ppMetadatum,
-    ppPair,
-    ppSexp,
-    ppStrictSeq,
-    ppWord64,
   )
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
@@ -120,6 +103,8 @@ pattern Data p <-
   DataConstr (Memo p _)
   where
     Data p = DataConstr (memoBytes (To p))
+
+{-# COMPLETE Data #-}
 
 getPlutusData :: Data era -> Plutus.Data
 getPlutusData (DataConstr (Memo d _)) = d
@@ -297,24 +282,11 @@ pattern AuxiliaryData {txMD, scripts} <-
 
 {-# COMPLETE AuxiliaryData #-}
 
--- =======================================================
+pattern AuxiliaryData' ::
+  Map Word64 Metadatum ->
+  StrictSeq (Core.Script era) ->
+  AuxiliaryData era
+pattern AuxiliaryData' txMD_ scripts_ <-
+  AuxiliaryDataConstr (Memo (AuxiliaryDataRaw txMD_ scripts_) _)
 
-ppPlutusData :: Plutus.Data -> PDoc
-ppPlutusData (Plutus.Constr tag args) = ppSexp "Constr" [ppInteger tag, ppList ppPlutusData args]
-ppPlutusData (Plutus.Map pairs) = ppSexp "Map" [ppList (ppPair ppPlutusData ppPlutusData) pairs]
-ppPlutusData (Plutus.List xs) = ppSexp "List" [ppList ppPlutusData xs]
-ppPlutusData (Plutus.I i) = ppSexp "I" [ppInteger i]
-ppPlutusData (Plutus.B bytes) = ppSexp "B" [ppLong bytes]
-
-instance PrettyA Plutus.Data where prettyA = ppPlutusData
-
-ppData :: Data era -> PDoc
-ppData (DataConstr (Memo x _)) = ppSexp "Data" [ppPlutusData x]
-
-instance PrettyA (Data era) where prettyA = ppData
-
-ppAuxiliaryData :: (PrettyA (Core.Script era)) => AuxiliaryData era -> PDoc
-ppAuxiliaryData (AuxiliaryDataConstr (Memo (AuxiliaryDataRaw m s) _)) =
-  ppSexp "AuxiliaryData" [ppMap ppWord64 ppMetadatum m, ppStrictSeq prettyA s]
-
-instance (PrettyA (Core.Script era)) => PrettyA (AuxiliaryData era) where prettyA = ppAuxiliaryData
+{-# COMPLETE AuxiliaryData' #-}
