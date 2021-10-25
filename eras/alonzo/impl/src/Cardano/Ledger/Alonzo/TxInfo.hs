@@ -187,7 +187,7 @@ transVITime pp ei sysS (ValidityInterval (SJust i) (SJust j)) = do
 -- ========================================
 -- translate TxIn and TxOut
 
-txInfoIn' :: CC.Crypto c => TxIn c -> PV1.TxOutRef
+txInfoIn' :: TxIn c -> PV1.TxOutRef
 txInfoIn' (TxIn txid nat) = PV1.TxOutRef (txInfoId txid) (fromIntegral nat)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it and return
@@ -321,7 +321,7 @@ exBudgetToExUnits (PV1.ExBudget (PV1.ExCPU steps) (PV1.ExMemory memory)) =
 -- ===================================
 -- translate Script Purpose
 
-transScriptPurpose :: CC.Crypto crypto => ScriptPurpose crypto -> PV1.ScriptPurpose
+transScriptPurpose :: ScriptPurpose crypto -> PV1.ScriptPurpose
 transScriptPurpose (Minting policyid) = PV1.Minting (transPolicyID policyid)
 transScriptPurpose (Spending txin) = PV1.Spending (txInfoIn' txin)
 transScriptPurpose (Rewarding (RewardAcnt _network cred)) =
@@ -406,7 +406,6 @@ txInfo pp lang ei sysS utxo tx = do
 --   translates it into a 'Data', which the Plutus language knows how to interpret.
 --   The UTxO and the PtrMap are used to 'resolve' the TxIn and the StakeRefPtr's
 valContext ::
-  Era era =>
   VersionedTxInfo ->
   ScriptPurpose (Crypto era) ->
   Data era
