@@ -1,16 +1,15 @@
 module Test.Compact.KeyMap where
 
 import Data.Compact.KeyMap as KeyMap
+import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.QuickCheck
-import Test.QuickCheck
-
 
 instance Arbitrary Key where
   arbitrary =
     oneof
-      [ Key <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary
-      , Key <$> chooseAny <*> chooseAny <*> chooseAny <*> chooseAny
+      [ Key <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary,
+        Key <$> chooseAny <*> chooseAny <*> chooseAny <*> chooseAny
       ]
 
 instance Arbitrary a => Arbitrary (KeyMap a) where

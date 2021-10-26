@@ -1,31 +1,37 @@
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FunctionalDependencies #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-
 -- HeapWords for Array and PrimArray
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Data.Compact.Class where
 
-import qualified Data.Array as A
-import qualified Data.Primitive.Array as PA
-import qualified Data.Array.MArray as MutA
-import Data.Primitive.PrimArray
- ( PrimArray, indexPrimArray, primArrayFromList, primArrayToList, sizeofPrimArray, copyPrimArray,
-   MutablePrimArray,unsafeFreezePrimArray , newPrimArray,sizeofMutablePrimArray, readPrimArray, writePrimArray,
- )
-
-import qualified Data.Primitive.SmallArray as Small
-import Data.Primitive.SmallArray(SmallArray,SmallMutableArray)
-
-import Data.Primitive.Types (Prim (..))
-import GHC.Arr(STArray(..),unsafeFreezeSTArray)
-import Control.Monad.ST (ST, runST)
 import Cardano.Prelude (HeapWords (..))
+import Control.Monad.ST (ST, runST)
+import qualified Data.Array as A
+import qualified Data.Array.MArray as MutA
+import qualified Data.Primitive.Array as PA
+import Data.Primitive.PrimArray
+  ( MutablePrimArray,
+    PrimArray,
+    copyPrimArray,
+    indexPrimArray,
+    newPrimArray,
+    primArrayFromList,
+    primArrayToList,
+    readPrimArray,
+    sizeofMutablePrimArray,
+    sizeofPrimArray,
+    unsafeFreezePrimArray,
+    writePrimArray,
+  )
+import Data.Primitive.SmallArray (SmallArray, SmallMutableArray)
+import qualified Data.Primitive.SmallArray as Small
+import Data.Primitive.Types (Prim (..))
+import GHC.Arr (STArray (..), unsafeFreezeSTArray)
 
-  
 -- ============================================================================================
 -- Array like objects which can access elements by their index
 
@@ -51,7 +57,6 @@ binsearch lo hi k v = (if index v mid > k then binsearch lo mid k v else binsear
   where
     mid = lo + (div (hi - lo) 2)
 
-
 -- | Find the index and the value at the least upper bound of 'target'
 alub :: (Ord t1, Indexable t2 t1) => (Int, Int) -> t2 t1 -> t1 -> Maybe (Int, t1)
 alub (lo, hi) arr target
@@ -64,8 +69,8 @@ alub (lo, hi) arr target
     mid = lo + (div (hi - lo) 2)
 
 boundsCheck :: Indexable t1 a => (t1 a -> Int -> t2) -> t1 a -> Int -> t2
-boundsCheck indexf arr i | i>=0 && i < isize arr = indexf arr i
-boundsCheck _ arr i = error ("boundscheck error, "++show i++", not in bounds (0.."++show (isize arr -1)++").")
+boundsCheck indexf arr i | i >= 0 && i < isize arr = indexf arr i
+boundsCheck _ arr i = error ("boundscheck error, " ++ show i ++ ", not in bounds (0.." ++ show (isize arr -1) ++ ").")
 
 -- Built in type Instances
 
@@ -76,14 +81,14 @@ instance Indexable PA.Array x where
   tolist arr = foldr (:) [] arr
   catenate = catArray
   merge = mergeArray
-  
+
 instance Prim a => Indexable PrimArray a where
   index = boundsCheck indexPrimArray
   isize = sizeofPrimArray
   fromlist = primArrayFromList
   tolist = primArrayToList
   catenate = catArray
-  merge = mergeArray  
+  merge = mergeArray
 
 instance Indexable (A.Array Int) a where
   index = (A.!)
@@ -95,7 +100,7 @@ instance Indexable (A.Array Int) a where
 
 instance Indexable SmallArray t where
   index = boundsCheck Small.indexSmallArray
-  isize = Small.sizeofSmallArray 
+  isize = Small.sizeofSmallArray
   fromlist = Small.smallArrayFromList
   tolist arr = foldr (:) [] arr
   catenate = catArray
@@ -105,12 +110,14 @@ instance Indexable SmallArray t where
 -- Pairs of Mutable Arrays and ImMutable Arrays that can be converted safely
 -- ========================================================================
 
-
-mboundsCheck :: (ArrayPair arr marr a) =>
-                (marr s a -> Int -> ST s a) -> marr s a -> Int -> ST s a
-mboundsCheck indexf arr i | i>=0 && i < msize arr = indexf arr i
-mboundsCheck _ arr i = error ("mboundscheck error, "++show i++", not in bounds (0.."++show (msize arr -1)++").")
-
+mboundsCheck ::
+  (ArrayPair arr marr a) =>
+  (marr s a -> Int -> ST s a) ->
+  marr s a ->
+  Int ->
+  ST s a
+mboundsCheck indexf arr i | i >= 0 && i < msize arr = indexf arr i
+mboundsCheck _ arr i = error ("mboundscheck error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr -1) ++ ").")
 
 class Indexable arr a => ArrayPair arr marr a | marr -> arr, arr -> marr where
   mindex :: marr s a -> Int -> ST s a
@@ -126,49 +133,50 @@ instance ArrayPair SmallArray SmallMutableArray a where
   mindex = mboundsCheck Small.readSmallArray
   msize = Small.sizeofSmallMutableArray
   mnew size = Small.newSmallArray size undefined
-  mfreeze = Small.unsafeFreezeSmallArray 
-  mwrite arr i a = if i>=0 && i<(msize arr)
-       then Small.writeSmallArray arr i a
-       else error ("mwrite error, "++show i++", not in bounds (0.."++show (msize arr -1)++").")
+  mfreeze = Small.unsafeFreezeSmallArray
+  mwrite arr i a =
+    if i >= 0 && i < (msize arr)
+      then Small.writeSmallArray arr i a
+      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr -1) ++ ").")
   mcopy = Small.copySmallArray
 
 instance ArrayPair PA.Array PA.MutableArray a where
-  msize = PA.sizeofMutableArray 
+  msize = PA.sizeofMutableArray
   mindex = mboundsCheck PA.readArray
   mnew n = PA.newArray n undefined
   mfreeze = PA.unsafeFreezeArray
   mwrite arr i a =
-    if i>=0 && i<(msize arr)
-       then  PA.writeArray arr i a
-       else error ("mwrite error, "++show i++", not in bounds (0.."++show (msize arr -1)++").")
+    if i >= 0 && i < (msize arr)
+      then PA.writeArray arr i a
+      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr -1) ++ ").")
   mcopy = PA.copyArray
 
 instance Prim a => ArrayPair PrimArray MutablePrimArray a where
   msize = sizeofMutablePrimArray
   mindex = mboundsCheck readPrimArray
-  mnew = newPrimArray  
+  mnew = newPrimArray
   mfreeze = unsafeFreezePrimArray
   mwrite arr i a =
-    if i>=0 && i<(msize arr)
-       then writePrimArray arr i a
-       else error ("mwrite error, "++show i++", not in bounds (0.."++show (msize arr -1)++").")
+    if i >= 0 && i < (msize arr)
+      then writePrimArray arr i a
+      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr -1) ++ ").")
   mcopy = copyPrimArray
 
 -- | MutArray fixes the index type to Int for the STArray type constructor
 newtype MutArray s t = MutArray (STArray s Int t)
 
 instance ArrayPair (A.Array Int) MutArray a where
-  msize (MutArray (STArray lo hi _ _)) = hi - lo + 1 
+  msize (MutArray (STArray lo hi _ _)) = hi - lo + 1
   mindex (MutArray arr) i = MutA.readArray arr i
-  mnew n = MutArray <$> (MutA.newArray_ (0,n-1))
+  mnew n = MutArray <$> (MutA.newArray_ (0, n -1))
   mfreeze (MutArray arr) = unsafeFreezeSTArray arr
   mwrite (MutArray arr) i a = MutA.writeArray arr i a
   mcopy marr startm arr start count = go startm start count
-    where go _i _j 0 = pure ()
-          go i j n = do
-             mwrite marr i (index arr j)
-             go (i+1) (j+1) (n-1)
-
+    where
+      go _i _j 0 = pure ()
+      go i j n = do
+        mwrite marr i (index arr j)
+        go (i + 1) (j + 1) (n -1)
 
 -- =======================================================
 -- Usefull functions that use Mutable Arrays
@@ -176,9 +184,9 @@ instance ArrayPair (A.Array Int) MutArray a where
 -- | Build a mutable array from a list
 mfromlist :: ArrayPair arr marr a => [a] -> ST s (marr s a)
 mfromlist xs = do
-  marr <- mnew (length xs) 
+  marr <- mnew (length xs)
   let loop _i [] = pure ()
-      loop i (y:ys) = mwrite marr i y >> loop (i+1) ys
+      loop i (y : ys) = mwrite marr i y >> loop (i + 1) ys
   loop 0 xs
   pure marr
 
@@ -187,42 +195,45 @@ mfromlist xs = do
 --   catArray   [[2,1],[14],[6,5,11]]  --> [2,1,14,6,5,11]
 --   mergeArray [[1,2],[14],[5,6,11]]  --> [1,2,5,6,11,14]
 catArray :: ArrayPair arr marr a => Int -> [arr a] -> arr a
-catArray totalsize xs = fst(withMutArray totalsize (build 0 xs))
-  where build _next [] _marr = pure ()
-        build next (arr: arrs) marr =
-           do let size = isize arr
-              mcopy marr next arr 0 size
-              build (next+size) arrs marr
+catArray totalsize xs = fst (withMutArray totalsize (build 0 xs))
+  where
+    build _next [] _marr = pure ()
+    build next (arr : arrs) marr =
+      do
+        let size = isize arr
+        mcopy marr next arr 0 size
+        build (next + size) arrs marr
 
 -- | Swap the values at indices 'i' and 'j' in mutable array 'marr'
 swap :: ArrayPair arr marr a => marr s a -> Int -> Int -> ST s ()
-swap _ i j | i==j = pure ()
+swap _ i j | i == j = pure ()
 swap marr i j = do
-  ti <- mindex marr i;
-  tj <- mindex marr j;
+  ti <- mindex marr i
+  tj <- mindex marr j
   mwrite marr i tj
   mwrite marr j ti
 
 mToList :: ArrayPair arr marr a => Int -> marr s a -> ST s [a]
 mToList first marr = loop first []
-  where hi = (msize marr - 1)
-        loop lo xs | lo > hi = pure(reverse xs)
-        loop lo xs = do {x <- mindex marr lo; loop (lo+1) (x:xs)}
-
+  where
+    hi = (msize marr - 1)
+    loop lo xs | lo > hi = pure (reverse xs)
+    loop lo xs = do x <- mindex marr lo; loop (lo + 1) (x : xs)
 
 -- | Extract a slice from an array
 slice :: ArrayPair arr2 marr a => Int -> Int -> arr2 a -> arr2 a
 slice 0 hi arr | hi == (isize arr -1) = arr
-slice lo hi arr = fst(withMutArray size action)
-  where size = max (hi - lo + 1) 0
-        action marr = mcopy marr 0 arr lo size
+slice lo hi arr = fst (withMutArray size action)
+  where
+    size = max (hi - lo + 1) 0
+    action marr = mcopy marr 0 arr lo size
 {-# INLINE slice #-}
 
 -- ================================================================
 -- Functions for using mutable initialization in a safe manner.
 -- Using these functions is the safe way to use the method 'mfreeze'
 
-withMutArray:: ArrayPair arr marr a => Int -> (forall s. marr s a -> ST s x) -> (arr a,x)
+withMutArray :: ArrayPair arr marr a => Int -> (forall s. marr s a -> ST s x) -> (arr a, x)
 withMutArray n process = runST $ do
   marr <- mnew n
   x <- process marr
@@ -230,11 +241,11 @@ withMutArray n process = runST $ do
   pure (arr, x)
 
 with2MutArray ::
-  ( ArrayPair arr1 marr1 a, ArrayPair arr2 marr2 b) =>
+  (ArrayPair arr1 marr1 a, ArrayPair arr2 marr2 b) =>
   Int ->
   Int ->
   (forall s. marr1 s a -> marr2 s b -> ST s x) ->
-  (arr1 a, arr2 b,x)
+  (arr1 a, arr2 b, x)
 with2MutArray size1 size2 process = runST $ do
   arr1 <- mnew size1
   arr2 <- mnew size2
@@ -252,30 +263,30 @@ with2MutArray size1 size2 process = runST $ do
 class Ord key => Search t key where
   search :: key -> t -> Maybe Int
 
-instance Ord key => Search (PA.Array key) key
-   where search key v = binsearch 0 (isize v - 1) key v
+instance Ord key => Search (PA.Array key) key where
+  search key v = binsearch 0 (isize v - 1) key v
 
-instance (Prim key,Ord key) => Search (PrimArray key) key
-   where search key v = binsearch 0 (isize v - 1) key v
+instance (Prim key, Ord key) => Search (PrimArray key) key where
+  search key v = binsearch 0 (isize v - 1) key v
 
-instance Ord key => Search (A.Array Int key) key
-   where search key v = binsearch 0 (isize v - 1) key v
+instance Ord key => Search (A.Array Int key) key where
+  search key v = binsearch 0 (isize v - 1) key v
 
 instance (Search t key) => Search [t] key where
-   search _ [] = Nothing
-   search key (x:xs) = 
-     case search key x of
-       Nothing -> search key xs
-       Just i -> Just i
+  search _ [] = Nothing
+  search key (x : xs) =
+    case search key x of
+      Nothing -> search key xs
+      Just i -> Just i
 
 instance Search t key => Search (Node t) key where
-   search key (Node _ x) = search key x
+  search key (Node _ x) = search key x
 
 -- ==============================================================
 -- Overloaded operations on (Map k v)
 
 class Maplike m k v where
-  makemap :: [(k,v)] -> m k v
+  makemap :: [(k, v)] -> m k v
   lookupmap :: Ord k => k -> m k v -> Maybe v
   insertmap :: Ord k => k -> v -> m k v -> m k v
 
@@ -283,7 +294,7 @@ class Maplike m k v where
 -- Overloaded operations on (Set k)
 
 class Setlike m k where
-  makeset :: [k] -> m k 
+  makeset :: [k] -> m k
   elemset :: Ord k => k -> m k -> Bool
   insertset :: Ord k => k -> m k -> m k
   emptyset :: m k
@@ -331,7 +342,6 @@ pieces xs = chop parts xs
     chop [] _zs = []
     chop ((_, n) : ys) zs = (n, take n zs) : chop ys (drop n zs)
 
-
 -- | When a list is represented with the structure of binary numbers, an important
 --   property is that every such list has a full prefix. This is a prefix which has
 --   contiguous powers of two. For example:
@@ -340,22 +350,21 @@ pieces xs = chop parts xs
 --   (16, [node 1,node 1,node 2, node 4, node 8], [node 32,node 128])
 --   because [1,2,4,8] is the longest contiguous prefix consisting of adjacent powers of 2.
 --   In the worst case the prefix has length 1.
-splitAtFullPrefix :: (node -> Int) -> Int -> node -> [node] -> (Int,[node],[node])
-splitAtFullPrefix getsize _next node [] = (getsize node,[node],[])
-splitAtFullPrefix getsize next node1 (node2:more) =
-   let n = getsize node1
-       m = getsize node2
-   in if next==m
-         then case splitAtFullPrefix getsize (next*2) node2 more of
-                (count,prefix,rest) -> (count+n, node1:prefix, rest)
-         else (n,[node1],node2:more)
-
+splitAtFullPrefix :: (node -> Int) -> Int -> node -> [node] -> (Int, [node], [node])
+splitAtFullPrefix getsize _next node [] = (getsize node, [node], [])
+splitAtFullPrefix getsize next node1 (node2 : more) =
+  let n = getsize node1
+      m = getsize node2
+   in if next == m
+        then case splitAtFullPrefix getsize (next * 2) node2 more of
+          (count, prefix, rest) -> (count + n, node1 : prefix, rest)
+        else (n, [node1], node2 : more)
 
 -- ==============================================================================
 
 -- | A node carries a 'size' and some array-like type 'arr'
 data Node arr = Node {-# UNPACK #-} !Int arr
-  deriving Show
+  deriving (Show)
 
 arrayPart :: Node arr -> arr
 arrayPart (Node _ arr) = arr
@@ -370,86 +379,96 @@ nodesize (Node i _) = i
 --   The function 'smaller' compares two 't' for smallness.
 --   'pair' is the smallest (index,t) we have seen so far. 'lo' and 'hi' limit
 --   the bounds of where to look.
-smallestIndex ::(ArrayPair arr marr t) => (t -> t -> Bool) ->  marr s t -> (Int,t) ->Int -> Int -> ST s (Int,t)
-smallestIndex smaller marr initpair initlo hi = loop initpair initlo where
-   loop pair lo | lo > hi = pure pair
-   loop (pair@(_i,t)) lo = do
-     t2 <- mindex marr lo
-     if smaller t t2
-         then loop pair (lo+1) 
-         else loop (lo,t2) (lo+1)
+smallestIndex :: (ArrayPair arr marr t) => (t -> t -> Bool) -> marr s t -> (Int, t) -> Int -> Int -> ST s (Int, t)
+smallestIndex smaller marr initpair initlo hi = loop initpair initlo
+  where
+    loop pair lo | lo > hi = pure pair
+    loop (pair@(_i, t)) lo = do
+      t2 <- mindex marr lo
+      if smaller t t2
+        then loop pair (lo + 1)
+        else loop (lo, t2) (lo + 1)
 
 -- | Apply 'action' to each 't' in 'marr' in ascending order as determined by 'smaller'
 --  'state' is the current state, and 'lo' and 'hi' limit the bounds of where to look.
 --  'markIfDone' might alter 'marr' and return a new 'lo' limit, if the 'lo' index in
 --  'marr' has no more 't' objects to offer.
-inOrder :: 
-   (Int -> Int -> t -> PA.MutableArray s t -> ST s Int) ->
-   (t -> t -> Bool) ->
-   state ->
-   Int ->
-   Int ->
-   (state -> t -> ST s state) ->
-   PA.MutableArray s t ->  -- array of items to be merged, This should be small. At most 20 or so.
-   ST s state
-inOrder markIfDone smaller initstate initlo hi action marr = loop initlo initstate where
-   loop lo  state | lo > hi = pure state
-   loop lo state = 
-      do t <-  mindex marr lo
-         (i,small) <- smallestIndex smaller marr (lo,t) (lo+1) hi
-         state' <- action state small
-         lo' <- markIfDone lo i small marr
-         loop lo' state'
+inOrder ::
+  (Int -> Int -> t -> PA.MutableArray s t -> ST s Int) ->
+  (t -> t -> Bool) ->
+  state ->
+  Int ->
+  Int ->
+  (state -> t -> ST s state) ->
+  PA.MutableArray s t -> -- array of items to be merged, This should be small. At most 20 or so.
+  ST s state
+inOrder markIfDone smaller initstate initlo hi action marr = loop initlo initstate
+  where
+    loop lo state | lo > hi = pure state
+    loop lo state =
+      do
+        t <- mindex marr lo
+        (i, small) <- smallestIndex smaller marr (lo, t) (lo + 1) hi
+        state' <- action state small
+        lo' <- markIfDone lo i small marr
+        loop lo' state'
 
 -- | A commonly used 'markIfDone' function. Test if 'next' is still in bounds for 'arr'
 --   If so, them mutate 'marr' to indicate that next time we should look at index 'next+1' in arr.
 --   If it is out of bounds, then swap the pairs in 'marr' at indexs 'i' and 'lo', and then
 --   increment lo, so the pair that has no more to offer, is no longer in an active position.
-mark1:: (Indexable arr t) =>
-        Int -> Int -> (Int,arr t) -> PA.MutableArray s (Int,arr t) -> ST s Int
-mark1 lo i (next,arr) marr =
-  do let next' = next+1
-     if next' < isize arr
-        then mwrite marr i (next',arr) >> pure lo
-        else swap marr lo i >> pure(lo+1)
+mark1 ::
+  (Indexable arr t) =>
+  Int ->
+  Int ->
+  (Int, arr t) ->
+  PA.MutableArray s (Int, arr t) ->
+  ST s Int
+mark1 lo i (next, arr) marr =
+  do
+    let next' = next + 1
+    if next' < isize arr
+      then mwrite marr i (next', arr) >> pure lo
+      else swap marr lo i >> pure (lo + 1)
 
 -- | A commonly used 'smaller' function
 smaller1 :: (Ord a, Indexable arr a) => (Int, arr a) -> (Int, arr a) -> Bool
-smaller1 (i,arr1) (j,arr2) = index arr1 i < index arr2 j
+smaller1 (i, arr1) (j, arr2) = index arr1 i < index arr2 j
 
 -- | A commonly used 'action' function. Appropriate when the 'arr' is simple with
 --   no bells or whistles. Good for PrimArray, PA.Array, A.Array, Any array with a ArrayPair instance.
 --   If we use an exotic array with no ArrayPair instance, we can stil merge, but we can't use this
 --   action function.
-action1:: (ArrayPair arr marr a, Indexable t a) => marr s a -> Int -> (Int, t a) -> ST s Int
-action1 marr i (j,arr) = (mwrite marr i (index arr j) >> pure(i+1))
-
+action1 :: (ArrayPair arr marr a, Indexable t a) => marr s a -> Int -> (Int, t a) -> ST s Int
+action1 marr i (j, arr) = (mwrite marr i (index arr j) >> pure (i + 1))
 
 -- | Merge a list of array-like objects using 'action' The 'action' will differ depending on
 --   what kind of arrays are begin merged.
-mergeWithAction :: forall a arr marr.
+mergeWithAction ::
+  forall a arr marr.
   (ArrayPair arr marr a, Ord a) =>
   Int ->
   [arr a] ->
-  (forall s. marr s a -> Int -> (Int,arr a) -> ST s Int) ->
+  (forall s. marr s a -> Int -> (Int, arr a) -> ST s Int) ->
   arr a
-mergeWithAction size inputs action = fst $ withMutArray size build where
-  build:: forall s. marr s a -> ST s Int
-  build moutput = do
-     minputs <- mfromlist (map (\ x -> (0,x)) inputs)
-     inOrder mark1 smaller1 (0::Int) 0 (length inputs-1) (action moutput) minputs
+mergeWithAction size inputs action = fst $ withMutArray size build
+  where
+    build :: forall s. marr s a -> ST s Int
+    build moutput = do
+      minputs <- mfromlist (map (\x -> (0, x)) inputs)
+      inOrder mark1 smaller1 (0 :: Int) 0 (length inputs -1) (action moutput) minputs
 
 -- | Merge a list of array like objects by allocating the target and then merging the sources.
 --   mergeArray maintains ascending order. But catArray maintains index order.
 --   mergeArray [[1,2],[14],[5,6,11]]  --> [1,2,5,6,11,14]
 --   catArray [[2,1],[14],[6,5,11]]  --> [2,1,14,6,5,11]
-
-mergeArray :: (Ord a,ArrayPair arr marr a) => Int -> [arr a] -> arr a
+mergeArray :: (Ord a, ArrayPair arr marr a) => Int -> [arr a] -> arr a
 mergeArray size xs = mergeWithAction size xs action1
 
 testmerge :: PrimArray Int
-testmerge = mergeArray (sum(map isize xs)) xs
-  where xs = [fromlist[2,7], fromlist[1,6,19], fromlist[4,9], fromlist[3,8,12,17]]
+testmerge = mergeArray (sum (map isize xs)) xs
+  where
+    xs = [fromlist [2, 7], fromlist [1, 6, 19], fromlist [4, 9], fromlist [3, 8, 12, 17]]
 
 {-
 -- | Merge 2 parallel arrays with 'action'. The order of merging depends only on
@@ -482,5 +501,3 @@ mergeMapNode size nodes = mergeArray2 size inputs action where
    action mkeys mvals i (n,arrkeys) = undefined
 
 -}
-
-
