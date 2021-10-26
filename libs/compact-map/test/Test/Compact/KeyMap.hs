@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module Test.Compact.KeyMap where
 
 import Data.Compact.KeyMap as KeyMap

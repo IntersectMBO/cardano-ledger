@@ -52,10 +52,8 @@ library
                      , Control.SetAlgebra
   build-depends:       aeson
                      , ansi-wl-pprint
-                     , array
                      , base >=4.11 && <5
                      , bytestring
-                     , cardano-prelude
                      , cborg
                      , containers
                      , cryptonite
@@ -65,9 +63,6 @@ library
                      , free
                      , mtl
                      , nothunks
-                     , prettyprinter
-                     , primitive
-                     , random
                      , strict-containers
                      , text
                      , transformers >= 0.5

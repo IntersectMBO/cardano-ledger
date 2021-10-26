@@ -40,9 +40,6 @@ import Prettyprinter
 import qualified Prettyprinter.Internal as Pretty
 import System.Random (RandomGen, genWord64, mkStdGen)
 
--- import Debug.Trace
-
--- type PArray = PA.Array
 type PArray = Small.SmallArray
 
 -- | Show 'n' as a binary number with most significant bits on the left.
