@@ -22,6 +22,7 @@ packages:
   libs/non-integral
   libs/small-steps
   libs/small-steps-test
+  libs/compact-map
 
   -- Deprecations
   eras/shelley/chain-and-ledger/executable-spec
@@ -172,6 +173,9 @@ package cardano-ledger-test
 package cardano-protocol-tpraos
   ghc-options: -Werror
 
+package compact-map
+  ghc-options: -Werror
+
 package non-integral
   ghc-options: -Werror
 
@@ -183,4 +187,3 @@ package small-steps-test
 
 package small-steps
   ghc-options: -Werror
-
