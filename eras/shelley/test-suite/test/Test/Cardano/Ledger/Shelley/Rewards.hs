@@ -35,6 +35,7 @@ import Cardano.Ledger.BaseTypes
     mkActiveSlotCoeff,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
+import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (VRF)
@@ -104,6 +105,7 @@ import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
 import Control.Provenance (ProvM, preservesJust, preservesNothing, runProvM, runWithProvM)
 import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Map (Map)
@@ -116,6 +118,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word64)
+import GHC.Stack
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
@@ -289,6 +292,10 @@ genBlocksMade pools = BlocksMade . Map.fromList <$> mapM f pools
 
 -- Properties --
 
+toCompactCoinError :: HasCallStack => Coin -> CompactForm Coin
+toCompactCoinError c =
+  fromMaybe (error $ "Invalid Coin: " <> show c) $ toCompact c
+
 rewardsBoundedByPot :: forall era. Era era => Proxy era -> Property
 rewardsBoundedByPot _ = property $ do
   numPools <- choose (0, maxNumPools)
@@ -307,12 +314,8 @@ rewardsBoundedByPot _ = property $ do
             Map.fromList $ (,_poolId params) <$> Map.keys members
       rewardAcnts = Set.fromList $ Map.keys delegs
       poolParams =
-        Map.fromList $
-          fmap
-            ( \PoolInfo {params} ->
-                (_poolId params, params)
-            )
-            pools
+        VMap.fromList
+          [(_poolId params, params) | PoolInfo {params} <- pools]
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
       (RewardAns rs _) =
@@ -324,8 +327,8 @@ rewardsBoundedByPot _ = property $ do
               rewardPot
               rewardAcnts
               poolParams
-              (Stake stake)
-              delegs
+              (Stake (VMap.fromMap (toCompactCoinError <$> stake)))
+              (VMap.fromMap delegs)
               totalLovelace
               asc
               slotsPerEpoch
@@ -374,10 +377,11 @@ rewardsProvenance _ = do
   silentSlots <- genNatural 0 (3 * totalBlocks) -- the '3 * sum blocks' is pretty arbitrary
   let stake = foldMap members pools
       delegs =
-        foldMap (\PoolInfo {params, members} -> _poolId params <$ members) pools
-      rewardAcnts = Set.fromList $ Map.keys delegs
+        VMap.fromMap $
+          foldMap (\PoolInfo {params, members} -> _poolId params <$ members) pools
+      rewardAcnts = Set.fromDistinctAscList $ VMap.keys delegs
       poolParams =
-        Map.fromList [(_poolId params, params) | PoolInfo {params} <- pools]
+        VMap.fromList [(_poolId params, params) | PoolInfo {params} <- pools]
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
       (_, prov) =
@@ -389,7 +393,7 @@ rewardsProvenance _ = do
               rewardPot
               rewardAcnts
               poolParams
-              (Stake stake)
+              (Stake (VMap.fromMap (fmap toCompactCoinError stake)))
               delegs
               totalLovelace
               asc
@@ -507,7 +511,7 @@ rewardOnePool
     where
       Coin ostake =
         Set.foldl'
-          (\c o -> c <> Map.findWithDefault mempty (KeyHashObj o) stake)
+          (\c o -> maybe c (mappend c . fromCompact) $ VMap.lookup (KeyHashObj o) stake)
           mempty
           (_poolOwners pool)
       Coin pledge = _poolPledge pool
@@ -525,10 +529,10 @@ rewardOnePool
               memberRew
                 poolR
                 pool
-                (StakeShare (fromIntegral c % tot))
+                (StakeShare (unCoin (fromCompact c) % tot))
                 (StakeShare sigma)
             )
-            | (hk, Coin c) <- Map.toList stake,
+            | (hk, c) <- VMap.toAscList stake,
               notPoolOwner hk
           ]
       notPoolOwner (KeyHashObj hk) = hk `Set.notMember` _poolOwners pool
@@ -553,9 +557,9 @@ rewardOld ::
   BlocksMade (Crypto era) ->
   Coin ->
   Set.Set (Credential 'Staking (Crypto era)) ->
-  Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)) ->
   Stake (Crypto era) ->
-  Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
+  VMap.VMap VMap.VB VMap.VB (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
@@ -577,15 +581,15 @@ rewardOld
   slotsPerEpoch = (rewards', hs)
     where
       totalBlocks = sum b
-      Coin activeStake = fold . unStake $ stake
+      Coin activeStake = VMap.foldMap fromCompact $ unStake stake
       results :: [(KeyHash 'StakePool (Crypto era), Maybe (Map (Credential 'Staking (Crypto era)) Coin), Likelihood)]
       results = do
-        (hk, pparams) <- Map.toList poolParams
+        (hk, pparams) <- VMap.toAscList poolParams
         let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
             sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
             blocksProduced = Map.lookup hk b
             actgr@(Stake s) = poolStake hk delegs stake
-            Coin pstake = fold s
+            Coin pstake = VMap.foldMap fromCompact s
             rewardMap = case blocksProduced of
               Nothing -> Nothing -- This is equivalent to calling rewarOnePool with n = 0
               Just n ->
@@ -751,9 +755,9 @@ reward ::
   BlocksMade crypto ->
   Coin ->
   Set (Credential 'Staking crypto) ->
-  Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   Stake crypto ->
-  Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
+  VMap.VMap VMap.VB VMap.VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
   Coin ->
   ActiveSlotCoeff ->
   EpochSize ->
@@ -771,7 +775,7 @@ reward
   slotsPerEpoch = completeM pulser
     where
       totalBlocks = sum b
-      Coin activeStake = fold . unStake $ stake
+      Coin activeStake = VMap.foldMap fromCompact $ unStake stake
       free =
         FreeVars
           { b,
@@ -789,8 +793,9 @@ reward
             pp_nOpt,
             pp_mv
           }
+      pps = StrictSeq.fromList $ VMap.elems poolParams
       pulser :: Pulser crypto
-      pulser = RSLP 2 free (StrictSeq.fromList $ Map.elems poolParams) (RewardAns Map.empty Map.empty)
+      pulser = RSLP 2 free pps (RewardAns Map.empty Map.empty)
 
 -- ==================================================================
 

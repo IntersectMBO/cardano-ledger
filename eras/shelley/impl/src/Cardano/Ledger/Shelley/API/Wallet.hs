@@ -66,6 +66,7 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
   )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN, VRF)
@@ -104,7 +105,7 @@ import Cardano.Ledger.Shelley.Rewards
   ( NonMyopic (..),
     PerformanceEstimate (..),
     StakeShare (..),
-    getTopRankedPools,
+    getTopRankedPoolsVMap,
     nonMyopicMemberRew,
     percentile',
   )
@@ -130,12 +131,12 @@ import Data.Coders
     (!>),
     (<!),
   )
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
-import Data.Foldable (fold)
+import Data.Foldable (fold, foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
@@ -225,7 +226,7 @@ poolsByTotalStakeFraction globals ss =
   where
     snap@(EB.SnapShot stake _ _) = currentSnapshot ss
     Coin totalStake = getTotalStake globals ss
-    Coin activeStake = fold . EB.unStake $ stake
+    Coin activeStake = VMap.foldMap fromCompact $ EB.unStake stake
     stakeRatio = activeStake % totalStake
     PoolDistr poolsByActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
@@ -261,39 +262,31 @@ getNonMyopicMemberRewards ::
     (Either Coin (Credential 'Staking (Crypto era)))
     (Map (KeyHash 'StakePool (Crypto era)) Coin)
 getNonMyopicMemberRewards globals ss creds =
-  Map.fromList $
-    fmap
-      (\cred -> (cred, Map.map (mkNMMRewards $ memShare cred) poolData))
-      (Set.toList creds)
+  Map.fromSet (\cred -> Map.map (mkNMMRewards $ memShare cred) poolData) creds
   where
     maxSupply = Coin . fromIntegral $ maxLovelaceSupply globals
     Coin totalStake = circulation es maxSupply
     toShare (Coin x) = StakeShare (x % totalStake)
     memShare (Right cred) =
-      toShare $
-        Map.findWithDefault (Coin 0) cred (EB.unStake stake)
+      toShare $ maybe mempty fromCompact $ VMap.lookup cred (EB.unStake stake)
     memShare (Left coin) = toShare coin
     es = nesEs ss
     pp = esPp es
-    NonMyopic
-      { likelihoodsNM = ls,
-        rewardPotNM = rPot
-      } = esNonMyopic es
+    NonMyopic {likelihoodsNM = ls, rewardPotNM = rPot} = esNonMyopic es
     EB.SnapShot stake delegs poolParams = currentSnapshot ss
     poolData =
-      Map.mapWithKey
-        ( \k p ->
+      Map.fromDistinctAscList
+        [ ( k,
             ( percentile' (histLookup k),
               p,
-              toShare . fold
-                . EB.unStake
-                $ EB.poolStake k delegs stake
+              toShare . VMap.foldMap fromCompact . EB.unStake $ EB.poolStake k delegs stake
             )
-        )
-        poolParams
-    histLookup k = fromMaybe mempty (Map.lookup k ls)
+          )
+          | (k, p) <- VMap.toAscList poolParams
+        ]
+    histLookup k = Map.findWithDefault mempty k ls
     topPools =
-      getTopRankedPools
+      getTopRankedPoolsVMap
         rPot
         (Coin totalStake)
         pp
@@ -306,18 +299,14 @@ getNonMyopicMemberRewards globals ss creds =
       where
         s = (toShare . _poolPledge) poolp
         checkPledge pool =
-          let ostake =
-                Set.foldl'
-                  ( \c o ->
-                      c
-                        <> fromMaybe
-                          mempty
-                          ( Map.lookup (KeyHashObj o) (EB.unStake stake)
-                          )
-                  )
-                  mempty
-                  (_poolOwners pool)
+          let ostake = sumPoolOwnersStake pool stake
            in _poolPledge poolp <= ostake
+
+sumPoolOwnersStake :: PoolParams crypto -> EB.Stake crypto -> Coin
+sumPoolOwnersStake pool stake =
+  let getStakeFor o =
+        maybe mempty fromCompact $ VMap.lookup (KeyHashObj o) (EB.unStake stake)
+   in foldMap' getStakeFor (_poolOwners pool)
 
 -- | Create a current snapshot of the ledger state.
 --
@@ -405,7 +394,7 @@ getRewardInfoPools ::
   NewEpochState era ->
   (RewardParams, Map (KeyHash 'StakePool (Crypto era)) RewardInfoPool)
 getRewardInfoPools globals ss =
-  (mkRewardParams, Map.mapWithKey mkRewardInfoPool poolParams)
+  (mkRewardParams, VMap.toMap (VMap.mapWithKey mkRewardInfoPool poolParams))
   where
     es = nesEs ss
     pp = esPp es
@@ -413,7 +402,7 @@ getRewardInfoPools globals ss =
       { likelihoodsNM = ls,
         rewardPotNM = rPot
       } = esNonMyopic es
-    histLookup key = fromMaybe mempty (Map.lookup key ls)
+    histLookup key = Map.findWithDefault mempty key ls
 
     EB.SnapShot stakes delegs poolParams = currentSnapshot ss
 
@@ -435,17 +424,8 @@ getRewardInfoPools globals ss =
             unPerformanceEstimate $ percentile' $ histLookup key
         }
       where
-        pstake = fold . EB.unStake $ EB.poolStake key delegs stakes
-        ostake =
-          Set.foldl'
-            ( \c o ->
-                c
-                  <> fromMaybe
-                    mempty
-                    (Map.lookup (KeyHashObj o) (EB.unStake stakes))
-            )
-            mempty
-            (_poolOwners poolp)
+        pstake = VMap.foldMap fromCompact . EB.unStake $ EB.poolStake key delegs stakes
+        ostake = sumPoolOwnersStake poolp stakes
 
 {-# DEPRECATED getRewardInfo "Use 'getRewardProvenance' instead." #-}
 getRewardInfo ::

@@ -87,6 +87,7 @@ library
     quiet,
     scientific,
     non-integral,
+    primitive,
     small-steps,
     strict-containers,
     text,

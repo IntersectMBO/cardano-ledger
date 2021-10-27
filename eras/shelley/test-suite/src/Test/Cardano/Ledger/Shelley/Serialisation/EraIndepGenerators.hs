@@ -3,11 +3,14 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -55,7 +58,7 @@ import Cardano.Ledger.BaseTypes
     textToDns,
     textToUrl,
   )
-import Cardano.Ledger.Coin (DeltaCoin (..))
+import Cardano.Ledger.Coin (CompactForm (..), DeltaCoin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -110,6 +113,7 @@ import Control.SetAlgebra (biMapFromList)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
+import qualified Data.Compact.VMap as VMap
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Maybe (fromJust)
@@ -571,6 +575,13 @@ instance
       <*> arbitrary
       <*> arbitrary
 
+instance
+  (Arbitrary k, Arbitrary v, Ord k, VMap.Vector kv k, VMap.Vector vv v) =>
+  Arbitrary (VMap.VMap kv vv k v)
+  where
+  arbitrary = VMap.fromMap <$> arbitrary
+  shrink = fmap VMap.fromMap . shrink . VMap.toMap
+
 instance Arbitrary RewardType where
   arbitrary = genericArbitraryU
   shrink = genericShrink
@@ -614,6 +625,8 @@ instance CC.Crypto crypto => Arbitrary (SnapShots crypto) where
 
 instance Arbitrary PerformanceEstimate where
   arbitrary = PerformanceEstimate <$> arbitrary
+
+deriving instance Arbitrary (CompactForm Coin)
 
 instance CC.Crypto crypto => Arbitrary (Stake crypto) where
   arbitrary = Stake <$> arbitrary

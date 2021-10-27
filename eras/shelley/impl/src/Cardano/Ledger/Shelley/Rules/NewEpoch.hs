@@ -22,6 +22,7 @@ where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
@@ -38,9 +39,10 @@ import Cardano.Ledger.Slot
 import qualified Cardano.Ledger.Val as Val
 import Control.Provenance (runProvM)
 import Control.State.Transition
+import Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes)
+import Data.Ratio
 import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Records
@@ -171,16 +173,21 @@ newEpochTransition = do
 
 calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
 calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
-  let Coin total = Map.foldl' (<>) mempty stake
+  let Coin total = VMap.foldMap fromCompact stake
+      -- total could be zero (in particular when shrinking)
+      nonZeroTotal = if total == 0 then 1 else total
       sd =
         Map.fromListWith (+) $
-          catMaybes
-            [ (,fromIntegral c / fromIntegral (if total == 0 then 1 else total))
-                <$> Map.lookup hk delegs -- TODO mgudemann total could be zero (in
-                -- particular when shrinking)
-              | (hk, Coin c) <- Map.toList stake
-            ]
-   in PoolDistr $ Map.intersectionWith IndividualPoolStake sd (Map.map _poolVrf poolParams)
+          [ (d, c % nonZeroTotal)
+            | (hk, compactCoin) <- VMap.toAscList stake,
+              let Coin c = fromCompact compactCoin,
+              Just d <- [VMap.lookup hk delegs]
+          ]
+   in PoolDistr $
+        Map.intersectionWith
+          IndividualPoolStake
+          sd
+          (toMap (VMap.map _poolVrf poolParams))
 
 instance
   ( UsesTxOut era,

@@ -233,6 +233,7 @@ import Data.Coders
     decodeRecordNamed,
     (<!),
   )
+import qualified Data.Compact.VMap as VMap
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
@@ -999,9 +1000,9 @@ stakeDistr ::
   SnapShot (Crypto era)
 stakeDistr u ds ps =
   SnapShot
-    (Stake $ eval (dom activeDelegs ◁ stakeRelation))
-    delegs
-    poolParams
+    (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
+    (VMap.fromMap delegs)
+    (VMap.fromMap poolParams)
   where
     DState rewards' delegs ptrs' _ _ _ = ds
     PState poolParams _ _ = ps
@@ -1009,6 +1010,10 @@ stakeDistr u ds ps =
     stakeRelation = aggregateUtxoCoinByCredential (forwards ptrs') u rewards'
     activeDelegs :: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
+    compactCoinOrError c =
+      case toCompact c of
+        Nothing -> error $ "Invalid ADA value in staking: " <> show c
+        Just compactCoin -> compactCoin
 
 -- | Apply a reward update
 applyRUpd ::
@@ -1115,7 +1120,7 @@ startStep ::
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       f, numPools, k :: Rational
-      numPools = fromIntegral (Map.size poolParams)
+      numPools = fromIntegral (VMap.size poolParams)
       k = fromIntegral secparam
       f = unboundRational (activeSlotVal asc)
 
@@ -1168,7 +1173,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
             rewTotalStake = totalStake,
             rewRPot = Coin rPot
           }
-      activestake = fold . unStake $ stake'
+      activestake = VMap.foldMap fromCompact $ unStake stake'
       free =
         FreeVars
           (unBlocksMade b)
@@ -1190,7 +1195,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
         RSLP
           pulseSize
           free
-          (StrictSeq.fromList $ Map.elems poolParams)
+          (StrictSeq.fromList $ VMap.elems poolParams)
           (RewardAns Map.empty Map.empty)
       provenance =
         def
@@ -1277,7 +1282,7 @@ completeRupd
                 key
                 ( Desirability
                     { hitRateEstimate = unPerformanceEstimate estimate,
-                      desirabilityScore = case Map.lookup key poolParams of
+                      desirabilityScore = case VMap.lookup key poolParams of
                         Just ppx -> desirability (a0, nOpt) rpot ppx estimate totalstake
                         Nothing -> 0
                     }

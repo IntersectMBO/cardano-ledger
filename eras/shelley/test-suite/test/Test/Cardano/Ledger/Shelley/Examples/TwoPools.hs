@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -121,7 +122,7 @@ import Test.Cardano.Ledger.Shelley.Examples.Init
     nonce0,
     ppEx,
   )
-import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser)
+import Test.Cardano.Ledger.Shelley.Examples.PoolLifetime (makeCompletedPulser, mkStake)
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
     NatNonce (..),
@@ -365,23 +366,20 @@ snapEx3 :: ExMock c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
     { EB._stake =
-        EB.Stake $
-          Map.fromList
-            [ (Cast.aliceSHK, aliceCoinEx1),
-              (Cast.bobSHK, bobInitCoin),
-              (Cast.carlSHK, carlInitCoin)
-            ],
-      EB._delegations =
-        Map.fromList
-          [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
-            (Cast.bobSHK, hk Cast.bobPoolKeys),
-            (Cast.carlSHK, hk Cast.alicePoolKeys)
+        mkStake
+          [ (Cast.aliceSHK, aliceCoinEx1),
+            (Cast.bobSHK, bobInitCoin),
+            (Cast.carlSHK, carlInitCoin)
           ],
+      EB._delegations =
+        [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+          (Cast.bobSHK, hk Cast.bobPoolKeys),
+          (Cast.carlSHK, hk Cast.alicePoolKeys)
+        ],
       EB._poolParams =
-        Map.fromList
-          [ (hk Cast.alicePoolKeys, alicePoolParams'),
-            (hk Cast.bobPoolKeys, bobPoolParams')
-          ]
+        [ (hk Cast.alicePoolKeys, alicePoolParams'),
+          (hk Cast.bobPoolKeys, bobPoolParams')
+        ]
     }
 
 expectedStEx3 ::
@@ -482,13 +480,13 @@ blockEx5 =
     (mkOCert Cast.alicePoolKeys 0 (KESPeriod 10))
 
 activeStakeEx5 :: Integer
-activeStakeEx5 = sum $ unCoin <$> [aliceCoinEx1, bobInitCoin, carlInitCoin]
+activeStakeEx5 = sum $ map unCoin [aliceCoinEx1, bobInitCoin, carlInitCoin]
 
 alicePoolStake :: Rational
 alicePoolStake = (unCoin aliceCoinEx1 + unCoin carlInitCoin) % activeStakeEx5
 
 bobPoolStake :: Rational
-bobPoolStake = (unCoin bobInitCoin) % activeStakeEx5
+bobPoolStake = unCoin bobInitCoin % activeStakeEx5
 
 pdEx5 :: forall c. CryptoClass.Crypto c => PoolDistr c
 pdEx5 =

@@ -37,13 +37,13 @@ library
                     , cardano-ledger-alonzo
                     , cardano-ledger-shelley
                     , cardano-ledger-shelley-ma
-                    , cardano-protocol-tpraos
                     , cborg
                     , conduit
                     , containers
                     , compact-map
                     , deepseq
                     , foldl
+                    , vector
                     , persistent
                     , persistent-sqlite
                     , persistent-template
@@ -58,6 +58,7 @@ library
                     , Cardano.Ledger.State.Schema
                     , Cardano.Ledger.State.Transform
                     , Cardano.Ledger.State.Query
+                    , Cardano.Ledger.State.Vector
   hs-source-dirs:     src
 
 executable ledger-state
@@ -78,6 +79,7 @@ benchmark memory
   main-is:        Memory.hs
   hs-source-dirs: bench
   build-depends:  base
+                , deepseq
                 , weigh
                 , ledger-state
                 , optparse-applicative
@@ -85,5 +87,4 @@ benchmark memory
   ghc-options:   -Wall
                  -O2
                  -rtsopts
-                 -with-rtsopts=-T
   default-language:   Haskell2010

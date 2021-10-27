@@ -173,6 +173,7 @@ import Control.SetAlgebra (forwards)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
+import qualified Data.Compact.VMap as VMap
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map (Map, toList)
 import Data.MemoBytes (MemoBytes (..))
@@ -374,12 +375,20 @@ ppMap' name kf vf m =
 ppMap :: (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
 ppMap = ppMap' (text "Map")
 
+ppVMap ::
+  (VMap.Vector kv k, VMap.Vector vv v) =>
+  (k -> PDoc) ->
+  (v -> PDoc) ->
+  VMap.VMap kv vv k v ->
+  PDoc
+ppVMap pk pv = ppMap' (text "VMap") pk pv . VMap.toMap
+
 class PrettyA t where
   prettyA :: t -> PDoc
 
--- =====================================================================================================
+-- =============================================================================
 -- END HELPER FUNCTIONS
--- ================================= ====================================================================
+-- =============================================================================
 
 ppLastAppliedBlock :: LastAppliedBlock c -> PDoc
 ppLastAppliedBlock (LastAppliedBlock blkNo slotNo hh) =
@@ -511,7 +520,7 @@ ppFreeVars (FreeVars b1 del stake1 addrs total active asc1 blocks r1 slots d a0 
   ppRecord
     "FreeVars"
     [ ("b", ppMap ppKeyHash ppNatural b1),
-      ("delegs", ppMap ppCredential ppKeyHash del),
+      ("delegs", ppVMap ppCredential ppKeyHash del),
       ("stake", ppStake stake1),
       ("addrsRew", ppSet ppCredential addrs),
       ("totalStake", ppInteger total),
@@ -801,7 +810,8 @@ instance PrettyA Likelihood where
 -- Cardano.Ledger.Shelley.EpochBoundary
 
 ppStake :: Stake crypto -> PDoc
-ppStake (Stake m) = ppMap' (text "Stake") ppCredential ppCoin m
+ppStake (Stake m) =
+  ppMap' (text "Stake") ppCredential (ppCoin . fromCompact) (VMap.toMap m)
 
 ppBlocksMade :: BlocksMade crypto -> PDoc
 ppBlocksMade (BlocksMade m) = ppMap' (text "BlocksMade") ppKeyHash ppNatural m
@@ -811,8 +821,8 @@ ppSnapShot (SnapShot st deleg params) =
   ppRecord
     "SnapShot"
     [ ("stake", ppStake st),
-      ("delegations", ppMap ppCredential ppKeyHash deleg),
-      ("poolParams", ppMap ppKeyHash ppPoolParams params)
+      ("delegations", ppVMap ppCredential ppKeyHash deleg),
+      ("poolParams", ppVMap ppKeyHash ppPoolParams params)
     ]
 
 ppSnapShots :: SnapShots crypto -> PDoc

@@ -61,6 +61,10 @@ instance PersistField (TxId C) where
 instance PersistFieldSql (TxId C) where
   sqlType _ = SqlBlob
 
+deriving instance PersistField (CompactForm Coin)
+
+deriving instance PersistFieldSql (CompactForm Coin)
+
 instance PersistField Coin where
   toPersistValue = PersistInt64 . fromIntegral . unCoin
   fromPersistValue (PersistInt64 i64) = Right $ Coin $ fromIntegral i64

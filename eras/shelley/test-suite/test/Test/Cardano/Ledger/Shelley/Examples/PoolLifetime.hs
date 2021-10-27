@@ -1,6 +1,9 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -15,6 +18,7 @@ module Test.Cardano.Ledger.Shelley.Examples.PoolLifetime
     makePulser',
     makeCompletedPulser,
     poolLifetimeExample,
+    mkStake,
   )
 where
 
@@ -30,10 +34,11 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
-import Cardano.Ledger.Credential (Ptr (..))
+import Cardano.Ledger.Compactible
+import Cardano.Ledger.Credential (Credential, Ptr (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Keys (asWitness, coerceKeyRole)
+import Cardano.Ledger.Keys (KeyRole (..), asWitness, coerceKeyRole)
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
     PoolDistr (..),
@@ -97,13 +102,14 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Control.Provenance (runProvM)
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (def)
-import Data.Foldable (fold)
 import Data.Group (invert)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto, ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
@@ -140,10 +146,24 @@ import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 aliceInitCoin :: Coin
-aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
+aliceInitCoin = Coin 10_000_000_000_000_000
 
 bobInitCoin :: Coin
-bobInitCoin = Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
+bobInitCoin = Coin 1_000_000_000_000_000
+
+toCompactCoinError :: Coin -> CompactForm Coin
+toCompactCoinError c =
+  case toCompact c of
+    Nothing -> error $ "Invalid coin: " <> show c
+    Just compactCoin -> compactCoin
+
+mkStake ::
+  [ ( Credential 'Staking crypto,
+      Coin
+    )
+  ] ->
+  EB.Stake crypto
+mkStake = EB.Stake . GHC.Exts.fromList . map (fmap toCompactCoinError)
 
 initUTxO :: Cr.Crypto c => UTxO (ShelleyEra c)
 initUTxO =
@@ -413,17 +433,15 @@ snapEx3 :: Cr.Crypto c => EB.SnapShot c
 snapEx3 =
   EB.SnapShot
     { EB._stake =
-        EB.Stake $
-          Map.fromList
-            [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr),
-              (Cast.bobSHK, bobInitCoin)
-            ],
-      EB._delegations =
-        Map.fromList
-          [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
-            (Cast.bobSHK, hk Cast.alicePoolKeys)
+        mkStake
+          [ (Cast.aliceSHK, aliceCoinEx2Base <> aliceCoinEx2Ptr),
+            (Cast.bobSHK, bobInitCoin)
           ],
-      EB._poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
+      EB._delegations =
+        [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+          (Cast.bobSHK, hk Cast.alicePoolKeys)
+        ],
+      EB._poolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
 expectedStEx3 ::
@@ -558,19 +576,17 @@ snapEx5 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx5 =
   EB.SnapShot
     { EB._stake =
-        EB.Stake $
-          Map.fromList
-            [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr),
-              (Cast.carlSHK, carlMIR),
-              (Cast.bobSHK, bobInitCoin)
-            ],
-      EB._delegations =
-        Map.fromList
-          [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
-            (Cast.carlSHK, hk Cast.alicePoolKeys),
-            (Cast.bobSHK, hk Cast.alicePoolKeys)
+        mkStake
+          [ (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr),
+            (Cast.carlSHK, carlMIR),
+            (Cast.bobSHK, bobInitCoin)
           ],
-      EB._poolParams = Map.singleton (hk Cast.alicePoolKeys) Cast.alicePoolParams
+      EB._delegations =
+        [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+          (Cast.carlSHK, hk Cast.alicePoolKeys),
+          (Cast.bobSHK, hk Cast.alicePoolKeys)
+        ],
+      EB._poolParams = [(hk Cast.alicePoolKeys, Cast.alicePoolParams)]
     }
 
 pdEx5 :: forall c. Cr.Crypto c => PoolDistr c
@@ -873,12 +889,11 @@ snapEx9 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx9 =
   snapEx5
     { EB._stake =
-        EB.Stake $
-          Map.fromList
-            [ (Cast.bobSHK, bobInitCoin <> bobRAcnt8),
-              (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8),
-              (Cast.carlSHK, carlMIR)
-            ]
+        mkStake
+          [ (Cast.bobSHK, bobInitCoin <> bobRAcnt8),
+            (Cast.aliceSHK, aliceCoinEx4Base <> aliceCoinEx2Ptr <> aliceRAcnt8),
+            (Cast.carlSHK, carlMIR)
+          ]
     }
 
 expectedStEx9 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)
@@ -1026,9 +1041,10 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     epoch4Likelihood = likelihood blocks t (epochSize $ EpochNo 4)
     blocks = 0
     t = leaderProbability f relativeStake (_d ppEx)
-    (Coin stake) = fold (EB.unStake . EB._stake $ snapEx5 @c) -- everyone has delegated to Alice's Pool
+    -- everyone has delegated to Alice's Pool
+    Coin stake = VMap.foldMap fromCompact (EB.unStake . EB._stake $ snapEx5 @c)
     relativeStake = fromRational (stake % supply)
-    (Coin supply) = maxLLSupply <-> reserves12
+    Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals
 
 nonMyopicEx11 :: forall c. Cr.Crypto c => NonMyopic c
@@ -1094,16 +1110,14 @@ snapEx12 :: forall c. Cr.Crypto c => EB.SnapShot c
 snapEx12 =
   snapEx9
     { EB._stake =
-        EB.Stake $
-          Map.fromList
-            [ (Cast.aliceSHK, aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr),
-              (Cast.carlSHK, carlMIR)
-            ],
+        mkStake
+          [ (Cast.aliceSHK, aliceRAcnt8 <> aliceCoinEx2Ptr <> aliceCoinEx11Ptr),
+            (Cast.carlSHK, carlMIR)
+          ],
       EB._delegations =
-        Map.fromList
-          [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
-            (Cast.carlSHK, hk Cast.alicePoolKeys)
-          ]
+        [ (Cast.aliceSHK, hk Cast.alicePoolKeys),
+          (Cast.carlSHK, hk Cast.alicePoolKeys)
+        ]
     }
 
 expectedStEx12 :: forall c. (ExMock (Crypto (ShelleyEra c))) => ChainState (ShelleyEra c)

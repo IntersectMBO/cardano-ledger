@@ -18,6 +18,7 @@ module Cardano.Ledger.Shelley.Rewards
     PerformanceEstimate (..),
     NonMyopic (..),
     getTopRankedPools,
+    getTopRankedPoolsVMap,
     StakeShare (..),
     mkApparentPerformance,
     RewardType (..),
@@ -62,6 +63,7 @@ import Cardano.Ledger.Coin
     coinToRational,
     rationalToCoinViaFloor,
   )
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -84,6 +86,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, modifyM)
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, fold)
 import Data.Function (on)
@@ -318,11 +321,33 @@ getTopRankedPools ::
   Map (KeyHash 'StakePool crypto) PerformanceEstimate ->
   Set (KeyHash 'StakePool crypto)
 getTopRankedPools rPot totalStake pp poolParams aps =
+  let pdata = Map.toAscList $ Map.intersectionWith (,) poolParams aps
+   in getTopRankedPoolsInternal rPot totalStake pp pdata
+
+getTopRankedPoolsVMap ::
+  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  Coin ->
+  Coin ->
+  pp ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  Map (KeyHash 'StakePool crypto) PerformanceEstimate ->
+  Set (KeyHash 'StakePool crypto)
+getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
+  let pdata = [(kh, (pps, a)) | (kh, a) <- Map.toAscList aps, Just pps <- [VMap.lookup kh poolParams]]
+   in getTopRankedPoolsInternal rPot totalStake pp pdata
+
+getTopRankedPoolsInternal ::
+  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  Coin ->
+  Coin ->
+  pp ->
+  [(KeyHash 'StakePool crypto, (PoolParams crypto, PerformanceEstimate))] ->
+  Set (KeyHash 'StakePool crypto)
+getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
     fst
       <$> take (fromIntegral $ getField @"_nOpt" pp) (sortBy (flip compare `on` snd) rankings)
   where
-    pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =
       [ ( hk,
           desirability (getField @"_a0" pp, getField @"_nOpt" pp) rPot pool ap totalStake
@@ -489,7 +514,7 @@ rewardOnePool
     where
       Coin ostake =
         Set.foldl'
-          (\c o -> c <> Map.findWithDefault mempty (KeyHashObj o) stake)
+          (\c o -> c <> maybe mempty fromCompact (VMap.lookup (KeyHashObj o) stake))
           mempty
           (_poolOwners pool)
       Coin pledge = _poolPledge pool
@@ -511,11 +536,12 @@ rewardOnePool
                   ( memberRew
                       poolR
                       pool
-                      (StakeShare (fromIntegral c % tot))
+                      (StakeShare (c % tot))
                       (StakeShare sigma)
                   )
             )
-            | (hk, Coin c) <- Map.toList stake,
+            | (hk, compactCoin) <- VMap.toAscList stake,
+              let Coin c = fromCompact compactCoin,
               notPoolOwner hk,
               hk `Set.member` addrsRew
           ]
