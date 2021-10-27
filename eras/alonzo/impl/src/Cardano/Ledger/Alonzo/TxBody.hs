@@ -17,7 +17,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Alonzo.TxBody
-  ( TxOut (TxOut, TxOutCompact, TxOutCompactDH),
+  ( module Cardano.Ledger.Alonzo.TxOut,
     TxBody
       ( TxBody,
         inputs,
@@ -66,6 +66,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
+import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes
   ( Network,
     StrictMaybe (..),
@@ -117,91 +118,6 @@ import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
 import qualified Data.ByteString.Short as SBS
-import Data.Word
-
--- We are trying to make some special cases, Since this is already a
--- multi-constructor type, we can make more specialized constructors for free.
--- What can we specialize?
---
--- * Shelley address VS byron address?
---   * Why not just specialize over the size of the ShortByteString?
--- * Currency
---   * Just Ada VS multi asset
--- * Datum VS no datum
---
--- Note that we don't unpack stake reference as we want to take advantage of
--- sharing.
-data TxOut era
-  -- | Encode everything into a single short byte string. In the case of
-  -- MultiAsset, we have a variable size Value and need to pay the overhead of a
-  -- ShortByteString (as per the compact form of Value). So let's just use a
-  -- ShortByteString once and store all the data we need. TODO we want to
-  -- special case the ada-only cases (actually any case that has known size
-  -- encoding) and use unpacked Word64s
-  = TxOut_Shelley SBS.ShortByteString
-  | TxOut_Byron SBS.ShortByteString
-  | TxOutCompact
-      {-# UNPACK #-} !(CompactAddr (Crypto era))
-      !(CompactForm (Core.Value era))
-  | TxOutCompactDH
-      {-# UNPACK #-} !(CompactAddr (Crypto era))
-      !(CompactForm (Core.Value era))
-      !(DataHash (Crypto era))
-
-deriving stock instance
-  ( Eq (Core.Value era),
-    Compactible (Core.Value era)
-  ) =>
-  Eq (TxOut era)
-
-viewCompactTxOut ::
-  forall era.
-  (Era era) =>
-  TxOut era ->
-  (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
-viewCompactTxOut (TxOutCompact bs c) = (addr, val, SNothing)
-  where
-    addr = decompactAddr bs
-    val = fromCompact c
-viewCompactTxOut (TxOutCompactDH bs c dh) = (addr, val, SJust dh)
-  where
-    addr = decompactAddr bs
-    val = fromCompact c
-
-instance
-  ( Era era,
-    Show (Core.Value era),
-    Show (CompactForm (Core.Value era))
-  ) =>
-  Show (TxOut era)
-  where
-  show = show . viewCompactTxOut
-
-deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
-
-pattern TxOut ::
-  ( Era era,
-    Compactible (Core.Value era),
-    Show (Core.Value era),
-    HasCallStack
-  ) =>
-  Addr (Crypto era) ->
-  Core.Value era ->
-  StrictMaybe (DataHash (Crypto era)) ->
-  TxOut era
-pattern TxOut addr vl dh <-
-  (viewCompactTxOut -> (addr, vl, dh))
-  where
-    TxOut addr vl mdh =
-      let v = fromMaybe (error $ "Illegal value in txout: " <> show vl) $ toCompact vl
-          a = compactAddr addr
-       in case mdh of
-            SNothing -> TxOutCompact a v
-            SJust dh -> TxOutCompactDH a v dh
-
-{-# COMPLETE TxOut #-}
-
--- ======================================
 
 type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
 
@@ -435,54 +351,6 @@ txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 -- Serialisation
 --------------------------------------------------------------------------------
 
-instance
-  ( Era era,
-    Compactible (Core.Value era)
-  ) =>
-  ToCBOR (TxOut era)
-  where
-  toCBOR (TxOutCompact addr cv) =
-    encodeListLen 2
-      <> toCBOR addr
-      <> toCBOR cv
-  toCBOR (TxOutCompactDH addr cv dh) =
-    encodeListLen 3
-      <> toCBOR addr
-      <> toCBOR cv
-      <> toCBOR dh
-
-instance
-  ( Era era,
-    DecodeNonNegative (Core.Value era),
-    Show (Core.Value era),
-    Compactible (Core.Value era)
-  ) =>
-  FromCBOR (TxOut era)
-  where
-  fromCBOR = do
-    lenOrIndef <- decodeListLenOrIndef
-    case lenOrIndef of
-      Nothing -> do
-        a <- fromCBOR
-        cv <- decodeNonNegative
-        decodeBreakOr >>= \case
-          True -> pure $ TxOutCompact a cv
-          False -> do
-            dh <- fromCBOR
-            decodeBreakOr >>= \case
-              True -> pure $ TxOutCompactDH a cv dh
-              False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
-      Just 2 ->
-        TxOutCompact
-          <$> fromCBOR
-          <*> decodeNonNegative
-      Just 3 ->
-        TxOutCompactDH
-          <$> fromCBOR
-          <*> decodeNonNegative
-          <*> fromCBOR
-      Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
-
 encodeTxBodyRaw ::
   ( Era era,
     ToCBOR (PParamsDelta era)
@@ -684,22 +552,6 @@ instance
 
 instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
   getField (TxBodyConstr (Memo m _)) = _txnetworkid m
-
-instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
-  getField (TxOutCompact a _) = a
-  getField (TxOutCompactDH a _ _) = a
-
-instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
-  getField (TxOutCompact a _) = decompactAddr a
-  getField (TxOutCompactDH a _ _) = decompactAddr a
-
-instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
-  getField (TxOutCompact _ v) = fromCompact v
-  getField (TxOutCompactDH _ v _) = fromCompact v
-
-instance c ~ Crypto era => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
-  getField (TxOutCompact _ _) = SNothing
-  getField (TxOutCompactDH _ _ d) = SJust d
 
 
 {- This is great and all, but we need to figure out the encoding anyway! So
