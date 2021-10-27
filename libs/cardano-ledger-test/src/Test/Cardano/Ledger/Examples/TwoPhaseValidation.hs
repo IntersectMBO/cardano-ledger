@@ -195,6 +195,16 @@ someOutput :: Scriptic era => Proof era -> Core.TxOut era
 someOutput pf =
   newTxOut Override pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
 
+nonScriptOutWithDatum :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+nonScriptOutWithDatum pf =
+  newTxOut
+    Override
+    pf
+    [ Address (someAddr pf),
+      Amount (inject $ Coin 1221),
+      DHash [hashData $ datumExample1 @era]
+    ]
+
 collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
 collateralOutput pf =
   newTxOut Override pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
@@ -254,7 +264,8 @@ initUTxO pf =
         ++ map (\i -> (TxIn genesisId i, collateralOutput pf)) [11 .. 18]
         ++ [ (TxIn genesisId 100, timelockOut pf),
              (TxIn genesisId 101, unspendableOut pf),
-             (TxIn genesisId 102, alwaysSucceedsOutputV2 pf)
+             (TxIn genesisId 102, alwaysSucceedsOutputV2 pf),
+             (TxIn genesisId 103, nonScriptOutWithDatum pf)
            ]
 
 initialUtxoSt ::
@@ -1068,6 +1079,53 @@ utxoStEx11 ::
   UTxOState era
 utxoStEx11 pf = UTxOState (utxoEx11 pf) (Coin 0) (Coin 5) def
 
+-- ====================================================================================
+--  Example 12: Attaching a datum (hash) to a non-script output.
+--
+--  Note that a when spending a non-script output with a datum hash, the datum cannot
+--  be supplied, because it is considered extraneous,
+--  as in the 'notOkSupplimentaryDatumTx' example.
+-- ====================================================================================
+
+outEx12 :: Scriptic era => Proof era -> Core.TxOut era
+outEx12 pf = newTxOut Override pf [Address (someAddr pf), Amount (inject $ Coin 1216)]
+
+nonScriptOutWithDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
+nonScriptOutWithDatumTxBody pf =
+  newTxBody
+    Override
+    pf
+    [ Inputs [TxIn genesisId 103],
+      Outputs [outEx12 pf],
+      Txfee (Coin 5)
+    ]
+
+nonScriptOutWithDatumTx ::
+  forall era.
+  ( Scriptic era,
+    SignBody era
+  ) =>
+  Proof era ->
+  Core.Tx era
+nonScriptOutWithDatumTx pf =
+  newTx
+    Override
+    pf
+    [ Body (nonScriptOutWithDatumTxBody pf),
+      Witnesses'
+        [ AddrWits [makeWitnessVKey (hashAnnotated (nonScriptOutWithDatumTxBody pf)) (someKeys pf)]
+        ]
+    ]
+
+utxoEx12 :: PostShelley era => Proof era -> UTxO era
+utxoEx12 pf = expectedUTxO pf (ExpectSuccess (nonScriptOutWithDatumTxBody pf) (outEx12 pf)) 103
+
+utxoStEx12 ::
+  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  Proof era ->
+  UTxOState era
+utxoStEx12 pf = UTxOState (utxoEx12 pf) (Coin 0) (Coin 5) def
+
 -- =======================
 -- Invalid Transactions
 -- =======================
@@ -1692,7 +1750,12 @@ alonzoUTXOWexamples =
             testUTXOW
               (pp pf)
               (trustMe True $ multipleEqualCertsTx pf)
-              (Right . utxoStEx11 $ pf)
+              (Right . utxoStEx11 $ pf),
+          testCase "non-script output with datum" $
+            testUTXOW
+              (pp pf)
+              (trustMe True $ nonScriptOutWithDatumTx pf)
+              (Right . utxoStEx12 $ pf)
         ],
       testGroup
         "invalid transactions"
@@ -2051,7 +2114,8 @@ example1UTxO =
         (TxIn genesisId 8, someOutput pf),
         (TxIn genesisId 100, timelockOut pf),
         (TxIn genesisId 101, unspendableOut pf),
-        (TxIn genesisId 102, alwaysSucceedsOutputV2 pf)
+        (TxIn genesisId 102, alwaysSucceedsOutputV2 pf),
+        (TxIn genesisId 103, nonScriptOutWithDatum pf)
       ]
   where
     pf = Alonzo Mock
