@@ -19,6 +19,7 @@ packages:
   libs/cardano-ledger-test
   libs/cardano-protocol-tpraos
   libs/plutus-preprocessor
+  libs/ledger-state
   libs/non-integral
   libs/small-steps
   libs/small-steps-test

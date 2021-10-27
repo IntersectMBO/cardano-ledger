@@ -1,0 +1,89 @@
+cabal-version: 2.2
+
+name:                ledger-state
+version:             0.1.0.0
+license:             Apache-2.0
+author:              IOHK Formal Methods Team
+maintainer:          formal.methods@iohk.io
+description:         This is a tool that helps us experiment with the UTxO map
+build-type:          Simple
+
+extra-source-files:
+  README.md
+  ChangeLog.md
+
+source-repository head
+  type: git
+  location: https://github.com/input-output-hk/cardano-ledger-specs.git
+  subdir:   libs/utxo-state
+
+common project-config
+  default-language:   Haskell2010
+  build-depends:      base >= 4.12 && < 4.15
+
+  ghc-options:        -Wall
+                      -Wcompat
+                      -Wincomplete-record-updates
+                      -Wincomplete-uni-patterns
+                      -Wredundant-constraints
+                      -Wunused-packages
+
+library
+  import:             project-config
+  build-depends:      bytestring
+                    , cardano-binary
+                    , cardano-crypto-class
+                    , cardano-ledger-core
+                    , cardano-ledger-alonzo
+                    , cardano-ledger-shelley
+                    , cardano-ledger-shelley-ma
+                    , cardano-protocol-tpraos
+                    , cborg
+                    , conduit
+                    , containers
+                    , compact-map
+                    , deepseq
+                    , foldl
+                    , persistent
+                    , persistent-sqlite
+                    , persistent-template
+                    , prettyprinter
+                    , strict-containers
+                    , small-steps
+                    , text
+                    , transformers
+  exposed-modules:    Cardano.Ledger.State
+                    , Cardano.Ledger.State.UTxO
+                    , Cardano.Ledger.State.Orphans
+                    , Cardano.Ledger.State.Schema
+                    , Cardano.Ledger.State.Transform
+                    , Cardano.Ledger.State.Query
+  hs-source-dirs:     src
+
+executable ledger-state
+  import:              project-config
+  hs-source-dirs:      app
+  main-is:             Main.hs
+  ghc-options:         -O2
+                       -threaded
+                       -rtsopts
+  build-depends:       cardano-ledger-shelley
+                     , ledger-state
+                     , optparse-applicative
+                     , text
+
+
+benchmark memory
+  type:           exitcode-stdio-1.0
+  main-is:        Memory.hs
+  hs-source-dirs: bench
+  build-depends:  base
+                , weigh
+                , ledger-state
+                , optparse-applicative
+                , text
+  ghc-options:   -Wall
+                 -O2
+                 -rtsopts
+                 -with-rtsopts=-T
+  default-language:   Haskell2010
