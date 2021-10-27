@@ -180,7 +180,7 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
     return $ API.ProposedPPUpdates $ fmap translatePParamsUpdate ppup
 
-translateTxOut ::
+translateTxOut :: Crypto c =>
   Core.TxOut (MaryEra c) -> Core.TxOut (AlonzoEra c)
 translateTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
 

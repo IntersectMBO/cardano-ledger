@@ -57,15 +57,10 @@ module Cardano.Ledger.Alonzo.TxBody
 where
 
 import Cardano.Binary
-  ( DecoderError (..),
-    FromCBOR (..),
+  ( FromCBOR (..),
     ToCBOR (..),
-    decodeBreakOr,
-    decodeListLenOrIndef,
-    encodeListLen,
   )
-import Cardano.Ledger.Address (Addr)
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..))
 import Cardano.Ledger.Alonzo.TxOut
 import Cardano.Ledger.BaseTypes
   ( Network,
@@ -76,7 +71,6 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
   ( EraIndependentScriptIntegrity,
@@ -90,7 +84,6 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
-import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
@@ -100,12 +93,10 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     decodeMint,
-    decodeNonNegative,
     encodeMint,
     isZero,
   )
 import Data.Coders
-import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -114,10 +105,8 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
-import GHC.Stack (HasCallStack)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks)
+import NoThunks.Class (NoThunks)
 import Prelude hiding (lookup)
-import qualified Data.ByteString.Short as SBS
 
 type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
 
@@ -146,9 +135,8 @@ data TxBodyRaw era = TxBodyRaw
   deriving (Generic, Typeable)
 
 deriving instance
-  ( Eq (Core.Value era),
-    CC.Crypto (Crypto era),
-    Compactible (Core.Value era),
+  ( Era era,
+    Eq (Core.Value era),
     Eq (PParamsDelta era)
   ) =>
   Eq (TxBodyRaw era)
@@ -169,9 +157,8 @@ newtype TxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving newtype (SafeToHash)
 
 deriving newtype instance
-  ( Eq (Core.Value era),
-    Compactible (Core.Value era),
-    CC.Crypto (Crypto era),
+  ( Era era,
+    Eq (Core.Value era),
     Eq (PParamsDelta era)
   ) =>
   Eq (TxBody era)

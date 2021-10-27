@@ -19,7 +19,7 @@ module Cardano.Ledger.Alonzo.TxOut
   where
 
 import Data.ByteString(ByteString,pack,index)
-import Cardano.Binary(serialize', FromCBOR (..), ToCBOR (..), encodeListLen, decodeListLenOrIndef, decodeBreakOr, DecoderError (DecoderErrorCustom))
+import Cardano.Binary(FromCBOR (..), ToCBOR (..), encodeListLen, decodeListLenOrIndef, decodeBreakOr, DecoderError (DecoderErrorCustom))
 import qualified Data.ByteString as BS
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr(..), compactAddr, decompactAddr)
 import Cardano.Ledger.BaseTypes(StrictMaybe(..),Network(..))
@@ -35,24 +35,21 @@ import Cardano.Ledger.Credential
     StakeReference(..))
 import Cardano.Ledger.Hashes(ScriptHash(..))
 import Cardano.Ledger.Keys(KeyHash(..))
-import Cardano.Ledger.Mary.Value(Value(..))
-import qualified Data.Map as Map
 import Data.Word(Word8,Word64)
 import Cardano.Ledger.Compactible (Compactible (..),CompactForm)
 import qualified Cardano.Ledger.Crypto as CC
 import Data.Maybe (fromJust)
 
 import Data.Proxy
-import qualified Codec.CBOR.Read as Read
-import qualified Data.ByteString.Lazy as BSL
 import GHC.Stack (HasCallStack)
 import NoThunks.Class
 import GHC.Records (HasField(..))
 import Cardano.Ledger.Val
 import Cardano.Prelude (cborError)
+import Cardano.Ledger.Coin (Coin(..))
 
 data TxOut era
-  = TxOutCompactShelley
+  = TxOutCompactShelleyAdaOnly
       !(StakeReference (Crypto era))
       {-# UNPACK #-} !ByteString -- TODO change to a SBS then to a unpacked representation
   | TxOutCompact'
@@ -65,8 +62,7 @@ data TxOut era
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
-instance (Era era, CC.Crypto (Crypto era), Show (Core.Value era))
-  => Eq (TxOut era) where
+instance Era era => Eq (TxOut era) where
   TxOutCompact' cAddrA cValA == TxOutCompact' cAddrB cValB
     = cAddrA == cAddrB
     && cValA == cValB
@@ -90,8 +86,8 @@ instance
 
 pattern TxOut ::
   ( Era era,
-    Compactible (Core.Value era),
-    Show (Core.Value era),
+    -- Compactible (Core.Value era),
+    -- Show (Core.Value era),
     HasCallStack
   ) =>
   Addr (Crypto era) ->
@@ -140,25 +136,24 @@ safeHashToBytes :: SafeHash crypto a -> ByteString
 safeHashToBytes = hashToBytes . extractHash
 
 -- ======================================================
-makeTag :: Word8 -> Word8 -> Word8 -> Word8
-makeTag addr val dhash
-  | (addr >= 0 && addr <= 4) && (val >= 0 && val <= 2) && (dhash >= 0 && dhash <= 1) =
-    (addr * 8 + val * 2 + dhash) -- (shiftL addr 3 .|. shiftL val 1 .|. dhash)
-  | otherwise = error ("tags are not in the correct ranges "++show (addr,val,dhash) ++"in (0-4,0-2,0-1).")
+makeTag :: Word8 -> Word8 -> Word8
+makeTag addr dhash
+  | (addr >= 0 && addr <= 4) && (dhash >= 0 && dhash <= 1) =
+    (addr * 2 + dhash) -- (shiftL addr 1 .|. dhash)
+  | otherwise = error ("tags are not in the correct ranges "++show (addr, dhash) ++"in (0-4, 0-1).")
 
-getTags :: Word8 -> (Word8,Word8,Word8)
-getTags tag = (addr,val,dhash)
+getTags :: Word8 -> (Word8,Word8)
+getTags tag = (addr,dhash)
   where dhash = mod tag 2
-        val = mod (div tag 2) 4
-        addr = mod (div tag 8) 8
+        addr = mod (div tag 2) 4
 
 -- ===============================================
 
 encodeAddr :: Addr crypto -> Maybe (Word8, StakeReference crypto, ByteString)
-encodeAddr (Addr Testnet (ScriptHashObj (ScriptHash hash1)) stake) = Just (0,stake,hashToBytes hash1)
-encodeAddr (Addr Testnet (KeyHashObj (KeyHash hash1)) stake)       = Just (1,stake,hashToBytes hash1)
-encodeAddr (Addr Mainnet (ScriptHashObj (ScriptHash hash1)) stake) = Just (2,stake,hashToBytes hash1)
-encodeAddr (Addr Mainnet (KeyHashObj (KeyHash hash1)) stake)       = Just (3,stake,hashToBytes hash1)
+encodeAddr (Addr Testnet (ScriptHashObj (ScriptHash hash1)) stake) = Just (0, stake, hashToBytes hash1)
+encodeAddr (Addr Testnet (KeyHashObj (KeyHash hash1)) stake)       = Just (1, stake, hashToBytes hash1)
+encodeAddr (Addr Mainnet (ScriptHashObj (ScriptHash hash1)) stake) = Just (2, stake, hashToBytes hash1)
+encodeAddr (Addr Mainnet (KeyHashObj (KeyHash hash1)) stake)       = Just (3, stake, hashToBytes hash1)
 encodeAddr (AddrBootstrap _)                                       = Nothing
 
 decodeAddr :: forall crypto. HashAlgorithm (CC.ADDRHASH crypto) => Word8 -> Int -> StakeReference crypto -> ByteString -> (Int, Addr crypto)
@@ -176,26 +171,14 @@ decodeAddr tag byteIx stake bs = (byteIx + addrSizeBytes, addr)
       3 -> Addr Mainnet (KeyHashObj (KeyHash hash1)) stake
       _ -> error $ "CompactTxOut: Unexpected address tag: " <> show tag
 
--- TODO
--- TODO We use a CBOR encoding for multi-asset values. I'm not sure if
--- TODO that'll really save space or perhaps make it worse!
--- TODO
-encodeValue :: forall crypto. CC.Crypto crypto => Value crypto -> (Word8,ByteString)
-encodeValue (Value 0 m) | Map.null m = (0, mempty)
-encodeValue (Value n m) | Map.null m = (1, word64ToByteString (fromIntegral n))
-encodeValue (v@(Value _ _))          = (2, serialize' @(CompactForm (Value crypto)) (unJust(toCompact v)))
-    where unJust (Just x) = x
-          unJust Nothing = error ("Value does not have compact form.")
+encodeValue :: Val (Core.Value era) => Proxy era -> Core.Value era -> Maybe ByteString
+encodeValue _ v = if adaOnly v
+  then Just $ word64ToByteString $ fromIntegral $ unCoin $ coin v
+  else Nothing
 
-decodeValue :: forall crypto. CC.Crypto crypto => Word8 -> Int -> ByteString -> (Int, Value crypto)
-decodeValue tag byteIx bs = case tag of
-  0 -> (byteIx, Value 0 Map.empty)
-  1 -> (j, Value (fromIntegral n) Map.empty)
-    where (j,n) = readWord64 byteIx bs
-  2 -> case Read.deserialiseFromBytes @(CompactForm (Value crypto)) fromCBOR (BSL.fromStrict $ BS.drop byteIx bs) of
-            Left _err -> error "CompactTxOut: Invalid Value encoding"
-            Right (bsRest, cValue) -> (BS.length bs - fromIntegral (BSL.length bsRest), fromCompact cValue)
-  _ -> error $ "CompactTxOut: Unexpected address tag: " <> show tag
+decodeValue :: Val (Core.Value era) => Proxy era -> Int -> ByteString -> (Int, Core.Value era)
+decodeValue _ byteIx bs = (j, inject (Coin (fromIntegral n)))
+  where (j,n) = readWord64 byteIx bs
 
 
 encodeDataHash :: StrictMaybe (DataHash crypto) -> (Word8,ByteString)
@@ -217,30 +200,28 @@ subbytestring loInc hiExc = BS.drop loInc . BS.take (hiExc - loInc)
 -- ===============================================
 
 mkTxOut ::
+  forall era.
   ( Era era,
-    Compactible (Core.Value era),
-    Show (Core.Value era),
     HasCallStack
   ) => Addr (Crypto era) -> Core.Value era -> StrictMaybe (DataHash (Crypto era)) -> TxOut era
-mkTxOut addr val dhashMay = case encodeAddr addr of
-  Nothing -> case dhashMay of
-    SNothing -> TxOutCompact' (compactAddr addr) (fromJust (toCompact val))
-    SJust dhash -> TxOutCompactDH' (compactAddr addr) (fromJust (toCompact val)) dhash
-  Just (addrTag, stake, addrBytes)
-      -> TxOutCompactShelley
+mkTxOut addr val dhashMay = case (encodeAddr addr, encodeValue (Proxy @era) val) of
+  (Just (addrTag, stake, addrBytes), Just valueBytes)
+      -> TxOutCompactShelleyAdaOnly
           stake
           (tagBytes <> addrBytes <> valueBytes <> dhashBytes)
     where (dhashTag, dhashBytes) = encodeDataHash dhashMay
-          (valueTag, valueBytes) = encodeValue val
-          tagBytes = pack [makeTag addrTag valueTag dhashTag]
+          tagBytes = pack [makeTag addrTag dhashTag]
+  _ -> case dhashMay of
+    SNothing -> TxOutCompact' (compactAddr addr) (fromJust (toCompact val))
+    SJust dhash -> TxOutCompactDH' (compactAddr addr) (fromJust (toCompact val)) dhash
 
 viewTxOut :: forall era.
   ( Era era
   ) => TxOut era -> (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
-viewTxOut (TxOutCompactShelley stake bytes) =  (addr, val, dhash)
-  where (i1,(addrtag,valtag,dhashtag)) = readTags 0 bytes
+viewTxOut (TxOutCompactShelleyAdaOnly stake bytes) =  (addr, val, dhash)
+  where (i1,(addrtag, dhashtag)) = readTags 0 bytes
         (i2,addr) = decodeAddr @(Crypto era) addrtag i1 stake bytes
-        (i3,val) = decodeValue @(Crypto era) valtag i2 bytes
+        (i3,val) = decodeValue (Proxy @era) i2 bytes
         (_i4,dhash) = decodeDataHash @(Crypto era) dhashtag i3 bytes
 viewTxOut (TxOutCompact' cAddr cVal) = (decompactAddr cAddr, fromCompact cVal, SNothing)
 viewTxOut (TxOutCompactDH' cAddr cVal dh) = (decompactAddr cAddr, fromCompact cVal, SJust dh)
@@ -250,7 +231,7 @@ viewCompactTxOut :: forall era.
   ) => TxOut era -> (CompactAddr (Crypto era), CompactForm (Core.Value era), StrictMaybe (DataHash (Crypto era)))
 viewCompactTxOut (TxOutCompact' cAddr cVal) = (cAddr, cVal, SNothing)
 viewCompactTxOut (TxOutCompactDH' cAddr cVal dh) = (cAddr, cVal, SJust dh)
-viewCompactTxOut txOut@TxOutCompactShelley{} = (compactAddr addr, fromJust (toCompact val), dhash)
+viewCompactTxOut txOut@TxOutCompactShelleyAdaOnly{} = (compactAddr addr, fromJust (toCompact val), dhash)
   where
   (addr, val, dhash) = viewTxOut txOut
 
@@ -262,7 +243,7 @@ word64ToByteString w64 = pack(loop 8 w64 [])
         loop 0 _ ans = ans
         loop cnt n ans = loop (cnt - 1) (div n 256) ((fromIntegral (mod n 256)):ans)
 
-readTags:: Int -> ByteString -> (Int,(Word8,Word8,Word8))
+readTags:: Int -> ByteString -> (Int,(Word8,Word8))
 readTags i bs | i > (BS.length bs - 1) = error ("Not enough bytes to read the Tags")
 readTags i bs = (i+1,getTags(index bs i))
 
@@ -330,24 +311,16 @@ instance
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
 -- TODO do we still need this?
-instance (Crypto era ~ c
-  , Era era, Core.Value era ~ Value c -- TODO remove
-  ) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
+instance (Crypto era ~ c, Era era) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
   getField (TxOutCompact' a _) = a
   getField (TxOutCompactDH' a _ _) = a
   getField (TxOut a _ _) = compactAddr a
 
-instance (CC.Crypto c, Crypto era ~ c
-  , Era era, Core.Value era ~ Value c -- TODO remove
-  ) => HasField "address" (TxOut era) (Addr c) where
+instance (Crypto era ~ c, Era era) => HasField "address" (TxOut era) (Addr c) where
   getField (TxOut a _ _) = a
 
-instance (Core.Value era ~ val, Compactible val
-  , Era era, Core.Value era ~ Value (Crypto era) -- TODO remove
-  ) => HasField "value" (TxOut era) val where
+instance (Core.Value era ~ val, Era era) => HasField "value" (TxOut era) val where
   getField (TxOut _ v _) = v
 
-instance (c ~ Crypto era
-  , Era era, Core.Value era ~ Value c -- TODO remove
-  ) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
+instance (c ~ Crypto era, Era era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField (TxOut _ _ dhMay) = dhMay

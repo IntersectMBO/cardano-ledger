@@ -177,7 +177,6 @@ ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ad
 
 ppTxOut ::
   ( Era era,
-    Show (Core.Value era),
     PrettyA (Core.Value era)
   ) =>
   TxOut era ->
@@ -187,7 +186,6 @@ ppTxOut (TxOut addr val dhash) =
 
 ppTxBody ::
   ( AlonzoBody era,
-    Show (Core.Value era),
     PrettyA (Core.Value era),
     PrettyA (Core.PParamsDelta era)
   ) =>
@@ -217,8 +215,7 @@ ppAuxDataHash (Core.AuxiliaryDataHash axh) = ppSafeHash axh
 instance
   ( AlonzoBody era,
     PrettyA (Core.Value era),
-    PrettyA (Core.PParamsDelta era),
-    Show (Core.Value era)
+    PrettyA (Core.PParamsDelta era)
   ) =>
   PrettyA (TxBody era)
   where
@@ -226,7 +223,6 @@ instance
 
 instance
   ( Era era,
-    Show (Core.Value era),
     PrettyA (Core.Value era)
   ) =>
   PrettyA (TxOut era)
