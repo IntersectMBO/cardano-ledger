@@ -57,15 +57,15 @@ data TxOut era
       {-# UNPACK #-} !ByteString -- TODO change to a SBS then to a unpacked representation
   | TxOutCompact'
       {-# UNPACK #-} !(CompactAddr (Crypto era))
-      !(CompactForm (Value (Crypto era))) -- TODO change to Core.Value
+      !(CompactForm (Core.Value era)) -- TODO change to Core.Value
   | TxOutCompactDH'
       {-# UNPACK #-} !(CompactAddr (Crypto era))
-      !(CompactForm (Value (Crypto era))) -- TODO change to Core.Value
+      !(CompactForm (Core.Value era)) -- TODO change to Core.Value
       !(DataHash (Crypto era))
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
-instance (Era era, CC.Crypto (Crypto era), Core.Value era ~ Value (Crypto era))
+instance (Era era, CC.Crypto (Crypto era), Show (Core.Value era))
   => Eq (TxOut era) where
   TxOutCompact' cAddrA cValA == TxOutCompact' cAddrB cValB
     = cAddrA == cAddrB
@@ -81,7 +81,6 @@ instance (Era era, CC.Crypto (Crypto era), Core.Value era ~ Value (Crypto era))
 
 instance
   ( Era era,
-    Core.Value era ~ Value (Crypto era), -- TODO remove
     Show (Core.Value era),
     Show (CompactForm (Core.Value era))
   ) =>
@@ -92,8 +91,8 @@ instance
 pattern TxOut ::
   ( Era era,
     Compactible (Core.Value era),
-    HasCallStack,
-    Core.Value era ~ Value (Crypto era) -- TODO Remove
+    Show (Core.Value era),
+    HasCallStack
   ) =>
   Addr (Crypto era) ->
   Core.Value era ->
@@ -101,7 +100,7 @@ pattern TxOut ::
   TxOut era
 pattern TxOut addr vl dh <- (viewTxOut -> (addr, vl, dh))
   where
-    TxOut addr vl mdh = compactTxOut addr vl mdh
+    TxOut addr vl mdh = mkTxOut addr vl mdh
 
 {-# COMPLETE TxOut #-}
 
@@ -109,11 +108,10 @@ pattern TxOut addr vl dh <- (viewTxOut -> (addr, vl, dh))
 pattern TxOutCompact ::
   ( Era era,
     Compactible (Core.Value era),
-    HasCallStack,
-    Core.Value era ~ Value (Crypto era) -- TODO Remove
+    HasCallStack
   ) =>
   CompactAddr (Crypto era) ->
-  CompactForm (Value (Crypto era)) ->
+  CompactForm (Core.Value era) ->
   TxOut era
 pattern TxOutCompact addr vl <- (viewCompactTxOut -> (addr, vl, SNothing))
   where
@@ -123,11 +121,10 @@ pattern TxOutCompact addr vl <- (viewCompactTxOut -> (addr, vl, SNothing))
 pattern TxOutCompactDH ::
   ( Era era,
     Compactible (Core.Value era),
-    HasCallStack,
-    Core.Value era ~ Value (Crypto era) -- TODO Remove
+    HasCallStack
   ) =>
   CompactAddr (Crypto era) ->
-  CompactForm (Value (Crypto era)) ->
+  CompactForm (Core.Value era) ->
   DataHash (Crypto era) ->
   TxOut era
 pattern TxOutCompactDH addr vl dh <- (viewCompactTxOut -> (addr, vl, SJust dh))
@@ -219,12 +216,13 @@ subbytestring loInc hiExc = BS.drop loInc . BS.take (hiExc - loInc)
 
 -- ===============================================
 
-compactTxOut ::
+mkTxOut ::
   ( Era era,
-    -- Show(Core.Value era),
-    Core.Value era ~ Value (Crypto era)
-  ) => Addr (Crypto era) -> Value (Crypto era) -> StrictMaybe (DataHash (Crypto era)) -> TxOut era
-compactTxOut addr val dhashMay = case encodeAddr addr of
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    HasCallStack
+  ) => Addr (Crypto era) -> Core.Value era -> StrictMaybe (DataHash (Crypto era)) -> TxOut era
+mkTxOut addr val dhashMay = case encodeAddr addr of
   Nothing -> case dhashMay of
     SNothing -> TxOutCompact' (compactAddr addr) (fromJust (toCompact val))
     SJust dhash -> TxOutCompactDH' (compactAddr addr) (fromJust (toCompact val)) dhash
@@ -237,9 +235,8 @@ compactTxOut addr val dhashMay = case encodeAddr addr of
           tagBytes = pack [makeTag addrTag valueTag dhashTag]
 
 viewTxOut :: forall era.
-  ( Era era,
-    Core.Value era ~ Value (Crypto era)
-  ) => TxOut era -> (Addr (Crypto era), Value (Crypto era), StrictMaybe (DataHash (Crypto era)))
+  ( Era era
+  ) => TxOut era -> (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
 viewTxOut (TxOutCompactShelley stake bytes) =  (addr, val, dhash)
   where (i1,(addrtag,valtag,dhashtag)) = readTags 0 bytes
         (i2,addr) = decodeAddr @(Crypto era) addrtag i1 stake bytes
@@ -249,9 +246,8 @@ viewTxOut (TxOutCompact' cAddr cVal) = (decompactAddr cAddr, fromCompact cVal, S
 viewTxOut (TxOutCompactDH' cAddr cVal dh) = (decompactAddr cAddr, fromCompact cVal, SJust dh)
 
 viewCompactTxOut :: forall era.
-  ( Era era,
-    Core.Value era ~ Value (Crypto era)
-  ) => TxOut era -> (CompactAddr (Crypto era), CompactForm (Value (Crypto era)), StrictMaybe (DataHash (Crypto era)))
+  ( Era era
+  ) => TxOut era -> (CompactAddr (Crypto era), CompactForm (Core.Value era), StrictMaybe (DataHash (Crypto era)))
 viewCompactTxOut (TxOutCompact' cAddr cVal) = (cAddr, cVal, SNothing)
 viewCompactTxOut (TxOutCompactDH' cAddr cVal dh) = (cAddr, cVal, SJust dh)
 viewCompactTxOut txOut@TxOutCompactShelley{} = (compactAddr addr, fromJust (toCompact val), dhash)
@@ -286,8 +282,7 @@ readWord64 i bs = (i+8,loop 0 0)
 
 instance
   ( Era era,
-    Compactible (Core.Value era),
-    Core.Value era ~ Value (Crypto era) -- TODO remove
+    Compactible (Core.Value era)
   ) =>
   ToCBOR (TxOut era)
   where
@@ -305,8 +300,7 @@ instance
   ( Era era,
     DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
-    Compactible (Core.Value era),
-    Core.Value era ~ Value (Crypto era) -- TODO remove
+    Compactible (Core.Value era)
   ) =>
   FromCBOR (TxOut era)
   where
