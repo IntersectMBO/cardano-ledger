@@ -969,6 +969,7 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
 
 instance
   Mock crypto =>

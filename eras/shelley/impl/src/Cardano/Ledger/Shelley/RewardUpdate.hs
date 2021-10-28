@@ -36,7 +36,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( SnapShots (..),
+  ( SnapShot (..),
     Stake (..),
     poolStake,
   )
@@ -160,7 +160,8 @@ emptyRewardUpdate =
 
 -- | To pulse the reward update, we need a snap shot of the EpochState particular to this computation
 data RewardSnapShot crypto = RewardSnapShot
-  { rewSnapshots :: !(SnapShots crypto),
+  { rewSnapshot :: !(SnapShot crypto),
+    rewFees :: !Coin,
     rewa0 :: !NonNegativeInterval,
     rewnOpt :: !Natural,
     rewprotocolVersion :: !ProtVer,
@@ -178,9 +179,16 @@ instance NoThunks (RewardSnapShot crypto)
 instance NFData (RewardSnapShot crypto)
 
 instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
-  toCBOR (RewardSnapShot ss a0 nopt ver nm dr1 r dt1 tot pot) =
+  toCBOR (RewardSnapShot ss fees a0 nopt ver nm dr1 r dt1 tot pot) =
     encode
-      ( Rec RewardSnapShot !> To ss !> E boundedRationalToCBOR a0 !> To nopt !> To ver !> To nm !> To dr1
+      ( Rec RewardSnapShot
+          !> To ss
+          !> To fees
+          !> E boundedRationalToCBOR a0
+          !> To nopt
+          !> To ver
+          !> To nm
+          !> To dr1
           !> To r
           !> To dt1
           !> To tot
@@ -188,7 +196,21 @@ instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
       )
 
 instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
-  fromCBOR = decode (RecD RewardSnapShot <! From <! D boundedRationalFromCBOR <! From <! From <! From <! From <! From <! From <! From <! From)
+  fromCBOR =
+    decode
+      ( RecD RewardSnapShot
+          <! From
+          <! From
+          <! D boundedRationalFromCBOR
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+      )
 
 -- Some functions that only need a subset of the PParams can be
 -- passed a RewardSnapShot, as it copies of some values from PParams

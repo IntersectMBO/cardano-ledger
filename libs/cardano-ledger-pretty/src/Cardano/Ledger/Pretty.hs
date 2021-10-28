@@ -490,10 +490,11 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
     ]
 
 ppRewardSnapShot :: RewardSnapShot crypto -> PDoc
-ppRewardSnapShot (RewardSnapShot snaps a0 nopt ver non deltaR1 rR deltaT1 total pot) =
+ppRewardSnapShot (RewardSnapShot snap fee a0 nopt ver non deltaR1 rR deltaT1 total pot) =
   ppRecord
     "RewardSnapShot"
-    [ ("snapshots", ppSnapShots snaps),
+    [ ("snapshots", ppSnapShot snap),
+      ("fees", ppCoin fee),
       ("a0", ppRational $ unboundRational a0),
       ("nOpt", ppNatural nopt),
       ("version", ppProtVer ver),
