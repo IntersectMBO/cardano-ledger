@@ -1153,7 +1153,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       totalStake = circulation es maxSupply
       rewsnap =
         RewardSnapShot
-          { rewSnapshots = ss,
+          { rewSnapshot = _pstakeGo ss,
+            rewFees = _feeSS ss,
             rewa0 = getField @"_a0" pr,
             rewnOpt = getField @"_nOpt" pr,
             rewprotocolVersion = getField @"_protocolVersion" pr,
@@ -1246,12 +1247,13 @@ completeRupd
   ( Pulsing
       rewsnap@RewardSnapShot
         { rewDeltaR1 = deltaR1,
+          rewFees = feesSS,
           rewR = oldr,
           rewDeltaT1 = (Coin deltaT1),
           rewNonMyopic = nm,
           rewTotalStake = totalstake,
           rewRPot = rpot,
-          rewSnapshots = snaps,
+          rewSnapshot = snap,
           rewa0 = a0,
           rewnOpt = nOpt
         }
@@ -1266,7 +1268,7 @@ completeRupd
         -- A function to compute the 'desirablity' aggregate. Called only if we are computing
         -- provenance. Adds nested pair ('key',(LikeliHoodEstimate,Desirability)) to the Map 'ans'
         addDesireability ans key likelihood =
-          let SnapShot _ _ poolParams = _pstakeGo snaps
+          let SnapShot _ _ poolParams = snap
               estimate = percentile' likelihood
            in Map.insert
                 key
@@ -1285,7 +1287,7 @@ completeRupd
         { deltaT = DeltaCoin deltaT1,
           deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
           rs = rs_,
-          deltaF = invert (toDeltaCoin $ _feeSS snaps),
+          deltaF = invert (toDeltaCoin feesSS),
           nonMyopic = updateNonMyopic nm oldr newLikelihoods
         }
 
