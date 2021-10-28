@@ -149,7 +149,7 @@ getTags tag = (addr,dhash)
 
 -- ===============================================
 
-encodeAddr :: Addr crypto -> Maybe (Word8, StakeReference crypto, ByteString)
+encodeAddr :: forall crypto. Addr crypto -> Maybe (Word8, StakeReference crypto, ByteString)
 encodeAddr (Addr Testnet (ScriptHashObj (ScriptHash hash1)) stake) = Just (0, stake, hashToBytes hash1)
 encodeAddr (Addr Testnet (KeyHashObj (KeyHash hash1)) stake)       = Just (1, stake, hashToBytes hash1)
 encodeAddr (Addr Mainnet (ScriptHashObj (ScriptHash hash1)) stake) = Just (2, stake, hashToBytes hash1)
@@ -162,7 +162,7 @@ decodeAddr tag byteIx stake bs = (byteIx + addrSizeBytes, addr)
     addrSizeBytes = fromIntegral $ sizeHash (Proxy @(CC.ADDRHASH crypto))
 
     hash1 :: Hash (CC.ADDRHASH crypto) a
-    hash1 = fromJust (hashFromBytes (subbytestring byteIx (byteIx + addrSizeBytes) bs))
+    hash1 = fromJust (hashFromBytes (subbytestring byteIx addrSizeBytes bs))
 
     addr = case tag of
       0 -> Addr Testnet (ScriptHashObj (ScriptHash hash1)) stake
@@ -191,11 +191,15 @@ decodeDataHash tag i bs = case tag of
   1 -> (i + dataHashSizeBytes, SJust hash1)
     where
       dataHashSizeBytes = fromIntegral $ sizeHash (Proxy @(CC.HASH crypto))
-      hash1 = unsafeMakeSafeHash $ fromJust (hashFromBytes (subbytestring i (i + dataHashSizeBytes) bs))
+      hash1 = unsafeMakeSafeHash $ fromJust (hashFromBytes (subbytestring i dataHashSizeBytes bs))
   _ -> error $ "CompactTxOut: Unexpected address tag: " <> show tag
 
 subbytestring :: Int -> Int -> ByteString -> ByteString
-subbytestring loInc hiExc = BS.drop loInc . BS.take (hiExc - loInc)
+subbytestring loInc sz bs
+  | BS.length bs' /= sz = error $ "subbytestring " <> show loInc <> " " <> show sz <> " bs: out of bounds (length bs == " <> show (BS.length bs) <> ")"
+  | otherwise = bs'
+  where
+    bs' = BS.take sz $ BS.drop loInc bs
 
 -- ===============================================
 
@@ -204,7 +208,7 @@ mkTxOut ::
   ( Era era,
     HasCallStack
   ) => Addr (Crypto era) -> Core.Value era -> StrictMaybe (DataHash (Crypto era)) -> TxOut era
-mkTxOut addr val dhashMay = case (encodeAddr addr, encodeValue (Proxy @era) val) of
+mkTxOut addr val dhashMay = case (encodeAddr @(Crypto era) addr, encodeValue (Proxy @era) val) of
   (Just (addrTag, stake, addrBytes), Just valueBytes)
       -> TxOutCompactShelleyAdaOnly
           stake

@@ -36,7 +36,7 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wpartial-fields
                       -Wredundant-constraints
-                      -Wunused-packages
+                      -Wno-unused-packages
 
 library
   import:             base, project-config

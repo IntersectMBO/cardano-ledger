@@ -26,7 +26,7 @@ common project-config
                       -Wno-prepositive-qualified-module
                       -Wno-safe
                       -Wno-unsafe
-                      -Wunused-packages
+                      -Wno-unused-packages
 
 library
   import:             base, project-config

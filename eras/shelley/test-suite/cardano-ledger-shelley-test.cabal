@@ -29,7 +29,7 @@ common project-config
                       -Wincomplete-record-updates
                       -Wincomplete-uni-patterns
                       -Wredundant-constraints
-                      -Wunused-packages
+                      -Wno-unused-packages
 
 library
   import:             base, project-config
