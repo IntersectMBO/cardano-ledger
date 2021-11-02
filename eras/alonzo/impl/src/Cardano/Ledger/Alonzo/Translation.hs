@@ -181,7 +181,9 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where
     return $ API.ProposedPPUpdates $ fmap translatePParamsUpdate ppup
 
 translateTxOut ::
-  Core.TxOut (MaryEra c) -> Core.TxOut (AlonzoEra c)
+  Crypto c =>
+  Core.TxOut (MaryEra c) ->
+  Core.TxOut (AlonzoEra c)
 translateTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
 
 -- extendPP with type: extendPP :: Shelley.PParams' f era1 -> ... -> PParams' f era2
