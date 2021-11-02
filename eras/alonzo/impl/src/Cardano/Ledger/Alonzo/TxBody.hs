@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -12,9 +13,11 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Alonzo.TxBody
   ( TxOut (TxOut, TxOutCompact, TxOutCompactDH),
@@ -64,45 +67,52 @@ import Cardano.Binary
     decodeListLenOrIndef,
     encodeListLen,
   )
-import Cardano.Ledger.Address (Addr)
+import Cardano.Crypto.Hash
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
 import Cardano.Ledger.BaseTypes
-  ( Network,
+  ( Network (..),
     StrictMaybe (..),
     isSNothing,
   )
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
   ( EraIndependentScriptIntegrity,
     EraIndependentTxBody,
   )
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (Value (..), policies, policyID)
 import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
     SafeToHash,
+    extractHash,
+    unsafeMakeSafeHash,
   )
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash)
+import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (Wdrl), unWdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
+    Val (..),
+    adaOnly,
     decodeMint,
     decodeNonNegative,
     encodeMint,
     isZero,
   )
+import Data.Bits
 import Data.Coders
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -110,21 +120,45 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
+import Data.Typeable (Proxy (..), Typeable, (:~:) (Refl))
+import Data.Word
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
+import GHC.TypeLits
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
 
 data TxOut era
-  = TxOutCompact
+  = TxOutCompact'
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
-  | TxOutCompactDH
+  | TxOutCompactDH'
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
       !(DataHash (Crypto era))
+  | SizeHash (CC.ADDRHASH (Crypto era)) ~ 28 =>
+    TxOut_AddrHash28_AdaOnly
+      !(StakeReference (Crypto era))
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
+      {-# UNPACK #-} !Word64 -- Ada value
+  | ( SizeHash (CC.ADDRHASH (Crypto era)) ~ 28,
+      SizeHash (CC.HASH (Crypto era)) ~ 32
+    ) =>
+    TxOut_AddrHash28_AdaOnly_DataHash32
+      !(StakeReference (Crypto era))
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
+      {-# UNPACK #-} !Word64 -- Ada value
+      {-# UNPACK #-} !Word64 -- DataHash
+      {-# UNPACK #-} !Word64 -- DataHash
+      {-# UNPACK #-} !Word64 -- DataHash
+      {-# UNPACK #-} !Word64 -- DataHash
 
 deriving stock instance
   ( Eq (Core.Value era),
@@ -132,19 +166,152 @@ deriving stock instance
   ) =>
   Eq (TxOut era)
 
+decodeAddress28 ::
+  forall crypto.
+  ( SizeHash (CC.ADDRHASH crypto) ~ 28,
+    HashAlgorithm (CC.ADDRHASH crypto)
+  ) =>
+  StakeReference crypto ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Addr crypto
+decodeAddress28 stakeRef a b c d =
+  Addr network paymentCred stakeRef
+  where
+    network = if d `testBit` 1 then Mainnet else Testnet
+    paymentCred =
+      if d `testBit` 0
+        then KeyHashObj (KeyHash addrHash)
+        else ScriptHashObj (ScriptHash addrHash)
+    addrHash :: Hash (CC.ADDRHASH crypto) a
+    addrHash =
+      hashFromPackedBytes $
+        PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
+
+encodeAddress28 ::
+  forall crypto.
+  ( SizeHash (CC.ADDRHASH crypto) ~ 28,
+    HashAlgorithm (CC.ADDRHASH crypto)
+  ) =>
+  Network ->
+  (PaymentCredential crypto) ->
+  ( Word64,
+    Word64,
+    Word64,
+    Word64
+  )
+encodeAddress28 network paymentCred = case paymentCred of
+  KeyHashObj (KeyHash addrHash) -> go addrHash
+  ScriptHashObj (ScriptHash addrHash) -> go addrHash
+  where
+    networkBit = case network of
+      Mainnet -> 0 `setBit` 1
+      Testnet -> 0
+
+    payCredTypeBit = case paymentCred of
+      KeyHashObj {} -> 0 `setBit` 0
+      ScriptHashObj {} -> 0
+
+    go :: Hash (CC.ADDRHASH crypto) a -> (Word64, Word64, Word64, Word64)
+    go h = case hashToPackedBytes h of
+      PackedBytes28 a b c d ->
+        ( a,
+          b,
+          c,
+          ((fromIntegral d) `shiftL` 32) .|. networkBit .|. payCredTypeBit
+        )
+      _ -> error "encodeAddress28: unexpected 28 byte PackedBytes that does NOT use the PackedBytes28 constructor!"
+
+decodeDataHash32 ::
+  forall crypto.
+  ( SizeHash (CC.HASH crypto) ~ 32,
+    HashAlgorithm (CC.HASH crypto)
+  ) =>
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  DataHash crypto
+decodeDataHash32 a b c d =
+  unsafeMakeSafeHash $
+    hashFromPackedBytes $
+      PackedBytes32 a b c d
+
+encodeDataHash32 ::
+  forall crypto.
+  ( SizeHash (CC.HASH crypto) ~ 32,
+    HashAlgorithm (CC.HASH crypto)
+  ) =>
+  DataHash crypto ->
+  ( Word64,
+    Word64,
+    Word64,
+    Word64
+  )
+encodeDataHash32 dataHash = case hashToPackedBytes (extractHash dataHash) of
+  PackedBytes32 a b c d -> (a, b, c, d)
+  _ -> error "encodeAddress28: unexpected 32 byte PackedBytes that does NOT use the PackedBytes32 constructor!"
+
 viewCompactTxOut ::
   forall era.
-  (Era era) =>
+  Era era =>
+  TxOut era ->
+  (CompactAddr (Crypto era), CompactForm (Core.Value era), StrictMaybe (DataHash (Crypto era)))
+viewCompactTxOut txOut = case txOut of
+  TxOutCompact' addr val -> (addr, val, SNothing)
+  TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
+  TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal ->
+    (compactAddr addr, valueToCompactErr (Proxy @era) val, SNothing)
+    where
+      (addr, val) = viewAddrHash28_AdaOnly (Proxy @era) stakeRef a b c d adaVal
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h ->
+    (compactAddr addr, valueToCompactErr (Proxy @era) val, SJust (decodeDataHash32 e f g h))
+    where
+      (addr, val) = viewAddrHash28_AdaOnly (Proxy @era) stakeRef a b c d adaVal
+  where
+    valueToCompactErr _ = fromMaybe (error "Failed to compact a `Value era`") . toCompact
+
+viewTxOut ::
+  forall era.
+  Era era =>
   TxOut era ->
   (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
-viewCompactTxOut (TxOutCompact bs c) = (addr, val, SNothing)
+viewTxOut (TxOutCompact' bs c) = (addr, val, SNothing)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewCompactTxOut (TxOutCompactDH bs c dh) = (addr, val, SJust dh)
+viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
   where
     addr = decompactAddr bs
     val = fromCompact c
+viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal) =
+  (addr, val, SNothing)
+  where
+    (addr, val) = viewAddrHash28_AdaOnly (Proxy @era) stakeRef a b c d adaVal
+viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h) =
+  (addr, val, SJust (decodeDataHash32 e f g h))
+  where
+    (addr, val) = viewAddrHash28_AdaOnly (Proxy @era) stakeRef a b c d adaVal
+
+viewAddrHash28_AdaOnly ::
+  ( Era era,
+    SizeHash (CC.ADDRHASH (Crypto era)) ~ 28,
+    HashAlgorithm (CC.ADDRHASH (Crypto era))
+  ) =>
+  Proxy era ->
+  StakeReference (Crypto era) ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  (Addr (Crypto era), Core.Value era)
+viewAddrHash28_AdaOnly _ stakeRef a b c d adaVal =
+  ( decodeAddress28 stakeRef a b c d,
+    inject (Coin (fromIntegral adaVal))
+  )
 
 instance
   ( Era era,
@@ -153,13 +320,15 @@ instance
   ) =>
   Show (TxOut era)
   where
-  show = show . viewCompactTxOut
+  show = show . viewTxOut
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
 pattern TxOut ::
+  forall era.
   ( Era era,
     Compactible (Core.Value era),
+    Val (Core.Value era),
     Show (Core.Value era),
     HasCallStack
   ) =>
@@ -168,16 +337,57 @@ pattern TxOut ::
   StrictMaybe (DataHash (Crypto era)) ->
   TxOut era
 pattern TxOut addr vl dh <-
-  (viewCompactTxOut -> (addr, vl, dh))
+  (viewTxOut -> (addr, vl, dh))
   where
+    TxOut (Addr network paymentCred stakeRef) vl SNothing
+      | adaOnly vl,
+        Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
+        let (a, b, c, d) = encodeAddress28 network paymentCred
+         in TxOut_AddrHash28_AdaOnly stakeRef a b c d (fromIntegral (unCoin (coin vl)))
+    TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
+      | adaOnly vl,
+        Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28),
+        Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) =
+        let (a, b, c, d) = encodeAddress28 network paymentCred
+            (e, f, g, h) = encodeDataHash32 dh
+         in TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d (fromIntegral (unCoin (coin vl))) e f g h
     TxOut addr vl mdh =
       let v = fromMaybe (error $ "Illegal value in txout: " <> show vl) $ toCompact vl
           a = compactAddr addr
        in case mdh of
-            SNothing -> TxOutCompact a v
-            SJust dh -> TxOutCompactDH a v dh
+            SNothing -> TxOutCompact' a v
+            SJust dh -> TxOutCompactDH' a v dh
 
 {-# COMPLETE TxOut #-}
+
+-- TODO deprecate
+pattern TxOutCompact ::
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  TxOut era
+pattern TxOutCompact addr vl <-
+  (viewCompactTxOut -> (addr, vl, SNothing))
+  where
+    TxOutCompact = TxOutCompact'
+
+-- TODO deprecate
+pattern TxOutCompactDH ::
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  DataHash (Crypto era) ->
+  TxOut era
+pattern TxOutCompactDH addr vl dh <-
+  (viewCompactTxOut -> (addr, vl, SJust dh))
+  where
+    TxOutCompactDH = TxOutCompactDH'
+
+{-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
 -- ======================================
 
@@ -663,18 +873,18 @@ instance
 instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
   getField (TxBodyConstr (Memo m _)) = _txnetworkid m
 
-instance (Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
+instance (Era era, Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
   getField (TxOutCompact a _) = a
   getField (TxOutCompactDH a _ _) = a
 
-instance (CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
+instance (Era era, CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
   getField (TxOutCompact a _) = decompactAddr a
   getField (TxOutCompactDH a _ _) = decompactAddr a
 
-instance (Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
+instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
   getField (TxOutCompact _ v) = fromCompact v
   getField (TxOutCompactDH _ v _) = fromCompact v
 
-instance c ~ Crypto era => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
+instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField (TxOutCompact _ _) = SNothing
   getField (TxOutCompactDH _ _ d) = SJust d
