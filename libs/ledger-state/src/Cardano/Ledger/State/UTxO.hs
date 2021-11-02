@@ -21,29 +21,24 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value
 import qualified Cardano.Ledger.Mary.Value as Mary
+import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards
-import Cardano.Protocol.TPraos (individualPoolStakeVrf)
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
 import Control.Iterate.SetAlgebra (range)
 import Control.Monad
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import Data.Compact.HashMap (toKey)
 import Data.Compact.KeyMap as KeyMap hiding (Stat)
-import qualified Data.Conduit.List as C
 import Data.Foldable as F
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
-import Data.Proxy
 import qualified Data.Set as Set
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as T
-import qualified Data.Text.Read as T
 import Data.Typeable
 import Numeric.Natural
 import Prettyprinter
@@ -125,14 +120,13 @@ txIxNestedInsertKeyMap ::
   IntMap.IntMap (KeyMap.KeyMap a) ->
   (TxIn C, a) ->
   IntMap.IntMap (KeyMap.KeyMap a)
-txIxNestedInsertKeyMap !m (TxInCompact32 x1 x2 x3 x4 txIx, !v) =
-  let !key = KeyMap.Key x1 x2 x3 x4
+txIxNestedInsertKeyMap !m (TxInCompact txId txIx, !v) =
+  let !key = toKey txId
       f =
         \case
           Nothing -> Just $! KeyMap.Leaf key v
           Just hm -> Just $! KeyMap.insert key v hm
    in IntMap.alter f (fromIntegral txIx) m
-txIxNestedInsertKeyMap _ _ = error "Impossible"
 
 txIdSharingKeyMap :: Fold (TxIn C, a) (KeyMap.KeyMap (IntMap.IntMap a))
 txIdSharingKeyMap = Fold txIdNestedInsertKeyMap KeyMap.Empty id
@@ -144,11 +138,10 @@ txIdNestedInsertKeyMap ::
   KeyMap.KeyMap (IntMap.IntMap a) ->
   (TxIn C, a) ->
   KeyMap.KeyMap (IntMap.IntMap a)
-txIdNestedInsertKeyMap !m (TxInCompact32 x1 x2 x3 x4 txIx, !a) =
-  let !key = KeyMap.Key x1 x2 x3 x4
+txIdNestedInsertKeyMap !m (TxInCompact txId txIx, !a) =
+  let !key = toKey txId
       !v = IntMap.singleton (fromIntegral txIx) a
    in KeyMap.insertWith (<>) key v m
-txIdNestedInsertKeyMap _ _ = error "Impossible"
 
 testKeyMap ::
   KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra)) ->
@@ -164,8 +157,8 @@ testKeyMap km m =
       TxIn C ->
       Alonzo.TxOut CurrentEra ->
       KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra))
-    test acc txIn@(TxInCompact32 x1 x2 x3 x4 txIx) txOut =
-      let !key = KeyMap.Key x1 x2 x3 x4
+    test acc txIn@(TxInCompact txId txIx) txOut =
+      let !key = toKey txId
        in case KeyMap.lookupHM key acc of
             Nothing -> error $ "Can't find txId: " <> show txIn
             Just im ->
@@ -178,7 +171,6 @@ testKeyMap km m =
                         error $ "Found mismatching TxOuts for " <> show txIn
                       | IntMap.null im' -> KeyMap.delete key acc
                       | otherwise -> KeyMap.insert key im' acc
-    test _ _ _ = error "Impossible"
 
 totalADA :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> Mary.Value C
 totalADA = foldMap (\(Alonzo.TxOut _ v _) -> v)
