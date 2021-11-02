@@ -1,17 +1,43 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.Compact.HashMap where
 
+import Cardano.Crypto.Hash.Class
 import Data.Compact.KeyMap (Key, KeyMap)
 import qualified Data.Compact.KeyMap as KM
+import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
+import GHC.TypeLits
 
 -- ==========================================================================
 
 class Keyed t where
   toKey :: t -> Key
   fromKey :: Key -> t
+
+instance HashAlgorithm h => Keyed (Hash h a) where
+  toKey h =
+    case hashToPackedBytes h of
+      PackedBytes8 a -> KM.Key a 0 0 0
+      PackedBytes28 a b c d -> KM.Key a b c (fromIntegral d)
+      PackedBytes32 a b c d -> KM.Key a b c d
+      _ -> error $ "Unsupported hash size: " <> show (sizeHash (Proxy :: Proxy h))
+  fromKey (KM.Key a b c d) =
+    hashFromPackedBytes $
+      case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 32) of
+        Just Refl -> PackedBytes32 a b c d
+        Nothing ->
+          case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 28) of
+            Just Refl -> PackedBytes28 a b c (fromIntegral d)
+            Nothing ->
+              case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 8) of
+                Just Refl -> PackedBytes8 a
+                Nothing -> error $ "Unsupported hash size: " <> show (sizeHash (Proxy :: Proxy h))
 
 data HashMap k v where
   HashMap :: Keyed k => KeyMap v -> HashMap k v

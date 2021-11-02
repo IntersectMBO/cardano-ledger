@@ -151,7 +151,7 @@ import Cardano.Ledger.Slot
     EpochSize (..),
     SlotNo (..),
   )
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..), viewTxIn)
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (BHeader),
@@ -999,7 +999,7 @@ ppTxId :: TxId c -> PDoc
 ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
 
 ppTxIn :: TxIn c -> PDoc
-ppTxIn (viewTxIn -> (txid, index)) = ppSexp "TxIn" [ppTxId txid, ppNatural index]
+ppTxIn (TxIn txid index) = ppSexp "TxIn" [ppTxId txid, ppNatural index]
 
 ppTxOut :: (Era era, PrettyA (Core.Value era)) => TxOut era -> PDoc
 ppTxOut (TxOutCompact caddr cval) = ppSexp "TxOut" [ppCompactAddr caddr, ppCompactForm prettyA cval]
