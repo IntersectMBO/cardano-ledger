@@ -15,6 +15,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
@@ -75,7 +76,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     isSNothing,
   )
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -112,6 +113,7 @@ import Cardano.Ledger.Val
     encodeMint,
     isZero,
   )
+import Control.Monad (guard)
 import Data.Bits
 import Data.Coders
 import Data.Maybe (fromMaybe)
@@ -144,7 +146,7 @@ data TxOut era
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
-      {-# UNPACK #-} !Word64 -- Ada value
+      {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | ( SizeHash (CC.ADDRHASH (Crypto era)) ~ 28,
       SizeHash (CC.HASH (Crypto era)) ~ 32
     ) =>
@@ -154,7 +156,7 @@ data TxOut era
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
-      {-# UNPACK #-} !Word64 -- Ada value
+      {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
@@ -165,6 +167,16 @@ deriving stock instance
     Compactible (Core.Value era)
   ) =>
   Eq (TxOut era)
+
+getAdaOnly ::
+  forall era.
+  Val (Core.Value era) =>
+  Proxy era ->
+  Core.Value era ->
+  Maybe (CompactForm Coin)
+getAdaOnly _ v = do
+  guard $ adaOnly v
+  toCompact $ coin v
 
 decodeAddress28 ::
   forall crypto.
@@ -192,37 +204,33 @@ decodeAddress28 stakeRef a b c d =
 
 encodeAddress28 ::
   forall crypto.
-  ( SizeHash (CC.ADDRHASH crypto) ~ 28,
-    HashAlgorithm (CC.ADDRHASH crypto)
+  ( HashAlgorithm (CC.ADDRHASH crypto)
   ) =>
   Network ->
-  (PaymentCredential crypto) ->
-  ( Word64,
-    Word64,
-    Word64,
-    Word64
-  )
-encodeAddress28 network paymentCred = case paymentCred of
-  KeyHashObj (KeyHash addrHash) -> go addrHash
-  ScriptHashObj (ScriptHash addrHash) -> go addrHash
-  where
-    networkBit = case network of
-      Mainnet -> 0 `setBit` 1
-      Testnet -> 0
-
-    payCredTypeBit = case paymentCred of
-      KeyHashObj {} -> 0 `setBit` 0
-      ScriptHashObj {} -> 0
-
-    go :: Hash (CC.ADDRHASH crypto) a -> (Word64, Word64, Word64, Word64)
-    go h = case hashToPackedBytes h of
-      PackedBytes28 a b c d ->
-        ( a,
-          b,
-          c,
-          ((fromIntegral d) `shiftL` 32) .|. networkBit .|. payCredTypeBit
-        )
-      _ -> error "encodeAddress28: unexpected 28 byte PackedBytes that does NOT use the PackedBytes28 constructor!"
+  PaymentCredential crypto ->
+  Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Word64, Word64, Word64, Word64)
+encodeAddress28 network paymentCred = do
+  let networkBit, payCredTypeBit :: Word64
+      networkBit =
+        case network of
+          Mainnet -> 0 `setBit` 1
+          Testnet -> 0
+      payCredTypeBit =
+        case paymentCred of
+          KeyHashObj {} -> 0 `setBit` 0
+          ScriptHashObj {} -> 0
+      encodeAddr ::
+        Hash (CC.ADDRHASH crypto) a ->
+        Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Word64, Word64, Word64, Word64)
+      encodeAddr h = do
+        refl@Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH crypto))) (Proxy @28)
+        case hashToPackedBytes h of
+          PackedBytes28 a b c d ->
+            Just (refl, a, b, c, (fromIntegral d `shiftL` 32) .|. networkBit .|. payCredTypeBit)
+          _ -> Nothing
+  case paymentCred of
+    KeyHashObj (KeyHash addrHash) -> encodeAddr addrHash
+    ScriptHashObj (ScriptHash addrHash) -> encodeAddr addrHash
 
 decodeDataHash32 ::
   forall crypto.
@@ -241,18 +249,14 @@ decodeDataHash32 a b c d =
 
 encodeDataHash32 ::
   forall crypto.
-  ( SizeHash (CC.HASH crypto) ~ 32,
-    HashAlgorithm (CC.HASH crypto)
-  ) =>
+  (HashAlgorithm (CC.HASH crypto)) =>
   DataHash crypto ->
-  ( Word64,
-    Word64,
-    Word64,
-    Word64
-  )
-encodeDataHash32 dataHash = case hashToPackedBytes (extractHash dataHash) of
-  PackedBytes32 a b c d -> (a, b, c, d)
-  _ -> error "encodeAddress28: unexpected 32 byte PackedBytes that does NOT use the PackedBytes32 constructor!"
+  Maybe (SizeHash (CC.HASH crypto) :~: 32, Word64, Word64, Word64, Word64)
+encodeDataHash32 dataHash = do
+  refl@Refl <- sameNat (Proxy @(SizeHash (CC.HASH crypto))) (Proxy @32)
+  case hashToPackedBytes (extractHash dataHash) of
+    PackedBytes32 a b c d -> Just (refl, a, b, c, d)
+    _ -> Nothing
 
 viewCompactTxOut ::
   forall era.
@@ -263,15 +267,20 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal ->
-    (compactAddr addr, valueToCompactErr (Proxy @era) val, SNothing)
+    (compactAddr addr, toCompactValue adaVal, SNothing)
     where
-      (addr, val) = viewAddrHash28_AdaOnly (Proxy @era) stakeRef a b c d adaVal
+      addr = decodeAddress28 stakeRef a b c d
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h ->
-    (compactAddr addr, valueToCompactErr (Proxy @era) val, SJust (decodeDataHash32 e f g h))
+    (compactAddr addr, toCompactValue adaVal, SJust (decodeDataHash32 e f g h))
     where
-      (addr, val) = viewAddrHash28_AdaOnly (Proxy @era) stakeRef a b c d adaVal
+      addr = decodeAddress28 stakeRef a b c d
   where
-    valueToCompactErr _ = fromMaybe (error "Failed to compact a `Value era`") . toCompact
+    toCompactValue :: CompactForm Coin -> CompactForm (Core.Value era)
+    toCompactValue ada =
+      fromMaybe (error "Failed to compact a `Coin` as `CompactForm (Core.Value era)`")
+        . toCompact
+        . inject
+        $ fromCompact ada
 
 viewTxOut ::
   forall era.
@@ -287,31 +296,13 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
     addr = decompactAddr bs
     val = fromCompact c
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal) =
-  (addr, val, SNothing)
+  (addr, inject (fromCompact adaVal), SNothing)
   where
-    (addr, val) = viewAddrHash28_AdaOnly (Proxy @era) stakeRef a b c d adaVal
+    addr = decodeAddress28 stakeRef a b c d
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h) =
-  (addr, val, SJust (decodeDataHash32 e f g h))
+  (addr, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
   where
-    (addr, val) = viewAddrHash28_AdaOnly (Proxy @era) stakeRef a b c d adaVal
-
-viewAddrHash28_AdaOnly ::
-  ( Era era,
-    SizeHash (CC.ADDRHASH (Crypto era)) ~ 28,
-    HashAlgorithm (CC.ADDRHASH (Crypto era))
-  ) =>
-  Proxy era ->
-  StakeReference (Crypto era) ->
-  Word64 ->
-  Word64 ->
-  Word64 ->
-  Word64 ->
-  Word64 ->
-  (Addr (Crypto era), Core.Value era)
-viewAddrHash28_AdaOnly _ stakeRef a b c d adaVal =
-  ( decodeAddress28 stakeRef a b c d,
-    inject (Coin (fromIntegral adaVal))
-  )
+    addr = decodeAddress28 stakeRef a b c d
 
 instance
   ( Era era,
@@ -340,17 +331,14 @@ pattern TxOut addr vl dh <-
   (viewTxOut -> (addr, vl, dh))
   where
     TxOut (Addr network paymentCred stakeRef) vl SNothing
-      | adaOnly vl,
-        Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
-        let (a, b, c, d) = encodeAddress28 network paymentCred
-         in TxOut_AddrHash28_AdaOnly stakeRef a b c d (fromIntegral (unCoin (coin vl)))
+      | Just adaCompact <- getAdaOnly (Proxy @era) vl,
+        Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred =
+        TxOut_AddrHash28_AdaOnly stakeRef a b c d adaCompact
     TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
-      | adaOnly vl,
-        Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28),
-        Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) =
-        let (a, b, c, d) = encodeAddress28 network paymentCred
-            (e, f, g, h) = encodeDataHash32 dh
-         in TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d (fromIntegral (unCoin (coin vl))) e f g h
+      | Just adaCompact <- getAdaOnly (Proxy @era) vl,
+        Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred,
+        Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
+        TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaCompact e f g h
     TxOut addr vl mdh =
       let v = fromMaybe (error $ "Illegal value in txout: " <> show vl) $ toCompact vl
           a = compactAddr addr
