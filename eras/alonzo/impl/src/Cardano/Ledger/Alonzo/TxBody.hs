@@ -80,7 +80,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference)
+import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
@@ -141,7 +141,7 @@ data TxOut era
       !(DataHash (Crypto era))
   | SizeHash (CC.ADDRHASH (Crypto era)) ~ 28 =>
     TxOut_AddrHash28_AdaOnly
-      !(StakeReference (Crypto era))
+      !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
@@ -151,7 +151,7 @@ data TxOut era
       SizeHash (CC.HASH (Crypto era)) ~ 32
     ) =>
     TxOut_AddrHash28_AdaOnly_DataHash32
-      !(StakeReference (Crypto era))
+      !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
@@ -183,14 +183,14 @@ decodeAddress28 ::
   ( SizeHash (CC.ADDRHASH crypto) ~ 28,
     HashAlgorithm (CC.ADDRHASH crypto)
   ) =>
-  StakeReference crypto ->
+  Credential 'Staking crypto ->
   Word64 ->
   Word64 ->
   Word64 ->
   Word64 ->
   Addr crypto
 decodeAddress28 stakeRef a b c d =
-  Addr network paymentCred stakeRef
+  Addr network paymentCred (StakeRefBase stakeRef)
   where
     network = if d `testBit` 1 then Mainnet else Testnet
     paymentCred =
@@ -330,14 +330,16 @@ pattern TxOut addr vl dh <-
   (viewTxOut -> (addr, vl, dh))
   where
     TxOut (Addr network paymentCred stakeRef) vl SNothing
-      | Just adaCompact <- getAdaOnly (Proxy @era) vl,
+      | StakeRefBase stakeCred <- stakeRef,
+        Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred =
-        TxOut_AddrHash28_AdaOnly stakeRef a b c d adaCompact
+        TxOut_AddrHash28_AdaOnly stakeCred a b c d adaCompact
     TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
-      | Just adaCompact <- getAdaOnly (Proxy @era) vl,
+      | StakeRefBase stakeCred <- stakeRef,
+        Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred,
         Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
-        TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaCompact e f g h
+        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred a b c d adaCompact e f g h
     TxOut addr vl mdh =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
