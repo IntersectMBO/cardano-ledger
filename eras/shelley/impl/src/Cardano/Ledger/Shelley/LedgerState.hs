@@ -184,6 +184,7 @@ import Cardano.Ledger.Shelley.Rewards
   ( Likelihood (..),
     NonMyopic (..),
     PerformanceEstimate (..),
+    Reward,
     aggregateRewards,
     applyDecay,
     desirability,
@@ -1025,7 +1026,7 @@ applyRUpd' ::
   ) =>
   RewardUpdate (Crypto era) ->
   EpochState era ->
-  (EpochState era, Map (Credential 'Staking (Crypto era)) Coin)
+  (EpochState era, Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
 applyRUpd'
   ru
   (EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', regRU)
@@ -1036,10 +1037,12 @@ applyRUpd'
       (regRU, unregRU) =
         Map.partitionWithKey
           (\k _ -> eval (k ∈ dom (_rewards dState)))
-          (aggregateRewards pr $ rs ru)
+          (rs ru)
+      totalUnregistered = fold $ aggregateRewards pr unregRU
+      registered = aggregateRewards pr regRU
       as' =
         as
-          { _treasury = addDeltaCoin (_treasury as) (deltaT ru) <> fold unregRU,
+          { _treasury = addDeltaCoin (_treasury as) (deltaT ru) <> totalUnregistered,
             _reserves = addDeltaCoin (_reserves as) (deltaR ru)
           }
       ls' =
@@ -1050,7 +1053,7 @@ applyRUpd'
               delegState
                 { _dstate =
                     dState
-                      { _rewards = eval (_rewards dState ∪+ regRU)
+                      { _rewards = eval (_rewards dState ∪+ registered)
                       }
                 }
           }

@@ -30,7 +30,7 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rewards (sumRewards)
+import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
 import Cardano.Ledger.Shelley.Rules.Mir
 import Cardano.Ledger.Shelley.TxBody
@@ -41,6 +41,7 @@ import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
+import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -73,7 +74,7 @@ instance
   NoThunks (NewEpochPredicateFailure era)
 
 data NewEpochEvent era
-  = SumRewards !EpochNo !(Map.Map (Credential 'Staking (Crypto era)) Coin)
+  = RewardEvent !EpochNo !(Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
   | EpochEvent (Event (Core.EraRule "EPOCH" era))
   | MirEvent (Event (Core.EraRule "MIR" era))
 
@@ -149,7 +150,7 @@ newEpochTransition = do
             let totRs = sumRewards (esPrevPp es) rs_
             Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
             let (es', regRU) = applyRUpd' ru' es
-            tellEvent $ SumRewards e regRU
+            tellEvent $ RewardEvent e regRU
             pure es'
       es' <- case ru of
         SNothing -> pure es
