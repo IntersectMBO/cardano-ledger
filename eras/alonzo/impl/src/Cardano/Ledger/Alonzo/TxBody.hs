@@ -76,7 +76,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     isSNothing,
   )
-import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -320,7 +320,6 @@ pattern TxOut ::
   ( Era era,
     Compactible (Core.Value era),
     Val (Core.Value era),
-    Show (Core.Value era),
     HasCallStack
   ) =>
   Addr (Crypto era) ->
@@ -340,7 +339,7 @@ pattern TxOut addr vl dh <-
         Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
         TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaCompact e f g h
     TxOut addr vl mdh =
-      let v = fromMaybe (error $ "Illegal value in txout: " <> show vl) $ toCompact vl
+      let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
        in case mdh of
             SNothing -> TxOutCompact' a v
@@ -359,7 +358,7 @@ pattern TxOutCompact ::
 pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, SNothing))
   where
-    TxOutCompact = TxOutCompact'
+    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
 
 -- TODO deprecate
 pattern TxOutCompactDH ::
@@ -373,7 +372,7 @@ pattern TxOutCompactDH ::
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
   where
-    TxOutCompactDH = TxOutCompactDH'
+    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . SJust
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
