@@ -77,3 +77,6 @@ cradle:
 
     - path: "libs/non-integral/test"
       component: "non-integral:test:non-integral-test"
+
+    - path: "libs/compact-map"
+      component: "lib:compact-map"
