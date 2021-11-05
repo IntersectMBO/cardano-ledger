@@ -672,9 +672,9 @@ sizedMultiSig 0 = RequireSignature <$> arbitrary
 sizedMultiSig n =
   oneof
     [ RequireSignature <$> arbitrary,
-      RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n -1))),
-      RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n -1))),
-      RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n -1)))
+      RequireAllOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))),
+      RequireAnyOf <$> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1))),
+      RequireMOf <$> arbitrary <*> resize maxMultiSigListLens (listOf (sizedMultiSig (n - 1)))
     ]
 
 instance CC.Crypto crypto => Arbitrary (MultiSig crypto) where

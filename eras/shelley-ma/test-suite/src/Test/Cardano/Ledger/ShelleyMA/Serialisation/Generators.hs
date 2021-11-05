@@ -92,16 +92,16 @@ sizedTimelock n =
         <$> ( fromList
                 <$> resize
                   maxTimelockListLens
-                  (listOf (sizedTimelock (n -1)))
+                  (listOf (sizedTimelock (n - 1)))
             ),
       MA.RequireAnyOf
         <$> ( fromList
                 <$> resize
                   maxTimelockListLens
-                  (listOf (sizedTimelock (n -1)))
+                  (listOf (sizedTimelock (n - 1)))
             ),
       do
-        subs <- resize maxTimelockListLens (listOf (sizedTimelock (n -1)))
+        subs <- resize maxTimelockListLens (listOf (sizedTimelock (n - 1)))
         let i = length subs
         MA.RequireMOf <$> choose (0, i) <*> pure (fromList subs),
       RequireTimeStart <$> arbitrary,

@@ -231,7 +231,7 @@ percentile' = percentile 0.5 h
     h = normalize . Histogram $ logBeta 40 1 <$> samplePositions
     -- Beta(n,m)(x) = C * x^(n-1)*(1-x)^(m-1)
     -- log( Beta(n,m)(x) ) = (n-1) * log x + (m-1) * log (1-x)
-    logBeta n m x = LogWeight . realToFrac $ (n -1) * log x + (m -1) * log (1 - x)
+    logBeta n m x = LogWeight . realToFrac $ (n - 1) * log x + (m - 1) * log (1 - x)
 
 reimannSum :: (Functor f, Foldable f) => Double -> f Double -> Double
 reimannSum width heights = sum $ fmap (width *) heights

@@ -102,7 +102,7 @@ takeC :: Int -> Collect t -> [t]
 takeC n (Collect f) = fst (f ([], n) next)
   where
     next x (xs, 0) = (xs, 0)
-    next x (xs, m) = (x : xs, m -1)
+    next x (xs, m) = (x : xs, m - 1)
 
 isempty :: Collect t -> Bool
 isempty col = runCollect col True (\t a -> False)

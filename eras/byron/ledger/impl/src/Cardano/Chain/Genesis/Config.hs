@@ -152,7 +152,7 @@ mkConfigFromFile rnm fp expectedHash = do
       { configGenesisData = genesisData,
         configGenesisHash = genesisHash,
         configReqNetMagic = rnm,
-        configUTxOConfiguration = defaultUTxOConfiguration --TODO: add further config plumbing
+        configUTxOConfiguration = defaultUTxOConfiguration -- TODO: add further config plumbing
       }
 
 data ConfigurationError

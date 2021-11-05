@@ -140,7 +140,7 @@ instance Monoid (Value crypto) where
 instance Group (Value crypto) where
   invert (Value c m) =
     Value
-      (- c)
+      (-c)
       (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
 
 instance Abelian (Value crypto)
@@ -636,7 +636,7 @@ from (CompactValueMultiAsset c numAssets rep) =
 
     -- raw triples :: [(pid offset, asset name offset, quantity)]
     rawTriples :: [(Word16, Word16, Word64)]
-    rawTriples = map getTripleForIndex [0 .. (fromIntegral $ numAssets -1)]
+    rawTriples = map getTripleForIndex [0 .. (fromIntegral $ numAssets - 1)]
 
     triples :: [(PolicyID crypto, AssetName, Integer)]
     triples = map convertTriple rawTriples

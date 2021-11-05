@@ -243,7 +243,7 @@ decodeListN !n acc =
     0 -> return $! reverse acc
     _ -> do
       !t <- decodeMetadatum
-      decodeListN (n -1) (t : acc)
+      decodeListN (n - 1) (t : acc)
 
 decodeListIndefLen :: [Metadatum] -> Decoder s [Metadatum]
 decodeListIndefLen acc = do
@@ -261,7 +261,7 @@ decodeMapN !n acc =
     _ -> do
       !tm <- decodeMetadatum
       !tm' <- decodeMetadatum
-      decodeMapN (n -1) ((tm, tm') : acc)
+      decodeMapN (n - 1) ((tm, tm') : acc)
 
 decodeMapIndefLen :: [(Metadatum, Metadatum)] -> Decoder s [(Metadatum, Metadatum)]
 decodeMapIndefLen acc = do

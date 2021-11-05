@@ -92,23 +92,23 @@ ledgerExamplesAlonzo =
 exampleTxBodyAlonzo :: Cardano.Ledger.Core.TxBody StandardAlonzo
 exampleTxBodyAlonzo =
   TxBody
-    (Set.fromList [TxIn (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) --inputs
-    (Set.fromList [TxIn (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) --collateral
+    (Set.fromList [TxIn (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- inputs
+    (Set.fromList [TxIn (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral
     ( StrictSeq.fromList
         [ TxOut
             (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
             (SLE.exampleMultiAssetValue 2)
-            (SJust $ SLE.mkDummySafeHash Proxy 1) --outputs
+            (SJust $ SLE.mkDummySafeHash Proxy 1) -- outputs
         ]
     )
-    SLE.exampleCerts --txcerts
+    SLE.exampleCerts -- txcerts
     ( Wdrl $
         Map.singleton
           (RewardAcnt Testnet (SLE.keyToCredential SLE.exampleStakeKey))
-          (Coin 100) --txwdrls
+          (Coin 100) -- txwdrls
     )
-    (Coin 999) --txfee
-    (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) --txvldt
+    (Coin 999) -- txfee
+    (ValidityInterval (SJust (SlotNo 2)) (SJust (SlotNo 4))) -- txvldt
     ( SJust $
         Update
           ( ProposedPPUpdates $
@@ -117,12 +117,12 @@ exampleTxBodyAlonzo =
                 (emptyPParamsUpdate {_maxBHSize = SJust 4000})
           )
           (EpochNo 0)
-    ) --txUpdates
-    (Set.singleton $ SLE.mkKeyHash 212) --reqSignerHashes
-    (SLE.exampleMultiAssetValue 3) --mint
-    (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) --scriptIntegrityHash
-    (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) --adHash
-    (SJust Mainnet) --txnetworkid
+    ) -- txUpdates
+    (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
+    (SLE.exampleMultiAssetValue 3) -- mint
+    (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
+    (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
+    (SJust Mainnet) -- txnetworkid
 
 datumExample :: Data StandardAlonzo
 datumExample = Data (Plutus.I 191)

@@ -151,7 +151,7 @@ genLovelaceError =
         (fromIntegral (maxBound :: Word64))
 
     tooSmallRange :: Range Integer
-    tooSmallRange = Range.constant (fromIntegral (minBound :: Int)) (- 1)
+    tooSmallRange = Range.constant (fromIntegral (minBound :: Int)) (-1)
 
     genUnderflowErrorValues :: Gen (Word64, Word64)
     genUnderflowErrorValues = do
