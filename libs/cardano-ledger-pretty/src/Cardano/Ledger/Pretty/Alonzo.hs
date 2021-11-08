@@ -175,22 +175,12 @@ ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ad
       ("maxCollateralInputs", ppNatural mxC)
     ]
 
-ppTxOut ::
-  ( Era era,
-    Show (Core.Value era),
-    PrettyA (Core.Value era)
-  ) =>
-  TxOut era ->
-  PDoc
+ppTxOut :: (Era era, PrettyA (Core.Value era)) => TxOut era -> PDoc
 ppTxOut (TxOut addr val dhash) =
   ppSexp "TxOut" [ppAddr addr, prettyA val, ppStrictMaybe ppSafeHash dhash]
 
 ppTxBody ::
-  ( AlonzoBody era,
-    Show (Core.Value era),
-    PrettyA (Core.Value era),
-    PrettyA (Core.PParamsDelta era)
-  ) =>
+  (AlonzoBody era, PrettyA (Core.Value era), PrettyA (Core.PParamsDelta era)) =>
   TxBody era ->
   PDoc
 ppTxBody (TxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
@@ -215,22 +205,12 @@ ppAuxDataHash :: Core.AuxiliaryDataHash crypto -> PDoc
 ppAuxDataHash (Core.AuxiliaryDataHash axh) = ppSafeHash axh
 
 instance
-  ( AlonzoBody era,
-    PrettyA (Core.Value era),
-    PrettyA (Core.PParamsDelta era),
-    Show (Core.Value era)
-  ) =>
+  (AlonzoBody era, PrettyA (Core.Value era), PrettyA (Core.PParamsDelta era)) =>
   PrettyA (TxBody era)
   where
   prettyA = ppTxBody
 
-instance
-  ( Era era,
-    Show (Core.Value era),
-    PrettyA (Core.Value era)
-  ) =>
-  PrettyA (TxOut era)
-  where
+instance (Era era, PrettyA (Core.Value era)) => PrettyA (TxOut era) where
   prettyA x = ppTxOut x
 
 ppRdmrPtr :: RdmrPtr -> PDoc
