@@ -61,14 +61,11 @@ import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
 import Cardano.Ledger.Shelley.Rewards
   ( Likelihood (..),
     NonMyopic (..),
-    PerformanceEstimate (unPerformanceEstimate),
     Reward (..),
     RewardType (..),
     applyDecay,
-    desirability,
     leaderProbability,
     likelihood,
-    percentile',
   )
 import Cardano.Ledger.Shelley.Tx
   ( Tx (..),
@@ -821,41 +818,10 @@ rewardInfoTest = rewardInfoEx8 @?= expected
           RP.rPot = rpot,
           RP.deltaT1 = deltaT8',
           RP.activeStake = activestake,
-          RP.pools =
-            Map.singleton
-              (_poolId $ Cast.alicePoolParams)
-              ( RP.RewardProvenancePool
-                  { RP.poolBlocksP = 1,
-                    RP.sigmaP = (unCoin activestake) % (unCoin totstake),
-                    RP.sigmaAP = 1,
-                    RP.ownerStakeP = aliceCoinEx2Base <> aliceCoinEx2Ptr,
-                    RP.poolParamsP = Cast.alicePoolParams,
-                    RP.pledgeRatioP =
-                      (unCoin . _poolPledge $ Cast.alicePoolParams @C_Crypto)
-                        % (unCoin totstake),
-                    RP.maxPP = Coin 12693333333,
-                    RP.appPerfP = 1,
-                    RP.poolRP = Coin 12693333333,
-                    RP.lRewardP = aliceRAcnt8
-                  }
-              ),
-          RP.desirabilities =
-            Map.singleton
-              (_poolId $ Cast.alicePoolParams)
-              ( RP.Desirability
-                  { RP.hitRateEstimate = unPerformanceEstimate estimate,
-                    RP.desirabilityScore =
-                      desirability
-                        (_a0 ppEx, _nOpt ppEx)
-                        rpot
-                        (Cast.alicePoolParams @C_Crypto)
-                        estimate
-                        totstake
-                  }
-              )
+          RP.pools = mempty,
+          RP.desirabilities = mempty
         }
     rpot = Coin 1586666666666
-    estimate = percentile' alicePerfEx8
     supply = Coin . fromIntegral . maxLovelaceSupply $ testGlobals
     totstake = supply <-> reserves7
     activestake = aliceCoinEx2Base <> aliceCoinEx2Ptr <> bobInitCoin

@@ -110,10 +110,12 @@ import Cardano.Ledger.Shelley.RewardUpdate
   )
 import Cardano.Ledger.Shelley.Rewards
   ( Histogram (..),
+    LeaderOnlyReward (..),
     Likelihood (..),
     LogWeight (..),
     NonMyopic (..),
     PerformanceEstimate (..),
+    PoolRewardInfo (..),
     Reward (..),
     RewardType (..),
     StakeShare (..),
@@ -499,49 +501,44 @@ ppRewardUpdate (RewardUpdate dt dr rss df nonmyop) =
     ]
 
 ppRewardSnapShot :: RewardSnapShot crypto -> PDoc
-ppRewardSnapShot (RewardSnapShot snap fee a0 nopt ver non deltaR1 rR deltaT1 total pot) =
+ppRewardSnapShot (RewardSnapShot fee ver non deltaR1 rR deltaT1 ls lrews) =
   ppRecord
     "RewardSnapShot"
-    [ ("snapshots", ppSnapShot snap),
-      ("fees", ppCoin fee),
-      ("a0", ppRational $ unboundRational a0),
-      ("nOpt", ppNatural nopt),
+    [ ("fees", ppCoin fee),
       ("version", ppProtVer ver),
       ("nonmyopic", ppNonMyopic non),
       ("deltaR1", ppCoin deltaR1),
       ("R", ppCoin rR),
       ("deltaT1", ppCoin deltaT1),
-      ("totalStake", ppCoin total),
-      ("rewardPot", ppCoin pot)
+      ("likelihoods", ppMap ppKeyHash ppLikelihood ls),
+      ("leaderRewards", ppMap ppCredential (ppSet ppReward) lrews)
+    ]
+
+ppPoolRewardInfo :: PoolRewardInfo crypto -> PDoc
+ppPoolRewardInfo (PoolRewardInfo relStake pot params blocks lreward) =
+  ppRecord
+    "PoolRewardInfo"
+    [ ("poolRelativeStake", ppStakeShare relStake),
+      ("poolPot", ppCoin pot),
+      ("poolPs", ppPoolParams params),
+      ("poolBlocks", ppNatural blocks),
+      ("leaderReward", ppLeaderOnlyReward lreward)
     ]
 
 ppFreeVars :: FreeVars crypto -> PDoc
-ppFreeVars (FreeVars b1 del stake1 addrs total active asc1 blocks r1 slots d a0 nOpt mv) =
+ppFreeVars (FreeVars ds addrs total pv pri) =
   ppRecord
     "FreeVars"
-    [ ("b", ppMap ppKeyHash ppNatural b1),
-      ("delegs", ppVMap ppCredential ppKeyHash del),
-      ("stake", ppStake stake1),
+    [ ("delegs", ppVMap ppCredential ppKeyHash ds),
       ("addrsRew", ppSet ppCredential addrs),
       ("totalStake", ppInteger total),
-      ("activeStake", ppInteger active),
-      ("asc", ppActiveSlotCoeff asc1),
-      ("totalBlocks", ppNatural blocks),
-      ("r", ppCoin r1),
-      ("slotserEpoch", ppEpochSize slots),
-      ("d", ppUnitInterval d),
-      ("a0", ppRational $ unboundRational a0),
-      ("nOpt", ppNatural nOpt),
-      ("mv", ppNatural mv)
+      ("pv", ppProtVer pv),
+      ("poolRewardInfo", ppMap ppKeyHash ppPoolRewardInfo pri)
     ]
 
 ppAns :: RewardAns crypto -> PDoc
-ppAns (RewardAns x y) =
-  ppSexp'
-    mempty
-    [ ppMap ppCredential (ppSet ppReward) x,
-      ppMap ppKeyHash ppLikelihood y
-    ]
+ppAns (RewardAns x) =
+  ppSexp' mempty [ppMap ppCredential ppReward x]
 
 ppRewardPulser :: Pulser crypto -> PDoc
 ppRewardPulser (RSLP n free items ans) =
@@ -549,7 +546,7 @@ ppRewardPulser (RSLP n free items ans) =
     "RewardPulser"
     [ ppInt n,
       ppFreeVars free,
-      ppStrictSeq ppPoolParams items,
+      ppVMap ppCredential (ppCompactForm ppCoin) items,
       ppAns ans
     ]
 
@@ -658,6 +655,14 @@ ppReward (Reward rt pool amt) =
     "Reward"
     [ ("rewardType", ppRewardType rt),
       ("poolId", ppKeyHash pool),
+      ("rewardAmount", ppCoin amt)
+    ]
+
+ppLeaderOnlyReward :: LeaderOnlyReward crypto -> PDoc
+ppLeaderOnlyReward (LeaderOnlyReward pool amt) =
+  ppRecord
+    "LeaderOnlyReward"
+    [ ("poolId", ppKeyHash pool),
       ("rewardAmount", ppCoin amt)
     ]
 
