@@ -257,17 +257,15 @@ A complete transaction is comprised of:
   The correctness of the tag is verified as part of the ledger rules, and the block is
   deemed to be invalid if it is applied incorrectly.
   It can be used to re-apply blocks without script re-validation.
-  This tag cannot be signed, since it is applied by the block producer.
+  Since this tag is not part of the body, i.e. it is not signed, the block producer can
+  (and must) choose the correct value.
   \item any auxiliary data.
 \end{enumerate}
-
-Note that unlike in Shelley or ShelleyMA eras, transactions inside blocks and transactions
-a user submits are now of different types. A transaction inside a block is composed of
-the user-submitted transaction paired with the $\IsValid$ tag, which is
-added by the block producer. The user cannot
-add their own tag because of how this tag is used in transaction validation, see
-Section~\ref{sec:two-phase}.
-
+\begin{note}
+  In the implementation the $\IsValid$ tag is part of a user-submitted
+  transaction, but it is ignored and re-computed by the block
+  producer.
+\end{note}
 \subsection{Additional Role of Signatures on TxBody}
 
 The transaction body and the UTxO must uniquely determine all the data
@@ -282,14 +280,14 @@ with the datum hashes these UTxOs contain), and also the posted
 certificates, minting policies, and reward addresses do not need to be signed.
 The optional datum objects, however, could be stripped from the transaction without making
 it invalid. The optional datums are stored in the same map the required ones, so,
-for this reason, we do include all datum objects in the witness and PP hash calculation.
+for this reason, we do include all datum objects in the script integrity hash calculation.
 %
 The hash of the indexed redeemer structure and the protocol parameters that are used by
 script interpreters are included in the body of the transaction, as these are composed
 by the transaction author rather than
 fixed via a hash on the ledger. In the future, other parts of the ledger
 state may also need to be included in this hash, if they are passed as
-arguments to new script interpreter.
+arguments to a new script interpreter.
 
 \subsection{Data required for script validation.}
 \label{sec:script-data}
