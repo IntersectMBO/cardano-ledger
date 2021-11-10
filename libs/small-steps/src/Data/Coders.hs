@@ -21,8 +21,6 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
--- {-# OPTIONS_GHC  -fno-warn-orphans #-}
-
 -- | MemoBytes is an abstration for a datetype that encodes its own seriialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
 --   For example:   newtype Foo = Foo(MemoBytes NonMemoizingFoo)
@@ -65,8 +63,10 @@ module Data.Coders
     decodeCollection,
     encodeFoldableEncoder,
     encodeMap,
+    encodeVMap,
     wrapCBORMap,
     decodeMap,
+    decodeVMap,
     decodeMapByKey,
     decodeMapContents,
     decodeMapTraverse,
@@ -89,6 +89,8 @@ module Data.Coders
     mapEncode,
     mapDecode,
     mapDecodeA,
+    vMapEncode,
+    vMapDecode,
     setEncode,
     setDecode,
     setDecodeA,
@@ -127,6 +129,7 @@ import Codec.CBOR.Decoding (Decoder, decodeTag, decodeTag64)
 import Codec.CBOR.Encoding (Encoding, encodeTag)
 import Control.Applicative (liftA2)
 import Control.Monad (replicateM, unless, when)
+import qualified Data.Compact.VMap as VMap
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
 import qualified Data.Map as Map
@@ -140,6 +143,7 @@ import qualified Data.Text as Text
 import Data.Typeable
 import Formatting (build, formatToString)
 import Formatting.Buildable (Buildable)
+import qualified GHC.Exts as Exts
 import Numeric.Natural (Natural)
 
 -- ====================================================================
@@ -273,6 +277,17 @@ wrapCBORArray len contents =
 -- Era, which are not always cannonical. We want to make these
 -- cannonical improvements easy to use.
 
+encodeVMap ::
+  (VMap.Vector vk k, VMap.Vector vv v) =>
+  (k -> Encoding) ->
+  (v -> Encoding) ->
+  VMap.VMap vk vv k v ->
+  Encoding
+encodeVMap encodeKey encodeValue vmap =
+  let l = fromIntegral $ VMap.size vmap
+      contents = VMap.foldMapWithKey (\k v -> encodeKey k <> encodeValue v) vmap
+   in wrapCBORMap l contents
+
 encodeMap :: (a -> Encoding) -> (b -> Encoding) -> Map.Map a b -> Encoding
 encodeMap encodeKey encodeValue m =
   let l = fromIntegral $ Map.size m
@@ -285,12 +300,23 @@ wrapCBORMap len contents =
     then encodeMapLen len <> contents
     else encodeMapLenIndef <> contents <> encodeBreak
 
+decodeVMap ::
+  (VMap.Vector kv k, VMap.Vector vv v, Ord k) =>
+  Decoder s k ->
+  Decoder s v ->
+  Decoder s (VMap.VMap kv vv k v)
+decodeVMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
+
 decodeMap :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
 decodeMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 
-decodeMapByKey :: Ord a => Decoder s a -> (a -> Decoder s b) -> Decoder s (Map.Map a b)
+decodeMapByKey ::
+  (Exts.IsList t, Exts.Item t ~ (k, v)) =>
+  Decoder s k ->
+  (k -> Decoder s v) ->
+  Decoder s t
 decodeMapByKey decodeKey decodeValueFor =
-  Map.fromList
+  Exts.fromList
     <$> decodeMapContents decodeInlinedPair
   where
     decodeInlinedPair = do
@@ -764,6 +790,20 @@ mapEncode x = E (encodeMap toCBOR toCBOR) x
 -- | (mapDecode) is the Dual for (mapEncode x)
 mapDecode :: (Ord k, FromCBOR k, FromCBOR v) => Decode ('Closed 'Dense) (Map.Map k v)
 mapDecode = D (decodeMap fromCBOR fromCBOR)
+
+-- | (vMapEncode x) is self-documenting, correct way to encode VMap. use
+-- vMapDecode as its dual
+vMapEncode ::
+  (VMap.Vector kv k, VMap.Vector vv v, ToCBOR k, ToCBOR v) =>
+  VMap.VMap kv vv k v ->
+  Encode ('Closed 'Dense) (VMap.VMap kv vv k v)
+vMapEncode = E (encodeVMap toCBOR toCBOR)
+
+-- | (vMapDecode) is the Dual for (vMapEncode x)
+vMapDecode ::
+  (VMap.Vector kv k, VMap.Vector vv v, Ord k, FromCBOR k, FromCBOR v) =>
+  Decode ('Closed 'Dense) (VMap.VMap kv vv k v)
+vMapDecode = D (decodeVMap fromCBOR fromCBOR)
 
 -- | (setEncode x) is self-documenting (E encodeFoldable x), use setDecode as its dual
 setEncode :: (ToCBOR v) => Set.Set v -> Encode ('Closed 'Dense) (Set.Set v)

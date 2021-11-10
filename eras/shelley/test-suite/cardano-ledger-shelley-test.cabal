@@ -95,6 +95,7 @@ library
     cardano-slotting,
     cborg,
     containers,
+    compact-map,
     data-default-class,
     deepseq,
     directory,
@@ -120,7 +121,7 @@ library
     time,
     transformers,
     tree-diff,
-    vector
+    vector,
 
 test-suite cardano-ledger-shelley-test
   import:             base, project-config
@@ -184,6 +185,7 @@ test-suite cardano-ledger-shelley-test
       cardano-slotting,
       cborg,
       containers,
+      compact-map,
       data-default-class,
       groups,
       hedgehog >= 1.0.4,

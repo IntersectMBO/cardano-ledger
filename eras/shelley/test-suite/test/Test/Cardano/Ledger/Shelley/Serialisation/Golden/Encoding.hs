@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -41,7 +42,7 @@ import Cardano.Ledger.BaseTypes
     textToUrl,
   )
 import Cardano.Ledger.Block (Block (..))
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
@@ -426,7 +427,7 @@ tests =
     "CBOR Serialization Tests (Encoding)"
     [ checkEncodingCBOR
         "list"
-        [1 :: Integer]
+        ([1] :: [Integer])
         (T (TkListBegin . TkInteger 1 . TkBreak)),
       checkEncodingCBOR
         "set"
@@ -1204,7 +1205,7 @@ tests =
             <> S (Coin 1)
             <> S (Coin 2)
         ),
-      let stk = Map.singleton (testStakeCred @C_Crypto) (Coin 13)
+      let stk = [(testStakeCred @C_Crypto, CompactCoin 13)]
        in checkEncodingCBOR
             "stake"
             (Stake stk)
@@ -1214,18 +1215,18 @@ tests =
             ),
       let mark =
             SnapShot
-              (Stake $ Map.singleton (testStakeCred @C_Crypto) (Coin 11))
-              (Map.singleton (testStakeCred @C_Crypto) (hashKey $ vKey testStakePoolKey))
+              (Stake [(testStakeCred @C_Crypto, CompactCoin 11)])
+              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
               ps
           set =
             SnapShot
-              (Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22))
-              (Map.singleton (testStakeCred @C_Crypto) (hashKey $ vKey testStakePoolKey))
+              (Stake [(KeyHashObj testKeyHash2, CompactCoin 22)])
+              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
               ps
           go =
             SnapShot
-              (Stake $ Map.singleton (testStakeCred @C_Crypto) (Coin 33))
-              (Map.singleton (testStakeCred @C_Crypto) (hashKey $ vKey testStakePoolKey))
+              (Stake [(testStakeCred @C_Crypto, CompactCoin 33)])
+              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
               ps
           params =
             PoolParams
@@ -1244,7 +1245,7 @@ tests =
                         _poolMDHash = BS.pack "{}"
                       }
               }
-          ps = Map.singleton (hashKey $ vKey testStakePoolKey) params
+          ps = [(hashKey $ vKey testStakePoolKey, params)]
           fs = Coin 123
        in checkEncodingCBOR
             "snapshots"
@@ -1259,18 +1260,18 @@ tests =
           ac = AccountState (Coin 100) (Coin 100)
           mark =
             SnapShot
-              (Stake $ Map.singleton (testStakeCred @C_Crypto) (Coin 11))
-              (Map.singleton (testStakeCred @C_Crypto) (hashKey $ vKey testStakePoolKey))
+              (Stake [(testStakeCred @C_Crypto, CompactCoin 11)])
+              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
               ps
           set =
             SnapShot
-              (Stake $ Map.singleton (KeyHashObj testKeyHash2) (Coin 22))
-              (Map.singleton (testStakeCred @C_Crypto) (hashKey $ vKey testStakePoolKey))
+              (Stake [(KeyHashObj testKeyHash2, CompactCoin 22)])
+              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
               ps
           go =
             SnapShot
-              (Stake $ Map.singleton (testStakeCred @C_Crypto) (Coin 33))
-              (Map.singleton (testStakeCred @C_Crypto) (hashKey $ vKey testStakePoolKey))
+              (Stake [(testStakeCred @C_Crypto, CompactCoin 33)])
+              [(testStakeCred @C_Crypto, hashKey $ vKey testStakePoolKey)]
               ps
           params =
             PoolParams
@@ -1289,7 +1290,7 @@ tests =
                         _poolMDHash = BS.pack "{}"
                       }
               }
-          ps = Map.singleton (hashKey $ vKey testStakePoolKey) params
+          ps = [(hashKey $ vKey testStakePoolKey, params)]
           fs = Coin 123
           ss = SnapShots mark set go fs
           ls = def

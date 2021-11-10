@@ -1,9 +1,11 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 module Cardano.Ledger.Coin
   ( Coin (..),
@@ -27,6 +29,7 @@ import Data.Aeson (FromJSON, ToJSON)
 import Data.Group (Abelian, Group (..))
 import Data.Monoid (Sum (..))
 import Data.PartialOrd (PartialOrd)
+import Data.Primitive.Types
 import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
@@ -75,7 +78,7 @@ rationalToCoinViaCeiling = Coin . ceiling
 
 instance Compactible Coin where
   newtype CompactForm Coin = CompactCoin Word64
-    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords)
+    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim)
 
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c
@@ -86,6 +89,7 @@ integerToWord64 c
   | c < 0 = Nothing
   | c > fromIntegral (maxBound :: Word64) = Nothing
   | otherwise = Just $ fromIntegral c
+{-# INLINE integerToWord64 #-}
 
 instance ToCBOR (CompactForm Coin) where
   toCBOR (CompactCoin c) = toCBOR c

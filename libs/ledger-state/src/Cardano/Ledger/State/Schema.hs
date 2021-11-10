@@ -52,7 +52,7 @@ SnapShot
 SnapShotStake
   snapShotId SnapShotId
   credentialId CredentialId
-  coin Coin
+  coin (CompactForm Coin)
   UniqueSnapShotStake snapShotId credentialId
 SnapShotDelegation
   snapShotId SnapShotId

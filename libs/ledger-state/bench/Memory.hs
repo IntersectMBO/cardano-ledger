@@ -4,7 +4,7 @@
 module Main where
 
 import Cardano.Ledger.State.Query
-import Cardano.Ledger.State.UTxO
+--import Cardano.Ledger.State.UTxO
 import Control.Monad
 import qualified Data.Text as T
 import Options.Applicative as O
@@ -48,33 +48,36 @@ main = do
               (long "help" <> short 'h' <> help "Display this message.")
         )
         (header "ledger-state:memory - Tool for analyzing memory consumption of ledger state")
-  let cols = [Case, Max, MaxOS, Live, Allocated, GCs]
+  let cols = [Case, Max, MaxOS, Live, Allocated, GCs, WallTime]
   !mEpochStateEntity <- mapM (loadEpochStateEntity . T.pack) (optsSqliteDbFile opts)
   mainWith $ do
     setColumns cols
-    forM_ (optsLedgerStateBinaryFile opts) $ \binFp -> do
-      io "NewEpochState" loadNewEpochState binFp
+    -- forM_ (optsLedgerStateBinaryFile opts) $ \binFp -> do
+    --   io "NewEpochState" loadNewEpochState binFp
     forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
       let dbFp = T.pack dbFpStr
       forM_ mEpochStateEntity $ \ese ->
         wgroup "EpochState" $ do
+          io "SnapShots (Vector) - no sharing" (loadSnapShotsNoSharingM dbFp) ese
+          io "SnapShots (Vector) - with sharing" (loadSnapShotsWithSharingM dbFp) ese
           io "SnapShots - no sharing" (loadSnapShotsNoSharing dbFp) ese
           io "SnapShots - with sharing" (loadSnapShotsWithSharing dbFp) ese
-      wgroup "Baseline" $ do
-        io "DState" loadDStateNoSharing dbFp
-        io "UTxO" loadUTxONoSharing dbFp
-        io "LedgerState" getLedgerStateNoSharing dbFp
-      wgroup "UTxO (No TxOut)" $ do
-        io "IntMap (KeyMap TxId ())" (loadDbUTxO txIxSharingKeyMap_) dbFp
-        io "KeyMap TxId (IntMap TxId ())" (loadDbUTxO txIdSharingKeyMap_) dbFp
-        io "IntMap (Map TxId ())" (loadDbUTxO txIxSharing_) dbFp
-        io "Map TxIn ()" (loadDbUTxO noSharing_) dbFp
-      wgroup "LedgerState" $ do
-        wgroup "UTxO (Share DState)" $ do
-          io "IntMap (KeyMap TxId TxOut)" getLedgerStateDStateTxIxSharingKeyMap dbFp
-          io "KeyMap TxId (IntMap TxOut)" getLedgerStateDStateTxIdSharingKeyMap dbFp
-          io "IntMap (Map TxId TxOut)" getLedgerStateDStateTxIxSharing dbFp
-          io "Map TxIn TxOut" getLedgerStateDStateSharing dbFp
+
+-- wgroup "Baseline" $ do
+--   io "DState" loadDStateNoSharing dbFp
+--   io "UTxO" loadUTxONoSharing dbFp
+--   io "LedgerState" getLedgerStateNoSharing dbFp
+-- wgroup "UTxO (No TxOut)" $ do
+--   io "IntMap (KeyMap TxId ())" (loadDbUTxO txIxSharingKeyMap_) dbFp
+--   io "KeyMap TxId (IntMap TxId ())" (loadDbUTxO txIdSharingKeyMap_) dbFp
+--   io "IntMap (Map TxId ())" (loadDbUTxO txIxSharing_) dbFp
+--   io "Map TxIn ()" (loadDbUTxO noSharing_) dbFp
+-- wgroup "LedgerState" $ do
+--   wgroup "UTxO (Share DState)" $ do
+--     io "IntMap (KeyMap TxId TxOut)" getLedgerStateDStateTxIxSharingKeyMap dbFp
+--     io "KeyMap TxId (IntMap TxOut)" getLedgerStateDStateTxIdSharingKeyMap dbFp
+--     io "IntMap (Map TxId TxOut)" getLedgerStateDStateTxIxSharing dbFp
+--     io "Map TxIn TxOut" getLedgerStateDStateSharing dbFp
 
 --   wgroup "Share TxOut StakeCredential" $ do
 --     io "Map TxIn TxOut'" getLedgerStateDStateTxOutSharing dbFp

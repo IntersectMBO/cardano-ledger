@@ -56,6 +56,7 @@ library
                      , bytestring
                      , cborg
                      , containers
+                     , compact-map
                      , cryptonite
                      , data-default-class
                      , deepseq

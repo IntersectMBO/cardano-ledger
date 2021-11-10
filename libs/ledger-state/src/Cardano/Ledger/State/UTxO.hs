@@ -34,6 +34,7 @@ import Control.Monad
 import qualified Data.ByteString.Lazy as LBS
 import Data.Compact.HashMap (toKey)
 import Data.Compact.KeyMap as KeyMap hiding (Stat)
+import qualified Data.Compact.VMap as VMap
 import Data.Foldable as F
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
@@ -275,11 +276,11 @@ instance AggregateStat SnapShotStats where
 countSnapShotStat :: SnapShot C -> SnapShotStats
 countSnapShotStat SnapShot {..} =
   SnapShotStats
-    { sssStake = statMapKeys (unStake _stake),
-      sssDelegationCredential = statMapKeys _delegations,
-      sssDelegationStakePool = statFoldable _delegations,
-      sssPoolParams = statMapKeys _poolParams,
-      sssPoolParamsStats = foldMap countPoolParamsStats _poolParams
+    { sssStake = statMapKeys (VMap.toMap (unStake _stake)),
+      sssDelegationCredential = statMapKeys (VMap.toMap _delegations),
+      sssDelegationStakePool = statFoldable (VMap.toMap _delegations),
+      sssPoolParams = statMapKeys (VMap.toMap _poolParams),
+      sssPoolParamsStats = VMap.foldMap countPoolParamsStats _poolParams
     }
 
 data PoolParamsStats = PoolParamsStats
