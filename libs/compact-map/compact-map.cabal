@@ -34,6 +34,7 @@ library
                      , Data.Compact.VMap
   other-modules:       Data.Compact.Class
                      , Data.Compact.KVVector
+                     , Data.Compact.QuickSort
   build-depends:       base >=4.11 && <5
                      , array
                      , cardano-binary
