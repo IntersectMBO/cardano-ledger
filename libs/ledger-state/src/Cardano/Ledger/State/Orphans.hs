@@ -1,9 +1,11 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.State.Orphans where
@@ -23,6 +25,7 @@ import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.TxIn
 import Control.DeepSeq
 import Data.ByteString.Short
+import Data.Sharing (Arity (..), fromCBOR')
 import qualified Data.Text as T
 import Data.Typeable
 import Database.Persist
@@ -121,6 +124,12 @@ deriving via Enc (PPUPState CurrentEra) instance PersistFieldSql (PPUPState Curr
 deriving via Enc (TxOut CurrentEra) instance PersistField (TxOut CurrentEra)
 
 deriving via Enc (TxOut CurrentEra) instance PersistFieldSql (TxOut CurrentEra)
+
+instance FromCBOR (DState C) where
+  fromCBOR = fromCBOR' @(Credential 'Staking C, KeyHash 'StakePool C) A2
+
+instance FromCBOR (PState C) where
+  fromCBOR = fromCBOR' @(KeyHash 'StakePool C) A1
 
 deriving via Enc (DState C) instance PersistField (DState C)
 

@@ -50,6 +50,8 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Credential (Credential (..))
+import Cardano.Ledger.Keys (KeyRole (..))
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
@@ -68,6 +70,7 @@ import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Write (toLazyByteString)
 import qualified Data.ByteString.Lazy as Lazy
 import Data.Maybe (fromJust)
+import Data.Sharing (Arity (..), fromCBOR')
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Mock
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -273,3 +276,6 @@ tests =
       testProperty "roundtrip reward provenance" prop_roundtrip_RewardProvenance,
       pulsingTest
     ]
+
+instance FromCBOR (Ledger.LedgerState Mock.C) where
+  fromCBOR = fromCBOR' @(Credential 'Staking _) A1

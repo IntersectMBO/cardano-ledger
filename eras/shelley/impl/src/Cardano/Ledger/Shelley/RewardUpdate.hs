@@ -10,7 +10,9 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | How to compute the reward update compuation. Also, how to spread the
 --     compuation over many blocks, once the chain reaches a stability point.
@@ -63,6 +65,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Set (Set)
+import Data.Sharing (Arity (..), fromCBOR')
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -174,7 +177,7 @@ instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
   fromCBOR =
     decode
       ( RecD RewardSnapShot
-          <! From
+          <! D (fromCBOR' @(Credential 'Staking crypto) A1)
           <! From
           <! From
           <! From
@@ -230,8 +233,9 @@ instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
 instance (CC.Crypto crypto) => FromCBOR (FreeVars crypto) where
   fromCBOR =
     decode
-      ( RecD FreeVars
+      ( RecD FreeVars <! mapDecode {- b -}
           <! vMapDecode {- delegs -}
+          <! D (fromCBOR' @(Credential 'Staking crypto) A1 {- stake -})
           <! setDecode {- addrsRew -}
           <! From {- totalStake -}
           <! From {- pp_pv -}

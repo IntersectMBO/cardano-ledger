@@ -1,5 +1,7 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -7,6 +9,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Benchmarks for transaction application
 module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
@@ -15,7 +18,9 @@ import Cardano.Binary
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Era (Era, ValidateScript)
+import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
@@ -29,6 +34,7 @@ import Cardano.Ledger.Shelley.API
     Tx,
     applyTxsTransition,
   )
+import Cardano.Ledger.Shelley.LedgerState (DPState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
 import Criterion
@@ -36,6 +42,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class (Default, def)
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
+import Data.Sharing (Arity (..), fromCBOR')
 import Data.Typeable (typeRep)
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
@@ -172,3 +179,6 @@ applyTxBenchmarks =
           deserialiseTxEra (Proxy @AlonzoBench)
         ]
     ]
+
+instance FromCBOR (DPState C_Crypto) where
+  fromCBOR = fromCBOR' @(Credential 'Staking C_Crypto) A1

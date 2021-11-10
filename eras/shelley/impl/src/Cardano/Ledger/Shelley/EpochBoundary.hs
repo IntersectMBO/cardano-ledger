@@ -4,7 +4,9 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -58,11 +60,14 @@ import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import Data.Sharing
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+
+-- ====================================================
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake crypto = Stake
@@ -75,8 +80,8 @@ deriving newtype instance Typeable crypto => NoThunks (Stake crypto)
 deriving newtype instance
   CC.Crypto crypto => ToCBOR (Stake crypto)
 
-deriving newtype instance
-  CC.Crypto crypto => FromCBOR (Stake crypto)
+instance CC.Crypto crypto => FromCBORShare (Stake crypto) (Credential 'Staking crypto) 'N1 where
+  fromSharePlus A1 maps = do (x, maps2) <- fromSharePlus @(VMap VB VP _ _) A1 maps; pure (Stake x, maps2)
 
 sumAllStake :: Stake crypto -> Coin
 sumAllStake = VMap.foldMap fromCompact . unStake
@@ -194,10 +199,14 @@ instance
         <> toCBOR d
         <> toCBOR p
 
-instance CC.Crypto crypto => FromCBOR (SnapShot crypto) where
-  fromCBOR =
-    decodeRecordNamed "SnapShot" (const 3) $
-      SnapShot <$> fromCBOR <*> fromCBOR <*> fromCBOR
+instance CC.Crypto crypto => FromCBORShare (SnapShot crypto) (Credential 'Staking crypto) 'N1 where
+  fromSharePlus A1 maps =
+    decodeRecordNamed "SnapShot" (const 3) $ -- Maybe we should just pass on the maps2?
+      do
+        (stake, maps2) <- fromSharePlus @(Stake _) A1 maps
+        (delegs, maps3) <- fromSharePlus @(VMap _ _ _ _) A1 maps2
+        poolp <- fromCBOR
+        pure (SnapShot stake delegs poolp, maps3)
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
@@ -225,14 +234,14 @@ instance
 
 instance
   CC.Crypto crypto =>
-  FromCBOR (SnapShots crypto)
+  FromCBORShare (SnapShots crypto) (Credential 'Staking crypto) 'N1
   where
-  fromCBOR =
+  fromShare A1 maps =
     decodeRecordNamed "SnapShots" (const 4) $
       SnapShots
-        <$> fromCBOR
-        <*> fromCBOR
-        <*> fromCBOR
+        <$> fromShare A1 maps
+        <*> fromShare A1 maps
+        <*> fromShare A1 maps
         <*> fromCBOR
 
 instance Default (SnapShots crypto) where

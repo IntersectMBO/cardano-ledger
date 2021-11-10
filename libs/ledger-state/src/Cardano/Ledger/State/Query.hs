@@ -32,12 +32,21 @@ import Data.Conduit.List (sourceList)
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
+import Data.Sharing (include)
+import Data.Sharing as Sharing (Internable)
+import qualified Data.Sharing as Sharing (internI)
 import qualified Data.Text as T
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
 
 -- Populate database
+
+intern1 :: (Ord k, Internable (map k a) k) => k -> map k a -> k
+intern1 key mp = Sharing.internI (include mp []) key
+
+intern1L :: (Ord k, Internable (map k a) k) => k -> [map k a] -> k
+intern1L key maps = Sharing.internI (foldr include [] maps) key
 
 insertGetKey ::
   ( MonadIO m,
@@ -401,12 +410,12 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
     selectVMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
       pure
-        (VMap.interns (Keys.coerceKeyRole credential) otherStakes, snapShotStakeCoin)
+        (intern1L (Keys.coerceKeyRole credential) otherStakes, snapShotStakeCoin)
   poolParams <-
     selectVMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
       pure
-        ( VMap.interns (Keys.coerceKeyRole keyHash) otherPoolParams,
+        ( intern1L (Keys.coerceKeyRole keyHash) otherPoolParams,
           snapShotPoolParams
         )
   delegations <-
@@ -414,8 +423,8 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
       pure
-        ( VMap.interns (Keys.coerceKeyRole credential) otherDelegations,
-          VMap.intern (Keys.coerceKeyRole keyHash) poolParams
+        ( intern1L (Keys.coerceKeyRole credential) otherDelegations,
+          intern1 (Keys.coerceKeyRole keyHash) poolParams
         )
   pure
     EpochBoundary.SnapShot
