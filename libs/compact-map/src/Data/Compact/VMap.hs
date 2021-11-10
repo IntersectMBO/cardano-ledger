@@ -34,8 +34,6 @@ module Data.Compact.VMap
     fromAscListWithKeyN,
     fromDistinctAscList,
     fromDistinctAscListN,
-    intern,
-    interns,
     internMaybe,
     null,
     splitAt,
@@ -53,7 +51,6 @@ import Data.Compact.KVVector (KVVector (..))
 import qualified Data.Compact.KVVector as KV
 import qualified Data.Map.Strict as Map
 import Data.Maybe as Maybe hiding (mapMaybe)
-import qualified Data.Maybe as Maybe (mapMaybe)
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Primitive as VP
@@ -92,8 +89,8 @@ instance (VG.Vector kv k, VG.Vector vv v, Ord k) => Exts.IsList (VMap kv vv k v)
 empty :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v
 empty = VMap VG.empty
 
-size :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v -> Int
-size = VG.length . unVMap
+size :: (VG.Vector kv k) => VMap kv vv k v -> Int
+size = VG.length . KV.keysVector . unVMap
 
 lookup ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => k -> VMap kv vv k v -> Maybe v
@@ -239,11 +236,3 @@ splitAt i (VMap vec) = let (l, r) = VG.splitAt i vec in (VMap l, VMap r)
 internMaybe :: (VG.Vector kv k, Ord k) => k -> VMap kv vv k v -> Maybe k
 internMaybe key = KV.internKVVectorMaybe key . unVMap
 {-# INLINE internMaybe #-}
-
-intern :: (VG.Vector kv k, Ord k) => k -> VMap kv vv k v -> k
-intern k = fromMaybe k . internMaybe k
-{-# INLINE intern #-}
-
-interns :: (VG.Vector kv k, Ord k) => k -> [VMap kv vv k v] -> k
-interns k = fromMaybe k . listToMaybe . Maybe.mapMaybe (internMaybe k)
-{-# INLINE interns #-}

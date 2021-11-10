@@ -51,6 +51,7 @@ module Data.Coders
     decodeSet,
     decodeAnnSet,
     decodeRecordNamed,
+    decodeRecordNamedT,
     decodeRecordSum,
     invalidKey,
     unusedRequiredKeys,
@@ -129,6 +130,8 @@ import Codec.CBOR.Decoding (Decoder, decodeTag, decodeTag64)
 import Codec.CBOR.Encoding (Encoding, encodeTag)
 import Control.Applicative (liftA2)
 import Control.Monad (replicateM, unless, when)
+import Control.Monad.Trans
+import Control.Monad.Trans.Identity
 import qualified Data.Compact.VMap as VMap
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
@@ -150,9 +153,18 @@ import Numeric.Natural (Natural)
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder = do
-  lenOrIndef <- decodeListLenOrIndef
+  runIdentityT $ decodeRecordNamedT name getRecordSize (lift decoder)
+
+decodeRecordNamedT ::
+  (MonadTrans m, Monad (m (Decoder s))) =>
+  Text.Text ->
+  (a -> Int) ->
+  m (Decoder s) a ->
+  m (Decoder s) a
+decodeRecordNamedT name getRecordSize decoder = do
+  lenOrIndef <- lift decodeListLenOrIndef
   x <- decoder
-  case lenOrIndef of
+  lift $ case lenOrIndef of
     Just n -> matchSize (Text.pack "\nRecord " <> name) n (getRecordSize x)
     Nothing -> do
       isBreak <- decodeBreakOr
@@ -320,8 +332,8 @@ decodeMapByKey decodeKey decodeValueFor =
     <$> decodeMapContents decodeInlinedPair
   where
     decodeInlinedPair = do
-      key <- decodeKey
-      value <- decodeValueFor key
+      !key <- decodeKey
+      !value <- decodeValueFor key
       pure (key, value)
 
 decodeMapContents :: Decoder s a -> Decoder s [a]

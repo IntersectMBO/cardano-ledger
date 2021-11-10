@@ -70,6 +70,9 @@ LedgerState
   dstateId DStateId
   epochStateId EpochStateId
   pstateBin (Shelley.PState C)
+  UniqueLedgerStateUtxoId utxoId
+  UniqueLedgerStateDStateId dstateId
+  UniqueLedgerStateEpochStateId epochStateId
 UtxoState
   deposited Coin
   fees Coin

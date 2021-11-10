@@ -4,7 +4,9 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -46,21 +48,24 @@ import Cardano.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Serialization (decodeRecordNamed)
+import Cardano.Ledger.Serialization (decodeRecordNamedT)
 import Cardano.Ledger.Shelley.TxBody (PoolParams)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans (lift)
 import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
 import Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import Data.Sharing
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
+import Lens.Micro (_1, _2)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -75,8 +80,10 @@ deriving newtype instance Typeable crypto => NoThunks (Stake crypto)
 deriving newtype instance
   CC.Crypto crypto => ToCBOR (Stake crypto)
 
-deriving newtype instance
-  CC.Crypto crypto => FromCBOR (Stake crypto)
+instance CC.Crypto crypto => FromSharedCBOR (Stake crypto) where
+  type Share (Stake crypto) = Share (VMap VB VP (Credential 'Staking crypto) (CompactForm Coin))
+  getShare = getShare . unStake
+  fromSharedCBOR = fmap Stake . fromSharedCBOR
 
 sumAllStake :: Stake crypto -> Coin
 sumAllStake = VMap.foldMap fromCompact . unStake
@@ -194,14 +201,20 @@ instance
         <> toCBOR d
         <> toCBOR p
 
-instance CC.Crypto crypto => FromCBOR (SnapShot crypto) where
-  fromCBOR =
-    decodeRecordNamed "SnapShot" (const 3) $
-      SnapShot <$> fromCBOR <*> fromCBOR <*> fromCBOR
+instance CC.Crypto crypto => FromSharedCBOR (SnapShot crypto) where
+  type
+    Share (SnapShot crypto) =
+      (Interns (Credential 'Staking crypto), Interns (KeyHash 'StakePool crypto))
+  fromSharedPlusCBOR =
+    decodeRecordNamedT "SnapShot" (const 3) $ do
+      _stake <- fromSharedPlusLensCBOR _1
+      _delegations <- fromSharedPlusCBOR
+      _poolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
+      pure SnapShot {_stake, _delegations, _poolParams}
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
-  { _pstakeMark :: SnapShot crypto,
+  { _pstakeMark :: SnapShot crypto, -- Lazy on purpose
     _pstakeSet :: !(SnapShot crypto),
     _pstakeGo :: !(SnapShot crypto),
     _feeSS :: !Coin
@@ -216,24 +229,22 @@ instance
   CC.Crypto crypto =>
   ToCBOR (SnapShots crypto)
   where
-  toCBOR (SnapShots mark set go fs) =
+  toCBOR (SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}) =
     encodeListLen 4
-      <> toCBOR mark
-      <> toCBOR set
-      <> toCBOR go
-      <> toCBOR fs
+      <> toCBOR _pstakeMark
+      <> toCBOR _pstakeSet
+      <> toCBOR _pstakeGo
+      <> toCBOR _feeSS
 
-instance
-  CC.Crypto crypto =>
-  FromCBOR (SnapShots crypto)
-  where
-  fromCBOR =
-    decodeRecordNamed "SnapShots" (const 4) $
-      SnapShots
-        <$> fromCBOR
-        <*> fromCBOR
-        <*> fromCBOR
-        <*> fromCBOR
+instance CC.Crypto crypto => FromSharedCBOR (SnapShots crypto) where
+  type Share (SnapShots crypto) = Share (SnapShot crypto)
+  fromSharedPlusCBOR =
+    decodeRecordNamedT "SnapShots" (const 4) $ do
+      !_pstakeMark <- fromSharedPlusCBOR
+      _pstakeSet <- fromSharedPlusCBOR
+      _pstakeGo <- fromSharedPlusCBOR
+      _feeSS <- lift fromCBOR
+      pure SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
 
 instance Default (SnapShots crypto) where
   def = emptySnapShots

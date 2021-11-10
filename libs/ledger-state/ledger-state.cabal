@@ -37,7 +37,6 @@ library
                     , cardano-ledger-alonzo
                     , cardano-ledger-shelley
                     , cardano-ledger-shelley-ma
-                    , cborg
                     , conduit
                     , containers
                     , compact-map

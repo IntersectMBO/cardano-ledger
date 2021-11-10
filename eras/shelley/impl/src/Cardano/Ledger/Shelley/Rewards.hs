@@ -6,6 +6,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -77,7 +78,7 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
-  ( decodeRecordNamed,
+  ( decodeRecordNamedT,
     decodeSeq,
     encodeFoldable,
   )
@@ -94,6 +95,7 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
+import Control.Monad.Trans
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
@@ -109,8 +111,10 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Sharing
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
+import Lens.Micro (_1)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -282,16 +286,13 @@ instance CC.Crypto crypto => ToCBOR (NonMyopic crypto) where
         <> toCBOR aps
         <> toCBOR rp
 
-instance CC.Crypto crypto => FromCBOR (NonMyopic crypto) where
-  fromCBOR = do
-    decodeRecordNamed "NonMyopic" (const 3) $ do
-      aps <- fromCBOR
-      rp <- fromCBOR
-      pure $
-        NonMyopic
-          { likelihoodsNM = aps,
-            rewardPotNM = rp
-          }
+instance CC.Crypto crypto => FromSharedCBOR (NonMyopic crypto) where
+  type Share (NonMyopic crypto) = Interns (KeyHash 'StakePool crypto)
+  fromSharedPlusCBOR = do
+    decodeRecordNamedT "NonMyopic" (const 3) $ do
+      likelihoodsNM <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
+      rewardPotNM <- lift fromCBOR
+      pure $ NonMyopic {likelihoodsNM, rewardPotNM}
 
 -- | Desirability calculation for non-myopic utility,
 -- corresponding to f^~ in section 5.6.1 of

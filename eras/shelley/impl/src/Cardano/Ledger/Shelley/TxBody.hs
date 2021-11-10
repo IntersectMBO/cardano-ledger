@@ -193,6 +193,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Sharing
 import qualified Data.Text.Encoding as Text
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
@@ -1010,15 +1011,24 @@ instance-- use the weakest constraint necessary
       <> toCBOR addr
       <> toCBOR coin
 
-instance-- use the weakest constraint necessary
-
+instance
   (Era era, TransTxOut DecodeNonNegative era, Show (Core.Value era)) =>
   FromCBOR (TxOut era)
   where
-  fromCBOR = decodeRecordNamed "TxOut" (const 2) $ do
-    cAddr <- fromCBOR
-    coin <- decodeNonNegative
-    pure $ TxOutCompact cAddr coin
+  fromCBOR = fromNotSharedCBOR
+
+-- This instance does not do any sharing and is isomorphic to FromCBOR
+-- use the weakest constraint necessary
+instance
+  (Era era, TransTxOut DecodeNonNegative era, Show (Core.Value era)) =>
+  FromSharedCBOR (TxOut era)
+  where
+  type Share (TxOut era) = Interns (Credential 'Staking (Crypto era))
+  fromSharedCBOR _ =
+    decodeRecordNamed "TxOut" (const 2) $ do
+      cAddr <- fromCBOR
+      coin <- decodeNonNegative
+      pure $ TxOutCompact cAddr coin
 
 instance
   (Typeable kr, CC.Crypto crypto) =>

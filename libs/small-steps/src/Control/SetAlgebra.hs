@@ -55,8 +55,9 @@ module Control.SetAlgebra
     eval,
     -- Functions to build concrete Set-like things useable as Set Algebra Expressions
     materialize,
-    biMapFromList,
     biMapToMap,
+    biMapFromMap,
+    biMapFromList,
     biMapEmpty,
     fromList,
     keysEqual,
@@ -66,7 +67,7 @@ module Control.SetAlgebra
 where
 
 import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Embed (..), Iter (..), List, Single (..))
-import Control.Iterate.BiMap (BiMap (..), Bimap, biMapEmpty, biMapFromList, biMapToMap)
+import Control.Iterate.BiMap (BiMap (..), Bimap, biMapEmpty, biMapFromList, biMapFromMap, biMapToMap)
 import Control.Iterate.Exp
   ( Exp (..),
     HasExp (..),
