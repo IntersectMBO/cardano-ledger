@@ -1,25 +1,5 @@
 # code owners are automatically assigned to review PRs
 
-# Shelley Design Spec
-eras/shelley/design-spec/ @kantp @brunjlar @dcoutts
-
-# Formal Specs
-eras/shelley/formal-spec/ @jcorduan @polinavino
-eras/shelley-ma/formal-spec/ @polinavino @WhatisRT
-eras/alonzo/formal-spec/ @polinavino @WhatisRT
-
-# CDDL
-eras/shelley/cardano-ledger-shelley-test/cddl-files/ @redxaxder
-eras/shelley-ma/shelley-ma-test/cddl-files/          @redxaxder
-
-# Set Algebra
-libs/small-steps/src/Control/Iterate/      @TimSheard
-libs/small-steps/src/Control/Provenance.hs @TimSheard
-libs/small-steps/src/Control/SetAlgebra.hs @TimSheard
-
-# Coders library for CBOR encoding and decoding
-libs/small-steps/src/Data/Coders.hs @TimSheard
-
 # Devops
 .buildkite @devops
 .github    @devops
