@@ -31,7 +31,6 @@ import Cardano.Ledger.BaseTypes
     boundedRationalToCBOR,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
-import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -40,6 +39,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
     Stake (..),
     poolStake,
+    sumAllStake,
   )
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenancePool (..))
 import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
@@ -335,8 +335,8 @@ rewardStakePool
   pparams = do
     let hk = _poolId pparams
         blocksProduced = Map.lookup hk b
-        actgr@(Stake s) = poolStake hk delegs stake
-        Coin pstake = VMap.foldMap fromCompact s
+        actgr = poolStake hk delegs stake
+        Coin pstake = sumAllStake actgr
         sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
         sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
         ls =

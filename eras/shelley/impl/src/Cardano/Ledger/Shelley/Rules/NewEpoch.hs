@@ -22,7 +22,7 @@ where
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Compactible (Compactible (fromCompact))
+import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
@@ -172,14 +172,14 @@ newEpochTransition = do
           pd'
 
 calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
-calculatePoolDistr (SnapShot (Stake stake) delegs poolParams) =
-  let Coin total = VMap.foldMap fromCompact stake
+calculatePoolDistr (SnapShot stake delegs poolParams) =
+  let Coin total = sumAllStake stake
       -- total could be zero (in particular when shrinking)
       nonZeroTotal = if total == 0 then 1 else total
       sd =
         Map.fromListWith (+) $
           [ (d, c % nonZeroTotal)
-            | (hk, compactCoin) <- VMap.toAscList stake,
+            | (hk, compactCoin) <- VMap.toAscList (unStake stake),
               let Coin c = fromCompact compactCoin,
               Just d <- [VMap.lookup hk delegs]
           ]

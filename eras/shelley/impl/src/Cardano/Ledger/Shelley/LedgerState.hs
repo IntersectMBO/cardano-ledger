@@ -159,6 +159,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
     SnapShots (..),
     Stake (..),
     aggregateUtxoCoinByCredential,
+    sumAllStake,
   )
 import Cardano.Ledger.Shelley.PParams
   ( PParams,
@@ -1173,7 +1174,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
             rewTotalStake = totalStake,
             rewRPot = Coin rPot
           }
-      activestake = VMap.foldMap fromCompact $ unStake stake'
+      activestake = sumAllStake stake'
       free =
         FreeVars
           (unBlocksMade b)
@@ -1210,8 +1211,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
             d = d,
             expBlocks = expectedBlocks,
             eta = eta,
-            rPot = (Coin rPot),
-            deltaT1 = (Coin deltaT1)
+            rPot = Coin rPot,
+            deltaT1 = Coin deltaT1
             -- Fields not initialized here, but filled in in completeRupd
             --   deltaR2
             --   pools

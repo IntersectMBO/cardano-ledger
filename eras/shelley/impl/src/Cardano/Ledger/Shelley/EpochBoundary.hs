@@ -19,6 +19,7 @@
 -- This modules implements the necessary functions for the changes that can happen at epoch boundaries.
 module Cardano.Ledger.Shelley.EpochBoundary
   ( Stake (..),
+    sumAllStake,
     SnapShot (..),
     SnapShots (..),
     emptySnapShot,
@@ -80,6 +81,9 @@ deriving newtype instance
 
 deriving newtype instance
   CC.Crypto crypto => FromCBOR (Stake crypto)
+
+sumAllStake :: Stake crypto -> Coin
+sumAllStake = VMap.foldMap fromCompact . unStake
 
 -- A TxOut has 4 different shapes, depending on the shape its embedded of Addr.
 -- Credentials are stored in only 2 of the 4 cases.
