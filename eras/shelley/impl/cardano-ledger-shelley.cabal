@@ -38,6 +38,7 @@ library
     Cardano.Ledger.Shelley.API.ByronTranslation
     Cardano.Ledger.Shelley.API.Genesis
     Cardano.Ledger.Shelley.API.Protocol
+    Cardano.Ledger.Shelley.API.Types
     Cardano.Ledger.Shelley.API.Validation
     Cardano.Ledger.Shelley.API.Wallet
     Cardano.Ledger.Shelley.API.Mempool
@@ -82,7 +83,6 @@ library
     Cardano.Ledger.Shelley.Tx
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.UTxO
-  other-modules:      Cardano.Ledger.Shelley.API.Types
   hs-source-dirs: src
   build-depends:
     aeson,

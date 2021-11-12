@@ -36,9 +36,14 @@ common project-config
                       -Wredundant-constraints
                       -Wunused-packages
 
+
 library
   import:             base, project-config
   hs-source-dirs:     src
+  other-modules:
+    Data.Group.GrpMap
+    Data.Functor.PiecewiseConstant
+    Test.Cardano.Ledger.Orphans
   exposed-modules:
     Test.Cardano.Ledger.BaseTypes
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
@@ -48,6 +53,19 @@ library
     Test.Cardano.Ledger.Properties
     Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.Alonzo.Tools
+    Test.Cardano.Ledger.ModelChain
+    Test.Cardano.Ledger.ModelChain.Properties
+    Test.Cardano.Ledger.ModelChain.FeatureSet
+    Test.Cardano.Ledger.ModelChain.Value
+    Test.Cardano.Ledger.ModelChain.Address
+    Test.Cardano.Ledger.ModelChain.Script
+    Test.Cardano.Ledger.ModelChain.Shrinking
+    Test.Cardano.Ledger.ModelChain.Utils
+    Test.Cardano.Ledger.Elaborators
+    Test.Cardano.Ledger.Elaborators.Alonzo
+    Test.Cardano.Ledger.Elaborators.Shelley
+    Test.Cardano.Ledger.DependGraph
+
   build-depends:
     aeson,
     array,
@@ -62,22 +80,37 @@ library
     cardano-slotting,
     containers,
     data-default-class,
+    deepseq,
+    fgl,
     genvalidity,
     genvalidity-scientific,
+    groups,
+    hkd,
+    lens,
+    monad-supply,
     mtl,
     plutus-ledger-api,
+    plutus-tx,
+    profunctors,
+    QuickCheck,
+    QuickCheck-GenT,
+    quiet,
+    random,
     scientific,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    semigroupoids,
     small-steps,
     small-steps-test,
+    some,
     strict-containers,
+    tagged,
     tasty,
     tasty-hunit,
     tasty-quickcheck,
     time,
     transformers,
-    QuickCheck,
+    writer-cps-mtl,
 
 
 test-suite cardano-ledger-test
@@ -85,6 +118,8 @@ test-suite cardano-ledger-test
 
   type:                exitcode-stdio-1.0
   main-is:             Tests.hs
+  ghc-options: -rtsopts -threaded
+
   hs-source-dirs:      test
   other-modules:
   build-depends:
