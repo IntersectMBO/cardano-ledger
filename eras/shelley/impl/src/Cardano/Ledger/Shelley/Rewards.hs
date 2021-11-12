@@ -35,6 +35,7 @@ module Cardano.Ledger.Shelley.Rewards
     leaderRew,
     memberRew,
     aggregateRewards,
+    filterRewards,
     sumRewards,
     rewardOnePool,
   )
@@ -461,6 +462,20 @@ sumRewards ::
   Coin
 sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 
+-- | Filter the reward payments to those that will actually be delivered. This
+-- function exists since in Shelley, a stake credential earning rewards from
+-- multiple sources would only receive one reward.
+filterRewards ::
+  forall crypto pp.
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
+  Map (Credential 'Staking crypto) (Set (Reward crypto))
+filterRewards pp rewards =
+  if HardForks.aggregatedRewards pp
+    then rewards
+    else Map.map (Set.singleton . Set.findMin) rewards
+
 aggregateRewards ::
   forall crypto pp.
   (HasField "_protocolVersion" pp ProtVer) =>
@@ -468,13 +483,10 @@ aggregateRewards ::
   Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
   Map (Credential 'Staking crypto) Coin
 aggregateRewards pp rewards =
-  if HardForks.aggregatedRewards pp
-    then Map.map (Set.foldr addRewardToCoin mempty) rewards
-    else Map.map lastByOrd rewards
+  Map.map (Set.foldr addRewardToCoin mempty) $
+    filterRewards pp rewards
   where
     addRewardToCoin r = (<>) (rewardAmount r)
-    -- s should never be null, but we are being cautious
-    lastByOrd s = if Set.null s then mempty else (rewardAmount . Set.findMin) s
 
 -- | Reward one pool. The first argument (the triple (pp_d, pp_a0, pp_nOpt))
 --     is a subset of the fields of PParams
