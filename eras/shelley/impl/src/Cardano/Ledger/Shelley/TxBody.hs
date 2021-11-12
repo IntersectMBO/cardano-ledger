@@ -530,7 +530,7 @@ data GenesisDelegCert crypto
   deriving (Show, Generic, Eq, NFData)
 
 data MIRPot = ReservesMIR | TreasuryMIR
-  deriving (Show, Generic, Eq, NFData)
+  deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
 
 deriving instance NoThunks MIRPot
 
