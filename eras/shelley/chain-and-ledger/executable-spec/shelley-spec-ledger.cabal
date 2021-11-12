@@ -38,10 +38,11 @@ library
     Shelley.Spec.Ledger.API
     Shelley.Spec.Ledger.API.ByronTranslation
     Shelley.Spec.Ledger.API.Genesis
+    Shelley.Spec.Ledger.API.Mempool
     Shelley.Spec.Ledger.API.Protocol
+    Shelley.Spec.Ledger.API.Types
     Shelley.Spec.Ledger.API.Validation
     Shelley.Spec.Ledger.API.Wallet
-    Shelley.Spec.Ledger.API.Mempool
     Shelley.Spec.Ledger.BaseTypes
     Shelley.Spec.Ledger.BlockChain
     Shelley.Spec.Ledger.CompactAddr
