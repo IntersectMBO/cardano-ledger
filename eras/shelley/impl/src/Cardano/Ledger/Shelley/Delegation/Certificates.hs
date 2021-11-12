@@ -31,7 +31,7 @@ module Cardano.Ledger.Shelley.Delegation.Certificates
     isReservesMIRCert,
     isTreasuryMIRCert,
     requiresVKeyWitness,
-    --Deprecated
+    -- Deprecated
     PoolDistr,
     IndividualPoolStake,
   )

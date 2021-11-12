@@ -207,7 +207,7 @@ instance
     (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
     (ws, witsAnn) <- withSlice $ decodeSeq fromCBOR
     let b = length bodies
-        inRange x = (0 <= x) && (x <= (b -1))
+        inRange x = (0 <= x) && (x <= (b - 1))
         w = length ws
     (metadata, metadataAnn) <- withSlice $
       do
@@ -216,7 +216,7 @@ instance
           (all inRange (Map.keysSet m))
           ( fail
               ( "Some Auxiliarydata index is not in the range: 0 .. "
-                  ++ show (b -1)
+                  ++ show (b - 1)
               )
           )
         pure (constructMetadata @era b m)
@@ -235,7 +235,7 @@ instance
       (all inRange isValIdxs)
       ( fail
           ( "Some IsValid index is not in the range: 0 .. "
-              ++ show (b -1)
+              ++ show (b - 1)
               ++ ", "
               ++ show isValIdxs
           )

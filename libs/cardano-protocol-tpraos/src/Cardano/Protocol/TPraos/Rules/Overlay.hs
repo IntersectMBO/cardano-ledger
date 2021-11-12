@@ -106,8 +106,8 @@ data OverlayPredicateFailure crypto
       !(KeyHash 'StakePool crypto) -- unknown VRF keyhash (not registered)
   | VRFKeyWrongVRFKey
       !(KeyHash 'StakePool crypto) -- KeyHash of block issuer
-      !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash registered with stake pool
-      !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash from Header
+      !(Hash crypto (VerKeyVRF crypto)) -- VRF KeyHash registered with stake pool
+      !(Hash crypto (VerKeyVRF crypto)) -- VRF KeyHash from Header
   | VRFKeyBadNonce
       !Nonce -- Nonce constant to distinguish VRF nonce values
       !SlotNo -- Slot used for VRF calculation
@@ -129,8 +129,8 @@ data OverlayPredicateFailure crypto
       !(KeyHash 'GenesisDelegate crypto) -- KeyHash genesis delegate keyhash assigned to this slot
   | WrongGenesisVRFKeyOVERLAY
       !(KeyHash 'BlockIssuer crypto) -- KeyHash of block issuer
-      !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash registered with genesis delegation
-      !(Hash crypto (VerKeyVRF crypto)) --VRF KeyHash from Header
+      !(Hash crypto (VerKeyVRF crypto)) -- VRF KeyHash registered with genesis delegation
+      !(Hash crypto (VerKeyVRF crypto)) -- VRF KeyHash from Header
   | UnknownGenesisKeyOVERLAY
       !(KeyHash 'Genesis crypto) -- KeyHash which does not correspond to o genesis node
   | OcertFailure (PredicateFailure (OCERT crypto)) -- Subtransition Failures

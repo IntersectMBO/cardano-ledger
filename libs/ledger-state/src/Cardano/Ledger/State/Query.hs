@@ -342,7 +342,7 @@ getSnapShotNoSharing epochStateId snapShotType = do
     selectVMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
-      --TODO ^ rename snapShotDelegationKeyHashId
+      -- TODO ^ rename snapShotDelegationKeyHashId
       pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
   poolParams <-
     selectVMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do

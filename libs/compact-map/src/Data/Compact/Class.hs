@@ -70,7 +70,7 @@ alub (lo, hi) arr target
 
 boundsCheck :: Indexable t1 a => (t1 a -> Int -> t2) -> t1 a -> Int -> t2
 boundsCheck indexf arr i | i >= 0 && i < isize arr = indexf arr i
-boundsCheck _ arr i = error ("boundscheck error, " ++ show i ++ ", not in bounds (0.." ++ show (isize arr -1) ++ ").")
+boundsCheck _ arr i = error ("boundscheck error, " ++ show i ++ ", not in bounds (0.." ++ show (isize arr - 1) ++ ").")
 
 -- Built in type Instances
 
@@ -93,7 +93,7 @@ instance Prim a => Indexable PrimArray a where
 instance Indexable (A.Array Int) a where
   index = (A.!)
   isize arr = (hi - lo) + 1 where (lo, hi) = A.bounds arr
-  fromlist xs = (A.listArray (0, length xs -1) xs)
+  fromlist xs = (A.listArray (0, length xs - 1) xs)
   tolist arr = foldr (:) [] arr
   catenate = catArray
   merge = mergeArray
@@ -117,7 +117,7 @@ mboundsCheck ::
   Int ->
   ST s a
 mboundsCheck indexf arr i | i >= 0 && i < msize arr = indexf arr i
-mboundsCheck _ arr i = error ("mboundscheck error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr -1) ++ ").")
+mboundsCheck _ arr i = error ("mboundscheck error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr - 1) ++ ").")
 
 class Indexable arr a => ArrayPair arr marr a | marr -> arr, arr -> marr where
   mindex :: marr s a -> Int -> ST s a
@@ -137,7 +137,7 @@ instance ArrayPair SmallArray SmallMutableArray a where
   mwrite arr i a =
     if i >= 0 && i < (msize arr)
       then Small.writeSmallArray arr i a
-      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr -1) ++ ").")
+      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr - 1) ++ ").")
   mcopy = Small.copySmallArray
 
 instance ArrayPair PA.Array PA.MutableArray a where
@@ -148,7 +148,7 @@ instance ArrayPair PA.Array PA.MutableArray a where
   mwrite arr i a =
     if i >= 0 && i < (msize arr)
       then PA.writeArray arr i a
-      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr -1) ++ ").")
+      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr - 1) ++ ").")
   mcopy = PA.copyArray
 
 instance Prim a => ArrayPair PrimArray MutablePrimArray a where
@@ -159,7 +159,7 @@ instance Prim a => ArrayPair PrimArray MutablePrimArray a where
   mwrite arr i a =
     if i >= 0 && i < (msize arr)
       then writePrimArray arr i a
-      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr -1) ++ ").")
+      else error ("mwrite error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr - 1) ++ ").")
   mcopy = copyPrimArray
 
 -- | MutArray fixes the index type to Int for the STArray type constructor
@@ -168,7 +168,7 @@ newtype MutArray s t = MutArray (STArray s Int t)
 instance ArrayPair (A.Array Int) MutArray a where
   msize (MutArray (STArray lo hi _ _)) = hi - lo + 1
   mindex (MutArray arr) i = MutA.readArray arr i
-  mnew n = MutArray <$> (MutA.newArray_ (0, n -1))
+  mnew n = MutArray <$> (MutA.newArray_ (0, n - 1))
   mfreeze (MutArray arr) = unsafeFreezeSTArray arr
   mwrite (MutArray arr) i a = MutA.writeArray arr i a
   mcopy marr startm arr start count = go startm start count
@@ -176,7 +176,7 @@ instance ArrayPair (A.Array Int) MutArray a where
       go _i _j 0 = pure ()
       go i j n = do
         mwrite marr i (index arr j)
-        go (i + 1) (j + 1) (n -1)
+        go (i + 1) (j + 1) (n - 1)
 
 -- =======================================================
 -- Usefull functions that use Mutable Arrays
@@ -222,7 +222,7 @@ mToList first marr = loop first []
 
 -- | Extract a slice from an array
 slice :: ArrayPair arr2 marr a => Int -> Int -> arr2 a -> arr2 a
-slice 0 hi arr | hi == (isize arr -1) = arr
+slice 0 hi arr | hi == (isize arr - 1) = arr
 slice lo hi arr = fst (withMutArray size action)
   where
     size = max (hi - lo + 1) 0
@@ -456,7 +456,7 @@ mergeWithAction size inputs action = fst $ withMutArray size build
     build :: forall s. marr s a -> ST s Int
     build moutput = do
       minputs <- mfromlist (map (\x -> (0, x)) inputs)
-      inOrder mark1 smaller1 (0 :: Int) 0 (length inputs -1) (action moutput) minputs
+      inOrder mark1 smaller1 (0 :: Int) 0 (length inputs - 1) (action moutput) minputs
 
 -- | Merge a list of array like objects by allocating the target and then merging the sources.
 --   mergeArray maintains ascending order. But catArray maintains index order.

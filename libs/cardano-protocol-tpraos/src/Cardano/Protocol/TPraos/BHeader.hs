@@ -430,7 +430,7 @@ checkLeaderValue certVRF σ f =
     c, recip_q, x :: FixedPoint
     c = activeSlotLog f
     recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
-    x = - fromRational σ * c
+    x = -fromRational σ * c
     certNat :: Natural
     certNat = VRF.getOutputVRFNatural certVRF
 

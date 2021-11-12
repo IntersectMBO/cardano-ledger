@@ -1591,9 +1591,9 @@ instance HasTrace UPIVOTES where
       -- Add the missing votes w.r.t. a set of votes cast so far and genesis
       -- keys that can vote.
       completeVotes ::
-        -- | Genesis keys that can vote
+        -- Genesis keys that can vote
         Set Core.VKeyGenesis ->
-        -- | Votes for the registered update proposals
+        -- Votes for the registered update proposals
         Map UpId (Set Core.VKeyGenesis) ->
         Map UpId (Set Core.VKeyGenesis)
       completeVotes genesisKeys votes =

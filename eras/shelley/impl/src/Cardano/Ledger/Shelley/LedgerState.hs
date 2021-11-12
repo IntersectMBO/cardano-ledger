@@ -88,8 +88,6 @@ module Cardano.Ledger.Shelley.LedgerState
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
     updateNonMyopic,
-
-    -- *
     TransUTxOState,
     TransLedgerState,
   )

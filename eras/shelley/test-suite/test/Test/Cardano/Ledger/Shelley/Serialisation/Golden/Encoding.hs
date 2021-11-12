@@ -1012,7 +1012,7 @@ tests =
           ocert :: OCert C_Crypto
           ocert =
             OCert
-              (snd $testKESKeys @C_Crypto)
+              (snd $ testKESKeys @C_Crypto)
               0
               (KESPeriod 0)
               ( signedDSIGN @C_Crypto
@@ -1072,7 +1072,7 @@ tests =
             ),
       -- checkEncodingCBOR "block_header"
       let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
-          sig = signedKES () 0 (testBHB @C) (fst $testKESKeys @C_Crypto)
+          sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
        in checkEncodingCBORAnnotated
             "block_header"
             (BHeader (testBHB @C) sig)

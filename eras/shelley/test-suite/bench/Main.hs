@@ -116,7 +116,7 @@ type BenchEra = ShelleyEra BenchCrypto
 
 -- ============================================================
 
---TODO set this in one place (where?)
+-- TODO set this in one place (where?)
 type FixedValType = Coin
 
 eqf :: String -> (Map.Map Int Int -> Map.Map Int Int -> Bool) -> Int -> Benchmark

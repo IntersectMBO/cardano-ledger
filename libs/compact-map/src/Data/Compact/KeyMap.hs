@@ -135,7 +135,7 @@ bitmapToList :: Bits a => a -> [Int]
 bitmapToList bm = loop 63 []
   where
     loop i ans | i < 0 = ans
-    loop i ans = if testBit bm i then loop (i -1) (i : ans) else loop (i -1) ans
+    loop i ans = if testBit bm i then loop (i - 1) (i : ans) else loop (i - 1) ans
 
 instance HeapWords Key where
   heapWords (Key _ _ _ _) = 5
@@ -365,16 +365,16 @@ foldWithDescKey _ !ans Empty = ans
 foldWithDescKey accum !ans (Leaf k v) = accum k v ans
 foldWithDescKey accum !ans (One _ x) = foldWithDescKey accum ans x
 foldWithDescKey accum !ans (Two _ x y) = foldWithDescKey accum (foldWithDescKey accum ans y) x
-foldWithDescKey accum !ans0 (BitmapIndexed _ arr) = loop ans0 (n -1)
+foldWithDescKey accum !ans0 (BitmapIndexed _ arr) = loop ans0 (n - 1)
   where
     n = isize arr
     loop !ans i | i < 0 = ans
-    loop !ans i = loop (foldWithDescKey accum ans (index arr i)) (i -1)
-foldWithDescKey accum !ans0 (Full arr) = loop ans0 (n -1)
+    loop !ans i = loop (foldWithDescKey accum ans (index arr i)) (i - 1)
+foldWithDescKey accum !ans0 (Full arr) = loop ans0 (n - 1)
   where
     n = isize arr
     loop !ans i | i < 0 = ans
-    loop !ans i = loop (foldWithDescKey accum ans (index arr i)) (i -1)
+    loop !ans i = loop (foldWithDescKey accum ans (index arr i)) (i - 1)
 
 -- ==================================================================
 -- Lookup a key
@@ -794,7 +794,7 @@ at position i=4
 -}
 
 lessMasks, greaterMasks :: PArray Bitmap
-lessMasks = fromlist [setBits [0 .. i -1] | i <- [0 .. 63]]
+lessMasks = fromlist [setBits [0 .. i - 1] | i <- [0 .. 63]]
 greaterMasks = fromlist [setBits [i + 1 .. 63] | i <- [0 .. 63]]
 
 testsplitBitmap :: Int -> ([Int], Bool, [Int])
@@ -809,7 +809,7 @@ testsplitBitmap i = (bitmapToList l, b, bitmapToList g)
 remove :: PArray a -> Int -> PArray a
 remove arr i =
   if i < 0 || i > n
-    then error ("index out of bounds in 'remove' " ++ show i ++ " not in range (0," ++ show (isize arr -1) ++ ")")
+    then error ("index out of bounds in 'remove' " ++ show i ++ " not in range (0," ++ show (isize arr - 1) ++ ")")
     else fst (withMutArray n action)
   where
     n = (isize arr) - 1
@@ -821,7 +821,7 @@ remove arr i =
 update :: PArray t -> Int -> t -> PArray t
 update arr i _
   | i < 0 || i >= (isize arr) =
-    error ("index out of bounds in 'update' " ++ show i ++ " not in range (0," ++ show (isize arr -1) ++ ")")
+    error ("index out of bounds in 'update' " ++ show i ++ " not in range (0," ++ show (isize arr - 1) ++ ")")
 update arr i t = fst (withMutArray size1 action)
   where
     size1 = isize arr
@@ -880,7 +880,7 @@ makeKeys seed cnt = loop (mkStdGen seed) cnt []
   where
     loop _g i ans | i <= 0 = ans
     loop g i ans = case genKey g of
-      (key, g2) -> loop g2 (i -1) (key : ans)
+      (key, g2) -> loop g2 (i - 1) (key : ans)
 
 testt :: Int -> IO ()
 testt n = do
@@ -961,8 +961,8 @@ histogram :: KeyMap v -> PA.MutableArray s Int -> ST s ()
 histogram Empty _ = pure ()
 histogram (One _ x) marr = increment marr 1 >> histogram x marr
 histogram (Leaf _ _) _ = pure ()
-histogram (BitmapIndexed _ arr) marr = increment marr (isize arr -1) >> mapM_ (\x -> histogram x marr) arr
-histogram (Full arr) marr = increment marr (intSize -1) >> mapM_ (\x -> histogram x marr) arr
+histogram (BitmapIndexed _ arr) marr = increment marr (isize arr - 1) >> mapM_ (\x -> histogram x marr) arr
+histogram (Full arr) marr = increment marr (intSize - 1) >> mapM_ (\x -> histogram x marr) arr
 histogram (Two _ x y) marr = increment marr 2 >> histogram x marr >> histogram y marr
 
 histo :: KeyMap v -> PA.Array Int
@@ -971,7 +971,7 @@ histo x = fst (withMutArray intSize process)
     process marr = do initialize (intSize - 1); histogram x marr
       where
         initialize n | n < 0 = pure ()
-        initialize n = mwrite marr n 0 >> initialize (n -1)
+        initialize n = mwrite marr n 0 >> initialize (n - 1)
 
 bpairs :: [Key]
 bpairs = makeKeys 99 1500000
@@ -1032,7 +1032,7 @@ testlookup seed n = all ok results
     ps = zip (makeKeys seed n) [0 ..]
     keymap :: KeyMap Int
     keymap = fromList ps
-    results = [(i, lookupHM (fst (ps !! i)) keymap) | i <- [0 .. (n -1)]]
+    results = [(i, lookupHM (fst (ps !! i)) keymap) | i <- [0 .. (n - 1)]]
     ok (_, Just _) = True
     ok (i, Nothing) =
       error
@@ -1201,8 +1201,8 @@ getBitmap n arr lo hi = (size, segments, bitmap)
 contiguous :: Int -> Int -> Int -> Int -> PArray ([Int], b) -> Int
 contiguous _n _val i _maxi _arr | i < 0 = i
 contiguous _n _val i _maxi arr | i >= isize arr = isize arr - 1
-contiguous _n _val i maxi _arr | i > maxi = i -1 -- Do not look outside the valid range for matching val
-contiguous n val i maxi arr = if (fst (index arr i) !! n) == val then contiguous n val (i + 1) maxi arr else (i -1)
+contiguous _n _val i maxi _arr | i > maxi = i - 1 -- Do not look outside the valid range for matching val
+contiguous n val i maxi arr = if (fst (index arr i) !! n) == val then contiguous n val (i + 1) maxi arr else (i - 1)
 
 -- | compute the row ranges where the 'n' column has the same value 'val', we assume the rows are sorted
 --   in ascending order, and so is the list of 'vals'

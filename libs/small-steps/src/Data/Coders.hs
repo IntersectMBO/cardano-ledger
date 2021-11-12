@@ -697,7 +697,7 @@ getSparseBlock :: Maybe Int -> t -> (Word -> Field t) -> Set Word -> String -> D
 getSparseBlock (Just 0) initial _pick seen _name = pure (initial, seen)
 getSparseBlock (Just n) initial pick seen name = do
   (transform, seen2) <- applyField pick seen name
-  getSparseBlock (Just (n -1)) (transform initial) pick seen2 name
+  getSparseBlock (Just (n - 1)) (transform initial) pick seen2 name
 getSparseBlock Nothing initial pick seen name =
   decodeBreakOr >>= \case
     True -> pure (initial, seen)

@@ -96,5 +96,5 @@ combinedCDDL = do
   base <- BSL.readFile "cddl-files/shelley.cddl"
   crypto <- BSL.readFile "cddl-files/real/crypto.cddl"
   extras <- BSL.readFile "cddl-files/mock/extras.cddl"
-  --extras contains the types whose restrictions cannot be expressed in CDDL
+  -- extras contains the types whose restrictions cannot be expressed in CDDL
   pure $ base <> crypto <> extras

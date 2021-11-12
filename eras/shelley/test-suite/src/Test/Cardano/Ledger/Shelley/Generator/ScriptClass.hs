@@ -268,7 +268,7 @@ exponential :: Integer -> Integer -> Gen Integer
 exponential minc maxc = QC.frequency spread
   where
     width = (maxc - minc) `div` n
-    deltas = [QC.choose (minc + (i -1) * width, minc + i * width) | i <- [1 .. n]]
+    deltas = [QC.choose (minc + (i - 1) * width, minc + i * width) | i <- [1 .. n]]
     scales = [1, 2, 4, 6, 4, 2, 1]
     n = fromIntegral (length scales)
     spread = zip scales deltas

@@ -56,7 +56,7 @@ genTestCase numUTxO numAddr = do
   addrs :: [Addr C_Crypto] <- replicateM numAddr arbitrary
   let packedAddrs = Seq.fromList addrs
   txOuts <- replicateM numUTxO $ do
-    i <- choose (0, numAddr -1)
+    i <- choose (0, numAddr - 1)
     let addr = Seq.index packedAddrs i
     pure $
       TxOutCompact
