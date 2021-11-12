@@ -6,26 +6,25 @@ in addition to those that are already defined in the Shelley specification~\cite
 
 \vspace{12pt}
 \begin{tabular}{lp{5in}}
+  $\ExUnits$ &
+  $\ExUnits$ is made up of two integer values, representing abstract notions of the
+  relative memory usage and script execution steps respectively.
+  We give it the structure of a partially ordered monoid via its product structure,
+  i.e. addition and comparisons are defined point-wise.
+  \\
+  $\Prices$ &
+  $\Prices$ consists of two rational numbers that correspond to the components of $\ExUnits$:
+  the price per unit of memory and price per reduction step.
+  \\
   $\CostMod$ &
-  $c\in\CostMod$ is the vector of coefficients that are used to compute
-  a value $exu\in\ExUnits$ given a vector of some resource primitives. The mapping is defined
-  concretely by the specific version of the Plutus interpreter that is associated with $\Language$.
+  A cost model is a vector of coefficients that are used to compute
+  the execution units required to execute a script. Its specifics depend on
+  specific versions of the Plutus interpreter it is used with.
   We keep this type as abstract in the specification, see \cite{plutuscore} and \cite{plutustech}
   for details.
   \\
   $\Language$ &
   This represents phase-2 language types. Currently there is only $\PlutusVI$.
-  \\
-  $\Prices$ &
-  $\var{(pr_{mem}, pr_{steps})}\in \Prices$ consists of two rational numbers
-  that correspond to the components of $\ExUnits$:
-  $pr_{mem}$ is the price per unit of memory, and $pr_{steps}$ is the price per
-  reduction step. This is used to calculate the cost for a specific script execution.
-  \\
-  $\ExUnits$ &
-  $(mem, steps)\in \ExUnits$ is made up of two integer values.
-  These represent abstract notions of the relative memory usage and script execution steps,
-  respectively. We give it the structure of a partially ordered monoid via its product structure, i.e. addition and comparisons are defined point-wise.
   \\
   $\LangDepView$ &
   A pair of two byte strings, where the first represents the serialized language tag (eg. the tag for $\PlutusVI$),
@@ -124,31 +123,27 @@ signatures that must be checked during validation.
   \emph{Abstract types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad\qquad\qquad}r}
-      \var{cm} & \CostMod & \text{Coefficients for the cost model}
+    \begin{array}{l@{\qquad\qquad\qquad}r}
+      \CostMod & \text{Coefficients for the cost model}
     \end{array}
   \end{equation*}
   %
   \emph{Derived types}
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\quad=\quad}l@{\qquad}r}
-      \var{lg}
-      & \Language
+    \begin{array}{l@{\quad=\quad}l@{\qquad}r}
+      \Language
       & \{\PlutusVI, \dotsb\}
       & \text{Script Language}
       \\
-      \var{(pr_{mem}, pr_{steps})}
-      & \Prices
+      \Prices
       & \mathsf{Rational} \times \mathsf{Rational}
       & \text {Coefficients for $\ExUnits$ prices}
       \\
-      \var{(mem, steps)}
-      & \ExUnits
+      \ExUnits
       & \N \times \N
       & \text{Abstract execution units}
       \\
-      \var{ldv}
-      & \LangDepView
+      \LangDepView
       & \ByteString~\times~\ByteString
       & \text{Language Tag and PParams view}
     \end{array}
@@ -195,7 +190,7 @@ signatures that must be checked during validation.
   \emph{Helper Functions}
   %
   \begin{align*}
-    & \fun{getLanguageView} \in \PParams \to \Language \to \LangDepView \\
+    & \fun{getLanguageView} : \PParams \to \Language \to \LangDepView \\
     & \fun{getLanguageView}~\var{pp}~\PlutusVI = (\fun{serialize}~\PlutusVI, ~ (\fun{serialize}~(\fun{costmdls}~{pp}~\{\PlutusVI\})))
   \end{align*}
   \caption{Definitions Used in Protocol Parameters}

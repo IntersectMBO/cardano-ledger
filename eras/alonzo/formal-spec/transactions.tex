@@ -68,66 +68,59 @@ We add the following helper functions:
   \emph{Abstract types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\quad\quad\quad\quad}r}
-      \var{wph} &\ScriptIntegrityHash & \text{Script data hash}\\
-      \var{plc} & \ScriptPlutus & \text{Plutus core scripts} \\
-      \var{d} & \Data & \text{Generic script data}
+    \begin{array}{l@{\quad\quad\quad\quad}r}
+      \ScriptIntegrityHash & \text{Script data hash}\\
+      \ScriptPlutus & \text{Plutus core scripts} \\
+      \Data & \text{Generic script data}
     \end{array}
   \end{equation*}
   %
   \emph{Script types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{sc} & \ScriptPhTwo & \ScriptPlutus \\
-      \var{sc} & \Script & \ScriptPhOne \uniondistinct \ScriptPhTwo \\
-      \var{isv} & \IsValid & \Bool \\
-      \var{d} & \Datum & \Data \\
-      \var{r} & \Redeemer & \Data
+    \begin{array}{l@{\qquad=\qquad}lr}
+      \ScriptPhTwo & \ScriptPlutus \\
+      \Script & \ScriptPhOne \uniondistinct \ScriptPhTwo \\
+      \IsValid & \Bool \\
+      \Datum & \Data \\
+      \Redeemer & \Data
     \end{array}
   \end{equation*}
 %
   \emph{Derived types}
   %
   \begin{equation*}
-    \begin{array}{r@{~\in~}l@{\qquad=\qquad}lr}
-      \var{vi}
-      & \ValidityInterval
+    \begin{array}{l@{\qquad=\qquad}lr}
+      \ValidityInterval
       & \Slot^? \times \Slot^?
-%      & \text{validity interval}
       \\
-      \var{txout}
-      & \TxOut
+      \TxOut
       & \Addr \times \Value \times \hldiff{\DataHash^?}
-%      & \text{transaction outputs in a transaction}
       \\
-      \var{tag}
-      & \Tag
+      \Tag
       & \{\mathsf{Spend},~\mathsf{Mint},~\mathsf{Cert},~\mathsf{Rewrd}\}
       \\
-      \var{rdptr}
-      & \RdmrPtr
+      \RdmrPtr
       & \Tag \times \Ix
-%      & \text{reverse pointer to thing dv is for}
     \end{array}
   \end{equation*}
   %
   \emph{Helper Functions}
   %
   \begin{align*}
-    \fun{language}& \in \Script \to \Language^?\\
-    \fun{hashData}& \in \Data \to \DataHash
+    \fun{language}& : \Script \to \Language^?\\
+    \fun{hashData}& : \Data \to \DataHash
     \nextdef
-    \fun{getCoin}& \in \TxOut \to \Coin \\
-    \fun{getCoin}&~\hldiff{{(\_, \var{v}, \_)}} ~=~\fun{valueToCoin}~{v}
+    \fun{getCoin}& : \TxOut \to \Coin \\
+    \fun{getCoin}&~\hldiff{{(\_, \var{v}, \_)}}  = \fun{valueToCoin}~{v}
   \end{align*}
   %
   \begin{align*}
-  &\fun{hashScriptIntegrity} \in\PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits) \\
+  &\fun{hashScriptIntegrity} : \PParams \to \powerset{\Language} \to (\RdmrPtr \mapsto \Redeemer \times \ExUnits) \\
   &~~~~ \to (\DataHash \mapsto \Datum) \to \ScriptIntegrityHash^? \\
-  &\fun{hashScriptIntegrity}~{pp}~{langs}~{rdmrs}~{dats}~=~ \\
+  &\fun{hashScriptIntegrity}~{pp}~{langs}~{rdmrs}~{dats} =  \\
                     &~~~~ \begin{cases}
-                          \Nothing & rdmrs~=~\emptyset \land langs~=~\emptyset \land dats~=~\emptyset \\
+                          \Nothing & rdmrs = \emptyset \land langs = \emptyset \land dats = \emptyset \\
                           \fun{hash} (rdmrs, dats, \{ \fun{getLanguageView}~pp~l \mid l \in langs \}) & \text{otherwise}
                         \end{cases}
   \end{align*}
@@ -141,18 +134,18 @@ We add the following helper functions:
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
-      \var{wits} ~\in~ \TxWitness ~=~
+      \TxWitness =
        & (\VKey \mapsto \Sig) & \fun{txwitsVKey} & \text{VKey signatures}\\
        & \times ~(\ScriptHash \mapsto \Script)  & \fun{txscripts} & \text{All scripts}\\
        & \times~ \hldiff{(\DataHash \mapsto \Datum)} & \hldiff{\fun{txdats}} & \text{All datum objects}\\
-       & \times ~\hldiff{(\RdmrPtr \mapsto \Redeemer \times \ExUnits)}& \hldiff{\fun{txrdmrs}}& \text{Redeemers/budget}\\
+       & \times ~\hldiff{(\RdmrPtr \mapsto \Redeemer \times \ExUnits)}& \hldiff{\fun{txrdmrs}}& \text{Redeemers/budget}
     \end{array}
   \end{equation*}
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
-      \var{txbody} ~\in~ \TxBody ~=~
-      & \powerset{\TxIn} & \fun{txinputs}& \text{Inputs}\\
+      \TxBody =
+      & \powerset{\TxIn} & \fun{txins}& \text{Inputs}\\
       & \times ~\hldiff{\powerset{\TxIn}} & \hldiff{\fun{collateral}} & \text{Collateral inputs}\\
       & \times ~(\Ix \mapsto \TxOut) & \fun{txouts}& \text{Outputs}\\
       & \times~ \seqof{\DCert} & \fun{txcerts}& \text{Certificates}\\
@@ -170,7 +163,7 @@ We add the following helper functions:
   %
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
-      \var{tx} ~\in~ \Tx ~=~
+      \Tx =
       & \TxBody & \fun{txbody} & \text{Body}\\
       & \times ~\TxWitness & \fun{txwits} & \text{Witnesses}\\
       & \times ~\hldiff{\IsValid} & \hldiff{\fun{isValid}}&\text{Validation tag}\\
@@ -224,12 +217,14 @@ the body of the transaction:
     that are collected (into the fee pot) to cover a percentage of
     transaction fees (usually $100$ percent or more)
     \emph{in case the transaction contains failing phase-2 scripts}. They are not collected otherwise.
-    The purpose of these is to cover the resource use costs incurred by block producers running not only
-    scripts that validate, but the failing one also. Only the inputs that are locked by VKeys can
-    be used for collateral, and they must only contain Ada.
+    The purpose of the collateral is to cover the resource use costs
+    incurred by block producers running scripts that do not validate.
+
+    Collateral inputs behave like regular inputs, except that they
+    must be VKey locked and can only contain Ada. See \ref{fig:functions:utxo}.
 
     It is permitted to use the same inputs as both collateral and a regular inputs, as exactly
-    one set of inputs is ever collected : collateral ones in the case of script failure, and regular inputs
+    one set of inputs is ever collected: collateral ones in the case of script failure, and regular inputs
     in the case when all scripts validate.
 
   \item There is a new field called $\fun{reqSignerHashes}$ that is used to specify a set of hashes
@@ -261,18 +256,16 @@ A complete transaction is comprised of:
   that are executed during the script execution phase validate.
   The correctness of the tag is verified as part of the ledger rules, and the block is
   deemed to be invalid if it is applied incorrectly.
-  If it is set to $\False$, then the block can be re-applied without script re-validation.
-  This tag cannot be signed, since it is applied by the block producer.
+  It can be used to re-apply blocks without script re-validation.
+  Since this tag is not part of the body, i.e. it is not signed, the block producer can
+  (and must) choose the correct value.
   \item any auxiliary data.
 \end{enumerate}
-
-Note that unlike in Shelley or ShelleyMA eras, transactions inside blocks and transactions
-a user submits are now of different types. A transaction inside a block is composed of
-the user-submitted transaction paired with the $\IsValid$ tag, which is
-added by the block producer. The user cannot
-add their own tag because of how this tag is used in transaction validation, see
-Section~\ref{sec:two-phase}.
-
+\begin{note}
+  In the implementation the $\IsValid$ tag is part of a user-submitted
+  transaction, but it is ignored and re-computed by the block
+  producer.
+\end{note}
 \subsection{Additional Role of Signatures on TxBody}
 
 The transaction body and the UTxO must uniquely determine all the data
@@ -287,14 +280,14 @@ with the datum hashes these UTxOs contain), and also the posted
 certificates, minting policies, and reward addresses do not need to be signed.
 The optional datum objects, however, could be stripped from the transaction without making
 it invalid. The optional datums are stored in the same map the required ones, so,
-for this reason, we do include all datum objects in the witness and PP hash calculation.
+for this reason, we do include all datum objects in the script integrity hash calculation.
 %
 The hash of the indexed redeemer structure and the protocol parameters that are used by
 script interpreters are included in the body of the transaction, as these are composed
 by the transaction author rather than
 fixed via a hash on the ledger. In the future, other parts of the ledger
 state may also need to be included in this hash, if they are passed as
-arguments to new script interpreter.
+arguments to a new script interpreter.
 
 \subsection{Data required for script validation.}
 \label{sec:script-data}
