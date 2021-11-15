@@ -73,24 +73,13 @@ insertUTxO utxo stateKey = do
       txKey <-
         insert $ Tx {txInIx = fromIntegral txIx, txInId = txId, txOut = out}
       txsKey <-
-        case toTxOut' mempty out of
-          TxOutNoStake' out' -> do
-            insert $
-              Txs
-                { txsInIx = fromIntegral txIx,
-                  txsInId = txId,
-                  txsOut = out',
-                  txsStakeCredential = Nothing
-                }
-          TxOut' out' cred -> do
-            credId <- insertGetKey (Credential (Keys.asWitness cred))
-            insert $
-              Txs
-                { txsInIx = fromIntegral txIx,
-                  txsInId = txId,
-                  txsOut = out',
-                  txsStakeCredential = Just credId
-                }
+        insert $
+          Txs
+            { txsInIx = fromIntegral txIx,
+              txsInId = txId,
+              txsOut = out,
+              txsStakeCredential = Nothing
+            }
       insert_ $
         UtxoEntry
           { utxoEntryTxId = txKey,
@@ -460,22 +449,65 @@ sourceUTxO =
   selectSource [] []
     .| mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId (fromIntegral txInIx), txOut))
 
-sourceUTxOs ::
+sourceWithSharingUTxO ::
   MonadResource m =>
   Map.Map (Credential.StakeCredential C) a ->
+  ConduitM () (TxIn.TxIn C, Alonzo.TxOut CurrentEra) (ReaderT SqlBackend m) ()
+sourceWithSharingUTxO stakeCredentials =
+  sourceUTxO .| mapC (fmap internTxOut)
+  where
+    internTxOut = \case
+      Alonzo.TxOut_AddrHash28_AdaOnly cred a b c d e ->
+        Alonzo.TxOut_AddrHash28_AdaOnly (intern (Keys.coerceKeyRole cred) stakeCredentials) a b c d e
+      Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 cred a b c d e o p q r ->
+        Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32
+          (intern (Keys.coerceKeyRole cred) stakeCredentials)
+          a
+          b
+          c
+          d
+          e
+          o
+          p
+          q
+          r
+      out -> out
+
+sourceOrigUTxO' ::
+  MonadResource m =>
   ConduitM () (TxIn.TxIn C, TxOut') (ReaderT SqlBackend m) ()
-sourceUTxOs stakeCredentials =
+sourceOrigUTxO' =
   selectSource [] []
     .| mapMC
       ( \(Entity _ Txs {..}) -> do
           let txi = TxIn.TxIn txsInId (fromIntegral txsInIx)
-          case txsStakeCredential of
-            Nothing -> pure (txi, TxOutNoStake' txsOut)
-            Just credId -> do
-              Credential credential <- getJust credId
-              let !sharedCredential = intern (Keys.coerceKeyRole credential) stakeCredentials
-              pure (txi, TxOut' txsOut sharedCredential)
+          pure (txi, toOrigTxOut' txsOut)
       )
+
+sourceUTxO' ::
+  MonadResource m =>
+  ConduitM () (TxIn.TxIn C, TxOut') (ReaderT SqlBackend m) ()
+sourceUTxO' =
+  selectSource [] []
+    .| mapMC
+      ( \(Entity _ Txs {..}) -> do
+          let txi = TxIn.TxIn txsInId (fromIntegral txsInIx)
+          pure (txi, toTxOut' txsOut)
+      )
+
+sourceWithSharingUTxO' ::
+  MonadResource m =>
+  Map.Map (Credential.StakeCredential C) a ->
+  ConduitM () (TxIn.TxIn C, TxOut') (ReaderT SqlBackend m) ()
+sourceWithSharingUTxO' stakeCredentials =
+  sourceUTxO' .| mapC (fmap internTxOut')
+  where
+    internTxOut' = \case
+      TxOutStaking' cred a b c d ada ->
+        TxOutStaking' (intern (Keys.coerceKeyRole cred) stakeCredentials) a b c d ada
+      TxOutStakingDH' cred a b c d ada o p q r ->
+        TxOutStakingDH' (intern (Keys.coerceKeyRole cred) stakeCredentials) a b c d ada o p q r
+      out' -> out'
 
 foldDbUTxO ::
   MonadUnliftIO m =>
@@ -754,7 +786,7 @@ loadSnapShotsWithSharingM fp = runSqlite fp . getSnapShotsWithSharingM
 -- getLedgerStateWithSharing ::
 --      MonadUnliftIO m
 --   => T.Text
---   -> m (Shelley.LedgerState CurrentEra, IntMap.IntMap (Map.Map (TxIn.TxId C) TxOut'))
+--   -> m (Shelley.LedgerState CurrentEra, IntMap.IntMap (Map.Map (TxIn.TxId C) (TxOut')))
 -- getLedgerStateWithSharing fp =
 --   runSqlite fp $ do
 --     ledgerState@LedgerState {..} <- getJust lsId
@@ -767,7 +799,7 @@ loadSnapShotsWithSharingM fp = runSqlite fp . getSnapShotsWithSharingM
 -- getLedgerStateDStateTxOutSharing ::
 --      MonadUnliftIO m
 --   => T.Text
---   -> m (Shelley.LedgerState CurrentEra, Map.Map (TxIn.TxIn C) TxOut')
+--   -> m (Shelley.LedgerState CurrentEra, Map.Map (TxIn.TxIn C) (TxOut'))
 -- getLedgerStateDStateTxOutSharing fp =
 --   runSqlite fp $ do
 --     ledgerState@LedgerState {..} <- getJust lsId
@@ -780,7 +812,7 @@ loadSnapShotsWithSharingM fp = runSqlite fp . getSnapShotsWithSharingM
 -- getLedgerStateTxOutSharing ::
 --      MonadUnliftIO m
 --   => T.Text
---   -> m (Shelley.LedgerState CurrentEra, Map.Map (TxIn.TxIn C) TxOut')
+--   -> m (Shelley.LedgerState CurrentEra, Map.Map (TxIn.TxIn C) (TxOut'))
 -- getLedgerStateTxOutSharing fp =
 --   runSqlite fp $ do
 --     ledgerState@LedgerState {..} <- getJust lsId
@@ -790,15 +822,70 @@ loadSnapShotsWithSharingM fp = runSqlite fp . getSnapShotsWithSharingM
 --     m <- runConduitFold (sourceUTxOs stakeCredentials) noSharing
 --     pure (ls, m)
 
--- getLedgerStateWithSharingKeyMap ::
---      MonadUnliftIO m
---   => T.Text
---   -> m (Shelley.LedgerState CurrentEra, IntMap.IntMap (KeyMap.KeyMap TxOut'))
--- getLedgerStateWithSharingKeyMap fp =
---   runSqlite fp $ do
---     ledgerState@LedgerState {..} <- getJust lsId
---     dstate <- getDStateWithSharing ledgerStateDstateId
---     let stakeCredentials = Shelley._rewards dstate
---     ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
---     m <- runConduitFold (sourceUTxOs stakeCredentials) txIxSharingKeyMap
---     pure (ls, m)
+getLedgerStateNoSharingKeyMap ::
+  MonadUnliftIO m =>
+  T.Text ->
+  m
+    ( Shelley.LedgerState CurrentEra,
+      IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
+    )
+getLedgerStateNoSharingKeyMap fp =
+  runSqlite fp $ do
+    ledgerState@LedgerState {..} <- getJust lsId
+    dstate <- getDStateNoSharing ledgerStateDstateId
+    m <- runConduitFold sourceUTxO txIxSharingKeyMap
+    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
+    pure (ls, m)
+
+getLedgerStateWithSharingKeyMap ::
+  MonadUnliftIO m =>
+  T.Text ->
+  m
+    ( Shelley.LedgerState CurrentEra,
+      IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
+    )
+getLedgerStateWithSharingKeyMap fp =
+  runSqlite fp $ do
+    ledgerState@LedgerState {..} <- getJust lsId
+    dstate <- getDStateNoSharing ledgerStateDstateId
+    let stakeCredentials = Shelley._rewards dstate
+    m <- runConduitFold (sourceWithSharingUTxO stakeCredentials) txIxSharingKeyMap
+    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
+    pure (ls, m)
+
+getLedgerStateNoSharingOrigKeyMap' ::
+  MonadUnliftIO m =>
+  T.Text ->
+  m (Shelley.LedgerState CurrentEra, IntMap.IntMap (KeyMap.KeyMap TxOut'))
+getLedgerStateNoSharingOrigKeyMap' fp =
+  runSqlite fp $ do
+    ledgerState@LedgerState {..} <- getJust lsId
+    dstate <- getDStateNoSharing ledgerStateDstateId
+    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
+    m <- runConduitFold sourceOrigUTxO' txIxSharingKeyMap
+    pure (ls, m)
+
+getLedgerStateNoSharingKeyMap' ::
+  MonadUnliftIO m =>
+  T.Text ->
+  m (Shelley.LedgerState CurrentEra, IntMap.IntMap (KeyMap.KeyMap TxOut'))
+getLedgerStateNoSharingKeyMap' fp =
+  runSqlite fp $ do
+    ledgerState@LedgerState {..} <- getJust lsId
+    dstate <- getDStateNoSharing ledgerStateDstateId
+    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
+    m <- runConduitFold sourceUTxO' txIxSharingKeyMap
+    pure (ls, m)
+
+getLedgerStateWithSharingKeyMap' ::
+  MonadUnliftIO m =>
+  T.Text ->
+  m (Shelley.LedgerState CurrentEra, IntMap.IntMap (KeyMap.KeyMap TxOut'))
+getLedgerStateWithSharingKeyMap' fp =
+  runSqlite fp $ do
+    ledgerState@LedgerState {..} <- getJust lsId
+    dstate <- getDStateNoSharing ledgerStateDstateId
+    let stakeCredentials = Shelley._rewards dstate
+    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
+    m <- runConduitFold (sourceWithSharingUTxO' stakeCredentials) txIxSharingKeyMap
+    pure (ls, m)

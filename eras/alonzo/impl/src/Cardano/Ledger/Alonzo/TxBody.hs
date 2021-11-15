@@ -21,7 +21,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Alonzo.TxBody
-  ( TxOut (TxOut, TxOutCompact, TxOutCompactDH),
+  ( TxOut (.., TxOut, TxOutCompact, TxOutCompactDH),
     TxBody
       ( TxBody,
         inputs,

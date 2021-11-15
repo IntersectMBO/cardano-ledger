@@ -56,12 +56,22 @@ main = do
     --   io "NewEpochState" loadNewEpochState binFp
     forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
       let dbFp = T.pack dbFpStr
-      forM_ mEpochStateEntity $ \ese ->
-        wgroup "EpochState" $ do
-          io "SnapShots (Vector) - no sharing" (loadSnapShotsNoSharingM dbFp) ese
-          io "SnapShots (Vector) - with sharing" (loadSnapShotsWithSharingM dbFp) ese
-          io "SnapShots - no sharing" (loadSnapShotsNoSharing dbFp) ese
-          io "SnapShots - with sharing" (loadSnapShotsWithSharing dbFp) ese
+      forM_ mEpochStateEntity $ \_ese ->
+        -- wgroup "EpochState" $ do
+        --   io "SnapShots - no sharing" (loadSnapShotsNoSharingM dbFp) _ese
+        --   io "SnapShots - with sharing" (loadSnapShotsWithSharingM dbFp) _ese
+        --   io "SnapShots (Vector) - no sharing" (loadSnapShotsNoSharing dbFp) _ese
+        --   io "SnapShots (Vector) - with sharing" (loadSnapShotsWithSharing dbFp) _ese
+        wgroup "DState+UTxO" $ do
+          io "IntMap (KeyMap TxId TxOut) (original)" getLedgerStateNoSharingOrigKeyMap' dbFp
+          io "IntMap (KeyMap TxId TxOut)" getLedgerStateNoSharingKeyMap dbFp
+          io "IntMap (KeyMap TxId TxOut) (sharing)" getLedgerStateWithSharingKeyMap dbFp
+          io "IntMap (KeyMap TxId TxOut')" getLedgerStateNoSharingKeyMap' dbFp
+          io "IntMap (KeyMap TxId TxOut') (sharing)" getLedgerStateWithSharingKeyMap' dbFp
+
+-- io "KeyMap TxId (IntMap TxOut)" getLedgerStateDStateTxIdSharingKeyMap dbFp
+-- io "IntMap (Map TxId TxOut)" getLedgerStateDStateTxIxSharing dbFp
+-- io "Map TxIn TxOut" getLedgerStateDStateSharing dbFp
 
 -- wgroup "Baseline" $ do
 --   io "DState" loadDStateNoSharing dbFp
