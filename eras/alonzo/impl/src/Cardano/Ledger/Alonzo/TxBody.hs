@@ -139,18 +139,14 @@ data TxOut era
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
       !(DataHash (Crypto era))
-  | SizeHash (CC.ADDRHASH (Crypto era)) ~ 28 =>
-    TxOut_AddrHash28_AdaOnly
+  | TxOut_AddrHash28_AdaOnly
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
-  | ( SizeHash (CC.ADDRHASH (Crypto era)) ~ 28,
-      SizeHash (CC.HASH (Crypto era)) ~ 32
-    ) =>
-    TxOut_AddrHash28_AdaOnly_DataHash32
+  | TxOut_AddrHash28_AdaOnly_DataHash32
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Word64 -- Payment Addr
       {-# UNPACK #-} !Word64 -- Payment Addr
@@ -266,14 +262,17 @@ viewCompactTxOut ::
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
-  TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal ->
-    (compactAddr addr, toCompactValue adaVal, SNothing)
-    where
-      addr = decodeAddress28 stakeRef a b c d
-  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h ->
-    (compactAddr addr, toCompactValue adaVal, SJust (decodeDataHash32 e f g h))
-    where
-      addr = decodeAddress28 stakeRef a b c d
+  TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal
+    | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) ->
+      (compactAddr (decodeAddress28 stakeRef a b c d), toCompactValue adaVal, SNothing)
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h
+    | Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32),
+      Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) ->
+      ( compactAddr (decodeAddress28 stakeRef a b c d),
+        toCompactValue adaVal,
+        SJust (decodeDataHash32 e f g h)
+      )
+  _ -> error "Impossible: Compacted and address or hash of non-standard size"
   where
     toCompactValue :: CompactForm Coin -> CompactForm (Core.Value era)
     toCompactValue ada =
@@ -295,14 +294,14 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal) =
-  (addr, inject (fromCompact adaVal), SNothing)
-  where
-    addr = decodeAddress28 stakeRef a b c d
-viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h) =
-  (addr, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
-  where
-    addr = decodeAddress28 stakeRef a b c d
+viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal)
+  | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
+    (decodeAddress28 stakeRef a b c d, inject (fromCompact adaVal), SNothing)
+viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h)
+  | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28),
+    Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) =
+    (decodeAddress28 stakeRef a b c d, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
+viewTxOut _ = error "Impossible: Compacted and address or hash of non-standard size"
 
 instance
   ( Era era,
