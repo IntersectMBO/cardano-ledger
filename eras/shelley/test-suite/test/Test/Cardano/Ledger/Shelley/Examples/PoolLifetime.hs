@@ -102,7 +102,6 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Control.Provenance (runProvM)
-import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (def)
 import Data.Group (invert)
 import qualified Data.Map.Strict as Map
@@ -1042,7 +1041,7 @@ alicePerfEx11 = applyDecay decayFactor alicePerfEx8 <> epoch4Likelihood
     blocks = 0
     t = leaderProbability f relativeStake (_d ppEx)
     -- everyone has delegated to Alice's Pool
-    Coin stake = VMap.foldMap fromCompact (EB.unStake . EB._stake $ snapEx5 @c)
+    Coin stake = EB.sumAllStake (EB._stake $ snapEx5 @c)
     relativeStake = fromRational (stake % supply)
     Coin supply = maxLLSupply <-> reserves12
     f = activeSlotCoeff testGlobals

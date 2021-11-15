@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
     Stake (..),
     maxPool,
     poolStake,
+    sumAllStake,
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
@@ -581,15 +582,15 @@ rewardOld
   slotsPerEpoch = (rewards', hs)
     where
       totalBlocks = sum b
-      Coin activeStake = VMap.foldMap fromCompact $ unStake stake
+      Coin activeStake = sumAllStake stake
       results :: [(KeyHash 'StakePool (Crypto era), Maybe (Map (Credential 'Staking (Crypto era)) Coin), Likelihood)]
       results = do
         (hk, pparams) <- VMap.toAscList poolParams
         let sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
             sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
             blocksProduced = Map.lookup hk b
-            actgr@(Stake s) = poolStake hk delegs stake
-            Coin pstake = VMap.foldMap fromCompact s
+            actgr = poolStake hk delegs stake
+            Coin pstake = sumAllStake actgr
             rewardMap = case blocksProduced of
               Nothing -> Nothing -- This is equivalent to calling rewarOnePool with n = 0
               Just n ->
@@ -775,7 +776,7 @@ reward
   slotsPerEpoch = completeM pulser
     where
       totalBlocks = sum b
-      Coin activeStake = VMap.foldMap fromCompact $ unStake stake
+      Coin activeStake = sumAllStake stake
       free =
         FreeVars
           { b,

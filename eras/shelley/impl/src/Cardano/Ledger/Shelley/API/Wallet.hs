@@ -226,7 +226,7 @@ poolsByTotalStakeFraction globals ss =
   where
     snap@(EB.SnapShot stake _ _) = currentSnapshot ss
     Coin totalStake = getTotalStake globals ss
-    Coin activeStake = VMap.foldMap fromCompact $ EB.unStake stake
+    Coin activeStake = EB.sumAllStake stake
     stakeRatio = activeStake % totalStake
     PoolDistr poolsByActiveStake = calculatePoolDistr snap
     poolsByTotalStake = Map.map toTotalStakeFrac poolsByActiveStake
@@ -279,7 +279,7 @@ getNonMyopicMemberRewards globals ss creds =
         [ ( k,
             ( percentile' (histLookup k),
               p,
-              toShare . VMap.foldMap fromCompact . EB.unStake $ EB.poolStake k delegs stake
+              toShare . EB.sumAllStake $ EB.poolStake k delegs stake
             )
           )
           | (k, p) <- VMap.toAscList poolParams
@@ -424,7 +424,7 @@ getRewardInfoPools globals ss =
             unPerformanceEstimate $ percentile' $ histLookup key
         }
       where
-        pstake = VMap.foldMap fromCompact . EB.unStake $ EB.poolStake key delegs stakes
+        pstake = EB.sumAllStake $ EB.poolStake key delegs stakes
         ostake = sumPoolOwnersStake poolp stakes
 
 {-# DEPRECATED getRewardInfo "Use 'getRewardProvenance' instead." #-}
