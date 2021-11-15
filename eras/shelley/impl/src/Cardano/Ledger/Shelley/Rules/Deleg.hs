@@ -121,7 +121,7 @@ data DelegPredicateFailure era
       !SlotNo -- current slot
       !SlotNo -- Core.EraRule "MIR" must be submitted before this slot
   | DuplicateGenesisVRFDELEG
-      !(Hash (Crypto era) (VerKeyVRF (Crypto era))) --VRF KeyHash which is already delegated to
+      !(Hash (Crypto era) (VerKeyVRF (Crypto era))) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
   | MIRNegativesNotCurrentlyAllowed
   | InsufficientForTransferDELEG

@@ -126,6 +126,6 @@ class EncodeMint v where
   encodeMint :: v -> Encoding
 
 instance EncodeMint Coin where
-  --we expect nothing to be able to successfully decode this
-  --this is an alternative to throwing an error at encoding
+  -- we expect nothing to be able to successfully decode this
+  -- this is an alternative to throwing an error at encoding
   encodeMint = toCBOR

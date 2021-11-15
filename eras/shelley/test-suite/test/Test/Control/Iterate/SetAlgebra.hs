@@ -82,10 +82,10 @@ m0 :: Map.Map Int Char
 m0 = Map.fromList [(1, 'a'), (2, 'z'), (4, 'g')]
 
 m12 :: Map.Map Int Char
-m12 = Map.fromList [(n, chars !! n) | n <- [0 .. length chars -1]]
+m12 = Map.fromList [(n, chars !! n) | n <- [0 .. length chars - 1]]
 
 m22 :: Map.Map Int Char
-m22 = Map.fromList [(57 + n, chars !! n) | n <- [0 .. length chars -1]]
+m22 = Map.fromList [(57 + n, chars !! n) | n <- [0 .. length chars - 1]]
 
 mN :: Int -> Int -> Map.Map Int Char
 mN start size = Map.fromList [(n, chars !! (n `mod` nchars)) | n <- [start .. start + size]]

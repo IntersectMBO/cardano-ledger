@@ -157,7 +157,7 @@ genHash = mkHash <$> Gen.int (Range.linear 0 1000)
 
 genWords :: Natural -> Gen [Word8]
 genWords n
-  | n > 0 = (:) <$> Gen.word8 Range.constantBounded <*> genWords (n -1)
+  | n > 0 = (:) <$> Gen.word8 Range.constantBounded <*> genWords (n - 1)
   | otherwise = pure []
 
 genPParams :: Gen (PParams era)

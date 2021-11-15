@@ -65,19 +65,19 @@ checkCanonicalTerm = do
     TypeBytesIndef -> fail "indefinite bytes encoding"
     TypeString -> t <$> decodeStringCanonical
     TypeStringIndef -> fail "indefinite string encoding"
-    --TypeListLen ->
-    --TypeListLen64 ->
+    -- TypeListLen ->
+    -- TypeListLen64 ->
     TypeListLenIndef -> fail "indefinite list encoding"
     TypeMapLen -> checkCanonicalMap
     TypeMapLen64 -> checkCanonicalMap
     TypeMapLenIndef -> fail "indefinite map encoding"
-    --TypeTag ->
-    --TypeTag64 ->
-    --TypeBool ->
-    --TypeNull ->
+    -- TypeTag ->
+    -- TypeTag64 ->
+    -- TypeBool ->
+    -- TypeNull ->
     TypeSimple -> t <$> decodeSimpleCanonical
-    --TypeBreak ->
-    --TypeInvalid ->
+    -- TypeBreak ->
+    -- TypeInvalid ->
     _ -> fail "canonicity check not implemented"
 
 {-

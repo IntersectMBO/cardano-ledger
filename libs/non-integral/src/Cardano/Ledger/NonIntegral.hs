@@ -39,7 +39,7 @@ ipow' x n
 
 ipow :: Fractional a => a -> Integer -> a
 ipow x n
-  | n < 0 = 1 / ipow' x (- n)
+  | n < 0 = 1 / ipow' x (-n)
   | otherwise = ipow' x n
 
 logAs :: (Num a) => a -> [a]
@@ -176,7 +176,7 @@ splitLn x = (n, x')
 
 exp' :: (RealFrac a, Show a) => a -> a
 exp' x
-  | x < 0 = 1 / exp' (- x)
+  | x < 0 = 1 / exp' (-x)
   | otherwise = ipow x' n
   where
     (n, x_) = scaleExp x

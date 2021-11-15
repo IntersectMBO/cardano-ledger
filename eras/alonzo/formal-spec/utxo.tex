@@ -5,35 +5,35 @@
   \emph{Functions}
   %
   \begin{align*}
-    & \fun{isTwoPhaseScriptAddress} \in \Tx \to \Addr \to \Bool \\
+    & \fun{isTwoPhaseScriptAddress} : \Tx \to \Addr \to \Bool \\
     & \fun{isTwoPhaseScriptAddress}~tx~a = \\
       &\quad\begin{cases}
         \True  & a \in \AddrScr \land \fun{validatorHash}~a \mapsto s \in \fun{txscripts} (\fun{txwits}~tx) \land s \in \ScriptPhTwo \\
         \False & \text{otherwise}
       \end{cases}
                  \nextdef
-    & \fun{totExUnits} \in \Tx \to \ExUnits \\
+    & \fun{totExUnits} : \Tx \to \ExUnits \\
     & \fun{totExUnits}~\var{tx} = \sum_{r \in \fun{txrdmrs}~tx} \fun{exunits}~r
     \nextdef
-    & \fun{feesOK} \in \PParams \to \Tx \to \UTxO \to \Bool  \\
+    & \fun{feesOK} : \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
-    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
+    &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{txrdmrs}~tx \neq \emptyset \Rightarrow \\
     &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collateral}~{txb} \restrictdom \var{utxo}), a \in \AddrVKey) \\
     &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
-    &~~~~~~\wedge~ \var{balance}~*~100 \geq \txfee~{txb} * (\fun{collateralPercent}~pp))) \\
-    &~~~~~~\wedge~ \fun{collateral}~{tx}~ \neq~\{\}) \\
+    &~~~~~~\wedge~ \var{balance}*100 \geq \txfee{txb} * (\fun{collateralPercent}~pp))) \\
+    &~~~~~~\wedge~ \fun{collateral}~{tx} \neq \emptyset) \\
     &~~      \where \\
-    & ~~~~~~~ \var{txb}~=~\txbody{tx} \\
-    & ~~~~~~~ \var{balance}~=~\fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})
+    & ~~~~~~~ \var{txb} = \txbody{tx} \\
+    & ~~~~~~~ \var{balance} = \fun{ubalance}~(\fun{collateral}~{txb} \restrictdom \var{utxo})
     \nextdef
-    & \fun{cbalance} \in \UTxO \to \Coin \\
-    & \fun{cbalance}~\var{utxo}~=~ \fun{valueToCoin}~(\fun{ubalance}~\var{utxo})
+    & \fun{cbalance} : \UTxO \to \Coin \\
+    & \fun{cbalance}~\var{utxo} =  \fun{valueToCoin}~(\fun{ubalance}~\var{utxo})
     \nextdef
-    & \fun{txscriptfee} \in \Prices \to \ExUnits \to \Coin \\
+    & \fun{txscriptfee} : \Prices \to \ExUnits \to \Coin \\
     & \fun{txscriptfee}~(pr_{mem}, pr_{steps})~ (\var{mem, steps})
     = \fun{ceiling}~(\var{pr_{mem}}*\var{mem} + \var{pr_{steps}}*\var{steps})
     \nextdef
-    &\fun{minfee} \in \PParams \to \Tx \to \Coin \\
+    &\fun{minfee} : \PParams \to \Tx \to \Coin \\
     &\fun{minfee}~\var{pp}~\var{tx} = \\
     &~~(\fun{a}~\var{pp}) \cdot \fun{txSize}~\var{tx} + (\fun{b}~\var{pp}) +
     \hldiff{\fun{txscriptfee}~(\fun{prices}~{pp})~(\fun{totExunits}~(\fun{txbody}~{tx}))}
@@ -165,15 +165,15 @@ These include:
   %
   \emph{Abstract functions}
   \begin{align*}
-    &\fun{indexOf} \in \DCert \to \seqof{\DCert} \to \Ix^?\\
-    &\fun{indexOf} \in \AddrRWD \to \Wdrl \to \Ix^?\\
-    &\fun{indexOf} \in \TxIn \to \powerset{\TxIn} \to \Ix^?\\
-    &\fun{indexOf} \in \PolicyID \to \powerset{\PolicyID} \to \Ix^?
+    &\fun{indexOf} : \DCert \to \seqof{\DCert} \to \Ix^?\\
+    &\fun{indexOf} : \AddrRWD \to \Wdrl \to \Ix^?\\
+    &\fun{indexOf} : \TxIn \to \powerset{\TxIn} \to \Ix^?\\
+    &\fun{indexOf} : \PolicyID \to \powerset{\PolicyID} \to \Ix^?
   \end{align*}
   %
   \emph{Indexing functions}
   \begin{align*}
-    &\fun{indexedRdmrs} \in \Tx \to \ScriptPurpose \to (\Redeemer~\times~\ExUnits)^?\\
+    &\fun{indexedRdmrs} : \Tx \to \ScriptPurpose \to (\Redeemer~\times~\ExUnits)^?\\
     &\fun{indexedRdmrs}~tx~sp =
       \begin{cases}
         r        & (\fun{rdptr}~txb~sp)~ \mapsto r \in \fun{txrdmrs}~(\fun{txwits}~{tx}) \} \\
@@ -182,13 +182,13 @@ These include:
     & ~~\where \\
     & ~~\quad \var{txb} = \txbody{tx}
     \nextdef
-    &\fun{rdptr} ~\in~\TxBody~\to~\ScriptPurpose~ \to~ \RdmrPtr^? \\
-    &\fun{rdptr}~txb~sp~ =~
+    &\fun{rdptr} :\TxBody~\to~\ScriptPurpose~ \to~ \RdmrPtr^? \\
+    &\fun{rdptr}~txb~sp~ =
       \begin{cases}
-        (\mathsf{Cert},\fun{indexOf}~\var{sp}~(\fun{txcerts}~{txb}))   & \var{sp}~\in~\DCert \\
-        (\mathsf{Rewrd},\fun{indexOf}~\var{sp}~(\fun{txwdrls}~{txb}))   & \var{sp}~\in~\AddrRWD \\
-        (\mathsf{Mint},\fun{indexOf}~\var{sp}~(\dom (\fun{mint}~{txb})))    & \var{sp}~\in~\PolicyID \\
-        (\mathsf{Spend},\fun{indexOf}~\var{sp}~(\fun{txinputs}~{txb})) & \var{sp}~\in~\TxIn
+        (\mathsf{Cert},\fun{indexOf}~\var{sp}~(\fun{txcerts}~{txb}))   & \var{sp} \in \DCert \\
+        (\mathsf{Rewrd},\fun{indexOf}~\var{sp}~(\fun{txwdrls}~{txb}))   & \var{sp} \in \AddrRWD \\
+        (\mathsf{Mint},\fun{indexOf}~\var{sp}~(\dom (\fun{mint}~{txb})))    & \var{sp} \in \PolicyID \\
+        (\mathsf{Spend},\fun{indexOf}~\var{sp}~(\fun{txinputs}~{txb})) & \var{sp} \in \TxIn
       \end{cases}
   \end{align*}
   \caption{Indexing script and data objects}
@@ -207,7 +207,7 @@ validation context from the $\TxInfo$ summary.
 \begin{itemize}
 \item $\fun{epochInfoSlotToUTCTime}$ translates a slot number to system time if possible.
 This translation is implemented by the consensus algorithm (not the ledger), and requires
-two additional parameters to do this.
+two additional parameters to do this. Note that this does not depend on the clock of the node.
 
 If it is not possible to do this translation, $\Nothing$ is returned.
 The reason it may not be possible to translate is that the slot number
@@ -309,9 +309,9 @@ therefore vulnerable to the consequences of changing the slot length.
   \emph{Abstract Script Validation Functions}
   %
   \begin{align*}
-     &\fun{epochInfoSlotToUTCTime} \in \EpochInfo \to \SystemStart \to \Slot \to \UTCTime^? \\
+     &\fun{epochInfoSlotToUTCTime} : \EpochInfo \to \SystemStart \to \Slot \to \UTCTime^? \\
      &\text{Translate slot number to system time or fail} \\~\\
-     &\fun{runPLCScript} \in \CostMod \to \ScriptPlutus \to \ExUnits \to \seqof{\Data} \to
+     &\fun{runPLCScript} : \CostMod \to \ScriptPlutus \to \ExUnits \to \seqof{\Data} \to
      \IsValid \\
      &\text{Validate a Plutus script, taking resource limits into account}
   \end{align*}
@@ -365,8 +365,8 @@ evaluator.
   it evaluates them paired with all their
   inputs by calling the phase-2 script validator function, $\fun{runPLCScript}$ (see
   \ref{sec:txinfo} for details).
-  For phase-1 (timelock) scripts, it calls $\fun{evalTimelock}$. Note that although this
-  case is covered in the $\fun{evalScripts}$ definition, it should never be used, as
+  For phase-1 (timelock) scripts, it calls $\fun{evalTimelock}$. This case
+  is unused though, as
   the list of scripts and inputs that gets passed to the this function is constructed
   to contain only Plutus scripts. So, phase-1 scripts do not get evaluated twice.
 \end{itemize}
@@ -378,26 +378,26 @@ are caught during the application of the UTXOW rule (before these functions are 
 
 \begin{figure}[htb]
   \begin{align*}
-    & \fun{getDatum} \in \Tx \to \UTxO \to \ScriptPurpose \to \seqof{\Datum} \\
-    & \fun{getDatum}~{tx}~{utxo}~{sp}~=~
+    & \fun{getDatum} : \Tx \to \UTxO \to \ScriptPurpose \to \seqof{\Datum} \\
+    & \fun{getDatum}~{tx}~{utxo}~{sp} = 
       \begin{cases}
         [\var{d}] & \var{sp} \mapsto (\_, \_, h_d) \in \var{utxo}, \var{h_d}\mapsto \var{d} \in \fun{txdats}~(\fun{txwits}~tx) \\
         \epsilon  & \text{otherwise}
       \end{cases}
     \nextdef
-    & \fun{collectTwoPhaseScriptInputs} \in \EpochInfo \to \SystemStart \to \PParams \to \Tx \to \UTxO \to \\
+    & \fun{collectTwoPhaseScriptInputs} : \EpochInfo \to \SystemStart \to \PParams \to \Tx \to \UTxO \to \\
     & ~~~~ \seqof{(\Script \times \seqof{\Data} \times \ExUnits \times \CostMod)} \\
-    & \fun{collectTwoPhaseScriptInputs} ~\var{ei}~\var{sysSt}~\var{pp}~\var{tx}~ \var{utxo} ~=~ \\
-    & ~~\fun{toList} \{ (\var{script}, (\fun{getDatum}~tx~utxo~sp~++~[~\var{rdmr};~\fun{valContext}~\var{txinfo}~\var{sp}~]), \var{eu}, \var{cm}) \mid \\
+    & \fun{collectTwoPhaseScriptInputs} ~\var{ei}~\var{sysSt}~\var{pp}~\var{tx}~ \var{utxo}  =  \\
+    & ~~\fun{toList} \{ (\var{script}, (\fun{getDatum}~tx~utxo~sp ; \var{rdmr};\fun{valContext}~\var{txinfo}~\var{sp}), \var{eu}, \var{cm}) \mid \\
     & ~~~~(\var{sp}, \var{scriptHash}) \in \fun{scriptsNeeded}~{utxo}~{(\txbody{tx})}, \\
     & ~~~~\var{scriptHash}\mapsto \var{script}\in \fun{txscripts}~(\fun{txwits}~tx), \\
     & ~~~~(\var{rdmr}, \var{eu}) := \fun{indexedRdmrs}~tx~sp, \\
     & ~~~~\fun{language}~{script} \mapsto \var{cm} \in \fun{costmdls}~{pp}, \\
     & ~~~~\var{script} \in \ScriptPhTwo \} \\
     & \where \\
-    & ~~~~~~~ \var{txinfo}~=~\fun{txInfo}~\var{ei}~\var{sysSt}~(\fun{language}~{script})~{pp}~\var{utxo}~\var{tx} \\
+    & ~~~~~~~ \var{txinfo} = \fun{txInfo}~\var{ei}~\var{sysSt}~(\fun{language}~{script})~{pp}~\var{utxo}~\var{tx}
     \nextdef
-    & \fun{evalScripts} \in \Tx \times \seqof{(\Script \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \IsValid \\
+    & \fun{evalScripts} : \Tx \times \seqof{(\Script \times \seqof{\Data} \times \ExUnits \times \CostMod)} \to \IsValid \\
     & \fun{evalScripts}~\var{tx}~\epsilon = \True \\
     & \fun{evalScripts}~\var{tx}~((\var{sc}, \var{d}, \var{eu}, \var{cm});\Gamma) = \\
       & \begin{cases}
@@ -465,7 +465,7 @@ blocks, all the witnessing information can be thrown away.
 \label{sec:utxo-state-trans}
 
 We have defined a separate transition system, UTXOS, to represent the two distinct
-UTxO state changes: i) when all the scripts in a transaction validating; and
+UTxO state changes: i) when all the scripts in a transaction validate; and
 ii) when at least one fails to validate. Its transition types
 are identical to the UTXO transition (Figure
 \ref{fig:ts-types:utxo-scripts}).
@@ -552,7 +552,7 @@ In this case, the states of the UTxO, fee
       \trans{utxos}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs~{txb}}}  \\
+        \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{txb}}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{txb}} \\
         \varUpdate{\var{pup'}} \\
@@ -643,27 +643,27 @@ UTXOS rule.
     \inference[UTxO-inductive]
     {
       \var{txb}\leteq\txbody{tx} &
-      \fun{ininterval}~\var{slot}~(\fun{txvldt}~{tx}) &
+      \fun{ininterval}~\var{slot}~(\fun{txvldt}~{txb}) &
       \hldiff{\var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx}} \\~\\
-      \hldiff{\Nothing \notin \{\fun{txrdmrs}~\var{tx}, i_f\} ~\Rightarrow~ \fun{epochInfoSlotToUTCTime}~\mathsf{EI}~\mathsf{SysSt}~i_f \neq \Nothing} \\
+      \hldiff{\Nothing \notin \{\fun{txrdmrs}~\var{tx}, i_f\} \Rightarrow \fun{epochInfoSlotToUTCTime}~\mathsf{EI}~\mathsf{SysSt}~i_f \neq \Nothing} \\
       \txins{txb} \neq \emptyset
       & \hldiff{\fun{feesOK}~pp~tx~utxo}
       & \txins{txb}~\cup~\fun{collateral}~{txb}~ \subseteq~ \dom \var{utxo}
       \\
-      \consumed{pp}{utxo}{txb} = ~\produced{pp}{poolParams}~{txb}
+      \consumed{pp}{utxo}{txb} = \produced{pp}{poolParams}~{txb}
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \txouts{txb}, \\
       \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\fun{utxoEntrySize}~{txout} * \fun{coinsPerUTxOWord}~pp)} \\~
       \\
       \forall txout \in \txouts{txb},\\
-      \hldiff{\fun{serSize}~(\fun{getValue}~txout) ~\leq ~ \fun{maxValSize}~pp} \\~
+      \fun{serSize}~(\fun{getValue}~txout) \leq \hldiff{\fun{maxValSize}~pp} \\~
       \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \Rightarrow \fun{bootstrapAttrsSize}~a \leq 64 \\
       \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
       \\
       \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId \\
-      \hldiff{(\fun{txnetworkid}~\var{txb}~=~\NetworkId) ~\vee~(\fun{txnetworkid}~\var{txb}~=~\Nothing)}
+      \hldiff{(\fun{txnetworkid}~\var{txb} = \NetworkId) \vee (\fun{txnetworkid}~\var{txb} = \Nothing)}
       \\~\\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\~\\
       \hldiff{\fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp}} &  \hldiff{\| \fun{collateral}~{tx} \| \leq \fun{maxCollateralInputs}~{pp}}
@@ -758,9 +758,8 @@ We construct the following helper functions :
 
 \begin{figure}[htb]
   \begin{align*}
-    & \hspace{-0.8cm}\fun{witsVKeyNeeded} \in \UTxO \to \Tx \to (\KeyHashGen\mapsto\VKey) \to
+    & \hspace{-0.8cm}\fun{witsVKeyNeeded} : \UTxO \to \Tx \to (\KeyHashGen\mapsto\VKey) \to
       \powerset{\KeyHash} \\
-    & \text{required key hashes} \\
     &  \hspace{-0.8cm}\fun{witsVKeyNeeded}~\var{utxo}~\var{tx}~\var{genDelegs} = \\
     & ~~\{ \fun{paymentHK}~a \mid i \mapsto (a, \wcard) \in \var{utxo},~i\in\fun{txinsVKey}~{tx} \cup \hldiff{\fun{collateral}~{tx}} \} \\
     \cup & ~~
@@ -771,7 +770,7 @@ We construct the following helper functions :
     \cup & ~~\bigcup_{\substack{c \in \txcerts{tx} \\ ~c \in\DCertRegPool}} \fun{poolOwners}~{c} \\
     \cup & ~~\hldiff{\fun{reqSignerHashes}~\var{tx}}
     \nextdef
-    & \hspace{-1cm}\fun{scriptsNeeded} \in \UTxO \to \TxBody \to \powerset (\ScriptPurpose \times \ScriptHash) \\
+    & \hspace{-1cm}\fun{scriptsNeeded} : \UTxO \to \TxBody \to \powerset (\ScriptPurpose \times \ScriptHash) \\
     & \hspace{-1cm}\fun{scriptsNeeded}~\var{utxo}~\var{txb} = \\
     & ~~\{ (\var{i}, \fun{validatorHash}~a) \mid i\in\fun{txinsScript}~{(\fun{txins~\var{txb}})}~{utxo}, i \mapsto (a, \wcard, \wcard) \in \var{utxo} \} \\
     \cup & ~~\{ (\var{a}, \fun{stakeCred_{r}}~\var{a}) \mid a \in \dom (\AddrRWDScr
@@ -780,8 +779,8 @@ We construct the following helper functions :
     & ~~~~~~\var{c} \in \cwitness{cert} \cap \AddrScr\} \\
       \cup & ~~\{ (\var{pid}, \var{pid}) \mid \var{pid} \in \supp~(\fun{mint}~\var{txb}) \}
     \nextdef
-    & \hspace{-1cm}\fun{languages} \in \TxWitness \to \powerset{\Language} \\
-    & \hspace{-1cm}\fun{languages}~\var{txw}~=~
+    & \hspace{-1cm}\fun{languages} : \TxWitness \to \powerset{\Language} \\
+    & \hspace{-1cm}\fun{languages}~\var{txw} = 
       \{\fun{language}~s \mid s \in \range (\fun{txscripts}~{txw}) \cap \ScriptPhTwo\}
   \end{align*}
   \caption{UTXOW helper functions}
@@ -860,17 +859,18 @@ by the UTXO transition (the application of which is also part of the conditions)
       \hldiff{\var{inputHashes}\leteq \{ h \mid (\_ \mapsto (a, \_, h)) \in \txins{txb} \restrictdom \var{utxo}, \fun{isTwoPhaseScriptAddress}~{tx}~{a}\}}   \\~\\
       \hldiff{\forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptPhOne,
       \fun{validateScript}~\var{s}~\var{tx}}\\~\\
-      \hldiff{\{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~(\txbody{tx})\} = \dom (\fun{txscripts}~{txw})} \\~\\
+      \hldiff{\{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~txb\} = \dom (\fun{txscripts}~{txw})} \\~\\
       \hldiff{\var{inputHashes} \subseteq \dom (\fun{txdats}~{txw})} \\~\\
       \hldiff{\dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup \{h~\mid~ (\wcard, \wcard, h)\in\fun{txouts}~{tx}\}}
       \\~\\
-      \hldiff{\ \dom (\fun{txrdmrs}~tx) ~=~\{~\fun{rdptr}~txb~sp~
-       \vert~ (sp,h)~\in~\fun{scriptsNeeded}~\var{utxo}~(\txbody{tx}), } \\
-      \hldiff{h\mapsto s~\in~\fun{txscripts}~{txw}, s~\in~\ScriptPhTwo \}}
+      \hldiff{\ \dom (\fun{txrdmrs}~tx)  = \{~\fun{rdptr}~txb~sp~
+       \vert~ (sp,h) \in \fun{scriptsNeeded}~\var{utxo}~(\txbody{tx}), } \\
+      \hldiff{h\mapsto s \in \fun{txscripts}~{txw}, s \in \ScriptPhTwo \}}
       \\~\\
-      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{txw},
+      \var{txbodyHash}\leteq\fun{hash}~(\txbody{tx}) \\
+      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
       \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
-      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq \var{witsKeyHashes}
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq witsKeyHashes
       \\~\\
       genSig \leteq
       \left\{
@@ -893,7 +893,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
       \hldiff{\fun{languages}~{txw} \subseteq \dom(\fun{costmdls}~tx)} \\
-      \hldiff{\fun{scriptIntegrityHash}~{txb}~=~
+      \hldiff{\fun{scriptIntegrityHash}~{txb} = 
         \fun{hashScriptIntegrity}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})~(\fun{txdats}~{txw})}
       \\~\\
       {

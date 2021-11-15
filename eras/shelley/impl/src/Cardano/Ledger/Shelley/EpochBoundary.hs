@@ -19,6 +19,7 @@
 -- This modules implements the necessary functions for the changes that can happen at epoch boundaries.
 module Cardano.Ledger.Shelley.EpochBoundary
   ( Stake (..),
+    sumAllStake,
     SnapShot (..),
     SnapShots (..),
     emptySnapShot,
@@ -43,6 +44,7 @@ import Cardano.Ledger.Coin
     coinToRational,
     rationalToCoinViaFloor,
   )
+import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, Ptr, StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -55,10 +57,12 @@ import Cardano.Ledger.Val ((<+>), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
+import Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
@@ -66,15 +70,20 @@ import Numeric.Natural (Natural)
 
 -- | Type of stake as map from hash key to coins associated.
 newtype Stake crypto = Stake
-  { unStake :: Map (Credential 'Staking crypto) Coin
+  { unStake :: VMap VB VP (Credential 'Staking crypto) (CompactForm Coin)
   }
-  deriving (Show, Eq, Ord, NoThunks, NFData)
+  deriving (Show, Eq, NFData, Generic)
+
+deriving newtype instance Typeable crypto => NoThunks (Stake crypto)
 
 deriving newtype instance
   CC.Crypto crypto => ToCBOR (Stake crypto)
 
 deriving newtype instance
   CC.Crypto crypto => FromCBOR (Stake crypto)
+
+sumAllStake :: Stake crypto -> Coin
+sumAllStake = VMap.foldMap fromCompact . unStake
 
 -- A TxOut has 4 different shapes, depending on the shape its embedded of Addr.
 -- Credentials are stored in only 2 of the 4 cases.
@@ -113,11 +122,11 @@ aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
 -- | Get stake of one pool
 poolStake ::
   KeyHash 'StakePool crypto ->
-  Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
+  VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
   Stake crypto ->
   Stake crypto
 poolStake hk delegs (Stake stake) =
-  Stake $ eval (dom (delegs ▷ setSingleton hk) ◁ stake)
+  Stake $ fromMap (eval (dom (toMap delegs ▷ setSingleton hk) ◁ toMap stake))
 
 -- | Calculate total possible refunds.
 obligation ::
@@ -165,12 +174,12 @@ maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
 -- | Snapshot of the stake distribution.
 data SnapShot crypto = SnapShot
   { _stake :: !(Stake crypto),
-    _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
-    _poolParams :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto))
+    _delegations :: !(VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
+    _poolParams :: !(VMap VB VB (KeyHash 'StakePool crypto) (PoolParams crypto))
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (SnapShot crypto)
+instance Typeable crypto => NoThunks (SnapShot crypto)
 
 instance NFData (SnapShot crypto)
 
@@ -203,7 +212,7 @@ data SnapShots crypto = SnapShots
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (SnapShots crypto)
+instance Typeable crypto => NoThunks (SnapShots crypto)
 
 instance NFData (SnapShots crypto)
 
@@ -234,7 +243,7 @@ instance Default (SnapShots crypto) where
   def = emptySnapShots
 
 emptySnapShot :: SnapShot crypto
-emptySnapShot = SnapShot (Stake Map.empty) Map.empty Map.empty
+emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots crypto
 emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)

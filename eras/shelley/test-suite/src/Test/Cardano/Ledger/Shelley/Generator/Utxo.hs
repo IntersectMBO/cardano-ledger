@@ -543,7 +543,7 @@ applyDelta
   KeySpace_ {ksIndexedPaymentKeys, ksIndexedStakingKeys}
   tx
   (Delta deltafees extraIn _extraWits change extraKeys extraScripts) =
-    --fix up the witnesses here?
+    -- fix up the witnesses here?
     -- Adds extraInputs, extraWitnesses, and change from delta to tx
     let txBody = getField @"body" tx
         oldWitnessSet =
@@ -630,10 +630,10 @@ getNRandomPairs num m =
         then pure []
         else
           ( do
-              i <- QC.choose (0, n -1)
+              i <- QC.choose (0, n - 1)
               let (k, y) = Map.elemAt i m
                   m2 = Map.delete k m
-              ys <- getNRandomPairs (num -1) m2
+              ys <- getNRandomPairs (num - 1) m2
               pure ((k, y) : ys)
           )
 

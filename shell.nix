@@ -29,6 +29,7 @@ let
 
     # These programs will be available inside the nix-shell.
     buildInputs = with haskellPackages; [
+      nix-prefetch-git
       niv
       pkg-config
       hlint

@@ -36,9 +36,10 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( SnapShots (..),
+  ( SnapShot (..),
     Stake (..),
     poolStake,
+    sumAllStake,
   )
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenancePool (..))
 import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
@@ -65,11 +66,13 @@ import Data.Coders
     mapEncode,
     setDecode,
     setEncode,
+    vMapDecode,
+    vMapEncode,
     (!>),
     (<!),
   )
+import Data.Compact.VMap as VMap
 import Data.Default.Class (def)
-import Data.Foldable (fold)
 import Data.Group (invert)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
@@ -81,6 +84,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..), allNoThunks)
@@ -160,7 +164,8 @@ emptyRewardUpdate =
 
 -- | To pulse the reward update, we need a snap shot of the EpochState particular to this computation
 data RewardSnapShot crypto = RewardSnapShot
-  { rewSnapshots :: !(SnapShots crypto),
+  { rewSnapshot :: !(SnapShot crypto),
+    rewFees :: !Coin,
     rewa0 :: !NonNegativeInterval,
     rewnOpt :: !Natural,
     rewprotocolVersion :: !ProtVer,
@@ -173,14 +178,21 @@ data RewardSnapShot crypto = RewardSnapShot
   }
   deriving (Show, Eq, Generic)
 
-instance NoThunks (RewardSnapShot crypto)
+instance Typeable crypto => NoThunks (RewardSnapShot crypto)
 
 instance NFData (RewardSnapShot crypto)
 
 instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
-  toCBOR (RewardSnapShot ss a0 nopt ver nm dr1 r dt1 tot pot) =
+  toCBOR (RewardSnapShot ss fees a0 nopt ver nm dr1 r dt1 tot pot) =
     encode
-      ( Rec RewardSnapShot !> To ss !> E boundedRationalToCBOR a0 !> To nopt !> To ver !> To nm !> To dr1
+      ( Rec RewardSnapShot
+          !> To ss
+          !> To fees
+          !> E boundedRationalToCBOR a0
+          !> To nopt
+          !> To ver
+          !> To nm
+          !> To dr1
           !> To r
           !> To dt1
           !> To tot
@@ -188,7 +200,21 @@ instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
       )
 
 instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
-  fromCBOR = decode (RecD RewardSnapShot <! From <! D boundedRationalFromCBOR <! From <! From <! From <! From <! From <! From <! From <! From)
+  fromCBOR =
+    decode
+      ( RecD RewardSnapShot
+          <! From
+          <! From
+          <! D boundedRationalFromCBOR
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+          <! From
+      )
 
 -- Some functions that only need a subset of the PParams can be
 -- passed a RewardSnapShot, as it copies of some values from PParams
@@ -212,7 +238,7 @@ instance HasField "_protocolVersion" (RewardSnapShot crypto) ProtVer where
 
 data FreeVars crypto = FreeVars
   { b :: !(Map (KeyHash 'StakePool crypto) Natural),
-    delegs :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
+    delegs :: !(VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
     stake :: !(Stake crypto),
     addrsRew :: !(Set (Credential 'Staking crypto)),
     totalStake :: !Integer,
@@ -250,7 +276,7 @@ instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
         pp_mv
       } =
       encode
-        ( Rec FreeVars !> mapEncode b !> mapEncode delegs !> To stake !> setEncode addrsRew
+        ( Rec FreeVars !> mapEncode b !> vMapEncode delegs !> To stake !> setEncode addrsRew
             !> To totalStake
             !> To activeStake
             !> To asc
@@ -266,7 +292,7 @@ instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
 instance (CC.Crypto crypto) => FromCBOR (FreeVars crypto) where
   fromCBOR =
     decode
-      ( RecD FreeVars <! mapDecode {- b -} <! mapDecode {- delegs -} <! From {- stake -} <! setDecode {- addrsRew -}
+      ( RecD FreeVars <! mapDecode {- b -} <! vMapDecode {- delegs -} <! From {- stake -} <! setDecode {- addrsRew -}
           <! From {- totalStake -}
           <! From {- activeStake -}
           <! From {- asc -}
@@ -309,8 +335,8 @@ rewardStakePool
   pparams = do
     let hk = _poolId pparams
         blocksProduced = Map.lookup hk b
-        actgr@(Stake s) = poolStake hk delegs stake
-        Coin pstake = fold s
+        actgr = poolStake hk delegs stake
+        Coin pstake = sumAllStake actgr
         sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
         sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
         ls =
@@ -360,7 +386,7 @@ deriving instance Eq ans => Eq (RewardPulser c m ans)
 
 deriving instance Show ans => Show (RewardPulser c m ans)
 
-instance NoThunks (Pulser c) where
+instance Typeable c => NoThunks (Pulser c) where
   showTypeOf _ = "RewardPulser"
   wNoThunks ctxt (RSLP n free balance ans) =
     allNoThunks

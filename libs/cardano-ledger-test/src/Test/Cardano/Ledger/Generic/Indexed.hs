@@ -223,7 +223,7 @@ sometimelocks c =
     ++ concat [timelockCompound c i | i <- [1 .. 5]]
 
 timelocklength :: Int
-timelocklength = length (sometimelocks Mock) -1
+timelocklength = length (sometimelocks Mock) - 1
 
 instance (ReflectC c, CC.Crypto c) => Fixed (Timelock c) where
   unique n = (liftC sometimelocks) !! n
@@ -249,7 +249,7 @@ somealonzo c =
        )
 
 alonzolength :: Int
-alonzolength = length (somealonzo Mock :: [Script (AlonzoEra Mock)]) -1
+alonzolength = length (somealonzo Mock :: [Script (AlonzoEra Mock)]) - 1
 
 instance Reflect (AlonzoEra c) => Fixed (Script (AlonzoEra c)) where
   unique n = (liftC somealonzo) !! n

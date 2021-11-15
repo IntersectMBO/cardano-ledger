@@ -20,7 +20,8 @@ module Cardano.Ledger.Hashes
     EraIndependentAuxiliaryData,
     EraIndependentPParamView,
     EraIndependentScriptIntegrity,
-    -- $scriptHash
+
+    -- * Script hashes
     ScriptHash (..),
 
     -- * deprecated
@@ -34,6 +35,7 @@ import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Control.DeepSeq (NFData)
 import Data.Aeson
+import Data.Compact.HashMap (Keyed)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -68,20 +70,16 @@ data EraIndependentScriptIntegrity
 
 type EraIndependentWitnessPPData = EraIndependentScriptIntegrity
 
--- $scriptHash
-
 newtype ScriptHash crypto
   = ScriptHash (Hash.Hash (ADDRHASH crypto) EraIndependentScript)
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NFData, NoThunks)
 
-deriving newtype instance
-  CC.Crypto crypto =>
-  ToCBOR (ScriptHash crypto)
+deriving newtype instance CC.Crypto crypto => Keyed (ScriptHash crypto)
 
-deriving newtype instance
-  CC.Crypto crypto =>
-  FromCBOR (ScriptHash crypto)
+deriving newtype instance CC.Crypto crypto => ToCBOR (ScriptHash crypto)
+
+deriving newtype instance CC.Crypto crypto => FromCBOR (ScriptHash crypto)
 
 deriving newtype instance CC.Crypto crypto => ToJSON (ScriptHash crypto)
 

@@ -18,6 +18,7 @@ module Cardano.Ledger.Shelley.Rewards
     PerformanceEstimate (..),
     NonMyopic (..),
     getTopRankedPools,
+    getTopRankedPoolsVMap,
     StakeShare (..),
     mkApparentPerformance,
     RewardType (..),
@@ -34,6 +35,7 @@ module Cardano.Ledger.Shelley.Rewards
     leaderRew,
     memberRew,
     aggregateRewards,
+    filterRewards,
     sumRewards,
     rewardOnePool,
   )
@@ -62,6 +64,7 @@ import Cardano.Ledger.Coin
     coinToRational,
     rationalToCoinViaFloor,
   )
+import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
@@ -84,6 +87,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Provenance (ProvM, modifyM)
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, fold)
 import Data.Function (on)
@@ -231,7 +235,7 @@ percentile' = percentile 0.5 h
     h = normalize . Histogram $ logBeta 40 1 <$> samplePositions
     -- Beta(n,m)(x) = C * x^(n-1)*(1-x)^(m-1)
     -- log( Beta(n,m)(x) ) = (n-1) * log x + (m-1) * log (1-x)
-    logBeta n m x = LogWeight . realToFrac $ (n -1) * log x + (m -1) * log (1 - x)
+    logBeta n m x = LogWeight . realToFrac $ (n - 1) * log x + (m - 1) * log (1 - x)
 
 reimannSum :: (Functor f, Foldable f) => Double -> f Double -> Double
 reimannSum width heights = sum $ fmap (width *) heights
@@ -318,11 +322,33 @@ getTopRankedPools ::
   Map (KeyHash 'StakePool crypto) PerformanceEstimate ->
   Set (KeyHash 'StakePool crypto)
 getTopRankedPools rPot totalStake pp poolParams aps =
+  let pdata = Map.toAscList $ Map.intersectionWith (,) poolParams aps
+   in getTopRankedPoolsInternal rPot totalStake pp pdata
+
+getTopRankedPoolsVMap ::
+  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  Coin ->
+  Coin ->
+  pp ->
+  VMap.VMap VMap.VB VMap.VB (KeyHash 'StakePool crypto) (PoolParams crypto) ->
+  Map (KeyHash 'StakePool crypto) PerformanceEstimate ->
+  Set (KeyHash 'StakePool crypto)
+getTopRankedPoolsVMap rPot totalStake pp poolParams aps =
+  let pdata = [(kh, (pps, a)) | (kh, a) <- Map.toAscList aps, Just pps <- [VMap.lookup kh poolParams]]
+   in getTopRankedPoolsInternal rPot totalStake pp pdata
+
+getTopRankedPoolsInternal ::
+  (HasField "_a0" pp NonNegativeInterval, HasField "_nOpt" pp Natural) =>
+  Coin ->
+  Coin ->
+  pp ->
+  [(KeyHash 'StakePool crypto, (PoolParams crypto, PerformanceEstimate))] ->
+  Set (KeyHash 'StakePool crypto)
+getTopRankedPoolsInternal rPot totalStake pp pdata =
   Set.fromList $
     fst
       <$> take (fromIntegral $ getField @"_nOpt" pp) (sortBy (flip compare `on` snd) rankings)
   where
-    pdata = Map.toList $ Map.intersectionWith (,) poolParams aps
     rankings =
       [ ( hk,
           desirability (getField @"_a0" pp, getField @"_nOpt" pp) rPot pool ap totalStake
@@ -436,6 +462,20 @@ sumRewards ::
   Coin
 sumRewards protocolVersion rs = fold $ aggregateRewards protocolVersion rs
 
+-- | Filter the reward payments to those that will actually be delivered. This
+-- function exists since in Shelley, a stake credential earning rewards from
+-- multiple sources would only receive one reward.
+filterRewards ::
+  forall crypto pp.
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
+  Map (Credential 'Staking crypto) (Set (Reward crypto))
+filterRewards pp rewards =
+  if HardForks.aggregatedRewards pp
+    then rewards
+    else Map.map (Set.singleton . Set.findMin) rewards
+
 aggregateRewards ::
   forall crypto pp.
   (HasField "_protocolVersion" pp ProtVer) =>
@@ -443,13 +483,10 @@ aggregateRewards ::
   Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
   Map (Credential 'Staking crypto) Coin
 aggregateRewards pp rewards =
-  if HardForks.aggregatedRewards pp
-    then Map.map (Set.foldr addRewardToCoin mempty) rewards
-    else Map.map lastByOrd rewards
+  Map.map (Set.foldr addRewardToCoin mempty) $
+    filterRewards pp rewards
   where
     addRewardToCoin r = (<>) (rewardAmount r)
-    -- s should never be null, but we are being cautious
-    lastByOrd s = if Set.null s then mempty else (rewardAmount . Set.findMin) s
 
 -- | Reward one pool. The first argument (the triple (pp_d, pp_a0, pp_nOpt))
 --     is a subset of the fields of PParams
@@ -489,7 +526,7 @@ rewardOnePool
     where
       Coin ostake =
         Set.foldl'
-          (\c o -> c <> Map.findWithDefault mempty (KeyHashObj o) stake)
+          (\c o -> c <> maybe mempty fromCompact (VMap.lookup (KeyHashObj o) stake))
           mempty
           (_poolOwners pool)
       Coin pledge = _poolPledge pool
@@ -511,11 +548,12 @@ rewardOnePool
                   ( memberRew
                       poolR
                       pool
-                      (StakeShare (fromIntegral c % tot))
+                      (StakeShare (c % tot))
                       (StakeShare sigma)
                   )
             )
-            | (hk, Coin c) <- Map.toList stake,
+            | (hk, compactCoin) <- VMap.toAscList stake,
+              let Coin c = fromCompact compactCoin,
               notPoolOwner hk,
               hk `Set.member` addrsRew
           ]

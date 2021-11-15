@@ -127,7 +127,7 @@ newtype TxSigData = TxSigData
 recoverSigData :: Annotated Tx ByteString -> Annotated TxSigData ByteString
 recoverSigData atx =
   let txHash = hashDecoded atx
-      signedBytes = serialize' txHash --TODO: make the prefix bytes explicit
+      signedBytes = serialize' txHash -- TODO: make the prefix bytes explicit
    in Annotated (TxSigData txHash) signedBytes
 
 -- Used for debugging purposes only

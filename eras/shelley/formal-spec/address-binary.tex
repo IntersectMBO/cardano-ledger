@@ -104,5 +104,6 @@ The payload for the different address types are as follows:
 \end{center}
 
 The variable-length encoding used in pointers addresses is the base-128 representation
-of the number, with the the most significant bit of each byte indicating continuation.
-If the significant bit is $0$, then another bytes follows.
+of the number, with the most significant bit of each byte indicating continuation
+(this is sometimes called a variable-length quantity, or VLQ).
+If the significant bit is $1$, then another byte follows.

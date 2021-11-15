@@ -48,6 +48,7 @@ library
     cardano-protocol-tpraos,
     cardano-slotting,
     containers,
+    compact-map,
     iproute,
     mtl,
     plutus-ledger-api,

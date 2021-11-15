@@ -6,6 +6,7 @@
 
 module Cardano.Ledger.Alonzo.Tools
   ( evaluateTransactionExecutionUnits,
+    BasicFailure (..),
     ScriptFailure (..),
   )
 where
@@ -40,13 +41,20 @@ import Cardano.Slotting.Time (SystemStart)
 import Data.Array (Array, array, bounds, (!))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V2.Ledger.Api as PV2
 
--- | Failures that can be returned by 'evaluateTransactionExecutionUnits'.
+-- | Basic validtion failures that can be returned by 'evaluateTransactionExecutionUnits'.
+data BasicFailure c
+  = -- | The transaction contains inputs that are not present in the UTxO.
+    UnknownTxIns (Set (TxIn c))
+  deriving (Show)
+
+-- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
 data ScriptFailure c
   = -- | A redeemer was supplied that does not point to a
     --  valid plutus evaluation site in the given transaction.
@@ -76,6 +84,24 @@ note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
 note e Nothing = Left e
 
+basicValidation ::
+  -- | The transaction.
+  Core.Tx (AlonzoEra c) ->
+  -- | The current UTxO set (or the relevant portion for the transaction).
+  UTxO (AlonzoEra c) ->
+  -- | Basic failures.
+  Maybe (BasicFailure c)
+basicValidation tx utxo =
+  if Set.null badIns
+    then Nothing
+    else Just (UnknownTxIns badIns)
+  where
+    txb = getField @"body" tx
+    ins = getField @"inputs" txb
+    badIns = Set.filter (`Map.notMember` (unUTxO utxo)) ins
+
+type RedeemerReport c = Map RdmrPtr (Either (ScriptFailure c) ExUnits)
+
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
 --
@@ -97,13 +123,18 @@ evaluateTransactionExecutionUnits ::
   SystemStart ->
   -- | The array of cost models, indexed by the supported languages.
   Array Language CostModel ->
-  -- | A map from redeemer pointers to either a failure or a sufficient execution budget.
+  -- | If the transaction meets basic validation, we return a map from
+  --  redeemer pointers to either a failure or a sufficient execution budget.
+  --  Otherwise we return a basic validation error.
   --  The value is monadic, depending on the epoch info.
-  m (Map RdmrPtr (Either (ScriptFailure c) ExUnits))
+  m (Either (BasicFailure c) (RedeemerReport c))
 evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
-  let getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
-  txInfos <- array (PlutusV1, PlutusV2) <$> mapM getInfo (Set.toList nonNativeLanguages)
-  pure $ Map.mapWithKey (findAndCount pp txInfos) (unRedeemers $ getField @"txrdmrs" ws)
+  case basicValidation tx utxo of
+    Nothing -> do
+      let getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
+      txInfos <- array (PlutusV1, PlutusV2) <$> mapM getInfo (Set.toList nonNativeLanguages)
+      pure . Right $ Map.mapWithKey (findAndCount pp txInfos) (unRedeemers $ getField @"txrdmrs" ws)
+    Just e -> pure . Left $ e
   where
     txb = getField @"body" tx
     ws = getField @"wits" tx

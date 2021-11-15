@@ -19,9 +19,11 @@ packages:
   libs/cardano-ledger-test
   libs/cardano-protocol-tpraos
   libs/plutus-preprocessor
+  libs/ledger-state
   libs/non-integral
   libs/small-steps
   libs/small-steps-test
+  libs/compact-map
 
   -- Deprecations
   eras/shelley/chain-and-ledger/executable-spec
@@ -41,8 +43,8 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: 654f5b7c76f7cc57900b4ddc664a82fc3b925fb0
-  --sha256: 0j4x9zbx5dkww82sqi086h39p456iq5xr476ylmrnpwcpfb4xai4
+  tag: 41545ba3ac6b3095966316a99883d678b5ab8da8
+  --sha256: 0icq9y3nnl42fz536da84414av36g37894qnyw4rk3qkalksqwir
   subdir:
     base-deriving-via
     binary
@@ -95,6 +97,12 @@ source-repository-package
   location: https://github.com/michaelpj/flat.git
   tag: ee59880f47ab835dbd73bea0847dab7869fc20d8
   --sha256: 1lrzknw765pz2j97nvv9ip3l1mcpf2zr4n56hwlz0rk7wq7ls4cm
+
+source-repository-package
+  type: git
+  location: https://github.com/fpco/weigh.git
+  tag: bfcf4415144d7d2817dfcb91b6f9a6dfd7236de7
+  --sha256: 01fy4nbq6kaqi73ydn6w7rd1izkg5p217q5znyp2icybf41sl1b6
 
 allow-newer:
   monoidal-containers:aeson,
@@ -172,6 +180,9 @@ package cardano-ledger-test
 package cardano-protocol-tpraos
   ghc-options: -Werror
 
+package compact-map
+  ghc-options: -Werror
+
 package non-integral
   ghc-options: -Werror
 
@@ -183,4 +194,3 @@ package small-steps-test
 
 package small-steps
   ghc-options: -Werror
-

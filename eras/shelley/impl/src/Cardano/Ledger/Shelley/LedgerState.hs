@@ -88,8 +88,6 @@ module Cardano.Ledger.Shelley.LedgerState
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
     updateNonMyopic,
-
-    -- *
     TransUTxOState,
     TransLedgerState,
   )
@@ -159,6 +157,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
     SnapShots (..),
     Stake (..),
     aggregateUtxoCoinByCredential,
+    sumAllStake,
   )
 import Cardano.Ledger.Shelley.PParams
   ( PParams,
@@ -184,9 +183,11 @@ import Cardano.Ledger.Shelley.Rewards
   ( Likelihood (..),
     NonMyopic (..),
     PerformanceEstimate (..),
+    Reward,
     aggregateRewards,
     applyDecay,
     desirability,
+    filterRewards,
     percentile',
     sumRewards,
   )
@@ -232,6 +233,7 @@ import Data.Coders
     decodeRecordNamed,
     (<!),
   )
+import qualified Data.Compact.VMap as VMap
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
@@ -998,9 +1000,9 @@ stakeDistr ::
   SnapShot (Crypto era)
 stakeDistr u ds ps =
   SnapShot
-    (Stake $ eval (dom activeDelegs ◁ stakeRelation))
-    delegs
-    poolParams
+    (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
+    (VMap.fromMap delegs)
+    (VMap.fromMap poolParams)
   where
     DState rewards' delegs ptrs' _ _ _ = ds
     PState poolParams _ _ = ps
@@ -1008,6 +1010,10 @@ stakeDistr u ds ps =
     stakeRelation = aggregateUtxoCoinByCredential (forwards ptrs') u rewards'
     activeDelegs :: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
+    compactCoinOrError c =
+      case toCompact c of
+        Nothing -> error $ "Invalid ADA value in staking: " <> show c
+        Just compactCoin -> compactCoin
 
 -- | Apply a reward update
 applyRUpd ::
@@ -1025,10 +1031,10 @@ applyRUpd' ::
   ) =>
   RewardUpdate (Crypto era) ->
   EpochState era ->
-  (EpochState era, Map (Credential 'Staking (Crypto era)) Coin)
+  (EpochState era, Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
 applyRUpd'
   ru
-  (EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', regRU)
+  (EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', registered)
     where
       utxoState_ = _utxoState ls
       delegState = _delegationState ls
@@ -1036,10 +1042,13 @@ applyRUpd'
       (regRU, unregRU) =
         Map.partitionWithKey
           (\k _ -> eval (k ∈ dom (_rewards dState)))
-          (aggregateRewards pr $ rs ru)
+          (rs ru)
+      totalUnregistered = fold $ aggregateRewards pr unregRU
+      registered = filterRewards pr regRU
+      registeredAggregated = aggregateRewards pp registered
       as' =
         as
-          { _treasury = addDeltaCoin (_treasury as) (deltaT ru) <> fold unregRU,
+          { _treasury = addDeltaCoin (_treasury as) (deltaT ru) <> totalUnregistered,
             _reserves = addDeltaCoin (_reserves as) (deltaR ru)
           }
       ls' =
@@ -1050,7 +1059,7 @@ applyRUpd'
               delegState
                 { _dstate =
                     dState
-                      { _rewards = eval (_rewards dState ∪+ regRU)
+                      { _rewards = eval (_rewards dState ∪+ registeredAggregated)
                       }
                 }
           }
@@ -1112,7 +1121,7 @@ startStep ::
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       f, numPools, k :: Rational
-      numPools = fromIntegral (Map.size poolParams)
+      numPools = fromIntegral (VMap.size poolParams)
       k = fromIntegral secparam
       f = unboundRational (activeSlotVal asc)
 
@@ -1153,7 +1162,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       totalStake = circulation es maxSupply
       rewsnap =
         RewardSnapShot
-          { rewSnapshots = ss,
+          { rewSnapshot = _pstakeGo ss,
+            rewFees = _feeSS ss,
             rewa0 = getField @"_a0" pr,
             rewnOpt = getField @"_nOpt" pr,
             rewprotocolVersion = getField @"_protocolVersion" pr,
@@ -1164,7 +1174,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
             rewTotalStake = totalStake,
             rewRPot = Coin rPot
           }
-      activestake = fold . unStake $ stake'
+      activestake = sumAllStake stake'
       free =
         FreeVars
           (unBlocksMade b)
@@ -1186,7 +1196,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
         RSLP
           pulseSize
           free
-          (StrictSeq.fromList $ Map.elems poolParams)
+          (StrictSeq.fromList $ VMap.elems poolParams)
           (RewardAns Map.empty Map.empty)
       provenance =
         def
@@ -1201,8 +1211,8 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
             d = d,
             expBlocks = expectedBlocks,
             eta = eta,
-            rPot = (Coin rPot),
-            deltaT1 = (Coin deltaT1)
+            rPot = Coin rPot,
+            deltaT1 = Coin deltaT1
             -- Fields not initialized here, but filled in in completeRupd
             --   deltaR2
             --   pools
@@ -1246,12 +1256,13 @@ completeRupd
   ( Pulsing
       rewsnap@RewardSnapShot
         { rewDeltaR1 = deltaR1,
+          rewFees = feesSS,
           rewR = oldr,
           rewDeltaT1 = (Coin deltaT1),
           rewNonMyopic = nm,
           rewTotalStake = totalstake,
           rewRPot = rpot,
-          rewSnapshots = snaps,
+          rewSnapshot = snap,
           rewa0 = a0,
           rewnOpt = nOpt
         }
@@ -1266,13 +1277,13 @@ completeRupd
         -- A function to compute the 'desirablity' aggregate. Called only if we are computing
         -- provenance. Adds nested pair ('key',(LikeliHoodEstimate,Desirability)) to the Map 'ans'
         addDesireability ans key likelihood =
-          let SnapShot _ _ poolParams = _pstakeGo snaps
+          let SnapShot _ _ poolParams = snap
               estimate = percentile' likelihood
            in Map.insert
                 key
                 ( Desirability
                     { hitRateEstimate = unPerformanceEstimate estimate,
-                      desirabilityScore = case Map.lookup key poolParams of
+                      desirabilityScore = case VMap.lookup key poolParams of
                         Just ppx -> desirability (a0, nOpt) rpot ppx estimate totalstake
                         Nothing -> 0
                     }
@@ -1285,7 +1296,7 @@ completeRupd
         { deltaT = DeltaCoin deltaT1,
           deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
           rs = rs_,
-          deltaF = invert (toDeltaCoin $ _feeSS snaps),
+          deltaF = invert (toDeltaCoin feesSS),
           nonMyopic = updateNonMyopic nm oldr newLikelihoods
         }
 

@@ -117,35 +117,35 @@ block (specified in a protocol parameter).
 \end{figure}
 
 We have also defined a function that transforms the Shelley ledger state into
-the corresponding Goguen one, see Figure~\ref{fig:functions:to-shelley}. We
-refer to the Shelley-era protocol parameter type as $\ShelleyPParams$, and the corresponding Goguen
+the corresponding Alonzo one, see Figure~\ref{fig:functions:to-shelley}. We
+refer to the Shelley-era protocol parameter type as $\ShelleyPParams$, and the corresponding Alonzo
 type as $\PParams$. We use the notation $\var{chainstate}_{x}$ to represent
 variable $x$ in the chain state. We do not specify the variables that
 remain unchanged during the transition.
 
 %%
-%% Figure - Shelley to Goguen Transition
+%% Figure - Shelley to Alonzo Transition
 %%
 \begin{figure}[htb]
   \emph{Types and Constants}
   %
   \begin{align*}
-      & \NewParams ~=~ (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \\
+      & \NewParams = (\Language \mapsto \CostMod) \times \Prices \times \ExUnits \times \ExUnits \\
       & ~~~~~~~~ \times \N \times \Coin \times \N \times \N \\
-      & \text{the type of new parameters to add for Goguen}
+      & \text{the type of new parameters to add for Alonzo}
       \nextdef
-      & \var{ivPP} ~\in~ \NewParams \\
-      & \text{the initial values for new Goguen parameters}
+      & \var{ivPP} \in \NewParams \\
+      & \text{the initial values for new Alonzo parameters}
   \end{align*}
-  \emph{Shelley to Goguen Transition Functions}
+  \emph{Shelley to Alonzo Transition Functions}
   %
   \begin{align*}
-      & \fun{toGoguen} \in \ShelleyChainState \to \ChainState \\
-      & \fun{toGoguen}~\var{chainstate} =~\var{chainstate'} \\
+      & \fun{toAlonzo} : \ShelleyChainState \to \ChainState \\
+      & \fun{toAlonzo}~\var{chainstate} =~\var{chainstate'} \\
       &~~\where \\
       &~~~~\var{chainstate'}_{pparams}~=~(\var{pp}\cup \var{ivPP})~ - ~\var{minUTxOValue}\\
-      & \text{transform Shelley chain state to Goguen state}
+      & \text{transform Shelley chain state to Alonzo state}
   \end{align*}
-  \caption{Shelley to Goguen State Transtition}
+  \caption{Shelley to Alonzo State Transtition}
   \label{fig:functions:to-shelley}
 \end{figure}

@@ -122,7 +122,7 @@ maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal
 trivialPolicy :: CryptoClass.Crypto c => Int -> Timelock c
 trivialPolicy i
   | i == 0 = RequireAllOf (StrictSeq.fromList [])
-  | otherwise = RequireAllOf (StrictSeq.fromList [trivialPolicy (i -1)])
+  | otherwise = RequireAllOf (StrictSeq.fromList [trivialPolicy (i - 1)])
 
 coloredCoinMinMint :: Integer
 coloredCoinMinMint = 1000

@@ -31,10 +31,10 @@ doTestsFromStdin = do
       let a = (read (splitLine !! 1) :: FixedPoint) / precision
       let b = (read (splitLine !! 2) :: FixedPoint) / precision
       let c = ln' (1 - f)
-      let res = taylorExpCmp 3 (1 / (1 - a)) (- (b * c))
+      let res = taylorExpCmp 3 (1 / (1 - a)) (-(b * c))
       putStrLn $
         show (exp' x) ++ " "
-          ++ show (- (ln' a))
+          ++ show (-(ln' a))
           ++ " "
           ++ show (1 - ((1 - f) *** b))
           ++ " "

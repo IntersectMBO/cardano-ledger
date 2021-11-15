@@ -468,7 +468,7 @@ bootstrapKeyHash ::
   forall crypto.
   CC.Crypto crypto =>
   -- TODO: enforce this constraint
-  --(HASH era ~ Hash.Blake2b_224) =>
+  -- (HASH era ~ Hash.Blake2b_224) =>
   BootstrapAddress crypto ->
   KeyHash 'Payment crypto
 bootstrapKeyHash (BootstrapAddress byronAddress) =

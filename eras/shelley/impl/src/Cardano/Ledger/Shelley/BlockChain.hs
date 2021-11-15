@@ -255,7 +255,7 @@ constructMetadata ::
   Int ->
   Map Int (Annotator (Core.AuxiliaryData era)) ->
   Seq (Maybe (Annotator (Core.AuxiliaryData era)))
-constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n -1])
+constructMetadata n md = fmap (`Map.lookup` md) (Seq.fromList [0 .. n - 1])
 
 -- | The parts of the Tx in Blocks that have to have FromCBOR(Annotator x) instances.
 --   These are exactly the parts that are SafeToHash.
@@ -269,14 +269,14 @@ txSeqDecoder lax = do
   (bodies, bodiesAnn) <- withSlice $ decodeSeq fromCBOR
   (wits, witsAnn) <- withSlice $ decodeSeq fromCBOR
   let b = length bodies
-      inRange x = (0 <= x) && (x <= (b -1))
+      inRange x = (0 <= x) && (x <= (b - 1))
       w = length wits
   (metadata, metadataAnn) <- withSlice $
     do
       m <- decodeMap fromCBOR fromCBOR
       unless -- TODO this PR introduces this new test, That didn't used to run in the Shelley
         (lax || all inRange (Map.keysSet m)) -- Era,  Is it possible there might be some blocks, that should have been caught on the chain?
-        (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b -1)))
+        (fail ("Some Auxiliarydata index is not in the range: 0 .. " ++ show (b - 1)))
       pure (constructMetadata @era b m)
 
   unless
