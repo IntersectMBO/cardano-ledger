@@ -11,14 +11,19 @@ module Cardano.Ledger.Shelley.Rules.Snap
   ( SNAP,
     PredicateFailure,
     SnapPredicateFailure,
-    SnapEvent,
+    SnapEvent (..),
+    StakeDistEvent_ (..),
   )
 where
 
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Coin (Coin, CompactForm)
+import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
@@ -34,6 +39,9 @@ import Control.State.Transition
     judgmentContext,
     tellEvent,
   )
+import qualified Data.Compact.VMap as VMap
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
@@ -46,7 +54,12 @@ data SnapPredicateFailure era -- No predicate failures
 instance NoThunks (SnapPredicateFailure era)
 
 data SnapEvent era
-  = StakeDistEvent !(SnapShot (Crypto era))
+  = StakeDistEvent (StakeDistEvent_ era)
+
+data StakeDistEvent_ era = StakeDistEvent_
+  { sdistStakeMap :: !(Map (Credential 'Staking (Crypto era)) (Coin, (KeyHash 'StakePool (Crypto era))))
+  }
+  deriving (Eq)
 
 instance (UsesTxOut era, UsesValue era) => STS (SNAP era) where
   type State (SNAP era) = SnapShots (Crypto era)
@@ -71,7 +84,23 @@ snapTransition = do
       stake :: SnapShot (Crypto era)
       stake = stakeDistr utxo dstate pstate
 
-  tellEvent $ StakeDistEvent stake
+      stMap :: Map (Credential 'Staking (Crypto era)) (CompactForm Coin)
+      stMap = VMap.toMap . unStake $ _stake stake
+
+      stakeCoinMap :: Map (Credential 'Staking (Crypto era)) Coin
+      stakeCoinMap = fmap fromCompact stMap
+
+      stakePoolMap :: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
+      stakePoolMap = VMap.toMap $ _delegations stake
+
+      stakeMap :: Map (Credential 'Staking (Crypto era)) (Coin, (KeyHash 'StakePool (Crypto era)))
+      stakeMap = Map.intersectionWith (,) stakeCoinMap stakePoolMap
+
+  tellEvent $
+    StakeDistEvent $
+      StakeDistEvent_
+        { sdistStakeMap = stakeMap
+        }
 
   pure $
     s

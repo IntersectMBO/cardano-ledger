@@ -101,7 +101,8 @@ data AnnotatedBlock = AnnotatedBlock
 data AnnotatedTx = AnnotatedTx
   { atInputSum :: !Coin, -- Sum of the tx inputs
     atOutSum :: !Coin, -- Sum of the tx outputs
-    txFees :: !Coin -- All fields in the superset of all tx types
+    txFees :: !Coin
+    -- All fields in the superset of all tx types
   }
 
 data BbodyEvent era
