@@ -20,6 +20,7 @@ module Cardano.Ledger.Shelley.API.Validation
     BlockTransitionError (..),
     chainChecks,
     annotateBlock,
+    applyBlockOptsAnnotated,
     AnnotatedBlock (..),
   )
 where
@@ -84,8 +85,7 @@ class
     Environment (Core.EraRule "BBODY" era) ~ STS.BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ STS.BbodyState era,
     Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
-    ToCBORGroup (TxSeq era),
-    Coercible (Event (Core.EraRule "BBODY" era)) (STS.BbodyEvent era)
+    ToCBORGroup (TxSeq era)
   ) =>
   ApplyBlock era
   where
@@ -125,36 +125,20 @@ class
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
   default applyBlockOpts ::
     forall ep m.
-    ( EventReturnTypeRep ep,
-      MonadError (BlockTransitionError era) m,
-      Era era,
-      HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-      HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-      HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-      HasField "_keyDeposit" (Core.PParams era) Coin,
-      HasField "_poolDeposit" (Core.PParams era) Coin
-    ) =>
+    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m) =>
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
     (Block BHeaderView era) ->
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
-  applyBlockOpts opts globals state blk = do
-    res' <-
-      liftEither
-        . left BlockTransitionError
-        . right
-          ( mapEventReturn @ep @(Core.EraRule "BBODY" era) $
-              updateNewEpochState state
-          )
-        $ res
-    case asoEvents opts of
-      EPDiscard -> pure res'
-      EPReturn -> do
-        let ann = annotateBlock globals state blk
-        let annEv :: STS.BbodyEvent era
-            annEv = STS.AnnotatedBlockEvent ann
-        pure $ second (<> [coerce annEv]) res'
+  applyBlockOpts opts globals state blk =
+    liftEither
+      . left BlockTransitionError
+      . right
+        ( mapEventReturn @ep @(Core.EraRule "BBODY" era) $
+            updateNewEpochState state
+        )
+      $ res
     where
       res =
         flip runReader globals
@@ -339,3 +323,31 @@ annotateBlock globals state (Block' bheaderView txseq _) =
               STS.atOutSum = outs,
               STS.txFees = getField @"txfee" txBody
             }
+
+applyBlockOptsAnnotated ::
+  forall ep m era.
+  ( EventReturnTypeRep ep,
+    MonadError (BlockTransitionError era) m,
+    Era era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    Coercible (Event (Core.EraRule "BBODY" era)) (STS.BbodyEvent era),
+    ApplyBlock era
+  ) =>
+  ApplySTSOpts ep ->
+  Globals ->
+  NewEpochState era ->
+  (Block BHeaderView era) ->
+  m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
+applyBlockOptsAnnotated opts globals state blk = do
+  res' <- applyBlockOpts opts globals state blk
+  case asoEvents opts of
+    EPDiscard -> pure res'
+    EPReturn -> do
+      let ann = annotateBlock globals state blk
+      let annEv :: STS.BbodyEvent era
+          annEv = STS.AnnotatedBlockEvent ann
+      pure $ second (<> [coerce annEv]) res'

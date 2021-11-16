@@ -90,8 +90,7 @@ data BbodyPredicateFailure era
   deriving (Generic)
 
 data AnnotatedBlock = AnnotatedBlock
-  { -- abEra :: !Era
-    abEpochNo :: !EpochNo,
+  { abEpochNo :: !EpochNo,
     abSlotNo :: !SlotNo,
     abEpochSlot :: !SlotNo, -- The slot within the epoch (starts at 0 for first slot of each epoch
     abTimeStamp :: !UTCTime, -- The slot number converted to UTCTime
