@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -67,9 +68,11 @@ import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.Coders
 import Data.Foldable (toList)
+import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import Debug.Trace (traceEvent)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
@@ -182,6 +185,15 @@ scriptsValidateTransition = do
         totalDeposits pp (`Map.notMember` poolParams) txcerts <-> refunded
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
+  let !_ =
+        traceEvent
+          ( intercalate
+              ","
+              [ "[LEDGER][SCRIPTS_VALIDATION]",
+                "BEGIN"
+              ]
+          )
+          ()
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       case evalScripts @era tx sLst of
@@ -192,6 +204,15 @@ scriptsValidateTransition = do
               (FailedUnexpectedly sss)
         Passes -> pure ()
     Left info -> failBecause (CollectErrors info)
+  let !_ =
+        traceEvent
+          ( intercalate
+              ","
+              [ "[LEDGER][SCRIPTS_VALIDATION]",
+                "END"
+              ]
+          )
+          ()
   pup' <-
     trans @(Core.EraRule "PPUP" era) $
       TRC
@@ -232,12 +253,30 @@ scriptsNotValidateTransition = do
   let txb = body tx
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
+  let !_ =
+        traceEvent
+          ( intercalate
+              ","
+              [ "[LEDGER][SCRIPTS_NOT_VALIDATE_TRANSITION]",
+                "BEGIN"
+              ]
+          )
+          ()
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       case evalScripts @era tx sLst of
         Passes -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
         Fails _sss -> pure ()
     Left info -> failBecause (CollectErrors info)
+  let !_ =
+        traceEvent
+          ( intercalate
+              ","
+              [ "[LEDGER][SCRIPTS_NOT_VALIDATE_TRANSITION]",
+                "END"
+              ]
+          )
+          ()
   pure $
     us
       { _utxo = eval (getField @"collateral" txb ⋪ utxo),

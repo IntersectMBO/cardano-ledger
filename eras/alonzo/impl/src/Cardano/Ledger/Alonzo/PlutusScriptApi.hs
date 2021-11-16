@@ -68,6 +68,7 @@ import Cardano.Slotting.Time (SystemStart)
 import Data.Coders
 import Data.Foldable (foldl')
 import Data.Functor.Identity (Identity, runIdentity)
+import Data.List (intercalate)
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
@@ -75,6 +76,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (pack)
+import Debug.Trace (traceEvent)
 import GHC.Generics
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks)
@@ -242,8 +244,21 @@ evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
     lift True = Passes
     lift False = Fails [OnePhaseFailure . pack . show $ timelock]
 evalScripts tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : rest) =
-  runPLCScript (Proxy @era) lang cost pscript units (map getPlutusData ds)
-    `andResult` evalScripts tx rest
+  let beginMsg =
+        intercalate
+          ","
+          [ "[LEDGER][PLUTUS_SCRIPT]",
+            "BEGIN"
+          ]
+      !res = traceEvent beginMsg $ runPLCScript (Proxy @era) lang cost pscript units (map getPlutusData ds)
+      endMsg =
+        intercalate
+          ","
+          [ "[LEDGER][PLUTUS_SCRIPT]",
+            "END",
+            "res = " <> show res
+          ]
+   in (traceEvent endMsg res) `andResult` evalScripts tx rest
 
 -- Collect information (purpose and hash) about all the scripts in a Tx.
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
