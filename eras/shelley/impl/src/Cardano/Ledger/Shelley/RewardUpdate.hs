@@ -21,47 +21,30 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    NonNegativeInterval,
-    ProtVer (..),
-    ShelleyBase,
-    UnitInterval,
-    boundedRationalFromCBOR,
-    boundedRationalToCBOR,
-  )
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
+import Cardano.Ledger.Coin (Coin (..), CompactForm, DeltaCoin (..))
+import Cardano.Ledger.Compactible (Compactible (fromCompact))
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamed)
-import Cardano.Ledger.Shelley.EpochBoundary
-  ( SnapShot (..),
-    Stake (..),
-    poolStake,
-    sumAllStake,
-  )
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenancePool (..))
 import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
 import Cardano.Ledger.Shelley.Rewards
   ( Likelihood,
     NonMyopic,
+    PoolRewardInfo (..),
     Reward (..),
-    leaderProbability,
-    likelihood,
-    rewardOnePool,
+    RewardType (..),
+    rewardOnePoolMember,
   )
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
-import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData (..))
 import Control.Provenance (ProvM, liftProv)
 import Data.Coders
   ( Decode (..),
     Encode (..),
     decode,
-    decodeStrictSeq,
     encode,
-    encodeFoldable,
     mapDecode,
     mapEncode,
     setDecode,
@@ -78,35 +61,29 @@ import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.Pulse (Pulsable (..), completeM, foldlM')
-import Data.Ratio ((%))
-import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as StrictSeq
+import Data.Pulse (Pulsable (..), completeM)
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..), allNoThunks)
-import Numeric.Natural (Natural)
 
 -- ===============================================================
 
 -- | The result of reward calculation is a pair of aggregate Maps.
 data RewardAns c
   = RewardAns
-      !(Map (Credential 'Staking c) (Set (Reward c)))
-      !(Map (KeyHash 'StakePool c) Likelihood)
+      !(Map (Credential 'Staking c) (Reward c))
   deriving (Show, Eq, Generic)
   deriving (NFData)
 
 instance NoThunks (RewardAns crypto)
 
 instance CC.Crypto c => ToCBOR (RewardAns c) where
-  toCBOR (RewardAns x y) = toCBOR (x, y)
+  toCBOR (RewardAns x) = toCBOR x
 
 instance CC.Crypto c => FromCBOR (RewardAns c) where
-  fromCBOR = uncurry RewardAns <$> fromCBOR
+  fromCBOR = RewardAns <$> fromCBOR
 
 -- | The provenance we collect
 type KeyHashPoolProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
@@ -162,19 +139,16 @@ emptyRewardUpdate =
 
 -- ===================================================
 
--- | To pulse the reward update, we need a snap shot of the EpochState particular to this computation
+-- | To complete the reward update, we need a snap shot of the EpochState particular to this computation
 data RewardSnapShot crypto = RewardSnapShot
-  { rewSnapshot :: !(SnapShot crypto),
-    rewFees :: !Coin,
-    rewa0 :: !NonNegativeInterval,
-    rewnOpt :: !Natural,
+  { rewFees :: !Coin,
     rewprotocolVersion :: !ProtVer,
     rewNonMyopic :: !(NonMyopic crypto),
     rewDeltaR1 :: !Coin, -- deltaR1
     rewR :: !Coin, -- r
     rewDeltaT1 :: !Coin, -- deltaT1
-    rewTotalStake :: !Coin, -- totalStake
-    rewRPot :: !Coin -- rPot
+    rewLikelihoods :: !(Map (KeyHash 'StakePool crypto) Likelihood),
+    rewLeaders :: !(Map (Credential 'Staking crypto) (Set (Reward crypto)))
   }
   deriving (Show, Eq, Generic)
 
@@ -183,20 +157,17 @@ instance Typeable crypto => NoThunks (RewardSnapShot crypto)
 instance NFData (RewardSnapShot crypto)
 
 instance CC.Crypto crypto => ToCBOR (RewardSnapShot crypto) where
-  toCBOR (RewardSnapShot ss fees a0 nopt ver nm dr1 r dt1 tot pot) =
+  toCBOR (RewardSnapShot fees ver nm dr1 r dt1 lhs lrs) =
     encode
       ( Rec RewardSnapShot
-          !> To ss
           !> To fees
-          !> E boundedRationalToCBOR a0
-          !> To nopt
           !> To ver
           !> To nm
           !> To dr1
           !> To r
           !> To dt1
-          !> To tot
-          !> To pot
+          !> mapEncode lhs
+          !> mapEncode lrs
       )
 
 instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
@@ -205,29 +176,15 @@ instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
       ( RecD RewardSnapShot
           <! From
           <! From
-          <! D boundedRationalFromCBOR
           <! From
           <! From
           <! From
           <! From
-          <! From
-          <! From
-          <! From
-          <! From
+          <! mapDecode
+          <! mapDecode
       )
 
--- Some functions that only need a subset of the PParams can be
--- passed a RewardSnapShot, as it copies of some values from PParams
-
--- | RewardSnapShot can act as a Proxy for PParams where "_a0" is "Pool influence"
-instance HasField "_a0" (RewardSnapShot crypto) NonNegativeInterval where
-  getField x = rewa0 x
-
--- | RewardSnapShot can act as a Proxy for PParams where "_nOpt" is "Desired number of pools"
-instance HasField "_nOpt" (RewardSnapShot crypto) Natural where
-  getField x = rewnOpt x
-
--- | RewardSnapShot can act as a Proxy for PParams where "_protocolVersion" is " Protocol version"
+-- | RewardSnapShot can act as a Proxy for PParams when only the protocol version is needed.
 instance HasField "_protocolVersion" (RewardSnapShot crypto) ProtVer where
   getField x = rewprotocolVersion x
 
@@ -237,122 +194,77 @@ instance HasField "_protocolVersion" (RewardSnapShot crypto) ProtVer where
 -- Pulsable function.
 
 data FreeVars crypto = FreeVars
-  { b :: !(Map (KeyHash 'StakePool crypto) Natural),
-    delegs :: !(VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
-    stake :: !(Stake crypto),
+  { delegs :: !(VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
     addrsRew :: !(Set (Credential 'Staking crypto)),
     totalStake :: !Integer,
-    activeStake :: !Integer,
-    asc :: !ActiveSlotCoeff,
-    totalBlocks :: !Natural, --
-    r :: !Coin,
-    slotsPerEpoch :: !EpochSize,
-    pp_d :: !UnitInterval, -- The last three fields come from some version of PParams
-    pp_a0 :: !NonNegativeInterval,
-    pp_nOpt :: !Natural,
-    pp_mv :: !Natural
+    pp_pv :: !ProtVer,
+    poolRewardInfo :: !(Map (KeyHash 'StakePool crypto) (PoolRewardInfo crypto))
   }
   deriving (Eq, Show, Generic)
   deriving (NoThunks)
+
+-- | FreeVars can act as a Proxy for PParams when only the protocol version is needed.
+instance HasField "_protocolVersion" (FreeVars crypto) ProtVer where
+  getField = pp_pv
 
 instance NFData (FreeVars crypto)
 
 instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
   toCBOR
     FreeVars
-      { b,
-        delegs,
-        stake,
+      { delegs,
         addrsRew,
         totalStake,
-        activeStake,
-        asc,
-        totalBlocks,
-        r,
-        slotsPerEpoch,
-        pp_d,
-        pp_a0,
-        pp_nOpt,
-        pp_mv
+        pp_pv,
+        poolRewardInfo
       } =
       encode
-        ( Rec FreeVars !> mapEncode b !> vMapEncode delegs !> To stake !> setEncode addrsRew
+        ( Rec FreeVars
+            !> vMapEncode delegs
+            !> setEncode addrsRew
             !> To totalStake
-            !> To activeStake
-            !> To asc
-            !> To totalBlocks
-            !> To r
-            !> To slotsPerEpoch
-            !> To pp_d
-            !> E boundedRationalToCBOR pp_a0
-            !> To pp_nOpt
-            !> To pp_mv
+            !> To pp_pv
+            !> mapEncode poolRewardInfo
         )
 
 instance (CC.Crypto crypto) => FromCBOR (FreeVars crypto) where
   fromCBOR =
     decode
-      ( RecD FreeVars <! mapDecode {- b -} <! vMapDecode {- delegs -} <! From {- stake -} <! setDecode {- addrsRew -}
+      ( RecD FreeVars
+          <! vMapDecode {- delegs -}
+          <! setDecode {- addrsRew -}
           <! From {- totalStake -}
-          <! From {- activeStake -}
-          <! From {- asc -}
-          <! From {- totalBlocks -}
-          <! From {- r -}
-          <! From {- slotsPerEpoch -}
-          <! From {- pp_d -}
-          <! D boundedRationalFromCBOR {- pp_a0 -}
-          <! From {- pp_nOpt -}
-          <! From {- pp_mv -}
+          <! From {- pp_pv -}
+          <! mapDecode {- poolRewardInfo -}
       )
 
 -- =====================================================================
 
 -- | The function to call on each reward update pulse. Called by the pulser.
-rewardStakePool ::
-  Monad m =>
+rewardStakePoolMember ::
   FreeVars c ->
   RewardAns c ->
-  PoolParams c ->
-  ProvM (KeyHashPoolProvenance c) m (RewardAns c)
-rewardStakePool
-  FreeVars
-    { b,
-      delegs,
-      stake,
+  Credential 'Staking c ->
+  CompactForm Coin ->
+  RewardAns c
+rewardStakePoolMember
+  pp@FreeVars
+    { delegs,
       addrsRew,
       totalStake,
-      activeStake,
-      asc,
-      totalBlocks,
-      r,
-      slotsPerEpoch,
-      pp_d,
-      pp_a0,
-      pp_nOpt,
-      pp_mv
+      poolRewardInfo
     }
-  (RewardAns m1 m2)
-  pparams = do
-    let hk = _poolId pparams
-        blocksProduced = Map.lookup hk b
-        actgr = poolStake hk delegs stake
-        Coin pstake = sumAllStake actgr
-        sigma = if totalStake == 0 then 0 else fromIntegral pstake % fromIntegral totalStake
-        sigmaA = if activeStake == 0 then 0 else fromIntegral pstake % fromIntegral activeStake
-        ls =
-          likelihood
-            (fromMaybe 0 blocksProduced)
-            (leaderProbability asc sigma pp_d)
-            slotsPerEpoch
-    case blocksProduced of
-      Nothing -> pure $ RewardAns m1 (Map.insert hk ls m2)
-      Just n -> do
-        m <- rewardOnePool (pp_d, pp_a0, pp_nOpt, pp_mv) r n totalBlocks pparams actgr sigma sigmaA (Coin totalStake) addrsRew
-        pure $ RewardAns (Map.unionWith Set.union m m1) (Map.insert hk ls m2)
+  (RewardAns m)
+  cred
+  c = fromMaybe (RewardAns m) $ do
+    poolID <- VMap.lookup cred delegs
+    poolRI <- Map.lookup poolID poolRewardInfo
+    r <- rewardOnePoolMember pp (Coin totalStake) addrsRew poolRI cred (fromCompact c)
+    pure $ RewardAns (Map.insert cred (Reward MemberReward poolID r) m)
 
 -- ================================================================
 
--- | The type of a Pulser which uses 'rewardStakePool' as its underlying function.
+-- | The type of a Pulser which uses 'rewardStakePoolMember' as its underlying function.
 --     'rewardStakePool' will be partially applied to the component of type
 --     (FreeVars c) when pulsing. Note that we use two type equality (~) constraints
 --     to fix both the monad 'm' and the 'ans' type, to the context where we will use
@@ -364,7 +276,7 @@ data RewardPulser c (m :: Type -> Type) ans where
     (ans ~ RewardAns c, m ~ ProvM (KeyHashPoolProvenance c) ShelleyBase) =>
     !Int ->
     !(FreeVars c) ->
-    !(StrictSeq (PoolParams c)) ->
+    !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking c) (CompactForm Coin)) ->
     !ans ->
     RewardPulser c m ans
 
@@ -373,14 +285,16 @@ data RewardPulser c (m :: Type -> Type) ans where
 -- All of the instances are at that type. Though only the CBOR instances need make that explicit.
 
 instance Pulsable (RewardPulser crypto) where
-  done (RSLP _n _free zs _ans) = null zs
+  done (RSLP _n _free zs _ans) = VMap.null zs
   current (RSLP _ _ _ ans) = ans
-  pulseM ll@(RSLP _ _ StrictSeq.Empty _) = pure ll
-  pulseM (RSLP n free balance ans) = do
-    let !(steps, !balance') = StrictSeq.splitAt n balance
-    ans' <- foldlM' (rewardStakePool free) ans steps
-    pure (RSLP n free balance' ans')
-  completeM (RSLP _ free balance ans) = foldlM' (rewardStakePool free) ans balance
+  pulseM p@(RSLP n free balance ans) =
+    if VMap.null balance
+      then pure p
+      else do
+        let !(steps, !balance') = VMap.splitAt n balance
+            ans' = VMap.foldlWithKey (rewardStakePoolMember free) ans steps
+        pure $! RSLP n free balance' ans'
+  completeM (RSLP _ free balance ans) = pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
 
 deriving instance Eq ans => Eq (RewardPulser c m ans)
 
@@ -401,12 +315,12 @@ instance NFData (Pulser c) where
 
 instance (CC.Crypto c) => ToCBOR (Pulser c) where
   toCBOR (RSLP n free balance ans) =
-    encode (Rec RSLP !> To n !> To free !> E encodeFoldable balance !> To ans)
+    encode (Rec RSLP !> To n !> To free !> vMapEncode balance !> To ans)
 
 instance (CC.Crypto c) => FromCBOR (Pulser c) where
   fromCBOR =
     decode
-      ( RecD RSLP <! From <! From <! D (decodeStrictSeq fromCBOR) <! From
+      ( RecD RSLP <! From <! From <! vMapDecode <! From
       )
 
 -- =========================================================================

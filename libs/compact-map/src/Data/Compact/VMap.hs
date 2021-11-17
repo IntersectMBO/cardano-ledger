@@ -14,8 +14,11 @@ module Data.Compact.VMap
     lookup,
     findWithDefault,
     map,
+    mapMaybe,
     mapWithKey,
     fold,
+    foldl,
+    foldlWithKey,
     foldMap,
     foldMapWithKey,
     fromMap,
@@ -34,6 +37,8 @@ module Data.Compact.VMap
     intern,
     interns,
     internMaybe,
+    null,
+    splitAt,
     -- Internal types
     KV.KVMVector,
     KV.KVVector,
@@ -47,7 +52,8 @@ import Control.DeepSeq
 import Data.Compact.KVVector (KVVector (..))
 import qualified Data.Compact.KVVector as KV
 import qualified Data.Map.Strict as Map
-import Data.Maybe as Maybe
+import Data.Maybe as Maybe hiding (mapMaybe)
+import qualified Data.Maybe as Maybe (mapMaybe)
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Primitive as VP
@@ -56,7 +62,7 @@ import qualified Data.Vector.Storable as VU
 import qualified GHC.Exts as Exts
 import GHC.Generics (Generic)
 import NoThunks.Class
-import Prelude hiding (foldMap, lookup, map)
+import Prelude hiding (foldMap, foldl, lookup, map, null, splitAt)
 
 type VB = V.Vector
 
@@ -159,6 +165,14 @@ map ::
 map f (VMap vec) = VMap (KV.mapValsKVVector f vec)
 {-# INLINE map #-}
 
+mapMaybe ::
+  (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
+  (a -> Maybe b) ->
+  VMap kv vv k a ->
+  VMap kv vv k b
+mapMaybe f (VMap vec) = VMap (VG.mapMaybe (\(k, x) -> (,) k <$> f x) vec)
+{-# INLINE mapMaybe #-}
+
 mapWithKey ::
   (VG.Vector kv k, VG.Vector vv a, VG.Vector vv b) =>
   (k -> a -> b) ->
@@ -174,6 +188,24 @@ foldMapWithKey ::
   m
 foldMapWithKey f = VG.foldMap' (uncurry f) . unVMap
 {-# INLINE foldMapWithKey #-}
+
+foldl ::
+  VG.Vector vv v =>
+  (a -> v -> a) ->
+  a ->
+  VMap kv vv k v ->
+  a
+foldl f a = VG.foldl' f a . valsVector . unVMap
+{-# INLINE foldl #-}
+
+foldlWithKey ::
+  (VG.Vector kv k, VG.Vector vv v) =>
+  (a -> k -> v -> a) ->
+  a ->
+  VMap kv vv k v ->
+  a
+foldlWithKey f a = VG.foldl' (uncurry . f) a . unVMap
+{-# INLINE foldlWithKey #-}
 
 foldMap :: (VG.Vector vv v, Monoid m) => (v -> m) -> VMap kv vv k v -> m
 foldMap f = VG.foldMap' f . valsVector . unVMap
@@ -191,6 +223,18 @@ keys = VG.toList . keysVector . unVMap
 elems :: VG.Vector vv v => VMap kv vv k v -> [v]
 elems = VG.toList . valsVector . unVMap
 {-# INLINE elems #-}
+
+null :: (VG.Vector vv v, VG.Vector kv k) => VMap kv vv k v -> Bool
+null (VMap vec) = VG.null vec
+{-# INLINE null #-}
+
+splitAt ::
+  (VG.Vector vv v, VG.Vector kv k) =>
+  Int ->
+  VMap kv vv k v ->
+  (VMap kv vv k v, VMap kv vv k v)
+splitAt i (VMap vec) = let (l, r) = VG.splitAt i vec in (VMap l, VMap r)
+{-# INLINE splitAt #-}
 
 internMaybe :: (VG.Vector kv k, Ord k) => k -> VMap kv vv k v -> Maybe k
 internMaybe key = KV.internKVVectorMaybe key . unVMap
