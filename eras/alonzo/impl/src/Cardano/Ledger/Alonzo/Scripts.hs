@@ -34,11 +34,6 @@ module Cardano.Ledger.Alonzo.Scripts
     validateCostModelParams,
     decodeCostModelMap,
     decodeCostModel,
-
-    -- * Deprecated
-    defaultCostModel,
-    alwaysSucceeds,
-    alwaysFails,
   )
 where
 
@@ -73,10 +68,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
-import qualified Plutus.V1.Ledger.Examples as Plutus
-  ( alwaysFailingNAryFunction,
-    alwaysSucceedingNAryFunction,
-  )
 import Plutus.V2.Ledger.Api as PV2 hiding (Map, Script)
 
 -- | Marker indicating the part of a transaction for which this script is acting
@@ -117,14 +108,6 @@ instance NFData (Script era)
 instance SafeToHash (Script era) where
   originalBytes (TimelockScript t) = originalBytes t
   originalBytes (PlutusScript _ bs) = fromShort bs
-
-{-# DEPRECATED alwaysSucceeds "import from Test.Cardano.Ledger.Alonzo.Scripts instead" #-}
-alwaysSucceeds :: Language -> Natural -> Script era
-alwaysSucceeds lang n = PlutusScript lang (Plutus.alwaysSucceedingNAryFunction n)
-
-{-# DEPRECATED alwaysFails "import from Test.Cardano.Ledger.Alonzo.Scripts instead" #-}
-alwaysFails :: Language -> Natural -> Script era
-alwaysFails lang n = PlutusScript lang (Plutus.alwaysFailingNAryFunction n)
 
 isPlutusScript :: Script era -> Bool
 isPlutusScript (PlutusScript _ _) = True
@@ -219,10 +202,6 @@ checkCostModel PlutusV2 cm =
   if PV2.validateCostModelParams cm
     then Right (CostModel cm)
     else Left ("Invalid PlutusV2 cost model: " ++ show cm)
-
-defaultCostModel :: Language -> Maybe CostModel
-defaultCostModel PlutusV1 = CostModel <$> PV1.defaultCostModelParams
-defaultCostModel PlutusV2 = CostModel <$> PV2.defaultCostModelParams
 
 decodeCostModelMap :: Decoder s (Map Language CostModel)
 decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel

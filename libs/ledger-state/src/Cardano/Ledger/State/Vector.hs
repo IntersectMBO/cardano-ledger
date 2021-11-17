@@ -16,7 +16,7 @@ module Cardano.Ledger.State.Vector where
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys as Keys
-import Cardano.Ledger.Shelley.TxBody hiding (TxId, TxIn)
+import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.State.UTxO
 import Control.DeepSeq
 import Data.Map.Strict as Map

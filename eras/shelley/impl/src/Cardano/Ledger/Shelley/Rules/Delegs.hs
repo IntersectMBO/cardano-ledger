@@ -41,7 +41,6 @@ import Cardano.Ledger.Serialization
     mapFromCBOR,
     mapToCBOR,
   )
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState (..),
@@ -120,7 +119,7 @@ deriving stock instance
   Eq (DelegsPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
@@ -188,7 +187,7 @@ instance
 
 delegsTransition ::
   forall era.
-  ( ShelleyBased era,
+  ( Era era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Embed (Core.EraRule "DELPL" era) (DELEGS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,

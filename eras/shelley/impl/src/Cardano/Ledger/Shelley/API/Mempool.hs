@@ -41,6 +41,7 @@ import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
   ( Crypto,
+    Era,
     PreviousEra,
     TranslateEra (translateEra),
     TranslationContext,
@@ -48,7 +49,6 @@ import Cardano.Ledger.Era
   )
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Protocol (PraosCrypto)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
@@ -241,7 +241,7 @@ deriving stock instance
   Show (ApplyTxError era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     ToCBOR (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   ToCBOR (ApplyTxError era)
@@ -249,7 +249,7 @@ instance
   toCBOR (ApplyTxError es) = toCBOR es
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   FromCBOR (ApplyTxError era)

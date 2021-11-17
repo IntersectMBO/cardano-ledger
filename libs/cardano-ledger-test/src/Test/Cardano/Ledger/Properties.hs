@@ -17,7 +17,7 @@ import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW)
-import Cardano.Ledger.Alonzo.Scripts hiding (alwaysFails, alwaysSucceeds)
+import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
     ScriptPurpose (..),

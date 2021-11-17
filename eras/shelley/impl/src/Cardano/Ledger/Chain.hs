@@ -18,9 +18,6 @@ module Cardano.Ledger.Chain
     ChainPredicateFailure (..),
     pparamsToChainChecksPParams,
     chainChecks,
-    -- deprecated
-    ChainChecksData,
-    pparamsToChainChecksData,
   )
 where
 
@@ -41,10 +38,6 @@ data ChainChecksPParams = ChainChecksPParams
   }
   deriving (Show, Eq, Generic, NoThunks)
 
-{-# DEPRECATED ChainChecksData "Use ChainChecksPParams instead" #-}
-
-type ChainChecksData = ChainChecksPParams
-
 pparamsToChainChecksPParams ::
   ( HasField "_maxBHSize" pp Natural,
     HasField "_maxBBSize" pp Natural,
@@ -58,16 +51,6 @@ pparamsToChainChecksPParams pp =
       ccMaxBBSize = getField @"_maxBBSize" pp,
       ccProtocolVersion = getField @"_protocolVersion" pp
     }
-
-{-# DEPRECATED pparamsToChainChecksData "Use pparamsToChainChecksPParams instead" #-}
-pparamsToChainChecksData ::
-  ( HasField "_maxBHSize" pp Natural,
-    HasField "_maxBBSize" pp Natural,
-    HasField "_protocolVersion" pp ProtVer
-  ) =>
-  pp ->
-  ChainChecksPParams
-pparamsToChainChecksData = pparamsToChainChecksPParams
 
 data ChainPredicateFailure era
   = HeaderSizeTooLargeCHAIN

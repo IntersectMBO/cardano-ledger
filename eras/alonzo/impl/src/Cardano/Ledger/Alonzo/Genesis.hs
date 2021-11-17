@@ -5,9 +5,6 @@
 module Cardano.Ledger.Alonzo.Genesis
   ( AlonzoGenesis (..),
     extendPPWithGenesis,
-
-    -- * Deprecated
-    adaPerUTxOWord,
   )
 where
 
@@ -35,10 +32,6 @@ data AlonzoGenesis = AlonzoGenesis
     maxCollateralInputs :: !Natural
   }
   deriving (Eq, Generic, NoThunks)
-
-{-# DEPRECATED adaPerUTxOWord "Use coinsPerUTxOWord instead" #-}
-adaPerUTxOWord :: AlonzoGenesis -> Coin
-adaPerUTxOWord = coinsPerUTxOWord
 
 -- | Given the missing pieces turn a Shelley.PParams' into an Params'
 extendPPWithGenesis ::

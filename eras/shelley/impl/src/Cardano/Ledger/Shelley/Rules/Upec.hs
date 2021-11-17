@@ -17,9 +17,9 @@ module Cardano.Ledger.Shelley.Rules.Upec where
 import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley.Constraints
-  ( ShelleyBased,
-    UsesAuxiliary,
+  ( UsesAuxiliary,
     UsesPParams (mergePPUpdates),
     UsesScript,
     UsesTxBody,
@@ -150,7 +150,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         _ -> Nothing
 
 instance
-  (ShelleyBased era, STS (NEWPP era)) =>
+  (Era era, STS (NEWPP era)) =>
   Embed (NEWPP era) (UPEC era)
   where
   wrapFailed = NewPpFailure

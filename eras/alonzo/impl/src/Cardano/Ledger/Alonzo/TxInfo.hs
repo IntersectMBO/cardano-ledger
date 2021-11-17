@@ -540,18 +540,17 @@ runPLCScript proxy lang (CostModel cost) scriptbytestring units ds =
 -- It pays to decode the context data into a real context because that provides
 -- way more information. But there is no guarantee the context data really can
 -- be decoded.
-explainPlutusFailure,
-  explain_plutus_failure ::
-    forall era.
-    Show (Script era) =>
-    Proxy era ->
-    Language ->
-    SBS.ShortByteString ->
-    PV1.EvaluationError ->
-    [PV1.Data] ->
-    CostModel ->
-    ExUnits ->
-    ScriptResult
+explainPlutusFailure ::
+  forall era.
+  Show (Script era) =>
+  Proxy era ->
+  Language ->
+  SBS.ShortByteString ->
+  PV1.EvaluationError ->
+  [PV1.Data] ->
+  CostModel ->
+  ExUnits ->
+  ScriptResult
 explainPlutusFailure _proxy lang scriptbytestring e ds@[dat, redeemer, info] cm eu =
   -- A three data argument script.
   let ss :: Script era
@@ -632,8 +631,6 @@ explainPlutusFailure _proxy lang scriptbytestring e ds cm eu =
               ++ map show ds
           )
     db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
-explain_plutus_failure = explainPlutusFailure
-{-# DEPRECATED explain_plutus_failure "In favor of properly named `explainPlutusFailure`" #-}
 
 validPlutusdata :: PV1.Data -> Bool
 validPlutusdata (PV1.Constr _n ds) = all validPlutusdata ds

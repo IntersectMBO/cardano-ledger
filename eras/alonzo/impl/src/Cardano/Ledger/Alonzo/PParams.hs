@@ -27,10 +27,6 @@ module Cardano.Ledger.Alonzo.PParams
     encodeLangViews,
     retractPP,
     extendPP,
-    -- Deprecated
-    ProtVer,
-    pvMajor,
-    pvMinor,
   )
 where
 
@@ -542,15 +538,3 @@ extendPP
   col
   mxCol =
     PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP ada cost price mxTx mxBl mxV col mxCol
-
-{-# DEPRECATED ProtVer "Import from Cardano.Ledger.BaseTypes instead" #-}
-
-type ProtVer = BT.ProtVer
-
-{-# DEPRECATED pvMajor "Import from Cardano.Ledger.BaseTypes instead" #-}
-pvMajor :: ProtVer -> Natural
-pvMajor = BT.pvMajor
-
-{-# DEPRECATED pvMinor "Import from Cardano.Ledger.BaseTypes instead" #-}
-pvMinor :: ProtVer -> Natural
-pvMinor = BT.pvMinor
