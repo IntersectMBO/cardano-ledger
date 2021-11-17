@@ -54,6 +54,9 @@ cradle:
     - path: "eras/alonzo/test-suite/test"
       component: "cardano-ledger-alonzo-test:test:cardano-ledger-alonzo-test"
 
+    - path: "eras/babbage/impl/src"
+      component: "lib:cardano-ledger-babbage"
+
     - path: "libs/cardano-ledger-test/src"
       component: "lib:cardano-ledger-test"
 

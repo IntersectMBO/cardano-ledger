@@ -3,6 +3,7 @@ index-state: 2021-02-15T00:00:00Z
 packages:
   eras/alonzo/impl
   eras/alonzo/test-suite
+  eras/babbage/impl
   eras/byron/chain/executable-spec
   eras/byron/ledger/executable-spec
   eras/byron/ledger/impl
