@@ -4,7 +4,6 @@
 module Main where
 
 import Cardano.Ledger.State.Query
---import Cardano.Ledger.State.UTxO
 import Control.Monad
 import qualified Data.Text as T
 import Options.Applicative as O
@@ -63,11 +62,8 @@ main = do
         --   io "SnapShots (Vector) - no sharing" (loadSnapShotsNoSharing dbFp) _ese
         --   io "SnapShots (Vector) - with sharing" (loadSnapShotsWithSharing dbFp) _ese
         wgroup "DState+UTxO" $ do
-          io "IntMap (KeyMap TxId TxOut) (original)" getLedgerStateNoSharingOrigKeyMap' dbFp
           io "IntMap (KeyMap TxId TxOut)" getLedgerStateNoSharingKeyMap dbFp
           io "IntMap (KeyMap TxId TxOut) (sharing)" getLedgerStateWithSharingKeyMap dbFp
-          io "IntMap (KeyMap TxId TxOut')" getLedgerStateNoSharingKeyMap' dbFp
-          io "IntMap (KeyMap TxId TxOut') (sharing)" getLedgerStateWithSharingKeyMap' dbFp
 
 -- io "KeyMap TxId (IntMap TxOut)" getLedgerStateDStateTxIdSharingKeyMap dbFp
 -- io "IntMap (Map TxId TxOut)" getLedgerStateDStateTxIxSharing dbFp
@@ -94,6 +90,3 @@ main = do
 -- wgroup "Share TxOut StakeCredential" $ do
 --   io "Map TxIn TxOut'" getLedgerStateTxOutSharing dbFp
 -- wgroup "No Sharing" $ do
--- wgroup "Share TxOut StakeCredential" $ do
---   io "IntMap (KeyMap TxId TxOut')" getLedgerStateWithSharingKeyMap dbFp
---   io "IntMap (Map TxId TxOut')" getLedgerStateWithSharing dbFp
