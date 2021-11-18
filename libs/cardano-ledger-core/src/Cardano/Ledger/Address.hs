@@ -141,14 +141,19 @@ serialiseAddr = BSL.toStrict . B.runPut . putAddr
 deserialiseAddr :: CC.Crypto crypto => ByteString -> Maybe (Addr crypto)
 deserialiseAddr bs = case B.runGetOrFail getAddr (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
-  Right (_remaining, _offset, result) -> Just result
+  Right (remaining, _offset, result) ->
+    if BSL.null remaining
+      then Just result
+      else Nothing
 
 -- | Deserialise a stake refence from a address. This will fail if this
 -- is a Bootstrap address (or malformed).
 deserialiseAddrStakeRef :: CC.Crypto crypto => ByteString -> Maybe (StakeReference crypto)
-deserialiseAddrStakeRef bs = case B.runGetOrFail getAddrStakeReference (BSL.fromStrict bs) of
-  Left (_remaining, _offset, _message) -> Nothing
-  Right (_remaining, _offset, result) -> result
+deserialiseAddrStakeRef bs =
+  case B.runGetOrFail getAddrStakeReference (BSL.fromStrict bs) of
+    Right (remaining, _offset, result)
+      | not (BSL.null remaining) -> result
+    _ -> Nothing
 
 -- | Serialise a reward account to the external format.
 serialiseRewardAcnt :: RewardAcnt crypto -> ByteString
@@ -159,7 +164,10 @@ serialiseRewardAcnt = BSL.toStrict . B.runPut . putRewardAcnt
 deserialiseRewardAcnt :: CC.Crypto crypto => ByteString -> Maybe (RewardAcnt crypto)
 deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs) of
   Left (_remaining, _offset, _message) -> Nothing
-  Right (_remaining, _offset, result) -> Just result
+  Right (remaining, _offset, result) ->
+    if BSL.null remaining
+      then Just result
+      else Nothing
 
 -- | An address for UTxO.
 data Addr crypto

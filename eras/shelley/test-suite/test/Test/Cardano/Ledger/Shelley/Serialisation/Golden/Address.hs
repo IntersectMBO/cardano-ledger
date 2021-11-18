@@ -195,7 +195,11 @@ goldenTests_ShelleyCrypto =
                 Byron.addrType = Byron.ATVerKey
               }
         )
-        "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5"
+        "82d818582183581c4bf3c2ee56bfef278d65f7388c46efa12a1069698e474f77adf0cf6aa0001ab4aad9a5",
+      T.testCase "fail on extraneous bytes" $
+        case deserialiseAddr @ShelleyCrypto addressWithExtraneousBytes of
+          Nothing -> pure ()
+          Just _a -> error $ "This should have failed"
     ]
   where
     paymentKey :: Credential 'Payment ShelleyCrypto
@@ -226,6 +230,16 @@ goldenTests_ShelleyCrypto =
             ++ show (BS.length bytes)
             ++ ", but expected to be "
             ++ show expectedLength
+
+addressWithExtraneousBytes :: BS.ByteString
+addressWithExtraneousBytes = bs
+  where
+    bs = case B16.decode hs of
+      Left e -> error $ show e
+      Right x -> x
+    hs =
+      "01AA5C8B35A934ED83436ABB56CDB44878DAC627529D2DA0B59CDA794405931B9359\
+      \46E9391CABDFFDED07EB727F94E9E0F23739FF85978905BD460158907C589B9F1A62"
 
 golden :: HasCallStack => String -> (a -> B.Put) -> a -> LBS.ByteString -> TestTree
 golden name put value expected =
