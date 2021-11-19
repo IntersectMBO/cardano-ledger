@@ -28,7 +28,7 @@ module Test.Cardano.Ledger.DependGraph where
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.BaseTypes (Globals, boundRational, epochInfo)
+import Cardano.Ledger.BaseTypes (Globals (..), boundRational, epochInfo, UnitInterval)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Keys (KeyRole (..))
 import qualified Cardano.Ledger.Val as Val
@@ -40,6 +40,7 @@ import Control.Monad
 import Control.Monad.Reader
 import qualified Control.Monad.State.Lazy as State
 import Control.Monad.Supply
+import Control.DeepSeq
 import Control.Monad.Writer.CPS
 import Data.Bool (bool)
 import Data.Either
@@ -71,6 +72,8 @@ import Test.Cardano.Ledger.ModelChain
 import Test.Cardano.Ledger.ModelChain.FeatureSet
 import Test.Cardano.Ledger.ModelChain.Script
 import Test.Cardano.Ledger.ModelChain.Value
+
+import Debug.Trace (trace)
 
 data ModelGeneratorParamsF f = ModelGeneratorParams
   { _modelGeneratorParams_epochs :: f EpochNo,
@@ -268,21 +271,32 @@ genDCert allowScripts = do
   stakeHolders <- uses (modelLedger . to getModelLedger_utxos) $ Map.keysSet . unGrpMap . _modelUTxOMap_stake
   registeredStake <- uses (modelLedger . to getModelLedger_rewards) $ Map.keysSet
   pools <-
-    uses
+    use
       (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ss . modelSnapshots_pstake . snapshotQueue_mark . modelSnapshot_pools)
-      $ Map.keys
+
+  allDelegations <-
+    uses
+      (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_delegations)
+      $ Set.fromList . Map.toList
 
   let unregisteredStake = Set.difference stakeHolders registeredStake
       registeredStake' = Set.filter (isJust . guardHaveCollateral allowScripts) registeredStake
+      allPoolOwners = foldMap (\p -> foldMap (\cred -> Set.singleton (liftModelCredential cred, _mppId p))
+        $ filter (flip Set.member registeredStake' . liftModelCredential) $ _mppOwners p) pools
+      unDelegatedOwners = Set.difference allPoolOwners allDelegations
+
 
   frequency $
     [(1, ModelCertPool . ModelRegPool <$> genModelPool)]
       <> [ (1, ModelCertDeleg . ModelRegKey <$> elements (Set.toList unregisteredStake))
            | not (null unregisteredStake)
          ]
-      <> [ (1, fmap (ModelCertDeleg . ModelDelegate) $ ModelDelegation <$> elements (Set.toList registeredStake') <*> elements pools)
+      <> [ (1, fmap (ModelCertDeleg . ModelDelegate) $ uncurry ModelDelegation <$> elements (Set.toList unDelegatedOwners))
+           | not (null unDelegatedOwners)
+         ]
+      <> [ (1, fmap (ModelCertDeleg . ModelDelegate) $ ModelDelegation <$> elements (Set.toList registeredStake') <*> elements (Map.keys pools))
            | not (null registeredStake'),
-             not (null pools)
+             not (null $ Map.keys pools)
          ]
 
 genWdrl :: HasGenModelM st era m => AllowScripts (ScriptFeature era) -> m (Map (ModelCredential 'Staking (ScriptFeature era)) Coin)
@@ -426,14 +440,103 @@ graphHeads gr = mapMaybe f (FGL.nodes gr)
       guard $ null $ FGL.inn' c
       pure $ FGL.labNode' c
 
+adjustPledge :: MonadGen m => Coin -> m Coin
+adjustPledge x = do
+  let fifthOfX = (unCoin x) `div` 5
+  randXAmount <- choose (0, fifthOfX)
+  let adjustedX = (4 * fifthOfX) + randXAmount
+  pure $ Coin adjustedX
+
+genPoolParamPledge :: (MonadGen m, HasModelLedger era s, State.MonadState s m, MonadReader ModelGeneratorContext m) =>
+  ModelCredential 'Staking (ScriptFeature era) -> m Coin
+genPoolParamPledge owner = do
+  globals <- asks getGlobals
+  utxoMap <- use (modelLedger . modelLedger_nes . modelNewEpochState_es .  modelEpochState_ls . modelLState_utxoSt . modelUTxOState_utxo)
+  let ownerStake = (adjustPledge . fst) $ view (grpMap owner) $ _modelUTxOMap_stake utxoMap
+      maxVal = (maxLovelaceSupply globals) + 1
+  frequency
+    [ (1, pure $ Coin 0),
+      (10, ownerStake),
+      (1, pure $ word64ToCoin maxVal)
+    ]
+
+genPoolParamCost :: (MonadGen m, HasModelLedger era s, State.MonadState s m, MonadReader ModelGeneratorContext m) => m Coin
+genPoolParamCost = do
+  globals <- asks getGlobals
+  minPoolCost <- uses (modelLedger . modelLedger_nes) (_modelPParams_minPoolCost . getModelPParams)
+  reserves <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_acnt . modelAcnt_reserves)
+  fees <- use (modelLedger . modelLedger_nes . modelNewEpochState_es .  modelEpochState_ls . modelLState_utxoSt . modelUTxOState_fees)
+  pools <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_pstate . modelPState_poolParams)
+  let maxVal = (maxLovelaceSupply globals) + 1
+      numOfPools = (\x -> bool x 1 (0 == x)) $ length $ Map.keys pools
+      maxReasonableVal = ((unCoin reserves) + (unCoin fees)) `div` (toInteger numOfPools)
+  frequency
+    [ (1, pure $ runIdentity minPoolCost),
+      (1, Coin <$> (choose (unCoin $ runIdentity minPoolCost, maxReasonableVal))),
+      (1, pure $ word64ToCoin maxVal)
+    ]
+
+choosePoolAddr :: HasGenModelM st era m => [ModelCredential 'Staking sf] -> m (ModelCredential 'Staking sf)
+choosePoolAddr existingAddrs =
+  frequency $
+    [(1, freshRewardAddress)]
+    <> [(1, elements existingAddrs) | not (null existingAddrs)]
+
+getPoolParamAddress :: HasGenModelM st era m => m (ModelCredential 'Staking (ScriptFeature era))
+getPoolParamAddress = do
+  utxoMap <- use (modelLedger . modelLedger_nes . modelNewEpochState_es .  modelEpochState_ls . modelLState_utxoSt . modelUTxOState_utxo)
+  let creds = toList $ Map.keysSet $ unGrpMap $ _modelUTxOMap_stake utxoMap
+  choosePoolAddr creds
+
+getFilteredPoolParamAddress :: HasGenModelM st era m => m (ModelCredential 'Staking (ScriptFeature ('FeatureSet 'ExpectAnyOutput ('TyScriptFeature 'False 'False))))
+getFilteredPoolParamAddress = do
+  utxoMap <- use (modelLedger . modelLedger_nes . modelNewEpochState_es .  modelEpochState_ls . modelLState_utxoSt . modelUTxOState_utxo)
+  let creds = toList $ Map.keysSet $ unGrpMap $ _modelUTxOMap_stake utxoMap
+      addrList = mapMaybe (filterModelCredential (FeatureTag ValueFeatureTag_AnyOutput ScriptFeatureTag_None)) creds
+  choosePoolAddr addrList
+
+genPoolOwners :: HasGenModelM st era m => m [(ModelCredential 'Staking (ScriptFeature ('FeatureSet 'ExpectAnyOutput ('TyScriptFeature 'False 'False))))]
+genPoolOwners = do
+  numOfOwners <- frequency
+        [ (1, pure (1 :: Int)),
+          (1, choose (2 :: Int, 10))
+        ]
+  vectorOf numOfOwners getFilteredPoolParamAddress
+
+genPoolMargin :: MonadGen m => m (UnitInterval)
+genPoolMargin = do
+  n <- choose (1, 98)
+  d <- choose (2, 99)
+  frequency $
+    [ (1, pure $ (fromJust . boundRational) $ 0 % 1),
+      (1, pure $ (fromJust . boundRational) 1) ]
+    <> [ (1, pure $ (fromJust . boundRational) $ n % d) | n < d ]
+
+getPoolParamIdVrf :: HasGenModelM st era m => m (ModelPoolId, ModelCredential 'StakePool ('TyScriptFeature 'False 'False))
+getPoolParamIdVrf = do
+  pools <- uses
+    (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_pstate . modelPState_poolParams)
+    $ Map.elems
+  let poolIdVrfPair = (\p -> (_mppId p, _mppVrm p)) <$> pools
+  frequency $
+    [(1, elements poolIdVrfPair) | not (null poolIdVrfPair)]
+    <> [(1, (,) <$> freshPoolAddress <*> (freshCredential "poolVrf"))]
+
+
 -- TODO: this could be a more interesting pool.
-genModelPool :: (Show n, MonadSupply n m) => m (ModelPoolParams era)
+genModelPool :: HasGenModelM st era m => m (ModelPoolParams era)
 genModelPool = do
-  poolId <- freshPoolAddress
-  poolVrf <- freshCredential "poolVrf"
-  racct <- freshRewardAddress
-  powner <- freshRewardAddress
-  pure $ ModelPoolParams poolId poolVrf (Coin 0) (Coin 0) (fromJust $ boundRational $ 0 % 1) racct [powner]
+  (poolId, poolVrf) <- getPoolParamIdVrf
+  cost <- genPoolParamCost
+  --poolId <- freshPoolAddress
+  --poolVrf <- freshCredential "poolVrf"
+  racct <- getPoolParamAddress
+  pledge <- genPoolParamPledge racct
+  powners <- genPoolOwners
+  margin <- genPoolMargin
+  --let poolParams = ModelPoolParams poolId poolVrf pledge cost (fromJust $ boundRational $ 0 % 1) racct powners
+  --trace ("\nModelPoolParams: " <> show poolParams) $ pure poolParams
+  pure $ ModelPoolParams poolId poolVrf pledge cost margin racct powners
 
 minFee :: Integer
 minFee = 100000
@@ -460,17 +563,16 @@ genPartition xs = do
 minOutput :: Integer
 minOutput = 500_000
 
-genGenesesUTxOs :: (MonadGen m, MonadSupply Integer m) => ModelGeneratorParams -> m [(ModelUTxOId, ModelAddress sf, Coin)]
+genGenesesUTxOs :: (MonadGen m, MonadSupply Integer m) => ModelGeneratorParams -> m (Map.Map ModelUTxOId (ModelAddress sf, Coin))
 genGenesesUTxOs ctx = do
   genesisSupply <- liftGen (_modelGeneratorParams_genesesAcct ctx)
   g' <- liftGen $ unfoldModelValue @Void (Coin minOutput) (Val.inject genesisSupply)
-  xs <- for g' $ \(ModelValueSimple (x, _)) ->
-    (,,)
+  fmap Map.fromList $ for (toList g') $ \(ModelValueSimple (x, _)) ->
+    (\ui addr vl -> (ui, (addr, vl)))
       <$> freshUtxoId
       <*> freshPaymentAddress "gen"
       <*> pure x
 
-  pure $ toList xs
 
 -- TODO
 genGenesisDelegates :: Applicative m => m ModelGenesisDelegation
@@ -514,7 +616,7 @@ genModel ::
 genModel globals ctx = do
   pp <- pure modelPParams -- TODO
   let st0 :: Faucet (ModelLedger era)
-      st0 = Faucet 0 $ mkModelLedger globals (ModelGenesis pp Map.empty [])
+      st0 = Faucet 0 $ mkModelLedger globals (ModelGenesis pp Map.empty $ Map.empty)
 
   runGenModelM (ModelGeneratorContext globals ctx) st0 $ do
     genesisUtxos <- genGenesesUTxOs ctx
@@ -691,230 +793,4 @@ instance {-# OVERLAPPING #-} (Monad m) => MonadSupply Integer (State.StateT (Fau
   peek = use faucet_supply
   exhausted = pure False
 
-data FixupValuesFlags = FixupValuesFlags
-  { allowSigChanges :: Bool
-  }
 
-type ModelValueSimple' era = ModelValueSimple (ModelValueVars era (ValueFeature era))
-
-data FixupValuesError era
-  = FixupValues_BadWdrls
-      (Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era))
-      (Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era))
-      (Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era))
-      ModelTxId
-  | FixupValues_BadWitness
-      String
-      (Set (ModelCredential 'Witness ShelleyScriptFeatures), Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits))
-      ModelTxId
-  | FixupValues_FeeTooSmall
-      Integer
-      (ModelValueSimple' era)
-      (ModelValueSimple' era)
-      ModelTxId
-
-_FixupValues_BadWdrls ::
-  Prism'
-    (FixupValuesError era)
-    ( (Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era)),
-      (Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era)),
-      (Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era)),
-      ModelTxId
-    )
-_FixupValues_BadWdrls = prism (\(a, b, c, d) -> FixupValues_BadWdrls a b c d) $ \case
-  FixupValues_BadWdrls a b c d -> Right (a, b, c, d)
-  x -> Left x
-{-# INLINE _FixupValues_BadWdrls #-}
-
-_FixupValues_BadWitness ::
-  Prism'
-    (FixupValuesError era)
-    ( String,
-      (Set (ModelCredential 'Witness ShelleyScriptFeatures), Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits)),
-      ModelTxId
-    )
-_FixupValues_BadWitness = prism (\(a, b, c) -> FixupValues_BadWitness a b c) $ \case
-  FixupValues_BadWitness a b c -> Right (a, b, c)
-  x -> Left x
-{-# INLINE _FixupValues_BadWitness #-}
-
-_FixupValues_FeeTooSmall ::
-  Prism'
-    (FixupValuesError era)
-    ( Integer,
-      (ModelValueSimple' era),
-      (ModelValueSimple' era),
-      ModelTxId
-    )
-_FixupValues_FeeTooSmall = prism (\(a, b, c, d) -> FixupValues_FeeTooSmall a b c d) $ \case
-  FixupValues_FeeTooSmall a b c d -> Right (a, b, c, d)
-  x -> Left x
-{-# INLINE _FixupValues_FeeTooSmall #-}
-
-type FixupValuesErrors era = NonEmpty (FixupValuesError era)
-
-fixupValues ::
-  forall era.
-  KnownRequiredFeatures era =>
-  FixupValuesFlags ->
-  Globals ->
-  (ModelGenesis era, [ModelEpoch era]) ->
-  (Maybe (FixupValuesErrors era), (ModelGenesis era, [ModelEpoch era]))
-fixupValues fvf globals (genesis, epochs) =
-  let tellFixupErr ::
-        forall m.
-        Monad m =>
-        FixupValuesError era ->
-        WriterT (Maybe (FixupValuesErrors era)) m ()
-      tellFixupErr = tell . Just . pure
-
-      checkSigs ::
-        forall m.
-        HasModelM era (ModelLedger era) Globals m =>
-        String ->
-        ModelTx era ->
-        WriterT (Maybe (FixupValuesErrors era)) m (ModelTx era)
-      checkSigs hint mtx = do
-        ml <- use modelLedger
-        let wits = (_mtxWitnessSigs &&& _mtxRedeemers) mtx
-            wits'@(witnessSigs', redeemers') = witnessModelTxImpl mtx ml
-            mtx' =
-              mtx
-                { _mtxWitnessSigs = witnessSigs',
-                  _mtxRedeemers = redeemers'
-                }
-
-        when (wits /= wits' && not (allowSigChanges fvf)) $
-          tellFixupErr $
-            FixupValues_BadWitness hint wits' (getModelTxId mtx)
-        pure mtx'
-
-      evalOrDie :: ModelValue (ValueFeature era) era -> ModelValue' (ValueFeature era) era
-      evalOrDie = either (error . show) id . evalModelValueSimple . unModelValue
-
-      fixWdrl ::
-        forall m.
-        HasModelM era (ModelLedger era) Globals m =>
-        ModelTx era ->
-        WriterT (Maybe (FixupValuesErrors era)) m (ModelTx era)
-      fixWdrl tx = do
-        rewards <- uses modelLedger getModelLedger_rewards
-        let wdrlsWithErrors' =
-              Map.merge
-                Map.dropMissing
-                (Map.mapMissing $ \_ -> Left)
-                (Map.zipWithMatched $ \_ rwd _ -> Right (ModelValue $ ModelValue_Inject rwd))
-                rewards
-                (_mtxWdrl tx)
-            wdrls' = Map.mapMaybe (preview _Right) wdrlsWithErrors'
-            wdrlErrors = Map.mapMaybe (preview _Left) wdrlsWithErrors'
-            wdrlKeys = Map.keysSet $ _mtxWdrl tx
-            wdrlKeys' = Map.keysSet wdrls'
-
-        when (wdrlKeys /= wdrlKeys' || not (null wdrlErrors)) $
-          tellFixupErr $
-            FixupValues_BadWdrls (_mtxWdrl tx) wdrls' wdrlErrors (getModelTxId tx)
-
-        pure tx {_mtxWdrl = wdrls'}
-
-      -- distribute an error amount across the provided outputs, evenly
-      fixBalance ::
-        forall m.
-        HasModelM era (ModelLedger era) Globals m =>
-        ModelTx era ->
-        WriterT (Maybe (FixupValuesErrors era)) m (ModelTx era)
-      fixBalance
-        tx@( ModelTx
-               { _mtxFee = getModelValueCoin -> Coin fee,
-                 _mtxOutputs = outputs
-               }
-             ) = do
-          pp <- uses (modelLedger . modelLedger_nes) $ getModelPParams
-          utxo <- uses modelLedger $ getModelLedger_utxos
-          poolParams <- use $ modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_pstate . modelPState_poolParams
-
-          let consumed = evalOrDie $ getModelConsumed pp utxo tx
-              produced = evalOrDie $ getModelProduced pp poolParams tx
-              ModelValueSimple (Coin mada, GrpMap mma) = consumed ~~ produced
-              Coin feeMin = getModelMinfee pp tx
-              minUTxOs :: Map.Map ModelUTxOId Integer = fmap (unCoin . modelMinUTxOCoins pp) $ Map.fromList outputs
-
-              (fee', outsMap) = flip State.runState (Map.fromList $ (fmap . fmap) (evalOrDie . _mtxo_value) outputs) $ do
-                outCoins :: Map.Map ModelUTxOId Integer <-
-                  State.gets $
-                    Map.merge
-                      (Map.mapMissing $ \_ _ -> 0)
-                      Map.dropMissing
-                      (Map.zipWithMatched $ \_ minVal val -> unCoin (Val.coin val) - minVal)
-                      minUTxOs
-
-                let coinTotal = (fee - feeMin) + sum outCoins
-
-                    (Identity fee'' :*: outCoins') =
-                      repartition (mada + coinTotal) (Identity (fee % coinTotal) :*: ((% coinTotal) <$> outCoins))
-                    mergeValue k =
-                      Map.merge
-                        (Map.dropMissing)
-                        (Map.preserveMissing)
-                        (Map.zipWithMatched $ \_ -> set (atModelValueSimple k))
-
-                State.modify $ mergeValue Nothing $ Map.unionWith (+) outCoins' minUTxOs
-
-                ifor_ mma $ \assetId (Sum assetVal) -> do
-                  outAssets ::
-                    Map.Map ModelUTxOId Integer <-
-                    State.gets $ fmap (view $ atModelValueSimple (Just assetId))
-                  let assetTotal = sum outAssets
-                      outAssets' = repartition (assetVal + assetTotal) ((% assetTotal) <$> outAssets)
-
-                  State.modify $ mergeValue (Just assetId) $ outAssets'
-
-                pure (fee'' + feeMin)
-
-              outputs' =
-                (fmap . imap)
-                  (\ui -> modelTxOut_value .~ foldMapOf (ix ui) mkModelValue outsMap)
-                  outputs
-
-          when (fee' <= 0) $
-            tellFixupErr $
-              FixupValues_FeeTooSmall
-                fee'
-                consumed
-                produced
-                (getModelTxId tx)
-          pure $
-            tx
-              { _mtxFee = modelValueInject (Coin fee'),
-                _mtxOutputs = outputs'
-              }
-
-      fixTx ::
-        forall m.
-        HasModelM era (ModelLedger era) Globals m =>
-        SlotNo ->
-        Int ->
-        ModelTx era ->
-        WriterT (Maybe (FixupValuesErrors era)) m (ModelTx era)
-      fixTx slot txIx tx = do
-        tx' <- checkSigs "after" <=< fixBalance <=< checkSigs "between" <=< fixWdrl <=< checkSigs "before" $ tx
-
-        lift $ applyModelTx slot txIx tx'
-        pure tx'
-
-      go ::
-        forall m.
-        HasModelM era (ModelLedger era) Globals m =>
-        WriterT (Maybe (FixupValuesErrors era)) m [ModelEpoch era]
-      go = do
-        for epochs $ \(ModelEpoch blocks blocksMade) -> do
-          blocks' <- for blocks $ \(ModelBlock slot txs) -> do
-            lift $ applyModelTick slot
-            block' <- do
-              txs' <- ifor txs (fixTx slot)
-              pure txs'
-            pure $ ModelBlock slot block'
-          lift $ applyModelBlocksMade blocksMade
-          pure (ModelEpoch blocks' blocksMade)
-      ((epochs', errs), _st') = modelM (runWriterT go) globals (mkModelLedger globals genesis)
-   in (errs, (genesis, epochs'))

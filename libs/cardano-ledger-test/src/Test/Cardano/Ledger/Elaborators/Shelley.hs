@@ -141,6 +141,6 @@ elaborateShelleyPParams mpp =
           -- , Shelley._eMax = GHC.getField @"_eMax" mpp
           -- , Shelley._extraEntropy = GHC.getField @"_extraEntropy" mpp
           Shelley._protocolVersion = GHC.getField @"_protocolVersion" mpp,
-          Shelley._minUTxOValue = minUTxOValue
-          -- , Shelley._minPoolCost = GHC.getField @"_minPoolCost" mpp
+          Shelley._minUTxOValue = minUTxOValue,
+          Shelley._minPoolCost = GHC.getField @"_minPoolCost" mpp
         }

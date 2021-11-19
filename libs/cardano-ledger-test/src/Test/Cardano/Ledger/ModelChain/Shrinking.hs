@@ -2,29 +2,34 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# OPTIONS_GHC -Wno-orphans #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.ModelChain.Shrinking where
 
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Coin
+import Cardano.Slotting.Slot (EpochNo(..))
 import Cardano.Ledger.Keys (KeyRole (..))
 import Control.DeepSeq
 import Control.Lens
 import Control.Monad (ap)
+import Control.Monad.Reader.Class
 import qualified Control.Monad.State.Strict as State
 import Data.Foldable
 import Data.Group.GrpMap
 import qualified Data.List as List
 import qualified Data.Map as Map
-import Data.Maybe (catMaybes, isNothing, mapMaybe)
+import Data.Maybe (catMaybes, isNothing, mapMaybe, fromMaybe)
 import Data.Monoid (Any (..))
 import qualified Data.Set as Set
-import Test.Cardano.Ledger.DependGraph (FixupValuesErrors, FixupValuesFlags (..), fixupValues)
+import Data.Set (Set)
+import Test.Cardano.Ledger.ModelChain.Fixup (FixupValuesErrors, FixupValuesFlags (..), fixupValues)
 import Test.Cardano.Ledger.Elaborators.Alonzo ()
 import Test.Cardano.Ledger.Elaborators.Shelley ()
 import Test.Cardano.Ledger.ModelChain
@@ -32,6 +37,10 @@ import Test.Cardano.Ledger.ModelChain.Address
 import Test.Cardano.Ledger.ModelChain.FeatureSet
 import Test.Cardano.Ledger.ModelChain.Script
 import Test.Cardano.Ledger.ModelChain.Value
+import Data.Functor.Reverse (Reverse(..))
+import Control.Monad.Writer.Class
+import Data.Functor.PiecewiseConstant
+import Test.Cardano.Ledger.ModelChain.Fixup
 
 -- | Shrink the epochs down to txns and each element will have its own prefix of txns, including all txns that came before.
 -- This function also includes a prefix where there is a block with no transactions.
@@ -93,6 +102,127 @@ getModelLedger_rewardsProv prov =
       stk' = mkGrpMap stk
    in stk'
 
+
+traverseReversedWithEpochNoMaybeTxs :: forall m era. Applicative m =>
+  (EpochNo -> ModelTx era -> m (Maybe (ModelTx era))) -> [ModelEpoch era] -> m [ModelEpoch era]
+traverseReversedWithEpochNoMaybeTxs f epochs =
+  fmap getReverse $ itraverse (handleEpoch . toEnum) $ Reverse epochs
+    where handleEpoch i (ModelEpoch blocks blocksMade) = ModelEpoch <$> (fmap getReverse $ traverse (handleBlock i) $ Reverse blocks) <*> pure blocksMade
+          handleBlock i (ModelBlock slot txs) = ModelBlock slot <$> (fmap (catMaybes . getReverse) $ traverse (f i) $ Reverse txs)
+
+type TxDependencies = (Set ModelUTxOId, Set ModelTxId)
+
+newtype DiscardTransactionM era a = DiscardTransactionM
+  { runDiscardTransactionM :: ModelProvenanceState era -> TxDependencies -> (TxDependencies, Any, a)}
+  deriving (Functor)
+
+instance Monad (DiscardTransactionM era) where
+  DiscardTransactionM xs >>= f = DiscardTransactionM $ \prov txDeps ->
+    let (DiscardTransactionM ys) = f x
+        (txDeps', discarded, x) = xs prov txDeps
+        (txDeps'', discarded', y) = ys prov txDeps'
+    in (txDeps'', discarded' <> discarded, y)
+
+instance Applicative (DiscardTransactionM era) where
+  pure x = DiscardTransactionM $ \_ txDeps -> (txDeps, mempty, x)
+  (<*>) = ap
+
+instance MonadReader (ModelProvenanceState era) (DiscardTransactionM era) where
+  ask = DiscardTransactionM (\prov s -> (s, mempty, prov))
+  local f (DiscardTransactionM xs) = DiscardTransactionM (\prov s -> xs (f prov) s)
+
+instance MonadWriter Any (DiscardTransactionM era) where
+  tell a = DiscardTransactionM (\_ s -> (s, a, ()))
+  listen (DiscardTransactionM xs) = DiscardTransactionM $ \prov s ->
+    let (s', a, x) = xs prov s
+    in (s', a, (x, a))
+  pass (DiscardTransactionM xs) = DiscardTransactionM $ \prov s ->
+    let (s', a, (x, f)) = xs prov s
+    in (s', f a, x)
+
+instance State.MonadState TxDependencies (DiscardTransactionM era) where
+  get = DiscardTransactionM (\_ s -> (s, mempty, s))
+  put s = DiscardTransactionM (\_ _ -> (s, mempty, ()))
+
+discardOneTx :: (MonadWriter Any m, State.MonadState TxDependencies m, MonadReader (ModelProvenanceState era) m) =>
+  EpochNo -> ModelTx era -> m (Maybe (ModelTx era))
+discardOneTx epochNo tx = do
+  (uTxOIds, txIds) <- State.get
+  if (Set.member (getModelTxId tx) txIds || null (Set.intersection (Set.fromList $ fmap fst $ _mtxOutputs tx) uTxOIds))
+    then do
+      _1 <>= _mtxInputs tx
+      dcerts' <- fmap catMaybes $ traverse (discardDCert epochNo $ getModelTxId tx) $ _mtxDCert tx
+      wdrls' <- fmap (Map.mapMaybe id) $ itraverse (discardWdrls (getModelTxId tx) ) $ _mtxWdrl tx
+      pure $ Just tx {_mtxDCert = dcerts', _mtxWdrl = wdrls'}
+    else do
+      tell $ Any True
+      pure Nothing
+
+discardWdrls :: (MonadReader (ModelProvenanceState era) m, State.MonadState TxDependencies m) =>
+  ModelTxId -> ModelCredential 'Staking (ScriptFeature era) -> a -> m (Maybe a)
+discardWdrls tx cred x = do
+  ranges <- preview $ modelProvenanceState_wdrlRewards . ix cred . ix tx
+  case ranges of
+    Nothing -> pure Nothing
+    Just (start, end) -> do
+      allRewards <- asks _modelProvenanceState_reward
+      let (_, startRewards, mostRewards) = Map.splitLookup start allRewards
+          (rewards, endRewards, _) = Map.splitLookup end mostRewards
+          deps = fold $ foldMap (Map.lookup cred) $ (toList startRewards) <> (toList rewards) <> (toList endRewards)
+      if (deps == mempty)
+        then pure Nothing
+        else do
+          id <>= deps
+          pure $ Just x
+
+lookupEpochProv :: Ord k => k -> EpochNo -> Map.Map k (EpochMap (Maybe a)) -> Maybe a
+lookupEpochProv k epochNo prov =
+  let registrations = fromMaybe (pure Nothing) $ Map.lookup k prov
+      dep = liftPiecewiseConstantMap registrations epochNo
+  in dep
+
+discardDCert :: forall era m. (MonadReader (ModelProvenanceState era) m, State.MonadState TxDependencies m) => EpochNo -> ModelTxId -> ModelDCert era -> m (Maybe (ModelDCert era))
+discardDCert epochNo txNo dcert = case dcert of
+  ModelCertDeleg cert ->
+    case cert of
+      ModelRegKey a -> do
+        provReg <- asks _modelProvenanceState_regStake
+        pure $
+          let dep = lookupEpochProv a epochNo provReg
+          in if (Just txNo == dep)
+              then Just dcert
+              else Nothing
+      ModelDeRegKey _ -> -- TODO: This depends on rewards being zero, not currently tracked
+        pure $ Just dcert
+      ModelDelegate (ModelDelegation stake pool) -> do
+        provDeleg <- asks _modelProvenanceState_deleg
+        let dep = lookupEpochProv stake epochNo provDeleg
+        if (Just txNo == dep)
+            then do
+              provStake <- asks _modelProvenanceState_regStake
+              provPool <- asks _modelProvenanceState_regPool
+              for_ (lookupEpochProv stake epochNo provStake) $ \txId' -> _2 %= Set.insert txId'
+              for_ (lookupEpochProv pool epochNo provPool) $ \txId' -> _2 %= Set.insert txId'
+              pure $ Just dcert
+            else pure Nothing
+      ModelDCertGenesis _ -> pure $ Just dcert
+      ModelDCertMir _ -> pure $ Just dcert
+  ModelCertPool cert ->
+    case cert of
+      ModelRegPool a -> do
+        provReg <- asks _modelProvenanceState_regPool
+        pure $
+          let dep = lookupEpochProv (_mppId a) epochNo provReg
+          in if (Just txNo == dep)
+              then Just dcert
+              else Nothing
+      ModelRetirePool _ _ -> pure $ Just dcert
+{-
+discardTxs :: (ModelGenesis era, Map (Down (EpochNo, SlotNo, Int)) ModelTx) -> ModelProvenanceState era -> TxDependencies -> Maybe (ModelGenesis era, Map (Down (EpochNo, SlotNo, Int)) ModelTx)
+discardTxs (genesis, txs) prov txDeps =
+
+getTxDependencies :: ModelTx era -> EpochNo -> ModelProvenanceState era -> TxDependencies
+-}
 discardUnnecessaryTxns ::
   forall era.
   KnownRequiredFeatures era =>
@@ -100,6 +230,21 @@ discardUnnecessaryTxns ::
   (ModelGenesis era, [ModelEpoch era]) ->
   Maybe (ModelGenesis era, [ModelEpoch era])
 discardUnnecessaryTxns a b = snd <$> discardUnnecessaryTxnsWithErrors a b
+
+discardUnnecessaryTxnsImpl ::
+  forall era.
+  KnownRequiredFeatures era =>
+  Globals ->
+  (ModelGenesis era, [ModelEpoch era]) ->
+  Maybe (ModelGenesis era, [ModelEpoch era])
+discardUnnecessaryTxnsImpl globals (genesis, epochs) =
+  let DiscardTransactionM f = traverseReversedWithEpochNoMaybeTxs (discardOneTx ) epochs
+      (prov, _) = execModelMWithProv (traverse_ applyModelEpoch epochs) globals (emptyModelProvenanceState, mkModelLedger globals genesis)
+      ((utxoDeps, _), Any didShrink, epochs') = f prov (Set.empty, foldMap (Set.singleton . getModelTxId) $ lastOf (traverse . modelTxs) epochs)
+      genesis' = genesis {_modelGenesis_utxos = Map.restrictKeys  (_modelGenesis_utxos genesis) utxoDeps}
+  in if didShrink
+          then Just (genesis', epochs')
+          else Nothing
 
 discardUnnecessaryTxnsWithErrors ::
   forall era.
@@ -109,207 +254,7 @@ discardUnnecessaryTxnsWithErrors ::
   Maybe (Maybe (FixupValuesErrors era), (ModelGenesis era, [ModelEpoch era]))
 discardUnnecessaryTxnsWithErrors _ (_, []) = Nothing
 discardUnnecessaryTxnsWithErrors globals (genesis, epochs) =
-  let lastEpochsTxns = toListOf modelTxs $ last epochs
-      prevModelLedgers = snd $ foldl' createLedgers ((emptyModelProvenanceState, emptyLedger genesis), []) $ init' epochs
-      (initialTxFieldChecks, initialTxn) = getInitialInfo genesis prevModelLedgers lastEpochsTxns
-
-      (_, shrunkenEpochs) =
-        foldr
-          checkEpoch
-          (TrackDeps genesis initialTxFieldChecks prevModelLedgers, [])
-          epochs
-      lastOfShrunkenEpochs = last shrunkenEpochs
-      lastEpoch = lastOfShrunkenEpochs {_modelEpoch_blocks = addInitialTxn (_modelEpoch_blocks lastOfShrunkenEpochs) initialTxn}
-
-      newEpochs = (init shrunkenEpochs) <> [lastEpoch]
-   in if (epochs == newEpochs)
-        then Nothing
-        else Just $ fixupValues (FixupValuesFlags False) globals (genesis, newEpochs)
-  where
-    init' [] = []
-    init' xs = init xs
-    last' [] = Nothing
-    last' xs = Just $ last xs
-
-    createLedgers :: forall era'. KnownRequiredFeatures era' => ((ModelProvenanceState era', ModelLedger era'), [ModelProvenanceState era']) -> ModelEpoch era' -> ((ModelProvenanceState era', ModelLedger era'), [ModelProvenanceState era'])
-    createLedgers (currentLedger, ledgers) e =
-      let newLedger = execModelMWithProv (applyModelEpoch e) globals currentLedger
-       in (newLedger, ledgers <> [fst newLedger])
-
-    emptyLedger ::
-      forall era'.
-      KnownScriptFeature (ScriptFeature era') =>
-      ModelGenesis era' ->
-      ModelLedger era'
-    emptyLedger = mkModelLedger globals
-
-    emptyTxFieldChecks :: forall era'. TxFieldChecks era'
-    emptyTxFieldChecks = TxFieldChecks Set.empty Set.empty Set.empty Set.empty
-
-    -- This function is to get the counter-example's TxFieldChecks and the offending transaction
-    getInitialInfo ::
-      forall era'.
-      ModelGenesis era' ->
-      [ModelProvenanceState era'] ->
-      [ModelTx era'] ->
-      (TxFieldChecks era', [ModelTx era'])
-    getInitialInfo _ _ [] = (emptyTxFieldChecks, [])
-    getInitialInfo genesis' ls ts =
-      let lastTx = last ts
-          inputs = lastTx ^. modelTx_inputs
-          delegates = toListOf (modelTx_dCert . traverse . _ModelDelegate) lastTx
-          txDelegators = Set.fromList $ _mdDelegator <$> delegates
-          txDelegatees = Set.fromList $ _mdDelegatee <$> delegates
-
-          -- here we are checking whether the delegations deps are within the same tx
-          -- already keeping the initial tx
-          (_, (TxFieldChecks _ delegatorsLeft delegateesLeft _)) =
-            checkTxDelegationDeps
-              (TxFieldChecks [] txDelegators txDelegatees [])
-              (lastTx ^. modelTx_dCert)
-
-          txWdrls = lastTx ^. modelTx_wdrl
-          updatedFieldChecks =
-            trackWdrlDeps txWdrls (TxFieldChecks inputs delegatorsLeft delegateesLeft []) $
-              TrackDeps genesis' emptyTxFieldChecks ls
-
-          updatedFieldChecks' = trackCollateralDeps lastTx updatedFieldChecks
-       in (updatedFieldChecks', [lastTx])
-
-    -- This function adds the orignal counter-example transaction into the shrunken Epochs
-    addInitialTxn [] _ = []
-    addInitialTxn bs t =
-      let lastBlock = last bs
-          updatedLastBlock = lastBlock {_modelBlock_txSeq = (_modelBlock_txSeq lastBlock) <> t}
-       in (init bs) <> [updatedLastBlock]
-
-    checkTxNo ::
-      forall era'.
-      ModelTxId ->
-      TxFieldChecks era' ->
-      (Bool, TxFieldChecks era')
-    checkTxNo currentTxNo (TxFieldChecks utxos dors dees txNos) =
-      let bMatchingTxNo = elem currentTxNo txNos
-          newTxNos = Set.filter ((/=) currentTxNo) txNos
-       in (bMatchingTxNo, TxFieldChecks utxos dors dees newTxNos)
-
-    -- This function will return a bool to indicate whether to keep the tx and filter out any matching fields
-    checkTxDelegationDeps ::
-      forall era'.
-      TxFieldChecks era' ->
-      [ModelDCert era'] ->
-      (Bool, TxFieldChecks era')
-    checkTxDelegationDeps (TxFieldChecks uTxOIds prevDelegators prevDelegatees modelTxNos) dCerts =
-      let delegateeIds = (fmap _mppId . toListOf (traverse . _ModelRegisterPool)) dCerts
-          delegators = toListOf (traverse . _ModelRegisterStake) dCerts
-
-          bMatchingDelegateeIds = not . null $ Set.intersection (Set.fromList delegateeIds) prevDelegatees
-          bMatchingDelegators = not . null $ Set.intersection (Set.fromList delegators) prevDelegators
-          updatedDelegateeIds = Set.difference prevDelegatees (Set.fromList delegateeIds)
-          updatedDelegators = Set.difference prevDelegators (Set.fromList delegators)
-       in ( bMatchingDelegateeIds || bMatchingDelegators,
-            TxFieldChecks uTxOIds updatedDelegators updatedDelegateeIds modelTxNos
-          )
-
-    trackCollateralDeps ::
-      forall era'.
-      ModelTx era' ->
-      TxFieldChecks era' ->
-      TxFieldChecks era'
-    trackCollateralDeps tx txFieldChecks =
-      let oldUTxOs = txFieldChecks_UTxOIds txFieldChecks
-          newUTxOs =
-            case (tx ^. modelTx_collateral) of
-              NoPlutusSupport _ -> mempty
-              SupportsPlutus uTxOIds -> uTxOIds
-       in txFieldChecks {txFieldChecks_UTxOIds = oldUTxOs <> newUTxOs}
-
-    trackWdrlDeps ::
-      forall era'.
-      Map.Map (ModelCredential 'Staking (ScriptFeature era')) (ModelValue 'ExpectAdaOnly era') ->
-      TxFieldChecks era' ->
-      TrackDeps era' ->
-      TxFieldChecks era'
-    trackWdrlDeps wdrls txFieldChecks@(TxFieldChecks utxos delegators delegatees txNos) trackDeps
-      | wdrls == Map.empty = txFieldChecks
-      | otherwise =
-        let maybeLedger = last' $ trackDeps_modelLedger trackDeps
-            (newUtxos, newTxNos) =
-              case maybeLedger of
-                Nothing -> (utxos, txNos)
-                Just currentMLedger ->
-                  let wdrlAddrSet = Map.keysSet wdrls
-                      currentMLedgerRewards = getModelLedger_rewardsProv currentMLedger
-                      addrRewards = restrictKeysGrpMap currentMLedgerRewards wdrlAddrSet
-                      (rewardModelUTxOIds', rewardTxNos') = fold addrRewards
-                   in (utxos <> rewardModelUTxOIds', txNos <> rewardTxNos')
-         in TxFieldChecks newUtxos delegators delegatees newTxNos
-
-    -- This function checks whether to keep a tx. Appends it to list of txs to keep and tracks it's dependencies
-    checkTx ::
-      forall era'.
-      ModelTx era' ->
-      (TrackDeps era', [ModelTx era']) ->
-      (TrackDeps era', [ModelTx era'])
-    checkTx txToCheck ogTuple@(TrackDeps genesis' txFieldChecks ledgers, txsToKeep) =
-      -- Check if current tx outputs any tx of Interests
-      let txOutputsUTxOIds = Set.fromList $ fst <$> txToCheck ^. modelTx_outputs
-          trackedUTxOIds = txFieldChecks_UTxOIds txFieldChecks
-          bMatchingUTxOIds = not . null $ Set.intersection txOutputsUTxOIds trackedUTxOIds
-
-          txDCerts = toList $ txToCheck ^. modelTx_dCert
-          (keepTx', updatedDelegFieldChecks) = checkTxDelegationDeps txFieldChecks txDCerts
-
-          (keepTx, updatedDelegWdrlFieldChecks') =
-            checkTxNo (getModelTxId txToCheck) updatedDelegFieldChecks
-       in case (bMatchingUTxOIds || keepTx || keepTx') of
-            False -> ((fst ogTuple), txsToKeep)
-            _ ->
-              -- tx is tx of interest
-              let updatedTrackedUTxOIds = Set.difference trackedUTxOIds txOutputsUTxOIds
-                  txInputs = txToCheck ^. modelTx_inputs
-                  -- track inputs of tx
-                  updatedUTxOIds = txInputs <> updatedTrackedUTxOIds
-
-                  allUpdatedFieldChecks =
-                    trackWdrlDeps (txToCheck ^. modelTx_wdrl) updatedDelegWdrlFieldChecks' $ fst ogTuple
-                  (TxFieldChecks wdrlUTxOIds prevDelegators prevDelegatees txNos) =
-                    trackCollateralDeps txToCheck allUpdatedFieldChecks
-
-                  txDelegations = toListOf (traverse . _ModelDelegate) txDCerts
-                  txDelegators = Set.fromList $ _mdDelegator <$> txDelegations
-                  txDelegatees = Set.fromList $ _mdDelegatee <$> txDelegations
-                  -- We want to check whether Delegation Deps are within the same tx's _mtxDCerts
-                  (alreadyFound, (TxFieldChecks _ delegatorsLeft delegateesLeft _)) =
-                    checkTxDelegationDeps
-                      (TxFieldChecks [] txDelegators txDelegatees [])
-                      txDCerts
-                  -- Only add if not already found within same txn
-                  (updatedDelegators, updatedDelegatees) = case alreadyFound of
-                    True -> (prevDelegators <> delegatorsLeft, prevDelegatees <> delegateesLeft)
-                    False -> (prevDelegators <> txDelegators, prevDelegatees <> txDelegatees)
-
-                  newTxFieldChecks =
-                    TxFieldChecks (updatedUTxOIds <> wdrlUTxOIds) updatedDelegators updatedDelegatees txNos
-               in (TrackDeps genesis' newTxFieldChecks ledgers, txToCheck : txsToKeep)
-
-    checkBlock ::
-      forall era'.
-      ModelBlock era' ->
-      (TrackDeps era', [ModelBlock era']) ->
-      (TrackDeps era', [ModelBlock era'])
-    checkBlock (ModelBlock slotNo txs) (trackDeps, trackedBlocks) =
-      let (newTrackDeps, newTxs) = foldr checkTx (trackDeps, []) txs
-       in (newTrackDeps, (ModelBlock slotNo newTxs) : trackedBlocks)
-
-    checkEpoch ::
-      forall era'.
-      ModelEpoch era' ->
-      (TrackDeps era', [ModelEpoch era']) ->
-      (TrackDeps era', [ModelEpoch era'])
-    checkEpoch (ModelEpoch blocks blocksMade) (trackDeps, trackedEpochs) =
-      let (TrackDeps genesis' newUTxOIds ledgers, newBlocks) = foldr checkBlock (trackDeps, []) blocks
-       in (TrackDeps genesis' newUTxOIds $ init' ledgers, (ModelEpoch newBlocks blocksMade) : trackedEpochs)
+  fmap (fixupValues (FixupValuesFlags True) globals) $ discardUnnecessaryTxnsImpl globals (genesis, epochs)
 
 traverseMaybeTxs :: forall m era. Applicative m => (ModelTx era -> m (Maybe (ModelTx era))) -> [ModelEpoch era] -> m [ModelEpoch era]
 traverseMaybeTxs f = traverse f'
@@ -358,10 +303,10 @@ instance Applicative (CollapseTransactionsM era) where
 
 txOutputToGenesis ::
   (ModelUTxOId, ModelTxOut era') ->
-  (ModelUTxOId, ModelAddress (ScriptFeature era'), Coin)
+  Map.Map ModelUTxOId (ModelAddress (ScriptFeature era'), Coin)
 txOutputToGenesis (uTxOId, ModelTxOut (ModelAddress pmt stk) value _) =
   let newPmtKey = fixPmtCred pmt uTxOId
-   in (uTxOId, ModelAddress newPmtKey stk, getModelValueCoin value)
+   in Map.singleton uTxOId (ModelAddress newPmtKey stk, getModelValueCoin value)
 
 fixPmtCred ::
   ModelCredential 'Payment k ->
@@ -388,29 +333,31 @@ txPossibleOutputs tx =
 
 checkForDuplicateGenesis ::
   forall sf.
-  [(ModelUTxOId, ModelAddress sf, Coin)] ->
-  (ModelUTxOId, ModelAddress sf, Coin) ->
-  [(ModelUTxOId, ModelAddress sf, Coin)]
-checkForDuplicateGenesis prevGenesis originalGen@(uTxOId, ModelAddress pmt stk, coin) =
-  let allPmts = (\(_, addr, _) -> view modelAddress_pmt addr) <$> prevGenesis
-      modifiedGenesis =
-        case (elem pmt allPmts) of
+  ModelUTxOId ->
+  (Set (ModelAddress sf), Map.Map ModelUTxOId (ModelAddress sf, Coin)) ->
+  (ModelAddress sf, Coin) ->
+  (Set (ModelAddress sf), Map.Map ModelUTxOId (ModelAddress sf, Coin))
+checkForDuplicateGenesis uTxOId (allPmts, prevGenesis) originalGen@(addr@(ModelAddress pmt stk), coin) =
+  let modifiedGenesis =
+        case Set.member addr allPmts of
           False -> originalGen
-          True -> (uTxOId, ModelAddress (modifyPmtCred uTxOId) stk, coin)
-   in prevGenesis <> [modifiedGenesis]
+          True -> (ModelAddress (modifyPmtCred uTxOId) stk, coin)
+   in ( Set.insert (fst modifiedGenesis) allPmts
+      , Map.insert uTxOId modifiedGenesis prevGenesis
+      )
 
 fixAddrCollisions ::
   forall sf.
-  [(ModelUTxOId, ModelAddress sf, Coin)] ->
-  [(ModelUTxOId, ModelAddress sf, Coin)]
-fixAddrCollisions genesisToCheck = foldl' (checkForDuplicateGenesis) [] genesisToCheck
+  Map.Map ModelUTxOId (ModelAddress sf, Coin) ->
+  Map.Map ModelUTxOId (ModelAddress sf, Coin)
+fixAddrCollisions genesisToCheck = snd $ ifoldl' checkForDuplicateGenesis (Set.empty, Map.empty) genesisToCheck
 
 spendGenesis ::
   forall sf.
   Set.Set ModelUTxOId ->
-  [(ModelUTxOId, ModelAddress sf, Coin)] ->
-  [(ModelUTxOId, ModelAddress sf, Coin)]
-spendGenesis txInputs allGenesis = filter (\(x, _, _) -> not $ elem x txInputs) allGenesis
+  Map.Map ModelUTxOId (ModelAddress sf, Coin) ->
+  Map.Map ModelUTxOId (ModelAddress sf, Coin)
+spendGenesis txInputs allGenesis = Map.withoutKeys allGenesis txInputs
 
 collapseOneTx ::
   ModelTx era ->
@@ -419,7 +366,7 @@ collapseOneTx ::
 collapseOneTx lastTx tx = do
   allGenesis <- use $ cts_Gen . modelGenesis_utxos
   reqUTxOs <- use cts_RequiredUTxOs
-  let genesisUTxOIds = Set.fromList $ (\(x, _, _) -> x) <$> allGenesis
+  let genesisUTxOIds = Map.keysSet allGenesis
       txInputs = Set.union (tx ^. modelTx_inputs) (fromSupportsPlutus (\() -> Set.empty) id $ tx ^. modelTx_collateral)
       intersectingUTxOIds = Set.difference txInputs genesisUTxOIds
 
@@ -468,7 +415,7 @@ collapseOneTx lastTx tx = do
       cts_RequiredUTxOs %= Set.union unspentIds
       pure $ Just tx
     True -> do
-      let txOutputsGenesis = txOutputToGenesis <$> txOuts
+      let txOutputsGenesis = foldMap txOutputToGenesis txOuts
       cts_Gen . modelGenesis_utxos %= (<> txOutputsGenesis) . spendGenesis spentIds
       pure Nothing
 

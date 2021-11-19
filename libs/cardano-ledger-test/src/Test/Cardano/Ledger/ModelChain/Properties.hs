@@ -55,11 +55,12 @@ import GHC.Generics hiding (to)
 import GHC.Natural
 import qualified PlutusTx
 import System.CPUTime
-import Test.Cardano.Ledger.DependGraph (ModelGeneratorParamsF (..), defaultModelGeneratorParams, genModel, _FixupValues_FeeTooSmall)
+import Test.Cardano.Ledger.DependGraph (ModelGeneratorParamsF (..), defaultModelGeneratorParams, genModel)
+import Test.Cardano.Ledger.ModelChain.Fixup (_FixupValues_FeeTooSmall, fixupValues, FixupValuesFlags(..))
 import Test.Cardano.Ledger.Elaborators
 import Test.Cardano.Ledger.Elaborators.Alonzo ()
 import Test.Cardano.Ledger.Elaborators.Shelley ()
-import Test.Cardano.Ledger.ModelChain
+import Test.Cardano.Ledger.ModelChain hiding ((/))
 import Test.Cardano.Ledger.ModelChain.Address
 import Test.Cardano.Ledger.ModelChain.FeatureSet
 import Test.Cardano.Ledger.ModelChain.Script
@@ -104,7 +105,7 @@ modelMACoin' script assets = foldMap f assets
 modelCoin :: Integer -> ModelValue era k
 modelCoin = ModelValue . ModelValue_Inject . Coin
 
-modelGenesis :: KnownRequiredFeatures era => [(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)] -> ModelGenesis era
+modelGenesis :: KnownRequiredFeatures era => Map.Map ModelUTxOId (ModelAddress (ScriptFeature era), Coin) -> ModelGenesis era
 modelGenesis =
   ModelGenesis
     modelPParams
@@ -248,7 +249,7 @@ modelTestDelegations proxy needsCollateral stakeAddr@(ModelAddress _ stakeCred) 
         ]
       genAct =
         modelGenesis
-          [ (0, "unstaked", Coin 10_000_000_000_000)
+          [ (0, ("unstaked", Coin 10_000_000_000_000))
           ]
       checkAllWithdrawnRewards nes ems =
         let rewards = observeRewards (ModelTxId Set.empty) (nes, ems)
@@ -309,8 +310,8 @@ genModel' _ globals = do
           -- generated withdrawals correspond to zero rewards (esp in alonzo).
           -- These numbers are chosen so that the "zero withdrawal" issue occurs
           -- rarely.
-          _modelGeneratorParams_epochs = choose (10, 12),
-          _modelGeneratorParams_txnsPerSlot = frequency [(1, pure 1), (10, choose (2, 15))],
+          _modelGeneratorParams_epochs = pure 8, -- choose (10, 12),
+          _modelGeneratorParams_txnsPerSlot = frequency [(1, pure 1), (10, choose (2, 5))],
           _modelGeneratorParams_numSlotsUsed = choose (2, 5)
         }
   pure (NotShrunk, (a, b))
@@ -345,6 +346,29 @@ prop_simulateChainModel globals (g, e) = execPropertyWriter $ do
       tellProperty $ counterexample ("epoch:\t" <> show mepoch)
       State.modify $ execModelM (applyModelEpoch mepoch) globals
   tellProperty $ counterexample ("final ledger state:" <> show st')
+
+prop_simulateChainModel' ::
+  forall era prop.
+  ( KnownRequiredFeatures era,
+    Testable prop
+  ) =>
+  Globals ->
+  (ModelGenesis era, [ModelEpoch era]) ->
+  prop ->
+  Property
+prop_simulateChainModel' globals (genesis, epochs) = execPropertyWriter $ do
+  let ml0 = (mkModelLedger globals genesis)
+      go = do
+        for_ epochs $ \mepoch -> do
+          applyModelEpoch mepoch
+
+
+  ((), (prov, _)) <- modelMWithProvT go globals (emptyModelProvenanceState, ml0)
+  let poolsWithPledge = Set.fromList $ fmap _mppId $ toListOf (traverse . modelDCerts . _ModelRegisterPool . filtered ((> mempty) . _mppPledge)) epochs
+      intersectingPoolIds = Set.intersection poolsWithPledge $ _modelProvenanceState_poolPerformance prov
+
+  tellProperty $ cover 5 (not $ null intersectingPoolIds) "Pools earned rewards when pledging"
+  tellProperty $ counterexample $ show prov
 
 tellProperty :: MonadWriter (Endo Property) m => (Property -> Property) -> m ()
 tellProperty = tell . Endo
@@ -381,14 +405,19 @@ checkElaboratorResult _nes ees = execPropertyWriter_ $ do
   pure ()
 
 data ModelStats f = ModelStats
-  { _numberOfEpochs :: f Int,
-    _numberOfTransactions :: f Int,
-    _numberOfCerts :: f Int,
-    _blocksMade :: f Natural,
-    _numberOfDelegations :: f Int,
-    _withdrawals :: f Int,
-    _scriptUTxOs :: f Int,
-    _scriptWdrls :: f Int
+  { _numberOfEpochs :: !(f Int),
+    _numberOfTransactions :: !(f Int),
+    _numberOfCerts :: !(f Int),
+    _blocksMade :: !(f Natural),
+    _numberOfDelegations :: !(f Int),
+    _withdrawals :: !(f Int),
+    _scriptUTxOs :: !(f Int),
+    _scriptWdrls :: !(f Int),
+    _poolsWithCost :: !(f Int),
+    _poolsWithZeroMargin :: !(f Int),
+    _poolsWithMaxMargin :: !(f Int),
+    _poolsWithIntermediateMargin :: !(f Int),
+    _poolsWithPledge :: !(f Int)
   }
   deriving (Generic)
 
@@ -422,7 +451,12 @@ mstats =
           . uncurry Map.restrictKeys
           . ((_modelUTxOMap_utxos . collectModelUTxOs) &&& collectModelInputs),
       _scriptWdrls =
-        lengthOf (traverse . traverseModelScriptHashObj) . (=<<) Map.keys . toListOf (traverse . modelTxs . modelTx_wdrl)
+        lengthOf (traverse . traverseModelScriptHashObj) . (=<<) Map.keys . toListOf (traverse . modelTxs . modelTx_wdrl),
+      _poolsWithCost = lengthOf (traverse . modelDCerts . _ModelRegisterPool . filtered ((> mempty) . _mppCost)),
+      _poolsWithZeroMargin = lengthOf (traverse . modelDCerts . _ModelRegisterPool . filtered ((== minBound) . _mppMargin)),
+      _poolsWithMaxMargin = lengthOf (traverse . modelDCerts . _ModelRegisterPool . filtered ((== maxBound) . _mppMargin)),
+      _poolsWithIntermediateMargin = lengthOf (traverse . modelDCerts . _ModelRegisterPool . filtered ((\x -> x > minBound && x < maxBound) . _mppMargin)),
+      _poolsWithPledge = lengthOf (traverse . modelDCerts . _ModelRegisterPool . filtered ((> mempty) . _mppPledge))
     }
 
 shelleyFeatureTag, alonzoFeatureTag :: Some FeatureTag
@@ -437,9 +471,14 @@ mstatsCover =
       _numberOfCerts = Const (shelleyFeatureTag, 50, "number of certs") :*: Predicate (> 5),
       _blocksMade = Const (shelleyFeatureTag, 50, "blocks made") :*: Predicate (> 250),
       _numberOfDelegations = Const (shelleyFeatureTag, 10, "number of delegation") :*: Predicate (> 5),
-      _withdrawals = Const (shelleyFeatureTag, 10, "withdrawals") :*: Predicate (> 5),
+      _withdrawals = Const (shelleyFeatureTag, 10, "withdrawals") :*: Predicate (> 0),
       _scriptUTxOs = Const (alonzoFeatureTag, 60, "script locked utxos") :*: Predicate (> 5),
-      _scriptWdrls = Const (alonzoFeatureTag, 25, "script locked withdrarwals") :*: Predicate (> 5)
+      _scriptWdrls = Const (alonzoFeatureTag, 25, "script locked withdrarwals") :*: Predicate (> 0),
+      _poolsWithCost = Const (shelleyFeatureTag, 0, "pool has costs") :*: Predicate (> 0),
+      _poolsWithZeroMargin = Const (shelleyFeatureTag, 0, "pool has no margin") :*: Predicate (> 0),
+      _poolsWithMaxMargin = Const (shelleyFeatureTag, 0, "pool has max margin") :*: Predicate (> 0),
+      _poolsWithIntermediateMargin = Const (shelleyFeatureTag, 0, "pool has some margin") :*: Predicate (> 0),
+      _poolsWithPledge = Const (shelleyFeatureTag, 0, "pool has pledge") :*: Predicate (> 0)
     }
 
 collectModelUTxOs :: [ModelEpoch era] -> ModelUTxOMap era
@@ -491,9 +530,10 @@ modelGenTest proxy =
   forAllShrink
     (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era)) testGlobals)
     (shrinkModel testGlobals)
-    $ \(_ :: ModelShrinkingPhase, (a, b)) ->
+    $ \(_ :: ModelShrinkingPhase, ab@(a, b)) ->
       ( execPropertyWriter $ do
           tellProperty $ propModelStats (Proxy @(EraFeatureSet era)) b
+          tellProperty $ prop_simulateChainModel' testGlobals ab
       )
         (testChainModelInteractionWith' proxy checkElaboratorResult a b)
 
@@ -519,13 +559,14 @@ propertyShrinkingImpl ::
   (ModelGenesis era, [ModelEpoch era]) ->
   Property
 propertyShrinkingImpl callback (a, b) =
-  let (errs, (a', b')) =
-        maybe (mempty, (a, b)) id $
-          discardUnnecessaryTxnsWithErrors testGlobals (a, b)
+  let (a', b') =
+        maybe (a, b) id $
+          discardUnnecessaryTxnsImpl testGlobals (a, b)
+      (errs, (a'', b'')) = fixupValues (FixupValuesFlags True) testGlobals (a', b')
       numBefore = (lengthOf (traverse . modelTxs)) b
       numAfter = (lengthOf (traverse . modelTxs)) b'
 
-      (errs', ij@(i, j)) =
+      {-(errs', ij@(i, j)) =
         maybe (mempty, (a', b')) id $
           discardUnnecessaryTxnsWithErrors testGlobals (a', b')
       numAfter' = (lengthOf (traverse . modelTxs)) j
@@ -533,25 +574,29 @@ propertyShrinkingImpl callback (a, b) =
       (errs'', ij'@(_, j')) =
         maybe (mempty, (i, j)) id $
           collapseTransactionsWithErrors testGlobals (i, j)
-      numAfterCollapse = (lengthOf (traverse . modelTxs)) j'
+      numAfterCollapse = (lengthOf (traverse . modelTxs)) j'-}
 
-      allErrs = errs <> errs' <> errs''
+      allErrs = errs -- <> errs' <> errs''
 
-      mustAbort = has (traverse . traverse . _FixupValues_FeeTooSmall) allErrs
+      --mustAbort = has (traverse . traverse . _FixupValues_FeeTooSmall) allErrs
+      mustAbort = toListOf (traverse . traverse . _FixupValues_FeeTooSmall) allErrs
    in ( execPropertyWriter $ do
           tellProperty $ cover 55 (numAfter < numBefore) "numAfter < numBefore"
-          tellProperty $ cover 55 (numAfter' == numAfter) "numAfter' == numAfter"
+          --tellProperty $ cover 55 (numAfter' == numAfter) "numAfter' == numAfter"
 
-          tellProperty $ counterexample $ "\nafter discarding: " <> (show ij)
+          --tellProperty $ counterexample $ "\nafter discarding: " <> (show ij)
 
-          tellProperty $ cover 55 (numAfterCollapse < numAfter) "numAfterCollapse < numAfter"
-          tellProperty $ counterexample $ "\nshrinking result after collapsing: " <> (show ij')
+          --tellProperty $ cover 55 (numAfterCollapse < numAfter) "numAfterCollapse < numAfter"
+          --tellProperty $ counterexample $ "\nshrinking result after collapsing: " <> (show ij')
+          -- tellProperty $ counterexample ("a'b': " <> show (a', b'))
+          -- tellProperty $ counterexample (show mustAbort)
+          tellProperty_ $ null mustAbort
 
           tellProperty $ cover 10 (isNothing errs) "no errors from discard"
           tellProperty $ cover 90 (isNothing allErrs) "no fixup errors"
-          tellProperty $ cover 10 (not mustAbort) "no fatal fixup errors"
+          --tellProperty $ cover 10 (not mustAbort) "no fatal fixup errors"
       )
-        (not mustAbort ==> callback ij')
+        (callback (a'', b''))--ij')
 
 propertyShrinking ::
   forall era proxy.
@@ -596,6 +641,25 @@ generateOneExample = do
   result <- time "elaborate" $ pure $ fst &&& (_eesStats . snd . snd) $ chainModelInteractionWith proxy a b
   print result
 
+generateOneExample' :: IO ()
+generateOneExample' = do
+  let proxy = (Proxy :: Proxy (ShelleyEra C_Crypto))
+      proxy' = eraFeatureSet proxy
+  (_ :: ModelShrinkingPhase, ab@(a, b)) <- time "generate" $ generate $ genModel' proxy' testGlobals
+  time "examine" $ print $ examineModel b
+  mab' <- time "s1" $ pure $ discardUnnecessaryTxnsImpl testGlobals (a, b)
+  for_ mab' $ \ab' -> do
+    (errs, ab'') <- time "s1'" $ pure $ fixupValues (FixupValuesFlags True) testGlobals ab'
+    for_  errs $ \err -> do
+      print ("ab", ab)
+      print ("ab' == discardUnnecessaryTxnsImpl ab", ab)
+      print ("ab'' == fixupValues ab'", ab'')
+      print errs
+    time "examine'" $ print $ examineModel $ snd ab''
+    mresult <- time "modelApp" $ pure $ simulateChainModel testGlobals a b
+    putStrLn "done"
+    -- print mresult
+
 -- | some hand-written model based unit tests
 modelUnitTests ::
   forall era proxy.
@@ -612,15 +676,16 @@ modelUnitTests ::
 modelUnitTests proxy =
   testGroup
     (show $ typeRep proxy)
-    [ testProperty "gen" $ checkCoverage $ modelGenTest proxy,
+    [ testProperty "gen" $ modelGenTest proxy,
       testProperty "gen Always shrink" $ checkCoverage $ testModelShrinking proxy,
+      testProperty "test pool parameters" $ uncurry (testChainModelInteractionWith' proxy (\_ _ -> True)) testPoolParamModel,
       testProperty "noop" $ testChainModelInteraction proxy (modelGenesis []) [],
       testProperty "noop-2" $
         testChainModelInteraction
           proxy
           ( modelGenesis
-              [ (0, "alice", Coin 1_000_000),
-                (1, "bob", Coin 1_000_000)
+              [ (0, ("alice", Coin 1_000_000)),
+                (1, ("bob", Coin 1_000_000))
               ]
           )
           [ModelEpoch [] mempty],
@@ -630,7 +695,7 @@ modelUnitTests proxy =
         testChainModelInteraction
           proxy
           ( modelGenesis
-              [ (0, "alice", Coin 1_000_000_000)
+              [ (0, ("alice", Coin 1_000_000_000))
               ]
           )
           [ ModelEpoch
@@ -653,7 +718,7 @@ modelUnitTests proxy =
         testChainModelInteraction
           proxy
           ( ( modelGenesis
-                [ (0, "alice", Coin 1_000_000_000)
+                [ (0, ("alice", Coin 1_000_000_000))
                 ]
             )
           )
@@ -680,7 +745,7 @@ modelUnitTests proxy =
         testChainModelInteraction
           proxy
           ( ( modelGenesis
-                [ (0, "alice", Coin 1_000_000_000)
+                [ (0, ("alice", Coin 1_000_000_000))
                 ]
             )
           )
@@ -714,7 +779,7 @@ modelUnitTests proxy =
           proxy
           (ModelValueNotConservedUTxO (modelCoin 1_000_000_000) (modelCoin 101_000_000))
           ( modelGenesis
-              [ (0, "alice", Coin 1_000_000_000)
+              [ (0, ("alice", Coin 1_000_000_000))
               ]
           )
           [ ModelEpoch
@@ -734,7 +799,7 @@ modelUnitTests proxy =
         testChainModelInteraction
           proxy
           ( modelGenesis
-              [ (0, "alice", Coin 1_000_000_000)
+              [ (0, ("alice", Coin 1_000_000_000))
               ]
           )
           [ ModelEpoch
@@ -769,7 +834,7 @@ modelUnitTests proxy =
         ( testChainModelInteraction
             proxy
             ( modelGenesis
-                [ (0, "alice", Coin 1_000_000_000)
+                [ (0, ("alice", Coin 1_000_000_000))
                 ]
             )
         )
@@ -799,7 +864,7 @@ modelUnitTests proxy =
         ( testChainModelInteraction
             proxy
             ( modelGenesis
-                [ (0, "alice", Coin 1_000_000_000)
+                [ (0, ("alice", Coin 1_000_000_000))
                 ]
             )
         )
@@ -829,7 +894,7 @@ modelUnitTests proxy =
         ( testChainModelInteraction
             proxy
             ( modelGenesis
-                [ (0, "alice", Coin 1_000_000_000)
+                [ (0, ("alice", Coin 1_000_000_000))
                 ]
             )
         )
@@ -880,7 +945,7 @@ modelUnitTests proxy =
         ( testChainModelInteraction
             proxy
             ( modelGenesis
-                [ (0, "alice", Coin 1_000_000_000)
+                [ (0, ("alice", Coin 1_000_000_000))
                 ]
             )
         )
@@ -931,7 +996,7 @@ modelUnitTests proxy =
         ( testChainModelInteraction
             proxy
             ( modelGenesis
-                [ (0, "alice", Coin 1_000_000_000)
+                [ (0, ("alice", Coin 1_000_000_000))
                 ]
             )
         )
@@ -988,7 +1053,7 @@ modelUnitTests proxy =
         testChainModelInteraction
           proxy
           ( modelGenesis
-              [ (0, "alice", Coin 1_000_000_000)
+              [ (0, ("alice", Coin 1_000_000_000))
               ]
           )
           [ ModelEpoch
@@ -1019,7 +1084,7 @@ modelUnitTests proxy =
         testChainModelInteraction
           proxy
           ( modelGenesis
-              [ (0, "alice", Coin 1_000_000_000)
+              [ (0, ("alice", Coin 1_000_000_000))
               ]
           )
           [ ModelEpoch
@@ -1164,6 +1229,59 @@ shrinkDiscardTestData =
 testShrinkModelSimple :: [((), [ModelEpoch AllModelFeatures])]
 testShrinkModelSimple = shrinkModelSimple ((), shrinkSimpleTestData)
 
+testPoolParamModel :: forall era. KnownRequiredFeatures era => (ModelGenesis era, [ModelEpoch era])
+testPoolParamModel =
+  let modelPool =
+        ModelPoolParams
+          { _mppId = "pool1",
+            _mppVrm = "pool1'",
+            _mppPledge = (Coin 500),
+            _mppCost = (Coin 0),
+            _mppMargin = (fromJust $ boundRational $ 0 % 1),
+            _mppRAcnt = "rewardAcct",
+            _mppOwners = ["poolOwner"]
+          }
+  in (
+      ( modelGenesis
+          [ (0, ("unstaked", Coin 100_001_000_000)),
+            (1, ("poolOwner", Coin 1_000_000)),
+            (2, ("staked", Coin 1_000_000))
+          ]
+      ),
+      [ ModelEpoch [
+          ModelBlock
+            0
+            [ modelTx
+                { _mtxInputs = Set.fromList [0],
+                  _mtxOutputs = [(3, modelTxOut "unstaked" (modelCoin 1000000))],
+                  _mtxWitnessSigs = Set.fromList $ ["unstaked", "pool1", "poolOwner", "staked"],
+                  _mtxFee = modelCoin 100_000_000_000,
+                  _mtxDCert =
+                    [ ModelCertDeleg $ ModelRegKey "staked",
+                      ModelCertDeleg $ ModelRegKey "poolOwner",
+                      ModelCertPool $ ModelRegPool modelPool,
+                      ModelCertDeleg $ ModelDelegate (ModelDelegation "staked" "pool1"),
+                      ModelCertDeleg $ ModelDelegate (ModelDelegation "poolOwner" "pool1")
+                    ]
+                },
+              modelTx
+                  { _mtxInputs = Set.fromList [3],
+                    _mtxWitnessSigs = Set.fromList $ ["unstaked", "pool1", "poolOwner"],
+                    _mtxFee = modelCoin 1_000_000,
+                    _mtxDCert =
+                      [ ModelCertPool $ ModelRegPool modelPool {_mppMargin = maxBound}
+                      ]
+                  }
+            ]
+
+      ] mempty,
+        ModelEpoch [] mempty,
+        ModelEpoch [] (ModelBlocksMade $ Map.fromList [("pool1", 100)]),
+        ModelEpoch [] mempty,
+        ModelEpoch [] mempty
+      ]
+    )
+
 modelShrinkingUnitTests :: TestTree
 modelShrinkingUnitTests =
   testGroup
@@ -1193,14 +1311,16 @@ modelShrinkingUnitTests =
                 ]
               )
          in head x === ((), [ModelEpoch [ModelBlock 1 []] mempty])
-              .&&. List.last x === y
+              .&&. List.last x === y,
+      testProperty "test pledge stuff" $
+        prop_simulateChainModel' @AllModelFeatures testGlobals testPoolParamModel True
     ]
 
 modelUnitTests_ :: TestTree
 modelUnitTests_ =
   testGroup
     "model-unit-tests"
-    [ modelUnitTests (Proxy :: Proxy (ShelleyEra C_Crypto)),
+    [ --modelUnitTests (Proxy :: Proxy (ShelleyEra C_Crypto)),
       modelUnitTests (Proxy :: Proxy (AlonzoEra C_Crypto)),
       modelShrinkingUnitTests
     ]

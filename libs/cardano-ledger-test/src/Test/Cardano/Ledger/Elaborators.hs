@@ -36,6 +36,8 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.BaseTypes
+import Data.Maybe (fromMaybe)
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -610,12 +612,20 @@ lookupModelValue scriptAction = \case
       scriptAction (Proxy @era) policyHash realPolicy
       pure $ valueFromList 0 $ [(PolicyID policyHash, assetName, 1)]
 
+makeTxOut' ::
+  (Show (Core.Value era), UsesTxOut era) =>
+  Proxy era -> Addr (Crypto era) -> Core.Value era -> Core.TxOut era
+makeTxOut' p addr vl =
+  seq (fromMaybe (error $ "illegal value in txout: " <> show vl) $ toCompact vl) (makeTxOut p addr vl)
+
+
 mkTxOut ::
   forall m era.
   ( MonadState (NewEpochState era, EraElaboratorState era) m,
     Except.MonadError (ElaborateBlockError era) m,
     Era era,
     UsesTxOut era,
+    Show (Core.Value era),
     ElaborateEraModel era
   ) =>
   ModelUTxOId ->
@@ -627,7 +637,7 @@ mkTxOut mutxoId (ModelTxOut mAddr (ModelValue mValue) mDat) = (=<<) Except.liftE
       Except.runExceptT $ do
         addr <- zoom _2 $ getAddrFor (Proxy :: Proxy era) mAddr
         val :: Core.Value era <- either (Except.throwError . ElaborateBlockError_TxValue @era) pure =<< evalModelValue (lookupModelValue noScriptAction) mValue
-        let txo = makeTxOut (Proxy :: Proxy era) addr val
+        let txo = makeTxOut' (Proxy :: Proxy era) addr val
             (dat, txo') = case mDat of
               NoPlutusSupport () -> (SNothing, txo)
               SupportsPlutus Nothing -> (SNothing, txo)
@@ -997,8 +1007,8 @@ class
 
       go = (State.execState (compareModelLedger $ cmsError genesisAccounts) .) $
         State.runState $ do
-          utxo0 <- fmap (Map.fromListWith (\_ _ -> error "addr collision")) $
-            for genesisAccounts $ \(oid, mAddr, coins) -> do
+          utxo0 <- fmap (Map.fromListWith (\_ _ -> error "addr collision") . toList) $
+            ifor genesisAccounts $ \oid (mAddr, coins) -> do
               addr <- getAddrFor (Proxy :: Proxy era) mAddr
               eesUTxOs . at oid .= Just (TestUTxOInfo (Just (initialFundsPseudoTxIn addr)) mAddr SNothing)
               pure (addr, coins)
@@ -1073,6 +1083,7 @@ class
       HasField "inputs" (Core.TxBody era) (Set.Set (Shelley.TxIn (Crypto era))),
       HasField "wdrls" (Core.TxBody era) (Shelley.Wdrl (Crypto era)),
       HasField "certs" (Core.TxBody era) (StrictSeq.StrictSeq (DCert (Crypto era)))
+      , Show (Core.Value era)
     ) =>
     proxy era ->
     Globals ->

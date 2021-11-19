@@ -88,6 +88,14 @@ import Test.Cardano.Ledger.ModelChain.FeatureSet
 import Test.Cardano.Ledger.ModelChain.Script
 import Test.Cardano.Ledger.ModelChain.Value
 import Test.Cardano.Ledger.Orphans ()
+import Prelude hiding ((/))
+import qualified Prelude
+import GHC.Stack
+
+(/) :: (Eq a, HasCallStack, Fractional a) => a -> a -> a
+x / y = if y == 0
+  then error "divide by zero"
+  else x Prelude./ y
 
 class Val.Val val => ValueFromList val crypto | val -> crypto where
   valueFromList :: Integer -> [(PolicyID crypto, AssetName, Integer)] -> val
@@ -234,6 +242,12 @@ instance RequiredFeatures ModelEpoch where
 
 type ModelMA era = (ModelScript era, AssetName)
 
+type ModelValue' k era = ModelValueSimple (ModelValueVars era k)
+
+mkModelValue :: ModelValue' k era -> ModelValue k era
+mkModelValue = ModelValue . mkModelValueF
+
+
 data ModelValueVars era (k :: TyValueExpected) where
   ModelValue_MA ::
     ('ExpectAnyOutput ~ ValueFeature era) =>
@@ -249,8 +263,6 @@ deriving instance Show (ModelValueVars era valF)
 deriving instance Eq (ModelValueVars era valF)
 
 deriving instance Ord (ModelValueVars era valF)
-
-type ModelValue' k era = ModelValueSimple (ModelValueVars era k)
 
 newtype ModelValue k era = ModelValue {unModelValue :: ModelValueF (ModelValueVars era k)}
   deriving (Eq, Ord, Generic, NFData)
@@ -277,9 +289,6 @@ liftModelValue = ModelValue . fmap liftModelValueVars . unModelValue
 
 modelValueInject :: Coin -> ModelValue k era
 modelValueInject = ModelValue . ModelValue_Inject
-
-mkModelValue :: ModelValue' k era -> ModelValue k era
-mkModelValue = ModelValue . mkModelValueF
 
 -- | Convenience function to create a spendable ModelTxOut
 modelTxOut :: forall era. KnownScriptFeature (ScriptFeature era) => ModelAddress (ScriptFeature era) -> ModelValue (ValueFeature era) era -> ModelTxOut era
@@ -907,6 +916,17 @@ modelMWithProv k r (p, s) =
       ((x, s'), p') = State.runState (runModelM k' r s) p
    in (either (error . (<> "modelM:") . show) id x, (p', s'))
 
+modelMWithProvT ::
+ forall era a m.
+ (KnownRequiredFeatures era, Monad m) =>
+ (ModelM era (State.StateT (ModelProvenanceState era) m) a) ->
+ Globals ->
+ (ModelProvenanceState era, ModelLedger era) ->
+ m (a, (ModelProvenanceState era, ModelLedger era))
+modelMWithProvT k r (p, s) = do
+ ((x, s'), p') <- State.runStateT (runModelM k r s) p
+ pure (either (error . (<> "modelM:") . show) id x, (p', s'))
+
 type HasModelM era st r m =
   ( MonadReader r m,
     HasGlobals r,
@@ -1041,10 +1061,10 @@ toModelUTxOMap =
 mkModelUTxOMap ::
   forall era.
   KnownScriptFeature (ScriptFeature era) =>
-  [(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)] ->
+  Map.Map ModelUTxOId (ModelAddress (ScriptFeature era), Coin) ->
   ModelUTxOMap era
 mkModelUTxOMap =
-  foldMap $ \(ui, ma, val) ->
+  ifoldMap $ \ui (ma, val) ->
     ModelUTxOMap
       (Map.singleton ui (val, ModelTxOut ma (modelValueInject val) dh))
       (grpMapSingleton (_modelAddress_stk ma) (val, Set.singleton ui))
@@ -1160,7 +1180,8 @@ data ModelPParamsF (era :: FeatureSet) f = ModelPParams
     -- | mixes shelley era minUTxOValue with alonzo coinsPerUTxOWord.
     -- intermediate (shelley-ma : fig7[GL-D1]) is not handled.
     _modelPParams_coinsPerUTxOWord :: !(f (IfSupportsMint Coin Coin (ValueFeature era))),
-    _modelPParams_maxTxSize :: !(f Natural)
+    _modelPParams_maxTxSize :: !(f Natural),
+    _modelPParams_minPoolCost :: !(f Coin)
   }
   deriving (Generic)
 
@@ -1238,6 +1259,9 @@ instance GHC.HasField "_maxTxSize" (ModelPParams era) Natural where
 
 instance MintSupported (ValueFeature era) => GHC.HasField "_coinsPerUTxOWord" (ModelPParams era) Coin where
   getField = supportsMint . runIdentity . _modelPParams_coinsPerUTxOWord
+
+instance GHC.HasField "_minPoolCost" (ModelPParams era) Coin where
+  getField = runIdentity . _modelPParams_minPoolCost
 
 class HasModelPParams era a | a -> era where
   getModelPParams :: a -> ModelPParams era
@@ -1453,7 +1477,15 @@ data ModelProvenanceState era = ModelProvenanceState
       !( Map.Map
            (ModelCredential 'Staking (ScriptFeature era))
            EpochNo
-       )
+       ),
+   _modelProvenanceState_wdrlRewards ::
+      !( Map.Map
+            (ModelCredential 'Staking (ScriptFeature era))
+            (Map.Map
+                 ModelTxId
+                 (EpochNo, EpochNo))
+       ),
+   _modelProvenanceState_poolPerformance :: !(Set ModelPoolId)
   }
   deriving (Show)
 
@@ -1466,7 +1498,9 @@ emptyModelProvenanceState =
       _modelProvenanceState_regPool = Map.empty,
       _modelProvenanceState_deleg = Map.empty,
       _modelProvenanceState_reward = Map.empty,
-      _modelProvenanceState_wdrl = Map.empty
+      _modelProvenanceState_wdrl = Map.empty,
+      _modelProvenanceState_poolPerformance = Set.empty,
+      _modelProvenanceState_wdrlRewards = Map.empty
     }
 
 modelProvenanceState_currentSlot :: Lens' (ModelProvenanceState era) (EpochNo, SlotNo)
@@ -1496,6 +1530,14 @@ modelProvenanceState_reward a2fb s = (\b -> s {_modelProvenanceState_reward = b}
 modelProvenanceState_wdrl :: Lens' (ModelProvenanceState era) (Map.Map (ModelCredential 'Staking (ScriptFeature era)) EpochNo)
 modelProvenanceState_wdrl a2fb s = (\b -> s {_modelProvenanceState_wdrl = b}) <$> a2fb (_modelProvenanceState_wdrl s)
 {-# INLINE modelProvenanceState_wdrl #-}
+
+modelProvenanceState_wdrlRewards :: Lens' (ModelProvenanceState era) (Map.Map (ModelCredential 'Staking (ScriptFeature era)) (Map.Map ModelTxId (EpochNo, EpochNo)))
+modelProvenanceState_wdrlRewards a2fb s = (\b -> s {_modelProvenanceState_wdrlRewards = b}) <$> a2fb (_modelProvenanceState_wdrlRewards s)
+{-# INLINE modelProvenanceState_wdrlRewards #-}
+
+modelProvenanceState_poolPerformance :: Lens' (ModelProvenanceState era) (Set ModelPoolId)
+modelProvenanceState_poolPerformance a2fb s = (\b -> s {_modelProvenanceState_poolPerformance = b}) <$> a2fb (_modelProvenanceState_poolPerformance s)
+{-# INLINE modelProvenanceState_poolPerformance #-}
 
 class HasModelProvenanceState era st | st -> era where
   modelProvenanceState :: Lens' st (ModelProvenanceState era)
@@ -1615,11 +1657,27 @@ instance
         stakeProv' = (\stk -> (stk, poolReg')) <$> stakeProv
 
     modelProvenanceState . modelProvenanceState_reward . at epoch %= Just . Map.unionWith (<>) stakeProv' . fold
+    modelProvenanceState . modelProvenanceState_poolPerformance %= Set.insert pool
 
   wdrlProvenance stk = do
-    currentEpoch <- use $ modelProvenanceState . modelProvenanceState_currentSlot . _1
-    let availableRewards = currentEpoch - 2
-    modelProvenanceState . modelProvenanceState_wdrl %= Map.unionWith max (Map.fromSet (const availableRewards) stk)
+    provs <- use $ modelProvenanceState . modelProvenanceState_currentTxId
+    for_ provs $ \prov -> do
+      currentEpoch <- use $ modelProvenanceState . modelProvenanceState_currentSlot . _1
+      let availableRewards = currentEpoch - 2
+      oldWdrls <- use $ modelProvenanceState . modelProvenanceState_wdrl
+      let wdrlRewards = Map.merge
+            Map.dropMissing
+            (Map.mapMissing $ \_ () -> Map.singleton prov (0, currentEpoch))
+            (Map.zipWithMaybeMatched $ \_ oldWdrl () ->
+              if (currentEpoch > oldWdrl)
+                then Just $ Map.singleton prov (oldWdrl + 1, currentEpoch)
+                else Nothing
+            )
+            oldWdrls
+            $ Map.fromSet (const ()) stk
+      modelProvenanceState . modelProvenanceState_wdrlRewards %= Map.unionWith Map.union wdrlRewards
+      modelProvenanceState . modelProvenanceState_wdrl %= Map.unionWith max (Map.fromSet (const availableRewards) stk)
+
 
 newtype SomeMonadTrans t m a = SomeMonadTrans {getSomeMonadTrans :: t m a}
   deriving (Functor)
@@ -2630,8 +2688,8 @@ modelPParams :: forall era. KnownRequiredFeatures era => ModelPParams era
 modelPParams =
   ModelPParams
     { _modelPParams_protocolVersion = pure $ ProtVer 5 0,
-      _modelPParams_minfeeA = pure 0,
-      _modelPParams_minfeeB = pure 0,
+      _modelPParams_minfeeA = pure 1,
+      _modelPParams_minfeeB = pure 1,
       _modelPParams_collateralPercent = pure $ sp () 150,
       _modelPParams_d = pure $ maxBound,
       _modelPParams_maxTxSize = pure $ 1_000_000,
@@ -2642,8 +2700,9 @@ modelPParams =
       _modelPParams_keyDeposit = pure (Coin 0),
       _modelPParams_poolDeposit = pure (Coin 0),
       _modelPParams_prices = pure $ sp () (Prices minBound minBound),
-      _modelPParams_coinsPerUTxOWord = pure $ sm (Coin 0) (Coin 10000), -- TODO: because bad Default AlonzoGenesis
-      _modelPParams_maxCollateralInputs = pure $ sp () 5
+      _modelPParams_coinsPerUTxOWord = pure $ sm (Coin 1) (Coin 1),
+      _modelPParams_maxCollateralInputs = pure $ sp () 5,
+      _modelPParams_minPoolCost = pure (Coin 0)
     }
   where
     sp :: forall a b. a -> b -> IfSupportsPlutus a b (ScriptFeature era)
@@ -2655,14 +2714,16 @@ modelPParams =
 data ModelGenesis era = ModelGenesis
   { _modelGenesis_pp :: !(ModelPParams era),
     _modelGenesis_genDelegs :: !ModelGenesisDelegation,
-    _modelGenesis_utxos :: ![(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)]
+    -- _modelGenesis_utxos :: ![(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)]
+    _modelGenesis_utxos :: !(Map.Map ModelUTxOId (ModelAddress (ScriptFeature era), Coin))
   }
   deriving (Show, Generic)
 
 modelGenesis_pp :: Lens' (ModelGenesis era) (ModelPParams era)
 modelGenesis_pp = lens _modelGenesis_pp $ \s b -> s {_modelGenesis_pp = b}
 
-modelGenesis_utxos :: Lens' (ModelGenesis era) [(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)]
+-- modelGenesis_utxos :: Lens' (ModelGenesis era) [(ModelUTxOId, ModelAddress (ScriptFeature era), Coin)]
+modelGenesis_utxos :: Lens' (ModelGenesis era) (Map.Map ModelUTxOId (ModelAddress (ScriptFeature era), Coin))
 modelGenesis_utxos = lens _modelGenesis_utxos $ \s b -> s {_modelGenesis_utxos = b}
 
 instance NFData (ModelGenesis era)
@@ -2739,7 +2800,7 @@ mkModelLedger globals (ModelGenesis pp genDelegs utxos) =
 
     reserves =
       word64ToCoin (maxLovelaceSupply globals)
-        ~~ foldOf (traverse . _3) utxos
+        ~~ foldOf (traverse . _2) utxos
 
 class HasModelLedger era a | a -> era where
   modelLedger :: Lens' a (ModelLedger era)
@@ -3130,11 +3191,11 @@ maxPoolModel
 -- [SL-D1] 5.5.2 (p-hat)
 mkApparentPerformance ::
   UnitInterval ->
-  UnitInterval ->
+  Rational ->
   Natural ->
   Natural ->
   Rational
-mkApparentPerformance (unboundRational -> d) (unboundRational -> sigma) (toRational -> n) (toRational -> nbar)
+mkApparentPerformance (unboundRational -> d) sigma (toRational -> n) (toRational -> nbar)
   | d < 0.8 = beta / sigma
   | otherwise = 1
   where
@@ -3143,12 +3204,12 @@ mkApparentPerformance (unboundRational -> d) (unboundRational -> sigma) (toRatio
 -- |
 -- [SL-D5] Figure 47
 -- [SL-D1] 5.5.3
-r_operator :: MonadModelProvenance era provM => ModelSnapshotStake -> Coin -> ModelPoolParams era -> UnitInterval -> PositiveRational -> provM Coin
-r_operator stk f_hat (ModelPoolParams {_mppId = poolId, _mppCost = c, _mppMargin = (unboundRational -> m), _mppRAcnt = ra}) (unboundRational -> s) (unboundPositiveRational -> sigma)
-  | f_hat <= c = pure f_hat
-  | otherwise = do
-    rewardOperatorProvenance poolId $ Map.singleton ra $ _modelSnapshotStake_utxos stk
-    pure $ c <> rationalToCoin ((coinToRational $ f_hat ~~ c) * (m + (1 - m) * s / sigma))
+r_operator :: MonadModelProvenance era provM => ModelSnapshotStake -> Coin -> ModelPoolParams era -> Rational -> PositiveRational -> provM Coin
+r_operator stk f_hat (ModelPoolParams {_mppId = poolId, _mppCost = c, _mppMargin = (unboundRational -> m), _mppRAcnt = ra}) s (unboundPositiveRational -> sigma) = do
+  unless (f_hat <= mempty) $ rewardOperatorProvenance poolId $ Map.singleton ra $ _modelSnapshotStake_utxos stk
+  pure $ if (f_hat <= c)
+    then f_hat
+    else c <> rationalToCoin ((coinToRational $ f_hat ~~ c) * (m + (1 - m) * s / sigma))
 
 -- |
 -- [SL-D5] Figure 47
@@ -3157,7 +3218,7 @@ r_member :: MonadModelProvenance era provM => (ModelCredential 'Staking (ScriptF
 r_member (hk, stk) f_hat (ModelPoolParams {_mppId = poolId, _mppCost = c, _mppMargin = (unboundRational -> m)}) t (unboundPositiveRational -> sigma)
   | f_hat <= c = pure $ Val.zero
   | otherwise = do
-    rewardMemberProvenance poolId $ Map.singleton hk $ _modelSnapshotStake_utxos stk
+    unless (f_hat <= mempty) $ rewardMemberProvenance poolId $ Map.singleton hk $ _modelSnapshotStake_utxos stk
     pure $ rationalToCoin ((coinToRational $ f_hat ~~ c) * (1 - m) * t / sigma)
 
 unsafeFromRational :: forall r. (Typeable r, BoundedRational r) => String -> Rational -> r
@@ -3175,7 +3236,7 @@ rewardOnePoolModel ::
   ModelPoolParams era ->
   Map.Map (ModelCredential 'Staking (ScriptFeature era)) ModelSnapshotStake ->
   PositiveRational ->
-  UnitInterval ->
+  Rational ->
   Coin ->
   Set (ModelCredential 'Staking (ScriptFeature era)) ->
   provM (Map.Map (ModelCredential 'Staking (ScriptFeature era)) Coin)
@@ -3216,7 +3277,8 @@ rewardOnePoolModel
         ostake'
         poolR
         pool
-        (unsafeFromRational "rewardOnePoolModel::ostake/tot" $ ostake / tot)
+        --(unsafeFromRational "rewardOnePoolModel::ostake/tot" $ ostake / tot)
+        (ostake / tot)
         sigma
     let potentialRewards = Map.unionWith (<>) mRewards (Map.singleton (_mppRAcnt pool) iReward)
         rewards = Map.restrictKeys potentialRewards addrs_rew
@@ -3289,10 +3351,12 @@ rewardModel
             | (hk, (p, n, s)) <- Map.toList pdata,
               let sbar = coinToRational (foldMap _modelSnapshotStake_balance s),
               total_a > 0,
-              sigma_a <- case boundRational' $ sbar / total_a of
+              total /= mempty,
+              sigma_a <- [ sa | let sa = sbar / total_a, sa >= 0],
+              {-sigma_a <- case boundRational' $ sbar / total_a of
                 Underflow -> []
                 InBounds x -> [x]
-                Overflow -> error $ "sigma_a overflow: " <> show (sbar / total_a),
+                Overflow -> error $ "sigma_a overflow: " <> show (sbar / total_a), -}
               sigma <- toList $ boundPositiveRational (sbar / coinToRational total)
           ]
     let rewards = Map.unionsWith (<>) results
