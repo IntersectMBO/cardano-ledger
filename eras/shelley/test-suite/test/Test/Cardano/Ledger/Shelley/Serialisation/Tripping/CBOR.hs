@@ -28,6 +28,7 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.CBOR
     prop_roundtrip_LEDGER_PredicateFails,
     prop_roundtrip_PrtclState,
     prop_roundtrip_LedgerState,
+    prop_roundtrip_EpochState,
     prop_roundtrip_NewEpochState,
     prop_roundtrip_ShelleyGenesis,
 
@@ -68,6 +69,7 @@ import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Write (toLazyByteString)
+import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as Lazy
 import Data.Maybe (fromJust)
 import Data.Sharing (Arity (..), fromCBOR')
@@ -133,7 +135,7 @@ roundtrip2' enc dec a = case deserialiseFromBytes dec bs of
     | otherwise ->
       counterexample ("left-over bytes: " <> show bs') False
   Left e ->
-    counterexample (show e) False
+    counterexample (show e ++ "\n  " ++ show (Base16.encode bs)) False
   where
     bs = toLazyByteString (enc a)
 
@@ -182,6 +184,9 @@ prop_roundtrip_PrtclState = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_LedgerState :: Ledger.LedgerState Mock.C -> Property
 prop_roundtrip_LedgerState = roundtrip toCBOR fromCBOR
+
+prop_roundtrip_EpochState :: Ledger.EpochState Mock.C -> Property
+prop_roundtrip_EpochState = roundtrip2 toCBOR fromCBOR
 
 prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
 prop_roundtrip_NewEpochState = roundtrip2 toCBOR fromCBOR
@@ -267,6 +272,7 @@ tests =
         prop_roundtrip_LEDGER_PredicateFails,
       testProperty "roundtrip Protocol State" prop_roundtrip_PrtclState,
       testProperty "roundtrip Ledger State" prop_roundtrip_LedgerState,
+      testProperty "roundtrip EpochState" prop_roundtrip_EpochState,
       testProperty "roundtrip NewEpoch State" prop_roundtrip_NewEpochState,
       testProperty "roundtrip MultiSig" prop_roundtrip_MultiSig,
       testProperty "roundtrip Metadata" prop_roundtrip_metadata,

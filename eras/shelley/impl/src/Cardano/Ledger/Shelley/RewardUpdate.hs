@@ -55,6 +55,8 @@ import Data.Coders
     vMapEncode,
     (!>),
     (<!),
+    -- decodeSet,
+    -- decodeMap,
   )
 import Data.Compact.VMap as VMap
 import Data.Default.Class (def)
@@ -65,7 +67,8 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Set (Set)
-import Data.Sharing (Arity (..), fromCBOR')
+import Data.Sharing ()
+-- (Arity (..), FromCBORShare(..), decodeAndIntern)
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -140,7 +143,7 @@ emptyRewardUpdate :: RewardUpdate crypto
 emptyRewardUpdate =
   RewardUpdate (DeltaCoin 0) (DeltaCoin 0) Map.empty (DeltaCoin 0) def
 
--- ===================================================
+-- ================================================
 
 -- | To complete the reward update, we need a snap shot of the EpochState particular to this computation
 data RewardSnapShot crypto = RewardSnapShot
@@ -177,7 +180,7 @@ instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
   fromCBOR =
     decode
       ( RecD RewardSnapShot
-          <! D (fromCBOR' @(Credential 'Staking crypto) A1)
+          <! From
           <! From
           <! From
           <! From
@@ -233,14 +236,23 @@ instance (CC.Crypto crypto) => ToCBOR (FreeVars crypto) where
 instance (CC.Crypto crypto) => FromCBOR (FreeVars crypto) where
   fromCBOR =
     decode
-      ( RecD FreeVars <! mapDecode {- b -}
+      ( RecD FreeVars
           <! vMapDecode {- delegs -}
-          <! D (fromCBOR' @(Credential 'Staking crypto) A1 {- stake -})
           <! setDecode {- addrsRew -}
           <! From {- totalStake -}
           <! From {- pp_pv -}
           <! mapDecode {- poolRewardInfo -}
       )
+
+{-
+  fromCBOR = do
+     (dels,(stid,poolid)) <- fromSharePlus @_ @(Credential 'Staking crypto,KeyHash 'StakePool crypto) A2 ([],[])
+     adrrew <- decodeSet (decodeAndIntern stid)
+     totst <- fromCBOR
+     pp <- fromCBOR
+     rewinfo <- decodeMap (decodeAndIntern poolid) fromCBOR
+     pure(FreeVars dels adrrew totst pp rewinfo)
+-}
 
 -- =====================================================================
 

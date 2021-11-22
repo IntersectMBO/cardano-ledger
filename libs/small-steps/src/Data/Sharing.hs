@@ -18,6 +18,7 @@ module Data.Sharing
     Interned (..),
     Internable (..),
     fromCBOR',
+    decodeAndIntern,
     -- Extra for experts
     Arity (..),
     Nat (..),
@@ -189,3 +190,9 @@ decodeMapAsBimap maps = decodeMapSkel (biMapFromAscDistinctList . List.map (\(k,
 instance (Ord k, FromCBOR k, FromCBOR t, VMap.Vector v2 t) => FromCBORShare (VMap VB v2 k t) k 'N1 where
   fromShare A1 maps = decodeVMap (decodeAndIntern maps) fromCBOR
   fromSharePlus A1 maps = do mp <- fromShare A1 maps; pure (mp, include mp maps)
+
+instance (Ord k, Ord t, FromCBOR k, FromCBOR t, VMap.Vector v2 t) => FromCBORShare (VMap VB v2 k t) (k, t) 'N2 where
+  fromShare A2 (km, tm) = decodeVMap (decodeAndIntern km) (decodeAndIntern tm)
+  fromSharePlus A2 (kms, tms) = do
+    mp <- decodeVMap (decodeAndIntern kms) (decodeAndIntern tms)
+    pure (mp, (include mp kms, tms))
