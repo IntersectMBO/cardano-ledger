@@ -64,10 +64,6 @@ module Cardano.Ledger.Shelley.TxBody
     TransTxId,
     TransTxOut,
     TransTxBody,
-
-    -- * Deprecated
-    TxId,
-    TxIn,
   )
 where
 
@@ -1132,13 +1128,3 @@ instance
           _poolRelays = relays,
           _poolMD = maybeToStrictMaybe md
         }
-
--- DEPRECATED
-
-{-# DEPRECATED TxId "Import from Cardano.Ledger.TxIn instead" #-}
-
-type TxId = Core.TxId
-
-{-# DEPRECATED TxIn "Import from Cardano.Ledger.TxIn instead" #-}
-
-type TxIn = Core.TxIn

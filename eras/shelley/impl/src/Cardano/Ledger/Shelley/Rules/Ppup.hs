@@ -32,7 +32,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Serialization (decodeRecordSum)
 import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), pvCanFollow)
-import Cardano.Ledger.Shelley.PParams hiding (ProtVer)
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Slot
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))

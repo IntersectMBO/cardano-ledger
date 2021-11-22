@@ -60,11 +60,6 @@ module Cardano.Ledger.Alonzo.Tx
     -- Other
     toCBORForSizeComputation,
     toCBORForMempoolSubmission,
-    -- Deprecated
-    IsValidating,
-    isValidating,
-    WitnessPPData,
-    hashWitnessPPData,
   )
 where
 
@@ -149,18 +144,6 @@ import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 
 -- ===================================================
-
-{-# DEPRECATED IsValidating "Use IsValid instead" #-}
-
-type IsValidating = IsValid
-
-{-# DEPRECATED isValidating "Use isValid instead" #-}
-isValidating :: ValidatedTx era -> IsValid
-isValidating = isValid
-
--- | DEPRECATED - remove this HasField instance once we have removed IsValidating
-instance HasField "isValidating" (ValidatedTx era) IsValid where
-  getField = isValid
 
 -- | Tag indicating whether non-native scripts in this transaction are expected
 -- to validate. This is added by the block creator when constructing the block.
@@ -250,10 +233,6 @@ data ScriptIntegrity era
       !(Set LangDepView) -- From the Porotocl parameters
   deriving (Show, Eq, Generic, Typeable)
 
-{-# DEPRECATED WitnessPPData "Use ScriptIntegrity instead" #-}
-
-type WitnessPPData = ScriptIntegrity
-
 deriving instance Typeable era => NoThunks (ScriptIntegrity era)
 
 -- ScriptIntegrity is not transmitted over the network. The bytes are independently
@@ -282,17 +261,6 @@ hashScriptIntegrity pp langs rdmrs dats =
     else
       let newset = Set.map (getLanguageView pp) langs
        in SJust (hashAnnotated (ScriptIntegrity rdmrs dats newset))
-
-{-# DEPRECATED hashWitnessPPData "Use hashScriptIntegrity instead" #-}
-hashWitnessPPData ::
-  forall era.
-  Era era =>
-  PParams era ->
-  Set Language ->
-  Redeemers era ->
-  TxDats era ->
-  StrictMaybe (ScriptIntegrityHash (Crypto era))
-hashWitnessPPData = hashScriptIntegrity
 
 -- ===============================================================
 -- From the specification, Figure 5 "Functions related to fees"

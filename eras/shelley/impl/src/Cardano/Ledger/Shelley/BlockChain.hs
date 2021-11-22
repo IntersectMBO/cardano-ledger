@@ -28,30 +28,6 @@ module Cardano.Ledger.Shelley.BlockChain
     --
     incrBlocks,
     coreAuxDataBytes,
-    -- deprecated
-    HashHeader,
-    PrevHash,
-    BHBody,
-    BHeader,
-    LastAppliedBlock,
-    checkLeaderValue,
-    bhHash,
-    bnonce,
-    hashHeaderToNonce,
-    prevHashToNonce,
-    bHeaderSize,
-    bhbody,
-    hBbsize,
-    issuerIDfromBHBody,
-    seedEta,
-    seedL,
-    mkSeed,
-    lastAppliedHash,
-    --
-    Block,
-    bheader,
-    bbody,
-    neededTxInsForBlock,
     txSeqDecoder,
   )
 where
@@ -67,22 +43,16 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
-import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes
-  ( ActiveSlotCoeff,
-    BlocksMade (..),
+  ( BlocksMade (..),
     Nonce (..),
-    Seed (..),
     StrictMaybe (..),
     mkNonceFromNumber,
     strictMaybeToMaybe,
   )
 import Cardano.Ledger.Block (BlockAnn)
-import qualified Cardano.Ledger.Block as Core
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
-import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Hashes (EraIndependentBlockBody)
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
@@ -95,9 +65,6 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Ledger.Shelley.Tx (Tx, segwitTx)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.TxIn (TxIn (..))
-import qualified Cardano.Protocol.TPraos.BHeader as TP
-import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Char8 as BS
@@ -109,12 +76,10 @@ import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
-import Numeric.Natural (Natural)
 
 data TxSeq era = TxSeq'
   { txSeqTxns' :: !(StrictSeq (Tx era)),
@@ -320,104 +285,3 @@ incrBlocks isOverlay hk b'@(BlocksMade b)
     Just n -> Map.insert hk (n + 1) b
   where
     hkVal = Map.lookup hk b
-
--- DEPRECATED
-
-{-# DEPRECATED HashHeader "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-
-type HashHeader = TP.HashHeader
-
-{-# DEPRECATED PrevHash "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-
-type PrevHash = TP.PrevHash
-
-{-# DEPRECATED BHBody "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-
-type BHBody = TP.BHBody
-
-{-# DEPRECATED BHeader "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-
-type BHeader = TP.BHeader
-
-{-# DEPRECATED LastAppliedBlock "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-
-type LastAppliedBlock = TP.LastAppliedBlock
-
-{-# DEPRECATED checkLeaderValue "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-checkLeaderValue ::
-  forall v.
-  (VRF.VRFAlgorithm v) =>
-  VRF.OutputVRF v ->
-  Rational ->
-  ActiveSlotCoeff ->
-  Bool
-checkLeaderValue = TP.checkLeaderValue
-
-{-# DEPRECATED bhHash "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-bhHash :: CC.Crypto crypto => TP.BHeader crypto -> TP.HashHeader crypto
-bhHash = TP.bhHash
-
-{-# DEPRECATED hashHeaderToNonce "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-hashHeaderToNonce :: TP.HashHeader crypto -> Nonce
-hashHeaderToNonce = TP.hashHeaderToNonce
-
-{-# DEPRECATED prevHashToNonce "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-prevHashToNonce :: TP.PrevHash crypto -> Nonce
-prevHashToNonce = TP.prevHashToNonce
-
-{-# DEPRECATED issuerIDfromBHBody "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-issuerIDfromBHBody :: CC.Crypto crypto => TP.BHBody crypto -> KeyHash 'BlockIssuer crypto
-issuerIDfromBHBody = TP.issuerIDfromBHBody
-
-{-# DEPRECATED bHeaderSize "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-bHeaderSize :: forall crypto. (CC.Crypto crypto) => TP.BHeader crypto -> Int
-bHeaderSize = TP.bHeaderSize
-
-{-# DEPRECATED bhbody "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-bhbody :: CC.Crypto crypto => TP.BHeader crypto -> TP.BHBody crypto
-bhbody = TP.bhbody
-
-{-# DEPRECATED hBbsize "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-hBbsize :: TP.BHBody crypto -> Natural
-hBbsize = TP.hBbsize
-
-{-# DEPRECATED seedEta "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-seedEta :: Nonce
-seedEta = TP.seedEta
-
-{-# DEPRECATED seedL "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-seedL :: Nonce
-seedL = TP.seedL
-
-{-# DEPRECATED mkSeed "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-mkSeed :: Nonce -> SlotNo -> Nonce -> Seed
-mkSeed = TP.mkSeed
-
-{-# DEPRECATED lastAppliedHash "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-lastAppliedHash :: WithOrigin (TP.LastAppliedBlock crypto) -> TP.PrevHash crypto
-lastAppliedHash = TP.lastAppliedHash
-
-{-# DEPRECATED bnonce "Import from Cardano.Protocol.TPraos.BHeader instead" #-}
-bnonce :: TP.BHBody crypto -> Nonce
-bnonce = TP.bnonce
-
-{-# DEPRECATED Block "Import from Cardano.Ledger.Block instead" #-}
-
-type Block = Core.Block
-
-{-# DEPRECATED bheader "Import from Cardano.Ledger.Block instead" #-}
-bheader :: Block h era -> h (Crypto era)
-bheader = Core.bheader
-
-{-# DEPRECATED bbody "Import from Cardano.Ledger.Block instead" #-}
-bbody :: Block h era -> Era.TxSeq era
-bbody = Core.bbody
-
-{-# DEPRECATED neededTxInsForBlock "Import from Cardano.Ledger.Block instead" #-}
-neededTxInsForBlock ::
-  ( Era era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
-  Block h era ->
-  Set (TxIn (Crypto era))
-neededTxInsForBlock = Core.neededTxInsForBlock

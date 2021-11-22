@@ -37,9 +37,6 @@ module Cardano.Ledger.Shelley.UTxO
 
     -- * Utilities
     TransUTxO,
-
-    -- * Deprecated
-    txid,
   )
 where
 
@@ -82,7 +79,7 @@ import Cardano.Ledger.Shelley.TxBody
     pattern Delegate,
     pattern Delegation,
   )
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.TxIn as Core (txid)
 import Cardano.Ledger.Val (zero, (<+>), (<×>))
 import Control.DeepSeq (NFData)
@@ -152,14 +149,6 @@ deriving via
   instance
     Show (Core.TxOut era) =>
     Show (UTxO era)
-
-{-# DEPRECATED txid "Import from Cardano.Ledger.TxIn instead" #-}
-txid ::
-  forall era.
-  Era era =>
-  Core.TxBody era ->
-  TxId (Crypto era)
-txid = Core.txid
 
 -- | Compute the UTxO inputs of a transaction.
 -- txins has the same problems as txouts, see notes below.

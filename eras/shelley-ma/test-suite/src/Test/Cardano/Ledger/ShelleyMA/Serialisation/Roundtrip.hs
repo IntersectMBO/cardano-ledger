@@ -9,7 +9,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 import Cardano.Binary (Annotator (..), FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
+import Cardano.Ledger.Shelley.Constraints
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Proxy (Proxy (Proxy))
 import Data.Typeable (typeRep)
@@ -68,7 +68,10 @@ property x =
 
 allprops ::
   forall e.
-  ( ShelleyBased e,
+  ( UsesValue e,
+    UsesScript e,
+    UsesTxBody e,
+    UsesAuxiliary e,
     ApplyTx e,
     Arbitrary (Core.TxBody e),
     Arbitrary (Core.AuxiliaryData e),

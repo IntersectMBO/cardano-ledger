@@ -11,7 +11,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.Tx hiding (TxIn)
-import Cardano.Ledger.Shelley.TxBody hiding (TxIn)
+import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Slot
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>), (<->))

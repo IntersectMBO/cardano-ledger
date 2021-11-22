@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.PParams hiding (ProtVer)
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules.Delegs
 import Cardano.Ledger.Shelley.Rules.Ledger
 import Cardano.Ledger.Shelley.Tx

@@ -29,16 +29,12 @@ module Cardano.Ledger.Shelley.EpochBoundary
     obligation,
     maxPool,
     maxPool',
-
-    -- * Deprecated
-    BlocksMade,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
-import qualified Cardano.Ledger.BaseTypes as Core (BlocksMade)
 import Cardano.Ledger.Coin
   ( Coin (..),
     coinToRational,
@@ -247,7 +243,3 @@ emptySnapShot = SnapShot (Stake VMap.empty) VMap.empty VMap.empty
 
 emptySnapShots :: SnapShots crypto
 emptySnapShots = SnapShots emptySnapShot emptySnapShot emptySnapShot (Coin 0)
-
-{-# DEPRECATED BlocksMade "Import from Cardano.Ledger.BaseTypes instead" #-}
-
-type BlocksMade = Core.BlocksMade

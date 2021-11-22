@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.Constraints (ShelleyBased)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState,
@@ -72,25 +71,25 @@ newtype LedgersEvent era
   = LedgerEvent (Event (Core.EraRule "LEDGER" era))
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Show (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   Show (LedgersPredicateFailure era)
 
 deriving stock instance
-  ( ShelleyBased era,
+  ( Era era,
     Eq (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   Eq (LedgersPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     NoThunks (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   NoThunks (LedgersPredicateFailure era)
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     ToCBOR (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   ToCBOR (LedgersPredicateFailure era)
@@ -98,7 +97,7 @@ instance
   toCBOR (LedgerFailure e) = toCBOR e
 
 instance
-  ( ShelleyBased era,
+  ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "LEDGER" era))
   ) =>
   FromCBOR (LedgersPredicateFailure era)
@@ -107,7 +106,6 @@ instance
 
 instance
   ( Era era,
-    ShelleyBased era,
     Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
     State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),

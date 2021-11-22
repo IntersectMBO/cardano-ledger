@@ -23,10 +23,6 @@ module Cardano.Ledger.Shelley.PParams
     emptyPParamsUpdate,
     Update (..),
     updatePParams,
-    -- DEPRECATED
-    ProtVer,
-    pvMajor,
-    pvMinor,
   )
 where
 
@@ -461,15 +457,3 @@ updatePParams pp ppup =
       _minUTxOValue = fromSMaybe (_minUTxOValue pp) (_minUTxOValue ppup),
       _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup)
     }
-
-{-# DEPRECATED ProtVer "Import from Cardano.Ledger.BaseTypes instead" #-}
-
-type ProtVer = BT.ProtVer
-
-{-# DEPRECATED pvMajor "Import from Cardano.Ledger.BaseTypes instead" #-}
-pvMajor :: ProtVer -> Natural
-pvMajor = BT.pvMajor
-
-{-# DEPRECATED pvMinor "Import from Cardano.Ledger.BaseTypes instead" #-}
-pvMinor :: ProtVer -> Natural
-pvMinor = BT.pvMinor

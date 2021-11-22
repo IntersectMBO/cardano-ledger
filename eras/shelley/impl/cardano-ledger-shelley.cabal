@@ -33,7 +33,6 @@ library
     Cardano.Ledger.Chain
     Cardano.Ledger.Shelley
     Cardano.Ledger.Shelley.Constraints
-    Cardano.Ledger.Shelley.Address
     Cardano.Ledger.Shelley.Address.Bootstrap
     Cardano.Ledger.Shelley.API
     Cardano.Ledger.Shelley.API.ByronTranslation
@@ -42,31 +41,24 @@ library
     Cardano.Ledger.Shelley.API.Validation
     Cardano.Ledger.Shelley.API.Wallet
     Cardano.Ledger.Shelley.API.Mempool
-    Cardano.Ledger.Shelley.BaseTypes
     Cardano.Ledger.Shelley.BlockChain
     Cardano.Ledger.Shelley.CompactAddr
-    Cardano.Ledger.Shelley.Credential
     Cardano.Ledger.Shelley.Delegation.Certificates
     Cardano.Ledger.Shelley.Delegation.PoolParams
     Cardano.Ledger.Shelley.EpochBoundary
     Cardano.Ledger.Shelley.Genesis
     Cardano.Ledger.Shelley.HardForks
-    Cardano.Ledger.Shelley.Keys
     Cardano.Ledger.Shelley.LedgerState
     Cardano.Ledger.Shelley.Metadata
-    Cardano.Ledger.Shelley.OCert
     Cardano.Ledger.Shelley.Orphans
-    Cardano.Ledger.Shelley.OverlaySchedule
     Cardano.Ledger.Shelley.PParams
     Cardano.Ledger.Shelley.Rewards
     Cardano.Ledger.Shelley.RewardProvenance
     Cardano.Ledger.Shelley.RewardUpdate
     Cardano.Ledger.Shelley.Scripts
-    Cardano.Ledger.Shelley.Slot
     Cardano.Ledger.Shelley.SoftForks
     Cardano.Ledger.Shelley.StabilityWindow
     Cardano.Ledger.Shelley.Rules.Bbody
-    Cardano.Ledger.Shelley.Rules.Chain
     Cardano.Ledger.Shelley.Rules.Deleg
     Cardano.Ledger.Shelley.Rules.Delegs
     Cardano.Ledger.Shelley.Rules.Delpl
@@ -77,16 +69,12 @@ library
     Cardano.Ledger.Shelley.Rules.Mir
     Cardano.Ledger.Shelley.Rules.NewEpoch
     Cardano.Ledger.Shelley.Rules.Newpp
-    Cardano.Ledger.Shelley.Rules.Ocert
-    Cardano.Ledger.Shelley.Rules.Overlay
     Cardano.Ledger.Shelley.Rules.Pool
     Cardano.Ledger.Shelley.Rules.PoolReap
     Cardano.Ledger.Shelley.Rules.Ppup
-    Cardano.Ledger.Shelley.Rules.Prtcl
     Cardano.Ledger.Shelley.Rules.Rupd
     Cardano.Ledger.Shelley.Rules.Snap
     Cardano.Ledger.Shelley.Rules.Tick
-    Cardano.Ledger.Shelley.Rules.Tickn
     Cardano.Ledger.Shelley.Rules.Updn
     Cardano.Ledger.Shelley.Rules.Upec
     Cardano.Ledger.Shelley.Rules.Utxo

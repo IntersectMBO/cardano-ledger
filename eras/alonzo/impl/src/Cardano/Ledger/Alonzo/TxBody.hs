@@ -54,9 +54,6 @@ module Cardano.Ledger.Alonzo.TxBody
     AlonzoBody,
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
-
-    -- * deprecated
-    WitnessPPDataHash,
   )
 where
 
@@ -380,10 +377,6 @@ pattern TxOutCompactDH addr vl dh <-
 -- ======================================
 
 type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
-
-{-# DEPRECATED WitnessPPDataHash "Use ScriptIntegrityHash instead" #-}
-
-type WitnessPPDataHash crypto = SafeHash crypto EraIndependentScriptIntegrity
 
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (Crypto era))),
@@ -844,13 +837,6 @@ instance
   HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash c))
   where
   getField (TxBodyConstr (Memo m _)) = _adHash m
-
--- | TODO deprecated
-instance
-  c ~ Crypto era =>
-  HasField "wppHash" (TxBody era) (StrictMaybe (ScriptIntegrityHash c))
-  where
-  getField (TxBodyConstr (Memo m _)) = _scriptIntegrityHash m
 
 instance
   c ~ Crypto era =>

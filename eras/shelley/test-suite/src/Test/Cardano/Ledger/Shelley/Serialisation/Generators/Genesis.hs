@@ -27,7 +27,7 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.Shelley.Genesis
-import Cardano.Ledger.Shelley.PParams hiding (ProtVer)
+import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Prelude (Natural, Word32, Word64, Word8)

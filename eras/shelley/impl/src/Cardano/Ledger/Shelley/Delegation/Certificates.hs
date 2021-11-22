@@ -31,15 +31,11 @@ module Cardano.Ledger.Shelley.Delegation.Certificates
     isReservesMIRCert,
     isTreasuryMIRCert,
     requiresVKeyWitness,
-    -- Deprecated
-    PoolDistr,
-    IndividualPoolStake,
   )
 where
 
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import qualified Cardano.Ledger.PoolDistr as PD
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -114,13 +110,3 @@ requiresVKeyWitness :: DCert crypto -> Bool
 requiresVKeyWitness (DCertMir (MIRCert _ _)) = False
 requiresVKeyWitness (DCertDeleg (RegKey _)) = False
 requiresVKeyWitness _ = True
-
--- Deprecated
-
-{-# DEPRECATED PoolDistr "Import from Cardano.Ledger.PoolDistr instead" #-}
-
-type PoolDistr = PD.PoolDistr
-
-{-# DEPRECATED IndividualPoolStake "Import from Cardano.Ledger.PoolDistr instead" #-}
-
-type IndividualPoolStake = PD.IndividualPoolStake

@@ -106,18 +106,3 @@ type TransValue (c :: Type -> Constraint) era =
     Compactible (Value era),
     c (Value era)
   )
-
--- | General constraints that will hold true for ledgers which are based on
--- Shelley, and share similar serialisation formats"
-type ShelleyBased era =
-  ( -- Value constraints
-    UsesValue era,
-    -- TxBody constraints
-    UsesTxBody era,
-    -- Script constraints
-    UsesScript era,
-    -- AuxiliaryData constraints
-    UsesAuxiliary era
-  )
-
-{-# LANGUAGE Deprecated ShelleyBased "Use appropriate 'Uses' constraits (e.g. `UsesValue`) instead." #-}
