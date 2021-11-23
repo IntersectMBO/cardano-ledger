@@ -1,6 +1,7 @@
 module Main where
 
 import Test.Compact.KeyMap (alltests)
+import Test.Compact.SplitMap (splitMapTests)
 import Test.Compact.VMap
 import Test.Tasty
 
@@ -9,9 +10,10 @@ import Test.Tasty
 tests :: TestTree
 tests =
   testGroup
-    "compcat-map"
+    "compact-map"
     [ alltests,
-      vMapTests
+      vMapTests,
+      splitMapTests
     ]
 
 main :: IO ()

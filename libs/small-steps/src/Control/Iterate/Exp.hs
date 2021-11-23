@@ -3,6 +3,8 @@
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 -- | This module provides deep embeddings of three things
 --   1) Exp is a deep embedding of expressions over Sets and Maps as a typed data structure.
@@ -11,9 +13,11 @@
 --      a low-level compiled form of Exp
 module Control.Iterate.Exp where
 
-import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Iter (..), List (..), Sett (..), Single (..), fromPairs, unList)
+import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Iter (..), List (..), Sett (..), Single (..), fromPairs)
 import Control.Iterate.BiMap (BiMap, Bimap, biMapEmpty)
 import Control.Iterate.Collect (Collect (..), front, hasElem, none, one)
+import Data.Compact.SplitMap (Split, SplitMap)
+import qualified Data.Compact.SplitMap as Split
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -55,9 +59,10 @@ data Exp t where
   KeyEqual :: (Ord k, Iter f, Iter g) => Exp (f k v) -> Exp (g k u) -> Exp Bool
 
 instance Show (Exp t) where
-  show (Base MapR x) = "Map(" ++ show (Map.size x) ++ ")?"
-  show (Base SetR (Sett x)) = "Set(" ++ show (Set.size x) ++ ")?"
-  show (Base ListR xs) = "List(" ++ show (length (unList xs)) ++ ")?"
+  show (Base MapR _) = "Map?"
+  show (Base SetR _) = "Set?"
+  show (Base ListR _) = "List?"
+  show (Base SplitR _) = "SplitMap?"
   show (Base SingleR (Single _ _)) = "Single(_ _)"
   show (Base SingleR (SetSingle _)) = "SetSingle(_)"
   show (Base rep _x) = show rep ++ "?"
@@ -106,6 +111,9 @@ instance (Ord k) => HasExp (Single k v) (Single k v) where
 
 instance (Ord k, Ord v) => HasExp (Bimap k v) (Bimap k v) where
   toExp x = Base BiMapR x
+
+instance (Ord k, Split k) => HasExp (SplitMap k v) (SplitMap k v) where
+  toExp x = Base SplitR x
 
 -- =======================================================================================================
 -- When we build an Exp, we want to make sure all Sets with one element become (SetSingleton x)
@@ -455,6 +463,13 @@ guardQ x p = GuardD (query x) p
 -- Don't know why this won't type check
 -- diffQ :: (Ord k, HasQuery concrete1 k v, HasQuery concrete2 k u) => concrete1 -> concrete2 -> Query k v
 -- diffQ = \ x y -> DiffD (query x) (query y)
+diffQ ::
+  forall k v u concrete1 concrete2.
+  (Ord k, HasQuery (concrete1 k v) k v, HasQuery (concrete2 k u) k u) =>
+  (concrete1 k v) ->
+  (concrete2 k u) ->
+  Query k v
+diffQ x y = DiffD (query x) (query @(concrete2 k u) @k @u y)
 
 class HasQuery concrete k v where
   query :: concrete -> Query k v
@@ -476,6 +491,9 @@ instance (Ord v, Ord k) => HasQuery (BiMap v k v) k v where
 
 instance Ord k => HasQuery (Single k v) k v where
   query xs = BaseD SingleR xs
+
+instance (Ord k, Split k) => HasQuery (SplitMap k v) k v where
+  query xs = BaseD SplitR xs
 
 -- =================================================
 -- Show Instance of Query
@@ -630,3 +648,4 @@ materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
 materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))
 materialize BiMapR x = runCollect x biMapEmpty (\(k, v) ans -> addpair k v ans)
 materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
+materialize SplitR x = runCollect x Split.empty (\(k, v) ans -> Split.insert k v ans)

@@ -40,9 +40,9 @@ instance Uniform Key where
 
 instance Arbitrary Key where
   arbitrary =
-    oneof
-      [ Key <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary,
-        Key <$> chooseAny <*> chooseAny <*> chooseAny <*> chooseAny
+    frequency
+      [ (1, Key <$> arbitrary <*> arbitrary <*> arbitrary <*> arbitrary),
+        (20, Key <$> chooseAny <*> chooseAny <*> chooseAny <*> chooseAny)
       ]
 
 instance HM.Keyed Key where
@@ -113,9 +113,9 @@ setprop ::
   m k v ->
   m k v ->
   Property
-setprop unionWithF intersect a b c =
-  intersect a (unionWithF (\_k x _y -> x) b c)
-    === unionWithF (\_k x _y -> x) (intersect a b) (intersect a c)
+setprop unionWithF intersct a b c =
+  intersct a (unionWithF (\_k x _y -> x) b c)
+    === unionWithF (\_k x _y -> x) (intersct a b) (intersct a c)
 
 lookupinsert ::
   forall k a t.

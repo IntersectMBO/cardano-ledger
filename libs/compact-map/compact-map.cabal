@@ -33,6 +33,7 @@ library
                      , Data.Compact.HashMap
                      , Data.Compact.VMap
                      , Data.Compact.SmallArray
+                     , Data.Compact.SplitMap
   other-modules:       Data.Compact.KVVector
   build-depends:       base >=4.11 && <5
                      , cardano-binary
@@ -53,7 +54,8 @@ test-suite tests
 
   hs-source-dirs:      test
   main-is:             Main.hs
-  other-modules:       Test.Compact.KeyMap
+  other-modules:       Test.Compact.SplitMap
+                     , Test.Compact.KeyMap
                      , Test.Compact.VMap
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
