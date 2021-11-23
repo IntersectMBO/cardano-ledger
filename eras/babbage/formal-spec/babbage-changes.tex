@@ -1,0 +1,370 @@
+\documentclass[11pt,a4paper,dvipsnames]{article}
+% \usepackage[deliverable]{IOHKCoverPage}
+
+
+\usepackage[margin=2.5cm]{geometry}
+\usepackage{iohk}
+\usepackage{microtype}
+\usepackage{mathpazo} % nice fonts
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{latexsym}
+\usepackage{mathtools}
+\usepackage{stmaryrd}
+\usepackage{extarrows}
+\usepackage{slashed}
+\usepackage[colon]{natbib}
+\usepackage[unicode=true,pdftex,pdfa,colorlinks=true]{hyperref}
+\usepackage{xcolor}
+\usepackage[capitalise,noabbrev,nameinlink]{cleveref}
+\usepackage{float}
+\floatstyle{boxed}
+\restylefloat{figure}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{enumerate}
+\usepackage{comments} \newcommand{\khcomment}[1]{\comment{KH}{#1}}
+
+
+%%
+%% Package `semantic` can be used for writing inference rules.
+%%
+\usepackage{semantic}
+%% Setup for the semantic package
+\setpremisesspace{20pt}
+
+% % data for Deliverable header -- added by KH from an EU H2020 project template
+% \DeliverableNumber{GL-D2}
+% \DeliverableTitle{A Formal Specification of the Cardano Ledger integrating Plutus Core}{Formal Spec: Cardano Ledger with Plutus Core}
+% \DeliverableResponsible{Formal Methods Team}
+% \EditorName{Andre Knispel, \IOHK}
+% \Authors{
+%    Andre Knispel \quad \texttt{andre.knispel@iohk.io}\\
+%    Polina Vinogradova \quad \texttt{polina.vinogradova@iohk.io}
+%    % I think Andre is the main author of this document?  KH
+% }
+% \DueDate{28$^{\textrm{th}}$ February 2021}
+% \SubmissionDate{}{}
+% \LeaderName{Philipp Kant, \IOHK}
+% \InstitutionAddress{\IOHK}
+% \Version{FS-2.2.0}
+% \Project{Goguen Ledger}
+% \DisseminationDR
+
+%%
+%% Types
+%%
+\newcommand{\Nothing}{\ensuremath{\Diamond}}
+\newcommand{\N}{\ensuremath{\mathbb{N}}}
+\newcommand{\Bool}{\type{Bool}}
+\newcommand{\Npos}{\ensuremath{\mathbb{N}^{+}}}
+\newcommand{\Z}{\ensuremath{\mathbb{Z}}}
+\newcommand{\R}{\ensuremath{\mathbb{R}}}
+\newcommand{\Rnn}{\ensuremath{\mathbb{R}^{\geq 0}}}
+\newcommand{\Tx}{\type{Tx}}
+\newcommand{\ShelleyTx}{\type{ShelleyTx}}
+\newcommand{\GoguenTx}{\type{GoguenTx}}
+\newcommand{\TxBody}{\type{TxBody}}
+\newcommand{\UnsignedData}{\type{UnsignedData}}
+\newcommand{\VldSR}{\type{VldSR}}
+\newcommand{\VldOut}{\type{VldOut}}
+\newcommand{\Vlds}{\type{Vlds}}
+\newcommand{\TxWitness}{\type{TxWitness}}
+\newcommand{\Ix}{\type{Ix}}
+\newcommand{\RdmrPtr}{\type{RdmrPtr}}
+\newcommand{\TxId}{\type{TxId}}
+\newcommand{\Addr}{\type{Addr}}
+\newcommand{\UTxO}{\type{UTxO}}
+\newcommand{\UTxOIn}{\type{UTxOIn}}
+\newcommand{\Wdrl}{\type{Wdrl}}
+\newcommand{\Coin}{\type{Coin}}
+\newcommand{\PParams}{\type{PParams}}
+\newcommand{\ShelleyPParams}{\type{ShelleyPParams}}
+\newcommand{\NewParams}{\type{NewParams}}
+\newcommand{\Slot}{\type{Slot}}
+\newcommand{\MemoryEstimate}{\type{MemoryEstimate}}
+\newcommand{\UTCTime}{\type{UTCTime}}
+\newcommand{\SlotsPrior}{\ensuremath{\mathsf{SlotsPrior}}}
+\newcommand{\SlotsPerEpoch}{\mathsf{SlotsPerEpoch}}
+\newcommand{\SlotsPerKESPeriod}{\mathsf{SlotsPerKESPeriod}}
+\newcommand{\SlotsStabilityParam}{\fun{k}}
+\newcommand{\Duration}{\type{Duration}}
+\newcommand{\StakePools}{\type{StakePools}}
+\newcommand{\StakeDeleg}{\type{StakeDeleg}}
+\newcommand{\StakeCreds}{\type{StakeCreds}}
+\newcommand{\Seed}{\type{Seed}}
+\newcommand{\seedOp}{\star}
+\newcommand{\Ppm}{\type{Ppm}}
+\newcommand{\Tppm}{\mathsf{T_{ppm}}}
+\newcommand{\Value}{\type{Value}}
+\newcommand{\ProtVer}{\ensuremath{\type{ProtVer}}}
+\newcommand{\Language}{\type{Language}}
+\newcommand{\ApName}{\ensuremath{\type{ApName}}}
+\newcommand{\ApVer}{\ensuremath{\type{ApVer}}}
+\newcommand{\SystemTag}{\ensuremath{\type{SystemTag}}}
+\newcommand{\InstallerHash}{\ensuremath{\type{InstallerHash}}}
+\newcommand{\PPUpdate}{\type{PPUpdate}}
+\newcommand{\Applications}{\type{Applications}}
+\newcommand{\AVUpdate}{\type{AVUpdate}}
+\newcommand{\Update}{\type{Update}}
+\newcommand{\DCert}{\type{DCert}}
+\newcommand{\DCertRegKey}{\type{DCert_{regkey}}}
+\newcommand{\DCertDeRegKey}{\type{DCert_{deregkey}}}
+\newcommand{\DCertDeleg}{\type{DCert_{delegate}}}
+\newcommand{\DCertRegPool}{\type{DCert_{regpool}}}
+\newcommand{\DCertRetirePool}{\type{DCert_{retirepool}}}
+\newcommand{\DCertGen}{\type{DCert_{genesis}}}
+\newcommand{\DCertMir}{\type{DCert_{mir}}}
+\newcommand{\PoolParam}{\type{PoolParam}}
+\newcommand{\UTxOState}{\ensuremath{\type{UTxOState}}}
+\newcommand{\SFState}{\ensuremath{\type{SFState}}}
+\newcommand{\ledgerState}{\ensuremath{\type{ledgerState}}}
+\newcommand{\ValEnv}{\type{ValEnv}}
+\newcommand{\ValState}{\type{ValState}}
+\newcommand{\ScrInData}{\type{ScrInData}}
+\newcommand{\AddrRWD}{\type{Addr_{rwd}}}
+\newcommand{\AddrB}{\type{Addr_{base}}}
+\newcommand{\AddrP}{\type{Addr_{ptr}}}
+\newcommand{\AddrE}{\type{Addr_{enterprise}}}
+\newcommand{\AddrBS}{\type{Addr_{bootstrap}}}
+\newcommand{\Ptr}{\type{Ptr}}
+\newcommand{\DState}{\type{DState}}
+\newcommand{\DWEnv}{\type{DWEnv}}
+\newcommand{\DPSEnv}{\type{DPSEnv}}
+\newcommand{\DPEnv}{\type{DPEnv}}
+\newcommand{\DEnv}{\type{DEnv}}
+\newcommand{\PEnv}{\type{PEnv}}
+\newcommand{\DPState}{\type{DPState}}
+\newcommand{\PState}{\type{PState}}
+\newcommand{\DCertBody}{\type{DCertBody}}
+\newcommand{\TData}{\type{TData}}
+\newcommand{\DPoolReap}{\ensuremath{\type{poolreap}}}
+\newcommand{\UPIState}{\type{UPIState}}
+\newcommand{\UpdatePayload}{\type{UpdatePayload}}
+\newcommand{\NetworkId}{\mathsf{NetworkId}}
+
+% multi-signature
+\newcommand{\StakeCredential}{\type{Credential}_{stake}}
+\newcommand{\StakeDelegs}{\type{StakeDelegs}}
+\newcommand{\Quorum}{\type{Quorum}}
+
+\newcommand{\txwitsVKey}[1]{\fun{txwitsVKey}~\var{#1}}
+\newcommand{\txwitsScript}[1]{\fun{txwitsScript}~\var{#1}}
+
+\newcommand{\AddrVKey}{\type{Addr^{vkey}}}
+\newcommand{\AddrRWDVKey}{\type{Addr_{rwd}^{vkey}}}
+\newcommand{\AddrRWDScr}{\type{Addr_{rwd}^{script}}}
+\newcommand{\AddrVKeyB}{\type{Addr^{vkey}_{base}}}
+\newcommand{\AddrVKeyP}{\type{Addr^{vkey}_{ptr}}}
+\newcommand{\AddrVKeyE}{\type{Addr^{vkey}_{enterprise}}}
+\newcommand{\AddrVKeyBS}{\type{Addr^{vkey}_{bootstrap}}}
+\newcommand{\AddrScr}{\type{Addr^{script}}}
+\newcommand{\AddrScrBase}{\type{Addr_{base}^{script}}}
+\newcommand{\AddrScrEnterprise}{\type{Addr_{enterprise}^{script}}}
+\newcommand{\AddrScrPtr}{\type{Addr_{ptr}^{script}}}
+\newcommand{\AuxiliaryDataHash}{\type{AuxiliaryDataHash}}
+\newcommand{\AuxiliaryData}{\type{AuxiliaryData}}
+\newcommand{\Metadata}{\type{Metadata}}
+\newcommand{\DataHash}{\type{DataHash}}
+\newcommand{\TxInfo}{\type{TxInfo}}
+\newcommand{\Datum}{\type{Datum}}
+\newcommand{\Redeemer}{\type{Redeemer}}
+\newcommand{\EpochInfo}{\type{EpochInfo}}
+\newcommand{\SystemStart}{\type{SystemStart}}
+\newcommand{\ScriptHash}{\type{ScriptHash}}
+\newcommand{\PolicyID}{\type{PolicyID}}
+\newcommand{\LangDepView}{\type{LangDepView}}
+\newcommand{\ScriptIntegrityHash}{\type{ScriptIntegrityHash}}
+\newcommand{\Script}{\type{Script}}
+\newcommand{\ScriptPlutus}{\type{Script}_{plc}}
+\newcommand{\PlutusVI}{\type{PlutusV1}}
+\newcommand{\PlutusVII}{\type{PlutusV2}}
+\newcommand{\ScriptPhOne}{\type{Script^{ph1}}}
+\newcommand{\ScriptPhTwo}{\type{Script^{ph2}}}
+\newcommand{\ScriptV}{\type{Script_{v}}}
+\newcommand{\ScriptPurpose}{\type{ScriptPurpose}}
+\newcommand{\Rdmrs}{\type{Rdmrs}}
+\newcommand{\DorR}{\type{DorR}}
+\newcommand{\ValidationData}{\type{ValidationData}}
+\newcommand{\IsValid}{\type{IsValid}}
+\newcommand{\HashUnsData}{\type{HashUnsData}}
+\newcommand{\True}{\mathsf{True}}
+\newcommand{\False}{\mathsf{False}}
+\newcommand{\MSig}{\type{MSig}}
+\newcommand{\Tag}{\type{Tag}}
+\newcommand{\Credential}{\type{Credential}}
+\newcommand{\AssetID}{\type{AssetID}}
+
+%% Adding witnesses
+\newcommand{\AssetName}{\type{AssetName}}
+\newcommand{\Quantity}{\type{Quantity}}
+\newcommand{\TxIn}{\type{TxIn}}
+\newcommand{\OutRef}{\type{OutRef}}
+\newcommand{\ShelleyTxIn}{\type{ShelleyTxIn}}
+\newcommand{\ShelleyTxOut}{\type{ShelleyTxOut}}
+\newcommand{\ShelleyUTxO}{\type{ShelleyUTxO}}
+\newcommand{\ShelleyChainState}{\type{ShelleyChainState}}
+\newcommand{\HasDV}{\type{HasDV}}
+\newcommand{\TxInScr}{\type{TxInScr}}
+\newcommand{\Info}{\type{Info}}
+\newcommand{\ExUnits}{\type{ExUnits}}
+\newcommand{\CostMod}{\type{CostModel}}
+\newcommand{\ByteString}{\type{ByteString}}
+\newcommand{\ValidityInterval}{\type{ValidityInterval}}
+\newcommand{\Network}{\type{Network}}
+\newcommand{\Prices}{\type{Prices}}
+\newcommand{\IsFee}{\type{IsFee}}
+\newcommand{\TxOut}{\type{TxOut}}
+\newcommand{\OutFoo}{\type{OutFoo}}
+\newcommand{\VKey}{\type{VKey}}
+\newcommand{\VKeyEv}{\type{VKey_{ev}}}
+\newcommand{\VKeyGen}{\type{VKey_G}}
+\newcommand{\SKey}{\type{SKey}}
+\newcommand{\SKeyEv}{\type{SKey_{ev}}}
+\newcommand{\KeyHash}{\type{KeyHash}}
+\newcommand{\RewardAcnt}{\type{RewardAcnt}}
+\newcommand{\KeyHashGen}{\type{KeyHash_G}}
+\newcommand{\KeyPair}{\type{KeyPair}}
+\newcommand{\KeyPairEv}{\type{KeyPair_{ev}}}
+\newcommand{\Sig}{\type{Sig}}
+\newcommand{\Data}{\type{Data}}
+%% Adding delegation
+\newcommand{\Epoch}{\type{Epoch}}
+\newcommand{\KESPeriod}{\type{KESPeriod}}
+%% Blockchain
+\newcommand{\Gkeys}{\var{G_{keys}}}
+\newcommand{\Block}{\type{Block}}
+\newcommand{\SlotId}{\type{SlotId}}
+\newcommand{\PPUpdateEnv}{\type{PPUpdateEnv}}
+\newcommand{\AVUpdateEnv}{\type{AVUpdateEnv}}
+\newcommand{\AVUpdateState}{\type{AVUpdateState}}
+\newcommand{\UpdateEnv}{\type{UpdateEnv}}
+\newcommand{\UpdateState}{\type{UpdateState}}
+\newcommand{\UTxOEnv}{\type{UTxOEnv}}
+\newcommand{\CEEnv}{\type{CEEnv}}
+\newcommand{\CEState}{\type{CEState}}
+\newcommand{\BDEnv}{\type{BDEnv}}
+\newcommand{\BDState}{\type{BDState}}
+\newcommand{\LEnv}{\type{LEnv}}
+\newcommand{\LState}{\type{LState}}
+\newcommand{\GoguenChainState}{\type{GoguenChainState}}
+%%
+%% Functions
+%%
+\newcommand{\txins}[1]{\fun{txins}~ \var{#1}}
+\newcommand{\txouts}[1]{\fun{txouts}~ \var{#1}}
+\newcommand{\txcerts}[1]{\fun{txcerts}~ \var{#1}}
+\newcommand{\txid}[1]{\fun{txid}~ \var{#1}}
+\newcommand{\outs}[1]{\fun{outs}~ \var{#1}}
+\newcommand{\values}[1]{\fun{values}~ #1}
+\newcommand{\ubalance}[1]{\fun{ubalance}~ \var{#1}}
+\newcommand{\txttl}[1]{\fun{txttl}~ \var{#1}}
+\newcommand{\firstSlot}[1]{\fun{firstSlot}~ \var{#1}}
+\newcommand{\deposited}[2]{\fun{deposited}~ \var{#1} ~ \var{#2}}
+\newcommand{\decayedKey}[4]{\fun{decayedKey}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\decayedTx}[3]{\fun{decayedTx}~ \var{#1}~ \var{#2}~ \var{#3}}
+\newcommand{\keyRefund}[6]{\fun{keyRefund}~ {#1}~{#2}~{#3}~\var{#4}~\var{#5}~\var{#6}}
+\newcommand{\refund}[4]{\fun{refund}~ \var{#1}~ \var{#2}~ {#3}~ {#4}}
+\newcommand{\keyRefunds}[2]{\fun{keyRefunds}~ \var{#1}~ \var{#2}}
+\newcommand{\consumed}[4]{\fun{consumed}~ \var{#1}~ \var{#2}~ \var{#3}~ \var{#4}}
+\newcommand{\produced}[2]{\fun{produced}~ \var{#1}~ \var{#2}}
+\newcommand{\applyFun}[2]{\fun{#1}~\var{#2}}
+
+\newcommand{\RegKey}[1]{\textsc{RegKey}(#1)}
+\newcommand{\DeregKey}[1]{\textsc{DeregKey}(#1)}
+\newcommand{\Delegate}[1]{\textsc{Delegate}(#1)}
+\newcommand{\RegPool}[1]{\textsc{RegPool}(#1)}
+\newcommand{\RetirePool}[1]{\textsc{RetirePool}(#1)}
+\newcommand{\cwitness}[1]{\fun{cwitness}~ \var{#1}}
+\newcommand{\dpool}[1]{\fun{dpool}~ \var{#1}}
+\newcommand{\poolParam}[1]{\fun{poolParam}~ \var{#1}}
+\newcommand{\retire}[1]{\fun{retire}~ \var{#1}}
+\newcommand{\addrRw}[1]{\fun{addr_{rwd}}~ \var{#1}}
+\newcommand{\epoch}[1]{\fun{epoch}~\var{#1}}
+\newcommand{\kesPeriod}[1]{\fun{kesPeriod}~\var{#1}}
+\newcommand{\pps}[1]{\fun{pps}~ \var{#1}}
+
+%% UTxO witnesses
+\newcommand{\inputs}[1]{\fun{inputs}~ \var{#1}}
+\newcommand{\txwits}[1]{\fun{txwits}~ \var{#1}}
+\newcommand{\verify}[3]{\fun{verify} ~ #1 ~ #2 ~ #3}
+\newcommand{\sign}[2]{\fun{sign} ~ #1 ~ #2}
+\newcommand{\verifyEv}[4]{\fun{verify_{ev}} ~ #1 ~ #2 ~ #3 ~ #4}
+\newcommand{\signEv}[3]{\fun{sign_{ev}} ~ #1 ~ #2 ~ #3}
+\newcommand{\serialised}[1]{\llbracket \var{#1} \rrbracket}
+\newcommand{\hashKey}[1]{\fun{hashKey}~ \var{#1}}
+\newcommand{\txbody}[1]{\fun{txbody}~ \var{#1}}
+\newcommand{\txfee}[1]{\fun{txfee}~ \var{#1}}
+\newcommand{\txwdrls}[1]{\fun{txwdrls}~ \var{#1}}
+\newcommand{\minfee}[2]{\fun{minfee}~ \var{#1}~ \var{#2}}
+\newcommand{\slotminus}[2]{\var{#1}~-_{s}~\var{#2}}
+\DeclarePairedDelimiter\floor{\lfloor}{\rfloor}
+% wildcard parameter
+\newcommand{\wcard}[0]{\underline{\phantom{a}}}
+%% Adding ledgers...
+\newcommand{\utxo}[1]{\fun{utxo}~ #1}
+%% Delegation
+\newcommand{\delegatesName}{\fun{delegates}}
+\newcommand{\delegates}[3]{\delegatesName~#1~#2~#3}
+\newcommand{\dwho}[1]{\fun{dwho}~\var{#1}}
+\newcommand{\depoch}[1]{\fun{depoch}~\var{#1}}
+\newcommand{\dval}{\ensuremath{d_{\mathsf{val}}}}
+%% Delegation witnesses
+\newcommand{\dbody}[1]{\fun{dbody}~\var{#1}}
+\newcommand{\dwit}[1]{\fun{dwit}~\var{#1}}
+%% Blockchain
+\newcommand{\bwit}[1]{\fun{bwit}~\var{#1}}
+\newcommand{\bslot}[1]{\fun{bslot}~\var{#1}}
+\newcommand{\bbody}[1]{\fun{bbody}~\var{#1}}
+\newcommand{\bhbody}[1]{\fun{bhbody}~\var{#1}}
+\newcommand{\bdlgs}[1]{\fun{bdlgs}~\var{#1}}
+%% ledgerstate constants
+\newcommand{\genesisId}{\ensuremath{Genesis_{Id}}}
+\newcommand{\genesisTxOut}{\ensuremath{Genesis_{Out}}}
+\newcommand{\genesisUTxO}{\ensuremath{Genesis_{UTxO}}}
+\newcommand{\genesisUTxOState}{(\genesisUTxO,\wcard,\wcard,\wcard)}
+\newcommand{\emax}{\ensuremath{\mathsf{E_{max}}}}
+
+\newcommand{\unitInterval}{\ensuremath{[0,~1]}}
+\newcommand{\unitIntervalNonNull}{\ensuremath{(0,~1]}}
+\newcommand{\nonnegReals}{\ensuremath{[0,~\infty)}}
+\newcommand{\posReals}{\ensuremath{(0,~\infty)}}
+
+\newcommand{\Val}{\fun{Val}}
+\newcommand{\Utxo}{\fun{Utxo}}
+\newcommand{\field}{\fun{field}}
+
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}[section]
+\newtheorem{property}{Property}[section]
+\newtheorem{lemma}[definition]{Lemma}
+\newtheorem{theorem}[definition]{Theorem}
+\newtheorem{corollary}[definition]{Corollary}
+
+\newcommand{\leteq}{\ensuremath{\mathrel{\mathop:}=}}
+
+\definecolor{hldiffcolor}{rgb}{0.95, 0.93, 0}
+\newcommand{\hldiff}[1]{\mathchoice
+  {\colorbox{hldiffcolor}{$\displaystyle#1$}}
+  {\colorbox{hldiffcolor}{$\textstyle#1$}}
+  {\colorbox{hldiffcolor}{$\scriptstyle#1$}}
+  {\colorbox{hldiffcolor}{$\scriptscriptstyle#1$}}}
+\DeclareMathOperator{\supp}{supp}
+
+%% In-para enumeration -- KH
+\usepackage{paralist}
+
+%% Enumeration args -- KH
+\usepackage{enumitem}
+
+\begin{document}
+
+\include{introduction}
+\include{notation}
+\include{transactions}
+\include{utxo}
+\include{remove-overlay}
+
+\end{document}

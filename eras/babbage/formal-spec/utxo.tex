@@ -1,0 +1,326 @@
+\section{UTxO}
+\label{sec:utxo}
+
+\begin{figure*}[htb]
+  \emph{Functions}
+  %
+  \begin{align*}
+    & \fun{minCollateral} : \TxBody \to \PParams \to \Coin \\
+    & \fun{minCollateral}~txb~pp = \lceil \txfee{txb} * \fun{collateralPercent}~pp / 100 \rceil
+    \nextdef
+    & \fun{collBalance} : \TxBody \to \UTxO \to \Value \\
+    & \fun{collBalance}~txb~utxo = \fun{ubalance}~(\var{utxo}_{\fun{collateral}~{txb}}) -
+      \begin{cases}
+         0                 & \fun{collRet}~txb = \Nothing \\
+         \fun{collRet}~txb & \text{otherwise}
+      \end{cases}
+    \nextdef
+    & \fun{collOuts} : \TxBody \to \UTxO \\
+    & \fun{collOuts}~txb =
+      \begin{cases}
+        \emptyset                                                      & \fun{collRet}~txb = \Nothing \\
+        \{ (\txid{txb}, | \txouts{txb} |) \mapsto \fun{collRet}~txb \} & \text{otherwise}
+      \end{cases}
+    \nextdef
+    & \fun{feesOK} : \PParams \to \Tx \to \UTxO \to \Bool  \\
+    & \fun{feesOK}~\var{pp}~tx~utxo = \\
+    &~~      \minfee{pp}{tx} \leq \txfee{tx} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
+    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collateral}~{tx} \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
+    &~~~~~~\wedge \fun{adaOnly}~\var{balance} \\
+    &~~~~~~\wedge \var{balance} \geq \hldiff{\fun{minCollateral}~tx~pp} \\
+    &~~~~~~\wedge \hldiff{(\fun{txcoll}~tx \neq \Nothing) \Rightarrow \var{balance} = \fun{txcoll}~tx} \\
+    &~~~~~~\wedge \fun{collateral}~{tx} \neq \emptyset) \\
+    &~~      \where \\
+    & ~~~~~~~ \var{balance}=\hldiff{\fun{collBalance}~tx~utxo}
+  \end{align*}
+  \caption{Functions related to fees and collateral}
+  \label{fig:functions:utxo}
+\end{figure*}
+
+\begin{figure*}
+  \begin{align*}
+    & \fun{getDatum} : \Tx \to \UTxO \to \ScriptPurpose \to \seqof{\Datum} \\
+    & \fun{getDatum}~{tx}~{utxo}~{sp} =
+      \begin{cases}
+        [\var{d}] & (\_, \_, h) \in \var{utxo}~\var{sp},~ \var{d} \in \fun{txdats}~(\fun{txwits}~tx)~ \var{h} \\
+        [\var{d}] & \hldiff{(\_, \_, d) \in \var{utxo}~\var{sp},~ \var{d} \in \Datum} \\
+        \epsilon  & \text{otherwise}
+      \end{cases}
+  \end{align*}
+  \caption{Functions related to scripts}
+  \label{fig:functions:data}
+\end{figure*}
+
+\begin{figure}[htb]
+  \begin{equation}
+    \inference[Scripts-Yes]
+    {
+    \var{txb}\leteq\txbody{tx} &
+    \var{sLst} := \fun{collectTwoPhaseScriptInputs}~\var{pp}~\var{tx}~\var{utxo}
+    \\
+    ~
+    \\
+    \fun{isValid}~\var{tx} = \fun{evalScripts}~\var{tx}~\var{sLst} = \True
+    \\~\\
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{pp} \\
+        \var{genDelegs} \\
+      \end{array}
+    }
+    \vdash \var{pup} \trans{\hyperref[fig:rules:update]{ppup}}{\fun{txup}~\var{tx}} \var{pup'}
+    \\~\\
+    \var{refunded} \leteq \keyRefunds{pp}{txb}
+    \\
+    \var{depositChange} \leteq
+      (\fun{totalDeposits}~{pp}~\var{poolParams}~\txcerts{txb})~-~\var{refunded}
+    }
+    {
+    \begin{array}{l}
+      \var{slot}\\
+      \var{pp}\\
+      \var{poolParams}\\
+      \var{genDelegs}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{pup} \\
+      \end{array}
+      \right)
+      \trans{utxos}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{txb}}}  \\
+        \varUpdate{\var{deposits} + \var{depositChange}} \\
+        \varUpdate{\var{fees} + \txfee{txb}} \\
+        \varUpdate{\var{pup'}} \\
+      \end{array}
+      \right) \\
+    }
+  \end{equation}
+  \begin{equation}
+    \inference[Scripts-No]
+    {
+    \var{txb}\leteq\txbody{tx} &
+    \var{sLst} := \fun{collectTwoPhaseScriptInputs}~\var{pp}~\var{tx}~\var{utxo} \\
+    \hldiff{\var{collateralFees} := \fun{valueToCoin}~(\fun{collBalance}~txb~utxo)}
+    \\
+    ~
+    \\
+    \fun{isValid}~\var{tx} = \fun{evalScripts}~\var{tx}~\var{sLst} = \False
+    }
+    {
+    \begin{array}{l}
+      \var{slot}\\
+      \var{pp}\\
+      \var{poolParams}\\
+      \var{genDelegs}\\
+    \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{pup} \\
+      \end{array}
+      \right)
+      \trans{utxos}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{(\fun{collateral}~{txb} \subtractdom \var{utxo})} \cup \hldiff{\fun{collOuts}~txb}}  \\
+        \var{deposits} \\
+        \varUpdate{\var{fees} + \hldiff{\var{collateralFees}}} \\
+        \var{pup} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{State update rules}
+  \label{fig:rules:utxo-state-upd}
+\end{figure}
+
+\begin{figure}[htb]
+  \begin{equation}
+    \inference[UTxO-inductive]
+    {
+      \var{txb}\leteq\txbody{tx} &
+      \fun{ininterval}~\var{slot}~(\fun{txvldt}~{txb}) &
+      \var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx} \\~\\
+      \Nothing \notin \{\fun{txrdmrs}~\var{tx}, i_f\} \Rightarrow \fun{epochInfoSlotToUTCTime}~\mathsf{EI}~\mathsf{SysSt}~i_f \neq \Nothing \\
+      \txins{txb} \neq \emptyset
+      & \fun{feesOK}~pp~tx~utxo
+      \\
+      \txins{txb} \cup \fun{collateral}~{txb} \cup \hldiff{\fun{refInputs}~{tx}} \subseteq \dom \var{utxo} \\
+      \consumed{pp}{utxo}{txb} = \produced{pp}{poolParams}~{txb}
+      \\~\\
+      \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
+      \forall txout \in \txouts{txb}, \\
+      \fun{getValue}~txout \geq \fun{inject}~(\fun{utxoEntrySize}~{txout} * \fun{coinsPerUTxOWord}~pp) \\~
+      \\
+      \forall txout \in \txouts{txb},\\
+      \fun{serSize}~(\fun{getValue}~txout) \leq \fun{maxValSize}~pp \\~
+      \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \Rightarrow \fun{bootstrapAttrsSize}~a \leq 64 \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
+      \\
+      \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId \\
+      (\fun{txnetworkid}~\var{txb} = \NetworkId) \vee (\fun{txnetworkid}~\var{txb} = \Nothing)
+      \\~\\
+      \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\~\\
+      \fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp} &  \| \fun{collateral}~{tx} \| \leq \fun{maxCollateralInputs}~{pp}
+      \\
+      ~
+      \\
+      {
+        \begin{array}{c}
+          \var{slot}\\
+          \var{pp}\\
+          \var{poolParams}\\
+          \var{genDelegs}\\
+        \end{array}
+      }
+      \vdash
+      {
+        \left(
+          \begin{array}{r}
+            \var{utxo} \\
+            \var{deposits} \\
+            \var{fees} \\
+            \var{pup}\\
+          \end{array}
+        \right)
+      }
+      \trans{utxos}{\var{tx}}
+      {
+        \left(
+          \begin{array}{r}
+            \var{utxo'} \\
+            \var{deposits'} \\
+            \var{fees'} \\
+            \var{pup'}\\
+          \end{array}
+        \right)
+      }
+    }
+    {
+      \begin{array}{l}
+        \var{slot}\\
+        \var{pp}\\
+        \var{poolParams}\\
+        \var{genDelegs}\\
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{utxo} \\
+        \var{deposits} \\
+        \var{fees} \\
+        \var{pup}\\
+      \end{array}
+      \right)
+      \trans{utxo}{tx}
+      \left(
+      \begin{array}{r}
+        \varUpdate{\var{utxo'}}  \\
+        \varUpdate{\var{deposits'}} \\
+        \varUpdate{\var{fees'}} \\
+        \varUpdate{\var{pup'}}\\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+  \caption{UTxO inference rules}
+  \label{fig:rules:utxo-babbage}
+\end{figure}
+
+\begin{figure}
+  \begin{equation}
+    \label{eq:utxo-witness-inductive-babbage}
+    \inference[UTxO-witG]
+    {
+      \var{txb}\leteq\txbody{tx} &
+      \var{txw}\leteq\fun{txwits}~{tx} \\
+      (utxo, \wcard, \wcard, \wcard) \leteq \var{utxoSt} \\
+      \var{witsKeyHashes} \leteq \{\fun{hashKey}~\var{vk} \vert \var{vk} \in
+      \dom (\txwitsVKey{txw}) \}\\
+      \var{inputHashes}\leteq \left\{ h \,\middle|
+        {
+          \begin{array}{l}
+            (a, \_, h) \in \range(\var{utxo}|_{\txins{tx}}) \\
+            \fun{isTwoPhaseScriptAddress}~{tx}~{a} \\
+          \end{array}
+        }
+      \right\} \cap \hldiff{\DataHash} \\~\\
+      \forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptPhOne,
+      \fun{validateScript}~\var{s}~\var{tx}\\~\\
+      \{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~txb\} = \dom (\fun{txscripts}~{txw}) \\~\\
+      \var{inputHashes} \subseteq \dom (\fun{txdats}~{txw}) \\~\\
+      \dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup \{h \mid (\wcard, \wcard, h)\in\fun{txouts}~{tx} \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}
+      \\~\\
+      \dom (\fun{txrdmrs}~tx) = \left\{ \fun{rdptr}~txb~sp \,\middle|
+        {
+          \begin{array}{l}
+            (sp,h) \in \fun{scriptsNeeded}~\var{utxo}~txb \\
+            \fun{txscripts}~{txw}~h \in \ScriptPhTwo
+          \end{array}
+        } \right\}
+      \\~\\
+      \var{txbodyHash}\leteq\fun{hash}~(\txbody{tx}) \\
+      \forall \var{vk} \mapsto \sigma \in \txwitsVKey{tx},
+      \mathcal{V}_{\var{vk}}{\serialised{txbodyHash}}_{\sigma} \\
+      \fun{witsVKeyNeeded}~{utxo}~{tx}~{genDelegs} \subseteq witsKeyHashes
+      \\~\\
+      genSig \leteq
+      \left\{
+        \fun{hashKey}~gkey \vert gkey \in\dom{genDelegs}
+      \right\}
+      \cap
+      \var{witsKeyHashes}
+      \\
+      \left\{
+        c\in\txcerts{txb}~\cap\DCertMir
+      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
+      \fun{d}~\var{pp} > 0
+      \\~\\
+      \var{adh}\leteq\fun{txADhash}~\var{txb}
+      &
+      \var{ad}\leteq\fun{auxiliaryData}~\var{tx}
+      \\
+      (\var{adh}=\Nothing \land \var{ad}=\Nothing)
+      \lor
+      (\var{adh}=\fun{hashAD}~\var{ad})
+      \\~\\
+      \fun{languages}~{txw} \subseteq \dom(\fun{costmdls}~tx) \\
+      \fun{scriptIntegrityHash}~{txb} =
+      \fun{hashScriptIntegrity}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})~(\fun{txdats}~{txw})
+      \\~\\
+      {
+        \begin{array}{r}
+          \var{slot}\\
+          \var{pp}\\
+          \var{poolParams}\\
+          \var{genDelegs}\\
+        \end{array}
+      }
+      \vdash \var{utxoSt} \trans{\hyperref[fig:rules:utxo-shelley]{utxo}}{tx}
+      \var{utxoSt'}\\
+    }
+    {
+      \begin{array}{r}
+        \var{slot}\\
+        \var{pp}\\
+        \var{poolParams}\\
+        \var{genDelegs}\\
+      \end{array}
+      \vdash \var{utxoSt} \trans{utxow}{tx} \varUpdate{\var{utxoSt'}}
+    }
+  \end{equation}
+  \caption{UTxO with witnesses inference rules for Tx}
+  \label{fig:rules:utxow-babbage}
+\end{figure}

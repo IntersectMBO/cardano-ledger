@@ -1,0 +1,58 @@
+\hypersetup{
+  pdftitle={Formal Specification of the Cardano Ledger with Plutus
+  Integration},
+  breaklinks=true,
+  bookmarks=true,
+  colorlinks=false,
+  linkcolor={blue},
+  citecolor={blue},
+  urlcolor={blue},
+  linkbordercolor={white},
+  citebordercolor={white},
+  urlbordercolor={white}
+}
+
+
+\floatstyle{boxed}
+\restylefloat{figure}
+\cleardoublepage
+\renewcommand{\thepage}{\arabic{page}}
+\setcounter{page}{1}
+
+\title{Formal Specification of the Cardano Ledger with Plutus
+Integration}
+
+\author{
+   Polina Vinogradova \\ {\small \texttt{polina.vinogradova@iohk.io}} \\
+   Andre Knispel \\ {\small \texttt{andre.knispel@iohk.io}} \\
+   }
+
+\date{}
+
+\maketitle
+
+\begin{abstract}
+This document presents modifications to the Shelley ledger
+specification~\cite{shelley_spec} that will enable it to support the requirements for Plutus Foundation, within the context of the Goguen era
+of Cardano. This specification is based on the Plutus system and the extended
+UTxO specification of the mockchain on which it operates, as outlined in~\cite{chakravarty2020extended}.
+%
+We present a unified way to process both Plutus scripts and Shelley-style multi-signature scripts
+(see~\cite{multi_sig}).
+\end{abstract}
+
+\section*{List of Contributors}
+\label{acknowledgements}
+
+Duncan Coutts,
+Philipp Kant,
+Michal Peyton Jones,
+Jann Mueller,
+Jared Corduan,
+Matthias Gudemann,
+Manuel Chakravarty,
+Kevin Hammond,
+Tim Sheard,
+Nicholas Clarke,
+Alex Byaly,
+Yun Lu

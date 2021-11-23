@@ -1,0 +1,68 @@
+\section{Transactions}
+\label{sec:transactions}
+\begin{figure*}[htb]
+  \emph{Derived Types}
+  %
+  \begin{equation*}
+    \begin{array}{l@{\qquad=\qquad}lr}
+      \TxOut & \Addr \times \Value \times (\hldiff{\Datum} \uniondistinct \DataHash)^?
+    \end{array}
+  \end{equation*}
+  % 
+  \emph{Transaction Types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
+      \TxBody ~=~
+      & \powerset{\TxIn} & \fun{txinputs}& \text{Inputs}\\
+      & \times ~\powerset{\TxIn} & \fun{collateral} & \text{Collateral inputs}\\
+      & \times ~\hldiff{\powerset{\TxIn}} & \hldiff{\fun{refInputs}} & \hldiff{\text{Reference inputs}}\\
+      & \times ~(\Ix \pto \TxOut) & \fun{txouts}& \text{Outputs}\\
+      & \times ~\hldiff{\TxOut^?} & \hldiff{\fun{collRet}} & \hldiff{\text{Collateral return output}}\\
+      & \times ~\hldiff{\Coin^?} & \hldiff{\fun{txcoll}} & \hldiff{\text{Total collateral}}\\
+      & \times~ \seqof{\DCert} & \fun{txcerts}& \text{Certificates}\\
+       & \times ~\Value  & \fun{mint} &\text{A minted value}\\
+       & \times ~\Coin & \fun{txfee} &\text{Total fee}\\
+       & \times ~\ValidityInterval & \fun{txvldt} & \text{Validity interval}\\
+       & \times~ \Wdrl  & \fun{txwdrls} &\text{Reward withdrawals}\\
+       & \times ~\Update^?  & \fun{txUpdates} & \text{Update proposals}\\
+       & \times ~\powerset{\KeyHash} & \fun{reqSignerHashes} & \text{Hashes of VKeys passed to scripts}\\
+       & \times ~\ScriptIntegrityHash^? & \fun{scriptIntegrityHash} & \text{Hash of script-related data}\\
+       & \times ~\AuxiliaryDataHash^? & \fun{txADhash} & \text{Auxiliary data hash}\\
+       & \times ~\Network^? & \fun{txnetworkid} & \text{Tx network ID}\\
+    \end{array}
+  \end{equation*}
+  \caption{Definitions for transactions}
+  \label{fig:defs:utxo-shelley-2}
+\end{figure*}
+
+We add a field $\fun{refInputs}$ to the transaction that specifies
+\emph{reference inputs}. A reference input is not spent and does not
+require any witnessing to be included in a valid transaction. The only
+requirement is that is has to be present in the ledger state
+UTxO. There are no restrictions on which outputs can be used as a
+reference input. Reference inputs only affect the information that is
+passed to scripts by them being included in $\TxInfo$. \TODO{Do that}
+
+We add two fields to the transaction dealing with
+collateral. $\fun{collRet}$ specifies outputs that get created in case
+a transactions scripts fail. $\fun{txcoll}$ asserts the total amount
+of collateral that would get collected as fees. Specifying this field
+does not change how collateral is computed, but transactions whose
+collateral is different than the amount in $\fun{txcoll}$ will be
+invalid. This lets users write transactions whose collateral is
+evident by just looking at the transaction body instead of requiring
+information contained in the UTXO, which hardware wallets for example
+might not have access to.
+
+We also add support for supplying a $\Datum$ directly in a $\TxOut$
+instead of just its hash. This has several purposes:
+\begin{itemize}
+\item In case of a sufficiently small $\Datum$, this is more efficient
+\item Used together with reference inputs, this allows for many
+  transactions to use a $\Datum$ without repeating it every time, thus
+  reducing fees and block size
+\end{itemize}
+This change requires the function $\fun{utxoEntrySize}$ to be
+adjusted, to properly scale with the size of the $\Datum$. \TODO{This
+  is probably best combined with adjusting it for the disk storage.}

@@ -61,6 +61,7 @@ let
       shelley-ledger = pkgs.callPackage ./eras/shelley/formal-spec/default.nix {};
       shelley-ma = pkgs.callPackage ./eras/shelley-ma/formal-spec/default.nix {};
       alonzo-ledger = pkgs.callPackage ./eras/alonzo/formal-spec/default.nix {};
+      babbage-ledger = pkgs.callPackage ./eras/babbage/formal-spec/default.nix {};
       delegation-design = pkgs.callPackage ./eras/shelley/design-spec/default.nix {};
       small-step-semantics = pkgs.callPackage ./docs/small-step-semantics/default.nix {};
       pool-ranking = pkgs.callPackage ./docs/pool-ranking/default.nix {};

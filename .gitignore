@@ -39,6 +39,7 @@ ghcid.txt
 TAGS
 tags
 *.temp
+.dir-locals.el
 
 ## Emacs auto-generated Emacs-lisp code
 auto/
