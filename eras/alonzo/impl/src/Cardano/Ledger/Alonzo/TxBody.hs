@@ -329,17 +329,17 @@ pattern TxOut ::
 pattern TxOut addr vl dh <-
   (viewTxOut -> (addr, vl, dh))
   where
-    TxOut (Addr network paymentCred stakeRef) vl SNothing
-      | StakeRefBase stakeCred <- stakeRef,
-        Just adaCompact <- getAdaOnly (Proxy @era) vl,
-        Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred =
-        TxOut_AddrHash28_AdaOnly stakeCred a b c d adaCompact
-    TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
-      | StakeRefBase stakeCred <- stakeRef,
-        Just adaCompact <- getAdaOnly (Proxy @era) vl,
-        Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred,
-        Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
-        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred a b c d adaCompact e f g h
+    -- TxOut (Addr network paymentCred stakeRef) vl SNothing
+    --   | StakeRefBase stakeCred <- stakeRef,
+    --     Just adaCompact <- getAdaOnly (Proxy @era) vl,
+    --     Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred =
+    --     TxOut_AddrHash28_AdaOnly stakeCred a b c d adaCompact
+    -- TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
+    --   | StakeRefBase stakeCred <- stakeRef,
+    --     Just adaCompact <- getAdaOnly (Proxy @era) vl,
+    --     Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred,
+    --     Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
+    --     TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred a b c d adaCompact e f g h
     TxOut addr vl mdh =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
