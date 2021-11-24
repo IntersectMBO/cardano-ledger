@@ -26,7 +26,7 @@ module Cardano.Ledger.Babbage.TxBody
       ( TxBody,
         inputs,
         collateral,
-        collateralAddresses,
+        collateralReturn,
         outputs,
         txcerts,
         txwdrls,
@@ -41,7 +41,7 @@ module Cardano.Ledger.Babbage.TxBody
       ),
     inputs',
     collateral',
-    collateralAddresses',
+    collateralReturn',
     outputs',
     certs',
     wdrls',
@@ -368,7 +368,7 @@ type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (Crypto era))),
     _collateral :: !(Set (TxIn (Crypto era))),
-    _collateralAddresses :: !(StrictMaybe (Addr (Crypto era))),
+    _collateralReturn :: !(StrictMaybe (TxOut era)),
     _outputs :: !(StrictSeq (TxOut era)),
     _certs :: !(StrictSeq (DCert (Crypto era))),
     _wdrls :: !(Wdrl (Crypto era)),
@@ -458,7 +458,7 @@ pattern TxBody ::
   AlonzoBody era =>
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
-  StrictMaybe (Addr (Crypto era)) ->
+  StrictMaybe (TxOut era) ->
   StrictSeq (TxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
@@ -474,7 +474,7 @@ pattern TxBody ::
 pattern TxBody
   { inputs,
     collateral,
-    collateralAddresses,
+    collateralReturn,
     outputs,
     txcerts,
     txwdrls,
@@ -492,7 +492,7 @@ pattern TxBody
         TxBodyRaw
           { _inputs = inputs,
             _collateral = collateral,
-            _collateralAddresses = collateralAddresses,
+            _collateralReturn = collateralReturn,
             _outputs = outputs,
             _certs = txcerts,
             _wdrls = txwdrls,
@@ -511,7 +511,7 @@ pattern TxBody
     TxBody
       inputsX
       collateralX
-      collateralAddressesX
+      collateralReturnX
       outputsX
       certsX
       wdrlsX
@@ -529,7 +529,7 @@ pattern TxBody
                 TxBodyRaw
                   inputsX
                   collateralX
-                  collateralAddressesX
+                  collateralReturnX
                   outputsX
                   certsX
                   wdrlsX
@@ -555,7 +555,7 @@ instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 inputs' :: TxBody era -> Set (TxIn (Crypto era))
 collateral' :: TxBody era -> Set (TxIn (Crypto era))
-collateralAddresses' :: TxBody era -> StrictMaybe (Addr (Crypto era))
+collateralReturn' :: TxBody era -> StrictMaybe (TxOut era)
 outputs' :: TxBody era -> StrictSeq (TxOut era)
 certs' :: TxBody era -> StrictSeq (DCert (Crypto era))
 txfee' :: TxBody era -> Coin
@@ -572,7 +572,7 @@ txnetworkid' :: TxBody era -> StrictMaybe Network
 
 collateral' (TxBodyConstr (Memo raw _)) = _collateral raw
 
-collateralAddresses' (TxBodyConstr (Memo raw _)) = _collateralAddresses raw
+collateralReturn' (TxBodyConstr (Memo raw _)) = _collateralReturn raw
 
 outputs' (TxBodyConstr (Memo raw _)) = _outputs raw
 
@@ -664,7 +664,7 @@ encodeTxBodyRaw
   TxBodyRaw
     { _inputs,
       _collateral,
-      _collateralAddresses,
+      _collateralReturn,
       _outputs,
       _certs,
       _wdrls,
@@ -683,7 +683,7 @@ encodeTxBodyRaw
       )
       !> Key 0 (E encodeFoldable _inputs)
       !> Key 13 (E encodeFoldable _collateral)
-      !> Key 13 (To _collateralAddresses)
+      !> Key 13 (To _collateralReturn)
       !> Key 1 (E encodeFoldable _outputs)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
@@ -865,7 +865,7 @@ instance (Era era, CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era
   getField (TxOutCompact a _) = decompactAddr a
   getField (TxOutCompactDH a _ _) = decompactAddr a
   getField (TxOutCompactDatum a _ _) = decompactAddr a
-  getField (TxOut_AddrHash28_AdaOnly stakeRef a b c d _) =
+  getField (TxOut_AddrHash28_AdaOnly stakeRef a b c d _) = do
     decodeAddress28 stakeRef a b c d
   getField (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d _ _ _ _ _) =
     decodeAddress28 stakeRef a b c d
@@ -882,5 +882,5 @@ instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMay
   getField (TxOutCompactDH _ _ d) = SJust d
   getField (TxOutCompactDatum _ _ d) = SJust $ hashData d
   getField (TxOut_AddrHash28_AdaOnly _ _ _ _ _ _) = SNothing
-  getField (TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ _ _ _ e f g h) =
+  getField (TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ _ _ _ e f g h) = do
     SJust $ decodeDataHash32 e f g h
