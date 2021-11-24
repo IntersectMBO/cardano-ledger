@@ -51,6 +51,11 @@ module Cardano.Ledger.Alonzo.TxBody
     scriptIntegrityHash',
     adHash',
     txnetworkid',
+    getAdaOnly,
+    decodeDataHash32,
+    encodeDataHash32,
+    encodeAddress28,
+    decodeAddress28,
     AlonzoBody,
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
@@ -275,7 +280,8 @@ viewCompactTxOut txOut = case txOut of
         toCompactValue adaVal,
         SJust (decodeDataHash32 e f g h)
       )
-  _ -> error "Impossible: Compacted and address or hash of non-standard size"
+  TxOut_AddrHash28_AdaOnly {} -> error "Impossible: Compacted and address or hash of non-standard size"
+  TxOut_AddrHash28_AdaOnly_DataHash32 {} -> error "Impossible: Compacted and address or hash of non-standard size"
   where
     toCompactValue :: CompactForm Coin -> CompactForm (Core.Value era)
     toCompactValue ada =
@@ -304,7 +310,8 @@ viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h)
   | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28),
     Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) =
     (decodeAddress28 stakeRef a b c d, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
-viewTxOut _ = error "Impossible: Compacted and address or hash of non-standard size"
+viewTxOut (TxOut_AddrHash28_AdaOnly {}) = error "Impossible: Compacted and address or hash of non-standard size"
+viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 {}) = error "Impossible: Compacted and address or hash of non-standard size"
 
 instance
   ( Era era,
