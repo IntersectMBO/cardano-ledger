@@ -766,7 +766,7 @@ genTxAndLEDGERState = do
   txIx <- arbitrary
   maxTxExUnits <- arbitrary
   Positive maxCollateralInputs <- arbitrary
-  collateralPercentage <- fromIntegral <$> chooseInt (0, 10000)
+  collateralPercentage <- fromIntegral <$> chooseInt (1, 10000)
   minfeeA <- fromIntegral <$> chooseInt (0, 1000)
   minfeeB <- fromIntegral <$> chooseInt (0, 10000)
   let genT = do
