@@ -33,10 +33,10 @@ import Test.QuickCheck (generate)
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger
 
 let ge = genEnv (Proxy @(ShelleyEra C_Crypto))
-initLs <- generate $ mkGenesisLedgerState @([[LedgerPredicateFailure (ShelleyEra C_Crypto)]]) ge undefined
+initLs <- generate $ mkGenesisLedgerState @([LedgerPredicateFailure (ShelleyEra C_Crypto)]) ge undefined
 tr <- generate $ traceFromInitState @(LEDGER (ShelleyEra C_Crypto)) testGlobals 20 ge (Just $ \_ -> pure initLs)
 
 let sst = last $ sourceSignalTargets tr
-BS.writeFile "/tmp/0_ledgerstate/cbor" $ serialize' (source sst)
-BS.writeFile "/tmp/0_ledgerstate/cbor" $ serialize' (signal sst)
+BS.writeFile "/tmp/0_ledgerstate.cbor" $ serialize' (source sst)
+BS.writeFile "/tmp/0_tx.cbor" $ serialize' (signal sst)
 ```
