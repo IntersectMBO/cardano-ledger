@@ -143,13 +143,7 @@ instance
 newtype Tx era = TxConstr (MemoBytes (TxRaw era))
   deriving newtype (SafeToHash, ToCBOR)
 
-deriving newtype instance
-  ( Era era,
-    Eq (Core.AuxiliaryData era),
-    Eq (Core.TxBody era),
-    Eq (Core.Witnesses era)
-  ) =>
-  Eq (Tx era)
+deriving newtype instance Eq (Tx era)
 
 deriving newtype instance
   ( Era era,

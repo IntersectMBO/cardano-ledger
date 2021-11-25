@@ -239,9 +239,7 @@ newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving (Typeable)
   deriving newtype (SafeToHash)
 
-deriving instance
-  (TransValue Eq era, Eq (PParamsDelta era)) =>
-  Eq (TxBody era)
+deriving instance Eq (TxBody era)
 
 deriving instance
   (TransValue Show era, Show (PParamsDelta era)) =>
