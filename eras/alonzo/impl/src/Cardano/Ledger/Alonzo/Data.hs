@@ -246,7 +246,7 @@ newtype AuxiliaryData era = AuxiliaryDataConstr (MemoBytes (AuxiliaryDataRaw era
 
 instance (Crypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
 
-deriving instance Eq (Core.Script era) => Eq (AuxiliaryData era)
+deriving instance Eq (AuxiliaryData era)
 
 deriving instance Show (Core.Script era) => Show (AuxiliaryData era)
 

@@ -74,7 +74,7 @@ newtype AuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes (AuxiliaryDataRaw 
 instance (c ~ Crypto era) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
 
 deriving newtype instance
-  (Era era, Core.ChainData (Core.Script era)) =>
+  (Era era) =>
   Eq (AuxiliaryData era)
 
 deriving newtype instance

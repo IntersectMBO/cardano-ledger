@@ -254,7 +254,7 @@ deriving stock instance
 
 instance (Era era, NoThunks (Core.Script era)) => NoThunks (TxWitnessRaw era)
 
-deriving newtype instance (Era era, Eq (Core.Script era)) => Eq (TxWitness era)
+deriving newtype instance Eq (TxWitness era)
 
 deriving newtype instance
   (Era era, Show (Core.Script era)) =>
