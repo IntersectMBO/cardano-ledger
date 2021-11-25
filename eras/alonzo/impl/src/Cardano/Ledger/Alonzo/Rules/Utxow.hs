@@ -77,7 +77,7 @@ import Cardano.Ledger.Shelley.TxBody
     unWdrl,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txinLookup)
-import Control.Iterate.SetAlgebra (domain, eval, (⊆), (◁), (➖))
+import Control.SetAlgebra (domain, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
 import Data.Foldable (toList)

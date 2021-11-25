@@ -66,9 +66,9 @@ import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..), inInterval)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (SlotNo)
-import Control.Iterate.SetAlgebra (dom, eval, (⊆), (◁), (➖))
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (dom, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders

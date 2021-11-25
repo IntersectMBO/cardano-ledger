@@ -56,6 +56,7 @@ module Control.SetAlgebra
     -- Functions to build concrete Set-like things useable as Set Algebra Expressions
     materialize,
     biMapFromList,
+    biMapToMap,
     biMapEmpty,
     fromList,
     keysEqual,
@@ -64,6 +65,42 @@ module Control.SetAlgebra
   )
 where
 
+import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Embed (..), Iter (..), List, Single (..))
+import Control.Iterate.BiMap (BiMap (..), Bimap, biMapEmpty, biMapFromList, biMapToMap)
+import Control.Iterate.Exp
+  ( Exp (..),
+    HasExp (..),
+    dexclude,
+    dom,
+    drestrict,
+    intersect,
+    keyeq,
+    materialize,
+    rexclude,
+    rng,
+    rrestrict,
+    setSingleton,
+    singleton,
+    subset,
+    unionleft,
+    unionplus,
+    unionright,
+    (<|),
+    (|>),
+    (∈),
+    (∉),
+    (∩),
+    (∪),
+    (∪+),
+    (≍),
+    (⊆),
+    (⋪),
+    (⋫),
+    (▷),
+    (◁),
+    (➖),
+    (⨃),
+  )
 import Control.Iterate.SetAlgebra
 import Data.Map (Map)
 import Data.Set (Set)

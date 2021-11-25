@@ -60,8 +60,8 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (coin), adaOnly, (<+>), (<×>))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Iterate.SetAlgebra (eval, (◁))
 import Control.Monad (replicateM)
+import Control.SetAlgebra (eval, (◁))
 import qualified Data.ByteString.Char8 as BS
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List

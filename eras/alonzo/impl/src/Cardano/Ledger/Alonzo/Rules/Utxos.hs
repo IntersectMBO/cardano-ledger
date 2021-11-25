@@ -62,9 +62,9 @@ import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (balance, totalDeposits)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val as Val
-import Control.Iterate.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.State.Transition.Extended
 import Data.Coders
 import Data.Foldable (toList)

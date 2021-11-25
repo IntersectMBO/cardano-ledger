@@ -3,7 +3,7 @@
 -- | Benchmarks for Bimap
 module Bench.Control.Iterate.SetAlgebra.Bimap (fromList) where
 
-import Control.Iterate.SetAlgebra (biMapFromAscDistinctList, biMapFromList)
+import Control.Iterate.BiMap (biMapFromAscDistinctList, biMapFromList)
 import Criterion.Main
 import Test.QuickCheck (arbitrary, generate)
 
