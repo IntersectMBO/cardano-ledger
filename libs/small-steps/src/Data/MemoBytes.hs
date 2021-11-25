@@ -69,7 +69,7 @@ instance (Typeable t, FromCBOR (Annotator t)) => FromCBOR (Annotator (MemoBytes 
     (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
     pure (Annotator (\fullbytes -> Memo (getT fullbytes) (toShort (toStrict (getBytes fullbytes)))))
 
-instance Eq t => Eq (MemoBytes t) where (Memo x _) == (Memo y _) = x == y
+instance Eq (MemoBytes t) where (Memo _ x) == (Memo _ y) = x == y
 
 instance Show t => Show (MemoBytes t) where show (Memo y _) = show y
 
