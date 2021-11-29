@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -9,6 +10,7 @@ module Control.Iterate.BiMap where
 
 import Cardano.Binary
   ( Decoder,
+    DecoderError (DecoderErrorCustom),
     FromCBOR (..),
     ToCBOR (..),
     decodeListLen,
@@ -17,12 +19,8 @@ import Cardano.Binary
   )
 import Codec.CBOR.Encoding (encodeListLen)
 import Control.DeepSeq (NFData (rnf))
--- import Data.List (sortBy)
--- import qualified Data.List as List
--- import Data.Set (Set)
-
-import Control.Monad (void)
-import Data.Coders (invalidKey)
+import Control.Monad (unless, void)
+import Data.Coders (cborError, invalidKey)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -72,7 +70,11 @@ instance
 decodeMapAsBimap ::
   (FromCBOR a, FromCBOR b, Ord a, Ord b) =>
   Decoder s (BiMap b a b)
-decodeMapAsBimap = decodeMapSkel biMapFromAscDistinctList
+decodeMapAsBimap = do
+  bimap@(MkBiMap mf mb) <- decodeMapSkel biMapFromAscDistinctList
+  unless (Map.valid mf && Map.valid mb) $
+    cborError $ DecoderErrorCustom "BiMap" "Expected distinct keys in ascending order"
+  pure bimap
 
 instance (NoThunks a, NoThunks b) => NoThunks (BiMap v a b) where
   showTypeOf _ = "BiMap"
@@ -126,6 +128,8 @@ biMapFromList comb xs = foldr addEntry biMapEmpty xs
 mapflip :: (v -> v -> v) -> (v -> v -> v)
 mapflip f = (\old new -> f new old)
 
+-- | /Warning/ - invariant that keys are distinct and in ascending order is not
+-- checked. Make sure it is not violated, otherwise crazy things will happen.
 biMapFromAscDistinctList ::
   (Ord k, Ord v) => [(k, v)] -> BiMap v k v
 biMapFromAscDistinctList xs = MkBiMap bmForward bmBackward
