@@ -22,9 +22,9 @@ import Cardano.Ledger.State.Vector
 import qualified Cardano.Ledger.TxIn as TxIn
 import Conduit
 import Control.Foldl (Fold (..))
-import Control.Iterate.SetAlgebra
 import Control.Monad
 import Control.Monad.Trans.Reader
+import Control.SetAlgebra (biMapFromList, biMapToMap)
 import qualified Data.Compact.KeyMap as KeyMap
 import qualified Data.Compact.VMap as VMap
 import Data.Conduit.Internal (zipSources)

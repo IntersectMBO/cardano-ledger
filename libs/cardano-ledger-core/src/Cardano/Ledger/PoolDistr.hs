@@ -28,7 +28,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra
+import Control.SetAlgebra
   ( BaseRep (MapR),
     Embed (..),
     Exp (Base),

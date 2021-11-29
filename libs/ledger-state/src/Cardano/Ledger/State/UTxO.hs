@@ -29,8 +29,8 @@ import Codec.CBOR.Read (deserialiseFromBytes)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
-import Control.Iterate.SetAlgebra (range)
 import Control.Monad
+import Control.SetAlgebra (range)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Compact.HashMap (toKey)
 import Data.Compact.KeyMap as KeyMap hiding (Stat)

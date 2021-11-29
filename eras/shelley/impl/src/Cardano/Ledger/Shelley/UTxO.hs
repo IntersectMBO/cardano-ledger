@@ -83,7 +83,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.TxIn as Core (txid)
 import Cardano.Ledger.Val (zero, (<+>), (<×>))
 import Control.DeepSeq (NFData)
-import Control.Iterate.SetAlgebra
+import Control.SetAlgebra
   ( BaseRep (MapR),
     Embed (..),
     Exp (Base),

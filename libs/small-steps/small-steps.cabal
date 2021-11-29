@@ -47,9 +47,13 @@ library
                      , Data.Coders
                      , Data.Pulse
                      , Control.Provenance
-                     , Control.Iterate.SetAlgebra
+                     , Control.Iterate.BaseTypes
+                     , Control.Iterate.BiMap
                      , Control.Iterate.Collect
+                     , Control.Iterate.Exp
+                     , Control.Iterate.SetAlgebra
                      , Control.SetAlgebra
+                     
   build-depends:       aeson
                      , ansi-wl-pprint
                      , base >=4.11 && <5
