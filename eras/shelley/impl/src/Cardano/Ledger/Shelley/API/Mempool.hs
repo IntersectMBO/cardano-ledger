@@ -26,6 +26,7 @@ module Cardano.Ledger.Shelley.API.Mempool
     MempoolEnv,
     MempoolState,
     applyTxsTransition,
+    unsafeMakeValidated,
 
     -- * Exports for compatibility
     applyTxs,
@@ -85,6 +86,10 @@ extractTx (Validated tx) = tx
 
 coerceValidated :: Coercible a b => Validated a -> Validated b
 coerceValidated (Validated a) = Validated $ coerce a
+
+-- Don't use this except in Testing to make Arbitrary instances, etc.
+unsafeMakeValidated :: tx -> Validated tx
+unsafeMakeValidated = Validated
 
 -- | Translate a validated transaction across eras.
 --
