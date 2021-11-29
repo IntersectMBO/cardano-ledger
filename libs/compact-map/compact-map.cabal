@@ -32,10 +32,9 @@ library
   exposed-modules:     Data.Compact.KeyMap
                      , Data.Compact.HashMap
                      , Data.Compact.VMap
-  other-modules:       Data.Compact.Class
-                     , Data.Compact.KVVector
+                     , Data.Compact.SmallArray
+  other-modules:       Data.Compact.KVVector
   build-depends:       base >=4.11 && <5
-                     , array
                      , cardano-binary
                      , cardano-prelude
                      , containers
@@ -43,7 +42,6 @@ library
                      , deepseq
                      , prettyprinter
                      , primitive
-                     , random
                      , text
                      , nothunks
                      , vector
@@ -60,12 +58,14 @@ test-suite tests
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
+                     , cardano-prelude
                      , containers
                      , tasty
                      -- , tasty-expected-failure
                      , tasty-quickcheck
-                     -- , tasty-hunit
+                     , tasty-hunit
                      , compact-map
                      , QuickCheck
                      , quickcheck-classes-base
-  ghc-options:        -threaded
+                     , random
+  ghc-options:        -threaded -O

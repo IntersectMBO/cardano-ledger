@@ -2,6 +2,7 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Data.Compact.HashMap where
 
@@ -13,6 +14,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
 import GHC.TypeLits
+import Prettyprinter (viaShow)
 
 -- ==========================================================================
 
@@ -48,22 +50,46 @@ lookup k (HashMap m) = KM.lookupHM (toKey k) m
 insert :: k -> v -> HashMap k v -> HashMap k v
 insert k v (HashMap m) = HashMap (KM.insert (toKey k) v m)
 
+delete :: k -> HashMap k v -> HashMap k v
+delete k (HashMap m) = HashMap (KM.delete (toKey k) m)
+
 insertWithKey :: (k -> v -> v -> v) -> k -> v -> HashMap k v -> HashMap k v
 insertWithKey combine key v (HashMap m) = HashMap (KM.insertWithKey comb (toKey key) v m)
   where
     comb k v1 v2 = combine (fromKey k) v1 v2
 
 restrictKeys :: HashMap k v -> Set k -> HashMap k v
-restrictKeys (HashMap m) set = HashMap (KM.domainRestrict m (Set.map toKey set))
+restrictKeys (HashMap m) set = HashMap (KM.restrictKeys m (Set.map toKey set))
+
+withoutKeys :: HashMap k v -> Set k -> HashMap k v
+withoutKeys (HashMap m) set = HashMap (KM.withoutKeys m (Set.map toKey set))
 
 splitLookup :: k -> HashMap k a -> (HashMap k a, Maybe a, HashMap k a)
 splitLookup k (HashMap m) = (HashMap a, b, HashMap c)
   where
-    (a, b, c) = KM.splitKeyMap (KM.keyPath key) key m
+    (a, b, c) = KM.splitLookup key m
     key = toKey k
 
 intersection :: HashMap k v -> HashMap k v -> HashMap k v
-intersection (HashMap m1) (HashMap m2) = HashMap (KM.intersect m1 m2)
+intersection (HashMap m1) (HashMap m2) = HashMap (KM.intersect3 0 (\_k x _y -> x) m1 m2)
+
+intersectionWith :: (v -> v -> v) -> HashMap k v -> HashMap k v -> HashMap k v
+intersectionWith combine (HashMap m1) (HashMap m2) = HashMap (KM.intersect3 0 (\_k x y -> combine x y) m1 m2)
+
+unionWithKey :: (Keyed k) => (k -> v -> v -> v) -> HashMap k v -> HashMap k v -> HashMap k v
+unionWithKey combine (HashMap m1) (HashMap m2) = HashMap (KM.unionWithKey combine2 m1 m2)
+  where
+    combine2 k v1 v2 = combine (fromKey k) v1 v2
+
+unionWith :: (Keyed k) => (v -> v -> v) -> HashMap k v -> HashMap k v -> HashMap k v
+unionWith combine (HashMap m1) (HashMap m2) = HashMap (KM.unionWithKey combine2 m1 m2)
+  where
+    combine2 _k v1 v2 = combine v1 v2
+
+union :: (Keyed k) => HashMap k v -> HashMap k v -> HashMap k v
+union (HashMap m1) (HashMap m2) = HashMap (KM.unionWithKey combine2 m1 m2)
+  where
+    combine2 _k v1 _v2 = v1
 
 foldlWithKey' :: (ans -> k -> v -> ans) -> ans -> HashMap k v -> ans
 foldlWithKey' accum a (HashMap m) = KM.foldWithAscKey accum2 a m
@@ -77,7 +103,19 @@ fromList :: Keyed k => [(k, v)] -> HashMap k v
 fromList xs = HashMap (KM.fromList (map (\(k, v) -> (toKey k, v)) xs))
 
 toList :: HashMap k v -> [(k, v)]
-toList (HashMap m) = KM.foldWithAscKey (\ans k v -> (fromKey k, v) : ans) [] m
+toList (HashMap m) = KM.foldWithDescKey (\k v ans -> (fromKey k, v) : ans) [] m
 
 mapWithKey :: (k -> v -> u) -> HashMap k v -> HashMap k u
 mapWithKey f (HashMap m) = HashMap (KM.mapWithKey (\key v -> f (fromKey key) v) m)
+
+lookupMin :: HashMap k v -> Maybe (k, v)
+lookupMin (HashMap m) = fmap (\(k, v) -> (fromKey k, v)) (KM.lookupMin m)
+
+lookupMax :: HashMap k v -> Maybe (k, v)
+lookupMax (HashMap m) = fmap (\(k, v) -> (fromKey k, v)) (KM.lookupMax m)
+
+instance (Eq k, Eq v) => Eq (HashMap k v) where
+  x == y = toList x == toList y
+
+instance (Keyed k, Show k, Show v) => Show (HashMap k v) where
+  show (HashMap m) = show (KM.ppKeyMap ((viaShow @k) . fromKey) (viaShow @v) m)
