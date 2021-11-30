@@ -1,0 +1,49 @@
+% $id$
+% KH: created comments style file to allow alternative versions of a document.
+% KH: added draft environment
+
+% \newcommand{\red}[1]{#1}
+
+%% \usepackage[usenames]{color}
+%% \definecolor{BrickRed}{cmyk}{0, .89, .5, 0}
+%% \definecolor{Blue}{cmyk}{.8, .3, .2, 0}
+%% \definecolor{Green}{cmyk}{1, 0, 1, 0}
+%% \definecolor{Black}{cmyk}{1, 1, 1, 0}
+\newcommand{\red}{\color{BrickRed}}
+\newcommand{\blue}{\color{Blue}}
+\newcommand{\green}{\color{Green}}
+\newcommand{\black}{\color{Black}}
+
+\newcommand{\eucommentary}[1]{{\red\(\spadesuit\){\textbf{EC Commentary}: \emph{#1}}\(\spadesuit\)}}
+\newcommand{\euevaluation}[2]{{\red\(\spadesuit\){\textbf{Evaluation Criteria ({#1})}: \emph{#2}}\(\spadesuit\)}}
+
+\newcommand{\comment}[2]{{\blue\(\spadesuit\){\bf #1: }{\textit{#2}}\(\spadesuit\)}}
+\newcommand{\draftpage}{\newpage}
+
+\newcommand{\FIXME}[1]{[\textbf{FIXME}: #1]}
+
+\newcommand{\TODO}[1]{{\green\(\spadesuit\){\textbf{TO DO}: \emph{#1}}\(\spadesuit\)}}
+
+\newcommand{\TOWRITE}[2]{{\green\(\spadesuit\){#1 [\textbf{WRITE HERE}: #2]}\(\spadesuit\)}}
+
+\usepackage{marginnote}
+
+\newcommand{\commentwidth}{8cm}
+\newcommand{\marginparsepwidth}{2cm}
+
+
+\newenvironment{draft}{}{}
+
+\newcommand{\nocomments}{
+\renewcommand{\eucommentary}[1]{}
+\renewcommand{\euevaluation}[2]{}
+\renewcommand{\comment}[2]{}
+\renewcommand{\draftpage}{}
+\renewcommand{\FIXME}[1]{}
+\renewcommand{\TODO}[1]{}
+\renewcommand{\TOWRITE}[2]{}
+}
+
+\DeclareOption{final}{\nocomments}
+\DeclareOption{draft}{}
+\ProcessOptions*

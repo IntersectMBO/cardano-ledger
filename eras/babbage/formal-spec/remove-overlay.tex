@@ -1,0 +1,127 @@
+\newcommand{\createRUpd}[4]{\fun{createRUpd}~\var{#1}~\var{#2}~\var{#3}~\var{#4}}
+\newcommand{\mkApparentPerformance}[3]{\fun{mkApparentPerformance}~{#1}~\var{#2}~\var{#3}}
+\newcommand{\Q}{\ensuremath{\mathbb{Q}}}
+\newcommand{\ActiveSlotCoeff}{\mathsf{ActiveSlotCoeff}}
+\newcommand{\EpochState}{\type{EpochState}}
+\newcommand{\BlocksMade}{\type{BlocksMade}}
+\newcommand{\RewardUpdate}{\type{RewardUpdate}}
+\newcommand{\PrtclState}{\type{PrtclState}}
+\newcommand{\PrtclEnv}{\type{PrtclEnv}}
+\newcommand{\PoolDistr}{\type{PoolDistr}}
+\newcommand{\bheader}[1]{\fun{bheader}~\var{#1}}
+
+\section{Removal of the Overlay Schedule}
+
+The overlay schedule was only used during the early days of the Shelley ledger, and can be safely removed. First, the protocol parameter $\var{d}$ is removed, and any functions that use it are reduced to the case $\var{d} = 0$. The function $\fun{mkApparentPerformance}$ is reduced to one of its branches, and its first argument is dropped. It is only used in the definition of $\fun{rewardOnePool}$, which needs to be adjusted accordingly.
+
+\begin{figure}[htb]
+    \begin{align*}
+      & \fun{mkApparentPerformance} \in \unitInterval \to \N \to \N \to \Q \\
+      & \mkApparentPerformance{\sigma}{n}{\overline{N}} = \frac{\beta}{\sigma} \\
+      & ~~~\where \\
+      & ~~~~~~~\beta = \frac{n}{\max(1, \overline{N})} \\
+  \end{align*}
+  \caption{Function used in the Reward Calculation}
+  \label{fig:functions:rewards}
+\end{figure}
+
+The function $\fun{createRUpd}$ is adjusted by simplifying $\eta$.
+
+\begin{figure}[htb]
+  \emph{Calculation to create a reward update}
+  %
+  \begin{align*}
+    & \fun{createRUpd} \in \N \to \BlocksMade \to \EpochState \to \Coin \to \RewardUpdate \\
+    & \createRUpd{slotsPerEpoch}{b}{es}{total} = \left(
+      \Delta t_1,-~\Delta r_1+\Delta r_2,~\var{rs},~-\var{feeSS}\right) \\
+    & ~~~\where \\
+    & ~~~~~~~\dotsb \\
+    & ~~~~~~~\eta =
+        \frac{blocksMade}{\floor{{slotsPerEpoch} \cdot \ActiveSlotCoeff}} \\
+    & ~~~~~~~\dotsb
+  \end{align*}
+
+  \caption{Reward Update Creation}
+  \label{fig:functions:reward-update-creation}
+\end{figure}
+
+$\fun{incrBlocks}$ gets the same treatment as $\fun{mkApparentPerformance}$. Its invocation in $\mathsf{BBODY}$ needs to be adjusted as well.
+
+\begin{figure}
+  \begin{align*}
+      & \fun{incrBlocks} \in \KeyHash_{pool} \to
+          \BlocksMade \to \BlocksMade \\
+      & \fun{incrBlocks}~\var{hk}~\var{b} =
+        \begin{cases}
+          b\cup\{\var{hk}\mapsto 1\} & \text{if }\var{hk}\notin\dom{b} \\
+          b\unionoverrideRight\{\var{hk}\mapsto n+1\} & \text{if }\var{hk}\mapsto n\in b \\
+        \end{cases}
+  \end{align*}
+\end{figure}
+
+\newpage
+Finally, the $\mathsf{PRTCL}$ STS needs to be adjusted. To retire the $\mathsf{OVERLAY}$ STS, we inline the definition of its 'decentralized' case and drop all the unnecessary variables from its environment. It is invoked in $\mathsf{CHAIN}$, which needs to be adjusted accordingly.
+
+\begin{figure}
+  \emph{Protocol environments}
+  \begin{equation*}
+    \PrtclEnv =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{pd} & \PoolDistr & \text{pool stake distribution} \\
+        \eta_0 & \Seed & \text{epoch nonce} \\
+      \end{array}
+    \right)
+  \end{equation*}
+  \caption{Protocol transition-system types}
+  \label{fig:ts-types:prtcl}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:prtcl}
+    \inference[PRTCL]
+    {
+      \var{bhb}\leteq\bheader{bh} &
+      \eta\leteq\fun{bnonce}~(\bhbody{bhb})
+      \\~\\
+      {
+        \eta
+        \vdash
+        {\left(\begin{array}{c}
+        \eta_v \\
+        \eta_c \\
+        \end{array}\right)}
+        \trans{\hyperref[fig:rules:update-nonce]{updn}}{\var{slot}}
+        {\left(\begin{array}{c}
+        \eta_v' \\
+        \eta_c' \\
+        \end{array}\right)}
+    }\\~\\
+      {
+        \vdash\var{cs}\trans{\hyperref[fig:rules:ocert]{ocert}}{\var{bh}}\var{cs'}
+      }
+      \\~\\
+      \fun{praosVrfChecks}~\eta_0~\var{pd}~\ActiveSlotCoeff~\var{bhb}
+    }
+    {
+      {\begin{array}{c}
+         \var{pd} \\
+         \eta_0 \\
+       \end{array}}
+      \vdash
+      {\left(\begin{array}{c}
+            \var{cs} \\
+            \eta_v \\
+            \eta_c \\
+      \end{array}\right)}
+      \trans{prtcl}{\var{bh}}
+      {\left(\begin{array}{c}
+            \varUpdate{cs'} \\
+            \varUpdate{\eta_v'} \\
+            \varUpdate{\eta_c'} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+  \caption{Protocol rules}
+  \label{fig:rules:prtcl}
+\end{figure}

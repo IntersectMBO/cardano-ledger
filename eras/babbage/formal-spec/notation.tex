@@ -1,0 +1,23 @@
+\newcommand{\pto}{\to_{*}}
+
+\section{Notation}
+
+This specification features some changes to the notation used in previous specifications.
+
+\begin{description}
+\item[Maps and partial functions] We use the notation $f : A \pto B$
+  to denote a finitely supported partial function. If $B$ is a monoid,
+  $f$ is a function such that $f a = 0$ for all but finitely many
+  $a$. Otherwise it is a function $f : A \to B^?$ such that
+  $f a = \Nothing$ for all but finitely many $a$.
+\item[Map operations] We use standard notation for restriction and
+  corestriction of functions to operate on partial functions as well.
+\item[Working with partial values] We sometimes need a notation that
+  bubbles up $\Nothing$. $t^?$ might be nice, but how does it behave
+  for things like sets \& functions? Also, we sometimes need to do an
+  equality check except in a $\Nothing$ case. Good notation for that
+  would be nice.
+\item[Accessor functions] ???
+\item[Record updates] ???
+\end{description}
+
