@@ -2,12 +2,53 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MagicHash #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE UnboxedTuples #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Data.Compact.KeyMap where
+module Data.Compact.KeyMap
+  ( KeyMap(..),
+    Key (..),
+    empty,
+    size,
+    lookup,
+    lookupMax,
+    lookupMin,
+    splitLookup,
+    insert,
+    insertWith,
+    insertWithKey,
+    delete,
+    mapWithKey,
+    restrictKeys,
+    withoutKeys,
+    intersection,
+    intersectionWith,
+    intersectionWithKey,
+    union,
+    unionWith,
+    unionWithKey,
+    foldWithAscKey,
+    foldWithDescKey,
+    fromList,
+    toList,
+    lub,
+    maxViewWithKey,
+    minViewWithKey,
+    foldOverIntersection,
+    -- Pretty printing helpers
+    PrettyA(..),
+    ppKeyMap,
+    equate,
+    ppArray,
+    -- Debugging
+    histogram,
+    hdepth,
+    bitsPerSegment,
+  )
+where
 
 import Cardano.Prelude (Generic, HeapWords (..), ST, runST)
 import Control.DeepSeq (NFData (..))
@@ -20,7 +61,6 @@ import Data.Bits
     shiftR,
     testBit,
     unsafeShiftL,
-    zeroBits,
     (.&.),
     (.|.),
   )
@@ -36,6 +76,7 @@ import Data.Compact.SmallArray
     mwrite,
     tolist,
     withMutArray,
+    withMutArray_,
   )
 import Data.Foldable (foldl')
 import Data.Primitive.SmallArray ()
@@ -43,23 +84,14 @@ import qualified Data.Primitive.SmallArray as Small
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
+import qualified Data.Vector.Primitive as VP
+import qualified Data.Vector.Primitive.Mutable as MVP
 import Data.Word (Word64)
 import GHC.Exts (isTrue#, reallyUnsafePtrEquality#, (==#))
 import Prettyprinter
 import qualified Prettyprinter.Internal as Pretty
 import System.Random.Stateful (Uniform (..))
-
--- =============================
-
--- | binary encoding of 'n', LEAST significant bit on the front of the list.
-binary :: Integral n => n -> [n]
-binary 0 = []
-binary 1 = [1]
-binary n = mod n 2 : binary (div n 2)
-
--- | Show 'n' as a binary number with MOST significant bits on the front of the list.
-bin :: Integral n => n -> [n]
-bin x = reverse (binary x)
+import Prelude hiding (lookup)
 
 -- ==========================================================================
 -- bitsPerSegment, Segments, Paths. Breaking a Key into a sequence of small components
@@ -88,24 +120,17 @@ bitmapInvariantMessage funcName b =
 type Segment = Int
 
 -- | Represents a list of 'Segment', which when combined is in 1-1 correspondance with a Key
-type Path = [Segment]
-
--- | The maximum value of a Segment, as an Int
-intSize :: Int
-intSize = 2 ^ bitsPerSegment
-{-# INLINE intSize #-}
+type Path = VP.Vector Segment
 
 -- | The maximum value of a segment, as a Word64
 wordSize :: Word64
-wordSize = 2 ^ (fromIntegral bitsPerSegment :: Word64)
+wordSize = 2 ^ bitsPerSegment
 {-# INLINE wordSize #-}
 
 -- | The length of a list of segments representing a key. Need to be
 --   carefull if a Key isn't evenly divisible by bitsPerSegment
-pathSize :: Word64
-pathSize = if mod 64 wbits == 0 then div 64 wbits else div 64 wbits + 1
-  where
-    wbits = fromIntegral bitsPerSegment :: Word64
+pathSize :: Int
+pathSize = quot 64 bitsPerSegment + if rem 64 bitsPerSegment == 0 then 0 else 1
 
 -- ========================================================================
 -- Keys
@@ -127,14 +152,6 @@ instance Uniform Key where
     w3 <- uniformM g
     pure (Key w0 w1 w2 w3)
 
--- | The number of Word64 per key
-wordsPerKey :: Int
-wordsPerKey = 4
-
--- | The length of a Path for a Key (which might have multiple Word64's inside)
-keyPathSize :: Int
-keyPathSize = wordsPerKey * fromIntegral pathSize
-
 -- | Note that  (mod n wordSize) and (n .&. modMask) are the same
 modMask :: Word64
 modMask = wordSize - 1
@@ -143,16 +160,18 @@ modMask = wordSize - 1
 --   loop 0 _ ans = ans
 --   loop cnt n ans = loop (cnt - 1) (div n wordSize) ((fromIntegral (mod n wordSize)):ans)
 --   But much faster.
-getpath :: Word64 -> Path
-getpath w64 = loop pathSize w64 []
+getPath :: Word64 -> Path
+getPath = VP.reverse . VP.unfoldrExactN pathSize mkPath
   where
-    loop :: Word64 -> Word64 -> [Int] -> [Int]
-    loop 0 _ ans = ans
-    loop cnt n ans = loop (cnt - 1) (shiftR n bitsPerSegment) (fromIntegral (n .&. modMask) : ans)
+    mkPath :: Word64 -> (Segment, Word64)
+    mkPath n = (fromIntegral (n .&. modMask), shiftR n bitsPerSegment)
+    {-# INLINE mkPath #-}
+{-# INLINE getPath #-}
 
 -- | Break up a Key into a Path
 keyPath :: Key -> Path
-keyPath (Key w0 w1 w2 w3) = getpath w0 ++ getpath w1 ++ getpath w2 ++ getpath w3
+keyPath (Key w0 w1 w2 w3) = getPath w0 <> getPath w1 <> getPath w2 <> getPath w3
+{-# INLINE keyPath #-}
 
 showBM :: Bitmap -> String
 showBM bm = show (bitmapToList bm)
@@ -177,10 +196,13 @@ data KeyMap v
   | One {-# UNPACK #-} !Int !(KeyMap v) -- 1 subtree
   | Two {-# UNPACK #-} !Bitmap !(KeyMap v) !(KeyMap v) -- 2 subtrees
   | BitmapIndexed
-      {-# UNPACK #-} !Bitmap -- 3 - (intSize - 1) subtrees
+      {-# UNPACK #-} !Bitmap -- 3 - (wordSize - 1) subtrees
       {-# UNPACK #-} !(Small.SmallArray (KeyMap v))
-  | Full {-# UNPACK #-} !(Small.SmallArray (KeyMap v)) -- intSize subtrees
+  | Full {-# UNPACK #-} !(Small.SmallArray (KeyMap v)) -- wordSize subtrees
   deriving (NFData, Generic)
+
+empty :: KeyMap v
+empty = Empty
 
 notEmpty :: KeyMap v -> Bool
 notEmpty Empty = False
@@ -192,9 +214,6 @@ isEmpty _ = False
 
 instance Eq v => Eq (KeyMap v) where
   (==) x y = toList x == toList y
-
-heapAdd :: HeapWords a => a -> Int -> Int
-heapAdd x ans = heapWords x + ans
 
 heapPlus :: HeapWords a => Int -> a -> Int
 heapPlus ans x = heapWords x + ans
@@ -209,14 +228,6 @@ instance HeapWords v => HeapWords (KeyMap v) where
 
 instance HeapWords () where
   heapWords () = 1
-
-tag :: KeyMap v -> String
-tag Empty = "Empty"
-tag (One _ _xs) = "One"
-tag (Leaf _ _v) = "Leaf"
-tag (BitmapIndexed _ _arr) = "BitmapedIndexed"
-tag (Full _arr) = "Full"
-tag (Two _ _a _b) = "Two"
 
 -- ======================================================================
 -- Insertion
@@ -234,13 +245,13 @@ insertWithKey' !n0 combine !path !k !x = go n0
         LT -> Two (setBits [i, j]) node (go (n + 1) Empty)
         GT -> Two (setBits [i, j]) (go (n + 1) Empty) node
       where
-        i = path !! n
+        i = path VP.! n
     go !n t@(Leaf k2 y)
       | k == k2 =
         if x `ptrEq` y
           then t
           else Leaf k (combine k x y)
-      | otherwise = twoLeaf (drop n (keyPath k2)) t (drop n path) k x
+      | otherwise = twoLeaf (VP.drop n (keyPath k2)) t (VP.drop n path) k x
     go !n t@(BitmapIndexed bmap arr)
       | not (testBit bmap j) =
         let !arr' = insertAt arr i $! Leaf k x
@@ -253,7 +264,7 @@ insertWithKey' !n0 combine !path !k !x = go n0
               else BitmapIndexed bmap (update arr i st')
       where
         i = indexFromSegment bmap j
-        j = path !! n
+        j = path VP.! n
     go !n t@(Two bmap x0 x1)
       | not (testBit bmap j) =
         let !arr' = insertAt (fromlist [x0, x1]) i $! Leaf k x
@@ -269,7 +280,7 @@ insertWithKey' !n0 combine !path !k !x = go n0
                   else Two bmap x0 st'
       where
         i = indexFromSegment bmap j
-        j = path !! n
+        j = path VP.! n
     go !n t@(Full arr) =
       let !st = index arr i
           !st' = go (n + 1) st
@@ -278,24 +289,40 @@ insertWithKey' !n0 combine !path !k !x = go n0
             else Full (update arr i st')
       where
         i = indexFromSegment fullNodeMask j
-        j = path !! n
+        j = path VP.! n
 {-# INLINE insertWithKey' #-}
 
 twoLeaf :: Path -> KeyMap v -> Path -> Key -> v -> KeyMap v
-twoLeaf [] _ _ _ _ = error "the path ran out of segments in twoLeaf case 1."
-twoLeaf _ _ [] _ _ = error "the path ran out of segments in twoLeaf case 1."
-twoLeaf (i : is) leaf1 (j : js) k2 v2
-  | i == j = One i (twoLeaf is leaf1 js k2 v2)
-  | otherwise =
-    if i < j
-      then Two (setBits [i, j]) leaf1 (Leaf k2 v2)
-      else Two (setBits [i, j]) (Leaf k2 v2) leaf1
+twoLeaf path1 leaf1 path2 k2 v2 = go path1 path2
+  where
+    leaf2 = Leaf k2 v2
+    go p1 p2
+      | Just (i, is) <- VP.uncons p1,
+        Just (j, js) <- VP.uncons p2 =
+        if i == j
+          then One i (go is js)
+          else
+            let two = Two (setBits [i, j])
+             in if i < j
+                  then two leaf1 leaf2
+                  else two leaf2 leaf1
+      | otherwise =
+        error $
+          concat
+            [ "The path ran out of segments in 'twoLeaf'. \npath1: ",
+              show path1,
+              "\npath2: ",
+              show path2
+            ]
+{-# INLINE twoLeaf #-}
 
 insertWithKey :: (Key -> v -> v -> v) -> Key -> v -> KeyMap v -> KeyMap v
 insertWithKey f k = insertWithKey' 0 f (keyPath k) k
+{-# INLINE insertWithKey #-}
 
 insertWith :: (t -> t -> t) -> Key -> t -> KeyMap t -> KeyMap t
 insertWith f k = insertWithKey' 0 (\_ key val -> f key val) (keyPath k) k
+{-# INLINE insertWith #-}
 
 insert :: Key -> v -> KeyMap v -> KeyMap v
 insert !k = insertWithKey' 0 (\_key new _old -> new) (keyPath k) k
@@ -320,9 +347,9 @@ delete2 path key km continue = case3 (continue Empty) leafF arrayF km
   where
     leafF k2 _ = if key == k2 then continue Empty else continue km
     arrayF bmap arr =
-      case path of
-        [] -> continue km
-        (i : is) ->
+      case VP.uncons path of
+        Nothing -> continue km
+        Just (i, is) ->
           let m = setBit 0 i
               j = sparseIndex bmap m
               newcontinue Empty = continue (buildKeyMap (clearBit bmap i) (remove arr j))
@@ -428,8 +455,8 @@ foldWithAscKey accum !ans0 (Full arr) = loop ans0 0
     loop !ans i | i >= n = ans
     loop !ans i = loop (foldWithAscKey accum ans (index arr i)) (i + 1)
 
-sizeKeyMap :: KeyMap v -> Int
-sizeKeyMap = foldWithAscKey (\ans _k _v -> ans + 1) 0
+size :: KeyMap v -> Int
+size = foldWithAscKey (\ans _k _v -> ans + 1) 0
 
 -- ================================================================
 -- aggregation in descending order of keys
@@ -453,53 +480,42 @@ foldWithDescKey accum !ans0 (Full arr) = loop ans0 (n - 1)
 -- ==================================================================
 -- Lookup a key
 
-lookupHM :: Key -> KeyMap v -> Maybe v
-lookupHM key = go (keyPath key)
-  where
-    go _ Empty = Nothing
-    go _ (Leaf key2 v) = if key == key2 then Just v else Nothing
-    go [] _ = Nothing -- Path is empty, we will never find it.
-    go (j : js) (One i x) = if i == j then go js x else Nothing
-    go (j : js) (Two bm x0 x1) =
-      if testBit bm j
-        then (if i == 0 then go js x0 else go js x1)
-        else Nothing
-      where
-        i = indexFromSegment bm j
-    go (j : js) (BitmapIndexed bm arr) =
-      if testBit bm j
-        then go js (index arr i)
-        else Nothing
-      where
-        i = indexFromSegment bm j
-    go (j : js) (Full arr) =
-      -- Every possible bit is set, so no testBit call necessary
-      go js (index arr i)
-      where
-        i = indexFromSegment fullNodeMask j
+lookup :: Key -> KeyMap v -> Maybe v
+lookup key = searchPath key (keyPath key)
 
 searchPath :: Key -> Path -> KeyMap v -> Maybe v
-searchPath _key _path Empty = Nothing
-searchPath key _path (Leaf key2 v) = if key == key2 then Just v else Nothing
-searchPath _key [] _ = Nothing -- Path is empty, we will never find it.
-searchPath key (j : js) (One i x) = if i == j then searchPath key js x else Nothing
-searchPath key (j : js) (Two bm x0 x1) =
-  if testBit bm j
-    then (if i == 0 then searchPath key js x0 else searchPath key js x1)
-    else Nothing
+searchPath key = go
   where
-    i = indexFromSegment bm j
-searchPath key (j : js) (BitmapIndexed bm arr) =
-  if testBit bm j
-    then searchPath key js (index arr i)
-    else Nothing
-  where
-    i = indexFromSegment bm j
-searchPath key (j : js) (Full arr) =
-  -- Every possible bit is set, so no testBit call necessary
-  searchPath key js (index arr i)
-  where
-    i = indexFromSegment fullNodeMask j
+    go path =
+      \case
+        Leaf key2 v ->
+          if key == key2
+            then Just v
+            else Nothing
+        One i x
+          | Just (j, js) <- VP.uncons path ->
+            if i == j
+              then go js x
+              else Nothing
+        Two bm x0 x1
+          | Just (j, js) <- VP.uncons path ->
+            if testBit bm j
+              then
+                if indexFromSegment bm j == 0
+                  then go js x0
+                  else go js x1
+              else Nothing
+        BitmapIndexed bm arr
+          | Just (j, js) <- VP.uncons path ->
+            if testBit bm j
+              then go js (index arr (indexFromSegment bm j))
+              else Nothing
+        Full arr
+          | Just (j, js) <- VP.uncons path ->
+            -- Every possible bit is set, so no testBit call necessary
+            go js (index arr (indexFromSegment fullNodeMask j))
+        _ -> Nothing -- Path is empty, we will never find it.
+{-# INLINE searchPath #-}
 
 -- =========================================================
 -- map
@@ -520,11 +536,11 @@ instance Functor KeyMap where
 
 -- | Make an array of size 1, with 'x' stored at index 0.
 array1 :: a -> PArray a
-array1 x = fst (withMutArray 1 (\marr -> mwrite marr 0 x))
+array1 x = withMutArray_ 1 (\marr -> mwrite marr 0 x)
 
 -- | Make an array of size 2, with 'x' stored at index 0.
 array2 :: a -> a -> PArray a
-array2 x y = fst (withMutArray 2 (\marr -> mwrite marr 0 x >> mwrite marr 1 y))
+array2 x y = withMutArray_ 2 (\marr -> mwrite marr 0 x >> mwrite marr 1 y)
 
 union4 :: Int -> (Key -> v -> v -> v) -> KeyMap v -> KeyMap v -> KeyMap v
 union4 _n _combine Empty Empty = Empty
@@ -598,13 +614,13 @@ intersect3 :: Int -> (Key -> u -> v -> w) -> KeyMap u -> KeyMap v -> KeyMap w
 intersect3 _ _ Empty Empty = Empty
 intersect3 n combine x y = case3 Empty leafF1 arrayF1 x
   where
-    leafF1 k v = case searchPath k (drop n (keyPath k)) y of
+    leafF1 k v = case searchPath k (VP.drop n (keyPath k)) y of
       Nothing -> Empty
       Just u -> Leaf k (combine k v u)
     arrayF1 bm1 arr1 = case3 Empty leafF2 arrayF2 y
       where
         leafF2 k v =
-          case searchPath k (drop n (keyPath k)) x of
+          case searchPath k (VP.drop n (keyPath k)) x of
             Nothing -> Empty
             Just u -> Leaf k (combine k u v)
         arrayF2 bm2 arr2 = dropEmpty bm (arrayFromBitmap bm actionAt)
@@ -661,12 +677,12 @@ intersectionWhen combine x y = intersectWhenN 0 combine x y
 foldIntersect2 :: Int -> (ans -> Key -> u -> v -> ans) -> ans -> KeyMap u -> KeyMap v -> ans
 foldIntersect2 n accum ans x y = case3 ans leafF1 arrayF1 x
   where
-    leafF1 k u = case searchPath k (drop n (keyPath k)) y of
+    leafF1 k u = case searchPath k (VP.drop n (keyPath k)) y of
       Nothing -> ans
       Just v -> accum ans k u v
     arrayF1 bm1 arr1 = case3 ans leafF2 arrayF2 y
       where
-        leafF2 k v = case searchPath k (drop n (keyPath k)) x of
+        leafF2 k v = case searchPath k (VP.drop n (keyPath k)) x of
           Nothing -> ans
           Just u -> accum ans k u v
         arrayF2 bm2 arr2 = foldl' accum2 ans (bitmapToList bm)
@@ -692,7 +708,7 @@ restrictKeys :: KeyMap v -> Set Key -> KeyMap v
 restrictKeys hm = Set.foldl' accum Empty
   where
     accum ans key =
-      case lookupHM key hm of
+      case lookup key hm of
         Nothing -> ans
         Just v -> insert key v ans
 
@@ -700,7 +716,7 @@ withoutKeys :: KeyMap v -> Set Key -> KeyMap v
 withoutKeys hm s = Set.foldl' accum hm s
   where
     accum ans key =
-      case lookupHM key hm of
+      case lookup key hm of
         Nothing -> ans
         Just _ -> delete key ans
 
@@ -782,9 +798,9 @@ splitHelp2 path key x smallC largeC = case3 emptyC leafF arrayF x
       EQ -> (smallC Empty, Just u, largeC Empty)
       LT -> (smallC (Leaf k u), Nothing, largeC Empty)
       GT -> (smallC Empty, Nothing, largeC (Leaf k u))
-    arrayF bm arr = case path of
-      [] -> (smallC Empty, Nothing, largeC Empty)
-      (i : is) ->
+    arrayF bm arr = case VP.uncons path of
+      Nothing -> (smallC Empty, Nothing, largeC Empty)
+      Just (i, is) ->
         let (bmsmall, found, bmlarge) = splitBitmap bm i
             splicepoint = indexFromSegment bm i
          in if found
@@ -828,7 +844,7 @@ lub key hm =
 -- ==========================================
 -- Operations on Bits and Bitmaps
 
--- | Check if two the two arguments are the same value.  N.B. This
+-- | Check if the two arguments are the same value.  N.B. This
 -- function might give false negatives (due to GC moving objects.)
 ptrEq :: a -> a -> Bool
 ptrEq x y = isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
@@ -837,10 +853,6 @@ ptrEq x y = isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
 maxChildren :: Int
 maxChildren = 1 `unsafeShiftL` bitsPerSegment
 {-# INLINE maxChildren #-}
-
-subkeyMask :: Bitmap
-subkeyMask = 1 `unsafeShiftL` bitsPerSegment - 1
-{-# INLINE subkeyMask #-}
 
 sparseIndex :: Bitmap -> Bitmap -> Int
 sparseIndex b m = popCount (b .&. (m - 1))
@@ -888,9 +900,6 @@ fullNodeMask = complement (complement 0 `unsafeShiftL` maxChildren)
 setBits :: [Int] -> Bitmap
 setBits = foldl' setBit 0
 
-oneBits :: Bitmap
-oneBits = complement (zeroBits :: Word64)
-
 -- | Get the 'ith' element from a Bitmap
 ith :: Bitmap -> Int -> Int
 ith bmap i = bitmapToList bmap !! i
@@ -929,12 +938,9 @@ at position i=4
 
 lessMasks, greaterMasks :: PArray Bitmap
 lessMasks = fromlist [setBits [0 .. i - 1] | i <- [0 .. 63]]
+{-# NOINLINE lessMasks #-}
 greaterMasks = fromlist [setBits [i + 1 .. 63] | i <- [0 .. 63]]
-
-testsplitBitmap :: Int -> ([Int], Bool, [Int])
-testsplitBitmap i = (bitmapToList l, b, bitmapToList g)
-  where
-    (l, b, g) = splitBitmap (complement (zeroBits :: Word64)) i
+{-# NOINLINE greaterMasks #-}
 
 -- =======================================================================
 -- Operations to make new arrays out off old ones with small changes
@@ -945,7 +951,7 @@ remove :: PArray a -> Int -> PArray a
 remove arr i =
   if i < 0 || i > n
     then error $ boundsMessage "remove" i (isize arr - 1)
-    else fst (withMutArray n action)
+    else withMutArray_ n action
   where
     n = isize arr - 1
     action marr = do
@@ -957,7 +963,7 @@ remove arr i =
 update :: PArray t -> Int -> t -> PArray t
 update arr i _
   | i < 0 || i >= isize arr = error $ boundsMessage "update" i (isize arr - 1)
-update arr i t = fst (withMutArray size1 action)
+update arr i t = withMutArray_ size1 action
   where
     size1 = isize arr
     action marr = do
@@ -987,24 +993,13 @@ insertAt :: PArray e -> Int -> e -> PArray e
 insertAt arr idx b = runST (insertM arr idx b)
 {-# INLINE insertAt #-}
 
--- | Create a new Array of size 'n' filled with objects 'a'
-arrayOf :: Int -> a -> PArray a
-arrayOf n a = runST $ do
-  marr <- mnew n
-  let loop i
-        | i < n = mwrite marr i a >> loop (i + 1)
-        | otherwise = pure ()
-  loop 0
-  mfreeze marr
-{-# INLINE arrayOf #-}
-
 -- | Extract a slice from an array
 slice :: Int -> Int -> PArray a -> PArray a
 slice 0 hi arr | hi == (isize arr - 1) = arr
-slice lo hi arr = fst (withMutArray size action)
+slice lo hi arr = withMutArray_ asize action
   where
-    size = max (hi - lo + 1) 0
-    action marr = mcopy marr 0 arr lo size
+    asize = max (hi - lo + 1) 0
+    action marr = mcopy marr 0 arr lo asize
 {-# INLINE slice #-}
 
 -- ========================================================================
@@ -1020,7 +1015,7 @@ slice lo hi arr = fst (withMutArray size action)
 --   as in the original 'arr'. if 'n' is too large or too small (negative) for the array, 'n' is
 --   adjusted to copy everything (too large) or nothing (too small).
 lowSlice :: Int -> PArray a -> a -> PArray a
-lowSlice slicepoint arr x = fst (withMutArray (m + 1) action)
+lowSlice slicepoint arr x = withMutArray_ (m + 1) action
   where
     m = min (max slicepoint 0) (isize arr) -- if slicepoint<0 then copy zero things, if slicepoint>(isize arr) then copy everything
     action marr =
@@ -1033,7 +1028,7 @@ lowSlice slicepoint arr x = fst (withMutArray (m + 1) action)
 -- 'slicepoint' is too large or too small (negative) for the array, 'slicepoint' is
 -- adjusted to copy slicepointothing (too large) or everything (too small).
 highSlice :: Int -> PArray a -> a -> PArray a
-highSlice slicepoint arr x = fst (withMutArray (isize arr - m + 1) action)
+highSlice slicepoint arr x = withMutArray_ (isize arr - m + 1) action
   where
     -- if slicepoint < 0 then copy zero things, if slicepoint > (isize arr) then copy everything
     m = min (max (slicepoint + 1) 0) (isize arr)
@@ -1042,7 +1037,7 @@ highSlice slicepoint arr x = fst (withMutArray (isize arr - m + 1) action)
       mcopy marr 1 arr m (isize arr - m)
 
 arrayFromBitmap :: Bitmap -> (Int -> a) -> PArray a
-arrayFromBitmap bm f = fst (withMutArray (popCount bm) (loop 0))
+arrayFromBitmap bm f = withMutArray_ (popCount bm) (loop 0)
   where
     loop n _marr | n >= 64 = pure ()
     loop n marr =
@@ -1054,7 +1049,7 @@ arrayFromBitmap bm f = fst (withMutArray (popCount bm) (loop 0))
 -- ======================================================================================
 -- Helper functions for Pretty Printers
 
-newtype PrettyAnn = Width Int
+data PrettyAnn
 
 type Ann = [PrettyAnn]
 
@@ -1154,3 +1149,31 @@ ppKeyMap k p (Full arr) = ppSexp "F" [ppList q (zip (bitmapToList fullNodeMask) 
 instance PrettyA v => Show (KeyMap v) where
   show x = show (ppKeyMap ppKey prettyA x)
   showList xs x = unlines (map (\y -> "\n" ++ show (ppKeyMap ppKey prettyA y)) xs) ++ x
+
+-- Debugging tools:
+
+hdepth :: KeyMap v -> Int
+hdepth Empty = 0
+hdepth (One _ x) = 1 + hdepth x
+hdepth (Leaf _ _) = 1
+hdepth (BitmapIndexed _ arr) = 1 + foldr (max . hdepth) 0 arr
+hdepth (Full arr) = 1 + foldr (max . hdepth) 0 arr
+hdepth (Two _ x y) = 1 + max (hdepth x) (hdepth y)
+
+histogram :: KeyMap v -> VP.Vector Int
+histogram km = VP.create $ do
+  mvec <- MVP.new (fromIntegral wordSize)
+  mvec <$ histogramMut mvec km
+
+histogramMut :: VP.MVector s Int -> KeyMap v -> ST s ()
+histogramMut mvec = go
+  where
+    increment = MVP.modify mvec (+ 1)
+    go =
+      \case
+        Empty -> pure ()
+        One _ x -> increment 1 >> go x
+        Leaf _ _ -> pure ()
+        BitmapIndexed _ arr -> increment (isize arr - 1) >> mapM_ go arr
+        Full arr -> increment (fromIntegral wordSize - 1) >> mapM_ go arr
+        Two _ x y -> increment 2 >> go x >> go y

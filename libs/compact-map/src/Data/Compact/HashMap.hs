@@ -53,7 +53,7 @@ instance NFData v => NFData (HashMap k v) where
   rnf (HashMap km) = rnf km
 
 lookup :: k -> HashMap k v -> Maybe v
-lookup k (HashMap m) = KM.lookupHM (toKey k) m
+lookup k (HashMap m) = KM.lookup (toKey k) m
 
 insert :: k -> v -> HashMap k v -> HashMap k v
 insert k v (HashMap m) = HashMap (KM.insert (toKey k) v m)
@@ -79,11 +79,11 @@ splitLookup k (HashMap m) = (HashMap a, b, HashMap c)
     key = toKey k
 
 intersection :: HashMap k v -> HashMap k v -> HashMap k v
-intersection (HashMap m1) (HashMap m2) = HashMap (KM.intersect3 0 (\_k x _y -> x) m1 m2)
+intersection (HashMap m1) (HashMap m2) = HashMap (KM.intersection m1 m2)
 
 intersectionWith :: (v -> v -> v) -> HashMap k v -> HashMap k v -> HashMap k v
 intersectionWith combine (HashMap m1) (HashMap m2) =
-  HashMap (KM.intersect3 0 (\_k x y -> combine x y) m1 m2)
+  HashMap (KM.intersectionWith combine m1 m2)
 
 unionWithKey :: (Keyed k) => (k -> v -> v -> v) -> HashMap k v -> HashMap k v -> HashMap k v
 unionWithKey combine (HashMap m1) (HashMap m2) = HashMap (KM.unionWithKey combine2 m1 m2)
@@ -106,10 +106,11 @@ foldlWithKey' accum a (HashMap m) = KM.foldWithAscKey accum2 a m
     accum2 ans k v = accum ans (fromKey k) v
 
 size :: HashMap k v -> Int
-size (HashMap m) = KM.sizeKeyMap m
+size (HashMap m) = KM.size m
 
 fromList :: Keyed k => [(k, v)] -> HashMap k v
 fromList xs = HashMap (KM.fromList (map (first toKey) xs))
+{-# INLINE fromList #-}
 
 toList :: HashMap k v -> [(k, v)]
 toList (HashMap m) = KM.foldWithDescKey (\k v ans -> (fromKey k, v) : ans) [] m

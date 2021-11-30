@@ -71,7 +71,7 @@ test-suite tests
                      , QuickCheck
                      , quickcheck-classes-base
                      , random
-  ghc-options:        -threaded -O
+  ghc-options:        -threaded
 
 benchmark bench
   type:                exitcode-stdio-1.0

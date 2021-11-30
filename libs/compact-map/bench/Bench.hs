@@ -43,7 +43,7 @@ main = do
               , bench "KeyMap" $ nf KeyMap.fromList rxsnf
               , bench "HashMap" $ nf HMap.fromList rxsnf
               , bench "VMap" $
-                nf (VMap.fromList :: [(Key, Int)] -> VMap VB VP Key Int) rxsnf
+                nf (VMap.fromList :: [(Key, Int)] -> VMap VB VB Key Int) rxsnf
               ]
           ]
     ]
