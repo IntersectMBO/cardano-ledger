@@ -52,11 +52,11 @@ mcopy = Small.copySmallArray
 
 mboundsCheck :: (MArray s a -> Int -> p) -> MArray s a -> Int -> p
 mboundsCheck indexf arr i | i >= 0 && i < msize arr = indexf arr i
-mboundsCheck _ arr i = error ("mboundscheck error, " ++ show i ++ ", not in bounds (0.." ++ show (msize arr - 1) ++ ").")
+mboundsCheck _ arr i = error $ boundsMessage "mboundscheck" i (msize arr - 1)
 
 boundsCheck :: (PArray a -> Int -> p) -> PArray a -> Int -> p
 boundsCheck indexf arr i | i >= 0 && i < isize arr = indexf arr i
-boundsCheck _ arr i = error ("boundscheck error, " ++ show i ++ ", not in bounds (0.." ++ show (isize arr - 1) ++ ").")
+boundsCheck _ arr i = error $ boundsMessage "boundscheck" i (isize arr - 1)
 
 withMutArray :: Int -> (forall s. MArray s a -> ST s x) -> (PArray a, x)
 withMutArray n process = runST $ do
@@ -64,3 +64,17 @@ withMutArray n process = runST $ do
   x <- process marr
   arr <- mfreeze marr
   pure (arr, x)
+
+
+boundsMessage :: String -> Int -> Int -> String
+boundsMessage funcName i n =
+  concat
+    [ "Index out of bounds in '",
+      funcName,
+      "' ",
+      show i,
+      " not in range (0,",
+      show n,
+      ")"
+    ]
+{-# NOINLINE boundsMessage #-}

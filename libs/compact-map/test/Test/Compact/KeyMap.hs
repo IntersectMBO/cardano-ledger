@@ -22,7 +22,7 @@ import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import System.Random (mkStdGen)
-import System.Random.Stateful (Uniform (..), runStateGen_, uniformListM)
+import System.Random.Stateful (runStateGen_, uniformListM)
 import Test.QuickCheck
 import Test.Tasty
 import Test.Tasty.HUnit (testCaseInfo)

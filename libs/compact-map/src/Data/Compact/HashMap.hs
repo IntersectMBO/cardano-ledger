@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
@@ -16,6 +15,7 @@ import qualified Data.Set as Set
 import Data.Typeable
 import GHC.TypeLits
 import Prettyprinter (viaShow)
+import Data.Bifunctor (first)
 
 -- ==========================================================================
 
@@ -82,7 +82,8 @@ intersection :: HashMap k v -> HashMap k v -> HashMap k v
 intersection (HashMap m1) (HashMap m2) = HashMap (KM.intersect3 0 (\_k x _y -> x) m1 m2)
 
 intersectionWith :: (v -> v -> v) -> HashMap k v -> HashMap k v -> HashMap k v
-intersectionWith combine (HashMap m1) (HashMap m2) = HashMap (KM.intersect3 0 (\_k x y -> combine x y) m1 m2)
+intersectionWith combine (HashMap m1) (HashMap m2) =
+  HashMap (KM.intersect3 0 (\_k x y -> combine x y) m1 m2)
 
 unionWithKey :: (Keyed k) => (k -> v -> v -> v) -> HashMap k v -> HashMap k v -> HashMap k v
 unionWithKey combine (HashMap m1) (HashMap m2) = HashMap (KM.unionWithKey combine2 m1 m2)
@@ -108,19 +109,19 @@ size :: HashMap k v -> Int
 size (HashMap m) = KM.sizeKeyMap m
 
 fromList :: Keyed k => [(k, v)] -> HashMap k v
-fromList xs = HashMap (KM.fromList (map (\(k, v) -> (toKey k, v)) xs))
+fromList xs = HashMap (KM.fromList (map (first toKey) xs))
 
 toList :: HashMap k v -> [(k, v)]
 toList (HashMap m) = KM.foldWithDescKey (\k v ans -> (fromKey k, v) : ans) [] m
 
 mapWithKey :: (k -> v -> u) -> HashMap k v -> HashMap k u
-mapWithKey f (HashMap m) = HashMap (KM.mapWithKey (\key v -> f (fromKey key) v) m)
+mapWithKey f (HashMap m) = HashMap (KM.mapWithKey (f . fromKey) m)
 
 lookupMin :: HashMap k v -> Maybe (k, v)
-lookupMin (HashMap m) = fmap (\(k, v) -> (fromKey k, v)) (KM.lookupMin m)
+lookupMin (HashMap m) = first fromKey <$> KM.lookupMin m
 
 lookupMax :: HashMap k v -> Maybe (k, v)
-lookupMax (HashMap m) = fmap (\(k, v) -> (fromKey k, v)) (KM.lookupMax m)
+lookupMax (HashMap m) = first fromKey <$> KM.lookupMax m
 
 instance (Eq k, Eq v) => Eq (HashMap k v) where
   x == y = toList x == toList y
