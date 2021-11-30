@@ -46,6 +46,7 @@ import Data.Word (Word64)
 import GHC.Exts (isTrue#, reallyUnsafePtrEquality#, (==#))
 import Prettyprinter
 import qualified Prettyprinter.Internal as Pretty
+import System.Random.Stateful (Uniform (..))
 
 -- =============================
 
@@ -105,6 +106,15 @@ data Key
       {-# UNPACK #-} !Word64
       {-# UNPACK #-} !Word64
   deriving (Eq, Ord, Show, NFData, Generic)
+
+
+instance Uniform Key where
+  uniformM g = do
+    w0 <- uniformM g
+    w1 <- uniformM g
+    w2 <- uniformM g
+    w3 <- uniformM g
+    pure (Key w0 w1 w2 w3)
 
 -- | The number of Word64 per key
 wordsPerKey :: Int

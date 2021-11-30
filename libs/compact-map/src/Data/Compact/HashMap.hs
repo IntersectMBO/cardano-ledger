@@ -7,6 +7,7 @@
 module Data.Compact.HashMap where
 
 import Cardano.Crypto.Hash.Class
+import Control.DeepSeq
 import Data.Compact.KeyMap (Key, KeyMap)
 import qualified Data.Compact.KeyMap as KM
 import Data.Proxy
@@ -21,6 +22,10 @@ import Prettyprinter (viaShow)
 class Keyed t where
   toKey :: t -> Key
   fromKey :: Key -> t
+
+instance Keyed Key where
+  toKey = id
+  fromKey = id
 
 instance HashAlgorithm h => Keyed (Hash h a) where
   toKey h =
@@ -43,6 +48,9 @@ instance HashAlgorithm h => Keyed (Hash h a) where
 
 data HashMap k v where
   HashMap :: Keyed k => KeyMap v -> HashMap k v
+
+instance NFData v => NFData (HashMap k v) where
+  rnf (HashMap km) = rnf km
 
 lookup :: k -> HashMap k v -> Maybe v
 lookup k (HashMap m) = KM.lookupHM (toKey k) m
