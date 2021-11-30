@@ -122,6 +122,9 @@ package cardano-ledger-alonzo
 package cardano-ledger-alonzo-test
   ghc-options: -Werror
 
+package cardano-ledger-babbage
+  ghc-options: -Werror
+
 package byron-spec-chain
   ghc-options: -Werror
 

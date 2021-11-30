@@ -29,7 +29,7 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wpartial-fields
                       -Wredundant-constraints
-                      -Wunused-packages
+                      -- -Wunused-packages
 
 library
   import:             base, project-config

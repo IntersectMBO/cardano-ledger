@@ -377,6 +377,7 @@ deriving via
       Show (Core.Value era),
       DecodeNonNegative (Core.Value era),
       FromCBOR (Annotator (Core.Script era)),
+      FromCBOR (Data era),
       Core.SerialisableData (PParamsDelta era)
     ) =>
     FromCBOR (Annotator (TxBody era))
@@ -545,6 +546,11 @@ instance
     encodeListLen 2
       <> toCBOR addr
       <> toCBOR cv
+  toCBOR (TxOutCompactDatum addr cv d) =
+    encodeListLen 3
+      <> toCBOR addr
+      <> toCBOR cv
+      <> toCBOR d
   toCBOR (TxOutCompactDH addr cv dh) =
     encodeListLen 3
       <> toCBOR addr
@@ -555,7 +561,8 @@ instance
   ( Era era,
     DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
-    Compactible (Core.Value era)
+    Compactible (Core.Value era),
+    FromCBOR (Data era)
   ) =>
   FromCBOR (TxOut era)
   where
@@ -577,10 +584,17 @@ instance
           <$> fromCBOR
           <*> decodeNonNegative
       Just 3 ->
-        TxOutCompactDH
-          <$> fromCBOR
-          <*> decodeNonNegative
-          <*> fromCBOR
+        decodeBreakOr >>= \case
+          True ->
+            TxOutCompactDatum
+              <$> fromCBOR
+              <*> decodeNonNegative
+              <*> fromCBOR
+          False ->
+            TxOutCompactDH
+              <$> fromCBOR
+              <*> decodeNonNegative
+              <*> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
 encodeTxBodyRaw ::
@@ -612,7 +626,7 @@ encodeTxBodyRaw
       )
       !> Key 0 (E encodeFoldable _inputs)
       !> Key 13 (E encodeFoldable _collateral)
-      !> Key 13 (To _collateralReturn)
+      !> Key 16 (To _collateralReturn)
       !> Key 1 (E encodeFoldable _outputs)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
@@ -643,6 +657,7 @@ instance
     DecodeNonNegative (Core.Value era),
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (PParamsDelta era),
+    FromCBOR (Data era),
     ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (TxBodyRaw era)
@@ -681,6 +696,10 @@ instance
         field
           (\x tx -> tx {_collateral = x})
           (D (decodeSet fromCBOR))
+      bodyFields 16 =
+        field
+          (\x tx -> tx {_collateralReturn = x})
+          (D (SJust <$> fromCBOR))
       bodyFields 1 =
         field
           (\x tx -> tx {_outputs = x})
@@ -721,6 +740,7 @@ instance
     DecodeNonNegative (Core.Value era),
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (PParamsDelta era),
+    FromCBOR (Data era),
     ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (Annotator (TxBodyRaw era))
