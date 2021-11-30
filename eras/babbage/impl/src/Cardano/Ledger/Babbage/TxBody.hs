@@ -127,10 +127,10 @@ import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
 
 data TxOut era
-  = TxOutCompact
+  = TxOutCompact'
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
-  | TxOutCompactDH
+  | TxOutCompactDH'
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
       !(DataHash (Crypto era))
@@ -169,8 +169,8 @@ viewCompactTxOut ::
   TxOut era ->
   (CompactAddr (Crypto era), CompactForm (Core.Value era), StrictMaybe (DataHash (Crypto era)))
 viewCompactTxOut txOut = case txOut of
-  TxOutCompact addr val -> (addr, val, SNothing)
-  TxOutCompactDH addr val dh -> (addr, val, SJust dh)
+  TxOutCompact' addr val -> (addr, val, SNothing)
+  TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOutCompactDatum addr val datum -> (addr, val, SJust $ hashData datum)
   TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal
     | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) ->
@@ -197,11 +197,11 @@ viewTxOut ::
   Era era =>
   TxOut era ->
   (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
-viewTxOut (TxOutCompact bs c) = (addr, val, SNothing)
+viewTxOut (TxOutCompact' bs c) = (addr, val, SNothing)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactDH bs c dh) = (addr, val, SJust dh)
+viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
   where
     addr = decompactAddr bs
     val = fromCompact c
@@ -262,10 +262,39 @@ pattern TxOut addr vl dh <-
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
        in case mdh of
-            SNothing -> TxOutCompact a v
-            SJust dh -> TxOutCompactDH a v dh
+            SNothing -> TxOutCompact' a v
+            SJust dh -> TxOutCompactDH' a v dh
 
 {-# COMPLETE TxOut #-}
+
+-- TODO deprecate
+pattern TxOutCompact ::
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  TxOut era
+pattern TxOutCompact addr vl <-
+  (viewCompactTxOut -> (addr, vl, SNothing))
+  where
+    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
+
+-- TODO deprecate
+pattern TxOutCompactDH ::
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  DataHash (Crypto era) ->
+  TxOut era
+pattern TxOutCompactDH addr vl dh <-
+  (viewCompactTxOut -> (addr, vl, SJust dh))
+  where
+    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . SJust
+
+{-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
 -- ======================================
 
@@ -521,12 +550,6 @@ instance
       <> toCBOR addr
       <> toCBOR cv
       <> toCBOR dh
-  toCBOR x =
-    let (addr, cv, dh) = viewCompactTxOut x
-     in encodeListLen 3
-          <> toCBOR addr
-          <> toCBOR cv
-          <> toCBOR dh
 
 instance
   ( Era era,
@@ -761,45 +784,15 @@ instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
 instance (Era era, Crypto era ~ c) => HasField "compactAddress" (TxOut era) (CompactAddr c) where
   getField (TxOutCompact a _) = a
   getField (TxOutCompactDH a _ _) = a
-  getField (TxOutCompactDatum a _ _) = a
-  getField (TxOut_AddrHash28_AdaOnly stakeRef a b c d _)
-    | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
-      compactAddr (decodeAddress28 stakeRef a b c d)
-  getField (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d _ _ _ _ _)
-    | Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32),
-      Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
-      compactAddr (decodeAddress28 stakeRef a b c d)
-  getField (TxOut_AddrHash28_AdaOnly {}) = error "Impossible: Compacted and address or hash of non-standard size"
-  getField (TxOut_AddrHash28_AdaOnly_DataHash32 {}) = error "Impossible: Compacted and address or hash of non-standard size"
 
 instance (Era era, CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
   getField (TxOutCompact a _) = decompactAddr a
   getField (TxOutCompactDH a _ _) = decompactAddr a
-  getField (TxOutCompactDatum a _ _) = decompactAddr a
-  getField (TxOut_AddrHash28_AdaOnly stakeRef a b c d _)
-    | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
-      decodeAddress28 stakeRef a b c d
-  getField (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d _ _ _ _ _)
-    | Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32),
-      Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
-      decodeAddress28 stakeRef a b c d
-  getField (TxOut_AddrHash28_AdaOnly {}) = error "Impossible: Compacted and address or hash of non-standard size"
-  getField (TxOut_AddrHash28_AdaOnly_DataHash32 {}) = error "Impossible: Compacted and address or hash of non-standard size"
 
 instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
   getField (TxOutCompact _ v) = fromCompact v
   getField (TxOutCompactDH _ v _) = fromCompact v
-  getField (TxOutCompactDatum _ v _) = fromCompact v
-  getField (TxOut_AddrHash28_AdaOnly _ _ _ _ _ adaVal) = inject $ fromCompact adaVal
-  getField (TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ _ _ adaVal _ _ _ _) = inject $ fromCompact adaVal
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField (TxOutCompact _ _) = SNothing
   getField (TxOutCompactDH _ _ d) = SJust d
-  getField (TxOutCompactDatum _ _ d) = SJust $ hashData d
-  getField (TxOut_AddrHash28_AdaOnly _ _ _ _ _ _) = SNothing
-  getField (TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ _ _ _ e f g h)
-    | Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32),
-      Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
-      SJust $ decodeDataHash32 e f g h
-  getField (TxOut_AddrHash28_AdaOnly_DataHash32 {}) = error "Impossible: Compacted and address or hash of non-standard size"
