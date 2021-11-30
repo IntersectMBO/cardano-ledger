@@ -414,6 +414,7 @@ deriving via
       Show (Core.Value era),
       DecodeNonNegative (Core.Value era),
       FromCBOR (Annotator (Core.Script era)),
+      FromCBOR (Data era),
       Core.SerialisableData (PParamsDelta era)
     ) =>
     FromCBOR (Annotator (TxBody era))
@@ -614,7 +615,8 @@ instance
   ( Era era,
     DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
-    Compactible (Core.Value era)
+    Compactible (Core.Value era),
+    FromCBOR (Data era)
   ) =>
   FromCBOR (Annotator (TxOut era))
   where
@@ -739,6 +741,7 @@ instance
     DecodeNonNegative (Core.Value era),
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (PParamsDelta era),
+    FromCBOR (Data era),
     ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (Annotator (TxBodyRaw era))
