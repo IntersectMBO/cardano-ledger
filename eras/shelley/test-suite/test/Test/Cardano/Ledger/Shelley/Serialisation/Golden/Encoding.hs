@@ -1,12 +1,14 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Golden tests that check CBOR token encoding.
 module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Encoding (tests) where
@@ -184,6 +186,7 @@ import qualified Data.Maybe as Maybe (fromJust)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Sharing (fromNotSharedCBOR)
 import Data.String (fromString)
 import Numeric.Natural (Natural)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
@@ -1329,3 +1332,12 @@ tests =
                 <> S pd
             )
     ]
+
+-- ===============
+-- From CBOR instances for things that only have FromCBORSharing instances
+
+instance FromCBOR (Stake C_Crypto) where
+  fromCBOR = fromNotSharedCBOR
+
+instance FromCBOR (SnapShots C_Crypto) where
+  fromCBOR = fromNotSharedCBOR

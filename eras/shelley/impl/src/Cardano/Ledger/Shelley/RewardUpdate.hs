@@ -63,6 +63,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Set (Set)
+import Data.Sharing (fromNotSharedCBOR)
 import Data.Typeable
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -130,7 +131,7 @@ instance
       dr <- fromCBOR -- TODO change Coin serialization to use integers?
       rw <- fromCBOR
       df <- fromCBOR -- TODO change Coin serialization to use integers?
-      nm <- fromCBOR
+      nm <- fromNotSharedCBOR
       pure $ RewardUpdate dt (invert dr) rw (invert df) nm
 
 emptyRewardUpdate :: RewardUpdate crypto
@@ -176,7 +177,7 @@ instance CC.Crypto crypto => FromCBOR (RewardSnapShot crypto) where
       ( RecD RewardSnapShot
           <! From
           <! From
-          <! From
+          <! D fromNotSharedCBOR
           <! From
           <! From
           <! From

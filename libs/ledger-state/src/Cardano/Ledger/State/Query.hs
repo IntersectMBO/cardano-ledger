@@ -32,6 +32,7 @@ import Data.Conduit.List (sourceList)
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
+import Data.Sharing
 import qualified Data.Text as T
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
@@ -238,9 +239,16 @@ getSnapShotWithSharingM ::
   SnapShotType ->
   ReaderT SqlBackend m (SnapShotM C)
 getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
-  let otherStakes = ssStake <$> otherSnapShots
-  let otherPoolParams = ssPoolParams <$> otherSnapShots
-  let otherDelegations = ssDelegations <$> otherSnapShots
+  let internOtherStakes =
+        interns
+          (foldMap (internsFromMap . ssStake) otherSnapShots)
+          . Keys.coerceKeyRole
+  let internOtherPoolParams =
+        interns (foldMap (internsFromMap . ssPoolParams) otherSnapShots)
+          . Keys.coerceKeyRole
+  let internOtherDelegations =
+        interns (foldMap (internsFromMap . ssDelegations) otherSnapShots)
+          . Keys.coerceKeyRole
   snapShotId <-
     selectFirst
       [SnapShotType ==. snapShotType, SnapShotEpochStateId ==. epochStateId]
@@ -251,23 +259,17 @@ getSnapShotWithSharingM otherSnapShots epochStateId snapShotType = do
   stake <-
     selectMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
-      pure
-        (interns (Keys.coerceKeyRole credential) otherStakes, snapShotStakeCoin)
+      pure (internOtherStakes credential, snapShotStakeCoin)
   poolParams <-
     selectMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
-      pure
-        ( interns (Keys.coerceKeyRole keyHash) otherPoolParams,
-          snapShotPoolParams
-        )
+      pure (internOtherPoolParams keyHash, snapShotPoolParams)
+  let internPoolParams = interns (internsFromMap poolParams) . Keys.coerceKeyRole
   delegations <-
     selectMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
-      pure
-        ( interns (Keys.coerceKeyRole credential) otherDelegations,
-          intern (Keys.coerceKeyRole keyHash) poolParams
-        )
+      pure (internOtherDelegations credential, internPoolParams keyHash)
   pure
     SnapShotM
       { ssStake = stake,
@@ -386,10 +388,16 @@ getSnapShotWithSharing ::
   SnapShotType ->
   ReaderT SqlBackend m (EpochBoundary.SnapShot C)
 getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
-  let otherStakes =
-        EpochBoundary.unStake . EpochBoundary._stake <$> otherSnapShots
-  let otherPoolParams = EpochBoundary._poolParams <$> otherSnapShots
-  let otherDelegations = EpochBoundary._delegations <$> otherSnapShots
+  let internOtherStakes =
+        interns
+          (foldMap (internsFromVMap . EpochBoundary.unStake . EpochBoundary._stake) otherSnapShots)
+          . Keys.coerceKeyRole
+  let internOtherPoolParams =
+        interns (foldMap (internsFromVMap . EpochBoundary._poolParams) otherSnapShots)
+          . Keys.coerceKeyRole
+  let internOtherDelegations =
+        interns (foldMap (internsFromVMap . EpochBoundary._delegations) otherSnapShots)
+          . Keys.coerceKeyRole
   snapShotId <-
     selectFirst
       [SnapShotType ==. snapShotType, SnapShotEpochStateId ==. epochStateId]
@@ -400,23 +408,17 @@ getSnapShotWithSharing otherSnapShots epochStateId snapShotType = do
   stake <-
     selectVMap [SnapShotStakeSnapShotId ==. snapShotId] $ \SnapShotStake {..} -> do
       Credential credential <- getJust snapShotStakeCredentialId
-      pure
-        (VMap.interns (Keys.coerceKeyRole credential) otherStakes, snapShotStakeCoin)
+      pure (internOtherStakes credential, snapShotStakeCoin)
   poolParams <-
     selectVMap [SnapShotPoolSnapShotId ==. snapShotId] $ \SnapShotPool {..} -> do
       KeyHash keyHash <- getJust snapShotPoolKeyHashId
-      pure
-        ( VMap.interns (Keys.coerceKeyRole keyHash) otherPoolParams,
-          snapShotPoolParams
-        )
+      pure (internOtherPoolParams keyHash, snapShotPoolParams)
+  let internPoolParams = interns (internsFromVMap poolParams) . Keys.coerceKeyRole
   delegations <-
     selectVMap [SnapShotDelegationSnapShotId ==. snapShotId] $ \SnapShotDelegation {..} -> do
       Credential credential <- getJust snapShotDelegationCredentialId
       KeyHash keyHash <- getJust snapShotDelegationKeyHash
-      pure
-        ( VMap.interns (Keys.coerceKeyRole credential) otherDelegations,
-          VMap.intern (Keys.coerceKeyRole keyHash) poolParams
-        )
+      pure (internOtherDelegations credential, internPoolParams keyHash)
   pure
     EpochBoundary.SnapShot
       { _stake = EpochBoundary.Stake stake,
@@ -643,32 +645,30 @@ loadUTxONoSharing ::
 loadUTxONoSharing fp =
   runSqlite fp (Shelley.UTxO <$> runConduitFold sourceUTxO noSharing)
 
-getLedgerStateNoSharing ::
+loadLedgerStateNoSharing ::
   MonadUnliftIO m => T.Text -> m (Shelley.LedgerState CurrentEra)
-getLedgerStateNoSharing fp =
+loadLedgerStateNoSharing fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateNoSharing ledgerStateDstateId
     m <- runConduitFold sourceUTxO noSharing
     getLedgerState (Shelley.UTxO m) ledgerState dstate
 
-getLedgerStateDStateSharing ::
+loadLedgerStateDStateSharing ::
   MonadUnliftIO m => T.Text -> m (Shelley.LedgerState CurrentEra)
-getLedgerStateDStateSharing fp =
+loadLedgerStateDStateSharing fp =
   runSqlite fp $ do
-    ledgerState@LedgerState {..} <- getJust lsId
-    dstate <- getDStateWithSharing ledgerStateDstateId
-    m <- runConduitFold sourceUTxO noSharing
-    getLedgerState (Shelley.UTxO m) ledgerState dstate
+    ese <- getJustEntity esId
+    getLedgerStateWithSharing ese
 
-getLedgerStateDStateTxIxSharing ::
+loadLedgerStateDStateTxIxSharing ::
   MonadUnliftIO m =>
   T.Text ->
   m
     ( Shelley.LedgerState CurrentEra,
       IntMap.IntMap (Map.Map (TxIn.TxId C) (Alonzo.TxOut CurrentEra))
     )
-getLedgerStateDStateTxIxSharing fp =
+loadLedgerStateDStateTxIxSharing fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateWithSharing ledgerStateDstateId
@@ -676,14 +676,14 @@ getLedgerStateDStateTxIxSharing fp =
     m <- runConduitFold sourceUTxO txIxSharing
     pure (ls, m)
 
-getLedgerStateDStateTxIxSharingKeyMap ::
+loadLedgerStateDStateTxIxSharingKeyMap ::
   MonadUnliftIO m =>
   T.Text ->
   m
     ( Shelley.LedgerState CurrentEra,
       IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
     )
-getLedgerStateDStateTxIxSharingKeyMap fp =
+loadLedgerStateDStateTxIxSharingKeyMap fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateWithSharing ledgerStateDstateId
@@ -691,27 +691,20 @@ getLedgerStateDStateTxIxSharingKeyMap fp =
     ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
     pure (ls, m)
 
-getLedgerStateDStateTxIdSharingKeyMap ::
+loadLedgerStateDStateTxIdSharingKeyMap ::
   MonadUnliftIO m =>
   T.Text ->
   m
     ( Shelley.LedgerState CurrentEra,
       KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra))
     )
-getLedgerStateDStateTxIdSharingKeyMap fp =
+loadLedgerStateDStateTxIdSharingKeyMap fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateWithSharing ledgerStateDstateId
     m <- runConduitFold sourceUTxO txIdSharingKeyMap
     ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
     pure (ls, m)
-
--- storeLedgerState ::
---      MonadUnliftIO m => T.Text -> Shelley.LedgerState CurrentEra -> m ()
--- storeLedgerState fp ls =
---   runSqlite fp $ do
---     runMigration migrateAll
---     insertLedgerState ls
 
 storeEpochState ::
   MonadUnliftIO m => T.Text -> Shelley.EpochState CurrentEra -> m ()
@@ -728,6 +721,68 @@ esId = EpochStateKey (SqlBackendKey 1)
 
 loadEpochStateEntity :: MonadUnliftIO m => T.Text -> m (Entity EpochState)
 loadEpochStateEntity fp = runSqlite fp (getJustEntity esId)
+
+getLedgerStateWithSharing ::
+  (MonadUnliftIO m, MonadResource m) =>
+  Entity EpochState ->
+  ReaderT SqlBackend m (Shelley.LedgerState CurrentEra)
+getLedgerStateWithSharing ese = do
+  ledgerState@LedgerState {..} <-
+    maybe (error "Impossible") (pure . entityVal)
+      =<< selectFirst [LedgerStateEpochStateId ==. entityKey ese] []
+  dstate <- getDStateWithSharing ledgerStateDstateId
+  m <- runConduitFold sourceUTxO noSharing
+  getLedgerState (Shelley.UTxO m) ledgerState dstate
+
+getLedgerStateNoSharing ::
+  (MonadUnliftIO m, MonadResource m) =>
+  Entity EpochState ->
+  ReaderT SqlBackend m (Shelley.LedgerState CurrentEra)
+getLedgerStateNoSharing ese = do
+  ledgerState@LedgerState {..} <-
+    maybe (error "Impossible") (pure . entityVal)
+      =<< selectFirst [LedgerStateEpochStateId ==. entityKey ese] []
+  dstate <- getDStateNoSharing ledgerStateDstateId
+  m <- runConduitFold sourceUTxO noSharing
+  getLedgerState (Shelley.UTxO m) ledgerState dstate
+
+loadEpochState :: MonadUnliftIO m => T.Text -> m (Shelley.EpochState CurrentEra)
+loadEpochState fp = runSqlite fp $ do
+  ese@(Entity _ EpochState {..}) <- getJustEntity esId
+  snapshots <- getSnapShotsNoSharing ese
+  ledgerState <- getLedgerStateNoSharing ese
+  pure
+    Shelley.EpochState
+      { esAccountState =
+          Shelley.AccountState
+            { _treasury = epochStateTreasury,
+              _reserves = epochStateReserves
+            },
+        esLState = ledgerState,
+        esSnapshots = snapshots,
+        esPrevPp = epochStatePrevPp,
+        esPp = epochStatePp,
+        esNonMyopic = epochStateNonMyopic
+      }
+
+loadEpochStateWithSharing :: MonadUnliftIO m => T.Text -> m (Shelley.EpochState CurrentEra)
+loadEpochStateWithSharing fp = runSqlite fp $ do
+  ese@(Entity _ EpochState {..}) <- getJustEntity esId
+  snapshots <- getSnapShotsWithSharing ese
+  ledgerState <- getLedgerStateWithSharing ese
+  pure
+    Shelley.EpochState
+      { esAccountState =
+          Shelley.AccountState
+            { _treasury = epochStateTreasury,
+              _reserves = epochStateReserves
+            },
+        esLState = ledgerState,
+        esSnapshots = snapshots,
+        esPrevPp = epochStatePrevPp,
+        esPp = epochStatePp,
+        esNonMyopic = epochStateNonMyopic
+      }
 
 loadSnapShotsNoSharing ::
   MonadUnliftIO m => T.Text -> Entity EpochState -> m (EpochBoundary.SnapShots C)
@@ -747,14 +802,14 @@ loadSnapShotsWithSharingM :: T.Text -> Entity EpochState -> IO (SnapShotsM C)
 loadSnapShotsWithSharingM fp = runSqlite fp . getSnapShotsWithSharingM
 {-# INLINEABLE loadSnapShotsWithSharingM #-}
 
-getLedgerStateNoSharingKeyMap ::
+loadLedgerStateNoSharingKeyMap ::
   MonadUnliftIO m =>
   T.Text ->
   m
     ( Shelley.LedgerState CurrentEra,
       IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
     )
-getLedgerStateNoSharingKeyMap fp =
+loadLedgerStateNoSharingKeyMap fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateNoSharing ledgerStateDstateId
@@ -762,14 +817,14 @@ getLedgerStateNoSharingKeyMap fp =
     ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
     pure (ls, m)
 
-getLedgerStateWithSharingKeyMap ::
+loadLedgerStateWithSharingKeyMap ::
   MonadUnliftIO m =>
   T.Text ->
   m
     ( Shelley.LedgerState CurrentEra,
       IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
     )
-getLedgerStateWithSharingKeyMap fp =
+loadLedgerStateWithSharingKeyMap fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateNoSharing ledgerStateDstateId

@@ -110,6 +110,7 @@ import Cardano.Ledger.Val
     encodeMint,
     isZero,
   )
+import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (guard)
 import Data.Bits
 import Data.Coders
@@ -119,6 +120,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Sharing
 import Data.Typeable (Proxy (..), Typeable, (:~:) (Refl))
 import Data.Word
 import GHC.Generics (Generic)
@@ -160,6 +162,10 @@ deriving stock instance
     Compactible (Core.Value era)
   ) =>
   Eq (TxOut era)
+
+-- | Already in NF
+instance NFData (TxOut era) where
+  rnf = rwhnf
 
 getAdaOnly ::
   forall era.
@@ -628,9 +634,26 @@ instance
   ) =>
   FromCBOR (TxOut era)
   where
-  fromCBOR = do
+  fromCBOR = fromNotSharedCBOR
+
+instance
+  ( Era era,
+    DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    Compactible (Core.Value era)
+  ) =>
+  FromSharedCBOR (TxOut era)
+  where
+  type Share (TxOut era) = Interns (Credential 'Staking (Crypto era))
+  fromSharedCBOR credsInterns = do
     lenOrIndef <- decodeListLenOrIndef
-    case lenOrIndef of
+    let internTxOut = \case
+          TxOut_AddrHash28_AdaOnly cred a b c d ada ->
+            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) a b c d ada
+          TxOut_AddrHash28_AdaOnly_DataHash32 cred a b c d ada e f g h ->
+            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) a b c d ada e f g h
+          txOut -> txOut
+    internTxOut <$> case lenOrIndef of
       Nothing -> do
         a <- fromCBOR
         cv <- decodeNonNegative

@@ -106,6 +106,7 @@ library
     groups,
     iproute,
     mtl,
+    microlens,
     nothunks,
     primitive >= 0.7.1.0,
     quiet,

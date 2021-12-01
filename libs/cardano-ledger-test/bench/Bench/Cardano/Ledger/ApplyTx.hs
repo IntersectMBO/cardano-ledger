@@ -1,5 +1,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -7,6 +8,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Benchmarks for transaction application
 module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
@@ -29,6 +31,7 @@ import Cardano.Ledger.Shelley.API
     Tx,
     applyTxsTransition,
   )
+import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
 import Criterion
@@ -36,6 +39,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class (Default, def)
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
+import Data.Sharing (fromNotSharedCBOR)
 import Data.Typeable (typeRep)
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
@@ -172,3 +176,18 @@ applyTxBenchmarks =
           deserialiseTxEra (Proxy @AlonzoBench)
         ]
     ]
+
+instance FromCBOR (UTxOState ShelleyBench) where
+  fromCBOR = fromNotSharedCBOR
+
+instance FromCBOR (UTxOState AllegraBench) where
+  fromCBOR = fromNotSharedCBOR
+
+instance FromCBOR (UTxOState MaryBench) where
+  fromCBOR = fromNotSharedCBOR
+
+instance FromCBOR (UTxOState AlonzoBench) where
+  fromCBOR = fromNotSharedCBOR
+
+instance FromCBOR (DPState C_Crypto) where
+  fromCBOR = fromNotSharedCBOR

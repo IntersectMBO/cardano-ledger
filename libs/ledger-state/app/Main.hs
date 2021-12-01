@@ -11,10 +11,22 @@ import Data.Text as T (pack)
 import Options.Applicative
 import System.IO
 
+-- | Insight into options:
+--
+-- * `optsNewEpochStateBinaryFile` is for reading a previously serialized
+-- * `NewEpochState` produced by cadano-cli` and is used to populate sqlite
+-- * database
+--
+-- * `optsEpochStateBinaryFile` is used for grabbing data from sqlite,
+-- * constructing `EpochState` (in a new format) and writing it into the cbor
+-- * serialized file
 data Opts = Opts
   { -- | Path to the CBOR encoded NewEpochState data type, which will be used to
     -- load into sqlite database
-    optsLedgerStateBinaryFile :: Maybe FilePath,
+    optsNewEpochStateBinaryFile :: Maybe FilePath,
+    -- | Path to the CBOR encoded EpochState data type, which will have data
+    -- from sqlite database written into.
+    optsEpochStateBinaryFile :: Maybe FilePath,
     -- | Path to Sqlite database file.
     optsSqliteDbFile :: Maybe FilePath
   }
@@ -35,7 +47,17 @@ optsParser =
       )
     <*> option
       (Just <$> str)
-      ( long "new-epoch-state-sqlite"
+      ( long "epoch-state-cbor"
+          <> value Nothing
+          <> help
+            ( "Path to the CBOR encoded NewEpochState data type. "
+                <> "Can be produced by `cardano-cli query ledger-state` command. "
+                <> "When supplied stats about the state will be printed to stdout"
+            )
+      )
+    <*> option
+      (Just <$> str)
+      ( long "sqlite-db"
           <> value Nothing
           <> help
             ( "Path to Sqlite database file. When supplied then new-epoch-state "
@@ -55,15 +77,22 @@ main = do
               (long "help" <> short 'h' <> help "Display this message.")
         )
         (header "ledger-state - Tool for analyzing ledger state")
-  forM_ (optsLedgerStateBinaryFile opts) $ \binFp -> do
-    nes <- loadNewEpochState binFp
+  forM_ (optsNewEpochStateBinaryFile opts) $ \binFp -> do
+    nes <- readNewEpochState binFp
     forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
       let dbFp = T.pack dbFpStr
       storeEpochState dbFp $ nesEs nes
-      putStrLn "Loaded EpochState into the database"
+      putStrLn "Loaded NewEpochState into the database"
     printNewEpochStateStats $ countNewEpochStateStats nes
-  forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
-    let dbFp = T.pack dbFpStr
-    km <- loadDbUTxO txIdSharingKeyMap dbFp
-    m <- loadDbUTxO noSharing dbFp
-    testKeyMap km m
+  forM_ (optsEpochStateBinaryFile opts) $ \binFp -> do
+    forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
+      let dbFp = T.pack dbFpStr
+      epochState <- loadEpochState dbFp
+      putStrLn "Written EpochState into the database"
+      writeEpochState binFp epochState
+
+-- forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
+--   let dbFp = T.pack dbFpStr
+--   km <- loadDbUTxO txIdSharingKeyMap dbFp
+--   m <- loadDbUTxO noSharing dbFp
+--   testKeyMap km m

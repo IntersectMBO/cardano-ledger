@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.State.UTxO where
 
-import Cardano.Binary (FromCBOR (..))
+import Cardano.Binary
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.Data hiding (scripts)
@@ -25,11 +25,9 @@ import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards
-import Codec.CBOR.Read (deserialiseFromBytes)
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
-import Control.Monad
 import Control.SetAlgebra (range)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Compact.HashMap (toKey)
@@ -50,22 +48,23 @@ type C = StandardCrypto
 type CurrentEra = AlonzoEra C
 
 --- Loading
+readNewEpochState :: FilePath -> IO (NewEpochState CurrentEra)
+readNewEpochState = readFromCBOR
 
-loadNewEpochState :: FilePath -> IO (NewEpochState CurrentEra)
-loadNewEpochState fp =
-  LBS.readFile fp <&> deserialiseFromBytes fromCBOR >>= \case
+readEpochState :: FilePath -> IO (EpochState CurrentEra)
+readEpochState = readFromCBOR
+
+readFromCBOR :: FromCBOR a => FilePath -> IO a
+readFromCBOR fp =
+  LBS.readFile fp <&> decodeFull >>= \case
     Left exc -> throwIO exc
-    Right (extra, newEpochState) -> do
-      unless (LBS.null extra) $
-        putStrLn $
-          "Unexpected leftover: "
-            <> case LBS.splitAt 50 extra of
-              (_, "") -> show extra
-              (extraCut, _) -> show (extraCut <> "...")
-      pure newEpochState
+    Right res -> pure res
+
+writeEpochState :: FilePath -> EpochState CurrentEra -> IO ()
+writeEpochState fp = LBS.writeFile fp . serialize
 
 loadLedgerState :: FilePath -> IO (LedgerState CurrentEra)
-loadLedgerState fp = esLState . nesEs <$> loadNewEpochState fp
+loadLedgerState fp = esLState . nesEs <$> readNewEpochState fp
 
 runConduitFold :: Monad m => ConduitT () a m () -> Fold a b -> m b
 runConduitFold source (Fold f e g) = (g <$> runConduit (source .| foldlC f e))
@@ -176,9 +175,9 @@ testKeyMap km m =
 totalADA :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> Mary.Value C
 totalADA = foldMap (\(Alonzo.TxOut _ v _) -> v)
 
-loadBinUTxO :: FilePath -> IO (UTxO CurrentEra)
-loadBinUTxO fp = do
-  ls <- loadNewEpochState fp
+readBinUTxO :: FilePath -> IO (UTxO CurrentEra)
+readBinUTxO fp = do
+  ls <- readNewEpochState fp
   pure $! _utxo $ _utxoState $ esLState $ nesEs ls
 
 newtype Count = Count Int

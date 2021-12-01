@@ -4,6 +4,7 @@
 module Main where
 
 import Cardano.Ledger.State.Query
+import Cardano.Ledger.State.UTxO
 import Control.Monad
 import qualified Data.Text as T
 import Options.Applicative as O
@@ -12,7 +13,10 @@ import Weigh
 data Opts = Opts
   { -- | Path to the CBOR encoded NewEpochState data type, which will be used to
     -- load into sqlite database
-    optsLedgerStateBinaryFile :: Maybe FilePath,
+    optsNewEpochStateBinaryFile :: Maybe FilePath,
+    -- | Path to the CBOR encoded EpochState data type that will be used for
+    -- benchmarking deserialization
+    optsEpochStateBinaryFile :: Maybe FilePath,
     -- | Path to Sqlite database file.
     optsSqliteDbFile :: Maybe FilePath
   }
@@ -30,7 +34,14 @@ optsParser =
       )
     <*> option
       (Just <$> str)
-      ( long "new-epoch-state-sqlite"
+      ( long "epoch-state-cbor"
+          <> O.value Nothing
+          <> help
+            ("Benchmark loading CBOR encoded EpochState into memory.")
+      )
+    <*> option
+      (Just <$> str)
+      ( long "sqlite-db"
           <> O.value Nothing
           <> help
             ("Run various benchmarks on LedgerState representations")
@@ -48,22 +59,26 @@ main = do
         )
         (header "ledger-state:memory - Tool for analyzing memory consumption of ledger state")
   let cols = [Case, Max, MaxOS, Live, Allocated, GCs, WallTime]
-  !mEpochStateEntity <- mapM (loadEpochStateEntity . T.pack) (optsSqliteDbFile opts)
   mainWith $ do
     setColumns cols
-    -- forM_ (optsLedgerStateBinaryFile opts) $ \binFp -> do
-    --   io "NewEpochState" loadNewEpochState binFp
+    -- forM_ (optsNewEpochStateBinaryFile opts) $ \binFp -> do
+    --   io "NewEpochState" readNewEpochState binFp
+    forM_ (optsEpochStateBinaryFile opts) $ \binFp -> do
+      io "EpochState (FromCBOR)" readEpochState binFp
     forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do
       let dbFp = T.pack dbFpStr
-      forM_ mEpochStateEntity $ \_ese ->
-        -- wgroup "EpochState" $ do
-        --   io "SnapShots - no sharing" (loadSnapShotsNoSharingM dbFp) _ese
-        --   io "SnapShots - with sharing" (loadSnapShotsWithSharingM dbFp) _ese
-        --   io "SnapShots (Vector) - no sharing" (loadSnapShotsNoSharing dbFp) _ese
-        --   io "SnapShots (Vector) - with sharing" (loadSnapShotsWithSharing dbFp) _ese
-        wgroup "DState+UTxO" $ do
-          io "IntMap (KeyMap TxId TxOut)" getLedgerStateNoSharingKeyMap dbFp
-          io "IntMap (KeyMap TxId TxOut) (sharing)" getLedgerStateWithSharingKeyMap dbFp
+      io "EpochState (with-sharing)" loadEpochStateWithSharing dbFp
+      io "EpochState (no-sharing)" loadEpochState dbFp
+
+-- forM_ mEpochStateEntity $ \_ese ->
+--   -- wgroup "EpochState" $ do
+--   --   io "SnapShots - no sharing" (loadSnapShotsNoSharingM dbFp) _ese
+--   --   io "SnapShots - with sharing" (loadSnapShotsWithSharingM dbFp) _ese
+--   --   io "SnapShots (Vector) - no sharing" (loadSnapShotsNoSharing dbFp) _ese
+--   --   io "SnapShots (Vector) - with sharing" (loadSnapShotsWithSharing dbFp) _ese
+--   wgroup "DState+UTxO" $ do
+--     io "IntMap (KeyMap TxId TxOut)" getLedgerStateNoSharingKeyMap dbFp
+--     io "IntMap (KeyMap TxId TxOut) (sharing)" getLedgerStateWithSharingKeyMap dbFp
 
 -- io "KeyMap TxId (IntMap TxOut)" getLedgerStateDStateTxIdSharingKeyMap dbFp
 -- io "IntMap (Map TxId TxOut)" getLedgerStateDStateTxIxSharing dbFp

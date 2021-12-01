@@ -21,8 +21,8 @@ import Cardano.Ledger.Shelley.Rewards
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.TxIn
-import Control.DeepSeq
 import Data.ByteString.Short
+import Data.Sharing (fromNotSharedCBOR)
 import qualified Data.Text as T
 import Data.Typeable
 import Database.Persist
@@ -81,11 +81,6 @@ instance PersistField DeltaCoin where
 instance PersistFieldSql DeltaCoin where
   sqlType _ = SqlInt64
 
-instance NFData (TxOut CurrentEra) where
-  rnf = \case
-    TxOutCompact _ _ -> ()
-    TxOutCompactDH _ _ _ -> ()
-
 newtype Enc a = Enc {unEnc :: a}
 
 instance (ToCBOR a, FromCBOR a) => PersistField (Enc a) where
@@ -122,6 +117,12 @@ deriving via Enc (TxOut CurrentEra) instance PersistField (TxOut CurrentEra)
 
 deriving via Enc (TxOut CurrentEra) instance PersistFieldSql (TxOut CurrentEra)
 
+instance FromCBOR (DState C) where
+  fromCBOR = fromNotSharedCBOR
+
+instance FromCBOR (PState C) where
+  fromCBOR = fromNotSharedCBOR
+
 deriving via Enc (DState C) instance PersistField (DState C)
 
 deriving via Enc (DState C) instance PersistFieldSql (DState C)
@@ -137,6 +138,9 @@ deriving via Enc (GenDelegs C) instance PersistFieldSql (GenDelegs C)
 deriving via Enc (PoolParams C) instance PersistField (PoolParams C)
 
 deriving via Enc (PoolParams C) instance PersistFieldSql (PoolParams C)
+
+instance FromCBOR (NonMyopic C) where
+  fromCBOR = fromNotSharedCBOR
 
 deriving via Enc (NonMyopic C) instance PersistField (NonMyopic C)
 

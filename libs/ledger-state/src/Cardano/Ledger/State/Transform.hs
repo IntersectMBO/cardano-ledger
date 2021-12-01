@@ -13,15 +13,6 @@ intern !k m =
     Just kx -> kx
     Nothing -> k
 
-interns :: Ord k => k -> [Map k a] -> k
-interns !k = go
-  where
-    go [] = k
-    go (m : ms) =
-      case internMaybe k m of
-        Just kx -> kx
-        Nothing -> go ms
-
 internMaybe :: Ord k => k -> Map k a -> Maybe k
 internMaybe !k = go
   where

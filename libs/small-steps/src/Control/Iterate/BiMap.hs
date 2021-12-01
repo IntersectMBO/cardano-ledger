@@ -41,6 +41,11 @@ data BiMap v a b where MkBiMap :: (v ~ b) => !(Map.Map a b) -> !(Map.Map b (Set.
 biMapToMap :: BiMap v a b -> Map a b
 biMapToMap (MkBiMap m _) = m
 
+biMapFromMap ::
+  (Ord k, Ord v) => Map k v -> BiMap v k v
+biMapFromMap bmForward =
+  MkBiMap bmForward $ foldr (uncurry $ flip addBack) Map.empty $ Map.toList bmForward
+
 -- ============== begin necessary Cardano.Binary instances ===============
 instance (Ord a, Ord b, ToCBOR a, ToCBOR b) => ToCBOR (BiMap b a b) where
   -- The `toCBOR` instance encodes only the forward map. We wrap this in a

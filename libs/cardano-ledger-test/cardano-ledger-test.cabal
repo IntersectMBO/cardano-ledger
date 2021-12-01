@@ -91,6 +91,7 @@ test-suite cardano-ledger-test
     cardano-ledger-test,
     cardano-ledger-shelley-test,
     tasty,
+   
 
 
 benchmark bench
@@ -119,6 +120,7 @@ benchmark bench
     QuickCheck,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    small-steps,
   ghc-options:
       -threaded
       -rtsopts

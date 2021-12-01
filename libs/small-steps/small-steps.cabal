@@ -46,6 +46,7 @@ library
                      , Data.MemoBytes
                      , Data.Coders
                      , Data.Pulse
+                     , Data.Sharing
                      , Control.Provenance
                      , Control.Iterate.BaseTypes
                      , Control.Iterate.BiMap
@@ -67,7 +68,9 @@ library
                      , formatting
                      , free
                      , mtl
+                     , microlens
                      , nothunks
+                     , primitive
                      , strict-containers
                      , text
                      , transformers >= 0.5
