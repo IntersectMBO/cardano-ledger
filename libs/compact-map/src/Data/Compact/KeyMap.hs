@@ -418,10 +418,10 @@ filterArrayWithBitmap p bm0 arr =
     -- i ranges over all possible elements of a Bitmap [0..63], only some are found in 'bm'
     -- j ranges over the slots in the new array [0..n-1]
     loop i j bm marr
-      | i < 63 && not (testBit bm0 i) =
+      | i <= 63 && not (testBit bm0 i) =
         loop (i + 1) j bm marr -- Skip over those not in 'bm'
     loop i j bm marr
-      | i < 63 =
+      | i <= 63 =
         let slot = indexFromSegment bm0 i -- what is the index in 'arr' for this Bitmap element?
             item = index arr slot -- Get the array item
          in if not (p item) -- if it does not meet the 'p' then move it to the answer.
@@ -429,7 +429,7 @@ filterArrayWithBitmap p bm0 arr =
               else -- if it meets 'p' then don't copy, and clear it from 'bm'
                 loop (i + 1) j (clearBit bm i) marr
     loop _i j _bm _marr
-      | j /= n = error $ "Left over plank space at. j= " ++ show j ++ ", n= " ++ show n
+      | j /= n = error $ "Left over blank space at. j= " ++ show j ++ ", n= " ++ show n
     loop _i _j bm _marr = pure bm
 
 -- ================================================================
