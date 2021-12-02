@@ -9,7 +9,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Data.Compact.KeyMap
-  ( KeyMap(..),
+  ( KeyMap (..),
     Key (..),
     empty,
     size,
@@ -39,7 +39,7 @@ module Data.Compact.KeyMap
     minViewWithKey,
     foldOverIntersection,
     -- Pretty printing helpers
-    PrettyA(..),
+    PrettyA (..),
     ppKeyMap,
     equate,
     ppArray,
@@ -79,7 +79,6 @@ import Data.Compact.SmallArray
     withMutArray_,
   )
 import Data.Foldable (foldl')
-import Data.Primitive.SmallArray ()
 import qualified Data.Primitive.SmallArray as Small
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -409,18 +408,13 @@ filterArrayWithBitmap _p bm arr
   | popCount bm /= isize arr =
     error $
       concat
-        [ "array size ",
-          show (isize arr),
-          " and bitmap ",
-          show (bitmapToList bm),
-          " don't agree."
-        ]
+        ["array size ", show (isize arr), " and bitmap ", show (bitmapToList bm), " don't agree."]
 filterArrayWithBitmap p bm0 arr =
   if n == isize arr
     then (arr, bm0)
     else withMutArray n (loop 0 0 bm0)
   where
-    n = foldl' (\ans x -> if not (p x) then ans + 1 else ans) 0 arr
+    n = foldl' (\ans x -> if p x then ans else ans + 1) 0 arr
     -- i ranges over all possible elements of a Bitmap [0..63], only some are found in 'bm'
     -- j ranges over the slots in the new array [0..n-1]
     loop i j bm marr
@@ -434,6 +428,8 @@ filterArrayWithBitmap p bm0 arr =
               then mwrite marr j item >> loop (i + 1) (j + 1) bm marr
               else -- if it meets 'p' then don't copy, and clear it from 'bm'
                 loop (i + 1) j (clearBit bm i) marr
+    loop _i j _bm _marr
+      | j /= n = error $ "Left over plank space at. j= " ++ show j ++ ", n= " ++ show n
     loop _i _j bm _marr = pure bm
 
 -- ================================================================

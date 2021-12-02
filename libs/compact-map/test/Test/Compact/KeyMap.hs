@@ -254,18 +254,18 @@ keyMapEquivDataMap :: TestTree
 keyMapEquivDataMap =
   testGroup
     "KeyMap behaves like Data.Map"
-    [ testPropertyN 500 "insert" (insertHMDATA @Int),
-      testPropertyN 500 "delete" (deleteHMDATA @Int),
-      testPropertyN 500 "union" (unionHMDATA @Int),
-      testPropertyN 500 "intersection" (intersectHMDATA @Int),
-      testPropertyN 500 "lookup" (lookupHMDATA @Int),
-      testPropertyN 500 "withoutKeys" (withoutHMDATA @Int),
-      testPropertyN 500 "restrictKeys" (restrictHMDATA @Int),
-      testPropertyN 500 "lookupMin" (minHMDATA @Int),
-      testPropertyN 500 "lookupMax" (maxHMDATA @Int),
-      testPropertyN 500 "splitLookup" (splitHMDATA @Int),
-      testPropertyN 500 "minViewWithKey" minViewHMDATA,
-      testPropertyN 500 "maxViewWithKey" maxViewHMDATA
+    [ testPropertyN 5 "insert" (insertHMDATA @Int),
+      testPropertyN 5 "delete" (deleteHMDATA @Int),
+      testPropertyN 5 "union" (unionHMDATA @Int),
+      testPropertyN 5 "intersection" (intersectHMDATA @Int),
+      testPropertyN 5 "lookup" (lookupHMDATA @Int),
+      testPropertyN 5 "withoutKeys" (withoutHMDATA @Int),
+      testPropertyN 5 "restrictKeys" (restrictHMDATA @Int),
+      testPropertyN 5 "lookupMin" (minHMDATA @Int),
+      testPropertyN 5 "lookupMax" (maxHMDATA @Int),
+      testPropertyN 5 "splitLookup" (splitHMDATA @Int),
+      testPropertyN 5 "minViewWithKey" minViewHMDATA,
+      testPropertyN 5 "maxViewWithKey" maxViewHMDATA
     ]
 
 -- ====================================================
