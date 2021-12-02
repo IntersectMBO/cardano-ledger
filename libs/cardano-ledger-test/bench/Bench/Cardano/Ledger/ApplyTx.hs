@@ -1,9 +1,12 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
@@ -13,9 +16,12 @@
 -- | Benchmarks for transaction application
 module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
 
+import Bench.Cardano.Ledger.ApplyTx.Gen (generateForEra)
 import Cardano.Binary
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import Cardano.Ledger.Alonzo.Rules.Ledger ()
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, ValidateScript)
 import Cardano.Ledger.Mary (MaryEra)
@@ -28,12 +34,16 @@ import Cardano.Ledger.Shelley.API
     LedgerEnv (..),
     MempoolEnv,
     MempoolState,
+    ShelleyBasedEra,
     Tx,
     applyTxsTransition,
   )
 import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
+import Control.State.Transition (State)
+import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
 import Criterion
 import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class (Default, def)
@@ -42,7 +52,11 @@ import qualified Data.Sequence as Seq
 import Data.Sharing (fromNotSharedCBOR)
 import Data.Typeable (typeRep)
 import GHC.Generics (Generic)
+import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
+import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
+import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
 type ShelleyBench = ShelleyEra C_Crypto
@@ -66,7 +80,7 @@ type AlonzoBench = AlonzoEra C_Crypto
 applyTxMempoolEnv :: Default (Core.PParams era) => MempoolEnv era
 applyTxMempoolEnv =
   LedgerEnv
-    { ledgerSlotNo = SlotNo 71,
+    { ledgerSlotNo = SlotNo 0,
       ledgerIx = 0,
       ledgerPp = def,
       ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)
@@ -83,36 +97,29 @@ data ApplyTxRes era = ApplyTxRes
 instance NFData (ApplyTxRes era) where
   rnf (ApplyTxRes g me s t) = seq g (seq me (seq s (seq t ())))
 
-resource_n_ledgerstate :: Int -> FilePath
-resource_n_ledgerstate n = "bench/resources/" <> show n <> "_ledgerstate.cbor"
+--------------------------------------------------------------------------------
+-- Fixed generators
+--------------------------------------------------------------------------------
 
-resource_n_tx :: Int -> FilePath
-resource_n_tx n = "bench/resources/" <> show n <> "_tx.cbor"
+benchmarkSeed :: Int
+benchmarkSeed = 24601
 
--- | Apply the transaction as if it's a transaction from a given era.
-applyTxEra ::
+benchApplyTx ::
   forall era.
   ( Era era,
+    EraGen era,
     ApplyTx era,
-    Default (Core.PParams era),
-    FromCBOR (MempoolState era)
+    ShelleyBasedEra era,
+    HasTrace (Core.EraRule "LEDGER" era) (GenEnv era),
+    BaseEnv (Core.EraRule "LEDGER" era) ~ Globals,
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   Proxy era ->
-  FilePath ->
-  FilePath ->
   Benchmark
-applyTxEra p lsFile txFile = env loadRes go
+benchApplyTx p = env genRes go
   where
-    loadRes :: IO (ApplyTxRes era)
-    loadRes = do
-      state <-
-        either (\err -> error $ "Failed to decode state: " <> show err) id
-          . decodeFullDecoder "state" fromCBOR
-          <$> BSL.readFile lsFile
-      tx <-
-        either (\err -> error $ "Failed to decode tx: " <> show err) id
-          . decodeAnnotator "tx" fromCBOR
-          <$> BSL.readFile txFile
+    genRes = do
+      (state, tx) <- pure $ generateForEra p benchmarkSeed
       pure $! ApplyTxRes testGlobals applyTxMempoolEnv state tx
     go :: ApplyTxRes era -> Benchmark
     go ~ApplyTxRes {atrGlobals, atrMempoolEnv, atrState, atrTx} =
@@ -126,23 +133,12 @@ applyTxEra p lsFile txFile = env loadRes go
           )
           atrState
 
-applyTxGroup :: Benchmark
-applyTxGroup =
-  bgroup
-    "Apply Shelley Tx"
-    [ withRes 0,
-      withRes 1
-    ]
-  where
-    withRes n =
-      let ls = resource_n_ledgerstate n
-          tx = resource_n_tx n
-       in bgroup
-            (show n)
-            [ applyTxEra (Proxy @ShelleyBench) ls tx,
-              applyTxEra (Proxy @AllegraBench) ls tx,
-              applyTxEra (Proxy @MaryBench) ls tx
-            ]
+--------------------------------------------------------------------------------
+-- Deserialising resources from disk
+--------------------------------------------------------------------------------
+
+resource_n_tx :: Int -> FilePath
+resource_n_tx n = "bench/resources/" <> show n <> "_tx.cbor"
 
 -- | Benchmark deserialising a shelley transaction as if it comes from the given
 -- era.
@@ -163,11 +159,21 @@ deserialiseTxEra p =
         . decodeAnnotator "tx" fromCBOR
         <$> BSL.readFile (resource_n_tx 0)
 
+--------------------------------------------------------------------------------
+-- Benchmark suite
+--------------------------------------------------------------------------------
+
 applyTxBenchmarks :: Benchmark
 applyTxBenchmarks =
   bgroup
     "applyTxBenchmarks"
-    [ applyTxGroup,
+    [ bgroup
+        "ApplyTxInEra"
+        [ benchApplyTx (Proxy @ShelleyBench),
+          benchApplyTx (Proxy @AllegraBench),
+          benchApplyTx (Proxy @MaryBench)
+          -- benchApplyTx (Proxy @AlonzoBench)
+        ],
       bgroup
         "Deserialise Shelley Tx"
         [ deserialiseTxEra (Proxy @ShelleyBench),
