@@ -597,10 +597,11 @@ rewardOnePoolMember
   rewardInfo
   hk
   (Coin c) =
-    if hk `Set.member` addrsRew && notPoolOwner pp (poolPs rewardInfo) hk && r /= Coin 0
+    if prefilter && notPoolOwner pp (poolPs rewardInfo) hk && r /= Coin 0
       then Just r
       else Nothing
     where
+      prefilter = HardForks.forgoRewardPrefilter pp || hk `Set.member` addrsRew
       pool = poolPs rewardInfo
       sigma = poolRelativeStake rewardInfo
       poolR = poolPot rewardInfo

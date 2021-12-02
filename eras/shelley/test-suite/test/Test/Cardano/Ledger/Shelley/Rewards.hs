@@ -511,7 +511,11 @@ rewardOnePool
           else Map.insert
       potentialRewards =
         f (getRwdCred $ _poolRAcnt pool) lReward mRewards
-      rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
+      potentialRewards' =
+        if HardForks.forgoRewardPrefilter pp
+          then potentialRewards
+          else eval (addrsRew ◁ potentialRewards)
+      rewards' = Map.filter (/= Coin 0) potentialRewards'
 
 rewardOld ::
   forall era.
@@ -791,6 +795,7 @@ rewardTests =
       testProperty "provenance does not affect result" (newEpochProp 100 (sameWithOrWithoutProvenance @C testGlobals)),
       testProperty "ProvM preserves Nothing" (newEpochProp 100 (nothingInNothingOut @C)),
       testProperty "ProvM preserves Just" (newEpochProp 100 (justInJustOut @C)),
-      testProperty "compare with reference impl, no provenance" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 3 0))),
+      testProperty "compare with reference impl, no provenance, v3" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 3 0))),
+      testProperty "compare with reference impl, no provenance, v7" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 7 0))),
       testProperty "compare with reference impl, with provenance" (newEpochProp chainlen (oldEqualsNewOn @C (ProtVer 3 0)))
     ]
