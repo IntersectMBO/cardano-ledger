@@ -130,23 +130,13 @@ instance
   where
   toCBOR GenesisHash = encodeNull
   toCBOR (BlockHash h) = toCBOR h
-  encodedSizeExpr size proxy =
+  encodedSizeExpr size _ =
     szCases
       [ Case "GenesisHash" 1,
-        Case
-          "BlockHash"
-          ( encodedSizeExpr
-              size
-              ( ( \case
-                    -- we are mapping a 'Proxy', so nothing can
-                    -- go wrong here
-                    GenesisHash -> error "impossible happend"
-                    BlockHash h -> h
-                )
-                  <$> proxy
-              )
-          )
+        Case "BlockHash" (encodedSizeExpr size p)
       ]
+    where
+      p = Proxy :: Proxy (HashHeader crypto)
 
 instance
   CC.Crypto crypto =>
