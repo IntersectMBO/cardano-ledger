@@ -39,7 +39,7 @@ invariant :: k -> SplitMap k v -> Bool
 invariant k (SplitMap imap) =
   let (n, _key) = splitKey k
    in case IntMap.lookup n imap of
-        Just kmap -> KeyMap.notEmpty kmap
+        Just kmap -> KeyMap.isNotEmpty kmap
         Nothing -> True
 
 -- | To maintain the invariant, we define 'insertNormForm'
@@ -95,7 +95,7 @@ lookup :: k -> SplitMap k v -> Maybe v
 lookup k (SplitMap imap) =
   case IntMap.lookup n imap of
     Nothing -> Nothing
-    Just keymap -> KeyMap.lookupHM key keymap
+    Just keymap -> KeyMap.lookup key keymap
   where
     (n, key) = splitKey k
 
@@ -390,6 +390,6 @@ ppSplitMap :: forall k v. Show v => SplitMap k v -> PDoc
 ppSplitMap (SplitMap imap) = ppList ppitem (IntMap.toList imap)
   where
     ppitem :: (Int, KeyMap v) -> PDoc
-    ppitem (n, kmap) = ppSexp (pack "Split") [KeyMap.ppInt n, ppKeyMap KeyMap.ppKey ppv kmap]
+    ppitem (n, kmap) = ppSexp (pack "Split") [viaShow n, ppKeyMap viaShow ppv kmap]
     ppv :: v -> PDoc
     ppv x = viaShow x

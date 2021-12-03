@@ -56,7 +56,7 @@ roundtripFromList ::
   ([(k, v)] -> m k v) ->
   m k v ->
   Property
-roundtripFromList toL fromL mp = (fromL (toL mp)) === mp
+roundtripFromList toL fromL mp = fromL (toL mp) === mp
 
 insertDelete ::
   forall k v m.
@@ -67,7 +67,7 @@ insertDelete ::
   v ->
   m k v ->
   Property
-insertDelete insertF deleteF k v mp = (deleteF k (insertF k v mp) === deleteF k mp)
+insertDelete insertF deleteF k v mp = deleteF k (insertF k v mp) === deleteF k mp
 
 foldlkey ::
   forall k v m.
@@ -118,36 +118,53 @@ lookupdelete ::
   Property
 lookupdelete look del k km = look k (del k km) === Nothing
 
-assoc :: forall k v t. (Eq (t k v), Show (t k v)) => (t k v -> t k v -> t k v) -> t k v -> t k v -> t k v -> Property
+assoc ::
+  forall k v t.
+  (Eq (t k v), Show (t k v)) =>
+  (t k v -> t k v -> t k v) ->
+  t k v ->
+  t k v ->
+  t k v ->
+  Property
 assoc oper x y z = oper (oper x y) z === oper x (oper y z)
 
-commutes :: forall k v t. (Eq (t k v), Show (t k v)) => (t k v -> t k v -> t k v) -> t k v -> t k v -> Property
+commutes ::
+  forall k v t.
+  (Eq (t k v), Show (t k v)) =>
+  (t k v -> t k v -> t k v) ->
+  t k v ->
+  t k v ->
+  Property
 commutes oper x y = oper x y === oper y x
 
 ascFoldDescFold :: KeyMap Int -> Property
-ascFoldDescFold x = KeyMap.foldWithAscKey (\ans _key v -> ans + v) 0 x === KeyMap.foldWithDescKey (\_key v ans -> v + ans) 0 x
+ascFoldDescFold x =
+  KeyMap.foldWithAscKey (\ans _key v -> ans + v) 0 x
+    === KeyMap.foldWithDescKey (\_key v ans -> v + ans) 0 x
 
 allKey :: (Key -> Bool) -> KeyMap t -> Bool
-allKey p = KeyMap.foldWithDescKey (\key _v ans -> (p key) && ans) True
+allKey p = KeyMap.foldWithDescKey (\key _v ans -> p key && ans) True
 
 allVal :: (t -> Bool) -> KeyMap t -> Bool
-allVal p = KeyMap.foldWithDescKey (\_key v ans -> (p v) && ans) True
+allVal p = KeyMap.foldWithDescKey (\_key v ans -> p v && ans) True
 
-minKey :: (PrettyA a) => KeyMap a -> Property
-minKey x = case KeyMap.lookupMin x of
-  Nothing -> True === True
-  Just (k, _v) -> counterexample ("min=" ++ show k ++ "map=\n" ++ show x) (allKey (\x1 -> x1 >= k) x === True)
+minKey :: Show a => KeyMap a -> Maybe Property
+minKey x = do
+  (k, _v) <- KeyMap.lookupMin x
+  Just $ counterexample ("min=" ++ show k ++ "map=\n" ++ show x) (allKey (>= k) x)
 
-maxKey :: (PrettyA a) => KeyMap a -> Property
-maxKey x = case KeyMap.lookupMax x of
-  Nothing -> True === True
-  Just (k, _v) -> counterexample ("max=" ++ show k ++ "map=\n" ++ show x) (allKey (\x1 -> x1 <= k) x === True)
+maxKey :: Show a => KeyMap a -> Maybe Property
+maxKey x = do
+  (k, _v) <- KeyMap.lookupMax x
+  Just $ counterexample ("max=" ++ show k ++ "map=\n" ++ show x) (allKey (<= k) x)
 
 mapWorks :: KeyMap Int -> Property
 mapWorks x = allVal (== (99 :: Int)) (KeyMap.mapWithKey (\_key _x -> 99) x) === True
 
 foldintersect :: KeyMap Int -> KeyMap Int -> Property
-foldintersect x y = foldOverIntersection (\ans _key u _v -> ans + u) 0 x y === foldWithDescKey (\_key u ans -> ans + u) 0 (intersection x y)
+foldintersect x y =
+  foldOverIntersection (\ans _key u _v -> ans + u) 0 x y
+    === foldWithDescKey (\_key u ans -> ans + u) 0 (intersection x y)
 
 withoutRestrict :: KeyMap Int -> Set Key -> Bool
 withoutRestrict m domset = union (withoutKeys m domset) (restrictKeys m domset) == m
@@ -156,10 +173,7 @@ splitwhole :: Key -> KeyMap Int -> Property
 splitwhole k m =
   case splitLookup k m of
     (m1, Nothing, m2) -> m === union m1 m2
-    (m1, Just v, m2) -> m === (insert k v (union m1 m2))
-
--- testdel :: Key -> KeyMap Int -> Property
--- testdel k km = withMaxSuccess 1000000 (delete3 k km === delete k km)
+    (m1, Just v, m2) -> m === insert k v (union m1 m2)
 
 -- =========================================================
 
@@ -216,10 +230,14 @@ deleteHMDATA :: forall v. (Eq v, Show v) => Key -> [(Key, v)] -> Property
 deleteHMDATA k m = HM.delete k (HM.fromList m) $==$ Map.delete k (Map.fromList m)
 
 unionHMDATA :: forall v. (Eq v, Show v) => [(Key, v)] -> [(Key, v)] -> Property
-unionHMDATA n m = HM.union (HM.fromList n) (HM.fromList m) $==$ Map.union (Map.fromList n) (Map.fromList m)
+unionHMDATA n m =
+  HM.union (HM.fromList n) (HM.fromList m)
+    $==$ Map.union (Map.fromList n) (Map.fromList m)
 
 intersectHMDATA :: forall v. (Eq v, Show v) => [(Key, v)] -> [(Key, v)] -> Property
-intersectHMDATA n m = HM.intersection (HM.fromList n) (HM.fromList m) $==$ Map.intersection (Map.fromList n) (Map.fromList m)
+intersectHMDATA n m =
+  HM.intersection (HM.fromList n) (HM.fromList m)
+    $==$ Map.intersection (Map.fromList n) (Map.fromList m)
 
 lookupHMDATA :: forall v. (Eq v, Show v) => Key -> [(Key, v)] -> Property
 lookupHMDATA k m = HM.lookup k (HM.fromList m) === Map.lookup k (Map.fromList m)
@@ -236,7 +254,7 @@ minHMDATA m = HM.lookupMin (HM.fromList m) === Map.lookupMin (Map.fromList m)
 maxHMDATA :: (Eq a, Show a) => [(Key, a)] -> Property
 maxHMDATA m = HM.lookupMax (HM.fromList m) === Map.lookupMax (Map.fromList m)
 
-splitHMDATA :: (PrettyA a, Eq a, Show a) => Key -> [(Key, a)] -> Property
+splitHMDATA :: (Eq a, Show a) => Key -> [(Key, a)] -> Property
 splitHMDATA k m = case Map.splitLookup k (Map.fromList m) of
   (a, b, c) -> (fromList (Map.toList a), b, fromList (Map.toList c)) === splitLookup k (fromList m)
 
@@ -310,15 +328,15 @@ add n stat = Stat 1 n (Just n) (Just n) <> stat
 -- Computing statitics about KeyMaps
 
 count :: KeyMap v -> (Int, Int, Int, Stat Int, Stat Int, Int)
-count x = go 0 (0, 0, 0, mempty, mempty, 0) x
+count = go 0 (0, 0, 0, mempty, mempty, 0)
   where
-    go _ !(e, o, t, l, b, f) Empty = (e + 1, o, t, l, b, f)
-    go d !(e, o, t, l, b, f) (One _ y) = go (1 + d) (e, 1 + o, t, l, b, f) y
-    go d !(e, o, t, l, b, f) (Two _ z y) = go (1 + d) (go (1 + d) (e, o, 1 + t, l, b, f) z) y
-    go d !(e, o, t, l, b, f) (Leaf _ _) = (e, o, t, add d l, b, f)
-    go d !(e, o, t, l, b, f) (BitmapIndexed _ arr) =
+    go _ (e, o, t, l, b, f) Empty = (e + 1, o, t, l, b, f)
+    go d (e, o, t, l, b, f) (One _ y) = go (1 + d) (e, 1 + o, t, l, b, f) y
+    go d (e, o, t, l, b, f) (Two _ z y) = go (1 + d) (go (1 + d) (e, o, 1 + t, l, b, f) z) y
+    go d (e, o, t, l, b, f) (Leaf _ _) = (e, o, t, add d l, b, f)
+    go d (e, o, t, l, b, f) (BitmapIndexed _ arr) =
       foldl' (go (length arr + d)) (e, o, t, l, add (length arr) b, f) arr
-    go d !(e, o, t, l, b, f) (Full arr) = foldl' (go (length arr + d)) (e, o, t, l, b, f + 1) arr
+    go d (e, o, t, l, b, f) (Full arr) = foldl' (go (length arr + d)) (e, o, t, l, b, f + 1) arr
 
 -- KeyMap is designed for values of type Key which are true cryptographic hashes. This means they
 -- are close to uniformly distributed in their 32 byte range. One way to test this is to compare the

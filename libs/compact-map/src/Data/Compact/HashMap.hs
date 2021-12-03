@@ -7,6 +7,7 @@ module Data.Compact.HashMap where
 
 import Cardano.Crypto.Hash.Class
 import Control.DeepSeq
+import Data.Bifunctor (first)
 import Data.Compact.KeyMap (Key, KeyMap)
 import qualified Data.Compact.KeyMap as KM
 import Data.Proxy
@@ -15,7 +16,6 @@ import qualified Data.Set as Set
 import Data.Typeable
 import GHC.TypeLits
 import Prettyprinter (viaShow)
-import Data.Bifunctor (first)
 
 -- ==========================================================================
 

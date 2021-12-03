@@ -62,11 +62,13 @@ toMap ::
   KVVector kv vv (k, v) ->
   Map.Map k v
 toMap = Map.fromDistinctAscList . VG.toList
+{-# INLINE toMap #-}
 
 -- | Convert a `Map.Map` into a sorted key/value vector.
 fromMap ::
   (VG.Vector kv k, VG.Vector vv v) => Map.Map k v -> KVVector kv vv (k, v)
 fromMap m = fromDistinctAscListN (Map.size m) $ Map.toAscList m
+{-# INLINE fromMap #-}
 
 -- | Convert a possibly unsorted assoc list into a KVVector.
 fromList ::

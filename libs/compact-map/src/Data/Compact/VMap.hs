@@ -25,6 +25,7 @@ module Data.Compact.VMap
     toMap,
     fromList,
     fromListN,
+    toList,
     toAscList,
     keys,
     elems,
@@ -91,6 +92,7 @@ empty = VMap VG.empty
 
 size :: (VG.Vector kv k) => VMap kv vv k v -> Int
 size = VG.length . KV.keysVector . unVMap
+{-# INLINE size #-}
 
 lookup ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => k -> VMap kv vv k v -> Maybe v
@@ -109,6 +111,10 @@ fromMap = VMap . KV.fromMap
 toMap :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v -> Map.Map k v
 toMap = KV.toMap . unVMap
 {-# INLINE toMap #-}
+
+toList :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v -> [(k, v)]
+toList = VG.toList . unVMap
+{-# INLINE toList #-}
 
 toAscList :: (VG.Vector kv k, VG.Vector vv v) => VMap kv vv k v -> [(k, v)]
 toAscList = VG.toList . unVMap
