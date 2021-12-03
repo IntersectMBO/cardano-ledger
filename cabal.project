@@ -1,4 +1,4 @@
-index-state: 2021-02-15T00:00:00Z
+index-state: 2021-12-03T06:07:23Z
 
 packages:
   eras/alonzo/impl
@@ -102,10 +102,6 @@ source-repository-package
 allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
-
-  -- TODO: This is only needed until index-state is updated to 2021-02-17 or later.
-  test-framework:random,
-  test-framework-quickcheck2:random
 
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer
