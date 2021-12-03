@@ -19,11 +19,12 @@
 --
 -- In particular, this code supports extracting the components of the ledger
 -- state needed for protocol execution, both now and in a 2k-slot window.
-module Cardano.Ledger.Shelley.API.Protocol
+module Cardano.Protocol.TPraos.API
   ( PraosCrypto,
     GetLedgerView (..),
     LedgerView (..),
     FutureLedgerViewError (..),
+    ShelleyBasedEra,
     -- $chainstate
     ChainDepState (..),
     ChainTransitionError (..),
@@ -34,6 +35,8 @@ module Cardano.Ledger.Shelley.API.Protocol
     -- Leader Schedule
     checkLeaderValue,
     getLeaderSchedule,
+    -- Byron Transition
+    mkInitialShelleyLedgerView,
   )
 where
 
@@ -55,21 +58,19 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto, VRF)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
-    GenDelegs,
-    Hash,
-    KESignable,
-    KeyHash,
-    KeyRole (..),
-    SignKeyVRF,
-    VRFSignable,
-    coerceKeyRole,
-  )
+import Cardano.Ledger.Keys (DSignable, GenDelegPair (..), GenDelegs (..), Hash, KESignable, KeyHash, KeyRole (..), SignKeyVRF, VRFSignable, coerceKeyRole)
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.API (ApplyBlock, ApplyTx, CanStartFromGenesis, ShelleyGenesis (..))
+import Cardano.Ledger.Shelley.Constraints
+  ( UsesAuxiliary,
+    UsesPParams,
+    UsesScript,
+    UsesTxBody,
+    UsesTxOut,
+    UsesValue,
+  )
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     NewEpochState (..),
@@ -516,3 +517,35 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
     f = activeSlotCoeff globals
     epochSlots = Set.fromList [a .. b]
     (a, b) = runIdentity $ epochInfoRange ei currentEpoch
+
+class
+  ( PraosCrypto (Crypto era),
+    GetLedgerView era,
+    ApplyBlock era,
+    ApplyTx era,
+    CanStartFromGenesis era,
+    UsesValue era,
+    UsesScript era,
+    UsesAuxiliary era,
+    UsesTxBody era,
+    UsesTxOut era,
+    UsesPParams era,
+    ChainData (State (Core.EraRule "PPUP" era)),
+    SerialisableData (State (Core.EraRule "PPUP" era))
+  ) =>
+  ShelleyBasedEra era
+
+instance PraosCrypto crypto => ShelleyBasedEra (ShelleyEra crypto)
+
+mkInitialShelleyLedgerView ::
+  forall c.
+  ShelleyGenesis (ShelleyEra c) ->
+  LedgerView c
+mkInitialShelleyLedgerView genesisShelley =
+  LedgerView
+    { lvD = _d . sgProtocolParams $ genesisShelley,
+      lvExtraEntropy = _extraEntropy . sgProtocolParams $ genesisShelley,
+      lvPoolDistr = PoolDistr Map.empty,
+      lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
+      lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
+    }

@@ -40,6 +40,7 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
   ( Crypto,
     Era,
@@ -49,12 +50,11 @@ import Cardano.Ledger.Era
     TranslationError,
   )
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Protocol (PraosCrypto)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, LedgerPredicateFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
+import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (ArrowChoice (right), left)
 import Control.Monad.Except
@@ -183,7 +183,25 @@ class
           . left ApplyTxError
           $ res
 
-instance PraosCrypto c => ApplyTx (ShelleyEra c)
+instance
+  ( CC.Crypto c,
+    Eq (PredicateFailure (Core.EraRule "LEDGER" (ShelleyEra c))),
+    Signal (Core.EraRule "LEDGER" (ShelleyEra c)) ~ Shelley.Tx (ShelleyEra c),
+    State (Core.EraRule "LEDGER" (ShelleyEra c))
+      ~ (LedgerState.UTxOState (ShelleyEra c), LedgerState.DPState c),
+    Environment (Core.EraRule "LEDGER" (ShelleyEra c)) ~ LedgerEnv (ShelleyEra c),
+    BaseM (Core.EraRule "LEDGER" (ShelleyEra c)) ~ ShelleyBase,
+    PredicateFailure
+      (Core.EraRule "LEDGER" (ShelleyEra c))
+      ~ LedgerPredicateFailure (ShelleyEra c),
+    STS (Core.EraRule "LEDGER" (ShelleyEra c)),
+    FromCBOR (PredicateFailure (Core.EraRule "DELEGS" (ShelleyEra c))),
+    Show (PredicateFailure (Core.EraRule "DELEGS" (ShelleyEra c))),
+    FromCBOR (PredicateFailure (Core.EraRule "UTXOW" (ShelleyEra c))),
+    ToCBOR (PredicateFailure (Core.EraRule "DELEGS" (ShelleyEra c))),
+    ToCBOR (PredicateFailure (Core.EraRule "UTXOW" (ShelleyEra c)))
+  ) =>
+  ApplyTx (ShelleyEra c)
 
 type MempoolEnv era = Ledger.LedgerEnv era
 

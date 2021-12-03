@@ -28,10 +28,12 @@ import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, TxSeq)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Protocol (PraosCrypto)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
@@ -185,7 +187,11 @@ applyBlock =
         asoEvents = EPDiscard
       }
 
-instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
+instance
+  ( CC.Crypto crypto,
+    DSignable crypto (Hash crypto EraIndependentTxBody)
+  ) =>
+  ApplyBlock (ShelleyEra crypto)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
