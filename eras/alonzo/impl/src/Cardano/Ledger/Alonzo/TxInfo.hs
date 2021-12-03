@@ -83,7 +83,6 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
-import Data.Text.Prettyprint.Doc (Pretty (..))
 import Data.Time.Clock (nominalDiffTimeToSeconds)
 import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Typeable (Proxy (..), Typeable)
@@ -94,6 +93,7 @@ import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as PV1
 import Plutus.V1.Ledger.Contexts ()
 import qualified Plutus.V2.Ledger.Api as PV2
+import Prettyprinter (Pretty (..))
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
