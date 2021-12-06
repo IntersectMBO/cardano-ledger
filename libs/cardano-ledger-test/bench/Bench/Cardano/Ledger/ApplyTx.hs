@@ -20,7 +20,6 @@ import Bench.Cardano.Ledger.ApplyTx.Gen (generateForEra)
 import Cardano.Binary
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Ledger ()
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era, ValidateScript)
@@ -125,7 +124,7 @@ benchApplyTx p = env genRes go
     go ~ApplyTxRes {atrGlobals, atrMempoolEnv, atrState, atrTx} =
       bench (show $ typeRep p) $
         whnf
-          ( either (error . show) id
+          ( either (error . show) (\(x, y) -> x `seq` y `seq` (x, y))
               . applyTxsTransition @era @(Either _)
                 atrGlobals
                 atrMempoolEnv
