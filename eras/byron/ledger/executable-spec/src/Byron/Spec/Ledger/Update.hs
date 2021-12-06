@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -232,9 +233,13 @@ data UProp = UProp
   }
   deriving (Eq, Generic, Show, Hashable, Data, Typeable, NoThunks)
 
+#if MIN_VERSION_hashable(1,3,4)
+-- Instance Hashable (Set a) is provided by the hashable package
+#else
 -- We need the Hashable instance before making lenses.
 instance Hashable a => Hashable (Set a) where
   hashWithSalt = H.hashUsing Set.toList
+#endif
 
 makeLenses ''UProp
 
