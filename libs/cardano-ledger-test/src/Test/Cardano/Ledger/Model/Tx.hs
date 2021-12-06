@@ -523,7 +523,7 @@ getModelConsumed ::
   ModelTx era ->
   ModelValue (ValueFeature era) era
 getModelConsumed pp (ModelUTxOMap {_modelUTxOMap_utxos = utxo}) tx =
-  foldMapOf modelTx_inputs (foldMap (_mtxo_value . snd) . Map.restrictKeys utxo) tx
+  foldMapOf modelTx_inputs (foldMap _mtxo_value . Map.restrictKeys utxo) tx
     <> foldOf (modelTx_mint . traverseSupportsMint) tx
     <> foldMapOf (modelTx_wdrl . traverse) liftModelValue tx
     <> Val.inject (modelKeyRefunds pp $ _mtxDCert tx)

@@ -30,11 +30,12 @@ import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Test.Cardano.Ledger.Model.BaseTypes (PreservedAda (..))
+import Test.Cardano.Ledger.Model.BaseTypes (PreservedAda (..), ModelValue)
 import Test.Cardano.Ledger.Model.FeatureSet
   ( KnownScriptFeature,
     ScriptFeature,
     ifSupportsPlutus,
+    ValueFeature,
   )
 import Test.Cardano.Ledger.Model.Script
   ( ModelAddress (..),
@@ -49,18 +50,18 @@ import Test.Cardano.Ledger.Model.TxOut
   )
 
 data ModelUTxOMap era = ModelUTxOMap
-  { _modelUTxOMap_utxos :: !(Map.Map ModelUTxOId (Coin, ModelTxOut era)),
+  { _modelUTxOMap_utxos :: !(Map.Map ModelUTxOId (ModelTxOut era)),
     _modelUTxOMap_stake :: !(GrpMap (ModelCredential 'Staking (ScriptFeature era)) (Coin, Set ModelUTxOId)),
     _modelUTxOMap_collateralUtxos :: !(Set ModelUTxOId),
-    _modelUTxOMap_balance :: !Coin -- TODO: ModelValueF
+    _modelUTxOMap_balance :: !(ModelValue (ValueFeature era) era)
   }
   deriving (Eq, Show, Generic)
 
 instance PreservedAda (ModelUTxOMap era) where
-  totalPreservedAda = _modelUTxOMap_balance
+  totalPreservedAda = Val.coin . _modelUTxOMap_balance
 
 validModelUTxOMap :: ModelUTxOMap era -> Bool
-validModelUTxOMap m = m == toModelUTxOMap (fmap snd $ _modelUTxOMap_utxos m)
+validModelUTxOMap m = m == toModelUTxOMap (_modelUTxOMap_utxos m)
 
 instance Semigroup (ModelUTxOMap era) where
   -- TODO: this instance is partial. fix uses to be better?
@@ -76,7 +77,7 @@ instance Monoid (ModelUTxOMap era) where
 mergeModelUTxOMapWithConflicts ::
   ModelUTxOMap era ->
   ModelUTxOMap era ->
-  (Map.Map ModelUTxOId ((Coin, ModelTxOut era), (Coin, ModelTxOut era)), (ModelUTxOMap era))
+  (Map.Map ModelUTxOId (ModelTxOut era, ModelTxOut era), (ModelUTxOMap era))
 mergeModelUTxOMapWithConflicts
   (ModelUTxOMap utxos stake collateral bal)
   (ModelUTxOMap utxos' stake' collateral' bal') =
@@ -99,10 +100,10 @@ toModelUTxOMap =
   ifoldMap $ \ui txo@(ModelTxOut ma mval _) ->
     let val = Val.coin mval
      in ModelUTxOMap
-          (Map.singleton ui (val, txo))
+          (Map.singleton ui txo)
           (grpMapSingleton (_modelAddress_stk ma) (val, Set.singleton ui))
           (bool Set.empty (Set.singleton ui) $ has (modelAddress_pmt . _ModelKeyHashObj) ma)
-          val
+          (Val.inject val)
 
 mkModelUTxOMap ::
   forall era.
@@ -112,15 +113,12 @@ mkModelUTxOMap ::
 mkModelUTxOMap =
   ifoldMap $ \ui (ma, val) ->
     ModelUTxOMap
-      (Map.singleton ui (val, ModelTxOut ma (Val.inject val) dh))
+      (Map.singleton ui (ModelTxOut ma (Val.inject val) dh))
       (grpMapSingleton (_modelAddress_stk ma) (val, Set.singleton ui))
       (bool Set.empty (Set.singleton ui) $ has (modelAddress_pmt . _ModelKeyHashObj) ma)
-      val
+      (Val.inject val)
   where
     dh = ifSupportsPlutus (Proxy :: Proxy (ScriptFeature era)) () Nothing
-
-getModelUTxOMapTotalAda :: ModelUTxOMap era -> Coin
-getModelUTxOMapTotalAda = _modelUTxOMap_balance
 
 spendModelUTxOs ::
   Set ModelUTxOId ->
@@ -129,10 +127,10 @@ spendModelUTxOs ::
   ModelUTxOMap era
 spendModelUTxOs ins outs xs =
   let ins' = Map.restrictKeys (_modelUTxOMap_utxos xs) ins
-      outs' = Map.fromList $ (fmap . fmap) (Val.coin . _mtxo_value &&& id) outs
+      outs' = Map.fromList outs
       newCollateral = foldMap (\(ui, txo) -> bool Set.empty (Set.singleton ui) $ has (modelTxOut_address . modelAddress_pmt . _ModelKeyHashObj) txo) outs
-      getStake :: Map.Map ModelUTxOId (Coin, ModelTxOut era) -> GrpMap (ModelCredential 'Staking (ScriptFeature era)) (Coin, Set ModelUTxOId)
-      getStake = ifoldMap (\ui (val, txo) -> grpMapSingleton (_modelAddress_stk $ _mtxo_address txo) (val, Set.singleton ui))
+      getStake :: Map.Map ModelUTxOId (ModelTxOut era) -> GrpMap (ModelCredential 'Staking (ScriptFeature era)) (Coin, Set ModelUTxOId)
+      getStake = ifoldMap (\ui txo -> grpMapSingleton (_modelAddress_stk $ _mtxo_address txo) (Val.coin $ _mtxo_value txo, Set.singleton ui))
 
       mergeStake :: (Coin, Set ModelUTxOId) -> (Coin, Set ModelUTxOId) -> (Coin, Set ModelUTxOId)
       mergeStake (c, ui) (c', ui') = (c' ~~ c, Set.difference ui' ui)
@@ -141,7 +139,7 @@ spendModelUTxOs ins outs xs =
           _modelUTxOMap_stake = flip State.execState (_modelUTxOMap_stake xs) $ do
             id <>= getStake outs'
             State.modify $ zipWithGrpMap mergeStake $ getStake ins',
-          _modelUTxOMap_balance = _modelUTxOMap_balance xs <> foldMap fst outs' ~~ foldMap fst ins',
+          _modelUTxOMap_balance = _modelUTxOMap_balance xs <> foldMap _mtxo_value outs' ~~ foldMap _mtxo_value ins',
           _modelUTxOMap_collateralUtxos =
             Set.difference (_modelUTxOMap_collateralUtxos xs) ins
               `Set.union` newCollateral
@@ -161,12 +159,12 @@ instance At (ModelUTxOMap era) where
     let a = Map.lookup k $ _modelUTxOMap_utxos s
         b2t :: Maybe (ModelTxOut era) -> ModelUTxOMap era
         b2t b =
-          let val' = foldMap fst $ Map.lookup k $ _modelUTxOMap_utxos s
-              val = foldMap (Val.coin . _mtxo_value) b
-              hodler' = fmap (_modelAddress_stk . _mtxo_address . snd) $ Map.lookup k $ _modelUTxOMap_utxos s
+          let val' = foldMap _mtxo_value $ Map.lookup k $ _modelUTxOMap_utxos s
+              val = foldMap _mtxo_value b
+              hodler' = fmap (_modelAddress_stk . _mtxo_address) $ Map.lookup k $ _modelUTxOMap_utxos s
               hodler = _modelAddress_stk . _mtxo_address <$> b
            in ModelUTxOMap
-                { _modelUTxOMap_utxos = set (at k) (fmap ((,) val) b) (_modelUTxOMap_utxos s),
+                { _modelUTxOMap_utxos = set (at k) b (_modelUTxOMap_utxos s),
                   _modelUTxOMap_collateralUtxos =
                     set
                       (at k)
@@ -174,14 +172,14 @@ instance At (ModelUTxOMap era) where
                       (_modelUTxOMap_collateralUtxos s),
                   _modelUTxOMap_stake = flip State.execState (_modelUTxOMap_stake s) $ do
                     for_ hodler' $ \h -> do
-                      grpMap h . _1 <>= invert val'
+                      grpMap h . _1 <>= invert (Val.coin val')
                       grpMap h . _2 %= Set.delete k
                     for_ hodler $ \h -> do
-                      grpMap h . _1 <>= val'
+                      grpMap h . _1 <>= Val.coin val
                       grpMap h . _2 %= Set.insert k,
                   _modelUTxOMap_balance = _modelUTxOMap_balance s <> val ~~ val'
                 }
-     in b2t <$> (a2fb $ fmap snd a)
+     in b2t <$> (a2fb a)
 
 getCoinUTxOsfromUTxoMap :: ModelUTxOMap era -> (Coin, Set ModelUTxOId)
-getCoinUTxOsfromUTxoMap (ModelUTxOMap utxos _ _ balances) = (balances, Map.keysSet utxos)
+getCoinUTxOsfromUTxoMap (ModelUTxOMap utxos _ _ balances) = (Val.coin balances, Map.keysSet utxos)

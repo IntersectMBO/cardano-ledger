@@ -421,7 +421,7 @@ mstats =
       _numberOfDelegations = lengthOf (traverse . modelDCerts . _ModelDelegate),
       _withdrawals = lengthOf (traverse . modelTxs . modelTx_wdrl . traverse),
       _scriptUTxOs =
-        lengthOf (traverse . _2 . modelTxOut_address . modelAddress_pmt . traverseModelScriptHashObj)
+        lengthOf (traverse . modelTxOut_address . modelAddress_pmt . traverseModelScriptHashObj)
           . uncurry Map.restrictKeys
           . ((_modelUTxOMap_utxos . collectModelUTxOs) &&& collectModelInputs),
       _scriptWdrls =
@@ -630,7 +630,7 @@ modelUnitTests proxy =
   testGroup
     (show $ typeRep proxy)
     [ testProperty "gen" $ modelGenTest proxy,
-      testProperty "gen Always shrink" $ checkCoverage $ testModelShrinking proxy,
+      testProperty "gen Always shrink" $ testModelShrinking proxy,
       testProperty "test pool parameters" $ uncurry (testChainModelInteractionWith' proxy (\_ _ -> True)) testPoolParamModel,
       testProperty "noop" $ testChainModelInteraction proxy (modelGenesis []) [],
       testProperty "noop-2" $

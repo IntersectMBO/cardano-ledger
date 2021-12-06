@@ -85,12 +85,13 @@ import Test.Cardano.Ledger.Model.Value
 genInputs :: HasGenModelM st era m => AllowScripts (ScriptFeature era) -> m (Map ModelUTxOId (ModelTxOut era))
 genInputs allowScripts = do
   actualUtxos <- uses (modelLedger . to getModelLedger_utxos) _modelUTxOMap_utxos
-  utxos0 <- shuffle =<< uses (modelLedger . to getModelLedger_utxos) (mapMaybe (_2 . _2 . modelTxOut_address . modelAddress_pmt $ guardHaveCollateral allowScripts) . Map.toList . _modelUTxOMap_utxos)
+  utxos0 <- shuffle =<< uses (modelLedger . to getModelLedger_utxos)
+    (mapMaybe (_2 . modelTxOut_address . modelAddress_pmt $ guardHaveCollateral allowScripts) . Map.toList . _modelUTxOMap_utxos)
 
-  let spendable :: (Coin, ModelTxOut era) -> Coin
-      spendable = fst
+  let spendable :: ModelTxOut era -> Coin
+      spendable = Val.coin . _mtxo_value
 
-      go :: [(ModelUTxOId, (Coin, ModelTxOut era))] -> Coin -> [(ModelUTxOId, (Coin, ModelTxOut era))] -> [(ModelUTxOId, (Coin, ModelTxOut era))]
+      go :: [(ModelUTxOId, ModelTxOut era)] -> Coin -> [(ModelUTxOId, ModelTxOut era)] -> [(ModelUTxOId, ModelTxOut era)]
       go [] val acc
         | val >= Coin (minFee + minOutput) = acc
         | otherwise =
@@ -107,7 +108,7 @@ genInputs allowScripts = do
   numTxInputs <- liftGen =<< asks (_modelGeneratorParams_numTxInputs . _modelGeneratorContext_modelGeneratorParams)
   let utxos1 = (take numTxInputs utxos0)
       val1 = foldMap (spendable . snd) utxos1
-  pure $ Map.fromList $ (fmap . fmap) snd $ go (drop numTxInputs utxos0) val1 utxos1
+  pure $ Map.fromList $ go (drop numTxInputs utxos0) val1 utxos1
 
 genOutputs ::
   HasGenModelM st era m =>

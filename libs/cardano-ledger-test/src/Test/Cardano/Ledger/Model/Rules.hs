@@ -60,6 +60,7 @@ import Test.Cardano.Ledger.Model.BaseTypes
   ( HasGlobals (..),
     ModelPoolId,
     ModelValue,
+    totalPreservedAda,
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet,
@@ -120,6 +121,9 @@ import Test.Cardano.Ledger.Model.Script
   ( ModelCredential,
   )
 import Test.Cardano.Ledger.Model.Snapshot (SnapshotQueue (..))
+import Test.Cardano.Ledger.Model.TxOut
+  ( ModelTxOut(..),
+  )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
     ModelDelegCert (..),
@@ -416,7 +420,7 @@ modelFeesOK pp tx utxoMap =
            && fromSupportsPlutus (const True) (not . null) (tx ^. modelTx_collateral)
        )
   where
-    balance = fromSupportsPlutus (const mempty) (foldMap fst . Map.restrictKeys (_modelUTxOMap_utxos utxoMap)) (tx ^. modelTx_collateral)
+    balance = fromSupportsPlutus (const mempty) (foldMap (Val.coin . _mtxo_value) . Map.restrictKeys (_modelUTxOMap_utxos utxoMap)) (tx ^. modelTx_collateral)
 
 -- | (fig 9)[GL-D2]
 instance ModelSTS 'ModelRule_UTXOS where
@@ -447,11 +451,11 @@ instance ModelSTS 'ModelRule_UTXOS where
     -- modelUTxOState_ppup .= pup'
 
     | otherwise = RWS.execRWST $ do
-      b <- uses modelUTxOState_utxo _modelUTxOMap_balance
+      b <- uses modelUTxOState_utxo totalPreservedAda
       traverseSupportsPlutus_
         (\collateral -> modelUTxOState_utxo %= spendModelUTxOs collateral [])
         (_mtxCollateral tx)
-      b' <- uses modelUTxOState_utxo _modelUTxOMap_balance
+      b' <- uses modelUTxOState_utxo totalPreservedAda
       modelUTxOState_fees <>= b' ~~ b
 
 -- | handle utxos on transaction
