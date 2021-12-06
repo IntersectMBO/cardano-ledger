@@ -9,6 +9,7 @@ module Cardano.Ledger.Shelley.HardForks
     allowScriptStakeCredsToEarnRewards,
     translateTimeForPlutusScripts,
     missingScriptsSymmetricDifference,
+    forgoRewardPrefilter,
   )
 where
 
@@ -65,3 +66,12 @@ missingScriptsSymmetricDifference ::
   pp ->
   Bool
 missingScriptsSymmetricDifference pp = pvMajor (getField @"_protocolVersion" pp) > 6
+
+-- | Starting with protocol version 7, the reward calculation no longer
+-- filters out unregistered stake addresses at the moment the calculation begins.
+-- See the Shelley Ledger Errata 17.2.
+forgoRewardPrefilter ::
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Bool
+forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > 6

@@ -161,6 +161,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
     aggregateUtxoCoinByCredential,
     sumAllStake,
   )
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.PParams
   ( PParams,
     PParams' (..),
@@ -1251,7 +1252,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       collectLRs acc poolRI =
         let rewardAcnt = getRwdCred . _poolRAcnt . poolPs $ poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
-         in if rewardAcnt `Map.member` _rewards ds
+         in if HardForks.forgoRewardPrefilter pr || rewardAcnt `Map.member` _rewards ds
               then
                 Map.insertWith
                   Set.union
