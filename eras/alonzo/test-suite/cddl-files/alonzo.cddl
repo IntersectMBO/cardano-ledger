@@ -108,8 +108,12 @@ script_data_hash = $hash32 ; New
 ;     -  If two keys have the same length, the one with the lower value
 ;        in (byte-wise) lexical order sorts earlier.
 ;
-; For PlutusV1 (language id 0), the script integrity data is a cost_model.
-; This is the value of the costmdls map at key 0.
+; For PlutusV1 (language id 0), the language view is the following:
+;   - the value of costmdls map at key 0 is encoded as an indefinite length
+;     list and the result is encoded as a bytestring. (our apologies)
+;   - the language ID tag is also encoded twice. first as a uint then as
+;     a bytestring. (our apologies)
+;
 ; If there is no value for key 0, then the corresponding scripts cannot execute.
 ; Regardless of what the script integrity data is.
 
