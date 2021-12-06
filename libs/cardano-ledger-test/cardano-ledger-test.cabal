@@ -91,7 +91,7 @@ test-suite cardano-ledger-test
     cardano-ledger-test,
     cardano-ledger-shelley-test,
     tasty,
-   
+
 
 
 benchmark bench
@@ -103,6 +103,7 @@ benchmark bench
   main-is:          Main.hs
   other-modules:
     Bench.Cardano.Ledger.ApplyTx
+    Bench.Cardano.Ledger.ApplyTx.Gen
     Bench.Cardano.Ledger.EpochBoundary
     Bench.Cardano.Ledger.Serialisation.Generators
   build-depends:
@@ -110,6 +111,7 @@ benchmark bench
     cardano-binary,
     cardano-crypto-class,
     cardano-ledger-alonzo,
+    cardano-ledger-alonzo-test,
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
@@ -121,6 +123,7 @@ benchmark bench
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
     small-steps,
+    small-steps-test
   ghc-options:
       -threaded
       -rtsopts
