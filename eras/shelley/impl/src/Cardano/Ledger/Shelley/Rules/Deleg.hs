@@ -129,6 +129,9 @@ data DelegPredicateFailure era
       !Coin -- amount attempted to transfer
       !Coin -- amount available
   | MIRProducesNegativeUpdate
+  | MIRNegativeTransfer
+      !MIRPot -- which pot the rewards are to be drawn from, treasury or reserves
+      !Coin -- amount attempted to transfer
   deriving (Show, Eq, Generic)
 
 newtype DelegEvent era = NewEpoch EpochNo
@@ -191,6 +194,10 @@ instance
         <> toCBOR available
     MIRProducesNegativeUpdate ->
       encodeListLen 1 <> toCBOR (14 :: Word8)
+    MIRNegativeTransfer pot amt ->
+      encodeListLen 3 <> toCBOR (15 :: Word8)
+        <> toCBOR pot
+        <> toCBOR amt
 
 instance
   (Era era, Typeable (Core.Script era)) =>
@@ -244,6 +251,10 @@ instance
         pure (4, InsufficientForTransferDELEG pot needed available)
       14 -> do
         pure (1, MIRProducesNegativeUpdate)
+      15 -> do
+        pot <- fromCBOR
+        amt <- fromCBOR
+        pure (3, MIRNegativeTransfer pot amt)
       k -> invalidKey k
 
 delegationTransition ::
@@ -382,6 +393,8 @@ delegationTransition = do
             ?! MIRCertificateTooLateinEpochDELEG slot tooLate
 
           let available = availableAfterMIR targetPot acnt (_irwd ds)
+          coin >= mempty
+            ?! MIRNegativeTransfer targetPot coin
           coin <= available
             ?! InsufficientForTransferDELEG targetPot coin available
 
