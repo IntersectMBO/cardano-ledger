@@ -25,11 +25,11 @@ newtype MockTxIn = MockTxIn (Int, Key)
   deriving (Show, Eq, Ord)
 
 instance Split MockTxIn where
-  split (MockTxIn pair) = pair
-  join n k = MockTxIn (n, k)
+  splitKey (MockTxIn pair) = pair
+  joinKey n k = MockTxIn (n, k)
 
 instance Arbitrary MockTxIn where
-  arbitrary = join <$> chooseInt (0, 25) <*> arbitrary
+  arbitrary = joinKey <$> chooseInt (0, 25) <*> arbitrary
 
 -- =================================================================
 -- A simple type with a Split instance
@@ -44,11 +44,11 @@ instance Ord SS where
       other -> other
 
 instance Split SS where
-  split (SS n m) = (n, Key m 0 0 0)
-  join n (Key m _ _ _) = SS n m
+  splitKey (SS n m) = (n, Key m 0 0 0)
+  joinKey n (Key m _ _ _) = SS n m
 
 instance Arbitrary SS where
-  arbitrary = join <$> chooseInt (0, 25) <*> (Key <$> arbitrary <*> pure 0 <*> pure 0 <*> pure 0)
+  arbitrary = joinKey <$> chooseInt (0, 25) <*> (Key <$> arbitrary <*> pure 0 <*> pure 0 <*> pure 0)
 
 -- ===============================================
 
