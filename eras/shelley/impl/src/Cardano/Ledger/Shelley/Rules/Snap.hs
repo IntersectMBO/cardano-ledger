@@ -3,6 +3,8 @@
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -13,9 +15,7 @@ module Cardano.Ledger.Shelley.Rules.Snap
   )
 where
 
-import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
-import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
@@ -23,7 +23,7 @@ import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     LedgerState (..),
     UTxOState (..),
-    stakeDistr,
+    incrementalStakeDistr,
   )
 import Control.State.Transition
   ( STS (..),
@@ -32,8 +32,9 @@ import Control.State.Transition
     judgmentContext,
   )
 import GHC.Generics (Generic)
-import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
+
+-- ======================================================
 
 data SNAP era
 
@@ -51,19 +52,27 @@ instance (UsesTxOut era, UsesValue era) => STS (SNAP era) where
   initialRules = [pure emptySnapShots]
   transitionRules = [snapTransition]
 
+-- | The stake distribution was previously computed as in the spec:
+--
+-- @
+--  stakeDistr @era utxo dstate pstate
+-- @
+--
+-- but is now computed incrementally. We leave the comment as a historical note about
+-- where important changes were made to the source code.
 snapTransition ::
-  ( UsesValue era,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
-  ) =>
+  forall era.
   TransitionRule (SNAP era)
 snapTransition = do
   TRC (lstate, s, _) <- judgmentContext
 
-  let LedgerState (UTxOState utxo _ fees _) (DPState dstate pstate) = lstate
-      stake = stakeDistr utxo dstate pstate
+  let LedgerState (UTxOState _utxo _ fees _ incStake) (DPState dstate pstate) = lstate
+      -- stakeSnap = stakeDistr @era utxo dstate pstate  -- HISTORICAL NOTE
+      istakeSnap = incrementalStakeDistr @era incStake dstate pstate
+
   pure $
     s
-      { _pstakeMark = stake,
+      { _pstakeMark = istakeSnap,
         _pstakeSet = _pstakeMark s,
         _pstakeGo = _pstakeSet s,
         _feeSS = fees

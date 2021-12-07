@@ -575,7 +575,7 @@ genUTxOState utxo = do
   GenEnv {gePParams} <- ask
   DPState {_dstate, _pstate} <- gsDPState <$> get
   let deposited = obligation gePParams (_rewards _dstate) (_pParams _pstate)
-  lift (UTxOState utxo deposited <$> arbitrary <*> pure def)
+  lift (UTxOState utxo deposited <$> arbitrary <*> pure def <*> pure def)
 
 genRecipientsFrom :: [TxOut A] -> GenRS [TxOut A]
 genRecipientsFrom txOuts = do
@@ -803,7 +803,7 @@ genTxAndLEDGERState = do
   pure (trc, s)
 
 totalAda :: UTxOState A -> DPState C_Crypto -> Coin
-totalAda (UTxOState utxo f d _) DPState {_dstate} =
+totalAda (UTxOState utxo f d _ _) DPState {_dstate} =
   f <> d <> coin (balance utxo) <> F.fold (_rewards _dstate)
 
 testTxValidForLEDGER :: (TRC (AlonzoLEDGER A), GenState) -> Property

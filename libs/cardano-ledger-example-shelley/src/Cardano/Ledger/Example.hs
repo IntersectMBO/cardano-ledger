@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.API
     ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
     StrictMaybe (SNothing),
     TxOut (..),
-    UTxOState (UTxOState),
     balance,
     genesisUTxO,
     word64ToCoin,
@@ -54,6 +53,7 @@ import qualified Cardano.Ledger.Shelley.BlockChain as Shelley
   )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..), UsesTxBody, UsesTxOut (..), UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
+import Cardano.Ledger.Shelley.LedgerState (smartUTxOState)
 import Cardano.Ledger.Shelley.Metadata (Metadata (Metadata), validMetadatum)
 import Cardano.Ledger.Shelley.PParams ()
 import Cardano.Ledger.Shelley.PParams as Shelley
@@ -176,7 +176,7 @@ instance (CryptoClass.Crypto c) => CanStartFromGenesis (ExampleEra c) where
           (AccountState (Coin 0) reserves)
           emptySnapShots
           ( LedgerState
-              ( UTxOState
+              ( smartUTxOState
                   initialUtxo
                   (Coin 0)
                   (Coin 0)

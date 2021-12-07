@@ -144,7 +144,7 @@ showBalance ::
   String
 showBalance
   (LedgerEnv _ _ pparams _)
-  (UTxOState utxo _ _ _)
+  (UTxOState utxo _ _ _ _)
   (DPState _ (PState stakepools _ _))
   tx =
     "\n\nConsumed: " ++ show (consumed pparams utxo txBody)
@@ -204,7 +204,7 @@ genTx
          constants
        )
   (LedgerEnv slot txIx pparams reserves)
-  (utxoSt@(UTxOState utxo _ _ _), dpState) =
+  (utxoSt@(UTxOState utxo _ _ _ _), dpState) =
     do
       -------------------------------------------------------------------------
       -- Generate the building blocks of a TxBody

@@ -192,9 +192,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  ( Era era,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
-  ) =>
+  (Era era) =>
   ShelleyGenesisStaking (Crypto era) ->
   ChainState era ->
   ChainState era

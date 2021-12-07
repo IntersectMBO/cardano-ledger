@@ -113,7 +113,6 @@ relevantCasesAreCovered ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
-    -- HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   Property
 relevantCasesAreCovered = do
@@ -133,7 +132,6 @@ relevantCasesAreCoveredForTrace ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (PParams.Update era))
-    --  HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   Trace (CHAIN era) ->
   Property
@@ -255,7 +253,7 @@ ratioInt x y =
 -- | Transaction has script locked TxOuts
 txScriptOutputsRatio ::
   forall era.
-  HasField "address" (Core.TxOut era) (Addr (Crypto era)) =>
+  Era era =>
   Proxy era ->
   [StrictSeq (Core.TxOut era)] ->
   Double

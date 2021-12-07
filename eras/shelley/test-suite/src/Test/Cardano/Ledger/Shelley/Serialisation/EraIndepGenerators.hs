@@ -508,6 +508,10 @@ instance
   arbitrary = genericArbitraryU
   shrink = recursivelyShrink
 
+instance CC.Crypto c => Arbitrary (IncrementalStake c) where
+  arbitrary = IStake <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
 -- The 'genericShrink' function returns first the immediate subterms of a
 -- value (in case it is a recursive data-type), and then shrinks the value
 -- itself. Since 'UTxOState' is not a recursive data-type, there are no

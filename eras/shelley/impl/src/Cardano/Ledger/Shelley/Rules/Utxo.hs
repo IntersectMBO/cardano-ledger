@@ -28,7 +28,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.Address
-  ( Addr (AddrBootstrap),
+  ( Addr (..),
     bootstrapAddressAttrsSize,
     getNetwork,
     getRwdNetwork,
@@ -66,10 +66,11 @@ import Cardano.Ledger.Shelley.LedgerState
     keyRefunds,
     minfee,
     produced,
+    updateStakeDistribution,
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupEvent, PpupPredicateFailure)
-import Cardano.Ledger.Shelley.Tx (Tx (..), TxIn)
+import Cardano.Ledger.Shelley.Tx (Tx (..), TxIn, TxOut (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert,
     PoolParams,
@@ -90,7 +91,7 @@ import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (➖))
+import Control.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁), (➖))
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -279,6 +280,7 @@ instance
 
 instance
   ( UsesTxOut era,
+    Core.TxOut era ~ TxOut era,
     UsesValue era,
     UsesScript era,
     UsesAuxiliary era,
@@ -334,7 +336,8 @@ instance
 
 utxoInductive ::
   forall era utxo.
-  ( UsesAuxiliary era,
+  ( Core.TxOut era ~ TxOut era,
+    UsesAuxiliary era,
     UsesTxOut era,
     STS (utxo era),
     Embed (Core.EraRule "PPUP" era) (utxo era),
@@ -362,7 +365,7 @@ utxoInductive ::
   TransitionRule (utxo era)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo deposits' fees ppup = u
+  let UTxOState utxo deposits' fees ppup incStake = u
   let txb = getField @"body" tx
 
   getField @"ttl" txb >= slot ?! ExpiredUTxO (getField @"ttl" txb) slot
@@ -431,13 +434,18 @@ utxoInductive = do
   let totalDeposits' = totalDeposits pp (`Map.notMember` stakepools) txCerts
   tellEvent $ TotalDeposits totalDeposits'
   let depositChange = totalDeposits' <-> refunded
+  let utxoAdd = txouts txb -- These will be inserted into the UTxO
+  let utxoDel = eval (txins @era txb ◁ utxo) -- These will be deleted from the UTxO
+  let newUTxO = eval ((txins @era txb ⋪ utxo) ∪ utxoAdd) -- Domain exclusion (a ⋪ b) deletes 'a' from the domain of 'b'
+  let newIncStakeDistro = updateStakeDistribution @era incStake utxoDel utxoAdd
 
   pure
     UTxOState
-      { _utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
+      { _utxo = newUTxO,
         _deposited = deposits' <> depositChange,
         _fees = fees <> getField @"txfee" txb,
-        _ppups = ppup'
+        _ppups = ppup',
+        _stakeDistro = newIncStakeDistro
       }
 
 instance

@@ -79,6 +79,7 @@ import Cardano.Ledger.Shelley.LedgerState as X
     DPState (..),
     DState (..),
     EpochState (..),
+    IncrementalStake (..),
     InstantaneousRewards (..),
     KeyPairs,
     LedgerState (..),

@@ -36,6 +36,7 @@ library
   hs-source-dirs:     src
   exposed-modules:
     Test.Cardano.Crypto.VRF.Fake
+    Test.Cardano.Ledger.TerseTools
     Test.Cardano.Ledger.Shelley.Address.Bootstrap
     Test.Cardano.Ledger.Shelley.Address.CompactAddr
     Test.Cardano.Ledger.Shelley.BenchmarkFunctions

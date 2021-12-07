@@ -20,7 +20,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
@@ -140,7 +140,8 @@ ustate =
     { _utxo = initUTxO (Alonzo Mock),
       _deposited = Coin 0,
       _fees = Coin 0,
-      _ppups = def
+      _ppups = def,
+      _stakeDistro = IStake mempty mempty
     }
 
 -- Requires ex units, but there are no fees
