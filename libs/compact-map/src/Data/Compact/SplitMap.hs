@@ -59,12 +59,22 @@ null (SplitMap imap) = IntMap.null imap
 -- Insert and delete operations
 
 insertWithKey :: forall k v. (k -> v -> v -> v) -> k -> v -> SplitMap k v -> SplitMap k v
+{- Maybe we should benchmark these two
+insertWithKey combine k v (SplitMap imap) =
+  SplitMap (IntMap.insertWith combine2 n (KeyMap.insert key v KeyMap.Empty) imap)
+ where
+    (n, key) = splitKey k
+    combine2 :: KeyMap v -> KeyMap v -> KeyMap v
+    combine2 km1 km2 = KeyMap.unionWith (combine k) km1 km2
+-}    
 insertWithKey combine k v (SplitMap imap) =
   SplitMap (IntMap.insertWith combine2 n (KeyMap.insert key v KeyMap.Empty) imap)
   where
     (n, key) = splitKey k
     combine2 :: KeyMap v -> KeyMap v -> KeyMap v
-    combine2 km1 _ = KeyMap.insertWith @v (combine k) key v km1
+    combine2 _km1 km2 = KeyMap.insertWith @v (combine k) key v km2
+
+
 
 insertWith :: forall k v. (v -> v -> v) -> k -> v -> SplitMap k v -> SplitMap k v
 insertWith comb k v mp = insertWithKey (\_ x y -> comb x y) k v mp

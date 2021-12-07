@@ -76,9 +76,10 @@ allValx :: (t -> Bool) -> SplitMap k t -> Bool
 allValx p = foldlWithKey' (\ans _key v -> p v && ans) True
 
 minKeyx :: (Split k, Show k, Show a, Ord k) => SplitMap k a -> Property
-minKeyx x = do
-  (k, _v) <- lookupMin x
-  pure $ counterexample ("min=" ++ show k ++ "map=\n" ++ show x) (allKeyx (\x1 -> x1 >= k) x)
+minKeyx x =
+  case lookupMin x of
+   Just (k, _v) -> counterexample ("min=" ++ show k ++ "map=\n" ++ show x) (allKeyx (\x1 -> x1 >= k) x)
+   Nothing -> True ===True
 
 maxKeyx :: (Split k, Show k, Show a, Ord k) => SplitMap k a -> Property
 maxKeyx x = case lookupMax x of
