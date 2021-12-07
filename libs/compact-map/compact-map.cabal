@@ -33,11 +33,13 @@ library
                      , Data.Compact.HashMap
                      , Data.Compact.VMap
                      , Data.Compact.SmallArray
+                     , Data.Compact.UnifiedMap
   other-modules:       Data.Compact.KVVector
   build-depends:       base >=4.11 && <5
                      , cardano-binary
                      , cardano-prelude
                      , containers
+                     , strict-containers
                      , cardano-crypto-class
                      , deepseq
                      , prettyprinter
