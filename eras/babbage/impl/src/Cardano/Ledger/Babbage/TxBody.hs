@@ -18,6 +18,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# LANGUAGE InstanceSigs #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Babbage.TxBody
@@ -75,7 +76,7 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
+import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -119,7 +120,7 @@ import Cardano.Ledger.Val
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Data.Coders
 import Data.Maybe (fromMaybe)
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Data.MemoBytes (MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -134,6 +135,7 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
+import Data.Sharing (fromNotSharedCBOR, FromSharedCBOR (..), Interns, interns)
 
 data TxOut era
   = TxOutCompact'
@@ -404,20 +406,64 @@ deriving instance
   ) =>
   Show (TxBody era)
 
-deriving via
-  (Mem (TxBodyRaw era))
-  instance
-    ( Era era,
-      Typeable (Core.Script era),
-      Typeable (Core.AuxiliaryData era),
-      Compactible (Core.Value era),
-      Show (Core.Value era),
-      DecodeNonNegative (Core.Value era),
-      FromCBOR (Annotator (Core.Script era)),
-      FromCBOR (Data era),
-      Core.SerialisableData (PParamsDelta era)
-    ) =>
-    FromCBOR (Annotator (TxBody era))
+instance
+  ( Era era,
+    DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    Compactible (Core.Value era)
+  ) =>
+  FromCBOR (Annotator (TxOut era))
+  where
+  fromCBOR = fromNotSharedCBOR
+
+instance
+  ( Era era,
+    DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    Compactible (Core.Value era)
+  ) =>
+  FromSharedCBOR (Annotator (TxOut era))
+  where
+  type Share (Annotator (TxOut era)) = Interns (Credential 'Staking (Crypto era))
+  fromSharedCBOR :: forall s. Share (Annotator (TxOut era)) -> Decoder s (Annotator (TxOut era))
+  fromSharedCBOR credsInterns = do
+    lenOrIndef <- decodeListLenOrIndef
+    let 
+      internTxOut :: TxOut era -> TxOut era
+      internTxOut = \case
+          TxOut_AddrHash28_AdaOnly cred a b c d ada ->
+            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) a b c d ada
+          TxOut_AddrHash28_AdaOnly_DataHash32 cred a b c d ada e f g h ->
+            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) a b c d ada e f g h
+          txOut -> txOut
+    (fmap . fmap) internTxOut $ case lenOrIndef of
+      Nothing -> constAnn $ do
+        a <- fromCBOR
+        cv <- decodeNonNegative
+        decodeBreakOr >>= \case
+          True -> pure $ TxOutCompact a cv
+          False -> do
+            dh <- fromCBOR
+            decodeBreakOr >>= \case
+              True -> pure $ TxOutCompactDH a cv dh
+              False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
+      Just 2 -> constAnn $
+        TxOutCompact
+          <$> fromCBOR
+          <*> decodeNonNegative
+      Just 3 ->
+        decodeBreakOr >>= \case
+          True -> do
+            a :: CompactAddr (Crypto era) <- fromCBOR
+            b :: CompactForm (Core.Value era) <- decodeNonNegative
+            c :: (Annotator (Data era)) <- fromCBOR
+            pure $ TxOutCompactDatum a b <$> c
+          False -> constAnn $
+            TxOutCompactDH
+              <$> fromCBOR
+              <*> decodeNonNegative
+              <*> fromCBOR
+      Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
 -- The Set of constraints necessary to use the TxBody pattern
 type BabbageBody era =
@@ -741,7 +787,6 @@ instance
     DecodeNonNegative (Core.Value era),
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (PParamsDelta era),
-    FromCBOR (Data era),
     ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (Annotator (TxBodyRaw era))

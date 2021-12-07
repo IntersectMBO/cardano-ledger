@@ -57,6 +57,12 @@ cradle:
     - path: "eras/babbage/impl/src"
       component: "lib:cardano-ledger-babbage"
 
+    - path: "eras/babbage/test-suite/lib"
+      component: "cardano-ledger-babbage-test"
+
+    - path: "eras/babbage/test-suite/test"
+      component: "cardano-ledger-babbage-test:test:cardano-ledger-babbage-test"
+
     - path: "libs/cardano-ledger-test/src"
       component: "lib:cardano-ledger-test"
 

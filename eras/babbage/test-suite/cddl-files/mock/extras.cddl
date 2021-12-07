@@ -1,0 +1,43 @@
+set<a> = [a]
+  ; real set is [* a]
+
+unit_interval = #6.30([1, 2])
+  ; real unit_interval is: #6.30([uint, uint])
+  ; but this produces numbers outside the unit interval
+  ; and can also produce a zero in the denominator
+
+rational =  #6.30(
+   [ numerator   : 1
+   , denominator : 2
+   ])
+  ; real rational is: #6.30([uint, uint])
+  ; but this produces numbers outside the unit interval
+  ; and can also produce a zero in the denominator
+
+positive_interval = #6.30([1, 2])
+  ; fractional positive_interval is: #6.30([uint, uint])
+  ; but this can produce a zero in the denominator
+
+address = h'0001020304010203040102030401020304' /
+  h'1005060708010203040506070801020304' /
+  h'2001020304050607080102030405060708' /
+  h'3005060708050607080607050404050607' /
+  h'40010203040506070887680203' /
+  h'50050607080102030487680203' /
+  h'600102030405060708' /
+  h'700506070805060403'
+
+reward_account =
+  h'E00102030405060708' /
+  h'F00506070806050403'
+
+bounded_bytes = bytes .size (0..64)
+  ; the real bounded_bytes does not have this limit. it instead has a different
+  ; limit which cannot be expressed in CDDL.
+  ; The limit is as follows:
+  ;  - bytes with a definite-length encoding are limited to size 0..64
+  ;  - for bytes with an indefinite-length CBOR encoding, each chunk is
+  ;    limited to size 0..64
+  ;  ( reminder: in CBOR, the indefinite-length encoding of bytestrings
+  ;    consists of a token #2.31 followed by a sequence of definite-length
+  ;    encoded bytestrings and a stop code )
