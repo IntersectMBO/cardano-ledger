@@ -527,6 +527,32 @@ union x y = union4 0 (\_k a _b -> a) x y
 
 -- ===========================================
 -- intersection operators
+-- ==================================================
+
+-- | The (key,value) pairs (i.e. a subset) of 'h1' where key is in the domain of both 'h1' and 'h2'
+intersect :: KeyMap v -> KeyMap v -> KeyMap v
+intersect map1 map2 =
+  case maxMinOf map1 map2 of
+    Nothing -> Empty
+    Just k -> leapfrog k map1 map2 Empty
+
+-- | Accumulate a new Key map, by adding the key value pairs to 'ans', for
+--   the Keys that appear in both maps 'x' and 'y'. The key 'k' should
+--   be the smallest key in either 'x' or 'y', used to get started.
+leapfrog :: Key -> KeyMap v -> KeyMap v -> KeyMap v -> KeyMap v
+leapfrog k x y ans =
+  case (lub k x, lub k y) of
+    (Just ((k1, v1), h1), Just ((k2, _), h2)) ->
+      case maxMinOf h1 h2 of
+        Just k3 -> leapfrog k3 h1 h2 (if k1 == k2 then insert k1 v1 ans else ans)
+        Nothing -> (if k1 == k2 then insert k1 v1 ans else ans)
+    _ -> ans
+
+-- | Get the larger of the two min keys of 'x' and 'y'. Nothing if either is Empty.
+maxMinOf :: KeyMap v1 -> KeyMap v2 -> Maybe Key
+maxMinOf x y = case (lookupMin x, lookupMin y) of
+  (Just (k1, _), Just (k2, _)) -> Just (max k1 k2)
+  _ -> Nothing
 
 intersect3 :: Int -> (Key -> u -> v -> w) -> KeyMap u -> KeyMap v -> KeyMap w
 intersect3 _ _ Empty Empty = Empty
@@ -551,6 +577,33 @@ intersect3 n combine x y = case3 Empty leafF1 arrayF1 x
                 (index arr1 (indexFromSegment bm1 i))
                 (index arr2 (indexFromSegment bm2 i))
 
+intersectWhenN :: Int -> (Key -> u -> v -> Maybe w) -> KeyMap u -> KeyMap v -> KeyMap w
+intersectWhenN _ _ Empty Empty = Empty
+intersectWhenN n combine x y = case3 Empty leafF1 arrayF1 x
+  where
+    leafF1 k v = case searchPath k (drop n (keyPath k)) y of
+      Nothing -> Empty
+      Just u -> case combine k v u of
+        Just w -> Leaf k w
+        Nothing -> Empty
+    arrayF1 bm1 arr1 = case3 Empty leafF2 arrayF2 y
+      where
+        leafF2 k v =
+          case searchPath k (drop n (keyPath k)) x of
+            Nothing -> Empty
+            Just u -> case combine k u v of
+              Just w -> Leaf k w
+              Nothing -> Empty
+        arrayF2 bm2 arr2 = dropEmpty bm (arrayFromBitmap bm actionAt)
+          where
+            bm = bm1 .&. bm2
+            actionAt i =
+              intersectWhenN
+                (n + 1)
+                combine
+                (index arr1 (indexFromSegment bm1 i))
+                (index arr2 (indexFromSegment bm2 i))
+
 intersection :: KeyMap u -> KeyMap v -> KeyMap u
 intersection x y = intersect3 0 (\_key a _b -> a) x y
 
@@ -559,6 +612,11 @@ intersectionWith combine x y = intersect3 0 (\_key a b -> combine a b) x y
 
 intersectionWithKey :: (Key -> u -> v -> w) -> KeyMap u -> KeyMap v -> KeyMap w
 intersectionWithKey combine x y = intersect3 0 combine x y
+
+-- | Like intersectionWithKey, except if the 'combine' function returns Nothing, the common
+--   key is NOT placed in the intersectionWhen result.
+intersectionWhen :: (Key -> u -> v -> Maybe w) -> KeyMap u -> KeyMap v -> KeyMap w
+intersectionWhen combine x y = intersectWhenN 0 combine x y
 
 foldIntersect2 :: Int -> (ans -> Key -> u -> v -> ans) -> ans -> KeyMap u -> KeyMap v -> ans
 foldIntersect2 n accum ans x y = case3 ans leafF1 arrayF1 x

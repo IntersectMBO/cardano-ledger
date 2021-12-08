@@ -131,6 +131,7 @@ test-suite cardano-ledger-shelley-test
   main-is:             Tests.hs
   other-modules:
       Test.Control.Iterate.SetAlgebra
+      Test.Control.Iterate.SplitMapRules
       Test.Cardano.Ledger.Shelley.Examples
       Test.Cardano.Ledger.Shelley.Examples.Combinators
       Test.Cardano.Ledger.Shelley.Examples.EmptyBlock

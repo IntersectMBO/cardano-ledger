@@ -14,6 +14,7 @@ import Test.Cardano.Ledger.Shelley.SafeHash (safeHashTest)
 import qualified Test.Cardano.Ledger.Shelley.Serialisation as Serialisation
 import Test.Cardano.Ledger.Shelley.UnitTests (unitTests)
 import Test.Control.Iterate.SetAlgebra (setAlgTest)
+import Test.Control.Iterate.SplitMapRules (fastSlow)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -35,7 +36,8 @@ mainTests =
       unitTests,
       setAlgTest,
       prettyTest,
-      safeHashTest
+      safeHashTest,
+      fastSlow
     ]
 
 nightlyTests :: TestTree
@@ -50,7 +52,8 @@ fastTests :: TestTree
 fastTests =
   testGroup
     "Ledger with Delegation fast"
-    [ Serialisation.tests 1,
+    [ fastSlow,
+      Serialisation.tests 1,
       chainExamples,
       multisigExamples,
       unitTests,
