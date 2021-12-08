@@ -56,6 +56,7 @@ library
     base16-bytestring,
     cardano-binary,
     cardano-crypto-class,
+    cardano-data,
     cardano-ledger-core,
     cardano-prelude,
     cardano-protocol-tpraos,
@@ -70,6 +71,7 @@ library
     primitive,
     cardano-ledger-shelley,
     small-steps,
+    set-algebra,
     strict-containers,
     text,
     transformers

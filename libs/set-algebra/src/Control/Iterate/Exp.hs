@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -13,9 +14,11 @@
 --      a low-level compiled form of Exp
 module Control.Iterate.Exp where
 
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake, PoolDistr (..))
 import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Iter (..), List (..), Sett (..), Single (..), fromPairs)
-import Control.Iterate.BiMap (BiMap, Bimap, biMapEmpty)
 import Control.Iterate.Collect (Collect (..), front, hasElem, none, one)
+import Data.BiMap (BiMap, Bimap, biMapEmpty)
 import Data.Compact.SplitMap (Split, SplitMap)
 import qualified Data.Compact.SplitMap as Split
 import Data.List (sortBy)
@@ -649,3 +652,15 @@ materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k a
 materialize BiMapR x = runCollect x biMapEmpty (\(k, v) ans -> addpair k v ans)
 materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
 materialize SplitR x = runCollect x Split.empty (\(k, v) ans -> Split.insert k v ans)
+
+-- =============================================
+
+instance
+  HasExp
+    (PoolDistr crypto)
+    ( Map
+        (KeyHash 'StakePool crypto)
+        (IndividualPoolStake crypto)
+    )
+  where
+  toExp (PoolDistr x) = Base MapR x

@@ -23,6 +23,8 @@ packages:
   libs/non-integral
   libs/small-steps
   libs/small-steps-test
+  libs/cardano-data
+  libs/set-algebra
   libs/compact-map
 
 -- Always write GHC env files, because they are needed by the doctests.

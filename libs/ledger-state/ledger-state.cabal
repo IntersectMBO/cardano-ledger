@@ -32,6 +32,7 @@ library
   import:             project-config
   build-depends:      bytestring
                     , cardano-binary
+                    , cardano-data
                     , cardano-crypto-class
                     , cardano-ledger-core
                     , cardano-ledger-alonzo
@@ -47,6 +48,7 @@ library
                     , persistent-sqlite
                     , persistent-template
                     , prettyprinter
+                    , set-algebra
                     , strict-containers
                     , small-steps
                     , text

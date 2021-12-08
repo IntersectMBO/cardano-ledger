@@ -110,6 +110,7 @@ benchmark bench
     bytestring,
     cardano-binary,
     cardano-crypto-class,
+    cardano-data,
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
     cardano-ledger-core,

@@ -3,8 +3,8 @@
 -- | Benchmarks for Bimap
 module Bench.Control.Iterate.SetAlgebra.Bimap (fromList) where
 
-import Control.Iterate.BiMap (biMapFromAscDistinctList, biMapFromList)
 import Criterion.Main
+import Data.BiMap (biMapFromAscDistinctList, biMapFromList)
 import Test.QuickCheck (arbitrary, generate)
 
 -- | Benchmark ways to decode a bimap from a list

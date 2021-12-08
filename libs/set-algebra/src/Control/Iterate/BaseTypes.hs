@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
@@ -9,8 +10,10 @@
 --   what operations those types must support (Iter, Basic, Embed)
 module Control.Iterate.BaseTypes where
 
-import Control.Iterate.BiMap
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake, PoolDistr (..))
 import Control.Iterate.Collect (Collect (..), hasElem, isempty, none, one, when)
+import Data.BiMap
 import qualified Data.Compact.KeyMap as KeyMap
 import Data.Compact.SplitMap (Split (..), SplitMap (..), insertNormForm)
 import qualified Data.Compact.SplitMap as SplitMap
@@ -389,3 +392,15 @@ instance Embed (SplitMap k v) (SplitMap k v) where
 instance Embed Bool Bool where
   toBase xs = xs
   fromBase xs = xs
+
+-- | We can Embed a Newtype around a Map (or other Iterable type) and then use it in a set expression.
+instance
+  Embed
+    (PoolDistr crypto)
+    ( Map
+        (KeyHash 'StakePool crypto)
+        (IndividualPoolStake crypto)
+    )
+  where
+  toBase (PoolDistr x) = x
+  fromBase = PoolDistr

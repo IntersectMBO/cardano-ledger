@@ -22,7 +22,6 @@
 module Control.Iterate.SetAlgebra where
 
 import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Embed (..), Iter (..), Sett (..), Single (..), fromPairs)
-import Control.Iterate.BiMap (BiMap (..), biMapFromList, removeval)
 import Control.Iterate.Collect (Collect, front, one, rear, runCollect, when)
 import Control.Iterate.Exp
   ( Exp (..),
@@ -46,6 +45,7 @@ import Control.Iterate.Exp
     rngStep,
     second,
   )
+import Data.BiMap (BiMap (..), biMapFromList, removeval)
 import Data.Compact.SplitMap
   ( filterWithKey,
     foldlWithKey',
