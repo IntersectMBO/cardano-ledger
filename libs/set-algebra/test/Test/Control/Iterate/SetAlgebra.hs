@@ -21,8 +21,6 @@ import Control.Iterate.SetAlgebra
   ( compute,
     domEq,
     fifo,
-    intersectDomP,
-    intersectDomPLeft,
     lifo,
     runBool,
     runSet,
@@ -34,6 +32,7 @@ import Data.BiMap (BiMap (..))
 import Data.Char (ord)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (intersectDomP, intersectDomPLeft)
 import qualified Data.Set as Set
 import Test.Tasty
 import Test.Tasty.HUnit

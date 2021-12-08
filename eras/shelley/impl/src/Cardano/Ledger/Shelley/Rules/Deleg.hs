@@ -38,16 +38,15 @@ import Cardano.Ledger.Serialization (decodeRecordSum)
 import Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
-    DState,
+    DState (..),
     FutureGenDeleg (..),
     InstantaneousRewards (..),
     availableAfterMIR,
-    _delegations,
+    delegations,
+    rewards,
     _fGenDelegs,
     _genDelegs,
     _irwd,
-    _ptrs,
-    _rewards,
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -68,8 +67,9 @@ import Cardano.Ledger.Slot
     (*-),
     (+*),
   )
+import Cardano.Ledger.UnifiedMap (View (..))
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, range, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⋫), (⨃))
+import Control.SetAlgebra (dom, eval, range, singleton, (∈), (∉), (∪), (⨃))
 import Control.State.Transition
 import Data.Coders (Annotator)
 import Data.Foldable (fold)
@@ -77,6 +77,7 @@ import Data.Group (Group (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
@@ -273,34 +274,30 @@ delegationTransition = do
   TRC (DelegEnv slot ptr acnt pp, ds, c) <- judgmentContext
   case c of
     DCertDeleg (RegKey hk) -> do
-      eval (hk ∉ dom (_rewards ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
-
+      eval (hk ∉ dom (rewards ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
       pure $
-        ds
-          { _rewards = eval (_rewards ds ∪ singleton hk mempty),
-            _ptrs = eval (_ptrs ds ∪ singleton ptr hk)
-          }
+        ( let u1 = _unified ds
+              u2 = (Rewards u1 UM.∪ (hk, mempty))
+              u3 = (Ptrs u2 UM.∪ (ptr, hk))
+           in ds {_unified = u3}
+        )
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
-      eval (hk ∈ dom (_rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
-
-      let rewardCoin = Map.lookup hk (_rewards ds)
+      eval (hk ∈ dom (rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
+      let rewardCoin = UM.lookup hk (rewards ds)
       rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
       pure $
-        ds
-          { _rewards = eval (setSingleton hk ⋪ _rewards ds),
-            _delegations = eval (setSingleton hk ⋪ _delegations ds),
-            _ptrs = eval (_ptrs ds ⋫ setSingleton hk)
-          }
+        let u0 = _unified ds
+            u1 = (Set.singleton hk UM.⋪ Rewards u0)
+            u2 = (Set.singleton hk UM.⋪ Delegations u1)
+            u3 = (Ptrs u2 UM.⋫ Set.singleton hk)
+         in ds {_unified = u3}
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
-      eval (hk ∈ dom (_rewards ds)) ?! StakeDelegationImpossibleDELEG hk
+      eval (hk ∈ dom (rewards ds)) ?! StakeDelegationImpossibleDELEG hk
 
-      pure $
-        ds
-          { _delegations = eval (_delegations ds ⨃ singleton hk dpool)
-          }
+      pure (ds {_unified = (delegations ds UM.⨃ (Map.singleton hk dpool))})
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec

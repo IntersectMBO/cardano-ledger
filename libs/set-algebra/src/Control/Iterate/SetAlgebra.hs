@@ -35,17 +35,15 @@ import Control.Iterate.Exp
 
     constant,
     first,
-    materialize,
     nEgate,
     plus,
     projD,
     rngElem,
     rngFst,
     rngSnd,
-    rngStep,
     second,
   )
-import Data.BiMap (BiMap (..), biMapFromList, removeval)
+import Data.BiMap (BiMap (..), biMapEmpty, biMapFromList, removeval)
 import Data.Compact.SplitMap
   ( filterWithKey,
     foldlWithKey',
@@ -59,10 +57,18 @@ import Data.Compact.SplitMap
     withoutKeysSplit,
   )
 import qualified Data.Compact.SplitMap as Split
-import Data.Map.Internal (Map (..), link, link2)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
+import Data.MapExtras
+  ( disjointMapSetFold,
+    intersectDomP,
+    intersectDomPLeft,
+    intersectMapSetFold,
+    keysEqual,
+    noKeys,
+  )
 import qualified Data.Set as Set
+import Data.UMap (Tag (..), View (..))
+import qualified Data.UMap as UM
 import Prelude hiding (lookup)
 
 -- ===============================================================================
@@ -82,7 +88,10 @@ compile (Dom x) = (projD (fst (compile x)) (constant ()), SetR)
 compile (Rng (Base SetR _rel)) = (BaseD SetR (Sett (Set.singleton ())), SetR)
 compile (Rng (Singleton _k v)) = (BaseD SetR (Sett (Set.singleton v)), SetR)
 compile (Rng (SetSingleton _k)) = (BaseD SetR (Sett (Set.singleton ())), SetR)
-compile (Rng f) = (BaseD SetR (rngStep (fst (compile f))), SetR) -- We really ought to memoize this. It might be computed many times.
+compile (Rng f) = (BaseD SetR (materialize SetR (loop query)), SetR) -- We really ought to memoize this. It might be computed many times.
+  where
+    query = fst (compile f)
+    loop x = do (_k, v, x2) <- nxt x; front (v, ()) (loop x2)
 compile (DRestrict set rel) = (projD (andD (fst (compile set)) reld) rngSnd, rep)
   where
     (reld, rep) = compile rel
@@ -134,7 +143,7 @@ run (BaseD BiMapR x, BiMapR) = x -- only need to materialize data
 run (BaseD ListR x, ListR) = x -- if the forms do not match.
 run (BaseD _source x, ListR) = materialize ListR (fifo x) -- use fifo, since the order matters for Lists.
 run (BaseD _source x, target) = materialize target (lifo x) -- use lifo, for others
-run (other, ListR) = materialize ListR (fifo other) -- If it is a compund Iterator, for List, than materialize it using fifo
+run (other, ListR) = materialize ListR (fifo other) -- If it is a compound Iterator, for List, than materialize it using fifo
 run (other, target) = materialize target (lifo other) -- If it is a compund Iterator, for anything else than materialize it using lifo
 
 testing :: Bool
@@ -165,6 +174,18 @@ runBool (w@(Subset x y)) = runCollect (lifo left) True (\(k, _v) ans -> haskey k
   where
     left = compileSubterm w x
     right = compileSubterm w y
+
+-- | cost O(min (size m) (size n) * log(max (size m) (size n))), BUT the constants are high, too slow except for small maps.
+sameDomain :: (Ord k, Iter f, Iter g) => f k b -> g k c -> Bool
+sameDomain m n = loop (hasNxt m) (hasNxt n)
+  where
+    loop (Just (k1, _, nextm)) (Just (k2, _, nextn)) =
+      case compare k1 k2 of
+        EQ -> loop (hasNxt nextm) (hasNxt nextn)
+        LT -> False
+        GT -> False
+    loop Nothing Nothing = True
+    loop _ _ = False
 
 -- ==============================================================================================
 -- The faster strategy involves applying (type-specific) rewrite rules using the
@@ -221,6 +242,7 @@ compute (DRestrict (Base SetR (Sett set)) (Base MapR m)) = Map.restrictKeys m se
 compute (DRestrict (SetSingleton k) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Singleton k _v) (Base MapR m)) = Map.restrictKeys m (Set.singleton k)
 compute (DRestrict (Dom (Base MapR x)) (Base MapR y)) = Map.intersection y x
+compute (DRestrict (Dom (Base (ViewR _) x)) (Base MapR y)) = UM.domRestrict x y
 -- This case inspired by set expression in EpochBoundary.hs
 -- (dom (delegs ▷ Set.singleton hk) ◁ stake) in EpochBoundart.hs
 -- ((dom (Map(62)? ▷ (setSingleton _ ))) ◁ Map(63)?) which has this structure
@@ -439,129 +461,6 @@ rewrite (RRestrict (Base SplitR xs) (Base SetR (Sett s))) = Just $ filterWithKey
 -- Additional rewrites to be added on a demand basis.
 rewrite _ = Nothing
 
--- ===========================================================
--- Some times we need to write our own version of functions
--- over  Map.Map that do not appear in the library
--- For example
--- 1) version of Map.withoutKeys where both parts are Map.Map
--- 2) Comparing that two maps have exactly the same set of keys
--- 3) The intersection of two maps guarded by a predicate.
---    ((dom stkcred) ◁ deleg) ▷ (dom stpool))   ==>
---    intersectDomP (\ k v -> Map.member v stpool) stkcred deleg
--- ============================================================
-
-noKeys :: Ord k => Map k a -> Map k b -> Map k a
-noKeys Tip _ = Tip
-noKeys m Tip = m
-noKeys m (Bin _ k _ ls rs) = case Map.split k m of
-  (lm, rm) -> link2 lm' rm' -- We know `k` is not in either `lm` or `rm`
-    where
-      !lm' = noKeys lm ls
-      !rm' = noKeys rm rs
-{-# INLINEABLE noKeys #-}
-
--- This version benchmarks better than the following three versions, by almost a factor of 4, at Trees with 100 to 100,000 pairs
--- keysEqual2 x y = Map.foldrWithKey' (\ k v ans -> k:ans) [] x == Map.foldrWithKey' (\ k v ans -> k:ans) [] y
--- keysEqual3 x y = Map.keysSet x == Map.keysSet y
--- keysEqual4 x y = Map.keys x == Map.keys y
--- This is a type specific version of sameDomain
-
-keysEqual :: Ord k => Map k v1 -> Map k v2 -> Bool
-keysEqual Tip Tip = True
-keysEqual Tip (Bin _ _ _ _ _) = False
-keysEqual (Bin _ _ _ _ _) Tip = False
-keysEqual m (Bin _ k _ ls rs) =
-  case splitMember k m of
-    (lm, True, rm) -> keysEqual ls lm && keysEqual rs rm
-    _ -> False
-
--- cost O(min (size m) (size n) * log(max (size m) (size n))), BUT the constants are high, too slow except for small maps.
-sameDomain :: (Ord k, Iter f, Iter g) => f k b -> g k c -> Bool
-sameDomain m n = loop (hasNxt m) (hasNxt n)
-  where
-    loop (Just (k1, _, nextm)) (Just (k2, _, nextn)) =
-      case compare k1 k2 of
-        EQ -> loop (hasNxt nextm) (hasNxt nextn)
-        LT -> False
-        GT -> False
-    loop Nothing Nothing = True
-    loop _ _ = False
-
--- | A variant of 'splitLookup' that indicates only whether the
--- key was present, rather than producing its value. This is used to
--- implement 'keysEqual' to avoid allocating unnecessary 'Just'
--- constructors.
-splitMember :: Ord k => k -> Map k a -> (Map k a, Bool, Map k a)
-splitMember k0 m = case go k0 m of
-  StrictTriple l mv r -> (l, mv, r)
-  where
-    go :: Ord k => k -> Map k a -> StrictTriple (Map k a) Bool (Map k a)
-    go !k t =
-      case t of
-        Tip -> StrictTriple Tip False Tip
-        Bin _ kx x l r -> case compare k kx of
-          LT ->
-            let StrictTriple lt z gt = go k l
-                !gt' = link kx x gt r
-             in StrictTriple lt z gt'
-          GT ->
-            let StrictTriple lt z gt = go k r
-                !lt' = link kx x l lt
-             in StrictTriple lt' z gt
-          EQ -> StrictTriple l True r
-{-# INLINEABLE splitMember #-}
-
-data StrictTriple a b c = StrictTriple !a !b !c
-
--- | intersetDomP p m1 m2 == Keep the key and value from m2, iff (the key is in the dom of m1) && ((p key value) is true)
-intersectDomP :: Ord k => (k -> v2 -> Bool) -> Map k v1 -> Map k v2 -> Map k v2
-intersectDomP _ Tip _ = Tip
-intersectDomP _ _ Tip = Tip
-intersectDomP p t1 (Bin _ k v l2 r2) =
-  if mb && (p k v)
-    then link k v l1l2 r1r2
-    else link2 l1l2 r1r2
-  where
-    !(l1, mb, r1) = splitMember k t1
-    !l1l2 = intersectDomP p l1 l2
-    !r1r2 = intersectDomP p r1 r2
-{-# INLINEABLE intersectDomP #-}
-
--- | - Similar to intersectDomP, except the Map returned has the same key as the first input map, rather than the second input map.
-intersectDomPLeft :: Ord k => (k -> v2 -> Bool) -> Map k v1 -> Map k v2 -> Map k v1
-intersectDomPLeft _ Tip _ = Tip
-intersectDomPLeft _ _ Tip = Tip
-intersectDomPLeft p (Bin _ k v1 l1 r1) t2 =
-  case mb of
-    Just v2 | p k v2 -> link k v1 l1l2 r1r2
-    _other -> link2 l1l2 r1r2
-  where
-    !(l2, mb, r2) = Map.splitLookup k t2
-    !l1l2 = intersectDomPLeft p l1 l2
-    !r1r2 = intersectDomPLeft p r1 r2
-{-# INLINEABLE intersectDomPLeft #-}
-
--- | - fold over the intersection of a Map and a Set
-intersectMapSetFold :: Ord k => (k -> v -> ans -> ans) -> Map k v -> Set k -> ans -> ans
-intersectMapSetFold _accum Tip _ !ans = ans
-intersectMapSetFold _accum _ set !ans | Set.null set = ans
-intersectMapSetFold accum (Bin _ k v l1 l2) set !ans =
-  intersectMapSetFold accum l1 s1 (addKV k v (intersectMapSetFold accum l2 s2 ans))
-  where
-    (s1, found, s2) = Set.splitMember k set
-    addKV k1 v1 !ans1 = if found then accum k1 v1 ans1 else ans1
-{-# INLINEABLE intersectMapSetFold #-}
-
--- | Fold with 'accum' all those pairs in the map, not appearing in the set.
-disjointMapSetFold :: Ord k => (k -> v -> ans -> ans) -> Map k v -> Set k -> ans -> ans
-disjointMapSetFold _accum Tip _ !ans = ans
-disjointMapSetFold accum m set !ans | Set.null set = Map.foldrWithKey' accum ans m
-disjointMapSetFold accum (Bin _ k v l1 l2) set !ans =
-  disjointMapSetFold accum l1 s1 (addKV k v (disjointMapSetFold accum l2 s2 ans))
-  where
-    (s1, found, s2) = Set.splitMember k set
-    addKV k1 v1 !ans1 = if not found then accum k1 v1 ans1 else ans1
-
 -- ==========================================================================
 -- The most basic operation of iteration, where (Iter f) is to use the 'nxt'
 -- operator on (f k v) to create a (Collect k v). The two possible
@@ -595,6 +494,27 @@ fromList SetR combine xs = foldr (addp combine) (Sett (Set.empty)) xs
 fromList BiMapR combine xs = biMapFromList combine xs
 fromList SingleR combine xs = foldr (addp combine) Fail xs
 fromList SplitR combine xs = foldr (addp combine) Split.empty xs
+fromList (ViewR Rew) combine xs = foldr (addp combine) (Rewards UM.empty) xs
+fromList (ViewR Del) combine xs = foldr (addp combine) (Delegations UM.empty) xs
+fromList (ViewR Ptr) combine xs = foldr (addp combine) (Ptrs UM.empty) xs
+
+-- =======================================================================================
+
+-- | A witness (BaseRep) can be used to materialize a (Collect k v) into the type witnessed by the BaseRep.
+-- Recall a (Collect k v) has no intrinsic type (it is just an ABSTRACT sequence of tuples), so
+-- the witness describes how to turn them into the chosen datatype. Note that materialize is meant
+-- to be applied to a collection built by iterating over a Query. This produces the keys in
+-- ascending order, with no duplicate keys. So we do not need to specify how to merge duplicate values.
+materialize :: (Ord k) => BaseRep f k v -> Collect (k, v) -> f k v
+materialize ListR x = fromPairs (\l _r -> l) (runCollect x [] (:))
+materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
+materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))
+materialize BiMapR x = runCollect x biMapEmpty (\(k, v) ans -> addpair k v ans)
+materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
+materialize SplitR x = runCollect x Split.empty (\(k, v) ans -> Split.insert k v ans)
+materialize (ViewR Rew) x = runCollect x (Rewards UM.empty) (\(k, v) ans -> UM.insert' k v ans)
+materialize (ViewR Del) x = runCollect x (Delegations UM.empty) (\(k, v) ans -> UM.insert' k v ans)
+materialize (ViewR Ptr) x = runCollect x (Ptrs UM.empty) (\(k, v) ans -> UM.insert' k v ans)
 
 -- =========================================================================================
 -- Now we make an iterator that collects triples, on the intersection

@@ -332,8 +332,7 @@ chainTransition =
         let NewEpochState e1 _ _ _ _ _ = nes
             NewEpochState e2 _ bcur es _ _pd = nes'
         let EpochState account _ ls _ pp' _ = es
-        let LedgerState _ (DPState (DState _ _ _ _ _genDelegs _) (PState _ _ _)) = ls
-
+        let LedgerState _ (DPState (DState _ _ genDelegs _) (PState _ _ _)) = ls
         let ph = lastAppliedHash lab
             etaPH = prevHashToNonce ph
 
@@ -348,7 +347,7 @@ chainTransition =
         PrtclState cs' etaV' etaC' <-
           trans @(PRTCL (Crypto era)) $
             TRC
-              ( PrtclEnv (getField @"_d" pp') _pd _genDelegs eta0',
+              ( PrtclEnv (getField @"_d" pp') _pd genDelegs eta0',
                 PrtclState cs etaV etaC,
                 bh
               )

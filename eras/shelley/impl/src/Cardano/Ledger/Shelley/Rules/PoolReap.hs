@@ -32,11 +32,13 @@ import Cardano.Ledger.Shelley.LedgerState
     PState (..),
     TransUTxOState,
     UTxOState (..),
+    rewards,
   )
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt, getRwdCred, _poolRAcnt)
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.UnifiedMap (View (..))
 import Cardano.Ledger.Val ((<+>), (<->))
-import Control.SetAlgebra (dom, eval, setSingleton, (∈), (∪+), (⋪), (⋫), (▷), (◁))
+import Control.SetAlgebra (dom, eval, setSingleton, (∈), (⋪), (▷), (◁))
 import Control.State.Transition
   ( Assertion (..),
     STS (..),
@@ -50,6 +52,7 @@ import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Typeable (Typeable)
+import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -101,13 +104,13 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (pp, _, _)) st ->
-            obligation pp (_rewards $ prDState st) (_pParams $ prPState st)
+            obligation pp (rewards $ prDState st) (_pParams $ prPState st)
               == _deposited (prUTxOSt st)
         ),
       PostCondition
         "PoolReap may not create or remove reward accounts"
         ( \(TRC (_, st, _)) st' ->
-            let r = _rewards . prDState
+            let r = rewards . prDState
              in length (r st) == length (r st')
         )
     ]
@@ -136,7 +139,7 @@ poolReapTransition = do
       mRefunds :: Map.Map (Credential 'Staking (Crypto era)) Coin
       (refunds, mRefunds) =
         Map.partitionWithKey
-          (\k _ -> eval (k ∈ dom (_rewards ds)))
+          (\k _ -> eval (k ∈ dom (rewards ds)))
           (Map.mapKeys getRwdCred rewardAcnts')
       refunded = fold $ Map.elems refunds
       unclaimed = fold $ Map.elems mRefunds
@@ -151,7 +154,7 @@ poolReapTransition = do
             rewardAcnts_
         (refundPools', unclaimedPools') =
           Map.partitionWithKey
-            (\k _ -> eval (k ∈ dom (_rewards ds)))
+            (\k _ -> eval (k ∈ dom (rewards ds)))
             rewardAcntsWithPool
      in RetiredPools
           { refundPools = refundPools',
@@ -163,10 +166,11 @@ poolReapTransition = do
     PoolreapState
       us {_deposited = _deposited us <-> (unclaimed <+> refunded)}
       a {_treasury = _treasury a <+> unclaimed}
-      ds
-        { _rewards = eval (_rewards ds ∪+ refunds),
-          _delegations = eval (_delegations ds ⋫ retired)
-        }
+      ( let u0 = _unified ds
+            u1 = (Rewards u0 UM.∪+ refunds)
+            u2 = (Delegations u1 UM.⋫ retired)
+         in ds {_unified = u2}
+      )
       ps
         { _pParams = eval (retired ⋪ _pParams ps),
           _fPParams = eval (retired ⋪ _fPParams ps),

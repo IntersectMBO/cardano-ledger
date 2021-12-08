@@ -136,16 +136,16 @@ splitIsMapTests =
       testProperty "SplitMap SS foldl" $ foldlkey @SS @Int toList foldlWithKey',
       testProperty "SplitMap MockTxIn foldl" $ foldlkey @MockTxIn @Int toList foldlWithKey',
       testProperty "union-intersect-property" $ setprop @SS @Int unionWithKey intersection,
-      testPropertyN 1000 "union-intersect-property" $ setprop @MockTxIn @Int unionWithKey intersection,
+      testPropertyN 100 "union-intersect-property" $ setprop @MockTxIn @Int unionWithKey intersection,
       testProperty "lookup-insert SS" $ lookupinsert @SS @Int SplitMap.lookup insert,
       testProperty "lookup-insert MockTxIn" $ lookupinsert @MockTxIn @Int SplitMap.lookup insert,
       testProperty "lookup-delete SS" $ lookupdelete @SS @Int SplitMap.lookup delete,
       testProperty "lookup-delete MockTxIn" $ lookupdelete @MockTxIn @Int SplitMap.lookup delete,
-      testPropertyN 1000 "union is associative" $ assoc @MockTxIn @Int union,
-      testPropertyN 1000 "unionWith is commutative" $ commutes @MockTxIn @Int (unionWith (+)),
+      testPropertyN 100 "union is associative" $ assoc @MockTxIn @Int union,
+      testPropertyN 100 "unionWith is commutative" $ commutes @MockTxIn @Int (unionWith (+)),
       -- (unionwith f) is commutative if 'f' is commutative
-      testPropertyN 1000 "intersect is associative" $ assoc @MockTxIn @Int intersection,
-      testPropertyN 1000 "intersectWith is commutative" $ commutes @SS @Int (intersectionWith (+)),
+      testPropertyN 100 "intersect is associative" $ assoc @MockTxIn @Int intersection,
+      testPropertyN 100 "intersectWith is commutative" $ commutes @SS @Int (intersectionWith (+)),
       -- (unionwith f) is commutative if 'f' is commutative
       testProperty "ascending fold == descending fold with commutative operator" (ascFoldDescFoldx @SS),
       testProperty "lookupMin finds the smallest key" (minKeyx @SS @Int),
@@ -156,7 +156,7 @@ splitIsMapTests =
       testProperty "restrictKeysMap and withoutKeysMap partition a KeyMap" (withoutRestrictM @MockTxIn),
       testProperty "restrictKeysSplit and withoutKeysSplit partition a KeyMap" (withoutRestrictSp @MockTxIn),
       testProperty "restrictKeys and withoutKeys partition a KeyMap" (withoutRestrictSp2 @SS),
-      testPropertyN 500 "splitLookup pieces add to the whole" (splitwholeS @SS),
+      testPropertyN 50 "splitLookup pieces add to the whole" (splitwholeS @SS),
       testProperty "intersectWhen is filter after intersection" (testWhen @SS)
     ]
 

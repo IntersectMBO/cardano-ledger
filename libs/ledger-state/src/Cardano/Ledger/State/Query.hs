@@ -24,9 +24,8 @@ import Conduit
 import Control.Foldl (Fold (..))
 import Control.Monad
 import Control.Monad.Trans.Reader
-import Control.SetAlgebra (biMapFromList, biMapToMap)
 import qualified Data.Compact.KeyMap as KeyMap
-import qualified Data.Compact.VMap as VMap
+import qualified Data.Compact.ViewMap as VMap
 import Data.Conduit.Internal (zipSources)
 import Data.Conduit.List (sourceList)
 import Data.Functor
@@ -34,6 +33,7 @@ import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import Data.Sharing
 import qualified Data.Text as T
+import Data.UMap (delView, ptrView, rewView, unify)
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
@@ -93,14 +93,14 @@ insertDState Shelley.DState {..} = do
   let irDeltaReserves = Shelley.deltaReserves _irwd
   let irDeltaTreasury = Shelley.deltaTreasury _irwd
   dstateId <- insert $ DState (Enc _fGenDelegs) _genDelegs irDeltaReserves irDeltaTreasury
-  forM_ (Map.toList _rewards) $ \(cred, c) -> do
+  forM_ (Map.toList (rewView _unified)) $ \(cred, c) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (Reward dstateId credId c)
-  forM_ (Map.toList _delegations) $ \(cred, spKeyHash) -> do
+  forM_ (Map.toList (delView _unified)) $ \(cred, spKeyHash) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     keyHashId <- insertGetKey (KeyHash (Keys.asWitness spKeyHash))
     insert_ (Delegation dstateId credId keyHashId)
-  forM_ (Map.toList (biMapToMap _ptrs)) $ \(ptr, cred) -> do
+  forM_ (Map.toList (ptrView _unified)) $ \(ptr, cred) -> do
     credId <- insertGetKey (Credential (Keys.asWitness cred))
     insert_ (Ptr dstateId credId ptr)
   forM_ (Map.toList (Shelley.iRReserves _irwd)) $ \(cred, c) -> do
@@ -543,7 +543,7 @@ getDStateNoSharing dstateId = do
         KeyHash keyHash <- getJust delegationStakePoolId
         pure (Keys.coerceKeyRole credential, Keys.coerceKeyRole keyHash)
   ptrs <-
-    biMapFromList const <$> do
+    Map.fromList <$> do
       ps <- selectList [PtrDstateId ==. dstateId] []
       forM ps $ \(Entity _ Ptr {..}) -> do
         Credential credential <- getJust ptrCredentialId
@@ -562,9 +562,7 @@ getDStateNoSharing dstateId = do
         pure (Keys.coerceKeyRole credential, iRTreasuryCoin)
   pure
     Shelley.DState
-      { _rewards = rewards,
-        _delegations = delegations,
-        _ptrs = ptrs,
+      { _unified = unify rewards delegations ptrs,
         _fGenDelegs = unEnc dStateFGenDelegs,
         _genDelegs = dStateGenDelegs,
         _irwd =
@@ -595,7 +593,7 @@ getDStateWithSharing dstateId = do
         KeyHash keyHash <- getJust delegationStakePoolId
         pure (cred, Keys.coerceKeyRole keyHash)
   ptrs <-
-    biMapFromList const <$> do
+    Map.fromList <$> do
       ps <- selectList [PtrDstateId ==. dstateId] []
       forM ps $ \(Entity _ Ptr {..}) -> do
         Credential credential <- getJust ptrCredentialId
@@ -617,9 +615,7 @@ getDStateWithSharing dstateId = do
         pure (cred, iRTreasuryCoin)
   pure
     Shelley.DState
-      { _rewards = rewards,
-        _delegations = delegations,
-        _ptrs = ptrs,
+      { _unified = unify rewards delegations ptrs,
         _fGenDelegs = unEnc dStateFGenDelegs,
         _genDelegs = dStateGenDelegs,
         _irwd =
@@ -823,7 +819,7 @@ loadLedgerStateWithSharingKeyMap fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateNoSharing ledgerStateDstateId
-    let stakeCredentials = Shelley._rewards dstate
+    let stakeCredentials = rewView (Shelley._unified dstate)
     m <- runConduitFold (sourceWithSharingUTxO stakeCredentials) txIxSharingKeyMap
     ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
     pure (ls, m)

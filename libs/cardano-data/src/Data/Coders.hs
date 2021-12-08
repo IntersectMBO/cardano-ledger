@@ -138,7 +138,7 @@ import Control.Applicative (liftA2)
 import Control.Monad (replicateM, unless, when)
 import Control.Monad.Trans
 import Control.Monad.Trans.Identity
-import qualified Data.Compact.VMap as VMap
+import qualified Data.Compact.ViewMap as VMap
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
 import Data.Functor.Identity (Identity (..))

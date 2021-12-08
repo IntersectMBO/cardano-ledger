@@ -31,10 +31,11 @@ import Cardano.Ledger.Shelley.LedgerState
     esPp,
     esPrevPp,
     esSnapshots,
+    rewards,
     _delegationState,
     _dstate,
     _irwd,
-    _rewards,
+    _unified,
     pattern EpochState,
   )
 import Cardano.Ledger.Val ((<->))
@@ -51,6 +52,7 @@ import Data.Default.Class (Default)
 import Data.Foldable (fold)
 import qualified Data.Map.Strict as Map
 import Data.Typeable (Typeable)
+import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -82,7 +84,7 @@ instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
     [ PostCondition
         "MIR may not create or remove reward accounts"
         ( \(TRC (_, st, _)) st' ->
-            let r = _rewards . _dstate . _delegationState . esLState
+            let r = rewards . _dstate . _delegationState . esLState
              in length (r st) == length (r st')
         )
     ]
@@ -104,11 +106,11 @@ mirTransition = do
     judgmentContext
   let dpState = _delegationState ls
       ds = _dstate dpState
-      rewards = _rewards ds
+      rewards' = rewards ds
       reserves = _reserves acnt
       treasury = _treasury acnt
-      irwdR = eval $ dom rewards ◁ iRReserves (_irwd ds) :: RewardAccounts (Crypto era)
-      irwdT = eval $ dom rewards ◁ iRTreasury (_irwd ds) :: RewardAccounts (Crypto era)
+      irwdR = eval $ dom rewards' ◁ iRReserves (_irwd ds) :: RewardAccounts (Crypto era)
+      irwdT = eval $ dom rewards' ◁ iRTreasury (_irwd ds) :: RewardAccounts (Crypto era)
       totR = fold irwdR
       totT = fold irwdT
       availableReserves = reserves `addDeltaCoin` (deltaReserves . _irwd $ ds)
@@ -130,7 +132,7 @@ mirTransition = do
                 dpState
                   { _dstate =
                       ds
-                        { _rewards = eval (_rewards ds ∪+ update),
+                        { _unified = (rewards' UM.∪+ update),
                           _irwd = emptyInstantaneousRewards
                         }
                   }

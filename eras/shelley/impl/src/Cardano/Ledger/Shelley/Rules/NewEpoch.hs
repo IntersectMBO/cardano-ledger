@@ -39,7 +39,7 @@ import Cardano.Ledger.Slot
 import qualified Cardano.Ledger.Val as Val
 import Control.Provenance (runProvM)
 import Control.State.Transition
-import Data.Compact.VMap as VMap
+import Data.Compact.ViewMap as VMap
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
 import Data.Ratio

@@ -155,6 +155,7 @@ import Cardano.Ledger.Slot
     SlotNo (..),
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (..), UnifiedMap)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (BHeader),
@@ -172,11 +173,10 @@ import Cardano.Slotting.Slot (WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Codec.Binary.Bech32
 import Control.Monad.Identity (Identity)
-import Control.SetAlgebra (forwards)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
-import qualified Data.Compact.VMap as VMap
+import qualified Data.Compact.ViewMap as VMap
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map (Map, toList)
 import Data.MemoBytes (MemoBytes (..))
@@ -393,6 +393,28 @@ class PrettyA t where
 -- END HELPER FUNCTIONS
 -- =============================================================================
 
+-- =====================================================
+-- Data.UMap
+
+ppTrip :: Triple crypto -> PDoc
+ppTrip (Triple mcoin set mpool) =
+  ppSexp
+    "Triple"
+    [ ppStrictMaybe ppCoin mcoin,
+      ppSet ppPtr set,
+      ppStrictMaybe ppKeyHash mpool
+    ]
+
+ppUnifiedMap :: UnifiedMap crypto -> PDoc
+ppUnifiedMap (UnifiedMap tripmap ptrmap) =
+  ppRecord
+    "UnifiedMap"
+    [ ("combined", ppMap ppCredential ppTrip tripmap),
+      ("ptrs", ppMap ppPtr ppCredential ptrmap)
+    ]
+
+-- ======================================================
+
 ppLastAppliedBlock :: LastAppliedBlock c -> PDoc
 ppLastAppliedBlock (LastAppliedBlock blkNo slotNo hh) =
   ppRecord
@@ -594,12 +616,10 @@ ppDPState :: DPState crypto -> PDoc
 ppDPState (DPState d p) = ppRecord "DPState" [("dstate", ppDState d), ("pstate", ppPState p)]
 
 ppDState :: DState crypto -> PDoc
-ppDState (DState r1 ds ptrs future gen irwd) =
+ppDState (DState unified future gen irwd) =
   ppRecord
     "DState"
-    [ ("rewards", ppRewardAccounts r1),
-      ("delegations", ppMap' mempty ppCredential ppKeyHash ds),
-      ("ptrs", ppMap ppPtr ppCredential (forwards ptrs)),
+    [ ("unifiedMap", ppUnifiedMap unified),
       ("futuregendelegs", ppMap ppFutureGenDeleg ppGenDelegPair future),
       ("gendelegs", ppGenDelegs gen),
       ("instantaeousrewards", ppInstantaneousRewards irwd)

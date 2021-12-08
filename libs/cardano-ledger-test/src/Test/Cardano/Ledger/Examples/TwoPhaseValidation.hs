@@ -121,6 +121,8 @@ import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.UMap (View (Rewards))
+import qualified Data.UMap as UM
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified Plutus.V1.Ledger.Api as Plutus
@@ -2051,7 +2053,7 @@ dpstate :: Scriptic era => Proof era -> DPState (Crypto era)
 dpstate pf =
   def
     { _dstate =
-        def {_rewards = Map.singleton (scriptStakeCredSuceed pf) (Coin 1000)}
+        def {_unified = UM.insert (scriptStakeCredSuceed pf) (Coin 1000) (Rewards UM.empty)}
     }
 
 initialBBodyState ::

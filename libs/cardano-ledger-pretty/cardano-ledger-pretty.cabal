@@ -54,7 +54,6 @@ library
     mtl,
     plutus-ledger-api,
     prettyprinter,
-    set-algebra,
     small-steps,
     cardano-ledger-core,
     strict-containers,

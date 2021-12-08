@@ -66,6 +66,7 @@ import Cardano.Ledger.Shelley.LedgerState
     PState (..),
     RewardAccounts,
     UTxOState (..),
+    rewards,
   )
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Tx (hashScript)
@@ -92,6 +93,8 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.UMap (View (Rewards))
+import qualified Data.UMap as UM
 import GHC.Stack
 import Numeric.Natural
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
@@ -524,8 +527,8 @@ genDCerts = do
                     <$> lookupPlutusScript delegCred Cert
           _ -> pure (dc : dcs, ss, regCreds)
   NonNegative n <- lift arbitrary
-  DPState {_dstate = DState {_rewards}} <- gsDPState <$> get
-  let initSets = ([], Set.empty, Map.keysSet _rewards)
+  DPState {_dstate = DState {_unified}} <- gsDPState <$> get
+  let initSets = ([], Set.empty, UM.domain (Rewards _unified))
   (dcs, _, _) <- F.foldlM genUniqueScript initSets [1 :: Int .. n]
   pure $ reverse dcs
 
@@ -574,7 +577,7 @@ genUTxOState :: UTxO A -> GenRS (UTxOState A)
 genUTxOState utxo = do
   GenEnv {gePParams} <- ask
   DPState {_dstate, _pstate} <- gsDPState <$> get
-  let deposited = obligation gePParams (_rewards _dstate) (_pParams _pstate)
+  let deposited = obligation gePParams (rewards _dstate) (_pParams _pstate)
   lift (UTxOState utxo deposited <$> arbitrary <*> pure def <*> pure def)
 
 genRecipientsFrom :: [TxOut A] -> GenRS [TxOut A]
@@ -617,16 +620,16 @@ getDCertCredential = \case
 genRewards :: GenRS (RewardAccounts C_Crypto)
 genRewards = do
   NonNegative n <- lift arbitrary
-  rewards <-
+  newrewards <-
     Map.fromList <$> replicateM n ((,) <$> genCredential Rewrd <*> lift genPositiveVal)
-  modifyDState $ \ds -> ds {_rewards = rewards `Map.union` _rewards ds}
-  pure rewards
+  modifyDState $ \ds -> ds {_unified = rewards ds UM.⨃ newrewards} -- Prefers coins in newrewards
+  pure newrewards
 
 genWithdrawals :: GenRS (Wdrl C_Crypto)
 genWithdrawals = do
   let networkId = Testnet
-  rewards <- genRewards
-  pure $ Wdrl $ Map.fromList $ map (first (RewardAcnt networkId)) $ Map.toList rewards
+  newrewards <- genRewards
+  pure $ Wdrl $ Map.fromList $ map (first (RewardAcnt networkId)) $ Map.toList newrewards
 
 languagesUsed ::
   ValidatedTx A ->
@@ -804,7 +807,7 @@ genTxAndLEDGERState = do
 
 totalAda :: UTxOState A -> DPState C_Crypto -> Coin
 totalAda (UTxOState utxo f d _ _) DPState {_dstate} =
-  f <> d <> coin (balance utxo) <> F.fold (_rewards _dstate)
+  f <> d <> coin (balance utxo) <> F.foldl' (<>) mempty (rewards _dstate)
 
 testTxValidForLEDGER :: (TRC (AlonzoLEDGER A), GenState) -> Property
 testTxValidForLEDGER (trc@(TRC (_, (utxoState, dpstate), vtx)), _) =

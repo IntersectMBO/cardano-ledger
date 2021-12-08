@@ -41,7 +41,6 @@ library
   build-depends:       ansi-wl-pprint
                      , base >=4.11 && <5
                      , cardano-data
-                     , cardano-ledger-core
                      , compact-map
                      , containers
   hs-source-dirs:      src

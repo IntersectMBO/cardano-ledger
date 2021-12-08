@@ -64,13 +64,13 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
-    DState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
     RewardUpdate (..),
     circulation,
     createRUpd,
+    rewards,
     updateNonMyopic,
   )
 import Cardano.Ledger.Shelley.PParams
@@ -108,7 +108,7 @@ import Control.Monad.Trans.Reader (asks, runReader)
 import Control.Provenance (ProvM, preservesJust, preservesNothing, runProvM, runWithProvM)
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
-import qualified Data.Compact.VMap as VMap
+import qualified Data.Compact.ViewMap as VMap
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Map (Map)
@@ -120,6 +120,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.UMap as UM
 import Data.Word (Word64)
 import GHC.Stack
 import Numeric.Natural (Natural)
@@ -631,7 +632,7 @@ createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm)
           pr
           b
           _R
-          (Map.keysSet $ _rewards ds)
+          (UM.domain $ rewards ds)
           poolParams
           stake'
           delegs'

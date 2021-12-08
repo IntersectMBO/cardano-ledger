@@ -25,6 +25,7 @@ module Data.Sharing
     internsFromMap,
     internsFromVMap,
     toMemptyLens,
+    fromShareCBORfunctor,
   )
 where
 
@@ -34,8 +35,8 @@ import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
 import Data.BiMap (BiMap (..), biMapFromMap)
 import Data.Coders (decodeMap, decodeVMap, invalidKey)
-import Data.Compact.VMap (VB, VMap, VP)
-import qualified Data.Compact.VMap as VMap
+import Data.Compact.ViewMap (VB, VMap, VP)
+import qualified Data.Compact.ViewMap as VMap
 import qualified Data.Foldable as F
 import Data.Functor.Identity
 import Data.Kind
@@ -128,9 +129,9 @@ class Monoid (Share a) => FromSharedCBOR a where
   -- | Utilize sharing when decoding, but do not add anything to the state for
   -- future sharing.
   fromSharedCBOR :: Share a -> Decoder s a
-  fromSharedCBOR = evalStateT fromSharedPlusCBOR
+  fromSharedCBOR s = fst <$> runStateT fromSharedPlusCBOR s
 
-  -- | Deserialize with sharing and add the state that used for sharing. Default
+  -- | Deserialize with sharing and add to the state that is used for sharing. Default
   -- implementation will add value returned by `getShare` for adding to the
   -- state.
   fromSharedPlusCBOR :: StateT (Share a) (Decoder s) a
@@ -223,3 +224,9 @@ instance (Ord a, Ord b, FromCBOR a, FromCBOR b) => FromSharedCBOR (BiMap b a b) 
         return x
       k -> invalidKey (fromIntegral k)
   getShare (MkBiMap m1 m2) = (internsFromMap m1, internsFromMap m2)
+
+-- | Share every item in a functor, have deserializing it
+fromShareCBORfunctor :: (FromCBOR (f b), Functor f) => Interns b -> Decoder s (f b)
+fromShareCBORfunctor kis = do
+  sm <- fromCBOR
+  pure (interns kis <$> sm)

@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Data.Compact.VMap
+module Data.Compact.ViewMap
   ( VG.Vector,
     VB,
     VU,

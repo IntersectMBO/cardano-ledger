@@ -36,6 +36,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
@@ -47,9 +48,10 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState (..),
     RewardAccounts,
+    rewards,
     _dstate,
     _pParams,
-    _rewards,
+    _unified,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DELPL, DelplEnv (..), DelplEvent, DelplPredicateFailure)
 import Cardano.Ledger.Shelley.TxBody
@@ -62,8 +64,9 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
   )
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.UnifiedMap (Trip (..), UMap (..), View (..), ViewMap)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, (∈), (⨃))
+import Control.SetAlgebra (dom, eval, (∈))
 import Control.State.Transition
   ( Embed (..),
     STS (..),
@@ -78,8 +81,10 @@ import Control.State.Transition
 import Data.Functor.Identity (Identity (runIdentity))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence (Seq (..))
 import Data.Typeable (Typeable)
+import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -223,14 +228,13 @@ delegsTransition = do
     Empty -> do
       let ds = _dstate dpstate
           wdrls_ = unWdrl . getField @"wdrls" $ getField @"body" tx
-          rewards = _rewards ds
-
-      isSubmapOf wdrls_ rewards -- wdrls_ ⊆ rewards
+          rewards' = rewards ds
+      isSubmapOf wdrls_ rewards' -- wdrls_ ⊆ rewards
         ?! WithdrawalsNotInRewardsDELEGS
           ( Map.differenceWith
               (\x y -> if x /= y then Just x else Nothing)
               wdrls_
-              (Map.mapKeys (mkRwdAcnt network) rewards)
+              (Map.mapKeys (mkRwdAcnt network) (UM.unUnify rewards'))
           )
 
       let wdrls_' :: RewardAccounts (Crypto era)
@@ -241,8 +245,8 @@ delegsTransition = do
               )
               Map.empty
               wdrls_
-          rewards' = eval (rewards ⨃ wdrls_')
-      pure $ dpstate {_dstate = ds {_rewards = rewards'}}
+          unified' = (rewards' UM.⨃ wdrls_')
+      pure $ dpstate {_dstate = ds {_unified = unified'}}
     gamma :|> c -> do
       dpstate' <-
         trans @(DELEGS era) $ TRC (env, dpstate, gamma)
@@ -263,14 +267,19 @@ delegsTransition = do
   where
     -- @wdrls_@ is small and @rewards@ big, better to transform the former
     -- than the latter into the right shape so we can call 'Map.isSubmapOf'.
-    isSubmapOf :: Map (RewardAcnt (Crypto era)) Coin -> RewardAccounts (Crypto era) -> Bool
-    isSubmapOf wdrls_ rewards = wdrls_' `Map.isSubmapOf` rewards
+    isSubmapOf ::
+      Map (RewardAcnt (Crypto era)) Coin ->
+      ViewMap (Crypto era) (Credential 'Staking crypto) Coin ->
+      Bool
+    isSubmapOf wdrls_ (Rewards (UnifiedMap tripmap _)) = Map.isSubmapOfBy f withdrawalMap tripmap
       where
-        wdrls_' =
+        withdrawalMap =
           Map.fromList
             [ (cred, coin)
               | (RewardAcnt _ cred, coin) <- Map.toList wdrls_
             ]
+        f coin1 (Triple (SJust coin2) _ _) = coin1 == coin2
+        f _ _ = False
 
 instance
   ( Era era,

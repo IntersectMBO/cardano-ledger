@@ -40,6 +40,8 @@ library
                      , Data.Pulse
                      , Data.Sharing
                      , Data.BiMap
+                     , Data.MapExtras
+                     , Data.UMap
 
   build-depends:       base >=4.11 && <5
                      , bytestring
@@ -60,3 +62,25 @@ library
                      , cardano-crypto-class
                      , cardano-binary
   hs-source-dirs:      src
+
+
+test-suite cardano-data-tests
+  import:             project-config
+
+  hs-source-dirs:      test
+  main-is:             Main.hs
+  other-modules:       Test.Data.UMap
+                     
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  build-depends:       base
+                    -- , cardano-prelude
+                     , containers
+                     , tasty
+                     , tasty-quickcheck
+                     -- , tasty-hunit
+                     , cardano-data
+                     , QuickCheck
+                     -- , quickcheck-classes-base
+                     -- , random
+  ghc-options:        -threaded -O

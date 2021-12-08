@@ -5,7 +5,7 @@ module Main where
 import Control.Monad
 import Criterion.Main
 import Data.Compact.KeyMap as KeyMap
-import Data.Compact.VMap as VMap
+import Data.Compact.ViewMap as VMap
 import Data.Foldable as F
 import Data.Map.Strict as Map
 import System.Random.Stateful as Random

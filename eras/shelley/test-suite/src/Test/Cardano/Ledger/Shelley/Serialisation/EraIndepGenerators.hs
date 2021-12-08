@@ -108,6 +108,7 @@ import qualified Cardano.Ledger.Shelley.Rules.Pool as STS
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as STS
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as STS
 import Cardano.Ledger.Shelley.Tx (WitnessSetHKD (WitnessSet), hashScript)
+import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (UnifiedMap), UnifiedMap)
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.OCert as TP
@@ -116,11 +117,10 @@ import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as STS
 import Cardano.Slotting.Block (BlockNo (..))
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
-import Control.SetAlgebra (biMapFromList)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
-import qualified Data.Compact.VMap as VMap
+import qualified Data.Compact.ViewMap as VMap
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Maybe (fromJust)
@@ -458,12 +458,18 @@ instance CC.Crypto crypto => Arbitrary (GenDelegPair crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
+instance CC.Crypto crypto => Arbitrary (Triple crypto) where
+  arbitrary = Triple <$> arbitrary <*> arbitrary <*> arbitrary
+  shrink = genericShrink
+
+instance CC.Crypto crypto => Arbitrary (UnifiedMap crypto) where
+  arbitrary = UnifiedMap <$> arbitrary <*> arbitrary
+  shrink = genericShrink
+
 instance CC.Crypto crypto => Arbitrary (DState crypto) where
   arbitrary =
     DState
       <$> arbitrary
-      <*> arbitrary
-      <*> (biMapFromList const <$> arbitrary)
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

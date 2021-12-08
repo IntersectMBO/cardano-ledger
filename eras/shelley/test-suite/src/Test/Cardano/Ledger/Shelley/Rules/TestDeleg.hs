@@ -25,6 +25,8 @@ import qualified Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer
 import Cardano.Ledger.Shelley.LedgerState
   ( DState (..),
     InstantaneousRewards (..),
+    delegations,
+    rewards,
   )
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
 import Cardano.Ledger.Shelley.TxBody
@@ -48,8 +50,9 @@ import Control.State.Transition.Trace
   )
 import Data.Foldable (fold)
 import Data.List (foldl')
-import qualified Data.Map.Strict as Map (difference, filter, keysSet, lookup, (\\))
+import qualified Data.Map.Strict as Map (difference, filter, keysSet, (\\))
 import qualified Data.Set as Set (isSubsetOf, singleton, size)
+import qualified Data.UMap as UM
 import GHC.Records (HasField (..))
 import Test.QuickCheck (Property, conjoin, counterexample, property)
 
@@ -63,10 +66,10 @@ keyRegistration
     conjoin
       [ counterexample
           "a newly registered key should have a reward account"
-          ((eval (hk ∈ dom (_rewards targetSt))) :: Bool),
+          ((eval (hk ∈ dom (rewards targetSt))) :: Bool),
         counterexample
           "a newly registered key should have a reward account with 0 balance"
-          (Map.lookup hk (_rewards targetSt) == Just mempty)
+          (UM.lookup hk (rewards targetSt) == Just mempty)
       ]
 keyRegistration _ = property ()
 
@@ -80,10 +83,10 @@ keyDeRegistration
     conjoin
       [ counterexample
           "a deregistered stake key should no longer be in the rewards mapping"
-          ((eval (hk ∉ dom (_rewards targetSt))) :: Bool),
+          ((eval (hk ∉ dom (rewards targetSt))) :: Bool),
         counterexample
           "a deregistered stake key should no longer be in the delegations mapping"
-          ((eval (hk ∉ dom (_delegations targetSt))) :: Bool)
+          ((eval (hk ∉ dom (delegations targetSt))) :: Bool)
       ]
 keyDeRegistration _ = property ()
 
@@ -94,11 +97,11 @@ keyDelegation
     { signal = (DCertDeleg (Delegate (Delegation from to))),
       target = targetSt
     } =
-    let fromImage = eval (rng (Set.singleton from ◁ _delegations targetSt))
+    let fromImage = eval (rng (Set.singleton from ◁ delegations targetSt))
      in conjoin
           [ counterexample
               "a delegated key should have a reward account"
-              ((eval (from ∈ dom (_rewards targetSt))) :: Bool),
+              ((eval (from ∈ dom (rewards targetSt))) :: Bool),
             counterexample
               "a registered stake credential should be delegated"
               ((eval (to ∈ fromImage)) :: Bool),
@@ -113,8 +116,8 @@ keyDelegation _ = property ()
 rewardsSumInvariant :: SourceSignalTarget (DELEG era) -> Property
 rewardsSumInvariant
   SourceSignalTarget {source, target} =
-    let sourceRewards = _rewards source
-        targetRewards = _rewards target
+    let sourceRewards = UM.unUnify (rewards source) -- would not use unUnify in production, but tests are OK?
+        targetRewards = UM.unUnify (rewards target)
         rewardsSum = foldl' (<>) mempty
      in conjoin
           [ counterexample
