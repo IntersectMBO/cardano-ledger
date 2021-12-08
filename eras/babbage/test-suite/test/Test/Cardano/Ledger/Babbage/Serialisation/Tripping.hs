@@ -3,9 +3,12 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
+{-# OPTIONS_GHC -w #-}
+
 module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 
 import Cardano.Binary
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.TxBody (TxBody)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley.Metadata (Metadata)

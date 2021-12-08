@@ -24,14 +24,14 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Babbage tests"
-    [ Tripping.tests,
+    [ Tripping.tests
     ]
 
 fastTests :: TestTree
 fastTests =
   testGroup
     "Babbage tests"
-    [ Tripping.tests,
+    [ Tripping.tests
     ]
 
 nightlyTests :: TestTree
