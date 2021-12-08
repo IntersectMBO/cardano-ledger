@@ -21,7 +21,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Babbage.TxBody
-  ( TxOut (.., TxOut, TxOutCompact, TxOutCompactDH),
+  ( TxOut (TxOut, TxOutCompact, TxOutCompactDH, TxOutCompactDatum),
     TxBody
       ( TxBody,
         inputs,
@@ -75,7 +75,8 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), DataHash)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
+import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -85,7 +86,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
@@ -99,8 +100,6 @@ import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
     SafeToHash,
-    extractHash,
-    unsafeMakeSafeHash,
   )
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
@@ -112,7 +111,6 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     Val (..),
-    adaOnly,
     decodeMint,
     decodeNonNegative,
     encodeMint,
@@ -136,6 +134,8 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
+import Control.DeepSeq (NFData (rnf), rwhnf)
+import Data.Sharing (FromSharedCBOR (..), Interns, fromNotSharedCBOR, interns)
 
 data TxOut era
   = TxOutCompact'
@@ -224,6 +224,11 @@ viewTxOut (TxOutCompactDatum' bs c d) = (addr, val, Datum d)
   where
     addr = decompactAddr bs
     val = fromCompact c
+viewTxOut (TxOutCompactDatum bs c datum) = (addr, val, SJust dh)
+  where
+    addr = decompactAddr bs
+    val = fromCompact c
+    dh = hashData datum
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal)
   | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
     let addr = decodeAddress28 stakeRef a b c d
@@ -353,7 +358,7 @@ data TxBodyRaw era = TxBodyRaw
     _mint :: !(Value (Crypto era)),
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
-    -- Operations on the TxBody in the BabbageEra depend upon this.
+    -- Operations on the TxBody in the AlonzoEra depend upon this.
     _scriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (Crypto era))),
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     _txnetworkid :: !(StrictMaybe Network)
@@ -416,12 +421,13 @@ deriving via
       Show (Core.Value era),
       DecodeNonNegative (Core.Value era),
       FromCBOR (Annotator (Core.Script era)),
+      FromCBOR (Data era),
       Core.SerialisableData (PParamsDelta era)
     ) =>
     FromCBOR (Annotator (TxBody era))
 
 -- The Set of constraints necessary to use the TxBody pattern
-type BabbageBody era =
+type AlonzoBody era =
   ( Era era,
     Compactible (Core.Value era),
     ToCBOR (Core.Script era),
@@ -429,7 +435,7 @@ type BabbageBody era =
   )
 
 pattern TxBody ::
-  BabbageBody era =>
+  AlonzoBody era =>
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
@@ -533,7 +539,7 @@ instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 -- ==============================================================================
 -- We define these accessor functions manually, because if we define them using
--- the record syntax in the TxBody pattern, they inherit the (BabbageBody era)
+-- the record syntax in the TxBody pattern, they inherit the (AlonzoBody era)
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
@@ -622,6 +628,9 @@ instance
   FromCBOR (Annotator (TxOut era))
   where
   fromCBOR = fromNotSharedCBOR
+
+constAnn :: Decoder s a -> Decoder s (Annotator a)
+constAnn = fmap (Annotator . const)
 
 instance
   ( Era era,
@@ -742,6 +751,7 @@ instance
     DecodeNonNegative (Core.Value era),
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (PParamsDelta era),
+    FromCBOR (Data era),
     ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (TxBodyRaw era)
@@ -834,6 +844,7 @@ instance
     DecodeNonNegative (Core.Value era),
     FromCBOR (Annotator (Core.Script era)),
     FromCBOR (PParamsDelta era),
+    FromCBOR (Data era),
     ToCBOR (PParamsDelta era)
   ) =>
   FromCBOR (Annotator (TxBodyRaw era))
