@@ -264,6 +264,7 @@ import qualified Data.Set as Set
 import Data.Sharing
 import Data.Typeable
 import Data.Word (Word64)
+import GHC.Conc (par)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import Lens.Micro (_1, _2)
@@ -1224,11 +1225,14 @@ incrementalStakeDistr ::
   PState (Crypto era) ->
   SnapShot (Crypto era)
 incrementalStakeDistr incstake ds ps =
-  SnapShot
-    (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stake1)))
-    (VMap.fromMap delegs)
-    (VMap.fromMap poolParams)
+  delegsMap `par` poolParamsMap
+    `par` SnapShot
+      (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stake1)))
+      delegsMap
+      poolParamsMap
   where
+    delegsMap = VMap.fromMap delegs
+    poolParamsMap = VMap.fromMap poolParams
     DState rewards' delegs bimap _ _ _ = ds
     PState poolParams _ _ = ps
     stake0, stake1 :: Map (Credential 'Staking (Crypto era)) Coin

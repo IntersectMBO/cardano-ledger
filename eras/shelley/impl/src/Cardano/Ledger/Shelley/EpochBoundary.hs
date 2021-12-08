@@ -136,8 +136,8 @@ maxPool pc r sigma pR = maxPool' a0 nOpt r sigma pR
 -- | Snapshot of the stake distribution.
 data SnapShot crypto = SnapShot
   { _stake :: !(Stake crypto),
-    _delegations :: !(VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
-    _poolParams :: !(VMap VB VB (KeyHash 'StakePool crypto) (PoolParams crypto))
+    _delegations :: VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto),
+    _poolParams :: VMap VB VB (KeyHash 'StakePool crypto) (PoolParams crypto)
   }
   deriving (Show, Eq, Generic)
 
