@@ -21,6 +21,7 @@ module Cardano.Ledger.Babbage
   )
 where
 
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import Cardano.Ledger.Babbage.Data (AuxiliaryData (..))
 import Cardano.Ledger.Babbage.Genesis
 import Cardano.Ledger.Babbage.Language (Language (..))
@@ -42,7 +43,6 @@ import Cardano.Ledger.Babbage.TxBody (TxBody, TxOut (..))
 import Cardano.Ledger.Babbage.TxInfo (validScript)
 import qualified Cardano.Ledger.Babbage.TxSeq as Babbage (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Babbage.TxWitness (TxWitness (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
@@ -68,8 +68,8 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
     EpochState (..),
-    LedgerState (..),
     IncrementalStake (..),
+    LedgerState (..),
     NewEpochState (..),
     UTxOState (..),
     _genDelegs,

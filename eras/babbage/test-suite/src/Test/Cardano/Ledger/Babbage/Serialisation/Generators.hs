@@ -14,12 +14,12 @@
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
 import Cardano.Ledger.Babbage.TxBody
-  ( TxOut (..),
+  ( BabbageBody,
     TxBody (..),
-    BabbageBody
+    TxOut (..),
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript )
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Int (Int64)
@@ -74,4 +74,3 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-

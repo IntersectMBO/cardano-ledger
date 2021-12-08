@@ -20,12 +20,12 @@ module Cardano.Ledger.Babbage.Rules.Bbody
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.Babbage.Scripts (ExUnits (..), pointWiseExUnits)
 import qualified Cardano.Ledger.Babbage.Tx as Babbage (ValidatedTx, totExUnits)
 import Cardano.Ledger.Babbage.TxSeq (txSeqTxns)
 import qualified Cardano.Ledger.Babbage.TxSeq as Babbage (TxSeq)
 import Cardano.Ledger.Babbage.TxWitness (TxWitness)
-import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
 import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core

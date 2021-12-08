@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-
 {-# OPTIONS_GHC -w #-}
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where

@@ -30,9 +30,9 @@ module Cardano.Ledger.Babbage.Data
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (..), peekTokenType, withSlice)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Language (Language (..))
 import Cardano.Ledger.Babbage.Scripts (Script (..))
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
