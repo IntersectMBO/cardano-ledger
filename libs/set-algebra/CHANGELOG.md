@@ -1,4 +1,4 @@
-# Revision history for small-steps
+# Revision history for set-algebra
 
 ## 0.1.0.0 -- YYYY-mm-dd
 

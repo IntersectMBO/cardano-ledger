@@ -173,6 +173,9 @@ package cardano-ledger-test
 package cardano-protocol-tpraos
   ghc-options: -Werror
 
+package cardano-data
+  ghc-options: -Werror
+
 package compact-map
   ghc-options: -Werror
 
@@ -187,3 +190,7 @@ package small-steps-test
 
 package small-steps
   ghc-options: -Werror
+
+package set-algebra
+  ghc-options: -Werror
+
