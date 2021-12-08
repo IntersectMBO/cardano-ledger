@@ -14,6 +14,7 @@ module Control.Iterate.Exp where
 import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Iter (..), List (..), Sett (..), Single (..), fromPairs, unList)
 import Control.Iterate.BiMap (BiMap, Bimap, biMapEmpty)
 import Control.Iterate.Collect (Collect (..), front, hasElem, none, one)
+import Data.Compact.UnifiedMap (ViewMap)
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -106,6 +107,9 @@ instance (Ord k) => HasExp (Single k v) (Single k v) where
 
 instance (Ord k, Ord v) => HasExp (Bimap k v) (Bimap k v) where
   toExp x = Base BiMapR x
+
+instance Ord k => HasExp (ViewMap k v) (ViewMap k v) where
+  toExp x = Base ViewMapR x
 
 -- =======================================================================================================
 -- When we build an Exp, we want to make sure all Sets with one element become (SetSingleton x)
@@ -630,3 +634,4 @@ materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
 materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))
 materialize BiMapR x = runCollect x biMapEmpty (\(k, v) ans -> addpair k v ans)
 materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
+materialize ViewMapR _x = error "ViewMaps cannot be materialized"

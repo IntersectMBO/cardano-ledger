@@ -17,6 +17,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- temporary until we move Data.Coders
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- |
 -- Module      : LedgerState
@@ -234,14 +236,19 @@ import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans
 import Control.Provenance (ProvM, liftProv, modifyM)
-import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
+-- import Control.SetAlgebra (Bimap, biMapEmpty, dom, eval, forwards, (∈), (∪+), (▷), (◁))
+import Control.SetAlgebra (dom, eval, (∈), (▷), (◁))
 import Control.State.Transition (STS (State))
 import Data.Coders
   ( Decode (From, RecD),
     decode,
+    decodeMap,
     decodeRecordNamed,
+    encodeMap,
     (<!),
   )
+import Data.Compact.UnifiedMap (Triple (..), UnifiedMap (..), ViewMap (..))
+import qualified Data.Compact.UnifiedMap as UM
 import qualified Data.Compact.VMap as VMap
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
@@ -264,6 +271,41 @@ import Lens.Micro (_1, _2)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
+
+-- =================================================
+
+instance (Ord ptr, ToCBOR coin, ToCBOR ptr, ToCBOR poolid) => ToCBOR (Triple coin ptr poolid) where
+  toCBOR (Triple coin ptr pool) =
+    encodeListLen 3 <> toCBOR coin <> toCBOR ptr <> toCBOR pool
+
+instance (Ord ptr, FromCBOR coin, FromCBOR ptr, FromCBOR poolid) => FromCBOR (Triple coin ptr poolid) where
+  fromCBOR =
+    decodeRecordNamed "Triple" (const 3) $
+      Triple <$> fromCBOR <*> fromCBOR <*> fromCBOR
+
+instance
+  (Ord ptr, ToCBOR coin, ToCBOR ptr, ToCBOR poolid, ToCBOR stakeid) =>
+  ToCBOR (UnifiedMap coin ptr stakeid poolid)
+  where
+  toCBOR (UnifiedMap tripmap ptrmap) =
+    encodeListLen 2 <> encodeMap toCBOR toCBOR tripmap <> encodeMap toCBOR toCBOR ptrmap
+
+instance
+  ( Ord ptr,
+    Ord stakeid,
+    Monoid coin,
+    FromCBOR coin,
+    FromCBOR ptr,
+    FromCBOR stakeid,
+    FromCBOR poolid
+  ) =>
+  FromCBOR (UnifiedMap coin ptr stakeid poolid)
+  where
+  fromCBOR =
+    decodeRecordNamed "UnifiedMap" (const 2) $
+      UnifiedMap <$> decodeMap fromCBOR fromCBOR <*> decodeMap fromCBOR fromCBOR
+
+-- =========================================================================================
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -335,12 +377,15 @@ instance CC.Crypto crypto => FromSharedCBOR (InstantaneousRewards crypto) where
 
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
-  { -- | The active reward accounts.
+  { {- -- | The active reward accounts.
     _rewards :: !(RewardAccounts crypto),
     -- | The current delegations.
     _delegations :: !(Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto)),
     -- | The pointed to hash keys.
-    _ptrs :: !(Bimap Ptr (Credential 'Staking crypto)),
+    _ptrs :: !(Bimap Ptr (Credential 'Staking crypto)), -}
+
+    -- | Unified Reward Maps
+    _unified :: UnifiedMap Coin Ptr (Credential 'Staking crypto) (KeyHash 'StakePool crypto),
     -- | Future genesis key delegations
     _fGenDelegs :: !(Map (FutureGenDeleg crypto) (GenDelegPair crypto)),
     -- | Genesis key delegations
@@ -350,16 +395,23 @@ data DState crypto = DState
   }
   deriving (Show, Eq, Generic)
 
+rewards :: DState crypto -> ViewMap (Credential 'Staking crypto) Coin
+rewards (DState unified _ _ _) = Rewards unified
+
+delegations :: DState crypto -> ViewMap (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
+delegations (DState unified _ _ _) = Delegations unified
+
+ptrs :: DState crypto -> ViewMap Ptr (Credential 'Staking crypto)
+ptrs (DState unified _ _ _) = Ptrs unified
+
 instance NoThunks (DState crypto)
 
 instance NFData (DState crypto)
 
 instance CC.Crypto crypto => ToCBOR (DState crypto) where
-  toCBOR (DState rw dlg p fgs gs ir) =
-    encodeListLen 6
-      <> toCBOR rw
-      <> toCBOR dlg
-      <> toCBOR p
+  toCBOR (DState unified fgs gs ir) =
+    encodeListLen 4
+      <> toCBOR unified
       <> toCBOR fgs
       <> toCBOR gs
       <> toCBOR ir
@@ -370,13 +422,14 @@ instance CC.Crypto crypto => FromSharedCBOR (DState crypto) where
       (Interns (Credential 'Staking crypto), Interns (KeyHash 'StakePool crypto))
   fromSharedPlusCBOR = do
     decodeRecordNamedT "DState" (const 6) $ do
-      rw <- fromSharedPlusLensCBOR (toMemptyLens _1 _1)
-      dlg <- fromSharedPlusCBOR
-      p <- fromSharedPlusLensCBOR (toMemptyLens _2 _1)
+      -- rw <- fromSharedPlusLensCBOR (toMemptyLens _1 _1)
+      -- dlg <- fromSharedPlusCBOR
+      -- p <- fromSharedPlusLensCBOR (toMemptyLens _2 _1)
+      unified <- lift fromCBOR
       fgs <- lift fromCBOR
       gs <- lift fromCBOR
       ir <- fromSharedPlusLensCBOR _1
-      pure $ DState rw dlg p fgs gs ir
+      pure $ DState unified fgs gs ir
 
 -- | Current state of staking pools and their certificate counters.
 data PState crypto = PState
@@ -691,7 +744,7 @@ getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ = nes
     EpochState _ _ ls _ _ _ = es
-    LedgerState _ (DPState (DState _ _ _ _ (GenDelegs genDelegs) _) _) = ls
+    LedgerState _ (DPState (DState _unified _ (GenDelegs genDelegs) _) _) = ls
 
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
@@ -1047,14 +1100,17 @@ stakeDistr ::
 stakeDistr u ds ps =
   SnapShot
     (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
-    (VMap.fromMap delegs)
+    (VMap.fromMap (UM.unUnify delegs))
     (VMap.fromMap poolParams)
   where
-    DState rewards' delegs ptrs' _ _ _ = ds
+    -- DState rewards' delegs ptrs' _ _ _ = ds
+    rewards' = rewards ds
+    delegs = delegations ds
+    ptrs' = ptrs ds
     PState poolParams _ _ = ps
     stakeRelation :: Map (Credential 'Staking (Crypto era)) Coin
-    stakeRelation = aggregateUtxoCoinByCredential (forwards ptrs') u rewards'
-    activeDelegs :: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
+    stakeRelation = aggregateUtxoCoinByCredential (UM.unUnify ptrs') u (UM.unUnify rewards') -- HERE FIX ME
+    activeDelegs :: ViewMap (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
     activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
     compactCoinOrError c =
       case toCompact c of
@@ -1087,7 +1143,7 @@ applyRUpd'
       dState = _dstate delegState
       (regRU, unregRU) =
         Map.partitionWithKey
-          (\k _ -> eval (k ∈ dom (_rewards dState)))
+          (\k _ -> eval (k ∈ dom (rewards dState)))
           (rs ru)
       totalUnregistered = fold $ aggregateRewards pr unregRU
       registered = filterRewards pr regRU
@@ -1105,7 +1161,7 @@ applyRUpd'
               delegState
                 { _dstate =
                     dState
-                      { _rewards = eval (_rewards dState ∪+ registeredAggregated)
+                      { _unified = (_unified dState UM.∪+ registeredAggregated)
                       }
                 }
           }
@@ -1252,7 +1308,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       collectLRs acc poolRI =
         let rewardAcnt = getRwdCred . _poolRAcnt . poolPs $ poolRI
             packageLeaderReward = Set.singleton . leaderRewardToGeneral . poolLeaderReward
-         in if HardForks.forgoRewardPrefilter pr || rewardAcnt `Map.member` _rewards ds
+         in if HardForks.forgoRewardPrefilter pr || rewardAcnt `UM.member` rewards ds
               then
                 Map.insertWith
                   Set.union
@@ -1280,7 +1336,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       free =
         FreeVars
           delegs'
-          (Map.keysSet $ _rewards ds)
+          (UM.domain $ rewards ds)
           (unCoin totalStake)
           (getField @"_protocolVersion" pr)
           blockProducingPoolInfo
@@ -1476,9 +1532,7 @@ instance Default (InstantaneousRewards crypto) where
 instance Default (DState crypto) where
   def =
     DState
-      Map.empty
-      Map.empty
-      biMapEmpty
+      (UnifiedMap Map.empty Map.empty)
       Map.empty
       (GenDelegs Map.empty)
       def

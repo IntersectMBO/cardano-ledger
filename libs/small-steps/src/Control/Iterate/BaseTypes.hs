@@ -11,6 +11,8 @@ module Control.Iterate.BaseTypes where
 
 import Control.Iterate.BiMap
 import Control.Iterate.Collect (Collect (..), hasElem, isempty, none, one, when)
+import Data.Compact.UnifiedMap (ViewMap (..))
+import qualified Data.Compact.UnifiedMap as UM
 import Data.List (sortBy)
 import qualified Data.List as List
 import Data.Map.Internal (Map (..))
@@ -82,6 +84,7 @@ data BaseRep f k v where
   ListR :: Basic List => BaseRep List k v
   SingleR :: Basic Single => BaseRep Single k v
   BiMapR :: (Basic (BiMap v), Ord v) => BaseRep (BiMap v) k v
+  ViewMapR :: Basic ViewMap => BaseRep ViewMap k v
 
 instance Show (BaseRep f k v) where
   show MapR = "Map"
@@ -89,6 +92,7 @@ instance Show (BaseRep f k v) where
   show ListR = "List"
   show SingleR = "Single"
   show BiMapR = "BiMap"
+  show ViewMapR = "ViewMap"
 
 -- ==================================================================
 -- Now for each Basic type we provide instances
@@ -301,6 +305,36 @@ instance Iter Map.Map where
   isnull = Map.null
   lookup = Map.lookup
 
+-- ==========================================================================
+-- ViewMap
+
+instance Basic ViewMap where
+  addkv (k, v) m comb = UM.insertWith comb k v m
+  addpair = UM.insert
+  removekey = UM.delete
+  domain = UM.domain
+  range = UM.range
+  emptyc = error "'emptyc' cannot be defined for ViewMap"
+
+instance Iter ViewMap where
+  nxt m =
+    Collect
+      ( \ans f ->
+          case UM.next m of
+            Nothing -> ans
+            Just (k, v, nextm) -> f (k, v, nextm) ans
+      )
+  lub key m =
+    Collect
+      ( \ans f ->
+          case UM.leastUpperBound key m of
+            Nothing -> ans
+            Just (k, v, nextm) -> f (k, v, nextm) ans
+      )
+  haskey = UM.member
+  isnull = UM.isNull
+  lookup = UM.lookup
+
 -- ===========================================================================
 -- Every iterable type type forms an isomorphism with some Base type. For most
 -- Base types the isomorphism is the identity in both directions, but for some,
@@ -335,5 +369,9 @@ instance Embed (Single k v) (Single k v) where
 
 -- Necessary when asking Boolean queries like: (⊆),(∈),(∉)
 instance Embed Bool Bool where
+  toBase xs = xs
+  fromBase xs = xs
+
+instance Embed (ViewMap k v) (ViewMap k v) where
   toBase xs = xs
   fromBase xs = xs

@@ -476,6 +476,7 @@ fromList ListR combine xs = fromPairs combine xs
 fromList SetR combine xs = foldr (addp combine) (Sett (Set.empty)) xs
 fromList BiMapR combine xs = biMapFromList combine xs
 fromList SingleR combine xs = foldr (addp combine) Fail xs
+fromList ViewMapR _combine _xs = error "cannot build a ViewMap with 'fromList'."
 
 -- =========================================================================================
 -- Now we make an iterator that collects triples, on the intersection
