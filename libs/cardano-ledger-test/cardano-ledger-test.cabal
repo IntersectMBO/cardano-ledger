@@ -111,6 +111,7 @@ library
     plutus-tx,
     profunctors,
     QuickCheck,
+    quickcheck-instances,
     QuickCheck-GenT,
     quiet,
     random,

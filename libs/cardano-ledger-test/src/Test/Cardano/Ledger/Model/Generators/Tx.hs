@@ -1,16 +1,18 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE PolyKinds #-}
-{-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Model.Generators.Tx where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Mary.Value (AssetName (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Lens
@@ -20,19 +22,28 @@ import Control.Lens
     uses,
     (.=),
   )
-import Control.Monad (replicateM)
+import Control.Monad (forM, replicateM)
 import Control.Monad.Reader.Class (asks)
+import Control.Monad.Supply
+  ( MonadSupply (..),
+  )
+import qualified Data.ByteString as BS
 import Data.Foldable (fold)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
 import QuickCheck.GenT
-  ( liftGen,
-    frequency,
+  ( Gen,
+    arbitrary,
     choose,
+    elements,
+    frequency,
+    liftGen,
+    oneof,
+    resize,
+    sublistOf,
   )
-import Test.Cardano.Prelude.Arbitrary.QuickCheck
 import Test.Cardano.Ledger.Model.API
   ( applyModelDCert,
     applyModelTx,
@@ -48,15 +59,17 @@ import Test.Cardano.Ledger.Model.BaseTypes
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet (..),
-    IfSupportsMint,
+    IfSupportsMint (..),
     IfSupportsPlutus (..),
     KnownScriptFeature,
     ScriptFeature,
+    TyScriptFeature (..),
     TyValueExpected (..),
     ValueFeature,
     fromSupportsMint,
     ifSupportsMint,
     ifSupportsPlutus,
+    reifySupportsMint,
     reifySupportsPlutus,
     traverseSupportsMint,
   )
@@ -81,7 +94,9 @@ import Test.Cardano.Ledger.Model.Generators.TxOut
   )
 import Test.Cardano.Ledger.Model.Script
   ( ModelCredential (..),
+    ModelPlutusScript (..),
     ModelScript (..),
+    PreprocessedPlutusScript (..),
     modelAddress_pmt,
     _ModelScriptHashObj,
   )
@@ -92,7 +107,7 @@ import Test.Cardano.Ledger.Model.Tx
     _ModelDelegate,
   )
 import Test.Cardano.Ledger.Model.TxOut
-  ( ModelTxOut(..),
+  ( ModelTxOut (..),
     ModelUTxOId,
     modelTxOut_address,
   )
@@ -100,8 +115,10 @@ import Test.Cardano.Ledger.Model.UTxO
   ( ModelUTxOMap (..),
   )
 import Test.Cardano.Ledger.Model.Value
-  ( mkModelValueF',
+  ( getModelValueF,
+    mkModelValueF',
   )
+import Test.QuickCheck.Instances.ByteString ()
 
 genWdrl :: HasGenModelM st era m => AllowScripts (ScriptFeature era) -> m (Map (ModelCredential 'Staking (ScriptFeature era)) Coin)
 genWdrl allowScripts = do
@@ -137,32 +154,107 @@ wouldSpendLastCollateral slot txn = do
   pure . Set.null . _modelUTxOMap_collateralUtxos $ getModelLedger_utxos ml'
 
 freshMintScript ::
-  MonadSupply Integer m =>
+  forall era st m tlf.
+  ( HasGenModelM st era m,
+    ScriptFeature era ~ 'TyScriptFeature tlf 'True
+  ) =>
   m (ModelScript (ScriptFeature era))
 freshMintScript = do
   x <- supply
-  pure $ ModelScriptHashObj $ ModelPlutusScript_Salt x $ ModelPlutusScript_Preprocessed RedeemerIs102
+  case (reifySupportsPlutus (Proxy @(ScriptFeature era))) of
+    SupportsPlutus () ->
+      pure $
+        ModelScript_PlutusV1 $
+          ModelPlutusScript_Salt x $ ModelPlutusScript_Preprocessed RedeemerIs102
 
-freshAsset :: m (ModelValueVars era (ValueFeature era))
-freshAsset = fmap ModelValue_MA ((,) <$> freshMintScript <*> _)
+genAssetName :: Gen AssetName
+genAssetName =
+  AssetName
+    <$> oneof
+      [ pure BS.empty,
+        resize 32 arbitrary
+      ]
 
-genMint :: HasGenModelM st era m => ModelValue (ValueFeature era) era -> m (ModelValue (ValueFeature era) era)
-genMint inputVal =
-  frequency [
-    (1, pure mempty),
-    (1, do
-      numAssetsToMint <- choose (1, 10)
-      newAssets <- replicateM numAssetsToMint $ (,) <$> freshAsset <*>
-        frequency [
-          (1, pure 1),
-          (1, choose (1_000 :: Integer, 1_000_000))
-        ]
-      pure $ ModelValue $ mkModelValueF' mempty $ Map.fromList newAssets
-      )
-    -- create new coins that dont exist
-    -- destroy some inputs
-    -- create new coins that already exist
-  ]
+freshAsset ::
+  forall era st m tlf.
+  ( HasGenModelM st era m,
+    ScriptFeature era ~ 'TyScriptFeature tlf 'True,
+    ValueFeature era ~ 'ExpectAnyOutput
+  ) =>
+  m (ModelValueVars era 'ExpectAnyOutput)
+freshAsset =
+  case (reifySupportsMint (Proxy @(ValueFeature era))) of
+    SupportsMint () ->
+      fmap ModelValue_MA ((,) <$> freshMintScript <*> liftGen genAssetName)
+
+makeAsset ::
+  forall era st m.
+  HasGenModelM st era m =>
+  (ModelValueVars era 'ExpectAnyOutput) ->
+  m (ModelValue 'ExpectAnyOutput era)
+makeAsset asset = do
+  numAssetsToMint <- choose (1, 10)
+  newAssets <-
+    replicateM numAssetsToMint $
+      (,) asset
+        <$> frequency
+          [ (1, pure 1),
+            (1, choose (1_000 :: Integer, 1_000_000))
+          ]
+  pure $ ModelValue $ mkModelValueF' mempty $ Map.fromList newAssets
+
+data MintBurnAmount
+  = MintBurnSmallest
+  | MintBurnEverything
+  | MintBurnRandom
+
+mintBurnAssets ::
+  forall era st m.
+  HasGenModelM st era m =>
+  [(ModelValueVars era 'ExpectAnyOutput, Integer)] ->
+  m (ModelValue 'ExpectAnyOutput era)
+mintBurnAssets assets = do
+  burnAmt <- elements [MintBurnRandom, MintBurnEverything, MintBurnSmallest]
+  modifiedAssets <- forM assets $ \(asset, qty) ->
+    fmap ((,) asset) $
+      case burnAmt of
+        MintBurnSmallest -> pure (-1)
+        MintBurnEverything -> pure (-qty)
+        MintBurnRandom -> choose (-qty, -1 :: Integer)
+
+  pure $ ModelValue $ mkModelValueF' mempty $ Map.fromList modifiedAssets
+
+genMint ::
+  forall era st m tlf.
+  ( HasGenModelM st era m,
+    ScriptFeature era ~ 'TyScriptFeature tlf 'True,
+    ValueFeature era ~ 'ExpectAnyOutput
+  ) =>
+  ModelValue (ValueFeature era) era ->
+  m (ModelValue (ValueFeature era) era)
+genMint inputVal = do
+  utxoMap <- uses modelLedger getModelLedger_utxos
+  let getMapFromModelValue = snd . getModelValueF . unModelValue
+      existingAssets = (Map.keys . getMapFromModelValue . _modelUTxOMap_balance) utxoMap
+      inputAssets = (Map.toList . getMapFromModelValue) inputVal
+  frequency $
+    [ (1, pure mempty),
+      (1, makeAsset =<< freshAsset)
+    ]
+      <> [(1, makeAsset =<< elements existingAssets) | (not . null) existingAssets]
+      <> [ ( 1,
+             do
+               sublistInputs <- sublistOf inputAssets
+               randAssets <-
+                 frequency $
+                   [(1, pure sublistInputs) | (not . null) sublistInputs]
+                     <> [ (1, fmap (: []) $ elements inputAssets),
+                          (1, pure inputAssets)
+                        ]
+               mintBurnAssets randAssets
+           )
+           | (not . null) inputAssets
+         ]
 
 genModelTx :: forall era m st. SlotNo -> HasGenModelM st era m => m (ModelTx era)
 genModelTx slot = do
@@ -170,8 +262,16 @@ genModelTx slot = do
   ins <- genInputs haveCollateral
   wdrl <- fmap Val.inject <$> genWdrl haveCollateral
 
-  mint <- traverseSupportsMint id
-    $ ifSupportsMint (Proxy :: Proxy (ValueFeature era)) () (genMint $ foldMap _mtxo_value ins)
+  mint <- case haveCollateral of
+    NoPlutusSupport () -> pure mempty
+    SupportsPlutus False -> pure mempty
+    SupportsPlutus True ->
+      traverseSupportsMint id $
+        ifSupportsMint
+          (Proxy :: Proxy (ValueFeature era))
+          ()
+          (genMint $ foldMap _mtxo_value ins)
+
   (outs, fee) <- genOutputs haveCollateral ins mint
   let txn =
         ModelTx

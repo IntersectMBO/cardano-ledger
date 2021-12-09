@@ -121,9 +121,6 @@ import Test.Cardano.Ledger.Model.Script
   ( ModelCredential,
   )
 import Test.Cardano.Ledger.Model.Snapshot (SnapshotQueue (..))
-import Test.Cardano.Ledger.Model.TxOut
-  ( ModelTxOut(..),
-  )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
     ModelDelegCert (..),
@@ -141,6 +138,9 @@ import Test.Cardano.Ledger.Model.Tx
     modelTx_collateral,
     modelTx_fee,
     modelTx_redeemers,
+  )
+import Test.Cardano.Ledger.Model.TxOut
+  ( ModelTxOut (..),
   )
 import Test.Cardano.Ledger.Model.UTxO
   ( ModelUTxOMap (..),

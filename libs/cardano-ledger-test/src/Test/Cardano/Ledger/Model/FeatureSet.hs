@@ -84,8 +84,8 @@ fromSupportsPlutus f g = \case
 ifSupportsPlutus ::
   KnownScriptFeature s =>
   proxy s ->
-  a ->
-  b ->
+  (forall s'. s ~ 'TyScriptFeature s' 'False => a) ->
+  (forall s'. s ~ 'TyScriptFeature s' 'True => b) ->
   IfSupportsPlutus a b s
 ifSupportsPlutus proxy x y = case reifySupportsPlutus proxy of
   NoPlutusSupport () -> NoPlutusSupport x
@@ -181,8 +181,8 @@ instance (Monoid a, Monoid b, KnownValueFeature k) => Monoid (IfSupportsMint a b
 ifSupportsMint ::
   KnownValueFeature s =>
   proxy s ->
-  a ->
-  b ->
+  (s ~ 'ExpectAdaOnly => a) ->
+  (s ~ 'ExpectAnyOutput => b) ->
   IfSupportsMint a b s
 ifSupportsMint proxy x y = case reifyValueFeature proxy of
   ValueFeatureTag_AdaOnly -> NoMintSupport x
@@ -215,6 +215,18 @@ reifySupportsMint ::
 reifySupportsMint proxy = case reifyValueFeature proxy of
   ValueFeatureTag_AdaOnly -> NoMintSupport ()
   ValueFeatureTag_AnyOutput -> SupportsMint ()
+
+reifySupportsMint' ::
+  KnownValueFeature s => proxy s -> Bool
+reifySupportsMint' = fromSupportsMint (const False) (const True) . reifySupportsMint
+
+class PlutusScriptFeature v ~ 'True => PlutusSupported v where
+  supportsPlutus :: IfSupportsPlutus a b v -> b
+  supportsPlutus (SupportsPlutus x) = x
+
+--observePlutusSupport :: v
+
+instance PlutusScriptFeature v ~ 'True => PlutusSupported v
 
 class v ~ 'ExpectAnyOutput => MintSupported v where
   supportsMint :: IfSupportsMint a b v -> b

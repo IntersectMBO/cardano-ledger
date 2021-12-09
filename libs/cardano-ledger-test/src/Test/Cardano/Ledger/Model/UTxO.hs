@@ -11,9 +11,21 @@ module Test.Cardano.Ledger.Model.UTxO where
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Keys (KeyRole (..))
 import qualified Cardano.Ledger.Val as Val
-import Control.Arrow ((&&&))
 import Control.DeepSeq (NFData)
 import Control.Lens
+  ( At (..),
+    Index,
+    IxValue,
+    Ixed,
+    Lens',
+    ifoldMap,
+    set,
+    (%=),
+    (<>=),
+    _1,
+    _2,
+  )
+import Control.Monad (guard)
 import qualified Control.Monad.State.Strict as State
 import Data.Bool (bool)
 import Data.Foldable (for_)
@@ -30,23 +42,21 @@ import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
-import Test.Cardano.Ledger.Model.BaseTypes (PreservedAda (..), ModelValue)
+import Test.Cardano.Ledger.Model.BaseTypes (ModelValue, PreservedAda (..))
 import Test.Cardano.Ledger.Model.FeatureSet
   ( KnownScriptFeature,
     ScriptFeature,
-    ifSupportsPlutus,
     ValueFeature,
+    ifSupportsPlutus,
   )
 import Test.Cardano.Ledger.Model.Script
   ( ModelAddress (..),
     ModelCredential,
-    modelAddress_pmt,
-    _ModelKeyHashObj,
   )
 import Test.Cardano.Ledger.Model.TxOut
   ( ModelTxOut (..),
     ModelUTxOId,
-    modelTxOut_address,
+    canBeUsedAsCollateral,
   )
 
 data ModelUTxOMap era = ModelUTxOMap
@@ -102,7 +112,7 @@ toModelUTxOMap =
      in ModelUTxOMap
           (Map.singleton ui txo)
           (grpMapSingleton (_modelAddress_stk ma) (val, Set.singleton ui))
-          (bool Set.empty (Set.singleton ui) $ has (modelAddress_pmt . _ModelKeyHashObj) ma)
+          (bool Set.empty (Set.singleton ui) $ canBeUsedAsCollateral txo)
           (Val.inject val)
 
 mkModelUTxOMap ::
@@ -112,11 +122,12 @@ mkModelUTxOMap ::
   ModelUTxOMap era
 mkModelUTxOMap =
   ifoldMap $ \ui (ma, val) ->
-    ModelUTxOMap
-      (Map.singleton ui (ModelTxOut ma (Val.inject val) dh))
-      (grpMapSingleton (_modelAddress_stk ma) (val, Set.singleton ui))
-      (bool Set.empty (Set.singleton ui) $ has (modelAddress_pmt . _ModelKeyHashObj) ma)
-      (Val.inject val)
+    let txo = ModelTxOut ma (Val.inject val) dh
+     in ModelUTxOMap
+          (Map.singleton ui txo)
+          (grpMapSingleton (_modelAddress_stk ma) (val, Set.singleton ui))
+          (bool Set.empty (Set.singleton ui) $ canBeUsedAsCollateral txo)
+          (Val.inject val)
   where
     dh = ifSupportsPlutus (Proxy :: Proxy (ScriptFeature era)) () Nothing
 
@@ -128,7 +139,13 @@ spendModelUTxOs ::
 spendModelUTxOs ins outs xs =
   let ins' = Map.restrictKeys (_modelUTxOMap_utxos xs) ins
       outs' = Map.fromList outs
-      newCollateral = foldMap (\(ui, txo) -> bool Set.empty (Set.singleton ui) $ has (modelTxOut_address . modelAddress_pmt . _ModelKeyHashObj) txo) outs
+      newCollateral =
+        foldMap
+          ( \(ui, txo) ->
+              bool Set.empty (Set.singleton ui) $
+                canBeUsedAsCollateral txo
+          )
+          outs
       getStake :: Map.Map ModelUTxOId (ModelTxOut era) -> GrpMap (ModelCredential 'Staking (ScriptFeature era)) (Coin, Set ModelUTxOId)
       getStake = ifoldMap (\ui txo -> grpMapSingleton (_modelAddress_stk $ _mtxo_address txo) (Val.coin $ _mtxo_value txo, Set.singleton ui))
 
@@ -168,7 +185,7 @@ instance At (ModelUTxOMap era) where
                   _modelUTxOMap_collateralUtxos =
                     set
                       (at k)
-                      (() <$ preview (_Just . modelTxOut_address . modelAddress_pmt . _ModelKeyHashObj) b)
+                      (guard =<< fmap canBeUsedAsCollateral b)
                       (_modelUTxOMap_collateralUtxos s),
                   _modelUTxOMap_stake = flip State.execState (_modelUTxOMap_stake s) $ do
                     for_ hodler' $ \h -> do

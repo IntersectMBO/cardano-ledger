@@ -2,6 +2,9 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE NumericUnderscores #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Model.Generators.TxOut where
 
@@ -19,6 +22,7 @@ import Data.Group (Group (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import Data.Proxy (Proxy (..))
 import Data.Traversable (for)
 import QuickCheck.GenT
   ( choose,
@@ -41,6 +45,8 @@ import Test.Cardano.Ledger.Model.FeatureSet
     TyValueExpected (..),
     ValueFeature,
     fromSupportsMint,
+    fromSupportsPlutus,
+    reifySupportsMint',
   )
 import Test.Cardano.Ledger.Model.Generators
   ( AllowScripts,
@@ -82,18 +88,27 @@ import Test.Cardano.Ledger.Model.Value
   ( ModelValueF (..),
   )
 
-genInputs :: HasGenModelM st era m => AllowScripts (ScriptFeature era) -> m (Map ModelUTxOId (ModelTxOut era))
+genInputs :: forall st era m. HasGenModelM st era m => AllowScripts (ScriptFeature era) -> m (Map ModelUTxOId (ModelTxOut era))
 genInputs allowScripts = do
   actualUtxos <- uses (modelLedger . to getModelLedger_utxos) _modelUTxOMap_utxos
-  utxos0 <- shuffle =<< uses (modelLedger . to getModelLedger_utxos)
-    (mapMaybe (_2 . modelTxOut_address . modelAddress_pmt $ guardHaveCollateral allowScripts) . Map.toList . _modelUTxOMap_utxos)
+  utxos0 <-
+    shuffle
+      =<< uses
+        (modelLedger . to getModelLedger_utxos)
+        (mapMaybe (_2 . modelTxOut_address . modelAddress_pmt $ guardHaveCollateral allowScripts) . Map.toList . _modelUTxOMap_utxos)
 
   let spendable :: ModelTxOut era -> Coin
       spendable = Val.coin . _mtxo_value
 
+      minInput =
+        Coin (minFee + minOutput)
+          <> if not (fromSupportsPlutus (const True) id allowScripts) && reifySupportsMint' (Proxy @(ValueFeature era))
+            then Coin minOutput
+            else mempty
+
       go :: [(ModelUTxOId, ModelTxOut era)] -> Coin -> [(ModelUTxOId, ModelTxOut era)] -> [(ModelUTxOId, ModelTxOut era)]
       go [] val acc
-        | val >= Coin (minFee + minOutput) = acc
+        | val >= minInput = acc
         | otherwise =
           error $
             unlines
@@ -102,7 +117,7 @@ genInputs allowScripts = do
               ]
       -- TODO, get rewards/fees back into circulation in generator.
       go (utxo : rest) val acc
-        | val < Coin (minFee + minOutput) = go rest (val <> spendable (snd utxo)) (utxo : acc)
+        | val < minInput = go rest (val <> spendable (snd utxo)) (utxo : acc)
         | otherwise = acc
 
   numTxInputs <- liftGen =<< asks (_modelGeneratorParams_numTxInputs . _modelGeneratorContext_modelGeneratorParams)
@@ -124,13 +139,20 @@ genOutputs haveCollateral ins mint = do
   -- TODO: corner case, if the amount of inAda < minFee + minOutput && ma > 0;
   -- the inputs are unspendable, and the generator needs to abort.
   (fee, outVals) <-
-    if
-        | inAda < minFee -> error "input too small"
-        | inAda < minFee + minOutput -> pure (inAda, [])
-        | otherwise -> do
-          fee <- choose (minFee, min (inAda - minOutput) maxFee)
-          outVals <- liftGen $ unfoldModelValue (Coin minOutput) (ModelValueF (Coin inAda ~~ Coin fee, ma))
-          pure (fee, toList outVals)
+    let haveCollateral' = fromSupportsPlutus (const True) id haveCollateral || ma == mempty
+     in if
+            | inAda < minFee -> error "input too small"
+            | inAda < minFee + minOutput && haveCollateral' -> pure (inAda, [])
+            | inAda < minFee + (minOutput * 2) && not haveCollateral' -> error "leftover multi-asset"
+            | not haveCollateral' -> do
+              let maOut = ModelValueF (Coin minOutput, ma)
+              fee <- choose (minFee, min (inAda - minOutput) maxFee)
+              outVals <- liftGen $ unfoldModelValue (Coin minOutput) (ModelValueF (Coin inAda ~~ Coin fee ~~ Coin minOutput, mempty))
+              pure (fee, maOut : toList outVals)
+            | otherwise -> do
+              fee <- choose (minFee, min (inAda - minOutput) maxFee)
+              outVals <- liftGen $ unfoldModelValue (Coin minOutput) (ModelValueF (Coin inAda ~~ Coin fee, ma))
+              pure (fee, toList outVals)
 
   delegates <-
     uses

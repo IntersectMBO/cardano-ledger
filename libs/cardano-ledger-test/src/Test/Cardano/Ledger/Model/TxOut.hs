@@ -15,6 +15,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Lens
   ( Lens',
+    has,
     lens,
   )
 import Data.Functor.Identity (Identity (..))
@@ -45,6 +46,8 @@ import Test.Cardano.Ledger.Model.Script
   ( ModelAddress (..),
     ModelCredential (..),
     filterModelAddress,
+    modelAddress_pmt,
+    _ModelKeyHashObj,
   )
 
 newtype ModelUTxOId = ModelUTxOId {unModelUTxOId :: Integer}
@@ -105,3 +108,9 @@ modelUTxOEntrySize (ModelTxOut _a v d) =
     v' = unModelValue v
     utxoEntrySizeWithoutVal = 29 -- according to spec, anways.
     modelDataHashSize = maybe 0 (const 10)
+
+canBeUsedAsCollateral :: ModelTxOut era -> Bool
+canBeUsedAsCollateral txo
+  | not $ has (modelTxOut_address . modelAddress_pmt . _ModelKeyHashObj) txo = False
+  | not $ Val.adaOnly $ _mtxo_value txo = False
+  | otherwise = True
