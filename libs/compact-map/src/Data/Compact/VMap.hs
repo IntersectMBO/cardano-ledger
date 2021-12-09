@@ -16,6 +16,7 @@ module Data.Compact.VMap
     map,
     mapMaybe,
     mapWithKey,
+    filter,
     fold,
     foldl,
     foldlWithKey,
@@ -59,7 +60,7 @@ import qualified Data.Vector.Storable as VU
 import qualified GHC.Exts as Exts
 import GHC.Generics (Generic)
 import NoThunks.Class
-import Prelude hiding (foldMap, foldl, lookup, map, null, splitAt)
+import Prelude hiding (filter, foldMap, foldl, lookup, map, null, splitAt)
 
 type VB = V.Vector
 
@@ -96,6 +97,14 @@ lookup ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => k -> VMap kv vv k v -> Maybe v
 lookup k = KV.lookupKVVector k . unVMap
 {-# INLINE lookup #-}
+
+filter ::
+  (VG.Vector kv k, VG.Vector vv v) =>
+  (k -> v -> Bool) ->
+  VMap kv vv k v ->
+  VMap kv vv k v
+filter f = VMap . VG.filter (uncurry f) . unVMap
+{-# INLINE filter #-}
 
 findWithDefault ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => v -> k -> VMap kv vv k v -> v

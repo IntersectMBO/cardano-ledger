@@ -681,7 +681,7 @@ mkPoolRewardInfo
       zero = CompactCoin 0
       Coin ostake =
         Set.foldl'
-          (\c o -> c <> (fromCompact $ VMap.findWithDefault zero (KeyHashObj o) (unStake pstake)))
+          (\c o -> c <> fromCompact (VMap.findWithDefault zero (KeyHashObj o) (unStake pstake)))
           mempty
           (_poolOwners pool)
       sigma = if totalStake == 0 then 0 else fromIntegral pstakeTot % fromIntegral totalStake
