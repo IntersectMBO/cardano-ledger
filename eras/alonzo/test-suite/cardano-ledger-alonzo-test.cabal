@@ -69,7 +69,6 @@ library
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
     set-algebra,
-    small-steps,
     strict-containers,
     text,
   hs-source-dirs:
