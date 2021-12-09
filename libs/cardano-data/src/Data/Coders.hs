@@ -59,6 +59,8 @@ module Data.Coders
     wrapCBORArray,
     encodePair,
     encodeFoldable,
+    encodeFoldableAsDefinite,
+    encodeFoldableAsIndefinite,
     encodeFoldableMapPairs,
     decodeCollectionWithLen,
     decodeCollection,
@@ -257,6 +259,16 @@ decodeCollectionWithLen lenOrIndef el = do
 
 encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
 encodeFoldable = encodeFoldableEncoder toCBOR
+
+encodeFoldableAsIndefinite :: (ToCBOR a, Foldable f) => f a -> Encoding
+encodeFoldableAsIndefinite f = encodeFoldableEncoderAs wrapArray toCBOR f
+  where
+    wrapArray _len contents = encodeListLenIndef <> contents <> encodeBreak
+
+encodeFoldableAsDefinite :: (ToCBOR a, Foldable f) => f a -> Encoding
+encodeFoldableAsDefinite f = encodeFoldableEncoderAs wrapArray toCBOR f
+  where
+    wrapArray len contents = encodeListLen len <> contents
 
 -- Encodes a sequence of pairs as a cbor map
 encodeFoldableMapPairs :: (ToCBOR a, ToCBOR b, Foldable f) => f (a, b) -> Encoding
