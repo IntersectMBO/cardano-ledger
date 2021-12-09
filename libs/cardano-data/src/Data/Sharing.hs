@@ -27,10 +27,10 @@ module Data.Sharing
 where
 
 import Cardano.Binary (Decoder, FromCBOR (..), decodeListLen, dropMap)
-import Control.Iterate.BiMap (BiMap (..), biMapFromMap)
 import Control.Monad (void)
 import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
+import Data.BiMap (BiMap (..), biMapFromMap)
 import Data.Coders (decodeMap, decodeVMap, invalidKey)
 import Data.Compact.VMap (VB, VMap, VP)
 import qualified Data.Compact.VMap as VMap

@@ -1,8 +1,8 @@
 cabal-version: 2.2
 
-name:                small-steps
+name:                set-algebra
 version:             0.1.0.0
-synopsis:            Small step semantics
+synopsis:            Set Algebra
 homepage:            https://github.com/input-output-hk/cardano-legder-specs
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
@@ -14,12 +14,7 @@ extra-source-files:  CHANGELOG.md
 source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  subdir:   libs/small-steps
-
-flag sts_assert
-    description: Enable STS assertions by default
-    default: False
-    manual: True
+  subdir:   libs/set-algebra
 
 common base
   build-depends:      base >= 4.12 && < 4.15
@@ -37,22 +32,16 @@ common project-config
 library
   import:             base, project-config
 
-  exposed-modules:     Control.State.Transition
-                     , Control.State.Transition.Extended
-                     , Control.State.Transition.Simple
-                     , Control.Provenance
+  exposed-modules:     Control.Iterate.BaseTypes
+                     , Control.Iterate.Collect
+                     , Control.Iterate.Exp
+                     , Control.Iterate.SetAlgebra
+                     , Control.SetAlgebra
 
-  build-depends:       aeson
+  build-depends:       ansi-wl-pprint
                      , base >=4.11 && <5
+                     , cardano-data
+                     , cardano-ledger-core
+                     , compact-map
                      , containers
-                     , data-default-class
-                     , free
-                     , mtl
-                     , nothunks
-                     , strict-containers
-                     , text
-                     , transformers >= 0.5
-                                         
   hs-source-dirs:      src
-  if (flag(sts_assert))
-    cpp-options:      -DSTS_ASSERT

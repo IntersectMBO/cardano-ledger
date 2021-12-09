@@ -1,8 +1,8 @@
 cabal-version: 2.2
 
-name:                small-steps
+name:                cardano-data
 version:             0.1.0.0
-synopsis:            Small step semantics
+synopsis:            Specialized data for Cardano project
 homepage:            https://github.com/input-output-hk/cardano-legder-specs
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
@@ -14,12 +14,7 @@ extra-source-files:  CHANGELOG.md
 source-repository head
   type:     git
   location: https://github.com/input-output-hk/cardano-ledger-specs
-  subdir:   libs/small-steps
-
-flag sts_assert
-    description: Enable STS assertions by default
-    default: False
-    manual: True
+  subdir:   libs/cardano-data
 
 common base
   build-depends:      base >= 4.12 && < 4.15
@@ -37,22 +32,31 @@ common project-config
 library
   import:             base, project-config
 
-  exposed-modules:     Control.State.Transition
-                     , Control.State.Transition.Extended
-                     , Control.State.Transition.Simple
-                     , Control.Provenance
+  exposed-modules:     Data.AbstractSize
+                     , Data.Relation
+                     , Data.CanonicalMaps
+                     , Data.MemoBytes
+                     , Data.Coders
+                     , Data.Pulse
+                     , Data.Sharing
+                     , Data.BiMap
 
-  build-depends:       aeson
-                     , base >=4.11 && <5
+  build-depends:       base >=4.11 && <5
+                     , bytestring
+                     , cborg
                      , containers
-                     , data-default-class
-                     , free
+                     , compact-map
+                     , cryptonite
+                     , deepseq
+                     , formatting
                      , mtl
+                     , microlens
                      , nothunks
+                     , primitive
                      , strict-containers
                      , text
                      , transformers >= 0.5
-                                         
+                     -- IOHK deps
+                     , cardano-crypto-class
+                     , cardano-binary
   hs-source-dirs:      src
-  if (flag(sts_assert))
-    cpp-options:      -DSTS_ASSERT

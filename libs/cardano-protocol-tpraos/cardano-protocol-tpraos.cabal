@@ -57,5 +57,6 @@ library
     mtl,
     quiet,
     non-integral,
+    set-algebra,
     small-steps,
     transformers,
