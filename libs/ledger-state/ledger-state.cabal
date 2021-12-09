@@ -5,7 +5,7 @@ version:             0.1.0.0
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
-description:         This is a tool that helps us experiment with the UTxO map
+description:         This is a tool that helps us experiment with the Ledger State
 build-type:          Simple
 
 extra-source-files:
@@ -15,7 +15,7 @@ extra-source-files:
 source-repository head
   type: git
   location: https://github.com/input-output-hk/cardano-ledger-specs.git
-  subdir:   libs/utxo-state
+  subdir:   libs/ledger-state
 
 common project-config
   default-language:   Haskell2010
@@ -46,11 +46,9 @@ library
                     , vector
                     , persistent
                     , persistent-sqlite
-                    , persistent-template
                     , prettyprinter
                     , set-algebra
                     , strict-containers
-                    , small-steps
                     , text
                     , transformers
   exposed-modules:    Cardano.Ledger.State
