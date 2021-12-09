@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Model.Generators.Shrinking where
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Keys (KeyRole (..))
+import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Lens
@@ -60,7 +61,6 @@ import Test.Cardano.Ledger.Model.API
   )
 import Test.Cardano.Ledger.Model.BaseTypes
   ( ModelPoolId (..),
-    getModelValueCoin,
     unModelValue,
   )
 import Test.Cardano.Ledger.Model.FeatureSet
@@ -378,7 +378,7 @@ txOutputToGenesis ::
   Map.Map ModelUTxOId (ModelAddress (ScriptFeature era'), Coin)
 txOutputToGenesis (uTxOId, ModelTxOut (ModelAddress pmt stk) value _) =
   let newPmtKey = fixPmtCred pmt uTxOId
-   in Map.singleton uTxOId (ModelAddress newPmtKey stk, getModelValueCoin value)
+   in Map.singleton uTxOId (ModelAddress newPmtKey stk, Val.coin value)
 
 fixPmtCred ::
   ModelCredential 'Payment k ->

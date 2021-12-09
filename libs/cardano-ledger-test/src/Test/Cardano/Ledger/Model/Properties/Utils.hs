@@ -18,6 +18,15 @@ import Control.State.Transition.Extended
 import Data.List (nub, (\\))
 import Test.Cardano.Ledger.Model.API
 import Test.Cardano.Ledger.Model.Elaborators
+  ( ElaborateEraModel(..),
+    ApplyBlockTransitionError(..),
+    ElaborateApplyTxError(..),
+    ElaborateBlockError(..),
+    EraElaboratorState(..),
+    TestCredentialInfo(..),
+    elaborateBlocks_,
+    eraFeatureSet,
+  )
 import Test.Cardano.Ledger.Model.FeatureSet
 import Test.Cardano.Ledger.Model.Rules (ModelPredicateFailure (..))
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)

@@ -14,7 +14,48 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Model.FeatureSet where
+-- | = Type level representation of features which are present, conditionally on
+-- the era/hard fork.
+--
+-- Many of the helper types (those which start with \"@If@\") have a signature
+-- which resembles 'Data.Bool.bool'.
+module Test.Cardano.Ledger.Model.FeatureSet
+  ( FeatureSet (..),
+    TyValueExpected (..),
+    TyScriptFeature (..),
+    ValueFeature,
+    ScriptFeature,
+    ShelleyScriptFeatures,
+    KnownRequiredFeatures (..),
+    KnownScriptFeature (..),
+    KnownValueFeature (..),
+    hasKnownRequiredFeatures,
+    hasKnownValueFeature,
+    reifyExpectAnyOutput,
+    RequiredFeatures (..),
+    preceedsModelEra,
+    FeatureTag (..),
+    ScriptFeatureTag (..),
+    ValueFeatureTag (..),
+    IfSupportsMint (..),
+    MintSupported (..),
+    fromSupportsMint,
+    ifSupportsMint,
+    traverseSupportsMint,
+    IfSupportsPlutus (..),
+    bitraverseSupportsPlutus,
+    filterSupportsPlutus,
+    fromSupportsPlutus,
+    ifSupportsPlutus,
+    mapSupportsPlutus,
+    reifySupportsPlutus,
+    traverseSupportsPlutus,
+    traverseSupportsPlutus_,
+    IfSupportsScript (..),
+    hasKnownScriptFeature,
+    IfSupportsTimelock (..),
+  )
+where
 
 import Control.DeepSeq (NFData (..))
 import Data.Kind (Type)
@@ -22,12 +63,18 @@ import Data.Proxy (Proxy (..))
 import Data.Type.Bool (type (||))
 import Data.Type.Equality ((:~:) (..))
 
+-- | Type level indication of what kind of value is allowed.
 data TyValueExpected
-  = ExpectAdaOnly
-  | ExpectAnyOutput
+  = -- | Only ada is permitted in this position.
+    ExpectAdaOnly
+  | -- | ada or multi-asset values are permitted.
+    ExpectAnyOutput
 
+-- | type level indication of what kind of script is allowed
 data TyScriptFeature = TyScriptFeature
-  { _tyScript_timelock :: !Bool,
+  { -- | true when multi-sig credentials are permitted.
+    _tyScript_timelock :: !Bool,
+    -- | true when plutus scripts are permitted.
     _tyScript_plutus :: !Bool
   }
 
@@ -36,6 +83,7 @@ type family PlutusScriptFeature (a :: TyScriptFeature) where
 
 type ShelleyScriptFeatures = 'TyScriptFeature 'False 'False
 
+-- | GADT to reify into a value the type level information in 'TyScriptFeature'
 data ScriptFeatureTag (s :: TyScriptFeature) where
   ScriptFeatureTag_None :: ScriptFeatureTag ('TyScriptFeature 'False 'False)
   ScriptFeatureTag_Simple :: ScriptFeatureTag ('TyScriptFeature 'True 'False)
@@ -43,7 +91,9 @@ data ScriptFeatureTag (s :: TyScriptFeature) where
 
 deriving instance Show (ScriptFeatureTag s)
 
-class KnownScriptFeature (s :: TyScriptFeature) where reifyScriptFeature :: proxy s -> ScriptFeatureTag s
+class KnownScriptFeature (s :: TyScriptFeature) where
+  -- | Reflect 'TyScriptFeature' into a value.
+  reifyScriptFeature :: proxy s -> ScriptFeatureTag s
 
 instance KnownScriptFeature ('TyScriptFeature 'False 'False) where reifyScriptFeature _ = ScriptFeatureTag_None
 
@@ -57,10 +107,14 @@ hasKnownScriptFeature = \case
   ScriptFeatureTag_Simple -> \x -> x
   ScriptFeatureTag_PlutusV1 -> \x -> x
 
+-- | Select a type if a model has support for multi-sig contracts.
+-- same convention as Data.Bool.bool;  True case comes last
 data IfSupportsTimelock a b (k :: TyScriptFeature) where
   NoTimelockSupport :: a -> IfSupportsTimelock a b ('TyScriptFeature 'False x)
   SupportsTimelock :: b -> IfSupportsTimelock a b ('TyScriptFeature 'True x)
 
+-- | Select a type if a model has support for Plutus Scripts.
+-- same convention as Data.Bool.bool;  True case comes last
 data IfSupportsPlutus a b (k :: TyScriptFeature) where
   NoPlutusSupport :: a -> IfSupportsPlutus a b ('TyScriptFeature x 'False)
   SupportsPlutus :: b -> IfSupportsPlutus a b ('TyScriptFeature x 'True)
@@ -117,17 +171,6 @@ traverseSupportsPlutus_ f = \case
   NoPlutusSupport _ -> pure ()
   SupportsPlutus x -> () <$ f x
 
-zipSupportsPlutusWith ::
-  (a -> b -> c) ->
-  IfSupportsPlutus () a s ->
-  IfSupportsPlutus () b s ->
-  IfSupportsPlutus () c s
-zipSupportsPlutusWith f = \case
-  NoPlutusSupport () -> \case
-    NoPlutusSupport () -> NoPlutusSupport ()
-  SupportsPlutus x -> \case
-    SupportsPlutus y -> SupportsPlutus (f x y)
-
 bitraverseSupportsPlutus ::
   Applicative m =>
   (a -> m c) ->
@@ -145,6 +188,8 @@ reifySupportsPlutus proxy = case reifyScriptFeature proxy of
   ScriptFeatureTag_Simple -> NoPlutusSupport ()
   ScriptFeatureTag_PlutusV1 -> SupportsPlutus ()
 
+-- | Select a type if a model has support for any type of contract.
+-- same convention as Data.Bool.bool;  True case comes last
 data IfSupportsScript a b (k :: TyScriptFeature) where
   NoScriptSupport ::
     a ->
@@ -155,6 +200,7 @@ data IfSupportsScript a b (k :: TyScriptFeature) where
     b ->
     IfSupportsScript a b ('TyScriptFeature t p)
 
+-- | Select a type if a model has support for Multi-Asset values.
 -- same convention as Data.Bool.bool;  True case comes last
 data IfSupportsMint a b (valF :: TyValueExpected) where
   NoMintSupport :: a -> IfSupportsMint a b 'ExpectAdaOnly
@@ -193,14 +239,6 @@ fromSupportsMint f g = \case
   NoMintSupport x -> f x
   SupportsMint y -> g y
 
-mapSupportsMint ::
-  (a -> b) ->
-  IfSupportsMint x a s ->
-  IfSupportsMint x b s
-mapSupportsMint f = \case
-  NoMintSupport x -> NoMintSupport x
-  SupportsMint x -> SupportsMint (f x)
-
 traverseSupportsMint ::
   Applicative m =>
   (a -> m b) ->
@@ -224,8 +262,6 @@ class PlutusScriptFeature v ~ 'True => PlutusSupported v where
   supportsPlutus :: IfSupportsPlutus a b v -> b
   supportsPlutus (SupportsPlutus x) = x
 
---observePlutusSupport :: v
-
 instance PlutusScriptFeature v ~ 'True => PlutusSupported v
 
 class v ~ 'ExpectAnyOutput => MintSupported v where
@@ -234,19 +270,26 @@ class v ~ 'ExpectAnyOutput => MintSupported v where
 
 instance v ~ 'ExpectAnyOutput => MintSupported v
 
+-- | project the 'TyValueExpected' out of a 'FeatureSet'
 type family ValueFeature (a :: FeatureSet) where
   ValueFeature ('FeatureSet v _) = v
 
+-- | project the 'TyScriptFeature' out of a 'FeatureSet'
 type family ScriptFeature (a :: FeatureSet) where
   ScriptFeature ('FeatureSet _ s) = s
 
+-- | A type level representation if which features are allowed in a ledger
+-- model.  Rather than specifying a particular hard fork, this data only
+-- expresses the presence or absence of particular features,
 data FeatureSet = FeatureSet TyValueExpected TyScriptFeature
 
+-- | GADT to reify the type level information in 'FeatureSet'
 data FeatureTag (tag :: FeatureSet) where
   FeatureTag :: ValueFeatureTag v -> ScriptFeatureTag s -> FeatureTag ('FeatureSet v s)
 
 deriving instance Show (FeatureTag tag)
 
+-- | GADT to reify the type level information in 'TyValueExpected'
 data ValueFeatureTag (v :: TyValueExpected) where
   ValueFeatureTag_AdaOnly :: ValueFeatureTag 'ExpectAdaOnly
   ValueFeatureTag_AnyOutput :: ValueFeatureTag 'ExpectAnyOutput
@@ -259,9 +302,12 @@ type family MaxValueFeature (a :: TyValueExpected) (b :: TyValueExpected) :: TyV
   MaxValueFeature 'ExpectAnyOutput b = b
   MaxValueFeature a 'ExpectAnyOutput = a
 
--- law: () <$ filterFeatures (minFeatures x) y == () <$ filterFeatures x y
 class RequiredFeatures (f :: FeatureSet -> Type) where
-  -- minFeatures :: f a -> FeatureTag a
+  -- | restrict a model to a subset of ledger features.
+  -- Returns 'Nothing' if the given model uses features not present in the
+  -- requested era, or the same model with the right tag if the model is
+  -- compatible with that model.
+  -- law: () <$ filterFeatures (minFeatures x) y == () <$ filterFeatures x y
   filterFeatures ::
     KnownRequiredFeatures a =>
     FeatureTag b ->
@@ -318,6 +364,7 @@ compareFeatureTag (FeatureTag v s) (FeatureTag v' s') =
     combineGPartialOrdering GPartialLT GPartialGT = GIncomparable
     combineGPartialOrdering GPartialLT GPartialLT = GPartialLT
 
+-- | test if one set of features is contained in another.
 preceedsModelEra :: FeatureTag a -> FeatureTag b -> Bool
 preceedsModelEra x y = case compareFeatureTag x y of
   GPartialLT -> True
@@ -325,7 +372,9 @@ preceedsModelEra x y = case compareFeatureTag x y of
   GPartialGT -> False
   GIncomparable -> False
 
-class KnownValueFeature (v :: TyValueExpected) where reifyValueFeature :: proxy v -> ValueFeatureTag v
+class KnownValueFeature (v :: TyValueExpected) where
+  -- | Reflect 'TyValueExpected' into a value.
+  reifyValueFeature :: proxy v -> ValueFeatureTag v
 
 instance KnownValueFeature 'ExpectAdaOnly where reifyValueFeature _ = ValueFeatureTag_AdaOnly
 
@@ -343,6 +392,7 @@ class
   ) =>
   KnownRequiredFeatures (a :: FeatureSet)
   where
+  -- | Reflect 'FeatureSet' into a value.
   reifyRequiredFeatures :: proxy a -> FeatureTag a
   reifyRequiredFeatures _ =
     FeatureTag

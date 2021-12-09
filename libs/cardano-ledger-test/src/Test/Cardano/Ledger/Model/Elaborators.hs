@@ -23,7 +23,36 @@
 {-# LANGUAGE UndecidableSuperClasses #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module Test.Cardano.Ledger.Model.Elaborators where
+-- | This module contains the mechanism used to related a ledger model
+-- transaction with a real implementation.
+--
+module Test.Cardano.Ledger.Model.Elaborators
+  ( -- | = API for property testing
+    ElaborateEraModel(..),
+    elaborateBlocks_,
+    CompareModelLedger(..),
+    EraElaboratorStats(..),
+    eraFeatureSet,
+    EraValueFeature,
+    EraScriptFeature,
+    -- | = API for instances
+    noScriptAction,
+    lookupModelValue,
+    TxWitnessArguments(..),
+    TxBodyArguments(..),
+    ExpectedValueTypeC(..),
+    -- | = semi-internal for property testing.
+    ApplyBlockTransitionError(..),
+    ElaborateApplyTxError(..),
+    ElaborateBlockError(..),
+    observeRewards,
+
+    -- | = internal implementation details.
+    EraElaboratorState(..),
+    TestCredentialInfo(..),
+    ElaborateValueType,
+  )
+  where
 
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
 import qualified Cardano.Crypto.Hash.Class as Hash
@@ -140,7 +169,6 @@ import Data.Tuple (swap)
 import Data.Typeable (Typeable)
 import Data.Void (Void)
 import Data.Word (Word64)
-import Debug.Trace (traceM)
 import GHC.Generics (Generic, (:.:) (Comp1))
 import GHC.Records (HasField (..))
 import qualified PlutusTx
@@ -170,7 +198,7 @@ import Test.Cardano.Ledger.Model.FeatureSet
     IfSupportsPlutus (..),
     IfSupportsScript (..),
     IfSupportsTimelock (..),
-    KnownRequiredFeatures,
+    KnownRequiredFeatures(..),
     ScriptFeature,
     ScriptFeatureTag (..),
     TyScriptFeature (..),
@@ -233,8 +261,7 @@ data ExpectedValueTypeC era where
     ExpectedValueTypeC era
   ExpectedValueTypeC_MA ::
     ( ValueFromList (Core.Value era) (Crypto era),
-      EraValueFeature era ~ 'ExpectAnyOutput,
-      ValidateScript era
+      EraValueFeature era ~ 'ExpectAnyOutput
     ) =>
     ExpectedValueTypeC era
 
@@ -333,13 +360,13 @@ tuoi_txid :: Lens' (TestUTxOInfo era) (Maybe (Shelley.TxIn (Crypto era)))
 tuoi_txid a2fb s = (\b -> s {_tuoi_txid = b}) <$> a2fb (_tuoi_txid s)
 {-# INLINE tuoi_txid #-}
 
-tuoi_maddr :: Lens' (TestUTxOInfo era) (ModelAddress (EraScriptFeature era))
-tuoi_maddr a2fb s = (\b -> s {_tuoi_maddr = b}) <$> a2fb (_tuoi_maddr s)
-{-# INLINE tuoi_maddr #-}
-
-tuoi_data :: Lens' (TestUTxOInfo era) (StrictMaybe (Alonzo.DataHash (Crypto era), (Alonzo.Data era)))
-tuoi_data a2fb s = (\b -> s {_tuoi_data = b}) <$> a2fb (_tuoi_data s)
-{-# INLINE tuoi_data #-}
+-- tuoi_maddr :: Lens' (TestUTxOInfo era) (ModelAddress (EraScriptFeature era))
+-- tuoi_maddr a2fb s = (\b -> s {_tuoi_maddr = b}) <$> a2fb (_tuoi_maddr s)
+-- {-# INLINE tuoi_maddr #-}
+--
+-- tuoi_data :: Lens' (TestUTxOInfo era) (StrictMaybe (Alonzo.DataHash (Crypto era), (Alonzo.Data era)))
+-- tuoi_data a2fb s = (\b -> s {_tuoi_data = b}) <$> a2fb (_tuoi_data s)
+-- {-# INLINE tuoi_data #-}
 
 data EraElaboratorTxAccum era = EraElaboratorTxAccum
   { _eesScripts :: ElaboratedScriptsCache era,
@@ -1012,6 +1039,14 @@ type family ElaborateValueType (valF :: TyValueExpected) crypto :: Type where
   ElaborateValueType 'ExpectAdaOnly _ = Coin
   ElaborateValueType 'ExpectAnyOutput crypto = Cardano.Ledger.Mary.Value.Value crypto
 
+eraFeatureSet ::
+  forall era proxy.
+  ElaborateEraModel era =>
+  proxy era ->
+  FeatureTag (EraFeatureSet era)
+eraFeatureSet _ = reifyRequiredFeatures (Proxy :: Proxy (EraFeatureSet era))
+
+-- | Ledger Eras that can be modeled.
 class
   ( ElaborateValueType (EraValueFeature era) (Crypto era) ~ Core.Value era,
     KnownRequiredFeatures (EraFeatureSet era),
@@ -1019,11 +1054,17 @@ class
   ) =>
   ElaborateEraModel era
   where
+  -- | the features that can be used in the model for this era.
   type EraFeatureSet era :: FeatureSet
-  eraFeatureSet :: proxy era -> FeatureTag (EraFeatureSet era)
 
-  reifyValueConstraint ::
-    ExpectedValueTypeC era
+  -- | refies the constraints neccessary to instantiate a 'Core.Value' from
+  -- a 'ModelValue'
+  reifyValueConstraint :: ExpectedValueTypeC era
+  default reifyValueConstraint ::
+    ( ValueFromList (Core.Value era) (Crypto era),
+      EraValueFeature era ~ 'ExpectAnyOutput
+    ) => ExpectedValueTypeC era
+  reifyValueConstraint = ExpectedValueTypeC_MA
 
   -- | Apply a ModelBlock to a specific era's ledger.
   elaborateBlock ::
@@ -1490,37 +1531,8 @@ cmsError ::
   EraElaboratorState era ->
   NonEmpty.NonEmpty (ElaboratorLedgerIssue era) ->
   x
-cmsError = mkCMSHandler error
-
-cmsTrace ::
-  ( Applicative m,
-    Show a,
-    Show (Core.Script era),
-    Show (Core.Tx era),
-    LedgerState.TransUTxOState Show era
-  ) =>
-  a ->
-  NewEpochState era ->
-  EraElaboratorState era ->
-  NonEmpty.NonEmpty (ElaboratorLedgerIssue era) ->
-  m ()
-cmsTrace = mkCMSHandler traceM
-
-mkCMSHandler ::
-  ( Era era,
-    Show a,
-    Show (Core.Script era),
-    Show (Core.Tx era),
-    LedgerState.TransUTxOState Show era
-  ) =>
-  (String -> b) ->
-  a ->
-  NewEpochState era ->
-  EraElaboratorState era ->
-  NonEmpty.NonEmpty (ElaboratorLedgerIssue era) ->
-  b
-mkCMSHandler k hint nes ees issues =
-  k $
+cmsError hint nes ees issues =
+  error $
     unlines
       [ "model/elaborated diverged",
         show hint,
@@ -1530,6 +1542,7 @@ mkCMSHandler k hint nes ees issues =
         show (toList issues)
       ]
 
+-- TODO: cause this to float errors out as values in ElaborateEraModel methods.
 compareModelLedger ::
   forall era m.
   ( MonadState (NewEpochState era, EraElaboratorState era) m,
@@ -1542,8 +1555,10 @@ compareModelLedger k = do
   let issues = compareModelLedgerImpl (_eesModel ees) nes
   traverse_ (k nes ees) $ NonEmpty.nonEmpty issues
 
-newtype ComposeCrypto f era = ComposeCrypto {getComposeCrypto :: f (Crypto era)}
+newtype ComposeCrypto f era = ComposeCrypto (f (Crypto era))
 
+-- | compare a model and real implementation of a ledger data type and gather
+-- the (semantically relevant) differences between them.
 class CompareModelLedger a where
   type ModelFor a :: FeatureSet -> Type
 

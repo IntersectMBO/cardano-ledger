@@ -51,7 +51,6 @@ import Test.Cardano.Ledger.Model.BaseTypes
 import Test.Cardano.Ledger.Model.Elaborators
   ( ApplyBlockTransitionError (..),
     ElaborateEraModel (..),
-    ExpectedValueTypeC (..),
     TxBodyArguments (..),
     TxWitnessArguments (..),
     lookupModelValue,
@@ -63,7 +62,6 @@ import Test.Cardano.Ledger.Model.Elaborators.Shelley
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet (..),
-    FeatureTag (..),
     IfSupportsMint (..),
     IfSupportsPlutus (..),
     IfSupportsScript (..),
@@ -71,7 +69,6 @@ import Test.Cardano.Ledger.Model.FeatureSet
     ScriptFeatureTag (..),
     TyScriptFeature (..),
     TyValueExpected (..),
-    ValueFeatureTag (..),
   )
 import Test.Cardano.Ledger.Model.Rules (ModelPredicateFailure (..))
 import Test.Cardano.Ledger.Model.Value (evalModelValue)
@@ -84,9 +81,6 @@ instance
   ElaborateEraModel (AlonzoEra crypto)
   where
   type EraFeatureSet (AlonzoEra crypto) = 'FeatureSet 'ExpectAnyOutput ('TyScriptFeature 'True 'True)
-  eraFeatureSet _ = FeatureTag ValueFeatureTag_AnyOutput ScriptFeatureTag_PlutusV1
-
-  reifyValueConstraint = ExpectedValueTypeC_MA
 
   toEraPredicateFailure = \case
     ModelValueNotConservedUTxO (ModelValue x) (ModelValue y) -> State.evalState $

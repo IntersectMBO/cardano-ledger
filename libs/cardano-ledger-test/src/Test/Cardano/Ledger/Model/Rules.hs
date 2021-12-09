@@ -13,7 +13,40 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Model.Rules where
+-- | = Model implementation of the ledger semantics.
+--
+-- The implementation here follows the spec, and favors readability.
+--
+-- Unlike the real implementation, the model is impelented in a "closed world"
+-- way, where all posssible hard forks are captured in a single implementation,
+-- difference across versions are handled by matching on feature flags in the
+-- 'era' parameter used throughout the model types.
+--
+-- other, relevant model implementations can be found in in these modules.
+-- Where possible, namespaces and type names match the real implementation, with
+-- Model prefixed as appropriate to avoid confusion.
+-- * "Test.Cardano.Ledger.Model.BaseTypes"
+-- * "Test.Cardano.Ledger.Model.LedgerState"
+-- * "Test.Cardano.Ledger.Model.PParams"
+-- * "Test.Cardano.Ledger.Model.Rewards"
+-- * "Test.Cardano.Ledger.Model.Script"
+-- * "Test.Cardano.Ledger.Model.Tx"
+-- * "Test.Cardano.Ledger.Model.TxOut"
+-- * "Test.Cardano.Ledger.Model.UTxO"
+-- * "Test.Cardano.Ledger.Model.Value"
+--
+--
+-- additionally, the base monad used throughout this module can be found in
+-- "Test.Cardano.Ledger.Model.Prov".  That type is used mainly for quickcheck
+-- shrinking and isn't critical to understand the main concepts here.
+module Test.Cardano.Ledger.Model.Rules
+  ( ModelRule (..),
+    applyRule,
+    ModelLEnv (..),
+    ModelDPSEnv (..),
+    ModelPredicateFailure (..),
+  )
+where
 
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
@@ -147,7 +180,7 @@ import Test.Cardano.Ledger.Model.UTxO
     spendModelUTxOs,
   )
 
--- TODO: ModelRule_NEWPP ModelRule_PPUP
+-- | Universe of modeled ledger rules.
 data ModelRule
   = ModelRule_LEDGERS
   | ModelRule_LEDGER
@@ -166,27 +199,43 @@ data ModelRule
   | ModelRule_SNAP
   | ModelRule_POOLREAP
 
+-- | perform one model transition
+-- this returns both the errors and the modified state.
+applyRule ::
+  ( ModelSTS (rule :: ModelRule),
+    KnownRequiredFeatures era,
+    MonadModelProvenance era provM
+  ) =>
+  proxy rule ->
+  ModelSignal rule era ->
+  Globals ->
+  (ModelEnv rule era) ->
+  ModelState rule era ->
+  provM (ModelState rule era, Set (ModelFailure rule era))
+applyRule p s globals env = applyRuleImpl p s (ModelGlobalsEnv globals env)
+
+-- | One model rule transition.
 class ModelSTS (rule :: ModelRule) where
   type ModelSignal rule :: FeatureSet -> Type
   type ModelState rule :: FeatureSet -> Type
   type ModelEnv rule :: FeatureSet -> Type
   type ModelFailure rule :: FeatureSet -> Type
 
-  applyRule ::
+  applyRuleImpl ::
     (KnownRequiredFeatures era, MonadModelProvenance era provM) =>
     proxy rule ->
     ModelSignal rule era ->
     ModelGlobalsEnv (ModelEnv rule era) ->
     ModelState rule era ->
     provM (ModelState rule era, Set (ModelFailure rule era))
-  default applyRule ::
+  default applyRuleImpl ::
     (KnownRequiredFeatures era, ModelSignal rule ~ Const Void) =>
     proxy rule ->
     ModelSignal rule era ->
     ModelGlobalsEnv (ModelEnv rule era) ->
     ModelState rule era ->
     provM (ModelState rule era, Set (ModelFailure rule era))
-  applyRule _ = absurd . getConst
+  applyRuleImpl _ = absurd . getConst
 
 class (ModelSTS rule, ModelSTS (ModelSuperRule rule)) => ModelSubRule (rule :: ModelRule) where
   type ModelSuperRule rule :: ModelRule
@@ -406,7 +455,7 @@ instance ModelSTS 'ModelRule_LEDGERS where
   type ModelEnv 'ModelRule_LEDGERS = ModelLEDGERSEnv
   type ModelFailure 'ModelRule_LEDGERS = Proxy
 
-  applyRule _ txs = RWS.execRWST $ do
+  applyRuleImpl _ txs = RWS.execRWST $ do
     liftApplyRules (Proxy @'ModelRule_LEDGER) (getCompose txs) txs
 
 -- | See figure 4 [GL-D2]
@@ -429,7 +478,7 @@ instance ModelSTS 'ModelRule_UTXOS where
   type ModelEnv 'ModelRule_UTXOS = ModelUTxOEnv
   type ModelFailure 'ModelRule_UTXOS = Proxy
 
-  applyRule _ tx
+  applyRuleImpl _ tx
     | modelIsValid tx = RWS.execRWST $ do
       refunded <-
         modelKeyRefunds
@@ -468,7 +517,7 @@ instance ModelSTS 'ModelRule_UTXO where
   type ModelEnv 'ModelRule_UTXO = ModelUTxOEnv
   type ModelFailure 'ModelRule_UTXO = Proxy
 
-  applyRule _ tx = RWS.execRWST $ do
+  applyRuleImpl _ tx = RWS.execRWST $ do
     -- guardRule ModelUTXOFailure_InputSetEmtpy
     --   (not $ null $ _mtxInputs tx)
 
@@ -494,7 +543,7 @@ instance ModelSTS 'ModelRule_LEDGER where
   type ModelEnv 'ModelRule_LEDGER = ModelLEnv
   type ModelFailure 'ModelRule_LEDGER = Proxy
 
-  applyRule _ tx = RWS.execRWST $ do
+  applyRuleImpl _ tx = RWS.execRWST $ do
     lift $ setProvenance (getModelTxId tx)
     liftApplyRule (Proxy @'ModelRule_DELEGS) (Compose $ _mtxDCert tx) tx
     liftApplyRule (Proxy @'ModelRule_UTXOW) tx tx
@@ -507,7 +556,7 @@ instance ModelSTS 'ModelRule_UTXOW where
   type ModelEnv 'ModelRule_UTXOW = ModelUTxOEnv
   type ModelFailure 'ModelRule_UTXOW = Proxy
 
-  applyRule _ tx = RWS.execRWST $ do
+  applyRuleImpl _ tx = RWS.execRWST $ do
     liftApplyRule (Proxy @'ModelRule_UTXO) tx tx
 
 data ModelDPSEnv era = ModelDPSEnv
@@ -525,7 +574,7 @@ instance ModelSTS 'ModelRule_DELEGS where
   type ModelEnv 'ModelRule_DELEGS = ModelDPSEnv
   type ModelFailure 'ModelRule_DELEGS = Proxy
 
-  applyRule _ cs = RWS.execRWST $ do
+  applyRuleImpl _ cs = RWS.execRWST $ do
     wdrls <- asks (_mtxWdrl . _modelDPSEnv_tx . _modelEnv)
     lift $ wdrlProvenance (Map.keysSet wdrls)
     badWdrls <-
@@ -550,7 +599,7 @@ instance ModelSTS 'ModelRule_DELPL where
   type ModelEnv 'ModelRule_DELPL = ModelDPSEnv
   type ModelFailure 'ModelRule_DELPL = Proxy
 
-  applyRule _ dcert = RWS.execRWST $ do
+  applyRuleImpl _ dcert = RWS.execRWST $ do
     lift $ delegProvenance dcert
     case dcert of
       c'@(ModelCertDeleg c) -> liftApplyRule (Proxy @'ModelRule_DELEG) c c'
@@ -565,7 +614,7 @@ instance ModelSTS 'ModelRule_DELEG where
   type ModelEnv 'ModelRule_DELEG = ModelDEnv
   type ModelFailure 'ModelRule_DELEG = Proxy
 
-  applyRule _ = \case
+  applyRuleImpl _ = \case
     ModelRegKey hk ->
       RWS.execRWST $
         use (modelDState_rewards . at hk) >>= \case
@@ -624,7 +673,7 @@ instance ModelSTS 'ModelRule_POOL where
   type ModelEnv 'ModelRule_POOL = ModelPEnv
   type ModelFailure 'ModelRule_POOL = Proxy
 
-  applyRule _ = \case
+  applyRuleImpl _ = \case
     ModelRegPool pool@ModelPoolParams {_mppId = hk} ->
       RWS.execRWST $
         use (modelPState_poolParams . at hk) >>= \case
@@ -643,7 +692,7 @@ instance ModelSTS 'ModelRule_TICK where
   type ModelEnv 'ModelRule_TICK = Proxy
   type ModelFailure 'ModelRule_TICK = Proxy
 
-  applyRule _ slot = RWS.execRWST $ do
+  applyRuleImpl _ slot = RWS.execRWST $ do
     Identity epoch <-
       epochInfoEpoch
         <$> asks (epochInfo . getGlobals)
@@ -660,7 +709,7 @@ instance ModelSTS 'ModelRule_RUPD where
   type ModelEnv 'ModelRule_RUPD = ModelRUpdEnv
   type ModelFailure 'ModelRule_RUPD = Proxy
 
-  applyRule _ (Const s) =
+  applyRuleImpl _ (Const s) =
     RWS.execRWST $
       State.get >>= \case
         Compose (Just _) -> pure ()
@@ -688,7 +737,7 @@ instance ModelSTS 'ModelRule_NEWEPOCH where
   type ModelEnv 'ModelRule_NEWEPOCH = Proxy
   type ModelFailure 'ModelRule_NEWEPOCH = Proxy
 
-  applyRule _ e = RWS.execRWST $ do
+  applyRuleImpl _ e = RWS.execRWST $ do
     el <- State.gets _modelNewEpochState_el
     case getConst e `compare` (el + 1) of
       LT -> pure ()
@@ -715,7 +764,7 @@ instance ModelSTS 'ModelRule_MIR where
   type ModelEnv 'ModelRule_MIR = Proxy
   type ModelFailure 'ModelRule_MIR = Proxy
 
-  applyRule _ Proxy = RWS.execRWST $ do
+  applyRuleImpl _ Proxy = RWS.execRWST $ do
     ( Comp1
         ( ModelAcnt
             { _modelAcnt_treasury = ModelInstantaneousReward dTreasury irTreasury,
@@ -756,7 +805,7 @@ instance ModelSTS 'ModelRule_EPOCH where
   type ModelEnv 'ModelRule_EPOCH = Proxy
   type ModelFailure 'ModelRule_EPOCH = Proxy
 
-  applyRule _ e = RWS.execRWST $ do
+  applyRuleImpl _ e = RWS.execRWST $ do
     liftApplyRule (Proxy @'ModelRule_SNAP) Proxy e
 
     modelEpochState_ls . modelLState_dpstate . modelDPState_pstate
@@ -784,10 +833,6 @@ data ModelGlobalsEnv a = ModelGlobalsEnv
     _modelEnv :: !a
   }
   deriving (Show, Functor, Foldable, Traversable)
-
-modelEnv :: Lens (ModelGlobalsEnv a) (ModelGlobalsEnv b) a b
-modelEnv a2fb s = (\b -> s {_modelEnv = b}) <$> a2fb (_modelEnv s)
-{-# INLINE modelEnv #-}
 
 instance HasGlobals (ModelGlobalsEnv a) where
   getGlobals (ModelGlobalsEnv g _) = g
@@ -837,7 +882,7 @@ liftApplyRules proxy signal' signal = RWS.rwsT $ \(ModelGlobalsEnv globals env) 
   (st''', w) <-
     RWS.execRWST
       ( for_ envs' $ \(env', signal'') -> RWS.rwsT $ \() st' -> do
-          (st'', w') <- applyRule proxy signal'' (ModelGlobalsEnv globals env') st'
+          (st'', w') <- applyRuleImpl proxy signal'' (ModelGlobalsEnv globals env') st'
           pure ((), st'', w')
       )
       ()
@@ -880,7 +925,7 @@ instance ModelSTS 'ModelRule_SNAP where
   type ModelEnv 'ModelRule_SNAP = ModelLState
   type ModelFailure 'ModelRule_SNAP = Proxy
 
-  applyRule _ Proxy = RWS.execRWST $ do
+  applyRuleImpl _ Proxy = RWS.execRWST $ do
     ModelLState
       ( ModelUTxOState
           { _modelUTxOState_utxo = utxo,
@@ -903,7 +948,7 @@ instance ModelSTS 'ModelRule_POOLREAP where
   type ModelEnv 'ModelRule_POOLREAP = ModelPOOLREAPEnv
   type ModelFailure 'ModelRule_POOLREAP = Proxy
 
-  applyRule _ (Const e) = RWS.execRWST $ do
+  applyRuleImpl _ (Const e) = RWS.execRWST $ do
     retired <-
       ifoldMap (\hk e' -> if e == e' then Set.singleton hk else Set.empty)
         <$> use (modelPlReapState_pstate . modelPState_retiring)

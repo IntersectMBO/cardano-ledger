@@ -83,7 +83,6 @@ instance
   ElaborateEraModel (ShelleyEra crypto)
   where
   type EraFeatureSet (ShelleyEra crypto) = 'FeatureSet 'ExpectAdaOnly ('TyScriptFeature 'False 'False)
-  eraFeatureSet _ = FeatureTag ValueFeatureTag_AdaOnly ScriptFeatureTag_None
 
   reifyValueConstraint = ExpectedValueTypeC_Simple
 

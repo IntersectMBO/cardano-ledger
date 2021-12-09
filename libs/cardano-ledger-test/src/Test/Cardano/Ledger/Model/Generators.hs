@@ -14,6 +14,21 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+-- | = Model ledger quickcheck generators.
+--
+-- The main idea here is to generate a bunch of model transactions applied to a
+-- model initial (genesis) state, in hopes of encountering as many important
+-- corner cases as possible.
+--
+-- This module mainly contains only the
+-- environment used in the generators.  see also:
+--
+--  * "Test.Cardano.Ledger.Model.Generators.Chain" for the generators themselves.
+--  * "Test.Cardano.Ledger.Model.Generators.Shrinking" for tools to shrink
+--    generated models.
+--  * "Test.Cardano.Ledger.Model.Fixup" for adjusting models to "be correct"
+--    after minor manipulations that may have renderded them invalid for minor
+--    reasons.
 module Test.Cardano.Ledger.Model.Generators where
 
 import Cardano.Ledger.BaseTypes
@@ -78,6 +93,7 @@ import Test.Cardano.Ledger.Model.Prov
   ( MonadModelProvenance (..),
   )
 
+-- | some parameters to fine tune the behavior of model generation.
 data ModelGeneratorParamsF f = ModelGeneratorParams
   { _modelGeneratorParams_epochs :: f EpochNo,
     _modelGeneratorParams_genesesAcct :: f Coin,

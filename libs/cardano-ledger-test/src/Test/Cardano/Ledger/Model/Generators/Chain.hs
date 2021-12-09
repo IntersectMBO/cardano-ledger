@@ -4,7 +4,18 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Model.Generators.Chain where
+-- | QuickCheck generators for top level model ledger types.  see also:
+--
+-- * "Test.Cardano.Ledger.Model.Generators.Certificates"
+-- * "Test.Cardano.Ledger.Model.Generators.Value"
+-- * "Test.Cardano.Ledger.Model.Generators.Address"
+-- * "Test.Cardano.Ledger.Model.Generators.TxOut"
+-- * "Test.Cardano.Ledger.Model.Generators.Tx"
+-- * "Test.Cardano.Ledger.Model.Generators.Script"
+module Test.Cardano.Ledger.Model.Generators.Chain
+  ( genModel,
+  )
+  where
 
 import Cardano.Ledger.BaseTypes
   ( Globals (..),

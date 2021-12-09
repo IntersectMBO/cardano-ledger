@@ -13,7 +13,125 @@
 {-# LANGUAGE StandaloneKindSignatures #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Model.API where
+-- | = Overview
+--
+-- the `Test.Cardano.Ledger.Model` namespace exists to enable QuickCheck style
+-- property based testing, without having the obstacles that come from directly
+-- stating those properties in terms of the types in the primary implementation.
+-- The problems are, in no particular order:
+--
+--  - the ledger and transaction types are large records with many degrees of
+--    freedom; most combinations are invalid.  the spec mostly defines which
+--    ledgers are valid in terms of which states are reachable from initial
+--    conditions via valid transactions, and which transactions are valid in terms
+--    of the ledger transition rules.
+--  - The use of cryptographic hashing in generated values interfere with
+--    shrinking; any modification of a transaction demands a corresponding change
+--    to the ledger state.
+--  - testing era specific logic requires considerable effort to adapt to new eras,
+--    whereas era agnostic API's are not able to interact with features that
+--    differ between eras under test.
+--
+--
+-- These issues are addressed in the Ledger Model by way of separating the
+-- generation of test inputs and checking those inputs for required properties into
+-- different types; with the generation step abstracting out many of the issues
+-- that obstruct its use with quickcheck.  A summary of those differences is:
+--
+--  - A separate hierarchy of types for most ledger concepts which mirror the
+--    types in the "real" implementation.
+--  - conversion from model types to real types is mediated by the classes and
+--    functions in the `Test.Cardano.Ledger.Model.Elaborators` namespace.
+--    conversion that can use era agnostic API's are in the form of default
+--    methods on the corresponding classes, and the parts that require era
+--    specific types are left to the per-era instances of those classes.
+--  - A type parameter is used as a "flag" to enable or select which features
+--    apply to the era being modeled in a single heirarchy of types for all eras.
+--    in contrast with the "real" implementation uses a type parameter for the
+--    era; with type families determining which types appear in the heirarchy of
+--    types that are used in that implementation.  The model parameter represents
+--    only which features are present/absent, rather than specifying a particular
+--    era.
+--  - no cryptography, the model instead uses surrogate keys of one form or
+--    another in place of hashes and signatures.
+--
+-- An overview of how a property is checked in this model:
+--
+-- * "Test.Cardano.Ledger.Model.FeatureSet" : Which features are available in an
+--    era are encoded in the era type used in the model.
+-- * "Test.Cardano.Ledger.Model.Rules" : The spec is reimplemented in terms of
+--    the model, to streamline other steps.
+-- * "Test.Cardano.Ledger.Model.API" : this module, which provides a reasonable
+--    environment to run the model implementation
+-- * "Test.Cardano.Ledger.Model.Generators" : the collection of quickcheck
+--    generators.
+-- * "Test.Cardano.Ledger.Model.Elaborators" : generated models are converted to
+--      real transactions and ledger states.
+-- * "Test.Cardano.Ledger.Model.Properties" : elaborated results are checked,
+--    both regular properties of the elaborated types, and that the behaviour
+--    between models and elaborated ledgerstates agree.
+--
+--
+--
+-- = Adding a new era to the ledger model.
+--
+-- There are two "steps" to adding a new era, providing a new instance to
+-- `Test.Cardano.Ledger.Model.Elaborators.ElaborateEraModel` for the new era, and
+-- then extending the model to support features that are new in the new era.
+--
+-- The former is a fairly mechanical process of giving the implementation of the
+-- era specific types, whereas the latter depends on what's being changed in the
+-- new era.
+--
+-- In case new data types become available, or the cardinality changes between
+-- eras, it will probably be needed to extend the `FeatureSet` type to capture that
+-- change.  Feature support GADTs can then be used in places in the model data
+-- types where the presence or absence depends on the feature in question.  This
+-- should also have a downstream effect on the ElaborateEraModel instances; and
+-- that class will need to be adjusted to account for the new data.
+--
+-- If instead a change of behavior is to be expressed, in a way that's visible in
+-- the ledgerstate itself (as with the protocol version), then model versions of
+-- the conditional behavior should be recreated in
+-- "Test.Cardano.Ledger.Model.Rules", and will likely need to be mirrored in
+-- "Test.Cardano.Ledger.Model.Generators".
+module Test.Cardano.Ledger.Model.API
+  ( -- | = Top level model types
+    ModelBlock (..),
+    ModelEpoch (..),
+    ModelGenesis (..),
+    -- | = User facing model API
+    applyModelEpoch,
+    applyModelBlock,
+    applyModelDCert,
+    applyModelTx,
+    applyModelTick,
+    applyModelBlocksMade,
+    -- | = Model emulation data types.
+    ModelLedger (..),
+    HasModelLedger (..),
+    mkModelLedger,
+    HasModelM,
+    ModelM (..),
+    execModelM,
+    execModelMWithProv,
+    modelM,
+    -- | = miscelaneous lenses.
+    getModelLedger_epoch,
+    getModelLedger_rewards,
+    getModelLedger_utxos,
+    modelBlock_slot,
+    modelEpoch_blocksMade,
+    modelGenesis_pp,
+    modelGenesis_utxos,
+    modelLedger_nes,
+    modelLedger_slotOffset,
+    modelMWithProv,
+    modelMWithProvT,
+    modelEpoch_blocks,
+    modelBlock_txSeq,
+  )
+where
 
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
@@ -109,7 +227,6 @@ import Test.Cardano.Ledger.Model.Prov
   )
 import Test.Cardano.Ledger.Model.Rules
   ( ModelDPSEnv (..),
-    ModelGlobalsEnv (..),
     ModelLEnv (..),
     ModelRule (..),
     applyRule,
@@ -134,8 +251,12 @@ import Test.Cardano.Ledger.Model.UTxO
     mkModelUTxOMap,
   )
 
+-- | Model version of Block; which from the view of the model, is all of the
+-- transactions for a particular slot.  block metadata is elsewhere.
 data ModelBlock era = ModelBlock
-  { _modelBlock_slot :: SlotNo,
+  { -- | block position in the epoch.  this is relative to the start of the
+    -- epoch, not an absolute slot number
+    _modelBlock_slot :: SlotNo,
     _modelBlock_txSeq :: [ModelTx era]
   }
   deriving (Show, Generic, Eq)
@@ -225,7 +346,8 @@ applyModelTick mslot = do
     applyRule
       (Proxy @'ModelRule_TICK)
       (Const slot)
-      (ModelGlobalsEnv globals Proxy)
+      globals
+      Proxy
       nes
   -- TODO: unless (null $ errs') sulk
   modelLedger . modelLedger_nes .= nes'
@@ -245,7 +367,8 @@ applyModelTx slot txIx tx = do
     applyRule
       (Proxy @'ModelRule_LEDGER)
       tx
-      (ModelGlobalsEnv globals $ ModelLEnv slot txIx $ getModelPParams es)
+      globals
+      (ModelLEnv slot txIx $ getModelPParams es)
       (_modelEpochState_ls es)
   -- TODO: unless (null errs) sulk
   let es' = set modelEpochState_ls ls' es
@@ -281,13 +404,15 @@ applyModelBlocksMade blocksMade = do
         applyRule
           (Proxy @'ModelRule_TICK)
           (Const neededSlot + 1)
-          (ModelGlobalsEnv globals Proxy)
+          globals
+          Proxy
           nes
   (nes'', errs'') <-
     applyRule
       (Proxy @'ModelRule_TICK)
       (Const firstOfNew)
-      (ModelGlobalsEnv globals Proxy)
+      globals
+      Proxy
       nes'
   let errs = errs' <> errs''
 
@@ -295,6 +420,10 @@ applyModelBlocksMade blocksMade = do
     then modelLedger . modelLedger_nes .= nes''
     else error $ show errs
 
+-- | Run a single 'ModelEpoch'.
+--
+-- This API runs "as if" every tick in the epoch occurs, even if the ModelEpoch
+-- has no blocks in the slots where important events occur.
 applyModelEpoch :: HasModelM era st r m => ModelEpoch era -> m ()
 applyModelEpoch epoch = do
   forOf_ (modelEpoch_blocks . traverse) epoch applyModelBlock
@@ -385,6 +514,7 @@ modelMWithProvT k r (p, s) = do
   ((x, s'), p') <- State.runStateT (runModelM k r s) p
   pure (either (error . (<> "modelM:") . show) id x, (p', s'))
 
+-- | Just enough context to evaluate a model transaction.
 type HasModelM era st r m =
   ( MonadReader r m,
     HasGlobals r,
@@ -499,14 +629,13 @@ applyModelDCert dCert = do
     applyRule
       (Proxy @'ModelRule_DELPL)
       dCert
-      ( ModelGlobalsEnv globals $
-          ModelDPSEnv
-            { _modelDPSEnv_slot = 999,
-              _modelDPSEnv_txIx = 999,
-              _modelDPSEnv_pp = pp,
-              _modelDPSEnv_tx = modelTx
-            }
-      )
+      globals
+      ModelDPSEnv
+        { _modelDPSEnv_slot = 999,
+          _modelDPSEnv_txIx = 999,
+          _modelDPSEnv_pp = pp,
+          _modelDPSEnv_tx = modelTx
+        }
       st
   -- TODO: unless (null errs) sulk
   modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate

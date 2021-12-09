@@ -10,7 +10,21 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Test.Cardano.Ledger.Model.BaseTypes where
+module Test.Cardano.Ledger.Model.BaseTypes
+  ( ModelValue (..),
+    ModelValueVars (..),
+    filterModelValue,
+    liftModelValue,
+    PreservedAda (..),
+    ModelPoolId (..),
+    ModelBlocksMade (..),
+    _ModelBlocksMade,
+    HasGlobals (..),
+    PositiveRational,
+    boundPositiveRational,
+    unboundPositiveRational,
+  )
+where
 
 import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Coin (Coin)
@@ -62,7 +76,12 @@ class HasGlobals a where
 instance HasGlobals Globals where
   getGlobals = id
 
+-- | Things that have a pot of ADA in them.
+--
+-- This should only count coins that contribute toward the conserved quantity
+-- 'Cardano.Ledger.BaseTypes.maxLovelaceSupply'
 class PreservedAda a where
+  -- | Get the amount of ADA in a value.
   totalPreservedAda :: a -> Coin
 
 newtype ModelBlocksMade = ModelBlocksMade {unModelBlocksMade :: Map.Map ModelPoolId Natural}
@@ -83,8 +102,7 @@ deriving newtype instance Show ModelPoolId
 
 type ModelMA era = (ModelScript era, AssetName)
 
-type ModelValue' k era = ModelValueF (ModelValueVars era k)
-
+-- | key for a single non-ada asset
 data ModelValueVars era (k :: TyValueExpected) where
   ModelValue_MA ::
     ('ExpectAnyOutput ~ ValueFeature era) =>
@@ -121,7 +139,7 @@ newtype ModelValue k era = ModelValue {unModelValue :: ModelValueF (ModelValueVa
 liftModelValue :: ModelValue 'ExpectAdaOnly era -> ModelValue k era
 liftModelValue = ModelValue . mapModelValueF liftModelValueVars . unModelValue
 
--- change the "expected return type" of a ModelValue
+-- | change the "expected return type" of a ModelValue
 filterModelValue ::
   forall a b c.
   (KnownValueFeature b, KnownRequiredFeatures c) =>
@@ -133,10 +151,7 @@ filterModelValue = \case
 instance KnownValueFeature v => RequiredFeatures (ModelValue v) where
   filterFeatures tag (ModelValue val) = ModelValue <$> traverseModelValueF (hasKnownRequiredFeatures tag filterModelValueVars) val
 
-getModelValueCoin :: ModelValue a c -> Coin
-getModelValueCoin = Val.coin . unModelValue
-
--- The spec stipulates that certain values particularly, the sigma parameter
+-- | The spec stipulates that certain values particularly, the sigma parameter
 -- used in rewards calculations) to be within [0,1], but which never-the-less
 -- can be above 1 due to the
 newtype PositiveRational = PositiveRational {unboundPositiveRational :: Rational}
