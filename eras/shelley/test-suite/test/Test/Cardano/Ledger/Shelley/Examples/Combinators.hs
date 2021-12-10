@@ -73,7 +73,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody, UsesTxOut)
+import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -97,7 +97,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules.Mir (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
-import Cardano.Ledger.Shelley.UTxO (txins, txouts)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), txins, txouts)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader
@@ -110,8 +110,8 @@ import Cardano.Protocol.TPraos.BHeader
     prevHashToNonce,
   )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
-import Control.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.State.Transition (STS (State))
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -210,7 +210,6 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 newUTxO ::
   forall era.
   ( UsesTxBody era,
-    UsesTxOut era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   Core.TxBody era ->
@@ -222,10 +221,11 @@ newUTxO txb cs = cs {chainNes = nes'}
     es = nesEs nes
     ls = esLState es
     utxoSt = _utxoState ls
-    utxo = _utxo utxoSt
+    utxo = unUTxO $ _utxo utxoSt
     utxoAdd = txouts @era txb
-    utxoDel = eval (txins @era txb ◁ utxo)
-    utxo' = eval ((txins @era txb ⋪ utxo) ∪ utxoAdd)
+    (utxoWithout, utxoToDel) = SplitMap.extractKeysSet utxo (txins @era txb)
+    utxoDel = UTxO utxoToDel
+    utxo' = UTxO (utxoWithout `SplitMap.union` unUTxO utxoAdd)
     sd' = updateStakeDistribution @era (_stakeDistro utxoSt) utxoDel utxoAdd
     utxoSt' = utxoSt {_utxo = utxo', _stakeDistro = sd'}
     ls' = ls {_utxoState = utxoSt'}

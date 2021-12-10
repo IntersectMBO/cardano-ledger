@@ -59,6 +59,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -289,7 +290,7 @@ genesisUTxO ::
   UTxO era
 genesisUTxO genesis =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (txIn, txOut)
         | (addr, amount) <- Map.toList (sgInitialFunds genesis),
           let txIn = initialFundsPseudoTxIn addr

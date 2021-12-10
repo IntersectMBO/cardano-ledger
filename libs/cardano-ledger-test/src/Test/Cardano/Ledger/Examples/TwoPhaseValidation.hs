@@ -107,6 +107,7 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString as BS (replicate)
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (..))
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Map (Map)
@@ -256,7 +257,7 @@ unspendableOut pf =
 initUTxO :: PostShelley era => Proof era -> UTxO era
 initUTxO pf =
   UTxO $
-    Map.fromList $
+    SplitMap.fromList $
       [ (TxIn genesisId 1, alwaysSucceedsOutput pf),
         (TxIn genesisId 2, alwaysFailsOutput pf)
       ]
@@ -297,10 +298,10 @@ expectedUTxO pf ex idx = UTxO utxo
   where
     utxo = case ex of
       ExpectSuccess txb newOut ->
-        Map.insert (TxIn (txid txb) 0) newOut (filteredUTxO idx)
+        SplitMap.insert (TxIn (txid txb) 0) newOut (filteredUTxO idx)
       ExpectFailure -> filteredUTxO (10 + idx)
-    filteredUTxO :: Natural -> Map.Map (TxIn (Crypto era)) (Core.TxOut era)
-    filteredUTxO x = Map.filterWithKey (\(TxIn _ i) _ -> i /= x) (unUTxO . initUTxO $ pf)
+    filteredUTxO :: Natural -> SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)
+    filteredUTxO x = SplitMap.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO (initUTxO pf)
 
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
@@ -959,9 +960,9 @@ utxoEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> UTxO era
 utxoEx9 pf = UTxO utxo
   where
     utxo =
-      Map.insert (TxIn (txid (validatingBodyManyScripts pf)) 0) (outEx9 pf) $
-        Map.filterWithKey
-          (\k _ -> k /= TxIn genesisId 1 && k /= TxIn genesisId 100)
+      SplitMap.insert (TxIn (txid (validatingBodyManyScripts pf)) 0) (outEx9 pf) $
+        SplitMap.filterWithKey
+          (\k _ -> k /= (TxIn genesisId 1) && k /= (TxIn genesisId 100))
           (unUTxO $ initUTxO pf)
 
 utxoStEx9 ::
@@ -2105,7 +2106,7 @@ testAlonzoBadPMDHBlock = makeNaiveBlock [trustMe True $ poolMDHTooBigTx pf]
 example1UTxO :: UTxO A
 example1UTxO =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn (txid (validatingBody pf)) 0, outEx1 pf),
         (TxIn (txid (validatingBodyWithCert pf)) 0, outEx3 pf),
         (TxIn (txid (validatingBodyWithWithdrawal pf)) 0, outEx5 pf),

@@ -82,6 +82,7 @@ import Control.Monad.Trans.RWS.Strict (RWST (..), ask)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
 import Data.Coerce
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as F
 import Data.Functor
@@ -449,7 +450,7 @@ genTxOut val = do
 genUTxO :: GenRS (UTxO A)
 genUTxO = do
   NonEmpty ins <- lift $ resize 10 arbitrary
-  UTxO <$> sequence (Map.fromSet (const genOut) (Set.fromList ins))
+  UTxO <$> sequence (SplitMap.fromSet (const genOut) (Set.fromList ins))
   where
     genOut = genTxOut =<< lift genPositiveVal
 
@@ -538,14 +539,14 @@ genCollateralUTxO ::
   Coin ->
   UTxO A ->
   GenRS (UTxO A, Map.Map (TxIn C_Crypto) (TxOut A))
-genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxoMap) = do
+genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxo) = do
   GenEnv {gePParams} <- ask
   let collPerc = _collateralPercentage gePParams
       minCollTotal = Coin (ceiling ((fee * toInteger collPerc) % 100))
       -- Generate a collateral that is neither in UTxO map nor has already been generated
       genNewCollateral addr coll um c = do
         txIn <- lift arbitrary
-        if Map.member txIn utxoMap || Map.member txIn coll
+        if SplitMap.member txIn utxo || Map.member txIn coll
           then genNewCollateral addr coll um c
           else pure (um, Map.insert txIn (TxOut addr (inject c) SNothing) coll, c)
       -- Either pick a collateral from a map or generate a completely new one
@@ -566,8 +567,10 @@ genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxoMap) = do
               then genNewCollateral ec coll um (minCollTotal <-> curCollTotal)
               else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
           go ecs' coll' (curCollTotal <+> c) um'
-  collaterals <- go collateralAddresses Map.empty (Coin 0) $ Map.filter spendOnly utxoMap
-  pure (UTxO (Map.union utxoMap collaterals), collaterals)
+  collaterals <-
+    go collateralAddresses Map.empty (Coin 0) $
+      SplitMap.toMap $ SplitMap.filter spendOnly utxo
+  pure (UTxO (Map.foldrWithKey' SplitMap.insert utxo collaterals), collaterals)
   where
     spendOnly (TxOut (Addr _ (ScriptHashObj _) _) _ _) = False
     spendOnly (TxOut (Addr _ _ (StakeRefBase (ScriptHashObj _))) _ _) = False
@@ -652,7 +655,7 @@ genValidatedTx = do
   -- 1. Produce utxos that will be spent
   n <- lift $ choose (1, length utxoNoCollateral)
   toSpendNoCollateral <-
-    Map.fromList . take n <$> lift (shuffle $ Map.toList utxoNoCollateral)
+    Map.fromList . take n <$> lift (shuffle $ SplitMap.toList utxoNoCollateral)
   -- 2. Check if all Plutus scripts are valid
   let toSpendNoCollateralTxOuts = Map.elems toSpendNoCollateral
       -- We use maxBound to ensure the serializaed size overestimation
@@ -733,7 +736,9 @@ genValidatedTx = do
   feeKey <- lift $ elements $ Map.keys toSpendNoCollateral
   let injectFee (TxOut addr val mdh) = TxOut addr (val <+> inject fee) mdh
       utxoFeeAdjusted =
-        UTxO $ Map.update (Just . injectFee) feeKey utxoNoCollateral
+        UTxO $ case SplitMap.lookup feeKey utxoNoCollateral of
+          Nothing -> utxoNoCollateral
+          Just txOut -> SplitMap.insert feeKey (injectFee txOut) utxoNoCollateral
   -- 7. Generate utxos that will be used as collateral
   (utxo, collMap) <- genCollateralUTxO collateralAddresses fee utxoFeeAdjusted
   collateralKeyWitsMakers <- mapM (genTxOutTimelockKeyWitness Nothing) $ Map.elems collMap

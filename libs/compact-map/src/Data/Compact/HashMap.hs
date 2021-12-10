@@ -6,10 +6,24 @@
 module Data.Compact.HashMap where
 
 import Cardano.Crypto.Hash.Class
+  ( Hash,
+    HashAlgorithm (SizeHash),
+    PackedBytes (..),
+    hashFromBytes,
+    hashFromPackedBytes,
+    hashToBytes,
+    hashToPackedBytes,
+    sizeHash,
+  )
 import Control.DeepSeq
 import Data.Bifunctor (first)
+import Data.Bits
+import qualified Data.ByteString as BS
+import Data.ByteString.Builder
+import qualified Data.ByteString.Lazy as BSL
 import Data.Compact.KeyMap (Key, KeyMap)
 import qualified Data.Compact.KeyMap as KM
+import Data.Function (fix)
 import Data.Proxy
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -33,18 +47,67 @@ instance HashAlgorithm h => Keyed (Hash h a) where
       PackedBytes8 a -> KM.Key a 0 0 0
       PackedBytes28 a b c d -> KM.Key a b c (fromIntegral d)
       PackedBytes32 a b c d -> KM.Key a b c d
-      _ -> error $ "Unsupported hash size: " <> show (sizeHash (Proxy :: Proxy h))
-  fromKey (KM.Key a b c d) =
-    hashFromPackedBytes $
-      case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 32) of
-        Just Refl -> PackedBytes32 a b c d
-        Nothing ->
-          case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 28) of
-            Just Refl -> PackedBytes28 a b c (fromIntegral d)
-            Nothing ->
-              case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 8) of
-                Just Refl -> PackedBytes8 a
-                Nothing -> error $ "Unsupported hash size: " <> show (sizeHash (Proxy :: Proxy h))
+      _ -> hashToKey h
+  fromKey key@(KM.Key a b c d) =
+    case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 32) of
+      Just Refl -> hashFromPackedBytes $ PackedBytes32 a b c d
+      Nothing ->
+        case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 28) of
+          Just Refl -> hashFromPackedBytes $ PackedBytes28 a b c (fromIntegral d)
+          Nothing ->
+            case sameNat (Proxy :: Proxy (SizeHash h)) (Proxy :: Proxy 8) of
+              Just Refl -> hashFromPackedBytes $ PackedBytes8 a
+              Nothing -> hashFromKey key
+
+-- | Convert any hash that is at most 32 bytes in length to a Key. Slow, but
+-- uncommon case of non-standard hash size.
+hashToKey :: forall h a. HashAlgorithm h => Hash h a -> Key
+hashToKey h
+  | n <= 8 = KM.Key a 0 0 0
+  | n <= 16 = KM.Key a b 0 0
+  | n <= 24 = KM.Key a b c 0
+  | n <= 32 = KM.Key a b c d
+  | otherwise = error $ "Unsupported hash size: " <> show n
+  where
+    indexWord64 i =
+      BS.foldl' (\acc byte -> acc `shift` 8 .|. fromIntegral byte) 0 $
+        BS.take 8 $ BS.drop (i * 8) bs
+    bs = hashToBytes h
+    a = indexWord64 0
+    b = indexWord64 1
+    c = indexWord64 2
+    d = indexWord64 3
+    n = sizeHash (Proxy :: Proxy h)
+
+-- | Convert any Key to a hash that is at most 32 bytes in length. Slow, but
+-- uncommon case of non-standard hash size
+hashFromKey :: forall h a. HashAlgorithm h => Key -> Hash h a
+hashFromKey (KM.Key a b c d)
+  | n <= 32,
+    Just h <- hashFromBytes (BSL.toStrict (toLazyByteString build)) =
+    h
+  | otherwise = error $ "Unsupported hash size: " <> show n
+  where
+    bytesToWord64 =
+      fix
+        ( \loop acc i bytes ->
+            if i <= (0 :: Int)
+              then acc
+              else
+                loop
+                  (word8 (fromIntegral (bytes .&. 0xff)) <> acc)
+                  (i - 1)
+                  (bytes `shiftR` 8)
+        )
+        mempty
+    build
+      | n <= 8 = bytesToWord64 r a
+      | n <= 16 = bytesToWord64 8 a <> bytesToWord64 r b
+      | n <= 24 = bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 r c
+      | otherwise =
+        bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 8 c <> bytesToWord64 r d
+    n = fromIntegral $ sizeHash (Proxy :: Proxy h)
+    r = n - 8 * (n `quot` 8)
 
 data HashMap k v where
   HashMap :: Keyed k => KeyMap v -> HashMap k v

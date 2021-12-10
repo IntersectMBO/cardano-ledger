@@ -120,6 +120,7 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
 import qualified Data.Map.Strict as Map (empty, fromList)
@@ -435,8 +436,8 @@ instance
   ) =>
   Arbitrary (UTxO era)
   where
-  arbitrary = genericArbitraryU
-  shrink = genericShrink
+  arbitrary = UTxO . SplitMap.fromMap <$> arbitrary
+  shrink = fmap (UTxO . SplitMap.fromMap) . shrink . SplitMap.toMap . unUTxO
 
 instance CC.Crypto crypto => Arbitrary (PState crypto) where
   arbitrary = genericArbitraryU

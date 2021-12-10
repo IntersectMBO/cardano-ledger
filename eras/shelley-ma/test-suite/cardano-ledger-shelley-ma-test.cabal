@@ -53,9 +53,8 @@ library
     Test.Cardano.Ledger.ShelleyMA.TxBody
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
-  -- other-extensions:
+
   build-depends:
-    base >=4.9 && <4.15,
     base16-bytestring,
     bytestring,
     cardano-binary,
@@ -101,14 +100,13 @@ test-suite cardano-ledger-shelley-ma-test
   -- We set a bound here so that we're alerted of potential space
   -- leaks in our generators (or test) code.
   --
-  -- The 4 megabytes stack bound and 200 megabytes heap bound were
+  -- The 4 megabytes stack bound and 250 megabytes heap bound were
   -- determined ad-hoc.
   ghc-options:        -threaded
                       -rtsopts
                       -with-rtsopts=-N
                       "-with-rtsopts=-K4m -M250m"
   build-depends:
-      base >=4.9 && <4.15,
       bytestring,
       cardano-binary,
       cardano-data,
@@ -119,6 +117,7 @@ test-suite cardano-ledger-shelley-ma-test
       cardano-slotting,
       cborg,
       containers,
+      compact-map,
       data-default-class,
       mtl,
       QuickCheck,

@@ -14,10 +14,17 @@
 --      a low-level compiled form of Exp
 module Control.Iterate.Exp where
 
-import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Iter (..), List (..), Sett (..), Single (..), fromPairs)
+import Control.Iterate.BaseTypes
+  ( BaseRep (..),
+    Basic (..),
+    Iter (..),
+    List (..),
+    Sett (..),
+    Single (..),
+    fromPairs,
+  )
 import Control.Iterate.Collect (Collect (..), hasElem, none, one)
 import Data.BiMap (BiMap, Bimap)
-import Data.Compact.SplitMap (Split, SplitMap)
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -65,7 +72,6 @@ instance Show (Exp t) where
   show (Base MapR _) = "Map?"
   show (Base SetR _) = "Set?"
   show (Base ListR _) = "List?"
-  show (Base SplitR _) = "SplitMap?"
   show (Base SingleR (Single _ _)) = "Single(_ _)"
   show (Base SingleR (SetSingle _)) = "SetSingle(_)"
   show (Base rep _x) = show rep ++ "?"
@@ -115,9 +121,6 @@ instance (Ord k) => HasExp (Single k v) (Single k v) where
 instance (Ord k, Ord v) => HasExp (Bimap k v) (Bimap k v) where
   toExp x = Base BiMapR x
 
-instance (Ord k, Split k) => HasExp (SplitMap k v) (SplitMap k v) where
-  toExp x = Base SplitR x
-
 instance
   (UnifiedView coin cred pool ptr k v, Ord k, Monoid coin, Ord coin, Ord cred, Ord ptr, Ord pool) =>
   HasExp
@@ -126,7 +129,7 @@ instance
   where
   toExp x = Base (ViewR tag) x
 
--- =======================================================================================================
+-- =========================================================================================
 -- When we build an Exp, we want to make sure all Sets with one element become (SetSingleton x)
 -- so we use these 'smart' constructors.
 
@@ -499,9 +502,6 @@ instance Ord k => HasQuery (Map.Map k v) k v where
 
 instance Ord k => HasQuery (Single k v) k v where
   query xs = BaseD SingleR xs
-
-instance (Ord k, Split k) => HasQuery (SplitMap k v) k v where
-  query xs = BaseD SplitR xs
 
 instance (Ord v, Ord k) => HasQuery (BiMap v k v) k v where
   query xs = BaseD BiMapR xs

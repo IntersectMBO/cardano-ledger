@@ -12,10 +12,6 @@ module Control.Iterate.BaseTypes where
 
 import Control.Iterate.Collect (Collect (..), hasElem, isempty, none, one, when)
 import Data.BiMap
-import qualified Data.Compact.KeyMap as KeyMap
-import Data.Compact.SplitMap (Split (..), SplitMap (..), insertNormForm)
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.IntMap as IntMap
 import Data.List (sortBy)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
@@ -85,7 +81,6 @@ data BaseRep f k v where
   ListR :: Basic List => BaseRep List k v
   SingleR :: Basic Single => BaseRep Single k v
   BiMapR :: (Basic (BiMap v), Ord v) => BaseRep (BiMap v) k v
-  SplitR :: (Split k, Basic SplitMap) => BaseRep SplitMap k v
   ViewR ::
     (Monoid coin, Ord cred, Ord ptr, Ord coin, Ord pool) =>
     UM.Tag coin cred pool ptr k v ->
@@ -97,7 +92,6 @@ instance Show (BaseRep f k v) where
   show ListR = "List"
   show SingleR = "Single"
   show BiMapR = "BiMap"
-  show SplitR = "SplitMap"
   show (ViewR UM.Rew) = "ViewR-cred-coin"
   show (ViewR UM.Del) = "ViewR-cred-keyhash"
   show (ViewR UM.Ptr) = "ViewR-ptr-cred"
@@ -310,48 +304,6 @@ instance Iter Map.Map where
   isnull = Map.null
   lookup = Map.lookup
 
--- ============== Basic the two-level SplitMap =========================
-
-instance Iter SplitMap where
-  nxt (SplitMap imap) =
-    case IntMap.minViewWithKey imap of
-      Nothing -> none
-      Just ((n, kmap), imap2) ->
-        case KeyMap.minViewWithKey kmap of
-          Nothing -> none -- This should never happen, every 'n' should have at least one 'key'
-          Just ((key, v), kmap2) -> one (joinKey n key, v, insertNormForm n kmap2 imap2)
-
-  lub k (SplitMap imap) =
-    let (n, key) = splitKey k
-     in case IntMap.splitLookup n imap of
-          (_, Just kmap, imap2) ->
-            case KeyMap.lub key kmap of
-              Nothing -> nxt (SplitMap imap2) -- imap has n, but kmap does not have key.
-              Just ((key2, v), kmap2) -> one (joinKey n key2, v, insertNormForm n kmap2 imap2)
-          (_, Nothing, imap3) -> nxt (SplitMap imap3)
-
-  isnull (SplitMap x) = IntMap.null x
-
-  haskey = SplitMap.member
-
-  lookup = SplitMap.lookup
-
-  element k x =
-    case SplitMap.lookup k x of
-      Nothing -> none
-      Just _ -> one ()
-
-instance Basic SplitMap where
-  addpair = SplitMap.insert
-  addkv (k, v) x comb = SplitMap.insertWith comb k v x
-  removekey = SplitMap.delete
-  domain smap = SplitMap.foldlWithKey' accum Set.empty smap
-    where
-      accum ans k _ = Set.insert k ans
-  range smap = SplitMap.foldlWithKey' accum Set.empty smap
-    where
-      accum ans _ v = Set.insert v ans
-
 -- ==========================================================================
 -- Basic ViewMap
 
@@ -416,10 +368,6 @@ instance Embed (BiMap v k v) (BiMap v k v) where
   fromBase xs = xs
 
 instance Embed (Single k v) (Single k v) where
-  toBase xs = xs
-  fromBase xs = xs
-
-instance Embed (SplitMap k v) (SplitMap k v) where
   toBase xs = xs
   fromBase xs = xs
 

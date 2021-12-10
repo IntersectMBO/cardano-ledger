@@ -155,7 +155,7 @@ instance Crypto c => TranslateEra (MaryEra c) TxOut where
 
 instance Crypto c => TranslateEra (MaryEra c) UTxO where
   translateEra ctxt utxo =
-    return $ UTxO $ Map.map (translateEra' ctxt) $ unUTxO utxo
+    return $ UTxO (translateEra' ctxt <$> unUTxO utxo)
 
 instance Crypto c => TranslateEra (MaryEra c) WitnessSet where
   type TranslationError (MaryEra c) WitnessSet = DecoderError

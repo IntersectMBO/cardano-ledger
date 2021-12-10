@@ -1,4 +1,3 @@
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -7,11 +6,7 @@ module Test.Compact.VMap where
 import Data.Compact.VMap as VMap
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
-import Data.Proxy
-import Test.QuickCheck
-import Test.QuickCheck.Classes.Base
-import Test.Tasty
-import Test.Tasty.QuickCheck
+import Test.Compact.Common
 
 type MapT = Map.Map Char Int
 
@@ -23,12 +18,6 @@ instance
   where
   arbitrary =
     VMap.fromMap . Map.fromList <$> arbitrary
-
-testLawsGroup :: TestName -> [Laws] -> TestTree
-testLawsGroup name = testGroup name . fmap testLaws
-  where
-    testLaws Laws {..} =
-      testGroup lawsTypeclass $ fmap (uncurry testProperty) lawsProperties
 
 prop_Roundtrip :: (VMapT -> a) -> (a -> VMapT) -> VMapT -> Property
 prop_Roundtrip to from km = from (to km) === km

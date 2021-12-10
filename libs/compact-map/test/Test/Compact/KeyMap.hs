@@ -1,5 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ExplicitForAll #-}
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -14,11 +13,8 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import System.Random (mkStdGen)
 import System.Random.Stateful (runStateGen_, uniformListM)
-import Test.QuickCheck
-import Test.QuickCheck.Property (mapTotalResult, maybeNumTests)
-import Test.Tasty
+import Test.Compact.Common
 import Test.Tasty.HUnit (testCaseInfo)
-import Test.Tasty.QuickCheck
 
 -- ==============================================================
 
@@ -176,13 +172,6 @@ splitwhole k m =
     (m1, Just v, m2) -> m === insert k v (union m1 m2)
 
 -- =========================================================
-
-withMaxTimesSuccess :: Testable prop => Int -> prop -> Property
-withMaxTimesSuccess !n =
-  mapTotalResult $ \res -> res {maybeNumTests = (n *) <$> (maybeNumTests res <|> Just 100)}
-
-testPropertyN :: Testable prop => Int -> TestName -> prop -> TestTree
-testPropertyN n name = testProperty name . withMaxTimesSuccess n
 
 keyMapTests :: TestTree
 keyMapTests =
@@ -388,6 +377,16 @@ alltests :: TestTree
 alltests =
   testGroup
     "KeyMap tests"
-    [keyMapTests, keyMapEquivDataMap]
+    [ keyMapTests,
+      keyMapEquivDataMap,
+      testLawsGroup
+        "classes"
+        [ eqLaws (Proxy @(KeyMap Int)),
+          semigroupLaws (Proxy @(KeyMap Int)),
+          monoidLaws (Proxy @(KeyMap Int)),
+          foldableLaws (Proxy @KeyMap),
+          traversableLaws (Proxy @KeyMap)
+        ]
+    ]
 
 -- =======================================================

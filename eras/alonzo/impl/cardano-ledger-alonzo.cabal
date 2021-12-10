@@ -68,6 +68,7 @@ library
     cardano-ledger-shelley-ma,
     cardano-prelude,
     cardano-slotting,
+    compact-map,
     containers,
     data-default,
     deepseq,

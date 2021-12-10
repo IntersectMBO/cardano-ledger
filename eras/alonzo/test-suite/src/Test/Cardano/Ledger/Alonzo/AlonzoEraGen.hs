@@ -61,8 +61,8 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (coin), adaOnly, (<+>), (<×>))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
-import Control.SetAlgebra (eval, (◁))
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
 import Data.Map as Map
@@ -261,7 +261,7 @@ unTime (PlutusScript _ _) = error "Plutus in Timelock"
 
 okAsCollateral :: forall c. Mock c => UTxO (AlonzoEra c) -> TxIn c -> Bool
 okAsCollateral utxo inputx =
-  case Map.lookup inputx (unUTxO utxo) of
+  case SplitMap.lookup inputx (unUTxO utxo) of
     Nothing -> False
     Just outputx -> vKeyLocked outputx
 
@@ -415,11 +415,12 @@ instance Mock c => EraGen (AlonzoEra c) where
           Set.empty
           mapScriptWit
           -- (dataMapFromTxOut (Prelude.foldr (:) [] (outputs' txbody)) (TxDats (getDataMap scriptinfo mapScriptWit)))
-          (dataMapFromTxOut (Prelude.foldr (:) [] (Map.elems smallUtxo)) (TxDats (getDataMap scriptinfo mapScriptWit)))
+          (dataMapFromTxOut smallUtxo (TxDats (getDataMap scriptinfo mapScriptWit)))
           -- The data hashes come from two places
           (Redeemers rdmrMap)
       txinputs = inputs' txbody
-      smallUtxo = eval (txinputs ◁ utxo) :: Map.Map (TxIn c) (Core.TxOut (AlonzoEra c))
+      smallUtxo :: [Core.TxOut (AlonzoEra c)]
+      smallUtxo = SplitMap.elems (unUTxO utxo `SplitMap.restrictKeysSet` txinputs)
       purposeHashPairs = scriptsNeededFromBody @(AlonzoEra c) utxo txbody
       rdmrMap = List.foldl' accum Map.empty purposeHashPairs -- Search through the pairs for Plutus scripts
       accum ans (purpose, hash1) =
@@ -486,7 +487,7 @@ sumCollateral ::
   UTxO era ->
   Coin
 sumCollateral tx (UTxO utxo) =
-  coin . balance @era . UTxO . eval $ collateral_ ◁ utxo
+  coin . balance @era . UTxO $ SplitMap.restrictKeysSet utxo collateral_
   where
     collateral_ = getField @"collateral" . getField @"body" $ tx
 

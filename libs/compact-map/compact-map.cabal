@@ -36,6 +36,7 @@ library
                      , Data.Compact.SplitMap
   other-modules:       Data.Compact.KVVector
   build-depends:       base >=4.11 && <5
+                     , bytestring
                      , cardano-binary
                      , cardano-prelude
                      , containers
@@ -55,7 +56,8 @@ test-suite tests
 
   hs-source-dirs:      test
   main-is:             Main.hs
-  other-modules:       Test.Compact.SplitMap
+  other-modules:       Test.Compact.Common
+                     , Test.Compact.SplitMap
                      , Test.Compact.KeyMap
                      , Test.Compact.VMap
   type:                exitcode-stdio-1.0
@@ -64,7 +66,6 @@ test-suite tests
                      , cardano-prelude
                      , containers
                      , tasty
-                     -- , tasty-expected-failure
                      , tasty-quickcheck
                      , tasty-hunit
                      , compact-map

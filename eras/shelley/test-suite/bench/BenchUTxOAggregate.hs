@@ -38,6 +38,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, (▷), (◁))
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -65,7 +66,7 @@ genTestCase numUTxO numAddr = do
         (fromJust $ toCompact $ Val.inject (Coin $ fromIntegral i))
   let mktxid i = TxId (unsafeMakeSafeHash (mkDummyHash i))
   let mktxin i = TxIn (mktxid i) (fromIntegral i)
-  let utxo = Map.fromList $ zip (mktxin <$> [1 ..]) txOuts
+  let utxo = SplitMap.fromList $ zip (mktxin <$> [1 ..]) txOuts
       liveptrs :: [Ptr]
       liveptrs = [p | (TxOut (Addr _ _ (StakeRefPtr p)) _) <- txOuts]
       m = length liveptrs `div` 2

@@ -42,6 +42,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.Exception (ErrorCall (ErrorCall), evaluate, try)
 import Control.State.Transition.Extended (PredicateFailure)
 import qualified Data.ByteString.Char8 as BS
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -85,7 +86,7 @@ bootstrapTxId = txid txb
 initUTxO :: UTxO MaryTest
 initUTxO =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn bootstrapTxId 0, TxOut Cast.aliceAddr (Val.inject aliceInitCoin)),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
@@ -193,7 +194,7 @@ txSimpleEx1 =
 expectedUTxOSimpleEx1 :: UTxO MaryTest
 expectedUTxOSimpleEx1 =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn (txid txbodySimpleEx1) 0, TxOut Cast.aliceAddr tokensSimpleEx1),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
@@ -239,7 +240,7 @@ txSimpleEx2 =
 expectedUTxOSimpleEx2 :: UTxO MaryTest
 expectedUTxOSimpleEx2 =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn (txid txbodySimpleEx2) 0, TxOut Cast.aliceAddr aliceTokensSimpleEx2),
         (TxIn (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
@@ -334,7 +335,7 @@ txTimeEx1InvalidRHSopen = txTimeEx1 $ txbodyTimeEx1 (SJust startInterval) SNothi
 expectedUTxOTimeEx1 :: UTxO MaryTest
 expectedUTxOTimeEx1 =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn (txid txbodyTimeEx1Valid) 0, TxOut Cast.aliceAddr tokensTimeEx1),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
@@ -378,7 +379,7 @@ txTimeEx2 =
 expectedUTxOTimeEx2 :: UTxO MaryTest
 expectedUTxOTimeEx2 =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn (txid txbodyTimeEx2) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)),
         (TxIn (txid txbodyTimeEx2) 1, TxOut Cast.bobAddr bobTokensTimeEx2),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
@@ -438,7 +439,7 @@ txSingWitEx1Valid =
 expectedUTxOSingWitEx1 :: UTxO MaryTest
 expectedUTxOSingWitEx1 =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn (txid txbodySingWitEx1) 0, TxOut Cast.bobAddr tokensSingWitEx1),
         (TxIn bootstrapTxId 0, TxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
@@ -498,7 +499,7 @@ initialUTxONegEx1 = expectedUTxOSimpleEx2
 expectedUTxONegEx1 :: UTxO MaryTest
 expectedUTxONegEx1 =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn (txid txbodyNegEx1) 0, TxOut Cast.aliceAddr aliceTokensNegEx1),
         (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin)),
         (TxIn (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2)

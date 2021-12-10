@@ -14,7 +14,7 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Benchmarks for transaction application
-module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks) where
+module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks, ShelleyBench) where
 
 import Bench.Cardano.Ledger.ApplyTx.Gen (generateForEra)
 import Cardano.Binary

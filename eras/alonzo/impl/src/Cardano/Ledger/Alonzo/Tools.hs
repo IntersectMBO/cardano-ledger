@@ -39,6 +39,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Array (Array, array, bounds, (!))
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -98,7 +99,7 @@ basicValidation tx utxo =
   where
     txb = getField @"body" tx
     ins = getField @"inputs" txb
-    badIns = Set.filter (`Map.notMember` (unUTxO utxo)) ins
+    badIns = Set.filter (`SplitMap.notMember` unUTxO utxo) ins
 
 type RedeemerReport c = Map RdmrPtr (Either (ScriptFailure c) ExUnits)
 
@@ -169,7 +170,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModel lang)
       args <- case sp of
         (Spending txin) -> do
-          txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
+          txOut <- note (UnknownTxIn txin) $ SplitMap.lookup txin (unUTxO utxo)
           let TxOut _ _ mdh = txOut
           dh <- note (InvalidTxIn txin) $ strictMaybeToMaybe mdh
           dat <- note (MissingDatum dh) $ Map.lookup dh dats

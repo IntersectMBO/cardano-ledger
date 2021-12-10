@@ -20,7 +20,6 @@ import Cardano.Ledger.Slot
   )
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..))
@@ -47,7 +46,7 @@ import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, getBlockNonce)
 -- =============================================================
 
 initStEx1 :: forall era. ShelleyTest era => ChainState era
-initStEx1 = initSt (UTxO Map.empty)
+initStEx1 = initSt (UTxO mempty)
 
 blockEx1 ::
   forall era.

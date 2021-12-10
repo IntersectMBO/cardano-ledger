@@ -16,6 +16,7 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)
 import Control.State.Transition.Extended (TRC (..))
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (def)
 import qualified Data.Map as Map
 import qualified Data.Sequence.Strict as StrictSeq
@@ -68,7 +69,7 @@ testScriptPostTranslation =
               S.StakeRefNull
           utxo =
             S.UTxO $
-              Map.singleton
+              SplitMap.singleton
                 (S.TxIn bootstrapTxId 0)
                 (S.TxOut addr (Val.inject (S.Coin 1)))
           env = S.LedgerEnv (SlotNo 0) 0 emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))
