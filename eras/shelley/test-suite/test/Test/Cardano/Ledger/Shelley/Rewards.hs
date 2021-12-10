@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
     maxPool,
     poolStake,
     sumAllStake,
+    sumStakePerPool,
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
@@ -756,17 +757,22 @@ reward
   (Coin totalStake) = completeM pulser
     where
       totalBlocks = sum b
+      stakePerPool = sumStakePerPool delegs stake
       Coin activeStake = sumAllStake stake
-      mkPoolRewardInfo' =
+      -- ensure mkPoolRewardInfo does not use stake that doesn't belong to the pool
+      stakeForPool pool = poolStake (_poolId pool) delegs stake
+      mkPoolRewardInfo' pool =
         mkPoolRewardInfo
           pp
           r
           (BlocksMade b)
           totalBlocks
-          stake
+          (stakeForPool pool)
           delegs
+          stakePerPool
           (Coin totalStake)
           (Coin activeStake)
+          pool
       poolRewardInfo = VMap.toMap $ VMap.mapMaybe (rightToMaybe . mkPoolRewardInfo') poolParams
       pp_pv = _protocolVersion pp
       free =

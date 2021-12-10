@@ -166,6 +166,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
     SnapShots (..),
     Stake (..),
     sumAllStake,
+    sumStakePerPool,
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.PParams
@@ -1414,6 +1415,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- member and leader rewards.
       activestake = sumAllStake stake'
       totalStake = circulation es maxSupply
+      stakePerPool = sumStakePerPool delegs' stake'
       mkPoolRewardInfoCurry =
         mkPoolRewardInfo
           pr
@@ -1422,6 +1424,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           (fromIntegral blocksMade)
           stake'
           delegs'
+          stakePerPool
           totalStake
           activestake
 

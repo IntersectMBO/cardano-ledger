@@ -67,7 +67,6 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin
   ( Coin (..),
-    CompactForm (CompactCoin),
     coinToRational,
     rationalToCoinViaFloor,
   )
@@ -87,14 +86,13 @@ import Cardano.Ledger.Shelley.EpochBoundary
   ( Stake (..),
     maxPool,
     maxPool',
-    poolStake,
-    sumAllStake,
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
+import Control.Monad (guard)
 import Control.Monad.Trans
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import qualified Data.Compact.VMap as VMap
@@ -627,6 +625,7 @@ mkPoolRewardInfo ::
   Natural ->
   Stake (Crypto era) ->
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
+  Map (KeyHash 'StakePool (Crypto era)) Coin ->
   Coin ->
   Coin ->
   PoolParams (Crypto era) ->
@@ -638,6 +637,7 @@ mkPoolRewardInfo
   blocksTotal
   stake
   delegs
+  stakePerPool
   (Coin totalStake)
   (Coin activeStake)
   pool = case Map.lookup (_poolId pool) (unBlocksMade blocks) of
@@ -676,14 +676,12 @@ mkPoolRewardInfo
       pp_d = getField @"_d" pp
       pp_a0 = getField @"_a0" pp
       pp_nOpt = getField @"_nOpt" pp
-      pstake = poolStake (_poolId pool) delegs stake
-      Coin pstakeTot = sumAllStake pstake
-      zero = CompactCoin 0
-      Coin ostake =
-        Set.foldl'
-          (\c o -> c <> fromCompact (VMap.findWithDefault zero (KeyHashObj o) (unStake pstake)))
-          mempty
-          (_poolOwners pool)
+      Coin pstakeTot = Map.findWithDefault mempty (_poolId pool) stakePerPool
+      accOwnerStake c o = maybe c (c <>) $ do
+        hk <- VMap.lookup (KeyHashObj o) delegs
+        guard (hk == _poolId pool)
+        fromCompact <$> VMap.lookup (KeyHashObj o) (unStake stake)
+      Coin ostake = Set.foldl' accOwnerStake mempty (_poolOwners pool)
       sigma = if totalStake == 0 then 0 else fromIntegral pstakeTot % fromIntegral totalStake
 
 -- | Compute the Non-Myopic Pool Stake
