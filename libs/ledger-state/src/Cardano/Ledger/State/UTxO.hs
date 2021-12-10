@@ -159,7 +159,7 @@ testKeyMap km m =
       KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra))
     test acc txIn@(TxInCompact txId txIx) txOut =
       let !key = toKey txId
-       in case KeyMap.lookupHM key acc of
+       in case KeyMap.lookup key acc of
             Nothing -> error $ "Can't find txId: " <> show txIn
             Just im ->
               let txIx' = fromIntegral txIx
