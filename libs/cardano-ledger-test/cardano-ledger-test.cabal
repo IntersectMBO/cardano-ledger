@@ -106,6 +106,7 @@ benchmark bench
     Bench.Cardano.Ledger.ApplyTx.Gen
     Bench.Cardano.Ledger.EpochBoundary
     Bench.Cardano.Ledger.Serialisation.Generators
+    Bench.Cardano.Ledger.SumStake
   build-depends:
     bytestring,
     cardano-binary,
@@ -116,6 +117,7 @@ benchmark bench
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
+    compact-map,
     containers,
     criterion,
     data-default-class,
@@ -123,6 +125,7 @@ benchmark bench
     QuickCheck,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    random,
     small-steps,
     small-steps-test
   ghc-options:
