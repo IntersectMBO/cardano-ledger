@@ -13,11 +13,10 @@ import qualified Data.Compact.KeyMap as KeyMap
 import Data.Foldable (foldl')
 import qualified Data.IntMap as IntMap
 import Data.IntMap.Strict (IntMap)
-import Data.Map.Internal (Map (..), link, link2)
+import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Set.Internal as IT
 import Data.Text (pack)
 import Prettyprinter
 import Prelude hiding (lookup)
@@ -191,40 +190,19 @@ foldIntersectIntMap accum ans0 imap1 imap2 =
 --   Only those keys 'k' that meet the predicate 'p' are included.
 --   The result isa Data.Map
 intersectMapSplit :: (k -> v -> u -> Bool) -> Map.Map k v -> SplitMap k u -> Map.Map k v
-intersectMapSplit _ Tip _ = Tip
-intersectMapSplit p (Bin _ k v l r) sp =
-  case splitLookup k sp of
-    (sl, Nothing, sr) -> link2 (intersectMapSplit p l sl) (intersectMapSplit p r sr)
-    (sl, Just u, sr) ->
-      if p k v u
-        then link k v (intersectMapSplit p l sl) (intersectMapSplit p r sr)
-        else link2 (intersectMapSplit p l sl) (intersectMapSplit p r sr)
+intersectMapSplit p m sm = Map.filterWithKey (\k v -> maybe False (p k v) $ lookup k sm) m
 
 -- | The intersection over the common domain 'k' of a Data.Set and a SplitMap
 --   Only those keys 'k' that meet the predicate 'p' are included.
 --   The result is a Data.Set
 intersectSetSplit :: (k -> u -> Bool) -> Set k -> SplitMap k u -> Set k
-intersectSetSplit _ IT.Tip _ = IT.Tip
-intersectSetSplit p (IT.Bin _ k l r) sp =
-  case splitLookup k sp of
-    (sl, Nothing, sr) -> IT.merge (intersectSetSplit p l sl) (intersectSetSplit p r sr)
-    (sl, Just u, sr) ->
-      if p k u
-        then IT.link k (intersectSetSplit p l sl) (intersectSetSplit p r sr)
-        else IT.merge (intersectSetSplit p l sl) (intersectSetSplit p r sr)
+intersectSetSplit p s sm = Set.filter (\k -> maybe False (p k) $ lookup k sm) s
 
 -- | The intersection over the common domain 'k' of a SplitMap and a Data.Map.
 --   Only those keys 'k' that meet the predicate 'p' are included.
 --   The result isa SplitMap
-intersectSplitMap :: (k -> v -> u -> Bool) -> SplitMap k v -> Map.Map k u -> SplitMap k v
-intersectSplitMap _ (SplitMap _) Tip = empty
-intersectSplitMap p sp (Bin _ k u l r) =
-  case splitLookup k sp of
-    (sl, Nothing, sr) -> union (intersectSplitMap p sl l) (intersectSplitMap p sr r)
-    (sl, Just v, sr) ->
-      if p k v u
-        then insert k v (union (intersectSplitMap p sl l) (intersectSplitMap p sr r))
-        else union (intersectSplitMap p sl l) (intersectSplitMap p sr r)
+intersectSplitMap :: Ord k => (k -> v -> u -> Bool) -> SplitMap k v -> Map.Map k u -> SplitMap k v
+intersectSplitMap p sm m = filterWithKey (\k v -> maybe False (p k v) $ Map.lookup k m) sm
 
 -- ============================================================================
 -- Fold operations
