@@ -99,14 +99,9 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
--- | This instance is crafted to agreee with TxIn as the domain of SplitMap
-instance Ord (TxIn crypto) where
-  compare (TxInCompact id1 n1) (TxInCompact id2 n2) =
-    case compare n1 n2 of
-      EQ -> compare id1 id2
-      other -> other
-
 deriving instance Eq (TxIn crypto)
+
+deriving instance Ord (TxIn crypto)
 
 deriving instance Show (TxIn crypto)
 
