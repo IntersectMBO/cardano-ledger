@@ -6,6 +6,7 @@ import Tests.Cardano.Ledger.NonIntegral
 
 main :: IO ()
 main = do
+  property_negative_taylorExpCmp_comparison
   property_exponential_is_monotonic_db
   property_logarithm_is_monotonic_db
   property_exp_maps_unit_interval_to_unit_interval_db
