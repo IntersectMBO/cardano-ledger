@@ -251,6 +251,8 @@ protocol_param_update =
   , ? 20: ex_units           ; max tx ex units ; New
   , ? 21: ex_units           ; max block ex units ; New
   , ? 22: uint               ; max value size ; New
+  , ? 23: uint               ; collateral percentage ; New
+  , ? 24: uint               ; max collateral inputs ; New
   }
 
 transaction_witness_set =
