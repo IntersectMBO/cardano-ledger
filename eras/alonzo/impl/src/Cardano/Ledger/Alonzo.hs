@@ -109,7 +109,7 @@ instance
   where
   type Crypto (AlonzoEra c) = c
 
-instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
+instance API.ShelleyEraCrypto c => API.ApplyTx (AlonzoEra c) where
   reapplyTx globals env state vtx =
     let res =
           flip runReader globals
@@ -118,9 +118,9 @@ instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
             $ TRC (env, state, API.extractTx vtx)
      in liftEither . left API.ApplyTxError $ res
 
-instance API.PraosCrypto c => API.ApplyBlock (AlonzoEra c)
+instance API.ShelleyEraCrypto c => API.ApplyBlock (AlonzoEra c)
 
-instance (API.PraosCrypto c) => API.GetLedgerView (AlonzoEra c)
+instance (CC.Crypto c) => API.GetLedgerView (AlonzoEra c)
 
 instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
   isNativeScript x = not (isPlutusScript x)
@@ -228,7 +228,7 @@ instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
   hashTxSeq = Alonzo.hashTxSeq
   numSegComponents = 4
 
-instance API.PraosCrypto c => API.ShelleyBasedEra (AlonzoEra c)
+instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping

@@ -54,12 +54,10 @@ import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto, VRF)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
     GenDelegs,
-    Hash,
     KESignable,
     KeyHash,
     KeyRole (..),
@@ -124,7 +122,6 @@ import Numeric.Natural (Natural)
 class
   ( CC.Crypto c,
     DSignable c (OCertSignable c),
-    DSignable c (Hash c EraIndependentTxBody),
     KESignable c (BHBody c),
     VRFSignable c Seed
   ) =>
@@ -173,7 +170,7 @@ class
     m (LedgerView (Crypto era))
   futureLedgerView = futureView
 
-instance PraosCrypto crypto => GetLedgerView (ShelleyEra crypto)
+instance CC.Crypto crypto => GetLedgerView (ShelleyEra crypto)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView

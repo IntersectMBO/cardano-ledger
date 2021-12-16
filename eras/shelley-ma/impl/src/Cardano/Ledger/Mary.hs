@@ -36,11 +36,11 @@ import Cardano.Ledger.Val (Val ((<->)), coin, inject)
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 
-instance PraosCrypto c => ApplyTx (MaryEra c)
+instance ShelleyEraCrypto c => ApplyTx (MaryEra c)
 
-instance PraosCrypto c => ApplyBlock (MaryEra c)
+instance ShelleyEraCrypto c => ApplyBlock (MaryEra c)
 
-instance PraosCrypto c => GetLedgerView (MaryEra c)
+instance CC.Crypto c => GetLedgerView (MaryEra c)
 
 instance Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState sg () =
@@ -77,7 +77,7 @@ instance Crypto c => CanStartFromGenesis (MaryEra c) where
       genDelegs = sgGenDelegs sg
       pp = sgProtocolParams sg
 
-instance PraosCrypto c => ShelleyBasedEra (MaryEra c)
+instance ShelleyEraCrypto c => ShelleyBasedEra (MaryEra c)
 
 instance CC.Crypto c => CLI (MaryEra c) where
   evaluateMinFee = minfee

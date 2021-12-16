@@ -94,7 +94,8 @@ type ShelleyBasedEra' era =
   ( ShelleyBasedEra era,
     ToCBORGroup (TxSeq era),
     ToCBOR (Core.Witnesses era),
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    PraosCrypto (Cardano.Ledger.Era.Crypto era)
   )
 
 defaultShelleyLedgerExamples ::

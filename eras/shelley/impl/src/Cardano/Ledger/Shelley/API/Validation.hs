@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -19,6 +20,7 @@ module Cardano.Ledger.Shelley.API.Validation
     TickTransitionError (..),
     BlockTransitionError (..),
     chainChecks,
+    ShelleyEraCrypto,
   )
 where
 
@@ -28,10 +30,12 @@ import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
 import Cardano.Ledger.Core (ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, TxSeq)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Protocol (PraosCrypto)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
@@ -185,7 +189,12 @@ applyBlock =
         asoEvents = EPDiscard
       }
 
-instance PraosCrypto crypto => ApplyBlock (ShelleyEra crypto)
+type ShelleyEraCrypto crypto =
+  ( CC.Crypto crypto,
+    DSignable crypto (Hash crypto EraIndependentTxBody)
+  )
+
+instance ShelleyEraCrypto crypto => ApplyBlock (ShelleyEra crypto)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
