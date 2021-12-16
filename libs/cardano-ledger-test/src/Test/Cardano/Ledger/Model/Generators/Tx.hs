@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE NumericUnderscores #-}
@@ -18,6 +19,8 @@ import Cardano.Slotting.Slot (SlotNo)
 import Control.Lens
   ( has,
     to,
+    ifor,
+    _1,
     use,
     uses,
     (.=),
@@ -33,6 +36,8 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
+import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import QuickCheck.GenT
   ( Gen,
     arbitrary,
@@ -86,6 +91,7 @@ import Test.Cardano.Ledger.Model.Generators.Certificates
   )
 import Test.Cardano.Ledger.Model.Generators.Script
   ( genCollateral,
+    genRedeemer,
     guardHaveCollateral,
   )
 import Test.Cardano.Ledger.Model.Generators.TxOut
@@ -102,6 +108,10 @@ import Test.Cardano.Ledger.Model.Script
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
+    ModelScriptPurpose(..),
+    modelRedeemerPresent,
+    ModelMintValue,
+    ModelRedeemer,
     ModelTx (..),
     modelDelegation_delegator,
     _ModelDelegate,
@@ -120,32 +130,35 @@ import Test.Cardano.Ledger.Model.Value
   )
 import Test.QuickCheck.Instances.ByteString ()
 
-genWdrl :: HasGenModelM st era m => AllowScripts (ScriptFeature era) -> m (Map (ModelCredential 'Staking (ScriptFeature era)) Coin)
+genWdrl ::
+  HasGenModelM st era m =>
+  AllowScripts (ScriptFeature era) ->
+  m (Map
+    (ModelCredential 'Staking (ScriptFeature era))
+    (ModelValue 'ExpectAdaOnly era, ModelRedeemer (ScriptFeature era)))
 genWdrl allowScripts = do
   allRewards <- uses (modelLedger . to getModelLedger_rewards) $ Map.filter (/= Val.zero)
   numWdrls <- liftGen =<< asks (_modelGeneratorParams_numWdrls . _modelGeneratorContext_modelGeneratorParams)
   (rewards, _) <- chooseElems numWdrls $ Map.mapMaybeWithKey (\k v -> v <$ guardHaveCollateral allowScripts k) allRewards
-  pure rewards
+  ifor rewards $ \cred qty -> do
+    rdmr <- genRedeemer (ModelScriptPurpose_Rewarding cred)
+    pure (Val.inject qty, rdmr)
 
 needCollateral ::
   forall era.
   KnownScriptFeature (ScriptFeature era) =>
-  Map ModelUTxOId (ModelTxOut era) ->
-  Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era) ->
-  IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era) ->
-  [ModelDCert ('FeatureSet (ValueFeature era) (ScriptFeature era))] ->
+  Map ModelUTxOId (ModelRedeemer (ScriptFeature era), ModelTxOut era) ->
+  Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era, ModelRedeemer (ScriptFeature era)) ->
+  IfSupportsMint () (ModelMintValue (ScriptFeature era)) (ValueFeature era) ->
+  [(ModelDCert ('FeatureSet (ValueFeature era) (ScriptFeature era)), ModelRedeemer (ScriptFeature era))] ->
   Bool
 needCollateral ins wdrls mint dcerts = case reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era)) of
   NoPlutusSupport () -> False
   SupportsPlutus () ->
-    has (traverse . modelTxOut_address . modelAddress_pmt . _ModelScriptHashObj) ins
-      || has (traverse . _ModelScriptHashObj) (Map.keys wdrls)
-      || fromSupportsMint (\() -> False) (any isPlutusMintAsset . unModelValue) mint
-      || has (traverse . _ModelDelegate . modelDelegation_delegator . _ModelScriptHashObj) dcerts
-  where
-    isPlutusMintAsset :: ModelValueVars era (ValueFeature era) -> Bool
-    isPlutusMintAsset (ModelValue_MA (ModelScript_PlutusV1 _, _)) = True
-    isPlutusMintAsset _ = False
+    any (modelRedeemerPresent . fst) ins
+    || any (modelRedeemerPresent . snd) wdrls
+    || fromSupportsMint (const False) (any (modelRedeemerPresent . snd)) mint
+    || any (modelRedeemerPresent . snd) dcerts
 
 wouldSpendLastCollateral :: HasGenModelM st era m => SlotNo -> ModelTx era -> m Bool
 wouldSpendLastCollateral slot txn = do
@@ -191,99 +204,96 @@ makeAsset ::
   forall era st m.
   HasGenModelM st era m =>
   (ModelValueVars era 'ExpectAnyOutput) ->
-  m (ModelValue 'ExpectAnyOutput era)
-makeAsset asset = do
-  numAssetsToMint <- choose (1, 10)
-  newAssets <-
-    replicateM numAssetsToMint $
-      (,) asset
-        <$> frequency
-          [ (1, pure 1),
-            (1, choose (1_000 :: Integer, 1_000_000))
-          ]
-  pure $ ModelValue $ mkModelValueF' mempty $ Map.fromList newAssets
-
-data MintBurnAmount
-  = MintBurnSmallest
-  | MintBurnEverything
-  | MintBurnRandom
+  m (ModelMintValue (ScriptFeature era))
+makeAsset asset@(ModelValue_MA (policyId, assetName)) = do
+  rdmr <- genRedeemer (ModelScriptPurpose_Minting policyId)
+  qty <- frequency
+      [ (1, pure 1),
+        (1, choose (1_000 :: Integer, 1_000_000))
+      ]
+  pure $ Map.singleton policyId (Map.singleton assetName qty, rdmr)
 
 mintBurnAssets ::
   forall era st m.
   HasGenModelM st era m =>
-  [(ModelValueVars era 'ExpectAnyOutput, Integer)] ->
-  m (ModelValue 'ExpectAnyOutput era)
-mintBurnAssets assets = do
-  burnAmt <- elements [MintBurnRandom, MintBurnEverything, MintBurnSmallest]
-  modifiedAssets <- forM assets $ \(asset, qty) ->
-    fmap ((,) asset) $
-      case burnAmt of
-        MintBurnSmallest -> pure (-1)
-        MintBurnEverything -> pure (-qty)
-        MintBurnRandom -> choose (-qty, -1 :: Integer)
+  NonEmpty (ModelValueVars era 'ExpectAnyOutput, Integer) ->
+  -- m (ModelValue 'ExpectAnyOutput era)
+  m (ModelMintValue (ScriptFeature era))
+mintBurnAssets assets' = do
+  let assets = foldMap mkMintQty assets'
+      mkMintQty ::
+        (ModelValueVars era 'ExpectAnyOutput, Integer) ->
+        Map.Map (ModelScript (ScriptFeature era)) (Map.Map AssetName Integer)
+      mkMintQty = \case
+        (ModelValue_MA (policyId, assetName), qty) ->
+          Map.singleton policyId $ Map.singleton assetName qty
+  modifiedAssets <-
+    oneof
+      [ mkMintQty <$> elements (toList assets') -- pick one asset, burn one unit of that asset
+      , pure $ (fmap.fmap) negate assets -- burn all of it
+      , (traverse . traverse) (\qty -> choose (-qty, -1 :: Integer)) assets -- burn a random amount of each asset
+      ]
 
-  pure $ ModelValue $ mkModelValueF' mempty $ Map.fromList modifiedAssets
+  ifor modifiedAssets $ \policy qty -> (,) qty <$> genRedeemer (ModelScriptPurpose_Minting policy)
 
+-- TODO: the Plutus Support constraint is a limitation fo the generator; it
+-- should be able to generate any type of asset, not just plutus scripted
+-- assets.
 genMint ::
-  forall era st m tlf.
+  forall era st m tlf .
   ( HasGenModelM st era m,
-    ScriptFeature era ~ 'TyScriptFeature tlf 'True,
-    ValueFeature era ~ 'ExpectAnyOutput
+    ScriptFeature era ~ 'TyScriptFeature tlf 'True
+    -- ValueFeature era ~ 'ExpectAnyOutput
   ) =>
   ModelValue (ValueFeature era) era ->
-  m (ModelValue (ValueFeature era) era)
-genMint inputVal = do
+  -- m (ModelValue (ValueFeature era) era)
+  m (IfSupportsMint () (ModelMintValue (ScriptFeature era)) (ValueFeature era))
+genMint inputVal = traverseSupportsMint id $ ifSupportsMint (Proxy :: Proxy (ValueFeature era)) () $ do
   utxoMap <- uses modelLedger getModelLedger_utxos
   let getMapFromModelValue = snd . getModelValueF . unModelValue
       existingAssets = (Map.keys . getMapFromModelValue . _modelUTxOMap_balance) utxoMap
       inputAssets = (Map.toList . getMapFromModelValue) inputVal
-  frequency $
-    [ (1, pure mempty),
-      (1, makeAsset =<< freshAsset)
-    ]
-      <> [(1, makeAsset =<< elements existingAssets) | (not . null) existingAssets]
-      <> [ ( 1,
+  frequency $ concat
+    [ [(1, pure mempty)],
+      [(1, makeAsset =<< freshAsset)],
+      [(1, makeAsset =<< elements existingAssets) | (not . null) existingAssets],
+      case nonEmpty inputAssets of
+        Nothing ->  []
+        Just inputAssets' -> [ ( 1,
              do
                sublistInputs <- sublistOf inputAssets
-               randAssets <-
-                 frequency $
-                   [(1, pure sublistInputs) | (not . null) sublistInputs]
-                     <> [ (1, fmap (: []) $ elements inputAssets),
-                          (1, pure inputAssets)
-                        ]
+               randAssets <- frequency $ concat
+                [ [(1, pure sublistInputs') | sublistInputs' <- toList $ nonEmpty sublistInputs],
+                  [(1, fmap pure $ elements inputAssets)],
+                  [(1, pure inputAssets')]
+                ]
                mintBurnAssets randAssets
            )
-           | (not . null) inputAssets
          ]
+      ]
 
 genModelTx :: forall era m st. SlotNo -> HasGenModelM st era m => m (ModelTx era)
 genModelTx slot = do
   (haveCollateral, collateral) <- genCollateral
   ins <- genInputs haveCollateral
-  wdrl <- fmap Val.inject <$> genWdrl haveCollateral
+  wdrl <- genWdrl haveCollateral
 
   mint <- case haveCollateral of
     NoPlutusSupport () -> pure mempty
     SupportsPlutus False -> pure mempty
-    SupportsPlutus True ->
-      traverseSupportsMint id $
-        ifSupportsMint
-          (Proxy :: Proxy (ValueFeature era))
-          ()
-          (genMint $ foldMap _mtxo_value ins)
+    SupportsPlutus True -> genMint $ foldMap (_mtxo_value . snd) ins
 
   (outs, fee) <- genOutputs haveCollateral ins mint
   let txn =
         ModelTx
-          { _mtxInputs = Map.keysSet ins,
+          { _mtxInputs = fmap fst ins,
             _mtxOutputs = outs,
-            _mtxFee = fee <> fold wdrl, -- TODO, put withdwrawals in outputs sometimes.
+            _mtxFee = fee <> foldMap fst wdrl, -- TODO, put withdwrawals in outputs sometimes.
             _mtxDCert = [],
             _mtxWdrl = wdrl,
             _mtxMint = mint,
             _mtxCollateral = ifSupportsPlutus (Proxy :: Proxy (ScriptFeature era)) () Set.empty,
             _mtxValidity = ifSupportsPlutus (Proxy :: Proxy (ScriptFeature era)) () (IsValid True),
-            _mtxRedeemers = Map.empty,
             _mtxWitnessSigs = Set.empty
           }
 
@@ -293,7 +303,7 @@ genModelTx slot = do
     numDCerts <- liftGen =<< asks (_modelGeneratorParams_numDCerts . _modelGeneratorContext_modelGeneratorParams)
     dcerts <- replicateM numDCerts $ do
       dcert <- genDCert haveCollateral
-      applyModelDCert dcert
+      applyModelDCert (fst dcert)
       pure dcert
 
     modelLedger .= st0

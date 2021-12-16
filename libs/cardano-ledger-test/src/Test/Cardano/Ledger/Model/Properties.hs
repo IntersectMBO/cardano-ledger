@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -34,7 +35,7 @@ import Cardano.Ledger.Val (Val (..))
 import Control.Arrow ((&&&))
 import Control.DeepSeq
 import Control.Lens
-import Control.Monad (when)
+import Control.Monad (when, guard)
 import qualified Control.Monad.State.Strict as State
 import qualified Control.Monad.Trans.Writer.CPS as CPS
 import Control.Monad.Writer.Class
@@ -126,6 +127,7 @@ instance IsString AssetName where
   fromString = AssetName . BS.pack
 
 modelTestDelegations ::
+  forall era proxy .
   ( ElaborateEraModel era,
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
@@ -147,13 +149,14 @@ modelTestDelegations proxy needsCollateral stakeAddr@(ModelAddress _ stakeCred) 
           "rewardAcct"
           ["poolOwner"]
       modelDelegation = ModelCertDeleg $ ModelDelegate (ModelDelegation stakeCred "pool1")
+      stkRdmr x = SupportsPlutus (x <$ guard needsCollateral)
+      noRdmr = SupportsPlutus Nothing
       allAtOnce =
         [ ModelBlock
             0
             [ modelTx
-                { _mtxInputs = Set.fromList [0],
+                { _mtxInputs = [(0, noRdmr)],
                   _mtxWitnessSigs = Set.fromList $ ["unstaked", "pool1", "poolOwner"] <> mapMaybe mkWitness [_modelAddress_pmt stakeAddr],
-                  _mtxRedeemers = Map.fromList [x | x <- [(ModelScriptPurpose_Certifying modelDelegation, (PlutusTx.I 5, ExUnits 1 1))], needsCollateral],
                   _mtxCollateral = SupportsPlutus $ Set.fromList [x | x <- [0], needsCollateral],
                   _mtxOutputs =
                     [ (100, modelTxOut "unstaked" (modelCoin 9_800_000_000_000)),
@@ -161,9 +164,9 @@ modelTestDelegations proxy needsCollateral stakeAddr@(ModelAddress _ stakeCred) 
                     ],
                   _mtxFee = modelCoin 100_000_000_000,
                   _mtxDCert =
-                    [ ModelCertDeleg $ ModelRegKey stakeCred,
-                      ModelCertPool $ ModelRegPool modelPool,
-                      modelDelegation
+                    [ (ModelCertDeleg $ ModelRegKey stakeCred, noRdmr),
+                      (ModelCertPool $ ModelRegPool modelPool, noRdmr),
+                      (modelDelegation, stkRdmr (PlutusTx.I 5, ExUnits 1 1))
                     ]
                 }
             ]
@@ -172,7 +175,7 @@ modelTestDelegations proxy needsCollateral stakeAddr@(ModelAddress _ stakeCred) 
         [ ModelBlock
             0
             [ modelTx
-                { _mtxInputs = Set.fromList [0],
+                { _mtxInputs = [(0, noRdmr)],
                   _mtxWitnessSigs = Set.fromList ["unstaked"],
                   _mtxOutputs =
                     [ (1, modelTxOut "unstaked" (modelCoin 9_875_000_000_000)),
@@ -184,40 +187,39 @@ modelTestDelegations proxy needsCollateral stakeAddr@(ModelAddress _ stakeCred) 
           ModelBlock
             1
             [ modelTx
-                { _mtxInputs = Set.fromList [1],
+                { _mtxInputs = [(1, noRdmr)],
                   _mtxWitnessSigs = Set.fromList ["unstaked"],
                   _mtxOutputs =
                     [ (2, modelTxOut "unstaked" (modelCoin 9_850_000_000_000))
                     ],
                   _mtxFee = modelCoin 25_000_000_000,
-                  _mtxDCert = [ModelCertDeleg $ ModelRegKey stakeCred]
+                  _mtxDCert = [(ModelCertDeleg $ ModelRegKey stakeCred, noRdmr)]
                 }
             ],
           ModelBlock
             2
             [ modelTx
-                { _mtxInputs = Set.fromList [2],
+                { _mtxInputs = [(2, noRdmr)],
                   _mtxWitnessSigs = Set.fromList ["unstaked", "pool1", "poolOwner"],
                   _mtxOutputs =
                     [ (3, modelTxOut "unstaked" (modelCoin 9_825_000_000_000))
                     ],
                   _mtxFee = modelCoin 25_000_000_000,
-                  _mtxDCert = [ModelCertPool $ ModelRegPool modelPool]
+                  _mtxDCert = [(ModelCertPool $ ModelRegPool modelPool, noRdmr)]
                 }
             ],
           ModelBlock
             3
             [ modelTx
-                { _mtxInputs = Set.fromList [3],
+                { _mtxInputs = [(3, noRdmr)],
                   _mtxWitnessSigs = Set.fromList $ ["unstaked"] <> mapMaybe mkWitness [_modelAddress_pmt stakeAddr],
-                  _mtxRedeemers = Map.fromList [x | x <- [(ModelScriptPurpose_Certifying modelDelegation, (PlutusTx.I 5, ExUnits 1 1))], needsCollateral],
                   _mtxCollateral = SupportsPlutus $ Set.fromList [x | x <- [3], needsCollateral],
                   _mtxOutputs =
                     [ (100, modelTxOut "unstaked" (modelCoin 9_800_000_000_000))
                     ],
                   _mtxFee = modelCoin 25_000_000_000,
                   _mtxDCert =
-                    [ modelDelegation
+                    [ (modelDelegation, stkRdmr (PlutusTx.I 5, ExUnits 1 1))
                     ]
                 }
             ]
@@ -245,9 +247,8 @@ modelTestDelegations proxy needsCollateral stakeAddr@(ModelAddress _ stakeCred) 
               [ ModelBlock
                   0
                   [ modelTx
-                      { _mtxInputs = Set.fromList [100],
+                      { _mtxInputs = [(100, noRdmr)],
                         _mtxWitnessSigs = Set.fromList $ ["unstaked"] <> mapMaybe mkWitness [_modelAddress_pmt stakeAddr],
-                        _mtxRedeemers = Map.fromList [x | x <- [(ModelScriptPurpose_Rewarding stakeCred, (PlutusTx.I 5, ExUnits 1 1))], needsCollateral],
                         _mtxCollateral = SupportsPlutus $ Set.fromList [x | x <- [100], needsCollateral],
                         _mtxOutputs =
                           [ (103, modelTxOut "unstaked" (modelCoin 9_700_000_000_000)),
@@ -255,7 +256,7 @@ modelTestDelegations proxy needsCollateral stakeAddr@(ModelAddress _ stakeCred) 
                             (105, modelTxOut "minimum" (modelCoin 100_000_000))
                           ],
                         _mtxFee = modelCoin 100_000_000_000,
-                        _mtxWdrl = Map.singleton stakeCred reward
+                        _mtxWdrl = Map.singleton stakeCred (reward, stkRdmr (PlutusTx.I 5, ExUnits 1 1))
                       }
                   ]
               ]
@@ -466,7 +467,7 @@ collectModelUTxOs epochs =
 collectModelInputs :: [ModelEpoch era] -> Set.Set ModelUTxOId
 collectModelInputs epochs =
   fold $
-    [ _mtxInputs tx
+    [ Map.keysSet $ _mtxInputs tx
       | tx <- toListOf (traverse . modelEpoch_blocks . traverse . modelBlock_txSeq . traverse) epochs
     ]
 
@@ -504,6 +505,7 @@ modelGenTest proxy =
   forAllShrink
     (genModel' (reifyRequiredFeatures $ Proxy @(EraFeatureSet era)) testGlobals)
     (shrinkModel testGlobals)
+    -- (traverse shrinkModelSimple)
     $ \(_ :: ModelShrinkingPhase, ab@(a, b)) ->
       ( execPropertyWriter $ do
           tellProperty $ propModelStats (Proxy @(EraFeatureSet era)) b
@@ -655,7 +657,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxOutputs =
                           [ (1, modelTxOut "bob" (modelCoin 100_000_000)),
                             (2, modelTxOut "alice" (modelCoin 1_000_000_000 <-> (modelCoin 100_000_000 <+> modelCoin 1_000_000)))
@@ -679,13 +681,13 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxOutputs =
                           [ (1, modelTxOut "bob" (modelCoin 100_000_000)),
                             (2, modelTxOut "alice" (modelCoin 1_000_000_000 <-> (modelCoin 100_000_000 <+> modelCoin 1_000_000)))
                           ],
                         _mtxDCert =
-                          [ ModelCertDeleg $ ModelDCertGenesis $ ModelGenesisDelegCert "gd1" "gd1:2"
+                          [ (ModelCertDeleg $ ModelDCertGenesis $ ModelGenesisDelegCert "gd1" "gd1:2", noRdmr)
                           ],
                         _mtxFee = modelCoin 1_000_000,
                         _mtxWitnessSigs = Set.fromList ["alice", "gd1"]
@@ -706,17 +708,17 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxOutputs =
                           [ (1, modelTxOut "bob" (modelCoin 100_000_000)),
                             (2, modelTxOut "alice" (modelCoin 1_000_000_000 <-> (modelCoin 100_000_000 <+> modelCoin 1_000_000)))
                           ],
                         _mtxDCert =
-                          [ ModelCertDeleg $
+                          [ (ModelCertDeleg $
                               ModelDCertMir $
                                 ModelMIRCert ReservesMIR $
-                                  ModelStakeAddressesMIR [("carol", DeltaCoin 100_123)],
-                            ModelCertDeleg $ ModelRegKey "carol"
+                                  ModelStakeAddressesMIR [("carol", DeltaCoin 100_123)], noRdmr),
+                            (ModelCertDeleg $ ModelRegKey "carol", noRdmr)
                           ],
                         _mtxFee = modelCoin 1_000_000,
                         _mtxWitnessSigs =
@@ -739,7 +741,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = (Set.fromList [0]),
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs = [(1, modelTxOut "bob" $ modelCoin 100_000_000)],
                         _mtxFee = modelCoin 1_000_000
@@ -759,7 +761,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs =
                           [ (1, modelTxOut "bob" (modelCoin 100_000_000)),
@@ -771,7 +773,7 @@ modelUnitTests proxy =
                 ModelBlock
                   2
                   [ modelTx
-                      { _mtxInputs = Set.fromList [2],
+                      { _mtxInputs = [(2, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs =
                           [ (3, modelTxOut "bob" (modelCoin 100_000_000)),
@@ -795,7 +797,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs =
                           [ ( 1,
@@ -807,7 +809,7 @@ modelUnitTests proxy =
                             )
                           ],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint (modelMACoin purpleModelScript [("purp", 1234)])
+                        _mtxMint = SupportsMint [(purpleModelScript, ([("purp", 1234)], noRdmr))]
                       }
                   ]
               ]
@@ -825,7 +827,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice", "BobCoin"],
                         _mtxOutputs =
                           [ ( 1,
@@ -837,7 +839,7 @@ modelUnitTests proxy =
                             )
                           ],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint (modelMACoin bobCoinScript [("BOB", 1234)])
+                        _mtxMint = SupportsMint [(bobCoinScript, ([("BOB", 1234)], noRdmr))]
                       }
                   ]
               ]
@@ -855,7 +857,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs =
                           [ ( 1,
@@ -867,10 +869,10 @@ modelUnitTests proxy =
                             )
                           ],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint (modelMACoin purpleModelScript [("BOB", 1234)])
+                        _mtxMint = SupportsMint [(purpleModelScript, ([("BOB", 1234)], noRdmr))]
                       },
                     modelTx
-                      { _mtxInputs = Set.fromList [1],
+                      { _mtxInputs = [(1, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs =
                           [ ( 2,
@@ -906,7 +908,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice", "BobCoin"],
                         _mtxOutputs =
                           [ ( 1,
@@ -918,10 +920,10 @@ modelUnitTests proxy =
                             )
                           ],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint (modelMACoin bobCoinScript [("BOB", 1234)])
+                        _mtxMint = SupportsMint [(bobCoinScript, ([("BOB", 1234)], noRdmr))]
                       },
                     modelTx
-                      { _mtxInputs = Set.fromList [1],
+                      { _mtxInputs = [(1, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs =
                           [ ( 2,
@@ -957,7 +959,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice", "BobCoin"],
                         _mtxOutputs =
                           [ ( 1,
@@ -969,10 +971,11 @@ modelUnitTests proxy =
                             )
                           ],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint (modelMACoin bobCoinScript [("BOB", 1234)])
+                        _mtxMint = SupportsMint
+                          [(bobCoinScript, ([("BOB", 1234)], noRdmr))]
                       },
                     modelTx
-                      { _mtxInputs = Set.fromList [1],
+                      { _mtxInputs = [(1, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs =
                           [ ( 2,
@@ -993,10 +996,12 @@ modelUnitTests proxy =
                         _mtxFee = modelCoin 1_000_000
                       },
                     modelTx
-                      { _mtxInputs = Set.fromList [3],
+                      { _mtxInputs = [(3, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["carol", "BobCoin"],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint (modelMACoin bobCoinScript [("BOB", -100)])
+                        _mtxMint = SupportsMint
+                          [(bobCoinScript, ([("BOB", -100)], noRdmr))]
+                        -- (modelMACoin bobCoinScript [("BOB", -100)])
                       }
                   ]
               ]
@@ -1013,9 +1018,8 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
-                        _mtxRedeemers = Map.singleton (ModelScriptPurpose_Minting $ modelPlutusScript 3) (PlutusTx.I 7, ExUnits 1 1),
                         _mtxCollateral = SupportsPlutus (Set.fromList [0]),
                         _mtxOutputs =
                           [ ( 1,
@@ -1027,7 +1031,8 @@ modelUnitTests proxy =
                             )
                           ],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint (modelMACoin (modelPlutusScript 3) [("purp", 1234)])
+                        _mtxMint = SupportsMint
+                          [(modelPlutusScript 3, ([("purp", 1234)], mkRdmr (PlutusTx.I 7, ExUnits 1 1)))]
                       }
                   ]
               ]
@@ -1044,7 +1049,7 @@ modelUnitTests proxy =
               [ ModelBlock
                   1
                   [ modelTx
-                      { _mtxInputs = Set.fromList [0],
+                      { _mtxInputs = [(0, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["alice"],
                         _mtxOutputs =
                           [ (1, modelTxOut "bob" (modelCoin 100_000_000)),
@@ -1060,9 +1065,8 @@ modelUnitTests proxy =
                 ModelBlock
                   2
                   [ modelTx
-                      { _mtxInputs = Set.fromList [2],
+                      { _mtxInputs = [(2, mkRdmr (PlutusTx.I 7, ExUnits 1 1))],
                         _mtxWitnessSigs = Set.fromList ["bob"],
-                        _mtxRedeemers = Map.singleton (ModelScriptPurpose_Spending 2) (PlutusTx.I 7, ExUnits 1 1),
                         _mtxCollateral = SupportsPlutus (Set.fromList [1]),
                         _mtxOutputs =
                           [ (3, modelTxOut "bob" (modelCoin 100_000_000)),
@@ -1075,28 +1079,32 @@ modelUnitTests proxy =
               mempty
           ]
     ]
+  where
+    mkRdmr = SupportsPlutus . Just
+    noRdmr = SupportsPlutus Nothing
 
 shrinkSimpleTestData :: [ModelEpoch AllModelFeatures]
 shrinkSimpleTestData =
   [ ModelEpoch
-      [ ModelBlock 1 [modelTx {_mtxInputs = [1]}, modelTx {_mtxInputs = [2]}, modelTx {_mtxInputs = [3]}],
-        ModelBlock 2 [modelTx {_mtxInputs = [4]}, modelTx {_mtxInputs = [5]}, modelTx {_mtxInputs = [6]}],
-        ModelBlock 3 [modelTx {_mtxInputs = [7]}, modelTx {_mtxInputs = [8]}, modelTx {_mtxInputs = [9]}]
+      [ ModelBlock 1 [modelTx {_mtxInputs = [(1, noRdmr)]}, modelTx {_mtxInputs = [(2, noRdmr)]}, modelTx {_mtxInputs = [(3, noRdmr)]}],
+        ModelBlock 2 [modelTx {_mtxInputs = [(4, noRdmr)]}, modelTx {_mtxInputs = [(5, noRdmr)]}, modelTx {_mtxInputs = [(6, noRdmr)]}],
+        ModelBlock 3 [modelTx {_mtxInputs = [(7, noRdmr)]}, modelTx {_mtxInputs = [(8, noRdmr)]}, modelTx {_mtxInputs = [(9, noRdmr)]}]
       ]
       mempty,
     ModelEpoch
-      [ ModelBlock 4 [modelTx {_mtxInputs = [10]}, modelTx {_mtxInputs = [11]}, modelTx {_mtxInputs = [12]}],
-        ModelBlock 5 [modelTx {_mtxInputs = [13]}, modelTx {_mtxInputs = [14]}, modelTx {_mtxInputs = [15]}],
-        ModelBlock 6 [modelTx {_mtxInputs = [16]}, modelTx {_mtxInputs = [17]}, modelTx {_mtxInputs = [18]}]
+      [ ModelBlock 4 [modelTx {_mtxInputs = [(10, noRdmr)]}, modelTx {_mtxInputs = [(11, noRdmr)]}, modelTx {_mtxInputs = [(12, noRdmr)]}],
+        ModelBlock 5 [modelTx {_mtxInputs = [(13, noRdmr)]}, modelTx {_mtxInputs = [(14, noRdmr)]}, modelTx {_mtxInputs = [(15, noRdmr)]}],
+        ModelBlock 6 [modelTx {_mtxInputs = [(16, noRdmr)]}, modelTx {_mtxInputs = [(17, noRdmr)]}, modelTx {_mtxInputs = [(18, noRdmr)]}]
       ]
       mempty,
     ModelEpoch
-      [ ModelBlock 7 [modelTx {_mtxInputs = [19]}, modelTx {_mtxInputs = [20]}, modelTx {_mtxInputs = [21]}],
-        ModelBlock 8 [modelTx {_mtxInputs = [22]}, modelTx {_mtxInputs = [23]}, modelTx {_mtxInputs = [24]}],
-        ModelBlock 9 [modelTx {_mtxInputs = [25]}, modelTx {_mtxInputs = [26]}, modelTx {_mtxInputs = [27]}]
+      [ ModelBlock 7 [modelTx {_mtxInputs = [(19, noRdmr)]}, modelTx {_mtxInputs = [(20, noRdmr)]}, modelTx {_mtxInputs = [(21, noRdmr)]}],
+        ModelBlock 8 [modelTx {_mtxInputs = [(22, noRdmr)]}, modelTx {_mtxInputs = [(23, noRdmr)]}, modelTx {_mtxInputs = [(24, noRdmr)]}],
+        ModelBlock 9 [modelTx {_mtxInputs = [(25, noRdmr)]}, modelTx {_mtxInputs = [(26, noRdmr)]}, modelTx {_mtxInputs = [(27, noRdmr)]}]
       ]
       mempty
   ]
+  where noRdmr = SupportsPlutus Nothing
 
 shrinkDiscardTestData :: [ModelEpoch AllModelFeatures]
 shrinkDiscardTestData =
@@ -1114,66 +1122,74 @@ shrinkDiscardTestData =
       testPool = mkTestPool "pool1" "rewardAcct" ["poolOwner"]
       testPool2 = mkTestPool "pool2" "rewardAcct2" ["poolOwner2"]
       testPool3 = mkTestPool "pool3" "rewardAcct3" ["poolOwner3"]
+      noRdmr = SupportsPlutus Nothing
    in [ ModelEpoch
           [ ModelBlock
               1
-              [ modelTx {_mtxInputs = [1], _mtxOutputs = [(6, defaultTxOut)]},
-                modelTx {_mtxInputs = [2], _mtxOutputs = [(5, defaultTxOut)]},
-                modelTx {_mtxInputs = [3], _mtxOutputs = [(4, defaultTxOut)]}
+              [ modelTx {_mtxInputs = [(1, noRdmr)], _mtxOutputs = [(6, defaultTxOut)]},
+                modelTx {_mtxInputs = [(2, noRdmr)], _mtxOutputs = [(5, defaultTxOut)]},
+                modelTx {_mtxInputs = [(3, noRdmr)], _mtxOutputs = [(4, defaultTxOut)]}
               ],
             ModelBlock
               2
-              [ modelTx {_mtxInputs = [4], _mtxOutputs = [(8, defaultTxOut), (9, defaultTxOut)]},
-                modelTx {_mtxInputs = [5], _mtxDCert = [ModelCertDeleg $ ModelRegKey "someAddress3"]},
-                modelTx {_mtxInputs = [6], _mtxOutputs = [(7, defaultTxOut)]}
+              [ modelTx {_mtxInputs = [(4, noRdmr)], _mtxOutputs = [(8, defaultTxOut), (9, defaultTxOut)]},
+                modelTx {_mtxInputs = [(5, noRdmr)], _mtxDCert = [(ModelCertDeleg $ ModelRegKey "someAddress3", noRdmr)]},
+                modelTx {_mtxInputs = [(6, noRdmr)], _mtxOutputs = [(7, defaultTxOut)]}
               ],
             ModelBlock
               3
-              [ modelTx {_mtxInputs = [7], _mtxOutputs = [(11, defaultTxOut), (12, defaultTxOut)]},
-                modelTx {_mtxInputs = [8], _mtxDCert = [ModelCertPool $ ModelRegPool testPool3]},
-                modelTx {_mtxInputs = [9], _mtxOutputs = [(10, defaultTxOut)]}
+              [ modelTx {_mtxInputs = [(7, noRdmr)], _mtxOutputs = [(11, defaultTxOut), (12, defaultTxOut)]},
+                modelTx {_mtxInputs = [(8, noRdmr)], _mtxDCert =
+                  [(ModelCertPool $ ModelRegPool testPool3, noRdmr)]},
+                modelTx {_mtxInputs = [(9, noRdmr)], _mtxOutputs = [(10, defaultTxOut)]}
               ]
           ]
           mempty,
         ModelEpoch
           [ ModelBlock
               4
-              [ modelTx {_mtxInputs = [10], _mtxOutputs = [(14, defaultTxOut), (15, defaultTxOut)]},
-                modelTx {_mtxInputs = [11]},
-                modelTx {_mtxInputs = [12], _mtxOutputs = [(13, defaultTxOut)], _mtxDCert = [ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress3" "pool3")]}
+              [ modelTx {_mtxInputs = [(10, noRdmr)], _mtxOutputs = [(14, defaultTxOut), (15, defaultTxOut)]},
+                modelTx {_mtxInputs = [(11, noRdmr)]},
+                modelTx {_mtxInputs = [(12, noRdmr)], _mtxOutputs = [(13, defaultTxOut)], _mtxDCert =
+                  [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress3" "pool3"), noRdmr)]}
               ],
             ModelBlock
               5
-              [ modelTx {_mtxInputs = [13], _mtxOutputs = [(17, defaultTxOut), (18, defaultTxOut)]},
-                modelTx {_mtxInputs = [14], _mtxDCert = [ModelCertDeleg $ ModelRegKey "someAddress2"]},
-                modelTx {_mtxInputs = [15], _mtxOutputs = [(16, defaultTxOut)]}
+              [ modelTx {_mtxInputs = [(13, noRdmr)], _mtxOutputs = [(17, defaultTxOut), (18, defaultTxOut)]},
+                modelTx {_mtxInputs = [(14, noRdmr)], _mtxDCert = [(ModelCertDeleg $ ModelRegKey "someAddress2", noRdmr)]},
+                modelTx {_mtxInputs = [(15, noRdmr)], _mtxOutputs = [(16, defaultTxOut)]}
               ],
             ModelBlock
               6
-              [ modelTx {_mtxInputs = [16], _mtxOutputs = [(20, defaultTxOut), (21, defaultTxOut)]},
-                modelTx {_mtxInputs = [17], _mtxDCert = [ModelCertPool $ ModelRegPool testPool2]},
-                modelTx {_mtxInputs = [18], _mtxOutputs = [(19, defaultTxOut)]}
+              [ modelTx {_mtxInputs = [(16, noRdmr)], _mtxOutputs = [(20, defaultTxOut), (21, defaultTxOut)]},
+                modelTx {_mtxInputs = [(17, noRdmr)], _mtxDCert = [(ModelCertPool $ ModelRegPool testPool2, noRdmr)]},
+                modelTx {_mtxInputs = [(18, noRdmr)], _mtxOutputs = [(19, defaultTxOut)]}
               ]
           ]
           mempty,
         ModelEpoch
           [ ModelBlock
               7
-              [ modelTx {_mtxInputs = [19], _mtxOutputs = [(23, defaultTxOut), (24, defaultTxOut)]},
-                modelTx {_mtxInputs = [20], _mtxDCert = [ModelCertDeleg $ ModelRegKey "someAddress"]},
-                modelTx {_mtxInputs = [21], _mtxOutputs = [(22, defaultTxOut)]}
+              [ modelTx {_mtxInputs = [(19, noRdmr)], _mtxOutputs = [(23, defaultTxOut), (24, defaultTxOut)]},
+                modelTx {_mtxInputs = [(20, noRdmr)], _mtxDCert = [(ModelCertDeleg $ ModelRegKey "someAddress", noRdmr)]},
+                modelTx {_mtxInputs = [(21, noRdmr)], _mtxOutputs = [(22, defaultTxOut)]}
               ],
             ModelBlock
               8
-              [ modelTx {_mtxInputs = [22], _mtxOutputs = [(26, defaultTxOut), (27, defaultTxOut)]},
-                modelTx {_mtxInputs = [23], _mtxDCert = [ModelCertPool $ ModelRegPool testPool]},
-                modelTx {_mtxInputs = [24], _mtxOutputs = [(25, defaultTxOut)]}
+              [ modelTx {_mtxInputs = [(22, noRdmr)], _mtxOutputs = [(26, defaultTxOut), (27, defaultTxOut)]},
+                modelTx {_mtxInputs = [(23, noRdmr)], _mtxDCert =
+                  [(ModelCertPool $ ModelRegPool testPool, noRdmr)]
+                },
+                modelTx {_mtxInputs = [(24, noRdmr)], _mtxOutputs = [(25, defaultTxOut)]}
               ],
             ModelBlock
               9
-              [ modelTx {_mtxInputs = [25]},
-                modelTx {_mtxInputs = [26], _mtxDCert = [ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress2" "pool2")]},
-                modelTx {_mtxInputs = [27], _mtxDCert = [ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress" "pool1")]}
+              [ modelTx {_mtxInputs = [(25, noRdmr)]},
+                modelTx {_mtxInputs = [(26, noRdmr)], _mtxDCert =
+                  [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress2" "pool2"), noRdmr)]
+                },
+                modelTx {_mtxInputs = [(27, noRdmr)], _mtxDCert =
+                  [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress" "pool1"), noRdmr)]}
               ]
           ]
           mempty
@@ -1194,6 +1210,7 @@ testPoolParamModel =
             _mppRAcnt = "rewardAcct",
             _mppOwners = ["poolOwner"]
           }
+      noRdmr = ifSupportsPlutus (Proxy :: Proxy (ScriptFeature era)) () Nothing
    in ( ( modelGenesis
             [ (0, ("unstaked", Coin 100_001_000_000)),
               (1, ("poolOwner", Coin 1_000_000)),
@@ -1204,24 +1221,24 @@ testPoolParamModel =
             [ ModelBlock
                 0
                 [ modelTx
-                    { _mtxInputs = Set.fromList [0],
+                    { _mtxInputs = [(0, noRdmr)],
                       _mtxOutputs = [(3, modelTxOut "unstaked" (modelCoin 1000000))],
                       _mtxWitnessSigs = Set.fromList $ ["unstaked", "pool1", "poolOwner", "staked"],
                       _mtxFee = modelCoin 100_000_000_000,
                       _mtxDCert =
-                        [ ModelCertDeleg $ ModelRegKey "staked",
-                          ModelCertDeleg $ ModelRegKey "poolOwner",
-                          ModelCertPool $ ModelRegPool modelPool,
-                          ModelCertDeleg $ ModelDelegate (ModelDelegation "staked" "pool1"),
-                          ModelCertDeleg $ ModelDelegate (ModelDelegation "poolOwner" "pool1")
+                        [ (ModelCertDeleg $ ModelRegKey "staked", noRdmr),
+                          (ModelCertDeleg $ ModelRegKey "poolOwner", noRdmr),
+                          (ModelCertPool $ ModelRegPool modelPool, noRdmr),
+                          (ModelCertDeleg $ ModelDelegate (ModelDelegation "staked" "pool1"), noRdmr),
+                          (ModelCertDeleg $ ModelDelegate (ModelDelegation "poolOwner" "pool1"), noRdmr)
                         ]
                     },
                   modelTx
-                    { _mtxInputs = Set.fromList [3],
+                    { _mtxInputs = [(3, noRdmr)],
                       _mtxWitnessSigs = Set.fromList $ ["unstaked", "pool1", "poolOwner"],
                       _mtxFee = modelCoin 1_000_000,
                       _mtxDCert =
-                        [ ModelCertPool $ ModelRegPool modelPool {_mppMargin = maxBound}
+                        [ (ModelCertPool $ ModelRegPool modelPool {_mppMargin = maxBound}, noRdmr)
                         ]
                     }
                 ]
@@ -1234,30 +1251,33 @@ testPoolParamModel =
         ]
       )
 
+
+
 modelShrinkingUnitTests :: TestTree
 modelShrinkingUnitTests =
   testGroup
     "model-shrinking-unit-tests"
     [ testProperty "test simple shrink" $
-        let x = shrinkModelSimple ((), shrinkSimpleTestData)
+        let noRdmr = SupportsPlutus Nothing
+            x = shrinkModelSimple ((), shrinkSimpleTestData)
             y =
               ( (),
                 [ ModelEpoch
-                    [ ModelBlock 1 [modelTx {_mtxInputs = [1]}, modelTx {_mtxInputs = [2]}, modelTx {_mtxInputs = [3]}],
-                      ModelBlock 2 [modelTx {_mtxInputs = [4]}, modelTx {_mtxInputs = [5]}, modelTx {_mtxInputs = [6]}],
-                      ModelBlock 3 [modelTx {_mtxInputs = [7]}, modelTx {_mtxInputs = [8]}, modelTx {_mtxInputs = [9]}]
+                    [ ModelBlock 1 [modelTx {_mtxInputs = [(1, noRdmr)]}, modelTx {_mtxInputs = [(2, noRdmr)]}, modelTx {_mtxInputs = [(3, noRdmr)]}],
+                      ModelBlock 2 [modelTx {_mtxInputs = [(4, noRdmr)]}, modelTx {_mtxInputs = [(5, noRdmr)]}, modelTx {_mtxInputs = [(6, noRdmr)]}],
+                      ModelBlock 3 [modelTx {_mtxInputs = [(7, noRdmr)]}, modelTx {_mtxInputs = [(8, noRdmr)]}, modelTx {_mtxInputs = [(9, noRdmr)]}]
                     ]
                     mempty,
                   ModelEpoch
-                    [ ModelBlock 4 [modelTx {_mtxInputs = [10]}, modelTx {_mtxInputs = [11]}, modelTx {_mtxInputs = [12]}],
-                      ModelBlock 5 [modelTx {_mtxInputs = [13]}, modelTx {_mtxInputs = [14]}, modelTx {_mtxInputs = [15]}],
-                      ModelBlock 6 [modelTx {_mtxInputs = [16]}, modelTx {_mtxInputs = [17]}, modelTx {_mtxInputs = [18]}]
+                    [ ModelBlock 4 [modelTx {_mtxInputs = [(10, noRdmr)]}, modelTx {_mtxInputs = [(11, noRdmr)]}, modelTx {_mtxInputs = [(12, noRdmr)]}],
+                      ModelBlock 5 [modelTx {_mtxInputs = [(13, noRdmr)]}, modelTx {_mtxInputs = [(14, noRdmr)]}, modelTx {_mtxInputs = [(15, noRdmr)]}],
+                      ModelBlock 6 [modelTx {_mtxInputs = [(16, noRdmr)]}, modelTx {_mtxInputs = [(17, noRdmr)]}, modelTx {_mtxInputs = [(18, noRdmr)]}]
                     ]
                     mempty,
                   ModelEpoch
-                    [ ModelBlock 7 [modelTx {_mtxInputs = [19]}, modelTx {_mtxInputs = [20]}, modelTx {_mtxInputs = [21]}],
-                      ModelBlock 8 [modelTx {_mtxInputs = [22]}, modelTx {_mtxInputs = [23]}, modelTx {_mtxInputs = [24]}],
-                      ModelBlock 9 [modelTx {_mtxInputs = [25]}, modelTx {_mtxInputs = [26]}]
+                    [ ModelBlock 7 [modelTx {_mtxInputs = [(19, noRdmr)]}, modelTx {_mtxInputs = [(20, noRdmr)]}, modelTx {_mtxInputs = [(21, noRdmr)]}],
+                      ModelBlock 8 [modelTx {_mtxInputs = [(22, noRdmr)]}, modelTx {_mtxInputs = [(23, noRdmr)]}, modelTx {_mtxInputs = [(24, noRdmr)]}],
+                      ModelBlock 9 [modelTx {_mtxInputs = [(25, noRdmr)]}, modelTx {_mtxInputs = [(26, noRdmr)]}]
                     ]
                     mempty
                 ]

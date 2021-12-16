@@ -46,7 +46,6 @@ module Test.Cardano.Ledger.Model.Elaborators
     ElaborateApplyTxError(..),
     ElaborateBlockError(..),
     observeRewards,
-
     -- | = internal implementation details.
     EraElaboratorState(..),
     TestCredentialInfo(..),
@@ -131,6 +130,7 @@ import Control.Lens
   ( Lens',
     at,
     ifor,
+    itoListOf,
     ifor_,
     set,
     use,
@@ -234,6 +234,8 @@ import Test.Cardano.Ledger.Model.Script
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
+    modelTx_redeemers,
+    mkMintValue,
     ModelDelegCert (..),
     ModelDelegation (..),
     ModelGenesisDelegCert (..),
@@ -1245,11 +1247,11 @@ class
     ( Either (ElaborateBlockError era) (Core.Tx era),
       (NewEpochState era, EraElaboratorState era)
     )
-  elaborateTx proxy _ maxTTL (ModelTx mtxInputs mtxOutputs (ModelValue mtxFee) mtxDCert mtxWdrl mtxMint mtxCollateral mtxValidity mtxRdm mtxWits) = State.runState $
+  elaborateTx proxy _ maxTTL mtx@(ModelTx mtxInputs mtxOutputs (ModelValue mtxFee) mtxDCert mtxWdrl mtxMint mtxCollateral mtxValidity mtxWits) = State.runState $
     Except.runExceptT $ do
       (txBodyArguments, EraElaboratorTxAccum scripts dats) <- CPS.runWriterT $ do
         let mkDCerts ::
-              ModelDCert (EraFeatureSet era) ->
+              (ModelDCert (EraFeatureSet era), a) ->
               CPS.WriterT
                 (EraElaboratorTxAccum era)
                 ( Except.ExceptT
@@ -1260,17 +1262,17 @@ class
                     )
                 )
                 (DCert (Crypto era))
-            mkDCerts x = do
+            mkDCerts (x, _) = do
               zoom _2 $ tellDCertScriptWits proxy x
               lift . lift . zoom _2 . State.state $ elaborateDCert proxy x
 
         outs <- for mtxOutputs $ \(oid, o) -> mkTxOut oid o
-        ins :: Set.Set (Shelley.TxIn (Crypto era)) <- zoom _2 $ fmap fold $ traverse mkTxIn $ Set.toList mtxInputs
+        ins :: Set.Set (Shelley.TxIn (Crypto era)) <- zoom _2 $ fmap fold $ traverse mkTxIn $ Map.keys mtxInputs
         cins <- traverseSupportsPlutus (zoom _2 . fmap fold . traverse mkTxIn . Set.toList) mtxCollateral
         dcerts <- traverse mkDCerts mtxDCert
         wdrl' <-
           fmap Map.fromList $
-            for (Map.toList mtxWdrl) $ \(mAddr, ModelValue mqty) -> do
+            for (Map.toList mtxWdrl) $ \(mAddr, (ModelValue mqty, _)) -> do
               stakeCredential <- zoom _2 $ getCredentialFor proxy mAddr
               let ra = RewardAcnt Testnet stakeCredential
               -- tellWitness (Rewarding ra) stakeKey
@@ -1297,7 +1299,7 @@ class
             ExpectedValueTypeC_MA -> case mtxMint of
               SupportsMint m' ->
                 fmap SupportsMint $
-                  evalModelValue (lookupModelValue (tellMintWitness @era)) (unModelValue m')
+                  evalModelValue (lookupModelValue (tellMintWitness @era)) (unModelValue $ mkMintValue mtxMint)
 
         pure $
           TxBodyArguments
@@ -1334,11 +1336,11 @@ class
       nes <- State.gets fst
       witA <- zoom _2 $ traverse (getKeyPairFor proxy) $ Set.toList mtxWits
 
-      rdm <- ifor mtxRdm $ \msp (mdat, exu) -> do
+      rdm <- for (itoListOf modelTx_redeemers mtx) $ \(msp, (mdat, exu)) -> do
         sp <- zoom _2 $ State.state $ elaborateScriptPurpose proxy msp
         pure $ TestRedeemer sp mdat exu
 
-      (realTxBody, txWitnessArguments) <- mkTxWitnessArguments mtxInputs nes witA scripts (toList rdm) dats txBodyArguments
+      (realTxBody, txWitnessArguments) <- mkTxWitnessArguments (Map.keysSet mtxInputs) nes witA scripts rdm dats txBodyArguments
 
       let txid = TxIn.txid @era realTxBody
       ifor_ mtxOutputs $ \n (mutxoid, _) ->

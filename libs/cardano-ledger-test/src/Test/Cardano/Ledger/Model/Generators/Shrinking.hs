@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,6 +7,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -21,6 +23,8 @@ import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Lens
   ( Lens',
     ifoldl',
+    _Just,
+    ifoldMap,
     imap,
     itraverse,
     ix,
@@ -34,6 +38,7 @@ import Control.Lens
     (<>=),
     (^.),
     _1,
+    has,
     _2,
   )
 import Control.Monad (ap)
@@ -66,6 +71,7 @@ import Test.Cardano.Ledger.Model.BaseTypes
 import Test.Cardano.Ledger.Model.FeatureSet
   ( KnownRequiredFeatures,
     ScriptFeature,
+    traverseSupportsPlutus,
     fromSupportsMint,
     fromSupportsPlutus,
   )
@@ -84,6 +90,8 @@ import Test.Cardano.Ledger.Model.Script
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
+    mkMintValue,
+    modelRedeemerPresent,
     ModelDelegCert (..),
     ModelDelegation (..),
     ModelPoolCert (..),
@@ -226,7 +234,7 @@ discardOneTx epochNo tx = do
   (uTxOIds, txIds) <- State.get
   if (Set.member (getModelTxId tx) txIds || not (null $ Set.intersection (Set.fromList $ fmap fst $ _mtxOutputs tx) uTxOIds))
     then do
-      _1 <>= _mtxInputs tx
+      _1 <>= Map.keysSet (_mtxInputs tx)
       _1 <>= fromSupportsPlutus mempty id (_mtxCollateral tx)
       dcerts' <- fmap catMaybes $ traverse (discardDCert epochNo $ getModelTxId tx) $ _mtxDCert tx
       wdrls' <- fmap (Map.mapMaybe id) $ itraverse (discardWdrls (getModelTxId tx)) $ _mtxWdrl tx
@@ -262,8 +270,8 @@ lookupEpochProv k epochNo prov =
       dep = liftPiecewiseConstantMap registrations epochNo
    in dep
 
-discardDCert :: forall era m. (MonadReader (ModelProvenanceState era) m, State.MonadState TxDependencies m) => EpochNo -> ModelTxId -> ModelDCert era -> m (Maybe (ModelDCert era))
-discardDCert epochNo txNo dcert = case dcert of
+discardDCert :: forall era m a. (MonadReader (ModelProvenanceState era) m, State.MonadState TxDependencies m) => EpochNo -> ModelTxId -> (ModelDCert era, a) -> m (Maybe (ModelDCert era, a))
+discardDCert epochNo txNo (dcert, rdmr) = fmap (, rdmr) <$> case dcert of
   ModelCertDeleg cert ->
     case cert of
       ModelRegKey a -> do
@@ -398,7 +406,7 @@ txPossibleOutputs ::
   (Set.Set ModelUTxOId, Set.Set ModelUTxOId, [(ModelUTxOId, ModelTxOut era')])
 txPossibleOutputs tx =
   let collateral = fromSupportsPlutus (\() -> Set.empty) id $ tx ^. modelTx_collateral
-      txIns = tx ^. modelTx_inputs
+      txIns = Map.keysSet $ tx ^. modelTx_inputs
    in if modelIsValid tx
         then (txIns, collateral, tx ^. modelTx_outputs)
         else (collateral, txIns, [])
@@ -432,6 +440,7 @@ spendGenesis ::
 spendGenesis txInputs allGenesis = Map.withoutKeys allGenesis txInputs
 
 collapseOneTx ::
+  forall era.
   ModelTx era ->
   ModelTx era ->
   CollapseTransactionsM era (Maybe (ModelTx era))
@@ -439,38 +448,33 @@ collapseOneTx lastTx tx = do
   allGenesis <- use $ cts_Gen . modelGenesis_utxos
   reqUTxOs <- use cts_RequiredUTxOs
   let genesisUTxOIds = Map.keysSet allGenesis
-      txInputs = Set.union (tx ^. modelTx_inputs) (fromSupportsPlutus (\() -> Set.empty) id $ tx ^. modelTx_collateral)
+      txInputs = Set.union
+        (Map.keysSet $ tx ^. modelTx_inputs)
+        (fromSupportsPlutus (\() -> Set.empty) id $ tx ^. modelTx_collateral)
       intersectingUTxOIds = Set.difference txInputs genesisUTxOIds
 
-      txOutsData = (\(_, x) -> view modelTxOut_data x) <$> (tx ^. modelTx_outputs)
-      mTxOutsData = traverse (fromSupportsPlutus (const Nothing) id) txOutsData
+      -- txOutsData = (\(_, x) -> view modelTxOut_data x) <$> (tx ^. modelTx_outputs)
+      -- mTxOutsData = traverse (fromSupportsPlutus (const Nothing) id) txOutsData
+      mTxOutsData = has
+        (modelTx_outputs . traverse . _2 . modelTxOut_data . traverseSupportsPlutus . _Just)
+        tx
 
-      isLastTx = (_mtxInputs lastTx) == (_mtxInputs tx)
+      isLastTx = getModelTxId lastTx == getModelTxId tx
+
       lastTxScriptInputs =
-        Set.fromList $
-          mapMaybe
-            ( \r -> case r of
-                ModelScriptPurpose_Spending utxoId -> Just utxoId
-                _ -> Nothing
-            )
-            $ Map.keys $ lastTx ^. modelTx_redeemers
+        ifoldMap
+          (\utxoId r -> if modelRedeemerPresent r then Set.singleton utxoId else mempty)
+          (_mtxInputs lastTx)
       lastTxScriptIntersection =
         Set.intersection lastTxScriptInputs $
           Set.fromList (fst <$> tx ^. modelTx_outputs)
 
-      isMinting =
-        fromSupportsMint
-          (const False)
-          ( \x ->
-              let (ModelValueF (_, mGrpMap)) = unModelValue x
-               in (not . null) mGrpMap
-          )
-          $ tx ^. modelTx_mint
+      isMinting = (/= mempty) $ mkMintValue @era $ tx ^. modelTx_mint
 
       collapseConditions =
         null intersectingUTxOIds
           && not isLastTx
-          && isNothing mTxOutsData
+          && not mTxOutsData
           && not isMinting
           && null lastTxScriptIntersection
           && (null $ tx ^. modelTx_dCert)

@@ -26,6 +26,8 @@ module Test.Cardano.Ledger.Model.FeatureSet
     ValueFeature,
     ScriptFeature,
     ShelleyScriptFeatures,
+    reifySupportsMint',
+    reifySupportsMint,
     KnownRequiredFeatures (..),
     KnownScriptFeature (..),
     KnownValueFeature (..),
@@ -135,11 +137,23 @@ fromSupportsPlutus f g = \case
   NoPlutusSupport x -> f x
   SupportsPlutus y -> g y
 
-ifSupportsPlutus ::
+ifSupportsPlutus' ::
+  forall s a b proxy.
   KnownScriptFeature s =>
   proxy s ->
   (forall s'. s ~ 'TyScriptFeature s' 'False => a) ->
   (forall s'. s ~ 'TyScriptFeature s' 'True => b) ->
+  IfSupportsPlutus a b s
+ifSupportsPlutus' proxy x y = case reifySupportsPlutus proxy of
+  NoPlutusSupport () -> NoPlutusSupport x
+  SupportsPlutus () -> SupportsPlutus y
+
+ifSupportsPlutus ::
+  forall s a b proxy.
+  KnownScriptFeature s =>
+  proxy s ->
+  a ->
+  b ->
   IfSupportsPlutus a b s
 ifSupportsPlutus proxy x y = case reifySupportsPlutus proxy of
   NoPlutusSupport () -> NoPlutusSupport x
@@ -258,11 +272,7 @@ reifySupportsMint' ::
   KnownValueFeature s => proxy s -> Bool
 reifySupportsMint' = fromSupportsMint (const False) (const True) . reifySupportsMint
 
-class PlutusScriptFeature v ~ 'True => PlutusSupported v where
-  supportsPlutus :: IfSupportsPlutus a b v -> b
-  supportsPlutus (SupportsPlutus x) = x
 
-instance PlutusScriptFeature v ~ 'True => PlutusSupported v
 
 class v ~ 'ExpectAnyOutput => MintSupported v where
   supportsMint :: IfSupportsMint a b v -> b

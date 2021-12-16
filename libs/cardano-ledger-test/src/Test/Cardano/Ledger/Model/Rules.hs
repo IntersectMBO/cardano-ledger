@@ -167,6 +167,7 @@ import Test.Cardano.Ledger.Model.Tx
     getModelTxId,
     modelIsValid,
     modelKeyRefunds,
+    modelDCerts,
     modelTotalDeposits,
     modelTx_collateral,
     modelTx_fee,
@@ -462,7 +463,7 @@ instance ModelSTS 'ModelRule_LEDGERS where
 modelFeesOK :: ModelPParams era -> ModelTx era -> ModelUTxOMap era -> Bool
 modelFeesOK pp tx utxoMap =
   -- TODO: This is not fully completed at all
-  (null $ tx ^. modelTx_redeemers)
+  has modelTx_redeemers tx
     || ( ( balance `pow` (100 :: Natural) >= (Val.coin $ tx ^. modelTx_fee)
              `pow` (fromSupportsPlutus (const 100) id $ runIdentity $ _modelPParams_collateralPercent pp)
          )
@@ -483,18 +484,18 @@ instance ModelSTS 'ModelRule_UTXOS where
       refunded <-
         modelKeyRefunds
           <$> asks (_modelUTxOEnv_pp . _modelEnv)
-          <*> pure (_mtxDCert tx)
+          <*> pure (toListOf modelDCerts tx)
       deposits <-
         modelTotalDeposits
           <$> asks (_modelUTxOEnv_pp . _modelEnv)
           <*> asks (_modelUTxOEnv_poolParams . _modelEnv)
-          <*> pure (_mtxDCert tx)
+          <*> pure (toListOf modelDCerts tx)
 
       let depositChange = deposits ~~ refunded
 
       -- pup' <- liftModelRule (Proxy @ModelRule_PPUP) tx
 
-      modelUTxOState_utxo %= spendModelUTxOs (_mtxInputs tx) (_mtxOutputs tx)
+      modelUTxOState_utxo %= spendModelUTxOs (Map.keysSet $ _mtxInputs tx) (_mtxOutputs tx)
       modelUTxOState_deposited <>= depositChange
       modelUTxOState_fees <>= Val.coin (_mtxFee tx)
     -- modelUTxOState_ppup .= pup'
@@ -536,6 +537,8 @@ data ModelLEnv env = ModelLEnv
     -- , _modelLEnv_acnt :: !ModelAcnt
   }
 
+
+
 -- FIG30[SL-D5]
 instance ModelSTS 'ModelRule_LEDGER where
   type ModelSignal 'ModelRule_LEDGER = ModelTx
@@ -545,8 +548,8 @@ instance ModelSTS 'ModelRule_LEDGER where
 
   applyRuleImpl _ tx = RWS.execRWST $ do
     lift $ setProvenance (getModelTxId tx)
-    liftApplyRule (Proxy @'ModelRule_DELEGS) (Compose $ _mtxDCert tx) tx
     liftApplyRule (Proxy @'ModelRule_UTXOW) tx tx
+    liftApplyRule (Proxy @'ModelRule_DELEGS) (Compose $ toListOf modelDCerts tx) tx
     lift $ clearProvenance
 
 -- (fig13)[GL-D2]
@@ -580,9 +583,9 @@ instance ModelSTS 'ModelRule_DELEGS where
     badWdrls <-
       modelDPState_dstate . modelDState_rewards
         %%= Map.mergeA
-          (Map.traverseMaybeMissing $ \_ wdrl -> (bool mempty (Set.singleton Proxy) (Val.zero == Val.coin wdrl), Nothing)) -- DelegateeNotRegistered
+          (Map.traverseMaybeMissing $ \_ (wdrl, _) -> (bool mempty (Set.singleton Proxy) (Val.zero == Val.coin wdrl), Nothing)) -- DelegateeNotRegistered
           (Map.preserveMissing)
-          ( Map.zipWithAMatched $ \_ mwdrl rwd ->
+          ( Map.zipWithAMatched $ \_ (mwdrl, _) rwd ->
               let wdrl = Val.coin mwdrl
                in (bool mempty (Set.singleton Proxy) (rwd == wdrl), Val.zero)
           ) -- WithdrawalsNotInRewards

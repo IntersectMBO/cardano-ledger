@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -15,6 +16,9 @@
 module Test.Cardano.Ledger.Model.Tx where
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), txscriptfee)
+import Data.Maybe (isJust)
+import Data.Kind (Type)
+import Cardano.Ledger.Mary.Value (AssetName)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
@@ -23,14 +27,18 @@ import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..))
+import Control.Lens.Indexed (Indexable)
 import Control.Lens
   ( Lens',
+    itraverse,
     Prism',
     Traversal',
+    ifoldMap,
     foldMapOf,
     foldOf,
     folded,
     lengthOf,
+    indexed,
     lens,
     prism,
     toListOf,
@@ -49,14 +57,18 @@ import GHC.Generics (Generic)
 import qualified GHC.Records as GHC
 import qualified PlutusTx (Data)
 import Quiet (Quiet (..))
+import Test.Cardano.Ledger.Model.Value (mkModelValueF')
 import Test.Cardano.Ledger.Model.BaseTypes
   ( ModelPoolId (..),
-    ModelValue,
+    ModelValue(..),
+    ModelValueVars(..),
     liftModelValue,
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet,
+    fromSupportsPlutus,
     FeatureTag (..),
+    traverseSupportsPlutus,
     IfSupportsMint (..),
     IfSupportsPlutus (..),
     KnownRequiredFeatures,
@@ -67,6 +79,7 @@ import Test.Cardano.Ledger.Model.FeatureSet
     TyValueExpected (..),
     ValueFeature,
     ValueFeatureTag (..),
+    ScriptFeatureTag (..),
     bitraverseSupportsPlutus,
     filterSupportsPlutus,
     hasKnownScriptFeature,
@@ -105,8 +118,8 @@ newtype ModelTxId = ModelTxId (Set ModelUTxOId)
 
 getModelTxId :: ModelTx era -> ModelTxId
 getModelTxId mtx = ModelTxId $ case _mtxValidity mtx of
-  NoPlutusSupport () -> _mtxInputs mtx
-  SupportsPlutus (IsValid True) -> _mtxInputs mtx
+  NoPlutusSupport () -> Map.keysSet $ _mtxInputs mtx
+  SupportsPlutus (IsValid True) -> Map.keysSet $ _mtxInputs mtx
   SupportsPlutus (IsValid False) -> case _mtxCollateral mtx of
     SupportsPlutus xs -> xs
 
@@ -120,24 +133,46 @@ instance HasModelTx era (ModelTx era) where
   {-# INLINE modelTxs #-}
 
 instance HasModelDCert era (ModelTx era) where
-  modelDCerts = modelTx_dCert . traverse
+  modelDCerts = modelTx_dCert . traverse . _1
   {-# INLINE modelDCerts #-}
 
+type ModelRedeemer = IfSupportsPlutus () (Maybe (PlutusTx.Data, ExUnits))
+
+modelRedeemerPresent :: ModelRedeemer sf -> Bool
+modelRedeemerPresent = fromSupportsPlutus (const False) isJust
+
+type ModelMintValue sf = Map.Map
+  (ModelScript sf)
+  (Map.Map AssetName Integer, ModelRedeemer sf)
+
+mkMintValue ::
+  forall era.
+  IfSupportsMint () (ModelMintValue (ScriptFeature era)) (ValueFeature era) ->
+  ModelValue (ValueFeature era) era
+mkMintValue = \case
+  NoMintSupport () -> mempty
+  SupportsMint ma -> ifoldMap (\policyId (qty, _) -> ifoldMap (\an q -> ModelValue $ mkModelValueF' mempty $ Map.singleton (ModelValue_MA (policyId, an)) q) qty) ma
+
+
 data ModelTx (era :: FeatureSet) = ModelTx
-  { _mtxInputs :: !(Set ModelUTxOId),
+  -- { _mtxInputs :: !(Set ModelUTxOId),
+  { _mtxInputs :: !(Map.Map ModelUTxOId (ModelRedeemer (ScriptFeature era))),
     _mtxOutputs :: ![(ModelUTxOId, ModelTxOut era)],
     _mtxFee :: !(ModelValue 'ExpectAdaOnly era),
-    _mtxDCert :: ![ModelDCert era],
-    _mtxWdrl :: !(Map.Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era)),
-    _mtxMint :: !(IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era)),
+    _mtxDCert :: ![(ModelDCert era, ModelRedeemer (ScriptFeature era))],
+    _mtxWdrl ::
+      !(Map.Map (ModelCredential 'Staking (ScriptFeature era))
+        (ModelValue 'ExpectAdaOnly era, ModelRedeemer (ScriptFeature era))),
+    -- _mtxMint :: !(IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era)),
+    _mtxMint :: !(IfSupportsMint () (ModelMintValue (ScriptFeature era)) (ValueFeature era)),
     _mtxCollateral :: !(IfSupportsPlutus () (Set ModelUTxOId) (ScriptFeature era)),
     _mtxValidity :: !(IfSupportsPlutus () IsValid (ScriptFeature era)),
-    _mtxRedeemers :: !(Map.Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits)),
+    -- _mtxRedeemers :: !(Map.Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits)),
     _mtxWitnessSigs :: !(Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False)))
   }
   deriving (Show, Generic, Eq)
 
-modelTx_inputs :: Lens' (ModelTx era) (Set ModelUTxOId)
+modelTx_inputs :: Lens' (ModelTx era) (Map.Map ModelUTxOId (ModelRedeemer (ScriptFeature era)))
 modelTx_inputs = lens _mtxInputs (\s b -> s {_mtxInputs = b})
 {-# INLINE modelTx_inputs #-}
 
@@ -145,35 +180,19 @@ modelTx_outputs :: Lens' (ModelTx era) [(ModelUTxOId, ModelTxOut era)]
 modelTx_outputs = lens _mtxOutputs (\s b -> s {_mtxOutputs = b})
 {-# INLINE modelTx_outputs #-}
 
--- -- focus on a specified output with the given id;
--- modelTx_outputAt :: ModelUTxOId -> Lens' (ModelTx era) (Maybe (ModelTxOut era))
--- modelTx_outputAt k = modelTx_outputs . lens (List.lookup k) (flip f)
---   where
---     f :: forall a. Maybe a -> [(ModelUTxOId, a)] -> [(ModelUTxOId, a)]
---     f = \case
---       Nothing ->
---         let g [] = []
---             g ((k', v) : rest) = if k == k' then rest else (k', v) : g rest
---          in g
---       Just v' ->
---         let h [] = [(k, v')]
---             h ((k', v) : rest) = if k == k' then (k, v') : rest else (k', v) : h rest
---          in h
--- {-# INLINE modelTx_outputAt #-}
-
 modelTx_fee :: Lens' (ModelTx era) (ModelValue 'ExpectAdaOnly era)
 modelTx_fee = lens _mtxFee (\s b -> s {_mtxFee = b})
 {-# INLINE modelTx_fee #-}
 
-modelTx_dCert :: Lens' (ModelTx era) [ModelDCert era]
+modelTx_dCert :: Lens' (ModelTx era) [(ModelDCert era, ModelRedeemer (ScriptFeature era))]
 modelTx_dCert = lens _mtxDCert (\s b -> s {_mtxDCert = b})
 {-# INLINE modelTx_dCert #-}
 
-modelTx_wdrl :: Lens' (ModelTx era) (Map.Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era))
+modelTx_wdrl :: Lens' (ModelTx era) (Map.Map (ModelCredential 'Staking (ScriptFeature era)) (ModelValue 'ExpectAdaOnly era, ModelRedeemer (ScriptFeature era)))
 modelTx_wdrl = lens _mtxWdrl (\s b -> s {_mtxWdrl = b})
 {-# INLINE modelTx_wdrl #-}
 
-modelTx_mint :: Lens' (ModelTx era) (IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era))
+modelTx_mint :: Lens' (ModelTx era) (IfSupportsMint () (ModelMintValue (ScriptFeature era)) (ValueFeature era))
 modelTx_mint = lens _mtxMint (\s b -> s {_mtxMint = b})
 {-# INLINE modelTx_mint #-}
 
@@ -185,8 +204,34 @@ modelTx_validity :: Lens' (ModelTx era) (IfSupportsPlutus () IsValid (ScriptFeat
 modelTx_validity = lens _mtxValidity (\s b -> s {_mtxValidity = b})
 {-# INLINE modelTx_validity #-}
 
-modelTx_redeemers :: Lens' (ModelTx era) (Map.Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits))
-modelTx_redeemers = lens _mtxRedeemers (\s b -> s {_mtxRedeemers = b})
+-- | traverse over all of the redeemers in a 'ModelTx', with
+-- 'ModelScriptPurpose' indices.
+-- read this as
+-- @modelTx_redeemers :: Control.Lens.IndexedTraversal' (ModelScriptPurpose era) (ModelTx era) (PlutusTx.Data, ExUnits)@
+modelTx_redeemers ::
+  forall era (p :: Type -> Type -> Type) (f :: Type -> Type).
+  (Indexable (ModelScriptPurpose era) p, Applicative f) =>
+  p (PlutusTx.Data, ExUnits) (f (PlutusTx.Data, ExUnits)) -> (ModelTx era) -> f (ModelTx era)
+modelTx_redeemers
+  f mtx@(ModelTx
+    { _mtxInputs = a,
+      _mtxDCert = b,
+      _mtxWdrl = c,
+      _mtxMint = d
+    }) = (\a' b' c' d' -> mtx
+    { _mtxInputs = a',
+      _mtxDCert = b',
+      _mtxWdrl = c',
+      _mtxMint = d'
+    })
+  <$> itraverse (f' . ModelScriptPurpose_Spending) a
+  <*> traverse (\(i, r) -> (,) i <$> f' (ModelScriptPurpose_Certifying i) r) b
+  <*> itraverse (\i -> traverse $ f' $ ModelScriptPurpose_Rewarding i) c
+  <*> traverseSupportsMint (itraverse $ \i -> traverse $ f' $ ModelScriptPurpose_Minting i) d
+  where
+    f' :: ModelScriptPurpose era -> ModelRedeemer (ScriptFeature era) -> f (ModelRedeemer (ScriptFeature era))
+    f' = (traverseSupportsPlutus . traverse) . indexed f
+
 {-# INLINE modelTx_redeemers #-}
 
 modelTx_witnessSigs :: Lens' (ModelTx era) (Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False)))
@@ -203,7 +248,7 @@ modelIsValid tx = case _mtxValidity tx of
 modelTx :: forall (era :: FeatureSet). KnownRequiredFeatures era => ModelTx era
 modelTx =
   ModelTx
-    { _mtxInputs = Set.empty,
+    { _mtxInputs = Map.empty,
       _mtxOutputs = [],
       _mtxFee = mempty,
       _mtxDCert = [],
@@ -214,18 +259,21 @@ modelTx =
           ValueFeatureTag_AnyOutput -> SupportsMint mempty,
       _mtxCollateral = mapSupportsPlutus (const Set.empty) $ reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era)),
       _mtxValidity = mapSupportsPlutus (const $ IsValid True) $ reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era)),
-      _mtxRedeemers = Map.empty,
       _mtxWitnessSigs = Set.empty
     }
 
 instance RequiredFeatures ModelTx where
   filterFeatures :: forall a b. KnownRequiredFeatures a => FeatureTag b -> ModelTx a -> Maybe (ModelTx b)
-  filterFeatures tag@(FeatureTag _ sf) (ModelTx ins outs fee dcert wdrl g cins valid rdmr wits) =
-    ModelTx ins
-      <$> (traverse . traverse) (filterFeatures tag) outs
+  filterFeatures tag@(FeatureTag _ sf) (ModelTx ins outs fee dcerts wdrl g cins valid {- rdmr -} wits) =
+    ModelTx
+      <$> traverse filterModelRedeemer ins
+      <*> (traverse . traverse) (filterFeatures tag) outs
       <*> (filterFeatures tag fee)
-      <*> traverse (filterFeatures tag) dcert
-      <*> fmap Map.fromList (for (Map.toList wdrl) $ \(k, v) -> (,) <$> filterModelCredential tag k <*> filterFeatures tag v)
+      <*> traverse (\(dcert, mr) -> (,) <$> filterFeatures tag dcert <*> filterModelRedeemer mr) dcerts
+      <*> fmap Map.fromList (for (Map.toList wdrl) $ \(k, (v, r)) -> (,)
+        <$> filterModelCredential tag k
+        <*> ((,) <$> filterFeatures tag v <*> filterModelRedeemer r)
+        )
       <*> ( case g of
               NoMintSupport () -> case tag of
                 FeatureTag ValueFeatureTag_AdaOnly _ -> pure $ NoMintSupport ()
@@ -233,7 +281,7 @@ instance RequiredFeatures ModelTx where
               SupportsMint g' -> case tag of
                 FeatureTag ValueFeatureTag_AdaOnly _ | g' == mempty -> pure $ NoMintSupport ()
                 FeatureTag ValueFeatureTag_AdaOnly _ -> Nothing
-                FeatureTag ValueFeatureTag_AnyOutput _ -> SupportsMint <$> filterFeatures tag g'
+                FeatureTag ValueFeatureTag_AnyOutput _ -> SupportsMint <$> filterMintAssets g'
           )
       <*> ( let setNotEmpty :: Set x -> Maybe (Set x)
                 setNotEmpty x
@@ -242,9 +290,32 @@ instance RequiredFeatures ModelTx where
              in (fmap (mapSupportsPlutus fold) $ filterSupportsPlutus tag $ mapSupportsPlutus setNotEmpty cins)
           )
       <*> filterModelValidity valid
-      <*> fmap Map.fromList ((traverse . _1) (filterFeatures tag) $ Map.toList rdmr)
       <*> pure wits
     where
+      filterModelRedeemer ::
+        ModelRedeemer (ScriptFeature a) ->
+        Maybe (ModelRedeemer (ScriptFeature b))
+      filterModelRedeemer = \case
+        NoPlutusSupport () -> Just $ case sf of
+          ScriptFeatureTag_None -> NoPlutusSupport ()
+          ScriptFeatureTag_Simple -> NoPlutusSupport ()
+          ScriptFeatureTag_PlutusV1 -> SupportsPlutus Nothing
+        SupportsPlutus x -> case sf of
+          ScriptFeatureTag_None -> maybe (Just $ NoPlutusSupport ()) (const Nothing) x
+          ScriptFeatureTag_Simple -> maybe (Just $ NoPlutusSupport ()) (const Nothing) x
+          ScriptFeatureTag_PlutusV1 -> Just $ SupportsPlutus x
+
+      filterMintAssets :: Map.Map (ModelScript (ScriptFeature a)) (Map.Map AssetName Integer, ModelRedeemer (ScriptFeature a)) -> Maybe (ModelMintValue (ScriptFeature b))
+      filterMintAssets mints = Map.fromList <$> traverse filterMintAsset (Map.toList mints)
+
+      filterMintAsset ::
+        (ModelScript (ScriptFeature a), (Map.Map AssetName Integer, ModelRedeemer (ScriptFeature a))) ->
+        Maybe (ModelScript (ScriptFeature b), (Map.Map AssetName Integer, ModelRedeemer (ScriptFeature b)))
+      filterMintAsset (pid, (qty, mr)) = do
+        pid' <- hasKnownScriptFeature sf $ filterModelScript @(ScriptFeature b) pid
+        mr' <- filterModelRedeemer mr
+        pure (pid', (qty, mr'))
+
       filterModelValidity = hasKnownScriptFeature sf $ \case
         NoPlutusSupport () -> Just $ ifSupportsPlutus sf () (IsValid True)
         SupportsPlutus v@(IsValid True) -> Just $ ifSupportsPlutus sf () v
@@ -499,7 +570,7 @@ modelTotalDeposits
     where
       newPools =
         Set.fromList
-          [ c
+          [ _mppId c
             | c <- toListOf (folded . _ModelRegisterPool) certs,
               not (Map.member (_mppId c) poolParams)
           ]
@@ -523,10 +594,11 @@ getModelConsumed ::
   ModelTx era ->
   ModelValue (ValueFeature era) era
 getModelConsumed pp (ModelUTxOMap {_modelUTxOMap_utxos = utxo}) tx =
-  foldMapOf modelTx_inputs (foldMap _mtxo_value . Map.restrictKeys utxo) tx
-    <> foldOf (modelTx_mint . traverseSupportsMint) tx
-    <> foldMapOf (modelTx_wdrl . traverse) liftModelValue tx
-    <> Val.inject (modelKeyRefunds pp $ _mtxDCert tx)
+  foldMapOf modelTx_inputs (foldMap _mtxo_value . Map.restrictKeys utxo . Map.keysSet) tx
+    <> mkMintValue (_mtxMint tx)
+    <> foldMapOf (modelTx_wdrl . traverse . _1) liftModelValue tx
+    <> Val.inject (modelKeyRefunds pp $ toListOf modelDCerts tx)
+  where
 
 getModelProduced ::
   ModelPParams era ->
@@ -536,7 +608,7 @@ getModelProduced ::
 getModelProduced pp poolParams tx =
   foldOf (modelTx_outputs . traverse . _2 . modelTxOut_value) tx
     <> foldMapOf modelTx_fee liftModelValue tx
-    <> Val.inject (modelTotalDeposits pp poolParams $ _mtxDCert tx)
+    <> Val.inject (modelTotalDeposits pp poolParams $ toListOf modelDCerts tx)
 
 -- TODO: this is not at all correct, just a placeholder
 getModelTxSize ::
@@ -546,7 +618,7 @@ getModelTxSize _ = 2000
 
 -- SEE Fig 4 [GL-D2]
 modelTotExunits :: ModelTx era -> ExUnits
-modelTotExunits = foldOf (modelTx_redeemers . traverse . _2)
+modelTotExunits = foldOf (modelTx_redeemers . _2)
 
 -- | (fig 17)[SL-D5]
 modelKeyRefunds :: ModelPParams era -> [ModelDCert era] -> Coin

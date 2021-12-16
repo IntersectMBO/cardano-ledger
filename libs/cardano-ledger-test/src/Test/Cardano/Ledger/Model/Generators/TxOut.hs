@@ -12,6 +12,8 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.Lens
   ( to,
+    itraverse,
+    ifor,
     uses,
     _2,
   )
@@ -41,6 +43,7 @@ import Test.Cardano.Ledger.Model.BaseTypes
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( IfSupportsMint,
+    traverseSupportsPlutus,
     ScriptFeature,
     TyValueExpected (..),
     ValueFeature,
@@ -60,6 +63,7 @@ import Test.Cardano.Ledger.Model.Generators.Address
   )
 import Test.Cardano.Ledger.Model.Generators.Script
   ( genScriptData,
+    genRedeemer,
     guardHaveCollateral,
   )
 import Test.Cardano.Ledger.Model.Generators.Value
@@ -81,6 +85,12 @@ import Test.Cardano.Ledger.Model.TxOut
     ModelUTxOId (..),
     modelTxOut_address,
   )
+import Test.Cardano.Ledger.Model.Tx
+  ( ModelMintValue,
+    ModelScriptPurpose(..),
+    ModelRedeemer,
+    mkMintValue,
+  )
 import Test.Cardano.Ledger.Model.UTxO
   ( ModelUTxOMap (..),
   )
@@ -88,7 +98,11 @@ import Test.Cardano.Ledger.Model.Value
   ( ModelValueF (..),
   )
 
-genInputs :: forall st era m. HasGenModelM st era m => AllowScripts (ScriptFeature era) -> m (Map ModelUTxOId (ModelTxOut era))
+genInputs ::
+  forall st era m.
+  HasGenModelM st era m =>
+  AllowScripts (ScriptFeature era) ->
+  m (Map ModelUTxOId (ModelRedeemer (ScriptFeature era), ModelTxOut era))
 genInputs allowScripts = do
   actualUtxos <- uses (modelLedger . to getModelLedger_utxos) _modelUTxOMap_utxos
   utxos0 <-
@@ -123,19 +137,23 @@ genInputs allowScripts = do
   numTxInputs <- liftGen =<< asks (_modelGeneratorParams_numTxInputs . _modelGeneratorContext_modelGeneratorParams)
   let utxos1 = (take numTxInputs utxos0)
       val1 = foldMap (spendable . snd) utxos1
-  pure $ Map.fromList $ go (drop numTxInputs utxos0) val1 utxos1
+  let ins = Map.fromList $ go (drop numTxInputs utxos0) val1 utxos1
+  ifor ins $ \ui txo -> do
+    rdmr <- genRedeemer $ ModelScriptPurpose_Spending ui
+    pure (rdmr, txo)
 
 genOutputs ::
   HasGenModelM st era m =>
   AllowScripts (ScriptFeature era) ->
-  Map ModelUTxOId (ModelTxOut era) ->
-  IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era) ->
+  Map ModelUTxOId (ModelRedeemer (ScriptFeature era), ModelTxOut era) ->
+  IfSupportsMint () (ModelMintValue (ScriptFeature era)) (ValueFeature era) ->
   m ([(ModelUTxOId, ModelTxOut era)], ModelValue 'ExpectAdaOnly era)
-genOutputs haveCollateral ins mint = do
+genOutputs haveCollateral ins mintWithRdmr = do
   -- by assumption, there are no rewards; since they would have been outputs to
   -- earlier transactions, and thus have different value now. thus the non-ada
   -- values are entirely known qty multi-asset outputs.
-  let (ModelValueF (Coin inAda, ma)) = unModelValue $ fromSupportsMint (\() -> mempty) id mint <> foldMap _mtxo_value ins
+  let mint = mkMintValue mintWithRdmr
+      (ModelValueF (Coin inAda, ma)) = unModelValue $ mint <> foldMap (_mtxo_value . snd) ins
   -- TODO: corner case, if the amount of inAda < minFee + minOutput && ma > 0;
   -- the inputs are unspendable, and the generator needs to abort.
   (fee, outVals) <-
@@ -163,7 +181,7 @@ genOutputs haveCollateral ins mint = do
     ui <- freshUTxOId
     addr <-
       oneof $
-        (fmap pure $ mapMaybe ((modelAddress_pmt $ guardHaveCollateral haveCollateral) . _mtxo_address) $ toList ins)
+        (fmap pure $ mapMaybe ((modelAddress_pmt $ guardHaveCollateral haveCollateral) . _mtxo_address . snd) $ toList ins)
           <> [genAddr haveCollateral "genOutputs"]
           <> if null delegates then [] else [freshWdrlAddress =<< elements delegates]
     dh <- liftGen $ genScriptData $ _modelAddress_pmt addr

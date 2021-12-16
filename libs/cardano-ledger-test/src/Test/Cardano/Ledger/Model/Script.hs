@@ -87,6 +87,8 @@ class HasKeyRole' (a :: KeyRole -> k -> Type) where
 
 data ModelCredential (r :: KeyRole) (k :: TyScriptFeature) where
   ModelKeyHashObj :: String -> ModelCredential r k
+  -- TODO: this should be:
+  -- ModelScriptHashObj :: ModelScript s -> ModelCredential r s
   ModelScriptHashObj :: ModelPlutusScript -> ModelCredential r ('TyScriptFeature x 'True)
 
 _ModelKeyHashObj :: Prism' (ModelCredential r k) String

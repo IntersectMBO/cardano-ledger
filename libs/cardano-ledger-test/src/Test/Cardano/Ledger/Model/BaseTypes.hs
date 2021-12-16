@@ -22,6 +22,7 @@ module Test.Cardano.Ledger.Model.BaseTypes
     HasGlobals (..),
     PositiveRational,
     boundPositiveRational,
+    ModelMA,
     unboundPositiveRational,
   )
 where

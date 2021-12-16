@@ -26,10 +26,12 @@ import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, word64ToCoin)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
+import Data.Proxy (Proxy(..))
 import qualified Cardano.Ledger.Val as Val
 import Control.Arrow ((&&&))
 import Control.Lens
   ( Lens',
+    has,
     at,
     foldMapOf,
     folded,
@@ -37,6 +39,7 @@ import Control.Lens
     ifor_,
     imap,
     ix,
+    forOf,
     maximumOf,
     over,
     preview,
@@ -104,6 +107,7 @@ import Test.Cardano.Ledger.Model.BaseTypes
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet,
     KnownRequiredFeatures,
+    ifSupportsPlutus,
     ScriptFeature,
     TyScriptFeature (..),
     ValueFeature,
@@ -137,10 +141,13 @@ import Test.Cardano.Ledger.Model.Script
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
+    ModelRedeemer,
+    modelTx_dCert,
+    modelDCerts,
     ModelDelegCert (..),
     ModelMIRCert (..),
     ModelMIRTarget (..),
-    ModelScriptPurpose (..),
+    -- ModelScriptPurpose (..),
     ModelTx (..),
     getModelConsumed,
     getModelMinfee,
@@ -282,7 +289,7 @@ fixWdrl tx = do
         Map.merge
           Map.dropMissing
           (Map.mapMissing $ \k v -> error $ unwords ["fixWdrl: ", show k, show v])
-          (Map.zipWithMatched $ \_ rwd _ -> Val.inject rwd)
+          (Map.zipWithMatched $ \_ rwd (_, rdmr) -> (Val.inject rwd, rdmr))
           rewards
           (_mtxWdrl tx)
   pure tx {_mtxWdrl = wdrls'}
@@ -312,8 +319,8 @@ fixMIR tx = do
         ReservesMIR -> TreasuryMIR
       st0 = ModelAcnt (dT0, fold irT0, irT0) (dR0, fold irR0, irR0)
 
-      dcert' = flip State.evalState st0 $
-        for (_mtxDCert tx) $ \case
+      tx' = flip State.evalState st0 $
+        forOf (modelTx_dCert . traverse . _1) tx $ \case
           x@(ModelCertPool {}) -> pure x
           ModelCertDeleg x ->
             ModelCertDeleg <$> case x of
@@ -370,13 +377,14 @@ fixMIR tx = do
                       pure qty'
               y -> pure y
 
-  pure $ tx {_mtxDCert = dcert'}
+  pure tx'
 
 askForHelp ::
+  forall era m.
   HasModelM era (ModelLedger era) Globals m =>
   Coin ->
   ModelTx era ->
-  MonadFixupValuesT era m (Set ModelUTxOId)
+  MonadFixupValuesT era m (Map.Map ModelUTxOId (ModelRedeemer (ScriptFeature era)))
 askForHelp qty tx = do
   (reserveId, reserveAvail) <- use fixupValuesState_helpReserves
 
@@ -397,7 +405,8 @@ askForHelp qty tx = do
     modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_utxoSt . modelUTxOState_utxo . at helpId .= Just (modelTxOut helpAddr $ Val.inject qty)
     modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_utxoSt . modelUTxOState_utxo . ix reserveId . modelTxOut_value .= Val.inject newReserves
 
-  pure $ Set.insert helpId $ _mtxInputs tx
+  let noRedeemer = ifSupportsPlutus (Proxy :: Proxy (ScriptFeature era)) () Nothing
+  pure $ Map.insert helpId noRedeemer $ _mtxInputs tx
 
 -- distribute an error amount across the provided outputs, evenly
 fixBalance ::
@@ -435,7 +444,7 @@ fixBalance
               workingBalance =
                 consumedAda
                   - (feeMin + sum minUTxOs)
-                  - (unCoin $ modelTotalDeposits pp poolParams $ _mtxDCert tx)
+                  - (unCoin $ modelTotalDeposits pp poolParams $ toListOf modelDCerts tx)
 
               (Identity fee'' :*: outCoins') =
                 repartition
@@ -484,69 +493,53 @@ fixBalance
 
 witnessModelTx ::
   forall (era :: FeatureSet). ModelTx era -> ModelLedger era -> ModelTx era
-witnessModelTx mtx ml =
-  let (witnessSigs, redeemers) = witnessModelTxImpl mtx ml
-   in mtx
-        { _mtxWitnessSigs = witnessSigs,
-          _mtxRedeemers = redeemers
-        }
+witnessModelTx mtx ml = mtx { _mtxWitnessSigs = witnessModelTxImpl mtx ml }
 
 -- TODO: there's some extra degrees of freedom hidden in this function, they
+-- should be exposed: how timelocks are signed (which n of m) / which genDelegs
+-- are used.
+--
 -- SEE: Fig18 [SL-D5]
--- should be exposed
--- - redeemer value/exunits
--- - how timelocks are signed (which n of m)
 witnessModelTxImpl ::
   forall (era :: FeatureSet).
   ModelTx era ->
   ModelLedger era ->
-  ( Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False)),
-    Map.Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits)
+  ( Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False))
   )
 witnessModelTxImpl mtx ml =
-  let mkRdmr :: ModelScript (ScriptFeature era) -> ModelScriptPurpose era -> (PlutusTx.Data, ExUnits)
-      mkRdmr _ _ = (PlutusTx.I 10, ExUnits 1 1)
+  let lookupOutput :: ModelUTxOId -> Maybe (ModelCredential 'Payment (ScriptFeature era))
+      lookupOutput ui = preview (to getModelLedger_utxos . at ui . _Just . modelTxOut_address @era . modelAddress_pmt) ml
 
-      lookupOutput :: ModelUTxOId -> Maybe (ModelUTxOId, ModelCredential 'Payment (ScriptFeature era))
-      lookupOutput ui = (,) ui <$> preview (to getModelLedger_utxos . at ui . _Just . modelTxOut_address @era . modelAddress_pmt) ml
-
-      matchDCert :: ModelDCert era -> Maybe (ModelScriptPurpose era, ModelCredential 'Witness (ScriptFeature era))
-      matchDCert cert = (,) (ModelScriptPurpose_Certifying cert) <$> modelCWitness cert
-
-      witnessMint :: ModelValueVars era (ValueFeature era) -> (Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False)), Map.Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits))
+      witnessMint :: ModelScript (ScriptFeature era) -> Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False))
       witnessMint = \case
-        ModelValue_MA (modelPolicy, _) -> case modelPolicy of
-          ModelScript_Timelock tl -> foldMap (\wit -> (Set.singleton wit, Map.empty)) (modelScriptNeededSigs tl)
-          ModelScript_PlutusV1 _s1 ->
-            let sp = ModelScriptPurpose_Minting modelPolicy
-             in (Set.empty, Map.singleton sp (mkRdmr modelPolicy sp))
+        ModelScript_Timelock tl -> foldMap (\wit -> Set.singleton wit) (modelScriptNeededSigs tl)
+        ModelScript_PlutusV1 _s1 -> Set.empty
 
       witnessCredential ::
-        ModelScriptPurpose era ->
         ModelCredential k (ScriptFeature era) ->
-        ( Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False)),
-          Map.Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits)
-        )
-      witnessCredential msp = \case
-        ModelKeyHashObj k -> (Set.singleton (ModelKeyHashObj k), Map.empty)
-        ModelScriptHashObj s -> (Set.empty, Map.singleton msp (mkRdmr (ModelScript_PlutusV1 s) msp))
+        Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False))
+      witnessCredential = \case
+        ModelKeyHashObj k -> Set.singleton (ModelKeyHashObj k)
+        ModelScriptHashObj s -> Set.empty
 
-      witnessGenesisDelegates = (Set.fromList $ fmap coerceKeyRole' $ toListOf (modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_genDelegs . folded) ml, Map.empty)
+      -- TODO: this unconditionally uses all genDelegs; but should probably use
+      -- the genDelegs already on the tx, if they meet quorum; and should expose
+      -- the exta degrees of freedom to the caller otherwise.
+      witnessGenesisDelegates = Set.fromList $ fmap coerceKeyRole' $ toListOf (modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_genDelegs . folded) ml
 
       witnessSigs :: Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False))
-      redeemers :: Map.Map (ModelScriptPurpose era) (PlutusTx.Data, ExUnits)
-      (witnessSigs, redeemers) =
-        foldMap (uncurry witnessCredential . first ModelScriptPurpose_Spending) (mapMaybe lookupOutput $ Set.toList $ _mtxInputs mtx)
-          <> foldMap (uncurry witnessCredential) (mapMaybe matchDCert $ _mtxDCert mtx)
-          <> foldMapOf (traverse . _ModelRegisterPool . modelPoolParams_owners . traverse) ((,Map.empty) . Set.singleton . coerceKeyRole') (_mtxDCert mtx)
-          <> foldMap (const witnessGenesisDelegates) (mapMaybe (preview _ModelMIR) $ _mtxDCert mtx)
-          <> foldMap (uncurry witnessCredential . (ModelScriptPurpose_Rewarding &&& id)) (Map.keys $ _mtxWdrl mtx)
-          <> fromSupportsMint mempty (foldMap witnessMint . unModelValue) (_mtxMint mtx)
+      witnessSigs =
+        foldMap witnessCredential (mapMaybe lookupOutput $ Map.keys $ _mtxInputs mtx)
+          <> foldMap witnessCredential (mapMaybe (modelCWitness . fst) $ _mtxDCert mtx)
+          <> foldMapOf (traverse . _1 . _ModelRegisterPool . modelPoolParams_owners . traverse) (Set.singleton . coerceKeyRole') (_mtxDCert mtx)
+          <> (if (has (modelDCerts . _ModelMIR) mtx) then witnessGenesisDelegates else mempty)
+          <> foldMap witnessCredential (Map.keys $ _mtxWdrl mtx)
+          <> fromSupportsMint mempty (foldMap witnessMint . Map.keys) (_mtxMint mtx)
           <> fromSupportsPlutus
             mempty
-            (foldMap (uncurry witnessCredential . first ModelScriptPurpose_Spending) . mapMaybe lookupOutput . Set.toList)
+            (foldMap witnessCredential . mapMaybe lookupOutput . Set.toList)
             (_mtxCollateral mtx)
-   in (witnessSigs, redeemers)
+   in witnessSigs
 
 -- apportion a container with weights.  this doesn't normalize the container, if
 -- the weights don't total unity, then the result will not total the given
