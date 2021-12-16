@@ -831,6 +831,26 @@ decodeNewEpochState =
     <*! Ann From
     <*! Ann From
 
+instance
+  ( Era era,
+    FromCBOR (Core.PParams era),
+    FromSharedCBOR (Annotator (Core.TxOut era)),
+    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
+    FromCBOR (Core.Value era),
+    FromCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  FromCBOR (Annotator (NewEpochState era))
+  where
+  fromCBOR = do
+    decode $
+      Ann (RecD NewEpochState)
+        <*! Ann From
+        <*! Ann From
+        <*! Ann From
+        <*! From
+        <*! Ann From
+        <*! Ann From
+
 getGKeys ::
   NewEpochState era ->
   Set (KeyHash 'Genesis (Crypto era))

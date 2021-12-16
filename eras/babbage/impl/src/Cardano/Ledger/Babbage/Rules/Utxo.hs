@@ -76,12 +76,12 @@ import Data.Coders
     Encode (..),
     Wrapped (Open),
     decode,
-    decodeList,
+    decodeAnnList,
     decodeSet,
     encode,
     encodeFoldable,
     (!>),
-    (<!),
+    (<!), (<*!), Annotator (Annotator)
   )
 import Data.Coerce (coerce)
 import Data.Foldable (foldl', toList)
@@ -571,41 +571,46 @@ encFail NoCollateralInputs =
 
 decFail ::
   ( Era era,
-    FromCBOR (Core.TxOut era),
+    FromCBOR (Annotator (Core.TxOut era)),
     FromCBOR (Core.Value era),
-    FromCBOR (PredicateFailure (Core.EraRule "UTXOS" era))
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXOS" era)))
   ) =>
   Word ->
-  Decode 'Open (UtxoPredicateFailure era)
-decFail 0 = SumD BadInputsUTxO <! D (decodeSet fromCBOR)
-decFail 1 = SumD OutsideValidityIntervalUTxO <! From <! From
-decFail 2 = SumD MaxTxSizeUTxO <! From <! From
-decFail 3 = SumD InputSetEmptyUTxO
-decFail 4 = SumD FeeTooSmallUTxO <! From <! From
-decFail 5 = SumD ValueNotConservedUTxO <! From <! From
-decFail 6 = SumD OutputTooSmallUTxO <! D (decodeList fromCBOR)
-decFail 7 = SumD UtxosFailure <! From
-decFail 8 = SumD WrongNetwork <! From <! D (decodeSet fromCBOR)
-decFail 9 = SumD WrongNetworkWithdrawal <! From <! D (decodeSet fromCBOR)
-decFail 10 = SumD OutputBootAddrAttrsTooBig <! D (decodeList fromCBOR)
-decFail 11 = SumD TriesToForgeADA
-decFail 12 = SumD OutputTooBigUTxO <! D (decodeList fromCBOR)
-decFail 13 = SumD InsufficientCollateral <! From <! From
-decFail 14 = SumD ScriptsNotPaidUTxO <! From
-decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
-decFail 16 = SumD CollateralContainsNonADA <! From
-decFail 17 = SumD WrongNetworkInTxBody <! From <! From
-decFail 18 = SumD OutsideForecast <! From
-decFail 19 = SumD TooManyCollateralInputs <! From <! From
-decFail 20 = SumD NoCollateralInputs
+  Decode 'Open (Annotator (UtxoPredicateFailure era))
+decFail 0 = Ann $ SumD BadInputsUTxO <! D (decodeSet fromCBOR)
+decFail 1 = Ann $ SumD OutsideValidityIntervalUTxO <! From <! From
+decFail 2 = Ann $ SumD MaxTxSizeUTxO <! From <! From
+decFail 3 = Ann $ SumD InputSetEmptyUTxO
+decFail 4 = Ann $ SumD FeeTooSmallUTxO <! From <! From
+decFail 5 = Ann $ SumD ValueNotConservedUTxO <! From <! From
+decFail 6 = SumD (pure OutputTooSmallUTxO) <*! D (decodeAnnList fromCBOR)
+decFail 7 = SumD (pure UtxosFailure) <*! From
+decFail 8 = Ann $ SumD WrongNetwork <! From <! D (decodeSet fromCBOR)
+decFail 9 = Ann $ SumD WrongNetworkWithdrawal <! From <! D (decodeSet fromCBOR)
+decFail 10 = SumD (pure OutputBootAddrAttrsTooBig) <*! D (decodeAnnList fromCBOR)
+decFail 11 = Ann $ SumD TriesToForgeADA
+decFail 12 = SumD (pure OutputTooBigUTxO) <*! D (do
+    xs <- decodeAnnList $ do 
+      (a, b, Annotator fc) <- fromCBOR
+      pure $ Annotator $ \fbs -> (a, b, fc fbs)
+    pure xs
+  )
+decFail 13 = Ann $ SumD InsufficientCollateral <! From <! From
+decFail 14 = SumD (pure ScriptsNotPaidUTxO) <*! From
+decFail 15 = Ann $ SumD ExUnitsTooBigUTxO <! From <! From
+decFail 16 = Ann $ SumD CollateralContainsNonADA <! From
+decFail 17 = Ann $ SumD WrongNetworkInTxBody <! From <! From
+decFail 18 = Ann $ SumD OutsideForecast <! From
+decFail 19 = Ann $ SumD TooManyCollateralInputs <! From <! From
+decFail 20 = Ann $ SumD NoCollateralInputs
 decFail n = Invalid n
 
 instance
   ( Era era,
-    FromCBOR (Core.TxOut era),
+    FromCBOR (Annotator (Core.TxOut era)),
     FromCBOR (Core.Value era),
-    FromCBOR (PredicateFailure (Core.EraRule "UTXOS" era))
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXOS" era)))
   ) =>
-  FromCBOR (UtxoPredicateFailure era)
+  FromCBOR (Annotator (UtxoPredicateFailure era))
   where
   fromCBOR = decode (Summands "UtxoPredicateFailure" decFail)

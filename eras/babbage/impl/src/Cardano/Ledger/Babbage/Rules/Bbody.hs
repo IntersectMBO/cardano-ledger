@@ -111,6 +111,18 @@ instance
       dec 1 = SumD TooManyExUnits <! From <! From
       dec n = Invalid n
 
+instance
+  ( Typeable era,
+    FromCBOR (Annotator (BbodyPredicateFailure era))
+  ) =>
+  FromCBOR (Annotator (BabbageBbodyPredFail era))
+  where
+  fromCBOR = decode (Summands "BabbageBbodyPredFail" dec)
+    where
+      dec 0 = SumD (pure ShelleyInBabbagePredFail) <*! From
+      dec 1 = Ann $ SumD TooManyExUnits <! From <! From
+      dec n = Ann $ Invalid n
+
 -- ========================================
 -- The STS instance
 

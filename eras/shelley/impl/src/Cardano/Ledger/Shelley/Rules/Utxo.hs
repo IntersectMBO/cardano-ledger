@@ -119,6 +119,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+import Data.Coders (Annotator)
 
 data UTXO era
 

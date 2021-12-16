@@ -29,13 +29,13 @@ module Cardano.Ledger.Babbage.Data
   )
 where
 
+import Cardano.Ledger.Alonzo.Data ()
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (..), peekTokenType, withSlice)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Language (Language (..))
 import Cardano.Ledger.Babbage.Scripts (Script (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
   ( EraIndependentAuxiliaryData,
@@ -49,8 +49,6 @@ import Cardano.Ledger.SafeHash
   )
 import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.Shelley.Metadata (Metadatum)
-import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
-import qualified Codec.Serialise as Cborg (Serialise (..))
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (toShort)
 import Data.Coders
@@ -71,15 +69,15 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 -- It is imported from the Plutus package, but it needs a few additional
 -- instances to also work in the ledger.
 
-instance FromCBOR (Annotator Plutus.Data) where
-  fromCBOR = pure <$> Cborg.decode
+-- instance FromCBOR (Annotator Plutus.Data) where
+--   fromCBOR = pure <$> Cborg.decode
+-- 
+-- instance ToCBOR Plutus.Data where
+--   toCBOR = Cborg.encode
 
-instance ToCBOR Plutus.Data where
-  toCBOR = Cborg.encode
-
-deriving anyclass instance NoThunks Plutus.BuiltinByteString
-
-deriving instance NoThunks Plutus.Data
+-- deriving anyclass instance NoThunks Plutus.BuiltinByteString
+-- 
+-- deriving instance NoThunks Plutus.Data
 
 -- ============================================================================
 -- the newtype Data is a wrapper around the type that Plutus expects as data.
@@ -121,9 +119,9 @@ dataHashSize :: StrictMaybe (DataHash c) -> Integer
 dataHashSize SNothing = 0
 dataHashSize (SJust _) = 10
 
-instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
-  heapWords SNothing = heapWords0
-  heapWords (SJust a) = heapWords1 a
+-- instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
+--   heapWords SNothing = heapWords0
+--   heapWords (SJust a) = heapWords1 a
 
 -- =============================================================================
 -- Version without serialized bytes

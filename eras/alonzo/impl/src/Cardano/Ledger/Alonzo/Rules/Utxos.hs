@@ -12,6 +12,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE FlexibleInstances #-}
 
 module Cardano.Ledger.Alonzo.Rules.Utxos
   ( UTXOS,
@@ -366,6 +367,19 @@ decUtxosPredicateFailure 0 = Ann $ SumD ValidationTagMismatch <! From <! From
 decUtxosPredicateFailure 1 = Ann $ SumD (CollectErrors @era) <! From
 decUtxosPredicateFailure 2 = SumD (pure UpdateFailure) <*! From
 decUtxosPredicateFailure n = Ann $ Invalid n
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "PPUP" era)))
+  ) =>
+  FromCBOR (Annotator (UtxosPredicateFailure era))
+  where
+  fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
+    where
+      dec 0 = Ann $ SumD ValidationTagMismatch <! From <! From
+      dec 1 = Ann $ SumD (CollectErrors @era) <! From
+      dec 2 = SumD (pure UpdateFailure) <*! From
+      dec n = Ann $ Invalid n
 
 deriving stock instance
   ( Shelley.TransUTxOState Show era,

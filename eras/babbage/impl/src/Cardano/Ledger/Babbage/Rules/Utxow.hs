@@ -193,6 +193,34 @@ decodePredFail 6 = SumD UnspendableUTxONoDatumHash <! From
 decodePredFail 7 = SumD ExtraRedeemers <! From
 decodePredFail n = Invalid n
 
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXO" era))),
+    Typeable (Core.Script era),
+    Typeable (Core.AuxiliaryData era)
+  ) =>
+  FromCBOR (Annotator (BabbagePredFail era))
+  where
+  fromCBOR = decode (Summands "(BabbagePredFail" decodePredFailA)
+
+decodePredFailA ::
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXO" era))), -- TODO, we should be able to get rid of this constraint
+    Typeable (Core.Script era),
+    Typeable (Core.AuxiliaryData era)
+  ) =>
+  Word ->
+  Decode 'Open (Annotator (BabbagePredFail era))
+decodePredFailA 0 = SumD (pure WrappedShelleyEraFailure) <*! D fromCBOR
+decodePredFailA 1 = Ann $ SumD MissingRedeemers <! From
+decodePredFailA 2 = Ann $ SumD MissingRequiredDatums <! From <! From
+decodePredFailA 3 = Ann $ SumD NonOutputSupplimentaryDatums <! From <! From
+decodePredFailA 4 = Ann $ SumD PPViewHashesDontMatch <! From <! From
+decodePredFailA 5 = Ann $ SumD MissingRequiredSigners <! From
+decodePredFailA 6 = Ann $ SumD UnspendableUTxONoDatumHash <! From
+decodePredFailA 7 = Ann $ SumD ExtraRedeemers <! From
+decodePredFailA n = Ann $ Invalid n
+
 -- =============================================
 
 -- | given the "txscripts" field of the Witnesses, compute the set of languages used in a transaction
