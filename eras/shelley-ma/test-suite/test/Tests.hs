@@ -1,10 +1,15 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Main where
 
+import Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER)
+import Cardano.Ledger.ShelleyMA (ShelleyMAEra)
+import qualified Cardano.Protocol.TPraos.Rules.Tickn as TPraos
 import Test.Cardano.Ledger.Allegra.ScriptTranslation (testScriptPostTranslation)
 import Test.Cardano.Ledger.Allegra.Translation (allegraTranslationTests)
 import Test.Cardano.Ledger.AllegraEraGen ()
@@ -27,6 +32,8 @@ type AL = LEDGER (AllegraEra TestCrypto)
 type M = MaryEra TestCrypto
 
 type ML = LEDGER (MaryEra TestCrypto)
+
+type instance Core.EraRule "TICKN" (ShelleyMAEra _ma _c) = TPraos.TICKN
 
 tests :: TestTree
 tests = askOption $ \case

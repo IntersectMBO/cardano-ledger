@@ -37,9 +37,11 @@ import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader
-  ( LastAppliedBlock (..),
+  ( HashHeader (..),
+    LastAppliedBlock (..),
     hashHeaderToNonce,
   )
+import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition

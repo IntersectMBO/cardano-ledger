@@ -108,6 +108,10 @@ import qualified Cardano.Ledger.Shelley.Rules.Pool as STS
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as STS
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as STS
 import Cardano.Ledger.Shelley.Tx (WitnessSetHKD (WitnessSet), hashScript)
+import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
+import qualified Cardano.Protocol.TPraos.BHeader as TP
+import qualified Cardano.Protocol.TPraos.OCert as TP
+import qualified Cardano.Protocol.TPraos.Rules.Overlay as STS
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as STS
 import Cardano.Slotting.Block (BlockNo (..))
@@ -199,7 +203,7 @@ instance Mock crypto => Arbitrary (BHeader crypto) where
     bodyHash <- arbitrary
     let kesPeriod = 1
         keyRegKesPeriod = 1
-        ocert = mkOCert allPoolKeys 1 (KESPeriod kesPeriod)
+        ocert = mkOCert allPoolKeys 1 (TP.KESPeriod kesPeriod)
     return $
       mkBlockHeader
         prevHash
@@ -231,8 +235,8 @@ instance CC.Crypto crypto => Arbitrary (BootstrapWitness crypto) where
     attributes <- arbitrary
     pure $ BootstrapWitness key sig chainCode attributes
 
-instance CC.Crypto crypto => Arbitrary (HashHeader crypto) where
-  arbitrary = HashHeader <$> genHash
+instance CC.Crypto crypto => Arbitrary (TP.HashHeader crypto) where
+  arbitrary = TP.HashHeader <$> genHash
 
 instance (Typeable kr, CC.Crypto crypto) => Arbitrary (WitVKey kr crypto) where
   arbitrary =
@@ -609,7 +613,7 @@ instance Arbitrary a => Arbitrary (StrictMaybe a) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance CC.Crypto crypto => Arbitrary (OBftSlot crypto) where
+instance CC.Crypto crypto => Arbitrary (STS.OBftSlot crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
@@ -876,7 +880,7 @@ genCoherentBlock = do
   epochNonce <- arbitrary :: Gen Nonce
   let kesPeriod = 1
       keyRegKesPeriod = 1
-      ocert = mkOCert allPoolKeys 1 (KESPeriod kesPeriod)
+      ocert = mkOCert allPoolKeys 1 (TP.KESPeriod kesPeriod)
   return $
     mkBlock
       prevHash

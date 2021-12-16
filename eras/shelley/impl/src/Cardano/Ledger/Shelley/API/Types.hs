@@ -154,32 +154,3 @@ import Cardano.Ledger.Shelley.UTxO as X
     balance,
   )
 import Cardano.Ledger.TxIn as X (TxId (..), TxIn (..))
-import Cardano.Protocol.TPraos.BHeader as X
-  ( BHBody (..),
-    BHeader (..),
-    HashHeader (..),
-    PrevHash (..),
-    bHeaderSize,
-    bhHash,
-    bhbody,
-  )
-import Cardano.Protocol.TPraos.OCert as X (KESPeriod (..), OCert (..))
-import Cardano.Protocol.TPraos.Rules.OCert as X (OCertEnv (..))
-import Cardano.Protocol.TPraos.Rules.Overlay as X
-  ( OBftSlot (..),
-    classifyOverlaySlot,
-    lookupInOverlaySchedule,
-  )
-import Cardano.Protocol.TPraos.Rules.Prtcl as X
-  ( PrtclEnv (..),
-    PrtclPredicateFailure (..),
-    PrtclState (..),
-    PrtlSeqFailure (..),
-    prtlSeqChecks,
-  )
-import Cardano.Protocol.TPraos.Rules.Tickn as X
-  ( TICKN,
-    TicknEnv (..),
-    TicknPredicateFailure,
-    TicknState (..),
-  )

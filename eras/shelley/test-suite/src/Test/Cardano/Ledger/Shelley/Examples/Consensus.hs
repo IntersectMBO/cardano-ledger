@@ -34,10 +34,13 @@ import Cardano.Ledger.Shelley.Rules.Delegs
 import Cardano.Ledger.Shelley.Rules.Ledger
 import Cardano.Ledger.Shelley.Tx
 import Cardano.Ledger.Shelley.UTxO
+import Cardano.Protocol.TPraos.BHeader
+import Cardano.Protocol.TPraos.OCert
+import Cardano.Protocol.TPraos.Rules.Prtcl
+import Cardano.Protocol.TPraos.Rules.Tickn
 import Cardano.Slotting.Block
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot
-import Control.State.Transition.Extended
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
 import Data.Default.Class

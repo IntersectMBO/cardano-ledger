@@ -23,12 +23,16 @@ import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.BHeader
-  ( LastAppliedBlock (..),
+  ( BHeader (..),
+    LastAppliedBlock (..),
     hashHeaderToNonce,
     mkSeed,
     seedL,
   )
-import Cardano.Protocol.TPraos.OCert (currentIssueNo, kesPeriod)
+import Cardano.Protocol.TPraos.OCert (KESPeriod (..), OCertEnv (..), currentIssueNo, kesPeriod)
+import Cardano.Protocol.TPraos.Rules.Overlay (OBftSlot (..), lookupInOverlaySchedule)
+import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
+import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.SetAlgebra (dom, eval)
 import Control.State.Transition.Trace.Generator.QuickCheck (sigGen)

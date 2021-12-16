@@ -116,6 +116,7 @@ test-suite cardano-ledger-shelley-ma-test
       cardano-ledger-core,
       cardano-ledger-shelley-ma-test,
       cardano-ledger-shelley-ma,
+      cardano-protocol-tpraos,
       cardano-slotting,
       cborg,
       containers,
