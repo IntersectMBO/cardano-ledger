@@ -26,7 +26,7 @@ import Cardano.Binary
     Decoder,
     FromCBOR (..),
     ToCBOR (..),
-    encodeListLen, Annotator
+    encodeListLen,
   )
 import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes

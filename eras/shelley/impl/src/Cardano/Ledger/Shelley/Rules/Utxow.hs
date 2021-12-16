@@ -115,7 +115,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
-import Data.Coders (Annotator)
 
 -- =========================================
 

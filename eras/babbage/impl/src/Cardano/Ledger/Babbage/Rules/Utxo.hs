@@ -72,7 +72,8 @@ import Control.SetAlgebra (dom, eval, (⊆), (◁), (➖))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
-  ( Decode (..),
+  ( Annotator (Annotator),
+    Decode (..),
     Encode (..),
     Wrapped (Open),
     decode,
@@ -81,7 +82,8 @@ import Data.Coders
     encode,
     encodeFoldable,
     (!>),
-    (<!), (<*!), Annotator (Annotator)
+    (<!),
+    (<*!),
   )
 import Data.Coerce (coerce)
 import Data.Foldable (foldl', toList)
@@ -589,12 +591,15 @@ decFail 8 = Ann $ SumD WrongNetwork <! From <! D (decodeSet fromCBOR)
 decFail 9 = Ann $ SumD WrongNetworkWithdrawal <! From <! D (decodeSet fromCBOR)
 decFail 10 = SumD (pure OutputBootAddrAttrsTooBig) <*! D (decodeAnnList fromCBOR)
 decFail 11 = Ann $ SumD TriesToForgeADA
-decFail 12 = SumD (pure OutputTooBigUTxO) <*! D (do
-    xs <- decodeAnnList $ do 
-      (a, b, Annotator fc) <- fromCBOR
-      pure $ Annotator $ \fbs -> (a, b, fc fbs)
-    pure xs
-  )
+decFail 12 =
+  SumD (pure OutputTooBigUTxO)
+    <*! D
+      ( do
+          xs <- decodeAnnList $ do
+            (a, b, Annotator fc) <- fromCBOR
+            pure $ Annotator $ \fbs -> (a, b, fc fbs)
+          pure xs
+      )
 decFail 13 = Ann $ SumD InsufficientCollateral <! From <! From
 decFail 14 = SumD (pure ScriptsNotPaidUTxO) <*! From
 decFail 15 = Ann $ SumD ExUnitsTooBigUTxO <! From <! From

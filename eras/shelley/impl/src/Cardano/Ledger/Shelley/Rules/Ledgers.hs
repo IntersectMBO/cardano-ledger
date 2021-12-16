@@ -55,7 +55,6 @@ import Data.Foldable (toList)
 import Data.Sequence (Seq)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Data.Coders (Annotator)
 
 data LEDGERS era
 

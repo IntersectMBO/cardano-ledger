@@ -12,7 +12,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
 
 module Cardano.Ledger.Alonzo.Rules.Utxos
   ( UTXOS,

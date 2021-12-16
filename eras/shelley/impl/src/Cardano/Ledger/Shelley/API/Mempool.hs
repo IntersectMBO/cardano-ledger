@@ -12,7 +12,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE FlexibleInstances #-}
 
 -- | Interface to the Shelley ledger for the purposes of managing a Shelley
 -- mempool.
@@ -78,7 +77,6 @@ import Data.Functor.Identity (Identity (..))
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
-import Data.Coders (decodeAnnList)
 
 -- | A newtype which indicates that a transaction has been validated against
 -- some chain state.

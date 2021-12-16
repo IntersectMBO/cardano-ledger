@@ -75,8 +75,8 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
+import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -134,8 +134,6 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
-import Control.DeepSeq (NFData (rnf), rwhnf)
-import Data.Sharing (FromSharedCBOR (..), Interns, fromNotSharedCBOR, interns)
 
 data TxOut era
   = TxOutCompact'

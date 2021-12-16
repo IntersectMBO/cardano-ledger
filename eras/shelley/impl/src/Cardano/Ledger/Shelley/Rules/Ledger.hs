@@ -28,7 +28,7 @@ import Cardano.Binary
     Decoder,
     FromCBOR (..),
     ToCBOR (..),
-    encodeListLen, Annotator
+    encodeListLen,
   )
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)

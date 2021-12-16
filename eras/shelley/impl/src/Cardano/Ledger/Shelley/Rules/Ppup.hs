@@ -45,7 +45,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
-import Data.Coders (Annotator)
 
 data PPUP era
 

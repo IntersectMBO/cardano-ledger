@@ -29,8 +29,8 @@ module Cardano.Ledger.Babbage.Data
   )
 where
 
-import Cardano.Ledger.Alonzo.Data ()
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (..), peekTokenType, withSlice)
+import Cardano.Ledger.Alonzo.Data ()
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.Babbage.Language (Language (..))
 import Cardano.Ledger.Babbage.Scripts (Script (..))
@@ -71,12 +71,12 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 
 -- instance FromCBOR (Annotator Plutus.Data) where
 --   fromCBOR = pure <$> Cborg.decode
--- 
+--
 -- instance ToCBOR Plutus.Data where
 --   toCBOR = Cborg.encode
 
 -- deriving anyclass instance NoThunks Plutus.BuiltinByteString
--- 
+--
 -- deriving instance NoThunks Plutus.Data
 
 -- ============================================================================
