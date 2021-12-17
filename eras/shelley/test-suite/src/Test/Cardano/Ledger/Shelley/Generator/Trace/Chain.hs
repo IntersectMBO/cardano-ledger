@@ -36,6 +36,7 @@ import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv, BbodyState)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
   ( HashHeader (..),
     LastAppliedBlock (..),

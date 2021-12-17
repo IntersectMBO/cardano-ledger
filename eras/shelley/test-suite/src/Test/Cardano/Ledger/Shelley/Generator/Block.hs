@@ -22,6 +22,7 @@ import Cardano.Ledger.Crypto (VRF)
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Slot (SlotNo (..))
+import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader (..),
     LastAppliedBlock (..),

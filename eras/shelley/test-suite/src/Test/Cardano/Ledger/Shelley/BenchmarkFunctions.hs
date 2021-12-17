@@ -51,7 +51,6 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (PraosCrypto)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -84,6 +83,7 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (inject))
+import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Default.Class (def)
 import qualified Data.Map as Map

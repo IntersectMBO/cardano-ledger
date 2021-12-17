@@ -21,7 +21,6 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.ByronTranslation as X
 import Cardano.Ledger.Shelley.API.Genesis as X
 import Cardano.Ledger.Shelley.API.Mempool as X
-import Cardano.Ledger.Shelley.API.Protocol as X
 import Cardano.Ledger.Shelley.API.Types as X
 import Cardano.Ledger.Shelley.API.Validation as X
 import Cardano.Ledger.Shelley.API.Wallet as X
@@ -38,7 +37,6 @@ import Data.Sharing (FromSharedCBOR, Interns, Share)
 
 class
   ( CC.Crypto (Crypto era),
-    GetLedgerView era,
     ApplyBlock era,
     ApplyTx era,
     CanStartFromGenesis era,

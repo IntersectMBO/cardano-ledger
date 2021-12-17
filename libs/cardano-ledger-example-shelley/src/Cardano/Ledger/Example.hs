@@ -33,7 +33,6 @@ import Cardano.Ledger.Shelley.API
     DState (_genDelegs),
     EpochState (EpochState),
     GenDelegs (GenDelegs),
-    GetLedgerView,
     LedgerState (LedgerState),
     NewEpochState (NewEpochState),
     PoolDistr (PoolDistr),
@@ -85,6 +84,7 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxBody (TxBody (..))
 import Cardano.Ledger.Val (Val ((<->)))
+import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.Rules.OCert (OCERT)
 import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY)
 import Cardano.Protocol.TPraos.Rules.Tickn (TICKN)

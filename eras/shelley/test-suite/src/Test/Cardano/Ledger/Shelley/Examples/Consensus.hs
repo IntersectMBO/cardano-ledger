@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.Rules.Delegs
 import Cardano.Ledger.Shelley.Rules.Ledger
 import Cardano.Ledger.Shelley.Tx
 import Cardano.Ledger.Shelley.UTxO
+import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
 import Cardano.Protocol.TPraos.OCert
 import Cardano.Protocol.TPraos.Rules.Prtcl
@@ -288,6 +289,8 @@ exampleNewEpochState ::
   forall era.
   ( ShelleyBasedEra' era,
     HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_rho" (Core.PParams era) UnitInterval,
     HasField "_tau" (Core.PParams era) UnitInterval

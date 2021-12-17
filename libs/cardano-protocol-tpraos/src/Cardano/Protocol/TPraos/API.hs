@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,6 +12,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
@@ -19,10 +21,11 @@
 --
 -- In particular, this code supports extracting the components of the ledger
 -- state needed for protocol execution, both now and in a 2k-slot window.
-module Cardano.Ledger.Shelley.API.Protocol
+module Cardano.Protocol.TPraos.API
   ( PraosCrypto,
     GetLedgerView (..),
     LedgerView (..),
+    mkInitialShelleyLedgerView,
     FutureLedgerViewError (..),
     -- $chainstate
     ChainDepState (..),
@@ -39,6 +42,9 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.VRF as VRF
+import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams' (..))
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
@@ -57,7 +63,7 @@ import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
-    GenDelegs,
+    GenDelegs (..),
     KESignable,
     KeyHash,
     KeyRole (..),
@@ -65,9 +71,11 @@ import Cardano.Ledger.Keys
     VRFSignable,
     coerceKeyRole,
   )
+import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.PoolDistr (PoolDistr (..), individualPoolStake)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     NewEpochState (..),
@@ -171,6 +179,12 @@ class
   futureLedgerView = futureView
 
 instance CC.Crypto crypto => GetLedgerView (ShelleyEra crypto)
+
+instance CC.Crypto c => GetLedgerView (AllegraEra c)
+
+instance CC.Crypto c => GetLedgerView (MaryEra c)
+
+instance CC.Crypto c => GetLedgerView (AlonzoEra c)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
@@ -513,3 +527,18 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
     f = activeSlotCoeff globals
     epochSlots = Set.fromList [a .. b]
     (a, b) = runIdentity $ epochInfoRange ei currentEpoch
+
+-- | We construct a 'LedgerView' using the Shelley genesis config in the same
+-- way as 'translateToShelleyLedgerState'.
+mkInitialShelleyLedgerView ::
+  forall c.
+  ShelleyGenesis (ShelleyEra c) ->
+  LedgerView c
+mkInitialShelleyLedgerView genesisShelley =
+  LedgerView
+    { lvD = _d . sgProtocolParams $ genesisShelley,
+      lvExtraEntropy = _extraEntropy . sgProtocolParams $ genesisShelley,
+      lvPoolDistr = PoolDistr Map.empty,
+      lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
+      lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
+    }

@@ -120,8 +120,6 @@ instance API.ShelleyEraCrypto c => API.ApplyTx (AlonzoEra c) where
 
 instance API.ShelleyEraCrypto c => API.ApplyBlock (AlonzoEra c)
 
-instance (CC.Crypto c) => API.GetLedgerView (AlonzoEra c)
-
 instance (CC.Crypto c) => Shelley.ValidateScript (AlonzoEra c) where
   isNativeScript x = not (isPlutusScript x)
   scriptPrefixTag script =

@@ -40,8 +40,6 @@ instance ShelleyEraCrypto c => ApplyTx (MaryEra c)
 
 instance ShelleyEraCrypto c => ApplyBlock (MaryEra c)
 
-instance CC.Crypto c => GetLedgerView (MaryEra c)
-
 instance Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState sg () =
     NewEpochState

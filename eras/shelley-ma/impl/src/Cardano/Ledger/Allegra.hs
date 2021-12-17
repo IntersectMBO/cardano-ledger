@@ -43,8 +43,6 @@ instance ShelleyEraCrypto c => ApplyTx (AllegraEra c)
 
 instance ShelleyEraCrypto c => ApplyBlock (AllegraEra c)
 
-instance CC.Crypto c => GetLedgerView (AllegraEra c)
-
 instance
   ( Crypto c
   ) =>

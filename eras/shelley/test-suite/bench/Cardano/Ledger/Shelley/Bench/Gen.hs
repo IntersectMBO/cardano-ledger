@@ -21,7 +21,6 @@ import Cardano.Ledger.Shelley.API
     DCert,
     DPState,
     DelplEnv,
-    GetLedgerView,
     LEDGERS,
     Tx,
   )
@@ -31,6 +30,7 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
   )
 import Cardano.Ledger.Shelley.Tx (TxIn)
+import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
