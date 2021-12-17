@@ -22,7 +22,7 @@ import Cardano.Ledger.Babbage.Scripts
     Script (..),
   )
 import Cardano.Ledger.Babbage.Tx (DataHash, ScriptPurpose (Spending), ValidatedTx (..), rdptr)
-import Cardano.Ledger.Babbage.TxBody (TxOut (..))
+import Cardano.Ledger.Babbage.TxBody (TxOut (..), datumDatahash)
 import Cardano.Ledger.Babbage.TxInfo
   ( VersionedTxInfo (..),
     exBudgetToExUnits,
@@ -171,7 +171,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         (Spending txin) -> do
           txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
           let TxOut _ _ mdh = txOut
-          dh <- note (InvalidTxIn txin) $ strictMaybeToMaybe mdh
+          dh <- note (InvalidTxIn txin) $ strictMaybeToMaybe $ datumDatahash mdh
           dat <- note (MissingDatum dh) $ Map.lookup dh dats
           pure [dat, rdmr, valContext inf sp]
         _ -> pure [rdmr, valContext inf sp]

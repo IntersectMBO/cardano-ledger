@@ -42,6 +42,7 @@ library
   import:             base, project-config
 
   exposed-modules:
+    Test.Cardano.Ledger.Babbage.Scripts
     Test.Cardano.Ledger.Babbage.Serialisation.Generators
     Test.Cardano.Ledger.Babbage.Trace
   build-depends:

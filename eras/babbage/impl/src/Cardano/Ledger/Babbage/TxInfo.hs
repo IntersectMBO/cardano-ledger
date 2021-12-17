@@ -30,7 +30,7 @@ import Cardano.Ledger.Babbage.TxBody
     vldt',
     wdrls',
   )
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage (TxBody (..), TxOut (..))
+import qualified Cardano.Ledger.Babbage.TxBody as Babbage (TxBody (..), TxOut (..), datumDatahash)
 import Cardano.Ledger.Babbage.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -224,9 +224,9 @@ txInfoOut ::
   ) =>
   Babbage.TxOut era ->
   Maybe PV1.TxOut
-txInfoOut (Babbage.TxOut addr val datahash) =
+txInfoOut (Babbage.TxOut addr val datum) =
   case transAddr addr of
-    Just ad -> Just (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
+    Just ad -> Just (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash $ Babbage.datumDatahash datum))
     Nothing -> Nothing
 
 -- ==================================

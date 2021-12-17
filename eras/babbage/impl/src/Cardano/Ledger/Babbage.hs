@@ -39,7 +39,7 @@ import qualified Cardano.Ledger.Babbage.Rules.Utxos as Babbage (UTXOS)
 import qualified Cardano.Ledger.Babbage.Rules.Utxow as Babbage (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
-import Cardano.Ledger.Babbage.TxBody (TxBody, TxOut (..))
+import Cardano.Ledger.Babbage.TxBody (TxBody, TxOut (..), Datum(..))
 import Cardano.Ledger.Babbage.TxInfo (validScript)
 import qualified Cardano.Ledger.Babbage.TxSeq as Babbage (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Babbage.TxWitness (TxWitness (..))
@@ -178,7 +178,7 @@ instance
       pp = sgProtocolParams sg
 
 instance (CC.Crypto c) => UsesTxOut (BabbageEra c) where
-  makeTxOut _proxy addr val = TxOut addr val SNothing
+  makeTxOut _proxy addr val = TxOut addr val NoDatum
 
 instance CC.Crypto c => API.CLI (BabbageEra c) where
   evaluateMinFee = minfee

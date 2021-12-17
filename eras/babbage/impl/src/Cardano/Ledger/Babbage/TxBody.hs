@@ -74,6 +74,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Crypto.Hash
+import qualified Data.Text as T
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
 import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
@@ -222,11 +223,10 @@ viewTxOut (TxOutCompactDatum' bs c d) = (addr, val, Datum d)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactDatum bs c datum) = (addr, val, SJust dh)
+viewTxOut (TxOutCompactDatum bs c d) = (addr, val, Datum d)
   where
     addr = decompactAddr bs
     val = fromCompact c
-    dh = hashData datum
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal)
   | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
     let addr = decodeAddress28 stakeRef a b c d

@@ -64,6 +64,6 @@ tests :: TestTree
 tests =
   testGroup
     "Babbage CBOR round-trip"
-    [ testProperty "alonzo/TxBody" $
+    [ testProperty "babbage/TxBody" $
         trippingAnn @(TxBody (BabbageEra C_Crypto))
     ]

@@ -134,6 +134,7 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
+import qualified Data.Text as T
 
 data TxOut era
   = TxOutCompact'
@@ -701,7 +702,7 @@ instance
           <$> fromCBOR
           <*> decodeNonNegative
           <*> fromCBOR
-      Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
+      Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
 encodeTxBodyRaw ::
   ( Era era,
