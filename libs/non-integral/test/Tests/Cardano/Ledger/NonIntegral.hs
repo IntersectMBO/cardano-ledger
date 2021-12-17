@@ -101,8 +101,14 @@ pow_Diff z (y, x) = ((z *** (1 / x)) *** y, (z *** y) *** (1 / x))
 leader :: (RealFrac a, Show a, Enum a) => a -> a -> a
 leader f sigma = 1 - ((1 - f) *** sigma)
 
-taylor :: (RealFrac a, Show a, Enum a) => a -> a -> a -> a -> Bool
-taylor f a p sigma = case taylorExpCmp 3 (1 / q) (-sigma * c) of
+taylorExpCmpCheck :: RealFrac a => a -> a -> a -> Bool
+taylorExpCmpCheck a p s = case taylorExpCmp 3 p s of
+  ABOVE _ _ -> p >= a
+  BELOW _ _ -> p < a
+  MaxReached _ -> False
+
+praosLeaderCheck :: (RealFrac a, Show a, Enum a) => a -> a -> a -> a -> Bool
+praosLeaderCheck f a p sigma = case taylorExpCmp 3 (1 / q) (-sigma * c) of
   ABOVE _ _ -> p >= a
   BELOW _ _ -> p < a
   MaxReached _ -> False
@@ -152,11 +158,18 @@ prop_FPfindD (Positive x) = findD x === True
 prop_FPlnPow :: UnitInterval FixedPoint -> UnitInterval FixedPoint -> Property
 prop_FPlnPow (Unit x) (Unit y) = (x > 0) ==> (log_pow x y ~= epsFP) === True
 
+prop_neg_taylorExpCmp :: UnitInterval FixedPoint -> UnitInterval FixedPoint -> Property
+prop_neg_taylorExpCmp (Unit p) (Unit s) =
+  both (\x -> 0 < x && x < 1) (p, s)
+    ==> taylorExpCmpCheck (exp' sm) p sm
+  where
+    sm = -s
+
 prop_LeaderCmp :: UnitInterval FixedPoint -> UnitInterval FixedPoint -> Property
 prop_LeaderCmp (Unit p) (Unit s) =
   both (\x -> 0 < x && x < 1) (p, s)
     ==> classify (p < a) "is leader"
-    $ taylor f a p s
+    $ praosLeaderCheck f a p s
   where
     a = leader f s
     f = 1 / 10
@@ -376,6 +389,13 @@ property_bound_findE_fp =
     "check bound of `findE`"
     1000
     prop_FPfindD
+
+property_negative_taylorExpCmp_comparison :: IO ()
+property_negative_taylorExpCmp_comparison =
+  qcWithLabel
+    "property negative taylorExpCmp check"
+    10000
+    prop_neg_taylorExpCmp
 
 property_praos_leader_comparison :: IO ()
 property_praos_leader_comparison =
