@@ -15,7 +15,7 @@
 module Test.Cardano.Ledger.Model.Generators.Chain
   ( genModel,
   )
-  where
+where
 
 import Cardano.Ledger.BaseTypes
   ( Globals (..),

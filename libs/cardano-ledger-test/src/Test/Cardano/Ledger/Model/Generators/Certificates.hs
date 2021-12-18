@@ -27,7 +27,6 @@ import Control.Lens
     view,
   )
 import Control.Monad.Reader.Class (MonadReader, asks)
-import Data.Proxy(Proxy(..))
 import qualified Control.Monad.State.Strict as State
 import Data.Bool (bool)
 import Data.Coerce (coerce)
@@ -42,6 +41,7 @@ import Data.Maybe
     mapMaybe,
   )
 import Data.Monoid (Ap (..))
+import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import qualified Data.Set as Set
 import Data.Void (Void)
@@ -72,13 +72,13 @@ import Test.Cardano.Ledger.Model.BaseTypes
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet (..),
-    ifSupportsPlutus,
     FeatureTag (..),
     ScriptFeature,
     ScriptFeatureTag (..),
     TyScriptFeature (..),
     TyValueExpected (..),
     ValueFeatureTag (..),
+    ifSupportsPlutus,
   )
 import Test.Cardano.Ledger.Model.Generators
   ( AllowScripts,
@@ -93,9 +93,8 @@ import Test.Cardano.Ledger.Model.Generators.Address
     genStakingCredential,
   )
 import Test.Cardano.Ledger.Model.Generators.Script
-  ( guardHaveCollateral,
-    genRedeemer,
-    genScriptData,
+  ( genRedeemer,
+    guardHaveCollateral,
   )
 import Test.Cardano.Ledger.Model.Generators.Value (unfoldModelValue)
 import Test.Cardano.Ledger.Model.LedgerState
@@ -130,14 +129,14 @@ import Test.Cardano.Ledger.Model.Snapshot
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
-    ModelScriptPurpose(..),
-    ModelRedeemer,
     ModelDelegCert (..),
     ModelDelegation (..),
     ModelMIRCert (..),
     ModelMIRTarget (..),
     ModelPoolCert (..),
     ModelPoolParams (..),
+    ModelRedeemer,
+    ModelScriptPurpose (..),
   )
 import Test.Cardano.Ledger.Model.UTxO
   ( ModelUTxOMap (..),
@@ -209,19 +208,17 @@ genDelegation allowScripts = do
       (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ss . modelSnapshots_pstake . snapshotQueue_mark . modelSnapshot_pools)
   let registeredStake' = Set.filter (isJust . guardHaveCollateral allowScripts) registeredStake
   pure
-    [ (1, do
-            cert' <- ModelDelegation
+    [ ( 1,
+        do
+          cert' <-
+            ModelDelegation
               <$> elements (Set.toList registeredStake')
               <*> elements (Map.keys pools)
-            let cert = ModelCertDeleg $ ModelDelegate cert'
-            rdmr <- genRedeemer $ ModelScriptPurpose_Certifying cert
-
-            pure
-              ( cert
-              , rdmr
-              )
-        )
-        | not (null registeredStake'),
+          let cert = ModelCertDeleg $ ModelDelegate cert'
+          rdmr <- genRedeemer $ ModelScriptPurpose_Certifying cert
+          pure (cert, rdmr)
+      )
+      | not (null registeredStake'),
         not (null $ Map.keys pools)
     ]
 
@@ -293,7 +290,7 @@ genDCert ::
   forall st era m.
   HasGenModelM st era m =>
   AllowScripts (ScriptFeature era) ->
-  m (ModelDCert era, ModelRedeemer(ScriptFeature era))
+  m (ModelDCert era, ModelRedeemer (ScriptFeature era))
 genDCert allowScripts = do
   frequency
     =<< foldA
@@ -312,7 +309,6 @@ genDCert allowScripts = do
     foldA :: forall t w m'. (Foldable t, Monoid w, Applicative m') => t (m' w) -> m' w
     foldA = foldMapA id
     {-# INLINE foldA #-}
-
 
 foldMapA :: forall t w m a. (Foldable t, Monoid w, Applicative m) => (a -> m w) -> t a -> m w
 foldMapA = coerce (foldMap :: (a -> Ap m w) -> t a -> Ap m w)

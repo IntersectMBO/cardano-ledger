@@ -33,8 +33,8 @@ import Test.Cardano.Ledger.Model.FeatureSet
     RequiredFeatures (..),
     ScriptFeature,
     ValueFeature,
+    bifoldMapSupportsFeature,
     filterSupportsPlutus,
-    fromSupportsPlutus,
     hasKnownValueFeature,
     ifSupportsPlutus,
   )
@@ -103,7 +103,7 @@ modelMinUTxOCoins pp txout = case runIdentity $ _modelPParams_coinsPerUTxOWord p
 -- TODO: this is not at all correct, just a placeholder
 modelUTxOEntrySize :: ModelTxOut era -> Integer
 modelUTxOEntrySize (ModelTxOut _a v d) =
-  utxoEntrySizeWithoutVal + Val.size v' + fromSupportsPlutus (\() -> 0) modelDataHashSize d
+  utxoEntrySizeWithoutVal + Val.size v' + bifoldMapSupportsFeature (\() -> 0) modelDataHashSize d
   where
     v' = unModelValue v
     utxoEntrySizeWithoutVal = 29 -- according to spec, anways.

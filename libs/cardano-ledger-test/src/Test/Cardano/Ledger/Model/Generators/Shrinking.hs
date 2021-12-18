@@ -1,13 +1,13 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLists #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
@@ -22,9 +22,9 @@ import Cardano.Slotting.Slot (EpochNo (..))
 import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Lens
   ( Lens',
-    ifoldl',
-    _Just,
+    has,
     ifoldMap,
+    ifoldl',
     imap,
     itraverse,
     ix,
@@ -33,13 +33,12 @@ import Control.Lens
     over,
     preview,
     use,
-    view,
     (%=),
     (<>=),
     (^.),
     _1,
-    has,
     _2,
+    _Just,
   )
 import Control.Monad (ap)
 import Control.Monad.Reader.Class (MonadReader (..), asks)
@@ -51,7 +50,7 @@ import Data.Functor.Reverse (Reverse (..))
 import Data.Group.GrpMap (GrpMap, mkGrpMap)
 import qualified Data.List as List
 import qualified Data.Map as Map
-import Data.Maybe (catMaybes, fromMaybe, isNothing, mapMaybe)
+import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Any (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -64,16 +63,12 @@ import Test.Cardano.Ledger.Model.API
     mkModelLedger,
     modelGenesis_utxos,
   )
-import Test.Cardano.Ledger.Model.BaseTypes
-  ( ModelPoolId (..),
-    unModelValue,
-  )
+import Test.Cardano.Ledger.Model.BaseTypes (ModelPoolId (..))
 import Test.Cardano.Ledger.Model.FeatureSet
-  ( KnownRequiredFeatures,
+  ( FeatureSupport (..),
+    KnownRequiredFeatures,
     ScriptFeature,
-    traverseSupportsPlutus,
-    fromSupportsMint,
-    fromSupportsPlutus,
+    traverseSupportsFeature,
   )
 import Test.Cardano.Ledger.Model.Fixup (fixupValues)
 import Test.Cardano.Ledger.Model.Generators ()
@@ -90,23 +85,21 @@ import Test.Cardano.Ledger.Model.Script
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
-    mkMintValue,
-    modelRedeemerPresent,
     ModelDelegCert (..),
     ModelDelegation (..),
     ModelPoolCert (..),
     ModelPoolParams (..),
-    ModelScriptPurpose (..),
     ModelTx (..),
     ModelTxId,
     getModelTxId,
+    mkMintValue,
     modelIsValid,
+    modelRedeemerPresent,
     modelTx_collateral,
     modelTx_dCert,
     modelTx_inputs,
     modelTx_mint,
     modelTx_outputs,
-    modelTx_redeemers,
     modelTx_wdrl,
     modelTxs,
   )
@@ -114,9 +107,6 @@ import Test.Cardano.Ledger.Model.TxOut
   ( ModelTxOut (..),
     ModelUTxOId,
     modelTxOut_data,
-  )
-import Test.Cardano.Ledger.Model.Value
-  ( ModelValueF (..),
   )
 
 -- | Shrink the epochs down to txns and each element will have its own prefix of txns, including all txns that came before.
@@ -235,7 +225,7 @@ discardOneTx epochNo tx = do
   if (Set.member (getModelTxId tx) txIds || not (null $ Set.intersection (Set.fromList $ fmap fst $ _mtxOutputs tx) uTxOIds))
     then do
       _1 <>= Map.keysSet (_mtxInputs tx)
-      _1 <>= fromSupportsPlutus mempty id (_mtxCollateral tx)
+      _1 <>= foldSupportsFeature (_mtxCollateral tx)
       dcerts' <- fmap catMaybes $ traverse (discardDCert epochNo $ getModelTxId tx) $ _mtxDCert tx
       wdrls' <- fmap (Map.mapMaybe id) $ itraverse (discardWdrls (getModelTxId tx)) $ _mtxWdrl tx
       pure $ Just tx {_mtxDCert = dcerts', _mtxWdrl = wdrls'}
@@ -271,42 +261,43 @@ lookupEpochProv k epochNo prov =
    in dep
 
 discardDCert :: forall era m a. (MonadReader (ModelProvenanceState era) m, State.MonadState TxDependencies m) => EpochNo -> ModelTxId -> (ModelDCert era, a) -> m (Maybe (ModelDCert era, a))
-discardDCert epochNo txNo (dcert, rdmr) = fmap (, rdmr) <$> case dcert of
-  ModelCertDeleg cert ->
-    case cert of
-      ModelRegKey a -> do
-        provReg <- asks _modelProvenanceState_regStake
-        pure $
-          let dep = lookupEpochProv a epochNo provReg
-           in if (Just txNo == dep)
-                then Just dcert
-                else Nothing
-      ModelDeRegKey _ ->
-        -- TODO: This depends on rewards being zero, not currently tracked
-        pure $ Just dcert
-      ModelDelegate (ModelDelegation stake pool) -> do
-        provDeleg <- asks _modelProvenanceState_deleg
-        let dep = lookupEpochProv stake epochNo provDeleg
-        if (Just txNo == dep)
-          then do
-            provStake <- asks _modelProvenanceState_regStake
-            provPool <- asks _modelProvenanceState_regPool
-            for_ (lookupEpochProv stake epochNo provStake) $ \txId' -> _2 %= Set.insert txId'
-            for_ (lookupEpochProv pool epochNo provPool) $ \txId' -> _2 %= Set.insert txId'
-            pure $ Just dcert
-          else pure Nothing
-      ModelDCertGenesis _ -> pure $ Just dcert
-      ModelDCertMir _ -> pure $ Just dcert
-  ModelCertPool cert ->
-    case cert of
-      ModelRegPool a -> do
-        provReg <- asks _modelProvenanceState_regPool
-        pure $
-          if (Just txNo == lookupEpochProv (_mppId a) epochNo provReg)
-            || (Just txNo == lookupEpochProv (_mppId a) (epochNo + 1) provReg)
-            then Just dcert
-            else Nothing
-      ModelRetirePool _ _ -> pure $ Just dcert
+discardDCert epochNo txNo (dcert, rdmr) =
+  fmap (,rdmr) <$> case dcert of
+    ModelCertDeleg cert ->
+      case cert of
+        ModelRegKey a -> do
+          provReg <- asks _modelProvenanceState_regStake
+          pure $
+            let dep = lookupEpochProv a epochNo provReg
+             in if (Just txNo == dep)
+                  then Just dcert
+                  else Nothing
+        ModelDeRegKey _ ->
+          -- TODO: This depends on rewards being zero, not currently tracked
+          pure $ Just dcert
+        ModelDelegate (ModelDelegation stake pool) -> do
+          provDeleg <- asks _modelProvenanceState_deleg
+          let dep = lookupEpochProv stake epochNo provDeleg
+          if (Just txNo == dep)
+            then do
+              provStake <- asks _modelProvenanceState_regStake
+              provPool <- asks _modelProvenanceState_regPool
+              for_ (lookupEpochProv stake epochNo provStake) $ \txId' -> _2 %= Set.insert txId'
+              for_ (lookupEpochProv pool epochNo provPool) $ \txId' -> _2 %= Set.insert txId'
+              pure $ Just dcert
+            else pure Nothing
+        ModelDCertGenesis _ -> pure $ Just dcert
+        ModelDCertMir _ -> pure $ Just dcert
+    ModelCertPool cert ->
+      case cert of
+        ModelRegPool a -> do
+          provReg <- asks _modelProvenanceState_regPool
+          pure $
+            if (Just txNo == lookupEpochProv (_mppId a) epochNo provReg)
+              || (Just txNo == lookupEpochProv (_mppId a) (epochNo + 1) provReg)
+              then Just dcert
+              else Nothing
+        ModelRetirePool _ _ -> pure $ Just dcert
 
 discardUnnecessaryTxns ::
   forall era.
@@ -405,7 +396,7 @@ txPossibleOutputs ::
   ModelTx era' ->
   (Set.Set ModelUTxOId, Set.Set ModelUTxOId, [(ModelUTxOId, ModelTxOut era')])
 txPossibleOutputs tx =
-  let collateral = fromSupportsPlutus (\() -> Set.empty) id $ tx ^. modelTx_collateral
+  let collateral = foldSupportsFeature $ tx ^. modelTx_collateral
       txIns = Map.keysSet $ tx ^. modelTx_inputs
    in if modelIsValid tx
         then (txIns, collateral, tx ^. modelTx_outputs)
@@ -448,16 +439,16 @@ collapseOneTx lastTx tx = do
   allGenesis <- use $ cts_Gen . modelGenesis_utxos
   reqUTxOs <- use cts_RequiredUTxOs
   let genesisUTxOIds = Map.keysSet allGenesis
-      txInputs = Set.union
-        (Map.keysSet $ tx ^. modelTx_inputs)
-        (fromSupportsPlutus (\() -> Set.empty) id $ tx ^. modelTx_collateral)
+      txInputs =
+        Set.union
+          (Map.keysSet $ tx ^. modelTx_inputs)
+          (foldSupportsFeature $ tx ^. modelTx_collateral)
       intersectingUTxOIds = Set.difference txInputs genesisUTxOIds
 
-      -- txOutsData = (\(_, x) -> view modelTxOut_data x) <$> (tx ^. modelTx_outputs)
-      -- mTxOutsData = traverse (fromSupportsPlutus (const Nothing) id) txOutsData
-      mTxOutsData = has
-        (modelTx_outputs . traverse . _2 . modelTxOut_data . traverseSupportsPlutus . _Just)
-        tx
+      mTxOutsData =
+        has
+          (modelTx_outputs . traverse . _2 . modelTxOut_data . traverseSupportsFeature . _Just)
+          tx
 
       isLastTx = getModelTxId lastTx == getModelTxId tx
 

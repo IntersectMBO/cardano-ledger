@@ -21,25 +21,22 @@
 
 module Test.Cardano.Ledger.Model.Fixup where
 
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.BaseTypes (Globals (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, word64ToCoin)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
-import Data.Proxy (Proxy(..))
 import qualified Cardano.Ledger.Val as Val
-import Control.Arrow ((&&&))
 import Control.Lens
   ( Lens',
-    has,
     at,
     foldMapOf,
     folded,
+    forOf,
+    has,
     ifor,
     ifor_,
     imap,
     ix,
-    forOf,
     maximumOf,
     over,
     preview,
@@ -62,7 +59,6 @@ import Control.Monad.Error.Class (MonadError, throwError)
 import qualified Control.Monad.Except as Except
 import qualified Control.Monad.State.Strict as State
 import Control.Monad.Trans.Class (MonadTrans, lift)
-import Data.Bifunctor (first)
 import Data.Coerce (coerce)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity (..))
@@ -71,6 +67,7 @@ import Data.Group.GrpMap (GrpMap (..), mapGrpMap, mkGrpMap, zipWithGrpMap)
 import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
+import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Semigroup (Sum (..))
 import Data.Set (Set)
@@ -78,7 +75,6 @@ import qualified Data.Set as Set
 import Data.Traversable
 import GHC.Exts (fromString)
 import GHC.Generics ((:*:) (..), (:.:) (..))
-import qualified PlutusTx
 import Test.Cardano.Ledger.Model.API
   ( HasModelM,
     ModelBlock (..),
@@ -106,13 +102,12 @@ import Test.Cardano.Ledger.Model.BaseTypes
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet,
+    FeatureSupport (..),
     KnownRequiredFeatures,
-    ifSupportsPlutus,
     ScriptFeature,
     TyScriptFeature (..),
     ValueFeature,
-    fromSupportsMint,
-    fromSupportsPlutus,
+    ifSupportsPlutus,
   )
 import Test.Cardano.Ledger.Model.LedgerState
   ( ModelInstantaneousReward (..),
@@ -141,12 +136,10 @@ import Test.Cardano.Ledger.Model.Script
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
-    ModelRedeemer,
-    modelTx_dCert,
-    modelDCerts,
     ModelDelegCert (..),
     ModelMIRCert (..),
     ModelMIRTarget (..),
+    ModelRedeemer,
     -- ModelScriptPurpose (..),
     ModelTx (..),
     getModelConsumed,
@@ -154,8 +147,10 @@ import Test.Cardano.Ledger.Model.Tx
     getModelProduced,
     getModelTxId,
     modelCWitness,
+    modelDCerts,
     modelPoolParams_owners,
     modelTotalDeposits,
+    modelTx_dCert,
     modelTx_outputs,
     modelTxs,
     _ModelMIR,
@@ -493,7 +488,7 @@ fixBalance
 
 witnessModelTx ::
   forall (era :: FeatureSet). ModelTx era -> ModelLedger era -> ModelTx era
-witnessModelTx mtx ml = mtx { _mtxWitnessSigs = witnessModelTxImpl mtx ml }
+witnessModelTx mtx ml = mtx {_mtxWitnessSigs = witnessModelTxImpl mtx ml}
 
 -- TODO: there's some extra degrees of freedom hidden in this function, they
 -- should be exposed: how timelocks are signed (which n of m) / which genDelegs
@@ -520,7 +515,7 @@ witnessModelTxImpl mtx ml =
         Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False))
       witnessCredential = \case
         ModelKeyHashObj k -> Set.singleton (ModelKeyHashObj k)
-        ModelScriptHashObj s -> Set.empty
+        ModelScriptHashObj {} -> Set.empty
 
       -- TODO: this unconditionally uses all genDelegs; but should probably use
       -- the genDelegs already on the tx, if they meet quorum; and should expose
@@ -534,9 +529,8 @@ witnessModelTxImpl mtx ml =
           <> foldMapOf (traverse . _1 . _ModelRegisterPool . modelPoolParams_owners . traverse) (Set.singleton . coerceKeyRole') (_mtxDCert mtx)
           <> (if (has (modelDCerts . _ModelMIR) mtx) then witnessGenesisDelegates else mempty)
           <> foldMap witnessCredential (Map.keys $ _mtxWdrl mtx)
-          <> fromSupportsMint mempty (foldMap witnessMint . Map.keys) (_mtxMint mtx)
-          <> fromSupportsPlutus
-            mempty
+          <> foldMapSupportsFeature (foldMap witnessMint . Map.keys) (_mtxMint mtx)
+          <> foldMapSupportsFeature
             (foldMap witnessCredential . mapMaybe lookupOutput . Set.toList)
             (_mtxCollateral mtx)
    in witnessSigs

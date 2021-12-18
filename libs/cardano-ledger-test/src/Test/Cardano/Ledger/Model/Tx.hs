@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
@@ -16,39 +16,39 @@
 module Test.Cardano.Ledger.Model.Tx where
 
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), txscriptfee)
-import Data.Maybe (isJust)
-import Data.Kind (Type)
-import Cardano.Ledger.Mary.Value (AssetName)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.Keys (KeyRole (..))
+import Cardano.Ledger.Mary.Value (AssetName)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (EpochNo)
 import Control.DeepSeq (NFData (..))
-import Control.Lens.Indexed (Indexable)
 import Control.Lens
   ( Lens',
-    itraverse,
     Prism',
     Traversal',
-    ifoldMap,
     foldMapOf,
     foldOf,
     folded,
-    lengthOf,
+    ifoldMap,
     indexed,
+    itraverse,
+    lengthOf,
     lens,
     prism,
     toListOf,
     _1,
     _2,
   )
+import Control.Lens.Indexed (Indexable)
 import Data.Foldable (fold)
 import Data.Functor.Identity (Identity (..))
 import Data.Group (Group (..))
+import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -57,37 +57,32 @@ import GHC.Generics (Generic)
 import qualified GHC.Records as GHC
 import qualified PlutusTx (Data)
 import Quiet (Quiet (..))
-import Test.Cardano.Ledger.Model.Value (mkModelValueF')
 import Test.Cardano.Ledger.Model.BaseTypes
   ( ModelPoolId (..),
-    ModelValue(..),
-    ModelValueVars(..),
+    ModelValue (..),
+    ModelValueVars (..),
     liftModelValue,
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet,
-    fromSupportsPlutus,
+    FeatureSupport (..),
     FeatureTag (..),
-    traverseSupportsPlutus,
     IfSupportsMint (..),
     IfSupportsPlutus (..),
     KnownRequiredFeatures,
     RequiredFeatures (..),
     ScriptFeature,
+    ScriptFeatureTag (..),
     ShelleyScriptFeatures,
     TyScriptFeature (..),
     TyValueExpected (..),
     ValueFeature,
     ValueFeatureTag (..),
-    ScriptFeatureTag (..),
-    bitraverseSupportsPlutus,
     filterSupportsPlutus,
     hasKnownScriptFeature,
     ifSupportsPlutus,
-    mapSupportsPlutus,
     reifyRequiredFeatures,
     reifySupportsPlutus,
-    traverseSupportsMint,
   )
 import Test.Cardano.Ledger.Model.PParams
   ( ModelPParams,
@@ -109,6 +104,7 @@ import Test.Cardano.Ledger.Model.TxOut
 import Test.Cardano.Ledger.Model.UTxO
   ( ModelUTxOMap (..),
   )
+import Test.Cardano.Ledger.Model.Value (mkModelValueF')
 import Test.Cardano.Ledger.Orphans ()
 
 -- a (valid) transaction can be summarised by the UTxOs it spends.  we use this
@@ -139,11 +135,12 @@ instance HasModelDCert era (ModelTx era) where
 type ModelRedeemer = IfSupportsPlutus () (Maybe (PlutusTx.Data, ExUnits))
 
 modelRedeemerPresent :: ModelRedeemer sf -> Bool
-modelRedeemerPresent = fromSupportsPlutus (const False) isJust
+modelRedeemerPresent = bifoldMapSupportsFeature (const False) isJust
 
-type ModelMintValue sf = Map.Map
-  (ModelScript sf)
-  (Map.Map AssetName Integer, ModelRedeemer sf)
+type ModelMintValue sf =
+  Map.Map
+    (ModelScript sf)
+    (Map.Map AssetName Integer, ModelRedeemer sf)
 
 mkMintValue ::
   forall era.
@@ -153,7 +150,6 @@ mkMintValue = \case
   NoMintSupport () -> mempty
   SupportsMint ma -> ifoldMap (\policyId (qty, _) -> ifoldMap (\an q -> ModelValue $ mkModelValueF' mempty $ Map.singleton (ModelValue_MA (policyId, an)) q) qty) ma
 
-
 data ModelTx (era :: FeatureSet) = ModelTx
   -- { _mtxInputs :: !(Set ModelUTxOId),
   { _mtxInputs :: !(Map.Map ModelUTxOId (ModelRedeemer (ScriptFeature era))),
@@ -161,8 +157,10 @@ data ModelTx (era :: FeatureSet) = ModelTx
     _mtxFee :: !(ModelValue 'ExpectAdaOnly era),
     _mtxDCert :: ![(ModelDCert era, ModelRedeemer (ScriptFeature era))],
     _mtxWdrl ::
-      !(Map.Map (ModelCredential 'Staking (ScriptFeature era))
-        (ModelValue 'ExpectAdaOnly era, ModelRedeemer (ScriptFeature era))),
+      !( Map.Map
+           (ModelCredential 'Staking (ScriptFeature era))
+           (ModelValue 'ExpectAdaOnly era, ModelRedeemer (ScriptFeature era))
+       ),
     -- _mtxMint :: !(IfSupportsMint () (ModelValue (ValueFeature era) era) (ValueFeature era)),
     _mtxMint :: !(IfSupportsMint () (ModelMintValue (ScriptFeature era)) (ValueFeature era)),
     _mtxCollateral :: !(IfSupportsPlutus () (Set ModelUTxOId) (ScriptFeature era)),
@@ -211,27 +209,33 @@ modelTx_validity = lens _mtxValidity (\s b -> s {_mtxValidity = b})
 modelTx_redeemers ::
   forall era (p :: Type -> Type -> Type) (f :: Type -> Type).
   (Indexable (ModelScriptPurpose era) p, Applicative f) =>
-  p (PlutusTx.Data, ExUnits) (f (PlutusTx.Data, ExUnits)) -> (ModelTx era) -> f (ModelTx era)
+  p (PlutusTx.Data, ExUnits) (f (PlutusTx.Data, ExUnits)) ->
+  ModelTx era ->
+  f (ModelTx era)
 modelTx_redeemers
-  f mtx@(ModelTx
-    { _mtxInputs = a,
-      _mtxDCert = b,
-      _mtxWdrl = c,
-      _mtxMint = d
-    }) = (\a' b' c' d' -> mtx
-    { _mtxInputs = a',
-      _mtxDCert = b',
-      _mtxWdrl = c',
-      _mtxMint = d'
-    })
-  <$> itraverse (f' . ModelScriptPurpose_Spending) a
-  <*> traverse (\(i, r) -> (,) i <$> f' (ModelScriptPurpose_Certifying i) r) b
-  <*> itraverse (\i -> traverse $ f' $ ModelScriptPurpose_Rewarding i) c
-  <*> traverseSupportsMint (itraverse $ \i -> traverse $ f' $ ModelScriptPurpose_Minting i) d
-  where
-    f' :: ModelScriptPurpose era -> ModelRedeemer (ScriptFeature era) -> f (ModelRedeemer (ScriptFeature era))
-    f' = (traverseSupportsPlutus . traverse) . indexed f
-
+  f
+  mtx@( ModelTx
+          { _mtxInputs = a,
+            _mtxDCert = b,
+            _mtxWdrl = c,
+            _mtxMint = d
+          }
+        ) =
+    ( \a' b' c' d' ->
+        mtx
+          { _mtxInputs = a',
+            _mtxDCert = b',
+            _mtxWdrl = c',
+            _mtxMint = d'
+          }
+    )
+      <$> itraverse (f' . ModelScriptPurpose_Spending) a
+      <*> traverse (\(i, r) -> (,) i <$> f' (ModelScriptPurpose_Certifying i) r) b
+      <*> itraverse (\i -> traverse $ f' $ ModelScriptPurpose_Rewarding i) c
+      <*> traverseSupportsFeature (itraverse $ \i -> traverse $ f' $ ModelScriptPurpose_Minting i) d
+    where
+      f' :: ModelScriptPurpose era -> ModelRedeemer (ScriptFeature era) -> f (ModelRedeemer (ScriptFeature era))
+      f' = (traverseSupportsFeature . traverse) . indexed f
 {-# INLINE modelTx_redeemers #-}
 
 modelTx_witnessSigs :: Lens' (ModelTx era) (Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False)))
@@ -257,8 +261,8 @@ modelTx =
         FeatureTag v _ -> case v of
           ValueFeatureTag_AdaOnly -> NoMintSupport ()
           ValueFeatureTag_AnyOutput -> SupportsMint mempty,
-      _mtxCollateral = mapSupportsPlutus (const Set.empty) $ reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era)),
-      _mtxValidity = mapSupportsPlutus (const $ IsValid True) $ reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era)),
+      _mtxCollateral = mapSupportsFeature (const Set.empty) $ reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era)),
+      _mtxValidity = mapSupportsFeature (const $ IsValid True) $ reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era)),
       _mtxWitnessSigs = Set.empty
     }
 
@@ -270,9 +274,12 @@ instance RequiredFeatures ModelTx where
       <*> (traverse . traverse) (filterFeatures tag) outs
       <*> (filterFeatures tag fee)
       <*> traverse (\(dcert, mr) -> (,) <$> filterFeatures tag dcert <*> filterModelRedeemer mr) dcerts
-      <*> fmap Map.fromList (for (Map.toList wdrl) $ \(k, (v, r)) -> (,)
-        <$> filterModelCredential tag k
-        <*> ((,) <$> filterFeatures tag v <*> filterModelRedeemer r)
+      <*> fmap
+        Map.fromList
+        ( for (Map.toList wdrl) $ \(k, (v, r)) ->
+            (,)
+              <$> filterModelCredential tag k
+              <*> ((,) <$> filterFeatures tag v <*> filterModelRedeemer r)
         )
       <*> ( case g of
               NoMintSupport () -> case tag of
@@ -287,7 +294,7 @@ instance RequiredFeatures ModelTx where
                 setNotEmpty x
                   | Set.null x = Nothing
                   | otherwise = Just x
-             in (fmap (mapSupportsPlutus fold) $ filterSupportsPlutus tag $ mapSupportsPlutus setNotEmpty cins)
+             in (fmap (mapSupportsFeature fold) $ filterSupportsPlutus tag $ mapSupportsFeature setNotEmpty cins)
           )
       <*> filterModelValidity valid
       <*> pure wits
@@ -319,7 +326,7 @@ instance RequiredFeatures ModelTx where
       filterModelValidity = hasKnownScriptFeature sf $ \case
         NoPlutusSupport () -> Just $ ifSupportsPlutus sf () (IsValid True)
         SupportsPlutus v@(IsValid True) -> Just $ ifSupportsPlutus sf () v
-        SupportsPlutus v@(IsValid False) -> bitraverseSupportsPlutus id id $ ifSupportsPlutus sf Nothing (Just v)
+        SupportsPlutus v@(IsValid False) -> bisequenceSupportsFeature $ ifSupportsPlutus sf Nothing (Just v)
 
 data ModelPoolParams era = ModelPoolParams
   { _mppId :: !ModelPoolId,

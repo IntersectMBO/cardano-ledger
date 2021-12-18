@@ -11,9 +11,8 @@ module Test.Cardano.Ledger.Model.Generators.TxOut where
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.Lens
-  ( to,
-    itraverse,
-    ifor,
+  ( ifor,
+    to,
     uses,
     _2,
   )
@@ -42,13 +41,11 @@ import Test.Cardano.Ledger.Model.BaseTypes
   ( ModelValue (..),
   )
 import Test.Cardano.Ledger.Model.FeatureSet
-  ( IfSupportsMint,
-    traverseSupportsPlutus,
+  ( FeatureSupport (..),
+    IfSupportsMint,
     ScriptFeature,
     TyValueExpected (..),
     ValueFeature,
-    fromSupportsMint,
-    fromSupportsPlutus,
     reifySupportsMint',
   )
 import Test.Cardano.Ledger.Model.Generators
@@ -62,8 +59,8 @@ import Test.Cardano.Ledger.Model.Generators.Address
     genAddr,
   )
 import Test.Cardano.Ledger.Model.Generators.Script
-  ( genScriptData,
-    genRedeemer,
+  ( genRedeemer,
+    genScriptData,
     guardHaveCollateral,
   )
 import Test.Cardano.Ledger.Model.Generators.Value
@@ -80,16 +77,16 @@ import Test.Cardano.Ledger.Model.Script
     modelAddress_pmt,
   )
 import Test.Cardano.Ledger.Model.Snapshot (snapshotQueue_mark)
+import Test.Cardano.Ledger.Model.Tx
+  ( ModelMintValue,
+    ModelRedeemer,
+    ModelScriptPurpose (..),
+    mkMintValue,
+  )
 import Test.Cardano.Ledger.Model.TxOut
   ( ModelTxOut (..),
     ModelUTxOId (..),
     modelTxOut_address,
-  )
-import Test.Cardano.Ledger.Model.Tx
-  ( ModelMintValue,
-    ModelScriptPurpose(..),
-    ModelRedeemer,
-    mkMintValue,
   )
 import Test.Cardano.Ledger.Model.UTxO
   ( ModelUTxOMap (..),
@@ -116,7 +113,7 @@ genInputs allowScripts = do
 
       minInput =
         Coin (minFee + minOutput)
-          <> if not (fromSupportsPlutus (const True) id allowScripts) && reifySupportsMint' (Proxy @(ValueFeature era))
+          <> if not (bifoldMapSupportsFeature (const True) id allowScripts) && reifySupportsMint' (Proxy @(ValueFeature era))
             then Coin minOutput
             else mempty
 
@@ -157,7 +154,7 @@ genOutputs haveCollateral ins mintWithRdmr = do
   -- TODO: corner case, if the amount of inAda < minFee + minOutput && ma > 0;
   -- the inputs are unspendable, and the generator needs to abort.
   (fee, outVals) <-
-    let haveCollateral' = fromSupportsPlutus (const True) id haveCollateral || ma == mempty
+    let haveCollateral' = bifoldMapSupportsFeature (const True) id haveCollateral || ma == mempty
      in if
             | inAda < minFee -> error "input too small"
             | inAda < minFee + minOutput && haveCollateral' -> pure (inAda, [])

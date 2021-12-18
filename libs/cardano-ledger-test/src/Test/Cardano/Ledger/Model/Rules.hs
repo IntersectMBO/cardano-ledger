@@ -97,10 +97,9 @@ import Test.Cardano.Ledger.Model.BaseTypes
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet,
+    FeatureSupport (..),
     KnownRequiredFeatures,
     ValueFeature,
-    fromSupportsPlutus,
-    traverseSupportsPlutus_,
   )
 import Test.Cardano.Ledger.Model.LedgerState
   ( ModelDPState (..),
@@ -165,9 +164,9 @@ import Test.Cardano.Ledger.Model.Tx
     ModelPoolParams (..),
     ModelTx (..),
     getModelTxId,
+    modelDCerts,
     modelIsValid,
     modelKeyRefunds,
-    modelDCerts,
     modelTotalDeposits,
     modelTx_collateral,
     modelTx_fee,
@@ -465,12 +464,12 @@ modelFeesOK pp tx utxoMap =
   -- TODO: This is not fully completed at all
   has modelTx_redeemers tx
     || ( ( balance `pow` (100 :: Natural) >= (Val.coin $ tx ^. modelTx_fee)
-             `pow` (fromSupportsPlutus (const 100) id $ runIdentity $ _modelPParams_collateralPercent pp)
+             `pow` (bifoldMapSupportsFeature (const 100) id $ runIdentity $ _modelPParams_collateralPercent pp)
          )
-           && fromSupportsPlutus (const True) (not . null) (tx ^. modelTx_collateral)
+           && bifoldMapSupportsFeature (const True) (not . null) (tx ^. modelTx_collateral)
        )
   where
-    balance = fromSupportsPlutus (const mempty) (foldMap (Val.coin . _mtxo_value) . Map.restrictKeys (_modelUTxOMap_utxos utxoMap)) (tx ^. modelTx_collateral)
+    balance = bifoldMapSupportsFeature (const mempty) (foldMap (Val.coin . _mtxo_value) . Map.restrictKeys (_modelUTxOMap_utxos utxoMap)) (tx ^. modelTx_collateral)
 
 -- | (fig 9)[GL-D2]
 instance ModelSTS 'ModelRule_UTXOS where
@@ -502,7 +501,7 @@ instance ModelSTS 'ModelRule_UTXOS where
 
     | otherwise = RWS.execRWST $ do
       b <- uses modelUTxOState_utxo totalPreservedAda
-      traverseSupportsPlutus_
+      traverseSupportsFeature_
         (\collateral -> modelUTxOState_utxo %= spendModelUTxOs collateral [])
         (_mtxCollateral tx)
       b' <- uses modelUTxOState_utxo totalPreservedAda
@@ -537,8 +536,6 @@ data ModelLEnv env = ModelLEnv
     -- , _modelLEnv_acnt :: !ModelAcnt
   }
 
-
-
 -- fig 14(GL-D2)
 -- DEPRECATED: FIG30[SL-D5]
 instance ModelSTS 'ModelRule_LEDGER where
@@ -548,11 +545,11 @@ instance ModelSTS 'ModelRule_LEDGER where
   type ModelFailure 'ModelRule_LEDGER = Proxy
 
   applyRuleImpl _ tx = RWS.execRWST $ do
-      lift $ setProvenance (getModelTxId tx)
-      liftApplyRule (Proxy @'ModelRule_UTXOW) tx tx
-      when (modelIsValid tx) $
-        liftApplyRule (Proxy @'ModelRule_DELEGS) (Compose $ toListOf modelDCerts tx) tx
-      lift $ clearProvenance
+    lift $ setProvenance (getModelTxId tx)
+    liftApplyRule (Proxy @'ModelRule_UTXOW) tx tx
+    when (modelIsValid tx) $
+      liftApplyRule (Proxy @'ModelRule_DELEGS) (Compose $ toListOf modelDCerts tx) tx
+    lift $ clearProvenance
 
 -- (fig13)[GL-D2]
 instance ModelSTS 'ModelRule_UTXOW where

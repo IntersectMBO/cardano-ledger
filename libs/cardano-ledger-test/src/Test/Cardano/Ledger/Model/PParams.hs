@@ -37,7 +37,7 @@ import Test.Cardano.Ledger.Model.FeatureSet
     MintSupported (..),
     ScriptFeature,
     ValueFeature,
-    fromSupportsPlutus,
+    bifoldMapSupportsFeature,
     ifSupportsMint,
     ifSupportsPlutus,
   )
@@ -166,10 +166,10 @@ instance GHC.HasField "_poolDeposit" (ModelPParams era) Coin where
   getField = runIdentity . _modelPParams_poolDeposit
 
 instance GHC.HasField "_maxCollateralInputs" (ModelPParams era) Natural where
-  getField = fromSupportsPlutus (\() -> 0) id . runIdentity . _modelPParams_maxCollateralInputs
+  getField = bifoldMapSupportsFeature (\() -> 0) id . runIdentity . _modelPParams_maxCollateralInputs
 
 instance GHC.HasField "_prices" (ModelPParams era) Prices where
-  getField = fromSupportsPlutus (\() -> Prices minBound minBound) id . runIdentity . _modelPParams_prices
+  getField = bifoldMapSupportsFeature (\() -> Prices minBound minBound) id . runIdentity . _modelPParams_prices
 
 instance GHC.HasField "_maxTxSize" (ModelPParams era) Natural where
   getField = runIdentity . _modelPParams_maxTxSize

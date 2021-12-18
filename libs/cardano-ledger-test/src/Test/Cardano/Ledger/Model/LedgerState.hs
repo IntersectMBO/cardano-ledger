@@ -1,28 +1,29 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Test.Cardano.Ledger.Model.LedgerState where
 
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Slotting.Slot (EpochNo, SlotNo)
 import Control.DeepSeq (NFData)
 import Control.Lens
   ( Lens',
-    preview,
-    ix,
     foldOf,
-    ifoldMap,
     folded,
+    ifoldMap,
+    ix,
     lens,
+    preview,
     to,
   )
 import Data.Group (Group (..))
@@ -30,8 +31,8 @@ import Data.Group.GrpMap (GrpMap)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic, (:.:) (..))
+import qualified PlutusTx (Data)
 import Quiet (Quiet (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Test.Cardano.Ledger.Model.Acnt
   ( ModelAcnt,
     ModelAcntF,
@@ -42,33 +43,31 @@ import Test.Cardano.Ledger.Model.BaseTypes
     PreservedAda (..),
   )
 import Test.Cardano.Ledger.Model.FeatureSet
-  ( ScriptFeature,
+  ( FeatureSupport (..),
+    ScriptFeature,
     ShelleyScriptFeatures,
-    FeatureSupport(..),
   )
 import Test.Cardano.Ledger.Model.PParams
   ( HasModelPParams (..),
     ModelPParams,
   )
 import Test.Cardano.Ledger.Model.Script
-  ( ModelCredential,
+  ( ModelAddress (..),
+    ModelCredential (..),
     ModelPlutusScript,
-    ModelScript(..),
-    ModelAddress(..),
+    ModelScript (..),
     evalModelPlutusScript,
-    ModelCredential(..),
   )
 import Test.Cardano.Ledger.Model.Snapshot
 import Test.Cardano.Ledger.Model.Tx
   ( ModelPoolParams,
-    modelCWitness,
     ModelRedeemer,
-    ModelTx(..),
+    ModelTx (..),
+    modelCWitness,
   )
-import qualified PlutusTx (Data)
 import Test.Cardano.Ledger.Model.TxOut
-  ( ModelUTxOId,
-    ModelTxOut(..),
+  ( ModelTxOut (..),
+    ModelUTxOId,
   )
 import Test.Cardano.Ledger.Model.UTxO (ModelUTxOMap)
 
@@ -389,46 +388,50 @@ modelSnapshot_pools a2fb s = (\b -> s {_modelSnapshot_pools = b}) <$> a2fb (_mod
 validateModelTx :: forall era. ModelUTxOMap era -> ModelTx era -> IsValid
 validateModelTx
   utxos
-  (ModelTx
-    { _mtxInputs = ins,
-      _mtxDCert = dcerts,
-      _mtxWdrl = wdrl,
-      _mtxMint = mint
-    }) =
-  ifoldMap
-    (\ui rdmr ->
-      foldMap
-        (\(ModelTxOut addr _ dh) -> case _modelAddress_pmt addr of
-          ModelKeyHashObj {} -> mempty
-          ModelScriptHashObj c -> foldMapSupportsFeature (\dh' -> go dh' rdmr c) dh
+  ( ModelTx
+      { _mtxInputs = ins,
+        _mtxDCert = dcerts,
+        _mtxWdrl = wdrl,
+        _mtxMint = mint
+      }
+    ) =
+    ifoldMap
+      ( \ui rdmr ->
+          foldMap
+            ( \(ModelTxOut addr _ dh) -> case _modelAddress_pmt addr of
+                ModelKeyHashObj {} -> mempty
+                ModelScriptHashObj c -> foldMapSupportsFeature (\dh' -> go dh' rdmr c) dh
+            )
+            (preview (ix ui) utxos)
+      )
+      ins
+      <> foldMap
+        ( \(dcert, rdmr) ->
+            foldMap
+              ( \case
+                  ModelKeyHashObj {} -> mempty
+                  ModelScriptHashObj c -> go Nothing rdmr c
+              )
+              $ modelCWitness dcert -- This is a little wrong, only concerning the presence of a redeemer, and ignoring if there *should* be a redeemer.
         )
-        (preview (ix ui) utxos)
-    )
-    ins
-  <> foldMap
-    (\(dcert, rdmr) -> foldMap (\case
-        ModelKeyHashObj {} -> mempty
-        ModelScriptHashObj c -> go Nothing rdmr c
-      ) $ modelCWitness dcert -- This is a little wrong, only concerning the presence of a redeemer, and ignoring if there *should* be a redeemer.
-    )
-    dcerts
-  <> ifoldMap
-    (\case
-      ModelKeyHashObj {} -> mempty
-      ModelScriptHashObj c -> \(_, rdmr) -> go Nothing rdmr c
-    )
-    wdrl
-  <> foldMapSupportsFeature
-    ( ifoldMap $ \case
-      ModelScript_Timelock {} -> mempty
-      ModelScript_PlutusV1 policy -> \(_, rdmr) ->
-        go Nothing rdmr policy
-    )
-    mint
-  where
-    go :: Maybe PlutusTx.Data -> ModelRedeemer (ScriptFeature era) -> ModelPlutusScript -> IsValid
-    go dh rdmr script =
-      (foldMapSupportsFeature . foldMap) (\(r, _) -> evalModelPlutusScript dh r script) rdmr
+        dcerts
+      <> ifoldMap
+        ( \case
+            ModelKeyHashObj {} -> mempty
+            ModelScriptHashObj c -> \(_, rdmr) -> go Nothing rdmr c
+        )
+        wdrl
+      <> foldMapSupportsFeature
+        ( ifoldMap $ \case
+            ModelScript_Timelock {} -> mempty
+            ModelScript_PlutusV1 policy -> \(_, rdmr) ->
+              go Nothing rdmr policy
+        )
+        mint
+    where
+      go :: Maybe PlutusTx.Data -> ModelRedeemer (ScriptFeature era) -> ModelPlutusScript -> IsValid
+      go dh rdmr script =
+        (foldMapSupportsFeature . foldMap) (\(r, _) -> evalModelPlutusScript dh r script) rdmr
 
 data ModelSnapshotStake = ModelSnapshotStake
   { _modelSnapshotStake_balance :: Coin, -- sum of utxos and rewards

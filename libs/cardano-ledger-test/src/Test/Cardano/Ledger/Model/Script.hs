@@ -18,6 +18,7 @@ module Test.Cardano.Ledger.Model.Script where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import qualified Cardano.Ledger.Crypto as C
 import Cardano.Ledger.Keys
 import Cardano.Ledger.ShelleyMA.Timelocks
@@ -26,14 +27,13 @@ import Control.DeepSeq
 import Control.Lens
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Data.Maybe (fromMaybe)
-import qualified PlutusTx (Data(..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified GHC.Exts as GHC
 import GHC.Generics
 import Numeric.Natural (Natural)
+import qualified PlutusTx (Data (..))
 import Quiet (Quiet (..))
 import Test.Cardano.Ledger.Alonzo.PlutusScripts as TestScripts
 import qualified Test.Cardano.Ledger.Alonzo.Scripts as AlonzoTest

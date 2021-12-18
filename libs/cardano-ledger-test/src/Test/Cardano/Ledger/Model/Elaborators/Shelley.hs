@@ -57,17 +57,14 @@ import Test.Cardano.Ledger.Model.Elaborators
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet (..),
-    FeatureTag (..),
+    FeatureSupport (..),
     IfSupportsMint (..),
     IfSupportsPlutus (..),
     IfSupportsScript (..),
     IfSupportsTimelock (..),
     KnownRequiredFeatures,
-    ScriptFeatureTag (..),
     TyScriptFeature (..),
     TyValueExpected (..),
-    ValueFeatureTag (..),
-    fromSupportsMint,
   )
 import Test.Cardano.Ledger.Model.PParams (ModelPParams, ModelPParamsF (..))
 import Test.Cardano.Ledger.Model.Rules (ModelPredicateFailure (..))
@@ -153,7 +150,7 @@ elaborateShelleyPParams ::
   Shelley.PParams era
 elaborateShelleyPParams mpp =
   let minUTxOValue =
-        fromSupportsMint id (`pow` (29 :: Integer)) $ runIdentity $ _modelPParams_coinsPerUTxOWord mpp
+        bifoldMapSupportsFeature id (`pow` (29 :: Integer)) $ runIdentity $ _modelPParams_coinsPerUTxOWord mpp
    in Shelley.emptyPParams
         { Shelley._nOpt = GHC.getField @"_nOpt" mpp,
           Shelley._a0 = GHC.getField @"_a0" mpp,

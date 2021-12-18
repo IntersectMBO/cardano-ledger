@@ -25,33 +25,32 @@
 
 -- | This module contains the mechanism used to related a ledger model
 -- transaction with a real implementation.
---
 module Test.Cardano.Ledger.Model.Elaborators
   ( -- | = API for property testing
-    ElaborateEraModel(..),
+    ElaborateEraModel (..),
     elaborateBlocks_,
-    CompareModelLedger(..),
-    EraElaboratorStats(..),
+    CompareModelLedger (..),
+    EraElaboratorStats (..),
     eraFeatureSet,
     EraValueFeature,
     EraScriptFeature,
     -- | = API for instances
     noScriptAction,
     lookupModelValue,
-    TxWitnessArguments(..),
-    TxBodyArguments(..),
-    ExpectedValueTypeC(..),
+    TxWitnessArguments (..),
+    TxBodyArguments (..),
+    ExpectedValueTypeC (..),
     -- | = semi-internal for property testing.
-    ApplyBlockTransitionError(..),
-    ElaborateApplyTxError(..),
-    ElaborateBlockError(..),
+    ApplyBlockTransitionError (..),
+    ElaborateApplyTxError (..),
+    ElaborateBlockError (..),
     observeRewards,
     -- | = internal implementation details.
-    EraElaboratorState(..),
-    TestCredentialInfo(..),
+    EraElaboratorState (..),
+    TestCredentialInfo (..),
     ElaborateValueType,
   )
-  where
+where
 
 import qualified Cardano.Crypto.DSIGN.Class as DSIGN
 import qualified Cardano.Crypto.Hash.Class as Hash
@@ -130,8 +129,8 @@ import Control.Lens
   ( Lens',
     at,
     ifor,
-    itoListOf,
     ifor_,
+    itoListOf,
     set,
     use,
     view,
@@ -193,22 +192,21 @@ import Test.Cardano.Ledger.Model.BaseTypes
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet,
+    FeatureSupport (..),
     FeatureTag,
     IfSupportsMint (..),
     IfSupportsPlutus (..),
     IfSupportsScript (..),
     IfSupportsTimelock (..),
-    KnownRequiredFeatures(..),
+    KnownRequiredFeatures (..),
     ScriptFeature,
     ScriptFeatureTag (..),
     TyScriptFeature (..),
     TyValueExpected (..),
     ValueFeature,
     ifSupportsPlutus,
-    mapSupportsPlutus,
     reifyScriptFeature,
     reifySupportsPlutus,
-    traverseSupportsPlutus,
   )
 import Test.Cardano.Ledger.Model.LedgerState
   ( ModelDPState (..),
@@ -234,8 +232,6 @@ import Test.Cardano.Ledger.Model.Script
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
-    modelTx_redeemers,
-    mkMintValue,
     ModelDelegCert (..),
     ModelDelegation (..),
     ModelGenesisDelegCert (..),
@@ -246,6 +242,8 @@ import Test.Cardano.Ledger.Model.Tx
     ModelScriptPurpose (..),
     ModelTx (..),
     ModelTxId,
+    mkMintValue,
+    modelTx_redeemers,
   )
 import Test.Cardano.Ledger.Model.TxOut (ModelTxOut (..), ModelUTxOId)
 import Test.Cardano.Ledger.Model.UTxO (ModelUTxOMap (..))
@@ -963,7 +961,7 @@ mkTxWitnessArguments mtxInputs nes pendingWits (ElaboratedScriptsCache pendingSc
           | not (Alonzo.nullRedeemers r) ->
             makeTxBody @era nes $
               txBodyArguments
-                { _txBodyArguments_redeemers = mapSupportsPlutus SJust redeemers
+                { _txBodyArguments_redeemers = mapSupportsFeature SJust redeemers
                 }
           | otherwise -> fakeTxBody
         NoPlutusSupport () -> fakeTxBody
@@ -1065,7 +1063,8 @@ class
   default reifyValueConstraint ::
     ( ValueFromList (Core.Value era) (Crypto era),
       EraValueFeature era ~ 'ExpectAnyOutput
-    ) => ExpectedValueTypeC era
+    ) =>
+    ExpectedValueTypeC era
   reifyValueConstraint = ExpectedValueTypeC_MA
 
   -- | Apply a ModelBlock to a specific era's ledger.
@@ -1268,7 +1267,7 @@ class
 
         outs <- for mtxOutputs $ \(oid, o) -> mkTxOut oid o
         ins :: Set.Set (Shelley.TxIn (Crypto era)) <- zoom _2 $ fmap fold $ traverse mkTxIn $ Map.keys mtxInputs
-        cins <- traverseSupportsPlutus (zoom _2 . fmap fold . traverse mkTxIn . Set.toList) mtxCollateral
+        cins <- traverseSupportsFeature (zoom _2 . fmap fold . traverse mkTxIn . Set.toList) mtxCollateral
         dcerts <- traverse mkDCerts mtxDCert
         wdrl' <-
           fmap Map.fromList $
@@ -1297,7 +1296,7 @@ class
           case reifyValueConstraint @era of
             ExpectedValueTypeC_Simple -> pure $ NoMintSupport ()
             ExpectedValueTypeC_MA -> case mtxMint of
-              SupportsMint m' ->
+              SupportsMint {} ->
                 fmap SupportsMint $
                   evalModelValue (lookupModelValue (tellMintWitness @era)) (unModelValue $ mkMintValue mtxMint)
 

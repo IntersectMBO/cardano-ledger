@@ -1,5 +1,4 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -11,6 +10,7 @@
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE OverloadedLists #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -35,7 +35,7 @@ import Cardano.Ledger.Val (Val (..))
 import Control.Arrow ((&&&))
 import Control.DeepSeq
 import Control.Lens
-import Control.Monad (when, guard)
+import Control.Monad (guard, when)
 import qualified Control.Monad.State.Strict as State
 import qualified Control.Monad.Trans.Writer.CPS as CPS
 import Control.Monad.Writer.Class
@@ -127,7 +127,7 @@ instance IsString AssetName where
   fromString = AssetName . BS.pack
 
 modelTestDelegations ::
-  forall era proxy .
+  forall era proxy.
   ( ElaborateEraModel era,
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
@@ -714,10 +714,12 @@ modelUnitTests proxy =
                             (2, modelTxOut "alice" (modelCoin 1_000_000_000 <-> (modelCoin 100_000_000 <+> modelCoin 1_000_000)))
                           ],
                         _mtxDCert =
-                          [ (ModelCertDeleg $
-                              ModelDCertMir $
-                                ModelMIRCert ReservesMIR $
-                                  ModelStakeAddressesMIR [("carol", DeltaCoin 100_123)], noRdmr),
+                          [ ( ModelCertDeleg $
+                                ModelDCertMir $
+                                  ModelMIRCert ReservesMIR $
+                                    ModelStakeAddressesMIR [("carol", DeltaCoin 100_123)],
+                              noRdmr
+                            ),
                             (ModelCertDeleg $ ModelRegKey "carol", noRdmr)
                           ],
                         _mtxFee = modelCoin 1_000_000,
@@ -971,8 +973,9 @@ modelUnitTests proxy =
                             )
                           ],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint
-                          [(bobCoinScript, ([("BOB", 1234)], noRdmr))]
+                        _mtxMint =
+                          SupportsMint
+                            [(bobCoinScript, ([("BOB", 1234)], noRdmr))]
                       },
                     modelTx
                       { _mtxInputs = [(1, noRdmr)],
@@ -999,9 +1002,9 @@ modelUnitTests proxy =
                       { _mtxInputs = [(3, noRdmr)],
                         _mtxWitnessSigs = Set.fromList ["carol", "BobCoin"],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint
-                          [(bobCoinScript, ([("BOB", -100)], noRdmr))]
-                        -- (modelMACoin bobCoinScript [("BOB", -100)])
+                        _mtxMint =
+                          SupportsMint
+                            [(bobCoinScript, ([("BOB", -100)], noRdmr))]
                       }
                   ]
               ]
@@ -1031,8 +1034,9 @@ modelUnitTests proxy =
                             )
                           ],
                         _mtxFee = modelCoin 1_000_000,
-                        _mtxMint = SupportsMint
-                          [(modelPlutusScript 3, ([("purp", 1234)], mkRdmr (PlutusTx.I 7, ExUnits 1 1)))]
+                        _mtxMint =
+                          SupportsMint
+                            [(modelPlutusScript 3, ([("purp", 1234)], mkRdmr (PlutusTx.I 7, ExUnits 1 1)))]
                       }
                   ]
               ]
@@ -1104,7 +1108,8 @@ shrinkSimpleTestData =
       ]
       mempty
   ]
-  where noRdmr = SupportsPlutus Nothing
+  where
+    noRdmr = SupportsPlutus Nothing
 
 shrinkDiscardTestData :: [ModelEpoch AllModelFeatures]
 shrinkDiscardTestData =
@@ -1139,8 +1144,11 @@ shrinkDiscardTestData =
             ModelBlock
               3
               [ modelTx {_mtxInputs = [(7, noRdmr)], _mtxOutputs = [(11, defaultTxOut), (12, defaultTxOut)]},
-                modelTx {_mtxInputs = [(8, noRdmr)], _mtxDCert =
-                  [(ModelCertPool $ ModelRegPool testPool3, noRdmr)]},
+                modelTx
+                  { _mtxInputs = [(8, noRdmr)],
+                    _mtxDCert =
+                      [(ModelCertPool $ ModelRegPool testPool3, noRdmr)]
+                  },
                 modelTx {_mtxInputs = [(9, noRdmr)], _mtxOutputs = [(10, defaultTxOut)]}
               ]
           ]
@@ -1150,8 +1158,12 @@ shrinkDiscardTestData =
               4
               [ modelTx {_mtxInputs = [(10, noRdmr)], _mtxOutputs = [(14, defaultTxOut), (15, defaultTxOut)]},
                 modelTx {_mtxInputs = [(11, noRdmr)]},
-                modelTx {_mtxInputs = [(12, noRdmr)], _mtxOutputs = [(13, defaultTxOut)], _mtxDCert =
-                  [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress3" "pool3"), noRdmr)]}
+                modelTx
+                  { _mtxInputs = [(12, noRdmr)],
+                    _mtxOutputs = [(13, defaultTxOut)],
+                    _mtxDCert =
+                      [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress3" "pool3"), noRdmr)]
+                  }
               ],
             ModelBlock
               5
@@ -1177,19 +1189,26 @@ shrinkDiscardTestData =
             ModelBlock
               8
               [ modelTx {_mtxInputs = [(22, noRdmr)], _mtxOutputs = [(26, defaultTxOut), (27, defaultTxOut)]},
-                modelTx {_mtxInputs = [(23, noRdmr)], _mtxDCert =
-                  [(ModelCertPool $ ModelRegPool testPool, noRdmr)]
-                },
+                modelTx
+                  { _mtxInputs = [(23, noRdmr)],
+                    _mtxDCert =
+                      [(ModelCertPool $ ModelRegPool testPool, noRdmr)]
+                  },
                 modelTx {_mtxInputs = [(24, noRdmr)], _mtxOutputs = [(25, defaultTxOut)]}
               ],
             ModelBlock
               9
               [ modelTx {_mtxInputs = [(25, noRdmr)]},
-                modelTx {_mtxInputs = [(26, noRdmr)], _mtxDCert =
-                  [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress2" "pool2"), noRdmr)]
-                },
-                modelTx {_mtxInputs = [(27, noRdmr)], _mtxDCert =
-                  [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress" "pool1"), noRdmr)]}
+                modelTx
+                  { _mtxInputs = [(26, noRdmr)],
+                    _mtxDCert =
+                      [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress2" "pool2"), noRdmr)]
+                  },
+                modelTx
+                  { _mtxInputs = [(27, noRdmr)],
+                    _mtxDCert =
+                      [(ModelCertDeleg $ ModelDelegate (ModelDelegation "someAddress" "pool1"), noRdmr)]
+                  }
               ]
           ]
           mempty
@@ -1250,8 +1269,6 @@ testPoolParamModel =
           ModelEpoch [] mempty
         ]
       )
-
-
 
 modelShrinkingUnitTests :: TestTree
 modelShrinkingUnitTests =

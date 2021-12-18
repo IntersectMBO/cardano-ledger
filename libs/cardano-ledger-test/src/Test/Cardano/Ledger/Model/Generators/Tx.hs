@@ -1,7 +1,7 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -11,33 +11,29 @@
 module Test.Cardano.Ledger.Model.Generators.Tx where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Lens
-  ( has,
+  ( ifor,
     to,
-    ifor,
-    _1,
     use,
     uses,
     (.=),
   )
-import Control.Monad (forM, replicateM)
+import Control.Monad (replicateM)
 import Control.Monad.Reader.Class (asks)
 import Control.Monad.Supply
   ( MonadSupply (..),
   )
 import qualified Data.ByteString as BS
-import Data.Foldable (fold)
+import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Set as Set
-import Data.Foldable (toList)
-import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import QuickCheck.GenT
   ( Gen,
     arbitrary,
@@ -49,21 +45,14 @@ import QuickCheck.GenT
     resize,
     sublistOf,
   )
-import Test.Cardano.Ledger.Model.LedgerState
-  ( modelNewEpochState_es,
-    modelEpochState_ls,
-    modelLState_utxoSt,
-    modelUTxOState_utxo,
-    validateModelTx,
-  )
 import Test.Cardano.Ledger.Model.API
   ( applyModelDCert,
-    modelLedger_nes,
     applyModelTx,
     execModelM,
     getModelLedger_rewards,
     getModelLedger_utxos,
     modelLedger,
+    modelLedger_nes,
   )
 import Test.Cardano.Ledger.Model.BaseTypes
   ( ModelValue (..),
@@ -72,20 +61,18 @@ import Test.Cardano.Ledger.Model.BaseTypes
   )
 import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet (..),
+    FeatureSupport (..),
     IfSupportsMint (..),
     IfSupportsPlutus (..),
-    mapSupportsFeature,
     KnownScriptFeature,
     ScriptFeature,
     TyScriptFeature (..),
     TyValueExpected (..),
     ValueFeature,
-    fromSupportsMint,
     ifSupportsMint,
     ifSupportsPlutus,
     reifySupportsMint,
     reifySupportsPlutus,
-    traverseSupportsMint,
   )
 import Test.Cardano.Ledger.Model.Fixup (witnessModelTx)
 import Test.Cardano.Ledger.Model.Generators
@@ -107,44 +94,45 @@ import Test.Cardano.Ledger.Model.Generators.TxOut
   ( genInputs,
     genOutputs,
   )
+import Test.Cardano.Ledger.Model.LedgerState
+  ( modelEpochState_ls,
+    modelLState_utxoSt,
+    modelNewEpochState_es,
+    modelUTxOState_utxo,
+    validateModelTx,
+  )
 import Test.Cardano.Ledger.Model.Script
   ( ModelCredential (..),
     ModelPlutusScript (..),
     ModelScript (..),
     PreprocessedPlutusScript (..),
-    modelAddress_pmt,
-    _ModelScriptHashObj,
   )
 import Test.Cardano.Ledger.Model.Tx
   ( ModelDCert (..),
-    ModelScriptPurpose(..),
-    modelRedeemerPresent,
     ModelMintValue,
     ModelRedeemer,
+    ModelScriptPurpose (..),
     ModelTx (..),
-    modelDelegation_delegator,
-    _ModelDelegate,
+    modelRedeemerPresent,
   )
 import Test.Cardano.Ledger.Model.TxOut
   ( ModelTxOut (..),
     ModelUTxOId,
-    modelTxOut_address,
   )
 import Test.Cardano.Ledger.Model.UTxO
   ( ModelUTxOMap (..),
   )
-import Test.Cardano.Ledger.Model.Value
-  ( getModelValueF,
-    mkModelValueF',
-  )
+import Test.Cardano.Ledger.Model.Value (getModelValueF)
 import Test.QuickCheck.Instances.ByteString ()
 
 genWdrl ::
   HasGenModelM st era m =>
   AllowScripts (ScriptFeature era) ->
-  m (Map
-    (ModelCredential 'Staking (ScriptFeature era))
-    (ModelValue 'ExpectAdaOnly era, ModelRedeemer (ScriptFeature era)))
+  m
+    ( Map
+        (ModelCredential 'Staking (ScriptFeature era))
+        (ModelValue 'ExpectAdaOnly era, ModelRedeemer (ScriptFeature era))
+    )
 genWdrl allowScripts = do
   allRewards <- uses (modelLedger . to getModelLedger_rewards) $ Map.filter (/= Val.zero)
   numWdrls <- liftGen =<< asks (_modelGeneratorParams_numWdrls . _modelGeneratorContext_modelGeneratorParams)
@@ -165,9 +153,9 @@ needCollateral ins wdrls mint dcerts = case reifySupportsPlutus (Proxy :: Proxy 
   NoPlutusSupport () -> False
   SupportsPlutus () ->
     any (modelRedeemerPresent . fst) ins
-    || any (modelRedeemerPresent . snd) wdrls
-    || fromSupportsMint (const False) (any (modelRedeemerPresent . snd)) mint
-    || any (modelRedeemerPresent . snd) dcerts
+      || any (modelRedeemerPresent . snd) wdrls
+      || bifoldMapSupportsFeature (const False) (any (modelRedeemerPresent . snd)) mint
+      || any (modelRedeemerPresent . snd) dcerts
 
 wouldSpendLastCollateral :: HasGenModelM st era m => SlotNo -> ModelTx era -> m Bool
 wouldSpendLastCollateral slot txn = do
@@ -214,13 +202,14 @@ makeAsset ::
   HasGenModelM st era m =>
   (ModelValueVars era 'ExpectAnyOutput) ->
   m (ModelMintValue (ScriptFeature era))
-makeAsset asset@(ModelValue_MA (policyId, assetName)) = do
+makeAsset (ModelValue_MA (policyId, aname)) = do
   rdmr <- genRedeemer (ModelScriptPurpose_Minting policyId)
-  qty <- frequency
+  qty <-
+    frequency
       [ (1, pure 1),
         (1, choose (1_000 :: Integer, 1_000_000))
       ]
-  pure $ Map.singleton policyId (Map.singleton assetName qty, rdmr)
+  pure $ Map.singleton policyId (Map.singleton aname qty, rdmr)
 
 mintBurnAssets ::
   forall era st m.
@@ -234,13 +223,13 @@ mintBurnAssets assets' = do
         (ModelValueVars era 'ExpectAnyOutput, Integer) ->
         Map.Map (ModelScript (ScriptFeature era)) (Map.Map AssetName Integer)
       mkMintQty = \case
-        (ModelValue_MA (policyId, assetName), qty) ->
-          Map.singleton policyId $ Map.singleton assetName qty
+        (ModelValue_MA (policyId, aname), qty) ->
+          Map.singleton policyId $ Map.singleton aname qty
   modifiedAssets <-
     oneof
-      [ mkMintQty <$> elements (toList assets') -- pick one asset, burn one unit of that asset
-      , pure $ (fmap.fmap) negate assets -- burn all of it
-      , (traverse . traverse) (\qty -> choose (-qty, -1 :: Integer)) assets -- burn a random amount of each asset
+      [ mkMintQty <$> elements (toList assets'), -- pick one asset, burn one unit of that asset
+        pure $ (fmap . fmap) negate assets, -- burn all of it
+        (traverse . traverse) (\qty -> choose (-qty, -1 :: Integer)) assets -- burn a random amount of each asset
       ]
 
   ifor modifiedAssets $ \policy qty -> (,) qty <$> genRedeemer (ModelScriptPurpose_Minting policy)
@@ -249,7 +238,7 @@ mintBurnAssets assets' = do
 -- should be able to generate any type of asset, not just plutus scripted
 -- assets.
 genMint ::
-  forall era st m tlf .
+  forall era st m tlf.
   ( HasGenModelM st era m,
     ScriptFeature era ~ 'TyScriptFeature tlf 'True
     -- ValueFeature era ~ 'ExpectAnyOutput
@@ -257,29 +246,34 @@ genMint ::
   ModelValue (ValueFeature era) era ->
   -- m (ModelValue (ValueFeature era) era)
   m (IfSupportsMint () (ModelMintValue (ScriptFeature era)) (ValueFeature era))
-genMint inputVal = traverseSupportsMint id $ ifSupportsMint (Proxy :: Proxy (ValueFeature era)) () $ do
-  utxoMap <- uses modelLedger getModelLedger_utxos
-  let getMapFromModelValue = snd . getModelValueF . unModelValue
-      existingAssets = (Map.keys . getMapFromModelValue . _modelUTxOMap_balance) utxoMap
-      inputAssets = (Map.toList . getMapFromModelValue) inputVal
-  frequency $ concat
-    [ [(1, pure mempty)],
-      [(1, makeAsset =<< freshAsset)],
-      [(1, makeAsset =<< elements existingAssets) | (not . null) existingAssets],
-      case nonEmpty inputAssets of
-        Nothing ->  []
-        Just inputAssets' -> [ ( 1,
-             do
-               sublistInputs <- sublistOf inputAssets
-               randAssets <- frequency $ concat
-                [ [(1, pure sublistInputs') | sublistInputs' <- toList $ nonEmpty sublistInputs],
-                  [(1, fmap pure $ elements inputAssets)],
-                  [(1, pure inputAssets')]
-                ]
-               mintBurnAssets randAssets
-           )
-         ]
-      ]
+genMint inputVal = sequenceSupportsFeature $
+  ifSupportsMint (Proxy :: Proxy (ValueFeature era)) () $ do
+    utxoMap <- uses modelLedger getModelLedger_utxos
+    let getMapFromModelValue = snd . getModelValueF . unModelValue
+        existingAssets = (Map.keys . getMapFromModelValue . _modelUTxOMap_balance) utxoMap
+        inputAssets = (Map.toList . getMapFromModelValue) inputVal
+    frequency $
+      concat
+        [ [(1, pure mempty)],
+          [(1, makeAsset =<< freshAsset)],
+          [(1, makeAsset =<< elements existingAssets) | (not . null) existingAssets],
+          case nonEmpty inputAssets of
+            Nothing -> []
+            Just inputAssets' ->
+              [ ( 1,
+                  do
+                    sublistInputs <- sublistOf inputAssets
+                    randAssets <-
+                      frequency $
+                        concat
+                          [ [(1, pure sublistInputs') | sublistInputs' <- toList $ nonEmpty sublistInputs],
+                            [(1, fmap pure $ elements inputAssets)],
+                            [(1, pure inputAssets')]
+                          ]
+                    mintBurnAssets randAssets
+                )
+              ]
+        ]
 
 genModelTx :: forall era m st. SlotNo -> HasGenModelM st era m => m (ModelTx era)
 genModelTx slot = do
@@ -322,11 +316,13 @@ genModelTx slot = do
   utxos <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_utxoSt . modelUTxOState_utxo)
 
   let nc = needCollateral ins wdrl mint dcerts
-      txn' = txn
-        { _mtxDCert = dcerts,
-          _mtxCollateral = if nc then collateral else _mtxCollateral txn
-        }
+      txn' =
+        txn
+          { _mtxDCert = dcerts,
+            _mtxCollateral = if nc then collateral else _mtxCollateral txn
+          }
   uses modelLedger $
-    witnessModelTx txn'
-      { _mtxValidity = mapSupportsFeature (const $ validateModelTx utxos txn') $ _mtxValidity txn'
-      }
+    witnessModelTx
+      txn'
+        { _mtxValidity = mapSupportsFeature (const $ validateModelTx utxos txn') $ _mtxValidity txn'
+        }

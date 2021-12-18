@@ -41,19 +41,12 @@ module Test.Cardano.Ledger.Model.FeatureSet
     ValueFeatureTag (..),
     IfSupportsMint (..),
     MintSupported (..),
-    FeatureSupport(..),
-    fromSupportsMint,
+    FeatureSupport (..),
     ifSupportsMint,
-    traverseSupportsMint,
     IfSupportsPlutus (..),
-    bitraverseSupportsPlutus,
     filterSupportsPlutus,
-    fromSupportsPlutus,
     ifSupportsPlutus,
-    mapSupportsPlutus,
     reifySupportsPlutus,
-    traverseSupportsPlutus,
-    traverseSupportsPlutus_,
     IfSupportsScript (..),
     hasKnownScriptFeature,
     IfSupportsTimelock (..),
@@ -61,12 +54,12 @@ module Test.Cardano.Ledger.Model.FeatureSet
 where
 
 import Control.DeepSeq (NFData (..))
+import Data.Functor.Const (Const (..))
+import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.Proxy (Proxy (..))
 import Data.Type.Bool (type (||))
 import Data.Type.Equality ((:~:) (..))
-import Data.Functor.Identity (Identity(..))
-import Data.Functor.Const (Const(..))
 
 -- | Type level indication of what kind of value is allowed.
 data TyValueExpected
@@ -112,9 +105,12 @@ hasKnownScriptFeature = \case
   ScriptFeatureTag_Simple -> \x -> x
   ScriptFeatureTag_PlutusV1 -> \x -> x
 
-
 class FeatureSupport (f :: Type -> Type -> k -> Type) where
   bitraverseSupportsFeature :: Functor m => (a -> m c) -> (b -> m d) -> f a b x -> m (f c d x)
+
+  bisequenceSupportsFeature :: Functor m => f (m a) (m b) x -> m (f a b x)
+  bisequenceSupportsFeature = bitraverseSupportsFeature id id
+  {-# INLINE bisequenceSupportsFeature #-}
 
   bitraverseSupportsFeature_ :: Functor m => (a -> m c) -> (b -> m d) -> f a b x -> m ()
   bitraverseSupportsFeature_ f g = (<$) () . bitraverseSupportsFeature f g
@@ -123,6 +119,10 @@ class FeatureSupport (f :: Type -> Type -> k -> Type) where
   traverseSupportsFeature :: Applicative m => (b -> m d) -> f a b x -> m (f a d x)
   traverseSupportsFeature = bitraverseSupportsFeature pure
   {-# INLINE traverseSupportsFeature #-}
+
+  sequenceSupportsFeature :: Applicative m => f a (m b) x -> m (f a b x)
+  sequenceSupportsFeature = traverseSupportsFeature id
+  {-# INLINE sequenceSupportsFeature #-}
 
   traverseSupportsFeature_ :: Applicative m => (b -> m d) -> f a b x -> m ()
   traverseSupportsFeature_ f = (<$) () . bitraverseSupportsFeature pure f
@@ -152,18 +152,17 @@ class FeatureSupport (f :: Type -> Type -> k -> Type) where
   foldSupportsFeature = getConst . bitraverseSupportsFeature mempty Const
   {-# INLINE foldSupportsFeature #-}
 
-instance FeatureSupport IfSupportsTimelock where
-  bitraverseSupportsFeature f g = \case
-    NoTimelockSupport x -> NoTimelockSupport <$> f x
-    SupportsTimelock y -> SupportsTimelock <$> g y
-  {-# INLINE bitraverseSupportsFeature #-}
-
-
 -- | Select a type if a model has support for multi-sig contracts.
 -- same convention as Data.Bool.bool;  True case comes last
 data IfSupportsTimelock a b (k :: TyScriptFeature) where
   NoTimelockSupport :: a -> IfSupportsTimelock a b ('TyScriptFeature 'False x)
   SupportsTimelock :: b -> IfSupportsTimelock a b ('TyScriptFeature 'True x)
+
+instance FeatureSupport IfSupportsTimelock where
+  bitraverseSupportsFeature f g = \case
+    NoTimelockSupport x -> NoTimelockSupport <$> f x
+    SupportsTimelock y -> SupportsTimelock <$> g y
+  {-# INLINE bitraverseSupportsFeature #-}
 
 -- | Select a type if a model has support for Plutus Scripts.
 -- same convention as Data.Bool.bool;  True case comes last
@@ -182,21 +181,6 @@ deriving instance (Eq a, Eq b) => Eq (IfSupportsPlutus a b k)
 
 deriving instance (Ord a, Ord b) => Ord (IfSupportsPlutus a b k)
 
-{-# DEPRECATED fromSupportsPlutus "use bifoldMapSupportsFeature" #-}
-fromSupportsPlutus :: (a -> c) -> (b -> c) -> IfSupportsPlutus a b k -> c
-fromSupportsPlutus = bifoldMapSupportsFeature
-
-ifSupportsPlutus' ::
-  forall s a b proxy.
-  KnownScriptFeature s =>
-  proxy s ->
-  (forall s'. s ~ 'TyScriptFeature s' 'False => a) ->
-  (forall s'. s ~ 'TyScriptFeature s' 'True => b) ->
-  IfSupportsPlutus a b s
-ifSupportsPlutus' proxy x y = case reifySupportsPlutus proxy of
-  NoPlutusSupport () -> NoPlutusSupport x
-  SupportsPlutus () -> SupportsPlutus y
-
 ifSupportsPlutus ::
   forall s a b proxy.
   KnownScriptFeature s =>
@@ -208,43 +192,11 @@ ifSupportsPlutus proxy x y = case reifySupportsPlutus proxy of
   NoPlutusSupport () -> NoPlutusSupport x
   SupportsPlutus () -> SupportsPlutus y
 
-{-# DEPRECATED mapSupportsPlutus "use mapSupportsFeature" #-}
-mapSupportsPlutus ::
-  (a -> b) ->
-  IfSupportsPlutus x a s ->
-  IfSupportsPlutus x b s
-mapSupportsPlutus = mapSupportsFeature
-
-{-# DEPRECATED traverseSupportsPlutus "use traverseSupportsFeature" #-}
-traverseSupportsPlutus ::
-  Applicative m =>
-  (a -> m b) ->
-  IfSupportsPlutus x a s ->
-  m (IfSupportsPlutus x b s)
-traverseSupportsPlutus = traverseSupportsFeature
-
-{-# DEPRECATED traverseSupportsPlutus_ "use traverseSupportsFeature_" #-}
-traverseSupportsPlutus_ ::
-  Applicative m =>
-  (a -> m b) ->
-  IfSupportsPlutus x a s ->
-  m ()
-traverseSupportsPlutus_ = traverseSupportsFeature_
-
 instance FeatureSupport IfSupportsPlutus where
   bitraverseSupportsFeature f g = \case
     NoPlutusSupport x -> NoPlutusSupport <$> f x
     SupportsPlutus y -> SupportsPlutus <$> g y
   {-# INLINE bitraverseSupportsFeature #-}
-
-{-# DEPRECATED bitraverseSupportsPlutus "use bitraverseSupportsFeature" #-}
-bitraverseSupportsPlutus ::
-  Functor m =>
-  (a -> m c) ->
-  (b -> m d) ->
-  IfSupportsPlutus a b s ->
-  m (IfSupportsPlutus c d s)
-bitraverseSupportsPlutus = bitraverseSupportsFeature
 
 reifySupportsPlutus ::
   KnownScriptFeature s => proxy s -> IfSupportsPlutus () () s
@@ -299,23 +251,11 @@ ifSupportsMint proxy x y = case reifyValueFeature proxy of
   ValueFeatureTag_AdaOnly -> NoMintSupport x
   ValueFeatureTag_AnyOutput -> SupportsMint y
 
-{-# DEPRECATED fromSupportsMint "use bifoldMapSupportsFeature" #-}
-fromSupportsMint :: (a -> c) -> (b -> c) -> IfSupportsMint a b s -> c
-fromSupportsMint = bifoldMapSupportsFeature
-
 instance FeatureSupport IfSupportsMint where
   bitraverseSupportsFeature f g = \case
     NoMintSupport x -> NoMintSupport <$> f x
     SupportsMint y -> SupportsMint <$> g y
   {-# INLINE bitraverseSupportsFeature #-}
-
-{-# DEPRECATED traverseSupportsMint "use traverseSupportsFeature" #-}
-traverseSupportsMint ::
-  Applicative m =>
-  (a -> m b) ->
-  IfSupportsMint x a s ->
-  m (IfSupportsMint x b s)
-traverseSupportsMint = traverseSupportsFeature
 
 reifySupportsMint ::
   KnownValueFeature s => proxy s -> IfSupportsMint () () s
@@ -325,7 +265,7 @@ reifySupportsMint proxy = case reifyValueFeature proxy of
 
 reifySupportsMint' ::
   KnownValueFeature s => proxy s -> Bool
-reifySupportsMint' = fromSupportsMint (const False) (const True) . reifySupportsMint
+reifySupportsMint' = bifoldMapSupportsFeature (const False) (const True) . reifySupportsMint
 
 class v ~ 'ExpectAnyOutput => MintSupported v where
   supportsMint :: IfSupportsMint a b v -> b

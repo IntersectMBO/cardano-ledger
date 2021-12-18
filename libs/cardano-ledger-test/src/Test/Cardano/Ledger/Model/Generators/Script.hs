@@ -1,26 +1,25 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 
 module Test.Cardano.Ledger.Model.Generators.Script where
 
-import Control.Lens (to, uses, use, at)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Control.Lens (at, to, use, uses)
 import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified PlutusTx (Data (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
 import QuickCheck.GenT
   ( Gen,
-    elements,
     arbitrary,
+    choose,
     frequency,
     liftGen,
-    choose,
   )
 import Test.Cardano.Ledger.Model.API
   ( getModelLedger_utxos,
@@ -28,47 +27,40 @@ import Test.Cardano.Ledger.Model.API
     modelLedger_nes,
   )
 import Test.Cardano.Ledger.Model.FeatureSet
-  ( IfSupportsPlutus (..),
+  ( FeatureSupport (..),
+    IfSupportsPlutus (..),
     KnownScriptFeature,
-    fromSupportsPlutus,
     ScriptFeature,
+    bifoldMapSupportsFeature,
     ifSupportsPlutus,
-    mapSupportsPlutus,
     reifySupportsPlutus,
-    traverseSupportsPlutus,
+    traverseSupportsFeature,
   )
 import Test.Cardano.Ledger.Model.Generators
   ( AllowScripts,
     HasGenModelM,
     chooseElems,
   )
-import Test.Cardano.Ledger.Model.Script
-  ( ModelCredential (..),
-    ModelScript(..),
-    PreprocessedPlutusScript(..),
-    ModelPlutusScript(..),
-  )
 import Test.Cardano.Ledger.Model.LedgerState
-  ( modelNewEpochState_es,
-    modelEpochState_ls,
+  ( modelEpochState_ls,
     modelLState_utxoSt,
+    modelNewEpochState_es,
     modelUTxOState_utxo,
   )
-import Test.Cardano.Ledger.Model.Script (ModelAddress(..))
-import Test.Cardano.Ledger.Model.TxOut
-  (ModelTxOut(..))
+import Test.Cardano.Ledger.Model.Script (ModelAddress (..), ModelCredential (..), ModelPlutusScript (..), ModelScript (..), PreprocessedPlutusScript (..))
 import Test.Cardano.Ledger.Model.Tx
-  ( ModelScriptPurpose(..),
+  ( ModelRedeemer,
+    ModelScriptPurpose (..),
     modelCWitness,
-    ModelRedeemer,
   )
 import Test.Cardano.Ledger.Model.TxOut
-  ( ModelUTxOId,
+  ( ModelTxOut (..),
+    ModelUTxOId,
   )
 import Test.Cardano.Ledger.Model.UTxO (ModelUTxOMap (..))
 
 genRedeemer :: forall era m st. HasGenModelM st era m => ModelScriptPurpose era -> m (ModelRedeemer (ScriptFeature era))
-genRedeemer sp = traverseSupportsPlutus go $ reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era))
+genRedeemer sp = traverseSupportsFeature go $ reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era))
   where
     go () = case sp of
       ModelScriptPurpose_Minting policyId -> case policyId of
@@ -77,13 +69,13 @@ genRedeemer sp = traverseSupportsPlutus go $ reifySupportsPlutus (Proxy :: Proxy
       ModelScriptPurpose_Spending ui ->
         use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_utxoSt . modelUTxOState_utxo . at ui) >>= \case
           Nothing -> pure Nothing -- this "should" be an error
-          Just txo -> liftGen $ genCredRedeemer (fromSupportsPlutus (const Nothing) id $ _mtxo_data txo) (_modelAddress_pmt $ _mtxo_address txo)
+          Just txo -> liftGen $ genCredRedeemer (bifoldMapSupportsFeature (const Nothing) id $ _mtxo_data txo) (_modelAddress_pmt $ _mtxo_address txo)
       ModelScriptPurpose_Rewarding cred -> liftGen $ genCredRedeemer Nothing cred
       ModelScriptPurpose_Certifying cert -> case modelCWitness cert of
         Nothing -> pure Nothing
         Just cred -> liftGen $ genCredRedeemer Nothing cred
 
-genCredRedeemer :: Maybe PlutusTx.Data -> ModelCredential k sf -> Gen (Maybe (PlutusTx.Data, ExUnits ))
+genCredRedeemer :: Maybe PlutusTx.Data -> ModelCredential k sf -> Gen (Maybe (PlutusTx.Data, ExUnits))
 genCredRedeemer dh = \case
   ModelKeyHashObj _ -> pure Nothing
   ModelScriptHashObj sc -> Just <$> genScriptRedeemer dh sc
@@ -101,54 +93,60 @@ genPreprocesedScriptRedeemer dh =
         Nothing -> pure (PlutusTx.I 0, ExUnits 5 5)
         Just dh' -> f dh'
       eu = ExUnits 5 5
-  in \case
-    GuessTheNumber3 -> withDh $ \dh' -> frequency
-      [ (10, pure $ (dh', eu)),
-        (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
-      ]
-    Evendata3 -> pure (PlutusTx.I 10, eu)
-    Odddata3 -> pure (PlutusTx.I 10, eu)
-    EvenRedeemer3 -> frequency
-      [ (10, pure $ (PlutusTx.I 10, eu)),
-        (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
-      ]
-    OddRedeemer3 -> frequency
-      [ (10, pure $ (PlutusTx.I 11, eu)),
-        (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
-      ]
-    SumsTo103 -> withDh $ \case
-      PlutusTx.I dh' -> frequency
-        [ (10, pure $ (PlutusTx.I $ 10 - dh', eu)),
-          (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
-        ]
-      _ -> pure $ (PlutusTx.I 11, eu)
-    OddRedeemer2 -> frequency
-      [ (10, pure $ (PlutusTx.I 11, eu)),
-        (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
-      ]
-    EvenRedeemer2 -> frequency
-      [ (10, pure $ (PlutusTx.I 10, eu)),
-        (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
-      ]
-    RedeemerIs102 -> frequency
-      [ (10, pure $ (PlutusTx.I 10, eu)),
-        (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
-      ]
+   in \case
+        GuessTheNumber3 -> withDh $ \dh' ->
+          frequency
+            [ (10, pure $ (dh', eu)),
+              (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
+            ]
+        Evendata3 -> pure (PlutusTx.I 10, eu)
+        Odddata3 -> pure (PlutusTx.I 10, eu)
+        EvenRedeemer3 ->
+          frequency
+            [ (10, pure $ (PlutusTx.I 10, eu)),
+              (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
+            ]
+        OddRedeemer3 ->
+          frequency
+            [ (10, pure $ (PlutusTx.I 11, eu)),
+              (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
+            ]
+        SumsTo103 -> withDh $ \case
+          PlutusTx.I dh' ->
+            frequency
+              [ (10, pure $ (PlutusTx.I $ 10 - dh', eu)),
+                (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
+              ]
+          _ -> pure $ (PlutusTx.I 11, eu)
+        OddRedeemer2 ->
+          frequency
+            [ (10, pure $ (PlutusTx.I 11, eu)),
+              (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
+            ]
+        EvenRedeemer2 ->
+          frequency
+            [ (10, pure $ (PlutusTx.I 10, eu)),
+              (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
+            ]
+        RedeemerIs102 ->
+          frequency
+            [ (10, pure $ (PlutusTx.I 10, eu)),
+              (1, (,) <$> fmap PlutusTx.I arbitrary <*> pure eu)
+            ]
 
 genScriptData :: forall sf r. KnownScriptFeature sf => ModelCredential r sf -> Gen (IfSupportsPlutus () (Maybe PlutusTx.Data) sf)
-genScriptData addr = traverseSupportsPlutus id $
+genScriptData addr = traverseSupportsFeature id $
   ifSupportsPlutus (Proxy :: Proxy sf) () $ case addr of
     ModelKeyHashObj _ -> pure Nothing
     -- ModelScriptHashObj _ -> Just . PlutusTx.I <$> arbitrary
     ModelScriptHashObj _ -> Just . PlutusTx.I <$> pure 0
-
 
 genCollateral ::
   forall era m st.
   HasGenModelM st era m =>
   m (AllowScripts (ScriptFeature era), IfSupportsPlutus () (Set ModelUTxOId) (ScriptFeature era))
 genCollateral = do
-  res <- flip traverseSupportsPlutus (reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era))) $ \() -> do
+  res <- flip traverseSupportsFeature (reifySupportsPlutus (Proxy :: Proxy (ScriptFeature era))) $ \() -> do
     availableCollateralInputs <- uses (modelLedger . to getModelLedger_utxos) $ _modelUTxOMap_collateralUtxos
     numCollateralInputs <- choose (1, min 5 (Set.size availableCollateralInputs - 1))
     (collateral, rest) <- chooseElems numCollateralInputs availableCollateralInputs
@@ -158,7 +156,7 @@ genCollateral = do
         then Set.empty
         else collateral
 
-  pure (mapSupportsPlutus (not . Set.null) res, res)
+  pure (mapSupportsFeature (not . Set.null) res, res)
 
 guardHaveCollateral ::
   IfSupportsPlutus () Bool sf ->
