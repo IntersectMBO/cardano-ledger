@@ -26,6 +26,9 @@ import Control.DeepSeq
 import Control.Lens
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Data.Maybe (fromMaybe)
+import qualified PlutusTx (Data(..))
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified GHC.Exts as GHC
@@ -282,3 +285,35 @@ elaborateModelScript = \case
   ModelPlutusScript_Salt n ps -> case elaborateModelScript ps of
     Alonzo.TimelockScript {} -> error $ "not supposted to be a timelock script: " <> show ps
     Alonzo.PlutusScript lang ps' -> AlonzoTest.saltFunction lang n ps'
+
+evalModelPlutusScript ::
+  Maybe PlutusTx.Data ->
+  PlutusTx.Data ->
+  ModelPlutusScript ->
+  IsValid
+evalModelPlutusScript dh rdmr = IsValid . go
+  where
+    nargs = maybe 2 (const 3) dh
+    reqArgs n k
+      | n < nargs = pure True
+      | n == nargs = k
+      | otherwise = pure False
+    fromI = \case
+      PlutusTx.I i -> Just i
+      _ -> Nothing
+    go = \case
+      ModelPlutusScript_AlwaysSucceeds n -> n >= nargs
+      ModelPlutusScript_AlwaysFails n -> n > nargs
+      ModelPlutusScript_Salt _ ps -> go ps
+      ModelPlutusScript_Preprocessed p -> fromMaybe False $ case p of
+        GuessTheNumber3 -> reqArgs 3 $ (==) <$> (dh >>= fromI) <*> fromI rdmr
+        Evendata3 -> reqArgs 3 $ dh >>= (fmap even . fromI)
+        Odddata3 -> reqArgs 3 $ dh >>= (fmap odd . fromI)
+        EvenRedeemer3 -> reqArgs 3 $ even <$> fromI rdmr
+        OddRedeemer3 -> reqArgs 3 $ odd <$> fromI rdmr
+        SumsTo103 -> reqArgs 3 $ do
+          x <- (+) <$> (dh >>= fromI) <*> fromI rdmr
+          pure $ x == 10
+        OddRedeemer2 -> reqArgs 2 $ odd <$> fromI rdmr
+        EvenRedeemer2 -> reqArgs 2 $ even <$> fromI rdmr
+        RedeemerIs102 -> reqArgs 2 $ (10 ==) <$> fromI rdmr

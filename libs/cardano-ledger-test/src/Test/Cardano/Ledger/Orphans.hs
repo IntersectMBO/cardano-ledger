@@ -24,11 +24,15 @@ import qualified Control.Monad.Trans.RWS.CPS as CPS
 import qualified Control.Monad.Trans.Writer.CPS as CPS
 import Control.Monad.Writer.CPS ()
 import Data.Profunctor.Unsafe ((#.))
+import Data.Monoid (All(..))
 import GHC.Generics ((:*:) (..), (:.:) (..))
 import QuickCheck.GenT (MonadGen (..))
 import qualified System.Random
 
 instance NFData IsValid
+
+deriving via All instance Semigroup IsValid
+deriving via All instance Monoid IsValid
 
 type instance Zoomed (CPS.RWST r w s z) = FocusingWith w z
 

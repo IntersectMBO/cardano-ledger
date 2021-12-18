@@ -197,6 +197,7 @@ instance At (ModelUTxOMap era) where
                   _modelUTxOMap_balance = _modelUTxOMap_balance s <> val ~~ val'
                 }
      in b2t <$> (a2fb a)
+  {-# INLINE at #-}
 
 getCoinUTxOsfromUTxoMap :: ModelUTxOMap era -> (Coin, Set ModelUTxOId)
 getCoinUTxOsfromUTxoMap (ModelUTxOMap utxos _ _ balances) = (Val.coin balances, Map.keysSet utxos)

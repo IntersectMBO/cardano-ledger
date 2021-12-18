@@ -53,16 +53,16 @@ type UsesModelPP pparams =
   )
 
 -- | convenient initial pparams
-modelPParams :: forall era. KnownRequiredFeatures era => ModelPParams era
+modelPParams :: forall era f. (KnownRequiredFeatures era, Applicative f) => ModelPParamsF era f
 modelPParams =
   ModelPParams
     { _modelPParams_protocolVersion = pure $ ProtVer 5 0,
       _modelPParams_minfeeA = pure 1,
       _modelPParams_minfeeB = pure 1,
       _modelPParams_collateralPercent = pure $ sp () 150,
-      _modelPParams_d = pure $ maxBound,
-      _modelPParams_maxTxSize = pure $ 1_000_000,
-      _modelPParams_nOpt = pure $ 10,
+      _modelPParams_d = pure maxBound,
+      _modelPParams_maxTxSize = pure 1_000_000,
+      _modelPParams_nOpt = pure 10,
       _modelPParams_rho = pure $ unsafeFromRational "modelPParams::rho" 0.02,
       _modelPParams_tau = pure minBound,
       _modelPParams_a0 = pure minBound,

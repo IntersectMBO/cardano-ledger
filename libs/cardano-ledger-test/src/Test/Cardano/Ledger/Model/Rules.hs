@@ -506,7 +506,7 @@ instance ModelSTS 'ModelRule_UTXOS where
         (\collateral -> modelUTxOState_utxo %= spendModelUTxOs collateral [])
         (_mtxCollateral tx)
       b' <- uses modelUTxOState_utxo totalPreservedAda
-      modelUTxOState_fees <>= b' ~~ b
+      modelUTxOState_fees <>= b ~~ b'
 
 -- | handle utxos on transaction
 -- SEE: (fig 10)[GL-D2]
@@ -539,7 +539,8 @@ data ModelLEnv env = ModelLEnv
 
 
 
--- FIG30[SL-D5]
+-- fig 14(GL-D2)
+-- DEPRECATED: FIG30[SL-D5]
 instance ModelSTS 'ModelRule_LEDGER where
   type ModelSignal 'ModelRule_LEDGER = ModelTx
   type ModelState 'ModelRule_LEDGER = ModelLState
@@ -547,10 +548,11 @@ instance ModelSTS 'ModelRule_LEDGER where
   type ModelFailure 'ModelRule_LEDGER = Proxy
 
   applyRuleImpl _ tx = RWS.execRWST $ do
-    lift $ setProvenance (getModelTxId tx)
-    liftApplyRule (Proxy @'ModelRule_UTXOW) tx tx
-    liftApplyRule (Proxy @'ModelRule_DELEGS) (Compose $ toListOf modelDCerts tx) tx
-    lift $ clearProvenance
+      lift $ setProvenance (getModelTxId tx)
+      liftApplyRule (Proxy @'ModelRule_UTXOW) tx tx
+      when (modelIsValid tx) $
+        liftApplyRule (Proxy @'ModelRule_DELEGS) (Compose $ toListOf modelDCerts tx) tx
+      lift $ clearProvenance
 
 -- (fig13)[GL-D2]
 instance ModelSTS 'ModelRule_UTXOW where

@@ -49,8 +49,16 @@ import QuickCheck.GenT
     resize,
     sublistOf,
   )
+import Test.Cardano.Ledger.Model.LedgerState
+  ( modelNewEpochState_es,
+    modelEpochState_ls,
+    modelLState_utxoSt,
+    modelUTxOState_utxo,
+    validateModelTx,
+  )
 import Test.Cardano.Ledger.Model.API
   ( applyModelDCert,
+    modelLedger_nes,
     applyModelTx,
     execModelM,
     getModelLedger_rewards,
@@ -66,6 +74,7 @@ import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSet (..),
     IfSupportsMint (..),
     IfSupportsPlutus (..),
+    mapSupportsFeature,
     KnownScriptFeature,
     ScriptFeature,
     TyScriptFeature (..),
@@ -310,10 +319,14 @@ genModelTx slot = do
 
     pure dcerts
 
+  utxos <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_utxoSt . modelUTxOState_utxo)
+
   let nc = needCollateral ins wdrl mint dcerts
-  uses modelLedger $
-    witnessModelTx
-      txn
+      txn' = txn
         { _mtxDCert = dcerts,
           _mtxCollateral = if nc then collateral else _mtxCollateral txn
         }
+  uses modelLedger $
+    witnessModelTx txn'
+      { _mtxValidity = mapSupportsFeature (const $ validateModelTx utxos txn') $ _mtxValidity txn'
+      }

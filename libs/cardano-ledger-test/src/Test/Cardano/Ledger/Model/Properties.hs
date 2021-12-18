@@ -1204,8 +1204,8 @@ testPoolParamModel =
         ModelPoolParams
           { _mppId = "pool1",
             _mppVrm = "pool1'",
-            _mppPledge = (Coin 500),
-            _mppCost = (Coin 0),
+            _mppPledge = Coin 500,
+            _mppCost = Coin 0,
             _mppMargin = (fromJust $ boundRational $ 0 % 1),
             _mppRAcnt = "rewardAcct",
             _mppOwners = ["poolOwner"]
