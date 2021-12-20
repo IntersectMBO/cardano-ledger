@@ -34,13 +34,15 @@ import Cardano.Binary
   ( Encoding,
     FromCBOR (..),
     ToCBOR (..),
+    encodeMapLen,
     encodeNull,
+    encodePreEncoded,
     serialize',
     serializeEncoding',
   )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
+  ( CostModel (..),
     ExUnits (..),
     Prices (..),
     decodeCostModelMap,
@@ -67,6 +69,7 @@ import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
+import qualified Data.ByteString as BS
 import Data.Coders
   ( Decode (..),
     Density (..),
@@ -75,13 +78,16 @@ import Data.Coders
     Wrapped (..),
     decode,
     encode,
+    encodeFoldableAsIndefinite,
     field,
     mapEncode,
     (!>),
     (<!),
   )
 import Data.Default (Default (..))
+import Data.Function (on)
 import Data.Functor.Identity (Identity (..))
+import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -494,19 +500,32 @@ getLanguageView ::
   Language ->
   LangDepView
 getLanguageView pp lang@PlutusV1 =
-  LangDepView
-    (serialize' lang)
-    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))
+  LangDepView -- The silly double bagging is to keep compatibility with a past bug
+    (serialize' (serialize' lang))
+    ( serialize'
+        ( serializeEncoding' $
+            maybe encodeNull enc $
+              Map.lookup lang (_costmdls pp)
+        )
+    )
+  where
+    enc (CostModel cm) = encodeFoldableAsIndefinite $ Map.elems cm
 getLanguageView pp lang@PlutusV2 =
   LangDepView
     (serialize' lang)
     (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))
 
 encodeLangViews :: Set LangDepView -> Encoding
-encodeLangViews views =
-  toCBOR $ Map.fromList (unLangDepView <$> Set.toList views)
+encodeLangViews views = encodeMapLen n <> foldMap encPair ascending
   where
-    unLangDepView (LangDepView a b) = (a, b)
+    n = fromIntegral (Set.size views) :: Word
+    ascending = sortBy (shortLex `on` tag) $ Set.toList views
+    encPair (LangDepView k v) = encodePreEncoded k <> encodePreEncoded v
+    shortLex :: ByteString -> ByteString -> Ordering
+    shortLex a b
+      | BS.length a < BS.length b = LT
+      | BS.length a > BS.length b = GT
+      | otherwise = compare a b
 
 -- | Turn an PParams' into a Shelley.Params'
 retractPP :: HKD f Coin -> PParams' f era2 -> Shelley.PParams' f era1

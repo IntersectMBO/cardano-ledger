@@ -179,7 +179,7 @@ newtype CostModel = CostModel (Map Text Integer)
 -- NOTE: Since cost model serializations need to be independently reproduced,
 -- we use the 'canonical' serialization approach used in Byron.
 instance ToCBOR CostModel where
-  toCBOR (CostModel cm) = toCBOR $ Map.elems cm
+  toCBOR (CostModel cm) = encodeFoldableAsDefinite $ Map.elems cm
 
 instance SafeToHash CostModel where
   originalBytes = serialize'

@@ -7,10 +7,13 @@ import Cardano.Binary
     Decoder,
     TokenType (..),
     decodeAnnotator,
+    decodeBool,
     decodeBytesCanonical,
     decodeDoubleCanonical,
     decodeIntegerCanonical,
+    decodeListLenCanonical,
     decodeMapLenCanonical,
+    decodeNull,
     decodeSimpleCanonical,
     decodeStringCanonical,
     peekTokenType,
@@ -19,7 +22,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.PParams
-import Control.Monad (replicateM, unless)
+import Control.Monad (replicateM, unless, void)
 import qualified Data.ByteString.Base16 as B16
 import Data.ByteString.Lazy as LBS
 import Data.Functor.Compose (Compose (..))
@@ -65,20 +68,20 @@ checkCanonicalTerm = do
     TypeBytesIndef -> fail "indefinite bytes encoding"
     TypeString -> t <$> decodeStringCanonical
     TypeStringIndef -> fail "indefinite string encoding"
-    -- TypeListLen ->
-    -- TypeListLen64 ->
+    TypeListLen -> t <$> checkCanonicalList
+    TypeListLen64 -> t <$> checkCanonicalList
     TypeListLenIndef -> fail "indefinite list encoding"
     TypeMapLen -> checkCanonicalMap
     TypeMapLen64 -> checkCanonicalMap
     TypeMapLenIndef -> fail "indefinite map encoding"
     -- TypeTag ->
     -- TypeTag64 ->
-    -- TypeBool ->
-    -- TypeNull ->
+    TypeBool -> t <$> decodeBool
+    TypeNull -> t <$> decodeNull
     TypeSimple -> t <$> decodeSimpleCanonical
     -- TypeBreak ->
     -- TypeInvalid ->
-    _ -> fail "canonicity check not implemented"
+    x -> fail $ "canonicity check for " <> show x <> " not implemented"
 
 {-
 - The keys in the map must be sorted as follows:
@@ -103,6 +106,12 @@ checkCanonicalMap = do
     Annotator $ \fullBytes -> do
       ks <- runAnnotator keys' fullBytes
       unless (isSorted ks) (Left "map keys out of order")
+
+checkCanonicalList :: Decoder s (Annotator (Either String ()))
+checkCanonicalList = do
+  len <- decodeListLenCanonical
+  checkedTerms <- (replicateM len checkCanonicalTerm)
+  pure $ void <$> (getCompose . sequenceA . fmap Compose) checkedTerms
 
 isSorted :: [ByteString] -> Bool
 isSorted [] = True
