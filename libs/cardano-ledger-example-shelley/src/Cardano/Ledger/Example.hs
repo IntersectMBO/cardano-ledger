@@ -33,12 +33,11 @@ import Cardano.Ledger.Shelley.API
     DState (_genDelegs),
     EpochState (EpochState),
     GenDelegs (GenDelegs),
-    GetLedgerView,
     LedgerState (LedgerState),
     NewEpochState (NewEpochState),
     PoolDistr (PoolDistr),
-    PraosCrypto,
     ShelleyBasedEra,
+    ShelleyEraCrypto,
     ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
     StrictMaybe (SNothing),
     TxOut (..),
@@ -85,6 +84,7 @@ import Cardano.Ledger.Shelley.Tx
   )
 import Cardano.Ledger.Shelley.TxBody (TxBody (..))
 import Cardano.Ledger.Val (Val ((<->)))
+import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.Rules.OCert (OCERT)
 import Cardano.Protocol.TPraos.Rules.Overlay (OVERLAY)
 import Cardano.Protocol.TPraos.Rules.Tickn (TICKN)
@@ -158,13 +158,13 @@ instance CryptoClass.Crypto c => ValidateAuxiliaryData (ExampleEra c) c where
       index = Proxy @EraIndependentAuxiliaryData
   validateAuxiliaryData (Metadata m) = all validMetadatum m
 
-instance PraosCrypto c => ApplyTx (ExampleEra c)
+instance ShelleyEraCrypto c => ApplyTx (ExampleEra c)
 
-instance PraosCrypto c => ApplyBlock (ExampleEra c)
+instance ShelleyEraCrypto c => ApplyBlock (ExampleEra c)
 
-instance PraosCrypto c => GetLedgerView (ExampleEra c)
+instance CryptoClass.Crypto c => GetLedgerView (ExampleEra c)
 
-instance PraosCrypto c => ShelleyBasedEra (ExampleEra c)
+instance ShelleyEraCrypto c => ShelleyBasedEra (ExampleEra c)
 
 instance (CryptoClass.Crypto c) => CanStartFromGenesis (ExampleEra c) where
   initialState sg () =

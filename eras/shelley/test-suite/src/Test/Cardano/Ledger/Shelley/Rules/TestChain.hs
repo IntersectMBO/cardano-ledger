@@ -42,11 +42,7 @@ import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
-import Cardano.Ledger.Shelley.API
-  ( ApplyBlock,
-    DELEG,
-    GetLedgerView,
-  )
+import Cardano.Ledger.Shelley.API (ApplyBlock, DELEG)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (..), Stake (..), obligation)
 import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
@@ -63,6 +59,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))
+import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader (..),
     bhbody,

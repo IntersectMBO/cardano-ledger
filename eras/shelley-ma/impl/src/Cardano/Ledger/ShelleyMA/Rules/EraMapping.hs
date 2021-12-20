@@ -53,8 +53,6 @@ type instance Core.EraRule "TICK" (ShelleyMAEra ma c) = Shelley.TICK (ShelleyMAE
 
 type instance Core.EraRule "TICKF" (ShelleyMAEra ma c) = Shelley.TICKF (ShelleyMAEra ma c)
 
-type instance Core.EraRule "TICKN" (ShelleyMAEra _ma _c) = Shelley.TICKN
-
 type instance Core.EraRule "UPEC" (ShelleyMAEra ma c) = Shelley.UPEC (ShelleyMAEra ma c)
 
 -- These rules are defined anew in the ShelleyMA era(s)

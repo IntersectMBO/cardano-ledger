@@ -4,8 +4,7 @@
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 module Cardano.Ledger.Shelley.API.ByronTranslation
-  ( mkInitialShelleyLedgerView,
-    translateToShelleyLedgerState,
+  ( translateToShelleyLedgerState,
 
     -- * Exported for testing purposes
     translateCompactTxOutByronToShelley,
@@ -19,15 +18,14 @@ import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Chain (pparamsToChainChecksPParams)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Protocol
 import Cardano.Ledger.Shelley.API.Types
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (UnsafeCompactAddr))
 import Cardano.Ledger.Shelley.EpochBoundary
+import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
@@ -157,18 +155,3 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
                 _pstate = def
               }
         }
-
--- | We construct a 'LedgerView' using the Shelley genesis config in the same
--- way as 'translateToShelleyLedgerState'.
-mkInitialShelleyLedgerView ::
-  forall c.
-  ShelleyGenesis (ShelleyEra c) ->
-  LedgerView c
-mkInitialShelleyLedgerView genesisShelley =
-  LedgerView
-    { lvD = _d . sgProtocolParams $ genesisShelley,
-      lvExtraEntropy = _extraEntropy . sgProtocolParams $ genesisShelley,
-      lvPoolDistr = PoolDistr Map.empty,
-      lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
-      lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
-    }

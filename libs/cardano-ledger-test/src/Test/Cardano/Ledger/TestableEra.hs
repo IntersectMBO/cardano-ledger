@@ -2,6 +2,7 @@
 module Test.Cardano.Ledger.TestableEra where
 
 import Cardano.Ledger.Shelley.API
+import Cardano.Protocol.TPraos.API
 
 class
   ( ApplyBlock era,

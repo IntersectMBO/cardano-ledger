@@ -24,7 +24,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (PraosCrypto)
 import Cardano.Ledger.Shelley.Bench.Gen
   ( genBlock,
     genTriple,
@@ -41,6 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Rewards (likelihood)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
+import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Iterate.SetAlgebra (compile, compute, run)

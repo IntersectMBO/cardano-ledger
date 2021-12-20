@@ -22,7 +22,6 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( Coin (..),
     DCert,
-    PraosCrypto,
     Update,
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..))
@@ -37,6 +36,7 @@ import Cardano.Ledger.Shelley.Tx
 import Cardano.Ledger.Shelley.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>))
+import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Control.Monad (replicateM)
 import Data.Sequence.Strict (StrictSeq ((:|>)))
 import Data.Set (Set)
