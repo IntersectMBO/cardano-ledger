@@ -159,6 +159,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.Group.GrpMap (GrpMap (..))
 import Data.Kind (Type)
 import qualified Data.List.NonEmpty as NonEmpty
+import Data.Maybe (catMaybes)
 import qualified Data.Map as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -385,7 +386,7 @@ instance Typeable era => Monoid (EraElaboratorTxAccum era) where
 -- under normal circumstances, this arises during elaboration, at which time the
 -- era is already known
 data TestRedeemer era = TestRedeemer
-  { _trdmrPtr :: !(Alonzo.ScriptPurpose (Crypto era)),
+  { _trdmrPtr :: !(Either (Alonzo.RdmrPtr) (Alonzo.ScriptPurpose (Crypto era))),
     _trdmData :: !PlutusTx.Data,
     _trdmExUnits :: !ExUnits
   }
@@ -403,7 +404,7 @@ elaborateModelRedeemer ::
   TestRedeemer era ->
   StrictMaybe (Alonzo.RdmrPtr, (Alonzo.Data era, Alonzo.ExUnits))
 elaborateModelRedeemer tx (TestRedeemer scriptPurpose dat exUnits) =
-  (,) <$> (Alonzo.rdptr @era tx scriptPurpose) <*> pure (Alonzo.Data dat, exUnits)
+  (,) <$> (either pure (Alonzo.rdptr @era tx) scriptPurpose) <*> pure (Alonzo.Data dat, exUnits)
 
 eesUnusedKeyPairs :: Functor f => (Word64 -> f Word64) -> EraElaboratorState era -> f (EraElaboratorState era)
 eesUnusedKeyPairs a2fb s = (\b -> s {_eesUnusedKeyPairs = b}) <$> a2fb (_eesUnusedKeyPairs s)
@@ -1335,9 +1336,30 @@ class
       nes <- State.gets fst
       witA <- zoom _2 $ traverse (getKeyPairFor proxy) $ Set.toList mtxWits
 
-      rdm <- for (itoListOf modelTx_redeemers mtx) $ \(msp, (mdat, exu)) -> do
-        sp <- zoom _2 $ State.state $ elaborateScriptPurpose proxy msp
-        pure $ TestRedeemer sp mdat exu
+      rdm <- do
+        certRdmr <- ifor (_mtxDCert mtx) $ \i -> \case
+          (_, NoPlutusSupport ()) -> pure Nothing
+          (_, SupportsPlutus Nothing) -> pure Nothing
+          (_, SupportsPlutus (Just (mdat, exu))) ->
+            pure $ Just $ TestRedeemer (Left $ Alonzo.RdmrPtr Alonzo.Cert $ toEnum i) mdat exu
+
+        otherRdmr <- for (itoListOf modelTx_redeemers mtx) $ \(msp, (mdat, exu)) ->
+          let mapLikeRdmr = case msp of
+                ModelScriptPurpose_Certifying {} -> False
+                ModelScriptPurpose_Minting {} -> True
+                ModelScriptPurpose_Rewarding {} -> True
+                ModelScriptPurpose_Spending {} -> True
+          in if mapLikeRdmr
+            then do
+              sp <- zoom _2 $ State.state $ elaborateScriptPurpose proxy msp
+              pure $ Just $ TestRedeemer (Right sp) mdat exu
+            else pure Nothing
+
+        pure $ concat
+          [ catMaybes certRdmr,
+            catMaybes otherRdmr
+          ]
+
 
       (realTxBody, txWitnessArguments) <- mkTxWitnessArguments (Map.keysSet mtxInputs) nes witA scripts rdm dats txBodyArguments
 

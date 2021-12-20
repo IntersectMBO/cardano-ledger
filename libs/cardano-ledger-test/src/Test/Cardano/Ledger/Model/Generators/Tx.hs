@@ -1,4 +1,5 @@
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -11,6 +12,7 @@
 module Test.Cardano.Ledger.Model.Generators.Tx where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import qualified Control.Monad.State.Strict as State
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName (..))
 import qualified Cardano.Ledger.Val as Val
@@ -20,6 +22,10 @@ import Control.Lens
     to,
     use,
     uses,
+    _Nothing,
+    preview,
+    at,
+    (<<.=),
     (.=),
   )
 import Control.Monad (replicateM)
@@ -318,7 +324,7 @@ genModelTx slot = do
   let nc = needCollateral ins wdrl mint dcerts
       txn' =
         txn
-          { _mtxDCert = dcerts,
+          { _mtxDCert = clobberDCertRedeemers dcerts,
             _mtxCollateral = if nc then collateral else _mtxCollateral txn
           }
   uses modelLedger $
@@ -326,3 +332,20 @@ genModelTx slot = do
       txn'
         { _mtxValidity = mapSupportsFeature (const $ validateModelTx utxos txn') $ _mtxValidity txn'
         }
+
+clobberDCertRedeemers ::
+  forall era.
+  [(ModelDCert era, ModelRedeemer (ScriptFeature era))] ->
+  [(ModelDCert era, ModelRedeemer (ScriptFeature era))]
+clobberDCertRedeemers dcerts = State.evalState (traverse go dcerts) Set.empty
+  where
+    go ::
+      (ModelDCert era, ModelRedeemer (ScriptFeature era)) ->
+      State.State
+        (Set.Set (ModelDCert era))
+        (ModelDCert era, ModelRedeemer (ScriptFeature era))
+    go x@(dcert, rdmr) = case rdmr of
+      SupportsPlutus (Just _) -> do
+        oldRdmr <- at dcert <<.= Just ()
+        pure (dcert, mapSupportsFeature (preview _Nothing oldRdmr *>) rdmr )
+      _ -> pure x
