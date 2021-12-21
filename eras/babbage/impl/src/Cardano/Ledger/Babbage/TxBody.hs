@@ -74,7 +74,6 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Crypto.Hash
-import qualified Data.Text as T
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
 import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)

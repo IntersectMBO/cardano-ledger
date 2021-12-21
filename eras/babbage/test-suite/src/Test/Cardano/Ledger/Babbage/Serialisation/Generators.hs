@@ -13,12 +13,6 @@
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
-import Cardano.Ledger.Babbage.TxBody
-  ( BabbageBody,
-    TxBody (..),
-    TxOut (..),
-    Datum (..),
-  )
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Data (AuxiliaryData (..), Data (..))
 import Cardano.Ledger.Babbage.Language
@@ -26,31 +20,6 @@ import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Babbage.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbagePredFail (..))
-import Cardano.Ledger.Babbage.Tx
-import Cardano.Ledger.Babbage.TxInfo (FailureDescription (..), ScriptResult (..))
-import Cardano.Ledger.Babbage.TxWitness
-import Cardano.Ledger.Compactible (toCompact)
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
-import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
-import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
-import Data.Int (Int64)
-import Data.Map (Map)
-import Data.Maybe (fromJust)
-import Data.Maybe (fromMaybe)
-import Data.Text (pack)
-import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
-import Test.Cardano.Ledger.Babbage.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
-import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
-import Test.QuickCheck
-import qualified Cardano.Ledger.Core as Core
-import qualified Data.Map as Map
-import qualified Data.Set as Set
-import qualified PlutusTx as Plutus
 import Cardano.Ledger.Babbage.Scripts
   ( CostModel (..),
     ExUnits (..),
@@ -58,9 +27,35 @@ import Cardano.Ledger.Babbage.Scripts
     Script (..),
     Tag (..),
   )
+import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
-  ( TxOut (..),
+  ( BabbageBody,
+    Datum (..),
+    TxBody (..),
+    TxOut (..),
   )
+import Cardano.Ledger.Babbage.TxInfo (FailureDescription (..), ScriptResult (..))
+import Cardano.Ledger.Babbage.TxWitness
+import Cardano.Ledger.Compactible (toCompact)
+import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Hashes (ScriptHash)
+import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
+import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
+import Data.Int (Int64)
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Maybe (fromJust, fromMaybe)
+import qualified Data.Set as Set
+import Data.Text (pack)
+import Numeric.Natural (Natural)
+import Plutus.V1.Ledger.Api (defaultCostModelParams)
+import qualified PlutusTx as Plutus
+import Test.Cardano.Ledger.Babbage.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
+import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
+import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
+import Test.QuickCheck
 
 instance
   ( Era era,
@@ -70,10 +65,11 @@ instance
   ) =>
   Arbitrary (TxOut era)
   where
-  arbitrary = TxOut
-    <$> arbitrary
-    <*> arbitrary
-    <*> arbitrary
+  arbitrary =
+    TxOut
+      <$> arbitrary
+      <*> arbitrary
+      <*> arbitrary
 
 instance
   ( UsesValue era,
@@ -338,10 +334,13 @@ instance Mock c => Arbitrary (ScriptIntegrity (BabbageEra c)) where
       <*> genData
       <*> (Set.singleton <$> (getLanguageView <$> arbitrary <*> arbitrary))
 
-instance Mock (Crypto era) =>
-  Arbitrary (Datum era) where
-  arbitrary = oneof
-    [ pure NoDatum
-    , DatumHash <$> arbitrary
-    , Datum <$> arbitrary
-    ]
+instance
+  Mock (Crypto era) =>
+  Arbitrary (Datum era)
+  where
+  arbitrary =
+    oneof
+      [ pure NoDatum,
+        DatumHash <$> arbitrary,
+        Datum <$> arbitrary
+      ]
