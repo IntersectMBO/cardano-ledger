@@ -21,7 +21,6 @@ module Cardano.Ledger.Babbage
   )
 where
 
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import Cardano.Ledger.Babbage.Data (AuxiliaryData (..))
 import Cardano.Ledger.Babbage.Genesis
 import Cardano.Ledger.Babbage.Language (Language (..))
@@ -39,10 +38,11 @@ import qualified Cardano.Ledger.Babbage.Rules.Utxos as Babbage (UTXOS)
 import qualified Cardano.Ledger.Babbage.Rules.Utxow as Babbage (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
-import Cardano.Ledger.Babbage.TxBody (TxBody, TxOut (..), Datum(..))
+import Cardano.Ledger.Babbage.TxBody (TxBody, TxOut (..), Datum (..))
 import Cardano.Ledger.Babbage.TxInfo (validScript)
 import qualified Cardano.Ledger.Babbage.TxSeq as Babbage (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Babbage.TxWitness (TxWitness (..))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
@@ -109,7 +109,7 @@ instance
   where
   type Crypto (BabbageEra c) = c
 
-instance API.PraosCrypto c => API.ApplyTx (BabbageEra c) where
+instance API.ShelleyEraCrypto c => API.ApplyTx (BabbageEra c) where
   reapplyTx globals env state vtx =
     let res =
           flip runReader globals
@@ -118,9 +118,7 @@ instance API.PraosCrypto c => API.ApplyTx (BabbageEra c) where
             $ TRC (env, state, API.extractTx vtx)
      in liftEither . left API.ApplyTxError $ res
 
-instance API.PraosCrypto c => API.ApplyBlock (BabbageEra c)
-
-instance (API.PraosCrypto c) => API.GetLedgerView (BabbageEra c)
+instance API.ShelleyEraCrypto c => API.ApplyBlock (BabbageEra c)
 
 instance (CC.Crypto c) => Shelley.ValidateScript (BabbageEra c) where
   isNativeScript x = not (isPlutusScript x)
@@ -228,7 +226,7 @@ instance CC.Crypto c => EraModule.SupportsSegWit (BabbageEra c) where
   hashTxSeq = Babbage.hashTxSeq
   numSegComponents = 4
 
-instance API.PraosCrypto c => API.ShelleyBasedEra (BabbageEra c)
+instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping
