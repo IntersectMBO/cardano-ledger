@@ -91,6 +91,8 @@ instance
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
+      <*> arbitrary
+      <*> arbitrary
       <*> genMintValues
       <*> arbitrary
       <*> arbitrary
