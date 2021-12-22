@@ -192,6 +192,27 @@ instance
           k -> invalidKey k
       )
 
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "POOL" era))),
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "DELEG" era))),
+    Typeable (Core.Script era)
+  ) =>
+  FromCBOR (Annotator (DelplPredicateFailure era))
+  where
+  fromCBOR =
+    decodeRecordSum
+      "PredicateFailure (DELPL era)"
+      ( \case
+          0 -> do
+            a <- fromCBOR
+            pure (2, fmap PoolFailure a)
+          1 -> do
+            a <- fromCBOR
+            pure (2, fmap DelegFailure a)
+          k -> invalidKey k
+      )
+
 delplTransition ::
   forall era.
   ( Embed (Core.EraRule "DELEG" era) (DELPL era),
