@@ -13,7 +13,7 @@
 
 module Cardano.Ledger.Alonzo.Rules.Utxo where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
+import Cardano.Binary (Annotator (Annotator), FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address
   ( Addr (..),
     RewardAcnt,
@@ -76,12 +76,14 @@ import Data.Coders
     Encode (..),
     Wrapped (Open),
     decode,
+    decodeAnnList,
     decodeList,
     decodeSet,
     encode,
     encodeFoldable,
     (!>),
     (<!),
+    (<*!),
   )
 import Data.Coerce (coerce)
 import Data.Foldable (foldl', toList)
@@ -609,3 +611,52 @@ instance
   FromCBOR (UtxoPredicateFailure era)
   where
   fromCBOR = decode (Summands "UtxoPredicateFailure" decFail)
+
+decFailA ::
+  ( Era era,
+    FromCBOR (Annotator (Core.TxOut era)),
+    FromCBOR (Core.Value era),
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXOS" era)))
+  ) =>
+  Word ->
+  Decode 'Open (Annotator (UtxoPredicateFailure era))
+decFailA 0 = Ann $ SumD BadInputsUTxO <! D (decodeSet fromCBOR)
+decFailA 1 = Ann $ SumD OutsideValidityIntervalUTxO <! From <! From
+decFailA 2 = Ann $ SumD MaxTxSizeUTxO <! From <! From
+decFailA 3 = Ann $ SumD InputSetEmptyUTxO
+decFailA 4 = Ann $ SumD FeeTooSmallUTxO <! From <! From
+decFailA 5 = Ann $ SumD ValueNotConservedUTxO <! From <! From
+decFailA 6 = SumD (pure OutputTooSmallUTxO) <*! D (decodeAnnList fromCBOR)
+decFailA 7 = SumD (pure UtxosFailure) <*! From
+decFailA 8 = Ann $ SumD WrongNetwork <! From <! D (decodeSet fromCBOR)
+decFailA 9 = Ann $ SumD WrongNetworkWithdrawal <! From <! D (decodeSet fromCBOR)
+decFailA 10 = SumD (pure OutputBootAddrAttrsTooBig) <*! D (decodeAnnList fromCBOR)
+decFailA 11 = Ann $ SumD TriesToForgeADA
+decFailA 12 =
+  SumD (pure OutputTooBigUTxO)
+    <*! D
+      ( do
+          xs <- decodeAnnList $ do
+            (a, b, Annotator fc) <- fromCBOR
+            pure $ Annotator $ \fbs -> (a, b, fc fbs)
+          pure xs
+      )
+decFailA 13 = Ann $ SumD InsufficientCollateral <! From <! From
+decFailA 14 = SumD (pure ScriptsNotPaidUTxO) <*! From
+decFailA 15 = Ann $ SumD ExUnitsTooBigUTxO <! From <! From
+decFailA 16 = Ann $ SumD CollateralContainsNonADA <! From
+decFailA 17 = Ann $ SumD WrongNetworkInTxBody <! From <! From
+decFailA 18 = Ann $ SumD OutsideForecast <! From
+decFailA 19 = Ann $ SumD TooManyCollateralInputs <! From <! From
+decFailA 20 = Ann $ SumD NoCollateralInputs
+decFailA n = Invalid n
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (Core.TxOut era)),
+    FromCBOR (Core.Value era),
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXOS" era)))
+  ) =>
+  FromCBOR (Annotator (UtxoPredicateFailure era))
+  where
+  fromCBOR = decode (Summands "UtxoPredicateFailure" decFailA)

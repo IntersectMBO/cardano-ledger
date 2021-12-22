@@ -58,6 +58,7 @@ import Control.State.Transition
     (?!),
   )
 import qualified Data.ByteString as BS
+import Data.Coders (Annotator)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
@@ -170,6 +171,12 @@ instance
         s <- fromCBOR
         pure (3, PoolMedataHashTooBig poolID s)
       k -> invalidKey k
+
+instance
+  (Era era) =>
+  FromCBOR (Annotator (PoolPredicateFailure era))
+  where
+  fromCBOR = pure <$> fromCBOR
 
 poolDelegationTransition ::
   forall era.

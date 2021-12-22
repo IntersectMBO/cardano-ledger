@@ -275,7 +275,8 @@ viewCompactTxOut txOut = case txOut of
         toCompactValue adaVal,
         SJust (decodeDataHash32 e f g h)
       )
-  _ -> error "Impossible: Compacted and address or hash of non-standard size"
+  TxOut_AddrHash28_AdaOnly {} -> error "Impossible: Compacted and address or hash of non-standard size"
+  TxOut_AddrHash28_AdaOnly_DataHash32 {} -> error "Impossible: Compacted and address or hash of non-standard size"
   where
     toCompactValue :: CompactForm Coin -> CompactForm (Core.Value era)
     toCompactValue ada =
@@ -304,7 +305,8 @@ viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h)
   | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28),
     Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) =
     (decodeAddress28 stakeRef a b c d, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
-viewTxOut _ = error "Impossible: Compacted and address or hash of non-standard size"
+viewTxOut (TxOut_AddrHash28_AdaOnly {}) = error "Impossible: Compacted and address or hash of non-standard size"
+viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 {}) = error "Impossible: Compacted and address or hash of non-standard size"
 
 instance
   ( Era era,
@@ -635,6 +637,27 @@ instance
   FromCBOR (TxOut era)
   where
   fromCBOR = fromNotSharedCBOR
+
+instance
+  ( Era era,
+    DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    Compactible (Core.Value era)
+  ) =>
+  FromCBOR (Annotator (TxOut era))
+  where
+  fromCBOR = pure <$> fromCBOR
+
+instance
+  ( Era era,
+    DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    Compactible (Core.Value era)
+  ) =>
+  FromSharedCBOR (Annotator (TxOut era))
+  where
+  type Share (Annotator (TxOut era)) = Share (TxOut era)
+  fromSharedCBOR x = pure <$> fromSharedCBOR x
 
 instance
   ( Era era,

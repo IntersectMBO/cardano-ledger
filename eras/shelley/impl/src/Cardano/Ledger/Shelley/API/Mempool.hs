@@ -3,6 +3,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -36,9 +37,9 @@ module Cardano.Ledger.Shelley.API.Mempool
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
+import Cardano.Ledger.Core (AnnotatedData, ChainData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
   ( Crypto,
@@ -69,6 +70,7 @@ import Control.State.Transition.Extended
     TRC (..),
     applySTS,
   )
+import Data.Coders (decodeAnnList)
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
 import Data.Sequence (Seq)
@@ -109,7 +111,7 @@ class
     Eq (ApplyTxError era),
     Show (ApplyTxError era),
     Typeable (ApplyTxError era),
-    SerialisableData (ApplyTxError era),
+    AnnotatedData (ApplyTxError era),
     STS (Core.EraRule "LEDGER" era),
     BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
@@ -260,6 +262,14 @@ instance
   FromCBOR (ApplyTxError era)
   where
   fromCBOR = ApplyTxError <$> fromCBOR
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "LEDGER" era)))
+  ) =>
+  FromCBOR (Annotator (ApplyTxError era))
+  where
+  fromCBOR = (fmap . fmap) ApplyTxError (decodeAnnList fromCBOR)
 
 -- | Old 'applyTxs'
 applyTxs ::

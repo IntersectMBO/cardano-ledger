@@ -87,7 +87,7 @@ allprops =
       testProperty "Metadata" $ propertyAnn @(Core.AuxiliaryData e),
       testProperty "Value" $ property @(Core.Value e),
       testProperty "Script" $ propertyAnn @(Core.Script e),
-      testProperty "ApplyTxError" $ property @(ApplyTxError e)
+      testProperty "ApplyTxError" $ propertyAnn @(ApplyTxError e)
     ]
 
 allEraRoundtripTests :: TestTree

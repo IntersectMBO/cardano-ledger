@@ -45,9 +45,11 @@ module Data.Coders
     decode,
     runE, -- Used in testing
     decodeList,
+    decodeAnnList,
     decodePair,
     decodeSeq,
     decodeStrictSeq,
+    decodeAnnStrictSeq,
     decodeSet,
     decodeAnnSet,
     decodeRecordNamed,
@@ -228,11 +230,17 @@ unusedRequiredKeys used required name =
 decodeList :: Decoder s a -> Decoder s [a]
 decodeList = decodeCollection decodeListLenOrIndef
 
+decodeAnnList :: Decoder s (Annotator t) -> Decoder s (Annotator [t])
+decodeAnnList dec = do xs <- decodeList dec; pure (sequence xs)
+
 decodeSeq :: Decoder s a -> Decoder s (Seq a)
 decodeSeq decoder = Seq.fromList <$> decodeList decoder
 
 decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq a)
 decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
+
+decodeAnnStrictSeq :: Decoder s (Annotator a) -> Decoder s (Annotator (StrictSeq a))
+decodeAnnStrictSeq dec = do xs <- decodeList dec; pure (StrictSeq.fromList <$> (sequence xs))
 
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
 decodeSet decoder = Set.fromList <$> decodeList decoder

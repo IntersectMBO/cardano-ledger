@@ -22,7 +22,8 @@ module Cardano.Ledger.Shelley.Rules.Delegs
 where
 
 import Cardano.Binary
-  ( FromCBOR (..),
+  ( Annotator,
+    FromCBOR (..),
     ToCBOR (..),
     encodeListLen,
   )
@@ -163,6 +164,27 @@ instance
     (DelplFailure a) ->
       encodeListLen 2 <> toCBOR (2 :: Word8)
         <> toCBOR a
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "DELPL" era))),
+    Typeable (Core.Script era)
+  ) =>
+  FromCBOR (Annotator (DelegsPredicateFailure era))
+  where
+  fromCBOR =
+    decodeRecordSum "PredicateFailure" $
+      \case
+        0 -> do
+          kh <- fromCBOR
+          pure (2, pure $ DelegateeNotRegisteredDELEG kh)
+        1 -> do
+          ws <- mapFromCBOR
+          pure (2, pure $ WithdrawalsNotInRewardsDELEGS ws)
+        2 -> do
+          a <- fromCBOR
+          pure (2, fmap DelplFailure a)
+        k -> invalidKey k
 
 instance
   ( Era era,

@@ -101,6 +101,7 @@ import Control.State.Transition
     (?!),
     (?!:),
   )
+import Data.Coders (Annotator)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import Data.Sequence.Strict (StrictSeq)
@@ -199,6 +200,50 @@ instance
     ExtraneousScriptWitnessesUTXOW ss ->
       encodeListLen 2 <> toCBOR (10 :: Word8)
         <> encodeFoldable ss
+
+instance
+  ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXO" era))),
+    Typeable (Core.Script era),
+    Typeable (Core.AuxiliaryData era)
+  ) =>
+  FromCBOR (Annotator (UtxowPredicateFailure era))
+  where
+  fromCBOR = decodeRecordSum "PredicateFailure (UTXOW era)" $
+    \case
+      0 -> do
+        wits <- decodeList fromCBOR
+        pure (2, pure @Annotator $ InvalidWitnessesUTXOW wits)
+      1 -> do
+        missing <- decodeSet fromCBOR
+        pure (2, pure $ MissingVKeyWitnessesUTXOW $ WitHashes missing)
+      2 -> do
+        ss <- decodeSet fromCBOR
+        pure (2, pure $ MissingScriptWitnessesUTXOW ss)
+      3 -> do
+        ss <- decodeSet fromCBOR
+        pure (2, pure $ ScriptWitnessNotValidatingUTXOW ss)
+      4 -> do
+        a <- fromCBOR
+        pure (2, fmap UtxoFailure a)
+      5 -> do
+        s <- decodeSet fromCBOR
+        pure (2, pure $ MIRInsufficientGenesisSigsUTXOW s)
+      6 -> do
+        h <- fromCBOR
+        pure (2, pure $ MissingTxBodyMetadataHash h)
+      7 -> do
+        h <- fromCBOR
+        pure (2, pure $ MissingTxMetadata h)
+      8 -> do
+        bodyHash <- fromCBOR
+        fullMDHash <- fromCBOR
+        pure (3, pure $ ConflictingMetadataHash bodyHash fullMDHash)
+      9 -> pure (1, pure InvalidMetadata)
+      10 -> do
+        ss <- decodeSet fromCBOR
+        pure (2, pure $ ExtraneousScriptWitnessesUTXOW ss)
+      k -> invalidKey k
 
 instance
   ( Era era,

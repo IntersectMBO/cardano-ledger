@@ -28,7 +28,7 @@ import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
-import Cardano.Ledger.Core (ChainData, SerialisableData)
+import Cardano.Ledger.Core (AnnotatedData, ChainData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, TxSeq)
@@ -55,7 +55,7 @@ import NoThunks.Class (NoThunks (..))
 
 class
   ( ChainData (NewEpochState era),
-    SerialisableData (NewEpochState era),
+    AnnotatedData (NewEpochState era),
     ChainData (BlockTransitionError era),
     ChainData (STS.ChainPredicateFailure era),
     STS (Core.EraRule "TICK" era),
