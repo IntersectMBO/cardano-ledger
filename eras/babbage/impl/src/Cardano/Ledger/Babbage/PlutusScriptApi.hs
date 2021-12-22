@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -89,6 +90,7 @@ import NoThunks.Class (NoThunks)
 getData ::
   forall era tx.
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "wits" tx (TxWitness era)
   ) =>
   tx ->
@@ -104,12 +106,14 @@ getData tx (UTxO m) sp = case sp of
     case Map.lookup txin m of
       Nothing -> []
       Just txout ->
-        case getField @"datahash" txout of
-          SNothing -> []
-          SJust hash ->
-            case Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx)) of
-              Nothing -> []
-              Just d -> [d]
+        if
+            | SJust d <- getField @"datum" txout ->
+              [d]
+            | SJust hash <- getField @"datahash" txout ->
+              case Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx)) of
+                Nothing -> []
+                Just d -> [d]
+            | otherwise -> []
 
 -- ========================================================================
 
@@ -152,6 +156,7 @@ collectTwoPhaseScriptInputs ::
     Core.TxOut era ~ Babbage.TxOut era,
     Core.TxBody era ~ Babbage.TxBody era,
     Core.Value era ~ Mary.Value (Crypto era),
+    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
