@@ -71,9 +71,8 @@ import Cardano.Binary
     ToCBOR (..),
     decodeBreakOr,
     decodeListLenOrIndef,
-    encodeListLen
+    encodeListLen,
   )
-
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
