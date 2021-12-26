@@ -200,18 +200,7 @@ instance
   ) =>
   FromCBOR (Annotator (DelplPredicateFailure era))
   where
-  fromCBOR =
-    decodeRecordSum
-      "PredicateFailure (DELPL era)"
-      ( \case
-          0 -> do
-            a <- fromCBOR
-            pure (2, fmap PoolFailure a)
-          1 -> do
-            a <- fromCBOR
-            pure (2, fmap DelegFailure a)
-          k -> invalidKey k
-      )
+  fromCBOR = decodePredFail
 
 delplTransition ::
   forall era.

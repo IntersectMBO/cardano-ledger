@@ -239,25 +239,24 @@ instance
   ) =>
   FromCBOR (Annotator (AlonzoPredFail era))
   where
-  fromCBOR = decode (Summands "(AlonzoPredFail" decodePredFailA)
+  fromCBOR = decode (Summands "(AlonzoPredFail" decodePredFail)
 
-decodePredFailA ::
+decodePredFail ::
   ( Era era,
-    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXO" era))), -- TODO, we should be able to get rid of this constraint
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    Applicative f,
+    FromCBOR (f (UtxowPredicateFailure era))
   ) =>
   Word ->
-  Decode 'Open (Annotator (AlonzoPredFail era))
-decodePredFailA 0 = SumD (pure WrappedShelleyEraFailure) <*! D fromCBOR
-decodePredFailA 1 = Ann $ SumD MissingRedeemers <! From
-decodePredFailA 2 = Ann $ SumD MissingRequiredDatums <! From <! From
-decodePredFailA 3 = Ann $ SumD NonOutputSupplimentaryDatums <! From <! From
-decodePredFailA 4 = Ann $ SumD PPViewHashesDontMatch <! From <! From
-decodePredFailA 5 = Ann $ SumD MissingRequiredSigners <! From
-decodePredFailA 6 = Ann $ SumD UnspendableUTxONoDatumHash <! From
-decodePredFailA 7 = Ann $ SumD ExtraRedeemers <! From
-decodePredFailA n = Ann $ Invalid n
+  Decode 'Open (f (AlonzoPredFail era))
+decodePredFail 0 = SumD (pure WrappedShelleyEraFailure) <*! D fromCBOR
+decodePredFail 1 = Ann $ SumD MissingRedeemers <! From
+decodePredFail 2 = Ann $ SumD MissingRequiredDatums <! From <! From
+decodePredFail 3 = Ann $ SumD NonOutputSupplimentaryDatums <! From <! From
+decodePredFail 4 = Ann $ SumD PPViewHashesDontMatch <! From <! From
+decodePredFail 5 = Ann $ SumD MissingRequiredSigners <! From
+decodePredFail 6 = Ann $ SumD UnspendableUTxONoDatumHash <! From
+decodePredFail 7 = Ann $ SumD ExtraRedeemers <! From
+decodePredFail n = Ann $ Invalid n
 
 -- =============================================
 

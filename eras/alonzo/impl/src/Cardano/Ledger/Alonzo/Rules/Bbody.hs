@@ -139,16 +139,19 @@ instance
 
 instance
   ( Typeable era,
-    FromCBOR (Annotator (BbodyPredicateFailure era)) -- TODO why is there no FromCBOR for (BbodyPredicateFailure era)
+    FromCBOR (Annotator (BbodyPredicateFailure era))
   ) =>
   FromCBOR (Annotator (AlonzoBbodyPredFail era))
   where
-  fromCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
-    where
-      dec :: (Word -> Decode 'Open (Annotator (AlonzoBbodyPredFail era)))
-      dec 0 = SumD (pure ShelleyInAlonzoPredFail) <*! From
-      dec 1 = Ann $ SumD TooManyExUnits <! From <! From
-      dec n = Invalid n
+  fromCBOR = decode (Summands "AlonzoBbodyPredFail" decAlonzoBbodyPredFail)
+
+decAlonzoBbodyPredFail ::
+  (Applicative f, FromCBOR (f (BbodyPredicateFailure era))) =>
+  Word ->
+  Decode 'Open (f (AlonzoBbodyPredFail era))
+decAlonzoBbodyPredFail 0 = SumD (pure ShelleyInAlonzoPredFail) <*! From
+decAlonzoBbodyPredFail 1 = Ann $ SumD TooManyExUnits <! From <! From
+decAlonzoBbodyPredFail n = Invalid n
 
 -- ========================================
 -- The STS instance
