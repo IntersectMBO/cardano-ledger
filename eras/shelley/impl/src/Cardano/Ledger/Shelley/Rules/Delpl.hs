@@ -23,6 +23,7 @@ where
 
 import Cardano.Binary
   ( Annotator,
+    Decoder,
     FromCBOR (..),
     ToCBOR (..),
     encodeListLen,
@@ -50,6 +51,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Slot (SlotNo)
 import Control.State.Transition
+import Data.Functor.Identity (Identity (runIdentity))
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -138,18 +140,26 @@ instance
   ) =>
   FromCBOR (DelplPredicateFailure era)
   where
-  fromCBOR =
-    decodeRecordSum
-      "PredicateFailure (DELPL era)"
-      ( \case
-          0 -> do
-            a <- fromCBOR
-            pure (2, PoolFailure a)
-          1 -> do
-            a <- fromCBOR
-            pure (2, DelegFailure a)
-          k -> invalidKey k
-      )
+  fromCBOR = runIdentity <$> decodePredFail
+
+decodePredFail ::
+  ( Applicative f,
+    FromCBOR (f (PredicateFailure (Core.EraRule "POOL" era))),
+    FromCBOR (f (PredicateFailure (Core.EraRule "DELEG" era)))
+  ) =>
+  Decoder s (f (DelplPredicateFailure era))
+decodePredFail =
+  decodeRecordSum
+    "PredicateFailure (DELPL era)"
+    ( \case
+        0 -> do
+          a <- fromCBOR
+          pure (2, fmap PoolFailure a)
+        1 -> do
+          a <- fromCBOR
+          pure (2, fmap DelegFailure a)
+        k -> invalidKey k
+    )
 
 instance
   ( Era era,
@@ -159,18 +169,7 @@ instance
   ) =>
   FromCBOR (Annotator (DelplPredicateFailure era))
   where
-  fromCBOR =
-    decodeRecordSum
-      "PredicateFailure (DELPL era)"
-      ( \case
-          0 -> do
-            a <- fromCBOR
-            pure (2, fmap PoolFailure a)
-          1 -> do
-            a <- fromCBOR
-            pure (2, fmap DelegFailure a)
-          k -> invalidKey k
-      )
+  fromCBOR = decodePredFail
 
 delplTransition ::
   forall era.

@@ -25,6 +25,7 @@ where
 
 import Cardano.Binary
   ( Annotator,
+    Decoder,
     FromCBOR (..),
     ToCBOR (..),
     encodeListLen,
@@ -63,6 +64,7 @@ import Control.State.Transition
     judgmentContext,
     trans,
   )
+import Data.Functor.Identity (Identity (runIdentity))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -133,16 +135,24 @@ instance
   ) =>
   FromCBOR (Annotator (LedgerPredicateFailure era))
   where
-  fromCBOR =
-    decodeRecordSum "PredicateFailure (LEDGER era)" $
-      \case
-        0 -> do
-          a <- fromCBOR
-          pure (2, UtxowFailure <$> a)
-        1 -> do
-          a <- fromCBOR
-          pure (2, DelegsFailure <$> a)
-        k -> invalidKey k
+  fromCBOR = decodePredFail
+
+decodePredFail ::
+  ( FromCBOR (f (PredicateFailure (Core.EraRule "DELEGS" era))),
+    FromCBOR (f (PredicateFailure (Core.EraRule "UTXOW" era))),
+    Applicative f
+  ) =>
+  Decoder s (f (LedgerPredicateFailure era))
+decodePredFail =
+  decodeRecordSum "PredicateFailure (LEDGER era)" $
+    \case
+      0 -> do
+        a <- fromCBOR
+        pure (2, UtxowFailure <$> a)
+      1 -> do
+        a <- fromCBOR
+        pure (2, DelegsFailure <$> a)
+      k -> invalidKey k
 
 instance
   ( FromCBOR (PredicateFailure (Core.EraRule "DELEGS" era)),
@@ -151,16 +161,7 @@ instance
   ) =>
   FromCBOR (LedgerPredicateFailure era)
   where
-  fromCBOR =
-    decodeRecordSum "PredicateFailure (LEDGER era)" $
-      \case
-        0 -> do
-          a <- fromCBOR
-          pure (2, UtxowFailure a)
-        1 -> do
-          a <- fromCBOR
-          pure (2, DelegsFailure a)
-        k -> invalidKey k
+  fromCBOR = runIdentity <$> decodePredFail
 
 instance
   ( Show (Core.PParams era),

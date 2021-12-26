@@ -69,6 +69,7 @@ import Control.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.State.Transition.Extended
 import Data.Coders
 import Data.Foldable (toList)
+import Data.Functor.Identity (Identity (..))
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -343,12 +344,7 @@ instance
   ) =>
   FromCBOR (UtxosPredicateFailure era)
   where
-  fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
-    where
-      dec 0 = SumD ValidationTagMismatch <! From <! From
-      dec 1 = SumD (CollectErrors @era) <! From
-      dec 2 = SumD UpdateFailure <! From
-      dec n = Invalid n
+  fromCBOR = runIdentity <$> decode (Summands "UtxosPredicateFailure" decUtxosPredicateFailure)
 
 instance
   ( Era era,
@@ -356,12 +352,20 @@ instance
   ) =>
   FromCBOR (Annotator (UtxosPredicateFailure era))
   where
-  fromCBOR = decode (Summands "UtxosPredicateFailure" dec)
-    where
-      dec 0 = Ann $ SumD ValidationTagMismatch <! From <! From
-      dec 1 = Ann $ SumD (CollectErrors @era) <! From
-      dec 2 = SumD (pure UpdateFailure) <*! From
-      dec n = Ann $ Invalid n
+  fromCBOR = decode (Summands "UtxosPredicateFailure" decUtxosPredicateFailure)
+
+decUtxosPredicateFailure ::
+  forall f era.
+  ( Era era,
+    FromCBOR (f (PredicateFailure (Core.EraRule "PPUP" era))),
+    Applicative f
+  ) =>
+  Word ->
+  Decode 'Open (f (UtxosPredicateFailure era))
+decUtxosPredicateFailure 0 = Ann $ SumD ValidationTagMismatch <! From <! From
+decUtxosPredicateFailure 1 = Ann $ SumD (CollectErrors @era) <! From
+decUtxosPredicateFailure 2 = SumD (pure UpdateFailure) <*! From
+decUtxosPredicateFailure n = Ann $ Invalid n
 
 deriving stock instance
   ( Shelley.TransUTxOState Show era,

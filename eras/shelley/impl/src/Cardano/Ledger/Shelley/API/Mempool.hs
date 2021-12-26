@@ -37,7 +37,7 @@ module Cardano.Ledger.Shelley.API.Mempool
   )
 where
 
-import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (Annotator, Decoder, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData)
 import qualified Cardano.Ledger.Core as Core
@@ -73,6 +73,7 @@ import Control.State.Transition.Extended
 import Data.Coders (decodeAnnList)
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
+import Data.Functor.Identity (Identity (..))
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
@@ -261,7 +262,7 @@ instance
   ) =>
   FromCBOR (ApplyTxError era)
   where
-  fromCBOR = ApplyTxError <$> fromCBOR
+  fromCBOR = runIdentity <$> decodeApplyTxError
 
 instance
   ( Era era,
@@ -269,7 +270,15 @@ instance
   ) =>
   FromCBOR (Annotator (ApplyTxError era))
   where
-  fromCBOR = (fmap . fmap) ApplyTxError (decodeAnnList fromCBOR)
+  fromCBOR = decodeApplyTxError
+
+decodeApplyTxError ::
+  forall f era s.
+  ( Applicative f,
+    FromCBOR (f (PredicateFailure (Core.EraRule "LEDGER" era)))
+  ) =>
+  Decoder s (f (ApplyTxError era))
+decodeApplyTxError = (fmap . fmap) ApplyTxError (decodeAnnList fromCBOR)
 
 -- | Old 'applyTxs'
 applyTxs ::
