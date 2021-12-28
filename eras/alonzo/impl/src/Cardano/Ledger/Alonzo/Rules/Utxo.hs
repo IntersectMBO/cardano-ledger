@@ -581,6 +581,16 @@ instance
   where
   fromCBOR = runIdentity <$> decode (Summands "UtxoPredicateFailure" decFail)
 
+instance
+  ( Era era,
+    FromCBOR (Annotator (Core.TxOut era)),
+    FromCBOR (Core.Value era),
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXOS" era)))
+  ) =>
+  FromCBOR (Annotator (UtxoPredicateFailure era))
+  where
+  fromCBOR = decode (Summands "UtxoPredicateFailure" decFail)
+
 decFail ::
   ( Era era,
     Applicative f,
