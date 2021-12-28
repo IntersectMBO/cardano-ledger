@@ -39,11 +39,9 @@ import qualified Data.Map.Strict as Map
 
 type AllegraEra = ShelleyMAEra 'Allegra
 
-instance PraosCrypto c => ApplyTx (AllegraEra c)
+instance ShelleyEraCrypto c => ApplyTx (AllegraEra c)
 
-instance PraosCrypto c => ApplyBlock (AllegraEra c)
-
-instance PraosCrypto c => GetLedgerView (AllegraEra c)
+instance ShelleyEraCrypto c => ApplyBlock (AllegraEra c)
 
 instance
   ( Crypto c
@@ -64,6 +62,7 @@ instance
                   (Coin 0)
                   (Coin 0)
                   def
+                  (IStake mempty mempty)
               )
               (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
           )
@@ -82,7 +81,7 @@ instance
       genDelegs = sgGenDelegs sg
       pp = sgProtocolParams sg
 
-instance PraosCrypto c => ShelleyBasedEra (AllegraEra c)
+instance ShelleyEraCrypto c => ShelleyBasedEra (AllegraEra c)
 
 instance CC.Crypto c => CLI (AllegraEra c) where
   evaluateMinFee = minfee

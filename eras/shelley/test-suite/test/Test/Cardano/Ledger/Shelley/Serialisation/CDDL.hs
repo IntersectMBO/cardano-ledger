@@ -26,7 +26,6 @@ import Cardano.Ledger.Shelley.API
   ( Credential,
     DCert,
     MultiSig,
-    OCert,
     ProposedPPUpdates,
     Tx,
     Update,
@@ -41,6 +40,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
+import Cardano.Protocol.TPraos.OCert (OCert)
 import qualified Data.ByteString.Lazy as BSL
 import Test.Cardano.Ledger.Shelley.LaxBlock (LaxBlock)
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils

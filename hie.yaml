@@ -83,3 +83,9 @@ cradle:
 
     - path: "libs/compact-map"
       component: "lib:compact-map"
+
+    - path: "libs/compact-map"
+      component: "compact-map:test:tests"
+
+    - path: "libs/compact-map"
+      component: "compact-map:bench:bench"

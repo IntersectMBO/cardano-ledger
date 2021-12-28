@@ -99,9 +99,9 @@ pattern TxIn addr index <-
 
 {-# COMPLETE TxIn #-}
 
-deriving instance Ord (TxIn crypto)
-
 deriving instance Eq (TxIn crypto)
+
+deriving instance Ord (TxIn crypto)
 
 deriving instance Show (TxIn crypto)
 

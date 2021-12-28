@@ -136,6 +136,7 @@ import Test.Cardano.Ledger.Shelley.PropertyTests
     removedAfterPoolreap,
   )
 import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (incrementalStakeProp)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 
@@ -147,7 +148,9 @@ import Test.Tasty.QuickCheck
 --     versions of all these inputs, and lets the user select which of these inputs he needs to make a generator.
 --     See genAlonzoTx and genAlonzoBlock as examples of its use.
 genstuff ::
-  (EraGen era, Default (State (Core.EraRule "PPUP" era))) =>
+  ( EraGen era,
+    Default (State (Core.EraRule "PPUP" era))
+  ) =>
   Proxy era ->
   ( GenEnv era ->
     ChainState era ->
@@ -304,7 +307,10 @@ alonzoPropertyTests =
   testGroup
     "Alonzo property tests"
     [ propertyTests @A @L,
-      Alonzo.propertyTests
+      Alonzo.propertyTests,
+      testProperty
+        "Incremental stake distribution at epoch boundaries agrees"
+        (incrementalStakeProp (Proxy :: Proxy A))
     ]
 
 -- | A select subset of all the property tests

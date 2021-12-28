@@ -27,6 +27,8 @@ import Cardano.Ledger.Shelley.API.Types
     word64ToCoin,
   )
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
+import Cardano.Ledger.Shelley.LedgerState (updateStakeDistribution)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val ((<->)))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
@@ -67,6 +69,7 @@ instance
                   (Coin 0)
                   (Coin 0)
                   def
+                  (updateStakeDistribution mempty (UTxO mempty) initialUtxo)
               )
               (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
           )

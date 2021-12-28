@@ -58,6 +58,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
     maxPool,
     poolStake,
     sumAllStake,
+    sumStakePerPool,
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
@@ -511,7 +512,11 @@ rewardOnePool
           else Map.insert
       potentialRewards =
         f (getRwdCred $ _poolRAcnt pool) lReward mRewards
-      rewards' = Map.filter (/= Coin 0) $ eval (addrsRew ◁ potentialRewards)
+      potentialRewards' =
+        if HardForks.forgoRewardPrefilter pp
+          then potentialRewards
+          else eval (addrsRew ◁ potentialRewards)
+      rewards' = Map.filter (/= Coin 0) potentialRewards'
 
 rewardOld ::
   forall era.
@@ -752,17 +757,22 @@ reward
   (Coin totalStake) = completeM pulser
     where
       totalBlocks = sum b
+      stakePerPool = sumStakePerPool delegs stake
       Coin activeStake = sumAllStake stake
-      mkPoolRewardInfo' =
+      -- ensure mkPoolRewardInfo does not use stake that doesn't belong to the pool
+      stakeForPool pool = poolStake (_poolId pool) delegs stake
+      mkPoolRewardInfo' pool =
         mkPoolRewardInfo
           pp
           r
           (BlocksMade b)
           totalBlocks
-          stake
+          (stakeForPool pool)
           delegs
+          stakePerPool
           (Coin totalStake)
           (Coin activeStake)
+          pool
       poolRewardInfo = VMap.toMap $ VMap.mapMaybe (rightToMaybe . mkPoolRewardInfo') poolParams
       pp_pv = _protocolVersion pp
       free =
@@ -791,6 +801,7 @@ rewardTests =
       testProperty "provenance does not affect result" (newEpochProp 100 (sameWithOrWithoutProvenance @C testGlobals)),
       testProperty "ProvM preserves Nothing" (newEpochProp 100 (nothingInNothingOut @C)),
       testProperty "ProvM preserves Just" (newEpochProp 100 (justInJustOut @C)),
-      testProperty "compare with reference impl, no provenance" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 3 0))),
+      testProperty "compare with reference impl, no provenance, v3" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 3 0))),
+      testProperty "compare with reference impl, no provenance, v7" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 7 0))),
       testProperty "compare with reference impl, with provenance" (newEpochProp chainlen (oldEqualsNewOn @C (ProtVer 3 0)))
     ]

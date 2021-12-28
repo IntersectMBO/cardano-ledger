@@ -517,12 +517,7 @@ getLedgerState utxo LedgerState {..} dstate = do
   pure
     Shelley.LedgerState
       { Shelley._utxoState =
-          Shelley.UTxOState
-            { Shelley._utxo = utxo,
-              Shelley._deposited = utxoStateDeposited,
-              Shelley._fees = utxoStateFees,
-              Shelley._ppups = utxoStatePpups
-            },
+          Shelley.smartUTxOState utxo utxoStateDeposited utxoStateFees utxoStatePpups, -- Maintain invariant
         Shelley._delegationState =
           Shelley.DPState
             { Shelley._dstate = dstate,

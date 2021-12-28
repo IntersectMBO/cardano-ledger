@@ -203,7 +203,7 @@ taylorExpCmp boundX cmp x = go 1000 0 x 1 1
       | cmp < acc' - errorTerm = BELOW acc' (n + 1)
       | otherwise = go maxN (n + 1) err' acc' divisor'
       where
-        errorTerm = err' * boundX
+        errorTerm = abs (err' * boundX)
         divisor' = divisor + 1
         nextX = err
         err' = (err * x) / divisor'

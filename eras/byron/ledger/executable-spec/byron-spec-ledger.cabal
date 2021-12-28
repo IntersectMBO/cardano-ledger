@@ -49,6 +49,7 @@ library
                      , Byron.Spec.Ledger.STS.UTXOW
                      , Byron.Spec.Ledger.STS.UTXOWS
   build-depends:       bimap >=0.4 && <0.5
+                     , cardano-data
                      , containers
                      , filepath
                      , goblins
@@ -81,6 +82,7 @@ test-suite byron-spec-ledger-test
   type: exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends: bimap >=0.4 && <0.5
+               , cardano-data
                , containers
                , hedgehog >= 1.0.4
                , microlens

@@ -33,14 +33,6 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (..))
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.API.Protocol
-  ( ChainDepState (..),
-    ChainTransitionError,
-    LedgerView (..),
-    currentLedgerView,
-    tickChainDepState,
-    updateChainDepState,
-  )
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
 import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
@@ -50,6 +42,15 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.TxBody (TransTxBody, TransTxId)
 import Cardano.Prelude (NFData (rnf))
+import Cardano.Protocol.TPraos.API
+  ( ChainDepState (..),
+    ChainTransitionError,
+    GetLedgerView,
+    LedgerView (..),
+    currentLedgerView,
+    tickChainDepState,
+    updateChainDepState,
+  )
 import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..), makeHeaderView)
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
@@ -83,7 +84,7 @@ validateInput ::
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),
     API.ApplyBlock era,
-    API.GetLedgerView era,
+    GetLedgerView era,
     MinLEDGER_STS era
   ) =>
   Int ->
@@ -97,7 +98,7 @@ genValidateInput ::
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),
     API.ApplyBlock era,
-    API.GetLedgerView era,
+    GetLedgerView era,
     MinLEDGER_STS era
   ) =>
   Int ->
@@ -180,7 +181,7 @@ genUpdateInputs ::
     Mock (Crypto era),
     ShelleyTest era,
     MinLEDGER_STS era,
-    API.GetLedgerView era,
+    GetLedgerView era,
     Core.EraRule "LEDGERS" era ~ API.LEDGERS era,
     QC.HasTrace (API.LEDGERS era) (GenEnv era),
     API.ApplyBlock era

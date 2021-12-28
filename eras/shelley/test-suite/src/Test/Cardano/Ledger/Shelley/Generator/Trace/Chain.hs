@@ -36,10 +36,13 @@ import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv, BbodyState)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Protocol.TPraos.API
 import Cardano.Protocol.TPraos.BHeader
-  ( LastAppliedBlock (..),
+  ( HashHeader (..),
+    LastAppliedBlock (..),
     hashHeaderToNonce,
   )
+import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -192,9 +195,7 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  ( Era era,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
-  ) =>
+  (Era era) =>
   ShelleyGenesisStaking (Crypto era) ->
   ChainState era ->
   ChainState era

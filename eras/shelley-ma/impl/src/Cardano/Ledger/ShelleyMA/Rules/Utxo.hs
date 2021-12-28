@@ -39,7 +39,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Shelley.LedgerState (PPUPState)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState, updateStakeDistribution)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
@@ -248,7 +248,7 @@ utxoTransition ::
   TransitionRule (UTXO era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo deposits' fees ppup = u
+  let Shelley.UTxOState utxo deposits' fees ppup incStake = u
   let txb = getField @"body" tx
 
   inInterval slot (getField @"vldt" txb)
@@ -336,13 +336,17 @@ utxoTransition = do
   let refunded = Shelley.keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
   let depositChange = totalDeposits pp (`Map.notMember` stakepools) txCerts Val.<-> refunded
+  let utxoAdd = txouts txb -- These will be inserted into the UTxO
+  let utxoDel = eval (txins @era txb ◁ utxo) -- These will be deleted from the UTxO
+  let newIncStakeDistro = updateStakeDistribution @era incStake utxoDel utxoAdd
 
   pure
     Shelley.UTxOState
-      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ txouts txb),
+      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ utxoAdd),
         Shelley._deposited = deposits' <> depositChange,
         Shelley._fees = fees <> getField @"txfee" txb,
-        Shelley._ppups = ppup'
+        Shelley._ppups = ppup',
+        Shelley._stakeDistro = newIncStakeDistro
       }
 
 --------------------------------------------------------------------------------

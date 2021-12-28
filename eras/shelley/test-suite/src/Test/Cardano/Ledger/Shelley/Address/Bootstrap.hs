@@ -47,7 +47,8 @@ import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Address.Bootstrap
 import Cardano.Ledger.Shelley.LedgerState
-  ( PPUPState (..),
+  ( IncrementalStake (..),
+    PPUPState (..),
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams
@@ -156,7 +157,8 @@ utxoState0 =
     { _utxo = utxo0,
       _deposited = Coin 0,
       _fees = Coin 0,
-      _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
+      _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty),
+      _stakeDistro = mempty
     }
 
 tx :: Tx C
@@ -171,7 +173,8 @@ utxoState1 =
     { _utxo = UTxO $ Map.fromList [bobResult, aliceResult],
       _deposited = Coin 0,
       _fees = Coin 10,
-      _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty)
+      _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty),
+      _stakeDistro = IStake mempty mempty
     }
   where
     txid = TxId $ hashAnnotated txBody

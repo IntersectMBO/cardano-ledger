@@ -37,7 +37,6 @@ library
     Cardano.Ledger.Shelley.API
     Cardano.Ledger.Shelley.API.ByronTranslation
     Cardano.Ledger.Shelley.API.Genesis
-    Cardano.Ledger.Shelley.API.Protocol
     Cardano.Ledger.Shelley.API.Validation
     Cardano.Ledger.Shelley.API.Wallet
     Cardano.Ledger.Shelley.API.Mempool
@@ -92,10 +91,10 @@ library
     cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-wrapper,
+    cardano-data,
     cardano-ledger-byron,
     cardano-ledger-core,
     cardano-prelude,
-    cardano-protocol-tpraos,
     cardano-slotting,
     cborg,
     compact-map,
@@ -110,6 +109,7 @@ library
     nothunks,
     primitive >= 0.7.1.0,
     quiet,
+    set-algebra,
     small-steps,
     strict-containers,
     text,

@@ -25,7 +25,7 @@ import Cardano.Ledger.SafeHash
     castSafeHash,
   )
 import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
-import Cardano.Ledger.Shelley.EpochBoundary (aggregateUtxoCoinByCredential)
+import Cardano.Ledger.Shelley.LedgerState (aggregateUtxoCoinByCredential)
 import Cardano.Ledger.Shelley.TxBody (TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.ShelleyMA ()

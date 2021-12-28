@@ -15,7 +15,6 @@
 module Test.Control.Iterate.SetAlgebra where
 
 import Control.Iterate.BaseTypes (List (..), Sett (..), fromPairs)
-import Control.Iterate.BiMap (BiMap (..))
 import Control.Iterate.Collect
 import Control.Iterate.Exp (Exp (..), Query (..), domElem, lift, rngSnd)
 import Control.Iterate.SetAlgebra
@@ -31,6 +30,7 @@ import Control.Iterate.SetAlgebra
     (⨝),
   )
 import Control.SetAlgebra
+import Data.BiMap (BiMap (..))
 import Data.Char (ord)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

@@ -31,7 +31,7 @@ import Control.Foldl (Fold (..))
 import Control.SetAlgebra (range)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Compact.HashMap (toKey)
-import Data.Compact.KeyMap as KeyMap hiding (Stat)
+import Data.Compact.KeyMap as KeyMap
 import qualified Data.Compact.VMap as VMap
 import Data.Foldable as F
 import Data.Functor
@@ -159,7 +159,7 @@ testKeyMap km m =
       KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra))
     test acc txIn@(TxInCompact txId txIx) txOut =
       let !key = toKey txId
-       in case KeyMap.lookupHM key acc of
+       in case KeyMap.lookup key acc of
             Nothing -> error $ "Can't find txId: " <> show txIn
             Just im ->
               let txIx' = fromIntegral txIx

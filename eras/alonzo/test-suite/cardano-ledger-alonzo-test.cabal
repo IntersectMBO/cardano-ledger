@@ -68,7 +68,7 @@ library
     QuickCheck,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
-    small-steps,
+    set-algebra,
     strict-containers,
     text,
   hs-source-dirs:

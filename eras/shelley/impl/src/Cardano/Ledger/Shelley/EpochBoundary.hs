@@ -22,11 +22,11 @@
 module Cardano.Ledger.Shelley.EpochBoundary
   ( Stake (..),
     sumAllStake,
+    sumStakePerPool,
     SnapShot (..),
     SnapShots (..),
     emptySnapShot,
     emptySnapShots,
-    aggregateUtxoCoinByCredential,
     poolStake,
     obligation,
     maxPool,
@@ -35,27 +35,22 @@ module Cardano.Ledger.Shelley.EpochBoundary
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (..), NonNegativeInterval)
 import Cardano.Ledger.Coin
   ( Coin (..),
+    CompactForm (..),
     coinToRational,
     rationalToCoinViaFloor,
   )
 import Cardano.Ledger.Compactible
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential, Ptr, StakeReference (..))
+import Cardano.Ledger.Credential (Credential)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamedT)
 import Cardano.Ledger.Shelley.TxBody (PoolParams)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Val ((<+>), (<×>))
-import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
-import Control.SetAlgebra (dom, eval, setSingleton, (▷), (◁))
 import Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
@@ -86,41 +81,8 @@ instance CC.Crypto crypto => FromSharedCBOR (Stake crypto) where
   fromSharedCBOR = fmap Stake . fromSharedCBOR
 
 sumAllStake :: Stake crypto -> Coin
-sumAllStake = VMap.foldMap fromCompact . unStake
-
--- A TxOut has 4 different shapes, depending on the shape its embedded of Addr.
--- Credentials are stored in only 2 of the 4 cases.
--- 1) TxOut (Addr _ _ (StakeRefBase cred)) coin   -> HERE
--- 2) TxOut (Addr _ _ (StakeRefPtr ptr)) coin     -> HERE
--- 3) TxOut (Addr _ _ StakeRefNull) coin          -> NOT HERE
--- 4) TxOut (AddrBootstrap _) coin                -> NOT HERE
--- Unfortunately TxOut is a pattern, that deserializes the address. This can be expensive, so if
--- we only deserialize the parts that we need, for the 2 cases that count, we can speed
--- things up considerably. That is the role of deserialiseAddrStakeRef. It returns (Just stake)
--- for the two cases that matter, and Nothing for the other two cases.
-
--- | Sum up all the Coin for each staking Credential
-aggregateUtxoCoinByCredential ::
-  forall era.
-  ( Era era,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
-  ) =>
-  Map Ptr (Credential 'Staking (Crypto era)) ->
-  UTxO era ->
-  Map (Credential 'Staking (Crypto era)) Coin ->
-  Map (Credential 'Staking (Crypto era)) Coin
-aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
-  Map.foldl' accum initial u
-  where
-    accum !ans out =
-      case (getField @"address" out, getField @"value" out) of
-        (Addr _ _ (StakeRefPtr p), c) ->
-          case Map.lookup p ptrs of
-            Just cred -> Map.insertWith (<>) cred (Val.coin c) ans
-            Nothing -> ans
-        (Addr _ _ (StakeRefBase hk), c) ->
-          Map.insertWith (<>) hk (Val.coin c) ans
-        _other -> ans
+sumAllStake = fromCompact . CompactCoin . VMap.foldl (\acc (CompactCoin c) -> acc + c) 0 . unStake
+{-# INLINE sumAllStake #-}
 
 -- | Get stake of one pool
 poolStake ::
@@ -129,7 +91,19 @@ poolStake ::
   Stake crypto ->
   Stake crypto
 poolStake hk delegs (Stake stake) =
-  Stake $ fromMap (eval (dom (toMap delegs ▷ setSingleton hk) ◁ toMap stake))
+  --Stake $ (eval (dom (delegs ▷ setSingleton hk) ◁ stake))
+  Stake $ VMap.filter (\cred _ -> VMap.lookup cred delegs == Just hk) stake
+
+sumStakePerPool ::
+  VMap VB VB (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
+  Stake crypto ->
+  Map (KeyHash 'StakePool crypto) Coin
+sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
+  where
+    accum !acc cred compactCoin =
+      case VMap.lookup cred delegs of
+        Nothing -> acc
+        Just kh -> Map.insertWith (<+>) kh (fromCompact compactCoin) acc
 
 -- | Calculate total possible refunds.
 obligation ::

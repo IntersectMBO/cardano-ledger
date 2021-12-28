@@ -6,7 +6,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Control.Iterate.BiMap where
+module Data.BiMap where
 
 import Cardano.Binary
   ( Decoder,

@@ -40,6 +40,7 @@ library
   hs-source-dirs:      src
   build-depends:       bimap >=0.4 && <0.5
                      , bytestring
+                     , cardano-data
                      , containers
                      , byron-spec-ledger
                      , goblins
@@ -60,6 +61,7 @@ test-suite chain-rules-test
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       containers
+                     , cardano-data
                      , data-ordlist
                      , hedgehog >= 1.0.4
                      , microlens

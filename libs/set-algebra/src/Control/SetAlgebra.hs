@@ -67,7 +67,6 @@ module Control.SetAlgebra
 where
 
 import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Embed (..), Iter (..), List, Single (..))
-import Control.Iterate.BiMap (BiMap (..), Bimap, biMapEmpty, biMapFromList, biMapFromMap, biMapToMap)
 import Control.Iterate.Exp
   ( Exp (..),
     HasExp (..),
@@ -103,6 +102,7 @@ import Control.Iterate.Exp
     (⨃),
   )
 import Control.Iterate.SetAlgebra
+import Data.BiMap (BiMap (..), Bimap, biMapEmpty, biMapFromList, biMapFromMap, biMapToMap)
 import Data.Map (Map)
 import Data.Set (Set)
 

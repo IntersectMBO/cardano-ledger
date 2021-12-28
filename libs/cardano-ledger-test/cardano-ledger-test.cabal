@@ -59,6 +59,7 @@ library
     cardano-ledger-core,
     cardano-ledger-pretty,
     cardano-ledger-shelley-ma,
+    cardano-protocol-tpraos,
     cardano-slotting,
     containers,
     data-default-class,
@@ -91,7 +92,7 @@ test-suite cardano-ledger-test
     cardano-ledger-test,
     cardano-ledger-shelley-test,
     tasty,
-   
+
 
 
 benchmark bench
@@ -103,16 +104,21 @@ benchmark bench
   main-is:          Main.hs
   other-modules:
     Bench.Cardano.Ledger.ApplyTx
+    Bench.Cardano.Ledger.ApplyTx.Gen
     Bench.Cardano.Ledger.EpochBoundary
     Bench.Cardano.Ledger.Serialisation.Generators
+    Bench.Cardano.Ledger.SumStake
   build-depends:
     bytestring,
     cardano-binary,
     cardano-crypto-class,
+    cardano-data,
     cardano-ledger-alonzo,
+    cardano-ledger-alonzo-test,
     cardano-ledger-core,
     cardano-ledger-shelley-ma-test,
     cardano-ledger-shelley-ma,
+    compact-map,
     containers,
     criterion,
     data-default-class,
@@ -120,7 +126,9 @@ benchmark bench
     QuickCheck,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    random,
     small-steps,
+    small-steps-test
   ghc-options:
       -threaded
       -rtsopts

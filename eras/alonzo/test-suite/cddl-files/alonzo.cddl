@@ -108,8 +108,14 @@ script_data_hash = $hash32 ; New
 ;     -  If two keys have the same length, the one with the lower value
 ;        in (byte-wise) lexical order sorts earlier.
 ;
-; For PlutusV1 (language id 0), the script integrity data is a cost_model.
-; This is the value of the costmdls map at key 0.
+; For PlutusV1 (language id 0), the language view is the following:
+;   - the value of costmdls map at key 0 is encoded as an indefinite length
+;     list and the result is encoded as a bytestring. (our apologies)
+;   - the language ID tag is also encoded twice. first as a uint then as
+;     a bytestring. (our apologies)
+; For PlutusV2 (language id 1), the language view is the following:
+;   - the value of costmdls map at key 1 is encoded as an definite length list.
+;
 ; If there is no value for key 0, then the corresponding scripts cannot execute.
 ; Regardless of what the script integrity data is.
 
@@ -247,6 +253,8 @@ protocol_param_update =
   , ? 20: ex_units           ; max tx ex units ; New
   , ? 21: ex_units           ; max block ex units ; New
   , ? 22: uint               ; max value size ; New
+  , ? 23: uint               ; collateral percentage ; New
+  , ? 24: uint               ; max collateral inputs ; New
   }
 
 transaction_witness_set =

@@ -82,7 +82,11 @@ import Cardano.Ledger.Shelley.API
     UTxO (..),
   )
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), WitHashes (..))
+import Cardano.Ledger.Shelley.LedgerState
+  ( UTxOState (..),
+    WitHashes (..),
+    smartUTxOState,
+  )
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplPredicateFailure (..))
@@ -274,7 +278,7 @@ initialUtxoSt ::
   ) =>
   Proof era ->
   UTxOState era
-initialUtxoSt pf = UTxOState (initUTxO pf) (Coin 0) (Coin 0) def
+initialUtxoSt pf = smartUTxOState (initUTxO pf) (Coin 0) (Coin 0) def
 
 -- | This is a helper type for the expectedUTxO function.
 --  ExpectSuccess indicates that we created a valid transaction
@@ -429,7 +433,7 @@ utxoStEx1 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx1 pf = UTxOState (utxoEx1 pf) (Coin 0) (Coin 5) def
+utxoStEx1 pf = smartUTxOState (utxoEx1 pf) (Coin 0) (Coin 5) def
 
 -- ======================================================================
 --  Example 2: Process a SPEND transaction with a failing Plutus script.
@@ -505,7 +509,7 @@ utxoStEx2 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx2 pf = UTxOState (utxoEx2 pf) (Coin 0) (Coin 5) def
+utxoStEx2 pf = smartUTxOState (utxoEx2 pf) (Coin 0) (Coin 5) def
 
 -- =========================================================================
 --  Example 3: Process a CERT transaction with a succeeding Plutus script.
@@ -564,7 +568,7 @@ utxoStEx3 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx3 pf = UTxOState (utxoEx3 pf) (Coin 0) (Coin 5) def
+utxoStEx3 pf = smartUTxOState (utxoEx3 pf) (Coin 0) (Coin 5) def
 
 -- =====================================================================
 --  Example 4: Process a CERT transaction with a failing Plutus script.
@@ -623,7 +627,7 @@ utxoStEx4 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx4 pf = UTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
+utxoStEx4 pf = smartUTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
 
 -- ==============================================================================
 --  Example 5: Process a WITHDRAWAL transaction with a succeeding Plutus script.
@@ -684,7 +688,7 @@ utxoStEx5 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx5 pf = UTxOState (utxoEx5 pf) (Coin 0) (Coin 5) def
+utxoStEx5 pf = smartUTxOState (utxoEx5 pf) (Coin 0) (Coin 5) def
 
 -- ===========================================================================
 --  Example 6: Process a WITHDRAWAL transaction with a failing Plutus script.
@@ -745,7 +749,7 @@ utxoStEx6 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx6 pf = UTxOState (utxoEx6 pf) (Coin 0) (Coin 5) def
+utxoStEx6 pf = smartUTxOState (utxoEx6 pf) (Coin 0) (Coin 5) def
 
 -- =============================================================================
 --  Example 7: Process a MINT transaction with a succeeding Plutus script.
@@ -806,7 +810,7 @@ utxoStEx7 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era, HasTokens era) =>
   Proof era ->
   UTxOState era
-utxoStEx7 pf = UTxOState (utxoEx7 pf) (Coin 0) (Coin 5) def
+utxoStEx7 pf = smartUTxOState (utxoEx7 pf) (Coin 0) (Coin 5) def
 
 -- ==============================================================================
 --  Example 8: Process a MINT transaction with a failing Plutus script.
@@ -866,7 +870,7 @@ utxoStEx8 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx8 pf = UTxOState (utxoEx8 pf) (Coin 0) (Coin 5) def
+utxoStEx8 pf = smartUTxOState (utxoEx8 pf) (Coin 0) (Coin 5) def
 
 -- ====================================================================================
 --  Example 9: Process a transaction with a succeeding script in every place possible,
@@ -969,7 +973,7 @@ utxoStEx9 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era, HasTokens era) =>
   Proof era ->
   UTxOState era
-utxoStEx9 pf = UTxOState (utxoEx9 pf) (Coin 0) (Coin 5) def
+utxoStEx9 pf = smartUTxOState (utxoEx9 pf) (Coin 0) (Coin 5) def
 
 -- ====================================================================================
 --  Example 10: A transaction with an acceptable supplimentary datum
@@ -1022,7 +1026,7 @@ utxoStEx10 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx10 pf = UTxOState (utxoEx10 pf) (Coin 0) (Coin 5) def
+utxoStEx10 pf = smartUTxOState (utxoEx10 pf) (Coin 0) (Coin 5) def
 
 -- ====================================================================================
 --  Example 11: A transaction with multiple identical certificates
@@ -1077,7 +1081,7 @@ utxoStEx11 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
-utxoStEx11 pf = UTxOState (utxoEx11 pf) (Coin 0) (Coin 5) def
+utxoStEx11 pf = smartUTxOState (utxoEx11 pf) (Coin 0) (Coin 5) def
 
 -- ====================================================================================
 --  Example 12: Attaching a datum (hash) to a non-script output.
@@ -1121,10 +1125,17 @@ utxoEx12 :: PostShelley era => Proof era -> UTxO era
 utxoEx12 pf = expectedUTxO pf (ExpectSuccess (nonScriptOutWithDatumTxBody pf) (outEx12 pf)) 103
 
 utxoStEx12 ::
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  ( Default (State (EraRule "PPUP" era)),
+    PostShelley era
+  ) =>
   Proof era ->
   UTxOState era
-utxoStEx12 pf = UTxOState (utxoEx12 pf) (Coin 0) (Coin 5) def
+utxoStEx12 pf =
+  smartUTxOState
+    (utxoEx12 pf)
+    (Coin 0)
+    (Coin 5)
+    def
 
 -- =======================
 -- Invalid Transactions
@@ -2121,7 +2132,7 @@ example1UTxO =
     pf = Alonzo Mock
 
 example1UtxoSt :: UTxOState A
-example1UtxoSt = UTxOState example1UTxO (Coin 0) (Coin 40) def
+example1UtxoSt = smartUTxOState example1UTxO (Coin 0) (Coin 40) def
 
 example1BBodyState :: BbodyState A
 example1BBodyState =

@@ -90,6 +90,7 @@ import Cardano.Ledger.Shelley.LedgerState
     RewardUpdate (..),
     UTxOState (..),
     applyRUpd,
+    updateStakeDistribution,
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates)
 import Cardano.Ledger.Shelley.Rules.Mir (emptyInstantaneousRewards)
@@ -107,7 +108,7 @@ import Cardano.Protocol.TPraos.BHeader
     prevHashToNonce,
   )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
-import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫))
+import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫), (◁))
 import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
@@ -217,8 +218,11 @@ newUTxO txb cs = cs {chainNes = nes'}
     ls = esLState es
     utxoSt = _utxoState ls
     utxo = _utxo utxoSt
-    utxo' = eval ((txins @era txb ⋪ utxo) ∪ txouts @era txb)
-    utxoSt' = utxoSt {_utxo = utxo'}
+    utxoAdd = txouts @era txb
+    utxoDel = eval (txins @era txb ◁ utxo)
+    utxo' = eval ((txins @era txb ⋪ utxo) ∪ utxoAdd)
+    sd' = updateStakeDistribution @era (_stakeDistro utxoSt) utxoDel utxoAdd
+    utxoSt' = utxoSt {_utxo = utxo', _stakeDistro = sd'}
     ls' = ls {_utxoState = utxoSt'}
     es' = es {esLState = ls'}
     nes' = nes {nesEs = es'}

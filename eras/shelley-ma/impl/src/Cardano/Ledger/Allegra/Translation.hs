@@ -146,7 +146,8 @@ instance Crypto c => TranslateEra (AllegraEra c) UTxOState where
         { _utxo = translateEra' ctxt $ _utxo us,
           _deposited = _deposited us,
           _fees = _fees us,
-          _ppups = translateEra' ctxt $ _ppups us
+          _ppups = translateEra' ctxt $ _ppups us,
+          _stakeDistro = _stakeDistro us
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) LedgerState where

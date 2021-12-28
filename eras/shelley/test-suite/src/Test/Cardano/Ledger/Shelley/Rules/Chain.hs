@@ -65,7 +65,7 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     PState (..),
     TransUTxOState,
-    UTxOState (..),
+    smartUTxOState,
     updateNES,
     _genDelegs,
   )
@@ -181,7 +181,8 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  ( Default (State (Core.EraRule "PPUP" era))
+  ( Era era,
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->
@@ -201,7 +202,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
             (AccountState (Coin 0) reserves)
             emptySnapShots
             ( LedgerState
-                ( UTxOState
+                ( smartUTxOState
                     utxo
                     (Coin 0)
                     (Coin 0)

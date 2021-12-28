@@ -77,6 +77,7 @@ import Test.Cardano.Ledger.Shelley.Rules.TestChain
     delegProperties,
     poolProperties,
     removedAfterPoolreap,
+    stakeIncrTest,
   )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.ShelleyTranslation (testGroupShelleyTranslation)
@@ -197,7 +198,10 @@ propertyTests =
             (adaPreservationChain @era @ledger),
           TQC.testProperty
             "inputs are eliminated, outputs added to utxo and TxIds are unique"
-            (collisionFreeComplete @era @ledger)
+            (collisionFreeComplete @era @ledger),
+          TQC.testProperty
+            "incremental stake calc"
+            (stakeIncrTest @era @ledger)
         ],
       testGroup
         "Properties of Trace generators"

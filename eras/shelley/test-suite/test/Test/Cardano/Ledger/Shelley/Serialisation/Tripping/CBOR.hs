@@ -59,6 +59,7 @@ import Cardano.Ledger.Shelley.RewardUpdate
     RewardUpdate (..),
   )
 import qualified Cardano.Ledger.Shelley.Rules.Ledgers as STS
+import qualified Cardano.Protocol.TPraos.BHeader as TP
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
@@ -143,13 +144,13 @@ prop_roundtrip_Addr = roundtrip toCBOR fromCBOR
 prop_roundtrip_RewardAcnt :: Ledger.RewardAcnt Mock.C_Crypto -> Property
 prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_Block :: Ledger.Block Ledger.BHeader Mock.C -> Property
+prop_roundtrip_Block :: Ledger.Block TP.BHeader Mock.C -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Header :: Ledger.BHeader Mock.C_Crypto -> Property
+prop_roundtrip_Header :: TP.BHeader Mock.C_Crypto -> Property
 prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_BlockHeaderHash :: Ledger.HashHeader Mock.C_Crypto -> Property
+prop_roundtrip_BlockHeaderHash :: TP.HashHeader Mock.C_Crypto -> Property
 prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_TxBody :: Ledger.TxBody Mock.C -> Property

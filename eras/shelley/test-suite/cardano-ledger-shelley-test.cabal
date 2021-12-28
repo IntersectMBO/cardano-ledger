@@ -36,6 +36,7 @@ library
   hs-source-dirs:     src
   exposed-modules:
     Test.Cardano.Crypto.VRF.Fake
+    Test.Cardano.Ledger.TerseTools
     Test.Cardano.Ledger.Shelley.Address.Bootstrap
     Test.Cardano.Ledger.Shelley.Address.CompactAddr
     Test.Cardano.Ledger.Shelley.BenchmarkFunctions
@@ -111,6 +112,7 @@ library
     QuickCheck >= 2.13.2,
     serialise,
     cardano-ledger-shelley,
+    set-algebra,
     small-steps-test,
     small-steps,
     strict-containers,
@@ -130,6 +132,7 @@ test-suite cardano-ledger-shelley-test
   main-is:             Tests.hs
   other-modules:
       Test.Control.Iterate.SetAlgebra
+      Test.Control.Iterate.SplitMapRules
       Test.Cardano.Ledger.Shelley.Examples
       Test.Cardano.Ledger.Shelley.Examples.Combinators
       Test.Cardano.Ledger.Shelley.Examples.EmptyBlock
@@ -174,6 +177,7 @@ test-suite cardano-ledger-shelley-test
       binary,
       bytestring,
       cardano-binary,
+      cardano-data,
       cardano-crypto-class,
       cardano-crypto-praos,
       cardano-ledger-byron,
@@ -195,6 +199,7 @@ test-suite cardano-ledger-shelley-test
       scientific,
       cardano-ledger-shelley-test,
       cardano-ledger-shelley,
+      set-algebra,
       small-steps-test,
       small-steps,
       strict-containers,
@@ -223,6 +228,7 @@ benchmark mainbench
   build-depends:
     cardano-crypto-class,
     cardano-crypto-praos,
+    cardano-data,
     cardano-ledger-core,
     cardano-prelude,
     cardano-protocol-tpraos,
@@ -235,6 +241,7 @@ benchmark mainbench
     QuickCheck,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
+    set-algebra,
     small-steps,
     small-steps-test,
     strict-containers,

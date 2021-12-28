@@ -1,4 +1,4 @@
-index-state: 2021-02-15T00:00:00Z
+index-state: 2021-12-03T06:07:23Z
 
 packages:
   eras/alonzo/impl
@@ -24,6 +24,8 @@ packages:
   libs/non-integral
   libs/small-steps
   libs/small-steps-test
+  libs/cardano-data
+  libs/set-algebra
   libs/compact-map
 
 -- Always write GHC env files, because they are needed by the doctests.
@@ -104,10 +106,6 @@ allow-newer:
   monoidal-containers:aeson,
   size-based:template-haskell,
 
-  -- TODO: This is only needed until index-state is updated to 2021-02-17 or later.
-  test-framework:random,
-  test-framework-quickcheck2:random
-
 constraints:
   -- bizarre issue: in earlier versions they define their own 'GEq', in newer
   -- ones they reuse the one from 'some', but there isn't e.g. a proper version
@@ -179,6 +177,9 @@ package cardano-ledger-test
 package cardano-protocol-tpraos
   ghc-options: -Werror
 
+package cardano-data
+  ghc-options: -Werror
+
 package compact-map
   ghc-options: -Werror
 
@@ -193,3 +194,7 @@ package small-steps-test
 
 package small-steps
   ghc-options: -Werror
+
+package set-algebra
+  ghc-options: -Werror
+
