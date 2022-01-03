@@ -531,7 +531,6 @@ decodeEpochState ::
   ( FromCBOR (Core.PParams era),
     TransValue FromCBOR era,
     FromSharedCBOR (f (LedgerState era)),
-    -- Share (f (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
     Share (f (LedgerState era)) ~ (Interns (Credential 'Staking (Crypto era)), Interns (KeyHash 'StakePool (Crypto era))),
     Applicative f
   ) =>
@@ -706,7 +705,7 @@ instance
   where
   type
     Share (Annotator (UTxOState era)) =
-      Interns (Credential 'Staking (Crypto era))
+      Share (UTxOState era)
   fromSharedCBOR = decodeUTxOState
 
 decodeUTxOState ::
@@ -872,9 +871,7 @@ instance
   ) =>
   FromSharedCBOR (Annotator (LedgerState era))
   where
-  type
-    Share (Annotator (LedgerState era)) =
-      (Interns (Credential 'Staking (Crypto era)), Interns (KeyHash 'StakePool (Crypto era)))
+  type Share (Annotator (LedgerState era)) = Share (LedgerState era)
   fromSharedPlusCBOR = decodeLedgerState
 
 decodeLedgerState ::

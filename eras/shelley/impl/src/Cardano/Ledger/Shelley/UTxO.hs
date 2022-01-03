@@ -156,7 +156,7 @@ instance
   where
   type
     Share (Annotator (UTxO era)) =
-      Interns (Credential 'Staking (Crypto era))
+      Share (UTxO era)
   fromSharedCBOR credsInterns = do
     !theMap <- decodeMap fromCBOR (fromSharedCBOR credsInterns)
     pure $ UTxO <$!> (sequenceA theMap)
