@@ -9,6 +9,7 @@ module Test.Cardano.Ledger.Mary.Examples.Consensus where
 import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.Value
 import qualified Data.Map.Strict as Map (singleton)
 import Data.Proxy
@@ -27,6 +28,7 @@ ledgerExamplesMary =
     (exampleMultiAssetValue 1)
     exampleTxBodyMary
     exampleAuxiliaryDataMA
+    ()
 
 exampleMultiAssetValue ::
   forall c.

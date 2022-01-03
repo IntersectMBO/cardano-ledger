@@ -87,7 +87,8 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
     sleRewardsCredentials :: Set (Either Coin (Credential 'Staking (Cardano.Ledger.Era.Crypto era))),
     sleResultExamples :: ShelleyResultExamples era,
     sleNewEpochState :: NewEpochState era,
-    sleChainDepState :: ChainDepState (Cardano.Ledger.Era.Crypto era)
+    sleChainDepState :: ChainDepState (Cardano.Ledger.Era.Crypto era),
+    sleTranslationContext :: TranslationContext era
   }
 
 {-------------------------------------------------------------------------------
@@ -115,8 +116,9 @@ defaultShelleyLedgerExamples ::
   Core.Value era ->
   Core.TxBody era ->
   Core.AuxiliaryData era ->
+  TranslationContext era ->
   ShelleyLedgerExamples era
-defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData =
+defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData translationContext =
   ShelleyLedgerExamples
     { sleBlock = exampleShelleyLedgerBlock (mkValidatedTx tx),
       sleHashHeader = exampleHashHeader (Proxy @era),
@@ -138,7 +140,8 @@ defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData =
           value
           emptyPParams
           (emptyPParams {_minUTxOValue = Coin 1}),
-      sleChainDepState = exampleLedgerChainDepState 1
+      sleChainDepState = exampleLedgerChainDepState 1,
+      sleTranslationContext = translationContext
     }
   where
     tx = exampleTx mkWitnesses txBody auxData
@@ -404,6 +407,7 @@ ledgerExamplesShelley =
     exampleCoin
     exampleTxBodyShelley
     exampleAuxiliaryDataShelley
+    ()
 
 mkWitnessesPreAlonzo ::
   ShelleyBasedEra' era =>
