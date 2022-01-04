@@ -37,6 +37,7 @@ import Cardano.Ledger.Slot
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
+import Data.Coders (Annotator)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -113,6 +114,12 @@ instance
     PPUpdateWrongEpoch ce e vp ->
       encodeListLen 4 <> toCBOR (1 :: Word8) <> toCBOR ce <> toCBOR e <> toCBOR vp
     PVCannotFollowPPUP p -> encodeListLen 2 <> toCBOR (2 :: Word8) <> toCBOR p
+
+instance
+  (Era era) =>
+  FromCBOR (Annotator (PpupPredicateFailure era))
+  where
+  fromCBOR = pure <$> fromCBOR
 
 instance
   (Era era) =>

@@ -68,10 +68,9 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
     EpochState (..),
-    IncrementalStake (..),
     LedgerState (..),
     NewEpochState (..),
-    UTxOState (..),
+    smartUTxOState,
     _genDelegs,
   )
 import Cardano.Ledger.Shelley.Metadata (validMetadatum)
@@ -150,12 +149,11 @@ instance
           (AccountState (Coin 0) reserves)
           emptySnapShots
           ( LedgerState
-              ( UTxOState
+              ( smartUTxOState
                   initialUtxo
                   (Coin 0)
                   (Coin 0)
                   def
-                  (IStake mempty mempty)
               )
               (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
           )

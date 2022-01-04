@@ -36,18 +36,55 @@ common project-config
                       -Wredundant-constraints
                       -Wunused-packages
 
+
 library
   import:             base, project-config
   hs-source-dirs:     src
+  other-modules:
+    Data.Group.GrpMap
+    Data.Functor.PiecewiseConstant
+    Test.Cardano.Ledger.Orphans
   exposed-modules:
+    Test.Cardano.Ledger.Alonzo.Tools
     Test.Cardano.Ledger.BaseTypes
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
-    Test.Cardano.Ledger.Generic.Proof
     Test.Cardano.Ledger.Generic.Indexed
+    Test.Cardano.Ledger.Generic.Proof
     Test.Cardano.Ledger.Generic.Updaters
+    Test.Cardano.Ledger.Model.API
+    Test.Cardano.Ledger.Model.Acnt
+    Test.Cardano.Ledger.Model.BaseTypes
+    Test.Cardano.Ledger.Model.Elaborators
+    Test.Cardano.Ledger.Model.Elaborators.Alonzo
+    Test.Cardano.Ledger.Model.Elaborators.Shelley
+    Test.Cardano.Ledger.Model.FeatureSet
+    Test.Cardano.Ledger.Model.Fixup
+    Test.Cardano.Ledger.Model.Generators
+    Test.Cardano.Ledger.Model.Generators.Address
+    Test.Cardano.Ledger.Model.Generators.Certificates
+    Test.Cardano.Ledger.Model.Generators.Chain
+    Test.Cardano.Ledger.Model.Generators.Script
+    Test.Cardano.Ledger.Model.Generators.Shrinking
+    Test.Cardano.Ledger.Model.Generators.Tx
+    Test.Cardano.Ledger.Model.Generators.TxOut
+    Test.Cardano.Ledger.Model.Generators.Value
+    Test.Cardano.Ledger.Model.LedgerState
+    Test.Cardano.Ledger.Model.PParams
+    Test.Cardano.Ledger.Model.Properties
+    Test.Cardano.Ledger.Model.Properties.Utils
+    Test.Cardano.Ledger.Model.Prov
+    Test.Cardano.Ledger.Model.Rewards
+    Test.Cardano.Ledger.Model.Rules
+    Test.Cardano.Ledger.Model.Script
+    Test.Cardano.Ledger.Model.Snapshot
+    Test.Cardano.Ledger.Model.Tx
+    Test.Cardano.Ledger.Model.TxOut
+    Test.Cardano.Ledger.Model.UTxO
+    Test.Cardano.Ledger.Model.Value
     Test.Cardano.Ledger.Properties
+    Test.Cardano.Ledger.Rational
     Test.Cardano.Ledger.TestableEra
-    Test.Cardano.Ledger.Alonzo.Tools
+    Test.Cardano.Ledger.ValueFromList
   build-depends:
     aeson,
     array,
@@ -63,22 +100,37 @@ library
     cardano-slotting,
     containers,
     data-default-class,
+    deepseq,
     genvalidity,
     genvalidity-scientific,
+    groups,
+    hkd,
+    lens,
+    monad-supply,
     mtl,
     plutus-ledger-api,
+    plutus-tx,
+    profunctors,
+    QuickCheck,
+    quickcheck-instances,
+    QuickCheck-GenT,
+    quiet,
+    random,
     scientific,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    semigroupoids,
     small-steps,
     small-steps-test,
+    some,
     strict-containers,
+    tagged,
     tasty,
     tasty-hunit,
     tasty-quickcheck,
     time,
     transformers,
-    QuickCheck,
+    writer-cps-mtl,
 
 
 test-suite cardano-ledger-test
@@ -86,6 +138,8 @@ test-suite cardano-ledger-test
 
   type:                exitcode-stdio-1.0
   main-is:             Tests.hs
+  ghc-options: -rtsopts -threaded
+
   hs-source-dirs:      test
   other-modules:
   build-depends:

@@ -22,7 +22,9 @@ module Cardano.Ledger.Shelley.Rules.Delegs
 where
 
 import Cardano.Binary
-  ( FromCBOR (..),
+  ( Annotator,
+    Decoder,
+    FromCBOR (..),
     ToCBOR (..),
     encodeListLen,
   )
@@ -73,6 +75,7 @@ import Control.State.Transition
     (?!),
     (?!:),
   )
+import Data.Functor.Identity (Identity (runIdentity))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq (..))
@@ -166,24 +169,41 @@ instance
 
 instance
   ( Era era,
+    FromCBOR (Annotator (PredicateFailure (Core.EraRule "DELPL" era))),
+    Typeable (Core.Script era)
+  ) =>
+  FromCBOR (Annotator (DelegsPredicateFailure era))
+  where
+  fromCBOR = decodePredFail
+
+decodePredFail ::
+  ( Era era,
+    Applicative f,
+    FromCBOR (f (PredicateFailure (Core.EraRule "DELPL" era)))
+  ) =>
+  (Decoder s (f (DelegsPredicateFailure era)))
+decodePredFail =
+  decodeRecordSum "PredicateFailure" $
+    \case
+      0 -> do
+        kh <- fromCBOR
+        pure (2, pure $ DelegateeNotRegisteredDELEG kh)
+      1 -> do
+        ws <- mapFromCBOR
+        pure (2, pure $ WithdrawalsNotInRewardsDELEGS ws)
+      2 -> do
+        a <- fromCBOR
+        pure (2, fmap DelplFailure a)
+      k -> invalidKey k
+
+instance
+  ( Era era,
     FromCBOR (PredicateFailure (Core.EraRule "DELPL" era)),
     Typeable (Core.Script era)
   ) =>
   FromCBOR (DelegsPredicateFailure era)
   where
-  fromCBOR =
-    decodeRecordSum "PredicateFailure" $
-      \case
-        0 -> do
-          kh <- fromCBOR
-          pure (2, DelegateeNotRegisteredDELEG kh)
-        1 -> do
-          ws <- mapFromCBOR
-          pure (2, WithdrawalsNotInRewardsDELEGS ws)
-        2 -> do
-          a <- fromCBOR
-          pure (2, DelplFailure a)
-        k -> invalidKey k
+  fromCBOR = runIdentity <$> decodePredFail
 
 delegsTransition ::
   forall era.

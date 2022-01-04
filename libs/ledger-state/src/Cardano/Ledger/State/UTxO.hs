@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
@@ -38,6 +39,7 @@ import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import qualified Data.Text as T
 import Data.Typeable
 import Numeric.Natural
 import Prettyprinter
@@ -49,14 +51,20 @@ type CurrentEra = AlonzoEra C
 
 --- Loading
 readNewEpochState :: FilePath -> IO (NewEpochState CurrentEra)
-readNewEpochState = readFromCBOR
+readNewEpochState = readFromCBORA
 
 readEpochState :: FilePath -> IO (EpochState CurrentEra)
-readEpochState = readFromCBOR
+readEpochState = readFromCBORA
 
 readFromCBOR :: FromCBOR a => FilePath -> IO a
 readFromCBOR fp =
   LBS.readFile fp <&> decodeFull >>= \case
+    Left exc -> throwIO exc
+    Right res -> pure res
+
+readFromCBORA :: FromCBOR (Annotator a) => FilePath -> IO a
+readFromCBORA fp = do
+  LBS.readFile fp <&> decodeAnnotator (T.pack fp) fromCBOR >>= \case
     Left exc -> throwIO exc
     Right res -> pure res
 

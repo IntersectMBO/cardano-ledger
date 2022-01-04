@@ -649,6 +649,27 @@ instance
     Show (Core.Value era),
     Compactible (Core.Value era)
   ) =>
+  FromCBOR (Annotator (TxOut era))
+  where
+  fromCBOR = pure <$> fromCBOR
+
+instance
+  ( Era era,
+    DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    Compactible (Core.Value era)
+  ) =>
+  FromSharedCBOR (Annotator (TxOut era))
+  where
+  type Share (Annotator (TxOut era)) = Share (TxOut era)
+  fromSharedCBOR x = pure <$> fromSharedCBOR x
+
+instance
+  ( Era era,
+    DecodeNonNegative (Core.Value era),
+    Show (Core.Value era),
+    Compactible (Core.Value era)
+  ) =>
   FromSharedCBOR (TxOut era)
   where
   type Share (TxOut era) = Interns (Credential 'Staking (Crypto era))

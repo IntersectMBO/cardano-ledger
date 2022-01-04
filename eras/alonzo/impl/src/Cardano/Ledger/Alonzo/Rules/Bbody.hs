@@ -55,6 +55,7 @@ import Control.State.Transition
     (?!),
   )
 import Data.Coders
+import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -101,15 +102,27 @@ instance
 
 instance
   ( Typeable era,
-    FromCBOR (BbodyPredicateFailure era) -- TODO why is there no FromCBOR for (BbodyPredicateFailure era)
+    FromCBOR (BbodyPredicateFailure era)
   ) =>
   FromCBOR (AlonzoBbodyPredFail era)
   where
-  fromCBOR = decode (Summands "AlonzoBbodyPredFail" dec)
-    where
-      dec 0 = SumD ShelleyInAlonzoPredFail <! From
-      dec 1 = SumD TooManyExUnits <! From <! From
-      dec n = Invalid n
+  fromCBOR = runIdentity <$> decode (Summands "AlonzoBbodyPredFail" decAlonzoBbodyPredFail)
+
+instance
+  ( Typeable era,
+    FromCBOR (Annotator (BbodyPredicateFailure era))
+  ) =>
+  FromCBOR (Annotator (AlonzoBbodyPredFail era))
+  where
+  fromCBOR = decode (Summands "AlonzoBbodyPredFail" decAlonzoBbodyPredFail)
+
+decAlonzoBbodyPredFail ::
+  (Applicative f, FromCBOR (f (BbodyPredicateFailure era))) =>
+  Word ->
+  Decode 'Open (f (AlonzoBbodyPredFail era))
+decAlonzoBbodyPredFail 0 = SumD (pure ShelleyInAlonzoPredFail) <*! From
+decAlonzoBbodyPredFail 1 = Ann $ SumD TooManyExUnits <! From <! From
+decAlonzoBbodyPredFail n = Invalid n
 
 -- ========================================
 -- The STS instance
