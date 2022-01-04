@@ -20,13 +20,16 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
-module Cardano.Ledger.Alonzo.TxBody
-  ( TxOut (.., TxOut, TxOutCompact, TxOutCompactDH),
+module Cardano.Ledger.Babbage.TxBody
+  ( TxOut (TxOut, TxOutCompact, TxOutCompactDH, TxOutCompactDatum),
     TxBody
       ( TxBody,
         inputs,
         collateral,
+        referenceInputs,
         outputs,
+        collateralReturn,
+        totalCollateral,
         txcerts,
         txwdrls,
         txfee,
@@ -38,9 +41,14 @@ module Cardano.Ledger.Alonzo.TxBody
         adHash,
         txnetworkid
       ),
+    Datum (..),
+    datumDatahash,
     inputs',
     collateral',
+    referenceInputs',
     outputs',
+    collateralReturn',
+    totalCollateral',
     certs',
     wdrls',
     txfee',
@@ -51,12 +59,7 @@ module Cardano.Ledger.Alonzo.TxBody
     scriptIntegrityHash',
     adHash',
     txnetworkid',
-    getAdaOnly,
-    decodeDataHash32,
-    encodeDataHash32,
-    encodeAddress28,
-    decodeAddress28,
-    AlonzoBody,
+    BabbageBody,
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
   )
@@ -72,7 +75,8 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
+import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -82,7 +86,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes
@@ -96,8 +100,6 @@ import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
     SafeToHash,
-    extractHash,
-    unsafeMakeSafeHash,
   )
 import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
@@ -109,15 +111,12 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     Val (..),
-    adaOnly,
     decodeMint,
     decodeNonNegative,
     encodeMint,
     isZero,
   )
-import Control.DeepSeq (NFData (..), rwhnf)
-import Control.Monad (guard)
-import Data.Bits
+import Control.DeepSeq (NFData (rnf), rwhnf)
 import Data.Coders
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -125,7 +124,8 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Sharing
+import Data.Sharing (FromSharedCBOR (..), Interns, fromNotSharedCBOR, interns)
+import qualified Data.Text as T
 import Data.Typeable (Proxy (..), Typeable, (:~:) (Refl))
 import Data.Word
 import GHC.Generics (Generic)
@@ -143,6 +143,10 @@ data TxOut era
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
       !(DataHash (Crypto era))
+  | TxOutCompactDatum'
+      {-# UNPACK #-} !(CompactAddr (Crypto era))
+      !(CompactForm (Core.Value era))
+      !(Data era)
   | TxOut_AddrHash28_AdaOnly
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Word64 -- Payment Addr
@@ -172,96 +176,6 @@ deriving stock instance
 instance NFData (TxOut era) where
   rnf = rwhnf
 
-getAdaOnly ::
-  forall era.
-  Val (Core.Value era) =>
-  Proxy era ->
-  Core.Value era ->
-  Maybe (CompactForm Coin)
-getAdaOnly _ v = do
-  guard $ adaOnly v
-  toCompact $ coin v
-
-decodeAddress28 ::
-  forall crypto.
-  ( SizeHash (CC.ADDRHASH crypto) ~ 28,
-    HashAlgorithm (CC.ADDRHASH crypto)
-  ) =>
-  Credential 'Staking crypto ->
-  Word64 ->
-  Word64 ->
-  Word64 ->
-  Word64 ->
-  Addr crypto
-decodeAddress28 stakeRef a b c d =
-  Addr network paymentCred (StakeRefBase stakeRef)
-  where
-    network = if d `testBit` 1 then Mainnet else Testnet
-    paymentCred =
-      if d `testBit` 0
-        then KeyHashObj (KeyHash addrHash)
-        else ScriptHashObj (ScriptHash addrHash)
-    addrHash :: Hash (CC.ADDRHASH crypto) a
-    addrHash =
-      hashFromPackedBytes $
-        PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
-
-encodeAddress28 ::
-  forall crypto.
-  ( HashAlgorithm (CC.ADDRHASH crypto)
-  ) =>
-  Network ->
-  PaymentCredential crypto ->
-  Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Word64, Word64, Word64, Word64)
-encodeAddress28 network paymentCred = do
-  let networkBit, payCredTypeBit :: Word64
-      networkBit =
-        case network of
-          Mainnet -> 0 `setBit` 1
-          Testnet -> 0
-      payCredTypeBit =
-        case paymentCred of
-          KeyHashObj {} -> 0 `setBit` 0
-          ScriptHashObj {} -> 0
-      encodeAddr ::
-        Hash (CC.ADDRHASH crypto) a ->
-        Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Word64, Word64, Word64, Word64)
-      encodeAddr h = do
-        refl@Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH crypto))) (Proxy @28)
-        case hashToPackedBytes h of
-          PackedBytes28 a b c d ->
-            Just (refl, a, b, c, (fromIntegral d `shiftL` 32) .|. networkBit .|. payCredTypeBit)
-          _ -> Nothing
-  case paymentCred of
-    KeyHashObj (KeyHash addrHash) -> encodeAddr addrHash
-    ScriptHashObj (ScriptHash addrHash) -> encodeAddr addrHash
-
-decodeDataHash32 ::
-  forall crypto.
-  ( SizeHash (CC.HASH crypto) ~ 32,
-    HashAlgorithm (CC.HASH crypto)
-  ) =>
-  Word64 ->
-  Word64 ->
-  Word64 ->
-  Word64 ->
-  DataHash crypto
-decodeDataHash32 a b c d =
-  unsafeMakeSafeHash $
-    hashFromPackedBytes $
-      PackedBytes32 a b c d
-
-encodeDataHash32 ::
-  forall crypto.
-  (HashAlgorithm (CC.HASH crypto)) =>
-  DataHash crypto ->
-  Maybe (SizeHash (CC.HASH crypto) :~: 32, Word64, Word64, Word64, Word64)
-encodeDataHash32 dataHash = do
-  refl@Refl <- sameNat (Proxy @(SizeHash (CC.HASH crypto))) (Proxy @32)
-  case hashToPackedBytes (extractHash dataHash) of
-    PackedBytes32 a b c d -> Just (refl, a, b, c, d)
-    _ -> Nothing
-
 viewCompactTxOut ::
   forall era.
   Era era =>
@@ -270,6 +184,7 @@ viewCompactTxOut ::
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
+  TxOutCompactDatum' addr val datum -> (addr, val, SJust $ hashData datum)
   TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal
     | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) ->
       (compactAddr (decodeAddress28 stakeRef a b c d), toCompactValue adaVal, SNothing)
@@ -294,22 +209,28 @@ viewTxOut ::
   forall era.
   Era era =>
   TxOut era ->
-  (Addr (Crypto era), Core.Value era, StrictMaybe (DataHash (Crypto era)))
-viewTxOut (TxOutCompact' bs c) = (addr, val, SNothing)
+  (Addr (Crypto era), Core.Value era, Datum era)
+viewTxOut (TxOutCompact' bs c) = (addr, val, NoDatum)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
+viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, DatumHash dh)
+  where
+    addr = decompactAddr bs
+    val = fromCompact c
+viewTxOut (TxOutCompactDatum' bs c d) = (addr, val, Datum d)
   where
     addr = decompactAddr bs
     val = fromCompact c
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal)
   | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
-    (decodeAddress28 stakeRef a b c d, inject (fromCompact adaVal), SNothing)
+    let addr = decodeAddress28 stakeRef a b c d
+     in (addr, inject (fromCompact adaVal), NoDatum)
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h)
-  | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28),
-    Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) =
-    (decodeAddress28 stakeRef a b c d, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
+  | Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32),
+    Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
+    let addr = decodeAddress28 stakeRef a b c d
+     in (addr, inject (fromCompact adaVal), DatumHash (decodeDataHash32 e f g h))
 viewTxOut (TxOut_AddrHash28_AdaOnly {}) = error "Impossible: Compacted and address or hash of non-standard size"
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 {}) = error "Impossible: Compacted and address or hash of non-standard size"
 
@@ -324,6 +245,18 @@ instance
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 
+data Datum era
+  = NoDatum
+  | DatumHash !(DataHash (Crypto era))
+  | Datum !(Data era)
+  deriving (Eq, Ord, Show)
+
+datumDatahash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
+datumDatahash = \case
+  NoDatum -> SNothing
+  (DatumHash d) -> SJust d
+  (Datum d) -> SJust $ hashData d
+
 pattern TxOut ::
   forall era.
   ( Era era,
@@ -333,28 +266,29 @@ pattern TxOut ::
   ) =>
   Addr (Crypto era) ->
   Core.Value era ->
-  StrictMaybe (DataHash (Crypto era)) ->
+  Datum (era) ->
   TxOut era
 pattern TxOut addr vl dh <-
   (viewTxOut -> (addr, vl, dh))
   where
-    TxOut (Addr network paymentCred stakeRef) vl SNothing
+    TxOut (Addr network paymentCred stakeRef) vl NoDatum
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred =
         TxOut_AddrHash28_AdaOnly stakeCred a b c d adaCompact
-    TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
+    TxOut (Addr network paymentCred stakeRef) vl (DatumHash dh)
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred,
         Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
         TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred a b c d adaCompact e f g h
-    TxOut addr vl mdh =
+    TxOut addr vl d =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
-       in case mdh of
-            SNothing -> TxOutCompact' a v
-            SJust dh -> TxOutCompactDH' a v dh
+       in case d of
+            NoDatum -> TxOutCompact' a v
+            DatumHash dh -> TxOutCompactDH' a v dh
+            Datum d' -> TxOutCompactDatum' a v d'
 
 {-# COMPLETE TxOut #-}
 
@@ -369,7 +303,7 @@ pattern TxOutCompact ::
 pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, SNothing))
   where
-    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
+    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) NoDatum
 
 -- TODO deprecate
 pattern TxOutCompactDH ::
@@ -383,7 +317,17 @@ pattern TxOutCompactDH ::
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
   where
-    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . SJust
+    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . DatumHash
+
+pattern TxOutCompactDatum ::
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  Data era ->
+  TxOut era
+pattern TxOutCompactDatum addr vl d = TxOutCompactDatum' addr vl d
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
@@ -394,7 +338,10 @@ type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
 data TxBodyRaw era = TxBodyRaw
   { _inputs :: !(Set (TxIn (Crypto era))),
     _collateral :: !(Set (TxIn (Crypto era))),
+    _referenceInputs :: !(Set (TxIn (Crypto era))),
     _outputs :: !(StrictSeq (TxOut era)),
+    _collateralReturn :: !(StrictMaybe (TxOut era)),
+    _totalCollateral :: !Coin,
     _certs :: !(StrictSeq (DCert (Crypto era))),
     _wdrls :: !(Wdrl (Crypto era)),
     _txfee :: !Coin,
@@ -404,7 +351,7 @@ data TxBodyRaw era = TxBodyRaw
     _mint :: !(Value (Crypto era)),
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
-    -- Operations on the TxBody in the AlonzoEra depend upon this.
+    -- Operations on the TxBody in the BabbageEra depend upon this.
     _scriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (Crypto era))),
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     _txnetworkid :: !(StrictMaybe Network)
@@ -472,7 +419,7 @@ deriving via
     FromCBOR (Annotator (TxBody era))
 
 -- The Set of constraints necessary to use the TxBody pattern
-type AlonzoBody era =
+type BabbageBody era =
   ( Era era,
     Compactible (Core.Value era),
     ToCBOR (Core.Script era),
@@ -480,10 +427,13 @@ type AlonzoBody era =
   )
 
 pattern TxBody ::
-  AlonzoBody era =>
+  BabbageBody era =>
+  Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
+  StrictMaybe (TxOut era) ->
+  Coin ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
   Coin ->
@@ -498,7 +448,10 @@ pattern TxBody ::
 pattern TxBody
   { inputs,
     collateral,
+    referenceInputs,
     outputs,
+    collateralReturn,
+    totalCollateral,
     txcerts,
     txwdrls,
     txfee,
@@ -515,7 +468,10 @@ pattern TxBody
         TxBodyRaw
           { _inputs = inputs,
             _collateral = collateral,
+            _referenceInputs = referenceInputs,
             _outputs = outputs,
+            _collateralReturn = collateralReturn,
+            _totalCollateral = totalCollateral,
             _certs = txcerts,
             _wdrls = txwdrls,
             _txfee = txfee,
@@ -533,7 +489,10 @@ pattern TxBody
     TxBody
       inputsX
       collateralX
+      referenceInputsX
       outputsX
+      collateralReturnX
+      totalCollateralX
       certsX
       wdrlsX
       txfeeX
@@ -550,7 +509,10 @@ pattern TxBody
                 TxBodyRaw
                   inputsX
                   collateralX
+                  referenceInputsX
                   outputsX
+                  collateralReturnX
+                  totalCollateralX
                   certsX
                   wdrlsX
                   txfeeX
@@ -569,13 +531,16 @@ instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 
 -- ==============================================================================
 -- We define these accessor functions manually, because if we define them using
--- the record syntax in the TxBody pattern, they inherit the (AlonzoBody era)
+-- the record syntax in the TxBody pattern, they inherit the (BabbageBody era)
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
 inputs' :: TxBody era -> Set (TxIn (Crypto era))
 collateral' :: TxBody era -> Set (TxIn (Crypto era))
+referenceInputs' :: TxBody era -> Set (TxIn (Crypto era))
 outputs' :: TxBody era -> StrictSeq (TxOut era)
+collateralReturn' :: TxBody era -> StrictMaybe (TxOut era)
+totalCollateral' :: TxBody era -> Coin
 certs' :: TxBody era -> StrictSeq (DCert (Crypto era))
 txfee' :: TxBody era -> Coin
 wdrls' :: TxBody era -> Wdrl (Crypto era)
@@ -591,7 +556,13 @@ txnetworkid' :: TxBody era -> StrictMaybe Network
 
 collateral' (TxBodyConstr (Memo raw _)) = _collateral raw
 
+referenceInputs' (TxBodyConstr (Memo raw _)) = _referenceInputs raw
+
 outputs' (TxBodyConstr (Memo raw _)) = _outputs raw
+
+collateralReturn' (TxBodyConstr (Memo raw _)) = _collateralReturn raw
+
+totalCollateral' (TxBodyConstr (Memo raw _)) = _totalCollateral raw
 
 certs' (TxBodyConstr (Memo raw _)) = _certs raw
 
@@ -627,6 +598,12 @@ instance
     encodeListLen 2
       <> toCBOR addr
       <> toCBOR cv
+  toCBOR (TxOutCompactDatum addr cv d) =
+    encodeListLen 4
+      <> toCBOR True
+      <> toCBOR addr
+      <> toCBOR cv
+      <> toCBOR d
   toCBOR (TxOutCompactDH addr cv dh) =
     encodeListLen 3
       <> toCBOR addr
@@ -639,7 +616,7 @@ instance
     Show (Core.Value era),
     Compactible (Core.Value era)
   ) =>
-  FromCBOR (TxOut era)
+  FromCBOR (Annotator (TxOut era))
   where
   fromCBOR = fromNotSharedCBOR
 
@@ -649,59 +626,48 @@ instance
     Show (Core.Value era),
     Compactible (Core.Value era)
   ) =>
-  FromCBOR (Annotator (TxOut era))
-  where
-  fromCBOR = pure <$> fromCBOR
-
-instance
-  ( Era era,
-    DecodeNonNegative (Core.Value era),
-    Show (Core.Value era),
-    Compactible (Core.Value era)
-  ) =>
   FromSharedCBOR (Annotator (TxOut era))
   where
-  type Share (Annotator (TxOut era)) = Share (TxOut era)
-  fromSharedCBOR x = pure <$> fromSharedCBOR x
-
-instance
-  ( Era era,
-    DecodeNonNegative (Core.Value era),
-    Show (Core.Value era),
-    Compactible (Core.Value era)
-  ) =>
-  FromSharedCBOR (TxOut era)
-  where
-  type Share (TxOut era) = Interns (Credential 'Staking (Crypto era))
+  type Share (Annotator (TxOut era)) = Interns (Credential 'Staking (Crypto era))
   fromSharedCBOR credsInterns = do
     lenOrIndef <- decodeListLenOrIndef
-    let internTxOut = \case
+    let internTxOut :: TxOut era -> TxOut era
+        internTxOut = \case
           TxOut_AddrHash28_AdaOnly cred a b c d ada ->
             TxOut_AddrHash28_AdaOnly (interns credsInterns cred) a b c d ada
           TxOut_AddrHash28_AdaOnly_DataHash32 cred a b c d ada e f g h ->
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) a b c d ada e f g h
           txOut -> txOut
-    internTxOut <$> case lenOrIndef of
-      Nothing -> do
-        a <- fromCBOR
-        cv <- decodeNonNegative
-        decodeBreakOr >>= \case
-          True -> pure $ TxOutCompact a cv
-          False -> do
-            dh <- fromCBOR
-            decodeBreakOr >>= \case
-              True -> pure $ TxOutCompactDH a cv dh
-              False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
+    internTxOut <$$> case lenOrIndef of
+      Nothing ->
+        fmap pure $ do
+          a <- fromCBOR
+          cv <- decodeNonNegative
+          decodeBreakOr >>= \case
+            True -> pure $ TxOutCompact a cv
+            False -> do
+              dh <- fromCBOR
+              decodeBreakOr >>= \case
+                True -> pure $ TxOutCompactDH a cv dh
+                False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
       Just 2 ->
-        TxOutCompact
-          <$> fromCBOR
-          <*> decodeNonNegative
+        fmap pure $
+          TxOutCompact
+            <$> fromCBOR
+            <*> decodeNonNegative
       Just 3 ->
-        TxOutCompactDH
-          <$> fromCBOR
-          <*> decodeNonNegative
-          <*> fromCBOR
-      Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
+        fmap pure $
+          TxOutCompactDH
+            <$> fromCBOR
+            <*> decodeNonNegative
+            <*> fromCBOR
+      Just 4 -> do
+        True <- fromCBOR @Bool
+        a <- fromCBOR
+        b <- decodeNonNegative
+        c <- fromCBOR
+        pure $ TxOutCompactDatum a b <$> c
+      Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
 encodeTxBodyRaw ::
   ( Era era,
@@ -713,7 +679,10 @@ encodeTxBodyRaw
   TxBodyRaw
     { _inputs,
       _collateral,
+      _referenceInputs,
       _outputs,
+      _collateralReturn,
+      _totalCollateral,
       _certs,
       _wdrls,
       _txfee,
@@ -726,12 +695,15 @@ encodeTxBodyRaw
       _txnetworkid
     } =
     Keyed
-      ( \i ifee o f t c w u b rsh mi sh ah ni ->
-          TxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
+      ( \i ifee ri o cr tc f t c w u b rsh mi sh ah ni ->
+          TxBodyRaw i ifee ri o cr tc c w f (ValidityInterval b t) u rsh mi sh ah ni
       )
       !> Key 0 (E encodeFoldable _inputs)
       !> Key 13 (E encodeFoldable _collateral)
+      !> Key 18 (E encodeFoldable _referenceInputs)
       !> Key 1 (E encodeFoldable _outputs)
+      !> Key 16 (To _collateralReturn)
+      !> Key 17 (To _totalCollateral)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
       !> Omit null (Key 4 (E encodeFoldable _certs))
@@ -751,6 +723,12 @@ encodeTxBodyRaw
       fromSJust (SJust x) = x
       fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
 
+doubleFmap, (<$$>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
+{-# INLINE doubleFmap #-}
+doubleFmap = fmap . fmap
+{-# INLINE (<$$>) #-}
+(<$$>) = doubleFmap
+
 instance
   forall era.
   ( Era era,
@@ -763,13 +741,13 @@ instance
     FromCBOR (PParamsDelta era),
     ToCBOR (PParamsDelta era)
   ) =>
-  FromCBOR (TxBodyRaw era)
+  FromCBOR (Annotator (TxBodyRaw era))
   where
   fromCBOR =
     decode $
       SparseKeyed
         "TxBodyRaw"
-        initial
+        (pure initial)
         bodyFields
         requiredFields
     where
@@ -778,7 +756,10 @@ instance
         TxBodyRaw
           mempty
           mempty
+          mempty
           StrictSeq.empty
+          SNothing
+          mempty
           StrictSeq.empty
           (Wdrl mempty)
           mempty
@@ -789,60 +770,57 @@ instance
           SNothing
           SNothing
           SNothing
-      bodyFields :: (Word -> Field (TxBodyRaw era))
+      bodyFields :: (Word -> Field (Annotator (TxBodyRaw era)))
       bodyFields 0 =
-        field
+        fieldA
           (\x tx -> tx {_inputs = x})
           (D (decodeSet fromCBOR))
       bodyFields 13 =
-        field
+        fieldA
           (\x tx -> tx {_collateral = x})
           (D (decodeSet fromCBOR))
+      bodyFields 18 =
+        fieldA
+          (\x tx -> tx {_referenceInputs = x})
+          (D (decodeSet fromCBOR))
       bodyFields 1 =
-        field
+        fieldAA
           (\x tx -> tx {_outputs = x})
-          (D (decodeStrictSeq fromCBOR))
-      bodyFields 2 = field (\x tx -> tx {_txfee = x}) From
+          (D (decodeAnnStrictSeq fromCBOR))
+      bodyFields 16 =
+        fieldAA
+          (\x tx -> tx {_collateralReturn = x})
+          (D (sequenceA <$> fromCBOR))
+      bodyFields 17 =
+        fieldA
+          (\x tx -> tx {_totalCollateral = x})
+          (D (fromCBOR))
+      bodyFields 2 = fieldA (\x tx -> tx {_txfee = x}) From
       bodyFields 3 =
-        field
+        fieldA
           (\x tx -> tx {_vldt = (_vldt tx) {invalidHereafter = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 4 =
-        field
+        fieldA
           (\x tx -> tx {_certs = x})
           (D (decodeStrictSeq fromCBOR))
-      bodyFields 5 = field (\x tx -> tx {_wdrls = x}) From
-      bodyFields 6 = field (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
-      bodyFields 7 = field (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 5 = fieldA (\x tx -> tx {_wdrls = x}) From
+      bodyFields 6 = fieldA (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
+      bodyFields 7 = fieldA (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 8 =
-        field
+        fieldA
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
-      bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
-      bodyFields 11 = field (\x tx -> tx {_scriptIntegrityHash = x}) (D (SJust <$> fromCBOR))
-      bodyFields 14 = field (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
-      bodyFields 15 = field (\x tx -> tx {_txnetworkid = x}) (D (SJust <$> fromCBOR))
+      bodyFields 9 = fieldA (\x tx -> tx {_mint = x}) (D decodeMint)
+      bodyFields 11 = fieldA (\x tx -> tx {_scriptIntegrityHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 14 = fieldA (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
+      bodyFields 15 = fieldA (\x tx -> tx {_txnetworkid = x}) (D (SJust <$> fromCBOR))
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
         [ (0, "inputs"),
           (1, "outputs"),
           (2, "fee")
         ]
-
-instance
-  ( Era era,
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era),
-    Compactible (Core.Value era),
-    Show (Core.Value era),
-    DecodeNonNegative (Core.Value era),
-    FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (PParamsDelta era),
-    ToCBOR (PParamsDelta era)
-  ) =>
-  FromCBOR (Annotator (TxBodyRaw era))
-  where
-  fromCBOR = pure <$> fromCBOR
 
 -- ====================================================
 -- HasField instances to be consistent with earlier Eras
@@ -876,6 +854,15 @@ instance (Crypto era ~ c) => HasField "mint" (TxBody era) (Mary.Value c) where
 
 instance (Crypto era ~ c) => HasField "collateral" (TxBody era) (Set (TxIn c)) where
   getField (TxBodyConstr (Memo m _)) = _collateral m
+
+instance (Crypto era ~ c) => HasField "referenceInputs" (TxBody era) (Set (TxIn c)) where
+  getField (TxBodyConstr (Memo m _)) = _referenceInputs m
+
+instance HasField "collateralReturn" (TxBody era) (StrictMaybe (TxOut era)) where
+  getField (TxBodyConstr (Memo m _)) = _collateralReturn m
+
+instance HasField "totalCollateral" (TxBody era) (Coin) where
+  getField (TxBodyConstr (Memo m _)) = _totalCollateral m
 
 instance (Crypto era ~ c) => HasField "minted" (TxBody era) (Set (ScriptHash c)) where
   getField (TxBodyConstr (Memo m _)) = Set.map policyID (policies (_mint m))
@@ -913,3 +900,8 @@ instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (T
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField (TxOutCompact _ _) = SNothing
   getField (TxOutCompactDH _ _ d) = SJust d
+
+instance (Era era) => HasField "datum" (TxOut era) (StrictMaybe (Data era)) where
+  getField (TxOutCompact _ _) = SNothing
+  getField (TxOutCompactDatum _ _ d) = SJust d
+  getField (TxOutCompactDH _ _ _) = SNothing

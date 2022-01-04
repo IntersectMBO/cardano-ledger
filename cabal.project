@@ -3,6 +3,7 @@ index-state: 2021-12-03T06:07:23Z
 packages:
   eras/alonzo/impl
   eras/alonzo/test-suite
+  eras/babbage/impl
   eras/byron/chain/executable-spec
   eras/byron/ledger/executable-spec
   eras/byron/ledger/impl
@@ -117,6 +118,9 @@ package cardano-ledger-alonzo
   ghc-options: -Werror
 
 package cardano-ledger-alonzo-test
+  ghc-options: -Werror
+
+package cardano-ledger-babbage
   ghc-options: -Werror
 
 package byron-spec-chain
