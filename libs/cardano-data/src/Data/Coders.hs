@@ -1,3 +1,4 @@
+{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -20,6 +21,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | MemoBytes is an abstration for a datetype that encodes its own seriialization.
 --   The idea is to use a newtype around a MemoBytes non-memoizing version.
@@ -45,9 +47,11 @@ module Data.Coders
     decode,
     runE, -- Used in testing
     decodeList,
+    decodeAnnList,
     decodePair,
     decodeSeq,
     decodeStrictSeq,
+    decodeAnnStrictSeq,
     decodeSet,
     decodeAnnSet,
     decodeRecordNamed,
@@ -137,6 +141,7 @@ import Control.Monad.Trans.Identity
 import qualified Data.Compact.VMap as VMap
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
+import Data.Functor.Identity (Identity (..))
 import qualified Data.Map as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -228,17 +233,23 @@ unusedRequiredKeys used required name =
 decodeList :: Decoder s a -> Decoder s [a]
 decodeList = decodeCollection decodeListLenOrIndef
 
+decodeAnnList :: Applicative f => Decoder s (f t) -> Decoder s (f [t])
+decodeAnnList dec = do xs <- decodeList dec; pure (sequenceA xs)
+
 decodeSeq :: Decoder s a -> Decoder s (Seq a)
 decodeSeq decoder = Seq.fromList <$> decodeList decoder
 
 decodeStrictSeq :: Decoder s a -> Decoder s (StrictSeq a)
 decodeStrictSeq decoder = StrictSeq.fromList <$> decodeList decoder
 
+decodeAnnStrictSeq :: Applicative f => Decoder s (f a) -> Decoder s (f (StrictSeq a))
+decodeAnnStrictSeq dec = do xs <- decodeList dec; pure (StrictSeq.fromList <$> (sequenceA xs))
+
 decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
 decodeSet decoder = Set.fromList <$> decodeList decoder
 
-decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set t))
-decodeAnnSet dec = do xs <- decodeList dec; pure (Set.fromList <$> (sequence xs))
+decodeAnnSet :: (Ord t, Applicative f) => Decoder s (f t) -> Decoder s (f (Set t))
+decodeAnnSet dec = do xs <- decodeList dec; pure (Set.fromList <$> (sequenceA xs))
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
@@ -270,7 +281,7 @@ encodeFoldableAsDefinite f = encodeFoldableEncoderAs wrapArray toCBOR f
   where
     wrapArray len contents = encodeListLen len <> contents
 
--- Encodes a sequence of pairs as a cbor map
+-- Encodes a sequenceA of pairs as a cbor map
 encodeFoldableMapPairs :: (ToCBOR a, ToCBOR b, Foldable f) => f (a, b) -> Encoding
 encodeFoldableMapPairs = encodeFoldableEncoderAs wrapCBORMap $
   \(a, b) -> toCBOR a <> toCBOR b
@@ -578,9 +589,9 @@ data Decode (w :: Wrapped) t where
   DD :: Dual t -> Decode ('Closed 'Dense) t
   TagD :: Word -> Decode ('Closed x) t -> Decode ('Closed x) t
   Emit :: t -> Decode w t
-  -- The next two could be generalized to any (Applicative f) rather than Annotator
-  Ann :: Decode w t -> Decode w (Annotator t)
-  ApplyAnn :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
+  -- 'f' is usually 'Annotator' or 'Identity'
+  Ann :: Applicative f => Decode w t -> Decode w (f t)
+  ApplyAnn :: Applicative f => Decode w1 (f (a -> t)) -> Decode ('Closed d) (f a) -> Decode w1 (f t)
   -- A function to Either can raise an error when applied by returning (Left errorMessage)
   ApplyErr :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 
@@ -593,7 +604,7 @@ infixl 4 <?
 (<!) :: Decode w1 (a -> t) -> Decode ('Closed w) a -> Decode w1 t
 x <! y = ApplyD x y
 
-(<*!) :: Decode w1 (Annotator (a -> t)) -> Decode ('Closed d) (Annotator a) -> Decode w1 (Annotator t)
+(<*!) :: Applicative f => Decode w1 (f (a -> t)) -> Decode ('Closed d) (f a) -> Decode w1 (f t)
 x <*! y = ApplyAnn x y
 
 (<?) :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
@@ -617,12 +628,15 @@ hsize (Ann x) = hsize x
 hsize (ApplyAnn f x) = hsize f + hsize x
 hsize (ApplyErr f x) = hsize f + hsize x
 
+{-# INLINE decode #-}
 decode :: Decode w t -> Decoder s t
 decode x = fmap snd (decodE x)
 
+{-# INLINE decodE #-}
 decodE :: Decode w t -> Decoder s (Int, t)
 decodE x = decodeCount x 0
 
+{-# INLINE decodeCount #-}
 decodeCount :: forall (w :: Wrapped) s t. Decode w t -> Int -> Decoder s (Int, t)
 decodeCount (Summands nm f) n = (n + 1,) <$> decodeRecordSum nm (\x -> decodE (f x))
 decodeCount (SumD cn) n = pure (n + 1, cn)
@@ -657,6 +671,7 @@ decodeCount (ApplyErr cn g) n = do
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
+{-# INLINE decodeClosed #-}
 decodeClosed :: Decode ('Closed d) t -> Decoder s t
 decodeClosed (Summands nm f) = decodeRecordSum nm (\x -> decodE (f x))
 decodeClosed (KeyedD cn) = pure cn
@@ -688,6 +703,7 @@ decodeClosed (ApplyErr cn g) = do
     Right z -> pure z
     Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack $ message)
 
+{-# INLINE decodeSparse #-}
 decodeSparse ::
   Typeable a =>
   String ->
@@ -857,20 +873,20 @@ listDecode = D (decodeList fromCBOR)
 --                                             ^^^^^^^^
 -- One can always lift x::(Decode w T) by using Ann. so (Ann x)::(Decode w (Annotator T)).
 
-pairDecodeA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator y) -> Decode ('Closed 'Dense) (Annotator (x, y))
+pairDecodeA :: Applicative f => Decode ('Closed 'Dense) (f x) -> Decode ('Closed 'Dense) (f y) -> Decode ('Closed 'Dense) (f (x, y))
 pairDecodeA x y = D (do (xA, yA) <- decodePair (decode x) (decode y); pure (do x' <- xA; y' <- yA; pure (x', y')))
 
-listDecodeA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
-listDecodeA dx = D (do listXA <- decodeList (decode dx); pure (sequence listXA))
+listDecodeA :: Applicative f => Decode ('Closed 'Dense) (f x) -> Decode ('Closed 'Dense) (f [x])
+listDecodeA dx = D (do listXA <- decodeList (decode dx); pure (sequenceA listXA))
 
-setDecodeA :: Ord x => Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator (Set x))
+setDecodeA :: (Ord x, Applicative f) => Decode ('Closed 'Dense) (f x) -> Decode ('Closed 'Dense) (f (Set x))
 setDecodeA dx = D (decodeAnnSet (decode dx))
 
 mapDecodeA ::
-  Ord k =>
-  Decode ('Closed 'Dense) (Annotator k) ->
-  Decode ('Closed 'Dense) (Annotator v) ->
-  Decode ('Closed 'Dense) (Annotator (Map.Map k v))
+  (Ord k, Applicative f) =>
+  Decode ('Closed 'Dense) (f k) ->
+  Decode ('Closed 'Dense) (f v) ->
+  Decode ('Closed 'Dense) (f (Map.Map k v))
 mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
 
 -- ==================================================================
@@ -906,3 +922,7 @@ assertTag tag = do
 -- | Convert a @Buildable@ error into a 'cborg' decoder error
 cborError :: Buildable e => e -> Decoder s a
 cborError = fail . formatToString build
+
+-- Orphan
+instance FromCBOR a => FromCBOR (Identity a) where
+  fromCBOR = Identity <$> fromCBOR

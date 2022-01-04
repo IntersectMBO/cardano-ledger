@@ -1017,6 +1017,19 @@ instance
   where
   fromCBOR = fromNotSharedCBOR
 
+instance
+  (Era era, TransTxOut DecodeNonNegative era, Show (Core.Value era)) =>
+  FromCBOR (Annotator (TxOut era))
+  where
+  fromCBOR = pure <$> fromCBOR
+
+instance
+  (Era era, TransTxOut DecodeNonNegative era, Show (Core.Value era)) =>
+  FromSharedCBOR (Annotator (TxOut era))
+  where
+  type Share (Annotator (TxOut era)) = Share (TxOut era)
+  fromSharedCBOR x = pure <$> fromSharedCBOR x
+
 -- This instance does not do any sharing and is isomorphic to FromCBOR
 -- use the weakest constraint necessary
 instance

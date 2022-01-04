@@ -33,6 +33,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesValue,
   )
 import Control.State.Transition (State)
+import Data.Coders (Annotator)
 import Data.Sharing (FromSharedCBOR, Interns, Share)
 
 class
@@ -49,8 +50,8 @@ class
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     ChainData (State (Core.EraRule "PPUP" era)),
     SerialisableData (State (Core.EraRule "PPUP" era)),
-    Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
-    FromSharedCBOR (Core.TxOut era)
+    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
+    FromSharedCBOR (Annotator (Core.TxOut era))
   ) =>
   ShelleyBasedEra era
 
