@@ -662,7 +662,7 @@ instance
             <*> decodeNonNegative
             <*> fromCBOR
       Just 4 -> do
-        _ <- fromCBOR @Bool
+        True <- fromCBOR @Bool
         a <- fromCBOR
         b <- decodeNonNegative
         c <- fromCBOR
