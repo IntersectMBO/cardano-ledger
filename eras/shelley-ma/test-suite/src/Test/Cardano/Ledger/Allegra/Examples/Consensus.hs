@@ -6,6 +6,7 @@
 module Test.Cardano.Ledger.Allegra.Examples.Consensus where
 
 import Cardano.Ledger.Allegra (AllegraEra)
+import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core
@@ -34,6 +35,7 @@ ledgerExamplesAllegra =
     exampleCoin
     exampleTxBodyAllegra
     exampleAuxiliaryDataMA
+    ()
 
 exampleTxBodyAllegra :: Cardano.Ledger.ShelleyMA.TxBody.TxBody StandardAllegra
 exampleTxBodyAllegra = exampleTxBodyMA exampleCoin

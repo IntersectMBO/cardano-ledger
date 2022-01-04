@@ -6,14 +6,16 @@ module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), AuxiliaryDataHash (..), Data (..), hashData)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..), emptyPParams, emptyPParamsUpdate)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..), Script (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
+import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (NonNegativeInterval, StrictMaybe (..), boundRational)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (TxBody)
 import Cardano.Ledger.Crypto (StandardCrypto)
@@ -43,6 +45,7 @@ import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import GHC.Stack (HasCallStack)
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
@@ -72,7 +75,8 @@ ledgerExamplesAlonzo =
           ],
       SLE.sleResultExamples = resultExamples,
       SLE.sleNewEpochState = exampleAlonzoNewEpochState,
-      SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1
+      SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1,
+      SLE.sleTranslationContext = exampleAlonzoGenesis
     }
   where
     resultExamples =
@@ -165,3 +169,21 @@ exampleAlonzoNewEpochState =
     (SLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams {_coinsPerUTxOWord = Coin 1})
+
+exampleAlonzoGenesis :: AlonzoGenesis
+exampleAlonzoGenesis =
+  AlonzoGenesis
+    { coinsPerUTxOWord = Coin 1,
+      costmdls = Map.fromList [(PlutusV1, CostModel (Map.fromList [("A", 79), ("V", 78)]))],
+      prices = Prices (boundRational' 90) (boundRational' 91),
+      maxTxExUnits = ExUnits 123 123,
+      maxBlockExUnits = ExUnits 223 223,
+      maxValSize = 1234,
+      collateralPercentage = 20,
+      maxCollateralInputs = 30
+    }
+  where
+    boundRational' :: HasCallStack => Rational -> NonNegativeInterval
+    boundRational' x = case boundRational x of
+      Nothing -> error $ "Expected non-negative value but got: " <> show x
+      Just x' -> x'
