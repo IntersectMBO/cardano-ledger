@@ -88,7 +88,7 @@ import Numeric.Natural (Natural)
 type PParamsUpdate era = PParams' StrictMaybe era
 
 -- | Protocol parameters.
--- Shelley parameters + additional ones
+-- Alonzo parameters without d and extraEntropy
 data PParams' f era = PParams
   { -- | The linear factor for the minimum fee calculation
     _minfeeA :: !(HKD f Natural),
