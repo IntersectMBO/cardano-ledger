@@ -1,0 +1,288 @@
+\section{MIR Certificates}
+\label{sec:mir}
+
+\newcommand{\InstantaneousRewards}{\type{InstantaneousRewards}}
+\newcommand{\MIRPot}{\type{MIRPot}}
+\newcommand{\ReservesMIR}{\type{ReservesMIR}}
+\newcommand{\TreasuryMIR}{\type{TreasuryMIR}}
+
+In the Alonzo era, MIR certs have:
+
+\begin{itemize}
+  \item Slightly different behavior -
+  prior to the Alonzo era, MIR certificates within the same epoch override
+  values for repeated stake addresses.
+  In the Alonzo era, repetitions are handled by adding the values.
+  Moreover, negative values are allowed, so long as the change never results in
+  an overall negative sum.
+  See Figure \ref{fig:dcert-mir}.
+  \item Extended functionality -
+  MIR certificates can now be used to transfer funds between the reserves and the treasury.
+  See Figure \ref{fig:dcert-mir-trans}.
+\end{itemize}
+
+Figure \ref{fig:defs:alonzo-mir} describes the necessary changes to the types.
+Note that $\fun{mirTarget}$ was named $\fun{credCoinMap}$ in the Shelley specification.
+Figure \ref{fig:dcert-mir} is a modification to the DELEG rule, and
+Figure \ref{fig:dcert-mir-trans} is an addition to the DELEG rule.
+Lastly, Figure \ref{fig:rules:mir} is the updated MIR rule.
+
+
+\begin{figure*}[htb]
+  \emph{Derived types}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
+      \InstantaneousRewards =
+      & (\StakeCredential \mapsto \Coin)
+      & \text{rewards from reserves}
+      \\
+      & \times (\StakeCredential \mapsto \Coin)
+      & \text{rewards from treasury}
+      \\
+      & \times \hldiff{\Coin}
+      & \text{pending modification to reserves}
+      \\
+      & \times \hldiff{\Coin}
+      & \text{pending modification to treasury}
+    \end{array}
+  \end{equation*}
+  %
+  \emph{New MIR Cert accessor}
+  %
+  \begin{equation*}
+    \begin{array}{r@{~:~}lr}
+      \fun{mirTarget}
+      & \DCertMir \to (\StakeCredential \mapsto \Coin) \uniondistinct \hldiff{\MIRPot}
+    \end{array}
+  \end{equation*}
+  \caption{Alonzo Types for MIR updates}
+  \label{fig:defs:alonzo-mir}
+\end{figure*}
+
+\begin{figure}[htp]
+  \centering
+  \begin{equation}\label{eq:deleg-mir}
+    \inference[Deleg-Mir]
+    {
+      \var{c}\in \DCertMir
+      &
+      \hldiff{\fun{mirTarget}~\var{c}\in \StakeCredential \mapsto \Coin}
+      \\
+      slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{StabilityWindow}\\
+      (\var{irR},~\var{irT}\hldiff{,~\var{dR},~\var{dT}})\leteq\var{i_{rwd}}
+      &
+      (\var{treasury},~\var{reserves})\leteq\var{acnt}
+      \\
+      (\var{pot}\hldiff{,~\var{deltaPot}},~\var{irPot})\leteq
+      {\begin{cases}
+          (\var{reserves}\hldiff{,~\var{dR}},~\var{irR}) & \fun{mirPot}~\var{c}=\ReservesMIR \\
+          (\var{treasury}\hldiff{,~\var{dT}},~\var{irT}) & \fun{mirPot}~\var{c}=\TreasuryMIR
+       \end{cases}}
+      \\
+      \var{combined}\leteq(\fun{mirTarget}~\var{c})\hldiff{\unionoverridePlus}\var{irPot}
+      \\
+      \sum\limits_{\wcard\mapsto\var{val}\in\var{combined}} val \leq\var{pot} \hldiff{+ \var{deltaPot}}
+      \\
+      \forall \var{r}\in\range{\hldiff{\var{combinedR}}},~r\geq 0
+      \\
+      \var{i_{rwd}'}\leteq
+      {\begin{cases}
+          (\var{combined},~\var{irT}\hldiff{,~\var{dR},~\var{dT}}) & \fun{mirPot}~\var{c}=\ReservesMIR  \\
+          (\var{irR},~\var{combined}\hldiff{,~\var{dR},~\var{dT}}) & \fun{mirPot}~\var{c}=\TreasuryMIR
+      \end{cases}}
+    }
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+        \var{acnt}
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fGenDelegs} \\
+        \var{genDelegs} \\
+        \var{i_{rwd}}
+      \end{array}
+      \right)
+      \trans{deleg}{c}
+      \left(
+      \begin{array}{c}
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fGenDelegs}\\
+        \var{genDelegs} \\
+        \varUpdate{\var{i_{rwd}'}} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+
+  \caption{Move Instantaneous Rewards Inference Rule}
+  \label{fig:dcert-mir}
+\end{figure}
+
+\begin{figure}[htp]
+  \centering
+  \begin{equation}\label{eq:deleg-mir-transfer}
+    \inference[Deleg-Mir-Trans]
+    {
+      \var{c}\in \DCertMir
+      &
+      \fun{mirTarget}~\var{c}\in \Coin
+      \\
+      slot < \fun{firstSlot}~((\epoch{slot}) + 1) - \fun{StabilityWindow}\\
+      (\var{irR},~\var{irT},~\var{dR},~\var{dT})\leteq\var{i_{rwd}}
+      \\
+      \var{coin}\leteq\fun{mirTarget}~\var{c}
+      &
+      \var{coin} \geq 0
+      &
+      (\var{treasury},~\var{reserves})\leteq\var{acnt}
+      \\
+      \var{available}\leteq
+      {\begin{cases}
+          \var{reserves}+\var{dR}+
+          \left(\sum\limits_{\wcard\mapsto\var{val}\in\var{irR}} val\right)
+          & \fun{mirPot}~\var{c}=\ReservesMIR \\
+          \var{treasury}+\var{dT}+
+          \left(\sum\limits_{\wcard\mapsto\var{val}\in\var{irT}} val\right)
+          & \fun{mirPot}~\var{c}=\TreasuryMIR
+       \end{cases}
+      }
+      \\
+      \var{coin} \leq \var{available}
+      \\
+      \var{i_{rwd}'}\leteq
+      {\begin{cases}
+         (\var{irR},~\var{irT},~\var{dR}-\var{coin},~\var{dT}+\var{coin})
+          & \fun{mirPot}~\var{c}=\ReservesMIR \\
+         (\var{irR},~\var{irT},~\var{dR}+\var{coin},~\var{dT}-\var{coin})
+          & \fun{mirPot}~\var{c}=\TreasuryMIR
+       \end{cases}
+      }
+    }
+    {
+      \begin{array}{r}
+        \var{slot} \\
+        \var{ptr} \\
+        \var{acnt}
+      \end{array}
+      \vdash
+      \left(
+      \begin{array}{r}
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fGenDelegs} \\
+        \var{genDelegs} \\
+        \var{i_{rwd}}
+      \end{array}
+      \right)
+      \trans{deleg}{c}
+      \left(
+      \begin{array}{c}
+        \var{rewards} \\
+        \var{delegations} \\
+        \var{ptrs} \\
+        \var{fGenDelegs}\\
+        \var{genDelegs} \\
+        \varUpdate{\var{i_{rwd}'}} \\
+      \end{array}
+      \right)
+    }
+  \end{equation}
+
+  \caption{MIR transfer Inference Rule}
+  \label{fig:dcert-mir-trans}
+\end{figure}
+
+\begin{figure}[ht]
+  \begin{equation}\label{eq:mir}
+    \inference[MIR]
+    {
+      (\var{rewards},~\var{delegations},~
+      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
+        \leteq \var{ds}
+      \\
+      (\var{treasury},~\var{reserves})\leteq\var{acnt}
+      \\
+      (\var{irReserves},~\var{irTreasury}\hldiff{,~\var{deltaReserves},~\var{deltaTreasury}})\leteq\var{i_{rwd}}
+      \\~\\
+      \var{irwdR}\leteq
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irReserves}
+        \right\}
+      \\
+      \var{irwdT}\leteq
+        \left\{
+        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
+        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irTreasury}
+        \right\}
+      \\
+      \hldiff{\var{availableReserves}\leteq\var{reserves}+\var{deltaReserves}}
+      \\
+      \hldiff{\var{availableTreasury}\leteq\var{treasury}+\var{deltaTreasury}}
+      \\~\\
+      \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdR}}v
+      &
+      \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdT}}v
+      \\
+      \var{enough}\leteq
+          \var{totR}\leq\hldiff{\var{availableReserves}}
+          \land\var{totT}\leq\hldiff{\var{availableTreasury}}
+      \\
+      \var{acnt'}\leteq
+      {\begin{cases}
+          (\var{treasury}-\var{totT},~\var{reserves}-\var{totR})
+          & \var{enough}
+          \\
+          \var{acnt}
+          &
+          \text{otherwise}
+       \end{cases}}
+      \\~\\
+      \var{rewards'}\leteq
+      {\begin{cases}
+          \var{rewards}\unionoverridePlus\var{irwdR}\unionoverridePlus\var{irwdT}
+          & \var{enough}
+          \\
+          \var{rewards}
+          &
+          \text{otherwise}
+       \end{cases}}
+      \\
+      \var{ds'} \leteq
+      (\varUpdate{\var{rewards}'},~\var{delegations},~
+      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},
+      ~(\varUpdate{\emptyset},~\varUpdate{\emptyset},~\varUpdate{0},~\varUpdate{0}))
+    }
+    {
+      \vdash
+      {\left(\begin{array}{c}
+            \var{acnt} \\
+            \var{ss} \\
+            (\var{us},~(\var{ds},~\var{ps})) \\
+            \var{prevPP} \\
+            \var{pp} \\
+      \end{array}\right)}
+      \trans{mir}{}
+      {\left(\begin{array}{c}
+            \varUpdate{\var{acnt'}} \\
+            \var{ss} \\
+            (\var{us},~(\varUpdate{\var{ds'}},~\var{ps})) \\
+            \var{prevPP} \\
+            \var{pp} \\
+      \end{array}\right)}
+    }
+  \end{equation}
+
+  \caption{MIR rules}
+  \label{fig:rules:mir}
+\end{figure}

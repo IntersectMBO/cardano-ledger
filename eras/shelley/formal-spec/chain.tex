@@ -174,11 +174,29 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       &
       \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdT}}v
       \\
-      \var{totR}\leq\var{reserves}
-      &
-      \var{totT}\leq\var{treasury}
+      \var{enough}\leteq
+          \var{totR}\leq\var{reserves}
+          \land\var{totT}\leq\var{treasury}
+      \\
+      \var{acnt'}\leteq
+      {\begin{cases}
+          (\var{treasury}-\var{totT},~\var{reserves}-\var{totR})
+          & \var{enough}
+          \\
+          \var{acnt}
+          &
+          \text{otherwise}
+       \end{cases}}
       \\~\\
-      \var{rewards'}\leteq\var{rewards}\unionoverridePlus\var{irwdR}\unionoverridePlus\var{irwdT}
+      \var{rewards'}\leteq
+      {\begin{cases}
+          \var{rewards}\unionoverridePlus\var{irwdR}\unionoverridePlus\var{irwdT}
+          & \var{enough}
+          \\
+          \var{rewards}
+          &
+          \text{otherwise}
+       \end{cases}}
       \\
       \var{ds'} \leteq
       (\varUpdate{\var{rewards}'},~\var{delegations},~
@@ -196,7 +214,7 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
       \end{array}\right)}
       \trans{mir}{}
       {\left(\begin{array}{c}
-            \varUpdate{(\varUpdate{\var{treasury}-\var{totT}},~\varUpdate{\var{reserves}-\var{totR}})} \\
+            \varUpdate{\var{acnt'}} \\
             \var{ss} \\
             (\var{us},~(\varUpdate{\var{ds'}},~\var{ps})) \\
             \var{prevPP} \\
@@ -205,61 +223,6 @@ we reset both of the instantaneous reward mappings back to the empty mapping.
     }
   \end{equation}
 
-  \nextdef
-
-  \begin{equation}\label{eq:mir-skip}
-    \inference[MIR-Skip]
-    {
-      (\var{rewards},~\var{delegations},~
-      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},~\var{i_{rwd}})
-        \leteq \var{ds}
-      \\
-      (\var{treasury},~\var{reserves})\leteq\var{acnt}
-      &
-      (\var{irReserves},~\var{irTreasury})\leteq\var{i_{rwd}}
-      \\~\\
-      \var{irwdR}\leteq
-        \left\{
-        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irReserves}
-        \right\}
-      \\
-      \var{irwdT}\leteq
-        \left\{
-        \fun{addr_{rwd}}~\var{hk}\mapsto\var{val}
-        ~\vert~\var{hk}\mapsto\var{val}\in(\dom{rewards})\restrictdom\var{irTreasury}
-        \right\}
-      \\~\\
-      \var{totR}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdR}}v
-      &
-      \var{totT}\leteq\sum\limits_{\wcard\mapsto v\in\var{irwdT}}v
-      \\
-      \var{totR}>\var{reserves}~\lor~\var{totT}>\var{treasury}
-      \\~\\
-      \var{ds'} \leteq
-      (\var{rewards},~\var{delegations},~
-      \var{ptrs},~\var{fGenDelegs},~\var{genDelegs},
-      ~(\varUpdate{\emptyset},~\varUpdate{\emptyset}))
-    }
-    {
-      \vdash
-      {\left(\begin{array}{c}
-            \var{acnt} \\
-            \var{ss} \\
-            (\var{us},~(\var{ds},~\var{ps})) \\
-            \var{prevPP} \\
-            \var{pp} \\
-      \end{array}\right)}
-      \trans{mir}{}
-      {\left(\begin{array}{c}
-            \var{acnt} \\
-            \var{ss} \\
-            (\var{us},~(\varUpdate{\var{ds'}},~\var{ps})) \\
-            \var{prevPP} \\
-            \var{pp} \\
-      \end{array}\right)}
-    }
-  \end{equation}
   \caption{MIR rules}
   \label{fig:rules:mir}
 \end{figure}
