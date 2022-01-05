@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
 
@@ -20,8 +21,10 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.PParams
+import qualified Cardano.Ledger.Core as Core
 import Control.Monad (replicateM, unless, void)
 import qualified Data.ByteString.Base16 as B16
 import Data.ByteString.Lazy as LBS
@@ -36,7 +39,7 @@ import Test.Tasty.QuickCheck
 tests :: TestTree
 tests = testProperty "LangDepView encoding is canonical" canonicalLangDepView
 
-canonicalLangDepView :: PParams era -> Set Language -> Property
+canonicalLangDepView :: Core.PParams (AlonzoEra era) -> Set Language -> Property
 canonicalLangDepView pparams langs =
   let langViews = Set.fromList $ getLanguageView pparams <$> Set.toList langs
       encodedViews = serializeEncoding $ encodeLangViews langViews
