@@ -84,11 +84,17 @@ cradle:
     - path: "libs/non-integral/test"
       component: "non-integral:test:non-integral-test"
 
-    - path: "libs/compact-map"
+    - path: "libs/compact-map/src"
       component: "lib:compact-map"
 
-    - path: "libs/compact-map"
+    - path: "libs/compact-map/test"
       component: "compact-map:test:tests"
 
-    - path: "libs/compact-map"
+    - path: "libs/compact-map/bench"
       component: "compact-map:bench:bench"
+
+    - path: "libs/set-algebra/src"
+      component: "lib:set-algebra"
+
+    - path: "libs/set-algebra/test"
+      component: "set-algebra:test:tests"
