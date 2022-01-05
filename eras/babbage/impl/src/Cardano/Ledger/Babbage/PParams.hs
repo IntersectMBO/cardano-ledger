@@ -30,6 +30,7 @@ module Cardano.Ledger.Babbage.PParams
   )
 where
 
+import GHC.Records (HasField (..))
 import Cardano.Binary
   ( Encoding,
     FromCBOR (..),

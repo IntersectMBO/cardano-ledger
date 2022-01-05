@@ -11,6 +11,8 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS_GHC -w #-}
+
 module Cardano.Ledger.Babbage.Rules.Bbody
   ( BabbageBBODY,
     BabbageBbodyPredFail (..),
@@ -21,7 +23,7 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.Babbage.Scripts (ExUnits (..), pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
 import qualified Cardano.Ledger.Babbage.Tx as Babbage (ValidatedTx, totExUnits)
 import Cardano.Ledger.Babbage.TxSeq (txSeqTxns)
 import qualified Cardano.Ledger.Babbage.TxSeq as Babbage (TxSeq)
@@ -144,7 +146,6 @@ bbodyTransition ::
     State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
     -- Conditions to define the rule in this Era
-    HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     Era era, -- supplies WellFormed HasField, and Crypto constraints
     Era.TxSeq era ~ Babbage.TxSeq era,
@@ -203,7 +204,7 @@ bbodyTransition =
           BbodyState @era
             ls'
             ( incrBlocks
-                (isOverlaySlot firstSlotNo (getField @"_d" pp) slot)
+                False -- TODO: without _d, what is (isOverlaySlot firstSlotNo (getField @"_d" pp) slot)?
                 hkAsStakePool
                 b
             )
@@ -216,7 +217,6 @@ instance
     Signal (Core.EraRule "LEDGERS" era) ~ Seq (Babbage.ValidatedTx era),
     Era era,
     Core.Tx era ~ Babbage.ValidatedTx era,
-    HasField "_d" (Core.PParams era) UnitInterval,
     HasField "_maxBlockExUnits" (Core.PParams era) ExUnits,
     Era.TxSeq era ~ Babbage.TxSeq era,
     Core.Tx era ~ Babbage.ValidatedTx era,

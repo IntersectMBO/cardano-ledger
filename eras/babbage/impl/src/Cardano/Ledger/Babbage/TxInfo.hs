@@ -14,11 +14,11 @@ module Cardano.Ledger.Babbage.TxInfo where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull', serialize')
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Babbage.Data (Data (..), getPlutusData)
-import Cardano.Ledger.Babbage.Language (Language (..))
+import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 -- Instances only
 
-import Cardano.Ledger.Babbage.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
   ( certs',

@@ -31,7 +31,7 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Babbage.Scripts (Script)
+import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Babbage.Tx (IsValid (..), ValidatedTx (..), segwitTx)
 import Cardano.Ledger.Babbage.TxWitness (TxWitness)
 import qualified Cardano.Ledger.Core as Core

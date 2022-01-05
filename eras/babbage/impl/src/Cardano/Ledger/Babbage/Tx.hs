@@ -71,15 +71,15 @@ import Cardano.Binary
     serializeEncoding',
   )
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Babbage.Data (Data, DataHash, hashData)
-import Cardano.Ledger.Babbage.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
+import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Babbage.PParams
   ( LangDepView (..),
     PParams,
     encodeLangViews,
     getLanguageView,
   )
-import Cardano.Ledger.Babbage.Scripts
+import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
     Prices,

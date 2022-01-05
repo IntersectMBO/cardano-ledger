@@ -7,7 +7,7 @@
 module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 
 import Cardano.Binary
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage (BabbageEra, PParams)
 import Cardano.Ledger.Babbage.TxBody (TxBody, TxOut)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley.Metadata (Metadata)
@@ -66,4 +66,6 @@ tests =
     "Babbage CBOR round-trip"
     [ testProperty "babbage/TxBody" $
         trippingAnn @(TxBody (BabbageEra C_Crypto))
+    , testProperty "babbage/PParams" $
+        tripping @(PParams (BabbageEra C_Crypto))
     ]

@@ -14,13 +14,13 @@
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Data (AuxiliaryData (..), Data (..))
-import Cardano.Ledger.Babbage.Language
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..))
+import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Babbage.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbagePredFail (..))
-import Cardano.Ledger.Babbage.Scripts
+import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
     Prices (..),
@@ -51,7 +51,7 @@ import Data.Text (pack)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified PlutusTx as Plutus
-import Test.Cardano.Ledger.Babbage.Scripts (alwaysFails, alwaysSucceeds)
+import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
@@ -236,15 +236,11 @@ instance Arbitrary (PParams era) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
 
 instance Arbitrary (PParamsUpdate era) where
   arbitrary =
     PParams
       <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary

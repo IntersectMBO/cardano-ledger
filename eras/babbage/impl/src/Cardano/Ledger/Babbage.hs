@@ -22,9 +22,9 @@ module Cardano.Ledger.Babbage
 where
 
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
-import Cardano.Ledger.Babbage.Data (AuxiliaryData (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
 import Cardano.Ledger.Babbage.Genesis
-import Cardano.Ledger.Babbage.Language (Language (..))
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Babbage.PParams
   ( PParams,
     PParams' (..),
@@ -37,7 +37,7 @@ import Cardano.Ledger.Babbage.Rules.Utxo (utxoEntrySize)
 import qualified Cardano.Ledger.Babbage.Rules.Utxo as Babbage (BabbageUTXO)
 import qualified Cardano.Ledger.Babbage.Rules.Utxos as Babbage (UTXOS)
 import qualified Cardano.Ledger.Babbage.Rules.Utxow as Babbage (BabbageUTXOW)
-import Cardano.Ledger.Babbage.Scripts (Script (..), isPlutusScript)
+import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (..))
 import Cardano.Ledger.Babbage.TxInfo (validScript)

@@ -15,13 +15,13 @@ module Cardano.Ledger.Babbage.Rules.Utxow where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
-import Cardano.Ledger.Babbage.Data (DataHash)
-import Cardano.Ledger.Babbage.Language (Language (..))
+import Cardano.Ledger.Alonzo.Data (DataHash)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Babbage.PParams (PParams)
 import Cardano.Ledger.Babbage.PlutusScriptApi (language, scriptsNeeded)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO)
 import qualified Cardano.Ledger.Babbage.Rules.Utxo as Babbage (UtxoEvent, UtxoPredicateFailure)
-import Cardano.Ledger.Babbage.Scripts (Script (..))
+import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Babbage.Tx
   ( ScriptPurpose,
     ValidatedTx (..),

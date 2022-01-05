@@ -23,10 +23,10 @@ module Cardano.Ledger.Babbage.PlutusScriptApi
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Babbage.Data (getPlutusData)
-import Cardano.Ledger.Babbage.Language (Language (..))
-import Cardano.Ledger.Babbage.Scripts (CostModel (..), ExUnits (..))
-import qualified Cardano.Ledger.Babbage.Scripts as BabbageScript (Script (..))
+import Cardano.Ledger.Alonzo.Data (getPlutusData)
+import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..))
+import qualified Cardano.Ledger.Alonzo.Scripts as BabbageScript (Script (..))
 import Cardano.Ledger.Babbage.Tx
   ( Data,
     DataHash,

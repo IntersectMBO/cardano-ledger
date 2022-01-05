@@ -12,11 +12,11 @@ module Cardano.Ledger.Babbage.Tools
 where
 
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Data (Data, getPlutusData)
-import Cardano.Ledger.Babbage.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Alonzo.Data (Data, getPlutusData)
+import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Babbage.PParams (_maxTxExUnits, _protocolVersion)
 import Cardano.Ledger.Babbage.PlutusScriptApi (scriptsNeeded)
-import Cardano.Ledger.Babbage.Scripts
+import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
     Script (..),

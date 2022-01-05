@@ -23,13 +23,13 @@ module Cardano.Ledger.Babbage.Rules.Utxos
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Babbage.Language (Language)
+import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Babbage.PlutusScriptApi
   ( CollectError,
     collectTwoPhaseScriptInputs,
     evalScripts,
   )
-import Cardano.Ledger.Babbage.Scripts (Script)
+import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Babbage.Tx
   ( CostModel,
     DataHash,

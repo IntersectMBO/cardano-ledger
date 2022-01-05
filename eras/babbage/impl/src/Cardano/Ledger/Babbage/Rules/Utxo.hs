@@ -21,9 +21,9 @@ import Cardano.Ledger.Address
     getNetwork,
     getRwdNetwork,
   )
-import Cardano.Ledger.Babbage.Data (dataHashSize)
+import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Babbage.Rules.Utxos (UTXOS, UtxosPredicateFailure)
-import Cardano.Ledger.Babbage.Scripts (ExUnits (..), Prices, pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee, totExUnits)
 import qualified Cardano.Ledger.Babbage.Tx as Babbage (ValidatedTx)
 import Cardano.Ledger.Babbage.TxBody

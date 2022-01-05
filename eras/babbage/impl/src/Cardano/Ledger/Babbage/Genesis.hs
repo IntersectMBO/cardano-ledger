@@ -9,9 +9,9 @@ module Cardano.Ledger.Babbage.Genesis
 where
 
 import Cardano.Binary
-import Cardano.Ledger.Babbage.Language (Language)
+import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Babbage.PParams
-import Cardano.Ledger.Babbage.Scripts
+import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import Data.Coders

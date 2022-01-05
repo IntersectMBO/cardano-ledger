@@ -48,9 +48,9 @@ import Cardano.Binary
     encodeListLen,
     serializeEncoding',
   )
-import Cardano.Ledger.Babbage.Data (Data, DataHash, hashData)
-import Cardano.Ledger.Babbage.Language (Language (..))
-import Cardano.Ledger.Babbage.Scripts (ExUnits (..), Script (..), Tag)
+import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
+import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), Tag)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript, hashScript)
 import Cardano.Ledger.Keys
