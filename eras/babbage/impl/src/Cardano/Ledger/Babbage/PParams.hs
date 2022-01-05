@@ -314,13 +314,8 @@ instance Ord (PParams' StrictMaybe era) where
               EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
                 LT -> LT
                 GT -> GT
-                EQ -> (_maxValSize x, _maxValSize y) <== EQ
-          )
-
-infixr 4 <==
-
-(<==) :: Ord a => (a, a) -> Ordering -> Ordering
-(x, y) <== z = case compare x y of LT -> LT; GT -> GT; EQ -> z
+                EQ -> compare (_maxValSize x) (_maxValSize y)
+       )
 
 compareEx :: StrictMaybe ExUnits -> StrictMaybe ExUnits -> Ordering
 compareEx SNothing SNothing = EQ

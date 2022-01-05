@@ -294,38 +294,33 @@ emptyPParams =
 -- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
 instance Ord (PParams' StrictMaybe era) where
   compare x y =
-    (_minfeeA x, _minfeeA y)
-      <== (_minfeeB x, _minfeeB y)
-      <== (_maxBBSize x, _maxBBSize y)
-      <== (_maxTxSize x, _maxTxSize y)
-      <== (_maxBHSize x, _maxBHSize y)
-      <== (_keyDeposit x, _keyDeposit y)
-      <== (_poolDeposit x, _poolDeposit y)
-      <== (_eMax x, _eMax y)
-      <== (_nOpt x, _nOpt y)
-      <== (_a0 x, _a0 y)
-      <== (_rho x, _rho y)
-      <== (_tau x, _tau y)
-      <== (_d x, _d y)
-      <== (_extraEntropy x, _extraEntropy y)
-      <== (_protocolVersion x, _protocolVersion y)
-      <== (_minPoolCost x, _minPoolCost y)
-      <== (_coinsPerUTxOWord x, _coinsPerUTxOWord y)
-      <== (_costmdls x, _costmdls y)
-      <== (_prices x, _prices y)
-      <== ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
+       compare (_minfeeA x) (_minfeeA y)
+    <> compare (_minfeeB x) (_minfeeB y)
+    <> compare (_maxBBSize x) (_maxBBSize y)
+    <> compare (_maxTxSize x) (_maxTxSize y)
+    <> compare (_maxBHSize x) (_maxBHSize y)
+    <> compare (_keyDeposit x) (_keyDeposit y)
+    <> compare (_poolDeposit x) (_poolDeposit y)
+    <> compare (_eMax x) (_eMax y)
+    <> compare (_nOpt x) (_nOpt y)
+    <> compare (_a0 x) (_a0 y)
+    <> compare (_rho x) (_rho y)
+    <> compare (_tau x) (_tau y)
+    <> compare (_d x) (_d y)
+    <> compare (_extraEntropy x) (_extraEntropy y)
+    <> compare (_protocolVersion x) (_protocolVersion y)
+    <> compare (_minPoolCost x) (_minPoolCost y)
+    <> compare (_coinsPerUTxOWord x) (_coinsPerUTxOWord y)
+    <> compare (_costmdls x) (_costmdls y)
+    <> compare (_prices x) (_prices y)
+    <> ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
               LT -> LT
               GT -> GT
               EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
                 LT -> LT
                 GT -> GT
-                EQ -> (_maxValSize x, _maxValSize y) <== EQ
-          )
-
-infixr 4 <==
-
-(<==) :: Ord a => (a, a) -> Ordering -> Ordering
-(x, y) <== z = case compare x y of LT -> LT; GT -> GT; EQ -> z
+                EQ -> compare (_maxValSize x) (_maxValSize y)
+       )
 
 compareEx :: StrictMaybe ExUnits -> StrictMaybe ExUnits -> Ordering
 compareEx SNothing SNothing = EQ
