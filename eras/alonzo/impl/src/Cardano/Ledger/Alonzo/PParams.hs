@@ -57,6 +57,7 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
@@ -67,6 +68,7 @@ import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Shelley.PParams (HKD)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Prelude (HasField (getField))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -294,33 +296,33 @@ emptyPParams =
 -- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
 instance Ord (PParams' StrictMaybe era) where
   compare x y =
-       compare (_minfeeA x) (_minfeeA y)
-    <> compare (_minfeeB x) (_minfeeB y)
-    <> compare (_maxBBSize x) (_maxBBSize y)
-    <> compare (_maxTxSize x) (_maxTxSize y)
-    <> compare (_maxBHSize x) (_maxBHSize y)
-    <> compare (_keyDeposit x) (_keyDeposit y)
-    <> compare (_poolDeposit x) (_poolDeposit y)
-    <> compare (_eMax x) (_eMax y)
-    <> compare (_nOpt x) (_nOpt y)
-    <> compare (_a0 x) (_a0 y)
-    <> compare (_rho x) (_rho y)
-    <> compare (_tau x) (_tau y)
-    <> compare (_d x) (_d y)
-    <> compare (_extraEntropy x) (_extraEntropy y)
-    <> compare (_protocolVersion x) (_protocolVersion y)
-    <> compare (_minPoolCost x) (_minPoolCost y)
-    <> compare (_coinsPerUTxOWord x) (_coinsPerUTxOWord y)
-    <> compare (_costmdls x) (_costmdls y)
-    <> compare (_prices x) (_prices y)
-    <> ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
-              LT -> LT
-              GT -> GT
-              EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
-                LT -> LT
-                GT -> GT
-                EQ -> compare (_maxValSize x) (_maxValSize y)
-       )
+    compare (_minfeeA x) (_minfeeA y)
+      <> compare (_minfeeB x) (_minfeeB y)
+      <> compare (_maxBBSize x) (_maxBBSize y)
+      <> compare (_maxTxSize x) (_maxTxSize y)
+      <> compare (_maxBHSize x) (_maxBHSize y)
+      <> compare (_keyDeposit x) (_keyDeposit y)
+      <> compare (_poolDeposit x) (_poolDeposit y)
+      <> compare (_eMax x) (_eMax y)
+      <> compare (_nOpt x) (_nOpt y)
+      <> compare (_a0 x) (_a0 y)
+      <> compare (_rho x) (_rho y)
+      <> compare (_tau x) (_tau y)
+      <> compare (_d x) (_d y)
+      <> compare (_extraEntropy x) (_extraEntropy y)
+      <> compare (_protocolVersion x) (_protocolVersion y)
+      <> compare (_minPoolCost x) (_minPoolCost y)
+      <> compare (_coinsPerUTxOWord x) (_coinsPerUTxOWord y)
+      <> compare (_costmdls x) (_costmdls y)
+      <> compare (_prices x) (_prices y)
+      <> ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
+             LT -> LT
+             GT -> GT
+             EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
+               LT -> LT
+               GT -> GT
+               EQ -> compare (_maxValSize x) (_maxValSize y)
+         )
 
 compareEx :: StrictMaybe ExUnits -> StrictMaybe ExUnits -> Ordering
 compareEx SNothing SNothing = EQ
@@ -491,7 +493,8 @@ data LangDepView = LangDepView {tag :: ByteString, params :: ByteString}
 
 getLanguageView ::
   forall era.
-  PParams era ->
+  (HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)) =>
+  Core.PParams era ->
   Language ->
   LangDepView
 getLanguageView pp lang@PlutusV1 =
@@ -500,7 +503,7 @@ getLanguageView pp lang@PlutusV1 =
     ( serialize'
         ( serializeEncoding' $
             maybe encodeNull enc $
-              Map.lookup lang (_costmdls pp)
+              Map.lookup lang (getField @"_costmdls" pp)
         )
     )
   where
@@ -508,7 +511,7 @@ getLanguageView pp lang@PlutusV1 =
 getLanguageView pp lang@PlutusV2 =
   LangDepView
     (serialize' lang)
-    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))
+    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (getField @"_costmdls" pp))
 
 encodeLangViews :: Set LangDepView -> Encoding
 encodeLangViews views = encodeMapLen n <> foldMap encPair ascending

@@ -34,13 +34,9 @@ import Cardano.Binary
   ( Encoding,
     FromCBOR (..),
     ToCBOR (..),
-    encodeMapLen,
-    encodeNull,
-    encodePreEncoded,
-    serialize',
-    serializeEncoding',
   )
 import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.PParams (LangDepView (..), encodeLangViews, getLanguageView)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
@@ -68,8 +64,6 @@ import Cardano.Ledger.Shelley.PParams (HKD)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
-import Data.ByteString (ByteString)
-import qualified Data.ByteString as BS
 import Data.Coders
   ( Decode (..),
     Density (..),
@@ -78,20 +72,14 @@ import Data.Coders
     Wrapped (..),
     decode,
     encode,
-    encodeFoldableAsIndefinite,
     field,
     mapEncode,
     (!>),
     (<!),
   )
 import Data.Default (Default (..))
-import Data.Function (on)
 import Data.Functor.Identity (Identity (..))
-import Data.List (sortBy)
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map
-import Data.Set (Set)
-import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
@@ -275,31 +263,31 @@ emptyPParams =
 -- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
 instance Ord (PParams' StrictMaybe era) where
   compare x y =
-       compare (_minfeeA x) (_minfeeA y)
-    <> compare (_minfeeB x) (_minfeeB y)
-    <> compare (_maxBBSize x) (_maxBBSize y)
-    <> compare (_maxTxSize x) (_maxTxSize y)
-    <> compare (_maxBHSize x) (_maxBHSize y)
-    <> compare (_keyDeposit x) (_keyDeposit y)
-    <> compare (_poolDeposit x) (_poolDeposit y)
-    <> compare (_eMax x) (_eMax y)
-    <> compare (_nOpt x) (_nOpt y)
-    <> compare (_a0 x) (_a0 y)
-    <> compare (_rho x) (_rho y)
-    <> compare (_tau x) (_tau y)
-    <> compare (_protocolVersion x) (_protocolVersion y)
-    <> compare (_minPoolCost x) (_minPoolCost y)
-    <> compare (_coinsPerUTxOWord x) (_coinsPerUTxOWord y)
-    <> compare (_costmdls x) (_costmdls y)
-    <> compare (_prices x) (_prices y)
-    <> ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
-              LT -> LT
-              GT -> GT
-              EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
-                LT -> LT
-                GT -> GT
-                EQ -> compare (_maxValSize x) (_maxValSize y)
-       )
+    compare (_minfeeA x) (_minfeeA y)
+      <> compare (_minfeeB x) (_minfeeB y)
+      <> compare (_maxBBSize x) (_maxBBSize y)
+      <> compare (_maxTxSize x) (_maxTxSize y)
+      <> compare (_maxBHSize x) (_maxBHSize y)
+      <> compare (_keyDeposit x) (_keyDeposit y)
+      <> compare (_poolDeposit x) (_poolDeposit y)
+      <> compare (_eMax x) (_eMax y)
+      <> compare (_nOpt x) (_nOpt y)
+      <> compare (_a0 x) (_a0 y)
+      <> compare (_rho x) (_rho y)
+      <> compare (_tau x) (_tau y)
+      <> compare (_protocolVersion x) (_protocolVersion y)
+      <> compare (_minPoolCost x) (_minPoolCost y)
+      <> compare (_coinsPerUTxOWord x) (_coinsPerUTxOWord y)
+      <> compare (_costmdls x) (_costmdls y)
+      <> compare (_prices x) (_prices y)
+      <> ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
+             LT -> LT
+             GT -> GT
+             EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
+               LT -> LT
+               GT -> GT
+               EQ -> compare (_maxValSize x) (_maxValSize y)
+         )
 
 compareEx :: StrictMaybe ExUnits -> StrictMaybe ExUnits -> Ordering
 compareEx SNothing SNothing = EQ
@@ -448,48 +436,6 @@ updatePParams pp ppup =
       _collateralPercentage = fromSMaybe (_collateralPercentage pp) (_collateralPercentage ppup),
       _maxCollateralInputs = fromSMaybe (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
     }
-
--- ===================================================
--- Figure 1: "Definitions Used in Protocol Parameters"
-
--- The LangDepView is a key value pair. The key is the (canonically) encoded
--- language tag and the value is the (canonically) encoded set of relevant
--- protocol parameters
-data LangDepView = LangDepView {tag :: ByteString, params :: ByteString}
-  deriving (Eq, Show, Ord, Generic, NoThunks)
-
-getLanguageView ::
-  forall era.
-  PParams era ->
-  Language ->
-  LangDepView
-getLanguageView pp lang@PlutusV1 =
-  LangDepView -- The silly double bagging is to keep compatibility with a past bug
-    (serialize' (serialize' lang))
-    ( serialize'
-        ( serializeEncoding' $
-            maybe encodeNull enc $
-              Map.lookup lang (_costmdls pp)
-        )
-    )
-  where
-    enc (CostModel cm) = encodeFoldableAsIndefinite $ Map.elems cm
-getLanguageView pp lang@PlutusV2 =
-  LangDepView
-    (serialize' lang)
-    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))
-
-encodeLangViews :: Set LangDepView -> Encoding
-encodeLangViews views = encodeMapLen n <> foldMap encPair ascending
-  where
-    n = fromIntegral (Set.size views) :: Word
-    ascending = sortBy (shortLex `on` tag) $ Set.toList views
-    encPair (LangDepView k v) = encodePreEncoded k <> encodePreEncoded v
-    shortLex :: ByteString -> ByteString -> Ordering
-    shortLex a b
-      | BS.length a < BS.length b = LT
-      | BS.length a > BS.length b = GT
-      | otherwise = compare a b
 
 -- | Turn an PParams' into a Shelley.Params'
 retractPP :: HKD f Coin -> HKD f UnitInterval -> HKD f Nonce -> PParams' f era2 -> Shelley.PParams' f era1
