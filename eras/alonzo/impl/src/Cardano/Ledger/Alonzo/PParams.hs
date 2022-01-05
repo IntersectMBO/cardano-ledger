@@ -488,7 +488,7 @@ data LangDepView = LangDepView {tag :: ByteString, params :: ByteString}
 
 getLanguageView ::
   forall era.
-  (HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)) =>
+  (HasField "_costmdls" (Core.PParams era) (Map Language CostModel)) =>
   Core.PParams era ->
   Language ->
   LangDepView
