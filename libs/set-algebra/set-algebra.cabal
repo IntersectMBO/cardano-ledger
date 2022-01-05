@@ -45,3 +45,22 @@ library
                      , compact-map
                      , containers
   hs-source-dirs:      src
+
+test-suite tests
+  import:             project-config
+
+  hs-source-dirs:      test
+  main-is:             Main.hs
+  other-modules:       Test.Control.Iterate.SetAlgebra
+                     , Test.Control.Iterate.SplitMapRules
+  type:                exitcode-stdio-1.0
+  default-language:    Haskell2010
+  build-depends:       base
+                     , containers
+                     , set-algebra
+                     , tasty
+                     , tasty-hunit
+                     , tasty-quickcheck
+                     , cardano-data
+                     , compact-map
+  ghc-options:        -threaded
