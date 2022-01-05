@@ -13,13 +13,8 @@
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
-import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..))
 import Cardano.Ledger.Alonzo.Language
-import Cardano.Ledger.Babbage.PParams
-import Cardano.Ledger.Babbage.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Babbage.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbagePredFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
@@ -27,6 +22,11 @@ import Cardano.Ledger.Alonzo.Scripts
     Script (..),
     Tag (..),
   )
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Babbage.Rules.Utxo (UtxoPredicateFailure (..))
+import Cardano.Ledger.Babbage.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbagePredFail (..))
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageBody,

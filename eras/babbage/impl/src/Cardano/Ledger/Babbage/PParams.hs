@@ -30,7 +30,6 @@ module Cardano.Ledger.Babbage.PParams
   )
 where
 
-import GHC.Records (HasField (..))
 import Cardano.Binary
   ( Encoding,
     FromCBOR (..),
@@ -88,6 +87,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 

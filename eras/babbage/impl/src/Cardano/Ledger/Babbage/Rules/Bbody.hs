@@ -10,7 +10,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-
 {-# OPTIONS_GHC -w #-}
 
 module Cardano.Ledger.Babbage.Rules.Bbody
@@ -22,8 +21,8 @@ module Cardano.Ledger.Babbage.Rules.Bbody
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
+import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import qualified Cardano.Ledger.Babbage.Tx as Babbage (ValidatedTx, totExUnits)
 import Cardano.Ledger.Babbage.TxSeq (txSeqTxns)
 import qualified Cardano.Ledger.Babbage.TxSeq as Babbage (TxSeq)

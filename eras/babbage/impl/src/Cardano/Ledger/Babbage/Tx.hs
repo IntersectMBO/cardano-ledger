@@ -73,12 +73,6 @@ import Cardano.Binary
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.Babbage.PParams
-  ( LangDepView (..),
-    PParams,
-    encodeLangViews,
-    getLanguageView,
-  )
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
@@ -86,6 +80,12 @@ import Cardano.Ledger.Alonzo.Scripts
     Script,
     Tag (..),
     txscriptfee,
+  )
+import Cardano.Ledger.Babbage.PParams
+  ( LangDepView (..),
+    PParams,
+    encodeLangViews,
+    getLanguageView,
   )
 import Cardano.Ledger.Babbage.TxBody
   ( EraIndependentScriptIntegrity,

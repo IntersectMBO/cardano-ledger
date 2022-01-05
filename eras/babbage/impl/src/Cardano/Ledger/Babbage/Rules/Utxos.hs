@@ -24,12 +24,12 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Language (Language)
+import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Babbage.PlutusScriptApi
   ( CollectError,
     collectTwoPhaseScriptInputs,
     evalScripts,
   )
-import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Babbage.Tx
   ( CostModel,
     DataHash,
@@ -61,7 +61,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailu
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
-import Cardano.Ledger.TxIn (TxIn (..), txid, TxId)
+import Cardano.Ledger.TxIn (TxId, TxIn (..), txid)
 import Cardano.Ledger.Val as Val
 import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Trans.Reader (asks)
@@ -286,7 +286,7 @@ scriptsNotValidateTransition = do
           ()
   pure $
     us
-      { _utxo = eval ((getField @"collateral" txb ⋪ utxo) ∪ collOuts txb) ,
+      { _utxo = eval ((getField @"collateral" txb ⋪ utxo) ∪ collOuts txb),
         _fees = fees <> Val.coin (balance @era (eval (getField @"collateral" txb ◁ utxo))),
         _stakeDistro =
           updateStakeDistribution @era
@@ -295,23 +295,26 @@ scriptsNotValidateTransition = do
             (UTxO Map.empty)
       }
 
-collOuts :: forall era.
-  ( Era era 
-  , HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (Core.TxOut era))
+collOuts ::
+  forall era.
+  ( Era era,
+    HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (Core.TxOut era))
   ) =>
-  Core.TxBody era -> UTxO era
+  Core.TxBody era ->
+  UTxO era
 collOuts txb = case getField @"collateralReturn" txb of
   SNothing -> UTxO mempty
-  SJust cr -> 
+  SJust cr ->
     let id_ :: (TxId (Crypto era))
-        id_  = txid txb
+        id_ = txid txb
         outs :: (UTxO era)
         outs = txouts txb
         x :: Map.Map (TxIn (Crypto era)) (Core.TxOut era)
         x = undefined -- ???
-    in UTxO $ x
-  -- ∅                                          collRet txb =  ⃟
-  -- {(txid txb, |txouts txb|) ↦ collRet txb}   otherwise
+     in UTxO $ x
+
+-- ∅                                          collRet txb =  ⃟
+-- {(txid txb, |txouts txb|) ↦ collRet txb}   otherwise
 
 data TagMismatchDescription
   = PassedUnexpectedly

@@ -65,7 +65,7 @@ tests =
   testGroup
     "Babbage CBOR round-trip"
     [ testProperty "babbage/TxBody" $
-        trippingAnn @(TxBody (BabbageEra C_Crypto))
-    , testProperty "babbage/PParams" $
+        trippingAnn @(TxBody (BabbageEra C_Crypto)),
+      testProperty "babbage/PParams" $
         tripping @(PParams (BabbageEra C_Crypto))
     ]
