@@ -398,13 +398,8 @@ txInfo pp lang ei sysS utxo tx = do
     datpairs = Map.toList (unTxDats $ txdats' _witnesses)
     rdmrs = Map.toList (unRedeemers $ txrdmrs' _witnesses)
 
--- ===============================================================
--- From the specification, Figure 7 "Script Validation, cont."
--- ===============================================================
-
--- | valContext collects info from the Tx and the UTxO an
---   translates it into a 'Data', which the Plutus language knows how to interpret.
---   The UTxO and the PtrMap are used to 'resolve' the TxIn and the StakeRefPtr's
+-- | valContext pairs transaction data with a script purpose.
+--   See figure 22 of the Alonzo specification.
 valContext ::
   VersionedTxInfo ->
   ScriptPurpose (Crypto era) ->
