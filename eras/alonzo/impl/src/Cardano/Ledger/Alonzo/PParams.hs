@@ -315,14 +315,9 @@ instance Ord (PParams' StrictMaybe era) where
       <> compare (_coinsPerUTxOWord x) (_coinsPerUTxOWord y)
       <> compare (_costmdls x) (_costmdls y)
       <> compare (_prices x) (_prices y)
-      <> ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
-             LT -> LT
-             GT -> GT
-             EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
-               LT -> LT
-               GT -> GT
-               EQ -> compare (_maxValSize x) (_maxValSize y)
-         )
+      <> compareEx (_maxTxExUnits x) (_maxTxExUnits y)
+      <> compareEx (_maxBlockExUnits x) (_maxBlockExUnits y)
+      <> compare (_maxValSize x) (_maxValSize y)
 
 compareEx :: StrictMaybe ExUnits -> StrictMaybe ExUnits -> Ordering
 compareEx SNothing SNothing = EQ
