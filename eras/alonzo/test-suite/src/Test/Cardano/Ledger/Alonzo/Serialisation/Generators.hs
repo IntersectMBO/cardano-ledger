@@ -323,4 +323,4 @@ instance Mock c => Arbitrary (ScriptIntegrity (AlonzoEra c)) where
     ScriptIntegrity
       <$> arbitrary
       <*> genData
-      <*> (Set.singleton <$> (getLanguageView <$> arbitrary <*> arbitrary))
+      <*> (Set.singleton <$> (getLanguageView @(AlonzoEra c) <$> arbitrary <*> arbitrary))

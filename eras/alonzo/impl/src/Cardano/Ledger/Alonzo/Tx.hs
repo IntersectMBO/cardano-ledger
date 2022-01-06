@@ -76,6 +76,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams
   ( LangDepView (..),
     PParams,
+    PParams' (..),
     encodeLangViews,
     getLanguageView,
   )
@@ -249,7 +250,9 @@ instance (Era era, c ~ Crypto era) => HashAnnotated (ScriptIntegrity era) EraInd
 
 hashScriptIntegrity ::
   forall era.
-  Era era =>
+  ( Era era,
+    Core.PParams era ~ PParams era
+  ) =>
   PParams era ->
   Set Language ->
   Redeemers era ->
