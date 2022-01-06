@@ -92,7 +92,6 @@ import Cardano.Ledger.Alonzo.TxBody
   ( EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
     TxBody (..),
-    TxOut (..),
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -222,7 +221,7 @@ instance
 -- =========================================================
 -- Figure 2: Definitions for Transactions
 
-getCoin :: (Era era) => TxOut era -> Coin
+getCoin :: (Era era) => Core.TxOut era -> Coin
 getCoin txout = coin (getField @"value" txout)
 
 -- | A ScriptIntegrityHash is the hash of three things.  The first two come

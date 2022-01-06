@@ -35,6 +35,7 @@ library
   import:             base, project-config
   exposed-modules:
     Cardano.Ledger.Babbage.PParams
+    Cardano.Ledger.Babbage.Tx
     Cardano.Ledger.Babbage.TxBody
   build-depends:
     array,
