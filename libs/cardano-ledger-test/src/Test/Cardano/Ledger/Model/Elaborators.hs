@@ -167,6 +167,7 @@ import qualified Data.Set as Set
 import Data.Traversable (for)
 import Data.Tuple (swap)
 import Data.Typeable (Typeable)
+import Data.UMap (rewView)
 import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Generics (Generic, (:.:) (Comp1))
@@ -1537,7 +1538,7 @@ observeRewards ::
 observeRewards mtxid (nes, ems) =
   let creds = _eesStakeCredentials ems
    in Map.fromList $ do
-        (a, b) <- Map.toList . LedgerState._rewards . LedgerState._dstate . LedgerState._delegationState . LedgerState.esLState $ LedgerState.nesEs nes
+        (a, b) <- Map.toList . rewView . LedgerState._unified . LedgerState._dstate . LedgerState._delegationState . LedgerState.esLState $ LedgerState.nesEs nes
         a' <- case Map.lookup (asWitness a) creds of
           Just a' -> pure $ coerceKeyRole' a'
           Nothing -> error $ unwords ["observeRewards:", show mtxid, "can't find", show a]
@@ -1666,11 +1667,12 @@ instance CompareModelLedger (ComposeCrypto LedgerState.DState) where
       )
     ( ComposeCrypto
         ( LedgerState.DState
-            { LedgerState._rewards = rewards,
+            { LedgerState._unified = unified,
               LedgerState._irwd = ir
             }
           )
       ) = CPS.execWriter $ do
+      let rewards = rewView unified
       CPS.tell $ compareModel (WrappedModelInstantaneousRewards mir) (ComposeCrypto ir)
       unless (fold mrewards == fold rewards) $ CPS.tell [MismatchedRewards mrewards rewards]
 

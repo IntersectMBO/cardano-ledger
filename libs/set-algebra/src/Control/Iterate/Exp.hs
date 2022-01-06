@@ -14,17 +14,15 @@
 --      a low-level compiled form of Exp
 module Control.Iterate.Exp where
 
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake, PoolDistr (..))
 import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Iter (..), List (..), Sett (..), Single (..), fromPairs)
-import Control.Iterate.Collect (Collect (..), front, hasElem, none, one)
-import Data.BiMap (BiMap, Bimap, biMapEmpty)
+import Control.Iterate.Collect (Collect (..), hasElem, none, one)
+import Data.BiMap (BiMap, Bimap)
 import Data.Compact.SplitMap (Split, SplitMap)
-import qualified Data.Compact.SplitMap as Split
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
+import Data.UMap (UnifiedView (..), View)
 import Text.PrettyPrint.ANSI.Leijen (Doc, align, parens, text, vsep, (<+>))
 import Prelude hiding (lookup)
 
@@ -41,7 +39,7 @@ import Prelude hiding (lookup)
 -- 4) "eval" can introspect the code and apply efficient domain and type specific translations
 -- 5) Use the (Iter f) class to evaluate some Exp that can benefit from its efficient nature.
 data Exp t where
-  Base :: (Ord k, Basic f) => BaseRep f k v -> f k v -> Exp (f k v) -- Note the use of BaseRep to witness what Base type.
+  Base :: (Ord k, Basic f, Iter f) => BaseRep f k v -> f k v -> Exp (f k v) -- Note the use of BaseRep to witness what Base type.
   Dom :: Ord k => Exp (f k v) -> Exp (Sett k ())
   Rng :: (Ord k, Ord v) => Exp (f k v) -> Exp (Sett v ())
   DRestrict :: (Ord k, Iter g) => Exp (g k ()) -> Exp (f k v) -> Exp (f k v)
@@ -54,9 +52,11 @@ data Exp t where
   Subset :: (Ord k, Iter f, Iter g) => Exp (f k v) -> Exp (g k u) -> Exp Bool
   SetDiff :: (Ord k, Iter f, Iter g) => Exp (f k v) -> Exp (g k u) -> Exp (f k v)
   UnionOverrideLeft :: (Show k, Show v, Ord k) => Exp (f k v) -> Exp (g k v) -> Exp (f k v)
+  -- If 'k' appears in both, then choose the 'v' from the left 'f'
   -- The (Show k, Show v) supports logging errors if there are duplicate keys.
-  UnionPlus :: (Ord k, Monoid n) => Exp (f k n) -> Exp (f k n) -> Exp (f k n)
+  UnionPlus :: (Ord k, Monoid n) => Exp (f k n) -> Exp (g k n) -> Exp (f k n)
   UnionOverrideRight :: Ord k => Exp (f k v) -> Exp (g k v) -> Exp (f k v)
+  -- If 'k' appears in both, then choose the 'v' from the right 'g'
   Singleton :: (Ord k) => k -> v -> Exp (Single k v)
   SetSingleton :: (Ord k) => k -> Exp (Single k ())
   KeyEqual :: (Ord k, Iter f, Iter g) => Exp (f k v) -> Exp (g k u) -> Exp Bool
@@ -117,6 +117,14 @@ instance (Ord k, Ord v) => HasExp (Bimap k v) (Bimap k v) where
 
 instance (Ord k, Split k) => HasExp (SplitMap k v) (SplitMap k v) where
   toExp x = Base SplitR x
+
+instance
+  (UnifiedView coin cred pool ptr k v, Ord k, Monoid coin, Ord coin, Ord cred, Ord ptr, Ord pool) =>
+  HasExp
+    (View coin cred pool ptr k v)
+    (View coin cred pool ptr k v)
+  where
+  toExp x = Base (ViewR tag) x
 
 -- =======================================================================================================
 -- When we build an Exp, we want to make sure all Sets with one element become (SetSingleton x)
@@ -183,7 +191,7 @@ unionleft = (∪)
 (⨃) x y = UnionOverrideRight (toExp x) (toExp y)
 unionright = (⨃)
 
-(∪+), unionplus :: (Ord k, Monoid n, HasExp s1 (f k n), HasExp s2 (f k n)) => s1 -> s2 -> Exp (f k n)
+(∪+), unionplus :: (Ord k, Monoid n, HasExp s1 (f k n), HasExp s2 (g k n)) => s1 -> s2 -> Exp (f k n)
 (∪+) x y = UnionPlus (toExp x) (toExp y)
 unionplus = (∪+)
 
@@ -489,14 +497,20 @@ instance Ord k => HasQuery (Set.Set k) k () where
 instance Ord k => HasQuery (Map.Map k v) k v where
   query xs = BaseD MapR xs
 
-instance (Ord v, Ord k) => HasQuery (BiMap v k v) k v where
-  query xs = BaseD BiMapR xs
-
 instance Ord k => HasQuery (Single k v) k v where
   query xs = BaseD SingleR xs
 
 instance (Ord k, Split k) => HasQuery (SplitMap k v) k v where
   query xs = BaseD SplitR xs
+
+instance (Ord v, Ord k) => HasQuery (BiMap v k v) k v where
+  query xs = BaseD BiMapR xs
+
+instance
+  (UnifiedView coin cred pool ptr k v, Monoid coin, Ord k, Ord coin, Ord cred, Ord ptr, Ord pool) =>
+  HasQuery (View coin cred pool ptr k v) k v
+  where
+  query xs = BaseD (ViewR tag) xs
 
 -- =================================================
 -- Show Instance of Query
@@ -630,37 +644,4 @@ diffStep (k1, u1, f1) g =
     Just (k2, _u2, g2) -> case compare k1 k2 of
       EQ -> do tup <- nxtQuery f1; diffStep tup g2
       LT -> one (k1, u1, DiffD f1 g)
-      GT -> one (k1, u1, DiffD f1 g) -- the hasLub guarantees k1 <= k2, so this case is dead code
-
--- ========== Rng ====================
-rngStep :: Ord v => Query k v -> Sett v ()
-rngStep dat = materialize SetR (loop dat)
-  where
-    loop x = do (_k, v, x2) <- nxt x; front (v, ()) (loop x2)
-
--- =======================================================================================
-
--- | Given a BaseRep we can materialize a (Collect k v) into the type witnessed by the BaseRep.
--- Recall a (Collect k v) has no intrinsic type (it is just an ABSTRACT sequence of tuples), so
--- the witness describes how to turn them into the chosen datatype. Note that materialize is meant
--- to be applied to a collection built by iterating over a Query. This produces the keys in
--- ascending order, with no duplicate keys. So we do not need to specify how to merge values.
-materialize :: (Ord k) => BaseRep f k v -> Collect (k, v) -> f k v
-materialize ListR x = fromPairs (\l _r -> l) (runCollect x [] (:))
-materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
-materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))
-materialize BiMapR x = runCollect x biMapEmpty (\(k, v) ans -> addpair k v ans)
-materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
-materialize SplitR x = runCollect x Split.empty (\(k, v) ans -> Split.insert k v ans)
-
--- =============================================
-
-instance
-  HasExp
-    (PoolDistr crypto)
-    ( Map
-        (KeyHash 'StakePool crypto)
-        (IndividualPoolStake crypto)
-    )
-  where
-  toExp (PoolDistr x) = Base MapR x
+      GT -> one (k1, u1, DiffD f1 g) -- the hasElem guarantees k1 <= k2, so this case is dead code

@@ -59,19 +59,20 @@ import Cardano.Ledger.Shelley.API
     VKey,
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR)
+import Cardano.Ledger.Shelley.LedgerState (availableAfterMIR, rewards)
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
 import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
 import qualified Data.List as List
 import Data.Map.Strict (Map)
-import qualified Data.Map.Strict as Map (elems, findWithDefault, fromList, keys, lookup, size)
+import qualified Data.Map.Strict as Map (elems, fromList, lookup)
 import Data.Maybe (fromMaybe)
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set ((\\))
 import qualified Data.Set as Set
+import qualified Data.UMap as UM
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
@@ -205,7 +206,7 @@ genRegKeyCert
       ]
     where
       scriptToCred' = ScriptHashObj . hashScript @era
-      notRegistered k = eval (k ∉ dom (_rewards delegSt))
+      notRegistered k = eval (k ∉ dom (rewards delegSt))
       availableKeys = filter (notRegistered . toCred . snd) keys
       availableScripts = filter (notRegistered . scriptToCred' . snd) scripts
 
@@ -242,7 +243,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
     ]
   where
     scriptToCred' = ScriptHashObj . hashScript @era
-    registered k = eval (k ∈ dom (_rewards dState))
+    registered k = eval (k ∈ dom (rewards dState))
     availableKeys =
       filter
         ( \(_, k) ->
@@ -258,7 +259,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
         )
         scripts
     zeroRewards k =
-      (Coin 0) == (Map.findWithDefault (Coin 1) (getRwdCred $ mkRwdAcnt Testnet k) (_rewards dState))
+      (Coin 0) == (UM.findWithDefault (Coin 1) (getRwdCred $ mkRwdAcnt Testnet k) (rewards dState))
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's
@@ -308,7 +309,7 @@ genDelegation
         where
           scriptCert =
             DCertDeleg (Delegate (Delegation (scriptToCred' delegatorScript) poolKey))
-      registeredDelegate k = eval (k ∈ dom (_rewards (_dstate dpState)))
+      registeredDelegate k = eval (k ∈ dom (rewards (_dstate dpState)))
       availableDelegates = filter (registeredDelegate . toCred . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
@@ -462,11 +463,10 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
         fromMaybe
           (error "genInstantaneousRewardsAccounts: lookupGenDelegate failed")
           (Map.lookup gk genesisDelegatesByHash)
-      credentials = _rewards delegSt
-
+      credentials = rewards delegSt
   winnerCreds <-
-    take <$> QC.elements [0 .. (max 0 $ Map.size credentials - 1)]
-      <*> QC.shuffle (Map.keys credentials)
+    take <$> QC.elements [0 .. (max 0 $ UM.size credentials - 1)]
+      <*> QC.shuffle (Set.toList (UM.domain credentials))
   coins <- replicateM (length winnerCreds) $ genInteger 1 1000
   let credCoinMap = Map.fromList $ zip winnerCreds (fmap DeltaCoin coins)
 

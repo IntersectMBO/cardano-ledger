@@ -47,6 +47,7 @@ import Control.State.Transition
   )
 import Data.Default.Class (Default, def)
 import Data.Typeable (Typeable)
+import Data.UMap (rewView)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import GHC.Records
@@ -116,8 +117,8 @@ newPpTransition = do
 
   case ppNew of
     Just ppNew' -> do
-      let Coin oblgCurr = obligation pp (_rewards dstate) (_pParams pstate)
-          Coin oblgNew = obligation ppNew' (_rewards dstate) (_pParams pstate)
+      let Coin oblgCurr = obligation pp (rewView (_unified dstate)) (_pParams pstate)
+          Coin oblgNew = obligation ppNew' (rewView (_unified dstate)) (_pParams pstate)
           diff = oblgCurr - oblgNew
           Coin availableReserves = availableAfterMIR ReservesMIR acnt (_irwd dstate)
 

@@ -95,7 +95,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Control.Monad.Trans
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import qualified Data.Compact.VMap as VMap
+import qualified Data.Compact.ViewMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Foldable (find, fold)
 import Data.Function (on)

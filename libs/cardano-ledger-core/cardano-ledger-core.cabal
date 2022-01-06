@@ -60,6 +60,7 @@ library
     Cardano.Ledger.Serialization
     Cardano.Ledger.Slot
     Cardano.Ledger.TxIn
+    Cardano.Ledger.UnifiedMap
     Cardano.Ledger.Val
 
   build-depends:
@@ -87,6 +88,7 @@ library
     partial-order,
     quiet,
     scientific,
+    set-algebra,
     non-integral,
     primitive,
     small-steps,

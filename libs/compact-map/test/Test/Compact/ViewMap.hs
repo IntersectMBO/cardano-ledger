@@ -2,9 +2,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Compact.VMap where
+module Test.Compact.ViewMap where
 
-import Data.Compact.VMap as VMap
+import Data.Compact.ViewMap as VMap
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Proxy

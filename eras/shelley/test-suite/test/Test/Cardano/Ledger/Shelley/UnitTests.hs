@@ -48,8 +48,9 @@ import Cardano.Ledger.Shelley.LedgerState
     IncrementalStake (..),
     UTxOState (..),
     WitHashes (..),
+    rewards,
     _dstate,
-    _rewards,
+    _unified,
   )
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
@@ -102,6 +103,7 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import qualified Data.UMap as UM
 import Data.Word (Word64)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
@@ -382,10 +384,10 @@ dpState :: DPState C_Crypto
 dpState = DPState def def
 
 addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState C_Crypto
-addReward dp ra c = dp {_dstate = ds {_rewards = rewards}}
+addReward dp ra c = dp {_dstate = ds {_unified = rewards'}}
   where
     ds = _dstate dp
-    rewards = Map.insert ra c $ _rewards ds
+    rewards' = (UM.insert ra c (rewards ds))
 
 ledgerEnv :: LedgerEnv C
 ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState (Coin 0) (Coin 0))

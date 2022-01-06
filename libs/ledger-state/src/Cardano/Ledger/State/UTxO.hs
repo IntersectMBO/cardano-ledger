@@ -33,7 +33,7 @@ import Control.SetAlgebra (range)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Compact.HashMap (toKey)
 import Data.Compact.KeyMap as KeyMap
-import qualified Data.Compact.VMap as VMap
+import qualified Data.Compact.ViewMap as VMap
 import Data.Foldable as F
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
@@ -41,6 +41,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Text as T
 import Data.Typeable
+import Data.UMap (delView, ptrView, rewView)
 import Numeric.Natural
 import Prettyprinter
 import Text.Printf
@@ -493,10 +494,10 @@ countDStateStats :: DState C -> DStateStats
 countDStateStats DState {..} =
   DStateStats
     { dssCredentialStaking =
-        statMapKeys _rewards
-          <> statMapKeys _delegations
-          <> statSet (range _ptrs),
-      dssDelegations = statFoldable _delegations,
+        statMapKeys (rewView _unified)
+          <> statMapKeys (delView _unified)
+          <> statSet (range (ptrView _unified)),
+      dssDelegations = statFoldable (delView _unified),
       dssKeyHashGenesis =
         statFoldable (fGenDelegGenKeyHash <$> Map.keys _fGenDelegs)
           <> statMapKeys (unGenDelegs _genDelegs),

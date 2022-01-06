@@ -120,7 +120,7 @@ import Cardano.Ledger.Shelley.LedgerState
     _deposited,
     _dstate,
     _fees,
-    _rewards,
+    _unified,
     _utxo,
     _utxoState,
   )
@@ -758,7 +758,7 @@ applyTxBody ls pp tx =
           },
       _delegationState =
         dels
-          { _dstate = dst {_rewards = newAccounts}
+          { _dstate = dst {_unified = newAccounts}
           }
     }
   where
@@ -767,7 +767,7 @@ applyTxBody ls pp tx =
     us = _utxoState ls
     newAccounts =
       reapRewards
-        ((_rewards . _dstate . _delegationState) ls)
+        ((_unified . _dstate . _delegationState) ls)
         (Map.mapKeys getRwdCred . unWdrl $ getField @"wdrls" tx)
 
 -- ==================================================================

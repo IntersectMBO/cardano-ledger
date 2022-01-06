@@ -36,11 +36,11 @@ import Cardano.Ledger.Shelley.LedgerState
     esPp,
     esPrevPp,
     esSnapshots,
+    rewards,
     _delegationState,
     _deposited,
     _ppups,
     _reserves,
-    _rewards,
     _utxoState,
     pattern DPState,
     pattern EpochState,
@@ -192,8 +192,8 @@ epochTransition = do
       TRC (epochState', UpecState pp (_ppups utxoSt'), ())
   let utxoSt'' = utxoSt' {_ppups = ppupSt'}
 
-  let Coin oblgCurr = obligation pp (_rewards dstate') (_pParams pstate'')
-      Coin oblgNew = obligation pp' (_rewards dstate') (_pParams pstate'')
+  let Coin oblgCurr = obligation pp (rewards dstate') (_pParams pstate'')
+      Coin oblgNew = obligation pp' (rewards dstate') (_pParams pstate'')
       Coin reserves = _reserves acnt'
       utxoSt''' = utxoSt'' {_deposited = Coin oblgNew}
       acnt'' = acnt' {_reserves = Coin $ reserves + oblgCurr - oblgNew}

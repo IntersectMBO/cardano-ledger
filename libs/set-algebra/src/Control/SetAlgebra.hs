@@ -75,7 +75,6 @@ import Control.Iterate.Exp
     drestrict,
     intersect,
     keyeq,
-    materialize,
     rexclude,
     rng,
     rrestrict,
@@ -104,6 +103,7 @@ import Control.Iterate.Exp
 import Control.Iterate.SetAlgebra
 import Data.BiMap (BiMap (..), Bimap, biMapEmpty, biMapFromList, biMapFromMap, biMapToMap)
 import Data.Map (Map)
+import Data.MapExtras (keysEqual)
 import Data.Set (Set)
 
 forwards :: BiMap v k v -> Map k v

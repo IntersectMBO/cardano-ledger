@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
-import Data.Compact.VMap as VMap
+import Data.Compact.ViewMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -107,10 +107,13 @@ sumStakePerPool delegs (Stake stake) = VMap.foldlWithKey accum Map.empty stake
 
 -- | Calculate total possible refunds.
 obligation ::
-  forall crypto pp.
-  (HasField "_keyDeposit" pp Coin, HasField "_poolDeposit" pp Coin) =>
+  forall crypto pp anymap.
+  ( HasField "_keyDeposit" pp Coin,
+    HasField "_poolDeposit" pp Coin,
+    Foldable (anymap (Credential 'Staking crypto))
+  ) =>
   pp ->
-  Map (Credential 'Staking crypto) Coin ->
+  anymap (Credential 'Staking crypto) Coin ->
   Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   Coin
 obligation pp rewards stakePools =
@@ -179,12 +182,11 @@ instance CC.Crypto crypto => FromSharedCBOR (SnapShot crypto) where
   type
     Share (SnapShot crypto) =
       (Interns (Credential 'Staking crypto), Interns (KeyHash 'StakePool crypto))
-  fromSharedPlusCBOR =
-    decodeRecordNamedT "SnapShot" (const 3) $ do
-      _stake <- fromSharedPlusLensCBOR _1
-      _delegations <- fromSharedPlusCBOR
-      _poolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
-      pure SnapShot {_stake, _delegations, _poolParams}
+  fromSharedPlusCBOR = decodeRecordNamedT "SnapShot" (const 3) $ do
+    _stake <- fromSharedPlusLensCBOR _1
+    _delegations <- fromSharedPlusCBOR
+    _poolParams <- fromSharedPlusLensCBOR (toMemptyLens _1 _2)
+    pure SnapShot {_stake, _delegations, _poolParams}
 
 -- | Snapshots of the stake distribution.
 data SnapShots crypto = SnapShots
@@ -212,13 +214,12 @@ instance
 
 instance CC.Crypto crypto => FromSharedCBOR (SnapShots crypto) where
   type Share (SnapShots crypto) = Share (SnapShot crypto)
-  fromSharedPlusCBOR =
-    decodeRecordNamedT "SnapShots" (const 4) $ do
-      !_pstakeMark <- fromSharedPlusCBOR
-      _pstakeSet <- fromSharedPlusCBOR
-      _pstakeGo <- fromSharedPlusCBOR
-      _feeSS <- lift fromCBOR
-      pure SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
+  fromSharedPlusCBOR = decodeRecordNamedT "SnapShots" (const 4) $ do
+    !_pstakeMark <- fromSharedPlusCBOR
+    _pstakeSet <- fromSharedPlusCBOR
+    _pstakeGo <- fromSharedPlusCBOR
+    _feeSS <- lift fromCBOR
+    pure SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
 
 instance Default (SnapShots crypto) where
   def = emptySnapShots

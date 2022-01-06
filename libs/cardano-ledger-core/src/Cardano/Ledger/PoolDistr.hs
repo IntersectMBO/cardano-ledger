@@ -28,6 +28,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash, KeyHash, KeyRole (..), VerKeyVRF)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
+import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
 import Data.Map.Strict (Map)
 import Data.Relation (Relation (..))
 import GHC.Generics (Generic)
@@ -76,3 +77,27 @@ newtype PoolDistr crypto = PoolDistr
   }
   deriving stock (Show, Eq)
   deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks, Relation)
+
+-- ===============================
+
+instance
+  HasExp
+    (PoolDistr crypto)
+    ( Map
+        (KeyHash 'StakePool crypto)
+        (IndividualPoolStake crypto)
+    )
+  where
+  toExp (PoolDistr x) = Base MapR x
+
+-- | We can Embed a Newtype around a Map (or other Iterable type) and then use it in a set expression.
+instance
+  Embed
+    (PoolDistr crypto)
+    ( Map
+        (KeyHash 'StakePool crypto)
+        (IndividualPoolStake crypto)
+    )
+  where
+  toBase (PoolDistr x) = x
+  fromBase = PoolDistr

@@ -90,6 +90,8 @@ import Cardano.Ledger.Shelley.LedgerState
     RewardUpdate (..),
     UTxOState (..),
     applyRUpd,
+    delegations,
+    rewards,
     updateStakeDistribution,
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates)
@@ -108,12 +110,15 @@ import Cardano.Protocol.TPraos.BHeader
     prevHashToNonce,
   )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
-import Control.SetAlgebra (eval, setSingleton, singleton, (∪), (⋪), (⋫), (◁))
+import Control.SetAlgebra (eval, (∪), (⋪), (◁))
 import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import qualified Data.Set as Set
+import Data.UMap (View (Delegations, Ptrs, Rewards), unView)
+import qualified Data.UMap as UM
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
@@ -245,8 +250,11 @@ newStakeCred cred ptr cs = cs {chainNes = nes'}
     ds = _dstate dps
     ds' =
       ds
-        { _rewards = Map.insert cred (Coin 0) (_rewards ds),
-          _ptrs = eval (_ptrs ds ∪ (singleton ptr cred))
+        { _unified =
+            let um0 = _unified ds
+                um1 = (UM.insert cred (Coin 0) (Rewards um0))
+                um2 = (Ptrs um1 UM.∪ (ptr, cred))
+             in um2
         }
     dps' = dps {_dstate = ds'}
     ls' = ls {_delegationState = dps'}
@@ -270,9 +278,12 @@ deregStakeCred cred cs = cs {chainNes = nes'}
     ds = _dstate dps
     ds' =
       ds
-        { _rewards = Map.delete cred (_rewards ds),
-          _ptrs = eval (_ptrs ds ⋫ setSingleton cred),
-          _delegations = Map.delete cred (_delegations ds)
+        { _unified =
+            let um0 = _unified ds
+                um1 = (UM.delete cred (Rewards um0))
+                um2 = (Ptrs um1 UM.⋫ Set.singleton cred)
+                um3 = (UM.delete cred (Delegations um2))
+             in um3
         }
     dps' = dps {_dstate = ds'}
     ls' = ls {_delegationState = dps'}
@@ -298,7 +309,7 @@ delegation cred pool cs = cs {chainNes = nes'}
     ds = _dstate dps
     ds' =
       ds
-        { _delegations = Map.insert cred pool (_delegations ds)
+        { _unified = (UM.insert cred pool (delegations ds))
         }
     dps' = dps {_dstate = ds'}
     ls' = ls {_delegationState = dps'}
@@ -421,15 +432,13 @@ reapPool pool cs = cs {chainNes = nes'}
     pp = esPp es
     ds = _dstate dps
     RewardAcnt _ rewardAddr = _poolRAcnt pool
-    (rewards, unclaimed) =
-      case Map.lookup rewardAddr (_rewards ds) of
-        Nothing -> (_rewards ds, _poolDeposit pp)
-        Just era -> (Map.insert rewardAddr (era <+> _poolDeposit pp) (_rewards ds), Coin 0)
-    ds' =
-      ds
-        { _delegations = eval (_delegations ds ⋫ setSingleton kh),
-          _rewards = rewards
-        }
+    (rewards', unclaimed) =
+      case UM.lookup rewardAddr (rewards ds) of
+        Nothing -> (rewards ds, _poolDeposit pp)
+        Just era -> (UM.insert' rewardAddr (era <+> _poolDeposit pp) (rewards ds), Coin 0)
+    umap1 = unView rewards'
+    umap2 = (UM.Delegations umap1 UM.⋫ Set.singleton kh)
+    ds' = ds {_unified = umap2}
     as = esAccountState es
     as' = as {_treasury = (_treasury as) <+> unclaimed}
     utxoSt = _utxoState ls
@@ -480,9 +489,9 @@ applyMIR ::
   Map (Credential 'Staking (Crypto era)) Coin ->
   ChainState era ->
   ChainState era
-applyMIR pot rewards cs = cs {chainNes = nes'}
+applyMIR pot newrewards cs = cs {chainNes = nes'}
   where
-    tot = fold rewards
+    tot = fold newrewards
     nes = chainNes cs
     es = nesEs nes
     ls = esLState es
@@ -490,7 +499,7 @@ applyMIR pot rewards cs = cs {chainNes = nes'}
     ds = _dstate dps
     ds' =
       ds
-        { _rewards = Map.unionWith (<+>) rewards (_rewards ds),
+        { _unified = (rewards ds) UM.∪+ newrewards,
           _irwd = emptyInstantaneousRewards
         }
     dps' = dps {_dstate = ds'}

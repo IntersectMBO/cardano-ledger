@@ -1,8 +1,6 @@
 module Main where
 
-import Test.Compact.KeyMap (alltests)
-import Test.Compact.SplitMap (splitMapTests)
-import Test.Compact.ViewMap
+import Test.Data.UMap (alltests)
 import Test.Tasty
 
 -- ====================================================================================
@@ -10,10 +8,8 @@ import Test.Tasty
 tests :: TestTree
 tests =
   testGroup
-    "compact-map"
-    [ alltests,
-      vMapTests,
-      splitMapTests
+    "cardano-data"
+    [ alltests
     ]
 
 main :: IO ()

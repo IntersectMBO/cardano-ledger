@@ -66,9 +66,9 @@ import Cardano.Ledger.Shelley.LedgerState
     consumed,
     minfee,
     produced,
+    ptrsMap,
+    rewards,
     _dstate,
-    _ptrs,
-    _rewards,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
@@ -82,7 +82,6 @@ import Cardano.Ledger.Shelley.UTxO
   )
 import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
-import Control.SetAlgebra (forwards)
 import Control.State.Transition
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Either as Either (partitionEithers)
@@ -94,6 +93,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.UMap as UM
 import qualified Data.Vector as V
 import Debug.Trace (trace)
 import GHC.Records (HasField (..))
@@ -221,7 +221,7 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((_rewards . _dstate) dpState)
+          ((UM.unUnify . rewards . _dstate) dpState)
       (update, updateWits) <-
         genUpdate
           constants
@@ -888,8 +888,7 @@ genRecipients len keys scripts = do
 
 genPtrAddrs :: DState crypto -> [Addr crypto] -> Gen [Addr crypto]
 genPtrAddrs ds addrs = do
-  let pointers = forwards (_ptrs ds)
-
+  let pointers = (ptrsMap ds)
   n <- QC.choose (0, min (Map.size pointers) (length addrs))
   pointerList <- map fst <$> getNRandomPairs n pointers
 

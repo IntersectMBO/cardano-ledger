@@ -37,11 +37,12 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.Iterate.SetAlgebra (compile, compute, run)
 import Control.Monad (replicateM)
-import Control.SetAlgebra (Bimap, biMapFromList, dom, (▷), (◁))
+import Control.SetAlgebra (dom, (▷), (◁))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence as Seq
+import qualified Data.UMap as UM
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Examples.Cast (alicePoolParams)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators (mkDummyHash)
@@ -70,8 +71,8 @@ genTestCase numUTxO numAddr = do
       m = length liveptrs `div` 2
   moreptrs :: [Ptr] <- replicateM m arbitrary
   creds :: [Credential 'Staking C_Crypto] <- replicateM (m + m) arbitrary
-  let ptrs' :: Bimap Ptr (Credential 'Staking C_Crypto)
-      ptrs' = biMapFromList (\new _old -> new) (zip (liveptrs ++ moreptrs) creds)
+  let ptrs' :: Map Ptr (Credential 'Staking C_Crypto)
+      ptrs' = Map.fromList (zip (liveptrs ++ moreptrs) creds)
   rewards :: [(Credential 'Staking C_Crypto, Coin)] <- replicateM (3 * (numUTxO `div` 4)) arbitrary
   let rewards' :: Map (Credential 'Staking C_Crypto) Coin
       rewards' = Map.fromList rewards
@@ -86,14 +87,12 @@ genTestCase numUTxO numAddr = do
 makeStatePair ::
   Map (Credential 'Staking crypto) Coin ->
   Map (Credential 'Staking crypto) (KeyHash 'StakePool crypto) ->
-  Bimap Ptr (Credential 'Staking crypto) ->
+  Map Ptr (Credential 'Staking crypto) ->
   Map (KeyHash 'StakePool crypto) (PoolParams crypto) ->
   (DState crypto, PState crypto)
 makeStatePair rewards' delegs ptrs' poolParams =
   ( DState
-      rewards'
-      delegs
-      ptrs'
+      (UM.unify rewards' delegs ptrs')
       Map.empty
       (GenDelegs Map.empty)
       (InstantaneousRewards Map.empty Map.empty mempty mempty),

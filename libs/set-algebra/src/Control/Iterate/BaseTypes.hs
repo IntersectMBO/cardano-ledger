@@ -10,8 +10,6 @@
 --   what operations those types must support (Iter, Basic, Embed)
 module Control.Iterate.BaseTypes where
 
-import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake, PoolDistr (..))
 import Control.Iterate.Collect (Collect (..), hasElem, isempty, none, one, when)
 import Data.BiMap
 import qualified Data.Compact.KeyMap as KeyMap
@@ -20,10 +18,10 @@ import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.IntMap as IntMap
 import Data.List (sortBy)
 import qualified Data.List as List
-import Data.Map.Internal (Map (..))
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.UMap as UM
 
 -- ================= The Iter class =================================================
 -- The Set algebra include types that encode finite maps of some type. They
@@ -63,7 +61,7 @@ class Iter f where
 -- what kind of basic types of Maps and Sets can be used this way. Every Basic type has a few operations
 -- for creating one from a list, for adding and removing key-value pairs, looking up a value given a key.
 -- Instances of this algebra are functional in that every key has exactly one value associated with it.
-class Iter f => Basic f where
+class Basic f where
   -- | in addpair the new value always prevails, to make a choice use 'addkv' which has a combining function that allows choice.
   addpair :: (Ord k) => k -> v -> f k v -> f k v
   addpair k v f = addkv (k, v) f (\_old new -> new)
@@ -74,8 +72,6 @@ class Iter f => Basic f where
   removekey :: (Ord k) => k -> f k v -> f k v
   domain :: Ord k => f k v -> Set k
   range :: Ord v => f k v -> Set v
-  emptyc :: Ord k => f k v
-  emptyc = error ("emptyc only works on some types.")
 
 -- ===============================================================================================
 
@@ -90,6 +86,10 @@ data BaseRep f k v where
   SingleR :: Basic Single => BaseRep Single k v
   BiMapR :: (Basic (BiMap v), Ord v) => BaseRep (BiMap v) k v
   SplitR :: (Split k, Basic SplitMap) => BaseRep SplitMap k v
+  ViewR ::
+    (Monoid coin, Ord cred, Ord ptr, Ord coin, Ord pool) =>
+    UM.Tag coin cred pool ptr k v ->
+    BaseRep (UM.View coin cred pool ptr) k v
 
 instance Show (BaseRep f k v) where
   show MapR = "Map"
@@ -98,6 +98,9 @@ instance Show (BaseRep f k v) where
   show SingleR = "Single"
   show BiMapR = "BiMap"
   show SplitR = "SplitMap"
+  show (ViewR UM.Rew) = "ViewR-cred-coin"
+  show (ViewR UM.Del) = "ViewR-cred-keyhash"
+  show (ViewR UM.Ptr) = "ViewR-ptr-cred"
 
 -- ==================================================================
 -- Now for each Basic type we provide instances
@@ -131,7 +134,6 @@ instance Basic List where
       remove ((key, u) : ys) = if key == k then ys else (k, u) : (remove ys)
   domain (UnSafeList xs) = foldr (\(k, _v) ans -> Set.insert k ans) Set.empty xs
   range (UnSafeList xs) = foldr (\(_k, v) ans -> Set.insert v ans) Set.empty xs
-  emptyc = (UnSafeList [])
 
 fromPairs :: Ord k => (v -> v -> v) -> [(k, v)] -> List k v
 fromPairs combine xs = UnSafeList (normalize combine (sortBy (\x y -> compare (fst x) (fst y)) xs))
@@ -184,7 +186,6 @@ instance Basic Single where
   range (Single _a b) = Set.singleton b
   range (SetSingle _a) = Set.singleton ()
   range Fail = Set.empty
-  emptyc = Fail
 
 instance Iter Single where
   nxt (Single k v) = Collect (\ans f -> f (k, v, Fail) ans)
@@ -217,7 +218,6 @@ instance Basic Sett where
   removekey k (Sett m) = Sett (Set.delete k m)
   domain (Sett xs) = xs
   range (Sett _xs) = Set.singleton ()
-  emptyc = error ("Sett Set.empty has type (Sett k ()) and it needs type (Sett k v)")
 
 instance Show key => Show (Sett key ()) where
   show (Sett ss) = show ss
@@ -255,7 +255,6 @@ instance Ord v => Basic (BiMap v) where
       Nothing -> m
   domain (MkBiMap left _right) = Map.keysSet left
   range (MkBiMap _left right) = Map.keysSet right
-  emptyc = error ("emptyc cannot be defined for BiMap, use the variable: biMapEmpty :: BiMap v k v")
 
 instance Ord v => Iter (BiMap v) where
   nxt (MkBiMap left right) =
@@ -270,7 +269,7 @@ instance Ord v => Iter (BiMap v) where
       ( \ans f ->
           case Map.splitLookup key forward of -- NOTE in Log time, we skip over all those tuples in _left
             (_left, Just v, right) -> f (key, v, MkBiMap right backward) ans
-            (_left, Nothing, Tip) -> ans
+            (_left, Nothing, right) | Map.null right -> ans
             (_left, Nothing, right) -> f (k, v, MkBiMap m3 backward) ans
               where
                 ((k, v), m3) = Map.deleteFindMin right
@@ -286,7 +285,8 @@ instance Basic Map.Map where
   removekey k m = Map.delete k m
   domain x = Map.keysSet x
   range xs = Map.foldrWithKey (\_k v ans -> Set.insert v ans) Set.empty xs
-  emptyc = Map.empty
+
+-- emptyc = Map.empty
 
 instance Iter Map.Map where
   nxt m =
@@ -301,7 +301,7 @@ instance Iter Map.Map where
       ( \ans f ->
           case Map.splitLookup key m of -- NOTE in Log time, we skip over all those tuples in _left
             (_left, Just v, right) -> f (key, v, right) ans
-            (_left, Nothing, Tip) -> ans
+            (_left, Nothing, right) | Map.null right -> ans
             (_left, Nothing, right) -> f (k, v, m3) ans
               where
                 ((k, v), m3) = Map.deleteFindMin right
@@ -352,6 +352,41 @@ instance Basic SplitMap where
     where
       accum ans _ v = Set.insert v ans
 
+-- ==========================================================================
+-- Basic ViewMap
+
+instance
+  (Monoid coin, Ord coin, Ord cred, Ord ptr, Ord pool) =>
+  Basic (UM.View coin cred pool ptr)
+  where
+  addkv (k, v) m comb = UM.insertWith' comb k v m
+  addpair = UM.insert'
+  removekey = UM.delete'
+  domain = UM.domain
+  range = UM.range
+
+instance
+  (Ord coin, Ord cred, Ord ptr) =>
+  Iter (UM.View coin cred pool ptr)
+  where
+  nxt m =
+    Collect
+      ( \ans f ->
+          case UM.next m of
+            Nothing -> ans
+            Just (k, v, nextm) -> f (k, v, nextm) ans
+      )
+  lub key m =
+    Collect
+      ( \ans f ->
+          case UM.leastUpperBound key m of
+            Nothing -> ans
+            Just (k, v, nextm) -> f (k, v, nextm) ans
+      )
+  haskey = UM.member
+  isnull = UM.isNull
+  lookup = UM.lookup
+
 -- ===========================================================================
 -- Every iterable type type forms an isomorphism with some Base type. For most
 -- Base types the isomorphism is the identity in both directions, but for some,
@@ -393,14 +428,6 @@ instance Embed Bool Bool where
   toBase xs = xs
   fromBase xs = xs
 
--- | We can Embed a Newtype around a Map (or other Iterable type) and then use it in a set expression.
-instance
-  Embed
-    (PoolDistr crypto)
-    ( Map
-        (KeyHash 'StakePool crypto)
-        (IndividualPoolStake crypto)
-    )
-  where
-  toBase (PoolDistr x) = x
-  fromBase = PoolDistr
+instance Embed (UM.View coin cred pool ptr k v) (UM.View coin cred pool ptr k v) where
+  toBase xs = xs
+  fromBase xs = xs
