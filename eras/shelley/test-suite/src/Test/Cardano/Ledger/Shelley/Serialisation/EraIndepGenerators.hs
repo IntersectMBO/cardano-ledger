@@ -120,7 +120,7 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
-import qualified Data.Compact.ViewMap as VMap
+import qualified Data.Compact.VMap as VMap
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
 import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Maybe (fromJust)

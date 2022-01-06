@@ -54,7 +54,7 @@ import Data.Coders
     (!>),
     (<!),
   )
-import Data.Compact.ViewMap as VMap
+import Data.Compact.VMap as VMap
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Kind (Type)

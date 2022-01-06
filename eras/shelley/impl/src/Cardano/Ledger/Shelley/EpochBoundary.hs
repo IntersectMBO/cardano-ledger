@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
-import Data.Compact.ViewMap as VMap
+import Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map

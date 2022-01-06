@@ -2,7 +2,7 @@ module Main where
 
 import Test.Compact.KeyMap (alltests)
 import Test.Compact.SplitMap (splitMapTests)
-import Test.Compact.ViewMap
+import Test.Compact.VMap
 import Test.Tasty
 
 -- ====================================================================================

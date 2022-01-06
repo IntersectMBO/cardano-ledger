@@ -103,7 +103,7 @@ import Control.State.Transition.Trace
 import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
-import qualified Data.Compact.ViewMap as VMap
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default)
 import Data.Foldable (fold, foldl', toList)
 import Data.Functor.Identity (Identity)

@@ -33,7 +33,7 @@ import Control.SetAlgebra (range)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Compact.HashMap (toKey)
 import Data.Compact.KeyMap as KeyMap
-import qualified Data.Compact.ViewMap as VMap
+import qualified Data.Compact.VMap as VMap
 import Data.Foldable as F
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
