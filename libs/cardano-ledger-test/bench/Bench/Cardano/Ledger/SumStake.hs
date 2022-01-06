@@ -6,7 +6,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible
 import Control.Monad
 import Criterion
-import Data.Compact.ViewMap as VMap
+import Data.Compact.VMap as VMap
 import Data.Foldable as F
 import Data.Map.Strict as Map
 import System.Random.Stateful

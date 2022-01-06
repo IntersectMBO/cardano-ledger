@@ -124,7 +124,7 @@ import Data.Coders
     (!>),
     (<!),
   )
-import qualified Data.Compact.ViewMap as VMap
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Foldable (fold, foldMap')

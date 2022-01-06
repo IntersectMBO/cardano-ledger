@@ -31,7 +31,7 @@ library
 
   exposed-modules:     Data.Compact.KeyMap
                      , Data.Compact.HashMap
-                     , Data.Compact.ViewMap
+                     , Data.Compact.VMap
                      , Data.Compact.SmallArray
                      , Data.Compact.SplitMap
   other-modules:       Data.Compact.KVVector
@@ -57,7 +57,7 @@ test-suite tests
   main-is:             Main.hs
   other-modules:       Test.Compact.SplitMap
                      , Test.Compact.KeyMap
-                     , Test.Compact.ViewMap
+                     , Test.Compact.VMap
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base

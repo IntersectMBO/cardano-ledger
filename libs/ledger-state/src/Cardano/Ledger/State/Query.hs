@@ -25,7 +25,7 @@ import Control.Foldl (Fold (..))
 import Control.Monad
 import Control.Monad.Trans.Reader
 import qualified Data.Compact.KeyMap as KeyMap
-import qualified Data.Compact.ViewMap as VMap
+import qualified Data.Compact.VMap as VMap
 import Data.Conduit.Internal (zipSources)
 import Data.Conduit.List (sourceList)
 import Data.Functor

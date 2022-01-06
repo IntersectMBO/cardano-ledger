@@ -108,7 +108,7 @@ import Control.Monad.Trans.Reader (asks, runReader)
 import Control.Provenance (ProvM, preservesJust, preservesNothing, runProvM, runWithProvM)
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
-import qualified Data.Compact.ViewMap as VMap
+import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold)
 import Data.Map (Map)
