@@ -1,11 +1,9 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -236,7 +234,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
+    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -261,7 +259,7 @@ instance
 
   type
     Signal (CHAIN era) =
-      Block BHeader era
+      Block (BHeader (Crypto era)) era
 
   type Environment (CHAIN era) = ()
   type BaseM (CHAIN era) = ShelleyBase
@@ -279,7 +277,7 @@ chainTransition ::
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
+    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,
@@ -309,7 +307,7 @@ chainTransition =
                  etaC
                  etaH
                  lab,
-               (Block bh txs)
+               Block bh txs
                )
            ) -> do
         case prtlSeqChecks lab bh of
@@ -356,7 +354,7 @@ chainTransition =
         let thouShaltNot = error "A block with a header view should never be hashed"
         BbodyState ls' bcur' <-
           trans @(Core.EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, (Block' bhView txs thouShaltNot))
+            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block' bhView txs thouShaltNot)
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh

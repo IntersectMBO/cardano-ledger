@@ -244,7 +244,7 @@ ledgerEnv = LedgerEnv (SlotNo 0) 0 def (AccountState (Coin 0) (Coin 0))
 genAlonzoTx :: Gen (Core.Tx A)
 genAlonzoTx = genstuff ap (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (utxo, dp))
 
-genAlonzoBlock :: Gen (Block BHeader A)
+genAlonzoBlock :: Gen (Block (BHeader TestCrypto) A)
 genAlonzoBlock = genstuff ap (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
 
 genShelleyTx :: Gen (Core.Tx (ShelleyEra TestCrypto))
@@ -253,7 +253,7 @@ genShelleyTx =
     (Proxy @(ShelleyEra TestCrypto))
     (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (utxo, dp))
 
-genShelleyBlock :: Gen (Block BHeader (ShelleyEra TestCrypto))
+genShelleyBlock :: Gen (Block (BHeader TestCrypto) (ShelleyEra TestCrypto))
 genShelleyBlock = genstuff (Proxy @(ShelleyEra TestCrypto)) (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
 
 -- ==================================================================================================

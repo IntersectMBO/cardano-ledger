@@ -144,7 +144,7 @@ prop_roundtrip_Addr = roundtrip toCBOR fromCBOR
 prop_roundtrip_RewardAcnt :: Ledger.RewardAcnt Mock.C_Crypto -> Property
 prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_Block :: Ledger.Block TP.BHeader Mock.C -> Property
+prop_roundtrip_Block :: Ledger.Block (TP.BHeader Mock.C_Crypto) Mock.C -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_Header :: TP.BHeader Mock.C_Crypto -> Property

@@ -20,6 +20,7 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Era as Era (Crypto)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr
 import Cardano.Ledger.SafeHash
@@ -80,7 +81,7 @@ data ShelleyResultExamples era = ShelleyResultExamples
   }
 
 data ShelleyLedgerExamples era = ShelleyLedgerExamples
-  { sleBlock :: Block BHeader era,
+  { sleBlock :: Block (BHeader (Era.Crypto era)) era,
     sleHashHeader :: HashHeader (Cardano.Ledger.Era.Crypto era),
     sleTx :: Core.Tx era,
     sleApplyTxError :: ApplyTxError era,
@@ -163,7 +164,7 @@ exampleShelleyLedgerBlock ::
   forall era.
   ShelleyBasedEra' era =>
   Core.Tx era ->
-  Block BHeader era
+  Block (BHeader (Era.Crypto era)) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
   where
     keys :: AllIssuerKeys (Cardano.Ledger.Era.Crypto era) 'StakePool

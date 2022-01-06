@@ -125,7 +125,7 @@ instance
 
   type
     Signal (BBODY era) =
-      Block BHeaderView era
+      Block (BHeaderView (Crypto era)) era
 
   type Environment (BBODY era) = BbodyEnv era
 

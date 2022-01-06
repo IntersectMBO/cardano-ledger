@@ -162,7 +162,7 @@ evolveNonceUnfrozen n cs =
 newLab ::
   forall era.
   (Era era) =>
-  Block BHeader era ->
+  Block (BHeader (Crypto era)) era ->
   ChainState era ->
   ChainState era
 newLab b cs =
@@ -620,7 +620,7 @@ newEpoch ::
   forall era.
   (Core.PParams era ~ PParams era) =>
   Era era =>
-  Block BHeader era ->
+  Block (BHeader (Crypto era)) era ->
   ChainState era ->
   ChainState era
 newEpoch b cs = cs'

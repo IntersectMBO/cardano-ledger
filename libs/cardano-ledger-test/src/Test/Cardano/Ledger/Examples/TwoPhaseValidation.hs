@@ -3,19 +3,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Test.Cardano.Ledger.Examples.TwoPhaseValidation where
 
@@ -127,7 +121,7 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto, TestCrypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
@@ -219,13 +213,13 @@ alwaysSucceedsHash ::
   Natural ->
   Proof era ->
   ScriptHash (Crypto era)
-alwaysSucceedsHash n pf = hashScript @era $ (always n pf)
+alwaysSucceedsHash n pf = hashScript @era $ always n pf
 
 alwaysFailsHash :: forall era. Scriptic era => Natural -> Proof era -> ScriptHash (Crypto era)
-alwaysFailsHash n pf = hashScript @era $ (never n pf)
+alwaysFailsHash n pf = hashScript @era $ never n pf
 
 timelockScript :: PostShelley era => Int -> Proof era -> Core.Script era
-timelockScript s pf = allOf [matchkey 1, after (100 + s)] $ pf
+timelockScript s = allOf [matchkey 1, after (100 + s)]
 
 timelockHash ::
   forall era.
@@ -233,7 +227,7 @@ timelockHash ::
   Int ->
   Proof era ->
   ScriptHash (Crypto era)
-timelockHash n pf = hashScript @era $ (timelockScript n pf)
+timelockHash n pf = hashScript @era $ timelockScript n pf
 
 timelockAddr :: forall era. PostShelley era => Proof era -> Addr (Crypto era)
 timelockAddr pf = Addr Testnet pCred sCred
@@ -965,7 +959,7 @@ utxoEx9 pf = UTxO utxo
     utxo =
       Map.insert (TxIn (txid (validatingBodyManyScripts pf)) 0) (outEx9 pf) $
         Map.filterWithKey
-          (\k _ -> k /= (TxIn genesisId 1) && k /= (TxIn genesisId 100))
+          (\k _ -> k /= TxIn genesisId 1 && k /= TxIn genesisId 100)
           (unUTxO $ initUTxO pf)
 
 utxoStEx9 ::
@@ -1164,7 +1158,7 @@ incorrectNetworkIDTx pf =
     ]
 
 extraneousKeyHash :: CC.Crypto c => KeyHash 'Witness c
-extraneousKeyHash = hashKey . snd . mkKeyPair $ (RawSeed 0 0 0 0 99)
+extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
 
 missingRequiredWitnessTxBody :: Era era => Proof era -> Core.TxBody era
 missingRequiredWitnessTxBody pf =
@@ -1658,7 +1652,7 @@ testUTXOW' mutator pparams tx predicateFailure@(Left _) = do
   let st =
         runShelleyBase $
           applySTSTest @(AlonzoUTXOW A)
-            (TRC (utxoEnv pparams, (initialUtxoSt $ Alonzo Mock), tx))
+            (TRC (utxoEnv pparams, initialUtxoSt $ Alonzo Mock, tx))
       st' = case st of
         r@(Right _) -> r
         Left e -> Left (map mutator e)
@@ -1689,16 +1683,15 @@ quietPlutusFailureDescriptions
             )
         )
     ) =
-    ( WrappedShelleyEraFailure
-        ( UtxoFailure
-            ( UtxosFailure
-                ( ValidationTagMismatch
-                    (IsValid True)
-                    (FailedUnexpectedly (map quietPlutusFailureDescription fs))
-                )
-            )
-        )
-    )
+    WrappedShelleyEraFailure
+      ( UtxoFailure
+          ( UtxosFailure
+              ( ValidationTagMismatch
+                  (IsValid True)
+                  (FailedUnexpectedly (map quietPlutusFailureDescription fs))
+              )
+          )
+      )
 quietPlutusFailureDescriptions pf = pf
 
 alonzoUTXOWexamples :: TestTree
@@ -1796,7 +1789,7 @@ alonzoUTXOWexamples =
                       $ [NoRedeemer (Spending (TxIn genesisId 1))],
                     MissingRedeemers
                       [ ( Spending (TxIn genesisId 1),
-                          (alwaysSucceedsHash 3 pf)
+                          alwaysSucceedsHash 3 pf
                         )
                       ]
                   ]
@@ -1831,7 +1824,7 @@ alonzoUTXOWexamples =
                         NoWitness (timelockHash 0 pf)
                       ],
                     WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      (timelockHash 0 pf)
+                      timelockHash 0 pf
                   ]
               ),
           testCase "missing 2-phase script witness" $
@@ -1845,7 +1838,7 @@ alonzoUTXOWexamples =
                         NoWitness (alwaysSucceedsHash 2 pf)
                       ],
                     WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      (alwaysSucceedsHash 2 pf),
+                      alwaysSucceedsHash 2 pf,
                     -- these redeemers are associated with phase-1 scripts
                     ExtraRedeemers
                       [ RdmrPtr Tag.Mint 0,
@@ -1866,7 +1859,7 @@ alonzoUTXOWexamples =
                     -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
                     MissingRedeemers
                       [ ( Spending (TxIn genesisId 1),
-                          (alwaysSucceedsHash 3 pf)
+                          alwaysSucceedsHash 3 pf
                         )
                       ],
                     ExtraRedeemers [RdmrPtr Tag.Mint 0]
@@ -2038,7 +2031,7 @@ collectOrderingAlonzo :: TestTree
 collectOrderingAlonzo =
   testCase
     "collectTwoPhaseScriptInputs output order"
-    $ collectTwoPhaseScriptInputsOutputOrdering
+    collectTwoPhaseScriptInputsOutputOrdering
 
 -- =======================
 -- Alonzo BBODY Tests
@@ -2074,8 +2067,8 @@ makeNaiveBlock ::
     ToCBORGroup (TxSeq era)
   ) =>
   [Core.Tx era] ->
-  (Block BHeaderView era)
-makeNaiveBlock txs = (UnsafeUnserialisedBlock bhView txs')
+  Block (BHeaderView (Crypto era)) era
+makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txs'
   where
     bhView =
       BHeaderView
@@ -2087,7 +2080,7 @@ makeNaiveBlock txs = (UnsafeUnserialisedBlock bhView txs')
         }
     txs' = (toTxSeq @era) . StrictSeq.fromList $ txs
 
-testAlonzoBlock :: (Block BHeaderView A)
+testAlonzoBlock :: (Block (BHeaderView TestCrypto) A)
 testAlonzoBlock =
   makeNaiveBlock
     [ trustMe True $ validatingTx pf,
@@ -2102,7 +2095,7 @@ testAlonzoBlock =
   where
     pf = Alonzo Mock
 
-testAlonzoBadPMDHBlock :: (Block BHeaderView A)
+testAlonzoBadPMDHBlock :: (Block (BHeaderView TestCrypto) A)
 testAlonzoBadPMDHBlock = makeNaiveBlock [trustMe True $ poolMDHTooBigTx pf]
   where
     pf = Alonzo Mock
@@ -2142,7 +2135,7 @@ example1BBodyState =
 
 testBBODY ::
   BbodyState A ->
-  (Block BHeaderView A) ->
+  Block (BHeaderView TestCrypto) A ->
   Either [PredicateFailure (AlonzoBBODY A)] (BbodyState A) ->
   Assertion
 testBBODY initialSt block (Right expectedSt) =

@@ -242,7 +242,7 @@ blockEx1 ::
   ( HasCallStack,
     TwoPoolsConstraints era
   ) =>
-  Block BHeader era
+  Block (BHeader (Crypto era)) era
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -286,7 +286,7 @@ expectedStEx1 =
 -- This is the only block in this example that includes a transaction,
 -- and after this block is processed, the UTxO will consist entirely
 -- of Alice's new coin aliceCoinEx1, and Bob and Carls initial genesis coins.
-twoPools1 :: (TwoPoolsConstraints era) => CHAINExample BHeader era
+twoPools1 :: (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools1 = CHAINExample initStTwoPools blockEx1 (Right expectedStEx1)
 
 --
@@ -297,10 +297,10 @@ blockEx2 ::
   forall era.
   ( TwoPoolsConstraints era
   ) =>
-  Block BHeader era
+  Block (BHeader (Crypto era)) era
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @era blockEx1)
+    (bhHash $ bheader @(BHeader (Crypto era)) @era blockEx1)
     (coreNodeKeysBySchedule @era ppEx 90)
     []
     (SlotNo 90)
@@ -329,7 +329,7 @@ expectedStEx2 =
 twoPools2 ::
   ( TwoPoolsConstraints era
   ) =>
-  CHAINExample BHeader era
+  CHAINExample (BHeader (Crypto era)) era
 twoPools2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
@@ -347,10 +347,10 @@ blockEx3 ::
   forall era.
   ( TwoPoolsConstraints era
   ) =>
-  Block BHeader era
+  Block (BHeader (Crypto era)) era
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @era blockEx2)
+    (bhHash $ bheader @(BHeader (Crypto era)) @era blockEx2)
     (coreNodeKeysBySchedule @era ppEx 110)
     []
     (SlotNo 110)
@@ -399,7 +399,7 @@ expectedStEx3 =
 twoPools3 ::
   ( TwoPoolsConstraints era
   ) =>
-  CHAINExample BHeader era
+  CHAINExample (BHeader (Crypto era)) era
 twoPools3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
@@ -410,10 +410,10 @@ blockEx4 ::
   forall era.
   ( TwoPoolsConstraints era
   ) =>
-  Block BHeader era
+  Block (BHeader (Crypto era)) era
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @era blockEx3)
+    (bhHash $ bheader @(BHeader (Crypto era)) @era blockEx3)
     (coreNodeKeysBySchedule @era ppEx 190)
     []
     (SlotNo 190)
@@ -452,7 +452,7 @@ expectedStEx4 =
 --
 -- Create an empty block near the end of epoch 0 to close out the epoch,
 -- preparing the way for the first non-empty pool distribution.
-twoPools4 :: (TwoPoolsConstraints era) => CHAINExample BHeader era
+twoPools4 :: (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 epoch2Nonce :: forall era. (TwoPoolsConstraints era) => Nonce
@@ -464,10 +464,10 @@ epoch2Nonce =
 -- Block 5, Slot 221, Epoch 2
 --
 
-blockEx5 :: forall era. (TwoPoolsConstraints era) => Block BHeader era
+blockEx5 :: forall era. (TwoPoolsConstraints era) => Block (BHeader (Crypto era)) era
 blockEx5 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @era blockEx4)
+    (bhHash $ bheader @(BHeader (Crypto era)) @era blockEx4)
     Cast.alicePoolKeys
     []
     (SlotNo 221) -- odd slots open for decentralization
@@ -517,17 +517,17 @@ expectedStEx5 =
 --
 -- Create the first non-empty pool distribution by starting the epoch 2.
 -- Moreover, Alice's pool produces the block.
-twoPools5 :: (TwoPoolsConstraints era) => CHAINExample BHeader era
+twoPools5 :: (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools5 = CHAINExample expectedStEx4 blockEx5 (Right expectedStEx5)
 
 --
 -- Block 6, Slot 295, Epoch 2
 --
 
-blockEx6 :: forall era. (TwoPoolsConstraints era) => Block BHeader era
+blockEx6 :: forall era. (TwoPoolsConstraints era) => Block (BHeader (Crypto era)) era
 blockEx6 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @era blockEx5)
+    (bhHash $ bheader @(BHeader (Crypto era)) @era blockEx5)
     Cast.alicePoolKeys
     []
     (SlotNo 295) -- odd slots open for decentralization
@@ -551,17 +551,17 @@ expectedStEx6 =
 -- === Block 6, Slot 295, Epoch 2
 --
 -- Alice's pool produces a second block.
-twoPools6 :: (TwoPoolsConstraints era) => CHAINExample BHeader era
+twoPools6 :: (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools6 = CHAINExample expectedStEx5 blockEx6 (Right expectedStEx6)
 
 --
 -- Block 7, Slot 297, Epoch 2
 --
 
-blockEx7 :: forall era. (TwoPoolsConstraints era) => Block BHeader era
+blockEx7 :: forall era. (TwoPoolsConstraints era) => Block (BHeader (Crypto era)) era
 blockEx7 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @era blockEx6)
+    (bhHash $ bheader @(BHeader (Crypto era)) @era blockEx6)
     Cast.bobPoolKeys
     []
     (SlotNo 297) -- odd slots open for decentralization
@@ -584,7 +584,7 @@ expectedStEx7 =
 -- === Block 7, Slot 295, Epoch 2
 --
 -- Bob's pool produces a block.
-twoPools7 :: (TwoPoolsConstraints era) => CHAINExample BHeader era
+twoPools7 :: (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools7 = CHAINExample expectedStEx6 blockEx7 (Right expectedStEx7)
 
 --
@@ -596,10 +596,10 @@ epoch3Nonce =
   chainCandidateNonce (expectedStEx7 @era)
     ⭒ hashHeaderToNonce (bhHash $ bheader (blockEx4 @era))
 
-blockEx8 :: forall era. (TwoPoolsConstraints era) => Block BHeader era
+blockEx8 :: forall era. (TwoPoolsConstraints era) => Block (BHeader (Crypto era)) era
 blockEx8 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @era blockEx7)
+    (bhHash $ bheader @(BHeader (Crypto era)) @era blockEx7)
     (coreNodeKeysBySchedule @era ppEx 310)
     []
     (SlotNo 310)
@@ -624,17 +624,17 @@ expectedStEx8 =
 -- === Block 8, Slot 310, Epoch 3
 --
 -- Create an empty block to start epoch 3.
-twoPools8 :: (TwoPoolsConstraints era) => CHAINExample BHeader era
+twoPools8 :: (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 
 --
 -- Block 9, Slot 390, Epoch 3
 --
 
-blockEx9 :: forall era. (TwoPoolsConstraints era) => Block BHeader era
+blockEx9 :: forall era. (TwoPoolsConstraints era) => Block (BHeader (Crypto era)) era
 blockEx9 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @era blockEx8)
+    (bhHash $ bheader @(BHeader (Crypto era)) @era blockEx8)
     (coreNodeKeysBySchedule @era ppEx 390)
     []
     (SlotNo 390)
@@ -798,7 +798,7 @@ expectedStEx9 pp =
 --
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
-twoPools9 :: forall era. (TwoPoolsConstraints era) => CHAINExample BHeader era
+twoPools9 :: forall era. (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx)
 
 --
@@ -827,7 +827,7 @@ expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
 
 -- Create the first non-trivial reward update. The rewards demonstrate the
 -- results of the delegation scenario that was constructed in the first and only transaction.
-twoPools9Agg :: forall era. (TwoPoolsConstraints era) => CHAINExample BHeader era
+twoPools9Agg :: forall era. (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 
 testAggregateRewardsLegacy :: Assertion

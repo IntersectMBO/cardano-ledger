@@ -50,30 +50,30 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era
-  = Block' !(h (Crypto era)) !(Era.TxSeq era) BSL.ByteString
+  = Block' !h !(Era.TxSeq era) BSL.ByteString
   deriving (Generic)
 
 deriving stock instance
-  (Era era, Show (Era.TxSeq era), Show (h (Crypto era))) =>
+  (Era era, Show (Era.TxSeq era), Show h) =>
   Show (Block h era)
 
 deriving stock instance
-  (Era era, Eq (Era.TxSeq era), Eq (h (Crypto era))) =>
+  (Era era, Eq (Era.TxSeq era), Eq h) =>
   Eq (Block h era)
 
 deriving anyclass instance
   ( Era era,
     NoThunks (Era.TxSeq era),
-    NoThunks (h (Crypto era))
+    NoThunks h
   ) =>
   NoThunks (Block h era)
 
 pattern Block ::
   ( Era era,
     ToCBORGroup (Era.TxSeq era),
-    ToCBOR (h (Crypto era))
+    ToCBOR h
   ) =>
-  h (Crypto era) ->
+  h ->
   Era.TxSeq era ->
   Block h era
 pattern Block h txns <-
@@ -90,7 +90,7 @@ pattern Block h txns <-
 -- | Access a block without its serialised bytes. This is often useful when
 -- we're using a 'BHeaderView' in place of the concrete header.
 pattern UnserialisedBlock ::
-  h (Crypto era) ->
+  h ->
   Era.TxSeq era ->
   Block h era
 pattern UnserialisedBlock h txns <- Block' h txns _
@@ -103,7 +103,7 @@ pattern UnserialisedBlock h txns <- Block' h txns _
 --   serialised. Any uses of this pattern outside of testing code should be
 --   regarded with suspicion.
 pattern UnsafeUnserialisedBlock ::
-  h (Crypto era) ->
+  h ->
   Era.TxSeq era ->
   Block h era
 pattern UnsafeUnserialisedBlock h txns <-
@@ -136,7 +136,7 @@ instance
     ValidateScript era,
     Era.SupportsSegWit era,
     FromCBOR (Annotator (Era.TxSeq era)),
-    FromCBOR (Annotator (h (Crypto era))),
+    FromCBOR (Annotator (h)),
     Typeable h
   ) =>
   FromCBOR (Annotator (Block h era))
@@ -153,7 +153,7 @@ instance
 
 bheader ::
   Block h era ->
-  h (Crypto era)
+  h
 bheader (Block' bh _ _) = bh
 
 bbody :: Block h era -> Era.TxSeq era

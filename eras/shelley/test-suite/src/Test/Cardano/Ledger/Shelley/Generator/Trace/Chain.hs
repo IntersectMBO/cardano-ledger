@@ -102,7 +102,7 @@ instance
     Embed (Core.EraRule "BBODY" era) (CHAIN era),
     Environment (Core.EraRule "BBODY" era) ~ BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
+    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     Embed (Core.EraRule "TICKN" era) (CHAIN era),
     Environment (Core.EraRule "TICKN" era) ~ TicknEnv,
     State (Core.EraRule "TICKN" era) ~ TicknState,

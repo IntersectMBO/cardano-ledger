@@ -136,7 +136,7 @@ relevantCasesAreCoveredForTrace ::
   Trace (CHAIN era) ->
   Property
 relevantCasesAreCoveredForTrace tr = do
-  let blockTxs :: Block BHeader era -> [Core.Tx era]
+  let blockTxs :: Block (BHeader (Crypto era)) era -> [Core.Tx era]
       blockTxs (UnserialisedBlock _ txSeq) = toList (fromTxSeq @era txSeq)
       bs = traceSignals OldestFirst tr
       txs = concat (blockTxs <$> bs)
@@ -416,7 +416,7 @@ onlyValidChainSignalsAreGenerated =
     genesisChainSt = Just $ mkGenesisChainState (genEnv p)
 
 -- | Counts the epochs spanned by this trace
-epochsInTrace :: forall era. Era era => [Block BHeader era] -> Int
+epochsInTrace :: forall era. Era era => [Block (BHeader (Crypto era)) era] -> Int
 epochsInTrace [] = 0
 epochsInTrace bs =
   fromIntegral $ toEpoch - fromEpoch + 1
