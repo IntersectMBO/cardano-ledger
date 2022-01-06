@@ -75,8 +75,8 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.TxBody (decodeAddress28, decodeDataHash32, encodeAddress28, encodeDataHash32, getAdaOnly)
-import Cardano.Ledger.Babbage.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -219,10 +219,6 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, DatumHash dh)
     addr = decompactAddr bs
     val = fromCompact c
 viewTxOut (TxOutCompactDatum' bs c d) = (addr, val, Datum d)
-  where
-    addr = decompactAddr bs
-    val = fromCompact c
-viewTxOut (TxOutCompactDatum bs c d) = (addr, val, Datum d)
   where
     addr = decompactAddr bs
     val = fromCompact c
@@ -661,7 +657,7 @@ instance
             <*> decodeNonNegative
       Just 3 ->
         fmap pure $
-          TxOutCompact
+          TxOutCompactDH
             <$> fromCBOR
             <*> decodeNonNegative
             <*> fromCBOR

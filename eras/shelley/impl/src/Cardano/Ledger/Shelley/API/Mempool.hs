@@ -280,30 +280,6 @@ decodeApplyTxError ::
   Decoder s (f (ApplyTxError era))
 decodeApplyTxError = (fmap . fmap) ApplyTxError (decodeAnnList fromCBOR)
 
-instance
-  ( Era era,
-    FromCBOR (Annotator (PredicateFailure (Core.EraRule "LEDGER" era)))
-  ) =>
-  FromCBOR (Annotator (ApplyTxError era))
-  where
-  fromCBOR = (fmap . fmap) ApplyTxError (decodeAnnList fromCBOR)
-
-instance
-  ( Era era,
-    FromCBOR (Annotator (PredicateFailure (Core.EraRule "LEDGER" era)))
-  ) =>
-  FromCBOR (Annotator (ApplyTxError era))
-  where
-  fromCBOR = decodeApplyTxError
-
-decodeApplyTxError ::
-  forall f era s.
-  ( Applicative f,
-    FromCBOR (f (PredicateFailure (Core.EraRule "LEDGER" era)))
-  ) =>
-  Decoder s (f (ApplyTxError era))
-decodeApplyTxError = (fmap . fmap) ApplyTxError (decodeAnnList fromCBOR)
-
 -- | Old 'applyTxs'
 applyTxs ::
   ApplyTx era =>

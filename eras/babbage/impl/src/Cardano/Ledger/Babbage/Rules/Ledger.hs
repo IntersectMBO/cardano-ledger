@@ -29,7 +29,7 @@ import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
     PState (..),
-    UTxOState (..),
+    UTxOState (..), rewards
   )
 import Cardano.Ledger.Shelley.Rules.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (..))
@@ -156,7 +156,7 @@ instance
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (utxoSt, DPState {_dstate, _pstate}) ->
-              obligation ledgerPp (_rewards _dstate) (_pParams _pstate)
+              obligation ledgerPp (rewards _dstate) (_pParams _pstate)
                 == _deposited utxoSt
         )
     ]

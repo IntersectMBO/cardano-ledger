@@ -34,20 +34,18 @@ import Cardano.Binary
   ( Encoding,
     FromCBOR (..),
     ToCBOR (..),
-    encodeNull,
-    serialize',
-    serializeEncoding',
   )
-import Cardano.Ledger.Babbage.Language (Language (..))
-import Cardano.Ledger.Babbage.Scripts
-  ( CostModel,
+import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.PParams (LangDepView (..), encodeLangViews, getLanguageView)
+import Cardano.Ledger.Alonzo.Scripts
+  ( CostModel (..),
     ExUnits (..),
     Prices (..),
     decodeCostModelMap,
   )
 import Cardano.Ledger.BaseTypes
   ( NonNegativeInterval,
-    Nonce (NeutralNonce),
+    Nonce,
     StrictMaybe (..),
     UnitInterval,
     fromSMaybe,
@@ -55,7 +53,6 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Era
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
@@ -66,7 +63,6 @@ import Cardano.Ledger.Shelley.PParams (HKD)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
-import Data.ByteString (ByteString)
 import Data.Coders
   ( Decode (..),
     Density (..),
@@ -87,6 +83,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
+import Cardano.Ledger.Era (Era)
 
 type PParamsUpdate era = PParams' StrictMaybe era
 
@@ -118,18 +115,10 @@ data PParams' f era = PParams
     _rho :: !(HKD f UnitInterval),
     -- | Treasury expansion
     _tau :: !(HKD f UnitInterval),
-    -- | Decentralization parameter. Note that the scale is inverted here - a
-    -- value of 0 indicates full decentralisation, where 1 indicates full
-    -- federalisation.
-    _d :: !(HKD f UnitInterval),
-    -- | Extra entropy
-    _extraEntropy :: !(HKD f Nonce),
     -- | Protocol version
     _protocolVersion :: !(HKD f BT.ProtVer),
     -- | Minimum Stake Pool Cost
     _minPoolCost :: !(HKD f Coin),
-    -- new/updated for alonzo
-
     -- | Cost in lovelace per word (8 bytes) of UTxO storage (instead of _minUTxOValue)
     _coinsPerUTxOWord :: !(HKD f Coin),
     -- | Cost models for non-native script languages
@@ -150,7 +139,7 @@ data PParams' f era = PParams
   }
   deriving (Generic)
 
-type PParams era = PParams' Identity era
+type PParams = PParams' Identity
 
 deriving instance Eq (PParams' Identity era)
 
@@ -160,7 +149,7 @@ deriving instance NFData (PParams' Identity era)
 
 instance NoThunks (PParams era)
 
-instance (Era era) => ToCBOR (PParams era) where
+instance Era era => ToCBOR (PParams era) where
   toCBOR
     PParams
       { _minfeeA = minfeeA',
@@ -175,11 +164,8 @@ instance (Era era) => ToCBOR (PParams era) where
         _a0 = a0',
         _rho = rho',
         _tau = tau',
-        _d = d',
-        _extraEntropy = extraEntropy',
         _protocolVersion = protocolVersion',
         _minPoolCost = minPoolCost',
-        -- new/updated for alonzo
         _coinsPerUTxOWord = coinsPerUTxOWord',
         _costmdls = costmdls',
         _prices = prices',
@@ -203,11 +189,8 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To a0'
             !> To rho'
             !> To tau'
-            !> To d'
-            !> To extraEntropy'
             !> E toCBORGroup protocolVersion'
             !> To minPoolCost'
-            -- new/updated for alonzo
             !> To coinsPerUTxOWord'
             !> mapEncode costmdls'
             !> To prices'
@@ -218,10 +201,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To maxCollateralInputs'
         )
 
-instance
-  (Era era) =>
-  FromCBOR (PParams era)
-  where
+instance Era era => FromCBOR (PParams era) where
   fromCBOR =
     decode $
       RecD PParams
@@ -237,11 +217,8 @@ instance
         <! From -- _a0              :: NonNegativeInterval
         <! From -- _rho             :: UnitInterval
         <! From -- _tau             :: UnitInterval
-        <! From -- _d               :: UnitInterval
-        <! From -- _extraEntropy    :: Nonce
         <! D fromCBORGroup -- _protocolVersion :: ProtVer
         <! From -- _minPoolCost     :: Natural
-        -- new/updated for alonzo
         <! From -- _coinsPerUTxOWord  :: Coin
         <! D decodeCostModelMap -- _costmdls :: (Map Language CostModel)
         <! From -- _prices = prices',
@@ -267,11 +244,8 @@ emptyPParams =
       _a0 = minBound,
       _rho = minBound,
       _tau = minBound,
-      _d = minBound,
-      _extraEntropy = NeutralNonce,
       _protocolVersion = BT.ProtVer 0 0,
       _minPoolCost = mempty,
-      -- new/updated for alonzo
       _coinsPerUTxOWord = Coin 0,
       _costmdls = mempty,
       _prices = Prices minBound minBound,
@@ -286,33 +260,26 @@ emptyPParams =
 -- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
 instance Ord (PParams' StrictMaybe era) where
   compare x y =
-    (_minfeeA x, _minfeeA y)
-      <== (_minfeeB x, _minfeeB y)
-      <== (_maxBBSize x, _maxBBSize y)
-      <== (_maxTxSize x, _maxTxSize y)
-      <== (_maxBHSize x, _maxBHSize y)
-      <== (_keyDeposit x, _keyDeposit y)
-      <== (_poolDeposit x, _poolDeposit y)
-      <== (_eMax x, _eMax y)
-      <== (_nOpt x, _nOpt y)
-      <== (_a0 x, _a0 y)
-      <== (_rho x, _rho y)
-      <== (_tau x, _tau y)
-      <== (_d x, _d y)
-      <== (_extraEntropy x, _extraEntropy y)
-      <== (_protocolVersion x, _protocolVersion y)
-      <== (_minPoolCost x, _minPoolCost y)
-      <== (_coinsPerUTxOWord x, _coinsPerUTxOWord y)
-      <== (_costmdls x, _costmdls y)
-      <== (_prices x, _prices y)
-      <== ( case compareEx (_maxTxExUnits x) (_maxTxExUnits y) of
-              LT -> LT
-              GT -> GT
-              EQ -> case compareEx (_maxBlockExUnits x) (_maxBlockExUnits y) of
-                LT -> LT
-                GT -> GT
-                EQ -> compare (_maxValSize x) (_maxValSize y)
-       )
+    compare (_minfeeA x) (_minfeeA y)
+      <> compare (_minfeeB x) (_minfeeB y)
+      <> compare (_maxBBSize x) (_maxBBSize y)
+      <> compare (_maxTxSize x) (_maxTxSize y)
+      <> compare (_maxBHSize x) (_maxBHSize y)
+      <> compare (_keyDeposit x) (_keyDeposit y)
+      <> compare (_poolDeposit x) (_poolDeposit y)
+      <> compare (_eMax x) (_eMax y)
+      <> compare (_nOpt x) (_nOpt y)
+      <> compare (_a0 x) (_a0 y)
+      <> compare (_rho x) (_rho y)
+      <> compare (_tau x) (_tau y)
+      <> compare (_protocolVersion x) (_protocolVersion y)
+      <> compare (_minPoolCost x) (_minPoolCost y)
+      <> compare (_coinsPerUTxOWord x) (_coinsPerUTxOWord y)
+      <> compare (_costmdls x) (_costmdls y)
+      <> compare (_prices x) (_prices y)
+      <> compareEx (_maxTxExUnits x) (_maxTxExUnits y)
+      <> compareEx (_maxBlockExUnits x) (_maxBlockExUnits y)
+      <> compare (_maxValSize x) (_maxValSize y)
 
 compareEx :: StrictMaybe ExUnits -> StrictMaybe ExUnits -> Ordering
 compareEx SNothing SNothing = EQ
@@ -353,8 +320,6 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 9 (_a0 ppup) toCBOR
     !> omitStrictMaybe 10 (_rho ppup) toCBOR
     !> omitStrictMaybe 11 (_tau ppup) toCBOR
-    !> omitStrictMaybe 12 (_d ppup) toCBOR
-    !> omitStrictMaybe 13 (_extraEntropy ppup) toCBOR
     !> omitStrictMaybe 14 (_protocolVersion ppup) toCBOR
     !> omitStrictMaybe 16 (_minPoolCost ppup) toCBOR
     !> omitStrictMaybe 17 (_coinsPerUTxOWord ppup) toCBOR
@@ -374,7 +339,7 @@ encodePParamsUpdate ppup =
     fromSJust (SJust x) = x
     fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
 
-instance (Era era) => ToCBOR (PParamsUpdate era) where
+instance Era era => ToCBOR (PParamsUpdate era) where
   toCBOR ppup = encode (encodePParamsUpdate ppup)
 
 emptyPParamsUpdate :: PParamsUpdate era
@@ -392,11 +357,8 @@ emptyPParamsUpdate =
       _a0 = SNothing,
       _rho = SNothing,
       _tau = SNothing,
-      _d = SNothing,
-      _extraEntropy = SNothing,
       _protocolVersion = SNothing,
       _minPoolCost = SNothing,
-      -- new/updated for alonzo
       _coinsPerUTxOWord = SNothing,
       _costmdls = SNothing,
       _prices = SNothing,
@@ -420,8 +382,6 @@ updateField 8 = field (\x up -> up {_nOpt = SJust x}) From
 updateField 9 = field (\x up -> up {_a0 = SJust x}) From
 updateField 10 = field (\x up -> up {_rho = SJust x}) From
 updateField 11 = field (\x up -> up {_tau = SJust x}) From
-updateField 12 = field (\x up -> up {_d = SJust x}) From
-updateField 13 = field (\x up -> up {_extraEntropy = SJust x}) From
 updateField 14 = field (\x up -> up {_protocolVersion = SJust x}) From
 updateField 16 = field (\x up -> up {_minPoolCost = SJust x}) From
 updateField 17 = field (\x up -> up {_coinsPerUTxOWord = SJust x}) From
@@ -434,7 +394,7 @@ updateField 23 = field (\x up -> up {_collateralPercentage = SJust x}) From
 updateField 24 = field (\x up -> up {_maxCollateralInputs = SJust x}) From
 updateField k = field (\_x up -> up) (Invalid k)
 
-instance (Era era) => FromCBOR (PParamsUpdate era) where
+instance Era era => FromCBOR (PParamsUpdate era) where
   fromCBOR =
     decode
       (SparseKeyed "PParamsUpdate" emptyPParamsUpdate updateField [])
@@ -457,11 +417,8 @@ updatePParams pp ppup =
       _a0 = fromSMaybe (_a0 pp) (_a0 ppup),
       _rho = fromSMaybe (_rho pp) (_rho ppup),
       _tau = fromSMaybe (_tau pp) (_tau ppup),
-      _d = fromSMaybe (_d pp) (_d ppup),
-      _extraEntropy = fromSMaybe (_extraEntropy pp) (_extraEntropy ppup),
       _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
       _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup),
-      -- new/updated for alonzo
       _coinsPerUTxOWord = fromSMaybe (_coinsPerUTxOWord pp) (_coinsPerUTxOWord ppup),
       _costmdls = fromSMaybe (_costmdls pp) (_costmdls ppup),
       _prices = fromSMaybe (_prices pp) (_prices ppup),
@@ -472,40 +429,13 @@ updatePParams pp ppup =
       _maxCollateralInputs = fromSMaybe (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
     }
 
--- ===================================================
--- Figure 1: "Definitions Used in Protocol Parameters"
-
--- The LangDepView is a key value pair. The key is the (canonically) encoded
--- language tag and the value is the (canonically) encoded set of relevant
--- protocol parameters
-data LangDepView = LangDepView {tag :: ByteString, params :: ByteString}
-  deriving (Eq, Show, Ord, Generic, NoThunks)
-
-getLanguageView ::
-  forall era.
-  PParams era ->
-  Language ->
-  LangDepView
-getLanguageView pp lang@PlutusV1 =
-  LangDepView
-    (serialize' lang)
-    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))
-getLanguageView pp lang@PlutusV2 =
-  LangDepView
-    (serialize' lang)
-    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (_costmdls pp))
-
-encodeLangViews :: Set LangDepView -> Encoding
-encodeLangViews views =
-  toCBOR $ Map.fromList (unLangDepView <$> Set.toList views)
-  where
-    unLangDepView (LangDepView a b) = (a, b)
-
 -- | Turn an PParams' into a Shelley.Params'
-retractPP :: HKD f Coin -> PParams' f era2 -> Shelley.PParams' f era1
+retractPP :: HKD f Coin -> HKD f UnitInterval -> HKD f Nonce -> PParams' f era -> Shelley.PParams' f era
 retractPP
   c
-  (PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP _ _ _ _ _ _ _ _) =
+  d
+  eE
+  (PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau pv mnP _ _ _ _ _ _ _ _) =
     Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP
 
 -- | Given the missing pieces Turn a Shelley.PParams' into an Params'
@@ -521,7 +451,7 @@ extendPP ::
   HKD f Natural ->
   PParams' f era2
 extendPP
-  (Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv _ mnP)
+  (Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau _d _eE pv _ mnP)
   ada
   cost
   price
@@ -530,4 +460,10 @@ extendPP
   mxV
   col
   mxCol =
-    PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP ada cost price mxTx mxBl mxV col mxCol
+    PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau pv mnP ada cost price mxTx mxBl mxV col mxCol
+
+-- | Since Babbage removes the '_d' field from PParams, we provide this
+-- 'HasField' instance which defaults '_d' to '0' in order to reuse
+-- code for the reward calculation.
+instance HasField "_d" (PParams era) UnitInterval where
+  getField _ = minBound

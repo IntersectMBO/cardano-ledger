@@ -330,7 +330,7 @@ instance Mock c => Arbitrary (ScriptIntegrity (BabbageEra c)) where
     ScriptIntegrity
       <$> arbitrary
       <*> genData
-      <*> (Set.singleton <$> (getLanguageView <$> arbitrary <*> arbitrary))
+      <*> (Set.singleton <$> (getLanguageView @(BabbageEra c) <$> arbitrary <*> arbitrary))
 
 instance
   Mock (Crypto era) =>

@@ -35,8 +35,6 @@ import Cardano.Ledger.Shelley.Constraints
 import Control.State.Transition (State)
 import Data.Coders (Annotator)
 import Data.Sharing (FromSharedCBOR, Interns, Share)
-import Data.Coders (Annotator)
-import Data.Sharing (FromSharedCBOR, Interns, Share)
 
 class
   ( CC.Crypto (Crypto era),

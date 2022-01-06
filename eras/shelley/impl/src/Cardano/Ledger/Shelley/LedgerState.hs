@@ -245,7 +245,6 @@ import Cardano.Prelude (rightToMaybe)
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (StateT (..), evalStateT)
 import Control.Monad.Trans
-import Control.Monad.Trans.State.Strict (StateT)
 import Control.Provenance (ProvM, liftProv, modifyM)
 import Control.SetAlgebra (dom, eval, (∈), (▷), (◁))
 import Control.State.Transition (STS (State))
@@ -804,53 +803,6 @@ instance
   FromCBOR (NewEpochState era)
   where
   fromCBOR = runIdentity <$> decode decodeNewEpochState
-
-instance
-  ( Era era,
-    FromCBOR (Core.PParams era),
-    FromSharedCBOR (Annotator (Core.TxOut era)),
-    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
-    FromCBOR (Core.Value era),
-    FromCBOR (State (Core.EraRule "PPUP" era))
-  ) =>
-  FromCBOR (Annotator (NewEpochState era))
-  where
-  fromCBOR = decode decodeNewEpochState
-
-decodeNewEpochState ::
-  ( Applicative f,
-    Era era,
-    FromCBOR (f (EpochState era))
-  ) =>
-  (Decode ('Closed 'Dense) (f (NewEpochState era)))
-decodeNewEpochState =
-  Ann (RecD NewEpochState)
-    <*! Ann From
-    <*! Ann From
-    <*! Ann From
-    <*! From
-    <*! Ann From
-    <*! Ann From
-
-instance
-  ( Era era,
-    FromCBOR (Core.PParams era),
-    FromSharedCBOR (Annotator (Core.TxOut era)),
-    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era)),
-    FromCBOR (Core.Value era),
-    FromCBOR (State (Core.EraRule "PPUP" era))
-  ) =>
-  FromCBOR (Annotator (NewEpochState era))
-  where
-  fromCBOR = do
-    decode $
-      Ann (RecD NewEpochState)
-        <*! Ann From
-        <*! Ann From
-        <*! Ann From
-        <*! From
-        <*! Ann From
-        <*! Ann From
 
 instance
   ( Era era,
