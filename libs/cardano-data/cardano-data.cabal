@@ -41,6 +41,7 @@ library
                      , Data.Sharing
                      , Data.BiMap
                      , Data.MapExtras
+                     , Data.Roundtrip
                      , Data.UMap
 
   build-depends:       base >=4.11 && <5
@@ -70,15 +71,20 @@ test-suite cardano-data-tests
   hs-source-dirs:      test
   main-is:             Main.hs
   other-modules:       Test.Data.UMap
+                     , Test.Data.Coders
                      
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
-                    -- , cardano-prelude
+                     , bytestring
+                     , cardano-binary
+                     , cborg
                      , containers
+                     , strict-containers
                      , tasty
                      , tasty-quickcheck
-                     -- , tasty-hunit
+                     , tasty-hunit
+                     , text
                      , cardano-data
                      , QuickCheck
                      -- , quickcheck-classes-base

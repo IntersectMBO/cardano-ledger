@@ -6,27 +6,17 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 
-module Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
+module Test.Data.Coders
   ( codersTest,
-    roundTrip,
-    roundTrip',
-    embedTrip,
-    embedTrip',
-    roundTripAnn,
-    embedTripAnn,
-    RoundTripResult,
   )
 where
 
 import Cardano.Binary
-  ( Annotator (..),
-    FromCBOR (fromCBOR),
-    FullByteString (Full),
+  ( FromCBOR (fromCBOR),
     ToCBOR (toCBOR),
     encodeListLen,
     encodeWord,
   )
-import Codec.CBOR.Decoding (Decoder)
 import Codec.CBOR.Encoding (Encoding)
 import Codec.CBOR.FlatTerm (TermToken, toFlatTerm)
 import Codec.CBOR.Read (DeserialiseFailure, deserialiseFromBytes)
@@ -51,43 +41,13 @@ import Data.Coders
     (!>),
     (<!),
   )
+import Data.Roundtrip (roundTrip')
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Text (Text, pack)
 import Data.Typeable
 import Test.Tasty
 import Test.Tasty.HUnit
 import Test.Tasty.QuickCheck hiding (scale)
-
--- =====================================================================
-
-type RoundTripResult t = Either Codec.CBOR.Read.DeserialiseFailure (Lazy.ByteString, t)
-
-roundTrip :: (ToCBOR t, FromCBOR t) => t -> RoundTripResult t
-roundTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))
-
-roundTrip' :: (t -> Encoding) -> (forall s. Decoder s t) -> t -> RoundTripResult t
-roundTrip' enc dec t = deserialiseFromBytes dec (toLazyByteString (enc t))
-
-roundTripAnn :: (ToCBOR t, FromCBOR (Annotator t)) => t -> RoundTripResult t
-roundTripAnn s =
-  let bytes = toLazyByteString (toCBOR s)
-   in case deserialiseFromBytes fromCBOR bytes of
-        Left err -> Left err
-        Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
-
--- | Can we serialise a type, and then deserialise it as something else?
-embedTrip :: (ToCBOR t, FromCBOR s) => t -> RoundTripResult s
-embedTrip s = deserialiseFromBytes fromCBOR (toLazyByteString (toCBOR s))
-
-embedTrip' :: (s -> Encoding) -> (forall x. Decoder x t) -> s -> RoundTripResult t
-embedTrip' enc dec s = deserialiseFromBytes dec (toLazyByteString (enc s))
-
-embedTripAnn :: forall s t. (ToCBOR t, FromCBOR (Annotator s)) => t -> RoundTripResult s
-embedTripAnn s =
-  let bytes = toLazyByteString (toCBOR s)
-   in case deserialiseFromBytes fromCBOR bytes of
-        Left err -> Left err
-        Right (leftover, Annotator f) -> Right (leftover, f (Full bytes))
 
 -- ==========================================================================
 

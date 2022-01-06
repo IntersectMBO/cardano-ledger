@@ -22,9 +22,9 @@ import qualified Cardano.Ledger.Shelley.Tx as LTX
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
+import Data.Roundtrip (roundTrip, roundTrip', roundTripAnn)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders (roundTrip, roundTrip', roundTripAnn)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Tasty
 import Test.Tasty.QuickCheck

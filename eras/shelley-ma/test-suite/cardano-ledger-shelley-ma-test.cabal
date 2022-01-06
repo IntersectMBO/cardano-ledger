@@ -51,7 +51,6 @@ library
     Test.Cardano.Ledger.AllegraEraGen
     Test.Cardano.Ledger.Allegra.Examples.Consensus
     Test.Cardano.Ledger.ShelleyMA.TxBody
-    Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators
     Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip
   -- other-extensions:
