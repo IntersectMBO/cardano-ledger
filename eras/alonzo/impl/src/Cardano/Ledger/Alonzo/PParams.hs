@@ -68,7 +68,6 @@ import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Shelley.PParams (HKD)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Slot (EpochNo (..))
-import Cardano.Prelude (HasField (getField))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -95,6 +94,7 @@ import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Generics (Generic)
+import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
