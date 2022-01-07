@@ -175,6 +175,7 @@ import Control.Monad.Identity (Identity)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map (Map, toList)
@@ -362,9 +363,9 @@ ppMaybe :: (x -> Doc ann) -> Maybe x -> Doc ann
 ppMaybe _ Nothing = text "?-"
 ppMaybe p (Just x) = text "?" <> p x
 
-ppMap' :: PDoc -> (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
-ppMap' name kf vf m =
-  let docs = fmap (\(k, v) -> arrow (kf k, vf v)) (Map.toList m)
+ppAssocList :: PDoc -> (k -> PDoc) -> (v -> PDoc) -> [(k, v)] -> PDoc
+ppAssocList name kf vf xs =
+  let docs = fmap (\(k, v) -> arrow (kf k, vf v)) xs
       vertical =
         if isEmpty name
           then hang 1 (puncLeft lbrace docs comma rbrace)
@@ -373,6 +374,12 @@ ppMap' name kf vf m =
         flatAlt
           vertical
           (name <> encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) docs)
+
+ppSplitMap :: (k -> PDoc) -> (v -> PDoc) -> SplitMap.SplitMap k v -> PDoc
+ppSplitMap kf vf = ppAssocList (text "SplitMap") kf vf . SplitMap.toList
+
+ppMap' :: PDoc -> (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
+ppMap' name kf vf = ppAssocList name kf vf . Map.toList
 
 ppMap :: (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
 ppMap = ppMap' (text "Map")
@@ -383,7 +390,7 @@ ppVMap ::
   (v -> PDoc) ->
   VMap.VMap kv vv k v ->
   PDoc
-ppVMap pk pv = ppMap' (text "VMap") pk pv . VMap.toMap
+ppVMap pk pv = ppAssocList (text "VMap") pk pv . VMap.toList
 
 class PrettyA t where
   prettyA :: t -> PDoc
@@ -891,7 +898,7 @@ ppUTxO ::
   PrettyA (Core.TxOut era) =>
   UTxO era ->
   PDoc
-ppUTxO (UTxO m) = ppMap' (text "UTxO") ppTxIn prettyA m
+ppUTxO = ppAssocList (text "UTxO") ppTxIn prettyA . SplitMap.toList . unUTxO
 
 instance
   PrettyA (Core.TxOut era) =>

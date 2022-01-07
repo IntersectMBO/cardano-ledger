@@ -258,6 +258,7 @@ import Data.Coders
     (<!),
     (<*!),
   )
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
@@ -1022,9 +1023,13 @@ consumed ::
   UTxO era ->
   Core.TxBody era ->
   Core.Value era
-consumed pp u tx =
-  balance @era (eval (txins @era tx ◁ u)) <> Val.inject (refunds <+> withdrawals)
+consumed pp (UTxO u) tx =
+  {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
+  Set.foldl' lookupAddTxOut mempty (txins @era tx)
+    <> Val.inject (refunds <+> withdrawals)
   where
+    lookupAddTxOut acc txin = maybe acc (addTxOut acc) $ SplitMap.lookup txin u
+    addTxOut !b out = getField @"value" out <+> b
     refunds = keyRefunds pp tx
     withdrawals = fold . unWdrl $ getField @"wdrls" tx
 
@@ -1261,7 +1266,7 @@ aggregateUtxoCoinByCredential ::
   Map (Credential 'Staking (Crypto era)) Coin ->
   Map (Credential 'Staking (Crypto era)) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
-  Map.foldl' accum initial u
+  SplitMap.foldl' accum initial u
   where
     accum !ans out =
       case (getField @"address" out, getField @"value" out) of
@@ -1304,7 +1309,7 @@ incrementalAggregateUtxoCoinByCredential ::
   IncrementalStake (Crypto era) ->
   IncrementalStake (Crypto era)
 incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
-  Map.foldl' accum initial u
+  SplitMap.foldl' accum initial u
   where
     keepOrDelete new Nothing =
       case mode new of
@@ -1448,7 +1453,7 @@ smartUTxOState utxo c1 c2 st =
     c1
     c2
     st
-    (updateStakeDistribution (IStake Map.empty Map.empty) (UTxO Map.empty) utxo)
+    (updateStakeDistribution mempty mempty utxo)
 
 -- ==============================
 
@@ -1826,7 +1831,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     us = _utxoState ls
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
-      Map.partition (isBootstrapRedeemer . getField @"address") utxo
+      SplitMap.partition (isBootstrapRedeemer . getField @"address") utxo
     acnt = esAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
@@ -1846,10 +1851,10 @@ instance Default (PPUPState era) where
   def = PPUPState emptyPPPUpdates emptyPPPUpdates
 
 instance
-  Default (State (Core.EraRule "PPUP" era)) =>
+  (Default (State (Core.EraRule "PPUP" era)), CC.Crypto (Crypto era)) =>
   Default (UTxOState era)
   where
-  def = UTxOState (UTxO Map.empty) (Coin 0) (Coin 0) def (IStake mempty Map.empty)
+  def = UTxOState mempty mempty mempty def mempty
 
 instance
   (Default (LedgerState era), Default (Core.PParams era)) =>

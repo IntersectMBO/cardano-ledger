@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -77,7 +78,7 @@ translateUTxOByronToShelley ::
   UTxO (ShelleyEra c)
 translateUTxOByronToShelley (Byron.UTxO utxoByron) =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (txInShelley, txOutShelley)
         | (txInByron, txOutByron) <- Map.toList utxoByron,
           let txInShelley = translateCompactTxInByronToShelley txInByron

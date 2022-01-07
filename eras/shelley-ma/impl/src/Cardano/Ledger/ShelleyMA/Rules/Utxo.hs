@@ -39,7 +39,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Shelley.LedgerState (PPUPState, updateStakeDistribution)
+import Cardano.Ledger.Shelley.LedgerState (PPUPState)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
@@ -52,8 +52,7 @@ import Cardano.Ledger.Shelley.TxBody
     unWdrl,
   )
 import Cardano.Ledger.Shelley.UTxO
-  ( UTxO,
-    balance,
+  ( UTxO (..),
     totalDeposits,
     txins,
     txouts,
@@ -66,7 +65,6 @@ import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁), (➖))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
@@ -76,7 +74,8 @@ import Data.Coders
     encodeFoldable,
     invalidKey,
   )
-import Data.Foldable (fold, toList)
+import qualified Data.Compact.SplitMap as SplitMap
+import Data.Foldable (toList)
 import Data.Functor.Identity (Identity (..))
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -213,20 +212,12 @@ consumed ::
   UTxO era ->
   Core.TxBody era ->
   Core.Value era
-consumed pp u tx =
-  balance @era (eval (txins @era tx ◁ u))
-    <> getField @"mint" tx
-    <> Val.inject (refunds <> withdrawals)
-  where
-    -- balance (UTxO (Map.restrictKeys v (txins tx))) + refunds + withdrawals
-    refunds = Shelley.keyRefunds pp tx
-    withdrawals = fold . unWdrl $ getField @"wdrls" tx
+consumed pp u tx = Shelley.consumed pp u tx <> getField @"mint" tx
 
 -- | The UTxO transition rule for the Shelley-MA (Mary and Allegra) eras.
 utxoTransition ::
   forall era.
   ( UsesTxBody era,
-    UsesTxOut era,
     UsesValue era,
     STS (UTXO era),
     Embed (Core.EraRule "PPUP" era) (UTXO era),
@@ -249,7 +240,7 @@ utxoTransition ::
   TransitionRule (UTXO era)
 utxoTransition = do
   TRC (Shelley.UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
-  let Shelley.UTxOState utxo deposits' fees ppup incStake = u
+  let Shelley.UTxOState utxo _ _ ppup _ = u
   let txb = getField @"body" tx
 
   inInterval slot (getField @"vldt" txb)
@@ -261,8 +252,8 @@ utxoTransition = do
       txFee = getField @"txfee" txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  eval (txins @era txb ⊆ dom utxo)
-    ?! BadInputsUTxO (eval (txins @era txb ➖ dom utxo))
+  let badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) (txins @era txb)
+  Set.null badInputs ?! BadInputsUTxO badInputs
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
@@ -292,7 +283,7 @@ utxoTransition = do
   -- the check `adaPolicy ∉ supp mint tx` in the spec.
   Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
 
-  let outputs = Map.elems $ unUTxO (txouts txb)
+  let outputs = unUTxO (txouts txb)
       minUTxOValue = getField @"_minUTxOValue" pp
       outputsTooSmall =
         filter
@@ -304,7 +295,7 @@ utxoTransition = do
                       v
                       (Val.inject $ scaledMinDeposit v minUTxOValue)
           )
-          outputs
+          (SplitMap.elems outputs)
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   let outputsTooBig =
@@ -316,7 +307,7 @@ utxoTransition = do
               -- max transaction size. We will make it a protocol parameter
               -- in the Alonzo era.
           )
-          outputs
+          (SplitMap.elems outputs)
   null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
@@ -327,7 +318,7 @@ utxoTransition = do
               AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
               _ -> False
           )
-          outputs
+          (SplitMap.elems outputs)
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
@@ -337,18 +328,7 @@ utxoTransition = do
   let refunded = Shelley.keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
   let depositChange = totalDeposits pp (`Map.notMember` stakepools) txCerts Val.<-> refunded
-  let utxoAdd = txouts txb -- These will be inserted into the UTxO
-  let utxoDel = eval (txins @era txb ◁ utxo) -- These will be deleted from the UTxO
-  let newIncStakeDistro = updateStakeDistribution @era incStake utxoDel utxoAdd
-
-  pure
-    Shelley.UTxOState
-      { Shelley._utxo = eval ((txins @era txb ⋪ utxo) ∪ utxoAdd),
-        Shelley._deposited = deposits' <> depositChange,
-        Shelley._fees = fees <> getField @"txfee" txb,
-        Shelley._ppups = ppup',
-        Shelley._stakeDistro = newIncStakeDistro
-      }
+  pure $! Shelley.updateUTxOState u txb depositChange ppup'
 
 --------------------------------------------------------------------------------
 -- UTXO STS

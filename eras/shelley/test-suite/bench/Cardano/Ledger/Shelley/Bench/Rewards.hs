@@ -37,10 +37,12 @@ import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)
 import Control.Provenance (runProvM, runWithProvM)
 import Control.State.Transition.Extended (IRC (..), TRC (..), applySTS)
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (def))
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
 import qualified Data.Map.Strict as Map
+import qualified Data.Maybe as Maybe
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -90,8 +92,8 @@ genChainInEpoch epoch = do
           . LS.nesEs
           $ chainNes genesisChainState
       initUtxoAddrs =
-        Map.elems
-          . Map.mapMaybe (\(TxOut addr _) -> addrToKeyHash addr)
+        Maybe.mapMaybe (\(TxOut addr _) -> addrToKeyHash addr)
+          . SplitMap.elems
           . unUTxO
           $ initUtxo
       stakeMap =

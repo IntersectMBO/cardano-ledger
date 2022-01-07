@@ -65,6 +65,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Coders
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (foldl')
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (intercalate)
@@ -101,7 +102,7 @@ getData tx (UTxO m) sp = case sp of
   Certifying _dcert -> []
   Spending txin ->
     -- Only the Spending ScriptPurpose contains Data
-    case Map.lookup txin m of
+    case SplitMap.lookup txin m of
       Nothing -> []
       Just txout ->
         case getField @"datahash" txout of
@@ -302,7 +303,7 @@ scriptsNeededFromBody (UTxO u) txb = spend ++ reward ++ cert ++ minted
       where
         collect :: TxIn (Crypto era) -> Maybe (ScriptPurpose (Crypto era), ScriptHash (Crypto era))
         collect !i = do
-          addr <- getField @"address" <$> Map.lookup i u
+          addr <- getField @"address" <$> SplitMap.lookup i u
           hash <- getScriptHash addr
           return (Spending i, hash)
 

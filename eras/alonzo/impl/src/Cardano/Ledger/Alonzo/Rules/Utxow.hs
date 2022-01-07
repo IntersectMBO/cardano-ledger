@@ -77,9 +77,10 @@ import Cardano.Ledger.Shelley.TxBody
     unWdrl,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txinLookup)
-import Control.SetAlgebra (domain, eval, (⊆), (◁), (➖))
+import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
 import Data.Functor.Identity (Identity (..))
 import qualified Data.Map.Strict as Map
@@ -274,10 +275,10 @@ alonzoStyleWitness = do
 
   {-  { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} = dom(txdats txw)   -}
   let inputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
-      smallUtxo = eval (inputs ◁ utxo) :: Map.Map (TxIn (Crypto era)) (Core.TxOut era)
+      smallUtxo = inputs SplitMap.◁ unUTxO utxo
       twoPhaseOuts =
         [ output
-          | (_input, output) <- Map.toList smallUtxo,
+          | (_input, output) <- SplitMap.toList smallUtxo,
             isTwoPhaseScriptAddress @era tx (getField @"address" output)
         ]
       utxoHashes' = mapM (getField @"datahash") twoPhaseOuts
@@ -287,7 +288,7 @@ alonzoStyleWitness = do
       -- of the equality check, but we must explicitly rule it out.
       failBecause . UnspendableUTxONoDatumHash . Set.fromList $
         [ input
-          | (input, output) <- Map.toList smallUtxo,
+          | (input, output) <- SplitMap.toList smallUtxo,
             SNothing <- [getField @"datahash" output],
             isTwoPhaseScriptAddress @era tx (getField @"address" output)
         ]

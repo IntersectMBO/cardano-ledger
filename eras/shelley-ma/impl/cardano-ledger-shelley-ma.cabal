@@ -62,6 +62,7 @@ library
     cardano-slotting,
     cborg,
     containers,
+    compact-map,
     data-default-class,
     deepseq,
     groups,
@@ -70,7 +71,6 @@ library
     primitive,
     cardano-ledger-shelley,
     small-steps,
-    set-algebra,
     strict-containers,
     text,
     transformers

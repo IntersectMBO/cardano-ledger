@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -19,6 +20,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo
     UtxoPredicateFailure (..),
     UtxoEvent (..),
     PredicateFailure,
+    updateUTxOState,
   )
 where
 
@@ -91,7 +93,6 @@ import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, (∪), (⊆), (⋪), (◁), (➖))
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -108,6 +109,7 @@ import Control.State.Transition
     (?!),
   )
 import Data.Coders (Annotator)
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -350,7 +352,6 @@ utxoInductive ::
   forall era utxo.
   ( Core.TxOut era ~ TxOut era,
     UsesAuxiliary era,
-    UsesTxOut era,
     STS (utxo era),
     Embed (Core.EraRule "PPUP" era) (utxo era),
     BaseM (utxo era) ~ ShelleyBase,
@@ -377,7 +378,7 @@ utxoInductive ::
   TransitionRule (utxo era)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
-  let UTxOState utxo deposits' fees ppup incStake = u
+  let UTxOState utxo _ _ ppup _ = u
   let txb = getField @"body" tx
 
   getField @"ttl" txb >= slot ?! ExpiredUTxO (getField @"ttl" txb) slot
@@ -390,8 +391,10 @@ utxoInductive = do
       txFee = getField @"txfee" txb
   minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
 
-  eval (txins @era txb ⊆ dom utxo)
-    ?! BadInputsUTxO (eval (txins @era txb ➖ dom utxo))
+  {- badInputs = txins txb ➖ dom utxo -}
+  let badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) (txins txb)
+  {- txins txb ⊆ dom utxo -}
+  Set.null badInputs ?! BadInputsUTxO badInputs
 
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
@@ -412,7 +415,7 @@ utxoInductive = do
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputs = Map.elems $ unUTxO (txouts txb)
+  let outputs = unUTxO (txouts txb)
       minUTxOValue = getField @"_minUTxOValue" pp
       -- minUTxOValue deposit comparison done as Coin because this rule
       -- is correct strictly in the Shelley era (in shelleyMA we would need to
@@ -423,7 +426,7 @@ utxoInductive = do
               let c = getField @"value" x
                in Val.coin c < minUTxOValue
           )
-          outputs
+          (SplitMap.elems outputs)
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
   -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
@@ -434,7 +437,7 @@ utxoInductive = do
               AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
               _ -> False
           )
-          outputs
+          (SplitMap.elems outputs)
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
@@ -446,19 +449,30 @@ utxoInductive = do
   let totalDeposits' = totalDeposits pp (`Map.notMember` stakepools) txCerts
   tellEvent $ TotalDeposits totalDeposits'
   let depositChange = totalDeposits' <-> refunded
-  let utxoAdd = txouts txb -- These will be inserted into the UTxO
-  let utxoDel = eval (txins @era txb ◁ utxo) -- These will be deleted from the UTxO
-  let newUTxO = eval ((txins @era txb ⋪ utxo) ∪ utxoAdd) -- Domain exclusion (a ⋪ b) deletes 'a' from the domain of 'b'
-  let newIncStakeDistro = updateStakeDistribution @era incStake utxoDel utxoAdd
+  pure $! updateUTxOState u txb depositChange ppup'
 
-  pure
-    UTxOState
-      { _utxo = newUTxO,
-        _deposited = deposits' <> depositChange,
-        _fees = fees <> getField @"txfee" txb,
-        _ppups = ppup',
-        _stakeDistro = newIncStakeDistro
-      }
+updateUTxOState ::
+  (Era era, HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))) =>
+  UTxOState era ->
+  Core.TxBody era ->
+  Coin ->
+  State (Core.EraRule "PPUP" era) ->
+  UTxOState era
+updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositChange ppups =
+  let UTxO utxo = _utxo
+      !utxoAdd = txouts txb -- These will be inserted into the UTxO
+      {- utxoDel  = txins txb ◁ utxo -}
+      !(!utxoWithout, !utxoDel) = SplitMap.extractKeysSet utxo (txins txb)
+      {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
+      newUTxO = utxoWithout `SplitMap.union` unUTxO utxoAdd
+      newIncStakeDistro = updateStakeDistribution _stakeDistro (UTxO utxoDel) utxoAdd
+   in UTxOState
+        { _utxo = UTxO newUTxO,
+          _deposited = _deposited <> depositChange,
+          _fees = _fees <> getField @"txfee" txb,
+          _ppups = ppups,
+          _stakeDistro = newIncStakeDistro
+        }
 
 instance
   ( Era era,

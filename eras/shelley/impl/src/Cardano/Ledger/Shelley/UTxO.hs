@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -24,6 +25,7 @@ module Cardano.Ledger.Shelley.UTxO
     txouts,
     txup,
     balance,
+    sumAllValue,
     totalDeposits,
     makeWitnessVKey,
     makeWitnessesVKey,
@@ -33,7 +35,6 @@ module Cardano.Ledger.Shelley.UTxO
     scriptsNeeded,
     scriptCred,
     scriptStakeCred,
-    txinsScript,
 
     -- * Utilities
     TransUTxO,
@@ -81,21 +82,14 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.TxIn as Core (txid)
-import Cardano.Ledger.Val (zero, (<+>), (<×>))
+import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
-import Control.SetAlgebra
-  ( BaseRep (MapR),
-    Embed (..),
-    Exp (Base),
-    HasExp (toExp),
-    eval,
-    (◁),
-  )
-import Data.Coders (decodeMap)
+import Data.Coders (decodeSplitMap, encodeSplitMap)
 import Data.Coerce (coerce)
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Constraint (Constraint)
-import Data.Foldable (toList)
+import Data.Foldable (foldMap', toList)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -112,22 +106,9 @@ import Quiet
 
 -- ===============================================
 
-instance
-  (Crypto era ~ crypto, Core.TxOut era ~ out) =>
-  HasExp (UTxO era) (Map (TxIn crypto) out)
-  where
-  toExp (UTxO x) = Base MapR x
-
-instance
-  (Crypto era ~ crypto, Core.TxOut era ~ out) =>
-  Embed (UTxO era) (Map (TxIn crypto) out)
-  where
-  toBase (UTxO x) = x
-  fromBase = UTxO
-
 -- | The unspent transaction outputs.
-newtype UTxO era = UTxO {unUTxO :: Map (TxIn (Crypto era)) (Core.TxOut era)}
-  deriving (Generic)
+newtype UTxO era = UTxO {unUTxO :: SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)}
+  deriving (Generic, Semigroup)
 
 type TransUTxO (c :: Type -> Constraint) era = (c (Core.TxOut era), TransTxId c era)
 
@@ -136,16 +117,12 @@ deriving instance TransUTxO NoThunks era => NoThunks (UTxO era)
 deriving instance (Era era, NFData (Core.TxOut era)) => NFData (UTxO era)
 
 deriving newtype instance
-  Eq (Core.TxOut era) =>
-  Eq (UTxO era)
+  (Eq (Core.TxOut era), CC.Crypto (Crypto era)) => Eq (UTxO era)
 
-deriving newtype instance
-  (Era era, ToCBOR (Core.TxOut era)) =>
-  ToCBOR (UTxO era)
+deriving newtype instance CC.Crypto (Crypto era) => Monoid (UTxO era)
 
-deriving newtype instance
-  (Era era, FromCBOR (Core.TxOut era)) =>
-  FromCBOR (UTxO era)
+instance (Era era, ToCBOR (Core.TxOut era)) => ToCBOR (UTxO era) where
+  toCBOR = encodeSplitMap toCBOR toCBOR . unUTxO
 
 instance
   ( CC.Crypto (Crypto era),
@@ -158,8 +135,8 @@ instance
     Share (Annotator (UTxO era)) =
       Share (UTxO era)
   fromSharedCBOR credsInterns = do
-    !theMap <- decodeMap fromCBOR (fromSharedCBOR credsInterns)
-    pure $ UTxO <$!> (sequenceA theMap)
+    !theMap <- decodeSplitMap fromCBOR (fromSharedCBOR credsInterns)
+    pure $ UTxO <$!> sequenceA theMap
 
 instance
   ( CC.Crypto (Crypto era),
@@ -172,7 +149,7 @@ instance
     Share (UTxO era) =
       Interns (Credential 'Staking (Crypto era))
   fromSharedCBOR credsInterns =
-    UTxO <$!> decodeMap fromCBOR (fromSharedCBOR credsInterns)
+    UTxO <$!> decodeSplitMap fromCBOR (fromSharedCBOR credsInterns)
 
 instance
   ( CC.Crypto (Crypto era),
@@ -182,14 +159,13 @@ instance
   FromCBOR (Annotator (UTxO era))
   where
   fromCBOR = do
-    !theMap <- decodeMap fromCBOR fromCBOR
-    pure $ UTxO <$!> (sequenceA theMap)
+    !theMap <- decodeSplitMap fromCBOR fromCBOR
+    pure $ UTxO <$!> sequenceA theMap
 
 deriving via
   Quiet (UTxO era)
   instance
-    Show (Core.TxOut era) =>
-    Show (UTxO era)
+    (Show (Core.TxOut era), CC.Crypto (Crypto era)) => Show (UTxO era)
 
 -- | Compute the UTxO inputs of a transaction.
 -- txins has the same problems as txouts, see notes below.
@@ -214,7 +190,7 @@ txouts ::
   UTxO era
 txouts tx =
   UTxO $
-    Map.fromList
+    SplitMap.fromList
       [ (TxIn transId idx, out)
         | (out, idx) <- zip (toList $ getField @"outputs" tx) [0 ..]
       ]
@@ -226,7 +202,7 @@ txinLookup ::
   TxIn (Crypto era) ->
   UTxO era ->
   Maybe (Core.TxOut era)
-txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
+txinLookup txin (UTxO utxo') = SplitMap.lookup txin utxo'
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
@@ -278,12 +254,21 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
 
 -- | Determine the total balance contained in the UTxO.
 balance ::
+  forall era.
   Era era =>
   UTxO era ->
   Core.Value era
-balance (UTxO utxo) = Map.foldl' addTxOuts zero utxo
-  where
-    addTxOuts !b out = getField @"value" out <+> b
+balance = sumAllValue @era . unUTxO
+{-# INLINE balance #-}
+
+-- | Sum all the value in any Foldable with elements that have a field "value"
+sumAllValue ::
+  forall era tx f.
+  (Foldable f, HasField "value" tx (Core.Value era), Monoid (Core.Value era)) =>
+  f tx ->
+  Core.Value era
+sumAllValue = foldMap' (getField @"value")
+{-# INLINE sumAllValue #-}
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
@@ -359,35 +344,31 @@ scriptsNeeded ::
   tx ->
   Set (ScriptHash (Crypto era))
 scriptsNeeded u tx =
-  Set.fromList (Map.elems $ Map.mapMaybe (getScriptHash . (getField @"address")) u'')
+  scriptHashes
     `Set.union` Set.fromList
-      ( Maybe.mapMaybe (scriptCred . getRwdCred) $
-          Map.keys withdrawals
-      )
+      [sh | w <- withdrawals, Just sh <- [scriptCred (getRwdCred w)]]
     `Set.union` Set.fromList
-      ( Maybe.mapMaybe
-          scriptStakeCred
-          (filter requiresVKeyWitness certificates)
-      )
+      [sh | c <- certificates, requiresVKeyWitness c, Just sh <- [scriptStakeCred c]]
     `Set.union` getField @"minted" txbody -- This might be Set.empty in some Eras.
   where
     txbody = getField @"body" tx
-    withdrawals = unWdrl (getField @"wdrls" txbody)
-    u'' = eval (txinsScript (getField @"inputs" txbody) u ◁ u)
+    withdrawals = Map.keys (unWdrl (getField @"wdrls" txbody))
+    scriptHashes = txinsScriptHashes (getField @"inputs" txbody) u
     certificates = toList (getField @"certs" txbody)
 
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
-txinsScript ::
-  (HasField "address" (Core.TxOut era) (Addr crypto0)) =>
+txinsScriptHashes ::
+  (HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
-  Set (TxIn (Crypto era))
-txinsScript txInps (UTxO u) = foldr add Set.empty txInps
+  Set (ScriptHash (Crypto era))
+txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
   where
-    -- to get subset, start with empty, and only insert those inputs in txInps that are locked in u
-    add input ans = case Map.lookup input u of
+    -- to get subset, start with empty, and only insert those inputs in txInps
+    -- that are locked in u
+    add input ans = case SplitMap.lookup input u of
       Just out -> case getField @"address" out of
-        Addr _ (ScriptHashObj _) _ -> Set.insert input ans
+        Addr _ (ScriptHashObj h) _ -> Set.insert h ans
         _ -> ans
       Nothing -> ans

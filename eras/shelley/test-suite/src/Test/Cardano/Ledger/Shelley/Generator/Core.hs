@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.Core
   ( AllIssuerKeys (..),
-    applyTxBody,
     GenEnv (..),
     ScriptSpace (..),
     TwoPhase3ArgInfo (..),
@@ -61,7 +60,7 @@ import Cardano.Binary (ToCBOR)
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Crypto.VRF (evalCertified)
-import Cardano.Ledger.Address (Addr (..), getRwdCred, toAddr, toCred)
+import Cardano.Ledger.Address (Addr (..), toAddr, toCred)
 import Cardano.Ledger.BaseTypes
   ( BoundedRational (..),
     Nonce (..),
@@ -113,36 +112,15 @@ import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     KeyPairs,
-    LedgerState,
-    depositPoolChange,
-    reapRewards,
-    _delegationState,
-    _deposited,
-    _dstate,
-    _fees,
-    _unified,
-    _utxo,
-    _utxoState,
   )
-import Cardano.Ledger.Shelley.PParams (PParams)
-import Cardano.Ledger.Shelley.Scripts
-  ( ScriptHash,
-  )
+import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import Cardano.Ledger.Shelley.Tx
-  ( TxIn,
-    WitnessSet,
+  ( WitnessSet,
     pattern TxIn,
   )
 import qualified Cardano.Ledger.Shelley.Tx as Ledger
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert,
-    Wdrl,
-    unWdrl,
-  )
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO,
-    txins,
-    txouts,
     pattern UTxO,
   )
 import Cardano.Ledger.Slot
@@ -171,19 +149,16 @@ import Cardano.Protocol.TPraos.OCert
 import Codec.Serialise (serialise)
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (∪), (⋪))
 import Data.ByteString.Lazy (toStrict)
 import Data.Coerce (coerce)
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
 import Data.Ratio (denominator, numerator, (%))
-import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Set (Set)
 import Data.Word (Word64)
-import GHC.Records (HasField, getField)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as Plutus
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
@@ -725,50 +700,13 @@ genesisAccountState =
 -- | Creates the UTxO for a new ledger with the specified
 -- genesis TxId and transaction outputs.
 genesisCoins ::
+  CC.Crypto (Crypto era) =>
   Ledger.TxId (Crypto era) ->
   [Core.TxOut era] ->
   UTxO era
 genesisCoins genesisTxId outs =
   UTxO $
-    Map.fromList [(TxIn genesisTxId idx, out) | (idx, out) <- zip [0 ..] outs]
-
--- | Apply a transaction body as a state transition function on the ledger state.
-applyTxBody ::
-  forall era.
-  ( Era era,
-    Show (Core.TxOut era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField
-      "wdrls"
-      (Core.TxBody era)
-      (Wdrl (Crypto era))
-  ) =>
-  LedgerState era ->
-  PParams era ->
-  Core.TxBody era ->
-  LedgerState era
-applyTxBody ls pp tx =
-  ls
-    { _utxoState =
-        us
-          { _utxo = eval (txins @era tx ⋪ (_utxo us) ∪ txouts tx),
-            _deposited = depositPoolChange ls pp tx,
-            _fees = (getField @"txfee" tx) <> (_fees . _utxoState $ ls)
-          },
-      _delegationState =
-        dels
-          { _dstate = dst {_unified = newAccounts}
-          }
-    }
-  where
-    dels = _delegationState ls
-    dst = _dstate dels
-    us = _utxoState ls
-    newAccounts =
-      reapRewards
-        ((_unified . _dstate . _delegationState) ls)
-        (Map.mapKeys getRwdCred . unWdrl $ getField @"wdrls" tx)
+    SplitMap.fromList [(TxIn genesisTxId idx, out) | (idx, out) <- zip [0 ..] outs]
 
 -- ==================================================================
 -- Operations on GenEnv that deal with ScriptSpace

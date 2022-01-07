@@ -83,6 +83,7 @@ import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
   ( ByteString,
   )
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -147,7 +148,7 @@ genByronAddrFromVKey vkey =
 utxo0 :: UTxO C
 utxo0 =
   UTxO $
-    Map.singleton
+    SplitMap.singleton
       (TxIn genesisId 0)
       (TxOut aliceAddr aliceInitCoin)
 
@@ -170,7 +171,7 @@ txBad = Tx txBody mempty {bootWits = Set.fromList [aliceBadWitness]} SNothing
 utxoState1 :: UTxOState C
 utxoState1 =
   UTxOState
-    { _utxo = UTxO $ Map.fromList [bobResult, aliceResult],
+    { _utxo = UTxO $ SplitMap.fromList [bobResult, aliceResult],
       _deposited = Coin 0,
       _fees = Coin 10,
       _ppups = PPUPState (ProposedPPUpdates mempty) (ProposedPPUpdates mempty),

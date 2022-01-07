@@ -167,7 +167,7 @@ test-suite cardano-ledger-shelley-test
       -- We set a bound here so that we're alerted of potential space
       -- leaks in our generators (or test) code.
       --
-      -- The 4 megabytes stack bound and 200 megabytes heap bound were
+      -- The 4 megabytes stack bound and 250 megabytes heap bound were
       -- determined ad-hoc.
       "-with-rtsopts=-K4m -M250m"
   build-depends:
@@ -232,6 +232,7 @@ benchmark mainbench
     cardano-prelude,
     cardano-protocol-tpraos,
     cardano-slotting,
+    compact-map,
     containers,
     criterion,
     data-default-class,
@@ -249,4 +250,4 @@ benchmark mainbench
       -threaded
       -rtsopts
       -with-rtsopts=-N
-      -O
+      -O2

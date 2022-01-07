@@ -13,9 +13,8 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Word (Word64)
+import Test.Compact.Common
 import Test.Compact.KeyMap
-import Test.Tasty
-import Test.Tasty.QuickCheck
 import Prelude hiding (lookup)
 
 -- ==============================================================
@@ -35,13 +34,7 @@ instance Arbitrary MockTxIn where
 -- A simple type with a Split instance
 
 data SS = SS Int Word64
-  deriving (Eq, Show)
-
-instance Ord SS where
-  compare (SS i n) (SS j m) =
-    case compare i j of
-      EQ -> compare n m
-      other -> other
+  deriving (Eq, Ord, Show)
 
 instance Split SS where
   splitKey (SS n m) = (n, Key m 0 0 0)
@@ -86,11 +79,15 @@ maxKeyx x = case lookupMax x of
   Nothing -> True === True
   Just (k, _v) -> counterexample ("max=" ++ show k ++ "map=\n" ++ show x) (allKeyx (\x1 -> x1 <= k) x === True)
 
-mapWorksx :: SplitMap k Int -> Property
-mapWorksx x = allValx (== (99 :: Int)) (mapWithKey (\_key _x -> 99) x) === True
+mapWorksx :: SplitMap k Int -> Bool
+mapWorksx x = allValx (== (99 :: Int)) (mapWithKey (\_key _x -> 99) x)
 
 foldintersectS :: forall k. SplitMap k Int -> SplitMap k Int -> Property
 foldintersectS x y = foldOverIntersection (\ans _key u _v -> ans + u) 0 x y === foldlWithKey' (\ans _key u -> ans + u) 0 (intersection x y)
+
+withoutRestrictExtractS :: (Eq k, Split k, Show k) => SplitMap k Int -> Set k -> Property
+withoutRestrictExtractS m domset =
+  extractKeysSet m domset === (withoutKeysSet m domset, restrictKeysSet m domset)
 
 withoutRestrictS :: (Eq k, Split k, Show k) => SplitMap k Int -> Set k -> Property
 withoutRestrictS m domset = union (withoutKeysSet m domset) (restrictKeysSet m domset) === m
@@ -108,14 +105,14 @@ splitwholeS :: (Eq k, Show k, Split k) => k -> SplitMap k Int -> Property
 splitwholeS k m =
   case splitLookup k m of
     (m1, Nothing, m2) -> m === union m1 m2
-    (m1, Just v, m2) -> m === (insert k v (union m1 m2))
+    (m1, Just v, m2) -> m === insert k v (union m1 m2)
 
 testWhen :: Test k => SplitMap k Int -> SplitMap k Int -> Bool
 testWhen xs ys = intersectionWhen p xs ys == filterWithKey q (intersectionWith r xs ys)
   where
     q _k v = even v
     r _u v = v
-    p k u v = if (q k v) then Just (r u v) else Nothing
+    p k u v = if q k v then Just (r u v) else Nothing
 
 -- ===============================================
 
@@ -152,6 +149,7 @@ splitIsMapTests =
       testProperty "lookupMax finds the largest key" (maxKeyx @SS @Int),
       testProperty "(mapWithKey f) applies 'f' to every value" (mapWorksx @MockTxIn),
       testProperty "foldOverIntersection folds over the intersection" (foldintersectS @MockTxIn),
+      testProperty "extractKeysSet = restrictKeysSet + withoutKeysSet" (withoutRestrictExtractS @MockTxIn),
       testProperty "restrictKeysSet and withoutKeysSet partition a KeyMap" (withoutRestrictS @MockTxIn),
       testProperty "restrictKeysMap and withoutKeysMap partition a KeyMap" (withoutRestrictM @MockTxIn),
       testProperty "restrictKeysSplit and withoutKeysSplit partition a KeyMap" (withoutRestrictSp @MockTxIn),
@@ -167,9 +165,10 @@ infix 4 %==%
 
 (%==%) :: (Split k, Eq k, Eq v, Show k, Show v) => SplitMap k v -> Map.Map k v -> Property
 (%==%) x y =
-  counterexample
-    ("\nkeymap\n" ++ show x ++ "\ndatamap\n" ++ show y)
-    (toList x === Map.toList y)
+  counterexample ("Invariant violated:\n" ++ show x) (valid x)
+    .&&. counterexample
+      ("\nkeymap\n" ++ show x ++ "\ndatamap\n" ++ show y)
+      (toList x === Map.toList y)
 
 type Test k = (Split k, Eq k, Show k, Ord k)
 
@@ -180,10 +179,16 @@ deleteSPLITDATA :: forall k v. (Test k, Eq v, Show v) => k -> [(k, v)] -> Proper
 deleteSPLITDATA k m = delete k (fromList m) %==% Map.delete k (Map.fromList m)
 
 unionSPLITDATA :: forall k v. (Test k, Eq v, Show v) => [(k, v)] -> [(k, v)] -> Property
-unionSPLITDATA n m = union (fromList n) (fromList m) %==% Map.union (Map.fromList n) (Map.fromList m)
+unionSPLITDATA n m =
+  union (fromList n) (fromList m) %==% Map.union (Map.fromList n) (Map.fromList m)
 
-intersectSPLITDATA :: forall k v. (Test k, Eq v, Show v) => [(k, v)] -> [(k, v)] -> Property
-intersectSPLITDATA n m = intersection (fromList n) (fromList m) %==% Map.intersection (Map.fromList n) (Map.fromList m)
+disjointSPLITDATA :: forall k v. Test k => [(k, v)] -> [(k, v)] -> Property
+disjointSPLITDATA n m =
+  disjoint (fromList n) (fromList m) === Map.disjoint (Map.fromList n) (Map.fromList m)
+
+intersectionSPLITDATA :: forall k v. (Test k, Eq v, Show v) => [(k, v)] -> [(k, v)] -> Property
+intersectionSPLITDATA n m =
+  intersection (fromList n) (fromList m) %==% Map.intersection (Map.fromList n) (Map.fromList m)
 
 lookupSPLITDATA :: forall k v. (Test k, Eq v, Show v) => k -> [(k, v)] -> Property
 lookupSPLITDATA k m = lookup k (fromList m) === Map.lookup k (Map.fromList m)
@@ -221,7 +226,8 @@ splitMapEquivDataMap =
     [ testPropertyN 500 "insert" (insertSPLITDATA @SS @Int),
       testPropertyN 500 "delete" (deleteSPLITDATA @SS @Int),
       testPropertyN 500 "union" (unionSPLITDATA @SS @Int),
-      testPropertyN 500 "intersection" (intersectSPLITDATA @SS @Int),
+      testPropertyN 500 "intersection" (intersectionSPLITDATA @SS @Int),
+      testPropertyN 500 "disjoint" (disjointSPLITDATA @SS @Int),
       testPropertyN 500 "lookup" (lookupSPLITDATA @SS @Int),
       testPropertyN 500 "withoutKeys" (withoutSPLITDATA @SS @Int),
       testPropertyN 500 "restrictKeys" (restrictSPLITDATA @SS @Int),
@@ -233,4 +239,18 @@ splitMapEquivDataMap =
     ]
 
 splitMapTests :: TestTree
-splitMapTests = testGroup "SplitMap tests" [splitIsMapTests, splitMapEquivDataMap]
+splitMapTests =
+  testGroup
+    "SplitMap tests"
+    [ splitIsMapTests,
+      splitMapEquivDataMap,
+      testLawsGroup
+        "classes"
+        [ eqLaws (Proxy @(SplitMap MockTxIn Word)),
+          semigroupLaws (Proxy @(SplitMap MockTxIn Word)),
+          monoidLaws (Proxy @(SplitMap MockTxIn Word)),
+          isListLaws (Proxy @(SplitMap MockTxIn Word)),
+          foldableLaws (Proxy @(SplitMap MockTxIn)),
+          traversableLaws (Proxy @(SplitMap MockTxIn))
+        ]
+    ]

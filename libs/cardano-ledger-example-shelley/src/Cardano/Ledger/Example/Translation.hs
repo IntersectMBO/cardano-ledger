@@ -143,7 +143,7 @@ instance Crypto c => TranslateEra (ExampleEra c) TxOut where
 
 instance Crypto c => TranslateEra (ExampleEra c) UTxO where
   translateEra ctxt utxo =
-    return $ UTxO $ Map.map (translateEra' ctxt) $ unUTxO utxo
+    return $ UTxO (translateEra' ctxt <$> unUTxO utxo)
 
 instance Crypto c => TranslateEra (ExampleEra c) UTxOState where
   translateEra ctxt us =

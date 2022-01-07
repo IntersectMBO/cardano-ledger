@@ -66,7 +66,6 @@ library test
     Test.Cardano.Ledger.Example
   -- other-extensions:
   build-depends:
-    array,
     cardano-ledger-example-shelley,
     cardano-ledger-shelley-test,
     base >=4.9 && <4.15,
@@ -82,7 +81,6 @@ library test
     cborg,
     containers,
     hashable,
-    mtl,
     cardano-ledger-shelley,
     small-steps,
     strict-containers,

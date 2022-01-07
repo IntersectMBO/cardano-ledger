@@ -60,6 +60,7 @@ library
     cardano-ledger-shelley-ma,
     cardano-protocol-tpraos,
     cardano-slotting,
+    compact-map,
     containers,
     data-default-class,
     hashable,
@@ -68,7 +69,6 @@ library
     QuickCheck,
     cardano-ledger-shelley-test,
     cardano-ledger-shelley,
-    set-algebra,
     strict-containers,
     text,
   hs-source-dirs:
@@ -104,6 +104,7 @@ test-suite cardano-ledger-alonzo-test
     cardano-ledger-shelley-ma-test,
     cardano-protocol-tpraos,
     cardano-slotting,
+    compact-map,
     containers,
     data-default-class,
     plutus-core,

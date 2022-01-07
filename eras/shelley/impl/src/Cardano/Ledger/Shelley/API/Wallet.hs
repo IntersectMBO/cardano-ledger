@@ -124,6 +124,7 @@ import Data.Coders
     (!>),
     (<!),
   )
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
@@ -158,7 +159,7 @@ getFilteredUTxO ::
   UTxO era
 getFilteredUTxO ss addrs =
   UTxO $
-    Map.filter
+    SplitMap.filter
       (\out -> getField @"compactAddress" out `Set.member` addrSBSs)
       fullUTxO
   where
@@ -172,8 +173,7 @@ getUTxOSubset ::
   Set (TxIn (Crypto era)) ->
   UTxO era
 getUTxOSubset ss txins =
-  UTxO $
-    fullUTxO `Map.restrictKeys` txins
+  UTxO $ fullUTxO `SplitMap.restrictKeysSet` txins
   where
     UTxO fullUTxO = getUTxO ss
 

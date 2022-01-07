@@ -45,6 +45,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
 import Data.Maybe (fromMaybe)
 import Data.Word (Word64)
+import GHC.Stack
 import qualified Test.QuickCheck as QuickCheck
 
 -- | State transition systems for which traces can be generated, given a trace
@@ -59,19 +60,20 @@ class STS sts => HasTrace sts traceGenEnv where
   -- | Interpret the action from the base monad into a pure value, given some
   -- initial environment. This obviously places some contraints on the nature of
   -- the base monad for a trace to be completed.
-  interpretSTS :: forall a. (BaseEnv sts -> STS.BaseM sts a -> a)
+  interpretSTS :: forall a. HasCallStack => (BaseEnv sts -> STS.BaseM sts a -> a)
   default interpretSTS :: (STS.BaseM sts ~ Identity) => forall a. BaseEnv sts -> STS.BaseM sts a -> a
   interpretSTS _ (Identity x) = x
 
-  envGen :: traceGenEnv -> QuickCheck.Gen (Environment sts)
+  envGen :: HasCallStack => traceGenEnv -> QuickCheck.Gen (Environment sts)
 
   sigGen ::
+    HasCallStack =>
     traceGenEnv ->
     Environment sts ->
     State sts ->
     QuickCheck.Gen (Signal sts)
 
-  shrinkSignal :: Signal sts -> [Signal sts]
+  shrinkSignal :: HasCallStack => Signal sts -> [Signal sts]
 
 -- | Generate a random trace starting in the given environment and initial state.
 traceFrom ::
@@ -124,7 +126,8 @@ trace traceEnv maxTraceLength traceGenEnv =
 traceFromInitState ::
   forall sts traceGenEnv.
   ( HasTrace sts traceGenEnv,
-    Show (Environment sts)
+    Show (Environment sts),
+    HasCallStack
   ) =>
   BaseEnv sts ->
   -- | Maximum trace length.

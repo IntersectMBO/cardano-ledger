@@ -25,6 +25,7 @@ module Data.Compact.KeyMap
     insertWithKey,
     delete,
     mapWithKey,
+    traverseWithKey,
     restrictKeys,
     withoutKeys,
     intersection,
@@ -54,6 +55,7 @@ module Data.Compact.KeyMap
     ppSexp,
     ppList,
     -- Debugging
+    valid,
     histogram,
     hdepth,
     bitsPerSegment,
@@ -89,7 +91,7 @@ import Data.Compact.SmallArray
     withMutArray,
     withMutArray_,
   )
-import Data.Foldable (foldl')
+import Data.Foldable as F (foldl', foldr, foldr')
 import qualified Data.Primitive.SmallArray as Small
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -98,6 +100,7 @@ import qualified Data.Vector.Primitive as VP
 import qualified Data.Vector.Primitive.Mutable as MVP
 import Data.Word (Word64)
 import GHC.Exts (isTrue#, reallyUnsafePtrEquality#, (==#))
+import NoThunks.Class
 import Numeric (showIntAtBase)
 import Prettyprinter
 import qualified Prettyprinter.Internal as Pretty
@@ -218,6 +221,22 @@ data KeyMap v
   | Full {-# UNPACK #-} !(Small.SmallArray (KeyMap v)) -- segmentMaxValue subtrees
   deriving (NFData, Generic)
 
+instance NoThunks v => NoThunks (KeyMap v) where
+  showTypeOf _ = "KeyMap"
+  wNoThunks ctxt = \case
+    Empty -> return Nothing
+    Leaf _ v -> wNoThunks ctxt v
+    One _ km -> wNoThunks ctxt km
+    Two _ km1 km2 -> noThunksInValues ctxt [km1, km2]
+    BitmapIndexed _ arr -> noThunksInValues ctxt $ tolist arr
+    Full arr -> noThunksInValues ctxt $ tolist arr
+
+instance Semigroup (KeyMap v) where
+  (<>) = union
+
+instance Monoid (KeyMap v) where
+  mempty = empty
+
 empty :: KeyMap v
 empty = Empty
 
@@ -225,12 +244,14 @@ singleton :: Key -> v -> KeyMap v
 singleton k v = insert k v Empty
 
 isNotEmpty :: KeyMap v -> Bool
-isNotEmpty Empty = False
-isNotEmpty _ = True
+isNotEmpty = not . isEmpty
 
 isEmpty :: KeyMap v -> Bool
 isEmpty Empty = True
 isEmpty _ = False
+
+valid :: KeyMap v -> Bool
+valid km = isEmpty km || size km > 0
 
 instance Eq v => Eq (KeyMap v) where
   (==) x y = toList x == toList y
@@ -411,15 +432,15 @@ twoE bmap x y = Two bmap x y
 --   size of 'arr' and dropping all Empty nodes.  Use this only where things can
 --   become empty (delete, intersect, etc)
 dropEmpty :: Bitmap -> PArray (KeyMap v) -> KeyMap v
-dropEmpty _ arr | isize arr == 0 = Empty
-dropEmpty b arr | isize arr == 1 =
-  case bitmapToList b of
-    (i : _) -> oneE i (index arr 0)
-    [] ->
-      error $ bitmapInvariantMessage "dropEmpty" b ++ " It should have 1 bit set."
-dropEmpty b arr | isize arr == 2 = twoE b (index arr 0) (index arr 1)
 dropEmpty b arr
-  | any isNotEmpty arr =
+  | isize arr == 0 = Empty
+  | isize arr == 1 =
+    case bitmapToList b of
+      (i : _) -> oneE i (index arr 0)
+      [] ->
+        error $ bitmapInvariantMessage "dropEmpty" b ++ " It should have 1 bit set."
+  | isize arr == 2 = twoE b (index arr 0) (index arr 1)
+  | any isEmpty arr =
     case filterArrayWithBitmap isEmpty b arr of
       (arr2, bm2) -> buildKeyMap bm2 arr2
   | b == fullNodeMask = Full arr
@@ -555,6 +576,35 @@ mapWithKey f (Full arr) = Full (fmap (mapWithKey f) arr)
 instance Functor KeyMap where
   fmap f x = mapWithKey (\_ v -> f v) x
 
+instance Foldable KeyMap where
+  length = size
+  foldr' f = foldWithDescKey (const f)
+  foldl' f = foldWithAscKey (\acc _ -> f acc)
+  foldr f = go
+    where
+      go acc =
+        \case
+          Empty -> acc
+          Leaf _ v -> f v acc
+          One _ x -> go acc x
+          Two _ x y -> go (go acc y) x
+          BitmapIndexed _ arr -> F.foldr (flip go) acc arr
+          Full arr -> F.foldr (flip go) acc arr
+  {-# INLINE foldr #-}
+
+traverseWithKey :: Applicative f => (Key -> a -> f b) -> KeyMap a -> f (KeyMap b)
+traverseWithKey f = \case
+  Empty -> pure Empty
+  Leaf k2 v -> Leaf k2 <$> f k2 v
+  One i x -> One i <$> traverseWithKey f x
+  Two bm x0 x1 -> Two bm <$> traverseWithKey f x0 <*> traverseWithKey f x1
+  BitmapIndexed bm arr ->
+    BitmapIndexed bm <$> traverse (traverseWithKey f) arr
+  Full arr -> Full <$> traverse (traverseWithKey f) arr
+
+instance Traversable KeyMap where
+  traverse f = traverseWithKey (const f)
+
 -- =========================================================
 -- UnionWith
 
@@ -578,7 +628,7 @@ unionInternal n combine x y = case3 emptyC1 leafF1 arrayF1 x
       where
         emptyC2 = x
         -- flip the combine function because the Leaf comes from the right, but
-        -- in insertWithKeyInternal is is on the left.
+        -- in insertWithKeyInternal is on the left.
         leafF2 k v = insertWithKeyInternal n (\key a b -> combine key b a) (keyPath k) k v x
         arrayF2 bm2 arr2 = buildKeyMap bm (arrayFromBitmap bm actionAt)
           where
@@ -641,6 +691,7 @@ maxMinOf x y = case (lookupMin x, lookupMin y) of
 
 intersectInternal :: Int -> (Key -> u -> v -> w) -> KeyMap u -> KeyMap v -> KeyMap w
 intersectInternal n combine = intersectWhenN n (\k u v -> Just (combine k u v))
+{-# INLINE intersectInternal #-}
 
 intersectWhenN :: Int -> (Key -> u -> v -> Maybe w) -> KeyMap u -> KeyMap v -> KeyMap w
 intersectWhenN _ _ Empty Empty = Empty
@@ -685,6 +736,7 @@ intersectionWithKey = intersectInternal 0
 --   key is NOT placed in the intersectionWhen result.
 intersectionWhen :: (Key -> u -> v -> Maybe w) -> KeyMap u -> KeyMap v -> KeyMap w
 intersectionWhen = intersectWhenN 0
+{-# INLINE intersectionWhen #-}
 
 foldIntersectInternal :: Int -> (ans -> Key -> u -> v -> ans) -> ans -> KeyMap u -> KeyMap v -> ans
 foldIntersectInternal n accum ans x y = case3 ans leafF1 arrayF1 x
@@ -793,7 +845,7 @@ maxViewWithKey km = maxViewWithKeyHelp km id
 
 -- ==========================================================
 -- Split a KeyMap into pieces according to different criteria
--- These functins are usefull for divide and conquer algorithms.
+-- These functions are usefull for divide and conquer algorithms.
 
 -- | Breaks a KeyMap into three parts, Uses two continuations: smallC and largeC
 --   which encode how to build the larger answer from a smaller one.
@@ -907,7 +959,7 @@ case3 emptyC leafF arrayF km =
 -- | A bitmask with the 'bitsPerSegment' least significant bits set.
 fullNodeMask :: Bitmap
 fullNodeMask = complement (complement 0 `unsafeShiftL` maxChildren)
-{-# INLINE fullNodeMask #-}
+{-# NOINLINE fullNodeMask #-}
 
 setBits :: [Int] -> Bitmap
 setBits = foldl' setBit 0

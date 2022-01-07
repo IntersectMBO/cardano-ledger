@@ -1755,7 +1755,8 @@ data ElaboratorLedgerIssue era
   | MismatchedImmediateRewards (ModelInstantaneousRewards (EraFeatureSet era)) (LedgerState.InstantaneousRewards (Crypto era))
 
 deriving instance
-  ( Show (Core.TxOut era)
+  ( Show (Core.TxOut era),
+    C.Crypto (Crypto era)
   ) =>
   Show (ElaboratorLedgerIssue era)
 

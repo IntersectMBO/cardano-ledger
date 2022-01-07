@@ -54,6 +54,7 @@ import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField)
+import GHC.Stack
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..), genCoin)
@@ -146,8 +147,8 @@ instance
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
-    LedgersEnv <$> pure (SlotNo 0)
-      <*> genEraPParams @era geConstants
+    LedgersEnv (SlotNo 0)
+      <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
   -- a LEDGERS signal is a sequence of LEDGER signals
@@ -159,11 +160,12 @@ instance
         foldM
           genAndApplyTx
           (utxoSt, dpSt, [])
-          [0 .. (fromIntegral maxTxsPerBlock - 1)]
+          [0 .. fromIntegral maxTxsPerBlock - 1]
 
       pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
       where
         genAndApplyTx ::
+          HasCallStack =>
           (UTxOState era, DPState (Crypto era), [Core.Tx era]) ->
           Ix ->
           Gen (UTxOState era, DPState (Crypto era), [Core.Tx era])
@@ -176,7 +178,7 @@ instance
                   applySTSTest @(Core.EraRule "LEDGER" era)
                     (TRC (ledgerEnv, (u, dp), tx))
           pure $ case res of
-            Left pf -> (error ("LEDGER sigGen: " <> show pf))
+            Left pf -> error ("LEDGER sigGen: " <> show pf)
             Right (u', dp') ->
               (u', dp', tx : txs)
 

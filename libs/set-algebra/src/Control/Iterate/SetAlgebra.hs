@@ -1,18 +1,5 @@
-{-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 
 -- | Supports writing 'Set algebra' expressions, using overloaded set operations, that can
 --   be applied to a variety of Basic types (Set, List, Map, BiMap etc). Also supports
@@ -21,7 +8,15 @@
 --   no rewrite rules for a specific expression, falls back to a less efficient generic algorithm.
 module Control.Iterate.SetAlgebra where
 
-import Control.Iterate.BaseTypes (BaseRep (..), Basic (..), Embed (..), Iter (..), Sett (..), Single (..), fromPairs)
+import Control.Iterate.BaseTypes
+  ( BaseRep (..),
+    Basic (..),
+    Embed (..),
+    Iter (..),
+    Sett (..),
+    Single (..),
+    fromPairs,
+  )
 import Control.Iterate.Collect (Collect, front, one, rear, runCollect, when)
 import Control.Iterate.Exp
   ( Exp (..),
@@ -44,19 +39,6 @@ import Control.Iterate.Exp
     second,
   )
 import Data.BiMap (BiMap (..), biMapEmpty, biMapFromList, removeval)
-import Data.Compact.SplitMap
-  ( filterWithKey,
-    foldlWithKey',
-    intersectMapSplit,
-    intersectSplitMap,
-    intersection,
-    member,
-    restrictKeysSet,
-    withoutKeysMap,
-    withoutKeysSet,
-    withoutKeysSplit,
-  )
-import qualified Data.Compact.SplitMap as Split
 import qualified Data.Map.Strict as Map
 import Data.MapExtras
   ( disjointMapSetFold,
@@ -137,7 +119,6 @@ compileSubterm _whole sub = fst (compile sub)
 run :: (Ord k) => (Query k v, BaseRep f k v) -> f k v
 run (BaseD SetR x, SetR) = x -- If it is already data (BaseD)
 run (BaseD MapR x, MapR) = x -- and in the right form (the BaseRep's match)
-run (BaseD SplitR x, SplitR) = x
 run (BaseD SingleR x, SingleR) = x -- just return the data
 run (BaseD BiMapR x, BiMapR) = x -- only need to materialize data
 run (BaseD ListR x, ListR) = x -- if the forms do not match.
@@ -341,10 +322,7 @@ compute (KeyEqual (Dom (Base MapR m)) (Dom (Base MapR n))) = keysEqual m n
 compute (KeyEqual (Dom (Base BiMapR (MkBiMap m _))) (Dom (Base BiMapR (MkBiMap n _)))) = keysEqual m n
 compute (KeyEqual (Base SetR (Sett m)) (Base SetR (Sett n))) = n == m
 compute (KeyEqual (Base MapR xs) (Base SetR (Sett ys))) = Map.keysSet xs == ys
-compute x =
-  case rewrite x of
-    Just t -> t
-    Nothing -> computeSlow x
+compute x = computeSlow x
 
 eval :: Embed s t => Exp t -> s
 eval x = fromBase (compute x)
@@ -368,98 +346,6 @@ computeSlow (e@(UnionPlus _ _)) = runSetExp e
 computeSlow (Singleton k v) = Single k v
 computeSlow (SetSingleton k) = (SetSingle k)
 computeSlow (e@(KeyEqual _ _)) = runBoolExp e
-
--- =========================================================================
--- Apply rewrite rules for SplitMap
-
-rewrite :: Exp t -> Maybe t
-rewrite (Base _rep relation) = Just relation
--- t01
-rewrite (Dom (Base SplitR x)) = Just $ Sett (foldlWithKey' (\ans k _ -> Set.insert k ans) Set.empty x)
--- t02
-rewrite (Dom (RRestrict (Base SplitR xs) (SetSingleton v))) = Just $ Sett (foldlWithKey' accum Set.empty xs)
-  where
-    accum ans k u = if u == v then Set.insert k ans else ans
--- t03
-rewrite (Dom (RRestrict (Base SplitR xs) (Base SetR (Sett set)))) = Just $ Sett (foldlWithKey' accum Set.empty xs)
-  where
-    accum ans k u = if Set.member u set then Set.insert k ans else ans
--- t04
-rewrite (Dom (RExclude (Base SplitR xs) (Base SetR (Sett set)))) = Just $ Sett (foldlWithKey' accum Set.empty xs)
-  where
-    accum ans k u = if not (Set.member u set) then Set.insert k ans else ans
--- t05
-rewrite (Dom (RExclude (Base SplitR xs) (SetSingleton v))) = Just $ Sett (foldlWithKey' accum Set.empty xs)
-  where
-    accum ans k u = if not (u == v) then Set.insert k ans else ans
--- t06
-rewrite (Dom (DRestrict (SetSingleton v) (Base SplitR xs))) =
-  if member v xs
-    then Just (Sett (Set.singleton v))
-    else Just (Sett (Set.empty))
--- t07
-rewrite (Dom (DRestrict (Base SetR (Sett set)) (Base SplitR xs))) = Just $ Sett (Set.foldl' accum Set.empty set)
-  where
-    accum ans k = if member k xs then Set.insert k ans else ans
--- t08
-rewrite (Dom (DExclude (SetSingleton v) (Base SplitR xs))) = Just $ Sett (foldlWithKey' accum Set.empty xs)
-  where
-    accum ans k _v = if k == v then ans else Set.insert k ans
--- t09
-rewrite (Dom (DExclude (Base SetR (Sett set)) (Base SplitR xs))) = Just $ Sett (foldlWithKey' accum Set.empty xs)
-  where
-    accum ans k _v = if Set.member k set then ans else Set.insert k ans
--- t10
-rewrite (DRestrict (Base SetR (Sett set)) (Base SplitR m)) = Just $ restrictKeysSet m set
--- t11
-rewrite (DRestrict (SetSingleton k) (Base SplitR m)) = Just $ restrictKeysSet m (Set.singleton k)
--- t12
-rewrite (DRestrict (Singleton k _v) (Base SplitR m)) = Just $ restrictKeysSet m (Set.singleton k)
--- t13
-rewrite (DRestrict (Dom (Base MapR x)) (Base SplitR y)) = Just $ intersectSplitMap always y x
-  where
-    always _ _ _ = True
--- t14
-rewrite (DRestrict (Dom (Base SplitR x)) (Base MapR y)) = Just $ intersectMapSplit always y x
-  where
-    always _ _ _ = True
--- t15
-rewrite (DRestrict (Dom (Base SplitR x)) (Base SplitR y)) = Just $ intersection y x
--- t16
-rewrite (DRestrict (Dom (RRestrict (Base MapR delegs) (SetSingleton hk))) (Base SplitR stake)) =
-  Just $
-    intersectSplitMap (\_k _u v2 -> v2 == hk) stake delegs
--- t17
-rewrite (DRestrict (Dom (RRestrict (Base MapR delegs) (Base _ rngf))) (Base SplitR stake)) =
-  Just $
-    intersectSplitMap (\_k _u v2 -> haskey v2 rngf) stake delegs
--- t18
-rewrite (DRestrict set (Base SplitR ys)) = Just $ restrictKeysSet ys set2
-  where
-    -- Pay the cost of materializing set to use O(n* log n) restictKeys
-    Sett set2 = materialize SetR (lifo (compute set))
--- t19
-rewrite (DExclude (SetSingleton n) (Base SplitR m)) = Just $ withoutKeysSet m (Set.singleton n)
--- t20
-rewrite (DExclude (Dom (Singleton n _v)) (Base SplitR m)) = Just $ withoutKeysSet m (Set.singleton n)
--- t21
-rewrite (DExclude (Rng (Singleton _n v)) (Base SplitR m)) = Just $ withoutKeysSet m (Set.singleton v)
--- t22
-rewrite (DExclude (Base SetR (Sett x1)) (Base SplitR x2)) = Just $ withoutKeysSet x2 x1
--- t23
-rewrite (DExclude (Dom (Base MapR x1)) (Base SplitR x2)) = Just $ withoutKeysMap x2 x1
--- t24
-rewrite (DExclude (Dom (Base SplitR x1)) (Base SplitR x2)) = Just $ withoutKeysSplit x2 x1
--- t25
-rewrite (RExclude (Base SplitR xs) (SetSingleton u)) = Just $ filterWithKey (\_k v -> not (v == u)) xs
--- t26
-rewrite (RExclude (Base SplitR xs) (Base SetR (Sett set))) = Just $ filterWithKey (\_k v -> not (Set.member v set)) xs
--- t27
-rewrite (RRestrict (Base SplitR xs) (SetSingleton k)) = Just $ filterWithKey (\_ x -> x == k) xs
--- t28
-rewrite (RRestrict (Base SplitR xs) (Base SetR (Sett s))) = Just $ filterWithKey (\_ x -> Set.member x s) xs
--- Additional rewrites to be added on a demand basis.
-rewrite _ = Nothing
 
 -- ==========================================================================
 -- The most basic operation of iteration, where (Iter f) is to use the 'nxt'
@@ -493,7 +379,6 @@ fromList ListR combine xs = fromPairs combine xs
 fromList SetR combine xs = foldr (addp combine) (Sett (Set.empty)) xs
 fromList BiMapR combine xs = biMapFromList combine xs
 fromList SingleR combine xs = foldr (addp combine) Fail xs
-fromList SplitR combine xs = foldr (addp combine) Split.empty xs
 fromList (ViewR Rew) combine xs = foldr (addp combine) (Rewards UM.empty) xs
 fromList (ViewR Del) combine xs = foldr (addp combine) (Delegations UM.empty) xs
 fromList (ViewR Ptr) combine xs = foldr (addp combine) (Ptrs UM.empty) xs
@@ -511,7 +396,6 @@ materialize MapR x = runCollect x Map.empty (\(k, v) ans -> Map.insert k v ans)
 materialize SetR x = Sett (runCollect x Set.empty (\(k, _) ans -> Set.insert k ans))
 materialize BiMapR x = runCollect x biMapEmpty (\(k, v) ans -> addpair k v ans)
 materialize SingleR x = runCollect x Fail (\(k, v) _ignore -> Single k v)
-materialize SplitR x = runCollect x Split.empty (\(k, v) ans -> Split.insert k v ans)
 materialize (ViewR Rew) x = runCollect x (Rewards UM.empty) (\(k, v) ans -> UM.insert' k v ans)
 materialize (ViewR Del) x = runCollect x (Delegations UM.empty) (\(k, v) ans -> UM.insert' k v ans)
 materialize (ViewR Ptr) x = runCollect x (Ptrs UM.empty) (\(k, v) ans -> UM.insert' k v ans)

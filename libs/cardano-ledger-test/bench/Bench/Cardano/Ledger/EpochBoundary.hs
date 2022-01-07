@@ -35,6 +35,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData (..))
 import Criterion
 import Data.ByteString (ByteString)
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Functor ((<&>))
 import Data.List (genericReplicate)
 import Data.Map.Strict (Map)
@@ -114,7 +115,7 @@ utxo ::
   Int ->
   UTxO TestEra
 utxo noUnstaked noBase ptrMap dupFactor =
-  UTxO . Map.fromAscList $
+  UTxO . SplitMap.fromList $
     txIns
       `zip` ( genericReplicate noUnstaked txOutUnstaked
                 <> cycleTimes dupFactor stakedTxs

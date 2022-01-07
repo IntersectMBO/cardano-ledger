@@ -16,8 +16,6 @@ import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
--- Instances only
-
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
@@ -76,6 +74,7 @@ import Data.Coders
     (!>),
     (<!),
   )
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
 import Data.Maybe (mapMaybe)
@@ -202,7 +201,7 @@ txInfoIn ::
   TxIn (Crypto era) ->
   Maybe PV1.TxInInfo
 txInfoIn (UTxO mp) txin =
-  case Map.lookup txin mp of
+  case SplitMap.lookup txin mp of
     Nothing -> Nothing
     Just txout -> case transAddr addr of
       Just ad -> Just (PV1.TxInInfo (txInfoIn' txin) (PV1.TxOut ad valout dhash))

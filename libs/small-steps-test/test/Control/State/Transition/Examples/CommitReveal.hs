@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -176,14 +175,8 @@ instance
   HashAlgorithm hashAlgo =>
   STS.Gen.HasTrace (CR hashAlgo Map Data) ()
   where
-  envGen :: () -> QC.Gen ()
   envGen _ = pure ()
 
-  sigGen ::
-    () ->
-    () ->
-    CRSt hashAlgo Map Data ->
-    QC.Gen (CRSignal hashAlgo Data)
   sigGen () () CRSt {hashToData, committedHashes} =
     if Set.null committedHashes
       then genCommit
