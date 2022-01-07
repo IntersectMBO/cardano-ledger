@@ -12,14 +12,14 @@ import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
 import Cardano.Ledger.Shelley.Constraints
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Proxy (Proxy (Proxy))
+import Data.Roundtrip
+  ( roundTrip,
+    roundTripAnn,
+  )
 import Data.Typeable (typeRep)
 import Test.Cardano.Ledger.EraBuffet
 import Test.Cardano.Ledger.Shelley.Generator.Metadata ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
-import Test.Cardano.Ledger.ShelleyMA.Serialisation.Coders
-  ( roundTrip,
-    roundTripAnn,
-  )
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (Arbitrary, Property, counterexample, (===))
 import Test.Tasty (TestTree, testGroup)
