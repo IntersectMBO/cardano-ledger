@@ -100,5 +100,5 @@ tests =
       testProperty "alonzo/Tx" $
         trippingAnn @(LTX.Tx (AlonzoEra C_Crypto)),
       testProperty "alonzo/Block" $
-        trippingAnn @(Block BHeader (AlonzoEra C_Crypto))
+        trippingAnn @(Block (BHeader C_Crypto) (AlonzoEra C_Crypto))
     ]

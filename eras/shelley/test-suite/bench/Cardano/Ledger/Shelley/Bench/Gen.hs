@@ -99,7 +99,7 @@ genBlock ::
   ) =>
   GenEnv era ->
   ChainState era ->
-  IO (Block BHeader era)
+  IO (Block (BHeader (Crypto era)) era)
 genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 -- The order one does this is important, since all these things must flow from the same

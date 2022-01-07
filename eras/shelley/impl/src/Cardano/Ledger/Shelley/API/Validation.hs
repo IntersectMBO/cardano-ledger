@@ -67,7 +67,7 @@ class
     BaseM (Core.EraRule "BBODY" era) ~ ShelleyBase,
     Environment (Core.EraRule "BBODY" era) ~ STS.BbodyEnv era,
     State (Core.EraRule "BBODY" era) ~ STS.BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ (Block BHeaderView era),
+    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     ToCBORGroup (TxSeq era)
   ) =>
   ApplyBlock era
@@ -104,7 +104,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    (Block BHeaderView era) ->
+    Block (BHeaderView (Crypto era)) era ->
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
   default applyBlockOpts ::
     forall ep m.
@@ -112,7 +112,7 @@ class
     ApplySTSOpts ep ->
     Globals ->
     NewEpochState era ->
-    (Block BHeaderView era) ->
+    Block (BHeaderView (Crypto era)) era ->
     m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
@@ -141,12 +141,12 @@ class
   reapplyBlock ::
     Globals ->
     NewEpochState era ->
-    (Block BHeaderView era) ->
+    Block (BHeaderView (Crypto era)) era ->
     NewEpochState era
   default reapplyBlock ::
     Globals ->
     NewEpochState era ->
-    (Block BHeaderView era) ->
+    Block (BHeaderView (Crypto era)) era ->
     NewEpochState era
   reapplyBlock globals state blk =
     updateNewEpochState state res
@@ -179,7 +179,7 @@ applyBlock ::
   ) =>
   Globals ->
   NewEpochState era ->
-  (Block BHeaderView era) ->
+  Block (BHeaderView (Crypto era)) era ->
   m (NewEpochState era)
 applyBlock =
   applyBlockOpts $
@@ -207,7 +207,7 @@ chainChecks ::
   STS.ChainChecksPParams ->
   BHeaderView (Crypto era) ->
   m ()
-chainChecks globals ccd bh = STS.chainChecks (maxMajorPV globals) ccd bh
+chainChecks globals = STS.chainChecks (maxMajorPV globals)
 
 {-------------------------------------------------------------------------------
   Applying blocks

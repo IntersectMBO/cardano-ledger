@@ -850,13 +850,14 @@ genTx =
     <*> arbitrary
 
 genBlock ::
-  forall era.
+  forall era h.
   ( Era era,
     ToCBORGroup (TxSeq era),
     Mock (Crypto era),
-    Arbitrary (Core.Tx era)
+    Arbitrary (Core.Tx era),
+    h ~ BHeader (Crypto era)
   ) =>
-  Gen (Block BHeader era)
+  Gen (Block h era)
 genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 
 -- | For some purposes, a totally random block generator may not be suitable.
@@ -868,14 +869,15 @@ genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 --
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
-  forall era.
+  forall era h.
   ( EraGen era,
     ToCBORGroup (TxSeq era),
     Mock (Crypto era),
     UsesTxBody era,
-    Arbitrary (Core.Tx era)
+    Arbitrary (Core.Tx era),
+    h ~ BHeader (Crypto era)
   ) =>
-  Gen (Block BHeader era)
+  Gen (Block h era)
 genCoherentBlock = do
   let KeySpace_ {ksCoreNodes} = geKeySpace (genEnv p)
   prevHash <- arbitrary :: Gen (HashHeader (Crypto era))
@@ -922,9 +924,10 @@ instance
     ToCBORGroup (TxSeq era),
     SupportsSegWit era,
     Mock (Crypto era),
-    Arbitrary (Core.Tx era)
+    Arbitrary (Core.Tx era),
+    h ~ BHeader (Crypto era)
   ) =>
-  Arbitrary (Block BHeader era)
+  Arbitrary (Block h era)
   where
   arbitrary = genBlock
 

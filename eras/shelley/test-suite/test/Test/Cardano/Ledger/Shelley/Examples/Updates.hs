@@ -175,7 +175,7 @@ txEx1 =
       }
     SNothing
 
-blockEx1 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
+blockEx1 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -202,7 +202,7 @@ expectedStEx1 =
 -- === Block 1, Slot 10, Epoch 0
 --
 -- In the first block, three genesis keys vote on the same new parameters.
-updates1 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
+updates1 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 updates1 = CHAINExample initStUpdates blockEx1 (Right expectedStEx1)
 
 --
@@ -249,10 +249,10 @@ txEx2 =
       }
     SNothing
 
-blockEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
+blockEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx2 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx1)
+    (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx1)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 20)
     [txEx2]
     (SlotNo 20)
@@ -276,7 +276,7 @@ expectedStEx2 =
 -- === Block 2, Slot 20, Epoch 0
 --
 -- In the second block, two more genesis keys vote for the same new parameters.
-updates2 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
+updates2 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 updates2 = CHAINExample expectedStEx1 blockEx2 (Right expectedStEx2)
 
 --
@@ -338,10 +338,10 @@ txEx3 =
       }
     SNothing
 
-blockEx3 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
+blockEx3 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx3 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx2)
+    (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx2)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 80)
     [txEx3]
     (SlotNo 80)
@@ -369,7 +369,7 @@ expectedStEx3 =
 -- === Block 3, Slot 80, Epoch 0
 --
 -- In the third block, one genesis keys votes for the next epoch
-updates3 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
+updates3 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 updates3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 
 --
@@ -379,10 +379,10 @@ updates3 = CHAINExample expectedStEx2 blockEx3 (Right expectedStEx3)
 epoch1Nonce :: forall c. (ExMock (Crypto (ShelleyEra c))) => Nonce
 epoch1Nonce = (chainCandidateNonce (expectedStEx3 @c)) ⭒ mkNonceFromNumber 123
 
-blockEx4 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Block BHeader (ShelleyEra c)
+blockEx4 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx4 =
   mkBlockFakeVRF
-    (bhHash $ bheader @BHeader @(ShelleyEra c) blockEx3)
+    (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx3)
     (coreNodeKeysBySchedule @(ShelleyEra c) ppEx 110)
     []
     (SlotNo 110)
@@ -413,7 +413,7 @@ expectedStEx4 =
 -- and the future vote becomes a current vote.
 -- Since the extra entropy was voted on, notice that it is a part
 -- of the new epoch nonce.
-updates4 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample BHeader (ShelleyEra c)
+updates4 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 updates4 = CHAINExample expectedStEx3 blockEx4 (Right expectedStEx4)
 
 --

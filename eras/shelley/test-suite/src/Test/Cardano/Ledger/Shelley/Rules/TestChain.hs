@@ -853,7 +853,7 @@ withdrawals ::
   ( EraGen era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  Block BHeader era ->
+  Block (BHeader (Crypto era)) era ->
   Coin
 withdrawals (UnserialisedBlock _ txseq) =
   foldl'
@@ -1026,7 +1026,7 @@ ledgerTraceFromBlock ::
     TestingLedger era ledger
   ) =>
   ChainState era ->
-  Block BHeader era ->
+  Block (BHeader (Crypto era)) era ->
   (ChainState era, Trace ledger)
 ledgerTraceFromBlock chainSt block =
   ( tickedChainSt,
@@ -1046,7 +1046,7 @@ ledgerTraceFromBlockWithRestrictedUTxO ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   ChainState era ->
-  Block BHeader era ->
+  Block (BHeader (Crypto era)) era ->
   (UTxO era, Trace ledger)
 ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   ( UTxO irrelevantUTxO,
@@ -1070,7 +1070,7 @@ poolTraceFromBlock ::
     HasField "_minPoolCost" (Core.PParams era) Coin
   ) =>
   ChainState era ->
-  Block BHeader era ->
+  Block (BHeader (Crypto era)) era ->
   (ChainState era, Trace (POOL era))
 poolTraceFromBlock chainSt block =
   ( tickedChainSt,
@@ -1097,7 +1097,7 @@ delegTraceFromBlock ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
   ChainState era ->
-  Block BHeader era ->
+  Block (BHeader (Crypto era)) era ->
   (DelegEnv era, Trace (DELEG era))
 delegTraceFromBlock chainSt block =
   ( delegEnv,
@@ -1132,7 +1132,7 @@ ledgerTraceBase ::
     ApplyBlock era
   ) =>
   ChainState era ->
-  Block BHeader era ->
+  Block (BHeader (Crypto era)) era ->
   ( ChainState era,
     LedgerEnv era,
     (UTxOState era, DPState (Crypto era)),

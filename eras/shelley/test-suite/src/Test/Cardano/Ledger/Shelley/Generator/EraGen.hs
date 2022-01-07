@@ -138,7 +138,7 @@ type MinCHAIN_STS era =
     BaseM (CHAIN era) ~ ShelleyBase,
     Environment (CHAIN era) ~ (),
     State (CHAIN era) ~ ChainState era,
-    Signal (CHAIN era) ~ Block BHeader era
+    Signal (CHAIN era) ~ Block (BHeader (Crypto era)) era
   )
 
 -- | Minimal requirements on the UTxO instances

@@ -55,7 +55,7 @@ blockEx1 ::
     ShelleyTest era,
     ExMock (Crypto era)
   ) =>
-  Block BHeader era
+  Block (BHeader (Crypto era)) era
 blockEx1 =
   mkBlockFakeVRF
     lastByronHeaderHash
@@ -96,5 +96,5 @@ expectedStEx1 =
 --
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
-exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era), PreAlonzo era) => CHAINExample BHeader era
+exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era), PreAlonzo era) => CHAINExample (BHeader (Crypto era)) era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

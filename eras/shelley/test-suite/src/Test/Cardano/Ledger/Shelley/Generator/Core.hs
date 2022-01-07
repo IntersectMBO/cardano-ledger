@@ -596,7 +596,7 @@ mkBlock ::
   Word ->
   -- | Operational certificate
   OCert (Crypto era) ->
-  Block BHeader era
+  Block (BHeader (Crypto era)) era
 mkBlock prev pkeys txns s blockNo enonce kesPeriod c0 oCert =
   let txseq = (toTxSeq @era . StrictSeq.fromList) txns
       bodySize = fromIntegral $ bBodySize $ txseq
@@ -633,7 +633,7 @@ mkBlockFakeVRF ::
   Word ->
   -- | Operational certificate
   OCert (Crypto era) ->
-  Block BHeader era
+  Block (BHeader (Crypto era)) era
 mkBlockFakeVRF prev pkeys txns s blockNo enonce (NatNonce bnonce) l kesPeriod c0 oCert =
   let (_, (sHot, _)) = head $ hot pkeys
       KeyPair vKeyCold _ = cold pkeys

@@ -134,7 +134,7 @@ bbodyTransition ::
   forall (someBBODY :: Type -> Type) era.
   ( -- Conditions that the Abstract someBBODY must meet
     STS (someBBODY era),
-    Signal (someBBODY era) ~ (Block BHeaderView era),
+    Signal (someBBODY era) ~ (Block (BHeaderView (Crypto era)) era),
     PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFail era,
     BaseM (someBBODY era) ~ ShelleyBase,
     State (someBBODY era) ~ BbodyState era,
@@ -232,7 +232,7 @@ instance
 
   type
     Signal (AlonzoBBODY era) =
-      (Block BHeaderView era)
+      (Block (BHeaderView (Crypto era)) era)
 
   type Environment (AlonzoBBODY era) = BbodyEnv era
 
