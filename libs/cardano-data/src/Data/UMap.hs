@@ -22,6 +22,7 @@ module Data.UMap
     rewView,
     delView,
     ptrView,
+    domRestrictedView,
     zero,
     zeroMaybe,
     mapNext,
@@ -200,25 +201,38 @@ unView (Delegations um) = um
 unView (Ptrs um) = um
 
 -- | This is expensive, use it wisely (like maybe once per epoch boundary to make a SnapShot)
-unUnify :: Ord cred => View coin cred pool ptr k v -> Map k v
+--   See also domRestrictedView, which domain restricts before computing a view.
+unUnify :: View coin cred pool ptr k v -> Map k v
 unUnify (Rewards (UnifiedMap tripmap _)) = filterMaybe ok tripmap
   where
     ok _key (Triple (SJust c) _ _) = Just c
     ok _ _ = Nothing
-unUnify (Delegations (UnifiedMap tripmap _)) = Map.foldlWithKey' accum Map.empty tripmap
+unUnify (Delegations (UnifiedMap tripmap _)) = filterMaybe ok tripmap
   where
-    accum ans k (Triple _ _ (SJust v)) = Map.insert k v ans
-    accum ans _ _ = ans
+    ok _key (Triple _ _ (SJust v)) = Just v
+    ok _ _ = Nothing
 unUnify (Ptrs (UnifiedMap _ ptrmap)) = ptrmap
 
-rewView :: Ord cred => UMap coin cred pool ptr -> Map.Map cred coin
+rewView :: UMap coin cred pool ptr -> Map.Map cred coin
 rewView x = unUnify (Rewards x)
 
-delView :: Ord cred => UMap coin cred pool ptr -> Map.Map cred pool
+delView :: UMap coin cred pool ptr -> Map.Map cred pool
 delView x = unUnify (Delegations x)
 
-ptrView :: Ord cred => UMap coin cred pool ptr -> Map.Map ptr cred
+ptrView :: UMap coin cred pool ptr -> Map.Map ptr cred
 ptrView x = unUnify (Ptrs x)
+
+-- | Return the appropriate View of a domain restricted Umap. f 'setk' is small this should be efficient.
+domRestrictedView :: (Ord ptr, Ord cred) => Set k -> View coin cred pl ptr k v -> Map.Map k v
+domRestrictedView setk (Rewards (UnifiedMap tripmap _)) = filterMaybe ok (Map.restrictKeys tripmap setk)
+  where
+    ok _key (Triple (SJust c) _ _) = Just c
+    ok _ _ = Nothing
+domRestrictedView setk (Delegations (UnifiedMap tripmap _)) = filterMaybe ok (Map.restrictKeys tripmap setk)
+  where
+    ok _key (Triple _ _ (SJust v)) = Just v
+    ok _ _ = Nothing
+domRestrictedView setk (Ptrs (UnifiedMap _ ptrmap)) = Map.restrictKeys ptrmap setk
 
 instance Foldable (View coin cred pool ptr k) where
   foldMap f (Rewards (UnifiedMap tmap _)) = Map.foldlWithKey accum mempty tmap
