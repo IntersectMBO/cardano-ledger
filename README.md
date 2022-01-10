@@ -56,11 +56,12 @@ The directory structure of this repository is as follows:
     - [tests](./eras/alonzo/test-suite)
 - [Libraries](./libs)
 
-## Build tools
+# Building
 
-For building LaTeX documents we use
-[`nix`](https://nixos.org/nix/download.html). Haskell files can be built either
-with `nix` or [`cabal`](https://www.haskell.org/cabal/).
+It is recommended to use [`nix`](https://nixos.org/nix/download.html) for building everything in this repository.
+Haskell files can be built with [`cabal`](https://www.haskell.org/cabal/) inside of a nix shell.
+
+## Nix Cache
 
 When using `nix` it is recommended that you setup the cache, so that it can
 reuse built artifacts, reducing the compilation times dramatically:
@@ -127,186 +128,12 @@ For a continuous compilation of the `LaTeX` file run:
 nix-shell --pure --run "make watch"
 ```
 
-## Development
+# Submitting an issue
 
-While building most compilation warnings will be turned into an error due to
-`-Werror` flag. However during development it might be a bit inconvenient thus
-can be disabled on per project basis:
+Issues can be filed in the [GitHub Issue tracker](https://github.com/input-output-hk/cardano-ledger/issues).
 
-```shell
-cabal configure <package-name> --ghc-options="-Wwarn"
-cabal build <package-name>
-```
-
-## Testing the Haskell programs
-
-The tests can be run with cabal.
-For example the Shelley tests can be run with:
-
-```shell
-cabal test cardano-ledger-shelley-test
-```
-
-**Note** that the tests in `cardano-ledger-shelley-test` require two Ruby gems,
-[cbor-diag](https://rubygems.org/gems/cbor-diag) and
-[cddl](https://rubygems.org/gems/cddl).
-
-It can be helpful to use the `--test-show-details=streaming` option for seeing
-the output of the tests while they run:
-
-```shell
-cabal test cardano-ledger-shelley-test --test-show-details=streaming
-```
-
-### Running Specific Tests
-
-The test suites use [Tasty](https://github.com/feuerbach/tasty),
-which allows for running specific tests.
-This is done by passing the `-p` flag to the test program, followed by an `awk` pattern.
-You can alternatively use the `TASTY_PATTERN` environment variable with a pattern.
-For example, the Shelley golden tests can be run with:
-
-```shell
-cabal test cardano-ledger-shelley-test --test-options="-p golden"
-```
-
-or
-
-```shell
-TASTY_PATTERN=golden cabal test cardano-ledger-shelley-test
-```
-
-`Tasty` allows for more
-[complex patterns](https://github.com/feuerbach/tasty#patterns).
-For instance, to run only the Byron update mechanism tests for the ledger
-that classify traces, we can pass the
-`-p $1 ~ /Ledger/ && $2 ~ /Update/ && $3 ~ /classified/` option.
-Here each `$i` refers to a level in the tests names hierarchy.
-Passing `-l` to `tasty` will list the available test names.
-
-When testing using `cabal`, pay special attention to escaping the right symbols, e.g.:
-
-```shell
-cabal test byron-spec-ledger:test:byron-spec-ledger-test --test-options "-p \"\$1 ~ /Ledger/ && \$2 ~ /Update/ && \$3 ~ /classified/\""
-```
-
-### Replaying QuickCheck Failures
-
-When a QuickCheck test fails, the seed which produced the failure is reported.
-The failure can be replayed with:
-
-```shell
-cabal test cardano-ledger-shelley-test --test-options "--quickcheck-replay=42"
-```
-(where 42 is an example seed).
-
-### Test Scenarios
-
-Most of the test suites are grouped into test scenarios.
-For example, the Shelley test suite contains
-`ContinuousIntegration`, `Development`, `Nightly`, and `Fast`,
-which can be run with the `--scenario` flag. For example:
-
-```shell
-cabal test cardano-ledger-shelley-test --test-options --scenario=Fast
-```
-
-### ghcid
-
-We have support for running
-[ghcid](https://github.com/ndmitchell/ghcid)
-from inside of nix-shell.
-Enter nix-shell from the base directory of the repository,
-change directories to the cabal package that you wish to check,
-then run `ghcid`.
-
-For example:
-
-```shell
-nix-shell
-cd eras/shelley/impl/
-ghcid
-```
-
----
-
-# nix-build Infrastructure
-
-The artifacts in this repository can be built and tested using nix. This is
-additionally used by the Hydra CI to test building, including cross-compilation
-for other systems.
-
-## To add a new Haskell project
-
-To add a new Haskell project, you should do the following:
-
-1. Create the project in the usual way. It should have an appropriate `.cabal` file.
-2. Add the project to the [top-level stack.yaml](./stack.yaml), configuring
-   dependencies etc as needed. If your project's configuration deviates too far
-   from the [snapshot in
-   ``cardano-prelude`](https://github.com/input-output-hk/cardano-prelude/blob/master/snapshot.yaml),
-   then you may have to submit a PR there to update that snapshot.
-3. At this point, test that your new project builds using `stack build <project_name>`.
-4. Run [nix-shell ./nix -A iohkNix.stack-cabal-sync-shell --run scripts/stack-cabal_config_check.sh](./scripts/stack-cabal_config_check.sh)
-  script to check and report your change from stack.yaml to cabal.project.
-5. Run the [regenerate](./nix/regenerate.sh) script to
-   update sha256 checksums in cabal.project.
-5. Test that you can build your new project by running the following: `nix build
-   -f default.nix libs.<project_name>`. If you have executables, then
-   you may also try building these using the `exes.<executable_name>`
-   attribute path. A good way to see what's available is to execute `:l
-   default.nix` in `nix repl`. This will allow you to explore the potential
-   attribute names.
-5. If you want your product to be tested by CI, add it to
-   [release.nix](./release.nix) using the format specified in that file.
-
-## To add a new LaTeX specification
-
-To add a new LaTeX specification, the easiest way is to copy from one of the
-existing specifications. You will want the `Makefile` and `default.nix` (say
-from [the Shelley ledger spec](./eras/shelley/formal-spec)).
-
-1. Copy these files into the root of your new LaTeX specification.
-2. Modify the `DOCNAME` in the `Makefile`.
-3. Update `default.nix` to:
-   1. Make sure that the relative path in the first line is pointing to
-      (default.nix)[./default.nix]. This is used to pin the
-      `nixpkgs` version used to build the LaTeX specifications.
-   2. Update the `buildInputs` to add in any LaTeX packages you need in your
-      document, and remove any unneeded ones.
-   3. Alter the `meta` description field to reflect the nature of this document.
-4. Add a link to the package at the bottom of [default.nix](./default.nix),
-   following the existing examples.
-5. To require that your specification be built in CI, add it at the end of the
-   list in [default.nix](./default.nix) following the existing examples.
-
-## Additional documentation
-
-You can find additional documentation on the nix infrastructure used in this
-repo in the following places:
-
-- [The haskell.nix user guide](https://github.com/input-output-hk/haskell.nix/blob/documentation/docs/user-guide.md)
-- [The nix-tools repository](https://github.com/input-output-hk/nix-tools)
-- [The iohk-nix repository](https://github.com/input-output-hk/iohk-nix)
-
-Note that the user guide linked above is incomplete and does not correctly refer
-to projects built using `iohk-nix`, as this one is. A certain amount of trial
-and error may be required to make substantive changes!
-
-<p align="center">
-  <a href="https://github.com/input-output-hk/cardano-ledger-specs/blob/master/LICENSE">
-    <img src="https://img.shields.io/github/license/input-output-hk/cardano-ledger-specs.svg?style=for-the-badge"/>
-  </a>
-</p>
+However, note that this is pre-release software, so we will not usually be providing support.
 
 # Contributing
 
-## Code formatting
-
-We use [`editorconfig`](https://editorconfig.org/) to ensure consistency in the format of our
-Haskell code. There are editorconfig plugins for several text editors, so make sure that your editor
-honors the configuration in [`.editorconfig`](.editorconfig).
-
-Additionally, we use [`ormolu`](https://github.com/tweag/ormolu/) for formatting.
-There is a script [here](https://github.com/input-output-hk/cardano-ledger-specs/blob/master/scripts/ormolise.sh)
-which uses nix to format the appropriate directories.
+See [CONTRIBUTING](https://github.com/input-output-hk/cardano-ledger/blob/master/CONTRIBUTING.md).
