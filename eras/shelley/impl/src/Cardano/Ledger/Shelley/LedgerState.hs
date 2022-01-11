@@ -76,10 +76,8 @@ module Cardano.Ledger.Shelley.LedgerState
     keyRefunds,
 
     -- * Epoch boundary
-    stakeDistr,
     incrementalStakeDistr,
     updateStakeDistribution,
-    aggregateUtxoCoinByCredential,
     applyRUpd,
     applyRUpd',
     createRUpd,
@@ -245,7 +243,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans
 import Control.Provenance (ProvM, liftProv, modifyM)
-import Control.SetAlgebra (dom, eval, (∈), (▷), (◁))
+import Control.SetAlgebra (dom, eval, (∈), (◁))
 import Control.State.Transition (STS (State))
 import Data.Coders
   ( Decode (From, RecD),
@@ -365,7 +363,9 @@ data DState crypto = DState
 rewards :: DState crypto -> ViewMap crypto (Credential 'Staking crypto) Coin
 rewards (DState unified _ _ _) = Rewards unified
 
-delegations :: DState crypto -> ViewMap crypto (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
+delegations ::
+  DState crypto ->
+  ViewMap crypto (Credential 'Staking crypto) (KeyHash 'StakePool crypto)
 delegations (DState unified _ _ _) = Delegations unified
 
 -- | get the actual ptrs map, we don't need a view
@@ -1105,7 +1105,7 @@ reapRewards ::
   UnifiedMap crypto ->
   RewardAccounts crypto ->
   UnifiedMap crypto
-reapRewards (UnifiedMap tmap ptrmap) withdrawals = (UnifiedMap (Map.mapWithKey g tmap) ptrmap)
+reapRewards (UnifiedMap tmap ptrmap) withdrawals = UnifiedMap (Map.mapWithKey g tmap) ptrmap
   where
     g k (Triple x y z) = Triple (fmap (removeRewards k) x) y z
     removeRewards k v = if k `Map.member` withdrawals then Coin 0 else v
@@ -1114,67 +1114,11 @@ reapRewards (UnifiedMap tmap ptrmap) withdrawals = (UnifiedMap (Map.mapWithKey g
 -- epoch boundary calculations --
 ---------------------------------
 
--- | Compute the current Stake Distribution. This was called at the Epoch boundary in the Snap Rule.
---   Now it is called in the tests to see that its incremental analog 'incrementalStakeDistr' agrees.
-stakeDistr ::
-  forall era.
-  Era era =>
-  UTxO era ->
-  DState (Crypto era) ->
-  PState (Crypto era) ->
-  SnapShot (Crypto era)
-stakeDistr u ds ps =
-  SnapShot
-    (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
-    (VMap.fromMap (UM.unUnify delegs))
-    (VMap.fromMap poolParams)
-  where
-    rewards' = rewards ds
-    delegs = delegations ds
-    ptrs' = ptrsMap ds
-    PState poolParams _ _ = ps
-    stakeRelation :: Map (Credential 'Staking (Crypto era)) Coin
-    stakeRelation = aggregateUtxoCoinByCredential ptrs' u (UM.unUnify rewards')
-    -- The use of  (UM.unUnify rewards') looks exspensive, but since we now incrementally
-    -- compute stake distribution, this function is ONLY used in tests
-    activeDelegs :: ViewMap (Crypto era) (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
-    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
-
 compactCoinOrError :: Coin -> CompactForm Coin
 compactCoinOrError c =
   case toCompact c of
     Nothing -> error $ "Invalid ADA value in staking: " <> show c
     Just compactCoin -> compactCoin
-
--- A TxOut has 4 different shapes, depending on the shape of its embedded Addr.
--- Credentials are stored in only 2 of the 4 cases.
--- 1) TxOut (Addr _ _ (StakeRefBase cred)) coin   -> HERE
--- 2) TxOut (Addr _ _ (StakeRefPtr ptr)) coin     -> HERE
--- 3) TxOut (Addr _ _ StakeRefNull) coin          -> NOT HERE
--- 4) TxOut (AddrBootstrap _) coin                -> NOT HERE
-
--- | Sum up all the Coin for each staking Credential. This function has an
---   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'
-aggregateUtxoCoinByCredential ::
-  forall era.
-  ( Era era
-  ) =>
-  Map Ptr (Credential 'Staking (Crypto era)) ->
-  UTxO era ->
-  Map (Credential 'Staking (Crypto era)) Coin ->
-  Map (Credential 'Staking (Crypto era)) Coin
-aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
-  SplitMap.foldl' accum initial u
-  where
-    accum !ans out =
-      case (getField @"address" out, getField @"value" out) of
-        (Addr _ _ (StakeRefPtr p), c) ->
-          case Map.lookup p ptrs of
-            Just cred -> Map.insertWith (<>) cred (Val.coin c) ans
-            Nothing -> ans
-        (Addr _ _ (StakeRefBase hk), c) ->
-          Map.insertWith (<>) hk (Val.coin c) ans
-        _other -> ans
 
 -- ==============================
 -- operations on IncrementalStake
@@ -1224,6 +1168,13 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
             Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDelete c) hk stake) ptrs
             _other -> ans
 
+-- A TxOut has 4 different shapes, depending on the shape of its embedded Addr.
+-- Credentials are stored in only 2 of the 4 cases.
+-- 1) TxOut (Addr _ _ (StakeRefBase cred)) coin   -> HERE
+-- 2) TxOut (Addr _ _ (StakeRefPtr ptr)) coin     -> HERE
+-- 3) TxOut (Addr _ _ StakeRefNull) coin          -> NOT HERE
+-- 4) TxOut (AddrBootstrap _) coin                -> NOT HERE
+
 -- ========================================================================
 
 -- | Compute the current state distribution by using the IncrementalStake,
@@ -1262,14 +1213,14 @@ incrementalStakeDistr ::
 incrementalStakeDistr incstake ds ps =
   SnapShot
     (Stake $ VMap.fromMap (compactCoinOrError <$> step2))
-    (VMap.fromMap delegs)
+    delegs
     (VMap.fromMap poolParams)
   where
     UnifiedMap tripmap ptrmap = _unified ds
     PState poolParams _ _ = ps
-    delegs = UM.unUnify (delegations ds)
+    delegs = UM.viewToVMap (delegations ds)
     -- A credential is active, only if it is being delegated
-    step1 = resolveActiveIncrementalPtrs (`Map.member` delegs) ptrmap incstake
+    step1 = resolveActiveIncrementalPtrs (`VMap.member` delegs) ptrmap incstake
     step2 = aggregateActiveStake tripmap step1
 
 -- | Resolve inserts and deletes which were indexed by Ptrs, by looking them
@@ -1294,25 +1245,18 @@ resolveActiveIncrementalPtrs isActive ptrMap (IStake credStake ptrStake) =
             then Map.insertWith (<>) cred coin ans
             else ans
 
--- | Aggregate active stake by merging two maps. The triple map from the UnifiedMap, and the IncrementalStake
---   Only keep the active stake. Active can be determined if there is a (SJust deleg) in the Triple.
---   This is step2 =  aggregate (dom activeDelegs ◁ rewards) step1
+-- | Aggregate active stake by merging two maps. The triple map from the
+--   UnifiedMap, and the IncrementalStake Only keep the active stake. Active can
+--   be determined if there is a (SJust deleg) in the Triple.  This is step2 =
+--   aggregate (dom activeDelegs ◁ rewards) step1
 aggregateActiveStake :: Ord k => Map k (Triple crypto) -> Map k Coin -> Map k Coin
 aggregateActiveStake tripmap incremental =
   Map.mergeWithKey
     -- How to merge the ranges of the two maps where they have a common key. Below
     -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
-    ( \_k triple coin2 ->
-        case triple of
-          Triple (SJust coin1) _ (SJust _) -> Just (coin1 <> coin2)
-          _ -> Nothing
-    )
+    (\_k trip coin2 -> (<> coin2) <$> UM.tripDelegatedReward trip)
     -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
-    ( \mp ->
-        let p _key (Triple (SJust c) _ (SJust _)) = Just c
-            p _ _ = Nothing
-         in Map.mapMaybeWithKey p mp
-    )
+    (Map.mapMaybeWithKey (\_ -> UM.tripDelegatedReward))
     -- what to do when a key is only in 'incremental', keep everything, because at
     -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
     -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.

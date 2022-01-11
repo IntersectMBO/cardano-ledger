@@ -4,6 +4,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -12,11 +13,15 @@
 
 module Data.UMap
   ( Trip (Triple),
+    tripReward,
+    tripDelegatedReward,
+    tripDelegation,
     UMap (..),
     UnifiedView (..),
     umInvariant,
     unView,
     unUnify,
+    viewToVMap,
     rewView,
     delView,
     ptrView,
@@ -58,10 +63,12 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import Control.DeepSeq (NFData (..))
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Coders (decodeMap, decodeRecordNamed, encodeMap)
+import qualified Data.Compact.VMap as VMap
 import Data.Foldable (Foldable (..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (intersectDomPLeft)
+import Data.Maybe as Maybe (fromMaybe, isNothing, mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -110,6 +117,31 @@ viewTrip (TFEE x) = (SJust x, Set.empty, SNothing)
 viewTrip (TFEF x y) = (SJust x, Set.empty, SJust y)
 viewTrip (TFFE x y) = (SJust x, y, SNothing)
 viewTrip (TFFF x y z) = (SJust x, y, SJust z)
+
+tripDelegatedReward :: Trip coin ptr pool -> Maybe coin
+tripDelegatedReward =
+  \case
+    TFFF c _ _ -> Just c
+    TFEF c _ -> Just c
+    _ -> Nothing
+
+tripReward :: Trip coin ptr pool -> Maybe coin
+tripReward =
+  \case
+    TFFF c _ _ -> Just c
+    TFFE c _ -> Just c
+    TFEF c _ -> Just c
+    TFEE c -> Just c
+    _ -> Nothing
+
+tripDelegation :: Trip coin ptr pool -> Maybe pool
+tripDelegation =
+  \case
+    TFFF _ _ p -> Just p
+    TFEF _ p -> Just p
+    TEFF _ p -> Just p
+    TEEF p -> Just p
+    _ -> Nothing
 
 -- A Triple can be extracted and injected into the TEEE ... TFFF constructors.
 pattern Triple :: StrictMaybe coin -> Set ptr -> StrictMaybe pool -> Trip coin ptr pool
@@ -201,15 +233,22 @@ unView (Ptrs um) = um
 -- | This is expensive, use it wisely (like maybe once per epoch boundary to make a SnapShot)
 --   See also domRestrictedView, which domain restricts before computing a view.
 unUnify :: View coin cred pool ptr k v -> Map k v
-unUnify (Rewards (UnifiedMap tripmap _)) = Map.mapMaybeWithKey ok tripmap
-  where
-    ok _key (Triple (SJust c) _ _) = Just c
-    ok _ _ = Nothing
-unUnify (Delegations (UnifiedMap tripmap _)) = Map.mapMaybeWithKey ok tripmap
-  where
-    ok _key (Triple _ _ (SJust v)) = Just v
-    ok _ _ = Nothing
+unUnify (Rewards (UnifiedMap tripmap _)) = Map.mapMaybe tripReward tripmap
+unUnify (Delegations (UnifiedMap tripmap _)) = Map.mapMaybe tripDelegation tripmap
 unUnify (Ptrs (UnifiedMap _ ptrmap)) = ptrmap
+
+-- | This is expensive, use it wisely (like maybe once per epoch boundary to make a SnapShot)
+viewToVMap :: Ord cred => View coin cred pool ptr k v -> VMap.VMap VMap.VB VMap.VB k v
+viewToVMap view =
+  case view of
+    Rewards (UnifiedMap tripmap _) ->
+      VMap.fromListN (size view) . Maybe.mapMaybe toReward . Map.toList $ tripmap
+    Delegations (UnifiedMap tripmap _) ->
+      VMap.fromListN (size view) . Maybe.mapMaybe toDelegation . Map.toList $ tripmap
+    Ptrs (UnifiedMap _ ptrmap) -> VMap.fromMap ptrmap
+  where
+    toReward (key, t) = (,) key <$> tripReward t
+    toDelegation (key, t) = (,) key <$> tripDelegation t
 
 rewView :: UMap coin cred pool ptr -> Map.Map cred coin
 rewView x = unUnify (Rewards x)
@@ -223,15 +262,9 @@ ptrView x = unUnify (Ptrs x)
 -- | Return the appropriate View of a domain restricted Umap. f 'setk' is small this should be efficient.
 domRestrictedView :: (Ord ptr, Ord cred) => Set k -> View coin cred pl ptr k v -> Map.Map k v
 domRestrictedView setk (Rewards (UnifiedMap tripmap _)) =
-  Map.mapMaybeWithKey ok (Map.restrictKeys tripmap setk)
-  where
-    ok _key (Triple (SJust c) _ _) = Just c
-    ok _ _ = Nothing
+  Map.mapMaybe tripReward (Map.restrictKeys tripmap setk)
 domRestrictedView setk (Delegations (UnifiedMap tripmap _)) =
-  Map.mapMaybeWithKey ok (Map.restrictKeys tripmap setk)
-  where
-    ok _key (Triple _ _ (SJust v)) = Just v
-    ok _ _ = Nothing
+  Map.mapMaybe tripDelegation (Map.restrictKeys tripmap setk)
 domRestrictedView setk (Ptrs (UnifiedMap _ ptrmap)) = Map.restrictKeys ptrmap setk
 
 instance Foldable (View coin cred pool ptr k) where
@@ -256,21 +289,12 @@ instance Foldable (View coin cred pool ptr k) where
 
   foldl' accum ans0 (Rewards (UnifiedMap tmap _)) = Map.foldl' accum2 ans0 tmap
     where
-      -- accum2 ans (Triple (SJust c) _ _) = accum ans c
-      accum2 ans (TFFF c _ _) = accum ans c -- Tight loop here, so avoid the pattern
-      accum2 ans (TFFE c _) = accum ans c
-      accum2 ans (TFEF c _) = accum ans c
-      accum2 ans (TFEE c) = accum ans c
-      accum2 ans _ = ans
+      accum2 ans = maybe ans (accum ans) . tripReward
   foldl' accum ans0 (Delegations (UnifiedMap tmap _)) = Map.foldl' accum2 ans0 tmap
     where
-      -- accum2 ans (Triple _ _ (SJust p)) = accum ans p -- Don't use pattern Triple in tight loop.
-      accum2 ans (TFFF _ _ p) = accum ans p
-      accum2 ans (TFEF _ p) = accum ans p
-      accum2 ans (TEFF _ p) = accum ans p
-      accum2 ans (TEEF p) = accum ans p
-      accum2 ans _ = ans
+      accum2 ans = maybe ans (accum ans) . tripDelegation
   foldl' accum ans (Ptrs (UnifiedMap _ ptrmap)) = Map.foldl' accum ans ptrmap
+  length = size
 
 -- =======================================================
 -- Operations on Triple
@@ -335,7 +359,11 @@ next (Ptrs (UnifiedMap tripmap ptrmap)) =
     Nothing -> Nothing
     Just (k, stakeid, m2) -> Just (k, stakeid, ptrs (Map.empty `asTypeOf` tripmap) m2)
 
-leastUpperBound :: (Ord ptr, Ord cr) => k -> View coin cr pool ptr k v -> Maybe (k, v, View coin cr pool ptr k v)
+leastUpperBound ::
+  (Ord ptr, Ord cr) =>
+  k ->
+  View coin cr pool ptr k v ->
+  Maybe (k, v, View coin cr pool ptr k v)
 leastUpperBound stakeid (Rewards (UnifiedMap tripmap _)) =
   case mapLub stakeid tripmap of
     Nothing -> Nothing
@@ -362,10 +390,12 @@ delete' ::
   k ->
   View coin cr pool ptr k v ->
   View coin cr pool ptr k v
-delete' stakeid (Rewards (UnifiedMap tripmap ptrmap)) = rewards (Map.update ok stakeid tripmap) ptrmap
+delete' stakeid (Rewards (UnifiedMap tripmap ptrmap)) =
+  rewards (Map.update ok stakeid tripmap) ptrmap
   where
     ok (Triple _ ptr poolid) = zeroMaybe (Triple SNothing ptr poolid)
-delete' stakeid (Delegations (UnifiedMap tripmap ptrmap)) = delegations (Map.update ok stakeid tripmap) ptrmap
+delete' stakeid (Delegations (UnifiedMap tripmap ptrmap)) =
+  delegations (Map.update ok stakeid tripmap) ptrmap
   where
     ok (Triple c ptr _) = zeroMaybe (Triple c ptr SNothing)
 delete' ptr (Ptrs (UnifiedMap tripmap ptrmap)) =
@@ -378,10 +408,23 @@ delete' ptr (Ptrs (UnifiedMap tripmap ptrmap)) =
 delete :: (Ord cr, Ord ptr) => k -> View coin cr pool ptr k v -> UMap coin cr pool ptr
 delete k m = unView (delete' k m)
 
--- | insertWith' (\ old new -> old) k v xs  Keeps the value already in the ViewMap if the key 'k' is already there
---   insertWith' (\ old new -> new) k v xs  Replaces the value already in the ViewMap with 'v', if key 'k' is already there
---   insertWith' (\ old new -> old+new) k v xs  Replaces the value already in the ViewMap with the sum, if key 'k' is already there
---   insertWith' combine k v xs,  Ignores 'combine' if the key 'k' is NOT already in the ViewMap, and inserts 'v'
+-- | Special insertion:
+--
+--  Keeps the value already in the ViewMap if the key 'k' is already there:
+--
+-- > insertWith' (\ old new -> old) k v xs
+--
+-- Replaces the value already in the ViewMap with 'v', if key 'k' is already there:
+--
+-- > insertWith' (\ old new -> new) k v xs
+--
+-- Replaces the value already in the ViewMap with the sum, if key 'k' is already there:
+--
+-- > insertWith' (\ old new -> old+new) k v xs
+--
+-- Ignores 'combine' if the key 'k' is NOT already in the ViewMap, and inserts 'v':
+--
+-- > insertWith' combine k v xs
 insertWith' ::
   (Ord cr, Monoid coin, Ord ptr) =>
   (v -> v -> v) ->
@@ -410,7 +453,8 @@ insertWith' comb ptr stake (Ptrs (UnifiedMap tripmap ptrmap)) =
       retract stakeid pointer m = Map.update ok stakeid m
         where
           ok (Triple c set d) = zeroMaybe (Triple c (Set.delete pointer set) d)
-      add stakeid pointer m = Map.insertWith (<>) stakeid (Triple SNothing (Set.singleton pointer) SNothing) m
+      add stakeid pointer m =
+        Map.insertWith (<>) stakeid (Triple SNothing (Set.singleton pointer) SNothing) m
       tripmap2 = add newstake ptr (retract oldstake ptr tripmap)
       ptrmap2 = Map.insert ptr newstake ptrmap
    in Ptrs (UnifiedMap tripmap2 ptrmap2)
@@ -430,7 +474,7 @@ insert' ::
   v ->
   View coin cr pool ptr k v ->
   View coin cr pool ptr k v
-insert' k v view = insertWith' (\_old new -> new) k v view
+insert' = insertWith' (\_old new -> new)
 
 insert ::
   (Ord cr, Monoid coin, Ord ptr) =>
@@ -442,25 +486,14 @@ insert k v m = unView (insert' k v m)
 
 lookup :: (Ord cr, Ord ptr) => k -> View coin cr pool ptr k v -> Maybe v
 lookup stakeid (Rewards (UnifiedMap tripmap _)) =
-  case Map.lookup stakeid tripmap of
-    Just (Triple (SJust coin) _ _) -> Just coin
-    _ -> Nothing
+  Map.lookup stakeid tripmap >>= tripReward
 lookup stakeid (Delegations (UnifiedMap tripmap _)) =
-  case Map.lookup stakeid tripmap of
-    Nothing -> Nothing
-    Just (Triple _ _ SNothing) -> Nothing
-    Just (Triple _ _ (SJust x)) -> Just x
+  Map.lookup stakeid tripmap >>= tripDelegation
 lookup ptr (Ptrs (UnifiedMap _ ptrmap)) = Map.lookup ptr ptrmap
 
 isNull :: View coin cr pool ptr k v -> Bool
-isNull (Rewards (UnifiedMap tripmap _)) = all nothing tripmap
-  where
-    nothing (Triple SNothing _ _) = True
-    nothing (Triple (SJust _) _ _) = False
-isNull (Delegations (UnifiedMap tripmap _)) = all nothing tripmap
-  where
-    nothing (Triple _ _ SNothing) = True
-    nothing (Triple _ _ (SJust _)) = False
+isNull (Rewards (UnifiedMap tripmap _)) = all (isNothing . tripReward) tripmap
+isNull (Delegations (UnifiedMap tripmap _)) = all (isNothing . tripDelegation) tripmap
 isNull (Ptrs (UnifiedMap _ ptrmap)) = Map.null ptrmap
 
 domain :: (Ord cr) => View coin cr pool ptr k v -> Set k
@@ -531,8 +564,8 @@ view ⨃ mp = unView $ Map.foldlWithKey' accum view mp
   Map k coin ->
   UMap coin cred pool ptr
 (Rewards (UnifiedMap tm pm)) ∪+ mp = UnifiedMap (unionHelp tm mp) pm
-(Delegations (UnifiedMap tm pm)) ∪+ _mp = (UnifiedMap tm pm) -- I don't think this is reachable
-(Ptrs (UnifiedMap tm pm)) ∪+ _mp = (UnifiedMap tm pm) -- I don't think this is reachable
+(Delegations (UnifiedMap tm pm)) ∪+ _mp = UnifiedMap tm pm -- I don't think this is reachable
+(Ptrs (UnifiedMap tm pm)) ∪+ _mp = UnifiedMap tm pm -- I don't think this is reachable
 
 unionHelp ::
   (Ord k, Monoid coin) =>
@@ -571,9 +604,10 @@ set ⋪ view = unView (Set.foldl' (flip delete') view set)
 Ptrs um ⋫ set = Set.foldl' removeCredStaking um set
   where
     -- removeCredStaking :: UnifiedMap crypto -> Credential 'Staking crypto -> UnifiedMap crypto
-    removeCredStaking (m@(UnifiedMap m2 m1)) cred =
+    removeCredStaking m@(UnifiedMap m2 m1) cred =
       case Map.lookup cred m2 of
-        Just (Triple _ kset _) -> UnifiedMap (Map.update ok cred m2) (foldr (\k pset -> Map.delete k pset) m1 kset)
+        Just (Triple _ kset _) ->
+          UnifiedMap (Map.update ok cred m2) (foldr (\k pset -> Map.delete k pset) m1 kset)
           where
             ok (Triple coin _ poolid) = zeroMaybe (Triple coin Set.empty poolid)
         Nothing -> m
@@ -693,18 +727,21 @@ class UnifiedView coin cred pool ptr k v where
 -- derived operations
 
 findWithDefault :: (Ord cred, Ord ptr) => a -> k -> View coin cred pool ptr k a -> a
-findWithDefault a1 k vm =
-  case lookup k vm of
-    Just a2 -> a2
-    Nothing -> a1
+findWithDefault d k = fromMaybe d . lookup k
 
--- | A View is a view, so the size of the view is NOT the same as the size of the underlying triple map.
+-- | A View is a view, so the size of the view is NOT the same as the size of
+-- the underlying triple map.
 size :: View coin cred pool ptr k a -> Int
 size (Ptrs (UnifiedMap _ ptrmap)) = Map.size ptrmap
 size x = foldl' (\count _v -> count + 1) 0 x
 
 -- | Create a UMap from 3 separate maps. For use in tests only.
-unify :: (Monoid coin, Ord cred, Ord ptr) => Map cred coin -> Map cred pool -> Map ptr cred -> UMap coin cred pool ptr
+unify ::
+  (Monoid coin, Ord cred, Ord ptr) =>
+  Map cred coin ->
+  Map cred pool ->
+  Map ptr cred ->
+  UMap coin cred pool ptr
 unify rews dels ptrss = um3
   where
     um1 = unView $ Map.foldlWithKey' (\um k v -> insert' k v um) (Rewards empty) rews

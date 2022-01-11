@@ -26,6 +26,7 @@ module Data.Compact.KVVector
     fromListN,
     mapValsKVVector,
     mapWithKeyKVVector,
+    memberKVVector,
     lookupKVVector,
     lookupDefaultKVVector,
     sortAscKVMVector,
@@ -207,6 +208,10 @@ lookupDefaultKVVector ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => v -> k -> KVVector kv vv (k, v) -> v
 lookupDefaultKVVector v k = fromMaybe v . lookupKVVector k
 {-# INLINE lookupDefaultKVVector #-}
+
+memberKVVector :: (Ord k, VG.Vector kv k) => k -> KVVector kv vv (k, v) -> Bool
+memberKVVector k = isJust . lookupIxSortedVector k . keysVector
+{-# INLINE memberKVVector #-}
 
 -- | Perform a binary search on a sorted vector
 lookupIxSortedVector ::

@@ -2,16 +2,13 @@
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- Allow for an orphan HasTrace instance for CHAIN, since HasTrace only pertains to tests
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -31,7 +28,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Shelley.LedgerState (stakeDistr)
+import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv, BbodyState)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.Val ((<->))
@@ -196,18 +193,17 @@ mkOCertIssueNos (GenDelegs delegs0) =
 -- This allows stake pools to produce blocks from genesis.
 registerGenesisStaking ::
   forall era.
-  (Era era) =>
   ShelleyGenesisStaking (Crypto era) ->
   ChainState era ->
   ChainState era
 registerGenesisStaking
   ShelleyGenesisStaking {sgsPools, sgsStake}
-  cs@(STS.ChainState {chainNes = oldChainNes}) =
+  cs@STS.ChainState {chainNes = oldChainNes} =
     cs
       { chainNes = newChainNes
       }
     where
-      oldEpochState = nesEs $ oldChainNes
+      oldEpochState = nesEs oldChainNes
       oldLedgerState = esLState oldEpochState
       oldDPState = _delegationState oldLedgerState
 
@@ -264,7 +260,7 @@ registerGenesisStaking
       -- during the previous epoch. We create a "fake" snapshot in order to
       -- establish an initial stake distribution.
       initSnapShot =
-        stakeDistr @era
-          (_utxo . _utxoState . esLState $ oldEpochState)
+        incrementalStakeDistr
+          (_stakeDistro . _utxoState . esLState $ oldEpochState)
           newDState
           newPState

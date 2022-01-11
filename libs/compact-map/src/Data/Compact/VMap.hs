@@ -13,6 +13,8 @@ module Data.Compact.VMap
     size,
     lookup,
     findWithDefault,
+    member,
+    notMember,
     map,
     mapMaybe,
     mapWithKey,
@@ -99,6 +101,16 @@ lookup ::
   (Ord k, VG.Vector kv k, VG.Vector vv v) => k -> VMap kv vv k v -> Maybe v
 lookup k = KV.lookupKVVector k . unVMap
 {-# INLINE lookup #-}
+
+member ::
+  (Ord k, VG.Vector kv k) => k -> VMap kv vv k v -> Bool
+member k = KV.memberKVVector k . unVMap
+{-# INLINE member #-}
+
+notMember ::
+  (Ord k, VG.Vector kv k) => k -> VMap kv vv k v -> Bool
+notMember k = not . member k
+{-# INLINE notMember #-}
 
 filter ::
   (VG.Vector kv k, VG.Vector vv v) =>
