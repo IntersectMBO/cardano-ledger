@@ -262,7 +262,6 @@ import Data.Group (Group, invert)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.MapExtras (filterMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
@@ -1305,14 +1304,14 @@ aggregateActiveStake tripmap incremental =
     -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
     ( \_k triple coin2 ->
         case triple of
-          (Triple (SJust coin1) _ (SJust _)) -> Just (coin1 <> coin2)
+          Triple (SJust coin1) _ (SJust _) -> Just (coin1 <> coin2)
           _ -> Nothing
     )
     -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
     ( \mp ->
         let p _key (Triple (SJust c) _ (SJust _)) = Just c
             p _ _ = Nothing
-         in filterMaybe p mp
+         in Map.mapMaybeWithKey p mp
     )
     -- what to do when a key is only in 'incremental', keep everything, because at
     -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
