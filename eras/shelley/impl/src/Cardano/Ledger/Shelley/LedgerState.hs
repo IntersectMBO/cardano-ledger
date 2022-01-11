@@ -1233,7 +1233,7 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
 --   aggregate of the current UTxO) and UnifiedMap (which tracks Coin,
 --   Delegations, and Ptrs simultaneously).  Note that logically:
 --   1) IncrementalStake = (credStake, ptrStake)
---   2) UnifiedMap = (rewards, activeDelegs, ptrmap:: Map ptr cred)
+--   2) UnifiedMap = (rewards, activeDelegs, ptrmap :: Map ptr cred)
 --
 --   Using this scheme the logic can do 3 things in one go, without touching the UTxO.
 --   1) Resolve Pointers
@@ -1263,22 +1263,15 @@ incrementalStakeDistr ::
 incrementalStakeDistr incstake ds ps =
   SnapShot
     (Stake $ VMap.fromMap (compactCoinOrError <$> step2))
-    (VMap.fromMap (UM.unUnify delegs))
+    (VMap.fromMap delegs)
     (VMap.fromMap poolParams)
   where
     UnifiedMap tripmap ptrmap = _unified ds
     PState poolParams _ _ = ps
-    delegs = delegations ds
-    step1 = resolveActiveIncrementalPtrs (activeP tripmap) ptrmap incstake
+    delegs = UM.unUnify (delegations ds)
+    -- A credential is active, only if it is being delegated
+    step1 = resolveActiveIncrementalPtrs (`Map.member` delegs) ptrmap incstake
     step2 = aggregateActiveStake tripmap step1
-
--- | A credential is active, only if the third part of the triple is (SJust _)
-activeP :: Map (Credential 'Staking crypt0) (Triple crypto) -> Credential 'Staking crypt0 -> Bool
-activeP mp cred =
-  case Map.lookup cred mp of
-    Nothing -> False
-    Just (Triple _ _ SNothing) -> False
-    Just (Triple _ _ (SJust _)) -> True
 
 -- | Resolve inserts and deletes which were indexed by Ptrs, by looking them
 --   up in 'ptrs' and combining the result of the lookup with the ordinary stake.
