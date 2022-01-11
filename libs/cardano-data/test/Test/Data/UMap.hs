@@ -188,7 +188,6 @@ iterPtr acts = runPtr acts == loop (next um) Map.empty
 -- =================
 
 finish ::
-  Ord cred =>
   Maybe (a, b, View coin cred pool ptr k v) ->
   Maybe (a, b, Map k v)
 finish Nothing = Nothing
