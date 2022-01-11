@@ -620,7 +620,7 @@ instance Semigroup (IncrementalStake c) where
   (IStake a b) <> (IStake c d) = IStake (Map.unionWith (<>) a c) (Map.unionWith (<>) b d)
 
 instance Monoid (IncrementalStake c) where
-  mempty = (IStake Map.empty Map.empty)
+  mempty = IStake Map.empty Map.empty
 
 instance Data.Group.Group (IncrementalStake c) where
   invert (IStake m1 m2) = IStake (Map.map invert m1) (Map.map invert m2)
@@ -1116,7 +1116,7 @@ reapRewards (UnifiedMap tmap ptrmap) withdrawals = (UnifiedMap (Map.mapWithKey g
 ---------------------------------
 
 -- | Compute the current Stake Distribution. This was called at the Epoch boundary in the Snap Rule.
---   Now its is called in the tests to see that its incremental analog 'incrementaStakeDistr' agrees.
+--   Now its is called in the tests to see that its incremental analog 'incrementalStakeDistr' agrees.
 stakeDistr ::
   forall era.
   Era era =>
@@ -1195,7 +1195,7 @@ updateStakeDistribution incStake0 utxoDel utxoAdd = incStake2
 
 -- | Incrementally sum up all the Coin for each staking Credential, use different 'mode' operations
 --   for UTxO that are inserts (id) and UTxO that are deletes (invert). Never store a (Coin 0) balance,
---   since these do not occur in the non-incremental stye that works directly from the whole UTxO.
+--   since these do not occur in the non-incremental style that works directly from the whole UTxO.
 --   This function has a non-incremental analog 'aggregateUtxoCoinByCredential' . In this incremental
 --   version we expect the size of the UTxO to be fairly small. I.e the number of inputs and outputs
 --   in a transaction, which is aways < 4096, not millions, and very often < 10).

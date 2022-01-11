@@ -235,11 +235,11 @@ domRestrictedView setk (Ptrs (UnifiedMap _ ptrmap)) = Map.restrictKeys ptrmap se
 instance Foldable (View coin cred pool ptr k) where
   foldMap f (Rewards (UnifiedMap tmap _)) = Map.foldlWithKey accum mempty tmap
     where
-      accum ans _ (Triple (SJust c) _ _) = ans <> (f c)
+      accum ans _ (Triple (SJust c) _ _) = ans <> f c
       accum ans _ _ = ans
   foldMap f (Delegations (UnifiedMap tmap _)) = Map.foldlWithKey accum mempty tmap
     where
-      accum ans _ (Triple _ _ (SJust c)) = ans <> (f c)
+      accum ans _ (Triple _ _ (SJust c)) = ans <> f c
       accum ans _ (Triple _ _ SNothing) = ans
   foldMap f (Ptrs (UnifiedMap _ ptrmap)) = foldMap f ptrmap
   foldr accum ans0 (Rewards (UnifiedMap tmap _)) = Map.foldr accum2 ans0 tmap
@@ -274,7 +274,8 @@ instance Foldable (View coin cred pool ptr k) where
 -- Operations on Triple
 
 instance (Ord ptr, Monoid coin) => Semigroup (Trip coin ptr pool) where
-  (<>) (Triple c1 ptrs1 x) (Triple c2 ptrs2 y) = Triple (appendStrictMaybe c1 c2) (Set.union ptrs1 ptrs2) (add x y)
+  (<>) (Triple c1 ptrs1 x) (Triple c2 ptrs2 y) =
+    Triple (appendStrictMaybe c1 c2) (Set.union ptrs1 ptrs2) (add x y)
     where
       add SNothing SNothing = SNothing
       add (SJust w) SNothing = SJust w
