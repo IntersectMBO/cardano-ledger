@@ -6,6 +6,7 @@
 
 module Cardano.Ledger.Shelley.Constraints where
 
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Compactible (Compactible (..))
@@ -56,7 +57,8 @@ class
 class
   ( Era era,
     ChainData (TxOut era),
-    AnnotatedData (TxOut era),
+    ToCBOR (TxOut era),
+    FromCBOR (TxOut era),
     HasField "address" (TxOut era) (Addr (Crypto era)),
     HasField "compactAddress" (TxOut era) (CompactAddr (Crypto era)),
     HasField "value" (TxOut era) (Value era)

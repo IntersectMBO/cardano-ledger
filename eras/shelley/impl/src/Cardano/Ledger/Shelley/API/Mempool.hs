@@ -3,7 +3,6 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -37,9 +36,9 @@ module Cardano.Ledger.Shelley.API.Mempool
   )
 where
 
-import Cardano.Binary (Annotator, Decoder, FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Core (AnnotatedData, ChainData)
+import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
   ( Crypto,
@@ -70,10 +69,8 @@ import Control.State.Transition.Extended
     TRC (..),
     applySTS,
   )
-import Data.Coders (decodeAnnList)
 import Data.Coerce (Coercible, coerce)
 import Data.Functor ((<&>))
-import Data.Functor.Identity (Identity (..))
 import Data.Sequence (Seq)
 import Data.Typeable (Typeable)
 import NoThunks.Class (NoThunks)
@@ -112,7 +109,7 @@ class
     Eq (ApplyTxError era),
     Show (ApplyTxError era),
     Typeable (ApplyTxError era),
-    AnnotatedData (ApplyTxError era),
+    SerialisableData (ApplyTxError era),
     STS (Core.EraRule "LEDGER" era),
     BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
@@ -262,23 +259,7 @@ instance
   ) =>
   FromCBOR (ApplyTxError era)
   where
-  fromCBOR = runIdentity <$> decodeApplyTxError
-
-instance
-  ( Era era,
-    FromCBOR (Annotator (PredicateFailure (Core.EraRule "LEDGER" era)))
-  ) =>
-  FromCBOR (Annotator (ApplyTxError era))
-  where
-  fromCBOR = decodeApplyTxError
-
-decodeApplyTxError ::
-  forall f era s.
-  ( Applicative f,
-    FromCBOR (f (PredicateFailure (Core.EraRule "LEDGER" era)))
-  ) =>
-  Decoder s (f (ApplyTxError era))
-decodeApplyTxError = (fmap . fmap) ApplyTxError (decodeAnnList fromCBOR)
+  fromCBOR = ApplyTxError <$> fromCBOR
 
 -- | Old 'applyTxs'
 applyTxs ::

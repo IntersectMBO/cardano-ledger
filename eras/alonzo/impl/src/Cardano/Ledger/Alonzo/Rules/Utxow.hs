@@ -82,7 +82,6 @@ import Control.State.Transition.Extended
 import Data.Coders
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
-import Data.Functor.Identity (Identity (..))
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -175,34 +174,25 @@ instance
   ) =>
   FromCBOR (AlonzoPredFail era)
   where
-  fromCBOR = runIdentity <$> decode (Summands "(AlonzoPredFail" decodePredFail)
-
-instance
-  ( Era era,
-    FromCBOR (Annotator (PredicateFailure (Core.EraRule "UTXO" era))),
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
-  ) =>
-  FromCBOR (Annotator (AlonzoPredFail era))
-  where
   fromCBOR = decode (Summands "(AlonzoPredFail" decodePredFail)
 
 decodePredFail ::
   ( Era era,
-    Applicative f,
-    FromCBOR (f (UtxowPredicateFailure era))
+    FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)), -- TODO, we should be able to get rid of this constraint
+    Typeable (Core.Script era),
+    Typeable (Core.AuxiliaryData era)
   ) =>
   Word ->
-  Decode 'Open (f (AlonzoPredFail era))
-decodePredFail 0 = SumD (pure WrappedShelleyEraFailure) <*! D fromCBOR
-decodePredFail 1 = Ann $ SumD MissingRedeemers <! From
-decodePredFail 2 = Ann $ SumD MissingRequiredDatums <! From <! From
-decodePredFail 3 = Ann $ SumD NonOutputSupplimentaryDatums <! From <! From
-decodePredFail 4 = Ann $ SumD PPViewHashesDontMatch <! From <! From
-decodePredFail 5 = Ann $ SumD MissingRequiredSigners <! From
-decodePredFail 6 = Ann $ SumD UnspendableUTxONoDatumHash <! From
-decodePredFail 7 = Ann $ SumD ExtraRedeemers <! From
-decodePredFail n = Ann $ Invalid n
+  Decode 'Open (AlonzoPredFail era)
+decodePredFail 0 = SumD WrappedShelleyEraFailure <! D fromCBOR
+decodePredFail 1 = SumD MissingRedeemers <! From
+decodePredFail 2 = SumD MissingRequiredDatums <! From <! From
+decodePredFail 3 = SumD NonOutputSupplimentaryDatums <! From <! From
+decodePredFail 4 = SumD PPViewHashesDontMatch <! From <! From
+decodePredFail 5 = SumD MissingRequiredSigners <! From
+decodePredFail 6 = SumD UnspendableUTxONoDatumHash <! From
+decodePredFail 7 = SumD ExtraRedeemers <! From
+decodePredFail n = Invalid n
 
 -- =============================================
 

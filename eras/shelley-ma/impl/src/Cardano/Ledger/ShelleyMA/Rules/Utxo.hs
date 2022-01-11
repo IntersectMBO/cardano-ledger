@@ -15,7 +15,7 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
-import Cardano.Binary (Annotator, Decoder, FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
 import Cardano.Ledger.Address
   ( Addr (AddrBootstrap),
     bootstrapAddressAttrsSize,
@@ -76,7 +76,6 @@ import Data.Coders
   )
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
-import Data.Functor.Identity (Identity (..))
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -437,67 +436,48 @@ instance
   ) =>
   FromCBOR (UtxoPredicateFailure era)
   where
-  fromCBOR = runIdentity <$> decodeUtxoPredicateFailure
-
-instance
-  ( TransValue FromCBOR era,
-    Shelley.TransUTxO FromCBOR era,
-    Val.DecodeNonNegative (Core.Value era),
-    Show (Core.Value era),
-    FromCBOR (Annotator (PredicateFailure (Core.EraRule "PPUP" era)))
-  ) =>
-  FromCBOR (Annotator (UtxoPredicateFailure era))
-  where
-  fromCBOR = decodeUtxoPredicateFailure
-
-decodeUtxoPredicateFailure ::
-  forall era f s.
-  ( TransValue FromCBOR era,
-    Shelley.TransUTxO FromCBOR era,
-    Applicative f,
-    FromCBOR (f (PredicateFailure (Core.EraRule "PPUP" era)))
-  ) =>
-  Decoder s (f (UtxoPredicateFailure era))
-decodeUtxoPredicateFailure = decodeRecordSum "PredicateFailureUTXO" $ \case
-  0 -> do
-    ins <- decodeSet fromCBOR
-    pure (2, pure @f $ BadInputsUTxO ins) -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
-  1 -> do
-    a <- fromCBOR
-    b <- fromCBOR
-    pure (3, pure $ OutsideValidityIntervalUTxO a b)
-  2 -> do
-    a <- fromCBOR
-    b <- fromCBOR
-    pure (3, pure $ MaxTxSizeUTxO a b)
-  3 -> pure (1, pure InputSetEmptyUTxO)
-  4 -> do
-    a <- fromCBOR
-    b <- fromCBOR
-    pure (3, pure $ FeeTooSmallUTxO a b)
-  5 -> do
-    a <- fromCBOR
-    b <- fromCBOR
-    pure (3, pure $ ValueNotConservedUTxO a b)
-  6 -> do
-    outs <- decodeList fromCBOR
-    pure (2, pure $ OutputTooSmallUTxO outs)
-  7 -> do
-    a <- fromCBOR
-    pure (2, fmap UpdateFailure a)
-  8 -> do
-    right <- fromCBOR
-    wrongs <- decodeSet fromCBOR
-    pure (3, pure $ WrongNetwork right wrongs)
-  9 -> do
-    right <- fromCBOR
-    wrongs <- decodeSet fromCBOR
-    pure (3, pure $ WrongNetworkWithdrawal right wrongs)
-  10 -> do
-    outs <- decodeList fromCBOR
-    pure (2, pure $ OutputBootAddrAttrsTooBig outs)
-  11 -> pure (1, pure TriesToForgeADA)
-  12 -> do
-    outs <- decodeList fromCBOR
-    pure (2, pure $ OutputTooBigUTxO outs)
-  k -> invalidKey k
+  fromCBOR =
+    decodeRecordSum "PredicateFailureUTXO" $
+      \case
+        0 -> do
+          ins <- decodeSet fromCBOR
+          pure (2, BadInputsUTxO ins) -- The (2,..) indicates the number of things decoded, INCLUDING the tags, which are decoded by decodeRecordSumNamed
+        1 -> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure (3, OutsideValidityIntervalUTxO a b)
+        2 -> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure (3, MaxTxSizeUTxO a b)
+        3 -> pure (1, InputSetEmptyUTxO)
+        4 -> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure (3, FeeTooSmallUTxO a b)
+        5 -> do
+          a <- fromCBOR
+          b <- fromCBOR
+          pure (3, ValueNotConservedUTxO a b)
+        6 -> do
+          outs <- decodeList fromCBOR
+          pure (2, OutputTooSmallUTxO outs)
+        7 -> do
+          a <- fromCBOR
+          pure (2, UpdateFailure a)
+        8 -> do
+          right <- fromCBOR
+          wrongs <- decodeSet fromCBOR
+          pure (3, WrongNetwork right wrongs)
+        9 -> do
+          right <- fromCBOR
+          wrongs <- decodeSet fromCBOR
+          pure (3, WrongNetworkWithdrawal right wrongs)
+        10 -> do
+          outs <- decodeList fromCBOR
+          pure (2, OutputBootAddrAttrsTooBig outs)
+        11 -> pure (1, TriesToForgeADA)
+        12 -> do
+          outs <- decodeList fromCBOR
+          pure (2, OutputTooBigUTxO outs)
+        k -> invalidKey k

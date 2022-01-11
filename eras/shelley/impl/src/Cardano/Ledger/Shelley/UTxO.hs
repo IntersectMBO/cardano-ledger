@@ -41,7 +41,7 @@ module Cardano.Ledger.Shelley.UTxO
   )
 where
 
-import Cardano.Binary (Annotator (..), FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe, strictMaybeToMaybe)
@@ -126,20 +126,6 @@ instance (Era era, ToCBOR (Core.TxOut era)) => ToCBOR (UTxO era) where
 
 instance
   ( CC.Crypto (Crypto era),
-    FromSharedCBOR (Annotator (Core.TxOut era)),
-    Share (Annotator (Core.TxOut era)) ~ Interns (Credential 'Staking (Crypto era))
-  ) =>
-  FromSharedCBOR (Annotator (UTxO era))
-  where
-  type
-    Share (Annotator (UTxO era)) =
-      Share (UTxO era)
-  fromSharedCBOR credsInterns = do
-    !theMap <- decodeSplitMap fromCBOR (fromSharedCBOR credsInterns)
-    pure $ UTxO <$!> sequenceA theMap
-
-instance
-  ( CC.Crypto (Crypto era),
     FromSharedCBOR (Core.TxOut era),
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era))
   ) =>
@@ -152,15 +138,12 @@ instance
     UTxO <$!> decodeSplitMap fromCBOR (fromSharedCBOR credsInterns)
 
 instance
-  ( CC.Crypto (Crypto era),
-    Typeable era,
-    FromCBOR (Annotator (Core.TxOut era))
+  ( FromCBOR (Core.TxOut era),
+    Era era
   ) =>
-  FromCBOR (Annotator (UTxO era))
+  FromCBOR (UTxO era)
   where
-  fromCBOR = do
-    !theMap <- decodeSplitMap fromCBOR fromCBOR
-    pure $ UTxO <$!> sequenceA theMap
+  fromCBOR = UTxO <$!> decodeSplitMap fromCBOR fromCBOR
 
 deriving via
   Quiet (UTxO era)
