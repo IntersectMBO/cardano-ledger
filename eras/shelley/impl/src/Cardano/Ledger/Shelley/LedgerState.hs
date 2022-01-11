@@ -315,8 +315,8 @@ instance CC.Crypto crypto => FromCBOR (FutureGenDeleg crypto) where
 data InstantaneousRewards crypto = InstantaneousRewards
   { iRReserves :: !(Map (Credential 'Staking crypto) Coin),
     iRTreasury :: !(Map (Credential 'Staking crypto) Coin),
-    deltaReserves :: DeltaCoin,
-    deltaTreasury :: DeltaCoin
+    deltaReserves :: !DeltaCoin,
+    deltaTreasury :: !DeltaCoin
   }
   deriving (Show, Eq, Generic)
 
@@ -350,7 +350,7 @@ instance CC.Crypto crypto => FromSharedCBOR (InstantaneousRewards crypto) where
 -- | State of staking pool delegations and rewards
 data DState crypto = DState
   { -- | Unified Reward Maps
-    _unified :: UnifiedMap crypto,
+    _unified :: !(UnifiedMap crypto),
     -- | Future genesis key delegations
     _fGenDelegs :: !(Map (FutureGenDeleg crypto) (GenDelegPair crypto)),
     -- | Genesis key delegations
