@@ -1288,7 +1288,7 @@ testIncrementalStake ::
 testIncrementalStake _ (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate)) =
   let stake = stakeDistr @era utxo dstate pstate
 
-      istake = incrementalStakeDistr @era incStake dstate pstate
+      istake = incrementalStakeDistr @(Crypto era) incStake dstate pstate
    in counterexample
         ( "\nIncremental stake distribution does not match old style stake distribution"
             ++ tersediffincremental "differences: Old vs Incremental" (_stake stake) (_stake istake)
@@ -1309,4 +1309,4 @@ tersediffincremental :: String -> Stake crypto -> Stake crypto -> String
 tersediffincremental message (Stake a) (Stake c) =
   tersemapdiffs (message ++ " " ++ "hashes") (mp a) (mp c)
   where
-    mp = (Map.map fromCompact) . VMap.toMap
+    mp = Map.map fromCompact . VMap.toMap

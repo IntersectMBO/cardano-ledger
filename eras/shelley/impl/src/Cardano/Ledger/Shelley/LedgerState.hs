@@ -1115,7 +1115,7 @@ reapRewards (UnifiedMap tmap ptrmap) withdrawals = (UnifiedMap (Map.mapWithKey g
 ---------------------------------
 
 -- | Compute the current Stake Distribution. This was called at the Epoch boundary in the Snap Rule.
---   Now its is called in the tests to see that its incremental analog 'incrementalStakeDistr' agrees.
+--   Now it is called in the tests to see that its incremental analog 'incrementalStakeDistr' agrees.
 stakeDistr ::
   forall era.
   Era era =>
@@ -1254,11 +1254,11 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
 --   step2 =  aggregate (dom activeDelegs ◁ rewards) step1
 --   This function has a non-incremental analog, 'stakeDistr', mosty used in tests, which does use the UTxO.
 incrementalStakeDistr ::
-  forall era.
-  IncrementalStake (Crypto era) ->
-  DState (Crypto era) ->
-  PState (Crypto era) ->
-  SnapShot (Crypto era)
+  forall crypto.
+  IncrementalStake crypto ->
+  DState crypto ->
+  PState crypto ->
+  SnapShot crypto
 incrementalStakeDistr incstake ds ps =
   SnapShot
     (Stake $ VMap.fromMap (compactCoinOrError <$> step2))
