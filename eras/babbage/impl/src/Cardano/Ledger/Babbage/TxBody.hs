@@ -11,6 +11,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -42,6 +43,9 @@ module Cardano.Ledger.Babbage.TxBody
         txnetworkid
       ),
     Datum (..),
+    InlineDatum,
+    fromInlineDatum,
+    toInlineDatum,
     datumDatahash,
     inputs',
     collateral',
@@ -69,9 +73,11 @@ import Cardano.Binary
   ( DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    decodeAnnotator,
     decodeBreakOr,
     decodeListLenOrIndef,
     encodeListLen,
+    toStrictByteString,
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
@@ -117,6 +123,9 @@ import Cardano.Ledger.Val
     isZero,
   )
 import Control.DeepSeq (NFData (rnf), rwhnf)
+import qualified Data.ByteString.Lazy as LBS
+import Data.ByteString.Short (ShortByteString)
+import qualified Data.ByteString.Short as SBS
 import Data.Coders
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -134,6 +143,22 @@ import GHC.Stack (HasCallStack)
 import GHC.TypeLits
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
+
+-- Invariant: `ByteString` is valid cbor for a `Data`
+type role InlineDatum representational
+
+newtype InlineDatum era = InlineDatum' ShortByteString
+  deriving newtype (FromCBOR, ToCBOR, Eq, Ord, Show)
+
+fromInlineDatum :: forall era. Era era => InlineDatum era -> Data era
+fromInlineDatum (InlineDatum' x) =
+  let longX = LBS.fromStrict $ SBS.fromShort x
+   in case decodeAnnotator "Data" fromCBOR longX of
+        Left e -> error $ "impossible: InlineDatum is not valid cbor for Data: " <> show e
+        Right d -> d
+
+toInlineDatum :: forall era. Era era => Data era -> InlineDatum era
+toInlineDatum d = InlineDatum' (SBS.toShort $ toStrictByteString $ toCBOR d)
 
 data TxOut era
   = TxOutCompact'
@@ -418,6 +443,21 @@ deriving via
     ) =>
     FromCBOR (Annotator (TxBody era))
 
+instance
+  ( Era era,
+    Typeable (Core.Script era),
+    Typeable (Core.AuxiliaryData era),
+    Compactible (Core.Value era),
+    Show (Core.Value era),
+    DecodeNonNegative (Core.Value era),
+    FromCBOR (Annotator (Core.Script era)),
+    FromCBOR (PParamsDelta era),
+    ToCBOR (PParamsDelta era)
+  ) =>
+  FromCBOR (Annotator (TxBodyRaw era))
+  where
+  fromCBOR = pure <$> fromCBOR
+
 -- The Set of constraints necessary to use the TxBody pattern
 type BabbageBody era =
   ( Era era,
@@ -616,7 +656,7 @@ instance
     Show (Core.Value era),
     Compactible (Core.Value era)
   ) =>
-  FromCBOR (Annotator (TxOut era))
+  FromCBOR (TxOut era)
   where
   fromCBOR = fromNotSharedCBOR
 
@@ -626,9 +666,9 @@ instance
     Show (Core.Value era),
     Compactible (Core.Value era)
   ) =>
-  FromSharedCBOR (Annotator (TxOut era))
+  FromSharedCBOR (TxOut era)
   where
-  type Share (Annotator (TxOut era)) = Interns (Credential 'Staking (Crypto era))
+  type Share (TxOut era) = Interns (Credential 'Staking (Crypto era))
   fromSharedCBOR credsInterns = do
     lenOrIndef <- decodeListLenOrIndef
     let internTxOut :: TxOut era -> TxOut era
@@ -638,35 +678,29 @@ instance
           TxOut_AddrHash28_AdaOnly_DataHash32 cred a b c d ada e f g h ->
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) a b c d ada e f g h
           txOut -> txOut
-    internTxOut <$$> case lenOrIndef of
-      Nothing ->
-        fmap pure $ do
-          a <- fromCBOR
-          cv <- decodeNonNegative
-          decodeBreakOr >>= \case
-            True -> pure $ TxOutCompact a cv
-            False -> do
-              dh <- fromCBOR
-              decodeBreakOr >>= \case
-                True -> pure $ TxOutCompactDH a cv dh
-                False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
+    internTxOut <$> case lenOrIndef of
+      Nothing -> do
+        a <- fromCBOR
+        cv <- decodeNonNegative
+        decodeBreakOr >>= \case
+          True -> pure $ TxOutCompact a cv
+          False -> do
+            dh <- fromCBOR
+            decodeBreakOr >>= \case
+              True -> pure $ TxOutCompactDH a cv dh
+              False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
       Just 2 ->
-        fmap pure $
-          TxOutCompact
-            <$> fromCBOR
-            <*> decodeNonNegative
+        TxOutCompact
+          <$> fromCBOR
+          <*> decodeNonNegative
       Just 3 ->
-        fmap pure $
-          TxOutCompactDH
-            <$> fromCBOR
-            <*> decodeNonNegative
-            <*> fromCBOR
+        TxOutCompactDH
+          <$> fromCBOR
+          <*> decodeNonNegative
+          <*> fromCBOR
       Just 4 -> do
         True <- fromCBOR @Bool
-        a <- fromCBOR
-        b <- decodeNonNegative
-        c <- fromCBOR
-        pure $ TxOutCompactDatum a b <$> c
+        TxOutCompactDatum <$> fromCBOR <*> decodeNonNegative <*> (fromInlineDatum <$> fromCBOR)
       Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
 encodeTxBodyRaw ::
@@ -723,12 +757,6 @@ encodeTxBodyRaw
       fromSJust (SJust x) = x
       fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
 
-doubleFmap, (<$$>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
-{-# INLINE doubleFmap #-}
-doubleFmap = fmap . fmap
-{-# INLINE (<$$>) #-}
-(<$$>) = doubleFmap
-
 instance
   forall era.
   ( Era era,
@@ -741,13 +769,13 @@ instance
     FromCBOR (PParamsDelta era),
     ToCBOR (PParamsDelta era)
   ) =>
-  FromCBOR (Annotator (TxBodyRaw era))
+  FromCBOR (TxBodyRaw era)
   where
   fromCBOR =
     decode $
       SparseKeyed
         "TxBodyRaw"
-        (pure initial)
+        initial
         bodyFields
         requiredFields
     where
@@ -770,51 +798,51 @@ instance
           SNothing
           SNothing
           SNothing
-      bodyFields :: (Word -> Field (Annotator (TxBodyRaw era)))
+      bodyFields :: (Word -> Field (TxBodyRaw era))
       bodyFields 0 =
-        fieldA
+        field
           (\x tx -> tx {_inputs = x})
           (D (decodeSet fromCBOR))
       bodyFields 13 =
-        fieldA
+        field
           (\x tx -> tx {_collateral = x})
           (D (decodeSet fromCBOR))
       bodyFields 18 =
-        fieldA
+        field
           (\x tx -> tx {_referenceInputs = x})
           (D (decodeSet fromCBOR))
       bodyFields 1 =
-        fieldAA
+        field
           (\x tx -> tx {_outputs = x})
-          (D (decodeAnnStrictSeq fromCBOR))
+          (D (decodeStrictSeq fromCBOR))
       bodyFields 16 =
-        fieldAA
+        field
           (\x tx -> tx {_collateralReturn = x})
-          (D (sequenceA <$> fromCBOR))
+          (D fromCBOR)
       bodyFields 17 =
-        fieldA
+        field
           (\x tx -> tx {_totalCollateral = x})
-          (D (fromCBOR))
-      bodyFields 2 = fieldA (\x tx -> tx {_txfee = x}) From
+          (D fromCBOR)
+      bodyFields 2 = field (\x tx -> tx {_txfee = x}) From
       bodyFields 3 =
-        fieldA
+        field
           (\x tx -> tx {_vldt = (_vldt tx) {invalidHereafter = x}})
           (D (SJust <$> fromCBOR))
       bodyFields 4 =
-        fieldA
+        field
           (\x tx -> tx {_certs = x})
           (D (decodeStrictSeq fromCBOR))
-      bodyFields 5 = fieldA (\x tx -> tx {_wdrls = x}) From
-      bodyFields 6 = fieldA (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
-      bodyFields 7 = fieldA (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 5 = field (\x tx -> tx {_wdrls = x}) From
+      bodyFields 6 = field (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
+      bodyFields 7 = field (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
       bodyFields 8 =
-        fieldA
+        field
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
           (D (SJust <$> fromCBOR))
-      bodyFields 9 = fieldA (\x tx -> tx {_mint = x}) (D decodeMint)
-      bodyFields 11 = fieldA (\x tx -> tx {_scriptIntegrityHash = x}) (D (SJust <$> fromCBOR))
-      bodyFields 14 = fieldA (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
-      bodyFields 15 = fieldA (\x tx -> tx {_txnetworkid = x}) (D (SJust <$> fromCBOR))
+      bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
+      bodyFields 11 = field (\x tx -> tx {_scriptIntegrityHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 14 = field (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
+      bodyFields 15 = field (\x tx -> tx {_txnetworkid = x}) (D (SJust <$> fromCBOR))
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
         [ (0, "inputs"),
