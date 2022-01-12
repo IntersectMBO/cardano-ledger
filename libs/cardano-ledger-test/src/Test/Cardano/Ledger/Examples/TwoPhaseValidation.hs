@@ -116,6 +116,7 @@ import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString as BS (replicate)
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (..))
+import Data.Either (fromRight)
 import Data.Functor.Identity (Identity, runIdentity)
 import Data.Map (Map)
 import qualified Data.Map as Map
@@ -2041,7 +2042,7 @@ collectTwoPhaseScriptInputsOutputOrdering =
     apf = Alonzo Mock
     context =
       valContext
-        ( runIdentity $
+        ( fromRight (error "translation error") . runIdentity $
             txInfo
               (pp apf)
               PlutusV1

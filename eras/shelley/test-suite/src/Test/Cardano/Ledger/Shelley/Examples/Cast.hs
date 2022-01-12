@@ -14,6 +14,7 @@
 module Test.Cardano.Ledger.Shelley.Examples.Cast
   ( alicePay,
     aliceStake,
+    alicePHK,
     aliceSHK,
     aliceAddr,
     alicePtrAddr,
@@ -109,6 +110,7 @@ alicePoolKeys =
 aliceAddr :: CC.Crypto crypto => Addr crypto
 aliceAddr = mkAddr (alicePay, aliceStake)
 
+-- | Alice's payment credential
 alicePHK :: CC.Crypto crypto => Credential 'Payment crypto
 alicePHK = (KeyHashObj . hashKey . vKey) alicePay
 

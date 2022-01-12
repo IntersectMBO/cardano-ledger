@@ -91,6 +91,7 @@ test-suite cardano-ledger-alonzo-test
     Test.Cardano.Ledger.Alonzo.Translation
     Test.Cardano.Ledger.Alonzo.Trials
     Test.Cardano.Ledger.Alonzo.Trials
+    Test.Cardano.Ledger.Alonzo.TxInfo
   build-depends:
     base16-bytestring,
     bytestring,

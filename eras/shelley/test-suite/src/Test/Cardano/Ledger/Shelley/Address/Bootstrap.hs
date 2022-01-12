@@ -12,6 +12,7 @@ module Test.Cardano.Ledger.Shelley.Address.Bootstrap
     testBootstrapNotSpending,
     bootstrapHashTest,
     genSignature,
+    aliceByronAddr,
   )
 where
 

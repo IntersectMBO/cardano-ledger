@@ -108,6 +108,8 @@ exampleInvalidExUnitCalc = do
       costmodels
   case res of
     Left (UnknownTxIns _) -> pure ()
+    Left (BadTranslation _) ->
+      assertFailure "evaluateTransactionExecutionUnits should not fail from BadTranslation"
     Right _ -> assertFailure "evaluateTransactionExecutionUnits should have failed"
 
 exampleTx :: Core.Tx A

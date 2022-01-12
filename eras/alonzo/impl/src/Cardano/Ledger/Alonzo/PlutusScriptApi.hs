@@ -36,6 +36,7 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxInfo
   ( FailureDescription (..),
     ScriptResult (..),
+    TranslationError (..),
     andResult,
     runPLCScript,
     txInfo,
@@ -120,12 +121,14 @@ data CollectError crypto
   = NoRedeemer !(ScriptPurpose crypto)
   | NoWitness !(ScriptHash crypto)
   | NoCostModel !Language
+  | BadTranslation !TranslationError
   deriving (Eq, Show, Generic, NoThunks)
 
 instance (CC.Crypto crypto) => ToCBOR (CollectError crypto) where
   toCBOR (NoRedeemer x) = encode $ Sum NoRedeemer 0 !> To x
   toCBOR (NoWitness x) = encode $ Sum NoWitness 1 !> To x
   toCBOR (NoCostModel x) = encode $ Sum NoCostModel 2 !> To x
+  toCBOR (BadTranslation x) = encode $ Sum BadTranslation 3 !> To x
 
 instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
   fromCBOR = decode (Summands "CollectError" dec)
@@ -133,6 +136,7 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
       dec 0 = SumD NoRedeemer <! From
       dec 1 = SumD NoWitness <! From
       dec 2 = SumD NoCostModel <! From
+      dec 3 = SumD BadTranslation <! From
       dec n = Invalid n
 
 -- | Collect the inputs for twophase scripts. If any script can't find ist data return
@@ -198,19 +202,24 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
         Just script -> Right script
         Nothing -> Left (NoWitness hash)
     apply costs (sp, d, eu) script@(AlonzoScript.PlutusScript lang _) =
-      (script, getData tx utxo sp ++ (d : [valContext (txinfo lang) sp]), eu, costs Map.! lang)
-    apply _ (_, _, eu) script = (script, [], eu, CostModel mempty)
+      case txinfo lang of
+        Right inf -> Right (script, getData tx utxo sp ++ (d : [valContext inf sp]), eu, costs Map.! lang)
+        Left te -> Left $ BadTranslation te
+    apply _ (_, _, eu) script = Right (script, [], eu, CostModel mempty)
 
 -- | Merge two lists (either of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.
-merge :: forall t1 t2 a1 a2. (t1 -> t2 -> a1) -> [Either a2 t1] -> [Either a2 t2] -> Either [a2] [a1] -> Either [a2] [a1]
+merge :: forall t1 t2 a1 a2. (t1 -> t2 -> Either a2 a1) -> [Either a2 t1] -> [Either a2 t2] -> Either [a2] [a1] -> Either [a2] [a1]
 merge _f [] [] answer = answer
 merge _f [] (_ : _) answer = answer
 merge _f (_ : _) [] answer = answer
 merge f (x : xs) (y : ys) zs = merge f xs ys (gg x y zs)
   where
     gg :: Either a2 t1 -> Either a2 t2 -> Either [a2] [a1] -> Either [a2] [a1]
-    gg (Right a) (Right b) (Right cs) = Right (f a b : cs) -- The one place a success occurs.
+    gg (Right a) (Right b) (Right cs) =
+      case f a b of
+        Right c -> Right $ c : cs
+        Left e -> Left [e]
     gg (Left a) (Right _) (Right _) = Left [a]
     gg (Right _) (Left b) (Right _) = Left [b]
     gg (Left a) (Left b) (Right _) = Left [a, b]
