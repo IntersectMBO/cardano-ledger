@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -218,11 +219,14 @@ profileEpochBoundary =
 
 epochAt :: Int -> Benchmark
 epochAt x =
-  env (QC.generate (genTestCase x n)) $ \arg ->
+  env (QC.generate (genTestCase x n)) $ \ ~arg@(dstate, pstate, utxo) ->
     bgroup
       ("UTxO=" ++ show x ++ ",  address=" ++ show n)
       [ bench "stakeDistr" (nf action2m arg),
-        bench "incrementalStakeDistr)" (nf action2im arg)
+        bench "incrementalStakeDistr" (nf action2im arg),
+        env (pure (updateStakeDistribution mempty mempty utxo)) $ \incStake ->
+          bench "incrementalStakeDistr (no update)" $
+            nf (incrementalStakeDistr incStake dstate) pstate
       ]
   where
     n = 10000 :: Int
@@ -246,14 +250,16 @@ action2im (dstate, pstate, utxo) =
 -- | Benchmarks for the various validation transitions exposed by the API
 validGroup :: Benchmark
 validGroup =
-  bgroup "validation" $
+  bgroup
+    "validation"
     [ runAtUTxOSize 1000,
       runAtUTxOSize 100000,
       runAtUTxOSize 1000000
     ]
   where
     runAtUTxOSize n =
-      bgroup (show n) $
+      bgroup
+        (show n)
         [ env (validateInput @BenchEra n) $ \arg ->
             bgroup
               "block"
@@ -274,15 +280,14 @@ profileValid :: IO ()
 profileValid = do
   state <- validateInput @BenchEra 10000
   let ans = sum [applyBlock @BenchEra state n | n <- [1 .. 10000 :: Int]]
-  putStrLn (show ans)
-  pure ()
+  print ans
 
 -- ========================================================
 -- Profile algorithms for  ((dom d ◁ r) ▷ dom rg)
 
 domainRangeRestrict :: IO ()
 domainRangeRestrict =
-  defaultMain $
+  defaultMain
     [ bgroup "domain-range restict" $
         drrAt <$> benchParameters
     ]
@@ -474,7 +479,8 @@ main = do
       bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
       validGroup,
       -- Benchmarks for the various generators
-      bgroup "gen" $
+      bgroup
+        "gen"
         [ env
             (return chainstate)
             ( \cs ->

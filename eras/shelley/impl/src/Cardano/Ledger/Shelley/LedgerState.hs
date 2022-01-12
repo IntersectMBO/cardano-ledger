@@ -1254,9 +1254,9 @@ aggregateActiveStake tripmap incremental =
   Map.mergeWithKey
     -- How to merge the ranges of the two maps where they have a common key. Below
     -- 'coin1' and 'coin2' have the same key, '_k', and the stake is active if the delegation is SJust
-    (\_k trip coin2 -> (<> coin2) <$> UM.tripDelegatedReward trip)
+    (\_k trip coin2 -> (<> coin2) <$> UM.tripRewardActiveDelegation trip)
     -- what to do when a key appears just in 'tripmap', we only add the coin if the key is active
-    (Map.mapMaybeWithKey (\_ -> UM.tripDelegatedReward))
+    (Map.mapMaybe UM.tripRewardActiveDelegation)
     -- what to do when a key is only in 'incremental', keep everything, because at
     -- the call site of aggregateActiveStake, the arg 'incremental' is filtered by
     -- 'resolveActiveIncrementalPtrs' which guarantees that only active stake is included.

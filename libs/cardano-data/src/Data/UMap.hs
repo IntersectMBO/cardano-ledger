@@ -14,7 +14,7 @@
 module Data.UMap
   ( Trip (Triple),
     tripReward,
-    tripDelegatedReward,
+    tripRewardActiveDelegation,
     tripDelegation,
     UMap (..),
     UnifiedView (..),
@@ -118,8 +118,8 @@ viewTrip (TFEF x y) = (SJust x, Set.empty, SJust y)
 viewTrip (TFFE x y) = (SJust x, y, SNothing)
 viewTrip (TFFF x y z) = (SJust x, y, SJust z)
 
-tripDelegatedReward :: Trip coin ptr pool -> Maybe coin
-tripDelegatedReward =
+tripRewardActiveDelegation :: Trip coin ptr pool -> Maybe coin
+tripRewardActiveDelegation =
   \case
     TFFF c _ _ -> Just c
     TFEF c _ -> Just c
