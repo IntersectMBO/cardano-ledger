@@ -71,7 +71,6 @@ import Cardano.Ledger.UnifiedMap (View (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, range, singleton, (∈), (∉), (∪), (⨃))
 import Control.State.Transition
-import Data.Coders (Annotator)
 import Data.Foldable (fold)
 import Data.Group (Group (..))
 import qualified Data.Map.Strict as Map
@@ -258,12 +257,6 @@ instance
         amt <- fromCBOR
         pure (3, MIRNegativeTransfer pot amt)
       k -> invalidKey k
-
-instance
-  (Era era, Typeable (Core.Script era)) =>
-  FromCBOR (Annotator (DelegPredicateFailure era))
-  where
-  fromCBOR = pure <$> fromCBOR
 
 delegationTransition ::
   ( Typeable era,

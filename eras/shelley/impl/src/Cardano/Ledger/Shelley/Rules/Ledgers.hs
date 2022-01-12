@@ -49,7 +49,6 @@ import Control.State.Transition
     judgmentContext,
     trans,
   )
-import Data.Coders (Annotator)
 import Data.Default.Class (Default)
 import Data.Foldable (toList)
 import Data.Sequence (Seq)
@@ -104,14 +103,6 @@ instance
   FromCBOR (LedgersPredicateFailure era)
   where
   fromCBOR = LedgerFailure <$> fromCBOR
-
-instance
-  ( Era era,
-    FromCBOR (Annotator (PredicateFailure (Core.EraRule "LEDGER" era)))
-  ) =>
-  FromCBOR (Annotator (LedgersPredicateFailure era))
-  where
-  fromCBOR = fmap LedgerFailure <$> fromCBOR
 
 instance
   ( Era era,

@@ -1,6 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
@@ -10,7 +9,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -38,7 +36,6 @@ import Data.Coders (decodeMap, decodeVMap, invalidKey)
 import Data.Compact.VMap (VB, VMap, VP)
 import qualified Data.Compact.VMap as VMap
 import qualified Data.Foldable as F
-import Data.Functor.Identity
 import Data.Kind
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict.Internal
@@ -185,8 +182,6 @@ fromSharedPlusLensCBOR l = do
 -- | Use `FromSharedCBOR` class while ignoring sharing
 fromNotSharedCBOR :: FromSharedCBOR a => Decoder s a
 fromNotSharedCBOR = fromSharedCBOR mempty
-
-deriving newtype instance FromSharedCBOR a => FromSharedCBOR (Identity a)
 
 instance (Ord k, FromCBOR k, FromCBOR v) => FromSharedCBOR (Map k v) where
   type Share (Map k v) = (Interns k, Interns v)
