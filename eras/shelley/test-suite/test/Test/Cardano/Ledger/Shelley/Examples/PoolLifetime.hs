@@ -377,7 +377,7 @@ makeCompletedPulser ::
   BlocksMade (Crypto era) ->
   ChainState era ->
   PulsingRewUpdate (Crypto era)
-makeCompletedPulser bs cs = Complete . runShelleyBase . runProvM . completeRupd $ makePulser bs cs
+makeCompletedPulser bs cs = Complete . fst . runShelleyBase . runProvM . completeRupd $ makePulser bs cs
 
 pulserEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => PulsingRewUpdate c
 pulserEx2 = makeCompletedPulser (BlocksMade mempty) expectedStEx1

@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
 import Cardano.Ledger.Shelley.Rules.Mir
+import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Slot
 import qualified Cardano.Ledger.Val as Val
@@ -76,7 +77,8 @@ instance
   NoThunks (NewEpochPredicateFailure era)
 
 data NewEpochEvent era
-  = RewardEvent !EpochNo !(Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
+  = DeltaRewardEvent (Event (Core.EraRule "RUPD" era))
+  | TotalRewardEvent (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
   | EpochEvent (Event (Core.EraRule "EPOCH" era))
   | MirEvent (Event (Core.EraRule "MIR" era))
 
@@ -88,6 +90,7 @@ instance
     Environment (Core.EraRule "MIR" era) ~ (),
     State (Core.EraRule "MIR" era) ~ EpochState era,
     Signal (Core.EraRule "MIR" era) ~ (),
+    Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era),
     Environment (Core.EraRule "EPOCH" era) ~ (),
     State (Core.EraRule "EPOCH" era) ~ EpochState era,
     Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
@@ -125,6 +128,7 @@ newEpochTransition ::
   forall era.
   ( Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
     Embed (Core.EraRule "EPOCH" era) (NEWEPOCH era),
+    Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era),
     Environment (Core.EraRule "MIR" era) ~ (),
     State (Core.EraRule "MIR" era) ~ EpochState era,
     Signal (Core.EraRule "MIR" era) ~ (),
@@ -135,7 +139,8 @@ newEpochTransition ::
     UsesTxOut era,
     UsesValue era,
     Default (State (Core.EraRule "PPUP" era)),
-    Default (Core.PParams era)
+    Default (Core.PParams era),
+    Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
@@ -151,12 +156,17 @@ newEpochTransition = do
       let updateRewards ru'@(RewardUpdate dt dr rs_ df _) = do
             let totRs = sumRewards (esPrevPp es) rs_
             Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
-            let (es', regRU) = applyRUpd' ru' es
-            tellEvent $ RewardEvent e regRU
+            let (es', _regRU) = applyRUpd' ru' es
+            if not (Map.null rs_) -- Tell the TotalRewardEvent, this should equal aggregating the DeltaRewardEvents
+              then tellEvent (TotalRewardEvent rs_)
+              else pure ()
             pure es'
       es' <- case ru of
         SNothing -> pure es
-        SJust p@(Pulsing _ _) -> liftSTS (runProvM $ completeRupd p) >>= updateRewards
+        SJust p@(Pulsing _ _) -> do
+          (ans, event) <- liftSTS (runProvM $ completeRupd p)
+          tellReward (DeltaRewardEvent (RupdEvent e event))
+          updateRewards ans
         SJust (Complete ru') -> updateRewards ru'
       es'' <- trans @(Core.EraRule "MIR" era) $ TRC ((), es', ())
       es''' <- trans @(Core.EraRule "EPOCH" era) $ TRC ((), es'', e)
@@ -170,6 +180,11 @@ newEpochTransition = do
           es'''
           SNothing
           pd'
+
+-- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
+tellReward :: (Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)) => NewEpochEvent era -> Rule (NEWEPOCH era) rtype ()
+tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
+tellReward x = tellEvent x
 
 calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
 calculatePoolDistr (SnapShot stake delegs poolParams) =

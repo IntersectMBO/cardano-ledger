@@ -28,6 +28,8 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain
     stakeIncrTest,
     incrementalStakeProp,
     aggregateUtxoCoinByCredential,
+    splitTrace,
+    forEachEpochTrace,
   )
 where
 
@@ -102,6 +104,7 @@ import Control.State.Transition.Trace
     Trace (..),
     TraceOrder (OldestFirst),
     sourceSignalTargets,
+    splitTrace,
     traceStates,
   )
 import qualified Control.State.Transition.Trace as Trace
@@ -409,7 +412,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
     rewardUpdateMsgs = case ru' of
       SNothing -> []
       SJust ru'' ->
-        let ru = runShelleyBase . runProvM . completeRupd $ ru''
+        let (ru, _) = runShelleyBase . runProvM . completeRupd $ ru''
             regRewards = Map.filterWithKey (\kh _ -> UM.member kh oldRAs) (rs ru)
          in [ "\n\nSum of new rewards\n",
               show (sumRewards prevPP (rs ru)),
@@ -1259,6 +1262,28 @@ sameEpoch SourceSignalTarget {source, target} =
   epoch source == epoch target
   where
     epoch = nesEL . chainNes
+
+-- | Test a property on the first 'subtracecount' sub-Traces that end on an EpochBoundary
+forEachEpochTrace ::
+  forall era prop.
+  ( EraGen era,
+    Testable prop,
+    QC.HasTrace (CHAIN era) (GenEnv era),
+    Default (State (Core.EraRule "PPUP" era))
+  ) =>
+  Int ->
+  Word64 ->
+  (Trace (CHAIN era) -> prop) ->
+  Property
+forEachEpochTrace subtracecount tracelen f = forAllChainTrace tracelen action
+  where
+    -- split at contiguous elements with different Epoch numbers
+    p new old = (nesEL . chainNes) new /= (nesEL . chainNes) old
+    -- At a minimum throw away the last trace which is probably an incomplete epoch
+    action tr = conjoin $ map f (take (min subtracecount (m - 1)) (reverse traces))
+      where
+        traces = splitTrace p tr
+        m = length traces
 
 -- ============================================================
 -- Properties for Incremental Stake Distribution  Calculation

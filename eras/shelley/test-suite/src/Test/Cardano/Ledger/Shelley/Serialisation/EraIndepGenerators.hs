@@ -1036,4 +1036,4 @@ instance
   Mock crypto =>
   Arbitrary (Pulser crypto)
   where
-  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> (RewardAns <$> arbitrary)
+  arbitrary = RSLP <$> arbitrary <*> arbitrary <*> arbitrary <*> (RewardAns <$> arbitrary <*> arbitrary)
