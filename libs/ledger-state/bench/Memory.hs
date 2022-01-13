@@ -12,10 +12,10 @@ import Weigh
 
 data Opts = Opts
   { -- | Path to the CBOR encoded NewEpochState data type, which will be used to
-    -- load into sqlite database
+    -- benchmarking deserialization of NewEpochState
     optsNewEpochStateBinaryFile :: Maybe FilePath,
     -- | Path to the CBOR encoded EpochState data type that will be used for
-    -- benchmarking deserialization
+    -- benchmarking deserialization of EpochState
     optsEpochStateBinaryFile :: Maybe FilePath,
     -- | Path to Sqlite database file.
     optsSqliteDbFile :: Maybe FilePath

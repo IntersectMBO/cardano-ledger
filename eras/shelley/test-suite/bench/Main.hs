@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -35,7 +36,8 @@ import Cardano.Ledger.Shelley.LedgerState
     DState (..),
     PState (..),
     UTxOState (..),
-    stakeDistr,
+    incrementalStakeDistr,
+    updateStakeDistribution,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Rewards (likelihood)
@@ -75,6 +77,7 @@ import Test.Cardano.Ledger.Shelley.BenchmarkFunctions
     ledgerStateWithNregisteredKeys,
     ledgerStateWithNregisteredPools,
   )
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, testGlobals)
 import Test.QuickCheck (arbitrary)
 import Test.QuickCheck.Gen as QC
@@ -207,24 +210,26 @@ profileCreateRegPools size = do
 -- ==========================================
 -- Epoch Boundary
 
-profileEpochBoundary :: IO ()
+profileEpochBoundary :: Benchmark
 profileEpochBoundary =
-  defaultMain $
-    [ bgroup "aggregate stake" $
-        epochAt <$> benchParameters
-    ]
+  bgroup "aggregate stake" $ epochAt <$> benchParameters
   where
     benchParameters :: [Int]
-    benchParameters = [10000, 100000, 1000000]
+    benchParameters = [5000, 50000, 500000]
 
 epochAt :: Int -> Benchmark
 epochAt x =
-  env (QC.generate (genTestCase x (10000 :: Int))) $
-    \arg ->
-      bgroup
-        ("UTxO=" ++ show x ++ ",  address=" ++ show (10000 :: Int))
-        [ bench "Using maps" (whnf action2m arg)
-        ]
+  env (QC.generate (genTestCase x n)) $ \ ~arg@(dstate, pstate, utxo) ->
+    bgroup
+      ("UTxO=" ++ show x ++ ",  address=" ++ show n)
+      [ bench "stakeDistr" (nf action2m arg),
+        bench "incrementalStakeDistr" (nf action2im arg),
+        env (pure (updateStakeDistribution mempty mempty utxo)) $ \incStake ->
+          bench "incrementalStakeDistr (no update)" $
+            nf (incrementalStakeDistr incStake dstate) pstate
+      ]
+  where
+    n = 10000 :: Int
 
 action2m ::
   ShelleyTest era =>
@@ -232,19 +237,29 @@ action2m ::
   EB.SnapShot (Crypto era)
 action2m (dstate, pstate, utxo) = stakeDistr utxo dstate pstate
 
+action2im ::
+  ShelleyTest era =>
+  (DState (Crypto era), PState (Crypto era), UTxO era) ->
+  EB.SnapShot (Crypto era)
+action2im (dstate, pstate, utxo) =
+  let incStake = updateStakeDistribution mempty mempty utxo
+   in incrementalStakeDistr incStake dstate pstate
+
 -- =================================================================
 
 -- | Benchmarks for the various validation transitions exposed by the API
 validGroup :: Benchmark
 validGroup =
-  bgroup "validation" $
+  bgroup
+    "validation"
     [ runAtUTxOSize 1000,
       runAtUTxOSize 100000,
       runAtUTxOSize 1000000
     ]
   where
     runAtUTxOSize n =
-      bgroup (show n) $
+      bgroup
+        (show n)
         [ env (validateInput @BenchEra n) $ \arg ->
             bgroup
               "block"
@@ -265,15 +280,14 @@ profileValid :: IO ()
 profileValid = do
   state <- validateInput @BenchEra 10000
   let ans = sum [applyBlock @BenchEra state n | n <- [1 .. 10000 :: Int]]
-  putStrLn (show ans)
-  pure ()
+  print ans
 
 -- ========================================================
 -- Profile algorithms for  ((dom d ◁ r) ▷ dom rg)
 
 domainRangeRestrict :: IO ()
 domainRangeRestrict =
-  defaultMain $
+  defaultMain
     [ bgroup "domain-range restict" $
         drrAt <$> benchParameters
     ]
@@ -308,7 +322,6 @@ alg2 (d, r, rg) = run $ compile ((dom d ◁ r) ▷ dom rg)
 -- main = profileCreateRegPools 100000
 -- main = profileNkeysMPools
 -- main = profile_stakeDistr
--- main = profileEpochBoundary
 
 -- =========================================================
 
@@ -366,8 +379,9 @@ main :: IO ()
 -- main=profileValid
 main = do
   (genenv, chainstate, genTxfun) <- genTriple (Proxy :: Proxy BenchEra) 1000
-  defaultMain $
-    [ bgroup "vary input size" $
+  defaultMain
+    [ bgroup
+        "vary input size"
         [ varyInput
             "deregister key"
             (1, 5000)
@@ -461,12 +475,12 @@ main = do
             ledgerStateWithNkeysMpools
             ledgerDelegateManyKeysOnePool
         ],
-      bgroup "vary utxo at epoch boundary" $
-        (epochAt <$> [5000, 50000, 500000]),
+      profileEpochBoundary,
       bgroup "domain-range restict" $ drrAt <$> [10000, 100000, 1000000],
       validGroup,
       -- Benchmarks for the various generators
-      bgroup "gen" $
+      bgroup
+        "gen"
         [ env
             (return chainstate)
             ( \cs ->

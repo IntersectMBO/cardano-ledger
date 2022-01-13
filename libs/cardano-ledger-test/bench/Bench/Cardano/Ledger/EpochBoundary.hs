@@ -25,14 +25,15 @@ import Cardano.Ledger.SafeHash
     castSafeHash,
   )
 import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
-import Cardano.Ledger.Shelley.LedgerState (aggregateUtxoCoinByCredential)
+--import Cardano.Ledger.Shelley.LedgerState
+
 import Cardano.Ledger.Shelley.TxBody (TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.ShelleyMA ()
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import Criterion
 import Data.ByteString (ByteString)
 import qualified Data.Compact.SplitMap as SplitMap
@@ -44,6 +45,7 @@ import Data.Maybe (fromJust)
 import Data.Proxy
 import Data.Word (Word64)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (aggregateUtxoCoinByCredential)
 
 type TestEra = MaryEra TestCrypto
 
@@ -135,7 +137,7 @@ data AggTestSetup = AggTestSetup
   }
 
 instance NFData AggTestSetup where
-  rnf (AggTestSetup p u) = seq p (seq u ())
+  rnf (AggTestSetup p u) = deepseq p (rnf u)
 
 -- | Construct the relevant UTxO and pointer map to test
 -- 'aggregateUtxoCoinByCredential'.
@@ -174,36 +176,36 @@ aggregateUtxoBench =
     "aggregateUtxoCoinByCredential"
     [ bgroup
         "duplication"
-        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 0 10 0 100) $ bench "10/0 * 100" . whnf go,
-          env (pure $ sizedAggTestSetup 0 100 0 10) $ bench "100/0 * 10" . whnf go
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go,
+          env (pure $ sizedAggTestSetup 0 10 0 100) $ bench "10/0 * 100" . nf go,
+          env (pure $ sizedAggTestSetup 0 100 0 10) $ bench "100/0 * 10" . nf go
         ],
       bgroup
         "ptr"
-        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 0 500 500 1) $ bench "500/500" . whnf go
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go,
+          env (pure $ sizedAggTestSetup 0 500 500 1) $ bench "500/500" . nf go
         ],
       bgroup
         "utxo"
-        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "0 1000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 1000 1000 0 1) $ bench "1000 1000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 10000 1000 0 1) $ bench "10000 1000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 100000 1000 0 1) $ bench "100000 1000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 1000000 1000 0 1) $ bench "1000000 1000/0" . whnf go
+        [ env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "0 1000/0" . nf go,
+          env (pure $ sizedAggTestSetup 1000 1000 0 1) $ bench "1000 1000/0" . nf go,
+          env (pure $ sizedAggTestSetup 10000 1000 0 1) $ bench "10000 1000/0" . nf go,
+          env (pure $ sizedAggTestSetup 100000 1000 0 1) $ bench "100000 1000/0" . nf go,
+          env (pure $ sizedAggTestSetup 1000000 1000 0 1) $ bench "1000000 1000/0" . nf go
         ],
       bgroup
         "size"
-        [ env (pure $ sizedAggTestSetup 0 100 0 1) $ bench "100/0" . whnf go,
-          env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 0 10000 0 1) $ bench "10000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 0 100000 0 1) $ bench "100000/0" . whnf go,
-          env (pure $ sizedAggTestSetup 0 1000000 0 1) $ bench "1000000/0" . whnf go
+        [ env (pure $ sizedAggTestSetup 0 100 0 1) $ bench "100/0" . nf go,
+          env (pure $ sizedAggTestSetup 0 1000 0 1) $ bench "1000/0" . nf go,
+          env (pure $ sizedAggTestSetup 0 10000 0 1) $ bench "10000/0" . nf go,
+          env (pure $ sizedAggTestSetup 0 100000 0 1) $ bench "100000/0" . nf go,
+          env (pure $ sizedAggTestSetup 0 1000000 0 1) $ bench "1000000/0" . nf go
         ],
       bgroup
         "mainnet"
-        [ env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "current" . whnf go,
-          env (pure $ sizedAggTestSetup 4000000 500000 0 1) $ bench "current no dup" . whnf go,
-          env (pure $ sizedAggTestSetup 8000000 200000 0 5) $ bench "2x" . whnf go
+        [ env (pure $ sizedAggTestSetup 4000000 100000 0 5) $ bench "current" . nf go,
+          env (pure $ sizedAggTestSetup 4000000 500000 0 1) $ bench "current no dup" . nf go,
+          env (pure $ sizedAggTestSetup 8000000 200000 0 5) $ bench "2x" . nf go
         ]
     ]
   where

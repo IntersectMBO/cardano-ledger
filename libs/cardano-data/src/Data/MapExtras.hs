@@ -134,13 +134,3 @@ intersectWhen1 p x y = Map.mergeWithKey (\k u v -> if p k u v then Just u else N
 
 intersectWhen2 :: Ord k => (k -> u -> v -> Bool) -> Map k u -> Map k v -> Map k v
 intersectWhen2 p x y = Map.mergeWithKey (\k u v -> if p k u v then Just v else Nothing) (const Map.empty) (const Map.empty) x y
-
-filterMaybe :: (k -> a -> Maybe b) -> Map k a -> Map k b
-filterMaybe _ Tip = Tip
-filterMaybe p (Bin _ kx x l r) =
-  case p kx x of
-    Nothing -> link2 pl pr
-    Just b -> link kx b pl pr
-  where
-    !pl = filterMaybe p l
-    !pr = filterMaybe p r

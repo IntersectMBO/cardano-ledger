@@ -87,10 +87,10 @@ import Cardano.Ledger.Shelley.LedgerState
     circulation,
     consumed,
     createRUpd,
+    incrementalStakeDistr,
     minfee,
     produced,
     rewards,
-    stakeDistr,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
@@ -210,7 +210,6 @@ getPoolParameters = Map.restrictKeys . f
 -- This is not based on any snapshot, but uses the current ledger state.
 poolsByTotalStakeFraction ::
   forall era.
-  (UsesValue era) =>
   Globals ->
   NewEpochState era ->
   PoolDistr (Crypto era)
@@ -243,8 +242,7 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  ( UsesValue era,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_nOpt" (Core.PParams era) Natural
   ) =>
   Globals ->
@@ -305,17 +303,14 @@ sumPoolOwnersStake pool stake =
 -- When ranking pools, and reporting their saturation level, in the wallet, we
 -- do not want to use one of the regular snapshots, but rather the most recent
 -- ledger state.
-currentSnapshot ::
-  (UsesValue era) =>
-  NewEpochState era ->
-  EB.SnapShot (Crypto era)
+currentSnapshot :: NewEpochState era -> EB.SnapShot (Crypto era)
 currentSnapshot ss =
-  stakeDistr utxo dstate pstate
+  incrementalStakeDistr incrementalStake dstate pstate
   where
-    es = nesEs ss
-    utxo = _utxo . _utxoState . esLState $ es
-    dstate = _dstate . _delegationState . esLState $ es
-    pstate = _pstate . _delegationState . esLState $ es
+    ledgerState = esLState $ nesEs ss
+    incrementalStake = _stakeDistro $ _utxoState ledgerState
+    dstate = _dstate $ _delegationState ledgerState
+    pstate = _pstate $ _delegationState ledgerState
 
 -- | Information about a stake pool
 data RewardInfoPool = RewardInfoPool
@@ -375,8 +370,7 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  ( UsesValue era,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
     HasField "_nOpt" (Core.PParams era) Natural
   ) =>
   Globals ->

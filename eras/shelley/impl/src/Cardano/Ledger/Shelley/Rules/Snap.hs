@@ -68,7 +68,7 @@ snapTransition = do
 
   let LedgerState (UTxOState _utxo _ fees _ incStake) (DPState dstate pstate) = lstate
       -- stakeSnap = stakeDistr @era utxo dstate pstate  -- HISTORICAL NOTE
-      istakeSnap = incrementalStakeDistr @era incStake dstate pstate
+      istakeSnap = incrementalStakeDistr @(Crypto era) incStake dstate pstate
 
   pure $
     s

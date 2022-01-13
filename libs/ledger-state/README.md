@@ -48,7 +48,13 @@ Hit Ctr-C to stop the node
 ## Populate sqlite db
 
 ```shell
-$ cabal run ledger-state --new-epoch-state-cbor="${CARDANO_DATA}/ledger-state.bin" --new-epoch-state-sqlite="${CARDANO_DATA}/ledger-state.sqlite"
+$ cabal run -- ledger-state:ledger-state --new-epoch-state-cbor="${CARDANO_DATA}/ledger-state.bin" --sqlite-db="${CARDANO_DATA}/ledger-state.sqlite"
+```
+
+## Create NewEpochState from sqlite db
+
+```shell
+$ cabal run -- ledger-state:ledger-state --epoch-state-cbor="${CARDANO_DATA}/ledger-state.bin" --sqlite-db="${CARDANO_DATA}/ledger-state.sqlite"
 ```
 
 ## Running benchmarks

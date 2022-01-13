@@ -5,7 +5,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -24,12 +23,15 @@ module Test.Cardano.Ledger.Shelley.Rules.TestChain
     ledgerTraceFromBlock,
     -- Helper Constraints
     TestingLedger,
-    -- Incremental Stake Comp
+    -- Stake Comp
+    stakeDistr,
     stakeIncrTest,
     incrementalStakeProp,
+    aggregateUtxoCoinByCredential,
   )
 where
 
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (Globals, ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Block
   ( Block (..),
@@ -38,10 +40,11 @@ import Cardano.Ledger.Block
     neededTxInsForBlock,
   )
 import Cardano.Ledger.Coin
-import Cardano.Ledger.Compactible (fromCompact)
+import Cardano.Ledger.Compactible (fromCompact, toCompact)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase, StakeRefPtr))
 import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking, Witness))
 import Cardano.Ledger.Shelley.API (ApplyBlock, DELEG)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (..), Stake (..), obligation)
@@ -57,6 +60,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     completeRupd,
     credMap,
+    delegations,
     deltaF,
     deltaR,
     deltaT,
@@ -67,7 +71,6 @@ import Cardano.Ledger.Shelley.LedgerState
     ptrsMap,
     rewards,
     rs,
-    stakeDistr,
   )
 import Cardano.Ledger.Shelley.Rewards (sumRewards)
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegEnv (..))
@@ -79,6 +82,7 @@ import Cardano.Ledger.Shelley.Tx hiding (TxIn)
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits, txins, txouts, pattern UTxO)
 import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Prelude (HasField (..))
@@ -91,7 +95,7 @@ import Cardano.Protocol.TPraos.BHeader
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.Provenance (runProvM)
-import Control.SetAlgebra (eval, (∩))
+import Control.SetAlgebra (dom, eval, (∩), (▷), (◁))
 import Control.State.Transition
 import Control.State.Transition.Trace
   ( SourceSignalTarget (..),
@@ -1288,7 +1292,7 @@ testIncrementalStake ::
 testIncrementalStake _ (LedgerState (UTxOState utxo _ _ _ incStake) (DPState dstate pstate)) =
   let stake = stakeDistr @era utxo dstate pstate
 
-      istake = incrementalStakeDistr @era incStake dstate pstate
+      istake = incrementalStakeDistr @(Crypto era) incStake dstate pstate
    in counterexample
         ( "\nIncremental stake distribution does not match old style stake distribution"
             ++ tersediffincremental "differences: Old vs Incremental" (_stake stake) (_stake istake)
@@ -1309,4 +1313,55 @@ tersediffincremental :: String -> Stake crypto -> Stake crypto -> String
 tersediffincremental message (Stake a) (Stake c) =
   tersemapdiffs (message ++ " " ++ "hashes") (mp a) (mp c)
   where
-    mp = (Map.map fromCompact) . VMap.toMap
+    mp = Map.map fromCompact . VMap.toMap
+
+-- | Compute the current Stake Distribution. This was called at the Epoch boundary in the Snap Rule.
+--   Now it is called in the tests to see that its incremental analog 'incrementalStakeDistr' agrees.
+stakeDistr ::
+  forall era.
+  Era era =>
+  UTxO era ->
+  DState (Crypto era) ->
+  PState (Crypto era) ->
+  SnapShot (Crypto era)
+stakeDistr u ds ps =
+  SnapShot
+    (Stake $ VMap.fromMap (compactCoinOrError <$> eval (dom activeDelegs ◁ stakeRelation)))
+    (VMap.fromMap (UM.unUnify delegs))
+    (VMap.fromMap poolParams)
+  where
+    rewards' = rewards ds
+    delegs = delegations ds
+    ptrs' = ptrsMap ds
+    PState poolParams _ _ = ps
+    stakeRelation :: Map (Credential 'Staking (Crypto era)) Coin
+    stakeRelation = aggregateUtxoCoinByCredential ptrs' u (UM.unUnify rewards')
+    activeDelegs :: ViewMap (Crypto era) (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
+    activeDelegs = eval ((dom rewards' ◁ delegs) ▷ dom poolParams)
+    compactCoinOrError c =
+      case toCompact c of
+        Nothing -> error $ "Invalid ADA value in staking: " <> show c
+        Just compactCoin -> compactCoin
+
+-- | Sum up all the Coin for each staking Credential. This function has an
+--   incremental analog. See 'incrementalAggregateUtxoCoinByCredential'
+aggregateUtxoCoinByCredential ::
+  forall era.
+  ( Era era
+  ) =>
+  Map Ptr (Credential 'Staking (Crypto era)) ->
+  UTxO era ->
+  Map (Credential 'Staking (Crypto era)) Coin ->
+  Map (Credential 'Staking (Crypto era)) Coin
+aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
+  SplitMap.foldl' accum initial u
+  where
+    accum ans out =
+      case (getField @"address" out, getField @"value" out) of
+        (Addr _ _ (StakeRefPtr p), c) ->
+          case Map.lookup p ptrs of
+            Just cred -> Map.insertWith (<>) cred (Val.coin c) ans
+            Nothing -> ans
+        (Addr _ _ (StakeRefBase hk), c) ->
+          Map.insertWith (<>) hk (Val.coin c) ans
+        _other -> ans
