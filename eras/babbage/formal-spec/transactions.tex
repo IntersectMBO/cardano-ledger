@@ -5,7 +5,7 @@
   %
   \begin{equation*}
     \begin{array}{l@{\qquad=\qquad}lr}
-      \TxOut & \Addr \times \Value \times (\hldiff{\Datum} \uniondistinct \DataHash)^?
+      \TxOut & \Addr \times \Value \times (\hldiff{\Datum} \uniondistinct \DataHash)^? \times \hldiff{\Script^?}
     \end{array}
   \end{equation*}
   % 
@@ -14,8 +14,8 @@
   \begin{equation*}
     \begin{array}{r@{~~}l@{~~}l@{\qquad}l}
       \TxBody ~=~
-      & \powerset{\TxIn} & \fun{txinputs}& \text{Inputs}\\
-      & \times ~\powerset{\TxIn} & \fun{collateral} & \text{Collateral inputs}\\
+      & \powerset{\TxIn} & \fun{spendInputs}& \text{Inputs}\\
+      & \times ~\powerset{\TxIn} & \fun{collInputs} & \text{Collateral inputs}\\
       & \times ~\hldiff{\powerset{\TxIn}} & \hldiff{\fun{refInputs}} & \hldiff{\text{Reference inputs}}\\
       & \times ~(\Ix \pto \TxOut) & \fun{txouts}& \text{Outputs}\\
       & \times ~\hldiff{\TxOut^?} & \hldiff{\fun{collRet}} & \hldiff{\text{Collateral return output}}\\
@@ -43,6 +43,8 @@ requirement is that is has to be present in the ledger state
 UTxO. There are no restrictions on which outputs can be used as a
 reference input. Reference inputs only affect the information that is
 passed to scripts by them being included in $\TxInfo$. \TODO{Do that}
+For consistency, we've renamed the regular and collateral inputs to
+$\fun{spendInputs}$ and $\fun{collInputs}$ respectively.
 
 We add two fields to the transaction dealing with
 collateral. $\fun{collRet}$ specifies outputs that get created in case

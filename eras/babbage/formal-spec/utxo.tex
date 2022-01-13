@@ -5,11 +5,18 @@
   \emph{Functions}
   %
   \begin{align*}
+    & \fun{isTwoPhaseScriptAddress} : \Tx \to \hldiff{\UTxO} \to \Addr \to \Bool \\
+    & \fun{isTwoPhaseScriptAddress}~tx~\hldiff{utxo}~a = \\
+    &\quad\begin{cases}
+        \True  & a \in \AddrScr \land \fun{validatorHash}~a \mapsto s \in \fun{txscripts}~tx~\hldiff{utxo} \land s \in \ScriptPhTwo \\
+        \False & \text{otherwise}
+      \end{cases}
+    \nextdef
     & \fun{minCollateral} : \TxBody \to \PParams \to \Coin \\
     & \fun{minCollateral}~txb~pp = \lceil \txfee{txb} * \fun{collateralPercent}~pp / 100 \rceil
     \nextdef
     & \fun{collBalance} : \TxBody \to \UTxO \to \Value \\
-    & \fun{collBalance}~txb~utxo = \fun{ubalance}~(\var{utxo}_{\fun{collateral}~{txb}}) -
+    & \fun{collBalance}~txb~utxo = \fun{ubalance}~(\var{utxo}_{\fun{collInputs}~{txb}}) -
       \begin{cases}
          0                 & \fun{collRet}~txb = \Nothing \\
          \fun{collRet}~txb & \text{otherwise}
@@ -25,11 +32,11 @@
     & \fun{feesOK} : \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo = \\
     &~~      \minfee{pp}{tx} \leq \txfee{tx} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
-    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collateral}~{tx} \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
+    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collInputs}~tx \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
     &~~~~~~\wedge \fun{adaOnly}~\var{balance} \\
     &~~~~~~\wedge \var{balance} \geq \hldiff{\fun{minCollateral}~tx~pp} \\
     &~~~~~~\wedge \hldiff{(\fun{txcoll}~tx \neq \Nothing) \Rightarrow \var{balance} = \fun{txcoll}~tx} \\
-    &~~~~~~\wedge \fun{collateral}~{tx} \neq \emptyset) \\
+    &~~~~~~\wedge \fun{collInputs}~{tx} \neq \emptyset) \\
     &~~      \where \\
     & ~~~~~~~ \var{balance}=\hldiff{\fun{collBalance}~tx~utxo}
   \end{align*}
@@ -46,6 +53,13 @@
         [\var{d}] & \hldiff{(\_, \_, d) \in \var{utxo}~\var{sp},~ \var{d} \in \Datum} \\
         \epsilon  & \text{otherwise}
       \end{cases}
+    \nextdef
+    & \fun{txscripts} : \Tx \to \hldiff{\UTxO} \to \powerset{\Script} \\
+    & \fun{txscripts}~tx~utxo = \fun{txwitscripts}~tx \cup \hldiff{\{ \fun{hash}~s \mapsto s \mid (\_, \_, \_, s) \in \var{utxo}~(\fun{spendInputs}~tx \cup \fun{refInputs}~tx)\}}
+    \nextdef
+    & \fun{languages} : \Tx \to \UTxO \to \powerset{\Language} \\
+    & \fun{languages}~tx~utxo =
+      \{\fun{language}~s \mid s \in \range (\fun{txscripts}~tx~utxo) \cap \ScriptPhTwo\}
   \end{align*}
   \caption{Functions related to scripts}
   \label{fig:functions:data}
@@ -95,7 +109,7 @@
       \trans{utxos}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{\var{(\txins{txb} \subtractdom \var{utxo}) \cup \outs{txb}}}  \\
+        \varUpdate{\var{(\fun{spendInputs}~txb \subtractdom \var{utxo}) \cup \outs{txb}}}  \\
         \varUpdate{\var{deposits} + \var{depositChange}} \\
         \varUpdate{\var{fees} + \txfee{txb}} \\
         \varUpdate{\var{pup'}} \\
@@ -133,7 +147,7 @@
       \trans{utxos}{tx}
       \left(
       \begin{array}{r}
-        \varUpdate{\var{(\fun{collateral}~{txb} \subtractdom \var{utxo})} \cup \hldiff{\fun{collOuts}~txb}}  \\
+        \varUpdate{\var{(\fun{collInputs}~{txb} \subtractdom \var{utxo})} \cup \hldiff{\fun{collOuts}~txb}}  \\
         \var{deposits} \\
         \varUpdate{\var{fees} + \hldiff{\var{collateralFees}}} \\
         \var{pup} \\
@@ -153,10 +167,10 @@
       \fun{ininterval}~\var{slot}~(\fun{txvldt}~{txb}) &
       \var{(\wcard, i_f)}\leteq\fun{txvldt}~{tx} \\~\\
       \Nothing \notin \{\fun{txrdmrs}~\var{tx}, i_f\} \Rightarrow \fun{epochInfoSlotToUTCTime}~\mathsf{EI}~\mathsf{SysSt}~i_f \neq \Nothing \\
-      \txins{txb} \neq \emptyset
+      \fun{spendInputs}~txb \neq \emptyset
       & \fun{feesOK}~pp~tx~utxo
       \\
-      \txins{txb} \cup \fun{collateral}~{txb} \cup \hldiff{\fun{refInputs}~{tx}} \subseteq \dom \var{utxo} \\
+      \fun{spendInputs}~txb \cup \fun{collInputs}~txb \cup \hldiff{\fun{refInputs}~{tx}} \subseteq \dom \var{utxo} \\
       \consumed{pp}{utxo}{txb} = \produced{pp}{poolParams}~{txb}
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
@@ -173,7 +187,7 @@
       (\fun{txnetworkid}~\var{txb} = \NetworkId) \vee (\fun{txnetworkid}~\var{txb} = \Nothing)
       \\~\\
       \fun{txsize}~{tx}\leq\fun{maxTxSize}~\var{pp} \\~\\
-      \fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp} &  \| \fun{collateral}~{tx} \| \leq \fun{maxCollateralInputs}~{pp}
+      \fun{totExunits}~{tx} \leq \fun{maxTxExUnits}~{pp} &  \| \fun{collInputs}~{tx} \| \leq \fun{maxCollateralInputs}~{pp}
       \\
       ~
       \\
@@ -252,14 +266,14 @@
       \var{inputHashes}\leteq \left\{ h \,\middle|
         {
           \begin{array}{l}
-            (a, \_, h) \in \range(\var{utxo}|_{\txins{tx}}) \\
-            \fun{isTwoPhaseScriptAddress}~{tx}~{a} \\
+            (a, \_, h) \in \range(\var{utxo}|_{\fun{spendInputs}~tx}) \\
+            \fun{isTwoPhaseScriptAddress}~tx~\hldiff{utxo}~a \\
           \end{array}
         }
       \right\} \cap \hldiff{\DataHash} \\~\\
-      \forall \var{s} \in \range (\fun{txscripts}~{txw}) \cap \ScriptPhOne,
+      \forall \var{s} \in \range (\fun{txscripts}~txw~\hldiff{utxo}) \cap \ScriptPhOne,
       \fun{validateScript}~\var{s}~\var{tx}\\~\\
-      \{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~txb\} = \dom (\fun{txscripts}~{txw}) \\~\\
+      \{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~txb\} = \dom (\fun{txscripts}~txw~\hldiff{utxo}) \\~\\
       \var{inputHashes} \subseteq \dom (\fun{txdats}~{txw}) \\~\\
       \dom (\fun{txdats}~{txw}) \subseteq \var{inputHashes} \cup \{h \mid (\wcard, \wcard, h)\in\fun{txouts}~{tx} \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}
       \\~\\
@@ -267,7 +281,7 @@
         {
           \begin{array}{l}
             (sp,h) \in \fun{scriptsNeeded}~\var{utxo}~txb \\
-            \fun{txscripts}~{txw}~h \in \ScriptPhTwo
+            \fun{txscripts}~{txw}~\hldiff{utxo}~h \in \ScriptPhTwo
           \end{array}
         } \right\}
       \\~\\
@@ -296,7 +310,7 @@
       \lor
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
-      \fun{languages}~{txw} \subseteq \dom(\fun{costmdls}~tx) \\
+      \fun{languages}~tx~\hldiff{utxo} \subseteq \dom(\fun{costmdls}~tx) \\
       \fun{scriptIntegrityHash}~{txb} =
       \fun{hashScriptIntegrity}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})~(\fun{txdats}~{txw})
       \\~\\
