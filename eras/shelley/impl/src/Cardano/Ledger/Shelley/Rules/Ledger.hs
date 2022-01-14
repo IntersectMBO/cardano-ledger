@@ -28,7 +28,6 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-
 import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -45,10 +44,13 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Utxo
-  ( UtxoEnv (..),
+import Cardano.Ledger.Shelley.Rules.Delegs
+  ( DELEGS,
+    DelegsEnv (..),
+    DelegsEvent,
+    DelegsPredicateFailure,
   )
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW, UtxowPredicateFailure)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody)

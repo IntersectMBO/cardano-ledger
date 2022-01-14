@@ -1,9 +1,7 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 
 module BenchUTxOAggregate where
 
@@ -11,6 +9,7 @@ import Cardano.Ledger.Address
   ( Addr (..),
   )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (toCompact)
 import Cardano.Ledger.Credential
   ( Credential (..),
@@ -19,7 +18,6 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
-import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Shelley.LedgerState
   ( DState (..),
     InstantaneousRewards (..),

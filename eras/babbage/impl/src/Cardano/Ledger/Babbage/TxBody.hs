@@ -95,6 +95,7 @@ import Cardano.Ledger.BaseTypes
     isSNothing,
   )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -113,7 +114,6 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
-import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
@@ -150,7 +150,6 @@ import Prelude hiding (lookup)
 encodeInlineDatum :: Era era => Data era -> Encoding
 encodeInlineDatum x =
   encodeTag 42 <> encodeBytes (toStrictByteString $ toCBOR x)
-
 
 decodeInlineDatum :: forall s era. Era era => Decoder s (Data era)
 decodeInlineDatum = do
