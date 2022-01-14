@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.Shelley.CompactAddr
+module Cardano.Ledger.CompactAddress
   ( compactAddr,
     decompactAddr,
     CompactAddr (..),
@@ -42,7 +42,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..))
-import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
+import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Prelude (Text, cborError, panic)
 import Control.Monad (ap)

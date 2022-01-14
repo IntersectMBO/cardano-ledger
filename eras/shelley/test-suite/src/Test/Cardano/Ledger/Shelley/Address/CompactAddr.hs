@@ -13,7 +13,7 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Ledger.Shelley.CompactAddr as CA
+import qualified Cardano.Ledger.CompactAddress as CA
 import qualified Data.ByteString.Short as SBS
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()

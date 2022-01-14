@@ -9,6 +9,7 @@ import Cardano.Crypto.DSIGN.Mock
 import Cardano.Ledger.Address (Addr (Addr))
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (Coin))
+import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (Compactible (toCompact))
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj),
@@ -24,9 +25,6 @@ import Cardano.Ledger.SafeHash
   ( SafeToHash (makeHashWithExplicitProxys),
     castSafeHash,
   )
-import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
---import Cardano.Ledger.Shelley.LedgerState
-
 import Cardano.Ledger.Shelley.TxBody (TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.ShelleyMA ()

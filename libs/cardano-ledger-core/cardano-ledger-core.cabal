@@ -42,6 +42,7 @@ library
 
   exposed-modules:
     Cardano.Ledger.Address
+    Cardano.Ledger.CompactAddress
     Cardano.Ledger.AuxiliaryData
     Cardano.Ledger.BaseTypes
     Cardano.Ledger.BHeaderView

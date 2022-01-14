@@ -46,6 +46,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -71,7 +72,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
-import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),

@@ -38,7 +38,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
-import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (TxOut), getAlonzoTxOutEitherAddr)
 import Cardano.Ledger.Alonzo.TxInfo (validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
@@ -51,9 +51,7 @@ import qualified Cardano.Ledger.Era as EraModule
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
 import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Rules.ValidationMode
-  ( applySTSNonStatic,
-  )
+import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import qualified Cardano.Ledger.Shelley.API as API
@@ -107,6 +105,8 @@ instance
   EraModule.Era (AlonzoEra c)
   where
   type Crypto (AlonzoEra c) = c
+
+  getTxOutEitherAddr = getAlonzoTxOutEitherAddr
 
 instance API.ShelleyEraCrypto c => API.ApplyTx (AlonzoEra c) where
   reapplyTx globals env state vtx =
@@ -173,7 +173,7 @@ instance
       genDelegs = sgGenDelegs sg
       pp = sgProtocolParams sg
 
-instance (CC.Crypto c) => UsesTxOut (AlonzoEra c) where
+instance CC.Crypto c => UsesTxOut (AlonzoEra c) where
   makeTxOut _proxy addr val = TxOut addr val SNothing
 
 instance CC.Crypto c => API.CLI (AlonzoEra c) where

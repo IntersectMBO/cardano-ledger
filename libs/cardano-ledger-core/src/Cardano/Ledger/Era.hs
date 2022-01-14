@@ -6,13 +6,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 
 -- | Support for multiple (Shelley-based) eras in the ledger.
 module Cardano.Ledger.Era
-  ( Era,
-    Crypto,
+  ( Era(..),
     PreviousEra,
     TranslationContext,
     TranslateEra (..),
@@ -27,6 +25,7 @@ where
 
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible)
@@ -68,6 +67,25 @@ class
   Era e
   where
   type Crypto e :: Type
+
+  -- | Extract from TxOut either an address or its compact version by doing the
+  -- least amount of work. Default implementation relies on the "address" field.
+  getTxOutEitherAddr ::
+    Core.TxOut e ->
+    Either (Addr (Crypto e)) (CompactAddr (Crypto e))
+  getTxOutEitherAddr = Left . getField @"address"
+
+  getTxOutAddr :: Core.TxOut e -> Addr (Crypto e)
+  getTxOutAddr t =
+    case getTxOutEitherAddr t of
+      Left a -> a
+      Right ca -> decompactAddr ca
+
+  getTxOutCompactAddr :: Core.TxOut e -> CompactAddr (Crypto e)
+  getTxOutCompactAddr t =
+    case getTxOutEitherAddr t of
+      Left a -> compactAddr a
+      Right ca -> ca
 
 -----------------------------------------------------------------------------
 -- Script Validation

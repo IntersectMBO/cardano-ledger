@@ -28,7 +28,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Address (Addr (..))
+
 import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -148,7 +148,6 @@ instance
   ( Show (Core.PParams era),
     Show (Core.Tx era),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
     Embed (Core.EraRule "DELEGS" era) (LEDGER era),

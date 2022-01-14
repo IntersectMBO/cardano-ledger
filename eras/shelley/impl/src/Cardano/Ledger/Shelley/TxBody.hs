@@ -83,10 +83,7 @@ import Cardano.Binary
     szCases,
   )
 import qualified Cardano.Crypto.Hash.Class as HS
-import Cardano.Ledger.Address
-  ( Addr (..),
-    RewardAcnt (..),
-  )
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes
   ( DnsName,
@@ -100,6 +97,7 @@ import Cardano.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
@@ -144,11 +142,6 @@ import Cardano.Ledger.Serialization
     listLenInt,
     mapFromCBOR,
     mapToCBOR,
-  )
-import Cardano.Ledger.Shelley.CompactAddr
-  ( CompactAddr,
-    compactAddr,
-    decompactAddr,
   )
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Shelley.Orphans ()
@@ -486,15 +479,6 @@ viewCompactTxOut (TxOutCompact bs c) = (addr, val)
   where
     addr = decompactAddr bs
     val = fromCompact c
-
-instance
-  ( Crypto era ~ c,
-    Era era,
-    TransValue Show era
-  ) =>
-  HasField "compactAddress" (TxOut era) (CompactAddr c)
-  where
-  getField (TxOutCompact a _) = a
 
 -- ---------------------------
 -- WellFormed instances
