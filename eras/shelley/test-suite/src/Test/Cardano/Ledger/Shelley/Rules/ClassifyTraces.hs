@@ -23,7 +23,7 @@ import Cardano.Binary (ToCBOR, serialize')
 import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfo)
 import Cardano.Ledger.Block (Block (..), bheader)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq), TxSeq)
+import Cardano.Ledger.Era (Era (..), SupportsSegWit (fromTxSeq), TxSeq)
 import Cardano.Ledger.Shelley.API
   ( Addr (..),
     Credential (..),
@@ -78,9 +78,10 @@ import Control.State.Transition.Trace.Generator.QuickCheck
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import qualified Data.ByteString as BS
 import Data.Default.Class (Default)
-import Data.Foldable (toList)
+import Data.Foldable (foldMap', toList)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
+import Data.Semigroup (Sum (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..), getField)
@@ -264,11 +265,11 @@ txScriptOutputsRatio _ txoutsList =
   where
     countScriptOuts :: StrictSeq (Core.TxOut era) -> Int
     countScriptOuts txouts =
-      sum $
-        fmap
-          ( \out -> case (getField @"address" (out :: Core.TxOut era)) of
-              Addr _ (ScriptHashObj _) _ -> 1
-              _ -> 0
+      getSum $
+        foldMap'
+          ( \out -> case getTxOutAddr out of
+              Addr _ (ScriptHashObj _) _ -> Sum 1
+              _ -> Sum 0
           )
           txouts
 

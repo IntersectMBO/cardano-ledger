@@ -133,7 +133,7 @@ import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase, StakeRefPtr))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -996,7 +996,7 @@ witsVKeyNeeded utxo' tx genDelegs =
         accum txin ans =
           case txinLookup txin utxo' of
             Just out ->
-              case getField @"address" out of
+              case getTxOutAddr out of
                 Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
                 AddrBootstrap bootAddr ->
                   Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
@@ -1144,8 +1144,7 @@ updateStakeDistribution incStake0 utxoDel utxoAdd = incStake2
 --   in a transaction, which is aways < 4096, not millions, and very often < 10).
 incrementalAggregateUtxoCoinByCredential ::
   forall era.
-  ( Era era
-  ) =>
+  Era era =>
   (Coin -> Coin) ->
   UTxO era ->
   IncrementalStake (Crypto era) ->
@@ -1163,7 +1162,7 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
         final -> Just final
     accum ans@(IStake stake ptrs) out =
       let c = Val.coin (getField @"value" out)
-       in case getField @"address" out of
+       in case getTxOutAddr out of
             Addr _ _ (StakeRefPtr p) -> IStake stake (Map.alter (keepOrDelete c) p ptrs)
             Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDelete c) hk stake) ptrs
             _other -> ans
@@ -1657,7 +1656,7 @@ updateNES
 
 returnRedeemAddrsToReserves ::
   forall era.
-  (Era era) =>
+  Era era =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
@@ -1666,7 +1665,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     us = _utxoState ls
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
-      SplitMap.partition (isBootstrapRedeemer . getField @"address") utxo
+      SplitMap.partition (isBootstrapRedeemer . getTxOutAddr) utxo
     acnt = esAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =

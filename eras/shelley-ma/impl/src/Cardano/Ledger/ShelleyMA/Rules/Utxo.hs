@@ -29,7 +29,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -258,7 +258,7 @@ utxoTransition = do
   let addrsWrongNetwork =
         filter
           (\a -> getNetwork a /= ni)
-          (fmap (getField @"address") $ toList $ getField @"outputs" txb)
+          (fmap getTxOutAddr $ toList $ getField @"outputs" txb)
   null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
   let wdrlsWrongNetwork =
         filter
@@ -313,7 +313,7 @@ utxoTransition = do
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
         filter
-          ( \out -> case getField @"address" out of
+          ( \out -> case getTxOutAddr out of
               AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
               _ -> False
           )

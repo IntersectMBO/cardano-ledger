@@ -80,7 +80,6 @@ class
   getTxOutEitherAddr ::
     Core.TxOut e ->
     Either (Addr (Crypto e)) (CompactAddr (Crypto e))
-  getTxOutEitherAddr = Left . getField @"address"
 
   getTxOutAddr :: Core.TxOut e -> Addr (Crypto e)
   getTxOutAddr t =
@@ -273,7 +272,6 @@ type WellFormed era =
     HasField "scriptWits" (Core.Tx era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
     -- TxOut
     HasField "value" (Core.TxOut era) (Core.Value era),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     -- HashAnnotated
     HashAnnotated (Core.AuxiliaryData era) EraIndependentAuxiliaryData (Crypto era),
     HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),

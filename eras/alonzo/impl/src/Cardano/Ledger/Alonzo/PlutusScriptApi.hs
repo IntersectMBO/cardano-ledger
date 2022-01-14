@@ -47,7 +47,7 @@ import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
@@ -303,7 +303,7 @@ scriptsNeededFromBody (UTxO u) txb = spend ++ reward ++ cert ++ minted
       where
         collect :: TxIn (Crypto era) -> Maybe (ScriptPurpose (Crypto era), ScriptHash (Crypto era))
         collect !i = do
-          addr <- getField @"address" <$> SplitMap.lookup i u
+          addr <- getTxOutAddr <$> SplitMap.lookup i u
           hash <- getScriptHash addr
           return (Spending i, hash)
 
