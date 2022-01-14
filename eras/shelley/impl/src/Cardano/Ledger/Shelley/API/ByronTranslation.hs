@@ -21,12 +21,12 @@ import qualified Cardano.Crypto.Hashing as Hashing
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Chain (pparamsToChainChecksPParams)
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
+import Cardano.Ledger.CompactAddress (CompactAddr (UnsafeCompactAddr))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Protocol
 import Cardano.Ledger.Shelley.API.Types
-import Cardano.Ledger.Shelley.CompactAddr (CompactAddr (UnsafeCompactAddr))
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))

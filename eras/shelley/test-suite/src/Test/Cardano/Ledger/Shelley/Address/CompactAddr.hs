@@ -8,12 +8,12 @@ module Test.Cardano.Ledger.Shelley.Address.CompactAddr where
 
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
 import qualified Cardano.Ledger.Address as Addr
+import qualified Cardano.Ledger.CompactAddress as CA
 import Cardano.Ledger.Credential
   ( PaymentCredential,
     StakeReference (..),
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import qualified Cardano.Ledger.Shelley.CompactAddr as CA
 import qualified Data.ByteString.Short as SBS
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()

@@ -34,7 +34,7 @@ import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (SupportsSegWit (..), ValidateScript (..))
-import qualified Cardano.Ledger.Era as E (Era (Crypto), TranslationContext)
+import qualified Cardano.Ledger.Era as E (Era (..), TranslationContext)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
 import Cardano.Ledger.Shelley.BlockChain (bbHash)
@@ -63,6 +63,8 @@ data ShelleyEra c
 
 instance CryptoClass.Crypto c => E.Era (ShelleyEra c) where
   type Crypto (ShelleyEra c) = c
+
+  getTxOutEitherAddr (STx.TxOutCompact a _) = Right a
 
 instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
 
