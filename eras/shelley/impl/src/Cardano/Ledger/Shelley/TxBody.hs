@@ -50,7 +50,6 @@ module Cardano.Ledger.Shelley.TxBody
       ),
     TxBodyRaw (..),
     EraIndependentTxBody,
-    -- eraIndTxBodyHash,
     TxOut (TxOut, TxOutCompact),
     Url,
     Wdrl (..),
@@ -851,6 +850,9 @@ data WitVKey kr crypto = WitVKey'
 deriving instance CC.Crypto crypto => Show (WitVKey kr crypto)
 
 deriving instance CC.Crypto crypto => Eq (WitVKey kr crypto)
+
+instance NFData (WitVKey kr crypto) where
+  rnf (WitVKey' _ _ _ bytes) = rnf bytes
 
 deriving via
   (AllowThunksIn '["wvkBytes"] (WitVKey kr crypto))

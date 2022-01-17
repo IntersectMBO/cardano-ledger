@@ -50,7 +50,7 @@ import Cardano.Ledger.SafeHash
     SafeToHash (..),
   )
 import Cardano.Ledger.ShelleyMA.Timelocks
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), rwhnf)
 import Control.Monad (when)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
@@ -84,6 +84,9 @@ data Tag
   deriving (Eq, Generic, Ord, Show, Enum, Bounded)
 
 instance NoThunks Tag
+
+instance NFData Tag where
+  rnf = rwhnf
 
 -- =======================================================
 

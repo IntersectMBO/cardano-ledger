@@ -413,6 +413,10 @@ instance
   (Typeable era, NoThunks (Core.Value era), NoThunks (PParamsDelta era)) =>
   NoThunks (TxBodyRaw era)
 
+instance
+  (CC.Crypto (Crypto era), Typeable era, NFData (Core.Value era), NFData (PParamsDelta era)) =>
+  NFData (TxBodyRaw era)
+
 deriving instance
   ( Era era,
     Show (Core.Value era),
@@ -432,6 +436,10 @@ deriving instance
     NoThunks (PParamsDelta era)
   ) =>
   NoThunks (TxBody era)
+
+deriving instance
+  (CC.Crypto (Crypto era), Typeable era, NFData (Core.Value era), NFData (PParamsDelta era)) =>
+  NFData (TxBody era)
 
 deriving instance
   ( Era era,

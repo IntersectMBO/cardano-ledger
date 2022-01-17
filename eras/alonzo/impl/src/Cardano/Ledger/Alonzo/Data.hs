@@ -53,6 +53,7 @@ import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Data.ByteString.Lazy (toStrict)
 import Data.ByteString.Short (toShort)
+import Control.DeepSeq (NFData)
 import Data.Coders
 import Data.Foldable (foldl')
 import Data.Map (Map)
@@ -87,7 +88,7 @@ deriving instance NoThunks Plutus.Data
 
 newtype Data era = DataConstr (MemoBytes Plutus.Data)
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, ToCBOR, NFData)
 
 instance Typeable era => FromCBOR (Annotator (Data era)) where
   fromCBOR = do
@@ -138,7 +139,12 @@ deriving instance Eq (Core.Script era) => Eq (AuxiliaryDataRaw era)
 
 deriving instance Show (Core.Script era) => Show (AuxiliaryDataRaw era)
 
-deriving via InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryDataRaw era) instance NoThunks (AuxiliaryDataRaw era)
+instance NFData (Core.Script era) => NFData (AuxiliaryDataRaw era)
+
+deriving via
+  InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryDataRaw era)
+  instance
+    NoThunks (AuxiliaryDataRaw era)
 
 instance
   ( Typeable era,
@@ -245,6 +251,8 @@ newtype AuxiliaryData era = AuxiliaryDataConstr (MemoBytes (AuxiliaryDataRaw era
   deriving newtype (ToCBOR, SafeToHash)
 
 instance (Crypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
+
+deriving newtype instance NFData (Core.Script era) => NFData (AuxiliaryData era)
 
 deriving instance Eq (AuxiliaryData era)
 
