@@ -22,6 +22,7 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..))
@@ -33,7 +34,6 @@ import Cardano.Ledger.Alonzo.Tx
     indexedRdmrs,
     txdats',
   )
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..), vldt')
 import Cardano.Ledger.Alonzo.TxInfo
   ( FailureDescription (..),
     ScriptResult (..),
@@ -48,6 +48,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
@@ -61,6 +62,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), getScriptHash, scriptCred)
 import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
+import Cardano.Ledger.ShelleyMA.TxBody (ValidityInterval)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -150,8 +152,6 @@ collectTwoPhaseScriptInputs ::
   forall era tx.
   ( Era era,
     Core.Script era ~ AlonzoScript.Script era,
-    Core.TxOut era ~ Alonzo.TxOut era,
-    Core.TxBody era ~ Alonzo.TxBody era,
     Core.Value era ~ Mary.Value (Crypto era),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
@@ -160,7 +160,11 @@ collectTwoPhaseScriptInputs ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "body" tx (Core.TxBody era),
-    HasField "wits" tx (TxWitness era)
+    HasField "wits" tx (TxWitness era),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
+    HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
+    HasField "vldt" (Core.TxBody era) ValidityInterval
   ) =>
   EpochInfo Identity ->
   SystemStart ->
@@ -227,17 +231,17 @@ language (AlonzoScript.TimelockScript _) = Nothing
 evalScripts ::
   forall era tx.
   ( Era era,
-    Alonzo.TxBody era ~ Core.TxBody era,
     Show (AlonzoScript.Script era),
     HasField "body" tx (Core.TxBody era),
-    HasField "wits" tx (TxWitness era)
+    HasField "wits" tx (TxWitness era),
+    HasField "vldt" (Core.TxBody era) ValidityInterval
   ) =>
   tx ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
   ScriptResult
 evalScripts _tx [] = Passes
 evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
-  lift (evalTimelock vhks (Alonzo.vldt' (getField @"body" tx)) timelock)
+  lift (evalTimelock vhks (getField @"vldt" (getField @"body" tx)) timelock)
     `andResult` evalScripts tx rest
   where
     vhks = Set.map witKeyHash (txwitsVKey' (getField @"wits" tx))

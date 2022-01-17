@@ -22,6 +22,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( CollectError,
@@ -50,6 +51,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
+import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Rules.ValidationMode (lblStatic)
 import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyRefunds, updateStakeDistribution)
@@ -59,6 +61,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailu
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val as Val
 import Control.Monad.Except (MonadError (throwError))
@@ -95,14 +98,25 @@ instance
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Core.Script era ~ Script era,
     Core.Value era ~ Value (Crypto era),
-    Core.TxOut era ~ Alonzo.TxOut era,
-    Core.TxBody era ~ Alonzo.TxBody era,
     ValidateScript era,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era)))
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era)),
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Core.ChainData (Core.TxOut era),
+    Core.SerialisableData (Core.TxOut era),
+    Core.ChainData (Core.TxBody era),
+    ToCBOR (Core.TxBody era)
   ) =>
   STS (UTXOS era)
   where
@@ -126,9 +140,7 @@ utxosTransition ::
     Show (Core.PParams era),
     Show (Core.PParamsDelta era),
     Eq (Core.PParamsDelta era),
-    Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
-    Core.TxBody era ~ Alonzo.TxBody era,
     ValidateScript era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -136,7 +148,18 @@ utxosTransition ::
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    Core.ChainData (Core.TxBody era),
+    ToCBOR (Core.TxBody era),
+    Core.ChainData (Core.TxOut era),
+    Core.SerialisableData (Core.TxOut era),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era)),
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   TransitionRule (UTXOS era)
 utxosTransition =
@@ -156,8 +179,6 @@ scriptsValidateTransition ::
     Show (Core.PParamsDelta era),
     Eq (Core.PParamsDelta era),
     Core.Script era ~ Script era,
-    Core.TxBody era ~ Alonzo.TxBody era,
-    Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
     ValidateScript era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -165,7 +186,19 @@ scriptsValidateTransition ::
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    Core.ChainData (Core.TxOut era),
+    Core.SerialisableData (Core.TxOut era),
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era)),
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    Core.ChainData (Core.TxBody era),
+    ToCBOR (Core.TxBody era)
   ) =>
   TransitionRule (UTXOS era)
 scriptsValidateTransition = do
@@ -226,14 +259,25 @@ scriptsNotValidateTransition ::
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     ValidateScript era,
     Core.Script era ~ Script era,
-    Core.TxBody era ~ Alonzo.TxBody era,
-    Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
+    Core.ChainData (Core.TxOut era),
+    Core.SerialisableData (Core.TxOut era),
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era)),
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    Core.ChainData (Core.TxBody era),
+    ToCBOR (Core.TxBody era),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
   ) =>
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
@@ -309,7 +353,8 @@ data UtxosPredicateFailure era
 
 instance
   ( Era era,
-    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era)),
+    Show (Core.TxOut era)
   ) =>
   ToCBOR (UtxosPredicateFailure era)
   where
@@ -382,7 +427,6 @@ constructValidated ::
     Core.Script era ~ Script era,
     Core.TxOut era ~ Alonzo.TxOut era,
     Core.Value era ~ Value (Crypto era),
-    Core.TxBody era ~ Alonzo.TxBody era,
     Core.Witnesses era ~ Alonzo.TxWitness era,
     ValidateScript era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -390,7 +434,10 @@ constructValidated ::
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "mint" (Core.TxBody era) (Value (Crypto era)),
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
+    HasField "vldt" (Core.TxBody era) ValidityInterval
   ) =>
   Globals ->
   UtxoEnv era ->

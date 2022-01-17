@@ -34,9 +34,11 @@ common project-config
 library
   import:             base, project-config
   exposed-modules:
+    Cardano.Ledger.Babbage.Genesis
     Cardano.Ledger.Babbage.PParams
     Cardano.Ledger.Babbage.Tx
     Cardano.Ledger.Babbage.TxBody
+    Cardano.Ledger.Babbage
   build-depends:
     array,
     base-deriving-via,

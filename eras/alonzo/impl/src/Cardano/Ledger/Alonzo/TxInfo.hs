@@ -185,7 +185,8 @@ txInfoIn ::
   forall era c i.
   ( Era era,
     Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (TxOut era) (StrictMaybe (SafeHash c i))
+    HasField "datahash" (TxOut era) (StrictMaybe (SafeHash c i)),
+    HasField "address" (TxOut era) (Addr c)
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
@@ -210,7 +211,8 @@ txInfoOut ::
   forall era c.
   ( Era era,
     Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash c))
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash c)),
+    HasField "address" (TxOut era) (Addr c)
   ) =>
   Core.TxOut era ->
   Maybe PV1.TxOut
@@ -342,7 +344,8 @@ txInfo ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
-    HasField "vldt" (Core.TxBody era) ValidityInterval
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "address" (TxOut era) (Addr (Crypto era))
   ) =>
   Core.PParams era ->
   Language ->
