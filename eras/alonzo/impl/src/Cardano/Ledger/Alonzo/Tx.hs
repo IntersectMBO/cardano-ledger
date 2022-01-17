@@ -73,6 +73,7 @@ import Cardano.Binary
     serializeEncoding,
     serializeEncoding',
   )
+import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
@@ -153,7 +154,7 @@ import Numeric.Natural (Natural)
 -- to validate. This is added by the block creator when constructing the block.
 newtype IsValid = IsValid Bool
   deriving (Eq, Show, Generic)
-  deriving newtype (NoThunks)
+  deriving newtype (NoThunks, NFData)
 
 data ValidatedTx era = ValidatedTx
   { body :: !(Core.TxBody era),
@@ -194,6 +195,22 @@ instance
     NoThunks (Core.PParamsDelta era)
   ) =>
   NoThunks (ValidatedTx era)
+
+instance
+  ( Era era,
+    Core.Script era ~ Script era,
+    crypto ~ Crypto era,
+    NFData (Core.AuxiliaryData era),
+    NFData (Core.Script era),
+    NFData (Core.TxBody era),
+    NFData (Core.Value era),
+    NFData (Core.PParamsDelta era),
+    NFData (TxDats era),
+    NFData (Redeemers era),
+    NFData (VerKeyDSIGN (CC.DSIGN crypto)),
+    NFData (SigDSIGN (CC.DSIGN crypto))
+  ) =>
+  NFData (ValidatedTx era)
 
 -- ===================================
 -- WellFormed instances

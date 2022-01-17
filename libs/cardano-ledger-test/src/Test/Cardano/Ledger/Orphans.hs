@@ -28,8 +28,6 @@ import GHC.Generics ((:*:) (..), (:.:) (..))
 import QuickCheck.GenT (MonadGen (..))
 import qualified System.Random
 
-instance NFData IsValid
-
 deriving via All instance Semigroup IsValid
 
 deriving via All instance Monoid IsValid

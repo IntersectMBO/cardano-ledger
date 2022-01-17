@@ -87,3 +87,30 @@ benchmark memory
                  -O2
                  -rtsopts
   default-language:   Haskell2010
+
+
+benchmark performance
+  import:             project-config
+
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:
+    bench
+  main-is:          Performance.hs
+  build-depends:
+    base,
+    aeson,
+    bytestring,
+    base16-bytestring,
+    cardano-binary,
+    cardano-ledger-alonzo,
+    cardano-slotting,
+    containers,
+    criterion,
+    data-default-class,
+    cardano-ledger-core,
+    cardano-ledger-shelley,
+    ledger-state,
+  ghc-options:
+      -threaded
+      -rtsopts
+      -O2
