@@ -342,7 +342,7 @@ scriptsNeeded u tx =
 -- | Compute the subset of inputs of the set 'txInps' for which each input is
 -- locked by a script in the UTxO 'u'.
 txinsScriptHashes ::
-  (HasField "address" (Core.TxOut era) (Addr (Crypto era))) =>
+  Era era =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Set (ScriptHash (Crypto era))
@@ -351,7 +351,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
     -- to get subset, start with empty, and only insert those inputs in txInps
     -- that are locked in u
     add input ans = case SplitMap.lookup input u of
-      Just out -> case getField @"address" out of
+      Just out -> case getTxOutAddr out of
         Addr _ (ScriptHashObj h) _ -> Set.insert h ans
         _ -> ans
       Nothing -> ans

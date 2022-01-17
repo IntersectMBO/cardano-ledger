@@ -27,7 +27,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Mary.Value (Value, policies, policyID)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
@@ -106,6 +106,8 @@ instance
   Era (ShelleyMAEra ma c)
   where
   type Crypto (ShelleyMAEra ma c) = c
+
+  getTxOutEitherAddr (TxOutCompact a _) = Right a
 
 instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Mary c)
 

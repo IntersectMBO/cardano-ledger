@@ -43,7 +43,7 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.Shelley.Delegation.Certificates
@@ -388,7 +388,7 @@ witsVKeyNeeded utxo' tx genDelegs =
         accum txin ans =
           case txinLookup txin utxo' of
             Just out ->
-              case getField @"address" out of
+              case getTxOutAddr out of
                 Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
                 AddrBootstrap bootAddr ->
                   Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans

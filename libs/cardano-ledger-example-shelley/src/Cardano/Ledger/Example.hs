@@ -20,7 +20,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..), ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
 import Cardano.Ledger.Shelley.API
@@ -97,6 +97,8 @@ data ExampleEra c
 
 instance CryptoClass.Crypto c => Era (ExampleEra c) where
   type Crypto (ExampleEra c) = c
+
+  getTxOutEitherAddr (TxOutCompact a _) = Right a
 
 instance CryptoClass.Crypto c => UsesValue (ExampleEra c)
 

@@ -43,7 +43,7 @@ import Cardano.Ledger.Coin
 import Cardano.Ledger.Compactible (fromCompact, toCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase, StakeRefPtr))
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (fromTxSeq))
+import Cardano.Ledger.Era (Era (..), SupportsSegWit (fromTxSeq))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking, Witness))
 import Cardano.Ledger.Shelley.API (ApplyBlock, DELEG)
 import Cardano.Ledger.Shelley.Constraints (UsesPParams, UsesValue)
@@ -1357,11 +1357,9 @@ aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
   SplitMap.foldl' accum initial u
   where
     accum ans out =
-      case (getField @"address" out, getField @"value" out) of
-        (Addr _ _ (StakeRefPtr p), c) ->
-          case Map.lookup p ptrs of
-            Just cred -> Map.insertWith (<>) cred (Val.coin c) ans
-            Nothing -> ans
-        (Addr _ _ (StakeRefBase hk), c) ->
-          Map.insertWith (<>) hk (Val.coin c) ans
-        _other -> ans
+      let c = Val.coin (getField @"value" out)
+       in case getTxOutAddr out of
+            Addr _ _ (StakeRefPtr p)
+              | Just cred <- Map.lookup p ptrs -> Map.insertWith (<>) cred c ans
+            Addr _ _ (StakeRefBase hk) -> Map.insertWith (<>) hk c ans
+            _other -> ans

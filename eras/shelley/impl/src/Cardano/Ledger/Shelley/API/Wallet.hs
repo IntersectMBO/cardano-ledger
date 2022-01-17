@@ -60,19 +60,19 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
   )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era (Crypto, getTxOutEitherAddr))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
@@ -153,20 +153,19 @@ getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era)) =>
+  Era era =>
   NewEpochState era ->
   Set (Addr (Crypto era)) ->
   UTxO era
-getFilteredUTxO ss addrs =
-  UTxO $
-    SplitMap.filter
-      (\out -> getField @"compactAddress" out `Set.member` addrSBSs)
-      fullUTxO
+getFilteredUTxO ss addrSet =
+  UTxO $ SplitMap.filter checkAddr fullUTxO
   where
     UTxO fullUTxO = getUTxO ss
-    -- Instead of decompacting each address in the huge UTxO, compact each
-    -- address in the small set of address.
-    addrSBSs = Set.map compactAddr addrs
+    compactAddrSet = Set.map compactAddr addrSet
+    checkAddr out =
+      case getTxOutEitherAddr out of
+        Left addr -> addr `Set.member` addrSet
+        Right cAddr -> cAddr `Set.member` compactAddrSet
 
 getUTxOSubset ::
   NewEpochState era ->

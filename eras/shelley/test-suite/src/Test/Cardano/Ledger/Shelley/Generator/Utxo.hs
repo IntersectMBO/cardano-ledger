@@ -37,7 +37,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
   ( KeyHash,
@@ -494,7 +494,7 @@ genNextDelta
         Core.TxOut era ->
         Core.TxOut era
       deltaChange f out =
-        makeTxOut (Proxy @era) (getField @"address" out) (f $ getField @"value" out)
+        makeTxOut (Proxy @era) (getTxOutAddr out) (f $ getField @"value" out)
       getChangeAmount out = coin $ getField @"value" out
 
 -- calculates fixed point of getNextDelta such that
@@ -816,7 +816,7 @@ genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo)
     )
   where
     witnessedInput output =
-      case getField @"address" output of
+      case getTxOutAddr output of
         addr@(Addr _ (KeyHashObj _) _) ->
           Left . asWitness $ findPayKeyPairAddr @era addr keyHashMap
         addr@(Addr _ (ScriptHashObj _) _) ->
