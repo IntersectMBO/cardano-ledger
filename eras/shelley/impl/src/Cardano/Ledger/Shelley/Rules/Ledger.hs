@@ -54,6 +54,7 @@ import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW, UtxowPredicateFailure)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody)
 import Cardano.Ledger.Slot (SlotNo)
+import Control.DeepSeq (NFData (..))
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -85,6 +86,9 @@ data LedgerEnv era = LedgerEnv
   }
 
 deriving instance Show (Core.PParams era) => Show (LedgerEnv era)
+
+instance NFData (Core.PParams era) => NFData (LedgerEnv era) where
+  rnf (LedgerEnv _slotNo _ix pp _account) = rnf pp
 
 data LedgerPredicateFailure era
   = UtxowFailure (PredicateFailure (Core.EraRule "UTXOW" era)) -- Subtransition Failures

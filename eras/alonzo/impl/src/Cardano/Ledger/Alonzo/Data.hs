@@ -63,6 +63,7 @@ import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.Shelley.Metadata (Metadatum)
 import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import qualified Codec.Serialise as Cborg (Serialise (..))
+import Control.DeepSeq (NFData)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coders
@@ -97,7 +98,7 @@ deriving instance NoThunks Plutus.Data
 
 newtype Data era = DataConstr (MemoBytes Plutus.Data)
   deriving (Eq, Ord, Generic, Show)
-  deriving newtype (SafeToHash, ToCBOR)
+  deriving newtype (SafeToHash, ToCBOR, NFData)
 
 instance Typeable era => FromCBOR (Annotator (Data era)) where
   fromCBOR = do
@@ -191,6 +192,8 @@ data AuxiliaryDataRaw era = AuxiliaryDataRaw
 deriving instance Eq (Core.Script era) => Eq (AuxiliaryDataRaw era)
 
 deriving instance Show (Core.Script era) => Show (AuxiliaryDataRaw era)
+
+instance NFData (Core.Script era) => NFData (AuxiliaryDataRaw era)
 
 deriving via
   InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryDataRaw era)
@@ -302,6 +305,8 @@ newtype AuxiliaryData era = AuxiliaryDataConstr (MemoBytes (AuxiliaryDataRaw era
   deriving newtype (ToCBOR, SafeToHash)
 
 instance (Crypto era ~ c) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
+
+deriving newtype instance NFData (Core.Script era) => NFData (AuxiliaryData era)
 
 deriving instance Eq (AuxiliaryData era)
 
