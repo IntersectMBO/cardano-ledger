@@ -16,7 +16,7 @@ build-type:          Simple
 
 extra-source-files:
   cddl-files/alonzo.cddl
-  cddl-files/mock/crypto.cddl
+  cddl-files/real/crypto.cddl
   cddl-files/mock/extras.cddl
   golden/*.cbor
 
