@@ -1,5 +1,3 @@
-{-# LANGUAGE TypeApplications #-}
-
 module Cardano.Ledger.Shelley.StabilityWindow
   ( computeStabilityWindow,
     computeRandomnessStabilisationWindow,
@@ -19,7 +17,7 @@ computeStabilityWindow ::
   ActiveSlotCoeff ->
   Word64
 computeStabilityWindow k asc =
-  ceiling $ fromIntegral @_ @Double (3 * k) / fromRational f
+  ceiling $ (3 * fromIntegral k) / f
   where
     f = unboundRational . activeSlotVal $ asc
 
@@ -33,6 +31,6 @@ computeRandomnessStabilisationWindow ::
   ActiveSlotCoeff ->
   Word64
 computeRandomnessStabilisationWindow k asc =
-  ceiling $ fromIntegral @_ @Double (4 * k) / fromRational f
+  ceiling $ (4 * fromIntegral k) / f
   where
     f = unboundRational . activeSlotVal $ asc
