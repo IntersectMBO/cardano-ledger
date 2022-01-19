@@ -1,0 +1,51 @@
+\newcommand{\Stake}{\type{Stake}}
+\newcommand{\mReward}[4]{\fun{r_{member}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
+\newcommand{\lReward}[4]{\fun{r_{operator}}~ \var{#1}~ \var{#2}~ \var{#3}~ {#4}}
+
+\section{Forgo Reward Calculation Prefilter}
+
+The reward calculation no longer filters out the unregistered stake
+credentials when creating a reward update. As in the Shelley era, though,
+they are still filtered on the epoch boundary when the reward update is applied.
+This addresses errata 17.2 in the Shelley ledger specification \cite{shelley_spec}[17.2].
+The change consists of removing the line
+$$\var{addrs_{rew}}\restrictdom{\var{potentialRewards}}$$
+from the $\fun{rewardOnePool}$ function.
+
+\begin{figure}[htb]
+  \emph{Calculation to reward a single stake pool}
+  %
+  \begin{align*}
+    & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \PoolParam\\
+    & ~~~\to \Stake \to \Q \to \Q \to \Coin \to (\AddrRWD \mapsto \Coin) \\
+     & \fun{rewardOnePool}~\var{pp}~\var{R}~\var{n}~\var{\overline{N}}~\var{pool}~\var{stake}~{\sigma}~{\sigma_a}~\var{tot} =
+         \var{rewards}\\
+     & ~~~\where \\
+    & ~~~~~~~\var{ostake} = \sum_{\substack{
+      hk_\mapsto c\in\var{stake}\\
+      hk\in(\fun{poolOwners}~\var{pool})\\
+      }} c \\
+    & ~~~~~~~\var{pledge} = \fun{poolPledge}~pool \\
+    & ~~~~~~~p_{r} = \var{pledge} / \var{tot} \\
+    & ~~~~~~~maxP =
+    \begin{cases}
+      \fun{maxPool}~\var{pp}~\var{R}~\sigma~\var{p_r}&
+      \var{pledge} \leq \var{ostake}\\
+      0 & \text{otherwise.}
+    \end{cases} \\
+    & ~~~~~~~\var{appPerf} = \mkApparentPerformance{(\fun{d}~pp)}{\sigma_a}{n}{\overline{N}} \\
+    & ~~~~~~~\var{poolR} = \floor{\var{appPerf}\cdot\var{maxP}} \\
+    & ~~~~~~~\var{mRewards} = \\
+    & ~~~~~~~~~~\left\{
+                   \addrRw~hk\mapsto\mReward{poolR}{pool}{\frac{c}{tot}}{\sigma}
+                   ~\Big\vert~
+                   hk\mapsto c\in\var{stake},~~hk \not\in(\fun{poolOwners}~\var{pool})
+                 \right\}\\
+    & ~~~~~~~\var{lReward} = \lReward{poolR}{pool}{\frac{\var{ostake}}{tot}}{\sigma} \\
+    & ~~~~~~~\var{rewards} =
+               \var{mRewards} \cup
+               \{(\fun{poolRAcnt}~\var{pool})\mapsto\var{lReward}\} \\
+  \end{align*}
+  \caption{The Reward Calculation}
+  \label{fig:functions:reward-calc}
+\end{figure}
