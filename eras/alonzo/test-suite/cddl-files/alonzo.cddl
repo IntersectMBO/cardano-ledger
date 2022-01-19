@@ -118,6 +118,11 @@ script_data_hash = $hash32 ; New
 ;
 ; If there is no value for key 0, then the corresponding scripts cannot execute.
 ; Regardless of what the script integrity data is.
+;
+; Finally, note that in the case that a transaction includes datums but does not
+; include any redeemers, the script data format becomes (in hex):
+; [ 80 | datums | A0 ]
+; corresponding to a CBOR empty list and an empty map (our apologies).
 
 ; address = bytes
 ; reward_account = bytes
