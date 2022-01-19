@@ -51,8 +51,8 @@ import Cardano.Chain.Slotting
   ( EpochNumber,
     SlotCount (SlotCount),
     SlotNumber,
+    addSlotCount,
     epochFirstSlot,
-    subSlotCount,
     unSlotNumber,
   )
 import Cardano.Chain.Update.Proposal (AProposal, UpId, recoverUpId)
@@ -403,7 +403,7 @@ registerEndorsement env st endorsement = do
   let pidsKeep = nonExpiredPids `union` confirmedPids
 
       nonExpiredPids =
-        M.keysSet $ M.filter (subSlotCount u currentSlot <=) proposalRegistrationSlot
+        M.keysSet $ M.filter (\s -> currentSlot <= addSlotCount u s) proposalRegistrationSlot
 
       confirmedPids = M.keysSet confirmedProposals
 

@@ -9,7 +9,7 @@ where
 
 import Cardano.Chain.Common.BlockCount (BlockCount)
 import Cardano.Chain.ProtocolConstants (kUpdateStabilityParam)
-import Cardano.Chain.Slotting (SlotNumber, subSlotCount)
+import Cardano.Chain.Slotting (SlotNumber, addSlotCount)
 import Cardano.Chain.Update.ProtocolParameters (ProtocolParameters)
 import Cardano.Chain.Update.ProtocolVersion (ProtocolVersion)
 import Cardano.Chain.Update.Validation.Endorsement
@@ -59,4 +59,4 @@ tryBumpVersion env st =
     Environment {k, epochFirstSlot, candidateProtocolVersions} = env
 
     stableCandidates =
-      filter ((<= subSlotCount (kUpdateStabilityParam k) epochFirstSlot) . cpuSlot) candidateProtocolVersions
+      filter ((\x -> addSlotCount (kUpdateStabilityParam k) x <= epochFirstSlot) . cpuSlot) candidateProtocolVersions
