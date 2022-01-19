@@ -8,11 +8,22 @@
 \newcommand{\PrtclState}{\type{PrtclState}}
 \newcommand{\PrtclEnv}{\type{PrtclEnv}}
 \newcommand{\PoolDistr}{\type{PoolDistr}}
+\newcommand{\BHBody}{\type{BHBody}}
+\newcommand{\HashHeader}{\type{HashHeader}}
+\newcommand{\HashBBody}{\type{HashBBody}}
+\newcommand{\BlockNo}{\type{BlockNo}}
+\newcommand{\Proof}{\type{Proof}}
+\newcommand{\OCert}{\type{OCert}}
 \newcommand{\bheader}[1]{\fun{bheader}~\var{#1}}
+\newcommand{\verifyVrf}[4]{\fun{verifyVrf}_{#1} ~ #2 ~ #3 ~#4}
+\newcommand{\slotToSeed}[1]{\fun{slotToSeed}~ \var{#1}}
+\newcommand{\XOR}{\mathsf{XOR}}
 
 \section{Removal of the Overlay Schedule}
 
 The overlay schedule was only used during the early days of the Shelley ledger, and can be safely removed. First, the protocol parameter $\var{d}$ is removed, and any functions that use it are reduced to the case $\var{d} = 0$. The function $\fun{mkApparentPerformance}$ is reduced to one of its branches, and its first argument is dropped. It is only used in the definition of $\fun{rewardOnePool}$, which needs to be adjusted accordingly.
+
+Additionally, the block header body now contains a single VRF value to be used for both the leader check and the block nonce.
 
 \begin{figure}[htb]
     \begin{align*}
@@ -61,6 +72,62 @@ $\fun{incrBlocks}$ gets the same treatment as $\fun{mkApparentPerformance}$. Its
 
 \newpage
 Finally, the $\mathsf{PRTCL}$ STS needs to be adjusted. To retire the $\mathsf{OVERLAY}$ STS, we inline the definition of its 'decentralized' case and drop all the unnecessary variables from its environment. It is invoked in $\mathsf{CHAIN}$, which needs to be adjusted accordingly.
+
+As there is now only a singe VRF check, slight modifications are needed for the definition of the block header body \text{BHBody} type and the function \text{vrfChecks}. The Shelley era accessor functions $\fun{bleader}$ and $\fun{bnonce}$ are replaced with new functions.
+
+\begin{figure*}[htb]
+  %
+  \emph{Block Header Body}
+  %
+  \begin{equation*}
+    \BHBody =
+    \left(
+      \begin{array}{r@{~\in~}lr}
+        \var{prev} & \HashHeader^? & \text{hash of previous block header}\\
+        \var{vk} & \VKey & \text{block issuer}\\
+        \var{vrfVk} & \VKey & \text{VRF verification key}\\
+        \var{blockno} & \BlockNo & \text{block number}\\
+        \var{slot} & \Slot & \text{block slot}\\
+        \hldiff{\var{vrfRes}} & \hldiff{\Seed} & \hldiff{\text{VRF result value}}\\
+        \var{prf} & \Proof & \text{vrf proof}\\
+        \var{bsize} & \N & \text{size of the block body}\\
+        \var{bhash} & \HashBBody & \text{block body hash}\\
+        \var{oc} & \OCert & \text{operational certificate}\\
+        \var{pv} & \ProtVer & \text{protocol version}\\
+      \end{array}
+    \right)
+  \end{equation*}
+  %
+  \emph{New Accessor Function}
+  \begin{equation*}
+    \begin{array}{r@{~\in~}l}
+       \fun{bVrfRes} & \BHBody \to \Seed \\
+       \fun{bVrfProof} & \BHBody \to \Proof \\
+    \end{array}
+  \end{equation*}
+  %
+  \emph{New Helper Functions}
+    \begin{align*}
+      & \fun{bleader} \in \BHBody \to \Seed \\
+      & \fun{bleader}~(\var{bhb}) = (\fun{hash}~``TEST") ~\XOR~ (\fun{bVrfRes}~\var{bhb})\\
+      \\
+      & \fun{bnonce} \in \BHBody \to \Seed \\
+      & \fun{bnonce}~(\var{bhb}) = (\fun{hash}~``NONCE") ~\XOR~ (\fun{bVrfRes}~\var{bhb})\\
+      \\
+      & \fun{vrfChecks} \in \Seed \to \BHBody \to \Bool \\
+      & \fun{vrfChecks}~\eta_0~\var{bhb} =
+          \verifyVrf{\Seed}{\var{vrfK}}{(\slotToSeed{slot}~\XOR~\eta_0)}{(\var{value},~\var{proof}}) \\
+      & ~~~~\where \\
+      & ~~~~~~~~~~\var{slot} \leteq \bslot{bhb} \\
+      & ~~~~~~~~~~\var{vrfK} \leteq \fun{bvkvrf}~\var{bhb} \\
+      & ~~~~~~~~~~\var{value} \leteq \fun{bVrfRes}~\var{bhb} \\
+      & ~~~~~~~~~~\var{proof} \leteq \fun{bVrfProof}~\var{bhb} \\
+  \end{align*}
+  %
+  \caption{Block Definitions}
+  \label{fig:defs:blocks}
+\end{figure*}
+
 
 \begin{figure}
   \emph{Protocol environments}
