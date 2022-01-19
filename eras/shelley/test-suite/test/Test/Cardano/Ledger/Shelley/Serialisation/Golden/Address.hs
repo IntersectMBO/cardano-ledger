@@ -37,10 +37,10 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Base16.Lazy as LB16
 import qualified Data.ByteString.Lazy as LBS
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
+import GHC.Exts (IsString)
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty (TestTree)
 import qualified Test.Tasty as T
 import qualified Test.Tasty.HUnit as T
@@ -68,73 +68,77 @@ goldenTests_MockCrypto :: TestTree
 goldenTests_MockCrypto =
   T.testGroup
     "MockCrypto golden tests"
-    [ golden "keyHash" putCredential keyHash "01020304a1a2a3a4",
-      golden "scriptHash" putCredential scriptHash "05060708b5b6b7b8",
-      golden "ptr" putPtr ptr "81000203",
+    [ golden "keyHash" putCredential keyHash keyHashHex,
+      golden "scriptHash" putCredential scriptHash scriptHashHex,
+      golden "ptr" putPtr ptr ptrHex,
       golden
         "addrBaseKK"
         putAddr
         (Addr Testnet keyHash (StakeRefBase keyHash))
-        "0001020304a1a2a3a401020304a1a2a3a4",
+        ("00" <> keyHashHex <> keyHashHex),
       golden
         "addrBaseSK"
         putAddr
         (Addr Testnet scriptHash (StakeRefBase keyHash))
-        "1005060708b5b6b7b801020304a1a2a3a4",
+        ("10" <> scriptHashHex <> keyHashHex),
       golden
         "addrBaseKS"
         putAddr
         (Addr Testnet keyHash (StakeRefBase scriptHash))
-        "2001020304a1a2a3a405060708b5b6b7b8",
+        ("20" <> keyHashHex <> scriptHashHex),
       golden
         "addrBaseSS"
         putAddr
         (Addr Testnet scriptHash (StakeRefBase scriptHash))
-        "3005060708b5b6b7b805060708b5b6b7b8",
+        ("30" <> scriptHashHex <> scriptHashHex),
       golden
         "addrPtrK"
         putAddr
         (Addr Testnet keyHash (StakeRefPtr ptr))
-        "4001020304a1a2a3a481000203",
+        ("40" <> keyHashHex <> ptrHex),
       golden
         "addrPtrS"
         putAddr
         (Addr Testnet scriptHash (StakeRefPtr ptr))
-        "5005060708b5b6b7b881000203",
+        ("50" <> scriptHashHex <> ptrHex),
       golden
         "addrEnterpriseK"
         putAddr
         (Addr Testnet keyHash StakeRefNull)
-        "6001020304a1a2a3a4",
+        ("60" <> keyHashHex),
       golden
         "addrEnterpriseS"
         putAddr
         (Addr Testnet scriptHash StakeRefNull)
-        "7005060708b5b6b7b8",
+        ("70" <> scriptHashHex),
       golden
         "rewardAcntK"
         putRewardAcnt
         (RewardAcnt Testnet keyHash)
-        "e001020304a1a2a3a4",
+        ("e0" <> keyHashHex),
       golden
         "rewardAcntS"
         putRewardAcnt
         (RewardAcnt Testnet scriptHash)
-        "f005060708b5b6b7b8"
+        ("f0" <> scriptHashHex)
     ]
   where
-    keyHash :: Credential kh C_Crypto
+    keyHashHex :: IsString s => s
+    keyHashHex = "01020304a1a2a3a4a5a6a7a8a9b0b1b2b3b4b5b6b7b8b9c0c1c2c3c4"
+    keyHash :: Credential kh StandardCrypto
     keyHash =
       KeyHashObj . KeyHash
         . fromMaybe (error "Unable to decode")
-        . hashFromTextAsHex
-        $ "01020304a1a2a3a4"
-    scriptHash :: Credential kh C_Crypto
+        $ hashFromTextAsHex keyHashHex
+    scriptHashHex :: IsString s => s
+    scriptHashHex = "05060708b5b6b7b8d5d6d7d8d9e0e1e2e3e4e5e6e7e8e9f0f1f2f3f4"
+    scriptHash :: Credential kh StandardCrypto
     scriptHash =
       ScriptHashObj . ScriptHash
         . fromMaybe (error "Unable to decode")
-        . hashFromTextAsHex
-        $ "05060708b5b6b7b8"
+        $ hashFromTextAsHex scriptHashHex
+    ptrHex :: IsString s => s
+    ptrHex = "81000203"
     ptr :: Ptr
     ptr = Ptr (SlotNo 128) 2 3
 
@@ -213,7 +217,9 @@ goldenTests_ShelleyCrypto =
     -- and should be 28-byte in the aftermath
     keyBlake2b224 :: BS.ByteString -> Credential kh ShelleyCrypto
     keyBlake2b224 vk =
-      KeyHashObj . KeyHash . fromJust . hashFromBytes $ hk
+      KeyHashObj . KeyHash
+        . fromMaybe (error "Supplied bytes are of unexpected length")
+        $ hashFromBytes hk
       where
         hash = digest (Proxy :: Proxy Blake2b_224)
         vk' = invariantSize 32 vk
@@ -231,7 +237,7 @@ goldenTests_ShelleyCrypto =
             ++ ", but expected to be "
             ++ show expectedLength
 
-addressWithExtraneousBytes :: BS.ByteString
+addressWithExtraneousBytes :: HasCallStack => BS.ByteString
 addressWithExtraneousBytes = bs
   where
     bs = case B16.decode hs of
