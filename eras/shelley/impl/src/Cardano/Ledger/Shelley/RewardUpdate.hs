@@ -72,9 +72,8 @@ import NoThunks.Class (NoThunks (..), allNoThunks)
 -- ===============================================================
 
 -- | The result of reward calculation is a pair of aggregate Maps.
-data RewardAns c
-  = RewardAns
-      !(Map (Credential 'Staking c) (Reward c))
+newtype RewardAns c
+  = RewardAns (Map (Credential 'Staking c) (Reward c))
   deriving (Show, Eq, Generic)
   deriving (NFData)
 

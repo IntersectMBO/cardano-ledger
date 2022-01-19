@@ -495,8 +495,8 @@ aggregateRewards pp rewards =
   Map.map (foldMap' rewardAmount) $ filterRewards pp rewards
 
 data LeaderOnlyReward crypto = LeaderOnlyReward
-  { lRewardPool :: KeyHash 'StakePool crypto,
-    lRewardAmount :: Coin
+  { lRewardPool :: !(KeyHash 'StakePool crypto),
+    lRewardAmount :: !Coin
   }
   deriving (Eq, Ord, Show, Generic)
 
