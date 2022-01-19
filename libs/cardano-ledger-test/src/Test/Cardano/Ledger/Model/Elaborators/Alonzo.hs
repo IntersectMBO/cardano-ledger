@@ -15,6 +15,7 @@ import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis as Alonzo (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
+import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo
   ( UtxoPredicateFailure (..),
   )

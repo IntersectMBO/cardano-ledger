@@ -21,16 +21,11 @@ import Cardano.Ledger.Address
     getNetwork,
     getRwdNetwork,
   )
-import Cardano.Ledger.Alonzo.Data (dataHashSize)
+import Cardano.Ledger.Alonzo.Data (DataHash, dataHashSize)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS, UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee, totExUnits)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
-import Cardano.Ledger.Alonzo.TxBody
-  ( TxOut (..),
-    txnetworkid',
-  )
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody, TxOut)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txrdmrs'), nullRedeemers)
 import Cardano.Ledger.BaseTypes
@@ -47,7 +42,6 @@ import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
-import qualified Cardano.Ledger.Mary.Value as Alonzo (Value)
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams,
@@ -55,7 +49,7 @@ import Cardano.Ledger.Shelley.Constraints
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
-import Cardano.Ledger.Shelley.TxBody (unWdrl)
+import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl, unWdrl)
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
     balance,
@@ -89,6 +83,7 @@ import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (foldl', toList)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
@@ -99,7 +94,12 @@ import Numeric.Natural (Natural)
 
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
-utxoEntrySize :: Era era => TxOut era -> Integer
+utxoEntrySize ::
+  ( Era era,
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash c))
+  ) =>
+  Core.TxOut era ->
+  Integer
 utxoEntrySize txout = utxoEntrySizeWithoutVal + Val.size v + dataHashSize dh
   where
     v = getField @"value" txout
@@ -227,7 +227,7 @@ isKeyHashAddr (AddrBootstrap _) = True
 isKeyHashAddr (Addr _ (KeyHashObj _) _) = True
 isKeyHashAddr _ = False
 
-vKeyLocked :: Era era => TxOut era -> Bool
+vKeyLocked :: (HasField "address" (Core.TxOut era) (Addr (Crypto era))) => Core.TxOut era -> Bool
 vKeyLocked txout = isKeyHashAddr (getField @"address" txout)
 
 -- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
@@ -244,7 +244,6 @@ feesOK ::
   forall era.
   ( Era era,
     ValidateScript era, -- isTwoPhaseScriptAddress
-    Core.TxOut era ~ Alonzo.TxOut era, -- balance requires this,
     Core.Tx era ~ Alonzo.ValidatedTx era,
     Core.Witnesses era ~ TxWitness era,
     HasField
@@ -254,7 +253,8 @@ feesOK ::
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
-    HasField "_collateralPercentage" (Core.PParams era) Natural
+    HasField "_collateralPercentage" (Core.PParams era) Natural,
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   Core.PParams era ->
   Core.Tx era ->
@@ -302,6 +302,9 @@ utxoTransition ::
     Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
     -- We leave Core.PParams abstract
     UsesPParams era,
+    Core.ChainData (Core.Value era),
+    Core.ChainData (Core.TxOut era),
+    Core.ChainData (Core.TxBody era),
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_keyDeposit" (Core.PParams era) Coin,
@@ -313,13 +316,19 @@ utxoTransition ::
     HasField "_maxValSize" (Core.PParams era) Natural,
     HasField "_collateralPercentage" (Core.PParams era) Natural,
     HasField "_maxCollateralInputs" (Core.PParams era) Natural,
-    -- We fix Core.Tx, Core.Value, Core.TxBody, and Core.TxOut
     Core.Tx era ~ Alonzo.ValidatedTx era,
-    Core.TxOut era ~ Alonzo.TxOut era,
-    Core.Value era ~ Alonzo.Value (Crypto era),
-    Core.TxBody era ~ Alonzo.TxBody era,
     Core.Witnesses era ~ TxWitness era,
-    Era.TxSeq era ~ Alonzo.TxSeq era
+    Era.TxSeq era ~ Alonzo.TxSeq era,
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Core.Value era),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    ToCBOR (Core.Value era),
+    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era))
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
@@ -430,7 +439,7 @@ utxoTransition = do
       (Set.fromList wdrlsWrongNetwork)
 
   {-   txnetworkid txb = NetworkId   -}
-  case txnetworkid' txb of
+  case getField @"txnetworkid" txb of
     SNothing -> pure ()
     SJust bid -> ni == bid ?!# WrongNetworkInTxBody ni bid
 
@@ -464,6 +473,10 @@ instance
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (Core.EraRule "UTXOS" era) ~ ValidatedTx era,
     -- We leave Core.PParams abstract
+    ToCBOR (Core.Value era),
+    Core.ChainData (Core.Value era),
+    Core.ChainData (Core.TxOut era),
+    Core.ChainData (Core.TxBody era),
     UsesPParams era,
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_minfeeA" (Core.PParams era) Natural,
@@ -477,11 +490,16 @@ instance
     HasField "_maxValSize" (Core.PParams era) Natural,
     HasField "_collateralPercentage" (Core.PParams era) Natural,
     HasField "_maxCollateralInputs" (Core.PParams era) Natural,
-    -- We fix Core.Value, Core.TxBody, and Core.TxOut
-    Core.Value era ~ Alonzo.Value (Crypto era),
-    Core.TxBody era ~ Alonzo.TxBody era,
+    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Core.Value era),
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Core.Witnesses era ~ TxWitness era,
-    Core.TxOut era ~ Alonzo.TxOut era,
     Era.TxSeq era ~ Alonzo.TxSeq era,
     Core.Tx era ~ Alonzo.ValidatedTx era
   ) =>

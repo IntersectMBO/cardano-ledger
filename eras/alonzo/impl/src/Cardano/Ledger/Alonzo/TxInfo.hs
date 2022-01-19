@@ -18,17 +18,6 @@ import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxBody
-  ( certs',
-    inputs',
-    mint',
-    outputs',
-    reqSignerHashes',
-    txfee',
-    vldt',
-    wdrls',
-  )
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -36,7 +25,8 @@ import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Keys (KeyHash (..), hashKey)
+import Cardano.Ledger.Hashes (EraIndependentData)
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.SafeHash
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
@@ -192,10 +182,11 @@ txInfoIn' (TxIn txid nat) = PV1.TxOutRef (txInfoId txid) (fromIntegral nat)
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it and return
 --   (Just translation). If does not exist in the UTxO, return Nothing.
 txInfoIn ::
-  forall era.
+  forall era c i.
   ( Era era,
     Value era ~ Mary.Value (Crypto era),
-    Core.TxOut era ~ Alonzo.TxOut era
+    HasField "datahash" (TxOut era) (StrictMaybe (SafeHash c i)),
+    HasField "address" (TxOut era) (Addr c)
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
@@ -217,16 +208,19 @@ txInfoIn (UTxO mp) txin =
 --   possible the address part is a Bootstrap Address, in that case return Nothing
 --   I.e. don't include Bootstrap Addresses in the answer.
 txInfoOut ::
-  forall era.
+  forall era c.
   ( Era era,
-    Value era ~ Mary.Value (Crypto era)
+    Value era ~ Mary.Value (Crypto era),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash c)),
+    HasField "address" (TxOut era) (Addr c)
   ) =>
-  Alonzo.TxOut era ->
+  Core.TxOut era ->
   Maybe PV1.TxOut
-txInfoOut (Alonzo.TxOut addr val datahash) =
-  case transAddr addr of
-    Just ad -> Just (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
-    Nothing -> Nothing
+txInfoOut txo =
+  let (addr, val, datahash) = (getField @"address" txo, getField @"value" txo, getField @"datahash" txo)
+   in case transAddr addr of
+        Just ad -> Just (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
+        Nothing -> Nothing
 
 -- ==================================
 -- translate Values
@@ -340,12 +334,18 @@ txInfo ::
   forall era tx m.
   ( Era era,
     Monad m,
-    Core.TxOut era ~ Alonzo.TxOut era,
-    Core.TxBody era ~ Alonzo.TxBody era,
     Value era ~ Mary.Value (Crypto era),
     HasField "body" tx (Core.TxBody era),
     HasField "wits" tx (TxWitness era),
-    HasField "_protocolVersion" (PParams era) ProtVer
+    HasField "datahash" (TxOut era) (StrictMaybe (SafeHash (Crypto era) EraIndependentData)),
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "address" (TxOut era) (Addr (Crypto era))
   ) =>
   Core.PParams era ->
   Language ->
@@ -361,39 +361,41 @@ txInfo pp lang ei sysS utxo tx = do
       PlutusV1 ->
         TxInfoPV1 $
           PV1.TxInfo
-            { PV1.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),
-              PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
+            { PV1.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
+              PV1.txInfoOutputs = mapMaybe (txInfoOut @era) (foldr (:) [] outs),
               PV1.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
               PV1.txInfoMint = transValue forge,
-              PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (certs' tbody),
-              PV1.txInfoWdrl = Map.toList (transWdrl (wdrls' tbody)),
+              PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
+              PV1.txInfoWdrl = Map.toList (transWdrl (getField @"wdrls" tbody)),
               PV1.txInfoValidRange = timeRange,
-              PV1.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
+              PV1.txInfoSignatories = map transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
               PV1.txInfoData = map transDataPair datpairs,
               PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
             }
       PlutusV2 ->
         TxInfoPV2 $
           PV2.TxInfo
-            { PV2.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (inputs' tbody)),
+            { PV2.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
               PV2.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
               PV2.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
               PV2.txInfoMint = transValue forge,
-              PV2.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (certs' tbody),
-              PV2.txInfoWdrl = PV2.fromList $ Map.toList (transWdrl (wdrls' tbody)),
+              PV2.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
+              PV2.txInfoWdrl = PV2.fromList $ Map.toList (transWdrl (getField @"wdrls" tbody)),
               PV2.txInfoValidRange = timeRange,
-              PV2.txInfoSignatories = map transKeyHash (Set.toList (reqSignerHashes' tbody)),
+              PV2.txInfoSignatories = map transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
               PV2.txInfoRedeemers = PV2.fromList $ mapMaybe (transRedeemerPtr tbody) rdmrs,
               PV2.txInfoData = PV2.fromList $ map transDataPair datpairs,
               PV2.txInfoId = PV2.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
             }
   where
+    tbody :: Core.TxBody era
     tbody = getField @"body" tx
     _witnesses = getField @"wits" tx
-    outs = outputs' tbody
-    fee = txfee' tbody
-    forge = mint' tbody
-    interval = vldt' tbody
+    outs = getField @"outputs" tbody
+    fee = getField @"txfee" tbody
+    forge = getField @"mint" tbody
+    interval = getField @"vldt" tbody
+
     datpairs = Map.toList (unTxDats $ txdats' _witnesses)
     rdmrs = Map.toList (unRedeemers $ txrdmrs' _witnesses)
 

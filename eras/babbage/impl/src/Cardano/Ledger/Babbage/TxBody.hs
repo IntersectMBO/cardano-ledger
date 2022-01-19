@@ -58,6 +58,7 @@ module Cardano.Ledger.Babbage.TxBody
     scriptIntegrityHash',
     adHash',
     txnetworkid',
+    getBabbageTxOutEitherAddr,
     BabbageBody,
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,

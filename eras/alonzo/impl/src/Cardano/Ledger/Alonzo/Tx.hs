@@ -75,8 +75,6 @@ import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams
   ( LangDepView (..),
-    PParams,
-    PParams' (..),
     encodeLangViews,
     getLanguageView,
   )
@@ -92,7 +90,6 @@ import Cardano.Ledger.Alonzo.TxBody
   ( EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
     TxBody (..),
-    TxOut (..),
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -222,7 +219,7 @@ instance
 -- =========================================================
 -- Figure 2: Definitions for Transactions
 
-getCoin :: (Era era) => TxOut era -> Coin
+getCoin :: (Era era) => Core.TxOut era -> Coin
 getCoin txout = coin (getField @"value" txout)
 
 -- | A ScriptIntegrityHash is the hash of three things.  The first two come
@@ -251,9 +248,9 @@ instance (Era era, c ~ Crypto era) => HashAnnotated (ScriptIntegrity era) EraInd
 hashScriptIntegrity ::
   forall era.
   ( Era era,
-    Core.PParams era ~ PParams era
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
-  PParams era ->
+  Core.PParams era ->
   Set Language ->
   Redeemers era ->
   TxDats era ->

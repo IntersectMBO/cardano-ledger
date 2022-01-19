@@ -17,11 +17,10 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (PParams)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent, UtxoPredicateFailure)
-import Cardano.Ledger.Alonzo.Scripts (Script (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel, Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
     ValidatedTx (..),
@@ -230,7 +229,6 @@ alonzoStyleWitness ::
   ( Era era,
     -- Fix some Core types to the Alonzo Era
     Core.Tx era ~ ValidatedTx era, -- scriptsNeeded, checkScriptData etc. are fixed at Alonzo.Tx
-    Core.PParams era ~ PParams era,
     Core.Script era ~ Script era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (utxow era),
@@ -249,7 +247,9 @@ alonzoStyleWitness ::
     AlonzoStyleAdditions era,
     -- New transaction body fields needed for Alonzo
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    --
+    (HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel))
   ) =>
   TransitionRule (utxow era)
 alonzoStyleWitness = do
@@ -444,7 +444,6 @@ instance
   forall era.
   ( -- Fix some Core types to the Alonzo Era
     Core.Tx era ~ ValidatedTx era,
-    Core.PParams era ~ PParams era,
     Core.Script era ~ Script era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (AlonzoUTXOW era),
@@ -457,6 +456,7 @@ instance
     -- Supply the HasField and Validate instances for Alonzo
     ShelleyStyleWitnessNeeds era, -- supplies a subset of those needed. All the old Shelley Needs still apply.
     Show (Core.TxOut era),
+    (HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)),
     AlonzoStyleAdditions era
   ) =>
   STS (AlonzoUTXOW era)
