@@ -100,7 +100,7 @@ import Cardano.Ledger.Shelley.PParams as X
     ProposedPPUpdates (..),
     Update (..),
   )
-import Cardano.Ledger.Shelley.Rewards as X
+import Cardano.Ledger.Shelley.PoolRank as X
   ( NonMyopic,
   )
 import Cardano.Ledger.Shelley.Rules.Deleg as X (DELEG, DelegEnv (..))

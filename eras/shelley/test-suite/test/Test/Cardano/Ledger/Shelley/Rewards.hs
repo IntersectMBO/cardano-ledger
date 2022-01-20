@@ -78,6 +78,12 @@ import Cardano.Ledger.Shelley.PParams
     PParams' (..),
     emptyPParams,
   )
+import Cardano.Ledger.Shelley.PoolRank
+  ( Likelihood,
+    NonMyopic,
+    leaderProbability,
+    likelihood,
+  )
 import Cardano.Ledger.Shelley.RewardUpdate
   ( FreeVars (..),
     KeyHashPoolProvenance,
@@ -86,14 +92,10 @@ import Cardano.Ledger.Shelley.RewardUpdate
     RewardPulser (RSLP),
   )
 import Cardano.Ledger.Shelley.Rewards
-  ( Likelihood,
-    NonMyopic,
-    Reward (rewardAmount),
+  ( Reward (rewardAmount),
     StakeShare (..),
     aggregateRewards,
-    leaderProbability,
     leaderRew,
-    likelihood,
     memberRew,
     mkApparentPerformance,
     mkPoolRewardInfo,

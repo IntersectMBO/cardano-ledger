@@ -59,16 +59,18 @@ import Cardano.Ledger.Shelley.PParams
   ( PParams,
     PParams' (..),
   )
-import Cardano.Ledger.Shelley.Rewards
+import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),
     NonMyopic (..),
-    Reward (..),
+    leaderProbability,
+    likelihood,
+  )
+import Cardano.Ledger.Shelley.Rewards
+  ( Reward (..),
     RewardType (..),
     StakeShare (..),
     aggregateRewards,
-    leaderProbability,
     leaderRew,
-    likelihood,
     memberRew,
     mkApparentPerformance,
     sumRewards,

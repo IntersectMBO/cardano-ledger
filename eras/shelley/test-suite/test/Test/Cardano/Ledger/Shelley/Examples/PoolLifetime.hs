@@ -57,16 +57,15 @@ import Cardano.Ledger.Shelley.LedgerState
     startStep,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
-import Cardano.Ledger.Shelley.Rewards
+import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),
     NonMyopic (..),
-    Reward (..),
-    RewardType (..),
     applyDecay,
     leaderProbability,
     likelihood,
   )
+import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
+import Cardano.Ledger.Shelley.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.Shelley.Tx
   ( Tx (..),
     WitnessSetHKD (..),

@@ -93,15 +93,15 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
-import Cardano.Ledger.Shelley.Rewards
+import Cardano.Ledger.Shelley.PoolRank
   ( NonMyopic (..),
     PerformanceEstimate (..),
-    StakeShare (..),
     getTopRankedPoolsVMap,
     nonMyopicMemberRew,
     percentile',
   )
+import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
+import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody (DCert, PoolParams (..), WitVKey (..))

@@ -99,6 +99,13 @@ import Cardano.Ledger.Shelley.PParams
     ProposedPPUpdates (..),
     Update (..),
   )
+import Cardano.Ledger.Shelley.PoolRank
+  ( Histogram (..),
+    Likelihood (..),
+    LogWeight (..),
+    NonMyopic (..),
+    PerformanceEstimate (..),
+  )
 import Cardano.Ledger.Shelley.RewardUpdate
   ( FreeVars (..),
     Pulser,
@@ -109,12 +116,7 @@ import Cardano.Ledger.Shelley.RewardUpdate
     RewardUpdate (..),
   )
 import Cardano.Ledger.Shelley.Rewards
-  ( Histogram (..),
-    LeaderOnlyReward (..),
-    Likelihood (..),
-    LogWeight (..),
-    NonMyopic (..),
-    PerformanceEstimate (..),
+  ( LeaderOnlyReward (..),
     PoolRewardInfo (..),
     Reward (..),
     RewardType (..),

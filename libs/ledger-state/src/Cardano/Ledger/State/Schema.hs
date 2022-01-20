@@ -18,7 +18,7 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
-import qualified Cardano.Ledger.Shelley.Rewards as Shelley
+import qualified Cardano.Ledger.Shelley.PoolRank as Shelley
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import Cardano.Ledger.State.Orphans (Enc, SnapShotType (..))
 import Cardano.Ledger.State.UTxO
