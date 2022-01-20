@@ -24,6 +24,7 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import Data.Default.Class (def)
 import GHC.Records
+import GHC.Stack
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty.HUnit (Assertion, (@?=))
@@ -36,6 +37,7 @@ ignoreAllButUTxO ::
 ignoreAllButUTxO = fmap (\(UTxOState utxo _ _ _ _, _) -> utxo)
 
 testMaryNoDelegLEDGER ::
+  HasCallStack =>
   UTxO MaryTest ->
   Tx MaryTest ->
   LedgerEnv MaryTest ->
