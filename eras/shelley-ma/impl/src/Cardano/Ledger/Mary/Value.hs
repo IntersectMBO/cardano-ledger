@@ -74,7 +74,7 @@ import Data.Coders
 import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
-import Data.List (nub, sort, sortOn)
+import Data.List (sortOn)
 import Data.Map.Internal
   ( Map (..),
     link,
@@ -84,7 +84,6 @@ import Data.Map.Internal
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
-import Data.Ord (Down (..))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
 import qualified Data.Semigroup as Semigroup (Sum (..))
@@ -558,23 +557,24 @@ to v = do
     pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy (CC.ADDRHASH crypto)))
 
     -- pids is the collection of all distinct pids
-    pids = nub $ sort $ (\(pid, _, _) -> pid) <$> triples
+    pids = Set.fromList $ (\(pid, _, _) -> pid) <$> triples
 
     pidOffsetMap :: Map (PolicyID crypto) Word16
     pidOffsetMap =
       -- the pid offsets are:
       --   X, X + s, X + 2s, X + 3s, ...
       -- where X is the start of block D and s is the size of a pid
-      let offsets = enumFromThen abcRegionSize (abcRegionSize + pidSize)
-       in fromIntegral <$> Map.fromList (zip pids offsets)
+      let offsets =
+            enumFromThen (fromIntegral abcRegionSize) (fromIntegral (abcRegionSize + pidSize))
+       in Map.fromList (zip (Set.toList pids) offsets)
 
     pidOffset pid = fromJust (Map.lookup pid pidOffsetMap)
 
-    pidBlockSize = length pids * pidSize
+    pidBlockSize = Set.size pids * pidSize
 
-    -- Putting asset names in (comparing Down) order ensures that the empty string
+    -- Putting asset names in descending order ensures that the empty string
     -- is last, so the associated offset is pointing to the end of the array
-    assetNames = nub $ sortOn Down $ (\(_, an, _) -> an) <$> triples
+    assetNames = Set.toDescList $ Set.fromList $ (\(_, an, _) -> an) <$> triples
 
     assetNameLengths = fromIntegral . BS.length . assetName <$> assetNames
 
@@ -650,7 +650,7 @@ from (CompactValueMultiAsset c numAssets rep) =
     -- length will be: offset - length(rep) = 0
     assetLens =
       -- This assumes that the triples are ordered by nondecreasing asset name offset
-      let ixs = nub $ map (\(_, x, _) -> x) rawTriples
+      let ixs = nubOrd $ map (\(_, x, _) -> x) rawTriples
           ixPairs = zip ixs (drop 1 ixs ++ [fromIntegral $ SBS.length rep])
        in Map.fromList $ (\(a, b) -> (a, fromIntegral $ b - a)) <$> ixPairs
     assetLen :: Word16 -> Int
@@ -670,6 +670,17 @@ from (CompactValueMultiAsset c numAssets rep) =
           SBS.fromShort $ readShortByteString rep (fromIntegral a) (assetLen a),
         fromIntegral i
       )
+
+-- | Strip out duplicates
+nubOrd :: Ord a => [a] -> [a]
+nubOrd =
+  loop mempty
+  where
+    loop _ [] = []
+    loop s (a : as)
+      | a `Set.member` s = loop s as
+      | otherwise =
+        let s' = Set.insert a s in s' `seq` a : loop s' as
 
 sbsToByteArray :: ShortByteString -> BA.ByteArray
 sbsToByteArray (SBS bah) = BA.ByteArray bah
