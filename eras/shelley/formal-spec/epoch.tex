@@ -571,13 +571,10 @@ This transition has no preconditions and results in the following state change:
                  & \{\var{hk}\mapsto \fun{poolRAcnt}~\var{pool} \mid
                    \var{hk}\mapsto\var{pool} \in \var{retired}\restrictdom\var{poolParams} \} \\
         \var{rewardAcnts'} & \left\{
-                        a \mapsto c
-                        \mathrel{\Bigg|}
-                        \begin{array}{r@{~\in~}l}
-                          \var{hk} \mapsto c & \var{pr}, \\
-                          \var{hk}\mapsto\var{a} & \var{rewardAcnts} \\
-                        \end{array}
-                      \right\} \\
+                               \sum\limits_{\wcard\mapsto c\in\var{pr}\circ\var{rewardAcnts}^{-1}(a)} c
+                               \mathrel{\Bigg|}
+			       a\in\range{rewardAcnts}
+                             \right\} \\
         \var{refunds} & \dom{rewards}\restrictdom\var{rewardAcnts'} \\
         \var{mRefunds} & \dom{rewards}\subtractdom\var{rewardAcnts'} \\
         \var{refunded} & \sum\limits_{\wcard\mapsto c\in\var{refunds}} c \\
