@@ -71,6 +71,7 @@ import Data.Coders
     (!>),
     (<!),
   )
+import Data.Foldable (foldMap')
 import Data.Group (Abelian, Group (..))
 import Data.Int (Int64)
 import Data.List (nub, sort, sortOn)
@@ -86,7 +87,9 @@ import Data.Maybe (fromJust)
 import Data.Ord (Down (..))
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
+import qualified Data.Semigroup as Semigroup (Sum (..))
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Text.Encoding (decodeLatin1)
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64)
@@ -603,13 +606,13 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
     len = length xs
     abcRegionSize = len * 12
 
-    numPids = length . nub . sort $ (\(pid, _, _) -> pid) <$> xs
+    numPids = Set.size . Set.fromList $ (\(pid, _, _) -> pid) <$> xs
     pidSize = fromIntegral (Hash.sizeHash (Proxy :: Proxy (CC.ADDRHASH crypto)))
     pidBlockSize = numPids * pidSize
 
-    assetNames = nub $ sort $ (\(_, an, _) -> an) <$> xs
-    assetNameLengths = fromIntegral . BS.length . assetName <$> assetNames
-    anameBlockSize = sum assetNameLengths
+    assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
+    anameBlockSize =
+      Semigroup.getSum $ foldMap' (Semigroup.Sum . BS.length . assetName) assetNames
 
 from :: forall crypto. (CC.Crypto crypto) => CompactValue crypto -> Value crypto
 from (CompactValueAdaOnly c) = Value (fromIntegral c) mempty
