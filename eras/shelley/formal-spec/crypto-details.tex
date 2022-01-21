@@ -52,6 +52,14 @@ More generally, we expect the following properties from a Verifyable Random Func
 \item[Pseudorandomness] Assuming the public-private key pair has been generated honestly, the VRF hash output on any adversarially-chosen VRF input looks indistinguishable from random for a computationally bounded adversary who does not know the private key. 
 \end{description}
 
+\subsection{Abstract functions $\seedOp$ and \fun{seedToSlot}}
+\label{sec:mkseed-slottoseed}
+The seed operation $x \seedOp y$ from Figure~\ref{fig:defs-vrf} is implemented
+as the BLAKE2b-256 hash of the concatenation of $x$ and $y$.
+
+The function \fun{slotToSeed} from Figure~\ref{fig:defs:blocks} is implemented
+as the big-endian encoding of the slot number in 8 bytes.
+
 \subsection{Multi-Signatures}
 As presented in Figure~\ref{fig:types-msig}, Shelley realizes multi-signatures 
 in a native way, via a script-like DSL. One defines the conditions required to 
