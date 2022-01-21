@@ -8,7 +8,7 @@
 
 module Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   ( cddlTest,
-    cddlTest',
+    cddlAnnotatorTest,
     cddlGroupTest,
     cddlTestCommon,
   )
@@ -33,86 +33,84 @@ import Cardano.Ledger.Serialization
 import Cardano.Prelude
   ( Exception,
     ExitCode (..),
-    Proxy (..),
-    bracket,
-    catch,
     forM_,
     throwIO,
-    typeRep,
   )
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
-import qualified System.Directory as Sys
+import Data.Typeable
+import GHC.Stack
 import qualified System.IO as Sys
-import qualified System.IO.Error as Sys
 import System.Process.ByteString.Lazy (readProcessWithExitCode)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (assertFailure, testCase)
+import UnliftIO.Temporary (withTempFile)
 
 -- Round trip test for a type t with instances:
 -- ToCBOR t
 -- FromCBOR t
 cddlTest ::
   forall a.
-  (ToCBOR a, FromCBOR a, Show a) =>
+  (ToCBOR a, FromCBOR a, Show a, HasCallStack) =>
   Int ->
   BSL.ByteString ->
   IO BSL.ByteString ->
   TestTree
-cddlTest n entryName cddlRes = testCase
-  ("cddl roundtrip " <> show (typeRep (Proxy @a)))
-  $ do
-    basecddl <- cddlRes
-    let cddl = "output = " <> entryName <> "\n" <> basecddl
-    cddlTestCommon @a serialize (decodeFullDecoder "cbor test" fromCBOR) n cddl
+cddlTest = cddlRoundtripTest @a serialize (decodeFullDecoder "cbor test" fromCBOR)
 
 -- Round trip test for a type t with instances:
 -- ToCBOR t
 -- FromCBOR (Annotator t)
-cddlTest' ::
+cddlAnnotatorTest ::
   forall a.
-  (ToCBOR a, FromCBOR (Annotator a), Show a) =>
+  (ToCBOR a, FromCBOR (Annotator a), Show a, HasCallStack) =>
   Int ->
   BSL.ByteString ->
   IO BSL.ByteString ->
   TestTree
-cddlTest' n entryName cddlRes = testCase
-  ("cddl roundtrip " <> show (typeRep (Proxy @a)))
-  $ do
-    basecddl <- cddlRes
-    let cddl = "output = " <> entryName <> "\n" <> basecddl
-    cddlTestCommon @a serialize (decodeAnnotator "cbor test" fromCBOR) n cddl
+cddlAnnotatorTest = cddlRoundtripTest @a serialize (decodeAnnotator "cbor test" fromCBOR)
 
--- Round trip test for a type t with instances:
+-- | Round trip test for a type t with instances:
 -- ToCBORGroup t
 -- FromCBORGRoup t
 cddlGroupTest ::
   forall a.
-  (ToCBORGroup a, FromCBORGroup a, Show a) =>
+  (ToCBORGroup a, FromCBORGroup a, Show a, HasCallStack) =>
   Int ->
   BSL.ByteString ->
   IO BSL.ByteString ->
   TestTree
-cddlGroupTest n entryName cddlRes = testCase ("cddl roundtrip " <> show (typeRep (Proxy @a))) $ do
-  basecddl <- cddlRes
-  let cddl = "output = [" <> entryName <> "]\n" <> basecddl
-  cddlTestCommon @a
-    (\x -> serializeEncoding $ encodeListLen (listLen x) <> toCBORGroup x)
-    (decodeFullDecoder "cbor test" groupRecord)
-    n
-    cddl
+cddlGroupTest n entryName =
+  let serializeGroup x = serializeEncoding $ encodeListLen (listLen x) <> toCBORGroup x
+      desrializeGroup = decodeFullDecoder "cbor test" groupRecord
+   in cddlRoundtripTest @a serializeGroup desrializeGroup n ("[" <> entryName <> "]")
+
+cddlRoundtripTest ::
+  forall a.
+  (Typeable a, Show a, HasCallStack) =>
+  (a -> BSL.ByteString) ->
+  (BSL.ByteString -> Either DecoderError a) ->
+  Int ->
+  BSL.ByteString ->
+  IO BSL.ByteString ->
+  TestTree
+cddlRoundtripTest serializeWith decodeWith n entryName cddlRes =
+  testCase ("CDDL roundtrip " <> show (typeRep (Proxy @a))) $ do
+    basecddl <- cddlRes
+    let cddl = "output = " <> entryName <> "\n" <> basecddl
+    cddlTestCommon @a serializeWith decodeWith n cddl
 
 -- Round trip test for a type t, using explicit encoding and decoding functions
 cddlTestCommon ::
-  Show a =>
+  (Show a, HasCallStack) =>
   (a -> BSL.ByteString) ->
   (BSL.ByteString -> Either DecoderError a) ->
   Int ->
   BSL.ByteString ->
   IO ()
 cddlTestCommon serializer decoder n cddlData = do
-  usingFile cddlData $ \cddl -> do
+  usingTempFile cddlData $ \cddl -> do
     examples <- Char8.lines <$> generateCBORDiagStdIn n cddlData :: IO [BSL.ByteString]
     forM_ examples $ \exampleDiag -> do
       exampleBytes <- diagToBytes exampleDiag
@@ -174,16 +172,8 @@ readProcessWithExitCode2 exec args stdIn = do
     ExitSuccess -> pure (Right stdOut)
     ExitFailure _i -> pure (Left stdErr)
 
-withTempFile :: FilePath -> String -> (FilePath -> Sys.Handle -> IO a) -> IO a
-withTempFile dir nameTemplate k = bracket (Sys.openBinaryTempFile dir nameTemplate) cleanup (uncurry k)
-  where
-    cleanup (fileName, h) = do
-      Sys.hClose h
-      catch (Sys.removeFile fileName) $ \err ->
-        if Sys.isDoesNotExistError err then return () else throwIO err
-
-usingFile :: BSL.ByteString -> (FilePath -> IO a) -> IO a
-usingFile bytes k = withTempFile "." "tmp" $ \fileName h -> do
+usingTempFile :: BSL.ByteString -> (FilePath -> IO a) -> IO a
+usingTempFile bytes k = withTempFile "." "tmp" $ \fileName h -> do
   BSL.hPut h bytes
   Sys.hClose h
   k fileName

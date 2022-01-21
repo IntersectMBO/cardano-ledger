@@ -105,6 +105,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified Data.UMap as UM
 import Data.Word (Word64)
+import GHC.Stack
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
   ( testBootstrapNotSpending,
@@ -226,7 +227,6 @@ instance Arbitrary StakeProportion where
 testCheckLeaderVal ::
   forall v.
   (v ~ VRF C_Crypto) =>
-  -- (v ~ CLVVRF) =>
   TestTree
 testCheckLeaderVal =
   testGroup
@@ -311,6 +311,7 @@ testCheckLeaderVal =
     maxVRFVal = (2 ^ (8 * VRF.sizeOutputVRF (Proxy @v))) - 1
 
 testLEDGER ::
+  HasCallStack =>
   (UTxOState C, DPState C_Crypto) ->
   Tx C ->
   LedgerEnv C ->
@@ -524,17 +525,17 @@ testEmptyInputSet =
 testFeeTooSmall :: Assertion
 testFeeTooSmall =
   testInvalidTx
-    [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 100) (Coin 1)))]
+    [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 205) (Coin 1)))]
     $ aliceGivesBobLovelace
       AliceToBob
-        { input = (TxIn genesisId 0),
-          toBob = (Coin 3000),
-          fee = (Coin 1),
-          deposits = (Coin 0),
-          refunds = (Coin 0),
+        { input = TxIn genesisId 0,
+          toBob = Coin 3000,
+          fee = Coin 1,
+          deposits = Coin 0,
+          refunds = Coin 0,
           certs = [],
-          ttl = (SlotNo 100),
-          signers = ([asWitness alicePay])
+          ttl = SlotNo 100,
+          signers = [asWitness alicePay]
         }
 
 testExpiredTx :: Assertion
@@ -543,14 +544,14 @@ testExpiredTx =
       tx =
         aliceGivesBobLovelace $
           AliceToBob
-            { input = (TxIn genesisId 0),
-              toBob = (Coin 3000),
-              fee = (Coin 600),
-              deposits = (Coin 0),
-              refunds = (Coin 0),
+            { input = TxIn genesisId 0,
+              toBob = Coin 3000,
+              fee = Coin 600,
+              deposits = Coin 0,
+              refunds = Coin 0,
               certs = [],
-              ttl = (SlotNo 0),
-              signers = ([asWitness alicePay])
+              ttl = SlotNo 0,
+              signers = [asWitness alicePay]
             }
       ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp (AccountState (Coin 0) (Coin 0))
    in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left errs)

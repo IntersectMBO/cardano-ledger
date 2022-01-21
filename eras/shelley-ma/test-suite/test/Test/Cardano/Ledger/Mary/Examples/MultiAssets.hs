@@ -204,7 +204,7 @@ expectedUTxOSimpleEx1 =
 ----------------------------
 
 minUtxoSimpleEx2 :: Coin
-minUtxoSimpleEx2 = Coin 115
+minUtxoSimpleEx2 = Coin 117
 
 aliceCoinsSimpleEx2 :: Coin
 aliceCoinsSimpleEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> minUtxoSimpleEx2)

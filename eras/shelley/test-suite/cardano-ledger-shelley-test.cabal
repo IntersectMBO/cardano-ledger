@@ -100,7 +100,6 @@ library
     compact-map,
     data-default-class,
     deepseq,
-    directory,
     generic-random,
     hashable,
     hedgehog-quickcheck,
@@ -124,6 +123,7 @@ library
     time,
     transformers,
     tree-diff,
+    unliftio,
     vector,
 
 test-suite cardano-ledger-shelley-test
@@ -178,7 +178,6 @@ test-suite cardano-ledger-shelley-test
       cardano-binary,
       cardano-data,
       cardano-crypto-class,
-      cardano-crypto-praos,
       cardano-ledger-byron,
       cardano-ledger-core,
       cardano-ledger-pretty,

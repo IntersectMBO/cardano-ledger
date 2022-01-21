@@ -110,5 +110,5 @@ txBodyTest =
   testGroup
     "TxBody"
     [ fieldTests,
-      testCase "length" (assertEqual "length" 36 (Short.length (bytes txM)))
+      testCase "length" (assertEqual "length" 57 (Short.length (bytes txM)))
     ]

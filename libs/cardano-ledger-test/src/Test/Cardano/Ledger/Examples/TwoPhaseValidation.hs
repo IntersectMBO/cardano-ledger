@@ -118,6 +118,7 @@ import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
+import GHC.Stack
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified Plutus.V1.Ledger.Api as Plutus
@@ -880,7 +881,7 @@ validatingRedeemersEx9 =
     [ (RdmrPtr Tag.Spend 0, (Data (Plutus.I 101), ExUnits 5000 5000)),
       (RdmrPtr Tag.Cert 1, (Data (Plutus.I 102), ExUnits 5000 5000)),
       (RdmrPtr Tag.Rewrd 0, (Data (Plutus.I 103), ExUnits 5000 5000)),
-      (RdmrPtr Tag.Mint 0, (Data (Plutus.I 104), ExUnits 5000 5000))
+      (RdmrPtr Tag.Mint 1, (Data (Plutus.I 104), ExUnits 5000 5000))
     ]
 
 mintEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> Core.Value era
@@ -1643,6 +1644,7 @@ type A = AlonzoEra C_Crypto
 type UtxowPF = PredicateFailure (Core.EraRule "UTXOW" A)
 
 testUTXOW' ::
+  HasCallStack =>
   (UtxowPF -> UtxowPF) ->
   Core.PParams A ->
   ValidatedTx A ->
@@ -1661,7 +1663,12 @@ testUTXOW' mutator pparams tx predicateFailure@(Left _) = do
         Left e -> Left (map mutator e)
   st' @?= predicateFailure
 
-testUTXOW :: Core.PParams A -> ValidatedTx A -> Either [UtxowPF] (UTxOState A) -> Assertion
+testUTXOW ::
+  HasCallStack =>
+  Core.PParams A ->
+  ValidatedTx A ->
+  Either [UtxowPF] (UTxOState A) ->
+  Assertion
 testUTXOW = testUTXOW' id
 
 trustMe :: Bool -> ValidatedTx A -> ValidatedTx A
@@ -1844,7 +1851,7 @@ alonzoUTXOWexamples =
                       alwaysSucceedsHash 2 pf,
                     -- these redeemers are associated with phase-1 scripts
                     ExtraRedeemers
-                      [ RdmrPtr Tag.Mint 0,
+                      [ RdmrPtr Tag.Mint 1,
                         RdmrPtr Tag.Cert 1,
                         RdmrPtr Tag.Rewrd 0
                       ]

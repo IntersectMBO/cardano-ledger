@@ -97,7 +97,7 @@ import Control.Monad.Trans
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
 import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
-import Data.Foldable (find, fold)
+import Data.Foldable (find, fold, foldMap')
 import Data.Function (on)
 import Data.List (sortBy)
 import Data.Map.Strict (Map)
@@ -492,14 +492,11 @@ aggregateRewards ::
   Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
   Map (Credential 'Staking crypto) Coin
 aggregateRewards pp rewards =
-  Map.map (Set.foldr addRewardToCoin mempty) $
-    filterRewards pp rewards
-  where
-    addRewardToCoin r = (<>) (rewardAmount r)
+  Map.map (foldMap' rewardAmount) $ filterRewards pp rewards
 
 data LeaderOnlyReward crypto = LeaderOnlyReward
-  { lRewardPool :: KeyHash 'StakePool crypto,
-    lRewardAmount :: Coin
+  { lRewardPool :: !(KeyHash 'StakePool crypto),
+    lRewardAmount :: !Coin
   }
   deriving (Eq, Ord, Show, Generic)
 

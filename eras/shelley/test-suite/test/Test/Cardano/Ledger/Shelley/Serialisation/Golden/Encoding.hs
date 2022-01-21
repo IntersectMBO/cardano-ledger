@@ -291,7 +291,7 @@ testGenesisDelegateKey = KeyPair vk sk
 testBlockIssuerKeyTokens :: Tokens -> Tokens
 testBlockIssuerKeyTokens = e
   where
-    (VKey vk) = vKey (testBlockIssuerKey @C_Crypto)
+    VKey vk = vKey (testBlockIssuerKey @C_Crypto)
     Encoding e = encodeVerKeyDSIGN vk
 
 testKey1SigToken ::
@@ -774,7 +774,7 @@ tests =
        in checkEncodingCBOR
             "full_update"
             (Update ppup e)
-            ( (T $ TkListLen 2)
+            ( T (TkListLen 2)
                 <> S ppup
                 <> S e
             ),
@@ -1171,8 +1171,8 @@ tests =
                 -- tx 4, two scripts
                 <> T (TkMapLen 1 . TkWord 1)
                 <> T (TkListLen 2)
-                <> S (testScript @C_Crypto)
                 <> S (testScript2 @C_Crypto)
+                <> S (testScript @C_Crypto)
                 -- tx 5, two keys and two scripts
                 <> T (TkMapLen 2)
                 <> T (TkWord 0)
@@ -1181,8 +1181,8 @@ tests =
                 <> S w1
                 <> T (TkWord 1)
                 <> T (TkListLen 2)
-                <> S (testScript @C_Crypto)
                 <> S (testScript2 @C_Crypto)
+                <> S (testScript @C_Crypto)
                 -- metadata
                 <> T (TkMapLen 1)
                 <> T (TkInt 4)

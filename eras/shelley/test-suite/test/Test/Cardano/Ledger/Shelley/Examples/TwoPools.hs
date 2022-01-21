@@ -804,17 +804,16 @@ twoPools9 = CHAINExample expectedStEx8 blockEx9 (Right $ expectedStEx9 ppEx)
 --
 -- Now test with Aggregation
 --
+carlsRewards :: forall c. ExMock c => Set (Reward c)
+carlsRewards =
+  Set.fromList
+    [ Reward MemberReward (hk Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c),
+      Reward LeaderReward (hk Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c),
+      Reward LeaderReward (hk Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
+    ]
 
 rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Reward c))
-rsEx9Agg =
-  Map.singleton
-    Cast.carlSHK
-    ( Set.fromList $
-        [ Reward MemberReward (hk Cast.alicePoolKeys) (carlMemberRewardsFromAlice @c),
-          Reward LeaderReward (hk Cast.alicePoolKeys) (carlLeaderRewardsFromAlice @c),
-          Reward LeaderReward (hk Cast.bobPoolKeys) (carlLeaderRewardsFromBob @c)
-        ]
-    )
+rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
 ppProtVer3 :: PParams era
 ppProtVer3 = ppEx {_protocolVersion = ProtVer 3 0}
@@ -830,20 +829,16 @@ expectedStEx9Agg = C.setPrevPParams ppProtVer3 (expectedStEx9 ppProtVer3)
 twoPools9Agg :: forall era. (TwoPoolsConstraints era) => CHAINExample (BHeader (Crypto era)) era
 twoPools9Agg = CHAINExample expectedStEx8Agg blockEx9 (Right expectedStEx9Agg)
 
-testAggregateRewardsLegacy :: Assertion
-testAggregateRewardsLegacy =
-  (aggregateRewards @C_Crypto) ppEx rsEx9Agg
-    @?= Map.singleton Cast.carlSHK (carlLeaderRewardsFromAlice @(Crypto C))
+testAggregateRewardsLegacy :: HasCallStack => Assertion
+testAggregateRewardsLegacy = do
+  let expectedReward = carlLeaderRewardsFromBob @(Crypto C)
+  expectedReward @?= rewardAmount (minimum (carlsRewards @(Crypto C)))
+  aggregateRewards @C_Crypto ppEx rsEx9Agg @?= Map.singleton Cast.carlSHK expectedReward
 
 testAggregateRewardsNew :: Assertion
 testAggregateRewardsNew =
-  (aggregateRewards @C_Crypto) ppProtVer3 rsEx9Agg
-    @?= Map.singleton
-      Cast.carlSHK
-      ( carlLeaderRewardsFromAlice @(Crypto C)
-          <> carlLeaderRewardsFromBob @(Crypto C)
-          <> carlMemberRewardsFromAlice @(Crypto C)
-      )
+  aggregateRewards @C_Crypto ppProtVer3 rsEx9Agg
+    @?= Map.singleton Cast.carlSHK (foldMap rewardAmount (carlsRewards @(Crypto C)))
 
 --
 -- Two Pools Test Group
@@ -854,17 +849,19 @@ twoPoolsExample =
   testGroup
     "two pools"
     [ testCase "create non-aggregated pulser" $ testCHAINExample twoPools9,
-      testCase "non-aggregated pulser is correct" $
-        ( (Complete (rewardUpdateEx9 @C ppEx rsEx9Agg))
+      testCase
+        "non-aggregated pulser is correct"
+        ( Complete (rewardUpdateEx9 @C ppEx rsEx9Agg)
             @?= (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppEx)
         ),
-      testCase "aggregated pulser is correct" $
-        ( (Complete (rewardUpdateEx9 @C ppProtVer3 rsEx9Agg))
+      testCase
+        "aggregated pulser is correct"
+        ( Complete (rewardUpdateEx9 @C ppProtVer3 rsEx9Agg)
             @?= (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppProtVer3)
         ),
       testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg,
-      testCase "create legacy aggregatedRewards" $ testAggregateRewardsLegacy,
-      testCase "create new aggregatedRewards" $ testAggregateRewardsNew
+      testCase "create legacy aggregatedRewards" testAggregateRewardsLegacy,
+      testCase "create new aggregatedRewards" testAggregateRewardsNew
     ]
 
 -- This test group tests each block individually, which is really only
