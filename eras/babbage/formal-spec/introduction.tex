@@ -21,5 +21,8 @@ Concretely, this specification makes the following changes:
 \item Add inline datums in the UTxO
 \item Add reference scripts
 \item Add transaction fields for specifying and returning collateral
-\item Remove the protocol parameter $\var{d}$ and the overlay schedule
+\item Remove the protocol parameters $\var{d}$ and $\var{extraEntropy}$
+\item Remove the overlay schedule
+\item Block headers to only include a single VRF value and proof
+\item Remove the pre-filtering of unregistered stake credentials in the reward calculation
 \end{itemize}
