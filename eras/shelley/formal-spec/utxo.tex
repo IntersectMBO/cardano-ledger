@@ -398,15 +398,15 @@ and refund functions.
   \begin{align*}
     & \fun{totalDeposits} \in \PParams \to (\KeyHash_{pool}\mapsto\PoolParam) \\
     & ~~~~\to \seqof{\DCert} \to \Coin
-    & \text{total deposits for transaction} \\
+    & \text{total deposits for a tx} \\
     & \totalDeposits{pp}{poolParams}{certs} = \\
     &  ~~~ (\fun{keyDeposit}~pp)\cdot|\var{certs}\cap\DCertRegKey| \\
     &  ~~~~~ + (\fun{poolDeposit}~pp)\cdot|\{\cwitness{c} ~\mid c\in~\var{newPools}\}| \\
     & ~~~\where \\
-    &  ~~~~~~~ \var{newPools} = \{c ~\mid~ \var{certs}\cap\DCertRegPool,\cwitness{c}\notin \var{poolParams}\}
+    &  ~~~~~~~ \var{newPools} = \{c ~\mid~ c\in\var{certs}\cap\DCertRegPool,~\cwitness{c}\notin \var{poolParams}\}
     \nextdef
       & \fun{keyRefunds} \in \PParams \to \TxBody \to \Coin
-      & \text{key refunds for a transaction} \\
+      & \text{key refunds for a tx} \\
       & \keyRefunds{pp}{tx} = (\fun{keyDeposit}~\var{pp})\cdot|\txcerts{tx} \cap \DCertDeRegKey|\\
       \end{align*}
       \caption{Functions used in Deposits - Refunds}
