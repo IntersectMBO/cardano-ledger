@@ -118,8 +118,7 @@ isKeyHashAddr _ = False
 -- | We are choosing new TxOut to pay fees, We want only Key locked addresss with Ada only values.
 vKeyLocked :: Mock c => Core.TxOut (AlonzoEra c) -> Bool
 vKeyLocked txout =
-  isKeyHashAddr (getField @"address" txout)
-    && adaOnly (getField @"value" txout)
+  isKeyHashAddr (getTxOutAddr txout) && adaOnly (getField @"value" txout)
 
 phase2scripts3Arg :: forall c. Mock c => [TwoPhase3ArgInfo (AlonzoEra c)]
 phase2scripts3Arg =

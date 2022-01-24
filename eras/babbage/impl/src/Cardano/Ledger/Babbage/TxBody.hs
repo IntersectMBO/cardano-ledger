@@ -868,12 +868,6 @@ instance
 instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
   getField (TxBodyConstr (Memo m _)) = _txnetworkid m
 
-instance (Era era, CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era) (Addr c) where
-  getField t =
-    case getBabbageTxOutEitherAddr t of
-      Left a -> a
-      Right ca -> decompactAddr ca
-
 instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
   getField (TxOutCompact _ v) = fromCompact v
   getField (TxOutCompactDH _ v _) = fromCompact v

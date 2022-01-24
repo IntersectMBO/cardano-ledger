@@ -22,7 +22,6 @@ module Cardano.Ledger.Alonzo.Rules.Utxos
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Language (Language)
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( CollectError,
@@ -103,7 +102,6 @@ instance
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -153,7 +151,6 @@ utxosTransition ::
     ToCBOR (Core.TxBody era),
     Core.ChainData (Core.TxOut era),
     Core.SerialisableData (Core.TxOut era),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "mint" (Core.TxBody era) (Value (Crypto era)),
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
@@ -190,7 +187,6 @@ scriptsValidateTransition ::
     Core.SerialisableData (Core.TxOut era),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "mint" (Core.TxBody era) (Value (Crypto era)),
@@ -267,7 +263,6 @@ scriptsNotValidateTransition ::
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),

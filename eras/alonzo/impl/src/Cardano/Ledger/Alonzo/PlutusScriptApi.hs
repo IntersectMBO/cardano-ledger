@@ -22,7 +22,6 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..))
@@ -161,7 +160,6 @@ collectTwoPhaseScriptInputs ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "body" tx (Core.TxBody era),
     HasField "wits" tx (TxWitness era),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
     HasField "vldt" (Core.TxBody era) ValidityInterval

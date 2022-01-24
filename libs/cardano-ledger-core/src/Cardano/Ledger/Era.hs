@@ -69,7 +69,7 @@ class
   type Crypto e :: Type
 
   -- | Extract from TxOut either an address or its compact version by doing the
-  -- least amount of work. Default implementation relies on the "address" field.
+  -- least amount of work.
   --
   -- The utility of this function comes from the fact that TxOut usually stores
   -- the address in either one of two forms: compacted or unpacked. In order to

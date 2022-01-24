@@ -486,9 +486,6 @@ viewCompactTxOut (TxOutCompact bs c) = (addr, val)
 instance (Compactible v, v ~ Core.Value era) => HasField "value" (TxOut era) v where
   getField (TxOutCompact _ v) = fromCompact v
 
-instance (CC.Crypto c, c ~ Crypto era) => HasField "address" (TxOut era) (Addr c) where
-  getField (TxOutCompact a _) = decompactAddr a
-
 data DelegCert crypto
   = -- | A stake key registration certificate.
     RegKey !(StakeCredential crypto)

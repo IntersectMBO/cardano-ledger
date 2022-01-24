@@ -24,7 +24,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
@@ -185,8 +185,7 @@ txInfoIn ::
   forall era c i.
   ( Era era,
     Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (TxOut era) (StrictMaybe (SafeHash c i)),
-    HasField "address" (TxOut era) (Addr c)
+    HasField "datahash" (TxOut era) (StrictMaybe (SafeHash c i))
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
@@ -199,7 +198,7 @@ txInfoIn (UTxO mp) txin =
       Nothing -> Nothing
       where
         valout = transValue (getField @"value" txout)
-        addr = getField @"address" txout
+        addr = getTxOutAddr txout
         dhash = case getField @"datahash" txout of
           SNothing -> Nothing
           SJust safehash -> Just (PV1.DatumHash (transSafeHash safehash))
@@ -211,13 +210,12 @@ txInfoOut ::
   forall era c.
   ( Era era,
     Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash c)),
-    HasField "address" (TxOut era) (Addr c)
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash c))
   ) =>
   Core.TxOut era ->
   Maybe PV1.TxOut
 txInfoOut txo =
-  let (addr, val, datahash) = (getField @"address" txo, getField @"value" txo, getField @"datahash" txo)
+  let (addr, val, datahash) = (getTxOutAddr txo, getField @"value" txo, getField @"datahash" txo)
    in case transAddr addr of
         Just ad -> Just (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
         Nothing -> Nothing
@@ -344,8 +342,7 @@ txInfo ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
-    HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "address" (TxOut era) (Addr (Crypto era))
+    HasField "vldt" (Core.TxBody era) ValidityInterval
   ) =>
   Core.PParams era ->
   Language ->
