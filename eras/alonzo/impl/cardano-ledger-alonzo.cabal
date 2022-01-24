@@ -57,6 +57,7 @@ library
     Cardano.Ledger.Alonzo.TxWitness
     Cardano.Ledger.DescribeEras
   build-depends:
+    aeson,
     array,
     base-deriving-via,
     base64-bytestring,
@@ -82,6 +83,7 @@ library
     serialise,
     set-algebra,
     cardano-ledger-shelley,
+    scientific,
     small-steps,
     strict-containers,
     text,
