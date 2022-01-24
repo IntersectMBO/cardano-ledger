@@ -28,12 +28,11 @@ import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamed)
+import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenancePool (..))
 import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
 import Cardano.Ledger.Shelley.Rewards
-  ( Likelihood,
-    NonMyopic,
-    PoolRewardInfo (..),
+  ( PoolRewardInfo (..),
     Reward (..),
     RewardType (..),
     rewardOnePoolMember,

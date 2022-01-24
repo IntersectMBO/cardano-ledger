@@ -24,7 +24,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rewards
+import Cardano.Ledger.Shelley.PoolRank
 import Conduit
 import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))

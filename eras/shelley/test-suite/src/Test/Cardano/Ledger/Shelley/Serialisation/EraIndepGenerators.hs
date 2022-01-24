@@ -76,6 +76,11 @@ import Cardano.Ledger.Shelley.Constraints
   )
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
+import Cardano.Ledger.Shelley.PoolRank
+  ( Likelihood (..),
+    LogWeight (..),
+    PerformanceEstimate (..),
+  )
 import Cardano.Ledger.Shelley.RewardProvenance
   ( Desirability (..),
     RewardProvenance (..),
@@ -91,9 +96,6 @@ import Cardano.Ledger.Shelley.RewardUpdate
   )
 import Cardano.Ledger.Shelley.Rewards
   ( LeaderOnlyReward (..),
-    Likelihood (..),
-    LogWeight (..),
-    PerformanceEstimate (..),
     PoolRewardInfo (..),
     Reward (..),
     RewardType (..),

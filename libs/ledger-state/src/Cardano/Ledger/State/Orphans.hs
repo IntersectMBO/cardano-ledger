@@ -17,7 +17,7 @@ import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.LedgerState
-import Cardano.Ledger.Shelley.Rewards
+import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.State.UTxO
 import Cardano.Ledger.TxIn

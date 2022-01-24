@@ -177,6 +177,13 @@ import Cardano.Ledger.Shelley.PParams
     Update (..),
     emptyPPPUpdates,
   )
+import Cardano.Ledger.Shelley.PoolRank
+  ( Likelihood (..),
+    NonMyopic (..),
+    applyDecay,
+    leaderProbability,
+    likelihood,
+  )
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance (..))
 import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
 import Cardano.Ledger.Shelley.RewardUpdate
@@ -191,17 +198,12 @@ import Cardano.Ledger.Shelley.RewardUpdate
     pulseOther,
   )
 import Cardano.Ledger.Shelley.Rewards
-  ( Likelihood (..),
-    NonMyopic (..),
-    PoolRewardInfo (..),
+  ( PoolRewardInfo (..),
     Reward,
     StakeShare (..),
     aggregateRewards,
-    applyDecay,
     filterRewards,
-    leaderProbability,
     leaderRewardToGeneral,
-    likelihood,
     mkPoolRewardInfo,
     sumRewards,
   )

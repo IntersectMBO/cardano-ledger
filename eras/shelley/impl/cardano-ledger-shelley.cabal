@@ -51,6 +51,7 @@ library
     Cardano.Ledger.Shelley.LedgerState
     Cardano.Ledger.Shelley.Metadata
     Cardano.Ledger.Shelley.Orphans
+    Cardano.Ledger.Shelley.PoolRank
     Cardano.Ledger.Shelley.PParams
     Cardano.Ledger.Shelley.Rewards
     Cardano.Ledger.Shelley.RewardProvenance
