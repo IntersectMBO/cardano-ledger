@@ -10,7 +10,6 @@ import Cardano.Chain.Slotting
     SlotNumber (..),
     addSlotCount,
     fromSlotNumber,
-    subSlotCount,
     toSlotNumber,
   )
 import Cardano.Prelude
@@ -66,16 +65,10 @@ ts_prop_addSlotCount = withTestsTS 100 . property $ do
   sc <- forAll genSlotCount
   fs <- forAll genSlotNumber
   let added = fs + (SlotNumber $ unSlotCount sc)
-  addSlotCount sc fs === added
-
--- Check that `subSlotCount` actually subtracts.
-ts_prop_subSlotCount :: TSProperty
-ts_prop_subSlotCount = withTestsTS 100 . property $ do
-  sc <- forAll genSlotCount
-  fs <- forAll genSlotNumber
-  let sc' = SlotNumber $ unSlotCount sc
-      subtracted = fs - sc'
-  subSlotCount sc fs === if fs > sc' then subtracted else SlotNumber 0
+  addSlotCount sc fs
+    === if unSlotNumber fs <= maxBound - (unSlotCount sc)
+      then added
+      else SlotNumber maxBound
 
 tests :: TSGroup
 tests = $$discoverPropArg
