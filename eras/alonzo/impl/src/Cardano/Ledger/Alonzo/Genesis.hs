@@ -29,7 +29,6 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.SafeHash (extractHash)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
-import Control.Applicative ((<|>))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
@@ -206,9 +205,7 @@ instance FromJSONKey Language where
 
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
-    coinsPerUTxOWord <-
-      o .: "lovelacePerUTxOWord"
-        <|> o .: "adaPerUTxOWord" --TODO: deprecate
+    coinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
     cModels <- o .:? "costModels"
     prices <- o .: "executionPrices"
     maxTxExUnits <- o .: "maxTxExUnits"
