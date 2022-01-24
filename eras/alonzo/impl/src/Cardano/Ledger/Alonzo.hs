@@ -98,14 +98,8 @@ import qualified Data.Set as Set
 -- | The Alonzo era
 data AlonzoEra c
 
-instance
-  ( CC.Crypto c,
-    era ~ AlonzoEra c
-  ) =>
-  EraModule.Era (AlonzoEra c)
-  where
+instance CC.Crypto c => EraModule.Era (AlonzoEra c) where
   type Crypto (AlonzoEra c) = c
-
   getTxOutEitherAddr = getAlonzoTxOutEitherAddr
 
 instance API.ShelleyEraCrypto c => API.ApplyTx (AlonzoEra c) where

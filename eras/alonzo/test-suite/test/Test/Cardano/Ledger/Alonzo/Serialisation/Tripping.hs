@@ -7,7 +7,7 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 
 import Cardano.Binary
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData, Data (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData, BinaryData, Data (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
@@ -75,6 +75,8 @@ tests =
         trippingAnn @(Script (AlonzoEra C_Crypto)),
       testProperty "alonzo/Data" $
         trippingAnn @(Data (AlonzoEra C_Crypto)),
+      testProperty "alonzo/BinaryData" $
+        tripping @(BinaryData (AlonzoEra C_Crypto)),
       testProperty "alonzo/Metadata" $
         trippingAnn @(Metadata (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxWitness" $

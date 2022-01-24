@@ -14,7 +14,7 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Data (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), BinaryData, Data (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
@@ -54,6 +54,9 @@ import Test.QuickCheck
 
 instance Arbitrary (Data era) where
   arbitrary = Data <$> arbitrary
+
+instance Arbitrary (BinaryData era) where
+  arbitrary = dataToBinaryData <$> arbitrary
 
 genPair :: Gen a -> Gen b -> Gen (a, b)
 genPair x y = do a <- x; b <- y; pure (a, b)

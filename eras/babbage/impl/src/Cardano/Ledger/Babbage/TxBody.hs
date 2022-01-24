@@ -41,7 +41,7 @@ module Cardano.Ledger.Babbage.TxBody
         txnetworkid
       ),
     Datum (..),
-    datumDatahash,
+    datumDataHash,
     inputs',
     collateral',
     referenceInputs',
@@ -69,23 +69,25 @@ import Cardano.Binary
   ( DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
-    decodeAnnotator,
     decodeBreakOr,
-    decodeBytes,
     decodeListLenOrIndef,
-    decodeTag,
-    encodeBytes,
     encodeListLen,
-    encodeTag,
-    toStrictByteString,
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
+import Cardano.Ledger.Alonzo.Data
+  ( AuxiliaryDataHash (..),
+    BinaryData,
+    Data,
+    DataHash,
+    binaryDataToData,
+    hashBinaryData,
+  )
 import Cardano.Ledger.Alonzo.TxBody
   ( Addr28Extra,
     DataHash32,
     decodeAddress28,
+    decodeDataHash32,
     encodeAddress28,
     encodeDataHash32,
     getAdaOnly,
@@ -95,6 +97,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     isSNothing,
+    maybeToStrictMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
@@ -131,7 +134,6 @@ import Cardano.Ledger.Val
     isZero,
   )
 import Control.DeepSeq (NFData (rnf), rwhnf)
-import qualified Data.ByteString.Lazy as LBS
 import Data.Coders
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -149,18 +151,6 @@ import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
 
-encodeInlineDatum :: Era era => Data era -> Encoding
-encodeInlineDatum x =
-  encodeTag 42 <> encodeBytes (toStrictByteString $ toCBOR x)
-
-decodeInlineDatum :: forall s era. Era era => Decoder s (Data era)
-decodeInlineDatum = do
-  42 <- decodeTag
-  x <- decodeBytes
-  case decodeAnnotator "Data" fromCBOR (LBS.fromStrict x) of
-    Left e -> fail $ "Invalid CBOR for Data: " <> show e
-    Right d -> pure d
-
 data TxOut era
   = TxOutCompact'
       {-# UNPACK #-} !(CompactAddr (Crypto era))
@@ -169,10 +159,10 @@ data TxOut era
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
       !(DataHash (Crypto era))
-  | TxOutCompactDatum'
+  | TxOutCompactDatum
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
-      !(Data era)
+      {-# UNPACK #-} !(BinaryData era) -- Inline data
   | TxOut_AddrHash28_AdaOnly
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Addr28Extra
@@ -201,7 +191,7 @@ viewCompactTxOut ::
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
-  TxOutCompactDatum' addr val datum -> (addr, val, SJust $ hashData datum)
+  TxOutCompactDatum addr val datum -> (addr, val, SJust $ hashBinaryData datum)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal ->
     Alonzo.viewCompactTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32 ->
@@ -221,7 +211,7 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, DatumHash dh)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactDatum' bs c d) = (addr, val, Datum d)
+viewTxOut (TxOutCompactDatum bs c d) = (addr, val, Datum d)
   where
     addr = decompactAddr bs
     val = fromCompact c
@@ -252,14 +242,14 @@ deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
 data Datum era
   = NoDatum
   | DatumHash !(DataHash (Crypto era))
-  | Datum !(Data era)
+  | Datum !(BinaryData era)
   deriving (Eq, Ord, Show)
 
-datumDatahash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
-datumDatahash = \case
+datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
+datumDataHash = \case
   NoDatum -> SNothing
   (DatumHash d) -> SJust d
-  (Datum d) -> SJust $ hashData d
+  (Datum d) -> SJust $ hashBinaryData d
 
 pattern TxOut ::
   forall era.
@@ -272,8 +262,8 @@ pattern TxOut ::
   Core.Value era ->
   Datum era ->
   TxOut era
-pattern TxOut addr vl dh <-
-  (viewTxOut -> (addr, vl, dh))
+pattern TxOut addr vl datum <-
+  (viewTxOut -> (addr, vl, datum))
   where
     TxOut (Addr network paymentCred stakeRef) vl NoDatum
       | StakeRefBase stakeCred <- stakeRef,
@@ -292,7 +282,7 @@ pattern TxOut addr vl dh <-
        in case d of
             NoDatum -> TxOutCompact' a v
             DatumHash dh -> TxOutCompactDH' a v dh
-            Datum d' -> TxOutCompactDatum' a v d'
+            Datum binaryData -> TxOutCompactDatum a v binaryData
 
 {-# COMPLETE TxOut #-}
 
@@ -322,16 +312,6 @@ pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
   where
     TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . DatumHash
-
-pattern TxOutCompactDatum ::
-  ( Era era,
-    HasCallStack
-  ) =>
-  CompactAddr (Crypto era) ->
-  CompactForm (Core.Value era) ->
-  Data era ->
-  TxOut era
-pattern TxOutCompactDatum addr vl d = TxOutCompactDatum' addr vl d
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
@@ -619,7 +599,7 @@ instance
       <> toCBOR True
       <> toCBOR addr
       <> toCBOR cv
-      <> encodeInlineDatum d
+      <> toCBOR d
   toCBOR (TxOutCompactDH addr cv dh) =
     encodeListLen 3
       <> toCBOR addr
@@ -675,7 +655,7 @@ instance
           <*> fromCBOR
       Just 4 -> do
         True <- fromCBOR @Bool
-        TxOutCompactDatum <$> fromCBOR <*> decodeNonNegative <*> decodeInlineDatum
+        TxOutCompactDatum <$> fromCBOR <*> decodeNonNegative <*> fromCBOR
       Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
 encodeTxBodyRaw ::
@@ -899,13 +879,10 @@ instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (T
   getField (TxOutCompactDH _ v _) = fromCompact v
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
-  getField (TxOutCompact _ _) = SNothing
-  getField (TxOutCompactDH _ _ d) = SJust d
+  getField = maybeToStrictMaybe . txOutDataHash
 
 instance (Era era) => HasField "datum" (TxOut era) (StrictMaybe (Data era)) where
-  getField (TxOutCompact _ _) = SNothing
-  getField (TxOutCompactDatum _ _ d) = SJust d
-  getField (TxOutCompactDH _ _ _) = SNothing
+  getField = maybeToStrictMaybe . txOutData
 
 getBabbageTxOutEitherAddr ::
   HashAlgorithm (CC.ADDRHASH (Crypto era)) =>
@@ -914,10 +891,22 @@ getBabbageTxOutEitherAddr ::
 getBabbageTxOutEitherAddr = \case
   TxOutCompact' cAddr _ -> Right cAddr
   TxOutCompactDH' cAddr _ _ -> Right cAddr
-  TxOutCompactDatum' cAddr _ _ -> Right cAddr
+  TxOutCompactDatum cAddr _ _ -> Right cAddr
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
     | otherwise -> error "Impossible: Compacted an address of non-standard size"
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
   _ -> error "Impossible: Compacted an address or a hash of non-standard size"
+
+txOutData :: TxOut era -> Maybe (Data era)
+txOutData = \case
+  TxOutCompactDatum _ _ binaryData -> Just $! binaryDataToData binaryData
+  _ -> Nothing
+
+txOutDataHash :: Era era => TxOut era -> Maybe (DataHash (Crypto era))
+txOutDataHash = \case
+  TxOutCompactDH' _ _ dh -> Just dh
+  TxOutCompactDatum _ _ binaryData -> Just $! hashBinaryData binaryData
+  TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 -> decodeDataHash32 dataHash32
+  _ -> Nothing

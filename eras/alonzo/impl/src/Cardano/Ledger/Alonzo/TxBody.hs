@@ -154,7 +154,7 @@ data DataHash32
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
-  deriving Eq
+  deriving (Eq)
 
 data TxOut era
   = TxOutCompact'
@@ -215,8 +215,7 @@ decodeAddress28 stakeRef (Addr28Extra a b c d) = do
 
 encodeAddress28 ::
   forall crypto.
-  ( HashAlgorithm (CC.ADDRHASH crypto)
-  ) =>
+  HashAlgorithm (CC.ADDRHASH crypto) =>
   Network ->
   PaymentCredential crypto ->
   Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Addr28Extra)
@@ -246,11 +245,12 @@ encodeAddress28 network paymentCred = do
 
 decodeDataHash32 ::
   forall crypto.
-  (SizeHash (CC.HASH crypto) ~ 32) =>
+  HashAlgorithm (CC.HASH crypto) =>
   DataHash32 ->
-  DataHash crypto
-decodeDataHash32 (DataHash32 a b c d) =
-  unsafeMakeSafeHash $ hashFromPackedBytes $ PackedBytes32 a b c d
+  Maybe (DataHash crypto)
+decodeDataHash32 (DataHash32 a b c d) = do
+  Refl <- sameNat (Proxy @(SizeHash (CC.HASH crypto))) (Proxy @32)
+  Just $! unsafeMakeSafeHash $ hashFromPackedBytes $ PackedBytes32 a b c d
 
 encodeDataHash32 ::
   forall crypto.
@@ -274,13 +274,12 @@ viewCompactTxOut txOut = case txOut of
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
     | Just addr <- decodeAddress28 stakeRef addr28Extra ->
       (compactAddr addr, toCompactValue adaVal, SNothing)
-    | otherwise -> error "Impossible: Compacted an address of non-standard size"
+    | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
     | Just addr <- decodeAddress28 stakeRef addr28Extra,
-      Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) ->
-      (compactAddr addr, toCompactValue adaVal, SJust (decodeDataHash32 dataHash32))
-    | otherwise ->
-      error "Impossible: Compacted an address or a hash of non-standard size"
+      Just dh <- decodeDataHash32 dataHash32 ->
+      (compactAddr addr, toCompactValue adaVal, SJust dh)
+    | otherwise -> error addressErrorMsg
   where
     toCompactValue :: CompactForm Coin -> CompactForm (Core.Value era)
     toCompactValue ada =
@@ -307,12 +306,10 @@ viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal)
     (addr, inject (fromCompact adaVal), SNothing)
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32)
   | Just addr <- decodeAddress28 stakeRef addr28Extra,
-    Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) =
-    (addr, inject (fromCompact adaVal), SJust (decodeDataHash32 dataHash32))
-viewTxOut TxOut_AddrHash28_AdaOnly {} =
-  error "Impossible: Compacted address or hash of non-standard size"
-viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} =
-  error "Impossible: Compacted address or hash of non-standard size"
+    Just dh <- decodeDataHash32 dataHash32 =
+    (addr, inject (fromCompact adaVal), SJust dh)
+viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
+viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
 
 instance
   ( Era era,
@@ -895,6 +892,11 @@ getAlonzoTxOutEitherAddr = \case
   TxOutCompactDH' cAddr _ _ -> Right cAddr
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
+    | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-  _ -> error "Impossible: Compacted an address of non-standard size"
+  _ -> error addressErrorMsg
+
+addressErrorMsg :: String
+addressErrorMsg = "Impossible: Compacted an address of non-standard size"
+{-# NOINLINE addressErrorMsg #-}
