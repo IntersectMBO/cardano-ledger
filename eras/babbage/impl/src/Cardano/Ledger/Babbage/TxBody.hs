@@ -84,6 +84,7 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash, hashData)
 import Cardano.Ledger.Alonzo.TxBody
   ( Addr28Extra,
+    DataHash32,
     decodeAddress28,
     encodeAddress28,
     encodeDataHash32,
@@ -180,10 +181,7 @@ data TxOut era
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
-      {-# UNPACK #-} !Word64 -- DataHash
-      {-# UNPACK #-} !Word64 -- DataHash
-      {-# UNPACK #-} !Word64 -- DataHash
-      {-# UNPACK #-} !Word64 -- DataHash
+      {-# UNPACK #-} !DataHash32
 
 deriving stock instance
   ( Eq (Core.Value era),
@@ -206,9 +204,9 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompactDatum' addr val datum -> (addr, val, SJust $ hashData datum)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal ->
     Alonzo.viewCompactTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
-  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal e f g h ->
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32 ->
     Alonzo.viewCompactTxOut @era $
-      Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal e f g h
+      Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
 
 viewTxOut ::
   forall era.
@@ -231,14 +229,14 @@ viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal) = (addr, val, N
   where
     (addr, val, _) =
       Alonzo.viewTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
-viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal e f g h) =
+viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32) =
   case mDataHash of
     SNothing -> (addr, val, NoDatum)
     SJust dh -> (addr, val, DatumHash dh)
   where
     (addr, val, mDataHash) =
       Alonzo.viewTxOut @era $
-        Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal e f g h
+        Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
 
 instance
   ( Era era,
@@ -286,8 +284,8 @@ pattern TxOut addr vl dh <-
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
-        Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
-        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact e f g h
+        Just (Refl, dataHash32) <- encodeDataHash32 dh =
+        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
     TxOut addr vl d =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
@@ -652,8 +650,8 @@ instance
     let internTxOut = \case
           TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
             TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
-          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada e f g h ->
-            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada e f g h
+          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
+            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
           txOut -> txOut
     internTxOut <$> case lenOrIndef of
       Nothing -> do
@@ -920,6 +918,6 @@ getBabbageTxOutEitherAddr = \case
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
     | otherwise -> error "Impossible: Compacted an address of non-standard size"
-  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _ _ _ _
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-    | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"
+  _ -> error "Impossible: Compacted an address or a hash of non-standard size"
