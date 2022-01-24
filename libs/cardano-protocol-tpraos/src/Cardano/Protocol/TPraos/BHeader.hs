@@ -73,7 +73,10 @@ import Cardano.Ledger.BaseTypes
     mkNonceFromOutputVRF,
   )
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Hashes (EraIndependentBlockBody)
+import Cardano.Ledger.Hashes
+  ( EraIndependentBlockBody,
+    EraIndependentBlockHeader,
+  )
 import Cardano.Ledger.Keys
   ( CertifiedVRF,
     Hash,
@@ -112,7 +115,7 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- | The hash of a Block Header
-newtype HashHeader crypto = HashHeader {unHashHeader :: Hash crypto (BHeader crypto)}
+newtype HashHeader crypto = HashHeader {unHashHeader :: Hash crypto EraIndependentBlockHeader}
   deriving stock (Show, Eq, Generic, Ord)
   deriving newtype (NFData, NoThunks)
 
@@ -323,7 +326,7 @@ bhHash ::
   CC.Crypto crypto =>
   BHeader crypto ->
   HashHeader crypto
-bhHash = HashHeader . Hash.hashWithSerialiser toCBOR
+bhHash = HashHeader . Hash.castHash . Hash.hashWithSerialiser toCBOR
 
 -- | HashHeader to Nonce
 -- What is going on here?
