@@ -1,0 +1,29 @@
+\newcommand{\Stake}{\type{Stake}}
+
+\section{Forgo Reward Calculation Prefilter}
+
+The reward calculation no longer filters out the unregistered stake
+credentials when creating a reward update. As in the Shelley era, though,
+they are still filtered on the epoch boundary when the reward update is applied.
+This addresses errata 17.2 in the Shelley ledger specification \cite{shelley_spec}[17.2].
+The change consists of removing the line
+$$\var{addrs_{rew}}\restrictdom{\var{potentialRewards}}$$
+from the last line of the $\fun{rewardOnePool}$ function.
+
+\begin{figure}[htb]
+  \emph{Calculation to reward a single stake pool}
+  %
+  \begin{align*}
+    & \fun{rewardOnePool} \in \PParams \to \Coin \to \N \to \N \to \PoolParam\\
+    & ~~~\to \Stake \to \Q \to \Q \to \Coin \to (\AddrRWD \mapsto \Coin) \\
+     & \fun{rewardOnePool}~\var{pp}~\var{R}~\var{n}~\var{\overline{N}}~\var{pool}~\var{stake}~{\sigma}~{\sigma_a}~\var{tot} =
+         \var{rewards}\\
+     & ~~~\where \\
+          & ~~~~~~~\ldots \\
+          & ~~~~~~~\hldiff{\var{rewards}} =
+               \var{mRewards} \cup
+               \{(\fun{poolRAcnt}~\var{pool})\mapsto\var{lReward}\} \\
+  \end{align*}
+  \caption{Reward Calculation Helper Function}
+  \label{fig:functions:reward-calc}
+\end{figure}
