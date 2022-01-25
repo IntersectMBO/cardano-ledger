@@ -7,15 +7,14 @@ import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
-import Data.Fixed(Fixed, HasResolution)
+import Data.Fixed (Fixed, HasResolution)
 import qualified Data.Map.Strict as Map (Map, toList)
-import Data.Maybe.Strict(StrictMaybe(..))
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
 import Data.Text (Text)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Natural (Natural)
-
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
@@ -223,9 +222,3 @@ atWidth n a pp = do
   let doc = pp a
   putDocW n doc
   putStrLn ""
-
-
--- =============================================================================
--- END HELPER FUNCTIONS
--- =============================================================================
- 

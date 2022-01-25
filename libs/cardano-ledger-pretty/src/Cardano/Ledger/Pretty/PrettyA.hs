@@ -11,8 +11,6 @@
 
 module Cardano.Ledger.Pretty.PrettyA where
 
-import PrettyBase
-
 import Cardano.Chain.Common
   ( AddrAttributes (..),
     Address (..),
@@ -188,6 +186,7 @@ import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
 import GHC.Natural (Natural)
 import GHC.Records
+import PrettyBase
 import Prettyprinter
 
 -- =====================================================================================================
@@ -195,15 +194,13 @@ import Prettyprinter
 -- =====================================================================================================
 
 class PrettyA t where
-  prettyA:: t -> PDoc
-
+  prettyA :: t -> PDoc
 
 instance PrettyA Long.ByteString where
   prettyA = ppLong
 
 instance PrettyA Lazy.ByteString where
   prettyA = ppLazy
-
 
 -- =============================================================================
 -- END HELPER FUNCTIONS
