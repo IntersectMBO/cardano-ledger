@@ -37,8 +37,8 @@ library
     Cardano.Ledger.Pretty
     Cardano.Ledger.Pretty.Alonzo
     Cardano.Ledger.Pretty.Mary
+    Cardano.Ledger.Pretty.PrettyA
   build-depends:
-    bech32,
     bytestring,
     cardano-data,
     cardano-ledger-alonzo,
@@ -53,8 +53,8 @@ library
     iproute,
     mtl,
     plutus-ledger-api,
+    pretty-base,
     prettyprinter,
     small-steps,
     cardano-ledger-core,
     strict-containers,
-    text,
