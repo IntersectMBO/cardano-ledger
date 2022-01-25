@@ -25,6 +25,7 @@ packages:
   libs/small-steps
   libs/small-steps-test
   libs/cardano-data
+  libs/pretty-base
   libs/set-algebra
   libs/compact-map
 
