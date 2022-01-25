@@ -23,7 +23,6 @@ where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (ProtVer (..))
-import Cardano.Ledger.Era (Crypto)
 import Control.Monad (unless)
 import Control.Monad.Except (MonadError, throwError)
 import GHC.Generics (Generic)
@@ -52,7 +51,7 @@ pparamsToChainChecksPParams pp =
       ccProtocolVersion = getField @"_protocolVersion" pp
     }
 
-data ChainPredicateFailure era
+data ChainPredicateFailure
   = HeaderSizeTooLargeCHAIN
       !Natural -- Header Size
       !Natural -- Max Header Size
@@ -64,13 +63,13 @@ data ChainPredicateFailure era
       !Natural -- max protocol version
   deriving (Generic, Show, Eq, Ord)
 
-instance NoThunks (ChainPredicateFailure era)
+instance NoThunks ChainPredicateFailure
 
 chainChecks ::
-  MonadError (ChainPredicateFailure era) m =>
+  MonadError ChainPredicateFailure m =>
   Natural ->
   ChainChecksPParams ->
-  BHeaderView (Crypto era) ->
+  BHeaderView crypto ->
   m ()
 chainChecks maxpv ccd bhv = do
   unless (m <= maxpv) $ throwError (ObsoleteNodeCHAIN m maxpv)

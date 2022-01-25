@@ -48,6 +48,7 @@ import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Numeric.Natural (Natural)
 
 {-------------------------------------------------------------------------------
   Block validation API
@@ -57,7 +58,7 @@ class
   ( ChainData (NewEpochState era),
     SerialisableData (NewEpochState era),
     ChainData (BlockTransitionError era),
-    ChainData (STS.ChainPredicateFailure era),
+    ChainData STS.ChainPredicateFailure,
     STS (Core.EraRule "TICK" era),
     BaseM (Core.EraRule "TICK" era) ~ ShelleyBase,
     Environment (Core.EraRule "TICK" era) ~ (),
@@ -201,13 +202,14 @@ instance ShelleyEraCrypto crypto => ApplyBlock (ShelleyEra crypto)
 -------------------------------------------------------------------------------}
 
 chainChecks ::
-  forall era m.
-  MonadError (STS.ChainPredicateFailure era) m =>
-  Globals ->
+  forall crypto m.
+  MonadError STS.ChainPredicateFailure m =>
+  -- | Max major protocol version
+  Natural ->
   STS.ChainChecksPParams ->
-  BHeaderView (Crypto era) ->
+  BHeaderView crypto ->
   m ()
-chainChecks globals = STS.chainChecks (maxMajorPV globals)
+chainChecks = STS.chainChecks
 
 {-------------------------------------------------------------------------------
   Applying blocks

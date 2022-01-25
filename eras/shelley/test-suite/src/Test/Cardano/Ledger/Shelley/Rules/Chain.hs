@@ -139,7 +139,7 @@ deriving stock instance
 instance (Era era, TransUTxOState NFData era) => NFData (ChainState era)
 
 data TestChainPredicateFailure era
-  = RealChainPredicateFailure !(ChainPredicateFailure era)
+  = RealChainPredicateFailure !ChainPredicateFailure
   | BbodyFailure !(PredicateFailure (Core.EraRule "BBODY" era)) -- Subtransition Failures
   | TickFailure !(PredicateFailure (Core.EraRule "TICK" era)) -- Subtransition Failures
   | TicknFailure !(PredicateFailure (Core.EraRule "TICKN" era)) -- Subtransition Failures
