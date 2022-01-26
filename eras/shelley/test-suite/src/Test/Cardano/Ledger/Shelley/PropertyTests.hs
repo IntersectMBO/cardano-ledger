@@ -59,7 +59,6 @@ import Test.Cardano.Ledger.Shelley.Address.CompactAddr
     propCompactSerializationAgree,
     propDecompactAddrLazy,
     propDecompactShelleyLazyAddr,
-    propIsBootstrapRedeemer,
   )
 import Test.Cardano.Ledger.Shelley.ByronTranslation (testGroupByronTranslation)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -131,8 +130,7 @@ minimalPropertyTests =
         [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
           TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
           TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
-          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era)),
-          TQC.testProperty "isBootstrapRedeemer is equivalent for CompactAddr and Addr" (propIsBootstrapRedeemer @(Crypto era))
+          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
         ],
       TQC.testProperty "WitVKey does not brake containers due to invalid Ord" $
         propWitVKeys @(Crypto era)
@@ -219,7 +217,6 @@ propertyTests =
         [ TQC.testProperty "Compact address round trip" (propCompactAddrRoundTrip @(Crypto era)),
           TQC.testProperty "Compact address binary representation" (propCompactSerializationAgree @(Crypto era)),
           TQC.testProperty "determining address type doesn't force contents" (propDecompactAddrLazy @(Crypto era)),
-          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era)),
-          TQC.testProperty "isBootstrapRedeemer is equivalent for CompactAddr and Addr" (propIsBootstrapRedeemer @(Crypto era))
+          TQC.testProperty "reading the keyhash doesn't force the stake reference" (propDecompactShelleyLazyAddr @(Crypto era))
         ]
     ]

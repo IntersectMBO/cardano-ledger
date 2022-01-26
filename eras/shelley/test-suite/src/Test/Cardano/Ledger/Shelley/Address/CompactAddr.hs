@@ -6,7 +6,6 @@
 module Test.Cardano.Ledger.Shelley.Address.CompactAddr where
 
 import Cardano.Ledger.Address (Addr (..), serialiseAddr)
-import qualified Cardano.Ledger.Address as Addr
 import qualified Cardano.Ledger.CompactAddress as CA
 import Cardano.Ledger.Credential
   ( PaymentCredential,
@@ -59,10 +58,6 @@ propDecompactShelleyLazyAddr = do
   let keyHash0 = unsafeGetHash addr
       keyHash1 = unsafeGetHash . CA.decompactAddr . mangle . CA.compactAddr $ addr
    in pure $ keyHash0 == keyHash1
-
-propIsBootstrapRedeemer :: CC.Crypto crypto => Addr crypto -> Property
-propIsBootstrapRedeemer addr =
-  Addr.isBootstrapRedeemer addr === CA.isBootstrapRedeemer (CA.compactAddr addr)
 
 unsafeGetHash :: Addr crypto -> PaymentCredential crypto
 unsafeGetHash (Addr _ hash _) = hash
