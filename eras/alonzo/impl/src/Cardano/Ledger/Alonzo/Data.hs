@@ -18,18 +18,34 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Alonzo.Data
-  ( Data (Data, ..),
+  ( Data (Data),
     DataHash,
     hashData,
     getPlutusData,
     dataHashSize,
+    BinaryData,
+    hashBinaryData,
+    makeBinaryData,
+    binaryDataToData,
+    dataToBinaryData,
+    decodeBinaryData,
     -- $
     AuxiliaryData (AuxiliaryData, AuxiliaryData', scripts, txMD),
     AuxiliaryDataHash (..),
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), TokenType (..), peekTokenType, withSlice)
+import Cardano.Binary
+  ( DecoderError (..),
+    FromCBOR (..),
+    ToCBOR (..),
+    TokenType (..),
+    decodeAnnotator,
+    decodeTag,
+    encodeTag,
+    peekTokenType,
+    withSlice,
+  )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
@@ -51,8 +67,8 @@ import Cardano.Ledger.Serialization (mapFromCBOR)
 import Cardano.Ledger.Shelley.Metadata (Metadatum)
 import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import qualified Codec.Serialise as Cborg (Serialise (..))
-import Data.ByteString.Lazy (toStrict)
-import Data.ByteString.Short (toShort)
+import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coders
 import Data.Foldable (foldl')
 import Data.Map (Map)
@@ -109,6 +125,53 @@ pattern Data p <-
 getPlutusData :: Data era -> Plutus.Data
 getPlutusData (DataConstr (Memo d _)) = d
 
+-- | Inlined data must be stored in the most compact form because it contributes
+-- to the memory overhead of the ledger state. Constructor is intentionally not
+-- exported, in order to prevent invalid creation of data from arbitrary binary
+-- data. Use `makeBinaryData` for smart construction.
+newtype BinaryData era = BinaryData ShortByteString
+  deriving newtype (Eq, Ord, Show, SafeToHash)
+
+instance (Crypto era ~ c) => HashAnnotated (BinaryData era) EraIndependentData c
+
+instance Typeable era => ToCBOR (BinaryData era) where
+  toCBOR (BinaryData sbs) = encodeTag 42 <> toCBOR sbs
+
+instance Typeable era => FromCBOR (BinaryData era) where
+  fromCBOR = do
+    42 <- decodeTag
+    sbs <- fromCBOR
+    either fail pure $! makeBinaryData sbs
+
+makeBinaryData :: ShortByteString -> Either String (BinaryData era)
+makeBinaryData sbs = do
+  let binaryData = BinaryData sbs
+  -- We need to verify that binary data is indeed valid Plutus Data.
+  case decodeBinaryData binaryData of
+    Left e -> Left $ "Invalid CBOR for Data: " <> show e
+    Right _d -> Right binaryData
+
+decodeBinaryData :: BinaryData era -> Either DecoderError (Data era)
+decodeBinaryData (BinaryData sbs) = do
+  plutusData <- decodeAnnotator "Data" fromCBOR (fromStrict (fromShort sbs))
+  pure (DataConstr (Memo plutusData sbs))
+
+-- | It is safe to convert `BinaryData` to `Data` because the only way to
+-- construct `BinaryData` is thorugh smart constructor `makeBinaryData` that
+-- takes care of verification.
+binaryDataToData :: BinaryData era -> Data era
+binaryDataToData binaryData =
+  case decodeBinaryData binaryData of
+    Left errMsg ->
+      error $ "Impossible: incorrectly encoded data: " ++ show errMsg
+    Right d -> d
+
+dataToBinaryData :: Data era -> BinaryData era
+dataToBinaryData (DataConstr (Memo _ sbs)) = BinaryData sbs
+
+hashBinaryData :: Era era => BinaryData era -> DataHash (Crypto era)
+hashBinaryData = hashAnnotated
+
 -- =============================================================================
 
 type DataHash crypto = SafeHash crypto EraIndependentData
@@ -138,7 +201,10 @@ deriving instance Eq (Core.Script era) => Eq (AuxiliaryDataRaw era)
 
 deriving instance Show (Core.Script era) => Show (AuxiliaryDataRaw era)
 
-deriving via InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryDataRaw era) instance NoThunks (AuxiliaryDataRaw era)
+deriving via
+  InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryDataRaw era)
+  instance
+    NoThunks (AuxiliaryDataRaw era)
 
 instance
   ( Typeable era,

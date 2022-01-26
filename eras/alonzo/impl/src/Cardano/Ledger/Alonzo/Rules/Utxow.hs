@@ -269,7 +269,7 @@ alonzoStyleWitness = do
       twoPhaseOuts =
         [ output
           | (_input, output) <- SplitMap.toList smallUtxo,
-            isTwoPhaseScriptAddress @era tx (getField @"address" output)
+            isTwoPhaseScriptAddress @era tx (getTxOutAddr output)
         ]
       utxoHashes' = mapM (getField @"datahash") twoPhaseOuts
   case utxoHashes' of
@@ -280,7 +280,7 @@ alonzoStyleWitness = do
         [ input
           | (input, output) <- SplitMap.toList smallUtxo,
             SNothing <- [getField @"datahash" output],
-            isTwoPhaseScriptAddress @era tx (getField @"address" output)
+            isTwoPhaseScriptAddress @era tx (getTxOutAddr output)
         ]
     SJust utxoHashes -> do
       let txHashes = domain (unTxDats . txdats . wits $ tx)

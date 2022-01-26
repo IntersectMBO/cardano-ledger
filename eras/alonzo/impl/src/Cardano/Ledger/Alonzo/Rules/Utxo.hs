@@ -40,7 +40,7 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
 import Cardano.Ledger.Shelley.Constraints
@@ -227,8 +227,8 @@ isKeyHashAddr (AddrBootstrap _) = True
 isKeyHashAddr (Addr _ (KeyHashObj _) _) = True
 isKeyHashAddr _ = False
 
-vKeyLocked :: (HasField "address" (Core.TxOut era) (Addr (Crypto era))) => Core.TxOut era -> Bool
-vKeyLocked txout = isKeyHashAddr (getField @"address" txout)
+vKeyLocked :: Era era => Core.TxOut era -> Bool
+vKeyLocked txout = isKeyHashAddr (getTxOutAddr txout)
 
 -- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
 --   1) The fee paid is >= the minimum fee
@@ -253,8 +253,7 @@ feesOK ::
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
-    HasField "_collateralPercentage" (Core.PParams era) Natural,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+    HasField "_collateralPercentage" (Core.PParams era) Natural
   ) =>
   Core.PParams era ->
   Core.Tx era ->
@@ -327,8 +326,7 @@ utxoTransition ::
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     ToCBOR (Core.Value era),
-    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network)
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
@@ -413,7 +411,7 @@ utxoTransition = do
   -- It is important to limit their overall size.
   let outputsAttrsTooBig =
         filter
-          ( \out -> case getField @"address" out of
+          ( \out -> case getTxOutAddr out of
               AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
               _ -> False
           )
@@ -425,7 +423,7 @@ utxoTransition = do
   let addrsWrongNetwork =
         filter
           (\a -> getNetwork a /= ni)
-          (fmap (getField @"address") $ toList $ getField @"outputs" txb)
+          (fmap getTxOutAddr $ toList $ getField @"outputs" txb)
   null addrsWrongNetwork ?!# WrongNetwork ni (Set.fromList addrsWrongNetwork)
 
   {-   ∀ (a ↦ _) ∈ txwdrls txb, netId a = NetworkId   -}
@@ -494,7 +492,6 @@ instance
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "mint" (Core.TxBody era) (Core.Value era),
     HasField "vldt" (Core.TxBody era) ValidityInterval,

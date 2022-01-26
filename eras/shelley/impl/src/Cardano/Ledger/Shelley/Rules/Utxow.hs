@@ -30,7 +30,6 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash,
     ValidateAuxiliaryData (..),
@@ -38,7 +37,7 @@ import Cardano.Ledger.AuxiliaryData
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe (..), invalidKey, quorum, (==>))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -255,7 +254,6 @@ type ShelleyStyleWitnessNeeds era =
     HasField "bootWits" (Core.Tx era) (Set (BootstrapWitness (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     ValidateAuxiliaryData era (Crypto era),
     ValidateScript era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
@@ -416,8 +414,7 @@ instance
     Signal (Core.EraRule "UTXO" era) ~ Core.Tx era,
     PredicateFailure (UTXOW era) ~ UtxowPredicateFailure era,
     -- Supply the HasField and Validate instances for Shelley
-    ShelleyStyleWitnessNeeds era,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era))
+    ShelleyStyleWitnessNeeds era
   ) =>
   STS (UTXOW era)
   where

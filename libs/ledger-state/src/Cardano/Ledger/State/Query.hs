@@ -462,15 +462,12 @@ sourceWithSharingUTxO stakeCredentials =
     internTxOut = \case
       Alonzo.TxOut_AddrHash28_AdaOnly cred addr28Extra e ->
         Alonzo.TxOut_AddrHash28_AdaOnly (intern (Keys.coerceKeyRole cred) stakeCredentials) addr28Extra e
-      Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra e o p q r ->
+      Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra e dataHash32 ->
         Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32
           (intern (Keys.coerceKeyRole cred) stakeCredentials)
           addr28Extra
           e
-          o
-          p
-          q
-          r
+          dataHash32
       out -> out
 
 foldDbUTxO ::

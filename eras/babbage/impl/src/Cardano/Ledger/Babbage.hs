@@ -99,8 +99,7 @@ import qualified Data.Set as Set
 data BabbageEra c
 
 instance
-  ( CC.Crypto c,
-    era ~ BabbageEra c
+  ( CC.Crypto c
   ) =>
   EraModule.Era (BabbageEra c)
   where

@@ -8,10 +8,9 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
-import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState,
     witsVKeyNeeded,
@@ -26,9 +25,7 @@ import Cardano.Ledger.Shelley.Rules.Utxow
   )
 import Cardano.Ledger.Shelley.Tx (WitnessSet)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
-import Cardano.Ledger.ShelleyMA.TxBody ()
 import Control.State.Transition.Extended
-import GHC.Records (HasField)
 
 -- ==============================================================================
 --   We want to reuse the same rules for Mary and Allegra. We accomplish this
@@ -48,7 +45,6 @@ instance
   forall era.
   ( -- Fix Core.Witnesses to the Allegra and Mary Era
     Core.Witnesses era ~ WitnessSet era,
-    HasField "address" (Core.TxOut era) (Addr (Crypto era)),
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (UTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
