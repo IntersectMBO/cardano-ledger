@@ -128,6 +128,7 @@ import Cardano.Ledger.Coin
     rationalToCoinViaFloor,
     toDeltaCoin,
   )
+import qualified Cardano.Ledger.CompactAddress as CA (isBootstrapRedeemer)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -1666,8 +1667,15 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     ls = esLState es
     us = _utxoState ls
     UTxO utxo = _utxo us
-    (redeemers, nonredeemers) =
-      SplitMap.partition (isBootstrapRedeemer . getTxOutAddr) utxo
+    -- TLDR we avoiding deserializing/serializing each address in the UTxO.
+    -- Here we can check very efficiently if an address is a Bootstrap redeemer,
+    -- by selecting an appropriate function depending on the current in-memory
+    -- representation of an address. If it is in compacted form we'll use the
+    -- specialized version that will only decompact an address if it is indeed a
+    -- Byron address. See #1937 for more info on the topic.
+    efficientPartition =
+      either isBootstrapRedeemer CA.isBootstrapRedeemer . getTxOutEitherAddr
+    (redeemers, nonredeemers) = SplitMap.partition efficientPartition utxo
     acnt = esAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =
