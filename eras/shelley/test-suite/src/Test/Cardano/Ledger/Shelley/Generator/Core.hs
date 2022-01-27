@@ -706,7 +706,7 @@ genesisCoins ::
   UTxO era
 genesisCoins genesisTxId outs =
   UTxO $
-    SplitMap.fromList [(TxIn genesisTxId idx, out) | (idx, out) <- zip [0 ..] outs]
+    SplitMap.fromList [(TxIn genesisTxId idx, out) | (idx, out) <- zip [minBound ..] outs]
 
 -- ==================================================================
 -- Operations on GenEnv that deal with ScriptSpace

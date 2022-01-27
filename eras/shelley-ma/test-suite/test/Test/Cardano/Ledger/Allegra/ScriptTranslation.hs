@@ -70,14 +70,14 @@ testScriptPostTranslation =
           utxo =
             S.UTxO $
               SplitMap.singleton
-                (S.TxIn bootstrapTxId 0)
+                (S.TxIn bootstrapTxId minBound)
                 (S.TxOut addr (Val.inject (S.Coin 1)))
-          env = S.LedgerEnv (SlotNo 0) 0 emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))
+          env = S.LedgerEnv (SlotNo 0) minBound emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))
           utxoStShelley = def {S._utxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @Allegra () utxoStShelley
           txb =
             S.TxBody
-              (Set.singleton $ S.TxIn bootstrapTxId 0)
+              (Set.singleton $ S.TxIn bootstrapTxId minBound)
               StrictSeq.empty
               StrictSeq.empty
               (S.Wdrl mempty)

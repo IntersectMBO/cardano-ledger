@@ -5,11 +5,9 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 -- The HasTrace instance relies on test generators and so cannot
 -- be included with the LEDGER STS
@@ -18,7 +16,7 @@
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
 import Cardano.Binary (ToCBOR)
-import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.Constraints
@@ -40,7 +38,7 @@ import Cardano.Ledger.Shelley.Rules.Delpl (DELPL, DelplEnv, DelplPredicateFailur
 import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER, LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Ledgers (LEDGERS, LedgersEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
-import Cardano.Ledger.Shelley.TxBody (DCert, Ix)
+import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (foldM)
@@ -113,7 +111,7 @@ instance
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
-    LedgerEnv (SlotNo 0) 0
+    LedgerEnv (SlotNo 0) minBound
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
@@ -160,17 +158,17 @@ instance
         foldM
           genAndApplyTx
           (utxoSt, dpSt, [])
-          [0 .. fromIntegral maxTxsPerBlock - 1]
+          [minBound .. mkTxIxPartial (toInteger maxTxsPerBlock - 1)]
 
       pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
       where
         genAndApplyTx ::
           HasCallStack =>
           (UTxOState era, DPState (Crypto era), [Core.Tx era]) ->
-          Ix ->
+          TxIx ->
           Gen (UTxOState era, DPState (Crypto era), [Core.Tx era])
-        genAndApplyTx (u, dp, txs) ix = do
-          let ledgerEnv = LedgerEnv slotNo ix pParams reserves
+        genAndApplyTx (u, dp, txs) txIx = do
+          let ledgerEnv = LedgerEnv slotNo txIx pParams reserves
           tx <- genTx ge ledgerEnv (u, dp)
 
           let res =

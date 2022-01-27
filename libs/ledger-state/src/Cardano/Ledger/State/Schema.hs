@@ -14,6 +14,7 @@ module Cardano.Ledger.State.Schema where
 
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
@@ -24,7 +25,6 @@ import Cardano.Ledger.State.Orphans (Enc, SnapShotType (..))
 import Cardano.Ledger.State.UTxO
 import qualified Cardano.Ledger.TxIn as TxIn
 import qualified Data.Map.Strict as Map
-import Data.Word
 import Database.Persist.Sqlite
 import Database.Persist.TH
 
@@ -90,12 +90,12 @@ KeyHash
   witness KeyHashWitness
   UniqueKeyHash witness
 Tx
-  inIx Word64
+  inIx TxIx
   inId (TxIn.TxId C)
   out (Alonzo.TxOut CurrentEra)
   UniqueTx inIx inId
 Txs
-  inIx Word64
+  inIx TxIx
   inId (TxIn.TxId C)
   out (Alonzo.TxOut CurrentEra)
   stakeCredential CredentialId Maybe

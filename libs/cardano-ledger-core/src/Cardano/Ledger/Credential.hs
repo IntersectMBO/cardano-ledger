@@ -19,7 +19,7 @@ module Cardano.Ledger.Credential
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.BaseTypes (TxIx, invalidKey)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
@@ -99,7 +99,7 @@ type Ix = Word64
 
 -- | Pointer to a slot, transaction index and index in certificate list.
 data Ptr
-  = Ptr !SlotNo !Ix !Ix
+  = Ptr !SlotNo !TxIx !Ix
   deriving (Show, Eq, Ord, Generic, NFData, NoThunks)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
@@ -137,8 +137,9 @@ instance ToCBORGroup Ptr where
     where
       getSlotNo :: Ptr -> SlotNo
       getSlotNo (Ptr a _ _) = a
-      getIx1, getIx2 :: Ptr -> Ix
+      getIx1 :: Ptr -> TxIx
       getIx1 (Ptr _ x _) = x
+      getIx2 :: Ptr -> Ix
       getIx2 (Ptr _ _ x) = x
 
   listLen _ = 3

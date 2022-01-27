@@ -41,7 +41,6 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable
 import Data.UMap (delView, ptrView, rewView)
-import Numeric.Natural
 import Prettyprinter
 import Text.Printf
 
@@ -97,7 +96,7 @@ txIdNestedInsert ::
   (TxIn C, a) ->
   Map.Map (TxId C) (IntMap.IntMap a)
 txIdNestedInsert !m (TxIn !txId !txIx, !v) =
-  let !e = IntMap.singleton (fromIntegral txIx) v
+  let !e = IntMap.singleton (txIxToInt txIx) v
    in Map.insertWith (<>) txId e m
 
 txIxSharing :: Fold (TxIn C, a) (IntMap.IntMap (Map.Map (TxId C) a))
@@ -115,7 +114,7 @@ txIxNestedInsert !im (TxIn !txId !txIx, !v) =
         \case
           Nothing -> Just $! Map.singleton txId v
           Just !m -> Just $! Map.insert txId v m
-   in IntMap.alter f (fromIntegral txIx) im
+   in IntMap.alter f (txIxToInt txIx) im
 
 txIxSharingKeyMap :: Fold (TxIn C, a) (IntMap.IntMap (KeyMap.KeyMap a))
 txIxSharingKeyMap = Fold txIxNestedInsertKeyMap mempty id
@@ -128,13 +127,13 @@ txIxNestedInsertKeyMap ::
   IntMap.IntMap (KeyMap.KeyMap a) ->
   (TxIn C, a) ->
   IntMap.IntMap (KeyMap.KeyMap a)
-txIxNestedInsertKeyMap !m (TxInCompact txId txIx, !v) =
+txIxNestedInsertKeyMap !m (TxIn txId txIx, !v) =
   let !key = toKey txId
       f =
         \case
           Nothing -> Just $! KeyMap.Leaf key v
           Just hm -> Just $! KeyMap.insert key v hm
-   in IntMap.alter f (fromIntegral txIx) m
+   in IntMap.alter f (txIxToInt txIx) m
 
 txIdSharingKeyMap :: Fold (TxIn C, a) (KeyMap.KeyMap (IntMap.IntMap a))
 txIdSharingKeyMap = Fold txIdNestedInsertKeyMap KeyMap.Empty id
@@ -146,9 +145,9 @@ txIdNestedInsertKeyMap ::
   KeyMap.KeyMap (IntMap.IntMap a) ->
   (TxIn C, a) ->
   KeyMap.KeyMap (IntMap.IntMap a)
-txIdNestedInsertKeyMap !m (TxInCompact txId txIx, !a) =
+txIdNestedInsertKeyMap !m (TxIn txId txIx, !a) =
   let !key = toKey txId
-      !v = IntMap.singleton (fromIntegral txIx) a
+      !v = IntMap.singleton (txIxToInt txIx) a
    in KeyMap.insertWith (<>) key v m
 
 testKeyMap ::
@@ -165,12 +164,12 @@ testKeyMap km m =
       TxIn C ->
       Alonzo.TxOut CurrentEra ->
       KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra))
-    test acc txIn@(TxInCompact txId txIx) txOut =
+    test acc txIn@(TxIn txId txIx) txOut =
       let !key = toKey txId
        in case KeyMap.lookup key acc of
             Nothing -> error $ "Can't find txId: " <> show txIn
             Just im ->
-              let txIx' = fromIntegral txIx
+              let txIx' = txIxToInt txIx
                   im' = IntMap.delete txIx' im
                in case IntMap.lookup txIx' im of
                     Nothing -> error $ "Can't find txIx: " <> show txIn
@@ -571,7 +570,7 @@ countLedgerStateStats LedgerState {..} =
 
 data TxInStats = TxInStats
   { tisTxId :: !(Stat (TxId C)),
-    tisTxIx :: !(Stat Natural)
+    tisTxIx :: !(Stat TxIx)
   }
 
 instance Pretty TxInStats where
@@ -743,7 +742,7 @@ data UTxOUniques = UTxOUniques
     stakePtrs :: !(Set.Set Ptr),
     scripts :: !(Set.Set (ScriptHash C)),
     txIds :: !(Set.Set (TxId C)),
-    txIxs :: !(Set.Set Natural)
+    txIxs :: !(Set.Set TxIx)
   }
 
 emptyUniques :: UTxOUniques

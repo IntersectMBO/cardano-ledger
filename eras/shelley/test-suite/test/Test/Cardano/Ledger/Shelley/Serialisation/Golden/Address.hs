@@ -17,7 +17,7 @@ import qualified Cardano.Chain.Common as Byron
 import Cardano.Crypto.Hash (HashAlgorithm (..), hashFromBytes, hashFromTextAsHex, sizeHash)
 import Cardano.Crypto.Hash.Blake2b (Blake2b_224)
 import Cardano.Ledger.Address
-import Cardano.Ledger.BaseTypes (Network (..))
+import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
 import Cardano.Ledger.Credential
   ( Credential (..),
     Ptr (..),
@@ -140,7 +140,7 @@ goldenTests_MockCrypto =
     ptrHex :: IsString s => s
     ptrHex = "81000203"
     ptr :: Ptr
-    ptr = Ptr (SlotNo 128) 2 3
+    ptr = Ptr (SlotNo 128) (mkTxIxPartial 2) 3
 
 goldenTests_ShelleyCrypto :: TestTree
 goldenTests_ShelleyCrypto =
@@ -211,7 +211,7 @@ goldenTests_ShelleyCrypto =
     stakeKey :: Credential 'Staking ShelleyCrypto
     stakeKey = keyBlake2b224 $ B16.encode "1c2c3c4c5c6c7c8c"
     ptr :: Ptr
-    ptr = Ptr (SlotNo 128) 2 3
+    ptr = Ptr (SlotNo 128) (mkTxIxPartial 2) 3
     -- 32-byte verification key is expected, vk, ie., public key without chain code.
     -- The verification key undergoes Blake2b_224 hashing
     -- and should be 28-byte in the aftermath

@@ -118,7 +118,7 @@ aliceSHK = (KeyHashObj . hashKey . vKey) aliceStake
 
 -- | Alice's base address
 alicePtrAddr :: CC.Crypto crypto => Addr crypto
-alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) 0 0)
+alicePtrAddr = Addr Testnet alicePHK (StakeRefPtr $ Ptr (SlotNo 10) minBound minBound)
 
 -- | Alice's stake pool parameters
 alicePoolParams :: forall crypto. CC.Crypto crypto => PoolParams crypto

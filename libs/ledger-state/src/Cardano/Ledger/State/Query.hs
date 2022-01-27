@@ -73,11 +73,11 @@ insertUTxO utxo stateKey = do
   where
     insertTxOut (TxIn.TxIn txId txIx, out) = do
       txKey <-
-        insert $ Tx {txInIx = fromIntegral txIx, txInId = txId, txOut = out}
+        insert $ Tx {txInIx = txIx, txInId = txId, txOut = out}
       txsKey <-
         insert $
           Txs
-            { txsInIx = fromIntegral txIx,
+            { txsInIx = txIx,
               txsInId = txId,
               txsOut = out,
               txsStakeCredential = Nothing
@@ -450,7 +450,7 @@ sourceUTxO ::
   ConduitM () (TxIn.TxIn C, Alonzo.TxOut CurrentEra) (ReaderT SqlBackend m) ()
 sourceUTxO =
   selectSource [] []
-    .| mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId (fromIntegral txInIx), txOut))
+    .| mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId txInIx, txOut))
 
 sourceWithSharingUTxO ::
   MonadResource m =>

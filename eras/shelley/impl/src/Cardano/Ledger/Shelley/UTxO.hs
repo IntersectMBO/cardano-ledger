@@ -175,7 +175,7 @@ txouts tx =
   UTxO $
     SplitMap.fromList
       [ (TxIn transId idx, out)
-        | (out, idx) <- zip (toList $ getField @"outputs" tx) [0 ..]
+        | (out, idx) <- zip (toList $ getField @"outputs" tx) [minBound ..]
       ]
   where
     transId = Core.txid tx

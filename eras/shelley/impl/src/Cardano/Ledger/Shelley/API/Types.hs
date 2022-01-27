@@ -17,6 +17,7 @@ import Cardano.Ledger.BaseTypes as X
     Port (..),
     ProtVer (..),
     StrictMaybe (..),
+    TxIx (..),
     epochInfo,
   )
 -- TODO deprecate these?

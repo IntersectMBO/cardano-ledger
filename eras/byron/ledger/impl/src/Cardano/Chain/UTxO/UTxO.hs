@@ -164,7 +164,7 @@ txOutputUTxO tx =
         | (ix, txOut) <- indexedOutputs
       ]
   where
-    indexedOutputs :: [(Word32, TxOut)]
+    indexedOutputs :: [(Word16, TxOut)]
     indexedOutputs = zip [0 ..] (NE.toList $ txOutputs tx)
 
     txId :: Tx -> TxId

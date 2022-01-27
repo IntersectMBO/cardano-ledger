@@ -5,12 +5,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
@@ -19,7 +17,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
   )
 where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
+import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, TxIx)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -110,7 +108,7 @@ instance
   ) =>
   STS (CERTS era)
   where
-  type Environment (CERTS era) = (SlotNo, Ix, Core.PParams era, AccountState)
+  type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
   type State (CERTS era) = (DPState (Crypto era), Ix)
   type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
@@ -205,7 +203,7 @@ genDCerts ::
   Core.PParams era ->
   DPState (Crypto era) ->
   SlotNo ->
-  Ix ->
+  TxIx ->
   AccountState ->
   Gen
     ( StrictSeq (DCert (Crypto era)),
@@ -241,7 +239,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         totalDeposits pparams (`Map.notMember` pools) certs,
-        (length deRegStakeCreds) <×> (getField @"_keyDeposit" pparams),
+        length deRegStakeCreds <×> getField @"_keyDeposit" pparams,
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
           extractScriptCred <$> scriptCreds

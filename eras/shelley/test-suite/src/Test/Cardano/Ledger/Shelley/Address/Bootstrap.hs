@@ -78,7 +78,7 @@ import Cardano.Ledger.Shelley.UTxO
 import Cardano.Ledger.Slot
   ( SlotNo (..),
   )
-import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
   ( ByteString,
@@ -149,7 +149,7 @@ utxo0 :: UTxO C
 utxo0 =
   UTxO $
     SplitMap.singleton
-      (TxIn genesisId 0)
+      (TxIn genesisId minBound)
       (TxOut aliceAddr aliceInitCoin)
 
 utxoState0 :: UTxOState C
@@ -179,8 +179,8 @@ utxoState1 =
     }
   where
     txid = TxId $ hashAnnotated txBody
-    bobResult = (TxIn txid 0, TxOut bobAddr coinsToBob)
-    aliceResult = (TxIn txid 1, TxOut aliceAddr (Coin 998990))
+    bobResult = (mkTxInPartial txid 0, TxOut bobAddr coinsToBob)
+    aliceResult = (mkTxInPartial txid 1, TxOut aliceAddr (Coin 998990))
 
 utxoEnv :: UtxoEnv C
 utxoEnv =
@@ -240,7 +240,7 @@ coinsToBob = Coin 1000
 txBody :: TxBody C
 txBody =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut bobAddr coinsToBob, TxOut aliceAddr change],
       _certs = StrictSeq.fromList mempty,
       _wdrls = Wdrl Map.empty,

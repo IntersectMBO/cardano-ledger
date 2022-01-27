@@ -52,7 +52,7 @@ payCred = KeyHashObj (hashKey . VKey $ VerKeyMockDSIGN 0)
 
 -- | Infinite list of transaction inputs
 txIns :: [TxIn TestCrypto]
-txIns = [0 ..] <&> TxIn txId
+txIns = [minBound ..] <&> TxIn txId
   where
     txId =
       TxId . castSafeHash $
@@ -99,7 +99,7 @@ stakeCreds n =
 stakePtrs :: [StakeCredential c] -> Map Ptr (StakeCredential c)
 stakePtrs creds =
   Map.fromList
-    [ (Ptr (SlotNo i) 0 0, cred)
+    [ (Ptr (SlotNo i) minBound minBound, cred)
       | (i, cred) <- zip [0 ..] creds
     ]
 

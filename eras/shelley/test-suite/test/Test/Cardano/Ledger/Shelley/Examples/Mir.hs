@@ -132,7 +132,7 @@ feeTx1 = Coin 1
 txbodyEx1 :: (ShelleyTest era) => MIRPot -> TxBody era
 txbodyEx1 pot =
   TxBody
-    (Set.fromList [TxIn genesisId 0])
+    (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
         [ DCertMir (MIRCert pot ir),
@@ -212,7 +212,7 @@ expectedStEx1' txwits pot =
     . C.newLab (blockEx1' txwits pot)
     . C.feesAndDeposits feeTx1 (_keyDeposit ppEx)
     . C.newUTxO (txbodyEx1 pot)
-    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) 0 1)
+    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound 1)
     . C.mir Cast.aliceSHK pot aliceMIRCoin
     $ initStMIR (Coin 1000)
 

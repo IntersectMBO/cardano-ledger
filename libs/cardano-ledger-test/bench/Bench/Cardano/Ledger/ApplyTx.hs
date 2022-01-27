@@ -80,7 +80,7 @@ applyTxMempoolEnv :: Default (Core.PParams era) => MempoolEnv era
 applyTxMempoolEnv =
   LedgerEnv
     { ledgerSlotNo = SlotNo 0,
-      ledgerIx = 0,
+      ledgerIx = minBound,
       ledgerPp = def,
       ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)
     }

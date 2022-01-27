@@ -50,7 +50,7 @@ env :: ProtVer -> AccountState -> DelegEnv ShelleyTest
 env pv acnt =
   DelegEnv
     { slotNo = SlotNo 50,
-      ptr_ = Ptr (SlotNo 50) 0 0,
+      ptr_ = Ptr (SlotNo 50) minBound minBound,
       acnt_ = acnt,
       ppDE = emptyPParams {_protocolVersion = pv}
     }

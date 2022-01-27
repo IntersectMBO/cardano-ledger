@@ -8,6 +8,7 @@ module BenchUTxOAggregate where
 import Cardano.Ledger.Address
   ( Addr (..),
   )
+import Cardano.Ledger.BaseTypes (mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (toCompact)
@@ -63,7 +64,7 @@ genTestCase numUTxO numAddr = do
         (compactAddr addr)
         (fromJust $ toCompact $ Val.inject (Coin $ fromIntegral i))
   let mktxid i = TxId (unsafeMakeSafeHash (mkDummyHash i))
-  let mktxin i = TxIn (mktxid i) (fromIntegral i)
+  let mktxin i = TxIn (mktxid i) (mkTxIxPartial (toInteger i))
   let utxo = SplitMap.fromList $ zip (mktxin <$> [1 ..]) txOuts
       liveptrs :: [Ptr]
       liveptrs = [p | (TxOut (Addr _ _ (StakeRefPtr p)) _) <- txOuts]

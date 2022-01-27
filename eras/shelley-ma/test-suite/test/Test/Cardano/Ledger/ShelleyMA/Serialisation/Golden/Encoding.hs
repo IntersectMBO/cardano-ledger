@@ -43,7 +43,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks
   )
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
-import Cardano.Ledger.TxIn (TxIn (..))
+import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
 import Codec.CBOR.Encoding (Tokens (..))
 import qualified Data.ByteString.Char8 as BS
@@ -234,7 +234,7 @@ goldenEncodingTestsAllegra =
       metadataNoScritpsGoldenTest @A,
       metadataWithScritpsGoldenTest @A,
       -- "minimal_txn_body"
-      let tin = TxIn genesisId 1
+      let tin = mkTxInPartial genesisId 1
           tout = TxOut @A testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             "minimal_txbody"
@@ -260,7 +260,7 @@ goldenEncodingTestsAllegra =
                 <> T (TkWord64 9)
             ),
       -- "full_txn_body"
-      let tin = TxIn genesisId 1
+      let tin = mkTxInPartial genesisId 1
           tout = TxOut @A testAddrE (Coin 2)
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)
@@ -367,7 +367,7 @@ goldenEncodingTestsMary =
       metadataNoScritpsGoldenTest @M,
       metadataWithScritpsGoldenTest @M,
       -- "minimal_txn_body"
-      let tin = TxIn genesisId 1
+      let tin = mkTxInPartial genesisId 1
           tout = TxOut @M testAddrE (Val.inject $ Coin 2)
        in checkEncodingCBORAnnotated
             "minimal_txbody"
@@ -393,7 +393,7 @@ goldenEncodingTestsMary =
                 <> T (TkWord64 9)
             ),
       -- "full_txn_body"
-      let tin = TxIn genesisId 1
+      let tin = mkTxInPartial genesisId 1
           tout = TxOut @M testAddrE (Val.inject $ Coin 2)
           reg = DCertDeleg (RegKey testStakeCred)
           ras = Map.singleton (RewardAcnt Testnet (KeyHashObj testKeyHash)) (Coin 123)

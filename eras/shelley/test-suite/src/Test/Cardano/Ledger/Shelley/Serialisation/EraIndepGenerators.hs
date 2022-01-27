@@ -6,7 +6,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -394,6 +393,8 @@ instance CC.Crypto crypto => Arbitrary (Credential r crypto) where
       [ ScriptHashObj . ScriptHash <$> genHash,
         KeyHashObj <$> arbitrary
       ]
+
+deriving instance Arbitrary TxIx
 
 instance Arbitrary Ptr where
   arbitrary = genericArbitraryU

@@ -330,7 +330,7 @@ exampleNewEpochState value ppp pp =
                     { _utxo =
                         UTxO $
                           SplitMap.fromList
-                            [ ( TxIn (TxId (mkDummySafeHash Proxy 1)) 0,
+                            [ ( TxIn (TxId (mkDummySafeHash Proxy 1)) minBound,
                                 makeTxOut (Proxy @era) addr value
                               )
                             ],
@@ -461,7 +461,7 @@ exampleAuxiliaryDataShelley = Metadata exampleMetadataMap
 exampleTxIns :: Cardano.Ledger.Crypto.Crypto c => Set (TxIn c)
 exampleTxIns =
   Set.fromList
-    [ TxIn (TxId (mkDummySafeHash Proxy 1)) 0
+    [ TxIn (TxId (mkDummySafeHash Proxy 1)) minBound
     ]
 
 exampleCerts :: Cardano.Ledger.Crypto.Crypto c => StrictSeq (DCert c)

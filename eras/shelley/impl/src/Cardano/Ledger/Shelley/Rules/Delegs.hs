@@ -29,6 +29,7 @@ import Cardano.Binary
 import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
+    TxIx,
     invalidKey,
     networkId,
   )
@@ -56,7 +57,6 @@ import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
     Delegation (..),
-    Ix,
     Ptr (..),
     RewardAcnt (..),
     Wdrl (..),
@@ -90,11 +90,11 @@ import NoThunks.Class (NoThunks (..))
 data DELEGS era
 
 data DelegsEnv era = DelegsEnv
-  { delegsSlotNo :: SlotNo,
-    delegsIx :: Ix,
-    delegspp :: Core.PParams era,
-    delegsTx :: Core.Tx era,
-    delegsAccount :: AccountState
+  { delegsSlotNo :: !SlotNo,
+    delegsIx :: !TxIx,
+    delegspp :: !(Core.PParams era),
+    delegsTx :: !(Core.Tx era),
+    delegsAccount :: !AccountState
   }
 
 deriving stock instance

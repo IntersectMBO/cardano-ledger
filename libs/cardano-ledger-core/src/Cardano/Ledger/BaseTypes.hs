@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -49,6 +48,13 @@ module Cardano.Ledger.BaseTypes
     module Data.Maybe.Strict,
     BlocksMade (..),
 
+    -- * Indices
+    TxIx (..),
+    txIxToInt,
+    txIxFromInteger,
+    txIxFromIntegral,
+    mkTxIxPartial,
+
     -- * STS Base
     Globals (..),
     epochInfo,
@@ -94,6 +100,7 @@ import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
 import Data.Map.Strict (Map)
+import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (Scientific, base10Exponent, coefficient, normalize, scientific)
@@ -104,6 +111,7 @@ import Data.Typeable
 import Data.Word (Word16, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
+import GHC.Stack
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
@@ -646,3 +654,31 @@ newtype BlocksMade crypto = BlocksMade
   deriving (Eq, Generic)
   deriving (Show) via Quiet (BlocksMade crypto)
   deriving newtype (NoThunks, NFData, ToJSON, FromJSON, ToCBOR, FromCBOR)
+
+-- | Transaction index. It is unfeasable to have 65535 outputs in a transaction,
+-- but 255 is right on the border of a maximum CertIx on Mainnet at the moment,
+-- that is why `Word16` was chosen as the smallest upper bound. Use: `txIxToInt`,
+-- `txIxFromIntegral` and `txIxFromInteger` in order to construct this index
+-- safely from anything other than `Word16`. There is also `mkTxIxPartial` that
+-- can be used for testing.
+newtype TxIx = TxIx Word16
+  deriving stock (Eq, Ord)
+  deriving newtype (NFData, Enum, Bounded, Show, NoThunks, ToCBOR, FromCBOR)
+
+txIxToInt :: TxIx -> Int
+txIxToInt (TxIx w16) = fromIntegral w16
+
+txIxFromIntegral :: Integral a => a -> Maybe TxIx
+txIxFromIntegral = txIxFromInteger . toInteger
+
+txIxFromInteger :: Integer -> Maybe TxIx
+txIxFromInteger i
+  | i < fromIntegral (minBound :: Word16) || i > fromIntegral (maxBound :: Word16) = Nothing
+  | otherwise = Just (TxIx (fromInteger i))
+
+-- | Construct a `TxIx` from an arbitrary precision `Integer`. Throws an error for
+-- values out of range. Make sure to use it only for testing.
+mkTxIxPartial :: HasCallStack => Integer -> TxIx
+mkTxIxPartial i =
+  fromMaybe (error $ "Value for TxIx is out of a valid range: " ++ show i) $
+    txIxFromInteger i

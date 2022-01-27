@@ -127,8 +127,8 @@ type TxAttributes = Attributes ()
 -- | Transaction arbitrary input
 data TxIn
   = -- | TxId = Which transaction's output is used
-    -- | Word32 = Index of the output in transaction's outputs
-    TxInUtxo TxId Word32
+    -- | Word16 = Index of the output in transaction's outputs
+    TxInUtxo TxId Word16
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass (NFData)
 
@@ -148,7 +148,7 @@ instance ToCBOR TxIn where
   encodedSizeExpr size _ =
     2
       + knownCborDataItemSizeExpr
-        (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word32)])
+        (szCases [Case "TxInUtxo" $ size $ Proxy @(TxId, Word16)])
 
 instance FromCBOR TxIn where
   fromCBOR = do
@@ -159,7 +159,7 @@ instance FromCBOR TxIn where
       _ -> cborError $ DecoderErrorUnknownTag "TxIn" tag
 
 instance HeapWords TxIn where
-  heapWords (TxInUtxo txid w32) = heapWords2 txid w32
+  heapWords (TxInUtxo txid _w16) = 3 + heapWords txid + 2
 
 --------------------------------------------------------------------------------
 -- TxOut

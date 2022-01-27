@@ -12,6 +12,7 @@ import Cardano.Binary
 import Cardano.Crypto.Hash.Class
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.TxBody
+import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Keys
@@ -64,6 +65,10 @@ instance PersistFieldSql (TxId C) where
 deriving instance PersistField (CompactForm Coin)
 
 deriving instance PersistFieldSql (CompactForm Coin)
+
+deriving instance PersistField TxIx
+
+deriving instance PersistFieldSql TxIx
 
 instance PersistField Coin where
   toPersistValue = PersistInt64 . fromIntegral . unCoin

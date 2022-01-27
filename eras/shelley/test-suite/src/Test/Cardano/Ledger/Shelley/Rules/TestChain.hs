@@ -1166,7 +1166,7 @@ ledgerTraceBase ::
   )
 ledgerTraceBase chainSt block =
   ( tickedChainSt,
-    LedgerEnv slot 0 pp_ (esAccountState nes),
+    LedgerEnv slot minBound pp_ (esAccountState nes),
     (utxoSt0, delegSt0),
     txs
   )

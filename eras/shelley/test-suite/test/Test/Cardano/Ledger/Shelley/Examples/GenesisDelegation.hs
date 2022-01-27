@@ -127,7 +127,7 @@ feeTx1 = Coin 1
 txbodyEx1 :: (Cr.Crypto c) => TxBody (ShelleyEra c)
 txbodyEx1 =
   TxBody
-    (Set.fromList [TxIn genesisId 0])
+    (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
         [ DCertGenesis

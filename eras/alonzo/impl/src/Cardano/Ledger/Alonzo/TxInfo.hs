@@ -19,10 +19,14 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
-import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
+import Cardano.Ledger.Credential
+  ( Credential (KeyHashObj, ScriptHashObj),
+    Ptr (..),
+    StakeReference (..),
+  )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Hashes (EraIndependentData)
@@ -118,7 +122,7 @@ transStakeCred (KeyHashObj (KeyHash kh)) =
 transStakeReference :: StakeReference crypto -> Maybe PV1.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transStakeCred cred))
 transStakeReference (StakeRefPtr (Ptr (SlotNo slot) i1 i2)) =
-  Just (PV1.StakingPtr (fromIntegral slot) (fromIntegral i1) (fromIntegral i2))
+  Just (PV1.StakingPtr (fromIntegral slot) (fromIntegral (txIxToInt i1)) (fromIntegral i2))
 transStakeReference StakeRefNull = Nothing
 
 transCred :: Credential keyrole crypto -> PV1.Credential
@@ -183,7 +187,7 @@ transVITime pp ei sysS (ValidityInterval (SJust i) (SJust j)) = do
 -- translate TxIn and TxOut
 
 txInfoIn' :: TxIn c -> PV1.TxOutRef
-txInfoIn' (TxIn txid nat) = PV1.TxOutRef (txInfoId txid) (fromIntegral nat)
+txInfoIn' (TxIn txid txIx) = PV1.TxOutRef (txInfoId txid) (toInteger (txIxToInt txIx))
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it and return
 --   (Just translation). If does not exist in the UTxO, return Nothing.

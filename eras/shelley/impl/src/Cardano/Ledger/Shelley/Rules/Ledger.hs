@@ -28,7 +28,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (ShelleyBase, invalidKey)
+import Cardano.Ledger.BaseTypes (ShelleyBase, TxIx, invalidKey)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -39,7 +39,6 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState (..),
     DState (..),
-    Ix,
     PState (..),
     UTxOState (..),
     rewards,
@@ -79,10 +78,10 @@ import NoThunks.Class (NoThunks (..))
 data LEDGER era
 
 data LedgerEnv era = LedgerEnv
-  { ledgerSlotNo :: SlotNo,
-    ledgerIx :: Ix,
-    ledgerPp :: Core.PParams era,
-    ledgerAccount :: AccountState
+  { ledgerSlotNo :: !SlotNo,
+    ledgerIx :: !TxIx,
+    ledgerPp :: !(Core.PParams era),
+    ledgerAccount :: !AccountState
   }
 
 deriving instance Show (Core.PParams era) => Show (LedgerEnv era)
