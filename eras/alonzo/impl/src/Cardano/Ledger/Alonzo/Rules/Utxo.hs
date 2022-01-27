@@ -17,7 +17,6 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address
   ( Addr (..),
     RewardAcnt,
-    bootstrapAddressAttrsSize,
     getNetwork,
     getRwdNetwork,
   )
@@ -37,15 +36,18 @@ import Cardano.Ledger.BaseTypes
     systemStart,
   )
 import Cardano.Ledger.Coin
+import Cardano.Ledger.CompactAddress
+  ( CompactAddr,
+    isBootstrapCompactAddr,
+    isPayCredScriptCompactAddr,
+  )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesPParams,
-  )
+import Cardano.Ledger.Shelley.Constraints (UsesPParams)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
@@ -227,8 +229,16 @@ isKeyHashAddr (AddrBootstrap _) = True
 isKeyHashAddr (Addr _ (KeyHashObj _) _) = True
 isKeyHashAddr _ = False
 
+-- | This is equivalent to `isKeyHashAddr`, but for compacted version of an address.
+isKeyHashCompactAddr :: CompactAddr crypto -> Bool
+isKeyHashCompactAddr cAddr =
+  isBootstrapCompactAddr cAddr || not (isPayCredScriptCompactAddr cAddr)
+
 vKeyLocked :: Era era => Core.TxOut era -> Bool
-vKeyLocked txout = isKeyHashAddr (getTxOutAddr txout)
+vKeyLocked txOut =
+  case getTxOutEitherAddr txOut of
+    Left addr -> isKeyHashAddr addr
+    Right cAddr -> isKeyHashCompactAddr cAddr
 
 -- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
 --   1) The fee paid is >= the minimum fee
@@ -407,15 +417,7 @@ utxoTransition = do
   null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
   {-    ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64   -}
-  -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
-  -- It is important to limit their overall size.
-  let outputsAttrsTooBig =
-        filter
-          ( \out -> case getTxOutAddr out of
-              AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
-              _ -> False
-          )
-          (SplitMap.elems outputs)
+  let outputsAttrsTooBig = Shelley.filterOutputsAttrsTooBig outputs
   null outputsAttrsTooBig ?!# OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   {-   ∀(_ ↦ (a,_)) ∈ txouts txb, netId a = NetworkId   -}

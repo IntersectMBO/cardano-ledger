@@ -16,11 +16,7 @@
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
-import Cardano.Ledger.Address
-  ( Addr (AddrBootstrap),
-    bootstrapAddressAttrsSize,
-    getNetwork,
-  )
+import Cardano.Ledger.Address (Addr, getNetwork)
 import Cardano.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
@@ -309,15 +305,7 @@ utxoTransition = do
           (SplitMap.elems outputs)
   null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
-  -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
-  -- It is important to limit their overall size.
-  let outputsAttrsTooBig =
-        filter
-          ( \out -> case getTxOutAddr out of
-              AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
-              _ -> False
-          )
-          (SplitMap.elems outputs)
+  let outputsAttrsTooBig = Shelley.filterOutputsAttrsTooBig outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)

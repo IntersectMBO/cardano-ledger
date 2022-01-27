@@ -388,7 +388,6 @@ isBootstrapRedeemer :: BootstrapAddress crypto -> Bool
 isBootstrapRedeemer (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem)) = True
 isBootstrapRedeemer _ = False
 
-
 putPtr :: Ptr -> Put
 putPtr (Ptr slot txIx certIx) = do
   putSlot slot

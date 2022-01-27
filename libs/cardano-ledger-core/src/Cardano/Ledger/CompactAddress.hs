@@ -8,6 +8,7 @@ module Cardano.Ledger.CompactAddress
     decompactAddr,
     CompactAddr (..),
     substring,
+    isPayCredScriptCompactAddr,
     isBootstrapCompactAddr,
   )
 where
@@ -229,7 +230,12 @@ getPayCred header = case testBit header payCredIsScript of
   True -> getScriptHash
   False -> getKeyHash
 
+-- | Efficiently check whether compated adddress is an address with a credential
+-- that is a payment script.
+isPayCredScriptCompactAddr :: CompactAddr crypto -> Bool
+isPayCredScriptCompactAddr (UnsafeCompactAddr bytes) =
+  testBit (SBS.index bytes 0) payCredIsScript
+
 -- | Efficiently check whether compated adddress is a Byron address.
 isBootstrapCompactAddr :: CompactAddr crypto -> Bool
 isBootstrapCompactAddr (UnsafeCompactAddr bytes) = testBit (SBS.index bytes 0) byron
-

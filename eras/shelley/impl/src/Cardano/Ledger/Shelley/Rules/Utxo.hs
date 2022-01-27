@@ -21,6 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo
     UtxoEvent (..),
     PredicateFailure,
     updateUTxOState,
+    filterOutputsAttrsTooBig,
   )
 where
 
@@ -44,7 +45,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
   ( decodeList,
@@ -417,15 +418,7 @@ utxoInductive = do
           (SplitMap.elems outputs)
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
-  -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
-  -- It is important to limit their overall size.
-  let outputsAttrsTooBig =
-        filter
-          ( \x -> case getTxOutAddr x of
-              AddrBootstrap addr -> bootstrapAddressAttrsSize addr > 64
-              _ -> False
-          )
-          (SplitMap.elems outputs)
+  let outputsAttrsTooBig = filterOutputsAttrsTooBig outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
   let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
@@ -438,6 +431,21 @@ utxoInductive = do
   tellEvent $ TotalDeposits totalDeposits'
   let depositChange = totalDeposits' <-> refunded
   pure $! updateUTxOState u txb depositChange ppup'
+
+-- | Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
+-- It is important to limit their overall size.
+--
+-- > ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64
+filterOutputsAttrsTooBig ::
+  Era era => SplitMap.SplitMap k (Core.TxOut era) -> [Core.TxOut era]
+filterOutputsAttrsTooBig outputs =
+  filter
+    ( \txOut ->
+        case getTxOutBootstrapAddress txOut of
+          Just addr -> bootstrapAddressAttrsSize addr > 64
+          _ -> False
+    )
+    (SplitMap.elems outputs)
 
 updateUTxOState ::
   (Era era, HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))) =>
