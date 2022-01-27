@@ -15,9 +15,14 @@
 module Cardano.Ledger.Alonzo.Rules.Utxos
   ( UTXOS,
     UtxosPredicateFailure (..),
+    UtxosEvent (..),
     constructValidated,
     lbl2Phase,
     TagMismatchDescription (..),
+    genericUtxosTransition,
+    genericScriptsValidateTransition,
+    genericScriptsNotValidateTransition,
+    UtxosDelta (UtxosDelta),
   )
 where
 
@@ -125,32 +130,29 @@ instance
   type PredicateFailure (UTXOS era) = UtxosPredicateFailure era
   type Event (UTXOS era) = UtxosEvent era
 
-  transitionRules = [utxosTransition]
+  transitionRules = [genericUtxosTransition alonzoUtxosDelta]
 
-utxosTransition ::
-  forall era.
-  ( Core.Script era ~ Script era,
+genericUtxosTransition ::
+  forall utxos era.
+  ( STS (utxos era),
+    Signal (utxos era) ~ ValidatedTx era,
+    BaseM (utxos era) ~ ShelleyBase,
+    State (utxos era) ~ UTxOState era,
+    Environment (utxos era) ~ UtxoEnv era,
+    Embed (Core.EraRule "PPUP" era) (utxos era),
+    --
+    Core.Script era ~ Script era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (Core.EraRule "PPUP" era) (UTXOS era),
-    Eq (Core.PParams era),
-    Show (Core.PParams era),
-    Show (Core.PParamsDelta era),
-    Eq (Core.PParamsDelta era),
     Core.Value era ~ Value (Crypto era),
     ValidateScript era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    Core.ChainData (Core.TxBody era),
-    ToCBOR (Core.TxBody era),
-    Core.ChainData (Core.TxOut era),
-    Core.SerialisableData (Core.TxOut era),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "mint" (Core.TxBody era) (Value (Crypto era)),
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
@@ -158,23 +160,25 @@ utxosTransition ::
     HasField "vldt" (Core.TxBody era) ValidityInterval,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  TransitionRule (UTXOS era)
-utxosTransition =
+  UtxosDelta utxos era ->
+  TransitionRule (utxos era)
+genericUtxosTransition delta =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
     case getField @"isValid" tx of
-      IsValid True -> scriptsValidateTransition
-      IsValid False -> scriptsNotValidateTransition
+      IsValid True -> genericScriptsValidateTransition delta
+      IsValid False -> genericScriptsNotValidateTransition delta
 
-scriptsValidateTransition ::
-  forall era.
-  ( Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
+genericScriptsValidateTransition ::
+  forall era utxos.
+  ( STS (utxos era), -- liftSTS
+    Signal (utxos era) ~ ValidatedTx era,
+    BaseM (utxos era) ~ ShelleyBase,
+    State (utxos era) ~ UTxOState era,
+    Environment (utxos era) ~ UtxoEnv era,
+    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (Core.EraRule "PPUP" era) (UTXOS era),
-    Eq (Core.PParams era),
-    Show (Core.PParams era),
-    Show (Core.PParamsDelta era),
-    Eq (Core.PParamsDelta era),
+    Embed (Core.EraRule "PPUP" era) (utxos era),
     Core.Script era ~ Script era,
     Core.Value era ~ Value (Crypto era),
     ValidateScript era,
@@ -183,21 +187,17 @@ scriptsValidateTransition ::
     HasField "_keyDeposit" (Core.PParams era) Coin,
     HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    Core.ChainData (Core.TxOut era),
-    Core.SerialisableData (Core.TxOut era),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "mint" (Core.TxBody era) (Value (Crypto era)),
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
-    HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    Core.ChainData (Core.TxBody era),
-    ToCBOR (Core.TxBody era)
+    HasField "vldt" (Core.TxBody era) ValidityInterval
   ) =>
-  TransitionRule (UTXOS era)
-scriptsValidateTransition = do
+  UtxosDelta utxos era ->
+  TransitionRule (utxos era)
+genericScriptsValidateTransition delta = do
   TRC (UtxoEnv slot pp poolParams genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
   let txb = body tx
@@ -205,6 +205,7 @@ scriptsValidateTransition = do
       txcerts = toList $ getField @"certs" txb
       depositChange =
         totalDeposits pp (`Map.notMember` poolParams) txcerts <-> refunded
+      liftfail = embed' delta
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   let !_ =
@@ -221,11 +222,13 @@ scriptsValidateTransition = do
       case evalScripts @era tx sLst of
         Fails sss ->
           False
-            ?!## ValidationTagMismatch
-              (getField @"isValid" tx)
-              (FailedUnexpectedly sss)
+            ?!## liftfail
+              ( ValidationTagMismatch
+                  (getField @"isValid" tx)
+                  (FailedUnexpectedly sss)
+              )
         Passes -> pure ()
-    Left info -> failBecause (CollectErrors info)
+    Left info -> failBecause (liftfail (CollectErrors @era info))
   let !_ =
         traceEvent
           ( intercalate
@@ -242,42 +245,32 @@ scriptsValidateTransition = do
 
   pure $! updateUTxOState u txb depositChange ppup'
 
-scriptsNotValidateTransition ::
-  forall era.
-  ( Era era,
-    Eq (Core.PParams era),
-    Show (Core.PParams era),
-    Show (Core.PParamsDelta era),
-    Eq (Core.PParamsDelta era),
-    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (Core.EraRule "PPUP" era) (UTXOS era),
-    ValidateScript era,
-    Core.Script era ~ Script era,
+genericScriptsNotValidateTransition ::
+  forall era utxos.
+  ( ValidateScript era,
+    STS (utxos era), -- arises from liftSTS
+    Environment (utxos era) ~ UtxoEnv era,
+    Signal (utxos era) ~ ValidatedTx era,
+    BaseM (utxos era) ~ ShelleyBase,
+    State (utxos era) ~ UTxOState era,
     Core.Value era ~ Value (Crypto era),
-    Core.ChainData (Core.TxOut era),
-    Core.SerialisableData (Core.TxOut era),
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    Core.Script era ~ Script era,
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "mint" (Core.TxBody era) (Value (Crypto era)),
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    Core.ChainData (Core.TxBody era),
-    ToCBOR (Core.TxBody era),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
-  TransitionRule (UTXOS era)
-scriptsNotValidateTransition = do
+  UtxosDelta utxos era ->
+  TransitionRule (utxos era)
+genericScriptsNotValidateTransition delta = do
   TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   let txb = body tx
+      liftfail = embed' delta
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
   let !_ =
@@ -292,9 +285,9 @@ scriptsNotValidateTransition = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       case evalScripts @era tx sLst of
-        Passes -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+        Passes -> False ?!## liftfail (ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly)
         Fails _sss -> pure ()
-    Left info -> failBecause (CollectErrors info)
+    Left info -> failBecause (liftfail (CollectErrors @era info))
   let !_ =
         traceEvent
           ( intercalate
@@ -306,13 +299,12 @@ scriptsNotValidateTransition = do
           ()
       {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
       {- utxoDel  = getField @"collateral" txb ◁ utxo -}
-      !(!utxoKeep, !utxoDel) =
-        SplitMap.extractKeysSet (unUTxO utxo) (getField @"collateral" txb)
+      !(!utxoKeep, !utxoDel, appliedfees) = collBalanceFees' delta txb utxo
   pure
     $! us
-      { _utxo = UTxO utxoKeep,
-        _fees = fees <> Val.coin (balance (UTxO utxoDel)),
-        _stakeDistro = updateStakeDistribution (_stakeDistro us) (UTxO utxoDel) mempty
+      { _utxo = utxoKeep,
+        _fees = fees <> appliedfees,
+        _stakeDistro = updateStakeDistribution (_stakeDistro us) utxoDel mempty
       }
 
 data TagMismatchDescription
@@ -448,15 +440,15 @@ constructValidated globals (UtxoEnv _ pp _ _) st tx =
             ValidatedTx
               (getField @"body" tx)
               (getField @"wits" tx)
-              (IsValid (lift scriptEvalResult))
+              (IsValid (liftfail scriptEvalResult))
               (getField @"auxiliaryData" tx)
        in pure vTx
   where
     utxo = _utxo st
     sysS = systemStart globals
     ei = epochInfo globals
-    lift Passes = True -- Convert a ScriptResult into a Bool
-    lift (Fails _) = False
+    liftfail Passes = True -- Convert a ScriptResult into a Bool
+    liftfail (Fails _) = False
 
 --------------------------------------------------------------------------------
 -- 2-phase checks
@@ -483,3 +475,25 @@ lbl2Phase = "2phase"
 (?!##) = labeledPred [lblStatic, lbl2Phase]
 
 infix 1 ?!##
+
+-- ============================================================
+
+data UtxosDelta utxos era = UtxosDelta
+  { collBalanceFees' :: Core.TxBody era -> UTxO era -> (UTxO era, UTxO era, Coin),
+    embed' :: UtxosPredicateFailure era -> PredicateFailure (utxos era)
+  }
+
+alonzoUtxosDelta ::
+  ( Era era,
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  UtxosDelta UTXOS era
+alonzoUtxosDelta = UtxosDelta collBalFee id
+  where
+    collBalFee txb utxo = (UTxO utxoKeep, UTxO utxoDel, coin_)
+      where
+        !(!utxoKeep, !utxoDel) =
+          SplitMap.extractKeysSet
+            (unUTxO utxo)
+            (getField @"collateral" txb)
+        !coin_ = Val.coin (balance (UTxO utxoDel))

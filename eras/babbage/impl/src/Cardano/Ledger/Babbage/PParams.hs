@@ -46,7 +46,6 @@ import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.BaseTypes
   ( NonNegativeInterval,
     Nonce,
-    StrictMaybe (..),
     UnitInterval,
     fromSMaybe,
     isSNothing,
@@ -80,6 +79,7 @@ import Data.Coders
 import Data.Default (Default (..))
 import Data.Functor.Identity (Identity (..))
 import Data.Map.Strict (Map)
+import Data.Maybe.Strict (StrictMaybe (..))
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))

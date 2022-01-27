@@ -23,8 +23,8 @@ module Cardano.Ledger.Babbage.TxBody
   ( TxOut (TxOut, TxOutCompact, TxOutCompactDH, TxOutCompactDatum, TxOutCompactRefScript),
     TxBody
       ( TxBody,
-        inputs,
-        collateral,
+        spendingInputs,
+        collateralInputs,
         referenceInputs,
         outputs,
         collateralReturn,
@@ -42,8 +42,8 @@ module Cardano.Ledger.Babbage.TxBody
       ),
     Datum (..),
     datumDataHash,
-    inputs',
-    collateral',
+    spendingInputs',
+    collateralInputs',
     referenceInputs',
     outputs',
     collateralReturn',
@@ -96,7 +96,6 @@ import Cardano.Ledger.Alonzo.TxBody
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.BaseTypes
   ( Network (..),
-    StrictMaybe (..),
     isSNothing,
     maybeToStrictMaybe,
   )
@@ -137,6 +136,7 @@ import Cardano.Ledger.Val
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Data.Coders
 import Data.Maybe (fromMaybe)
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -372,7 +372,7 @@ pattern TxOutCompactRefScript addr vl d rs <-
 type ScriptIntegrityHash crypto = SafeHash crypto EraIndependentScriptIntegrity
 
 data TxBodyRaw era = TxBodyRaw
-  { _spendInputs :: !(Set (TxIn (Crypto era))),
+  { _spendingInputs :: !(Set (TxIn (Crypto era))),
     _collateralInputs :: !(Set (TxIn (Crypto era))),
     _referenceInputs :: !(Set (TxIn (Crypto era))),
     _outputs :: !(StrictSeq (TxOut era)),
@@ -497,8 +497,8 @@ pattern TxBody ::
   StrictMaybe Network ->
   TxBody era
 pattern TxBody
-  { inputs,
-    collateral,
+  { spendingInputs,
+    collateralInputs,
     referenceInputs,
     outputs,
     collateralReturn,
@@ -517,8 +517,8 @@ pattern TxBody
   TxBodyConstr
     ( Memo
         TxBodyRaw
-          { _spendInputs = inputs,
-            _collateralInputs = collateral,
+          { _spendingInputs = spendingInputs,
+            _collateralInputs = collateralInputs,
             _referenceInputs = referenceInputs,
             _outputs = outputs,
             _collateralReturn = collateralReturn,
@@ -586,8 +586,8 @@ instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-inputs' :: TxBody era -> Set (TxIn (Crypto era))
-collateral' :: TxBody era -> Set (TxIn (Crypto era))
+spendingInputs' :: TxBody era -> Set (TxIn (Crypto era))
+collateralInputs' :: TxBody era -> Set (TxIn (Crypto era))
 referenceInputs' :: TxBody era -> Set (TxIn (Crypto era))
 outputs' :: TxBody era -> StrictSeq (TxOut era)
 collateralReturn' :: TxBody era -> StrictMaybe (TxOut era)
@@ -601,11 +601,12 @@ reqSignerHashes' :: TxBody era -> Set (KeyHash 'Witness (Crypto era))
 adHash' :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
 mint' :: TxBody era -> Value (Crypto era)
 scriptIntegrityHash' :: TxBody era -> StrictMaybe (ScriptIntegrityHash (Crypto era))
-inputs' (TxBodyConstr (Memo raw _)) = _spendInputs raw
+
+spendingInputs' (TxBodyConstr (Memo raw _)) = _spendingInputs raw
 
 txnetworkid' :: TxBody era -> StrictMaybe Network
 
-collateral' (TxBodyConstr (Memo raw _)) = _collateralInputs raw
+collateralInputs' (TxBodyConstr (Memo raw _)) = _collateralInputs raw
 
 referenceInputs' (TxBodyConstr (Memo raw _)) = _referenceInputs raw
 
@@ -742,7 +743,7 @@ encodeTxBodyRaw ::
   Encode ('Closed 'Sparse) (TxBodyRaw era)
 encodeTxBodyRaw
   TxBodyRaw
-    { _spendInputs,
+    { _spendingInputs,
       _collateralInputs,
       _referenceInputs,
       _outputs,
@@ -763,7 +764,7 @@ encodeTxBodyRaw
       ( \i ifee ri o cr tc f t c w u b rsh mi sh ah ni ->
           TxBodyRaw i ifee ri o cr tc c w f (ValidityInterval b t) u rsh mi sh ah ni
       )
-      !> Key 0 (E encodeFoldable _spendInputs)
+      !> Key 0 (E encodeFoldable _spendingInputs)
       !> Key 13 (E encodeFoldable _collateralInputs)
       !> Key 18 (E encodeFoldable _referenceInputs)
       !> Key 1 (E encodeFoldable _outputs)
@@ -832,7 +833,7 @@ instance
       bodyFields :: (Word -> Field (TxBodyRaw era))
       bodyFields 0 =
         field
-          (\x tx -> tx {_spendInputs = x})
+          (\x tx -> tx {_spendingInputs = x})
           (D (decodeSet fromCBOR))
       bodyFields 13 =
         field
@@ -885,7 +886,7 @@ instance
 -- HasField instances to be consistent with earlier Eras
 
 instance (Crypto era ~ c) => HasField "inputs" (TxBody era) (Set (TxIn c)) where
-  getField (TxBodyConstr (Memo m _)) = _spendInputs m
+  getField (TxBodyConstr (Memo m _)) = _spendingInputs m
 
 instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
   getField (TxBodyConstr (Memo m _)) = _outputs m

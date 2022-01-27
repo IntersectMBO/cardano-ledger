@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
@@ -10,29 +11,36 @@ module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 
 import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState,
     witsVKeyNeeded,
   )
+import Cardano.Ledger.Shelley.PParams (Update)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.Rules.Utxow
-  ( ShelleyStyleWitnessNeeds,
+  ( ShelleyUtxowNeeds,
+    UtxowDeltaS (..),
     UtxowEvent (..),
     UtxowPredicateFailure (..),
-    shelleyStyleWitness,
+    genericShelleyUtxow,
   )
-import Cardano.Ledger.Shelley.Tx (WitnessSet)
+import Cardano.Ledger.Shelley.Tx (TxIn, WitnessSet)
+import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
 import Control.State.Transition.Extended
+import qualified Data.Map as Map
+import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Set as Set
+import GHC.Records (HasField (getField))
 
 -- ==============================================================================
 --   We want to reuse the same rules for Mary and Allegra. We accomplish this
 --   by adding: HasField "minted" (Core.TxBody era) (Set (ScriptHash (Crypto era)))
 --   to the (WellFormed era) constraint, and adjusting UTxO.(ScriptsNeeded) to
 --   add this set to its output. In the Shelley and Allegra Era, this is the empty set.
---   With this generalization, Cardano.Ledger.Shelley.Rules.Utxow(shelleyStyleWitness)
+--   With this generalization, Cardano.Ledger.Shelley.Rules.Utxow(genericShelleyUtxow)
 --   can still be used in Allegra and Mary, because they use the same Shelley style rules.
 
 --------------------------------------------------------------------------------
@@ -51,7 +59,7 @@ instance
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXO" era) ~ Core.Tx era,
     -- Supply the HasField and Validate instances for Mary and Allegra (which match Shelley)
-    ShelleyStyleWitnessNeeds era
+    ShelleyUtxowNeeds era
   ) =>
   STS (UTXOW era)
   where
@@ -62,11 +70,24 @@ instance
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
   type Event (UTXOW era) = UtxowEvent era
 
-  transitionRules = [shelleyStyleWitness witsVKeyNeeded id]
+  transitionRules = [genericShelleyUtxow maUtxowDelta]
 
   -- The ShelleyMA Era uses the same PredicateFailure type
   -- as Shelley, so the 'embed' function is identity
   initialRules = []
+
+maUtxowDelta ::
+  ( Era era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Ord (Core.Script era)
+  ) =>
+  UtxowDeltaS UTXOW era
+maUtxowDelta = UtxowDeltaS witsVKeyNeeded id txscripts (const Set.empty)
+  where
+    txscripts wits _utxo = Set.fromList (Map.elems (getField @"scriptWits" wits))
 
 instance
   ( Era era,

@@ -26,9 +26,6 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
 import qualified Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.TxInfo (validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
@@ -41,6 +38,18 @@ import Cardano.Ledger.Babbage.PParams
     PParamsUpdate,
     updatePParams,
   )
+{- TEMPORARILY COMMENTED out see bug in instance API.ShelleyEraCrypto c => API.ApplyTx (BabbageEra c) where
+import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
+import Control.Arrow (left)
+import Control.Monad.Except (liftEither)
+import Control.Monad.Reader (runReader)
+import Control.State.Transition.Extended (TRC (TRC))
+-}
+
+-- import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO)
+import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut), getBabbageTxOutEitherAddr)
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
@@ -51,7 +60,6 @@ import qualified Cardano.Ledger.Era as EraModule
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
 import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import qualified Cardano.Ledger.Shelley.API as API
@@ -84,10 +92,6 @@ import Cardano.Ledger.Shelley.UTxO (balance)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
-import Control.Arrow (left)
-import Control.Monad.Except (liftEither)
-import Control.Monad.Reader (runReader)
-import Control.State.Transition.Extended (TRC (TRC))
 import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
@@ -107,16 +111,30 @@ instance
 
   getTxOutEitherAddr = getBabbageTxOutEitherAddr
 
+{-
+I NEED HELP FIXING THIS
+-- • Reduction stack overflow; size = 201
+--      When simplifying the following type: Core.TxBody (BabbageEra c)
+--      Use -freduction-depth=0 to disable this check
+--      (any upper bound you could choose might fail unpredictably with
+--       minor updates to GHC, so disabling the check is recommended if
+--       you're sure that type checking should terminate)
+--    • In the instance declaration for ‘API.ApplyTx (BabbageEra c)’
+--    |
+-- 117 | instance API.ShelleyEraCrypto c => API.ApplyTx (BabbageEra c) where
+
 instance API.ShelleyEraCrypto c => API.ApplyTx (BabbageEra c) where
   reapplyTx globals env state vtx =
     let res =
           flip runReader globals
             . applySTSNonStatic
-              @(Core.EraRule "LEDGER" (BabbageEra c))
+              -- @(Core.EraRule "LEDGER" (BabbageEra c))
+              @(Alonzo.AlonzoLEDGER (BabbageEra c)) -- Tried this
             $ TRC (env, state, API.extractTx vtx)
      in liftEither . left API.ApplyTxError $ res
 
 instance API.ShelleyEraCrypto c => API.ApplyBlock (BabbageEra c)
+-}
 
 instance (CC.Crypto c) => Shelley.ValidateScript (BabbageEra c) where
   isNativeScript x = not (isPlutusScript x)
@@ -219,7 +237,7 @@ instance CC.Crypto c => EraModule.SupportsSegWit (BabbageEra c) where
   hashTxSeq = Alonzo.hashTxSeq
   numSegComponents = 4
 
-instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
+-- instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
 
 -------------------------------------------------------------------------------
 -- Era Mapping
@@ -227,11 +245,11 @@ instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
 
 -- Rules inherited from Alonzo
 
-type instance Core.EraRule "UTXOS" (BabbageEra c) = Alonzo.UTXOS (BabbageEra c)
+type instance Core.EraRule "UTXOS" (BabbageEra c) = BabbageUTXOS (BabbageEra c)
 
-type instance Core.EraRule "UTXO" (BabbageEra c) = Alonzo.AlonzoUTXO (BabbageEra c)
+type instance Core.EraRule "UTXO" (BabbageEra c) = BabbageUTXO (BabbageEra c)
 
-type instance Core.EraRule "UTXOW" (BabbageEra c) = Alonzo.AlonzoUTXOW (BabbageEra c)
+type instance Core.EraRule "UTXOW" (BabbageEra c) = BabbageUTXOW (BabbageEra c)
 
 type instance Core.EraRule "LEDGER" (BabbageEra c) = Alonzo.AlonzoLEDGER (BabbageEra c)
 

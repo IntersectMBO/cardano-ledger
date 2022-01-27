@@ -31,9 +31,10 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr,
+    Redeemers,
+    TxDats,
     TxWitness (..),
     unRedeemers,
-    unTxDats,
   )
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
@@ -61,10 +62,11 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
-  ( ShelleyStyleWitnessNeeds,
+  ( ShelleyUtxowNeeds,
+    UtxowDeltaS (UtxowDeltaS),
     UtxowEvent (UtxoEvent),
     UtxowPredicateFailure (..),
-    shelleyStyleWitness,
+    genericShelleyUtxow,
   )
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..), extractKeyHashWitnessSet)
@@ -203,56 +205,52 @@ langsUsed hashScriptMap =
     ]
 
 {- Defined in the Shelley Utxow rule.
-type ShelleyStyleWitnessNeeds era =
+type ShelleyUtxowNeeds era =
   ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    Ord(Core.Script),
     ValidateAuxiliaryData era (Crypto era),
     ValidateScript era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   )
 -}
 
--- | Constraints to make an Alonzo Utxow STS instance
---   (in addition to ShelleyStyleWitnessNeeds)
-type AlonzoStyleAdditions era =
-  ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- BE SURE AND ADD THESE INSTANCES
+type AlonzoUtxowNeeds era =
+  ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
+    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
+    HasField "txdats" (Core.Witnesses era) (TxDats era),
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "scriptIntegrityHash" (Core.TxBody era) (StrictMaybe (ScriptIntegrityHash (Crypto era)))
   )
 
--- | A somewhat generic STS transitionRule function for the Alonzo Era.
-alonzoStyleWitness ::
+genericAlonzoUtxow ::
   forall era utxow.
   ( Era era,
-    -- Fix some Core types to the Alonzo Era
-    Core.Tx era ~ ValidatedTx era, -- scriptsNeeded, checkScriptData etc. are fixed at Alonzo.Tx
-    Core.Script era ~ Script era,
-    -- Allow UTXOW to call UTXO
-    Embed (Core.EraRule "UTXO" era) (utxow era),
+    -- STS properties
+    STS (utxow era),
+    Signal (utxow era) ~ ValidatedTx era,
+    Environment (utxow era) ~ UtxoEnv era,
+    BaseM (utxow era) ~ ShelleyBase,
+    State (utxow era) ~ UTxOState era,
+    -- utxow calls utxo, need some consistency constraints
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era,
-    -- Asumptions needed since we are going to fix utxow when we use this in an STS Era
-    BaseM (utxow era) ~ ShelleyBase,
-    Environment (utxow era) ~ UtxoEnv era,
-    State (utxow era) ~ UTxOState era,
-    Signal (utxow era) ~ ValidatedTx era,
-    PredicateFailure (utxow era) ~ AlonzoPredFail era,
-    STS (utxow era),
-    -- Supply the HasField and Validate instances for Alonzo
-    ShelleyStyleWitnessNeeds era,
-    AlonzoStyleAdditions era,
-    -- New transaction body fields needed for Alonzo
-    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    --
-    (HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel))
+    Signal (Core.EraRule "UTXO" era) ~ Core.Tx era,
+    Embed (Core.EraRule "UTXO" era) (utxow era),
+    -- What it means t be a Tx has changed, Tx have validation fields
+    Core.Tx era ~ ValidatedTx era,
+    -- Assorted needs about substructure in the Shelley and Alonzo Eras
+    AlonzoUtxowNeeds era,
+    ShelleyUtxowNeeds era
   ) =>
+  UtxowDeltaA utxow era ->
   TransitionRule (utxow era)
-alonzoStyleWitness = do
+genericAlonzoUtxow delta = do
   (TRC (UtxoEnv _slot pp _stakepools _genDelegs, u', tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
@@ -262,6 +260,7 @@ alonzoStyleWitness = do
   let utxo = _utxo u'
       txbody = getField @"body" (tx :: Core.Tx era)
       witsKeyHashes = unWitHashes $ witsFromTxWitnesses @era tx
+      liftfail = embed' delta
 
   {-  { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} = dom(txdats txw)   -}
   let inputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
@@ -276,17 +275,17 @@ alonzoStyleWitness = do
     SNothing ->
       -- In the spec, the Nothing value can end up on the left hand side
       -- of the equality check, but we must explicitly rule it out.
-      failBecause . UnspendableUTxONoDatumHash . Set.fromList $
+      failBecause . liftfail . UnspendableUTxONoDatumHash . Set.fromList $
         [ input
           | (input, output) <- SplitMap.toList smallUtxo,
             SNothing <- [getField @"datahash" output],
-            isTwoPhaseScriptAddress @era tx (getTxOutAddr output)
+            isTwoPhaseScriptAddress' delta tx utxo (getTxOutAddr output)
         ]
     SJust utxoHashes -> do
-      let txHashes = domain (unTxDats . txdats . wits $ tx)
-          inputHashes = Set.fromList utxoHashes
+      let txHashes = domain (getField @"txdatahash" tx)
+          inputHashes = (Set.fromList utxoHashes) :: Set (DataHash (Crypto era))
           unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
-      Set.null unmatchedDatumHashes ?! MissingRequiredDatums unmatchedDatumHashes txHashes
+      Set.null unmatchedDatumHashes ?! liftfail (MissingRequiredDatums unmatchedDatumHashes txHashes)
 
       -- Check that all supplimental datums contained in the witness set appear in the outputs.
       let outputDatumHashes =
@@ -299,7 +298,7 @@ alonzoStyleWitness = do
           (okSupplimentalDHs, notOkSupplimentalDHs) =
             Set.partition (`Set.member` outputDatumHashes) supplimentalDatumHashes
       Set.null notOkSupplimentalDHs
-        ?! NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs
+        ?! liftfail (NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs)
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h \mapsto s ∈ txscripts txw, s ∈ Scriptph2}     -}
@@ -312,31 +311,32 @@ alonzoStyleWitness = do
         ]
       (extraRdmrs, missingRdmrs) =
         extSymmetricDifference
-          (Map.keys $ unRedeemers $ txrdmrs $ wits tx)
+          (Map.keys $ unRedeemers $ getField @"txrdmrs" (getField @"wits" tx))
           id
           redeemersNeeded
           fst
-  null extraRdmrs ?! ExtraRedeemers extraRdmrs
-  null missingRdmrs ?! MissingRedeemers (map snd missingRdmrs)
+  null extraRdmrs ?! liftfail (ExtraRedeemers extraRdmrs)
+  null missingRdmrs ?! liftfail (MissingRedeemers (map snd missingRdmrs))
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded includes the reqSignerHashes in the union   -}
   let reqSignerHashes' = getField @"reqSignerHashes" txbody
   eval (reqSignerHashes' ⊆ witsKeyHashes)
-    ?!# MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)
+    ?!# liftfail (MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes))
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  let languages =
-        [ l
-          | (_hash, script) <- Map.toList (getField @"scriptWits" tx),
-            (not . isNativeScript @era) script,
-            Just l <- [language @era script]
-        ]
-      computedPPhash = hashScriptIntegrity pp (Set.fromList languages) (txrdmrs . wits $ tx) (txdats . wits $ tx)
+  let languages = languages' delta tx utxo
+      computedPPhash =
+        hashScriptIntegrity
+          pp
+          languages
+          (getField @"txrdmrs" (getField @"wits" tx))
+          (getField @"txdats" (getField @"wits" tx))
       bodyPPhash = getField @"scriptIntegrityHash" txbody
-  bodyPPhash == computedPPhash ?! PPViewHashesDontMatch bodyPPhash computedPPhash
 
-  {- The shelleyStyleWitness calls the UTXO rule which applies all these rules -}
+  bodyPPhash == computedPPhash ?! liftfail (PPViewHashesDontMatch bodyPPhash computedPPhash)
+
+  {- The genericShelleyUtxow calls the UTXOW rule which applies all these rules -}
   {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
@@ -345,7 +345,10 @@ alonzoStyleWitness = do
   {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  shelleyStyleWitness witsVKeyNeeded WrappedShelleyEraFailure
+  genericShelleyUtxow (shelley' delta)
+
+-- ================================================================
+-- Some operations where the changes in Alonzo need restructuring
 
 -- | Collect the set of hashes of keys that needs to sign a given transaction.
 --  This set consists of the txin owners, certificate authors, and withdrawal
@@ -435,8 +438,8 @@ extSymmetricDifference as fa bs fb = (extraA, extraB)
     extraA = filter (\x -> not $ fa x `Set.member` intersection) as
     extraB = filter (\x -> not $ fb x `Set.member` intersection) bs
 
--- ====================================
--- Make the STS instance
+-- ============================================================
+-- Make the STS instance by specializing genericAlonzoUtxow
 
 data AlonzoUTXOW era
 
@@ -445,6 +448,7 @@ instance
   ( -- Fix some Core types to the Alonzo Era
     Core.Tx era ~ ValidatedTx era,
     Core.Script era ~ Script era,
+    Core.Witnesses era ~ TxWitness era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (AlonzoUTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
@@ -453,11 +457,12 @@ instance
     -- New transaction body fields needed for Alonzo
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "scriptIntegrityHash" (Core.TxBody era) (StrictMaybe (ScriptIntegrityHash (Crypto era))),
     -- Supply the HasField and Validate instances for Alonzo
-    ShelleyStyleWitnessNeeds era, -- supplies a subset of those needed. All the old Shelley Needs still apply.
+    ShelleyUtxowNeeds era, -- supplies a subset of those needed. All the old Shelley Needs still apply.
     Show (Core.TxOut era),
-    (HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)),
-    AlonzoStyleAdditions era
+    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
   STS (AlonzoUTXOW era)
   where
@@ -467,7 +472,7 @@ instance
   type BaseM (AlonzoUTXOW era) = ShelleyBase
   type PredicateFailure (AlonzoUTXOW era) = AlonzoPredFail era
   type Event (AlonzoUTXOW era) = AlonzoEvent era
-  transitionRules = [alonzoStyleWitness]
+  transitionRules = [genericAlonzoUtxow alonzoUtxowDeltaA]
   initialRules = []
 
 instance
@@ -483,3 +488,60 @@ instance
   where
   wrapFailed = WrappedShelleyEraFailure . UtxoFailure
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent
+
+-- ==================================================================
+-- How to specialize the Utxow rule
+
+-- | Information to distinguish between the utxow rules of different Eras
+data UtxowDeltaA utxow era = UtxowDeltaA
+  { languages' :: Core.Tx era -> UTxO era -> Set Language,
+    isTwoPhaseScriptAddress' :: Core.Tx era -> UTxO era -> Addr (Crypto era) -> Bool,
+    shelley' :: UtxowDeltaS utxow era,
+    embed' :: AlonzoPredFail era -> PredicateFailure (utxow era)
+  }
+
+-- ==================================================
+
+-- | Specializing UtxowDeltaA to the Alonzo era
+alonzoUtxowDeltaA ::
+  forall era.
+  ( Era era,
+    ValidateScript era,
+    Core.Script era ~ Script era,
+    Core.Witnesses era ~ TxWitness era,
+    Core.Tx era ~ ValidatedTx era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+  ) =>
+  UtxowDeltaA AlonzoUTXOW era
+alonzoUtxowDeltaA = UtxowDeltaA lang istwo deltaS id
+  where
+    lang tx _utxo =
+      Set.fromList
+        [ l
+          | (_hash, script) <- Map.toList (getField @"scriptWits" tx),
+            (not . isNativeScript @era) script,
+            Just l <- [language script]
+        ]
+    istwo tx _utxo addr = isTwoPhaseScriptAddress tx addr
+    deltaS = alonzoUtxowDeltaS
+
+-- | Specializing UtxowDeltaS to the Alonzo era
+alonzoUtxowDeltaS ::
+  ( Era era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    Core.Witnesses era ~ TxWitness era,
+    Core.Script era ~ Script era
+  ) =>
+  UtxowDeltaS AlonzoUTXOW era
+alonzoUtxowDeltaS = UtxowDeltaS witsVKeyNeeded liftfail txsc (const Set.empty)
+  where
+    txsc tx _utxo = Set.fromList (Map.elems (txscripts (getField @"wits" tx)))
+    liftfail = WrappedShelleyEraFailure

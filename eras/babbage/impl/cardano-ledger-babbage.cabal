@@ -34,11 +34,16 @@ common project-config
 library
   import:             base, project-config
   exposed-modules:
+    Cardano.Ledger.Babbage.Collateral
     Cardano.Ledger.Babbage.Genesis
     Cardano.Ledger.Babbage.PParams
+    Cardano.Ledger.Babbage.Scripts
     Cardano.Ledger.Babbage.Tx
     Cardano.Ledger.Babbage.TxBody
     Cardano.Ledger.Babbage.Translation
+    Cardano.Ledger.Babbage.Rules.Utxo
+    Cardano.Ledger.Babbage.Rules.Utxos
+    Cardano.Ledger.Babbage.Rules.Utxow
     Cardano.Ledger.Babbage
   build-depends:
     array,
@@ -54,6 +59,7 @@ library
     cardano-ledger-shelley-ma,
     cardano-prelude,
     cardano-slotting,
+    compact-map,
     containers,
     data-default,
     deepseq,

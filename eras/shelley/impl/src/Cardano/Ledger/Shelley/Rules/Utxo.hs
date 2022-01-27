@@ -45,7 +45,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
+import Cardano.Ledger.Era (Crypto, Era (getTxOutAddr), getTxOutBootstrapAddress)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
   ( decodeList,
@@ -418,6 +418,8 @@ utxoInductive = do
           (SplitMap.elems outputs)
   null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
 
+  -- Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
+  -- It is important to limit their overall size.
   let outputsAttrsTooBig = filterOutputsAttrsTooBig outputs
   null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 

@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -26,7 +27,7 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee, totExUnits)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txrdmrs'), nullRedeemers)
+import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness (txrdmrs'), nullRedeemers)
 import Cardano.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
@@ -44,10 +45,9 @@ import Cardano.Ledger.CompactAddress
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
+import Cardano.Ledger.Era (Era (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Rules.ValidationMode ((?!#))
-import Cardano.Ledger.Shelley.Constraints (UsesPParams)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
@@ -240,6 +240,40 @@ vKeyLocked txOut =
     Left addr -> isKeyHashAddr addr
     Right cAddr -> isKeyHashCompactAddr cAddr
 
+-- =======================================================
+
+-- | Record fields needed to compute the Utxo rules
+type AlonzoUtxoNeeds era =
+  ( HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "_maxTxSize" (Core.PParams era) Natural,
+    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
+    HasField "_coinsPerUTxOWord" (Core.PParams era) Coin,
+    HasField "_maxValSize" (Core.PParams era) Natural,
+    HasField "_maxCollateralInputs" (Core.PParams era) Natural,
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "mint" (Core.TxBody era) (Core.Value era),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network)
+  )
+
+-- | Record fields needed to compute Fees
+type FeeNeeds era =
+  ( HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
+    HasField "_minfeeA" (Core.PParams era) Natural,
+    HasField "_minfeeB" (Core.PParams era) Natural,
+    HasField "_prices" (Core.PParams era) Prices,
+    HasField "_collateralPercentage" (Core.PParams era) Natural
+  )
+
+-- ======================================================================
+
 -- | feesOK is a predicate with several parts. Some parts only apply in special circumstances.
 --   1) The fee paid is >= the minimum fee
 --   2) If the total ExUnits are 0 in both Memory and Steps, no further part needs to be checked.
@@ -248,28 +282,25 @@ vKeyLocked txOut =
 --      fee marked in the transaction
 --   5) The collateral inputs do not contain any non-ADA part
 --   6) There is at least one collateral input
---   As a TransitionRule it will return (), and raise an error (rather than
---   return) if any of the required parts are False.
+--   As a TransitionRule it will return (), and raise a PredicateFailure
+--   (rather than return) if any of the required parts are False.
+--   We can lift this to future Era's by specifying how to 'liftfail' UtxoPredicateFailure
+--   to another predicate failure: (PredicateFailure (utxo era)) which embeds UtxoPredicateFailure
 feesOK ::
-  forall era.
+  forall era utxo.
   ( Era era,
-    ValidateScript era, -- isTwoPhaseScriptAddress
+    --  minFee requires a concrete type.
     Core.Tx era ~ Alonzo.ValidatedTx era,
-    Core.Witnesses era ~ TxWitness era,
-    HasField
-      "collateral" -- to get inputs to pay the fees
-      (Core.TxBody era)
-      (Set (TxIn (Crypto era))),
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural,
-    HasField "_prices" (Core.PParams era) Prices,
-    HasField "_collateralPercentage" (Core.PParams era) Natural
+    Core.Witnesses era ~ TxWitness era, -- Force by using ValidatedTx
+    -- substruture properties of era
+    FeeNeeds era
   ) =>
+  (UtxoPredicateFailure era -> PredicateFailure (utxo era)) ->
   Core.PParams era ->
   Core.Tx era ->
   UTxO era ->
-  Rule (AlonzoUTXO era) 'Transition ()
-feesOK pp tx (UTxO utxo) = do
+  Rule (utxo era) 'Transition ()
+feesOK liftfail pp tx (UTxO utxo) = do
   let txb = getField @"body" tx
       theFee = getField @"txfee" txb -- Coin supplied to pay fees
       collateral = getField @"collateral" txb -- Inputs allocated to pay theFee
@@ -280,81 +311,77 @@ feesOK pp tx (UTxO utxo) = do
       minimumFee = minfee @era pp tx
       collPerc = getField @"_collateralPercentage" pp
   -- Part 1
-  (minimumFee <= theFee) ?! FeeTooSmallUTxO minimumFee theFee
+  (minimumFee <= theFee) ?! liftfail (FeeTooSmallUTxO minimumFee theFee)
   -- Part 2
   unless (nullRedeemers . txrdmrs' . wits $ tx) $ do
     -- Part 3
     all vKeyLocked utxoCollateral
-      ?! ScriptsNotPaidUTxO
-        (UTxO (SplitMap.filter (not . vKeyLocked) utxoCollateral))
+      ?! liftfail
+        ( ScriptsNotPaidUTxO
+            (UTxO (SplitMap.filter (not . vKeyLocked) utxoCollateral))
+        )
     -- Part 4
     (Val.scale (100 :: Natural) (Val.coin bal) >= Val.scale collPerc theFee)
-      ?! InsufficientCollateral
-        (Val.coin bal)
-        (rationalToCoinViaCeiling $ (fromIntegral collPerc * unCoin theFee) % 100)
+      ?! liftfail
+        ( InsufficientCollateral
+            (Val.coin bal)
+            (rationalToCoinViaCeiling $ (fromIntegral collPerc * unCoin theFee) % 100)
+        )
     -- Part 5
-    Val.inject (Val.coin bal) == bal ?! CollateralContainsNonADA bal
+    Val.inject (Val.coin bal) == bal ?! liftfail (CollateralContainsNonADA bal)
     -- Part 6
-    not (null utxoCollateral) ?! NoCollateralInputs
+    not (null utxoCollateral) ?! liftfail NoCollateralInputs
 
 -- ================================================================
 
--- | The UTxO transition rule for the Alonzo eras.
-utxoTransition ::
-  forall era.
+-- | Specifying how things might change for the Utxo rule for Alonzo and later Eras
+data UtxoDelta utxo era = UtxoDelta
+  { feesOK' :: Core.PParams era -> Core.Tx era -> UTxO era -> Rule (utxo era) 'Transition (),
+    referenceInputs' :: Core.TxBody era -> Set (TxIn (Crypto era)),
+    embed' :: UtxoPredicateFailure era -> PredicateFailure (utxo era)
+  }
+
+-- | The UTxO transition rule for Alonzo-like eras.
+genericAlonzoUtxo ::
+  forall era utxo.
   ( Era era,
-    ValidateScript era,
-    -- instructions for calling UTXOS from AlonzoUTXO
-    Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
+    -- STS properties
+    STS (utxo era),
+    Signal (utxo era) ~ ValidatedTx era,
+    Environment (utxo era) ~ Shelley.UtxoEnv era,
+    BaseM (utxo era) ~ ShelleyBase,
+    State (utxo era) ~ Shelley.UTxOState era,
+    -- instructions for calling UTXOS from utxo
+    Embed (Core.EraRule "UTXOS" era) (utxo era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
-    -- We leave Core.PParams abstract
-    UsesPParams era,
-    Core.ChainData (Core.Value era),
-    Core.ChainData (Core.TxOut era),
-    Core.ChainData (Core.TxBody era),
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural,
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_maxTxSize" (Core.PParams era) Natural,
-    HasField "_prices" (Core.PParams era) Prices,
-    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_coinsPerUTxOWord" (Core.PParams era) Coin,
-    HasField "_maxValSize" (Core.PParams era) Natural,
-    HasField "_collateralPercentage" (Core.PParams era) Natural,
-    HasField "_maxCollateralInputs" (Core.PParams era) Natural,
-    Core.Tx era ~ Alonzo.ValidatedTx era,
-    Core.Witnesses era ~ TxWitness era,
-    Era.TxSeq era ~ Alonzo.TxSeq era,
-    HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    ToCBOR (Core.Value era),
-    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network)
+    -- specific wierdness
+    Core.Tx era ~ ValidatedTx era,
+    ToCBOR (Core.Value era), -- we have to serialise Value to get a compact one.
+    -- substructural properties for era
+    AlonzoUtxoNeeds era
   ) =>
-  TransitionRule (AlonzoUTXO era)
-utxoTransition = do
+  UtxoDelta utxo era ->
+  TransitionRule (utxo era)
+genericAlonzoUtxo delta = do
   TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
-
   {-   txb := txbody tx   -}
   {-   (,i_f) := txvldttx   -}
-  let txb = body tx
+  let txb = getField @"body" tx
       vi@(ValidityInterval _ i_f) = getField @"vldt" txb
-      inputsAndCollateral =
-        Set.union
-          (getField @"inputs" txb)
-          (getField @"collateral" txb)
+      allInputs =
+        Set.unions
+          [ getField @"inputs" txb,
+            getField @"collateral" txb,
+            referenceInputs' delta txb
+          ]
+      liftfail = embed' delta
 
   {-   ininterval slot (txvldt tx)    -}
   inInterval slot vi
-    ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
+    ?! liftfail (OutsideValidityIntervalUTxO (getField @"vldt" txb) slot)
 
   {-   epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇   -}
   sysSt <- liftSTS $ asks systemStart
@@ -363,29 +390,29 @@ utxoTransition = do
     SNothing -> pure ()
     SJust ifj -> case epochInfoSlotToUTCTime ei sysSt ifj of
       -- if tx has non-native scripts, end of validity interval must translate to time
-      Left _ -> (nullRedeemers . txrdmrs' . wits $ tx) ?! OutsideForecast ifj
+      Left _ -> (nullRedeemers . getField @"txrdmrs" . getField @"wits" $ tx) ?! liftfail (OutsideForecast ifj)
       Right _ -> pure ()
 
   {-   txins txb ≠ ∅   -}
-  not (Set.null (getField @"inputs" txb)) ?!# InputSetEmptyUTxO
+  not (Set.null (getField @"inputs" txb)) ?!# liftfail InputSetEmptyUTxO
 
   {-   feesOK pp tx utxo   -}
-  feesOK pp tx utxo -- Generalizes the fee to small from earlier Era's
+  feesOK' delta pp tx utxo -- Generalizes the fee checks from earlier Era's
 
-  {- badInputs = (txins txb ∪ collateral txb) ➖ dom utxo -}
-  let badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) inputsAndCollateral
-  {-   (txins txb) ∪ (collateral txb) ⊆ dom utxo   -}
-  Set.null badInputs ?! BadInputsUTxO badInputs
+  {- badInputs = (spendingInputs txb ∪ collateralInputs txb ∪ referenceInputs txb) ➖ dom utxo -}
+  let badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) allInputs
+  {-  (spendingInputs txb ∪ collateralInputs txb ∪ referenceInputs txb) ⊆ dom utxo   -}
+  Set.null badInputs ?! liftfail (BadInputsUTxO badInputs)
 
   {-   consumedpp utxo txb = producedpp poolParams txb    -}
   let consumed_ = consumed @era pp utxo txb
       produced_ = Shelley.produced @era pp (`Map.notMember` stakepools) txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
+  consumed_ == produced_ ?! liftfail (ValueNotConservedUTxO consumed_ produced_)
 
   {-   adaID ∉ supp mint tx   -}
   -- Check that the mint field does not try to mint ADA.
   -- Here in the implementation, we store the adaId policyID in the coin field of the value.
-  Val.coin (getField @"mint" txb) == Val.zero ?!# TriesToForgeADA
+  Val.coin (getField @"mint" txb) == Val.zero ?!# liftfail TriesToForgeADA
 
   {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject(uxoEntrySizetxout ∗ coinsPerUTxOWord p)   -}
   let (Coin coinsPerUTxOWord) = getField @"_coinsPerUTxOWord" pp
@@ -401,7 +428,7 @@ utxoTransition = do
                       (Val.inject $ Coin (utxoEntrySize out * coinsPerUTxOWord))
           )
           (SplitMap.elems outputs)
-  null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+  null outputsTooSmall ?! liftfail (OutputTooSmallUTxO outputsTooSmall)
 
   {-   ∀ txout ∈ txouts txb, serSize(getValuetxout) ≤ (maxTxSizep p)∗(maxValSizep pp)   -}
   -- use serialized length of Value because this Value size is being limited inside a serialized Tx
@@ -414,19 +441,19 @@ utxoTransition = do
              in if sersize > maxValSize
                   then (fromIntegral sersize, fromIntegral maxValSize, out) : ans
                   else ans
-  null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
+  null outputsTooBig ?! liftfail (OutputTooBigUTxO outputsTooBig)
 
   {-    ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64   -}
   let outputsAttrsTooBig = Shelley.filterOutputsAttrsTooBig outputs
-  null outputsAttrsTooBig ?!# OutputBootAddrAttrsTooBig outputsAttrsTooBig
+  null outputsAttrsTooBig ?!# liftfail (OutputBootAddrAttrsTooBig outputsAttrsTooBig)
 
   {-   ∀(_ ↦ (a,_)) ∈ txouts txb, netId a = NetworkId   -}
   ni <- liftSTS $ asks networkId
   let addrsWrongNetwork =
         filter
           (\a -> getNetwork a /= ni)
-          (fmap getTxOutAddr $ toList $ getField @"outputs" txb)
-  null addrsWrongNetwork ?!# WrongNetwork ni (Set.fromList addrsWrongNetwork)
+          (fmap (getTxOutAddr) $ toList $ getField @"outputs" txb)
+  null addrsWrongNetwork ?!# liftfail (WrongNetwork ni (Set.fromList addrsWrongNetwork))
 
   {-   ∀ (a ↦ _) ∈ txwdrls txb, netId a = NetworkId   -}
   let wdrlsWrongNetwork =
@@ -434,73 +461,60 @@ utxoTransition = do
           (\a -> getRwdNetwork a /= ni)
           (Map.keys . unWdrl . getField @"wdrls" $ txb)
   null wdrlsWrongNetwork
-    ?!# WrongNetworkWithdrawal
-      ni
-      (Set.fromList wdrlsWrongNetwork)
+    ?!# liftfail (WrongNetworkWithdrawal ni (Set.fromList wdrlsWrongNetwork))
 
   {-   txnetworkid txb = NetworkId   -}
   case getField @"txnetworkid" txb of
     SNothing -> pure ()
-    SJust bid -> ni == bid ?!# WrongNetworkInTxBody ni bid
+    SJust bid -> ni == bid ?!# liftfail (WrongNetworkInTxBody ni bid)
 
   {-   txsize tx ≤ maxTxSize pp   -}
   let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
       txSize_ = getField @"txsize" tx
-  txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
+  txSize_ <= maxTxSize_ ?! liftfail (MaxTxSizeUTxO txSize_ maxTxSize_)
 
   {-   totExunits tx ≤ maxTxExUnits pp    -}
   let maxTxEx = getField @"_maxTxExUnits" pp
-      totExunits = totExUnits tx -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction.
-  pointWiseExUnits (<=) totExunits maxTxEx ?! ExUnitsTooBigUTxO maxTxEx totExunits
+      totExunits = totExUnits tx
+  -- This sums up the ExUnits for all embedded Plutus Scripts anywhere in the transaction.
+  pointWiseExUnits (<=) totExunits maxTxEx ?! liftfail (ExUnitsTooBigUTxO maxTxEx totExunits)
 
   {-   ‖collateral tx‖  ≤  maxCollInputs pp   -}
   let maxColl = getField @"_maxCollateralInputs" pp
       numColl = fromIntegral . Set.size $ getField @"collateral" txb
-  numColl <= maxColl ?! TooManyCollateralInputs maxColl numColl
+  numColl <= maxColl ?! liftfail (TooManyCollateralInputs maxColl numColl)
 
   trans @(Core.EraRule "UTXOS" era) =<< coerce <$> judgmentContext
 
---------------------------------------------------------------------------------
--- AlonzoUTXO STS
---------------------------------------------------------------------------------
+-- =============================================================================
+-- STS (AlonzoUTXO era) intance made here
 
 instance
   forall era.
-  ( ValidateScript era,
+  ( Era era,
+    -- Concrete assumptions about Alonzo-like Eras
+    Core.Witnesses era ~ TxWitness era,
+    Era.TxSeq era ~ Alonzo.TxSeq era,
+    Core.Tx era ~ Alonzo.ValidatedTx era,
     -- Instructions needed to call the UTXOS transition from this one.
     Embed (Core.EraRule "UTXOS" era) (AlonzoUTXO era),
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (Core.EraRule "UTXOS" era) ~ ValidatedTx era,
-    -- We leave Core.PParams abstract
+    -- Properties needed to Show and compare the predicate failures
     ToCBOR (Core.Value era),
-    Core.ChainData (Core.Value era),
-    Core.ChainData (Core.TxOut era),
-    Core.ChainData (Core.TxBody era),
-    UsesPParams era,
-    HasField "_keyDeposit" (Core.PParams era) Coin,
+    Show (Core.Value era),
+    Show (Core.TxOut era),
+    Show (Core.TxBody era),
+    Eq (Core.Value era),
+    Eq (Core.TxOut era),
+    Eq (Core.TxBody era),
+    -- substructural properties of the current Era
+    HasField "_collateralPercentage" (Core.PParams era) Natural,
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_maxTxSize" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
-    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_coinsPerUTxOWord" (Core.PParams era) Coin,
-    HasField "_maxValSize" (Core.PParams era) Natural,
-    HasField "_collateralPercentage" (Core.PParams era) Natural,
-    HasField "_maxCollateralInputs" (Core.PParams era) Natural,
-    HasField "txnetworkid" (Core.TxBody era) (StrictMaybe Network),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "mint" (Core.TxBody era) (Core.Value era),
-    HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    Core.Witnesses era ~ TxWitness era,
-    Era.TxSeq era ~ Alonzo.TxSeq era,
-    Core.Tx era ~ Alonzo.ValidatedTx era
+    AlonzoUtxoNeeds era
   ) =>
   STS (AlonzoUTXO era)
   where
@@ -512,7 +526,7 @@ instance
   type Event (AlonzoUTXO era) = UtxoEvent era
 
   initialRules = []
-  transitionRules = [utxoTransition]
+  transitionRules = [genericAlonzoUtxo alonzoUtxoDelta]
 
 instance
   ( Era era,
@@ -524,6 +538,18 @@ instance
   where
   wrapFailed = UtxosFailure
   wrapEvent = UtxosEvent
+
+-- ==================================================================
+-- Specializing the generic rules to AlonzoEra
+
+alonzoUtxoDelta ::
+  ( Era era,
+    Core.Witnesses era ~ TxWitness era,
+    Core.Tx era ~ ValidatedTx era,
+    FeeNeeds era
+  ) =>
+  UtxoDelta AlonzoUTXO era
+alonzoUtxoDelta = UtxoDelta (feesOK id) (const (Set.empty)) id
 
 --------------------------------------------------------------------------------
 -- Serialisation
