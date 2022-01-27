@@ -13,10 +13,6 @@ module Cardano.Ledger.Babbage.Translation where
 
 import Cardano.Binary
   ( DecoderError,
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeAnnotator,
-    serialize,
   )
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
@@ -25,8 +21,8 @@ import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
-import Cardano.Ledger.Babbage.Tx (IsValid (..), ValidatedTx (..))
-import Cardano.Ledger.Babbage.TxBody (TxOut (..), datumFromDatahash)
+import Cardano.Ledger.Babbage.Tx (ValidatedTx (..))
+import Cardano.Ledger.Babbage.TxBody (Datum (..), TxOut (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -35,6 +31,7 @@ import Cardano.Ledger.Era
     TranslationContext,
     translateEra',
   )
+import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
   ( EpochState (..),
     NewEpochState (..),
@@ -42,9 +39,6 @@ import Cardano.Ledger.Shelley.API
     StrictMaybe (..),
   )
 import qualified Cardano.Ledger.Shelley.API as API
-import Control.Monad.Except (Except, throwError)
-import Data.Coders (Annotator)
-import Data.Text (Text)
 
 --------------------------------------------------------------------------------
 -- Translation from Alonzo to Babbage
@@ -119,18 +113,12 @@ instance
     aux <- case Alonzo.auxiliaryData tx of
       SNothing -> pure SNothing
       SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
-    validating <- translateViaCBORAnn "validating" $ Alonzo.isValid tx
+    let validating = Alonzo.isValid tx
     pure $ Tx $ ValidatedTx bdy txwits validating aux
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
-
-translateViaCBORAnn :: (ToCBOR a, FromCBOR (Annotator b)) => Text -> a -> Except DecoderError b
-translateViaCBORAnn name x =
-  case decodeAnnotator name fromCBOR (serialize x) of
-    Right newx -> pure newx
-    Left decoderError -> throwError decoderError
 
 instance (Crypto c, Functor f) => TranslateEra (BabbageEra c) (API.PParams' f)
 

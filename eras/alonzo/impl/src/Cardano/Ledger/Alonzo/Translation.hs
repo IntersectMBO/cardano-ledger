@@ -12,10 +12,6 @@ module Cardano.Ledger.Alonzo.Translation where
 
 import Cardano.Binary
   ( DecoderError,
-    FromCBOR (..),
-    ToCBOR (..),
-    decodeAnnotator,
-    serialize,
   )
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), extendPPWithGenesis)
@@ -31,6 +27,7 @@ import Cardano.Ledger.Era
     translateEra',
   )
 import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
   ( EpochState (..),
     NewEpochState (..),
@@ -41,9 +38,6 @@ import qualified Cardano.Ledger.Shelley.API as API
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
 import qualified Cardano.Ledger.Shelley.Tx as LTX
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
-import Control.Monad.Except (Except, throwError)
-import Data.Coders
-import Data.Text (Text)
 
 --------------------------------------------------------------------------------
 -- Translation from Mary to Alonzo
@@ -125,12 +119,6 @@ instance
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
-
-translateViaCBORAnn :: (ToCBOR a, FromCBOR (Annotator b)) => Text -> a -> Except DecoderError b
-translateViaCBORAnn name x =
-  case decodeAnnotator name fromCBOR (serialize x) of
-    Right newx -> pure newx
-    Left decoderError -> throwError decoderError
 
 instance (Crypto c, Functor f) => TranslateEra (AlonzoEra c) (API.PParams' f)
 
