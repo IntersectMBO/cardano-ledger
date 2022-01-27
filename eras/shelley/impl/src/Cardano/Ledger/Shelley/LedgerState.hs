@@ -1553,8 +1553,7 @@ pulseStep ::
 pulseStep (Complete r) = pure (Complete r, mempty)
 pulseStep p@(Pulsing _ pulser) | done pulser = completeStep p
 pulseStep (Pulsing rewsnap pulser) = do
-  -- The pulser computes one kind of provenance, pulseOther incorporates it
-  -- into the current flavor of provenance: RewardProvenance.
+  -- The pulser might compute provenance, but using pulseM here does not compute it
   p2@(RSLP _ _ _ (RewardAns _ event)) <- pulseM pulser
   pure (Pulsing rewsnap p2, event)
 
@@ -1565,7 +1564,7 @@ completeStep ::
   ShelleyBase (PulsingRewUpdate crypto, RewardEvent crypto)
 completeStep (Complete r) = pure (Complete r, mempty)
 completeStep (Pulsing rewsnap pulser) = do
-  (p2, event) <- runProvM (completeRupd (Pulsing rewsnap pulser))
+  (p2, !event) <- runProvM (completeRupd (Pulsing rewsnap pulser))
   pure (Complete p2, event)
 
 -- | Phase 3 of reward update has several parts
@@ -1593,24 +1592,25 @@ completeRupd
     RewardAns rs_ events <- lift (completeM pulser)
     let rs' = Map.map Set.singleton rs_
     let rs'' = Map.unionWith Set.union rs' lrewards
-    let events' = Map.unionWith Set.union events lrewards
+    let !events' = Map.unionWith Set.union events lrewards
 
     let deltaR2 = oldr <-> sumRewards rewsnap rs''
     modifyM (\rp -> rp {deltaR2 = deltaR2})
     let neverpulsed = Map.null prev
-        pair@(_, _event) =
-          ( RewardUpdate
-              { deltaT = DeltaCoin deltaT1,
-                deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
-                rs = rs'',
-                deltaF = invert (toDeltaCoin feesSS),
-                nonMyopic = updateNonMyopic nm oldr newLikelihoods
-              },
-            if neverpulsed -- If we have never pulsed then everything in the computed needs to added to the event
-              then Map.unionWith Set.union rs' events'
-              else events'
-          )
-    pure pair
+        !newevent =
+          if neverpulsed -- If we have never pulsed then everything in the computed needs to added to the event
+            then Map.unionWith Set.union rs' events'
+            else events'
+    pure
+      ( RewardUpdate
+          { deltaT = DeltaCoin deltaT1,
+            deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
+            rs = rs'',
+            deltaF = invert (toDeltaCoin feesSS),
+            nonMyopic = updateNonMyopic nm oldr newLikelihoods
+          },
+        newevent
+      )
 
 -- | To create a reward update, run all 3 phases
 --   This function is not used in the rules, so it ignores RewardEvents
