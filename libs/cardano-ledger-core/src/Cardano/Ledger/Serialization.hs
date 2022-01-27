@@ -35,6 +35,7 @@ module Cardano.Ledger.Serialization
     ratioFromCBOR,
     mapToCBOR,
     mapFromCBOR,
+    translateViaCBORAnn,
     -- IPv4
     ipv4ToBytes,
     ipv4FromBytes,
@@ -61,14 +62,17 @@ import Cardano.Binary
     FromCBOR (..),
     Size,
     ToCBOR (..),
+    decodeAnnotator,
     decodeListLenOrIndef,
     decodeTag,
     encodeListLen,
     encodeTag,
+    serialize,
     withWordSize,
   )
 import Cardano.Prelude (cborError)
 import Control.Monad (unless, when)
+import Control.Monad.Except (Except, MonadError (throwError))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
 import Data.Binary.Put (putWord32le, runPut)
 import qualified Data.ByteString as BS
@@ -76,7 +80,8 @@ import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders
-  ( decodeCollectionWithLen,
+  ( Annotator,
+    decodeCollectionWithLen,
     decodeList,
     decodeMap,
     decodeMapContents,
@@ -299,3 +304,9 @@ utcTimeFromCBOR = do
       UTCTime
         (fromOrdinalDate year dayOfYear)
         (picosecondsToDiffTime diff)
+
+translateViaCBORAnn :: (ToCBOR a, FromCBOR (Annotator b)) => Text -> a -> Except DecoderError b
+translateViaCBORAnn name x =
+  case decodeAnnotator name fromCBOR (serialize x) of
+    Right newx -> pure newx
+    Left decoderError -> throwError decoderError

@@ -2,22 +2,27 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Alonzo.Translation where
+module Cardano.Ledger.Babbage.Translation where
 
 import Cardano.Binary
   ( DecoderError,
   )
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), extendPPWithGenesis)
-import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate, extendPP)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
+import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
+import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis (..))
+import Cardano.Ledger.Babbage.PParams (PParams' (..))
+import Cardano.Ledger.Babbage.Tx (ValidatedTx (..))
+import Cardano.Ledger.Babbage.TxBody (Datum (..), TxOut (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -26,7 +31,6 @@ import Cardano.Ledger.Era
     TranslationContext,
     translateEra',
   )
-import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
   ( EpochState (..),
@@ -35,12 +39,9 @@ import Cardano.Ledger.Shelley.API
     StrictMaybe (..),
   )
 import qualified Cardano.Ledger.Shelley.API as API
-import qualified Cardano.Ledger.Shelley.PParams as Shelley
-import qualified Cardano.Ledger.Shelley.Tx as LTX
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 
 --------------------------------------------------------------------------------
--- Translation from Mary to Alonzo
+-- Translation from Alonzo to Babbage
 --
 -- The instances below are needed by the consensus layer. Do not remove any of
 -- them without coordinating with consensus.
@@ -54,16 +55,16 @@ import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
-type instance PreviousEra (AlonzoEra c) = MaryEra c
+type instance PreviousEra (BabbageEra c) = AlonzoEra c
 
-type instance TranslationContext (AlonzoEra c) = AlonzoGenesis
+type instance TranslationContext (BabbageEra c) = AlonzoGenesis
 
 instance
   (Crypto c) =>
-  TranslateEra (AlonzoEra c) NewEpochState
+  TranslateEra (BabbageEra c) NewEpochState
   where
   translateEra ctxt nes =
-    return $
+    pure $
       NewEpochState
         { nesEL = nesEL nes,
           nesBprev = nesBprev nes,
@@ -73,9 +74,9 @@ instance
           nesPd = nesPd nes
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGenesis where
+instance Crypto c => TranslateEra (BabbageEra c) ShelleyGenesis where
   translateEra ctxt genesis =
-    return
+    pure
       API.ShelleyGenesis
         { API.sgSystemStart = API.sgSystemStart genesis,
           API.sgNetworkMagic = API.sgNetworkMagic genesis,
@@ -98,53 +99,52 @@ newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
   ( Crypto c,
-    Core.Tx (AlonzoEra c) ~ ValidatedTx (AlonzoEra c)
+    Core.Tx (BabbageEra c) ~ ValidatedTx (BabbageEra c)
   ) =>
-  TranslateEra (AlonzoEra c) Tx
+  TranslateEra (BabbageEra c) Tx
   where
-  type TranslationError (AlonzoEra c) Tx = DecoderError
+  type TranslationError (BabbageEra c) Tx = DecoderError
   translateEra _ctxt (Tx tx) = do
     -- Note that this does not preserve the hidden bytes field of the transaction.
     -- This is under the premise that this is irrelevant for TxInBlocks, which are
     -- not transmitted as contiguous chunks.
-    bdy <- translateViaCBORAnn "txbody" $ LTX.body tx
-    txwits <- translateViaCBORAnn "txwitness" $ LTX.wits tx
-    -- transactions from Mary era always pass script ("phase 2") validation
-    aux <- case LTX.auxiliaryData tx of
+    bdy <- translateViaCBORAnn "txbody" $ Alonzo.body tx
+    txwits <- translateViaCBORAnn "txwitness" $ Alonzo.wits tx
+    aux <- case Alonzo.auxiliaryData tx of
       SNothing -> pure SNothing
       SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
-    let validating = IsValid True
+    let validating = Alonzo.isValid tx
     pure $ Tx $ ValidatedTx bdy txwits validating aux
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (AlonzoEra c) (API.PParams' f)
+instance (Crypto c, Functor f) => TranslateEra (BabbageEra c) (API.PParams' f)
 
-instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
+instance Crypto c => TranslateEra (BabbageEra c) EpochState where
   translateEra ctxt es =
-    return
+    pure
       EpochState
         { esAccountState = esAccountState es,
           esSnapshots = esSnapshots es,
           esLState = translateEra' ctxt $ esLState es,
-          esPrevPp = translatePParams ctxt $ esPrevPp es,
-          esPp = translatePParams ctxt $ esPp es,
+          esPrevPp = translatePParams $ esPrevPp es,
+          esPp = translatePParams $ esPp es,
           esNonMyopic = esNonMyopic es
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.LedgerState where
+instance Crypto c => TranslateEra (BabbageEra c) API.LedgerState where
   translateEra ctxt ls =
-    return
+    pure
       API.LedgerState
         { API._utxoState = translateEra' ctxt $ API._utxoState ls,
           API._delegationState = API._delegationState ls
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
+instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where
   translateEra ctxt us =
-    return
+    pure
       API.UTxOState
         { API._utxo = translateEra' ctxt $ API._utxo us,
           API._deposited = API._deposited us,
@@ -153,38 +153,32 @@ instance Crypto c => TranslateEra (AlonzoEra c) API.UTxOState where
           API._stakeDistro = API._stakeDistro us
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.UTxO where
+instance Crypto c => TranslateEra (BabbageEra c) API.UTxO where
   translateEra _ctxt utxo =
-    return $ API.UTxO $ translateTxOut <$> API.unUTxO utxo
+    pure $ API.UTxO $ translateTxOut <$> API.unUTxO utxo
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.PPUPState where
+instance Crypto c => TranslateEra (BabbageEra c) API.PPUPState where
   translateEra ctxt ps =
-    return
+    pure
       API.PPUPState
         { API.proposals = translateEra' ctxt $ API.proposals ps,
           API.futureProposals = translateEra' ctxt $ API.futureProposals ps
         }
 
-instance Crypto c => TranslateEra (AlonzoEra c) API.ProposedPPUpdates where
+instance Crypto c => TranslateEra (BabbageEra c) API.ProposedPPUpdates where
   translateEra _ctxt (API.ProposedPPUpdates ppup) =
-    return $ API.ProposedPPUpdates $ fmap translatePParamsUpdate ppup
+    pure $ API.ProposedPPUpdates $ fmap translatePParams ppup
 
 translateTxOut ::
   Crypto c =>
-  Core.TxOut (MaryEra c) ->
-  Core.TxOut (AlonzoEra c)
-translateTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
-
--- extendPP with type: extendPP :: Shelley.PParams' f era1 -> ... -> PParams' f era2
--- Is general enough to work for both
--- (PParams era)       = (PParams' Identity era)    and
--- (PParamsUpdate era) = (PParams' StrictMaybe era)
+  Core.TxOut (AlonzoEra c) ->
+  Core.TxOut (BabbageEra c)
+translateTxOut (Alonzo.TxOut addr value dh) = TxOut addr value d
+  where
+    d = case dh of
+      SNothing -> NoDatum
+      SJust d' -> DatumHash d'
 
 translatePParams ::
-  AlonzoGenesis -> Shelley.PParams (MaryEra c) -> PParams (AlonzoEra c)
-translatePParams = flip extendPPWithGenesis
-
-translatePParamsUpdate ::
-  Shelley.PParamsUpdate (MaryEra c) -> PParamsUpdate (AlonzoEra c)
-translatePParamsUpdate pp =
-  extendPP pp SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing
+  Alonzo.PParams' f (AlonzoEra c) -> PParams' f (BabbageEra c)
+translatePParams (Alonzo.PParams {..}) = PParams {..}
