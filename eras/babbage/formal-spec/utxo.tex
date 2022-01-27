@@ -31,14 +31,15 @@
     \nextdef
     & \fun{feesOK} : \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo = \\
-    &~~      \minfee{pp}{tx} \leq \txfee{tx} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
-    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collInputs}~tx \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
+    &~~      \minfee{pp}{tx} \leq \txfee{txb} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
+    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collInputs}~txb \restrictdom \var{utxo}), \fun{paymentHK}~a \in \AddrVKey) \\
     &~~~~~~\wedge \fun{adaOnly}~\var{balance} \\
-    &~~~~~~\wedge \var{balance} \geq \hldiff{\fun{minCollateral}~tx~pp} \\
-    &~~~~~~\wedge \hldiff{(\fun{txcoll}~tx \neq \Nothing) \Rightarrow \var{balance} = \fun{txcoll}~tx} \\
-    &~~~~~~\wedge \fun{collInputs}~{tx} \neq \emptyset) \\
+    &~~~~~~\wedge \var{balance} \geq \hldiff{\fun{minCollateral}~txb~pp} \\
+    &~~~~~~\wedge \hldiff{(\fun{txcoll}~txb \neq \Nothing) \Rightarrow \var{balance} = \fun{txcoll}~txb} \\
+    &~~~~~~\wedge \fun{collInputs}~{txb} \neq \emptyset) \\
     &~~      \where \\
-    & ~~~~~~~ \var{balance}=\hldiff{\fun{collBalance}~tx~utxo}
+    & ~~~~~~~ \var{txb}=\txbody{tx} \\
+    & ~~~~~~~ \var{balance}=\hldiff{\fun{collBalance}~txb~utxo}
   \end{align*}
   \caption{Functions related to fees and collateral}
   \label{fig:functions:utxo}
