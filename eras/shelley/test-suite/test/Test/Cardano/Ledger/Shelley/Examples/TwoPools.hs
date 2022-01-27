@@ -101,7 +101,6 @@ import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Control.Provenance (runProvM)
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Map.Strict (Map)
@@ -851,15 +850,13 @@ twoPoolsExample =
   testGroup
     "two pools"
     [ testCase "create non-aggregated pulser" $ testCHAINExample twoPools9,
-      testCase
-        "non-aggregated pulser is correct"
-        ( Complete (rewardUpdateEx9 @C ppEx rsEx9Agg)
-            @?= (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppEx)
+      testCase "non-aggregated pulser is correct" $
+        ( (Complete (rewardUpdateEx9 @C ppEx rsEx9Agg))
+            @?= (fst . runShelleyBase . completeStep $ pulserEx9 @C ppEx)
         ),
-      testCase
-        "aggregated pulser is correct"
-        ( Complete (rewardUpdateEx9 @C ppProtVer3 rsEx9Agg)
-            @?= (runShelleyBase . runProvM . completeStep $ pulserEx9 @C ppProtVer3)
+      testCase "aggregated pulser is correct" $
+        ( (Complete (rewardUpdateEx9 @C ppProtVer3 rsEx9Agg))
+            @?= (fst . runShelleyBase . completeStep $ pulserEx9 @C ppProtVer3)
         ),
       testCase "create aggregated pulser" $ testCHAINExample twoPools9Agg,
       testCase "create legacy aggregatedRewards" testAggregateRewardsLegacy,

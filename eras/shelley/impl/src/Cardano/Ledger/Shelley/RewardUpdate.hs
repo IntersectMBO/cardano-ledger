@@ -11,6 +11,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE ViewPatterns #-}
 
 -- | How to compute the reward update compuation. Also, how to spread the
 --     compuation over many blocks, once the chain reaches a stability point.
@@ -30,7 +31,6 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenancePool (..))
-import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
 import Cardano.Ledger.Shelley.Rewards
   ( PoolRewardInfo (..),
     Reward (..),
@@ -38,7 +38,6 @@ import Cardano.Ledger.Shelley.Rewards
     rewardOnePoolMember,
   )
 import Control.DeepSeq (NFData (..))
-import Control.Provenance (ProvM, liftProv)
 import Data.Coders
   ( Decode (..),
     Encode (..),
@@ -62,6 +61,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.Sharing (fromNotSharedCBOR)
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -70,25 +70,30 @@ import NoThunks.Class (NoThunks (..), allNoThunks)
 
 -- ===============================================================
 
+type RewardEvent c = (Map (Credential 'Staking c) (Set (Reward c)))
+
 -- | The result of reward calculation is a pair of aggregate Maps.
-newtype RewardAns c
-  = RewardAns (Map (Credential 'Staking c) (Reward c))
+--   One for the accumulated answer, and one for the answer since the last pulse
+data RewardAns c = RewardAns
+  { accumRewardAns :: !(Map (Credential 'Staking c) (Reward c)),
+    recentRewardAns :: !(RewardEvent c)
+  }
   deriving (Show, Eq, Generic)
   deriving (NFData)
 
 instance NoThunks (RewardAns crypto)
 
 instance CC.Crypto c => ToCBOR (RewardAns c) where
-  toCBOR (RewardAns x) = toCBOR x
+  toCBOR (RewardAns accum recent) = encodeListLen 2 <> toCBOR accum <> toCBOR recent
 
 instance CC.Crypto c => FromCBOR (RewardAns c) where
-  fromCBOR = RewardAns <$> fromCBOR
+  fromCBOR = decodeRecordNamed "RewardAns" (const 2) (RewardAns <$> fromCBOR <*> fromCBOR)
 
 -- | The provenance we collect
 type KeyHashPoolProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
 
 -- | The type of RewardPulser we pulse on.
-type Pulser c = RewardPulser c (ProvM (KeyHashPoolProvenance c) ShelleyBase) (RewardAns c)
+type Pulser c = RewardPulser c ShelleyBase (RewardAns c)
 
 -- =====================================
 
@@ -253,13 +258,15 @@ rewardStakePoolMember
       totalStake,
       poolRewardInfo
     }
-  (RewardAns m)
+  inputanswer@(RewardAns accum recent)
   cred
-  c = fromMaybe (RewardAns m) $ do
+  c = fromMaybe inputanswer $ do
     poolID <- VMap.lookup cred delegs
     poolRI <- Map.lookup poolID poolRewardInfo
     r <- rewardOnePoolMember pp (Coin totalStake) addrsRew poolRI cred (fromCompact c)
-    pure $ RewardAns (Map.insert cred (Reward MemberReward poolID r) m)
+    let ans = Reward MemberReward poolID r
+    -- There is always just 1 member reward, so Set.singleton is appropriate
+    pure $ RewardAns (Map.insert cred ans accum) (Map.insert cred (Set.singleton ans) recent)
 
 -- ================================================================
 
@@ -272,7 +279,7 @@ rewardStakePoolMember
 --     RSPL = Reward Serializable Listbased Pulser
 data RewardPulser c (m :: Type -> Type) ans where
   RSLP ::
-    (ans ~ RewardAns c, m ~ ProvM (KeyHashPoolProvenance c) ShelleyBase) =>
+    (ans ~ RewardAns c, m ~ ShelleyBase) =>
     !Int ->
     !(FreeVars c) ->
     !(VMap.VMap VMap.VB VMap.VP (Credential 'Staking c) (CompactForm Coin)) ->
@@ -280,20 +287,23 @@ data RewardPulser c (m :: Type -> Type) ans where
     RewardPulser c m ans
 
 -- Because of the constraints on the Constructor RSLP, there is really only one inhabited
--- type:  (RewardPulser c (ProvM (KeyHashPoolProvenance c) ShelleyBase) (RewardAns c))
+-- type:  (RewardPulser c ShelleyBase (RewardAns c))
 -- All of the instances are at that type. Though only the CBOR instances need make that explicit.
+
+clearRecent :: RewardAns c -> RewardAns c
+clearRecent (RewardAns accum _) = RewardAns accum Map.empty
 
 instance Pulsable (RewardPulser crypto) where
   done (RSLP _n _free zs _ans) = VMap.null zs
   current (RSLP _ _ _ ans) = ans
-  pulseM p@(RSLP n free balance ans) =
+  pulseM p@(RSLP n free balance (clearRecent -> ans)) =
     if VMap.null balance
       then pure p
       else do
         let !(steps, !balance') = VMap.splitAt n balance
             ans' = VMap.foldlWithKey (rewardStakePoolMember free) ans steps
         pure $! RSLP n free balance' ans'
-  completeM (RSLP _ free balance ans) = pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
+  completeM (RSLP _ free balance (clearRecent -> ans)) = pure $ VMap.foldlWithKey (rewardStakePoolMember free) ans balance
 
 deriving instance Eq ans => Eq (RewardPulser c m ans)
 
@@ -342,30 +352,3 @@ instance (CC.Crypto crypto) => FromCBOR (PulsingRewUpdate crypto) where
       decPS n = Invalid n
 
 instance NFData (PulsingRewUpdate crypto)
-
--- ====================================================================
--- Some generic lifting functions to lift one provenance computation
--- into another, and one to lift a Pulser from one provenance type to
--- another.  Then a specialisation on the Provenance types we use here.
-
--- | Lift a Pulser in the ProvM monad, from one type of provenance (s1) to another (s2)
-pulseProvM ::
-  (Monad m, Pulsable pulse) =>
-  s1 ->
-  (s1 -> s2 -> s2) ->
-  pulse (ProvM s1 m) ans ->
-  ProvM s2 m (pulse (ProvM s1 m) ans)
-pulseProvM initial combine tma = liftProv (pulseM tma) initial (\_ s1 s2 -> combine s1 s2)
-
--- | lift a pulseM function from (KeyHashPoolProvenance (Crypto era))
---   provenance to (RewardProvenance (Crypto er)) provenance
-pulseOther :: Pulser crypto -> ProvM (RP.RewardProvenance crypto) ShelleyBase (Pulser crypto)
-pulseOther = pulseProvM Map.empty incrementProvenance
-
--- | How to merge KeyHashPoolProvenance into RewardProvenance
-incrementProvenance ::
-  KeyHashPoolProvenance crypto ->
-  RP.RewardProvenance crypto ->
-  RP.RewardProvenance crypto
-incrementProvenance provpools prov@RP.RewardProvenance {RP.pools = old} =
-  prov {RP.pools = Map.union provpools old}

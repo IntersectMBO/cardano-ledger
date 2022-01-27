@@ -39,13 +39,12 @@ import Cardano.Ledger.Shelley.LedgerState
     PulsingRewUpdate,
   )
 import Cardano.Ledger.Shelley.Rules.NewEpoch (NEWEPOCH, NewEpochEvent, NewEpochPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Rupd (RUPD, RupdEnv (..), RupdPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Rupd (RUPD, RupdEnv (..), RupdEvent, RupdPredicateFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
 import qualified Data.Map.Strict as Map
-import Data.Void (Void)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -214,7 +213,7 @@ instance
   ( Era era,
     STS (RUPD era),
     PredicateFailure (Core.EraRule "RUPD" era) ~ RupdPredicateFailure era,
-    Event (Core.EraRule "RUPD" era) ~ Void
+    Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)
   ) =>
   Embed (RUPD era) (TICK era)
   where

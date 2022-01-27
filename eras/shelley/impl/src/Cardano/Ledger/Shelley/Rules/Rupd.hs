@@ -18,7 +18,7 @@ module Cardano.Ledger.Shelley.Rules.Rupd
     completeStep,
     lift,
     Identity (..),
-    createRUpd,
+    RupdEvent (..),
   )
 where
 
@@ -37,17 +37,20 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
     PulsingRewUpdate (..),
     completeStep,
-    createRUpd,
     pulseStep,
     startStep,
   )
+import Cardano.Ledger.Shelley.Rewards (Reward)
 import Cardano.Ledger.Slot
   ( Duration (..),
+    EpochNo,
     SlotNo,
     epochInfoEpoch,
     epochInfoFirst,
@@ -58,15 +61,18 @@ import Cardano.Slotting.EpochInfo.API (epochInfoRange)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.Trans (lift)
 import Control.Monad.Trans.Reader (asks)
-import Control.Provenance (runProvM)
 import Control.State.Transition
-  ( STS (..),
+  ( Rule,
+    STS (..),
     TRC (..),
     TransitionRule,
     judgmentContext,
     liftSTS,
+    tellEvent,
   )
 import Data.Functor ((<&>))
+import qualified Data.Map.Strict as Map
+import Data.Set (Set)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks (..))
@@ -98,9 +104,17 @@ instance
   type Environment (RUPD era) = RupdEnv era
   type BaseM (RUPD era) = ShelleyBase
   type PredicateFailure (RUPD era) = RupdPredicateFailure era
+  type Event (RUPD era) = RupdEvent (Crypto era)
 
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
+
+data RupdEvent crypto = RupdEvent !EpochNo !(Map.Map (Credential 'Staking crypto) (Set (Reward crypto)))
+
+-- | tell a RupdEvent only if the map is non-empty
+tellRupd :: String -> RupdEvent (Crypto era) -> Rule (RUPD era) rtype ()
+tellRupd _ (RupdEvent _ m) | Map.null m = pure ()
+tellRupd _message x = tellEvent x
 
 -- | The Goldilocks labeling of when to do the reward calculation.
 data RewardTiming = RewardsTooEarly | RewardsJustRight | RewardsTooLate
@@ -126,7 +140,7 @@ rupdTransition ::
   TransitionRule (RUPD era)
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
-  (slotsPerEpoch, slot, slotForce, maxLL, asc, k) <- liftSTS $ do
+  (slotsPerEpoch, slot, slotForce, maxLL, asc, k, e) <- liftSTS $ do
     ei <- asks epochInfo
     sr <- asks randomnessStabilisationWindow
     e <- epochInfoEpoch ei s
@@ -135,21 +149,37 @@ rupdTransition = do
     maxLL <- asks maxLovelaceSupply
     asc <- asks activeSlotCoeff
     k <- asks securityParameter -- Maximum number of blocks we are allowed to roll back
-    return (slotsPerEpoch, slot, (slot +* Duration sr), maxLL, asc, k)
+    return (slotsPerEpoch, slot, (slot +* Duration sr), maxLL, asc, k, e)
   let maxsupply = Coin (fromIntegral maxLL)
   case determineRewardTiming s slot slotForce of
-    -- Waiting for the stabiliy point, do nothing, keep waiting
+    -- Waiting for the stability point, do nothing, keep waiting
     RewardsTooEarly -> pure SNothing
     -- More blocks to come, get things started or take a step
     RewardsJustRight ->
       case ru of
-        SNothing -> liftSTS $ runProvM $ pure $ SJust $ fst $ startStep slotsPerEpoch b es maxsupply asc k
-        (SJust p@(Pulsing _ _)) -> liftSTS $ runProvM $ (SJust <$> pulseStep p)
+        SNothing ->
+          -- This is the first opportunity to pulse, so start pulsing.
+          -- SJust <$> tellLeaderEvents (e + 1) (fst (startStep slotsPerEpoch b es maxsupply asc k))
+          (pure . SJust . fst) (startStep slotsPerEpoch b es maxsupply asc k)
+        (SJust p@(Pulsing _ _)) -> do
+          -- We began pulsing earlier, so run another pulse
+          (ans, event) <- liftSTS $ pulseStep p
+          tellRupd "Pulsing Rupd" (RupdEvent (e + 1) event)
+          pure (SJust ans)
         (SJust p@(Complete _)) -> pure (SJust p)
     -- Time to force the completion of the pulser so that downstream tools such as db-sync
     -- have time to see the reward update before the epoch boundary rollover.
     RewardsTooLate ->
       case ru of
-        SNothing -> SJust <$> (liftSTS . runProvM . completeStep . fst $ startStep slotsPerEpoch b es maxsupply asc k)
-        SJust p@(Pulsing _ _) -> SJust <$> (liftSTS . runProvM . completeStep $ p)
+        SNothing -> do
+          -- Nothing has been done, so start, and then complete the pulser. We hope this is very rare.
+          let pulser = fst (startStep slotsPerEpoch b es maxsupply asc k)
+          (reward, event) <- liftSTS . completeStep $ pulser
+          tellRupd "Starting too late" (RupdEvent (e + 1) event)
+          pure (SJust reward)
+        SJust p@(Pulsing _ _) -> do
+          -- We have been pulsing, but we ran out of time, so complete the pulser.
+          (reward, event) <- liftSTS . completeStep $ p
+          tellRupd "completing too late" (RupdEvent (e + 1) event)
+          pure (SJust reward)
         complete@(SJust (Complete _)) -> pure complete

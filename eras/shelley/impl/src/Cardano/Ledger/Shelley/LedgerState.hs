@@ -85,8 +85,6 @@ module Cardano.Ledger.Shelley.LedgerState
     startStep,
     pulseStep,
     completeStep,
-    pulseOther,
-    --
     NewEpochState (..),
     getGKeys,
     updateNES,
@@ -192,15 +190,15 @@ import Cardano.Ledger.Shelley.RewardUpdate
     Pulser,
     PulsingRewUpdate (..),
     RewardAns (..),
+    RewardEvent,
     RewardPulser (..),
     RewardSnapShot (..),
     RewardUpdate (..),
     emptyRewardUpdate,
-    pulseOther,
   )
 import Cardano.Ledger.Shelley.Rewards
   ( PoolRewardInfo (..),
-    Reward,
+    Reward (..),
     StakeShare (..),
     aggregateRewards,
     filterRewards,
@@ -245,7 +243,7 @@ import Cardano.Prelude (rightToMaybe)
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans
-import Control.Provenance (ProvM, liftProv, modifyM)
+import Control.Provenance (ProvM, modifyM, runProvM)
 import Control.SetAlgebra (dom, eval, (∈), (◁))
 import Control.State.Transition (STS (State))
 import Data.Coders
@@ -1525,7 +1523,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           pulseSize
           free
           (unStake stake')
-          (RewardAns Map.empty)
+          (RewardAns Map.empty Map.empty)
       provenance =
         def
           { spe = case slotsPerEpoch of EpochSize n -> n,
@@ -1552,33 +1550,33 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
 -- | Run the pulser for a bit. If is has nothing left to do, complete it.
 pulseStep ::
   PulsingRewUpdate crypto ->
-  ProvM (RewardProvenance crypto) ShelleyBase (PulsingRewUpdate crypto)
-pulseStep (Complete r) = pure (Complete r)
+  ShelleyBase (PulsingRewUpdate crypto, RewardEvent crypto)
+pulseStep (Complete r) = pure (Complete r, mempty)
 pulseStep p@(Pulsing _ pulser) | done pulser = completeStep p
 pulseStep (Pulsing rewsnap pulser) = do
-  -- The pulser computes one kind of provenance, pulseOther incorporates it
-  -- into the current flavor of provenance: RewardProvenance.
-  p2 <- pulseOther pulser
-  pure (Pulsing rewsnap p2)
+  -- The pulser might compute provenance, but using pulseM here does not compute it
+  p2@(RSLP _ _ _ (RewardAns _ event)) <- pulseM pulser
+  pure (Pulsing rewsnap p2, event)
 
 -- Phase 3
 
 completeStep ::
   PulsingRewUpdate crypto ->
-  ProvM (RewardProvenance crypto) ShelleyBase (PulsingRewUpdate crypto)
-completeStep (Complete r) = pure (Complete r)
+  ShelleyBase (PulsingRewUpdate crypto, RewardEvent crypto)
+completeStep (Complete r) = pure (Complete r, mempty)
 completeStep (Pulsing rewsnap pulser) = do
-  p2 <- completeRupd (Pulsing rewsnap pulser)
-  pure (Complete p2)
+  (p2, !event) <- runProvM (completeRupd (Pulsing rewsnap pulser))
+  pure (Complete p2, event)
 
 -- | Phase 3 of reward update has several parts
 --   a) completeM the pulser (in case there are still computions to run)
 --   b) Combine the pulser provenance with the RewardProvenance
 --   c) Construct the final RewardUpdate
+--   d) Add the leader rewards to both the events and the computed Rewards
 completeRupd ::
   PulsingRewUpdate crypto ->
-  ProvM (RewardProvenance crypto) ShelleyBase (RewardUpdate crypto)
-completeRupd (Complete x) = pure x
+  ProvM (RewardProvenance crypto) ShelleyBase (RewardUpdate crypto, RewardEvent crypto)
+completeRupd (Complete x) = pure (x, mempty)
 completeRupd
   ( Pulsing
       rewsnap@RewardSnapShot
@@ -1590,27 +1588,33 @@ completeRupd
           rewLikelihoods = newLikelihoods,
           rewLeaders = lrewards
         }
-      pulser
+      pulser@(RSLP _size _free _source (RewardAns prev _now)) -- If prev is Map.empty, we have never pulsed.
     ) = do
-    let ignore _ _ rewprov = rewprov
-    RewardAns rs_ <- liftProv (completeM pulser) Map.empty ignore
-    -- TODO the pulser is no longer supplying any proveance,
-    -- we can clean this up and make it pure.
+    RewardAns rs_ events <- lift (completeM pulser)
     let rs' = Map.map Set.singleton rs_
     let rs'' = Map.unionWith Set.union rs' lrewards
+    let !events' = Map.unionWith Set.union events lrewards
 
     let deltaR2 = oldr <-> sumRewards rewsnap rs''
     modifyM (\rp -> rp {deltaR2 = deltaR2})
-    pure $
-      RewardUpdate
-        { deltaT = DeltaCoin deltaT1,
-          deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
-          rs = rs'',
-          deltaF = invert (toDeltaCoin feesSS),
-          nonMyopic = updateNonMyopic nm oldr newLikelihoods
-        }
+    let neverpulsed = Map.null prev
+        !newevent =
+          if neverpulsed -- If we have never pulsed then everything in the computed needs to added to the event
+            then Map.unionWith Set.union rs' events'
+            else events'
+    pure
+      ( RewardUpdate
+          { deltaT = DeltaCoin deltaT1,
+            deltaR = invert (toDeltaCoin deltaR1) <> toDeltaCoin deltaR2,
+            rs = rs'',
+            deltaF = invert (toDeltaCoin feesSS),
+            nonMyopic = updateNonMyopic nm oldr newLikelihoods
+          },
+        newevent
+      )
 
 -- | To create a reward update, run all 3 phases
+--   This function is not used in the rules, so it ignores RewardEvents
 createRUpd ::
   forall era.
   (UsesPP era) =>
@@ -1624,10 +1628,10 @@ createRUpd ::
 createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
   let (step1, initialProvenance) = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
   modifyM (\_ -> initialProvenance)
-  step2 <- pulseStep step1
+  (step2, _event) <- lift (pulseStep step1)
   case step2 of
     (Complete r) -> pure r
-    (Pulsing rewsnap pulser) -> completeRupd (Pulsing rewsnap pulser)
+    (Pulsing rewsnap pulser) -> fst <$> completeRupd (Pulsing rewsnap pulser)
 
 -- =====================================================================
 

@@ -568,8 +568,8 @@ ppFreeVars (FreeVars ds addrs total pv pri) =
     ]
 
 ppAns :: RewardAns crypto -> PDoc
-ppAns (RewardAns x) =
-  ppSexp' mempty [ppMap ppCredential ppReward x]
+ppAns (RewardAns x y) =
+  ppRecord "RewardAns" [("allEvents", ppMap ppCredential ppReward x), ("recentEvents", ppMap ppCredential (ppSet ppReward) y)]
 
 ppRewardPulser :: Pulser crypto -> PDoc
 ppRewardPulser (RSLP n free items ans) =

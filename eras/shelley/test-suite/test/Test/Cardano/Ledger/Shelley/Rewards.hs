@@ -1,18 +1,20 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Currently this uses the trace mechansim to check that computing rewards has
 -- a required set of properties. It works only in the Shelley Era. It could be
 -- generalized, and then moved to the Generator/Trace/ directory which computes
 -- property tests in all eras.
-module Test.Cardano.Ledger.Shelley.Rewards (rewardTests, C, defaultMain, newEpochProp) where
+module Test.Cardano.Ledger.Shelley.Rewards (rewardTests, C, defaultMain, newEpochProp, newEpochEventsProp, ppAgg) where
 
 import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.DSIGN as Crypto
@@ -49,7 +51,7 @@ import Cardano.Ledger.Keys
     hashWithSerialiser,
     vKey,
   )
-import Cardano.Ledger.Pretty (PrettyA (..))
+import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
 import Cardano.Ledger.Shelley.API.Wallet (getRewardProvenance)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
@@ -67,8 +69,10 @@ import Cardano.Ledger.Shelley.LedgerState
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
+    PulsingRewUpdate (..),
     RewardUpdate (..),
     circulation,
+    completeRupd,
     createRUpd,
     rewards,
     updateNonMyopic,
@@ -86,9 +90,9 @@ import Cardano.Ledger.Shelley.PoolRank
   )
 import Cardano.Ledger.Shelley.RewardUpdate
   ( FreeVars (..),
-    KeyHashPoolProvenance,
     Pulser,
     RewardAns (..),
+    RewardEvent,
     RewardPulser (RSLP),
   )
 import Cardano.Ledger.Shelley.Rewards
@@ -100,6 +104,9 @@ import Cardano.Ledger.Shelley.Rewards
     mkApparentPerformance,
     mkPoolRewardInfo,
   )
+import Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (TotalRewardEvent))
+import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
+import qualified Cardano.Ledger.Shelley.Rules.Tick as Tick
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (invert, (<+>), (<->))
@@ -107,12 +114,12 @@ import Cardano.Prelude (rightToMaybe)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
-import Control.Provenance (ProvM, preservesJust, preservesNothing, runProvM, runWithProvM)
+import Control.Provenance (preservesJust, preservesNothing, runProvM, runWithProvM)
 import Control.SetAlgebra (eval, (◁))
-import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
+import Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
 import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (def))
-import Data.Foldable (fold)
+import Data.Foldable (fold, foldl')
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe, mapMaybe)
@@ -129,8 +136,8 @@ import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genCoin, genNatural)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
-import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainState (..))
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace)
+import Test.Cardano.Ledger.Shelley.Rules.Chain (ChainEvent (..), ChainState (..))
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace, forEachEpochTrace)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.Utils
@@ -138,7 +145,8 @@ import Test.Cardano.Ledger.Shelley.Utils
     testGlobals,
     unsafeBoundRational,
   )
-import Test.Tasty
+import Test.Cardano.Ledger.TerseTools (Terse (..), tersemapdiffs)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck
   ( Gen,
     Property,
@@ -326,18 +334,17 @@ rewardsBoundedByPot _ = property $ do
           [(_poolId params, params) | PoolInfo {params} <- pools]
       totalLovelace = undelegatedLovelace <> fold stake
       slotsPerEpoch = EpochSize . fromIntegral $ totalBlocks + silentSlots
-      (RewardAns rs) =
+      (RewardAns rs _) =
         runShelleyBase $
-          runProvM $
-            reward @era
-              pp
-              bs
-              rewardPot
-              rewardAcnts
-              poolParams
-              (Stake (VMap.fromMap (toCompactCoinError <$> stake)))
-              (VMap.fromMap delegs)
-              totalLovelace
+          reward @era
+            pp
+            bs
+            rewardPot
+            rewardAcnts
+            poolParams
+            (Stake (VMap.fromMap (toCompactCoinError <$> stake)))
+            (VMap.fromMap delegs)
+            totalLovelace
   pure $
     counterexample
       ( mconcat
@@ -735,6 +742,63 @@ newEpochProp tracelen propf = withMaxSuccess 100 $
       Just SourceSignalTarget {target} -> propf (chainNes target)
       _ -> True === True
 
+-- | Given a NewEpochState and [ChainEvent], test a Property at every Epoch Boundary
+newEpochEventsProp :: Word64 -> ([ChainEvent C] -> NewEpochState C -> Property) -> Property
+newEpochEventsProp tracelen propf = withMaxSuccess 10 $
+  forEachEpochTrace @C 10 tracelen $ \tr ->
+    case lastElem (sourceSignalTargets tr) of
+      Just SourceSignalTarget {target} -> propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
+      _ -> True === True
+
+aggDeltaRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
+aggDeltaRewardEvents events = foldl' accum Map.empty events
+  where
+    accum ans (TickEvent (Tick.RupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
+    accum ans _ = ans
+
+getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
+getMostRecentTotalRewardEvent events = foldl' accum Map.empty events
+  where
+    accum ans (TickEvent (Tick.NewEpochEvent (TotalRewardEvent m))) = Map.unionWith Set.union m ans
+    accum ans _ = ans
+
+complete :: PulsingRewUpdate crypto -> (RewardUpdate crypto, RewardEvent crypto)
+complete (Complete r) = (r, mempty)
+complete (Pulsing rewsnap pulser) = runShelleyBase $ runProvM (completeRupd (Pulsing rewsnap pulser))
+
+eventsMirrorRewards :: [ChainEvent C] -> NewEpochState C -> Property
+eventsMirrorRewards events nes = same eventRew compRew
+  where
+    (compRew, eventRew) =
+      case (nesRu nes) of
+        SNothing -> (total, aggevent)
+        SJust pulser ->
+          ( Map.unionWith (Set.union) (rs completed) total,
+            Map.unionWith (Set.union) lastevent aggevent
+          )
+          where
+            (completed, lastevent) = complete pulser
+    total = getMostRecentTotalRewardEvent events
+    aggevent = aggDeltaRewardEvents events
+    same x y = withMaxSuccess 1 $ counterexample message (x === y)
+      where
+        message =
+          ( "events don't mirror rewards "
+              ++ tersemapdiffs "Map differences: aggregated events on the left, computed on the right." x y
+          )
+
+ppAgg :: Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C))) -> PDoc
+ppAgg m = ppMap prettyA (ppSet ppReward) m
+
+instance Terse (Reward crypto) where
+  terse x = show (ppReward x)
+
+instance PrettyA x => Terse (Set x) where
+  terse x = show (ppSet prettyA x)
+
+instance PrettyA (Reward crypto) where
+  prettyA = ppReward
+
 -- ================================================================
 
 reward ::
@@ -748,7 +812,7 @@ reward ::
   Stake (Crypto era) ->
   VMap.VMap VMap.VB VMap.VB (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era)) ->
   Coin ->
-  ProvM (KeyHashPoolProvenance (Crypto era)) ShelleyBase (RewardAns (Crypto era))
+  ShelleyBase (RewardAns (Crypto era))
 reward
   pp
   (BlocksMade b)
@@ -787,7 +851,7 @@ reward
             delegs
           }
       pulser :: Pulser (Crypto era)
-      pulser = RSLP 2 free (unStake stake) (RewardAns Map.empty)
+      pulser = RSLP 2 free (unStake stake) (RewardAns Map.empty Map.empty)
 
 -- ==================================================================
 
@@ -806,5 +870,6 @@ rewardTests =
       testProperty "ProvM preserves Just" (newEpochProp 100 (justInJustOut @C)),
       testProperty "compare with reference impl, no provenance, v3" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 3 0))),
       testProperty "compare with reference impl, no provenance, v7" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 7 0))),
-      testProperty "compare with reference impl, with provenance" (newEpochProp chainlen (oldEqualsNewOn @C (ProtVer 3 0)))
+      testProperty "compare with reference impl, with provenance" (newEpochProp chainlen (oldEqualsNewOn @C (ProtVer 3 0))),
+      testProperty "delta events mirror reward updates" (newEpochEventsProp chainlen eventsMirrorRewards)
     ]

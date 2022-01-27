@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -44,6 +45,8 @@ module Control.State.Transition.Trace
     -- * Miscellaneous utilities
     extractValues,
     applySTSTest,
+    getEvents,
+    splitTrace,
   )
 where
 
@@ -52,8 +55,10 @@ import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
 import Control.State.Transition.Extended hiding (Assertion, trans)
 import Data.Data (Data, Typeable, cast, gmapQ)
+import Data.Foldable (toList)
 import Data.Maybe (catMaybes)
-import Data.Sequence.Strict (StrictSeq (Empty, (:<|)))
+import Data.Sequence.Strict (StrictSeq (Empty, (:<|), (:|>)))
+import qualified Data.Sequence.Strict as SS
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
 import GHC.Stack (HasCallStack)
@@ -499,3 +504,65 @@ applySTSTest = applySTSOptsEither defaultOpts
           asoValidation = ValidateAll,
           asoEvents = EPDiscard
         }
+
+-- | Extract the Events from a trace, by re-applying the signal with
+--   assertions and vaidations turned off, but events turned on.
+getEvents :: forall sts. STS sts => Trace sts -> BaseM sts [[Event sts]]
+getEvents (Trace env s0 pairs) = mapM action (map make pairs2)
+  where
+    pairs2 = unstagger s0 (toList pairs)
+    make (state, sig) = (env, state, sig)
+    defaultOpts =
+      ApplySTSOpts
+        { asoAssertions = AssertionsOff,
+          asoValidation = ValidateNone,
+          asoEvents = EPReturn
+        }
+    action :: (Environment sts, State sts, Signal sts) -> BaseM sts [Event sts]
+    action x = do
+      item <- applySTSOptsEither @sts @(BaseM sts) @'Transition defaultOpts (TRC x)
+      case item of
+        Left _ -> pure []
+        Right (_, events) -> pure (reverse events)
+    -- A Trace stores pairs of State and Signal (called a SigState). The pairs
+    -- consist of the state that came about by appying the signal, so the index
+    -- of the two parts don't match up. For example here is a sample
+    -- [(s_n+1,dn), ... ,(s5,d4),(s4,d3),(s3,d2),(s2,d1)] si is a state and dj is a signal.
+    -- Note how the indexes don't matchup. When we compute events we want the indices to align.
+    -- We want it to look like this [(sn,dn), ... ,(s5,d5),(s4,d4),(s3,d3),(s2,d2),(s1,d1)]
+    -- We call this transformation, the unstagger transformation.
+    unstagger :: State s -> [SigState s] -> [(State s, Signal s)]
+    unstagger _ [] = []
+    unstagger s1 [(SigState _s2 d1)] = [(s1, d1)]
+    unstagger s1 ((SigState _s4 d3) : (more@((SigState s3 _d2) : _))) = (s3, d3) : unstagger s1 more
+
+-- | Given a StrictSeq of SigState (as found in a Trace, where earlier things are to the right), and
+--   Given 'p' that compares later states to earlier states, split at the boundary where
+--   the 'p' detects a change. Used to make a list of shorter Traces from a big Trace. Usually
+--   'p' dectects changes in the Epoch (this marks the epoch boundary), but might have other uses.
+--   Note that the last sub-Trace might be ill-formed, because we run out of Trace elements,
+--   rather than detecting the changes guarded by 'p'
+splitAtChange ::
+  (State s -> State s -> Bool) ->
+  StrictSeq (SigState s) ->
+  State s ->
+  StrictSeq (SigState s) ->
+  [(StrictSeq (SigState s), State s)] ->
+  [(StrictSeq (SigState s), State s)]
+splitAtChange _p SS.Empty a0 ans1 ans2 = (ans1, a0) : ans2 -- Might be ill-formed
+splitAtChange p (xs@(_ :|> x1) :|> x0) a0 ans1 ans2 =
+  if p s1 s0
+    then splitAtChange p xs a0 (x0 :<| ans1) ans2
+    else splitAtChange p xs s0 SS.Empty ((x1 :<| (x0 :<| ans1), a0) : ans2)
+  where
+    (SigState s1 _) = x1
+    (SigState s0 _) = x0
+splitAtChange _p (SS.Empty :|> x1) a0 ans1 ans2 = (((x1 :<| ans1), a0) : ans2) -- Might be ill-formed
+
+-- | Split a Trace into several shorter traces. The leftmost Trace
+--   (at the front of the list) might be ill-formed, depending on what 'p' does.
+splitTrace :: (State s -> State s -> Bool) -> Trace s -> [Trace s]
+splitTrace p (Trace env s0 sigstates) = map f xs
+  where
+    f (sigstates2, s) = Trace env s sigstates2
+    xs = splitAtChange p sigstates s0 Empty []
