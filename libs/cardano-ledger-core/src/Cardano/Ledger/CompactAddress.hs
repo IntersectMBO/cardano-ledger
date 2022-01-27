@@ -1,4 +1,5 @@
 {-# LANGUAGE DeriveFunctor #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -46,6 +47,7 @@ import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Prelude (Text, cborError, panic)
+import Control.DeepSeq (NFData)
 import Control.Monad (ap)
 import qualified Control.Monad.Fail
 import Data.Bits (testBit, (.&.))
@@ -57,7 +59,7 @@ import qualified Data.Primitive.ByteArray as BA
 import Data.Word (Word64, Word8)
 
 newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
-  deriving (Eq, Ord)
+  deriving (Eq, Ord, NFData)
 
 instance CC.Crypto c => Show (CompactAddr c) where
   show c = show (decompactAddr c)

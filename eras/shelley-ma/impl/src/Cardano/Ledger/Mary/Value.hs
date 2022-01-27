@@ -51,7 +51,7 @@ import Cardano.Ledger.Val
     Val (..),
   )
 import Cardano.Prelude (cborError)
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
 import qualified Data.ByteString as BS
@@ -127,8 +127,8 @@ data Value crypto = Value !Integer !(Map (PolicyID crypto) (Map AssetName Intege
 instance CC.Crypto crypto => Eq (Value crypto) where
   x == y = pointwise (==) x y
 
--- TODO make these specific
-instance NFData (Value crypto)
+instance NFData (Value crypto) where
+  rnf (Value c m) = c `deepseq` rnf m
 
 instance NoThunks (Value crypto)
 
@@ -334,7 +334,7 @@ instance
 
 instance CC.Crypto crypto => Compactible (Value crypto) where
   newtype CompactForm (Value crypto) = CompactValue (CompactValue crypto)
-    deriving (Eq, Typeable, Show, NoThunks, ToCBOR, FromCBOR)
+    deriving (Eq, Typeable, Show, NoThunks, ToCBOR, FromCBOR, NFData)
   toCompact x = CompactValue <$> to x
   fromCompact (CompactValue x) = from x
 
@@ -357,6 +357,9 @@ data CompactValue crypto
       {-# UNPACK #-} !Word32 -- number of ma's
       {-# UNPACK #-} !ShortByteString -- rep
   deriving (Show, Typeable)
+
+instance NFData (CompactValue crypto) where
+  rnf = rwhnf
 
 instance CC.Crypto crypto => Eq (CompactValue crypto) where
   a == b = from a == from b
