@@ -24,7 +24,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), Ptr (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
@@ -131,6 +131,12 @@ transAddr :: Addr crypto -> Maybe PV1.Address
 transAddr (Addr _net object stake) = Just (PV1.Address (transCred object) (transStakeReference stake))
 transAddr (AddrBootstrap _bootaddr) = Nothing
 
+transTxOutAddr :: Era era => TxOut era -> Maybe PV1.Address
+transTxOutAddr txOut = do
+  -- filter out Byron addresses without uncompacting them
+  Nothing <- Just (getTxOutBootstrapAddress txOut)
+  transAddr $ getTxOutAddr txOut
+
 slotToPOSIXTime ::
   (Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
   Core.PParams era ->
@@ -147,7 +153,7 @@ slotToPOSIXTime pp ei sysS s = do
         then
           truncate
             -- Convert to milliseconds
-            . (* fromInteger 1000)
+            . (* 1000)
         else resolution
 
 -- | translate a validity interval to POSIX time
@@ -193,12 +199,11 @@ txInfoIn ::
 txInfoIn (UTxO mp) txin =
   case SplitMap.lookup txin mp of
     Nothing -> Nothing
-    Just txout -> case transAddr addr of
+    Just txout -> case transTxOutAddr txout of
       Just ad -> Just (PV1.TxInInfo (txInfoIn' txin) (PV1.TxOut ad valout dhash))
       Nothing -> Nothing
       where
         valout = transValue (getField @"value" txout)
-        addr = getTxOutAddr txout
         dhash = case getField @"datahash" txout of
           SNothing -> Nothing
           SJust safehash -> Just (PV1.DatumHash (transSafeHash safehash))
@@ -214,9 +219,10 @@ txInfoOut ::
   ) =>
   Core.TxOut era ->
   Maybe PV1.TxOut
-txInfoOut txo =
-  let (addr, val, datahash) = (getTxOutAddr txo, getField @"value" txo, getField @"datahash" txo)
-   in case transAddr addr of
+txInfoOut txout =
+  let val = getField @"value" txout
+      datahash = getField @"datahash" txout
+   in case transTxOutAddr txout of
         Just ad -> Just (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
         Nothing -> Nothing
 
