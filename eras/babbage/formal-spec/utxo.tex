@@ -46,11 +46,18 @@
 
 \begin{figure*}
   \begin{align*}
+    & \fun{hasTxIn} : \ScriptPurpose \to \TxIn^? \\
+    & \fun{hasTxIn}~\var{sp}=
+        \begin{cases}
+          \var{sp} & \var{sp}\in\TxIn \\
+          \Nothing & \text{otherwise}
+        \end{cases}
+    \nextdef
     & \fun{getDatum} : \Tx \to \UTxO \to \ScriptPurpose \to \seqof{\Datum} \\
     & \fun{getDatum}~{tx}~{utxo}~{sp} =
       \begin{cases}
-        [\var{d}] & (\_, \_, h) \in \var{utxo}~\var{sp},~ \var{d} \in \fun{txdats}~(\fun{txwits}~tx)~ \var{h} \\
-        [\var{d}] & \hldiff{(\_, \_, d) \in \var{utxo}~\var{sp},~ \var{d} \in \Datum} \\
+        [\var{d}] & \var{txin}\in_?(\fun{hasTxIn}~\var{sp}),   (\_, \_, h, \_) \in \var{utxo}~\var{txin},~ \var{d} \in \fun{txdats}~(\fun{txwits}~tx)~ \var{h} \\
+        [\var{d}] & \var{txin}\in_?(\fun{hasTxIn}~\var{sp}),   (\_, \_, h, \_) \in \var{utxo}~\var{txin},~ \var{d} \in \Datum \\
         \epsilon  & \text{otherwise}
       \end{cases}
     \nextdef

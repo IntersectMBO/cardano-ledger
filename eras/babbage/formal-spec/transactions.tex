@@ -5,7 +5,8 @@
   %
   \begin{equation*}
     \begin{array}{l@{\qquad=\qquad}lr}
-      \TxOut & \Addr \times \Value \times (\hldiff{\Datum} \uniondistinct \DataHash)^? \times \hldiff{\Script^?}
+      \TxOut & \Addr \times \Value \times (\hldiff{\Datum} \uniondistinct \DataHash)^? \times \hldiff{\Script^?} \\
+      \ScriptPurpose & \PolicyID \uniondistinct \TxIn \uniondistinct \AddrRWD \uniondistinct \DCert
     \end{array}
   \end{equation*}
   % 
