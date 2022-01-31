@@ -311,6 +311,10 @@ language = 0 ; Plutus v1
 
 costmdls = { * language => cost_model } ; New
 
+; The keys to the cost model map are not present in the serialization.
+; The values in the serialization are assumed to be ordered
+; lexicographically by their correpsonding key value.
+; The key values are listed in sorted_cost_model_keys.txt.
 cost_model = [ 166*166 int ] ; New
 
 transaction_metadatum =
