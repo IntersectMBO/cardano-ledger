@@ -86,3 +86,10 @@ to include the Byron era redeem addresses
 These addresses were, however, not spendable in the Shelley era.
 At the Allegra hard fork they were removed from the UTxO
 and the Ada contained in them was returned to the reserves.
+
+\subsection{Block hash used in the epoch nonce}
+\label{sec:block-hash-in-epoch-nonce}
+
+In the $\mathsf{CHAIN}$ rule in Figure~\ref{fig:rules:chain}, the $\mathsf{TICKN}$ rule uses
+the last block hash of the previous epoch to create the new epoch nonce.
+In the implemenation, however, the \textit{penultimate} block hash of the previous epoch is used.
