@@ -11,6 +11,7 @@
 -- | Support for multiple (Shelley-based) eras in the ledger.
 module Cardano.Ledger.Era
   ( Era (..),
+    getTxOutBootstrapAddress,
     PreviousEra,
     TranslationContext,
     TranslateEra (..),
@@ -24,10 +25,10 @@ module Cardano.Ledger.Era
 where
 
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Address (Addr)
+import Cardano.Ledger.Address (Addr (..), BootstrapAddress)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.Coin (Coin)
-import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
+import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr, isBootstrapCompactAddr)
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
@@ -92,6 +93,25 @@ class
     case getTxOutEitherAddr t of
       Left a -> compactAddr a
       Right ca -> ca
+
+-- TODO - figure out a dedicated module for things that will create helper
+-- functions from this module:
+
+-- | Get the Bootsrap address from the TxOut. Returns `Nothing` if it is a
+-- Shelley address or newer
+getTxOutBootstrapAddress ::
+  forall era.
+  Era era =>
+  Core.TxOut era ->
+  Maybe (BootstrapAddress (Crypto era))
+getTxOutBootstrapAddress txOut =
+  case getTxOutEitherAddr txOut of
+    Left (AddrBootstrap bootstrapAddr) -> Just bootstrapAddr
+    Right cAddr
+      | isBootstrapCompactAddr cAddr -> do
+        AddrBootstrap bootstrapAddr <- Just (decompactAddr cAddr)
+        Just bootstrapAddr
+    _ -> Nothing
 
 -----------------------------------------------------------------------------
 -- Script Validation

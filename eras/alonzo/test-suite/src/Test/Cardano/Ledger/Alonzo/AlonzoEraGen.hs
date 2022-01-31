@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams, extendPP, retractPP)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
-import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
+import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize, vKeyLocked)
 import Cardano.Ledger.Alonzo.Rules.Utxow (langsUsed)
 import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, txscriptfee)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo
@@ -110,15 +110,9 @@ import Test.QuickCheck hiding ((><))
 
 -- ============================================================
 
-isKeyHashAddr :: Addr crypto -> Bool
-isKeyHashAddr (AddrBootstrap _) = True
-isKeyHashAddr (Addr _ (KeyHashObj _) _) = True
-isKeyHashAddr _ = False
-
 -- | We are choosing new TxOut to pay fees, We want only Key locked addresss with Ada only values.
-vKeyLocked :: Mock c => Core.TxOut (AlonzoEra c) -> Bool
-vKeyLocked txout =
-  isKeyHashAddr (getTxOutAddr txout) && adaOnly (getField @"value" txout)
+vKeyLockedAdaOnly :: Mock c => Core.TxOut (AlonzoEra c) -> Bool
+vKeyLockedAdaOnly txout = vKeyLocked txout && adaOnly (getField @"value" txout)
 
 phase2scripts3Arg :: forall c. Mock c => [TwoPhase3ArgInfo (AlonzoEra c)]
 phase2scripts3Arg =
@@ -262,7 +256,7 @@ okAsCollateral :: forall c. Mock c => UTxO (AlonzoEra c) -> TxIn c -> Bool
 okAsCollateral utxo inputx =
   case SplitMap.lookup inputx (unUTxO utxo) of
     Nothing -> False
-    Just outputx -> vKeyLocked outputx
+    Just outputx -> vKeyLockedAdaOnly outputx
 
 genAlonzoTxBody ::
   forall c.
@@ -441,7 +435,7 @@ instance Mock c => EraGen (AlonzoEra c) where
         (isNativeScript @(AlonzoEra c) script)
           || (phase2scripts3ArgSucceeds script && phase2scripts2ArgSucceeds script)
 
-  genEraGoodTxOut = vKeyLocked
+  genEraGoodTxOut = vKeyLockedAdaOnly
 
   genEraScriptCost pp script =
     if isPlutusScript script

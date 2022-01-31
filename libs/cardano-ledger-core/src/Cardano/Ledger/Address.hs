@@ -384,8 +384,8 @@ bootstrapAddressAttrsSize (BootstrapAddress addr) =
     attrs = Byron.addrAttributes addr
 
 -- | Return True if a given address is a redeemer address from the Byron Era
-isBootstrapRedeemer :: Addr crypto -> Bool
-isBootstrapRedeemer (AddrBootstrap (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem))) = True
+isBootstrapRedeemer :: BootstrapAddress crypto -> Bool
+isBootstrapRedeemer (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem)) = True
 isBootstrapRedeemer _ = False
 
 putPtr :: Ptr -> Put
