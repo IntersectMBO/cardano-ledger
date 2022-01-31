@@ -456,11 +456,11 @@ In the first case, the new epoch state is updated as follows:
 \label{sec:tick-nonce-trans}
 
 The Tick Nonce Transition is responsible for updating the epoch nonce and the
-previous hash nonce at the start of an epoch. Its environment is shown in
+previous epoch's hash nonce at the start of an epoch. Its environment is shown in
 Figure~\ref{fig:ts-types:ticknonce} and consists of the protocol parameters
-$\var{pp}$, the candidate nonce $\eta_c$ and the previous header hash as a
-nonce. Its state consists of the epoch nonce $\eta_0$ and the previous hash
-nonce.
+$\var{pp}$, the candidate nonce $\eta_c$ and the previous epoch's last block
+header hash as a nonce. Its state consists of the epoch nonce $\eta_0$ and
+the previous epoch's last block header hash nonce.
 
 \begin{figure}
   \emph{Tick Nonce environments}
@@ -481,7 +481,7 @@ nonce.
     \left(
       \begin{array}{r@{~\in~}lr}
         \eta_0 & \Seed & \text{epoch nonce} \\
-        \eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
+        \eta_h & \Seed & \text{seed generated from hash of previous epoch's last block header} \\
       \end{array}
     \right)
   \end{equation*}
@@ -1632,7 +1632,7 @@ following:
         ~\eta_0 & \Seed & \text{epoch nonce} \\
         ~\eta_v & \Seed & \text{evolving nonce} \\
         ~\eta_c & \Seed & \text{candidate nonce} \\
-        ~\eta_h & \Seed & \text{seed generated from hash of previous epoch} \\
+        ~\eta_h & \Seed & \text{seed generated from hash of previous epoch's last block header} \\
         \var{lab} & \LastAppliedBlock^? & \text{latest applied block} \\
       \end{array}
     \right)
