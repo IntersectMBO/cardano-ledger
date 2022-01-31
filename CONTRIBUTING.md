@@ -111,29 +111,17 @@ The artifacts in this repository can be built and tested using nix. This is
 additionally used by the Hydra CI to test building, including cross-compilation
 for other systems.
 
-### To add a new Haskell project
+### To add a new Haskell package
 
-To add a new Haskell project, you should do the following:
+To add a new Haskell package, you should do the following:
 
 1. Create the project in the usual way. It should have an appropriate `.cabal` file.
-2. Add the project to the [top-level stack.yaml](./stack.yaml), configuring
-   dependencies etc as needed. If your project's configuration deviates too far
-   from the [snapshot in
-   ``cardano-prelude`](https://github.com/input-output-hk/cardano-prelude/blob/master/snapshot.yaml),
-   then you may have to submit a PR there to update that snapshot.
-3. At this point, test that your new project builds using `stack build <project_name>`.
-4. Run [nix-shell ./nix -A iohkNix.stack-cabal-sync-shell --run scripts/stack-cabal_config_check.sh](./scripts/stack-cabal_config_check.sh)
-  script to check and report your change from stack.yaml to cabal.project.
-5. Run the [regenerate](./nix/regenerate.sh) script to
-   update sha256 checksums in cabal.project.
-5. Test that you can build your new project by running the following: `nix build
+2. Test that you can build your new project by running the following: `nix build
    -f default.nix libs.<project_name>`. If you have executables, then
    you may also try building these using the `exes.<executable_name>`
    attribute path. A good way to see what's available is to execute `:l
    default.nix` in `nix repl`. This will allow you to explore the potential
-   attribute names.
-5. If you want your product to be tested by CI, add it to
-   [release.nix](./release.nix) using the format specified in that file.
+   attribute names by using tab completion on "libs.".
 
 ### To add a new LaTeX specification
 
