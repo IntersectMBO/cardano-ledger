@@ -54,6 +54,11 @@ module Cardano.Ledger.BaseTypes
     txIxFromInteger,
     txIxFromIntegral,
     mkTxIxPartial,
+    CertIx (..),
+    certIxToInt,
+    certIxFromInteger,
+    certIxFromIntegral,
+    mkCertIxPartial,
 
     -- * STS Base
     Globals (..),
@@ -96,11 +101,11 @@ import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders (invalidKey)
+import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
 import Data.Functor.Identity
 import Data.Map.Strict (Map)
-import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (Scientific, base10Exponent, coefficient, normalize, scientific)
@@ -657,10 +662,10 @@ newtype BlocksMade crypto = BlocksMade
 
 -- | Transaction index. It is unfeasable to have 65535 outputs in a transaction,
 -- but 255 is right on the border of a maximum CertIx on Mainnet at the moment,
--- that is why `Word16` was chosen as the smallest upper bound. Use: `txIxToInt`,
--- `txIxFromIntegral` and `txIxFromInteger` in order to construct this index
--- safely from anything other than `Word16`. There is also `mkTxIxPartial` that
--- can be used for testing.
+-- that is why `Word16` was chosen as the smallest upper bound. Use
+-- `txIxFromIntegral` in order to construct this index safely from anything
+-- other than `Word16`. There is also `mkTxIxPartial` that can be used for
+-- testing.
 newtype TxIx = TxIx Word16
   deriving stock (Eq, Ord)
   deriving newtype (NFData, Enum, Bounded, Show, NoThunks, ToCBOR, FromCBOR)
@@ -669,16 +674,36 @@ txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
 
 txIxFromIntegral :: Integral a => a -> Maybe TxIx
-txIxFromIntegral = txIxFromInteger . toInteger
-
-txIxFromInteger :: Integer -> Maybe TxIx
-txIxFromInteger i
-  | i < fromIntegral (minBound :: Word16) || i > fromIntegral (maxBound :: Word16) = Nothing
-  | otherwise = Just (TxIx (fromInteger i))
+txIxFromIntegral = coerce . word16FromInteger . toInteger
 
 -- | Construct a `TxIx` from an arbitrary precision `Integer`. Throws an error for
 -- values out of range. Make sure to use it only for testing.
 mkTxIxPartial :: HasCallStack => Integer -> TxIx
 mkTxIxPartial i =
-  fromMaybe (error $ "Value for TxIx is out of a valid range: " ++ show i) $
-    txIxFromInteger i
+  maybe (error $ "Value for TxIx is out of a valid range: " ++ show i) TxIx $
+    word16FromInteger i
+
+-- | Certificate index. Use `certIxFromIntegral` in order to construct this
+-- index safely from anything other than `Word16`. There is also
+-- `mkCertIxPartial` that can be used for testing.
+newtype CertIx = CertIx Word16
+  deriving stock (Eq, Ord)
+  deriving newtype (NFData, Enum, Bounded, Show, NoThunks, ToCBOR, FromCBOR)
+
+certIxToInt :: CertIx -> Int
+certIxToInt (CertIx w16) = fromIntegral w16
+
+certIxFromIntegral :: Integral a => a -> Maybe CertIx
+certIxFromIntegral = coerce . word16FromInteger . toInteger
+
+-- | Construct a `CertIx` from an arbitrary precision `Integer`. Throws an error for
+-- values out of range. Make sure to use it only for testing.
+mkCertIxPartial :: HasCallStack => Integer -> CertIx
+mkCertIxPartial i =
+  maybe (error $ "Value for CertIx is out of a valid range: " ++ show i) CertIx $
+    word16FromInteger i
+
+word16FromInteger :: Integer -> Maybe Word16
+word16FromInteger i
+  | i < fromIntegral (minBound :: Word16) || i > fromIntegral (maxBound :: Word16) = Nothing
+  | otherwise = Just (fromInteger i)

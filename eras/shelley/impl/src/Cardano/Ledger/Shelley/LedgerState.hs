@@ -39,7 +39,6 @@ module Cardano.Ledger.Shelley.LedgerState
     PulsingRewUpdate (..),
     FutureGenDeleg (..),
     InstantaneousRewards (..),
-    Ix,
     KeyPairs,
     LedgerState (..),
     PPUPState (..),
@@ -208,7 +207,6 @@ import Cardano.Ledger.Shelley.Rewards
 import Cardano.Ledger.Shelley.Tx (extractKeyHashWitnessSet)
 import Cardano.Ledger.Shelley.TxBody
   ( EraIndependentTxBody,
-    Ix,
     MIRPot (..),
     PoolCert (..),
     PoolParams (..),

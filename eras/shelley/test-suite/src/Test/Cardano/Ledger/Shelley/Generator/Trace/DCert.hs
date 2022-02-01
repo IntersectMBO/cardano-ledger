@@ -17,7 +17,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
   )
 where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase, TxIx)
+import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, TxIx)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -35,7 +35,6 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (isDeRegKey)
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEvent, DelplPredicateFailure)
-import Cardano.Ledger.Shelley.TxBody (Ix)
 import Cardano.Ledger.Shelley.UTxO (totalDeposits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<×>))
@@ -109,7 +108,7 @@ instance
   STS (CERTS era)
   where
   type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
-  type State (CERTS era) = (DPState (Crypto era), Ix)
+  type State (CERTS era) = (DPState (Crypto era), CertIx)
   type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
   type Event (CERTS era) = CertsEvent era
@@ -142,7 +141,7 @@ certsTransition = do
         trans @(Core.EraRule "DELPL" era) $
           TRC (DelplEnv slot ptr pp acnt, dpState, cert)
 
-      pure (dpState', nextCertIx + 1)
+      pure (dpState', succ nextCertIx)
     Nothing ->
       pure (dpState, nextCertIx)
 
@@ -224,7 +223,7 @@ genDCerts
   txIx
   acnt = do
     let env = (slot, txIx, pparams, acnt)
-        st0 = (dpState, 0)
+        st0 = (dpState, minBound)
 
     certsTrace <-
       QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0

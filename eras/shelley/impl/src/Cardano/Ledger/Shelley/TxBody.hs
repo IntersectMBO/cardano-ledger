@@ -25,7 +25,6 @@ module Cardano.Ledger.Shelley.TxBody
     DelegCert (..),
     Delegation (..),
     GenesisDelegCert (..),
-    Ix,
     MIRCert (..),
     MIRPot (..),
     MIRTarget (..),
@@ -100,12 +99,7 @@ import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    Ix,
-    Ptr (..),
-    StakeCredential,
-  )
+import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeCredential)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)

@@ -29,6 +29,7 @@ import Cardano.Ledger.BaseTypes
     ProtVer (..),
     StrictMaybe (..),
     activeSlotVal,
+    mkCertIxPartial,
     (⭒),
   )
 import Cardano.Ledger.Block (Block, bheader)
@@ -268,9 +269,9 @@ expectedStEx1 =
     . C.newLab blockEx1
     . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> ((2 :: Integer) <×> _poolDeposit ppEx))
     . C.newUTxO txbodyEx1
-    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound 0)
-    . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound 1)
-    . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) minBound 2)
+    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
+    . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
+    . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 2))
     . C.newPool alicePoolParams'
     . C.newPool bobPoolParams'
     . C.delegation Cast.aliceSHK (_poolId alicePoolParams')

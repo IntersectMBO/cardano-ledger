@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -19,7 +20,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), txIxToInt)
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), certIxToInt, txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
 import Cardano.Ledger.Credential
@@ -121,8 +122,10 @@ transStakeCred (KeyHashObj (KeyHash kh)) =
 
 transStakeReference :: StakeReference crypto -> Maybe PV1.StakingCredential
 transStakeReference (StakeRefBase cred) = Just (PV1.StakingHash (transStakeCred cred))
-transStakeReference (StakeRefPtr (Ptr (SlotNo slot) i1 i2)) =
-  Just (PV1.StakingPtr (fromIntegral slot) (fromIntegral (txIxToInt i1)) (fromIntegral i2))
+transStakeReference (StakeRefPtr (Ptr (SlotNo slot) txIx certIx)) =
+  let !txIxInteger = toInteger (txIxToInt txIx)
+      !certIxInteger = toInteger (certIxToInt certIx)
+   in Just (PV1.StakingPtr (fromIntegral slot) txIxInteger certIxInteger)
 transStakeReference StakeRefNull = Nothing
 
 transCred :: Credential keyrole crypto -> PV1.Credential

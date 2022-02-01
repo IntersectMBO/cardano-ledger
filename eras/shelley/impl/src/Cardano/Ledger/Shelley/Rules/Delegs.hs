@@ -31,6 +31,7 @@ import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
     TxIx,
     invalidKey,
+    mkCertIxPartial,
     networkId,
   )
 import Cardano.Ledger.Coin (Coin)
@@ -225,7 +226,7 @@ delegsTransition = do
               )
               Map.empty
               wdrls_
-          unified' = (rewards' UM.⨃ wdrls_')
+          unified' = rewards' UM.⨃ wdrls_'
       pure $ dpstate {_dstate = ds {_unified = unified'}}
     gamma :|> c -> do
       dpstate' <-
@@ -241,7 +242,9 @@ delegsTransition = do
             _ -> Right ()
       isDelegationRegistered ?!: id
 
-      let ptr = Ptr slot txIx (fromIntegral $ length gamma)
+      -- It is impossible to have 4294967295 number of certificates in a
+      -- trabsaction, thus partial function is justified.
+      let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(Core.EraRule "DELPL" era) $
         TRC (DelplEnv slot ptr pp acnt, dpstate', c)
   where

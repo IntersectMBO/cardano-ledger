@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -45,6 +44,7 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     BlocksMade (..),
+    CertIx (..),
     DnsName,
     NonNegativeInterval,
     PositiveInterval,
@@ -395,6 +395,8 @@ instance CC.Crypto crypto => Arbitrary (Credential r crypto) where
       ]
 
 deriving instance Arbitrary TxIx
+
+deriving instance Arbitrary CertIx
 
 instance Arbitrary Ptr where
   arbitrary = genericArbitraryU

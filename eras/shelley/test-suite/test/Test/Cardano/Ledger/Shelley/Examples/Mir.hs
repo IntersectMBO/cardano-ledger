@@ -15,7 +15,7 @@ module Test.Cardano.Ledger.Shelley.Examples.Mir
   )
 where
 
-import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..), mkCertIxPartial)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import Cardano.Ledger.Credential (Ptr (..))
@@ -212,7 +212,7 @@ expectedStEx1' txwits pot =
     . C.newLab (blockEx1' txwits pot)
     . C.feesAndDeposits feeTx1 (_keyDeposit ppEx)
     . C.newUTxO (txbodyEx1 pot)
-    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound 1)
+    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
     . C.mir Cast.aliceSHK pot aliceMIRCoin
     $ initStMIR (Coin 1000)
 

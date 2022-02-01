@@ -10,7 +10,6 @@
 module Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     GenesisCredential (..),
-    Ix,
     PaymentCredential,
     Ptr (..),
     StakeCredential,
@@ -19,7 +18,7 @@ module Cardano.Ledger.Credential
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.BaseTypes (TxIx, invalidKey)
+import Cardano.Ledger.BaseTypes (CertIx, TxIx, invalidKey)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
@@ -39,7 +38,7 @@ import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=
 import qualified Data.Aeson as Aeson
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)
-import Data.Word (Word64, Word8)
+import Data.Word (Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -95,13 +94,20 @@ data StakeReference crypto
 
 instance NoThunks (StakeReference crypto)
 
-type Ix = Word64
-
 -- | Pointer to a slot, transaction index and index in certificate list.
-data Ptr
-  = Ptr !SlotNo !TxIx !Ix
+data Ptr = Ptr !SlotNo !TxIx !CertIx
   deriving (Show, Eq, Ord, Generic, NFData, NoThunks)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
+
+ptrSlotNo :: Ptr -> SlotNo
+ptrSlotNo (Ptr sn _ _) = sn
+
+ptrTxIx :: Ptr -> TxIx
+ptrTxIx (Ptr _ txIx _) = txIx
+
+ptrCertIx :: Ptr -> CertIx
+ptrCertIx (Ptr _ _ cIx) = cIx
+
 
 instance
   (Typeable kr, CC.Crypto crypto) =>
@@ -131,16 +137,9 @@ instance ToCBORGroup Ptr where
       <> toCBOR txIx
       <> toCBOR certIx
   encodedGroupSizeExpr size_ proxy =
-    encodedSizeExpr size_ (getSlotNo <$> proxy)
-      + encodedSizeExpr size_ (getIx1 <$> proxy)
-      + encodedSizeExpr size_ (getIx2 <$> proxy)
-    where
-      getSlotNo :: Ptr -> SlotNo
-      getSlotNo (Ptr a _ _) = a
-      getIx1 :: Ptr -> TxIx
-      getIx1 (Ptr _ x _) = x
-      getIx2 :: Ptr -> Ix
-      getIx2 (Ptr _ _ x) = x
+    encodedSizeExpr size_ (ptrSlotNo <$> proxy)
+      + encodedSizeExpr size_ (ptrTxIx <$> proxy)
+      + encodedSizeExpr size_ (ptrCertIx <$> proxy)
 
   listLen _ = 3
   listLenBound _ = 3
@@ -160,9 +159,5 @@ instance Ord (GenesisCredential crypto) where
 instance Eq (GenesisCredential crypto) where
   (==) (GenesisCredential gh) (GenesisCredential gh') = gh == gh'
 
-instance
-  CC.Crypto crypto =>
-  ToCBOR (GenesisCredential crypto)
-  where
-  toCBOR (GenesisCredential kh) =
-    toCBOR kh
+instance CC.Crypto crypto => ToCBOR (GenesisCredential crypto) where
+  toCBOR (GenesisCredential kh) = toCBOR kh
