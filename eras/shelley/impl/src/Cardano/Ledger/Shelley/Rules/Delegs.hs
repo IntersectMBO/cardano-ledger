@@ -243,7 +243,7 @@ delegsTransition = do
       isDelegationRegistered ?!: id
 
       -- It is impossible to have 4294967295 number of certificates in a
-      -- trabsaction, thus partial function is justified.
+      -- transaction, therefore partial function is justified.
       let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(Core.EraRule "DELPL" era) $
         TRC (DelplEnv slot ptr pp acnt, dpstate', c)

@@ -15,11 +15,7 @@ import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
-import Cardano.Ledger.BaseTypes
-  ( NonNegativeInterval,
-    StrictMaybe (..),
-    boundRational,
-  )
+import Cardano.Ledger.BaseTypes (NonNegativeInterval, StrictMaybe (..), boundRational)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (TxBody)
 import Cardano.Ledger.Crypto (StandardCrypto)

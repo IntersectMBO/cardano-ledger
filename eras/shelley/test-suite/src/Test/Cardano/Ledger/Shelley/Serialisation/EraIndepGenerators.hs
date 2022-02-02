@@ -49,6 +49,7 @@ import Cardano.Ledger.BaseTypes
     NonNegativeInterval,
     PositiveInterval,
     PositiveUnitInterval,
+    TxIx (..),
     UnitInterval,
     Url,
     mkActiveSlotCoeff,

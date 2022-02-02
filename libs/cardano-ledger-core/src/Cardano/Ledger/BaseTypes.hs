@@ -51,12 +51,10 @@ module Cardano.Ledger.BaseTypes
     -- * Indices
     TxIx (..),
     txIxToInt,
-    txIxFromInteger,
     txIxFromIntegral,
     mkTxIxPartial,
     CertIx (..),
     certIxToInt,
-    certIxFromInteger,
     certIxFromIntegral,
     mkCertIxPartial,
 

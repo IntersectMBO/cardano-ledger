@@ -33,7 +33,6 @@ import Cardano.Ledger.Address
     toWord7,
     word7sToWord64,
   )
-import qualified Cardano.Ledger.Address as Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (CertIx (..), TxIx (..), word8ToNetwork)
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),

@@ -1,5 +1,3 @@
-{-# LANGUAGE DuplicateRecordFields #-}
-
 module Cardano.Ledger.Shelley.API.Types
   ( module X,
   )
@@ -11,14 +9,19 @@ import Cardano.Ledger.Address as X
   )
 import Cardano.Ledger.BHeaderView as X (isOverlaySlot)
 import Cardano.Ledger.BaseTypes as X
-  ( Globals (..),
+  ( CertIx,
+    Globals (..),
     Network (..),
     Nonce (..),
     Port (..),
     ProtVer (..),
     StrictMaybe (..),
-    TxIx (..),
+    TxIx,
+    certIxFromIntegral,
+    certIxToInt,
     epochInfo,
+    txIxFromIntegral,
+    txIxToInt,
   )
 -- TODO deprecate these?
 
