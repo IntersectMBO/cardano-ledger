@@ -20,7 +20,7 @@
 {-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Babbage.TxBody
-  ( TxOut (TxOut, TxOutCompact, TxOutCompactDH, TxOutCompactDatum),
+  ( TxOut (TxOut, TxOutCompact, TxOutCompactDH, TxOutCompactDatum, TxOutCompactRefScript),
     TxBody
       ( TxBody,
         inputs,
@@ -194,17 +194,24 @@ viewCompactTxOut ::
   forall era.
   Era era =>
   TxOut era ->
-  (CompactAddr (Crypto era), CompactForm (Core.Value era), StrictMaybe (DataHash (Crypto era)))
+  (CompactAddr (Crypto era), CompactForm (Core.Value era), Datum era, StrictMaybe (Core.Script era))
 viewCompactTxOut txOut = case txOut of
-  TxOutCompact' addr val -> (addr, val, SNothing)
-  TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
-  TxOutCompactDatum addr val datum -> (addr, val, SJust $ hashBinaryData datum)
-  TxOutCompactRefScript' addr val datum _rs -> (addr, val, datumDataHash datum)
+  TxOutCompact' addr val -> (addr, val, NoDatum, SNothing)
+  TxOutCompactDH' addr val dh -> (addr, val, DatumHash dh, SNothing)
+  TxOutCompactDatum addr val datum -> (addr, val, Datum datum, SNothing)
+  TxOutCompactRefScript' addr val datum rs -> (addr, val, datum, SJust rs)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal ->
-    Alonzo.viewCompactTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
+    let (a, b, c) = Alonzo.viewCompactTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
+     in (a, b, toDatum c, SNothing)
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32 ->
-    Alonzo.viewCompactTxOut @era $
-      Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
+    let (a, b, c) =
+          Alonzo.viewCompactTxOut @era $
+            Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
+     in (a, b, toDatum c, SNothing)
+  where
+    toDatum = \case
+      SNothing -> NoDatum
+      SJust dh -> DatumHash dh
 
 viewTxOut ::
   forall era.
@@ -325,7 +332,7 @@ pattern TxOutCompact ::
   CompactForm (Core.Value era) ->
   TxOut era
 pattern TxOutCompact addr vl <-
-  (viewCompactTxOut -> (addr, vl, SNothing))
+  (viewCompactTxOut -> (addr, vl, NoDatum, SNothing))
   where
     TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) NoDatum SNothing
 
@@ -339,11 +346,26 @@ pattern TxOutCompactDH ::
   DataHash (Crypto era) ->
   TxOut era
 pattern TxOutCompactDH addr vl dh <-
-  (viewCompactTxOut -> (addr, vl, SJust dh))
+  (viewCompactTxOut -> (addr, vl, DatumHash dh, SNothing))
   where
     TxOutCompactDH cAddr cVal dh = TxOut (decompactAddr cAddr) (fromCompact cVal) (DatumHash dh) SNothing
 
-{-# COMPLETE TxOutCompact, TxOutCompactDH #-}
+pattern TxOutCompactRefScript ::
+  forall era.
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  Datum era ->
+  Core.Script era ->
+  TxOut era
+pattern TxOutCompactRefScript addr vl d rs <-
+  (viewCompactTxOut -> (addr, vl, d, SJust rs))
+  where
+    TxOutCompactRefScript cAddr cVal d rs = TxOut (decompactAddr cAddr) (fromCompact cVal) d (SJust rs)
+
+{-# COMPLETE TxOutCompact, TxOutCompactDH, TxOutCompactRefScript #-}
 
 -- ======================================
 
@@ -634,7 +656,7 @@ instance
       <> toCBOR addr
       <> toCBOR cv
       <> toCBOR d
-  toCBOR (TxOutCompactRefScript' addr cv d rs) =
+  toCBOR (TxOutCompactRefScript addr cv d rs) =
     encodeListLen 5
       <> toCBOR (2 :: Word8)
       <> toCBOR addr
@@ -925,6 +947,7 @@ instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
 instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
   getField (TxOutCompact _ v) = fromCompact v
   getField (TxOutCompactDH _ v _) = fromCompact v
+  getField (TxOutCompactRefScript _ v _ _) = fromCompact v
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField = maybeToStrictMaybe . txOutDataHash
