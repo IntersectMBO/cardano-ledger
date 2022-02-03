@@ -94,6 +94,7 @@ library
     cardano-data,
     cardano-ledger-alonzo,
     cardano-ledger-alonzo-test,
+    cardano-ledger-babbage,
     cardano-ledger-core,
     cardano-ledger-pretty,
     cardano-ledger-shelley-ma,

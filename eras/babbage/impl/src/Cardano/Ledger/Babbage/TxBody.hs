@@ -245,6 +245,14 @@ data Datum era
   | Datum !(BinaryData era)
   deriving (Eq, Ord, Show)
 
+instance Semigroup (Datum era) where -- This instance is left biased
+  NoDatum <> x = x
+  x <> NoDatum = x
+  x <> _ = x
+
+instance Monoid (Datum era) where
+  mempty = NoDatum
+
 datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
 datumDataHash = \case
   NoDatum -> SNothing

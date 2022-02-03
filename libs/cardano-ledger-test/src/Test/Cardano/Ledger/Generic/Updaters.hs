@@ -16,6 +16,7 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Cardano.Ledger.Generic.Updaters where
 
@@ -36,6 +37,11 @@ import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..), unTxDats)
+--
+
+import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams, PParams' (..), PParamsUpdate)
+import qualified Cardano.Ledger.Babbage.Tx as Babbage (ValidatedTx (..))
+import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxBody (..), TxOut (..))
 import Cardano.Ledger.BaseTypes (Network (..), NonNegativeInterval, Nonce, ProtVer (..), StrictMaybe (..), UnitInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
@@ -57,6 +63,8 @@ import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxBody (..), TxOut (.
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
+--
+import qualified Cardano.Ledger.TxIn as Common (TxIn (..))
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import qualified Data.ByteString.Char8 as BS
@@ -207,12 +215,31 @@ initialTxBody (Alonzo _) =
     SNothing
     SNothing
     SNothing
+initialTxBody (Babbage _) =
+  Babbage.TxBody
+    Set.empty
+    Set.empty
+    Set.empty
+    Seq.empty
+    SNothing
+    (Coin 0)
+    Seq.empty
+    initWdrl
+    (Coin 0)
+    initVI
+    SNothing
+    Set.empty
+    initValue
+    SNothing
+    SNothing
+    SNothing
 
 initialWitnesses :: Era era => Proof era -> Core.Witnesses era
 initialWitnesses (Shelley _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Allegra _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Mary _) = WitnessSet Set.empty Map.empty Set.empty
 initialWitnesses (Alonzo _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
+initialWitnesses (Babbage _) = TxWitness mempty mempty mempty mempty (Redeemers mempty)
 
 initialTx :: forall era. Proof era -> Core.Tx era
 initialTx era@(Shelley _) = Shelley.Tx (initialTxBody era) (initialWitnesses era) SNothing
@@ -224,12 +251,19 @@ initialTx era@(Alonzo _) =
     (initialWitnesses era)
     (Alonzo.IsValid True)
     SNothing
+initialTx era@(Babbage _) =
+  Babbage.ValidatedTx
+    (initialTxBody era)
+    (initialWitnesses era)
+    (Alonzo.IsValid True)
+    SNothing
 
 initialPParams :: forall era. Proof era -> Core.PParams era
 initialPParams (Shelley _) = def
 initialPParams (Allegra _) = def
 initialPParams (Mary _) = def
 initialPParams (Alonzo _) = def
+initialPParams (Babbage _) = def
 
 -- ===========================================================================
 -- Upaters and the use of Policy to specify Merge Semantics and use of [t] as inputs.
@@ -246,10 +280,10 @@ initialPParams (Alonzo _) = def
 data Policy
   = -- | Combine old and new values using Semigroup semantics (or raise an error if (Semgroup t) doesn't hold).
     Merge
-  | -- | Always use the new value
+  | -- | Always use the new value, unless it is zero, then use the old value
     Override
-  | -- | Combine old and new, but don't add any new values if they are already in old.
-    NoDups
+  | -- | Always use the old value, unless it is zero, then use the new value
+    First
 
 -- | filter out elements of 'xs' that are in 't'
 nodups :: (Foldable t, Eq x) => t x -> [x] -> [x]
@@ -269,10 +303,10 @@ instance (Show x, Eq x, Semigroup x) => Merge (Maybe x) x where
   applyMerge Override Nothing [] = Nothing
   applyMerge Override (Just _) [y] = Just y
   applyMerge Override (Just x) [] = Just x
-  applyMerge NoDups Nothing [x] = Just x
-  applyMerge NoDups Nothing [] = Nothing
-  applyMerge NoDups (Just x) [y] = Just (if x == y then x else y)
-  applyMerge NoDups (Just x) [] = Just x
+  applyMerge First Nothing [x] = Just x
+  applyMerge First Nothing [] = Nothing
+  applyMerge First (Just x) [_] = Just x
+  applyMerge First (Just x) [] = Just x
   applyMerge _ _ xs =
     error ("Only null lists or lists with 1 element can be used in applyMerge for Maybe: " ++ show xs)
 
@@ -285,38 +319,38 @@ instance (Show x, Eq x, Semigroup x) => Merge (StrictMaybe x) x where
   applyMerge Override SNothing [] = SNothing
   applyMerge Override (SJust _) [y] = SJust y
   applyMerge Override (SJust x) [] = SJust x
-  applyMerge NoDups SNothing [x] = SJust x
-  applyMerge NoDups SNothing [] = SNothing
-  applyMerge NoDups (SJust x) [y] = SJust (if x == y then x else y)
-  applyMerge NoDups (SJust x) [] = SJust x
+  applyMerge First SNothing [x] = SJust x
+  applyMerge First SNothing [] = SNothing
+  applyMerge First (SJust x) [_] = SJust x
+  applyMerge First (SJust x) [] = SJust x
   applyMerge _ _ xs =
     error ("Only null lists or lists with 1 element can be used in applyMerge for Maybe: " ++ show xs)
 
 instance Ord x => Merge (Set x) x where
   applyMerge Merge set ts = Set.union set (Set.fromList ts)
   applyMerge Override _set ts = (Set.fromList ts)
-  applyMerge NoDups set ts = Set.union set (Set.fromList (nodups set ts))
+  applyMerge First set ts = Set.union set (Set.fromList (nodups set ts)) -- FIXME
 
 instance Eq x => Merge (StrictSeq x) x where
-  applyMerge Override _seqx ts = (Seq.fromList ts)
+  applyMerge Override _ ts = (Seq.fromList ts)
   applyMerge Merge seqx ts = seqx <> (Seq.fromList ts)
-  applyMerge NoDups seqx ts = seqx <> (Seq.fromList (nodups seqx ts))
+  applyMerge First seqx _ = seqx 
 
 instance Eq x => Merge [x] x where
   applyMerge Merge list ts = list ++ ts
-  applyMerge Override _list ts = ts
-  applyMerge NoDups list ts = list ++ (nodups list ts)
+  applyMerge Override _ ts = ts
+  applyMerge First list _ = list 
 
 instance (Show t, Semigroup t, Show key, Ord key) => Merge (Map key t) (key, t) where
   applyMerge Override _m ts = (Map.fromList ts)
-  applyMerge NoDups m ts = Map.union m (Map.fromList ts)
+  applyMerge First m _ts = m
   applyMerge Merge m ts = Map.unionWith (<>) m (Map.fromList ts)
 
--- | Use this when the range of the map is not a Semigroup. Note Merge cas can fail.
-applyMaybe :: Show a => Policy -> Maybe a -> [a] -> Maybe a
+-- | Use this when the range of the map is not a Semigroup. Note Merge can can fail.
+
 applyMap :: (Ord key, Show t, Show key) => String -> Policy -> Map key t -> [(key, t)] -> Map key t
-applyMap _ Override _m pairs = Map.fromList pairs
-applyMap _ NoDups m ts = Map.union m (Map.fromList ts)
+applyMap _ Override _ pairs = Map.fromList pairs
+applyMap _ First m _ = m
 applyMap message Merge m pairs = List.foldl' accum m pairs
   where
     accum ans (k, t) = Map.insertWithKey checkdisjoint k t ans
@@ -332,6 +366,7 @@ applyMap message Merge m pairs = List.foldl' accum m pairs
         )
 
 -- | Use this when the Maybe type does not have a Semigroup instance
+applyMaybe :: Show a => Policy -> Maybe a -> [a] -> Maybe a
 applyMaybe Merge (Just x) [y] = error ("No Semigroup in applyMaybe: " ++ show x ++ "  " ++ show y)
 applyMaybe _ Nothing [x] = Just x
 applyMaybe _ Nothing [] = Nothing
@@ -397,6 +432,14 @@ updateTx p wit@(Alonzo _) (Alonzo.ValidatedTx b w iv d) dt =
     Witnesses' wfields -> Alonzo.ValidatedTx b (newWitnesses p wit wfields) iv d
     AuxData faux -> Alonzo.ValidatedTx b w iv (applySMaybe p d faux)
     Valid iv' -> Alonzo.ValidatedTx b w (Alonzo.IsValid iv') d
+updateTx p wit@(Babbage _) (Babbage.ValidatedTx b w iv d) dt =
+  case dt of
+    Body fbody -> Babbage.ValidatedTx fbody w iv d
+    Body' bfields -> Babbage.ValidatedTx (newTxBody p wit bfields) w iv d
+    Witnesses fwit -> Babbage.ValidatedTx b fwit iv d
+    Witnesses' wfields -> Babbage.ValidatedTx b (newWitnesses p wit wfields) iv d
+    AuxData faux -> Babbage.ValidatedTx b w iv (applySMaybe p d faux)
+    Valid iv' -> Babbage.ValidatedTx b w (Alonzo.IsValid iv') d
 
 newTx :: Policy -> Proof era -> [TxField era] -> Core.Tx era
 newTx p era = List.foldl' (updateTx p era) (initialTx era)
@@ -407,7 +450,9 @@ newTx p era = List.foldl' (updateTx p era) (initialTx era)
 data TxBodyField era
   = Inputs [TxIn (Crypto era)]
   | Collateral [TxIn (Crypto era)]
+  | RefInputs [TxIn (Crypto era)]
   | Outputs [Core.TxOut era]
+  | CollateralReturn [Core.TxOut era] -- 0 or 1 element
   | Certs [DCert (Crypto era)]
   | Wdrls (Wdrl (Crypto era))
   | Txfee Coin
@@ -470,6 +515,23 @@ updateTxBody p (Alonzo _) tx dt = case dt of
   (WppHash h) -> tx {Alonzo.scriptIntegrityHash = applySMaybe p (Alonzo.scriptIntegrityHash tx) h}
   (AdHash hs) -> tx {Alonzo.adHash = applySMaybe p (Alonzo.adHash tx) hs}
   (Txnetworkid i) -> tx {Alonzo.txnetworkid = i}
+  _ -> tx
+updateTxBody p (Babbage _) tx dt = case dt of
+  (Inputs is) -> tx {Babbage.inputs = applyMerge p (Babbage.inputs tx) is}
+  (Collateral is) -> tx {Babbage.collateral = applyMerge p (Babbage.collateral tx) is}
+  (RefInputs is) -> tx {Babbage.referenceInputs = applyMerge p (Babbage.referenceInputs tx) is}
+  (Outputs outs1) -> tx {Babbage.outputs = applyMerge p (Babbage.outputs tx) outs1}
+  (CollateralReturn outs1) -> tx {Babbage.collateralReturn = applySMaybe p (Babbage.collateralReturn tx) outs1}
+  (Certs cs) -> tx {Babbage.txcerts = applyMerge p (Babbage.txcerts tx) cs}
+  (Wdrls ws) -> tx {Babbage.txwdrls = Wdrl (Map.unionWith (<+>) (unWdrl (Babbage.txwdrls tx)) (unWdrl ws))}
+  (Txfee c) -> tx {Babbage.txfee = (Babbage.txfee tx) <+> c}
+  (Vldt vi) -> tx {Babbage.txvldt = vi}
+  (Update up) -> tx {Babbage.txUpdates = applySMaybe p (Babbage.txUpdates tx) up}
+  (ReqSignerHashes hs) -> tx {Babbage.reqSignerHashes = applyMerge p (Babbage.reqSignerHashes tx) hs}
+  (Mint v) -> tx {Babbage.mint = v}
+  (WppHash h) -> tx {Babbage.scriptIntegrityHash = applySMaybe p (Babbage.scriptIntegrityHash tx) h}
+  (AdHash hs) -> tx {Babbage.adHash = applySMaybe p (Babbage.adHash tx) hs}
+  (Txnetworkid i) -> tx {Babbage.txnetworkid = i}
 
 newTxBody :: Era era => Policy -> Proof era -> [TxBodyField era] -> Core.TxBody era
 newTxBody p era = List.foldl' (updateTxBody p era) (initialTxBody era)
@@ -517,6 +579,15 @@ updateWitnesses p wit@(Alonzo _) w dw = case dw of
       { txdats = TxDats $ applyMap "DataWits" p (unTxDats $ txdats w) (map (\x -> (hashData @era x, x)) ds)
       }
   (RdmrWits r) -> w {txrdmrs = r} -- We do not use a merging sematics on Redeemers because the Hashes would get messed up.
+updateWitnesses p wit@(Babbage _) w dw = case dw of
+  (AddrWits ks) -> w {txwitsVKey = applyMerge p (txwitsVKey w) ks}
+  (BootWits boots) -> w {txwitsBoot = applyMerge p (txwitsBoot w) boots}
+  (ScriptWits ss) -> w {txscripts = applyMap "ScriptWits" p (txscripts w) (map (hashpair wit) ss)}
+  (DataWits ds) ->
+    w
+      { txdats = TxDats $ applyMap "DataWits" p (unTxDats $ txdats w) (map (\x -> (hashData @era x, x)) ds)
+      }
+  (RdmrWits r) -> w {txrdmrs = r} -- We do not use a merging sematics on Redeemers because the Hashes would get messed up.
 
 newWitnesses :: Era era => Policy -> Proof era -> [WitnessesField era] -> Core.Witnesses era
 newWitnesses p era = List.foldl' (updateWitnesses p era) (initialWitnesses era)
@@ -548,9 +619,9 @@ data PParamsField era
   | -- | Treasury expansion
     Tau (UnitInterval)
   | -- | Decentralization parameter
-    D (UnitInterval)
+    D (UnitInterval) -- Dropped in Babbage
   | -- | Extra entropy
-    ExtraEntropy (Nonce)
+    ExtraEntropy (Nonce) -- Dropped in Babbage
   | -- | Protocol version
     ProtocolVersion (ProtVer)
   | -- | Minimum Stake Pool Cost
@@ -619,6 +690,27 @@ updatePParams (Alonzo _) pp dpp = case dpp of
   MaxBlockExUnits n -> pp {Alonzo._maxBlockExUnits = n}
   CollateralPercentage perc -> pp {Alonzo._collateralPercentage = perc}
   _ -> pp
+updatePParams (Babbage _) pp dpp = case dpp of
+  (MinfeeA nat) -> pp {Babbage._minfeeA = nat}
+  (MinfeeB nat) -> pp {Babbage._minfeeB = nat}
+  (MaxBBSize nat) -> pp {Babbage._maxBBSize = nat}
+  (MaxTxSize nat) -> pp {Babbage._maxTxSize = nat}
+  (MaxBHSize nat) -> pp {Babbage._maxBHSize = nat}
+  (KeyDeposit coin) -> pp {Babbage._keyDeposit = coin}
+  (PoolDeposit coin) -> pp {Babbage._poolDeposit = coin}
+  (EMax e) -> pp {Babbage._eMax = e}
+  (NOpt nat) -> pp {Babbage._nOpt = nat}
+  (A0 rat) -> pp {Babbage._a0 = rat}
+  (Rho u) -> pp {Babbage._rho = u}
+  (Tau u) -> pp {Babbage._tau = u}
+  (ProtocolVersion pv) -> pp {Babbage._protocolVersion = pv}
+  (MinPoolCost coin) -> pp {Babbage._minPoolCost = coin}
+  Costmdls cost -> pp {Babbage._costmdls = cost}
+  MaxValSize n -> pp {Babbage._maxValSize = n}
+  MaxTxExUnits n -> pp {Babbage._maxTxExUnits = n}
+  MaxBlockExUnits n -> pp {Babbage._maxBlockExUnits = n}
+  CollateralPercentage perc -> pp {Babbage._collateralPercentage = perc}
+  _ -> pp
 
 newPParams :: Proof era -> [PParamsField era] -> Core.PParams era
 newPParams era = List.foldl' (updatePParams era) (initialPParams era)
@@ -632,16 +724,18 @@ notAddress _ = True
 
 applyValue :: Policy -> Proof era -> Core.Value era -> Core.Value era -> Core.Value era
 applyValue Override _ _old new = new
-applyValue NoDups _ _old new = new
+applyValue First _ old _new = old
 applyValue Merge (Shelley _) old new = old <+> new
 applyValue Merge (Allegra _) old new = old <+> new
 applyValue Merge (Mary _) old new = old <+> new
 applyValue Merge (Alonzo _) old new = old <+> new
+applyValue Merge (Babbage _) old new = old <+> new
 
 data TxOutField era
   = Address (Addr (Crypto era))
   | Amount (Core.Value era)
-  | DHash [DataHash (Crypto era)] -- 0 or 1 element, represents Maybe type
+  | DHash [DataHash (Crypto era)] -- 0 or 1 element, represents a Maybe-like type
+  | Datum [Babbage.Datum era] -- 0 or 1 element, represents a Maybe-like type
 
 updateTxOut :: Policy -> Proof era -> Core.TxOut era -> TxOutField era -> Core.TxOut era
 updateTxOut p (Shelley c) (out@(Shelley.TxOut a v)) txoutd = case txoutd of
@@ -660,6 +754,19 @@ updateTxOut p (Alonzo c) (Alonzo.TxOut a v h) txoutd = case txoutd of
   Address addr -> Alonzo.TxOut addr v h
   Amount val -> Alonzo.TxOut a (applyValue p (Alonzo c) v val) h
   DHash mdh -> Alonzo.TxOut a v (applySMaybe Merge h mdh)
+  Datum [] -> Alonzo.TxOut a v SNothing
+  Datum [Babbage.NoDatum] -> Alonzo.TxOut a v SNothing
+  Datum [Babbage.DatumHash dh] -> Alonzo.TxOut a v (SJust dh)
+  Datum (d : _) -> error ("Cannot use a script Datum in the Alonzo era " ++ show d)
+updateTxOut p (Babbage c) (Babbage.TxOut a v h) txoutd = case txoutd of
+  Address addr -> Babbage.TxOut addr v h
+  Amount val -> Babbage.TxOut a (applyValue p (Alonzo c) v val) h
+  Datum [] -> Babbage.TxOut a v Babbage.NoDatum
+  Datum [d] -> Babbage.TxOut a v d
+  Datum ds -> error ("Only lists with 0 or 1 element can be used in Babbage Datum field " ++ show ds)
+  DHash [] -> Babbage.TxOut a v Babbage.NoDatum
+  DHash [dh] -> Babbage.TxOut a v (Babbage.DatumHash dh)
+  DHash (d : _) -> error ("Only lists with 0 or 1 element can be used in Babbage DHash field " ++ show d)
 
 newTxOut :: Era era => Policy -> Proof era -> [TxOutField era] -> Core.TxOut era
 newTxOut _ _ dts | all notAddress dts = error ("A call to newTxOut must have an (Address x) field.")
@@ -678,6 +785,7 @@ initialTxOut wit@(Shelley _) = Shelley.TxOut (initialAddr wit) (Coin 0)
 initialTxOut wit@(Allegra _) = Shelley.TxOut (initialAddr wit) (Coin 0)
 initialTxOut wit@(Mary _) = Shelley.TxOut (initialAddr wit) (inject (Coin 0))
 initialTxOut wit@(Alonzo _) = Alonzo.TxOut (initialAddr wit) (inject (Coin 0)) SNothing
+initialTxOut wit@(Babbage _) = Babbage.TxOut (initialAddr wit) (inject (Coin 0)) Babbage.NoDatum
 
 -- ====================================
 
