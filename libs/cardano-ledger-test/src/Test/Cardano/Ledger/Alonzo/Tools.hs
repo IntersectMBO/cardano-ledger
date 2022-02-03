@@ -35,7 +35,9 @@ import Data.Maybe (fromJust)
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (defaultCostModel)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation (A, datumExample1, initUTxO, someKeys, testSystemStart, validatingBody, validatingRedeemersEx1)
+import Test.Cardano.Ledger.Generic.Fields (PParamsField (..), TxField (..), WitnessesField (..))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo))
+import Test.Cardano.Ledger.Generic.Scriptic (always)
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
@@ -116,13 +118,13 @@ exampleTx :: Core.Tx A
 exampleTx =
   let pf = Alonzo Mock
    in newTx
-        Override
+        override
         pf
         [ Body (validatingBody pf),
-          Witnesses'
-            [ AddrWits [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
-              ScriptWits [always 3 pf],
-              DataWits [datumExample1],
+          WitnessesI
+            [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
+              ScriptWits' [always 3 pf],
+              DataWits' [datumExample1],
               RdmrWits validatingRedeemersEx1
             ]
         ]

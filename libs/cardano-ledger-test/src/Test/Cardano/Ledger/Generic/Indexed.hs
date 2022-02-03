@@ -15,15 +15,15 @@
 module Test.Cardano.Ledger.Generic.Indexed where
 
 import Cardano.Crypto.DSIGN.Class ()
-import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (Value)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
+import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys
@@ -135,7 +135,7 @@ theSKey n = SKey (sKey (theKeyPair @c n))
 theKeyHash :: CC.Crypto c => Int -> KeyHash kr c
 theKeyHash n = hashKey (theVKey n)
 
-theWitVKey :: (CC.Crypto c, Good c) => Int -> SafeHash c EraIndependentTxBody -> WitVKey 'Witness c
+theWitVKey :: (GoodCrypto c) => Int -> SafeHash c EraIndependentTxBody -> WitVKey 'Witness c
 theWitVKey n hash = makeWitnessVKey hash (theKeyPair n)
 
 theKeyHashObj :: CC.Crypto crypto => Int -> Credential kr crypto
@@ -255,6 +255,10 @@ instance Reflect (AlonzoEra c) => Fixed (Script (AlonzoEra c)) where
   unique n = (liftC somealonzo) !! n
   size _ = Just alonzolength
 
+instance Reflect (BabbageEra c) => Fixed (Script (BabbageEra c)) where
+  unique n = (liftC somealonzo) !! n
+  size _ = Just alonzolength
+
 -- ==============================================
 -- Type families (and other Types uniquely determined from type families like Hashes)
 -- Because we can't make instances over type families, we can't say things like
@@ -266,12 +270,14 @@ pickValue n (Shelley _) = unique @Coin n
 pickValue n (Allegra _) = unique @Coin n
 pickValue n (Mary _) = unMulti (unique @(MultiAsset era) n)
 pickValue n (Alonzo _) = unMulti (unique @(MultiAsset era) n)
+pickValue n (Babbage _) = unMulti (unique @(MultiAsset era) n)
 
 pickScript :: Int -> Proof era -> Core.Script era
 pickScript n (Shelley c) = somemultisigs c !! n
 pickScript n (Allegra c) = sometimelocks c !! n
 pickScript n (Mary c) = sometimelocks c !! n
 pickScript n (Alonzo c) = somealonzo c !! n
+pickScript n (Babbage c) = somealonzo c !! n
 
 pickScriptHash :: forall era. Reflect era => Int -> Proof era -> ScriptHash (Crypto era)
 pickScriptHash n wit = hashScript @era (pickScript n wit)
@@ -306,5 +312,3 @@ instance PrettyA (SKey kr c) where
 
 instance PrettyA (MultiAsset era) where
   prettyA (MultiAsset v) = prettyA v
-
-type Good c = DSignable c (CH.Hash (CC.HASH c) EraIndependentTxBody)
