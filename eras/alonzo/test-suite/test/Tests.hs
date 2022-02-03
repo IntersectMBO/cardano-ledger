@@ -15,6 +15,7 @@ import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
 import Test.Cardano.Ledger.Alonzo.Trials (alonzoPropertyTests, fastPropertyTests)
+import Test.Cardano.Ledger.Alonzo.TxInfo (txInfoTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -37,7 +38,8 @@ mainTests =
       CDDL.tests 5,
       Golden.goldenUTxOEntryMinAda,
       Golden.goldenSerialization,
-      plutusScriptExamples
+      plutusScriptExamples,
+      txInfoTests
     ]
 
 fastTests :: TestTree
@@ -49,7 +51,8 @@ fastTests =
       CDDL.tests 1,
       Golden.goldenUTxOEntryMinAda,
       Golden.goldenSerialization,
-      plutusScriptExamples
+      plutusScriptExamples,
+      txInfoTests
     ]
 
 nightlyTests :: TestTree

@@ -24,7 +24,8 @@ import Cardano.Ledger.Alonzo.Scripts
 import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), ValidatedTx (..), rdptr)
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo
-  ( VersionedTxInfo (..),
+  ( TranslationError,
+    VersionedTxInfo (..),
     exBudgetToExUnits,
     transExUnits,
     txInfo,
@@ -53,6 +54,8 @@ import qualified Plutus.V2.Ledger.Api as PV2
 data BasicFailure c
   = -- | The transaction contains inputs that are not present in the UTxO.
     UnknownTxIns (Set (TxIn c))
+  | -- | The transaction context translation failed
+    BadTranslation TranslationError
   deriving (Show)
 
 -- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
@@ -132,9 +135,16 @@ evaluateTransactionExecutionUnits ::
 evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
   case basicValidation tx utxo of
     Nothing -> do
-      let getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
-      txInfos <- array (PlutusV1, PlutusV2) <$> mapM getInfo (Set.toList nonNativeLanguages)
-      pure . Right $ Map.mapWithKey (findAndCount pp txInfos) (unRedeemers $ getField @"txrdmrs" ws)
+      let getInfo :: Language -> m (Either TranslationError (Language, VersionedTxInfo))
+          getInfo lang = ((,) lang <$>) <$> txInfo pp lang ei sysS utxo tx
+      txInfos <- mapM getInfo (Set.toList nonNativeLanguages)
+      case sequence txInfos of
+        Left transEr -> pure . Left $ BadTranslation transEr
+        Right ctx ->
+          pure . Right $
+            Map.mapWithKey
+              (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
+              (unRedeemers $ getField @"txrdmrs" ws)
     Just e -> pure . Left $ e
   where
     txb = getField @"body" tx

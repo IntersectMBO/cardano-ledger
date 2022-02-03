@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), certIxToInt, txIxToInt)
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), certIxToInt, txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
 import Cardano.Ledger.Credential
@@ -35,8 +35,6 @@ import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.SafeHash
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-  ( translateTimeForPlutusScripts,
-  )
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -70,9 +68,9 @@ import Data.Coders
     (<!),
   )
 import qualified Data.Compact.SplitMap as SplitMap
+import Data.Either (rights)
 import Data.Fixed (HasResolution (resolution))
 import qualified Data.Map as Map
-import Data.Maybe (mapMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -91,6 +89,28 @@ import Prettyprinter (Pretty (..))
 
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
+
+data TranslationError
+  = ByronInputInContext
+  | ByronOutputInContext
+  | TranslationLogicErrorInput
+  | TranslationLogicErrorRedeemer
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance ToCBOR TranslationError where
+  toCBOR ByronInputInContext = encode $ Sum ByronInputInContext 0
+  toCBOR ByronOutputInContext = encode $ Sum ByronOutputInContext 1
+  toCBOR TranslationLogicErrorInput = encode $ Sum TranslationLogicErrorInput 2
+  toCBOR TranslationLogicErrorRedeemer = encode $ Sum TranslationLogicErrorRedeemer 3
+
+instance FromCBOR TranslationError where
+  fromCBOR = decode (Summands "TranslationError" dec)
+    where
+      dec 0 = SumD ByronInputInContext
+      dec 1 = SumD ByronOutputInContext
+      dec 2 = SumD TranslationLogicErrorInput
+      dec 3 = SumD TranslationLogicErrorRedeemer
+      dec n = Invalid n
 
 transDataHash :: StrictMaybe (DataHash c) -> Maybe PV1.DatumHash
 transDataHash (SJust safe) = Just (transDataHash' safe)
@@ -141,8 +161,10 @@ transAddr (AddrBootstrap _bootaddr) = Nothing
 transTxOutAddr :: Era era => TxOut era -> Maybe PV1.Address
 transTxOutAddr txOut = do
   -- filter out Byron addresses without uncompacting them
-  Nothing <- Just (getTxOutBootstrapAddress txOut)
-  transAddr $ getTxOutAddr txOut
+  case getTxOutBootstrapAddress txOut of
+    Just _ -> Nothing
+    -- The presence of a Byron address is caught above in the Just case
+    Nothing -> transAddr (getTxOutAddr txOut)
 
 slotToPOSIXTime ::
   (Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
@@ -202,13 +224,13 @@ txInfoIn ::
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
-  Maybe PV1.TxInInfo
+  Either TranslationError PV1.TxInInfo
 txInfoIn (UTxO mp) txin =
   case SplitMap.lookup txin mp of
-    Nothing -> Nothing
+    Nothing -> Left TranslationLogicErrorInput
     Just txout -> case transTxOutAddr txout of
-      Just ad -> Just (PV1.TxInInfo (txInfoIn' txin) (PV1.TxOut ad valout dhash))
-      Nothing -> Nothing
+      Just ad -> Right (PV1.TxInInfo (txInfoIn' txin) (PV1.TxOut ad valout dhash))
+      Nothing -> Left ByronInputInContext
       where
         valout = transValue (getField @"value" txout)
         dhash = case getField @"datahash" txout of
@@ -225,13 +247,13 @@ txInfoOut ::
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash c))
   ) =>
   Core.TxOut era ->
-  Maybe PV1.TxOut
+  Either TranslationError PV1.TxOut
 txInfoOut txout =
   let val = getField @"value" txout
       datahash = getField @"datahash" txout
    in case transTxOutAddr txout of
-        Just ad -> Just (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
-        Nothing -> Nothing
+        Just ad -> Right (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
+        Nothing -> Left ByronOutputInContext
 
 -- ==================================
 -- translate Values
@@ -302,11 +324,11 @@ transRedeemerPtr ::
   ) =>
   (Core.TxBody era) ->
   (RdmrPtr, (Data era, ExUnits)) ->
-  Maybe (PV2.ScriptPurpose, PV2.Redeemer)
+  Either TranslationError (PV2.ScriptPurpose, PV2.Redeemer)
 transRedeemerPtr txb (ptr, (d, _)) =
   case rdptrInv txb ptr of
-    SNothing -> Nothing
-    SJust sp -> Just (transScriptPurpose sp, transRedeemer d)
+    SNothing -> Left TranslationLogicErrorRedeemer
+    SJust sp -> Right (transScriptPurpose sp, transRedeemer d)
 
 transExUnits :: ExUnits -> PV1.ExBudget
 transExUnits (ExUnits mem steps) =
@@ -363,16 +385,16 @@ txInfo ::
   SystemStart ->
   UTxO era ->
   tx ->
-  m VersionedTxInfo
+  m (Either TranslationError VersionedTxInfo)
 txInfo pp lang ei sysS utxo tx = do
   timeRange <- transVITime pp ei sysS interval
   pure $
-    case lang of
-      PlutusV1 ->
-        TxInfoPV1 $
+    case (lang, HardForks.failInPresenceOfByronAddress pp) of
+      (PlutusV1, False) ->
+        Right . TxInfoPV1 $
           PV1.TxInfo
-            { PV1.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
-              PV1.txInfoOutputs = mapMaybe (txInfoOut @era) (foldr (:) [] outs),
+            { PV1.txInfoInputs = rights $ map (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
+              PV1.txInfoOutputs = rights $ map txInfoOut (foldr (:) [] outs),
               PV1.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
               PV1.txInfoMint = transValue forge,
               PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
@@ -382,18 +404,37 @@ txInfo pp lang ei sysS utxo tx = do
               PV1.txInfoData = map transDataPair datpairs,
               PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
             }
-      PlutusV2 ->
-        TxInfoPV2 $
+      (PlutusV1, True) -> do
+        inputs'' <- mapM (txInfoIn utxo) (Set.toList (getField @"inputs" tbody))
+        outputs'' <- mapM txInfoOut (foldr (:) [] outs)
+        pure . TxInfoPV1 $
+          PV1.TxInfo
+            { PV1.txInfoInputs = inputs'',
+              PV1.txInfoOutputs = outputs'',
+              PV1.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
+              PV1.txInfoMint = transValue forge,
+              PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
+              PV1.txInfoWdrl = Map.toList (transWdrl (getField @"wdrls" tbody)),
+              PV1.txInfoValidRange = timeRange,
+              PV1.txInfoSignatories = map transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
+              PV1.txInfoData = map transDataPair datpairs,
+              PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
+            }
+      (PlutusV2, _) -> do
+        inputs'' <- mapM (txInfoIn utxo) (Set.toList (getField @"inputs" tbody))
+        outputs'' <- mapM txInfoOut (foldr (:) [] outs)
+        rdmrs' <- mapM (transRedeemerPtr tbody) rdmrs
+        pure . TxInfoPV2 $
           PV2.TxInfo
-            { PV2.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
-              PV2.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
+            { PV2.txInfoInputs = inputs'',
+              PV2.txInfoOutputs = outputs'',
               PV2.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
               PV2.txInfoMint = transValue forge,
               PV2.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
               PV2.txInfoWdrl = PV2.fromList $ Map.toList (transWdrl (getField @"wdrls" tbody)),
               PV2.txInfoValidRange = timeRange,
               PV2.txInfoSignatories = map transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
-              PV2.txInfoRedeemers = PV2.fromList $ mapMaybe (transRedeemerPtr tbody) rdmrs,
+              PV2.txInfoRedeemers = PV2.fromList rdmrs',
               PV2.txInfoData = PV2.fromList $ map transDataPair datpairs,
               PV2.txInfoId = PV2.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
             }
