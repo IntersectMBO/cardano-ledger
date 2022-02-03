@@ -142,7 +142,7 @@ ledgersTransition = do
             TRC (LedgerEnv slot ix pp account, (u', dp'), tx)
       )
       (u, dp)
-      $ zip [0 ..] $
+      $ zip [minBound ..] $
         toList txwits
 
   pure $ LedgerState u'' dp''

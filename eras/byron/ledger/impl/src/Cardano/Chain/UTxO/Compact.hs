@@ -52,7 +52,7 @@ import NoThunks.Class (NoThunks (..))
 data CompactTxIn
   = CompactTxInUtxo
       {-# UNPACK #-} !CompactTxId
-      {-# UNPACK #-} !Word32
+      {-# UNPACK #-} !Word16
   deriving (Eq, Ord, Generic, Show)
   deriving anyclass (NFData, NoThunks)
 
@@ -61,13 +61,13 @@ instance HeapWords CompactTxIn where
     -- We have
     --
     -- > data CompactTxIn = CompactTxInUtxo {-# UNPACK #-} !CompactTxId
-    -- >                                    {-# UNPACK #-} !Word32
+    -- >                                    {-# UNPACK #-} !Word16
     --
     -- so 'CompactTxInUtxo' requires:
     --
     -- - 1 word for the 'CompactTxInUtxo' object header
     -- - 4 words (on a 64-bit arch) for the unpacked 'CompactTxId'
-    -- - 1 word for the unpacked 'Word32'
+    -- - 1 word for the unpacked 'Word16'
     --
     -- +---------------------------------------------+
     -- │CompactTxInUtxo│Word#|Word#│Word#│Word#│Word#│

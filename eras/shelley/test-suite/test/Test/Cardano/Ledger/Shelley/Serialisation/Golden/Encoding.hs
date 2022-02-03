@@ -40,6 +40,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     mkNonceFromNumber,
+    mkTxIxPartial,
     textToDns,
     textToUrl,
   )
@@ -470,7 +471,7 @@ tests =
         (T (TkListLen 2 . TkWord 0) <> S (testKeyHash1 @C_Crypto)),
       checkEncodingCBOR
         "txin"
-        (TxIn @C_Crypto genesisId 0)
+        (TxIn @C_Crypto genesisId minBound)
         (T (TkListLen 2) <> S (genesisId :: TxId C_Crypto) <> T (TkWord64 0)),
       let a = Addr Testnet testPayCred StakeRefNull
        in checkEncodingCBOR
@@ -779,12 +780,11 @@ tests =
                 <> S e
             ),
       -- checkEncodingCBOR "minimal_txn_body"
-      let tin = TxIn @C_Crypto genesisId 1
-          tout = TxOut @C testAddrE (Coin 2)
+      let tout = TxOut @C testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             "txbody"
             ( TxBody @C -- minimal transaction body
-                (Set.fromList [tin])
+                (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
                 (Wdrl Map.empty)
@@ -796,7 +796,7 @@ tests =
             ( T (TkMapLen 4)
                 <> T (TkWord 0) -- Tx Ins
                 <> T (TkListLen 1)
-                <> S tin
+                <> S genesisTxIn1
                 <> T (TkWord 1) -- Tx Outs
                 <> T (TkListLen 1)
                 <> S tout
@@ -806,8 +806,7 @@ tests =
                 <> T (TkWord64 500)
             ),
       -- checkEncodingCBOR "transaction_mixed"
-      let tin = TxIn @C_Crypto genesisId 1
-          tout = TxOut @C testAddrE (Coin 2)
+      let tout = TxOut @C testAddrE (Coin 2)
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
@@ -841,7 +840,7 @@ tests =
        in checkEncodingCBORAnnotated
             "txbody_partial"
             ( TxBody @C -- transaction body with some optional components
-                (Set.fromList [tin])
+                (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 StrictSeq.Empty
                 (Wdrl ras)
@@ -853,7 +852,7 @@ tests =
             ( T (TkMapLen 6)
                 <> T (TkWord 0) -- Tx Ins
                 <> T (TkListLen 1)
-                <> S tin
+                <> S genesisTxIn1
                 <> T (TkWord 1) -- Tx Outs
                 <> T (TkListLen 1)
                 <> S tout
@@ -867,8 +866,7 @@ tests =
                 <> S up
             ),
       -- checkEncodingCBOR "full_txn_body"
-      let tin = TxIn @C_Crypto genesisId 1
-          tout = TxOut @C testAddrE (Coin 2)
+      let tout = TxOut @C testAddrE (Coin 2)
           reg = DCertDeleg (RegKey (testStakeCred @C_Crypto))
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
@@ -904,7 +902,7 @@ tests =
        in checkEncodingCBORAnnotated
             "txbody_full"
             ( TxBody @C -- transaction body with all components
-                (Set.fromList [tin])
+                (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
                 (Wdrl ras)
@@ -916,7 +914,7 @@ tests =
             ( T (TkMapLen 8)
                 <> T (TkWord 0) -- Tx Ins
                 <> T (TkListLen 1)
-                <> S tin
+                <> S genesisTxIn1
                 <> T (TkWord 1) -- Tx Outs
                 <> T (TkListLen 1)
                 <> S tout
@@ -937,7 +935,7 @@ tests =
       -- checkEncodingCBOR "minimal_txn"
       let txb =
             TxBody @C
-              (Set.fromList [TxIn genesisId 1])
+              (Set.fromList [TxIn genesisId (mkTxIxPartial 1)])
               (StrictSeq.singleton $ TxOut @C testAddrE (Coin 2))
               StrictSeq.empty
               (Wdrl Map.empty)
@@ -965,7 +963,7 @@ tests =
       -- checkEncodingCBOR "full_txn"
       let txb =
             TxBody @C
-              (Set.fromList [TxIn genesisId 1])
+              (Set.fromList [genesisTxIn1])
               (StrictSeq.singleton $ TxOut @C testAddrE (Coin 2))
               StrictSeq.empty
               (Wdrl Map.empty)
@@ -1099,11 +1097,10 @@ tests =
       let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
-          tin = Set.fromList [TxIn @C_Crypto genesisId 1]
           tout = StrictSeq.singleton $ TxOut @C testAddrE (Coin 2)
           txb s =
             TxBody @C
-              tin
+              (Set.fromList [genesisTxIn1])
               tout
               StrictSeq.empty
               (Wdrl Map.empty)
@@ -1332,6 +1329,8 @@ tests =
                 <> S pd
             )
     ]
+  where
+    genesisTxIn1 = TxIn @C_Crypto genesisId (mkTxIxPartial 1)
 
 -- ===============
 -- From CBOR instances for things that only have FromCBORSharing instances

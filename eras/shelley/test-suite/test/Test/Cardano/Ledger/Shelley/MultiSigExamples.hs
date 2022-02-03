@@ -26,6 +26,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     maybeToStrictMaybe,
+    mkTxIxPartial,
   )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
@@ -151,7 +152,7 @@ aliceAndBobOrCarlOrDaria =
 initTxBody :: ShelleyTest era => [(Addr (Crypto era), Core.Value era)] -> TxBody era
 initTxBody addrs =
   TxBody
-    (Set.fromList [TxIn genesisId 0, TxIn genesisId 1])
+    (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
     (StrictSeq.fromList $ map (uncurry TxOut) addrs)
     Empty
     (Wdrl Map.empty)
@@ -282,20 +283,16 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     (txId, initUtxo) = initialUTxOState aliceKeep lockScripts
     utxoSt = case initUtxo of
       Right utxoSt'' -> utxoSt''
-      _ ->
-        error
-          ( "must fail test before: "
-              ++ show initUtxo
-          )
+      _ -> error $ "must fail test before: " ++ show initUtxo
     txbody =
       makeTxBody
         inputs'
         [(Cast.aliceAddr, (Val.inject $ aliceInitCoin <> bobInitCoin <> fold (unWdrl wdrl)))]
         wdrl
     inputs' =
-      [ TxIn txId (fromIntegral n)
+      [ TxIn txId (mkTxIxPartial (toInteger n))
         | n <-
-            [0 .. length lockScripts - (if (Val.pointwise (>) aliceKeep mempty) then 0 else 1)]
+            [0 .. length lockScripts - if Val.pointwise (>) aliceKeep mempty then 0 else 1]
       ]
     -- alice? + scripts
     tx =

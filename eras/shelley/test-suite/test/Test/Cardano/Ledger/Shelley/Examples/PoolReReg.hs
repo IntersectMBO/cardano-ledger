@@ -104,7 +104,7 @@ aliceCoinEx1 = aliceInitCoin <-> _poolDeposit ppEx <-> feeTx1
 txbodyEx1 :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx1 =
   TxBody
-    (Set.fromList [TxIn genesisId 0])
+    (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     (StrictSeq.fromList ([DCertPool (RegPool Cast.alicePoolParams)]))
     (Wdrl Map.empty)
@@ -180,7 +180,7 @@ newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
 txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx2 =
   TxBody
-    (Set.fromList [TxIn (txid txbodyEx1) 0])
+    (Set.fromList [TxIn (txid txbodyEx1) minBound])
     (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
     ( StrictSeq.fromList
         ( [ DCertPool (RegPool newPoolParams)

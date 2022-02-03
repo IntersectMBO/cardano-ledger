@@ -35,7 +35,9 @@ import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
+    mkTxIxPartial,
     strictMaybeToMaybe,
+    txIxToInt,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
@@ -96,6 +98,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
+import Data.Word
 import GHC.Stack
 import Numeric.Natural
 import Plutus.V1.Ledger.Api (defaultCostModelParams)
@@ -696,8 +699,12 @@ genValidatedTx = do
   bogusCollateralTxId <- lift arbitrary
   let bogusCollateralTxIns =
         Set.fromList
-          [ TxIn bogusCollateralTxId (fromIntegral i)
-            | i <- [maxBound, maxBound - 1 .. maxBound - maxCollateralCount - 1]
+          [ TxIn bogusCollateralTxId txIx
+            | txIx <-
+                [ maxBound,
+                  pred maxBound
+                  .. mkTxIxPartial (toInteger (txIxToInt maxBound - maxCollateralCount - 1))
+                ]
           ]
   collateralAddresses <- replicateM maxCollateralCount genNoScriptRecipient
   bogusCollateralKeyWitsMakers <-
@@ -796,7 +803,7 @@ genTxAndLEDGERState = do
             _maxTxSize = fromIntegral (maxBound :: Int),
             _maxTxExUnits = maxTxExUnits,
             _collateralPercentage = collateralPercentage,
-            _maxCollateralInputs = maxCollateralInputs
+            _maxCollateralInputs = fromIntegral (maxCollateralInputs :: Word16)
           }
       slotNo = SlotNo 100000000
       ledgerEnv = LedgerEnv slotNo txIx pp (AccountState (Coin 0) (Coin 0))

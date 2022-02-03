@@ -16,7 +16,7 @@ transaction =
   , auxiliary_data / null
   ]
 
-transaction_index = uint
+transaction_index = uint .size 2
 
 header =
   [ header_body

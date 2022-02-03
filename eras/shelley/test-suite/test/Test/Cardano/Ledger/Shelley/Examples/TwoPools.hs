@@ -29,6 +29,7 @@ import Cardano.Ledger.BaseTypes
     ProtVer (..),
     StrictMaybe (..),
     activeSlotVal,
+    mkCertIxPartial,
     (⭒),
   )
 import Cardano.Ledger.Block (Block, bheader)
@@ -200,7 +201,7 @@ bobPoolParams' = Cast.bobPoolParams {_poolRAcnt = RewardAcnt Testnet Cast.carlSH
 txbodyEx1 :: forall era. TwoPoolsConstraints era => TxBody era
 txbodyEx1 =
   TxBody
-    (Set.fromList [TxIn genesisId 0])
+    (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
         [ DCertDeleg (RegKey Cast.aliceSHK),
@@ -268,9 +269,9 @@ expectedStEx1 =
     . C.newLab blockEx1
     . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> ((2 :: Integer) <×> _poolDeposit ppEx))
     . C.newUTxO txbodyEx1
-    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) 0 0)
-    . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) 0 1)
-    . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) 0 2)
+    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
+    . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
+    . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 2))
     . C.newPool alicePoolParams'
     . C.newPool bobPoolParams'
     . C.delegation Cast.aliceSHK (_poolId alicePoolParams')

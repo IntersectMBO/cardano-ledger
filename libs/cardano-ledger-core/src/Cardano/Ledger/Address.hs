@@ -63,7 +63,13 @@ import Cardano.Binary
 import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.Hashing as Byron
-import Cardano.Ledger.BaseTypes (Network (..), networkToWord8, word8ToNetwork)
+import Cardano.Ledger.BaseTypes
+  ( CertIx (..),
+    Network (..),
+    TxIx (..),
+    networkToWord8,
+    word8ToNetwork,
+  )
 import Cardano.Ledger.Credential
   ( Credential (..),
     PaymentCredential,
@@ -100,7 +106,7 @@ import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import Data.Word (Word64)
+import Data.Word (Word16, Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -389,18 +395,18 @@ isBootstrapRedeemer (BootstrapAddress (Byron.Address _ _ Byron.ATRedeem)) = True
 isBootstrapRedeemer _ = False
 
 putPtr :: Ptr -> Put
-putPtr (Ptr slot txIx certIx) = do
+putPtr (Ptr slot (TxIx txIx) (CertIx certIx)) = do
   putSlot slot
-  putVariableLengthWord64 txIx
-  putVariableLengthWord64 certIx
+  putVariableLengthWord64 ((fromIntegral :: Word16 -> Word64) txIx)
+  putVariableLengthWord64 ((fromIntegral :: Word16 -> Word64) certIx)
   where
     putSlot (SlotNo n) = putVariableLengthWord64 n
 
 getPtr :: Get Ptr
 getPtr =
   Ptr <$> (SlotNo <$> getVariableLengthWord64)
-    <*> getVariableLengthWord64
-    <*> getVariableLengthWord64
+    <*> (TxIx . fromIntegral <$> getVariableLengthWord64)
+    <*> (CertIx . fromIntegral <$> getVariableLengthWord64)
 
 newtype Word7 = Word7 Word8
   deriving (Eq, Show)

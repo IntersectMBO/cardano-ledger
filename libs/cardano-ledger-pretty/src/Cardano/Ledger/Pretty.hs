@@ -42,7 +42,9 @@ import Cardano.Ledger.BaseTypes
     Url (..),
     activeSlotLog,
     activeSlotVal,
+    certIxToInt,
     dnsToText,
+    txIxToInt,
   )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
@@ -85,7 +87,6 @@ import Cardano.Ledger.Shelley.LedgerState
     FutureGenDeleg (..),
     IncrementalStake (..),
     InstantaneousRewards (..),
-    Ix,
     LedgerState (..),
     NewEpochState (..),
     PPUPState (..),
@@ -651,9 +652,6 @@ ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
       ("deltaTreasury", ppDeltaCoin dT)
     ]
 
-ppIx :: Ix -> PDoc
-ppIx = viaShow
-
 ppPPUPState :: PrettyA (PParamsDelta era) => PPUPState era -> PDoc
 ppPPUPState (PPUPState p fp) =
   ppRecord
@@ -1055,7 +1053,7 @@ ppTxId :: TxId c -> PDoc
 ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
 
 ppTxIn :: TxIn c -> PDoc
-ppTxIn (TxIn txid index) = ppSexp "TxIn" [ppTxId txid, ppNatural index]
+ppTxIn (TxIn txid index) = ppSexp "TxIn" [ppTxId txid, pretty (txIxToInt index)]
 
 ppTxOut :: (Era era, PrettyA (Core.Value era)) => TxOut era -> PDoc
 ppTxOut (TxOutCompact caddr cval) = ppSexp "TxOut" [ppCompactAddr caddr, ppCompactForm prettyA cval]
@@ -1345,7 +1343,8 @@ ppCredential (ScriptHashObj (ScriptHash x)) = ppSexp "ScriptCred" [ppHash x]
 ppCredential (KeyHashObj (KeyHash x)) = ppSexp "KeyCred" [ppHash x]
 
 ppPtr :: Ptr -> PDoc
-ppPtr (Ptr slot n m) = ppSexp "Ptr" [ppSlotNo slot, pretty n, pretty m]
+ppPtr (Ptr slot txIx certIx) =
+  ppSexp "Ptr" [ppSlotNo slot, pretty (txIxToInt txIx), pretty (certIxToInt certIx)]
 
 ppStakeReference :: StakeReference c -> PDoc
 ppStakeReference (StakeRefBase x) = ppSexp "BaseRef" [ppCredential x]

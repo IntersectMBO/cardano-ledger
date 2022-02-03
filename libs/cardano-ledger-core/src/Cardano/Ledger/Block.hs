@@ -136,7 +136,7 @@ instance
     ValidateScript era,
     Era.SupportsSegWit era,
     FromCBOR (Annotator (Era.TxSeq era)),
-    FromCBOR (Annotator (h)),
+    FromCBOR (Annotator h),
     Typeable h
   ) =>
   FromCBOR (Annotator (Block h era))
@@ -166,7 +166,7 @@ bbody (Block' _ txs _) = txs
 --
 -- This function will be used by the consensus layer to enable storing
 -- the UTxO on disk. In particular, given a block, the consensus layer
--- will use 'neededTxInsForBlock' to retrived the needed UTxO from disk
+-- will use 'neededTxInsForBlock' to retrieve the needed UTxO from disk
 -- and present only those to the ledger.
 neededTxInsForBlock ::
   ( Era era,

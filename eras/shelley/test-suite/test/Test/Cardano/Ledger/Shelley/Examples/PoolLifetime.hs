@@ -30,6 +30,7 @@ import Cardano.Ledger.BaseTypes
     Nonce,
     StrictMaybe (..),
     epochInfo,
+    mkCertIxPartial,
     (⭒),
   )
 import Cardano.Ledger.Block (Block, bheader)
@@ -92,7 +93,7 @@ import Cardano.Ledger.Slot
     SlotNo (..),
     epochInfoSize,
   )
-import Cardano.Ledger.TxIn (TxIn (..), txid)
+import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial, txid)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
@@ -193,7 +194,7 @@ feeTx1 = Coin 3
 txbodyEx1 :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx1 =
   TxBody
-    (Set.fromList [TxIn genesisId 0])
+    (Set.fromList [TxIn genesisId minBound])
     (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
         ( [ DCertDeleg (RegKey Cast.aliceSHK),
@@ -264,9 +265,9 @@ expectedStEx1 =
     . C.newLab blockEx1
     . C.feesAndDeposits feeTx1 (((3 :: Integer) <×> _keyDeposit ppEx) <+> _poolDeposit ppEx)
     . C.newUTxO txbodyEx1
-    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) 0 0)
-    . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) 0 1)
-    . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) 0 2)
+    . C.newStakeCred Cast.aliceSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 0))
+    . C.newStakeCred Cast.bobSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 1))
+    . C.newStakeCred Cast.carlSHK (Ptr (SlotNo 10) minBound (mkCertIxPartial 2))
     . C.newPool Cast.alicePoolParams
     . C.mir Cast.carlSHK ReservesMIR carlMIR
     . C.mir Cast.dariaSHK ReservesMIR dariaMIR
@@ -299,7 +300,7 @@ aliceCoinEx2Ptr = aliceCoinEx1 <-> (aliceCoinEx2Base <+> feeTx2)
 txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx2 =
   TxBody
-    { _inputs = Set.fromList [TxIn (txid (txbodyEx1 @c)) 0],
+    { _inputs = Set.fromList [TxIn (txid (txbodyEx1 @c)) minBound],
       _outputs =
         StrictSeq.fromList
           [ TxOut Cast.aliceAddr (Val.inject aliceCoinEx2Base),
@@ -470,7 +471,7 @@ aliceCoinEx4Base = aliceCoinEx2Base <-> feeTx4
 txbodyEx4 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx4 =
   TxBody
-    { _inputs = Set.fromList [TxIn (txid txbodyEx2) 0],
+    { _inputs = Set.fromList [TxIn (txid txbodyEx2) minBound],
       _outputs = StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx4Base)],
       _certs =
         StrictSeq.fromList
@@ -893,7 +894,7 @@ bobAda10 =
 txbodyEx10 :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx10 =
   TxBody
-    (Set.fromList [TxIn genesisId 1])
+    (Set.fromList [mkTxInPartial genesisId 1])
     (StrictSeq.singleton $ TxOut Cast.bobAddr (Val.inject bobAda10))
     (StrictSeq.fromList [DCertDeleg (DeRegKey Cast.bobSHK)])
     (Wdrl $ Map.singleton (RewardAcnt Testnet Cast.bobSHK) bobRAcnt8)
@@ -958,7 +959,7 @@ aliceRetireEpoch = EpochNo 5
 txbodyEx11 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbodyEx11 =
   TxBody
-    (Set.fromList [TxIn (txid txbodyEx4) 0])
+    (Set.fromList [TxIn (txid txbodyEx4) minBound])
     (StrictSeq.singleton $ TxOut Cast.alicePtrAddr (Val.inject aliceCoinEx11Ptr))
     (StrictSeq.fromList [DCertPool (RetirePool (hk Cast.alicePoolKeys) aliceRetireEpoch)])
     (Wdrl Map.empty)

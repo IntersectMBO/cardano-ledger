@@ -1136,7 +1136,7 @@ delegTraceFromBlock chainSt block =
     blockCerts = filter delegCert (certs txs)
     delegEnv =
       let (LedgerEnv s txIx pp reserves) = ledgerEnv
-          dummyCertIx = 0
+          dummyCertIx = minBound
           ptr = Ptr s txIx dummyCertIx
        in DelegEnv s ptr reserves pp
     delegSt0 =
@@ -1166,7 +1166,7 @@ ledgerTraceBase ::
   )
 ledgerTraceBase chainSt block =
   ( tickedChainSt,
-    LedgerEnv slot 0 pp_ (esAccountState nes),
+    LedgerEnv slot minBound pp_ (esAccountState nes),
     (utxoSt0, delegSt0),
     txs
   )

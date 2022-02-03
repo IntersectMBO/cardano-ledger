@@ -68,6 +68,7 @@ import Cardano.Ledger.BaseTypes
     Network (Testnet),
     StrictMaybe (..),
     epochInfo,
+    mkTxIxPartial,
   )
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
@@ -1366,7 +1367,8 @@ class
 
       let txid = TxIn.txid @era realTxBody
       ifor_ mtxOutputs $ \n (mutxoid, _) ->
-        _2 . eesUTxOs . at mutxoid . _Just . tuoi_txid .= Just (Shelley.TxIn txid (fromIntegral n))
+        _2 . eesUTxOs . at mutxoid . _Just . tuoi_txid
+          .= Just (Shelley.TxIn txid (mkTxIxPartial (toInteger n)))
       pure $ makeTx proxy realTxBody txWitnessArguments
 
   -- | build a full tx from TxBody and set of witnesses.

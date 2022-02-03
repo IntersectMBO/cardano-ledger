@@ -69,6 +69,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -178,7 +179,7 @@ carlPay = KeyPair vk sk
 txbSimpleUTxO :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbSimpleUTxO =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.empty,
       _wdrls = Wdrl Map.empty,
@@ -212,8 +213,8 @@ txbMutiUTxO =
   TxBody
     { _inputs =
         Set.fromList
-          [ TxIn genesisId 0,
-            TxIn genesisId 1
+          [ mkTxInPartial genesisId 0,
+            mkTxInPartial genesisId 1
           ],
       _outputs =
         StrictSeq.fromList
@@ -254,7 +255,7 @@ txMutiUTxOBytes16 = "83a4008282582003170a2e7597b7b7e3d84c05391d139a62b157e78786d
 txbRegisterStake :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbRegisterStake =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.fromList [DCertDeleg (RegKey aliceSHK)],
       _wdrls = Wdrl Map.empty,
@@ -282,7 +283,7 @@ txRegisterStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7
 txbDelegateStake :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbDelegateStake =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs =
         StrictSeq.fromList
@@ -317,7 +318,7 @@ txDelegateStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e7
 txbDeregisterStake :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbDeregisterStake =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.fromList [DCertDeleg (DeRegKey aliceSHK)],
       _wdrls = Wdrl Map.empty,
@@ -348,7 +349,7 @@ txDeregisterStakeBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157
 txbRegisterPool :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbRegisterPool =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.fromList [DCertPool (RegPool alicePoolParams)],
       _wdrls = Wdrl Map.empty,
@@ -376,7 +377,7 @@ txRegisterPoolBytes16 = "83a5008182582003170a2e7597b7b7e3d84c05391d139a62b157e78
 txbRetirePool :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbRetirePool =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.fromList [DCertPool (RetirePool alicePoolKH (EpochNo 5))],
       _wdrls = Wdrl Map.empty,
@@ -408,7 +409,7 @@ md = MD.Metadata $ Map.singleton 0 (MD.List [MD.I 5, MD.S "hello"])
 txbWithMD :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
 txbWithMD =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.empty,
       _wdrls = Wdrl Map.empty,
@@ -445,7 +446,7 @@ msig =
 txbWithMultiSig :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbWithMultiSig =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0], -- acting as if this is multi-sig
+    { _inputs = Set.fromList [TxIn genesisId minBound], -- acting as if this is multi-sig
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.empty,
       _wdrls = Wdrl Map.empty,
@@ -477,7 +478,7 @@ txWithMultiSigBytes16 = "83a4008182582003170a2e7597b7b7e3d84c05391d139a62b157e78
 txbWithWithdrawal :: Cr.Crypto c => TxBody (ShelleyEra c)
 txbWithWithdrawal =
   TxBody
-    { _inputs = Set.fromList [TxIn genesisId 0],
+    { _inputs = Set.fromList [TxIn genesisId minBound],
       _outputs = StrictSeq.fromList [TxOut aliceAddr (Val.inject $ Coin 10)],
       _certs = StrictSeq.empty,
       _wdrls = Wdrl $ Map.singleton (RewardAcnt Testnet aliceSHK) (Val.inject $ Coin 100),

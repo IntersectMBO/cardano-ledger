@@ -36,7 +36,7 @@ import Cardano.Ledger.ShelleyMA.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody (..))
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.TxIn (TxId, TxIn (..), txid)
+import Cardano.Ledger.TxIn (TxId, TxIn (..), mkTxInPartial, txid)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Exception (ErrorCall (ErrorCall), evaluate, try)
@@ -87,8 +87,8 @@ initUTxO :: UTxO MaryTest
 initUTxO =
   UTxO $
     SplitMap.fromList
-      [ (TxIn bootstrapTxId 0, TxOut Cast.aliceAddr (Val.inject aliceInitCoin)),
-        (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial bootstrapTxId 0, TxOut Cast.aliceAddr (Val.inject aliceInitCoin)),
+        (mkTxInPartial bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 pp :: PParams MaryTest
@@ -101,7 +101,7 @@ pp =
     }
 
 ledgerEnv :: SlotNo -> LedgerEnv MaryTest
-ledgerEnv s = LedgerEnv s 0 pp (AccountState (Coin 0) (Coin 0))
+ledgerEnv s = LedgerEnv s minBound pp (AccountState (Coin 0) (Coin 0))
 
 feeEx :: Coin
 feeEx = Coin 3
@@ -176,7 +176,7 @@ tokensSimpleEx1 = mintSimpleEx1 <+> Val.inject aliceCoinSimpleEx1
 txbodySimpleEx1 :: TxBody MaryTest
 txbodySimpleEx1 =
   makeTxb
-    [TxIn bootstrapTxId 0]
+    [mkTxInPartial bootstrapTxId 0]
     [TxOut Cast.aliceAddr tokensSimpleEx1]
     unboundedInterval
     mintSimpleEx1
@@ -195,8 +195,8 @@ expectedUTxOSimpleEx1 :: UTxO MaryTest
 expectedUTxOSimpleEx1 =
   UTxO $
     SplitMap.fromList
-      [ (TxIn (txid txbodySimpleEx1) 0, TxOut Cast.aliceAddr tokensSimpleEx1),
-        (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial (txid txbodySimpleEx1) 0, TxOut Cast.aliceAddr tokensSimpleEx1),
+        (mkTxInPartial bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 ----------------------------
@@ -223,7 +223,7 @@ bobTokensSimpleEx2 =
 txbodySimpleEx2 :: TxBody MaryTest
 txbodySimpleEx2 =
   makeTxb
-    [TxIn (txid txbodySimpleEx1) 0]
+    [mkTxInPartial (txid txbodySimpleEx1) 0]
     [ TxOut Cast.aliceAddr aliceTokensSimpleEx2,
       TxOut Cast.bobAddr bobTokensSimpleEx2
     ]
@@ -241,9 +241,9 @@ expectedUTxOSimpleEx2 :: UTxO MaryTest
 expectedUTxOSimpleEx2 =
   UTxO $
     SplitMap.fromList
-      [ (TxIn (txid txbodySimpleEx2) 0, TxOut Cast.aliceAddr aliceTokensSimpleEx2),
-        (TxIn (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2),
-        (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial (txid txbodySimpleEx2) 0, TxOut Cast.aliceAddr aliceTokensSimpleEx2),
+        (mkTxInPartial (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2),
+        (mkTxInPartial bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 ------------------------------------------------------------
@@ -299,7 +299,7 @@ tokensTimeEx1 = mintTimeEx1 <+> Val.inject aliceCoinsTimeEx1
 txbodyTimeEx1 :: StrictMaybe SlotNo -> StrictMaybe SlotNo -> TxBody MaryTest
 txbodyTimeEx1 s e =
   makeTxb
-    [TxIn bootstrapTxId 0]
+    [mkTxInPartial bootstrapTxId 0]
     [TxOut Cast.aliceAddr tokensTimeEx1]
     (ValidityInterval s e)
     mintTimeEx1
@@ -336,8 +336,8 @@ expectedUTxOTimeEx1 :: UTxO MaryTest
 expectedUTxOTimeEx1 =
   UTxO $
     SplitMap.fromList
-      [ (TxIn (txid txbodyTimeEx1Valid) 0, TxOut Cast.aliceAddr tokensTimeEx1),
-        (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial (txid txbodyTimeEx1Valid) 0, TxOut Cast.aliceAddr tokensTimeEx1),
+        (mkTxInPartial bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 ----------------------------------------
@@ -359,7 +359,7 @@ aliceCoinsTimeEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> mintTimeEx2)
 txbodyTimeEx2 :: TxBody MaryTest
 txbodyTimeEx2 =
   makeTxb
-    [TxIn (txid txbodyTimeEx1Valid) 0]
+    [mkTxInPartial (txid txbodyTimeEx1Valid) 0]
     [ TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2),
       TxOut Cast.bobAddr bobTokensTimeEx2
     ]
@@ -380,9 +380,9 @@ expectedUTxOTimeEx2 :: UTxO MaryTest
 expectedUTxOTimeEx2 =
   UTxO $
     SplitMap.fromList
-      [ (TxIn (txid txbodyTimeEx2) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)),
-        (TxIn (txid txbodyTimeEx2) 1, TxOut Cast.bobAddr bobTokensTimeEx2),
-        (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
+      [ (mkTxInPartial (txid txbodyTimeEx2) 0, TxOut Cast.aliceAddr (Val.inject aliceCoinsTimeEx2)),
+        (mkTxInPartial (txid txbodyTimeEx2) 1, TxOut Cast.bobAddr bobTokensTimeEx2),
+        (mkTxInPartial bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin))
       ]
 
 --------------------------------------------------------------
@@ -420,7 +420,7 @@ tokensSingWitEx1 = mintSingWitEx1 <+> Val.inject bobCoinsSingWitEx1
 txbodySingWitEx1 :: TxBody MaryTest
 txbodySingWitEx1 =
   makeTxb
-    [TxIn bootstrapTxId 1]
+    [mkTxInPartial bootstrapTxId 1]
     [TxOut Cast.bobAddr tokensSingWitEx1]
     unboundedInterval
     mintSingWitEx1
@@ -440,8 +440,8 @@ expectedUTxOSingWitEx1 :: UTxO MaryTest
 expectedUTxOSingWitEx1 =
   UTxO $
     SplitMap.fromList
-      [ (TxIn (txid txbodySingWitEx1) 0, TxOut Cast.bobAddr tokensSingWitEx1),
-        (TxIn bootstrapTxId 0, TxOut Cast.aliceAddr (Val.inject aliceInitCoin))
+      [ (mkTxInPartial (txid txbodySingWitEx1) 0, TxOut Cast.bobAddr tokensSingWitEx1),
+        (mkTxInPartial bootstrapTxId 0, TxOut Cast.aliceAddr (Val.inject aliceInitCoin))
       ]
 
 txSingWitEx1Invalid :: Tx MaryTest
@@ -478,7 +478,7 @@ aliceTokensNegEx1 =
 txbodyNegEx1 :: TxBody MaryTest
 txbodyNegEx1 =
   makeTxb
-    [TxIn (txid txbodySimpleEx2) 0]
+    [mkTxInPartial (txid txbodySimpleEx2) 0]
     [TxOut Cast.aliceAddr aliceTokensNegEx1]
     unboundedInterval
     mintNegEx1
@@ -500,9 +500,9 @@ expectedUTxONegEx1 :: UTxO MaryTest
 expectedUTxONegEx1 =
   UTxO $
     SplitMap.fromList
-      [ (TxIn (txid txbodyNegEx1) 0, TxOut Cast.aliceAddr aliceTokensNegEx1),
-        (TxIn bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin)),
-        (TxIn (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2)
+      [ (mkTxInPartial (txid txbodyNegEx1) 0, TxOut Cast.aliceAddr aliceTokensNegEx1),
+        (mkTxInPartial bootstrapTxId 1, TxOut Cast.bobAddr (Val.inject bobInitCoin)),
+        (mkTxInPartial (txid txbodySimpleEx2) 1, TxOut Cast.bobAddr bobTokensSimpleEx2)
       ]
 
 --
@@ -523,7 +523,7 @@ aliceTokensNegEx2 =
 txbodyNegEx2 :: TxBody MaryTest
 txbodyNegEx2 =
   makeTxb
-    [TxIn (txid txbodySimpleEx2) 0]
+    [mkTxInPartial (txid txbodySimpleEx2) 0]
     [TxOut Cast.aliceAddr aliceTokensNegEx2]
     unboundedInterval
     mintNegEx2
@@ -567,7 +567,7 @@ bigOut = TxOut Cast.aliceAddr $ bigValue <+> Val.inject minUtxoBigEx
 txbodyWithBigValue :: TxBody MaryTest
 txbodyWithBigValue =
   makeTxb
-    [TxIn bootstrapTxId 0]
+    [mkTxInPartial bootstrapTxId 0]
     [smallOut, bigOut]
     unboundedInterval
     (bigValue <+> smallValue)

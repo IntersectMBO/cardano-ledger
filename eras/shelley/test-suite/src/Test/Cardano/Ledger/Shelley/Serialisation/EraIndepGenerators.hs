@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -6,7 +5,6 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -46,10 +44,12 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     BlocksMade (..),
+    CertIx (..),
     DnsName,
     NonNegativeInterval,
     PositiveInterval,
     PositiveUnitInterval,
+    TxIx (..),
     UnitInterval,
     Url,
     mkActiveSlotCoeff,
@@ -394,6 +394,10 @@ instance CC.Crypto crypto => Arbitrary (Credential r crypto) where
       [ ScriptHashObj . ScriptHash <$> genHash,
         KeyHashObj <$> arbitrary
       ]
+
+deriving instance Arbitrary TxIx
+
+deriving instance Arbitrary CertIx
 
 instance Arbitrary Ptr where
   arbitrary = genericArbitraryU

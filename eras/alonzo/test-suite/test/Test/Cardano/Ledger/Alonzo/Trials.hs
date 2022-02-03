@@ -226,7 +226,7 @@ instance
   TQC.HasTrace (AlonzoLEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
-    LedgerEnv (SlotNo 0) 0
+    LedgerEnv (SlotNo 0) minBound
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
@@ -239,7 +239,7 @@ instance
 
 -- An initial (mostly empty) LedgerEnv
 ledgerEnv :: forall era. Default (Core.PParams era) => LedgerEnv era
-ledgerEnv = LedgerEnv (SlotNo 0) 0 def (AccountState (Coin 0) (Coin 0))
+ledgerEnv = LedgerEnv (SlotNo 0) minBound def (AccountState (Coin 0) (Coin 0))
 
 genAlonzoTx :: Gen (Core.Tx A)
 genAlonzoTx = genstuff ap (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (utxo, dp))

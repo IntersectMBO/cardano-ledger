@@ -127,7 +127,7 @@ genBase16Bs :: Gen ByteString
 genBase16Bs = B16.encode <$> genBytes 32
 
 genTxIn :: Gen TxIn
-genTxIn = TxInUtxo <$> genTxId <*> genWord32
+genTxIn = TxInUtxo <$> genTxId <*> genWord16
 
 genTxInList :: Gen (NonEmpty TxIn)
 genTxInList = Gen.nonEmpty (Range.linear 1 20) genTxIn

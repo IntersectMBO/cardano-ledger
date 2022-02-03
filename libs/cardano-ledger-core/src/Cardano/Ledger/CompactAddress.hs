@@ -33,7 +33,7 @@ import Cardano.Ledger.Address
     toWord7,
     word7sToWord64,
   )
-import Cardano.Ledger.BaseTypes (word8ToNetwork)
+import Cardano.Ledger.BaseTypes (CertIx (..), TxIx (..), word8ToNetwork)
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     PaymentCredential,
@@ -207,8 +207,8 @@ getVariableLengthWord64 = word7sToWord64 <$> getWord7s
 getPtr :: GetShort Ptr
 getPtr =
   Ptr <$> (SlotNo <$> getVariableLengthWord64)
-    <*> getVariableLengthWord64
-    <*> getVariableLengthWord64
+    <*> (TxIx . fromIntegral <$> getVariableLengthWord64)
+    <*> (CertIx . fromIntegral <$> getVariableLengthWord64)
 
 getKeyHash :: CC.Crypto crypto => GetShort (Credential kr crypto)
 getKeyHash = KeyHashObj . KeyHash <$> getHash

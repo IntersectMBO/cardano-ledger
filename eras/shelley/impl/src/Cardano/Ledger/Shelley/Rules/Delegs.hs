@@ -29,7 +29,9 @@ import Cardano.Binary
 import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
+    TxIx,
     invalidKey,
+    mkCertIxPartial,
     networkId,
   )
 import Cardano.Ledger.Coin (Coin)
@@ -56,7 +58,6 @@ import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
     Delegation (..),
-    Ix,
     Ptr (..),
     RewardAcnt (..),
     Wdrl (..),
@@ -90,11 +91,11 @@ import NoThunks.Class (NoThunks (..))
 data DELEGS era
 
 data DelegsEnv era = DelegsEnv
-  { delegsSlotNo :: SlotNo,
-    delegsIx :: Ix,
-    delegspp :: Core.PParams era,
-    delegsTx :: Core.Tx era,
-    delegsAccount :: AccountState
+  { delegsSlotNo :: !SlotNo,
+    delegsIx :: !TxIx,
+    delegspp :: !(Core.PParams era),
+    delegsTx :: !(Core.Tx era),
+    delegsAccount :: !AccountState
   }
 
 deriving stock instance
@@ -225,7 +226,7 @@ delegsTransition = do
               )
               Map.empty
               wdrls_
-          unified' = (rewards' UM.⨃ wdrls_')
+          unified' = rewards' UM.⨃ wdrls_'
       pure $ dpstate {_dstate = ds {_unified = unified'}}
     gamma :|> c -> do
       dpstate' <-
@@ -241,7 +242,9 @@ delegsTransition = do
             _ -> Right ()
       isDelegationRegistered ?!: id
 
-      let ptr = Ptr slot txIx (fromIntegral $ length gamma)
+      -- It is impossible to have 4294967295 number of certificates in a
+      -- transaction, therefore partial function is justified.
+      let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(Core.EraRule "DELPL" era) $
         TRC (DelplEnv slot ptr pp acnt, dpstate', c)
   where

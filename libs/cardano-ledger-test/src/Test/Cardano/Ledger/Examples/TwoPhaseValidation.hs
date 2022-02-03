@@ -41,7 +41,14 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), StrictMaybe (..), textToUrl)
+import Cardano.Ledger.BaseTypes
+  ( BlocksMade (..),
+    Network (..),
+    StrictMaybe (..),
+    TxIx,
+    mkTxIxPartial,
+    textToUrl,
+  )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraRule)
@@ -207,6 +214,9 @@ nonScriptOutWithDatum pf =
       DHash [hashData $ datumExample1 @era]
     ]
 
+mkGenesisTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => Integer -> TxIn crypto
+mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
+
 collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
 collateralOutput pf =
   newTxOut Override pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
@@ -259,15 +269,15 @@ initUTxO :: PostShelley era => Proof era -> UTxO era
 initUTxO pf =
   UTxO $
     SplitMap.fromList $
-      [ (TxIn genesisId 1, alwaysSucceedsOutput pf),
-        (TxIn genesisId 2, alwaysFailsOutput pf)
+      [ (mkGenesisTxIn 1, alwaysSucceedsOutput pf),
+        (mkGenesisTxIn 2, alwaysFailsOutput pf)
       ]
-        ++ map (\i -> (TxIn genesisId i, someOutput pf)) [3 .. 8]
-        ++ map (\i -> (TxIn genesisId i, collateralOutput pf)) [11 .. 18]
-        ++ [ (TxIn genesisId 100, timelockOut pf),
-             (TxIn genesisId 101, unspendableOut pf),
-             (TxIn genesisId 102, alwaysSucceedsOutputV2 pf),
-             (TxIn genesisId 103, nonScriptOutWithDatum pf)
+        ++ map (\i -> (mkGenesisTxIn i, someOutput pf)) [3 .. 8]
+        ++ map (\i -> (mkGenesisTxIn i, collateralOutput pf)) [11 .. 18]
+        ++ [ (mkGenesisTxIn 100, timelockOut pf),
+             (mkGenesisTxIn 101, unspendableOut pf),
+             (mkGenesisTxIn 102, alwaysSucceedsOutputV2 pf),
+             (mkGenesisTxIn 103, nonScriptOutWithDatum pf)
            ]
 
 initialUtxoSt ::
@@ -294,14 +304,20 @@ data Expect era = ExpectSuccess (Core.TxBody era) (Core.TxOut era) | ExpectFailu
 -- If we expect the transaction script to validate, then
 -- the UTxO for (TxIn genesisId i) will be consumed and a UTxO will be created.
 -- Otherwise, the UTxO for (TxIn genesisId (10+i)) will be consumed.
-expectedUTxO :: forall era. (PostShelley era) => Proof era -> Expect era -> Natural -> UTxO era
+expectedUTxO ::
+  forall era.
+  (HasCallStack, PostShelley era) =>
+  Proof era ->
+  Expect era ->
+  Integer ->
+  UTxO era
 expectedUTxO pf ex idx = UTxO utxo
   where
     utxo = case ex of
       ExpectSuccess txb newOut ->
-        SplitMap.insert (TxIn (txid txb) 0) newOut (filteredUTxO idx)
-      ExpectFailure -> filteredUTxO (10 + idx)
-    filteredUTxO :: Natural -> SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)
+        SplitMap.insert (TxIn (txid txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
+      ExpectFailure -> filteredUTxO (mkTxIxPartial (10 + idx))
+    filteredUTxO :: TxIx -> SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)
     filteredUTxO x = SplitMap.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO (initUTxO pf)
 
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
@@ -355,8 +371,8 @@ extraRedeemersBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 1],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 1],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] extraRedeemersEx txDatsExample1)
@@ -390,8 +406,8 @@ validatingBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 1],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 1],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 txDatsExample1)
@@ -474,8 +490,8 @@ notValidatingBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 2],
-      Collateral [TxIn genesisId 12],
+    [ Inputs [mkGenesisTxIn 2],
+      Collateral [mkGenesisTxIn 12],
       Outputs [outEx2 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] notValidatingRedeemers txDatsExample2)
@@ -532,8 +548,8 @@ validatingBodyWithCert pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 3],
-      Collateral [TxIn genesisId 13],
+    [ Inputs [mkGenesisTxIn 3],
+      Collateral [mkGenesisTxIn 13],
       Outputs [outEx3 pf],
       Certs [DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)],
       Txfee (Coin 5),
@@ -591,8 +607,8 @@ notValidatingBodyWithCert pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 4],
-      Collateral [TxIn genesisId 14],
+    [ Inputs [mkGenesisTxIn 4],
+      Collateral [mkGenesisTxIn 14],
       Outputs [outEx4 pf],
       Certs [DCertDeleg (DeRegKey $ scriptStakeCredFail pf)],
       Txfee (Coin 5),
@@ -647,8 +663,8 @@ validatingBodyWithWithdrawal pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 5],
-      Collateral [TxIn genesisId 15],
+    [ Inputs [mkGenesisTxIn 5],
+      Collateral [mkGenesisTxIn 15],
       Outputs [outEx5 pf],
       Txfee (Coin 5),
       Wdrls
@@ -708,8 +724,8 @@ notValidatingBodyWithWithdrawal pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 6],
-      Collateral [TxIn genesisId 16],
+    [ Inputs [mkGenesisTxIn 6],
+      Collateral [mkGenesisTxIn 16],
       Outputs [outEx6 pf],
       Txfee (Coin 5),
       Wdrls
@@ -772,8 +788,8 @@ validatingBodyWithMint pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 7],
-      Collateral [TxIn genesisId 17],
+    [ Inputs [mkGenesisTxIn 7],
+      Collateral [mkGenesisTxIn 17],
       Outputs [outEx7 pf],
       Txfee (Coin 5),
       Mint (mintEx7 pf),
@@ -833,8 +849,8 @@ notValidatingBodyWithMint pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 8],
-      Collateral [TxIn genesisId 18],
+    [ Inputs [mkGenesisTxIn 8],
+      Collateral [mkGenesisTxIn 18],
       Outputs [outEx8 pf],
       Txfee (Coin 5),
       Mint (mintEx8 pf),
@@ -907,8 +923,8 @@ validatingBodyManyScripts pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 1, TxIn genesisId 100],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 1, mkGenesisTxIn 100],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx9 pf],
       Txfee (Coin 5),
       Certs
@@ -961,9 +977,9 @@ utxoEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> UTxO era
 utxoEx9 pf = UTxO utxo
   where
     utxo =
-      SplitMap.insert (TxIn (txid (validatingBodyManyScripts pf)) 0) (outEx9 pf) $
+      SplitMap.insert (TxIn (txid (validatingBodyManyScripts pf)) minBound) (outEx9 pf) $
         SplitMap.filterWithKey
-          (\k _ -> k /= (TxIn genesisId 1) && k /= (TxIn genesisId 100))
+          (\k _ -> k /= mkGenesisTxIn 1 && k /= mkGenesisTxIn 100)
           (unUTxO $ initUTxO pf)
 
 utxoStEx9 ::
@@ -992,7 +1008,7 @@ okSupplimentaryDatumTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 3],
+    [ Inputs [mkGenesisTxIn 3],
       Outputs [outEx10 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) txDatsExample1)
@@ -1042,8 +1058,8 @@ multipleEqualCertsBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 3],
-      Collateral [TxIn genesisId 13],
+    [ Inputs [mkGenesisTxIn 3],
+      Collateral [mkGenesisTxIn 13],
       Outputs [outEx3 pf],
       Certs
         [ DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf),
@@ -1097,7 +1113,7 @@ nonScriptOutWithDatumTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 103],
+    [ Inputs [mkGenesisTxIn 103],
       Outputs [outEx12 pf],
       Txfee (Coin 5)
     ]
@@ -1144,7 +1160,7 @@ incorrectNetworkIDTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 3],
+    [ Inputs [mkGenesisTxIn 3],
       Outputs [outEx3 pf],
       Txfee (Coin 5),
       Txnetworkid (SJust Mainnet)
@@ -1169,7 +1185,7 @@ missingRequiredWitnessTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 3],
+    [ Inputs [mkGenesisTxIn 3],
       Outputs [outEx3 pf],
       Txfee (Coin 5),
       ReqSignerHashes [extraneousKeyHash]
@@ -1191,8 +1207,8 @@ missingRedeemerTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 1],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 1],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] (Redeemers mempty) txDatsExample1)
@@ -1302,8 +1318,8 @@ wrongRedeemerLabelTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 1],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 1],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] misPurposedRedeemer txDatsExample1)
@@ -1334,8 +1350,8 @@ missingDatumTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 1],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 1],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
@@ -1401,8 +1417,8 @@ tooManyExUnitsTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 1],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 1],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersTooManyExUnits txDatsExample1)
@@ -1450,8 +1466,8 @@ plutusOutputWithNoDataTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 101],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 101],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 mempty)
@@ -1487,7 +1503,7 @@ notOkSupplimentaryDatumTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 3],
+    [ Inputs [mkGenesisTxIn 3],
       Outputs [outputWithNoDatum pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) totallyIrrelevantTxDats)
@@ -1521,7 +1537,7 @@ poolMDHTooBigTxBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 3],
+    [ Inputs [mkGenesisTxIn 3],
       Outputs [newTxOut Override pf [Address $ someAddr pf, Amount (inject $ Coin 995)]],
       Certs [DCertPool (RegPool poolParams)],
       Txfee (Coin 5)
@@ -1573,8 +1589,8 @@ multipleEqualCertsBodyInvalid pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 3],
-      Collateral [TxIn genesisId 13],
+    [ Inputs [mkGenesisTxIn 3],
+      Collateral [mkGenesisTxIn 13],
       Outputs [outEx3 pf],
       Certs
         [ DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf),
@@ -1608,8 +1624,8 @@ noCostModelBody pf =
   newTxBody
     Override
     pf
-    [ Inputs [TxIn genesisId 102],
-      Collateral [TxIn genesisId 11],
+    [ Inputs [mkGenesisTxIn 102],
+      Collateral [mkGenesisTxIn 11],
       Outputs [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersEx1 txDatsExample1)
@@ -1796,12 +1812,9 @@ alonzoUTXOWexamples =
                   [ WrappedShelleyEraFailure . UtxoFailure
                       . UtxosFailure
                       . CollectErrors
-                      $ [NoRedeemer (Spending (TxIn genesisId 1))],
+                      $ [NoRedeemer (Spending (mkGenesisTxIn 1))],
                     MissingRedeemers
-                      [ ( Spending (TxIn genesisId 1),
-                          alwaysSucceedsHash 3 pf
-                        )
-                      ]
+                      [(Spending (mkGenesisTxIn 1), alwaysSucceedsHash 3 pf)]
                   ]
               ),
           testCase "wrong wpp hash" $
@@ -1830,7 +1843,7 @@ alonzoUTXOWexamples =
               (trustMe True $ missing1phaseScriptWitnessTx pf)
               ( Left
                   [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
-                      [ NoRedeemer (Spending (TxIn genesisId 100)),
+                      [ NoRedeemer (Spending (mkGenesisTxIn 100)),
                         NoWitness (timelockHash 0 pf)
                       ],
                     WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
@@ -1865,10 +1878,10 @@ alonzoUTXOWexamples =
                   [ WrappedShelleyEraFailure . UtxoFailure
                       . UtxosFailure
                       . CollectErrors
-                      $ [NoRedeemer (Spending (TxIn genesisId 1))],
+                      $ [NoRedeemer (Spending (mkGenesisTxIn 1))],
                     -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
                     MissingRedeemers
-                      [ ( Spending (TxIn genesisId 1),
+                      [ ( Spending (mkGenesisTxIn 1),
                           alwaysSucceedsHash 3 pf
                         )
                       ],
@@ -1967,7 +1980,9 @@ alonzoUTXOWexamples =
             testUTXOW
               (pp pf)
               (trustMe True $ plutusOutputWithNoDataTx pf)
-              ( Left [UnspendableUTxONoDatumHash . Set.singleton $ TxIn genesisId 101]
+              ( Left
+                  [ UnspendableUTxONoDatumHash . Set.singleton $ mkGenesisTxIn 101
+                  ]
               ),
           testCase "unacceptable supplimentary datum" $
             testUTXOW
@@ -2035,7 +2050,7 @@ collectTwoPhaseScriptInputsOutputOrdering =
               (initUTxO apf)
               (validatingTx apf)
         )
-        (Spending $ TxIn genesisId 1)
+        (Spending $ mkGenesisTxIn 1)
 
 collectOrderingAlonzo :: TestTree
 collectOrderingAlonzo =
@@ -2114,22 +2129,22 @@ example1UTxO :: UTxO A
 example1UTxO =
   UTxO $
     SplitMap.fromList
-      [ (TxIn (txid (validatingBody pf)) 0, outEx1 pf),
-        (TxIn (txid (validatingBodyWithCert pf)) 0, outEx3 pf),
-        (TxIn (txid (validatingBodyWithWithdrawal pf)) 0, outEx5 pf),
-        (TxIn (txid (validatingBodyWithMint pf)) 0, outEx7 pf),
-        (TxIn genesisId 11, collateralOutput pf),
-        (TxIn genesisId 2, alwaysFailsOutput pf),
-        (TxIn genesisId 13, collateralOutput pf),
-        (TxIn genesisId 4, someOutput pf),
-        (TxIn genesisId 15, collateralOutput pf),
-        (TxIn genesisId 6, someOutput pf),
-        (TxIn genesisId 17, collateralOutput pf),
-        (TxIn genesisId 8, someOutput pf),
-        (TxIn genesisId 100, timelockOut pf),
-        (TxIn genesisId 101, unspendableOut pf),
-        (TxIn genesisId 102, alwaysSucceedsOutputV2 pf),
-        (TxIn genesisId 103, nonScriptOutWithDatum pf)
+      [ (TxIn (txid (validatingBody pf)) minBound, outEx1 pf),
+        (TxIn (txid (validatingBodyWithCert pf)) minBound, outEx3 pf),
+        (TxIn (txid (validatingBodyWithWithdrawal pf)) minBound, outEx5 pf),
+        (TxIn (txid (validatingBodyWithMint pf)) minBound, outEx7 pf),
+        (mkGenesisTxIn 11, collateralOutput pf),
+        (mkGenesisTxIn 2, alwaysFailsOutput pf),
+        (mkGenesisTxIn 13, collateralOutput pf),
+        (mkGenesisTxIn 4, someOutput pf),
+        (mkGenesisTxIn 15, collateralOutput pf),
+        (mkGenesisTxIn 6, someOutput pf),
+        (mkGenesisTxIn 17, collateralOutput pf),
+        (mkGenesisTxIn 8, someOutput pf),
+        (mkGenesisTxIn 100, timelockOut pf),
+        (mkGenesisTxIn 101, unspendableOut pf),
+        (mkGenesisTxIn 102, alwaysSucceedsOutputV2 pf),
+        (mkGenesisTxIn 103, nonScriptOutWithDatum pf)
       ]
   where
     pf = Alonzo Mock

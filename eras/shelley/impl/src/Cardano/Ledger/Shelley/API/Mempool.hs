@@ -216,7 +216,7 @@ mkMempoolEnv
   slot =
     Ledger.LedgerEnv
       { Ledger.ledgerSlotNo = slot,
-        Ledger.ledgerIx = 0,
+        Ledger.ledgerIx = minBound,
         Ledger.ledgerPp = LedgerState.esPp nesEs,
         Ledger.ledgerAccount = LedgerState.esAccountState nesEs
       }

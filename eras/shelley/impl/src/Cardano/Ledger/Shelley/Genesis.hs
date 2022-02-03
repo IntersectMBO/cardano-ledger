@@ -308,7 +308,7 @@ genesisUTxO genesis =
 -- we need this same 'TxIn' to use as an input to the spending transaction.
 initialFundsPseudoTxIn :: forall crypto. CC.Crypto crypto => Addr crypto -> TxIn crypto
 initialFundsPseudoTxIn addr =
-  TxIn (pseudoTxId addr) 0
+  TxIn (pseudoTxId addr) minBound
   where
     pseudoTxId =
       TxId

@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.Shelley.UnitTests (unitTests) where
 
 import Cardano.Binary (serialize')
 import Cardano.Crypto.DSIGN.Class (SignKeyDSIGN, VerKeyDSIGN)
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Address
   ( Addr (..),
@@ -25,7 +26,7 @@ import Cardano.Ledger.Credential
   ( Credential (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto (DSIGN, VRF)
+import Cardano.Ledger.Crypto (DSIGN, HASH, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys
   ( KeyPair (..),
@@ -158,6 +159,9 @@ bobAddr =
     Testnet
     (KeyHashObj . hashKey $ vKey bobPay)
     (StakeRefBase . KeyHashObj . hashKey $ vKey bobStake)
+
+mkGenesisTxIn :: (HashAlgorithm (HASH crypto), HasCallStack) => Integer -> TxIn crypto
+mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 pp :: PParams era
 pp =
@@ -388,10 +392,10 @@ addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState
 addReward dp ra c = dp {_dstate = ds {_unified = rewards'}}
   where
     ds = _dstate dp
-    rewards' = (UM.insert ra c (rewards ds))
+    rewards' = UM.insert ra c (rewards ds)
 
 ledgerEnv :: LedgerEnv C
-ledgerEnv = LedgerEnv (SlotNo 0) 0 pp (AccountState (Coin 0) (Coin 0))
+ledgerEnv = LedgerEnv (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
   [PredicateFailure (LEDGER C)] ->
@@ -404,17 +408,17 @@ testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
   testInvalidTx
     [ UtxowFailure (UtxoFailure (ValueNotConservedUTxO (Coin 0) (Coin 10000))),
-      UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ TxIn genesisId 42))
+      UtxowFailure (UtxoFailure $ BadInputsUTxO (Set.singleton $ mkGenesisTxIn 42))
     ]
     $ aliceGivesBobLovelace $
       AliceToBob
-        { input = (TxIn genesisId 42), -- Non Existent
-          toBob = (Coin 3000),
-          fee = (Coin 1500),
-          deposits = (Coin 0),
-          refunds = (Coin 0),
+        { input = mkGenesisTxIn 42, -- Non Existent
+          toBob = Coin 3000,
+          fee = Coin 1500,
+          deposits = Coin 0,
+          refunds = Coin 0,
           certs = [],
-          ttl = (SlotNo 100),
+          ttl = SlotNo 100,
           signers = [asWitness alicePay]
         }
 
@@ -422,7 +426,7 @@ testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
   let txbody =
         TxBody @C
-          (Set.fromList [TxIn genesisId 0])
+          (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6404),
                 TxOut bobAddr (Coin 3000)
@@ -447,7 +451,7 @@ testSpendNotOwnedUTxO :: Assertion
 testSpendNotOwnedUTxO =
   let txbody =
         TxBody @C
-          (Set.fromList [TxIn genesisId 1])
+          (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 232))
           Empty
           (Wdrl Map.empty)
@@ -469,7 +473,7 @@ testWitnessWrongUTxO :: Assertion
 testWitnessWrongUTxO =
   let txbody =
         TxBody @C
-          (Set.fromList [TxIn genesisId 1])
+          (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
           Empty
           (Wdrl Map.empty)
@@ -479,7 +483,7 @@ testWitnessWrongUTxO =
           SNothing
       tx2body =
         TxBody @C
-          (Set.fromList [TxIn genesisId 1])
+          (Set.fromList [mkGenesisTxIn 1])
           (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
           Empty
           (Wdrl Map.empty)
@@ -528,7 +532,7 @@ testFeeTooSmall =
     [UtxowFailure (UtxoFailure (FeeTooSmallUTxO (Coin 205) (Coin 1)))]
     $ aliceGivesBobLovelace
       AliceToBob
-        { input = TxIn genesisId 0,
+        { input = TxIn genesisId minBound,
           toBob = Coin 3000,
           fee = Coin 1,
           deposits = Coin 0,
@@ -544,7 +548,7 @@ testExpiredTx =
       tx =
         aliceGivesBobLovelace $
           AliceToBob
-            { input = TxIn genesisId 0,
+            { input = TxIn genesisId minBound,
               toBob = Coin 3000,
               fee = Coin 600,
               deposits = Coin 0,
@@ -553,14 +557,14 @@ testExpiredTx =
               ttl = SlotNo 0,
               signers = [asWitness alicePay]
             }
-      ledgerEnv' = LedgerEnv (SlotNo 1) 0 pp (AccountState (Coin 0) (Coin 0))
+      ledgerEnv' = LedgerEnv (SlotNo 1) minBound pp (AccountState (Coin 0) (Coin 0))
    in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left errs)
 
 testInvalidWintess :: Assertion
 testInvalidWintess =
   let txb =
         TxBody @C
-          (Set.fromList [TxIn genesisId 0])
+          (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6000),
                 TxOut bobAddr (Coin 3000)
@@ -587,7 +591,7 @@ testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
   let txb =
         TxBody @C
-          (Set.fromList [TxIn genesisId 0])
+          (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6000),
                 TxOut bobAddr (Coin 3010)
@@ -613,7 +617,7 @@ testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
   let txb =
         TxBody @C
-          (Set.fromList [TxIn genesisId 0])
+          (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
               [ TxOut aliceAddr (Coin 6000),
                 TxOut bobAddr (Coin 3011)
@@ -644,13 +648,13 @@ testOutputTooSmall =
     [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [TxOut bobAddr (Coin 1)])]
     $ aliceGivesBobLovelace $
       AliceToBob
-        { input = (TxIn genesisId 0),
-          toBob = (Coin 1), -- Too Small
-          fee = (Coin 997),
-          deposits = (Coin 0),
-          refunds = (Coin 0),
+        { input = TxIn genesisId minBound,
+          toBob = Coin 1, -- Too Small
+          fee = Coin 997,
+          deposits = Coin 0,
+          refunds = Coin 0,
           certs = [],
-          ttl = (SlotNo 0),
+          ttl = SlotNo 0,
           signers = [asWitness alicePay]
         }
 
@@ -693,13 +697,13 @@ testPoolCostTooSmall =
     ]
     $ aliceGivesBobLovelace $
       AliceToBob
-        { input = (TxIn genesisId 0),
-          toBob = (Coin 100),
-          fee = (Coin 997),
-          deposits = (Coin 250),
-          refunds = (Coin 0),
+        { input = TxIn genesisId minBound,
+          toBob = Coin 100,
+          fee = Coin 997,
+          deposits = Coin 250,
+          refunds = Coin 0,
           certs = [DCertPool $ RegPool alicePoolParamsSmallCost],
-          ttl = (SlotNo 0),
+          ttl = SlotNo 0,
           signers =
             ( [ asWitness alicePay,
                 asWitness aliceStake,
@@ -713,7 +717,7 @@ testProducedOverMaxWord64 =
   let biggestCoin = fromIntegral (maxBound :: Word64)
       txbody =
         TxBody @C
-          (Set.fromList [TxIn genesisId 0])
+          (Set.fromList [TxIn genesisId minBound])
           (StrictSeq.fromList [TxOut bobAddr (Coin biggestCoin)])
           Empty
           (Wdrl Map.empty)

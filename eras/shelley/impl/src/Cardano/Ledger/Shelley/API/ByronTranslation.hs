@@ -17,7 +17,7 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
-import Cardano.Ledger.BaseTypes (BlocksMade (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (..), TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.CompactAddress (CompactAddr (UnsafeCompactAddr))
 import qualified Cardano.Ledger.Crypto as CC
@@ -69,7 +69,7 @@ translateCompactTxInByronToShelley ::
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
   TxIn
     (translateTxIdByronToShelley (Byron.fromCompactTxId compactTxId))
-    (fromIntegral idx)
+    (TxIx idx)
 
 translateUTxOByronToShelley ::
   forall c.

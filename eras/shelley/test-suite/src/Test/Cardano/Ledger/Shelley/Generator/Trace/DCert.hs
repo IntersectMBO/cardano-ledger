@@ -5,12 +5,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
@@ -19,7 +17,7 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.DCert
   )
 where
 
-import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
+import Cardano.Ledger.BaseTypes (CertIx, Globals, ShelleyBase, TxIx)
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
@@ -37,7 +35,6 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (isDeRegKey)
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEvent, DelplPredicateFailure)
-import Cardano.Ledger.Shelley.TxBody (Ix)
 import Cardano.Ledger.Shelley.UTxO (totalDeposits)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<×>))
@@ -110,8 +107,8 @@ instance
   ) =>
   STS (CERTS era)
   where
-  type Environment (CERTS era) = (SlotNo, Ix, Core.PParams era, AccountState)
-  type State (CERTS era) = (DPState (Crypto era), Ix)
+  type Environment (CERTS era) = (SlotNo, TxIx, Core.PParams era, AccountState)
+  type State (CERTS era) = (DPState (Crypto era), CertIx)
   type Signal (CERTS era) = Maybe (DCert (Crypto era), CertCred era)
   type PredicateFailure (CERTS era) = CertsPredicateFailure era
   type Event (CERTS era) = CertsEvent era
@@ -144,7 +141,7 @@ certsTransition = do
         trans @(Core.EraRule "DELPL" era) $
           TRC (DelplEnv slot ptr pp acnt, dpState, cert)
 
-      pure (dpState', nextCertIx + 1)
+      pure (dpState', succ nextCertIx)
     Nothing ->
       pure (dpState, nextCertIx)
 
@@ -205,7 +202,7 @@ genDCerts ::
   Core.PParams era ->
   DPState (Crypto era) ->
   SlotNo ->
-  Ix ->
+  TxIx ->
   AccountState ->
   Gen
     ( StrictSeq (DCert (Crypto era)),
@@ -226,7 +223,7 @@ genDCerts
   txIx
   acnt = do
     let env = (slot, txIx, pparams, acnt)
-        st0 = (dpState, 0)
+        st0 = (dpState, minBound)
 
     certsTrace <-
       QC.traceFrom @(CERTS era) testGlobals maxCertsPerTx ge env st0
@@ -241,7 +238,7 @@ genDCerts
     pure
       ( StrictSeq.fromList certs,
         totalDeposits pparams (`Map.notMember` pools) certs,
-        (length deRegStakeCreds) <×> (getField @"_keyDeposit" pparams),
+        length deRegStakeCreds <×> getField @"_keyDeposit" pparams,
         lastState_,
         ( concat (keyCredAsWitness <$> keyCreds'),
           extractScriptCred <$> scriptCreds

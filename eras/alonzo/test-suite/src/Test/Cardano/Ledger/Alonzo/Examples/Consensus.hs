@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.API
     ProposedPPUpdates (..),
     RewardAcnt (..),
     TxId (..),
-    TxIn (..),
     Update (..),
     Wdrl (..),
   )
@@ -39,6 +38,7 @@ import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
 import Cardano.Ledger.Shelley.Tx (Tx (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.TxIn (mkTxInPartial)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
@@ -96,8 +96,8 @@ ledgerExamplesAlonzo =
 exampleTxBodyAlonzo :: Cardano.Ledger.Core.TxBody StandardAlonzo
 exampleTxBodyAlonzo =
   TxBody
-    (Set.fromList [TxIn (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- inputs
-    (Set.fromList [TxIn (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral
+    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- inputs
+    (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral
     ( StrictSeq.fromList
         [ TxOut
             (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
