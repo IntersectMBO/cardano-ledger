@@ -69,6 +69,7 @@ import Cardano.Binary
   ( DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    decodeAnnotator,
     decodeBreakOr,
     decodeListLenOrIndef,
     encodeListLen,
@@ -163,6 +164,11 @@ data TxOut era
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
       {-# UNPACK #-} !(BinaryData era) -- Inline data
+  | TxOutCompactRefScript'
+      {-# UNPACK #-} !(CompactAddr (Crypto era))
+      !(CompactForm (Core.Value era))
+      !(Datum era)
+      !(Core.Script era)
   | TxOut_AddrHash28_AdaOnly
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Addr28Extra
@@ -175,6 +181,7 @@ data TxOut era
 
 deriving stock instance
   ( Eq (Core.Value era),
+    Eq (Core.Script era),
     Compactible (Core.Value era)
   ) =>
   Eq (TxOut era)
@@ -192,6 +199,7 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOutCompactDatum addr val datum -> (addr, val, SJust $ hashBinaryData datum)
+  TxOutCompactRefScript' addr val datum _rs -> (addr, val, datumDataHash datum)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal ->
     Alonzo.viewCompactTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32 ->
@@ -202,27 +210,31 @@ viewTxOut ::
   forall era.
   Era era =>
   TxOut era ->
-  (Addr (Crypto era), Core.Value era, Datum era)
-viewTxOut (TxOutCompact' bs c) = (addr, val, NoDatum)
+  (Addr (Crypto era), Core.Value era, Datum era, StrictMaybe (Core.Script era))
+viewTxOut (TxOutCompact' bs c) = (addr, val, NoDatum, SNothing)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, DatumHash dh)
+viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, DatumHash dh, SNothing)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactDatum bs c d) = (addr, val, Datum d)
+viewTxOut (TxOutCompactDatum bs c d) = (addr, val, Datum d, SNothing)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal) = (addr, val, NoDatum)
+viewTxOut (TxOutCompactRefScript' bs c d rs) = (addr, val, d, SJust rs)
+  where
+    addr = decompactAddr bs
+    val = fromCompact c
+viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal) = (addr, val, NoDatum, SNothing)
   where
     (addr, val, _) =
       Alonzo.viewTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32) =
   case mDataHash of
-    SNothing -> (addr, val, NoDatum)
-    SJust dh -> (addr, val, DatumHash dh)
+    SNothing -> (addr, val, NoDatum, SNothing)
+    SJust dh -> (addr, val, DatumHash dh, SNothing)
   where
     (addr, val, mDataHash) =
       Alonzo.viewTxOut @era $
@@ -231,6 +243,7 @@ viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataH
 instance
   ( Era era,
     Show (Core.Value era),
+    Show (Core.Script era),
     Show (CompactForm (Core.Value era))
   ) =>
   Show (TxOut era)
@@ -244,6 +257,20 @@ data Datum era
   | DatumHash !(DataHash (Crypto era))
   | Datum !(BinaryData era)
   deriving (Eq, Ord, Show)
+
+instance Era era => ToCBOR (Datum era) where
+  toCBOR d = encode $ case d of
+    NoDatum -> Sum NoDatum 0
+    DatumHash dh -> Sum DatumHash 1 !> To dh
+    Datum d' -> Sum Datum 2 !> To d'
+
+instance Era era => FromCBOR (Datum era) where
+  fromCBOR = decode (Summands "Datum" decodeDatum)
+    where
+      decodeDatum 0 = SumD NoDatum
+      decodeDatum 1 = SumD DatumHash <! From
+      decodeDatum 2 = SumD Datum <! From
+      decodeDatum k = Invalid k
 
 datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
 datumDataHash = \case
@@ -261,28 +288,31 @@ pattern TxOut ::
   Addr (Crypto era) ->
   Core.Value era ->
   Datum era ->
+  StrictMaybe (Core.Script era) ->
   TxOut era
-pattern TxOut addr vl datum <-
-  (viewTxOut -> (addr, vl, datum))
+pattern TxOut addr vl datum refScript <-
+  (viewTxOut -> (addr, vl, datum, refScript))
   where
-    TxOut (Addr network paymentCred stakeRef) vl NoDatum
+    TxOut (Addr network paymentCred stakeRef) vl NoDatum SNothing
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
         TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
-    TxOut (Addr network paymentCred stakeRef) vl (DatumHash dh)
+    TxOut (Addr network paymentCred stakeRef) vl (DatumHash dh) SNothing
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
         Just (Refl, dataHash32) <- encodeDataHash32 dh =
         TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
-    TxOut addr vl d =
+    TxOut addr vl d rs =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
-       in case d of
-            NoDatum -> TxOutCompact' a v
-            DatumHash dh -> TxOutCompactDH' a v dh
-            Datum binaryData -> TxOutCompactDatum a v binaryData
+       in case rs of
+            SNothing -> case d of
+              NoDatum -> TxOutCompact' a v
+              DatumHash dh -> TxOutCompactDH' a v dh
+              Datum binaryData -> TxOutCompactDatum a v binaryData
+            SJust rs' -> TxOutCompactRefScript' a v d rs'
 
 {-# COMPLETE TxOut #-}
 
@@ -297,7 +327,7 @@ pattern TxOutCompact ::
 pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, SNothing))
   where
-    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) NoDatum
+    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) NoDatum SNothing
 
 -- TODO deprecate
 pattern TxOutCompactDH ::
@@ -311,7 +341,7 @@ pattern TxOutCompactDH ::
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
   where
-    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . DatumHash
+    TxOutCompactDH cAddr cVal dh = TxOut (decompactAddr cAddr) (fromCompact cVal) (DatumHash dh) SNothing
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
@@ -344,6 +374,7 @@ data TxBodyRaw era = TxBodyRaw
 
 deriving instance
   ( Eq (Core.Value era),
+    Eq (Core.Script era),
     CC.Crypto (Crypto era),
     Compactible (Core.Value era),
     Eq (PParamsDelta era)
@@ -357,6 +388,7 @@ instance
 deriving instance
   ( Era era,
     Show (Core.Value era),
+    Show (Core.Script era),
     Show (PParamsDelta era)
   ) =>
   Show (TxBodyRaw era)
@@ -380,6 +412,7 @@ deriving instance
 deriving instance
   ( Era era,
     Compactible (Core.Value era),
+    Show (Core.Script era),
     Show (Core.Value era),
     Show (PParamsDelta era)
   ) =>
@@ -586,7 +619,8 @@ txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 
 instance
   ( Era era,
-    Compactible (Core.Value era)
+    Compactible (Core.Value era),
+    ToCBOR (Core.Script era)
   ) =>
   ToCBOR (TxOut era)
   where
@@ -596,10 +630,17 @@ instance
       <> toCBOR cv
   toCBOR (TxOutCompactDatum addr cv d) =
     encodeListLen 4
-      <> toCBOR True
+      <> toCBOR (0 :: Word8)
       <> toCBOR addr
       <> toCBOR cv
       <> toCBOR d
+  toCBOR (TxOutCompactRefScript' addr cv d rs) =
+    encodeListLen 5
+      <> toCBOR (2 :: Word8)
+      <> toCBOR addr
+      <> toCBOR cv
+      <> toCBOR d
+      <> toCBOR rs
   toCBOR (TxOutCompactDH addr cv dh) =
     encodeListLen 3
       <> toCBOR addr
@@ -610,6 +651,7 @@ instance
   ( Era era,
     DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
+    FromCBOR (Annotator (Core.Script era)),
     Compactible (Core.Value era)
   ) =>
   FromCBOR (TxOut era)
@@ -620,6 +662,7 @@ instance
   ( Era era,
     DecodeNonNegative (Core.Value era),
     Show (Core.Value era),
+    FromCBOR (Annotator (Core.Script era)),
     Compactible (Core.Value era)
   ) =>
   FromSharedCBOR (TxOut era)
@@ -654,13 +697,24 @@ instance
           <*> decodeNonNegative
           <*> fromCBOR
       Just 4 -> do
-        True <- fromCBOR @Bool
+        1 <- fromCBOR @Word8
         TxOutCompactDatum <$> fromCBOR <*> decodeNonNegative <*> fromCBOR
+      Just 5 -> do
+        1 <- fromCBOR @Word8
+        TxOutCompactRefScript' <$> fromCBOR <*> decodeNonNegative <*> fromCBOR <*> decodeCIC "Script"
       Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
+
+decodeCIC :: (FromCBOR (Annotator b)) => T.Text -> Decoder s b
+decodeCIC s = do
+  lbs <- fromCBOR
+  case decodeAnnotator s fromCBOR lbs of
+    Left _ -> fail "foo"
+    Right x -> pure x
 
 encodeTxBodyRaw ::
   ( Era era,
-    ToCBOR (PParamsDelta era)
+    ToCBOR (PParamsDelta era),
+    ToCBOR (Core.Script era)
   ) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
