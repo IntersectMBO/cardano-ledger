@@ -19,14 +19,13 @@ module Cardano.Ledger.Shelley.Rules.Utxow
     UtxowPredicateFailure (..),
     UtxowEvent (..),
     PredicateFailure,
-    shelleyStyleWitness,
+    transitionRulesUTXOW,
     ShelleyStyleWitnessNeeds,
 
     -- * Individual validation steps
     validateFailedScripts,
     validateMissingScripts,
     validateVerifiedWits,
-    validateNeededWitnesses,
     validateMetadata,
     validateMIRInsufficientGenesisSigs,
   )
@@ -37,13 +36,23 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
+import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash)
 import Cardano.Ledger.AuxiliaryData
   ( AuxiliaryDataHash,
     ValidateAuxiliaryData (..),
     hashAuxiliaryData,
   )
-import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe (..), invalidKey, quorum, (==>))
+import Cardano.Ledger.BaseTypes
+  ( ProtVer,
+    ShelleyBase,
+    StrictMaybe (..),
+    invalidKey,
+    quorum,
+    strictMaybeToMaybe,
+    (==>),
+  )
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys
   ( DSignable,
@@ -55,7 +64,7 @@ import Cardano.Ledger.Keys
     VKey,
     asWitness,
   )
-import Cardano.Ledger.Rules.ValidationMode (runValidationStaticWith, runValidationWith)
+import Cardano.Ledger.Rules.ValidationMode (runValidation, runValidationStatic)
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization
   ( decodeList,
@@ -64,15 +73,21 @@ import Cardano.Ledger.Serialization
     encodeFoldable,
   )
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness, bwKey, verifyBootstrapWit)
-import Cardano.Ledger.Shelley.Delegation.Certificates (isInstantaneousRewards)
+import Cardano.Ledger.Shelley.Delegation.Certificates
+  ( delegCWitness,
+    genesisCWitness,
+    isInstantaneousRewards,
+    poolCWitness,
+    requiresVKeyWitness,
+  )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState (..),
     WitHashes (..),
     diffWitHashes,
     nullWitHashes,
+    propWits,
     witsFromTxWitnesses,
-    witsVKeyNeeded,
   )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Utxo (UTXO, UtxoEnv (..), UtxoEvent, UtxoPredicateFailure)
@@ -82,11 +97,21 @@ import Cardano.Ledger.Shelley.Tx
   ( Tx,
     ValidateScript,
     WitVKey,
+    extractKeyHashWitnessSet,
     hashScript,
     validateScript,
   )
-import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody, Wdrl, WitVKey (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO, scriptsNeeded, verifyWitVKey)
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (..),
+    EraIndependentTxBody,
+    PoolCert (..),
+    PoolParams (..),
+    Wdrl,
+    WitVKey (..),
+    getRwdCred,
+    unWdrl,
+  )
+import Cardano.Ledger.Shelley.UTxO (UTxO, scriptsNeeded, txinLookup, verifyWitVKey)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
@@ -277,17 +302,10 @@ initialLedgerStateUTXOW = do
   IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
   trans @(Core.EraRule "UTXO" era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
 
--- | Function which collects VKey witnesses.
-type CollectVKeyWitnesses era =
-  UTxO era ->
-  Core.Tx era ->
-  GenDelegs (Crypto era) ->
-  WitHashes (Crypto era)
-
 -- | A generic Utxow witnessing function designed to be use across many Eras.
 --   Note the 'embed' argument lifts from the simple Shelley (UtxowPredicateFailure) to
 --   the PredicateFailure (type family) of the context of where it is called.
-shelleyStyleWitness ::
+transitionRulesUTXOW ::
   forall era utxow.
   ( Era era,
     BaseM (utxow era) ~ ShelleyBase,
@@ -298,19 +316,15 @@ shelleyStyleWitness ::
     Environment (utxow era) ~ UtxoEnv era,
     State (utxow era) ~ UTxOState era,
     Signal (utxow era) ~ Core.Tx era,
+    PredicateFailure (utxow era) ~ UtxowPredicateFailure era,
     STS (utxow era),
     ShelleyStyleWitnessNeeds era
   ) =>
-  CollectVKeyWitnesses era ->
-  (UtxowPredicateFailure era -> PredicateFailure (utxow era)) ->
   TransitionRule (utxow era)
-shelleyStyleWitness collectVKeyWitnesses embed = do
+transitionRulesUTXOW = do
   (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
-  {-  txb := txbody tx  -}
-  {-  txw := txwits tx  -}
-  {-  auxdata := auxiliaryData tx   -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = _utxo u
       witsKeyHashes = witsFromTxWitnesses @era tx
@@ -318,29 +332,28 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
   -- check scripts
   {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
 
-  runValidationStaticWith embed $ validateFailedScripts tx
+  runValidationStatic $ validateFailedScripts tx
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  runValidationWith embed $ validateMissingScripts pp utxo tx
+  runValidation $ validateMissingScripts pp utxo tx
 
   -- check VKey witnesses
 
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
-  runValidationStaticWith embed $ validateVerifiedWits tx
+  runValidationStatic $ validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  let needed = collectVKeyWitnesses utxo tx genDelegs
-  runValidationWith embed $ validateNeededWitnesses needed witsKeyHashes
+  runValidation $ validateNeededWitnesses genDelegs utxo tx witsKeyHashes
 
   -- check metadata hash
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runValidationStaticWith embed $ validateMetadata pp tx
+  runValidationStatic $ validateMetadata pp tx
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   coreNodeQuorum <- liftSTS $ asks quorum
-  runValidationWith embed $
+  runValidation $
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
 
   trans @(Core.EraRule "UTXO" era) $
@@ -377,7 +390,7 @@ instance
   type BaseM (UTXOW era) = ShelleyBase
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
   type Event _ = UtxowEvent era
-  transitionRules = [shelleyStyleWitness witsVKeyNeeded id]
+  transitionRules = [transitionRulesUTXOW]
   initialRules = [initialLedgerStateUTXOW]
 
 {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
@@ -454,13 +467,93 @@ validateVerifiedWits tx =
           (Set.toList $ getField @"bootWits" tx)
 
 validateNeededWitnesses ::
-  WitHashes (Crypto era) ->
+  ( Era era,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+  ) =>
+  GenDelegs (Crypto era) ->
+  UTxO era ->
+  Core.Tx era ->
   WitHashes (Crypto era) ->
   Validation (NonEmpty (UtxowPredicateFailure era)) ()
-validateNeededWitnesses needed witsKeyHashes =
-  let missingWitnesses = diffWitHashes needed witsKeyHashes
+validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
+  let needed = witsVKeyNeeded utxo tx genDelegs
+      missingWitnesses = diffWitHashes needed witsKeyHashes
    in failureUnless (nullWitHashes missingWitnesses) $
         MissingVKeyWitnessesUTXOW missingWitnesses
+
+-- | Collect the set of hashes of keys that needs to sign a
+--  given transaction. This set consists of the txin owners,
+--  certificate authors, and withdrawal reward accounts.
+witsVKeyNeeded ::
+  forall era tx.
+  ( Era era,
+    HasField "body" tx (Core.TxBody era),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+  ) =>
+  UTxO era ->
+  tx ->
+  GenDelegs (Crypto era) ->
+  WitHashes (Crypto era)
+witsVKeyNeeded utxo' tx genDelegs =
+  WitHashes $
+    certAuthors
+      `Set.union` inputAuthors
+      `Set.union` owners
+      `Set.union` wdrlAuthors
+      `Set.union` updateKeys
+  where
+    txbody = getField @"body" tx
+    inputAuthors :: Set (KeyHash 'Witness (Crypto era))
+    inputAuthors = foldr accum Set.empty (getField @"inputs" txbody)
+      where
+        accum txin ans =
+          case txinLookup txin utxo' of
+            Just out ->
+              case getTxOutAddr out of
+                Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
+                AddrBootstrap bootAddr ->
+                  Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
+                _ -> ans
+            Nothing -> ans
+
+    wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
+    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (getField @"wdrls" txbody))
+      where
+        accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
+    owners :: Set (KeyHash 'Witness (Crypto era))
+    owners = foldr accum Set.empty (getField @"certs" txbody)
+      where
+        accum (DCertPool (RegPool pool)) ans =
+          Set.union
+            (Set.map asWitness (_poolOwners pool))
+            ans
+        accum _cert ans = ans
+    cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
+    cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
+    cwitness (DCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
+    cwitness c = error $ show c ++ " does not have a witness"
+    -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
+    -- before the call to `cwitness`, so this error should never be reached.
+
+    certAuthors :: Set (KeyHash 'Witness (Crypto era))
+    certAuthors = foldr accum Set.empty (getField @"certs" txbody)
+      where
+        accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
+        accum _cert ans = ans
+    updateKeys :: Set (KeyHash 'Witness (Crypto era))
+    updateKeys =
+      asWitness
+        `Set.map` propWits
+          ( strictMaybeToMaybe $
+              getField @"update" txbody
+          )
+          genDelegs
 
 -- | check metadata hash
 --   ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)
