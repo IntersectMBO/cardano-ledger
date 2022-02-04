@@ -66,7 +66,6 @@ module Cardano.Ledger.Shelley.LedgerState
     txsizeBound,
     produced,
     consumed,
-    verifiedWits,
     witsVKeyNeeded,
     witsFromTxWitnesses,
     propWits,
@@ -132,23 +131,19 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase,
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
+  ( GenDelegPair (..),
     GenDelegs (..),
-    Hash,
     KeyHash (..),
     KeyPair,
     KeyRole (..),
-    VKey,
     asWitness,
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
+import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamedT, mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Address.Bootstrap
   ( BootstrapWitness (..),
     bootstrapWitKeyHash,
-    verifyBootstrapWit,
   )
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Shelley.Delegation.Certificates
@@ -225,7 +220,6 @@ import Cardano.Ledger.Shelley.UTxO
     txinLookup,
     txins,
     txouts,
-    verifyWitVKey,
   )
 import Cardano.Ledger.Slot
   ( EpochNo (..),
@@ -1033,36 +1027,6 @@ witsVKeyNeeded utxo' tx genDelegs =
               getField @"update" txbody
           )
           genDelegs
-
--- | Given a ledger state, determine if the UTxO witnesses in a given
---  transaction are correct.
-verifiedWits ::
-  forall era tx.
-  ( Era era,
-    HasField "addrWits" tx (Set (WitVKey 'Witness (Crypto era))),
-    HasField "bootWits" tx (Set (BootstrapWitness (Crypto era))),
-    HasField "body" tx (Core.TxBody era),
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
-  ) =>
-  tx ->
-  Either [VKey 'Witness (Crypto era)] ()
-verifiedWits tx =
-  case failed <> failedBootstrap of
-    [] -> Right ()
-    nonEmpty -> Left nonEmpty
-  where
-    txbody = getField @"body" tx
-    wvkKey (WitVKey k _) = k
-    failed =
-      wvkKey
-        <$> filter
-          (not . verifyWitVKey (extractHash (hashAnnotated @(Crypto era) txbody)))
-          (Set.toList $ getField @"addrWits" tx)
-    failedBootstrap =
-      bwKey
-        <$> filter
-          (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
-          (Set.toList $ getField @"bootWits" tx)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.

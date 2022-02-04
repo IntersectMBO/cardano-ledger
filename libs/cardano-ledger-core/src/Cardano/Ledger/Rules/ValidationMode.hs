@@ -15,10 +15,19 @@ module Cardano.Ledger.Rules.ValidationMode
     failBecauseS,
     applySTSNonStatic,
     applySTSValidateSuchThat,
+
+    -- * Interface with validation-selective libarary
+    runValidation,
+    runValidationWith,
+    runValidationStatic,
+    runValidationStaticWith,
   )
 where
 
 import Control.State.Transition.Extended
+import Data.Foldable (traverse_)
+import Data.List.NonEmpty (NonEmpty)
+import Validation
 
 applySTSValidateSuchThat ::
   forall s m rtype.
@@ -86,3 +95,23 @@ applySTSNonStatic ::
   RuleContext rtype s ->
   m (Either [PredicateFailure s] (State s))
 applySTSNonStatic = applySTSValidateSuchThat (notElem lblStatic)
+
+runValidation ::
+  Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
+runValidation v = whenFailure_ v (traverse_ failBecause)
+
+runValidationWith ::
+  (e -> PredicateFailure sts) ->
+  Validation (NonEmpty e) () ->
+  Rule sts ctx ()
+runValidationWith f v = whenFailure_ v (traverse_ (failBecause . f))
+
+runValidationStatic ::
+  Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
+runValidationStatic v = whenFailure_ v (traverse_ failBecauseS)
+
+runValidationStaticWith ::
+  (e -> PredicateFailure sts) ->
+  Validation (NonEmpty e) () ->
+  Rule sts ctx ()
+runValidationStaticWith f v = whenFailure_ v (traverse_ (failBecauseS . f))
