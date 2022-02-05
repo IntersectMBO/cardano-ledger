@@ -113,6 +113,7 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
+import Control.Parallel.Strategies (parTraversable, rseq, using)
 import Control.Provenance (runWithProvM)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
@@ -158,7 +159,7 @@ getFilteredUTxO ::
   Set (Addr (Crypto era)) ->
   UTxO era
 getFilteredUTxO ss addrSet =
-  UTxO $ SplitMap.filter checkAddr fullUTxO
+  UTxO (SplitMap.filter checkAddr fullUTxO `using` parTraversable rseq)
   where
     UTxO fullUTxO = getUTxO ss
     compactAddrSet = Set.map compactAddr addrSet

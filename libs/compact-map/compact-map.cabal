@@ -50,6 +50,7 @@ library
                      , vector
                      , vector-algorithms
   hs-source-dirs:      src
+  ghc-options:        -threaded
 
 test-suite tests
   import:             project-config
