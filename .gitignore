@@ -52,3 +52,6 @@ specs/**/.ghc.environment.x86_64-linux-*
 
 *.pdf
 .envrc
+
+## macOS
+.DS_Store
