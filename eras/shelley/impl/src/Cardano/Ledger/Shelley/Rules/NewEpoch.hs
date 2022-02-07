@@ -78,7 +78,7 @@ instance
 
 data NewEpochEvent era
   = DeltaRewardEvent (Event (Core.EraRule "RUPD" era))
-  | TotalRewardEvent (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
+  | TotalRewardEvent EpochNo (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
   | EpochEvent (Event (Core.EraRule "EPOCH" era))
   | MirEvent (Event (Core.EraRule "MIR" era))
 
@@ -158,7 +158,7 @@ newEpochTransition = do
             Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
             let (es', _regRU) = applyRUpd' ru' es
             if not (Map.null rs_) -- Tell the TotalRewardEvent, this should equal aggregating the DeltaRewardEvents
-              then tellEvent (TotalRewardEvent rs_)
+              then tellEvent (TotalRewardEvent e rs_)
               else pure ()
             pure es'
       es' <- case ru of

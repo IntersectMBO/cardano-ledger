@@ -759,7 +759,7 @@ aggDeltaRewardEvents events = foldl' accum Map.empty events
 getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
 getMostRecentTotalRewardEvent events = foldl' accum Map.empty events
   where
-    accum ans (TickEvent (Tick.NewEpochEvent (TotalRewardEvent m))) = Map.unionWith Set.union m ans
+    accum ans (TickEvent (Tick.NewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
     accum ans _ = ans
 
 complete :: PulsingRewUpdate crypto -> (RewardUpdate crypto, RewardEvent crypto)
