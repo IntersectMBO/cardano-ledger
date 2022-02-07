@@ -238,7 +238,6 @@ deriving instance Typeable era => NoThunks (ScriptIntegrity era)
 -- Instead, we must use a reproducable serialization
 instance Era era => SafeToHash (ScriptIntegrity era) where
   originalBytes (ScriptIntegrity m d l) =
-    -- TODO: double check that canonical encodings are used for the langDepView (l)
     let dBytes = if nullDats d then mempty else originalBytes d
         lBytes = serializeEncoding' (encodeLangViews l)
      in originalBytes m <> dBytes <> lBytes
