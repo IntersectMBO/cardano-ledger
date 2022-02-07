@@ -121,7 +121,7 @@ import Cardano.Ledger.Val
     isZero,
   )
 import Control.DeepSeq (NFData (..), rwhnf)
-import Control.Monad (guard)
+import Control.Monad (guard, (<$!>))
 import Data.Bits
 import Data.Coders
 import Data.Maybe (fromMaybe)
@@ -616,7 +616,7 @@ instance
           TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
             TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
           txOut -> txOut
-    internTxOut <$> case lenOrIndef of
+    internTxOut <$!> case lenOrIndef of
       Nothing -> do
         a <- fromCBOR
         cv <- decodeNonNegative
