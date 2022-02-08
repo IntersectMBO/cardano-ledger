@@ -21,7 +21,6 @@
 
 module Cardano.Ledger.Alonzo.TxBody
   ( TxOut (.., TxOut, TxOutCompact, TxOutCompactDH),
-    Addr28Extra,
     TxBody
       ( TxBody,
         inputs,
@@ -131,14 +130,6 @@ import GHC.TypeLits
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
 
-data Addr28Extra
-  = Addr28Extra
-      {-# UNPACK #-} !Word64 -- Payment Addr
-      {-# UNPACK #-} !Word64 -- Payment Addr
-      {-# UNPACK #-} !Word64 -- Payment Addr
-      {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
-  deriving (Eq)
-
 data TxOut era
   = TxOutCompact'
       {-# UNPACK #-} !(CompactAddr (Crypto era))
@@ -149,11 +140,17 @@ data TxOut era
       !(DataHash (Crypto era))
   | TxOut_AddrHash28_AdaOnly
       !(Credential 'Staking (Crypto era))
-      {-# UNPACK #-} !Addr28Extra
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
       !(Credential 'Staking (Crypto era))
-      {-# UNPACK #-} !Addr28Extra
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr
+      {-# UNPACK #-} !Word64 -- Payment Addr (32bits) + ... +  0/1 for Testnet/Mainnet + 0/1 Script/Pubkey
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
       {-# UNPACK #-} !Word64 -- DataHash
       {-# UNPACK #-} !Word64 -- DataHash
@@ -182,22 +179,25 @@ getAdaOnly _ v = do
 
 decodeAddress28 ::
   forall crypto.
-  HashAlgorithm (CC.ADDRHASH crypto) =>
+  SizeHash (CC.ADDRHASH crypto) ~ 28 =>
   Credential 'Staking crypto ->
-  Addr28Extra ->
-  Maybe (Addr crypto)
-decodeAddress28 stakeRef (Addr28Extra a b c d) = do
-  Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH crypto))) (Proxy @28)
-  let network = if d `testBit` 1 then Mainnet else Testnet
-      paymentCred =
-        if d `testBit` 0
-          then KeyHashObj (KeyHash addrHash)
-          else ScriptHashObj (ScriptHash addrHash)
-      addrHash :: Hash (CC.ADDRHASH crypto) a
-      addrHash =
-        hashFromPackedBytes $
-          PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
-  pure $ Addr network paymentCred (StakeRefBase stakeRef)
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Word64 ->
+  Addr crypto
+decodeAddress28 stakeRef a b c d =
+  Addr network paymentCred (StakeRefBase stakeRef)
+  where
+    network = if d `testBit` 1 then Mainnet else Testnet
+    paymentCred =
+      if d `testBit` 0
+        then KeyHashObj (KeyHash addrHash)
+        else ScriptHashObj (ScriptHash addrHash)
+    addrHash :: Hash (CC.ADDRHASH crypto) a
+    addrHash =
+      hashFromPackedBytes $
+        PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
 
 encodeAddress28 ::
   forall crypto.
@@ -205,7 +205,7 @@ encodeAddress28 ::
   ) =>
   Network ->
   PaymentCredential crypto ->
-  Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Addr28Extra)
+  Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Word64, Word64, Word64, Word64)
 encodeAddress28 network paymentCred = do
   let networkBit, payCredTypeBit :: Word64
       networkBit =
@@ -218,13 +218,12 @@ encodeAddress28 network paymentCred = do
           ScriptHashObj {} -> 0
       encodeAddr ::
         Hash (CC.ADDRHASH crypto) a ->
-        Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Addr28Extra)
+        Maybe (SizeHash (CC.ADDRHASH crypto) :~: 28, Word64, Word64, Word64, Word64)
       encodeAddr h = do
         refl@Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH crypto))) (Proxy @28)
         case hashToPackedBytes h of
           PackedBytes28 a b c d ->
-            let d' = (fromIntegral d `shiftL` 32) .|. networkBit .|. payCredTypeBit
-             in Just (refl, Addr28Extra a b c d')
+            Just (refl, a, b, c, (fromIntegral d `shiftL` 32) .|. networkBit .|. payCredTypeBit)
           _ -> Nothing
   case paymentCred of
     KeyHashObj (KeyHash addrHash) -> encodeAddr addrHash
@@ -232,7 +231,7 @@ encodeAddress28 network paymentCred = do
 
 decodeDataHash32 ::
   forall crypto.
-  (SizeHash (CC.HASH crypto) ~ 32) =>
+  SizeHash (CC.HASH crypto) ~ 32 =>
   Word64 ->
   Word64 ->
   Word64 ->
@@ -262,16 +261,17 @@ viewCompactTxOut ::
 viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
-  TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
-    | Just addr <- decodeAddress28 stakeRef addr28Extra ->
-      (compactAddr addr, toCompactValue adaVal, SNothing)
-    | otherwise -> error "Impossible: Compacted and address or hash of non-standard size"
-  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal e f g h
-    | Just addr <- decodeAddress28 stakeRef addr28Extra,
-      Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) ->
-      (compactAddr addr, toCompactValue adaVal, SJust (decodeDataHash32 e f g h))
-    | otherwise ->
-      error "Impossible: Compacted and address or hash of non-standard size"
+  TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal
+    | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) ->
+      (compactAddr (decodeAddress28 stakeRef a b c d), toCompactValue adaVal, SNothing)
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h
+    | Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32),
+      Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) ->
+      ( compactAddr (decodeAddress28 stakeRef a b c d),
+        toCompactValue adaVal,
+        SJust (decodeDataHash32 e f g h)
+      )
+  _ -> error "Impossible: Compacted and address or hash of non-standard size"
   where
     toCompactValue :: CompactForm Coin -> CompactForm (Core.Value era)
     toCompactValue ada =
@@ -293,17 +293,14 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal)
-  | Just addr <- decodeAddress28 stakeRef addr28Extra =
-    (addr, inject (fromCompact adaVal), SNothing)
-viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal e f g h)
-  | Just addr <- decodeAddress28 stakeRef addr28Extra,
+viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef a b c d adaVal)
+  | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) =
+    (decodeAddress28 stakeRef a b c d, inject (fromCompact adaVal), SNothing)
+viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d adaVal e f g h)
+  | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28),
     Just Refl <- sameNat (Proxy @(SizeHash (CC.HASH (Crypto era)))) (Proxy @32) =
-    (addr, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
-viewTxOut (TxOut_AddrHash28_AdaOnly {}) =
-  error "Impossible: Compacted and address or hash of non-standard size"
-viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 {}) =
-  error "Impossible: Compacted and address or hash of non-standard size"
+    (decodeAddress28 stakeRef a b c d, inject (fromCompact adaVal), SJust (decodeDataHash32 e f g h))
+viewTxOut _ = error "Impossible: Compacted and address or hash of non-standard size"
 
 instance
   ( Era era,
@@ -333,14 +330,14 @@ pattern TxOut addr vl dh <-
     TxOut (Addr network paymentCred stakeRef) vl SNothing
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
-        Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
-        TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+        Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred =
+        TxOut_AddrHash28_AdaOnly stakeCred a b c d adaCompact
     TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
-        Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
+        Just (Refl, a, b, c, d) <- encodeAddress28 network paymentCred,
         Just (Refl, e, f, g, h) <- encodeDataHash32 dh =
-        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact e f g h
+        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred a b c d adaCompact e f g h
     TxOut addr vl mdh =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr
@@ -641,10 +638,10 @@ instance
   fromSharedCBOR credsInterns = do
     lenOrIndef <- decodeListLenOrIndef
     let internTxOut = \case
-          TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
-            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
-          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada e f g h ->
-            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada e f g h
+          TxOut_AddrHash28_AdaOnly cred a b c d ada ->
+            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) a b c d ada
+          TxOut_AddrHash28_AdaOnly_DataHash32 cred a b c d ada e f g h ->
+            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) a b c d ada e f g h
           txOut -> txOut
     internTxOut <$> case lenOrIndef of
       Nothing -> do
@@ -878,15 +875,18 @@ instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMay
   getField (TxOutCompactDH _ _ d) = SJust d
 
 getAlonzoTxOutEitherAddr ::
+  forall era.
   HashAlgorithm (CC.ADDRHASH (Crypto era)) =>
   TxOut era ->
   Either (Addr (Crypto era)) (CompactAddr (Crypto era))
 getAlonzoTxOutEitherAddr = \case
   TxOutCompact' cAddr _ -> Right cAddr
   TxOutCompactDH' cAddr _ _ -> Right cAddr
-  TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
+  TxOut_AddrHash28_AdaOnly stakeRef a b c d _
+    | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) ->
+      Left $! decodeAddress28 stakeRef a b c d
     | otherwise -> error "Impossible: Compacted an address of non-standard size"
-  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _ _ _ _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
+  TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef a b c d _ _ _ _ _
+    | Just Refl <- sameNat (Proxy @(SizeHash (CC.ADDRHASH (Crypto era)))) (Proxy @28) ->
+      Left $! decodeAddress28 stakeRef a b c d
     | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"

@@ -459,12 +459,15 @@ sourceWithSharingUTxO stakeCredentials =
   sourceUTxO .| mapC (fmap internTxOut)
   where
     internTxOut = \case
-      Alonzo.TxOut_AddrHash28_AdaOnly cred addr28Extra e ->
-        Alonzo.TxOut_AddrHash28_AdaOnly (intern (Keys.coerceKeyRole cred) stakeCredentials) addr28Extra e
-      Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra e o p q r ->
+      Alonzo.TxOut_AddrHash28_AdaOnly cred a b c d e ->
+        Alonzo.TxOut_AddrHash28_AdaOnly (intern (Keys.coerceKeyRole cred) stakeCredentials) a b c d e
+      Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32 cred a b c d e o p q r ->
         Alonzo.TxOut_AddrHash28_AdaOnly_DataHash32
           (intern (Keys.coerceKeyRole cred) stakeCredentials)
-          addr28Extra
+          a
+          b
+          c
+          d
           e
           o
           p
