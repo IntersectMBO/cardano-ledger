@@ -11,8 +11,8 @@ import Control.DeepSeq
 import Data.Compact.KeyMap (Key (..), KeyMap, PDoc, ppKeyMap, ppList, ppSexp)
 import qualified Data.Compact.KeyMap as KeyMap
 import qualified Data.Foldable as F
-import qualified Data.IntMap as IntMap
 import Data.IntMap.Strict (IntMap)
+import qualified Data.IntMap.Strict as IntMap
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
