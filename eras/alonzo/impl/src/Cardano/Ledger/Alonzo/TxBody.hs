@@ -72,6 +72,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     isSNothing,
+    maybeToStrictMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
@@ -867,12 +868,20 @@ instance (Era era, CC.Crypto c, Crypto era ~ c) => HasField "address" (TxOut era
       Right ca -> decompactAddr ca
 
 instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
-  getField (TxOutCompact _ v) = fromCompact v
-  getField (TxOutCompactDH _ v _) = fromCompact v
+  getField = \case
+    TxOutCompact' _ cv -> fromCompact cv
+    TxOutCompactDH' _ cv _ -> fromCompact cv
+    TxOut_AddrHash28_AdaOnly _ _ _ _ _ cc -> inject (fromCompact cc)
+    TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ _ _ cc _ _ _ _ -> inject (fromCompact cc)
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
-  getField (TxOutCompact _ _) = SNothing
-  getField (TxOutCompactDH _ _ d) = SJust d
+  getField = \case
+    TxOutCompactDH' _ _ dh -> SJust dh
+    TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ _ _ _ a b c d ->
+      maybeToStrictMaybe $ do
+        Refl <- sameNat (Proxy @(SizeHash (CC.HASH c))) (Proxy @32)
+        Just $ decodeDataHash32 a b c d
+    _ -> SNothing
 
 getAlonzoTxOutEitherAddr ::
   forall era.
