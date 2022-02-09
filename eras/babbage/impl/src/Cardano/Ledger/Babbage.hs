@@ -169,7 +169,7 @@ instance
       pp = sgProtocolParams sg
 
 instance CC.Crypto c => UsesTxOut (BabbageEra c) where
-  makeTxOut _proxy addr val = TxOut addr val NoDatum
+  makeTxOut _proxy addr val = TxOut addr val NoDatum SNothing
 
 instance CC.Crypto c => API.CLI (BabbageEra c) where
   evaluateMinFee = minfee

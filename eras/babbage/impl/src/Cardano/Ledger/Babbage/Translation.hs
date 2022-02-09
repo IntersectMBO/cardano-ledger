@@ -173,7 +173,7 @@ translateTxOut ::
   Crypto c =>
   Core.TxOut (AlonzoEra c) ->
   Core.TxOut (BabbageEra c)
-translateTxOut (Alonzo.TxOut addr value dh) = TxOut addr value d
+translateTxOut (Alonzo.TxOut addr value dh) = TxOut addr value d SNothing
   where
     d = case dh of
       SNothing -> NoDatum
