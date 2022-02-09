@@ -242,14 +242,14 @@ instance CC.Crypto crypto => ToCBOR (NonMyopic crypto) where
       { likelihoodsNM = aps,
         rewardPotNM = rp
       } =
-      encodeListLen 3
+      encodeListLen 2
         <> toCBOR aps
         <> toCBOR rp
 
 instance CC.Crypto crypto => FromSharedCBOR (NonMyopic crypto) where
   type Share (NonMyopic crypto) = Interns (KeyHash 'StakePool crypto)
   fromSharedPlusCBOR = do
-    decodeRecordNamedT "NonMyopic" (const 3) $ do
+    decodeRecordNamedT "NonMyopic" (const 2) $ do
       likelihoodsNM <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
       rewardPotNM <- lift fromCBOR
       pure $ NonMyopic {likelihoodsNM, rewardPotNM}

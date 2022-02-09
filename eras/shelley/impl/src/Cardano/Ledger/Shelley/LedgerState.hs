@@ -379,7 +379,7 @@ instance NFData (DState crypto)
 
 instance CC.Crypto crypto => ToCBOR (DState crypto) where
   toCBOR (DState unified fgs gs ir) =
-    encodeListLen 6
+    encodeListLen 4
       <> toCBOR unified
       <> toCBOR fgs
       <> toCBOR gs
@@ -390,7 +390,7 @@ instance CC.Crypto crypto => FromSharedCBOR (DState crypto) where
     Share (DState crypto) =
       (Interns (Credential 'Staking crypto), Interns (KeyHash 'StakePool crypto))
   fromSharedPlusCBOR = do
-    decodeRecordNamedT "DState" (const 6) $ do
+    decodeRecordNamedT "DState" (const 4) $ do
       unified <- fromSharedPlusCBOR
       fgs <- lift fromCBOR
       gs <- lift fromCBOR

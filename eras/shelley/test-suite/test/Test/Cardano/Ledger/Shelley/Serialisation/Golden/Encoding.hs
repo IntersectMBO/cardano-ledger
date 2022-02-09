@@ -21,6 +21,7 @@ import Cardano.Binary
     ToCBOR (..),
     decodeAnnotator,
     decodeFullDecoder,
+    serialize',
     toCBOR,
   )
 import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
@@ -178,6 +179,7 @@ import Cardano.Protocol.TPraos.OCert
   )
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS (pack)
 import Data.Coerce (coerce)
 import Data.Default.Class (def)
@@ -192,6 +194,7 @@ import Data.String (fromString)
 import Numeric.Natural (Natural)
 import Test.Cardano.Crypto.VRF.Fake (WithResult (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto, ExMock, Mock)
+import Test.Cardano.Ledger.Shelley.Examples.Consensus as Ex (ledgerExamplesShelley, sleNewEpochState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (PreAlonzo)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
@@ -202,6 +205,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.GoldenUtils
   )
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.Tasty (TestTree, testGroup)
+import Test.Tasty.HUnit (testCase, (@?=))
 
 -- ============================================
 
@@ -1327,7 +1331,22 @@ tests =
                 <> S es
                 <> S (SJust ru)
                 <> S pd
-            )
+            ),
+      let actual = B16.encode . serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
+          expected =
+            "8600a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541"
+              <> "0aa1581ca646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a03"
+              <> "86821927101903e8828283a0a0a08482a0a0a0a084a0a0000085a1825820ee155a"
+              <> "ce9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e2500825839"
+              <> "00cb9358529df4729c3246a2a033cb9821abbfd16de4888005904abc410d6a577e"
+              <> "9441ad8ed9663931906e4d43ece8f82c712b1d0235affb060a1903e80182a0a082"
+              <> "a0a08483a0a0a083a0a0a083a0a0a00092000000190800000000001864d81e8200"
+              <> "01d81e820001d81e820001d81e8200018100000000009200000019080000000000"
+              <> "1864d81e820001d81e820001d81e820001d81e82000181000000010082a0008183"
+              <> "00880082000082a000000000a0a0840185a0803903ba820000a0a082a0a0a1581c"
+              <> "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b0825418282010158"
+              <> "20c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+       in testCase "ledger state golden test" (actual @?= expected)
     ]
   where
     genesisTxIn1 = TxIn @C_Crypto genesisId (mkTxIxPartial 1)
