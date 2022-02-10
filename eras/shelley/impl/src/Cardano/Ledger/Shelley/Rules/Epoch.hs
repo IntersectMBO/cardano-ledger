@@ -47,7 +47,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Rules.PoolReap (POOLREAP, PoolreapEvent, PoolreapPredicateFailure, PoolreapState (..))
-import Cardano.Ledger.Shelley.Rules.Snap (SNAP, SnapPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Snap (SNAP, SnapEvent, SnapPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Upec (UPEC, UpecPredicateFailure)
 import Cardano.Ledger.Slot (EpochNo)
 import Control.SetAlgebra (eval, (⨃))
@@ -209,7 +209,7 @@ instance
   ( UsesTxOut era,
     UsesValue era,
     PredicateFailure (Core.EraRule "SNAP" era) ~ SnapPredicateFailure era,
-    Event (Core.EraRule "SNAP" era) ~ Void
+    Event (Core.EraRule "SNAP" era) ~ SnapEvent era
   ) =>
   Embed (SNAP era) (EPOCH era)
   where
