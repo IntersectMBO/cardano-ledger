@@ -3,7 +3,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
-module Cardano.Ledger.CompactAddress
+module Cardano.Ledger.Shelley.CompactAddr
   ( compactAddr,
     decompactAddr,
     CompactAddr (..),

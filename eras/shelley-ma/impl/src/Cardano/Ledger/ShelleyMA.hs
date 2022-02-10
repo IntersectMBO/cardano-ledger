@@ -107,14 +107,14 @@ instance
   where
   type Crypto (ShelleyMAEra ma c) = c
 
-  getTxOutEitherAddr (TxOutCompact a _) = Right a
-
 instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Mary c)
 
 instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Allegra c)
 
 instance CryptoClass.Crypto c => UsesTxOut (ShelleyMAEra 'Mary c) where
   makeTxOut _ a v = TxOut a v
+
+  getTxOutEitherAddr (TxOutCompact a _) = Right a
 
 instance CryptoClass.Crypto c => UsesTxOut (ShelleyMAEra 'Allegra c) where
   makeTxOut _ a v = TxOut a v

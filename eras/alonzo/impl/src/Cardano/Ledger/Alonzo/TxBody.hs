@@ -75,7 +75,6 @@ import Cardano.Ledger.BaseTypes
     maybeToStrictMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -96,6 +95,7 @@ import Cardano.Ledger.SafeHash
     extractHash,
     unsafeMakeSafeHash,
   )
+import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))

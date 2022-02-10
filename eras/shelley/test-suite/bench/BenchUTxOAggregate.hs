@@ -11,7 +11,6 @@ import Cardano.Ledger.Address
   ( Addr (..),
   )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (toCompact)
 import Cardano.Ledger.Credential
   ( Credential (..),
@@ -20,6 +19,7 @@ import Cardano.Ledger.Credential
   )
 import Cardano.Ledger.Keys (GenDelegs (..), KeyHash (..), KeyRole (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
+import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
 import Cardano.Ledger.Shelley.LedgerState
   ( DState (..),
     InstantaneousRewards (..),

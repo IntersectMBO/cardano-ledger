@@ -67,8 +67,8 @@ txOutAlonzoBench count name mkTxOuts =
           nf
             ( map
                 ( \case
-                    TxOutCompact addr vl -> addr `deepseq` vl
-                    TxOutCompactDH addr vl dh -> addr `deepseq` dh `deepseq` vl
+                    TxOutCompact addr vl -> addr `seq` vl
+                    TxOutCompactDH addr vl dh -> addr `seq` dh `deepseq` vl
                 )
             )
             txOuts,

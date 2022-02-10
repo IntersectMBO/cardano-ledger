@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Shelley.Constraints where
@@ -25,9 +26,11 @@ import Cardano.Ledger.Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (HashAnnotated)
+import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Data.Kind (Constraint, Type)
 import Data.Proxy (Proxy)
+import GHC.Records
 
 --------------------------------------------------------------------------------
 -- Shelley Era
@@ -61,6 +64,25 @@ class
   UsesTxOut era
   where
   makeTxOut :: Proxy era -> Addr (Crypto era) -> Value era -> TxOut era
+
+  -- | Extract from TxOut either an address or its compact version by doing the
+  -- least amount of work. Default implementation relies on the "address" field.
+  getTxOutEitherAddr ::
+    TxOut era ->
+    Either (Addr (Crypto era)) (CompactAddr (Crypto era))
+  getTxOutEitherAddr = Left . getField @"address"
+
+  getTxOutAddr :: TxOut era -> Addr (Crypto era)
+  getTxOutAddr t =
+    case getTxOutEitherAddr t of
+      Left a -> a
+      Right ca -> decompactAddr ca
+
+  getTxOutCompactAddr :: TxOut era -> CompactAddr (Crypto era)
+  getTxOutCompactAddr t =
+    case getTxOutEitherAddr t of
+      Left a -> compactAddr a
+      Right ca -> ca
 
 type UsesScript era =
   ( Era era,

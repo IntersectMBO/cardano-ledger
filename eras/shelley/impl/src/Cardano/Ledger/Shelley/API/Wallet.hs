@@ -60,20 +60,20 @@ import Cardano.Ledger.BaseTypes
     epochInfo,
   )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (Crypto, getTxOutEitherAddr))
+import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
     PoolDistr (..),
   )
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Shelley.CompactAddr (compactAddr)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut (getTxOutEitherAddr), UsesValue)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -152,7 +152,7 @@ getUTxO = _utxo . _utxoState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  Era era =>
+  UsesTxOut era =>
   NewEpochState era ->
   Set (Addr (Crypto era)) ->
   UTxO era

@@ -64,12 +64,12 @@ data ShelleyEra c
 instance CryptoClass.Crypto c => E.Era (ShelleyEra c) where
   type Crypto (ShelleyEra c) = c
 
-  getTxOutEitherAddr (STx.TxOutCompact a _) = Right a
-
 instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
 
 instance CryptoClass.Crypto c => UsesTxOut (ShelleyEra c) where
   makeTxOut _ a v = STx.TxOut a v
+
+  getTxOutEitherAddr (STx.TxOutCompact a _) = Right a
 
 instance CryptoClass.Crypto c => UsesPParams (ShelleyEra c) where
   mergePPUpdates _ = updatePParams

@@ -107,8 +107,6 @@ instance
   where
   type Crypto (AlonzoEra c) = c
 
-  getTxOutEitherAddr = getAlonzoTxOutEitherAddr
-
 instance API.PraosCrypto c => API.ApplyTx (AlonzoEra c) where
   reapplyTx globals env state vtx =
     let res =
@@ -179,6 +177,8 @@ instance
 
 instance CC.Crypto c => UsesTxOut (AlonzoEra c) where
   makeTxOut _proxy addr val = TxOut addr val SNothing
+
+  getTxOutEitherAddr = getAlonzoTxOutEitherAddr
 
 instance CC.Crypto c => API.CLI (AlonzoEra c) where
   evaluateMinFee = minfee

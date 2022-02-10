@@ -97,7 +97,6 @@ import Cardano.Ledger.BaseTypes
     strictMaybeToMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
-import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
@@ -143,6 +142,7 @@ import Cardano.Ledger.Serialization
     mapFromCBOR,
     mapToCBOR,
   )
+import Cardano.Ledger.Shelley.CompactAddr (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Shelley.PParams (Update)
