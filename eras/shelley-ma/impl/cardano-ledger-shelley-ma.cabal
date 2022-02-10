@@ -73,5 +73,6 @@ library
     small-steps,
     strict-containers,
     text,
-    transformers
+    transformers,
+    validation-selective,
   hs-source-dirs: src

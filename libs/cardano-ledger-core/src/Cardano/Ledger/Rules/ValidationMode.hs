@@ -18,15 +18,19 @@ module Cardano.Ledger.Rules.ValidationMode
 
     -- * Interface with validation-selective libarary
     runValidation,
-    runValidationWith,
+    runValidationTrans,
+    runValidationTransMaybe,
     runValidationStatic,
-    runValidationStaticWith,
+    runValidationStaticTrans,
   )
 where
 
 import Control.State.Transition.Extended
+import Data.Bifunctor (first)
 import Data.Foldable (traverse_)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
+import Data.Maybe (mapMaybe)
 import Validation
 
 applySTSValidateSuchThat ::
@@ -96,24 +100,42 @@ applySTSNonStatic ::
   m (Either [PredicateFailure s] (State s))
 applySTSNonStatic = applySTSValidateSuchThat (notElem lblStatic)
 
+-- | Fail with all `PredicateFailure`'s in STS if `Validation` was unsuccessful.
 runValidation ::
   Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
 runValidation v = whenFailure_ v (traverse_ (\pf -> pf `seq` failBecause pf))
 
-runValidationWith ::
+-- | Same as `runValidation`, except with ability to translate opaque failures
+-- into `PredicateFailure`s with a help of supplied function.
+runValidationTrans ::
   (e -> PredicateFailure sts) ->
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-runValidationWith toPredicateFailure v =
+runValidationTrans toPredicateFailure v =
   whenFailure_ v (traverse_ (\e -> failBecause $! toPredicateFailure e))
 
+-- | Same as `runValidationTrans`, but makes it possible to filter out failures
+-- with the translating function when it returns `Nothing`.
+runValidationTransMaybe ::
+  (e -> Maybe (PredicateFailure sts)) ->
+  Validation (NonEmpty e) () ->
+  Rule sts ctx ()
+runValidationTransMaybe toPredicateFailureMaybe =
+  runValidation
+    . maybe (Success ()) Failure
+    . NE.nonEmpty
+    . fromFailure []
+    . first (mapMaybe toPredicateFailureMaybe . NE.toList)
+
+-- | Same as `runValidation`, but will label preficate failures as @"static"@
 runValidationStatic ::
   Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
 runValidationStatic v = whenFailure_ v (traverse_ (\pf -> pf `seq` failBecauseS pf))
 
-runValidationStaticWith ::
+-- | Same as `runValidationTrans`, but will label preficate failures as @"static"@
+runValidationStaticTrans ::
   (e -> PredicateFailure sts) ->
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-runValidationStaticWith toPredicateFailure v =
+runValidationStaticTrans toPredicateFailure v =
   whenFailure_ v (traverse_ (\e -> failBecauseS $! toPredicateFailure e))

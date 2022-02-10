@@ -21,7 +21,14 @@ module Cardano.Ledger.Shelley.Rules.Utxo
     UtxoEvent (..),
     PredicateFailure,
     updateUTxOState,
+    -- * Validations
+    validateInputSetEmptyUTxO,
+    validateFeeTooSmallUTxO,
+    validateBadInputsUTxO,
+    validateWrongNetwork,
+    validateWrongNetworkWithdrawal,
     validateOutputBootAddrsTooBig,
+    validateMaxTxSizeUTxO,
   )
 where
 
@@ -107,7 +114,6 @@ import Control.State.Transition
     trans,
     wrapEvent,
     wrapFailed,
-    (?!),
   )
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (foldl', toList)
@@ -342,6 +348,7 @@ instance
 utxoInductive ::
   forall era utxo.
   ( Core.TxOut era ~ TxOut era,
+    Core.Value era ~ Coin,
     UsesAuxiliary era,
     STS (utxo era),
     Embed (Core.EraRule "PPUP" era) (utxo era),
@@ -392,35 +399,21 @@ utxoInductive = do
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runValidation $ validateWrongNetworkWithdrawal netId txb
 
-  let consumed_ = consumed pp utxo txb
-      produced_ = produced @era pp (`Map.notMember` stakepools) txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
+  {- consumed pp utxo txb = produced pp poolParams txb -}
+  runValidation $ validateValueNotConservedUTxO pp utxo stakepools txb
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  let outputs = unUTxO (txouts txb)
-      minUTxOValue = getField @"_minUTxOValue" pp
-      -- minUTxOValue deposit comparison done as Coin because this rule
-      -- is correct strictly in the Shelley era (in shelleyMA we would need to
-      -- additionally check that all amounts are non-negative)
-      outputsTooSmall =
-        filter
-          ( \x ->
-              let c = getField @"value" x
-               in Val.coin c < minUTxOValue
-          )
-          (SplitMap.elems outputs)
-  null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+  let outputs = txouts txb
+  {- ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp) -}
+  runValidation $ validateOutputTooSmallUTxO pp outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runValidation $ validateOutputBootAddrsTooBig outputs
-  -- let outputsAttrsTooBig = filterOutputsAttrsTooBig outputs
-  -- null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
 
-  let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
-      txSize_ = getField @"txsize" tx
-  txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
+  {- txsize tx ≤ maxTxSize pp -}
+  runValidation $ validateMaxTxSizeUTxO pp tx
 
   let refunded = keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
@@ -501,7 +494,6 @@ validateWrongNetwork netId txb =
   failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
   where
     txOutputs = getField @"outputs" txb
-
     addrsWrongNetwork =
       filter
         (\a -> getNetwork a /= netId)
@@ -524,15 +516,63 @@ validateWrongNetworkWithdrawal netId txb =
         (\a -> getRwdNetwork a /= netId)
         (Map.keys . unWdrl . getField @"wdrls" $ txb)
 
+-- | Ensure that value consumed and produced matches up exactly
+--
+-- > consumed pp utxo txb = produced pp poolParams txb
+validateValueNotConservedUTxO ::
+  ( Era era,
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+  ) =>
+  Core.PParams era ->
+  UTxO era ->
+  Map (KeyHash 'StakePool (Crypto era)) a ->
+  Core.TxBody era ->
+  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+validateValueNotConservedUTxO pp utxo stakepools txb =
+  failureUnless (consumedValue == producedValue) $
+    ValueNotConservedUTxO consumedValue producedValue
+  where
+    consumedValue = consumed pp utxo txb
+    producedValue = produced pp (`Map.notMember` stakepools) txb
+
+-- | Ensure there are no `Core.TxOut`s that have less than @minUTxOValue@
+--
+-- > ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp)
+validateOutputTooSmallUTxO ::
+  ( HasField "_minUTxOValue" (Core.PParams era) Coin,
+    HasField "value" (Core.TxOut era) Coin
+  ) =>
+  Core.PParams era ->
+  UTxO era ->
+  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+validateOutputTooSmallUTxO pp (UTxO outputs) =
+  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  where
+    minUTxOValue = getField @"_minUTxOValue" pp
+    -- minUTxOValue deposit comparison done as Coin because this rule is correct
+    -- strictly in the Shelley era (in ShelleyMA we additionally check that all
+    -- amounts are non-negative)
+    outputsTooSmall =
+      filter
+        ( \x ->
+            let c = getField @"value" x
+             in c < minUTxOValue
+        )
+        (SplitMap.elems outputs)
+
 -- | Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
 -- It is important to limit their overall size.
 --
 -- > ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64
 validateOutputBootAddrsTooBig ::
   Era era =>
-  SplitMap.SplitMap k (Core.TxOut era) ->
+  UTxO era ->
   Validation (NonEmpty (UtxoPredicateFailure era)) ()
-validateOutputBootAddrsTooBig outputs =
+validateOutputBootAddrsTooBig (UTxO outputs) =
   failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
   where
     outputsAttrsTooBig =
@@ -543,6 +583,22 @@ validateOutputBootAddrsTooBig outputs =
               _ -> False
         )
         (SplitMap.elems outputs)
+
+-- | Ensure that the size of the transaction does not exceed the @maxTxSize@ protocol parameter
+--
+-- > txsize tx ≤ maxTxSize pp
+validateMaxTxSizeUTxO ::
+  ( HasField "_maxTxSize" (Core.PParams era) Natural,
+    HasField "txsize" (Core.Tx era) Integer
+  ) =>
+  Core.PParams era ->
+  Core.Tx era ->
+  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+validateMaxTxSizeUTxO pp tx =
+  failureUnless (txSize <= maxTxSize) $ MaxTxSizeUTxO txSize maxTxSize
+  where
+    maxTxSize = toInteger (getField @"_maxTxSize" pp)
+    txSize = getField @"txsize" tx
 
 updateUTxOState ::
   (Era era, HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))) =>

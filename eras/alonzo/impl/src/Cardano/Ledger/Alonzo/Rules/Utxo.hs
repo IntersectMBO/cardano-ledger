@@ -3,6 +3,7 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -46,7 +47,11 @@ import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
-import Cardano.Ledger.Rules.ValidationMode ((?!#))
+import Cardano.Ledger.Rules.ValidationMode
+  ( --runValidation, (
+    runValidationTransMaybe,
+    (?!#),
+  )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
@@ -93,6 +98,8 @@ import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
+
+--import Validation
 
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
@@ -221,6 +228,21 @@ instance
 
 newtype UtxoEvent era
   = UtxosEvent (Event (Core.EraRule "UTXOS" era))
+
+fromShelleyFailure :: Shelley.UtxoPredicateFailure era -> Maybe (UtxoPredicateFailure era)
+fromShelleyFailure = \case
+  -- Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
+  -- Shelley.ExpiredUTxO {} -> Nothing -- Rule was replaced with `OutsideValidityIntervalUTxO`
+  -- Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
+  -- Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
+  -- Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
+  -- Shelley.ValueNotConservedUTxO {} -> Nothing -- Rule was upgraded
+  -- Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
+  -- Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
+  -- Shelley.OutputTooSmallUTxO {} -> Nothing -- Rule was upgraded
+  -- Shelley.UpdateFailure ppf -> Just $ UpdateFailure ppf
+  Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
+  _ -> error "TODO: Implement"
 
 -- | Returns true for VKey locked addresses, and false for any kind of
 -- script-locked address.
@@ -416,9 +438,9 @@ utxoTransition = do
                   else ans
   null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
 
-  {-    ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64   -}
-  let outputsAttrsTooBig = Shelley.filterOutputsAttrsTooBig outputs
-  null outputsAttrsTooBig ?!# OutputBootAddrAttrsTooBig outputsAttrsTooBig
+  {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
+  runValidationTransMaybe fromShelleyFailure $
+    Shelley.validateOutputBootAddrsTooBig (UTxO outputs)
 
   {-   ∀(_ ↦ (a,_)) ∈ txouts txb, netId a = NetworkId   -}
   ni <- liftSTS $ asks networkId

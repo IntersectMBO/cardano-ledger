@@ -263,12 +263,12 @@ totalDeposits ::
   (KeyHash 'StakePool crypto -> Bool) ->
   [DCert crypto] ->
   Coin
-totalDeposits pp isNewPool cs =
+totalDeposits pp isNewPool certs =
   (numKeys <×> getField @"_keyDeposit" pp)
     <+> (numNewPools <×> getField @"_poolDeposit" pp)
   where
-    numKeys = length $ filter isRegKey cs
-    pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool cs
+    numKeys = length $ filter isRegKey certs
+    pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool certs
     numNewPools = length $ Set.filter isNewPool pools
 
 getKeyHashFromRegPool :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)

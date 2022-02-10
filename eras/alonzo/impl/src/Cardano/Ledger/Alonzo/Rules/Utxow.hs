@@ -45,7 +45,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
-import Cardano.Ledger.Rules.ValidationMode (runValidationStaticWith, runValidationWith, (?!#))
+import Cardano.Ledger.Rules.ValidationMode (runValidationStaticTrans, runValidationTrans, (?!#))
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( delegCWitness,
     genesisCWitness,
@@ -355,33 +355,33 @@ alonzoStyleWitness = do
   -- check scripts
   {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
 
-  runValidationStaticWith WrappedShelleyEraFailure $
+  runValidationStaticTrans WrappedShelleyEraFailure $
     Shelley.validateFailedScripts tx
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  runValidationWith WrappedShelleyEraFailure $
+  runValidationTrans WrappedShelleyEraFailure $
     Shelley.validateMissingScripts pp utxo tx
 
   -- check VKey witnesses
 
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
-  runValidationStaticWith WrappedShelleyEraFailure $
+  runValidationStaticTrans WrappedShelleyEraFailure $
     Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runValidationWith WrappedShelleyEraFailure $
+  runValidationTrans WrappedShelleyEraFailure $
     validateNeededWitnesses genDelegs utxo tx witsKeyHashes
 
   -- check metadata hash
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runValidationStaticWith WrappedShelleyEraFailure $
+  runValidationStaticTrans WrappedShelleyEraFailure $
     Shelley.validateMetadata pp tx
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   coreNodeQuorum <- liftSTS $ asks quorum
-  runValidationWith WrappedShelleyEraFailure $
+  runValidationTrans WrappedShelleyEraFailure $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
 
   trans @(Core.EraRule "UTXO" era) $
