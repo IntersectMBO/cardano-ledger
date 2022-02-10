@@ -98,20 +98,22 @@ applySTSNonStatic = applySTSValidateSuchThat (notElem lblStatic)
 
 runValidation ::
   Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
-runValidation v = whenFailure_ v (traverse_ failBecause)
+runValidation v = whenFailure_ v (traverse_ (\pf -> pf `seq` failBecause pf))
 
 runValidationWith ::
   (e -> PredicateFailure sts) ->
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-runValidationWith f v = whenFailure_ v (traverse_ (failBecause . f))
+runValidationWith toPredicateFailure v =
+  whenFailure_ v (traverse_ (\e -> failBecause $! toPredicateFailure e))
 
 runValidationStatic ::
   Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
-runValidationStatic v = whenFailure_ v (traverse_ failBecauseS)
+runValidationStatic v = whenFailure_ v (traverse_ (\pf -> pf `seq` failBecauseS pf))
 
 runValidationStaticWith ::
   (e -> PredicateFailure sts) ->
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-runValidationStaticWith f v = whenFailure_ v (traverse_ (failBecauseS . f))
+runValidationStaticWith toPredicateFailure v =
+  whenFailure_ v (traverse_ (\e -> failBecauseS $! toPredicateFailure e))
