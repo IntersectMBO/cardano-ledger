@@ -22,6 +22,7 @@ module Cardano.Ledger.Rules.ValidationMode
     runValidationTransMaybe,
     runValidationStatic,
     runValidationStaticTrans,
+    runValidationStaticTransMaybe,
   )
 where
 
@@ -121,21 +122,36 @@ runValidationTransMaybe ::
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
 runValidationTransMaybe toPredicateFailureMaybe =
-  runValidation
-    . maybe (Success ()) Failure
-    . NE.nonEmpty
-    . fromFailure []
-    . first (mapMaybe toPredicateFailureMaybe . NE.toList)
+  runValidation . mapMaybeValidation toPredicateFailureMaybe
 
--- | Same as `runValidation`, but will label preficate failures as @"static"@
+-- | Same as `runValidation`, but will label predicate failures as @"static"@
 runValidationStatic ::
   Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
 runValidationStatic v = whenFailure_ v (traverse_ (\pf -> pf `seq` failBecauseS pf))
 
--- | Same as `runValidationTrans`, but will label preficate failures as @"static"@
+-- | Same as `runValidationTrans`, but will label predicate failures as @"static"@
 runValidationStaticTrans ::
   (e -> PredicateFailure sts) ->
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
 runValidationStaticTrans toPredicateFailure v =
   whenFailure_ v (traverse_ (\e -> failBecauseS $! toPredicateFailure e))
+
+-- | Same as `runValidationTransMaybe`, but will label predicate failures as @"static"@
+runValidationStaticTransMaybe ::
+  (e -> Maybe (PredicateFailure sts)) ->
+  Validation (NonEmpty e) () ->
+  Rule sts ctx ()
+runValidationStaticTransMaybe toPredicateFailure =
+  runValidationStatic . mapMaybeValidation toPredicateFailure
+
+-- | Helper function to filter out unused failures
+mapMaybeValidation ::
+  (e -> Maybe e') ->
+  Validation (NonEmpty e) () ->
+  Validation (NonEmpty e') ()
+mapMaybeValidation toPredicateFailureMaybe =
+  maybe (Success ()) Failure
+    . NE.nonEmpty
+    . fromFailure []
+    . first (mapMaybe toPredicateFailureMaybe . NE.toList)

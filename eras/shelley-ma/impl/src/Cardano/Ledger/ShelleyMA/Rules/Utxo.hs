@@ -60,6 +60,7 @@ import Data.Coders
   )
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
+import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -116,10 +117,6 @@ scaledMinDeposit v (Coin mv)
     -- round down
     coinsPerUTxOWord :: Integer
     coinsPerUTxOWord = quot mv (utxoEntrySizeWithoutVal + coinSize)
-
--- | This is a constant value hardcoded for ShelleyMA that was later moved to PParams
-newtype MaxValSize = MaxValSize {_maxValSize :: Natural}
-  deriving (Eq, Show)
 
 -- ==========================================================
 
@@ -256,7 +253,8 @@ utxoTransition = do
   runValidationTransMaybe fromShelleyFailure $ Shelley.validateFeeTooSmallUTxO pp tx
 
   {- txins txb ⊆ dom utxo -}
-  runValidationTransMaybe fromShelleyFailure $ Shelley.validateBadInputsUTxO utxo txb
+  runValidationTransMaybe fromShelleyFailure $
+    Shelley.validateBadInputsUTxO utxo $ getField @"inputs" txb
 
   netId <- liftSTS $ asks networkId
 
@@ -279,12 +277,12 @@ utxoTransition = do
   {- ∀ txout ∈ txouts txb, getValue txout ≥ inject (scaledMinDeposit v (minUTxOValue pp)) -}
   runValidation $ validateOutputTooSmallUTxO pp outputs
 
-  -- In ShelleyMA MaxValSize is a constant of 4000 bytes, i.e. 500 words.
   {- ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ MaxValSize -}
-  runValidation $ validateOutputTooBigUTxO (MaxValSize 4000) outputs
+  -- MaxValSize = 4000
+  runValidation $ validateOutputTooBigUTxO outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runValidationTransMaybe fromShelleyFailure $ Shelley.validateOutputBootAddrsTooBig outputs
+  runValidationTransMaybe fromShelleyFailure $ Shelley.validateOutputBootAddrAttrsTooBig outputs
 
   {- txsize tx ≤ maxTxSize pp -}
   runValidationTransMaybe fromShelleyFailure $ Shelley.validateMaxTxSizeUTxO pp tx
@@ -323,22 +321,20 @@ validateTriesToForgeADA txb =
 --
 -- > ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ MaxValSize
 validateOutputTooBigUTxO ::
-  ( HasField "_maxValSize" params Natural,
-    HasField "value" (Core.TxOut era) (Core.Value era),
+  ( HasField "value" (Core.TxOut era) (Core.Value era),
     ToCBOR (Core.Value era)
   ) =>
-  params ->
   UTxO era ->
   Validation (NonEmpty (UtxoPredicateFailure era)) ()
-validateOutputTooBigUTxO params (UTxO outputs) =
+validateOutputTooBigUTxO (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
-    maxValSize = getField @"_maxValSize" params
+    maxValSize = 4000 :: Int64
     outputsTooBig =
       filter
         ( \out ->
             let v = getField @"value" out
-             in fromIntegral (BSL.length (serialize v)) > maxValSize
+             in BSL.length (serialize v) > maxValSize
         )
         (SplitMap.elems outputs)
 

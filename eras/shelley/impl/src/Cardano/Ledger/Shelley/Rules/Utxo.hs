@@ -27,7 +27,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo
     validateBadInputsUTxO,
     validateWrongNetwork,
     validateWrongNetworkWithdrawal,
-    validateOutputBootAddrsTooBig,
+    validateOutputBootAddrAttrsTooBig,
     validateMaxTxSizeUTxO,
   )
 where
@@ -389,7 +389,7 @@ utxoInductive = do
   runValidation $ validateFeeTooSmallUTxO pp tx
 
   {- txins txb ⊆ dom utxo -}
-  runValidation $ validateBadInputsUTxO utxo txb
+  runValidation $ validateBadInputsUTxO utxo $ getField @"inputs" txb
 
   netId <- liftSTS $ asks networkId
 
@@ -410,7 +410,7 @@ utxoInductive = do
   runValidation $ validateOutputTooSmallUTxO pp outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runValidation $ validateOutputBootAddrsTooBig outputs
+  runValidation $ validateOutputBootAddrAttrsTooBig outputs
 
   {- txsize tx ≤ maxTxSize pp -}
   runValidation $ validateMaxTxSizeUTxO pp tx
@@ -469,18 +469,16 @@ validateFeeTooSmallUTxO pp tx =
 
 -- | Ensure all transaction inputs are present in `UTxO`
 --
--- > txins txb ⊆ dom utxo
+-- > inputs ⊆ dom utxo
 validateBadInputsUTxO ::
-  HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))) =>
   UTxO era ->
-  Core.TxBody era ->
+  Set (TxIn (Crypto era)) ->
   Validation (NonEmpty (UtxoPredicateFailure era)) ()
-validateBadInputsUTxO utxo txb =
+validateBadInputsUTxO utxo txins =
   failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs
   where
-    {- txins txb ➖ dom utxo -}
-    badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) (txins txb)
-    txins = getField @"inputs"
+    {- inputs ➖ dom utxo -}
+    badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) txins
 
 -- | Make sure all addresses match the supplied NetworkId
 --
@@ -568,11 +566,11 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 -- It is important to limit their overall size.
 --
 -- > ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64
-validateOutputBootAddrsTooBig ::
+validateOutputBootAddrAttrsTooBig ::
   Era era =>
   UTxO era ->
   Validation (NonEmpty (UtxoPredicateFailure era)) ()
-validateOutputBootAddrsTooBig (UTxO outputs) =
+validateOutputBootAddrAttrsTooBig (UTxO outputs) =
   failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
   where
     outputsAttrsTooBig =

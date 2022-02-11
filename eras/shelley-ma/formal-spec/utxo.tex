@@ -165,7 +165,7 @@ $\Coin$.
   \begin{equation}\label{eq:utxo-inductive-shelley}
     \inference[UTxO-inductive]
     { \var{txb}\leteq\txbody{tx}
-      & \hldiff{\fun{ininterval}~\var{slot}~(\fun{txvld}{tx})}
+      & \hldiff{\fun{ininterval}~\var{slot}~(\fun{txvldt}~{tx})}
       \\ \txins{txb} \neq \emptyset
       & \minfee{pp}{tx} \leq \txfee{txb}
       & \txins{txb} \subseteq \dom \var{utxo}
