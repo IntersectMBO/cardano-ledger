@@ -23,6 +23,7 @@ module Cardano.Ledger.Rules.ValidationMode
     runValidationStatic,
     runValidationStaticTrans,
     runValidationStaticTransMaybe,
+    mapMaybeValidation,
   )
 where
 

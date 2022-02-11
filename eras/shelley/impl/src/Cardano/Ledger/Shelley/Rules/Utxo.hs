@@ -21,6 +21,7 @@ module Cardano.Ledger.Shelley.Rules.Utxo
     UtxoEvent (..),
     PredicateFailure,
     updateUTxOState,
+
     -- * Validations
     validateInputSetEmptyUTxO,
     validateFeeTooSmallUTxO,

@@ -18,9 +18,9 @@
     & \fun{feesOK} : \PParams \to \Tx \to \UTxO \to \Bool  \\
     & \fun{feesOK}~\var{pp}~tx~utxo~= \\
     &~~      \minfee{pp}~{tx} \leq \txfee{txb} \wedge (\fun{txrdmrs}~tx \neq \emptyset \Rightarrow \\
-    &~~~~~~((\forall (a, \wcard, \_) \in \fun{range}~(\fun{collateral}~{txb} \restrictdom \var{utxo}), a \in \AddrVKey) \\
+    &~~~~~~((\forall (a, \wcard, \wcard) \in \fun{range}~(\fun{collateral}~{txb} \restrictdom \var{utxo}), a \in \AddrVKey) \\
     &~~~~~~\wedge~ \fun{adaOnly}~\var{balance} \\
-    &~~~~~~\wedge~ \var{balance}*100 \geq \txfee{txb} * (\fun{collateralPercent}~pp))) \\
+    &~~~~~~\wedge~ \var{balance}*100 \geq \txfee{txb} * (\fun{collateralPercent}~pp) \\
     &~~~~~~\wedge~ \fun{collateral}~{tx} \neq \emptyset) \\
     &~~      \where \\
     & ~~~~~~~ \var{txb} = \txbody{tx} \\

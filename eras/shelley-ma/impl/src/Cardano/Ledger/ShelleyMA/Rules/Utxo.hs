@@ -301,10 +301,10 @@ validateOutsideValidityIntervalUTxO ::
   Core.TxBody era ->
   Validation (NonEmpty (UtxoPredicateFailure era)) ()
 validateOutsideValidityIntervalUTxO slot txb =
-  failureUnless (inInterval slot (txvld txb)) $
-    OutsideValidityIntervalUTxO (txvld txb) slot
+  failureUnless (inInterval slot (txvldt txb)) $
+    OutsideValidityIntervalUTxO (txvldt txb) slot
   where
-    txvld = getField @"vldt"
+    txvldt = getField @"vldt"
 
 -- | Check that the mint field does not try to mint ADA. This is equivalent to
 -- the check:
