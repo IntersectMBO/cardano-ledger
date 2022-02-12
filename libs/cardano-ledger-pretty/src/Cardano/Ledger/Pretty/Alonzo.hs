@@ -222,11 +222,11 @@ ppTxWitness :: (Era era, PrettyA (Core.Script era)) => TxWitness era -> PDoc
 ppTxWitness (TxWitness' vk wb sc da (Redeemers rd)) =
   ppRecord
     "TxWitness"
-    [ ("txwitsVKey", ppSet ppWitVKey vk),
-      ("txwitsBoot", ppSet ppBootstrapWitness wb),
-      ("txscripts", ppMap ppScriptHash prettyA sc),
-      ("txdats", ppMap ppSafeHash ppData (unTxDats da)),
-      ("txrdmrs", ppMap ppRdmrPtr (ppPair ppData ppExUnits) rd)
+    [ ("keys", ppSet ppWitVKey vk),
+      ("bootstrap witnesses", ppSet ppBootstrapWitness wb),
+      ("scripts map", ppMap ppScriptHash prettyA sc),
+      ("Data map", ppMap ppSafeHash ppData (unTxDats da)),
+      ("Redeemer map", ppMap ppRdmrPtr (ppPair ppData ppExUnits) rd)
     ]
 
 instance

@@ -213,12 +213,11 @@ someAddr pf = Addr Testnet pCred sCred
 
 someOutput :: Scriptic era => Proof era -> Core.TxOut era
 someOutput pf =
-  newTxOut override pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
+  newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
 
 nonScriptOutWithDatum :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 nonScriptOutWithDatum pf =
   newTxOut
-    override
     pf
     [ Address (someAddr pf),
       Amount (inject $ Coin 1221),
@@ -230,7 +229,7 @@ mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
 collateralOutput pf =
-  newTxOut override pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
+  newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
 
 alwaysSucceedsHash ::
   forall era.
@@ -263,14 +262,13 @@ timelockAddr pf = Addr Testnet pCred sCred
 
 timelockOut :: PostShelley era => Proof era -> Core.TxOut era
 timelockOut pf =
-  newTxOut override pf [Address $ timelockAddr pf, Amount (inject $ Coin 1)]
+  newTxOut pf [Address $ timelockAddr pf, Amount (inject $ Coin 1)]
 
 -- | This output is unspendable since it is locked by a plutus script,
 --  but has no datum hash.
 unspendableOut :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 unspendableOut pf =
   newTxOut
-    override
     pf
     [ Address (scriptAddr (always 3 pf) pf),
       Amount (inject $ Coin 5000)
@@ -350,7 +348,6 @@ txDatsExample1 = TxDats $ keyBy hashData $ [datumExample1]
 alwaysSucceedsOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 alwaysSucceedsOutput pf =
   newTxOut
-    override
     pf
     [ Address (scriptAddr (always 3 pf) pf),
       Amount (inject $ Coin 5000),
@@ -360,7 +357,6 @@ alwaysSucceedsOutput pf =
 alwaysSucceedsOutputV2 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 alwaysSucceedsOutputV2 pf =
   newTxOut
-    override
     pf
     [ Address (scriptAddr (alwaysAlt 3 pf) pf),
       Amount (inject $ Coin 5000),
@@ -380,7 +376,6 @@ extraRedeemersEx =
 extraRedeemersBody :: Scriptic era => Proof era -> Core.TxBody era
 extraRedeemersBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 1],
       Collateral' [mkGenesisTxIn 11],
@@ -398,7 +393,6 @@ extraRedeemersTx ::
   Core.Tx era
 extraRedeemersTx pf =
   newTx
-    override
     pf
     [ Body (extraRedeemersBody pf),
       WitnessesI
@@ -410,12 +404,11 @@ extraRedeemersTx pf =
     ]
 
 outEx1 :: Scriptic era => Proof era -> Core.TxOut era
-outEx1 pf = newTxOut override pf [Address (someAddr pf), Amount (inject $ Coin 4995)]
+outEx1 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]
 
 validatingBody :: Scriptic era => Proof era -> Core.TxBody era
 validatingBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 1],
       Collateral' [mkGenesisTxIn 11],
@@ -439,7 +432,6 @@ validatingTx ::
   Core.Tx era
 validatingTx pf =
   newTx
-    override
     pf
     [ Body (validatingBody pf),
       WitnessesI
@@ -486,7 +478,6 @@ notValidatingRedeemers =
 alwaysFailsOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 alwaysFailsOutput pf =
   newTxOut
-    override
     pf
     [ Address (scriptAddr (never 0 pf) pf),
       Amount (inject $ Coin 3000),
@@ -494,12 +485,11 @@ alwaysFailsOutput pf =
     ]
 
 outEx2 :: (Scriptic era) => Proof era -> Core.TxOut era
-outEx2 pf = newTxOut override pf [Address (someAddr pf), Amount (inject $ Coin 2995)]
+outEx2 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]
 
 notValidatingBody :: Scriptic era => Proof era -> Core.TxBody era
 notValidatingBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 2],
       Collateral' [mkGenesisTxIn 12],
@@ -516,7 +506,6 @@ notValidatingTx ::
   Core.Tx era
 notValidatingTx pf =
   newTx
-    override
     pf
     [ Body (notValidatingBody pf),
       WitnessesI
@@ -541,7 +530,7 @@ utxoStEx2 pf = smartUTxOState (utxoEx2 pf) (Coin 0) (Coin 5) def
 -- =========================================================================
 
 outEx3 :: Era era => Proof era -> Core.TxOut era
-outEx3 pf = newTxOut override pf [Address (someAddr pf), Amount (inject $ Coin 995)]
+outEx3 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
 
 redeemerExample3 :: Data era
 redeemerExample3 = Data (Plutus.I 42)
@@ -557,7 +546,6 @@ scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 validatingBodyWithCert :: Scriptic era => Proof era -> Core.TxBody era
 validatingBodyWithCert pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 3],
       Collateral' [mkGenesisTxIn 13],
@@ -576,7 +564,6 @@ validatingTxWithCert ::
   Core.Tx era
 validatingTxWithCert pf =
   newTx
-    override
     pf
     [ Body (validatingBodyWithCert pf),
       WitnessesI
@@ -600,7 +587,7 @@ utxoStEx3 pf = smartUTxOState (utxoEx3 pf) (Coin 0) (Coin 5) def
 -- =====================================================================
 
 outEx4 :: (Scriptic era) => Proof era -> Core.TxOut era
-outEx4 pf = newTxOut override pf [Address (someAddr pf), Amount (inject $ Coin 995)]
+outEx4 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
 
 redeemerExample4 :: Data era
 redeemerExample4 = Data (Plutus.I 0)
@@ -616,7 +603,6 @@ scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)
 notValidatingBodyWithCert :: Scriptic era => Proof era -> Core.TxBody era
 notValidatingBodyWithCert pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 4],
       Collateral' [mkGenesisTxIn 14],
@@ -635,7 +621,6 @@ notValidatingTxWithCert ::
   Core.Tx era
 notValidatingTxWithCert pf =
   newTx
-    override
     pf
     [ Body (notValidatingBodyWithCert pf),
       WitnessesI
@@ -659,7 +644,7 @@ utxoStEx4 pf = smartUTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
 -- ==============================================================================
 
 outEx5 :: (Scriptic era) => Proof era -> Core.TxOut era
-outEx5 pf = newTxOut override pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
+outEx5 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
 redeemerExample5 :: Data era
 redeemerExample5 = Data (Plutus.I 42)
@@ -672,7 +657,6 @@ validatingRedeemersEx5 =
 validatingBodyWithWithdrawal :: Scriptic era => Proof era -> Core.TxBody era
 validatingBodyWithWithdrawal pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 5],
       Collateral' [mkGenesisTxIn 15],
@@ -696,7 +680,6 @@ validatingTxWithWithdrawal ::
   Core.Tx era
 validatingTxWithWithdrawal pf =
   newTx
-    override
     pf
     [ Body (validatingBodyWithWithdrawal pf),
       WitnessesI
@@ -720,7 +703,7 @@ utxoStEx5 pf = smartUTxOState (utxoEx5 pf) (Coin 0) (Coin 5) def
 -- ===========================================================================
 
 outEx6 :: (Scriptic era) => Proof era -> Core.TxOut era
-outEx6 pf = newTxOut override pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
+outEx6 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
 redeemerExample6 :: Data era
 redeemerExample6 = Data (Plutus.I 0)
@@ -733,7 +716,6 @@ notValidatingRedeemersEx6 =
 notValidatingBodyWithWithdrawal :: Scriptic era => Proof era -> Core.TxBody era
 notValidatingBodyWithWithdrawal pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 6],
       Collateral' [mkGenesisTxIn 16],
@@ -757,7 +739,6 @@ notValidatingTxWithWithdrawal ::
   Core.Tx era
 notValidatingTxWithWithdrawal pf =
   newTx
-    override
     pf
     [ Body (notValidatingBodyWithWithdrawal pf),
       WitnessesI
@@ -784,7 +765,7 @@ mintEx7 :: forall era. (Scriptic era, HasTokens era) => Proof era -> Core.Value 
 mintEx7 pf = forge @era 1 (always 2 pf)
 
 outEx7 :: (HasTokens era, Scriptic era) => Proof era -> Core.TxOut era
-outEx7 pf = newTxOut override pf [Address (someAddr pf), Amount (mintEx7 pf <+> inject (Coin 995))]
+outEx7 pf = newTxOut pf [Address (someAddr pf), Amount (mintEx7 pf <+> inject (Coin 995))]
 
 redeemerExample7 :: Data era
 redeemerExample7 = Data (Plutus.I 42)
@@ -797,7 +778,6 @@ validatingRedeemersEx7 =
 validatingBodyWithMint :: (HasTokens era, Scriptic era) => Proof era -> Core.TxBody era
 validatingBodyWithMint pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 7],
       Collateral' [mkGenesisTxIn 17],
@@ -817,7 +797,6 @@ validatingTxWithMint ::
   Core.Tx era
 validatingTxWithMint pf =
   newTx
-    override
     pf
     [ Body (validatingBodyWithMint pf),
       WitnessesI
@@ -845,7 +824,7 @@ mintEx8 :: forall era. (Scriptic era, HasTokens era) => Proof era -> Core.Value 
 mintEx8 pf = forge @era 1 (never 1 pf)
 
 outEx8 :: (HasTokens era, Scriptic era) => Proof era -> Core.TxOut era
-outEx8 pf = newTxOut override pf [Address (someAddr pf), Amount (mintEx8 pf <+> inject (Coin 995))]
+outEx8 pf = newTxOut pf [Address (someAddr pf), Amount (mintEx8 pf <+> inject (Coin 995))]
 
 redeemerExample8 :: Data era
 redeemerExample8 = Data (Plutus.I 0)
@@ -858,7 +837,6 @@ notValidatingRedeemersEx8 =
 notValidatingBodyWithMint :: (HasTokens era, Scriptic era) => Proof era -> Core.TxBody era
 notValidatingBodyWithMint pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 8],
       Collateral' [mkGenesisTxIn 18],
@@ -878,7 +856,6 @@ notValidatingTxWithMint ::
   Core.Tx era
 notValidatingTxWithMint pf =
   newTx
-    override
     pf
     [ Body (notValidatingBodyWithMint pf),
       WitnessesI
@@ -917,7 +894,6 @@ mintEx9 pf = forge @era 1 (always 2 pf) <+> forge @era 1 (timelockScript 1 pf)
 outEx9 :: (HasTokens era, PostShelley era) => Proof era -> Core.TxOut era
 outEx9 pf =
   newTxOut
-    override
     pf
     [ Address (someAddr pf),
       Amount (mintEx9 pf <+> inject (Coin 4996))
@@ -932,7 +908,6 @@ validatingBodyManyScripts ::
   Core.TxBody era
 validatingBodyManyScripts pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 1, mkGenesisTxIn 100],
       Collateral' [mkGenesisTxIn 11],
@@ -964,7 +939,6 @@ validatingTxManyScripts ::
   Core.Tx era
 validatingTxManyScripts pf =
   newTx
-    override
     pf
     [ Body (validatingBodyManyScripts pf),
       WitnessesI
@@ -1007,7 +981,6 @@ utxoStEx9 pf = smartUTxOState (utxoEx9 pf) (Coin 0) (Coin 5) def
 outEx10 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 outEx10 pf =
   newTxOut
-    override
     pf
     [ Address (scriptAddr (always 3 pf) pf),
       Amount (inject $ Coin 995),
@@ -1017,7 +990,6 @@ outEx10 pf =
 okSupplimentaryDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
 okSupplimentaryDatumTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 3],
       Outputs' [outEx10 pf],
@@ -1034,7 +1006,6 @@ okSupplimentaryDatumTx ::
   Core.Tx era
 okSupplimentaryDatumTx pf =
   newTx
-    override
     pf
     [ Body (okSupplimentaryDatumTxBody pf),
       WitnessesI
@@ -1067,7 +1038,6 @@ multipleEqualCertsRedeemers =
 multipleEqualCertsBody :: Scriptic era => Proof era -> Core.TxBody era
 multipleEqualCertsBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 3],
       Collateral' [mkGenesisTxIn 13],
@@ -1089,7 +1059,6 @@ multipleEqualCertsTx ::
   Core.Tx era
 multipleEqualCertsTx pf =
   newTx
-    override
     pf
     [ Body (multipleEqualCertsBody pf),
       WitnessesI
@@ -1117,12 +1086,11 @@ utxoStEx11 pf = smartUTxOState (utxoEx11 pf) (Coin 0) (Coin 5) def
 -- ====================================================================================
 
 outEx12 :: Scriptic era => Proof era -> Core.TxOut era
-outEx12 pf = newTxOut override pf [Address (someAddr pf), Amount (inject $ Coin 1216)]
+outEx12 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1216)]
 
 nonScriptOutWithDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
 nonScriptOutWithDatumTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 103],
       Outputs' [outEx12 pf],
@@ -1138,7 +1106,6 @@ nonScriptOutWithDatumTx ::
   Core.Tx era
 nonScriptOutWithDatumTx pf =
   newTx
-    override
     pf
     [ Body (nonScriptOutWithDatumTxBody pf),
       WitnessesI
@@ -1169,7 +1136,6 @@ utxoStEx12 pf =
 incorrectNetworkIDTxBody :: Era era => Proof era -> Core.TxBody era
 incorrectNetworkIDTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 3],
       Outputs' [outEx3 pf],
@@ -1180,7 +1146,6 @@ incorrectNetworkIDTxBody pf =
 incorrectNetworkIDTx :: (Era era, SignBody era) => Proof era -> Core.Tx era
 incorrectNetworkIDTx pf =
   newTx
-    override
     pf
     [ Body (incorrectNetworkIDTxBody pf),
       WitnessesI
@@ -1194,7 +1159,6 @@ extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
 missingRequiredWitnessTxBody :: Era era => Proof era -> Core.TxBody era
 missingRequiredWitnessTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 3],
       Outputs' [outEx3 pf],
@@ -1205,7 +1169,6 @@ missingRequiredWitnessTxBody pf =
 missingRequiredWitnessTx :: (Era era, SignBody era) => Proof era -> Core.Tx era
 missingRequiredWitnessTx pf =
   newTx
-    override
     pf
     [ Body (missingRequiredWitnessTxBody pf),
       WitnessesI
@@ -1216,7 +1179,6 @@ missingRequiredWitnessTx pf =
 missingRedeemerTxBody :: Scriptic era => Proof era -> Core.TxBody era
 missingRedeemerTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 1],
       Collateral' [mkGenesisTxIn 11],
@@ -1231,7 +1193,6 @@ missingRedeemerTx ::
   Core.Tx era
 missingRedeemerTx pf =
   newTx
-    override
     pf
     [ Body (missingRedeemerTxBody pf),
       WitnessesI
@@ -1247,7 +1208,6 @@ wrongWppHashTx ::
   Core.Tx era
 wrongWppHashTx pf =
   newTx
-    override
     pf
     [ Body (missingRedeemerTxBody pf),
       WitnessesI
@@ -1268,7 +1228,6 @@ missing1phaseScriptWitnessTx ::
   Core.Tx era
 missing1phaseScriptWitnessTx pf =
   newTx
-    override
     pf
     [ Body (validatingBodyManyScripts pf),
       WitnessesI
@@ -1298,7 +1257,6 @@ missing2phaseScriptWitnessTx ::
   Core.Tx era
 missing2phaseScriptWitnessTx pf =
   newTx
-    override
     pf
     [ Body (validatingBodyManyScripts pf),
       WitnessesI
@@ -1327,7 +1285,6 @@ misPurposedRedeemer =
 wrongRedeemerLabelTxBody :: Scriptic era => Proof era -> Core.TxBody era
 wrongRedeemerLabelTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 1],
       Collateral' [mkGenesisTxIn 11],
@@ -1345,7 +1302,6 @@ wrongRedeemerLabelTx ::
   Core.Tx era
 wrongRedeemerLabelTx pf =
   newTx
-    override
     pf
     [ Body (wrongRedeemerLabelTxBody pf),
       WitnessesI
@@ -1359,7 +1315,6 @@ wrongRedeemerLabelTx pf =
 missingDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
 missingDatumTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 1],
       Collateral' [mkGenesisTxIn 11],
@@ -1377,7 +1332,6 @@ missingDatumTx ::
   Core.Tx era
 missingDatumTx pf =
   newTx
-    override
     pf
     [ Body (missingDatumTxBody pf),
       WitnessesI
@@ -1397,7 +1351,6 @@ phase1FailureTx ::
   Core.Tx era
 phase1FailureTx pf =
   newTx
-    override
     pf
     [ Body (validatingBodyManyScripts pf),
       WitnessesI
@@ -1426,7 +1379,6 @@ validatingRedeemersTooManyExUnits =
 tooManyExUnitsTxBody :: Scriptic era => Proof era -> Core.TxBody era
 tooManyExUnitsTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 1],
       Collateral' [mkGenesisTxIn 11],
@@ -1444,7 +1396,6 @@ tooManyExUnitsTx ::
   Core.Tx era
 tooManyExUnitsTx pf =
   newTx
-    override
     pf
     [ Body (tooManyExUnitsTxBody pf),
       WitnessesI
@@ -1462,7 +1413,6 @@ missingCollateralSig ::
   Core.Tx era
 missingCollateralSig pf =
   newTx
-    override
     pf
     [ Body (validatingBody pf),
       WitnessesI
@@ -1475,7 +1425,6 @@ missingCollateralSig pf =
 plutusOutputWithNoDataTxBody :: Scriptic era => Proof era -> Core.TxBody era
 plutusOutputWithNoDataTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 101],
       Collateral' [mkGenesisTxIn 11],
@@ -1493,7 +1442,6 @@ plutusOutputWithNoDataTx ::
   Core.Tx era
 plutusOutputWithNoDataTx pf =
   newTx
-    override
     pf
     [ Body (plutusOutputWithNoDataTxBody pf),
       WitnessesI
@@ -1507,12 +1455,11 @@ totallyIrrelevantDatum :: Data era
 totallyIrrelevantDatum = Data (Plutus.I 1729)
 
 outputWithNoDatum :: forall era. Era era => Proof era -> Core.TxOut era
-outputWithNoDatum pf = newTxOut override pf [Address $ someAddr pf, Amount (inject $ Coin 995)]
+outputWithNoDatum pf = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995)]
 
 notOkSupplimentaryDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
 notOkSupplimentaryDatumTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 3],
       Outputs' [outputWithNoDatum pf],
@@ -1531,7 +1478,6 @@ notOkSupplimentaryDatumTx ::
   Core.Tx era
 notOkSupplimentaryDatumTx pf =
   newTx
-    override
     pf
     [ Body (notOkSupplimentaryDatumTxBody pf),
       WitnessesI
@@ -1546,10 +1492,9 @@ hashsize = fromIntegral $ sizeHash ([] @(CC.HASH c))
 poolMDHTooBigTxBody :: forall era. Scriptic era => Proof era -> Core.TxBody era
 poolMDHTooBigTxBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 3],
-      Outputs' [newTxOut override pf [Address $ someAddr pf, Amount (inject $ Coin 995)]],
+      Outputs' [newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995)]],
       Certs' [DCertPool (RegPool poolParams)],
       Txfee (Coin 5)
     ]
@@ -1579,7 +1524,6 @@ poolMDHTooBigTx pf =
   -- Note that the UTXOW rule will no trigger the expected predicate failure,
   -- since it is checked in the POOL rule. BBODY will trigger it, however.
   newTx
-    override
     pf
     [ Body (poolMDHTooBigTxBody pf),
       WitnessesI
@@ -1598,7 +1542,6 @@ multipleEqualCertsRedeemersInvalid =
 multipleEqualCertsBodyInvalid :: Scriptic era => Proof era -> Core.TxBody era
 multipleEqualCertsBodyInvalid pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 3],
       Collateral' [mkGenesisTxIn 13],
@@ -1620,7 +1563,6 @@ multipleEqualCertsTxInvalid ::
   Core.Tx era
 multipleEqualCertsTxInvalid pf =
   newTx
-    override
     pf
     [ Body (multipleEqualCertsBodyInvalid pf),
       WitnessesI
@@ -1633,7 +1575,6 @@ multipleEqualCertsTxInvalid pf =
 noCostModelBody :: Scriptic era => Proof era -> Core.TxBody era
 noCostModelBody pf =
   newTxBody
-    override
     pf
     [ Inputs' [mkGenesisTxIn 102],
       Collateral' [mkGenesisTxIn 11],
@@ -1651,7 +1592,6 @@ noCostModelTx ::
   Core.Tx era
 noCostModelTx pf =
   newTx
-    override
     pf
     [ Body (noCostModelBody pf),
       WitnessesI
@@ -2256,7 +2196,6 @@ testEvaluateTransactionFee =
     pparams = newPParams pf $ defaultPPs ++ [MinfeeA 1]
     validatingTxNoWits =
       newTx
-        override
         pf
         [ Body (validatingBody pf),
           WitnessesI

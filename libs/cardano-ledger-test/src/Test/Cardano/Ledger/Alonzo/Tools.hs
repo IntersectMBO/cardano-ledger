@@ -118,7 +118,6 @@ exampleTx :: Core.Tx A
 exampleTx =
   let pf = Alonzo Mock
    in newTx
-        override
         pf
         [ Body (validatingBody pf),
           WitnessesI
