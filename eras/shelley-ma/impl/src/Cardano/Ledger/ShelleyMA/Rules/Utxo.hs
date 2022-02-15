@@ -10,13 +10,11 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
--- The STS instance for UTXO is technically an orphan.
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
-import Cardano.Ledger.Address (Addr, getNetwork)
+import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
@@ -26,6 +24,8 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
+import Cardano.Ledger.Rules.ValidationMode (runValidation, runValidationTransMaybe)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -41,20 +41,8 @@ import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (Tx (..), TxIn, TxOut)
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert,
-    RewardAcnt (getRwdNetwork),
-    Wdrl,
-    unWdrl,
-  )
-import Cardano.Ledger.Shelley.UTxO
-  ( UTxO (..),
-    totalDeposits,
-    txins,
-    txouts,
-    txup,
-    unUTxO,
-  )
+import Cardano.Ledger.Shelley.TxBody (DCert, RewardAcnt, Wdrl)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits, txouts, txup)
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
@@ -72,15 +60,17 @@ import Data.Coders
   )
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
+import Data.Int (Int64)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
+import Validation
 
 {- The scaledMinDeposit calculation uses the minUTxOValue protocol parameter
 (passed to it as Coin mv) as a specification of "the cost of
@@ -162,6 +152,20 @@ data UtxoPredicateFailure era
       ![Core.TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
+fromShelleyFailure :: Shelley.UtxoPredicateFailure era -> Maybe (UtxoPredicateFailure era)
+fromShelleyFailure = \case
+  Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
+  Shelley.ExpiredUTxO {} -> Nothing -- Rule was replaced with `OutsideValidityIntervalUTxO`
+  Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
+  Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
+  Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
+  Shelley.ValueNotConservedUTxO {} -> Nothing -- Rule was updated
+  Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
+  Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
+  Shelley.OutputTooSmallUTxO {} -> Nothing -- Rule was updated
+  Shelley.UpdateFailure ppf -> Just $ UpdateFailure ppf
+  Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
+
 deriving stock instance
   ( Shelley.TransUTxOState Show era,
     TransValue Show era,
@@ -215,6 +219,7 @@ utxoTransition ::
   ( UsesTxBody era,
     UsesValue era,
     STS (UTXO era),
+    Core.Tx era ~ Tx era,
     Embed (Core.EraRule "PPUP" era) (UTXO era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -238,84 +243,148 @@ utxoTransition = do
   let Shelley.UTxOState utxo _ _ ppup _ = u
   let txb = getField @"body" tx
 
-  inInterval slot (getField @"vldt" txb)
-    ?! OutsideValidityIntervalUTxO (getField @"vldt" txb) slot
+  {- ininterval slot (txvld tx) -}
+  runValidation $ validateOutsideValidityIntervalUTxO slot txb
 
-  txins @era txb /= Set.empty ?! InputSetEmptyUTxO
+  {- txins txb ≠ ∅ -}
+  runValidationTransMaybe fromShelleyFailure $ Shelley.validateInputSetEmptyUTxO txb
 
-  let minFee = Shelley.minfee pp tx
-      txFee = getField @"txfee" txb
-  minFee <= txFee ?! FeeTooSmallUTxO minFee txFee
+  {- minfee pp tx ≤ txfee txb -}
+  runValidationTransMaybe fromShelleyFailure $ Shelley.validateFeeTooSmallUTxO pp tx
 
-  let badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) (txins @era txb)
-  Set.null badInputs ?! BadInputsUTxO badInputs
+  {- txins txb ⊆ dom utxo -}
+  runValidationTransMaybe fromShelleyFailure $
+    Shelley.validateBadInputsUTxO utxo $ getField @"inputs" txb
 
-  ni <- liftSTS $ asks networkId
-  let addrsWrongNetwork =
-        filter
-          (\a -> getNetwork a /= ni)
-          (fmap getTxOutAddr $ toList $ getField @"outputs" txb)
-  null addrsWrongNetwork ?! WrongNetwork ni (Set.fromList addrsWrongNetwork)
-  let wdrlsWrongNetwork =
-        filter
-          (\a -> getRwdNetwork a /= ni)
-          (Map.keys . unWdrl . getField @"wdrls" $ txb)
-  null wdrlsWrongNetwork
-    ?! WrongNetworkWithdrawal
-      ni
-      (Set.fromList wdrlsWrongNetwork)
+  netId <- liftSTS $ asks networkId
 
-  let consumed_ = consumed pp utxo txb
-      produced_ = Shelley.produced @era pp (`Map.notMember` stakepools) txb
-  consumed_ == produced_ ?! ValueNotConservedUTxO consumed_ produced_
+  {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
+  runValidationTransMaybe fromShelleyFailure $ Shelley.validateWrongNetwork netId txb
+
+  {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
+  runValidationTransMaybe fromShelleyFailure $ Shelley.validateWrongNetworkWithdrawal netId txb
+
+  {- consumed pp utxo txb = produced pp poolParams txb -}
+  runValidation $ validateValueNotConservedUTxO pp utxo stakepools txb
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
-    trans @(Core.EraRule "PPUP" era) $
-      TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+    trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  -- Check that the mint field does not try to mint ADA. This is equivalent to
-  -- the check `adaPolicy ∉ supp mint tx` in the spec.
-  Val.coin (getField @"mint" txb) == Val.zero ?! TriesToForgeADA
+  runValidation $ validateTriesToForgeADA txb
 
-  let outputs = unUTxO (txouts txb)
-      minUTxOValue = getField @"_minUTxOValue" pp
-      outputsTooSmall =
-        filter
-          ( \out ->
-              let v = getField @"value" out
-               in not $
-                    Val.pointwise
-                      (>=)
-                      v
-                      (Val.inject $ scaledMinDeposit v minUTxOValue)
-          )
-          (SplitMap.elems outputs)
-  null outputsTooSmall ?! OutputTooSmallUTxO outputsTooSmall
+  let outputs = txouts txb
+  {- ∀ txout ∈ txouts txb, getValue txout ≥ inject (scaledMinDeposit v (minUTxOValue pp)) -}
+  runValidation $ validateOutputTooSmallUTxO pp outputs
 
-  let outputsTooBig =
-        filter
-          ( \out ->
-              let v = getField @"value" out
-               in (BSL.length . serialize) v > 4000
-              -- TODO this is arbitrary, but sufficiently below the current
-              -- max transaction size. We will make it a protocol parameter
-              -- in the Alonzo era.
-          )
-          (SplitMap.elems outputs)
-  null outputsTooBig ?! OutputTooBigUTxO outputsTooBig
+  {- ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ MaxValSize -}
+  -- MaxValSize = 4000
+  runValidation $ validateOutputTooBigUTxO outputs
 
-  let outputsAttrsTooBig = Shelley.filterOutputsAttrsTooBig outputs
-  null outputsAttrsTooBig ?! OutputBootAddrAttrsTooBig outputsAttrsTooBig
+  {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
+  runValidationTransMaybe fromShelleyFailure $ Shelley.validateOutputBootAddrAttrsTooBig outputs
 
-  let maxTxSize_ = fromIntegral (getField @"_maxTxSize" pp)
-      txSize_ = getField @"txsize" tx
-  txSize_ <= maxTxSize_ ?! MaxTxSizeUTxO txSize_ maxTxSize_
+  {- txsize tx ≤ maxTxSize pp -}
+  runValidationTransMaybe fromShelleyFailure $ Shelley.validateMaxTxSizeUTxO pp tx
 
   let refunded = Shelley.keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
   let depositChange = totalDeposits pp (`Map.notMember` stakepools) txCerts Val.<-> refunded
   pure $! Shelley.updateUTxOState u txb depositChange ppup'
+
+-- | Ensure the transaction is within the validity window.
+--
+-- > ininterval slot (txvld tx)
+validateOutsideValidityIntervalUTxO ::
+  HasField "vldt" (Core.TxBody era) ValidityInterval =>
+  SlotNo ->
+  Core.TxBody era ->
+  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+validateOutsideValidityIntervalUTxO slot txb =
+  failureUnless (inInterval slot (txvldt txb)) $
+    OutsideValidityIntervalUTxO (txvldt txb) slot
+  where
+    txvldt = getField @"vldt"
+
+-- | Check that the mint field does not try to mint ADA. This is equivalent to
+-- the check:
+--
+-- > adaPolicy ∉ supp mint tx
+validateTriesToForgeADA ::
+  (Val.Val (Core.Value era), HasField "mint" (Core.TxBody era) (Core.Value era)) =>
+  Core.TxBody era ->
+  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+validateTriesToForgeADA txb =
+  failureUnless (Val.coin (getField @"mint" txb) == Val.zero) TriesToForgeADA
+
+-- | Ensure that there are no `Core.TxOut`s that have `Value` of size larger than @MaxValSize@
+--
+-- > ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ MaxValSize
+validateOutputTooBigUTxO ::
+  ( HasField "value" (Core.TxOut era) (Core.Value era),
+    ToCBOR (Core.Value era)
+  ) =>
+  UTxO era ->
+  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+validateOutputTooBigUTxO (UTxO outputs) =
+  failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
+  where
+    maxValSize = 4000 :: Int64
+    outputsTooBig =
+      filter
+        ( \out ->
+            let v = getField @"value" out
+             in BSL.length (serialize v) > maxValSize
+        )
+        (SplitMap.elems outputs)
+
+-- | Ensure that there are no `Core.TxOut`s that have value less than the scaled @minUTxOValue@
+--
+-- > ∀ txout ∈ txouts txb, getValue txout ≥ inject (scaledMinDeposit v (minUTxOValue pp))
+validateOutputTooSmallUTxO ::
+  ( HasField "_minUTxOValue" (Core.PParams era) Coin,
+    HasField "value" (Core.TxOut era) (Core.Value era),
+    Val.Val (Core.Value era)
+  ) =>
+  Core.PParams era ->
+  UTxO era ->
+  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+validateOutputTooSmallUTxO pp (UTxO outputs) =
+  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  where
+    minUTxOValue = getField @"_minUTxOValue" pp
+    outputsTooSmall =
+      filter
+        ( \out ->
+            let v = getField @"value" out
+             in Val.pointwise (<) v (Val.inject $ scaledMinDeposit v minUTxOValue)
+        )
+        (SplitMap.elems outputs)
+
+-- | Ensure that value consumed and produced matches up exactly. Note that this
+-- is different from Shelley, since implementation of `consumed` has changed.
+--
+-- > consumed pp utxo txb = produced pp poolParams txb
+validateValueNotConservedUTxO ::
+  ( Era era,
+    HasField "_keyDeposit" (Core.PParams era) Coin,
+    HasField "_poolDeposit" (Core.PParams era) Coin,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "mint" (Core.TxBody era) (Core.Value era)
+  ) =>
+  Core.PParams era ->
+  UTxO era ->
+  Map.Map (KeyHash 'StakePool (Crypto era)) a ->
+  Core.TxBody era ->
+  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+validateValueNotConservedUTxO pp utxo stakepools txb =
+  failureUnless (consumedValue == producedValue) $
+    ValueNotConservedUTxO consumedValue producedValue
+  where
+    consumedValue = consumed pp utxo txb
+    producedValue = Shelley.produced pp (`Map.notMember` stakepools) txb
 
 --------------------------------------------------------------------------------
 -- UTXO STS

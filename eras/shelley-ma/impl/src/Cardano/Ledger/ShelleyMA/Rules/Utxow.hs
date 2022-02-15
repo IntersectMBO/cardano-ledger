@@ -11,17 +11,14 @@ module Cardano.Ledger.ShelleyMA.Rules.Utxow where
 import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Shelley.LedgerState
-  ( UTxOState,
-    witsVKeyNeeded,
-  )
+import Cardano.Ledger.Shelley.LedgerState (UTxOState)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.Rules.Utxow
   ( ShelleyStyleWitnessNeeds,
     UtxowEvent (..),
     UtxowPredicateFailure (..),
-    shelleyStyleWitness,
+    transitionRulesUTXOW,
   )
 import Cardano.Ledger.Shelley.Tx (WitnessSet)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (UTXO, UtxoPredicateFailure)
@@ -62,7 +59,7 @@ instance
   type PredicateFailure (UTXOW era) = UtxowPredicateFailure era
   type Event (UTXOW era) = UtxowEvent era
 
-  transitionRules = [shelleyStyleWitness witsVKeyNeeded id]
+  transitionRules = [transitionRulesUTXOW]
 
   -- The ShelleyMA Era uses the same PredicateFailure type
   -- as Shelley, so the 'embed' function is identity

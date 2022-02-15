@@ -90,5 +90,6 @@ library
     time,
     transformers,
     utf8-string,
+    validation-selective,
   hs-source-dirs:
     src

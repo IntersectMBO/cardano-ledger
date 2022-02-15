@@ -38,13 +38,14 @@ import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
     StrictMaybe (..),
+    quorum,
     strictMaybeToMaybe,
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
-import Cardano.Ledger.Rules.ValidationMode ((?!#))
+import Cardano.Ledger.Rules.ValidationMode (runValidationStaticTrans, runValidationTrans, (?!#))
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( delegCWitness,
     genesisCWitness,
@@ -54,6 +55,8 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
 import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState (..),
     WitHashes (..),
+    diffWitHashes,
+    nullWitHashes,
     propWits,
     unWitHashes,
     witsFromTxWitnesses,
@@ -64,8 +67,8 @@ import Cardano.Ledger.Shelley.Rules.Utxow
   ( ShelleyStyleWitnessNeeds,
     UtxowEvent (UtxoEvent),
     UtxowPredicateFailure (..),
-    shelleyStyleWitness,
   )
+import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..), extractKeyHashWitnessSet)
 import Cardano.Ledger.Shelley.TxBody
@@ -76,11 +79,13 @@ import Cardano.Ledger.Shelley.TxBody
     unWdrl,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txinLookup)
+import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
+import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -89,6 +94,7 @@ import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
+import Validation
 
 -- =================================================
 
@@ -253,15 +259,15 @@ alonzoStyleWitness ::
   ) =>
   TransitionRule (utxow era)
 alonzoStyleWitness = do
-  (TRC (UtxoEnv _slot pp _stakepools _genDelegs, u', tx)) <- judgmentContext
+  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
-  let utxo = _utxo u'
+  let utxo = _utxo u
       txbody = getField @"body" (tx :: Core.Tx era)
-      witsKeyHashes = unWitHashes $ witsFromTxWitnesses @era tx
+      witsKeyHashes = witsFromTxWitnesses @era tx
 
   {-  { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} = dom(txdats txw)   -}
   let inputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
@@ -322,8 +328,8 @@ alonzoStyleWitness = do
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded includes the reqSignerHashes in the union   -}
   let reqSignerHashes' = getField @"reqSignerHashes" txbody
-  eval (reqSignerHashes' ⊆ witsKeyHashes)
-    ?!# MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes)
+  eval (reqSignerHashes' ⊆ unWitHashes witsKeyHashes)
+    ?!# MissingRequiredSigners (eval $ reqSignerHashes' ➖ unWitHashes witsKeyHashes)
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
   let languages =
@@ -345,7 +351,60 @@ alonzoStyleWitness = do
   {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   {-   adh := txADhash txb;  ad := auxiliaryData tx                      -}
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  shelleyStyleWitness witsVKeyNeeded WrappedShelleyEraFailure
+
+  -- check scripts
+  {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
+
+  runValidationStaticTrans WrappedShelleyEraFailure $
+    Shelley.validateFailedScripts tx
+
+  {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
+  runValidationTrans WrappedShelleyEraFailure $
+    Shelley.validateMissingScripts pp utxo tx
+
+  -- check VKey witnesses
+
+  {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
+  runValidationStaticTrans WrappedShelleyEraFailure $
+    Shelley.validateVerifiedWits tx
+
+  {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
+  runValidationTrans WrappedShelleyEraFailure $
+    validateNeededWitnesses genDelegs utxo tx witsKeyHashes
+
+  -- check metadata hash
+  {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
+  runValidationStaticTrans WrappedShelleyEraFailure $
+    Shelley.validateMetadata pp tx
+
+  -- check genesis keys signatures for instantaneous rewards certificates
+  {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
+  {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
+  coreNodeQuorum <- liftSTS $ asks quorum
+  runValidationTrans WrappedShelleyEraFailure $
+    Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
+
+  trans @(Core.EraRule "UTXO" era) $
+    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+
+validateNeededWitnesses ::
+  ( Era era,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  GenDelegs (Crypto era) ->
+  UTxO era ->
+  Core.Tx era ->
+  WitHashes (Crypto era) ->
+  Validation (NonEmpty (UtxowPredicateFailure era)) ()
+validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
+  let needed = witsVKeyNeeded utxo tx genDelegs
+      missingWitnesses = diffWitHashes needed witsKeyHashes
+   in failureUnless (nullWitHashes missingWitnesses) $
+        MissingVKeyWitnessesUTXOW missingWitnesses
 
 -- | Collect the set of hashes of keys that needs to sign a given transaction.
 --  This set consists of the txin owners, certificate authors, and withdrawal

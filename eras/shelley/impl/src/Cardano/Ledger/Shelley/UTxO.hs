@@ -159,26 +159,20 @@ txins ::
   Set (TxIn (Crypto era))
 txins = getField @"inputs"
 
--- Because its only input (Core.TxBody) is a type family this
--- function tends to give errors like
--- "Could not deduce: Core.TxOut era0 ~ Core.TxOut era"
--- The way to fix this is to use TypeApplications like this:  txouts @era body
--- where the type variable: era, is in scope (use ScopedTypeVariables)
-
 -- | Compute the transaction outputs of a transaction.
 txouts ::
   forall era.
   Era era =>
   Core.TxBody era ->
   UTxO era
-txouts tx =
+txouts txBody =
   UTxO $
     SplitMap.fromList
       [ (TxIn transId idx, out)
-        | (out, idx) <- zip (toList $ getField @"outputs" tx) [minBound ..]
+        | (out, idx) <- zip (toList $ getField @"outputs" txBody) [minBound ..]
       ]
   where
-    transId = Core.txid tx
+    transId = Core.txid txBody
 
 -- | Lookup a txin for a given UTxO collection
 txinLookup ::
@@ -269,12 +263,12 @@ totalDeposits ::
   (KeyHash 'StakePool crypto -> Bool) ->
   [DCert crypto] ->
   Coin
-totalDeposits pp isNewPool cs =
+totalDeposits pp isNewPool certs =
   (numKeys <×> getField @"_keyDeposit" pp)
     <+> (numNewPools <×> getField @"_poolDeposit" pp)
   where
-    numKeys = length $ filter isRegKey cs
-    pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool cs
+    numKeys = length $ filter isRegKey certs
+    pools = Set.fromList $ Maybe.mapMaybe getKeyHashFromRegPool certs
     numNewPools = length $ Set.filter isNewPool pools
 
 getKeyHashFromRegPool :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)

@@ -96,4 +96,5 @@ library
     strict-containers,
     text,
     time,
-    transformers
+    transformers,
+    validation-selective,

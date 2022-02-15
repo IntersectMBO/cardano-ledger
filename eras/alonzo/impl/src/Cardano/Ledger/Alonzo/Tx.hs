@@ -311,12 +311,12 @@ minfee ::
   ( HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
     HasField "_prices" (Core.PParams era) Prices,
-    HasField "wits" (tx era) (Core.Witnesses era),
+    HasField "wits" (Core.Tx era) (Core.Witnesses era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "txsize" (tx era) Integer
+    HasField "txsize" (Core.Tx era) Integer
   ) =>
   Core.PParams era ->
-  tx era ->
+  Core.Tx era ->
   Coin
 minfee pp tx =
   (getField @"txsize" tx <×> a pp)
@@ -328,10 +328,10 @@ minfee pp tx =
     allExunits = totExUnits tx
 
 totExUnits ::
-  ( HasField "wits" (tx era) (Core.Witnesses era),
+  ( HasField "wits" (Core.Tx era) (Core.Witnesses era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era)
   ) =>
-  tx era ->
+  Core.Tx era ->
   ExUnits
 totExUnits = foldMap snd . Map.elems . unRedeemers . getField @"txrdmrs" . getField @"wits"
 

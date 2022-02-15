@@ -66,8 +66,6 @@ module Cardano.Ledger.Shelley.LedgerState
     txsizeBound,
     produced,
     consumed,
-    verifiedWits,
-    witsVKeyNeeded,
     witsFromTxWitnesses,
     propWits,
 
@@ -105,7 +103,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, isBootstrapRedeemer)
+import Cardano.Ledger.Address (Addr (..), isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     BlocksMade (..),
@@ -116,7 +114,6 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     activeSlotVal,
-    strictMaybeToMaybe,
   )
 import Cardano.Ledger.Coin
   ( Coin (..),
@@ -132,33 +129,22 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (StakeRefBase,
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Keys
-  ( DSignable,
-    GenDelegPair (..),
+  ( GenDelegPair (..),
     GenDelegs (..),
-    Hash,
     KeyHash (..),
     KeyPair,
     KeyRole (..),
-    VKey,
     asWitness,
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.SafeHash (HashAnnotated, extractHash, hashAnnotated)
+import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamedT, mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Address.Bootstrap
   ( BootstrapWitness (..),
     bootstrapWitKeyHash,
-    verifyBootstrapWit,
   )
 import Cardano.Ledger.Shelley.Constraints (TransValue)
-import Cardano.Ledger.Shelley.Delegation.Certificates
-  ( DCert (..),
-    delegCWitness,
-    genesisCWitness,
-    isDeRegKey,
-    poolCWitness,
-    requiresVKeyWitness,
-  )
+import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..), isDeRegKey)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),
@@ -204,11 +190,9 @@ import Cardano.Ledger.Shelley.Rewards
     mkPoolRewardInfo,
     sumRewards,
   )
-import Cardano.Ledger.Shelley.Tx (extractKeyHashWitnessSet)
 import Cardano.Ledger.Shelley.TxBody
   ( EraIndependentTxBody,
     MIRPot (..),
-    PoolCert (..),
     PoolParams (..),
     Ptr (..),
     RewardAcnt (..),
@@ -222,10 +206,8 @@ import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
     balance,
     totalDeposits,
-    txinLookup,
     txins,
     txouts,
-    verifyWitVKey,
   )
 import Cardano.Ledger.Slot
   ( EpochNo (..),
@@ -962,107 +944,6 @@ witsFromTxWitnesses coreTx =
   where
     bsWits = getField @"bootWits" coreTx
     addWits = getField @"addrWits" coreTx
-
--- | Collect the set of hashes of keys that needs to sign a
---  given transaction. This set consists of the txin owners,
---  certificate authors, and withdrawal reward accounts.
-witsVKeyNeeded ::
-  forall era tx.
-  ( Era era,
-    HasField "body" tx (Core.TxBody era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
-  ) =>
-  UTxO era ->
-  tx ->
-  GenDelegs (Crypto era) ->
-  WitHashes (Crypto era)
-witsVKeyNeeded utxo' tx genDelegs =
-  WitHashes $
-    certAuthors
-      `Set.union` inputAuthors
-      `Set.union` owners
-      `Set.union` wdrlAuthors
-      `Set.union` updateKeys
-  where
-    txbody = getField @"body" tx
-    inputAuthors :: Set (KeyHash 'Witness (Crypto era))
-    inputAuthors = foldr accum Set.empty (getField @"inputs" txbody)
-      where
-        accum txin ans =
-          case txinLookup txin utxo' of
-            Just out ->
-              case getTxOutAddr out of
-                Addr _ (KeyHashObj pay) _ -> Set.insert (asWitness pay) ans
-                AddrBootstrap bootAddr ->
-                  Set.insert (asWitness (bootstrapKeyHash bootAddr)) ans
-                _ -> ans
-            Nothing -> ans
-
-    wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
-    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (getField @"wdrls" txbody))
-      where
-        accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
-    owners :: Set (KeyHash 'Witness (Crypto era))
-    owners = foldr accum Set.empty (getField @"certs" txbody)
-      where
-        accum (DCertPool (RegPool pool)) ans =
-          Set.union
-            (Set.map asWitness (_poolOwners pool))
-            ans
-        accum _cert ans = ans
-    cwitness (DCertDeleg dc) = extractKeyHashWitnessSet [delegCWitness dc]
-    cwitness (DCertPool pc) = extractKeyHashWitnessSet [poolCWitness pc]
-    cwitness (DCertGenesis gc) = Set.singleton (asWitness $ genesisCWitness gc)
-    cwitness c = error $ show c ++ " does not have a witness"
-    -- key reg requires no witness but this is already filtered outby requiresVKeyWitness
-    -- before the call to `cwitness`, so this error should never be reached.
-
-    certAuthors :: Set (KeyHash 'Witness (Crypto era))
-    certAuthors = foldr accum Set.empty (getField @"certs" txbody)
-      where
-        accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
-        accum _cert ans = ans
-    updateKeys :: Set (KeyHash 'Witness (Crypto era))
-    updateKeys =
-      asWitness
-        `Set.map` propWits
-          ( strictMaybeToMaybe $
-              getField @"update" txbody
-          )
-          genDelegs
-
--- | Given a ledger state, determine if the UTxO witnesses in a given
---  transaction are correct.
-verifiedWits ::
-  forall era tx.
-  ( Era era,
-    HasField "addrWits" tx (Set (WitVKey 'Witness (Crypto era))),
-    HasField "bootWits" tx (Set (BootstrapWitness (Crypto era))),
-    HasField "body" tx (Core.TxBody era),
-    DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
-  ) =>
-  tx ->
-  Either [VKey 'Witness (Crypto era)] ()
-verifiedWits tx =
-  case failed <> failedBootstrap of
-    [] -> Right ()
-    nonEmpty -> Left nonEmpty
-  where
-    txbody = getField @"body" tx
-    wvkKey (WitVKey k _) = k
-    failed =
-      wvkKey
-        <$> filter
-          (not . verifyWitVKey (extractHash (hashAnnotated @(Crypto era) txbody)))
-          (Set.toList $ getField @"addrWits" tx)
-    failedBootstrap =
-      bwKey
-        <$> filter
-          (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
-          (Set.toList $ getField @"bootWits" tx)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
