@@ -18,6 +18,7 @@
 module Test.Cardano.Ledger.Generic.Properties where
 
 -- =================================
+-- import Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -1234,11 +1235,12 @@ genTxAndLEDGERState proof = do
 -- in a way that is Era Agnostic
 
 applySTSByProof ::
-  (RuleTypeRep rtype, GoodCrypto (Crypto era)) =>
+  forall era.
+  (GoodCrypto (Crypto era)) =>
   Proof era ->
-  RuleContext rtype (Core.EraRule "LEDGER" era) ->
+  RuleContext 'Transition (Core.EraRule "LEDGER" era) ->
   (Either [PredicateFailure (Core.EraRule "LEDGER" era)] (State (Core.EraRule "LEDGER" era)))
-applySTSByProof (Babbage _) trc = runShelleyBase $ applySTS trc
+applySTSByProof (Babbage _) _trc = runShelleyBase $ applySTS @(Core.EraRule "LEDGER" (BabbageEra (Crypto era))) _trc
 applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Allegra _) trc = runShelleyBase $ applySTS trc

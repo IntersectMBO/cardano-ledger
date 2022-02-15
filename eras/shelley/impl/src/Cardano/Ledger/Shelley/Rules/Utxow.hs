@@ -28,6 +28,7 @@ module Cardano.Ledger.Shelley.Rules.Utxow
     validateVerifiedWits,
     validateMetadata,
     validateMIRInsufficientGenesisSigs,
+    validateNeededWitnesses,
   )
 where
 
@@ -64,7 +65,12 @@ import Cardano.Ledger.Keys
     VKey,
     asWitness,
   )
-import Cardano.Ledger.Rules.ValidationMode (runValidation, runValidationStatic)
+import Cardano.Ledger.Rules.ValidationMode
+  ( Inject (..),
+    Test,
+    runTest,
+    runTestOnSignal,
+  )
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization
   ( decodeList,
@@ -130,7 +136,6 @@ import Control.State.Transition
     wrapFailed,
   )
 import Data.Foldable (sequenceA_)
-import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import Data.Sequence.Strict (StrictSeq)
@@ -332,28 +337,27 @@ transitionRulesUTXOW = do
   -- check scripts
   {-  ∀ s ∈ range(txscripts txw) ∩ Scriptnative), runNativeScript s tx   -}
 
-  runValidationStatic $ validateFailedScripts tx
+  runTestOnSignal $ validateFailedScripts tx
 
   {-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  runValidation $ validateMissingScripts pp utxo tx
+  runTest $ validateMissingScripts pp (scriptsNeeded utxo tx) (Map.keysSet (getField @"scriptWits" tx))
 
   -- check VKey witnesses
-
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
-  runValidationStatic $ validateVerifiedWits tx
+  runTestOnSignal $ validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
-  runValidation $ validateNeededWitnesses genDelegs utxo tx witsKeyHashes
+  runTest $ validateNeededWitnesses witsVKeyNeeded genDelegs utxo tx witsKeyHashes
 
   -- check metadata hash
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
-  runValidationStatic $ validateMetadata pp tx
+  runTestOnSignal $ validateMetadata pp tx
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
   {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
   coreNodeQuorum <- liftSTS $ asks quorum
-  runValidation $
+  runTest $
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
 
   trans @(Core.EraRule "UTXO" era) $
@@ -398,7 +402,7 @@ validateFailedScripts ::
   forall era.
   ValidateScript era =>
   Core.Tx era ->
-  Validation (NonEmpty (UtxowPredicateFailure era)) ()
+  Test (UtxowPredicateFailure era)
 validateFailedScripts tx = do
   let failedScripts =
         Map.filterWithKey
@@ -409,33 +413,29 @@ validateFailedScripts tx = do
   failureUnless (Map.null failedScripts) $
     ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
 
-{-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
+{-  { s | (_,s) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)    -}
+{-  sNeeded := scriptsNeeded utxo tx                             -}
+{-  sReceived := Map.keysSet (getField @"scriptWits" tx)         -}
 validateMissingScripts ::
   forall era.
-  ( ValidateScript era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   Core.PParams era ->
-  UTxO era ->
-  Core.Tx era ->
-  Validation (NonEmpty (UtxowPredicateFailure era)) ()
-validateMissingScripts pp utxo tx =
-  let sNeeded = scriptsNeeded utxo tx
-      sReceived = Map.keysSet (getField @"scriptWits" tx)
-   in if HardForks.missingScriptsSymmetricDifference pp
-        then
-          sequenceA_
-            [ failureUnless (sNeeded `Set.isSubsetOf` sReceived) $
-                MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived),
-              failureUnless (sReceived `Set.isSubsetOf` sNeeded) $
-                ExtraneousScriptWitnessesUTXOW (sReceived `Set.difference` sNeeded)
-            ]
-        else
-          failureUnless (sNeeded == sReceived) $
-            MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
+  Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (Crypto era)) ->
+  Test (UtxowPredicateFailure era)
+validateMissingScripts pp sNeeded sReceived =
+  if HardForks.missingScriptsSymmetricDifference pp
+    then
+      sequenceA_
+        [ failureUnless (sNeeded `Set.isSubsetOf` sReceived) $
+            MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived),
+          failureUnless (sReceived `Set.isSubsetOf` sNeeded) $
+            ExtraneousScriptWitnessesUTXOW (sReceived `Set.difference` sNeeded)
+        ]
+    else
+      failureUnless (sNeeded == sReceived) $
+        MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
 
 -- | Given a ledger state, determine if the UTxO witnesses in a given
 --  transaction are correct.
@@ -447,7 +447,7 @@ validateVerifiedWits ::
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody)
   ) =>
   Core.Tx era ->
-  Validation (NonEmpty (UtxowPredicateFailure era)) ()
+  Test (UtxowPredicateFailure era)
 validateVerifiedWits tx =
   case failed <> failedBootstrap of
     [] -> pure ()
@@ -466,6 +466,7 @@ validateVerifiedWits tx =
           (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
           (Set.toList $ getField @"bootWits" tx)
 
+{-
 validateNeededWitnesses ::
   ( Era era,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -477,9 +478,26 @@ validateNeededWitnesses ::
   UTxO era ->
   Core.Tx era ->
   WitHashes (Crypto era) ->
-  Validation (NonEmpty (UtxowPredicateFailure era)) ()
+  Test (UtxowPredicateFailure era)
 validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
   let needed = witsVKeyNeeded utxo tx genDelegs
+      missingWitnesses = diffWitHashes needed witsKeyHashes
+   in failureUnless (nullWitHashes missingWitnesses) $
+        MissingVKeyWitnessesUTXOW missingWitnesses
+-}
+
+-- How to compute the set of witnessed needed (witsvkeyneeded) varies
+-- from Era to Era, so we parameterise over that function in this test.
+-- That allows it to be used in many Eras.
+validateNeededWitnesses ::
+  (UTxO era -> Core.Tx era -> GenDelegs (Crypto era) -> WitHashes (Crypto era)) ->
+  GenDelegs (Crypto era) ->
+  UTxO era ->
+  Core.Tx era ->
+  WitHashes (Crypto era) ->
+  Test (UtxowPredicateFailure era)
+validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
+  let needed = witsvkeyneeded utxo tx genDelegs
       missingWitnesses = diffWitHashes needed witsKeyHashes
    in failureUnless (nullWitHashes missingWitnesses) $
         MissingVKeyWitnessesUTXOW missingWitnesses
@@ -565,7 +583,7 @@ validateMetadata ::
   ) =>
   Core.PParams era ->
   Core.Tx era ->
-  Validation (NonEmpty (UtxowPredicateFailure era)) ()
+  Test (UtxowPredicateFailure era)
 validateMetadata pp tx =
   let txbody = getField @"body" tx
    in case (getField @"adHash" txbody, getField @"auxiliaryData" tx) of
@@ -594,7 +612,7 @@ validateMIRInsufficientGenesisSigs ::
   Word64 ->
   WitHashes (Crypto era) ->
   Core.Tx era ->
-  Validation (NonEmpty (UtxowPredicateFailure era)) ()
+  Test (UtxowPredicateFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =
   let genDelegates =
         Set.fromList $ asWitness . genDelegKeyHash <$> Map.elems genMapping
@@ -609,3 +627,15 @@ validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKey
    in failureUnless
         (not (null mirCerts) ==> Set.size genSig >= fromIntegral coreNodeQuorum)
         $ MIRInsufficientGenesisSigsUTXOW genSig
+
+-- ===================================================
+-- Inject Instances
+
+instance Inject (UtxowPredicateFailure era) (UtxowPredicateFailure era) where
+  inject = id
+
+instance
+  PredicateFailure (Core.EraRule "UTXO" era) ~ UtxoPredicateFailure era =>
+  Inject (UtxoPredicateFailure era) (UtxowPredicateFailure era)
+  where
+  inject = UtxoFailure

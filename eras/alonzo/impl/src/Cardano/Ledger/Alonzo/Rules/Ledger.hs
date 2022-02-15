@@ -17,7 +17,7 @@ module Cardano.Ledger.Alonzo.Rules.Ledger
   )
 where
 
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent, AlonzoPredFail, AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent, AlonzoUTXOW, UtxowPredicateFail)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
@@ -176,7 +176,7 @@ instance
 instance
   ( Era era,
     STS (AlonzoUTXOW era),
-    PredicateFailure (Core.EraRule "UTXOW" era) ~ AlonzoPredFail era,
+    PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFail era,
     Event (Core.EraRule "UTXOW" era) ~ AlonzoEvent era
   ) =>
   Embed (AlonzoUTXOW era) (AlonzoLEDGER era)

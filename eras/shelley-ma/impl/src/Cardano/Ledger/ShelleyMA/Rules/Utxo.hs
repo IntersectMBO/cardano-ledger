@@ -25,7 +25,12 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Rules.ValidationMode (runValidation, runValidationTransMaybe)
+import Cardano.Ledger.Rules.ValidationMode
+  ( Inject (..),
+    InjectMaybe (..),
+    Test,
+    runTest,
+  )
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -61,7 +66,6 @@ import Data.Coders
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
 import Data.Int (Int64)
-import Data.List.NonEmpty (NonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -152,20 +156,6 @@ data UtxoPredicateFailure era
       ![Core.TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
-fromShelleyFailure :: Shelley.UtxoPredicateFailure era -> Maybe (UtxoPredicateFailure era)
-fromShelleyFailure = \case
-  Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
-  Shelley.ExpiredUTxO {} -> Nothing -- Rule was replaced with `OutsideValidityIntervalUTxO`
-  Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
-  Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
-  Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
-  Shelley.ValueNotConservedUTxO {} -> Nothing -- Rule was updated
-  Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
-  Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
-  Shelley.OutputTooSmallUTxO {} -> Nothing -- Rule was updated
-  Shelley.UpdateFailure ppf -> Just $ UpdateFailure ppf
-  Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
-
 deriving stock instance
   ( Shelley.TransUTxOState Show era,
     TransValue Show era,
@@ -244,48 +234,48 @@ utxoTransition = do
   let txb = getField @"body" tx
 
   {- ininterval slot (txvld tx) -}
-  runValidation $ validateOutsideValidityIntervalUTxO slot txb
+  runTest $ validateOutsideValidityIntervalUTxO slot txb
 
   {- txins txb ≠ ∅ -}
-  runValidationTransMaybe fromShelleyFailure $ Shelley.validateInputSetEmptyUTxO txb
+  -- runValidationTransMaybe fromShelleyFailure $ Shelley.validateInputSetEmptyUTxO txb
+  runTest $ Shelley.validateInputSetEmptyUTxO txb
 
   {- minfee pp tx ≤ txfee txb -}
-  runValidationTransMaybe fromShelleyFailure $ Shelley.validateFeeTooSmallUTxO pp tx
+  runTest $ Shelley.validateFeeTooSmallUTxO pp tx
 
   {- txins txb ⊆ dom utxo -}
-  runValidationTransMaybe fromShelleyFailure $
-    Shelley.validateBadInputsUTxO utxo $ getField @"inputs" txb
+  runTest $ Shelley.validateBadInputsUTxO utxo $ getField @"inputs" txb
 
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runValidationTransMaybe fromShelleyFailure $ Shelley.validateWrongNetwork netId txb
+  runTest $ Shelley.validateWrongNetwork netId txb
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
-  runValidationTransMaybe fromShelleyFailure $ Shelley.validateWrongNetworkWithdrawal netId txb
+  runTest $ Shelley.validateWrongNetworkWithdrawal netId txb
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runValidation $ validateValueNotConservedUTxO pp utxo stakepools txb
+  runTest $ validateValueNotConservedUTxO pp utxo stakepools txb
 
   -- process Protocol Parameter Update Proposals
   ppup' <-
     trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
-  runValidation $ validateTriesToForgeADA txb
+  runTest $ validateTriesToForgeADA txb
 
   let outputs = txouts txb
   {- ∀ txout ∈ txouts txb, getValue txout ≥ inject (scaledMinDeposit v (minUTxOValue pp)) -}
-  runValidation $ validateOutputTooSmallUTxO pp outputs
+  runTest $ validateOutputTooSmallUTxO pp outputs
 
   {- ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ MaxValSize -}
   -- MaxValSize = 4000
-  runValidation $ validateOutputTooBigUTxO outputs
+  runTest $ validateOutputTooBigUTxO outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runValidationTransMaybe fromShelleyFailure $ Shelley.validateOutputBootAddrAttrsTooBig outputs
+  runTest $ Shelley.validateOutputBootAddrAttrsTooBig outputs
 
   {- txsize tx ≤ maxTxSize pp -}
-  runValidationTransMaybe fromShelleyFailure $ Shelley.validateMaxTxSizeUTxO pp tx
+  runTest $ Shelley.validateMaxTxSizeUTxO pp tx
 
   let refunded = Shelley.keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
@@ -299,7 +289,7 @@ validateOutsideValidityIntervalUTxO ::
   HasField "vldt" (Core.TxBody era) ValidityInterval =>
   SlotNo ->
   Core.TxBody era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateOutsideValidityIntervalUTxO slot txb =
   failureUnless (inInterval slot (txvldt txb)) $
     OutsideValidityIntervalUTxO (txvldt txb) slot
@@ -313,7 +303,7 @@ validateOutsideValidityIntervalUTxO slot txb =
 validateTriesToForgeADA ::
   (Val.Val (Core.Value era), HasField "mint" (Core.TxBody era) (Core.Value era)) =>
   Core.TxBody era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateTriesToForgeADA txb =
   failureUnless (Val.coin (getField @"mint" txb) == Val.zero) TriesToForgeADA
 
@@ -325,7 +315,7 @@ validateOutputTooBigUTxO ::
     ToCBOR (Core.Value era)
   ) =>
   UTxO era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateOutputTooBigUTxO (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
@@ -348,7 +338,7 @@ validateOutputTooSmallUTxO ::
   ) =>
   Core.PParams era ->
   UTxO era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
@@ -378,7 +368,7 @@ validateValueNotConservedUTxO ::
   UTxO era ->
   Map.Map (KeyHash 'StakePool (Crypto era)) a ->
   Core.TxBody era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateValueNotConservedUTxO pp utxo stakepools txb =
   failureUnless (consumedValue == producedValue) $
     ValueNotConservedUTxO consumedValue producedValue
@@ -538,3 +528,39 @@ instance
           outs <- decodeList fromCBOR
           pure (2, OutputTooBigUTxO outs)
         k -> invalidKey k
+
+-- ===============================================
+-- Inject instances
+
+fromShelleyFailure :: Shelley.UtxoPredicateFailure era -> Maybe (UtxoPredicateFailure era)
+fromShelleyFailure = \case
+  Shelley.BadInputsUTxO ins -> Just $ BadInputsUTxO ins
+  Shelley.ExpiredUTxO {} -> Nothing -- Rule was replaced with `OutsideValidityIntervalUTxO`
+  Shelley.MaxTxSizeUTxO a m -> Just $ MaxTxSizeUTxO a m
+  Shelley.InputSetEmptyUTxO -> Just InputSetEmptyUTxO
+  Shelley.FeeTooSmallUTxO mf af -> Just $ FeeTooSmallUTxO mf af
+  Shelley.ValueNotConservedUTxO {} -> Nothing -- Rule was updated
+  Shelley.WrongNetwork n as -> Just $ WrongNetwork n as
+  Shelley.WrongNetworkWithdrawal n as -> Just $ WrongNetworkWithdrawal n as
+  Shelley.OutputTooSmallUTxO {} -> Nothing -- Rule was updated
+  Shelley.UpdateFailure ppf -> Just $ UpdateFailure ppf
+  Shelley.OutputBootAddrAttrsTooBig outs -> Just $ OutputBootAddrAttrsTooBig outs
+
+instance InjectMaybe (Shelley.UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+  injectMaybe = fromShelleyFailure
+
+instance Inject (UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+  inject = id
+
+instance Inject (Shelley.UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+  inject (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins
+  inject (Shelley.ExpiredUTxO ttl current) = OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
+  inject (Shelley.MaxTxSizeUTxO a m) = MaxTxSizeUTxO a m
+  inject (Shelley.InputSetEmptyUTxO) = InputSetEmptyUTxO
+  inject (Shelley.FeeTooSmallUTxO mf af) = FeeTooSmallUTxO mf af
+  inject (Shelley.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
+  inject (Shelley.WrongNetwork n as) = WrongNetwork n as
+  inject (Shelley.WrongNetworkWithdrawal n as) = WrongNetworkWithdrawal n as
+  inject (Shelley.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
+  inject (Shelley.UpdateFailure x) = UpdateFailure x
+  inject (Shelley.OutputBootAddrAttrsTooBig outs) = OutputTooBigUTxO outs

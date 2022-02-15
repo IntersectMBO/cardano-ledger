@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhase
 import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..), AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
@@ -152,7 +152,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     mkVRFKeyPair,
     runShelleyBase,
   )
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 -- =======================
@@ -1811,14 +1811,14 @@ alonzoUTXOWexamples =
                         NoWitness (alwaysSucceedsHash 2 pf),
                         NoWitness (alwaysSucceedsHash 2 pf)
                       ],
-                    WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      alwaysSucceedsHash 2 pf,
                     -- these redeemers are associated with phase-1 scripts
                     ExtraRedeemers
                       [ RdmrPtr Tag.Mint 1,
                         RdmrPtr Tag.Cert 1,
                         RdmrPtr Tag.Rewrd 0
-                      ]
+                      ],
+                    WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
+                      alwaysSucceedsHash 2 pf
                   ]
               ),
           testCase "redeemer with incorrect label" $
@@ -2208,3 +2208,6 @@ testEvaluateTransactionFee =
 alonzoAPITests :: TestTree
 alonzoAPITests =
   testGroup "Alonzo API" [testCase "evaluateTransactionFee" testEvaluateTransactionFee]
+
+main :: IO ()
+main = defaultMain alonzoUTXOWexamples

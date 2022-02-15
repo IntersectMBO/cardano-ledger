@@ -1,3 +1,5 @@
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -24,6 +26,14 @@ module Cardano.Ledger.Rules.ValidationMode
     runValidationStaticTrans,
     runValidationStaticTransMaybe,
     mapMaybeValidation,
+
+    -- * Interface for independent Tests
+    Inject (..),
+    InjectMaybe (..),
+    Test,
+    runTest,
+    runTestMaybe,
+    runTestOnSignal,
   )
 where
 
@@ -156,3 +166,22 @@ mapMaybeValidation toPredicateFailureMaybe =
     . NE.nonEmpty
     . fromFailure []
     . first (mapMaybe toPredicateFailureMaybe . NE.toList)
+
+-- ===========================================================
+
+class Inject t s where
+  inject :: t -> s
+
+class InjectMaybe t s where
+  injectMaybe :: t -> Maybe s
+
+type Test failure = Validation (NonEmpty failure) ()
+
+runTest :: Inject t (PredicateFailure sts) => Test t -> Rule sts ctx ()
+runTest x = runValidationTrans inject x
+
+runTestOnSignal :: Inject t (PredicateFailure sts) => Test t -> Rule sts ctx ()
+runTestOnSignal x = runValidationStaticTrans inject x
+
+runTestMaybe :: InjectMaybe t (PredicateFailure sts) => Test t -> Rule sts ctx ()
+runTestMaybe x = runValidationTransMaybe injectMaybe x

@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
+import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
@@ -303,7 +303,7 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (AlonzoEra c)) where
         CollateralContainsNonADA <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (AlonzoPredFail (AlonzoEra c)) where
+instance Mock c => Arbitrary (UtxowPredicateFail (AlonzoEra c)) where
   arbitrary =
     oneof
       [ WrappedShelleyEraFailure <$> arbitrary,
