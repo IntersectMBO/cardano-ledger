@@ -201,8 +201,8 @@ obligation' (Allegra _) = obligation @c @(Shelley.PParams era) @(ViewMap c)
 obligation' (Shelley _) = obligation @c @(Shelley.PParams era) @(ViewMap c)
 
 minfee' :: forall era. Proof era -> Core.PParams era -> Core.Tx era -> Coin
-minfee' (Alonzo _) = minfee @era @(ValidatedTx)
-minfee' (Babbage _) = minfee @era @(ValidatedTx)
+minfee' (Alonzo _) = minfee
+minfee' (Babbage _) = minfee
 minfee' (Mary _) = Shelley.minfee
 minfee' (Allegra _) = Shelley.minfee
 minfee' (Shelley _) = Shelley.minfee

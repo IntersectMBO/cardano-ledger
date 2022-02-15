@@ -275,7 +275,7 @@ ppUtxoPredicateFailure (Alonzo.OutputTooBigUTxO xs) =
         ( \(a, b, c) ->
             ppRecord
               ""
-              [("actual size", ppInt a), ("PParam max value", ppInt b), ("TxOut", prettyTxOut c)]
+              [("actual size", ppInteger a), ("PParam max value", ppInteger b), ("TxOut", prettyTxOut c)]
         )
         xs
     ]

@@ -27,7 +27,6 @@ import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
-import Test.Cardano.Ledger.Generic.Parametric (Parametric)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (Testable (..), testProperties)
@@ -105,8 +104,7 @@ instance ReflectC C_Crypto where
 class
   ( Era era,
     ValidateScript era,
-    ReflectC (Crypto era),
-    Parametric era
+    ReflectC (Crypto era)
   ) =>
   Reflect era
   where
