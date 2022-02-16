@@ -55,7 +55,7 @@ getDatum tx (UTxO m) sp = case hasTxIn sp of
   Just txin ->
     case SplitMap.lookup txin m of
       Nothing -> []
-      Just (TxOut _ _ datum) ->
+      Just (TxOut _ _ datum _) ->
         case datum of
           NoDatum -> []
           Datum d -> [d]

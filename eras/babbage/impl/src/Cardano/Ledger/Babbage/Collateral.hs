@@ -31,6 +31,7 @@ import qualified Data.Compact.SplitMap as SplitMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
+import Cardano.Ledger.BaseTypes(txIxFromIntegral)
 
 -- ============================================================
 
@@ -69,7 +70,7 @@ collBalance :: forall era. Era era => TxBody era -> UTxO era -> Core.Value era
 collBalance txb (UTxO m) =
   case collateralReturn' txb of
     SNothing -> colbal
-    SJust (TxOut _ retval _) -> colbal <-> retval
+    SJust (TxOut _ retval _ _) -> colbal <-> retval
   where
     collateral = UTxO (collateralInputs' @era txb ◁ m)
     colbal = balance @era collateral
@@ -86,7 +87,9 @@ collOuts txb =
     SNothing -> UTxO SplitMap.empty
     SJust txout -> UTxO (SplitMap.singleton (TxIn (txid txb) index) txout)
       where
-        index = fromIntegral (length (outputs' txb))
+        index = case txIxFromIntegral (length (outputs' txb)) of
+                   Just ix -> ix
+                   Nothing -> error ("Every (length (outputs' txb)) should fit in a TxIx.")
 
 feesOK :: Core.PParams era -> Core.Tx era -> UTxO era -> Bool
 feesOK _pparams _tx _utxo = undefined
