@@ -16,9 +16,9 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
     alonzoUTXOWexamples,
     collectOrderingAlonzo,
   )
-import Test.Cardano.Ledger.Generic.Properties (genericProperties)
+-- import qualified Test.Cardano.Ledger.Generic.Properties as Old(genericProperties)
 import Test.Cardano.Ledger.Model.Properties (modelUnitTests_)
-import Test.Cardano.Ledger.Properties (alonzoProperties)
+import Test.Cardano.Ledger.Properties (genericProperties)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -42,10 +42,10 @@ mainTests =
           alonzoBBODYexamples,
           alonzoAPITests,
           collectOrderingAlonzo,
-          alonzoProperties,
+          genericProperties,
           modelUnitTests_
-        ],
-      genericProperties
+        ]
+      -- ,Old.genericProperties
     ]
 
 -- main entry point
