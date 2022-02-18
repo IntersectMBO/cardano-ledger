@@ -22,7 +22,7 @@ module Test.Cardano.Ledger.Generic.Properties where
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, binaryDataToData, hashData)
-import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
@@ -111,7 +111,7 @@ import Data.Functor
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (catMaybes, fromJust, mapMaybe)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
@@ -122,7 +122,6 @@ import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
 import GHC.Stack
 import Numeric.Natural
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Generic.Fields hiding (Mint)
@@ -602,7 +601,7 @@ genPlutusScript proof tag = do
         | otherwise = 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
-  language <- lift $ elements (Set.toList nonNativeLanguages)
+  language <- lift $ elements (languages proof)
   script <-
     if isValid
       then alwaysSucceeds @era language . (+ numArgs) . getNonNegative <$> lift arbitrary
@@ -1211,11 +1210,7 @@ genTxAndLEDGERState proof = do
           proof
           [ MinfeeA minfeeA,
             MinfeeB minfeeB,
-            Costmdls $
-              Map.fromList
-                [ (PlutusV1, CostModel $ 0 <$ fromJust defaultCostModelParams),
-                  (PlutusV2, CostModel $ 0 <$ fromJust defaultCostModelParams)
-                ],
+            defaultCostModels proof,
             MaxValSize 1000,
             MaxTxSize $ fromIntegral (maxBound :: Int),
             MaxTxExUnits maxTxExUnits,
@@ -1293,11 +1288,7 @@ setup proof = do
           proof
           [ MinfeeA minfeeA,
             MinfeeB minfeeB,
-            Costmdls $
-              Map.fromList
-                [ (PlutusV1, CostModel $ 0 <$ fromJust defaultCostModelParams),
-                  (PlutusV2, CostModel $ 0 <$ fromJust defaultCostModelParams)
-                ],
+            defaultCostModels proof,
             MaxValSize 1000,
             MaxTxSize $ fromIntegral (maxBound :: Int),
             MaxTxExUnits maxTxExUnits,

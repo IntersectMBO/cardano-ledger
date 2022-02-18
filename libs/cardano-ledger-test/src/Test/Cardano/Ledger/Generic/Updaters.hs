@@ -26,6 +26,7 @@ module Test.Cardano.Ledger.Generic.Updaters where
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams' (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..))
 import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
@@ -45,10 +46,12 @@ import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe (fromJust)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
 
@@ -394,3 +397,24 @@ newScriptIntegrityHash (Alonzo _) pp ls rds dats =
     SJust x -> SJust x
     SNothing -> SNothing
 newScriptIntegrityHash _wit _pp _ls _rds _dats = SNothing
+
+defaultCostModels :: Proof era -> PParamsField era
+defaultCostModels (Shelley _) = Costmdls mempty
+defaultCostModels (Allegra _) = Costmdls mempty
+defaultCostModels (Mary _) = Costmdls mempty
+defaultCostModels (Alonzo _) =
+  Costmdls . Map.singleton PlutusV1 . CostModel $
+    0 <$ fromJust defaultCostModelParams
+defaultCostModels (Babbage _) =
+  Costmdls . Map.fromList $
+    [ (PlutusV1, CostModel $ 0 <$ fromJust defaultCostModelParams),
+      (PlutusV2, CostModel $ 0 <$ fromJust defaultCostModelParams)
+      -- Note that the V2 cost model will soon be different than V1
+    ]
+
+languages :: Proof era -> [Language]
+languages (Shelley _) = []
+languages (Allegra _) = []
+languages (Mary _) = []
+languages (Alonzo _) = [PlutusV1]
+languages (Babbage _) = [PlutusV1, PlutusV2]

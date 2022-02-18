@@ -730,7 +730,7 @@ decodeCIC :: (FromCBOR (Annotator b)) => T.Text -> Decoder s b
 decodeCIC s = do
   lbs <- fromCBOR
   case decodeAnnotator s fromCBOR lbs of
-    Left _ -> fail "foo"
+    Left e -> fail (show e)
     Right x -> pure x
 
 encodeTxBodyRaw ::
@@ -955,6 +955,9 @@ instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMay
 instance (Era era) => HasField "datum" (TxOut era) (StrictMaybe (Data era)) where
   getField = maybeToStrictMaybe . txOutData
 
+instance (Era era, s ~ Core.Script era) => HasField "referenceScript" (TxOut era) (StrictMaybe s) where
+  getField = maybeToStrictMaybe . txOutScript
+
 getBabbageTxOutEitherAddr ::
   HashAlgorithm (CC.ADDRHASH (Crypto era)) =>
   TxOut era ->
@@ -980,4 +983,9 @@ txOutDataHash = \case
   TxOutCompactDH' _ _ dh -> Just dh
   TxOutCompactDatum _ _ binaryData -> Just $! hashBinaryData binaryData
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 -> decodeDataHash32 dataHash32
+  _ -> Nothing
+
+txOutScript :: TxOut era -> Maybe (Core.Script era)
+txOutScript = \case
+  TxOutCompactRefScript' _ _ _ s -> Just $! s
   _ -> Nothing

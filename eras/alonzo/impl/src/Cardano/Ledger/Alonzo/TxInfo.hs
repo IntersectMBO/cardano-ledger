@@ -19,10 +19,10 @@ import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
 import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..), unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), certIxToInt, txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core as Core (PParams, TxBody, TxOut, Value)
+import Cardano.Ledger.Core as Core (PParams, Tx, TxBody, TxOut, Value)
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     Ptr (..),
@@ -95,6 +95,10 @@ data TranslationError
   | ByronOutputInContext
   | TranslationLogicErrorInput
   | TranslationLogicErrorRedeemer
+  | TranslationLogicErrorDoubleDatum
+  | LanguageNotSupported
+  | InlineDatumsNotSupported
+  | ReferenceScriptsNotSupported
   deriving (Eq, Show, Generic, NoThunks)
 
 instance ToCBOR TranslationError where
@@ -102,6 +106,10 @@ instance ToCBOR TranslationError where
   toCBOR ByronOutputInContext = encode $ Sum ByronOutputInContext 1
   toCBOR TranslationLogicErrorInput = encode $ Sum TranslationLogicErrorInput 2
   toCBOR TranslationLogicErrorRedeemer = encode $ Sum TranslationLogicErrorRedeemer 3
+  toCBOR TranslationLogicErrorDoubleDatum = encode $ Sum LanguageNotSupported 4
+  toCBOR LanguageNotSupported = encode $ Sum LanguageNotSupported 5
+  toCBOR InlineDatumsNotSupported = encode $ Sum InlineDatumsNotSupported 6
+  toCBOR ReferenceScriptsNotSupported = encode $ Sum ReferenceScriptsNotSupported 7
 
 instance FromCBOR TranslationError where
   fromCBOR = decode (Summands "TranslationError" dec)
@@ -110,6 +118,10 @@ instance FromCBOR TranslationError where
       dec 1 = SumD ByronOutputInContext
       dec 2 = SumD TranslationLogicErrorInput
       dec 3 = SumD TranslationLogicErrorRedeemer
+      dec 4 = SumD TranslationLogicErrorDoubleDatum
+      dec 5 = SumD LanguageNotSupported
+      dec 6 = SumD InlineDatumsNotSupported
+      dec 7 = SumD ReferenceScriptsNotSupported
       dec n = Invalid n
 
 transDataHash :: StrictMaybe (DataHash c) -> Maybe PV1.DatumHash
@@ -313,23 +325,6 @@ getWitVKeyHash =
 transDataPair :: (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
 transDataPair (x, y) = (transDataHash' x, PV1.Datum (PV1.dataToBuiltinData (getPlutusData y)))
 
-transRedeemer :: Data era -> PV2.Redeemer
-transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
-
-transRedeemerPtr ::
-  ( Era era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
-  ) =>
-  (Core.TxBody era) ->
-  (RdmrPtr, (Data era, ExUnits)) ->
-  Either TranslationError (PV2.ScriptPurpose, PV2.Redeemer)
-transRedeemerPtr txb (ptr, (d, _)) =
-  case rdptrInv txb ptr of
-    SNothing -> Left TranslationLogicErrorRedeemer
-    SJust sp -> Right (transScriptPurpose sp, transRedeemer d)
-
 transExUnits :: ExUnits -> PV1.ExBudget
 transExUnits (ExUnits mem steps) =
   PV1.ExBudget (PV1.ExCPU (fromIntegral steps)) (PV1.ExMemory (fromIntegral mem))
@@ -359,17 +354,25 @@ data VersionedTxInfo
   | TxInfoPV2 PV2.TxInfo
   deriving (Show, Eq)
 
--- ===================================
-
 -- | Compute a Digest of the current transaction to pass to the script
 --   This is the major component of the valContext function.
-txInfo ::
-  forall era tx m.
+class HasTxInfo era where
+  txInfo ::
+    Monad m =>
+    Core.PParams era ->
+    Language ->
+    EpochInfo m ->
+    SystemStart ->
+    UTxO era ->
+    Core.Tx era ->
+    m (Either TranslationError VersionedTxInfo)
+
+alonzoTxInfo ::
+  forall era m.
   ( Era era,
     Monad m,
     Value era ~ Mary.Value (Crypto era),
-    HasField "body" tx (Core.TxBody era),
-    HasField "wits" tx (TxWitness era),
+    HasField "wits" (Core.Tx era) (TxWitness era),
     HasField "datahash" (TxOut era) (StrictMaybe (SafeHash (Crypto era) EraIndependentData)),
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -384,13 +387,13 @@ txInfo ::
   EpochInfo m ->
   SystemStart ->
   UTxO era ->
-  tx ->
+  Core.Tx era ->
   m (Either TranslationError VersionedTxInfo)
-txInfo pp lang ei sysS utxo tx = do
+alonzoTxInfo pp lang ei sysS utxo tx = do
   timeRange <- transVITime pp ei sysS interval
   pure $
-    case (lang, HardForks.failInPresenceOfByronAddress pp) of
-      (PlutusV1, False) ->
+    case lang of
+      PlutusV1 ->
         Right . TxInfoPV1 $
           PV1.TxInfo
             { PV1.txInfoInputs = rights $ map (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
@@ -404,40 +407,7 @@ txInfo pp lang ei sysS utxo tx = do
               PV1.txInfoData = map transDataPair datpairs,
               PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
             }
-      (PlutusV1, True) -> do
-        inputs'' <- mapM (txInfoIn utxo) (Set.toList (getField @"inputs" tbody))
-        outputs'' <- mapM txInfoOut (foldr (:) [] outs)
-        pure . TxInfoPV1 $
-          PV1.TxInfo
-            { PV1.txInfoInputs = inputs'',
-              PV1.txInfoOutputs = outputs'',
-              PV1.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
-              PV1.txInfoMint = transValue forge,
-              PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
-              PV1.txInfoWdrl = Map.toList (transWdrl (getField @"wdrls" tbody)),
-              PV1.txInfoValidRange = timeRange,
-              PV1.txInfoSignatories = map transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
-              PV1.txInfoData = map transDataPair datpairs,
-              PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
-            }
-      (PlutusV2, _) -> do
-        inputs'' <- mapM (txInfoIn utxo) (Set.toList (getField @"inputs" tbody))
-        outputs'' <- mapM txInfoOut (foldr (:) [] outs)
-        rdmrs' <- mapM (transRedeemerPtr tbody) rdmrs
-        pure . TxInfoPV2 $
-          PV2.TxInfo
-            { PV2.txInfoInputs = inputs'',
-              PV2.txInfoOutputs = outputs'',
-              PV2.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
-              PV2.txInfoMint = transValue forge,
-              PV2.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
-              PV2.txInfoWdrl = PV2.fromList $ Map.toList (transWdrl (getField @"wdrls" tbody)),
-              PV2.txInfoValidRange = timeRange,
-              PV2.txInfoSignatories = map transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
-              PV2.txInfoRedeemers = PV2.fromList rdmrs',
-              PV2.txInfoData = PV2.fromList $ map transDataPair datpairs,
-              PV2.txInfoId = PV2.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
-            }
+      _ -> Left LanguageNotSupported
   where
     tbody :: Core.TxBody era
     tbody = getField @"body" tx
@@ -448,7 +418,6 @@ txInfo pp lang ei sysS utxo tx = do
     interval = getField @"vldt" tbody
 
     datpairs = Map.toList (unTxDats $ txdats' _witnesses)
-    rdmrs = Map.toList (unRedeemers $ txrdmrs' _witnesses)
 
 -- | valContext pairs transaction data with a script purpose.
 --   See figure 22 of the Alonzo specification.

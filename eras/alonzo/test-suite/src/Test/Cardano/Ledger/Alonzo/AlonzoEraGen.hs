@@ -122,12 +122,6 @@ phase2scripts3Arg =
       (P.I 1)
       (P.I 1, bigMem, bigStep)
       True,
-    TwoPhase3ArgInfo
-      (alwaysSucceeds PlutusV2 3)
-      (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV2 3))
-      (P.I 1)
-      (P.I 1, bigMem, bigStep)
-      True,
     TwoPhase3ArgInfo guessTheNumber3 (hashScript @(AlonzoEra c) guessTheNumber3) (P.I 9) (P.I 9, bigMem, bigStep) True,
     TwoPhase3ArgInfo evendata3 (hashScript @(AlonzoEra c) evendata3) (P.I 8) (P.I 8, bigMem, bigStep) True,
     TwoPhase3ArgInfo odddata3 (hashScript @(AlonzoEra c) odddata3) (P.I 9) (P.I 9, bigMem, bigStep) True,
@@ -135,12 +129,6 @@ phase2scripts3Arg =
     TwoPhase3ArgInfo
       (alwaysFails PlutusV1 3)
       (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 3))
-      (P.I 1)
-      (P.I 1, bigMem, bigStep)
-      False,
-    TwoPhase3ArgInfo
-      (alwaysFails PlutusV2 3)
-      (hashScript @(AlonzoEra c) (alwaysFails PlutusV2 3))
       (P.I 1)
       (P.I 1, bigMem, bigStep)
       False
@@ -153,16 +141,10 @@ phase2scripts2Arg =
       (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV1 2))
       (P.I 1, bigMem, bigStep)
       True,
-    TwoPhase2ArgInfo
-      (alwaysSucceeds PlutusV2 2)
-      (hashScript @(AlonzoEra c) (alwaysSucceeds PlutusV2 2))
-      (P.I 1, bigMem, bigStep)
-      True,
     TwoPhase2ArgInfo oddRedeemer2 (hashScript @(AlonzoEra c) oddRedeemer2) (P.I 13, bigMem, bigStep) True,
     TwoPhase2ArgInfo evenRedeemer2 (hashScript @(AlonzoEra c) evenRedeemer2) (P.I 14, bigMem, bigStep) True,
     TwoPhase2ArgInfo redeemerIs102 (hashScript @(AlonzoEra c) redeemerIs102) (P.I 10, bigMem, bigStep) True,
-    TwoPhase2ArgInfo (alwaysFails PlutusV1 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 2)) (P.I 1, bigMem, bigStep) False,
-    TwoPhase2ArgInfo (alwaysFails PlutusV2 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV2 2)) (P.I 1, bigMem, bigStep) False
+    TwoPhase2ArgInfo (alwaysFails PlutusV1 2) (hashScript @(AlonzoEra c) (alwaysFails PlutusV1 2)) (P.I 1, bigMem, bigStep) False
   ]
 
 phase2scripts3ArgSucceeds :: forall c. Mock c => Script (AlonzoEra c) -> Bool
@@ -320,15 +302,6 @@ genAlonzoPParamsDelta ::
 genAlonzoPParamsDelta constants pp = do
   shelleypp <- genShelleyPParamsDelta @(MaryEra c) constants (Alonzo.retractPP (Coin 100) pp)
   ada <- genM (Coin <$> choose (1, 5))
-  cost <-
-    genM
-      ( pure
-          ( Map.fromList
-              [ (PlutusV1, freeCostModel),
-                (PlutusV2, freeCostModel)
-              ] -- TODO what is a better assumption for this?
-          )
-      )
   let genPrice = unsafeBoundRational . (% 100) <$> choose (0, 200)
   price <- genM (Prices <$> genPrice <*> genPrice)
   mxTx <- pure SNothing -- genM (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
@@ -336,7 +309,8 @@ genAlonzoPParamsDelta constants pp = do
   -- Not too small for mxV, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
   mxV <- genM (genNatural 4000 5000)
-  let c = SJust 25 -- percent of fee in collateral
+  let cost = SJust $ Map.singleton PlutusV1 freeCostModel
+      c = SJust 25 -- percent of fee in collateral
       mxC = SJust 100 -- max number of inputs in collateral
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
 
@@ -347,18 +321,12 @@ genAlonzoPParams ::
 genAlonzoPParams constants = do
   shelleypp <- Shelley.genPParams @(MaryEra c) constants -- This ensures that "_d" field is not 0.
   ada <- (Coin <$> choose (1, 5))
-  cost <-
-    pure
-      ( Map.fromList
-          [ (PlutusV1, freeCostModel),
-            (PlutusV2, freeCostModel)
-          ] -- TODO change the cost model?
-      )
   price <- pure (Prices minBound minBound) -- (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- pure (ExUnits (5 * bigMem + 1) (5 * bigStep + 1)) -- (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- (ExUnits <$> (genNatural (20 * bigMem + 1) (30 * bigMem + 1)) <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1))
   mxV <- (genNatural 4000 10000) -- This can't be too small. Shelley uses Hard coded 4000
-  let c = 25 -- percent of fee in collateral
+  let cost = Map.singleton PlutusV1 freeCostModel
+      c = 25 -- percent of fee in collateral
       mxC = 100 -- max number of inputs in collateral
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
 

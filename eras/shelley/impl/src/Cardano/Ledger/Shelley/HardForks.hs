@@ -10,7 +10,6 @@ module Cardano.Ledger.Shelley.HardForks
     translateTimeForPlutusScripts,
     missingScriptsSymmetricDifference,
     forgoRewardPrefilter,
-    failInPresenceOfByronAddress,
   )
 where
 
@@ -76,11 +75,3 @@ forgoRewardPrefilter ::
   pp ->
   Bool
 forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > 6
-
--- | Starting with protocol version 7, Plutus V1 scripts will fail if the transaction
--- it is included in contains a Byron address.
-failInPresenceOfByronAddress ::
-  (HasField "_protocolVersion" pp ProtVer) =>
-  pp ->
-  Bool
-failInPresenceOfByronAddress pp = pvMajor (getField @"_protocolVersion" pp) > 6
