@@ -25,7 +25,7 @@ module Cardano.Ledger.TxIn
 where
 
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial, txIxToInt)
+import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import Cardano.Ledger.Core (TxBody)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
@@ -35,7 +35,6 @@ import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Prelude (HeapWords (..), NFData)
 import qualified Cardano.Prelude as HW
 import Data.Compact.HashMap (Keyed (..))
-import Data.Compact.SplitMap as SMap
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -83,11 +82,11 @@ data TxIn crypto = TxIn !(TxId crypto) {-# UNPACK #-} !TxIx
 mkTxInPartial :: HW.HasCallStack => TxId crypto -> Integer -> TxIn crypto
 mkTxInPartial txId = TxIn txId . mkTxIxPartial
 
-instance CC.Crypto crypto => Split (TxIn crypto) where
-  splitKey (TxIn txId txIx) = (txIxToInt txIx, toKey txId)
-  joinKey txIx key =
-    -- `fromIntegral` is safe here, since we have only valid values in the SplitMap:
-    TxIn (fromKey key) (TxIx (fromIntegral txIx))
+-- instance CC.Crypto crypto => Split (TxIn crypto) where
+--   splitKey (TxIn txId txIx) = (txIxToInt txIx, toKey txId)
+--   joinKey txIx key =
+--     -- `fromIntegral` is safe here, since we have only valid values in the SplitMap:
+--     TxIn (fromKey key) (TxIx (fromIntegral txIx))
 
 deriving instance Eq (TxIn crypto)
 

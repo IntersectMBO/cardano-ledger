@@ -700,7 +700,6 @@ genesisAccountState =
 -- | Creates the UTxO for a new ledger with the specified
 -- genesis TxId and transaction outputs.
 genesisCoins ::
-  CC.Crypto (Crypto era) =>
   Ledger.TxId (Crypto era) ->
   [Core.TxOut era] ->
   UTxO era
