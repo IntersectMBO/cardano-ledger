@@ -73,6 +73,7 @@ import Cardano.Binary
     decodeBreakOr,
     decodeListLenOrIndef,
     encodeListLen,
+    serialize,
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
@@ -662,7 +663,7 @@ instance
       <> toCBOR addr
       <> toCBOR cv
       <> toCBOR d
-      <> toCBOR rs
+      <> encodeCIC rs
   toCBOR (TxOutCompactDH addr cv dh) =
     encodeListLen 3
       <> toCBOR addr
@@ -710,28 +711,28 @@ instance
               True -> pure $ TxOutCompactDH a cv dh
               False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
       Just 2 ->
-        TxOutCompact
-          <$> fromCBOR
-          <*> decodeNonNegative
+        TxOutCompact <$> fromCBOR <*> decodeNonNegative
       Just 3 ->
-        TxOutCompactDH
-          <$> fromCBOR
-          <*> decodeNonNegative
-          <*> fromCBOR
+        TxOutCompactDH <$> fromCBOR <*> decodeNonNegative <*> fromCBOR
       Just 4 -> do
-        1 <- fromCBOR @Word8
+        0 <- fromCBOR @Word8
         TxOutCompactDatum <$> fromCBOR <*> decodeNonNegative <*> fromCBOR
       Just 5 -> do
-        1 <- fromCBOR @Word8
+        2 <- fromCBOR @Word8
         TxOutCompactRefScript' <$> fromCBOR <*> decodeNonNegative <*> fromCBOR <*> decodeCIC "Script"
       Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
+-- decodes the CBOR from TkBytes
 decodeCIC :: (FromCBOR (Annotator b)) => T.Text -> Decoder s b
 decodeCIC s = do
   lbs <- fromCBOR
   case decodeAnnotator s fromCBOR lbs of
     Left _ -> fail "foo"
     Right x -> pure x
+
+-- encodes the CBOR as TkBytes
+encodeCIC :: ToCBOR a => a -> Encoding
+encodeCIC = toCBOR . serialize
 
 encodeTxBodyRaw ::
   ( Era era,
