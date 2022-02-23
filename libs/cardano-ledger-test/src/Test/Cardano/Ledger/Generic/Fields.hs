@@ -45,7 +45,7 @@ where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (IsValid (..), ScriptIntegrityHash, ValidatedTx (..))
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..))
@@ -114,7 +114,7 @@ data TxBodyField era
   | Wdrls (Wdrl (Crypto era))
   | Txfee Coin
   | Vldt ValidityInterval
-  | Slot SlotNo
+  | TTL SlotNo
   | Update (StrictMaybe (PP.Update era))
   | ReqSignerHashes (Set (KeyHash 'Witness (Crypto era)))
   | Mint (Core.Value era)
@@ -219,6 +219,8 @@ data PParamsField era
     MaxValSize (Natural)
   | -- | The scaling percentage of the collateral relative to the fee
     CollateralPercentage (Natural)
+  | -- | Maximum number of collateral inputs allowed in a transaction
+    MaxCollateralInputs Natural
 
 -- =========================================================================
 -- Era parametric "empty" or initial values.
@@ -364,8 +366,8 @@ abstractTxBody (Babbage _) (Babbage.TxBody inp col ref out colret totcol cert wd
     AdHash adh,
     Txnetworkid net
   ]
-abstractTxBody (Shelley _) (Shelley.TxBody inp out cert wdrl fee slot up adh) =
-  [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Slot slot, Update up, AdHash adh]
+abstractTxBody (Shelley _) (Shelley.TxBody inp out cert wdrl fee ttlslot up adh) =
+  [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, TTL ttlslot, Update up, AdHash adh]
 abstractTxBody (Mary _) (MA.TxBody inp out cert wdrl fee vldt up adh mnt) =
   [Inputs inp, Outputs out, Certs cert, Wdrls wdrl, Txfee fee, Vldt vldt, Update up, AdHash adh, Mint mnt]
 abstractTxBody (Allegra _) (MA.TxBody inp out cert wdrl fee vldt up adh mnt) =
@@ -614,3 +616,33 @@ pattern DHash' x <-
     DHash' x = DHash (toStrictMaybe x)
 
 -- =======================
+
+{-
+
+import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
+getPParamField :: Proof era -> Core.PParams era -> PParamsField era -> PParamsField era
+getPParamField (Babbage _) pp field =case field of
+  (MinfeeA _) -> MinfeeA (Babbage._minfeeA pp)
+  (MinfeeB _)  ->  MinfeeB (Babbage._minfeeB pp)
+  (MaxBBSize _)  ->  MaxBBSize (Babbage._maxBBSize pp)
+  (MaxTxSize _)  ->  MaxTxSize (Babbage._maxTxSize pp)
+  (MaxBHSize _)  ->  MaxBHSize (Babbage._maxBHSize pp)
+  (KeyDeposit _)  ->  KeyDeposit (Babbage._keyDeposit pp)
+  (PoolDeposit _)  ->  PoolDeposit (Babbage._poolDeposit pp)
+  (EMax _)  ->  EMax (Babbage._eMax pp)
+  (NOpt _)  ->  NOpt (Babbage._nOpt pp)
+  (A0 _)  ->  A0(Babbage._a0 pp)
+  (Rho _)  ->  Rho(Babbage._rho pp)
+  (Tau _)  ->  Tau(Babbage._tau pp)
+  (ProtocolVersion _)  -> ProtocolVersion (Babbage._protocolVersion pp)
+  (MinPoolCost _)  ->  MinPoolCost (Babbage._minPoolCost pp)
+  (Costmdls _) ->  Costmdls(Babbage._costmdls pp)
+  (Prices _)  ->  Prices(Babbage._prices pp)
+  (MaxValSize _) ->  MaxValSize(Babbage._maxValSize pp)
+  (MaxTxExUnits _)  ->  MaxTxExUnits(Babbage._maxTxExUnits pp)
+  (MaxBlockExUnits _)  ->  MaxBlockExUnits(Babbage._maxBlockExUnits pp)
+  (CollateralPercentage _)  ->  CollateralPercentage(Babbage._collateralPercentage pp)
+  (MaxCollateralInputs _)  -> MaxCollateralInputs (Babbage._maxCollateralInputs pp)
+  other -> error ("Babbage does not have this field")
+
+-}

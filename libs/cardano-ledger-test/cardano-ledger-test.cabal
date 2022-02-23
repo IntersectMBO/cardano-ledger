@@ -50,10 +50,11 @@ library
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Fields
-    Test.Cardano.Ledger.Generic.Parametric
     Test.Cardano.Ledger.Generic.Proof
     Test.Cardano.Ledger.Generic.Scriptic
     Test.Cardano.Ledger.Generic.Updaters
+    Test.Cardano.Ledger.Generic.PrettyCore
+    Test.Cardano.Ledger.Generic.Properties
     Test.Cardano.Ledger.Model.API
     Test.Cardano.Ledger.Model.Acnt
     Test.Cardano.Ledger.Model.BaseTypes
