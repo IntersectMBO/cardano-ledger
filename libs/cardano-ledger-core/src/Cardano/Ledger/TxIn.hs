@@ -82,6 +82,7 @@ data TxIn crypto = TxIn !(TxId crypto) {-# UNPACK #-} !TxIx
 mkTxInPartial :: HW.HasCallStack => TxId crypto -> Integer -> TxIn crypto
 mkTxInPartial txId = TxIn txId . mkTxIxPartial
 
+-- This instance might be useful again if we can get SplitMap to perform well.
 -- instance CC.Crypto crypto => Split (TxIn crypto) where
 --   splitKey (TxIn txId txIx) = (txIxToInt txIx, toKey txId)
 --   joinKey txIx key =
