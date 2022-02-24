@@ -905,7 +905,7 @@ getAlonzoTxOutEitherAddr = \case
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-  _ -> error addressErrorMsg
+    | otherwise -> error addressErrorMsg
 
 addressErrorMsg :: String
 addressErrorMsg = "Impossible: Compacted an address of non-standard size"

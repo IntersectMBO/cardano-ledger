@@ -357,6 +357,7 @@ pattern TxOutCompactDH addr vl dh <-
       | otherwise = TxOutCompactDH' cAddr cVal dh
       where
         value = fromCompact cVal
+
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
 -- ======================================
@@ -962,27 +963,43 @@ getBabbageTxOutEitherAddr ::
 getBabbageTxOutEitherAddr = \case
   TxOutCompact' cAddr _ -> Right cAddr
   TxOutCompactDH' cAddr _ _ -> Right cAddr
+  TxOutCompactRefScript cAddr _ _ _ -> Right cAddr
   TxOutCompactDatum cAddr _ _ -> Right cAddr
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
     | otherwise -> error "Impossible: Compacted an address of non-standard size"
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-  _ -> error "Impossible: Compacted an address or a hash of non-standard size"
+    | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"
 
 txOutData :: TxOut era -> Maybe (Data era)
 txOutData = \case
+  TxOutCompact' {} -> Nothing
+  TxOutCompactDH' {} -> Nothing
   TxOutCompactDatum _ _ binaryData -> Just $! binaryDataToData binaryData
-  _ -> Nothing
+  TxOutCompactRefScript _ _ (Datum binaryData) _ -> Just $! binaryDataToData binaryData
+  TxOutCompactRefScript _ _ _ _ -> Nothing
+  TxOut_AddrHash28_AdaOnly {} -> Nothing
+  TxOut_AddrHash28_AdaOnly_DataHash32 {} -> Nothing
 
 txOutDataHash :: Era era => TxOut era -> Maybe (DataHash (Crypto era))
 txOutDataHash = \case
+  TxOutCompact' {} -> Nothing
   TxOutCompactDH' _ _ dh -> Just dh
   TxOutCompactDatum _ _ binaryData -> Just $! hashBinaryData binaryData
+  TxOutCompactRefScript _ _ datum _ ->
+    case datum of
+      NoDatum -> Nothing
+      DatumHash dh -> Just dh
+      Datum binaryData -> Just $! hashBinaryData binaryData
+  TxOut_AddrHash28_AdaOnly {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 -> decodeDataHash32 dataHash32
-  _ -> Nothing
 
 txOutScript :: TxOut era -> Maybe (Core.Script era)
 txOutScript = \case
-  TxOutCompactRefScript' _ _ _ s -> Just s
-  _ -> Nothing
+  TxOutCompact' {} -> Nothing
+  TxOutCompactDH' {} -> Nothing
+  TxOutCompactDatum {} -> Nothing
+  TxOutCompactRefScript _ _ _ s -> Just s
+  TxOut_AddrHash28_AdaOnly {} -> Nothing
+  TxOut_AddrHash28_AdaOnly_DataHash32 {} -> Nothing
