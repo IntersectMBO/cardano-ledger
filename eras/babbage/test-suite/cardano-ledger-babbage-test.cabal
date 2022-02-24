@@ -39,7 +39,6 @@ library
 
   exposed-modules:
     Test.Cardano.Ledger.Babbage.Serialisation.Generators
-    Test.Cardano.Ledger.Babbage.Trace
   build-depends:
     bytestring,
     cardano-binary,

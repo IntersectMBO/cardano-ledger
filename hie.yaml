@@ -104,3 +104,6 @@ cradle:
 
     - path: "libs/set-algebra/test"
       component: "set-algebra:test:tests"
+
+    - path: "libs/cardano-ledger-pretty/src"
+      component: "lib:cardano-ledger-pretty"

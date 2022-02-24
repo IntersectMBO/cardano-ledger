@@ -180,6 +180,7 @@ import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
+import qualified Data.Hashable as Hashable
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map (Map, toList)
 import Data.MemoBytes (MemoBytes (..))
@@ -189,6 +190,7 @@ import Data.Set (Set, toList)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import Data.Word (Word16, Word32, Word64, Word8)
+import Debug.Trace (trace)
 import GHC.Natural (Natural)
 import GHC.Records
 import Prettyprinter
@@ -1661,3 +1663,13 @@ instance PrettyA Bool where
 
 instance PrettyA Int where
   prettyA = ppInt
+
+ptrace :: PrettyA t => String -> t -> a -> a
+ptrace x y z = trace ("\n" ++ show (prettyA y) ++ "\n" ++ show x) z
+
+instance (PrettyA x, PrettyA y) => PrettyA (Map.Map x y) where
+  prettyA m = ppMap prettyA prettyA m
+
+-- | turn on trace appromimately 1 in 'n' times it is called.
+occaisionally :: Hashable.Hashable a => a -> Int -> String -> String
+occaisionally x n s = if mod (Hashable.hash x) n == 0 then trace s s else s

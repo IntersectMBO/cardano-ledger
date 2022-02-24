@@ -48,7 +48,6 @@ library
     Test.Cardano.Ledger.Alonzo.Serialisation.Generators
     Test.Cardano.Ledger.Alonzo.AlonzoEraGen
     Test.Cardano.Ledger.Alonzo.Scripts
-    Test.Cardano.Ledger.Alonzo.Trace
     Test.Cardano.Ledger.Alonzo.PlutusScripts
   build-depends:
     bytestring,
