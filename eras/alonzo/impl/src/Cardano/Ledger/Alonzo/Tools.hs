@@ -186,7 +186,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
         Just (PlutusScript v bytes) -> pure $ Just (bytes, v)
-      pointer <- case rdptr @era txb sp of
+      pointer <- case rdptr txb sp of
         SNothing -> []
         -- Since scriptsNeeded used the transaction to create script purposes,
         -- it would be a logic error if rdptr was not able to find sp.

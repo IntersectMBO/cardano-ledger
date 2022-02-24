@@ -987,5 +987,5 @@ txOutDataHash = \case
 
 txOutScript :: TxOut era -> Maybe (Core.Script era)
 txOutScript = \case
-  TxOutCompactRefScript' _ _ _ s -> Just $! s
+  TxOutCompactRefScript' _ _ _ s -> Just s
   _ -> Nothing
