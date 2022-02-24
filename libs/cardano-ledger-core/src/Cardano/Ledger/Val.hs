@@ -67,6 +67,9 @@ class
   -- | If a quantity is stored in only one of 'v1' or 'v2', we use 0 for the missing quantity.
   pointwise :: (Integer -> Integer -> Bool) -> t -> t -> Bool
 
+  -- | Check if value contains only ADA. Must hold property:
+  --
+  -- > inject (coin v) == v
   isAdaOnly :: t -> Bool
 
   isAdaOnlyCompact :: CompactForm t -> Bool

@@ -33,13 +33,13 @@
     & \fun{ubalance} \in \UTxO \to \hldiff{\ValMonoid} \\
     & \fun{ubalance} ~ utxo = \hldiff{\sum_{\wcard\mapsto\var{u}\in~\var{utxo}} \fun{getValue}~\var{u}}
     \nextdef
-    & \fun{adaOnly} ~\in~ \mathsf{ValType} \to \Bool \\
-    & \fun{adaOnly}~v = v \in \range \fun{inject}
+    & \fun{isAdaOnly} ~\in~ \mathsf{ValType} \to \Bool \\
+    & \fun{isAdaOnly}~v = v \in \range \fun{inject}
     \nextdef
     & \fun{scaledMinDeposit} \in \ValMonoid \to \Coin \to \Coin \\
     & \fun{scaledMinDeposit}~\var{v}~\var{mv} ~=~
     \begin{cases}
-      \var{mv} & \fun{adaOnly}~v \\
+      \var{mv} & \fun{isAdaOnly}~v \\
       \fun{max}~(\var{mv},~\fun{utxoEntrySize}~{v} * \fun{coinsPerUTxOWord}~mv)) & \text{otherwise}
     \end{cases}
   \end{align*}
