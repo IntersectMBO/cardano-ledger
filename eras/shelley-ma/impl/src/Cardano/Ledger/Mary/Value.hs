@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -39,7 +40,7 @@ import Cardano.Binary
     toCBOR,
   )
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.Coin (Coin (..), integerToWord64)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Serialization (decodeMap, encodeMap)
@@ -181,6 +182,14 @@ instance CC.Crypto crypto => Val (Value crypto) where
         ( roundupBytesToWords (representationSize (snd $ gettriples vv))
             + repOverhead
         )
+
+  isAdaOnly (Value _ v) = Map.null v
+
+  isAdaOnlyCompact = \case
+    CompactValue (CompactValueAdaOnly _) -> True
+    CompactValue (CompactValueMultiAsset {}) -> False
+
+  injectCompact = CompactValue . CompactValueAdaOnly
 
 -- space (in Word64s) taken up by the ada amount
 adaWords :: Int
@@ -351,9 +360,9 @@ instance CC.Crypto crypto => FromCBOR (CompactValue crypto) where
       Just x -> pure x
 
 data CompactValue crypto
-  = CompactValueAdaOnly {-# UNPACK #-} !Word64
+  = CompactValueAdaOnly {-# UNPACK #-} !(CompactForm Coin)
   | CompactValueMultiAsset
-      {-# UNPACK #-} !Word64 -- ada
+      {-# UNPACK #-} !(CompactForm Coin) -- ada
       {-# UNPACK #-} !Word32 -- number of ma's
       {-# UNPACK #-} !ShortByteString -- rep
   deriving (Show, Typeable)
@@ -483,7 +492,7 @@ to ::
   Maybe (CompactValue crypto)
 to (Value ada ma)
   | Map.null ma =
-    CompactValueAdaOnly <$> integerToWord64 ada
+    CompactValueAdaOnly . CompactCoin <$> integerToWord64 ada
 to v = do
   c <- integerToWord64 ada
   -- Here we convert the (pid, assetName, quantity) triples into
@@ -494,7 +503,7 @@ to v = do
   preparedTriples <-
     zip [0 ..] . sortOn (\(_, x, _) -> x) <$> traverse prepare triples
   pure $
-    CompactValueMultiAsset c (fromIntegral numTriples) $
+    CompactValueMultiAsset (CompactCoin c) (fromIntegral numTriples) $
       runST $ do
         byteArray <- BA.newByteArray repSize
         forM_ preparedTriples $ \(i, (pidoff, anoff, q)) ->
@@ -618,8 +627,8 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
       Semigroup.getSum $ foldMap' (Semigroup.Sum . BS.length . assetName) assetNames
 
 from :: forall crypto. (CC.Crypto crypto) => CompactValue crypto -> Value crypto
-from (CompactValueAdaOnly c) = Value (fromIntegral c) mempty
-from (CompactValueMultiAsset c numAssets rep) =
+from (CompactValueAdaOnly (CompactCoin c)) = Value (fromIntegral c) mempty
+from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
   valueFromList (fromIntegral c) triples
   where
     n = fromIntegral numAssets

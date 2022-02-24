@@ -130,7 +130,6 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     Val (..),
-    adaOnly,
     decodeMint,
     decodeNonNegative,
     encodeMint,
@@ -336,10 +335,8 @@ pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, NoDatum, SNothing))
   where
     TxOutCompact cAddr cVal
-      | adaOnly value = TxOut (decompactAddr cAddr) value NoDatum SNothing
+      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) NoDatum SNothing
       | otherwise = TxOutCompact' cAddr cVal
-      where
-        value = fromCompact cVal
 
 pattern TxOutCompactDH ::
   ( Era era,
@@ -353,10 +350,8 @@ pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, DatumHash dh, SNothing))
   where
     TxOutCompactDH cAddr cVal dh
-      | adaOnly value = TxOut (decompactAddr cAddr) value (DatumHash dh) SNothing
+      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) (DatumHash dh) SNothing
       | otherwise = TxOutCompactDH' cAddr cVal dh
-      where
-        value = fromCompact cVal
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 

@@ -83,6 +83,13 @@ instance Compactible Coin where
   toCompact (Coin c) = CompactCoin <$> integerToWord64 c
   fromCompact (CompactCoin c) = word64ToCoin c
 
+instance Compactible DeltaCoin where
+  newtype CompactForm DeltaCoin = CompactDeltaCoin Word64
+    deriving (Eq, Show, NoThunks, NFData, Typeable, HeapWords, Prim)
+
+  toCompact (DeltaCoin dc) = CompactDeltaCoin <$> integerToWord64 dc
+  fromCompact (CompactDeltaCoin cdc) = DeltaCoin (unCoin (word64ToCoin cdc))
+
 -- It's odd for this to live here. Where should it go?
 integerToWord64 :: Integer -> Maybe Word64
 integerToWord64 c
@@ -96,3 +103,9 @@ instance ToCBOR (CompactForm Coin) where
 
 instance FromCBOR (CompactForm Coin) where
   fromCBOR = CompactCoin <$> fromCBOR
+
+instance ToCBOR (CompactForm DeltaCoin) where
+  toCBOR (CompactDeltaCoin c) = toCBOR c
+
+instance FromCBOR (CompactForm DeltaCoin) where
+  fromCBOR = CompactDeltaCoin <$> fromCBOR

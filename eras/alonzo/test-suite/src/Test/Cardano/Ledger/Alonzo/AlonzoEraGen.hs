@@ -58,7 +58,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData as Mary (pattern AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.Val (Val (coin), adaOnly, (<+>), (<×>))
+import Cardano.Ledger.Val (Val (coin, isAdaOnly, (<+>), (<×>)))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
 import qualified Data.ByteString.Char8 as BS
@@ -112,7 +112,7 @@ import Test.QuickCheck hiding ((><))
 
 -- | We are choosing new TxOut to pay fees, We want only Key locked addresss with Ada only values.
 vKeyLockedAdaOnly :: Mock c => Core.TxOut (AlonzoEra c) -> Bool
-vKeyLockedAdaOnly txout = vKeyLocked txout && adaOnly (getField @"value" txout)
+vKeyLockedAdaOnly txout = vKeyLocked txout && isAdaOnly (getField @"value" txout)
 
 phase2scripts3Arg :: forall c. Mock c => [TwoPhase3ArgInfo (AlonzoEra c)]
 phase2scripts3Arg =

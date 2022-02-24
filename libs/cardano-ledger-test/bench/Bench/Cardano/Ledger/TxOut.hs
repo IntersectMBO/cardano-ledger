@@ -52,7 +52,7 @@ benchTxOut =
       txOutAddrAdaOnlyDataHash :: Int -> TxOut A
       txOutAddrAdaOnlyDataHash n = TxOut (addr n) ada (SJust dataHash32)
       count :: Int
-      count = 10000
+      count = 1000
    in bgroup
         "TxOut"
         [ bgroup
@@ -132,7 +132,7 @@ serializeTxOutAlonzoBench count name mkTxOuts =
     name
     [ env (pure (mkTxOuts <$> [1 .. count])) $ bench "ToCBOR" . nf (map serialize),
       env (pure (serialize . mkTxOuts <$> [1 .. count])) $
-      bench "FromCBOR" . nf (map (either (error . show) (id @(TxOut A)) . decodeFull))
+        bench "FromCBOR" . nf (map (either (error . show) (id @(TxOut A)) . decodeFull))
     ]
 
 payAddr28 :: Int -> KeyHash 'Payment StandardCrypto

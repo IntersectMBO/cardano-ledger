@@ -115,7 +115,6 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     Val (..),
-    adaOnly,
     decodeMint,
     decodeNonNegative,
     encodeMint,
@@ -192,7 +191,7 @@ getAdaOnly ::
   Core.Value era ->
   Maybe (CompactForm Coin)
 getAdaOnly _ v = do
-  guard $ adaOnly v
+  guard $ isAdaOnly v
   toCompact $ coin v
 
 decodeAddress28 ::
@@ -274,20 +273,13 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
     | Just addr <- decodeAddress28 stakeRef addr28Extra ->
-      (compactAddr addr, toCompactValue adaVal, SNothing)
+      (compactAddr addr, injectCompact adaVal, SNothing)
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
     | Just addr <- decodeAddress28 stakeRef addr28Extra,
       Just dh <- decodeDataHash32 dataHash32 ->
-      (compactAddr addr, toCompactValue adaVal, SJust dh)
+      (compactAddr addr, injectCompact adaVal, SJust dh)
     | otherwise -> error addressErrorMsg
-  where
-    toCompactValue :: CompactForm Coin -> CompactForm (Core.Value era)
-    toCompactValue ada =
-      fromMaybe (error "Failed to compact a `Coin` as `CompactForm (Core.Value era)`")
-        . toCompact
-        . inject
-        $ fromCompact ada
 
 viewTxOut ::
   forall era.
@@ -648,6 +640,7 @@ instance
 
 pattern TxOutCompact ::
   ( Era era,
+    Val (Core.Value era),
     HasCallStack
   ) =>
   CompactAddr (Crypto era) ->
@@ -657,10 +650,8 @@ pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, SNothing))
   where
     TxOutCompact cAddr cVal
-      | adaOnly value = TxOut (decompactAddr cAddr) value SNothing
+      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
       | otherwise = TxOutCompact' cAddr cVal
-      where
-        value = fromCompact cVal
 
 pattern TxOutCompactDH ::
   forall era.
@@ -675,10 +666,8 @@ pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
   where
     TxOutCompactDH cAddr cVal dh
-      | adaOnly value = TxOut (decompactAddr cAddr) value (SJust dh)
+      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) (SJust dh)
       | otherwise = TxOutCompactDH' cAddr cVal dh
-      where
-        value = fromCompact cVal
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 

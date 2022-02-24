@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
@@ -9,6 +10,7 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Model.BaseTypes
   ( ModelValue (..),
@@ -27,8 +29,10 @@ module Test.Cardano.Ledger.Model.BaseTypes
   )
 where
 
+import Cardano.Binary (ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals)
-import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Keys (KeyRole (..))
 import Cardano.Ledger.Mary.Value (AssetName)
 import qualified Cardano.Ledger.Val as Val
@@ -38,12 +42,13 @@ import Control.Lens
     iso,
     _1,
   )
+import Data.Coerce
 import Data.Group (Abelian, Group)
 import Data.Group.GrpMap (GrpMap (..))
 import qualified Data.Map.Strict as Map
 import Data.Monoid (Sum (..))
 import Data.Proxy (Proxy (..))
-import Data.Typeable ((:~:) (Refl))
+import Data.Typeable (Typeable, (:~:) (Refl))
 import qualified GHC.Exts as GHC (IsString)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
@@ -134,8 +139,26 @@ filterModelValueVars (ModelValue_MA ys) = do
   ModelValue_MA <$> _1 filterModelScript ys
 
 newtype ModelValue k era = ModelValue {unModelValue :: ModelValueF (ModelValueVars era k)}
-  deriving (Eq, Ord, Generic, NFData, Semigroup, Monoid, Group, Abelian, Val.Val)
+  deriving (Eq, Ord, Generic, NFData, Semigroup, Monoid, Group, Abelian)
   deriving (Show) via Quiet (ModelValue k era)
+
+instance Val.Val (ModelValue k era) where
+  coin = coerce (Val.coin :: ModelValueF (ModelValueVars era k) -> Coin)
+  modifyCoin f =
+    coerce
+      (Val.modifyCoin f :: ModelValueF (ModelValueVars era k) -> ModelValueF (ModelValueVars era k))
+  (<×>) i =
+    coerce
+      ((i Val.<×>) :: ModelValueF (ModelValueVars era k) -> ModelValueF (ModelValueVars era k))
+  inject = coerce (Val.inject :: Coin -> ModelValueF (ModelValueVars era k))
+  size = coerce (Val.size :: ModelValueF (ModelValueVars era k) -> Integer)
+  pointwise f =
+    coerce
+      (Val.pointwise f :: ModelValueF (ModelValueVars era k) -> ModelValueF (ModelValueVars era k) -> Bool)
+  isAdaOnly = coerce (Val.isAdaOnly :: ModelValueF (ModelValueVars era k) -> Bool)
+  isAdaOnlyCompact (ModelValueCompact v) = Val.isAdaOnly v
+  injectCompact (CompactCoin w64) =
+    ModelValueCompact (Val.inject (Coin (toInteger w64)))
 
 liftModelValue :: ModelValue 'ExpectAdaOnly era -> ModelValue k era
 liftModelValue = ModelValue . mapModelValueF liftModelValueVars . unModelValue
@@ -150,7 +173,8 @@ filterModelValue = \case
   ModelValue x -> ModelValue <$> traverseModelValueF filterModelValueVars x
 
 instance KnownValueFeature v => RequiredFeatures (ModelValue v) where
-  filterFeatures tag (ModelValue val) = ModelValue <$> traverseModelValueF (hasKnownRequiredFeatures tag filterModelValueVars) val
+  filterFeatures tag (ModelValue val) =
+    ModelValue <$> traverseModelValueF (hasKnownRequiredFeatures tag filterModelValueVars) val
 
 -- | The spec stipulates that certain values particularly, the sigma parameter
 -- used in rewards calculations) to be within [0,1], but which never-the-less
@@ -163,3 +187,14 @@ boundPositiveRational :: Rational -> Maybe PositiveRational
 boundPositiveRational x
   | x > 0 = Just $ PositiveRational x
   | otherwise = Nothing
+
+-- No compacting, just an identitity with ModelValueF, since Compactible instance is needed
+instance (Typeable k, Typeable era) => Compactible (ModelValue k era) where
+  newtype CompactForm (ModelValue k era) = ModelValueCompact (ModelValue k era)
+    deriving (Show, Eq)
+
+  toCompact = Just . ModelValueCompact
+  fromCompact (ModelValueCompact mvc) = mvc
+
+instance (Typeable k, Typeable era) => ToCBOR (CompactForm (ModelValue k era)) where
+  toCBOR = error "Unimplemented. Instance is only needed to satisfy Compactible constraints"

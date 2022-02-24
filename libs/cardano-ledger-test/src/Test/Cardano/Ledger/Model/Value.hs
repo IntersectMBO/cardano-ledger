@@ -19,7 +19,9 @@
 
 module Test.Cardano.Ledger.Model.Value where
 
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Binary (ToCBOR (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..))
+import Cardano.Ledger.Compactible
 import Cardano.Ledger.Val hiding (invert)
 import Control.DeepSeq (NFData)
 import Control.Lens (Lens')
@@ -37,6 +39,7 @@ import Data.Group.GrpMap
   )
 import qualified Data.Map as Map
 import Data.Monoid (Ap (..), Sum (..))
+import Data.Typeable
 import GHC.Generics (Generic)
 
 newtype ModelValueF a = ModelValueF {unModelValueF :: (Coin, GrpMap a (Sum Integer))}
@@ -107,6 +110,10 @@ instance Ord a => Val (ModelValueF a) where
 
   pointwise f (ModelValueF (Coin x, y)) (ModelValueF (Coin x', y')) = f x x' && pointWise' 0 f (coerce y) (coerce y')
 
+  isAdaOnly (ModelValueF (_, v)) = Map.null (unGrpMap v)
+  isAdaOnlyCompact (ModelValueCompactF v) = isAdaOnly v
+  injectCompact (CompactCoin w64) = ModelValueCompactF (inject (Coin (toInteger w64)))
+
 instance NFData a => NFData (ModelValueF a)
 
 getModelValueF :: ModelValueF a -> (Coin, Map.Map a Integer)
@@ -135,3 +142,14 @@ evalModelValue ::
 evalModelValue env (ModelValueF (c, as)) =
   (<+>) (inject c)
     <$> getAp (ifoldMap (\a (Sum n) -> Ap $ (<×>) n <$> env a) as)
+
+-- No compacting, just an identitity with ModelValueF, since Compactible instance is needed
+instance (Eq a, Show a, Typeable a) => Compactible (ModelValueF a) where
+  newtype CompactForm (ModelValueF a) = ModelValueCompactF (ModelValueF a)
+    deriving (Show, Eq)
+
+  toCompact = Just . ModelValueCompactF
+  fromCompact (ModelValueCompactF mvc) = mvc
+
+instance Typeable a => ToCBOR (CompactForm (ModelValueF a)) where
+  toCBOR = error "Unimplemented. Instance is only needed to satisfy Compactible constraints"
