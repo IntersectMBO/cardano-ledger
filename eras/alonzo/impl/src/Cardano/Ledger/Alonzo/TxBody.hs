@@ -82,6 +82,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     isSNothing,
+    maybeToStrictMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
@@ -355,35 +356,6 @@ pattern TxOut addr vl dh <-
             SJust dh -> TxOutCompactDH' a v dh
 
 {-# COMPLETE TxOut #-}
-
--- TODO deprecate
-pattern TxOutCompact ::
-  ( Era era,
-    HasCallStack
-  ) =>
-  CompactAddr (Crypto era) ->
-  CompactForm (Core.Value era) ->
-  TxOut era
-pattern TxOutCompact addr vl <-
-  (viewCompactTxOut -> (addr, vl, SNothing))
-  where
-    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
-
--- TODO deprecate
-pattern TxOutCompactDH ::
-  ( Era era,
-    HasCallStack
-  ) =>
-  CompactAddr (Crypto era) ->
-  CompactForm (Core.Value era) ->
-  DataHash (Crypto era) ->
-  TxOut era
-pattern TxOutCompactDH addr vl dh <-
-  (viewCompactTxOut -> (addr, vl, SJust dh))
-  where
-    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . SJust
-
-{-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
 -- ======================================
 
@@ -674,6 +646,42 @@ instance
           <*> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
+pattern TxOutCompact ::
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  TxOut era
+pattern TxOutCompact addr vl <-
+  (viewCompactTxOut -> (addr, vl, SNothing))
+  where
+    TxOutCompact cAddr cVal
+      | adaOnly value = TxOut (decompactAddr cAddr) value SNothing
+      | otherwise = TxOutCompact' cAddr cVal
+      where
+        value = fromCompact cVal
+
+pattern TxOutCompactDH ::
+  forall era.
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  DataHash (Crypto era) ->
+  TxOut era
+pattern TxOutCompactDH addr vl dh <-
+  (viewCompactTxOut -> (addr, vl, SJust dh))
+  where
+    TxOutCompactDH cAddr cVal dh
+      | adaOnly value = TxOut (decompactAddr cAddr) value (SJust dh)
+      | otherwise = TxOutCompactDH' cAddr cVal dh
+      where
+        value = fromCompact cVal
+
+{-# COMPLETE TxOutCompact, TxOutCompactDH #-}
+
 encodeTxBodyRaw ::
   ( Era era,
     ToCBOR (PParamsDelta era)
@@ -870,12 +878,20 @@ instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
   getField (TxBodyConstr (Memo m _)) = _txnetworkid m
 
 instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
-  getField (TxOutCompact _ v) = fromCompact v
-  getField (TxOutCompactDH _ v _) = fromCompact v
+  getField = \case
+    TxOutCompact' _ cv -> fromCompact cv
+    TxOutCompactDH' _ cv _ -> fromCompact cv
+    TxOut_AddrHash28_AdaOnly _ _ cc -> inject (fromCompact cc)
+    TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> inject (fromCompact cc)
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
-  getField (TxOutCompact _ _) = SNothing
-  getField (TxOutCompactDH _ _ d) = SJust d
+  getField = \case
+    TxOutCompactDH' _ _ dh -> SJust dh
+    TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dh ->
+      maybeToStrictMaybe $ do
+        Refl <- sameNat (Proxy @(SizeHash (CC.HASH c))) (Proxy @32)
+        decodeDataHash32 @c dh
+    _ -> SNothing
 
 getAlonzoTxOutEitherAddr ::
   HashAlgorithm (CC.ADDRHASH (Crypto era)) =>

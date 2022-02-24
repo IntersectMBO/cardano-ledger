@@ -130,6 +130,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     Val (..),
+    adaOnly,
     decodeMint,
     decodeNonNegative,
     encodeMint,
@@ -165,7 +166,7 @@ data TxOut era
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
       {-# UNPACK #-} !(BinaryData era) -- Inline data
-  | TxOutCompactRefScript'
+  | TxOutCompactRefScript
       {-# UNPACK #-} !(CompactAddr (Crypto era))
       !(CompactForm (Core.Value era))
       !(Datum era)
@@ -200,7 +201,7 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, NoDatum, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, DatumHash dh, SNothing)
   TxOutCompactDatum addr val datum -> (addr, val, Datum datum, SNothing)
-  TxOutCompactRefScript' addr val datum rs -> (addr, val, datum, SJust rs)
+  TxOutCompactRefScript addr val datum rs -> (addr, val, datum, SJust rs)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal ->
     let (a, b, c) = Alonzo.viewCompactTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
      in (a, b, toDatum c, SNothing)
@@ -231,7 +232,7 @@ viewTxOut (TxOutCompactDatum bs c d) = (addr, val, Datum d, SNothing)
   where
     addr = decompactAddr bs
     val = fromCompact c
-viewTxOut (TxOutCompactRefScript' bs c d rs) = (addr, val, d, SJust rs)
+viewTxOut (TxOutCompactRefScript bs c d rs) = (addr, val, d, SJust rs)
   where
     addr = decompactAddr bs
     val = fromCompact c
@@ -320,11 +321,10 @@ pattern TxOut addr vl datum refScript <-
               NoDatum -> TxOutCompact' a v
               DatumHash dh -> TxOutCompactDH' a v dh
               Datum binaryData -> TxOutCompactDatum a v binaryData
-            SJust rs' -> TxOutCompactRefScript' a v d rs'
+            SJust rs' -> TxOutCompactRefScript a v d rs'
 
 {-# COMPLETE TxOut #-}
 
--- TODO deprecate
 pattern TxOutCompact ::
   ( Era era,
     HasCallStack
@@ -335,9 +335,12 @@ pattern TxOutCompact ::
 pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, NoDatum, SNothing))
   where
-    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) NoDatum SNothing
+    TxOutCompact cAddr cVal
+      | adaOnly value = TxOut (decompactAddr cAddr) value NoDatum SNothing
+      | otherwise = TxOutCompact' cAddr cVal
+      where
+        value = fromCompact cVal
 
--- TODO deprecate
 pattern TxOutCompactDH ::
   ( Era era,
     HasCallStack
@@ -349,24 +352,12 @@ pattern TxOutCompactDH ::
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, DatumHash dh, SNothing))
   where
-    TxOutCompactDH cAddr cVal dh = TxOut (decompactAddr cAddr) (fromCompact cVal) (DatumHash dh) SNothing
-
-pattern TxOutCompactRefScript ::
-  forall era.
-  ( Era era,
-    HasCallStack
-  ) =>
-  CompactAddr (Crypto era) ->
-  CompactForm (Core.Value era) ->
-  Datum era ->
-  Core.Script era ->
-  TxOut era
-pattern TxOutCompactRefScript addr vl d rs <-
-  (viewCompactTxOut -> (addr, vl, d, SJust rs))
-  where
-    TxOutCompactRefScript cAddr cVal d rs = TxOut (decompactAddr cAddr) (fromCompact cVal) d (SJust rs)
-
-{-# COMPLETE TxOutCompact, TxOutCompactDH, TxOutCompactRefScript #-}
+    TxOutCompactDH cAddr cVal dh
+      | adaOnly value = TxOut (decompactAddr cAddr) value (DatumHash dh) SNothing
+      | otherwise = TxOutCompactDH' cAddr cVal dh
+      where
+        value = fromCompact cVal
+{-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
 -- ======================================
 
@@ -719,8 +710,9 @@ instance
         TxOutCompactDatum <$> fromCBOR <*> decodeNonNegative <*> fromCBOR
       Just 5 -> do
         2 <- fromCBOR @Word8
-        TxOutCompactRefScript' <$> fromCBOR <*> decodeNonNegative <*> fromCBOR <*> decodeCIC "Script"
-      Just n -> cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
+        TxOutCompactRefScript <$> fromCBOR <*> decodeNonNegative <*> fromCBOR <*> decodeCIC "Script"
+      Just n ->
+        cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
 
 -- decodes the CBOR from TkBytes
 decodeCIC :: (FromCBOR (Annotator b)) => T.Text -> Decoder s b
@@ -946,9 +938,13 @@ instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
   getField (TxBodyConstr (Memo m _)) = _txnetworkid m
 
 instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
-  getField (TxOutCompact _ v) = fromCompact v
-  getField (TxOutCompactDH _ v _) = fromCompact v
-  getField (TxOutCompactRefScript _ v _ _) = fromCompact v
+  getField = \case
+    TxOutCompact' _ cv -> fromCompact cv
+    TxOutCompactDH' _ cv _ -> fromCompact cv
+    TxOutCompactDatum _ cv _ -> fromCompact cv
+    TxOutCompactRefScript _ cv _ _ -> fromCompact cv
+    TxOut_AddrHash28_AdaOnly _ _ cc -> inject (fromCompact cc)
+    TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> inject (fromCompact cc)
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField = maybeToStrictMaybe . txOutDataHash
