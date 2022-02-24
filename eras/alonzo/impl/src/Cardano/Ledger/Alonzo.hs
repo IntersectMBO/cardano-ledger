@@ -39,7 +39,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (TxOut), getAlonzoTxOutEitherAddr)
-import Cardano.Ledger.Alonzo.TxInfo (validScript)
+import Cardano.Ledger.Alonzo.TxInfo (HasTxInfo (..), alonzoTxInfo, validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -219,6 +219,9 @@ instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
   numSegComponents = 4
 
 instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (AlonzoEra c)
+
+instance CC.Crypto c => HasTxInfo (AlonzoEra c) where
+  txInfo = alonzoTxInfo
 
 -------------------------------------------------------------------------------
 -- Era Mapping

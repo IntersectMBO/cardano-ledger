@@ -38,6 +38,7 @@ library
     Cardano.Ledger.Babbage.PParams
     Cardano.Ledger.Babbage.Tx
     Cardano.Ledger.Babbage.TxBody
+    Cardano.Ledger.Babbage.TxInfo
     Cardano.Ledger.Babbage.Translation
     Cardano.Ledger.Babbage
   build-depends:
@@ -54,6 +55,7 @@ library
     cardano-ledger-shelley-ma,
     cardano-prelude,
     cardano-slotting,
+    compact-map,
     containers,
     data-default,
     deepseq,

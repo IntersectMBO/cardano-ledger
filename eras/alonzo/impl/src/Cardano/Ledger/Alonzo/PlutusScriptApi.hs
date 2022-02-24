@@ -35,22 +35,20 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxInfo
   ( FailureDescription (..),
+    HasTxInfo (..),
     ScriptResult (..),
     TranslationError (..),
     andResult,
     runPLCScript,
-    txInfo,
     valContext,
   )
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts', unTxDats)
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..))
-import Cardano.Ledger.Keys (KeyHash, KeyRole (Witness))
 import Cardano.Ledger.Mary.Value (PolicyID (..))
-import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody
@@ -152,26 +150,21 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 --     Therefore collectTwoPhaseScriptInputs must only be called after checking
 --     that the transaction is within the time horizon.
 collectTwoPhaseScriptInputs ::
-  forall era tx.
+  forall era.
   ( Era era,
+    HasTxInfo era,
     Core.Script era ~ AlonzoScript.Script era,
-    Core.Value era ~ Mary.Value (Crypto era),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "body" tx (Core.TxBody era),
-    HasField "wits" tx (TxWitness era),
-    HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
-    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
-    HasField "vldt" (Core.TxBody era) ValidityInterval
+    HasField "wits" (Core.Tx era) (TxWitness era)
   ) =>
   EpochInfo Identity ->
   SystemStart ->
   Core.PParams era ->
-  tx ->
+  Core.Tx era ->
   UTxO era ->
   Either [CollectError (Crypto era)] [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =

@@ -36,7 +36,7 @@ import Cardano.Ledger.Alonzo.Tx
     ValidatedTx (..),
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
-import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), ScriptResult (..))
+import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), HasTxInfo (..), ScriptResult (..))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.BaseTypes
   ( Globals,
@@ -114,7 +114,10 @@ instance
     Core.ChainData (Core.TxOut era),
     Core.SerialisableData (Core.TxOut era),
     Core.ChainData (Core.TxBody era),
-    ToCBOR (Core.TxBody era)
+    ToCBOR (Core.TxBody era),
+    Core.Witnesses era ~ Alonzo.TxWitness era,
+    Core.Tx era ~ ValidatedTx era,
+    HasTxInfo era
   ) =>
   STS (UTXOS era)
   where
@@ -156,7 +159,10 @@ utxosTransition ::
     HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
     HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Core.Witnesses era ~ Alonzo.TxWitness era,
+    Core.Tx era ~ ValidatedTx era,
+    HasTxInfo era
   ) =>
   TransitionRule (UTXOS era)
 utxosTransition =
@@ -194,7 +200,10 @@ scriptsValidateTransition ::
     HasField "vldt" (Core.TxBody era) ValidityInterval,
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     Core.ChainData (Core.TxBody era),
-    ToCBOR (Core.TxBody era)
+    ToCBOR (Core.TxBody era),
+    Core.Witnesses era ~ Alonzo.TxWitness era,
+    Core.Tx era ~ ValidatedTx era,
+    HasTxInfo era
   ) =>
   TransitionRule (UTXOS era)
 scriptsValidateTransition = do
@@ -272,7 +281,10 @@ scriptsNotValidateTransition ::
     HasField "vldt" (Core.TxBody era) ValidityInterval,
     Core.ChainData (Core.TxBody era),
     ToCBOR (Core.TxBody era),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era))
+    Core.Tx era ~ ValidatedTx era,
+    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
+    Core.Witnesses era ~ Alonzo.TxWitness era,
+    HasTxInfo era
   ) =>
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
@@ -421,18 +433,15 @@ constructValidated ::
   ( MonadError [UtxosPredicateFailure era] m,
     Core.Script era ~ Script era,
     Core.TxOut era ~ Alonzo.TxOut era,
-    Core.Value era ~ Value (Crypto era),
     Core.Witnesses era ~ Alonzo.TxWitness era,
     ValidateScript era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "mint" (Core.TxBody era) (Value (Crypto era)),
-    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
-    HasField "vldt" (Core.TxBody era) ValidityInterval
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasTxInfo era
   ) =>
   Globals ->
   UtxoEnv era ->

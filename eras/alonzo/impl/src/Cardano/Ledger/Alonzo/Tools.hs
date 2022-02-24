@@ -11,31 +11,31 @@ module Cardano.Ledger.Alonzo.Tools
   )
 where
 
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data, getPlutusData)
-import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
-import Cardano.Ledger.Alonzo.PParams (_maxTxExUnits, _protocolVersion)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
     Script (..),
   )
-import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), ValidatedTx (..), rdptr)
-import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
+import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), rdptr)
 import Cardano.Ledger.Alonzo.TxInfo
-  ( TranslationError,
+  ( HasTxInfo,
+    TranslationError,
     VersionedTxInfo (..),
     exBudgetToExUnits,
     transExUnits,
     txInfo,
     valContext,
   )
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), unRedeemers, unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers, TxDats, unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import Cardano.Ledger.Shelley.Tx (TxIn)
+import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -43,6 +43,8 @@ import Data.Array (Array, array, bounds, (!))
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
@@ -89,12 +91,15 @@ note _ (Just x) = Right x
 note e Nothing = Left e
 
 basicValidation ::
+  ( HasField "body" (Core.Tx era) (Core.TxBody era),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
   -- | The transaction.
-  Core.Tx (AlonzoEra c) ->
+  Core.Tx era ->
   -- | The current UTxO set (or the relevant portion for the transaction).
-  UTxO (AlonzoEra c) ->
+  UTxO era ->
   -- | Basic failures.
-  Maybe (BasicFailure c)
+  Maybe (BasicFailure (Crypto era))
 basicValidation tx utxo =
   if Set.null badIns
     then Nothing
@@ -106,21 +111,43 @@ basicValidation tx utxo =
 
 type RedeemerReport c = Map RdmrPtr (Either (ScriptFailure c) ExUnits)
 
+languagesUsed ::
+  ( HasField "wits" (Core.Tx era) (Core.Witnesses era),
+    HasField "txscripts" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Script era))
+  ) =>
+  Core.Tx era ->
+  Set Language
+languagesUsed tx = Set.fromList $ mapMaybe getLanguage (getScripts tx)
+  where
+    getScripts = Map.elems . getField @"txscripts" . getField @"wits"
+    -- TODO account for reference scripts (and reference inputs) in babbage
+    getLanguage (TimelockScript _) = Nothing
+    getLanguage (PlutusScript lang _) = Just lang
+
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
 --
 --  The execution budgets in the supplied transaction are completely ignored.
 --  The results of 'evaluateTransactionExecutionUnits' are intended to replace them.
 evaluateTransactionExecutionUnits ::
-  forall c m.
-  ( CC.Crypto c,
+  forall era m.
+  ( Era era,
+    HasTxInfo era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "txscripts" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Script era)),
+    HasField "txdats" (Core.Witnesses era) (TxDats era),
+    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
+    HasField "_maxTxExUnits" (Core.PParams era) (ExUnits),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     Monad m
   ) =>
-  Core.PParams (AlonzoEra c) ->
+  Core.PParams era ->
   -- | The transaction.
-  Core.Tx (AlonzoEra c) ->
+  Core.Tx era ->
   -- | The current UTxO set (or the relevant portion for the transaction).
-  UTxO (AlonzoEra c) ->
+  UTxO era ->
   -- | The epoch info, used to translate slots to POSIX time for plutus.
   EpochInfo m ->
   -- | The start time of the given block chain.
@@ -131,13 +158,13 @@ evaluateTransactionExecutionUnits ::
   --  redeemer pointers to either a failure or a sufficient execution budget.
   --  Otherwise we return a basic validation error.
   --  The value is monadic, depending on the epoch info.
-  m (Either (BasicFailure c) (RedeemerReport c))
+  m (Either (BasicFailure (Crypto era)) (RedeemerReport (Crypto era)))
 evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
   case basicValidation tx utxo of
     Nothing -> do
       let getInfo :: Language -> m (Either TranslationError (Language, VersionedTxInfo))
           getInfo lang = ((,) lang <$>) <$> txInfo pp lang ei sysS utxo tx
-      txInfos <- mapM getInfo (Set.toList nonNativeLanguages)
+      txInfos <- mapM getInfo (Set.toList $ languagesUsed tx)
       case sequence txInfos of
         Left transEr -> pure . Left $ BadTranslation transEr
         Right ctx ->
@@ -155,10 +182,11 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
     ptrToPlutusScript = Map.fromList $ do
       (sp, sh) <- scriptsNeeded utxo tx
       msb <- case Map.lookup sh scripts of
+        -- TODO account for reference scripts (and reference inputs) in Babbage
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
         Just (PlutusScript v bytes) -> pure $ Just (bytes, v)
-      pointer <- case rdptr @(AlonzoEra c) txb sp of
+      pointer <- case rdptr txb sp of
         SNothing -> []
         -- Since scriptsNeeded used the transaction to create script purposes,
         -- it would be a logic error if rdptr was not able to find sp.
@@ -166,11 +194,11 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       pure (pointer, (sp, msb))
 
     findAndCount ::
-      Core.PParams (AlonzoEra c) ->
+      Core.PParams era ->
       Array Language VersionedTxInfo ->
       RdmrPtr ->
-      (Data (AlonzoEra c), ExUnits) ->
-      Either (ScriptFailure c) ExUnits
+      (Data era, ExUnits) ->
+      Either (ScriptFailure (Crypto era)) ExUnits
     findAndCount pparams info pointer (rdmr, _) = do
       (sp, mscript) <- note (RedeemerNotNeeded pointer) $ Map.lookup pointer ptrToPlutusScript
       (script, lang) <- note (MissingScript pointer) mscript
@@ -181,9 +209,10 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       args <- case sp of
         (Spending txin) -> do
           txOut <- note (UnknownTxIn txin) $ SplitMap.lookup txin (unUTxO utxo)
-          let TxOut _ _ mdh = txOut
+          let mdh = getField @"datahash" txOut
           dh <- note (InvalidTxIn txin) $ strictMaybeToMaybe mdh
           dat <- note (MissingDatum dh) $ Map.lookup dh dats
+          -- TODO account for inline datums (and reference inputs) in babbage
           pure [dat, rdmr, valContext inf sp]
         _ -> pure [rdmr, valContext inf sp]
       let pArgs = map getPlutusData args
@@ -194,7 +223,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
           PlutusV2 -> Left $ ValidationFailedV2 e logs
         (_, Right exBudget) -> note (IncompatibleBudget exBudget) $ exBudgetToExUnits exBudget
       where
-        maxBudget = transExUnits . _maxTxExUnits $ pparams
+        maxBudget = transExUnits . getField @"_maxTxExUnits" $ pparams
         interpreter lang = case lang of
           PlutusV1 -> PV1.evaluateScriptRestricting PV1.Verbose
           PlutusV2 -> PV2.evaluateScriptRestricting PV2.Verbose

@@ -30,7 +30,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
-import Cardano.Ledger.Alonzo.TxInfo (validScript)
+import Cardano.Ledger.Alonzo.TxInfo (HasTxInfo (..), validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -43,6 +43,7 @@ import Cardano.Ledger.Babbage.PParams
   )
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut), getBabbageTxOutEitherAddr)
+import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
@@ -220,6 +221,9 @@ instance CC.Crypto c => EraModule.SupportsSegWit (BabbageEra c) where
   numSegComponents = 4
 
 instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
+
+instance CC.Crypto c => HasTxInfo (BabbageEra c) where
+  txInfo = babbageTxInfo
 
 -------------------------------------------------------------------------------
 -- Era Mapping

@@ -12,7 +12,7 @@ module Test.Cardano.Ledger.Properties where
 
 import Cardano.Ledger.Alonzo (AlonzoEra, Value)
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
-import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
@@ -311,11 +311,10 @@ genPlutusScript tag = do
         | otherwise = 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
-  language <- lift $ elements (Set.toList nonNativeLanguages)
   script <-
     if isValid
-      then alwaysSucceeds language . (+ numArgs) . getNonNegative <$> lift arbitrary
-      else pure $ alwaysFails language numArgs
+      then alwaysSucceeds PlutusV1 . (+ numArgs) . getNonNegative <$> lift arbitrary
+      else pure $ alwaysFails PlutusV1 numArgs
   let scriptHash = hashScript @A script
   modify $ \ts@GenState {gsPlutusScripts} ->
     ts {gsPlutusScripts = Map.insert (scriptHash, tag) (IsValid isValid, script) gsPlutusScripts}
@@ -794,11 +793,7 @@ genTxAndLEDGERState = do
         def
           { _minfeeA = minfeeA,
             _minfeeB = minfeeB,
-            _costmdls =
-              Map.fromList
-                [ (PlutusV1, CostModel $ 0 <$ fromJust defaultCostModelParams),
-                  (PlutusV2, CostModel $ 0 <$ fromJust defaultCostModelParams)
-                ],
+            _costmdls = Map.singleton PlutusV1 (CostModel $ 0 <$ fromJust defaultCostModelParams),
             _maxValSize = 1000,
             _maxTxSize = fromIntegral (maxBound :: Int),
             _maxTxExUnits = maxTxExUnits,

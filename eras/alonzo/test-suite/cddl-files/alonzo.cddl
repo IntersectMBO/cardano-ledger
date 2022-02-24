@@ -113,8 +113,6 @@ script_data_hash = $hash32 ; New
 ;     list and the result is encoded as a bytestring. (our apologies)
 ;   - the language ID tag is also encoded twice. first as a uint then as
 ;     a bytestring. (our apologies)
-; For PlutusV2 (language id 1), the language view is the following:
-;   - the value of costmdls map at key 1 is encoded as an definite length list.
 ;
 ; If there is no value for key 0, then the corresponding scripts cannot execute.
 ; Regardless of what the script integrity data is.
