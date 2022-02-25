@@ -88,26 +88,6 @@ import NoThunks.Class (NoThunks)
 -- The UTXOS transition system
 --------------------------------------------------------------------------------
 
-{- These are the Field constraints needed. Since this STS instance is only going to
-   be used once, We can make all these go away by fixing the Core.XX types to the
-   concrete types used in this instance.
-type UtxosFieldNeeds era =
-  ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),  -- collectTwoPhaseScriptInputs
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))), -- collectTwoPhaseScriptInputs
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel), -- collectTwoPhaseScriptInputs
-    HasField "_protocolVersion" (Core.PParams era) ProtVer, -- collectTwoPhaseScriptInputs
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), -- -- collectTwoPhaseScriptInputs
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)), -- collectTwoPhaseScriptInputs
-    HasField "mint" (Core.TxBody era) (Value (Crypto era)), -- collectTwoPhaseScriptInputs
-    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))), -- collectTwoPhaseScriptInputs
-    HasField "vldt" (Core.TxBody era) ValidityInterval, -- collectTwoPhaseScriptInputs
-    HasField "_keyDeposit" (Core.PParams era) Coin, -- keyRefunds
-    HasField "_poolDeposit" (Core.PParams era) Coin, -- totalDeposits
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))), -- getField
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)) -- scriptsValidateTransition
-  )
--}
-
 type ConcreteAlonzo era =
   ( Core.Script era ~ Script era,
     Core.Value era ~ Value (Crypto era),

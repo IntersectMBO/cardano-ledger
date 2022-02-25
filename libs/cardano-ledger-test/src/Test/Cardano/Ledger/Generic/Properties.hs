@@ -1389,7 +1389,8 @@ genericProperties =
     [ coreTypesRoundTrip,
       testGroup
         "Alonzo UTXOW property tests"
-        [ testProperty "Alonzo ValidTx preserves ADA" $ forAll (genTxAndLEDGERState (Alonzo Mock)) (testTxValidForLEDGER (Alonzo Mock)),
+        [ testProperty "Babbage ValidTx preserves ADA" $ forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock)),
+          testProperty "Alonzo ValidTx preserves ADA" $ forAll (genTxAndLEDGERState (Alonzo Mock)) (testTxValidForLEDGER (Alonzo Mock)),
           testProperty "Mary Tx preserves ADA" $ forAll (genTxAndLEDGERState (Mary Mock)) (testTxValidForLEDGER (Mary Mock)),
           testProperty "Shelley Tx preserves ADA" $ forAll (genTxAndLEDGERState (Shelley Mock)) (testTxValidForLEDGER (Shelley Mock))
         ]
