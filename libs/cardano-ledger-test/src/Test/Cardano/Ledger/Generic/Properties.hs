@@ -1390,7 +1390,10 @@ main = defaultMain genericProperties
 
 -- TODO FIXME
 -- we are going to need some babbage specific guidance to make this work.
-go =
+-- This would be a failing test. We don't want to lose this information.
+-- We will fix it in a future PR. The failure is in the generator, not the tests.
+-- The generator generates good things in [Shelley .. Alonzo], but Babbage needs work.
+workNeededHere =
   defaultMain $
     testProperty "Babbage ValidTx preserves ADA" $
       forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))
