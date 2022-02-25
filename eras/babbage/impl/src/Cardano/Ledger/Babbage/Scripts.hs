@@ -43,6 +43,8 @@ getTxIn (Minting _policyid) = Nothing
 getTxIn (Rewarding _rewaccnt) = Nothing
 getTxIn (Certifying _dcert) = Nothing
 
+-- | Extract binary data either directly from the `Core.Tx` as an "inline datum"
+-- or it up in the witnesses by the hash.
 getDatum ::
   ( Era era,
     Core.TxOut era ~ TxOut era,
@@ -51,20 +53,15 @@ getDatum ::
   Core.Tx era ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
-  [BinaryData era]
-getDatum tx (UTxO m) sp = case getTxIn sp of
-  Nothing -> []
-  Just txin ->
-    case SplitMap.lookup txin m of
-      Nothing -> []
-      Just (TxOut _ _ datum _refScript) ->
-        case datum of
-          NoDatum -> []
-          Datum d -> [d]
-          DatumHash hash ->
-            case Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx)) of
-              Nothing -> []
-              Just dat -> [dataToBinaryData dat]
+  Maybe (BinaryData era)
+getDatum tx (UTxO m) sp = do
+  txin <- getTxIn sp
+  TxOut _ _ datum _refScript <- SplitMap.lookup txin m
+  case datum of
+    NoDatum -> Nothing
+    Datum d -> Just d
+    DatumHash hash ->
+      dataToBinaryData <$> Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx))
 
 txscripts ::
   forall era.
