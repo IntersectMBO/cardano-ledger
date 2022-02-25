@@ -13,8 +13,7 @@
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
--- import Cardano.Ledger.Babbage(BabbageEra)
-
+import Cardano.Ledger.Babbage(BabbageEra)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 -- ------------------------------
@@ -53,6 +52,7 @@ import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailu
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Generic.Proof
+import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 
 -- =====================================================
 
@@ -95,6 +95,14 @@ instance CC.Crypto c => PrettyCore (AlonzoEra c) where
   prettyWitnesses = ppTxWitness
   prettyValue = ppValue
   prettyTxOut = Cardano.Ledger.Pretty.Alonzo.ppTxOut
+
+instance CC.Crypto c => PrettyCore (BabbageEra c) where
+  prettyTx = Cardano.Ledger.Pretty.Alonzo.ppTx
+  prettyScript = ppScript
+  prettyTxBody = Babbage.ppTxBody
+  prettyWitnesses = ppTxWitness
+  prettyValue = ppValue
+  prettyTxOut = Babbage.ppTxOut
 
 -- ===================================================================
 -- PrettyA instances for UTXOW, UTXO, UTXOS, PPUP predicate failures
