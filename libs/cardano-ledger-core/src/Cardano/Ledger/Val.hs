@@ -21,8 +21,9 @@ module Cardano.Ledger.Val
 where
 
 import Cardano.Binary (Decoder, Encoding, decodeWord64, toCBOR)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
+import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
 import Cardano.Ledger.Compactible (Compactible (..))
+import Data.Coerce
 import Data.Foldable (foldl')
 import Data.Group (Abelian)
 
@@ -66,6 +67,15 @@ class
   -- | If a quantity is stored in only one of 'v1' or 'v2', we use 0 for the missing quantity.
   pointwise :: (Integer -> Integer -> Bool) -> t -> t -> Bool
 
+  -- | Check if value contains only ADA. Must hold property:
+  --
+  -- > inject (coin v) == v
+  isAdaOnly :: t -> Bool
+
+  isAdaOnlyCompact :: CompactForm t -> Bool
+
+  injectCompact :: CompactForm Coin -> CompactForm t
+
 -- =============================================================
 -- Synonyms with types fixed at (Val t). Makes calls easier
 -- to read, and gives better error messages, when a mistake is made
@@ -88,6 +98,7 @@ invert x = (-1 :: Integer) <×> x
 -- returns a Value containing only the coin (ada) tokens from the input Value
 adaOnly :: Val v => v -> Bool
 adaOnly v = (inject . coin) v == v
+{-# DEPRECATED adaOnly "In favor of `isAdaOnly`" #-}
 
 instance Val Coin where
   n <×> (Coin x) = Coin $ fromIntegral n * x
@@ -96,8 +107,20 @@ instance Val Coin where
   size _ = 1
   modifyCoin f v = f v
   pointwise p (Coin x) (Coin y) = p x y
+  isAdaOnly _ = True
+  isAdaOnlyCompact _ = True
+  injectCompact = id
 
-deriving via Coin instance Val DeltaCoin
+instance Val DeltaCoin where
+  n <×> (DeltaCoin x) = DeltaCoin $ fromIntegral n * x
+  coin = coerce
+  inject = coerce
+  size _ = 1
+  modifyCoin f v = coerce f v
+  pointwise p (DeltaCoin x) (DeltaCoin y) = p x y
+  isAdaOnly _ = True
+  isAdaOnlyCompact _ = True
+  injectCompact (CompactCoin cc) = CompactDeltaCoin cc
 
 -- =============================================================
 

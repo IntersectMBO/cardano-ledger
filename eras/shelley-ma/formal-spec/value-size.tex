@@ -107,7 +107,7 @@ of the size of a UTxO entry, and the associated min-Ada-value.
     & \fun{size} \in \Value_C \to \MemoryEstimate \\
     & \fun{size}~\var{vl} ~=~
     \begin{cases}
-      k_0 & \fun{adaOnly}~vl\\
+      k_0 & \fun{isAdaOnly}~vl\\
       k_1 + \lfloor~ (((\fun{numAssets}~vl) * k_2) + (\fun{sumALs}~vl) & \\
       ~~~~~~ + ((\fun{numPids}~vl) * k_3) + (k_4 - 1)))~ /~ k_4~\rfloor & \text{otherwise} \\
     \end{cases} \\

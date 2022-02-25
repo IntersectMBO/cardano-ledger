@@ -324,7 +324,7 @@ validateCollateral pp txb utxoCollateral bal =
       validateScriptsNotPaidUTxO utxoCollateral,
       -- Part 4: balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
       validateInsufficientCollateral pp txb bal,
-      -- Part 5: adaOnly balance
+      -- Part 5: isAdaOnly balance
       validateCollateralContainsNonADA bal,
       -- Part 6: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
       failureIf (null utxoCollateral) NoCollateralInputs
@@ -358,13 +358,13 @@ validateInsufficientCollateral pp txb bal =
     txfee = getField @"txfee" txb -- Coin supplied to pay fees
     collPerc = getField @"_collateralPercentage" pp
 
--- > adaOnly balance
+-- > isAdaOnly balance
 validateCollateralContainsNonADA ::
   Val.Val (Core.Value era) =>
   Core.Value era ->
   Validation (NonEmpty (UtxoPredicateFailure era)) ()
 validateCollateralContainsNonADA bal =
-  failureUnless (Val.inject (Val.coin bal) == bal) $ CollateralContainsNonADA bal
+  failureUnless (Val.isAdaOnly bal) $ CollateralContainsNonADA bal
 
 -- | If tx has non-native scripts, end of validity interval must translate to time
 --

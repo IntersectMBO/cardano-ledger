@@ -170,6 +170,7 @@ benchmark bench
     Bench.Cardano.Ledger.EpochBoundary
     Bench.Cardano.Ledger.Serialisation.Generators
     Bench.Cardano.Ledger.SumStake
+    Bench.Cardano.Ledger.TxOut
   build-depends:
     bytestring,
     cardano-binary,
@@ -190,7 +191,8 @@ benchmark bench
     cardano-ledger-shelley-test,
     random,
     small-steps,
-    small-steps-test
+    small-steps-test,
+    text
   ghc-options:
       -threaded
       -rtsopts

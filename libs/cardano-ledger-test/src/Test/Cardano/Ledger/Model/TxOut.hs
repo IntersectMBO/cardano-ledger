@@ -112,5 +112,5 @@ modelUTxOEntrySize (ModelTxOut _a v d) =
 canBeUsedAsCollateral :: ModelTxOut era -> Bool
 canBeUsedAsCollateral txo
   | not $ has (modelTxOut_address . modelAddress_pmt . _ModelKeyHashObj) txo = False
-  | not $ Val.adaOnly $ _mtxo_value txo = False
+  | not $ Val.isAdaOnly $ _mtxo_value txo = False
   | otherwise = True

@@ -82,6 +82,7 @@ import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     isSNothing,
+    maybeToStrictMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
@@ -114,7 +115,6 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeNonNegative,
     Val (..),
-    adaOnly,
     decodeMint,
     decodeNonNegative,
     encodeMint,
@@ -191,7 +191,7 @@ getAdaOnly ::
   Core.Value era ->
   Maybe (CompactForm Coin)
 getAdaOnly _ v = do
-  guard $ adaOnly v
+  guard $ isAdaOnly v
   toCompact $ coin v
 
 decodeAddress28 ::
@@ -273,20 +273,13 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
     | Just addr <- decodeAddress28 stakeRef addr28Extra ->
-      (compactAddr addr, toCompactValue adaVal, SNothing)
+      (compactAddr addr, injectCompact adaVal, SNothing)
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
     | Just addr <- decodeAddress28 stakeRef addr28Extra,
       Just dh <- decodeDataHash32 dataHash32 ->
-      (compactAddr addr, toCompactValue adaVal, SJust dh)
+      (compactAddr addr, injectCompact adaVal, SJust dh)
     | otherwise -> error addressErrorMsg
-  where
-    toCompactValue :: CompactForm Coin -> CompactForm (Core.Value era)
-    toCompactValue ada =
-      fromMaybe (error "Failed to compact a `Coin` as `CompactForm (Core.Value era)`")
-        . toCompact
-        . inject
-        $ fromCompact ada
 
 viewTxOut ::
   forall era.
@@ -355,35 +348,6 @@ pattern TxOut addr vl dh <-
             SJust dh -> TxOutCompactDH' a v dh
 
 {-# COMPLETE TxOut #-}
-
--- TODO deprecate
-pattern TxOutCompact ::
-  ( Era era,
-    HasCallStack
-  ) =>
-  CompactAddr (Crypto era) ->
-  CompactForm (Core.Value era) ->
-  TxOut era
-pattern TxOutCompact addr vl <-
-  (viewCompactTxOut -> (addr, vl, SNothing))
-  where
-    TxOutCompact cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
-
--- TODO deprecate
-pattern TxOutCompactDH ::
-  ( Era era,
-    HasCallStack
-  ) =>
-  CompactAddr (Crypto era) ->
-  CompactForm (Core.Value era) ->
-  DataHash (Crypto era) ->
-  TxOut era
-pattern TxOutCompactDH addr vl dh <-
-  (viewCompactTxOut -> (addr, vl, SJust dh))
-  where
-    TxOutCompactDH cAddr cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) . SJust
-
-{-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
 -- ======================================
 
@@ -674,6 +638,39 @@ instance
           <*> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
+pattern TxOutCompact ::
+  ( Era era,
+    Val (Core.Value era),
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  TxOut era
+pattern TxOutCompact addr vl <-
+  (viewCompactTxOut -> (addr, vl, SNothing))
+  where
+    TxOutCompact cAddr cVal
+      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
+      | otherwise = TxOutCompact' cAddr cVal
+
+pattern TxOutCompactDH ::
+  forall era.
+  ( Era era,
+    HasCallStack
+  ) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  DataHash (Crypto era) ->
+  TxOut era
+pattern TxOutCompactDH addr vl dh <-
+  (viewCompactTxOut -> (addr, vl, SJust dh))
+  where
+    TxOutCompactDH cAddr cVal dh
+      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) (SJust dh)
+      | otherwise = TxOutCompactDH' cAddr cVal dh
+
+{-# COMPLETE TxOutCompact, TxOutCompactDH #-}
+
 encodeTxBodyRaw ::
   ( Era era,
     ToCBOR (PParamsDelta era)
@@ -870,12 +867,20 @@ instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
   getField (TxBodyConstr (Memo m _)) = _txnetworkid m
 
 instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
-  getField (TxOutCompact _ v) = fromCompact v
-  getField (TxOutCompactDH _ v _) = fromCompact v
+  getField = \case
+    TxOutCompact' _ cv -> fromCompact cv
+    TxOutCompactDH' _ cv _ -> fromCompact cv
+    TxOut_AddrHash28_AdaOnly _ _ cc -> inject (fromCompact cc)
+    TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> inject (fromCompact cc)
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
-  getField (TxOutCompact _ _) = SNothing
-  getField (TxOutCompactDH _ _ d) = SJust d
+  getField = \case
+    TxOutCompactDH' _ _ dh -> SJust dh
+    TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dh ->
+      maybeToStrictMaybe $ do
+        Refl <- sameNat (Proxy @(SizeHash (CC.HASH c))) (Proxy @32)
+        decodeDataHash32 @c dh
+    _ -> SNothing
 
 getAlonzoTxOutEitherAddr ::
   HashAlgorithm (CC.ADDRHASH (Crypto era)) =>
@@ -889,7 +894,7 @@ getAlonzoTxOutEitherAddr = \case
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
     | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
-  _ -> error addressErrorMsg
+    | otherwise -> error addressErrorMsg
 
 addressErrorMsg :: String
 addressErrorMsg = "Impossible: Compacted an address of non-standard size"
