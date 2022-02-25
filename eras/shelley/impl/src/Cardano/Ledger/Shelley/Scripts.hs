@@ -35,6 +35,7 @@ import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
+import Control.DeepSeq (NFData)
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
 import Data.MemoBytes
@@ -72,9 +73,13 @@ data MultiSigRaw crypto
   deriving (Show, Eq, Ord, Generic)
   deriving anyclass (NoThunks)
 
+instance NFData (MultiSigRaw era)
+
 newtype MultiSig crypto = MultiSigConstr (MemoBytes (MultiSigRaw crypto))
   deriving (Eq, Ord, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
+
+deriving newtype instance NFData (MultiSig era)
 
 getMultiSigBytes :: MultiSig crypto -> ShortByteString
 getMultiSigBytes (MultiSigConstr (Memo _ bytes)) = bytes

@@ -22,7 +22,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules.Ledger ()
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era, ValidateScript)
+import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
@@ -34,7 +34,6 @@ import Cardano.Ledger.Shelley.API
     MempoolEnv,
     MempoolState,
     ShelleyBasedEra,
-    Tx,
     applyTxsTransition,
   )
 import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
@@ -44,7 +43,6 @@ import Control.DeepSeq (NFData (..))
 import Control.State.Transition (State)
 import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
 import Criterion
-import qualified Data.ByteString.Lazy as BSL
 import Data.Default.Class (Default, def)
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
@@ -103,6 +101,21 @@ instance NFData (ApplyTxRes era) where
 benchmarkSeed :: Int
 benchmarkSeed = 24601
 
+benchWithGenState ::
+  ( NFData a,
+    EraGen era,
+    HasTrace (Core.EraRule "LEDGER" era) (GenEnv era),
+    ShelleyBasedEra era,
+    Default (State (Core.EraRule "PPUP" era)),
+    BaseEnv (Core.EraRule "LEDGER" era) ~ Globals
+  ) =>
+  Proxy era ->
+  (((UTxOState era, DPState (Crypto era)), Core.Tx era) -> IO a) ->
+  (a -> Benchmarkable) ->
+  Benchmark
+benchWithGenState px prepEnv mkBench =
+  env (prepEnv $ generateForEra px benchmarkSeed) $ bench (show $ typeRep px) . mkBench
+
 benchApplyTx ::
   forall era.
   ( Era era,
@@ -111,52 +124,44 @@ benchApplyTx ::
     ShelleyBasedEra era,
     HasTrace (Core.EraRule "LEDGER" era) (GenEnv era),
     BaseEnv (Core.EraRule "LEDGER" era) ~ Globals,
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    NFData (State (Core.EraRule "PPUP" era)),
+    NFData (Core.PParams era),
+    NFData (Core.TxOut era),
+    NFData (Core.Value era)
   ) =>
   Proxy era ->
   Benchmark
-benchApplyTx p = env genRes go
+benchApplyTx px = benchWithGenState px genRes $ \txRes ->
+  let ApplyTxRes {atrGlobals, atrMempoolEnv, atrState, atrTx} = txRes
+   in nf
+        ( either (error . show) id
+            . applyTxsTransition atrGlobals atrMempoolEnv (Seq.singleton atrTx)
+        )
+        atrState
   where
-    genRes = do
-      (state, tx) <- pure $ generateForEra p benchmarkSeed
-      pure $! ApplyTxRes testGlobals applyTxMempoolEnv state tx
-    go :: ApplyTxRes era -> Benchmark
-    go ~ApplyTxRes {atrGlobals, atrMempoolEnv, atrState, atrTx} =
-      bench (show $ typeRep p) $
-        whnf
-          ( either (error . show) (\(x, y) -> x `seq` y `seq` (x, y))
-              . applyTxsTransition @era @(Either _)
-                atrGlobals
-                atrMempoolEnv
-                (Seq.singleton atrTx)
-          )
-          atrState
+    genRes (state, tx) = pure $ ApplyTxRes testGlobals applyTxMempoolEnv state tx
 
 --------------------------------------------------------------------------------
--- Deserialising resources from disk
+-- Deserialising resources
 --------------------------------------------------------------------------------
-
-resource_n_tx :: Int -> FilePath
-resource_n_tx n = "bench/resources/" <> show n <> "_tx.cbor"
 
 -- | Benchmark deserialising a shelley transaction as if it comes from the given
 -- era.
 deserialiseTxEra ::
   forall era.
-  ( Era era,
-    ValidateScript era,
-    FromCBOR (Annotator (Core.TxBody era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era)),
-    FromCBOR (Annotator (Core.Witnesses era))
+  ( EraGen era,
+    ShelleyBasedEra era,
+    Default (State (Core.EraRule "PPUP" era)),
+    BaseEnv (Core.EraRule "LEDGER" era) ~ Globals,
+    HasTrace (Core.EraRule "LEDGER" era) (GenEnv era),
+    NFData (Core.Tx era)
   ) =>
   Proxy era ->
   Benchmark
-deserialiseTxEra p =
-  bench (show $ typeRep p) $
-    whnfIO $
-      either (\err -> error $ "Failed to decode tx: " <> show err) (id @(Tx era))
-        . decodeAnnotator "tx" fromCBOR
-        <$> BSL.readFile (resource_n_tx 0)
+deserialiseTxEra px =
+  benchWithGenState px (pure . serialize . snd) $
+    nf (either (error . show) (id @((Core.Tx era))) . decodeAnnotator "tx" fromCBOR)
 
 --------------------------------------------------------------------------------
 -- Benchmark suite
@@ -177,8 +182,8 @@ applyTxBenchmarks =
         "Deserialise Shelley Tx"
         [ deserialiseTxEra (Proxy @ShelleyBench),
           deserialiseTxEra (Proxy @AllegraBench),
-          deserialiseTxEra (Proxy @MaryBench),
-          deserialiseTxEra (Proxy @AlonzoBench)
+          deserialiseTxEra (Proxy @MaryBench)
+          --deserialiseTxEra (Proxy @AlonzoBench)
         ]
     ]
 
