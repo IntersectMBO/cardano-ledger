@@ -37,12 +37,14 @@ library
     Cardano.Ledger.Pretty
     Cardano.Ledger.Pretty.Alonzo
     Cardano.Ledger.Pretty.Mary
+    Cardano.Ledger.Pretty.Babbage
   build-depends:
     bech32,
     bytestring,
     cardano-crypto-class,
     cardano-data,
     cardano-ledger-alonzo,
+    cardano-ledger-babbage,
     cardano-ledger-byron,
     cardano-ledger-core,
     cardano-ledger-shelley,

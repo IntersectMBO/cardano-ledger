@@ -55,7 +55,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
-import Cardano.Ledger.Rules.ValidationMode (runValidation)
+import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
 import Cardano.Ledger.Serialization
   ( decodeList,
     decodeRecordSum,
@@ -118,7 +118,6 @@ import Control.State.Transition
   )
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (foldl', toList)
-import Data.List.NonEmpty (NonEmpty)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -381,40 +380,40 @@ utxoInductive = do
   let txb = getField @"body" tx
 
   {- txttl txb ≥ slot -}
-  runValidation $ validateTimeToLive txb slot
+  runTest $ validateTimeToLive txb slot
 
   {- txins txb ≠ ∅ -}
-  runValidation $ validateInputSetEmptyUTxO txb
+  runTest $ validateInputSetEmptyUTxO txb
 
   {- minfee pp tx ≤ txfee txb -}
-  runValidation $ validateFeeTooSmallUTxO pp tx
+  runTest $ validateFeeTooSmallUTxO pp tx
 
   {- txins txb ⊆ dom utxo -}
-  runValidation $ validateBadInputsUTxO utxo $ getField @"inputs" txb
+  runTest $ validateBadInputsUTxO utxo $ getField @"inputs" txb
 
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runValidation $ validateWrongNetwork netId txb
+  runTest $ validateWrongNetwork netId txb
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
-  runValidation $ validateWrongNetworkWithdrawal netId txb
+  runTest $ validateWrongNetworkWithdrawal netId txb
 
   {- consumed pp utxo txb = produced pp poolParams txb -}
-  runValidation $ validateValueNotConservedUTxO pp utxo stakepools txb
+  runTest $ validateValueNotConservedUTxO pp utxo stakepools txb
 
   -- process Protocol Parameter Update Proposals
   ppup' <- trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputs = txouts txb
   {- ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp) -}
-  runValidation $ validateOutputTooSmallUTxO pp outputs
+  runTest $ validateOutputTooSmallUTxO pp outputs
 
   {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
-  runValidation $ validateOutputBootAddrAttrsTooBig outputs
+  runTest $ validateOutputBootAddrAttrsTooBig outputs
 
   {- txsize tx ≤ maxTxSize pp -}
-  runValidation $ validateMaxTxSizeUTxO pp tx
+  runTest $ validateMaxTxSizeUTxO pp tx
 
   let refunded = keyRefunds pp txb
   let txCerts = toList $ getField @"certs" txb
@@ -431,7 +430,7 @@ validateTimeToLive ::
   HasField "ttl" (Core.TxBody era) SlotNo =>
   Core.TxBody era ->
   SlotNo ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateTimeToLive txb slot = failureUnless (ttl >= slot) $ ExpiredUTxO ttl slot
   where
     ttl = getField @"ttl" txb
@@ -442,7 +441,7 @@ validateTimeToLive txb slot = failureUnless (ttl >= slot) $ ExpiredUTxO ttl slot
 validateInputSetEmptyUTxO ::
   HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))) =>
   Core.TxBody era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateInputSetEmptyUTxO txb =
   failureUnless (txins txb /= Set.empty) InputSetEmptyUTxO
   where
@@ -460,7 +459,7 @@ validateFeeTooSmallUTxO ::
   ) =>
   Core.PParams era ->
   Core.Tx era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateFeeTooSmallUTxO pp tx =
   failureUnless (minFee <= txFee) $ FeeTooSmallUTxO minFee txFee
   where
@@ -474,7 +473,7 @@ validateFeeTooSmallUTxO pp tx =
 validateBadInputsUTxO ::
   UTxO era ->
   Set (TxIn (Crypto era)) ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateBadInputsUTxO utxo txins =
   failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs
   where
@@ -488,7 +487,7 @@ validateWrongNetwork ::
   Era era =>
   Network ->
   Core.TxBody era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateWrongNetwork netId txb =
   failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
   where
@@ -505,7 +504,7 @@ validateWrongNetworkWithdrawal ::
   (HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))) =>
   Network ->
   Core.TxBody era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateWrongNetworkWithdrawal netId txb =
   failureUnless (null wdrlsWrongNetwork) $
     WrongNetworkWithdrawal netId (Set.fromList wdrlsWrongNetwork)
@@ -530,7 +529,7 @@ validateValueNotConservedUTxO ::
   UTxO era ->
   Map (KeyHash 'StakePool (Crypto era)) a ->
   Core.TxBody era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateValueNotConservedUTxO pp utxo stakepools txb =
   failureUnless (consumedValue == producedValue) $
     ValueNotConservedUTxO consumedValue producedValue
@@ -547,7 +546,7 @@ validateOutputTooSmallUTxO ::
   ) =>
   Core.PParams era ->
   UTxO era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
@@ -570,7 +569,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 validateOutputBootAddrAttrsTooBig ::
   Era era =>
   UTxO era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateOutputBootAddrAttrsTooBig (UTxO outputs) =
   failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
   where
@@ -592,7 +591,7 @@ validateMaxTxSizeUTxO ::
   ) =>
   Core.PParams era ->
   Core.Tx era ->
-  Validation (NonEmpty (UtxoPredicateFailure era)) ()
+  Test (UtxoPredicateFailure era)
 validateMaxTxSizeUTxO pp tx =
   failureUnless (txSize <= maxTxSize) $ MaxTxSizeUTxO txSize maxTxSize
   where
@@ -632,3 +631,14 @@ instance
   where
   wrapFailed = UpdateFailure
   wrapEvent = UpdateEvent
+
+-- =================================
+
+instance
+  PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era =>
+  Inject (PpupPredicateFailure era) (UtxoPredicateFailure era)
+  where
+  inject = UpdateFailure
+
+instance Inject (UtxoPredicateFailure era) (UtxoPredicateFailure era) where
+  inject = id

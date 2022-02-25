@@ -12,7 +12,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail)
+import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail)
 import Cardano.Ledger.Alonzo.Scripts (Script, decodeCostModel)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
@@ -91,8 +91,8 @@ tests =
         tripping @(PParamsUpdate (AlonzoEra C_Crypto)),
       testProperty "alonzo/AuxiliaryData" $
         trippingAnn @(AuxiliaryData (AlonzoEra C_Crypto)),
-      testProperty "alonzo/AlonzoPredFail" $
-        tripping @(AlonzoPredFail (AlonzoEra C_Crypto)),
+      testProperty "alonzo/UtxowPredicateFail" $
+        tripping @(UtxowPredicateFail (AlonzoEra C_Crypto)),
       testProperty "alonzo/UtxoPredicateFailure" $
         tripping @(UtxoPredicateFailure (AlonzoEra C_Crypto)),
       testProperty "alonzo/UtxosPredicateFailure" $

@@ -20,7 +20,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo
   ( UtxoPredicateFailure (..),
   )
 import Cardano.Ledger.Alonzo.Rules.Utxow
-  ( AlonzoPredFail (..),
+  ( UtxowPredicateFail (..),
   )
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo

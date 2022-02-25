@@ -40,6 +40,12 @@ library
     Cardano.Ledger.Babbage.TxBody
     Cardano.Ledger.Babbage.TxInfo
     Cardano.Ledger.Babbage.Translation
+    Cardano.Ledger.Babbage.Scripts
+    Cardano.Ledger.Babbage.Collateral
+    Cardano.Ledger.Babbage.Rules.Utxow
+    Cardano.Ledger.Babbage.Rules.Utxo
+    Cardano.Ledger.Babbage.Rules.Utxos
+    Cardano.Ledger.Babbage.Rules.Ledger
     Cardano.Ledger.Babbage
   build-depends:
     array,
@@ -74,5 +80,6 @@ library
     time,
     transformers,
     utf8-string,
+    validation-selective,
   hs-source-dirs:
     src

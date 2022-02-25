@@ -18,6 +18,7 @@
 module Test.Cardano.Ledger.Generic.Properties where
 
 -- =================================
+-- import Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
@@ -63,6 +64,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo (ppData, ppIsValid, ppTag)
+import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
@@ -135,17 +137,6 @@ import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
-
-{-
-
-import Debug.Trace
-import Cardano.Ledger.Shelley.Rules.Ledger(LedgerPredicateFailure(..))
-import Cardano.Ledger.Shelley.Rules.Utxow(UtxowPredicateFailure(..))
-import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley(UtxoPredicateFailure(..))
-
-import Cardano.Ledger.Alonzo.Rules.Utxow(AlonzoPredFail(..))
-import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo(UtxoPredicateFailure(..))
--}
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -1234,11 +1225,12 @@ genTxAndLEDGERState proof = do
 -- in a way that is Era Agnostic
 
 applySTSByProof ::
-  (RuleTypeRep rtype, GoodCrypto (Crypto era)) =>
+  forall era.
+  (GoodCrypto (Crypto era)) =>
   Proof era ->
-  RuleContext rtype (Core.EraRule "LEDGER" era) ->
+  RuleContext 'Transition (Core.EraRule "LEDGER" era) ->
   (Either [PredicateFailure (Core.EraRule "LEDGER" era)] (State (Core.EraRule "LEDGER" era)))
-applySTSByProof (Babbage _) trc = runShelleyBase $ applySTS trc
+applySTSByProof (Babbage _) _trc = runShelleyBase $ applySTS @(Core.EraRule "LEDGER" (BabbageEra (Crypto era))) _trc
 applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Allegra _) trc = runShelleyBase $ applySTS trc
@@ -1395,3 +1387,14 @@ genericProperties =
 
 main :: IO ()
 main = defaultMain genericProperties
+
+-- TODO FIXME
+-- we are going to need some babbage specific guidance to make this work.
+-- This would be a failing test. We don't want to lose this information.
+-- We will fix it in a future PR. The failure is in the generator, not the tests.
+-- The generator generates good things in [Shelley .. Alonzo], but Babbage needs work.
+workNeededHere :: IO ()
+workNeededHere =
+  defaultMain $
+    testProperty "Babbage ValidTx preserves ADA" $
+      forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))

@@ -13,8 +13,6 @@
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
--- import Cardano.Ledger.Babbage(BabbageEra)
-
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 -- ------------------------------
@@ -25,7 +23,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
+import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 -- -------------
 -- Specific types
 
@@ -34,6 +32,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..))
+import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..))
@@ -41,6 +40,7 @@ import Cardano.Ledger.Keys (hashKey)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
+import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (WitHashes (..))
@@ -96,6 +96,14 @@ instance CC.Crypto c => PrettyCore (AlonzoEra c) where
   prettyValue = ppValue
   prettyTxOut = Cardano.Ledger.Pretty.Alonzo.ppTxOut
 
+instance CC.Crypto c => PrettyCore (BabbageEra c) where
+  prettyTx = Cardano.Ledger.Pretty.Alonzo.ppTx
+  prettyScript = ppScript
+  prettyTxBody = Babbage.ppTxBody
+  prettyWitnesses = ppTxWitness
+  prettyValue = ppValue
+  prettyTxOut = Babbage.ppTxOut
+
 -- ===================================================================
 -- PrettyA instances for UTXOW, UTXO, UTXOS, PPUP predicate failures
 -- There are sometimes two versions:
@@ -132,47 +140,47 @@ instance
 -- =========================================
 -- Predicate Failure for Alonzo UTXOW
 
-ppAlonzoPredFail ::
+ppUtxowPredicateFail ::
   ( PrettyA (PredicateFailure (Core.EraRule "UTXO" era)),
     PrettyCore era
   ) =>
-  AlonzoPredFail era ->
+  UtxowPredicateFail era ->
   PDoc
-ppAlonzoPredFail (WrappedShelleyEraFailure x) = prettyA x
-ppAlonzoPredFail (MissingRedeemers xs) =
+ppUtxowPredicateFail (WrappedShelleyEraFailure x) = prettyA x
+ppUtxowPredicateFail (MissingRedeemers xs) =
   ppSexp "MissingRedeemers" [ppList (ppPair ppScriptPurpose ppScriptHash) xs]
-ppAlonzoPredFail (MissingRequiredDatums s1 s2) =
+ppUtxowPredicateFail (MissingRequiredDatums s1 s2) =
   ppRecord
     "MissingRequiredDatums"
     [ ("missing data hashes", ppSet ppSafeHash s1),
       ("received data hashes", ppSet ppSafeHash s2)
     ]
-ppAlonzoPredFail (NonOutputSupplimentaryDatums s1 s2) =
+ppUtxowPredicateFail (NonOutputSupplimentaryDatums s1 s2) =
   ppRecord
     "NonOutputSupplimentaryDatums"
     [ ("unallowed data hashes", ppSet ppSafeHash s1),
       ("acceptable data hashes", ppSet ppSafeHash s2)
     ]
-ppAlonzoPredFail (PPViewHashesDontMatch h1 h2) =
+ppUtxowPredicateFail (PPViewHashesDontMatch h1 h2) =
   ppRecord
     "NonOutputSupplimentaryDatums"
     [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash h1),
       ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash h2)
     ]
-ppAlonzoPredFail (MissingRequiredSigners x) =
+ppUtxowPredicateFail (MissingRequiredSigners x) =
   ppSexp "MissingRequiredSigners" [ppSet ppKeyHash x]
-ppAlonzoPredFail (UnspendableUTxONoDatumHash x) =
+ppUtxowPredicateFail (UnspendableUTxONoDatumHash x) =
   ppSexp "UnspendableUTxONoDatumHash" [ppSet ppTxIn x]
-ppAlonzoPredFail (ExtraRedeemers x) =
+ppUtxowPredicateFail (ExtraRedeemers x) =
   ppSexp "ExtraRedeemers" [ppList prettyA x]
 
 instance
   ( PrettyA (PredicateFailure (Core.EraRule "UTXO" era)),
     PrettyCore era
   ) =>
-  PrettyA (AlonzoPredFail era)
+  PrettyA (UtxowPredicateFail era)
   where
-  prettyA = ppAlonzoPredFail
+  prettyA = ppUtxowPredicateFail
 
 -- ====================================================
 -- Predicate Failure for Shelley UTXOW

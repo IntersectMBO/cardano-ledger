@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), BinaryData, Data (..), da
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoPredFail (..))
+import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
@@ -30,6 +30,7 @@ import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), ScriptResult (..))
 import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
 import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody
   ( BabbageBody,
@@ -205,7 +206,7 @@ instance Mock c => Arbitrary (UtxoPredicateFailure (BabbageEra c)) where
         CollateralContainsNonADA <$> arbitrary
       ]
 
-instance Mock c => Arbitrary (AlonzoPredFail (BabbageEra c)) where
+instance Mock c => Arbitrary (UtxowPredicateFail (BabbageEra c)) where
   arbitrary =
     oneof
       [ WrappedShelleyEraFailure <$> arbitrary,
@@ -230,4 +231,14 @@ instance
       [ pure NoDatum,
         DatumHash <$> arbitrary,
         Datum . dataToBinaryData <$> arbitrary
+      ]
+
+instance Mock c => Arbitrary (BabbageUtxoPred (BabbageEra c)) where
+  arbitrary =
+    oneof
+      [ FromAlonzoUtxoFail <$> arbitrary,
+        FromAlonzoUtxowFail <$> arbitrary,
+        UnequalCollateralReturn <$> arbitrary <*> arbitrary,
+        UnknownDataHash <$> arbitrary,
+        DanglingWitnessDataHash <$> arbitrary
       ]

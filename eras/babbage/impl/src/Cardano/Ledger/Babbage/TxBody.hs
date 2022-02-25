@@ -42,8 +42,8 @@ module Cardano.Ledger.Babbage.TxBody
       ),
     Datum (..),
     datumDataHash,
-    inputs',
-    collateral',
+    spendInputs',
+    collateralInputs',
     referenceInputs',
     outputs',
     collateralReturn',
@@ -574,8 +574,8 @@ instance (c ~ Crypto era) => HashAnnotated (TxBody era) EraIndependentTxBody c
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-inputs' :: TxBody era -> Set (TxIn (Crypto era))
-collateral' :: TxBody era -> Set (TxIn (Crypto era))
+spendInputs' :: TxBody era -> Set (TxIn (Crypto era))
+collateralInputs' :: TxBody era -> Set (TxIn (Crypto era))
 referenceInputs' :: TxBody era -> Set (TxIn (Crypto era))
 outputs' :: TxBody era -> StrictSeq (TxOut era)
 collateralReturn' :: TxBody era -> StrictMaybe (TxOut era)
@@ -589,11 +589,11 @@ reqSignerHashes' :: TxBody era -> Set (KeyHash 'Witness (Crypto era))
 adHash' :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
 mint' :: TxBody era -> Value (Crypto era)
 scriptIntegrityHash' :: TxBody era -> StrictMaybe (ScriptIntegrityHash (Crypto era))
-inputs' (TxBodyConstr (Memo raw _)) = _spendInputs raw
+spendInputs' (TxBodyConstr (Memo raw _)) = _spendInputs raw
 
 txnetworkid' :: TxBody era -> StrictMaybe Network
 
-collateral' (TxBodyConstr (Memo raw _)) = _collateralInputs raw
+collateralInputs' (TxBodyConstr (Memo raw _)) = _collateralInputs raw
 
 referenceInputs' (TxBodyConstr (Memo raw _)) = _referenceInputs raw
 

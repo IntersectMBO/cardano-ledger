@@ -12,23 +12,16 @@ module Cardano.Ledger.Babbage
   ( BabbageEra,
     Self,
     TxOut,
-    Value,
     TxBody,
     Script,
     AuxiliaryData,
-    PParams,
-    PParamsDelta,
   )
 where
 
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
-import qualified Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
-import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.TxInfo (HasTxInfo (..), validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
@@ -41,6 +34,10 @@ import Cardano.Ledger.Babbage.PParams
     PParamsUpdate,
     updatePParams,
   )
+import Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER)
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO)
+import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut), getBabbageTxOutEitherAddr)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
@@ -50,12 +47,13 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import qualified Cardano.Ledger.Era as EraModule
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
-import qualified Cardano.Ledger.Mary.Value as V (Value)
+import qualified Cardano.Ledger.Mary.Value as Mary (Value)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.API.Validation (ShelleyEraCrypto)
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
     UsesTxOut (..),
@@ -96,6 +94,19 @@ import qualified Data.Set as Set
 
 -- =====================================================
 
+instance (ShelleyEraCrypto c) => API.ApplyTx (BabbageEra c) where
+  reapplyTx globals env state vtx =
+    let res =
+          flip runReader globals
+            . applySTSNonStatic
+              @(Core.EraRule "LEDGER" (BabbageEra c))
+            $ TRC (env, state, API.extractTx vtx)
+     in liftEither . left (API.ApplyTxError) $ res
+
+instance ShelleyEraCrypto c => API.ApplyBlock (BabbageEra c)
+
+instance ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
+
 -- | The Alonzo era
 data BabbageEra c
 
@@ -107,17 +118,6 @@ instance
   type Crypto (BabbageEra c) = c
 
   getTxOutEitherAddr = getBabbageTxOutEitherAddr
-
-instance API.ShelleyEraCrypto c => API.ApplyTx (BabbageEra c) where
-  reapplyTx globals env state vtx =
-    let res =
-          flip runReader globals
-            . applySTSNonStatic
-              @(Core.EraRule "LEDGER" (BabbageEra c))
-            $ TRC (env, state, API.extractTx vtx)
-     in liftEither . left API.ApplyTxError $ res
-
-instance API.ShelleyEraCrypto c => API.ApplyBlock (BabbageEra c)
 
 instance (CC.Crypto c) => Shelley.ValidateScript (BabbageEra c) where
   isNativeScript x = not (isPlutusScript x)
@@ -190,7 +190,7 @@ type instance Core.TxOut (BabbageEra c) = TxOut (BabbageEra c)
 
 type instance Core.TxBody (BabbageEra c) = TxBody (BabbageEra c)
 
-type instance Core.Value (BabbageEra c) = V.Value c
+type instance Core.Value (BabbageEra c) = Mary.Value c
 
 type instance Core.Script (BabbageEra c) = Script (BabbageEra c)
 
@@ -220,8 +220,6 @@ instance CC.Crypto c => EraModule.SupportsSegWit (BabbageEra c) where
   hashTxSeq = Alonzo.hashTxSeq
   numSegComponents = 4
 
-instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
-
 instance CC.Crypto c => HasTxInfo (BabbageEra c) where
   txInfo = babbageTxInfo
 
@@ -231,13 +229,13 @@ instance CC.Crypto c => HasTxInfo (BabbageEra c) where
 
 -- Rules inherited from Alonzo
 
-type instance Core.EraRule "UTXOS" (BabbageEra c) = Alonzo.UTXOS (BabbageEra c)
+type instance Core.EraRule "UTXOS" (BabbageEra c) = BabbageUTXOS (BabbageEra c)
 
-type instance Core.EraRule "UTXO" (BabbageEra c) = Alonzo.AlonzoUTXO (BabbageEra c)
+type instance Core.EraRule "UTXO" (BabbageEra c) = BabbageUTXO (BabbageEra c)
 
-type instance Core.EraRule "UTXOW" (BabbageEra c) = Alonzo.AlonzoUTXOW (BabbageEra c)
+type instance Core.EraRule "UTXOW" (BabbageEra c) = BabbageUTXOW (BabbageEra c)
 
-type instance Core.EraRule "LEDGER" (BabbageEra c) = Alonzo.AlonzoLEDGER (BabbageEra c)
+type instance Core.EraRule "LEDGER" (BabbageEra c) = BabbageLEDGER (BabbageEra c)
 
 type instance Core.EraRule "BBODY" (BabbageEra c) = Alonzo.AlonzoBBODY (BabbageEra c)
 
@@ -279,6 +277,4 @@ type instance Core.EraRule "UPEC" (BabbageEra c) = Shelley.UPEC (BabbageEra c)
 
 type Self c = BabbageEra c
 
-type Value era = V.Value (EraModule.Crypto era)
-
-type PParamsDelta era = PParamsUpdate era
+-- =================================================
