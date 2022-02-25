@@ -1393,6 +1393,7 @@ main = defaultMain genericProperties
 -- This would be a failing test. We don't want to lose this information.
 -- We will fix it in a future PR. The failure is in the generator, not the tests.
 -- The generator generates good things in [Shelley .. Alonzo], but Babbage needs work.
+workNeededHere :: IO ()
 workNeededHere =
   defaultMain $
     testProperty "Babbage ValidTx preserves ADA" $
