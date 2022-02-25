@@ -64,7 +64,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo (ppData, ppIsValid, ppTag)
-import Cardano.Ledger.Pretty.Babbage()
+import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
@@ -1388,9 +1388,9 @@ genericProperties =
 main :: IO ()
 main = defaultMain genericProperties
 
-
 -- TODO FIXME
 -- we are going to need some babbage specific guidance to make this work.
-go = defaultMain $
-         testProperty "Babbage ValidTx preserves ADA" $
-             forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))
+go =
+  defaultMain $
+    testProperty "Babbage ValidTx preserves ADA" $
+      forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))

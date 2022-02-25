@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
-import Cardano.Ledger.Babbage(BabbageEra)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 -- ------------------------------
@@ -33,6 +32,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..))
+import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..))
@@ -40,6 +40,7 @@ import Cardano.Ledger.Keys (hashKey)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
+import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (WitHashes (..))
@@ -52,7 +53,6 @@ import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailu
 import Control.State.Transition.Extended (PredicateFailure)
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Generic.Proof
-import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 
 -- =====================================================
 
