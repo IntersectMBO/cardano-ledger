@@ -376,5 +376,8 @@ instance
   where
   getField (TxBodyConstr (Memo m _)) = getField @"adHash" m
 
+instance (Crypto era ~ c) => HasField "collateral" (TxBody era) (Set (TxIn c)) where
+  getField (TxBodyConstr (Memo _ _)) = empty
+
 instance Value era ~ value => HasField "mint" (TxBody era) value where
   getField (TxBodyConstr (Memo m _)) = getField @"mint" m

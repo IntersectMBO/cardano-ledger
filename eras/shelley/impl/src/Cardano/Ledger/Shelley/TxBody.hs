@@ -817,6 +817,9 @@ instance
   where
   getField (TxBodyConstr (Memo m _)) = getField @"_mdHashX" m
 
+instance (Crypto era ~ c) => HasField "collateral" (TxBody era) (Set (Core.TxIn c)) where
+  getField (TxBodyConstr (Memo _ _)) = Set.empty
+
 instance c ~ Crypto era => HasField "minted" (TxBody era) (Set (ScriptHash c)) where
   getField _ = Set.empty
 
