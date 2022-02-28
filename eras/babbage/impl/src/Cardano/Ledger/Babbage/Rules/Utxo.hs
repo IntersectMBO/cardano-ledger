@@ -191,8 +191,8 @@ feesOK pp tx (UTxO utxo) = do
                   failureUnless
                     (all vKeyLocked collat)
                     (inject (ScriptsNotPaidUTxO (UTxO (SplitMap.filter (not . vKeyLocked) collat)))),
-                  -- Part 4 (adaOnly balance)
-                  failureUnless (Val.adaOnly valbalance) (inject (CollateralContainsNonADA @era valbalance)),
+                  -- Part 4 (isAdaOnly balance)
+                  failureUnless (Val.isAdaOnly valbalance) (inject (CollateralContainsNonADA @era valbalance)),
                   -- Part 5 (balance ≥ minCollateral tx pp)
                   failureUnless
                     (coinbalance >= minCollateral txb pp)
