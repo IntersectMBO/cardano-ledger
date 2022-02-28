@@ -1,0 +1,403 @@
+block =
+  [ header
+  , transaction_bodies         : [* transaction_body]
+  , transaction_witness_sets   : [* transaction_witness_set]
+  , auxiliary_data_set         : {* transaction_index => auxiliary_data }
+  , invalid_transactions       : [* transaction_index ]
+  ]; Valid blocks must also satisfy the following two constraints:
+   ; 1) the length of transaction_bodies and transaction_witness_sets
+   ;    must be the same
+   ; 2) every transaction_index must be strictly smaller than the
+   ;    length of transaction_bodies
+
+transaction =
+  [ transaction_body
+  , transaction_witness_set
+  , bool
+  , auxiliary_data / null
+  ]
+
+transaction_index = uint .size 2
+
+header =
+  [ header_body
+  , body_signature : $kes_signature
+  ]
+
+header_body =
+  [ block_number     : uint
+  , slot             : uint
+  , prev_hash        : $hash32 / null
+  , issuer_vkey      : $vkey
+  , vrf_vkey         : $vrf_vkey
+  , vrf_result       : $vrf_cert ; New, replaces nonce_vrf and leader_vrf
+  , block_body_size  : uint
+  , block_body_hash  : $hash32 ; merkle triple root
+  , operational_cert
+  , protocol_version
+  ]
+
+operational_cert =
+  ( hot_vkey        : $kes_vkey
+  , sequence_number : uint
+  , kes_period      : uint
+  , sigma           : $signature
+  )
+
+protocol_version = (uint, uint)
+
+transaction_body =
+ { 0 : set<transaction_input>    ; inputs
+ , 1 : [* transaction_output]
+ , 2 : coin                      ; fee
+ , ? 3 : uint                    ; time to live
+ , ? 4 : [* certificate]
+ , ? 5 : withdrawals
+ , ? 6 : update
+ , ? 7 : auxiliary_data_hash
+ , ? 8 : uint                    ; validity interval start
+ , ? 9 : mint
+ , ? 11 : script_data_hash
+ , ? 13 : set<transaction_input> ; collateral inputs
+ , ? 14 : required_signers
+ , ? 15 : network_id
+ , ? 16 : transaction_output     ; collateral return; New
+ , ? 17 : coin                   ; total collateral; New
+ , ? 18 : set<transaction_input> ; reference inputs; New
+ }
+
+required_signers = set<$addr_keyhash>
+
+transaction_input = [ transaction_id : $hash32
+                    , index : uint
+                    ]
+
+transaction_output = legacy_Transaction_output / post_alonzo_transaction_output ; New
+
+legacy_transaction_output =
+  [ address
+  , amount : value
+  , ? datum_hash : $hash32
+  ]
+
+; Note that in the post_alonzo_transaction_output, we do not allow
+; a transaction output to include both a datum hash and a datum.
+; In other words, keys 2 and 3 are mutually exclusive.
+post_alonzo_transaction_output =
+     { 0 => address
+     , 1 => value
+     , ? 2 => datum_hash
+     , ? 3 => datum      ; New; inline datum
+     , ? 4 => script     ; New; script reference
+     }
+
+script_data_hash = $hash32
+; This is a hash of data which may affect evaluation of a script.
+; This data consists of:
+;   - The redeemers from the transaction_witness_set (the value of field 5).
+;   - The datums from the transaction_witness_set (the value of field 4).
+;   - The value in the costmdls map corresponding to the script's language
+;     (in field 18 of protocol_param_update.)
+; (In the future it may contain additional protocol parameters.)
+;
+; Since this data does not exist in contiguous form inside a transaction, it needs
+; to be independently constructed by each recipient.
+;
+; script data format:
+; [ redeemers | datums | language views ]
+; The redeemers are exactly the data present in the transaction witness set.
+; Similarly for the datums, if present. If no datums are provided, the middle
+; field is an empty string.
+;
+; language views CDDL:
+; { * language => script_integrity_data }
+;
+; This must be encoded canonically, using the same scheme as in
+; RFC7049 section 3.9:
+;  - Maps, strings, and bytestrings must use a definite-length encoding
+;  - Integers must be as small as possible.
+;  - The expressions for map length, string length, and bytestring length
+;    must be as short as possible.
+;  - The keys in the map must be sorted as follows:
+;     -  If two keys have different lengths, the shorter one sorts earlier.
+;     -  If two keys have the same length, the one with the lower value
+;        in (byte-wise) lexical order sorts earlier.
+;
+; For PlutusV1 (language id 0), the language view is the following:
+;   - the value of costmdls map at key 0 is encoded as an indefinite length
+;     list and the result is encoded as a bytestring. (our apologies)
+;   - the language ID tag is also encoded twice. first as a uint then as
+;     a bytestring. (our apologies)
+; For PlutusV2 (language id 1), the language view is the following:
+;   - the value of costmdls map at key 1 is encoded as an definite length list.
+;
+; If there is no value for key 0, then the corresponding scripts cannot execute.
+; Regardless of what the script integrity data is.
+;
+; Finally, note that in the case that a transaction includes datums but does not
+; include any redeemers, the script data format becomes (in hex):
+; [ 80 | datums | A0 ]
+; corresponding to a CBOR empty list and an empty map.
+
+; address = bytes
+; reward_account = bytes
+
+; address format:
+; [ 8 bit header | payload ];
+;
+; shelley payment addresses:
+; bit 7: 0
+; bit 6: base/other
+; bit 5: pointer/enterprise [for base: stake cred is keyhash/scripthash]
+; bit 4: payment cred is keyhash/scripthash
+; bits 3-0: network id
+;
+; reward addresses:
+; bits 7-5: 111
+; bit 4: credential is keyhash/scripthash
+; bits 3-0: network id
+;
+; byron addresses:
+; bits 7-4: 1000
+
+; 0000: base address: keyhash28,keyhash28
+; 0001: base address: scripthash28,keyhash28
+; 0010: base address: keyhash28,scripthash28
+; 0011: base address: scripthash28,scripthash28
+; 0100: pointer address: keyhash28, 3 variable length uint
+; 0101: pointer address: scripthash28, 3 variable length uint
+; 0110: enterprise address: keyhash28
+; 0111: enterprise address: scripthash28
+; 1000: byron address
+; 1110: reward account: keyhash28
+; 1111: reward account: scripthash28
+; 1001 - 1101: future formats
+
+certificate =
+  [ stake_registration
+  // stake_deregistration
+  // stake_delegation
+  // pool_registration
+  // pool_retirement
+  // genesis_key_delegation
+  // move_instantaneous_rewards_cert
+  ]
+
+stake_registration = (0, stake_credential)
+stake_deregistration = (1, stake_credential)
+stake_delegation = (2, stake_credential, pool_keyhash)
+pool_registration = (3, pool_params)
+pool_retirement = (4, pool_keyhash, epoch)
+genesis_key_delegation = (5, genesishash, genesis_delegate_hash, vrf_keyhash)
+move_instantaneous_rewards_cert = (6, move_instantaneous_reward)
+
+move_instantaneous_reward = [ 0 / 1, { * stake_credential => delta_coin } / coin ]
+; The first field determines where the funds are drawn from.
+; 0 denotes the reserves, 1 denotes the treasury.
+; If the second field is a map, funds are moved to stake credentials,
+; otherwise the funds are given to the other accounting pot.
+
+delta_coin = int
+
+stake_credential =
+  [  0, addr_keyhash
+  // 1, scripthash
+  ]
+
+pool_params = ( operator:       pool_keyhash
+              , vrf_keyhash:    vrf_keyhash
+              , pledge:         coin
+              , cost:           coin
+              , margin:         unit_interval
+              , reward_account: reward_account
+              , pool_owners:    set<addr_keyhash>
+              , relays:         [* relay]
+              , pool_metadata:  pool_metadata / null
+              )
+
+port = uint .le 65535
+ipv4 = bytes .size 4
+ipv6 = bytes .size 16
+dns_name = tstr .size (0..64)
+
+single_host_addr = ( 0
+                   , port / null
+                   , ipv4 / null
+                   , ipv6 / null
+                   )
+single_host_name = ( 1
+                   , port / null
+                   , dns_name ; An A or AAAA DNS record
+                   )
+multi_host_name = ( 2
+                   , dns_name ; A SRV DNS record
+                   )
+relay =
+  [  single_host_addr
+  // single_host_name
+  // multi_host_name
+  ]
+
+pool_metadata = [url, pool_metadata_hash]
+url = tstr .size (0..64)
+
+withdrawals = { * reward_account => coin }
+
+update = [ proposed_protocol_parameter_updates
+         , epoch
+         ]
+
+proposed_protocol_parameter_updates =
+  { * genesishash => protocol_param_update }
+
+protocol_param_update =
+  { ? 0:  uint               ; minfee A
+  , ? 1:  uint               ; minfee B
+  , ? 2:  uint               ; max block body size
+  , ? 3:  uint               ; max transaction size
+  , ? 4:  uint               ; max block header size
+  , ? 5:  coin               ; key deposit
+  , ? 6:  coin               ; pool deposit
+  , ? 7: epoch               ; maximum epoch
+  , ? 8: uint                ; n_opt: desired number of stake pools
+  , ? 9: rational            ; pool pledge influence
+  , ? 10: unit_interval      ; expansion rate
+  , ? 11: unit_interval      ; treasury growth rate
+  , ? 14: [protocol_version] ; protocol version
+  , ? 16: coin               ; min pool cost
+  , ? 17: coin               ; ada per utxo byte
+  , ? 18: costmdls           ; cost models for script languages
+  , ? 19: ex_unit_prices     ; execution costs
+  , ? 20: ex_units           ; max tx ex units
+  , ? 21: ex_units           ; max block ex units
+  , ? 22: uint               ; max value size
+  , ? 23: uint               ; collateral percentage
+  , ? 24: uint               ; max collateral inputs
+  }
+
+transaction_witness_set =
+  { ? 0: [* vkeywitness ]
+  , ? 1: [* native_script ]
+  , ? 2: [* bootstrap_witness ]
+  , ? 3: [* plutus_script ]
+  , ? 4: [* plutus_data ]
+  , ? 5: [* redeemer ]
+  }
+
+plutus_script = bytes
+
+plutus_data =
+    constr<plutus_data>
+  / { * plutus_data => plutus_data }
+  / [ * plutus_data ]
+  / big_int
+  / bounded_bytes
+
+big_int = int / big_uint / big_nint
+big_uint = #6.2(bounded_bytes)
+big_nint = #6.3(bounded_bytes)
+
+constr<a> =
+    #6.121([* a])
+  / #6.122([* a])
+  / #6.123([* a])
+  / #6.124([* a])
+  / #6.125([* a])
+  / #6.126([* a])
+  / #6.127([* a])
+  ; similarly for tag range: 6.1280 .. 6.1400 inclusive
+  / #6.102([uint, [* a]])
+
+redeemer = [ tag: redeemer_tag, index: uint, data: plutus_data, ex_units: ex_units ]
+redeemer_tag =
+    0 ; inputTag "Spend"
+  / 1 ; mintTag  "Mint"
+  / 2 ; certTag  "Cert"
+  / 3 ; wdrlTag  "Reward"
+ex_units = [mem: uint, steps: uint]
+
+ex_unit_prices =
+  [ mem_price: sub_coin, step_price: sub_coin ]
+
+language = 0 ; Plutus v1
+         / 1 ; Plutus v2
+
+costmdls = { * language => cost_model }
+
+cost_model = [ 166*166 int ]
+
+transaction_metadatum =
+    { * transaction_metadatum => transaction_metadatum }
+  / [ * transaction_metadatum ]
+  / int
+  / bytes .size (0..64)
+  / text .size (0..64)
+
+transaction_metadatum_label = uint
+metadata = { * transaction_metadatum_label => transaction_metadatum }
+
+auxiliary_data =
+  metadata ; Shelley
+  / [ transaction_metadata: metadata ; Shelley-ma
+    , auxiliary_scripts: [ * native_script ]
+    ]
+  / #6.259({ ? 0 => metadata         ; Alonzo and beyond
+      , ? 1 => [ * native_script ]
+      , ? 2 => [ * plutus_script ]
+      })
+
+vkeywitness = [ $vkey, $signature ]
+
+bootstrap_witness =
+  [ public_key : $vkey
+  , signature  : $signature
+  , chain_code : bytes .size 32
+  , attributes : bytes
+  ]
+
+native_script =
+  [ script_pubkey
+  // script_all
+  // script_any
+  // script_n_of_k
+  // invalid_before
+     ; Timelock validity intervals are half-open intervals [a, b).
+     ; This field specifies the left (included) endpoint a.
+  // invalid_hereafter
+     ; Timelock validity intervals are half-open intervals [a, b).
+     ; This field specifies the right (excluded) endpoint b.
+  ]
+
+script_pubkey = (0, addr_keyhash)
+script_all = (1, [ * native_script ])
+script_any = (2, [ * native_script ])
+script_n_of_k = (3, n: uint, [ * native_script ])
+invalid_before = (4, uint)
+invalid_hereafter = (5, uint)
+
+coin = uint
+
+sub_coin = positive_interval
+
+multiasset<a> = { * policy_id => { * asset_name => a } }
+policy_id = scripthash
+asset_name = bytes .size (0..32)
+
+value = coin / [coin,multiasset<uint>]
+mint = multiasset<int64>
+
+int64 = -9223372036854775808 .. 9223372036854775807
+
+network_id = 0 / 1
+
+epoch = uint
+
+addr_keyhash          = $hash28
+scripthash            = $hash28
+genesis_delegate_hash = $hash28
+pool_keyhash          = $hash28
+genesishash           = $hash28
+
+vrf_keyhash           = $hash32
+auxiliary_data_hash   = $hash32
+pool_metadata_hash    = $hash32
