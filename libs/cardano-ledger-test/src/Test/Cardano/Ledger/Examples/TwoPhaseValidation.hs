@@ -13,7 +13,6 @@
 
 module Test.Cardano.Ledger.Examples.TwoPhaseValidation where
 
-import Cardano.Crypto.DSIGN.Class (Signable)
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (Addr (..))
@@ -25,7 +24,7 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhase
 import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, UtxowPredicateFail (..))
+import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
@@ -38,11 +37,13 @@ import Cardano.Ledger.Alonzo.Tx
     hashScriptIntegrity,
     minfee,
   )
--- PParam HasField instances
+import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
+import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Network (..),
@@ -62,7 +63,7 @@ import Cardano.Ledger.Credential
   )
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), SupportsSegWit (..), ValidateScript (hashScript))
-import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyHash,
@@ -73,6 +74,8 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
+import Cardano.Ledger.Pretty
+import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API
@@ -90,6 +93,7 @@ import Cardano.Ledger.Shelley.LedgerState
     WitHashes (..),
     smartUTxOState,
   )
+import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplPredicateFailure (..))
@@ -114,12 +118,12 @@ import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
-import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString as BS (replicate)
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Functor.Identity (Identity, runIdentity)
+import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -140,17 +144,16 @@ import Test.Cardano.Ledger.Generic.Fields
     WitnessesField (..),
   )
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
+import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (HasTokens (..), PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto, TestCrypto)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),
-    applySTSTest,
     mkKeyPair,
     mkVRFKeyPair,
-    runShelleyBase,
   )
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
@@ -178,9 +181,6 @@ defaultPPs =
     ProtocolVersion $ ProtVer 5 0,
     CollateralPercentage 100
   ]
-
-pp :: Proof era -> Core.PParams era
-pp pf = newPParams pf defaultPPs
 
 utxoEnv :: Core.PParams era -> UtxoEnv era
 utxoEnv pparams =
@@ -332,6 +332,9 @@ expectedUTxO pf ex idx = UTxO utxo
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
+pp :: Proof era -> Core.PParams era
+pp pf = newPParams pf defaultPPs
+
 -- =========================================================================
 --  Example 1: Process a SPEND transaction with a succeeding Plutus script.
 -- =========================================================================
@@ -387,7 +390,7 @@ extraRedeemersBody pf =
 extraRedeemersTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -417,16 +420,10 @@ validatingBody pf =
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 txDatsExample1)
     ]
 
-type SignBody era =
-  ( Signable
-      (CC.DSIGN (Crypto era))
-      (CH.Hash (CC.HASH (Crypto era)) EraIndependentTxBody)
-  )
-
 validatingTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -500,7 +497,7 @@ notValidatingBody pf =
 
 notValidatingTx ::
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -558,7 +555,7 @@ validatingBodyWithCert pf =
 validatingTxWithCert ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -615,7 +612,7 @@ notValidatingBodyWithCert pf =
 notValidatingTxWithCert ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -674,7 +671,7 @@ validatingBodyWithWithdrawal pf =
 validatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -733,7 +730,7 @@ notValidatingBodyWithWithdrawal pf =
 notValidatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -791,7 +788,7 @@ validatingTxWithMint ::
   forall era.
   ( Scriptic era,
     HasTokens era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -850,7 +847,7 @@ notValidatingTxWithMint ::
   forall era.
   ( Scriptic era,
     HasTokens era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -933,7 +930,7 @@ validatingTxManyScripts ::
   forall era.
   ( PostShelley era,
     HasTokens era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1000,7 +997,7 @@ okSupplimentaryDatumTxBody pf =
 okSupplimentaryDatumTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1053,7 +1050,7 @@ multipleEqualCertsBody pf =
 multipleEqualCertsTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1100,7 +1097,7 @@ nonScriptOutWithDatumTxBody pf =
 nonScriptOutWithDatumTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1143,7 +1140,7 @@ incorrectNetworkIDTxBody pf =
       Txnetworkid (SJust Mainnet)
     ]
 
-incorrectNetworkIDTx :: (Era era, SignBody era) => Proof era -> Core.Tx era
+incorrectNetworkIDTx :: (Era era, GoodCrypto (Crypto era)) => Proof era -> Core.Tx era
 incorrectNetworkIDTx pf =
   newTx
     pf
@@ -1166,7 +1163,7 @@ missingRequiredWitnessTxBody pf =
       ReqSignerHashes' [extraneousKeyHash]
     ]
 
-missingRequiredWitnessTx :: (Era era, SignBody era) => Proof era -> Core.Tx era
+missingRequiredWitnessTx :: (Era era, GoodCrypto (Crypto era)) => Proof era -> Core.Tx era
 missingRequiredWitnessTx pf =
   newTx
     pf
@@ -1188,7 +1185,7 @@ missingRedeemerTxBody pf =
     ]
 
 missingRedeemerTx ::
-  (Scriptic era, SignBody era) =>
+  (Scriptic era, GoodCrypto (Crypto era)) =>
   Proof era ->
   Core.Tx era
 missingRedeemerTx pf =
@@ -1203,7 +1200,7 @@ missingRedeemerTx pf =
     ]
 
 wrongWppHashTx ::
-  (Scriptic era, SignBody era) =>
+  (Scriptic era, GoodCrypto (Crypto era)) =>
   Proof era ->
   Core.Tx era
 wrongWppHashTx pf =
@@ -1222,7 +1219,7 @@ missing1phaseScriptWitnessTx ::
   forall era.
   ( PostShelley era,
     HasTokens era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1251,7 +1248,7 @@ missing2phaseScriptWitnessTx ::
   forall era.
   ( PostShelley era,
     HasTokens era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1296,7 +1293,7 @@ wrongRedeemerLabelTxBody pf =
 wrongRedeemerLabelTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1326,7 +1323,7 @@ missingDatumTxBody pf =
 missingDatumTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1345,7 +1342,7 @@ phase1FailureTx ::
   forall era.
   ( PostShelley era,
     HasTokens era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1390,7 +1387,7 @@ tooManyExUnitsTxBody pf =
 tooManyExUnitsTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1436,7 +1433,7 @@ plutusOutputWithNoDataTxBody pf =
 plutusOutputWithNoDataTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1472,7 +1469,7 @@ notOkSupplimentaryDatumTxBody pf =
 notOkSupplimentaryDatumTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1516,7 +1513,7 @@ poolMDHTooBigTxBody pf =
 poolMDHTooBigTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1557,7 +1554,7 @@ multipleEqualCertsBodyInvalid pf =
 multipleEqualCertsTxInvalid ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1586,7 +1583,7 @@ noCostModelBody pf =
 noCostModelTx ::
   forall era.
   ( Scriptic era,
-    SignBody era
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
@@ -1610,371 +1607,8 @@ type A = AlonzoEra C_Crypto
 
 type UtxowPF = PredicateFailure (Core.EraRule "UTXOW" A)
 
-testUTXOW' ::
-  HasCallStack =>
-  (UtxowPF -> UtxowPF) ->
-  Core.PParams A ->
-  ValidatedTx A ->
-  Either [UtxowPF] (UTxOState A) ->
-  Assertion
-testUTXOW' _ pparams tx (Right expectedSt) =
-  checkTrace @(AlonzoUTXOW A) runShelleyBase (utxoEnv pparams) $
-    pure (initialUtxoSt $ Alonzo Mock) .- tx .-> expectedSt
-testUTXOW' mutator pparams tx predicateFailure@(Left _) = do
-  let st =
-        runShelleyBase $
-          applySTSTest @(AlonzoUTXOW A)
-            (TRC (utxoEnv pparams, initialUtxoSt $ Alonzo Mock, tx))
-      st' = case st of
-        r@(Right _) -> r
-        Left e -> Left (map mutator e)
-  st' @?= predicateFailure
-
-testUTXOW ::
-  HasCallStack =>
-  Core.PParams A ->
-  ValidatedTx A ->
-  Either [UtxowPF] (UTxOState A) ->
-  Assertion
-testUTXOW = testUTXOW' id
-
-trustMe :: Bool -> ValidatedTx A -> ValidatedTx A
-trustMe iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValid iv') m
-
 quietPlutusFailure :: FailureDescription
 quietPlutusFailure = PlutusFailure "human" "debug"
-
-quietPlutusFailureDescription :: FailureDescription -> FailureDescription
-quietPlutusFailureDescription pf@(OnePhaseFailure _) = pf
-quietPlutusFailureDescription (PlutusFailure _ _) = quietPlutusFailure
-
-quietPlutusFailureDescriptions :: UtxowPF -> UtxowPF
-quietPlutusFailureDescriptions
-  ( WrappedShelleyEraFailure
-      ( UtxoFailure
-          ( UtxosFailure
-              ( ValidationTagMismatch
-                  (IsValid True)
-                  (FailedUnexpectedly fs)
-                )
-            )
-        )
-    ) =
-    WrappedShelleyEraFailure
-      ( UtxoFailure
-          ( UtxosFailure
-              ( ValidationTagMismatch
-                  (IsValid True)
-                  (FailedUnexpectedly (map quietPlutusFailureDescription fs))
-              )
-          )
-      )
-quietPlutusFailureDescriptions pf = pf
-
-alonzoUTXOWexamples :: TestTree
-alonzoUTXOWexamples =
-  testGroup
-    "Alonzo UTXOW examples"
-    [ testGroup
-        "valid transactions"
-        [ testCase "validating SPEND script" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ validatingTx pf)
-              (Right . utxoStEx1 $ pf),
-          testCase "not validating SPEND script" $
-            testUTXOW
-              (pp pf)
-              (trustMe False $ notValidatingTx pf)
-              (Right . utxoStEx2 $ pf),
-          testCase "validating CERT script" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ validatingTxWithCert pf)
-              (Right . utxoStEx3 $ pf),
-          testCase "not validating CERT script" $
-            testUTXOW
-              (pp pf)
-              (trustMe False $ notValidatingTxWithCert pf)
-              (Right . utxoStEx4 $ pf),
-          testCase "validating WITHDRAWAL script" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ validatingTxWithWithdrawal pf)
-              (Right . utxoStEx5 $ pf),
-          testCase "not validating WITHDRAWAL script" $
-            testUTXOW
-              (pp pf)
-              (trustMe False $ notValidatingTxWithWithdrawal pf)
-              (Right . utxoStEx6 $ pf),
-          testCase "validating MINT script" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ validatingTxWithMint pf)
-              (Right . utxoStEx7 $ pf),
-          testCase "not validating MINT script" $
-            testUTXOW
-              (pp pf)
-              (trustMe False $ notValidatingTxWithMint pf)
-              (Right . utxoStEx8 $ pf),
-          testCase "validating scripts everywhere" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ validatingTxManyScripts pf)
-              (Right . utxoStEx9 $ pf),
-          testCase "acceptable supplimentary datum" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ okSupplimentaryDatumTx pf)
-              (Right . utxoStEx10 $ pf),
-          testCase "multiple identical certificates" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ multipleEqualCertsTx pf)
-              (Right . utxoStEx11 $ pf),
-          testCase "non-script output with datum" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ nonScriptOutWithDatumTx pf)
-              (Right . utxoStEx12 $ pf)
-        ],
-      testGroup
-        "invalid transactions"
-        [ testCase "wrong network ID" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ incorrectNetworkIDTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure
-                      (UtxoFailure (WrongNetworkInTxBody Testnet Mainnet))
-                  ]
-              ),
-          testCase "missing required key witness" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ missingRequiredWitnessTx pf)
-              ( Left [(MissingRequiredSigners . Set.singleton) extraneousKeyHash]
-              ),
-          testCase "missing redeemer" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ missingRedeemerTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure . UtxoFailure
-                      . UtxosFailure
-                      . CollectErrors
-                      $ [NoRedeemer (Spending (mkGenesisTxIn 1))],
-                    MissingRedeemers
-                      [(Spending (mkGenesisTxIn 1), alwaysSucceedsHash 3 pf)]
-                  ]
-              ),
-          testCase "wrong wpp hash" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ wrongWppHashTx pf)
-              ( Left
-                  [ PPViewHashesDontMatch
-                      ( hashScriptIntegrity
-                          (pp pf)
-                          (Set.singleton PlutusV1)
-                          (Redeemers mempty)
-                          txDatsExample1
-                      )
-                      ( hashScriptIntegrity
-                          (pp pf)
-                          (Set.singleton PlutusV1)
-                          validatingRedeemersEx1
-                          txDatsExample1
-                      )
-                  ]
-              ),
-          testCase "missing 1-phase script witness" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ missing1phaseScriptWitnessTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
-                      [ NoRedeemer (Spending (mkGenesisTxIn 100)),
-                        NoWitness (timelockHash 0 pf)
-                      ],
-                    WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      timelockHash 0 pf
-                  ]
-              ),
-          testCase "missing 2-phase script witness" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ missing2phaseScriptWitnessTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure . UtxoFailure . UtxosFailure . CollectErrors $
-                      [ NoWitness (alwaysSucceedsHash 2 pf),
-                        NoWitness (alwaysSucceedsHash 2 pf),
-                        NoWitness (alwaysSucceedsHash 2 pf)
-                      ],
-                    -- these redeemers are associated with phase-1 scripts
-                    ExtraRedeemers
-                      [ RdmrPtr Tag.Mint 1,
-                        RdmrPtr Tag.Cert 1,
-                        RdmrPtr Tag.Rewrd 0
-                      ],
-                    WrappedShelleyEraFailure . MissingScriptWitnessesUTXOW . Set.singleton $
-                      alwaysSucceedsHash 2 pf
-                  ]
-              ),
-          testCase "redeemer with incorrect label" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ wrongRedeemerLabelTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure . UtxoFailure
-                      . UtxosFailure
-                      . CollectErrors
-                      $ [NoRedeemer (Spending (mkGenesisTxIn 1))],
-                    -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
-                    MissingRedeemers
-                      [ ( Spending (mkGenesisTxIn 1),
-                          alwaysSucceedsHash 3 pf
-                        )
-                      ],
-                    ExtraRedeemers [RdmrPtr Tag.Mint 0]
-                  ]
-              ),
-          testCase "missing datum" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ missingDatumTx pf)
-              ( Left
-                  [ MissingRequiredDatums
-                      (Set.singleton $ hashData @A datumExample1)
-                      mempty
-                  ]
-              ),
-          testCase "phase 1 script failure" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ phase1FailureTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure . ScriptWitnessNotValidatingUTXOW $
-                      Set.fromList
-                        [ timelockHash 0 pf,
-                          timelockHash 1 pf,
-                          timelockHash 2 pf
-                        ]
-                  ]
-              ),
-          testCase "valid transaction marked as invalid" $
-            testUTXOW
-              (pp pf)
-              (trustMe False $ validatingTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure
-                      ( UtxoFailure
-                          (UtxosFailure (ValidationTagMismatch (IsValid False) PassedUnexpectedly))
-                      )
-                  ]
-              ),
-          testCase "invalid transaction marked as valid" $
-            testUTXOW'
-              quietPlutusFailureDescriptions
-              (pp pf)
-              (trustMe True $ notValidatingTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure
-                      ( UtxoFailure
-                          ( UtxosFailure
-                              ( ValidationTagMismatch
-                                  (IsValid True)
-                                  (FailedUnexpectedly [quietPlutusFailure])
-                              )
-                          )
-                      )
-                  ]
-              ),
-          testCase "too many execution units for tx" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ tooManyExUnitsTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure . UtxoFailure $
-                      ExUnitsTooBigUTxO
-                        (ExUnits {exUnitsMem = 1000000, exUnitsSteps = 1000000})
-                        (ExUnits {exUnitsMem = 1000001, exUnitsSteps = 5000})
-                  ]
-              ),
-          testCase "missing signature for collateral input" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ missingCollateralSig pf)
-              ( Left
-                  [ WrappedShelleyEraFailure
-                      ( MissingVKeyWitnessesUTXOW
-                          ( WitHashes
-                              ( Set.fromList
-                                  [ asWitness $
-                                      hashKey (vKey $ someKeys pf)
-                                  ]
-                              )
-                          )
-                      )
-                  ]
-              ),
-          testCase "insufficient collateral" $
-            testUTXOW
-              (newPParams pf $ defaultPPs ++ [CollateralPercentage 150])
-              (trustMe True $ validatingTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure
-                      (UtxoFailure (InsufficientCollateral (Coin 5) (Coin 8)))
-                  ]
-              ),
-          testCase "two-phase UTxO with no datum hash" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ plutusOutputWithNoDataTx pf)
-              ( Left
-                  [ UnspendableUTxONoDatumHash . Set.singleton $ mkGenesisTxIn 101
-                  ]
-              ),
-          testCase "unacceptable supplimentary datum" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ notOkSupplimentaryDatumTx pf)
-              ( Left
-                  [ NonOutputSupplimentaryDatums
-                      (Set.singleton $ hashData @A totallyIrrelevantDatum)
-                      mempty
-                  ]
-              ),
-          testCase "unacceptable extra redeemer" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ extraRedeemersTx pf)
-              ( Left
-                  [ ExtraRedeemers
-                      [RdmrPtr Tag.Spend 7]
-                  ]
-              ),
-          testCase "multiple equal plutus-locked certs" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ multipleEqualCertsTxInvalid pf)
-              ( Left
-                  [ ExtraRedeemers [RdmrPtr Tag.Cert 1]
-                  ]
-              ),
-          testCase "no cost model" $
-            testUTXOW
-              (pp pf)
-              (trustMe True $ noCostModelTx pf)
-              ( Left
-                  [ WrappedShelleyEraFailure
-                      (UtxoFailure (UtxosFailure (CollectErrors [NoCostModel PlutusV2])))
-                  ]
-              )
-        ]
-    ]
-  where
-    pf = Alonzo Mock
 
 -- =========================
 -- We have some tests that use plutus scripts, so they can only be run in
@@ -2097,28 +1731,45 @@ makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txs'
         }
     txs' = (toTxSeq @era) . StrictSeq.fromList $ txs
 
-testAlonzoBlock :: (Block (BHeaderView TestCrypto) A)
-testAlonzoBlock =
+trustMeP :: Proof era -> Bool -> Core.Tx era -> Core.Tx era
+trustMeP (Alonzo _) iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValid iv') m
+trustMeP (Babbage _) iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValid iv') m
+trustMeP _ _ tx = tx
+
+testAlonzoBlock ::
+  ( GoodCrypto (Crypto era),
+    Scriptic era,
+    HasTokens era,
+    ToCBORGroup (TxSeq era)
+  ) =>
+  Proof era ->
+  (Block (BHeaderView (Crypto era)) era)
+testAlonzoBlock pf =
   makeNaiveBlock
-    [ trustMe True $ validatingTx pf,
-      trustMe False $ notValidatingTx pf,
-      trustMe True $ validatingTxWithWithdrawal pf,
-      trustMe False $ notValidatingTxWithWithdrawal pf,
-      trustMe True $ validatingTxWithCert pf,
-      trustMe False $ notValidatingTxWithCert pf,
-      trustMe True $ validatingTxWithMint pf,
-      trustMe False $ notValidatingTxWithMint pf
+    [ trustMeP pf True $ validatingTx pf,
+      trustMeP pf False $ notValidatingTx pf,
+      trustMeP pf True $ validatingTxWithWithdrawal pf,
+      trustMeP pf False $ notValidatingTxWithWithdrawal pf,
+      trustMeP pf True $ validatingTxWithCert pf,
+      trustMeP pf False $ notValidatingTxWithCert pf,
+      trustMeP pf True $ validatingTxWithMint pf,
+      trustMeP pf False $ notValidatingTxWithMint pf
     ]
-  where
-    pf = Alonzo Mock
 
-testAlonzoBadPMDHBlock :: (Block (BHeaderView TestCrypto) A)
-testAlonzoBadPMDHBlock = makeNaiveBlock [trustMe True $ poolMDHTooBigTx pf]
-  where
-    pf = Alonzo Mock
+testAlonzoBadPMDHBlock :: GoodCrypto (Crypto era) => Proof era -> Block (BHeaderView (Crypto era)) era
+testAlonzoBadPMDHBlock pf@(Alonzo _) = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock pf@(Babbage _) = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock other = error ("testAlonzoBadPMDHBlock does not work in era " ++ show other)
 
-example1UTxO :: UTxO A
-example1UTxO =
+example1UTxO ::
+  ( GoodCrypto (Crypto era),
+    Scriptic era,
+    HasTokens era,
+    PostShelley era
+  ) =>
+  Proof era ->
+  UTxO era
+example1UTxO pf =
   UTxO $
     SplitMap.fromList
       [ (TxIn (txid (validatingBody pf)) minBound, outEx1 pf),
@@ -2138,51 +1789,32 @@ example1UTxO =
         (mkGenesisTxIn 102, alwaysSucceedsOutputV2 pf),
         (mkGenesisTxIn 103, nonScriptOutWithDatum pf)
       ]
-  where
-    pf = Alonzo Mock
 
-example1UtxoSt :: UTxOState A
-example1UtxoSt = smartUTxOState example1UTxO (Coin 0) (Coin 40) def
+example1UtxoSt ::
+  ( GoodCrypto (Crypto era),
+    Scriptic era,
+    HasTokens era,
+    PostShelley era,
+    Default (State (EraRule "PPUP" era))
+  ) =>
+  Proof era ->
+  UTxOState era
+example1UtxoSt proof = smartUTxOState (example1UTxO proof) (Coin 0) (Coin 40) def
 
-example1BBodyState :: BbodyState A
-example1BBodyState =
-  BbodyState (LedgerState example1UtxoSt def) (BlocksMade $ Map.singleton poolID 1)
+example1BBodyState ::
+  ( GoodCrypto (Crypto era),
+    HasTokens era,
+    PostShelley era,
+    Default (State (EraRule "PPUP" era))
+  ) =>
+  Proof era ->
+  BbodyState era
+example1BBodyState proof =
+  BbodyState (LedgerState (example1UtxoSt proof) def) (BlocksMade $ Map.singleton poolID 1)
   where
     poolID = hashKey . vKey . coerceKeyRole $ coldKeys
 
-testBBODY ::
-  BbodyState A ->
-  Block (BHeaderView TestCrypto) A ->
-  Either [PredicateFailure (AlonzoBBODY A)] (BbodyState A) ->
-  Assertion
-testBBODY initialSt block (Right expectedSt) =
-  checkTrace @(AlonzoBBODY A) runShelleyBase (bbodyEnv $ Alonzo Mock) $
-    pure initialSt .- block .-> expectedSt
-testBBODY initialSt block predicateFailure@(Left _) = do
-  let st =
-        runShelleyBase $
-          applySTSTest @(AlonzoBBODY A)
-            (TRC (bbodyEnv (Alonzo Mock), initialSt, block))
-  st @?= predicateFailure
-
-alonzoBBODYexamples :: TestTree
-alonzoBBODYexamples =
-  testGroup
-    "Alonzo BBODY examples"
-    [ testCase "eight plutus scripts cases" $
-        testBBODY (initialBBodyState pf) testAlonzoBlock (Right example1BBodyState),
-      testCase "block with bad pool md hash in tx" $
-        testBBODY
-          (initialBBodyState pf)
-          testAlonzoBadPMDHBlock
-          ( Left
-              [ ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
-                  PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys pf) (hashsize @Mock + 1)
-              ]
-          )
-    ]
-  where
-    pf = Alonzo Mock
+-- =============================================================
 
 testEvaluateTransactionFee :: Assertion
 testEvaluateTransactionFee =
@@ -2209,5 +1841,594 @@ alonzoAPITests :: TestTree
 alonzoAPITests =
   testGroup "Alonzo API" [testCase "evaluateTransactionFee" testEvaluateTransactionFee]
 
+-- =====================================================================================
+-- Proof parameterized TestTrees
+
+hashScriptIntegrityByProof ::
+  Proof era ->
+  Core.PParams era ->
+  Set.Set Language ->
+  Redeemers era ->
+  TxDats era ->
+  StrictMaybe (ScriptIntegrityHash (Crypto era))
+hashScriptIntegrityByProof (Alonzo _) = hashScriptIntegrity
+hashScriptIntegrityByProof (Babbage _) = hashScriptIntegrity
+hashScriptIntegrityByProof _ = \_ _ _ _ -> SNothing
+
+-- | This type is what you get when you use runSTS in the UTXOW rule. It is also
+--   the type one uses for expected answers, to compare the 'computed' against 'expected'
+type Result era = Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era))
+
+testUTXOWwith ::
+  forall era.
+  ( GoodCrypto (Crypto era),
+    Default (State (EraRule "PPUP" era)),
+    PostShelley era
+  ) =>
+  WitRule "UTXOW" era ->
+  (Result era -> Result era -> Assertion) ->
+  Core.PParams era ->
+  Core.Tx era ->
+  Result era ->
+  Assertion
+testUTXOWwith wit@(UTXOW proof) cont pparams tx expected =
+  let env = utxoEnv pparams
+      state = initialUtxoSt proof
+   in case proof of
+        Alonzo _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
+        Babbage _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
+        Mary _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
+        Allegra _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
+        Shelley _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
+
+-- | A small example of what a continuation for 'runSTS' might look like
+genericCont ::
+  ( Eq x,
+    Show x,
+    PrettyA x,
+    Eq y,
+    Show y,
+    PrettyA y
+  ) =>
+  Either [x] y ->
+  Either [x] y ->
+  Assertion
+genericCont expected computed =
+  case (computed, expected) of
+    (Left c, Left e) -> c @?= e
+    (Right c, Right e) -> c @?= e
+    (Left x, Right y) ->
+      error $
+        "expected to pass with "
+          ++ show (prettyA y)
+          ++ "\n\nBut failed with\n\n"
+          ++ show (ppList prettyA x)
+    (Right x, Left y) ->
+      error $
+        "expected to fail with "
+          ++ show (ppList prettyA y)
+          ++ "\n\nBut passed with\n\n"
+          ++ show (prettyA x)
+
+isSubset :: Eq t => [t] -> [t] -> Bool
+isSubset small big = List.all (`List.elem` big) small
+
+subsetCont ::
+  ( Eq x,
+    Show x,
+    PrettyA x,
+    Eq y,
+    Show y,
+    PrettyA y
+  ) =>
+  Either [x] y ->
+  Either [x] y ->
+  Assertion
+subsetCont expected computed =
+  case (computed, expected) of
+    (Left c, Left e) ->
+      -- It is OK if the expected is a subset of what's computed
+      if isSubset e c then e @?= e else c @?= e
+    (Right c, Right e) -> c @?= e
+    (Left x, Right y) ->
+      error $
+        "expected to pass with "
+          ++ show (prettyA y)
+          ++ "\n\nBut failed with\n\n"
+          ++ show (ppList prettyA x)
+    (Right x, Left y) ->
+      error $
+        "expected to fail with "
+          ++ show (ppList prettyA y)
+          ++ "\n\nBut passed with\n\n"
+          ++ show (prettyA x)
+
+-- ==============================================================================
+-- Three slighty different ways to make an Assertion, but all with the same type
+
+testUTXOWsubset,
+  specialCase,
+  testUTXOW ::
+    forall era.
+    ( GoodCrypto (Crypto era),
+      Default (State (EraRule "PPUP" era)),
+      PostShelley era
+    ) =>
+    WitRule "UTXOW" era ->
+    Core.PParams era ->
+    Core.Tx era ->
+    Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era)) ->
+    Assertion
+
+-- | Use an equality test on the expected and computed [PredicateFailure]
+testUTXOW wit@(UTXOW (Alonzo _)) = testUTXOWwith wit genericCont
+testUTXOW wit@(UTXOW (Babbage _)) = testUTXOWwith wit genericCont
+testUTXOW (UTXOW other) = error ("Cannot use testUTXOW in era " ++ show other)
+
+-- | Use a subset test on the expected and computed [PredicateFailure]
+testUTXOWsubset wit@(UTXOW (Alonzo _)) = testUTXOWwith wit subsetCont
+testUTXOWsubset wit@(UTXOW (Babbage _)) = testUTXOWwith wit subsetCont
+testUTXOWsubset (UTXOW other) = error ("Cannot use testUTXOW in era " ++ show other)
+
+-- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
+specialCase wit@(UTXOW proof) pparam tx expected =
+  let env = utxoEnv pparam
+      state = initialUtxoSt proof
+   in case proof of
+        Alonzo _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
+        Babbage _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
+        other -> error ("Cannot use specialCase in era " ++ show other)
+
+-- ========================================
+-- This implements a special rule to test that for ValidationTagMismatch. Rather than comparing the insides of
+-- ValidationTagMismatch (which are complicated and depend on Plutus) we just note that both the computed
+-- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
+-- so we need to case over the Era proof, to get the path correctly.
+
+findMismatch :: Proof era -> (PredicateFailure (Core.EraRule "UTXOW" era)) -> Maybe (UtxosPredicateFailure era)
+findMismatch (Alonzo _) (WrappedShelleyEraFailure (UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+findMismatch (Babbage _) (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _))) = Just x
+findMismatch _ _ = Nothing
+
+specialCont ::
+  ( Eq (PredicateFailure (EraRule "UTXOW" era)),
+    Eq a,
+    Show (PredicateFailure (EraRule "UTXOW" era)),
+    Show a
+  ) =>
+  Proof era ->
+  Either [PredicateFailure (EraRule "UTXOW" era)] a ->
+  Either [PredicateFailure (EraRule "UTXOW" era)] a ->
+  Assertion
+specialCont proof expected computed =
+  case (computed, expected) of
+    (Left [x], Left [y]) ->
+      case (findMismatch proof x, findMismatch proof y) of
+        (Just _, Just _) -> y @?= y
+        (_, _) -> error "Not both ValidationTagMismatch case 1"
+    (Left _, Left _) -> error "Not both ValidationTagMismatch case 2"
+    (Right x, Right y) -> x @?= y
+    (Left _, Right _) -> error "expected to pass, but failed."
+    (Right _, Left _) -> error "expected to fail, but passed."
+
+-- ================================================================================================
+
+alonzoUTXOWexamplesB ::
+  forall era.
+  ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era)),
+    State (EraRule "UTXOW" era) ~ UTxOState era,
+    GoodCrypto (Crypto era),
+    HasTokens era,
+    Scriptic era,
+    Default (State (EraRule "PPUP" era)),
+    PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto
+  ) =>
+  Proof era ->
+  TestTree
+alonzoUTXOWexamplesB pf =
+  testGroup
+    (show pf ++ " UTXOW examples")
+    [ testGroup
+        "valid transactions"
+        [ testCase "validating SPEND script" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ validatingTx pf)
+              (Right . utxoStEx1 $ pf),
+          testCase "not validating SPEND script" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf False $ notValidatingTx pf)
+              (Right . utxoStEx2 $ pf),
+          testCase "validating CERT script" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ validatingTxWithCert pf)
+              (Right . utxoStEx3 $ pf),
+          testCase "not validating CERT script" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf False $ notValidatingTxWithCert pf)
+              (Right . utxoStEx4 $ pf),
+          testCase "validating WITHDRAWAL script" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ validatingTxWithWithdrawal pf)
+              (Right . utxoStEx5 $ pf),
+          testCase "not validating WITHDRAWAL script" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf False $ notValidatingTxWithWithdrawal pf)
+              (Right . utxoStEx6 $ pf),
+          testCase "validating MINT script" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ validatingTxWithMint pf)
+              (Right . utxoStEx7 $ pf),
+          testCase "not validating MINT script" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf False $ notValidatingTxWithMint pf)
+              (Right . utxoStEx8 $ pf),
+          testCase "validating scripts everywhere" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ validatingTxManyScripts pf)
+              (Right . utxoStEx9 $ pf),
+          testCase "acceptable supplimentary datum" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ okSupplimentaryDatumTx pf)
+              (Right . utxoStEx10 $ pf),
+          testCase "multiple identical certificates" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ multipleEqualCertsTx pf)
+              (Right . utxoStEx11 $ pf),
+          testCase "non-script output with datum" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ nonScriptOutWithDatumTx pf)
+              (Right . utxoStEx12 $ pf)
+        ],
+      testGroup
+        "invalid transactions"
+        [ testCase "wrong network ID" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ incorrectNetworkIDTx pf)
+              ( Left
+                  [ fromUtxo @era (WrongNetworkInTxBody Testnet Mainnet)
+                  ]
+              ),
+          testCase "missing required key witness" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ missingRequiredWitnessTx pf)
+              ( Left [(fromPredFail @era . MissingRequiredSigners . Set.singleton) extraneousKeyHash]
+              ),
+          testCase "missing redeemer" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ missingRedeemerTx pf)
+              ( Left
+                  [ fromUtxos @era . CollectErrors $
+                      [NoRedeemer (Spending (mkGenesisTxIn 1))],
+                    fromPredFail $
+                      MissingRedeemers @era
+                        [(Spending (mkGenesisTxIn 1), alwaysSucceedsHash 3 pf)]
+                  ]
+              ),
+          testCase "wrong wpp hash" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ wrongWppHashTx pf)
+              ( Left
+                  [ fromPredFail @era $
+                      PPViewHashesDontMatch
+                        ( hashScriptIntegrityByProof
+                            pf
+                            (pp pf)
+                            (Set.singleton PlutusV1)
+                            (Redeemers mempty)
+                            txDatsExample1
+                        )
+                        ( hashScriptIntegrityByProof
+                            pf
+                            (pp pf)
+                            (Set.singleton PlutusV1)
+                            validatingRedeemersEx1
+                            txDatsExample1
+                        )
+                  ]
+              ),
+          testCase "missing 1-phase script witness" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ missing1phaseScriptWitnessTx pf)
+              ( Left
+                  [ fromUtxos @era . CollectErrors $
+                      [ NoRedeemer (Spending (mkGenesisTxIn 100)),
+                        NoWitness (timelockHash 0 pf)
+                      ],
+                    fromUtxow @era . MissingScriptWitnessesUTXOW . Set.singleton $
+                      timelockHash 0 pf
+                  ]
+              ),
+          testCase "missing 2-phase script witness" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ missing2phaseScriptWitnessTx pf)
+              ( Left
+                  [ fromUtxos @era . CollectErrors $
+                      [ NoWitness (alwaysSucceedsHash 2 pf),
+                        NoWitness (alwaysSucceedsHash 2 pf),
+                        NoWitness (alwaysSucceedsHash 2 pf)
+                      ],
+                    -- these redeemers are associated with phase-1 scripts
+                    fromPredFail @era . ExtraRedeemers $
+                      [ RdmrPtr Tag.Mint 1,
+                        RdmrPtr Tag.Cert 1,
+                        RdmrPtr Tag.Rewrd 0
+                      ],
+                    fromUtxow @era . MissingScriptWitnessesUTXOW . Set.singleton $
+                      alwaysSucceedsHash 2 pf
+                  ]
+              ),
+          testCase "redeemer with incorrect label" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ wrongRedeemerLabelTx pf)
+              ( Left
+                  [ fromUtxos @era (CollectErrors [NoRedeemer (Spending (mkGenesisTxIn 1))]),
+                    -- now "wrong redeemer label" means there are both unredeemable scripts and extra redeemers
+                    fromPredFail @era . MissingRedeemers $
+                      [ ( Spending (mkGenesisTxIn 1),
+                          alwaysSucceedsHash 3 pf
+                        )
+                      ],
+                    fromPredFail @era . ExtraRedeemers $ [RdmrPtr Tag.Mint 0]
+                  ]
+              ),
+          testCase "missing datum" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ missingDatumTx pf)
+              ( Left
+                  [ fromPredFail @era $
+                      MissingRequiredDatums
+                        (Set.singleton $ hashData @era datumExample1)
+                        mempty
+                  ]
+              ),
+          testCase "phase 1 script failure" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ phase1FailureTx pf)
+              ( Left
+                  [ fromUtxow @era $
+                      ScriptWitnessNotValidatingUTXOW $
+                        Set.fromList
+                          [ timelockHash 0 pf,
+                            timelockHash 1 pf,
+                            timelockHash 2 pf
+                          ]
+                  ]
+              ),
+          testCase "valid transaction marked as invalid" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf False $ validatingTx pf)
+              ( Left [fromUtxos @era (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
+              ),
+          testCase "invalid transaction marked as valid" $
+            specialCase
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ notValidatingTx pf)
+              ( Left
+                  [ fromUtxos @era
+                      ( ValidationTagMismatch
+                          (IsValid True)
+                          (FailedUnexpectedly [quietPlutusFailure])
+                      )
+                  ]
+              ),
+          testCase "too many execution units for tx" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ tooManyExUnitsTx pf)
+              ( Left
+                  [ fromUtxo @era $
+                      ExUnitsTooBigUTxO
+                        (ExUnits {exUnitsMem = 1000000, exUnitsSteps = 1000000})
+                        (ExUnits {exUnitsMem = 1000001, exUnitsSteps = 5000})
+                  ]
+              ),
+          testCase "missing signature for collateral input" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ missingCollateralSig pf)
+              ( Left
+                  [ fromUtxow @era
+                      ( MissingVKeyWitnessesUTXOW
+                          ( WitHashes
+                              ( Set.fromList
+                                  [ asWitness $
+                                      hashKey (vKey $ someKeys pf)
+                                  ]
+                              )
+                          )
+                      )
+                  ]
+              ),
+          testCase "insufficient collateral" $
+            testUTXOW
+              (UTXOW pf)
+              (newPParams pf $ defaultPPs ++ [CollateralPercentage 150])
+              (trustMeP pf True $ validatingTx pf)
+              ( Left [fromUtxo @era (InsufficientCollateral (Coin 5) (Coin 8))]
+              ),
+          testCase "two-phase UTxO with no datum hash" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ plutusOutputWithNoDataTx pf)
+              ( Left
+                  [ fromPredFail @era $ UnspendableUTxONoDatumHash . Set.singleton $ mkGenesisTxIn 101
+                  ]
+              ),
+          testCase "unacceptable supplimentary datum" $
+            testUTXOWsubset
+              (UTXOW pf) -- Special rules apply here, use (expected `isSubset` computed)
+              (pp pf)
+              (trustMeP pf True $ notOkSupplimentaryDatumTx pf)
+              ( Left
+                  [ fromPredFail @era $
+                      NonOutputSupplimentaryDatums
+                        (Set.singleton $ hashData @era totallyIrrelevantDatum)
+                        mempty
+                  ]
+              ),
+          testCase "unacceptable extra redeemer" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ extraRedeemersTx pf)
+              ( Left
+                  [ fromPredFail @era $
+                      ExtraRedeemers
+                        [RdmrPtr Tag.Spend 7]
+                  ]
+              ),
+          testCase "multiple equal plutus-locked certs" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ multipleEqualCertsTxInvalid pf)
+              ( Left
+                  [ fromPredFail @era $ ExtraRedeemers [RdmrPtr Tag.Cert 1]
+                  ]
+              ),
+          testCase "no cost model" $
+            testUTXOW
+              (UTXOW pf)
+              (pp pf)
+              (trustMeP pf True $ noCostModelTx pf)
+              ( Left [fromUtxos @era (CollectErrors [NoCostModel PlutusV2])]
+              )
+        ]
+    ]
+
+-- =====================================
+
+-- | We use this to write set of tests that raise AlonzoBased PredicateFailures.
+--   The type we use is for '(fail ~ PredicateFailure (EraRule "UTXOW" era))' .
+--   There are 4 types of AlonzoBased PredicateFailures: 'UtxowPredFail',
+--   'UtxosPredicateFailure',  'UtxoPredicateFailure', and  'UtxowPredicateFailure' .
+--   The idea is to make tests that only raise these failures, in Alonzo and future Eras.
+class AlonzoBased era failure where
+  fromUtxos :: UtxosPredicateFailure era -> failure
+  fromUtxo :: UtxoPredicateFailure era -> failure
+  fromUtxow :: UtxowPredicateFailure era -> failure
+  fromPredFail :: UtxowPredicateFail era -> failure
+
+instance AlonzoBased (AlonzoEra c) (UtxowPredicateFail (AlonzoEra c)) where
+  fromUtxos = WrappedShelleyEraFailure . UtxoFailure . UtxosFailure
+  fromUtxo = WrappedShelleyEraFailure . UtxoFailure
+  fromUtxow = WrappedShelleyEraFailure
+  fromPredFail = id
+
+instance AlonzoBased (BabbageEra c) (BabbageUtxoPred (BabbageEra c)) where
+  fromUtxos = FromAlonzoUtxoFail . UtxosFailure
+  fromUtxo = FromAlonzoUtxoFail
+  fromUtxow = FromAlonzoUtxowFail . WrappedShelleyEraFailure
+  fromPredFail = FromAlonzoUtxowFail
+
+-- ===================================================================
+
+testBBODY ::
+  ( GoodCrypto (Crypto era)
+  ) =>
+  WitRule "BBODY" era ->
+  BbodyState era ->
+  Block (BHeaderView (Crypto era)) era ->
+  Either [PredicateFailure (AlonzoBBODY era)] (BbodyState era) ->
+  Assertion
+testBBODY wit@(BBODY proof) initialSt block expected =
+  let env = bbodyEnv proof
+   in case proof of
+        Alonzo _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont expected)
+        Babbage _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont expected)
+        other -> error ("We cannot testBBODY in era " ++ show other)
+
+alonzoBBODYexamplesP ::
+  forall era.
+  ( GoodCrypto (Crypto era),
+    HasTokens era,
+    ToCBORGroup (TxSeq era),
+    Default (State (EraRule "PPUP" era)),
+    PostShelley era
+  ) =>
+  Proof era ->
+  TestTree
+alonzoBBODYexamplesP proof =
+  testGroup
+    (show proof ++ " BBODY examples")
+    [ testCase "eight plutus scripts cases" $
+        testBBODY (BBODY proof) (initialBBodyState proof) (testAlonzoBlock proof) (Right (example1BBodyState proof)),
+      testCase "block with bad pool md hash in tx" $
+        testBBODY
+          (BBODY proof)
+          (initialBBodyState proof)
+          (testAlonzoBadPMDHBlock proof)
+          (Left [makeTooBig proof])
+    ]
+
+makeTooBig :: Proof era -> AlonzoBbodyPredFail era
+makeTooBig proof@(Alonzo _) =
+  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+    PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+makeTooBig proof@(Babbage _) =
+  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+    PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
+
+-- ==============================================================================
+
+allTrees :: TestTree
+allTrees =
+  testGroup
+    "Generic Tests, testing Alonzo PredicateFailures, in postAlonzo eras."
+    [ alonzoUTXOWexamplesB (Alonzo Mock),
+      alonzoUTXOWexamplesB (Babbage Mock),
+      alonzoBBODYexamplesP (Alonzo Mock),
+      alonzoBBODYexamplesP (Babbage Mock)
+    ]
+
 main :: IO ()
-main = defaultMain alonzoUTXOWexamples
+main = defaultMain allTrees

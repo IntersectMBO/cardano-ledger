@@ -53,13 +53,9 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Hashes
-  ( EraIndependentAuxiliaryData,
-    EraIndependentData,
-  )
+import Cardano.Ledger.Hashes (DataHash, EraIndependentAuxiliaryData, EraIndependentData)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
-    SafeHash,
     SafeToHash (..),
     hashAnnotated,
   )
@@ -171,8 +167,6 @@ hashBinaryData :: Era era => BinaryData era -> DataHash (Crypto era)
 hashBinaryData = hashAnnotated
 
 -- =============================================================================
-
-type DataHash crypto = SafeHash crypto EraIndependentData
 
 hashData :: Era era => Data era -> DataHash (Crypto era)
 hashData = hashAnnotated

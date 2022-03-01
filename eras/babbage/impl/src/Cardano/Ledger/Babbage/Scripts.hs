@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (language)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..), txdats')
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness, txscripts', unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
 import Cardano.Ledger.Babbage.TxBody
   ( Datum (..),
     TxBody (..),
@@ -24,12 +24,13 @@ import Cardano.Ledger.Babbage.TxBody
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (hashScript, isNativeScript))
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..), txOutView)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
 import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Map as Map
-import Data.Maybe.Strict (StrictMaybe (SJust))
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
@@ -63,39 +64,34 @@ getDatum tx (UTxO m) sp = do
     DatumHash hash ->
       dataToBinaryData <$> Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx))
 
+{- txscripts tx utxo = txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}
+
+-- | Compute a Map of all the Scripts in a ValidatedTx.
 txscripts ::
   forall era.
-  ( Era era,
-    ValidateScript era,
-    Core.TxBody era ~ TxBody era,
-    Core.Witnesses era ~ TxWitness era,
-    Core.TxOut era ~ TxOut era
+  ( Core.TxBody era ~ TxBody era,
+    UsesTxOut era,
+    ValidateScript era
   ) =>
   UTxO era ->
   Core.Tx era ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era)
-txscripts (UTxO m) tx = witnessScripts `Map.union` referenceScripts
+txscripts (UTxO mp) tx = SplitMap.foldl' accum (getField @"scriptWits" tx) smallUtxo
   where
     txbody = getField @"body" tx
-    allInputs = Set.union (spendInputs' txbody) (referenceInputs' txbody)
-    witnessset = getField @"wits" tx
-    witnessScripts = txscripts' witnessset
-    referenceScripts = Set.foldl' accum Map.empty allInputs
-    accum ans txin =
-      case getScript txin of
-        Nothing -> ans
-        Just script -> Map.insert (hashScript @era script) script ans
-    getScript txin = SplitMap.lookup txin m >>= extractScript
-    extractScript (TxOut _ _ _ (SJust s)) = Just s
-    extractScript _ = Nothing
+    scriptinputs = referenceInputs' txbody `Set.union` spendInputs' txbody
+    smallUtxo = scriptinputs SplitMap.◁ mp
+    accum ans txout =
+      case txOutView @era txout of
+        (_, _, _, SNothing) -> ans
+        (_, _, _, SJust script) -> Map.insert (hashScript @era script) script ans
 
 languages ::
   forall era.
   ( ValidateScript era,
+    UsesTxOut era,
     Core.TxBody era ~ TxBody era,
-    Core.Witnesses era ~ TxWitness era,
-    Core.Script era ~ Script era, -- THE ATERNATIVE TO THIS IS TO ADD 'language' to the ValidateScript class
-    Core.TxOut era ~ TxOut era
+    Core.Script era ~ Script era
   ) =>
   UTxO era ->
   Core.Tx era ->

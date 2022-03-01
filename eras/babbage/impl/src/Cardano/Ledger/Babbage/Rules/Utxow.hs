@@ -26,7 +26,7 @@ import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent (WrappedShelleyEraEvent), UtxowPredicateFail, hasExactSetOfRedeemers, missingRequiredDatums, ppViewHashesMatch, requiredSignersAreWitnessed, witsVKeyNeeded)
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose, ValidatedTx (..), wits)
+import Cardano.Ledger.Alonzo.Tx (ScriptPurpose, ValidatedTx (..), txInputHashes, wits)
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo (TxDats (..), TxWitness (..), txdats')
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Babbage.Collateral as Babbage (isTwoPhaseScriptAddress)
@@ -37,7 +37,6 @@ import Cardano.Ledger.Babbage.Rules.Utxo
   )
 import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
 import Cardano.Ledger.Babbage.Scripts (txscripts)
-import qualified Cardano.Ledger.Babbage.Scripts as Babbage (txscripts)
 import Cardano.Ledger.Babbage.TxBody
   ( Datum (..),
     TxBody (..),
@@ -56,6 +55,7 @@ import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
 import Cardano.Ledger.SafeHash (HashAnnotated, hashAnnotated)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEvent (UtxowEvent), LedgerPredicateFailure (UtxowFailure))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
@@ -86,17 +86,6 @@ import Validation (failureUnless)
 -- ==================================================
 -- Reuseable tests first used in the Babbage Era
 
-{- inputHashes ⊆ dom(txdats txw) -}
-allInputDataHashesAreKnown ::
-  Era era =>
-  Set.Set (DataHash (Crypto era)) ->
-  (Alonzo.TxDats era) ->
-  Test (BabbageUtxoPred era)
-allInputDataHashesAreKnown inputHashes (Alonzo.TxDats m) =
-  failureUnless
-    (eval (inputHashes ⊆ dom (m)))
-    (UnknownDataHash (eval (inputHashes ➖ dom (m))))
-
 {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx ∪ utxo (refInputs tx)  -}
 danglingWitnessDataHashes ::
   Era era =>
@@ -116,22 +105,25 @@ danglingWitnessDataHashes inputHashes (Alonzo.TxDats m) outs =
 validateFailedBabbageScripts ::
   forall era.
   ( ValidateScript era,
+    UsesTxOut era,
     Core.Script era ~ Script era,
-    Core.TxBody era ~ TxBody era,
-    Core.Witnesses era ~ Alonzo.TxWitness era,
-    Core.TxOut era ~ TxOut era
+    Core.TxBody era ~ TxBody era
   ) =>
   Core.Tx era ->
   UTxO era ->
   Test (Shelley.UtxowPredicateFailure era)
 validateFailedBabbageScripts tx utxo = do
-  let failedScripts = Map.foldlWithKey' accum Set.empty (Babbage.txscripts utxo tx)
-      accum ans hsh script =
-        if not (isNativeScript @era script) || not (validateScript @era script tx)
-          then Set.insert hsh ans
-          else ans
-  failureUnless (Set.null failedScripts) $
-    Shelley.ScriptWitnessNotValidatingUTXOW failedScripts
+  let failedScripts =
+        Map.filterWithKey
+          ( \hs script ->
+              isNativeScript @era script
+                && ( hashScript @era script /= hs
+                       || not (validateScript @era script tx)
+                   )
+          )
+          (txscripts utxo tx)
+  failureUnless (Map.null failedScripts) $
+    Shelley.ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
@@ -145,6 +137,7 @@ babbageUtxowTransition ::
   forall era.
   ( ValidateScript era,
     ValidateAuxiliaryData era (Crypto era),
+    UsesTxOut era,
     STS (BabbageUTXOW era),
     -- Fix some Core types to the Babbage Era
     ConcreteBabbage era,
@@ -168,28 +161,22 @@ babbageUtxowTransition = do
       txbody = getField @"body" (tx :: Core.Tx era)
       txw = Alonzo.txdats' (wits tx)
       witsKeyHashes = witsFromTxWitnesses @era tx
+      {- txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}
+      hashScriptMap = txscripts utxo tx
       {- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
-      inputHashes = SplitMap.foldlWithKey' accum Set.empty (spendInputs' txbody SplitMap.◁ mp)
-        where
-          accum ans _key (TxOut a _ h _) =
-            case (Babbage.isTwoPhaseScriptAddress tx utxo a, h) of
-              (True, DatumHash dhash) -> Set.insert dhash ans
-              _ -> ans
+      (inputHashes, _) = txInputHashes (txscripts utxo tx) tx utxo
+
   -- check scripts
   {- ∀s ∈ range(txscripts txw utxo ∩ Script^{ph1}), validateScript s tx -}
   runTest $ validateFailedBabbageScripts tx utxo -- CHANGED In BABBAGE txscripts depends on UTxO
 
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
   let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx))
-      sReceived = Map.keysSet (txscripts utxo tx)
+      sReceived = Map.keysSet hashScriptMap
   runTest $ Shelley.validateMissingScripts pp sNeeded sReceived
 
   {-  inputHashes  = dom(txdats txw)   -}
-  runTest $ missingRequiredDatums utxo tx txbody
-
-  {- inputHashes ⊆ dom(txdats txw) -}
-  -- NEW in BABBAGE
-  runTest $ allInputDataHashesAreKnown inputHashes txw
+  runTest $ missingRequiredDatums hashScriptMap utxo tx txbody
 
   {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h, ) ∈ txouts tx ∪ utxo (refInputs tx) } -}
   let outs = foldr (:) [] (outputs' txbody)
@@ -245,10 +232,10 @@ instance
   forall era.
   ( ValidateScript era,
     ValidateAuxiliaryData era (Crypto era),
+    UsesTxOut era,
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Fix some Core types to the Babbage Era
     Core.Tx era ~ ValidatedTx era,
-    -- Core.Witnesses era ~ TxWitness era,
     ConcreteBabbage era,
     -- Allow UTXOW to call UTXO
     Embed (Core.EraRule "UTXO" era) (BabbageUTXOW era),

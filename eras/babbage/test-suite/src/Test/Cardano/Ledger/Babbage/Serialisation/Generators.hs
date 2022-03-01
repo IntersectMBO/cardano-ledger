@@ -239,6 +239,5 @@ instance Mock c => Arbitrary (BabbageUtxoPred (BabbageEra c)) where
       [ FromAlonzoUtxoFail <$> arbitrary,
         FromAlonzoUtxowFail <$> arbitrary,
         UnequalCollateralReturn <$> arbitrary <*> arbitrary,
-        UnknownDataHash <$> arbitrary,
         DanglingWitnessDataHash <$> arbitrary
       ]

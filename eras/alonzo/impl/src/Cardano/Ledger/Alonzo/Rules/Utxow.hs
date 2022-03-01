@@ -29,8 +29,8 @@ import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
     ValidatedTx (..),
     hashScriptIntegrity,
-    isTwoPhaseScriptAddress,
     rdptr,
+    txInputHashes,
   )
 import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxWitness
@@ -54,6 +54,7 @@ import Cardano.Ledger.Hashes (EraIndependentData, EraIndependentTxBody)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.SafeHash (SafeHash)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( delegCWitness,
     genesisCWitness,
@@ -89,7 +90,6 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (sequenceA_, toList)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -225,51 +225,36 @@ missingRequiredDatums ::
       (StrictMaybe (SafeHash (Crypto era) EraIndependentData)),
     ValidateScript era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    Core.Script era ~ Script era -- from txdats
+    Core.Script era ~ Script era,
+    UsesTxOut era
   ) =>
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
   UTxO era ->
   ValidatedTx era ->
   Core.TxBody era ->
   Test (UtxowPredicateFail era)
-missingRequiredDatums utxo tx txbody = do
-  let {- inputHashes := {h | ( _ → (a, , h)) ∈ txins txb ◁ utxo, isTwoPhaseScriptAddress tx a} -}
-      inputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
-      smallUtxo = inputs SplitMap.◁ unUTxO utxo
-      twoPhaseOuts =
-        [ output
-          | (_input, output) <- SplitMap.toList smallUtxo,
-            isTwoPhaseScriptAddress @era tx (getTxOutAddr output)
-        ]
-      utxoHashes' = mapM (getField @"datahash") twoPhaseOuts
-  case utxoHashes' of
-    SNothing ->
-      -- In the spec, the Nothing value can end up on the left hand side
-      -- of the equality check, but we must explicitly rule it out.
-      failure . UnspendableUTxONoDatumHash . Set.fromList $
-        [ input
-          | (input, output) <- SplitMap.toList smallUtxo,
-            SNothing <- [getField @"datahash" output],
-            isTwoPhaseScriptAddress @era tx (getTxOutAddr output)
-        ]
-    SJust utxoHashes -> do
-      let txHashes = domain (unTxDats . txdats . wits $ tx)
-          inputHashes = Set.fromList utxoHashes
-          unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
-          outputDatumHashes =
-            Set.fromList
-              [ dh | out <- toList (getField @"outputs" txbody), SJust dh <- [getField @"datahash" out]
-              ]
-          supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
-          (okSupplimentalDHs, notOkSupplimentalDHs) =
-            Set.partition (`Set.member` outputDatumHashes) supplimentalDatumHashes
-      sequenceA_
-        [ failureUnless
-            (Set.null unmatchedDatumHashes)
-            (MissingRequiredDatums unmatchedDatumHashes txHashes),
-          failureUnless
-            (Set.null notOkSupplimentalDHs)
-            (NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs)
-        ]
+missingRequiredDatums scriptwits utxo tx txbody = do
+  let (inputHashes, txinsNoDhash) = txInputHashes scriptwits tx utxo
+      txHashes = domain (unTxDats . txdats . wits $ tx)
+      unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
+      outputDatumHashes =
+        Set.fromList
+          [ dh | out <- toList (getField @"outputs" txbody), SJust dh <- [getField @"datahash" out]
+          ]
+      supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
+      (okSupplimentalDHs, notOkSupplimentalDHs) =
+        Set.partition (`Set.member` outputDatumHashes) supplimentalDatumHashes
+  sequenceA_
+    [ failureUnless
+        (Set.null txinsNoDhash)
+        (UnspendableUTxONoDatumHash txinsNoDhash),
+      failureUnless
+        (Set.null unmatchedDatumHashes)
+        (MissingRequiredDatums unmatchedDatumHashes txHashes),
+      failureUnless
+        (Set.null notOkSupplimentalDHs)
+        (NonOutputSupplimentaryDatums notOkSupplimentalDHs okSupplimentalDHs)
+    ]
 
 -- ==================
 {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
@@ -356,6 +341,7 @@ alonzoStyleWitness ::
   forall era.
   ( ValidateScript era,
     ValidateAuxiliaryData era (Crypto era),
+    UsesTxOut era,
     -- Fix some Core types to the Alonzo Era
     ConcreteAlonzo era,
     Core.Tx era ~ ValidatedTx era,
@@ -390,7 +376,7 @@ alonzoStyleWitness = do
 
   {- inputHashes := { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} -}
   {-  inputHashes ⊆ dom(txdats txw)  -}
-  runTest $ missingRequiredDatums utxo tx txbody
+  runTest $ missingRequiredDatums (getField @"scriptWits" tx) utxo tx txbody
 
   {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx -}
   -- This is incorporated into missingRequiredDatums, see the
@@ -534,6 +520,7 @@ data AlonzoUTXOW era
 instance
   forall era.
   ( ValidateScript era,
+    UsesTxOut era,
     ValidateAuxiliaryData era (Crypto era),
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Fix some Core types to the Alonzo Era

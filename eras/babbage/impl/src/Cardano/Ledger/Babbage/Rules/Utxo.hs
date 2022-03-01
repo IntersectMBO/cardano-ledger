@@ -102,7 +102,6 @@ data BabbageUtxoPred era
   = FromAlonzoUtxoFail !(UtxoPredicateFailure era) -- Inherited from Alonzo
   | FromAlonzoUtxowFail !(UtxowPredicateFail era)
   | UnequalCollateralReturn !Coin !Coin
-  | UnknownDataHash !(Set.Set (DataHash (Crypto era)))
   | DanglingWitnessDataHash !(Set.Set (DataHash (Crypto era)))
 
 deriving instance
@@ -363,7 +362,6 @@ instance
       work (FromAlonzoUtxoFail x) = Sum FromAlonzoUtxoFail 1 !> To x
       work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 2 !> To x
       work (UnequalCollateralReturn c1 c2) = Sum UnequalCollateralReturn 3 !> To c1 !> To c2
-      work (UnknownDataHash x) = Sum UnknownDataHash 4 !> To x
       work (DanglingWitnessDataHash x) = Sum DanglingWitnessDataHash 5 !> To x
 
 instance
@@ -383,7 +381,6 @@ instance
       work 1 = SumD FromAlonzoUtxoFail <! From
       work 2 = SumD FromAlonzoUtxowFail <! From
       work 3 = SumD UnequalCollateralReturn <! From <! From
-      work 4 = SumD UnknownDataHash <! From
       work 5 = SumD DanglingWitnessDataHash <! From
       work n = Invalid n
 

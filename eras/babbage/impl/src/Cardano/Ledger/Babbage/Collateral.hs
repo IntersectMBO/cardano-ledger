@@ -10,7 +10,7 @@
 module Cardano.Ledger.Babbage.Collateral where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Alonzo.Tx (isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Babbage.Scripts (txscripts)
 import Cardano.Ledger.Babbage.TxBody
   ( TxBody (..),
@@ -24,7 +24,8 @@ import Cardano.Ledger.BaseTypes (txIxFromIntegral)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, getScriptHash)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val ((<->))
 import Data.Compact.SplitMap ((◁))
@@ -37,21 +38,15 @@ import Numeric.Natural (Natural)
 
 isTwoPhaseScriptAddress ::
   forall era.
-  ( ValidateScript era,
-    Core.Witnesses era ~ TxWitness era,
-    Core.TxBody era ~ TxBody era,
-    Core.TxOut era ~ TxOut era
+  ( UsesTxOut era,
+    ValidateScript era,
+    Core.TxBody era ~ TxBody era
   ) =>
   Core.Tx era ->
   UTxO era ->
   Addr (Crypto era) ->
   Bool
-isTwoPhaseScriptAddress tx utxo addr =
-  case getScriptHash addr of
-    Nothing -> False
-    Just hash -> any ok (txscripts utxo tx)
-      where
-        ok script = hashScript @era script == hash && not (isNativeScript @era script)
+isTwoPhaseScriptAddress tx utxo addr = isTwoPhaseScriptAddressFromMap @era (txscripts utxo tx) addr
 
 minCollateral ::
   HasField "_collateralPercentage" (Core.PParams era) Natural =>

@@ -171,6 +171,8 @@ instance
 
 instance CC.Crypto c => UsesTxOut (BabbageEra c) where
   makeTxOut _proxy addr val = TxOut addr val NoDatum SNothing
+  getTxOutExtras (TxOut _ _ (DatumHash h) scriptM) = (SJust h, scriptM)
+  getTxOutExtras (TxOut _ _ _ scriptM) = (SNothing, scriptM)
 
 instance CC.Crypto c => API.CLI (BabbageEra c) where
   evaluateMinFee = minfee

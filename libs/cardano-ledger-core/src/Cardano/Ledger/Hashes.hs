@@ -24,6 +24,7 @@ module Cardano.Ledger.Hashes
 
     -- * Script hashes
     ScriptHash (..),
+    DataHash,
   )
 where
 
@@ -31,6 +32,7 @@ import Cardano.Binary (FromCBOR, ToCBOR)
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
+import Cardano.Ledger.SafeHash (SafeHash)
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import Data.Compact.HashMap (Keyed)
@@ -59,6 +61,8 @@ data EraIndependentAuxiliaryData
 data EraIndependentScript
 
 data EraIndependentData
+
+type DataHash crypto = SafeHash crypto EraIndependentData
 
 data EraIndependentScriptData
 

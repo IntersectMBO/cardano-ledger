@@ -2,6 +2,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 module Cardano.Ledger.Shelley.Constraints where
@@ -22,12 +24,14 @@ import Cardano.Ledger.Core
     TxOut,
     Value,
   )
-import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Era (Crypto, Era (..))
+import Cardano.Ledger.Hashes (DataHash, EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Val (DecodeMint, DecodeNonNegative, EncodeMint, Val)
 import Data.Kind (Constraint, Type)
+import Data.Maybe.Strict (StrictMaybe (SNothing))
 import Data.Proxy (Proxy)
+import GHC.Records (HasField (..))
 
 --------------------------------------------------------------------------------
 -- Shelley Era
@@ -61,6 +65,17 @@ class
   UsesTxOut era
   where
   makeTxOut :: Proxy era -> Addr (Crypto era) -> Value era -> TxOut era
+  getTxOutExtras :: TxOut era -> (StrictMaybe (DataHash (Crypto era)), StrictMaybe (Script era))
+  getTxOutExtras _txout = (SNothing, SNothing)
+
+txOutView ::
+  forall era.
+  UsesTxOut era =>
+  TxOut era ->
+  (Addr (Crypto era), Value era, StrictMaybe (DataHash (Crypto era)), StrictMaybe (Script era))
+txOutView txout =
+  case getTxOutExtras txout of
+    (mdh, mds) -> (getTxOutAddr txout, getField @"value" txout, mdh, mds)
 
 type UsesScript era =
   ( Era era,
