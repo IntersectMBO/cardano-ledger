@@ -35,6 +35,7 @@ import Codec.CBOR.Decoding
         TypeMapLenIndef
       ),
   )
+import Control.DeepSeq
 import Data.Coders
 import Data.Map.Strict (Map)
 import Data.MemoBytes
@@ -67,6 +68,8 @@ deriving instance
   (Core.ChainData (Core.Script era)) =>
   NoThunks (AuxiliaryDataRaw era)
 
+instance NFData (Core.Script era) => NFData (AuxiliaryDataRaw era)
+
 newtype AuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes (AuxiliaryDataRaw era))
   deriving (Generic, Typeable)
   deriving newtype (ToCBOR, SafeToHash)
@@ -84,6 +87,8 @@ deriving newtype instance
 deriving newtype instance
   (Era era, Core.ChainData (Core.Script era)) =>
   NoThunks (AuxiliaryData era)
+
+deriving newtype instance NFData (Core.Script era) => NFData (AuxiliaryData era)
 
 pattern AuxiliaryData ::
   ( Core.AnnotatedData (Core.Script era),

@@ -14,8 +14,6 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 build-type:          Simple
 extra-source-files:
   CHANGELOG.md
-  bench/resources/0_ledgerstate.cbor
-  bench/resources/0_tx.cbor
 
 source-repository head
   type:     git

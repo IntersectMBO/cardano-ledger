@@ -88,6 +88,7 @@ import Cardano.Ledger.Shelley.TxBody
     witKeyHash,
   )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
 import qualified Data.ByteString.Short as SBS
 import Data.Coders
@@ -116,6 +117,13 @@ data TxRaw era = TxRaw
   }
   deriving (Generic, Typeable)
 
+instance
+  ( NFData (Core.TxBody era),
+    NFData (Core.Witnesses era),
+    NFData (Core.AuxiliaryData era)
+  ) =>
+  NFData (TxRaw era)
+
 deriving instance
   ( Era era,
     Eq (Core.AuxiliaryData era),
@@ -142,6 +150,13 @@ instance
 
 newtype Tx era = TxConstr (MemoBytes (TxRaw era))
   deriving newtype (SafeToHash, ToCBOR)
+
+deriving newtype instance
+  ( NFData (Core.TxBody era),
+    NFData (Core.Witnesses era),
+    NFData (Core.AuxiliaryData era)
+  ) =>
+  NFData (Tx era)
 
 deriving newtype instance Eq (Tx era)
 
@@ -296,6 +311,14 @@ deriving instance
   Eq (WitnessSetHKD Identity era)
 
 deriving instance Era era => Generic (WitnessSetHKD Identity era)
+
+instance
+  ( Era era,
+    NFData (Core.Script era),
+    NFData (WitVKey 'Witness (Crypto era)),
+    NFData (BootstrapWitness (Crypto era))
+  ) =>
+  NFData (WitnessSetHKD Identity era)
 
 deriving via
   AllowThunksIn

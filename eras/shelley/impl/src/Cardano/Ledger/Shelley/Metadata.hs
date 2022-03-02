@@ -4,6 +4,7 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -40,6 +41,7 @@ import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
+import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
@@ -53,9 +55,8 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
 
 -- | A generic metadatum type.
 data Metadatum
-  = -- TODO make strict:
-    Map [(Metadatum, Metadatum)]
-  | List [Metadatum]
+  = Map ![(Metadatum, Metadatum)]
+  | List ![Metadatum]
   | I !Integer
   | B !BS.ByteString
   | S !T.Text
@@ -63,12 +64,23 @@ data Metadatum
 
 instance NoThunks Metadatum
 
+instance NFData Metadatum where
+  rnf = \case
+    Map m -> rnf m
+    List l -> rnf l
+    I _ -> ()
+    B _ -> ()
+    S _ -> ()
+
 data Metadata era = Metadata'
   { mdMap :: Map Word64 Metadatum,
     mdBytes :: LBS.ByteString
   }
   deriving (Eq, Show, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] (Metadata era)
+
+instance NFData (Metadata era) where
+  rnf m = mdMap m `deepseq` rnf (mdBytes m)
 
 -- Usually we derive SafetToHash instances, but since Metadata preserves its serialisation
 -- bytes we can just extract them here, and make an explicit SafeToHash instance.

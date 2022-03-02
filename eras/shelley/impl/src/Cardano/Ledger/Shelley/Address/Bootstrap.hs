@@ -11,6 +11,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Shelley.Address.Bootstrap
   ( BootstrapWitness
@@ -56,6 +57,7 @@ import Cardano.Ledger.Keys
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Prelude (panic)
+import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coerce (coerce)
@@ -69,7 +71,7 @@ import Quiet
 newtype ChainCode = ChainCode {unChainCode :: ByteString}
   deriving (Eq, Generic)
   deriving (Show) via Quiet ChainCode
-  deriving newtype (NoThunks, ToCBOR, FromCBOR)
+  deriving newtype (NoThunks, ToCBOR, FromCBOR, NFData)
 
 data BootstrapWitness crypto = BootstrapWitness'
   { bwKey' :: !(VKey 'Witness crypto),
@@ -87,6 +89,13 @@ data BootstrapWitness crypto = BootstrapWitness'
 deriving instance CC.Crypto crypto => Show (BootstrapWitness crypto)
 
 deriving instance CC.Crypto crypto => Eq (BootstrapWitness crypto)
+
+instance
+  ( CC.Crypto era,
+    NFData (DSIGN.VerKeyDSIGN (DSIGN era)),
+    NFData (DSIGN.SigDSIGN (DSIGN era))
+  ) =>
+  NFData (BootstrapWitness era)
 
 deriving via
   (AllowThunksIn '["bwBytes"] (BootstrapWitness crypto))

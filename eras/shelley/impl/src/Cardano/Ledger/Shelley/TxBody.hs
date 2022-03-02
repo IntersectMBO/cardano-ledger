@@ -613,7 +613,7 @@ type TransTxBody (c :: Type -> Constraint) era =
   )
 
 deriving instance
-  (CC.Crypto (Crypto era), NFData (Core.PParamsDelta era)) =>
+  (NFData (Core.TxOut era), CC.Crypto (Crypto era), NFData (Core.PParamsDelta era)) =>
   NFData (TxBodyRaw era)
 
 deriving instance (Era era, TransTxBody Eq era) => Eq (TxBodyRaw era)
@@ -732,7 +732,7 @@ deriving newtype instance
   (TransTxBody NoThunks era, Typeable era) => NoThunks (TxBody era)
 
 deriving newtype instance
-  (CC.Crypto (Crypto era), NFData (Core.PParamsDelta era)) =>
+  (NFData (Core.TxOut era), CC.Crypto (Crypto era), NFData (Core.PParamsDelta era)) =>
   NFData (TxBody era)
 
 deriving instance (Era era, TransTxBody Show era) => Show (TxBody era)
@@ -842,6 +842,9 @@ data WitVKey kr crypto = WitVKey'
 deriving instance CC.Crypto crypto => Show (WitVKey kr crypto)
 
 deriving instance CC.Crypto crypto => Eq (WitVKey kr crypto)
+
+instance NFData (WitVKey kr crypto) where
+  rnf (WitVKey' _ _ _ bytes) = rnf bytes
 
 deriving via
   (AllowThunksIn '["wvkBytes"] (WitVKey kr crypto))
