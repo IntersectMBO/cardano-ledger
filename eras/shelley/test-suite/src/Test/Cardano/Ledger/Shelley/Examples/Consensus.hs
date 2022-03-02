@@ -417,10 +417,7 @@ exampleTxBodyShelley :: Cardano.Ledger.Shelley.API.TxBody StandardShelley
 exampleTxBodyShelley =
   Cardano.Ledger.Shelley.API.TxBody
     exampleTxIns
-    ( StrictSeq.fromList
-        [ TxOut (mkAddr (examplePayKey, exampleStakeKey)) (Coin 100000)
-        ]
-    )
+    (StrictSeq.fromList [ exampleTxOut ])
     exampleCerts
     exampleWithdrawals
     (Coin 3)
@@ -446,10 +443,13 @@ exampleAuxiliaryDataShelley :: Core.AuxiliaryData StandardShelley
 exampleAuxiliaryDataShelley = Metadata exampleMetadataMap
 
 exampleTxIns :: Cardano.Ledger.Crypto.Crypto c => Set (TxIn c)
-exampleTxIns =
-  Set.fromList
-    [ TxIn (TxId (mkDummySafeHash Proxy 1)) 0
-    ]
+exampleTxIns = Set.fromList [ exampleTxIn ]
+
+exampleTxIn :: Cardano.Ledger.Crypto.Crypto c => TxIn c
+exampleTxIn = TxIn (TxId (mkDummySafeHash Proxy 1)) 0
+
+exampleTxOut :: TxOut StandardShelley
+exampleTxOut = TxOut (mkAddr (examplePayKey, exampleStakeKey)) (Coin 100000)
 
 exampleCerts :: Cardano.Ledger.Crypto.Crypto c => StrictSeq (DCert c)
 exampleCerts =
