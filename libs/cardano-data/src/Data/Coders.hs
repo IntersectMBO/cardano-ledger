@@ -260,6 +260,26 @@ decodeCollectionWithLen lenOrIndef el = do
         False -> pure (n, reverse acc)
         True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
 
+decodeAccWithLen ::
+  Decoder s (Maybe Int) ->
+  (a -> b -> b) ->
+  b ->
+  Decoder s a ->
+  Decoder s (Int, b)
+decodeAccWithLen lenOrIndef combine acc0 action = do
+  mLen <- lenOrIndef
+  let condition = case mLen of
+        Nothing -> const <$> decodeBreakOr
+        Just len -> pure (>= len)
+      loop !i !acc = do
+        shouldStop <- condition
+        if shouldStop i
+          then pure (i, acc)
+          else do
+            v <- action
+            loop (i + 1) (v `combine` acc)
+  loop 0 acc0
+
 encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
 encodeFoldable = encodeFoldableEncoder toCBOR
 
@@ -344,7 +364,18 @@ decodeMap :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
 decodeMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 
 decodeSplitMap :: SplitMap.Split a => Decoder s a -> Decoder s b -> Decoder s (SplitMap.SplitMap a b)
-decodeSplitMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
+decodeSplitMap decodeKey decodeValue =
+  snd
+    <$> decodeAccWithLen
+      decodeMapLenOrIndef
+      (uncurry SplitMap.insert)
+      SplitMap.empty
+      decodeInlinedPair
+  where
+    decodeInlinedPair = do
+      !key <- decodeKey
+      !value <- decodeValue
+      pure (key, value)
 
 decodeMapByKey ::
   (Exts.IsList t, Exts.Item t ~ (k, v)) =>
