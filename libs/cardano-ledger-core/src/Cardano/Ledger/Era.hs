@@ -109,8 +109,8 @@ getTxOutBootstrapAddress txOut =
     Left (AddrBootstrap bootstrapAddr) -> Just bootstrapAddr
     Right cAddr
       | isBootstrapCompactAddr cAddr -> do
-        AddrBootstrap bootstrapAddr <- Just (decompactAddr cAddr)
-        Just bootstrapAddr
+          AddrBootstrap bootstrapAddr <- Just (decompactAddr cAddr)
+          Just bootstrapAddr
     _ -> Nothing
 
 -----------------------------------------------------------------------------

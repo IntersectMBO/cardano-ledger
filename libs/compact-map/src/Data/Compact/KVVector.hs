@@ -252,25 +252,25 @@ removeDuplicates ::
 removeDuplicates f mv
   | VGM.null mv = pure mv
   | otherwise = do
-    let n = VGM.length mv
-        goMoved lastIx prev@(pk, pv) curIx = do
-          VGM.write mv lastIx prev
-          if curIx < n
-            then do
-              cur@(ck, cv) <- VGM.read mv curIx
-              if ck == pk
-                then goMoved lastIx (ck, f ck cv pv) (curIx + 1)
-                else goMoved (lastIx + 1) cur (curIx + 1)
-            else pure $ VGM.slice 0 (lastIx + 1) mv
-        goUnmoved (pk, pv) curIx
-          | curIx < n = do
-            cur@(ck, cv) <- VGM.read mv curIx
-            if ck == pk
-              then goMoved (curIx - 1) (ck, f ck cv pv) (curIx + 1)
-              else goUnmoved cur (curIx + 1)
-          | otherwise = pure mv
-    x0 <- VGM.read mv 0
-    goUnmoved x0 1
+      let n = VGM.length mv
+          goMoved lastIx prev@(pk, pv) curIx = do
+            VGM.write mv lastIx prev
+            if curIx < n
+              then do
+                cur@(ck, cv) <- VGM.read mv curIx
+                if ck == pk
+                  then goMoved lastIx (ck, f ck cv pv) (curIx + 1)
+                  else goMoved (lastIx + 1) cur (curIx + 1)
+              else pure $ VGM.slice 0 (lastIx + 1) mv
+          goUnmoved (pk, pv) curIx
+            | curIx < n = do
+                cur@(ck, cv) <- VGM.read mv curIx
+                if ck == pk
+                  then goMoved (curIx - 1) (ck, f ck cv pv) (curIx + 1)
+                  else goUnmoved cur (curIx + 1)
+            | otherwise = pure mv
+      x0 <- VGM.read mv 0
+      goUnmoved x0 1
 {-# INLINE removeDuplicates #-}
 
 normalize ::

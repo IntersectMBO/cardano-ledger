@@ -75,14 +75,14 @@ flattenEpochNumber es (EpochNumber i) = SlotNumber $ i * unEpochSlots es
 fromSlotNumber :: EpochSlots -> SlotNumber -> EpochAndSlotCount
 fromSlotNumber (EpochSlots n) (SlotNumber fsId)
   | n == 0 =
-    panic $
-      "'unflattenEpochAndSlotCount': The number of slots-per-epoch "
-        <> "passed to this function must be positive"
+      panic $
+        "'unflattenEpochAndSlotCount': The number of slots-per-epoch "
+          <> "passed to this function must be positive"
   | otherwise =
-    EpochAndSlotCount
-      { epochNo = EpochNumber epoch,
-        slotCount = SlotCount slot
-      }
+      EpochAndSlotCount
+        { epochNo = EpochNumber epoch,
+          slotCount = SlotCount slot
+        }
   where
     (epoch, slot) = fsId `divMod` n
 

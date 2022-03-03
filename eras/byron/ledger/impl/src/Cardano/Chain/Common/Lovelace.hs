@@ -245,6 +245,6 @@ integerToLovelace :: Integer -> Either LovelaceError Lovelace
 integerToLovelace n
   | n < 0 = Left (LovelaceTooSmall n)
   | n <= lovelaceToInteger (maxBound :: Lovelace) =
-    Right $
-      Lovelace (fromInteger n)
+      Right $
+        Lovelace (fromInteger n)
   | otherwise = Left (LovelaceTooLarge n)

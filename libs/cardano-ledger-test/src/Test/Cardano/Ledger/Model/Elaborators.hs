@@ -962,10 +962,10 @@ mkTxWitnessArguments mtxInputs nes pendingWits (ElaboratedScriptsCache pendingSc
       realTxBody = case redeemers of
         SupportsPlutus (r, _)
           | not (Alonzo.nullRedeemers r) ->
-            makeTxBody @era nes $
-              txBodyArguments
-                { _txBodyArguments_redeemers = mapSupportsFeature SJust redeemers
-                }
+              makeTxBody @era nes $
+                txBodyArguments
+                  { _txBodyArguments_redeemers = mapSupportsFeature SJust redeemers
+                  }
           | otherwise -> fakeTxBody
         NoPlutusSupport () -> fakeTxBody
       witVKey = elaborateWitnesses (Proxy :: Proxy era) pendingWits bodyHash

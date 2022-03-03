@@ -231,11 +231,11 @@ goldenTests_ShelleyCrypto =
     invariantSize expectedLength bytes
       | BS.length bytes == expectedLength = bytes
       | otherwise =
-        error $
-          "length was "
-            ++ show (BS.length bytes)
-            ++ ", but expected to be "
-            ++ show expectedLength
+          error $
+            "length was "
+              ++ show (BS.length bytes)
+              ++ ", but expected to be "
+              ++ show expectedLength
 
 addressWithExtraneousBytes :: HasCallStack => BS.ByteString
 addressWithExtraneousBytes = bs

@@ -222,8 +222,8 @@ r_member :: MonadModelProvenance era provM => (ModelCredential 'Staking (ScriptF
 r_member (hk, stk) f_hat (ModelPoolParams {_mppId = poolId, _mppCost = c, _mppMargin = (unboundRational -> m)}) t (unboundPositiveRational -> sigma)
   | f_hat <= c = pure $ Val.zero
   | otherwise = do
-    unless (f_hat <= mempty) $ rewardMemberProvenance poolId $ Map.singleton hk $ _modelSnapshotStake_utxos stk
-    pure $ rationalToCoinViaFloor ((coinToRational $ f_hat ~~ c) * (1 - m) * t / sigma)
+      unless (f_hat <= mempty) $ rewardMemberProvenance poolId $ Map.singleton hk $ _modelSnapshotStake_utxos stk
+      pure $ rationalToCoinViaFloor ((coinToRational $ f_hat ~~ c) * (1 - m) * t / sigma)
 
 -- Fig48 [SL-D5]
 rewardOnePoolModel ::
@@ -278,7 +278,7 @@ rewardOnePoolModel
         ostake'
         poolR
         pool
-        --(unsafeFromRational "rewardOnePoolModel::ostake/tot" $ ostake / tot)
+        -- (unsafeFromRational "rewardOnePoolModel::ostake/tot" $ ostake / tot)
         (ostake / tot)
         sigma
     let potentialRewards = Map.unionWith (<>) mRewards (Map.singleton (_mppRAcnt pool) iReward)

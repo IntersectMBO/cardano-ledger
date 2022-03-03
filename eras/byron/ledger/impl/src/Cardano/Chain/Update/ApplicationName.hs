@@ -98,8 +98,8 @@ checkApplicationName ::
   MonadError ApplicationNameError m => ApplicationName -> m ()
 checkApplicationName (ApplicationName appName)
   | T.length appName > applicationNameMaxLength =
-    throwError $
-      ApplicationNameTooLong appName
+      throwError $
+        ApplicationNameTooLong appName
   | T.any (not . isAscii) appName = throwError $ ApplicationNameNotAscii appName
   | otherwise = pure ()
 

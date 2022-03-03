@@ -279,7 +279,7 @@ sigGenChain
           -- defined.
           toNumberOfGenesisKeys n
             | fromIntegral (maxBound :: Word8) < n =
-              error $ "sigGenChain: too many genesis keys: " ++ show n
+                error $ "sigGenChain: too many genesis keys: " ++ show n
             | otherwise = fromIntegral n
 
       aBlockVersion <-

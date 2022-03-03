@@ -183,7 +183,7 @@ applyTxBenchmarks =
         [ deserialiseTxEra (Proxy @ShelleyBench),
           deserialiseTxEra (Proxy @AllegraBench),
           deserialiseTxEra (Proxy @MaryBench)
-          --deserialiseTxEra (Proxy @AlonzoBench)
+          -- deserialiseTxEra (Proxy @AlonzoBench)
         ]
     ]
 

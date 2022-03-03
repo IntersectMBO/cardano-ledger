@@ -29,9 +29,9 @@ instance Arbitrary a => Arbitrary (KeyMap a) where
   arbitrary = do
     let go i m
           | i > 0 = do
-            key <- arbitrary
-            val <- arbitrary
-            go (i - 1) $! insert key val m
+              key <- arbitrary
+              val <- arbitrary
+              go (i - 1) $! insert key val m
           | otherwise = pure m
     NonNegative n <- arbitrary
     go (n :: Int) KeyMap.Empty

@@ -223,15 +223,15 @@ fixupValues clue globals (genesis0, epochs) = loop (Coin 1000)
     loop falseReserves
       | falseReserves > word64ToCoin (maxLovelaceSupply globals) = error "fixup uses too much help"
       | otherwise =
-        let falseReserveUTXO = ModelUTxOId nextId0
-            nextId = nextId0 + 1
-            genesis = over modelGenesis_utxos (Map.insert falseReserveUTXO (fromString ("fixupValues reserves " <> clue), falseReserves)) genesis0
-            s = FixupValuesState nextId genesis (falseReserveUTXO, falseReserves)
-            (step, _ :: ModelLedger era) = modelM (runMonadFixupValuesT go s) globals (mkModelLedger globals genesis)
-         in case step of
-              Left FixupValuesRestartError_InsufficientFixupReserves ->
-                loop (falseReserves <> falseReserves <> Coin 1)
-              Right (epochs', (FixupValuesState _ genesis' _)) -> (genesis', epochs')
+          let falseReserveUTXO = ModelUTxOId nextId0
+              nextId = nextId0 + 1
+              genesis = over modelGenesis_utxos (Map.insert falseReserveUTXO (fromString ("fixupValues reserves " <> clue), falseReserves)) genesis0
+              s = FixupValuesState nextId genesis (falseReserveUTXO, falseReserves)
+              (step, _ :: ModelLedger era) = modelM (runMonadFixupValuesT go s) globals (mkModelLedger globals genesis)
+           in case step of
+                Left FixupValuesRestartError_InsufficientFixupReserves ->
+                  loop (falseReserves <> falseReserves <> Coin 1)
+                Right (epochs', (FixupValuesState _ genesis' _)) -> (genesis', epochs')
 
     go ::
       forall m.

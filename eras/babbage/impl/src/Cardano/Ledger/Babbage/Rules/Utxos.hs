@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxos where
 
-import Cardano.Binary (ToCBOR (..)) --FromCBOR (..))
+import Cardano.Binary (ToCBOR (..)) -- FromCBOR (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( collectTwoPhaseScriptInputs,
     evalScripts,

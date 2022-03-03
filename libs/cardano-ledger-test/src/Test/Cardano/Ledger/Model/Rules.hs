@@ -480,32 +480,32 @@ instance ModelSTS 'ModelRule_UTXOS where
 
   applyRuleImpl _ tx
     | modelIsValid tx = RWS.execRWST $ do
-      refunded <-
-        modelKeyRefunds
-          <$> asks (_modelUTxOEnv_pp . _modelEnv)
-          <*> pure (toListOf modelDCerts tx)
-      deposits <-
-        modelTotalDeposits
-          <$> asks (_modelUTxOEnv_pp . _modelEnv)
-          <*> asks (_modelUTxOEnv_poolParams . _modelEnv)
-          <*> pure (toListOf modelDCerts tx)
+        refunded <-
+          modelKeyRefunds
+            <$> asks (_modelUTxOEnv_pp . _modelEnv)
+            <*> pure (toListOf modelDCerts tx)
+        deposits <-
+          modelTotalDeposits
+            <$> asks (_modelUTxOEnv_pp . _modelEnv)
+            <*> asks (_modelUTxOEnv_poolParams . _modelEnv)
+            <*> pure (toListOf modelDCerts tx)
 
-      let depositChange = deposits ~~ refunded
+        let depositChange = deposits ~~ refunded
 
-      -- pup' <- liftModelRule (Proxy @ModelRule_PPUP) tx
+        -- pup' <- liftModelRule (Proxy @ModelRule_PPUP) tx
 
-      modelUTxOState_utxo %= spendModelUTxOs (Map.keysSet $ _mtxInputs tx) (_mtxOutputs tx)
-      modelUTxOState_deposited <>= depositChange
-      modelUTxOState_fees <>= Val.coin (_mtxFee tx)
+        modelUTxOState_utxo %= spendModelUTxOs (Map.keysSet $ _mtxInputs tx) (_mtxOutputs tx)
+        modelUTxOState_deposited <>= depositChange
+        modelUTxOState_fees <>= Val.coin (_mtxFee tx)
     -- modelUTxOState_ppup .= pup'
 
     | otherwise = RWS.execRWST $ do
-      b <- uses modelUTxOState_utxo totalPreservedAda
-      traverseSupportsFeature_
-        (\collateral -> modelUTxOState_utxo %= spendModelUTxOs collateral [])
-        (_mtxCollateral tx)
-      b' <- uses modelUTxOState_utxo totalPreservedAda
-      modelUTxOState_fees <>= b ~~ b'
+        b <- uses modelUTxOState_utxo totalPreservedAda
+        traverseSupportsFeature_
+          (\collateral -> modelUTxOState_utxo %= spendModelUTxOs collateral [])
+          (_mtxCollateral tx)
+        b' <- uses modelUTxOState_utxo totalPreservedAda
+        modelUTxOState_fees <>= b ~~ b'
 
 -- | handle utxos on transaction
 -- SEE: (fig 10)[GL-D2]
@@ -631,8 +631,8 @@ instance ModelSTS 'ModelRule_DELEG where
           Just reward
             | reward /= mempty -> tell (Set.singleton Proxy) -- StakeKeyNonZeroAccountBalance
             | otherwise -> do
-              modelDState_rewards . at hk .= Nothing
-              modelDState_delegations . at hk .= Nothing
+                modelDState_rewards . at hk .= Nothing
+                modelDState_delegations . at hk .= Nothing
     ModelDelegate (ModelDelegation hk dpool) ->
       RWS.execRWST $
         use (modelDState_rewards . at hk) >>= \case
@@ -792,13 +792,13 @@ instance ModelSTS 'ModelRule_MIR where
 
     if
         | totR <= availableReserves && totT <= availableTreasury -> do
-          let update = Map.unionWith (<>) irwdR' irwdT'
-              rewards' = Map.unionWith (<>) rewards update
-          lift $ mirProvenance (Just $ Map.keysSet update)
-          modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_rewards .= rewards'
-          modelEpochState_acnt <>= ModelAcnt dTreasury dReserves ~~ ModelAcnt totT totR
+            let update = Map.unionWith (<>) irwdR' irwdT'
+                rewards' = Map.unionWith (<>) rewards update
+            lift $ mirProvenance (Just $ Map.keysSet update)
+            modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_rewards .= rewards'
+            modelEpochState_acnt <>= ModelAcnt dTreasury dReserves ~~ ModelAcnt totT totR
         | otherwise -> do
-          lift $ mirProvenance Nothing
+            lift $ mirProvenance Nothing
 
 -- Fig44[SL-D5]
 instance ModelSTS 'ModelRule_EPOCH where

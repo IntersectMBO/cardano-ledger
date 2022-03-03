@@ -281,7 +281,7 @@ incrBlocks ::
 incrBlocks isOverlay hk b'@(BlocksMade b)
   | isOverlay = b'
   | otherwise = BlocksMade $ case hkVal of
-    Nothing -> Map.insert hk 1 b
-    Just n -> Map.insert hk (n + 1) b
+      Nothing -> Map.insert hk 1 b
+      Just n -> Map.insert hk (n + 1) b
   where
     hkVal = Map.lookup hk b

@@ -352,8 +352,8 @@ validateOutsideForecast ei sysSt tx =
   case getField @"vldt" (body tx) of
     ValidityInterval _ (SJust ifj)
       | not (nullRedeemers (txrdmrs' $ wits tx)) ->
-        -- ◇ ∉ { txrdmrs tx, i_f } ⇒
-        failureUnless (isRight (epochInfoSlotToUTCTime ei sysSt ifj)) $ OutsideForecast ifj
+          -- ◇ ∉ { txrdmrs tx, i_f } ⇒
+          failureUnless (isRight (epochInfoSlotToUTCTime ei sysSt ifj)) $ OutsideForecast ifj
     _ -> pure ()
 
 -- | Ensure that there are no `Core.TxOut`s that have value less than the sized @coinsPerUTxOWord@

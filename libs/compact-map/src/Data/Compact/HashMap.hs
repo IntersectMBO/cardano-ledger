@@ -85,7 +85,7 @@ hashFromKey :: forall h a. HashAlgorithm h => Key -> Hash h a
 hashFromKey (KM.Key a b c d)
   | n <= 32,
     Just h <- hashFromBytes (BSL.toStrict (toLazyByteString build)) =
-    h
+      h
   | otherwise = error $ "Unsupported hash size: " <> show n
   where
     bytesToWord64 =
@@ -105,7 +105,7 @@ hashFromKey (KM.Key a b c d)
       | n <= 16 = bytesToWord64 8 a <> bytesToWord64 r b
       | n <= 24 = bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 r c
       | otherwise =
-        bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 8 c <> bytesToWord64 r d
+          bytesToWord64 8 a <> bytesToWord64 8 b <> bytesToWord64 8 c <> bytesToWord64 r d
     n = fromIntegral $ sizeHash (Proxy :: Proxy h)
     r = n - 8 * (n `quot` 8)
 

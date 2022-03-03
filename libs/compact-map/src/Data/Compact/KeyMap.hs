@@ -294,36 +294,36 @@ insertWithKeyInternal !n0 combine path !k !x = go n0
         i = path VP.! n
     go !n t@(Leaf k2 y)
       | k == k2 =
-        if x `ptrEq` y
-          then t
-          else Leaf k (combine k x y)
+          if x `ptrEq` y
+            then t
+            else Leaf k (combine k x y)
       | otherwise = twoLeaf (VP.drop n (keyPath k2)) t (VP.drop n path) k x
     go !n t@(BitmapIndexed bmap arr)
       | not (testBit bmap j) =
-        let !arr' = insertAt arr i $! Leaf k x
-         in buildKeyMap (bmap .|. setBit 0 j) arr'
+          let !arr' = insertAt arr i $! Leaf k x
+           in buildKeyMap (bmap .|. setBit 0 j) arr'
       | otherwise =
-        let !st = index arr i
-            !st' = go (n + 1) st
-         in if st' `ptrEq` st
-              then t
-              else BitmapIndexed bmap (update arr i st')
+          let !st = index arr i
+              !st' = go (n + 1) st
+           in if st' `ptrEq` st
+                then t
+                else BitmapIndexed bmap (update arr i st')
       where
         i = indexFromSegment bmap j
         j = path VP.! n
     go !n t@(Two bmap x0 x1)
       | not (testBit bmap j) =
-        let !arr' = insertAt (fromlist [x0, x1]) i $! Leaf k x
-         in buildKeyMap (bmap .|. setBit 0 j) arr'
+          let !arr' = insertAt (fromlist [x0, x1]) i $! Leaf k x
+           in buildKeyMap (bmap .|. setBit 0 j) arr'
       | otherwise =
-        let !st = if i == 0 then x0 else x1
-            !st' = go (n + 1) st
-         in if st' `ptrEq` st
-              then t
-              else
-                if i == 0
-                  then Two bmap st' x1
-                  else Two bmap x0 st'
+          let !st = if i == 0 then x0 else x1
+              !st' = go (n + 1) st
+           in if st' `ptrEq` st
+                then t
+                else
+                  if i == 0
+                    then Two bmap st' x1
+                    else Two bmap x0 st'
       where
         i = indexFromSegment bmap j
         j = path VP.! n
@@ -345,21 +345,21 @@ twoLeaf path1 leaf1 path2 k2 v2 = go path1 path2
     go p1 p2
       | Just (i, is) <- VP.uncons p1,
         Just (j, js) <- VP.uncons p2 =
-        if i == j
-          then One i (go is js)
-          else
-            let two = Two (setBits [i, j])
-             in if i < j
-                  then two leaf1 leaf2
-                  else two leaf2 leaf1
+          if i == j
+            then One i (go is js)
+            else
+              let two = Two (setBits [i, j])
+               in if i < j
+                    then two leaf1 leaf2
+                    else two leaf2 leaf1
       | otherwise =
-        error $
-          concat
-            [ "The path ran out of segments in 'twoLeaf'. \npath1: ",
-              show path1,
-              "\npath2: ",
-              show path2
-            ]
+          error $
+            concat
+              [ "The path ran out of segments in 'twoLeaf'. \npath1: ",
+                show path1,
+                "\npath2: ",
+                show path2
+              ]
 {-# INLINE twoLeaf #-}
 
 insertWithKey :: (Key -> v -> v -> v) -> Key -> v -> KeyMap v -> KeyMap v
@@ -435,14 +435,14 @@ dropEmpty :: Bitmap -> PArray (KeyMap v) -> KeyMap v
 dropEmpty b arr
   | isize arr == 0 = Empty
   | isize arr == 1 =
-    case bitmapToList b of
-      (i : _) -> oneE i (index arr 0)
-      [] ->
-        error $ bitmapInvariantMessage "dropEmpty" b ++ " It should have 1 bit set."
+      case bitmapToList b of
+        (i : _) -> oneE i (index arr 0)
+        [] ->
+          error $ bitmapInvariantMessage "dropEmpty" b ++ " It should have 1 bit set."
   | isize arr == 2 = twoE b (index arr 0) (index arr 1)
   | any isEmpty arr =
-    case filterArrayWithBitmap isEmpty b arr of
-      (arr2, bm2) -> buildKeyMap bm2 arr2
+      case filterArrayWithBitmap isEmpty b arr of
+        (arr2, bm2) -> buildKeyMap bm2 arr2
   | b == fullNodeMask = Full arr
   | otherwise = BitmapIndexed b arr
 {-# INLINE dropEmpty #-}
@@ -453,9 +453,9 @@ dropEmpty b arr
 filterArrayWithBitmap :: (a -> Bool) -> Bitmap -> PArray a -> (PArray a, Bitmap)
 filterArrayWithBitmap _p bm arr
   | popCount bm /= isize arr =
-    error $
-      concat
-        ["array size ", show (isize arr), " and bitmap ", show (bitmapToList bm), " don't agree."]
+      error $
+        concat
+          ["array size ", show (isize arr), " and bitmap ", show (bitmapToList bm), " don't agree."]
 filterArrayWithBitmap p bm0 arr =
   if n == isize arr
     then (arr, bm0)
@@ -466,15 +466,15 @@ filterArrayWithBitmap p bm0 arr =
     -- j ranges over the slots in the new array [0..n-1]
     loop i j bm marr
       | i <= 63 && not (testBit bm0 i) =
-        loop (i + 1) j bm marr -- Skip over those not in 'bm'
+          loop (i + 1) j bm marr -- Skip over those not in 'bm'
     loop i j bm marr
       | i <= 63 =
-        let slot = indexFromSegment bm0 i -- what is the index in 'arr' for this Bitmap element?
-            item = index arr slot -- Get the array item
-         in if not (p item) -- if it does not meet the 'p' then move it to the answer.
-              then mwrite marr j item >> loop (i + 1) (j + 1) bm marr
-              else -- if it meets 'p' then don't copy, and clear it from 'bm'
-                loop (i + 1) j (clearBit bm i) marr
+          let slot = indexFromSegment bm0 i -- what is the index in 'arr' for this Bitmap element?
+              item = index arr slot -- Get the array item
+           in if not (p item) -- if it does not meet the 'p' then move it to the answer.
+                then mwrite marr j item >> loop (i + 1) (j + 1) bm marr
+                else -- if it meets 'p' then don't copy, and clear it from 'bm'
+                  loop (i + 1) j (clearBit bm i) marr
     loop _i j _bm _marr
       | j /= n = error $ "Left over blank space at. j= " ++ show j ++ ", n= " ++ show n
     loop _i _j bm _marr = pure bm
@@ -539,26 +539,26 @@ searchPath key = go
             else Nothing
         One i x
           | Just (j, js) <- VP.uncons path ->
-            if i == j
-              then go js x
-              else Nothing
+              if i == j
+                then go js x
+                else Nothing
         Two bm x0 x1
           | Just (j, js) <- VP.uncons path ->
-            if testBit bm j
-              then
-                if indexFromSegment bm j == 0
-                  then go js x0
-                  else go js x1
-              else Nothing
+              if testBit bm j
+                then
+                  if indexFromSegment bm j == 0
+                    then go js x0
+                    else go js x1
+                else Nothing
         BitmapIndexed bm arr
           | Just (j, js) <- VP.uncons path ->
-            if testBit bm j
-              then go js (index arr (indexFromSegment bm j))
-              else Nothing
+              if testBit bm j
+                then go js (index arr (indexFromSegment bm j))
+                else Nothing
         Full arr
           | Just (j, js) <- VP.uncons path ->
-            -- Every possible bit is set, so no testBit call necessary
-            go js (index arr (indexFromSegment fullNodeMask j))
+              -- Every possible bit is set, so no testBit call necessary
+              go js (index arr (indexFromSegment fullNodeMask j))
         _ -> Nothing -- Path is empty, we will never find it.
 {-# INLINE searchPath #-}
 
@@ -928,11 +928,11 @@ buildKeyMap :: Bitmap -> PArray (KeyMap v) -> KeyMap v
 buildKeyMap b arr
   | isize arr == 0 = Empty
   | isize arr == 1 =
-    case (index arr 0, bitmapToList b) of
-      (x@(Leaf _ _), _) -> x
-      (x, i : _) -> One i x
-      (_, []) ->
-        error $ bitmapInvariantMessage "buildKeyMap" b
+      case (index arr 0, bitmapToList b) of
+        (x@(Leaf _ _), _) -> x
+        (x, i : _) -> One i x
+        (_, []) ->
+          error $ bitmapInvariantMessage "buildKeyMap" b
   | isize arr == 2 = Two b (index arr 0) (index arr 1)
   | b == fullNodeMask = Full arr
   | otherwise = BitmapIndexed b arr
@@ -1042,11 +1042,11 @@ insertM :: PArray e -> Int -> e -> ST s (PArray e)
 insertM ary idx b
   | idx < 0 || idx > counter = error $ boundsMessage "insertM" idx counter
   | otherwise = do
-    mary <- mnew (counter + 1)
-    mcopy mary 0 ary 0 idx
-    mwrite mary idx b
-    mcopy mary (idx + 1) ary idx (counter - idx)
-    mfreeze mary
+      mary <- mnew (counter + 1)
+      mcopy mary 0 ary 0 idx
+      mwrite mary idx b
+      mcopy mary (idx + 1) ary idx (counter - idx)
+      mfreeze mary
   where
     !counter = isize ary
 {-# INLINE insertM #-}
@@ -1067,7 +1067,7 @@ slice lo hi arr = withMutArray_ asize action
 {-# INLINE slice #-}
 
 -- ========================================================================
---The functions lowSlice and highSlice, split an array into two arrays
+-- The functions lowSlice and highSlice, split an array into two arrays
 -- which share different variations of the value of the index 'slicepoint'.
 -- arr= [2,5,3,6,7,8,45,6,3]  let the slicepoint be index 3 (with value 6).
 --             ^ slicepoint at index 3

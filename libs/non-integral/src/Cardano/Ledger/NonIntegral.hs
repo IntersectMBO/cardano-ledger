@@ -142,9 +142,9 @@ contract factor x = go
     go l u
       | l + 1 == u = l
       | otherwise =
-        if x < x'
-          then go l mid
-          else go mid u
+          if x < x'
+            then go l mid
+            else go mid u
       where
         mid = l + ((u - l) `div` 2)
         x' = ipow factor mid

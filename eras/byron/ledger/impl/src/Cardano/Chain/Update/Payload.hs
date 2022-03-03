@@ -61,12 +61,12 @@ instance Decoded (APayload ByteString) where
 instance B.Buildable Payload where
   build p
     | null (payloadVotes p) =
-      formatMaybeProposal (payloadProposal p) <> ", no votes"
+        formatMaybeProposal (payloadProposal p) <> ", no votes"
     | otherwise =
-      formatMaybeProposal (payloadProposal p)
-        <> bprint
-          ("\n    votes: " . listJson)
-          (map formatVoteShort (payloadVotes p))
+        formatMaybeProposal (payloadProposal p)
+          <> bprint
+            ("\n    votes: " . listJson)
+            (map formatVoteShort (payloadVotes p))
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (APayload a)

@@ -257,13 +257,13 @@ validateTxIn ::
 validateTxIn UTxOConfiguration {tcAssetLockedSrcAddrs} utxo txIn
   | S.null tcAssetLockedSrcAddrs,
     txIn `UTxO.member` utxo =
-    pure ()
+      pure ()
   | Just txOut <- UTxO.lookupCompact (toCompactTxIn txIn) utxo,
     let (CompactTxOut txOutAddr _) = txOut,
     txOutAddr `S.notMember` tcAssetLockedSrcAddrs =
-    pure ()
+      pure ()
   | otherwise =
-    throwError $ TxValidationMissingInput txIn
+      throwError $ TxValidationMissingInput txIn
 
 -- | Validate the NetworkMagic of a TxOut
 validateTxOutNM ::

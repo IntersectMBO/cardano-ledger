@@ -305,13 +305,13 @@ pattern TxOut addr vl datum refScript <-
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
-        TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+          TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
     TxOut (Addr network paymentCred stakeRef) vl (DatumHash dh) SNothing
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
         Just (Refl, dataHash32) <- encodeDataHash32 dh =
-        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
+          TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
     TxOut addr vl d rs =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr

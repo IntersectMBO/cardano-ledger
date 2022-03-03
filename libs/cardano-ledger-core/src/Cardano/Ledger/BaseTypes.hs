@@ -249,7 +249,7 @@ fromRatioBoundedRatio ::
 fromRatioBoundedRatio ratio
   | r < toRationalBoundedRatio lowerBound
       || r > toRationalBoundedRatio upperBound =
-    Nothing -- ensure valid range
+      Nothing -- ensure valid range
   | otherwise = Just $ BoundedRatio ratio
   where
     r = promoteRatio ratio
@@ -319,11 +319,11 @@ fromScientificBoundedRatioWord64 ::
 fromScientificBoundedRatioWord64 (normalize -> sci)
   | coeff < 0 = failWith "negative"
   | exp10 <= 0 = do
-    when (exp10 < -19) $ failWith "too precise"
-    fromRationalEither (coeff % (10 ^ negate exp10))
+      when (exp10 < -19) $ failWith "too precise"
+      fromRationalEither (coeff % (10 ^ negate exp10))
   | otherwise = do
-    when (19 < exp10) $ failWith "too big"
-    fromRationalEither (coeff * 10 ^ exp10 % 1)
+      when (19 < exp10) $ failWith "too big"
+      fromRationalEither (coeff * 10 ^ exp10 % 1)
   where
     coeff = coefficient sci
     exp10 = base10Exponent sci

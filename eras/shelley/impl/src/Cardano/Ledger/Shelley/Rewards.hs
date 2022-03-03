@@ -102,9 +102,9 @@ leaderRew ::
 leaderRew f pool (StakeShare s) (StakeShare sigma)
   | f <= c = f
   | otherwise =
-    c
-      <> rationalToCoinViaFloor
-        (coinToRational (f <-> c) * (m' + (1 - m') * s / sigma))
+      c
+        <> rationalToCoinViaFloor
+          (coinToRational (f <-> c) * (m' + (1 - m') * s / sigma))
   where
     (c, m, _) = poolSpec pool
     m' = unboundRational m
@@ -119,8 +119,8 @@ memberRew ::
 memberRew (Coin f') pool (StakeShare t) (StakeShare sigma)
   | f' <= c = mempty
   | otherwise =
-    rationalToCoinViaFloor $
-      fromIntegral (f' - c) * (1 - m') * t / sigma
+      rationalToCoinViaFloor $
+        fromIntegral (f' - c) * (1 - m') * t / sigma
   where
     (Coin c, m, _) = poolSpec pool
     m' = unboundRational m

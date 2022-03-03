@@ -136,18 +136,18 @@ fromAvvmVK addrText = do
 redeemVKBuild :: ByteString -> RedeemVerificationKey
 redeemVKBuild bs
   | BS.length bs /= 32 =
-    panic $
-      "consRedeemVK: failed to form vk, wrong bs length: "
-        <> show (BS.length bs)
-        <> ", when should be 32"
+      panic $
+        "consRedeemVK: failed to form vk, wrong bs length: "
+          <> show (BS.length bs)
+          <> ", when should be 32"
   | otherwise =
-    case Ed25519.publicKey (BA.convert bs :: BA.Bytes) of
-      CryptoPassed r -> RedeemVerificationKey r
-      CryptoFailed e ->
-        panic $
-          mappend
-            "Cardano.Crypto.Signing.Types.Redeem.hs consRedeemVK failed because "
-            (T.pack $ show e)
+      case Ed25519.publicKey (BA.convert bs :: BA.Bytes) of
+        CryptoPassed r -> RedeemVerificationKey r
+        CryptoFailed e ->
+          panic $
+            mappend
+              "Cardano.Crypto.Signing.Types.Redeem.hs consRedeemVK failed because "
+              (T.pack $ show e)
 
 data AvvmVKError
   = ApeAddressFormat Text
