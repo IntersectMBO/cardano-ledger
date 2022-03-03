@@ -32,7 +32,8 @@ import Data.Aeson
     ToJSONKey (..),
     ToJSONKeyFunction (..),
   )
-import qualified Data.Aeson.Encoding as A
+import qualified Data.Aeson.Encoding.Internal as A (key)
+import qualified Data.Aeson.Key as A
 import Data.Aeson.TH (defaultOptions, deriveJSON)
 import qualified Data.ByteArray as BA
 import qualified Data.ByteString as BS
@@ -86,9 +87,9 @@ instance MonadError SchemaError m => FromObjectKey m RedeemVerificationKey where
     fmap Just . parseJSString (first (sformat build) . fromAvvmVK) . JSString
 
 instance ToJSONKey RedeemVerificationKey where
-  toJSONKey = ToJSONKeyText render (A.text . render)
+  toJSONKey = ToJSONKeyText render (A.key . render)
     where
-      render = sformat redeemVKB64UrlF
+      render = A.fromText . sformat redeemVKB64UrlF
 
 instance FromJSONKey RedeemVerificationKey where
   fromJSONKey =

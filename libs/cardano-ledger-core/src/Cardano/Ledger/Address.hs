@@ -91,6 +91,7 @@ import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Encoding as Aeson
+import qualified Data.Aeson.Key as Aeson (fromText)
 import qualified Data.Aeson.Types as Aeson
 import Data.Binary (Get, Put, Word8)
 import qualified Data.Binary as B
@@ -214,7 +215,7 @@ instance CC.Crypto crypto => FromJSON (RewardAcnt crypto) where
 instance NoThunks (RewardAcnt crypto)
 
 instance ToJSONKey (Addr crypto) where
-  toJSONKey = Aeson.ToJSONKeyText addrToText (Aeson.text . addrToText)
+  toJSONKey = Aeson.ToJSONKeyText (Aeson.fromText . addrToText) (Aeson.text . addrToText)
 
 instance CC.Crypto crypto => FromJSONKey (Addr crypto) where
   fromJSONKey = Aeson.FromJSONKeyTextParser parseAddr

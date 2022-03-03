@@ -74,8 +74,11 @@ newtype SignalSDELEG (v :: Type -> Type)
   = SignalSDELEG (STS.Signal SDELEG)
   deriving (Show)
 
-instance HTraversable SignalSDELEG where
-  htraverse _ s = pure (coerce s)
+instance FunctorB SignalSDELEG where
+  bmap _ = coerce
+
+instance TraversableB SignalSDELEG where
+  btraverse _ s = pure (coerce s)
 
 --------------------------------------------------------------------------------
 -- SDELEG Command
