@@ -1275,23 +1275,22 @@ startStep ::
   (PulsingRewUpdate (Crypto era), RewardProvenance (Crypto era))
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
-      f, numStakeCreds, k :: Rational
+      numStakeCreds, k :: Rational
       numStakeCreds = fromIntegral (VMap.size $ unStake stake')
       k = fromIntegral secparam
-      f = unboundRational (activeSlotVal asc)
 
-      -- We expect approximately (10k/f)-many blocks to be produced each epoch.
+      -- We expect approximately 10k-many blocks to be produced each epoch.
       -- The reward calculation begins (4k/f)-many slots into the epoch,
       -- and we guarantee that it ends (2k/f)-many slots before the end
       -- of the epoch (to allow tools such as db-sync to see the reward
       -- values in advance of them being applied to the ledger state).
       --
       -- Therefore to evenly space out the reward calculation, we divide
-      -- the number of stake credentials by 4k/f in order to determine how many
+      -- the number of stake credentials by 4k in order to determine how many
       -- stake credential rewards we should calculate each block.
       -- If it does not finish in this amount of time, the calculation is
       -- forced to completion.
-      pulseSize = max 1 (ceiling ((numStakeCreds * f) / (4 * k)))
+      pulseSize = max 1 (ceiling (numStakeCreds / (4 * k)))
 
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
