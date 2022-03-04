@@ -5,6 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -20,6 +21,8 @@ import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.BaseTypes (ShelleyBase)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto, DSIGN, HASH)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
@@ -27,7 +30,11 @@ import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
+import Control.State.Transition.Extended hiding (Assertion)
+import Data.Kind (Type)
+import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
+import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree)
 import Test.Tasty.QuickCheck (Testable (..), testProperties)
 
@@ -166,3 +173,29 @@ instance Eq (Some Proof) where
   (Some (Alonzo _)) == (Some (Alonzo _)) = True
   (Some (Babbage _)) == (Some (Babbage _)) = True
   _ == _ = False
+
+-- ===============================================================
+-- Proofs or witnesses to Core.EraRule Tags
+
+data WitRule (s :: Symbol) (e :: Type) where
+  UTXOW :: Proof era -> WitRule "UTXOW" era
+  LEDGER :: Proof era -> WitRule "LEDGER" era
+  BBODY :: Proof era -> WitRule "BBODY" era
+
+ruleProof :: WitRule s e -> Proof e
+ruleProof (UTXOW p) = p
+ruleProof (LEDGER p) = p
+ruleProof (BBODY p) = p
+
+runSTS ::
+  forall s e ans.
+  ( BaseM (Core.EraRule s e) ~ ShelleyBase,
+    STS (Core.EraRule s e)
+  ) =>
+  WitRule s e ->
+  RuleContext 'Transition (Core.EraRule s e) ->
+  (Either [PredicateFailure (Core.EraRule s e)] (State (Core.EraRule s e)) -> ans) ->
+  ans
+runSTS (UTXOW _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (LEDGER _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (BBODY _proof) x cont = cont (runShelleyBase (applySTSTest x))

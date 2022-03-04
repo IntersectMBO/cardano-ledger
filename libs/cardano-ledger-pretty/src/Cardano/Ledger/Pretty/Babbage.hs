@@ -140,8 +140,6 @@ ppBabbageUtxoPred (UnequalCollateralReturn c1 c2) =
   ppRecord
     "UnequalCollateralReturn"
     [("collateral needed", ppCoin c1), ("collateral returned", ppCoin c2)]
-ppBabbageUtxoPred (UnknownDataHash dhset) =
-  ppSexp "UnknownDataHashes" [ppSet ppDataHash dhset]
 ppBabbageUtxoPred (DanglingWitnessDataHash dhset) =
   ppSexp "DanglingWitnessDataHashes" [ppSet ppDataHash dhset]
 

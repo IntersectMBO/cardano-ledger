@@ -105,6 +105,12 @@ instance forall c. CC.Crypto c => HasTokens (AlonzoEra c) where
       pid = Mary.PolicyID (hashScript @(AlonzoEra c) s)
       an = Mary.AssetName $ BS.pack "an"
 
+instance forall c. CC.Crypto c => HasTokens (BabbageEra c) where
+  forge n s = Mary.Value 0 $ Map.singleton pid (Map.singleton an n)
+    where
+      pid = Mary.PolicyID (hashScript @(BabbageEra c) s)
+      an = Mary.AssetName $ BS.pack "an"
+
 -- =================================
 -- Make Scripts in Alonzo era
 

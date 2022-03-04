@@ -285,16 +285,15 @@ updateTxOut (Alonzo _) (out@(Alonzo.TxOut a v h)) txoutd = case txoutd of
   Address addr -> Alonzo.TxOut addr v h
   Amount val -> Alonzo.TxOut a val h
   DHash mdh -> Alonzo.TxOut a v mdh
-  Datum (Babbage.NoDatum) -> Alonzo.TxOut a v h
-  Datum (Babbage.DatumHash dh) -> Alonzo.TxOut a v (SJust dh)
-  Datum d -> error ("Cannot use a script Datum in the Alonzo era " ++ show d)
+  Datum d -> error ("This feature is only available from Babbage onward " ++ show d)
   _ -> out
-updateTxOut (Babbage _) (out@(Babbage.TxOut a v h refscript)) txoutd = case txoutd of
+updateTxOut (Babbage _) (Babbage.TxOut a v h refscript) txoutd = case txoutd of
   Address addr -> Babbage.TxOut addr v h refscript
   Amount val -> Babbage.TxOut a val h refscript
-  Datum x -> Babbage.TxOut a v x refscript
+  DHash SNothing -> Babbage.TxOut a v Babbage.NoDatum refscript
+  DHash (SJust dh) -> Babbage.TxOut a v (Babbage.DatumHash dh) refscript
+  Datum d -> Babbage.TxOut a v d refscript
   RefScript s -> Babbage.TxOut a v h s
-  _ -> out
 
 newTxOut :: Era era => Proof era -> [TxOutField era] -> Core.TxOut era
 newTxOut _ dts | all notAddress dts = error ("A call to newTxOut must have an (Address x) field.")
@@ -392,6 +391,10 @@ newScriptIntegrityHash ::
   Redeemers era ->
   TxDats era ->
   StrictMaybe (Alonzo.ScriptIntegrityHash (Crypto era))
+newScriptIntegrityHash (Babbage _) pp ls rds dats =
+  case (hashScriptIntegrity pp (Set.fromList ls) rds dats) of
+    SJust x -> SJust x
+    SNothing -> SNothing
 newScriptIntegrityHash (Alonzo _) pp ls rds dats =
   case (hashScriptIntegrity pp (Set.fromList ls) rds dats) of
     SJust x -> SJust x

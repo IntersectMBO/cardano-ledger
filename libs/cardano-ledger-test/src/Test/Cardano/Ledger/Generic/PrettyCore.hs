@@ -21,18 +21,20 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 -- import qualified  Cardano.Ledger.Shelley.Rules.Utxo as Shelley(UtxoPredicateFailure(..))
 
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
-import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 -- -------------
 -- Specific types
 
 -- import Cardano.Ledger.Alonzo.TxWitness(TxWitness (..))
 
+import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail (..))
+import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..))
 import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..))
@@ -44,13 +46,15 @@ import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Mary
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (WitHashes (..))
+import Cardano.Ledger.Shelley.Rules.Bbody (BbodyPredicateFailure (..), BbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as Shelley (PpupPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley (UtxoPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailure (..))
-import Control.State.Transition.Extended (PredicateFailure)
+import Control.State.Transition.Extended (STS (..))
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.Generic.Proof
 
@@ -550,6 +554,8 @@ ppScriptPurpose (Certifying dcert) = ppSexp "Certifying" [ppDCert dcert]
 instance PrettyA (ScriptPurpose crypto) where
   prettyA = ppScriptPurpose
 
+instance PrettyA x => PrettyA [x] where prettyA xs = ppList prettyA xs
+
 -- =====================================================
 
 dots :: PDoc -> PDoc
@@ -578,3 +584,85 @@ ppCoreScript (Allegra _) x = ppTimelock x
 ppCoreScript (Shelley _) x = ppMultiSig x
 
 -- =======================================================
+
+ppLedgersPredicateFailure ::
+  PrettyA (PredicateFailure (Core.EraRule "LEDGER" era)) => LedgersPredicateFailure era -> PDoc
+ppLedgersPredicateFailure (LedgerFailure x) = ppSexp "LedgerFailure" [prettyA x]
+
+instance
+  PrettyA (PredicateFailure (Core.EraRule "LEDGER" era)) =>
+  PrettyA (LedgersPredicateFailure era)
+  where
+  prettyA = ppLedgersPredicateFailure
+
+-- ================
+ppBbodyPredicateFailure ::
+  PrettyA (PredicateFailure (Core.EraRule "LEDGERS" era)) =>
+  BbodyPredicateFailure era ->
+  PDoc
+ppBbodyPredicateFailure (WrongBlockBodySizeBBODY x y) =
+  ppRecord
+    "WrongBlockBodySizeBBODY"
+    [ ("actual computed BBody size", ppInt x),
+      ("claimed BBody Size in Header", ppInt y)
+    ]
+ppBbodyPredicateFailure (InvalidBodyHashBBODY h1 h2) =
+  ppRecord
+    "(InvalidBodyHashBBODY"
+    [ ("actual hash", ppHash h1),
+      ("claimed hash", ppHash h2)
+    ]
+ppBbodyPredicateFailure (LedgersFailure x) =
+  ppSexp "LedgersFailure" [prettyA x]
+
+instance
+  PrettyA (PredicateFailure (Core.EraRule "LEDGERS" era)) =>
+  PrettyA (BbodyPredicateFailure era)
+  where
+  prettyA = ppBbodyPredicateFailure
+
+-- ================
+
+ppAlonzoBbodyPredFail ::
+  PrettyA (PredicateFailure (Core.EraRule "LEDGERS" era)) =>
+  AlonzoBbodyPredFail era ->
+  PDoc
+ppAlonzoBbodyPredFail (ShelleyInAlonzoPredFail x) =
+  ppSexp "ShelleyInAlonzoPredFail" [ppBbodyPredicateFailure x]
+ppAlonzoBbodyPredFail (TooManyExUnits e1 e2) =
+  ppRecord
+    "TooManyExUnits"
+    [ ("Computed Sum of ExUnits for all plutus scripts", ppExUnits e1),
+      ("Maximum allowed by protocal parameters", ppExUnits e2)
+    ]
+
+instance
+  PrettyA (PredicateFailure (Core.EraRule "LEDGERS" era)) =>
+  PrettyA (AlonzoBbodyPredFail era)
+  where
+  prettyA = ppAlonzoBbodyPredFail
+
+-- ===================
+
+ppBbodyState ::
+  ( PrettyA (Core.TxOut era),
+    PrettyA (Core.PParams era),
+    PrettyA (State (Core.EraRule "PPUP" era))
+  ) =>
+  BbodyState era ->
+  PDoc
+ppBbodyState (BbodyState ls (BlocksMade mp)) =
+  ppRecord
+    "BbodyState"
+    [ ("ledger state", ppLedgerState ls),
+      ("blocks made", ppMap ppKeyHash ppNatural mp)
+    ]
+
+instance
+  ( PrettyA (Core.TxOut era),
+    PrettyA (Core.PParams era),
+    PrettyA (State (Core.EraRule "PPUP" era))
+  ) =>
+  PrettyA (BbodyState era)
+  where
+  prettyA = ppBbodyState

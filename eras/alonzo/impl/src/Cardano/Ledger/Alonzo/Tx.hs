@@ -1,3 +1,4 @@
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -48,6 +49,8 @@ module Cardano.Ledger.Alonzo.Tx
     --  Figure 5
     minfee,
     isTwoPhaseScriptAddress,
+    isTwoPhaseScriptAddressFromMap,
+    txInputHashes,
     Shelley.txouts,
     -- Figure 6
     txrdmrs,
@@ -106,7 +109,8 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (isNativeScript))
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (hashScript, isNativeScript))
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Mary.Value (AssetName, PolicyID (..), Value (..))
 import Cardano.Ledger.SafeHash
@@ -115,15 +119,17 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..), txOutView)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
-import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..), WitVKey, unWdrl)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coders
+import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Map as Map
 import Data.Maybe.Strict
   ( StrictMaybe (..),
@@ -271,13 +277,7 @@ isTwoPhaseScriptAddress ::
   ValidatedTx era ->
   Addr (Crypto era) ->
   Bool
-isTwoPhaseScriptAddress tx addr =
-  case Shelley.getScriptHash addr of
-    Nothing -> False
-    Just hash ->
-      case Map.lookup hash (getField @"scriptWits" tx) of
-        Nothing -> False
-        Just scr -> not (isNativeScript @era scr)
+isTwoPhaseScriptAddress tx addr = isTwoPhaseScriptAddressFromMap @era (getField @"scriptWits" tx) addr
 
 -- | txsize computes the length of the serialised bytes
 instance
@@ -541,3 +541,56 @@ instance
           ( sequence . maybeToStrictMaybe
               <$> decodeNullMaybe fromCBOR
           )
+
+-- =======================================================================
+-- Some generic functions that compute over Tx. We try to be abstract over
+-- things that might differ from Era to Era like
+--    1) TxOut might have additional fields (uses txOutView from UsesTxOut)
+--    2) Scripts might appear in places other than the witness set. So
+--       we need such a 'witness' we pass it as a parameter and each call site
+--       can use a different method to compute it in the current Era.
+
+-- | Compute if an Addr has the hash of a TwoPhaseScript, we can tell
+--   what kind of Script from the Hash, by looking it up in the Map
+isTwoPhaseScriptAddressFromMap ::
+  forall era.
+  (ValidateScript era) =>
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Addr (Crypto era) ->
+  Bool
+isTwoPhaseScriptAddressFromMap hashScriptMap addr =
+  case Shelley.getScriptHash @(Crypto era) addr of
+    Nothing -> False
+    Just hash -> any ok hashScriptMap
+      where
+        ok script = hashScript @era script == hash && not (isNativeScript @era script)
+
+-- Compute two sets for all TwoPhase scripts in a Tx.
+-- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
+-- set 2) TxIns that are TwoPhase scripts, and should have a DataHash, but don't.
+{- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
+txInputHashes ::
+  forall era.
+  ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    UsesTxOut era,
+    ValidateScript era
+  ) =>
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  ValidatedTx era ->
+  UTxO era ->
+  (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
+txInputHashes hashScriptMap tx (UTxO mp) = SplitMap.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
+  where
+    txbody = body tx
+    spendinputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
+    smallUtxo = spendinputs SplitMap.◁ mp
+    accum ans@(hashSet, inputSet) txin txout =
+      case txOutView @era txout of
+        (addr, _, SNothing, _) ->
+          if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
+            then (hashSet, Set.insert txin inputSet)
+            else ans
+        (addr, _, SJust dhash, _) ->
+          if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
+            then (Set.insert dhash hashSet, inputSet)
+            else ans
