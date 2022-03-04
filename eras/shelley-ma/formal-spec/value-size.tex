@@ -49,18 +49,19 @@ sizes of $\Value_C$ elements.
   \emph{Helper Functions}
   \begin{align*}
     & \fun{serSize} \in \ValMonoid \to \MemoryEstimate \\
-    & \fun{serSize}~v~=~\|~\fun{serialize}~{v}~\| \\
-    & \text{Gives the size of the serialized representation of a $\ValMonoid$} \\
+    & \fun{serSize}~v=\lvert \fun{serialize}~{v} \rvert \\
+    & \text{Gives the size of the serialized representation of a $\ValMonoid$}
+    & \nextdef
     & \fun{numAssets} \in \Value_C \to \N \\
-    & \fun{numAssets}~{vl}~=~\|~\{~(pid, an)~\vert~pid~(\mapsto~(an~\mapsto~\wcard))~\in~vl~\}~\| \\
+    & \fun{numAssets}~{vl}=\lvert \{~(pid, an)~\vert~ pid \mapsto (an \mapsto \wcard) \in vl~\} \rvert \\
     & \text{Returns the number of distinct asset IDs in a $\Value_C$}
     & \nextdef
     & \fun{sumALs} \in \Value_C \to \N \\
-    & \fun{sumALs}~{vl}~=~ \sum_{\{~an~\vert~\wcard~(\mapsto~(an~\mapsto~\wcard))~\in~vl~\}} \fun{anameLen}~an \\
+    & \fun{sumALs}~{vl}= \sum_{\{~an~\vert~\wcard~\mapsto~(an~\mapsto~\wcard)~\in~vl~\}} \fun{anameLen}~an \\
     & \text{Returns the sum of the lengths (in bytes) of distinct asset names in a $\Value_C$}
     & \nextdef
     & \fun{numPids} \in \Value_C \to \N \\
-    & \fun{numPids}~{vl} ~=~ \|~\fun{pids}~{vl}~\| \\
+    & \fun{numPids}~{vl} = \lvert \fun{pids}~{vl} \rvert \\
     & \text{The number of policy IDs in a $\Value_C$}
   \end{align*}
   \caption{Value Size Helper Functions}
@@ -105,16 +106,16 @@ of the size of a UTxO entry, and the associated min-Ada-value.
   \emph{Size and Min-Ada Functions}
   \begin{align*}
     & \fun{size} \in \Value_C \to \MemoryEstimate \\
-    & \fun{size}~\var{vl} ~=~
+    & \fun{size}~\var{vl} =
     \begin{cases}
       k_0 & \fun{isAdaOnly}~vl\\
-      k_1 + \lfloor~ (((\fun{numAssets}~vl) * k_2) + (\fun{sumALs}~vl) & \\
-      ~~~~~~ + ((\fun{numPids}~vl) * k_3) + (k_4 - 1)))~ /~ k_4~\rfloor & \text{otherwise} \\
+      k_1 + \lfloor~ \fun{numAssets}~vl * k_2 + \fun{sumALs}~vl & \\
+      ~~~~~~ + \fun{numPids}~vl * k_3 + k_4 - 1 /~ k_4~\rfloor & \text{otherwise} \\
     \end{cases} \\
     & \text{Calculate the size of a $\Value_C$}
     \nextdef
-    & \fun{coinsPerUTxOWord}~\in \Coin \to \Coin \\
-    & \fun{coinsPerUTxOWord}~\var{mv} = \lfloor~ (\var{mv}~/~ \mathsf{adaOnlyUTxOSize})~ \rfloor \\
+    & \fun{coinsPerUTxOWord}\in \Coin \to \Coin \\
+    & \fun{coinsPerUTxOWord}~\var{mv} = \lfloor~ \var{mv}~/~ \mathsf{adaOnlyUTxOSize}~ \rfloor \\
     & \text{Calculate the cost of storing a memory unit of data as a UTxO entry}
     \nextdef
     & \fun{utxoEntrySize} \in \ValMonoid \to \MemoryEstimate \\
@@ -128,7 +129,7 @@ of the size of a UTxO entry, and the associated min-Ada-value.
 The $\fun{size}$ function returns the estimated size of a $\Value_C$ element. The size
 function on $\Value$ is defined via the isomorphism in Section \ref{sec:coin-value},
 
-\[ \fun{size}_{\Value}~v~=~\fun{size}~(\fun{iso}_{v}~v) \]
+\[ \fun{size}_{\Value}~v=\fun{size}~(\fun{iso}_{v}~v) \]
 
 The size of a $\Value_C$ element is constant in the case when it contains only Ada.
 If there are other types of assets contained in it, the size depends on

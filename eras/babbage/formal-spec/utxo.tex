@@ -1,6 +1,12 @@
 \section{UTxO}
 \label{sec:utxo}
 
+Some of the functions related to scripts, datums and collateral need
+to be adjusted for the new features. Most of these adjustments are
+self-explanatory. Note that the new $\fun{collOuts}$ function
+generates a single output with an index $| \txouts{txb} |$. This is to
+avoid potential confusion for transactions spending that output.
+
 \begin{figure*}[htb]
   \emph{Functions}
   %
@@ -12,11 +18,8 @@
         \False & \text{otherwise}
       \end{cases}
     \nextdef
-    & \fun{minCollateral} : \TxBody \to \PParams \to \Coin \\
-    & \fun{minCollateral}~txb~pp = \lceil \txfee{txb} * \fun{collateralPercent}~pp / 100 \rceil
-    \nextdef
     & \fun{collBalance} : \TxBody \to \UTxO \to \Value \\
-    & \fun{collBalance}~txb~utxo = \fun{ubalance}~(\var{utxo}_{\fun{collInputs}~{txb}}) -
+    & \fun{collBalance}~txb~utxo = \fun{ubalance}~(\var{utxo}|_{\fun{collInputs}~{txb}}) -
       \begin{cases}
          0                 & \fun{collRet}~txb = \Nothing \\
          \fun{collRet}~txb & \text{otherwise}
@@ -34,7 +37,7 @@
     &~~      \minfee{pp}{tx} \leq \txfee{tx} \wedge (\fun{txrdmrs}~tx \neq \Nothing \Rightarrow \\
     &~~~~~~((\forall (a, \wcard, \wcard) \in \fun{range}~(\fun{collInputs}~tx \restrictdom \var{utxo}), a \in \AddrVKey) \\
     &~~~~~~\wedge \fun{adaOnly}~\var{balance} \\
-    &~~~~~~\wedge \var{balance} \geq \hldiff{\fun{minCollateral}~tx~pp} \\
+    &~~~~~~\wedge \var{balance} \geq \hldiff{\lceil \txfee{txb} * \fun{collateralPercent}~pp / 100 \rceil} \\
     &~~~~~~\wedge \hldiff{(\fun{txcoll}~tx \neq \Nothing) \Rightarrow \var{balance} = \fun{txcoll}~tx} \\
     &~~~~~~\wedge \fun{collInputs}~{tx} \neq \emptyset) \\
     &~~      \where \\
@@ -49,8 +52,8 @@
     & \fun{getDatum} : \Tx \to \UTxO \to \ScriptPurpose \to \seqof{\Datum} \\
     & \fun{getDatum}~{tx}~{utxo}~{sp} =
       \begin{cases}
-        [\var{d}] & (\_, \_, h) \in \var{utxo}~\var{sp},~ \var{d} \in \fun{txdats}~(\fun{txwits}~tx)~ \var{h} \\
-        [\var{d}] & \hldiff{(\_, \_, d) \in \var{utxo}~\var{sp},~ \var{d} \in \Datum} \\
+        [\var{d}] & \var{sp} \in \TxIn, (\_, \_, h, \_) \in \var{utxo}~\var{sp},~ \var{d}\in\fun{txdats}~(\fun{txwits}~tx)~\var{h} \\
+        [\var{d}] & \hldiff{\var{sp} \in \TxIn, (\_, \_, d, \_) \in \var{utxo}~\var{sp},~ \var{d} \in \Datum} \\
         \epsilon  & \text{otherwise}
       \end{cases}
     \nextdef
@@ -60,6 +63,15 @@
     & \fun{languages} : \Tx \to \UTxO \to \powerset{\Language} \\
     & \fun{languages}~tx~utxo =
       \{\fun{language}~s \mid s \in \range (\fun{txscripts}~tx~utxo) \cap \ScriptPhTwo\}
+    \nextdef
+    & \fun{allowedLanguages} : \Tx \to \UTxO \to \powerset{\Language} \\
+    & \fun{allowedLanguages}~tx~utxo = \\
+    & \begin{cases}
+        \emptyset                   & \text{if}~\exists (a, \_, \_, \_) \in os, a \in \AddrBS \\
+        \{ \PlutusVII \}            & \text{if}~\exists (\_, \_, d, s) \in os, d \in \Datum \lor s \neq \Nothing \lor \fun{refInputs}~tx \neq \emptyset \\
+        \{ \PlutusVI, \PlutusVII \} & \text{otherwise}
+      \end{cases} \\
+    & \where \var{os} = \range \txouts{tx} \cup \var{utxo}~(\fun{spendInputs}~tx \cup \fun{refInputs}~tx)
   \end{align*}
   \caption{Functions related to scripts}
   \label{fig:functions:data}
@@ -175,7 +187,7 @@
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \txouts{txb}, \\
-      \fun{getValue}~txout \geq \fun{inject}~(\fun{utxoEntrySize}~{txout} * \fun{coinsPerUTxOWord}~pp) \\~
+      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\lceil\fun{serSize}~txout * \fun{coinsPerUTxOWord}~pp/8\rceil}) \\~
       \\
       \forall txout \in \txouts{txb},\\
       \fun{serSize}~(\fun{getValue}~txout) \leq \fun{maxValSize}~pp \\~
@@ -253,6 +265,11 @@
   \label{fig:rules:utxo-babbage}
 \end{figure}
 
+To the UTXOW rule, in addition to the changes required by the new
+features, we add a check that all scripts and datums involved in the
+transaction are well-formed. Also, we forbid transactions that use the
+new features and try to use $\PlutusVI$ scripts.
+
 \begin{figure}
   \begin{equation}
     \label{eq:utxo-witness-inductive-babbage}
@@ -310,7 +327,10 @@
       \lor
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
-      \fun{languages}~tx~\hldiff{utxo} \subseteq \dom(\fun{costmdls}~tx) \\
+      \hldiff{\forall x \in \range (\fun{txdats}~txw) \cup \range (\fun{txwitscripts}~txw) \cup \bigcup_{(\_, \_, d, s) \in \txouts{tx}} \{s, d\},} \\
+      \hldiff{x \in \Script \cup \Datum \Rightarrow \fun{isWellFormed}~x}
+      \\~\\
+      \fun{languages}~tx~\hldiff{utxo} \subseteq \dom(\fun{costmdls}~pp) \cap \fun{allowedLanguages}~tx~utxo \\
       \fun{scriptIntegrityHash}~{txb} =
       \fun{hashScriptIntegrity}~\var{pp}~(\fun{languages}~{txw})~(\fun{txrdmrs}~{txw})~(\fun{txdats}~{txw})
       \\~\\

@@ -42,7 +42,7 @@ require any witnessing to be included in a valid transaction. The only
 requirement is that is has to be present in the ledger state
 UTxO. There are no restrictions on which outputs can be used as a
 reference input. Reference inputs only affect the information that is
-passed to scripts by them being included in $\TxInfo$. \TODO{Do that}
+passed to scripts by them being included in $\TxInfo$.
 For consistency, we've renamed the regular and collateral inputs to
 $\fun{spendInputs}$ and $\fun{collInputs}$ respectively.
 
@@ -57,14 +57,18 @@ evident by just looking at the transaction body instead of requiring
 information contained in the UTXO, which hardware wallets for example
 might not have access to.
 
-We also add support for supplying a $\Datum$ directly in a $\TxOut$
-instead of just its hash. This has several purposes:
+We also add support for supplying a $\Datum$ and a $\Script$ directly in a $\TxOut$
+instead of just its hash. The \emph{inline} $\Datum$ has two main purposes:
 \begin{itemize}
 \item In case of a sufficiently small $\Datum$, this is more efficient
 \item Used together with reference inputs, this allows for many
   transactions to use a $\Datum$ without repeating it every time, thus
   reducing fees and block size
 \end{itemize}
-This change requires the function $\fun{utxoEntrySize}$ to be
-adjusted, to properly scale with the size of the $\Datum$. \TODO{This
-  is probably best combined with adjusting it for the disk storage.}
+The \emph{inline} script is visible to Plutus scripts and the scripts
+can be used together with reference inputs to not have to provide
+scripts in the transaction itself.
+
+This change requires the size calculation of outputs to be adjusted,
+to properly scale with the new additions. For simplicity and
+future-proofing, we now use the serialized size.
