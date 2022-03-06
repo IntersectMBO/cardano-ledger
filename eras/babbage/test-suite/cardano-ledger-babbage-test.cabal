@@ -13,7 +13,10 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
--- extra-source-files:
+extra-source-files:
+  cddl-files/babbage.cddl
+  cddl-files/real/crypto.cddl
+  cddl-files/mock/extras.cddl
 
 source-repository head
   type:     git
@@ -73,7 +76,8 @@ test-suite cardano-ledger-babbage-test
   hs-source-dirs:
     test
   other-modules:
-    Test.Cardano.Ledger.Babbage.Serialisation.Tripping
+    Test.Cardano.Ledger.Babbage.Serialisation.Tripping,
+    Test.Cardano.Ledger.Babbage.Serialisation.CDDL
   build-depends:
     QuickCheck,
     base16-bytestring,

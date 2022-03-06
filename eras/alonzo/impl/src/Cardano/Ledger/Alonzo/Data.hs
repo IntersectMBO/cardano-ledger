@@ -41,7 +41,7 @@ import Cardano.Binary
     ToCBOR (..),
     TokenType (..),
     decodeAnnotator,
-    decodeTag,
+    decodeNestedCborBytes,
     encodeTag,
     peekTokenType,
     withSlice,
@@ -129,13 +129,12 @@ newtype BinaryData era = BinaryData ShortByteString
 instance (Crypto era ~ c) => HashAnnotated (BinaryData era) EraIndependentData c
 
 instance Typeable era => ToCBOR (BinaryData era) where
-  toCBOR (BinaryData sbs) = encodeTag 42 <> toCBOR sbs
+  toCBOR (BinaryData sbs) = encodeTag 24 <> toCBOR sbs
 
 instance Typeable era => FromCBOR (BinaryData era) where
   fromCBOR = do
-    42 <- decodeTag
-    sbs <- fromCBOR
-    either fail pure $! makeBinaryData sbs
+    bs <- decodeNestedCborBytes
+    either fail pure $! makeBinaryData (toShort bs)
 
 makeBinaryData :: ShortByteString -> Either String (BinaryData era)
 makeBinaryData sbs = do
