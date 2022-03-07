@@ -122,6 +122,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
+import Debug.Trace (trace)
 import GHC.Stack
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
@@ -192,7 +193,7 @@ obligation' (Shelley _) = obligation @c @(Shelley.PParams era) @(ViewMap c)
 
 minfee' :: forall era. Proof era -> Core.PParams era -> Core.Tx era -> Coin
 minfee' (Alonzo _) = minfee
-minfee' (Babbage _) = minfee
+minfee' (Babbage _) = \pp tx -> (3 :: Int) <×> (minfee pp tx)
 minfee' (Mary _) = Shelley.minfee
 minfee' (Allegra _) = Shelley.minfee
 minfee' (Shelley _) = Shelley.minfee
@@ -836,7 +837,7 @@ genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxo) = do
         -- The size of the Gen computation is driven down when we generate scripts, so it can be 0 here
         -- that is really bad, because if the happens we get the same TxIn every time, and 'coll' never grows,
         -- so this function doesn't terminate. We want many choices of TxIn, so resize just this arbitrary by 10.
-        txIn <- lift (resize 10 (arbitrary :: Gen (TxIn (Crypto era))))
+        txIn <- lift (resize 20 (arbitrary :: Gen (TxIn (Crypto era))))
         if SplitMap.member txIn utxo || Map.member txIn coll
           then genNewCollateral addr coll um c
           else pure (um, Map.insert txIn (coreTxOut reify [Address addr, Amount (inject c)]) coll, c)
@@ -972,6 +973,7 @@ genValidatedTx proof = do
   UTxO utxoNoCollateral <- genUTxO
   -- 1. Produce utxos that will be spent
   n <- lift $ choose (1, length utxoNoCollateral)
+
   toSpendNoCollateral <-
     Map.fromList . take n <$> lift (shuffle $ SplitMap.toList utxoNoCollateral)
   -- 2. Check if all Plutus scripts are valid
@@ -1074,7 +1076,8 @@ genValidatedTx proof = do
 
   -- 7. Generate utxos that will be used as collateral
   (utxo, collMap) <- genCollateralUTxO collateralAddresses fee utxoFeeAdjusted
-  collateralKeyWitsMakers <- mapM (genTxOutKeyWitness proof Nothing) $ Map.elems collMap
+  collateralKeyWitsMakers <-
+    mapM (genTxOutKeyWitness proof Nothing) $ Map.elems collMap
 
   -- 8. Construct the correct Tx with valid fee and collaterals
   allPlutusScripts <- gsPlutusScripts <$> get
@@ -1098,7 +1101,7 @@ genValidatedTx proof = do
         redeemerDatumWits
           <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
       validTx = coreTx proof [Body txBody, Witnesses (assembleWits proof wits), Valid isValid, AuxData' []]
-  pure (utxo, validTx)
+  pure (utxo, trace ("TX\n" ++ show (txSummary proof validTx)) validTx)
 
 -- | Scan though the fields unioning all the RdrmWits fields into one Redeemer map
 mkTxrdmrs :: forall era. Era era => [WitnessesField era] -> Redeemers era
@@ -1398,3 +1401,5 @@ workNeededHere =
   defaultMain $
     testProperty "Babbage ValidTx preserves ADA" $
       forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))
+
+go = workNeededHere

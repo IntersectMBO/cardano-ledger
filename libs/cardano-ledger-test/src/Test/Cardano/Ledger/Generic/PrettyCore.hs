@@ -33,6 +33,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..))
+import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), unTxDats)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import qualified Cardano.Ledger.Core as Core
@@ -55,7 +56,18 @@ import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailure (..))
 import Control.State.Transition.Extended (STS (..))
+import qualified Data.Map as Map
+import qualified Data.Set as Set
+import Data.Text (Text)
 import Data.Typeable (Typeable)
+import Test.Cardano.Ledger.Generic.Fields
+  ( TxBodyField (..),
+    TxField (..),
+    WitnessesField (..),
+    abstractTx,
+    abstractTxBody,
+    abstractWitnesses,
+  )
 import Test.Cardano.Ledger.Generic.Proof
 
 -- =====================================================
@@ -666,3 +678,49 @@ instance
   PrettyA (BbodyState era)
   where
   prettyA = ppBbodyState
+
+-- =======================================================
+-- Summaries
+
+txBodyFieldSummary :: TxBodyField era -> [(Text, PDoc)]
+txBodyFieldSummary x = case x of
+  (Inputs s) -> [("Inputs", ppInt (Set.size s))]
+  (Collateral s) -> [("Collateral", ppInt (Set.size s))]
+  (RefInputs s) -> [("RefInputs", ppInt (Set.size s))]
+  (Outputs xs) -> [("Outputs", ppInt (length xs))]
+  (TotalCol c) -> [("TotalCollateral", ppCoin c)]
+  (Certs xs) -> [("Certs", ppInt (length xs))]
+  (Txfee c) -> [("Fee", ppCoin c)]
+  _ -> []
+
+bodySummary :: Proof era -> Core.TxBody era -> PDoc
+bodySummary proof body =
+  ppRecord
+    "TxBody"
+    (concat (map txBodyFieldSummary (abstractTxBody proof body)))
+
+witnessFieldSummary :: WitnessesField era -> (Text, PDoc)
+witnessFieldSummary x = case x of
+  (AddrWits s) -> ("Address Witnesses", ppInt (Set.size s))
+  (BootWits s) -> ("BootStrap Witnesses", ppInt (Set.size s))
+  (ScriptWits s) -> ("Script Witnesses", ppInt (Map.size s))
+  (DataWits m) -> ("Data Witnesses", ppInt (Map.size (unTxDats m)))
+  (RdmrWits (Redeemers' m)) -> ("Redeemer Witnesses", ppInt (Map.size m))
+
+witnessSummary :: Proof era -> Core.Witnesses era -> PDoc
+witnessSummary proof wits =
+  ppRecord
+    "Witnesses"
+    (map witnessFieldSummary (abstractWitnesses proof wits))
+
+txFieldSummary :: Proof era -> TxField era -> [PDoc]
+txFieldSummary proof x = case x of
+  (Body b) -> [bodySummary proof b]
+  (BodyI xs) -> [ppRecord "TxBody" (concat (map txBodyFieldSummary xs))]
+  (Witnesses ws) -> [witnessSummary proof ws]
+  (WitnessesI ws) -> [ppRecord "Witnesses" (map witnessFieldSummary ws)]
+  _ -> []
+
+txSummary :: Proof era -> Core.Tx era -> PDoc
+txSummary proof tx =
+  ppSexp "Tx" (concat (map (txFieldSummary proof) (abstractTx proof tx)))
