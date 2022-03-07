@@ -182,7 +182,6 @@ test-suite cardano-ledger-shelley-test
       cardano-ledger-core,
       cardano-ledger-pretty,
       cardano-prelude,
-      cardano-prelude-test,
       cardano-protocol-tpraos,
       cardano-slotting,
       cborg,
