@@ -30,9 +30,9 @@ import Cardano.Ledger.Alonzo.Tx
     ValidatedTx (..),
     hashScriptIntegrity,
     rdptr,
-    txInputHashes,
   )
 import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr,
     TxWitness (..),
@@ -54,7 +54,6 @@ import Cardano.Ledger.Hashes (EraIndependentData, EraIndependentTxBody)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( delegCWitness,
     genesisCWitness,
@@ -224,9 +223,8 @@ missingRequiredDatums ::
       (Core.TxOut era)
       (StrictMaybe (SafeHash (Crypto era) EraIndependentData)),
     ValidateScript era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     Core.Script era ~ Script era,
-    UsesTxOut era
+    ExtendedUTxO era
   ) =>
   Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
   UTxO era ->
@@ -234,7 +232,7 @@ missingRequiredDatums ::
   Core.TxBody era ->
   Test (UtxowPredicateFail era)
 missingRequiredDatums scriptwits utxo tx txbody = do
-  let (inputHashes, txinsNoDhash) = txInputHashes scriptwits tx utxo
+  let (inputHashes, txinsNoDhash) = inputDataHashes scriptwits tx utxo
       txHashes = domain (unTxDats . txdats . wits $ tx)
       unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
       outputDatumHashes =
@@ -341,7 +339,7 @@ alonzoStyleWitness ::
   forall era.
   ( ValidateScript era,
     ValidateAuxiliaryData era (Crypto era),
-    UsesTxOut era,
+    ExtendedUTxO era,
     -- Fix some Core types to the Alonzo Era
     ConcreteAlonzo era,
     Core.Tx era ~ ValidatedTx era,
@@ -520,8 +518,8 @@ data AlonzoUTXOW era
 instance
   forall era.
   ( ValidateScript era,
-    UsesTxOut era,
     ValidateAuxiliaryData era (Crypto era),
+    ExtendedUTxO era,
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Fix some Core types to the Alonzo Era
     Core.Tx era ~ ValidatedTx era,
