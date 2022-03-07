@@ -42,8 +42,8 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: fa42b562b514b895231b8710e4f228438a5cbd3a
-  --sha256: 0pqkrsynamaa2y69g68f07ghpqkynsi58xlrdgl5mqhc37607pb9
+  tag: 1587462ac8b2e50af2691f5ad93d3c2aa4674ed1
+  --sha256: 195950d7r64mp36xmjvwzfb6iazzr8viylwfqbw7g06pcw7q7d4f
   subdir:
     base-deriving-via
     binary
@@ -191,4 +191,3 @@ package small-steps
 
 package set-algebra
   ghc-options: -Werror
-
