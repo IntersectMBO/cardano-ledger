@@ -45,7 +45,7 @@ import Cardano.Ledger.Alonzo.Tx
     ValidatedTx (..),
   )
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
-import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), HasTxInfo (..), ScriptResult (..))
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), FailureDescription (..), ScriptResult (..))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.BaseTypes
   ( Globals,
@@ -105,7 +105,7 @@ instance
   forall era.
   ( Era era,
     ConcreteAlonzo era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     Embed (Core.EraRule "PPUP" era) (UTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -140,7 +140,7 @@ instance
 utxosTransition ::
   forall era.
   ( ConcreteAlonzo era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
@@ -161,7 +161,7 @@ scriptsValidateTransition ::
   forall era.
   ( ValidateScript era,
     ConcreteAlonzo era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     STS (UTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -206,7 +206,7 @@ scriptsNotValidateTransition ::
   forall era.
   ( ValidateScript era,
     ConcreteAlonzo era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     STS (UTXOS era)
   ) =>
   TransitionRule (UTXOS era)
@@ -350,7 +350,7 @@ constructValidated ::
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasTxInfo era
+    ExtendedUTxO era
   ) =>
   Globals ->
   UtxoEnv era ->

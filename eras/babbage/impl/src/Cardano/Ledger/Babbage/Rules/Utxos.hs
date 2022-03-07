@@ -30,7 +30,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 -- ,FailureDescription (..))
 
-import Cardano.Ledger.Alonzo.TxInfo (HasTxInfo, ScriptResult (Fails, Passes))
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Babbage
 import qualified Cardano.Ledger.Babbage.PParams as Babbage
@@ -75,7 +75,7 @@ instance
   forall era.
   ( Era era,
     ConcreteBabbage era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     Embed (Core.EraRule "PPUP" era) (BabbageUTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -107,7 +107,7 @@ instance
 utxosTransition ::
   forall era.
   ( ConcreteBabbage era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
@@ -128,7 +128,7 @@ scriptsYes ::
   forall era.
   ( ValidateScript era,
     ConcreteBabbage era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     STS (BabbageUTXOS era),
     Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
     State (Core.EraRule "PPUP" era) ~ PPUPState era,
@@ -178,7 +178,7 @@ scriptsNo ::
   forall era.
   ( ValidateScript era,
     ConcreteBabbage era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     STS (BabbageUTXOS era)
   ) =>
   TransitionRule (BabbageUTXOS era)
