@@ -37,9 +37,9 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), alonzoInputHashes, minfee)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (TxOut), getAlonzoTxOutEitherAddr)
-import Cardano.Ledger.Alonzo.TxInfo (HasTxInfo (..), alonzoTxInfo, validScript)
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo, validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -169,7 +169,6 @@ instance
 
 instance CC.Crypto c => UsesTxOut (AlonzoEra c) where
   makeTxOut _proxy addr val = TxOut addr val SNothing
-  getTxOutExtras (TxOut _ _ dhashM) = (dhashM, SNothing)
 
 instance CC.Crypto c => API.CLI (AlonzoEra c) where
   evaluateMinFee = minfee
@@ -221,8 +220,9 @@ instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
 
 instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 
-instance CC.Crypto c => HasTxInfo (AlonzoEra c) where
+instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
+  inputDataHashes = alonzoInputHashes
 
 -------------------------------------------------------------------------------
 -- Era Mapping
