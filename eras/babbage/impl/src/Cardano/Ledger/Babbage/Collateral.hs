@@ -24,7 +24,6 @@ import Cardano.Ledger.BaseTypes (txIxFromIntegral)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val ((<->))
@@ -38,7 +37,7 @@ import Numeric.Natural (Natural)
 
 isTwoPhaseScriptAddress ::
   forall era.
-  ( UsesTxOut era,
+  ( Core.TxOut era ~ TxOut era,
     ValidateScript era,
     Core.TxBody era ~ TxBody era
   ) =>

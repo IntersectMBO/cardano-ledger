@@ -23,6 +23,7 @@ import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..), unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), certIxToInt, txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, Tx, TxBody, TxOut, Value)
+import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     Ptr (..),
@@ -354,9 +355,11 @@ data VersionedTxInfo
   | TxInfoPV2 PV2.TxInfo
   deriving (Show, Eq)
 
--- | Compute a Digest of the current transaction to pass to the script
---   This is the major component of the valContext function.
-class HasTxInfo era where
+-- | Where we keep functions that differ from Era to Era but which
+--   deal with the extra things in the TxOut (Scripts, DataHash, Datum, etc)
+class ExtendedUTxO era where
+  -- Compute a Digest of the current transaction to pass to the script
+  --    This is the major component of the valContext function.
   txInfo ::
     Monad m =>
     Core.PParams era ->
@@ -366,6 +369,16 @@ class HasTxInfo era where
     UTxO era ->
     Core.Tx era ->
     m (Either TranslationError VersionedTxInfo)
+
+  -- Compute two sets for all TwoPhase scripts in a Tx.
+  -- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
+  -- set 2) TxIns that are TwoPhase scripts, and should have a DataHash but don't.
+  {- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
+  inputDataHashes ::
+    Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
+    ValidatedTx era ->
+    UTxO era ->
+    (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
 
 alonzoTxInfo ::
   forall era m.

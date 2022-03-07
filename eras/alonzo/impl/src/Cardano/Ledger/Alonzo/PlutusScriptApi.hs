@@ -34,8 +34,8 @@ import Cardano.Ledger.Alonzo.Tx
     txdats',
   )
 import Cardano.Ledger.Alonzo.TxInfo
-  ( FailureDescription (..),
-    HasTxInfo (..),
+  ( ExtendedUTxO (..),
+    FailureDescription (..),
     ScriptResult (..),
     TranslationError (..),
     andResult,
@@ -152,7 +152,7 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 collectTwoPhaseScriptInputs ::
   forall era.
   ( Era era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     Core.Script era ~ AlonzoScript.Script era,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),

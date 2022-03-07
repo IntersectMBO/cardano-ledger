@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), rdptr)
 import Cardano.Ledger.Alonzo.TxInfo
-  ( HasTxInfo,
+  ( ExtendedUTxO,
     TranslationError,
     VersionedTxInfo (..),
     exBudgetToExUnits,
@@ -132,7 +132,7 @@ languagesUsed tx = Set.fromList $ mapMaybe getLanguage (getScripts tx)
 evaluateTransactionExecutionUnits ::
   forall era m.
   ( Era era,
-    HasTxInfo era,
+    ExtendedUTxO era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),

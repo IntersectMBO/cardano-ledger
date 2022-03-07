@@ -50,7 +50,7 @@ module Cardano.Ledger.Alonzo.Tx
     minfee,
     isTwoPhaseScriptAddress,
     isTwoPhaseScriptAddressFromMap,
-    txInputHashes,
+    alonzoInputHashes,
     Shelley.txouts,
     -- Figure 6
     txrdmrs,
@@ -93,6 +93,7 @@ import Cardano.Ledger.Alonzo.TxBody
   ( EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
     TxBody (..),
+    TxOut (..),
   )
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr (..),
@@ -119,7 +120,6 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..), txOutView)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..), WitVKey, unWdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -565,32 +565,28 @@ isTwoPhaseScriptAddressFromMap hashScriptMap addr =
       where
         ok script = hashScript @era script == hash && not (isNativeScript @era script)
 
--- Compute two sets for all TwoPhase scripts in a Tx.
--- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
--- set 2) TxIns that are TwoPhase scripts, and should have a DataHash, but don't.
-{- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
-txInputHashes ::
+alonzoInputHashes ::
   forall era.
   ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    UsesTxOut era,
-    ValidateScript era
+    ValidateScript era,
+    Core.TxOut era ~ TxOut era
   ) =>
   Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
   ValidatedTx era ->
   UTxO era ->
   (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
-txInputHashes hashScriptMap tx (UTxO mp) = SplitMap.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
+alonzoInputHashes hashScriptMap tx (UTxO mp) = SplitMap.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
   where
     txbody = body tx
     spendinputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
     smallUtxo = spendinputs SplitMap.◁ mp
     accum ans@(hashSet, inputSet) txin txout =
-      case txOutView @era txout of
-        (addr, _, SNothing, _) ->
+      case txout of
+        (TxOut addr _ SNothing) ->
           if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
             then (hashSet, Set.insert txin inputSet)
             else ans
-        (addr, _, SJust dhash, _) ->
+        (TxOut addr _ (SJust dhash)) ->
           if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
             then (Set.insert dhash hashSet, inputSet)
             else ans
