@@ -134,6 +134,7 @@ library
     tasty,
     tasty-hunit,
     tasty-quickcheck,
+    text,
     time,
     transformers,
     writer-cps-mtl,

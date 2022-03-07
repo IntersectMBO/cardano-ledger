@@ -31,8 +31,9 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailur
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..))
+import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), unTxDats)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import qualified Cardano.Ledger.Core as Core
@@ -52,10 +53,25 @@ import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as Shelley (PpupPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley (UtxoPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
-import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
+import Cardano.Ledger.Shelley.TxBody (WitVKey (..), unWdrl)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailure (..))
+import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
+import qualified Data.Compact.SplitMap as Split
+import qualified Data.Map as Map
+import Data.Maybe.Strict (StrictMaybe (..))
+import qualified Data.Set as Set
+import Data.Text (Text)
 import Data.Typeable (Typeable)
+import Test.Cardano.Ledger.Generic.Fields
+  ( TxBodyField (..),
+    TxField (..),
+    WitnessesField (..),
+    abstractTx,
+    abstractTxBody,
+    abstractWitnesses,
+  )
 import Test.Cardano.Ledger.Generic.Proof
 
 -- =====================================================
@@ -107,6 +123,13 @@ instance CC.Crypto c => PrettyCore (BabbageEra c) where
   prettyWitnesses = ppTxWitness
   prettyValue = ppValue
   prettyTxOut = Babbage.ppTxOut
+
+prettyUTxO :: Proof era -> UTxO era -> PDoc
+prettyUTxO (Babbage _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO (Alonzo _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO (Mary _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO (Allegra _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO (Shelley _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
 
 -- ===================================================================
 -- PrettyA instances for UTXOW, UTXO, UTXOS, PPUP predicate failures
@@ -274,8 +297,8 @@ ppUtxoPredicateFailure (Alonzo.WrongNetworkWithdrawal n accnt) =
     ]
 ppUtxoPredicateFailure (Alonzo.OutputTooSmallUTxO xs) =
   ppSexp "OutputTooSmallUTxO" [ppList prettyTxOut xs]
-ppUtxoPredicateFailure (Alonzo.UtxosFailure subpred) =
-  ppSexp "UtxosFailure" [prettyA subpred]
+ppUtxoPredicateFailure (Alonzo.UtxosFailure subpred) = prettyA subpred
+-- ppSexp "UtxosFailure" [prettyA subpred]
 ppUtxoPredicateFailure (Alonzo.OutputBootAddrAttrsTooBig x) =
   ppSexp "OutputBootAddrAttrsTooBig" [ppList prettyTxOut x]
 ppUtxoPredicateFailure (Alonzo.TriesToForgeADA) =
@@ -347,7 +370,7 @@ ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
       ("mismatch description", ppTagMismatchDescription tag)
     ]
 ppUtxosPredicateFailure (CollectErrors es) =
-  ppRecord "CollectErrors" [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
+  ppRecord' mempty [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
 ppUtxosPredicateFailure (UpdateFailure p) = prettyA p
 
 instance PrettyA (PredicateFailure (Core.EraRule "PPUP" era)) => PrettyA (UtxosPredicateFailure era) where
@@ -666,3 +689,60 @@ instance
   PrettyA (BbodyState era)
   where
   prettyA = ppBbodyState
+
+-- =======================================================
+-- Summaries
+
+txBodyFieldSummary :: Era era => TxBodyField era -> [(Text, PDoc)]
+txBodyFieldSummary txb = case txb of
+  (Inputs s) -> [("Inputs", ppInt (Set.size s))]
+  (Collateral s) -> [("Collateral", ppInt (Set.size s))]
+  (RefInputs s) -> [("RefInputs", ppInt (Set.size s))]
+  (Outputs xs) -> [("Outputs", ppInt (length xs))]
+  (CollateralReturn (SJust _)) -> [("Collateral Return", ppString "?")]
+  (TotalCol c) -> [("TotalCollateral", ppCoin c)]
+  (Certs xs) -> [("Certs", ppInt (length xs))]
+  (Wdrls x) -> [("Withdrawals", ppInt (Map.size (unWdrl x)))]
+  (Vldt x) -> [("Validity interval", ppValidityInterval x)]
+  (Txfee c) -> [("Fee", ppCoin c)]
+  (Update (SJust _)) -> [("Collateral Return", ppString "?")]
+  (ReqSignerHashes x) -> [("Required Signer hashes", ppInt (Set.size x))]
+  (Mint v) -> [("Mint", ppInteger (Val.size v) <> ppString " bytes")]
+  (WppHash (SJust _)) -> [("WppHash", ppString "?")]
+  (AdHash (SJust _)) -> [("AdHash", ppString "?")]
+  (Txnetworkid (SJust x)) -> [("Network id", ppNetwork x)]
+  _ -> []
+
+bodySummary :: Era era => Proof era -> Core.TxBody era -> PDoc
+bodySummary proof body =
+  ppRecord
+    "TxBody"
+    (concat (map txBodyFieldSummary (abstractTxBody proof body)))
+
+witnessFieldSummary :: WitnessesField era -> (Text, PDoc)
+witnessFieldSummary wit = case wit of
+  (AddrWits s) -> ("Address Witnesses", ppInt (Set.size s))
+  (BootWits s) -> ("BootStrap Witnesses", ppInt (Set.size s))
+  (ScriptWits s) -> ("Script Witnesses", ppInt (Map.size s))
+  (DataWits m) -> ("Data Witnesses", ppInt (Map.size (unTxDats m)))
+  (RdmrWits (Redeemers' m)) -> ("Redeemer Witnesses", ppInt (Map.size m))
+
+witnessSummary :: Proof era -> Core.Witnesses era -> PDoc
+witnessSummary proof wits =
+  ppRecord
+    "Witnesses"
+    (map witnessFieldSummary (abstractWitnesses proof wits))
+
+txFieldSummary :: Era era => Proof era -> TxField era -> [PDoc]
+txFieldSummary proof tx = case tx of
+  (Body b) -> [bodySummary proof b]
+  (BodyI xs) -> [ppRecord "TxBody" (concat (map txBodyFieldSummary xs))]
+  (Witnesses ws) -> [witnessSummary proof ws]
+  (WitnessesI ws) -> [ppRecord "Witnesses" (map witnessFieldSummary ws)]
+  (AuxData (SJust _)) -> [ppSexp "AuxData" [ppString "?"]]
+  (Valid (IsValid b)) -> [ppSexp "IsValid" [ppBool b]]
+  _ -> []
+
+txSummary :: Era era => Proof era -> Core.Tx era -> PDoc
+txSummary proof tx =
+  ppSexp "Tx" (concat (map (txFieldSummary proof) (abstractTx proof tx)))

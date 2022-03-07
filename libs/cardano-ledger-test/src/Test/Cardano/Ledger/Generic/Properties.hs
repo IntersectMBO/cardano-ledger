@@ -22,7 +22,7 @@ module Test.Cardano.Ledger.Generic.Properties where
 
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (Data, DataHash, binaryDataToData, hashData)
+import Cardano.Ledger.Alonzo.Data (Data, DataHash, binaryDataToData, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
@@ -122,6 +122,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
+import Debug.Trace (trace)
 import GHC.Stack
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
@@ -192,10 +193,13 @@ obligation' (Shelley _) = obligation @c @(Shelley.PParams era) @(ViewMap c)
 
 minfee' :: forall era. Proof era -> Core.PParams era -> Core.Tx era -> Coin
 minfee' (Alonzo _) = minfee
-minfee' (Babbage _) = minfee
+minfee' (Babbage _) = minfee -- \pp tx -> {- (2 :: Int) <×> -} (minfee pp tx)
 minfee' (Mary _) = Shelley.minfee
 minfee' (Allegra _) = Shelley.minfee
 minfee' (Shelley _) = Shelley.minfee
+
+txInBalance :: forall era. Era era => (Set (TxIn (Crypto era))) -> UTxO era -> Coin
+txInBalance txinSet (UTxO m) = coin (balance (UTxO (SplitMap.toMap (txinSet SplitMap.◁ m))))
 
 hashScriptIntegrity' ::
   Proof era ->
@@ -242,15 +246,21 @@ isValid' (Alonzo _) x = isValid x
 isValid' (Babbage _) x = isValid x
 isValid' _ _ = IsValid True
 
-txoutAddrHash :: Proof era -> Core.TxOut era -> (Addr (Crypto era), Maybe (DataHash (Crypto era)))
-txoutAddrHash (Alonzo _) (TxOut addr _ (SJust dh)) = (addr, Just dh)
-txoutAddrHash (Alonzo _) (TxOut addr _ SNothing) = (addr, Nothing)
-txoutAddrHash (Babbage _) (Babbage.TxOut addr _ Babbage.NoDatum _) = (addr, Nothing)
-txoutAddrHash (Babbage _) (Babbage.TxOut addr _ (Babbage.DatumHash dh) _) = (addr, Just dh)
-txoutAddrHash (Babbage _) (Babbage.TxOut addr _ _ _) = (addr, Nothing)
-txoutAddrHash (Mary _) (Shelley.TxOut addr _) = (addr, Nothing)
-txoutAddrHash (Allegra _) (Shelley.TxOut addr _) = (addr, Nothing)
-txoutAddrHash (Shelley _) (Shelley.TxOut addr _) = (addr, Nothing)
+-- | Does the TxOut have evidence of data. Either ScriptHash or (in Babbage) an inline Datum
+txoutEvidenceOfData ::
+  forall era.
+  Proof era ->
+  Core.TxOut era ->
+  (Addr (Crypto era), Maybe (DataHash (Crypto era)))
+txoutEvidenceOfData (Alonzo _) (TxOut addr _ (SJust dh)) = (addr, Just dh)
+txoutEvidenceOfData (Alonzo _) (TxOut addr _ SNothing) = (addr, Nothing)
+txoutEvidenceOfData (Babbage _) (Babbage.TxOut addr _ Babbage.NoDatum _) = (addr, Nothing)
+txoutEvidenceOfData (Babbage _) (Babbage.TxOut addr _ (Babbage.DatumHash dh) _) = (addr, Just dh)
+txoutEvidenceOfData (Babbage _) (Babbage.TxOut addr _ (Babbage.Datum _d) _) =
+  (addr, Just (hashData @era (binaryDataToData _d)))
+txoutEvidenceOfData (Mary _) (Shelley.TxOut addr _) = (addr, Nothing)
+txoutEvidenceOfData (Allegra _) (Shelley.TxOut addr _) = (addr, Nothing)
+txoutEvidenceOfData (Shelley _) (Shelley.TxOut addr _) = (addr, Nothing)
 
 -- ==================================================
 -- Era agnostic generators.
@@ -294,6 +304,8 @@ data GenState era = GenState
     gsScripts :: Map (ScriptHash (Crypto era)) (Core.Script era),
     gsPlutusScripts :: Map (ScriptHash (Crypto era), Tag) (IsValid, Core.Script era),
     gsDatums :: Map (DataHash (Crypto era)) (Data era),
+    gsInlineData :: Set (Data era),
+    -- if you are in this set, you should not be included in the Data Witnesses
     gsDPState :: DPState (Crypto era)
   }
 
@@ -320,7 +332,7 @@ modifyPState f =
   modifyDPState $ \dp@DPState {_pstate = ps} -> dp {_pstate = f ps}
 
 emptyGenState :: GenState era
-emptyGenState = GenState mempty mempty mempty mempty def
+emptyGenState = GenState mempty mempty mempty mempty mempty def
 
 type GenRS era = RWST (GenEnv era) () (GenState era) Gen
 
@@ -490,7 +502,7 @@ mkMultiSigWit era mTag (Shelley.RequireMOf m timelocks) = do
 makeDatumWitness :: Proof era -> Core.TxOut era -> GenRS era [WitnessesField era]
 makeDatumWitness proof txout = case (proof, txout) of -- (TxOut _ _ mDatum) = mkDatumWit mDatum
   (Babbage _, Babbage.TxOut _ _ (Babbage.DatumHash h) _) -> mkDatumWit (SJust h)
-  (Babbage _, Babbage.TxOut _ _ (Babbage.Datum bd) _) -> pure [DataWits' [binaryDataToData bd]]
+  (Babbage _, Babbage.TxOut _ _ (Babbage.Datum _) _) -> pure []
   (Babbage _, Babbage.TxOut _ _ Babbage.NoDatum _) -> pure []
   (Alonzo _, TxOut _ _ mDatum) -> mkDatumWit mDatum
   _ -> pure [] -- No other era has data witnesses
@@ -498,7 +510,7 @@ makeDatumWitness proof txout = case (proof, txout) of -- (TxOut _ _ mDatum) = mk
     mkDatumWit SNothing = pure []
     mkDatumWit (SJust datumHash) = do
       datum <- lookupByKeyM "datum" datumHash gsDatums
-      pure $ [DataWits' [datum]]
+      pure [DataWits' [datum]]
 
 genKeyHash :: Reflect era => GenRS era (KeyHash kr (Crypto era))
 genKeyHash = do
@@ -582,17 +594,26 @@ genMultiSigScript proof = do
   modify $ \ts@GenState {gsScripts} -> ts {gsScripts = Map.insert scriptHash corescript gsScripts}
   pure scriptHash
 
+primaryLanguages :: Proof era -> [Language]
+primaryLanguages (Babbage _) = [PlutusV2]
+primaryLanguages (Alonzo _) = [PlutusV1]
+primaryLanguages other = []
+
 genPlutusScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (Crypto era))
 genPlutusScript proof tag = do
   isValid <- lift $ frequency [(5, pure False), (95, pure True)]
   -- Plutus scripts alwaysSucceeds needs at least numArgs, while
   -- alwaysFails needs exactly numArgs to have the desired affect.
-  let numArgs
-        | tag == Spend = 3
-        | otherwise = 2
+  -- For reasons unknown, this number differs from Alonzo to Babbage
+  -- Perhaps because Babbage is using PlutusV2 scripts?
+  let numArgs = case (proof, tag) of
+        (Babbage _, Spend) -> 2
+        (Babbage _, _) -> 1
+        (_, Spend) -> 3
+        (_, _) -> 2
   -- While using varying number of arguments for alwaysSucceeds we get
   -- varying script hashes, which helps with the fuzziness
-  language <- lift $ elements (languages proof)
+  language <- lift $ elements (primaryLanguages proof)
   script <-
     if isValid
       then alwaysSucceeds @era language . (+ numArgs) . getNonNegative <$> lift arbitrary
@@ -634,6 +655,7 @@ lookupPlutusScript (ScriptHashObj scriptHash) tag =
     Nothing -> Nothing
     Just (isValid, _) -> Just (isValid, scriptHash)
 
+-- | Make RdmrWits WitnessesField only if the Credential is for a Plutus Script
 redeemerWitnessMaker ::
   Era era =>
   Tag ->
@@ -703,14 +725,41 @@ genRecipient = do
   pure (Addr Testnet paymentCred (StakeRefBase stakeCred))
 
 genDatum :: Era era => GenRS era (Data era)
-genDatum = snd <$> genDatumWithHash
+genDatum = snd <$> genDatumWithHash False
 
-genDatumWithHash :: Era era => GenRS era (DataHash (Crypto era), Data era)
-genDatumWithHash = do
+genDatumWithHash :: Era era => Bool -> GenRS era (DataHash (Crypto era), Data era)
+genDatumWithHash inlined = do
   datum <- lift arbitrary
   let datumHash = hashData datum
-  modify $ \ts@GenState {gsDatums} -> ts {gsDatums = Map.insert datumHash datum gsDatums}
+  modify $ \ts@GenState {gsDatums, gsInlineData} ->
+    ts
+      { gsDatums = Map.insert datumHash datum gsDatums,
+        gsInlineData =
+          if inlined
+            then Set.insert datum gsInlineData
+            else gsInlineData
+      }
   pure (datumHash, datum)
+
+genBabbageDatum :: forall era. Era era => GenRS era (Babbage.Datum era)
+genBabbageDatum =
+  frequencyT
+    [ -- (1 ,pure Babbage.NoDatum) -- WE ONLY CALL when we know we have a PLUTUS, So we must have datum
+      (1, (Babbage.DatumHash . fst) <$> genDatumWithHash False),
+      (4, (Babbage.Datum . dataToBinaryData . snd) <$> genDatumWithHash True)
+      -- NOTE we use True with genDatumWithHash, because we want to
+      -- include it in the inline datums, so that it is NOT added to
+      -- the Data witnesses.
+    ]
+
+genRefScript :: Reflect era => Proof era -> GenRS era (StrictMaybe (Core.Script era))
+genRefScript proof = do
+  tag <- lift (arbitrary :: Gen Tag)
+  scripthash <- genScript proof tag
+  mscript <- lookupScript scripthash (Just tag)
+  case mscript of
+    Nothing -> pure SNothing
+    Just script -> pure (SJust script)
 
 genTxOut :: Reflect era => Proof era -> Core.Value era -> GenRS era [TxOutField era]
 genTxOut proof val = do
@@ -723,11 +772,13 @@ genTxOut proof val = do
         maybecorescript <- lookupScript scriptHash (Just Spend)
         case (proof, maybecorescript) of
           (Babbage _, Just (PlutusScript _ _)) -> do
-            (datahash, _data) <- genDatumWithHash
-            pure [DHash' [datahash]]
+            datum <- genBabbageDatum
+            -- script <- genRefScript proof
+            pure $ [Datum datum] -- ++ [RefScript script]
           (Alonzo _, Just (PlutusScript _ _)) -> do
-            (datahash, _data) <- genDatumWithHash
-            pure [DHash' [datahash]]
+            (datahash, _data) <- genDatumWithHash False
+
+            pure [DHash (SJust datahash)]
           (_, _) -> pure []
   pure $ [Address addr, Amount val] ++ dataHashFields
 
@@ -836,7 +887,7 @@ genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxo) = do
         -- The size of the Gen computation is driven down when we generate scripts, so it can be 0 here
         -- that is really bad, because if the happens we get the same TxIn every time, and 'coll' never grows,
         -- so this function doesn't terminate. We want many choices of TxIn, so resize just this arbitrary by 10.
-        txIn <- lift (resize 10 (arbitrary :: Gen (TxIn (Crypto era))))
+        txIn <- lift (resize 20 (arbitrary :: Gen (TxIn (Crypto era))))
         if SplitMap.member txIn utxo || Map.member txIn coll
           then genNewCollateral addr coll um c
           else pure (um, Map.insert txIn (coreTxOut reify [Address addr, Amount (inject c)]) coll, c)
@@ -972,12 +1023,13 @@ genValidatedTx proof = do
   UTxO utxoNoCollateral <- genUTxO
   -- 1. Produce utxos that will be spent
   n <- lift $ choose (1, length utxoNoCollateral)
+
   toSpendNoCollateral <-
     Map.fromList . take n <$> lift (shuffle $ SplitMap.toList utxoNoCollateral)
   -- 2. Check if all Plutus scripts are valid
   let toSpendNoCollateralTxOuts :: [Core.TxOut era]
       toSpendNoCollateralTxOuts = Map.elems toSpendNoCollateral
-      -- We use maxBound to ensure the serializaed size overestimation
+      -- We use maxBound to ensure the serialized size overestimation
       maxCoin = Coin (toInteger (maxBound :: Int))
   -- 3. Generate all recipients and witnesses needed for spending Plutus scripts
   recipients <- genRecipientsFrom toSpendNoCollateralTxOuts
@@ -988,7 +1040,7 @@ genValidatedTx proof = do
           <$> mDatumHash
           <*> paymentCredAddr addr
         | (_, coretxout) <- Map.toAscList toSpendNoCollateral,
-          let (addr, mDatumHash) = txoutAddrHash proof coretxout
+          let (addr, mDatumHash) = txoutEvidenceOfData proof coretxout
       ]
 
   wdrls@(Wdrl wdrlMap) <- genWithdrawals
@@ -1006,7 +1058,8 @@ genValidatedTx proof = do
       mkWits = mkPaymentWits ++ mkCertsWits ++ mkWdrlWits
   exUnits <- genExUnits proof (length mkWits)
 
-  let redeemerWitsList = concat (zipWith ($) mkWits exUnits)
+  let redeemerWitsList :: [WitnessesField era]
+      redeemerWitsList = concat (zipWith ($) mkWits exUnits)
   datumWitsList <- concat <$> mapM (makeDatumWitness proof) (Map.elems toSpendNoCollateral)
   keyWitsMakers <- mapM (genTxOutKeyWitness proof (Just Spend)) toSpendNoCollateralTxOuts
   dcertWitsMakers <- mapM (genCredKeyWit proof (Just Cert)) $ catMaybes dcertCreds
@@ -1034,6 +1087,7 @@ genValidatedTx proof = do
           proof
           [ Inputs (Map.keysSet (toSpendNoCollateral)),
             Collateral bogusCollateralTxIns,
+            TotalCol (Coin 0), -- Add a bogus Coin, fill it in later
             Outputs' (rewardsWithdrawalTxOut : recipients),
             Certs' dcerts,
             Wdrls wdrls,
@@ -1074,7 +1128,8 @@ genValidatedTx proof = do
 
   -- 7. Generate utxos that will be used as collateral
   (utxo, collMap) <- genCollateralUTxO collateralAddresses fee utxoFeeAdjusted
-  collateralKeyWitsMakers <- mapM (genTxOutKeyWitness proof Nothing) $ Map.elems collMap
+  collateralKeyWitsMakers <-
+    mapM (genTxOutKeyWitness proof Nothing) $ Map.elems collMap
 
   -- 8. Construct the correct Tx with valid fee and collaterals
   allPlutusScripts <- gsPlutusScripts <$> get
@@ -1091,13 +1146,21 @@ genValidatedTx proof = do
           txBodyNoFee
           [ Txfee fee,
             Collateral (Map.keysSet collMap),
+            TotalCol (txInBalance (Map.keysSet collMap) utxo),
             WppHash mIntegrityHash
           ]
       txBodyHash = hashAnnotated txBody
       wits =
         redeemerDatumWits
           <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
-      validTx = coreTx proof [Body txBody, Witnesses (assembleWits proof wits), Valid isValid, AuxData' []]
+      validTx =
+        coreTx
+          proof
+          [ Body txBody,
+            Witnesses (assembleWits proof wits),
+            Valid isValid,
+            AuxData' []
+          ]
   pure (utxo, validTx)
 
 -- | Scan though the fields unioning all the RdrmWits fields into one Redeemer map
@@ -1140,7 +1203,7 @@ instance
         ]
 
 ppGenState :: (CC.Crypto (Crypto era), PrettyA (Core.Script era)) => GenState era -> PDoc
-ppGenState (GenState keys scripts plutus dats dp) =
+ppGenState (GenState keys scripts plutus dats inline dp) =
   ppRecord
     "GenState"
     [ ("Keymap", ppMap ppKeyHash (dotsF ppKeyPair) keys),
@@ -1152,6 +1215,7 @@ ppGenState (GenState keys scripts plutus dats dp) =
           plutus
       ),
       ("Datums", dots $ ppMap ppSafeHash ppData dats),
+      ("Inline Datums", ppSet ppData inline),
       ("DPState", dots $ ppDPState dp)
     ]
 
@@ -1186,7 +1250,7 @@ genTxAndLEDGERState ::
 genTxAndLEDGERState proof = do
   txIx <- arbitrary
   maxTxExUnits <- (arbitrary :: Gen ExUnits)
-  Positive maxCollateralInputs <- (arbitrary :: Gen (Positive Natural))
+  maxCollateralInputs <- elements [1 .. 7 :: Natural]
   collateralPercentage <- (fromIntegral <$> chooseInt (1, 10000)) :: Gen Natural
   minfeeA <- fromIntegral <$> chooseInt (0, 1000)
   minfeeB <- fromIntegral <$> chooseInt (0, 10000)
@@ -1397,4 +1461,18 @@ workNeededHere :: IO ()
 workNeededHere =
   defaultMain $
     testProperty "Babbage ValidTx preserves ADA" $
-      forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))
+      ({- withMaxSuccess 100 -} (forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))))
+
+test :: ReflectC (Crypto era) => Int -> Proof era -> IO ()
+test n proof = defaultMain $
+  case proof of
+    Babbage _ ->
+      testProperty "Babbage ValidTx preserves ADA" $
+        (withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
+    Alonzo _ ->
+      testProperty "Babbage ValidTx preserves ADA" $
+        (withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
+    Shelley _ ->
+      testProperty "Babbage ValidTx preserves ADA" $
+        (withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
+    other -> error ("NO Test in era " ++ show other)

@@ -132,10 +132,10 @@ ppBabbageUtxoPred ::
   ) =>
   BabbageUtxoPred era ->
   PDoc
-ppBabbageUtxoPred (FromAlonzoUtxoFail x) =
-  ppSexp "FromAlonzoUtxoFail" [prettyA x]
-ppBabbageUtxoPred (FromAlonzoUtxowFail x) =
-  ppSexp "FromAlonzoUtxowFail" [prettyA x]
+ppBabbageUtxoPred (FromAlonzoUtxoFail x) = prettyA x
+-- ppSexp "FromAlonzoUtxoFail" [prettyA x]
+ppBabbageUtxoPred (FromAlonzoUtxowFail x) = prettyA x
+-- ppSexp "FromAlonzoUtxowFail" [prettyA x]
 ppBabbageUtxoPred (UnequalCollateralReturn c1 c2) =
   ppRecord
     "UnequalCollateralReturn"

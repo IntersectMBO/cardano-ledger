@@ -977,7 +977,7 @@ txOutData = \case
   TxOut_AddrHash28_AdaOnly {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> Nothing
 
-txOutDataHash :: Era era => TxOut era -> Maybe (DataHash (Crypto era))
+txOutDataHash :: forall era. Era era => TxOut era -> Maybe (DataHash (Crypto era))
 txOutDataHash = \case
   TxOutCompact' {} -> Nothing
   TxOutCompactDH' _ _ dh -> Just dh
@@ -986,7 +986,7 @@ txOutDataHash = \case
     case datum of
       NoDatum -> Nothing
       DatumHash dh -> Just dh
-      Datum _ -> Nothing
+      Datum _d -> Nothing -- Just(hashData @era (binaryDataToData _d)) -- FIXME, Might this make sense?
   TxOut_AddrHash28_AdaOnly {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 -> decodeDataHash32 dataHash32
 
