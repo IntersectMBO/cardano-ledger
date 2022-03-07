@@ -5,23 +5,27 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Cardano.Ledger.Babbage.Rules.Utxow where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
-import Cardano.Crypto.Hash.Class (Hash, hash)
+import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Data (DataHash)
-import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language, scriptsNeeded)
-import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
+import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent)
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent (WrappedShelleyEraEvent), UtxowPredicateFail, hasExactSetOfRedeemers, missingRequiredDatums, ppViewHashesMatch, requiredSignersAreWitnessed, witsVKeyNeeded)
+import Cardano.Ledger.Alonzo.Rules.Utxow
+  ( AlonzoEvent (WrappedShelleyEraEvent),
+    hasExactSetOfRedeemers,
+    missingRequiredDatums,
+    ppViewHashesMatch,
+    requiredSignersAreWitnessed,
+    witsVKeyNeeded,
+  )
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose, ValidatedTx (..), wits)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), wits)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo (TxDats (..), TxWitness (..), txdats')
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
-import qualified Cardano.Ledger.Babbage.Collateral as Babbage (isTwoPhaseScriptAddress)
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Utxo
   ( BabbageUTXO,
@@ -30,14 +34,13 @@ import Cardano.Ledger.Babbage.Rules.Utxo
 import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
 import Cardano.Ledger.Babbage.TxBody
   ( Datum (..),
-    TxBody (..),
     TxOut (..),
     outputs',
     referenceInputs',
-    spendInputs',
   )
 import Cardano.Ledger.BaseTypes
-  ( ShelleyBase,
+  ( ProtVer,
+    ShelleyBase,
     quorum,
   )
 import qualified Cardano.Ledger.Core as Core
@@ -45,10 +48,8 @@ import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
-import Cardano.Ledger.SafeHash (HashAnnotated, hashAnnotated)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
+import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEvent (UtxowEvent), LedgerPredicateFailure (UtxowFailure))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
   ( UtxowEvent (UtxoEvent),
@@ -67,15 +68,38 @@ import Control.State.Transition.Extended
     liftSTS,
     trans,
   )
-import qualified Data.Compact.SplitMap as SplitMap (foldlWithKey', lookup, (◁))
+import qualified Data.Compact.SplitMap as SplitMap (lookup)
 import qualified Data.List as List
 import qualified Data.Map as Map
+import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 import Validation (failureUnless)
 
 -- ==================================================
 -- Reuseable tests first used in the Babbage Era
+
+-- Int the Babbage Era with refererence scripts, the needed
+-- scripts only has to be a subset of the txscripts.
+{-  { s | (_,s) ∈ scriptsNeeded utxo tx} ⊆  dom(txscripts txw)    -}
+{-  sNeeded := scriptsNeeded utxo tx                             -}
+{-  sReceived := Map.keysSet (getField @"scriptWits" tx)         -}
+babbageMissingScripts ::
+  forall era.
+  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
+  Core.PParams era ->
+  Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (Crypto era)) ->
+  Test (Shelley.UtxowPredicateFailure era)
+babbageMissingScripts pp sNeeded sReceived =
+  if HardForks.missingScriptsSymmetricDifference pp
+    then
+      failureUnless (sNeeded `Set.isSubsetOf` sReceived) $
+        Shelley.MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
+    else
+      failureUnless (sNeeded == sReceived) $
+        Shelley.MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
 
 {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx ∪ utxo (refInputs tx)  -}
 danglingWitnessDataHashes ::
@@ -106,10 +130,11 @@ validateFailedBabbageScripts tx utxo = do
   let failedScripts =
         Map.filterWithKey
           ( \hs script ->
-              isNativeScript @era script
-                && ( hashScript @era script /= hs
-                       || not (validateScript @era script tx)
-                   )
+              let one = isNativeScript @era script
+                  two = hashScript @era script /= hs
+                  three = not (validateScript @era script tx)
+                  answer = one && (two || three)
+               in answer
           )
           (txscripts utxo tx)
   failureUnless (Map.null failedScripts) $
@@ -160,10 +185,10 @@ babbageUtxowTransition = do
   {- ∀s ∈ range(txscripts txw utxo ∩ Script^{ph1}), validateScript s tx -}
   runTest $ validateFailedBabbageScripts tx utxo -- CHANGED In BABBAGE txscripts depends on UTxO
 
-  {-  { h | (_,h) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx))
-      sReceived = Map.keysSet hashScriptMap
-  runTest $ Shelley.validateMissingScripts pp sNeeded sReceived
+  {-  { h | (_,h) ∈ scriptsNeeded utxo tx} ⊆ dom(txscripts txw)          -}
+  let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx)) -- Script credentials
+      sReceived = Map.keysSet (txscripts utxo tx)
+  runTest $ babbageMissingScripts pp sNeeded sReceived
 
   {-  inputHashes  = dom(txdats txw)   -}
   runTest $ missingRequiredDatums hashScriptMap utxo tx txbody

@@ -38,7 +38,7 @@ import Cardano.Ledger.Babbage.TxBody
   )
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), StrictMaybe)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Era (Era, ValidateScript (hashScript))
 import Cardano.Ledger.Pretty hiding
   ( ppPParams,
     ppPParamsUpdate,
@@ -53,6 +53,10 @@ import Cardano.Ledger.Pretty.Alonzo hiding
   )
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval, ppValue)
 import Data.Functor.Identity (Identity (..))
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
+import Prettyprinter ((<+>))
+
+-- =====================================
 
 ppPParamsId :: PParams' Identity era -> PDoc
 ppPParamsId (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
@@ -132,10 +136,8 @@ ppBabbageUtxoPred ::
   ) =>
   BabbageUtxoPred era ->
   PDoc
-ppBabbageUtxoPred (FromAlonzoUtxoFail x) =
-  ppSexp "FromAlonzoUtxoFail" [prettyA x]
-ppBabbageUtxoPred (FromAlonzoUtxowFail x) =
-  ppSexp "FromAlonzoUtxowFail" [prettyA x]
+ppBabbageUtxoPred (FromAlonzoUtxoFail x) = prettyA x
+ppBabbageUtxoPred (FromAlonzoUtxowFail x) = prettyA x
 ppBabbageUtxoPred (UnequalCollateralReturn c1 c2) =
   ppRecord
     "UnequalCollateralReturn"
@@ -152,23 +154,30 @@ instance
   prettyA = ppBabbageUtxoPred
 
 ppTxOut ::
+  forall era.
   ( Era era,
+    ValidateScript era,
     PrettyA (Core.Script era),
     PrettyA (Core.Value era)
   ) =>
   TxOut era ->
   PDoc
-ppTxOut (TxOut addr val datum scr) =
+ppTxOut (TxOut addr val datum mscript) =
   ppRecord
     "TxOut"
     [ ("address", ppAddr addr),
       ("value", prettyA val),
       ("datum", ppDatum datum),
-      ("reference script", ppStrictMaybe prettyA scr)
+      ( "reference script",
+        case mscript of
+          (SJust s) -> prettyA s <+> ppScriptHash (hashScript @era s)
+          SNothing -> ppString "?-"
+      )
     ]
 
 instance
   ( Era era,
+    ValidateScript era,
     PrettyA (Core.Script era),
     PrettyA (Core.Value era)
   ) =>
@@ -194,7 +203,7 @@ ppDataHash x = ppSafeHash x
 instance PrettyA (DataHash era) where prettyA = ppDataHash
 
 ppTxBody ::
-  ( Era era,
+  ( ValidateScript era,
     PrettyA (Core.Value era),
     PrettyA (Core.PParamsDelta era),
     PrettyA (Core.Script era)
@@ -225,6 +234,7 @@ ppTxBody x =
 
 instance
   ( Era era,
+    ValidateScript era,
     PrettyA (Core.Value era),
     PrettyA (Core.PParamsDelta era),
     PrettyA (Core.Script era)

@@ -1042,7 +1042,7 @@ txOutDataHash = \case
     case datum of
       NoDatum -> Nothing
       DatumHash dh -> Just dh
-      Datum _ -> Nothing
+      Datum _d -> Nothing
   TxOut_AddrHash28_AdaOnly {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 -> decodeDataHash32 dataHash32
 

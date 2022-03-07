@@ -32,7 +32,7 @@ import Cardano.Ledger.Alonzo.Tx
     rdptr,
   )
 import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), languages)
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr,
     TxWitness (txdats, txrdmrs),
@@ -322,13 +322,8 @@ ppViewHashesMatch ::
   UTxO era ->
   Test (UtxowPredicateFail era)
 ppViewHashesMatch tx txbody pp utxo = do
-  let languages =
-        [ l
-          | (_hash, script) <- Map.toList (txscripts @era utxo tx),
-            (not . isNativeScript @era) script,
-            Just l <- [language @era script]
-        ]
-      computedPPhash = hashScriptIntegrity pp (Set.fromList languages) (txrdmrs . wits $ tx) (txdats . wits $ tx)
+  let langs = languages @era tx utxo
+      computedPPhash = hashScriptIntegrity pp langs (txrdmrs . wits $ tx) (txdats . wits $ tx)
       bodyPPhash = getField @"scriptIntegrityHash" txbody
   failureUnless
     (bodyPPhash == computedPPhash)
