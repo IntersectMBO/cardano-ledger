@@ -31,7 +31,7 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailur
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
-import Cardano.Ledger.Alonzo.Tx (ScriptPurpose (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), unTxDats)
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -53,10 +53,12 @@ import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as Shelley (PpupPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley (UtxoPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
-import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
+import Cardano.Ledger.Shelley.TxBody (WitVKey (..), unWdrl)
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailure (..))
+import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.Map as Map
+import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Typeable (Typeable)
@@ -682,25 +684,34 @@ instance
 -- =======================================================
 -- Summaries
 
-txBodyFieldSummary :: TxBodyField era -> [(Text, PDoc)]
-txBodyFieldSummary x = case x of
+txBodyFieldSummary :: Era era => TxBodyField era -> [(Text, PDoc)]
+txBodyFieldSummary txb = case txb of
   (Inputs s) -> [("Inputs", ppInt (Set.size s))]
   (Collateral s) -> [("Collateral", ppInt (Set.size s))]
   (RefInputs s) -> [("RefInputs", ppInt (Set.size s))]
   (Outputs xs) -> [("Outputs", ppInt (length xs))]
+  (CollateralReturn (SJust _)) -> [("Collateral Return", ppString "?")]
   (TotalCol c) -> [("TotalCollateral", ppCoin c)]
   (Certs xs) -> [("Certs", ppInt (length xs))]
+  (Wdrls x) -> [("Withdrawals", ppInt (Map.size (unWdrl x)))]
+  (Vldt x) -> [("Validity interval", ppValidityInterval x)]
   (Txfee c) -> [("Fee", ppCoin c)]
+  (Update (SJust _)) -> [("Collateral Return", ppString "?")]
+  (ReqSignerHashes x) -> [("Required Signer hashes", ppInt (Set.size x))]
+  (Mint v) -> [("Mint", ppInteger (Val.size v) <> ppString " bytes")]
+  (WppHash (SJust _)) -> [("WppHash", ppString "?")]
+  (AdHash (SJust _)) -> [("AdHash", ppString "?")]
+  (Txnetworkid (SJust x)) -> [("Network id", ppNetwork x)]
   _ -> []
 
-bodySummary :: Proof era -> Core.TxBody era -> PDoc
+bodySummary :: Era era => Proof era -> Core.TxBody era -> PDoc
 bodySummary proof body =
   ppRecord
     "TxBody"
     (concat (map txBodyFieldSummary (abstractTxBody proof body)))
 
 witnessFieldSummary :: WitnessesField era -> (Text, PDoc)
-witnessFieldSummary x = case x of
+witnessFieldSummary wit = case wit of
   (AddrWits s) -> ("Address Witnesses", ppInt (Set.size s))
   (BootWits s) -> ("BootStrap Witnesses", ppInt (Set.size s))
   (ScriptWits s) -> ("Script Witnesses", ppInt (Map.size s))
@@ -713,14 +724,16 @@ witnessSummary proof wits =
     "Witnesses"
     (map witnessFieldSummary (abstractWitnesses proof wits))
 
-txFieldSummary :: Proof era -> TxField era -> [PDoc]
-txFieldSummary proof x = case x of
+txFieldSummary :: Era era => Proof era -> TxField era -> [PDoc]
+txFieldSummary proof tx = case tx of
   (Body b) -> [bodySummary proof b]
   (BodyI xs) -> [ppRecord "TxBody" (concat (map txBodyFieldSummary xs))]
   (Witnesses ws) -> [witnessSummary proof ws]
   (WitnessesI ws) -> [ppRecord "Witnesses" (map witnessFieldSummary ws)]
+  (AuxData (SJust _)) -> [ppSexp "AuxData" [ppString "?"]]
+  (Valid (IsValid b)) -> [ppSexp "IsValid" [ppBool b]]
   _ -> []
 
-txSummary :: Proof era -> Core.Tx era -> PDoc
+txSummary :: Era era => Proof era -> Core.Tx era -> PDoc
 txSummary proof tx =
   ppSexp "Tx" (concat (map (txFieldSummary proof) (abstractTx proof tx)))

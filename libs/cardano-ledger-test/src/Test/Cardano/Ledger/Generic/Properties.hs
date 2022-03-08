@@ -122,7 +122,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
-import Debug.Trace (trace)
 import GHC.Stack
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
@@ -139,6 +138,7 @@ import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
+-- import Debug.Trace (trace)
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
 
@@ -193,7 +193,7 @@ obligation' (Shelley _) = obligation @c @(Shelley.PParams era) @(ViewMap c)
 
 minfee' :: forall era. Proof era -> Core.PParams era -> Core.Tx era -> Coin
 minfee' (Alonzo _) = minfee
-minfee' (Babbage _) = \pp tx -> (3 :: Int) <×> (minfee pp tx)
+minfee' (Babbage _) = minfee -- \pp tx -> {- (2 :: Int) <×> -} (minfee pp tx)
 minfee' (Mary _) = Shelley.minfee
 minfee' (Allegra _) = Shelley.minfee
 minfee' (Shelley _) = Shelley.minfee
@@ -1101,7 +1101,7 @@ genValidatedTx proof = do
         redeemerDatumWits
           <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
       validTx = coreTx proof [Body txBody, Witnesses (assembleWits proof wits), Valid isValid, AuxData' []]
-  pure (utxo, trace ("TX\n" ++ show (txSummary proof validTx)) validTx)
+  pure (utxo {- trace ("TX\n" ++ show (txSummary proof validTx)) -}, validTx)
 
 -- | Scan though the fields unioning all the RdrmWits fields into one Redeemer map
 mkTxrdmrs :: forall era. Era era => [WitnessesField era] -> Redeemers era
@@ -1189,7 +1189,7 @@ genTxAndLEDGERState ::
 genTxAndLEDGERState proof = do
   txIx <- arbitrary
   maxTxExUnits <- (arbitrary :: Gen ExUnits)
-  Positive maxCollateralInputs <- (arbitrary :: Gen (Positive Natural))
+  maxCollateralInputs <- elements [1 .. 7 :: Natural]
   collateralPercentage <- (fromIntegral <$> chooseInt (1, 10000)) :: Gen Natural
   minfeeA <- fromIntegral <$> chooseInt (0, 1000)
   minfeeB <- fromIntegral <$> chooseInt (0, 10000)
@@ -1400,6 +1400,7 @@ workNeededHere :: IO ()
 workNeededHere =
   defaultMain $
     testProperty "Babbage ValidTx preserves ADA" $
-      forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))
+      ({- withMaxSuccess 100 -} (forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))))
 
-go = workNeededHere
+test :: IO ()
+test = workNeededHere
