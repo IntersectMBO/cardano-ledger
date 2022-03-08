@@ -977,16 +977,19 @@ txOutData = \case
   TxOut_AddrHash28_AdaOnly {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> Nothing
 
+-- | Return the data hash of a given transaction output, if one is present.
+--  Note that this function does *not* return the hash of any inline datums
+--  that are present.
 txOutDataHash :: Era era => TxOut era -> Maybe (DataHash (Crypto era))
 txOutDataHash = \case
   TxOutCompact' {} -> Nothing
   TxOutCompactDH' _ _ dh -> Just dh
-  TxOutCompactDatum _ _ binaryData -> Just $! hashBinaryData binaryData
+  TxOutCompactDatum _ _ _ -> Nothing
   TxOutCompactRefScript _ _ datum _ ->
     case datum of
       NoDatum -> Nothing
       DatumHash dh -> Just dh
-      Datum binaryData -> Just $! hashBinaryData binaryData
+      Datum _ -> Nothing
   TxOut_AddrHash28_AdaOnly {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 -> decodeDataHash32 dataHash32
 
