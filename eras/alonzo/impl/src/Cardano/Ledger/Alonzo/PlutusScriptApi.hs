@@ -42,7 +42,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     runPLCScript,
     valContext,
   )
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), txscripts', unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), unTxDats)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
@@ -168,21 +168,21 @@ collectTwoPhaseScriptInputs ::
   UTxO era ->
   Either [CollectError (Crypto era)] [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
-  let scriptsUsed = Map.elems . txscripts' $ getField @"wits" tx
-      usedLanguages = [lang | (AlonzoScript.PlutusScript lang _) <- scriptsUsed]
+  let usedLanguages = [lang | (AlonzoScript.PlutusScript lang _) <- Map.elems scriptsUsed]
       costModels = getField @"_costmdls" pp
       missingCMs = [lang | lang <- usedLanguages, lang `Map.notMember` costModels]
    in case missingCMs of
         l : _ -> Left [NoCostModel l]
         _ -> merge (apply costModels) (map redeemer needed) (map getscript needed) (Right [])
   where
+    scriptsUsed = txscripts utxo tx
     txinfo lang = runIdentity $ txInfo pp lang ei sysS utxo tx
     needed = filter knownToNotBe1Phase $ scriptsNeeded utxo tx
     -- The formal spec achieves the same filtering as knownToNotBe1Phase
     -- by use of the (partial) language function, which is not defined
     -- on 1-phase scripts.
     knownToNotBe1Phase (_, sh) =
-      case sh `Map.lookup` txscripts' (getField @"wits" tx) of
+      case sh `Map.lookup` scriptsUsed of
         Just (AlonzoScript.PlutusScript _ _) -> True
         Just (AlonzoScript.TimelockScript _) -> False
         Nothing -> True
@@ -191,7 +191,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
         Just (d, eu) -> Right (sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
     getscript (_, hash) =
-      case hash `Map.lookup` txscripts' (getField @"wits" tx) of
+      case hash `Map.lookup` scriptsUsed of
         Just script -> Right script
         Nothing -> Left (NoWitness hash)
     apply costs (sp, d, eu) script@(AlonzoScript.PlutusScript lang _) =

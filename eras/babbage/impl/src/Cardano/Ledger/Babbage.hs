@@ -38,7 +38,7 @@ import Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
-import Cardano.Ledger.Babbage.Scripts (babbageInputDataHashes)
+import Cardano.Ledger.Babbage.Scripts (babbageInputDataHashes, babbageTxScripts)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut), getBabbageTxOutEitherAddr)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
@@ -224,6 +224,7 @@ instance CC.Crypto c => EraModule.SupportsSegWit (BabbageEra c) where
 instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
   inputDataHashes = babbageInputDataHashes
+  txscripts = babbageTxScripts
 
 -------------------------------------------------------------------------------
 -- Era Mapping

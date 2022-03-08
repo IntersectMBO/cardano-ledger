@@ -10,9 +10,6 @@
 module Cardano.Ledger.Babbage.Scripts where
 
 import Cardano.Ledger.Alonzo.Data (BinaryData, dataToBinaryData)
-import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (language)
-import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose (..),
     ValidatedTx (..),
@@ -28,7 +25,7 @@ import Cardano.Ledger.Babbage.TxBody
     spendInputs',
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (hashScript, isNativeScript))
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript (hashScript))
 import Cardano.Ledger.Hashes (DataHash)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -72,7 +69,7 @@ getDatum tx (UTxO m) sp = do
 {- txscripts tx utxo = txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}
 
 -- | Compute a Map of all the Scripts in a ValidatedTx.
-txscripts ::
+babbageTxScripts ::
   forall era.
   ( Core.TxBody era ~ TxBody era,
     Core.TxOut era ~ TxOut era,
@@ -81,7 +78,7 @@ txscripts ::
   UTxO era ->
   Core.Tx era ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era)
-txscripts (UTxO mp) tx = SplitMap.foldl' accum (getField @"scriptWits" tx) smallUtxo
+babbageTxScripts (UTxO mp) tx = SplitMap.foldl' accum (getField @"scriptWits" tx) smallUtxo
   where
     txbody = getField @"body" tx
     scriptinputs = referenceInputs' txbody `Set.union` spendInputs' txbody
@@ -90,24 +87,6 @@ txscripts (UTxO mp) tx = SplitMap.foldl' accum (getField @"scriptWits" tx) small
       case txout of
         (TxOut _ _ _ SNothing) -> ans
         (TxOut _ _ _ (SJust script)) -> Map.insert (hashScript @era script) script ans
-
-languages ::
-  forall era.
-  ( ValidateScript era,
-    Core.TxOut era ~ TxOut era,
-    Core.TxBody era ~ TxBody era,
-    Core.Script era ~ Script era
-  ) =>
-  UTxO era ->
-  Core.Tx era ->
-  Set Language
-languages utxo tx =
-  Set.fromList
-    [ lang
-      | (_, script) <- Map.toList (txscripts utxo tx),
-        (not . isNativeScript @era) script,
-        Just lang <- [language @era script]
-    ]
 
 -- Compute two sets for all TwoPhase scripts in a Tx.
 -- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash

@@ -11,15 +11,6 @@ module Cardano.Ledger.Babbage.Rules.Utxow where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash, hash)
--- Rule,
--- RuleType (Transition),
-
--- (?!),
-
--- StrictMaybe (..),
-
--- strictMaybeToMaybe,
-
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
@@ -27,7 +18,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent (WrappedShelleyEraEvent), UtxowPredicateFail, hasExactSetOfRedeemers, missingRequiredDatums, ppViewHashesMatch, requiredSignersAreWitnessed, witsVKeyNeeded)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (ScriptPurpose, ValidatedTx (..), wits)
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (inputDataHashes))
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo (TxDats (..), TxWitness (..), txdats')
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import qualified Cardano.Ledger.Babbage.Collateral as Babbage (isTwoPhaseScriptAddress)
@@ -37,7 +28,6 @@ import Cardano.Ledger.Babbage.Rules.Utxo
     BabbageUtxoPred (..),
   )
 import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
-import Cardano.Ledger.Babbage.Scripts (txscripts)
 import Cardano.Ledger.Babbage.TxBody
   ( Datum (..),
     TxBody (..),
@@ -106,9 +96,8 @@ danglingWitnessDataHashes inputHashes (Alonzo.TxDats m) outs =
 validateFailedBabbageScripts ::
   forall era.
   ( ValidateScript era,
-    Core.TxOut era ~ TxOut era,
-    Core.Script era ~ Script era,
-    Core.TxBody era ~ TxBody era
+    ExtendedUTxO era,
+    Core.Script era ~ Script era
   ) =>
   Core.Tx era ->
   UTxO era ->
@@ -222,7 +211,7 @@ babbageUtxowTransition = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx txbody pp
+  runTest $ ppViewHashesMatch tx txbody pp utxo
 
   trans @(Core.EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)

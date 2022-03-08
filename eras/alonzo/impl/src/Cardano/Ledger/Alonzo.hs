@@ -92,6 +92,7 @@ import Data.Default (def)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
+import GHC.Records (HasField (..))
 
 -- =====================================================
 
@@ -223,6 +224,7 @@ instance API.ShelleyEraCrypto c => API.ShelleyBasedEra (AlonzoEra c)
 instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
   inputDataHashes = alonzoInputHashes
+  txscripts _ = txscripts' . getField @"wits"
 
 -------------------------------------------------------------------------------
 -- Era Mapping
