@@ -71,6 +71,8 @@ import Test.Cardano.Ledger.Generic.Fields
     abstractWitnesses,
   )
 import Test.Cardano.Ledger.Generic.Proof
+import qualified Data.Compact.SplitMap as Split
+import Cardano.Ledger.Shelley.UTxO(UTxO(..))
 
 -- =====================================================
 
@@ -121,6 +123,14 @@ instance CC.Crypto c => PrettyCore (BabbageEra c) where
   prettyWitnesses = ppTxWitness
   prettyValue = ppValue
   prettyTxOut = Babbage.ppTxOut
+
+prettyUTxO :: Proof era -> UTxO era -> PDoc
+prettyUTxO (Babbage _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO (Alonzo _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO (Mary _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO (Allegra _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO (Shelley _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+
 
 -- ===================================================================
 -- PrettyA instances for UTXOW, UTXO, UTXOS, PPUP predicate failures
@@ -288,8 +298,8 @@ ppUtxoPredicateFailure (Alonzo.WrongNetworkWithdrawal n accnt) =
     ]
 ppUtxoPredicateFailure (Alonzo.OutputTooSmallUTxO xs) =
   ppSexp "OutputTooSmallUTxO" [ppList prettyTxOut xs]
-ppUtxoPredicateFailure (Alonzo.UtxosFailure subpred) =
-  ppSexp "UtxosFailure" [prettyA subpred]
+ppUtxoPredicateFailure (Alonzo.UtxosFailure subpred) = prettyA subpred
+  -- ppSexp "UtxosFailure" [prettyA subpred]
 ppUtxoPredicateFailure (Alonzo.OutputBootAddrAttrsTooBig x) =
   ppSexp "OutputBootAddrAttrsTooBig" [ppList prettyTxOut x]
 ppUtxoPredicateFailure (Alonzo.TriesToForgeADA) =
@@ -361,7 +371,7 @@ ppUtxosPredicateFailure (ValidationTagMismatch isvalid tag) =
       ("mismatch description", ppTagMismatchDescription tag)
     ]
 ppUtxosPredicateFailure (CollectErrors es) =
-  ppRecord "CollectErrors" [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
+  ppRecord' mempty [("When collecting inputs for twophase scripts, these went wrong.", ppList ppCollectError es)]
 ppUtxosPredicateFailure (UpdateFailure p) = prettyA p
 
 instance PrettyA (PredicateFailure (Core.EraRule "PPUP" era)) => PrettyA (UtxosPredicateFailure era) where
