@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -110,19 +111,17 @@ babbageInputDataHashes hashScriptMap tx (UTxO mp) =
     txbody = body tx
     spendinputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
     smallUtxo = spendinputs SplitMap.◁ mp
-    accum ans@(hashSet, inputSet) txin txout =
+    accum ans@(!hashSet, !inputSet) txin txout =
       case txout of
-        (TxOut addr _ NoDatum _) ->
+        TxOut addr _ NoDatum _ ->
           if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
             then (hashSet, Set.insert txin inputSet)
             else ans
-        (TxOut addr _ (DatumHash dhash) _) ->
+        TxOut addr _ (DatumHash dhash) _ ->
           if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
             then (Set.insert dhash hashSet, inputSet)
             else ans
-        (TxOut addr _ (Datum _) _) ->
-          if isTwoPhaseScriptAddressFromMap @era hashScriptMap addr
-            then ans -- An a TwoPhaseScript with Explict Datum and does not need a DataHash
-            else (hashSet, Set.insert txin inputSet)
-
--- FIXME -- An onePhase script with an unneeded Explict Datum, is that an error?
+        -- Though it is somewhat odd to allow non-two-phase-scripts to include a datum,
+        -- the Alonzo era already set the precedent with datum hashes, and several dapp
+        -- developers see this as a helpful feature.
+        TxOut _ _ (Datum _) _ -> ans

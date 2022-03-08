@@ -10,6 +10,7 @@ module Main where
 
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
+import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   ( allTrees,
     alonzoAPITests,
@@ -38,6 +39,7 @@ mainTests =
       testGroup
         "STS Tests"
         [ allTrees,
+          babbageFeatures,
           alonzoAPITests,
           collectOrderingAlonzo,
           alonzoProperties,
