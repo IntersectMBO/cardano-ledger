@@ -43,7 +43,7 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams, PParams' (..))
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum(..),TxOut (..))
+import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     mkTxIxPartial,
@@ -122,6 +122,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
+import Debug.Trace (trace)
 import GHC.Stack
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
@@ -138,8 +139,6 @@ import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 
-
-import Debug.Trace (trace)
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
 
@@ -200,7 +199,7 @@ minfee' (Allegra _) = Shelley.minfee
 minfee' (Shelley _) = Shelley.minfee
 
 txInBalance :: forall era. Era era => (Set (TxIn (Crypto era))) -> UTxO era -> Coin
-txInBalance txinSet (UTxO m) =  coin (balance (UTxO (SplitMap.toMap (txinSet SplitMap.◁ m))))
+txInBalance txinSet (UTxO m) = coin (balance (UTxO (SplitMap.toMap (txinSet SplitMap.◁ m))))
 
 hashScriptIntegrity' ::
   Proof era ->
@@ -360,7 +359,7 @@ lookupScript scriptHash mTag = do
   case Map.lookup scriptHash m of
     Just script -> pure $ Just script
     Nothing
-     | Just tag <- mTag ->
+      | Just tag <- mTag ->
         Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
     _ -> pure Nothing
 
@@ -614,7 +613,7 @@ genPlutusScript proof tag = do
 
 genScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (Crypto era))
 genScript proof tag = case proof of
-  Babbage _ -> elementsT [ {- genTimelockScript proof, FIXME -} genPlutusScript proof tag]
+  Babbage _ -> elementsT [{- genTimelockScript proof, FIXME -} genPlutusScript proof tag]
   Alonzo _ -> elementsT [genTimelockScript proof, genPlutusScript proof tag]
   Mary _ -> genTimelockScript proof
   Allegra _ -> genTimelockScript proof
@@ -719,20 +718,20 @@ genDatumWithHash = do
 
 genBabbageDatum :: Era era => GenRS era (Babbage.Datum era)
 genBabbageDatum =
-  frequencyT [-- (1 ,pure Babbage.NoDatum) -- WE ONLY CALL when we know we have a PLUTUS, So we must have datum
-              -- (2, (Babbage.DatumHash . fst) <$> genDatumWithHash)
-              (2, (Babbage.Datum . dataToBinaryData . snd) <$> genDatumWithHash)
-             ]
+  frequencyT
+    [ -- (1 ,pure Babbage.NoDatum) -- WE ONLY CALL when we know we have a PLUTUS, So we must have datum
+      -- (2, (Babbage.DatumHash . fst) <$> genDatumWithHash)
+      (2, (Babbage.Datum . dataToBinaryData . snd) <$> genDatumWithHash)
+    ]
 
 genRefScript :: Reflect era => Proof era -> GenRS era (StrictMaybe (Core.Script era))
 genRefScript proof = do
-   tag <- lift(arbitrary :: Gen Tag)
-   scripthash <- genScript proof tag
-   mscript <- lookupScript scripthash (Just tag)
-   case mscript of
-     Nothing -> pure SNothing
-     Just script -> pure(SJust script)
-   
+  tag <- lift (arbitrary :: Gen Tag)
+  scripthash <- genScript proof tag
+  mscript <- lookupScript scripthash (Just tag)
+  case mscript of
+    Nothing -> pure SNothing
+    Just script -> pure (SJust script)
 
 genTxOut :: Reflect era => Proof era -> Core.Value era -> GenRS era [TxOutField era]
 genTxOut proof val = do
@@ -750,8 +749,7 @@ genTxOut proof val = do
             pure $ [Datum datum] -- ++ [RefScript script]
           (Alonzo _, Just (PlutusScript _ _)) -> do
             (datahash, _data) <- genDatumWithHash
-            
- 
+
             pure [DHash (SJust datahash)]
           (_, _) -> pure []
   pure $ [Address addr, Amount val] ++ dataHashFields
@@ -1060,7 +1058,7 @@ genValidatedTx proof = do
           proof
           [ Inputs (Map.keysSet (toSpendNoCollateral)),
             Collateral bogusCollateralTxIns,
-            TotalCol (Coin 0),  -- Add a bogus Coin, fill it in later
+            TotalCol (Coin 0), -- Add a bogus Coin, fill it in later
             Outputs' (rewardsWithdrawalTxOut : recipients),
             Certs' dcerts,
             Wdrls wdrls,
@@ -1222,7 +1220,7 @@ genTxAndLEDGERState proof = do
   -- (env,pp) <- setup proof -- Generate a PParams and a GenEnv
   let genT = do
         (utxo, tx) <- genValidatedTx proof
-        utxoState <- trace (show(prettyUTxO proof utxo)) $ genUTxOState utxo
+        utxoState <- trace (show (prettyUTxO proof utxo)) $ genUTxOState utxo
         dpState <- gsDPState <$> get
         pure $ TRC (ledgerEnv, (utxoState, dpState), tx)
       pp =
@@ -1433,11 +1431,11 @@ test n proof = defaultMain $
   case proof of
     Babbage _ ->
       testProperty "Babbage ValidTx preserves ADA" $
-        ( withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
+        (withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
     Alonzo _ ->
       testProperty "Babbage ValidTx preserves ADA" $
-        ( withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
+        (withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
     Shelley _ ->
       testProperty "Babbage ValidTx preserves ADA" $
-        ( withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))        
-    other -> error ("NO Test in era "++show other)
+        (withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
+    other -> error ("NO Test in era " ++ show other)

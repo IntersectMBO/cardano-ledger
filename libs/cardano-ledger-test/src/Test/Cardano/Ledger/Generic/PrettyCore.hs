@@ -54,9 +54,11 @@ import qualified Cardano.Ledger.Shelley.Rules.Ppup as Shelley (PpupPredicateFail
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley (UtxoPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..), unWdrl)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailure (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
+import qualified Data.Compact.SplitMap as Split
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
@@ -71,8 +73,6 @@ import Test.Cardano.Ledger.Generic.Fields
     abstractWitnesses,
   )
 import Test.Cardano.Ledger.Generic.Proof
-import qualified Data.Compact.SplitMap as Split
-import Cardano.Ledger.Shelley.UTxO(UTxO(..))
 
 -- =====================================================
 
@@ -130,7 +130,6 @@ prettyUTxO (Alonzo _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
 prettyUTxO (Mary _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
 prettyUTxO (Allegra _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
 prettyUTxO (Shelley _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
-
 
 -- ===================================================================
 -- PrettyA instances for UTXOW, UTXO, UTXOS, PPUP predicate failures
@@ -299,7 +298,7 @@ ppUtxoPredicateFailure (Alonzo.WrongNetworkWithdrawal n accnt) =
 ppUtxoPredicateFailure (Alonzo.OutputTooSmallUTxO xs) =
   ppSexp "OutputTooSmallUTxO" [ppList prettyTxOut xs]
 ppUtxoPredicateFailure (Alonzo.UtxosFailure subpred) = prettyA subpred
-  -- ppSexp "UtxosFailure" [prettyA subpred]
+-- ppSexp "UtxosFailure" [prettyA subpred]
 ppUtxoPredicateFailure (Alonzo.OutputBootAddrAttrsTooBig x) =
   ppSexp "OutputBootAddrAttrsTooBig" [ppList prettyTxOut x]
 ppUtxoPredicateFailure (Alonzo.TriesToForgeADA) =
