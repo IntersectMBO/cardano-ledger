@@ -11,7 +11,7 @@ module Cardano.Ledger.Babbage.Collateral where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Tx (isTwoPhaseScriptAddressFromMap)
-import Cardano.Ledger.Babbage.Scripts (txscripts)
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (txscripts))
 import Cardano.Ledger.Babbage.TxBody
   ( TxBody (..),
     TxOut (..),
@@ -37,9 +37,8 @@ import Numeric.Natural (Natural)
 
 isTwoPhaseScriptAddress ::
   forall era.
-  ( Core.TxOut era ~ TxOut era,
-    ValidateScript era,
-    Core.TxBody era ~ TxBody era
+  ( ValidateScript era,
+    ExtendedUTxO era
   ) =>
   Core.Tx era ->
   UTxO era ->

@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.TxWitness
   ( RdmrPtr,
-    TxWitness (..),
+    TxWitness (txdats, txrdmrs),
     unRedeemers,
     unTxDats,
   )
@@ -261,13 +261,15 @@ hasExactSetOfRedeemers ::
   forall era.
   ( Era era,
     ValidateScript era,
+    ExtendedUTxO era,
     Core.Script era ~ Script era,
+    Core.Tx era ~ ValidatedTx era,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   UTxO era ->
-  ValidatedTx era ->
+  Core.Tx era ->
   Core.TxBody era ->
   Test (UtxowPredicateFail era)
 hasExactSetOfRedeemers utxo tx txbody = do
@@ -275,7 +277,7 @@ hasExactSetOfRedeemers utxo tx txbody = do
         [ (rp, (sp, sh))
           | (sp, sh) <- Alonzo.scriptsNeeded utxo tx,
             SJust rp <- [rdptr @era txbody sp],
-            Just script <- [Map.lookup sh (getField @"scriptWits" tx)],
+            Just script <- [Map.lookup sh (txscripts utxo tx)],
             (not . isNativeScript @era) script
         ]
       (extraRdmrs, missingRdmrs) =
@@ -308,18 +310,21 @@ requiredSignersAreWitnessed txbody witsKeyHashes = do
 ppViewHashesMatch ::
   forall era.
   ( ValidateScript era,
+    ExtendedUTxO era,
     Core.Script era ~ Script era,
+    Core.Tx era ~ ValidatedTx era,
     HasField "scriptIntegrityHash" (Core.TxBody era) (StrictMaybe (ScriptIntegrityHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
   ) =>
-  ValidatedTx era ->
+  Core.Tx era ->
   Core.TxBody era ->
   Core.PParams era ->
+  UTxO era ->
   Test (UtxowPredicateFail era)
-ppViewHashesMatch tx txbody pp = do
+ppViewHashesMatch tx txbody pp utxo = do
   let languages =
         [ l
-          | (_hash, script) <- Map.toList (getField @"scriptWits" tx),
+          | (_hash, script) <- Map.toList (txscripts @era utxo tx),
             (not . isNativeScript @era) script,
             Just l <- [language @era script]
         ]
@@ -415,7 +420,7 @@ alonzoStyleWitness = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx txbody pp
+  runTest $ ppViewHashesMatch tx txbody pp utxo
 
   trans @(Core.EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
