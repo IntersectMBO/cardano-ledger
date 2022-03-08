@@ -167,7 +167,7 @@ ppUtxowPredicateFail (NonOutputSupplimentaryDatums s1 s2) =
     ]
 ppUtxowPredicateFail (PPViewHashesDontMatch h1 h2) =
   ppRecord
-    "NonOutputSupplimentaryDatums"
+    "PPViewHashesDontMatch"
     [ ("PPHash in the TxBody", ppStrictMaybe ppSafeHash h1),
       ("PPHash Computed from the current Protocol Parameters", ppStrictMaybe ppSafeHash h2)
     ]

@@ -45,6 +45,7 @@ library
   exposed-modules:
     Test.Cardano.Ledger.Alonzo.Tools
     Test.Cardano.Ledger.BaseTypes
+    Test.Cardano.Ledger.Examples.BabbageFeatures
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Fields
