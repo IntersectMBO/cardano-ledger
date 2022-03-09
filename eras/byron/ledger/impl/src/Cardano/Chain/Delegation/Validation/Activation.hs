@@ -52,10 +52,10 @@ activateDelegation :: State -> ScheduledDelegation -> State
 activateDelegation as delegation
   | (delegate `Delegation.notMemberR` delegationMap)
       && (prevDelegationSlot < slot || unSlotNumber slot == 0) =
-    State
-      { delegationMap = Delegation.insert delegator delegate delegationMap,
-        delegationSlots = M.insert delegator slot delegationSlots
-      }
+      State
+        { delegationMap = Delegation.insert delegator delegate delegationMap,
+          delegationSlots = M.insert delegator slot delegationSlots
+        }
   | otherwise = as
   where
     State {delegationMap, delegationSlots} = as

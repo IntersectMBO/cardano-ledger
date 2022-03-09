@@ -95,8 +95,8 @@ lovelacePortionDenominator = 1e15
 rationalToLovelacePortion :: Rational -> LovelacePortion
 rationalToLovelacePortion r
   | r >= 0 && r <= 1 =
-    LovelacePortion
-      (ceiling (r * toRational lovelacePortionDenominator))
+      LovelacePortion
+        (ceiling (r * toRational lovelacePortionDenominator))
   | otherwise = panic "rationalToLovelacePortion: out of range [0..1]"
 
 -- | Turn a 'LovelacePortion' into a 'Rational' in the range @[0..1]@.

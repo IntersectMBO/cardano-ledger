@@ -178,10 +178,10 @@ instance CC.Crypto crypto => Val (Value crypto) where
     -- iii) the space taken up by the rest of the representation (quantities,
     --    PIDs, AssetNames, indeces)
     | otherwise =
-      fromIntegral
-        ( roundupBytesToWords (representationSize (snd $ gettriples vv))
-            + repOverhead
-        )
+        fromIntegral
+          ( roundupBytesToWords (representationSize (snd $ gettriples vv))
+              + repOverhead
+          )
 
   isAdaOnly (Value _ v) = Map.null v
 
@@ -492,7 +492,7 @@ to ::
   Maybe (CompactValue crypto)
 to (Value ada ma)
   | Map.null ma =
-    CompactValueAdaOnly . CompactCoin <$> integerToWord64 ada
+      CompactValueAdaOnly . CompactCoin <$> integerToWord64 ada
 to v = do
   c <- integerToWord64 ada
   -- Here we convert the (pid, assetName, quantity) triples into
@@ -692,7 +692,7 @@ nubOrd =
     loop s (a : as)
       | a `Set.member` s = loop s as
       | otherwise =
-        let s' = Set.insert a s in s' `seq` a : loop s' as
+          let s' = Set.insert a s in s' `seq` a : loop s' as
 
 sbsToByteArray :: ShortByteString -> BA.ByteArray
 sbsToByteArray (SBS bah) = BA.ByteArray bah

@@ -9,8 +9,8 @@ module Test.Cardano.Ledger.Shelley.Serialisation.Golden.Genesis
   ( tests,
 
     -- * Individual properties
-    prop_golden_json_ShelleyGenesis,
-    prop_golden_cbor_ShelleyGenesis,
+    golden_json_ShelleyGenesis,
+    golden_cbor_ShelleyGenesis,
   )
 where
 
@@ -25,6 +25,7 @@ import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams (PParams' (..), emptyPParams)
 import Cardano.Slotting.Slot (EpochSize (..))
+import Data.Aeson
 import qualified Data.ByteString.Char8 as BS (pack)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -32,7 +33,6 @@ import Data.Scientific (Scientific)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Hedgehog (Property)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (StandardCrypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Utils
@@ -41,19 +41,25 @@ import Test.Cardano.Ledger.Shelley.Utils
     mkVRFKeyPair,
     unsafeBoundRational,
   )
-import Test.Cardano.Prelude
 import Test.Tasty
-import Test.Tasty.HUnit (Assertion, assertFailure, testCase)
-import Test.Tasty.Hedgehog
+import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
-prop_golden_json_ShelleyGenesis :: Property
-prop_golden_json_ShelleyGenesis = goldenTestJSONPretty example "test/Golden/ShelleyGenesis"
+goldenTestJSON :: ToJSON a => a -> FilePath -> Assertion
+goldenTestJSON actual expectedFile =
+  case eitherDecode' (encode actual) of
+    Left err -> error err
+    Right (val :: Value) -> do
+      expected <- either error id <$> eitherDecodeFileStrict expectedFile
+      val @?= expected
+
+golden_json_ShelleyGenesis :: Assertion
+golden_json_ShelleyGenesis = goldenTestJSON example "test/Golden/ShelleyGenesis"
   where
     example :: ShelleyGenesis (ShelleyEra StandardCrypto)
     example = exampleShelleyGenesis
 
-prop_golden_cbor_ShelleyGenesis :: Assertion
-prop_golden_cbor_ShelleyGenesis =
+golden_cbor_ShelleyGenesis :: Assertion
+golden_cbor_ShelleyGenesis =
   if serializeEncoding received /= serializeEncoding expected
     then
       assertFailure $
@@ -180,8 +186,8 @@ tests :: TestTree
 tests =
   testGroup
     "Shelley Genesis golden tests"
-    [ testProperty "ShelleyGenesis JSON golden test" prop_golden_json_ShelleyGenesis,
-      testCase "ShelleyGenesis CBOR golden test" prop_golden_cbor_ShelleyGenesis
+    [ testCase "ShelleyGenesis JSON golden test" golden_json_ShelleyGenesis,
+      testCase "ShelleyGenesis CBOR golden test" golden_cbor_ShelleyGenesis
     ]
 
 exampleShelleyGenesis ::

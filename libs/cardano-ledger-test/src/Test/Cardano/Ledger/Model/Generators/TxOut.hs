@@ -124,11 +124,11 @@ genInputs allowScripts deposits refunds = do
       go [] val acc
         | val >= minInput = acc
         | otherwise =
-          error $
-            unlines
-              [ "insufficient UTxO's to proceed with generation.",
-                show actualUtxos
-              ]
+            error $
+              unlines
+                [ "insufficient UTxO's to proceed with generation.",
+                  show actualUtxos
+                ]
       -- TODO, get rewards/fees back into circulation in generator.
       go (utxo : rest) val acc
         | val < minInput = go rest (val <> spendable (snd utxo)) (utxo : acc)
@@ -179,23 +179,23 @@ genOutputs haveCollateral ins mintWithRdmr deposits refunds wdrls = do
         | inAda < minFee + minOutput && haveCollateral' -> pure (inAda, [])
         | inAda < minFee + (minOutput * 2) && not haveCollateral' -> error "leftover multi-asset"
         | not haveCollateral' -> do
-          let maOut = ModelValueF (Coin minOutput, ma)
-          fee <- choose (minFee, min (inAda - minOutput) maxFee)
-          outVals <- liftGen $ unfoldModelValue (Coin minOutput) (ModelValueF (Coin (inAda - fee - minOutput), mempty))
-          pure (fee, maOut : toList outVals)
+            let maOut = ModelValueF (Coin minOutput, ma)
+            fee <- choose (minFee, min (inAda - minOutput) maxFee)
+            outVals <- liftGen $ unfoldModelValue (Coin minOutput) (ModelValueF (Coin (inAda - fee - minOutput), mempty))
+            pure (fee, maOut : toList outVals)
         | otherwise -> do
-          fee <- choose (minFee, min (inAda - minOutput) maxFee)
-          outVals <-
-            liftGen $
-              unfoldModelValue
-                (Coin minOutput)
-                ( ModelValueF
-                    ( Coin
-                        (inAda - fee),
-                      ma
-                    )
-                )
-          pure (fee, toList outVals)
+            fee <- choose (minFee, min (inAda - minOutput) maxFee)
+            outVals <-
+              liftGen $
+                unfoldModelValue
+                  (Coin minOutput)
+                  ( ModelValueF
+                      ( Coin
+                          (inAda - fee),
+                        ma
+                      )
+                  )
+            pure (fee, toList outVals)
 
   delegates <-
     uses

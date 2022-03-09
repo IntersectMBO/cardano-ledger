@@ -318,9 +318,9 @@ instance Split (Value era) where
   vsplit (Value n mp) m
     | m Prelude.<= 0 = error "must split coins into positive parts"
     | otherwise =
-      ( take (fromIntegral m) (Value (n `div` m) mp : repeat (Value (n `div` m) Map.empty)),
-        Coin (n `rem` m)
-      )
+        ( take (fromIntegral m) (Value (n `div` m) mp : repeat (Value (n `div` m) Map.empty)),
+          Coin (n `rem` m)
+        )
 
 instance Mock c => MinGenTxout (MaryEra c) where
   calcEraMinUTxO _txout pp = _minUTxOValue pp

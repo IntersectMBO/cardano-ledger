@@ -101,9 +101,9 @@ roundtrip' ::
 roundtrip' enc dec a = case deserialiseFromBytes dec bs of
   Right (bs', a')
     | Lazy.null bs' ->
-      a === a' bs
+        a === a' bs
     | otherwise ->
-      counterexample ("left-over bytes: " <> show bs') False
+        counterexample ("left-over bytes: " <> show bs') False
   Left e ->
     counterexample (show e) False
   where
@@ -126,9 +126,9 @@ roundtrip2' ::
 roundtrip2' enc dec a = case deserialiseFromBytes dec bs of
   Right (bs', a')
     | Lazy.null bs' ->
-      serializeEncoding (enc a) === serializeEncoding (enc (a' bs))
+        serializeEncoding (enc a) === serializeEncoding (enc (a' bs))
     | otherwise ->
-      counterexample ("left-over bytes: " <> show bs') False
+        counterexample ("left-over bytes: " <> show bs') False
   Left e ->
     counterexample (show e) False
   where

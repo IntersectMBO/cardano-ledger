@@ -74,7 +74,7 @@ txb i o =
   TxBody
     (Set.singleton i) -- inputs
     mempty -- collateral
-    (StrictSeq.singleton o) --outputs
+    (StrictSeq.singleton o) -- outputs
     mempty -- certs
     (Wdrl mempty) -- withdrawals
     (Coin 2) -- txfee

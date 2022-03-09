@@ -66,15 +66,15 @@ instance Arbitrary Plutus.Data where
     where
       gendata n
         | n > 0 =
-          oneof
-            [ (Plutus.I <$> arbitrary),
-              (Plutus.B <$> arbitrary),
-              (Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))),
-              ( Plutus.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
-                  <*> listOf (gendata (n `div` 2))
-              ),
-              (Plutus.List <$> listOf (gendata (n `div` 2)))
-            ]
+            oneof
+              [ (Plutus.I <$> arbitrary),
+                (Plutus.B <$> arbitrary),
+                (Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))),
+                ( Plutus.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
+                    <*> listOf (gendata (n `div` 2))
+                ),
+                (Plutus.List <$> listOf (gendata (n `div` 2)))
+              ]
       gendata _ = oneof [Plutus.I <$> arbitrary, Plutus.B <$> arbitrary]
 
 instance

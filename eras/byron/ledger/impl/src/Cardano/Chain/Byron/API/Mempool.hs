@@ -174,8 +174,8 @@ mkUpdateEnvironment cfg currentSlot delegationMap =
     toNumGenKeys :: Int -> Word8
     toNumGenKeys n
       | n > fromIntegral (maxBound :: Word8) =
-        panic $
-          "toNumGenKeys: Too many genesis keys"
+          panic $
+            "toNumGenKeys: Too many genesis keys"
       | otherwise = fromIntegral n
 
 applyTxAux ::

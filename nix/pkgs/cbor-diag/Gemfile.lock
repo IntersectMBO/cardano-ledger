@@ -1,21 +1,27 @@
 GEM
   remote: https://rubygems.org/
   specs:
-    cbor-diag (0.5.6)
+    cbor-canonical (0.1.2)
+    cbor-deterministic (0.1.3)
+    cbor-diag (0.7.6)
+      cbor-canonical
+      cbor-deterministic
+      cbor-packed
       json
       neatjson
       treetop (~> 1)
-    json (2.3.0)
+    cbor-packed (0.1.3)
+    json (2.6.1)
     neatjson (0.9)
     polyglot (0.3.5)
-    treetop (1.6.10)
+    treetop (1.6.11)
       polyglot (~> 0.3)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
-  cbor-diag!
+  cbor-diag
 
 BUNDLED WITH
-   1.17.3
+   2.3.6

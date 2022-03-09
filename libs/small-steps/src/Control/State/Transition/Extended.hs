@@ -597,14 +597,14 @@ applySTSInternal ep ap goRule ctx =
         sfor_ (assertions @s) $! \case
           PreCondition msg cond
             | not (cond jc) ->
-              let assertion =
-                    AssertionViolation
-                      { avSTS = show $ typeRep assertion,
-                        avMsg = msg,
-                        avCtx = jc,
-                        avState = Nothing
-                      }
-               in throwE assertion
+                let assertion =
+                      AssertionViolation
+                        { avSTS = show $ typeRep assertion,
+                          avMsg = msg,
+                          avCtx = jc,
+                          avState = Nothing
+                        }
+                 in throwE assertion
           _ -> pure ()
       res <- lift (goRule jc `traverse` transitionRules)
       -- We only care about running postconditions if the state transition was
@@ -617,14 +617,14 @@ applySTSInternal ep ap goRule ctx =
                 sfor_ (assertions @s) $! \case
                   PostCondition msg cond
                     | not (cond jc st) ->
-                      let assertion =
-                            AssertionViolation
-                              { avSTS = show $ typeRep assertion,
-                                avMsg = msg,
-                                avCtx = jc,
-                                avState = Just st
-                              }
-                       in throwE assertion
+                        let assertion =
+                              AssertionViolation
+                                { avSTS = show $ typeRep assertion,
+                                  avMsg = msg,
+                                  avCtx = jc,
+                                  avState = Just st
+                                }
+                         in throwE assertion
                   _ -> pure ()
               _ -> pure ()
       pure $! res

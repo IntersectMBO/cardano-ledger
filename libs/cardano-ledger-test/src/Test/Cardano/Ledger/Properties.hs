@@ -118,8 +118,8 @@ genMapElem :: Map k a -> Gen (Maybe (k, a))
 genMapElem m
   | n == 0 = pure Nothing
   | otherwise = do
-    i <- choose (0, n - 1)
-    pure $ Just $ Map.elemAt i m
+      i <- choose (0, n - 1)
+      pure $ Just $ Map.elemAt i m
   where
     n = Map.size m
 
@@ -188,8 +188,8 @@ genExUnits n = do
     genUpTo maxVal (!totalLeft, !acc) _
       | totalLeft == 0 = pure (0, 0 : acc)
       | otherwise = do
-        x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
-        pure (totalLeft - x, x : acc)
+          x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
+          pure (totalLeft - x, x : acc)
     genSequenceSum maxVal
       | maxVal == 0 = pure $ replicate n 0
       | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
@@ -268,8 +268,8 @@ genTimelockScript = do
   -- diverge. It also has to stay very shallow because it grows too fast.
   let genNestedTimelock k
         | k > 0 =
-          elementsT $
-            nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
+            elementsT $
+              nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks =
         [ r
@@ -342,7 +342,7 @@ lookupScript scriptHash mTag = do
     Just script -> pure $ Just script
     Nothing
       | Just tag <- mTag ->
-        Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
+          Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
     _ -> pure Nothing
 
 lookupPlutusScript ::
@@ -503,31 +503,31 @@ genDCerts = do
         -- Workaround a misfeature where duplicate plutus scripts in DCert are ignored
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
               | Just (_, scriptHash) <- mScriptHash =
-                if (scriptHash, mKey) `Set.member` ss
-                  then (dcs, ss, regCreds)
-                  else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
+                  if (scriptHash, mKey) `Set.member` ss
+                    then (dcs, ss, regCreds)
+                    else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
               | otherwise = (dc : dcs', ss, regCreds')
         -- Generate registration and de-registration delegation certificates,
         -- while ensuring the proper registered/unregestered state in DState
         case dc of
           DCertDeleg d
             | RegKey regCred <- d ->
-              if regCred `Set.member` regCreds
-                then pure (dcs, ss, regCreds)
-                else pure (dc : dcs, ss, Set.insert regCred regCreds)
+                if regCred `Set.member` regCreds
+                  then pure (dcs, ss, regCreds)
+                  else pure (dc : dcs, ss, Set.insert regCred regCreds)
             | DeRegKey deregCred <- d ->
-              if deregCred `Set.member` regCreds
-                then
-                  insertIfNotPresent dcs (Set.delete deregCred regCreds) Nothing
-                    <$> lookupPlutusScript deregCred Cert
-                else pure (dcs, ss, regCreds)
+                if deregCred `Set.member` regCreds
+                  then
+                    insertIfNotPresent dcs (Set.delete deregCred regCreds) Nothing
+                      <$> lookupPlutusScript deregCred Cert
+                  else pure (dcs, ss, regCreds)
             | Delegate (Delegation delegCred delegKey) <- d ->
-              let (dcs', regCreds')
-                    | delegCred `Set.member` regCreds = (dcs, regCreds)
-                    | otherwise =
-                      (DCertDeleg (RegKey delegCred) : dcs, Set.insert delegCred regCreds)
-               in insertIfNotPresent dcs' regCreds' (Just delegKey)
-                    <$> lookupPlutusScript delegCred Cert
+                let (dcs', regCreds')
+                      | delegCred `Set.member` regCreds = (dcs, regCreds)
+                      | otherwise =
+                          (DCertDeleg (RegKey delegCred) : dcs, Set.insert delegCred regCreds)
+                 in insertIfNotPresent dcs' regCreds' (Just delegKey)
+                      <$> lookupPlutusScript delegCred Cert
           _ -> pure (dc : dcs, ss, regCreds)
   NonNegative n <- lift arbitrary
   DPState {_dstate = DState {_unified}} <- gsDPState <$> get
@@ -555,20 +555,20 @@ genCollateralUTxO collateralAddresses (Coin fee) (UTxO utxo) = do
       genCollateral addr coll um
         | Map.null um = genNewCollateral addr coll um =<< lift genPositiveVal
         | otherwise = do
-          i <- lift $ chooseInt (0, Map.size um - 1)
-          let (txIn, txOut@(TxOut _ val _)) = Map.elemAt i um
-          pure (Map.deleteAt i um, Map.insert txIn txOut coll, coin val)
+            i <- lift $ chooseInt (0, Map.size um - 1)
+            let (txIn, txOut@(TxOut _ val _)) = Map.elemAt i um
+            pure (Map.deleteAt i um, Map.insert txIn txOut coll, coin val)
       -- Recursively either pick existing key spend only outputs or generate new ones that
       -- will be later added to the UTxO map
       go ecs !coll !curCollTotal !um
         | curCollTotal >= minCollTotal = pure coll
         | [] <- ecs = error "Impossible: supplied less addresses then `maxCollateralInputs`"
         | ec : ecs' <- ecs = do
-          (um', coll', c) <-
-            if null ecs'
-              then genNewCollateral ec coll um (minCollTotal <-> curCollTotal)
-              else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
-          go ecs' coll' (curCollTotal <+> c) um'
+            (um', coll', c) <-
+              if null ecs'
+                then genNewCollateral ec coll um (minCollTotal <-> curCollTotal)
+                else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
+            go ecs' coll' (curCollTotal <+> c) um'
   collaterals <-
     go collateralAddresses Map.empty (Coin 0) $
       SplitMap.toMap $ SplitMap.filter spendOnly utxo

@@ -13,7 +13,6 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Slotting.Slot (EpochNo (..))
 import Control.DeepSeq
-import Control.Lens.Internal.Coerce ((#..))
 import Control.Lens.Internal.Zoom
 import Control.Lens.Zoom
 import Control.Monad.RWS.CPS ()
@@ -44,7 +43,7 @@ instance (Monoid w, Monad z) => Zoom (CPS.RWST r w s z) (CPS.RWST r w t z) s t w
 type instance Zoomed (CPS.WriterT w m) = FocusingPlus w (Zoomed m)
 
 instance (Monoid w, Zoom m n s t) => Zoom (CPS.WriterT w m) (CPS.WriterT w n) s t where
-  zoom l = CPS.writerT . zoom (\afb -> unfocusingPlus #.. l (FocusingPlus #.. afb)) . CPS.runWriterT
+  zoom l = CPS.writerT . zoom (\afb -> unfocusingPlus #. l (FocusingPlus #. afb)) . CPS.runWriterT
   {-# INLINE zoom #-}
 
 instance (NFData (f x), NFData (g x)) => NFData ((:*:) f g x)

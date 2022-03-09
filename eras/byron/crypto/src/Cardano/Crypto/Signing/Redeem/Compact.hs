@@ -37,7 +37,8 @@ import Data.Aeson
     ToJSONKey (..),
     ToJSONKeyFunction (..),
   )
-import qualified Data.Aeson.Encoding as A
+import qualified Data.Aeson.Encoding.Internal as A
+import qualified Data.Aeson.Key as A
 import Data.Binary.Get (Get, getWord64le, runGet)
 import Data.Binary.Put (Put, putWord64le, runPut)
 import qualified Data.ByteString.Lazy as BSL (fromStrict, toStrict)
@@ -134,9 +135,9 @@ instance MonadError SchemaError m => FromObjectKey m CompactRedeemVerificationKe
       . JSString
 
 instance ToJSONKey CompactRedeemVerificationKey where
-  toJSONKey = ToJSONKeyText render (A.text . render)
+  toJSONKey = ToJSONKeyText render (A.key . render)
     where
-      render = sformat redeemVKB64UrlF . fromCompactRedeemVerificationKey
+      render = A.fromText . sformat redeemVKB64UrlF . fromCompactRedeemVerificationKey
 
 instance FromJSONKey CompactRedeemVerificationKey where
   fromJSONKey = toCompactRedeemVerificationKey <$> fromJSONKey

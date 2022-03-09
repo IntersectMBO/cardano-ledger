@@ -87,9 +87,9 @@ instance Show h => Show (Attributes h) where
     let remain :: Prelude.String
         remain
           | attributesAreKnown attr =
-            ""
+              ""
           | otherwise =
-            ", remain: <" <> show (unknownAttributesLength attr) <> " bytes>"
+              ", remain: <" <> show (unknownAttributesLength attr) <> " bytes>"
      in mconcat ["Attributes { data_ = ", show (attrData attr), remain, " }"]
 
 instance {-# OVERLAPPABLE #-} Buildable h => Buildable (Attributes h) where
@@ -106,9 +106,9 @@ instance Buildable (Attributes ()) where
   build attr
     | attributesAreKnown attr = "<no attributes>"
     | otherwise =
-      bprint
-        ("Attributes { data: (), remain: <" . int . " bytes> }")
-        (unknownAttributesLength attr)
+        bprint
+          ("Attributes { data: (), remain: <" . int . " bytes> }")
+          (unknownAttributesLength attr)
 
 -- Used for debugging purposes only
 instance ToJSON a => ToJSON (Attributes a)

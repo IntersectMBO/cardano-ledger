@@ -273,12 +273,12 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
     | Just addr <- decodeAddress28 stakeRef addr28Extra ->
-      (compactAddr addr, injectCompact adaVal, SNothing)
+        (compactAddr addr, injectCompact adaVal, SNothing)
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
     | Just addr <- decodeAddress28 stakeRef addr28Extra,
       Just dh <- decodeDataHash32 dataHash32 ->
-      (compactAddr addr, injectCompact adaVal, SJust dh)
+        (compactAddr addr, injectCompact adaVal, SJust dh)
     | otherwise -> error addressErrorMsg
 
 viewTxOut ::
@@ -296,11 +296,11 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
     val = fromCompact c
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal)
   | Just addr <- decodeAddress28 stakeRef addr28Extra =
-    (addr, inject (fromCompact adaVal), SNothing)
+      (addr, inject (fromCompact adaVal), SNothing)
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32)
   | Just addr <- decodeAddress28 stakeRef addr28Extra,
     Just dh <- decodeDataHash32 dataHash32 =
-    (addr, inject (fromCompact adaVal), SJust dh)
+      (addr, inject (fromCompact adaVal), SJust dh)
 viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
 viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
 
@@ -333,13 +333,13 @@ pattern TxOut addr vl dh <-
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
-        TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+          TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
     TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred,
         Just (Refl, dataHash32) <- encodeDataHash32 dh =
-        TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
+          TxOut_AddrHash28_AdaOnly_DataHash32 stakeCred addr28Extra adaCompact dataHash32
     TxOut addr vl mdh =
       let v = fromMaybe (error "Illegal value in txout") $ toCompact vl
           a = compactAddr addr

@@ -108,24 +108,24 @@ instance VRFAlgorithm FakeVRF where
   rawDeserialiseVerKeyVRF bs
     | [kb] <- splitsAt [8] bs,
       let k = readBinaryWord64 kb =
-      Just $! VerKeyFakeVRF k
+        Just $! VerKeyFakeVRF k
     | otherwise =
-      Nothing
+        Nothing
 
   rawDeserialiseSignKeyVRF bs
     | [kb] <- splitsAt [8] bs,
       let k = readBinaryWord64 kb =
-      Just $! SignKeyFakeVRF k
+        Just $! SignKeyFakeVRF k
     | otherwise =
-      Nothing
+        Nothing
 
   rawDeserialiseCertVRF bs
     | [kb, smb] <- splitsAt [8, 2] bs,
       let k = readBinaryWord64 kb,
       let s = readBinaryWord16 smb =
-      Just $! CertFakeVRF k s
+        Just $! CertFakeVRF k s
     | otherwise =
-      Nothing
+        Nothing
 
 evalVRF' ::
   SneakilyContainResult a =>

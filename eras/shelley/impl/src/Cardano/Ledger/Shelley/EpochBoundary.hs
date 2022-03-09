@@ -91,7 +91,7 @@ poolStake ::
   Stake crypto ->
   Stake crypto
 poolStake hk delegs (Stake stake) =
-  --Stake $ (eval (dom (delegs ▷ setSingleton hk) ◁ stake))
+  -- Stake $ (eval (dom (delegs ▷ setSingleton hk) ◁ stake))
   Stake $ VMap.filter (\cred _ -> VMap.lookup cred delegs == Just hk) stake
 
 sumStakePerPool ::

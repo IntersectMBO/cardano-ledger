@@ -29,6 +29,9 @@ let
     compiler-nix-name = compiler;
     modules = [
       {
+        # Use our forked libsodium from iohk-nix crypto overlay.
+        packages.cardano-crypto-class.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 ] ];
+        packages.cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium-vrf pkgs.secp256k1 ] ];
         packages.byron-spec-chain.configureFlags = [ "--ghc-option=-Werror" ];
         packages.byron-spec-ledger.configureFlags = [ "--ghc-option=-Werror" ];
         packages.delegation.configureFlags = [ "--ghc-option=-Werror" ];

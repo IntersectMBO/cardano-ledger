@@ -36,12 +36,12 @@ unfoldModelValue (Coin minValue) = go
     go m@(ModelValueF (Coin ada, ma))
       | ada <= 2 * minValue = pure (pure m)
       | otherwise = do
-        adaL <- Coin <$> choose (minValue, ada - minValue)
-        maL <- traverseGrpMap splitMA ma
-        let adaR = Coin ada ~~ adaL
-            maR = ma ~~ maL
-            m' = (pure (ModelValueF (adaL, maL)) <> pure (ModelValueF (adaR, maR)))
-        frequency
-          [ (10, pure m'),
-            (1, fold1 <$> traverse go m')
-          ]
+          adaL <- Coin <$> choose (minValue, ada - minValue)
+          maL <- traverseGrpMap splitMA ma
+          let adaR = Coin ada ~~ adaL
+              maR = ma ~~ maL
+              m' = (pure (ModelValueF (adaL, maL)) <> pure (ModelValueF (adaR, maR)))
+          frequency
+            [ (10, pure m'),
+              (1, fold1 <$> traverse go m')
+            ]

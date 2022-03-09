@@ -152,9 +152,9 @@ data WitnessesField era
   | DataWits (TxDats era)
   | RdmrWits (Redeemers era)
 
-pattern AddrWits' :: Era era => [WitVKey 'Witness (Crypto era)] -> WitnessesField era --Set
+pattern AddrWits' :: Era era => [WitVKey 'Witness (Crypto era)] -> WitnessesField era -- Set
 
-pattern BootWits' :: Era era => [BootstrapWitness (Crypto era)] -> WitnessesField era --Set
+pattern BootWits' :: Era era => [BootstrapWitness (Crypto era)] -> WitnessesField era -- Set
 
 pattern ScriptWits' :: forall era. ValidateScript era => [Core.Script era] -> WitnessesField era -- Map
 

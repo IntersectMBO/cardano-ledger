@@ -83,9 +83,9 @@ instance Ord a => Val (ModelValueF a) where
     -- see comment in Cardano.Ledger.Mary.Value/instance Val (Value)/size
     | v == mempty = 2
     | otherwise =
-      fromIntegral $
-        roundupBytesToWords (representationSize v)
-          + repOverhead
+        fromIntegral $
+          roundupBytesToWords (representationSize v)
+            + repOverhead
     where
       repOverhead = 4 + adaWords + numberMulAssets
       adaWords = 1
