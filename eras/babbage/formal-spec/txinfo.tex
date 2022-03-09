@@ -1,0 +1,42 @@
+\section{TxInfo Construction}
+\label{sec:txinfo}
+
+The context of $\PlutusVII$ needs to be adjusted to contain the new
+features. Additionally, the redeemers are provided to the context, but
+without the execution units budget.
+
+\begin{figure*}[htb]
+  \emph{Conversion Functions}
+  \begin{align*}
+    & \fun{toPlutusType}_{\Script} \in \Script \to \type{P.ScriptHash} \\
+    & \fun{toPlutusType}_{\Script}~ s = \fun{hash}~s
+    \nextdef
+    & \fun{toPlutusType}_{\TxOut} \in \TxOut \to \type{P.TxOut} \\
+    & \fun{toPlutusType}_{\TxOut}~ (a, v, d, s) = (a_P, v_P, d_P, s_P)
+  \end{align*}
+  \caption{TxInfo Constituent Type Translation Functions}
+  \label{fig:txinfo-translations}
+\end{figure*}
+
+\begin{figure}
+    \emph{Ledger Functions}
+    %
+    \begin{align*}
+        &\fun{txInfo} : \Language \to \PParams \to \EpochInfo \to \SystemStart \to \UTxO \to \Tx \to \TxInfo \\
+        &\fun{txInfo}~\PlutusVII~pp~ ei~ sysS~ utxo~tx = \\
+        & ~~~~ (\{~(\var{txin}_P, \var{txout}_P) \mid \var{txin}\in\fun{spendInputs}~tx,~\var{txin}\mapsto\var{txout}\in\var{utxo}~\}, \\
+        & ~~~~ \hldiff{\{~(\var{txin}_P, \var{txout}_P) \mid \var{txin}\in\fun{refInputs}~tx,~\var{txin}\mapsto\var{txout}\in\var{utxo}~\}}, \\
+        & ~~~~ \{~\var{tout}_P\mid\var{tout}\in\fun{txouts}~{tx}~\} , \\
+        & ~~~~ (\fun{inject}~(\fun{txfee}~{tx}))_P, \\
+        & ~~~~ (\fun{mint}~{tx})_P , \\
+        & ~~~~ [~ c_P \mid c \in \fun{txcerts}~{tx} ~] , \\
+        & ~~~~ \{~(s_P,~c_P)\mid s\mapsto c \in \fun{txwdrls}~{tx}~\} , \\
+        & ~~~~ \fun{transVITime} ~pp ~ei~ sysS~ (\fun{txvldt}~tx)  , \\
+        & ~~~~ \{~k_P\mid k \in \dom \fun{txwitsVKey}~{tx}~\} , \\
+        & ~~~~ \hldiff{\{ (sp_P, d_P) \mid sp \mapsto (d, \_) \in \fun{indexedRdmrs}~tx \}}, \\
+        & ~~~~ \{~(h_P,~d_P)\mid h\mapsto d \in \fun{txdats}~{tx}~\} , \\
+        & ~~~~ (\fun{txid}~{tx})_P)
+    \end{align*}
+  \caption{Transaction Summarization Functions}
+  \label{fig:txinfo-funcs}
+\end{figure}
