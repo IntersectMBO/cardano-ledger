@@ -63,6 +63,7 @@ module Cardano.Ledger.Alonzo.TxBody
     AlonzoBody,
     EraIndependentScriptIntegrity,
     ScriptIntegrityHash,
+    getAlonzoTxOutAddr,
     getAlonzoTxOutEitherAddr,
   )
 where
@@ -885,6 +886,10 @@ instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMay
         Refl <- sameNat (Proxy @(SizeHash (CC.HASH c))) (Proxy @32)
         decodeDataHash32 @c dh
     _ -> SNothing
+
+getAlonzoTxOutAddr :: Era era => TxOut era -> Addr (Crypto era)
+getAlonzoTxOutAddr (TxOutCompact a _) = decompactAddr a
+getAlonzoTxOutAddr (TxOutCompactDH a _ _) = decompactAddr a
 
 getAlonzoTxOutEitherAddr ::
   HashAlgorithm (CC.ADDRHASH (Crypto era)) =>
