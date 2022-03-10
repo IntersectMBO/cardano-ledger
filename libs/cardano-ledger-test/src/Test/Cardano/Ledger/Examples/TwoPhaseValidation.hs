@@ -293,9 +293,9 @@ initialUtxoSt ::
   ( Default (State (EraRule "PPUP" era)),
     PostShelley era
   ) =>
-  Proof era ->
+  UTxO era ->
   UTxOState era
-initialUtxoSt pf = smartUTxOState (initUTxO pf) (Coin 0) (Coin 0) def
+initialUtxoSt utxo = smartUTxOState utxo (Coin 0) (Coin 0) def
 
 -- | This is a helper type for the expectedUTxO function.
 --  ExpectSuccess indicates that we created a valid transaction
@@ -316,18 +316,27 @@ data Expect era = ExpectSuccess (Core.TxBody era) (Core.TxOut era) | ExpectFailu
 expectedUTxO ::
   forall era.
   (HasCallStack, PostShelley era) =>
-  Proof era ->
+  UTxO era ->
   Expect era ->
   Integer ->
   UTxO era
-expectedUTxO pf ex idx = UTxO utxo
+expectedUTxO initUtxo ex idx = UTxO utxo
   where
     utxo = case ex of
       ExpectSuccess txb newOut ->
         SplitMap.insert (TxIn (txid txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
       ExpectFailure -> filteredUTxO (mkTxIxPartial (10 + idx))
     filteredUTxO :: TxIx -> SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)
-    filteredUTxO x = SplitMap.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO (initUTxO pf)
+    filteredUTxO x = SplitMap.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO initUtxo
+
+expectedUTxO' ::
+  forall era.
+  (HasCallStack, PostShelley era) =>
+  Proof era ->
+  Expect era ->
+  Integer ->
+  UTxO era
+expectedUTxO' pf ex idx = expectedUTxO (initUTxO pf) ex idx
 
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
@@ -440,7 +449,7 @@ validatingTx pf =
     ]
 
 utxoEx1 :: forall era. PostShelley era => Proof era -> UTxO era
-utxoEx1 pf = expectedUTxO pf (ExpectSuccess (validatingBody pf) (outEx1 pf)) 1
+utxoEx1 pf = expectedUTxO' pf (ExpectSuccess (validatingBody pf) (outEx1 pf)) 1
 
 utxoStEx1 ::
   forall era.
@@ -514,7 +523,7 @@ notValidatingTx pf =
     ]
 
 utxoEx2 :: PostShelley era => Proof era -> UTxO era
-utxoEx2 pf = expectedUTxO pf ExpectFailure 2
+utxoEx2 pf = expectedUTxO' pf ExpectFailure 2
 
 utxoStEx2 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
@@ -571,7 +580,7 @@ validatingTxWithCert pf =
     ]
 
 utxoEx3 :: PostShelley era => Proof era -> UTxO era
-utxoEx3 pf = expectedUTxO pf (ExpectSuccess (validatingBodyWithCert pf) (outEx3 pf)) 3
+utxoEx3 pf = expectedUTxO' pf (ExpectSuccess (validatingBodyWithCert pf) (outEx3 pf)) 3
 
 utxoStEx3 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
@@ -628,7 +637,7 @@ notValidatingTxWithCert pf =
     ]
 
 utxoEx4 :: PostShelley era => Proof era -> UTxO era
-utxoEx4 pf = expectedUTxO pf ExpectFailure 4
+utxoEx4 pf = expectedUTxO' pf ExpectFailure 4
 
 utxoStEx4 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
@@ -687,7 +696,7 @@ validatingTxWithWithdrawal pf =
     ]
 
 utxoEx5 :: PostShelley era => Proof era -> UTxO era
-utxoEx5 pf = expectedUTxO pf (ExpectSuccess (validatingBodyWithWithdrawal pf) (outEx5 pf)) 5
+utxoEx5 pf = expectedUTxO' pf (ExpectSuccess (validatingBodyWithWithdrawal pf) (outEx5 pf)) 5
 
 utxoStEx5 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
@@ -746,7 +755,7 @@ notValidatingTxWithWithdrawal pf =
     ]
 
 utxoEx6 :: PostShelley era => Proof era -> UTxO era
-utxoEx6 pf = expectedUTxO pf ExpectFailure 6
+utxoEx6 pf = expectedUTxO' pf ExpectFailure 6
 
 utxoStEx6 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
@@ -804,7 +813,7 @@ validatingTxWithMint pf =
     ]
 
 utxoEx7 :: forall era. (HasTokens era, PostShelley era) => Proof era -> UTxO era
-utxoEx7 pf = expectedUTxO pf (ExpectSuccess (validatingBodyWithMint pf) (outEx7 pf)) 7
+utxoEx7 pf = expectedUTxO' pf (ExpectSuccess (validatingBodyWithMint pf) (outEx7 pf)) 7
 
 utxoStEx7 ::
   forall era.
@@ -863,7 +872,7 @@ notValidatingTxWithMint pf =
     ]
 
 utxoEx8 :: PostShelley era => Proof era -> UTxO era
-utxoEx8 pf = expectedUTxO pf ExpectFailure 8
+utxoEx8 pf = expectedUTxO' pf ExpectFailure 8
 
 utxoStEx8 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
@@ -1012,7 +1021,7 @@ okSupplimentaryDatumTx pf =
     ]
 
 utxoEx10 :: forall era. PostShelley era => Proof era -> UTxO era
-utxoEx10 pf = expectedUTxO pf (ExpectSuccess (okSupplimentaryDatumTxBody pf) (outEx10 pf)) 3
+utxoEx10 pf = expectedUTxO' pf (ExpectSuccess (okSupplimentaryDatumTxBody pf) (outEx10 pf)) 3
 
 utxoStEx10 ::
   forall era.
@@ -1066,7 +1075,7 @@ multipleEqualCertsTx pf =
     ]
 
 utxoEx11 :: PostShelley era => Proof era -> UTxO era
-utxoEx11 pf = expectedUTxO pf (ExpectSuccess (multipleEqualCertsBody pf) (outEx3 pf)) 3
+utxoEx11 pf = expectedUTxO' pf (ExpectSuccess (multipleEqualCertsBody pf) (outEx3 pf)) 3
 
 utxoStEx11 ::
   (Default (State (EraRule "PPUP" era)), PostShelley era) =>
@@ -1111,7 +1120,7 @@ nonScriptOutWithDatumTx pf =
     ]
 
 utxoEx12 :: PostShelley era => Proof era -> UTxO era
-utxoEx12 pf = expectedUTxO pf (ExpectSuccess (nonScriptOutWithDatumTxBody pf) (outEx12 pf)) 103
+utxoEx12 pf = expectedUTxO' pf (ExpectSuccess (nonScriptOutWithDatumTxBody pf) (outEx12 pf)) 103
 
 utxoStEx12 ::
   ( Default (State (EraRule "PPUP" era)),
@@ -1703,9 +1712,10 @@ initialBBodyState ::
     PostShelley era
   ) =>
   Proof era ->
+  UTxO era ->
   BbodyState era
-initialBBodyState pf =
-  BbodyState (LedgerState (initialUtxoSt pf) (dpstate pf)) (BlocksMade mempty)
+initialBBodyState pf utxo =
+  BbodyState (LedgerState (initialUtxoSt utxo) (dpstate pf)) (BlocksMade mempty)
 
 coldKeys :: CC.Crypto c => KeyPair 'BlockIssuer c
 coldKeys = KeyPair vk sk
@@ -1867,13 +1877,14 @@ testUTXOWwith ::
   ) =>
   WitRule "UTXOW" era ->
   (Result era -> Result era -> Assertion) ->
+  UTxO era ->
   Core.PParams era ->
   Core.Tx era ->
   Result era ->
   Assertion
-testUTXOWwith wit@(UTXOW proof) cont pparams tx expected =
+testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
   let env = utxoEnv pparams
-      state = initialUtxoSt proof
+      state = initialUtxoSt utxo
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
@@ -1955,6 +1966,7 @@ testUTXOWsubset,
       PostShelley era
     ) =>
     WitRule "UTXOW" era ->
+    UTxO era ->
     Core.PParams era ->
     Core.Tx era ->
     Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era)) ->
@@ -1966,14 +1978,26 @@ testUTXOW wit@(UTXOW (Babbage _)) = testUTXOWwith wit genericCont
 testUTXOW (UTXOW other) = error ("Cannot use testUTXOW in era " ++ show other)
 
 -- | Use a subset test on the expected and computed [PredicateFailure]
-testUTXOWsubset wit@(UTXOW (Alonzo _)) = testUTXOWwith wit subsetCont
-testUTXOWsubset wit@(UTXOW (Babbage _)) = testUTXOWwith wit subsetCont
-testUTXOWsubset (UTXOW other) = error ("Cannot use testUTXOW in era " ++ show other)
+testUTXOWsubset wit@(UTXOW (Alonzo _)) utxo = testUTXOWwith wit subsetCont utxo
+testUTXOWsubset wit@(UTXOW (Babbage _)) utxo = testUTXOWwith wit subsetCont utxo
+testUTXOWsubset (UTXOW other) _ = error ("Cannot use testUTXOW in era " ++ show other)
+
+testU ::
+  forall era.
+  ( GoodCrypto (Crypto era),
+    Default (State (EraRule "PPUP" era)),
+    PostShelley era
+  ) =>
+  Proof era ->
+  Core.Tx era ->
+  Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era)) ->
+  Assertion
+testU pf tx expect = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf) tx expect
 
 -- | Use a test where any two (ValidationTagMismatch x y) failures match regardless of 'x' and 'y'
-specialCase wit@(UTXOW proof) pparam tx expected =
+specialCase wit@(UTXOW proof) utxo pparam tx expected =
   let env = utxoEnv pparam
-      state = initialUtxoSt proof
+      state = initialUtxoSt utxo
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
@@ -2031,100 +2055,85 @@ alonzoUTXOWexamplesB pf =
     [ testGroup
         "valid transactions"
         [ testCase "validating SPEND script" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ validatingTx pf)
               (Right . utxoStEx1 $ pf),
           testCase "not validating SPEND script" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf False $ notValidatingTx pf)
               (Right . utxoStEx2 $ pf),
           testCase "validating CERT script" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ validatingTxWithCert pf)
               (Right . utxoStEx3 $ pf),
           testCase "not validating CERT script" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf False $ notValidatingTxWithCert pf)
               (Right . utxoStEx4 $ pf),
           testCase "validating WITHDRAWAL script" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ validatingTxWithWithdrawal pf)
               (Right . utxoStEx5 $ pf),
           testCase "not validating WITHDRAWAL script" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf False $ notValidatingTxWithWithdrawal pf)
               (Right . utxoStEx6 $ pf),
           testCase "validating MINT script" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ validatingTxWithMint pf)
               (Right . utxoStEx7 $ pf),
           testCase "not validating MINT script" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf False $ notValidatingTxWithMint pf)
               (Right . utxoStEx8 $ pf),
           testCase "validating scripts everywhere" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ validatingTxManyScripts pf)
               (Right . utxoStEx9 $ pf),
           testCase "acceptable supplimentary datum" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ okSupplimentaryDatumTx pf)
               (Right . utxoStEx10 $ pf),
           testCase "multiple identical certificates" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ multipleEqualCertsTx pf)
               (Right . utxoStEx11 $ pf),
           testCase "non-script output with datum" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ nonScriptOutWithDatumTx pf)
               (Right . utxoStEx12 $ pf)
         ],
       testGroup
         "invalid transactions"
         [ testCase "wrong network ID" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ incorrectNetworkIDTx pf)
               ( Left
                   [ fromUtxo @era (WrongNetworkInTxBody Testnet Mainnet)
                   ]
               ),
           testCase "missing required key witness" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ missingRequiredWitnessTx pf)
               ( Left [(fromPredFail @era . MissingRequiredSigners . Set.singleton) extraneousKeyHash]
               ),
           testCase "missing redeemer" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ missingRedeemerTx pf)
               ( Left
                   [ fromUtxos @era . CollectErrors $
@@ -2135,9 +2144,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "wrong wpp hash" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ wrongWppHashTx pf)
               ( Left
                   [ fromPredFail @era $
@@ -2159,9 +2167,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "missing 1-phase script witness" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ missing1phaseScriptWitnessTx pf)
               ( Left
                   [ fromUtxos @era . CollectErrors $
@@ -2173,9 +2180,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "missing 2-phase script witness" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ missing2phaseScriptWitnessTx pf)
               ( Left
                   [ fromUtxos @era . CollectErrors $
@@ -2194,9 +2200,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "redeemer with incorrect label" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ wrongRedeemerLabelTx pf)
               ( Left
                   [ fromUtxos @era (CollectErrors [NoRedeemer (Spending (mkGenesisTxIn 1))]),
@@ -2210,9 +2215,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "missing datum" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ missingDatumTx pf)
               ( Left
                   [ fromPredFail @era $
@@ -2222,9 +2226,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "phase 1 script failure" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ phase1FailureTx pf)
               ( Left
                   [ fromUtxow @era $
@@ -2237,15 +2240,15 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "valid transaction marked as invalid" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf False $ validatingTx pf)
               ( Left [fromUtxos @era (ValidationTagMismatch (IsValid False) PassedUnexpectedly)]
               ),
           testCase "invalid transaction marked as valid" $
             specialCase
               (UTXOW pf)
+              (initUTxO pf)
               (pp pf)
               (trustMeP pf True $ notValidatingTx pf)
               ( Left
@@ -2257,9 +2260,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "too many execution units for tx" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ tooManyExUnitsTx pf)
               ( Left
                   [ fromUtxo @era $
@@ -2269,9 +2271,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "missing signature for collateral input" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ missingCollateralSig pf)
               ( Left
                   [ fromUtxow @era
@@ -2289,14 +2290,14 @@ alonzoUTXOWexamplesB pf =
           testCase "insufficient collateral" $
             testUTXOW
               (UTXOW pf)
+              (initUTxO pf)
               (newPParams pf $ defaultPPs ++ [CollateralPercentage 150])
               (trustMeP pf True $ validatingTx pf)
               ( Left [fromUtxo @era (InsufficientCollateral (Coin 5) (Coin 8))]
               ),
           testCase "two-phase UTxO with no datum hash" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ plutusOutputWithNoDataTx pf)
               ( Left
                   [ fromPredFail @era $ UnspendableUTxONoDatumHash . Set.singleton $ mkGenesisTxIn 101
@@ -2305,6 +2306,7 @@ alonzoUTXOWexamplesB pf =
           testCase "unacceptable supplimentary datum" $
             testUTXOWsubset
               (UTXOW pf) -- Special rules apply here, use (expected `isSubset` computed)
+              (initUTxO pf)
               (pp pf)
               (trustMeP pf True $ notOkSupplimentaryDatumTx pf)
               ( Left
@@ -2315,9 +2317,8 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "unacceptable extra redeemer" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ extraRedeemersTx pf)
               ( Left
                   [ fromPredFail @era $
@@ -2326,18 +2327,16 @@ alonzoUTXOWexamplesB pf =
                   ]
               ),
           testCase "multiple equal plutus-locked certs" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ multipleEqualCertsTxInvalid pf)
               ( Left
                   [ fromPredFail @era $ ExtraRedeemers [RdmrPtr Tag.Cert 1]
                   ]
               ),
           testCase "no cost model" $
-            testUTXOW
-              (UTXOW pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ noCostModelTx pf)
               ( Left [fromUtxos @era (CollectErrors [NoCostModel PlutusV2])]
               )
@@ -2400,11 +2399,15 @@ alonzoBBODYexamplesP proof =
   testGroup
     (show proof ++ " BBODY examples")
     [ testCase "eight plutus scripts cases" $
-        testBBODY (BBODY proof) (initialBBodyState proof) (testAlonzoBlock proof) (Right (example1BBodyState proof)),
+        testBBODY
+          (BBODY proof)
+          (initialBBodyState proof (initUTxO proof))
+          (testAlonzoBlock proof)
+          (Right (example1BBodyState proof)),
       testCase "block with bad pool md hash in tx" $
         testBBODY
           (BBODY proof)
-          (initialBBodyState proof)
+          (initialBBodyState proof (initUTxO proof))
           (testAlonzoBadPMDHBlock proof)
           (Left [makeTooBig proof])
     ]

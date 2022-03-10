@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
-import Cardano.Ledger.Alonzo.TxInfo (HasTxInfo (..), validScript)
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
@@ -38,6 +38,7 @@ import Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
+import Cardano.Ledger.Babbage.Scripts (babbageInputDataHashes, babbageTxScripts)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut), getBabbageTxOutEitherAddr)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
@@ -171,8 +172,6 @@ instance
 
 instance CC.Crypto c => UsesTxOut (BabbageEra c) where
   makeTxOut _proxy addr val = TxOut addr val NoDatum SNothing
-  getTxOutExtras (TxOut _ _ (DatumHash h) scriptM) = (SJust h, scriptM)
-  getTxOutExtras (TxOut _ _ _ scriptM) = (SNothing, scriptM)
 
 instance CC.Crypto c => API.CLI (BabbageEra c) where
   evaluateMinFee = minfee
@@ -222,8 +221,10 @@ instance CC.Crypto c => EraModule.SupportsSegWit (BabbageEra c) where
   hashTxSeq = Alonzo.hashTxSeq
   numSegComponents = 4
 
-instance CC.Crypto c => HasTxInfo (BabbageEra c) where
+instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
+  inputDataHashes = babbageInputDataHashes
+  txscripts = babbageTxScripts
 
 -------------------------------------------------------------------------------
 -- Era Mapping
