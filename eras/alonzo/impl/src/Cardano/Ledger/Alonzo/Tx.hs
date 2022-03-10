@@ -445,7 +445,7 @@ indexedRdmrs ::
   Maybe (Data era, ExUnits)
 indexedRdmrs tx sp = case rdptr @era (getField @"body" tx) sp of
   SNothing -> Nothing
-  SJust policyid -> Map.lookup policyid rdmrs
+  SJust rPtr -> Map.lookup rPtr rdmrs
     where
       rdmrs = unRedeemers $ txrdmrs' . getField @"wits" $ tx
 

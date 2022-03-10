@@ -145,7 +145,11 @@ For the software update mechanism, see Section~\ref{sec:software-updates}.
 
 The constants $\SlotsPerEpoch$ and $\SlotsPerKESPeriod$
 represent the number of slots in an epoch/KES period (for a brief explanation
-of a KES period, see Section \ref{sec:crypto-primitives-shelley}).
+of a KES cryptography, see Section \ref{sec:crypto-primitives-shelley}). The KES period is defined
+as a duration of slots which determines how often the KES private key must be evolved. The
+KES private key must be evolved once at the start of each new KES period.  The duration of the
+KES period is determined by $\SlotsPerKESPeriod$.  Any given KES key can be evolved up
+to $\MaxKESEvo$-many times before a new operational certificate must be issued.
 The constants $\StabilityWindow$ and $\RandomnessStabilisationWindow$ concern the chain stability.
 The maximum number of time a KES key can be evolved before a pool operator
 must create a new operational certificate is given by $\MaxKESEvo$.
