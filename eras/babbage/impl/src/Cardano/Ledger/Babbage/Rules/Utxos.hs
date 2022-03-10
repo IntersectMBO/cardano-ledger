@@ -156,16 +156,14 @@ scriptsYes = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       {- isValid tx = evalScripts tx sLst = True -}
-      ifFailureFree
-        ( case evalScripts @era tx sLst of
-            Fails sss ->
-              False
-                ?!## ValidationTagMismatch
-                  (getField @"isValid" tx)
-                  (FailedUnexpectedly sss)
-            Passes -> pure ()
-        )
-        (pure ())
+      whenFailureFree $
+        case evalScripts @era tx sLst of
+          Fails sss ->
+            False
+              ?!## ValidationTagMismatch
+                (getField @"isValid" tx)
+                (FailedUnexpectedly sss)
+          Passes -> pure ()
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent validEnd ()

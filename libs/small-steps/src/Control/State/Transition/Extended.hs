@@ -45,6 +45,7 @@ module Control.State.Transition.Extended
     labeledPred,
     labeledPredE,
     ifFailureFree,
+    whenFailureFree,
     failBecause,
     judgmentContext,
     trans,
@@ -367,6 +368,9 @@ trans ctx = wrap $ SubTrans ctx pure
 ifFailureFree :: Rule sts rtype a -> Rule sts rtype a -> Rule sts rtype a
 ifFailureFree x y = liftF (IfFailureFree x y)
 
+whenFailureFree :: Rule sts rtype () -> Rule sts rtype ()
+whenFailureFree action = ifFailureFree action (pure ())
+
 liftSTS ::
   STS sts =>
   (BaseM sts) a ->
@@ -542,7 +546,7 @@ applyRuleInternal ep vp goSTS jc r = do
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
     runClause (IfFailureFree yesrule norule) = do
-      failureFree <- (null . fst <$> get)
+      failureFree <- null . fst <$> get
       if failureFree
         then foldF runClause yesrule
         else foldF runClause norule

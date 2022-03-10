@@ -220,12 +220,10 @@ scriptsNotValidateTransition = do
 
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
-      ifFailureFree
-        ( case evalScripts @era tx sLst of
-            Passes -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
-            Fails _sss -> pure ()
-        )
-        (pure ())
+      whenFailureFree $
+        case evalScripts @era tx sLst of
+          Passes -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+          Fails _sss -> pure ()
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent invalidEnd ()
