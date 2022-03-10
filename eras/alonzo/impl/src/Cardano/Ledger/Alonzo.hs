@@ -38,7 +38,12 @@ import qualified Cardano.Ledger.Alonzo.Rules.Utxos as Alonzo (UTXOS)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxow as Alonzo (AlonzoUTXOW)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
-import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (TxOut), getAlonzoTxOutEitherAddr)
+import Cardano.Ledger.Alonzo.TxBody
+  ( TxBody,
+    TxOut (TxOut),
+    getAlonzoTxOutAddr,
+    getAlonzoTxOutEitherAddr,
+  )
 import Cardano.Ledger.Alonzo.TxInfo (HasTxInfo (..), alonzoTxInfo, validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
@@ -100,6 +105,7 @@ data AlonzoEra c
 
 instance CC.Crypto c => EraModule.Era (AlonzoEra c) where
   type Crypto (AlonzoEra c) = c
+  getTxOutAddr = getAlonzoTxOutAddr
   getTxOutEitherAddr = getAlonzoTxOutEitherAddr
 
 instance API.ShelleyEraCrypto c => API.ApplyTx (AlonzoEra c) where
