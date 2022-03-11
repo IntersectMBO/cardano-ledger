@@ -161,8 +161,8 @@ babbageUtxowTransition = do
   runTest $ validateFailedBabbageScripts tx utxo -- CHANGED In BABBAGE txscripts depends on UTxO
 
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} = dom(txscripts txw)          -}
-  let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx))
-      sReceived = Map.keysSet hashScriptMap
+  let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx)) -- Script credentials
+      sReceived = Map.keysSet (getField @"scriptWits" tx) -- We don't need the reference scripts
   runTest $ Shelley.validateMissingScripts pp sNeeded sReceived
 
   {-  inputHashes  = dom(txdats txw)   -}

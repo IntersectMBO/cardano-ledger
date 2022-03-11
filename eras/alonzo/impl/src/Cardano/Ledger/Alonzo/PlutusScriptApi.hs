@@ -264,7 +264,8 @@ evalScripts tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : rest
           ]
    in (traceEvent endMsg res) `andResult` evalScripts tx rest
 
--- Collect information (purpose and hash) about all the scripts in a Tx.
+-- Collect information (purpose and ScriptHash) about all the
+-- Credentials that refer to scripts in a Tx.
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
 scriptsNeeded ::
   forall era tx.
@@ -291,6 +292,14 @@ addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpo
   (Certifying $ DCertDeleg c, hk) : ans
 addOnlyCwitness !ans _ = ans
 
+-- | This includes all the ScriptHash found in some credential in the TxBody. Purposes
+--   include Spending (script credentials in the Addr of a TxOut, pointed to by some input)
+--   Rewarding (Withdrawals), Minting (minted field), and Certifying (Delegating)
+--   In some Eras there may be multiple sets of inputs. Be sure (getField @"inputs" txb)
+--   gets all of the inputs. This is an aggregation of the Credentials refering to Scripts.
+--   The flip side of 'scriptsNeeded' is 'txscripts' which finds the actual scripts.
+--   We maintain an invariant that every script credential refers to some actual script.
+--   This is tested in the test function 'validateMissingScripts' in the Utxow rule.
 scriptsNeededFromBody ::
   forall era.
   ( Era era,

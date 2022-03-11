@@ -68,7 +68,13 @@ getDatum tx (UTxO m) sp = do
 
 {- txscripts tx utxo = txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}
 
--- | Compute a Map of all the Scripts in a ValidatedTx.
+-- | Compute a Map of (ScriptHash -> Script) for all Scripts
+--   found in a ValidatedTx. Note we are interested in the actual scripts.
+--   There are two places to look
+--   1) the Script part of the Witnesses
+--   2) the reference scripts found in the TxOuts, pointed to by the inputs
+--   The flip side is 'ScriptsNeeded' computes the ScriptHash of every Credential.
+--   We maintain the invariant that every Script Credential points to some actual script.
 babbageTxScripts ::
   forall era.
   ( Core.TxBody era ~ TxBody era,
@@ -78,11 +84,22 @@ babbageTxScripts ::
   UTxO era ->
   Core.Tx era ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era)
-babbageTxScripts (UTxO mp) tx = SplitMap.foldl' accum (getField @"scriptWits" tx) smallUtxo
+babbageTxScripts utxo tx = Map.union (refScripts ins utxo) (getField @"scriptWits" tx)
   where
     txbody = getField @"body" tx
-    scriptinputs = referenceInputs' txbody `Set.union` spendInputs' txbody
-    smallUtxo = scriptinputs SplitMap.◁ mp
+    ins = referenceInputs' txbody `Set.union` spendInputs' txbody
+
+-- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
+refScripts ::
+  forall era.
+  ( Core.TxOut era ~ TxOut era,
+    ValidateScript era
+  ) =>
+  Set (TxIn (Crypto era)) ->
+  UTxO era ->
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era)
+refScripts ins (UTxO mp) = SplitMap.foldl' accum Map.empty (ins SplitMap.◁ mp)
+  where
     accum ans txout =
       case txout of
         (TxOut _ _ _ SNothing) -> ans
