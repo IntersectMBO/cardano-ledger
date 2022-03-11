@@ -71,6 +71,7 @@ import qualified Data.Compact.SplitMap as SplitMap (foldlWithKey', lookup, (◁)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import qualified Data.Set as Set
+import Debug.Trace (trace)
 import GHC.Records (HasField (..))
 import Validation (failureUnless)
 
@@ -106,15 +107,27 @@ validateFailedBabbageScripts tx utxo = do
   let failedScripts =
         Map.filterWithKey
           ( \hs script ->
-              isNativeScript @era script
-                && ( hashScript @era script /= hs
-                       || not (validateScript @era script tx)
-                   )
+              let one = isNativeScript @era script
+                  two = hashScript @era script /= hs
+                  three = not (validateScript @era script tx)
+                  answer = one && (two || three)
+               in if answer
+                    then trace (show (one, two, three) ++ "\n  " ++ show script) answer
+                    else answer
+                    {-
+                                  isNativeScript @era script
+                                    && ( hashScript @era script /= hs
+                                           || not (validateScript @era script tx)
+                                       ) -}
           )
           (txscripts utxo tx)
   failureUnless (Map.null failedScripts) $
     Shelley.ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
 
+{-
+report one two three hs script hash = trace
+   where ans = one && (two || three)
+-}
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
 -- The tests are very generic and reusable, but the transition

@@ -37,6 +37,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 
+-- import Debug.Trace(trace)
 -- ====================================================================
 
 getTxIn :: ScriptPurpose crypto -> Maybe (TxIn crypto)
@@ -84,10 +85,18 @@ babbageTxScripts ::
   UTxO era ->
   Core.Tx era ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era)
-babbageTxScripts utxo tx = Map.union (refScripts ins utxo) (getField @"scriptWits" tx)
+babbageTxScripts utxo tx = ans
   where
     txbody = getField @"body" tx
     ins = referenceInputs' txbody `Set.union` spendInputs' txbody
+    ans = Map.union (refScripts ins utxo) (getField @"scriptWits" tx)
+
+plistf :: Monoid x => (t -> x) -> x -> [t] -> x -> x -> x
+plistf f open xs sep close = open <> loop xs <> close
+  where
+    loop [] = mempty
+    loop [y] = f y
+    loop (y : ys) = f y <> sep <> loop ys
 
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
 refScripts ::

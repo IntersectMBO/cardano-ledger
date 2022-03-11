@@ -125,6 +125,7 @@ library
     scientific,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    cardano-ledger-babbage-test,
     semigroupoids,
     small-steps,
     small-steps-test,

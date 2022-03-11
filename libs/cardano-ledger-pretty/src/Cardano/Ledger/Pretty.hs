@@ -70,6 +70,7 @@ import Cardano.Ledger.Keys
     KeyRole (Staking),
     VKey (..),
     VerKeyKES,
+    hashKey,
   )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
@@ -1562,7 +1563,7 @@ instance PrettyA DnsName where
 -- Cardano.Ledger.Shelley.Keys
 
 ppVKey :: Crypto c => VKey r c -> PDoc
-ppVKey (VKey x) = reAnnotate (Width 5 :) (viaShow x)
+ppVKey vk@(VKey x) = vsep [reAnnotate (Width 5 :) (viaShow x), "hash = " <+> ppKeyHash (hashKey vk)]
 
 ppKeyPair :: Crypto c => KeyPair r c -> PDoc
 ppKeyPair (KeyPair x y) =

@@ -43,6 +43,7 @@ import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams, PParams' (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
+-- Aritrary instances
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     ProtVer (..),
@@ -126,9 +127,11 @@ import GHC.Stack
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
+import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Generic.Fields hiding (Mint)
 import qualified Test.Cardano.Ledger.Generic.Fields as Generic (TxBodyField (Mint))
 import Test.Cardano.Ledger.Generic.PrettyCore
+import Test.Cardano.Ledger.Generic.PrettyCore (txSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
@@ -234,12 +237,19 @@ getTxOutVal (Mary _) (Shelley.TxOut _ v) = v
 getTxOutVal (Allegra _) (Shelley.TxOut _ v) = v
 getTxOutVal (Shelley _) (Shelley.TxOut _ v) = v
 
+getTxOutRefScript :: Proof era -> Core.TxOut era -> StrictMaybe (Core.Script era)
+getTxOutRefScript (Babbage _) (Babbage.TxOut _ _ _ ms) = ms
+getTxOutRefScript _ _ = SNothing
+
 emptyPPUPstate :: forall era. Proof era -> State (Core.EraRule "PPUP" era)
 emptyPPUPstate (Babbage _) = def
 emptyPPUPstate (Alonzo _) = def
 emptyPPUPstate (Mary _) = def
 emptyPPUPstate (Allegra _) = def
 emptyPPUPstate (Shelley _) = def
+
+maxRefInputs (Babbage _) = 3
+maxRefInputs other = 0
 
 isValid' :: Proof era -> Core.Tx era -> IsValid
 isValid' (Alonzo _) x = isValid x
@@ -392,11 +402,17 @@ genTxOutKeyWitness ::
   Maybe Tag ->
   Core.TxOut era ->
   GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
-genTxOutKeyWitness era mTag txout = do
+genTxOutKeyWitness era mTag txout =
   case (getTxOutAddr txout) of
     AddrBootstrap baddr ->
       error $ "Can't authorize bootstrap address: " ++ show baddr
-    Addr _ payCred _ -> (mkWitVKey era mTag payCred)
+    Addr _ payCred _ ->
+      case getTxOutRefScript reify txout of
+        SNothing -> (mkWitVKey era mTag payCred)
+        SJust script -> do
+          f1 <- mkWitVKey era mTag payCred
+          f2 <- genGenericScriptWitness reify (Just Spend) script
+          pure (\safehash -> f1 safehash ++ f2 safehash)
 
 genCredKeyWit ::
   forall era k.
@@ -629,7 +645,8 @@ genPlutusScript proof tag = do
   language <- lift $ elements (primaryLanguages proof)
   script <-
     if isValid
-      then alwaysSucceeds @era language . (+ numArgs) . getNonNegative <$> lift arbitrary
+      then -- alwaysSucceeds @era language . (+ numArgs) . getNonNegative <$> lift arbitrary
+        alwaysSucceeds @era language . (+ numArgs) <$> (lift $ elements [0, 1, 2, 3 :: Natural])
       else pure $ alwaysFails @era language numArgs
   let corescript :: Core.Script era
       corescript = case proof of
@@ -784,14 +801,13 @@ genTxOut proof val = do
             pure $ [Datum datum] ++ [RefScript script]
           (Alonzo _, Just (PlutusScript _ _)) -> do
             (datahash, _data) <- genDatumWithHash
-
             pure [DHash (SJust datahash)]
           (_, _) -> pure []
   pure $ [Address addr, Amount val] ++ dataHashFields
 
 genUTxO :: Reflect era => GenRS era (UTxO era)
 genUTxO = do
-  NonEmpty ins <- lift $ resize 10 arbitrary
+  NonEmpty ins <- lift $ resize 20 arbitrary
   UTxO <$> sequence (SplitMap.fromSet (const genOut) (Set.fromList ins))
   where
     genOut = do
@@ -1029,10 +1045,10 @@ genValidatedTx proof = do
   GenEnv {geValidityInterval, gePParams} <- ask
   UTxO utxoNoCollateral <- genUTxO
   -- 1. Produce utxos that will be spent
-  n <- lift $ choose (1, length utxoNoCollateral)
+  numInputs <- lift $ choose (1, length utxoNoCollateral)
 
   toSpendNoCollateral <-
-    Map.fromList . take n <$> lift (shuffle $ SplitMap.toList utxoNoCollateral)
+    Map.fromList . take numInputs <$> lift (shuffle $ SplitMap.toList utxoNoCollateral)
   -- 2. Check if all Plutus scripts are valid
   let toSpendNoCollateralTxOuts :: [Core.TxOut era]
       toSpendNoCollateralTxOuts = Map.elems toSpendNoCollateral
@@ -1087,14 +1103,18 @@ genValidatedTx proof = do
     mapM (\a -> genTxOutKeyWitness proof Nothing (coreTxOut proof [Address a, Amount (inject maxCoin)])) collateralAddresses
   networkId <- lift $ elements [SNothing, SJust Testnet]
 
+  -- 4B. Steal some spending inputs to be referenence inputs
+  numRefInputs <- pure 0 -- lift $ choose (0,max (numInputs - maxRefInputs proof) 0)  -- if too few inputs, don't steal any
+  let (spendInputs, refInputs) = Map.splitAt (numInputs - numRefInputs) toSpendNoCollateral
   -- 5. Estimate the fee
   let redeemerDatumWits = (redeemerWitsList ++ datumWitsList)
       bogusIntegrityHash = hashScriptIntegrity' proof gePParams mempty (Redeemers mempty) mempty
       txBodyNoFee =
         coreTxBody
           proof
-          [ Inputs (Map.keysSet (toSpendNoCollateral)),
+          [ Inputs (Map.keysSet spendInputs),
             Collateral bogusCollateralTxIns,
+            RefInputs (Map.keysSet refInputs),
             TotalCol (Coin 0), -- Add a bogus Coin, fill it in later
             Outputs' (rewardsWithdrawalTxOut : recipients),
             Certs' dcerts,
@@ -1128,7 +1148,7 @@ genValidatedTx proof = do
   -- 6. Crank up the amount in one of outputs to account for the fee. Note this is
   -- a hack that is not possible in a real life, but in the end it does produce
   -- real life like setup
-  feeKey <- lift $ elements $ Map.keys toSpendNoCollateral
+  feeKey <- lift $ elements $ Map.keys spendInputs
   let utxoFeeAdjusted =
         UTxO $ case SplitMap.lookup feeKey utxoNoCollateral of
           Nothing -> utxoNoCollateral
@@ -1329,8 +1349,11 @@ testTxValidForLEDGER ::
   Box era ->
   Property
 testTxValidForLEDGER proof (Box (trc@(TRC (_, (utxoState, dpstate), vtx))) _) =
-  trace ("UTxO\n" ++ show (prettyUTxO proof (_utxo utxoState))) $
-    case applySTSByProof proof trc of -- trc encodes the initial (generated) state, vtx is the transaction
+  ( if False
+      then trace (show (txSummary proof vtx))
+      else id
+  )
+    $ case applySTSByProof proof trc of -- trc encodes the initial (generated) state, vtx is the transaction
       Right (utxoState', dpstate') ->
         -- UTxOState and DPState after applying the transaction $$$
         classify (coerce (isValid' proof vtx)) "TxValid" $
@@ -1415,7 +1438,7 @@ coreTypesRoundTrip =
     "Core types make generic roundtrips"
     [ testGroup
         "Witnesses roundtrip"
-        [ -- testProperty "Babbage era" $ txWitRoundTrip (Babbage Mock), -- No Arbitrary instance yet
+        [ testProperty "Babbage era" $ txWitRoundTrip (Babbage Mock), -- No Arbitrary instance yet
           testProperty "Alonzo era" $ txWitRoundTrip (Alonzo Mock),
           testProperty "Mary era" $ txWitRoundTrip (Mary Mock),
           testProperty "Allegra era" $ txWitRoundTrip (Allegra Mock),
@@ -1423,7 +1446,7 @@ coreTypesRoundTrip =
         ],
       testGroup
         "TxBody roundtrips"
-        [ -- testProperty "Babbage era" $ txBodyRoundTrip (Babbage Mock), -- No Arbitrary instance yet
+        [ testProperty "Babbage era" $ txBodyRoundTrip (Babbage Mock), -- No Arbitrary instance yet
           testProperty "Alonzo era" $ txBodyRoundTrip (Alonzo Mock),
           testProperty "Mary era" $ txBodyRoundTrip (Mary Mock),
           testProperty "Allegra era" $ txBodyRoundTrip (Allegra Mock),
@@ -1431,7 +1454,7 @@ coreTypesRoundTrip =
         ],
       testGroup
         "TxOut roundtrips"
-        [ -- testProperty "Babbage era" $ txOutRoundTrip (Babbage Mock), -- No Arbitrary instance yet
+        [ testProperty "Babbage era" $ txOutRoundTrip (Babbage Mock), -- No Arbitrary instance yet
           testProperty "Alonzo era" $ txOutRoundTrip (Alonzo Mock),
           testProperty "Mary era" $ txOutRoundTrip (Mary Mock),
           testProperty "Allegra era" $ txOutRoundTrip (Allegra Mock),
@@ -1439,7 +1462,7 @@ coreTypesRoundTrip =
         ],
       testGroup
         "Tx roundtrips"
-        [ -- testProperty "Babbage era" $ txRoundTrip (Babbage Mock), -- No Arbitrary instance yet
+        [ testProperty "Babbage era" $ txRoundTrip (Babbage Mock), -- No Arbitrary instance yet
           testProperty "Alonzo era" $ txRoundTrip (Alonzo Mock),
           testProperty "Mary era" $ txRoundTrip (Mary Mock),
           testProperty "Allegra era" $ txRoundTrip (Allegra Mock),
@@ -1489,3 +1512,30 @@ test n proof = defaultMain $
       testProperty "Babbage ValidTx preserves ADA" $
         (withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
     other -> error ("NO Test in era " ++ show other)
+
+alls :: [(String, Language, Natural, Script (BabbageEra Mock))]
+alls =
+  [ (name, v, n, f v n)
+    | v <- [PlutusV1, PlutusV2],
+      (f, name) <- [(alwaysSucceeds, "S"), (alwaysFails, "F")],
+      n <- [0 .. 3]
+  ]
+
+{- mapM_ print alls
+("S",PlutusV1,0,PlutusScript PlutusV1 ScriptHash "9eb420ad4a8eb3d63d7c3d578b97ac23361626ac1b5688aad376e127")
+("S",PlutusV1,1,PlutusScript PlutusV1 ScriptHash "c370d10724c6b5a2448af41238e024ad470c0139da7f4b8527a47d74")
+("S",PlutusV1,2,PlutusScript PlutusV1 ScriptHash "8d5bd54aa89e390f94b874db53531d8a6e50522ca181817805af06d9")
+("S",PlutusV1,3,PlutusScript PlutusV1 ScriptHash "58503a1d89a21fc9fc53d6a7cccef47341175a8f47636f57ccbdca2d")
+("F",PlutusV1,0,PlutusScript PlutusV1 ScriptHash "592b4d362fd98dc054dda15579f5524ccf184eb6228f514b9db32e12")
+("F",PlutusV1,1,PlutusScript PlutusV1 ScriptHash "4509cdddad21412c22c9164e10bc6071340ba235562f1575a35ded4d")
+("F",PlutusV1,2,PlutusScript PlutusV1 ScriptHash "f6210ccd14db6200883b2d2f678388160de1fee4a16554478c03c2bf")
+("F",PlutusV1,3,PlutusScript PlutusV1 ScriptHash "6a09cb22defaf4a96a6be1ef6c07467ac9923d1750a79214a06c503a")
+("S",PlutusV2,0,PlutusScript PlutusV2 ScriptHash "d28966b3926bf3b014e66e5440b3789b86b375499b1951d791cf783b")
+("S",PlutusV2,1,PlutusScript PlutusV2 ScriptHash "3c3b41b6bbd2d9e2aaf12e7bea35f75489c777faa57f44dbf3992782")
+("S",PlutusV2,2,PlutusScript PlutusV2 ScriptHash "195156f87f299562300852de1f1699d574e501b4ba886eab3ad6cf93")
+("S",PlutusV2,3,PlutusScript PlutusV2 ScriptHash "f3fbfa47030ad28189ae30b6218704ebe707f3035e5526e5a391df4d")
+("F",PlutusV2,0,PlutusScript PlutusV2 ScriptHash "d7d9f9b77d5ab2d26fe1bfcdad92542eb314392dec23db521ac17154")
+("F",PlutusV2,1,PlutusScript PlutusV2 ScriptHash "d8be7cd3abceaeead9abaf22a46a358b8cbd423a819cae6823e15cb6")
+("F",PlutusV2,2,PlutusScript PlutusV2 ScriptHash "03d9bf874aa50cb845f4dcf011a223ed4b1ccd51b485990baa79d676")
+("F",PlutusV2,3,PlutusScript PlutusV2 ScriptHash "51936f3c98a04b6609aa9b5c832ba1182cf43a58e534fcc05db09d69")
+-}
