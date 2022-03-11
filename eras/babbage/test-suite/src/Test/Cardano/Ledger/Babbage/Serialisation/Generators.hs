@@ -52,7 +52,6 @@ import Data.Maybe (fromJust, fromMaybe)
 import qualified Data.Set as Set
 import Data.Text (pack)
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators (genData)

@@ -124,7 +124,7 @@ instance CryptoClass.Crypto c => SupportsSegWit (ShelleyEra c) where
   numSegComponents = 3
 
 instance CryptoClass.Crypto c => ValidateAuxiliaryData (ShelleyEra c) c where
-  validateAuxiliaryData (Metadata m) = all validMetadatum m
+  validateAuxiliaryData _ (Metadata m) = all validMetadatum m
   hashAuxiliaryData metadata = AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @c) index metadata)
     where
       index = Proxy @EraIndependentAuxiliaryData

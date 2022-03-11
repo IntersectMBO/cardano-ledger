@@ -48,7 +48,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
+import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Cardano.Ledger.Shelley.Orphans ()
 import Test.Cardano.Ledger.Shelley.Utils (mkAddr)
@@ -110,7 +110,7 @@ exampleTxBodyBabbage =
     ( StrictSeq.fromList
         [ TxOut
             (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
-            (SLE.exampleMultiAssetValue 2)
+            (MarySLE.exampleMultiAssetValue 2)
             (Datum $ dataToBinaryData datumExample) -- inline datum
             (SJust $ alwaysSucceeds PlutusV2 3) -- reference script
         ]
@@ -135,7 +135,7 @@ exampleTxBodyBabbage =
           (EpochNo 0)
     ) -- txUpdates
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
-    (SLE.exampleMultiAssetValue 3) -- mint
+    (MarySLE.exampleMultiAssetValue 3) -- mint
     (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
     (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
     (SJust Mainnet) -- txnetworkid
@@ -178,6 +178,6 @@ exampleTransactionInBlock = ValidatedTx b w (IsValid True) a
 exampleBabbageNewEpochState :: NewEpochState StandardBabbage
 exampleBabbageNewEpochState =
   SLE.exampleNewEpochState
-    (SLE.exampleMultiAssetValue 1)
+    (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
     (emptyPParams {_coinsPerUTxOWord = Coin 1})

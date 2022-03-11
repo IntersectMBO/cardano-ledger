@@ -99,7 +99,7 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
             collectedScripts = Set.fromList $ map (\(s, _, _, _) -> s) collected
             suppliedPScrpts = Set.fromList [PlutusScript v s | PlutusScript v s <- Map.elems allScripts]
             expectedPScripts = collectedScripts == suppliedPScrpts
-            allPlutusTrue = case evalScripts tx collected of
+            allPlutusTrue = case evalScripts (_protocolVersion pp) tx collected of
               Fails _ -> False
               Passes -> True
          in counterexample

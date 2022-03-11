@@ -8,7 +8,6 @@ module Cardano.Ledger.Alonzo.Language where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord64)
 import Control.DeepSeq (NFData (..))
 import Data.Ix (Ix)
-import qualified Data.Set as Set
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 
@@ -37,5 +36,5 @@ instance ToCBOR Language where
 instance FromCBOR Language where
   fromCBOR = toEnum . fromIntegral <$> decodeWord64
 
-nonNativeLanguages :: Set.Set Language
-nonNativeLanguages = Set.fromList [minBound .. maxBound]
+nonNativeLanguages :: [Language]
+nonNativeLanguages = [minBound .. maxBound]

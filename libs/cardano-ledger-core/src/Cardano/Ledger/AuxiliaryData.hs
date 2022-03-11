@@ -14,6 +14,7 @@ module Cardano.Ledger.AuxiliaryData
 where
 
 import Cardano.Binary (FromCBOR, ToCBOR)
+import Cardano.Ledger.BaseTypes (ProtVer)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
@@ -41,4 +42,4 @@ deriving instance
 
 class ValidateAuxiliaryData era c | era -> c where
   hashAuxiliaryData :: Core.AuxiliaryData era -> AuxiliaryDataHash c
-  validateAuxiliaryData :: Core.AuxiliaryData era -> Bool
+  validateAuxiliaryData :: ProtVer -> Core.AuxiliaryData era -> Bool

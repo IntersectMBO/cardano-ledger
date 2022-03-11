@@ -152,9 +152,9 @@ main = do
       "import Cardano.Ledger.Alonzo.Language (Language (..))",
       "import Cardano.Ledger.Alonzo.Scripts (CostModel (..), Script (..))",
       "import Data.ByteString.Short (pack)",
-      "import Plutus.V1.Ledger.Api (defaultCostModelParams)\n",
-      "defaultCostModel :: Maybe CostModel",
-      "defaultCostModel = CostModel <$> defaultCostModelParams"
+      "import Plutus.V1.Ledger.EvaluationContext (costModelParamsForTesting, mkEvaluationContext)\n",
+      "defaultCostModel :: CostModel",
+      "defaultCostModel = CostModel costModelParamsForTesting <$> (mkEvaluationContext costModelParamsForTesting)"
     ]
   display outh PlutusV1 guess2args guessDecl2args "guessTheNumber2"
   display outh PlutusV1 guessTheNumberBytes guessDecl "guessTheNumber3"

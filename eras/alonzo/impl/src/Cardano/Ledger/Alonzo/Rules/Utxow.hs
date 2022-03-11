@@ -24,7 +24,7 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent, UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (ConcreteAlonzo)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, Script (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModels, Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose,
     ValidatedTx (..),
@@ -314,7 +314,7 @@ ppViewHashesMatch ::
     Core.Script era ~ Script era,
     Core.Tx era ~ ValidatedTx era,
     HasField "scriptIntegrityHash" (Core.TxBody era) (StrictMaybe (ScriptIntegrityHash (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
+    HasField "_costmdls" (Core.PParams era) CostModels
   ) =>
   Core.Tx era ->
   Core.TxBody era ->

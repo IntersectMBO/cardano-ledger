@@ -44,8 +44,7 @@ where
 
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash, Data (..), DataHash, hashData)
-import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices)
+import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (IsValid (..), ScriptIntegrityHash, ValidatedTx (..))
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxBody (..), TxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..))
@@ -208,7 +207,7 @@ data PParamsField era
   | -- | Cost in ada per byte of UTxO storage (instead of _minUTxOValue)
     AdaPerUTxOWord (Coin)
   | -- | Cost models for non-native script languages
-    Costmdls ((Map Language CostModel))
+    Costmdls (CostModels)
   | -- | Prices of execution units (for non-native script languages)
     Prices (Prices)
   | -- | Max total script execution resources units allowed per tx

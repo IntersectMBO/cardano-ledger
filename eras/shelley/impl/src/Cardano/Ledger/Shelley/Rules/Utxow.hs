@@ -586,6 +586,7 @@ validateMetadata ::
   Test (UtxowPredicateFailure era)
 validateMetadata pp tx =
   let txbody = getField @"body" tx
+      pv = getField @"_protocolVersion" pp
    in case (getField @"adHash" txbody, getField @"auxiliaryData" tx) of
         (SNothing, SNothing) -> pure ()
         (SJust mdh, SNothing) -> failure $ MissingTxMetadata mdh
@@ -597,7 +598,7 @@ validateMetadata pp tx =
                 ConflictingMetadataHash mdh (hashAuxiliaryData @era md'),
               -- check metadata value sizes
               when (SoftForks.validMetadata pp) $
-                failureUnless (validateAuxiliaryData @era md') InvalidMetadata
+                failureUnless (validateAuxiliaryData @era pv md') InvalidMetadata
             ]
 
 -- | check genesis keys signatures for instantaneous rewards certificates

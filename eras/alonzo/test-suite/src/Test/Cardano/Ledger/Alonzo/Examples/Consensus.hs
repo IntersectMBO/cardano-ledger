@@ -9,7 +9,7 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), AuxiliaryDataHash (..), D
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..), emptyPParams, emptyPParamsUpdate)
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Prices (..), Script (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices (..), Script (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Translation ()
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
@@ -47,6 +47,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import qualified PlutusTx as Plutus
+import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as SLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
@@ -174,7 +175,7 @@ exampleAlonzoGenesis :: AlonzoGenesis
 exampleAlonzoGenesis =
   AlonzoGenesis
     { coinsPerUTxOWord = Coin 1,
-      costmdls = Map.fromList [(PlutusV1, CostModel (Map.fromList [("A", 79), ("V", 78)]))],
+      costmdls = CostModels $ Map.fromList [(PlutusV1, testingCostModelV1)],
       prices = Prices (boundRational' 90) (boundRational' 91),
       maxTxExUnits = ExUnits 123 123,
       maxBlockExUnits = ExUnits 223 223,

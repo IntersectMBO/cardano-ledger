@@ -208,9 +208,9 @@ instance (CC.Crypto c) => UsesPParams (AlonzoEra c) where
 
 instance CC.Crypto c => ValidateAuxiliaryData (AlonzoEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
-  validateAuxiliaryData (AuxiliaryData metadata scrips) =
+  validateAuxiliaryData pv (AuxiliaryData metadata scrips) =
     all validMetadatum metadata
-      && all validScript scrips
+      && all (validScript pv) scrips
 
 instance CC.Crypto c => EraModule.SupportsSegWit (AlonzoEra c) where
   type TxSeq (AlonzoEra c) = Alonzo.TxSeq (AlonzoEra c)

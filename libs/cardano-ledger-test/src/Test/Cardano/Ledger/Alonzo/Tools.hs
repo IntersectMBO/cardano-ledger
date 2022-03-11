@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Alonzo.Tools (tests, testExUnitCalculation) where
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UTXOS)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.Tools (BasicFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.Tx
   ( ValidatedTx (..),
@@ -31,8 +31,7 @@ import Data.Array (Array, array)
 import Data.Default.Class (Default (..))
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (fromJust)
-import Test.Cardano.Ledger.Alonzo.PlutusScripts (defaultCostModel)
+import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation (A, datumExample1, initUTxO, someKeys, testSystemStart, validatingBody, validatingRedeemersEx1)
 import Test.Cardano.Ledger.Generic.Fields (PParamsField (..), TxField (..), WitnessesField (..))
@@ -135,7 +134,7 @@ uenv :: UtxoEnv A
 uenv = UtxoEnv (SlotNo 0) pparams mempty (GenDelegs mempty)
 
 costmodels :: Array Language CostModel
-costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, fromJust defaultCostModel)]
+costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, testingCostModelV1)]
 
 ustate :: UTxOState A
 ustate =
@@ -152,7 +151,7 @@ pparams :: PParams A
 pparams =
   newPParams
     (Alonzo Mock)
-    [ Costmdls $ Map.singleton PlutusV1 $ fromJust defaultCostModel,
+    [ Costmdls . CostModels $ Map.singleton PlutusV1 testingCostModelV1,
       MaxValSize 1000000000,
       MaxTxExUnits $ ExUnits 100000000 100000000,
       MaxBlockExUnits $ ExUnits 100000000 100000000,

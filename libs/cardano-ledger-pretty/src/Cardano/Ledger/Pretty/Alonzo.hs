@@ -72,10 +72,15 @@ ppExUnits (ExUnits mem step) =
 instance PrettyA ExUnits where prettyA = ppExUnits
 
 ppCostModel :: CostModel -> PDoc
-ppCostModel (CostModel m) =
-  ppSexp "CostModel" [ppMap text ppInteger m]
+ppCostModel (CostModelV1 m _) =
+  ppSexp "CostModelV1" [ppMap text ppInteger m]
+ppCostModel (CostModelV2 m _) =
+  ppSexp "CostModelV2" [ppMap text ppInteger m]
 
 instance PrettyA CostModel where prettyA = ppCostModel
+
+ppCostModels :: CostModels -> PDoc
+ppCostModels (CostModels cms) = (ppMap ppLanguage ppCostModel) cms
 
 ppPrices :: Prices -> PDoc
 ppPrices Prices {prMem, prSteps} =
@@ -111,7 +116,7 @@ ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mp
       ("protocolVersion", lift ppProtVer pv),
       ("minPoolCost", lift ppCoin mpool),
       ("adaPerWord", lift ppCoin ada),
-      ("costmdls", lift (ppMap ppLanguage ppCostModel) cost),
+      ("costmdls", lift ppCostModels cost),
       ("prices", lift ppPrices prices),
       ("maxTxExUnits", lift ppExUnits mxEx),
       ("maxBlockExUnits", lift ppExUnits mxBEx),
@@ -166,7 +171,7 @@ ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ad
       ("protocolVersion", ppProtVer pv),
       ("minPoolCost", ppCoin mpool),
       ("adaPerWord", ppCoin ada),
-      ("costmdls", ppMap ppLanguage ppCostModel cost),
+      ("costmdls", ppCostModels cost),
       ("prices", ppPrices prices),
       ("maxTxExUnits", ppExUnits mxEx),
       ("maxBlockExUnits", ppExUnits mxBEx),

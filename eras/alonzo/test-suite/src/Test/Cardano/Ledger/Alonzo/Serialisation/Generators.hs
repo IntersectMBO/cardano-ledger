@@ -6,6 +6,7 @@
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -22,6 +23,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPred
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
+    CostModels (..),
     ExUnits (..),
     Prices (..),
     Script (..),
@@ -41,11 +43,12 @@ import Data.Int (Int64)
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromMaybe)
+import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (pack)
+import Data.Text (Text, pack)
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
-import qualified PlutusTx as Plutus
+import qualified Plutus.V1.Ledger.Api as PV1
+import qualified Plutus.V2.Ledger.Api as PV2
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
@@ -61,21 +64,21 @@ instance Arbitrary (BinaryData era) where
 genPair :: Gen a -> Gen b -> Gen (a, b)
 genPair x y = do a <- x; b <- y; pure (a, b)
 
-instance Arbitrary Plutus.Data where
+instance Arbitrary PV1.Data where
   arbitrary = resize 5 (sized gendata)
     where
       gendata n
         | n > 0 =
             oneof
-              [ (Plutus.I <$> arbitrary),
-                (Plutus.B <$> arbitrary),
-                (Plutus.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))),
-                ( Plutus.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
+              [ (PV1.I <$> arbitrary),
+                (PV1.B <$> arbitrary),
+                (PV1.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))),
+                ( PV1.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
                     <*> listOf (gendata (n `div` 2))
                 ),
-                (Plutus.List <$> listOf (gendata (n `div` 2)))
+                (PV1.List <$> listOf (gendata (n `div` 2)))
               ]
-      gendata _ = oneof [Plutus.I <$> arbitrary, Plutus.B <$> arbitrary]
+      gendata _ = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
 instance
   ( UsesScript era,
@@ -193,15 +196,28 @@ instance Mock c => Arbitrary (Script (AlonzoEra c)) where
 --
 
 instance Arbitrary Language where
-  arbitrary = elements (Set.toList nonNativeLanguages)
+  arbitrary = elements nonNativeLanguages
 
 instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
+mkNullCostModel :: Set Text -> Map Text Integer
+mkNullCostModel = Map.fromList . fmap (\k -> (k, 0 :: Integer)) . Set.toList
+
+genCM :: Set Text -> Gen (Map Text Integer, PV1.EvaluationContext)
+genCM costModelParamNames = do
+  newCMPs <- traverse (const arbitrary) (mkNullCostModel costModelParamNames)
+  pure $ (newCMPs, fromMaybe (error "Corrupt cost model") (PV1.mkEvaluationContext newCMPs))
+
+genCostModel :: Language -> Gen (Language, CostModel)
+genCostModel PlutusV1 = (PlutusV1,) <$> uncurry CostModelV1 <$> genCM PV1.costModelParamNames
+genCostModel PlutusV2 = (PlutusV2,) <$> uncurry CostModelV2 <$> genCM PV2.costModelParamNames
+
 instance Arbitrary CostModel where
-  arbitrary = CostModel <$> traverse (const arbitrary) dcmp
-    where
-      dcmp = fromMaybe (error "Corrupt default cost model") defaultCostModelParams
+  arbitrary = snd <$> (elements nonNativeLanguages >>= genCostModel)
+
+instance Arbitrary CostModels where
+  arbitrary = CostModels . Map.fromList <$> (sublistOf nonNativeLanguages >>= mapM genCostModel)
 
 instance Arbitrary (PParams era) where
   arbitrary =

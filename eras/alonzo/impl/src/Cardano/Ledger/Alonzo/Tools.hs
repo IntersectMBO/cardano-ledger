@@ -18,6 +18,7 @@ import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
     ExUnits (..),
     Script (..),
+    getEvaluationContext,
   )
 import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), rdptr)
 import Cardano.Ledger.Alonzo.TxInfo
@@ -26,11 +27,12 @@ import Cardano.Ledger.Alonzo.TxInfo
     VersionedTxInfo (..),
     exBudgetToExUnits,
     transExUnits,
+    transProtocolVersion,
     txInfo,
     valContext,
   )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers, TxDats, unRedeemers, unTxDats)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), strictMaybeToMaybe)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
@@ -82,8 +84,10 @@ data ScriptFailure c
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
     IncompatibleBudget PV1.ExBudget
-  | -- | There was no cost model for given version of Plutus
+  | -- | There was no cost model for a given version of Plutus
     NoCostModel Language
+  | -- | There was a corruptp cost model for a given version of Plutus
+    CorruptCostModel Language
   deriving (Show)
 
 note :: e -> Maybe a -> Either e a
@@ -139,7 +143,8 @@ evaluateTransactionExecutionUnits ::
     HasField "txscripts" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Script era)),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "_maxTxExUnits" (Core.PParams era) (ExUnits),
+    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     Monad m
   ) =>
@@ -204,8 +209,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       (script, lang) <- note (MissingScript pointer) mscript
       let inf = info ! lang
       let (l1, l2) = bounds costModels
-      (CostModel costModel) <-
-        if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModel lang)
+      cm <- if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModel lang)
       args <- case sp of
         (Spending txin) -> do
           txOut <- note (UnknownTxIn txin) $ SplitMap.lookup txin (unUTxO utxo)
@@ -217,13 +221,14 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         _ -> pure [rdmr, valContext inf sp]
       let pArgs = map getPlutusData args
 
-      case interpreter lang costModel maxBudget script pArgs of
+      case interpreter lang (getEvaluationContext cm) maxBudget script pArgs of
         (logs, Left e) -> case lang of
           PlutusV1 -> Left $ ValidationFailedV1 e logs
           PlutusV2 -> Left $ ValidationFailedV2 e logs
         (_, Right exBudget) -> note (IncompatibleBudget exBudget) $ exBudgetToExUnits exBudget
       where
         maxBudget = transExUnits . getField @"_maxTxExUnits" $ pparams
+        pv = transProtocolVersion . getField @"_protocolVersion" $ pparams
         interpreter lang = case lang of
-          PlutusV1 -> PV1.evaluateScriptRestricting PV1.Verbose
-          PlutusV2 -> PV2.evaluateScriptRestricting PV2.Verbose
+          PlutusV1 -> PV1.evaluateScriptRestricting pv PV1.Verbose
+          PlutusV2 -> PV2.evaluateScriptRestricting pv PV2.Verbose

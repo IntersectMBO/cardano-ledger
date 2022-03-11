@@ -8,12 +8,11 @@ module Test.Cardano.Ledger.Alonzo.Serialisation.Tripping where
 import Cardano.Binary
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData, BinaryData, Data (..))
-import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail)
-import Cardano.Ledger.Alonzo.Scripts (Script, decodeCostModel)
+import Cardano.Ledger.Alonzo.Scripts (CostModels, Script)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import Cardano.Ledger.Alonzo.TxWitness
 import Cardano.Ledger.Block (Block)
@@ -22,7 +21,7 @@ import qualified Cardano.Ledger.Shelley.Tx as LTX
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import Data.Roundtrip (roundTrip, roundTrip', roundTripAnn)
+import Data.Roundtrip (roundTrip, roundTripAnn)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
@@ -83,8 +82,8 @@ tests =
         trippingAnn @(TxWitness (AlonzoEra C_Crypto)),
       testProperty "alonzo/TxBody" $
         trippingAnn @(TxBody (AlonzoEra C_Crypto)),
-      testProperty "alonzo/CostModel" $
-        trippingF (roundTrip' toCBOR (decodeCostModel PlutusV1)),
+      testProperty "alonzo/CostModels" $
+        tripping @CostModels,
       testProperty "alonzo/PParams" $
         tripping @(PParams (AlonzoEra C_Crypto)),
       testProperty "alonzo/PParamsUpdate" $

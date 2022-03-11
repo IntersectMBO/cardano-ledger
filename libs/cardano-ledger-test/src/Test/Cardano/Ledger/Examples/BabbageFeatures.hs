@@ -17,7 +17,7 @@ import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
@@ -56,7 +56,8 @@ import qualified Plutus.V1.Ledger.Api as Plutus
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   ( Expect (..),
     expectedUTxO,
-    freeCostModel,
+    freeCostModelV1,
+    freeCostModelV2,
     testUTXOW,
     trustMeP,
   )
@@ -144,7 +145,7 @@ initUTxO pf =
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls $ Map.fromList [(PlutusV1, freeCostModel), (PlutusV2, freeCostModel)],
+  [ Costmdls . CostModels $ Map.fromList [(PlutusV1, freeCostModelV1), (PlutusV2, freeCostModelV2)],
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,

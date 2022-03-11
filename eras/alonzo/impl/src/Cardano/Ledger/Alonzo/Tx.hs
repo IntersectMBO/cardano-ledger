@@ -83,6 +83,7 @@ import Cardano.Ledger.Alonzo.PParams
   )
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
+    CostModels,
     ExUnits (..),
     Prices,
     Script,
@@ -253,7 +254,7 @@ instance (Era era, c ~ Crypto era) => HashAnnotated (ScriptIntegrity era) EraInd
 hashScriptIntegrity ::
   forall era.
   ( Era era,
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel)
+    HasField "_costmdls" (Core.PParams era) CostModels
   ) =>
   Core.PParams era ->
   Set Language ->

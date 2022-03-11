@@ -30,17 +30,15 @@ module Cardano.Ledger.Alonzo.Rules.Utxos
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
-import Cardano.Ledger.Alonzo.Language (Language)
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( CollectError,
     collectTwoPhaseScriptInputs,
     evalScripts,
   )
-import Cardano.Ledger.Alonzo.Scripts (Script)
+import Cardano.Ledger.Alonzo.Scripts (CostModels, Script)
 import Cardano.Ledger.Alonzo.Tx
-  ( CostModel,
-    DataHash,
+  ( DataHash,
     IsValid (..),
     ValidatedTx (..),
   )
@@ -49,6 +47,7 @@ import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), FailureDescription (..),
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.BaseTypes
   ( Globals,
+    ProtVer,
     ShelleyBase,
     StrictMaybe (..),
     epochInfo,
@@ -184,7 +183,7 @@ scriptsValidateTransition = do
 
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
-      case evalScripts @era tx sLst of
+      case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
         Fails sss ->
           False
             ?!## ValidationTagMismatch
@@ -221,7 +220,7 @@ scriptsNotValidateTransition = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       whenFailureFree $
-        case evalScripts @era tx sLst of
+        case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
           Passes -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
           Fails _sss -> pure ()
     Left info -> failBecause (CollectErrors info)
@@ -348,7 +347,8 @@ constructValidated ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_costmdls" (Core.PParams era) CostModels,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "vldt" (Core.TxBody era) ValidityInterval,
     ExtendedUTxO era
@@ -362,7 +362,7 @@ constructValidated globals (UtxoEnv _ pp _ _) st tx =
   case collectTwoPhaseScriptInputs ei sysS pp tx utxo of
     Left errs -> throwError [CollectErrors errs]
     Right sLst ->
-      let scriptEvalResult = evalScripts @era tx sLst
+      let scriptEvalResult = evalScripts @era (getField @"_protocolVersion" pp) tx sLst
           vTx =
             ValidatedTx
               (getField @"body" tx)
