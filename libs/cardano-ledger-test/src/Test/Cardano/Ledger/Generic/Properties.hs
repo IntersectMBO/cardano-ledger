@@ -13,6 +13,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unused-imports #-}
 
 module Test.Cardano.Ledger.Generic.Properties where
 
@@ -248,8 +249,9 @@ emptyPPUPstate (Mary _) = def
 emptyPPUPstate (Allegra _) = def
 emptyPPUPstate (Shelley _) = def
 
+maxRefInputs :: Proof era -> Int
 maxRefInputs (Babbage _) = 3
-maxRefInputs other = 0
+maxRefInputs _ = 0
 
 isValid' :: Proof era -> Core.Tx era -> IsValid
 isValid' (Alonzo _) x = isValid x
@@ -626,7 +628,7 @@ genMultiSigScript proof = do
 primaryLanguages :: Proof era -> [Language]
 primaryLanguages (Babbage _) = [PlutusV2]
 primaryLanguages (Alonzo _) = [PlutusV1]
-primaryLanguages _ = []
+primaryLanguages _ = [PlutusV1]
 
 genPlutusScript :: forall era. Reflect era => Proof era -> Tag -> GenRS era (ScriptHash (Crypto era))
 genPlutusScript proof tag = do
@@ -1104,7 +1106,12 @@ genValidatedTx proof = do
   networkId <- lift $ elements [SNothing, SJust Testnet]
 
   -- 4B. Steal some spending inputs to be referenence inputs
-  numRefInputs <- pure 0 -- lift $ choose (0,max (numInputs - maxRefInputs proof) 0)  -- if too few inputs, don't steal any
+  numRefInputs <-
+    ifProof
+      proof
+      (postBabbage proof) -- only steal inputs in Babbage and future eras
+      (lift $ choose (0, max (numInputs - maxRefInputs proof) 0))
+      (pure 0) --        ^  if too few inputs, don't steal any
   let (spendInputs, refInputs) = Map.splitAt (numInputs - numRefInputs) toSpendNoCollateral
   -- 5. Estimate the fee
   let redeemerDatumWits = (redeemerWitsList ++ datumWitsList)
@@ -1120,7 +1127,7 @@ genValidatedTx proof = do
             Certs' dcerts,
             Wdrls wdrls,
             Txfee maxCoin,
-            ifProof proof (postAllegra Mock) (Vldt geValidityInterval) (TTL (timeToLive geValidityInterval)),
+            ifProof proof (postAllegra proof) (Vldt geValidityInterval) (TTL (timeToLive geValidityInterval)),
             Update' [],
             ReqSignerHashes' [],
             Generic.Mint mempty,
@@ -1358,7 +1365,7 @@ testTxValidForLEDGER proof (Box (trc@(TRC (_, (utxoState, dpstate), vtx))) _) =
         -- UTxOState and DPState after applying the transaction $$$
         classify (coerce (isValid' proof vtx)) "TxValid" $
           totalAda utxoState' dpstate' === totalAda utxoState dpstate
-      Left errs -> counterexample (show (ppList prettyA errs)) (property False)
+      Left errs -> counterexample (utxoString proof (_utxo utxoState) ++ "\n\n" ++ show (ppList prettyA errs)) (property False)
 
 -- ===============================================================
 -- Tools for generating other things from a GenEnv. This way one can
@@ -1477,27 +1484,24 @@ genericProperties =
     [ coreTypesRoundTrip,
       testGroup
         "Alonzo UTXOW property tests"
-        [ testProperty "Alonzo ValidTx preserves ADA" $ forAll (genTxAndLEDGERState (Alonzo Mock)) (testTxValidForLEDGER (Alonzo Mock)),
-          testProperty "Mary Tx preserves ADA" $ forAll (genTxAndLEDGERState (Mary Mock)) (testTxValidForLEDGER (Mary Mock)),
-          testProperty "Shelley Tx preserves ADA" $ forAll (genTxAndLEDGERState (Shelley Mock)) (testTxValidForLEDGER (Shelley Mock))
+        [ testProperty "Shelley Tx preserves ADA" $
+            forAll (genTxAndLEDGERState (Shelley Mock)) (testTxValidForLEDGER (Shelley Mock)),
+          testProperty "Mary Tx preserves ADA" $
+            forAll (genTxAndLEDGERState (Mary Mock)) (testTxValidForLEDGER (Mary Mock)),
+          testProperty "Alonzo ValidTx preserves ADA" $
+            forAll (genTxAndLEDGERState (Alonzo Mock)) (testTxValidForLEDGER (Alonzo Mock)),
+          testProperty "Babbage ValidTx preserves ADA" $
+            forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))
         ]
     ]
 
+-- ==============================================================
+-- Infrastrucure for running individual tests, with easy replay.
+-- In ghci just type
+-- :main --quickcheck-replay=205148
+
 main :: IO ()
 main = test 1 (Babbage Mock)
-
--- Use --quickcheck-replay=951837 to reproduce.
-
--- TODO FIXME
--- we are going to need some babbage specific guidance to make this work.
--- This would be a failing test. We don't want to lose this information.
--- We will fix it in a future PR. The failure is in the generator, not the tests.
--- The generator generates good things in [Shelley .. Alonzo], but Babbage needs work.
-workNeededHere :: IO ()
-workNeededHere =
-  defaultMain $
-    testProperty "Babbage ValidTx preserves ADA" $
-      ({- withMaxSuccess 100 -} (forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))))
 
 test :: ReflectC (Crypto era) => Int -> Proof era -> IO ()
 test n proof = defaultMain $
@@ -1512,30 +1516,3 @@ test n proof = defaultMain $
       testProperty "Babbage ValidTx preserves ADA" $
         (withMaxSuccess n (forAll (genTxAndLEDGERState proof) (testTxValidForLEDGER proof)))
     other -> error ("NO Test in era " ++ show other)
-
-alls :: [(String, Language, Natural, Script (BabbageEra Mock))]
-alls =
-  [ (name, v, n, f v n)
-    | v <- [PlutusV1, PlutusV2],
-      (f, name) <- [(alwaysSucceeds, "S"), (alwaysFails, "F")],
-      n <- [0 .. 3]
-  ]
-
-{- mapM_ print alls
-("S",PlutusV1,0,PlutusScript PlutusV1 ScriptHash "9eb420ad4a8eb3d63d7c3d578b97ac23361626ac1b5688aad376e127")
-("S",PlutusV1,1,PlutusScript PlutusV1 ScriptHash "c370d10724c6b5a2448af41238e024ad470c0139da7f4b8527a47d74")
-("S",PlutusV1,2,PlutusScript PlutusV1 ScriptHash "8d5bd54aa89e390f94b874db53531d8a6e50522ca181817805af06d9")
-("S",PlutusV1,3,PlutusScript PlutusV1 ScriptHash "58503a1d89a21fc9fc53d6a7cccef47341175a8f47636f57ccbdca2d")
-("F",PlutusV1,0,PlutusScript PlutusV1 ScriptHash "592b4d362fd98dc054dda15579f5524ccf184eb6228f514b9db32e12")
-("F",PlutusV1,1,PlutusScript PlutusV1 ScriptHash "4509cdddad21412c22c9164e10bc6071340ba235562f1575a35ded4d")
-("F",PlutusV1,2,PlutusScript PlutusV1 ScriptHash "f6210ccd14db6200883b2d2f678388160de1fee4a16554478c03c2bf")
-("F",PlutusV1,3,PlutusScript PlutusV1 ScriptHash "6a09cb22defaf4a96a6be1ef6c07467ac9923d1750a79214a06c503a")
-("S",PlutusV2,0,PlutusScript PlutusV2 ScriptHash "d28966b3926bf3b014e66e5440b3789b86b375499b1951d791cf783b")
-("S",PlutusV2,1,PlutusScript PlutusV2 ScriptHash "3c3b41b6bbd2d9e2aaf12e7bea35f75489c777faa57f44dbf3992782")
-("S",PlutusV2,2,PlutusScript PlutusV2 ScriptHash "195156f87f299562300852de1f1699d574e501b4ba886eab3ad6cf93")
-("S",PlutusV2,3,PlutusScript PlutusV2 ScriptHash "f3fbfa47030ad28189ae30b6218704ebe707f3035e5526e5a391df4d")
-("F",PlutusV2,0,PlutusScript PlutusV2 ScriptHash "d7d9f9b77d5ab2d26fe1bfcdad92542eb314392dec23db521ac17154")
-("F",PlutusV2,1,PlutusScript PlutusV2 ScriptHash "d8be7cd3abceaeead9abaf22a46a358b8cbd423a819cae6823e15cb6")
-("F",PlutusV2,2,PlutusScript PlutusV2 ScriptHash "03d9bf874aa50cb845f4dcf011a223ed4b1ccd51b485990baa79d676")
-("F",PlutusV2,3,PlutusScript PlutusV2 ScriptHash "51936f3c98a04b6609aa9b5c832ba1182cf43a58e534fcc05db09d69")
--}

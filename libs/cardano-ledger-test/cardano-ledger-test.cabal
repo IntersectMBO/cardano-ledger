@@ -115,6 +115,7 @@ library
     monad-supply,
     mtl,
     plutus-ledger-api,
+    plutus-core,
     plutus-tx,
     profunctors,
     QuickCheck,

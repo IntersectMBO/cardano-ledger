@@ -140,19 +140,26 @@ instance ReflectC c => Reflect (ShelleyEra c) where
 data Some f where
   Some :: f a -> Some f
 
-preShelley, preAllegra, preMary, preAlonzo, preBabbage :: CC.Crypto c => Evidence c -> [Some Proof]
-preShelley c = [Some (Shelley c)]
-preAllegra c = [Some (Allegra c), Some (Shelley c)]
-preMary c = [Some (Mary c), Some (Allegra c), Some (Shelley c)]
-preAlonzo c = [Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]
-preBabbage c = [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]
+preShelley, preAllegra, preMary, preAlonzo, preBabbage :: Proof era -> [Some Proof]
+preShelley proof = applyCrypto (\c -> [Some (Shelley c)]) proof
+preAllegra proof = applyCrypto (\c -> [Some (Allegra c), Some (Shelley c)]) proof
+preMary proof = applyCrypto (\c -> [Some (Mary c), Some (Allegra c), Some (Shelley c)]) proof
+preAlonzo proof = applyCrypto (\c -> [Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]) proof
+preBabbage proof = applyCrypto (\c -> [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]) proof
 
-postShelley, postAllegra, postMary, postAlonzo, postBabbage :: CC.Crypto c => Evidence c -> [Some Proof]
-postShelley c = [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]
-postAllegra c = [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c)]
-postMary c = [Some (Babbage c), Some (Alonzo c), Some (Mary c)]
-postAlonzo c = [Some (Babbage c), Some (Alonzo c)]
-postBabbage c = [Some (Babbage c)]
+postShelley, postAllegra, postMary, postAlonzo, postBabbage :: Proof era -> [Some Proof]
+postShelley proof = applyCrypto (\c -> [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]) proof
+postAllegra proof = applyCrypto (\c -> [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c)]) proof
+postMary proof = applyCrypto (\c -> [Some (Babbage c), Some (Alonzo c), Some (Mary c)]) proof
+postAlonzo proof = applyCrypto (\c -> [Some (Babbage c), Some (Alonzo c)]) proof
+postBabbage proof = applyCrypto (\c -> [Some (Babbage c)]) proof
+
+applyCrypto :: (forall c. CC.Crypto c => Evidence c -> [Some Proof]) -> (Proof era) -> [Some Proof]
+applyCrypto f (Babbage c) = f c
+applyCrypto f (Alonzo c) = f c
+applyCrypto f (Mary c) = f c
+applyCrypto f (Allegra c) = f c
+applyCrypto f (Shelley c) = f c
 
 allEra :: Testable p => String -> [Some Proof] -> (forall era. Proof era -> p) -> TestTree
 allEra name eras f = testProperties name (map g eras)
@@ -173,6 +180,13 @@ instance Eq (Some Proof) where
   (Some (Alonzo _)) == (Some (Alonzo _)) = True
   (Some (Babbage _)) == (Some (Babbage _)) = True
   _ == _ = False
+
+instance Show (Some Proof) where
+  show (Some (Shelley c)) = show (Shelley c)
+  show (Some (Allegra c)) = show (Allegra c)
+  show (Some (Mary c)) = show (Mary c)
+  show (Some (Alonzo c)) = show (Alonzo c)
+  show (Some (Babbage c)) = show (Babbage c)
 
 -- ===============================================================
 -- Proofs or witnesses to Core.EraRule Tags

@@ -874,7 +874,7 @@ instance
 -- HasField instances to be consistent with earlier Eras
 
 instance (Crypto era ~ c) => HasField "inputs" (TxBody era) (Set (TxIn c)) where
-  getField (TxBodyConstr (Memo m _)) = _spendInputs m
+  getField (TxBodyConstr (Memo m _)) = (_spendInputs m) `Set.union` (_referenceInputs m)
 
 instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
   getField (TxBodyConstr (Memo m _)) = _outputs m
