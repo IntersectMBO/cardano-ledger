@@ -104,7 +104,7 @@ import Cardano.Ledger.Shelley.Rewards
     mkApparentPerformance,
     mkPoolRewardInfo,
   )
-import Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (TotalRewardEvent))
+import Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (DeltaRewardEvent, TotalRewardEvent))
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import qualified Cardano.Ledger.Shelley.Rules.Tick as Tick
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
@@ -754,6 +754,7 @@ aggDeltaRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (
 aggDeltaRewardEvents events = foldl' accum Map.empty events
   where
     accum ans (TickEvent (Tick.RupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
+    accum ans (TickEvent (Tick.NewEpochEvent (DeltaRewardEvent (RupdEvent _ m)))) = Map.unionWith Set.union m ans
     accum ans _ = ans
 
 getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
