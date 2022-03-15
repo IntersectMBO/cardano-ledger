@@ -8,7 +8,7 @@ module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 import Cardano.Binary
 import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
 import Cardano.Ledger.Alonzo.Scripts (decodeCostModel)
-import Cardano.Ledger.Babbage (AuxiliaryData, BabbageEra, Script)
+import Cardano.Ledger.Babbage (AuxiliaryData, BabbageEra, Script, TxOut)
 import Cardano.Ledger.Babbage.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred)
 import Cardano.Ledger.Babbage.TxBody (TxBody)
@@ -38,9 +38,20 @@ trippingF f x =
     Right (remaining, y)
       | BSL.null remaining ->
           x === y
-    Right (remaining, _) ->
+    Right (remaining, y) ->
       counterexample
-        ("Unconsumed trailing bytes:\n" <> BSL.unpack remaining)
+        ( "Unconsumed trailing bytes:\n" <> BSL.unpack remaining
+            <> "\nbad res: "
+            <> show y
+            <> "\nfull term: "
+            <> case deserialiseFromBytes decodeTerm (serialize x) of
+              Left e -> ppShow e
+              Right (_, terms) -> ppShow terms
+            <> "\nreamining term: "
+            <> case deserialiseFromBytes decodeTerm (serialize y) of
+              Left e -> ppShow e
+              Right (_, terms) -> ppShow terms
+        )
         False
     Left stuff ->
       counterexample
@@ -78,6 +89,8 @@ tests =
         trippingAnn @(Script (BabbageEra C_Crypto)),
       testProperty "babbage/Metadata" $
         trippingAnn @(Metadata (BabbageEra C_Crypto)),
+      testProperty "babbage/TxOut" $
+        tripping @(TxOut (BabbageEra C_Crypto)),
       testProperty "babbage/TxBody" $
         trippingAnn @(TxBody (BabbageEra C_Crypto)),
       testProperty "babbage/CostModel" $

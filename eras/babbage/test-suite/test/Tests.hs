@@ -8,6 +8,7 @@
 
 module Main where
 
+import qualified Test.Cardano.Ledger.Babbage.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
@@ -24,21 +25,24 @@ mainTests :: TestTree
 mainTests =
   testGroup
     "Babbage tests"
-    [ Tripping.tests
+    [ Tripping.tests,
+      CDDL.tests 5
     ]
 
 fastTests :: TestTree
 fastTests =
   testGroup
     "Babbage tests"
-    [ Tripping.tests
+    [ Tripping.tests,
+      CDDL.tests 1
     ]
 
 nightlyTests :: TestTree
 nightlyTests =
   testGroup
     "Babbage tests"
-    []
+    [ CDDL.tests 50
+    ]
 
 -- main entry point
 main :: IO ()

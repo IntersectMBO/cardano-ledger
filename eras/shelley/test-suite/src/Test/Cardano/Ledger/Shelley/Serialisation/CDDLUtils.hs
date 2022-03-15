@@ -36,6 +36,8 @@ import Cardano.Prelude
     forM_,
     throwIO,
   )
+import Codec.CBOR.Read (deserialiseFromBytes)
+import Codec.CBOR.Term (decodeTerm)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
@@ -122,7 +124,10 @@ cddlTestCommon serializer decoder n cddlData = do
               [ "Failed to deserialize",
                 "Error: " <> show e,
                 "Generated diag: " <> Char8.unpack exampleDiag,
-                "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes)
+                "Generated base16: " <> Char8.unpack (Base16.encode exampleBytes),
+                "terms: " <> case deserialiseFromBytes decodeTerm exampleBytes of
+                  Left e' -> show e'
+                  Right (_, terms) -> show terms
               ]
       let reencoded = serializer decoded
       verifyConforming reencoded cddl >>= \case

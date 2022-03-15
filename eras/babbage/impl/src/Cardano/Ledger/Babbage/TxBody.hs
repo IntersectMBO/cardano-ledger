@@ -69,11 +69,13 @@ import Cardano.Binary
   ( DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
+    TokenType (..),
     decodeAnnotator,
     decodeBreakOr,
     decodeListLenOrIndef,
-    encodeListLen,
-    serialize,
+    decodeNestedCborBytes,
+    encodeNestedCbor,
+    peekTokenType,
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
@@ -83,7 +85,6 @@ import Cardano.Ledger.Alonzo.Data
     Data,
     DataHash,
     binaryDataToData,
-    hashBinaryData,
   )
 import Cardano.Ledger.Alonzo.TxBody
   ( Addr28Extra,
@@ -136,6 +137,8 @@ import Cardano.Ledger.Val
     isZero,
   )
 import Control.DeepSeq (NFData (rnf), rwhnf)
+import Control.Monad ((<$!>))
+import qualified Data.ByteString.Lazy as LBS
 import Data.Coders
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
@@ -280,11 +283,11 @@ instance Era era => FromCBOR (Datum era) where
       decodeDatum 2 = SumD Datum <! From
       decodeDatum k = Invalid k
 
-datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
+datumDataHash :: Datum era -> StrictMaybe (DataHash (Crypto era))
 datumDataHash = \case
   NoDatum -> SNothing
-  (DatumHash d) -> SJust d
-  (Datum d) -> SJust $ hashBinaryData d
+  (DatumHash dh) -> SJust dh
+  (Datum _) -> SNothing
 
 pattern TxOut ::
   forall era.
@@ -627,6 +630,78 @@ txnetworkid' (TxBodyConstr (Memo raw _)) = _txnetworkid raw
 -- Serialisation
 --------------------------------------------------------------------------------
 
+{-# INLINE encodeTxOut #-}
+encodeTxOut ::
+  forall era.
+  (Era era, ToCBOR (Core.Script era)) =>
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  Datum era ->
+  StrictMaybe (Core.Script era) ->
+  Encoding
+encodeTxOut addr val datum script =
+  encode $
+    Keyed (,,,,)
+      !> Key 0 (To addr)
+      !> Key 1 (To val)
+      !> Omit (== NoDatum) (Key 2 (To datum))
+      !> encodeKeyedStrictMaybeWith 3 encodeNestedCbor script
+
+data DecodingTxOut era = DecodingTxOut
+  { decodingTxOutAddr :: !(StrictMaybe (Addr (Crypto era))),
+    decodingTxOutVal :: !(Core.Value era),
+    decodingTxOutDatum :: !(Datum era),
+    decodingTxOutScript :: !(StrictMaybe (Core.Script era))
+  }
+  deriving (Typeable)
+
+{-# INLINE decodeTxOut #-}
+decodeTxOut ::
+  forall s era.
+  ( Era era,
+    FromCBOR (Annotator (Core.Script era)),
+    DecodeNonNegative (Core.Value era)
+  ) =>
+  Decoder s (TxOut era)
+decodeTxOut = do
+  dtxo <- decode $ SparseKeyed "TxOut" initial bodyFields requiredFields
+  case dtxo of
+    DecodingTxOut SNothing _ _ _ -> cborError $ DecoderErrorCustom "txout" "impossible: no addr"
+    DecodingTxOut (SJust addr) val d script -> pure $ TxOut addr val d script
+  where
+    initial :: DecodingTxOut era
+    initial =
+      DecodingTxOut SNothing mempty NoDatum SNothing
+    bodyFields :: (Word -> Field (DecodingTxOut era))
+    bodyFields 0 =
+      field
+        (\x txo -> txo {decodingTxOutAddr = SJust x})
+        (D fromCBOR)
+    bodyFields 1 =
+      field
+        (\x txo -> txo {decodingTxOutVal = x})
+        (D decodeNonNegative)
+    bodyFields 2 =
+      field
+        (\x txo -> txo {decodingTxOutDatum = x})
+        (D fromCBOR)
+    bodyFields 3 =
+      field
+        (\x txo -> txo {decodingTxOutScript = x})
+        (D $ (SJust <$> decodeCIC "Script"))
+    bodyFields n = field (\_ t -> t) (Invalid n)
+    requiredFields =
+      [ (0, "addr"),
+        (1, "val")
+      ]
+
+decodeCIC :: (FromCBOR (Annotator b)) => T.Text -> Decoder s b
+decodeCIC s = do
+  lbs <- decodeNestedCborBytes
+  case decodeAnnotator s fromCBOR (LBS.fromStrict lbs) of
+    Left e -> fail $ T.unpack s <> ": " <> show e
+    Right x -> pure x
+
 instance
   ( Era era,
     Compactible (Core.Value era),
@@ -634,28 +709,10 @@ instance
   ) =>
   ToCBOR (TxOut era)
   where
-  toCBOR (TxOutCompact addr cv) =
-    encodeListLen 2
-      <> toCBOR addr
-      <> toCBOR cv
-  toCBOR (TxOutCompactDatum addr cv d) =
-    encodeListLen 4
-      <> toCBOR (0 :: Word8)
-      <> toCBOR addr
-      <> toCBOR cv
-      <> toCBOR d
-  toCBOR (TxOutCompactRefScript addr cv d rs) =
-    encodeListLen 5
-      <> toCBOR (2 :: Word8)
-      <> toCBOR addr
-      <> toCBOR cv
-      <> toCBOR d
-      <> encodeCIC rs
-  toCBOR (TxOutCompactDH addr cv dh) =
-    encodeListLen 3
-      <> toCBOR addr
-      <> toCBOR cv
-      <> toCBOR dh
+  toCBOR (TxOutCompact addr cv) = encodeTxOut @era addr cv NoDatum SNothing
+  toCBOR (TxOutCompactDatum addr cv d) = encodeTxOut addr cv (Datum d) SNothing
+  toCBOR (TxOutCompactRefScript addr cv d rs) = encodeTxOut addr cv d (SJust rs)
+  toCBOR (TxOutCompactDH addr cv dh) = encodeTxOut @era addr cv (DatumHash dh) SNothing
 
 instance
   ( Era era,
@@ -679,48 +736,40 @@ instance
   where
   type Share (TxOut era) = Interns (Credential 'Staking (Crypto era))
   fromSharedCBOR credsInterns = do
-    lenOrIndef <- decodeListLenOrIndef
-    let internTxOut = \case
-          TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
-            TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
-          TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
-            TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
-          txOut -> txOut
-    internTxOut <$> case lenOrIndef of
-      Nothing -> do
-        a <- fromCBOR
-        cv <- decodeNonNegative
-        decodeBreakOr >>= \case
-          True -> pure $ TxOutCompact a cv
-          False -> do
-            dh <- fromCBOR
+    peekTokenType >>= \case
+      TypeMapLenIndef -> decodeTxOut
+      TypeMapLen -> decodeTxOut
+      _ -> oldTxOut
+    where
+      oldTxOut = do
+        lenOrIndef <- decodeListLenOrIndef
+        let internTxOut = \case
+              TxOut_AddrHash28_AdaOnly cred addr28Extra ada ->
+                TxOut_AddrHash28_AdaOnly (interns credsInterns cred) addr28Extra ada
+              TxOut_AddrHash28_AdaOnly_DataHash32 cred addr28Extra ada dataHash32 ->
+                TxOut_AddrHash28_AdaOnly_DataHash32 (interns credsInterns cred) addr28Extra ada dataHash32
+              txOut -> txOut
+        internTxOut <$!> case lenOrIndef of
+          Nothing -> do
+            a <- fromCBOR
+            cv <- decodeNonNegative
             decodeBreakOr >>= \case
-              True -> pure $ TxOutCompactDH a cv dh
-              False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
-      Just 2 ->
-        TxOutCompact <$> fromCBOR <*> decodeNonNegative
-      Just 3 ->
-        TxOutCompactDH <$> fromCBOR <*> decodeNonNegative <*> fromCBOR
-      Just 4 -> do
-        0 <- fromCBOR @Word8
-        TxOutCompactDatum <$> fromCBOR <*> decodeNonNegative <*> fromCBOR
-      Just 5 -> do
-        2 <- fromCBOR @Word8
-        TxOutCompactRefScript <$> fromCBOR <*> decodeNonNegative <*> fromCBOR <*> decodeCIC "Script"
-      Just n ->
-        cborError $ DecoderErrorCustom "txout" $ "wrong number of terms in txout: " <> T.pack (show n)
-
--- decodes the CBOR from TkBytes
-decodeCIC :: (FromCBOR (Annotator b)) => T.Text -> Decoder s b
-decodeCIC s = do
-  lbs <- fromCBOR
-  case decodeAnnotator s fromCBOR lbs of
-    Left e -> fail (show e)
-    Right x -> pure x
-
--- encodes the CBOR as TkBytes
-encodeCIC :: ToCBOR a => a -> Encoding
-encodeCIC = toCBOR . serialize
+              True -> pure $ TxOutCompact a cv
+              False -> do
+                dh <- fromCBOR
+                decodeBreakOr >>= \case
+                  True -> pure $ TxOutCompactDH a cv dh
+                  False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
+          Just 2 ->
+            TxOutCompact
+              <$> fromCBOR
+              <*> decodeNonNegative
+          Just 3 ->
+            TxOutCompactDH
+              <$> fromCBOR
+              <*> decodeNonNegative
+              <*> fromCBOR
+          Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
 
 encodeTxBodyRaw ::
   ( Era era,
@@ -756,7 +805,7 @@ encodeTxBodyRaw
       !> Key 13 (E encodeFoldable _collateralInputs)
       !> Key 18 (E encodeFoldable _referenceInputs)
       !> Key 1 (E encodeFoldable _outputs)
-      !> Key 16 (To _collateralReturn)
+      !> encodeKeyedStrictMaybe 16 _collateralReturn
       !> Key 17 (To _totalCollateral)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
@@ -769,13 +818,17 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 11 _scriptIntegrityHash
       !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 15 _txnetworkid
-    where
-      encodeKeyedStrictMaybe key x =
-        Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
 
-      fromSJust :: StrictMaybe a -> a
-      fromSJust (SJust x) = x
-      fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
+encodeKeyedStrictMaybeWith :: Word -> (a -> Encoding) -> StrictMaybe a -> Encode ('Closed 'Sparse) (StrictMaybe a)
+encodeKeyedStrictMaybeWith key enc x =
+  Omit isSNothing (Key key (E (enc . fromSJust) x))
+  where
+    fromSJust :: StrictMaybe a -> a
+    fromSJust (SJust x') = x'
+    fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
+
+encodeKeyedStrictMaybe :: ToCBOR a => Word -> StrictMaybe a -> Encode ('Closed 'Sparse) (StrictMaybe a)
+encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 
 instance
   forall era.
@@ -838,7 +891,7 @@ instance
       bodyFields 16 =
         field
           (\x tx -> tx {_collateralReturn = x})
-          (D fromCBOR)
+          (D (SJust <$> fromCBOR))
       bodyFields 17 =
         field
           (\x tx -> tx {_totalCollateral = x})

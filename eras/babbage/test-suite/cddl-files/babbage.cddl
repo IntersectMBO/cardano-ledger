@@ -47,24 +47,24 @@ operational_cert =
 protocol_version = (uint, uint)
 
 transaction_body =
- { 0 : set<transaction_input>    ; inputs
- , 1 : [* transaction_output]
- , 2 : coin                      ; fee
- , ? 3 : uint                    ; time to live
- , ? 4 : [* certificate]
- , ? 5 : withdrawals
- , ? 6 : update
- , ? 7 : auxiliary_data_hash
- , ? 8 : uint                    ; validity interval start
- , ? 9 : mint
- , ? 11 : script_data_hash
- , ? 13 : set<transaction_input> ; collateral inputs
- , ? 14 : required_signers
- , ? 15 : network_id
- , ? 16 : transaction_output     ; collateral return; New
- , ? 17 : coin                   ; total collateral; New
- , ? 18 : set<transaction_input> ; reference inputs; New
- }
+  { 0 : set<transaction_input>    ; inputs
+  , 1 : [* transaction_output]
+  , 2 : coin                      ; fee
+  , ? 3 : uint                    ; time to live
+  , ? 4 : [* certificate]
+  , ? 5 : withdrawals
+  , ? 6 : update
+  , ? 7 : auxiliary_data_hash
+  , ? 8 : uint                    ; validity interval start
+  , ? 9 : mint
+  , ? 11 : script_data_hash
+  , ? 13 : set<transaction_input> ; collateral inputs
+  , ? 14 : required_signers
+  , ? 15 : network_id
+  , ? 16 : transaction_output     ; collateral return; New
+  , ? 17 : coin                   ; total collateral; New
+  , ? 18 : set<transaction_input> ; reference inputs; New
+  }
 
 required_signers = set<$addr_keyhash>
 
@@ -72,7 +72,7 @@ transaction_input = [ transaction_id : $hash32
                     , index : uint
                     ]
 
-transaction_output = legacy_Transaction_output / post_alonzo_transaction_output ; New
+transaction_output = legacy_transaction_output / post_alonzo_transaction_output ; New
 
 legacy_transaction_output =
   [ address
@@ -84,12 +84,11 @@ legacy_transaction_output =
 ; a transaction output to include both a datum hash and a datum.
 ; In other words, keys 2 and 3 are mutually exclusive.
 post_alonzo_transaction_output =
-     { 0 => address
-     , 1 => value
-     , ? 2 => datum_hash
-     , ? 3 => datum      ; New; inline datum
-     , ? 4 => script     ; New; script reference
-     }
+  { 0 : address
+  , 1 : value
+  , ? 2 : datum      ; New; inline datum
+  , ? 3 : script_ref ; New; script reference
+  }
 
 script_data_hash = $hash32
 ; This is a hash of data which may affect evaluation of a script.
@@ -401,3 +400,12 @@ genesishash           = $hash28
 vrf_keyhash           = $hash32
 auxiliary_data_hash   = $hash32
 pool_metadata_hash    = $hash32
+
+datum_hash = $hash32
+data = #6.24(bytes .cbor plutus_data)
+
+datum = [ 0 // 1, $hash32 // 2, data ]
+
+script_ref = #6.24(bytes .cbor script)
+
+script = [ 0, native_script // 1, plutus_script // 2, plutus_script ]
