@@ -19,7 +19,6 @@ import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..))
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxOut (..))
@@ -57,7 +56,7 @@ import qualified Cardano.Ledger.Shelley.API as API
 
 type instance PreviousEra (BabbageEra c) = AlonzoEra c
 
-type instance TranslationContext (BabbageEra c) = AlonzoGenesis
+type instance TranslationContext (BabbageEra c) = ()
 
 instance
   (Crypto c) =>

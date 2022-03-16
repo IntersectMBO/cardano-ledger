@@ -41,6 +41,7 @@ library
   import:             base, project-config
 
   exposed-modules:
+    Test.Cardano.Ledger.Babbage.Examples.Consensus,
     Test.Cardano.Ledger.Babbage.Serialisation.Generators
   build-depends:
     bytestring,
