@@ -89,7 +89,7 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
-import Data.Foldable (sequenceA_, toList)
+import Data.Foldable (foldr', sequenceA_, toList)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -453,7 +453,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     txbody = getField @"body" tx
     inputAuthors :: Set (KeyHash 'Witness (Crypto era))
     inputAuthors =
-      foldr
+      foldr'
         accum
         Set.empty
         ( getField @"inputs" txbody
@@ -471,11 +471,11 @@ witsVKeyNeeded utxo' tx genDelegs =
             Nothing -> ans
 
     wdrlAuthors :: Set (KeyHash 'Witness (Crypto era))
-    wdrlAuthors = Map.foldrWithKey accum Set.empty (unWdrl (getField @"wdrls" txbody))
+    wdrlAuthors = Map.foldrWithKey' accum Set.empty (unWdrl (getField @"wdrls" txbody))
       where
         accum key _ ans = Set.union (extractKeyHashWitnessSet [getRwdCred key]) ans
     owners :: Set (KeyHash 'Witness (Crypto era))
-    owners = foldr accum Set.empty (getField @"certs" txbody)
+    owners = foldr' accum Set.empty (getField @"certs" txbody)
       where
         accum (DCertPool (RegPool pool)) ans =
           Set.union
@@ -490,7 +490,7 @@ witsVKeyNeeded utxo' tx genDelegs =
     -- before the call to `cwitness`, so this error should never be reached.
 
     certAuthors :: Set (KeyHash 'Witness (Crypto era))
-    certAuthors = foldr accum Set.empty (getField @"certs" txbody)
+    certAuthors = foldr' accum Set.empty (getField @"certs" txbody)
       where
         accum cert ans | requiresVKeyWitness cert = Set.union (cwitness cert) ans
         accum _cert ans = ans
