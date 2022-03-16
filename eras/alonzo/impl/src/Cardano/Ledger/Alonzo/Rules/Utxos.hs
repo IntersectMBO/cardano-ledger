@@ -180,7 +180,7 @@ scriptsValidateTransition = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
-  let !_ = traceEvent validBegin ()
+  () <- pure $! traceEvent validBegin ()
 
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
@@ -193,7 +193,7 @@ scriptsValidateTransition = do
         Passes -> pure ()
     Left info -> failBecause (CollectErrors info)
 
-  let !_ = traceEvent validEnd ()
+  () <- pure $! traceEvent validEnd ()
 
   ppup' <-
     trans @(Core.EraRule "PPUP" era) $
