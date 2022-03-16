@@ -77,6 +77,7 @@ module Cardano.Ledger.Shelley.LedgerState
     updateStakeDistribution,
     applyRUpd,
     applyRUpd',
+    filterAllRewards,
     createRUpd,
     completeRupd,
     startStep,
@@ -1189,17 +1190,12 @@ applyRUpd' ::
   (EpochState era, Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
 applyRUpd'
   ru
-  (EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', registered)
+  es@(EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', registered)
     where
       utxoState_ = _utxoState ls
       delegState = _delegationState ls
       dState = _dstate delegState
-      (regRU, unregRU) =
-        Map.partitionWithKey
-          (\k _ -> eval (k ∈ dom (rewards dState)))
-          (rs ru)
-      totalUnregistered = fold $ aggregateRewards pr unregRU
-      registered = filterRewards pr regRU
+      (registered, totalUnregistered) = filterAllRewards (rs ru) es
       registeredAggregated = aggregateRewards pp registered
       as' =
         as
@@ -1219,6 +1215,24 @@ applyRUpd'
                 }
           }
       nm' = nonMyopic ru
+
+filterAllRewards ::
+  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
+  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
+  EpochState era ->
+  (Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))), Coin)
+filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
+  (registered, totalUnregistered)
+  where
+    delegState = _delegationState ls
+    dState = _dstate delegState
+    (regRU, unregRU) =
+      Map.partitionWithKey
+        (\k _ -> eval (k ∈ dom (rewards dState)))
+        rs'
+    totalUnregistered = fold $ aggregateRewards pr unregRU
+    registered = filterRewards pr regRU
 
 decayFactor :: Float
 decayFactor = 0.9

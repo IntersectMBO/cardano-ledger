@@ -74,6 +74,7 @@ import Cardano.Ledger.Shelley.LedgerState
     circulation,
     completeRupd,
     createRUpd,
+    filterAllRewards,
     rewards,
     updateNonMyopic,
   )
@@ -104,7 +105,7 @@ import Cardano.Ledger.Shelley.Rewards
     mkApparentPerformance,
     mkPoolRewardInfo,
   )
-import Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (TotalRewardEvent))
+import Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (DeltaRewardEvent, TotalRewardEvent))
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import qualified Cardano.Ledger.Shelley.Rules.Tick as Tick
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
@@ -750,10 +751,11 @@ newEpochEventsProp tracelen propf = withMaxSuccess 10 $
       Just SourceSignalTarget {target} -> propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
       _ -> True === True
 
-aggDeltaRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
-aggDeltaRewardEvents events = foldl' accum Map.empty events
+aggIncrementalRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
+aggIncrementalRewardEvents events = foldl' accum Map.empty events
   where
     accum ans (TickEvent (Tick.RupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
+    accum ans (TickEvent (Tick.NewEpochEvent (DeltaRewardEvent (RupdEvent _ m)))) = Map.unionWith Set.union m ans
     accum ans _ = ans
 
 getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
@@ -770,21 +772,22 @@ eventsMirrorRewards :: [ChainEvent C] -> NewEpochState C -> Property
 eventsMirrorRewards events nes = same eventRew compRew
   where
     (compRew, eventRew) =
-      case (nesRu nes) of
-        SNothing -> (total, aggevent)
+      case nesRu nes of
+        SNothing -> (total, aggFilteredEvent)
         SJust pulser ->
-          ( Map.unionWith (Set.union) (rs completed) total,
-            Map.unionWith (Set.union) lastevent aggevent
+          ( Map.unionWith Set.union (rs completed) total,
+            Map.unionWith Set.union lastevent aggevent
           )
           where
             (completed, lastevent) = complete pulser
     total = getMostRecentTotalRewardEvent events
-    aggevent = aggDeltaRewardEvents events
+    aggevent = aggIncrementalRewardEvents events
+    (aggFilteredEvent, _) = filterAllRewards aggevent (nesEs nes)
     same x y = withMaxSuccess 1 $ counterexample message (x === y)
       where
         message =
           ( "events don't mirror rewards "
-              ++ tersemapdiffs "Map differences: aggregated events on the left, computed on the right." x y
+              ++ tersemapdiffs "Map differences: aggregated filtered events on the left, computed on the right." x y
           )
 
 ppAgg :: Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C))) -> PDoc

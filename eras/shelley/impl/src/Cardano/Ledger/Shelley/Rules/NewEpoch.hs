@@ -156,10 +156,10 @@ newEpochTransition = do
       let updateRewards ru'@(RewardUpdate dt dr rs_ df _) = do
             let totRs = sumRewards (esPrevPp es) rs_
             Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
-            let (es', _regRU) = applyRUpd' ru' es
+            let (es', regRU) = applyRUpd' ru' es
             -- This event (which is only generated once per epoch) must be generated even if the
             -- map is empty (db-sync depends on it).
-            tellEvent (TotalRewardEvent e rs_)
+            tellEvent $ TotalRewardEvent e regRU
             pure es'
       es' <- case ru of
         SNothing -> pure es
