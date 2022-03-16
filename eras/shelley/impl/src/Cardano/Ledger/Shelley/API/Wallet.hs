@@ -166,6 +166,7 @@ getFilteredUTxO ss addrSet =
       case getTxOutEitherAddr out of
         Left addr -> addr `Set.member` addrSet
         Right cAddr -> cAddr `Set.member` compactAddrSet
+{-# INLINEABLE getFilteredUTxO #-}
 
 getUTxOSubset ::
   NewEpochState era ->
