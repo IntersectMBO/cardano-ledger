@@ -44,6 +44,8 @@ module Control.State.Transition.Extended
     EventReturnType,
     labeledPred,
     labeledPredE,
+    ifFailureFree,
+    whenFailureFree,
     failBecause,
     judgmentContext,
     trans,
@@ -312,6 +314,7 @@ data Clause sts (rtype :: RuleType) a where
     (e -> PredicateFailure sts) ->
     a ->
     Clause sts rtype a
+  IfFailureFree :: Rule sts rtype a -> Rule sts rtype a -> Clause sts rtype a
 
 deriving instance Functor (Clause sts rtype)
 
@@ -361,6 +364,12 @@ labeledPredE lbls cond orElse = liftF $ Predicate lbls cond orElse ()
 trans ::
   Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
 trans ctx = wrap $ SubTrans ctx pure
+
+ifFailureFree :: Rule sts rtype a -> Rule sts rtype a -> Rule sts rtype a
+ifFailureFree x y = liftF (IfFailureFree x y)
+
+whenFailureFree :: Rule sts rtype () -> Rule sts rtype ()
+whenFailureFree action = ifFailureFree action (pure ())
 
 liftSTS ::
   STS sts =>
@@ -536,6 +545,11 @@ applyRuleInternal ep vp goSTS jc r = do
       t m a
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
+    runClause (IfFailureFree yesrule norule) = do
+      failureFree <- null . fst <$> get
+      if failureFree
+        then foldF runClause yesrule
+        else foldF runClause norule
     runClause (Predicate lbls cond orElse val) =
       if validateIf lbls
         then case cond of
