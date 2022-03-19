@@ -18,7 +18,6 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   )
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import Test.Cardano.Ledger.Model.Properties (modelUnitTests_)
-import Test.Cardano.Ledger.Properties (alonzoProperties)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -42,7 +41,6 @@ mainTests =
           babbageFeatures,
           alonzoAPITests,
           collectOrderingAlonzo,
-          alonzoProperties,
           modelUnitTests_
         ],
       genericProperties

@@ -362,7 +362,7 @@ instance
       work (FromAlonzoUtxoFail x) = Sum FromAlonzoUtxoFail 1 !> To x
       work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 2 !> To x
       work (UnequalCollateralReturn c1 c2) = Sum UnequalCollateralReturn 3 !> To c1 !> To c2
-      work (DanglingWitnessDataHash x) = Sum DanglingWitnessDataHash 5 !> To x
+      work (DanglingWitnessDataHash x) = Sum DanglingWitnessDataHash 4 !> To x
 
 instance
   ( Era era,
@@ -381,7 +381,7 @@ instance
       work 1 = SumD FromAlonzoUtxoFail <! From
       work 2 = SumD FromAlonzoUtxowFail <! From
       work 3 = SumD UnequalCollateralReturn <! From <! From
-      work 5 = SumD DanglingWitnessDataHash <! From
+      work 4 = SumD DanglingWitnessDataHash <! From
       work n = Invalid n
 
 deriving via InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era) instance NoThunks (BabbageUtxoPred era)

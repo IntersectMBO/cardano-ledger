@@ -84,7 +84,6 @@ library
     Test.Cardano.Ledger.Model.TxOut
     Test.Cardano.Ledger.Model.UTxO
     Test.Cardano.Ledger.Model.Value
-    Test.Cardano.Ledger.Properties
     Test.Cardano.Ledger.Rational
     Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.ValueFromList
@@ -115,6 +114,7 @@ library
     monad-supply,
     mtl,
     plutus-ledger-api,
+    plutus-core,
     plutus-tx,
     profunctors,
     QuickCheck,
@@ -125,6 +125,7 @@ library
     scientific,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    cardano-ledger-babbage-test,
     semigroupoids,
     small-steps,
     small-steps-test,
@@ -134,6 +135,7 @@ library
     tasty,
     tasty-hunit,
     tasty-quickcheck,
+    text,
     time,
     transformers,
     writer-cps-mtl,

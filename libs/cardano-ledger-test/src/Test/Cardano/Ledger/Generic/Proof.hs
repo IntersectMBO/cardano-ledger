@@ -32,6 +32,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Kind (Type)
+import GHC.Natural
 import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
@@ -137,34 +138,10 @@ instance ReflectC c => Reflect (ShelleyEra c) where
 -- ===================================================
 -- Tools for building TestTrees for multiple Eras
 
-data Some f where
-  Some :: f a -> Some f
-
-preShelley, preAllegra, preMary, preAlonzo, preBabbage :: CC.Crypto c => Evidence c -> [Some Proof]
-preShelley c = [Some (Shelley c)]
-preAllegra c = [Some (Allegra c), Some (Shelley c)]
-preMary c = [Some (Mary c), Some (Allegra c), Some (Shelley c)]
-preAlonzo c = [Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]
-preBabbage c = [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]
-
-postShelley, postAllegra, postMary, postAlonzo, postBabbage :: CC.Crypto c => Evidence c -> [Some Proof]
-postShelley c = [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c), Some (Shelley c)]
-postAllegra c = [Some (Babbage c), Some (Alonzo c), Some (Mary c), Some (Allegra c)]
-postMary c = [Some (Babbage c), Some (Alonzo c), Some (Mary c)]
-postAlonzo c = [Some (Babbage c), Some (Alonzo c)]
-postBabbage c = [Some (Babbage c)]
-
 allEra :: Testable p => String -> [Some Proof] -> (forall era. Proof era -> p) -> TestTree
 allEra name eras f = testProperties name (map g eras)
   where
     g (Some era) = (show era, property (f era))
-
-ifProof :: Proof era -> [Some Proof] -> a -> a -> a
-ifProof proof ps whentrue whenfalse =
-  if elem (Some proof) ps then whentrue else whenfalse
-
-ifCurrentProof :: forall era a. Reflect era => [Some Proof] -> a -> a -> a
-ifCurrentProof ps t f = ifProof (reify @era) ps t f
 
 instance Eq (Some Proof) where
   (Some (Shelley _)) == (Some (Shelley _)) = True
@@ -173,6 +150,13 @@ instance Eq (Some Proof) where
   (Some (Alonzo _)) == (Some (Alonzo _)) = True
   (Some (Babbage _)) == (Some (Babbage _)) = True
   _ == _ = False
+
+instance Show (Some Proof) where
+  show (Some (Shelley c)) = show (Shelley c)
+  show (Some (Allegra c)) = show (Allegra c)
+  show (Some (Mary c)) = show (Mary c)
+  show (Some (Alonzo c)) = show (Alonzo c)
+  show (Some (Babbage c)) = show (Babbage c)
 
 -- ===============================================================
 -- Proofs or witnesses to Core.EraRule Tags
@@ -199,3 +183,42 @@ runSTS ::
 runSTS (UTXOW _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (LEDGER _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (BBODY _proof) x cont = cont (runShelleyBase (applySTSTest x))
+
+-- ================================================================
+-- Crypto agnostic operations on (Proof era) via (Some Proof)
+
+data Some f where
+  Some :: f a -> Some f
+
+class Ranked t where
+  rank :: t i -> Natural
+
+instance (Eq (Some t), Ranked t) => Ord (Some t) where
+  compare (Some x) (Some y) = compare (rank x) (rank y)
+
+instance Ranked Proof where
+  rank (Shelley _) = 0
+  rank (Allegra _) = 1
+  rank (Mary _) = 2
+  rank (Alonzo _) = 3
+  rank (Babbage _) = 4
+
+preShelley, preAllegra, preMary, preAlonzo, preBabbage :: [Some Proof]
+preShelley = [Some (Shelley Mock)]
+preAllegra = [Some (Allegra Mock), Some (Shelley Mock)]
+preMary = [Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
+preAlonzo = [Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
+preBabbage = [Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
+
+postShelley, postAllegra, postMary, postAlonzo, postBabbage :: [Some Proof]
+postShelley =
+  [ Some (Babbage Mock),
+    Some (Alonzo Mock),
+    Some (Mary Mock),
+    Some (Allegra Mock),
+    Some (Shelley Mock)
+  ]
+postAllegra = [Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock)]
+postMary = [Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock)]
+postAlonzo = [Some (Babbage Mock), Some (Alonzo Mock)]
+postBabbage = [Some (Babbage Mock)]

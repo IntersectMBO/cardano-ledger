@@ -264,8 +264,10 @@ evalScripts tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : rest
           ]
    in (traceEvent endMsg res) `andResult` evalScripts tx rest
 
--- Collect information (purpose and hash) about all the scripts in a Tx.
+-- Collect information (purpose and ScriptHash) about all the
+-- Credentials that refer to scripts, that might be run in a Tx.
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
+-- See additional comments about 'scriptsNeededFromBody' below.
 scriptsNeeded ::
   forall era tx.
   ( Era era,
@@ -291,6 +293,37 @@ addOnlyCwitness !ans (DCertDeleg c@(Delegate (Delegation (ScriptHashObj hk) _dpo
   (Certifying $ DCertDeleg c, hk) : ans
 addOnlyCwitness !ans _ = ans
 
+-- |
+-- Uses of inputs in ‘txscripts’ and ‘neededScripts’
+-- There are currently 3 sets of inputs (spending, collateral, reference). A particular TxInput
+-- can appear in more than one of the sets. Even in all three at the same, but that may not be
+-- a really useful case. Inputs are where you find scripts with the 'Spending' purpose.
+--
+-- 1) Collateral inputs are only spent if phase two fails. Their corresponding TxOut can only have
+--    Key (not Script) Pay credentials, so ‘neededScripts’ does not look there.
+-- 2) Reference inputs are not spent in the current Tx, unless that same input also appears in one
+--    of the other sets. If that is not the case, their credentials are never needed, so anyone can
+--    access the inline datums and scripts in their corresponding TxOut, without needing any
+--    authorizing credentials. So ‘neededScripts’ does not look there.
+-- 3) Spending inputs are always spent. So their Pay credentials are always needed.
+--
+-- Collect information (purpose and ScriptHash) about all the Credentials that refer to scripts
+-- that will be needed to run in a TxBody in the Utxow rule. Note there may be credentials that
+-- cannot be run, so are not collected. In Babbage, reference inputs, fit that description.
+-- Purposes include
+-- 1) Spending (payment script credentials, but NOT staking scripts) in the Addr of a TxOut, pointed
+--    to by some input that needs authorization. Be sure (getField @"inputs" txb) gets all such inputs.
+--    In some Eras there may be multiple sets of inputs, which ones should be included? Currently that
+--    is only the spending inputs. Because collateral inputs can only have key-locked credentials,
+--    and reference inputs are never authorized. That might not always be the case.
+-- 2) Rewarding (Withdrawals),
+-- 3) Minting (minted field), and
+-- 4) Certifying (Delegating) scripts.
+--
+-- 'scriptsNeeded' is an aggregation of the needed Credentials referring to Scripts used in Utxow rule.
+-- The flip side of 'scriptsNeeded' (which collects script hashes) is 'txscripts' which finds the
+-- actual scripts. We maintain an invariant that every script credential refers to some actual script.
+-- This is tested in the test function 'validateMissingScripts' in the Utxow rule.
 scriptsNeededFromBody ::
   forall era.
   ( Era era,
@@ -308,7 +341,7 @@ scriptsNeededFromBody (UTxO u) txb = spend ++ reward ++ cert ++ minted
         collect :: TxIn (Crypto era) -> Maybe (ScriptPurpose (Crypto era), ScriptHash (Crypto era))
         collect !i = do
           addr <- getTxOutAddr <$> SplitMap.lookup i u
-          hash <- getScriptHash addr
+          hash <- getScriptHash addr -- Note this only looks at Pay credentials
           return (Spending i, hash)
 
     !reward = mapMaybe fromRwd (Map.keys withdrawals)

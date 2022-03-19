@@ -682,3 +682,18 @@ validScript scrip = case scrip of
   TimelockScript sc -> deepseq sc True
   PlutusScript PlutusV1 bytes -> PV1.validateScript bytes
   PlutusScript PlutusV2 bytes -> PV2.validateScript bytes
+
+-- | Compute the Set of Languages in an era, where Alonzo.Scripts are used
+languages ::
+  forall era.
+  ( ExtendedUTxO era,
+    Core.Script era ~ Script era
+  ) =>
+  Core.Tx era ->
+  UTxO era ->
+  Set (Language)
+languages tx utxo = Map.foldl' accum Set.empty allscripts
+  where
+    allscripts = Cardano.Ledger.Alonzo.TxInfo.txscripts @era utxo tx
+    accum ans (TimelockScript _) = ans
+    accum ans (PlutusScript l _) = Set.insert l ans
