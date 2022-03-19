@@ -1,22 +1,22 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Main where
 
+import GHC.Records
 import Cardano.Binary
 import Cardano.Ledger.Address
 import Cardano.Ledger.Alonzo
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Shelley.CompactAddr
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
-import Cardano.Ledger.Shelley.CompactAddr
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -33,7 +33,6 @@ import Data.Default.Class (def)
 import Data.Foldable as F
 import Data.Map.Strict as Map
 import Data.Set as Set
-import GHC.Records
 import System.Environment (getEnv)
 
 main :: IO ()
@@ -94,9 +93,9 @@ main = do
               Set.fromList [getField @"address" minTxOut, getField @"address" maxTxOut]
          in bgroup "MinMaxTxId" $
               [ env (pure setAddr) $
-                  bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState),
-                env (pure setAddr) $
-                  bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
+                  bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState)
+                -- env (pure setAddr) $
+                --   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
               ]
     ]
 
@@ -172,14 +171,14 @@ mkGlobals genesis pp =
         (sgEpochLength genesis)
         (mkSlotLength $ sgSlotLength genesis)
 
-getFilteredOldUTxO ::
-  (HasField "compactAddress" (Core.TxOut era) (CompactAddr (Crypto era))) =>
-  NewEpochState era ->
-  Set (Addr (Crypto era)) ->
-  UTxO era
-getFilteredOldUTxO ss addrs =
-  UTxO $
-    Map.filter (\out -> getField @"compactAddress" out `Set.member` addrSBSs) fullUTxO
-  where
-    UTxO fullUTxO = getUTxO ss
-    addrSBSs = Set.map compactAddr addrs
+-- getFilteredOldUTxO ::
+--   Era era =>
+--   NewEpochState era ->
+--   Set (Addr (Crypto era)) ->
+--   UTxO era
+-- getFilteredOldUTxO ss addrs =
+--   UTxO $
+--     Map.filter (\out -> getTxOutCompactAddr out `Set.member` addrSBSs) fullUTxO
+--   where
+--     UTxO fullUTxO = getUTxO ss
+--     addrSBSs = Set.map compactAddr addrs
