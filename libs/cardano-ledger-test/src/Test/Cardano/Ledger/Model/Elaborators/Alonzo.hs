@@ -45,7 +45,7 @@ import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
 import GHC.Records as GHC
-import Test.Cardano.Ledger.Examples.TwoPhaseValidation (freeCostModel)
+import Test.Cardano.Ledger.Examples.TwoPhaseValidation (freeCostModelV1)
 import Test.Cardano.Ledger.Model.BaseTypes
   ( ModelValue (..),
   )
@@ -103,7 +103,7 @@ instance
       additionalGenesesConfig =
         AlonzoGenesis
           { coinsPerUTxOWord = GHC.getField @"_coinsPerUTxOWord" mpp,
-            costmdls = Map.fromSet (const freeCostModel) $ Set.fromList [minBound ..],
+            costmdls = Alonzo.CostModels $ Map.singleton PlutusV1 freeCostModelV1,
             prices = GHC.getField @"_prices" mpp,
             maxTxExUnits = ExUnits 1_000 1_000,
             maxBlockExUnits = ExUnits 10_000 10_000,

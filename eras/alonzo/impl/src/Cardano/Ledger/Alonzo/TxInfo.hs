@@ -17,7 +17,7 @@ import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..), decodeCostModel)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), decodeCostModel, getEvaluationContext)
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..), unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), certIxToInt, txIxToInt)
@@ -485,13 +485,19 @@ andResult (Fails xs) (Fails ys) = Fails (xs ++ ys)
 instance Semigroup ScriptResult where
   (<>) = andResult
 
-data PlutusDebug = PlutusDebug
-  { debugCostModel :: CostModel,
-    debugExUnits :: ExUnits,
-    debugScript :: SBS.ShortByteString,
-    debugData :: [PV1.Data],
-    debugVersion :: Language
-  }
+data PlutusDebug
+  = PlutusDebugV1
+      CostModel
+      ExUnits
+      SBS.ShortByteString
+      [PV1.Data]
+      ProtVer
+  | PlutusDebugV2
+      CostModel
+      ExUnits
+      SBS.ShortByteString
+      [PV2.Data]
+      ProtVer
   deriving (Show)
 
 data PlutusDebugInfo
@@ -502,38 +508,55 @@ data PlutusDebugInfo
   deriving (Show)
 
 instance ToCBOR PlutusDebug where
-  toCBOR (PlutusDebug a b c d e) = encode (Rec PlutusDebug !> To a !> To b !> To c !> To d !> To e)
+  toCBOR (PlutusDebugV1 a b c d e) = encode $ Sum PlutusDebugV1 0 !> To a !> To b !> To c !> To d !> To e
+  toCBOR (PlutusDebugV2 a b c d e) = encode $ Sum PlutusDebugV2 1 !> To a !> To b !> To c !> To d !> To e
 
 instance FromCBOR PlutusDebug where
-  fromCBOR =
-    decode $
-      RecD PlutusDebug
-        <! D (decodeCostModel PlutusV1)
-        <! From
-        <! From
-        <! D (decodeList Cborg.decode)
-        <! From
+  fromCBOR = decode (Summands "PlutusDebug" dec)
+    where
+      dec 0 =
+        SumD PlutusDebugV1
+          <! D (decodeCostModel PlutusV1)
+          <! From
+          <! From
+          <! D (decodeList Cborg.decode)
+          <! From
+      dec 1 =
+        SumD PlutusDebugV2
+          <! D (decodeCostModel PlutusV2)
+          <! From
+          <! From
+          <! D (decodeList Cborg.decode)
+          <! From
+      dec n = Invalid n
 
-debugPlutus :: Language -> String -> PlutusDebugInfo
-debugPlutus lang db =
+debugPlutus :: String -> PlutusDebugInfo
+debugPlutus db =
   case B64.decode (BSU.fromString db) of
     Left e -> DebugBadHex (show e)
     Right bs ->
       case decodeFull' bs of
         Left e -> DebugCannotDecode (show e)
-        Right (PlutusDebug (CostModel cost) units script ds _version) ->
-          case interpreter
-            verbose
-            cost
+        Right (PlutusDebugV1 cm units script ds pv) ->
+          case PV1.evaluateScriptRestricting
+            (transProtocolVersion pv)
+            PV1.Verbose
+            (getEvaluationContext cm)
             (transExUnits units)
             script
             ds of
             (logs, Left e) -> DebugInfo logs (show e)
             (_, Right ex) -> DebugSuccess ex
-  where
-    (interpreter, verbose) = case lang of
-      PlutusV1 -> (PV1.evaluateScriptRestricting, PV1.Verbose)
-      PlutusV2 -> (PV2.evaluateScriptRestricting, PV2.Verbose)
+        Right (PlutusDebugV2 cm units script ds pv) ->
+          case PV2.evaluateScriptRestricting
+            (transProtocolVersion pv)
+            PV2.Verbose
+            (getEvaluationContext cm)
+            (transExUnits units)
+            script
+            ds of
+            (logs, Left e) -> DebugInfo logs (show e)
+            (_, Right ex) -> DebugSuccess ex
 
 -- The runPLCScript in the Specification has a slightly different type
 -- than the one in the implementation below. Made necessary by the the type
@@ -545,25 +568,27 @@ runPLCScript ::
   forall era.
   Show (Script era) =>
   Proxy era ->
+  ProtVer ->
   Language ->
   CostModel ->
   SBS.ShortByteString ->
   ExUnits ->
   [PV1.Data] ->
   ScriptResult
-runPLCScript proxy lang (CostModel cost) scriptbytestring units ds =
+runPLCScript proxy pv lang cm scriptbytestring units ds =
   case plutusInterpreter
     lang
     PV1.Quiet
-    cost
+    (getEvaluationContext cm)
     (transExUnits units)
     scriptbytestring
     ds of
-    (_, Left e) -> explainPlutusFailure proxy lang scriptbytestring e ds (CostModel cost) units
+    (_, Left e) -> explainPlutusFailure proxy pv lang scriptbytestring e ds cm units
     (_, Right _) -> Passes
   where
-    plutusInterpreter PlutusV1 = PV1.evaluateScriptRestricting
-    plutusInterpreter PlutusV2 = PV2.evaluateScriptRestricting
+    plutusPV = transProtocolVersion pv
+    plutusInterpreter PlutusV1 = PV1.evaluateScriptRestricting plutusPV
+    plutusInterpreter PlutusV2 = PV2.evaluateScriptRestricting plutusPV
 
 -- | Explain why a script might fail. Scripts come in two flavors:
 --
@@ -578,6 +603,7 @@ explainPlutusFailure ::
   forall era.
   Show (Script era) =>
   Proxy era ->
+  ProtVer ->
   Language ->
   SBS.ShortByteString ->
   PV1.EvaluationError ->
@@ -585,7 +611,7 @@ explainPlutusFailure ::
   CostModel ->
   ExUnits ->
   ScriptResult
-explainPlutusFailure _proxy lang scriptbytestring e ds@[dat, redeemer, info] cm eu =
+explainPlutusFailure _proxy pv lang scriptbytestring e ds@[dat, redeemer, info] cm eu =
   -- A three data argument script.
   let ss :: Script era
       ss = PlutusScript lang scriptbytestring
@@ -599,11 +625,12 @@ explainPlutusFailure _proxy lang scriptbytestring e ds@[dat, redeemer, info] cm 
                 unlines
                   [ "\nThe 3 arg plutus script (" ++ name ++ ") fails.",
                     show e,
+                    "The protocol version is: " ++ show pv,
                     "The data is: " ++ show dat,
                     "The redeemer is: " ++ show redeemer,
                     "The third data argument, does not decode to a context\n" ++ show info
                   ]
-            db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
+            db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
         Just info2 -> Fails [PlutusFailure line db]
           where
             info3 = show (pretty (info2 :: PV1.ScriptContext))
@@ -612,12 +639,13 @@ explainPlutusFailure _proxy lang scriptbytestring e ds@[dat, redeemer, info] cm 
                 unlines
                   [ "\nThe 3 arg plutus script (" ++ name ++ ") fails.",
                     show e,
+                    "The protocol version is: " ++ show pv,
                     "The data is: " ++ show dat,
                     "The redeemer is: " ++ show redeemer,
                     "The context is:\n" ++ info3
                   ]
-            db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
-explainPlutusFailure _proxy lang scriptbytestring e ds@[redeemer, info] cm eu =
+            db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
+explainPlutusFailure _proxy pv lang scriptbytestring e ds@[redeemer, info] cm eu =
   -- A two data argument script.
   let ss :: Script era
       ss = PlutusScript lang scriptbytestring
@@ -631,10 +659,11 @@ explainPlutusFailure _proxy lang scriptbytestring e ds@[redeemer, info] cm eu =
                 unlines
                   [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
                     show e,
+                    "The protocol version is: " ++ show pv,
                     "The redeemer is: " ++ show redeemer,
                     "The second data argument, does not decode to a context\n" ++ show info
                   ]
-            db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
+            db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
         Just info2 -> Fails [PlutusFailure line db]
           where
             info3 = show (pretty (info2 :: PV1.ScriptContext))
@@ -643,11 +672,12 @@ explainPlutusFailure _proxy lang scriptbytestring e ds@[redeemer, info] cm eu =
                 unlines
                   [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
                     show e,
+                    "The protocol version is: " ++ show pv,
                     "The redeemer is: " ++ show redeemer,
                     "The context is:\n" ++ info3
                   ]
-            db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
-explainPlutusFailure _proxy lang scriptbytestring e ds cm eu =
+            db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
+explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
   -- A script with the wrong number of arguments
   Fails [PlutusFailure line db]
   where
@@ -660,11 +690,12 @@ explainPlutusFailure _proxy lang scriptbytestring e ds cm eu =
         unlines
           ( [ "\nThe plutus script (" ++ name ++ ") fails.",
               show e,
+              "The protocol version is: " ++ show pv,
               "It was passed these " ++ show (Prelude.length ds) ++ " data arguments."
             ]
               ++ map show ds
           )
-    db = B64.encode . serialize' $ PlutusDebug cm eu scriptbytestring ds PlutusV1
+    db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
 
 validPlutusdata :: PV1.Data -> Bool
 validPlutusdata (PV1.Constr _n ds) = all validPlutusdata ds
@@ -677,11 +708,14 @@ validPlutusdata (PV1.B bs) = BS.length bs <= 64
 -- | Test that every Alonzo script represents a real Script.
 --     Run deepseq to see that there are no infinite computations and that
 --     every Plutus Script unflattens into a real PV1.Script
-validScript :: Script era -> Bool
-validScript scrip = case scrip of
+validScript :: ProtVer -> Script era -> Bool
+validScript pv scrip = case scrip of
   TimelockScript sc -> deepseq sc True
-  PlutusScript PlutusV1 bytes -> PV1.validateScript bytes
-  PlutusScript PlutusV2 bytes -> PV2.validateScript bytes
+  PlutusScript PlutusV1 bytes -> PV1.isScriptWellFormed (transProtocolVersion pv) bytes
+  PlutusScript PlutusV2 bytes -> PV2.isScriptWellFormed (transProtocolVersion pv) bytes
+
+transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
+transProtocolVersion (ProtVer major minor) = PV1.ProtocolVersion (fromIntegral major) (fromIntegral minor)
 
 -- | Compute the Set of Languages in an era, where Alonzo.Scripts are used
 languages ::

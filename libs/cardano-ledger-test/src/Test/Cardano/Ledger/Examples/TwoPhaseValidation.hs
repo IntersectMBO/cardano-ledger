@@ -25,10 +25,7 @@ import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
-import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel (..),
-    ExUnits (..),
-  )
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
@@ -134,8 +131,8 @@ import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
 import GHC.Stack
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
 import qualified Plutus.V1.Ledger.Api as Plutus
+import Plutus.V1.Ledger.EvaluationContext (costModelParamsForTesting, mkEvaluationContext)
 import Test.Cardano.Ledger.Generic.Fields
   ( PParamsField (..),
     TxBodyField (..),
@@ -169,12 +166,21 @@ testSystemStart :: SystemStart
 testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 -- | A cost model that sets everything as being free
-freeCostModel :: CostModel
-freeCostModel = CostModel $ 0 <$ fromJust defaultCostModelParams
+freeCostModelV1 :: CostModel
+freeCostModelV1 = CostModelV1 zeroValuedParams (fromJust $ mkEvaluationContext zeroValuedParams)
+  where
+    zeroValuedParams = 0 <$ costModelParamsForTesting
+
+-- | A cost model that sets everything as being free
+freeCostModelV2 :: CostModel
+freeCostModelV2 = CostModelV1 zeroValuedParams (fromJust $ mkEvaluationContext zeroValuedParams)
+  where
+    costModelParamsForTestingPV2 = costModelParamsForTesting -- TODO use PV2 when it exists
+    zeroValuedParams = 0 <$ costModelParamsForTestingPV2
 
 defaultPPs :: [PParamsField era]
 defaultPPs =
-  [ Costmdls $ Map.singleton PlutusV1 freeCostModel,
+  [ Costmdls . CostModels $ Map.singleton PlutusV1 freeCostModelV1,
     MaxValSize 1000000000,
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
@@ -1669,7 +1675,7 @@ collectTwoPhaseScriptInputsOutputOrdering apf =
       [ ( always 3 apf,
           [datumExample1, redeemerExample1, context],
           ExUnits 5000 5000,
-          freeCostModel
+          freeCostModelV1
         )
       ]
   where
@@ -2171,11 +2177,7 @@ alonzoUTXOWexamplesB pf =
               pf
               (trustMeP pf True $ missing1phaseScriptWitnessTx pf)
               ( Left
-                  [ fromUtxos @era . CollectErrors $
-                      [ NoRedeemer (Spending (mkGenesisTxIn 100)),
-                        NoWitness (timelockHash 0 pf)
-                      ],
-                    fromUtxow @era . MissingScriptWitnessesUTXOW . Set.singleton $
+                  [ fromUtxow @era . MissingScriptWitnessesUTXOW . Set.singleton $
                       timelockHash 0 pf
                   ]
               ),
@@ -2184,12 +2186,7 @@ alonzoUTXOWexamplesB pf =
               pf
               (trustMeP pf True $ missing2phaseScriptWitnessTx pf)
               ( Left
-                  [ fromUtxos @era . CollectErrors $
-                      [ NoWitness (alwaysSucceedsHash 2 pf),
-                        NoWitness (alwaysSucceedsHash 2 pf),
-                        NoWitness (alwaysSucceedsHash 2 pf)
-                      ],
-                    -- these redeemers are associated with phase-1 scripts
+                  [ -- these redeemers are associated with phase-1 scripts
                     fromPredFail @era . ExtraRedeemers $
                       [ RdmrPtr Tag.Mint 1,
                         RdmrPtr Tag.Cert 1,

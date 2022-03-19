@@ -25,6 +25,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxow (langsUsed)
 import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, txscriptfee)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo
   ( CostModel (..),
+    CostModels (..),
     ExUnits (..),
     Prices (..),
     Script (..),
@@ -74,7 +75,7 @@ import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
+import Plutus.V1.Ledger.Api (costModelParamNames, mkEvaluationContext)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
@@ -177,7 +178,10 @@ genAlonzoMint startvalue = do
 
 -- | A cost model that sets everything as being free
 freeCostModel :: CostModel
-freeCostModel = CostModel $ 0 <$ fromJust defaultCostModelParams
+freeCostModel = CostModelV1 cmps ec
+  where
+    cmps = Map.fromList $ fmap (\k -> (k, 0)) (Set.toList costModelParamNames)
+    ec = fromJust $ mkEvaluationContext cmps
 
 -- ================================================================
 
@@ -309,7 +313,7 @@ genAlonzoPParamsDelta constants pp = do
   -- Not too small for mxV, if this is too small then any Tx with Value
   -- that has lots of policyIds will fail. The Shelley Era uses hard coded 4000
   mxV <- genM (genNatural 4000 5000)
-  let cost = SJust $ Map.singleton PlutusV1 freeCostModel
+  let cost = SJust . CostModels $ Map.singleton PlutusV1 freeCostModel
       c = SJust 25 -- percent of fee in collateral
       mxC = SJust 100 -- max number of inputs in collateral
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)
@@ -319,13 +323,17 @@ genAlonzoPParams ::
   Constants ->
   Gen (Core.PParams (AlonzoEra c))
 genAlonzoPParams constants = do
-  shelleypp <- Shelley.genPParams @(MaryEra c) constants -- This ensures that "_d" field is not 0.
+  let constants' = constants {minMajorPV = 5}
+  -- This ensures that "_d" field is not 0, and that the major protocol version
+  -- is large enough to not trigger plutus script failures
+  -- (no bultins are alllowed before major version 5).
+  shelleypp <- Shelley.genPParams @(MaryEra c) constants'
   ada <- (Coin <$> choose (1, 5))
   price <- pure (Prices minBound minBound) -- (Prices <$> (Coin <$> choose (100, 5000)) <*> (Coin <$> choose (100, 5000)))
   mxTx <- pure (ExUnits (5 * bigMem + 1) (5 * bigStep + 1)) -- (ExUnits <$> (choose (100, 5000)) <*> (choose (100, 5000)))
   mxBl <- (ExUnits <$> (genNatural (20 * bigMem + 1) (30 * bigMem + 1)) <*> genNatural (20 * bigStep + 1) (30 * bigStep + 1))
   mxV <- (genNatural 4000 10000) -- This can't be too small. Shelley uses Hard coded 4000
-  let cost = Map.singleton PlutusV1 freeCostModel
+  let cost = CostModels $ Map.singleton PlutusV1 freeCostModel
       c = 25 -- percent of fee in collateral
       mxC = 100 -- max number of inputs in collateral
   pure (Alonzo.extendPP shelleypp ada cost price mxTx mxBl mxV c mxC)

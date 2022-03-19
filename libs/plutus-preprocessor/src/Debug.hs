@@ -6,4 +6,4 @@ import System.Environment (getArgs)
 import System.IO
 
 main :: IO ()
-main = getArgs >>= (print . debugPlutus PlutusV1 . head)
+main = getArgs >>= (print . debugPlutus . head)

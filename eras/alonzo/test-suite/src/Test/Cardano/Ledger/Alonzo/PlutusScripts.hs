@@ -4,10 +4,24 @@ module Test.Cardano.Ledger.Alonzo.PlutusScripts where
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel (..), Script (..))
 import Data.ByteString.Short (pack)
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
+import Data.Maybe (fromJust)
+import qualified Plutus.V1.Ledger.Api as PV1
+import qualified Plutus.V1.Ledger.EvaluationContext as PV1
+import qualified Plutus.V2.Ledger.Api as PV2
 
+testingCostModelV1 :: CostModel
+testingCostModelV1 =
+  CostModelV1 PV1.costModelParamsForTesting (fromJust $ PV1.mkEvaluationContext PV1.costModelParamsForTesting)
+
+testingCostModelV2 :: CostModel
+testingCostModelV2 =
+  CostModelV2 costModelParamsForTestingPV2 (fromJust $ PV2.mkEvaluationContext costModelParamsForTestingPV2)
+  where
+    costModelParamsForTestingPV2 = PV1.costModelParamsForTesting -- TODO use PV2 when it exists
+
+{-# DEPRECATED defaultCostModel "use testingCostModelV1 instead" #-}
 defaultCostModel :: Maybe CostModel
-defaultCostModel = CostModel <$> defaultCostModelParams
+defaultCostModel = Just testingCostModelV1
 
 {- Preproceesed Plutus Script
 guessTheNumber'2_0 :: PlutusTx.Builtins.Internal.BuiltinData ->

@@ -89,6 +89,7 @@ data Constants = Constants
     maxTreasury :: Integer,
     minReserves :: Integer,
     maxReserves :: Integer,
+    minMajorPV :: Natural,
     -- | When generating Tx, we want the UTxO size to fluctuate around this point. If
     --   it gets too small, we can't balance the fee, too large it gets too complicated.
     genTxStableUtxoSize :: Int,
@@ -140,6 +141,7 @@ defaultConstants =
       maxTreasury = 10000000,
       minReserves = 1000000,
       maxReserves = 10000000,
+      minMajorPV = 2,
       genTxStableUtxoSize = 100,
       genTxUtxoIncrement = 3
     }

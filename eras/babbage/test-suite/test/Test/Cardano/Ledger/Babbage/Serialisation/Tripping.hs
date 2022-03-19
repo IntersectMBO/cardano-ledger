@@ -6,8 +6,7 @@
 module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 
 import Cardano.Binary
-import Cardano.Ledger.Alonzo.Language (Language (PlutusV1))
-import Cardano.Ledger.Alonzo.Scripts (decodeCostModel)
+import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Babbage (AuxiliaryData, BabbageEra, Script, TxOut)
 import Cardano.Ledger.Babbage.PParams (PParams, PParamsUpdate)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred)
@@ -20,7 +19,7 @@ import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term (decodeTerm)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy.Char8 as BSL
-import Data.Roundtrip (roundTrip, roundTrip', roundTripAnn)
+import Data.Roundtrip (roundTrip, roundTripAnn)
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
@@ -94,7 +93,7 @@ tests =
       testProperty "babbage/TxBody" $
         trippingAnn @(TxBody (BabbageEra C_Crypto)),
       testProperty "babbage/CostModel" $
-        trippingF (roundTrip' toCBOR (decodeCostModel PlutusV1)),
+        tripping @CostModels,
       testProperty "babbage/PParams" $
         tripping @(PParams (BabbageEra C_Crypto)),
       testProperty "babbage/PParamsUpdate" $

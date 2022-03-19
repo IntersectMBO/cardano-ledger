@@ -27,13 +27,18 @@ module Cardano.Ledger.Alonzo.Scripts
 
     -- * Cost Model
     CostModel (..),
+    getEvaluationContext,
     ExUnits (ExUnits, exUnitsMem, exUnitsSteps, ..),
     ExUnits',
     Prices (..),
     hashCostModel,
-    validateCostModelParams,
+    isCostModelParamsWellFormed,
     decodeCostModelMap,
     decodeCostModel,
+    CostModels (..),
+
+    -- * Deprecated
+    validateCostModelParams,
   )
 where
 
@@ -49,6 +54,7 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash (..),
   )
+import Cardano.Ledger.Serialization (mapToCBOR)
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Control.DeepSeq (NFData (..))
 import Control.Monad (when)
@@ -65,7 +71,7 @@ import Data.Text (Text)
 import Data.Typeable
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks)
+import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
 import Plutus.V2.Ledger.Api as PV2 hiding (Map, Script)
@@ -173,13 +179,30 @@ pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `o
 
 -- =====================================
 
-newtype CostModel = CostModel (Map Text Integer)
-  deriving (Eq, Generic, Show, Ord)
+data CostModel
+  = CostModelV1 (Map Text Integer) PV1.EvaluationContext
+  | CostModelV2 (Map Text Integer) PV2.EvaluationContext
+
+instance Eq CostModel where
+  (CostModelV1 x _) == (CostModelV1 y _) = x == y
+  (CostModelV2 x _) == (CostModelV2 y _) = x == y
+  _ == _ = False
+
+instance Show CostModel where
+  show (CostModelV1 cm _) = "CostModelV1 " <> show cm
+  show (CostModelV2 cm _) = "CostModelV2 " <> show cm
+
+instance Ord CostModel where
+  compare (CostModelV1 x _) (CostModelV1 y _) = compare x y
+  compare (CostModelV2 x _) (CostModelV2 y _) = compare x y
+  compare (CostModelV1 _ _) (CostModelV2 _ _) = LT
+  compare (CostModelV2 _ _) (CostModelV1 _ _) = GT
 
 -- NOTE: Since cost model serializations need to be independently reproduced,
 -- we use the 'canonical' serialization approach used in Byron.
 instance ToCBOR CostModel where
-  toCBOR (CostModel cm) = encodeFoldableAsDefinite $ Map.elems cm
+  toCBOR (CostModelV1 cm _) = encodeFoldableAsDefinite $ Map.elems cm
+  toCBOR (CostModelV2 cm _) = encodeFoldableAsDefinite $ Map.elems cm
 
 instance SafeToHash CostModel where
   originalBytes = serialize'
@@ -189,36 +212,39 @@ instance SafeToHash CostModel where
 
 instance HashWithCrypto CostModel CostModel
 
-instance NoThunks CostModel
+deriving via InspectHeapNamed "PV1.EvaluationContext" PV1.EvaluationContext instance NoThunks PV1.EvaluationContext
 
-instance NFData CostModel
+deriving via InspectHeapNamed "CostModel" CostModel instance NoThunks CostModel
 
-checkCostModel :: Language -> Map Text Integer -> Either String CostModel
-checkCostModel PlutusV1 cm =
-  if PV1.validateCostModelParams cm
-    then Right (CostModel cm)
-    else Left ("Invalid PlutusV1 cost model: " ++ show cm)
-checkCostModel PlutusV2 cm =
-  if PV2.validateCostModelParams cm
-    then Right (CostModel cm)
-    else Left ("Invalid PlutusV2 cost model: " ++ show cm)
+instance NFData CostModel where
+  rnf (CostModelV1 cm ectx) = seq (rnf cm) (rnf ectx)
+  rnf (CostModelV2 cm ectx) = seq (rnf cm) (rnf ectx)
+
+-- | Convert cost model parameters to a cost model, making use of the
+--  conversion function mkEvaluationContext from the Plutus API.
+costModelParamsToCostModel :: Language -> Map Text Integer -> Either String CostModel
+costModelParamsToCostModel PlutusV1 cm =
+  case PV1.mkEvaluationContext cm of
+    Just evalCtx -> Right (CostModelV1 cm evalCtx)
+    Nothing -> Left ("Invalid PlutusV1 cost model: " ++ show cm)
+costModelParamsToCostModel PlutusV2 cm =
+  case PV2.mkEvaluationContext cm of
+    Just evalCtx -> Right (CostModelV2 cm evalCtx)
+    Nothing -> Left ("Invalid PlutusV2 cost model: " ++ show cm)
 
 decodeCostModelMap :: Decoder s (Map Language CostModel)
 decodeCostModelMap = decodeMapByKey fromCBOR decodeCostModel
 
 decodeCostModel :: Language -> Decoder s CostModel
-decodeCostModel lang =
-  case dcmps of
-    Nothing -> fail "Default Plutus Cost Model is corrupt."
-    Just dcm -> do
-      checked <- checkCostModel lang <$> decodeArrayAsMap (Map.keysSet dcm) fromCBOR
-      case checked of
-        Left e -> fail e
-        Right cm -> pure cm
+decodeCostModel lang = do
+  checked <- costModelParamsToCostModel lang <$> decodeArrayAsMap keys fromCBOR
+  case checked of
+    Left e -> fail e
+    Right cm -> pure cm
   where
-    dcmps = case lang of
-      PlutusV1 -> PV1.defaultCostModelParams
-      PlutusV2 -> PV2.defaultCostModelParams
+    keys = case lang of
+      PlutusV1 -> PV1.costModelParamNames
+      PlutusV2 -> PV2.costModelParamNames
 
 decodeArrayAsMap :: Ord a => Set a -> Decoder s b -> Decoder s (Map a b)
 decodeArrayAsMap keys decodeValue = do
@@ -243,6 +269,19 @@ hashCostModel ::
   CostModel ->
   SafeHash (Crypto e) CostModel
 hashCostModel _proxy = hashWithCrypto (Proxy @(Crypto e))
+
+getEvaluationContext :: CostModel -> PV1.EvaluationContext
+getEvaluationContext (CostModelV1 _ ec) = ec
+getEvaluationContext (CostModelV2 _ ec) = ec
+
+newtype CostModels = CostModels {unCostModels :: Map Language CostModel}
+  deriving (Eq, Show, Ord, Generic, NFData, NoThunks)
+
+instance FromCBOR CostModels where
+  fromCBOR = CostModels <$> decodeCostModelMap
+
+instance ToCBOR CostModels where
+  toCBOR = mapToCBOR . unCostModels
 
 -- ==================================
 
@@ -331,3 +370,7 @@ instance
       decodeScript 1 = Ann (SumD $ PlutusScript PlutusV1) <*! Ann From
       decodeScript 2 = Ann (SumD $ PlutusScript PlutusV2) <*! Ann From
       decodeScript n = Invalid n
+
+{-# DEPRECATED validateCostModelParams "this function is replaced by isCostModelParamsWellFormed" #-}
+validateCostModelParams :: CostModelParams -> Bool
+validateCostModelParams = isCostModelParamsWellFormed

@@ -202,7 +202,7 @@ instance
   ) =>
   ValidateAuxiliaryData (ShelleyMAEra (ma :: MaryOrAllegra) c) c
   where
-  validateAuxiliaryData (AuxiliaryData md as) = deepseq as $ all validMetadatum md
+  validateAuxiliaryData _ (AuxiliaryData md as) = deepseq as $ all validMetadatum md
   hashAuxiliaryData aux = AuxiliaryDataHash (hashAnnotated aux)
 
 instance

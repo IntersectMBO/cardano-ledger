@@ -9,17 +9,18 @@ module Test.Cardano.Ledger.Alonzo.Examples where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..), Script (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
 import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (Fails, Passes), runPLCScript)
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Data.ByteString.Short (ShortByteString)
-import Data.Maybe (fromMaybe)
 import Data.Proxy (Proxy (..))
-import Debug.Trace
 import qualified Plutus.V1.Ledger.Api as P
+import qualified Plutus.V1.Ledger.EvaluationContext as P
 import Plutus.V1.Ledger.Examples
   ( alwaysFailingNAryFunction,
     alwaysSucceedingNAryFunction,
   )
+import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
   ( evenRedeemer2,
     evendata3,
@@ -54,12 +55,12 @@ directPlutusTest expectation script ds =
     (ShouldFail, Right _) ->
       assertBool "This script should have failed" False
   where
-    costModel = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
     -- Evaluate a script with sufficient budget to run it.
+    pv = P.ProtocolVersion 6 0
     evalWithTightBudget :: ShortByteString -> [P.Data] -> Either P.EvaluationError P.ExBudget
     evalWithTightBudget scr datums = do
-      budget <- snd $ P.evaluateScriptCounting P.Quiet costModel scr datums
-      snd $ P.evaluateScriptRestricting P.Verbose costModel budget scr datums
+      budget <- snd $ P.evaluateScriptCounting pv P.Quiet P.evalCtxForTesting scr datums
+      snd $ P.evaluateScriptRestricting pv P.Verbose P.evalCtxForTesting budget scr datums
 
 -- | Expects 3 args (data, redeemer, context)
 guessTheNumber3 :: ShortByteString
@@ -187,12 +188,20 @@ alonzo = Proxy
 
 explainTest :: Script (AlonzoEra StandardCrypto) -> ShouldSucceed -> [P.Data] -> Assertion
 explainTest (script@(PlutusScript _ bytes)) mode ds =
-  let cost = fromMaybe (error "corrupt default cost model") P.defaultCostModelParams
-   in case (mode, runPLCScript alonzo PlutusV1 (CostModel cost) bytes (ExUnits 100000000 10000000) ds) of
-        (ShouldSucceed, Passes) -> assertBool "" True
-        (ShouldSucceed, Fails xs) -> assertBool (show xs) (trace (show (head xs)) False)
-        (ShouldFail, Passes) -> assertBool ("Test that should fail, passes: " ++ show script) False
-        (ShouldFail, Fails _) -> assertBool "" True
+  case ( mode,
+         runPLCScript
+           alonzo
+           (ProtVer 6 0)
+           PlutusV1
+           testingCostModelV1
+           bytes
+           (ExUnits 100000000 10000000)
+           ds
+       ) of
+    (ShouldSucceed, Passes) -> assertBool "" True
+    (ShouldSucceed, Fails xs) -> assertBool (show xs) False
+    (ShouldFail, Passes) -> assertBool ("Test that should fail, passes: " ++ show script) False
+    (ShouldFail, Fails _) -> assertBool "" True
 explainTest _other _mode _ds = assertBool "BAD Script" False
 
 explainTestTree :: TestTree

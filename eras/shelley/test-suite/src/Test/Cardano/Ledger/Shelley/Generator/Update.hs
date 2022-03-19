@@ -98,7 +98,7 @@ genIntervalInThousands lower upper =
   unsafeBoundRational <$> genRationalInThousands lower upper
 
 genPParams :: Constants -> Gen (PParams era)
-genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
+genPParams c@(Constants {maxMinFeeA, maxMinFeeB, minMajorPV}) =
   mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
     <*> genNatural 0 maxMinFeeB -- _minfeeB
     <*> szGen -- (maxBBSize, maxBHSize, maxTxSize)
@@ -111,7 +111,7 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB}) =
     <*> genTau
     <*> genDecentralisationParam
     <*> genExtraEntropy
-    <*> genProtocolVersion
+    <*> genProtocolVersion minMajorPV
     <*> genMinUTxOValue
     <*> genMinPoolCost
   where
@@ -191,8 +191,8 @@ genDecentralisationParam = unsafeBoundRational <$> QC.elements [0.1, 0.2 .. 1]
 -- ^ ^ TODO jc - generating d=0 takes some care, if there are no registered
 --  stake pools then d=0 deadlocks the system.
 
-genProtocolVersion :: HasCallStack => Gen ProtVer
-genProtocolVersion = ProtVer <$> genNatural 1 10 <*> genNatural 1 50
+genProtocolVersion :: HasCallStack => Natural -> Gen ProtVer
+genProtocolVersion minMajPV = ProtVer <$> genNatural minMajPV 10 <*> genNatural 1 50
 
 genMinUTxOValue :: HasCallStack => Gen Coin
 genMinUTxOValue = Coin <$> genInteger 1 20

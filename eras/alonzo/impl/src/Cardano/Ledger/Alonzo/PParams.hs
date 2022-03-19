@@ -43,9 +43,9 @@ import Cardano.Binary
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel (..),
+    CostModels (..),
     ExUnits (..),
     Prices (..),
-    decodeCostModelMap,
   )
 import Cardano.Ledger.BaseTypes
   ( NonNegativeInterval,
@@ -59,11 +59,7 @@ import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    mapToCBOR,
-  )
+import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Cardano.Ledger.Shelley.Orphans ()
 import Cardano.Ledger.Shelley.PParams (HKD)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
@@ -81,7 +77,6 @@ import Data.Coders
     encode,
     encodeFoldableAsIndefinite,
     field,
-    mapEncode,
     (!>),
     (<!),
   )
@@ -89,7 +84,6 @@ import Data.Default (Default (..))
 import Data.Function (on)
 import Data.Functor.Identity (Identity (..))
 import Data.List (sortBy)
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -143,7 +137,7 @@ data PParams' f era = PParams
     -- | Cost in lovelace per word (8 bytes) of UTxO storage (instead of _minUTxOValue)
     _coinsPerUTxOWord :: !(HKD f Coin),
     -- | Cost models for non-native script languages
-    _costmdls :: !(HKD f (Map Language CostModel)),
+    _costmdls :: !(HKD f CostModels),
     -- | Prices of execution units (for non-native script languages)
     _prices :: !(HKD f Prices),
     -- | Max total script execution resources units allowed per tx
@@ -219,7 +213,7 @@ instance (Era era) => ToCBOR (PParams era) where
             !> To minPoolCost'
             -- new/updated for alonzo
             !> To coinsPerUTxOWord'
-            !> mapEncode costmdls'
+            !> To costmdls'
             !> To prices'
             !> To maxTxExUnits'
             !> To maxBlockExUnits'
@@ -253,7 +247,7 @@ instance
         <! From -- _minPoolCost     :: Natural
         -- new/updated for alonzo
         <! From -- _coinsPerUTxOWord  :: Coin
-        <! D decodeCostModelMap -- _costmdls :: (Map Language CostModel)
+        <! From -- _costmdls :: CostModels
         <! From -- _prices = prices',
         <! From -- _maxTxExUnits = maxTxExUnits',
         <! From -- _maxBlockExUnits = maxBlockExUnits'
@@ -279,11 +273,11 @@ emptyPParams =
       _tau = minBound,
       _d = minBound,
       _extraEntropy = NeutralNonce,
-      _protocolVersion = BT.ProtVer 0 0,
+      _protocolVersion = BT.ProtVer 5 0,
       _minPoolCost = mempty,
       -- new/updated for alonzo
       _coinsPerUTxOWord = Coin 0,
-      _costmdls = mempty,
+      _costmdls = CostModels mempty,
       _prices = Prices minBound minBound,
       _maxTxExUnits = ExUnits 0 0,
       _maxBlockExUnits = ExUnits 0 0,
@@ -363,7 +357,7 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 14 (_protocolVersion ppup) toCBOR
     !> omitStrictMaybe 16 (_minPoolCost ppup) toCBOR
     !> omitStrictMaybe 17 (_coinsPerUTxOWord ppup) toCBOR
-    !> omitStrictMaybe 18 (_costmdls ppup) mapToCBOR
+    !> omitStrictMaybe 18 (_costmdls ppup) toCBOR
     !> omitStrictMaybe 19 (_prices ppup) toCBOR
     !> omitStrictMaybe 20 (_maxTxExUnits ppup) toCBOR
     !> omitStrictMaybe 21 (_maxBlockExUnits ppup) toCBOR
@@ -430,7 +424,7 @@ updateField 13 = field (\x up -> up {_extraEntropy = SJust x}) From
 updateField 14 = field (\x up -> up {_protocolVersion = SJust x}) From
 updateField 16 = field (\x up -> up {_minPoolCost = SJust x}) From
 updateField 17 = field (\x up -> up {_coinsPerUTxOWord = SJust x}) From
-updateField 18 = field (\x up -> up {_costmdls = x}) (D $ SJust <$> decodeCostModelMap)
+updateField 18 = field (\x up -> up {_costmdls = SJust x}) From
 updateField 19 = field (\x up -> up {_prices = SJust x}) From
 updateField 20 = field (\x up -> up {_maxTxExUnits = SJust x}) From
 updateField 21 = field (\x up -> up {_maxBlockExUnits = SJust x}) From
@@ -488,7 +482,7 @@ data LangDepView = LangDepView {tag :: ByteString, params :: ByteString}
 
 getLanguageView ::
   forall era.
-  (HasField "_costmdls" (Core.PParams era) (Map Language CostModel)) =>
+  (HasField "_costmdls" (Core.PParams era) CostModels) =>
   Core.PParams era ->
   Language ->
   LangDepView
@@ -498,15 +492,19 @@ getLanguageView pp lang@PlutusV1 =
     ( serialize'
         ( serializeEncoding' $
             maybe encodeNull enc $
-              Map.lookup lang (getField @"_costmdls" pp)
+              Map.lookup lang (unCostModels $ getField @"_costmdls" pp)
         )
     )
   where
-    enc (CostModel cm) = encodeFoldableAsIndefinite $ Map.elems cm
+    enc (CostModelV1 cm _) = encodeFoldableAsIndefinite $ Map.elems cm
+    enc (CostModelV2 cm _) = encodeFoldableAsIndefinite $ Map.elems cm
 getLanguageView pp lang@PlutusV2 =
   LangDepView
     (serialize' lang)
-    (serializeEncoding' $ maybe encodeNull toCBOR $ Map.lookup lang (getField @"_costmdls" pp))
+    ( serializeEncoding' $
+        maybe encodeNull toCBOR $
+          Map.lookup lang (unCostModels $ getField @"_costmdls" pp)
+    )
 
 encodeLangViews :: Set LangDepView -> Encoding
 encodeLangViews views = encodeMapLen n <> foldMap encPair ascending
@@ -531,7 +529,7 @@ retractPP
 extendPP ::
   Shelley.PParams' f era1 ->
   HKD f Coin ->
-  HKD f (Map Language CostModel) ->
+  HKD f CostModels ->
   HKD f Prices ->
   HKD f ExUnits ->
   HKD f ExUnits ->

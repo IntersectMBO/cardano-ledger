@@ -24,7 +24,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( Data,
@@ -43,7 +43,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     valContext,
   )
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), unTxDats)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -155,7 +155,7 @@ collectTwoPhaseScriptInputs ::
     ExtendedUTxO era,
     Core.Script era ~ AlonzoScript.Script era,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) (Map.Map Language CostModel),
+    HasField "_costmdls" (Core.PParams era) CostModels,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -169,7 +169,7 @@ collectTwoPhaseScriptInputs ::
   Either [CollectError (Crypto era)] [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   let usedLanguages = [lang | (AlonzoScript.PlutusScript lang _) <- Map.elems scriptsUsed]
-      costModels = getField @"_costmdls" pp
+      costModels = unCostModels $ getField @"_costmdls" pp
       missingCMs = [lang | lang <- usedLanguages, lang `Map.notMember` costModels]
    in case missingCMs of
         l : _ -> Left [NoCostModel l]
@@ -177,28 +177,27 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   where
     scriptsUsed = txscripts utxo tx
     txinfo lang = runIdentity $ txInfo pp lang ei sysS utxo tx
-    needed = filter knownToNotBe1Phase $ scriptsNeeded utxo tx
+    needed = mapMaybe knownToNotBe1Phase $ scriptsNeeded utxo tx
     -- The formal spec achieves the same filtering as knownToNotBe1Phase
     -- by use of the (partial) language function, which is not defined
     -- on 1-phase scripts.
-    knownToNotBe1Phase (_, sh) =
+    knownToNotBe1Phase (sp, sh) =
       case sh `Map.lookup` scriptsUsed of
-        Just (AlonzoScript.PlutusScript _ _) -> True
-        Just (AlonzoScript.TimelockScript _) -> False
-        Nothing -> True
-    redeemer (sp, _) =
+        Just (AlonzoScript.PlutusScript lang _) -> Just (sp, lang, sh)
+        Just (AlonzoScript.TimelockScript _) -> Nothing
+        Nothing -> Nothing
+    redeemer (sp, lang, _) =
       case indexedRdmrs tx sp of
-        Just (d, eu) -> Right (sp, d, eu)
+        Just (d, eu) -> Right (lang, sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
-    getscript (_, hash) =
+    getscript (_, _, hash) =
       case hash `Map.lookup` scriptsUsed of
         Just script -> Right script
         Nothing -> Left (NoWitness hash)
-    apply costs (sp, d, eu) script@(AlonzoScript.PlutusScript lang _) =
+    apply costs (lang, sp, d, eu) script =
       case txinfo lang of
         Right inf -> Right (script, getData tx utxo sp ++ (d : [valContext inf sp]), eu, costs Map.! lang)
         Left te -> Left $ BadTranslation te
-    apply _ (_, _, eu) script = Right (script, [], eu, CostModel mempty)
 
 -- | Merge two lists (either of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.
@@ -236,25 +235,26 @@ evalScripts ::
     HasField "wits" tx (TxWitness era),
     HasField "vldt" (Core.TxBody era) ValidityInterval
   ) =>
+  ProtVer ->
   tx ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
   ScriptResult
-evalScripts _tx [] = Passes
-evalScripts tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
+evalScripts _pv _tx [] = Passes
+evalScripts pv tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
   lift (evalTimelock vhks (getField @"vldt" (getField @"body" tx)) timelock)
-    `andResult` evalScripts tx rest
+    `andResult` evalScripts pv tx rest
   where
     vhks = Set.map witKeyHash (txwitsVKey' (getField @"wits" tx))
     lift True = Passes
     lift False = Fails [OnePhaseFailure . pack . show $ timelock]
-evalScripts tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : rest) =
+evalScripts pv tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : rest) =
   let beginMsg =
         intercalate
           ","
           [ "[LEDGER][PLUTUS_SCRIPT]",
             "BEGIN"
           ]
-      !res = traceEvent beginMsg $ runPLCScript (Proxy @era) lang cost pscript units (map getPlutusData ds)
+      !res = traceEvent beginMsg $ runPLCScript (Proxy @era) pv lang cost pscript units (map getPlutusData ds)
       endMsg =
         intercalate
           ","
@@ -262,7 +262,7 @@ evalScripts tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : rest
             "END",
             "res = " <> show res
           ]
-   in (traceEvent endMsg res) `andResult` evalScripts tx rest
+   in (traceEvent endMsg res) `andResult` evalScripts pv tx rest
 
 -- Collect information (purpose and ScriptHash) about all the
 -- Credentials that refer to scripts, that might be run in a Tx.

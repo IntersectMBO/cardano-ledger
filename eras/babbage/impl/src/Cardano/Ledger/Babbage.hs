@@ -210,9 +210,9 @@ instance (CC.Crypto c) => UsesPParams (BabbageEra c) where
 
 instance CC.Crypto c => ValidateAuxiliaryData (BabbageEra c) c where
   hashAuxiliaryData x = AuxiliaryDataHash (hashAnnotated x)
-  validateAuxiliaryData (AuxiliaryData metadata scrips) =
+  validateAuxiliaryData pv (AuxiliaryData metadata scrips) =
     all validMetadatum metadata
-      && all validScript scrips
+      && all (validScript pv) scrips
 
 instance CC.Crypto c => EraModule.SupportsSegWit (BabbageEra c) where
   type TxSeq (BabbageEra c) = Alonzo.TxSeq (BabbageEra c)

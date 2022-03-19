@@ -19,12 +19,12 @@ where
 
 import Cardano.Binary
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
-import Cardano.Ledger.Alonzo.Language
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Scripts
+import Cardano.Ledger.Alonzo.Scripts (CostModel (..), CostModels (..), ExUnits (..), ExUnits', Prices (..))
 import Cardano.Ledger.Alonzo.TxBody
 import qualified Cardano.Ledger.BaseTypes as BT
-import Cardano.Ledger.Coin
+import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.SafeHash (extractHash)
@@ -34,20 +34,22 @@ import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import Data.Coders
 import Data.Functor.Identity
-import Data.Map.Strict
-import qualified Data.Map.Strict as Map
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.Maybe (mapMaybe)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Text (Text)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
-import Numeric.Natural
-import Plutus.V1.Ledger.Api (defaultCostModelParams)
+import Numeric.Natural (Natural)
+import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script, TxOut, Value)
+import Plutus.V2.Ledger.Api as PV2 hiding (Map, Script, TxOut, Value)
 import Prelude
 
 data AlonzoGenesis = AlonzoGenesis
   { coinsPerUTxOWord :: !Coin,
-    costmdls :: !(Map Language CostModel),
+    costmdls :: !CostModels,
     prices :: !Prices,
     maxTxExUnits :: !ExUnits,
     maxBlockExUnits :: !ExUnits,
@@ -94,7 +96,7 @@ instance FromCBOR AlonzoGenesis where
     decode $
       RecD AlonzoGenesis
         <! From
-        <! D decodeCostModelMap
+        <! From
         <! From
         <! From
         <! From
@@ -179,9 +181,12 @@ instance FromJSON Prices where
           Nothing -> fail ("too much precision for bounded rational: " ++ show r)
           Just s -> return s
 
-deriving newtype instance FromJSON CostModel
+instance ToJSON CostModel where
+  toJSON (CostModelV1 cm _) = toJSON cm
+  toJSON (CostModelV2 cm _) = toJSON cm
 
-deriving newtype instance ToJSON CostModel
+instance ToJSON CostModels where
+  toJSON = toJSON . unCostModels
 
 languageToText :: Language -> Text
 languageToText PlutusV1 = "PlutusV1"
@@ -189,6 +194,7 @@ languageToText PlutusV2 = "PlutusV2"
 
 languageFromText :: MonadFail m => Text -> m Language
 languageFromText "PlutusV1" = pure PlutusV1
+languageFromText "PlutusV2" = pure PlutusV2
 languageFromText lang = fail $ "Error decoding Language: " ++ show lang
 
 instance FromJSON Language where
@@ -203,43 +209,45 @@ instance ToJSONKey Language where
 instance FromJSONKey Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
+validateCostModel :: MonadFail m => (Language, (Map Text Integer)) -> m (Language, CostModel)
+validateCostModel (PlutusV1, cmps) = case PV1.mkEvaluationContext cmps of
+  Nothing -> fail "corrupt Plutus V1 cost model"
+  Just ec -> pure (PlutusV1, CostModelV1 cmps ec)
+validateCostModel (PlutusV2, cmps) = case PV2.mkEvaluationContext cmps of
+  Nothing -> fail "corrupt Plutus V2 cost model"
+  Just ec -> pure (PlutusV2, CostModelV2 cmps ec)
+
+instance FromJSON CostModels where
+  parseJSON = Aeson.withObject "CostModels" $ \o -> do
+    plutusV1 <- o .:? "PlutusV1"
+    plutusV2 <- o .:? "PlutusV2"
+    cms <- mapM validateCostModel $ mapMaybe f [(PlutusV1, plutusV1), (PlutusV2, plutusV2)]
+    pure . CostModels . Map.fromList $ cms
+    where
+      f (_, Nothing) = Nothing
+      f (a, Just b) = Just (a, b)
+
 instance FromJSON AlonzoGenesis where
   parseJSON = Aeson.withObject "Alonzo Genesis" $ \o -> do
     coinsPerUTxOWord <- o .: "lovelacePerUTxOWord"
-    cModels <- o .:? "costModels"
+    costmdls <- o .: "costModels"
     prices <- o .: "executionPrices"
     maxTxExUnits <- o .: "maxTxExUnits"
     maxBlockExUnits <- o .: "maxBlockExUnits"
     maxValSize <- o .: "maxValueSize"
     collateralPercentage <- o .: "collateralPercentage"
     maxCollateralInputs <- o .: "maxCollateralInputs"
-    case cModels of
-      Nothing -> case CostModel <$> defaultCostModelParams of
-        Just m ->
-          return
-            AlonzoGenesis
-              { coinsPerUTxOWord,
-                costmdls = Map.singleton PlutusV1 m,
-                prices,
-                maxTxExUnits,
-                maxBlockExUnits,
-                maxValSize,
-                collateralPercentage,
-                maxCollateralInputs
-              }
-        Nothing -> fail "Failed to extract the cost model params from defaultCostModel"
-      Just costmdls ->
-        return
-          AlonzoGenesis
-            { coinsPerUTxOWord,
-              costmdls,
-              prices,
-              maxTxExUnits,
-              maxBlockExUnits,
-              maxValSize,
-              collateralPercentage,
-              maxCollateralInputs
-            }
+    return
+      AlonzoGenesis
+        { coinsPerUTxOWord,
+          costmdls,
+          prices,
+          maxTxExUnits,
+          maxBlockExUnits,
+          maxValSize,
+          collateralPercentage,
+          maxCollateralInputs
+        }
 
 instance ToJSON AlonzoGenesis where
   toJSON v =

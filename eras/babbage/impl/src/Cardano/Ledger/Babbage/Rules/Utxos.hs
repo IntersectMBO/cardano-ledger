@@ -157,7 +157,7 @@ scriptsYes = do
     Right sLst ->
       {- isValid tx = evalScripts tx sLst = True -}
       whenFailureFree $
-        case evalScripts @era tx sLst of
+        case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
           Fails sss ->
             False
               ?!## ValidationTagMismatch
@@ -196,7 +196,7 @@ scriptsNo = do
     Right sLst ->
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
-      case evalScripts @era tx sLst of
+      case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
         Passes -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
         Fails _sss -> pure ()
     Left info -> failBecause (CollectErrors info)
