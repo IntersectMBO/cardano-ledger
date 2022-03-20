@@ -49,7 +49,7 @@ import Cardano.Ledger.Keys
     VKey,
     asWitness,
   )
-import Cardano.Ledger.Rules.ValidationMode (failBecauseS, (?!#), (?!#:))
+import Cardano.Ledger.Rules.ValidationMode (failBecauseS, (?!#)) --, (?!#:))
 import Cardano.Ledger.Serialization
   ( decodeList,
     decodeRecordSum,
@@ -342,7 +342,7 @@ shelleyStyleWitness collectVKeyWitnesses embed = do
   -- check VKey witnesses
 
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
-  verifiedWits @era tx ?!#: (embed . InvalidWitnessesUTXOW)
+  verifiedWits @era tx ?!: (embed . InvalidWitnessesUTXOW)
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
   let needed = collectVKeyWitnesses utxo tx genDelegs

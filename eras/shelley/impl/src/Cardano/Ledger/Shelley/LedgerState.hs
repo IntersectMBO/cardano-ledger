@@ -257,6 +257,7 @@ import Data.Group (Group, invert)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.Pulse (Pulsable (..), completeM)
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
@@ -1039,16 +1040,15 @@ verifiedWits tx =
   where
     txbody = getField @"body" tx
     wvkKey (WitVKey k _) = k
+    bodyHash = extractHash (hashAnnotated @(Crypto era) txbody)
     failed =
-      wvkKey
-        <$> filter
-          (not . verifyWitVKey (extractHash (hashAnnotated @(Crypto era) txbody)))
-          (Set.toList $ getField @"addrWits" tx)
+      mapMaybe
+        (\w -> if verifyWitVKey bodyHash w then Nothing else Just $ wvkKey w)
+        (Set.toList $ getField @"addrWits" tx)
     failedBootstrap =
-      bwKey
-        <$> filter
-          (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
-          (Set.toList $ getField @"bootWits" tx)
+      mapMaybe
+        (\w -> if verifyBootstrapWit bodyHash w then Nothing else Just $ bwKey w)
+        (Set.toList $ getField @"bootWits" tx)
 
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
