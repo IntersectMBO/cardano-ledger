@@ -336,13 +336,13 @@ scriptsNeededFromBody ::
   [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
 scriptsNeededFromBody (UTxO u) txb = spend ++ reward ++ cert ++ minted
   where
+    collect :: TxIn (Crypto era) -> Maybe (ScriptPurpose (Crypto era), ScriptHash (Crypto era))
+    collect !i = do
+      addr <- getTxOutAddr <$> SplitMap.lookup i u
+      hash <- getScriptHash addr
+      return (Spending i, hash)
+
     !spend = mapMaybe collect (Set.toList $ getField @"inputs" txb)
-      where
-        collect :: TxIn (Crypto era) -> Maybe (ScriptPurpose (Crypto era), ScriptHash (Crypto era))
-        collect !i = do
-          addr <- getTxOutAddr <$> SplitMap.lookup i u
-          hash <- getScriptHash addr -- Note this only looks at Pay credentials
-          return (Spending i, hash)
 
     !reward = mapMaybe fromRwd (Map.keys withdrawals)
       where

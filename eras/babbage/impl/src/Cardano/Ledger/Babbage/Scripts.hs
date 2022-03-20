@@ -20,10 +20,7 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
 import Cardano.Ledger.Babbage.TxBody
   ( Datum (..),
-    TxBody (..),
     TxOut (..),
-    referenceInputs',
-    spendInputs',
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (hashScript))
@@ -99,17 +96,14 @@ getDatum tx (UTxO m) sp = do
 
 babbageTxScripts ::
   forall era.
-  ( Core.TxBody era ~ TxBody era,
-    Core.TxOut era ~ TxOut era,
-    ValidateScript era
-  ) =>
+  (ValidateScript era, HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era)), HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))), HasField "referenceInputs" (Core.TxBody era) (Set (TxIn (Crypto era)))) =>
   UTxO era ->
   Core.Tx era ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era)
 babbageTxScripts utxo tx = ans
   where
     txbody = getField @"body" tx
-    ins = referenceInputs' txbody `Set.union` spendInputs' txbody
+    ins = getField @"referenceInputs" txbody `Set.union` getField @"inputs" txbody
     ans = Map.union (refScripts ins utxo) (getField @"scriptWits" tx)
 
 plistf :: Monoid x => (t -> x) -> x -> [t] -> x -> x -> x
@@ -122,18 +116,16 @@ plistf f open xs sep close = open <> loop xs <> close
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
 refScripts ::
   forall era.
-  ( Core.TxOut era ~ TxOut era,
-    ValidateScript era
-  ) =>
+  (ValidateScript era, HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))) =>
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era)
 refScripts ins (UTxO mp) = SplitMap.foldl' accum Map.empty (ins SplitMap.◁ mp)
   where
     accum ans txout =
-      case txout of
-        (TxOut _ _ _ SNothing) -> ans
-        (TxOut _ _ _ (SJust script)) -> Map.insert (hashScript @era script) script ans
+      case getField @"referenceScript" txout of
+        SNothing -> ans
+        (SJust script) -> Map.insert (hashScript @era script) script ans
 
 -- Compute two sets for all TwoPhase scripts in a Tx.
 -- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
