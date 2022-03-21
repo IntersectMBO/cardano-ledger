@@ -453,17 +453,18 @@ validateVerifiedWits tx =
     [] -> pure ()
     nonEmpty -> failure $ InvalidWitnessesUTXOW nonEmpty
   where
-    txbody = getField @"body" tx
+    txBody = getField @"body" tx
+    txBodyHash = extractHash (hashAnnotated @(Crypto era) txBody)
     wvkKey (WitVKey k _) = k
     failed =
       wvkKey
         <$> filter
-          (not . verifyWitVKey (extractHash (hashAnnotated @(Crypto era) txbody)))
+          (not . verifyWitVKey txBodyHash)
           (Set.toList $ getField @"addrWits" tx)
     failedBootstrap =
       bwKey
         <$> filter
-          (not . verifyBootstrapWit (extractHash (hashAnnotated @(Crypto era) txbody)))
+          (not . verifyBootstrapWit txBodyHash)
           (Set.toList $ getField @"bootWits" tx)
 
 {-

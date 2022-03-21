@@ -138,7 +138,7 @@ runValidationTransMaybe toPredicateFailureMaybe =
 -- | Same as `runValidation`, but will label predicate failures as @"static"@
 runValidationStatic ::
   Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
-runValidationStatic v = whenFailure_ v (traverse_ (\pf -> pf `seq` failBecauseS pf))
+runValidationStatic v = whenFailure_ v (traverse_ failBecauseS)
 
 -- | Same as `runValidationTrans`, but will label predicate failures as @"static"@
 runValidationStaticTrans ::
@@ -146,7 +146,7 @@ runValidationStaticTrans ::
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
 runValidationStaticTrans toPredicateFailure v =
-  whenFailure_ v (traverse_ (\e -> failBecauseS $! toPredicateFailure e))
+  whenFailure_ v (traverse_ (failBecauseS . toPredicateFailure))
 
 -- | Same as `runValidationTransMaybe`, but will label predicate failures as @"static"@
 runValidationStaticTransMaybe ::
