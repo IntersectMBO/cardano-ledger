@@ -1,4 +1,3 @@
--- ifCurrentProof
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
@@ -9,12 +8,44 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
--- Used for Refect classes
+-- Used for Reflect classes
 {-# LANGUAGE UndecidableInstances #-}
 -- Used for Refect classes
 {-# LANGUAGE UndecidableSuperClasses #-}
 
-module Test.Cardano.Ledger.Generic.Proof where
+module Test.Cardano.Ledger.Generic.Proof
+  ( Mock,
+    Standard,
+    Evidence (..),
+    Proof (..),
+    getCrypto,
+    GoodCrypto,
+    ReflectC (..),
+    Reflect (..),
+    Some (..),
+    Ranked (..),
+    WitRule (..),
+    ruleProof,
+    runSTS,
+    goSTS,
+    preShelley,
+    preAllegra,
+    preMary,
+    preAlonzo,
+    preBabbage,
+    postShelley,
+    postAllegra,
+    postMary,
+    postAlonzo,
+    postBabbage,
+    ShelleyEra,
+    AllegraEra,
+    MaryEra,
+    AlonzoEra,
+    BabbageEra,
+    C_Crypto,
+  )
+where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm)
 import qualified Cardano.Crypto.Hash as CH
@@ -30,14 +61,13 @@ import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
+import Cardano.Ledger.Val (Val)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Kind (Type)
 import GHC.Natural
 import GHC.TypeLits (Symbol)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
-import Test.Tasty (TestTree)
-import Test.Tasty.QuickCheck (Testable (..), testProperties)
 
 -- =================================================
 -- GADTs for witnessing Crypto and Era
@@ -45,26 +75,6 @@ import Test.Tasty.QuickCheck (Testable (..), testProperties)
 type Mock = C_Crypto
 
 type Standard = StandardCrypto
-
-type ShelleyMock = ShelleyEra Mock
-
-type ShelleyReal = ShelleyEra Standard
-
-type AllegraMock = AllegraEra Mock
-
-type AllegraReal = AllegraEra Standard
-
-type MaryMock = MaryEra Mock
-
-type MaryReal = MaryEra Standard
-
-type AlonzoMock = AlonzoEra Mock
-
-type AlonzoReal = AlonzoEra Standard
-
-type BabbageMock = BabbageEra Mock
-
-type BabbageReal = BabbageEra Standard
 
 data Evidence c where
   Standard :: Evidence Standard
@@ -89,6 +99,13 @@ instance Show (Evidence c) where
   show Mock = "Mock"
   show Standard = "Standard"
 
+getCrypto :: Proof era -> Evidence (Crypto era)
+getCrypto (Babbage c) = c
+getCrypto (Alonzo c) = c
+getCrypto (Mary c) = c
+getCrypto (Allegra c) = c
+getCrypto (Shelley c) = c
+
 -- ==================================
 -- Reflection over Crypto and Era
 
@@ -112,6 +129,7 @@ instance ReflectC C_Crypto where
 class
   ( Era era,
     ValidateScript era,
+    Val (Core.Value era),
     ReflectC (Crypto era)
   ) =>
   Reflect era
@@ -138,11 +156,6 @@ instance ReflectC c => Reflect (ShelleyEra c) where
 -- ===================================================
 -- Tools for building TestTrees for multiple Eras
 
-allEra :: Testable p => String -> [Some Proof] -> (forall era. Proof era -> p) -> TestTree
-allEra name eras f = testProperties name (map g eras)
-  where
-    g (Some era) = (show era, property (f era))
-
 instance Eq (Some Proof) where
   (Some (Shelley _)) == (Some (Shelley _)) = True
   (Some (Allegra _)) == (Some (Allegra _)) = True
@@ -165,11 +178,15 @@ data WitRule (s :: Symbol) (e :: Type) where
   UTXOW :: Proof era -> WitRule "UTXOW" era
   LEDGER :: Proof era -> WitRule "LEDGER" era
   BBODY :: Proof era -> WitRule "BBODY" era
+  LEDGERS :: Proof era -> WitRule "LEDGERS" era
+  MOCKCHAIN :: Proof era -> WitRule "MOCKCHAIN" era
 
 ruleProof :: WitRule s e -> Proof e
 ruleProof (UTXOW p) = p
 ruleProof (LEDGER p) = p
 ruleProof (BBODY p) = p
+ruleProof (LEDGERS p) = p
+ruleProof (MOCKCHAIN p) = p
 
 runSTS ::
   forall s e ans.
@@ -177,12 +194,54 @@ runSTS ::
     STS (Core.EraRule s e)
   ) =>
   WitRule s e ->
-  RuleContext 'Transition (Core.EraRule s e) ->
+  TRC (Core.EraRule s e) ->
   (Either [PredicateFailure (Core.EraRule s e)] (State (Core.EraRule s e)) -> ans) ->
   ans
 runSTS (UTXOW _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (LEDGER _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (BBODY _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (LEDGERS _proof) x cont = cont (runShelleyBase (applySTSTest x))
+runSTS (MOCKCHAIN _proof) x cont = cont (runShelleyBase (applySTSTest x))
+
+-- | Like runSTS, but makes the components of the TRC triple explicit.
+--   in case you can't remember, in ghci type
+-- @@@
+--   :t goSTS (UTXOW (Babbage Mock))
+--   goSTS (LEDGER (Babbage Mock))
+--     :: LedgerEnv (BabbageEra C_Crypto)
+--        -> (UTxOState (BabbageEra C_Crypto), DPState C_Crypto)
+--        -> Cardano.Ledger.Alonzo.Tx.ValidatedTx (BabbageEra C_Crypto)
+--        -> (Either
+--              [LedgerPredicateFailure (BabbageEra C_Crypto)]
+--              (UTxOState (BabbageEra C_Crypto), DPState C_Crypto)
+--        -> ans)
+--        -> ans
+-- @@@
+--   it will tell you what type 'env' 'state' and 'sig' are for Babbage
+goSTS ::
+  forall s e ans env state sig.
+  ( BaseM (Core.EraRule s e) ~ ShelleyBase,
+    STS (Core.EraRule s e),
+    env ~ Environment (Core.EraRule s e),
+    state ~ State (Core.EraRule s e),
+    sig ~ Signal (Core.EraRule s e)
+  ) =>
+  WitRule s e ->
+  env ->
+  state ->
+  sig ->
+  (Either [PredicateFailure (Core.EraRule s e)] (State (Core.EraRule s e)) -> ans) ->
+  ans
+goSTS (UTXOW _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+goSTS (LEDGER _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+goSTS (BBODY _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+goSTS (LEDGERS _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+goSTS (MOCKCHAIN _proof) env state sig cont =
+  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
 
 -- ================================================================
 -- Crypto agnostic operations on (Proof era) via (Some Proof)

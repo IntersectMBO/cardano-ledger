@@ -3,80 +3,86 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeSynonymInstances #-}
--- PrettyA (PredicateFailure (Core.EraRule "UTXO" era))
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Generic.PrettyCore where
 
--- ------------------------------
--- Predicatefailures
-
--- import qualified  Cardano.Ledger.Shelley.Rules.Utxo as Shelley(UtxoPredicateFailure(..))
-
--- -------------
--- Specific types
-
--- import Cardano.Ledger.Alonzo.TxWitness(TxWitness (..))
-
-import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Allegra (AllegraEra)
-import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (Data (..), binaryDataToData)
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
+import Cardano.Ledger.Alonzo.Data (Data (..), binaryDataToData, hashData)
+import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (FailureDescription (..), TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
-import Cardano.Ledger.Alonzo.Scripts (Script (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), unTxDats)
-import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), unTxDats)
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), txIxToInt)
+import Cardano.Ledger.BaseTypes (BlocksMade (..), Network (..), TxIx (..), txIxToInt)
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeReference (..))
+import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
-import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash (..), KeyPair (..), VKey (..), hashKey)
-import Cardano.Ledger.Mary (MaryEra)
+import Cardano.Ledger.Keys (GenDelegs (..), HasKeyRole (coerceKeyRole), KeyHash (..), KeyPair (..), VKey (..), hashKey)
 import Cardano.Ledger.Mary.Value (Value (..))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
 import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Mary
-import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.LedgerState (WitHashes (..))
+import Cardano.Ledger.Shelley.LedgerState
+  ( AccountState (..),
+    DPState (..),
+    DState (..),
+    EpochState (..),
+    InstantaneousRewards (..),
+    LedgerState (..),
+    NewEpochState (..),
+    PState (..),
+    UTxOState (..),
+    WitHashes (..),
+  )
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyPredicateFailure (..), BbodyState (..))
+import Cardano.Ledger.Shelley.Rules.Epoch (EpochPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Newpp (NewppPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as Shelley (PpupPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Tick (TickPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Upec (UpecPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley (UtxoPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
-import Cardano.Ledger.Shelley.TxBody (WitVKey (..), unWdrl)
+import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..), PoolCert (..), PoolParams (..), Wdrl (..), WitVKey (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailure (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Ledger.UnifiedMap (UnifiedMap)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.Compact.SplitMap as Split
-import Data.List.NonEmpty (toList)
+import Data.Foldable (toList)
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
-import Data.Text (Text)
+import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
+import qualified Data.UMap as UMap (View (..), rewView, size)
 import PlutusCore.Data (Data (..))
-import Prettyprinter (viaShow)
+import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
     TxField (..),
@@ -138,11 +144,14 @@ instance CC.Crypto c => PrettyCore (BabbageEra c) where
   prettyTxOut = Babbage.ppTxOut
 
 prettyUTxO :: Proof era -> UTxO era -> PDoc
-prettyUTxO (Babbage _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
-prettyUTxO (Alonzo _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
-prettyUTxO (Mary _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
-prettyUTxO (Allegra _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
-prettyUTxO (Shelley _) (UTxO mp) = ppMap ppTxIn prettyTxOut (Split.toMap mp)
+prettyUTxO proof (UTxO mp) = prettyUTxOMap proof (Split.toMap mp)
+
+prettyUTxOMap :: Proof era -> Map.Map (TxIn (Crypto era)) (Core.TxOut era) -> PDoc
+prettyUTxOMap (Babbage _) mp = ppMap ppTxIn prettyTxOut mp
+prettyUTxOMap (Alonzo _) mp = ppMap ppTxIn prettyTxOut mp
+prettyUTxOMap (Mary _) mp = ppMap ppTxIn prettyTxOut mp
+prettyUTxOMap (Allegra _) mp = ppMap ppTxIn prettyTxOut mp
+prettyUTxOMap (Shelley _) mp = ppMap ppTxIn prettyTxOut mp
 
 -- ===================================================================
 -- PrettyA instances for UTXOW, UTXO, UTXOS, PPUP predicate failures
@@ -621,7 +630,7 @@ ppCoreScript (Shelley _) x = ppMultiSig x
 
 ppLedgersPredicateFailure ::
   PrettyA (PredicateFailure (Core.EraRule "LEDGER" era)) => LedgersPredicateFailure era -> PDoc
-ppLedgersPredicateFailure (LedgerFailure x) = ppSexp "LedgerFailure" [prettyA x]
+ppLedgersPredicateFailure (LedgerFailure x) = prettyA x
 
 instance
   PrettyA (PredicateFailure (Core.EraRule "LEDGER" era)) =>
@@ -675,6 +684,90 @@ instance
   PrettyA (AlonzoBbodyPredFail era)
   where
   prettyA = ppAlonzoBbodyPredFail
+
+-- ===============
+ppTickPredicateFailure ::
+  ( NewEpochPredicateFailure era ~ PredicateFailure (Core.EraRule "NEWEPOCH" era),
+    EpochPredicateFailure era ~ PredicateFailure (Core.EraRule "EPOCH" era),
+    UpecPredicateFailure era ~ PredicateFailure (Core.EraRule "UPEC" era)
+  ) =>
+  TickPredicateFailure era ->
+  PDoc
+ppTickPredicateFailure (NewEpochFailure x) = ppNewEpochPredicateFailure x
+ppTickPredicateFailure (RupdFailure _) =
+  ppString "RupdPredicateFailure has no constructors"
+
+instance
+  ( NewEpochPredicateFailure era ~ PredicateFailure (Core.EraRule "NEWEPOCH" era),
+    EpochPredicateFailure era ~ PredicateFailure (Core.EraRule "EPOCH" era),
+    UpecPredicateFailure era ~ PredicateFailure (Core.EraRule "UPEC" era)
+  ) =>
+  PrettyA (TickPredicateFailure era)
+  where
+  prettyA = ppTickPredicateFailure
+
+-- ===============
+ppNewEpochPredicateFailure ::
+  ( EpochPredicateFailure era ~ PredicateFailure (Core.EraRule "EPOCH" era),
+    UpecPredicateFailure era ~ PredicateFailure (Core.EraRule "UPEC" era)
+  ) =>
+  NewEpochPredicateFailure era ->
+  PDoc
+ppNewEpochPredicateFailure (EpochFailure x) = ppEpochPredicateFailure x
+ppNewEpochPredicateFailure (CorruptRewardUpdate x) =
+  ppSexp "CorruptRewardUpdate" [ppRewardUpdate x]
+ppNewEpochPredicateFailure (MirFailure _) =
+  ppString "MirPredicateFailure has no constructors"
+
+instance
+  ( NewEpochPredicateFailure era ~ PredicateFailure (Core.EraRule "NEWEPOCH" era),
+    EpochPredicateFailure era ~ PredicateFailure (Core.EraRule "EPOCH" era),
+    UpecPredicateFailure era ~ PredicateFailure (Core.EraRule "UPEC" era)
+  ) =>
+  PrettyA (NewEpochPredicateFailure era)
+  where
+  prettyA = ppNewEpochPredicateFailure
+
+-- ===============
+ppEpochPredicateFailure ::
+  ( UpecPredicateFailure era ~ PredicateFailure (Core.EraRule "UPEC" era)
+  ) =>
+  EpochPredicateFailure era ->
+  PDoc
+ppEpochPredicateFailure (PoolReapFailure _) =
+  ppString "PoolreapPredicateFailure has no constructors"
+ppEpochPredicateFailure (SnapFailure _) =
+  ppString "SnapPredicateFailure has no constructors"
+ppEpochPredicateFailure (UpecFailure x) = ppUpecPredicateFailure x
+
+instance
+  ( EpochPredicateFailure era ~ PredicateFailure (Core.EraRule "EPOCH" era),
+    UpecPredicateFailure era ~ PredicateFailure (Core.EraRule "UPEC" era)
+  ) =>
+  PrettyA (EpochPredicateFailure era)
+  where
+  prettyA = ppEpochPredicateFailure
+
+-- ===============
+ppUpecPredicateFailure :: UpecPredicateFailure era -> PDoc
+ppUpecPredicateFailure (NewPpFailure x) = ppNewppPredicateFailure x
+
+instance
+  (UpecPredicateFailure era ~ PredicateFailure (Core.EraRule "UPEC" era)) =>
+  PrettyA (UpecPredicateFailure era)
+  where
+  prettyA = ppUpecPredicateFailure
+
+-- ===============
+ppNewppPredicateFailure :: NewppPredicateFailure era -> PDoc
+ppNewppPredicateFailure (UnexpectedDepositPot c1 c2) =
+  ppRecord
+    "UnexpectedDepositPot"
+    [ ("The total outstanding deposits", ppCoin c1),
+      ("The deposit pot", ppCoin c2)
+    ]
+
+instance PrettyA (NewppPredicateFailure era) where prettyA = ppNewppPredicateFailure
 
 -- ===================
 
@@ -769,12 +862,12 @@ txInSummary (TxIn (TxId h) n) = ppSexp "TxIn" [trim (ppSafeHash h), ppInt (txIxT
 
 txOutSummary :: Proof era -> Core.TxOut era -> PDoc
 txOutSummary p@(Babbage _) (Babbage.TxOut addr v d s) =
-  ppSexp "TxOut" [addrSummary addr, valueSummary p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
+  ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
 txOutSummary p@(Alonzo _) (Alonzo.TxOut addr v md) =
-  ppSexp "TxOut" [addrSummary addr, valueSummary p v, ppStrictMaybe dataHashSummary md]
-txOutSummary p@(Mary _) (Shelley.TxOut addr v) = ppSexp "TxOut" [addrSummary addr, valueSummary p v]
-txOutSummary p@(Allegra _) (Shelley.TxOut addr v) = ppSexp "TxOut" [addrSummary addr, valueSummary p v]
-txOutSummary p@(Shelley _) (Shelley.TxOut addr v) = ppSexp "TxOut" [addrSummary addr, valueSummary p v]
+  ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, ppStrictMaybe dataHashSummary md]
+txOutSummary p@(Mary _) (Shelley.TxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
+txOutSummary p@(Allegra _) (Shelley.TxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
+txOutSummary p@(Shelley _) (Shelley.TxOut addr v) = ppSexp "TxOut" [addrSummary addr, pcCoreValue p v]
 
 datumSummary :: Babbage.Datum era -> PDoc
 datumSummary Babbage.NoDatum = ppString "NoDatum"
@@ -794,13 +887,6 @@ plutusDataSummary (B bs) = trim (ppLong bs)
 vSummary :: Value c -> PDoc
 vSummary (Value n m) = ppSexp "Value" [ppInteger n, ppString ("num tokens = " ++ show (Map.size m))]
 
-valueSummary :: Proof era -> Core.Value era -> PDoc
-valueSummary (Babbage _) v = vSummary v
-valueSummary (Alonzo _) v = vSummary v
-valueSummary (Mary _) v = vSummary v
-valueSummary (Allegra _) c = ppCoin c
-valueSummary (Shelley _) c = ppCoin c
-
 scriptSummary :: forall era. Proof era -> Core.Script era -> PDoc
 scriptSummary p@(Babbage _) script = plutusSummary p script
 scriptSummary p@(Alonzo _) script = plutusSummary p script
@@ -817,7 +903,7 @@ addrSummary (Addr nw pay stk) =
   ppSexp "Addr" [networkSummary nw, credSummary pay, stakeSummary stk]
 addrSummary (AddrBootstrap _) = ppString "Bootstrap"
 
-credSummary :: PaymentCredential crypto -> PDoc
+credSummary :: Credential keyrole crypto -> PDoc
 credSummary (ScriptHashObj (ScriptHash h)) = ppSexp "Script" [trim (ppHash h)]
 credSummary (KeyHashObj (KeyHash kh)) = ppSexp "Key" [trim (ppHash kh)]
 
@@ -874,3 +960,369 @@ plutusSummary (Babbage _) (TimelockScript x) = timelockSummary x
 plutusSummary (Alonzo _) s@(PlutusScript lang _) = (ppString (show lang ++ " ")) <> scriptHashSummary (hashScript @era s)
 plutusSummary (Alonzo _) (TimelockScript x) = timelockSummary x
 plutusSummary other _ = ppString ("Plutus script in era " ++ show other ++ "???")
+
+dStateSummary :: DState crypto -> PDoc
+dStateSummary (DState umap future (GenDelegs current) irwd) =
+  ppRecord
+    "DState"
+    [ ("Unified Reward Map", uMapSummary umap),
+      ("Future genesis key delegations", ppInt (Map.size future)),
+      ("Genesis key delegations", ppInt (Map.size current)),
+      ("Instantaneous Rewards", instantSummary irwd)
+    ]
+
+instantSummary :: InstantaneousRewards crypto -> PDoc
+instantSummary (InstantaneousRewards reserves treasury dreserves dtreasury) =
+  ppRecord
+    "InstantaneousRewards"
+    [ ("Rewards from reserves", ppInt (Map.size reserves)),
+      ("Rewards from treasury", ppInt (Map.size treasury)),
+      ("Treasury to reserves", ppDeltaCoin dreserves),
+      ("Reserves to treasury", ppDeltaCoin dtreasury)
+    ]
+
+uMapSummary :: UnifiedMap crypto -> PDoc
+uMapSummary umap =
+  ppRecord
+    "UMap"
+    [ ("Reward Map", ppInt (UMap.size (UMap.Rewards umap))),
+      ("Delegations Map", ppInt (UMap.size (UMap.Delegations umap))),
+      ("Ptrs Map", ppInt (UMap.size (UMap.Ptrs umap)))
+    ]
+
+pStateSummary :: PState crypto -> PDoc
+pStateSummary (PState pp fpp retire) =
+  ppRecord
+    "PState"
+    [ ("Pool parameters", ppInt (Map.size pp)),
+      ("Future pool parameters", ppInt (Map.size fpp)),
+      ("Retiring stake pools", ppInt (Map.size retire))
+    ]
+
+dpStateSummary :: DPState crypto -> PDoc
+dpStateSummary (DPState d p) = vsep [dStateSummary d, pStateSummary p]
+
+-- =============================================
+
+class PrettyC t era where
+  prettyC :: Proof era -> t -> PDoc
+
+pcTxId :: TxId crypto -> PDoc
+pcTxId (TxId safehash) = trim (ppSafeHash safehash)
+
+instance c ~ Crypto era => PrettyC (TxId c) era where prettyC _ = pcTxId
+
+pcTxIn :: TxIn crypto -> PDoc
+pcTxIn (TxIn (TxId h) (TxIx i)) = parens (hsep [ppString "TxIn", trim (ppSafeHash h), ppWord16 i])
+
+instance c ~ Crypto era => PrettyC (TxIn c) era where prettyC _ = pcTxIn
+
+pcNetwork :: Network -> PDoc
+pcNetwork Testnet = ppString "TestNet"
+pcNetwork Mainnet = ppString "Mainnet"
+
+instance PrettyC Network era where prettyC _ = pcNetwork
+
+pcKeyHash :: KeyHash discriminator crypto -> PDoc
+pcKeyHash (KeyHash h) = trim (ppHash h)
+
+instance c ~ Crypto era => PrettyC (KeyHash d c) era where prettyC _ = pcKeyHash
+
+pcCredential :: Credential keyrole c -> PDoc
+pcCredential (ScriptHashObj (ScriptHash h)) = hsep [ppString "Script", trim (ppHash h)]
+pcCredential (KeyHashObj (KeyHash h)) = hsep [ppString "Key", trim (ppHash h)]
+
+instance c ~ Crypto era => PrettyC (Credential keyrole c) era where prettyC _ = pcCredential
+
+pcStakeReference :: StakeReference c -> PDoc
+pcStakeReference StakeRefNull = ppString "Null"
+pcStakeReference (StakeRefBase cred) = pcCredential cred
+pcStakeReference (StakeRefPtr _) = ppString "Ptr"
+
+instance c ~ Crypto era => PrettyC (StakeReference c) era where prettyC _ = pcStakeReference
+
+pcAddr :: Addr c -> PDoc
+pcAddr (Addr nw pay stk) =
+  parens $
+    hsep
+      [ ppString "Addr",
+        pcNetwork nw,
+        pcCredential pay,
+        pcStakeReference stk
+      ]
+pcAddr (AddrBootstrap _) = ppString "Bootstrap"
+
+instance c ~ Crypto era => PrettyC (Addr c) era where prettyC _ = pcAddr
+
+pcCoreValue :: Proof era -> Core.Value era -> PDoc
+pcCoreValue (Babbage _) v = vSummary v
+pcCoreValue (Alonzo _) v = vSummary v
+pcCoreValue (Mary _) v = vSummary v
+pcCoreValue (Allegra _) (Coin n) = hsep [ppString "₳", ppInteger n]
+pcCoreValue (Shelley _) (Coin n) = hsep [ppString "₳", ppInteger n]
+
+pcCoin :: Coin -> PDoc
+pcCoin (Coin n) = hsep [ppString "₳", ppInteger n]
+
+instance PrettyC Coin era where prettyC _ = pcCoin
+
+pcValue :: Value c -> PDoc
+pcValue (Value n m) = ppSexp "Value" [ppInteger n, ppString ("num tokens = " ++ show (Map.size m))]
+
+instance c ~ Crypto era => PrettyC (Value c) era where prettyC _ = pcValue
+
+pcDatum :: Era era => Babbage.Datum era -> PDoc
+pcDatum Babbage.NoDatum = ppString "NoDatum"
+pcDatum (Babbage.DatumHash h) = ppSexp "DHash" [trim (ppSafeHash h)]
+pcDatum (Babbage.Datum b) = pcData (binaryDataToData b)
+
+instance Era era => PrettyC (Babbage.Datum era) era where prettyC _ = pcDatum
+
+pcData :: forall era. Era era => Alonzo.Data era -> PDoc
+pcData d@(Data (Constr n _)) =
+  ppSexp (pack ("Constr" ++ show n)) [ppString "Hash", trim $ ppSafeHash (hashData d)]
+pcData d@(Data (Map _)) =
+  ppSexp "Map" [ppString "Hash", trim $ ppSafeHash (hashData d)]
+pcData d@(Data (List _)) =
+  ppSexp "List" [ppString "Hash", trim $ ppSafeHash (hashData d)]
+pcData d@(Data (I n)) =
+  ppSexp "I" [ppInteger n, ppString "Hash", trim $ ppSafeHash (hashData d)]
+pcData d@(Data (B bytes)) =
+  ppSexp "B" [trim (viaShow bytes), ppString "Hash", trim $ ppSafeHash (hashData d)]
+
+instance Era era => PrettyC (Alonzo.Data era) era where prettyC _ = pcData
+
+pcTimelock :: Reflect era => PDoc -> Timelock (Crypto era) -> PDoc
+pcTimelock hash (RequireSignature akh) = ppSexp "Signature" [keyHashSummary akh, hash]
+pcTimelock hash (RequireAllOf _) = ppSexp "AllOf" [hash]
+pcTimelock hash (RequireAnyOf _) = ppSexp "AnyOf" [hash]
+pcTimelock hash (RequireMOf m _) = ppSexp "MOfN" [ppInteger (fromIntegral m), hash]
+pcTimelock hash (RequireTimeExpire mslot) = ppSexp "Expires" [ppSlotNo mslot, hash]
+pcTimelock hash (RequireTimeStart mslot) = ppSexp "Starts" [ppSlotNo mslot, hash]
+
+pcMultiSig :: Reflect era => PDoc -> SS.MultiSig (Crypto era) -> PDoc
+pcMultiSig h (SS.RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk, h]
+pcMultiSig h (SS.RequireAllOf _) = ppSexp "AllOf" [h]
+pcMultiSig h (SS.RequireAnyOf _) = ppSexp "AnyOf" [h]
+pcMultiSig h (SS.RequireMOf m _) = ppSexp "MOf" [ppInt m, h]
+
+pcScriptHash :: ScriptHash era -> PDoc
+pcScriptHash (ScriptHash h) = trim (ppHash h)
+
+pcHashScript :: forall era. Reflect era => Proof era -> Core.Script era -> PDoc
+pcHashScript (Babbage _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript (Alonzo _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript (Mary _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript (Allegra _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+pcHashScript (Shelley _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
+
+pcScript :: forall era. Reflect era => Proof era -> Core.Script era -> PDoc
+pcScript p@(Babbage _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
+pcScript p@(Babbage _) s@(PlutusScript v _) =
+  parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
+pcScript p@(Alonzo _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
+pcScript p@(Alonzo _) s@(PlutusScript v _) =
+  parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
+pcScript p@(Mary _) s = pcTimelock @era (pcHashScript @era p s) s
+pcScript p@(Allegra _) s = pcTimelock @era (pcHashScript @era p s) s
+pcScript p@(Shelley _) s = pcMultiSig @era (pcHashScript @era p s) s
+
+pcDataHash :: DataHash era -> PDoc
+pcDataHash dh = trim (ppSafeHash dh)
+
+pcTxOut :: Reflect era => Proof era -> Core.TxOut era -> PDoc
+pcTxOut p@(Babbage _) (Babbage.TxOut addr v d s) =
+  ppSexp "TxOut" [pcAddr addr, pcValue v, pcDatum d, ppStrictMaybe (pcScript p) s]
+pcTxOut (Alonzo _) (Alonzo.TxOut addr v md) =
+  ppSexp "TxOut" [pcAddr addr, pcValue v, ppStrictMaybe pcDataHash md]
+pcTxOut p@(Mary _) (Shelley.TxOut addr v) =
+  ppSexp "TxOut" [pcAddr addr, pcCoreValue p v]
+pcTxOut p@(Allegra _) (Shelley.TxOut addr v) =
+  ppSexp "TxOut" [pcAddr addr, pcCoreValue p v]
+pcTxOut p@(Shelley _) (Shelley.TxOut addr v) =
+  ppSexp "TxOut" [pcAddr addr, pcCoreValue p v]
+
+pcUTxO :: Reflect era => Proof era -> UTxO era -> PDoc
+pcUTxO proof (UTxO m) = ppMap pcTxIn (pcTxOut proof) (Split.toMap m)
+
+instance Reflect era => PrettyC (UTxO era) era where prettyC = pcUTxO
+
+pcIndividualPoolStake :: IndividualPoolStake crypto -> PDoc
+pcIndividualPoolStake (IndividualPoolStake rat vrf) =
+  ppRecord
+    "pool stake"
+    [("ratio", ppRational rat), ("vrf", trim (ppHash vrf))]
+
+instance c ~ Crypto era => PrettyC (IndividualPoolStake c) era where prettyC _ = pcIndividualPoolStake
+
+pcPoolParams :: PoolParams era -> PDoc
+pcPoolParams x =
+  ppRecord
+    "PoolParams"
+    [ ("Id", keyHashSummary (_poolId x)),
+      ("Vrf", trim (ppHash (_poolVrf x)))
+    ]
+
+instance PrettyC (PoolParams era) era where prettyC _ = pcPoolParams
+
+pcDelegCert :: DelegCert crypto -> PDoc
+pcDelegCert (RegKey cred) = ppSexp "RegKey" [pcCredential cred]
+pcDelegCert (DeRegKey cred) = ppSexp "DeRegKey" [pcCredential cred]
+pcDelegCert (Delegate (Delegation x y)) = ppSexp "Delegate" [pcCredential x, pcKeyHash y]
+
+instance c ~ Crypto era => PrettyC (DelegCert c) era where prettyC _ = pcDelegCert
+
+pcPoolCert :: PoolCert crypto -> PDoc
+pcPoolCert (RegPool poolp) = ppSexp "RegPool" [pcPoolParams poolp]
+pcPoolCert (RetirePool keyhash epoch) = ppSexp "RetirePool" [pcKeyHash keyhash, ppEpochNo epoch]
+
+instance c ~ Crypto era => PrettyC (PoolCert c) era where prettyC _ = pcPoolCert
+
+pcDCert :: DCert crypto -> PDoc
+pcDCert (DCertDeleg x) = pcDelegCert x
+pcDCert (DCertPool x) = pcPoolCert x
+pcDCert (DCertGenesis _) = ppString "GenesisCert"
+pcDCert (DCertMir _) = ppString "MirCert"
+
+instance c ~ Crypto era => PrettyC (DCert c) era where prettyC _ = pcDCert
+
+pcRewardAcnt :: RewardAcnt crypto -> PDoc
+pcRewardAcnt (RewardAcnt net cred) = ppSexp "RewAccnt" [pcNetwork net, pcCredential cred]
+
+instance c ~ Crypto era => PrettyC (RewardAcnt c) era where prettyC _ = pcRewardAcnt
+
+pcExUnits :: ExUnits -> PDoc
+pcExUnits (ExUnits mem step) =
+  ppSexp "ExUnits" [ppNatural mem, ppNatural step]
+
+pcTxBodyField :: Reflect era => Proof era -> TxBodyField era -> [(Text, PDoc)]
+pcTxBodyField proof x = case x of
+  Inputs s -> [("spend inputs", ppSet pcTxIn s)]
+  Collateral s -> [("coll inputs", ppSet pcTxIn s)]
+  RefInputs s -> [("ref inputs", ppSet pcTxIn s)]
+  Outputs s -> [("outputs", ppList (pcTxOut proof) (toList s))]
+  CollateralReturn SNothing -> []
+  CollateralReturn (SJust txout) -> [("coll return", pcTxOut proof txout)]
+  TotalCol SNothing -> []
+  TotalCol (SJust c) -> [("total coll", pcCoin c)]
+  Certs xs -> [("certs", ppList pcDCert (toList xs))]
+  Wdrls (Wdrl m) -> [("withdrawal", ppMap pcRewardAcnt pcCoin m)]
+  Txfee c -> [("fee", pcCoin c)]
+  Vldt v -> [("validity interval", ppValidityInterval v)]
+  TTL slot -> [("time to live", ppSlotNo slot)]
+  Update SNothing -> []
+  Update (SJust _) -> [("update", ppString "UPDATE")]
+  ReqSignerHashes s -> [("required hashes", ppSet pcKeyHash s)]
+  Mint v -> [("minted", pcCoreValue proof v)]
+  WppHash SNothing -> []
+  WppHash (SJust h) -> [("integrity hash", trim (ppSafeHash h))]
+  AdHash SNothing -> []
+  AdHash (SJust (Alonzo.AuxiliaryDataHash h)) -> [("aux data hash", trim (ppSafeHash h))]
+  Txnetworkid SNothing -> []
+  Txnetworkid (SJust nid) -> [("network id", pcNetwork nid)]
+
+pcTxField :: Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
+pcTxField proof x = case x of
+  Body b -> [("body", pcTxBody proof b)]
+  BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
+  Witnesses w -> [("witnesses", pcWitnesses proof w)]
+  WitnessesI ws -> [("witnesses", ppRecord "Witnesses" (concat (map (pcWitnessesField proof) ws)))]
+  AuxData SNothing -> []
+  AuxData (SJust _auxdata) -> [("aux data", ppString "AUXDATA")] -- ppAuxiliaryData auxdata)]
+  Valid (IsValid v) -> [("is valid", ppString (show v))]
+
+pcWitnessesField :: forall era. Reflect era => Proof era -> WitnessesField era -> [(Text, PDoc)]
+pcWitnessesField proof x = case x of
+  AddrWits set -> [("key wits", ppSet (pcWitVKey @era) set)]
+  BootWits _ -> [("boot wits", ppString "BOOTWITS")]
+  ScriptWits mp -> [("script wits", ppMap pcScriptHash (pcScript proof) mp)]
+  DataWits (TxDats m) -> [("data wits", ppMap pcDataHash pcData m)]
+  RdmrWits (Redeemers m) ->
+    [("redeemer wits", ppMap ppRdmrPtr (pcPair pcData pcExUnits) m)]
+
+pcPair :: (t1 -> PDoc) -> (t2 -> PDoc) -> (t1, t2) -> PDoc
+pcPair pp1 pp2 (x, y) = parens (hsep [pp1 x, ppString ",", pp2 y])
+
+pcWitVKey :: (Reflect era, Typeable discriminator) => WitVKey discriminator (Crypto era) -> PDoc
+pcWitVKey (WitVKey vk@(VKey x) sig) = ppSexp "WitVKey" [ppString keystring, ppString (drop 12 sigstring), hash]
+  where
+    keystring = show x
+    hash = pcKeyHash (hashKey vk)
+    sigstring = show sig
+
+pcWitnesses :: Reflect era => Proof era -> Core.Witnesses era -> PDoc
+pcWitnesses proof wits = ppRecord "Witnesses" pairs
+  where
+    fields = abstractWitnesses proof wits
+    pairs = concat (map (pcWitnessesField proof) fields)
+
+pcTx :: Reflect era => Proof era -> Core.Tx era -> PDoc
+pcTx proof tx = ppRecord "Tx" pairs
+  where
+    fields = abstractTx proof tx
+    pairs = concat (map (pcTxField proof) fields)
+
+pcTxBody :: Reflect era => Proof era -> Core.TxBody era -> PDoc
+pcTxBody proof txbody = ppRecord "TxBody" pairs
+  where
+    fields = abstractTxBody proof txbody
+    pairs = concat (map (pcTxBodyField proof) fields)
+
+pcUTxOState :: Reflect era => Proof era -> UTxOState era -> PDoc
+pcUTxOState proof (UTxOState u dep fees _pups _stakedistro) =
+  ppRecord
+    "UTxOState"
+    [ ("utxo", pcUTxO proof u),
+      ("deposited", pcCoin dep),
+      ("fees", pcCoin fees),
+      ("ppups", ppString "PPUP"),
+      ("stake distr", ppString "Stake Distr")
+    ]
+
+instance Reflect era => PrettyC (UTxOState era) era where prettyC = pcUTxOState
+
+pcDPState :: p -> DPState era -> PDoc
+pcDPState _proof (DPState (DState {_unified = un}) (PState {_pParams = pool})) =
+  ppRecord
+    "DPState summary"
+    [ ("rewards", ppMap pcCredential pcCoin (UMap.rewView un)),
+      ("pool params", ppMap pcKeyHash pcPoolParams pool)
+    ]
+
+instance PrettyC (DPState era) era where prettyC = pcDPState
+
+pcLedgerState :: Reflect era => Proof era -> LedgerState era -> PDoc
+pcLedgerState proof (LedgerState utstate dpstate) =
+  ppRecord
+    "LedgerState"
+    [ ("UTxOState", pcUTxOState proof utstate),
+      ("DPState", pcDPState proof dpstate)
+    ]
+
+instance Reflect era => PrettyC (LedgerState era) era where prettyC = pcLedgerState
+
+pcNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
+pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ pd _) =
+  ppRecord
+    "NewEpochState"
+    [ ("EpochNo", ppEpochNo en),
+      ("EpochState", pcEpochState proof es),
+      ("PoolDistr", ppPoolDistr pd),
+      ("Prev Blocks", ppMap pcKeyHash ppNatural pbm),
+      ("Current Blocks", ppMap pcKeyHash ppNatural cbm)
+    ]
+
+instance Reflect era => PrettyC (NewEpochState era) era where prettyC = pcNewEpochState
+
+pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
+pcEpochState proof (EpochState (AccountState tre res) _ ls _ _ _) =
+  ppRecord
+    "EpochState"
+    [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)]),
+      ("LedgerState", pcLedgerState proof ls)
+    ]
+
+instance Reflect era => PrettyC (EpochState era) era where prettyC = pcEpochState
+
+pc :: PrettyC t era => Proof era -> t -> IO ()
+pc proof x = putStrLn (show (prettyC proof x))

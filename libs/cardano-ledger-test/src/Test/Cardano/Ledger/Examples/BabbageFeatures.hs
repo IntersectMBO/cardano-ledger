@@ -24,7 +24,6 @@ import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Script (Plu
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
-import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import Cardano.Ledger.BaseTypes
