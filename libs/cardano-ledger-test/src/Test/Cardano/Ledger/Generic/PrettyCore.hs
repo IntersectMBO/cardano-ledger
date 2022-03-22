@@ -45,7 +45,7 @@ import Cardano.Ledger.Credential (Credential (..), PaymentCredential, StakeRefer
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
-import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash (..), hashKey)
+import Cardano.Ledger.Keys (HasKeyRole (coerceKeyRole), KeyHash (..), KeyPair (..), VKey (..), hashKey)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value (Value (..))
 import Cardano.Ledger.Pretty
@@ -60,10 +60,12 @@ import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as Shelley (PpupPredicateFailure (..))
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley (UtxoPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
+import qualified Cardano.Ledger.Shelley.Scripts as SS (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (WitVKey (..), unWdrl)
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as Mary (UtxoPredicateFailure (..))
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
@@ -74,6 +76,7 @@ import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Typeable (Typeable)
 import PlutusCore.Data (Data (..))
+import Prettyprinter (viaShow)
 import Test.Cardano.Ledger.Generic.Fields
   ( TxBodyField (..),
     TxField (..),
@@ -780,15 +783,12 @@ datumSummary Babbage.NoDatum = ppString "NoDatum"
 datumSummary (Babbage.DatumHash h) = ppSexp "DHash" [trim (ppSafeHash h)]
 datumSummary (Babbage.Datum b) = dataSummary (binaryDataToData b)
 
-dataHashSummary :: DataHash era -> PDoc
-dataHashSummary dh = trim (ppSafeHash dh)
-
 dataSummary :: Cardano.Ledger.Alonzo.Data.Data era -> PDoc
 dataSummary (Data x) = plutusDataSummary x
 
 plutusDataSummary :: PlutusCore.Data.Data -> PDoc
-plutusDataSummary (Constr n _) = ppString ("Constr-" ++ show n)
-plutusDataSummary (Map _) = ppString "Map"
+plutusDataSummary (Constr n ds) = (ppString (show n)) <> ppList plutusDataSummary ds
+plutusDataSummary (Map ds) = ppString "Map" <> ppList (ppPair plutusDataSummary plutusDataSummary) ds
 plutusDataSummary (List xs) = ppList plutusDataSummary xs
 plutusDataSummary (I n) = ppInteger n
 plutusDataSummary (B bs) = trim (ppLong bs)
@@ -804,11 +804,11 @@ valueSummary (Allegra _) c = ppCoin c
 valueSummary (Shelley _) c = ppCoin c
 
 scriptSummary :: forall era. Proof era -> Core.Script era -> PDoc
-scriptSummary (Babbage _) script = scriptHashSummary (hashScript @era script)
-scriptSummary (Alonzo _) script = scriptHashSummary (hashScript @era script)
-scriptSummary (Mary _) script = scriptHashSummary (hashScript @era script)
-scriptSummary (Allegra _) script = scriptHashSummary (hashScript @era script)
-scriptSummary (Shelley _) script = scriptHashSummary (hashScript @era script)
+scriptSummary p@(Babbage _) script = plutusSummary p script
+scriptSummary p@(Alonzo _) script = plutusSummary p script
+scriptSummary (Mary _) script = timelockSummary script
+scriptSummary (Allegra _) script = timelockSummary script
+scriptSummary (Shelley _) script = multiSigSummary script
 
 networkSummary :: Network -> PDoc
 networkSummary Testnet = ppString "Test"
@@ -836,3 +836,43 @@ utxoString proof (UTxO mp) = show (ppMap txInSummary (txOutSummary proof) (Split
 
 scriptHashSummary :: ScriptHash crypto -> PDoc
 scriptHashSummary (ScriptHash h) = trim (ppHash h)
+
+keyHashSummary :: KeyHash keyrole crypto -> PDoc
+keyHashSummary (KeyHash h) = trim (ppHash h)
+
+dataHashSummary :: DataHash era -> PDoc
+dataHashSummary dh = trim (ppSafeHash dh)
+
+keyPairSummary :: CC.Crypto c => KeyPair r c -> PDoc
+keyPairSummary (KeyPair x y) =
+  ppRecord "KeyPair" [("vKey", vKeySummary x), ("sKey", (viaShow y))]
+
+vKeySummary :: CC.Crypto c => VKey r c -> PDoc
+vKeySummary vk@(VKey x) = (viaShow x) <> " (hash " <> keyHashSummary (hashKey vk) <> ")"
+
+timelockSummary :: CC.Crypto crypto => Timelock crypto -> PDoc
+timelockSummary (RequireSignature akh) =
+  ppSexp "Signature" [keyHashSummary akh]
+timelockSummary (RequireAllOf ms) =
+  ppSexp "AllOf" (foldr (:) [] (fmap timelockSummary ms))
+timelockSummary (RequireAnyOf ms) =
+  ppSexp "AnyOf" (foldr (:) [] (fmap timelockSummary ms))
+timelockSummary (RequireMOf m ms) =
+  ppSexp "MOfN" (ppInteger (fromIntegral m) : foldr (:) [] (fmap timelockSummary ms))
+timelockSummary (RequireTimeExpire mslot) =
+  ppSexp "Expires" [ppSlotNo mslot]
+timelockSummary (RequireTimeStart mslot) =
+  ppSexp "Starts" [ppSlotNo mslot]
+
+multiSigSummary :: CC.Crypto crypto => SS.MultiSig crypto -> PDoc
+multiSigSummary (SS.RequireSignature hk) = ppSexp "ReqSig" [keyHashSummary hk]
+multiSigSummary (SS.RequireAllOf ps) = ppSexp "AllOf" (map multiSigSummary ps)
+multiSigSummary (SS.RequireAnyOf ps) = ppSexp "AnyOf" (map multiSigSummary ps)
+multiSigSummary (SS.RequireMOf m ps) = ppSexp "MOf" (ppInt m : map multiSigSummary ps)
+
+plutusSummary :: forall era. Proof era -> Script era -> PDoc
+plutusSummary (Babbage _) s@(PlutusScript lang _) = (ppString (show lang ++ " ")) <> scriptHashSummary (hashScript @era s)
+plutusSummary (Babbage _) (TimelockScript x) = timelockSummary x
+plutusSummary (Alonzo _) s@(PlutusScript lang _) = (ppString (show lang ++ " ")) <> scriptHashSummary (hashScript @era s)
+plutusSummary (Alonzo _) (TimelockScript x) = timelockSummary x
+plutusSummary other _ = ppString ("Plutus script in era " ++ show other ++ "???")
