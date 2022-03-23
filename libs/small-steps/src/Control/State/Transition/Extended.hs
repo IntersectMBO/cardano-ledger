@@ -38,6 +38,9 @@ module Control.State.Transition.Extended
     Embed (..),
     (?!),
     (?!:),
+    validate,
+    validateTrans,
+    validateTransLabeled,
     Label,
     SingEP (..),
     EventPolicy (..),
@@ -93,9 +96,12 @@ import Data.Default.Class (Default, def)
 import Data.Foldable (find, traverse_)
 import Data.Functor (($>), (<&>))
 import Data.Kind (Type)
+import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import Data.Typeable (typeRep)
 import Data.Void (Void)
 import NoThunks.Class (NoThunks (..))
+import Validation
 
 data RuleType
   = Initial
@@ -309,7 +315,7 @@ data Clause sts (rtype :: RuleType) a where
     Clause sts rtype a
   Predicate ::
     [Label] ->
-    Either e a ->
+    Validation (NonEmpty e) a ->
     -- Type of failure to return if the predicate fails
     (e -> PredicateFailure sts) ->
     a ->
@@ -323,6 +329,31 @@ type Rule sts rtype = F (Clause sts rtype)
 -- | Label for a predicate. This can be used to control which predicates get
 -- run.
 type Label = String
+
+-- | Fail with `PredicateFailure`'s in STS if `Validation` was unsuccessful.
+validate :: Validation (NonEmpty (PredicateFailure sts)) () -> Rule sts ctx ()
+validate = validateTrans id
+
+-- | Same as `validation`, except with ability to transform opaque failures
+-- into `PredicateFailure`s with a help of supplied function.
+validateTrans ::
+  -- | Transformation function for all errors
+  (e -> PredicateFailure sts) ->
+  Validation (NonEmpty e) () ->
+  Rule sts ctx ()
+validateTrans t v = liftF $ Predicate [] v t ()
+
+-- | Same as `validation`, except with ability to translate opaque failures
+-- into `PredicateFailure`s with a help of supplied function.
+validateTransLabeled ::
+  -- | Transformation function for all errors
+  (e -> PredicateFailure sts) ->
+  -- | Supply a list of labels to be used as filters when STS is executed
+  [Label] ->
+  -- | Actual validations to be executed
+  Validation (NonEmpty e) () ->
+  Rule sts ctx ()
+validateTransLabeled t labels v = liftF $ Predicate labels v t ()
 
 -- | Oh noes!
 --
@@ -349,7 +380,7 @@ labeledPred lbls cond orElse =
   liftF $
     Predicate
       lbls
-      (if cond then Right () else Left ())
+      (if cond then Success () else Failure (() :| []))
       (const orElse)
       ()
 
@@ -359,7 +390,8 @@ labeledPredE ::
   Either e () ->
   (e -> PredicateFailure sts) ->
   Rule sts ctx ()
-labeledPredE lbls cond orElse = liftF $ Predicate lbls cond orElse ()
+labeledPredE lbls cond orElse =
+  liftF $ Predicate lbls (eitherToValidation $ first pure cond) orElse ()
 
 trans ::
   Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
@@ -553,8 +585,8 @@ applyRuleInternal ep vp goSTS jc r = do
     runClause (Predicate lbls cond orElse val) =
       if validateIf lbls
         then case cond of
-          Left err -> modify (first (orElse err :)) >> pure val
-          Right x -> pure x
+          Success x -> pure x
+          Failure errs -> modify (first (map orElse (reverse (NE.toList errs)) <>)) >> pure val
         else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
       s <- lift $ goSTS subCtx

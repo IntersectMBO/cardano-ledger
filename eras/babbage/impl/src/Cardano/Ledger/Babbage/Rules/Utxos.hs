@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxos where
 
-import Cardano.Binary (ToCBOR (..)) -- FromCBOR (..))
+import Cardano.Binary (ToCBOR (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( collectTwoPhaseScriptInputs,
     evalScripts,
@@ -28,8 +28,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxos
   )
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
--- ,FailureDescription (..))
-
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Babbage
