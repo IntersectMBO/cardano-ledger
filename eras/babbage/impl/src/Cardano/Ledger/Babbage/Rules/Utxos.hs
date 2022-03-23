@@ -212,5 +212,5 @@ scriptsNo = do
       { _utxo = UTxO (SplitMap.union utxoKeep collouts), -- NEW to Babbage
       {- fees + collateralFees -}
         _fees = fees <> collateralFees, -- NEW to Babbage
-        _stakeDistro = updateStakeDistribution (_stakeDistro us) (UTxO utxoDel) mempty
+        _stakeDistro = updateStakeDistribution (_stakeDistro us) (UTxO utxoDel) (UTxO collouts)
       }
