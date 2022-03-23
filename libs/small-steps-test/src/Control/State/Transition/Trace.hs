@@ -397,8 +397,8 @@ closure env st0 sigs = mkTrace env st0 <$> loop st0 (reverse sigs) []
   m st
 mSt .- sig = do
   st <- mSt
-  validate <- ask -- Get the validation function from the environment
-  case validate st sig of
+  validation <- ask -- Get the validation function from the environment
+  case validation st sig of
     Left pfs -> liftIO . assertFailure . show $ pfs
     Right st' -> pure st'
 

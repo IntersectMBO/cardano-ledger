@@ -52,6 +52,7 @@ library
                      , strict-containers
                      , text
                      , transformers >= 0.5
+                     , validation-selective
 
   hs-source-dirs:      src
   if (flag(sts_assert))
