@@ -89,6 +89,7 @@ import Control.Monad.Except (liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
 import Data.Default (def)
+import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
@@ -225,6 +226,12 @@ instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
   txInfo = alonzoTxInfo
   inputDataHashes = alonzoInputHashes
   txscripts _ = txscripts' . getField @"wits"
+  getAllowedSupplimentalDataHashes txbody _ =
+    Set.fromList
+      [ dh
+        | out <- toList (getField @"outputs" txbody),
+          SJust dh <- [getField @"datahash" out]
+      ]
 
 -------------------------------------------------------------------------------
 -- Era Mapping

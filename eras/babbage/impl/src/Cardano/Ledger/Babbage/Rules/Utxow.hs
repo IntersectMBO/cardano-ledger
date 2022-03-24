@@ -22,9 +22,9 @@ import Cardano.Ledger.Alonzo.Rules.Utxow
     witsVKeyNeeded,
   )
 import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), wits)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo (TxDats (..), TxWitness (..), txdats')
+import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo (TxDats (..))
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Utxo
@@ -32,12 +32,7 @@ import Cardano.Ledger.Babbage.Rules.Utxo
     BabbageUtxoPred (..),
   )
 import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
-import Cardano.Ledger.Babbage.TxBody
-  ( Datum (..),
-    TxOut (..),
-    outputs',
-    referenceInputs',
-  )
+import Cardano.Ledger.Babbage.TxBody (Datum (..), TxOut (..))
 import Cardano.Ledger.BaseTypes
   ( ProtVer,
     ShelleyBase,
@@ -68,7 +63,6 @@ import Control.State.Transition.Extended
     liftSTS,
     trans,
   )
-import qualified Data.Compact.SplitMap as SplitMap (lookup)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -172,14 +166,10 @@ babbageUtxowTransition = do
   {-  txb := txbody tx  -}
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
-  let utxo@(UTxO mp) = _utxo u
+  let utxo = _utxo u
       txbody = getField @"body" (tx :: Core.Tx era)
-      txw = Alonzo.txdats' (wits tx)
       witsKeyHashes = witsFromTxWitnesses @era tx
-      {- txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}
       hashScriptMap = txscripts utxo tx
-      {- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isNonNativeScriptAddress tx a} -}
-      (inputHashes, _) = inputDataHashes (txscripts utxo tx) tx utxo
 
   -- check scripts
   {- ∀s ∈ range(txscripts txw utxo ∩ Script^{ph1}), validateScript s tx -}
@@ -192,12 +182,6 @@ babbageUtxowTransition = do
 
   {-  inputHashes  = dom(txdats txw)   -}
   runTest $ missingRequiredDatums hashScriptMap utxo tx txbody
-
-  {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h, ) ∈ txouts tx ∪ utxo (refInputs tx) } -}
-  let outs = foldr (:) [] (outputs' txbody)
-      allouts = Set.foldl' accum outs (referenceInputs' txbody)
-      accum ans refinput = case SplitMap.lookup refinput mp of Just out -> out : ans; Nothing -> ans
-  runTest $ danglingWitnessDataHashes inputHashes txw allouts
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}

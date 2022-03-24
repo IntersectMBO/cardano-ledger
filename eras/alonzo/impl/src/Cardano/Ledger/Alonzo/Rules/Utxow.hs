@@ -50,10 +50,9 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
-import Cardano.Ledger.Hashes (EraIndependentData, EraIndependentTxBody)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
-import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( delegCWitness,
     genesisCWitness,
@@ -89,7 +88,7 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (domain, eval, (⊆), (➖))
 import Control.State.Transition.Extended
 import Data.Coders
-import Data.Foldable (foldr', sequenceA_, toList)
+import Data.Foldable (foldr', sequenceA_)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -215,14 +214,11 @@ langsUsed hashScriptMap =
 
 -- =================
 
-{-  { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} ⊆ dom(txdats txw)   -}
+{- { h | (_ → (a,_,h)) ∈ txins tx ◁ utxo, isTwoPhaseScriptAddress tx a} ⊆ dom(txdats txw)   -}
+{- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h, ) ∈ txouts tx ∪ utxo (refInputs tx) } -}
 missingRequiredDatums ::
   forall era.
-  ( HasField
-      "datahash"
-      (Core.TxOut era)
-      (StrictMaybe (SafeHash (Crypto era) EraIndependentData)),
-    ValidateScript era,
+  ( ValidateScript era,
     Core.Script era ~ Script era,
     ExtendedUTxO era
   ) =>
@@ -235,13 +231,10 @@ missingRequiredDatums scriptwits utxo tx txbody = do
   let (inputHashes, txinsNoDhash) = inputDataHashes scriptwits tx utxo
       txHashes = domain (unTxDats . txdats . wits $ tx)
       unmatchedDatumHashes = eval (inputHashes ➖ txHashes)
-      outputDatumHashes =
-        Set.fromList
-          [ dh | out <- toList (getField @"outputs" txbody), SJust dh <- [getField @"datahash" out]
-          ]
+      allowedSupplimentalDataHashes = getAllowedSupplimentalDataHashes txbody utxo
       supplimentalDatumHashes = eval (txHashes ➖ inputHashes)
       (okSupplimentalDHs, notOkSupplimentalDHs) =
-        Set.partition (`Set.member` outputDatumHashes) supplimentalDatumHashes
+        Set.partition (`Set.member` allowedSupplimentalDataHashes) supplimentalDatumHashes
   sequenceA_
     [ failureUnless
         (Set.null txinsNoDhash)

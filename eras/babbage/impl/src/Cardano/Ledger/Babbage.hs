@@ -80,7 +80,7 @@ import qualified Cardano.Ledger.Shelley.Rules.Snap as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Tick as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Upec as Shelley
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
-import Cardano.Ledger.Shelley.UTxO (balance)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
@@ -88,10 +88,13 @@ import Control.Arrow (left)
 import Control.Monad.Except (liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
+import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default (def)
+import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
+import GHC.Records (HasField (..))
 
 -- =====================================================
 
@@ -225,6 +228,12 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
   txInfo = babbageTxInfo
   inputDataHashes = babbageInputDataHashes
   txscripts = babbageTxScripts
+  getAllowedSupplimentalDataHashes txbody (UTxO utxo) =
+    Set.fromList [dh | out <- outs, SJust dh <- [getField @"datahash" out]]
+    where
+      newOuts = toList $ getField @"outputs" txbody
+      referencedOuts = SplitMap.elems $ SplitMap.restrictKeysSet utxo (getField @"referenceInputs" txbody)
+      outs = newOuts <> referencedOuts
 
 -------------------------------------------------------------------------------
 -- Era Mapping

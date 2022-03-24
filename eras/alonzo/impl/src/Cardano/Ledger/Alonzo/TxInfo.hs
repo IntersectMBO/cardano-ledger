@@ -385,6 +385,11 @@ class ExtendedUTxO era where
     Core.Tx era ->
     Map.Map (ScriptHash (Crypto era)) (Core.Script era)
 
+  getAllowedSupplimentalDataHashes ::
+    Core.TxBody era ->
+    UTxO era ->
+    Set (DataHash (Crypto era))
+
 alonzoTxInfo ::
   forall era m.
   ( Era era,
