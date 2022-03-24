@@ -356,6 +356,12 @@ ppUtxoPredicateFailure (Alonzo.TooManyCollateralInputs x y) =
     ]
 ppUtxoPredicateFailure (Alonzo.NoCollateralInputs) =
   ppSexp "NoCollateralInputs" []
+ppUtxoPredicateFailure (Alonzo.TotalCollateralInequality x y) =
+  ppRecord
+    "TotalCollateralInequality"
+    [ ("balance computed", ppCoin x),
+      ("the asserted total collateral", ppCoin y)
+    ]
 
 instance
   ( PrettyCore era,
