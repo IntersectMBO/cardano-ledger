@@ -11,7 +11,7 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxos where
 
-import Cardano.Binary (ToCBOR (..)) -- FromCBOR (..))
+import Cardano.Binary (ToCBOR (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( collectTwoPhaseScriptInputs,
     evalScripts,
@@ -28,8 +28,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxos
   )
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
--- ,FailureDescription (..))
-
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Babbage
@@ -190,7 +188,7 @@ scriptsNo = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
-  let !_ = traceEvent invalidBegin ()
+  () <- pure $! traceEvent invalidBegin ()
 
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
@@ -201,11 +199,11 @@ scriptsNo = do
         Fails _sss -> pure ()
     Left info -> failBecause (CollectErrors info)
 
-  let !_ = traceEvent invalidEnd ()
+  () <- pure $! traceEvent invalidEnd ()
 
-      {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
-      {- utxoDel  = getField @"collateral" txb ◁ utxo -}
-      !(!utxoKeep, !utxoDel) =
+  {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
+  {- utxoDel  = getField @"collateral" txb ◁ utxo -}
+  let !(!utxoKeep, !utxoDel) =
         SplitMap.extractKeysSet (unUTxO utxo) (getField @"collateral" txb)
       UTxO collouts = Babbage.collOuts txb
       collateralFees = Val.coin (Babbage.collBalance txb utxo) -- NEW to Babbage

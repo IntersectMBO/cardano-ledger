@@ -57,6 +57,7 @@ import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, LedgerPredicateFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (ArrowChoice (right), left)
+import Control.DeepSeq (NFData)
 import Control.Monad.Except
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
@@ -78,7 +79,7 @@ import NoThunks.Class (NoThunks)
 -- | A newtype which indicates that a transaction has been validated against
 -- some chain state.
 newtype Validated tx = Validated tx
-  deriving (Eq, NoThunks, Show)
+  deriving (Eq, NoThunks, Show, NFData)
 
 -- | Extract the underlying unvalidated Tx.
 extractTx :: Validated tx -> tx
