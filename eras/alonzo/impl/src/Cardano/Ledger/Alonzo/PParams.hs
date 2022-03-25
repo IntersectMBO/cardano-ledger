@@ -42,8 +42,7 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel (..),
-    CostModels (..),
+  ( CostModels (..),
     ExUnits (..),
     Prices (..),
   )
@@ -75,7 +74,6 @@ import Data.Coders
     Wrapped (..),
     decode,
     encode,
-    encodeFoldableAsIndefinite,
     field,
     (!>),
     (<!),
@@ -491,13 +489,10 @@ getLanguageView pp lang@PlutusV1 =
     (serialize' (serialize' lang))
     ( serialize'
         ( serializeEncoding' $
-            maybe encodeNull enc $
+            maybe encodeNull toCBOR $
               Map.lookup lang (unCostModels $ getField @"_costmdls" pp)
         )
     )
-  where
-    enc (CostModelV1 cm _) = encodeFoldableAsIndefinite $ Map.elems cm
-    enc (CostModelV2 cm _) = encodeFoldableAsIndefinite $ Map.elems cm
 getLanguageView pp lang@PlutusV2 =
   LangDepView
     (serialize' lang)

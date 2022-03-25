@@ -15,7 +15,7 @@ import Cardano.Ledger.Alonzo.Data (Data, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel (..),
+  ( CostModel,
     ExUnits (..),
     Script (..),
     getEvaluationContext,

@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), CostModels (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), mkCostModel)
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
@@ -132,7 +132,7 @@ import qualified Data.UMap as UM
 import GHC.Stack
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as Plutus
-import Plutus.V1.Ledger.EvaluationContext (costModelParamsForTesting, mkEvaluationContext)
+import Plutus.V1.Ledger.EvaluationContext (costModelParamsForTesting)
 import Test.Cardano.Ledger.Generic.Fields
   ( PParamsField (..),
     TxBodyField (..),
@@ -167,16 +167,15 @@ testSystemStart = SystemStart $ posixSecondsToUTCTime 0
 
 -- | A cost model that sets everything as being free
 freeCostModelV1 :: CostModel
-freeCostModelV1 = CostModelV1 zeroValuedParams (fromJust $ mkEvaluationContext zeroValuedParams)
-  where
-    zeroValuedParams = 0 <$ costModelParamsForTesting
+freeCostModelV1 =
+  fromRight (error "corrupt freeCostModelV1") $
+    mkCostModel PlutusV1 (0 <$ costModelParamsForTesting)
 
 -- | A cost model that sets everything as being free
 freeCostModelV2 :: CostModel
-freeCostModelV2 = CostModelV1 zeroValuedParams (fromJust $ mkEvaluationContext zeroValuedParams)
-  where
-    costModelParamsForTestingPV2 = costModelParamsForTesting -- TODO use PV2 when it exists
-    zeroValuedParams = 0 <$ costModelParamsForTestingPV2
+freeCostModelV2 =
+  fromRight (error "corrupt freeCostModelV1") $
+    mkCostModel PlutusV1 (0 <$ costModelParamsForTesting) -- TODO use PV2 when it exists
 
 defaultPPs :: [PParamsField era]
 defaultPPs =

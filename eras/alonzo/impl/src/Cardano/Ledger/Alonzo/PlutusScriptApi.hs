@@ -24,7 +24,7 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), CostModels (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..))
 import Cardano.Ledger.Alonzo.Tx
   ( Data,

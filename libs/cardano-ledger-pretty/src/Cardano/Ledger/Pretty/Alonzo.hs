@@ -72,10 +72,8 @@ ppExUnits (ExUnits mem step) =
 instance PrettyA ExUnits where prettyA = ppExUnits
 
 ppCostModel :: CostModel -> PDoc
-ppCostModel (CostModelV1 m _) =
-  ppSexp "CostModelV1" [ppMap text ppInteger m]
-ppCostModel (CostModelV2 m _) =
-  ppSexp "CostModelV2" [ppMap text ppInteger m]
+ppCostModel cm =
+  ppSexp "CostModel" [ppLanguage (getCostModelLanguage cm), ppMap text ppInteger (getCostModelParams cm)]
 
 instance PrettyA CostModel where prettyA = ppCostModel
 
