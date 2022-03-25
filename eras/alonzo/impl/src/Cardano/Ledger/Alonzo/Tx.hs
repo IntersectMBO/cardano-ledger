@@ -23,8 +23,7 @@
 --       https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.alonzo-ledger/latest/download-by-type/doc-pdf/alonzo-changes
 --     The functions can be found in Figures in that document, and sections of this code refer to those figures.
 module Cardano.Ledger.Alonzo.Tx
-  ( Indexable (..),
-    -- Figure 1
+  ( -- Figure 1
     CostModel,
     getLanguageView,
     -- Figure 2
@@ -42,22 +41,23 @@ module Cardano.Ledger.Alonzo.Tx
     ValidatedTx (ValidatedTx, body, wits, isValid, auxiliaryData),
     txdats',
     txscripts',
+    txrdmrs,
     TxBody (..),
     -- Figure 4
-    ScriptPurpose (..),
     totExUnits,
-    --  Figure 5
-    minfee,
     isTwoPhaseScriptAddress,
+    minfee,
+    --  Figure 5
+    Indexable (..), -- indexOf
+    ScriptPurpose (..),
     isTwoPhaseScriptAddressFromMap,
     alonzoInputHashes,
     Shelley.txouts,
-    -- Figure 6
-    txrdmrs,
+    indexedRdmrs,
     rdptr,
+    -- Figure 6
     rdptrInv,
     getMapFromValue,
-    indexedRdmrs,
     -- Segwit
     segwitTx,
     -- Other
