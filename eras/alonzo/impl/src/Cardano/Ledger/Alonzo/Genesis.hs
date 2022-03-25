@@ -21,7 +21,15 @@ import Cardano.Binary
 import Cardano.Crypto.Hash.Class (hashToTextAsHex)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Scripts (CostModel (..), CostModels (..), ExUnits (..), ExUnits', Prices (..))
+import Cardano.Ledger.Alonzo.Scripts
+  ( CostModel,
+    CostModels (..),
+    ExUnits (..),
+    ExUnits',
+    Prices (..),
+    getCostModelParams,
+    mkCostModel,
+  )
 import Cardano.Ledger.Alonzo.TxBody
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin)
@@ -43,8 +51,6 @@ import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script, TxOut, Value)
-import Plutus.V2.Ledger.Api as PV2 hiding (Map, Script, TxOut, Value)
 import Prelude
 
 data AlonzoGenesis = AlonzoGenesis
@@ -182,8 +188,7 @@ instance FromJSON Prices where
           Just s -> return s
 
 instance ToJSON CostModel where
-  toJSON (CostModelV1 cm _) = toJSON cm
-  toJSON (CostModelV2 cm _) = toJSON cm
+  toJSON = toJSON . getCostModelParams
 
 instance ToJSON CostModels where
   toJSON = toJSON . unCostModels
@@ -210,12 +215,9 @@ instance FromJSONKey Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
 validateCostModel :: MonadFail m => (Language, (Map Text Integer)) -> m (Language, CostModel)
-validateCostModel (PlutusV1, cmps) = case PV1.mkEvaluationContext cmps of
-  Nothing -> fail "corrupt Plutus V1 cost model"
-  Just ec -> pure (PlutusV1, CostModelV1 cmps ec)
-validateCostModel (PlutusV2, cmps) = case PV2.mkEvaluationContext cmps of
-  Nothing -> fail "corrupt Plutus V2 cost model"
-  Just ec -> pure (PlutusV2, CostModelV2 cmps ec)
+validateCostModel (lang, cmps) = case mkCostModel lang cmps of
+  Left err -> fail err
+  Right cm -> pure (lang, cm)
 
 instance FromJSON CostModels where
   parseJSON = Aeson.withObject "CostModels" $ \o -> do

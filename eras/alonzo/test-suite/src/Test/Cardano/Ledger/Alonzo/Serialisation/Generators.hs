@@ -22,12 +22,12 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel (..),
-    CostModels (..),
+  ( CostModels (..),
     ExUnits (..),
     Prices (..),
     Script (..),
     Tag (..),
+    mkCostModel,
   )
 import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
@@ -42,7 +42,6 @@ import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Int (Int64)
 import Data.Map (Map)
 import qualified Data.Map as Map
-import Data.Maybe (fromMaybe)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
@@ -204,14 +203,14 @@ instance Arbitrary Prices where
 mkNullCostModel :: Set Text -> Map Text Integer
 mkNullCostModel = Map.fromList . fmap (\k -> (k, 0 :: Integer)) . Set.toList
 
-genCM :: Set Text -> Gen (Map Text Integer, PV1.EvaluationContext)
-genCM costModelParamNames = do
+genCM :: Language -> Set Text -> Gen CostModel
+genCM lang costModelParamNames = do
   newCMPs <- traverse (const arbitrary) (mkNullCostModel costModelParamNames)
-  pure $ (newCMPs, fromMaybe (error "Corrupt cost model") (PV1.mkEvaluationContext newCMPs))
+  either (error "Corrupt cost model") pure $ mkCostModel lang newCMPs
 
 genCostModel :: Language -> Gen (Language, CostModel)
-genCostModel PlutusV1 = (PlutusV1,) <$> uncurry CostModelV1 <$> genCM PV1.costModelParamNames
-genCostModel PlutusV2 = (PlutusV2,) <$> uncurry CostModelV2 <$> genCM PV2.costModelParamNames
+genCostModel PlutusV1 = (PlutusV1,) <$> genCM PlutusV1 PV1.costModelParamNames
+genCostModel PlutusV2 = (PlutusV2,) <$> genCM PlutusV2 PV2.costModelParamNames
 
 instance Arbitrary CostModel where
   arbitrary = snd <$> (elements nonNativeLanguages >>= genCostModel)

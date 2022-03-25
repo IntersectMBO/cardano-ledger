@@ -24,11 +24,12 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize, vKeyLocked)
 import Cardano.Ledger.Alonzo.Rules.Utxow (langsUsed)
 import Cardano.Ledger.Alonzo.Scripts (isPlutusScript, pointWiseExUnits, txscriptfee)
 import Cardano.Ledger.Alonzo.Scripts as Alonzo
-  ( CostModel (..),
+  ( CostModel,
     CostModels (..),
     ExUnits (..),
     Prices (..),
     Script (..),
+    mkCostModel,
   )
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
@@ -64,10 +65,10 @@ import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
 import qualified Data.ByteString.Char8 as BS
 import qualified Data.Compact.SplitMap as SplitMap
+import Data.Either (fromRight)
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
 import Data.Map as Map
-import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
@@ -75,7 +76,7 @@ import qualified Data.Sequence.Strict as Seq (fromList)
 import Data.Set as Set
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
-import Plutus.V1.Ledger.Api (costModelParamNames, mkEvaluationContext)
+import Plutus.V1.Ledger.Api (costModelParamNames)
 import qualified PlutusTx as P (Data (..))
 import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.AllegraEraGen (genValidityInterval)
@@ -178,10 +179,11 @@ genAlonzoMint startvalue = do
 
 -- | A cost model that sets everything as being free
 freeCostModel :: CostModel
-freeCostModel = CostModelV1 cmps ec
+freeCostModel =
+  fromRight (error "freeCostModel is not well-formed") $
+    Alonzo.mkCostModel PlutusV1 cmps
   where
     cmps = Map.fromList $ fmap (\k -> (k, 0)) (Set.toList costModelParamNames)
-    ec = fromJust $ mkEvaluationContext cmps
 
 -- ================================================================
 
