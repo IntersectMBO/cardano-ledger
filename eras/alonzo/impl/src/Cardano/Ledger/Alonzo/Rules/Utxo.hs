@@ -173,11 +173,6 @@ data UtxoPredicateFailure era
       -- ^ balance computed
       !Coin
       -- ^ the required collateral for the given fee
-  | TotalCollateralInequality
-      !Coin
-      -- ^ balance computed
-      !Coin
-      -- ^ the asserted total collateral
   | -- | The UTxO entries which have the wrong kind of script
     ScriptsNotPaidUTxO
       !(UTxO era)
@@ -657,8 +652,6 @@ encFail (TooManyCollateralInputs a b) =
   Sum TooManyCollateralInputs 19 !> To a !> To b
 encFail NoCollateralInputs =
   Sum NoCollateralInputs 20
-encFail (TotalCollateralInequality a b) =
-  Sum TotalCollateralInequality 21 !> To a !> To b
 
 decFail ::
   ( Era era,
@@ -694,7 +687,6 @@ decFail 17 = SumD WrongNetworkInTxBody <! From <! From
 decFail 18 = SumD OutsideForecast <! From
 decFail 19 = SumD TooManyCollateralInputs <! From <! From
 decFail 20 = SumD NoCollateralInputs
-decFail 21 = SumD TotalCollateralInequality <! From <! From
 decFail n = Invalid n
 
 instance
