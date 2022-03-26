@@ -29,7 +29,7 @@ common project-config
                       -Wincomplete-uni-patterns
                       -Wpartial-fields
                       -Wredundant-constraints
-                      -- -Wunused-packages
+                      -Wunused-packages
 
 library
   import:             base, project-config
@@ -48,9 +48,6 @@ library
     Cardano.Ledger.Babbage.Rules.Ledger
     Cardano.Ledger.Babbage
   build-depends:
-    array,
-    base-deriving-via,
-    base64-bytestring,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
@@ -59,27 +56,20 @@ library
     cardano-ledger-core,
     cardano-ledger-shelley,
     cardano-ledger-shelley-ma,
-    cardano-prelude,
     cardano-slotting,
     compact-map,
     containers,
     data-default,
     deepseq,
-    measures,
     mtl,
     nothunks,
-    plutus-core,
     plutus-ledger-api,
     plutus-tx,
-    prettyprinter,
-    serialise,
     set-algebra,
     small-steps,
     strict-containers,
     text,
-    time,
     transformers,
-    utf8-string,
     validation-selective,
   hs-source-dirs:
     src
