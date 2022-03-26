@@ -12,6 +12,7 @@ module Cardano.Ledger.Shelley.Rules.Deleg
   ( DELEG,
     DelegEnv (..),
     PredicateFailure,
+    DelegEvent (..),
     DelegPredicateFailure (..),
   )
 where

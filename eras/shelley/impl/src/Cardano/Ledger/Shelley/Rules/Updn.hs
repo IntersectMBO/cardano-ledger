@@ -8,6 +8,7 @@ module Cardano.Ledger.Shelley.Rules.Updn
     UpdnEnv (..),
     UpdnState (..),
     PredicateFailure,
+    UpdnEvent (..),
     UpdnPredicateFailure,
   )
 where
