@@ -77,7 +77,8 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash)
+import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
@@ -841,6 +842,9 @@ instance HasField "txfee" (TxBody era) Coin where
 instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
   getField (TxBodyConstr (Memo m _)) = _update m
 
+instance Crypto era ~ crypto => HasField "referenceInputs" (TxBody era) (Set (TxIn crypto)) where
+  getField _ = Set.empty
+
 instance
   (Crypto era ~ c) =>
   HasField "reqSignerHashes" (TxBody era) (Set (KeyHash 'Witness c))
@@ -907,3 +911,9 @@ getAlonzoTxOutEitherAddr = \case
 addressErrorMsg :: String
 addressErrorMsg = "Impossible: Compacted an address of non-standard size"
 {-# NOINLINE addressErrorMsg #-}
+
+instance HasField "datum" (TxOut era) (StrictMaybe (Data era)) where
+  getField _ = SNothing
+
+instance HasField "referenceScript" (TxOut era) (StrictMaybe (Script era)) where
+  getField _ = SNothing

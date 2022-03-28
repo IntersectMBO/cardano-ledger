@@ -20,9 +20,9 @@ import Cardano.Ledger.Alonzo.Scripts
     Script (..),
     getEvaluationContext,
   )
-import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (Spending), rdptr)
+import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxInfo
-  ( ExtendedUTxO,
+  ( ExtendedUTxO (txscripts),
     TranslationError,
     VersionedTxInfo (..),
     exBudgetToExUnits,
@@ -32,10 +32,9 @@ import Cardano.Ledger.Alonzo.TxInfo
     valContext,
   )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers, TxDats, unRedeemers, unTxDats)
-import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..), strictMaybeToMaybe)
+import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
@@ -115,16 +114,9 @@ basicValidation tx utxo =
 
 type RedeemerReport c = Map RdmrPtr (Either (ScriptFailure c) ExUnits)
 
-languagesUsed ::
-  ( HasField "wits" (Core.Tx era) (Core.Witnesses era),
-    HasField "txscripts" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Script era))
-  ) =>
-  Core.Tx era ->
-  Set Language
-languagesUsed tx = Set.fromList $ mapMaybe getLanguage (getScripts tx)
+languagesUsed :: [Script era] -> Set Language
+languagesUsed scripts = Set.fromList $ mapMaybe getLanguage scripts
   where
-    getScripts = Map.elems . getField @"txscripts" . getField @"wits"
-    -- TODO account for reference scripts (and reference inputs) in babbage
     getLanguage (TimelockScript _) = Nothing
     getLanguage (PlutusScript lang _) = Just lang
 
@@ -140,12 +132,13 @@ evaluateTransactionExecutionUnits ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "txscripts" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Script era)),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
+    Core.Script era ~ Script era,
     Monad m
   ) =>
   Core.PParams era ->
@@ -169,7 +162,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
     Nothing -> do
       let getInfo :: Language -> m (Either TranslationError (Language, VersionedTxInfo))
           getInfo lang = ((,) lang <$>) <$> txInfo pp lang ei sysS utxo tx
-      txInfos <- mapM getInfo (Set.toList $ languagesUsed tx)
+      txInfos <- mapM getInfo (Set.toList $ languagesUsed (Map.elems scripts))
       case sequence txInfos of
         Left transEr -> pure . Left $ BadTranslation transEr
         Right ctx ->
@@ -182,12 +175,12 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
     txb = getField @"body" tx
     ws = getField @"wits" tx
     dats = unTxDats $ getField @"txdats" ws
-    scripts = getField @"txscripts" ws
+    scripts = txscripts utxo tx
+    needed = scriptsNeeded utxo tx
 
     ptrToPlutusScript = Map.fromList $ do
-      (sp, sh) <- scriptsNeeded utxo tx
+      (sp, sh) <- needed
       msb <- case Map.lookup sh scripts of
-        -- TODO account for reference scripts (and reference inputs) in Babbage
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
         Just (PlutusScript v bytes) -> pure $ Just (bytes, v)
@@ -214,9 +207,11 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         (Spending txin) -> do
           txOut <- note (UnknownTxIn txin) $ SplitMap.lookup txin (unUTxO utxo)
           let mdh = getField @"datahash" txOut
-          dh <- note (InvalidTxIn txin) $ strictMaybeToMaybe mdh
-          dat <- note (MissingDatum dh) $ Map.lookup dh dats
-          -- TODO account for inline datums (and reference inputs) in babbage
+              md = getField @"datum" txOut
+          dat <- case (md, mdh) of
+            (SJust d, _) -> pure d
+            (_, SJust dh) -> note (MissingDatum dh) $ Map.lookup dh dats
+            (SNothing, SNothing) -> Left (InvalidTxIn txin)
           pure [dat, rdmr, valContext inf sp]
         _ -> pure [rdmr, valContext inf sp]
       let pArgs = map getPlutusData args
