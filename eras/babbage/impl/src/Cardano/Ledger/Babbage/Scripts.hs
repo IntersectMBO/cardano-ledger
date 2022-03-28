@@ -96,7 +96,11 @@ getDatum tx (UTxO m) sp = do
 
 babbageTxScripts ::
   forall era.
-  (ValidateScript era, HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era)), HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))), HasField "referenceInputs" (Core.TxBody era) (Set (TxIn (Crypto era)))) =>
+  ( ValidateScript era,
+    HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "referenceInputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
   UTxO era ->
   Core.Tx era ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era)

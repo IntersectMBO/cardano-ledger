@@ -212,7 +212,6 @@ exampleInvalidExUnitCalc proof = do
 exampleTx ::
   ( Scriptic era,
     Signable (Ledger.Crypto.DSIGN (Crypto era)) (Crypto.Hash (Ledger.Crypto.HASH (Crypto era)) EraIndependentTxBody)
-    -- Signable (Ledger.Crypto.DSIGN (Crypto.Crypto )) (Crypto.Hash (Ledger.Crypto.HASH (Ledger.Crypto.Crypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   Core.Tx era
@@ -249,7 +248,20 @@ ustate pf =
 
 updateTxExUnits ::
   forall era m.
-  (MonadFail m, Era era, ExtendedUTxO era, HasField "_maxTxExUnits" (Core.PParams era) ExUnits, HasField "_protocolVersion" (Core.PParams era) ProtVer, HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))), HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))), HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)), HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))), HasField "txdats" (Core.Witnesses era) (TxDats era), HasField "txrdmrs" (Core.Witnesses era) (Redeemers era), HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)), Core.Script era ~ Script era) =>
+  ( MonadFail m,
+    Era era,
+    ExtendedUTxO era,
+    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
+    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "txdats" (Core.Witnesses era) (TxDats era),
+    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    Core.Script era ~ Script era
+  ) =>
   Proof era ->
   Core.Tx era ->
   UTxO era ->
