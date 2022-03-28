@@ -49,6 +49,8 @@ library
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Fields
+    Test.Cardano.Ledger.Generic.Functions
+    Test.Cardano.Ledger.Generic.GenState
     Test.Cardano.Ledger.Generic.Proof
     Test.Cardano.Ledger.Generic.Scriptic
     Test.Cardano.Ledger.Generic.Updaters
@@ -116,6 +118,7 @@ library
     plutus-ledger-api,
     plutus-core,
     plutus-tx,
+    prettyprinter,
     profunctors,
     QuickCheck,
     quickcheck-instances,
