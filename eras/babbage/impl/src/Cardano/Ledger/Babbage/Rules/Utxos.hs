@@ -44,6 +44,7 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits)
+import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
@@ -51,6 +52,7 @@ import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
 import qualified Data.Map as Map
 import Data.Maybe.Strict
+import Data.Set (Set)
 import Debug.Trace (traceEvent)
 import GHC.Records (HasField (..))
 
@@ -111,7 +113,8 @@ utxosTransition ::
     Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
     Embed (Core.EraRule "PPUP" era) (BabbageUTXOS era),
     ValidateScript era,
-    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era)) -- Serializing the PredicateFailure
+    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era)),
+    HasField "collateral" (Babbage.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
@@ -178,7 +181,8 @@ scriptsNo ::
   ( ValidateScript era,
     ConcreteBabbage era,
     ExtendedUTxO era,
-    STS (BabbageUTXOS era)
+    STS (BabbageUTXOS era),
+    HasField "collateral" (Babbage.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsNo = do

@@ -15,7 +15,6 @@ import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (txscripts))
 import Cardano.Ledger.Babbage.TxBody
   ( TxBody (..),
     TxOut (..),
-    collateralInputs',
     collateralReturn',
     outputs',
     txfee',
@@ -30,6 +29,7 @@ import Cardano.Ledger.Val ((<->))
 import Data.Compact.SplitMap ((◁))
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Set (Set)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 
@@ -59,13 +59,21 @@ minCollateral txb pp = Coin ((fee * percent) `divideCeiling` 100)
       where
         (n, _rem) = x `divMod` y
 
-collBalance :: forall era. Era era => TxBody era -> UTxO era -> Core.Value era
+collBalance ::
+  forall era.
+  ( Era era,
+    HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (TxOut era)),
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era)))
+  ) =>
+  Core.TxBody era ->
+  UTxO era ->
+  Core.Value era
 collBalance txb (UTxO m) =
-  case collateralReturn' txb of
+  case getField @"collateralReturn" txb of
     SNothing -> colbal
     SJust (TxOut _ retval _ _) -> colbal <-> retval
   where
-    col = UTxO (collateralInputs' @era txb ◁ m)
+    col = UTxO (getField @"collateral" txb ◁ m)
     colbal = balance @era col
 
 collOuts ::
@@ -83,6 +91,3 @@ collOuts txb =
         index = case txIxFromIntegral (length (outputs' txb)) of
           Just i -> i
           Nothing -> error ("length outputs, should always fit in a TxIx")
-
-feesOK :: Core.PParams era -> Core.Tx era -> UTxO era -> Bool
-feesOK _pparams _tx _utxo = undefined
