@@ -149,7 +149,7 @@ import Numeric.Natural (Natural)
 getUTxO ::
   NewEpochState era ->
   UTxO era
-getUTxO = _utxo . _utxoState . esLState . nesEs
+getUTxO = _utxo . lsUTxOState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
@@ -187,7 +187,7 @@ getPools ::
   Set (KeyHash 'StakePool (Crypto era))
 getPools = Map.keysSet . f
   where
-    f = _pParams . _pstate . _delegationState . esLState . nesEs
+    f = _pParams . dpsPState . lsDPState . esLState . nesEs
 
 -- | Get the /current/ registered stake pool parameters for a given set of
 -- stake pools. The result map will contain entries for all the given stake
@@ -198,7 +198,7 @@ getPoolParameters ::
   Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
 getPoolParameters = Map.restrictKeys . f
   where
-    f = _pParams . _pstate . _delegationState . esLState . nesEs
+    f = _pParams . dpsPState . lsDPState . esLState . nesEs
 
 -- | Get pool sizes, but in terms of total stake
 --
@@ -308,9 +308,9 @@ currentSnapshot ss =
   incrementalStakeDistr incrementalStake dstate pstate
   where
     ledgerState = esLState $ nesEs ss
-    incrementalStake = _stakeDistro $ _utxoState ledgerState
-    dstate = _dstate $ _delegationState ledgerState
-    pstate = _pstate $ _delegationState ledgerState
+    incrementalStake = _stakeDistro $ lsUTxOState ledgerState
+    dstate = dpsDState $ lsDPState ledgerState
+    pstate = dpsPState $ lsDPState ledgerState
 
 -- | Information about a stake pool
 data RewardInfoPool = RewardInfoPool
@@ -583,8 +583,8 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
       feesAdaPot = fees_
     }
   where
-    (UTxOState u deposits fees_ _ _) = _utxoState ls
-    (DPState dstate _) = _delegationState ls
+    (UTxOState u deposits fees_ _ _) = lsUTxOState ls
+    (DPState dstate _) = lsDPState ls
     rewards_ = fold (rewards dstate)
     coins = Val.coin $ balance u
 

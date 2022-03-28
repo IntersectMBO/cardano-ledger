@@ -29,8 +29,8 @@ import Cardano.Ledger.Shelley.LedgerState
     DPState,
     LedgerState (..),
     UTxOState,
-    _delegationState,
-    _utxoState,
+    lsDPState,
+    lsUTxOState,
   )
 import Cardano.Ledger.Shelley.Rules.Ledger
   ( LEDGER,
@@ -134,7 +134,7 @@ ledgersTransition ::
   TransitionRule (LEDGERS era)
 ledgersTransition = do
   TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
-  let (u, dp) = (_utxoState ls, _delegationState ls)
+  let (u, dp) = (lsUTxOState ls, lsDPState ls)
   (u'', dp'') <-
     foldM
       ( \(u', dp') (ix, tx) ->

@@ -497,7 +497,7 @@ genDCerts = do
                       <$> lookupPlutusScript delegCred Cert
           _ -> pure (dc : dcs, ss, regCreds)
   NonNegative n <- lift arbitrary
-  DPState {_dstate = DState {_unified}} <- gsDPState <$> get
+  DPState {dpsDState = DState {_unified}} <- gsDPState <$> get
   let initSets = ([], Set.empty, UM.domain (Rewards _unified))
   (dcs, _, _) <- F.foldlM genUniqueScript initSets [1 :: Int .. n]
   pure $ reverse dcs
@@ -561,8 +561,8 @@ spendOnly txout = case getTxOutAddr txout of
 genUTxOState :: forall era. Reflect era => UTxO era -> GenRS era (UTxOState era)
 genUTxOState utxo = do
   GenEnv {gePParams} <- ask
-  DPState {_dstate, _pstate} <- gsDPState <$> get
-  let deposited = obligation' reify gePParams (rewards _dstate) (_pParams _pstate)
+  DPState {dpsDState, dpsPState} <- gsDPState <$> get
+  let deposited = obligation' reify gePParams (rewards dpsDState) (_pParams dpsPState)
   lift (UTxOState utxo deposited <$> arbitrary <*> pure (emptyPPUPstate @era reify) <*> pure def)
 
 genRecipientsFrom :: Reflect era => [Core.TxOut era] -> GenRS era [Core.TxOut era]
@@ -917,8 +917,8 @@ applySTSByProof (Shelley _) trc = runShelleyBase $ applySTS trc
 -- Now a test
 
 totalAda :: Reflect era => UTxOState era -> DPState (Crypto era) -> Coin
-totalAda (UTxOState utxo f d _ _) DPState {_dstate} =
-  f <> d <> coin (balance utxo) <> F.foldl' (<>) mempty (rewards _dstate)
+totalAda (UTxOState utxo f d _ _) DPState {dpsDState} =
+  f <> d <> coin (balance utxo) <> F.foldl' (<>) mempty (rewards dpsDState)
 
 -- Note we could probably abstract over an arbitray test here with
 -- type:: Box era -> Core.Tx era -> UTxOState era -> DPState era -> Property

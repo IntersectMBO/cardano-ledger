@@ -319,7 +319,7 @@ genUpdate
       nodes <- take 5 <$> QC.shuffle coreNodes
 
       let e = epochFromSlotNo s
-          (GenDelegs genDelegs) = (_genDelegs . _dstate) delegPoolSt
+          (GenDelegs genDelegs) = (_genDelegs . dpsDState) delegPoolSt
           genesisKeys = fst <$> nodes
           coreSigners = catMaybes $ (flip Map.lookup) genesisDelegatesByHash . genDelegKeyHash <$> Map.elems genDelegs
           failedWitnessLookup = length coreSigners < Map.size genDelegs

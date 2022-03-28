@@ -142,7 +142,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     ledgerState :: LedgerState (ShelleyEra c)
     ledgerState =
       LedgerState
-        { _utxoState =
+        { lsUTxOState =
             UTxOState
               { _utxo = utxoShelley,
                 _deposited = Coin 0,
@@ -150,9 +150,9 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
                 _ppups = def,
                 _stakeDistro = IStake mempty Map.empty
               },
-          _delegationState =
+          lsDPState =
             DPState
-              { _dstate = def {_genDelegs = genDelegs},
-                _pstate = def
+              { dpsDState = def {_genDelegs = genDelegs},
+                dpsPState = def
               }
         }

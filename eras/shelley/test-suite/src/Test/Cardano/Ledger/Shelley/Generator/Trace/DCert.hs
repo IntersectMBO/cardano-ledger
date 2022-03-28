@@ -245,7 +245,7 @@ genDCerts
         )
       )
     where
-      pools = _pParams (_pstate dpState)
+      pools = _pParams (dpsPState dpState)
       isScript (ScriptCred _) = True
       isScript _ = False
 

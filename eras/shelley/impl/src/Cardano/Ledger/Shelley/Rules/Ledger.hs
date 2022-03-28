@@ -193,8 +193,8 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
-           (utxoSt, DPState {_dstate, _pstate}) ->
-              obligation ledgerPp (rewards _dstate) (_pParams _pstate) -- FIX ME
+           (utxoSt, DPState {dpsDState, dpsPState}) ->
+              obligation ledgerPp (rewards dpsDState) (_pParams dpsPState) -- FIX ME
                 == _deposited utxoSt
         )
     ]

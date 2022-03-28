@@ -111,8 +111,8 @@ import Test.Cardano.Ledger.Model.FeatureSet
   )
 import Test.Cardano.Ledger.Model.LedgerState
   ( ModelInstantaneousReward (..),
-    modelDPState_dstate,
-    modelDPState_pstate,
+    modelDPStatedpsDState,
+    modelDPStatedpsPState,
     modelDState_genDelegs,
     modelDState_iRwd,
     modelEpochState_acnt,
@@ -307,7 +307,7 @@ fixMIR tx = do
           }
         )
     ) <-
-    lift $ use $ modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_iRwd
+    lift $ use $ modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_iRwd
 
   let otherPot = \case
         TreasuryMIR -> ReservesMIR
@@ -417,7 +417,7 @@ fixBalance
        ) = do
     pp <- lift $ uses (modelLedger . modelLedger_nes) $ getModelPParams
     utxo <- lift $ uses modelLedger $ getModelLedger_utxos
-    poolParams <- lift $ use $ modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_pstate . modelPState_poolParams
+    poolParams <- lift $ use $ modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPStatedpsPState . modelPState_poolParams
 
     let consumed@(ModelValueF (Coin consumedAda, _)) = unModelValue $ getModelConsumed pp utxo tx
         produced = unModelValue $ getModelProduced pp poolParams tx
@@ -537,7 +537,7 @@ witnessModelTxImpl mtx ml =
       -- TODO: this unconditionally uses all genDelegs; but should probably use
       -- the genDelegs already on the tx, if they meet quorum; and should expose
       -- the exta degrees of freedom to the caller otherwise.
-      witnessGenesisDelegates = Set.fromList $ fmap coerceKeyRole' $ toListOf (modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_genDelegs . folded) ml
+      witnessGenesisDelegates = Set.fromList $ fmap coerceKeyRole' $ toListOf (modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_genDelegs . folded) ml
 
       witnessSigs :: Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False))
       witnessSigs =

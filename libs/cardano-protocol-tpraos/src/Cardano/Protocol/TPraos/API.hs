@@ -79,8 +79,8 @@ import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     NewEpochState (..),
-    _delegationState,
-    _dstate,
+    lsDPState,
+    dpsDState,
     _genDelegs,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
@@ -236,8 +236,8 @@ view
         lvExtraEntropy = getField @"_extraEntropy" . esPp $ nesEs,
         lvPoolDistr = nesPd,
         lvGenDelegs =
-          _genDelegs . _dstate
-            . _delegationState
+          _genDelegs . dpsDState
+            . lsDPState
             $ esLState nesEs,
         lvChainChecks = pparamsToChainChecksPParams . esPp $ nesEs
       }

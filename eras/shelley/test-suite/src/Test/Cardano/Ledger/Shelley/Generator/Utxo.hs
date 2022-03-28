@@ -69,7 +69,7 @@ import Cardano.Ledger.Shelley.LedgerState
     produced,
     ptrsMap,
     rewards,
-    _dstate,
+    dpsDState,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
@@ -224,7 +224,7 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((UM.unUnify . rewards . _dstate) dpState)
+          ((UM.unUnify . rewards . dpsDState) dpState)
       (update, updateWits) <-
         genUpdate
           constants
@@ -273,7 +273,7 @@ genTx
 
       outputAddrs <-
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
-          >>= genPtrAddrs (_dstate dpState')
+          >>= genPtrAddrs (dpsDState dpState')
 
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.

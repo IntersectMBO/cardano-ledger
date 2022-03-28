@@ -99,8 +99,8 @@ import Test.Cardano.Ledger.Model.Generators.Script
 import Test.Cardano.Ledger.Model.Generators.Value (unfoldModelValue)
 import Test.Cardano.Ledger.Model.LedgerState
   ( ModelInstantaneousReward (..),
-    modelDPState_dstate,
-    modelDPState_pstate,
+    modelDPStatedpsDState,
+    modelDPStatedpsPState,
     modelDState_delegations,
     modelDState_iRwd,
     modelEpochState_acnt,
@@ -173,7 +173,7 @@ genRegPoolOwnerKey = do
   registeredStake <- uses (modelLedger . to getModelLedger_rewards) $ Map.keysSet
   allDelegations <-
     uses
-      (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_delegations)
+      (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_delegations)
       $ Set.fromList . Map.toList
   pools <-
     use
@@ -228,7 +228,7 @@ genMIR ::
   m [(Int, m (ModelDCert era))]
 genMIR = do
   acnts <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_acnt)
-  Comp1 irs <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_iRwd)
+  Comp1 irs <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_iRwd)
   registeredStake <- uses (modelLedger . to getModelLedger_rewards) $ Map.keysSet
   pure $
     concat
@@ -344,7 +344,7 @@ genPoolParamCost = do
   minPoolCost <- uses (modelLedger . modelLedger_nes) (_modelPParams_minPoolCost . getModelPParams)
   reserves <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_acnt . modelAcnt_reserves)
   fees <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_utxoSt . modelUTxOState_fees)
-  pools <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_pstate . modelPState_poolParams)
+  pools <- use (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPStatedpsPState . modelPState_poolParams)
   let maxVal = (maxLovelaceSupply globals) + 1
       numOfPools = (\x -> bool x 1 (0 == x)) $ length $ Map.keys pools
       maxReasonableVal = ((unCoin reserves) + (unCoin fees)) `div` (toInteger numOfPools)
@@ -396,7 +396,7 @@ getPoolParamIdVrf :: HasGenModelM st era m => m (ModelPoolId, ModelCredential 'S
 getPoolParamIdVrf = do
   pools <-
     uses
-      (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_pstate . modelPState_poolParams)
+      (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPStatedpsPState . modelPState_poolParams)
       $ Map.elems
   let poolIdVrfPair = (\p -> (_mppId p, _mppVrm p)) <$> pools
   frequency $

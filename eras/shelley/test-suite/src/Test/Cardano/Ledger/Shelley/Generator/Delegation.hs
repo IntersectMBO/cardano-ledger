@@ -163,8 +163,8 @@ genDCert
         )
       ]
     where
-      dState = _dstate dpState
-      pState = _pstate dpState
+      dState = dpsDState dpState
+      pState = dpsPState dpState
 
 -- | Generate a RegKey certificate
 genRegKeyCert ::
@@ -309,11 +309,11 @@ genDelegation
         where
           scriptCert =
             DCertDeleg (Delegate (Delegation (scriptToCred' delegatorScript) poolKey))
-      registeredDelegate k = eval (k ∈ dom (rewards (_dstate dpState)))
+      registeredDelegate k = eval (k ∈ dom (rewards (dpsDState dpState)))
       availableDelegates = filter (registeredDelegate . toCred . snd) keys
       availableDelegatesScripts =
         filter (registeredDelegate . scriptToCred' . snd) scripts
-      registeredPools = _pParams (_pstate dpState)
+      registeredPools = _pParams (dpsPState dpState)
       availablePools = Set.toList $ domain registeredPools
 
 genGenesisDelegation ::
@@ -346,11 +346,11 @@ genGenesisDelegation coreNodes delegateKeys dpState =
             ),
           CoreKeyCred [gkey]
         )
-    (GenDelegs genDelegs_) = _genDelegs $ _dstate dpState
+    (GenDelegs genDelegs_) = _genDelegs $ dpsDState dpState
     genesisDelegator k = eval (k ∈ dom genDelegs_)
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
     notActiveDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems genDelegs_))
-    fGenDelegs = _fGenDelegs $ _dstate dpState
+    fGenDelegs = _fGenDelegs $ dpsDState dpState
     notFutureDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems fGenDelegs))
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . cold) allDelegateKeys

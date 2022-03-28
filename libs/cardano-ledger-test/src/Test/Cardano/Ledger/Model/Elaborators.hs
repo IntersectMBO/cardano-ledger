@@ -853,8 +853,8 @@ mempoolState = \a2b s ->
               nesEs
                 { LedgerState.esLState =
                     esLState
-                      { LedgerState._utxoState = utxoState,
-                        LedgerState._delegationState = delegationState
+                      { LedgerState.lsUTxOState = utxoState,
+                        LedgerState.lsDPState = delegationState
                       }
                 }
           }
@@ -1540,7 +1540,7 @@ observeRewards ::
 observeRewards mtxid (nes, ems) =
   let creds = _eesStakeCredentials ems
    in Map.fromList $ do
-        (a, b) <- Map.toList . rewView . LedgerState._unified . LedgerState._dstate . LedgerState._delegationState . LedgerState.esLState $ LedgerState.nesEs nes
+        (a, b) <- Map.toList . rewView . LedgerState._unified . LedgerState.dpsDState . LedgerState.lsDPState . LedgerState.esLState $ LedgerState.nesEs nes
         a' <- case Map.lookup (asWitness a) creds of
           Just a' -> pure $ coerceKeyRole' a'
           Nothing -> error $ unwords ["observeRewards:", show mtxid, "can't find", show a]
@@ -1645,8 +1645,8 @@ instance CompareModelLedger LedgerState.LedgerState where
         }
       )
     ( LedgerState.LedgerState
-        { LedgerState._utxoState = utxo,
-          LedgerState._delegationState = dstate
+        { LedgerState.lsUTxOState = utxo,
+          LedgerState.lsDPState = dstate
         }
       ) = CPS.execWriter $ do
       CPS.tell $ compareModel mutxo utxo

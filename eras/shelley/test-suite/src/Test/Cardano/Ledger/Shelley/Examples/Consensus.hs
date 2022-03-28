@@ -325,7 +325,7 @@ exampleNewEpochState value ppp pp =
           esSnapshots = emptySnapShots,
           esLState =
             LedgerState
-              { _utxoState =
+              { lsUTxOState =
                   UTxOState
                     { _utxo =
                         UTxO $
@@ -339,7 +339,7 @@ exampleNewEpochState value ppp pp =
                       _ppups = def,
                       _stakeDistro = mempty
                     },
-                _delegationState = def
+                lsDPState = def
               },
           esPrevPp = ppp,
           esPp = pp,

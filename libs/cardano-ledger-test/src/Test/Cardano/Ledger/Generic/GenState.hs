@@ -216,7 +216,7 @@ genPool :: Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
 genPool = frequencyT [(10, genNewPool), (90, pickExisting)]
   where
     pickExisting = do
-      DPState {_pstate = PState {_pParams}} <- gsDPState <$> get
+      DPState {dpsPState = PState {_pParams}} <- gsDPState <$> get
       lift (genMapElem _pParams) >>= \case
         Nothing -> genNewPool
         Just poolId -> pure $ fst poolId
@@ -432,7 +432,7 @@ genPositiveVal = inject . Coin . getPositive <$> arbitrary
 
 modifyDState :: (MS.MonadState (GenState era) m) => (DState (Crypto era) -> DState (Crypto era)) -> m ()
 modifyDState f =
-  modifyDPState $ \dp@DPState {_dstate = ds} -> dp {_dstate = f ds}
+  modifyDPState $ \dp@DPState {dpsDState = ds} -> dp {dpsDState = f ds}
 
 modifyDPState :: (MS.MonadState (GenState era) m) => (DPState (Crypto era) -> DPState (Crypto era)) -> m ()
 modifyDPState f =
@@ -440,7 +440,7 @@ modifyDPState f =
 
 modifyPState :: (MS.MonadState (GenState era) m) => (PState (Crypto era) -> PState (Crypto era)) -> m ()
 modifyPState f =
-  modifyDPState $ \dp@DPState {_pstate = ps} -> dp {_pstate = f ps}
+  modifyDPState $ \dp@DPState {dpsPState = ps} -> dp {dpsPState = f ps}
 
 -- ========================================================================
 

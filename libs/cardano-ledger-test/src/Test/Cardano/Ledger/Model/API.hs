@@ -206,7 +206,7 @@ import Test.Cardano.Ledger.Model.LedgerState
     ModelSnapshot (..),
     ModelSnapshots (..),
     ModelUTxOState (..),
-    modelDPState_dstate,
+    modelDPStatedpsDState,
     modelDState_rewards,
     modelEpochState_ls,
     modelLState_dpstate,
@@ -572,7 +572,7 @@ mkModelLedger globals (ModelGenesis pp genDelegs utxos) =
                           },
                       _modelLState_dpstate =
                         ModelDPState
-                          { _modelDPState_dstate =
+                          { _modelDPStatedpsDState =
                               ModelDState
                                 { _modelDState_rewards = Map.empty,
                                   _modelDState_delegations = Map.empty,
@@ -580,7 +580,7 @@ mkModelLedger globals (ModelGenesis pp genDelegs utxos) =
                                   _modelDState_genDelegs = genDelegs,
                                   _modelDState_iRwd = mempty
                                 },
-                            _modelDPState_pstate =
+                            _modelDPStatedpsPState =
                               ModelPState
                                 { _modelPState_poolParams = Map.empty,
                                   _modelPState_fPoolParams = Map.empty,
@@ -657,7 +657,7 @@ modelLedger_slotOffset a2fb s = (\b -> s {_modelLedger_slotOffset = b}) <$> a2fb
 {-# INLINE modelLedger_slotOffset #-}
 
 getModelLedger_rewards :: ModelLedger era -> Map.Map (ModelCredential 'Staking (ScriptFeature era)) Coin
-getModelLedger_rewards = view $ modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_rewards
+getModelLedger_rewards = view $ modelLedger_nes . modelNewEpochState_es . modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_rewards
 {-# INLINE getModelLedger_rewards #-}
 
 modelLedger_nes :: Lens' (ModelLedger era) (ModelNewEpochState era)

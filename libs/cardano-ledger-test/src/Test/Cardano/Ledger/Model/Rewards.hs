@@ -52,7 +52,7 @@ import Test.Cardano.Ledger.Model.LedgerState
     ModelSnapshot (..),
     ModelSnapshotStake (..),
     ModelSnapshots (..),
-    modelDPState_dstate,
+    modelDPStatedpsDState,
     modelDState_rewards,
     modelEpochState_acnt,
     modelEpochState_ls,
@@ -79,13 +79,13 @@ import Test.Cardano.Ledger.Rational (unsafeFromRational)
 -- [SL-D5] Figure 52
 applyRUpd :: (MonadState (ModelEpochState era) m) => ModelRewardUpdate era -> m ()
 applyRUpd (ModelRewardUpdate deltaT deltaR (GrpMap rs) deltaF) = do
-  rewards <- use $ modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_rewards
+  rewards <- use $ modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_rewards
   let regRU = Map.intersection rs rewards
       unregRU = Map.difference rs rewards
       unregRU' = fold unregRU
   modelEpochState_acnt . modelAcnt_treasury <>= deltaT <> unregRU'
   modelEpochState_acnt . modelAcnt_reserves <>= deltaR
-  modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_rewards
+  modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_rewards
     %= Map.unionWith (<>) regRU
   modelEpochState_ls . modelLState_utxoSt . modelUTxOState_fees <>= deltaF
 
@@ -130,7 +130,7 @@ createRUpd
                 ModelLState
                   { _modelLState_dpstate =
                       ModelDPState
-                        { _modelDPState_dstate =
+                        { _modelDPStatedpsDState =
                             ModelDState
                               { _modelDState_rewards = rewards
                               }

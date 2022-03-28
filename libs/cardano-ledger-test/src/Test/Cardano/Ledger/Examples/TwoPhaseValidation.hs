@@ -1708,7 +1708,7 @@ bbodyEnv pf = BbodyEnv (pp pf) def
 dpstate :: Scriptic era => Proof era -> DPState (Crypto era)
 dpstate pf =
   def
-    { _dstate =
+    { dpsDState =
         def {_unified = UM.insert (scriptStakeCredSuceed pf) (Coin 1000) (Rewards UM.empty)}
     }
 

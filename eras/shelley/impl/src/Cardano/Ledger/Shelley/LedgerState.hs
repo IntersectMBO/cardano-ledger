@@ -411,8 +411,8 @@ instance CC.Crypto crypto => FromSharedCBOR (PState crypto) where
 
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
-  { _dstate :: !(DState crypto),
-    _pstate :: !(PState crypto)
+  { dpsDState :: !(DState crypto),
+    dpsPState :: !(PState crypto)
   }
   deriving (Show, Eq, Generic)
 
@@ -424,10 +424,10 @@ instance
   CC.Crypto crypto =>
   ToCBOR (DPState crypto)
   where
-  toCBOR DPState {_pstate, _dstate} =
+  toCBOR DPState {dpsPState, dpsDState} =
     encodeListLen 2
-      <> toCBOR _pstate -- We get better sharing when encoding pstate before dstate
-      <> toCBOR _dstate
+      <> toCBOR dpsPState -- We get better sharing when encoding pstate before dstate
+      <> toCBOR dpsDState
 
 instance CC.Crypto crypto => FromSharedCBOR (DPState crypto) where
   type
@@ -436,9 +436,9 @@ instance CC.Crypto crypto => FromSharedCBOR (DPState crypto) where
         Interns (KeyHash 'StakePool crypto)
       )
   fromSharedPlusCBOR = decodeRecordNamedT "DPState" (const 2) $ do
-    _pstate <- fromSharedPlusLensCBOR _2
-    _dstate <- fromSharedPlusCBOR
-    pure DPState {_pstate, _dstate}
+    dpsPState <- fromSharedPlusLensCBOR _2
+    dpsDState <- fromSharedPlusCBOR
+    pure DPState {dpsPState, dpsDState}
 
 data AccountState = AccountState
   { _treasury :: !Coin,
@@ -748,9 +748,9 @@ getGKeys nes = Map.keysSet genDelegs
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
   { -- | The current unspent transaction outputs.
-    _utxoState :: !(UTxOState era),
+    lsUTxOState :: !(UTxOState era),
     -- | The current delegation state
-    _delegationState :: !(DPState (Crypto era))
+    lsDPState :: !(DPState (Crypto era))
   }
   deriving (Generic)
 
@@ -772,10 +772,10 @@ instance
   (Era era, TransLedgerState ToCBOR era) =>
   ToCBOR (LedgerState era)
   where
-  toCBOR LedgerState {_utxoState, _delegationState} =
+  toCBOR LedgerState {lsUTxOState, lsDPState} =
     encodeListLen 2
-      <> toCBOR _delegationState -- encode delegation state first to improve sharing
-      <> toCBOR _utxoState
+      <> toCBOR lsDPState -- encode delegation state first to improve sharing
+      <> toCBOR lsUTxOState
 
 instance
   ( Era era,
@@ -792,9 +792,9 @@ instance
       (Interns (Credential 'Staking (Crypto era)), Interns (KeyHash 'StakePool (Crypto era)))
   fromSharedPlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
-      _delegationState <- fromSharedPlusCBOR
-      _utxoState <- fromSharedLensCBOR _1
-      pure LedgerState {_utxoState, _delegationState}
+      lsDPState <- fromSharedPlusCBOR
+      lsUTxOState <- fromSharedLensCBOR _1
+      pure LedgerState {lsUTxOState, lsDPState}
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
@@ -975,8 +975,8 @@ depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
     -- it could be that txDeposits < txRefunds. We keep the parenthesis above
     -- to emphasize this point.
 
-    currentPool = (_deposited . _utxoState) ls
-    pools = _pParams . _pstate . _delegationState $ ls
+    currentPool = (_deposited . lsUTxOState) ls
+    pools = _pParams . dpsPState . lsDPState $ ls
     txDeposits =
       totalDeposits pp (`Map.notMember` pools) (toList $ getField @"certs" tx)
     txRefunds = keyRefunds pp tx
@@ -1192,9 +1192,9 @@ applyRUpd'
   ru
   es@(EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', registered)
     where
-      utxoState_ = _utxoState ls
-      delegState = _delegationState ls
-      dState = _dstate delegState
+      utxoState_ = lsUTxOState ls
+      delegState = lsDPState ls
+      dState = dpsDState delegState
       (registered, totalUnregistered) = filterAllRewards (rs ru) es
       registeredAggregated = aggregateRewards pp registered
       as' =
@@ -1204,11 +1204,11 @@ applyRUpd'
           }
       ls' =
         ls
-          { _utxoState =
+          { lsUTxOState =
               utxoState_ {_fees = _fees utxoState_ `addDeltaCoin` deltaF ru},
-            _delegationState =
+            lsDPState =
               delegState
-                { _dstate =
+                { dpsDState =
                     dState
                       { _unified = (rewards dState UM.∪+ registeredAggregated)
                       }
@@ -1225,8 +1225,8 @@ filterAllRewards ::
 filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
   (registered, totalUnregistered)
   where
-    delegState = _delegationState ls
-    dState = _dstate delegState
+    delegState = lsDPState ls
+    dState = dpsDState delegState
     (regRU, unregRU) =
       Map.partitionWithKey
         (\k _ -> eval (k ∈ dom (rewards dState)))
@@ -1309,7 +1309,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
       Coin reserves = _reserves acnt
-      ds = _dstate $ _delegationState ls
+      ds = dpsDState $ lsDPState ls
       -- reserves and rewards change
       deltaR1 =
         rationalToCoinViaFloor $
@@ -1560,7 +1560,7 @@ returnRedeemAddrsToReserves ::
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
   where
     ls = esLState es
-    us = _utxoState ls
+    us = lsUTxOState ls
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
       SplitMap.partition (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
@@ -1571,7 +1571,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
         { _reserves = _reserves acnt <+> Val.coin (balance utxoR)
         }
     us' = us {_utxo = UTxO nonredeemers :: UTxO era}
-    ls' = ls {_utxoState = us'}
+    ls' = ls {lsUTxOState = us'}
 
 --------------------------------------------------------------------------------
 -- Default instances

@@ -176,10 +176,10 @@ genstuff proxy f =
             epochstate = nesEs newepochstate
             ledgerstate = esLState epochstate
             pparams = esPp epochstate
-            utxostate = _utxoState ledgerstate
-            dpstate = _delegationState ledgerstate
-            dstate = _dstate dpstate
-            pstate = _pstate dpstate
+            utxostate = lsUTxOState ledgerstate
+            dpstate = lsDPState ledgerstate
+            dstate = dpsDState dpstate
+            pstate = dpsPState dpstate
          in (f genenv chainstate newepochstate epochstate ledgerstate pparams utxostate dpstate dstate pstate)
 
 -- ======================================================================

@@ -100,7 +100,7 @@ import Test.Cardano.Ledger.Model.Generators.TxOut
     genOutputs,
   )
 import Test.Cardano.Ledger.Model.LedgerState
-  ( modelDPState_pstate,
+  ( modelDPStatedpsPState,
     modelEpochState_ls,
     modelLState_dpstate,
     modelLState_utxoSt,
@@ -311,7 +311,7 @@ genModelTx = do
         ( modelLedger . modelLedger_nes . modelNewEpochState_es
             . modelEpochState_ls
             . modelLState_dpstate
-            . modelDPState_pstate
+            . modelDPStatedpsPState
             . modelPState_poolParams
         )
       <*> pure dcertsWithoutRdmr

@@ -42,7 +42,7 @@ main = do
 
   let toMempoolState :: NewEpochState CurrentEra -> MempoolState CurrentEra
       toMempoolState NewEpochState {nesEs = EpochState {esLState}} =
-        (_utxoState esLState, _delegationState esLState)
+        (lsUTxOState esLState, lsDPState esLState)
       pp :: PParams CurrentEra
       pp = def
       !globals = mkGlobals genesis pp

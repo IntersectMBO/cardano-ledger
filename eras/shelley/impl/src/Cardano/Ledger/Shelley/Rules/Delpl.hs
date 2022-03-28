@@ -35,8 +35,8 @@ import Cardano.Ledger.Shelley.LedgerState
     DPState,
     DState,
     PState,
-    _dstate,
-    _pstate,
+    dpsDState,
+    dpsPState,
   )
 import Cardano.Ledger.Shelley.Rules.Deleg (DELEG, DelegEnv (..), DelegPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Pool (POOL, PoolEnv (..), PoolPredicateFailure)
@@ -167,31 +167,31 @@ delplTransition = do
   case c of
     DCertPool (RegPool _) -> do
       ps <-
-        trans @(Core.EraRule "POOL" era) $ TRC (PoolEnv slot pp, _pstate d, c)
-      pure $ d {_pstate = ps}
+        trans @(Core.EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
+      pure $ d {dpsPState = ps}
     DCertPool (RetirePool _ _) -> do
       ps <-
-        trans @(Core.EraRule "POOL" era) $ TRC (PoolEnv slot pp, _pstate d, c)
-      pure $ d {_pstate = ps}
+        trans @(Core.EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
+      pure $ d {dpsPState = ps}
     DCertGenesis GenesisDelegCert {} -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
-      pure $ d {_dstate = ds}
+        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+      pure $ d {dpsDState = ds}
     DCertDeleg (RegKey _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
-      pure $ d {_dstate = ds}
+        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+      pure $ d {dpsDState = ds}
     DCertDeleg (DeRegKey _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
-      pure $ d {_dstate = ds}
+        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+      pure $ d {dpsDState = ds}
     DCertDeleg (Delegate _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
-      pure $ d {_dstate = ds}
+        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+      pure $ d {dpsDState = ds}
     DCertMir _ -> do
-      ds <- trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, _dstate d, c)
-      pure $ d {_dstate = ds}
+      ds <- trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+      pure $ d {dpsDState = ds}
 
 instance
   ( Era era,

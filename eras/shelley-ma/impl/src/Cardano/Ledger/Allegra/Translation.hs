@@ -154,8 +154,8 @@ instance Crypto c => TranslateEra (AllegraEra c) LedgerState where
   translateEra ctxt ls =
     return
       LedgerState
-        { _utxoState = translateEra' ctxt $ _utxoState ls,
-          _delegationState = _delegationState ls
+        { lsUTxOState = translateEra' ctxt $ lsUTxOState ls,
+          lsDPState = lsDPState ls
         }
 
 instance Crypto c => TranslateEra (AllegraEra c) EpochState where

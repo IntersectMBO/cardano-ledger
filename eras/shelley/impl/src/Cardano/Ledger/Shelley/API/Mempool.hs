@@ -229,11 +229,11 @@ mkMempoolEnv
 --   a new block).
 mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
-  (_utxoState, _delegationState)
+  (lsUTxOState, lsDPState)
   where
     LedgerState.LedgerState
-      { LedgerState._utxoState,
-        LedgerState._delegationState
+      { LedgerState.lsUTxOState,
+        LedgerState.lsDPState
       } = LedgerState.esLState nesEs
 
 newtype ApplyTxError era = ApplyTxError [PredicateFailure (Core.EraRule "LEDGER" era)]
