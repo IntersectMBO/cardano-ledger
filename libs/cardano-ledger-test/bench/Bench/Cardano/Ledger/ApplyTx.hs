@@ -11,6 +11,7 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Benchmarks for transaction application
@@ -22,6 +23,7 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules.Ledger ()
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
@@ -38,7 +40,7 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState (DPState, LedgerState (..), UTxOState)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
-import Control.DeepSeq (NFData (..))
+import Control.DeepSeq (NFData (..), deepseq)
 import Control.State.Transition (State)
 import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
 import Criterion
@@ -83,15 +85,23 @@ applyTxMempoolEnv =
     }
 
 data ApplyTxRes era = ApplyTxRes
-  { atrGlobals :: Globals,
-    atrMempoolEnv :: MempoolEnv era,
-    atrState :: MempoolState era,
-    atrTx :: Core.Tx era
+  { atrGlobals :: !Globals,
+    atrMempoolEnv :: !(MempoolEnv era),
+    atrState :: !(MempoolState era),
+    atrTx :: !(Core.Tx era)
   }
   deriving (Generic)
 
-instance NFData (ApplyTxRes era) where
-  rnf (ApplyTxRes g me s t) = seq g (seq me (seq s (seq t ())))
+instance
+  ( Era era,
+    NFData (Core.PParams era),
+    NFData (Core.Tx era),
+    NFData (Core.TxOut era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (ApplyTxRes era)
+  where
+  rnf (ApplyTxRes g me s t) = g `seq` me `deepseq` s `deepseq` rnf t
 
 --------------------------------------------------------------------------------
 -- Fixed generators
@@ -124,7 +134,9 @@ benchApplyTx ::
     BaseEnv (Core.EraRule "LEDGER" era) ~ Globals,
     Default (State (Core.EraRule "PPUP" era)),
     NFData (State (Core.EraRule "PPUP" era)),
-    NFData (Core.TxOut era)
+    NFData (Core.TxOut era),
+    NFData (Core.PParams era),
+    NFData (Core.Tx era)
   ) =>
   Proxy era ->
   Benchmark
