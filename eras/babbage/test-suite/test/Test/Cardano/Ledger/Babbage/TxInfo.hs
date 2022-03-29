@@ -100,25 +100,25 @@ utxo =
 txb :: TxIn StandardCrypto -> Maybe (TxIn StandardCrypto) -> TxOut B -> TxBody B
 txb i mRefInp o =
   TxBody
-    (Set.singleton i) -- spend inputs
-    mempty -- collateral inputs
-    ( case mRefInp of
+    { inputs = Set.singleton i,
+      collateral = mempty,
+      referenceInputs = case mRefInp of
         Nothing -> mempty
-        Just ri -> (Set.singleton ri) -- referenceInputs inputs
-    )
-    (StrictSeq.singleton o) -- outputs
-    SNothing -- collateral output
-    (Coin 0) -- total collateral
-    mempty -- certs
-    (Wdrl mempty) -- withdrawals
-    (Coin 2) -- txfee
-    (ValidityInterval SNothing SNothing) -- validity interval
-    SNothing -- updates
-    mempty -- required signers
-    mempty -- mint
-    SNothing -- script integrity hash
-    SNothing -- auxiliary data hash
-    SNothing -- network ID
+        Just ri -> Set.singleton ri,
+      outputs = StrictSeq.singleton o,
+      collateralReturn = SNothing,
+      totalCollateral = Coin 0,
+      txcerts = mempty,
+      txwdrls = Wdrl mempty,
+      txfee = Coin 2,
+      txvldt = ValidityInterval SNothing SNothing,
+      txUpdates = SNothing,
+      reqSignerHashes = mempty,
+      mint = mempty,
+      scriptIntegrityHash = SNothing,
+      adHash = SNothing,
+      txnetworkid = SNothing
+    }
 
 txBare :: TxIn StandardCrypto -> TxOut B -> ValidatedTx B
 txBare i o = ValidatedTx (txb i Nothing o) mempty (IsValid True) SNothing
@@ -152,7 +152,7 @@ successfulV2Translation = successfulTranslation PlutusV2
 expectTranslationError :: Language -> ValidatedTx B -> TranslationError -> Assertion
 expectTranslationError lang tx expected =
   case ctx of
-    Right _ -> error "This translation was expected to fail, but it succeeded."
+    Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
     Left e -> e @?= expected
   where
     ctx = runIdentity $ txInfo def lang ei ss utxo tx
