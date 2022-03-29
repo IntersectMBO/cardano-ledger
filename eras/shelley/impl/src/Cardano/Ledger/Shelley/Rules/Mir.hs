@@ -25,15 +25,15 @@ import Cardano.Ledger.Shelley.LedgerState
     EpochState,
     InstantaneousRewards (..),
     RewardAccounts,
+    dpsDState,
     esAccountState,
     esLState,
     esNonMyopic,
     esPp,
     esPrevPp,
     esSnapshots,
+    lsDPState,
     rewards,
-    _delegationState,
-    _dstate,
     _irwd,
     _unified,
     pattern EpochState,
@@ -84,7 +84,7 @@ instance (Typeable era, Default (EpochState era)) => STS (MIR era) where
     [ PostCondition
         "MIR may not create or remove reward accounts"
         ( \(TRC (_, st, _)) st' ->
-            let r = rewards . _dstate . _delegationState . esLState
+            let r = rewards . dpsDState . lsDPState . esLState
              in length (r st) == length (r st')
         )
     ]
@@ -104,8 +104,8 @@ mirTransition = do
       ()
       ) <-
     judgmentContext
-  let dpState = _delegationState ls
-      ds = _dstate dpState
+  let dpState = lsDPState ls
+      ds = dpsDState dpState
       rewards' = rewards ds
       reserves = _reserves acnt
       treasury = _treasury acnt
@@ -128,9 +128,9 @@ mirTransition = do
             }
           ss
           ls
-            { _delegationState =
+            { lsDPState =
                 dpState
-                  { _dstate =
+                  { dpsDState =
                       ds
                         { _unified = (rewards' UM.∪+ update),
                           _irwd = emptyInstantaneousRewards
@@ -151,9 +151,9 @@ mirTransition = do
           acnt
           ss
           ls
-            { _delegationState =
+            { lsDPState =
                 dpState
-                  { _dstate =
+                  { dpsDState =
                       ds {_irwd = emptyInstantaneousRewards}
                   }
             }

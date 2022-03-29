@@ -87,7 +87,7 @@ genChainInEpoch epoch = do
   --   address.
   let initUtxo =
         LS._utxo
-          . LS._utxoState
+          . LS.lsUTxOState
           . LS.esLState
           . LS.nesEs
           $ chainNes genesisChainState

@@ -206,16 +206,20 @@ deriving stock instance
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  ( Eq (Core.Value era),
+  ( CC.Crypto (Crypto era),
+    Eq (Core.Value era),
     Eq (Core.TxOut era),
-    CC.Crypto (Crypto era),
     Eq (PredicateFailure (Core.EraRule "UTXOS" era))
   ) =>
   Eq (UtxoPredicateFailure era)
 
 instance
   ( Era era,
-    Shelley.TransUTxOState NoThunks era,
+    ToCBOR (Core.Value era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.TxBody era),
+    NoThunks (Core.Value era),
+    NoThunks (Core.TxOut era),
     NoThunks (PredicateFailure (Core.EraRule "UTXOS" era))
   ) =>
   NoThunks (UtxoPredicateFailure era)

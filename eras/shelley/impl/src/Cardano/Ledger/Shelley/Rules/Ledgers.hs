@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
@@ -24,14 +25,7 @@ import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState,
-    DPState,
-    LedgerState (..),
-    UTxOState,
-    _delegationState,
-    _utxoState,
-  )
+import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Ledger
   ( LEDGER,
     LedgerEnv (..),
@@ -108,7 +102,7 @@ instance
   ( Era era,
     Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
+    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Default (LedgerState era)
@@ -128,24 +122,19 @@ ledgersTransition ::
   forall era.
   ( Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
+    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era
   ) =>
   TransitionRule (LEDGERS era)
 ledgersTransition = do
   TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
-  let (u, dp) = (_utxoState ls, _delegationState ls)
-  (u'', dp'') <-
-    foldM
-      ( \(u', dp') (ix, tx) ->
-          trans @(Core.EraRule "LEDGER" era) $
-            TRC (LedgerEnv slot ix pp account, (u', dp'), tx)
-      )
-      (u, dp)
-      $ zip [minBound ..] $
-        toList txwits
-
-  pure $ LedgerState u'' dp''
+  foldM
+    ( \ !ls' (ix, tx) ->
+        trans @(Core.EraRule "LEDGER" era) $
+          TRC (LedgerEnv slot ix pp account, ls', tx)
+    )
+    ls
+    $ zip [minBound ..] $ toList txwits
 
 instance
   ( Era era,

@@ -43,11 +43,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     isRetirePool,
     isTreasuryMIRCert,
   )
-import Cardano.Ledger.Shelley.LedgerState
-  ( DPState,
-    UTxOState,
-    txsizeBound,
-  )
+import Cardano.Ledger.Shelley.LedgerState (LedgerState, txsizeBound)
 import Cardano.Ledger.Shelley.PParams
   ( Update (..),
     pattern ProposedPPUpdates,
@@ -312,7 +308,7 @@ onlyValidLedgerSignalsAreGenerated ::
     QC.HasTrace ledger (GenEnv era),
     Default (State (Core.EraRule "PPUP" era)),
     QC.BaseEnv ledger ~ Globals,
-    State ledger ~ (UTxOState era, DPState (Crypto era)),
+    State ledger ~ LedgerState era,
     Show (Environment ledger),
     Show (Signal ledger)
   ) =>

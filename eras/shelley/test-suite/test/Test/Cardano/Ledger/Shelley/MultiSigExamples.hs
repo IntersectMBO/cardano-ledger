@@ -256,7 +256,7 @@ initialUTxOState aliceKeep msigs =
                         initPParams
                         Map.empty
                         (GenDelegs Map.empty),
-                      _utxoState genesis,
+                      lsUTxOState genesis,
                       tx
                     )
                 )

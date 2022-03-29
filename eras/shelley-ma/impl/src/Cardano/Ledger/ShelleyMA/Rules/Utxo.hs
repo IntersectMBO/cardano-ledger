@@ -23,6 +23,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode
@@ -69,6 +70,7 @@ import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
@@ -157,21 +159,25 @@ data UtxoPredicateFailure era
   deriving (Generic)
 
 deriving stock instance
-  ( Shelley.TransUTxOState Show era,
-    TransValue Show era,
+  ( Show (Core.TxOut era),
+    Show (Core.Value era),
+    Show (Shelley.UTxOState era),
     Show (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  ( Shelley.TransUTxOState Eq era,
-    TransValue Eq era,
+  ( Eq (Core.TxOut era),
+    Eq (Core.Value era),
+    Eq (Shelley.UTxOState era),
     Eq (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   Eq (UtxoPredicateFailure era)
 
 instance
-  ( Shelley.TransUTxOState NoThunks era,
+  ( NoThunks (Core.TxOut era),
+    NoThunks (Core.Value era),
+    NoThunks (Shelley.UTxOState era),
     NoThunks (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   NoThunks (UtxoPredicateFailure era)
@@ -426,8 +432,11 @@ instance
 -- Serialisation
 --------------------------------------------------------------------------------
 instance
-  ( TransValue ToCBOR era,
-    Shelley.TransUTxOState ToCBOR era,
+  ( Typeable era,
+    CC.Crypto (Crypto era),
+    ToCBOR (Core.Value era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Shelley.UTxOState era),
     ToCBOR (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   ToCBOR (UtxoPredicateFailure era)

@@ -183,7 +183,7 @@ instance NFData (ModelLState era)
 instance PreservedAda (ModelLState era) where
   totalPreservedAda =
     foldOf
-      ( modelLState_dpstate . modelDPState_dstate . modelDState_rewards . folded
+      ( modelLState_dpstate . modelDPStatedpsDState . modelDState_rewards . folded
           <> modelLState_utxoSt
             . ( modelUTxOState_deposited
                   <> modelUTxOState_fees
@@ -201,20 +201,20 @@ modelLState_dpstate a2fb s = (\b -> s {_modelLState_dpstate = b}) <$> a2fb (_mod
 
 -- | fig 26
 data ModelDPState era = ModelDPState
-  { _modelDPState_dstate :: !(ModelDState era),
-    _modelDPState_pstate :: !(ModelPState era)
+  { _modelDPStatedpsDState :: !(ModelDState era),
+    _modelDPStatedpsPState :: !(ModelPState era)
   }
   deriving (Eq, Show, Generic)
 
 instance NFData (ModelDPState era)
 
-modelDPState_dstate :: Lens' (ModelDPState era) (ModelDState era)
-modelDPState_dstate a2fb s = (\b -> s {_modelDPState_dstate = b}) <$> a2fb (_modelDPState_dstate s)
-{-# INLINE modelDPState_dstate #-}
+modelDPStatedpsDState :: Lens' (ModelDPState era) (ModelDState era)
+modelDPStatedpsDState a2fb s = (\b -> s {_modelDPStatedpsDState = b}) <$> a2fb (_modelDPStatedpsDState s)
+{-# INLINE modelDPStatedpsDState #-}
 
-modelDPState_pstate :: Lens' (ModelDPState era) (ModelPState era)
-modelDPState_pstate a2fb s = (\b -> s {_modelDPState_pstate = b}) <$> a2fb (_modelDPState_pstate s)
-{-# INLINE modelDPState_pstate #-}
+modelDPStatedpsPState :: Lens' (ModelDPState era) (ModelPState era)
+modelDPStatedpsPState a2fb s = (\b -> s {_modelDPStatedpsPState = b}) <$> a2fb (_modelDPStatedpsPState s)
+{-# INLINE modelDPStatedpsPState #-}
 
 -- | fig 22
 data ModelPState era = ModelPState

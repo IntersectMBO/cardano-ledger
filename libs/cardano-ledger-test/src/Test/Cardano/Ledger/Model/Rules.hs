@@ -115,8 +115,8 @@ import Test.Cardano.Ledger.Model.LedgerState
     ModelSnapshotStake (..),
     ModelSnapshots (..),
     ModelUTxOState (..),
-    modelDPState_dstate,
-    modelDPState_pstate,
+    modelDPStatedpsDState,
+    modelDPStatedpsPState,
     modelDState_delegations,
     modelDState_fGenDelegs,
     modelDState_iRwd,
@@ -313,8 +313,8 @@ instance ModelSubRule 'ModelRule_UTXOW where
       ( ModelUTxOEnv
           { _modelUTxOEnv_slot = _modelLEnv_slot lenv,
             _modelUTxOEnv_pp = _modelLEnv_pp lenv,
-            _modelUTxOEnv_poolParams = _modelPState_poolParams $ _modelDPState_pstate $ _modelLState_dpstate st,
-            _modelUTxOEnv_genDelegs = _modelDState_genDelegs $ _modelDPState_dstate $ _modelLState_dpstate st
+            _modelUTxOEnv_poolParams = _modelPState_poolParams $ _modelDPStatedpsPState $ _modelLState_dpstate st,
+            _modelUTxOEnv_genDelegs = _modelDState_genDelegs $ _modelDPStatedpsDState $ _modelLState_dpstate st
           },
         tx
       )
@@ -355,16 +355,16 @@ instance ModelSubRule 'ModelRule_DELEG where
   type ModelSigIter 'ModelRule_DELEG = Identity
 
   getSubEnv _ _ sig env _ = (,) (ModelDEnv (_modelDPSEnv_slot env)) <$> sig
-  getSubState _ = _modelDPState_dstate
-  putSubState _ dst dpst = dpst {_modelDPState_dstate = dst}
+  getSubState _ = _modelDPStatedpsDState
+  putSubState _ dst dpst = dpst {_modelDPStatedpsDState = dst}
 
 instance ModelSubRule 'ModelRule_POOL where
   type ModelSuperRule 'ModelRule_POOL = 'ModelRule_DELPL
   type ModelSigIter 'ModelRule_POOL = Identity
 
   getSubEnv _ _ sig env _ = (,) (ModelPEnv (_modelDPSEnv_slot env) (_modelDPSEnv_pp env)) <$> sig
-  getSubState _ = _modelDPState_pstate
-  putSubState _ pst dpst = dpst {_modelDPState_pstate = pst}
+  getSubState _ = _modelDPStatedpsPState
+  putSubState _ pst dpst = dpst {_modelDPStatedpsPState = pst}
 
 instance ModelSubRule 'ModelRule_RUPD where
   type ModelSuperRule 'ModelRule_RUPD = 'ModelRule_TICK
@@ -403,8 +403,8 @@ instance ModelSubRule 'ModelRule_SNAP where
 data ModelPlReapState era = ModelPlReapState
   { _modelPlReapState_utxoSt :: !(ModelUTxOState era),
     _modelPlReapState_acnt :: !ModelAcnt,
-    _modelPlReapState_dstate :: !(ModelDState era),
-    _modelPlReapState_pstate :: !(ModelPState era)
+    _modelPlReapStatedpsDState :: !(ModelDState era),
+    _modelPlReapStatedpsPState :: !(ModelPState era)
   }
 
 modelPlReapState_utxoSt :: Lens' (ModelPlReapState era) (ModelUTxOState era)
@@ -415,13 +415,13 @@ modelPlReapState_acnt :: Lens' (ModelPlReapState era) ModelAcnt
 modelPlReapState_acnt = lens _modelPlReapState_acnt (\s b -> s {_modelPlReapState_acnt = b})
 {-# INLINE modelPlReapState_acnt #-}
 
-modelPlReapState_dstate :: Lens' (ModelPlReapState era) (ModelDState era)
-modelPlReapState_dstate = lens _modelPlReapState_dstate (\s b -> s {_modelPlReapState_dstate = b})
-{-# INLINE modelPlReapState_dstate #-}
+modelPlReapStatedpsDState :: Lens' (ModelPlReapState era) (ModelDState era)
+modelPlReapStatedpsDState = lens _modelPlReapStatedpsDState (\s b -> s {_modelPlReapStatedpsDState = b})
+{-# INLINE modelPlReapStatedpsDState #-}
 
-modelPlReapState_pstate :: Lens' (ModelPlReapState era) (ModelPState era)
-modelPlReapState_pstate = lens _modelPlReapState_pstate (\s b -> s {_modelPlReapState_pstate = b})
-{-# INLINE modelPlReapState_pstate #-}
+modelPlReapStatedpsPState :: Lens' (ModelPlReapState era) (ModelPState era)
+modelPlReapStatedpsPState = lens _modelPlReapStatedpsPState (\s b -> s {_modelPlReapStatedpsPState = b})
+{-# INLINE modelPlReapStatedpsPState #-}
 
 data ModelPOOLREAPEnv era = ModelPOOLREAPEnv (ModelPParams era)
 
@@ -434,8 +434,8 @@ instance ModelSubRule 'ModelRule_POOLREAP where
     ModelPlReapState
       (_modelLState_utxoSt $ _modelEpochState_ls st)
       (_modelEpochState_acnt st)
-      (_modelDPState_dstate $ _modelLState_dpstate $ _modelEpochState_ls st)
-      (_modelDPState_pstate $ _modelLState_dpstate $ _modelEpochState_ls st)
+      (_modelDPStatedpsDState $ _modelLState_dpstate $ _modelEpochState_ls st)
+      (_modelDPStatedpsPState $ _modelLState_dpstate $ _modelEpochState_ls st)
   putSubState _ (ModelPlReapState utxoSt acnt dstate pstate) st =
     st
       { _modelEpochState_ls =
@@ -580,7 +580,7 @@ instance ModelSTS 'ModelRule_DELEGS where
     wdrls <- asks (_mtxWdrl . _modelDPSEnv_tx . _modelEnv)
     lift $ wdrlProvenance (Map.keysSet wdrls)
     badWdrls <-
-      modelDPState_dstate . modelDState_rewards
+      modelDPStatedpsDState . modelDState_rewards
         %%= Map.mergeA
           (Map.traverseMaybeMissing $ \_ (wdrl, _) -> (bool mempty (Set.singleton Proxy) (Val.zero == Val.coin wdrl), Nothing)) -- DelegateeNotRegistered
           (Map.preserveMissing)
@@ -774,10 +774,10 @@ instance ModelSTS 'ModelRule_MIR where
             }
           )
       ) <-
-      modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_iRwd
+      modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_iRwd
         <<.= mempty
 
-    rewards <- use $ modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_rewards
+    rewards <- use $ modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_rewards
     ModelAcnt treasury reserves <- use modelEpochState_acnt
 
     let rewardAcnts = Map.keysSet rewards
@@ -795,7 +795,7 @@ instance ModelSTS 'ModelRule_MIR where
             let update = Map.unionWith (<>) irwdR' irwdT'
                 rewards' = Map.unionWith (<>) rewards update
             lift $ mirProvenance (Just $ Map.keysSet update)
-            modelEpochState_ls . modelLState_dpstate . modelDPState_dstate . modelDState_rewards .= rewards'
+            modelEpochState_ls . modelLState_dpstate . modelDPStatedpsDState . modelDState_rewards .= rewards'
             modelEpochState_acnt <>= ModelAcnt dTreasury dReserves ~~ ModelAcnt totT totR
         | otherwise -> do
             lift $ mirProvenance Nothing
@@ -810,7 +810,7 @@ instance ModelSTS 'ModelRule_EPOCH where
   applyRuleImpl _ e = RWS.execRWST $ do
     liftApplyRule (Proxy @'ModelRule_SNAP) Proxy e
 
-    modelEpochState_ls . modelLState_dpstate . modelDPState_pstate
+    modelEpochState_ls . modelLState_dpstate . modelDPStatedpsPState
       %= ( \(ModelPState poolParams fPoolParams retiring) ->
              ModelPState (Map.unionWith (\_ x -> x) poolParams fPoolParams) Map.empty retiring
          )
@@ -953,11 +953,11 @@ instance ModelSTS 'ModelRule_POOLREAP where
   applyRuleImpl _ (Const e) = RWS.execRWST $ do
     retired <-
       ifoldMap (\hk e' -> if e == e' then Set.singleton hk else Set.empty)
-        <$> use (modelPlReapState_pstate . modelPState_retiring)
+        <$> use (modelPlReapStatedpsPState . modelPState_retiring)
     pr <- asks (runIdentity . _modelPParams_poolDeposit . getModelPParams)
 
-    rewards <- use $ modelPlReapState_dstate . modelDState_rewards
-    poolParams <- use $ modelPlReapState_pstate . modelPState_poolParams
+    rewards <- use $ modelPlReapStatedpsDState . modelDState_rewards
+    poolParams <- use $ modelPlReapStatedpsPState . modelPState_poolParams
 
     let rewardAcnts =
           Map.fromList
@@ -979,12 +979,12 @@ instance ModelSTS 'ModelRule_POOLREAP where
 
     modelPlReapState_acnt . modelAcnt_treasury <>= unclaimed
 
-    modelPlReapState_dstate . modelDState_rewards %= Map.unionWith (<>) refunds
-    modelPlReapState_dstate . modelDState_delegations %= Map.filter (\hk -> not $ Set.member hk retired)
+    modelPlReapStatedpsDState . modelDState_rewards %= Map.unionWith (<>) refunds
+    modelPlReapStatedpsDState . modelDState_delegations %= Map.filter (\hk -> not $ Set.member hk retired)
 
-    modelPlReapState_pstate . modelPState_poolParams %= flip Map.withoutKeys retired
-    modelPlReapState_pstate . modelPState_fPoolParams %= flip Map.withoutKeys retired
-    modelPlReapState_pstate . modelPState_retiring %= flip Map.withoutKeys retired
+    modelPlReapStatedpsPState . modelPState_poolParams %= flip Map.withoutKeys retired
+    modelPlReapStatedpsPState . modelPState_fPoolParams %= flip Map.withoutKeys retired
+    modelPlReapStatedpsPState . modelPState_retiring %= flip Map.withoutKeys retired
 
 data ModelPredicateFailure era
   = ModelValueNotConservedUTxO

@@ -180,7 +180,7 @@ longTraceLen = 150
 type TestingLedger era ledger =
   ( BaseM ledger ~ ReaderT Globals Identity,
     Environment ledger ~ LedgerEnv era,
-    State ledger ~ (UTxOState era, DPState (Crypto era)),
+    State ledger ~ LedgerState era,
     Signal ledger ~ Core.Tx era,
     Embed (Core.EraRule "DELEGS" era) ledger,
     Embed (Core.EraRule "UTXOW" era) ledger,
@@ -252,9 +252,9 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
     checkIncrStakeComp :: SourceSignalTarget ledger -> Property
     checkIncrStakeComp
       SourceSignalTarget
-        { source = (UTxOState {_utxo = u, _stakeDistro = sd}, dp),
+        { source = LedgerState UTxOState {_utxo = u, _stakeDistro = sd} dp,
           signal = tx,
-          target = (UTxOState {_utxo = u', _stakeDistro = sd'}, dp')
+          target = LedgerState UTxOState {_utxo = u', _stakeDistro = sd'} dp'
         } =
         counterexample
           ( mconcat
@@ -282,8 +282,8 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
         where
           utxoBal = Val.coin $ balance u'
           incrStakeBal = fold (credMap sd') <> fold (ptrMap sd')
-          ptrs = ptrsMap . _dstate $ dp
-          ptrs' = ptrsMap . _dstate $ dp'
+          ptrs = ptrsMap . dpsDState $ dp
+          ptrs' = ptrsMap . dpsDState $ dp'
 
 -- | Various preservation propertiesC
 adaPreservationChain ::
@@ -368,7 +368,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
             "\n\nUnregistered Treasury MIR total\n",
             show (fold unRegMirTre),
             "\n\nPools Retiring This epoch\n",
-            show (Map.filter (\e -> e == (nesEL . chainNes $ source)) (_retiring . _pstate . _delegationState $ lsOld)),
+            show (Map.filter (\e -> e == (nesEL . chainNes $ source)) (_retiring . dpsPState . lsDPState $ lsOld)),
             "\n\ntxs\n"
           ]
             ++ obligationMsgs
@@ -387,11 +387,11 @@ checkPreservation SourceSignalTarget {source, target, signal} =
     ru' = nesRu . chainNes $ source
     lsOld = esLState . nesEs . chainNes $ source
     lsNew = esLState . nesEs . chainNes $ target
-    pools = _pParams . _pstate . _delegationState $ lsOld
-    oldRAs = rewards . _dstate . _delegationState $ lsOld
-    newRAs = rewards . _dstate . _delegationState $ lsNew
+    pools = _pParams . dpsPState . lsDPState $ lsOld
+    oldRAs = rewards . dpsDState . lsDPState $ lsOld
+    newRAs = rewards . dpsDState . lsDPState $ lsNew
 
-    proposal = votedValue (proposals . _ppups . _utxoState $ lsOld) currPP 5
+    proposal = votedValue (proposals . _ppups . lsUTxOState $ lsOld) currPP 5
     obligationMsgs = case proposal of
       Nothing -> []
       Just proposal' ->
@@ -404,7 +404,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
               show obligationDiff
             ]
 
-    mir = _irwd . _dstate . _delegationState $ lsOld
+    mir = _irwd . dpsDState . lsDPState $ lsOld
     isRegistered kh _ = UM.member kh oldRAs
     (regMirRes, unRegMirRes) = Map.partitionWithKey isRegistered (iRReserves mir)
     (regMirTre, unRegMirTre) = Map.partitionWithKey isRegistered (iRTreasury mir)
@@ -473,16 +473,16 @@ checkWithdrawlBound SourceSignalTarget {source, signal, target} =
     rewardDelta :: Coin
     rewardDelta =
       fold
-        ( rewards . _dstate
-            . _delegationState
+        ( rewards . dpsDState
+            . lsDPState
             . esLState
             . nesEs
             . chainNes
             $ source
         )
         <-> fold
-          ( rewards . _dstate
-              . _delegationState
+          ( rewards . dpsDState
+              . lsDPState
               . esLState
               . nesEs
               . chainNes
@@ -505,7 +505,7 @@ utxoDepositsIncreaseByFeesWithdrawals SourceSignalTarget {source, signal, target
     circulation target <-> circulation source
       === withdrawals signal <-> txFees ledgerTr
   where
-    us = _utxoState . esLState . nesEs . chainNes
+    us = lsUTxOState . esLState . nesEs . chainNes
     circulation chainSt =
       let UTxOState {_utxo = u, _deposited = d} = us chainSt
        in Val.coin (balance u) <+> d
@@ -527,7 +527,7 @@ potsSumIncreaseWdrlsPerBlock SourceSignalTarget {source, signal, target} =
   where
     potsSum chainSt =
       let UTxOState {_utxo = u, _deposited = d, _fees = f} =
-            _utxoState . esLState . nesEs . chainNes $ chainSt
+            lsUTxOState . esLState . nesEs . chainNes $ chainSt
        in Val.coin (balance u) <+> d <+> f
 
 -- | If we are not at an Epoch Boundary, then (Utxo + Deposits + Fees)
@@ -551,9 +551,9 @@ potsSumIncreaseWdrlsPerTx SourceSignalTarget {source = chainSt, signal = block} 
     sumIncreaseWdrls :: SourceSignalTarget ledger -> Property
     sumIncreaseWdrls
       SourceSignalTarget
-        { source = (UTxOState {_utxo = u, _deposited = d, _fees = f}, _),
+        { source = LedgerState UTxOState {_utxo = u, _deposited = d, _fees = f} _,
           signal = tx,
-          target = (UTxOState {_utxo = u', _deposited = d', _fees = f'}, _)
+          target = LedgerState UTxOState {_utxo = u', _deposited = d', _fees = f'} _
         } =
         property (hasFailedScripts tx)
           .||. (Val.coin (balance u') <+> d' <+> f') <-> (Val.coin (balance u) <+> d <+> f)
@@ -577,13 +577,13 @@ potsSumIncreaseByRewardsPerTx SourceSignalTarget {source = chainSt, signal = blo
     sumIncreaseRewards
       SourceSignalTarget
         { source =
-            ( UTxOState {_utxo = u, _deposited = d, _fees = f},
-              DPState {_dstate = DState {_unified = umap1}}
-              ),
+            LedgerState
+              UTxOState {_utxo = u, _deposited = d, _fees = f}
+              DPState {dpsDState = DState {_unified = umap1}},
           target =
-            ( UTxOState {_utxo = u', _deposited = d', _fees = f'},
-              DPState {_dstate = DState {_unified = umap2}}
-              )
+            LedgerState
+              UTxOState {_utxo = u', _deposited = d', _fees = f'}
+              DPState {dpsDState = DState {_unified = umap2}}
         } =
         (Val.coin (balance u') <+> d' <+> f') <-> (Val.coin (balance u) <+> d <+> f)
           === fold (UM.unUnify (UM.Rewards umap1)) <-> fold (UM.unUnify (UM.Rewards umap2))
@@ -604,13 +604,13 @@ potsRewardsDecreaseByWdrlsPerTx SourceSignalTarget {source = chainSt, signal = b
       map rewardsDecreaseByWdrls $
         sourceSignalTargets ledgerTr
   where
-    rewardsSum = fold . rewards . _dstate
+    rewardsSum = fold . rewards . dpsDState
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     rewardsDecreaseByWdrls
       SourceSignalTarget
-        { source = (_, dpstate),
+        { source = LedgerState _ dpstate,
           signal = tx,
-          target = (_, dpstate')
+          target = LedgerState _ dpstate'
         } =
         let totalRewards = rewardsSum dpstate
             totalRewards' = rewardsSum dpstate'
@@ -654,11 +654,11 @@ preserveBalance SourceSignalTarget {source = chainSt, signal = block} =
         (failedScripts .||. ediffEq created consumed_)
       where
         failedScripts = property $ hasFailedScripts tx
-        (UTxOState {_utxo = u}, dstate) = ledgerSt
-        (UTxOState {_utxo = u'}, _) = ledgerSt'
+        LedgerState (UTxOState {_utxo = u}) dstate = ledgerSt
+        LedgerState (UTxOState {_utxo = u'}) _ = ledgerSt'
         txb = getField @"body" tx
         certs = toList (getField @"certs" txb)
-        pools = _pParams . _pstate $ dstate
+        pools = _pParams . dpsPState $ dstate
         created =
           Val.coin (balance u')
             <+> getField @"txfee" txb
@@ -690,20 +690,24 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
     (tickedChainSt, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     pp_ = (esPp . nesEs . chainNes) tickedChainSt
 
-    createdIsConsumed SourceSignalTarget {source = (UTxOState {_utxo = UTxO u}, dstate), signal = tx} =
-      inps === outs
-      where
-        txb = getField @"body" tx
-        pools = _pParams . _pstate $ dstate
-        inps =
-          Val.coin (balance @era (UTxO (SplitMap.restrictKeysSet u (getField @"inputs" txb))))
-            <> keyRefunds pp_ txb
-            <> fold (unWdrl (getField @"wdrls" txb))
-        outs =
-          let certs = toList (getField @"certs" txb)
-           in Val.coin (balance (txouts @era txb))
-                <> getField @"txfee" txb
-                <> totalDeposits pp_ (`Map.notMember` pools) certs
+    createdIsConsumed
+      SourceSignalTarget
+        { source = LedgerState (UTxOState {_utxo = UTxO u}) dstate,
+          signal = tx
+        } =
+        inps === outs
+        where
+          txb = getField @"body" tx
+          pools = _pParams . dpsPState $ dstate
+          inps =
+            Val.coin (balance @era (UTxO (SplitMap.restrictKeysSet u (getField @"inputs" txb))))
+              <> keyRefunds pp_ txb
+              <> fold (unWdrl (getField @"wdrls" txb))
+          outs =
+            let certs = toList (getField @"certs" txb)
+             in Val.coin (balance (txouts @era txb))
+                  <> getField @"txfee" txb
+                  <> totalDeposits pp_ (`Map.notMember` pools) certs
 
 preserveOutputsTx ::
   forall era ledger.
@@ -720,11 +724,15 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
         sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    outputPreserved SourceSignalTarget {target = (UTxOState {_utxo = UTxO utxo}, _), signal = tx} =
-      let UTxO outs = txouts @era (getField @"body" tx)
-       in property $
-            hasFailedScripts tx
-              .||. counterexample "TxOuts are not a subset of UTxO" (outs `SplitMap.isSubmapOf` utxo)
+    outputPreserved
+      SourceSignalTarget
+        { target = LedgerState (UTxOState {_utxo = UTxO utxo}) _,
+          signal = tx
+        } =
+        let UTxO outs = txouts @era (getField @"body" tx)
+         in property $
+              hasFailedScripts tx
+                .||. counterexample "TxOuts are not a subset of UTxO" (outs `SplitMap.isSubmapOf` utxo)
 
 canRestrictUTxO ::
   forall era ledger.
@@ -746,8 +754,8 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
     (UTxO irrelevantUTxO, ledgerTrRestr) =
       ledgerTraceFromBlockWithRestrictedUTxO @era @ledger chainSt block
     outputPreserved
-      SourceSignalTarget {target = (UTxOState {_utxo = UTxO uFull}, _)}
-      SourceSignalTarget {target = (UTxOState {_utxo = UTxO uRestr}, _)} =
+      SourceSignalTarget {target = LedgerState (UTxOState {_utxo = UTxO uFull}) _}
+      SourceSignalTarget {target = LedgerState (UTxOState {_utxo = UTxO uRestr}) _} =
         counterexample
           (unlines ["non-disjoint:", show uRestr, show irrelevantUTxO])
           (uRestr `SplitMap.disjoint` irrelevantUTxO)
@@ -770,10 +778,14 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
         sourceSignalTargets ledgerTr
   where
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
-    inputsEliminated SourceSignalTarget {target = (UTxOState {_utxo = (UTxO u')}, _), signal = tx} =
-      property $
-        hasFailedScripts tx
-          || Set.null (eval (txins @era (getField @"body" tx) ∩ SplitMap.toSet u'))
+    inputsEliminated
+      SourceSignalTarget
+        { target = LedgerState (UTxOState {_utxo = (UTxO u')}) _,
+          signal = tx
+        } =
+        property $
+          hasFailedScripts tx
+            || Set.null (eval (txins @era (getField @"body" tx) ∩ SplitMap.toSet u'))
 
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.
@@ -794,9 +806,9 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
     (_, ledgerTr) = ledgerTraceFromBlock @era @ledger chainSt block
     newEntryPresent
       SourceSignalTarget
-        { source = (UTxOState {_utxo = UTxO u}, _),
+        { source = LedgerState (UTxOState {_utxo = UTxO u}) _,
           signal = tx,
-          target = (UTxOState {_utxo = UTxO u'}, _)
+          target = LedgerState (UTxOState {_utxo = UTxO u'}) _
         } =
         let UTxO outs = txouts @era (getField @"body" tx)
             outIds = Set.map (\(TxIn _id _) -> _id) (SplitMap.toSet outs)
@@ -903,7 +915,7 @@ txFees ledgerTr =
     f
       c
       SourceSignalTarget
-        { source = (UTxOState {_utxo = utxo}, _),
+        { source = LedgerState UTxOState {_utxo = utxo} _,
           signal = tx
         } = c <> feeOrCollateral tx utxo
 
@@ -913,7 +925,7 @@ nonNegativeDeposits ::
   Property
 nonNegativeDeposits SourceSignalTarget {source = chainSt} =
   let es = (nesEs . chainNes) chainSt
-      UTxOState {_deposited = d} = (_utxoState . esLState) es
+      UTxOState {_deposited = d} = (lsUTxOState . esLState) es
    in counterexample ("nonNegativeDeposits: " ++ show d) (d >= mempty)
 
 -- | Checks that the fees are non-decreasing when not at an epoch boundary
@@ -926,7 +938,7 @@ feesNonDecreasing SourceSignalTarget {source, target} =
   where
     fees_ chainSt =
       let UTxOState {_fees = fees} =
-            _utxoState . esLState . nesEs . chainNes $ chainSt
+            lsUTxOState . esLState . nesEs . chainNes $ chainSt
        in fees
 
 ----------------------------------------------------------------------
@@ -1082,10 +1094,10 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
   where
     (_tickedChainSt, ledgerEnv, ledgerSt0, txs) = ledgerTraceBase chainSt block
     txIns = neededTxInsForBlock block
-    (utxoSt, delegationSt) = ledgerSt0
+    LedgerState utxoSt delegationSt = ledgerSt0
     utxo = unUTxO . _utxo $ utxoSt
     (relevantUTxO, irrelevantUTxO) = SplitMap.partitionWithKey (const . (`Set.member` txIns)) utxo
-    ledgerSt0' = (utxoSt {_utxo = UTxO relevantUTxO}, delegationSt)
+    ledgerSt0' = LedgerState (utxoSt {_utxo = UTxO relevantUTxO}) delegationSt
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
 poolTraceFromBlock ::
@@ -1111,7 +1123,7 @@ poolTraceFromBlock chainSt block =
       let (LedgerEnv s _ pp _) = ledgerEnv
        in PoolEnv s pp
     poolSt0 =
-      let (_, DPState _ poolSt0_) = ledgerSt0
+      let LedgerState _ (DPState _ poolSt0_) = ledgerSt0
        in poolSt0_
     poolCert (DCertPool _) = True
     poolCert _ = False
@@ -1140,7 +1152,7 @@ delegTraceFromBlock chainSt block =
           ptr = Ptr s txIx dummyCertIx
        in DelegEnv s ptr reserves pp
     delegSt0 =
-      let (_, DPState delegSt0_ _) = ledgerSt0
+      let LedgerState _ (DPState delegSt0_ _) = ledgerSt0
        in delegSt0_
     delegCert (DCertDeleg _) = True
     delegCert (DCertMir _) = True
@@ -1159,15 +1171,11 @@ ledgerTraceBase ::
   ) =>
   ChainState era ->
   Block (BHeader (Crypto era)) era ->
-  ( ChainState era,
-    LedgerEnv era,
-    (UTxOState era, DPState (Crypto era)),
-    [Core.Tx era]
-  )
+  (ChainState era, LedgerEnv era, LedgerState era, [Core.Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt,
     LedgerEnv slot minBound pp_ (esAccountState nes),
-    (utxoSt0, delegSt0),
+    esLState nes,
     txs
   )
   where
@@ -1176,9 +1184,8 @@ ledgerTraceBase chainSt block =
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = esPp nes
-    LedgerState utxoSt0 delegSt0 = esLState nes
     -- Oldest to Newest first
-    txs = (reverse . toList . (fromTxSeq @era)) txSeq -- HERE WE USE SOME SegWit function
+    txs = (reverse . toList . fromTxSeq) txSeq -- HERE WE USE SOME SegWit function
 
 -- | Transform the [(source, signal, target)] of a CHAIN Trace
 -- by manually applying the Chain TICK Rule to each source and producing
@@ -1222,7 +1229,7 @@ removedAfterPoolreap =
       map removedAfterPoolreap_ $
         filter (not . sameEpoch) (chainSstWithTick tr)
   where
-    poolState = _pstate . _delegationState . esLState . nesEs . chainNes
+    poolState = dpsPState . lsDPState . esLState . nesEs . chainNes
 
     removedAfterPoolreap_ :: SourceSignalTarget (CHAIN era) -> Property
     removedAfterPoolreap_ (SourceSignalTarget {source, target, signal = (UnserialisedBlock bh _)}) =

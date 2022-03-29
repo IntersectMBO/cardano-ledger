@@ -48,8 +48,8 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState (..),
     RewardAccounts,
+    dpsDState,
     rewards,
-    _dstate,
     _pParams,
     _unified,
   )
@@ -207,7 +207,7 @@ delegsTransition = do
 
   case certificates of
     Empty -> do
-      let ds = _dstate dpstate
+      let ds = dpsDState dpstate
           wdrls_ = unWdrl . getField @"wdrls" $ getField @"body" tx
           rewards' = rewards ds
       isSubmapOf wdrls_ rewards' -- wdrls_ ⊆ rewards
@@ -227,14 +227,14 @@ delegsTransition = do
               Map.empty
               wdrls_
           unified' = rewards' UM.⨃ wdrls_'
-      pure $ dpstate {_dstate = ds {_unified = unified'}}
+      pure $ dpstate {dpsDState = ds {_unified = unified'}}
     gamma :|> c -> do
       dpstate' <-
         trans @(DELEGS era) $ TRC (env, dpstate, gamma)
 
       let isDelegationRegistered = case c of
             DCertDeleg (Delegate deleg) ->
-              let stPools_ = _pParams $ _pstate dpstate'
+              let stPools_ = _pParams $ dpsPState dpstate'
                   targetPool = _delegatee deleg
                in case eval (targetPool ∈ dom stPools_) of
                     True -> Right ()

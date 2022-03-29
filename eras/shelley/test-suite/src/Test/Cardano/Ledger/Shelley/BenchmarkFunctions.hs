@@ -49,7 +49,7 @@ import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DelegCert (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
-    DPState,
+    LedgerState (..),
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), emptyPParams)
@@ -86,6 +86,7 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Word (Word64)
+import GHC.Stack
 import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original
   ( C_Crypto,
   )
@@ -174,7 +175,7 @@ ledgerEnv :: (Core.PParams era ~ PParams era) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::
-  (UTxOState B, DPState B_Crypto) ->
+  LedgerState B ->
   Tx B ->
   LedgerEnv B ->
   ()
@@ -206,10 +207,10 @@ txSpendOneUTxO =
     SNothing
 
 ledgerSpendOneUTxO :: Integer -> ()
-ledgerSpendOneUTxO n = testLEDGER (initUTxO n, def) txSpendOneUTxO ledgerEnv
+ledgerSpendOneUTxO n = testLEDGER (initLedgerState n) txSpendOneUTxO ledgerEnv
 
 ledgerSpendOneGivenUTxO :: UTxOState B -> ()
-ledgerSpendOneGivenUTxO state = testLEDGER (state, def) txSpendOneUTxO ledgerEnv
+ledgerSpendOneGivenUTxO state = testLEDGER (LedgerState state def) txSpendOneUTxO ledgerEnv
 
 -- ===========================================================================
 --
@@ -269,13 +270,10 @@ txRegStakeKeys ix keys =
     (txbFromCerts ix $ stakeKeyRegistrations keys)
     [asWitness alicePay]
 
-initLedgerState :: Integer -> (UTxOState B, DPState B_Crypto)
-initLedgerState n = (initUTxO n, def)
+initLedgerState :: Integer -> LedgerState B
+initLedgerState n = LedgerState (initUTxO n) def
 
-makeLEDGERState ::
-  (UTxOState B, DPState B_Crypto) ->
-  Tx B ->
-  (UTxOState B, DPState B_Crypto)
+makeLEDGERState :: HasCallStack => LedgerState B -> Tx B -> LedgerState B
 makeLEDGERState start tx =
   let st = applySTS @(LEDGER B) (TRC (ledgerEnv, start, tx))
    in case runShelleyBase st of
@@ -285,8 +283,7 @@ makeLEDGERState start tx =
 -- Create a ledger state that has registered stake credentials that
 -- are seeded with (RawSeed n 0 0 0 0) to (RawSeed m 0 0 0 0).
 -- It is pre-populated with 2 genesis injcoins.
-ledgerStateWithNregisteredKeys ::
-  Word64 -> Word64 -> (UTxOState B, DPState B_Crypto)
+ledgerStateWithNregisteredKeys :: Word64 -> Word64 -> LedgerState B
 ledgerStateWithNregisteredKeys n m =
   makeLEDGERState (initLedgerState 1) $ txRegStakeKeys minBound (stakeKeys n m)
 
@@ -297,7 +294,7 @@ ledgerStateWithNregisteredKeys n m =
 -- so that keys (RawSeed n 0 0 0 0) through (RawSeed m 0 0 0 0) are already registered,
 -- register new keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [n, m] must be disjoint from [x, y].
-ledgerRegisterStakeKeys :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
+ledgerRegisterStakeKeys :: Word64 -> Word64 -> LedgerState B -> ()
 ledgerRegisterStakeKeys x y state =
   testLEDGER
     state
@@ -335,7 +332,7 @@ txDeRegStakeKeys x y =
 -- so that keys (RawSeed n 0 0 0 0) through (RawSeed m 0 0 0 0) are already registered,
 -- deregister keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [x, y] must be contained in [n, m].
-ledgerDeRegisterStakeKeys :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
+ledgerDeRegisterStakeKeys :: Word64 -> Word64 -> LedgerState B -> ()
 ledgerDeRegisterStakeKeys x y state =
   testLEDGER
     state
@@ -374,7 +371,7 @@ txWithdrawals x y =
 -- so that keys (RawSeed n 0 0 0 0) through (RawSeed m 0 0 0 0) are already registered,
 -- make reward withdrawls for keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [x, y] must be contained in [n, m].
-ledgerRewardWithdrawals :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
+ledgerRewardWithdrawals :: Word64 -> Word64 -> LedgerState B -> ()
 ledgerRewardWithdrawals x y state = testLEDGER state (txWithdrawals x y) ledgerEnv
 
 -- ===========================================================================
@@ -427,7 +424,7 @@ txRegStakePools ix keys =
 -- Create a ledger state that has n registered stake pools.
 -- The keys are seeded with (RawSeed n 1 0 0 0) to (RawSeed m 1 0 0 0)
 -- It is pre-populated with 2 genesis injcoins.
-ledgerStateWithNregisteredPools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto)
+ledgerStateWithNregisteredPools :: Word64 -> Word64 -> LedgerState B
 ledgerStateWithNregisteredPools n m =
   makeLEDGERState (initLedgerState 1) $ txRegStakePools minBound (poolColdKeys n m)
 
@@ -438,7 +435,7 @@ ledgerStateWithNregisteredPools n m =
 -- so that pool keys (RawSeed n 1 0 0 0) through (RawSeed m 1 0 0 0) are already registered,
 -- register new pools (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [n, m] must be disjoint from [x, y].
-ledgerRegisterStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
+ledgerRegisterStakePools :: Word64 -> Word64 -> LedgerState B -> ()
 ledgerRegisterStakePools x y state =
   testLEDGER
     state
@@ -452,7 +449,7 @@ ledgerRegisterStakePools x y state =
 -- so that pool keys (RawSeed n 1 0 0 0) through (RawSeed m 1 0 0 0) are already registered,
 -- re-register pools (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [n, m] must be contained in [x, y].
-ledgerReRegisterStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
+ledgerReRegisterStakePools :: Word64 -> Word64 -> LedgerState B -> ()
 ledgerReRegisterStakePools x y state =
   testLEDGER
     state
@@ -492,7 +489,7 @@ txRetireStakePool x y =
 -- so that pool keys (RawSeed n 1 0 0 0) through (RawSeed m 1 0 0 0) are already registered,
 -- retire pools (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0).
 -- Note that [n, m] must be contained in [x, y].
-ledgerRetireStakePools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
+ledgerRetireStakePools :: Word64 -> Word64 -> LedgerState B -> ()
 ledgerRetireStakePools x y state = testLEDGER state (txRetireStakePool x y) ledgerEnv
 
 -- ===========================================================================
@@ -504,7 +501,7 @@ ledgerRetireStakePools x y state = testLEDGER state (txRetireStakePool x y) ledg
 -- The stake keys are seeded with (RawSeed 1 0 0 0 0) to (RawSeed n 0 0 0 0)
 -- The stake pools are seeded with (RawSeed 1 1 0 0 0) to (RawSeed m 1 0 0 0)
 -- It is pre-populated with 3 genesis injcoins.
-ledgerStateWithNkeysMpools :: Word64 -> Word64 -> (UTxOState B, DPState B_Crypto)
+ledgerStateWithNkeysMpools :: Word64 -> Word64 -> LedgerState B
 ledgerStateWithNkeysMpools n m =
   makeLEDGERState
     (makeLEDGERState (initLedgerState 2) $ txRegStakeKeys minBound (stakeKeys 1 n))
@@ -540,6 +537,5 @@ txDelegate n m =
 -- and pool keys (RawSeed 1 1 0 0 0) through (RawSeed m 1 0 0 0) are already registered,
 -- delegate stake keys (RawSeed x 0 0 0 0) through (RawSeed y 0 0 0 0) to ONE pool.
 -- Note that [x, y] must be contained in [1, n].
-ledgerDelegateManyKeysOnePool ::
-  Word64 -> Word64 -> (UTxOState B, DPState B_Crypto) -> ()
+ledgerDelegateManyKeysOnePool :: Word64 -> Word64 -> LedgerState B -> ()
 ledgerDelegateManyKeysOnePool x y state = testLEDGER state (txDelegate x y) ledgerEnv

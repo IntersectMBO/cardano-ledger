@@ -116,8 +116,8 @@ adoptGenesisDelegs ::
 adoptGenesisDelegs es slot = es'
   where
     ls = esLState es
-    dp = _delegationState ls
-    ds = _dstate dp
+    dp = lsDPState ls
+    ds = dpsDState dp
     fGenDelegs = _fGenDelegs ds
     GenDelegs genDelegs = _genDelegs ds
     (curr, fGenDelegs') = Map.partitionWithKey (\(FutureGenDeleg s _) _ -> s <= slot) fGenDelegs
@@ -134,8 +134,8 @@ adoptGenesisDelegs es slot = es'
         { _fGenDelegs = fGenDelegs',
           _genDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
         }
-    dp' = dp {_dstate = ds'}
-    ls' = ls {_delegationState = dp'}
+    dp' = dp {dpsDState = ds'}
+    ls' = ls {lsDPState = dp'}
     es' = es {esLState = ls'}
 
 -- | This is a limited version of 'bheadTransition' which is suitable for the

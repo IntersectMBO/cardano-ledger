@@ -28,6 +28,7 @@ import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
+    LedgerState (..),
     PState (..),
     UTxOState (..),
     rewards,
@@ -65,7 +66,7 @@ data AlonzoLEDGER era
 ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
   ( Signal (someLEDGER era) ~ Core.Tx era,
-    State (someLEDGER era) ~ (UTxOState era, DPState (Crypto era)),
+    State (someLEDGER era) ~ LedgerState era,
     Environment (someLEDGER era) ~ LedgerEnv era,
     Embed (Core.EraRule "UTXOW" era) (someLEDGER era),
     Embed (Core.EraRule "DELEGS" era) (someLEDGER era),
@@ -81,7 +82,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, (utxoSt, dpstate), tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
   let txbody = getField @"body" tx
 
   dpstate' <-
@@ -106,11 +107,13 @@ ledgerTransition = do
           utxoSt,
           tx
         )
-  pure (utxoSt', dpstate')
+  pure $ LedgerState utxoSt' dpstate'
 
 instance
   ( Show (Core.Script era), -- All these Show instances arise because
     Show (Core.TxBody era), -- renderAssertionViolation, turns them into strings
+    Show (Core.TxOut era),
+    Show (State (Core.EraRule "PPUP" era)),
     Show (Core.AuxiliaryData era),
     Show (Core.PParams era),
     Show (Core.Value era),
@@ -128,14 +131,11 @@ instance
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    Show (UTxOState era)
+    HasField "_poolDeposit" (Core.PParams era) Coin
   ) =>
   STS (AlonzoLEDGER era)
   where
-  type
-    State (AlonzoLEDGER era) =
-      (UTxOState era, DPState (Crypto era))
+  type State (AlonzoLEDGER era) = LedgerState era
   type Signal (AlonzoLEDGER era) = ValidatedTx era
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
@@ -156,8 +156,8 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
-           (utxoSt, DPState {_dstate, _pstate}) ->
-              obligation ledgerPp (rewards _dstate) (_pParams _pstate)
+           (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
+              obligation ledgerPp (rewards dpsDState) (_pParams dpsPState)
                 == _deposited utxoSt
         )
     ]

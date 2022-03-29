@@ -205,7 +205,7 @@ registerGenesisStaking
     where
       oldEpochState = nesEs oldChainNes
       oldLedgerState = esLState oldEpochState
-      oldDPState = _delegationState oldLedgerState
+      oldDPState = lsDPState oldLedgerState
 
       -- Note that this is only applicable in the initial configuration where
       -- there is no existing stake distribution, since it would completely
@@ -227,12 +227,12 @@ registerGenesisStaking
           }
       newLedgerState =
         oldLedgerState
-          { _delegationState = newDPState
+          { lsDPState = newDPState
           }
       newDPState =
         oldDPState
-          { _dstate = newDState,
-            _pstate = newPState
+          { dpsDState = newDState,
+            dpsPState = newPState
           }
       -- New delegation state. Since we're using base addresses, we only care
       -- about updating the '_delegations' field.
@@ -240,19 +240,19 @@ registerGenesisStaking
       -- See STS DELEG for details
       newDState :: DState (Crypto era)
       newDState =
-        (_dstate oldDPState)
+        (dpsDState oldDPState)
           { _unified =
               UM.unify
                 (Map.map (const $ Coin 0) . Map.mapKeys KeyHashObj $ sgsStake)
                 (Map.mapKeys KeyHashObj sgsStake)
-                (UM.ptrView (_unified (_dstate oldDPState)))
+                (UM.ptrView (_unified (dpsDState oldDPState)))
           }
 
       -- We consider pools as having been registered in slot 0
       -- See STS POOL for details
       newPState :: PState (Crypto era)
       newPState =
-        (_pstate oldDPState)
+        (dpsPState oldDPState)
           { _pParams = sgsPools
           }
 
@@ -261,6 +261,6 @@ registerGenesisStaking
       -- establish an initial stake distribution.
       initSnapShot =
         incrementalStakeDistr
-          (_stakeDistro . _utxoState . esLState $ oldEpochState)
+          (_stakeDistro . lsUTxOState . esLState $ oldEpochState)
           newDState
           newPState

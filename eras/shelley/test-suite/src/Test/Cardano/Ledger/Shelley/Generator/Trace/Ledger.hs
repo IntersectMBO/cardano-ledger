@@ -153,32 +153,31 @@ instance
   sigGen
     ge@(GenEnv _ _ Constants {maxTxsPerBlock})
     (LedgersEnv slotNo pParams reserves)
-    (LedgerState utxoSt dpSt) = do
-      (_, _, txs') <-
+    ls = do
+      (_, txs') <-
         foldM
           genAndApplyTx
-          (utxoSt, dpSt, [])
+          (ls, [])
           [minBound .. mkTxIxPartial (toInteger maxTxsPerBlock - 1)]
 
       pure $ Seq.fromList (reverse txs') -- reverse Newest first to Oldest first
       where
         genAndApplyTx ::
           HasCallStack =>
-          (UTxOState era, DPState (Crypto era), [Core.Tx era]) ->
+          (LedgerState era, [Core.Tx era]) ->
           TxIx ->
-          Gen (UTxOState era, DPState (Crypto era), [Core.Tx era])
-        genAndApplyTx (u, dp, txs) txIx = do
+          Gen (LedgerState era, [Core.Tx era])
+        genAndApplyTx (ls', txs) txIx = do
           let ledgerEnv = LedgerEnv slotNo txIx pParams reserves
-          tx <- genTx ge ledgerEnv (u, dp)
+          tx <- genTx ge ledgerEnv ls'
 
           let res =
                 runShelleyBase $
                   applySTSTest @(Core.EraRule "LEDGER" era)
-                    (TRC (ledgerEnv, (u, dp), tx))
-          pure $ case res of
+                    (TRC (ledgerEnv, ls', tx))
+          case res of
             Left pf -> error ("LEDGER sigGen: " <> show pf)
-            Right (u', dp') ->
-              (u', dp', tx : txs)
+            Right ls'' -> pure (ls'', tx : txs)
 
   shrinkSignal = const []
 
@@ -199,8 +198,6 @@ mkGenesisLedgerState ::
   ) =>
   GenEnv era ->
   IRC ledger ->
-  Gen (Either a (UTxOState era, DPState (Crypto era)))
-mkGenesisLedgerState ge@(GenEnv _ _ c) _ = do
-  utxo0 <- genUtxo0 ge
-  let (LedgerState utxoSt dpSt) = genesisState (genesisDelegs0 c) utxo0
-  pure $ Right (utxoSt, dpSt)
+  Gen (Either a (LedgerState era))
+mkGenesisLedgerState ge@(GenEnv _ _ c) _ =
+  Right . genesisState (genesisDelegs0 c) <$> genUtxo0 ge

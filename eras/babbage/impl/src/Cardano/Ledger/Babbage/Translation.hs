@@ -137,8 +137,8 @@ instance Crypto c => TranslateEra (BabbageEra c) API.LedgerState where
   translateEra ctxt ls =
     pure
       API.LedgerState
-        { API._utxoState = translateEra' ctxt $ API._utxoState ls,
-          API._delegationState = API._delegationState ls
+        { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls,
+          API.lsDPState = API.lsDPState ls
         }
 
 instance Crypto c => TranslateEra (BabbageEra c) API.UTxOState where

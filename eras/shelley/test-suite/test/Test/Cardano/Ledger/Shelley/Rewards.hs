@@ -617,7 +617,7 @@ createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm)
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       Coin reserves = _reserves acnt
-      ds = _dstate $ _delegationState ls
+      ds = dpsDState $ lsDPState ls
       -- reserves and rewards change
       deltaR1 =
         rationalToCoinViaFloor $

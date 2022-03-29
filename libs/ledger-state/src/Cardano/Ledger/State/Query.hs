@@ -115,14 +115,14 @@ insertDState Shelley.DState {..} = do
 insertLedgerState ::
   MonadIO m => EpochStateId -> Shelley.LedgerState CurrentEra -> ReaderT SqlBackend m ()
 insertLedgerState epochStateKey Shelley.LedgerState {..} = do
-  stateKey <- insertUTxOState _utxoState
-  insertUTxO (Shelley._utxo _utxoState) stateKey
-  dstateKey <- insertDState $ Shelley._dstate _delegationState
+  stateKey <- insertUTxOState lsUTxOState
+  insertUTxO (Shelley._utxo lsUTxOState) stateKey
+  dstateKey <- insertDState $ Shelley.dpsDState lsDPState
   insert_
     LedgerState
       { ledgerStateUtxoId = stateKey,
         ledgerStateDstateId = dstateKey,
-        ledgerStatePstateBin = Shelley._pstate _delegationState,
+        ledgerStatePstateBin = Shelley.dpsPState lsDPState,
         ledgerStateEpochStateId = epochStateKey
       }
 
@@ -511,12 +511,12 @@ getLedgerState utxo LedgerState {..} dstate = do
   UtxoState {..} <- getJust ledgerStateUtxoId
   pure
     Shelley.LedgerState
-      { Shelley._utxoState =
+      { Shelley.lsUTxOState =
           Shelley.smartUTxOState utxo utxoStateDeposited utxoStateFees utxoStatePpups, -- Maintain invariant
-        Shelley._delegationState =
+        Shelley.lsDPState =
           Shelley.DPState
-            { Shelley._dstate = dstate,
-              Shelley._pstate = ledgerStatePstateBin
+            { Shelley.dpsDState = dstate,
+              Shelley.dpsPState = ledgerStatePstateBin
             }
       }
 

@@ -36,12 +36,12 @@ import Cardano.Ledger.Shelley.LedgerState
     esPp,
     esPrevPp,
     esSnapshots,
+    lsDPState,
+    lsUTxOState,
     rewards,
-    _delegationState,
     _deposited,
     _ppups,
     _reserves,
-    _utxoState,
     pattern DPState,
     pattern EpochState,
   )
@@ -162,8 +162,8 @@ epochTransition = do
       e
       ) <-
     judgmentContext
-  let utxoSt = _utxoState ls
-  let DPState dstate pstate = _delegationState ls
+  let utxoSt = lsUTxOState ls
+  let DPState dstate pstate = lsDPState ls
   ss' <-
     trans @(Core.EraRule "SNAP" era) $ TRC (ls, ss, ())
 
@@ -182,7 +182,7 @@ epochTransition = do
         EpochState
           acnt'
           ss'
-          (ls {_utxoState = utxoSt', _delegationState = DPState dstate' pstate''})
+          (ls {lsUTxOState = utxoSt', lsDPState = DPState dstate' pstate''})
           pr
           pp
           nm
@@ -200,7 +200,7 @@ epochTransition = do
   pure $
     epochState'
       { esAccountState = acnt'',
-        esLState = (esLState epochState') {_utxoState = utxoSt'''},
+        esLState = (esLState epochState') {lsUTxOState = utxoSt'''},
         esPrevPp = pp,
         esPp = pp'
       }

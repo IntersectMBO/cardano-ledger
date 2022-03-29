@@ -22,7 +22,6 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Rules.Ledger ()
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
@@ -36,7 +35,7 @@ import Cardano.Ledger.Shelley.API
     ShelleyBasedEra,
     applyTxsTransition,
   )
-import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (DPState, LedgerState (..), UTxOState)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
@@ -110,7 +109,7 @@ benchWithGenState ::
     BaseEnv (Core.EraRule "LEDGER" era) ~ Globals
   ) =>
   Proxy era ->
-  (((UTxOState era, DPState (Crypto era)), Core.Tx era) -> IO a) ->
+  ((LedgerState era, Core.Tx era) -> IO a) ->
   (a -> Benchmarkable) ->
   Benchmark
 benchWithGenState px prepEnv mkBench =
@@ -118,17 +117,14 @@ benchWithGenState px prepEnv mkBench =
 
 benchApplyTx ::
   forall era.
-  ( Era era,
-    EraGen era,
+  ( EraGen era,
     ApplyTx era,
     ShelleyBasedEra era,
     HasTrace (Core.EraRule "LEDGER" era) (GenEnv era),
     BaseEnv (Core.EraRule "LEDGER" era) ~ Globals,
     Default (State (Core.EraRule "PPUP" era)),
     NFData (State (Core.EraRule "PPUP" era)),
-    NFData (Core.PParams era),
-    NFData (Core.TxOut era),
-    NFData (Core.Value era)
+    NFData (Core.TxOut era)
   ) =>
   Proxy era ->
   Benchmark

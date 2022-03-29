@@ -94,8 +94,6 @@ module Cardano.Ledger.Shelley.LedgerState
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
     updateNonMyopic,
-    TransUTxOState,
-    TransLedgerState,
   )
 where
 
@@ -197,7 +195,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     Ptr (..),
     RewardAcnt (..),
-    TransTxId,
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
@@ -234,11 +231,9 @@ import Data.Coders
   )
 import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
-import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
 import Data.Group (Group, invert)
-import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), completeM)
@@ -411,8 +406,8 @@ instance CC.Crypto crypto => FromSharedCBOR (PState crypto) where
 
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
-  { _dstate :: !(DState crypto),
-    _pstate :: !(PState crypto)
+  { dpsDState :: !(DState crypto),
+    dpsPState :: !(PState crypto)
   }
   deriving (Show, Eq, Generic)
 
@@ -424,10 +419,10 @@ instance
   CC.Crypto crypto =>
   ToCBOR (DPState crypto)
   where
-  toCBOR DPState {_pstate, _dstate} =
+  toCBOR DPState {dpsPState, dpsDState} =
     encodeListLen 2
-      <> toCBOR _pstate -- We get better sharing when encoding pstate before dstate
-      <> toCBOR _dstate
+      <> toCBOR dpsPState -- We get better sharing when encoding pstate before dstate
+      <> toCBOR dpsDState
 
 instance CC.Crypto crypto => FromSharedCBOR (DPState crypto) where
   type
@@ -436,9 +431,9 @@ instance CC.Crypto crypto => FromSharedCBOR (DPState crypto) where
         Interns (KeyHash 'StakePool crypto)
       )
   fromSharedPlusCBOR = decodeRecordNamedT "DPState" (const 2) $ do
-    _pstate <- fromSharedPlusLensCBOR _2
-    _dstate <- fromSharedPlusCBOR
-    pure DPState {_pstate, _dstate}
+    dpsPState <- fromSharedPlusLensCBOR _2
+    dpsDState <- fromSharedPlusCBOR
+    pure DPState {dpsPState, dpsDState}
 
 data AccountState = AccountState
   { _treasury :: !Coin,
@@ -472,24 +467,50 @@ data EpochState era = EpochState
   }
   deriving (Generic)
 
-type TransEpoch (c :: Type -> Constraint) era =
-  ( TransLedgerState c era,
-    c (Core.PParams era)
-  )
-
 deriving stock instance
-  TransEpoch Show era =>
+  ( CC.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (Core.PParams era),
+    Show (State (Core.EraRule "PPUP" era))
+  ) =>
   Show (EpochState era)
 
 deriving stock instance
-  TransEpoch Eq era =>
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (Core.PParams era),
+    Eq (State (Core.EraRule "PPUP" era))
+  ) =>
   Eq (EpochState era)
 
-instance (Era era, TransEpoch NoThunks era) => NoThunks (EpochState era)
+instance
+  ( Era era,
+    NoThunks (Core.TxOut era),
+    NoThunks (State (Core.EraRule "PPUP" era)),
+    NoThunks (Core.Value era),
+    NoThunks (Core.PParams era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.Value era)
+  ) =>
+  NoThunks (EpochState era)
 
-instance (Era era, TransEpoch NFData era) => NFData (EpochState era)
+instance
+  ( Era era,
+    NFData (Core.TxOut era),
+    NFData (Core.PParams era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (EpochState era)
 
-instance (TransEpoch ToCBOR era) => ToCBOR (EpochState era) where
+instance
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.PParams era),
+    ToCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  ToCBOR (EpochState era)
+  where
   toCBOR EpochState {esAccountState, esLState, esSnapshots, esPrevPp, esPp, esNonMyopic} =
     encodeListLen 6
       <> toCBOR esAccountState
@@ -626,32 +647,45 @@ data UTxOState era = UTxOState
   }
   deriving (Generic)
 
--- | Constraints needed to derive different typeclasses instances (e.g. 'Show'
--- or 'Eq) for some STS states. Here @c@ is the typeclass we are deriving the
--- instance for.
-type TransUTxOState (c :: Type -> Constraint) era =
+instance
   ( Era era,
-    TransTxId c era,
-    TransValue c era,
-    c (Core.TxOut era),
-    c (Core.PParams era),
-    c (State (Core.EraRule "PPUP" era)),
-    Compactible (Core.Value era)
-  )
-
-instance TransUTxOState NFData era => NFData (UTxOState era)
+    NFData (Core.TxOut era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (UTxOState era)
 
 deriving stock instance
-  TransUTxOState Show era =>
+  ( CC.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (State (Core.EraRule "PPUP" era))
+  ) =>
   Show (UTxOState era)
 
 deriving stock instance
-  TransUTxOState Eq era =>
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (State (Core.EraRule "PPUP" era))
+  ) =>
   Eq (UTxOState era)
 
-instance TransUTxOState NoThunks era => NoThunks (UTxOState era)
+instance
+  ( Era era,
+    NoThunks (Core.TxOut era),
+    NoThunks (State (Core.EraRule "PPUP" era)),
+    NoThunks (Core.Value era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.Value era)
+  ) =>
+  NoThunks (UTxOState era)
 
-instance TransUTxOState ToCBOR era => ToCBOR (UTxOState era) where
+instance
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  ToCBOR (UTxOState era)
+  where
   toCBOR (UTxOState ut dp fs us sd) =
     encodeListLen 5 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us <> toCBOR sd
 
@@ -694,20 +728,46 @@ data NewEpochState era = NewEpochState
   deriving (Generic)
 
 deriving stock instance
-  (TransEpoch Show era) =>
+  ( CC.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (Core.PParams era),
+    Show (State (Core.EraRule "PPUP" era))
+  ) =>
   Show (NewEpochState era)
 
 deriving stock instance
-  TransEpoch Eq era =>
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (Core.PParams era),
+    Eq (State (Core.EraRule "PPUP" era))
+  ) =>
   Eq (NewEpochState era)
 
-instance (Era era, TransEpoch NFData era) => NFData (NewEpochState era)
-
-instance (Era era, TransEpoch NoThunks era) => NoThunks (NewEpochState era)
+instance
+  ( Era era,
+    NFData (Core.TxOut era),
+    NFData (Core.PParams era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (NewEpochState era)
 
 instance
-  ( Typeable era,
-    TransEpoch ToCBOR era
+  ( Era era,
+    NoThunks (Core.TxOut era),
+    NoThunks (Core.PParams era),
+    NoThunks (State (Core.EraRule "PPUP" era)),
+    NoThunks (Core.Value era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.Value era)
+  ) =>
+  NoThunks (NewEpochState era)
+
+instance
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.PParams era),
+    ToCBOR (State (Core.EraRule "PPUP" era))
   ) =>
   ToCBOR (NewEpochState era)
   where
@@ -748,34 +808,55 @@ getGKeys nes = Map.keysSet genDelegs
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
   { -- | The current unspent transaction outputs.
-    _utxoState :: !(UTxOState era),
+    lsUTxOState :: !(UTxOState era),
     -- | The current delegation state
-    _delegationState :: !(DPState (Crypto era))
+    lsDPState :: !(DPState (Crypto era))
   }
   deriving (Generic)
 
-type TransLedgerState (c :: Type -> Constraint) era = TransUTxOState c era
-
 deriving stock instance
-  TransLedgerState Show era =>
+  ( CC.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (State (Core.EraRule "PPUP" era))
+  ) =>
   Show (LedgerState era)
 
 deriving stock instance
-  TransLedgerState Eq era =>
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (State (Core.EraRule "PPUP" era))
+  ) =>
   Eq (LedgerState era)
 
-instance (Era era, TransLedgerState NoThunks era) => NoThunks (LedgerState era)
-
-instance (Era era, TransLedgerState NFData era) => NFData (LedgerState era)
+instance
+  ( Era era,
+    NoThunks (Core.TxOut era),
+    NoThunks (State (Core.EraRule "PPUP" era)),
+    NoThunks (Core.Value era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.Value era)
+  ) =>
+  NoThunks (LedgerState era)
 
 instance
-  (Era era, TransLedgerState ToCBOR era) =>
+  ( Era era,
+    NFData (Core.TxOut era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (LedgerState era)
+
+instance
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
   ToCBOR (LedgerState era)
   where
-  toCBOR LedgerState {_utxoState, _delegationState} =
+  toCBOR LedgerState {lsUTxOState, lsDPState} =
     encodeListLen 2
-      <> toCBOR _delegationState -- encode delegation state first to improve sharing
-      <> toCBOR _utxoState
+      <> toCBOR lsDPState -- encode delegation state first to improve sharing
+      <> toCBOR lsUTxOState
 
 instance
   ( Era era,
@@ -792,9 +873,9 @@ instance
       (Interns (Credential 'Staking (Crypto era)), Interns (KeyHash 'StakePool (Crypto era)))
   fromSharedPlusCBOR =
     decodeRecordNamedT "LedgerState" (const 2) $ do
-      _delegationState <- fromSharedPlusCBOR
-      _utxoState <- fromSharedLensCBOR _1
-      pure LedgerState {_utxoState, _delegationState}
+      lsDPState <- fromSharedPlusCBOR
+      lsUTxOState <- fromSharedLensCBOR _1
+      pure LedgerState {lsUTxOState, lsDPState}
 
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
@@ -975,8 +1056,8 @@ depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
     -- it could be that txDeposits < txRefunds. We keep the parenthesis above
     -- to emphasize this point.
 
-    currentPool = (_deposited . _utxoState) ls
-    pools = _pParams . _pstate . _delegationState $ ls
+    currentPool = (_deposited . lsUTxOState) ls
+    pools = _pParams . dpsPState . lsDPState $ ls
     txDeposits =
       totalDeposits pp (`Map.notMember` pools) (toList $ getField @"certs" tx)
     txRefunds = keyRefunds pp tx
@@ -1192,9 +1273,9 @@ applyRUpd'
   ru
   es@(EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', registered)
     where
-      utxoState_ = _utxoState ls
-      delegState = _delegationState ls
-      dState = _dstate delegState
+      utxoState_ = lsUTxOState ls
+      delegState = lsDPState ls
+      dState = dpsDState delegState
       (registered, totalUnregistered) = filterAllRewards (rs ru) es
       registeredAggregated = aggregateRewards pp registered
       as' =
@@ -1204,11 +1285,11 @@ applyRUpd'
           }
       ls' =
         ls
-          { _utxoState =
+          { lsUTxOState =
               utxoState_ {_fees = _fees utxoState_ `addDeltaCoin` deltaF ru},
-            _delegationState =
+            lsDPState =
               delegState
-                { _dstate =
+                { dpsDState =
                     dState
                       { _unified = (rewards dState UM.∪+ registeredAggregated)
                       }
@@ -1225,8 +1306,8 @@ filterAllRewards ::
 filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
   (registered, totalUnregistered)
   where
-    delegState = _delegationState ls
-    dState = _dstate delegState
+    delegState = lsDPState ls
+    dState = dpsDState delegState
     (regRU, unregRU) =
       Map.partitionWithKey
         (\k _ -> eval (k ∈ dom (rewards dState)))
@@ -1309,7 +1390,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- We now compute the amount of total rewards that can potentially be given
       -- out this epoch, and the adjustments to the reserves and the treasury.
       Coin reserves = _reserves acnt
-      ds = _dstate $ _delegationState ls
+      ds = dpsDState $ lsDPState ls
       -- reserves and rewards change
       deltaR1 =
         rationalToCoinViaFloor $
@@ -1560,7 +1641,7 @@ returnRedeemAddrsToReserves ::
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
   where
     ls = esLState es
-    us = _utxoState ls
+    us = lsUTxOState ls
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
       SplitMap.partition (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
@@ -1571,7 +1652,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
         { _reserves = _reserves acnt <+> Val.coin (balance utxoR)
         }
     us' = us {_utxo = UTxO nonredeemers :: UTxO era}
-    ls' = ls {_utxoState = us'}
+    ls' = ls {lsUTxOState = us'}
 
 --------------------------------------------------------------------------------
 -- Default instances

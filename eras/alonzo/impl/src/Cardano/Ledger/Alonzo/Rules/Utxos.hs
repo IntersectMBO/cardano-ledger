@@ -307,13 +307,13 @@ instance
       dec n = Invalid n
 
 deriving stock instance
-  ( Shelley.TransUTxOState Show era,
+  ( Show (Shelley.UTxOState era),
     Show (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   Show (UtxosPredicateFailure era)
 
 instance
-  ( Shelley.TransUTxOState Eq era,
+  ( Eq (Shelley.UTxOState era),
     Eq (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   Eq (UtxosPredicateFailure era)
@@ -324,7 +324,7 @@ instance
   _ == _ = False
 
 instance
-  ( Shelley.TransUTxOState NoThunks era,
+  ( NoThunks (Shelley.UTxOState era),
     NoThunks (PredicateFailure (Core.EraRule "PPUP" era))
   ) =>
   NoThunks (UtxosPredicateFailure era)

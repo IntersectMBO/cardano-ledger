@@ -73,9 +73,9 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
     alonzoSpecificPropsLEDGER :: SourceSignalTarget (AlonzoLEDGER A) -> Property
     alonzoSpecificPropsLEDGER
       SourceSignalTarget
-        { source = (UTxOState {_utxo = UTxO u, _deposited = dp, _fees = f}, ds),
+        { source = LedgerState UTxOState {_utxo = UTxO u, _deposited = dp, _fees = f} ds,
           signal = tx,
-          target = (UTxOState {_utxo = UTxO u', _deposited = dp', _fees = f'}, ds')
+          target = LedgerState UTxOState {_utxo = UTxO u', _deposited = dp', _fees = f'} ds'
         } =
         let isValid' = getField @"isValid" tx
             noNewUTxO = u' `SplitMap.isSubmapOf` u

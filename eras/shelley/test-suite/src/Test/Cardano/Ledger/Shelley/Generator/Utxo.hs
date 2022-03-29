@@ -62,14 +62,15 @@ import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
     KeyPairs,
+    LedgerState (..),
     PState (..),
     UTxOState (..),
     consumed,
+    dpsDState,
     minfee,
     produced,
     ptrsMap,
     rewards,
-    _dstate,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
@@ -189,7 +190,7 @@ genTx ::
   ) =>
   GenEnv era ->
   LedgerEnv era ->
-  (UTxOState era, DPState (Crypto era)) ->
+  LedgerState era ->
   Gen (Core.Tx era)
 genTx
   ge@( GenEnv
@@ -207,7 +208,7 @@ genTx
          constants
        )
   (LedgerEnv slot txIx pparams reserves)
-  (utxoSt@(UTxOState utxo _ _ _ _), dpState) =
+  (LedgerState utxoSt@(UTxOState utxo _ _ _ _) dpState) =
     do
       -------------------------------------------------------------------------
       -- Generate the building blocks of a TxBody
@@ -224,7 +225,7 @@ genTx
           constants
           ksIndexedStakeScripts
           ksIndexedStakingKeys
-          ((UM.unUnify . rewards . _dstate) dpState)
+          ((UM.unUnify . rewards . dpsDState) dpState)
       (update, updateWits) <-
         genUpdate
           constants
@@ -273,7 +274,7 @@ genTx
 
       outputAddrs <-
         genRecipients @era (length inputs + n) ksKeyPairs ksMSigScripts
-          >>= genPtrAddrs (_dstate dpState')
+          >>= genPtrAddrs (dpsDState dpState')
 
       -- Occasionally we have a transaction generated with insufficient inputs
       -- to cover the deposits. In this case we discard the test case.
