@@ -100,6 +100,7 @@ data TranslationError
   | LanguageNotSupported
   | InlineDatumsNotSupported
   | ReferenceScriptsNotSupported
+  | ReferenceInputsNotSupported
   deriving (Eq, Show, Generic, NoThunks)
 
 instance ToCBOR TranslationError where
@@ -111,6 +112,7 @@ instance ToCBOR TranslationError where
   toCBOR LanguageNotSupported = encode $ Sum LanguageNotSupported 5
   toCBOR InlineDatumsNotSupported = encode $ Sum InlineDatumsNotSupported 6
   toCBOR ReferenceScriptsNotSupported = encode $ Sum ReferenceScriptsNotSupported 7
+  toCBOR ReferenceInputsNotSupported = encode $ Sum ReferenceInputsNotSupported 8
 
 instance FromCBOR TranslationError where
   fromCBOR = decode (Summands "TranslationError" dec)
@@ -123,6 +125,7 @@ instance FromCBOR TranslationError where
       dec 5 = SumD LanguageNotSupported
       dec 6 = SumD InlineDatumsNotSupported
       dec 7 = SumD ReferenceScriptsNotSupported
+      dec 8 = SumD ReferenceInputsNotSupported
       dec n = Invalid n
 
 transDataHash :: StrictMaybe (DataHash c) -> Maybe PV1.DatumHash

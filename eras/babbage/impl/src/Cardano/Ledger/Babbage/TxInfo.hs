@@ -33,6 +33,7 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
+import Control.Monad (unless)
 import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq)
@@ -191,6 +192,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
   pure $
     case lang of
       PlutusV1 -> do
+        unless (Set.null $ getField @"referenceInputs" tbody) (Left ReferenceInputsNotSupported)
         inputs <- mapM (txInfoInV1 utxo) (Set.toList (getField @"inputs" tbody))
         outputs <- mapM txInfoOutV1 (foldr (:) [] outs)
         pure . TxInfoPV1 $
