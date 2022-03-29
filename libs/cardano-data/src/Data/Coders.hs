@@ -38,6 +38,8 @@ module Data.Coders
     Annotator (..),
     Dual (..),
     Field (..),
+    ofield,
+    invalidField,
     field,
     fieldA,
     fieldAA,
@@ -89,6 +91,8 @@ module Data.Coders
     Decoder,
     Encoding,
     encodeNullMaybe,
+    encodeKeyedStrictMaybeWith,
+    encodeKeyedStrictMaybe,
     decodeNullMaybe,
     decodeSparse,
     mapEncode,
@@ -141,6 +145,7 @@ import qualified Data.Compact.VMap as VMap
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
 import qualified Data.Map as Map
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq)
@@ -149,6 +154,7 @@ import Data.Set (Set, insert, member)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Typeable
+import Data.Void (Void)
 import Formatting (build, formatToString)
 import Formatting.Buildable (Buildable)
 import qualified GHC.Exts as Exts
@@ -508,8 +514,17 @@ data Dual t = Dual (t -> Encoding) (forall s. Decoder s t)
 data Field t where
   Field :: (x -> t -> t) -> (forall s. Decoder s x) -> Field t
 
+{-# INLINE field #-}
 field :: (x -> t -> t) -> Decode ('Closed d) x -> Field t
 field update dec = Field update (decode dec)
+
+{-# INLINE ofield #-}
+ofield :: (StrictMaybe x -> t -> t) -> Decode ('Closed d) x -> Field t
+ofield update dec = Field update (SJust <$> decode dec)
+
+{-# INLINE invalidField #-}
+invalidField :: forall t. Word -> Field t
+invalidField n = field (flip $ const @t @Void) (Invalid n)
 
 -- In order to sparse decode something with a (FromCBOR (Annotator t)) instance
 -- we can use these 'field' like functions.
@@ -530,6 +545,7 @@ data Encode (w :: Wrapped) t where
   Keyed :: t -> Encode ('Closed 'Sparse) t -- One Constructor with sparse encoding
   To :: ToCBOR a => a -> Encode ('Closed 'Dense) a
   E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
+  MapE :: (a -> b) -> Encode w a -> Encode w b
   ED :: Dual t -> t -> Encode ('Closed 'Dense) t
   OmitC :: t -> Encode w t
   Tag :: Word -> Encode ('Closed x) t -> Encode ('Closed x) t
@@ -552,6 +568,7 @@ runE (Rec cn) = cn
 runE (ApplyE f x) = runE f (runE x)
 runE (To x) = x
 runE (E _ x) = x
+runE (MapE f x) = f $ runE x
 runE (ED _ x) = x
 runE (OmitC x) = x
 runE (Omit _ x) = runE x
@@ -564,6 +581,7 @@ gsize (Sum _ _) = 0
 gsize (Rec _) = 0
 gsize (To _) = 1
 gsize (E _ _) = 1
+gsize (MapE _ x) = gsize x
 gsize (ApplyE f x) = gsize f + gsize x
 gsize (ED _ _) = 1
 gsize (OmitC _) = 0
@@ -582,6 +600,7 @@ encode sym = encodeCountPrefix 0 sym
     encodeCountPrefix n (Rec _) = encodeListLen n
     encodeCountPrefix _ (To x) = toCBOR x
     encodeCountPrefix _ (E enc x) = enc x
+    encodeCountPrefix n (MapE _ x) = encodeCountPrefix n x
     encodeCountPrefix _ (ED (Dual enc _) x) = enc x
     encodeCountPrefix _ (OmitC _) = mempty
     encodeCountPrefix n (Tag tag x) = encodeTag tag <> encodeCountPrefix n x
@@ -594,6 +613,7 @@ encode sym = encodeCountPrefix 0 sym
         encodeClosed (Rec _) = mempty
         encodeClosed (To x) = toCBOR x
         encodeClosed (E enc x) = enc x
+        encodeClosed (MapE _ x) = encodeClosed x
         encodeClosed (ApplyE f x) = encodeClosed f <> encodeClosed x
         encodeClosed (ED (Dual enc _) x) = enc x
         encodeClosed (OmitC _) = mempty
@@ -602,6 +622,13 @@ encode sym = encodeCountPrefix 0 sym
         encodeClosed (Tag tag x) = encodeTag tag <> encodeClosed x
         encodeClosed (Key tag x) = encodeWord tag <> encodeClosed x
         encodeClosed (Keyed _) = mempty
+
+encodeKeyedStrictMaybeWith :: Word -> (a -> Encoding) -> StrictMaybe a -> Encode ('Closed 'Sparse) (StrictMaybe a)
+encodeKeyedStrictMaybeWith _ _ SNothing = OmitC SNothing
+encodeKeyedStrictMaybeWith key enc (SJust x) = Key key (MapE SJust $ E enc x)
+
+encodeKeyedStrictMaybe :: ToCBOR a => Word -> StrictMaybe a -> Encode ('Closed 'Sparse) (StrictMaybe a)
+encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 
 -- ==================================================================
 -- Decode
@@ -740,7 +767,9 @@ decodeSparse ::
   Decoder s a
 decodeSparse name initial pick required = do
   lenOrIndef <- decodeMapLenOrIndef
-  (!v, used) <- getSparseBlock lenOrIndef initial pick (Set.empty) name
+  (!v, used) <- case lenOrIndef of
+    Just len -> getSparseBlock len initial pick (Set.empty) name
+    Nothing -> getSparseBlockIndef initial pick (Set.empty) name
   if all (\(key, _name) -> member key used) required
     then pure v
     else unusedRequiredKeys used required (show (typeOf initial))
@@ -760,17 +789,19 @@ applyField f seen name = do
 --   given a function that picks the right box for a given key, and an
 --   initial value for the record (usually starts filled with default values).
 --   The Block can be either len-encoded or block-encoded.
-getSparseBlock :: Maybe Int -> t -> (Word -> Field t) -> Set Word -> String -> Decoder s (t, Set Word)
-getSparseBlock (Just 0) initial _pick seen _name = pure (initial, seen)
-getSparseBlock (Just n) initial pick seen name = do
+getSparseBlock :: Int -> t -> (Word -> Field t) -> Set Word -> String -> Decoder s (t, Set Word)
+getSparseBlock 0 initial _pick seen _name = pure (initial, seen)
+getSparseBlock n initial pick seen name = do
   (transform, seen2) <- applyField pick seen name
-  getSparseBlock (Just (n - 1)) (transform initial) pick seen2 name
-getSparseBlock Nothing initial pick seen name =
+  getSparseBlock (n - 1) (transform initial) pick seen2 name
+
+getSparseBlockIndef :: t -> (Word -> Field t) -> Set Word -> String -> Decoder s (t, Set Word)
+getSparseBlockIndef initial pick seen name =
   decodeBreakOr >>= \case
     True -> pure (initial, seen)
     False -> do
       (transform, seen2) <- applyField pick seen name
-      getSparseBlock Nothing (transform initial) pick seen2 name
+      getSparseBlockIndef (transform initial) pick seen2 name
 
 -- ======================================================
 -- (Decode ('Closed 'Dense)) and (Decode ('Closed 'Sparse)) are applicative

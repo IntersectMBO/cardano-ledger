@@ -36,6 +36,7 @@ import Data.Coders
     encode,
     encodeFoldable,
     field,
+    invalidField,
     invalidKey,
     runE,
     (!>),
@@ -290,7 +291,7 @@ boxM 1 = field update1 From
 boxM 2 = field update2 From
   where
     update2 t (M n xs _) = M n xs t
-boxM n = field (\_ t -> t) (Invalid n)
+boxM n = invalidField n
 
 -- Finally there is a new constructor for Decode, called SparseKeyed, that decodes field
 -- keyed sparse objects. The user supplies an initial value and pick function, and a list

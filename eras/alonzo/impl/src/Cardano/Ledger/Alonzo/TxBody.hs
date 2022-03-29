@@ -82,7 +82,6 @@ import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
-    isSNothing,
     maybeToStrictMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
@@ -720,13 +719,6 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 11 _scriptIntegrityHash
       !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 15 _txnetworkid
-    where
-      encodeKeyedStrictMaybe key x =
-        Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
-
-      fromSJust :: StrictMaybe a -> a
-      fromSJust (SJust x) = x
-      fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing"
 
 instance
   forall era.
@@ -781,24 +773,24 @@ instance
           (D (decodeStrictSeq fromCBOR))
       bodyFields 2 = field (\x tx -> tx {_txfee = x}) From
       bodyFields 3 =
-        field
+        ofield
           (\x tx -> tx {_vldt = (_vldt tx) {invalidHereafter = x}})
-          (D (SJust <$> fromCBOR))
+          From
       bodyFields 4 =
         field
           (\x tx -> tx {_certs = x})
           (D (decodeStrictSeq fromCBOR))
       bodyFields 5 = field (\x tx -> tx {_wdrls = x}) From
-      bodyFields 6 = field (\x tx -> tx {_update = x}) (D (SJust <$> fromCBOR))
-      bodyFields 7 = field (\x tx -> tx {_adHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 6 = ofield (\x tx -> tx {_update = x}) From
+      bodyFields 7 = ofield (\x tx -> tx {_adHash = x}) From
       bodyFields 8 =
-        field
+        ofield
           (\x tx -> tx {_vldt = (_vldt tx) {invalidBefore = x}})
-          (D (SJust <$> fromCBOR))
+          From
       bodyFields 9 = field (\x tx -> tx {_mint = x}) (D decodeMint)
-      bodyFields 11 = field (\x tx -> tx {_scriptIntegrityHash = x}) (D (SJust <$> fromCBOR))
+      bodyFields 11 = ofield (\x tx -> tx {_scriptIntegrityHash = x}) From
       bodyFields 14 = field (\x tx -> tx {_reqSignerHashes = x}) (D (decodeSet fromCBOR))
-      bodyFields 15 = field (\x tx -> tx {_txnetworkid = x}) (D (SJust <$> fromCBOR))
+      bodyFields 15 = ofield (\x tx -> tx {_txnetworkid = x}) From
       bodyFields n = field (\_ t -> t) (Invalid n)
       requiredFields =
         [ (0, "inputs"),
