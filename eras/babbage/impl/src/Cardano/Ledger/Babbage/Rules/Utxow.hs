@@ -268,26 +268,3 @@ instance
   where
   wrapFailed = id
   wrapEvent = WrappedShelleyEraEvent . UtxoEvent
-
-{-
--- | In orer to reuse the AlonzoLEDGER STS instance we need to embed this UTXOW instance into it.
-instance ( ConcreteBabbage era
-         , Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era
-         , State (Core.EraRule "UTXO" era) ~ UTxOState era
-         , Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era
-         , Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody)
-         , Eq (PredicateFailure (Core.EraRule "UTXOS" era))
-         , Show (PredicateFailure (Core.EraRule "UTXOS" era))
-         , Embed (Core.EraRule "UTXO" era) (BabbageUTXOW era)
-         , ValidateAuxiliaryData era (Crypto era)
-         , ValidateScript era
-      --   , PredicateFailure (Core.EraRule "UTXOW" era) ~ BabbageUtxoPred era
-         , Event (Core.EraRule "UTXOW" era) ~ AlonzoEvent era
-         ) =>
-         Embed (BabbageUTXOW era) (AlonzoLEDGER era) where
-  wrapFailed =  foo -- FromAlonzoUtxowFail . UtxowFailure
-  wrapEvent = UtxowEvent
-
-foo :: BabbageUtxoPred era -> LedgerPredicateFailure era
-foo _ = undefined
--}
