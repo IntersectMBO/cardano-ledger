@@ -78,7 +78,8 @@ test-suite cardano-ledger-babbage-test
     test
   other-modules:
     Test.Cardano.Ledger.Babbage.Serialisation.Tripping,
-    Test.Cardano.Ledger.Babbage.Serialisation.CDDL
+    Test.Cardano.Ledger.Babbage.Serialisation.CDDL,
+    Test.Cardano.Ledger.Babbage.TxInfo
   build-depends:
     QuickCheck,
     base16-bytestring,
@@ -98,6 +99,7 @@ test-suite cardano-ledger-babbage-test
     cardano-protocol-tpraos,
     cardano-slotting,
     cborg,
+    compact-map,
     containers,
     data-default-class,
     plutus-core,

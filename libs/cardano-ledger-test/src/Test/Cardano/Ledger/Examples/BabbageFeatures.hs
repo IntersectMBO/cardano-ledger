@@ -65,7 +65,6 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
     freeCostModelV1,
     freeCostModelV2,
     keyBy,
-    scriptStakeCredSuceed,
     testUTXOW,
     trustMeP,
   )
@@ -173,7 +172,7 @@ referenceScriptOutput2 pf =
     pf
     [ Address (plainAddr pf),
       Amount (inject $ Coin 5000),
-      RefScript (SJust $ always 2 pf)
+      RefScript (SJust $ alwaysAlt 2 pf)
     ]
 
 referenceDataHashOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
@@ -529,7 +528,7 @@ redeemersEx7 =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Cert 0) (redeemerExample1, ExUnits 5000 5000)
 
-refScriptForDelegCertTxBody :: Scriptic era => Proof era -> Core.TxBody era
+refScriptForDelegCertTxBody :: forall era. Scriptic era => Proof era -> Core.TxBody era
 refScriptForDelegCertTxBody pf =
   newTxBody
     pf
@@ -537,10 +536,12 @@ refScriptForDelegCertTxBody pf =
       RefInputs' [referenceScriptInput2],
       Collateral' [collateralInput11],
       Outputs' [outEx7 pf],
-      Certs' [DCertDeleg (DeRegKey $ scriptStakeCredSuceed pf)],
+      Certs' [DCertDeleg (DeRegKey cred)],
       Txfee (Coin 5),
-      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] redeemersEx7 mempty)
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] redeemersEx7 mempty)
     ]
+  where
+    cred = ScriptHashObj (hashScript @era $ alwaysAlt 2 pf)
 
 refScriptForDelegCertTx ::
   forall era.
