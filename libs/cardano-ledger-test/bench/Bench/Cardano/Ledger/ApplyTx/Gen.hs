@@ -9,9 +9,8 @@ module Bench.Cardano.Ledger.ApplyTx.Gen (generateForEra) where
 
 import Cardano.Ledger.Core (EraRule)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.API (Globals, ShelleyBasedEra)
-import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Control.State.Transition (State)
 import Control.State.Transition.Trace
 import Control.State.Transition.Trace.Generator.QuickCheck
@@ -38,7 +37,7 @@ generateForEra ::
   ) =>
   Proxy era ->
   Int ->
-  ((UTxOState era, DPState (Crypto era)), Core.Tx era)
+  (LedgerState era, Core.Tx era)
 generateForEra eraProxy seed =
   let ge = genEnv eraProxy
       qcSeed = mkQCGen seed

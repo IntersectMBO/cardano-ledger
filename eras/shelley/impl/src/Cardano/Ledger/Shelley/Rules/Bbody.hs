@@ -35,7 +35,6 @@ import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     LedgerState,
-    TransLedgerState,
   )
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersEnv (..))
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
@@ -62,13 +61,9 @@ data BBODY era
 data BbodyState era
   = BbodyState (LedgerState era) (BlocksMade (Crypto era))
 
-deriving stock instance
-  TransLedgerState Show era =>
-  Show (BbodyState era)
+deriving stock instance Show (LedgerState era) => Show (BbodyState era)
 
-deriving stock instance
-  TransLedgerState Eq era =>
-  Eq (BbodyState era)
+deriving stock instance Eq (LedgerState era) => Eq (BbodyState era)
 
 data BbodyEnv era = BbodyEnv
   { bbodyPp :: Core.PParams era,

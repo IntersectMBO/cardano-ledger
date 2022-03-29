@@ -34,7 +34,7 @@ import Cardano.Ledger.Era (Era (Crypto), TxSeq)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash, KeyRole (Witness))
 import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.API (DPState, PPUPState, UTxOState)
+import Cardano.Ledger.Shelley.API (LedgerState, PPUPState)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
@@ -155,7 +155,7 @@ propertyTests ::
     HasField "scriptWits" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
     QC.BaseEnv ledger ~ Globals,
     BaseM ledger ~ ReaderT Globals Identity,
-    State ledger ~ (UTxOState era, DPState (Crypto era)),
+    State ledger ~ LedgerState era,
     Signal ledger ~ Core.Tx era,
     Show (TxSeq era)
   ) =>

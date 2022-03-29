@@ -39,6 +39,7 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState (..),
     DState (..),
+    LedgerState (..),
     PState (..),
     UTxOState (..),
     rewards,
@@ -152,6 +153,8 @@ instance
 instance
   ( Show (Core.PParams era),
     Show (Core.Tx era),
+    Show (Core.TxOut era),
+    Show (State (Core.EraRule "PPUP" era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era,
@@ -165,14 +168,11 @@ instance
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    Show (UTxOState era)
+    HasField "_poolDeposit" (Core.PParams era) Coin
   ) =>
   STS (LEDGER era)
   where
-  type
-    State (LEDGER era) =
-      (UTxOState era, DPState (Crypto era))
+  type State (LEDGER era) = LedgerState era
   type Signal (LEDGER era) = Core.Tx era
   type Environment (LEDGER era) = LedgerEnv era
   type BaseM (LEDGER era) = ShelleyBase
@@ -193,7 +193,7 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
-           (utxoSt, DPState {dpsDState, dpsPState}) ->
+           (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
               obligation ledgerPp (rewards dpsDState) (_pParams dpsPState) -- FIX ME
                 == _deposited utxoSt
         )
@@ -214,7 +214,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, (utxoSt, dpstate), tx) <- judgmentContext
+  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
 
   dpstate' <-
     trans @(Core.EraRule "DELEGS" era) $
@@ -235,7 +235,7 @@ ledgerTransition = do
           utxoSt,
           tx
         )
-  pure (utxoSt', dpstate')
+  pure (LedgerState utxoSt' dpstate')
 
 instance
   ( Era era,

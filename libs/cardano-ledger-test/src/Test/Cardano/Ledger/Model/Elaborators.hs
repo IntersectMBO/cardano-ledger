@@ -293,7 +293,7 @@ data EraElaboratorStats era = EraElaboratorStats
     _eeStats_adaConservedErrors ::
       [ ( Globals,
           MempoolEnv era,
-          (LedgerState.UTxOState era, LedgerState.DPState (Crypto era)),
+          LedgerState.LedgerState era,
           Core.Tx era
         )
       ]
@@ -310,7 +310,8 @@ instance Ord (EraElaboratorStats era) where
       <> on compare (length . _eeStats_adaConservedErrors)
 
 deriving instance
-  ( LedgerState.TransUTxOState Show era,
+  ( Show (LedgerState.LedgerState era),
+    Show (MempoolEnv era),
     Show (Core.Tx era)
   ) =>
   Show (EraElaboratorStats era)
@@ -342,8 +343,9 @@ data EraElaboratorState era = EraElaboratorState
 deriving instance
   ( C.Crypto (Crypto era),
     Show (Core.Script era),
-    LedgerState.TransUTxOState Show era,
-    Show (Core.Tx era)
+    Show (Core.Tx era),
+    Show (LedgerState.LedgerState era),
+    Show (EraElaboratorStats era)
   ) =>
   Show (EraElaboratorState era)
 
@@ -845,17 +847,11 @@ elaborateWitnesses _ witness bodyHash = flip foldMap witness $ \keyP ->
 mempoolState :: Functor f => (MempoolState era -> f (MempoolState era)) -> (NewEpochState era -> f (NewEpochState era))
 mempoolState = \a2b s ->
   let nesEs = LedgerState.nesEs s
-      esLState = LedgerState.esLState nesEs
-
-      mkNES (utxoState, delegationState) =
+      mkNES ls =
         s
           { LedgerState.nesEs =
               nesEs
-                { LedgerState.esLState =
-                    esLState
-                      { LedgerState.lsUTxOState = utxoState,
-                        LedgerState.lsDPState = delegationState
-                      }
+                { LedgerState.esLState = ls
                 }
           }
    in mkNES <$> a2b (mkMempoolState s)
@@ -870,9 +866,11 @@ data ElaborateApplyTxError era = ElaborateApplyTxError
   }
 
 deriving instance
-  ( Show (Core.Tx era),
-    LedgerState.TransUTxOState Show era,
+  ( C.Crypto (Crypto era),
+    Show (Core.Tx era),
     Show (Core.Script era),
+    Show (NewEpochState era),
+    Show (EraElaboratorState era),
     Show (ApplyTxError era)
   ) =>
   Show (ElaborateApplyTxError era)
@@ -884,13 +882,7 @@ data ElaborateBlockError era
 instance NFData (ElaborateBlockError era) where
   rnf = rwhnf
 
-deriving instance
-  ( Show (ApplyTxError era),
-    Show (Core.Tx era),
-    LedgerState.TransUTxOState Show era,
-    Show (Core.Script era)
-  ) =>
-  Show (ElaborateBlockError era)
+deriving instance Show (ElaborateApplyTxError era) => Show (ElaborateBlockError era)
 
 data TxBodyArguments era = TxBodyArguments
   { -- | ttl
@@ -1082,8 +1074,8 @@ class
     ( ApplyBlock era,
       ApplyTx era,
       UsesValue era,
-      Show (Core.Script era),
-      LedgerState.TransUTxOState Show era
+      Show (Core.TxOut era),
+      Show (EraElaboratorState era)
     ) =>
     Globals ->
     ModelBlock (EraFeatureSet era) ->
@@ -1138,9 +1130,9 @@ class
       EraElaboratorState era
     )
   default elaborateInitialState ::
-    ( Show (Core.Script era),
-      Show (Core.Tx era),
-      LedgerState.TransUTxOState Show era,
+    ( Show (Core.TxOut era),
+      Show (LedgerState.NewEpochState era),
+      Show (EraElaboratorState era),
       UsesValue era
     ) =>
     Globals ->
@@ -1395,9 +1387,8 @@ class
     )
   default elaborateBlocksMade ::
     ( ApplyBlock era,
-      Show (Core.Script era),
-      Show (Core.Tx era),
-      LedgerState.TransUTxOState Show era,
+      Show (Core.TxOut era),
+      Show (EraElaboratorState era),
       UsesValue era
     ) =>
     Globals ->
@@ -1548,9 +1539,10 @@ observeRewards mtxid (nes, ems) =
 
 cmsError ::
   ( Show a,
-    Show (Core.Script era),
-    Show (Core.Tx era),
-    LedgerState.TransUTxOState Show era
+    C.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (EraElaboratorState era),
+    Show (LedgerState.NewEpochState era)
   ) =>
   a ->
   NewEpochState era ->

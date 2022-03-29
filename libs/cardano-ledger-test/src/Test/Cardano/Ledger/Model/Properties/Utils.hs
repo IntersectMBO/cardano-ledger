@@ -13,7 +13,6 @@ module Test.Cardano.Ledger.Model.Properties.Utils where
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError (..))
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
-import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Control.State.Transition.Extended
 import Data.List (nub, (\\))
 import Test.Cardano.Ledger.Model.API
@@ -55,7 +54,8 @@ testChainModelInteractionWith ::
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
     Show (Core.Script era),
-    LedgerState.TransUTxOState Show era
+    Show (NewEpochState era),
+    Show (EraElaboratorState era)
   ) =>
   proxy era ->
   (NewEpochState era -> EraElaboratorState era -> prop) ->
@@ -74,7 +74,8 @@ testChainModelInteractionWith' ::
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
     Show (Core.Script era),
-    LedgerState.TransUTxOState Show era
+    Show (NewEpochState era),
+    Show (EraElaboratorState era)
   ) =>
   proxy era ->
   (NewEpochState era -> EraElaboratorState era -> prop) ->
@@ -125,10 +126,13 @@ testChainModelInteractionRejection proxy e a = filterChainModelProp proxy $ \b -
 -- error
 testChainModelInteraction ::
   ( Show (PredicateFailure (Core.EraRule "LEDGER" era)),
+    Show (State (Core.EraRule "PPUP" era)),
+    Show (NewEpochState era),
     ElaborateEraModel era,
     Show (Core.Tx era),
+    Show (Core.TxOut era),
     Show (Core.Script era),
-    LedgerState.TransUTxOState Show era
+    Show (Core.PParams era)
   ) =>
   proxy era ->
   ModelGenesis (EraFeatureSet era) ->

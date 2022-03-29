@@ -94,8 +94,6 @@ module Cardano.Ledger.Shelley.LedgerState
     -- * Remove Bootstrap Redeem Addresses
     returnRedeemAddrsToReserves,
     updateNonMyopic,
-    TransUTxOState,
-    TransLedgerState,
   )
 where
 
@@ -197,7 +195,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     Ptr (..),
     RewardAcnt (..),
-    TransTxId,
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
@@ -234,11 +231,9 @@ import Data.Coders
   )
 import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Compact.VMap as VMap
-import Data.Constraint (Constraint)
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
 import Data.Group (Group, invert)
-import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), completeM)
@@ -472,24 +467,50 @@ data EpochState era = EpochState
   }
   deriving (Generic)
 
-type TransEpoch (c :: Type -> Constraint) era =
-  ( TransLedgerState c era,
-    c (Core.PParams era)
-  )
-
 deriving stock instance
-  TransEpoch Show era =>
+  ( CC.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (Core.PParams era),
+    Show (State (Core.EraRule "PPUP" era))
+  ) =>
   Show (EpochState era)
 
 deriving stock instance
-  TransEpoch Eq era =>
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (Core.PParams era),
+    Eq (State (Core.EraRule "PPUP" era))
+  ) =>
   Eq (EpochState era)
 
-instance (Era era, TransEpoch NoThunks era) => NoThunks (EpochState era)
+instance
+  ( Era era,
+    NoThunks (Core.TxOut era),
+    NoThunks (State (Core.EraRule "PPUP" era)),
+    NoThunks (Core.Value era),
+    NoThunks (Core.PParams era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.Value era)
+  ) =>
+  NoThunks (EpochState era)
 
-instance (Era era, TransEpoch NFData era) => NFData (EpochState era)
+instance
+  ( Era era,
+    NFData (Core.TxOut era),
+    NFData (Core.PParams era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (EpochState era)
 
-instance (TransEpoch ToCBOR era) => ToCBOR (EpochState era) where
+instance
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.PParams era),
+    ToCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  ToCBOR (EpochState era)
+  where
   toCBOR EpochState {esAccountState, esLState, esSnapshots, esPrevPp, esPp, esNonMyopic} =
     encodeListLen 6
       <> toCBOR esAccountState
@@ -626,32 +647,45 @@ data UTxOState era = UTxOState
   }
   deriving (Generic)
 
--- | Constraints needed to derive different typeclasses instances (e.g. 'Show'
--- or 'Eq) for some STS states. Here @c@ is the typeclass we are deriving the
--- instance for.
-type TransUTxOState (c :: Type -> Constraint) era =
+instance
   ( Era era,
-    TransTxId c era,
-    TransValue c era,
-    c (Core.TxOut era),
-    c (Core.PParams era),
-    c (State (Core.EraRule "PPUP" era)),
-    Compactible (Core.Value era)
-  )
-
-instance TransUTxOState NFData era => NFData (UTxOState era)
+    NFData (Core.TxOut era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (UTxOState era)
 
 deriving stock instance
-  TransUTxOState Show era =>
+  ( CC.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (State (Core.EraRule "PPUP" era))
+  ) =>
   Show (UTxOState era)
 
 deriving stock instance
-  TransUTxOState Eq era =>
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (State (Core.EraRule "PPUP" era))
+  ) =>
   Eq (UTxOState era)
 
-instance TransUTxOState NoThunks era => NoThunks (UTxOState era)
+instance
+  ( Era era,
+    NoThunks (Core.TxOut era),
+    NoThunks (State (Core.EraRule "PPUP" era)),
+    NoThunks (Core.Value era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.Value era)
+  ) =>
+  NoThunks (UTxOState era)
 
-instance TransUTxOState ToCBOR era => ToCBOR (UTxOState era) where
+instance
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
+  ToCBOR (UTxOState era)
+  where
   toCBOR (UTxOState ut dp fs us sd) =
     encodeListLen 5 <> toCBOR ut <> toCBOR dp <> toCBOR fs <> toCBOR us <> toCBOR sd
 
@@ -694,20 +728,46 @@ data NewEpochState era = NewEpochState
   deriving (Generic)
 
 deriving stock instance
-  (TransEpoch Show era) =>
+  ( CC.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (Core.PParams era),
+    Show (State (Core.EraRule "PPUP" era))
+  ) =>
   Show (NewEpochState era)
 
 deriving stock instance
-  TransEpoch Eq era =>
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (Core.PParams era),
+    Eq (State (Core.EraRule "PPUP" era))
+  ) =>
   Eq (NewEpochState era)
 
-instance (Era era, TransEpoch NFData era) => NFData (NewEpochState era)
-
-instance (Era era, TransEpoch NoThunks era) => NoThunks (NewEpochState era)
+instance
+  ( Era era,
+    NFData (Core.TxOut era),
+    NFData (Core.PParams era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (NewEpochState era)
 
 instance
-  ( Typeable era,
-    TransEpoch ToCBOR era
+  ( Era era,
+    NoThunks (Core.TxOut era),
+    NoThunks (Core.PParams era),
+    NoThunks (State (Core.EraRule "PPUP" era)),
+    NoThunks (Core.Value era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.Value era)
+  ) =>
+  NoThunks (NewEpochState era)
+
+instance
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.PParams era),
+    ToCBOR (State (Core.EraRule "PPUP" era))
   ) =>
   ToCBOR (NewEpochState era)
   where
@@ -754,22 +814,43 @@ data LedgerState era = LedgerState
   }
   deriving (Generic)
 
-type TransLedgerState (c :: Type -> Constraint) era = TransUTxOState c era
-
 deriving stock instance
-  TransLedgerState Show era =>
+  ( CC.Crypto (Crypto era),
+    Show (Core.TxOut era),
+    Show (State (Core.EraRule "PPUP" era))
+  ) =>
   Show (LedgerState era)
 
 deriving stock instance
-  TransLedgerState Eq era =>
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (State (Core.EraRule "PPUP" era))
+  ) =>
   Eq (LedgerState era)
 
-instance (Era era, TransLedgerState NoThunks era) => NoThunks (LedgerState era)
-
-instance (Era era, TransLedgerState NFData era) => NFData (LedgerState era)
+instance
+  ( Era era,
+    NoThunks (Core.TxOut era),
+    NoThunks (State (Core.EraRule "PPUP" era)),
+    NoThunks (Core.Value era),
+    ToCBOR (Core.TxBody era),
+    ToCBOR (Core.TxOut era),
+    ToCBOR (Core.Value era)
+  ) =>
+  NoThunks (LedgerState era)
 
 instance
-  (Era era, TransLedgerState ToCBOR era) =>
+  ( Era era,
+    NFData (Core.TxOut era),
+    NFData (State (Core.EraRule "PPUP" era))
+  ) =>
+  NFData (LedgerState era)
+
+instance
+  ( Era era,
+    ToCBOR (Core.TxOut era),
+    ToCBOR (State (Core.EraRule "PPUP" era))
+  ) =>
   ToCBOR (LedgerState era)
   where
   toCBOR LedgerState {lsUTxOState, lsDPState} =

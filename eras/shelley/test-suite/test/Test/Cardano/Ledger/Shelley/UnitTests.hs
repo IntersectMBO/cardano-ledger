@@ -47,10 +47,11 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
     IncrementalStake (..),
+    LedgerState (..),
     UTxOState (..),
     WitHashes (..),
-    rewards,
     dpsDState,
+    rewards,
     _unified,
   )
 import Cardano.Ledger.Shelley.PParams
@@ -316,10 +317,10 @@ testCheckLeaderVal =
 
 testLEDGER ::
   HasCallStack =>
-  (UTxOState C, DPState C_Crypto) ->
+  LedgerState C ->
   Tx C ->
   LedgerEnv C ->
-  Either [PredicateFailure (LEDGER C)] (UTxOState C, DPState C_Crypto) ->
+  Either [PredicateFailure (LEDGER C)] (LedgerState C) ->
   Assertion
 testLEDGER initSt tx env (Right expectedSt) = do
   checkTrace @(LEDGER C) runShelleyBase env $ pure initSt .- tx .-> expectedSt
@@ -388,6 +389,9 @@ utxoState =
 dpState :: DPState C_Crypto
 dpState = DPState def def
 
+ledgerState :: LedgerState C
+ledgerState = LedgerState utxoState dpState
+
 addReward :: DPState C_Crypto -> Credential 'Staking C_Crypto -> Coin -> DPState C_Crypto
 addReward dp ra c = dp {dpsDState = ds {_unified = rewards'}}
   where
@@ -402,7 +406,7 @@ testInvalidTx ::
   Tx C ->
   Assertion
 testInvalidTx errs tx =
-  testLEDGER (utxoState, dpState) tx ledgerEnv (Left errs)
+  testLEDGER ledgerState tx ledgerEnv (Left errs)
 
 testSpendNonexistentInput :: Assertion
 testSpendNonexistentInput =
@@ -521,7 +525,7 @@ testEmptyInputSet =
       tx = Tx txb txwits SNothing
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
-        (utxoState, dpState')
+        (LedgerState utxoState dpState')
         tx
         ledgerEnv
         (Left [UtxowFailure (UtxoFailure InputSetEmptyUTxO)])
@@ -558,7 +562,7 @@ testExpiredTx =
               signers = [asWitness alicePay]
             }
       ledgerEnv' = LedgerEnv (SlotNo 1) minBound pp (AccountState (Coin 0) (Coin 0))
-   in testLEDGER (utxoState, dpState) tx ledgerEnv' (Left errs)
+   in testLEDGER ledgerState tx ledgerEnv' (Left errs)
 
 testInvalidWintess :: Assertion
 testInvalidWintess =
@@ -585,7 +589,7 @@ testInvalidWintess =
             InvalidWitnessesUTXOW
               [asWitness $ vKey alicePay]
         ]
-   in testLEDGER (utxoState, dpState) tx ledgerEnv (Left errs)
+   in testLEDGER ledgerState tx ledgerEnv (Left errs)
 
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
@@ -611,7 +615,7 @@ testWithdrawalNoWit =
         [ UtxowFailure . MissingVKeyWitnessesUTXOW $ WitHashes missing
         ]
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
-   in testLEDGER (utxoState, dpState') tx ledgerEnv (Left errs)
+   in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
@@ -640,7 +644,7 @@ testWithdrawalWrongAmt =
       dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
       tx = Tx @C txb txwits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
-   in testLEDGER (utxoState, dpState') tx ledgerEnv (Left errs)
+   in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion
 testOutputTooSmall =
@@ -727,7 +731,9 @@ testProducedOverMaxWord64 =
           SNothing
       txwits = mempty {addrWits = makeWitnessesVKey @C_Crypto (hashAnnotated txbody) [alicePay]}
       tx = Tx @C txbody txwits SNothing
-      st = runShelleyBase $ applySTSTest @(LEDGER C) (TRC (ledgerEnv, (utxoState, dpState), tx))
+      st =
+        runShelleyBase $
+          applySTSTest @(LEDGER C) (TRC (ledgerEnv, ledgerState, tx))
    in -- We test that the serialization of the predicate failure does not return bottom
       serialize' st @?= serialize' st
 

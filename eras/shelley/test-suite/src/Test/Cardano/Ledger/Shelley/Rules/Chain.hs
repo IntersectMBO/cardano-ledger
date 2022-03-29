@@ -25,7 +25,15 @@ module Test.Cardano.Ledger.Shelley.Rules.Chain
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView)
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals (..), Nonce (..), ProtVer (..), ShelleyBase, StrictMaybe (..), UnitInterval)
+import Cardano.Ledger.BaseTypes
+  ( BlocksMade (..),
+    Globals (..),
+    Nonce (..),
+    ProtVer (..),
+    ShelleyBase,
+    StrictMaybe (..),
+    UnitInterval,
+  )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Chain
   ( ChainPredicateFailure (..),
@@ -62,12 +70,16 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState (..),
     NewEpochState (..),
     PState (..),
-    TransUTxOState,
     smartUTxOState,
     updateNES,
     _genDelegs,
   )
-import Cardano.Ledger.Shelley.Rules.Bbody (BBODY, BbodyEnv (..), BbodyPredicateFailure, BbodyState (..))
+import Cardano.Ledger.Shelley.Rules.Bbody
+  ( BBODY,
+    BbodyEnv (..),
+    BbodyPredicateFailure,
+    BbodyState (..),
+  )
 import Cardano.Ledger.Shelley.Rules.Tick (TICK, TickEvent, TickPredicateFailure)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo)
@@ -128,15 +140,11 @@ data ChainState era = ChainState
   }
   deriving (Generic)
 
-deriving stock instance
-  TransUTxOState Show era =>
-  Show (ChainState era)
+deriving stock instance Show (NewEpochState era) => Show (ChainState era)
 
-deriving stock instance
-  TransUTxOState Eq era =>
-  Eq (ChainState era)
+deriving stock instance Eq (NewEpochState era) => Eq (ChainState era)
 
-instance (Era era, TransUTxOState NFData era) => NFData (ChainState era)
+instance NFData (NewEpochState era) => NFData (ChainState era)
 
 data TestChainPredicateFailure era
   = RealChainPredicateFailure !ChainPredicateFailure

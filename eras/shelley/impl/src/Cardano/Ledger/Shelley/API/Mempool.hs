@@ -41,8 +41,7 @@ import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
 import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era
-  ( Crypto,
-    Era,
+  ( Era,
     PreviousEra,
     TranslateEra (translateEra),
     TranslationContext,
@@ -188,10 +187,7 @@ instance ShelleyEraCrypto c => ApplyTx (ShelleyEra c)
 
 type MempoolEnv era = Ledger.LedgerEnv era
 
-type MempoolState era =
-  ( LedgerState.UTxOState era,
-    LedgerState.DPState (Crypto era)
-  )
+type MempoolState era = LedgerState.LedgerState era
 
 -- | Construct the environment used to validate transactions from the full
 -- ledger state.
@@ -228,13 +224,7 @@ mkMempoolEnv
 --   regenerated when the ledger state gets updated (e.g. through application of
 --   a new block).
 mkMempoolState :: NewEpochState era -> MempoolState era
-mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} =
-  (lsUTxOState, lsDPState)
-  where
-    LedgerState.LedgerState
-      { LedgerState.lsUTxOState,
-        LedgerState.lsDPState
-      } = LedgerState.esLState nesEs
+mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} = LedgerState.esLState nesEs
 
 newtype ApplyTxError era = ApplyTxError [PredicateFailure (Core.EraRule "LEDGER" era)]
 
@@ -305,11 +295,10 @@ overNewEpochState ::
   f (NewEpochState era)
 overNewEpochState f st = do
   f (mkMempoolState st)
-    <&> \(us, ds) ->
+    <&> \ls ->
       st
         { LedgerState.nesEs =
             (LedgerState.nesEs st)
-              { LedgerState.esLState =
-                  LedgerState.LedgerState us ds
+              { LedgerState.esLState = ls
               }
         }

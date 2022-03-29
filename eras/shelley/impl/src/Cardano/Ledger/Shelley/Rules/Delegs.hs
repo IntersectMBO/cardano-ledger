@@ -48,8 +48,8 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     DPState (..),
     RewardAccounts,
-    rewards,
     dpsDState,
+    rewards,
     _pParams,
     _unified,
   )

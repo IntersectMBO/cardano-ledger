@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DState (..),
     PState (..),
-    TransUTxOState,
     UTxOState (..),
     rewards,
   )
@@ -66,9 +65,7 @@ data PoolreapState era = PoolreapState
     prPState :: PState (Crypto era)
   }
 
-deriving stock instance
-  (TransUTxOState Show era) =>
-  Show (PoolreapState era)
+deriving stock instance Show (UTxOState era) => Show (PoolreapState era)
 
 data PoolreapPredicateFailure era -- No predicate failures
   deriving (Show, Eq, Generic)

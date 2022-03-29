@@ -35,7 +35,6 @@ import Cardano.Ledger.Era (Era (..))
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
 import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
-import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState,
     nesBcur,
@@ -123,7 +122,6 @@ applyBlock ::
   forall era.
   ( TransTxId Show era,
     TransTxBody NFData era,
-    TransValue NFData era,
     API.ApplyBlock era,
     NFData (Core.PParams era),
     NFData (State (Core.EraRule "PPUP" era))

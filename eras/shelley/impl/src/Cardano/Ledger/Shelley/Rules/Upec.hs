@@ -32,8 +32,8 @@ import Cardano.Ledger.Shelley.LedgerState
     esAccountState,
     esLState,
     lsDPState,
-    _ppups,
     lsUTxOState,
+    _ppups,
     pattern DPState,
     pattern EpochState,
   )

@@ -8,7 +8,7 @@ where
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
 import qualified Cardano.Ledger.Shelley.API as S
-import Cardano.Ledger.Shelley.LedgerState ()
+import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.PParams (emptyPParams)
 import Cardano.Ledger.Shelley.Tx (hashScript, scriptWits)
 import Cardano.Ledger.TxIn (txid)
@@ -91,7 +91,7 @@ testScriptPostTranslation =
           result =
             runShelleyBase $
               applySTSTest @(S.LEDGER Allegra)
-                (TRC (env, (utxoStAllegra, def), txa))
+                (TRC (env, LedgerState utxoStAllegra def, txa))
        in case result of
             Left e -> error $ show e
             Right _ -> pure ()

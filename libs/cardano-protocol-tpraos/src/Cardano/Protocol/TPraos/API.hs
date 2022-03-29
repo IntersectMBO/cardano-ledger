@@ -79,8 +79,8 @@ import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     NewEpochState (..),
-    lsDPState,
     dpsDState,
+    lsDPState,
     _genDelegs,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))

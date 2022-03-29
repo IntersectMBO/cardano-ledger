@@ -41,8 +41,7 @@ main = do
   genesis <- either error id <$> eitherDecodeFileStrict' genesisFilePath
 
   let toMempoolState :: NewEpochState CurrentEra -> MempoolState CurrentEra
-      toMempoolState NewEpochState {nesEs = EpochState {esLState}} =
-        (lsUTxOState esLState, lsDPState esLState)
+      toMempoolState NewEpochState {nesEs = EpochState {esLState}} = esLState
       pp :: PParams CurrentEra
       pp = def
       !globals = mkGlobals genesis pp
@@ -50,11 +49,12 @@ main = do
       seqTuple :: (a, b) -> (a, b)
       seqTuple (x, y) = x `seq` y `seq` (x, y)
       applyTx' mempoolEnv mempoolState =
-        either (error . show) (\(x, y) -> seqTuple (seqTuple x, y))
-          . applyTx globals mempoolEnv mempoolState
-      reapplyTx' mempoolEnv mempoolState =
         either (error . show) seqTuple
-          . reapplyTx globals mempoolEnv mempoolState
+          . applyTx globals mempoolEnv mempoolState
+      reapplyTx' mempoolEnv mempoolState tx =
+        case reapplyTx globals mempoolEnv mempoolState tx of
+          Left err -> error (show err)
+          Right st -> st
   putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
   es <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"

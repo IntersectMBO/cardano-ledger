@@ -1,6 +1,5 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -83,12 +82,6 @@ class
     NewEpochState era ->
     SlotNo ->
     EventReturnType ep (Core.EraRule "TICK" era) (NewEpochState era)
-  default applyTickOpts ::
-    ApplySTSOpts ep ->
-    Globals ->
-    NewEpochState era ->
-    SlotNo ->
-    EventReturnType ep (Core.EraRule "TICK" era) (NewEpochState era)
   applyTickOpts opts globals state hdr =
     either err id
       . flip runReader globals
@@ -100,14 +93,6 @@ class
 
   -- | Apply the block level ledger transition.
   applyBlockOpts ::
-    forall ep m.
-    (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m) =>
-    ApplySTSOpts ep ->
-    Globals ->
-    NewEpochState era ->
-    Block (BHeaderView (Crypto era)) era ->
-    m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
-  default applyBlockOpts ::
     forall ep m.
     (EventReturnTypeRep ep, MonadError (BlockTransitionError era) m) =>
     ApplySTSOpts ep ->
@@ -140,11 +125,6 @@ class
   -- the caller implicitly guarantees that they have previously called
   -- 'applyBlockTransition' on the same block and that this was successful.
   reapplyBlock ::
-    Globals ->
-    NewEpochState era ->
-    Block (BHeaderView (Crypto era)) era ->
-    NewEpochState era
-  default reapplyBlock ::
     Globals ->
     NewEpochState era ->
     Block (BHeaderView (Crypto era)) era ->

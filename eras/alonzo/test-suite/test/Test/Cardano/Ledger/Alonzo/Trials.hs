@@ -242,7 +242,8 @@ ledgerEnv :: forall era. Default (Core.PParams era) => LedgerEnv era
 ledgerEnv = LedgerEnv (SlotNo 0) minBound def (AccountState (Coin 0) (Coin 0))
 
 genAlonzoTx :: Gen (Core.Tx A)
-genAlonzoTx = genstuff ap (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (utxo, dp))
+genAlonzoTx = genstuff ap $ \genv _cs _nep _ep _ls _pp utxo dp _d _p ->
+  genTx genv ledgerEnv (LedgerState utxo dp)
 
 genAlonzoBlock :: Gen (Block (BHeader TestCrypto) A)
 genAlonzoBlock = genstuff ap (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
@@ -251,10 +252,13 @@ genShelleyTx :: Gen (Core.Tx (ShelleyEra TestCrypto))
 genShelleyTx =
   genstuff
     (Proxy @(ShelleyEra TestCrypto))
-    (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (utxo, dp))
+    (\genv _cs _nep _ep _ls _pp utxo dp _d _p -> genTx genv ledgerEnv (LedgerState utxo dp))
 
 genShelleyBlock :: Gen (Block (BHeader TestCrypto) (ShelleyEra TestCrypto))
-genShelleyBlock = genstuff (Proxy @(ShelleyEra TestCrypto)) (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
+genShelleyBlock =
+  genstuff
+    (Proxy @(ShelleyEra TestCrypto))
+    (\genv cs _nep _ep _ls _pp _utxo _dp _d _p -> genBlock genv cs)
 
 -- ==================================================================================================
 -- Scripts are generated when we call genEnv. They are stored in fields inside the GenEnv structure.

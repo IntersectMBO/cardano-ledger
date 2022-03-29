@@ -22,10 +22,11 @@ import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
+    LedgerState (..),
     PState (..),
     UTxOState (..),
     rewards,
@@ -49,7 +50,9 @@ data BabbageLEDGER c
 
 instance
   ( Era era,
+    ValidateScript era,
     ConcreteBabbage era,
+    Show (State (Core.EraRule "PPUP" era)),
     Embed (Core.EraRule "DELEGS" era) (BabbageLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (BabbageLEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
@@ -58,14 +61,11 @@ instance
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    Show (UTxOState era),
     Show (ValidatedTx era)
   ) =>
   STS (BabbageLEDGER era)
   where
-  type
-    State (BabbageLEDGER era) =
-      (UTxOState era, DPState (Crypto era))
+  type State (BabbageLEDGER era) = LedgerState era
   type Signal (BabbageLEDGER era) = ValidatedTx era
   type Environment (BabbageLEDGER era) = LedgerEnv era
   type BaseM (BabbageLEDGER era) = ShelleyBase
@@ -86,7 +86,7 @@ instance
     [ PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
-           (utxoSt, DPState {dpsDState, dpsPState}) ->
+           (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
               obligation ledgerPp (rewards dpsDState) (_pParams dpsPState)
                 == _deposited utxoSt
         )

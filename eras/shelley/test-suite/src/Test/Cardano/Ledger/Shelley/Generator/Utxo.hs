@@ -62,14 +62,15 @@ import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
     KeyPairs,
+    LedgerState (..),
     PState (..),
     UTxOState (..),
     consumed,
+    dpsDState,
     minfee,
     produced,
     ptrsMap,
     rewards,
-    dpsDState,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
@@ -189,7 +190,7 @@ genTx ::
   ) =>
   GenEnv era ->
   LedgerEnv era ->
-  (UTxOState era, DPState (Crypto era)) ->
+  LedgerState era ->
   Gen (Core.Tx era)
 genTx
   ge@( GenEnv
@@ -207,7 +208,7 @@ genTx
          constants
        )
   (LedgerEnv slot txIx pparams reserves)
-  (utxoSt@(UTxOState utxo _ _ _ _), dpState) =
+  (LedgerState utxoSt@(UTxOState utxo _ _ _ _) dpState) =
     do
       -------------------------------------------------------------------------
       -- Generate the building blocks of a TxBody

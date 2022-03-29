@@ -16,9 +16,6 @@
 
 module Test.Cardano.Ledger.Generic.Properties where
 
--- =================================
--- import Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
-
 import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
@@ -64,6 +61,7 @@ import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
     DState (..),
+    LedgerState (..),
     PState (..),
     UTxOState (..),
     rewards,
@@ -836,25 +834,25 @@ instance
 
 genTxAndUTXOState :: Reflect era => Proof era -> Gen (TRC (Core.EraRule "UTXOW" era), GenState era)
 genTxAndUTXOState proof@(Babbage _) = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, (utxoState, _), vtx)) genState) <- genTxAndLEDGERState proof
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), utxoState, vtx), genState)
+  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof
+  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Alonzo _) = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, (utxoState, _), vtx)) genState) <- genTxAndLEDGERState proof
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), utxoState, vtx), genState)
+  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof
+  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Mary _) = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, (utxoState, _), vtx)) genState) <- genTxAndLEDGERState proof
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), utxoState, vtx), genState)
+  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof
+  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Allegra _) = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, (utxoState, _), vtx)) genState) <- genTxAndLEDGERState proof
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), utxoState, vtx), genState)
+  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof
+  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Shelley _) = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, (utxoState, _), vtx)) genState) <- genTxAndLEDGERState proof
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), utxoState, vtx), genState)
+  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof
+  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 
 genTxAndLEDGERState ::
   ( Reflect era,
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
+    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era
   ) =>
   Proof era ->
@@ -871,7 +869,7 @@ genTxAndLEDGERState proof = do
         (utxo, tx) <- genValidatedTx proof
         utxoState <- genUTxOState utxo
         dpState <- gsDPState <$> get
-        pure $ TRC (ledgerEnv, (utxoState, dpState), tx)
+        pure $ TRC (ledgerEnv, LedgerState utxoState dpState, tx)
       pp =
         newPParams
           proof
@@ -916,8 +914,8 @@ applySTSByProof (Shelley _) trc = runShelleyBase $ applySTS trc
 -- =============================================
 -- Now a test
 
-totalAda :: Reflect era => UTxOState era -> DPState (Crypto era) -> Coin
-totalAda (UTxOState utxo f d _ _) DPState {dpsDState} =
+totalAda :: Reflect era => LedgerState era -> Coin
+totalAda (LedgerState (UTxOState utxo f d _ _) DPState {dpsDState}) =
   f <> d <> coin (balance utxo) <> F.foldl' (<>) mempty (rewards dpsDState)
 
 -- Note we could probably abstract over an arbitray test here with
@@ -926,26 +924,26 @@ totalAda (UTxOState utxo f d _ _) DPState {dpsDState} =
 testTxValidForLEDGER ::
   ( Reflect era,
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    State (Core.EraRule "LEDGER" era) ~ (UTxOState era, DPState (Crypto era)),
+    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
     PrettyA (PredicateFailure (Core.EraRule "LEDGER" era)),
     PrettyA (Signal (Core.EraRule "LEDGER" era))
   ) =>
   Proof era ->
   Box era ->
   Property
-testTxValidForLEDGER proof (Box _ (trc@(TRC (_, (utxoState, dpstate), vtx))) _) =
+testTxValidForLEDGER proof (Box _ (trc@(TRC (_, ledgerState, vtx))) _) =
   ( if False
       then trace (show (txSummary proof vtx))
       else id
   )
     $ case applySTSByProof proof trc of -- trc encodes the initial (generated) state, vtx is the transaction
-      Right (utxoState', dpstate') ->
+      Right ledgerState' ->
         -- UTxOState and DPState after applying the transaction $$$
         classify (coerce (isValid' proof vtx)) "TxValid" $
-          totalAda utxoState' dpstate' === totalAda utxoState dpstate
+          totalAda ledgerState' === totalAda ledgerState
       Left errs ->
         counterexample
-          ( utxoString proof (_utxo utxoState) ++ "\n\n"
+          ( utxoString proof (_utxo (lsUTxOState ledgerState)) ++ "\n\n"
               ++ show (prettyA vtx)
               ++ "\n\n"
               ++ show (ppList prettyA errs)

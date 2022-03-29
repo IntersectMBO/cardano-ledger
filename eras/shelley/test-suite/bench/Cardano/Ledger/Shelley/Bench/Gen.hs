@@ -26,7 +26,6 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
-    LedgerState (..),
     NewEpochState (..),
   )
 import Cardano.Ledger.Shelley.Tx (TxIn)
@@ -126,8 +125,5 @@ genTriple ::
 genTriple proxy n = do
   let ge = genEnv proxy
   cs <- genChainState n ge
-  let nes = chainNes cs -- NewEpochState
-  let es = nesEs nes -- EpochState
-  let (LedgerState utxoS dpstate) = esLState es -- LedgerState
-  let fun genenv = generate $ genTx genenv ledgerEnv (utxoS, dpstate)
+  let fun genenv = generate $ genTx genenv ledgerEnv (esLState (nesEs (chainNes cs)))
   pure (ge, cs, fun)
