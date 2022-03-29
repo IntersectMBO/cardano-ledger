@@ -51,6 +51,10 @@ transReferenceScript :: forall era. ValidateScript era => StrictMaybe (Core.Scri
 transReferenceScript SNothing = Nothing
 transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 
+-- | A transaction output can be transalated because it is a newly created output,
+-- or because it is the output which is connected to an transaction input being spent.
+data OutputSource = OutputFromInput | OutputFromOutput
+
 -- | Given a TxOut, translate it for V2 and return (Right transalation).
 -- If the transaction contains any Byron addresses or Babbage features, return Left.
 txInfoOutV1 ::
@@ -62,18 +66,20 @@ txInfoOutV1 ::
     HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
   ) =>
+  OutputSource ->
   Core.TxOut era ->
   Either TranslationError PV1.TxOut
-txInfoOutV1 txout =
+txInfoOutV1 os txout =
   let val = getField @"value" txout
       datahash = getField @"datahash" txout
       inlineDatum = getField @"datum" txout
       referenceScript = transReferenceScript @era $ getField @"referenceScript" txout
-   in case (Alonzo.transTxOutAddr txout, inlineDatum, referenceScript) of
-        (Nothing, _, _) -> Left ByronOutputInContext
-        (_, SJust _, _) -> Left InlineDatumsNotSupported
-        (_, _, Just _) -> Left ReferenceScriptsNotSupported
-        (Just ad, SNothing, Nothing) ->
+   in case (Alonzo.transTxOutAddr txout, inlineDatum, referenceScript, os) of
+        (Nothing, _, _, OutputFromOutput) -> Left ByronOutputInContext
+        (Nothing, _, _, OutputFromInput) -> Left ByronInputInContext
+        (_, SJust _, _, _) -> Left InlineDatumsNotSupported
+        (_, _, Just _, _) -> Left ReferenceScriptsNotSupported
+        (Just ad, SNothing, Nothing, _) ->
           Right (PV1.TxOut ad (Alonzo.transValue @(Crypto era) val) (Alonzo.transDataHash datahash))
 
 -- | Given a TxOut, translate it for V2 and return (Right transalation). It is
@@ -87,9 +93,10 @@ txInfoOutV2 ::
     HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
   ) =>
+  OutputSource ->
   Core.TxOut era ->
   Either TranslationError PV2.TxOut
-txInfoOutV2 txout =
+txInfoOutV2 os txout =
   let val = getField @"value" txout
       d = case (getField @"datahash" txout, getField @"datum" txout) of
         (SNothing, SNothing) -> Right PV2.NoOutputDatum
@@ -98,10 +105,11 @@ txInfoOutV2 txout =
           Right . PV2.OutputDatum . PV2.Datum . PV2.dataToBuiltinData . getPlutusData $ d'
         (SJust _, SJust _) -> Left TranslationLogicErrorDoubleDatum
       referenceScript = transReferenceScript @era $ getField @"referenceScript" txout
-   in case (Alonzo.transTxOutAddr txout, d) of
-        (_, Left e) -> Left e
-        (Nothing, _) -> Left ByronOutputInContext
-        (Just ad, Right d') ->
+   in case (Alonzo.transTxOutAddr txout, d, os) of
+        (_, Left e, _) -> Left e
+        (Nothing, _, OutputFromOutput) -> Left ByronOutputInContext
+        (Nothing, _, OutputFromInput) -> Left ByronInputInContext
+        (Just ad, Right d', _) ->
           Right (PV2.TxOut ad (Alonzo.transValue @(Crypto era) val) d' referenceScript)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
@@ -121,7 +129,7 @@ txInfoInV1 (UTxO mp) txin =
   case SplitMap.lookup txin mp of
     Nothing -> Left TranslationLogicErrorInput
     Just txout -> do
-      out <- txInfoOutV1 txout
+      out <- txInfoOutV1 OutputFromInput txout
       Right (PV1.TxInInfo (Alonzo.txInfoIn' txin) out)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V2 context
@@ -141,7 +149,7 @@ txInfoInV2 (UTxO mp) txin =
   case SplitMap.lookup txin mp of
     Nothing -> Left TranslationLogicErrorInput
     Just txout -> do
-      out <- txInfoOutV2 txout
+      out <- txInfoOutV2 OutputFromInput txout
       Right (PV2.TxInInfo (Alonzo.txInfoIn' txin) out)
 
 transRedeemer :: Data era -> PV2.Redeemer
@@ -194,7 +202,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
       PlutusV1 -> do
         unless (Set.null $ getField @"referenceInputs" tbody) (Left ReferenceInputsNotSupported)
         inputs <- mapM (txInfoInV1 utxo) (Set.toList (getField @"inputs" tbody))
-        outputs <- mapM txInfoOutV1 (foldr (:) [] outs)
+        outputs <- mapM (txInfoOutV1 OutputFromOutput) (foldr (:) [] outs)
         pure . TxInfoPV1 $
           PV1.TxInfo
             { PV1.txInfoInputs = inputs,
@@ -211,7 +219,7 @@ babbageTxInfo pp lang ei sysS utxo tx = do
       PlutusV2 -> do
         inputs <- mapM (txInfoInV2 utxo) (Set.toList (getField @"inputs" tbody))
         refInputs <- mapM (txInfoInV2 utxo) (Set.toList (getField @"referenceInputs" tbody))
-        outputs <- mapM txInfoOutV2 (foldr (:) [] outs)
+        outputs <- mapM (txInfoOutV2 OutputFromOutput) (foldr (:) [] outs)
         rdmrs' <- mapM (transRedeemerPtr tbody) rdmrs
         pure . TxInfoPV2 $
           PV2.TxInfo
