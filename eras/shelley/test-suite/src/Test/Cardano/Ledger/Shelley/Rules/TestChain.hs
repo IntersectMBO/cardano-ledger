@@ -737,8 +737,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
 canRestrictUTxO ::
   forall era ledger.
   ( ChainProperty era,
-    TestingLedger era ledger,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    TestingLedger era ledger
   ) =>
   SourceSignalTarget (CHAIN era) ->
   Property
@@ -1080,8 +1079,7 @@ ledgerTraceFromBlock chainSt block =
 ledgerTraceFromBlockWithRestrictedUTxO ::
   forall era ledger.
   ( ChainProperty era,
-    TestingLedger era ledger,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    TestingLedger era ledger
   ) =>
   ChainState era ->
   Block (BHeader (Crypto era)) era ->
