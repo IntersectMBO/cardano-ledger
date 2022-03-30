@@ -205,8 +205,8 @@ instance CC.Crypto c => GetLedgerView (BabbageEra c) where
           lvExtraEntropy = error "Extra entropy is not set in the Babbage era",
           lvPoolDistr = nesPd,
           lvGenDelegs =
-            _genDelegs . _dstate
-              . _delegationState
+            _genDelegs . dpsDState
+              . lsDPState
               $ esLState nesEs,
           lvChainChecks = pparamsToChainChecksPParams . esPp $ nesEs
         }
