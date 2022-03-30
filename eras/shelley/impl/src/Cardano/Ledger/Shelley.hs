@@ -1,3 +1,4 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -58,6 +59,7 @@ import Cardano.Ledger.Shelley.Tx
 import qualified Cardano.Ledger.Shelley.Tx as STx (Tx, TxBody, TxOut (..))
 import qualified Data.ByteString as BS
 import Data.Proxy
+import GHC.Records (HasField (..))
 
 data ShelleyEra c
 
@@ -65,6 +67,8 @@ instance CryptoClass.Crypto c => E.Era (ShelleyEra c) where
   type Crypto (ShelleyEra c) = c
 
   getTxOutEitherAddr (STx.TxOutCompact a _) = Right a
+
+  getAllTxInputs = getField @"inputs"
 
 instance CryptoClass.Crypto c => UsesValue (ShelleyEra c)
 

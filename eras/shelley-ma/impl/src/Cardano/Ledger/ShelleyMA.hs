@@ -109,6 +109,8 @@ instance
 
   getTxOutEitherAddr (TxOutCompact a _) = Right a
 
+  getAllTxInputs = getField @"inputs"
+
 instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Mary c)
 
 instance CryptoClass.Crypto c => UsesValue (ShelleyMAEra 'Allegra c)
