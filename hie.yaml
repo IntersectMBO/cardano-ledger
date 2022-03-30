@@ -107,3 +107,6 @@ cradle:
 
     - path: "libs/cardano-ledger-pretty/src"
       component: "lib:cardano-ledger-pretty"
+
+    - path: "libs/cardano-protocol-tpraos"
+      component: "lib:cardano-protocol-tpraos"
