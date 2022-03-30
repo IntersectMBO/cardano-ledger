@@ -12,7 +12,6 @@
 {-# LANGUAGE StrictData #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
 
@@ -46,6 +45,8 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams' (..))
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
+import Cardano.Ledger.Babbage (BabbageEra)
+import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Nonce (NeutralNonce),
@@ -151,7 +152,6 @@ class
     Signal (Core.EraRule "TICKF" era) ~ SlotNo,
     PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era,
     HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
     HasField "_maxBBSize" (Core.PParams era) Natural,
     HasField "_maxBHSize" (Core.PParams era) Natural,
     HasField "_protocolVersion" (Core.PParams era) ProtVer
@@ -159,6 +159,10 @@ class
   GetLedgerView era
   where
   currentLedgerView ::
+    NewEpochState era ->
+    LedgerView (Crypto era)
+  default currentLedgerView ::
+    HasField "_extraEntropy" (Core.PParams era) Nonce =>
     NewEpochState era ->
     LedgerView (Crypto era)
   currentLedgerView = view
@@ -171,7 +175,9 @@ class
     SlotNo ->
     m (LedgerView (Crypto era))
   default futureLedgerView ::
-    (MonadError (FutureLedgerViewError era) m) =>
+    ( MonadError (FutureLedgerViewError era) m,
+      HasField "_extraEntropy" (Core.PParams era) Nonce
+    ) =>
     Globals ->
     NewEpochState era ->
     SlotNo ->
@@ -185,6 +191,36 @@ instance CC.Crypto c => GetLedgerView (AllegraEra c)
 instance CC.Crypto c => GetLedgerView (MaryEra c)
 
 instance CC.Crypto c => GetLedgerView (AlonzoEra c)
+
+-- Note that although we do not use TPraos in the Babbage era, we include this
+-- because it makes it simpler to get the ledger view for Praos.
+instance CC.Crypto c => GetLedgerView (BabbageEra c) where
+  currentLedgerView
+    NewEpochState
+      { nesPd,
+        nesEs
+      } =
+      LedgerView
+        { lvD = getField @"_d" . esPp $ nesEs,
+          lvExtraEntropy = error "Extra entropy is not set in the Babbage era",
+          lvPoolDistr = nesPd,
+          lvGenDelegs =
+            _genDelegs . _dstate
+              . _delegationState
+              $ esLState nesEs,
+          lvChainChecks = pparamsToChainChecksPParams . esPp $ nesEs
+        }
+
+  futureLedgerView globals ss slot =
+    liftEither
+      . right currentLedgerView
+      . left FutureLedgerViewError
+      $ res
+    where
+      res =
+        flip runReader globals
+          . applySTS @(Core.EraRule "TICKF" (BabbageEra c))
+          $ TRC ((), ss, slot)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
