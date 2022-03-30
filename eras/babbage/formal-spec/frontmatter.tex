@@ -19,12 +19,11 @@
 \renewcommand{\thepage}{\arabic{page}}
 \setcounter{page}{1}
 
-\title{Formal Specification of the Cardano Ledger with Plutus
-Integration}
+\title{Formal Specification of the Cardano Ledger for the Babbage era}
 
 \author{
-   Polina Vinogradova \\ {\small \texttt{polina.vinogradova@iohk.io}} \\
    Andre Knispel \\ {\small \texttt{andre.knispel@iohk.io}} \\
+   Jared Corduan \\ {\small \texttt{jared.corduan@iohk.io}} \\
    }
 
 \date{}
@@ -32,27 +31,40 @@ Integration}
 \maketitle
 
 \begin{abstract}
-This document presents modifications to the Shelley ledger
-specification~\cite{shelley_spec} that will enable it to support the requirements for Plutus Foundation, within the context of the Goguen era
-of Cardano. This specification is based on the Plutus system and the extended
-UTxO specification of the mockchain on which it operates, as outlined in~\cite{chakravarty2020extended}.
-%
-We present a unified way to process both Plutus scripts and Shelley-style multi-signature scripts
-(see~\cite{multi_sig}).
+This document presents the modifications to the Alonzo ledger specification~
+(see \cite{alonzo_spec}) for the Babbage era.
+The Babbage era introduces two main groups of changes.
+
+The first group involves new ways of providing data to Plutus scripts.
+In particular, there is now support for
+\href{https://cips.cardano.org/cips/cip31/}{reference inputs},
+\href{https://cips.cardano.org/cips/cip32/}{inline datums}, and
+\href{https://cips.cardano.org/cips/cip33/}{reference scripts}.
+Additionally, the Babbage era supports
+\href{https://github.com/cardano-foundation/CIPs/pull/216}{collateral outputs},
+which supports collateral outputs and asserting the exact collateral.
+The former helps with managing collateral for all wallets and the latter helps
+reduces the risk of using collateral inputs in hardware wallets.
+
+The second group of changes involves the handling of block headers.
+We introduce a performance optimization, namely using a single VRF value for both
+the leader check and the epoch nonce contribution.
+We also remove the features introduced in the Shelley era which existed in order
+to smoothly transition from a federated environment into a decentralized environment
+(with respect to block production).
+In particular, there is no longer an overlay schedule or a mechanism for adding
+extra entropy to the epoch nonce.
 \end{abstract}
 
 \section*{List of Contributors}
 \label{acknowledgements}
 
-Duncan Coutts,
-Philipp Kant,
-Michal Peyton Jones,
-Jann Mueller,
-Jared Corduan,
-Matthias Gudemann,
-Manuel Chakravarty,
-Kevin Hammond,
-Tim Sheard,
-Nicholas Clarke,
 Alex Byaly,
-Yun Lu
+Nicholas Clarke,
+Duncan Coutts,
+Sebastien Guillemot,
+Philipp Kant,
+Jan Mazak,
+Michal Peyton Jones,
+Tim Sheard,
+Polina Vinogradova
