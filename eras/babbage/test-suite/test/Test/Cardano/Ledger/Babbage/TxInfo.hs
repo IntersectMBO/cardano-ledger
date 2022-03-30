@@ -128,15 +128,15 @@ txRefInput = ValidatedTx (txb shelleyInput (Just shelleyInput) shelleyOutput) me
 
 hasReferenceInput :: VersionedTxInfo -> Bool
 hasReferenceInput (TxInfoPV1 _) = False
-hasReferenceInput (TxInfoPV2 info) = (PV2.txInfoReferenceInputs info) /= mempty
+hasReferenceInput (TxInfoPV2 info) = PV2.txInfoReferenceInputs info /= mempty
 
 expectOneInput :: PV2.TxInInfo -> VersionedTxInfo -> Bool
 expectOneInput _ (TxInfoPV1 _) = False
-expectOneInput i (TxInfoPV2 info) = (PV2.txInfoInputs info) == [i]
+expectOneInput i (TxInfoPV2 info) = PV2.txInfoInputs info == [i]
 
 expectOneOutput :: PV2.TxOut -> VersionedTxInfo -> Bool
 expectOneOutput _ (TxInfoPV1 _) = False
-expectOneOutput o (TxInfoPV2 info) = (PV2.txInfoOutputs info) == [o]
+expectOneOutput o (TxInfoPV2 info) = PV2.txInfoOutputs info == [o]
 
 successfulTranslation :: Language -> ValidatedTx B -> (VersionedTxInfo -> Bool) -> Assertion
 successfulTranslation lang tx f =

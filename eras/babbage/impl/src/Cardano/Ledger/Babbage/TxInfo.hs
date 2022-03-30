@@ -96,21 +96,22 @@ txInfoOutV2 ::
   OutputSource ->
   Core.TxOut era ->
   Either TranslationError PV2.TxOut
-txInfoOutV2 os txout =
+txInfoOutV2 os txout = do
   let val = getField @"value" txout
-      d = case (getField @"datahash" txout, getField @"datum" txout) of
-        (SNothing, SNothing) -> Right PV2.NoOutputDatum
-        (SJust dh, SNothing) -> Right . PV2.OutputDatumHash $ Alonzo.transDataHash' dh
-        (SNothing, SJust d') ->
-          Right . PV2.OutputDatum . PV2.Datum . PV2.dataToBuiltinData . getPlutusData $ d'
-        (SJust _, SJust _) -> Left TranslationLogicErrorDoubleDatum
       referenceScript = transReferenceScript @era $ getField @"referenceScript" txout
-   in case (Alonzo.transTxOutAddr txout, d, os) of
-        (_, Left e, _) -> Left e
-        (Nothing, _, OutputFromOutput) -> Left ByronOutputInContext
-        (Nothing, _, OutputFromInput) -> Left ByronInputInContext
-        (Just ad, Right d', _) ->
-          Right (PV2.TxOut ad (Alonzo.transValue @(Crypto era) val) d' referenceScript)
+  datum <-
+    case (getField @"datahash" txout, getField @"datum" txout) of
+      (SNothing, SNothing) -> Right PV2.NoOutputDatum
+      (SJust dh, SNothing) -> Right . PV2.OutputDatumHash $ Alonzo.transDataHash' dh
+      (SNothing, SJust d') ->
+        Right . PV2.OutputDatum . PV2.Datum . PV2.dataToBuiltinData . getPlutusData $ d'
+      (SJust _, SJust _) -> Left TranslationLogicErrorDoubleDatum
+  case Alonzo.transTxOutAddr txout of
+    Nothing
+      | OutputFromOutput <- os -> Left ByronOutputInContext
+      | OutputFromInput <- os -> Left ByronInputInContext
+    Just ad ->
+      Right (PV2.TxOut ad (Alonzo.transValue @(Crypto era) val) datum referenceScript)
 
 -- | Given a TxIn, look it up in the UTxO. If it exists, translate it to the V1 context
 --   and return (Just translation). If does not exist in the UTxO, return Nothing.
