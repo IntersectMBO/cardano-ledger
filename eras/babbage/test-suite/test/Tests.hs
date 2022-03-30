@@ -10,6 +10,7 @@ module Main where
 
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Babbage.Serialisation.Tripping as Tripping
+import Test.Cardano.Ledger.Babbage.TxInfo (txInfoTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
 
@@ -26,6 +27,7 @@ mainTests =
   testGroup
     "Babbage tests"
     [ Tripping.tests,
+      txInfoTests,
       CDDL.tests 5
     ]
 
@@ -34,6 +36,7 @@ fastTests =
   testGroup
     "Babbage tests"
     [ Tripping.tests,
+      txInfoTests,
       CDDL.tests 1
     ]
 
