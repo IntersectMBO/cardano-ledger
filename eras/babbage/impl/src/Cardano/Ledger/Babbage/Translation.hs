@@ -15,6 +15,7 @@ import Cardano.Binary
   ( DecoderError,
   )
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
@@ -56,7 +57,7 @@ import qualified Cardano.Ledger.Shelley.API as API
 
 type instance PreviousEra (BabbageEra c) = AlonzoEra c
 
-type instance TranslationContext (BabbageEra c) = ()
+type instance TranslationContext (BabbageEra c) = AlonzoGenesis
 
 instance
   (Crypto c) =>
