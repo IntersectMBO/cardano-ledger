@@ -47,6 +47,7 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import qualified PlutusTx as Plutus
+import qualified Test.Cardano.Ledger.Alonzo.Examples.Consensus as AlonzoLE
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import qualified Test.Cardano.Ledger.Mary.Examples.Consensus as MarySLE
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
@@ -76,7 +77,7 @@ ledgerExamplesBabbage =
       SLE.sleResultExamples = resultExamples,
       SLE.sleNewEpochState = exampleBabbageNewEpochState,
       SLE.sleChainDepState = SLE.exampleLedgerChainDepState 1,
-      SLE.sleTranslationContext = ()
+      SLE.sleTranslationContext = AlonzoLE.exampleAlonzoGenesis
     }
   where
     resultExamples =
