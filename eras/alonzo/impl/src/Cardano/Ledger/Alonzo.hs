@@ -104,6 +104,11 @@ instance CC.Crypto c => EraModule.Era (AlonzoEra c) where
   type Crypto (AlonzoEra c) = c
   getTxOutEitherAddr = getAlonzoTxOutEitherAddr
 
+  getAllTxInputs txb = spending `Set.union` collateral
+    where
+      spending = getField @"inputs" txb
+      collateral = getField @"collateral" txb
+
 instance API.ShelleyEraCrypto c => API.ApplyTx (AlonzoEra c) where
   reapplyTx globals env state vtx =
     let res =

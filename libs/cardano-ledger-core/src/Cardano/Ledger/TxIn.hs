@@ -25,12 +25,12 @@ module Cardano.Ledger.TxIn
 where
 
 import Cardano.Binary (FromCBOR (fromCBOR), ToCBOR (..), encodeListLen)
+import Cardano.Crypto.Hash.Class (HashAlgorithm)
 import Cardano.Ledger.BaseTypes (TxIx (..), mkTxIxPartial)
 import Cardano.Ledger.Core (TxBody)
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, hashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Prelude (HeapWords (..), NFData)
 import qualified Cardano.Prelude as HW
@@ -40,10 +40,12 @@ import NoThunks.Class (NoThunks (..))
 
 -- | Compute the id of a transaction.
 txid ::
-  forall era.
-  Era era =>
+  forall era c.
+  ( HashAlgorithm (CC.HASH c),
+    HashAnnotated (TxBody era) EraIndependentTxBody c
+  ) =>
   TxBody era ->
-  TxId (Crypto era)
+  TxId c
 txid = TxId . hashAnnotated
 
 -- ===================================================================================

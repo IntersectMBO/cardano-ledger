@@ -42,6 +42,7 @@ import Cardano.Ledger.SafeHash
   ( HashAnnotated (..),
     SafeToHash (..),
   )
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val)
 import Control.Monad.Except (Except, runExcept)
 import qualified Data.ByteString as BS
@@ -93,6 +94,14 @@ class
     case getTxOutEitherAddr t of
       Left a -> compactAddr a
       Right ca -> ca
+
+  -- | The validity of any individual block depends only on a subset
+  -- of the UTxO stored in the ledger state. The consensus layer makes
+  -- use of this fact, and uses the function below to to retrieve the
+  -- needed UTxO from disk and present only those to the ledger.
+  -- It is therefore neccessary that this function account for all the
+  -- different types of inputs inside a transaction.
+  getAllTxInputs :: Core.TxBody e -> Set (TxIn (Crypto e))
 
 -- TODO - figure out a dedicated module for things that will create helper
 -- functions from this module:

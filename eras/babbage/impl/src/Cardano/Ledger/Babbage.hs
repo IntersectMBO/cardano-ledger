@@ -123,6 +123,12 @@ instance
 
   getTxOutEitherAddr = getBabbageTxOutEitherAddr
 
+  getAllTxInputs txb = spending `Set.union` collateral `Set.union` reference
+    where
+      spending = getField @"inputs" txb
+      collateral = getField @"collateral" txb
+      reference = getField @"referenceInputs" txb
+
 instance (CC.Crypto c) => Shelley.ValidateScript (BabbageEra c) where
   isNativeScript x = not (isPlutusScript x)
   scriptPrefixTag script =

@@ -33,7 +33,7 @@ import Cardano.Binary
     serializeEncoding,
   )
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
+import Cardano.Ledger.Era (Crypto, Era (getAllTxInputs), ValidateScript (..))
 import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Serialization
   ( ToCBORGroup (..),
@@ -169,14 +169,12 @@ bbody (Block' _ txs _) = txs
 -- will use 'neededTxInsForBlock' to retrieve the needed UTxO from disk
 -- and present only those to the ledger.
 neededTxInsForBlock ::
-  ( Era era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
+  Era era =>
   Block h era ->
   Set (TxIn (Crypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
     txBodies = map (getField @"body") $ toList $ Era.fromTxSeq txsSeq
-    allTxIns = Set.unions $ map (getField @"inputs") txBodies
+    allTxIns = Set.unions $ map getAllTxInputs txBodies
     newTxIds = Set.fromList $ map txid txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
