@@ -585,7 +585,7 @@ collateralOutputTxBody pf =
     [ Inputs' [failsEUTxOInput],
       Collateral' [collateralInput17],
       CollateralReturn' [collateralReturn pf],
-      TotalCol (Coin 5),
+      TotalCol (SJust $ Coin 5),
       Outputs' [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersEx1 txDatsExample2)
@@ -638,7 +638,7 @@ incorrectCollateralTotalTxBody pf =
     [ Inputs' [inlineDatumInput],
       Collateral' [collateralInput11],
       CollateralReturn' [collateralReturn pf],
-      TotalCol (Coin 6),
+      TotalCol (SJust $ Coin 6),
       Outputs' [outEx1 pf],
       Txfee (Coin 5),
       WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersEx1 mempty)

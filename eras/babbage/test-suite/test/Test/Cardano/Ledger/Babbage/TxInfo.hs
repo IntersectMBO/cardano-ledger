@@ -107,7 +107,7 @@ txb i mRefInp o =
         Just ri -> Set.singleton ri,
       outputs = StrictSeq.singleton o,
       collateralReturn = SNothing,
-      totalCollateral = Coin 0,
+      totalCollateral = SNothing,
       txcerts = mempty,
       txwdrls = Wdrl mempty,
       txfee = Coin 2,

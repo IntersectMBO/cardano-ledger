@@ -713,7 +713,7 @@ txBodyFieldSummary txb = case txb of
   (RefInputs s) -> [("RefInputs", ppInt (Set.size s))]
   (Outputs xs) -> [("Outputs", ppInt (length xs))]
   (CollateralReturn (SJust _)) -> [("Collateral Return", ppString "?")]
-  (TotalCol c) -> [("TotalCollateral", ppCoin c)]
+  (TotalCol (SJust c)) -> [("TotalCollateral", ppCoin c)]
   (Certs xs) -> [("Certs", ppInt (length xs))]
   (Wdrls x) -> [("Withdrawals", ppInt (Map.size (unWdrl x)))]
   (Vldt x) -> [("Validity interval", ppValidityInterval x)]

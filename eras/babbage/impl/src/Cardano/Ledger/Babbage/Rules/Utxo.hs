@@ -183,7 +183,7 @@ feesOK ::
     HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (TxOut era)),
     HasField "_prices" (Core.PParams era) Prices,
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "totalCollateral" (Core.TxBody era) Coin
+    HasField "totalCollateral" (Core.TxBody era) (StrictMaybe Coin)
   ) =>
   Core.PParams era ->
   Core.Tx era ->
@@ -210,7 +210,7 @@ validateTotalCollateral ::
   forall era.
   ( Era era,
     HasField "_collateralPercentage" (Core.PParams era) Natural,
-    HasField "totalCollateral" (Core.TxBody era) Coin
+    HasField "totalCollateral" (Core.TxBody era) (StrictMaybe Coin)
   ) =>
   Core.PParams era ->
   Core.TxBody era ->
@@ -226,21 +226,19 @@ validateTotalCollateral pp txb utxoCollateral bal =
       -- Part 5: balance ≥ ⌈txfee txb ∗ (collateralPercent pp) / 100⌉
       fromAlonzoValidation $ validateInsufficientCollateral pp txb bal,
       -- Part 6: (txcoll tx ≠ ◇) ⇒ balance = txcoll tx
-      unless (totalCollateral'' == mempty) $ validateCollateralEqBalance bal totalCollateral'',
+      validateCollateralEqBalance (Val.coin bal) (getField @"totalCollateral" txb),
       -- Part 7: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
       fromAlonzoValidation $ failureIf (null utxoCollateral) (NoCollateralInputs @era)
     ]
   where
-    totalCollateral'' = Val.inject $ getField @"totalCollateral" txb
     fromAlonzoValidation x = first (fmap inject) x
 
 -- > (txcoll tx ≠ ◇) => balance == txcoll tx
-validateCollateralEqBalance :: Val.Val t => t -> t -> Validation (NonEmpty (BabbageUtxoPred era)) ()
+validateCollateralEqBalance :: Coin -> StrictMaybe Coin -> Validation (NonEmpty (BabbageUtxoPred era)) ()
 validateCollateralEqBalance bal txcoll =
-  failureUnless (bal == txcoll) $
-    UnequalCollateralReturn
-      (Val.coin bal)
-      (Val.coin txcoll)
+  case txcoll of
+    SNothing -> pure ()
+    SJust tc -> failureUnless (bal == tc) (UnequalCollateralReturn bal tc)
 
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::

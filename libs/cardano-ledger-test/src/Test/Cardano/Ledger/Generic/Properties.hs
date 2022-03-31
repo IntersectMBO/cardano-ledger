@@ -707,7 +707,6 @@ genValidatedTx proof = do
           [ Inputs (Map.keysSet toSpendNoCollateral),
             Collateral bogusCollateralTxIns,
             RefInputs (Map.keysSet refInputsUtxo),
-            TotalCol (Coin 0), -- Add a bogus Coin, fill it in later
             Outputs' (rewardsWithdrawalTxOut : recipients),
             Certs' dcerts,
             Wdrls wdrls,
@@ -769,7 +768,7 @@ genValidatedTx proof = do
           txBodyNoFee
           [ Txfee fee,
             Collateral (Map.keysSet collMap),
-            TotalCol (txInBalance (Map.keysSet collMap) utxo),
+            TotalCol (SJust $ txInBalance (Map.keysSet collMap) utxo),
             WppHash mIntegrityHash
           ]
       txBodyHash = hashAnnotated txBody

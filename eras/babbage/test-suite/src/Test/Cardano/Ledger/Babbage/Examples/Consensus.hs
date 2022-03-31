@@ -117,7 +117,7 @@ exampleTxBodyBabbage =
         ]
     )
     (SJust collateralOutput) -- collateral return
-    (Coin 8675309) -- collateral tot
+    (SJust $ Coin 8675309) -- collateral tot
     SLE.exampleCerts -- txcerts
     ( Wdrl $
         Map.singleton
