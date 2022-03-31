@@ -54,6 +54,7 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     Test,
@@ -108,6 +109,7 @@ data BabbageUtxoPred era
   | FromAlonzoUtxowFail !(UtxowPredicateFail era)
   | UnequalCollateralReturn !Coin !Coin
   | DanglingWitnessDataHash !(Set.Set (DataHash (Crypto era)))
+  | MalformedScripts !(Set (ScriptHash (Crypto era)))
 
 deriving instance
   ( Era era,
@@ -394,6 +396,7 @@ instance
       work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 2 !> To x
       work (UnequalCollateralReturn c1 c2) = Sum UnequalCollateralReturn 3 !> To c1 !> To c2
       work (DanglingWitnessDataHash x) = Sum DanglingWitnessDataHash 4 !> To x
+      work (MalformedScripts x) = Sum MalformedScripts 5 !> To x
 
 instance
   ( Era era,
@@ -413,6 +416,7 @@ instance
       work 2 = SumD FromAlonzoUtxowFail <! From
       work 3 = SumD UnequalCollateralReturn <! From <! From
       work 4 = SumD DanglingWitnessDataHash <! From
+      work 5 = SumD MalformedScripts <! From
       work n = Invalid n
 
 deriving via InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era) instance NoThunks (BabbageUtxoPred era)

@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxow
   )
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo (TxDats (..))
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
@@ -120,7 +120,7 @@ validateFailedBabbageScripts ::
   Core.Tx era ->
   UTxO era ->
   Test (Shelley.UtxowPredicateFailure era)
-validateFailedBabbageScripts tx utxo = do
+validateFailedBabbageScripts tx utxo =
   let failedScripts =
         Map.filterWithKey
           ( \hs script ->
@@ -131,8 +131,28 @@ validateFailedBabbageScripts tx utxo = do
                in answer
           )
           (txscripts utxo tx)
-  failureUnless (Map.null failedScripts) $
-    Shelley.ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
+   in failureUnless
+        (Map.null failedScripts)
+        (Shelley.ScriptWitnessNotValidatingUTXOW $ Map.keysSet failedScripts)
+
+{- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ ⋃ ( , ,d,s)∈txouts tx{s, d},
+                       x ∈ Script ∪ Datum ⇒ isWellFormed x
+-}
+validateScriptsWellFormed ::
+  forall era.
+  ( ExtendedUTxO era,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    Core.Script era ~ Script era
+  ) =>
+  Core.PParams era ->
+  Core.Tx era ->
+  UTxO era ->
+  Test (BabbageUtxoPred era)
+validateScriptsWellFormed pp tx utxo =
+  let invalidScripts = Map.filter (\script -> not $ validScript (getField @"_protocolVersion" pp) script) (txscripts utxo tx)
+   in failureUnless
+        (Map.null invalidScripts)
+        (MalformedScripts $ Map.keysSet invalidScripts)
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
@@ -213,6 +233,13 @@ babbageUtxowTransition = do
   {-  ((adh = ◇) ∧ (ad= ◇)) ∨ (adh = hashAD ad)                          -}
   runTestOnSignal $
     Shelley.validateMetadata pp tx
+
+  {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ ⋃ ( , ,d,s)∈txouts tx{s, d},
+                         x ∈ Script ∪ Datum ⇒ isWellFormed x
+  -}
+  -- Datums are currently guarded by the wire format,
+  -- so we assume all datums to be well formed.
+  runTest $ validateScriptsWellFormed pp tx utxo
 
   {- languages tx utxo ⊆ dom(costmdls tx) -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
