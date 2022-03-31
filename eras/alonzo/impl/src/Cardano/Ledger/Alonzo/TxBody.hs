@@ -168,6 +168,9 @@ data TxOut era
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
+  | TxOut_AddrHash28_AdaOnly_NoStake
+      {-# UNPACK #-} !Addr28Extra
+      {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Addr28Extra
@@ -197,7 +200,7 @@ getAdaOnly _ v = do
 decodeAddress28 ::
   forall crypto.
   HashAlgorithm (CC.ADDRHASH crypto) =>
-  Credential 'Staking crypto ->
+  StakeReference crypto ->
   Addr28Extra ->
   Maybe (Addr crypto)
 decodeAddress28 stakeRef (Addr28Extra a b c d) = do
@@ -211,7 +214,7 @@ decodeAddress28 stakeRef (Addr28Extra a b c d) = do
       addrHash =
         hashFromPackedBytes $
           PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
-  pure $! Addr network paymentCred (StakeRefBase stakeRef)
+  pure $! Addr network paymentCred stakeRef
 
 encodeAddress28 ::
   forall crypto.
@@ -272,11 +275,15 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompact' addr val -> (addr, val, SNothing)
   TxOutCompactDH' addr val dh -> (addr, val, SJust dh)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
-    | Just addr <- decodeAddress28 stakeRef addr28Extra ->
+    | Just addr <- decodeAddress28 (StakeRefBase stakeRef) addr28Extra ->
+        (compactAddr addr, injectCompact adaVal, SNothing)
+    | otherwise -> error addressErrorMsg
+  TxOut_AddrHash28_AdaOnly_NoStake addr28Extra adaVal
+    | Just addr <- decodeAddress28 StakeRefNull addr28Extra ->
         (compactAddr addr, injectCompact adaVal, SNothing)
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32
-    | Just addr <- decodeAddress28 stakeRef addr28Extra,
+    | Just addr <- decodeAddress28 (StakeRefBase stakeRef) addr28Extra,
       Just dh <- decodeDataHash32 dataHash32 ->
         (compactAddr addr, injectCompact adaVal, SJust dh)
     | otherwise -> error addressErrorMsg
@@ -295,13 +302,17 @@ viewTxOut (TxOutCompactDH' bs c dh) = (addr, val, SJust dh)
     addr = decompactAddr bs
     val = fromCompact c
 viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal)
-  | Just addr <- decodeAddress28 stakeRef addr28Extra =
+  | Just addr <- decodeAddress28 (StakeRefBase stakeRef) addr28Extra =
+      (addr, inject (fromCompact adaVal), SNothing)
+viewTxOut (TxOut_AddrHash28_AdaOnly_NoStake addr28Extra adaVal)
+  | Just addr <- decodeAddress28 StakeRefNull addr28Extra =
       (addr, inject (fromCompact adaVal), SNothing)
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32)
-  | Just addr <- decodeAddress28 stakeRef addr28Extra,
+  | Just addr <- decodeAddress28 (StakeRefBase stakeRef) addr28Extra,
     Just dh <- decodeDataHash32 dataHash32 =
       (addr, inject (fromCompact adaVal), SJust dh)
 viewTxOut TxOut_AddrHash28_AdaOnly {} = error addressErrorMsg
+viewTxOut TxOut_AddrHash28_AdaOnly_NoStake {} = error addressErrorMsg
 viewTxOut TxOut_AddrHash28_AdaOnly_DataHash32 {} = error addressErrorMsg
 
 instance
@@ -334,6 +345,10 @@ pattern TxOut addr vl dh <-
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
           TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+      | StakeRefNull <- stakeRef,
+        Just adaCompact <- getAdaOnly (Proxy @era) vl,
+        Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
+          TxOut_AddrHash28_AdaOnly_NoStake addr28Extra adaCompact
     TxOut (Addr network paymentCred stakeRef) vl (SJust dh)
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
@@ -875,6 +890,7 @@ instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (T
     TxOutCompact' _ cv -> fromCompact cv
     TxOutCompactDH' _ cv _ -> fromCompact cv
     TxOut_AddrHash28_AdaOnly _ _ cc -> inject (fromCompact cc)
+    TxOut_AddrHash28_AdaOnly_NoStake _ cc -> inject (fromCompact cc)
     TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> inject (fromCompact cc)
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
@@ -894,10 +910,13 @@ getAlonzoTxOutEitherAddr = \case
   TxOutCompact' cAddr _ -> Right cAddr
   TxOutCompactDH' cAddr _ _ -> Right cAddr
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
+    | Just addr <- decodeAddress28 (StakeRefBase stakeRef) addr28Extra -> Left addr
+    | otherwise -> error addressErrorMsg
+  TxOut_AddrHash28_AdaOnly_NoStake addr28Extra _
+    | Just addr <- decodeAddress28 StakeRefNull addr28Extra -> Left addr
     | otherwise -> error addressErrorMsg
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
+    | Just addr <- decodeAddress28 (StakeRefBase stakeRef) addr28Extra -> Left addr
     | otherwise -> error addressErrorMsg
 
 addressErrorMsg :: String
