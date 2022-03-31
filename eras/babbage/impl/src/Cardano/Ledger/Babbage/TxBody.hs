@@ -174,6 +174,9 @@ data TxOut era
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Addr28Extra
       {-# UNPACK #-} !(CompactForm Coin) -- Ada value
+  | TxOut_AddrHash28_AdaOnly_NoStake
+      {-# UNPACK #-} !Addr28Extra
+      {-# UNPACK #-} !(CompactForm Coin) -- Ada value
   | TxOut_AddrHash28_AdaOnly_DataHash32
       !(Credential 'Staking (Crypto era))
       {-# UNPACK #-} !Addr28Extra
@@ -202,7 +205,14 @@ viewCompactTxOut txOut = case txOut of
   TxOutCompactDatum addr val datum -> (addr, val, Datum datum, SNothing)
   TxOutCompactRefScript addr val datum rs -> (addr, val, datum, SJust rs)
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal ->
-    let (a, b, c) = Alonzo.viewCompactTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
+    let (a, b, c) =
+          Alonzo.viewCompactTxOut @era $
+            Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
+     in (a, b, toDatum c, SNothing)
+  TxOut_AddrHash28_AdaOnly_NoStake addr28Extra adaVal ->
+    let (a, b, c) =
+          Alonzo.viewCompactTxOut @era $
+            Alonzo.TxOut_AddrHash28_AdaOnly_NoStake addr28Extra adaVal
      in (a, b, toDatum c, SNothing)
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32 ->
     let (a, b, c) =
@@ -239,6 +249,10 @@ viewTxOut (TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal) = (addr, val, N
   where
     (addr, val, _) =
       Alonzo.viewTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly stakeRef addr28Extra adaVal
+viewTxOut (TxOut_AddrHash28_AdaOnly_NoStake addr28Extra adaVal) = (addr, val, NoDatum, SNothing)
+  where
+    (addr, val, _) =
+      Alonzo.viewTxOut @era $ Alonzo.TxOut_AddrHash28_AdaOnly_NoStake addr28Extra adaVal
 viewTxOut (TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra adaVal dataHash32) =
   case mDataHash of
     SNothing -> (addr, val, NoDatum, SNothing)
@@ -306,6 +320,10 @@ pattern TxOut addr vl datum refScript <-
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
         Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
           TxOut_AddrHash28_AdaOnly stakeCred addr28Extra adaCompact
+      | StakeRefNull <- stakeRef,
+        Just adaCompact <- getAdaOnly (Proxy @era) vl,
+        Just (Refl, addr28Extra) <- encodeAddress28 network paymentCred =
+          TxOut_AddrHash28_AdaOnly_NoStake addr28Extra adaCompact
     TxOut (Addr network paymentCred stakeRef) vl (DatumHash dh) SNothing
       | StakeRefBase stakeCred <- stakeRef,
         Just adaCompact <- getAdaOnly (Proxy @era) vl,
@@ -940,6 +958,7 @@ instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (T
     TxOutCompactDatum _ cv _ -> fromCompact cv
     TxOutCompactRefScript _ cv _ _ -> fromCompact cv
     TxOut_AddrHash28_AdaOnly _ _ cc -> inject (fromCompact cc)
+    TxOut_AddrHash28_AdaOnly_NoStake _ cc -> inject (fromCompact cc)
     TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> inject (fromCompact cc)
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
@@ -961,10 +980,13 @@ getBabbageTxOutEitherAddr = \case
   TxOutCompactRefScript cAddr _ _ _ -> Right cAddr
   TxOutCompactDatum cAddr _ _ -> Right cAddr
   TxOut_AddrHash28_AdaOnly stakeRef addr28Extra _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
+    | Just addr <- decodeAddress28 (StakeRefBase stakeRef) addr28Extra -> Left addr
+    | otherwise -> error "Impossible: Compacted an address of non-standard size"
+  TxOut_AddrHash28_AdaOnly_NoStake addr28Extra _
+    | Just addr <- decodeAddress28 StakeRefNull addr28Extra -> Left addr
     | otherwise -> error "Impossible: Compacted an address of non-standard size"
   TxOut_AddrHash28_AdaOnly_DataHash32 stakeRef addr28Extra _ _
-    | Just addr <- decodeAddress28 stakeRef addr28Extra -> Left addr
+    | Just addr <- decodeAddress28 (StakeRefBase stakeRef) addr28Extra -> Left addr
     | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"
 
 txOutData :: TxOut era -> Maybe (Data era)
@@ -975,6 +997,7 @@ txOutData = \case
   TxOutCompactRefScript _ _ (Datum binaryData) _ -> Just $! binaryDataToData binaryData
   TxOutCompactRefScript _ _ _ _ -> Nothing
   TxOut_AddrHash28_AdaOnly {} -> Nothing
+  TxOut_AddrHash28_AdaOnly_NoStake {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> Nothing
 
 txOutDataHash :: Era era => TxOut era -> Maybe (DataHash (Crypto era))
@@ -988,6 +1011,7 @@ txOutDataHash = \case
       DatumHash dh -> Just dh
       Datum binaryData -> Just $! hashBinaryData binaryData
   TxOut_AddrHash28_AdaOnly {} -> Nothing
+  TxOut_AddrHash28_AdaOnly_NoStake {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 _ _ _ dataHash32 -> decodeDataHash32 dataHash32
 
 txOutScript :: TxOut era -> Maybe (Core.Script era)
@@ -997,4 +1021,5 @@ txOutScript = \case
   TxOutCompactDatum {} -> Nothing
   TxOutCompactRefScript _ _ _ s -> Just s
   TxOut_AddrHash28_AdaOnly {} -> Nothing
+  TxOut_AddrHash28_AdaOnly_NoStake {} -> Nothing
   TxOut_AddrHash28_AdaOnly_DataHash32 {} -> Nothing
