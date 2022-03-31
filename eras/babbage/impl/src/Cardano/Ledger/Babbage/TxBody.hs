@@ -368,7 +368,7 @@ data TxBodyRaw era = TxBodyRaw
     _referenceInputs :: !(Set (TxIn (Crypto era))),
     _outputs :: !(StrictSeq (TxOut era)),
     _collateralReturn :: !(StrictMaybe (TxOut era)),
-    _totalCollateral :: !Coin,
+    _totalCollateral :: !(StrictMaybe Coin),
     _certs :: !(StrictSeq (DCert (Crypto era))),
     _wdrls :: !(Wdrl (Crypto era)),
     _txfee :: !Coin,
@@ -475,7 +475,7 @@ pattern TxBody ::
   Set (TxIn (Crypto era)) ->
   StrictSeq (TxOut era) ->
   StrictMaybe (TxOut era) ->
-  Coin ->
+  StrictMaybe Coin ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
   Coin ->
@@ -582,7 +582,7 @@ collateralInputs' :: TxBody era -> Set (TxIn (Crypto era))
 referenceInputs' :: TxBody era -> Set (TxIn (Crypto era))
 outputs' :: TxBody era -> StrictSeq (TxOut era)
 collateralReturn' :: TxBody era -> StrictMaybe (TxOut era)
-totalCollateral' :: TxBody era -> Coin
+totalCollateral' :: TxBody era -> StrictMaybe Coin
 certs' :: TxBody era -> StrictSeq (DCert (Crypto era))
 txfee' :: TxBody era -> Coin
 wdrls' :: TxBody era -> Wdrl (Crypto era)
@@ -806,7 +806,7 @@ encodeTxBodyRaw
       !> Key 18 (E encodeFoldable _referenceInputs)
       !> Key 1 (E encodeFoldable _outputs)
       !> encodeKeyedStrictMaybe 16 _collateralReturn
-      !> Key 17 (To _totalCollateral)
+      !> encodeKeyedStrictMaybe 17 _totalCollateral
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
       !> Omit null (Key 4 (E encodeFoldable _certs))
@@ -860,7 +860,7 @@ instance
           mempty
           StrictSeq.empty
           SNothing
-          mempty
+          SNothing
           StrictSeq.empty
           (Wdrl mempty)
           mempty
@@ -895,7 +895,7 @@ instance
       bodyFields 17 =
         field
           (\x tx -> tx {_totalCollateral = x})
-          (D fromCBOR)
+          (D (SJust <$> fromCBOR))
       bodyFields 2 = field (\x tx -> tx {_txfee = x}) From
       bodyFields 3 =
         field
@@ -962,7 +962,7 @@ instance (Crypto era ~ c) => HasField "referenceInputs" (TxBody era) (Set (TxIn 
 instance HasField "collateralReturn" (TxBody era) (StrictMaybe (TxOut era)) where
   getField (TxBodyConstr (Memo m _)) = _collateralReturn m
 
-instance HasField "totalCollateral" (TxBody era) Coin where
+instance HasField "totalCollateral" (TxBody era) (StrictMaybe Coin) where
   getField (TxBodyConstr (Memo m _)) = _totalCollateral m
 
 instance (Crypto era ~ c) => HasField "minted" (TxBody era) (Set (ScriptHash c)) where

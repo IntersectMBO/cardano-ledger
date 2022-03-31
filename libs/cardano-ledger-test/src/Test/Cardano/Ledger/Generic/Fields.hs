@@ -108,7 +108,7 @@ data TxBodyField era
   | RefInputs (Set (TxIn (Crypto era)))
   | Outputs (StrictSeq (Core.TxOut era))
   | CollateralReturn (StrictMaybe (Core.TxOut era))
-  | TotalCol Coin
+  | TotalCol (StrictMaybe Coin)
   | Certs (StrictSeq (DCert (Crypto era)))
   | Wdrls (Wdrl (Crypto era))
   | Txfee Coin
@@ -259,7 +259,7 @@ initialTxBody (Babbage _) =
     Set.empty
     Seq.empty
     SNothing
-    (Coin 0)
+    SNothing
     Seq.empty
     initWdrl
     (Coin 0)

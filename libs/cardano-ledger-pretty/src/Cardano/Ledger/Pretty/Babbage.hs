@@ -219,7 +219,7 @@ ppTxBody x =
       ("reference inputs", ppSet ppTxIn (referenceInputs' x)),
       ("outputs", ppStrictSeq ppTxOut (outputs' x)),
       ("collateral return", ppStrictMaybe ppTxOut (collateralReturn' x)),
-      ("total collateral", ppCoin (totalCollateral' x)),
+      ("total collateral", ppStrictMaybe ppCoin (totalCollateral' x)),
       ("certificates", ppStrictSeq ppDCert (certs' x)),
       ("withdrawals", ppWdrl (wdrls' x)),
       ("txfee", ppCoin (txfee' x)),
