@@ -43,12 +43,16 @@ benchTxOut =
       stake = StakeRefBase (KeyHashObj stakeAddr28)
       addr :: Int -> Addr StandardCrypto
       addr n = Addr Mainnet (key n) stake
+      addrNoStaking :: Int -> Addr StandardCrypto
+      addrNoStaking n = Addr Mainnet (key n) StakeRefNull
       value :: Value StandardCrypto
       value = Value 200 (singleton (PolicyID policyId28) (singleton assName 217))
       txOutAddr :: Int -> TxOut A
       txOutAddr n = TxOut (addr n) value (SJust dataHash32)
       txOutAddrAdaOnly :: Int -> TxOut A
       txOutAddrAdaOnly n = TxOut (addr n) ada SNothing
+      txOutAddrAdaOnlyNoStaking :: Int -> TxOut A
+      txOutAddrAdaOnlyNoStaking n = TxOut (addrNoStaking n) ada SNothing
       txOutAddrAdaOnlyDataHash :: Int -> TxOut A
       txOutAddrAdaOnlyDataHash n = TxOut (addr n) ada (SJust dataHash32)
       count :: Int
@@ -59,19 +63,22 @@ benchTxOut =
             "construct"
             [ constructTxOutAlonzoBench count "ValueDataHash" addr value (SJust dataHash32),
               constructTxOutAlonzoBench count "AdaOnlyDataHash" addr ada (SJust dataHash32),
-              constructTxOutAlonzoBench count "AdaOnly" addr ada SNothing
+              constructTxOutAlonzoBench count "AdaOnly" addr ada SNothing,
+              constructTxOutAlonzoBench count "AdaOnlyNoStaking" addrNoStaking ada SNothing
             ],
           bgroup
             "access"
             [ accessTxOutAlonzoBench count "ValueDataHash" txOutAddr,
               accessTxOutAlonzoBench count "AdaOnlyDataHash" txOutAddrAdaOnlyDataHash,
-              accessTxOutAlonzoBench count "AdaOnly" txOutAddrAdaOnly
+              accessTxOutAlonzoBench count "AdaOnly" txOutAddrAdaOnly,
+              accessTxOutAlonzoBench count "AdaOnlyNoStaking" txOutAddrAdaOnlyNoStaking
             ],
           bgroup
             "serialize"
             [ serializeTxOutAlonzoBench count "ValueDataHash" txOutAddr,
               serializeTxOutAlonzoBench count "AdaOnlyDataHash" txOutAddrAdaOnlyDataHash,
-              serializeTxOutAlonzoBench count "AdaOnly" txOutAddrAdaOnly
+              serializeTxOutAlonzoBench count "AdaOnly" txOutAddrAdaOnly,
+              serializeTxOutAlonzoBench count "AdaOnlyNoStaking" txOutAddrAdaOnlyNoStaking
             ]
         ]
 
