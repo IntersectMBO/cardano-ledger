@@ -46,7 +46,7 @@ where
 
 import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing), isSNothing)
+import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta, Script, Value)
 import qualified Cardano.Ledger.Core as Core
@@ -79,7 +79,10 @@ import Data.Coders
     decode,
     decodeSet,
     decodeStrictSeq,
+    encodeKeyedStrictMaybe,
     field,
+    invalidField,
+    ofield,
     (!>),
   )
 import qualified Data.Map as Map
@@ -178,13 +181,6 @@ fromSJust :: StrictMaybe a -> a
 fromSJust (SJust x) = x
 fromSJust SNothing = error "SNothing in fromSJust"
 
-encodeKeyedStrictMaybe ::
-  ToCBOR a =>
-  Word ->
-  StrictMaybe a ->
-  Encode ('Closed 'Sparse) (StrictMaybe a)
-encodeKeyedStrictMaybe key x = Omit isSNothing (Key key (E (toCBOR . fromSJust) x))
-
 -- Sparse encodings of TxBodyRaw, the key values are fixed by backwarad compatibility
 -- concerns as we want the Shelley era TxBody to deserialise as a Shelley-ma TxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
@@ -210,14 +206,14 @@ bodyFields :: FamsFrom era => Word -> Field (TxBodyRaw era)
 bodyFields 0 = field (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
 bodyFields 1 = field (\x tx -> tx {outputs = x}) (D (decodeStrictSeq fromCBOR))
 bodyFields 2 = field (\x tx -> tx {txfee = x}) From
-bodyFields 3 = field (\x tx -> tx {vldt = (vldt tx) {invalidHereafter = x}}) (D (SJust <$> fromCBOR))
+bodyFields 3 = ofield (\x tx -> tx {vldt = (vldt tx) {invalidHereafter = x}}) From
 bodyFields 4 = field (\x tx -> tx {certs = x}) (D (decodeStrictSeq fromCBOR))
 bodyFields 5 = field (\x tx -> tx {wdrls = x}) From
-bodyFields 6 = field (\x tx -> tx {update = x}) (D (SJust <$> fromCBOR))
-bodyFields 7 = field (\x tx -> tx {adHash = x}) (D (SJust <$> fromCBOR))
-bodyFields 8 = field (\x tx -> tx {vldt = (vldt tx) {invalidBefore = x}}) (D (SJust <$> fromCBOR))
+bodyFields 6 = ofield (\x tx -> tx {update = x}) From
+bodyFields 7 = ofield (\x tx -> tx {adHash = x}) From
+bodyFields 8 = ofield (\x tx -> tx {vldt = (vldt tx) {invalidBefore = x}}) From
 bodyFields 9 = field (\x tx -> tx {mint = x}) (D decodeMint)
-bodyFields n = field (\_ t -> t) (Invalid n)
+bodyFields n = invalidField n
 
 initial :: (Val (Value era)) => TxBodyRaw era
 initial =

@@ -90,7 +90,6 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     Url,
     invalidKey,
-    isSNothing,
     maybeToStrictMaybe,
     strictMaybeToMaybe,
   )
@@ -156,13 +155,15 @@ import Data.ByteString.Short (ShortByteString, pack)
 import Data.Coders
   ( Decode (..),
     Density (..),
-    Dual (..),
     Encode (..),
     Field,
     Wrapped (..),
     decode,
     encode,
+    encodeKeyedStrictMaybe,
     field,
+    invalidField,
+    ofield,
     (!>),
   )
 import Data.Constraint (Constraint)
@@ -171,7 +172,7 @@ import Data.IP (IPv4, IPv6)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromJust, fromMaybe)
+import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
@@ -647,24 +648,13 @@ instance
 -- The order of serializing optional fields, and their key values is
 -- demanded by backward compatibility concerns.
 
--- | This Dual follows strategy of the the old code, for backward compatibility,
---   of serializing StrictMaybe values. The strategy is to serialise only the
---   value: 'x' in a (SJust x). The SNothing and the SJust part are never
---   written to the serialised bytes but are supplied by the Omit capability.
---   Be sure and wrap a (Omit isNothing (Key v _)) around use of this Dual.
---   Like this: (Omit isNothing (Key v (ED omitStrictNothingDual x))).
---   Neither the Omit or the key is needed for Decoders.
-omitStrictNothingDual :: (FromCBOR t, ToCBOR t) => Dual (StrictMaybe t)
-omitStrictNothingDual = Dual (toCBOR . fromJust . strictMaybeToMaybe) (SJust <$> fromCBOR)
-
 -- | Choose a de-serialiser when given the key (of type Word).
 --   Wrap it in a Field which pairs it with its update function which
 --   changes only the field being deserialised.
 boxBody ::
   ( Era era,
     FromCBOR (Core.TxOut era),
-    FromCBOR (Core.PParamsDelta era),
-    ToCBOR (Core.PParamsDelta era)
+    FromCBOR (Core.PParamsDelta era)
   ) =>
   Word ->
   Field (TxBodyRaw era)
@@ -674,15 +664,15 @@ boxBody 4 = field (\x tx -> tx {_certsX = x}) (D (decodeStrictSeq fromCBOR))
 boxBody 5 = field (\x tx -> tx {_wdrlsX = x}) From
 boxBody 2 = field (\x tx -> tx {_txfeeX = x}) From
 boxBody 3 = field (\x tx -> tx {_ttlX = x}) From
-boxBody 6 = field (\x tx -> tx {_txUpdateX = x}) (DD omitStrictNothingDual)
-boxBody 7 = field (\x tx -> tx {_mdHashX = x}) (DD omitStrictNothingDual)
-boxBody n = field (\_ t -> t) (Invalid n)
+boxBody 6 = ofield (\x tx -> tx {_txUpdateX = x}) From
+boxBody 7 = ofield (\x tx -> tx {_mdHashX = x}) From
+boxBody n = invalidField n
 
 -- | Tells how to serialise each field, and what tag to label it with in the
 --   serialisation. boxBody and txSparse should be Duals, visually inspect
 --   The key order looks strange but was choosen for backward compatibility.
 txSparse ::
-  (TransTxBody ToCBOR era, FromCBOR (Core.PParamsDelta era), Era era) =>
+  (TransTxBody ToCBOR era, Era era) =>
   TxBodyRaw era ->
   Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
@@ -693,8 +683,8 @@ txSparse (TxBodyRaw input output cert wdrl fee ttl update hash) =
     !> Key 3 (To ttl)
     !> Omit null (Key 4 (E encodeFoldable cert))
     !> Omit (null . unWdrl) (Key 5 (To wdrl))
-    !> Omit isSNothing (Key 6 (ED omitStrictNothingDual update))
-    !> Omit isSNothing (Key 7 (ED omitStrictNothingDual hash))
+    !> encodeKeyedStrictMaybe 6 update
+    !> encodeKeyedStrictMaybe 7 hash
 
 -- The initial TxBody. We will overide some of these fields as we build a TxBody,
 -- adding one field at a time, using optional serialisers, inside the Pattern.
