@@ -171,7 +171,7 @@ test-suite cardano-ledger-shelley-test
       -- determined ad-hoc.
       "-with-rtsopts=-K4m -M250m"
   build-depends:
-      aeson,
+      aeson >= 2,
       base16-bytestring >= 1,
       binary,
       bytestring,

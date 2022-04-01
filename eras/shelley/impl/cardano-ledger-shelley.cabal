@@ -85,7 +85,7 @@ library
     Cardano.Ledger.Shelley.UTxO
   hs-source-dirs: src
   build-depends:
-    aeson,
+    aeson >= 2,
     base16-bytestring >= 1,
     bytestring,
     cardano-binary,

@@ -98,7 +98,7 @@ benchmark performance
   main-is:          Performance.hs
   build-depends:
     base,
-    aeson,
+    aeson >= 2,
     bytestring,
     base16-bytestring,
     cardano-binary,

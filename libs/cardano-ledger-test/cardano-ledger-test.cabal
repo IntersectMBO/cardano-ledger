@@ -90,7 +90,7 @@ library
     Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.ValueFromList
   build-depends:
-    aeson,
+    aeson >= 2,
     array,
     bytestring,
     cardano-binary,
