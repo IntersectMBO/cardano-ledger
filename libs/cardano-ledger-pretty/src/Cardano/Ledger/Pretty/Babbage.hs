@@ -144,6 +144,8 @@ ppBabbageUtxoPred (UnequalCollateralReturn c1 c2) =
     [("collateral needed", ppCoin c1), ("collateral returned", ppCoin c2)]
 ppBabbageUtxoPred (DanglingWitnessDataHash dhset) =
   ppSexp "DanglingWitnessDataHashes" [ppSet ppDataHash dhset]
+ppBabbageUtxoPred (MalformedScripts scripts) =
+  ppSexp "MalformedScripts" [ppSet ppScriptHash scripts]
 
 instance
   ( PrettyA (UtxoPredicateFailure era),
