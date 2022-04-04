@@ -23,7 +23,7 @@ import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
 import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos (FailureDescription (..), TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), mkCostModel)
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -35,7 +35,7 @@ import Cardano.Ledger.Alonzo.Tx
     minfee,
   )
 import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
-import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), TranslationError, VersionedTxInfo, txInfo, valContext)
+import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -121,6 +121,7 @@ import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Functor.Identity (Identity, runIdentity)
 import qualified Data.List as List
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -2251,7 +2252,7 @@ alonzoUTXOWexamplesB pf =
                   [ fromUtxos @era
                       ( ValidationTagMismatch
                           (IsValid True)
-                          (FailedUnexpectedly [quietPlutusFailure])
+                          (FailedUnexpectedly (quietPlutusFailure :| []))
                       )
                   ]
               ),

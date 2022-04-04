@@ -198,10 +198,10 @@ explainTest (script@(PlutusScript _ bytes)) mode ds =
            (ExUnits 100000000 10000000)
            ds
        ) of
-    (ShouldSucceed, Passes) -> assertBool "" True
-    (ShouldSucceed, Fails xs) -> assertBool (show xs) False
-    (ShouldFail, Passes) -> assertBool ("Test that should fail, passes: " ++ show script) False
-    (ShouldFail, Fails _) -> assertBool "" True
+    (ShouldSucceed, Passes _) -> assertBool "" True
+    (ShouldSucceed, Fails _ xs) -> assertBool (show xs) False
+    (ShouldFail, Passes _) -> assertBool ("Test that should fail, passes: " ++ show script) False
+    (ShouldFail, Fails _ _) -> assertBool "" True
 explainTest _other _mode _ds = assertBool "BAD Script" False
 
 explainTestTree :: TestTree

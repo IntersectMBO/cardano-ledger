@@ -30,12 +30,11 @@ import Cardano.Ledger.Alonzo.Data (Data (..), binaryDataToData)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
 import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBbodyPredFail (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos (FailureDescription (..), TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
-import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), unTxDats)
 import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
@@ -70,6 +69,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
 import qualified Data.Compact.SplitMap as Split
+import Data.List.NonEmpty (toList)
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
@@ -401,7 +401,7 @@ instance PrettyA (CollectError crypto) where
 ppTagMismatchDescription :: TagMismatchDescription -> PDoc
 ppTagMismatchDescription (PassedUnexpectedly) = ppSexp "PassedUnexpectedly" []
 ppTagMismatchDescription (FailedUnexpectedly xs) =
-  ppSexp "FailedUnexpectedly" [ppList ppFailureDescription xs]
+  ppSexp "FailedUnexpectedly" [ppList ppFailureDescription (toList xs)]
 
 instance PrettyA TagMismatchDescription where
   prettyA = ppTagMismatchDescription

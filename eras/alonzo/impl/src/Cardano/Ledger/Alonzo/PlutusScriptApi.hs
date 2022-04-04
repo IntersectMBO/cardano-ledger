@@ -35,11 +35,11 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (..),
-    FailureDescription (..),
+    ScriptFailure (..),
     ScriptResult (..),
     TranslationError (..),
-    andResult,
     runPLCScript,
+    scriptFail,
     valContext,
   )
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), unTxDats)
@@ -239,14 +239,14 @@ evalScripts ::
   tx ->
   [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
   ScriptResult
-evalScripts _pv _tx [] = Passes
+evalScripts _pv _tx [] = mempty
 evalScripts pv tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
   lift (evalTimelock vhks (getField @"vldt" (getField @"body" tx)) timelock)
-    `andResult` evalScripts pv tx rest
+    <> evalScripts pv tx rest
   where
     vhks = Set.map witKeyHash (txwitsVKey' (getField @"wits" tx))
-    lift True = Passes
-    lift False = Fails [OnePhaseFailure . pack . show $ timelock]
+    lift True = mempty
+    lift False = scriptFail . OnePhaseSF . pack . show $ timelock
 evalScripts pv tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : rest) =
   let beginMsg =
         intercalate
@@ -262,7 +262,7 @@ evalScripts pv tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : r
             "END",
             "res = " <> show res
           ]
-   in (traceEvent endMsg res) `andResult` evalScripts pv tx rest
+   in (traceEvent endMsg res) <> evalScripts pv tx rest
 
 -- Collect information (purpose and ScriptHash) about all the
 -- Credentials that refer to scripts, that might be run in a Tx.
