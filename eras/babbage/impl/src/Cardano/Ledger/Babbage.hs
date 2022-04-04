@@ -111,7 +111,7 @@ instance ShelleyEraCrypto c => API.ApplyBlock (BabbageEra c)
 
 instance ShelleyEraCrypto c => API.ShelleyBasedEra (BabbageEra c)
 
--- | The Alonzo era
+-- | The Babbage era
 data BabbageEra c
 
 instance
