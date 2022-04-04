@@ -1,6 +1,4 @@
-{-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -132,13 +130,6 @@ class
     MempoolState era ->
     Core.Tx era ->
     m (MempoolState era, Validated (Core.Tx era))
-  default applyTx ::
-    MonadError (ApplyTxError era) m =>
-    Globals ->
-    MempoolEnv era ->
-    MempoolState era ->
-    Core.Tx era ->
-    m (MempoolState era, Validated (Core.Tx era))
   applyTx globals env state tx =
     let res =
           flip runReader globals
@@ -161,13 +152,6 @@ class
   --   this function will be called each time the mempool revalidates
   --   transactions against a new mempool state.
   reapplyTx ::
-    MonadError (ApplyTxError era) m =>
-    Globals ->
-    MempoolEnv era ->
-    MempoolState era ->
-    Validated (Core.Tx era) ->
-    m (MempoolState era)
-  default reapplyTx ::
     MonadError (ApplyTxError era) m =>
     Globals ->
     MempoolEnv era ->
@@ -254,8 +238,7 @@ instance
 
 -- | Old 'applyTxs'
 applyTxs ::
-  ApplyTx era =>
-  MonadError (ApplyTxError era) m =>
+  (ApplyTx era, MonadError (ApplyTxError era) m) =>
   Globals ->
   SlotNo ->
   Seq (Core.Tx era) ->
@@ -289,7 +272,7 @@ applyTxsTransition globals env txs state =
 -- | Transform a function over mempool states to one over the full
 -- 'NewEpochState'.
 overNewEpochState ::
-  Applicative f =>
+  Functor f =>
   (MempoolState era -> f (MempoolState era)) ->
   NewEpochState era ->
   f (NewEpochState era)
