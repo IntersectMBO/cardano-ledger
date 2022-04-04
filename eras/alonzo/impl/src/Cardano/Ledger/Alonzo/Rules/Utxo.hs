@@ -380,7 +380,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
         ( \out ->
             let v = getField @"value" out
              in -- pointwise is used because non-ada amounts must be >= 0 too
-                Val.pointwise (<) v (Val.inject $ Coin (utxoEntrySize out * coinsPerUTxOWord))
+                not $ Val.pointwise (>=) v (Val.inject $ Coin (utxoEntrySize out * coinsPerUTxOWord))
         )
         (SplitMap.elems outputs)
 
