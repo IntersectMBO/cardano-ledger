@@ -514,10 +514,6 @@ In this case, the states of the UTxO, fee
     {
     \var{txb}\leteq\txbody{tx} &
     \var{sLst} := \fun{collectTwoPhaseScriptInputs}~\mathsf{EI}~\mathsf{SysSt}~\var{pp}~\var{tx}~\var{utxo}
-    \\
-    ~
-    \\
-    \fun{isValid}~\var{tx} = \fun{evalScripts}~\var{tx}~\var{sLst} = \True
     \\~\\
     {
       \begin{array}{r}
@@ -531,7 +527,9 @@ In this case, the states of the UTxO, fee
     \var{refunded} \leteq \keyRefunds{pp}{txb}
     \\
     \var{depositChange} \leteq
-      (\fun{totalDeposits}~{pp}~\var{poolParams}~\txcerts{txb})~-~\var{refunded}
+      \fun{totalDeposits}~{pp}~\var{poolParams}~(\txcerts{txb})~-~\var{refunded}
+    \\~\\
+    \fun{isValid}~\var{tx} = \fun{evalScripts}~\var{tx}~\var{sLst} = \True
     }
     {
     \begin{array}{l}
@@ -881,8 +879,7 @@ by the UTXO transition (the application of which is also part of the conditions)
       \\
       \left\{
         c\in\txcerts{txb}~\cap\DCertMir
-      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum \wedge
-      \fun{d}~\var{pp} > 0
+      \right\} \neq\emptyset \implies \vert genSig\vert \geq \Quorum
       \\~\\
       \var{adh}\leteq\fun{txADhash}~\var{txb}
       &
