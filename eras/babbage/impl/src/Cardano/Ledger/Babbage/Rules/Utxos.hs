@@ -202,9 +202,9 @@ scriptsNo = do
       {- isValid tx = evalScripts tx sLst = False -}
       case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
         Passes _ -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
-        Fails ps fs ->
+        Fails ps fs -> do
           tellEvent (SuccessfulPlutusScriptsEvent ps)
-            >> tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
+          tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
     Left info -> failBecause (CollectErrors info)
 
   () <- pure $! traceEvent invalidEnd ()

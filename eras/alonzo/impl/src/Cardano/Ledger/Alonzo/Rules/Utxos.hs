@@ -231,9 +231,9 @@ scriptsNotValidateTransition = do
       whenFailureFree $
         case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
           Passes _ps -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
-          Fails ps fs ->
+          Fails ps fs -> do
             tellEvent (SuccessfulPlutusScriptsEvent ps)
-              >> tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
+            tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent invalidEnd ()
@@ -280,7 +280,7 @@ instance FromCBOR FailureDescription where
 scriptFailureToFailureDescription :: ScriptFailure -> FailureDescription
 scriptFailureToFailureDescription (OnePhaseSF t) = OnePhaseFailure t
 scriptFailureToFailureDescription (PlutusSF t pd) =
-  PlutusFailure t (B64.encode . serialize' $ pd)
+  PlutusFailure t (B64.encode $ serialize' pd)
 
 scriptFailuresToPredicateFailure :: NonEmpty ScriptFailure -> NonEmpty FailureDescription
 scriptFailuresToPredicateFailure = fmap scriptFailureToFailureDescription
