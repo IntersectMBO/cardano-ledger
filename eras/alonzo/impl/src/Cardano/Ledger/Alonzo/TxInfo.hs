@@ -12,7 +12,7 @@ module Cardano.Ledger.Alonzo.TxInfo where
 
 -- =============================================
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull', serialize')
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull')
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
@@ -71,6 +71,7 @@ import Data.Coders
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Either (rights)
 import Data.Fixed (HasResolution (resolution))
+import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -454,44 +455,30 @@ valContext ::
 valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 
-data FailureDescription
-  = OnePhaseFailure Text
-  | PlutusFailure Text ByteString
-  deriving (Show, Eq, Ord, Generic, NoThunks)
+data ScriptFailure = PlutusSF Text PlutusDebug
+  deriving (Show, Eq, Generic, NoThunks)
 
-instance ToCBOR FailureDescription where
-  toCBOR (OnePhaseFailure s) = encode $ Sum OnePhaseFailure 0 !> To s
-  toCBOR (PlutusFailure s b) = encode $ Sum PlutusFailure 1 !> To s !> To b
+data ScriptResult
+  = Passes [PlutusDebug]
+  | Fails [PlutusDebug] (NonEmpty ScriptFailure)
+  deriving (Show, Generic)
 
-instance FromCBOR FailureDescription where
-  fromCBOR = decode (Summands "FailureDescription" dec)
-    where
-      dec 0 = SumD OnePhaseFailure <! From
-      dec 1 = SumD PlutusFailure <! From <! From
-      dec n = Invalid n
+scriptPass :: PlutusDebug -> ScriptResult
+scriptPass pd = Passes [pd]
 
-data ScriptResult = Passes | Fails ![FailureDescription]
-  deriving (Show, Generic, NoThunks)
+scriptFail :: ScriptFailure -> ScriptResult
+scriptFail pd = Fails [] (pure pd)
 
-instance ToCBOR ScriptResult where
-  toCBOR Passes = encode $ Sum Passes 0
-  toCBOR (Fails fs) = encode $ Sum Fails 1 !> To fs
-
-instance FromCBOR ScriptResult where
-  fromCBOR = decode (Summands "ScriptResult" dec)
-    where
-      dec 0 = SumD Passes
-      dec 1 = SumD Fails <! From
-      dec n = Invalid n
-
-andResult :: ScriptResult -> ScriptResult -> ScriptResult
-andResult Passes Passes = Passes
-andResult Passes ans = ans
-andResult ans Passes = ans
-andResult (Fails xs) (Fails ys) = Fails (xs ++ ys)
+instance NoThunks ScriptResult
 
 instance Semigroup ScriptResult where
-  (<>) = andResult
+  (Passes ps) <> (Passes qs) = Passes (ps <> qs)
+  (Passes ps) <> (Fails qs xs) = Fails (ps <> qs) xs
+  (Fails ps xs) <> (Passes qs) = Fails (ps <> qs) xs
+  (Fails ps xs) <> (Fails qs ys) = Fails (ps <> qs) (xs <> ys)
+
+instance Monoid ScriptResult where
+  mempty = Passes mempty
 
 data PlutusDebug
   = PlutusDebugV1
@@ -506,12 +493,15 @@ data PlutusDebug
       SBS.ShortByteString
       [PV2.Data]
       ProtVer
+  deriving (Show, Eq, Generic, NoThunks)
+
+data PlutusError = PlutusErrorV1 PV1.EvaluationError | PlutusErrorV2 PV2.EvaluationError
   deriving (Show)
 
 data PlutusDebugInfo
   = DebugSuccess PV1.ExBudget
   | DebugCannotDecode String
-  | DebugInfo [Text] String
+  | DebugInfo [Text] PlutusError PlutusDebug
   | DebugBadHex String
   deriving (Show)
 
@@ -545,7 +535,7 @@ debugPlutus db =
     Right bs ->
       case decodeFull' bs of
         Left e -> DebugCannotDecode (show e)
-        Right (PlutusDebugV1 cm units script ds pv) ->
+        Right pdb@(PlutusDebugV1 cm units script ds pv) ->
           case PV1.evaluateScriptRestricting
             (transProtocolVersion pv)
             PV1.Verbose
@@ -553,9 +543,9 @@ debugPlutus db =
             (transExUnits units)
             script
             ds of
-            (logs, Left e) -> DebugInfo logs (show e)
+            (logs, Left e) -> DebugInfo logs (PlutusErrorV1 e) pdb
             (_, Right ex) -> DebugSuccess ex
-        Right (PlutusDebugV2 cm units script ds pv) ->
+        Right pdb@(PlutusDebugV2 cm units script ds pv) ->
           case PV2.evaluateScriptRestricting
             (transProtocolVersion pv)
             PV2.Verbose
@@ -563,7 +553,7 @@ debugPlutus db =
             (transExUnits units)
             script
             ds of
-            (logs, Left e) -> DebugInfo logs (show e)
+            (logs, Left e) -> DebugInfo logs (PlutusErrorV2 e) pdb
             (_, Right ex) -> DebugSuccess ex
 
 -- The runPLCScript in the Specification has a slightly different type
@@ -592,11 +582,13 @@ runPLCScript proxy pv lang cm scriptbytestring units ds =
     scriptbytestring
     ds of
     (_, Left e) -> explainPlutusFailure proxy pv lang scriptbytestring e ds cm units
-    (_, Right _) -> Passes
+    (_, Right _) -> scriptPass $ successConstructor lang cm units scriptbytestring ds pv
   where
     plutusPV = transProtocolVersion pv
     plutusInterpreter PlutusV1 = PV1.evaluateScriptRestricting plutusPV
     plutusInterpreter PlutusV2 = PV2.evaluateScriptRestricting plutusPV
+    successConstructor PlutusV1 = PlutusDebugV1
+    successConstructor PlutusV2 = PlutusDebugV2
 
 -- | Explain why a script might fail. Scripts come in two flavors:
 --
@@ -626,7 +618,7 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds@[dat, redeemer, info] 
       name :: String
       name = show ss
    in case PV1.fromData info of
-        Nothing -> Fails [PlutusFailure line db]
+        Nothing -> scriptFail $ PlutusSF line db
           where
             line =
               pack $
@@ -638,8 +630,8 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds@[dat, redeemer, info] 
                     "The redeemer is: " ++ show redeemer,
                     "The third data argument, does not decode to a context\n" ++ show info
                   ]
-            db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
-        Just info2 -> Fails [PlutusFailure line db]
+            db = PlutusDebugV1 cm eu scriptbytestring ds pv
+        Just info2 -> scriptFail $ PlutusSF line db
           where
             info3 = show (pretty (info2 :: PV1.ScriptContext))
             line =
@@ -652,7 +644,7 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds@[dat, redeemer, info] 
                     "The redeemer is: " ++ show redeemer,
                     "The context is:\n" ++ info3
                   ]
-            db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
+            db = PlutusDebugV1 cm eu scriptbytestring ds pv
 explainPlutusFailure _proxy pv lang scriptbytestring e ds@[redeemer, info] cm eu =
   -- A two data argument script.
   let ss :: Script era
@@ -660,7 +652,7 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds@[redeemer, info] cm eu
       name :: String
       name = show ss
    in case PV1.fromData info of
-        Nothing -> Fails [PlutusFailure line db]
+        Nothing -> scriptFail $ PlutusSF line db
           where
             line =
               pack $
@@ -671,8 +663,8 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds@[redeemer, info] cm eu
                     "The redeemer is: " ++ show redeemer,
                     "The second data argument, does not decode to a context\n" ++ show info
                   ]
-            db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
-        Just info2 -> Fails [PlutusFailure line db]
+            db = PlutusDebugV1 cm eu scriptbytestring ds pv
+        Just info2 -> scriptFail $ PlutusSF line db
           where
             info3 = show (pretty (info2 :: PV1.ScriptContext))
             line =
@@ -684,10 +676,10 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds@[redeemer, info] cm eu
                     "The redeemer is: " ++ show redeemer,
                     "The context is:\n" ++ info3
                   ]
-            db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
+            db = PlutusDebugV1 cm eu scriptbytestring ds pv
 explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
   -- A script with the wrong number of arguments
-  Fails [PlutusFailure line db]
+  scriptFail $ PlutusSF line db
   where
     ss :: Script era
     ss = PlutusScript lang scriptbytestring
@@ -703,7 +695,7 @@ explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
             ]
               ++ map show ds
           )
-    db = B64.encode . serialize' $ PlutusDebugV1 cm eu scriptbytestring ds pv
+    db = PlutusDebugV1 cm eu scriptbytestring ds pv
 
 validPlutusdata :: PV1.Data -> Bool
 validPlutusdata (PV1.Constr _n ds) = all validPlutusdata ds

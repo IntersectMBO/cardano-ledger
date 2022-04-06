@@ -35,14 +35,12 @@ import Cardano.Ledger.Alonzo.Tx
   )
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (..),
-    FailureDescription (..),
     ScriptResult (..),
     TranslationError (..),
-    andResult,
     runPLCScript,
     valContext,
   )
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (txwitsVKey'), unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
@@ -56,14 +54,13 @@ import Cardano.Ledger.Shelley.TxBody
     Delegation (..),
     Wdrl (..),
     getRwdCred,
-    witKeyHash,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), getScriptHash, scriptCred)
-import Cardano.Ledger.ShelleyMA.Timelocks (evalTimelock)
 import Cardano.Ledger.ShelleyMA.TxBody (ValidityInterval)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
+import Data.ByteString.Short (ShortByteString)
 import Data.Coders
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (foldl')
@@ -75,7 +72,6 @@ import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Text (pack)
 import Debug.Trace (traceEvent)
 import GHC.Generics
 import GHC.Records (HasField (..))
@@ -166,7 +162,7 @@ collectTwoPhaseScriptInputs ::
   Core.PParams era ->
   Core.Tx era ->
   UTxO era ->
-  Either [CollectError (Crypto era)] [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)]
+  Either [CollectError (Crypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
   let usedLanguages = [lang | (AlonzoScript.PlutusScript lang _) <- Map.elems scriptsUsed]
       costModels = unCostModels $ getField @"_costmdls" pp
@@ -183,42 +179,35 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
     -- on 1-phase scripts.
     knownToNotBe1Phase (sp, sh) =
       case sh `Map.lookup` scriptsUsed of
-        Just (AlonzoScript.PlutusScript lang _) -> Just (sp, lang, sh)
+        Just (AlonzoScript.PlutusScript lang script) -> Just (sp, lang, script)
         Just (AlonzoScript.TimelockScript _) -> Nothing
         Nothing -> Nothing
     redeemer (sp, lang, _) =
       case indexedRdmrs tx sp of
         Just (d, eu) -> Right (lang, sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
-    getscript (_, _, hash) =
-      case hash `Map.lookup` scriptsUsed of
-        Just script -> Right script
-        Nothing -> Left (NoWitness hash)
+    getscript (_, _, script) = script
     apply costs (lang, sp, d, eu) script =
       case txinfo lang of
-        Right inf -> Right (script, getData tx utxo sp ++ (d : [valContext inf sp]), eu, costs Map.! lang)
+        Right inf -> Right (script, lang, getData tx utxo sp ++ (d : [valContext inf sp]), eu, costs Map.! lang)
         Left te -> Left $ BadTranslation te
 
--- | Merge two lists (either of which may have failures, i.e. (Left _)), collect all the failures
+-- | Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
 --   but if there are none, use 'f' to construct a success.
-merge :: forall t1 t2 a1 a2. (t1 -> t2 -> Either a2 a1) -> [Either a2 t1] -> [Either a2 t2] -> Either [a2] [a1] -> Either [a2] [a1]
+merge :: forall t1 t2 a1 a2. (t1 -> t2 -> Either a2 a1) -> [Either a2 t1] -> [t2] -> Either [a2] [a1] -> Either [a2] [a1]
 merge _f [] [] answer = answer
 merge _f [] (_ : _) answer = answer
 merge _f (_ : _) [] answer = answer
 merge f (x : xs) (y : ys) zs = merge f xs ys (gg x y zs)
   where
-    gg :: Either a2 t1 -> Either a2 t2 -> Either [a2] [a1] -> Either [a2] [a1]
-    gg (Right a) (Right b) (Right cs) =
+    gg :: Either a2 t1 -> t2 -> Either [a2] [a1] -> Either [a2] [a1]
+    gg (Right a) b (Right cs) =
       case f a b of
         Right c -> Right $ c : cs
         Left e -> Left [e]
-    gg (Left a) (Right _) (Right _) = Left [a]
-    gg (Right _) (Left b) (Right _) = Left [b]
-    gg (Left a) (Left b) (Right _) = Left [a, b]
-    gg (Right _) (Right _) (Left cs) = Left cs
-    gg (Right _) (Left b) (Left cs) = Left (b : cs)
-    gg (Left a) (Right _) (Left cs) = Left (a : cs)
-    gg (Left a) (Left b) (Left cs) = Left (a : b : cs)
+    gg (Left a) _ (Right _) = Left [a]
+    gg (Right _) _ (Left cs) = Left cs
+    gg (Left a) _ (Left cs) = Left (a : cs)
 
 language :: AlonzoScript.Script era -> Maybe Language
 language (AlonzoScript.PlutusScript lang _) = Just lang
@@ -237,17 +226,10 @@ evalScripts ::
   ) =>
   ProtVer ->
   tx ->
-  [(AlonzoScript.Script era, [Data era], ExUnits, CostModel)] ->
+  [(ShortByteString, Language, [Data era], ExUnits, CostModel)] ->
   ScriptResult
-evalScripts _pv _tx [] = Passes
-evalScripts pv tx ((AlonzoScript.TimelockScript timelock, _, _, _) : rest) =
-  lift (evalTimelock vhks (getField @"vldt" (getField @"body" tx)) timelock)
-    `andResult` evalScripts pv tx rest
-  where
-    vhks = Set.map witKeyHash (txwitsVKey' (getField @"wits" tx))
-    lift True = Passes
-    lift False = Fails [OnePhaseFailure . pack . show $ timelock]
-evalScripts pv tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : rest) =
+evalScripts _pv _tx [] = mempty
+evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
   let beginMsg =
         intercalate
           ","
@@ -262,7 +244,7 @@ evalScripts pv tx ((AlonzoScript.PlutusScript lang pscript, ds, units, cost) : r
             "END",
             "res = " <> show res
           ]
-   in (traceEvent endMsg res) `andResult` evalScripts pv tx rest
+   in (traceEvent endMsg res) <> evalScripts pv tx rest
 
 -- Collect information (purpose and ScriptHash) about all the
 -- Credentials that refer to scripts, that might be run in a Tx.

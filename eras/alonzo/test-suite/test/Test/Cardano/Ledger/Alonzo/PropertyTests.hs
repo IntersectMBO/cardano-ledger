@@ -96,12 +96,12 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
                 (UTxO u) of
                 Left e -> error $ "Plutus script collection error: " <> show e
                 Right c -> c
-            collectedScripts = Set.fromList $ map (\(s, _, _, _) -> s) collected
+            collectedScripts = Set.fromList $ map (\(s, v, _, _, _) -> PlutusScript v s) collected
             suppliedPScrpts = Set.fromList [PlutusScript v s | PlutusScript v s <- Map.elems allScripts]
             expectedPScripts = collectedScripts == suppliedPScrpts
             allPlutusTrue = case evalScripts (_protocolVersion pp) tx collected of
-              Fails _ -> False
-              Passes -> True
+              Fails _ _ -> False
+              Passes _ -> True
          in counterexample
               ( mconcat
                   [ "\nHas plutus scripts: ",

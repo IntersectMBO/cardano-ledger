@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), BinaryData, Data (..), da
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos (FailureDescription (..), TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModels (..),
@@ -33,13 +33,13 @@ import Cardano.Ledger.Alonzo.Tx
 import Cardano.Ledger.Alonzo.TxBody
   ( TxOut (..),
   )
-import Cardano.Ledger.Alonzo.TxInfo (FailureDescription (..), ScriptResult (..))
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Int (Int64)
+import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Set (Set)
@@ -281,13 +281,9 @@ instance Arbitrary FailureDescription where
         PlutusFailure <$> (pack <$> arbitrary) <*> arbitrary
       ]
 
-instance Arbitrary ScriptResult where
-  arbitrary =
-    oneof [pure Passes, Fails <$> arbitrary]
-
 instance Arbitrary TagMismatchDescription where
   arbitrary =
-    oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> arbitrary]
+    oneof [pure PassedUnexpectedly, FailedUnexpectedly <$> ((:|) <$> arbitrary <*> arbitrary)]
 
 instance Mock c => Arbitrary (UtxosPredicateFailure (AlonzoEra c)) where
   arbitrary =
