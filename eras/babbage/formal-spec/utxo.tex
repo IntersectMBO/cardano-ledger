@@ -61,6 +61,9 @@ overflow, we let this number be $0$.
     & \fun{txscripts} : \Tx \to \hldiff{\UTxO} \to \ScriptHash \pto \Script \\
     & \fun{txscripts}~tx~utxo = \fun{txwitscripts}~tx \cup \hldiff{\fun{refScripts}~tx~utxo}
     \nextdef
+    & \fun{allOuts} : \Tx \to \powerset{\TxOut} \\
+    & \fun{allOuts}~tx = \range \txouts{tx} \cup \fun{collRet}~tx
+    \nextdef
     & \fun{languages} : \Tx \to \UTxO \to \powerset{\Language} \\
     & \fun{languages}~tx~utxo =
       \{\fun{language}~s \mid s \in \range (\fun{txscripts}~tx~\hldiff{utxo}) \cap \ScriptPhTwo\}
@@ -185,14 +188,14 @@ overflow, we let this number be $0$.
       \consumed{pp}{utxo}{txb} = \produced{pp}{poolParams}~{txb}
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
-      \forall txout \in \txouts{txb}, \\
+      \forall txout \in \hldiff{\fun{allOuts}~txb}, \\
       \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\lceil\fun{serSize}~txout * \fun{coinsPerUTxOWord}~pp/8\rceil}) \\~
       \\
-      \forall txout \in \txouts{txb},\\
+      \forall txout \in \hldiff{\fun{allOuts}~txb},\\
       \fun{serSize}~(\fun{getValue}~txout) \leq \fun{maxValSize}~pp \\~
       \\
-      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, a \in \AddrBS \Rightarrow \fun{bootstrapAttrsSize}~a \leq 64 \\
-      \forall (\wcard\mapsto (a,~\wcard)) \in \txouts{txb}, \fun{netId}~a = \NetworkId
+      \forall (\wcard\mapsto (a,~\wcard)) \in \hldiff{\fun{allOuts}~txb}, a \in \AddrBS \Rightarrow \fun{bootstrapAttrsSize}~a \leq 64 \\
+      \forall (\wcard\mapsto (a,~\wcard)) \in \hldiff{\fun{allOuts}~txb}, \fun{netId}~a = \NetworkId
       \\
       \forall (a\mapsto\wcard) \in \txwdrls{txb}, \fun{netId}~a = \NetworkId \\
       (\fun{txnetworkid}~\var{txb} = \NetworkId) \vee (\fun{txnetworkid}~\var{txb} = \Nothing)
@@ -290,7 +293,7 @@ new features and try to use $\PlutusVI$ scripts.
       \forall \var{s} \in \range (\fun{txscripts}~txw~\hldiff{utxo}) \cap \ScriptPhOne,
       \fun{validateScript}~\var{s}~\var{tx}\\~\\
       \{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~txb\} - \hldiff{\dom (\fun{refScripts}~tx~utxo)} = \dom (\fun{txwitscripts}~txw) \\~\\
-      \var{inputHashes} \subseteq_{\{h \mid (\wcard, \wcard, h)\in\fun{txouts}~{tx} \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}} \dom (\fun{txdats}~{txw})  \\~\\
+      \var{inputHashes} \subseteq_{\{h \mid (\wcard, \wcard, h)\in\fun{allOuts}~tx \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}} \dom (\fun{txdats}~{txw})  \\~\\
       \\~\\
       \dom (\fun{txrdmrs}~tx) = \left\{ \fun{rdptr}~txb~sp \,\middle|
         {
@@ -325,7 +328,7 @@ new features and try to use $\PlutusVI$ scripts.
       (\var{adh}=\fun{hashAD}~\var{ad})
       \\~\\
       \hldiff{\forall x \in \range (\fun{txdats}~txw) \cup \range (\fun{txwitscripts}~txw)} \\
-      \hldiff{\cup \bigcup_{(\_, \_, d, s) \in \txouts{tx}} \{s, d\} \cup \fun{scripts}~(\fun{auxiliaryData}~tx),} \\
+      \hldiff{\cup \bigcup_{(\_, \_, d, s) \in \hldiff{\fun{allOuts}~txb}} \{s, d\} \cup \fun{scripts}~(\fun{auxiliaryData}~tx),} \\
       \hldiff{x \in \Script \cup \Datum \Rightarrow \fun{isWellFormed}~x}
       \\~\\
       \fun{languages}~tx~\hldiff{utxo} \subseteq \dom(\fun{costmdls}~pp) \cap \fun{allowedLanguages}~tx~utxo \\
