@@ -81,6 +81,7 @@ import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -132,7 +133,7 @@ instance
 data UtxosEvent era
   = AlonzoPpupToUtxosEvent (Event (Core.EraRule "PPUP" era))
   | SuccessfulPlutusScriptsEvent [PlutusDebug]
-  | FailedPlutusScriptsEvent [PlutusDebug]
+  | FailedPlutusScriptsEvent (NonEmpty PlutusDebug)
 
 instance
   ( Era era,
@@ -233,7 +234,7 @@ scriptsNotValidateTransition = do
           Passes _ps -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
           Fails ps fs -> do
             tellEvent (SuccessfulPlutusScriptsEvent ps)
-            tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
+            mapM_ (tellEvent . FailedPlutusScriptsEvent) (scriptFailuresToPlutusDebug fs)
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent invalidEnd ()
@@ -285,8 +286,8 @@ scriptFailureToFailureDescription (PlutusSF t pd) =
 scriptFailuresToPredicateFailure :: NonEmpty ScriptFailure -> NonEmpty FailureDescription
 scriptFailuresToPredicateFailure = fmap scriptFailureToFailureDescription
 
-scriptFailuresToPlutusDebug :: NonEmpty ScriptFailure -> [PlutusDebug]
-scriptFailuresToPlutusDebug sfs = [pdb | PlutusSF _ pdb <- toList sfs]
+scriptFailuresToPlutusDebug :: NonEmpty ScriptFailure -> Maybe (NonEmpty PlutusDebug)
+scriptFailuresToPlutusDebug sfs = NE.nonEmpty [pdb | PlutusSF _ pdb <- toList sfs]
 
 data TagMismatchDescription
   = PassedUnexpectedly
