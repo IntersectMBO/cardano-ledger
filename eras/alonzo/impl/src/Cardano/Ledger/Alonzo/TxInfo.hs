@@ -455,9 +455,7 @@ valContext ::
 valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (transScriptPurpose sp)))
 valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 
-data ScriptFailure
-  = OnePhaseSF Text
-  | PlutusSF Text PlutusDebug
+data ScriptFailure = PlutusSF Text PlutusDebug
   deriving (Show, Eq, Generic, NoThunks)
 
 data ScriptResult

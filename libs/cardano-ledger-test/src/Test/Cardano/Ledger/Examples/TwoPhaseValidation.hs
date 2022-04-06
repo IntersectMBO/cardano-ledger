@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (FailureDescription (..), TagMismatchDescription (..), UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), mkCostModel)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script (..), mkCostModel)
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
@@ -116,6 +116,7 @@ import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS (replicate)
+import Data.ByteString.Short (ShortByteString)
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
@@ -1641,7 +1642,7 @@ collectInputs ::
   UTxO era ->
   Either
     [CollectError (Crypto era)]
-    [(Core.Script era, [Data era], ExUnits, CostModel)]
+    [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectInputs (Alonzo _) = collectTwoPhaseScriptInputs @era
 collectInputs (Babbage _) = collectTwoPhaseScriptInputs @era
 collectInputs x = error ("collectInputs Not defined in era " ++ show x)
@@ -1664,21 +1665,22 @@ getTxInfo era = error ("getTxInfo Not defined in era " ++ show era)
 
 -- | Never apply this to any Era but Alonzo or Babbage
 collectTwoPhaseScriptInputsOutputOrdering ::
-  ( Reflect era,
-    PostShelley era -- Generate Scripts with Timelocking
-  ) =>
-  Proof era ->
   Assertion
-collectTwoPhaseScriptInputsOutputOrdering apf =
+collectTwoPhaseScriptInputsOutputOrdering =
   collectInputs apf testEpochInfo testSystemStart (pp apf) (validatingTx apf) (initUTxO apf)
     @?= Right
-      [ ( always 3 apf,
+      [ ( sbs,
+          lang,
           [datumExample1, redeemerExample1, context],
           ExUnits 5000 5000,
           freeCostModelV1
         )
       ]
   where
+    apf = Alonzo Mock
+    (lang, sbs) = case always 3 apf of
+      TimelockScript _ -> error "always was not a Plutus script"
+      PlutusScript l s -> (l, s)
     context =
       valContext
         ( fromRight (error "translation error") . runIdentity $
@@ -1697,7 +1699,7 @@ collectOrderingAlonzo :: TestTree
 collectOrderingAlonzo =
   testCase
     "collectTwoPhaseScriptInputs output order"
-    (collectTwoPhaseScriptInputsOutputOrdering (Alonzo Mock))
+    collectTwoPhaseScriptInputsOutputOrdering
 
 -- =======================
 -- Alonzo BBODY Tests

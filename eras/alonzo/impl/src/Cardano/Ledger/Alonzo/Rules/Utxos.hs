@@ -132,7 +132,7 @@ instance
 data UtxosEvent era
   = AlonzoPpupToUtxosEvent (Event (Core.EraRule "PPUP" era))
   | SuccessfulPlutusScriptsEvent [PlutusDebug]
-  | FailedPlutusScriptsEvent [PlutusDebug]
+  | FailedPlutusScriptsEvent (NonEmpty PlutusDebug)
 
 instance
   ( Era era,
@@ -278,15 +278,14 @@ instance FromCBOR FailureDescription where
       dec n = Invalid n
 
 scriptFailureToFailureDescription :: ScriptFailure -> FailureDescription
-scriptFailureToFailureDescription (OnePhaseSF t) = OnePhaseFailure t
 scriptFailureToFailureDescription (PlutusSF t pd) =
   PlutusFailure t (B64.encode $ serialize' pd)
 
 scriptFailuresToPredicateFailure :: NonEmpty ScriptFailure -> NonEmpty FailureDescription
 scriptFailuresToPredicateFailure = fmap scriptFailureToFailureDescription
 
-scriptFailuresToPlutusDebug :: NonEmpty ScriptFailure -> [PlutusDebug]
-scriptFailuresToPlutusDebug sfs = [pdb | PlutusSF _ pdb <- toList sfs]
+scriptFailuresToPlutusDebug :: NonEmpty ScriptFailure -> NonEmpty PlutusDebug
+scriptFailuresToPlutusDebug = fmap (\(PlutusSF _ pdb) -> pdb)
 
 data TagMismatchDescription
   = PassedUnexpectedly
