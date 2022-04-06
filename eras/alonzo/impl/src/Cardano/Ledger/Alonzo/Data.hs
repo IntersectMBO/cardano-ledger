@@ -29,6 +29,7 @@ module Cardano.Ledger.Alonzo.Data
     binaryDataToData,
     dataToBinaryData,
     decodeBinaryData,
+    lengthBinaryData,
     -- $
     AuxiliaryData (AuxiliaryData, AuxiliaryData', scripts, txMD),
     AuxiliaryDataHash (..),
@@ -66,6 +67,7 @@ import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString.Lazy (fromStrict, toStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
+import qualified Data.ByteString.Short as BSS
 import Data.Coders
 import Data.Foldable (foldl')
 import Data.Map (Map)
@@ -165,6 +167,9 @@ dataToBinaryData (DataConstr (Memo _ sbs)) = BinaryData sbs
 
 hashBinaryData :: Era era => BinaryData era -> DataHash (Crypto era)
 hashBinaryData = hashAnnotated
+
+lengthBinaryData :: BinaryData era -> Int
+lengthBinaryData (BinaryData x) = BSS.length x
 
 -- =============================================================================
 

@@ -85,6 +85,7 @@ import Cardano.Ledger.Alonzo.Data
     Data,
     DataHash,
     binaryDataToData,
+    lengthBinaryData,
   )
 import Cardano.Ledger.Alonzo.TxBody
   ( Addr28Extra,
@@ -119,7 +120,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
-    SafeToHash,
+    SafeToHash (originalBytes),
   )
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -154,6 +155,9 @@ import GHC.Records (HasField (..))
 import GHC.Stack (HasCallStack)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Prelude hiding (lookup)
+import qualified Data.ByteString.Short as BSS (length)
+import Cardano.Ledger.CompactAddress (CompactAddr(UnsafeCompactAddr))
+import qualified Data.ByteString as BS
 
 data TxOut era
   = TxOutCompact'
@@ -645,6 +649,23 @@ encodeTxOut addr val datum script =
       !> Key 1 (To val)
       !> Omit (== NoDatum) (Key 2 (To datum))
       !> encodeKeyedStrictMaybeWith 3 encodeNestedCbor script
+
+serSizeTxOut :: (Era era, SafeToHash (Core.Script era)) => TxOut era -> Int
+serSizeTxOut txo = case txo of
+  TxOutCompact addr val                     -> key + szAddr addr + key + szVal val
+  TxOutCompactDH addr val dh                -> key + szAddr addr + key + szVal val + key + szDh dh
+  TxOutCompactDatum addr val d              -> key + szAddr addr + key + szVal val + key + lengthBinaryData d
+  TxOutCompactRefScript addr val NoDatum rs -> key + szAddr addr + key + szVal val + key + szRefScript rs
+  TxOutCompactRefScript addr val d rs       -> key + szAddr addr + key + szVal val + key + szDatum d + key + szRefScript rs
+  where
+  key                          = 8
+  szAddr (UnsafeCompactAddr x) = BSS.length x
+  szVal v                      = (fromInteger $ size $ fromCompact v) * 8
+  szDatum (NoDatum)            = 0
+  szDatum (Datum d)            = lengthBinaryData d
+  szDatum (DatumHash dh)       = BS.length $ originalBytes dh
+  szRefScript rs               = BS.length $ originalBytes rs
+  szDh                         = BS.length . originalBytes
 
 data DecodingTxOut era = DecodingTxOut
   { decodingTxOutAddr :: !(StrictMaybe (Addr (Crypto era))),
