@@ -782,7 +782,7 @@ eventsMirrorRewards events nes = same eventRew compRew
             (completed, lastevent) = complete pulser
     total = getMostRecentTotalRewardEvent events
     aggevent = aggIncrementalRewardEvents events
-    (aggFilteredEvent, _) = filterAllRewards aggevent (nesEs nes)
+    (aggFilteredEvent, _, _, _) = filterAllRewards aggevent (nesEs nes)
     same x y = withMaxSuccess 1 $ counterexample message (x === y)
       where
         message =
