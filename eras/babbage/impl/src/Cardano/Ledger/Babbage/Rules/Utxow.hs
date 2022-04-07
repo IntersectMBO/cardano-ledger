@@ -125,7 +125,7 @@ validateFailedBabbageScripts tx utxo =
         Map.filterWithKey
           ( \hs script ->
               let one = isNativeScript @era script
-                  two = hashScript @era script /= hs
+                  two = hashScript @era script /= hs -- TODO this is probably not needed. Only the script is transmitted on the wire, we compute the hash
                   three = not (validateScript @era script tx)
                   answer = one && (two || three)
                in answer
