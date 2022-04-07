@@ -263,12 +263,7 @@ utxoTransition = do
 
   {-   txb := txbody tx   -}
   let txb = body tx
-      allInputs =
-        Set.unions
-          [ getField @"inputs" txb,
-            getField @"collateral" txb,
-            getField @"referenceInputs" txb -- NEW TO Babbage UTXO rule
-          ]
+      allInputs = getAllTxInputs txb
 
   {- ininterval slot (txvld txb) -}
   runTest $
