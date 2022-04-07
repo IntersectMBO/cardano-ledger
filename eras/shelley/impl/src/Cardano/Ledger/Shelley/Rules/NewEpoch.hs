@@ -78,6 +78,7 @@ instance
 
 data NewEpochEvent era
   = DeltaRewardEvent (Event (Core.EraRule "RUPD" era))
+  | RestrainedRewards EpochNo (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))) (Set (Credential 'Staking (Crypto era)))
   | TotalRewardEvent EpochNo (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
   | EpochEvent (Event (Core.EraRule "EPOCH" era))
   | MirEvent (Event (Core.EraRule "MIR" era))
@@ -156,7 +157,8 @@ newEpochTransition = do
       let updateRewards ru'@(RewardUpdate dt dr rs_ df _) = do
             let totRs = sumRewards (esPrevPp es) rs_
             Val.isZero (dt <> (dr <> toDeltaCoin totRs <> df)) ?! CorruptRewardUpdate ru'
-            let (es', regRU) = applyRUpd' ru' es
+            let (es', regRU, eraIgnored, unregistered) = applyRUpd' ru' es
+            tellEvent $ RestrainedRewards e eraIgnored unregistered
             -- This event (which is only generated once per epoch) must be generated even if the
             -- map is empty (db-sync depends on it).
             tellEvent $ TotalRewardEvent e regRU

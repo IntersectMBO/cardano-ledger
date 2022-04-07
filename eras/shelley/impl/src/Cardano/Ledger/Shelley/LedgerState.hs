@@ -1179,7 +1179,7 @@ applyRUpd ::
   EpochState era ->
   EpochState era
 applyRUpd ru es =
-  let (es', _) = applyRUpd' ru es
+  let (es', _, _, _) = applyRUpd' ru es
    in es'
 
 applyRUpd' ::
@@ -1187,15 +1187,21 @@ applyRUpd' ::
   ) =>
   RewardUpdate (Crypto era) ->
   EpochState era ->
-  (EpochState era, Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
+  ( EpochState era
+  , Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))
+  , Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))
+  , Set (Credential 'Staking (Crypto era))
+  )
 applyRUpd'
   ru
-  es@(EpochState as ss ls pr pp _nm) = (EpochState as' ss ls' pr pp nm', registered)
+  es@(EpochState as ss ls pr pp _nm) =
+    (EpochState as' ss ls' pr pp nm', registered, eraIgnored, unregistered)
     where
       utxoState_ = _utxoState ls
       delegState = _delegationState ls
       dState = _dstate delegState
-      (registered, totalUnregistered) = filterAllRewards (rs ru) es
+      (registered, eraIgnored, unregistered, totalUnregistered) =
+        filterAllRewards (rs ru) es
       registeredAggregated = aggregateRewards pp registered
       as' =
         as
@@ -1221,9 +1227,12 @@ filterAllRewards ::
   ) =>
   Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
   EpochState era ->
-  (Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))), Coin)
+  ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))
+  , Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))
+  , Set (Credential 'Staking (Crypto era))
+  , Coin )
 filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
-  (registered, totalUnregistered)
+  (registered, eraIgnored, unregistered, totalUnregistered)
   where
     delegState = _delegationState ls
     dState = _dstate delegState
@@ -1232,7 +1241,8 @@ filterAllRewards rs' (EpochState _as _ss ls pr _pp _nm) =
         (\k _ -> eval (k ∈ dom (rewards dState)))
         rs'
     totalUnregistered = fold $ aggregateRewards pr unregRU
-    registered = filterRewards pr regRU
+    unregistered = Map.keysSet unregRU
+    (registered, eraIgnored) = filterRewards pr regRU
 
 decayFactor :: Float
 decayFactor = 0.9
