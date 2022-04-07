@@ -229,7 +229,7 @@ validateTotalCollateral pp txb utxoCollateral bal =
       fromAlonzoValidation $ validateInsufficientCollateral pp txb bal,
       -- Part 6: (txcoll tx ≠ ◇) ⇒ balance = txcoll tx
       validateCollateralEqBalance (Val.coin bal) (getField @"totalCollateral" txb),
-      -- Part 7: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
+      -- Part 7: collInputs tx ≠ ∅
       fromAlonzoValidation $ failureIf (null utxoCollateral) (NoCollateralInputs @era)
     ]
   where
