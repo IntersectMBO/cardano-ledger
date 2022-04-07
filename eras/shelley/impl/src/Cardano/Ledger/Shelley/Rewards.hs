@@ -187,11 +187,15 @@ filterRewards ::
   (HasField "_protocolVersion" pp ProtVer) =>
   pp ->
   Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
-  Map (Credential 'Staking crypto) (Set (Reward crypto))
+  ( Map (Credential 'Staking crypto) (Set (Reward crypto)),
+    Map (Credential 'Staking crypto) (Set (Reward crypto))
+  )
 filterRewards pp rewards =
   if HardForks.aggregatedRewards pp
-    then rewards
-    else Map.map (Set.singleton . Set.findMin) rewards
+    then (rewards, Map.empty)
+    else
+      let mp = Map.map Set.deleteFindMin rewards
+       in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
 
 aggregateRewards ::
   forall crypto pp.
@@ -200,7 +204,7 @@ aggregateRewards ::
   Map (Credential 'Staking crypto) (Set (Reward crypto)) ->
   Map (Credential 'Staking crypto) Coin
 aggregateRewards pp rewards =
-  Map.map (foldMap' rewardAmount) $ filterRewards pp rewards
+  Map.map (foldMap' rewardAmount) $ fst $ filterRewards pp rewards
 
 data LeaderOnlyReward crypto = LeaderOnlyReward
   { lRewardPool :: !(KeyHash 'StakePool crypto),
