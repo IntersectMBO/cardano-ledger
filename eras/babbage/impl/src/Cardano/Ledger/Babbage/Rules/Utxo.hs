@@ -229,7 +229,7 @@ validateTotalCollateral pp txb utxoCollateral bal =
       fromAlonzoValidation $ validateInsufficientCollateral pp txb bal,
       -- Part 6: (txcoll tx ≠ ◇) ⇒ balance = txcoll tx
       validateCollateralEqBalance (Val.coin bal) (getField @"totalCollateral" txb),
-      -- Part 7: (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
+      -- Part 7: collInputs tx ≠ ∅
       fromAlonzoValidation $ failureIf (null utxoCollateral) (NoCollateralInputs @era)
     ]
   where
@@ -263,12 +263,7 @@ utxoTransition = do
 
   {-   txb := txbody tx   -}
   let txb = body tx
-      allInputs =
-        Set.unions
-          [ getField @"inputs" txb,
-            getField @"collateral" txb,
-            getField @"referenceInputs" txb -- NEW TO Babbage UTXO rule
-          ]
+      allInputs = getAllTxInputs txb
 
   {- ininterval slot (txvld txb) -}
   runTest $

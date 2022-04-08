@@ -19,7 +19,7 @@ import Cardano.Ledger.Babbage.TxBody
     outputs',
     txfee',
   )
-import Cardano.Ledger.BaseTypes (txIxFromIntegral)
+import Cardano.Ledger.BaseTypes (TxIx (..), txIxFromIntegral)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript (..))
@@ -30,6 +30,7 @@ import Data.Compact.SplitMap ((◁))
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
+import Data.Word (Word16)
 import GHC.Records (HasField (..))
 import Numeric.Natural (Natural)
 
@@ -90,4 +91,7 @@ collOuts txb =
       where
         index = case txIxFromIntegral (length (outputs' txb)) of
           Just i -> i
-          Nothing -> error ("length outputs, should always fit in a TxIx")
+          -- In the impossible event that there are more transaction outputs
+          -- in the transaction than will fit into a Word16 (which backs the TxIx),
+          -- we give the collateral return output an index of maxBound.
+          Nothing -> TxIx (maxBound :: Word16)

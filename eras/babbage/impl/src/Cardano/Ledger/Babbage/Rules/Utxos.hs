@@ -153,6 +153,14 @@ scriptsYes = do
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
+  -- We intentionally run the PPUP rule before evaluating any Plutus scripts.
+  -- We do not want to waste computation running plutus scripts if the
+  -- transaction will fail due to `PPUP`
+  ppup' <-
+    trans @(Core.EraRule "PPUP" era) $
+      TRC
+        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ getField @"update" txb)
+
   let !_ = traceEvent validBegin ()
 
   {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
@@ -170,11 +178,6 @@ scriptsYes = do
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent validEnd ()
-
-  ppup' <-
-    trans @(Core.EraRule "PPUP" era) $
-      TRC
-        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ getField @"update" txb)
 
   pure $! updateUTxOState u txb depositChange ppup'
 

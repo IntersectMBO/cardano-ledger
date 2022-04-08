@@ -605,7 +605,7 @@ validateMetadata pp tx =
 -- | check genesis keys signatures for instantaneous rewards certificates
 --
 -- genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes
--- { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)
+-- { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum
 validateMIRInsufficientGenesisSigs ::
   ( HasField "body" (Core.Tx era) (Core.TxBody era),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert crypto))

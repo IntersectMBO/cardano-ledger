@@ -125,7 +125,7 @@ validateFailedBabbageScripts tx utxo =
         Map.filterWithKey
           ( \hs script ->
               let one = isNativeScript @era script
-                  two = hashScript @era script /= hs
+                  two = hashScript @era script /= hs -- TODO this is probably not needed. Only the script is transmitted on the wire, we compute the hash
                   three = not (validateScript @era script tx)
                   answer = one && (two || three)
                in answer
@@ -195,26 +195,26 @@ babbageUtxowTransition = do
   {- ∀s ∈ range(txscripts txw utxo ∩ Script^{ph1}), validateScript s tx -}
   runTest $ validateFailedBabbageScripts tx utxo -- CHANGED In BABBAGE txscripts depends on UTxO
 
-  {-  { h | (_,h) ∈ scriptsNeeded utxo tx} ⊆ dom(txscripts txw)          -}
+  {-  { h | (_,h) ∈ scriptsNeeded utxo tx} ⊆ dom(txscripts txw utxo)     -}
   let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx)) -- Script credentials
       sReceived = Map.keysSet (txscripts utxo tx)
   runTest $ babbageMissingScripts pp sNeeded sReceived
 
-  {-  inputHashes  = dom(txdats txw)   -}
+  {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
   runTest $ missingRequiredDatums hashScriptMap utxo tx txbody
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx txbody -- FIXME pass txscripts as parameter
-
-  -- let txbodyHash = hashAnnotated @(Crypto era) txbody
+  runTest $ hasExactSetOfRedeemers utxo tx txbody
 
   -- check VKey witnesses
+  -- let txbodyHash = hashAnnotated @(Crypto era) txbody
   {-  ∀ (vk ↦ σ) ∈ (txwitsVKey txw), V_vk⟦ txbodyHash ⟧_σ                -}
   runTestOnSignal $ Shelley.validateVerifiedWits tx
 
   {-  witsVKeyNeeded utxo tx genDelegs ⊆ witsKeyHashes                   -}
   runTest $ validateNeededWitnesses witsVKeyNeeded genDelegs utxo tx witsKeyHashes
+  -- TODO can we add the required signers to witsVKeyNeeded so we dont need the check below?
 
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded must include the reqSignerHashes in the union   -}
@@ -223,7 +223,7 @@ babbageUtxowTransition = do
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
-  {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ (|genSig| ≥ Quorum) ∧ (d pp > 0)  -}
+  {-  { c ∈ txcerts txb ∩ DCert_mir} ≠ ∅  ⇒ |genSig| ≥ Quorum  -}
   coreNodeQuorum <- liftSTS $ asks quorum
   runTest $
     Shelley.validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
