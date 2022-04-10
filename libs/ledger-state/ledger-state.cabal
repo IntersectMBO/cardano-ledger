@@ -51,8 +51,11 @@ library
                     , strict-containers
                     , text
                     , transformers
-  exposed-modules:    Cardano.Ledger.State
-                    , Cardano.Ledger.State.UTxO
+  exposed-modules:
+                    -- Cardano.Ledger.Address.Type
+                    -- , Cardano.Ledger.Address.Compact
+                    -- ,
+                      Cardano.Ledger.State.UTxO
                     , Cardano.Ledger.State.Orphans
                     , Cardano.Ledger.State.Schema
                     , Cardano.Ledger.State.Transform
@@ -110,6 +113,30 @@ benchmark performance
     cardano-ledger-core,
     cardano-ledger-shelley,
     ledger-state,
+  ghc-options:
+      -threaded
+      -rtsopts
+      -O2
+
+benchmark address
+  import:             project-config
+
+  type:             exitcode-stdio-1.0
+  hs-source-dirs:
+    bench
+  main-is:          Address.hs
+  build-depends:
+    base,
+    -- bytestring,
+    -- base16-bytestring,
+    -- cardano-binary,
+    cardano-crypto-class,
+    cardano-ledger-core,
+    cardano-slotting,
+    criterion,
+    deepseq,
+    strict-containers,
+    text
   ghc-options:
       -threaded
       -rtsopts
