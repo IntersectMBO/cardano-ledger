@@ -61,8 +61,8 @@ main = do
   let cols = [Case, Max, MaxOS, Live, Allocated, GCs, WallTime]
   mainWith $ do
     setColumns cols
-    -- forM_ (optsNewEpochStateBinaryFile opts) $ \binFp -> do
-    --   io "NewEpochState" readNewEpochState binFp
+    forM_ (optsNewEpochStateBinaryFile opts) $ \binFp -> do
+      io "NewEpochState" readNewEpochState binFp
     forM_ (optsEpochStateBinaryFile opts) $ \binFp -> do
       io "EpochState (FromCBOR)" readEpochState binFp
     forM_ (optsSqliteDbFile opts) $ \dbFpStr -> do

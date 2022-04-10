@@ -85,7 +85,12 @@ import Cardano.Ledger.BaseTypes
     maybeToStrictMaybe,
   )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
+import Cardano.Ledger.CompactAddress
+  ( CompactAddr,
+    compactAddr,
+    decompactAddr,
+    fromCborBackwardsBothAddr,
+  )
 import Cardano.Ledger.Compactible
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
@@ -626,25 +631,25 @@ instance
           txOut -> txOut
     internTxOut <$!> case lenOrIndef of
       Nothing -> do
-        a <- fromCBOR
+        (a, ca) <- fromCborBackwardsBothAddr
         cv <- decodeNonNegative
         decodeBreakOr >>= \case
-          True -> pure $ TxOutCompact a cv
+          True -> pure $ mkTxOutCompact a ca cv SNothing
           False -> do
             dh <- fromCBOR
             decodeBreakOr >>= \case
-              True -> pure $ TxOutCompactDH a cv dh
+              True -> pure $ mkTxOutCompact a ca cv (SJust dh)
               False -> cborError $ DecoderErrorCustom "txout" "Excess terms in txout"
-      Just 2 ->
-        TxOutCompact
-          <$> fromCBOR
-          <*> decodeNonNegative
-      Just 3 ->
-        TxOutCompactDH
-          <$> fromCBOR
-          <*> decodeNonNegative
-          <*> fromCBOR
+      Just 2 -> do
+        (a, ca) <- fromCborBackwardsBothAddr
+        cv <- decodeNonNegative
+        pure $ mkTxOutCompact a ca cv SNothing
+      Just 3 -> do
+        (a, ca) <- fromCborBackwardsBothAddr
+        cv <- decodeNonNegative
+        mkTxOutCompact a ca cv . SJust <$> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
+  {-# INLINEABLE fromSharedCBOR #-}
 
 pattern TxOutCompact ::
   ( Era era,
@@ -657,9 +662,7 @@ pattern TxOutCompact ::
 pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, SNothing))
   where
-    TxOutCompact cAddr cVal
-      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
-      | otherwise = TxOutCompact' cAddr cVal
+    TxOutCompact cAddr cVal = mkTxOutCompact (decompactAddr cAddr) cAddr cVal SNothing
 
 pattern TxOutCompactDH ::
   forall era.
@@ -673,11 +676,22 @@ pattern TxOutCompactDH ::
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
   where
-    TxOutCompactDH cAddr cVal dh
-      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) (SJust dh)
-      | otherwise = TxOutCompactDH' cAddr cVal dh
+    TxOutCompactDH cAddr cVal dh = mkTxOutCompact (decompactAddr cAddr) cAddr cVal (SJust dh)
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
+
+mkTxOutCompact ::
+  forall era.
+  (Era era, HasCallStack) =>
+  Addr (Crypto era) ->
+  CompactAddr (Crypto era) ->
+  CompactForm (Core.Value era) ->
+  StrictMaybe (DataHash (Crypto era)) ->
+  TxOut era
+mkTxOutCompact addr cAddr cVal mdh
+  | isAdaOnlyCompact cVal = TxOut addr (fromCompact cVal) mdh
+  | SJust dh <- mdh = TxOutCompactDH' cAddr cVal dh
+  | otherwise = TxOutCompact' cAddr cVal
 
 encodeTxBodyRaw ::
   ( Era era,

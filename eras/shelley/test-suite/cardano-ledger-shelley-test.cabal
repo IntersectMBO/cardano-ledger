@@ -80,6 +80,7 @@ library
     Test.TestScenario
   build-depends:
     base16-bytestring >= 1,
+    binary,
     bytestring,
     cardano-binary,
     cardano-crypto-class,
