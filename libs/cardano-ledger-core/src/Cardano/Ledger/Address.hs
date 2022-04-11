@@ -178,8 +178,8 @@ deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs)
 
 -- | An address for UTxO.
 data Addr crypto
-  = Addr Network (PaymentCredential crypto) (StakeReference crypto)
-  | AddrBootstrap (BootstrapAddress crypto)
+  = Addr !Network !(PaymentCredential crypto) !(StakeReference crypto)
+  | AddrBootstrap !(BootstrapAddress crypto)
   deriving (Show, Eq, Generic, NFData, Ord)
 
 getNetwork :: Addr crypto -> Network
