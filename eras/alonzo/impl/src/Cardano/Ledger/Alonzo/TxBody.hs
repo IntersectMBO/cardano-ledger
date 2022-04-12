@@ -887,6 +887,9 @@ instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMay
         decodeDataHash32 @c dh
     _ -> SNothing
 
+-- FIXME: This implementation is intentionally dumb and in theory results in
+-- extroneous conversion, however this mysteriously results in overall improved
+-- performance and fewer allocations
 getAlonzoTxOutAddr :: Era era => TxOut era -> Addr (Crypto era)
 getAlonzoTxOutAddr (TxOutCompact a _) = decompactAddr a
 getAlonzoTxOutAddr (TxOutCompactDH a _ _) = decompactAddr a
