@@ -34,6 +34,7 @@ let
       pkg-config
       hlint
       ormolu.ormolu
+      haskell-language-server
       pyEnv
     ];
 
