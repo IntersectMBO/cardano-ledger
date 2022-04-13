@@ -147,7 +147,7 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _,
-      src@(NewEpochState (EpochNo eL) _ bcur es ru _pd),
+      ~src@(NewEpochState (EpochNo eL) _ bcur es ru _pd),
       e@(EpochNo e_)
       ) <-
     judgmentContext
@@ -175,13 +175,14 @@ newEpochTransition = do
       let EpochState _acnt ss _ls _pr _ _ = es'''
           pd' = calculatePoolDistr (_pstakeSet ss)
       pure $
-        NewEpochState
-          e
-          bcur
-          (BlocksMade Map.empty)
-          es'''
-          SNothing
-          pd'
+        src
+          { nesEL = e,
+            nesBprev = bcur,
+            nesBcur = BlocksMade mempty,
+            nesEs = es''',
+            nesRu = SNothing,
+            nesPd = pd'
+          }
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
 tellReward :: (Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)) => NewEpochEvent era -> Rule (NEWEPOCH era) rtype ()

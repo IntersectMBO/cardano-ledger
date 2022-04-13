@@ -13,6 +13,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -83,7 +84,8 @@ module Cardano.Ledger.Shelley.LedgerState
     startStep,
     pulseStep,
     completeStep,
-    NewEpochState (..),
+    NewEpochState (NewEpochState, nesEL, nesEs, nesRu, nesPd, nesBprev, nesBcur),
+    stashedAVVMAddresses,
     getGKeys,
     updateNES,
     circulation,
@@ -711,21 +713,49 @@ instance
       pure UTxOState {_utxo, _deposited, _fees, _ppups, _stakeDistro}
 
 -- | New Epoch state and environment
-data NewEpochState era = NewEpochState
+data NewEpochState era = NewEpochStatePlusAVVM
   { -- | Last epoch
-    nesEL :: !EpochNo,
+    nesPlusEL :: !EpochNo,
     -- | Blocks made before current epoch
-    nesBprev :: !(BlocksMade (Crypto era)),
+    nesPlusBprev :: !(BlocksMade (Crypto era)),
     -- | Blocks made in current epoch
-    nesBcur :: !(BlocksMade (Crypto era)),
+    nesPlusBcur :: !(BlocksMade (Crypto era)),
     -- | Epoch state before current
-    nesEs :: !(EpochState era),
+    nesPlusEs :: !(EpochState era),
     -- | Possible reward update
-    nesRu :: !(StrictMaybe (PulsingRewUpdate (Crypto era))),
+    nesPlusRu :: !(StrictMaybe (PulsingRewUpdate (Crypto era))),
     -- | Stake distribution within the stake pool
-    nesPd :: !(PoolDistr (Crypto era))
+    nesPlusPd :: !(PoolDistr (Crypto era)),
+    -- | AVVM addresses to be removed at the end of the Shelley era. Note that
+    -- the existence of this field is a hack, related to the transition of UTxO
+    -- to disk. We remove AVVM addresses from the UTxO on the Shelley/Allegra
+    -- boundary. However, by this point the UTxO will be moved to disk, and
+    -- hence doing a scan of the UTxO for AVVM addresses will be expensive. Our
+    -- solution to this is to do a scan of the UTxO on the Byron/Shelley
+    -- boundary (since Byron UTxO are still on disk), stash the results here,
+    -- and then remove them at the Shelley/Allegra boundary.
+    --
+    -- This is very much an awkward implementation hack, and hence we hide it
+    -- from as many places as possible.
+    stashedAVVMAddresses :: !(StrictMaybe (UTxO era))
   }
   deriving (Generic)
+
+pattern NewEpochState ::
+  EpochNo ->
+  BlocksMade (Crypto era) ->
+  BlocksMade (Crypto era) ->
+  EpochState era ->
+  StrictMaybe (PulsingRewUpdate (Crypto era)) ->
+  PoolDistr (Crypto era) ->
+  NewEpochState era
+pattern NewEpochState {nesEL, nesBprev, nesBcur, nesEs, nesRu, nesPd} <-
+  NewEpochStatePlusAVVM nesEL nesBprev nesBcur nesEs nesRu nesPd _
+  where
+    NewEpochState el bprev bcur es ru pd =
+      NewEpochStatePlusAVVM el bprev bcur es ru pd SNothing
+
+{-# COMPLETE NewEpochState #-}
 
 deriving stock instance
   ( CC.Crypto (Crypto era),
@@ -771,15 +801,22 @@ instance
   ) =>
   ToCBOR (NewEpochState era)
   where
-  toCBOR (NewEpochState e bp bc es ru pd) =
-    encodeListLen 6 <> toCBOR e <> toCBOR bp <> toCBOR bc <> toCBOR es
+  toCBOR (NewEpochStatePlusAVVM e bp bc es ru pd av) =
+    encodeListLen 7
+      <> toCBOR e
+      <> toCBOR bp
+      <> toCBOR bc
+      <> toCBOR es
       <> toCBOR ru
       <> toCBOR pd
+      <> toCBOR av
 
 instance
   ( Era era,
     FromCBOR (Core.PParams era),
     FromSharedCBOR (Core.TxOut era),
+    -- This constraint is used only for the AVVM addresses
+    FromCBOR (Core.TxOut era),
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
     FromCBOR (Core.Value era),
     FromCBOR (State (Core.EraRule "PPUP" era))
@@ -788,7 +825,8 @@ instance
   where
   fromCBOR = do
     decode $
-      RecD NewEpochState
+      RecD NewEpochStatePlusAVVM
+        <! From
         <! From
         <! From
         <! From
@@ -1632,17 +1670,20 @@ updateNES ::
   LedgerState era ->
   NewEpochState era
 updateNES
-  ( NewEpochState
-      eL
-      bprev
-      _
-      (EpochState acnt ss _ pr pp nm)
-      ru
-      pd
-    )
+  oldNes@( NewEpochState
+             _eL
+             _bprev
+             _
+             (EpochState acnt ss _ pr pp nm)
+             _ru
+             _pd
+           )
   bcur
   ls =
-    NewEpochState eL bprev bcur (EpochState acnt ss ls pr pp nm) ru pd
+    oldNes
+      { nesBcur = bcur,
+        nesEs = EpochState acnt ss ls pr pp nm
+      }
 
 returnRedeemAddrsToReserves ::
   forall era.
