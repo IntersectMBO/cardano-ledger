@@ -10,7 +10,8 @@ module Cardano.Ledger.Babbage.Rules.Utxow where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Alonzo.Data (DataHash)
+import Cardano.Ledger.Alonzo.Data
+    ( DataHash, Data(Data), hashData )
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent)
 import Cardano.Ledger.Alonzo.Rules.Utxow
@@ -69,15 +70,20 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 import Validation (failureUnless)
+import Plutus.V1.Ledger.Api (Data(..))
+import qualified Data.ByteString as BS
+import qualified Plutus.V1.Ledger.Api as Plutus
+import Cardano.Ledger.Babbage.Scripts (refScripts)
+import Cardano.Ledger.Shelley.API (TxIn)
 
 -- ==================================================
 -- Reuseable tests first used in the Babbage Era
 
--- Int the Babbage Era with refererence scripts, the needed
+-- Int the Babbage Era with reference scripts, the needed
 -- scripts only has to be a subset of the txscripts.
-{-  { s | (_,s) ∈ scriptsNeeded utxo tx} ⊆  dom(txscripts txw)    -}
-{-  sNeeded := scriptsNeeded utxo tx                             -}
-{-  sReceived := Map.keysSet (getField @"scriptWits" tx)         -}
+{-  { s | (_,s) ∈ scriptsNeeded utxo tx} - dom(refScripts tx utxo) = dom(txscripts txw)  -}
+{-  sNeeded := scriptsNeeded utxo tx                                                     -}
+{-  sReceived := Map.keysSet (getField @"scriptWits" tx)                                 -}
 babbageMissingScripts ::
   forall era.
   ( HasField "_protocolVersion" (Core.PParams era) ProtVer
@@ -85,11 +91,12 @@ babbageMissingScripts ::
   Core.PParams era ->
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
+  Set (ScriptHash (Crypto era)) ->
   Test (Shelley.UtxowPredicateFailure era)
-babbageMissingScripts pp sNeeded sReceived =
+babbageMissingScripts pp sNeeded sRefs sReceived =
   if HardForks.missingScriptsSymmetricDifference pp
     then
-      failureUnless (sNeeded `Set.isSubsetOf` sReceived) $
+      failureUnless (sNeeded `Set.difference` sRefs == sReceived) $
         Shelley.MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
     else
       failureUnless (sNeeded == sReceived) $
@@ -99,7 +106,7 @@ babbageMissingScripts pp sNeeded sReceived =
 danglingWitnessDataHashes ::
   Era era =>
   Set.Set (DataHash (Crypto era)) ->
-  (Alonzo.TxDats era) ->
+  Alonzo.TxDats era ->
   [TxOut era] ->
   Test (BabbageUtxoPred era)
 danglingWitnessDataHashes inputHashes (Alonzo.TxDats m) outs =
@@ -107,8 +114,8 @@ danglingWitnessDataHashes inputHashes (Alonzo.TxDats m) outs =
       accum ans (TxOut _ _ (DatumHash dhash) _) = Set.insert dhash ans
       accum ans _ = ans
    in failureUnless
-        (eval (dom (m) ⊆ hashesInUse))
-        (DanglingWitnessDataHash (eval (dom (m) ➖ hashesInUse)))
+        (eval (dom m ⊆ hashesInUse))
+        (DanglingWitnessDataHash (eval (dom m ➖ hashesInUse)))
 
 {-  ∀ s ∈ (txscripts txw utxo ∩ Scriptnative), validateScript s tx   -}
 validateFailedBabbageScripts ::
@@ -149,10 +156,32 @@ validateScriptsWellFormed ::
   UTxO era ->
   Test (BabbageUtxoPred era)
 validateScriptsWellFormed pp tx utxo =
-  let invalidScripts = Map.filter (\script -> not $ validScript (getField @"_protocolVersion" pp) script) (txscripts utxo tx)
+  let invalidScripts = Map.filter (not . validScript (getField @"_protocolVersion" pp)) (txscripts utxo tx)
    in failureUnless
         (Map.null invalidScripts)
         (MalformedScripts $ Map.keysSet invalidScripts)
+
+validateDatumsWellFormed ::
+  forall era.
+  ( ExtendedUTxO era,
+    Era era
+  ) =>
+  Core.Tx era ->
+  Test (BabbageUtxoPred era)
+validateDatumsWellFormed tx =
+   let invalidDatums = Set.map hashData $ Set.filter (\(Data d) -> not $ validateData' d) (txdata tx)
+   in failureUnless
+        (Set.null invalidDatums)
+        (MalformedData invalidDatums)
+
+validateData' ::
+    Plutus.Data ->
+    Bool
+validateData' (Constr _ ds) = all validateData' ds
+validateData' (Map ds) = all (\(x, y) -> validateData' x && validateData' y) ds
+validateData' (List ds) = all validateData' ds
+validateData' (I _) = True
+validateData' (B bs) = BS.length bs <= 64
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
@@ -176,7 +205,8 @@ babbageUtxowTransition ::
     Embed (Core.EraRule "UTXO" era) (BabbageUTXOW era),
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era
+    Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era,
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
@@ -190,6 +220,7 @@ babbageUtxowTransition = do
       txbody = getField @"body" (tx :: Core.Tx era)
       witsKeyHashes = witsFromTxWitnesses @era tx
       hashScriptMap = txscripts utxo tx
+      inputs = getField @"inputs" txbody
 
   -- check scripts
   {- ∀s ∈ range(txscripts txw utxo ∩ Script^{ph1}), validateScript s tx -}
@@ -198,7 +229,8 @@ babbageUtxowTransition = do
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} ⊆ dom(txscripts txw utxo)     -}
   let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx)) -- Script credentials
       sReceived = Map.keysSet (txscripts utxo tx)
-  runTest $ babbageMissingScripts pp sNeeded sReceived
+      sRefs = Map.keysSet $ refScripts inputs utxo
+  runTest $ babbageMissingScripts pp sNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
   runTest $ missingRequiredDatums hashScriptMap utxo tx txbody
@@ -234,12 +266,11 @@ babbageUtxowTransition = do
   runTestOnSignal $
     Shelley.validateMetadata pp tx
 
-  {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ ⋃ ( , ,d,s)∈txouts tx{s, d},
+  {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
                          x ∈ Script ∪ Datum ⇒ isWellFormed x
   -}
-  -- Datums are currently guarded by the wire format,
-  -- so we assume all datums to be well formed.
   runTest $ validateScriptsWellFormed pp tx utxo
+  runTest $ validateDatumsWellFormed tx
 
   {- languages tx utxo ⊆ dom(costmdls tx) -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails

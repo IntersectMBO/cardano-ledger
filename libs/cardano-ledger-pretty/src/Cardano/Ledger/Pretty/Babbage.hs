@@ -146,6 +146,8 @@ ppBabbageUtxoPred (DanglingWitnessDataHash dhset) =
   ppSexp "DanglingWitnessDataHashes" [ppSet ppDataHash dhset]
 ppBabbageUtxoPred (MalformedScripts scripts) =
   ppSexp "MalformedScripts" [ppSet ppScriptHash scripts]
+ppBabbageUtxoPred (MalformedData dat) =
+  ppSexp "MalformedData" [ppSet ppDataHash dat]
 
 instance
   ( PrettyA (UtxoPredicateFailure era),

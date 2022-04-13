@@ -394,6 +394,14 @@ class ExtendedUTxO era where
     UTxO era ->
     Set (DataHash (Crypto era))
 
+  allOuts ::
+    Core.TxBody era ->
+    [Core.TxOut era]
+
+  txdata ::
+    Core.Tx era ->
+    Set (Data era)
+
 alonzoTxInfo ::
   forall era m.
   ( Era era,
