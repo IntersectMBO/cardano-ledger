@@ -49,7 +49,7 @@ import qualified Data.Map.Strict as Map
 -- _back_ to the translation functions as the UTxO, allowing these addresses to
 -- be removed. This is needed because we cannot do a full scan on the UTxO at
 -- this point, since it has been persisted to disk.
-shelleyToAllegraAVVMsToDelete :: NewEpochState era -> StrictMaybe (UTxO era)
+shelleyToAllegraAVVMsToDelete :: NewEpochState (ShelleyEra c) -> UTxO (ShelleyEra c)
 shelleyToAllegraAVVMsToDelete = stashedAVVMAddresses
 
 type instance PreviousEra (AllegraEra c) = ShelleyEra c
@@ -69,12 +69,11 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
           nesBcur = nesBcur nes,
           nesEs = translateEra' ctxt $ LS.returnRedeemAddrsToReserves . nesEs $ nes,
           nesRu = nesRu nes,
-          nesPd = nesPd nes
-        }
-        { -- At this point, the consensus layer has passed in our stashed AVVM
+          nesPd = nesPd nes,
+          -- At this point, the consensus layer has passed in our stashed AVVM
           -- addresses as our UTxO, and we have deleted them above (with
           -- 'returnRedeemAddrsToReserves'), so we may safely discard this map.
-          stashedAVVMAddresses = SNothing
+          stashedAVVMAddresses = ()
         }
 
 instance forall c. Crypto c => TranslateEra (AllegraEra c) Tx where

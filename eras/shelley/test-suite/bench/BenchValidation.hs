@@ -37,6 +37,7 @@ import Cardano.Ledger.Shelley.Bench.Gen (genBlock, genChainState)
 import Cardano.Ledger.Shelley.BlockChain (slotToNonce)
 import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState,
+    StashedAVVMAddresses,
     nesBcur,
   )
 import Cardano.Ledger.Shelley.TxBody (TransTxBody, TransTxId)
@@ -124,7 +125,8 @@ applyBlock ::
     TransTxBody NFData era,
     API.ApplyBlock era,
     NFData (Core.PParams era),
-    NFData (State (Core.EraRule "PPUP" era))
+    NFData (State (Core.EraRule "PPUP" era)),
+    NFData (StashedAVVMAddresses era)
   ) =>
   ValidateInput era ->
   Int ->

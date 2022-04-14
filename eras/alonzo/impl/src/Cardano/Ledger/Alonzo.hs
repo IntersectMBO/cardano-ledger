@@ -164,6 +164,7 @@ instance
       )
       SNothing
       (PoolDistr Map.empty)
+      ()
     where
       initialEpochNo = 0
       initialUtxo = genesisUTxO sg

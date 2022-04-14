@@ -70,7 +70,8 @@ instance
           nesBcur = nesBcur nes,
           nesEs = translateEra' ctxt $ nesEs nes,
           nesRu = nesRu nes,
-          nesPd = nesPd nes
+          nesPd = nesPd nes,
+          stashedAVVMAddresses = ()
         }
 
 instance Crypto c => TranslateEra (AlonzoEra c) ShelleyGenesis where

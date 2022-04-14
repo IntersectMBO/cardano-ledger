@@ -13,11 +13,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 -- |
@@ -85,6 +86,7 @@ module Cardano.Ledger.Shelley.LedgerState
     pulseStep,
     completeStep,
     NewEpochState (NewEpochState, nesEL, nesEs, nesRu, nesPd, nesBprev, nesBcur),
+    StashedAVVMAddresses,
     stashedAVVMAddresses,
     getGKeys,
     updateNES,
@@ -140,6 +142,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.SafeHash (HashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamedT, mapFromCBOR, mapToCBOR)
+import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.Address.Bootstrap
   ( BootstrapWitness (..),
     bootstrapWitKeyHash,
@@ -713,19 +716,19 @@ instance
       pure UTxOState {_utxo, _deposited, _fees, _ppups, _stakeDistro}
 
 -- | New Epoch state and environment
-data NewEpochState era = NewEpochStatePlusAVVM
+data NewEpochState era = NewEpochState
   { -- | Last epoch
-    nesPlusEL :: !EpochNo,
+    nesEL :: !EpochNo,
     -- | Blocks made before current epoch
-    nesPlusBprev :: !(BlocksMade (Crypto era)),
+    nesBprev :: !(BlocksMade (Crypto era)),
     -- | Blocks made in current epoch
-    nesPlusBcur :: !(BlocksMade (Crypto era)),
+    nesBcur :: !(BlocksMade (Crypto era)),
     -- | Epoch state before current
-    nesPlusEs :: !(EpochState era),
+    nesEs :: !(EpochState era),
     -- | Possible reward update
-    nesPlusRu :: !(StrictMaybe (PulsingRewUpdate (Crypto era))),
+    nesRu :: !(StrictMaybe (PulsingRewUpdate (Crypto era))),
     -- | Stake distribution within the stake pool
-    nesPlusPd :: !(PoolDistr (Crypto era)),
+    nesPd :: !(PoolDistr (Crypto era)),
     -- | AVVM addresses to be removed at the end of the Shelley era. Note that
     -- the existence of this field is a hack, related to the transition of UTxO
     -- to disk. We remove AVVM addresses from the UTxO on the Shelley/Allegra
@@ -737,31 +740,20 @@ data NewEpochState era = NewEpochStatePlusAVVM
     --
     -- This is very much an awkward implementation hack, and hence we hide it
     -- from as many places as possible.
-    stashedAVVMAddresses :: !(StrictMaybe (UTxO era))
+    stashedAVVMAddresses :: !(StashedAVVMAddresses era)
   }
   deriving (Generic)
 
-pattern NewEpochState ::
-  EpochNo ->
-  BlocksMade (Crypto era) ->
-  BlocksMade (Crypto era) ->
-  EpochState era ->
-  StrictMaybe (PulsingRewUpdate (Crypto era)) ->
-  PoolDistr (Crypto era) ->
-  NewEpochState era
-pattern NewEpochState {nesEL, nesBprev, nesBcur, nesEs, nesRu, nesPd} <-
-  NewEpochStatePlusAVVM nesEL nesBprev nesBcur nesEs nesRu nesPd _
-  where
-    NewEpochState el bprev bcur es ru pd =
-      NewEpochStatePlusAVVM el bprev bcur es ru pd SNothing
-
-{-# COMPLETE NewEpochState #-}
+type family StashedAVVMAddresses era where
+  StashedAVVMAddresses (ShelleyEra c) = UTxO (ShelleyEra c)
+  StashedAVVMAddresses _ = ()
 
 deriving stock instance
   ( CC.Crypto (Crypto era),
     Show (Core.TxOut era),
     Show (Core.PParams era),
-    Show (State (Core.EraRule "PPUP" era))
+    Show (State (Core.EraRule "PPUP" era)),
+    Show (StashedAVVMAddresses era)
   ) =>
   Show (NewEpochState era)
 
@@ -769,7 +761,8 @@ deriving stock instance
   ( CC.Crypto (Crypto era),
     Eq (Core.TxOut era),
     Eq (Core.PParams era),
-    Eq (State (Core.EraRule "PPUP" era))
+    Eq (State (Core.EraRule "PPUP" era)),
+    Eq (StashedAVVMAddresses era)
   ) =>
   Eq (NewEpochState era)
 
@@ -777,7 +770,8 @@ instance
   ( Era era,
     NFData (Core.TxOut era),
     NFData (Core.PParams era),
-    NFData (State (Core.EraRule "PPUP" era))
+    NFData (State (Core.EraRule "PPUP" era)),
+    NFData (StashedAVVMAddresses era)
   ) =>
   NFData (NewEpochState era)
 
@@ -787,6 +781,7 @@ instance
     NoThunks (Core.PParams era),
     NoThunks (State (Core.EraRule "PPUP" era)),
     NoThunks (Core.Value era),
+    NoThunks (StashedAVVMAddresses era),
     ToCBOR (Core.TxBody era),
     ToCBOR (Core.TxOut era),
     ToCBOR (Core.Value era)
@@ -797,11 +792,12 @@ instance
   ( Era era,
     ToCBOR (Core.TxOut era),
     ToCBOR (Core.PParams era),
-    ToCBOR (State (Core.EraRule "PPUP" era))
+    ToCBOR (State (Core.EraRule "PPUP" era)),
+    ToCBOR (StashedAVVMAddresses era)
   ) =>
   ToCBOR (NewEpochState era)
   where
-  toCBOR (NewEpochStatePlusAVVM e bp bc es ru pd av) =
+  toCBOR (NewEpochState e bp bc es ru pd av) =
     encodeListLen 7
       <> toCBOR e
       <> toCBOR bp
@@ -815,17 +811,16 @@ instance
   ( Era era,
     FromCBOR (Core.PParams era),
     FromSharedCBOR (Core.TxOut era),
-    -- This constraint is used only for the AVVM addresses
-    FromCBOR (Core.TxOut era),
     Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
     FromCBOR (Core.Value era),
-    FromCBOR (State (Core.EraRule "PPUP" era))
+    FromCBOR (State (Core.EraRule "PPUP" era)),
+    FromCBOR (StashedAVVMAddresses era)
   ) =>
   FromCBOR (NewEpochState era)
   where
   fromCBOR = do
     decode $
-      RecD NewEpochStatePlusAVVM
+      RecD NewEpochState
         <! From
         <! From
         <! From
@@ -839,7 +834,7 @@ getGKeys ::
   Set (KeyHash 'Genesis (Crypto era))
 getGKeys nes = Map.keysSet genDelegs
   where
-    NewEpochState _ _ _ es _ _ = nes
+    NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
     LedgerState _ (DPState (DState _ _ (GenDelegs genDelegs) _) _) = ls
 
@@ -1677,6 +1672,7 @@ updateNES
              (EpochState acnt ss _ pr pp nm)
              _ru
              _pd
+             _avvm
            )
   bcur
   ls =

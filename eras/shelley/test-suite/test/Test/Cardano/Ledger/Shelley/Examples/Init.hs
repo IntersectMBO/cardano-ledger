@@ -107,7 +107,11 @@ nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 -- The initial state for the examples uses the function
 -- 'initialShelleyState' with the genesis delegation
 -- 'genDelegs' and any given starting 'UTxO' set.
-initSt :: forall era. ShelleyTest era => UTxO era -> ChainState era
+initSt ::
+  forall era.
+  (ShelleyTest era) =>
+  UTxO era ->
+  ChainState era
 initSt utxo =
   initialShelleyState
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)

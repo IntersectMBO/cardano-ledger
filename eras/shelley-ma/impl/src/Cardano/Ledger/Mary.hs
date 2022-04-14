@@ -65,6 +65,7 @@ instance Crypto c => CanStartFromGenesis (MaryEra c) where
       )
       SNothing
       (PoolDistr Map.empty)
+      ()
     where
       initialEpochNo = 0
       initialUtxo = genesisUTxO sg

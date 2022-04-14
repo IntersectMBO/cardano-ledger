@@ -98,7 +98,8 @@ instance
     Default (EpochState era),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     Default (State (Core.EraRule "PPUP" era)),
-    Default (Core.PParams era)
+    Default (Core.PParams era),
+    Default (StashedAVVMAddresses era)
   ) =>
   STS (NEWEPOCH era)
   where
@@ -121,6 +122,7 @@ instance
           def
           SNothing
           (PoolDistr Map.empty)
+          def
     ]
 
   transitionRules = [newEpochTransition]
@@ -141,13 +143,14 @@ newEpochTransition ::
     UsesValue era,
     Default (State (Core.EraRule "PPUP" era)),
     Default (Core.PParams era),
+    Default (StashedAVVMAddresses era),
     Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
     ( _,
-      ~src@(NewEpochState (EpochNo eL) _ bcur es ru _pd),
+      src@(NewEpochState (EpochNo eL) _ bcur es ru _pd _),
       e@(EpochNo e_)
       ) <-
     judgmentContext

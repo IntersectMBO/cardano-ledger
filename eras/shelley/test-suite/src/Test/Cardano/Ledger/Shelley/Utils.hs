@@ -106,6 +106,7 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.BlockChain (TxSeq)
 import Cardano.Ledger.Shelley.Constraints
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.PParams (PParamsUpdate)
 import Cardano.Ledger.Shelley.Tx (Tx, TxOut, WitnessSet)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
@@ -173,6 +174,7 @@ type ShelleyTest era =
     Core.Witnesses era ~ WitnessSet era,
     Split (Core.Value era),
     Default (State (Core.EraRule "PPUP" era)),
+    Default (StashedAVVMAddresses era),
     Core.AnnotatedData (Core.Witnesses era)
   )
 

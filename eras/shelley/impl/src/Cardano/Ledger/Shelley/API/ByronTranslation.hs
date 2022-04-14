@@ -101,16 +101,15 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
       nesBcur = BlocksMade Map.empty,
       nesEs = epochState,
       nesRu = SNothing,
-      nesPd = PoolDistr Map.empty
-    }
-    { -- At this point, we compute the stashed AVVM addresses, while we are able
+      nesPd = PoolDistr Map.empty,
+      -- At this point, we compute the stashed AVVM addresses, while we are able
       -- to do a linear scan of the UTxO, and stash them away for use at the
       -- Shelley/Allegra boundary.
       stashedAVVMAddresses =
         let UTxO utxo = _utxo . lsUTxOState . esLState $ epochState
             redeemers =
               SplitMap.filter (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
-         in SJust $ UTxO redeemers
+         in UTxO redeemers
     }
   where
     pparams :: PParams (ShelleyEra c)

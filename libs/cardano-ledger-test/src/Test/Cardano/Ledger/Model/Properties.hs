@@ -29,6 +29,7 @@ import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Mary.Value (AssetName (..))
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..))
 import Cardano.Ledger.Val (Val (..))
@@ -136,7 +137,8 @@ modelTestDelegations ::
     Show (Core.Script era),
     Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
-    Show (LedgerState.LedgerState era)
+    Show (LedgerState.LedgerState era),
+    Show (StashedAVVMAddresses era)
   ) =>
   proxy era ->
   Coin ->
@@ -523,7 +525,8 @@ modelGenTest ::
     Show (Core.TxOut era),
     Show (Core.Script era),
     Show (Core.PParams era),
-    Show (State (Core.EraRule "PPUP" era))
+    Show (State (Core.EraRule "PPUP" era)),
+    Show (StashedAVVMAddresses era)
   ) =>
   proxy era ->
   Property
@@ -548,7 +551,8 @@ testModelShrinking ::
     Show (Core.Script era),
     Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
-    Show (LedgerState.LedgerState era)
+    Show (LedgerState.LedgerState era),
+    Show (StashedAVVMAddresses era)
   ) =>
   proxy era ->
   Property
@@ -611,7 +615,8 @@ propertyShrinking ::
     Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
     Show (LedgerState.LedgerState era),
-    ElaborateEraModel era
+    ElaborateEraModel era,
+    Show (StashedAVVMAddresses era)
   ) =>
   proxy era ->
   (ModelGenesis (EraFeatureSet era), [ModelEpoch (EraFeatureSet era)]) ->
@@ -657,7 +662,8 @@ testDelegCombinations ::
     Show (Core.TxOut era),
     Show (Core.Script era),
     Show (Core.PParams era),
-    Show (State (Core.EraRule "PPUP" era))
+    Show (State (Core.EraRule "PPUP" era)),
+    Show (StashedAVVMAddresses era)
   ) =>
   proxy era ->
   TestTree
@@ -686,7 +692,8 @@ modelUnitTests ::
     Show (Core.TxOut era),
     Show (Core.Script era),
     Show (Core.PParams era),
-    Show (State (Core.EraRule "PPUP" era))
+    Show (State (Core.EraRule "PPUP" era)),
+    Show (StashedAVVMAddresses era)
   ) =>
   proxy era ->
   TestTree
