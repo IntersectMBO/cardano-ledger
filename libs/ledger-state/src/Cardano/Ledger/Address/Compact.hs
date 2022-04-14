@@ -8,6 +8,8 @@
 module Cardano.Ledger.Address.Compact
   ( compactAddr,
     decompactAddr,
+    decodeAddr,
+    decodeAddrEither,
     CompactAddr (..),
   )
 where
@@ -32,19 +34,20 @@ import Cardano.Ledger.Address
     toWord7,
     word7sToWord64,
   )
-import Cardano.Ledger.BaseTypes -- (CertIx (..), TxIx (..), word8ToNetwork)
+import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.CompactAddress (CompactAddr (..))
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     PaymentCredential,
     Ptr (..),
     StakeReference (..),
   )
+import Cardano.Ledger.Crypto
 import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (SlotNo (..))
--- import Cardano.Prelude (Text, cborError, panic)
 import Control.DeepSeq (NFData)
 import Control.Monad
 import Control.Monad (ap)
@@ -65,11 +68,12 @@ import Data.Word
 -- * Same encoder/decoder for ShortByteString and ByteString
 -- * Same encoder/decoder for CBOR and Compact
 -- * Sticking Coin inside Addr28Extra can save more than it already does
-newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
-  deriving (Eq, Ord, NFData)
 
-instance CC.Crypto c => Show (CompactAddr c) where
-  show c = show (decompactAddr c)
+-- newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
+--   deriving (Eq, Ord, NFData)
+
+-- instance CC.Crypto c => Show (CompactAddr c) where
+--   show c = show (decompactAddr c)
 
 compactAddr :: Addr crypto -> CompactAddr crypto
 compactAddr = undefined
@@ -135,6 +139,7 @@ headerByron = 0b10000010 -- 0x80
 
 isByronAddress :: Header -> Bool
 isByronAddress = (== headerByron)
+{-# INLINE isByronAddress #-}
 
 headerNonShelleyBits :: Header
 headerNonShelleyBits = headerByron .|. 0b00001100
@@ -143,24 +148,37 @@ headerNetworkId :: Header -> Network
 headerNetworkId header
   | header `testBit` 0 = Mainnet
   | otherwise = Testnet
+{-# INLINE headerNetworkId #-}
 
 headerIsPaymentScript :: Header -> Bool
 headerIsPaymentScript = (`testBit` 4)
+{-# INLINE headerIsPaymentScript #-}
 
 headerIsEnterpriseAddr :: Header -> Bool
 headerIsEnterpriseAddr = (`testBit` 5)
+{-# INLINE headerIsEnterpriseAddr #-}
 
 headerIsStakingScript :: Header -> Bool
 headerIsStakingScript = (`testBit` 5)
+{-# INLINE headerIsStakingScript #-}
 
 headerIsBaseAddress :: Header -> Bool
 headerIsBaseAddress = not . (`testBit` 6)
+{-# INLINE headerIsBaseAddress #-}
 
+newtype Fail a = Fail {runFail :: Either String a}
+  deriving (Eq, Ord, Show, Functor, Applicative, Monad)
 
--- newtype FailT m a = FailT { runFailT :: m (Either String a)}
---   deriving (Eq, Ord, Show, Functor, Applicative, Monad)
+instance MonadFail Fail where
+  fail = Fail . Left
 
--- runFail = runIdentity . runFailT
+decodeAddrEither ::
+  forall crypto.
+  (CC.Crypto crypto) =>
+  ShortByteString ->
+  Either String (Addr crypto)
+decodeAddrEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
+{-# INLINE decodeAddrEither #-}
 
 decodeAddr ::
   forall crypto m.
@@ -168,6 +186,7 @@ decodeAddr ::
   ShortByteString ->
   m (Addr crypto)
 decodeAddr sbs = evalStateT (decodeAddrStateT sbs) 0
+{-# INLINE decodeAddr #-}
 
 decodeAddrStateT ::
   forall crypto m.
@@ -194,16 +213,19 @@ decodeAddrStateT sbs = do
   unless (lastOffset == len) $
     fail $ "Left over bytes: " ++ show (len - lastOffset)
   pure addr
+{-# INLINEABLE decodeAddrStateT #-}
 
 -- | This decoder assumes the whole `ShortByteString` is occupied by the `BootstrapAddress`
 decodeBootstrapAddress ::
-     forall crypto m. MonadFail m
-  => ShortByteString
-  -> StateT Int m (BootstrapAddress crypto)
+  forall crypto m.
+  MonadFail m =>
+  ShortByteString ->
+  StateT Int m (BootstrapAddress crypto)
 decodeBootstrapAddress sbs =
   case decodeFull' $ SBS.fromShort sbs of
     Left e -> fail $ show e
     Right addr -> BootstrapAddress addr <$ modify' (+ SBS.length sbs)
+{-# INLINE decodeBootstrapAddress #-}
 
 decodePaymentCredential ::
   (CC.Crypto crypto, MonadFail m) =>
@@ -213,6 +235,7 @@ decodePaymentCredential ::
 decodePaymentCredential header sbs
   | headerIsPaymentScript header = ScriptHashObj <$> decodeScriptHash sbs
   | otherwise = KeyHashObj <$> decodeKeyHash sbs
+{-# INLINE decodePaymentCredential #-}
 
 decodeStakeReference ::
   (CC.Crypto crypto, MonadFail m) =>
@@ -228,18 +251,21 @@ decodeStakeReference header sbs
       if headerIsEnterpriseAddr header
         then pure StakeRefNull
         else StakeRefPtr <$> decodePtr sbs
+{-# INLINE decodeStakeReference #-}
 
 decodeKeyHash ::
-     (CC.Crypto crypto, MonadFail m)
-  => ShortByteString
-  -> StateT Int m (KeyHash kr crypto)
+  (CC.Crypto crypto, MonadFail m) =>
+  ShortByteString ->
+  StateT Int m (KeyHash kr crypto)
 decodeKeyHash sbs = KeyHash <$> decodeHash sbs
+{-# INLINE decodeKeyHash #-}
 
 decodeScriptHash ::
-     (CC.Crypto crypto, MonadFail m)
-  => ShortByteString
-  -> StateT Int m (ScriptHash crypto)
+  (CC.Crypto crypto, MonadFail m) =>
+  ShortByteString ->
+  StateT Int m (ScriptHash crypto)
 decodeScriptHash sbs = ScriptHash <$> decodeHash sbs
+{-# INLINE decodeScriptHash #-}
 
 decodeHash ::
   forall a h m.
@@ -261,27 +287,32 @@ decodeHash sbs = do
   where
     hashLen :: Int
     hashLen = fromIntegral (Hash.sizeHash (Proxy :: Proxy h))
+{-# INLINE decodeHash #-}
 
 decodePtr ::
-     forall m. MonadFail m
-  => ShortByteString
-  -> StateT Int m Ptr
+  forall m.
+  MonadFail m =>
+  ShortByteString ->
+  StateT Int m Ptr
 decodePtr sbs =
   Ptr <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> decodeVariableLengthWord32 "SlotNo" sbs)
-      <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" sbs)
-      <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" sbs)
+    <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" sbs)
+    <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" sbs)
+{-# INLINE decodePtr #-}
 
 guardLength ::
-     forall m. MonadFail m
-  => String
-  -- ^ Name for what is being decoded for the error message
-  -> Int
-  -> ShortByteString
-  -> StateT Int m ()
+  forall m.
+  MonadFail m =>
+  -- | Name for what is being decoded for the error message
+  String ->
+  Int ->
+  ShortByteString ->
+  StateT Int m ()
 guardLength name expectedLength sbs = do
   offset <- get
   when (offset > SBS.length sbs - expectedLength) $
     failDecoding name "Not enough bytes for decoding"
+{-# INLINE guardLength #-}
 
 -- decodeWord8 ::
 --      forall m. MonadFail m
@@ -293,22 +324,22 @@ guardLength name expectedLength sbs = do
 --   offset <- get
 --   SBS.unsafeIndex sbs offset <$ put (offset + 1)
 
-
 -- | Decode a variable length integral value that is encoded with 7 bits of data
 -- and the most significant bit (MSB), the 8th bit is set whenever there are
 -- more bits following. Continuation style allows us to avoid
 -- rucursion. Removing loops is good for performance.
 decode7BitVarLength ::
-     forall a m. (Num a, Bits a, MonadFail m)
-  => String
-  -- ^ Name of what is being decoded for error reporting
-  -> ShortByteString
-  -- ^ Buffer that contains encoded number
-  -> (a -> StateT Int m a)
-  -- ^ Continuation that will be invoked if MSB is set
-  -> a
-  -- ^ Accumulator
-  -> StateT Int m a
+  forall a m.
+  (Num a, Bits a, MonadFail m) =>
+  -- | Name of what is being decoded for error reporting
+  String ->
+  -- | Buffer that contains encoded number
+  ShortByteString ->
+  -- | Continuation that will be invoked if MSB is set
+  (a -> StateT Int m a) ->
+  -- | Accumulator
+  a ->
+  StateT Int m a
 decode7BitVarLength name sbs cont !acc = do
   guardLength name 1 sbs
   offset <- state (\off -> (off, off + 1))
@@ -316,15 +347,18 @@ decode7BitVarLength name sbs cont !acc = do
   if b8 `testBit` 7
     then cont (acc `shiftL` 7 .|. fromIntegral (b8 `clearBit` 7))
     else pure (acc `shiftL` 7 .|. fromIntegral b8)
+{-# INLINE decode7BitVarLength #-}
 
 failDecoding :: MonadFail m => String -> String -> m a
 failDecoding name msg = fail $ "Decoding " ++ name ++ ": " ++ msg
+{-# NOINLINE failDecoding #-}
 
 decodeVariableLengthWord16 ::
-     forall m. MonadFail m
-  => String
-  -> ShortByteString
-  -> StateT Int m Word16
+  forall m.
+  MonadFail m =>
+  String ->
+  ShortByteString ->
+  StateT Int m Word16
 decodeVariableLengthWord16 name sbs = do
   off0 <- get
   let d7 = decode7BitVarLength name sbs
@@ -337,12 +371,14 @@ decodeVariableLengthWord16 name sbs = do
           failDecoding name "More than 16bits was supplied"
         pure res
   d7 (d7 d7last) 0
+{-# INLINE decodeVariableLengthWord16 #-}
 
 decodeVariableLengthWord32 ::
-     forall m. MonadFail m
-  => String
-  -> ShortByteString
-  -> StateT Int m Word32
+  forall m.
+  MonadFail m =>
+  String ->
+  ShortByteString ->
+  StateT Int m Word32
 decodeVariableLengthWord32 name sbs = do
   off0 <- get
   let d7 = decode7BitVarLength name sbs
@@ -355,6 +391,7 @@ decodeVariableLengthWord32 name sbs = do
           failDecoding name "More than 32bits was supplied"
         pure res
   d7 (d7 (d7 (d7 d7last))) 0
+{-# INLINE decodeVariableLengthWord32 #-}
 
 -- getBootstrapAddress :: GetShort (BootstrapAddress crypto)
 -- getBootstrapAddress = do
@@ -410,7 +447,6 @@ decodeVariableLengthWord32 name sbs = do
 
 -- getVariableLengthWord64 :: GetShort Word64
 -- getVariableLengthWord64 = word7sToWord64 <$> getWord7s
-
 
 -- -- | Efficiently check whether compated adddress is an address with a credential
 -- -- that is a payment script.

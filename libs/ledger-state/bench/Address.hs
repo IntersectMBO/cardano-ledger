@@ -6,10 +6,9 @@
 
 module Main where
 
--- import Cardano.Binary
-
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address
+import Cardano.Ledger.Address.Compact as Compact
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress as CompactAddress
 import Cardano.Ledger.Credential
@@ -33,7 +32,7 @@ main = do
       mkAddr mkStake n = Addr Mainnet (mkPayment n) (mkStake n)
       mkPtr n =
         let ni = toInteger n
-         in Ptr (SlotNo (fromIntegral n)) (mkTxIxPartial ni) (mkCertIxPartial ni)
+         in Ptr (SlotNo (fromIntegral n)) (mkTxIxPartial ni) (mkCertIxPartial (ni + 1))
       count :: Int
       count = 10000
       seqUnit :: a -> StrictUnit
@@ -46,6 +45,14 @@ main = do
       compactAddrs :: (Int -> StakeReference StandardCrypto) -> [CompactAddr StandardCrypto]
       compactAddrs = map CompactAddress.compactAddr . addrs
       {-# NOINLINE compactAddrs #-}
+      checkAddrEquality :: CompactAddr StandardCrypto -> StrictUnit
+      checkAddrEquality ca
+        | new == old = mempty
+        | otherwise = error $ "Check failed: " ++ show new ++ " vs " ++ show old
+        where
+          new, old :: Addr StandardCrypto
+          new = Compact.decompactAddr ca
+          old = CompactAddress.decompactAddr ca
   defaultMain
     [ bgroup
         "toCompact"
@@ -64,24 +71,42 @@ main = do
         ],
       bgroup
         "fromCompact"
-        [ bgroup "StakeRefNull" $
-            [ env (pure (compactAddrs (const StakeRefNull))) $
-                bench "old"
-                  . whnf
+        [ env (pure (compactAddrs (const StakeRefNull))) $ \cas ->
+            bgroup "StakeRefNull" $
+              [ bench "old" $
+                  whnf
                     (foldMap' (deepseqUnit @(Addr StandardCrypto) . CompactAddress.decompactAddr))
-            ],
-          bgroup "StakeRefBase" $
-            [ env (pure (compactAddrs stakeRefBase)) $
-                bench "old"
-                  . whnf
+                    cas,
+                bench "new" $
+                  whnf
+                    (foldMap' (deepseqUnit @(Addr StandardCrypto) . Compact.decompactAddr))
+                    cas,
+                bench "validate" $ whnf (foldMap' checkAddrEquality) cas
+              ],
+          env (pure (compactAddrs stakeRefBase)) $ \cas ->
+            bgroup "StakeRefBase" $
+              [ bench "old" $
+                  whnf
                     (foldMap' (deepseqUnit @(Addr StandardCrypto) . CompactAddress.decompactAddr))
-            ],
-          bgroup "StakeRefPtr" $
-            [ env (pure (compactAddrs (StakeRefPtr . mkPtr))) $
-                bench "old"
-                  . whnf
+                    cas,
+                bench "new" $
+                  whnf
+                    (foldMap' (deepseqUnit @(Addr StandardCrypto) . Compact.decompactAddr))
+                    cas,
+                bench "validate" $ whnf (foldMap' checkAddrEquality) cas
+              ],
+          env (pure (compactAddrs (StakeRefPtr . mkPtr))) $ \cas ->
+            bgroup "StakeRefPtr" $
+              [ bench "old" $
+                  whnf
                     (foldMap' (deepseqUnit @(Addr StandardCrypto) . CompactAddress.decompactAddr))
-            ]
+                    cas,
+                bench "new" $
+                  whnf
+                    (foldMap' (deepseqUnit @(Addr StandardCrypto) . Compact.decompactAddr))
+                    cas,
+                bench "validate" $ whnf (foldMap' checkAddrEquality) cas
+              ]
         ]
     ]
 
