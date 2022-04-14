@@ -212,7 +212,7 @@ decodeAddress28 stakeRef (Addr28Extra a b c d) = do
       addrHash =
         hashFromPackedBytes $
           PackedBytes28 a b c (fromIntegral (d `shiftR` 32))
-  pure $! Addr network paymentCred (StakeRefBase stakeRef)
+  pure $ Addr network paymentCred (StakeRefBase stakeRef)
 
 encodeAddress28 ::
   forall crypto.
@@ -658,9 +658,7 @@ pattern TxOutCompact ::
 pattern TxOutCompact addr vl <-
   (viewCompactTxOut -> (addr, vl, SNothing))
   where
-    TxOutCompact cAddr cVal
-      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) SNothing
-      | otherwise = TxOutCompact' cAddr cVal
+    TxOutCompact = TxOutCompact'
 
 pattern TxOutCompactDH ::
   forall era.
@@ -674,9 +672,7 @@ pattern TxOutCompactDH ::
 pattern TxOutCompactDH addr vl dh <-
   (viewCompactTxOut -> (addr, vl, SJust dh))
   where
-    TxOutCompactDH cAddr cVal dh
-      | isAdaOnlyCompact cVal = TxOut (decompactAddr cAddr) (fromCompact cVal) (SJust dh)
-      | otherwise = TxOutCompactDH' cAddr cVal dh
+    TxOutCompactDH = TxOutCompactDH'
 
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
@@ -873,10 +869,11 @@ instance HasField "txnetworkid" (TxBody era) (StrictMaybe Network) where
 
 instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (TxOut era) val where
   getField = \case
-    TxOutCompact' _ cv -> fromCompact cv
-    TxOutCompactDH' _ cv _ -> fromCompact cv
-    TxOut_AddrHash28_AdaOnly _ _ cc -> inject (fromCompact cc)
-    TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> inject (fromCompact cc)
+    -- FIXME: This implementation is intentionally dumb and in theory results in
+    -- extroneous conversion, however this mysteriously results in overall improved
+    -- performance and fewer allocations
+    TxOutCompact _ v -> fromCompact v
+    TxOutCompactDH _ v _ -> fromCompact v
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField = \case
