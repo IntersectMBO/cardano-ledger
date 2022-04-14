@@ -11,7 +11,10 @@ module Cardano.Ledger.Babbage.Rules.Utxow where
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Data
-    ( DataHash, Data(Data), hashData )
+  ( Data (Data),
+    DataHash,
+    hashData,
+  )
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent)
 import Cardano.Ledger.Alonzo.Rules.Utxow
@@ -33,6 +36,7 @@ import Cardano.Ledger.Babbage.Rules.Utxo
     BabbageUtxoPred (..),
   )
 import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
+import Cardano.Ledger.Babbage.Scripts (refScripts)
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxOut (..))
 import Cardano.Ledger.BaseTypes
   ( ProtVer,
@@ -44,7 +48,7 @@ import Cardano.Ledger.Crypto (DSIGN, HASH)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Rules.ValidationMode (Test, runTest, runTestOnSignal)
-import qualified Cardano.Ledger.Shelley.HardForks as HardForks
+import Cardano.Ledger.Shelley.API (TxIn)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
@@ -64,17 +68,17 @@ import Control.State.Transition.Extended
     liftSTS,
     trans,
   )
+import qualified Data.ByteString as BS
+import Data.Foldable (sequenceA_)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
-import Validation (failureUnless)
-import Plutus.V1.Ledger.Api (Data(..))
-import qualified Data.ByteString as BS
+import Plutus.V1.Ledger.Api (Data (..))
 import qualified Plutus.V1.Ledger.Api as Plutus
-import Cardano.Ledger.Babbage.Scripts (refScripts)
-import Cardano.Ledger.Shelley.API (TxIn)
+import Validation (failureUnless)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness(TxWitness'))
 
 -- ==================================================
 -- Reuseable tests first used in the Babbage Era
@@ -86,21 +90,21 @@ import Cardano.Ledger.Shelley.API (TxIn)
 {-  sReceived := Map.keysSet (getField @"scriptWits" tx)                                 -}
 babbageMissingScripts ::
   forall era.
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
-  ) =>
   Core.PParams era ->
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
   Test (Shelley.UtxowPredicateFailure era)
-babbageMissingScripts pp sNeeded sRefs sReceived =
-  if HardForks.missingScriptsSymmetricDifference pp
-    then
-      failureUnless (sNeeded `Set.difference` sRefs == sReceived) $
-        Shelley.MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
-    else
-      failureUnless (sNeeded == sReceived) $
-        Shelley.MissingScriptWitnessesUTXOW (sNeeded `Set.difference` sReceived)
+babbageMissingScripts _ sNeeded sRefs sReceived =
+  sequenceA_
+    [ failureUnless (Set.null extra) $ Shelley.ExtraneousScriptWitnessesUTXOW extra,
+      failureUnless (Set.null missing) $ Shelley.MissingScriptWitnessesUTXOW missing
+    ]
+  where
+    -- FIXME what about the hard forks?
+    neededNonRefs = sNeeded `Set.difference` sRefs
+    missing = neededNonRefs `Set.difference` sReceived
+    extra = sReceived `Set.difference` neededNonRefs
 
 {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx ∪ utxo (refInputs tx)  -}
 danglingWitnessDataHashes ::
@@ -169,14 +173,14 @@ validateDatumsWellFormed ::
   Core.Tx era ->
   Test (BabbageUtxoPred era)
 validateDatumsWellFormed tx =
-   let invalidDatums = Set.map hashData $ Set.filter (\(Data d) -> not $ validateData' d) (txdata tx)
+  let invalidDatums = Set.map hashData $ Set.filter (\(Data d) -> not $ validateData' d) (txdata tx)
    in failureUnless
         (Set.null invalidDatums)
         (MalformedData invalidDatums)
 
 validateData' ::
-    Plutus.Data ->
-    Bool
+  Plutus.Data ->
+  Bool
 validateData' (Constr _ ds) = all validateData' ds
 validateData' (Map ds) = all (\(x, y) -> validateData' x && validateData' y) ds
 validateData' (List ds) = all validateData' ds
@@ -228,7 +232,8 @@ babbageUtxowTransition = do
 
   {-  { h | (_,h) ∈ scriptsNeeded utxo tx} ⊆ dom(txscripts txw utxo)     -}
   let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx)) -- Script credentials
-      sReceived = Map.keysSet (txscripts utxo tx)
+      sReceived = Map.keysSet $ case getField @"wits" tx of
+        (TxWitness' _ _ scs _ _) -> scs
       sRefs = Map.keysSet $ refScripts inputs utxo
   runTest $ babbageMissingScripts pp sNeeded sRefs sReceived
 

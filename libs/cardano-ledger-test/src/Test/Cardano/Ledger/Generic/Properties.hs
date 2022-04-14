@@ -930,7 +930,7 @@ testTxValidForLEDGER ::
   Proof era ->
   Box era ->
   Property
-testTxValidForLEDGER proof (Box _ (trc@(TRC (_, ledgerState, vtx))) _) =
+testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _) =
   ( if False
       then trace (show (txSummary proof vtx))
       else id

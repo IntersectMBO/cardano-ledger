@@ -344,7 +344,8 @@ referenceScriptTx pf =
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (referenceScriptTxBody pf)) (someKeys pf)],
           DataWits' [datumExample1],
-          RdmrWits validatingRedeemersEx1
+          RdmrWits validatingRedeemersEx1,
+          ScriptWits' [alwaysAlt 3 pf]
         ]
     ]
 
@@ -388,6 +389,7 @@ inlineDatumAndRefScriptTx pf =
     [ Body (inlineDatumAndRefScriptTxBody pf),
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (inlineDatumAndRefScriptTxBody pf)) (someKeys pf)],
+          ScriptWits' [alwaysAlt 3 pf],
           RdmrWits validatingRedeemersEx1
         ]
     ]
@@ -562,6 +564,7 @@ refScriptForDelegCertTx pf =
     [ Body (refScriptForDelegCertTxBody pf),
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (refScriptForDelegCertTxBody pf)) (someKeys pf)],
+          ScriptWits' [alwaysAlt 2 pf],
           RdmrWits redeemersEx7
         ]
     ]
@@ -768,7 +771,7 @@ malformedScriptsTx pf =
     pf
     [ Body txb,
       WitnessesI
-        [ ScriptWits' [malformedScript pf "rs"],
+        [ --ScriptWits' [malformedScript pf "rs"],
           AddrWits' [makeWitnessVKey (hashAnnotated txb) (someKeys pf)]
         ]
     ]
