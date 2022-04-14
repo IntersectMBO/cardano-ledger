@@ -808,9 +808,9 @@ getGKeys nes = Map.keysSet genDelegs
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
   { -- | The current unspent transaction outputs.
-    lsUTxOState :: !(UTxOState era),
+    lsUTxOState :: UTxOState era,
     -- | The current delegation state
-    lsDPState :: !(DPState (Crypto era))
+    lsDPState :: DPState (Crypto era)
   }
   deriving (Generic)
 
