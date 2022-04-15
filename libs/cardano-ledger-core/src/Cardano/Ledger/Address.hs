@@ -311,7 +311,7 @@ putRewardAcnt (RewardAcnt network cred) = do
         ScriptHashObj _ -> flip setBit payCredIsScript
         KeyHashObj _ -> id
       netId = networkToWord8 network
-      rewardAcntPrefix = 0xE0 -- 0b1110000 are always set for reward accounts
+      rewardAcntPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
       header = setPayCredBit (netId .|. rewardAcntPrefix)
   B.putWord8 header
   putCredential cred
@@ -319,7 +319,7 @@ putRewardAcnt (RewardAcnt network cred) = do
 getRewardAcnt :: CC.Crypto crypto => Get (RewardAcnt crypto)
 getRewardAcnt = do
   header <- B.getWord8
-  let rewardAcntPrefix = 0xE0 -- 0b1110000 are always set for reward accounts
+  let rewardAcntPrefix = 0xE0 -- 0b11100000 are always set for reward accounts
       isRewardAcnt = (header .&. rewardAcntPrefix) == rewardAcntPrefix
       netId = header .&. 0x0F -- 0b00001111 is the mask for the network id
   case (word8ToNetwork netId, isRewardAcnt) of
