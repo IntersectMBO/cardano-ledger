@@ -11,13 +11,16 @@ module Cardano.Ledger.Address.Compact
     decodeAddr,
     decodeAddrEither,
     decodeAddrShortEither,
+    fromCborAddr,
     CompactAddr (..),
+    fromCborCompactAddr,
     decodeRewardAccount,
   )
 where
 
 import Cardano.Binary
-  ( DecoderError (..),
+  ( Decoder,
+    DecoderError (..),
     FromCBOR (..),
     ToCBOR (..),
     decodeFull',
@@ -77,15 +80,22 @@ compactAddr :: Addr crypto -> CompactAddr crypto
 compactAddr = undefined
 
 decompactAddr :: forall crypto. CC.Crypto crypto => CompactAddr crypto -> Addr crypto
-decompactAddr (UnsafeCompactAddr sbs) = maybe (error "Impossible") id (decodeAddr sbs)
+decompactAddr (UnsafeCompactAddr sbs) = maybe (error "Impossible") id (decodeAddrShort sbs)
 
--- data EncoderError = EncoderError
---   { encoderErrorOffset :: Int,
---     encoderErrorMessage :: String
---   }
---   deriving (Eq, Show)
 
--- type EncoderT m a = StateT Int (ExceptT (EncoderError String) m) a
+fromCborAddr :: forall crypto s. CC.Crypto crypto => Decoder s (Addr crypto)
+fromCborAddr = do
+  sbs <- fromCBOR
+  decodeAddrShort @crypto sbs
+{-# INLINE fromCborAddr #-}
+
+fromCborCompactAddr :: forall crypto s. CC.Crypto crypto => Decoder s (CompactAddr crypto)
+fromCborCompactAddr = do
+  sbs <- fromCBOR
+  -- Ensure bytes can be decoded as Addr
+  _ <- decodeAddrShort @crypto sbs
+  pure $ UnsafeCompactAddr sbs
+{-# INLINE fromCborCompactAddr #-}
 
 class AddressBuffer b where
   bufLength :: b -> Int
@@ -155,7 +165,7 @@ instance MonadFail Fail where
 
 decodeAddrEither ::
   forall crypto.
-  (CC.Crypto crypto) =>
+  CC.Crypto crypto =>
   BS.ByteString ->
   Either String (Addr crypto)
 decodeAddrEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
@@ -163,16 +173,24 @@ decodeAddrEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
 
 decodeAddrShortEither ::
   forall crypto.
-  (CC.Crypto crypto) =>
+  CC.Crypto crypto =>
   ShortByteString ->
   Either String (Addr crypto)
 decodeAddrShortEither sbs = runFail $ evalStateT (decodeAddrStateT sbs) 0
 {-# INLINE decodeAddrShortEither #-}
 
-decodeAddr ::
+decodeAddrShort ::
   forall crypto m.
   (CC.Crypto crypto, MonadFail m) =>
   ShortByteString ->
+  m (Addr crypto)
+decodeAddrShort sbs = evalStateT (decodeAddrStateT sbs) 0
+{-# INLINE decodeAddrShort #-}
+
+decodeAddr ::
+  forall crypto m.
+  (CC.Crypto crypto, MonadFail m) =>
+  BS.ByteString ->
   m (Addr crypto)
 decodeAddr sbs = evalStateT (decodeAddrStateT sbs) 0
 {-# INLINE decodeAddr #-}
@@ -236,10 +254,10 @@ decodeAddrStateT buf = do
 ensureBufIsConsumed ::
   forall m b.
   (MonadFail m, AddressBuffer b) =>
+  -- | Name for error reporting
   String ->
-  -- ^ Name for error reporting
+  -- | Buffer that should have beeen consumed.
   b ->
-  -- ^ Buffer that should have beeen consumed.
   StateT Int m ()
 ensureBufIsConsumed name buf = do
   lastOffset <- get
@@ -417,7 +435,7 @@ decodeVariableLengthWord32 name buf = do
 ------------------------------------------------------------------------------------------
 
 decodeRewardAccount ::
-     (MonadFail m, Crypto crypto, AddressBuffer b) => b -> m (RewardAcnt crypto)
+  (MonadFail m, Crypto crypto, AddressBuffer b) => b -> m (RewardAcnt crypto)
 decodeRewardAccount buf = evalStateT (decodeRewardAccountT buf) 0
 {-# INLINE decodeRewardAccount #-}
 
@@ -446,9 +464,9 @@ headerRewardAccountIsScript = (`testBit` 4)
 --                            `Account Credential is a Script
 -- @@@
 decodeRewardAccountT ::
-     (MonadFail m, Crypto crypto, AddressBuffer b)
-  => b
-  -> StateT Int m (RewardAcnt crypto)
+  (MonadFail m, Crypto crypto, AddressBuffer b) =>
+  b ->
+  StateT Int m (RewardAcnt crypto)
 decodeRewardAccountT buf = do
   guardLength "Header" 1 buf
   modify' (+ 1)

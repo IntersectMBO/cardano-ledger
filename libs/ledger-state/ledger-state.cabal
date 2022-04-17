@@ -53,9 +53,7 @@ library
                     , transformers
 
                     , primitive
-  exposed-modules:
-                    -- Cardano.Ledger.Address.Type
-                    Cardano.Ledger.Address.Compact
+  exposed-modules:    Cardano.Ledger.Address.Compact
                     , Cardano.Ledger.State.UTxO
                     , Cardano.Ledger.State.Orphans
                     , Cardano.Ledger.State.Schema
@@ -128,9 +126,9 @@ benchmark address
   main-is:          Address.hs
   build-depends:
     base,
-    -- bytestring,
+    bytestring,
     -- base16-bytestring,
-    -- cardano-binary,
+    cardano-binary,
     cardano-crypto-class,
     cardano-ledger-core,
     cardano-slotting,
