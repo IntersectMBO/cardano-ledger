@@ -9,9 +9,8 @@ module Main where
 import Cardano.Binary
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address
-import Cardano.Ledger.Address.Compact as Compact
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CompactAddress as CompactAddress
+import Cardano.Ledger.CompactAddress
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
@@ -41,7 +40,6 @@ main = do
       seqUnit x = x `seq` mempty
       addrs :: (Int -> StakeReference StandardCrypto) -> [Addr StandardCrypto]
       addrs mkStake = mkAddr mkStake <$> [1 .. count]
-      -- {-# NOINLINE addrs #-}
       partialDeserializeAddr :: ByteString -> Addr StandardCrypto
       partialDeserializeAddr =
         either (error . show) id . decodeFullDecoder "Addr" fromCborAddr . BSL.fromStrict
@@ -50,15 +48,15 @@ main = do
         "encode"
         [ bgroup "StakeRefNull" $
             [ env (pure (addrs (const StakeRefNull))) $
-                bench "old" . whnf (foldMap' (seqUnit . CompactAddress.compactAddr))
+                bench "old" . whnf (foldMap' (seqUnit . compactAddr))
             ],
           bgroup "StakeRefBase" $
             [ env (pure (addrs stakeRefBase)) $
-                bench "old" . whnf (foldMap' (seqUnit . CompactAddress.compactAddr))
+                bench "old" . whnf (foldMap' (seqUnit . compactAddr))
             ],
           bgroup "StakeRefPtr" $
             [ env (pure (addrs (StakeRefPtr . mkPtr))) $
-                bench "old" . whnf (foldMap' (seqUnit . CompactAddress.compactAddr))
+                bench "old" . whnf (foldMap' (seqUnit . compactAddr))
             ]
         ],
       bgroup
@@ -67,19 +65,19 @@ main = do
             "fromCompact"
             [ benchDecode
                 "StakeRefNull"
-                (CompactAddress.compactAddr <$> addrs (const StakeRefNull))
-                CompactAddress.decompactAddr
-                Compact.decompactAddr,
+                (compactAddr <$> addrs (const StakeRefNull))
+                decompactAddr
+                decompactAddrFast,
               benchDecode
                 "StakeRefBase"
-                (CompactAddress.compactAddr <$> addrs stakeRefBase)
-                CompactAddress.decompactAddr
-                Compact.decompactAddr,
+                (compactAddr <$> addrs stakeRefBase)
+                decompactAddr
+                decompactAddrFast,
               benchDecode
                 "StakeRefPtr"
-                (CompactAddress.compactAddr <$> addrs (StakeRefPtr . mkPtr))
-                CompactAddress.decompactAddr
-                Compact.decompactAddr
+                (compactAddr <$> addrs (StakeRefPtr . mkPtr))
+                decompactAddr
+                decompactAddrFast
             ],
           bgroup
             "fromCBOR"

@@ -53,8 +53,7 @@ library
                     , transformers
 
                     , primitive
-  exposed-modules:    Cardano.Ledger.Address.Compact
-                    , Cardano.Ledger.State.UTxO
+  exposed-modules:    Cardano.Ledger.State.UTxO
                     , Cardano.Ledger.State.Orphans
                     , Cardano.Ledger.State.Schema
                     , Cardano.Ledger.State.Transform
