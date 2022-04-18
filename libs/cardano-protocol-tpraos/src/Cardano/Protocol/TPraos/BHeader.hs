@@ -103,7 +103,6 @@ import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (OCert (..))
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Builder as BS
 import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
@@ -358,12 +357,8 @@ prevHashToNonce = \case
 issuerIDfromBHBody :: CC.Crypto crypto => BHBody crypto -> KeyHash 'BlockIssuer crypto
 issuerIDfromBHBody = hashKey . bheaderVk
 
-bHeaderSize ::
-  forall crypto.
-  (CC.Crypto crypto) =>
-  BHeader crypto ->
-  Int
-bHeaderSize = BS.length . serialize'
+bHeaderSize :: forall crypto. BHeader crypto -> Int
+bHeaderSize = fromIntegral . BSL.length . bHeaderBytes
 
 bhbody ::
   CC.Crypto crypto =>
