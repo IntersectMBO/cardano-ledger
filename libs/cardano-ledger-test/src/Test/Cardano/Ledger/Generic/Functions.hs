@@ -16,6 +16,7 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (DataHash, binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
+import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
@@ -32,6 +33,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (minfee)
@@ -51,11 +53,9 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Generic.Fields (TxOutField (..), initialTx, TxField (Body))
+import Test.Cardano.Ledger.Generic.Fields (TxField (Body), TxOutField (..), initialTx)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
-import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Test.Cardano.Ledger.Generic.Updaters (updateTx)
 
 -- ====================================================================

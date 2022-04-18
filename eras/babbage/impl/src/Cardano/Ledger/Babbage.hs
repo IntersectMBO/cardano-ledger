@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..), TxDats (TxDats'))
+import Cardano.Ledger.Alonzo.TxWitness (TxDats (TxDats'), TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import Cardano.Ledger.Babbage.Genesis
 import Cardano.Ledger.Babbage.PParams
@@ -91,11 +91,11 @@ import Control.State.Transition.Extended (TRC (TRC))
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default (def)
 import Data.Foldable (toList)
+import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
-import qualified Data.List as List
 
 -- =====================================================
 
@@ -246,7 +246,7 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
       collOuts = case getField @"collateralReturn" txbody of
         SNothing -> []
         SJust x -> [x]
-  txdata (ValidatedTx txbody (TxWitness _ _ _ (TxDats' m) _) _ _ ) = Set.union witnessData outputData
+  txdata (ValidatedTx txbody (TxWitness _ _ _ (TxDats' m) _) _ _) = Set.union witnessData outputData
     where
       witnessData = Set.fromList $ Map.elems m
       outputData = List.foldl' accum Set.empty $ allOuts txbody

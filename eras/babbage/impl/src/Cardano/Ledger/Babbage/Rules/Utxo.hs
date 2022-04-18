@@ -13,6 +13,7 @@
 module Cardano.Ledger.Babbage.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
+import Cardano.Ledger.Address (bootstrapAddressAttrsSize, getNetwork)
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Rules.Utxo
   ( UtxoEvent (..),
@@ -57,6 +58,7 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
+import Cardano.Ledger.Shelley.API (Network)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure)
@@ -85,7 +87,7 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Coders
 import Data.Coerce (coerce)
 import qualified Data.Compact.SplitMap as SplitMap
-import Data.Foldable (sequenceA_, Foldable (foldl'))
+import Data.Foldable (Foldable (foldl'), sequenceA_)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
@@ -95,8 +97,6 @@ import GHC.Natural (Natural)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation
-import Cardano.Ledger.Address (bootstrapAddressAttrsSize, getNetwork)
-import Cardano.Ledger.Shelley.API (Network)
 
 -- ======================================================
 
@@ -244,9 +244,8 @@ validateCollateralEqBalance bal txcoll =
 
 -- > getValue txout ≥ inject ( ⌈ serSize txout ∗ coinsPerUTxOWord pp / 8 ⌉ )
 validateOutputTooSmallUTxO ::
-  (
-    Era era, 
-    ToCBOR (Core.Value era), 
+  ( Era era,
+    ToCBOR (Core.Value era),
     HasField "_coinsPerUTxOWord" (Core.PParams era) Coin
   ) =>
   Core.PParams era ->

@@ -41,7 +41,7 @@ import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), alonzoInputHashes, minfee)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (TxOut), getAlonzoTxOutEitherAddr)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo, validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..), TxDats (TxDats'))
+import Cardano.Ledger.Alonzo.TxWitness (TxDats (TxDats'), TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
@@ -238,8 +238,7 @@ instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
           SJust dh <- [getField @"datahash" out]
       ]
   allOuts txbody = toList $ getField @"outputs" txbody
-  txdata (ValidatedTx _ (TxWitness _ _ _ (TxDats' m) _) _ _ ) = Set.fromList $ Map.elems m
-
+  txdata (ValidatedTx _ (TxWitness _ _ _ (TxDats' m) _) _ _) = Set.fromList $ Map.elems m
 
 -------------------------------------------------------------------------------
 -- Era Mapping
@@ -294,6 +293,7 @@ type instance Core.EraRule "UPEC" (AlonzoEra c) = Shelley.UPEC (AlonzoEra c)
 -- Self-Describing type synomyms
 
 type Self c = AlonzoEra c
+
 type Value era = V.Value (EraModule.Crypto era)
 
 type PParamsDelta era = PParamsUpdate era
