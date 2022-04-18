@@ -42,9 +42,11 @@ import Cardano.Binary
   )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModels (..),
+  ( CostModel,
+    CostModels (..),
     ExUnits (..),
     Prices (..),
+    getCostModelParams,
   )
 import Cardano.Ledger.BaseTypes
   ( NonNegativeInterval,
@@ -74,6 +76,7 @@ import Data.Coders
     Wrapped (..),
     decode,
     encode,
+    encodeFoldableAsIndefinite,
     field,
     (!>),
     (<!),
@@ -478,6 +481,15 @@ updatePParams pp ppup =
 data LangDepView = LangDepView {tag :: ByteString, params :: ByteString}
   deriving (Eq, Show, Ord, Generic, NoThunks)
 
+-- In the Alonzo era, the map of languages to cost models was mistakenly encoded
+-- using an indefinite CBOR map (contrary to canonical CBOR, as intended) when
+-- computing the script integrity hash.
+-- For this reason, PlutusV1 remains with this encoding.
+-- Future versions of Plutus, starting with PlutusV2 in the Babbage era, will
+-- use the intended definite length encoding.
+legacyNonCanonicalCostModelEncoder :: CostModel -> Encoding
+legacyNonCanonicalCostModelEncoder = encodeFoldableAsIndefinite . getCostModelParams
+
 getLanguageView ::
   forall era.
   (HasField "_costmdls" (Core.PParams era) CostModels) =>
@@ -489,7 +501,7 @@ getLanguageView pp lang@PlutusV1 =
     (serialize' (serialize' lang))
     ( serialize'
         ( serializeEncoding' $
-            maybe encodeNull toCBOR $
+            maybe encodeNull legacyNonCanonicalCostModelEncoder $
               Map.lookup lang (unCostModels $ getField @"_costmdls" pp)
         )
     )

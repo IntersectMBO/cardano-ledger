@@ -38,6 +38,7 @@ mainTests =
       CDDL.tests 5,
       Golden.goldenUTxOEntryMinAda,
       Golden.goldenSerialization,
+      Golden.goldenScriptIntegrity,
       plutusScriptExamples,
       txInfoTests
     ]
@@ -51,6 +52,7 @@ fastTests =
       CDDL.tests 1,
       Golden.goldenUTxOEntryMinAda,
       Golden.goldenSerialization,
+      Golden.goldenScriptIntegrity,
       plutusScriptExamples,
       txInfoTests
     ]
