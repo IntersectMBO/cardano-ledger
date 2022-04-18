@@ -28,6 +28,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxow
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (TxWitness'))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo (TxDats (..))
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
@@ -78,7 +79,6 @@ import GHC.Records (HasField (..))
 import Plutus.V1.Ledger.Api (Data (..))
 import qualified Plutus.V1.Ledger.Api as Plutus
 import Validation (failureUnless)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness(TxWitness'))
 
 -- ==================================================
 -- Reuseable tests first used in the Babbage Era

@@ -38,7 +38,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (minfee)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams, PParams' (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxOut (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, scriptsNeeded)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val (Val (coin, inject, (<+>)))
@@ -48,11 +48,15 @@ import Data.Default.Class (Default (def))
 import Data.Map (Map)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
+import qualified Data.Set as Set
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
-import Test.Cardano.Ledger.Generic.Fields (TxOutField (..))
+import Test.Cardano.Ledger.Generic.Fields (TxOutField (..), initialTx, TxField (Body))
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
+import Cardano.Ledger.Hashes (ScriptHash)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
+import Test.Cardano.Ledger.Generic.Updaters (updateTx)
 
 -- ====================================================================
 -- Era agnostic actions on (Core.PParams era) (Core.TxOut era) and
@@ -86,6 +90,14 @@ obligation' (Alonzo _) = obligation @c @(PParams era) @(ViewMap c)
 obligation' (Mary _) = obligation @c @(Shelley.PParams era) @(ViewMap c)
 obligation' (Allegra _) = obligation @c @(Shelley.PParams era) @(ViewMap c)
 obligation' (Shelley _) = obligation @c @(Shelley.PParams era) @(ViewMap c)
+
+-- | Compute the set of ScriptHashes for which there should be ScriptWitnesses
+scriptsNeeded' :: Proof era -> UTxO era -> Core.TxBody era -> Set (ScriptHash (Crypto era))
+scriptsNeeded' (Babbage _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody utxo txbody))
+scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody utxo txbody))
+scriptsNeeded' p@(Mary _) utxo txbody = scriptsNeeded utxo (updateTx p (initialTx p) (Body txbody))
+scriptsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded utxo (updateTx p (initialTx p) (Body txbody))
+scriptsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded utxo (updateTx p (initialTx p) (Body txbody))
 
 minfee' :: forall era. Proof era -> Core.PParams era -> Core.Tx era -> Coin
 minfee' (Alonzo _) = minfee

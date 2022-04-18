@@ -628,6 +628,13 @@ timeToLive :: ValidityInterval -> SlotNo
 timeToLive (ValidityInterval _ (SJust n)) = n
 timeToLive (ValidityInterval _ SNothing) = SlotNo maxBound
 
+-- | Keep only Script witnesses that are neccessary in 'era',
+onlyNecessaryScripts :: Proof era -> Set (ScriptHash (Crypto era)) -> [WitnessesField era] -> [WitnessesField era]
+onlyNecessaryScripts _ _ [] = []
+onlyNecessaryScripts proof hashes (ScriptWits m : xs) =
+  ScriptWits (Map.restrictKeys m hashes) : onlyNecessaryScripts proof hashes xs
+onlyNecessaryScripts proof hashes (x : xs) = x : onlyNecessaryScripts proof hashes xs
+
 genValidatedTx :: forall era. Reflect era => Proof era -> GenRS era (UTxO era, Core.Tx era)
 genValidatedTx proof = do
   GenEnv {geValidityInterval, gePParams} <- ask
@@ -724,10 +731,12 @@ genValidatedTx proof = do
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
       witsMakers :: [SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era]]
       witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
+      utxoNoCollateral' = scriptsNeeded' proof (UTxO utxoNoCollateral) txBodyNoFee
       noFeeWits :: [WitnessesField era]
       noFeeWits =
-        redeemerDatumWits
-          <> foldMap ($ txBodyNoFeeHash) (witsMakers ++ bogusCollateralKeyWitsMakers)
+        onlyNecessaryScripts proof utxoNoCollateral' $
+          redeemerDatumWits
+            <> foldMap ($ txBodyNoFeeHash) (witsMakers ++ bogusCollateralKeyWitsMakers)
       bogusTxForFeeCalc =
         coreTx
           proof
@@ -773,8 +782,9 @@ genValidatedTx proof = do
           ]
       txBodyHash = hashAnnotated txBody
       wits =
-        redeemerDatumWits
-          <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
+        onlyNecessaryScripts proof (scriptsNeeded' proof (UTxO utxoNoCollateral) txBody) $
+          redeemerDatumWits
+            <> foldMap ($ txBodyHash) (witsMakers ++ collateralKeyWitsMakers)
       validTx =
         coreTx
           proof
