@@ -9,13 +9,14 @@
 module Cardano.Ledger.CompactAddress
   ( compactAddr,
     decompactAddr,
+    deserializeShortAddr,
     CompactAddr (..),
     substring,
     isPayCredScriptCompactAddr,
     isBootstrapCompactAddr,
-    -- Faster Address serilization
-    decompactAddrFast,
+    -- Faster Address deserialization
     decodeAddr,
+    decodeAddrShort,
     decodeAddrEither,
     decodeAddrShortEither,
     fromCborAddr,
@@ -54,16 +55,16 @@ import Cardano.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
-import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Prelude (Text, cborError, panic)
+import Control.Applicative (Alternative ((<|>)))
 import Control.DeepSeq (NFData)
 import Control.Monad (ap, guard, unless, when)
 import qualified Control.Monad.Fail
-import Control.Monad.Trans.State.Lazy (StateT, evalStateT, get, modify', state)
+import Control.Monad.Trans.State (StateT, evalStateT, get, modify', state)
 import Data.Bits (Bits, clearBit, shiftL, testBit, (.&.), (.|.))
 import qualified Data.ByteString as BS
 import Data.ByteString.Short as SBS (fromShort, index, length, toShort)
@@ -84,31 +85,14 @@ compactAddr :: Addr crypto -> CompactAddr crypto
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
 
 decompactAddr :: forall crypto. CC.Crypto crypto => CompactAddr crypto -> Addr crypto
-decompactAddr (UnsafeCompactAddr bytes) =
-  if testBit header byron
-    then AddrBootstrap $ run "byron address" 0 bytes getBootstrapAddress
-    else Addr addrNetId paycred stakecred
+decompactAddr (UnsafeCompactAddr sbs) =
+  unwrap "CompactAddr" $ decodeAddrShort sbs <|> deserializeShortAddr sbs
   where
-    run :: forall a. Text -> Int -> ShortByteString -> GetShort a -> a
-    run name i sbs g = snd . unwrap name $ runGetShort g i sbs
     -- The reason failure is impossible here is that the only way to call this code
     -- is using a CompactAddr, which can only be constructed using compactAddr.
     -- compactAddr serializes an Addr, so this is guaranteed to work.
     unwrap :: forall a. Text -> Maybe a -> a
     unwrap name = fromMaybe (panic $ "Impossible failure when decoding " <> name)
-    header = run "address header" 0 bytes getWord
-    addrNetId =
-      unwrap "address network id" $
-        word8ToNetwork $ header .&. 0x0F -- 0b00001111 is the mask for the network id
-        -- The address format is
-        -- header | pay cred | stake cred
-        -- where the header is 1 byte
-        -- the pay cred is (sizeHash (ADDRHASH crypto)) bytes
-        -- and the stake cred can vary
-    paycred = run "payment credential" 1 bytes (getPayCred header)
-    stakecred = run "staking credential" 1 bytes $ do
-      skipHash ([] @(ADDRHASH crypto))
-      getStakeReference header
 
 instance CC.Crypto crypto => ToCBOR (CompactAddr crypto) where
   toCBOR (UnsafeCompactAddr bytes) = toCBOR bytes
@@ -182,9 +166,6 @@ getRemainingAsByteString = GetShort $ \i sbs ->
         then Just (l, SBS.fromShort $ substring sbs i l)
         else Nothing
 
-skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> GetShort ()
-skipHash p = skip . fromIntegral $ Hash.sizeHash p
-
 getHash :: forall a h. Hash.HashAlgorithm h => GetShort (Hash.Hash h a)
 getHash = GetShort $ \i sbs ->
   let hashLen = Hash.sizeHash ([] @h)
@@ -201,13 +182,6 @@ substring :: ShortByteString -> Int -> Int -> ShortByteString
 substring (SBS ba) start stop =
   case BA.cloneByteArray (BA.ByteArray ba) start (stop - start) of
     BA.ByteArray ba' -> SBS ba'
-
-skip :: Int -> GetShort ()
-skip n = GetShort $ \i sbs ->
-  let offsetStop = i + n
-   in if offsetStop <= SBS.length sbs
-        then Just (offsetStop, ())
-        else Nothing
 
 getWord7s :: GetShort [Word7]
 getWord7s = do
@@ -261,9 +235,6 @@ isBootstrapCompactAddr (UnsafeCompactAddr bytes) = testBit (SBS.index bytes 0) b
 ------------------------------------------------------------------------------------------
 -- Fast Address Serializer ---------------------------------------------------------------
 ------------------------------------------------------------------------------------------
-
-decompactAddrFast :: forall crypto. CC.Crypto crypto => CompactAddr crypto -> Addr crypto
-decompactAddrFast (UnsafeCompactAddr sbs) = maybe (error "Impossible") id (decodeAddrShort sbs)
 
 fromCborAddr :: forall crypto s. CC.Crypto crypto => Decoder s (Addr crypto)
 fromCborAddr = do
@@ -438,7 +409,7 @@ ensureBufIsConsumed ::
   (MonadFail m, AddressBuffer b) =>
   -- | Name for error reporting
   String ->
-  -- | Buffer that should have beeen consumed.
+  -- | Buffer that should have been consumed.
   b ->
   StateT Int m ()
 ensureBufIsConsumed name buf = do
@@ -526,7 +497,8 @@ decodePtr ::
   b ->
   StateT Int m Ptr
 decodePtr buf =
-  Ptr <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> decodeVariableLengthWord32 "SlotNo" buf)
+  Ptr
+    <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> decodeVariableLengthWord32 "SlotNo" buf)
     <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" buf)
     <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" buf)
 {-# INLINE decodePtr #-}

@@ -19,7 +19,7 @@ import Control.DeepSeq (NFData, deepseq)
 import Criterion.Main
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (foldMap')
-import Data.Maybe (fromJust)
+import Data.Maybe (fromMaybe)
 import qualified Data.Text as T
 import Data.Unit.Strict
 
@@ -129,13 +129,17 @@ textDigits n = let i = n `mod` 10 in T.pack (take 6 (cycle (show i)))
 payAddr28 :: Int -> KeyHash 'Payment StandardCrypto
 payAddr28 n =
   KeyHash $
-    fromJust $
+    fromMaybe "Unexpected PayAddr28" $
       hashFromTextAsHex $
         textDigits n <> "0405060708090a0b0c0d0e0f12131415161718191a1b1c1d1e"
 
 stakeAddr28 :: Int -> KeyHash 'Staking StandardCrypto
 stakeAddr28 n =
   KeyHash $
-    fromJust $
+    fromMaybe "Unexpected StakeAddr28" $
       hashFromTextAsHex $
         textDigits n <> "2122232425262728292a2b2c2d2e2f32333435363738393a3b"
+
+decompactAddrFast :: Crypto crypto => CompactAddr crypto -> Addr crypto
+decompactAddrFast (UnsafeCompactAddr sbs) =
+  fromMaybe (error "Impossible: decompactAddrFast") (decodeAddrShort sbs)
