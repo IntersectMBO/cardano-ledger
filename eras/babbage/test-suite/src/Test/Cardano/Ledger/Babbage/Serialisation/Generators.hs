@@ -14,6 +14,8 @@
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
 -- instances
+
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), BinaryData, Data (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
@@ -64,6 +66,7 @@ instance
   ( Era era,
     UsesValue era,
     Mock (Crypto era),
+    ToCBOR (Core.Script era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.Script era)
   ) =>

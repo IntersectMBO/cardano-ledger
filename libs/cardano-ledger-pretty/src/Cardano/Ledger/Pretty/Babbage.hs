@@ -10,6 +10,7 @@
 
 module Cardano.Ledger.Pretty.Babbage where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Alonzo.Data (BinaryData, DataHash, binaryDataToData)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail)
@@ -159,6 +160,7 @@ ppTxOut ::
   forall era.
   ( Era era,
     ValidateScript era,
+    ToCBOR (Core.Script era),
     PrettyA (Core.Script era),
     PrettyA (Core.Value era)
   ) =>
@@ -180,6 +182,7 @@ ppTxOut (TxOut addr val datum mscript) =
 instance
   ( Era era,
     ValidateScript era,
+    ToCBOR (Core.Script era),
     PrettyA (Core.Script era),
     PrettyA (Core.Value era)
   ) =>
@@ -206,6 +209,7 @@ instance PrettyA (DataHash era) where prettyA = ppDataHash
 
 ppTxBody ::
   ( ValidateScript era,
+    ToCBOR (Core.Script era),
     PrettyA (Core.Value era),
     PrettyA (Core.PParamsDelta era),
     PrettyA (Core.Script era)
@@ -237,6 +241,7 @@ ppTxBody x =
 instance
   ( Era era,
     ValidateScript era,
+    ToCBOR (Core.Script era),
     PrettyA (Core.Value era),
     PrettyA (Core.PParamsDelta era),
     PrettyA (Core.Script era)

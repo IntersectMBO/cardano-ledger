@@ -26,7 +26,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxo
     validateExUnitsTooBigUTxO,
     validateInsufficientCollateral,
     validateOutputTooBigUTxO,
-    validateOutputTooSmallUTxO,
     validateOutsideForecast,
     validateScriptsNotPaidUTxO,
     validateTooManyCollateralInputs,
@@ -44,6 +43,7 @@ import Cardano.Ledger.Babbage.TxBody
   ( TxBody (..),
     TxOut,
     txfee',
+    utxoEntrySize,
   )
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
@@ -185,7 +185,8 @@ feesOK ::
     HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (TxOut era)),
     HasField "_prices" (Core.PParams era) Prices,
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "totalCollateral" (Core.TxBody era) (StrictMaybe Coin)
+    HasField "totalCollateral" (Core.TxBody era) (StrictMaybe Coin),
+    ToCBOR (Core.Script era)
   ) =>
   Core.PParams era ->
   Core.Tx era ->
@@ -241,6 +242,30 @@ validateCollateralEqBalance bal txcoll =
   case txcoll of
     SNothing -> pure ()
     SJust tc -> failureUnless (bal == tc) (UnequalCollateralReturn bal tc)
+
+-- | Ensure that there are no `Core.TxOut`s that have value less than the sized @coinsPerUTxOWord@
+--
+-- > ∀ txout ∈ txouts txb, getValue txout ≥ inject (utxoEntrySize txout ∗ coinsPerUTxOWord pp)
+validateOutputTooSmallUTxO ::
+  ( HasField "_coinsPerUTxOWord" (Core.PParams era) Coin,
+    Core.TxOut era ~ TxOut era,
+    Era era
+  ) =>
+  Core.PParams era ->
+  UTxO era ->
+  Test (UtxoPredicateFailure era)
+validateOutputTooSmallUTxO pp (UTxO utxo) =
+  failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  where
+    Coin coinsPerUTxOWord = getField @"_coinsPerUTxOWord" pp
+    outputsTooSmall =
+      filter
+        ( \out ->
+            let v = getField @"value" out
+             in -- pointwise is used because non-ada amounts must be >= 0 too
+                not $ Val.pointwise (>=) v (Val.inject $ Coin (utxoEntrySize out * coinsPerUTxOWord)) -- TODO rename coinsPerUTxOWord
+        )
+        (SplitMap.elems utxo)
 
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::

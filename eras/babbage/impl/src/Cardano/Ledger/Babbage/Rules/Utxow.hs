@@ -8,6 +8,7 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxow where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.Data (DataHash)
@@ -97,7 +98,9 @@ babbageMissingScripts pp sNeeded sReceived =
 
 {- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx ∪ utxo (refInputs tx)  -}
 danglingWitnessDataHashes ::
-  Era era =>
+  ( Era era,
+    ToCBOR (Core.Script era)
+  ) =>
   Set.Set (DataHash (Crypto era)) ->
   (Alonzo.TxDats era) ->
   [TxOut era] ->

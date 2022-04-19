@@ -9,6 +9,7 @@
 --   Babbage Specification
 module Cardano.Ledger.Babbage.Collateral where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Tx (isTwoPhaseScriptAddressFromMap)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (txscripts))
@@ -64,7 +65,8 @@ collBalance ::
   forall era.
   ( Era era,
     HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (TxOut era)),
-    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    ToCBOR (Core.Script era)
   ) =>
   Core.TxBody era ->
   UTxO era ->

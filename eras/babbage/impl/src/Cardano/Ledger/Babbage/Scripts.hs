@@ -10,6 +10,7 @@
 --   Babbage Specification
 module Cardano.Ledger.Babbage.Scripts where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Alonzo.Data (BinaryData, dataToBinaryData)
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose (..),
@@ -47,7 +48,8 @@ getTxIn (Certifying _dcert) = Nothing
 getDatum ::
   ( Era era,
     Core.TxOut era ~ TxOut era,
-    Core.Witnesses era ~ TxWitness era
+    Core.Witnesses era ~ TxWitness era,
+    ToCBOR (Core.Script era)
   ) =>
   Core.Tx era ->
   UTxO era ->
@@ -141,7 +143,8 @@ babbageInputDataHashes ::
   forall era.
   ( HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     ValidateScript era,
-    Core.TxOut era ~ TxOut era
+    Core.TxOut era ~ TxOut era,
+    ToCBOR (Core.Script era)
   ) =>
   Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
   ValidatedTx era ->
