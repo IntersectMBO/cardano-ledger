@@ -771,8 +771,7 @@ malformedScriptsTx pf =
     pf
     [ Body txb,
       WitnessesI
-        [ -- ScriptWits' [malformedScript pf "rs"],
-          AddrWits' [makeWitnessVKey (hashAnnotated txb) (someKeys pf)]
+        [ AddrWits' [makeWitnessVKey (hashAnnotated txb) (someKeys pf)]
         ]
     ]
   where
