@@ -48,6 +48,7 @@ import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
+import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxIn (..), txid)
@@ -344,8 +345,7 @@ referenceScriptTx pf =
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (referenceScriptTxBody pf)) (someKeys pf)],
           DataWits' [datumExample1],
-          RdmrWits validatingRedeemersEx1,
-          ScriptWits' [alwaysAlt 3 pf]
+          RdmrWits validatingRedeemersEx1
         ]
     ]
 
@@ -389,7 +389,6 @@ inlineDatumAndRefScriptTx pf =
     [ Body (inlineDatumAndRefScriptTxBody pf),
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (inlineDatumAndRefScriptTxBody pf)) (someKeys pf)],
-          ScriptWits' [alwaysAlt 3 pf],
           RdmrWits validatingRedeemersEx1
         ]
     ]
@@ -564,7 +563,6 @@ refScriptForDelegCertTx pf =
     [ Body (refScriptForDelegCertTxBody pf),
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (refScriptForDelegCertTxBody pf)) (someKeys pf)],
-          ScriptWits' [alwaysAlt 2 pf],
           RdmrWits redeemersEx7
         ]
     ]
@@ -830,13 +828,6 @@ testU ::
   Assertion
 testU pf tx expect = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf) tx expect
 
-{- TODO
-
-INVALID examples:
-  * a tx with a script/datum which is not well-formed
-  * a tx with a plutus script and and byron outputs
--}
-
 genericBabbageFeatures ::
   forall era.
   ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era)),
@@ -868,11 +859,6 @@ genericBabbageFeatures pf =
               pf
               (trustMeP pf True $ inlineDatumAndRefScriptTx pf)
               (Right $ utxoStEx3 pf),
-          testCase "inline datum and ref script and redundant script witness" $
-            testU
-              pf
-              (trustMeP pf True $ inlineDatumAndRefScriptAndWitScriptTx pf)
-              (Right $ utxoStEx4 pf),
           testCase "reference input with data hash, no data witness" $
             testU
               pf
@@ -906,6 +892,17 @@ genericBabbageFeatures pf =
               pf
               (trustMeP pf True $ malformedScriptsTx pf)
               (Left [fromUtxoB @era (MalformedScripts (Set.fromList [hashScript @era $ malformedScript pf "rs"]))]),
+          testCase "inline datum and ref script and redundant script witness" $
+            testU
+              pf
+              (trustMeP pf True $ inlineDatumAndRefScriptAndWitScriptTx pf)
+              ( Left
+                  [ fromUtxow @era
+                      ( Shelley.ExtraneousScriptWitnessesUTXOW
+                          (Set.singleton $ hashScript @era (alwaysAlt 3 pf))
+                      )
+                  ]
+              ),
           testCase "inline datum with redundant datum witness" $
             testU
               pf

@@ -209,7 +209,8 @@ babbageUtxowTransition ::
     Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
     State (Core.EraRule "UTXO" era) ~ UTxOState era,
     Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "referenceInputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
@@ -223,7 +224,7 @@ babbageUtxowTransition = do
       txbody = getField @"body" (tx :: Core.Tx era)
       witsKeyHashes = witsFromTxWitnesses @era tx
       hashScriptMap = txscripts utxo tx
-      inputs = getField @"inputs" txbody
+      inputs = getField @"referenceInputs" txbody `Set.union` getField @"inputs" txbody
 
   -- check scripts
   {- ∀s ∈ range(txscripts txw utxo ∩ Script^{ph1}), validateScript s tx -}
