@@ -404,7 +404,7 @@ pool_metadata_hash    = $hash32
 datum_hash = $hash32
 data = #6.24(bytes .cbor plutus_data)
 
-datum = [ 0 // 1, $hash32 // 2, data ]
+datum = [ 0, $hash32 // 1, data ]
 
 script_ref = #6.24(bytes .cbor script)
 
