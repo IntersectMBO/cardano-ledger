@@ -40,7 +40,7 @@ import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Scripts (babbageInputDataHashes, babbageTxScripts)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
-import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut, TxOutCompactDatum), getBabbageTxOutEitherAddr)
+import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut, TxOutCompactDatum, TxOutCompactRefScript), getBabbageTxOutEitherAddr)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
@@ -252,6 +252,7 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
       outputData = List.foldl' accum Set.empty $ allOuts txbody
       accum s txout = case txout of
         TxOutCompactDatum _ _ dat -> Set.insert (binaryDataToData dat) s
+        TxOutCompactRefScript _ _ (Datum dat) _ -> Set.insert (binaryDataToData dat) s
         _ -> s
 
 -------------------------------------------------------------------------------

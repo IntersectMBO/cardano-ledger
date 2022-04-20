@@ -101,7 +101,6 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
       failureUnless (Set.null missing) $ Shelley.MissingScriptWitnessesUTXOW missing
     ]
   where
-    -- FIXME what about the hard forks?
     neededNonRefs = sNeeded `Set.difference` sRefs
     missing = neededNonRefs `Set.difference` sReceived
     extra = sReceived `Set.difference` neededNonRefs
