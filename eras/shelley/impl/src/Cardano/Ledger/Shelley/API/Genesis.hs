@@ -79,6 +79,7 @@ instance
       )
       SNothing
       (PoolDistr Map.empty)
+      (UTxO mempty)
     where
       initialEpochNo = 0
       initialUtxo = genesisUTxO sg

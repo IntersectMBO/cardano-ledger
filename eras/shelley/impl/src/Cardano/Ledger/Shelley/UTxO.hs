@@ -89,6 +89,7 @@ import Data.Coders (decodeSplitMap, encodeSplitMap)
 import Data.Coerce (coerce)
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Constraint (Constraint)
+import Data.Default.Class (Default)
 import Data.Foldable (foldMap', toList)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
@@ -108,7 +109,7 @@ import Quiet
 
 -- | The unspent transaction outputs.
 newtype UTxO era = UTxO {unUTxO :: SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)}
-  deriving (Generic, Semigroup)
+  deriving (Default, Generic, Semigroup)
 
 type TransUTxO (c :: Type -> Constraint) era = (c (Core.TxOut era), TransTxId c era)
 

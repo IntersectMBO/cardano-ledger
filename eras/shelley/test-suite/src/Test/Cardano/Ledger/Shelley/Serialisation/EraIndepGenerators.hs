@@ -74,7 +74,7 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg)
+import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),
@@ -561,12 +561,12 @@ instance
     Arbitrary (Core.Value era),
     Arbitrary (Core.PParams era),
     Arbitrary (State (Core.EraRule "PPUP" era)),
+    Arbitrary (StashedAVVMAddresses era),
     EraGen era
   ) =>
   Arbitrary (NewEpochState era)
   where
   arbitrary = genericArbitraryU
-  shrink = genericShrink
 
 instance CC.Crypto crypto => Arbitrary (BlocksMade crypto) where
   arbitrary = BlocksMade <$> arbitrary

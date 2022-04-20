@@ -70,6 +70,7 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState (..),
     NewEpochState (..),
     PState (..),
+    StashedAVVMAddresses,
     smartUTxOState,
     updateNES,
     _genDelegs,
@@ -188,7 +189,8 @@ instance
 -- | Creates a valid initial chain state
 initialShelleyState ::
   ( Era era,
-    Default (State (Core.EraRule "PPUP" era))
+    Default (State (Core.EraRule "PPUP" era)),
+    Default (StashedAVVMAddresses era)
   ) =>
   WithOrigin (LastAppliedBlock (Crypto era)) ->
   EpochNo ->
@@ -222,6 +224,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
         )
         SNothing
         (PoolDistr Map.empty)
+        def
     )
     cs
     initNonce
@@ -322,7 +325,7 @@ chainTransition =
           Right () -> pure ()
           Left e -> failBecause $ PrtclSeqFailure e
 
-        let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ = nes
+        let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
             chainChecksData = pparamsToChainChecksPParams pp
             bhView = makeHeaderView bh
 
@@ -335,8 +338,8 @@ chainTransition =
 
         nes' <- trans @(Core.EraRule "TICK" era) $ TRC ((), nes, s)
 
-        let NewEpochState e1 _ _ _ _ _ = nes
-            NewEpochState e2 _ bcur es _ _pd = nes'
+        let NewEpochState e1 _ _ _ _ _ _ = nes
+            NewEpochState e2 _ bcur es _ _pd _ = nes'
         let EpochState account _ ls _ pp' _ = es
         let LedgerState _ (DPState (DState _ _ genDelegs _) (PState _ _ _)) = ls
         let ph = lastAppliedHash lab

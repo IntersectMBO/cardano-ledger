@@ -67,7 +67,8 @@ instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
           nesBcur = nesBcur nes,
           nesEs = translateEra' ctxt $ nesEs nes,
           nesRu = nesRu nes,
-          nesPd = nesPd nes
+          nesPd = nesPd nes,
+          stashedAVVMAddresses = ()
         }
 
 instance Crypto c => TranslateEra (MaryEra c) Tx where

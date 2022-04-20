@@ -147,7 +147,7 @@ import Cardano.Ledger.Shelley.TxBody
     pattern PoolParams,
     pattern RewardAcnt,
   )
-import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
+import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO), makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
 import Cardano.Prelude (LByteString)
@@ -1321,20 +1321,22 @@ tests =
               es
               (SJust ru)
               pd
+              (UTxO mempty)
        in checkEncodingCBOR
             "new_epoch_state"
             nes
-            ( T (TkListLen 6)
+            ( T (TkListLen 7)
                 <> S e
                 <> S (BlocksMade @C_Crypto bs)
                 <> S (BlocksMade @C_Crypto bs)
                 <> S es
                 <> S (SJust ru)
                 <> S pd
+                <> S (UTxO @(ShelleyEra C_Crypto) mempty)
             ),
       let actual = B16.encode . serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
           expected =
-            "8600a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541"
+            "8700a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541"
               <> "0aa1581ca646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a03"
               <> "86821927101903e8828283a0a0a08482a0a0a0a084a0a0000085a1825820ee155a"
               <> "ce9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e2500825839"
@@ -1345,7 +1347,7 @@ tests =
               <> "1864d81e820001d81e820001d81e820001d81e82000181000000010082a0008183"
               <> "00880082000082a000000000a0a0840185a0803903ba820000a0a082a0a0a1581c"
               <> "e0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b0825418282010158"
-              <> "20c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4c"
+              <> "20c5e21ab1c9f6022d81c3b25e3436cb7f1df77f9652ae3e1310c28e621dd87b4ca0"
        in testCase "ledger state golden test" (actual @?= expected)
     ]
   where

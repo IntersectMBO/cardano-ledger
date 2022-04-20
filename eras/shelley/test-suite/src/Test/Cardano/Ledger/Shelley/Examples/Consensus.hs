@@ -111,7 +111,8 @@ defaultShelleyLedgerExamples ::
     PredicateFailure (Core.EraRule "DELEGS" era)
       ~ DelegsPredicateFailure era,
     Core.PParams era ~ Cardano.Ledger.Shelley.PParams.PParams era,
-    Core.PParamsDelta era ~ PParams' StrictMaybe era
+    Core.PParamsDelta era ~ PParams' StrictMaybe era,
+    Default (StashedAVVMAddresses era)
   ) =>
   (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
   (Tx era -> Core.Tx era) ->
@@ -298,7 +299,8 @@ exampleNewEpochState ::
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval
+    HasField "_tau" (Core.PParams era) UnitInterval,
+    Default (StashedAVVMAddresses era)
   ) =>
   Core.Value era ->
   Core.PParams era ->
@@ -311,7 +313,8 @@ exampleNewEpochState value ppp pp =
       nesBcur = BlocksMade (Map.singleton (mkKeyHash 2) 3),
       nesEs = epochState,
       nesRu = SJust rewardUpdate,
-      nesPd = examplePoolDistr
+      nesPd = examplePoolDistr,
+      stashedAVVMAddresses = def
     }
   where
     epochState :: EpochState era

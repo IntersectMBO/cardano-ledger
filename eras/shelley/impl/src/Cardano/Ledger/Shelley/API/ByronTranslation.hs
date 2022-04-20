@@ -17,10 +17,12 @@ import qualified Cardano.Chain.Common as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
+import Cardano.Ledger.Address (isBootstrapRedeemer)
 import Cardano.Ledger.BaseTypes (BlocksMade (..), TxIx (..))
 import Cardano.Ledger.Coin (CompactForm (CompactCoin))
 import Cardano.Ledger.CompactAddress (CompactAddr (UnsafeCompactAddr))
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Era (getTxOutBootstrapAddress)
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
@@ -99,7 +101,15 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
       nesBcur = BlocksMade Map.empty,
       nesEs = epochState,
       nesRu = SNothing,
-      nesPd = PoolDistr Map.empty
+      nesPd = PoolDistr Map.empty,
+      -- At this point, we compute the stashed AVVM addresses, while we are able
+      -- to do a linear scan of the UTxO, and stash them away for use at the
+      -- Shelley/Allegra boundary.
+      stashedAVVMAddresses =
+        let UTxO utxo = _utxo . lsUTxOState . esLState $ epochState
+            redeemers =
+              SplitMap.filter (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
+         in UTxO redeemers
     }
   where
     pparams :: PParams (ShelleyEra c)

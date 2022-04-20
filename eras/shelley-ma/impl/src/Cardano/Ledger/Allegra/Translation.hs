@@ -44,6 +44,14 @@ import qualified Data.Map.Strict as Map
 -- being total. Do not change it!
 --------------------------------------------------------------------------------
 
+-- | Return the subset of UTxO corresponding to Byron-era AVVM addresses, which
+-- are to be removed on the Shelley/Allegra boundary. This set will be passed
+-- _back_ to the translation functions as the UTxO, allowing these addresses to
+-- be removed. This is needed because we cannot do a full scan on the UTxO at
+-- this point, since it has been persisted to disk.
+shelleyToAllegraAVVMsToDelete :: NewEpochState (ShelleyEra c) -> UTxO (ShelleyEra c)
+shelleyToAllegraAVVMsToDelete = stashedAVVMAddresses
+
 type instance PreviousEra (AllegraEra c) = ShelleyEra c
 
 -- | Currently no context is needed to translate from Shelley to Allegra.
@@ -61,7 +69,11 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
           nesBcur = nesBcur nes,
           nesEs = translateEra' ctxt $ LS.returnRedeemAddrsToReserves . nesEs $ nes,
           nesRu = nesRu nes,
-          nesPd = nesPd nes
+          nesPd = nesPd nes,
+          -- At this point, the consensus layer has passed in our stashed AVVM
+          -- addresses as our UTxO, and we have deleted them above (with
+          -- 'returnRedeemAddrsToReserves'), so we may safely discard this map.
+          stashedAVVMAddresses = ()
         }
 
 instance forall c. Crypto c => TranslateEra (AllegraEra c) Tx where

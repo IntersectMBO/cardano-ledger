@@ -196,19 +196,16 @@ instance CC.Crypto c => GetLedgerView (AlonzoEra c)
 -- because it makes it simpler to get the ledger view for Praos.
 instance CC.Crypto c => GetLedgerView (BabbageEra c) where
   currentLedgerView
-    NewEpochState
-      { nesPd,
-        nesEs
-      } =
+    NewEpochState {nesPd = pd, nesEs = es} =
       LedgerView
-        { lvD = getField @"_d" . esPp $ nesEs,
+        { lvD = getField @"_d" . esPp $ es,
           lvExtraEntropy = error "Extra entropy is not set in the Babbage era",
-          lvPoolDistr = nesPd,
+          lvPoolDistr = pd,
           lvGenDelegs =
             _genDelegs . dpsDState
               . lsDPState
-              $ esLState nesEs,
-          lvChainChecks = pparamsToChainChecksPParams . esPp $ nesEs
+              $ esLState es,
+          lvChainChecks = pparamsToChainChecksPParams . esPp $ es
         }
 
   futureLedgerView globals ss slot =
@@ -264,18 +261,18 @@ view ::
   LedgerView (Crypto era)
 view
   NewEpochState
-    { nesPd,
-      nesEs
+    { nesPd = pd,
+      nesEs = es
     } =
     LedgerView
-      { lvD = getField @"_d" . esPp $ nesEs,
-        lvExtraEntropy = getField @"_extraEntropy" . esPp $ nesEs,
-        lvPoolDistr = nesPd,
+      { lvD = getField @"_d" . esPp $ es,
+        lvExtraEntropy = getField @"_extraEntropy" . esPp $ es,
+        lvPoolDistr = pd,
         lvGenDelegs =
           _genDelegs . dpsDState
             . lsDPState
-            $ esLState nesEs,
-        lvChainChecks = pparamsToChainChecksPParams . esPp $ nesEs
+            $ esLState es,
+        lvChainChecks = pparamsToChainChecksPParams . esPp $ es
       }
 
 -- $timetravel

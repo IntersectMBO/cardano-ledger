@@ -55,7 +55,7 @@ import Cardano.Ledger.Shelley.API
     StakeReference (StakeRefBase),
   )
 import Cardano.Ledger.Shelley.Constraints (UsesPParams (..))
-import Cardano.Ledger.Shelley.LedgerState (UTxOState (..))
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl, WitVKey)
@@ -212,7 +212,8 @@ class
     PrettyA (Core.Tx era),
     PrettyA (Core.TxBody era),
     PrettyA (Core.Witnesses era),
-    PrettyA (Core.Value era)
+    PrettyA (Core.Value era),
+    Default (StashedAVVMAddresses era)
   ) =>
   EraGen era
   where

@@ -98,7 +98,8 @@ instance
     Default (EpochState era),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     Default (State (Core.EraRule "PPUP" era)),
-    Default (Core.PParams era)
+    Default (Core.PParams era),
+    Default (StashedAVVMAddresses era)
   ) =>
   STS (NEWEPOCH era)
   where
@@ -121,6 +122,7 @@ instance
           def
           SNothing
           (PoolDistr Map.empty)
+          def
     ]
 
   transitionRules = [newEpochTransition]
@@ -141,13 +143,14 @@ newEpochTransition ::
     UsesValue era,
     Default (State (Core.EraRule "PPUP" era)),
     Default (Core.PParams era),
+    Default (StashedAVVMAddresses era),
     Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
   TRC
     ( _,
-      src@(NewEpochState (EpochNo eL) _ bcur es ru _pd),
+      src@(NewEpochState (EpochNo eL) _ bcur es ru _pd _),
       e@(EpochNo e_)
       ) <-
     judgmentContext
@@ -175,13 +178,14 @@ newEpochTransition = do
       let EpochState _acnt ss _ls _pr _ _ = es'''
           pd' = calculatePoolDistr (_pstakeSet ss)
       pure $
-        NewEpochState
-          e
-          bcur
-          (BlocksMade Map.empty)
-          es'''
-          SNothing
-          pd'
+        src
+          { nesEL = e,
+            nesBprev = bcur,
+            nesBcur = BlocksMade mempty,
+            nesEs = es''',
+            nesRu = SNothing,
+            nesPd = pd'
+          }
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
 tellReward :: (Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)) => NewEpochEvent era -> Rule (NEWEPOCH era) rtype ()

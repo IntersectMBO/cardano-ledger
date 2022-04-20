@@ -179,7 +179,7 @@ bheadTransition ::
   ) =>
   TransitionRule (TICK era)
 bheadTransition = do
-  TRC ((), nes@(NewEpochState _ bprev _ es _ _), slot) <-
+  TRC ((), nes@(NewEpochState _ bprev _ es _ _ _), slot) <-
     judgmentContext
 
   nes' <- validatingTickTransition @TICK nes slot
