@@ -861,7 +861,6 @@ genBlock ::
   Gen (Block h era)
 genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 
-
 -- | For some purposes, a totally random block generator may not be suitable.
 -- There are tests in the ouroboros-network repository, for instance, that
 -- perform some integrity checks on the generated blocks.
