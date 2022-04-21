@@ -84,7 +84,7 @@ import Data.Coders
 import Data.Coerce (coerce)
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Either (isRight)
-import Data.Foldable (foldl', sequenceA_)
+import Data.Foldable (foldl', sequenceA_, toList)
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -94,7 +94,6 @@ import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import Validation
-import Data.Foldable (toList)
 
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
