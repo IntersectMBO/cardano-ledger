@@ -5,6 +5,7 @@
 import Cardano.Crypto.Libsodium (sodiumInit)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER)
+import System.IO (hSetEncoding, stdout, utf8)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
 import Test.Cardano.Ledger.Shelley.Pretty (prettyTest)
 import Test.Cardano.Ledger.Shelley.PropertyTests (minimalPropertyTests, propertyTests)
@@ -56,6 +57,8 @@ fastTests =
       safeHashTest
     ]
 
--- main entry point
 main :: IO ()
-main = sodiumInit >> mainWithTestScenario tests
+main = do
+  hSetEncoding stdout utf8
+  sodiumInit
+  mainWithTestScenario tests
