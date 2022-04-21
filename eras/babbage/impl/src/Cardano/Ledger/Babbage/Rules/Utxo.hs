@@ -13,7 +13,7 @@
 module Cardano.Ledger.Babbage.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
-import Cardano.Ledger.Address (bootstrapAddressAttrsSize, getNetwork)
+import Cardano.Ledger.Address (bootstrapAddressAttrsSize)
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Rules.Utxo
   ( UtxoEvent (..),
@@ -58,7 +58,6 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
-import Cardano.Ledger.Shelley.API (Network)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure)
@@ -254,13 +253,21 @@ validateOutputTooSmallUTxO ::
 validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
     Coin coinsPerUTxOWord = getField @"_coinsPerUTxOWord" pp
+    -- It's better to use the length of the bytestring that was sent over
+    -- the wire instead of reserializing the data
     serSize = fromIntegral . BSL.length . serialize . getField @"value"
     outputsTooSmall =
       filter
         ( \out ->
             let v = getField @"value" out
              in -- pointwise is used because non-ada amounts must be >= 0 too
-                not $ Val.pointwise (>=) v (Val.inject $ Coin (serSize out * coinsPerUTxOWord `div` 8))
+                not $
+                  Val.pointwise
+                    (>=)
+                    v
+                    ( Val.inject . Coin $
+                        (((serSize out * coinsPerUTxOWord + 7) `div` 8) - 1) -- division, rounded up
+                    )
         )
         outs
 
@@ -301,20 +308,6 @@ validateOutputBootAddrAttrsTooBig outs =
               _ -> False
         )
         outs
-
--- > ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId
-validateWrongNetwork ::
-  Era era =>
-  Network ->
-  [Core.TxOut era] ->
-  Test (UtxoPredicateFailure era)
-validateWrongNetwork netId outs =
-  failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
-  where
-    addrsWrongNetwork =
-      filter
-        (\a -> getNetwork a /= netId)
-        (getTxOutAddr <$> outs)
 
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
@@ -383,7 +376,7 @@ utxoTransition = do
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId -}
-  runTestOnSignal $ validateWrongNetwork netId outs
+  runTestOnSignal $ Shelley.validateWrongNetwork netId outs
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txb

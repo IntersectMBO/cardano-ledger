@@ -399,7 +399,7 @@ utxoInductive = do
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTest $ validateWrongNetwork netId txb
+  runTest . validateWrongNetwork netId . toList $ getField @"outputs" txb
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runTest $ validateWrongNetworkWithdrawal netId txb
@@ -491,16 +491,15 @@ validateBadInputsUTxO utxo txins =
 validateWrongNetwork ::
   Era era =>
   Network ->
-  Core.TxBody era ->
+  [Core.TxOut era] ->
   Test (UtxoPredicateFailure era)
-validateWrongNetwork netId txb =
+validateWrongNetwork netId outs =
   failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
   where
-    txOutputs = getField @"outputs" txb
     addrsWrongNetwork =
       filter
         (\a -> getNetwork a /= netId)
-        (getTxOutAddr <$> toList txOutputs)
+        (getTxOutAddr <$> outs)
 
 -- | Make sure all addresses match the supplied NetworkId
 --

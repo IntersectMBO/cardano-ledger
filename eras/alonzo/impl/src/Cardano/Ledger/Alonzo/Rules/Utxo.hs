@@ -94,6 +94,7 @@ import GHC.Records
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import Validation
+import Data.Foldable (toList)
 
 -- | Compute an estimate of the size of storing one UTxO entry.
 -- This function implements the UTxO entry size estimate done by scaledMinDeposit in the ShelleyMA era
@@ -531,7 +532,7 @@ utxoTransition = do
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTestOnSignal $ Shelley.validateWrongNetwork netId txb
+  runTestOnSignal $ Shelley.validateWrongNetwork netId . toList $ getField @"outputs" txb
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txb
