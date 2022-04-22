@@ -22,6 +22,7 @@ module Cardano.Ledger.CompactAddress
     decodeAddrShortEither,
     fromCborAddr,
     fromCborCompactAddr,
+    fromCborBackwardsAddr,
     decodeRewardAcnt,
     fromCborRewardAcnt,
   )
@@ -41,6 +42,7 @@ import Cardano.Ledger.Address
     RewardAcnt (..),
     Word7 (..),
     byron,
+    getAddr,
     isEnterpriseAddr,
     notBaseAddr,
     payCredIsScript,
@@ -67,14 +69,17 @@ import Control.DeepSeq (NFData)
 import Control.Monad (ap, guard, unless, when)
 import qualified Control.Monad.Fail
 import Control.Monad.Trans.State (StateT, evalStateT, get, modify', state)
+import qualified Data.Binary.Get as B
 import Data.Bits (Bits, clearBit, shiftL, testBit, (.&.), (.|.))
 import qualified Data.ByteString as BS
+import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Short as SBS (fromShort, index, length, toShort)
 import Data.ByteString.Short.Internal as SBS (ShortByteString (SBS), unsafeIndex)
 import qualified Data.ByteString.Unsafe as BS (unsafeDrop, unsafeIndex)
 import Data.Maybe (fromMaybe)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
+import Data.String (fromString)
 import Data.Word (Word16, Word32, Word64, Word8)
 
 newtype CompactAddr crypto = UnsafeCompactAddr ShortByteString
@@ -287,6 +292,23 @@ fromCborCompactAddr = do
   _ <- decodeAddrShort @crypto sbs
   pure $ UnsafeCompactAddr sbs
 {-# INLINE fromCborCompactAddr #-}
+
+fromCborBackwardsAddr ::
+  forall crypto s.
+  CC.Crypto crypto =>
+  Decoder s (CompactAddr crypto, Addr crypto)
+fromCborBackwardsAddr = do
+  sbs <- fromCBOR
+  addr <-
+    case decodeAddrShortEither @crypto sbs of
+      Right a -> pure a
+      Left _err ->
+        case B.runGetOrFail getAddr $ BSL.fromStrict $ SBS.fromShort sbs of
+          Right (_remaining, _offset, value) -> pure value
+          Left (_remaining, _offset, message) ->
+            cborError (DecoderErrorCustom "Addr" $ fromString message)
+  pure (UnsafeCompactAddr sbs, addr)
+{-# INLINEABLE fromCborBackwardsAddr #-}
 
 class AddressBuffer b where
   bufLength :: b -> Int
