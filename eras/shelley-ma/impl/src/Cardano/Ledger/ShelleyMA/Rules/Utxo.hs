@@ -255,7 +255,7 @@ utxoTransition = do
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTest $ Shelley.validateWrongNetwork netId txb
+  runTest $ Shelley.validateWrongNetwork netId . toList $ getField @"outputs" txb
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runTest $ Shelley.validateWrongNetworkWithdrawal netId txb

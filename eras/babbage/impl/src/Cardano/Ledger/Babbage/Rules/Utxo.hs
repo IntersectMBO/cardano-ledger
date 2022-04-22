@@ -1,10 +1,7 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -15,7 +12,8 @@
 
 module Cardano.Ledger.Babbage.Rules.Utxo where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
+import Cardano.Ledger.Address (bootstrapAddressAttrsSize)
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Rules.Utxo
   ( UtxoEvent (..),
@@ -25,8 +23,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxo
     validateCollateralContainsNonADA,
     validateExUnitsTooBigUTxO,
     validateInsufficientCollateral,
-    validateOutputTooBigUTxO,
-    validateOutputTooSmallUTxO,
     validateOutsideForecast,
     validateScriptsNotPaidUTxO,
     validateTooManyCollateralInputs,
@@ -35,7 +31,8 @@ import Cardano.Ledger.Alonzo.Rules.Utxo
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (WrappedShelleyEraFailure))
 import Cardano.Ledger.Alonzo.Scripts (Prices)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee, txouts)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (allOuts))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness (..), nullRedeemers)
 import Cardano.Ledger.Babbage.Collateral
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
@@ -53,7 +50,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), ValidateScript (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
@@ -85,10 +82,11 @@ import Control.State.Transition.Extended
     trans,
   )
 import Data.Bifunctor (first)
+import qualified Data.ByteString.Lazy as BSL
 import Data.Coders
 import Data.Coerce (coerce)
 import qualified Data.Compact.SplitMap as SplitMap
-import Data.Foldable (sequenceA_)
+import Data.Foldable (Foldable (foldl'), sequenceA_)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
@@ -110,6 +108,7 @@ data BabbageUtxoPred era
   | UnequalCollateralReturn !Coin !Coin
   | DanglingWitnessDataHash !(Set.Set (DataHash (Crypto era)))
   | MalformedScripts !(Set (ScriptHash (Crypto era)))
+  | MalformedData !(Set (DataHash (Crypto era)))
 
 deriving instance
   ( Era era,
@@ -242,6 +241,74 @@ validateCollateralEqBalance bal txcoll =
     SNothing -> pure ()
     SJust tc -> failureUnless (bal == tc) (UnequalCollateralReturn bal tc)
 
+-- > getValue txout ≥ inject ( ⌈ serSize txout ∗ coinsPerUTxOWord pp / 8 ⌉ )
+validateOutputTooSmallUTxO ::
+  ( Era era,
+    ToCBOR (Core.Value era),
+    HasField "_coinsPerUTxOWord" (Core.PParams era) Coin
+  ) =>
+  Core.PParams era ->
+  [Core.TxOut era] ->
+  Test (UtxoPredicateFailure era)
+validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  where
+    Coin coinsPerUTxOWord = getField @"_coinsPerUTxOWord" pp
+    -- It's better to use the length of the bytestring that was sent over
+    -- the wire instead of reserializing the data
+    serSize = fromIntegral . BSL.length . serialize . getField @"value"
+    outputsTooSmall =
+      filter
+        ( \out ->
+            let v = getField @"value" out
+             in -- pointwise is used because non-ada amounts must be >= 0 too
+                not $
+                  Val.pointwise
+                    (>=)
+                    v
+                    ( Val.inject . Coin $
+                        ((serSize out * coinsPerUTxOWord + 7) `div` 8) -- division, rounded up
+                    )
+        )
+        outs
+
+-- > serSize (getValue txout) ≤ maxValSize pp
+validateOutputTooBigUTxO ::
+  ( HasField "_maxValSize" (Core.PParams era) Natural,
+    HasField "value" (Core.TxOut era) (Core.Value era),
+    ToCBOR (Core.Value era)
+  ) =>
+  Core.PParams era ->
+  [Core.TxOut era] ->
+  Test (UtxoPredicateFailure era)
+validateOutputTooBigUTxO pp outs =
+  failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
+  where
+    maxValSize = getField @"_maxValSize" pp
+    outputsTooBig = foldl' accum [] outs
+    accum ans out =
+      let v = getField @"value" out
+          serSize = fromIntegral $ BSL.length $ serialize v
+       in if serSize > maxValSize
+            then (fromIntegral serSize, fromIntegral maxValSize, out) : ans
+            else ans
+
+-- > a ∈ Addr_bootstrap ⇒ bootstrapAttrsSize a ≤ 64
+validateOutputBootAddrAttrsTooBig ::
+  Era era =>
+  [Core.TxOut era] ->
+  Test (UtxoPredicateFailure era)
+validateOutputBootAddrAttrsTooBig outs =
+  failureUnless (null outputsAttrsTooBig) $ OutputBootAddrAttrsTooBig outputsAttrsTooBig
+  where
+    outputsAttrsTooBig =
+      filter
+        ( \txOut ->
+            case getTxOutBootstrapAddress txOut of
+              Just addr -> bootstrapAddressAttrsSize addr > 64
+              _ -> False
+        )
+        outs
+
 -- | The UTxO transition rule for the Babbage eras.
 utxoTransition ::
   forall era.
@@ -254,7 +321,8 @@ utxoTransition ::
     Environment (Core.EraRule "UTXOS" era) ~ Shelley.UtxoEnv era,
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
-    Inject (PredicateFailure (Core.EraRule "PPUP" era)) (PredicateFailure (Core.EraRule "UTXOS" era))
+    Inject (PredicateFailure (Core.EraRule "PPUP" era)) (PredicateFailure (Core.EraRule "UTXOS" era)),
+    ExtendedUTxO era
   ) =>
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
@@ -294,21 +362,21 @@ utxoTransition = do
   runTestOnSignal $
     ShelleyMA.validateTriesToForgeADA txb
 
-  let outs = txouts txb
-  {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject (uxoEntrySizetxout ∗ coinsPerUTxOWord p) -}
+  let outs = allOuts txb
+  {-   ∀ txout ∈ allOuts txb, getValue txout ≥ inject ⌈ uxoEntrySize txout ∗ coinsPerUTxOWord p / 8 ⌉ -}
   runTest $ validateOutputTooSmallUTxO pp outs
 
-  {-   ∀ txout ∈ txouts txb, serSize (getValue txout) ≤ maxValSize pp   -}
+  {-   ∀ txout ∈ allOuts txb, serSize (getValue txout) ≤ maxValSize pp   -}
   runTest $ validateOutputTooBigUTxO pp outs
 
-  {- ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
+  {- ∀ ( _ ↦ (a,_)) ∈ allOuts txb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64 -}
   runTestOnSignal $
-    Shelley.validateOutputBootAddrAttrsTooBig outs
+    validateOutputBootAddrAttrsTooBig outs
 
   netId <- liftSTS $ asks networkId
 
-  {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTestOnSignal $ Shelley.validateWrongNetwork netId txb
+  {- ∀(_ → (a, _)) ∈ allOuts txb, netId a = NetworkId -}
+  runTestOnSignal $ Shelley.validateWrongNetwork netId outs
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runTestOnSignal $ Shelley.validateWrongNetworkWithdrawal netId txb
@@ -345,7 +413,8 @@ instance
     State (Core.EraRule "UTXOS" era) ~ Shelley.UTxOState era,
     Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
     Inject (PredicateFailure (Core.EraRule "PPUP" era)) (PredicateFailure (Core.EraRule "UTXOS" era)),
-    PredicateFailure (Core.EraRule "UTXO" era) ~ BabbageUtxoPred era
+    PredicateFailure (Core.EraRule "UTXO" era) ~ BabbageUtxoPred era,
+    ExtendedUTxO era
   ) =>
   STS (BabbageUTXO era)
   where
@@ -392,6 +461,7 @@ instance
       work (UnequalCollateralReturn c1 c2) = Sum UnequalCollateralReturn 3 !> To c1 !> To c2
       work (DanglingWitnessDataHash x) = Sum DanglingWitnessDataHash 4 !> To x
       work (MalformedScripts x) = Sum MalformedScripts 5 !> To x
+      work (MalformedData x) = Sum MalformedData 6 !> To x
 
 instance
   ( Era era,
@@ -412,6 +482,7 @@ instance
       work 3 = SumD UnequalCollateralReturn <! From <! From
       work 4 = SumD DanglingWitnessDataHash <! From
       work 5 = SumD MalformedScripts <! From
+      work 6 = SumD MalformedData <! From
       work n = Invalid n
 
 deriving via InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era) instance NoThunks (BabbageUtxoPred era)

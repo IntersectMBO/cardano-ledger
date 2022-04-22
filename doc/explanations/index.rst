@@ -10,4 +10,5 @@ Ledger Explanations
    faq
    policies
    glossary
-   min-utxo
+   min-utxo-mary
+   min-utxo-alonzo
