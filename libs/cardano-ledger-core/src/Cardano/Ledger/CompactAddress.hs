@@ -9,6 +9,7 @@
 module Cardano.Ledger.CompactAddress
   ( compactAddr,
     decompactAddr,
+    decompactAddrLazy,
     deserializeShortAddr,
     CompactAddr (..),
     substring,
@@ -55,6 +56,7 @@ import Cardano.Ledger.Credential
     Ptr (..),
     StakeReference (..),
   )
+import Cardano.Ledger.Crypto (ADDRHASH)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
@@ -93,6 +95,42 @@ decompactAddr (UnsafeCompactAddr sbs) =
     -- compactAddr serializes an Addr, so this is guaranteed to work.
     unwrap :: forall a. Text -> Maybe a -> a
     unwrap name = fromMaybe (panic $ "Impossible failure when decoding " <> name)
+{-# INLINEABLE decompactAddr #-}
+
+decompactAddrLazy :: forall crypto. CC.Crypto crypto => CompactAddr crypto -> Addr crypto
+decompactAddrLazy (UnsafeCompactAddr bytes) =
+  if testBit header byron
+    then AddrBootstrap $ run "byron address" 0 bytes getBootstrapAddress
+    else Addr addrNetId paycred stakecred
+  where
+    run :: forall a. Text -> Int -> ShortByteString -> GetShort a -> a
+    run name i sbs g = snd . unwrap name $ runGetShort g i sbs
+    -- The reason failure is impossible here is that the only way to call this code
+    -- is using a CompactAddr, which can only be constructed using compactAddr.
+    -- compactAddr serializes an Addr, so this is guaranteed to work.
+    unwrap :: forall a. Text -> Maybe a -> a
+    unwrap name = fromMaybe (panic $ "Impossible failure when decoding " <> name)
+    header = run "address header" 0 bytes getWord
+    addrNetId =
+      unwrap "address network id" $
+        word8ToNetwork $ header .&. 0x0F -- 0b00001111 is the mask for the network id
+        -- The address format is
+        -- header | pay cred | stake cred
+        -- where the header is 1 byte
+        -- the pay cred is (sizeHash (ADDRHASH crypto)) bytes
+        -- and the stake cred can vary
+    paycred = run "payment credential" 1 bytes (getPayCred header)
+    stakecred = run "staking credential" 1 bytes $ do
+      skipHash ([] @(ADDRHASH crypto))
+      getStakeReference header
+    skipHash :: forall proxy h. Hash.HashAlgorithm h => proxy h -> GetShort ()
+    skipHash p = skip . fromIntegral $ Hash.sizeHash p
+    skip :: Int -> GetShort ()
+    skip n = GetShort $ \i sbs ->
+      let offsetStop = i + n
+       in if offsetStop <= SBS.length sbs
+            then Just (offsetStop, ())
+            else Nothing
 
 instance CC.Crypto crypto => ToCBOR (CompactAddr crypto) where
   toCBOR (UnsafeCompactAddr bytes) = toCBOR bytes

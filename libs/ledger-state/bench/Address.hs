@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
@@ -38,6 +39,14 @@ main = do
       count = 10000
       seqUnit :: a -> StrictUnit
       seqUnit x = x `seq` mempty
+      forcePaymentCred :: Addr StandardCrypto -> StrictUnit
+      forcePaymentCred = \case
+        Addr _ p _ -> p `seq` mempty
+        _ -> mempty
+      forceStakingCred :: Addr StandardCrypto -> StrictUnit
+      forceStakingCred = \case
+        Addr _ _ s -> s `deepseq` mempty
+        _ -> mempty
       addrs :: (Int -> StakeReference StandardCrypto) -> [Addr StandardCrypto]
       addrs mkStake = mkAddr mkStake <$> [1 .. count]
       partialDeserializeAddr :: ByteString -> Addr StandardCrypto
@@ -63,36 +72,87 @@ main = do
         "decode"
         [ bgroup
             "fromCompact"
-            [ benchDecode
-                "StakeRefNull"
-                (compactAddr <$> addrs (const StakeRefNull))
-                decompactAddr
-                decompactAddrFast,
-              benchDecode
-                "StakeRefBase"
-                (compactAddr <$> addrs stakeRefBase)
-                decompactAddr
-                decompactAddrFast,
-              benchDecode
-                "StakeRefPtr"
-                (compactAddr <$> addrs (StakeRefPtr . mkPtr))
-                decompactAddr
-                decompactAddrFast
+            [ bgroup
+                "NormalForm"
+                [ benchDecode
+                    "StakeRefNull"
+                    deepseqUnit
+                    (compactAddr <$> addrs (const StakeRefNull))
+                    decompactAddrLazy
+                    decompactAddr,
+                  benchDecode
+                    "StakeRefBase"
+                    deepseqUnit
+                    (compactAddr <$> addrs stakeRefBase)
+                    decompactAddrLazy
+                    decompactAddr,
+                  benchDecode
+                    "StakeRefPtr"
+                    deepseqUnit
+                    (compactAddr <$> addrs (StakeRefPtr . mkPtr))
+                    decompactAddrLazy
+                    decompactAddr
+                ],
+              bgroup
+                "PaymentCredential"
+                [ benchDecode
+                    "StakeRefNull"
+                    forcePaymentCred
+                    (compactAddr <$> addrs (const StakeRefNull))
+                    decompactAddrLazy
+                    decompactAddr,
+                  benchDecode
+                    "StakeRefBase"
+                    forcePaymentCred
+                    (compactAddr <$> addrs stakeRefBase)
+                    decompactAddrLazy
+                    decompactAddr,
+                  benchDecode
+                    "StakeRefPtr"
+                    forcePaymentCred
+                    (compactAddr <$> addrs (StakeRefPtr . mkPtr))
+                    decompactAddrLazy
+                    decompactAddr
+                ],
+              bgroup
+                "StakingCredential"
+                [ benchDecode
+                    "StakeRefNull"
+                    forceStakingCred
+                    (compactAddr <$> addrs (const StakeRefNull))
+                    decompactAddrLazy
+                    decompactAddr,
+                  benchDecode
+                    "StakeRefBase"
+                    forceStakingCred
+                    (compactAddr <$> addrs stakeRefBase)
+                    decompactAddrLazy
+                    decompactAddr,
+                  benchDecode
+                    "StakeRefPtr"
+                    forceStakingCred
+                    (compactAddr <$> addrs (StakeRefPtr . mkPtr))
+                    decompactAddrLazy
+                    decompactAddr
+                ]
             ],
           bgroup
             "fromCBOR"
             [ benchDecode
                 "StakeRefNull"
+                forcePaymentCred
                 (serialize' <$> addrs (const StakeRefNull))
                 unsafeDeserialize'
                 partialDeserializeAddr,
               benchDecode
                 "StakeRefBase"
+                forcePaymentCred
                 (serialize' <$> addrs stakeRefBase)
                 unsafeDeserialize'
                 partialDeserializeAddr,
               benchDecode
                 "StakeRefPtr"
+                forcePaymentCred
                 (serialize' <$> addrs (StakeRefPtr . mkPtr))
                 unsafeDeserialize'
                 partialDeserializeAddr
@@ -103,21 +163,16 @@ main = do
 benchDecode ::
   NFData a =>
   String ->
+  (Addr StandardCrypto -> StrictUnit) ->
   [a] ->
   (a -> Addr StandardCrypto) ->
   (a -> Addr StandardCrypto) ->
   Benchmark
-benchDecode benchName as oldDecode newDecode =
+benchDecode benchName forceAddr as oldDecode newDecode =
   env (pure as) $ \cas ->
     bgroup benchName $
-      [ bench "old" $
-          whnf
-            (foldMap' (deepseqUnit @(Addr StandardCrypto) . oldDecode))
-            cas,
-        bench "new" $
-          whnf
-            (foldMap' (deepseqUnit @(Addr StandardCrypto) . newDecode))
-            cas
+      [ bench "old" $ whnf (foldMap' (forceAddr . oldDecode)) cas,
+        bench "new" $ whnf (foldMap' (forceAddr . newDecode)) cas
       ]
 
 deepseqUnit :: NFData a => a -> StrictUnit
@@ -140,6 +195,6 @@ stakeAddr28 n =
       hashFromTextAsHex $
         textDigits n <> "2122232425262728292a2b2c2d2e2f32333435363738393a3b"
 
-decompactAddrFast :: Crypto crypto => CompactAddr crypto -> Addr crypto
-decompactAddrFast (UnsafeCompactAddr sbs) =
-  fromMaybe (error "Impossible: decompactAddrFast") (decodeAddrShort sbs)
+-- decompactAddrOld :: Crypto crypto => CompactAddr crypto -> Addr crypto
+-- decompactAddrOld (UnsafeCompactAddr sbs) =
+--   fromMaybe (error "Impossible: decompactAddrFast") (deserializeShortAddr sbs)

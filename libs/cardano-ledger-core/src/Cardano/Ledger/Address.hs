@@ -177,6 +177,9 @@ deserialiseRewardAcnt bs = case B.runGetOrFail getRewardAcnt (BSL.fromStrict bs)
       else Nothing
 
 -- | An address for UTxO.
+--
+-- Contents of Addr data type are intentionally left as lazy, otherwise
+-- operating on compact form of an address will result in redundant work.
 data Addr crypto
   = Addr Network (PaymentCredential crypto) (StakeReference crypto)
   | AddrBootstrap (BootstrapAddress crypto)
