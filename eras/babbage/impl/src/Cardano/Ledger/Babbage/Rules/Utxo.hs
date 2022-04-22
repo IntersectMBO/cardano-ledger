@@ -266,7 +266,7 @@ validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ Outp
                     (>=)
                     v
                     ( Val.inject . Coin $
-                        (((serSize out * coinsPerUTxOWord + 7) `div` 8) - 1) -- division, rounded up
+                        ((serSize out * coinsPerUTxOWord + 7) `div` 8) -- division, rounded up
                     )
         )
         outs
