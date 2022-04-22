@@ -275,11 +275,7 @@ instance Arbitrary (PParamsUpdate era) where
       <*> arbitrary
 
 instance Arbitrary FailureDescription where
-  arbitrary =
-    oneof
-      [ (OnePhaseFailure . pack) <$> arbitrary,
-        PlutusFailure <$> (pack <$> arbitrary) <*> arbitrary
-      ]
+  arbitrary = PlutusFailure <$> (pack <$> arbitrary) <*> arbitrary
 
 instance Arbitrary TagMismatchDescription where
   arbitrary =

@@ -407,8 +407,6 @@ instance PrettyA TagMismatchDescription where
   prettyA = ppTagMismatchDescription
 
 ppFailureDescription :: FailureDescription -> PDoc
-ppFailureDescription (OnePhaseFailure txt) =
-  ppSexp "OnePhaseFailure" [text txt]
 ppFailureDescription (PlutusFailure txt bytes) =
   ppRecord "PlutusFailure" [("reason", text txt), ("script", ppLong bytes)]
 

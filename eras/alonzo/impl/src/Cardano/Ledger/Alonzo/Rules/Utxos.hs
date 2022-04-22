@@ -262,18 +262,20 @@ invalidEnd = intercalate "," ["[LEDGER][SCRIPTS_NOT_VALIDATE_TRANSITION]", "END"
 -- PredicateFailure data type for UTXOS
 
 data FailureDescription
-  = OnePhaseFailure Text
-  | PlutusFailure Text BS.ByteString
+  = PlutusFailure Text BS.ByteString
   deriving (Show, Eq, Generic, NoThunks)
 
 instance ToCBOR FailureDescription where
-  toCBOR (OnePhaseFailure s) = encode $ Sum OnePhaseFailure 0 !> To s
+  -- This strange encoding results from the fact that 'FailureDescription'
+  -- used to have another constructor, which used key 0.
+  -- We must maintain the original serialization in order to not disrupt
+  -- the node-to-client protocol of the cardano node.
   toCBOR (PlutusFailure s b) = encode $ Sum PlutusFailure 1 !> To s !> To b
 
 instance FromCBOR FailureDescription where
   fromCBOR = decode (Summands "FailureDescription" dec)
     where
-      dec 0 = SumD OnePhaseFailure <! From
+      -- Note the lack of key 0. See the ToCBOR instance above for an explanation.
       dec 1 = SumD PlutusFailure <! From <! From
       dec n = Invalid n
 
