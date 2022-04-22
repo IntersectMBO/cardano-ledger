@@ -77,7 +77,7 @@ tests :: TestTree
 tests =
   testGroup
     "Shelley Genesis"
-    [ testProperty "Adress round trip" $
+    [ testProperty "Address round trip" $
         prop_roundtrip_Address_JSON @C_Crypto Proxy,
       testProperty "Genesis round trip" $
         prop_roundtrip_ShelleyGenesis_JSON @C Proxy,
