@@ -25,6 +25,7 @@ module Cardano.Protocol.TPraos.BHeader
     lastAppliedHash,
     issuerIDfromBHBody,
     checkLeaderValue,
+    checkLeaderNatValue,
     bhHash,
     hashHeaderToNonce,
     prevHashToNonce,
@@ -369,6 +370,18 @@ bhbody (BHeader b _) = b
 hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize
 
+-- | Check that the certified VRF output, when used as a natural, is valid for
+-- being slot leader.
+checkLeaderValue ::
+  forall v.
+  (VRF.VRFAlgorithm v) =>
+  VRF.OutputVRF v ->
+  Rational ->
+  ActiveSlotCoeff ->
+  Bool
+checkLeaderValue certVRF σ f =
+  checkLeaderNatValue certVRF (VRF.getOutputVRFNatural certVRF) σ f
+
 -- | Check that the certified input natural is valid for being slot leader. This
 -- means we check that
 --
@@ -392,14 +405,15 @@ hBbsize = bsize
 -- Note that  1       1               1                         certNatMax
 --           --- =  ----- = ---------------------------- = ----------------------
 --            q     1 - p    1 - (certNat / certNatMax)    (certNatMax - certNat)
-checkLeaderValue ::
-  forall v.
+checkLeaderNatValue ::
+  forall proxy v.
   (VRF.VRFAlgorithm v) =>
-  VRF.OutputVRF v ->
+  proxy v ->
+  Natural ->
   Rational ->
   ActiveSlotCoeff ->
   Bool
-checkLeaderValue certVRF σ f =
+checkLeaderNatValue prox certNat σ f =
   if activeSlotVal f == maxBound
     then -- If the active slot coefficient is equal to one,
     -- then nearly every stake pool can produce a block every slot.
@@ -414,13 +428,11 @@ checkLeaderValue certVRF σ f =
       MaxReached _ -> False
   where
     certNatMax :: Natural
-    certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF (Proxy @v))
+    certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF prox)
     c, recip_q, x :: FixedPoint
     c = activeSlotLog f
     recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
     x = -fromRational σ * c
-    certNat :: Natural
-    certNat = VRF.getOutputVRFNatural certVRF
 
 seedEta :: Nonce
 seedEta = mkNonceFromNumber 0
