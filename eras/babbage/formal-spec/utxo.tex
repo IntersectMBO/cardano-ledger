@@ -7,7 +7,7 @@ self-explanatory. Note that the new $\fun{collOuts}$ function
 generates a single output with an index $| \txouts{txb} |$. This is to
 avoid potential confusion for transactions spending that output. Note
 that $\TxId$ can only hold integers up to $2^{16} - 1$. In case of an
-overflow, we let this number be $0$.
+overflow, we let this number be $2^{16} - 1$.
 
 \begin{figure*}[htb]
   \emph{Functions}
