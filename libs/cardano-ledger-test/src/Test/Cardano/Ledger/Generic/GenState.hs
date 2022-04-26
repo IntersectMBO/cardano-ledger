@@ -7,7 +7,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -35,7 +34,14 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
-import Cardano.Ledger.Shelley.LedgerState (DPState (..), DState (..), LedgerState (..), PState (..), RewardAccounts, smartUTxOState)
+import Cardano.Ledger.Shelley.LedgerState
+  ( DPState (..),
+    DState (..),
+    LedgerState (..),
+    PState (..),
+    RewardAccounts,
+    smartUTxOState,
+  )
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
@@ -138,7 +144,20 @@ data GenState era = GenState
   }
 
 emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
-emptyGenState proof genv = GenState mempty mempty mempty mempty mNewEpochStateZero Map.empty Map.empty Map.empty Map.empty Set.empty proof genv
+emptyGenState proof genv =
+  GenState
+    mempty
+    mempty
+    mempty
+    mempty
+    mNewEpochStateZero
+    Map.empty
+    Map.empty
+    Map.empty
+    Map.empty
+    Set.empty
+    proof
+    genv
 
 instance Default GenSize where
   def =
@@ -385,7 +404,7 @@ genFreshCredentials ::
   Set (Credential kr (Crypto era)) ->
   [Credential kr (Crypto era)] ->
   GenRS era [Credential kr (Crypto era)]
-genFreshCredentials _n 0 _tag _old _ans = error ("Ran out of tries in genFreshCredentials.")
+genFreshCredentials _n 0 _tag _old _ans = error "Ran out of tries in genFreshCredentials."
 genFreshCredentials n0 tries tag old0 ans0 = go n0 old0 ans0
   where
     go 0 _ ans = pure ans
@@ -400,7 +419,7 @@ genFreshCredential ::
   Tag ->
   Set (Credential kr (Crypto era)) ->
   GenRS era (Credential kr (Crypto era))
-genFreshCredential 0 _tag _old = error ("Ran out of tries in genFreshCredential.")
+genFreshCredential 0 _tag _old = error "Ran out of tries in genFreshCredential."
 genFreshCredential tries0 tag old = go tries0
   where
     go tries = do

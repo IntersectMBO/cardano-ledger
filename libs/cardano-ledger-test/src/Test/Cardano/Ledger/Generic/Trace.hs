@@ -1,18 +1,12 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -35,6 +29,7 @@ import Cardano.Ledger.Shelley.LedgerState
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
+    StashedAVVMAddresses,
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
@@ -80,7 +75,7 @@ import Test.Cardano.Ledger.Generic.TxGen
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCaseSteps)
+import Test.Tasty.QuickCheck (testProperty)
 
 -- ===========================================
 
@@ -133,7 +128,7 @@ genTxSeq proof gensize numTx = do
 run :: IO ()
 run = do
   (vs, _) <- generate $ genTxSeq (Babbage Mock) def 5
-  putStrLn (show (ppList (ppList (ppPair ppWord64 (pcTx (Babbage Mock)))) (Vector.toList vs)))
+  print (ppList (ppList (ppPair ppWord64 (pcTx (Babbage Mock)))) (Vector.toList vs))
 
 -- ==================================================================
 -- Constructing the "real", initial NewEpochState, from the GenState
@@ -211,7 +206,7 @@ instance
       mockblock
       ( \case
           Left pdfs -> error ("MOCKCHAIN sigGen:\n" <> show (ppList (ppMockChainFailure reify) pdfs))
-          Right _mcs -> pure (mockblock)
+          Right _mcs -> pure mockblock
       )
 
   shrinkSignal _x = []
@@ -227,47 +222,35 @@ chooseIssuer (PoolDistr m) = mapProportion getInt m
 -- ===================================================================================
 
 -- =========================================================================
--- Making and running tracesx
-
-makeMOCKCHAINtrace ::
-  forall era.
-  (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) =>
-  Proof era ->
-  GenSize ->
-  Word64 ->
-  Gen (Trace (MOCKCHAIN era))
-makeMOCKCHAINtrace proof gensize tracelen = do
-  (vs, genstate) <- genTxSeq proof gensize tracelen
-  traceFromInitState @(MOCKCHAIN era)
-    testGlobals
-    (fromIntegral (length vs))
-    (Gen1 (Vector.map (map snd) vs))
-    (Just (\_ -> Right <$> genMockChainState proof genstate))
+-- Making and running traces
 
 chainTest ::
   forall era.
   ( Reflect era,
-    HasTrace (MOCKCHAIN era) (Gen1 era)
+    HasTrace (MOCKCHAIN era) (Gen1 era),
+    Eq (Core.TxOut era),
+    Eq (Core.PParams era),
+    Eq (State (Core.EraRule "PPUP" era)),
+    Eq (StashedAVVMAddresses era)
   ) =>
   Proof era ->
   Word64 ->
   GenSize ->
   TestTree
-chainTest proof n gsize = testCaseSteps message action
+chainTest proof n gsize = testProperty message action
   where
     message = "MockChainTrace in the (" ++ show proof ++ ") era."
-    action step = do
-      step ("Generating a sequence of Tx of length " ++ show n)
-      (vs, genstate) <- generate $ genTxSeq proof gsize n
-      step ("Applying the STS rules to the trace with " ++ show (length vs) ++ " blocks.")
-      !_trace <-
-        generate $
-          traceFromInitState @(MOCKCHAIN era)
-            testGlobals
-            (fromIntegral (length vs))
-            (Gen1 (Vector.map (map snd) vs))
-            (Just (\_ -> Right <$> genMockChainState proof genstate))
-      pure ()
+    action = do
+      (vs, genstate) <- genTxSeq proof gsize n
+      initState <- genMockChainState proof genstate
+      trace <-
+        traceFromInitState @(MOCKCHAIN era)
+          testGlobals
+          (fromIntegral (length vs))
+          (Gen1 (Vector.map (map snd) vs))
+          (Just (\_ -> pure $ Right initState))
+      -- Here we can add some properties for traces:
+      pure (_traceInitState trace === initState)
 
 -- | test that we can generate a sequence of Tx that all STS validate given a (Proof era)
 testTraces :: Word64 -> TestTree

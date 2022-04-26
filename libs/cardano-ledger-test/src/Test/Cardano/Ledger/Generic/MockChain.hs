@@ -14,6 +14,7 @@ module Test.Cardano.Ledger.Generic.MockChain where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Pretty
@@ -31,10 +32,16 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState (..),
     NewEpochState (..),
     PState (..),
+    StashedAVVMAddresses,
   )
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
-import Cardano.Ledger.Shelley.Rules.Ledgers (LEDGERS, LedgersEnv (..), LedgersEvent, LedgersPredicateFailure)
+import Cardano.Ledger.Shelley.Rules.Ledgers
+  ( LEDGERS,
+    LedgersEnv (..),
+    LedgersEvent,
+    LedgersPredicateFailure,
+  )
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEnv)
 import Cardano.Ledger.Shelley.Rules.Tick (TICK, TickEvent, TickPredicateFailure)
 import Cardano.Slotting.Slot (EpochNo, SlotNo)
@@ -86,8 +93,18 @@ data MockChainState era = MockChainState
     mcsCount :: Int -- Counts the blocks made
   }
 
+deriving instance
+  ( CC.Crypto (Crypto era),
+    Eq (Core.TxOut era),
+    Eq (Core.PParams era),
+    Eq (State (Core.EraRule "PPUP" era)),
+    Eq (StashedAVVMAddresses era)
+  ) =>
+  Eq (MockChainState era)
+
 instance Show (MockChainState era) where
-  show (MockChainState nes slot count) = show count ++ " " ++ show slot ++ "\n  " ++ show (nesBcur nes)
+  show (MockChainState nes slot count) =
+    show count ++ " " ++ show slot ++ "\n  " ++ show (nesBcur nes)
 
 instance Show (MockBlock era) where
   show (MockBlock is sl _) = show is ++ " " ++ show sl
@@ -103,7 +120,7 @@ instance
     Environment (Core.EraRule "TICK" era) ~ (),
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (Core.EraRule "LEDGER" era) ~ (LedgerState era),
+    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
     Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
   ) =>
   STS (MOCKCHAIN era)
@@ -125,12 +142,12 @@ chainTransition ::
     Environment (Core.EraRule "TICK" era) ~ (),
     Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
     Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (Core.EraRule "LEDGER" era) ~ (LedgerState era),
+    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
     Embed (Core.EraRule "TICK" era) (MOCKCHAIN era)
   ) =>
   TransitionRule (MOCKCHAIN era)
 chainTransition = do
-  TRC (_, MockChainState nes lastSlot count, (MockBlock issuer slot txs)) <- judgmentContext
+  TRC (_, MockChainState nes lastSlot count, MockBlock issuer slot txs) <- judgmentContext
 
   lastSlot < slot ?! BlocksOutOfOrder lastSlot slot
 
