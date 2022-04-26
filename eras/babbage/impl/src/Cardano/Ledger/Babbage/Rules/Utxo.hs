@@ -108,7 +108,7 @@ data BabbageUtxoPred era
   | UnequalCollateralReturn !Coin !Coin
   | DanglingWitnessDataHash !(Set.Set (DataHash (Crypto era)))
   | MalformedScripts !(Set (ScriptHash (Crypto era)))
-  | MalformedData !(Set (DataHash (Crypto era)))
+  | DatumByteStringExceeds64Bytes !(Set (DataHash (Crypto era)))
 
 deriving instance
   ( Era era,
@@ -461,7 +461,7 @@ instance
       work (UnequalCollateralReturn c1 c2) = Sum UnequalCollateralReturn 3 !> To c1 !> To c2
       work (DanglingWitnessDataHash x) = Sum DanglingWitnessDataHash 4 !> To x
       work (MalformedScripts x) = Sum MalformedScripts 5 !> To x
-      work (MalformedData x) = Sum MalformedData 6 !> To x
+      work (DatumByteStringExceeds64Bytes x) = Sum DatumByteStringExceeds64Bytes 6 !> To x
 
 instance
   ( Era era,
@@ -482,7 +482,7 @@ instance
       work 3 = SumD UnequalCollateralReturn <! From <! From
       work 4 = SumD DanglingWitnessDataHash <! From
       work 5 = SumD MalformedScripts <! From
-      work 6 = SumD MalformedData <! From
+      work 6 = SumD DatumByteStringExceeds64Bytes <! From
       work n = Invalid n
 
 deriving via InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era) instance NoThunks (BabbageUtxoPred era)
