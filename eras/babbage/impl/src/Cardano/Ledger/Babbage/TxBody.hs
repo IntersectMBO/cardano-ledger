@@ -270,16 +270,15 @@ data Datum era
 
 instance Era era => ToCBOR (Datum era) where
   toCBOR d = encode $ case d of
-    NoDatum -> Sum NoDatum 0
-    DatumHash dh -> Sum DatumHash 1 !> To dh
-    Datum d' -> Sum Datum 2 !> To d'
+    DatumHash dh -> Sum DatumHash 0 !> To dh
+    Datum d' -> Sum Datum 1 !> To d'
+    NoDatum -> OmitC NoDatum
 
 instance Era era => FromCBOR (Datum era) where
   fromCBOR = decode (Summands "Datum" decodeDatum)
     where
-      decodeDatum 0 = SumD NoDatum
-      decodeDatum 1 = SumD DatumHash <! From
-      decodeDatum 2 = SumD Datum <! From
+      decodeDatum 0 = SumD DatumHash <! From
+      decodeDatum 1 = SumD Datum <! From
       decodeDatum k = Invalid k
 
 datumDataHash :: Datum era -> StrictMaybe (DataHash (Crypto era))
