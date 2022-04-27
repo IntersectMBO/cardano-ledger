@@ -53,6 +53,7 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
+import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (..))
@@ -120,8 +121,14 @@ collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
 collateralOutput pf =
   newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 50)]
 
+-- We intentionally use a ByteString with length greater than 64 to serve as
+-- as reminder that our protection against contiguous data over 64 Bytes on
+-- the wire is done during deserialization using the Plutus library.
+sixtyFiveBytes :: BS.ByteString
+sixtyFiveBytes = BS.pack [1 .. 65]
+
 datumExample1 :: Data era
-datumExample1 = Data (Plutus.I 123)
+datumExample1 = Data (Plutus.B sixtyFiveBytes)
 
 inlineDatumOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 inlineDatumOutput pf =

@@ -10,11 +10,7 @@ module Cardano.Ledger.Babbage.Rules.Utxow where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Alonzo.Data
-  ( Data (Data),
-    DataHash,
-    hashData,
-  )
+import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent)
 import Cardano.Ledger.Alonzo.Rules.Utxow
@@ -69,15 +65,12 @@ import Control.State.Transition.Extended
     liftSTS,
     trans,
   )
-import qualified Data.ByteString as BS
 import Data.Foldable (sequenceA_)
 import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
-import Plutus.V1.Ledger.Api (Data (..))
-import qualified Plutus.V1.Ledger.Api as Plutus
 import Validation (failureUnless)
 
 -- ==================================================
@@ -163,31 +156,6 @@ validateScriptsWellFormed pp tx utxo =
    in failureUnless
         (Map.null invalidScripts)
         (MalformedScripts $ Map.keysSet invalidScripts)
-
-validateDatumsWellFormed ::
-  forall era.
-  ( ExtendedUTxO era,
-    Era era
-  ) =>
-  Core.Tx era ->
-  Test (BabbageUtxoPred era)
-validateDatumsWellFormed tx =
-  let invalidDatums =
-        Set.map hashData $
-          Set.filter (\(Data d) -> not $ datumByteStringsAtMost64Bytes d) (txdata tx)
-   in failureUnless
-        (Set.null invalidDatums)
-        (DatumByteStringExceeds64Bytes invalidDatums)
-
-datumByteStringsAtMost64Bytes ::
-  Plutus.Data ->
-  Bool
-datumByteStringsAtMost64Bytes (Constr _ ds) = all datumByteStringsAtMost64Bytes ds
-datumByteStringsAtMost64Bytes (Map ds) =
-  all (\(x, y) -> datumByteStringsAtMost64Bytes x && datumByteStringsAtMost64Bytes y) ds
-datumByteStringsAtMost64Bytes (List ds) = all datumByteStringsAtMost64Bytes ds
-datumByteStringsAtMost64Bytes (I _) = True
-datumByteStringsAtMost64Bytes (B bs) = BS.length bs <= 64
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
@@ -278,7 +246,8 @@ babbageUtxowTransition = do
                          x ∈ Script ∪ Datum ⇒ isWellFormed x
   -}
   runTest $ validateScriptsWellFormed pp tx utxo
-  runTest $ validateDatumsWellFormed tx
+  -- Note that Datum validation is done during deserialization,
+  -- as given by the decoders in the Plutus libraray
 
   {- languages tx utxo ⊆ dom(costmdls tx) -}
   -- This check is checked when building the TxInfo using collectTwoPhaseScriptInputs, if it fails
