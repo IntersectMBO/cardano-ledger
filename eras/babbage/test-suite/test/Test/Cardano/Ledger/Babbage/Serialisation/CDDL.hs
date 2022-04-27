@@ -7,6 +7,7 @@ module Test.Cardano.Ledger.Babbage.Serialisation.CDDL
 where
 
 import Cardano.Ledger.Alonzo.Data (Data)
+import Cardano.Ledger.Alonzo.Scripts (CostModels)
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (PParamsUpdate)
@@ -37,6 +38,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(Datum B) n "datum",
       cddlAnnotatorTest @(TxWitness B) n "transaction_witness_set",
       cddlTest @(PParamsUpdate B) n "protocol_param_update",
+      cddlTest @CostModels n "costmdls",
       cddlAnnotatorTest @(Redeemers B) n "[* redeemer]",
       cddlAnnotatorTest @(ValidatedTx B) n "transaction"
     ]

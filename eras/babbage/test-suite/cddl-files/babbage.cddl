@@ -321,9 +321,10 @@ ex_unit_prices =
 language = 0 ; Plutus v1
          / 1 ; Plutus v2
 
-costmdls = { * language => cost_model }
-
-cost_model = [ 166*166 int ]
+costmdls =
+  { ? 0 : [ 166*166 int ] ; Plutus v1
+  , ? 1 : [ 170*170 int ] ; Plutus v2
+  }
 
 transaction_metadatum =
     { * transaction_metadatum => transaction_metadatum }
