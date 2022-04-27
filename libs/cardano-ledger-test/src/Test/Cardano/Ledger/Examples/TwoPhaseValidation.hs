@@ -16,7 +16,6 @@ module Test.Cardano.Ledger.Examples.TwoPhaseValidation where
 import qualified Cardano.Crypto.Hash as CH
 import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
@@ -38,7 +37,6 @@ import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import Cardano.Ledger.Babbage (BabbageEra)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
 import Cardano.Ledger.BaseTypes
@@ -147,7 +145,6 @@ import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (HasTokens (..), PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils
   ( RawSeed (..),

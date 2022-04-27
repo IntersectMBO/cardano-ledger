@@ -15,10 +15,8 @@
 module Test.Cardano.Ledger.Generic.Indexed where
 
 import Cardano.Crypto.DSIGN.Class ()
-import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (Script (..))
-import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (Value)
 import qualified Cardano.Ledger.Core as Core
@@ -44,6 +42,15 @@ import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Generic.Proof
+  ( AlonzoEra,
+    BabbageEra,
+    Evidence (..),
+    GoodCrypto,
+    Mock,
+    Proof (..),
+    Reflect (..),
+    ReflectC (..),
+  )
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
 
 -- ===========================================================================

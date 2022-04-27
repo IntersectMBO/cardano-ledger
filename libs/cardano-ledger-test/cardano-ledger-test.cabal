@@ -47,15 +47,20 @@ library
     Test.Cardano.Ledger.BaseTypes
     Test.Cardano.Ledger.Examples.BabbageFeatures
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
+    Test.Cardano.Ledger.Generic.ApplyTx
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Fields
     Test.Cardano.Ledger.Generic.Functions
     Test.Cardano.Ledger.Generic.GenState
+    Test.Cardano.Ledger.Generic.TxGen
     Test.Cardano.Ledger.Generic.Proof
-    Test.Cardano.Ledger.Generic.Scriptic
-    Test.Cardano.Ledger.Generic.Updaters
+    Test.Cardano.Ledger.Generic.MockChain
+    Test.Cardano.Ledger.Generic.ModelState
     Test.Cardano.Ledger.Generic.PrettyCore
     Test.Cardano.Ledger.Generic.Properties
+    Test.Cardano.Ledger.Generic.Scriptic
+    Test.Cardano.Ledger.Generic.Trace
+    Test.Cardano.Ledger.Generic.Updaters
     Test.Cardano.Ledger.Model.API
     Test.Cardano.Ledger.Model.Acnt
     Test.Cardano.Ledger.Model.BaseTypes
@@ -132,6 +137,7 @@ library
     semigroupoids,
     small-steps,
     small-steps-test,
+    set-algebra,
     some,
     strict-containers,
     tagged,
@@ -141,6 +147,7 @@ library
     text,
     time,
     transformers,
+    vector,
     writer-cps-mtl,
 
 
