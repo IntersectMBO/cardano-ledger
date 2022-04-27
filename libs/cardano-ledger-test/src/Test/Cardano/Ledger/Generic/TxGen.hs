@@ -261,9 +261,9 @@ mkWitVKey era mTag (ScriptHashObj scriptHash) =
     Nothing ->
       error $ "Impossible: Cannot find script with hash " ++ show scriptHash
     Just script -> do
-      let scriptWit = [ScriptWits' [script]]
+      let scriptWit = ScriptWits' [script]
       otherWit <- genGenericScriptWitness era mTag script
-      pure (\hash -> (scriptWit ++ otherWit hash))
+      pure (\hash -> (scriptWit : otherWit hash))
 
 -- | Generator for witnesses necessary for Scripts and Key
 -- credentials. Because of the Key credentials generating function requires a body
@@ -435,12 +435,12 @@ genTxIn _proof numChoices = do
 genFreshTxIn :: forall era. Reflect era => Int -> GenRS era [TxIn (Crypto era)]
 genFreshTxIn tries | tries <= 0 = error "Could not generate a fresh TxIn after many tries."
 genFreshTxIn tries = do
-  entrysInUse <- gets gsInitialUtxo
+  entriesInUse <- gets gsInitialUtxo
   -- Max number of choices. So the UTxO will never be larger than this
   numChoicesMax <- gets getUtxoChoicesMax
   n <- lift $ choose (1, numChoicesMax + 3)
   ins <- lift $ vectorOf n (genTxIn @era reify numChoicesMax)
-  case filter (`Map.notMember` entrysInUse) ins of
+  case filter (`Map.notMember` entriesInUse) ins of
     [] -> genFreshTxIn (tries - 1)
     freshTxIns -> pure (take numChoicesMax freshTxIns)
 
@@ -617,9 +617,9 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         -- The size of the Gen computation is driven down when we generate scripts, so it can be 0 here
         -- that is really bad, because if the happens we get the same TxIn every time, and 'coll' never grows,
         -- so this function doesn't terminate. We want many choices of TxIn, so resize just this arbitrary by 30.
-        entrysInUse <- gets gsInitialUtxo
+        entriesInUse <- gets gsInitialUtxo
         txIn <- lift (resize 30 (arbitrary :: Gen (TxIn (Crypto era))))
-        if Map.member txIn utxo || Map.member txIn coll || txIn `Map.member` entrysInUse
+        if Map.member txIn utxo || Map.member txIn coll || txIn `Map.member` entriesInUse
           then genNewCollateral addr coll um c
           else pure (um, Map.insert txIn (coreTxOut reify [Address addr, Amount (inject c)]) coll, c)
       -- Either pick a collateral from a map or generate a completely new one
@@ -650,8 +650,7 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
   collaterals <-
     go collateralAddresses Map.empty (Coin 0) $
       SplitMap.toMap $ SplitMap.filter spendOnly utxo
-  pure -- ((Map.foldrWithKey' Map.insert utxo collaterals), collaterals)
-    (Map.union collaterals utxo, collaterals)
+  pure (Map.union collaterals utxo, collaterals)
 
 spendOnly :: Era era => Core.TxOut era -> Bool
 spendOnly txout = case getTxOutAddr txout of
