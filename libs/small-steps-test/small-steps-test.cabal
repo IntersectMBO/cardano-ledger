@@ -38,6 +38,7 @@ library
                      , Control.State.Transition.Trace.Generator.QuickCheck
                      , Hedgehog.Extra.Manual
   build-depends:       goblins
+                     , cardano-prelude
                      , hedgehog >= 1.0.4
                      , tasty-hunit
                      , microlens

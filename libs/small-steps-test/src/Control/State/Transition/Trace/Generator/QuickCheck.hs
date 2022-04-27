@@ -96,8 +96,8 @@ traceFrom traceEnv maxTraceLength traceGenEnv env st0 = do
       State sts ->
       [(State sts, Signal sts)] ->
       QuickCheck.Gen [(State sts, Signal sts)]
-    loop 0 _ acc = pure $! acc
-    loop !d sti stSigs = do
+    loop 0 _ !acc = pure acc
+    loop d !sti !stSigs = do
       sig <- sigGen @sts @traceGenEnv traceGenEnv env sti
       case interpretSTS @sts @traceGenEnv traceEnv (Trace.applySTSTest @sts (TRC (env, sti, sig))) of
         Left _predicateFailures ->

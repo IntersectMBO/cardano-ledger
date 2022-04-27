@@ -58,7 +58,7 @@ import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx, txSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp)
+import Test.Cardano.Ledger.Generic.Trace (Gen1, testTraces, traceProp)
 import Test.Cardano.Ledger.Generic.TxGen
   ( Box (..),
     applySTSByProof,
@@ -228,22 +228,29 @@ txPreserveAda =
     ]
 
 -- | Ada is preserved over a trace of length 100
-adaIsPreserved :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> TestTree
+adaIsPreserved ::
+  ( Reflect era,
+    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ) =>
+  Proof era ->
+  TestTree
 adaIsPreserved proof =
-  testProperty ("In era (" ++ show proof ++ "). Trace length = 100") $
-    withMaxSuccess 30 $
-      traceProp proof 100 def (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
+  testProperty (show proof ++ " era. Trace length = 100") $
+    traceProp proof 100 def (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
 
 tracePreserveAda :: TestTree
 tracePreserveAda =
   testGroup
     "Total Ada is preserved over traces of length 100"
-    [ adaIsPreserved (Babbage Mock),
+    [ adaIsPreservedBabbage,
       adaIsPreserved (Alonzo Mock),
       adaIsPreserved (Mary Mock),
       adaIsPreserved (Allegra Mock),
       adaIsPreserved (Shelley Mock)
     ]
+
+adaIsPreservedBabbage :: TestTree
+adaIsPreservedBabbage = adaIsPreserved (Babbage Mock)
 
 -- | The incremental Stake invaraint is preserved over a trace of length 100
 stakeInvariant :: Era era => MockChainState era -> MockChainState era -> Property
@@ -253,9 +260,8 @@ stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
 
 incrementStakeInvariant :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> TestTree
 incrementStakeInvariant proof =
-  testProperty ("In era (" ++ show proof ++ "). Trace length = 100") $
-    withMaxSuccess 30 $
-      traceProp proof 100 def stakeInvariant
+  testProperty (show proof ++ " era. Trace length = 100") $
+    traceProp proof 100 def stakeInvariant
 
 incrementalStake :: TestTree
 incrementalStake =
@@ -275,7 +281,8 @@ genericProperties =
     [ coreTypesRoundTrip,
       txPreserveAda,
       tracePreserveAda,
-      incrementalStake
+      incrementalStake,
+      testTraces 100
     ]
 
 -- ==============================================================
@@ -316,7 +323,7 @@ runTest computeWith action proof = do
   action ans
 
 main2 :: IO ()
-main2 = runTest (\x -> fst <$> genValidatedTx x) (const (pure ())) (Alonzo Mock)
+main2 = runTest (\x -> fst <$> genValidatedTx x) (const (pure ())) (Babbage Mock)
 
 main3 :: IO ()
 main3 = runTest (\_x -> (fromMUtxo . fst) <$> genUTxO) action (Alonzo Mock)

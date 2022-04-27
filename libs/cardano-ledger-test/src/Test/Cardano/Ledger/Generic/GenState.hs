@@ -19,7 +19,7 @@ import Cardano.Ledger.Address (RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.BaseTypes (Network (Testnet), ProtVer (..))
+import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
@@ -71,6 +71,7 @@ import Test.Cardano.Ledger.Generic.Functions
     alwaysTrue,
     obligation',
     primaryLanguage,
+    protocolVersion,
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( ModelNewEpochState (..),
@@ -108,24 +109,24 @@ import Test.Tasty.QuickCheck
 
 -- | Constants that determine how big a GenState is generated.
 data GenSize = GenSize
-  { treasury :: Integer, -- DO WE EVER USE THIS?
-    reserves :: Integer, -- DO WE EVER USE THIS?
-    startSlot :: Word64,
-    blocksizeMax :: Integer,
-    collInputsMax :: Natural,
-    spendInputsMax :: Int,
-    refInputsMax :: Int,
-    utxoChoicesMax :: Int,
-    certificateMax :: Int,
-    withdrawalMax :: Int,
-    oldUtxoPercent :: Int -- between 0-100, 10 means pick an old UTxO 10% of the time
+  { treasury :: !Integer,
+    reserves :: !Integer,
+    startSlot :: !Word64,
+    blocksizeMax :: !Integer,
+    collInputsMax :: !Natural,
+    spendInputsMax :: !Int,
+    refInputsMax :: !Int,
+    utxoChoicesMax :: !Int,
+    certificateMax :: !Int,
+    withdrawalMax :: !Int,
+    oldUtxoPercent :: !Int -- between 0-100, 10 means pick an old UTxO 10% of the time
   }
   deriving (Show)
 
 data GenEnv era = GenEnv
-  { geValidityInterval :: ValidityInterval,
-    gePParams :: Core.PParams era,
-    geSize :: GenSize
+  { geValidityInterval :: !ValidityInterval,
+    gePParams :: !(Core.PParams era),
+    geSize :: !GenSize
   }
 
 data GenState era = GenState
@@ -242,10 +243,11 @@ nonNegativeSingleDigitInt =
 genPositiveVal :: Val v => Gen v
 genPositiveVal = inject . Coin . getPositive <$> arbitrary
 
--- | Generate a value to used in the Rewards, where an occasional 0 is necessary to
---   make DeReg certificates, which demand their reward balance to be zero
+-- | Generate a value (which is occaisionally 0) useful in generating Rewards, where we need a
+--   few 0's, because we cannot generate a DeReg certificates, without a 0 Reg value.
+--   Also used when generating the CollReturn, where an occasional 0 would be nice
 genRewardVal :: Val v => Gen v
-genRewardVal = frequency [(2, pure mempty), (98, genPositiveVal)]
+genRewardVal = frequency [(3, pure mempty), (97, genPositiveVal)]
 
 modifyModel :: (ModelNewEpochState era -> ModelNewEpochState era) -> GenRS era ()
 modifyModel f = modify (\gstate -> gstate {gsModel = f (gsModel gstate)})
@@ -334,7 +336,7 @@ genGenEnv proof gsize = do
             MaxTxExUnits maxTxExUnits,
             MaxCollateralInputs maxCollateralInputs,
             CollateralPercentage collateralPercentage,
-            ProtocolVersion $ ProtVer 7 0,
+            ProtocolVersion $ protocolVersion proof,
             PoolDeposit $ Coin 5,
             KeyDeposit $ Coin 2
           ]

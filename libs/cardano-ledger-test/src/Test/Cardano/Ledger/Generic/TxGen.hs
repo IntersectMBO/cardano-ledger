@@ -79,7 +79,6 @@ import Data.Word (Word16)
 import GHC.Stack
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
 import Test.Cardano.Ledger.Generic.Fields hiding (Mint)
 import qualified Test.Cardano.Ledger.Generic.Fields as Generic (TxBodyField (Mint))
 import Test.Cardano.Ledger.Generic.Functions
@@ -601,13 +600,16 @@ genDCerts = do
   (dcs, _, _) <- F.foldlM genUniqueScript initSets [1 :: Int .. n]
   pure $ reverse dcs
 
+-- | Generate a set of Collateral inputs sufficient to pay the minimum fee ('minCollTotal') computed
+--   from the fee and the collateralPercentage from the PParams. Return the new UTxO, the inputs,
+--   and coin of the excess amount included in the inputs, above what is needed to pay the minimum fee.
 genCollateralUTxO ::
   forall era.
   (HasCallStack, Reflect era) =>
   [Addr (Crypto era)] ->
   Coin ->
   MUtxo era ->
-  GenRS era (MUtxo era, Map.Map (TxIn (Crypto era)) (Core.TxOut era))
+  GenRS era (MUtxo era, Map.Map (TxIn (Crypto era)) (Core.TxOut era), Coin)
 genCollateralUTxO collateralAddresses (Coin fee) utxo = do
   GenEnv {gePParams} <- gets gsGenEnv
   let collPerc = collateralPercentage' reify gePParams
@@ -637,26 +639,35 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         Map (TxIn (Crypto era)) (Core.TxOut era) ->
         Coin ->
         Map (TxIn (Crypto era)) (Core.TxOut era) ->
-        GenRS era (Map (TxIn (Crypto era)) (Core.TxOut era))
+        GenRS era (Map (TxIn (Crypto era)) (Core.TxOut era), Coin)
       go ecs !coll !curCollTotal !um
-        | curCollTotal >= minCollTotal = pure coll
+        | curCollTotal >= minCollTotal = pure (coll, curCollTotal <-> minCollTotal)
         | [] <- ecs = error "Impossible: supplied less addresses then `maxCollateralInputs`"
         | ec : ecs' <- ecs = do
             (um', coll', c) <-
               if null ecs'
-                then genNewCollateral ec coll um (minCollTotal <-> curCollTotal)
+                then -- This is the last input, so most of the time, put something (val > 0)
+                -- extra in it or we will always have a ColReturn with zero in it.
+                do
+                  excess <- lift genPositiveVal
+                  genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
                 else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
             go ecs' coll' (curCollTotal <+> c) um'
-  collaterals <-
+  (collaterals, excessColCoin) <-
     go collateralAddresses Map.empty (Coin 0) $
       SplitMap.toMap $ SplitMap.filter spendOnly utxo
-  pure (Map.union collaterals utxo, collaterals)
+  pure (Map.union collaterals utxo, collaterals, excessColCoin)
 
 spendOnly :: Era era => Core.TxOut era -> Bool
 spendOnly txout = case getTxOutAddr txout of
   (Addr _ (ScriptHashObj _) _) -> False
   _ -> True
 
+-- | This function is used to generate the Outputs of a TxBody, It is computed by taking the
+--   Outputs of the range of the domain restricted UTxO, resticted by the Inputs of the TxBody,
+--   as input to the function, and then making new Outputs, where the sum of the Coin is the same.
+--   This way we generate a 'balanced' TxBody (modulo fees, deposits, refunds etc. which are
+--   handled separately)
 genRecipientsFrom :: Reflect era => [Core.TxOut era] -> GenRS era [Core.TxOut era]
 genRecipientsFrom txOuts = do
   let outCount = length txOuts
@@ -664,7 +675,7 @@ genRecipientsFrom txOuts = do
   let extra = outCount - approxCount
       avgExtra = ceiling (toInteger extra % toInteger approxCount)
       genExtra e
-        | e <= 0 || outCount == 0 || avgExtra == 0 = pure 0
+        | e <= 0 || avgExtra == 0 = pure 0
         | otherwise = lift $ chooseInt (0, avgExtra)
   let goNew _ [] !rs = pure rs
       goNew e (tx : txs) !rs = do
@@ -675,15 +686,25 @@ genRecipientsFrom txOuts = do
       goExtra e n !s txout (tx : txs) !rs = goExtra e (n - 1) (s <+> v) tx txs rs
         where
           v = getTxOutVal reify txout
+      -- Potentially split 'txout' into two TxOuts. If the two piece path is used
+      -- one of two TxOuts uses the same 'addr' as 'txout' and holds the 'change'
+      -- (i.e. difference between the original and the second, non-change, TxOut).
+      -- In either case whether it adds 1 or 2 TxOuts to 'rs', the coin value of
+      -- the new TxOut(s), is the same as the coin value of 'txout'.
       genWithChange s txout rs = do
         let !(!addr, !v, !ds) = txoutFields reify txout
-        c <- Coin <$> lift (choose (1, unCoin $ coin v))
-        fields <- genTxOut reify (s <+> inject c)
-        if c < coin v
-          then
-            let !change = coreTxOut reify (Address addr : Amount (v <-> inject c) : ds)
-             in pure (coreTxOut reify fields : change : rs)
-          else pure (coreTxOut reify fields : rs)
+            vCoin = unCoin (coin v)
+        if vCoin == 0 -- If the coin balance is 0, don't add any TxOuts to 'rs'
+          then pure rs
+          else do
+            c <- Coin <$> lift (choose (1, vCoin))
+            fields <- genTxOut reify (s <+> inject c)
+            pure $
+              if c < coin v
+                then
+                  let !change = coreTxOut reify (Address addr : Amount (v <-> inject c) : ds)
+                   in coreTxOut reify fields : change : rs
+                else coreTxOut reify fields : rs
   goNew extra txOuts []
 
 getDCertCredential :: DCert crypto -> Maybe (Credential 'Staking crypto)
@@ -755,7 +776,7 @@ genValidatedTxAndInfo proof = do
       Spend
       [ (\dh cred -> (lookupByKeyM "datum" dh gsDatums, cred))
           <$> mDatumHash
-          <*> (Just credential)
+          <*> Just credential
         | (_, coretxout) <- Map.toAscList toSpendNoCollateral,
           let (credentials, mDatumHash) = txoutEvidence proof coretxout,
           credential <- credentials
@@ -764,7 +785,12 @@ genValidatedTxAndInfo proof = do
   -- generate Withdrawals before DCerts, as Rewards are populated in the Model here,
   -- and we need to avoid certain DCerts if they conflict with existing Rewards
   (wdrls@(Wdrl wdrlMap), newRewards) <- genWithdrawals
-  rewardsWithdrawalTxOut <- coreTxOut proof <$> (genTxOut proof $ inject $ F.fold wdrlMap)
+  let withdrawalAmount = F.fold wdrlMap
+
+  rewardsWithdrawalTxOut <-
+    if withdrawalAmount == Coin 0
+      then pure Nothing
+      else Just . coreTxOut proof <$> genTxOut proof (inject withdrawalAmount)
   let wdrlCreds = map (getRwdCred . fst) $ Map.toAscList wdrlMap
   (IsValid v2, mkWdrlWits) <-
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
@@ -796,26 +822,40 @@ genValidatedTxAndInfo proof = do
   let bogusCollateralTxIns =
         Set.fromList
           [ TxIn bogusCollateralTxId (mkTxIxPartial (fromIntegral i))
-            | i <- [maxBound, maxBound - 1 .. maxBound - (fromIntegral maxCollateralCount) - 1] :: [Word16]
+            | i <- [maxBound, maxBound - 1 .. maxBound - fromIntegral maxCollateralCount - 1] :: [Word16]
           ]
   collateralAddresses <- replicateM maxCollateralCount genNoScriptRecipient
   bogusCollateralKeyWitsMakers <- forM collateralAddresses $ \a ->
     genTxOutKeyWitness proof Nothing (coreTxOut proof [Address a, Amount (inject maxCoin)])
   networkId <- lift $ elements [SNothing, SJust Testnet]
 
-  -- 6. Estimate the fee
-  let redeemerDatumWits = (redeemerWitsList ++ datumWitsList)
+  -- 6. Generate bogus collateral fields, and functions for updating them when we know their real values
+  -- Add a stub for the TotalCol field
+  bogusTotalCol <- frequencyT [(1, pure SNothing), (9, pure (SJust (Coin 0)))] -- generate a bogus Coin, fill it in later
+  let updateTotalColl SNothing _ = SNothing
+      updateTotalColl (SJust (Coin n)) (Coin m) = SJust (Coin (n + m))
+  -- If Babbage era, or greater, add a stub for a CollateralReturn TxOut
+  bogusCollReturn <-
+    if Some proof >= Some (Babbage Mock)
+      then frequencyT [(1, pure SNothing), (9, (SJust . coreTxOut proof) <$> genTxOut proof (inject (Coin 0)))]
+      else pure SNothing
+  let updateCollReturn SNothing _ = SNothing
+      updateCollReturn (SJust txout) v = SJust (injectFee proof v txout)
+
+  -- 7. Estimate the fee
+  let redeemerDatumWits = redeemerWitsList ++ datumWitsList
       bogusIntegrityHash = hashScriptIntegrity' proof gePParams mempty (Redeemers mempty) mempty
       inputSet = Map.keysSet toSpendNoCollateral
-      outputList = (rewardsWithdrawalTxOut : recipients)
+      outputList = maybe recipients (: recipients) rewardsWithdrawalTxOut
       txBodyNoFee =
         coreTxBody
           proof
           [ Inputs inputSet,
             Collateral bogusCollateralTxIns,
             RefInputs (Map.keysSet refInputsUtxo),
-            TotalCol (SJust (Coin 0)), -- Add a bogus Coin, fill it in later
+            TotalCol bogusTotalCol,
             Outputs' outputList,
+            CollateralReturn bogusCollReturn,
             Certs' dcerts,
             Wdrls wdrls,
             Txfee maxCoin,
@@ -849,17 +889,17 @@ genValidatedTxAndInfo proof = do
       fee = minfee' proof gePParams bogusTxForFeeCalc
       deposits = depositsAndRefunds proof gePParams dcerts
 
-  -- 7. Crank up the amount in one of outputs to account for the fee and deposits. Note
+  -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce
   -- real life like setup. We use the entry with TxIn feeKey, which we can safely overwrite.
   let utxoFeeAdjusted = Map.adjust (injectFee proof (fee <+> deposits)) feeKey utxoNoCollateral
 
-  -- 8. Generate utxos that will be used as collateral
-  (utxo, collMap) <- genCollateralUTxO collateralAddresses fee utxoFeeAdjusted
+  -- 9. Generate utxos that will be used as collateral
+  (utxo, collMap, excessColCoin) <- genCollateralUTxO collateralAddresses fee utxoFeeAdjusted
   collateralKeyWitsMakers <-
     mapM (genTxOutKeyWitness proof Nothing) $ Map.elems collMap
 
-  -- 9. Construct the correct Tx with valid fee and collaterals
+  -- 10. Construct the correct Tx with valid fee and collaterals
   allPlutusScripts <- gsPlutusScripts <$> get
   let mIntegrityHash =
         hashScriptIntegrity'
@@ -868,13 +908,18 @@ genValidatedTxAndInfo proof = do
           (languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts)
           (mkTxrdmrs redeemerDatumWits)
           (mkTxdats redeemerDatumWits)
+      balance =
+        case bogusCollReturn of
+          SNothing -> txInBalance (Map.keysSet collMap) utxo
+          SJust _ -> txInBalance (Map.keysSet collMap) utxo <-> excessColCoin
       txBody =
         overrideTxBody
           proof
           txBodyNoFee
           [ Txfee fee,
             Collateral (Map.keysSet collMap),
-            TotalCol (SJust (txInBalance (Map.keysSet collMap) utxo)),
+            CollateralReturn (updateCollReturn bogusCollReturn excessColCoin),
+            TotalCol (updateTotalColl bogusTotalCol balance),
             WppHash mIntegrityHash
           ]
       txBodyHash = hashAnnotated txBody
@@ -970,11 +1015,8 @@ testTx = do
   let proof = Babbage Mock
   ((_utxo, tx, _feepair, _), genstate) <- generate $ runGenRS proof def (genValidatedTxAndInfo proof)
   let m = gsModel genstate
-      count = mCount m
   putStrLn (show (pcTx proof tx))
   putStrLn (show (pcModelNewEpochState proof m))
-  let m2 = applyTx proof count m tx
-  putStrLn (show (pcModelNewEpochState proof m2))
 
 -- ==============================================================================
 -- How we take the generated stuff and put it through the STS rule mechanism

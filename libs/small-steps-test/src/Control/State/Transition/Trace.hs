@@ -50,6 +50,7 @@ module Control.State.Transition.Trace
   )
 where
 
+import Cardano.Prelude (NFData)
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
@@ -104,6 +105,13 @@ data Trace s = Trace
   deriving (Generic)
 
 makeLenses ''Trace
+
+deriving instance
+  ( NFData (Environment s),
+    NFData (State s),
+    NFData (SigState s)
+  ) =>
+  (NFData (Trace s))
 
 deriving instance
   (Eq (State s), Eq (Signal s), Eq (Environment s)) => (Eq (Trace s))

@@ -8,6 +8,7 @@
 
 module Main where
 
+import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
@@ -48,4 +49,6 @@ mainTests =
 
 -- main entry point
 main :: IO ()
-main = mainWithTestScenario tests
+main = do
+  hSetEncoding stdout utf8
+  mainWithTestScenario tests

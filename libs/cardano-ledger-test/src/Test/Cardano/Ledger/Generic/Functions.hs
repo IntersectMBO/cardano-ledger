@@ -32,10 +32,11 @@ import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams, PParams' (.
 import Cardano.Ledger.Babbage.Scripts (refScripts)
 import Cardano.Ledger.Babbage.TxBody as Babbage (referenceInputs', spendInputs')
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
+import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (Crypto, getAllTxInputs))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
@@ -63,6 +64,7 @@ import qualified Data.Foldable as Fold
 import qualified Data.List as List
 import Data.Map (Map, keysSet, restrictKeys)
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
@@ -93,6 +95,13 @@ collateralPercentage' :: Proof era -> Core.PParams era -> Natural
 collateralPercentage' (Alonzo _) x = _collateralPercentage x
 collateralPercentage' (Babbage _) x = Babbage._collateralPercentage x
 collateralPercentage' _proof _x = 0
+
+protocolVersion :: Proof era -> ProtVer
+protocolVersion (Babbage _) = ProtVer 7 0
+protocolVersion (Alonzo _) = ProtVer 6 0
+protocolVersion (Mary _) = ProtVer 4 0
+protocolVersion (Allegra _) = ProtVer 3 0
+protocolVersion (Shelley _) = ProtVer 2 0
 
 obligation' ::
   forall era c.
@@ -278,6 +287,20 @@ getInputs (Alonzo _) tx = getField @"inputs" tx
 getInputs (Mary _) tx = getField @"inputs" tx
 getInputs (Allegra _) tx = getField @"inputs" tx
 getInputs (Shelley _) tx = getField @"inputs" tx
+
+getOutputs :: Proof era -> Core.TxBody era -> StrictSeq (Core.TxOut era)
+getOutputs (Babbage _) tx = getField @"outputs" tx
+getOutputs (Alonzo _) tx = getField @"outputs" tx
+getOutputs (Mary _) tx = getField @"outputs" tx
+getOutputs (Allegra _) tx = getField @"outputs" tx
+getOutputs (Shelley _) tx = getField @"outputs" tx
+
+allInputs :: Proof era -> Core.TxBody era -> Set (TxIn (Crypto era))
+allInputs (Babbage _) txb = getAllTxInputs txb
+allInputs (Alonzo _) txb = getAllTxInputs txb
+allInputs (Mary _) txb = getAllTxInputs txb
+allInputs (Allegra _) txb = getAllTxInputs txb
+allInputs (Shelley _) txb = getAllTxInputs txb
 
 primaryLanguage :: Proof era -> Maybe Language
 primaryLanguage (Babbage _) = Just (PlutusV2)
