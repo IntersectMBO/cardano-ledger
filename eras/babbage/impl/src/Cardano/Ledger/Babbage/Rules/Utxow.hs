@@ -172,19 +172,22 @@ validateDatumsWellFormed ::
   Core.Tx era ->
   Test (BabbageUtxoPred era)
 validateDatumsWellFormed tx =
-  let invalidDatums = Set.map hashData $ Set.filter (\(Data d) -> not $ validateData' d) (txdata tx)
+  let invalidDatums =
+        Set.map hashData $
+          Set.filter (\(Data d) -> not $ datumByteStringsAtMost64Bytes d) (txdata tx)
    in failureUnless
         (Set.null invalidDatums)
-        (MalformedData invalidDatums)
+        (DatumByteStringExceeds64Bytes invalidDatums)
 
-validateData' ::
+datumByteStringsAtMost64Bytes ::
   Plutus.Data ->
   Bool
-validateData' (Constr _ ds) = all validateData' ds
-validateData' (Map ds) = all (\(x, y) -> validateData' x && validateData' y) ds
-validateData' (List ds) = all validateData' ds
-validateData' (I _) = True
-validateData' (B bs) = BS.length bs <= 64
+datumByteStringsAtMost64Bytes (Constr _ ds) = all datumByteStringsAtMost64Bytes ds
+datumByteStringsAtMost64Bytes (Map ds) =
+  all (\(x, y) -> datumByteStringsAtMost64Bytes x && datumByteStringsAtMost64Bytes y) ds
+datumByteStringsAtMost64Bytes (List ds) = all datumByteStringsAtMost64Bytes ds
+datumByteStringsAtMost64Bytes (I _) = True
+datumByteStringsAtMost64Bytes (B bs) = BS.length bs <= 64
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
