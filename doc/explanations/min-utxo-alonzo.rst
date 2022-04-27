@@ -11,7 +11,7 @@ still enforced in the Alonzo era.
 The size-dependent minimum ada amount in a UTxO is still referred to as the min-ada-value, and
 is now calculated using the Alonzo parameter ``coinsPerUTxOWord``.
 
-The formula for the min-ada-value calculation, for a UTxO containing an output ``txout`, is:
+The formula for the min-ada-value calculation, for a UTxO containing an output ``txout``, is:
 
 ``utxoEntrySize (txout) * coinsPerUTxOWord``
 

@@ -1,11 +1,8 @@
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -47,6 +44,7 @@ import Cardano.Binary
     toCBOR,
   )
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.CompactAddress (fromCborAddr, fromCborRewardAcnt)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
@@ -73,7 +71,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty
-import Test.Tasty.QuickCheck (Property, counterexample, testProperty, (===))
+import Test.Tasty.QuickCheck (Property, counterexample, testProperty, (.&&.), (===))
 
 -- | Check that: deserialize . serialize = id
 roundtrip ::
@@ -139,10 +137,14 @@ roundtrip2' enc dec a = case deserialiseFromBytes dec bs of
 -------------------------------------------------------------------------------}
 
 prop_roundtrip_Addr :: Ledger.Addr Mock.C_Crypto -> Property
-prop_roundtrip_Addr = roundtrip toCBOR fromCBOR
+prop_roundtrip_Addr addr =
+  roundtrip toCBOR fromCBOR addr
+    .&&. roundtrip toCBOR fromCborAddr addr
 
 prop_roundtrip_RewardAcnt :: Ledger.RewardAcnt Mock.C_Crypto -> Property
-prop_roundtrip_RewardAcnt = roundtrip toCBOR fromCBOR
+prop_roundtrip_RewardAcnt acnt =
+  roundtrip toCBOR fromCBOR acnt
+    .&&. roundtrip toCBOR fromCborRewardAcnt acnt
 
 prop_roundtrip_Block :: Ledger.Block (TP.BHeader Mock.C_Crypto) Mock.C -> Property
 prop_roundtrip_Block = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
