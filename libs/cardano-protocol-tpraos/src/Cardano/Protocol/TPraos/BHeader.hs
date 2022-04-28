@@ -12,9 +12,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
--- We are enabling orphans since BlockNo is orphaned until the instance is added to cardano-base
--- https://github.com/input-output-hk/cardano-base/pull/233
-{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Protocol.TPraos.BHeader
   ( HashHeader (..),
@@ -337,7 +334,7 @@ bhHash = HashHeader . Hash.castHash . Hash.hashWithSerialiser toCBOR
 hashHeaderToNonce :: HashHeader crypto -> Nonce
 hashHeaderToNonce (HashHeader h) = case Hash.hashFromBytes bytes of
   Nothing -> Nonce (Hash.castHash (Hash.hashWith id bytes))
-  Just hash -> Nonce hash
+  Just hash -> Nonce $! hash
   where
     bytes = Hash.hashToBytes h
 

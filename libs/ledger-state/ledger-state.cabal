@@ -52,7 +52,6 @@ library
                     , text
                     , transformers
 
-                    , primitive
   exposed-modules:    Cardano.Ledger.State.UTxO
                     , Cardano.Ledger.State.Orphans
                     , Cardano.Ledger.State.Schema

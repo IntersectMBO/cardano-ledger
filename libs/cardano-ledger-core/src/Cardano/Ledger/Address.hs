@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -344,7 +345,7 @@ getHash = do
   bytes <- B.getByteString . fromIntegral $ Hash.sizeHash ([] @h)
   case Hash.hashFromBytes bytes of
     Nothing -> fail "getHash: implausible hash length mismatch"
-    Just h -> pure h
+    Just !h -> pure h
 
 putHash :: Hash.Hash h a -> Put
 putHash = B.putByteString . Hash.hashToBytes
@@ -492,7 +493,7 @@ bootstrapKeyHash ::
 bootstrapKeyHash (BootstrapAddress byronAddress) =
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root
-      hash =
+      !hash =
         fromMaybe (panic "bootstrapKeyHash: incorrect hash length") $
           Hash.hashFromBytes bytes
    in KeyHash hash

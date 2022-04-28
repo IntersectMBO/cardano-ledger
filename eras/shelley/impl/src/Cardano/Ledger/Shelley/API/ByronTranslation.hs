@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ExistentialQuantification #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -34,7 +35,6 @@ import qualified Data.ByteString.Short as SBS
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (fromMaybe)
 import GHC.Stack (HasCallStack)
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
@@ -52,11 +52,11 @@ hashFromShortBytesE ::
   (Crypto.HashAlgorithm h, HasCallStack) =>
   SBS.ShortByteString ->
   Crypto.Hash h a
-hashFromShortBytesE sbs = fromMaybe (error msg) $ Crypto.hashFromBytesShort sbs
-  where
-    msg =
-      "hashFromBytesShort called with ShortByteString of the wrong length: "
-        <> show sbs
+hashFromShortBytesE sbs =
+  case Crypto.hashFromBytesShort sbs of
+    Just !h -> h
+    Nothing ->
+      error $ "hashFromBytesShort called with ShortByteString of the wrong length: " <> show sbs
 
 translateCompactTxOutByronToShelley :: Byron.CompactTxOut -> TxOut (ShelleyEra c)
 translateCompactTxOutByronToShelley (Byron.CompactTxOut compactAddr amount) =
