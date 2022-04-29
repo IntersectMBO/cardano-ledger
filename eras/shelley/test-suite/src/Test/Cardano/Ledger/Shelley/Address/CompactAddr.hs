@@ -10,7 +10,13 @@ module Test.Cardano.Ledger.Shelley.Address.CompactAddr where
 
 import Cardano.Binary (serialize')
 import qualified Cardano.Crypto.Hash.Class as Hash
-import Cardano.Ledger.Address (Addr (..), RewardAcnt (..), putVariableLengthWord64, serialiseAddr)
+import Cardano.Ledger.Address
+  ( Addr (..),
+    RewardAcnt (..),
+    deserialiseAddr,
+    putVariableLengthWord64,
+    serialiseAddr,
+  )
 import qualified Cardano.Ledger.CompactAddress as CA
 import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Crypto as CC (Crypto (ADDRHASH))
@@ -30,8 +36,9 @@ import Test.QuickCheck.Gen (chooseWord64)
 
 propValidateNewDecompact :: forall crypto. CC.Crypto crypto => Addr crypto -> Property
 propValidateNewDecompact addr =
-  let compact = SBS.toShort $ serialiseAddr addr
-      decompactedOld = CA.deserializeShortAddr @crypto compact
+  let bs = serialiseAddr addr
+      compact = SBS.toShort bs
+      decompactedOld = deserialiseAddr @crypto bs
       decompactedNew = CA.decodeAddrShort @crypto compact
    in isJust decompactedOld .&&. decompactedOld === decompactedNew
 

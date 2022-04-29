@@ -52,6 +52,11 @@ main = do
       partialDeserializeAddr :: ByteString -> Addr StandardCrypto
       partialDeserializeAddr =
         either (error . show) id . decodeFullDecoder "Addr" fromCborAddr . BSL.fromStrict
+      partialDeserializeCompactAddr :: ByteString -> CompactAddr StandardCrypto
+      partialDeserializeCompactAddr =
+        either (error . show) id
+          . decodeFullDecoder "CompactAddr" fromCborCompactAddrOld
+          . BSL.fromStrict
   defaultMain
     [ bgroup
         "encode"
@@ -137,7 +142,7 @@ main = do
                 ]
             ],
           bgroup
-            "fromCBOR"
+            "fromCBOR-Addr"
             [ benchDecode
                 "StakeRefNull"
                 forcePaymentCred
@@ -156,6 +161,27 @@ main = do
                 (serialize' <$> addrs (StakeRefPtr . mkPtr))
                 unsafeDeserialize'
                 partialDeserializeAddr
+            ],
+          bgroup
+            "fromCBOR-CompactAddr"
+            [ benchDecode
+                "StakeRefNull"
+                seqUnit
+                (serialize' <$> addrs (const StakeRefNull))
+                partialDeserializeCompactAddr
+                unsafeDeserialize',
+              benchDecode
+                "StakeRefBase"
+                seqUnit
+                (serialize' <$> addrs stakeRefBase)
+                partialDeserializeCompactAddr
+                unsafeDeserialize',
+              benchDecode
+                "StakeRefPtr"
+                seqUnit
+                (serialize' <$> addrs (StakeRefPtr . mkPtr))
+                partialDeserializeCompactAddr
+                unsafeDeserialize'
             ]
         ]
     ]
@@ -163,16 +189,16 @@ main = do
 benchDecode ::
   NFData a =>
   String ->
-  (Addr StandardCrypto -> StrictUnit) ->
+  (b -> StrictUnit) ->
   [a] ->
-  (a -> Addr StandardCrypto) ->
-  (a -> Addr StandardCrypto) ->
+  (a -> b) ->
+  (a -> b) ->
   Benchmark
-benchDecode benchName forceAddr as oldDecode newDecode =
+benchDecode benchName forceResult as oldDecode newDecode =
   env (pure as) $ \cas ->
     bgroup benchName $
-      [ bench "old" $ whnf (foldMap' (forceAddr . oldDecode)) cas,
-        bench "new" $ whnf (foldMap' (forceAddr . newDecode)) cas
+      [ bench "old" $ whnf (foldMap' (forceResult . oldDecode)) cas,
+        bench "new" $ whnf (foldMap' (forceResult . newDecode)) cas
       ]
 
 deepseqUnit :: NFData a => a -> StrictUnit
