@@ -638,7 +638,7 @@ instance Default (IncrementalStake c) where
 
 -- | There is a serious invariant that we must maintain in the UTxOState.
 --   Given (UTxOState utxo _ _ _ istake) it must be the case that
---   istake == (updateStakeDistribution (IStake Map.empty Map.empty) (UTxO Map.empty) utxo)
+--   istake == (updateStakeDistribution (UTxO SplitMap.empty) (UTxO SplitMap.empty) utxo)
 --   Of course computing the RHS of the above equality can be very expensive, so we only
 --   use this route in the testing function smartUTxO. But we are very carefull, wherever
 --   we update the UTxO, we carefully make INCREMENTAL changes to istake to maintain

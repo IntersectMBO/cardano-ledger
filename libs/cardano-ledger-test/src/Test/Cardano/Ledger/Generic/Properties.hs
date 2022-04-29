@@ -16,7 +16,9 @@
 
 module Test.Cardano.Ledger.Generic.Properties where
 
+import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
@@ -24,25 +26,26 @@ import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Pretty (PrettyA (..), ppList)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
-    DPState (..),
+    EpochState (..),
     LedgerState (..),
+    NewEpochState (..),
     UTxOState (..),
-    rewards,
+    updateStakeDistribution,
   )
+import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
-import Cardano.Ledger.Val
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
+import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
-import qualified Data.Foldable as F
 import qualified Data.Map as Map
 import Debug.Trace
 import Test.Cardano.Ledger.Generic.Fields (abstractTx, abstractTxBody, abstractTxOut, abstractWitnesses)
-import Test.Cardano.Ledger.Generic.Functions (isValid')
+import Test.Cardano.Ledger.Generic.Functions (TotalAda (..), isValid')
 import Test.Cardano.Ledger.Generic.GenState
   ( GenEnv (..),
     GenRS,
@@ -51,9 +54,11 @@ import Test.Cardano.Ledger.Generic.GenState
     modifyModel,
     runGenRS,
   )
+import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
 import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx, txSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
+import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp)
 import Test.Cardano.Ledger.Generic.TxGen
   ( Box (..),
     applySTSByProof,
@@ -116,13 +121,6 @@ genTxAndLEDGERState proof sizes = do
 
 -- =============================================
 -- Now a test
-
-totalAda :: Reflect era => LedgerState era -> Coin
-totalAda (LedgerState (UTxOState utxo f d _ _) DPState {dpsDState}) =
-  f <> d <> coin (balance utxo) <> F.foldl' (<>) mempty (rewards dpsDState)
-
--- Note we could probably abstract over an arbitray test here with
--- type:: Box era -> Core.Tx era -> UTxOState era -> DPState era -> Property
 
 testTxValidForLEDGER ::
   ( Reflect era,
@@ -212,31 +210,72 @@ coreTypesRoundTrip =
         ]
     ]
 
+-- | A single Tx preserves Ada
+txPreserveAda :: TestTree
+txPreserveAda =
+  testGroup
+    "Individual Tx's preserve Ada"
+    [ testProperty "Shelley Tx preserves ADA" $
+        forAll (genTxAndLEDGERState (Shelley Mock) def) (testTxValidForLEDGER (Shelley Mock)),
+      testProperty "Allegra Tx preserves ADA" $
+        forAll (genTxAndLEDGERState (Allegra Mock) def) (testTxValidForLEDGER (Allegra Mock)),
+      testProperty "Mary Tx preserves ADA" $
+        forAll (genTxAndLEDGERState (Mary Mock) def) (testTxValidForLEDGER (Mary Mock)),
+      testProperty "Alonzo ValidTx preserves ADA" $
+        forAll (genTxAndLEDGERState (Alonzo Mock) def) (testTxValidForLEDGER (Alonzo Mock)),
+      testProperty "Babbage ValidTx preserves ADA" $
+        forAll (genTxAndLEDGERState (Babbage Mock) def) (testTxValidForLEDGER (Babbage Mock))
+    ]
+
+-- | Ada is preserved over a trace of length 100
+adaIsPreserved :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> TestTree
+adaIsPreserved proof =
+  testProperty ("In era (" ++ show proof ++ "). Trace length = 100") $
+    withMaxSuccess 30 $
+      traceProp proof 100 def (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
+
+tracePreserveAda :: TestTree
+tracePreserveAda =
+  testGroup
+    "Total Ada is preserved over traces of length 100"
+    [ adaIsPreserved (Babbage Mock),
+      adaIsPreserved (Alonzo Mock),
+      adaIsPreserved (Mary Mock),
+      adaIsPreserved (Allegra Mock),
+      adaIsPreserved (Shelley Mock)
+    ]
+
+-- | The incremental Stake invaraint is preserved over a trace of length 100
+stakeInvariant :: Era era => MockChainState era -> MockChainState era -> Property
+stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
+  case (lsUTxOState . esLState . nesEs) nes of
+    (UTxOState utxo _ _ _ istake) -> istake === updateStakeDistribution mempty mempty utxo
+
+incrementStakeInvariant :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> TestTree
+incrementStakeInvariant proof =
+  testProperty ("In era (" ++ show proof ++ "). Trace length = 100") $
+    withMaxSuccess 30 $
+      traceProp proof 100 def stakeInvariant
+
+incrementalStake :: TestTree
+incrementalStake =
+  testGroup
+    "Incremental Stake invariant holds"
+    [ incrementStakeInvariant (Babbage Mock),
+      incrementStakeInvariant (Alonzo Mock),
+      incrementStakeInvariant (Mary Mock),
+      incrementStakeInvariant (Allegra Mock),
+      incrementStakeInvariant (Shelley Mock)
+    ]
+
 genericProperties :: TestTree
 genericProperties =
   testGroup
     "Generic Property tests"
     [ coreTypesRoundTrip,
-      testGroup
-        "Alonzo UTXOW property tests"
-        [ testProperty "Shelley Tx preserves ADA" $
-            forAll (genTxAndLEDGERState (Shelley Mock) def) (testTxValidForLEDGER (Shelley Mock)),
-          testProperty "Allegra Tx preserves ADA" $
-            forAll (genTxAndLEDGERState (Allegra Mock) def) (testTxValidForLEDGER (Allegra Mock)),
-          testProperty "Mary Tx preserves ADA" $
-            forAll (genTxAndLEDGERState (Mary Mock) def) (testTxValidForLEDGER (Mary Mock)),
-          testProperty "Alonzo ValidTx preserves ADA" $
-            {-
-                        forAll (genTxAndLEDGERState (Alonzo Mock)) (testTxValidForLEDGER (Alonzo Mock))
-                        -- Commented out this test for now, since the generator seems to
-                        -- generate extraneous script witnesses, which are not allowed any longer
-                        -- testProperty "Babbage ValidTx preserves ADA" $
-                        --  forAll (genTxAndLEDGERState (Babbage Mock)) (testTxValidForLEDGER (Babbage Mock))
-            -}
-            forAll (genTxAndLEDGERState (Alonzo Mock) def) (testTxValidForLEDGER (Alonzo Mock)),
-          testProperty "Babbage ValidTx preserves ADA" $
-            forAll (genTxAndLEDGERState (Babbage Mock) def) (testTxValidForLEDGER (Babbage Mock))
-        ]
+      txPreserveAda,
+      tracePreserveAda,
+      incrementalStake
     ]
 
 -- ==============================================================

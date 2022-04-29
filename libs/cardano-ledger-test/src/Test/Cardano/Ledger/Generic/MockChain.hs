@@ -57,6 +57,7 @@ import Control.State.Transition
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence (Seq (..))
+import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( pcNewEpochState,
     ppLedgersPredicateFailure,
@@ -108,6 +109,9 @@ instance Show (MockChainState era) where
 
 instance Show (MockBlock era) where
   show (MockBlock is sl _) = show is ++ " " ++ show sl
+
+instance Reflect era => TotalAda (MockChainState era) where
+  totalAda (MockChainState nes _lastbock _count) = totalAda nes
 
 -- ======================================================================
 

@@ -15,8 +15,6 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 -- =========================================================================
 
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
-import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Ledger ()
 import Cardano.Ledger.Babbage.Rules.Utxow ()
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
@@ -29,15 +27,13 @@ import Cardano.Ledger.Shelley.LedgerState
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
-    StashedAVVMAddresses,
   )
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (get, gets)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.State.Transition.Extended (STS (..))
-import Control.State.Transition.Trace (Trace (..))
+import Control.State.Transition.Trace (Trace (..), lastState)
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
 import Data.Default.Class (Default (def))
 import Data.Functor.Identity (Identity (runIdentity))
@@ -74,8 +70,6 @@ import Test.Cardano.Ledger.Generic.TxGen
   )
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 import Test.QuickCheck
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.QuickCheck (testProperty)
 
 -- ===========================================
 
@@ -196,7 +190,7 @@ instance
     issuerkey <- chooseIssuer pooldistr
     nextSlotNo <- SlotNo . (+ lastSlot) <$> choose (15, 25)
     let txs = Seq.fromList (txss ! count)
-    -- Assmble it into a MockBlock
+    -- Assemble it into a MockBlock
     let mockblock = MockBlock issuerkey nextSlotNo txs
     -- Run the STS Rules for MOCKCHAIN with generated signal
     goSTS
@@ -220,46 +214,39 @@ chooseIssuer (PoolDistr m) = mapProportion getInt m
     getInt x = floor (individualPoolStake x * 1000)
 
 -- ===================================================================================
-
+-- Generating Traces, and making properties out of a Trace
 -- =========================================================================
--- Making and running traces
 
-chainTest ::
+genTrace ::
   forall era.
   ( Reflect era,
-    HasTrace (MOCKCHAIN era) (Gen1 era),
-    Eq (Core.TxOut era),
-    Eq (Core.PParams era),
-    Eq (State (Core.EraRule "PPUP" era)),
-    Eq (StashedAVVMAddresses era)
+    HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
   Word64 ->
   GenSize ->
-  TestTree
-chainTest proof n gsize = testProperty message action
-  where
-    message = "MockChainTrace in the (" ++ show proof ++ ") era."
-    action = do
-      (vs, genstate) <- genTxSeq proof gsize n
-      initState <- genMockChainState proof genstate
-      trace <-
-        traceFromInitState @(MOCKCHAIN era)
-          testGlobals
-          (fromIntegral (length vs))
-          (Gen1 (Vector.map (map snd) vs))
-          (Just (\_ -> pure $ Right initState))
-      -- Here we can add some properties for traces:
-      pure (_traceInitState trace === initState)
+  Gen (Trace (MOCKCHAIN era))
+genTrace proof numTxInTrace gsize = do
+  (vs, genstate) <- genTxSeq proof gsize numTxInTrace
+  initState <- genMockChainState proof genstate
+  traceFromInitState @(MOCKCHAIN era)
+    testGlobals
+    (fromIntegral (length vs))
+    (Gen1 (Vector.map (map snd) vs))
+    (Just (\_ -> pure $ Right initState))
 
--- | test that we can generate a sequence of Tx that all STS validate given a (Proof era)
-testTraces :: Word64 -> TestTree
-testTraces n =
-  testGroup
-    "MockChainTrace"
-    [ chainTest (Babbage Mock) n def,
-      chainTest (Alonzo Mock) n def,
-      chainTest (Mary Mock) n def,
-      chainTest (Allegra Mock) n def,
-      chainTest (Shelley Mock) n def
-    ]
+traceProp ::
+  forall era prop.
+  ( Reflect era,
+    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ) =>
+  Proof era ->
+  Word64 ->
+  GenSize ->
+  (MockChainState era -> MockChainState era -> prop) ->
+  Gen prop
+traceProp proof numTxInTrace gsize f = do
+  trace <- genTrace proof numTxInTrace gsize
+  pure (f (_traceInitState trace) (lastState trace))
+
+-- =====================================================
