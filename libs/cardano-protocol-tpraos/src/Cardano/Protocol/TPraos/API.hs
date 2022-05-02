@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
@@ -222,7 +223,12 @@ instance CC.Crypto c => GetLedgerView (BabbageEra c) where
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
 data LedgerView crypto = LedgerView
   { lvD :: UnitInterval,
-    lvExtraEntropy :: Nonce,
+    -- Note that this field is not present in Babbage, but we require this view
+    -- in order to construct the Babbage ledger view. We allow this to be lazy
+    -- so that we may set it to an error. Note that `LedgerView` is never
+    -- serialised, so this should not be forced except as a result of a
+    -- programmer error.
+    lvExtraEntropy :: ~Nonce,
     lvPoolDistr :: PoolDistr crypto,
     lvGenDelegs :: GenDelegs crypto,
     lvChainChecks :: ChainChecksPParams
@@ -264,16 +270,17 @@ view
     { nesPd = pd,
       nesEs = es
     } =
-    LedgerView
-      { lvD = getField @"_d" . esPp $ es,
-        lvExtraEntropy = getField @"_extraEntropy" . esPp $ es,
-        lvPoolDistr = pd,
-        lvGenDelegs =
-          _genDelegs . dpsDState
-            . lsDPState
-            $ esLState es,
-        lvChainChecks = pparamsToChainChecksPParams . esPp $ es
-      }
+    let !ee = getField @"_extraEntropy" . esPp $ es
+     in LedgerView
+          { lvD = getField @"_d" . esPp $ es,
+            lvExtraEntropy = ee,
+            lvPoolDistr = pd,
+            lvGenDelegs =
+              _genDelegs . dpsDState
+                . lsDPState
+                $ esLState es,
+            lvChainChecks = pparamsToChainChecksPParams . esPp $ es
+          }
 
 -- $timetravel
 --
@@ -568,10 +575,11 @@ mkInitialShelleyLedgerView ::
   ShelleyGenesis (ShelleyEra c) ->
   LedgerView c
 mkInitialShelleyLedgerView genesisShelley =
-  LedgerView
-    { lvD = _d . sgProtocolParams $ genesisShelley,
-      lvExtraEntropy = _extraEntropy . sgProtocolParams $ genesisShelley,
-      lvPoolDistr = PoolDistr Map.empty,
-      lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
-      lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
-    }
+  let !ee = _extraEntropy . sgProtocolParams $ genesisShelley
+   in LedgerView
+        { lvD = _d . sgProtocolParams $ genesisShelley,
+          lvExtraEntropy = ee,
+          lvPoolDistr = PoolDistr Map.empty,
+          lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
+          lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
+        }
