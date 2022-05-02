@@ -204,6 +204,8 @@ data PParamsField era
     ProtocolVersion (ProtVer)
   | -- | Minimum Stake Pool Cost
     MinPoolCost (Coin)
+  | -- | Minimum Lovelace in a UTxO (deprecated by AdaPerUTxOWord)
+    MinUTxOValue (Coin)
   | -- | Cost in ada per byte of UTxO storage (instead of _minUTxOValue)
     AdaPerUTxOWord (Coin)
   | -- | Cost models for non-native script languages

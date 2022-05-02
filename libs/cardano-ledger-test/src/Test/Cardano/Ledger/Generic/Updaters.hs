@@ -320,7 +320,16 @@ updateShelleyPP pp dpp = case dpp of
   (ExtraEntropy nonce) -> pp {Shelley._extraEntropy = nonce}
   (ProtocolVersion pv) -> pp {Shelley._protocolVersion = pv}
   (MinPoolCost coin) -> pp {Shelley._minPoolCost = coin}
-  _ -> pp
+  (MinUTxOValue mu) -> pp {Shelley._minUTxOValue = mu}
+  -- Not present in Shelley
+  (AdaPerUTxOWord _) -> pp
+  (Costmdls _) -> pp
+  (Prices _) -> pp
+  (MaxTxExUnits _) -> pp
+  (MaxBlockExUnits _) -> pp
+  (MaxValSize _) -> pp
+  (MaxCollateralInputs _) -> pp
+  (CollateralPercentage _) -> pp
 
 -- | updatePParams uses the Override policy exclusively
 updatePParams :: Proof era -> Core.PParams era -> PParamsField era -> Core.PParams era
@@ -350,7 +359,10 @@ updatePParams (Alonzo _) pp dpp = case dpp of
   MaxTxExUnits n -> pp {Alonzo._maxTxExUnits = n}
   MaxBlockExUnits n -> pp {Alonzo._maxBlockExUnits = n}
   CollateralPercentage perc -> pp {Alonzo._collateralPercentage = perc}
-  _ -> pp
+  MaxCollateralInputs n -> pp {Alonzo._maxCollateralInputs = n}
+  AdaPerUTxOWord n -> pp {Alonzo._coinsPerUTxOWord = n}
+  -- Not used in Alonzo
+  MinUTxOValue _ -> pp
 updatePParams (Babbage _) pp dpp = case dpp of
   (MinfeeA nat) -> pp {Babbage._minfeeA = nat}
   (MinfeeB nat) -> pp {Babbage._minfeeB = nat}
@@ -373,9 +385,11 @@ updatePParams (Babbage _) pp dpp = case dpp of
   MaxBlockExUnits n -> pp {Babbage._maxBlockExUnits = n}
   CollateralPercentage perc -> pp {Babbage._collateralPercentage = perc}
   MaxCollateralInputs n -> pp {Babbage._maxCollateralInputs = n}
-  D _ -> pp -- All these are no longer in Babbage
+  AdaPerUTxOWord n -> pp {Babbage._coinsPerUTxOWord = n}
+  -- Not used in Babbage
+  D _ -> pp
   ExtraEntropy _ -> pp
-  AdaPerUTxOWord _ -> pp
+  MinUTxOValue _ -> pp
 
 newPParams :: Proof era -> [PParamsField era] -> Core.PParams era
 newPParams era = List.foldl' (updatePParams era) (initialPParams era)
