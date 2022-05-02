@@ -243,7 +243,7 @@ validateCollateralEqBalance bal txcoll =
 -- > getValue txout ≥ inject ( ⌈ serSize txout ∗ coinsPerUTxOWord pp / 8 ⌉ )
 validateOutputTooSmallUTxO ::
   ( Era era,
-    ToCBOR (Core.Value era),
+    ToCBOR (Core.TxOut era),
     HasField "_coinsPerUTxOWord" (Core.PParams era) Coin
   ) =>
   Core.PParams era ->
@@ -252,9 +252,7 @@ validateOutputTooSmallUTxO ::
 validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
   where
     Coin coinsPerUTxOWord = getField @"_coinsPerUTxOWord" pp
-    -- It's better to use the length of the bytestring that was sent over
-    -- the wire instead of reserializing the data
-    serSize = fromIntegral . BSL.length . serialize . getField @"value"
+    serSize = fromIntegral . BSL.length . serialize
     outputsTooSmall =
       filter
         ( \out ->
