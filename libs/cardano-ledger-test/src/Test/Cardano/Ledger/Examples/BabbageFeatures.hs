@@ -18,7 +18,6 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
-import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Script (PlutusScript))
@@ -973,7 +972,7 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ largeOutputTx pf)
-              (Left [fromUtxo @era (OutputTooSmallUTxO [largeOutput pf])])
+              (Left [fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput pf, 1015)]])
         ]
     ]
 

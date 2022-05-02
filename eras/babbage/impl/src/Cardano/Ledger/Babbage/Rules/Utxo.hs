@@ -108,11 +108,16 @@ data BabbageUtxoPred era
   | UnequalCollateralReturn !Coin !Coin
   | DanglingWitnessDataHash !(Set.Set (DataHash (Crypto era)))
   | MalformedScripts !(Set (ScriptHash (Crypto era)))
+  | -- | list of supplied transaction outputs that are too small,
+    -- together with the minimum value for the given output.
+    BabbageOutputTooSmallUTxO
+      ![(Core.TxOut era, Integer)]
 
 deriving instance
   ( Era era,
     Show (UtxoPredicateFailure era),
     Show (PredicateFailure (Core.EraRule "UTXO" era)),
+    Show (Core.TxOut era),
     Show (Core.Script era)
   ) =>
   Show (BabbageUtxoPred era)
@@ -121,6 +126,7 @@ deriving instance
   ( Era era,
     Eq (UtxoPredicateFailure era),
     Eq (PredicateFailure (Core.EraRule "UTXO" era)),
+    Eq (Core.TxOut era),
     Eq (Core.Script era)
   ) =>
   Eq (BabbageUtxoPred era)
@@ -248,25 +254,24 @@ validateOutputTooSmallUTxO ::
   ) =>
   Core.PParams era ->
   [Core.TxOut era] ->
-  Test (UtxoPredicateFailure era)
-validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ OutputTooSmallUTxO outputsTooSmall
+  Test (BabbageUtxoPred era)
+validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
   where
     Coin coinsPerUTxOWord = getField @"_coinsPerUTxOWord" pp
     serSize = fromIntegral . BSL.length . serialize
+    outs' = map (\out -> (out, (serSize out * coinsPerUTxOWord + 7) `div` 8)) outs
     outputsTooSmall =
       filter
-        ( \out ->
+        ( \(out, minSize) ->
             let v = getField @"value" out
              in -- pointwise is used because non-ada amounts must be >= 0 too
                 not $
                   Val.pointwise
                     (>=)
                     v
-                    ( Val.inject . Coin $
-                        ((serSize out * coinsPerUTxOWord + 7) `div` 8) -- division, rounded up
-                    )
+                    (Val.inject . Coin $ minSize)
         )
-        outs
+        outs'
 
 -- > serSize (getValue txout) ≤ maxValSize pp
 validateOutputTooBigUTxO ::
@@ -458,6 +463,7 @@ instance
       work (UnequalCollateralReturn c1 c2) = Sum UnequalCollateralReturn 3 !> To c1 !> To c2
       work (DanglingWitnessDataHash x) = Sum DanglingWitnessDataHash 4 !> To x
       work (MalformedScripts x) = Sum MalformedScripts 5 !> To x
+      work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 6 !> To x
 
 instance
   ( Era era,
@@ -478,6 +484,7 @@ instance
       work 3 = SumD UnequalCollateralReturn <! From <! From
       work 4 = SumD DanglingWitnessDataHash <! From
       work 5 = SumD MalformedScripts <! From
+      work 6 = SumD BabbageOutputTooSmallUTxO <! From
       work n = Invalid n
 
 deriving via InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era) instance NoThunks (BabbageUtxoPred era)

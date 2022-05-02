@@ -132,7 +132,8 @@ instance PrettyA (PParamsUpdate era) where
 
 ppBabbageUtxoPred ::
   ( PrettyA (UtxoPredicateFailure era),
-    PrettyA (UtxowPredicateFail era)
+    PrettyA (UtxowPredicateFail era),
+    PrettyA (Core.TxOut era)
   ) =>
   BabbageUtxoPred era ->
   PDoc
@@ -146,10 +147,13 @@ ppBabbageUtxoPred (DanglingWitnessDataHash dhset) =
   ppSexp "DanglingWitnessDataHashes" [ppSet ppDataHash dhset]
 ppBabbageUtxoPred (MalformedScripts scripts) =
   ppSexp "MalformedScripts" [ppSet ppScriptHash scripts]
+ppBabbageUtxoPred (BabbageOutputTooSmallUTxO xs) =
+  ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair prettyA ppInteger) xs]
 
 instance
   ( PrettyA (UtxoPredicateFailure era),
-    PrettyA (UtxowPredicateFail era)
+    PrettyA (UtxowPredicateFail era),
+    PrettyA (Core.TxOut era)
   ) =>
   PrettyA (BabbageUtxoPred era)
   where
