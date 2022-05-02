@@ -18,6 +18,7 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..))
+import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Script (PlutusScript))
@@ -258,7 +259,8 @@ defaultPPs =
     MaxTxExUnits $ ExUnits 1000000 1000000,
     MaxBlockExUnits $ ExUnits 1000000 1000000,
     ProtocolVersion $ ProtVer 7 0,
-    CollateralPercentage 100
+    CollateralPercentage 1,
+    AdaPerUTxOWord (Coin 5)
   ]
 
 pp :: Proof era -> Core.PParams era
@@ -818,6 +820,47 @@ malformedScript pf s = case pf of
     ms = PlutusScript PlutusV2 $ "nonsense " <> s
     er x = error $ "no malformedScript for " <> show x
 
+-- ========================================================================================
+--  Example 13: Invalid - TxOut too large for the included ADA, using a large inline datum
+-- ========================================================================================
+
+largeDatum :: Data era
+largeDatum = Data (Plutus.B . BS.pack $ replicate 1500 0)
+
+largeOutput :: forall era. Scriptic era => Proof era -> Core.TxOut era
+largeOutput pf =
+  newTxOut
+    pf
+    [ Address (plainAddr pf),
+      Amount (inject $ Coin 995),
+      Datum . Babbage.Datum . dataToBinaryData $ largeDatum @era
+    ]
+
+largeOutputTxBody :: Scriptic era => Proof era -> Core.TxBody era
+largeOutputTxBody pf =
+  newTxBody
+    pf
+    [ Inputs' [somePlainInput],
+      Outputs' [largeOutput pf],
+      Txfee (Coin 5)
+    ]
+
+largeOutputTx ::
+  forall era.
+  ( Scriptic era,
+    GoodCrypto (Crypto era)
+  ) =>
+  Proof era ->
+  Core.Tx era
+largeOutputTx pf =
+  newTx
+    pf
+    [ Body (largeOutputTxBody pf),
+      WitnessesI
+        [ AddrWits' [makeWitnessVKey (hashAnnotated (largeOutputTxBody pf)) (someKeys pf)]
+        ]
+    ]
+
 -- ====================================================================================
 --
 -- ====================================================================================
@@ -925,7 +968,12 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ inlineDatumV1Tx pf)
-              (Left [fromUtxos @era (CollectErrors [BadTranslation InlineDatumsNotSupported])])
+              (Left [fromUtxos @era (CollectErrors [BadTranslation InlineDatumsNotSupported])]),
+          testCase "min-utxo value with output too large" $
+            testU
+              pf
+              (trustMeP pf True $ largeOutputTx pf)
+              (Left [fromUtxo @era (OutputTooSmallUTxO [largeOutput pf])])
         ]
     ]
 
