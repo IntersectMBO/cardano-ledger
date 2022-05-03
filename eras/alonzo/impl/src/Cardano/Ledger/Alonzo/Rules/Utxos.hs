@@ -5,6 +5,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -24,7 +25,7 @@ module Cardano.Ledger.Alonzo.Rules.Utxos
     invalidBegin,
     invalidEnd,
     UtxosEvent (..),
-    (?!##),
+    when2Phase,
     ConcreteAlonzo,
     FailureDescription (..),
     scriptFailuresToPredicateFailure,
@@ -81,6 +82,7 @@ import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
+import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -192,10 +194,10 @@ scriptsValidateTransition = do
 
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
-      case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+      when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
         Fails _ps fs ->
-          False
-            ?!## ValidationTagMismatch
+          failBecause $
+            ValidationTagMismatch
               (getField @"isValid" tx)
               (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
         Passes ps -> tellEvent (SuccessfulPlutusScriptsEvent ps)
@@ -229,11 +231,14 @@ scriptsNotValidateTransition = do
   case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
     Right sLst ->
       whenFailureFree $
-        case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
-          Passes _ps -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
-          Fails ps fs -> do
-            tellEvent (SuccessfulPlutusScriptsEvent ps)
-            tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
+        when2Phase $
+          case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+            Passes _ps ->
+              failBecause $
+                ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+            Fails ps fs -> do
+              tellEvent (SuccessfulPlutusScriptsEvent ps)
+              tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent invalidEnd ()
@@ -437,10 +442,8 @@ lbl2Phase = "2phase"
 -- | Construct a 2-phase predicate check.
 --
 --   Note that 2-phase predicate checks are by definition static.
-(?!##) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
-(?!##) = labeledPred [lblStatic, lbl2Phase]
-
-infix 1 ?!##
+when2Phase :: Rule sts ctx () -> Rule sts ctx ()
+when2Phase = labeled $ lblStatic NE.:| [lbl2Phase]
 
 -- =========================================================
 -- Inject instances

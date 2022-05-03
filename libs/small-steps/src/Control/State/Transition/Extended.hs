@@ -45,6 +45,7 @@ module Control.State.Transition.Extended
     SingEP (..),
     EventPolicy (..),
     EventReturnType,
+    labeled,
     labeledPred,
     labeledPredE,
     ifFailureFree,
@@ -314,10 +315,16 @@ data Clause sts (rtype :: RuleType) a where
     a ->
     Clause sts rtype a
   Predicate ::
-    [Label] ->
     Validation (NonEmpty e) a ->
     -- Type of failure to return if the predicate fails
     (e -> PredicateFailure sts) ->
+    a ->
+    Clause sts rtype a
+  -- | Label part of a rule. The interpreter may be configured to only run parts
+  -- of rules governed by (or by the lack of) certain labels.
+  Label ::
+    NonEmpty Label ->
+    Rule sts rtype a ->
     a ->
     Clause sts rtype a
   IfFailureFree :: Rule sts rtype a -> Rule sts rtype a -> Clause sts rtype a
@@ -341,7 +348,7 @@ validateTrans ::
   (e -> PredicateFailure sts) ->
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-validateTrans t v = liftF $ Predicate [] v t ()
+validateTrans t v = liftF $ Predicate v t ()
 
 -- | Same as `validation`, except with ability to translate opaque failures
 -- into `PredicateFailure`s with a help of supplied function.
@@ -349,18 +356,20 @@ validateTransLabeled ::
   -- | Transformation function for all errors
   (e -> PredicateFailure sts) ->
   -- | Supply a list of labels to be used as filters when STS is executed
-  [Label] ->
+  NonEmpty Label ->
   -- | Actual validations to be executed
   Validation (NonEmpty e) () ->
   Rule sts ctx ()
-validateTransLabeled t labels v = liftF $ Predicate labels v t ()
+validateTransLabeled t labels v = liftF $ Label labels (liftF $ Predicate v t ()) ()
 
 -- | Oh noes!
 --
 --   This takes a condition (a boolean expression) and a failure and results in
 --   a clause which will throw that failure if the condition fails.
 (?!) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
-(?!) = labeledPred []
+(?!) cond onFail =
+  liftF $
+    Predicate (if cond then Success () else Failure (() :| [])) (const onFail) ()
 
 infix 1 ?!
 
@@ -371,27 +380,27 @@ failBecause = (False ?!)
 --
 --   We interpret this as "What?" "No!" "Because:"
 (?!:) :: Either e () -> (e -> PredicateFailure sts) -> Rule sts ctx ()
-(?!:) = labeledPredE []
+(?!:) cond onFail =
+  liftF $
+    Predicate (eitherToValidation $ first pure cond) onFail ()
 
 -- | Labeled predicate. This may be used to control which predicates are run
 -- using 'ValidateSuchThat'.
-labeledPred :: [Label] -> Bool -> PredicateFailure sts -> Rule sts ctx ()
-labeledPred lbls cond orElse =
-  liftF $
-    Predicate
-      lbls
-      (if cond then Success () else Failure (() :| []))
-      (const orElse)
-      ()
+labeledPred :: NonEmpty Label -> Bool -> PredicateFailure sts -> Rule sts ctx ()
+labeledPred lbls cond orElse = labeled lbls (cond ?! orElse)
 
 -- | Labeled predicate with an explanation
 labeledPredE ::
-  [Label] ->
+  NonEmpty Label ->
   Either e () ->
   (e -> PredicateFailure sts) ->
   Rule sts ctx ()
-labeledPredE lbls cond orElse =
-  liftF $ Predicate lbls (eitherToValidation $ first pure cond) orElse ()
+labeledPredE lbls cond orElse = labeled lbls (cond ?!: orElse)
+
+-- | Labeled clause. This will only be executed if the interpreter is set to
+-- execute clauses with this label.
+labeled :: NonEmpty Label -> Rule sts ctx () -> Rule sts ctx ()
+labeled lbls subrule = liftF $ Label lbls subrule ()
 
 trans ::
   Embed sub super => RuleContext rtype sub -> Rule super rtype (State sub)
@@ -582,11 +591,13 @@ applyRuleInternal ep vp goSTS jc r = do
       if failureFree
         then foldF runClause yesrule
         else foldF runClause norule
-    runClause (Predicate lbls cond orElse val) =
-      if validateIf lbls
-        then case cond of
-          Success x -> pure x
-          Failure errs -> modify (first (map orElse (reverse (NE.toList errs)) <>)) >> pure val
+    runClause (Predicate cond orElse val) =
+      case cond of
+        Success x -> pure x
+        Failure errs -> modify (first (map orElse (reverse (NE.toList errs)) <>)) >> pure val
+    runClause (Label lbls subrule val) =
+      if validateIf (NE.toList lbls)
+        then foldF runClause subrule
         else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
       s <- lift $ goSTS subCtx

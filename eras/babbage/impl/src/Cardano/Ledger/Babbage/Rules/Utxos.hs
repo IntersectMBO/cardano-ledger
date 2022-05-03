@@ -26,7 +26,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos
     scriptFailuresToPredicateFailure,
     validBegin,
     validEnd,
-    (?!##),
+    when2Phase,
   )
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
@@ -168,13 +168,14 @@ scriptsYes = do
     Right sLst ->
       {- isValid tx = evalScripts tx sLst = True -}
       whenFailureFree $
-        case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
-          Fails _ fs ->
-            False
-              ?!## ValidationTagMismatch
-                (getField @"isValid" tx)
-                (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
-          Passes _ -> pure ()
+        when2Phase $
+          case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+            Fails _ fs ->
+              failBecause $
+                ValidationTagMismatch
+                  (getField @"isValid" tx)
+                  (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
+            Passes _ -> pure ()
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent validEnd ()
@@ -203,8 +204,8 @@ scriptsNo = do
     Right sLst ->
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
-      case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
-        Passes _ -> False ?!## ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+      when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+        Passes _ -> failBecause $ ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
         Fails ps fs -> do
           tellEvent (SuccessfulPlutusScriptsEvent ps)
           tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
