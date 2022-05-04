@@ -9,7 +9,7 @@
 {-
 nix-shell --arg config "{ haskellNix.profiling = true; }"
 -}
--- Second set up the cabal.project.local (in the root of the cardano-ledger-specs directory) as follows.
+-- Second set up the cabal.project.local (in the root of the cardano-ledger directory) as follows.
 {-
 ignore-project: False
 profiling: True

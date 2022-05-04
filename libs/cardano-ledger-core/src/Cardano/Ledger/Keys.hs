@@ -337,7 +337,7 @@ newtype GKeys crypto = GKeys {unGKeys :: Set (VKey 'Genesis crypto)}
 --------------------------------------------------------------------------------
 -- crypto-parametrised types
 --
--- Within `cardano-ledger-specs`, we parametrise everything on our `crypto` type
+-- Within `cardano-ledger`, we parametrise everything on our `crypto` type
 -- "package". However, in `cardano-crypto-class`, things are parametrised on the
 -- original algorithm. In order to make using types from that module easier, we
 -- provide some type aliases which unwrap the crypto parameters.

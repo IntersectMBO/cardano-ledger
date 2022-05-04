@@ -36,7 +36,7 @@ data State = State
 -- the start of the new epoch, where @k@ is the chain security parameter.
 --
 -- For a full history of why this is required, see
--- https://github.com/input-output-hk/cardano-ledger-specs/issues/1288
+-- https://github.com/input-output-hk/cardano-ledger/issues/1288
 --
 -- This corresponds to the @PVBUMP@ rules in the Byron ledger specification.
 tryBumpVersion ::

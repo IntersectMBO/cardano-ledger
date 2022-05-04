@@ -1,7 +1,7 @@
 env:
-  BUILD_DIR: "/build/cardano-ledger-specs"
-  STACK_ROOT: "/build/cardano-ledger-specs.stack"
-  CACHE_DIR: "/cache/cardano-ledger-specs"
+  BUILD_DIR: "/build/cardano-ledger"
+  STACK_ROOT: "/build/cardano-ledger.stack"
+  CACHE_DIR: "/cache/cardano-ledger"
 
 steps:
   - label: 'nightly tests'

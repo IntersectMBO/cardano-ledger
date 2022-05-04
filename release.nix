@@ -8,12 +8,12 @@
 ############################################################################
 
 # The project sources
-{ cardano-ledger-specs ? { outPath = ./.; rev = "abcdef"; }
+{ cardano-ledger ? { outPath = ./.; rev = "abcdef"; }
 
 # Function arguments to pass to the project
 , projectArgs ? {
     config = { allowUnfree = false; inHydra = true; };
-    gitrev = cardano-ledger-specs.rev;
+    gitrev = cardano-ledger.rev;
   }
 
 # The systems that the jobset will be built for.
@@ -36,8 +36,8 @@
 with (import pkgs.iohkNix.release-lib) {
   inherit pkgs;
   inherit supportedSystems supportedCrossSystems scrubJobs projectArgs;
-  packageSet = import cardano-ledger-specs;
-  gitrev = cardano-ledger-specs.rev;
+  packageSet = import cardano-ledger;
+  gitrev = cardano-ledger.rev;
 };
 
 with pkgs.lib;

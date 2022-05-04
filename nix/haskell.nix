@@ -15,7 +15,7 @@
 let
 
   src = haskell-nix.haskellLib.cleanGit {
-      name = "cardano-ledger-specs";
+      name = "cardano-ledger";
       src = ../.;
   };
 
