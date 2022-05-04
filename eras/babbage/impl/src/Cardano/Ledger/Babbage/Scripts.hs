@@ -110,13 +110,6 @@ babbageTxScripts utxo tx = ans
     ins = getField @"referenceInputs" txbody `Set.union` getField @"inputs" txbody
     ans = Map.union (refScripts ins utxo) (getField @"scriptWits" tx)
 
-plistf :: Monoid x => (t -> x) -> x -> [t] -> x -> x -> x
-plistf f open xs sep close = open <> loop xs <> close
-  where
-    loop [] = mempty
-    loop [y] = f y
-    loop (y : ys) = f y <> sep <> loop ys
-
 -- | Collect all the reference scripts found in the TxOuts, pointed to by some input.
 refScripts ::
   forall era.
