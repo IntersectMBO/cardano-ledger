@@ -133,8 +133,7 @@ benchmark address
     criterion,
     deepseq,
     strict-containers,
-    text,
-    ledger-state
+    text
   ghc-options:
       -threaded
       -rtsopts

@@ -611,6 +611,7 @@ instance
   FromCBOR (TxOut era)
   where
   fromCBOR = fromNotSharedCBOR
+  {-# INLINE fromCBOR #-}
 
 instance
   ( Era era,
@@ -649,7 +650,7 @@ instance
         cv <- decodeNonNegative
         mkTxOutCompact a ca cv . SJust <$> fromCBOR
       Just _ -> cborError $ DecoderErrorCustom "txout" "wrong number of terms in txout"
-  {-# INLINEABLE fromSharedCBOR #-}
+  {-# INLINE fromSharedCBOR #-}
 
 pattern TxOutCompact ::
   ( Era era,

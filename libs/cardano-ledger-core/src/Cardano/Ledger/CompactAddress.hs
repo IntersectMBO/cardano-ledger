@@ -9,8 +9,6 @@
 module Cardano.Ledger.CompactAddress
   ( compactAddr,
     decompactAddr,
-    decompactAddrLazy,
-    deserializeShortAddr,
     CompactAddr (..),
     substring,
     isPayCredScriptCompactAddr,
@@ -26,6 +24,10 @@ module Cardano.Ledger.CompactAddress
     fromCborBackwardsBothAddr,
     decodeRewardAcnt,
     fromCborRewardAcnt,
+
+    -- * Exported for benchmarking only
+    fromCborCompactAddrOld,
+    decompactAddrLazy,
   )
 where
 
@@ -65,7 +67,6 @@ import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Prelude (Text, cborError, panic)
-import Control.Applicative (Alternative ((<|>)))
 import Control.DeepSeq (NFData)
 import Control.Monad (ap, guard, unless, when)
 import qualified Control.Monad.Fail
@@ -93,17 +94,24 @@ instance CC.Crypto c => Show (CompactAddr c) where
 
 compactAddr :: Addr crypto -> CompactAddr crypto
 compactAddr = UnsafeCompactAddr . SBS.toShort . serialiseAddr
+{-# INLINE compactAddr #-}
 
 decompactAddr :: forall crypto. CC.Crypto crypto => CompactAddr crypto -> Addr crypto
 decompactAddr (UnsafeCompactAddr sbs) =
-  unwrap "CompactAddr" $ decodeAddrShort sbs <|> deserializeShortAddr sbs
+  case decodeAddrShort sbs of
+    Just addr -> addr
+    Nothing -> decompactAddrOld sbs
+{-# INLINE decompactAddr #-}
+
+decompactAddrOld :: CC.Crypto crypto => ShortByteString -> Addr crypto
+decompactAddrOld short = snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0 short
   where
     -- The reason failure is impossible here is that the only way to call this code
     -- is using a CompactAddr, which can only be constructed using compactAddr.
     -- compactAddr serializes an Addr, so this is guaranteed to work.
     unwrap :: forall a. Text -> Maybe a -> a
     unwrap name = fromMaybe (panic $ "Impossible failure when decoding " <> name)
-{-# INLINEABLE decompactAddr #-}
+{-# NOINLINE decompactAddrOld #-}
 
 ------------------------------------------------------------------------------------------
 -- Fast Address Serializer ---------------------------------------------------------------
@@ -129,6 +137,22 @@ fromCborCompactAddr = do
   pure cAddr
 {-# INLINE fromCborCompactAddr #-}
 
+-- This is a fallback deserializer that preserves old behavior. It will almost never be
+-- invoked, that is why it is not inlined.
+fromCborAddrFallback :: CC.Crypto crypto => ShortByteString -> Decoder s (Addr crypto)
+fromCborAddrFallback sbs =
+  case B.runGetOrFail getAddr $ BSL.fromStrict $ SBS.fromShort sbs of
+    Right (_remaining, _offset, value) -> pure value
+    Left (_remaining, _offset, message) ->
+      cborError (DecoderErrorCustom "Addr" $ fromString message)
+{-# NOINLINE fromCborAddrFallback #-}
+
+fromCborCompactAddrOld :: forall s crypto. CC.Crypto crypto => Decoder s (CompactAddr crypto)
+fromCborCompactAddrOld = do
+  sbs <- fromCBOR
+  UnsafeCompactAddr sbs <$ fromCborAddrFallback @crypto sbs
+{-# INLINE fromCborCompactAddrOld #-}
+
 fromCborBackwardsBothAddr ::
   forall crypto s.
   CC.Crypto crypto =>
@@ -138,13 +162,9 @@ fromCborBackwardsBothAddr = do
   addr <-
     case decodeAddrShortEither @crypto sbs of
       Right a -> pure a
-      Left _err ->
-        case B.runGetOrFail getAddr $ BSL.fromStrict $ SBS.fromShort sbs of
-          Right (_remaining, _offset, value) -> pure value
-          Left (_remaining, _offset, message) ->
-            cborError (DecoderErrorCustom "Addr" $ fromString message)
+      Left _err -> fromCborAddrFallback sbs
   pure (addr, UnsafeCompactAddr sbs)
-{-# INLINEABLE fromCborBackwardsBothAddr #-}
+{-# INLINE fromCborBackwardsBothAddr #-}
 
 class AddressBuffer b where
   bufLength :: b -> Int
@@ -157,17 +177,25 @@ class AddressBuffer b where
 
 instance AddressBuffer ShortByteString where
   bufLength = SBS.length
+  {-# INLINE bufLength #-}
   bufUnsafeIndex = SBS.unsafeIndex
+  {-# INLINE bufUnsafeIndex #-}
   bufToByteString = SBS.fromShort
+  {-# INLINE bufToByteString #-}
   bufGetHash = Hash.hashFromOffsetBytesShort
+  {-# INLINE bufGetHash #-}
 
 instance AddressBuffer BS.ByteString where
   bufLength = BS.length
+  {-# INLINE bufLength #-}
   bufUnsafeIndex = BS.unsafeIndex
+  {-# INLINE bufUnsafeIndex #-}
   bufToByteString = id
+  {-# INLINE bufToByteString #-}
   bufGetHash bs offset = do
     guard (offset >= 0 && offset < BS.length bs)
     Hash.hashFromBytes (BS.unsafeDrop offset bs)
+  {-# INLINE bufGetHash #-}
 
 -- | Address header byte truth table:
 newtype Header = Header Word8
@@ -302,7 +330,7 @@ decodeAddrStateT buf = do
         staking <- decodeStakeReference header buf
         pure $ Addr (headerNetworkId header) payment staking
   addr <$ ensureBufIsConsumed "Addr" buf
-{-# INLINEABLE decodeAddrStateT #-}
+{-# INLINE decodeAddrStateT #-}
 
 -- | Checks that the current offset is exactly at the end of the buffer.
 ensureBufIsConsumed ::
@@ -318,6 +346,7 @@ ensureBufIsConsumed name buf = do
   let len = bufLength buf
   unless (lastOffset == len) $
     failDecoding name $ "Left over bytes: " ++ show (len - lastOffset)
+{-# INLINE ensureBufIsConsumed #-}
 
 -- | This decoder assumes the whole `ShortByteString` is occupied by the `BootstrapAddress`
 decodeBootstrapAddress ::
@@ -543,7 +572,7 @@ decodeRewardAccountT buf = do
       else KeyHashObj <$> decodeKeyHash buf
   ensureBufIsConsumed "RewardsAcnt" buf
   pure $! RewardAcnt (headerNetworkId header) account
-{-# INLINEABLE decodeRewardAccountT #-}
+{-# INLINE decodeRewardAccountT #-}
 
 ------------------------------------------------------------------------------------------
 -- Old Address Deserializer --------------------------------------------------------------
@@ -590,12 +619,10 @@ instance CC.Crypto crypto => ToCBOR (CompactAddr crypto) where
   toCBOR (UnsafeCompactAddr bytes) = toCBOR bytes
 
 instance CC.Crypto crypto => FromCBOR (CompactAddr crypto) where
-  fromCBOR = snd <$> fromCborBackwardsBothAddr
-
--- sbs <- fromCBOR
--- case deserializeShortAddr @crypto sbs of
---   Just _ -> pure $ UnsafeCompactAddr sbs
---   Nothing -> cborError $ DecoderErrorCustom "Addr" "invalid address"
+  fromCBOR = do
+    (_addr, cAddr) <- fromCborBackwardsBothAddr
+    pure cAddr
+  {-# INLINE fromCBOR #-}
 
 newtype GetShort a = GetShort {runGetShort :: Int -> ShortByteString -> Maybe (Int, a)}
   deriving (Functor)
@@ -612,9 +639,6 @@ instance Monad GetShort where
 
 instance Control.Monad.Fail.MonadFail GetShort where
   fail _ = GetShort $ \_ _ -> Nothing
-
-deserializeShortAddr :: CC.Crypto crypto => ShortByteString -> Maybe (Addr crypto)
-deserializeShortAddr short = snd <$> runGetShort getShortAddr 0 short
 
 getShortAddr :: CC.Crypto crypto => GetShort (Addr crypto)
 getShortAddr = do
