@@ -80,7 +80,7 @@ lblStatic = "static"
 --   The choice of '#' as a postfix here is made because often these are crypto
 --   checks.
 (?!#) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
-(?!#) = labeledPred [lblStatic]
+(?!#) = labeledPred $ lblStatic NE.:| []
 
 infix 1 ?!#
 
@@ -89,7 +89,7 @@ infix 1 ?!#
 --   The choice of '#' as a postfix here is made because often these are crypto
 --   checks.
 (?!#:) :: Either e () -> (e -> PredicateFailure sts) -> Rule sts ctx ()
-(?!#:) = labeledPredE [lblStatic]
+(?!#:) = labeledPredE $ lblStatic NE.:| []
 
 infix 1 ?!#:
 
@@ -130,7 +130,7 @@ runTest :: Inject t (PredicateFailure sts) => Test t -> Rule sts ctx ()
 runTest = validateTrans inject
 
 runTestOnSignal :: Inject t (PredicateFailure sts) => Test t -> Rule sts ctx ()
-runTestOnSignal = validateTransLabeled inject [lblStatic]
+runTestOnSignal = validateTransLabeled inject $ lblStatic NE.:| []
 
 runTestMaybe :: InjectMaybe t (PredicateFailure sts) => Test t -> Rule sts ctx ()
 runTestMaybe = validate . mapMaybeValidation injectMaybe
