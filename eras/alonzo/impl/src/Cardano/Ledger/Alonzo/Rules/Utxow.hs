@@ -105,21 +105,33 @@ import Validation
 --   failure type of the Shelley Era, as they share some failure modes.
 data UtxowPredicateFail era
   = WrappedShelleyEraFailure !(UtxowPredicateFailure era)
-  | MissingRedeemers ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
+  | -- | List of scripts for which no redeemers were supplied
+    MissingRedeemers
+      ![(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
   | MissingRequiredDatums
-      !(Set (DataHash (Crypto era))) -- Set of missing data hashes
-      !(Set (DataHash (Crypto era))) -- Set of received data hashes
+      !(Set (DataHash (Crypto era)))
+      -- ^ Set of missing data hashes
+      !(Set (DataHash (Crypto era)))
+      -- ^ Set of received data hashes
   | NonOutputSupplimentaryDatums
-      !(Set (DataHash (Crypto era))) -- Set of unallowed data hashes
-      !(Set (DataHash (Crypto era))) -- Set of acceptable supplimental data hashes
+      !(Set (DataHash (Crypto era)))
+      -- ^ Set of unallowed data hashes
+      !(Set (DataHash (Crypto era)))
+      -- ^ Set of acceptable supplimental data hashes
   | PPViewHashesDontMatch
       !(StrictMaybe (ScriptIntegrityHash (Crypto era)))
       -- ^ The PPHash in the TxBody
       !(StrictMaybe (ScriptIntegrityHash (Crypto era)))
       -- ^ Computed from the current Protocol Parameters
-  | MissingRequiredSigners (Set (KeyHash 'Witness (Crypto era)))
-  | UnspendableUTxONoDatumHash (Set (TxIn (Crypto era)))
-  | ExtraRedeemers ![RdmrPtr]
+  | -- | Set of witnesses which were needed and not supplied
+    MissingRequiredSigners
+      (Set (KeyHash 'Witness (Crypto era)))
+  | -- | Set of transaction inputs that are TwoPhase scripts, and should have a DataHash but don't
+    UnspendableUTxONoDatumHash
+      (Set (TxIn (Crypto era)))
+  | -- | List of redeemers not needed
+    ExtraRedeemers
+      ![RdmrPtr]
   deriving (Generic)
 
 deriving instance
