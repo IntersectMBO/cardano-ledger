@@ -47,7 +47,7 @@ let
     # PDF builds of LaTeX documentation.
     #
     # To download the latest PDF build from Hydra, use this link:
-    #   https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.NAME/latest/download/1/NAME.pdf
+    #   https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.NAME/latest/download/1/NAME.pdf
     #
     # To get a shell where you can run pdflatex to build it yourself, use:
     #   nix-shell default.nix -A specs.NAME

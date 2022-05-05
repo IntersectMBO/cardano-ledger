@@ -6,7 +6,7 @@ description:
   Cardano ledgers from the Shelley release onwards share a core basis rooted in
   the Shelley ledger specification. This package abstracts a number of components
   which we expect to be shared amongst all future ledgers implemented around this base.
-bug-reports:        https://github.com/input-output-hk/cardano-ledger-specs/issues
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
 
 license:            Apache-2.0
 author:             IOHK Formal Methods Team
@@ -15,7 +15,7 @@ copyright:          2021 Input Output (Hong Kong) Ltd.
 
 source-repository head
   type:     git
-  location: https://github.com/input-output-hk/cardano-ledger-specs
+  location: https://github.com/input-output-hk/cardano-ledger
   subdir:   libs/cardano-ledger-core
 
 common base

@@ -6,7 +6,7 @@ synopsis: A preproceesor for creating plutus scripts as bytestrings and equivale
 
 description: Use this file to compile plutus scripts and to generate bytestring equivalents as text
 
-bug-reports:https://github.com/input-output-hk/cardano-ledger-specs/issues
+bug-reports:https://github.com/input-output-hk/cardano-ledger/issues
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
@@ -18,7 +18,7 @@ extra-source-files: CHANGELOG.md
 
 source-repository head
   type:     git
-  location: https://github.com/input-output-hk/cardano-ledger-specs
+  location: https://github.com/input-output-hk/cardano-ledger
   subdir:   libs/plutus-preprocessor
 
 executable plutus-preprocessor

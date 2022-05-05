@@ -519,7 +519,7 @@ keyToCredential = KeyHashObj . hashKey . vKey
 
 -- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
 -- crypto:
--- <https://github.com/input-output-hk/cardano-ledger-specs/issues/1770>
+-- <https://github.com/input-output-hk/cardano-ledger/issues/1770>
 mkDSIGNKeyPair ::
   forall c kd.
   DSIGNAlgorithm (DSIGN c) =>

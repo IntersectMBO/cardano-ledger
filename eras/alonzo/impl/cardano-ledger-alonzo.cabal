@@ -6,7 +6,7 @@ synopsis:            Cardano ledger introducing Plutus Core
 description:
   This package builds upon the Mary ledger with support for extended UTxO
   via Plutus Core.
-bug-reports:         https://github.com/input-output-hk/cardano-ledger-specs/issues
+bug-reports:         https://github.com/input-output-hk/cardano-ledger/issues
 license:             Apache-2.0
 author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
@@ -16,7 +16,7 @@ build-type:          Simple
 
 source-repository head
   type:     git
-  location: https://github.com/input-output-hk/cardano-ledger-specs
+  location: https://github.com/input-output-hk/cardano-ledger
   subdir:   eras/alonzo/impl
 
 common base

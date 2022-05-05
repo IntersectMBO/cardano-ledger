@@ -402,7 +402,7 @@ ts_prop_invalidUpdateRegistrationsAreRejected =
 -- | Extract the update interface environment from a given block and chain
 -- environment and state.
 --
--- TODO: this should be in `cardano-ledger-specs`.
+-- TODO: this should be in `cardano-ledger`.
 mkUpiEnv ::
   Abstract.Block ->
   Environment CHAIN ->
@@ -424,7 +424,7 @@ mkUpiEnv block env st = (blockSlot, _dIStateDelegationMap delegSt, k, ngk)
 
 -- | Extract the update state from the given chain state.
 --
--- TODO: put this in `cardano-ledger-specs`.
+-- TODO: put this in `cardano-ledger`.
 mkUpiSt ::
   State CHAIN ->
   UPIState

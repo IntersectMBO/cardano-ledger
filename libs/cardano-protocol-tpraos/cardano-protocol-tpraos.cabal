@@ -2,7 +2,7 @@ cabal-version:      2.4
 name:               cardano-protocol-tpraos
 version:            0.1.0.0
 description:        Cardano Protocol: Transitional Praos
-bug-reports:        https://github.com/input-output-hk/cardano-ledger-specs/issues
+bug-reports:        https://github.com/input-output-hk/cardano-ledger/issues
 
 license:            Apache-2.0
 author:             IOHK Formal Methods Team
@@ -11,7 +11,7 @@ copyright:          2021 Input Output (Hong Kong) Ltd.
 
 source-repository head
   type:     git
-  location: https://github.com/input-output-hk/cardano-ledger-specs
+  location: https://github.com/input-output-hk/cardano-ledger
   subdir:   libs/cardano-protocol-tpraos
 
 common base

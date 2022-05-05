@@ -67,7 +67,7 @@ data RewardProvenancePool crypto = RewardProvenancePool
     maxPP :: !Coin,
     -- | The stake pool's apparent performance.
     -- See Section 5.5.2 of the
-    --  <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
+    --  <https://hydra.iohk.io/job/Cardano/cardano-ledger/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
     appPerfP :: !Rational,
     -- | The total Lovelace earned by the stake pool.
     poolRP :: !Coin,
@@ -90,7 +90,7 @@ instance CC.Crypto crypto => Default (RewardProvenancePool crypto) where
 -- | The desirability score of a stake pool, as described
 -- in <https://arxiv.org/abs/1807.11218 "Reward Sharing Schemes for Stake Pools">.
 -- Additionally, the hit rate estimation described in the
--- <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document> is included.
+-- <https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document> is included.
 data Desirability = Desirability
   { desirabilityScore :: !Double,
     hitRateEstimate :: !Double
@@ -109,10 +109,10 @@ instance NFData Desirability
 --
 --  For more background, see "Figure 48: The Reward Calculation" and
 --  "Figure 51: Reward Update Creation" of the
---  <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec the formal specification>.
+--  <https://hydra.iohk.io/job/Cardano/cardano-ledger/shelleyLedgerSpec/latest/download-by-type/doc-pdf/ledger-spec the formal specification>.
 --  The variable names here align with those in the specification.
 --  See also Section 5 of the
---  <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
+--  <https://hydra.iohk.io/job/Cardano/cardano-ledger/delegationDesignSpec/latest/download-by-type/doc-pdf/delegation_design_spec Design Specification>.
 data RewardProvenance crypto = RewardProvenance
   { -- | The number of slots per epoch.
     spe :: !Word64,
@@ -155,7 +155,7 @@ data RewardProvenance crypto = RewardProvenance
            (RewardProvenancePool crypto)
        ),
     -- | A map from pool ID to the desirability score.
-    -- See the <https://hydra.iohk.io/job/Cardano/cardano-ledger-specs/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document>.
+    -- See the <https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking stake pool ranking document>.
     desirabilities ::
       !(Map (KeyHash 'StakePool crypto) Desirability)
   }

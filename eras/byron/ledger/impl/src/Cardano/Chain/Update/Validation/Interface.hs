@@ -332,7 +332,7 @@ registerVotes env st votes = do
     -- as the first argument of @M.union@, since the values in this first
     -- argument overwrite the values in the second.
       { appVersions = M.union appVersions' appVersions,
-        -- TODO: consider using the `Relation` instances from `cardano-ledger-specs` (see `Ledger.Core`)
+        -- TODO: consider using the `Relation` instances from `cardano-ledger` (see `Ledger.Core`)
         registeredSoftwareUpdateProposals =
           M.withoutKeys
             registeredSoftwareUpdateProposals

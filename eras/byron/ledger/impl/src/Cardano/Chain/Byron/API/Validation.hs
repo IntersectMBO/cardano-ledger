@@ -103,7 +103,7 @@ mkBodyEnvironment cfg params slotNo =
 -- (currently done in body processing) is at least /conform/ spec, as these
 -- updates are conform spec. See
 --
--- <https://github.com/input-output-hk/cardano-ledger-specs/issues/1046>
+-- <https://github.com/input-output-hk/cardano-ledger/issues/1046>
 -- <https://github.com/input-output-hk/ouroboros-network/issues/1291>
 applyChainTick ::
   Gen.Config ->

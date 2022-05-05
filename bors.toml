@@ -1,6 +1,6 @@
 status = [
-  "buildkite/cardano-ledger-specs",
-  "ci/hydra:Cardano:cardano-ledger-specs:required",
+  "buildkite/cardano-ledger",
+  "ci/hydra:Cardano:cardano-ledger:required",
 ]
 timeout_sec = 7200
 required_approvals = 1

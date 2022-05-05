@@ -2,7 +2,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | The 'main' function in this file writes a file
---     'cardano-ledger-specs/alonzo/test/lib/Test/Cardano/Ledger/Alonzo/PlutusScripts.hs'
+--     'cardano-ledger/alonzo/test/lib/Test/Cardano/Ledger/Alonzo/PlutusScripts.hs'
 --     When this file is compiled it exports a bunch of Alonzo era scripts that are plutus scripts.
 --     Compiling that file does not have any dependency on the plutus-plugin.
 --     Instead this package 'plutus-preproccssor' has that dependency, but one does not have

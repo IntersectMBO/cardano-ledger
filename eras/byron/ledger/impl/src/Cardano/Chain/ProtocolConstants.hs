@@ -30,7 +30,7 @@ kSlotSecurityParam = SlotCount . (*) 2 . unBlockCount
 --   _certain to happen_ and it actually happening.
 --
 --   For full details, you can see
---   https://github.com/input-output-hk/cardano-ledger-specs/issues/1288
+--   https://github.com/input-output-hk/cardano-ledger/issues/1288
 kUpdateStabilityParam :: BlockCount -> SlotCount
 kUpdateStabilityParam = SlotCount . (*) 4 . unBlockCount
 
