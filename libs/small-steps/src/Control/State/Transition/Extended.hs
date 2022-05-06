@@ -369,7 +369,7 @@ validateTransLabeled t labels v = liftF $ Label labels (liftF $ Predicate v t ()
 (?!) :: Bool -> PredicateFailure sts -> Rule sts ctx ()
 (?!) cond onFail =
   liftF $
-    Predicate (if cond then Success () else Failure (() :| [])) (const onFail) ()
+    Predicate (if cond then Success () else Failure (onFail :| [])) id ()
 
 infix 1 ?!
 
@@ -592,9 +592,11 @@ applyRuleInternal ep vp goSTS jc r = do
         then foldF runClause yesrule
         else foldF runClause norule
     runClause (Predicate cond orElse val) =
-      case cond of
-        Success x -> pure x
-        Failure errs -> modify (first (map orElse (reverse (NE.toList errs)) <>)) >> pure val
+      case vp of
+        ValidateNone -> pure val
+        _ -> case cond of
+          Success x -> pure x
+          Failure errs -> modify (first (map orElse (reverse (NE.toList errs)) <>)) >> pure val
     runClause (Label lbls subrule val) =
       if validateIf (NE.toList lbls)
         then foldF runClause subrule
