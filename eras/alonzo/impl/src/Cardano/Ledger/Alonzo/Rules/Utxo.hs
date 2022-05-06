@@ -149,8 +149,10 @@ data UtxoPredicateFailure era
       -- ^ the Coin produced by this transaction
   | -- | the set of addresses with incorrect network IDs
     WrongNetwork
-      !Network -- the expected network id
+      !Network
+      -- ^ the expected network id
       !(Set (Addr (Crypto era)))
+      -- ^ the set of addresses with incorrect network IDs
   | WrongNetworkWithdrawal
       !Network
       -- ^ the expected network id
@@ -185,14 +187,19 @@ data UtxoPredicateFailure era
     CollateralContainsNonADA !(Core.Value era)
   | -- | Wrong Network ID in body
     WrongNetworkInTxBody
-      !Network -- Actual Network ID
-      !Network -- Network ID in transaction body
-  | OutsideForecast
-      !SlotNo -- slot number outside consensus forecast range
+      !Network
+      -- ^ Actual Network ID
+      !Network
+      -- ^ Network ID in transaction body
+  | -- | slot number outside consensus forecast range
+    OutsideForecast
+      !SlotNo
   | -- | There are too many collateral inputs
     TooManyCollateralInputs
-      !Natural -- Max allowed collateral inputs
-      !Natural -- Number of collateral inputs
+      !Natural
+      -- ^ Max allowed collateral inputs
+      !Natural
+      -- ^ Number of collateral inputs
   | NoCollateralInputs
   deriving (Generic)
 

@@ -105,9 +105,19 @@ data BabbageUTXO era
 data BabbageUtxoPred era
   = FromAlonzoUtxoFail !(UtxoPredicateFailure era) -- Inherited from Alonzo
   | FromAlonzoUtxowFail !(UtxowPredicateFail era)
-  | UnequalCollateralReturn !Coin !Coin
-  | DanglingWitnessDataHash !(Set.Set (DataHash (Crypto era)))
-  | MalformedScripts !(Set (ScriptHash (Crypto era)))
+  | -- | The collateral is not equivalent to the total collateral asserted by the transaction
+    UnequalCollateralReturn
+      !Coin
+      -- ^ collateral needed
+      !Coin
+      -- ^ collateral returned
+  | -- | the set of hashes in the transaction datum objects that are not in use
+    -- in the inputHashes or outputs
+    DanglingWitnessDataHash
+      !(Set.Set (DataHash (Crypto era)))
+  | -- | the set of malformed scripts
+    MalformedScripts
+      !(Set (ScriptHash (Crypto era)))
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
