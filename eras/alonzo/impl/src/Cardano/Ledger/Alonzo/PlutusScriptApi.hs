@@ -241,10 +241,9 @@ evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
         intercalate
           ","
           [ "[LEDGER][PLUTUS_SCRIPT]",
-            "END",
-            "res = " <> show res
+            "END"
           ]
-   in (traceEvent endMsg res) <> evalScripts pv tx rest
+   in traceEvent endMsg res <> evalScripts pv tx rest
 
 -- Collect information (purpose and ScriptHash) about all the
 -- Credentials that refer to scripts, that might be run in a Tx.

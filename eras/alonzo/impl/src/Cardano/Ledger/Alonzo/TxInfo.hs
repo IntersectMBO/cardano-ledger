@@ -464,12 +464,12 @@ valContext (TxInfoPV1 txinfo) sp = Data (PV1.toData (PV1.ScriptContext txinfo (t
 valContext (TxInfoPV2 txinfo) sp = Data (PV2.toData (PV2.ScriptContext txinfo (transScriptPurpose sp)))
 
 data ScriptFailure = PlutusSF Text PlutusDebug
-  deriving (Show, Eq, Generic, NoThunks)
+  deriving (Eq, Generic, NoThunks)
 
 data ScriptResult
   = Passes [PlutusDebug]
   | Fails [PlutusDebug] (NonEmpty ScriptFailure)
-  deriving (Show, Generic)
+  deriving (Generic)
 
 scriptPass :: PlutusDebug -> ScriptResult
 scriptPass pd = Passes [pd]
@@ -501,7 +501,12 @@ data PlutusDebug
       SBS.ShortByteString
       [PV2.Data]
       ProtVer
-  deriving (Show, Eq, Generic, NoThunks)
+  deriving (Eq, Generic, NoThunks)
+
+-- There is no Show instance for PlutusDebug intentionally, because it is too
+-- expensive and it will be too tempting to use it incorrectly. If needed for
+-- testing use 'StandaloneDeriving', otherwise define an efficient way to display
+-- this info.
 
 data PlutusError = PlutusErrorV1 PV1.EvaluationError | PlutusErrorV2 PV2.EvaluationError
   deriving (Show)
@@ -511,7 +516,6 @@ data PlutusDebugInfo
   | DebugCannotDecode String
   | DebugInfo [Text] PlutusError PlutusDebug
   | DebugBadHex String
-  deriving (Show)
 
 instance ToCBOR PlutusDebug where
   toCBOR (PlutusDebugV1 a b c d e) = encode $ Sum PlutusDebugV1 0 !> To a !> To b !> To c !> To d !> To e
