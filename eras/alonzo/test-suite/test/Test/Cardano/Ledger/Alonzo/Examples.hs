@@ -2,15 +2,21 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE StandaloneDeriving #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Test.Cardano.Ledger.Alonzo.Examples where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
-import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (Fails, Passes), runPLCScript)
+import Cardano.Ledger.Alonzo.TxInfo
+  ( PlutusDebug (..),
+    PlutusDebugInfo (..),
+    ScriptFailure (..),
+    ScriptResult (Fails, Passes),
+    runPLCScript,
+  )
 import Cardano.Ledger.BaseTypes (ProtVer (..))
 import Data.ByteString.Short (ShortByteString)
 import Data.Proxy (Proxy (..))
@@ -34,6 +40,16 @@ import qualified Test.Cardano.Ledger.Alonzo.PlutusScripts as Generated
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Tasty
 import Test.Tasty.HUnit (Assertion, assertBool, testCase)
+
+-- Do not remove these instances. They are here for two resons:
+--
+--  * Prevent usage of Show on these huge data types in production
+--  * Allow printing for testing.
+deriving instance Show PlutusDebug
+
+deriving instance Show PlutusDebugInfo
+
+deriving instance Show ScriptFailure
 
 -- =============================================
 
