@@ -10,7 +10,6 @@ module Cardano.Ledger.Babbage.Rules.Utxow where
 
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
-import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent)
 import Cardano.Ledger.Alonzo.Rules.Utxow
@@ -25,7 +24,6 @@ import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (TxWitness'))
-import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo (TxDats (..))
 import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Utxo
@@ -34,7 +32,6 @@ import Cardano.Ledger.Babbage.Rules.Utxo
   )
 import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
 import Cardano.Ledger.Babbage.Scripts (refScripts)
-import Cardano.Ledger.Babbage.TxBody (Datum (..), TxOut (..))
 import Cardano.Ledger.BaseTypes
   ( ProtVer,
     ShelleyBase,
@@ -55,7 +52,6 @@ import Cardano.Ledger.Shelley.Rules.Utxow
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, (⊆), (➖))
 import Control.State.Transition.Extended
   ( Embed (..),
     STS (..),
@@ -66,7 +62,6 @@ import Control.State.Transition.Extended
     trans,
   )
 import Data.Foldable (sequenceA_)
-import qualified Data.List as List
 import qualified Data.Map as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -97,21 +92,6 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
     neededNonRefs = sNeeded `Set.difference` sRefs
     missing = neededNonRefs `Set.difference` sReceived
     extra = sReceived `Set.difference` neededNonRefs
-
-{- dom(txdats txw) ⊆ inputHashes ∪ {h | ( , , h) ∈ txouts tx ∪ utxo (refInputs tx)  -}
-danglingWitnessDataHashes ::
-  Era era =>
-  Set.Set (DataHash (Crypto era)) ->
-  Alonzo.TxDats era ->
-  [TxOut era] ->
-  Test (BabbageUtxoPred era)
-danglingWitnessDataHashes inputHashes (Alonzo.TxDats m) outs =
-  let hashesInUse = List.foldl' accum inputHashes outs
-      accum ans (TxOut _ _ (DatumHash dhash) _) = Set.insert dhash ans
-      accum ans _ = ans
-   in failureUnless
-        (eval (dom m ⊆ hashesInUse))
-        (DanglingWitnessDataHash (eval (dom m ➖ hashesInUse)))
 
 {-  ∀ s ∈ (txscripts txw utxo ∩ Scriptnative), validateScript s tx   -}
 validateFailedBabbageScripts ::
