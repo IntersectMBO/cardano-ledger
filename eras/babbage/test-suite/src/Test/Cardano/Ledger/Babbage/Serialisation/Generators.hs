@@ -2,10 +2,8 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -238,6 +236,5 @@ instance Mock c => Arbitrary (BabbageUtxoPred (BabbageEra c)) where
       [ FromAlonzoUtxoFail <$> arbitrary,
         FromAlonzoUtxowFail <$> arbitrary,
         UnequalCollateralReturn <$> arbitrary <*> arbitrary,
-        DanglingWitnessDataHash <$> arbitrary,
         MalformedScripts <$> arbitrary
       ]
