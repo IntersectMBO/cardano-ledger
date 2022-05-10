@@ -22,7 +22,7 @@ import Cardano.Ledger.Babbage.Rules.Ledger ()
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Crypto, Era(..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
@@ -47,6 +47,7 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     StashedAVVMAddresses,
     UTxOState (..),
+    DPState(..),
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
@@ -110,6 +111,9 @@ import Test.Cardano.Ledger.Generic.PrettyCore
     pcTxIn,
     scriptSummary,
   )
+import Cardano.Ledger.Shelley.EpochBoundary(SnapShots(..))
+import Test.Cardano.Ledger.Shelley.Rules.TestChain(stakeDistr)  
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTx, pcTxBody, pcTxIn)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
@@ -185,16 +189,20 @@ genMockChainState proof gstate = pure $ MockChainState newepochstate (getSlot gs
           stashedAVVMAddresses = stashedAVVMAddressesZero proof
         }
 
-makeEpochState :: GenState era -> LedgerState era -> EpochState era
+makeEpochState :: Reflect era => GenState era -> LedgerState era -> EpochState era
 makeEpochState gstate ledgerstate =
   EpochState
     { esAccountState = AccountState (getTreasury gstate) (getReserves gstate),
-      esSnapshots = def,
+      esSnapshots = snaps ledgerstate,
       esLState = ledgerstate,
       esPrevPp = gePParams (gsGenEnv gstate),
       esPp = gePParams (gsGenEnv gstate),
       esNonMyopic = def
     }
+
+snaps:: Era era => LedgerState era -> SnapShots (Crypto era)
+snaps (LedgerState (UTxOState{_utxo = u}) (DPState dstate pstate)) = SnapShots snap snap snap mempty
+  where snap = stakeDistr u dstate pstate
 
 -- ==============================================================================
 
