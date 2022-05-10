@@ -27,7 +27,9 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness (txrdmrs'), nullRedeemers)
 import Cardano.Ledger.BaseTypes
-  ( Network,
+  ( Globals (stabilityWindow),
+    Network,
+    ProtVer,
     ShelleyBase,
     StrictMaybe (..),
     epochInfoWithErr,
@@ -53,6 +55,7 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
+import Cardano.Ledger.Shelley.HardForks (allowOutsideForecastTTL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
@@ -62,7 +65,7 @@ import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as ShelleyMA
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
-import Cardano.Slotting.Slot (SlotNo)
+import Cardano.Slotting.Slot (SlotNo (SlotNo))
 import Cardano.Slotting.Time (SystemStart)
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
@@ -89,6 +92,7 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
@@ -353,19 +357,31 @@ validateCollateralContainsNonADA bal =
 -- > (_,i_f) := txvldt tx
 -- > ◇ ∉ { txrdmrs tx, i_f } ⇒ epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇
 validateOutsideForecast ::
-  HasField "vldt" (Core.TxBody era) ValidityInterval =>
+  ( HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
+  Core.PParams era ->
   EpochInfo (Either a) ->
+  -- | Current slot number
+  SlotNo ->
   SystemStart ->
+  -- | Stability window, in terms of number of slots
+  Word64 ->
   ValidatedTx era ->
   Test (UtxoPredicateFailure era)
-validateOutsideForecast ei sysSt tx =
+validateOutsideForecast pp ei slotNo sysSt sw tx =
   {-   (_,i_f) := txvldt tx   -}
   case getField @"vldt" (body tx) of
     ValidityInterval _ (SJust ifj)
       | not (nullRedeemers (txrdmrs' $ wits tx)) ->
-          -- ◇ ∉ { txrdmrs tx, i_f } ⇒
-          failureUnless (isRight (epochInfoSlotToUTCTime ei sysSt ifj)) $ OutsideForecast ifj
+          unless (allowOutsideForecastTTL pp) $
+            -- ◇ ∉ { txrdmrs tx, i_f } ⇒
+            if ifj < addSlots sw (succ slotNo)
+              then failureUnless (isRight (epochInfoSlotToUTCTime ei sysSt ifj)) $ OutsideForecast ifj
+              else failure $ OutsideForecast ifj
     _ -> pure ()
+  where
+    addSlots count (SlotNo toSlot) = SlotNo (toSlot + count)
 
 -- | Ensure that there are no `Core.TxOut`s that have value less than the sized @coinsPerUTxOWord@
 --
@@ -501,9 +517,10 @@ utxoTransition = do
 
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfoWithErr
+  stability <- liftSTS $ asks stabilityWindow
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast ei sysSt tx
+  runTest $ validateOutsideForecast pp ei slot sysSt stability tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txb
