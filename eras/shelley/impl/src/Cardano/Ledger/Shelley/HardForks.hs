@@ -10,6 +10,7 @@ module Cardano.Ledger.Shelley.HardForks
     translateTimeForPlutusScripts,
     missingScriptsSymmetricDifference,
     forgoRewardPrefilter,
+    allowOutsideForecastTTL,
   )
 where
 
@@ -75,3 +76,13 @@ forgoRewardPrefilter ::
   pp ->
   Bool
 forgoRewardPrefilter pp = pvMajor (getField @"_protocolVersion" pp) > 6
+
+-- | In versions 5 and 6, we allow the ttl field to lie outside the stability
+-- window.
+allowOutsideForecastTTL ::
+  (HasField "_protocolVersion" pp ProtVer) =>
+  pp ->
+  Bool
+allowOutsideForecastTTL pp =
+  let mv = pvMajor (getField @"_protocolVersion" pp)
+   in mv == 5 || mv == 6

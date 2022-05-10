@@ -61,6 +61,7 @@ import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailu
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
 import Cardano.Ledger.Val as Val
+import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.ByteString as BS (ByteString)
@@ -178,7 +179,7 @@ scriptsValidateTransition = do
 
   () <- pure $! traceEvent validBegin ()
 
-  case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
+  case collectTwoPhaseScriptInputs (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
     Right sLst ->
       when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
         Fails _ps fs ->
@@ -207,14 +208,14 @@ scriptsNotValidateTransition ::
   ) =>
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
-  TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
+  TRC (UtxoEnv slot pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   let txb = body tx
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
   let !_ = traceEvent invalidBegin ()
 
-  case collectTwoPhaseScriptInputs ei sysSt pp tx utxo of
+  case collectTwoPhaseScriptInputs (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
     Right sLst ->
       whenFailureFree $
         when2Phase $
