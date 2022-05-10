@@ -28,6 +28,7 @@ import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness (txrdmrs'), nullRedeemers)
 import Cardano.Ledger.BaseTypes
   ( Network,
+    ProtVer,
     ShelleyBase,
     StrictMaybe (..),
     epochInfoWithErr,
@@ -53,6 +54,7 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
+import Cardano.Ledger.Shelley.HardForks (allowOutsideForecastTTL)
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (TxIn)
@@ -62,6 +64,7 @@ import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as ShelleyMA
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
+import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
 import Cardano.Slotting.Slot (SlotNo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Monad (unless)
@@ -353,18 +356,27 @@ validateCollateralContainsNonADA bal =
 -- > (_,i_f) := txvldt tx
 -- > ◇ ∉ { txrdmrs tx, i_f } ⇒ epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇
 validateOutsideForecast ::
-  HasField "vldt" (Core.TxBody era) ValidityInterval =>
+  ( HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
+  Core.PParams era ->
   EpochInfo (Either a) ->
+  -- | Current slot number
+  SlotNo ->
   SystemStart ->
   ValidatedTx era ->
   Test (UtxoPredicateFailure era)
-validateOutsideForecast ei sysSt tx =
+validateOutsideForecast pp ei slotNo sysSt tx =
   {-   (_,i_f) := txvldt tx   -}
   case getField @"vldt" (body tx) of
     ValidityInterval _ (SJust ifj)
       | not (nullRedeemers (txrdmrs' $ wits tx)) ->
-          -- ◇ ∉ { txrdmrs tx, i_f } ⇒
-          failureUnless (isRight (epochInfoSlotToUTCTime ei sysSt ifj)) $ OutsideForecast ifj
+          let ei' =
+                if allowOutsideForecastTTL pp
+                  then unsafeLinearExtendEpochInfo slotNo ei
+                  else ei
+           in -- ◇ ∉ { txrdmrs tx, i_f } ⇒
+              failureUnless (isRight (epochInfoSlotToUTCTime ei' sysSt ifj)) $ OutsideForecast ifj
     _ -> pure ()
 
 -- | Ensure that there are no `Core.TxOut`s that have value less than the sized @coinsPerUTxOWord@
@@ -503,7 +515,7 @@ utxoTransition = do
   ei <- liftSTS $ asks epochInfoWithErr
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast ei sysSt tx
+  runTest $ validateOutsideForecast pp ei slot sysSt tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txb
