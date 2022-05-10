@@ -15,12 +15,14 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 -- =========================================================================
 
+import Debug.Trace
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Ledger ()
 import Cardano.Ledger.Babbage.Rules.Utxow ()
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era(Era(..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty (PDoc, ppInt, ppList, ppMap, ppSafeHash, ppStrictSeq, ppString, ppWord64)
@@ -34,6 +36,7 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     StashedAVVMAddresses,
     UTxOState (..),
+    DPState(..),
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -76,6 +79,8 @@ import Test.Cardano.Ledger.Generic.ModelState
   ( stashedAVVMAddressesZero,
     toMUtxo,
   )
+import Cardano.Ledger.Shelley.EpochBoundary(SnapShots(..))
+import Test.Cardano.Ledger.Shelley.Rules.TestChain(stakeDistr)  
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTx, pcTxBody, pcTxIn)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
@@ -160,16 +165,20 @@ genMockChainState proof gstate = pure $ MockChainState newepochstate (getSlot gs
           stashedAVVMAddresses = stashedAVVMAddressesZero proof
         }
 
-makeEpochState :: GenState era -> LedgerState era -> EpochState era
+makeEpochState :: Reflect era => GenState era -> LedgerState era -> EpochState era
 makeEpochState gstate ledgerstate =
   EpochState
     { esAccountState = AccountState (getTreasury gstate) (getReserves gstate),
-      esSnapshots = def,
+      esSnapshots = snaps ledgerstate,
       esLState = ledgerstate,
       esPrevPp = gePParams (gsGenEnv gstate),
       esPp = gePParams (gsGenEnv gstate),
       esNonMyopic = def
     }
+
+snaps:: Era era => LedgerState era -> SnapShots (Crypto era)
+snaps (LedgerState (UTxOState{_utxo = u}) (DPState dstate pstate)) = SnapShots snap snap snap mempty
+  where snap = stakeDistr u dstate pstate
 
 -- ==============================================================================
 
@@ -246,8 +255,8 @@ instance
 
   sigGen (Gen1 txss) () mcs@(MockChainState newepoch (SlotNo lastSlot) count) = do
     let NewEpochState _epochnum _ _ epochstate _ pooldistr _ = newepoch
-    issuerkey <- chooseIssuer pooldistr
-    nextSlotNo <- SlotNo . (+ lastSlot) <$> choose (15, 25)
+    nextSlotNo <- SlotNo . (+ lastSlot) <$> choose (5,10)
+    issuerkey <- chooseIssuer nextSlotNo pooldistr
     let txs = txss ! count
     -- Assmble it into a MockBlock
     let mockblock = MockBlock issuerkey nextSlotNo txs
@@ -263,8 +272,9 @@ instance
 mapProportion :: (v -> Int) -> Map.Map k v -> Gen k
 mapProportion toInt m = frequency [(toInt v, pure k) | (k, v) <- Map.toList m]
 
-chooseIssuer :: PoolDistr crypto -> Gen (KeyHash 'StakePool crypto)
-chooseIssuer (PoolDistr m) = mapProportion getInt m
+chooseIssuer :: SlotNo -> PoolDistr crypto -> Gen (KeyHash 'StakePool crypto)
+chooseIssuer slot (PoolDistr m) =
+    mapProportion getInt (trace ("Slot="++show slot++" poolsize="++show(Map.size m )) m)
   where
     getInt x = floor (individualPoolStake x * 1000)
 

@@ -165,8 +165,8 @@ instance Default GenSize where
     GenSize
       { treasury = 1000000,
         reserves = 1000000,
-        startSlot = 10000000,
-        blocksizeMax = 10,
+        startSlot = 0,
+        blocksizeMax = 3,
         collInputsMax = 5,
         oldUtxoPercent = 15,
         spendInputsMax = 10,
