@@ -255,14 +255,17 @@ instance STS sts => Embed sts sts where
 
 data EventPolicy
   = EventPolicyReturn
+  | EventPolicyIgnore
   | EventPolicyDiscard
 
 data SingEP ep where
   EPReturn :: SingEP 'EventPolicyReturn
+  EPIgnore :: SingEP 'EventPolicyIgnore
   EPDiscard :: SingEP 'EventPolicyDiscard
 
 type family EventReturnType ep sts a :: Type where
   EventReturnType 'EventPolicyReturn sts a = (a, [Event sts])
+  EventReturnType 'EventPolicyIgnore sts a = (a, [Event sts])
   EventReturnType _ _ a = a
 
 class EventReturnTypeRep ert where
@@ -271,17 +274,22 @@ class EventReturnTypeRep ert where
 instance EventReturnTypeRep 'EventPolicyReturn where
   eventReturnTypeRep = EPReturn
 
+instance EventReturnTypeRep 'EventPolicyIgnore where
+  eventReturnTypeRep = EPIgnore
+
 instance EventReturnTypeRep 'EventPolicyDiscard where
   eventReturnTypeRep = EPDiscard
 
 discardEvents :: forall ep a. SingEP ep -> forall s. EventReturnType ep s a -> a
 discardEvents ep = case ep of
   EPReturn -> fst
+  EPIgnore -> fst
   EPDiscard -> id
 
 getEvents :: forall ep. SingEP ep -> forall s a. EventReturnType ep s a -> [Event s]
 getEvents ep ert = case ep of
   EPReturn -> snd ert
+  EPIgnore -> []
   EPDiscard -> []
 
 -- | Map over an arbitrary 'EventReturnType'.
@@ -293,6 +301,7 @@ mapEventReturn ::
   EventReturnType ep sts b
 mapEventReturn f ert = case eventReturnTypeRep @ep of
   EPReturn -> first f ert
+  EPIgnore -> first f ert
   EPDiscard -> f ert
 
 data Clause sts (rtype :: RuleType) a where
@@ -501,6 +510,10 @@ applySTSOptsEither opts ctx =
           r1 <&> \case
             ((st, []), evts) -> Right (st, evts)
             ((_, pfs), _) -> Left pfs
+        EPIgnore ->
+          r1 <&> \case
+            ((st, []), evts) -> Right (st, evts)
+            ((_, pfs), _) -> Left pfs
 
 applySTS ::
   forall s m rtype.
@@ -574,6 +587,7 @@ applyRuleInternal ep vp goSTS jc r = do
   (s, er) <- flip runStateT ([], []) $ foldF runClause r
   case ep of
     EPDiscard -> pure (s, fst er)
+    EPIgnore -> pure ((s, fst er), [])
     EPReturn -> pure ((s, fst er), snd er)
   where
     runClause ::
@@ -613,6 +627,7 @@ applyRuleInternal ep vp goSTS jc r = do
       pure $ next ss
     runClause (Writer w a) = case ep of
       EPReturn -> modify (second (<> w)) $> a
+      EPIgnore -> pure a
       EPDiscard -> pure a
     validateIf lbls = case vp of
       ValidateAll -> True
@@ -642,9 +657,11 @@ applySTSInternal ep ap goRule ctx =
             s' : _ -> case ep of
               EPDiscard -> (fst s', concatMap snd xs)
               EPReturn -> (((fst . fst) s', concatMap (snd . fst) xs), snd s')
+              EPIgnore -> (((fst . fst) s', concatMap (snd . fst) xs), snd s')
         Just s' -> case ep of
           EPDiscard -> (fst s', [])
           EPReturn -> ((fst $ fst s', []), snd s')
+          EPIgnore -> ((fst $ fst s', []), snd s')
     applySTSInternal' ::
       SRuleType rtype ->
       RuleContext rtype s ->
