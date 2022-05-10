@@ -47,12 +47,14 @@ library
     Test.Cardano.Ledger.BaseTypes
     Test.Cardano.Ledger.Examples.BabbageFeatures
     Test.Cardano.Ledger.Examples.TwoPhaseValidation
+    Test.Cardano.Ledger.Generic.AggPropTests
     Test.Cardano.Ledger.Generic.ApplyTx
     Test.Cardano.Ledger.Generic.Indexed
     Test.Cardano.Ledger.Generic.Fields
     Test.Cardano.Ledger.Generic.Functions
     Test.Cardano.Ledger.Generic.GenState
     Test.Cardano.Ledger.Generic.TxGen
+    Test.Cardano.Ledger.Generic.Types
     Test.Cardano.Ledger.Generic.Proof
     Test.Cardano.Ledger.Generic.MockChain
     Test.Cardano.Ledger.Generic.ModelState

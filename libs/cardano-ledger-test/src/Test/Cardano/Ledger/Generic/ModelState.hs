@@ -168,7 +168,7 @@ data ModelNewEpochState era = ModelNewEpochState
     mFPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
     mRetiring :: !(Map (KeyHash 'StakePool (Crypto era)) EpochNo),
     mSnapshots :: !(SnapShots (Crypto era)),
-    mEL :: !EpochNo, -- Last epoch,
+    mEL :: !EpochNo, -- The current epoch,
     mBprev :: !(Map (KeyHash 'StakePool (Crypto era)) Natural), --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
     mBcur :: !(Map (KeyHash 'StakePool (Crypto era)) Natural),
     -- | Blocks made in current epoch

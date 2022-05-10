@@ -10,11 +10,22 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
--- | Currently this uses the trace mechansim to check that computing rewards has
+-- | Currently this uses the trace mechanism to check that computing rewards has
 -- a required set of properties. It works only in the Shelley Era. It could be
 -- generalized, and then moved to the Generator/Trace/ directory which computes
 -- property tests in all eras.
-module Test.Cardano.Ledger.Shelley.Rewards (rewardTests, C, defaultMain, newEpochProp, newEpochEventsProp, ppAgg) where
+module Test.Cardano.Ledger.Shelley.Rewards
+  ( rewardTests,
+    C,
+    defaultMain,
+    newEpochProp,
+    newEpochEventsProp,
+    ppAgg,
+    RewardUpdateOld (..),
+    createRUpdOld,
+    createRUpdOld_,
+  )
+where
 
 import Cardano.Binary (toCBOR)
 import qualified Cardano.Crypto.DSIGN as Crypto
@@ -27,6 +38,7 @@ import Cardano.Ledger.BaseTypes
     BoundedRational (..),
     Globals (..),
     Network (..),
+    NonNegativeInterval,
     ProtVer (..),
     ShelleyBase,
     StrictMaybe (..),
@@ -52,11 +64,11 @@ import Cardano.Ledger.Keys
     vKey,
   )
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
+import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
+import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
 import Cardano.Ledger.Shelley.API.Wallet (getRewardProvenance)
 import Cardano.Ledger.Shelley.EpochBoundary
-  ( SnapShot (..),
-    SnapShots (..),
-    Stake (..),
+  ( Stake (..),
     maxPool,
     poolStake,
     sumAllStake,
@@ -75,6 +87,7 @@ import Cardano.Ledger.Shelley.LedgerState
     completeRupd,
     createRUpd,
     filterAllRewards,
+    lsDPState,
     rewards,
     updateNonMyopic,
   )
@@ -83,12 +96,7 @@ import Cardano.Ledger.Shelley.PParams
     PParams' (..),
     emptyPParams,
   )
-import Cardano.Ledger.Shelley.PoolRank
-  ( Likelihood,
-    NonMyopic,
-    leaderProbability,
-    likelihood,
-  )
+import Cardano.Ledger.Shelley.PoolRank (Likelihood, leaderProbability, likelihood)
 import Cardano.Ledger.Shelley.RewardUpdate
   ( FreeVars (..),
     Pulser,
@@ -108,9 +116,9 @@ import Cardano.Ledger.Shelley.Rewards
 import Cardano.Ledger.Shelley.Rules.NewEpoch (NewEpochEvent (DeltaRewardEvent, TotalRewardEvent))
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import qualified Cardano.Ledger.Shelley.Rules.Tick as Tick
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
+import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
-import Cardano.Ledger.Val (invert, (<+>), (<->))
+import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
@@ -119,7 +127,7 @@ import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold, foldl')
-import Data.Map (Map)
+import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Proxy
@@ -131,6 +139,7 @@ import qualified Data.Set as Set
 import qualified Data.UMap as UM
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
+import GHC.Records (HasField, getField)
 import GHC.Stack
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C)
@@ -458,7 +467,12 @@ justInJustOut newepochstate =
 -- change the result of reward calculation. we reproduce the old style functions here.
 
 rewardOnePool ::
-  PParams era ->
+  ( HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_nOpt" (Core.PParams era) Natural,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ) =>
+  Core.PParams era ->
   Coin ->
   Natural ->
   Natural ->
@@ -493,7 +507,7 @@ rewardOnePool
         if pledge <= ostake
           then maxPool pp r sigma pr
           else mempty
-      appPerf = mkApparentPerformance (_d pp) sigmaA blocksN blocksTotal
+      appPerf = mkApparentPerformance (getField @"_d" pp) sigmaA blocksN blocksTotal
       poolR = rationalToCoinViaFloor (appPerf * fromIntegral maxP)
       tot = fromIntegral totalStake
       mRewards =
@@ -530,7 +544,12 @@ rewardOnePool
 
 rewardOld ::
   forall era.
-  PParams era ->
+  ( HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_nOpt" (Core.PParams era) Natural
+  ) =>
+  Core.PParams era ->
   BlocksMade (Crypto era) ->
   Coin ->
   Set.Set (Credential 'Staking (Crypto era)) ->
@@ -585,7 +604,7 @@ rewardOld
             ls =
               likelihood
                 (fromMaybe 0 blocksProduced)
-                (leaderProbability asc sigma (_d pp))
+                (leaderProbability asc sigma (getField @"_d" pp))
                 slotsPerEpoch
         pure (hk, rewardMap, ls)
       f =
@@ -606,42 +625,71 @@ data RewardUpdateOld crypto = RewardUpdateOld
 
 createRUpdOld ::
   forall era.
-  (Core.PParams era ~ PParams era) =>
+  ( HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_nOpt" (Core.PParams era) Natural
+  ) =>
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
   Coin ->
   ShelleyBase (RewardUpdateOld (Crypto era))
-createRUpdOld slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply = do
+createRUpdOld slotsPerEpoch b es@(EpochState acnt ss ls pr _ nm) maxSupply =
+  createRUpdOld_ @era slotsPerEpoch b ss reserves pr totalStake rs nm
+  where
+    ds = dpsDState $ lsDPState ls
+    rs = UM.domain $ rewards ds
+    reserves = _reserves acnt
+    totalStake = circulation es maxSupply
+
+createRUpdOld_ ::
+  forall era.
+  ( HasField "_d" (Core.PParams era) UnitInterval,
+    HasField "_rho" (Core.PParams era) UnitInterval,
+    HasField "_tau" (Core.PParams era) UnitInterval,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "_a0" (Core.PParams era) NonNegativeInterval,
+    HasField "_nOpt" (Core.PParams era) Natural
+  ) =>
+  EpochSize ->
+  BlocksMade (Crypto era) ->
+  SnapShots (Crypto era) ->
+  Coin ->
+  Core.PParams era ->
+  Coin ->
+  Set.Set (Credential 'Staking (Crypto era)) ->
+  NonMyopic (Crypto era) ->
+  ShelleyBase (RewardUpdateOld (Crypto era))
+createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake rs nm = do
   asc <- asks activeSlotCoeff
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
-      Coin reserves = _reserves acnt
-      ds = dpsDState $ lsDPState ls
       -- reserves and rewards change
       deltaR1 =
         rationalToCoinViaFloor $
           min 1 eta
-            * unboundRational (_rho pr)
+            * unboundRational (getField @"_rho" pr)
             * fromIntegral reserves
-      d = unboundRational (_d pr)
+      d = unboundRational (getField @"_d" pr)
       expectedBlocks =
         floor $
           (1 - d) * unboundRational (activeSlotVal asc) * fromIntegral slotsPerEpoch
       -- TODO asc is a global constant, and slotsPerEpoch should not change often at all,
       -- it would be nice to not have to compute expectedBlocks every epoch
       eta
-        | unboundRational (_d pr) >= 0.8 = 1
+        | unboundRational (getField @"_d" pr) >= 0.8 = 1
         | otherwise = blocksMade % expectedBlocks
       Coin rPot = _feeSS ss <> deltaR1
-      deltaT1 = floor $ unboundRational (_tau pr) * fromIntegral rPot
+      deltaT1 = floor $ unboundRational (getField @"_tau" pr) * fromIntegral rPot
       _R = Coin $ rPot - deltaT1
-      totalStake = circulation es maxSupply
       (rs_, newLikelihoods) =
         rewardOld
           pr
           b
           _R
-          (UM.domain $ rewards ds)
+          rs
           poolParams
           stake'
           delegs'
@@ -740,25 +788,27 @@ newEpochProp tracelen propf = withMaxSuccess 100 $
   forAllChainTrace @C tracelen $ \tr ->
     case lastElem (sourceSignalTargets tr) of
       Just SourceSignalTarget {target} -> propf (chainNes target)
-      _ -> True === True
+      _ -> property True
 
 -- | Given a NewEpochState and [ChainEvent], test a Property at every Epoch Boundary
 newEpochEventsProp :: Word64 -> ([ChainEvent C] -> NewEpochState C -> Property) -> Property
 newEpochEventsProp tracelen propf = withMaxSuccess 10 $
   forEachEpochTrace @C 10 tracelen $ \tr ->
     case lastElem (sourceSignalTargets tr) of
-      Just SourceSignalTarget {target} -> propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
-      _ -> True === True
+      Just SourceSignalTarget {target} ->
+        propf (concat (runShelleyBase $ getEvents tr)) (chainNes target)
+      _ -> property True
 
 aggIncrementalRewardEvents :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
-aggIncrementalRewardEvents events = foldl' accum Map.empty events
+aggIncrementalRewardEvents = foldl' accum Map.empty
   where
     accum ans (TickEvent (Tick.RupdEvent (RupdEvent _ m))) = Map.unionWith Set.union m ans
-    accum ans (TickEvent (Tick.NewEpochEvent (DeltaRewardEvent (RupdEvent _ m)))) = Map.unionWith Set.union m ans
+    accum ans (TickEvent (Tick.NewEpochEvent (DeltaRewardEvent (RupdEvent _ m)))) =
+      Map.unionWith Set.union m ans
     accum ans _ = ans
 
 getMostRecentTotalRewardEvent :: [ChainEvent C] -> Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C)))
-getMostRecentTotalRewardEvent events = foldl' accum Map.empty events
+getMostRecentTotalRewardEvent = foldl' accum Map.empty
   where
     accum ans (TickEvent (Tick.NewEpochEvent (TotalRewardEvent _ m))) = Map.unionWith Set.union m ans
     accum ans _ = ans
@@ -785,12 +835,14 @@ eventsMirrorRewards events nes = same eventRew compRew
     same x y = withMaxSuccess 1 $ counterexample message (x === y)
       where
         message =
-          ( "events don't mirror rewards "
-              ++ tersemapdiffs "Map differences: aggregated filtered events on the left, computed on the right." x y
-          )
+          "events don't mirror rewards "
+            ++ tersemapdiffs
+              "Map differences: aggregated filtered events on the left, computed on the right."
+              x
+              y
 
 ppAgg :: Map (Credential 'Staking (Crypto C)) (Set (Reward (Crypto C))) -> PDoc
-ppAgg m = ppMap prettyA (ppSet ppReward) m
+ppAgg = ppMap prettyA (ppSet ppReward)
 
 instance Terse (Reward crypto) where
   terse x = show (ppReward x)

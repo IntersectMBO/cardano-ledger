@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -18,9 +19,12 @@ module Test.Cardano.Ledger.Generic.Trace where
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (body))
 import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Ledger ()
+-- import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era (..))
@@ -30,18 +34,16 @@ import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
     ppInt,
-    ppKeyHash,
     ppList,
     ppMap,
     ppRecord,
     ppSafeHash,
     ppSet,
+    ppSlotNo,
     ppString,
     ppWord64,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.AdaPots (totalAdaPotsES)
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -49,6 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
+    PState (..),
     StashedAVVMAddresses,
     UTxOState (..),
   )
@@ -62,15 +65,17 @@ import Control.Monad (forM)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (get, gets)
 import Control.Monad.Trans.Reader (ReaderT (..))
-import Control.State.Transition.Extended (STS (..), TRC (..))
-import Control.State.Transition.Trace (Trace (..), lastState)
+import qualified Control.State.Transition as STS
+import Control.State.Transition.Extended (IRC (), STS (..), TRC (..))
+import Control.State.Transition.Trace (Trace (..), lastState, splitTrace)
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), traceFromInitState)
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as Fold
 import Data.Functor.Identity (Identity (runIdentity))
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
-import Data.Sequence.Strict (StrictSeq)
+import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as SS
 import qualified Data.Set as Set
 import Data.Vector (Vector, (!))
@@ -78,15 +83,18 @@ import qualified Data.Vector as Vector
 import Debug.Trace
 import GHC.Word (Word64)
 import Prettyprinter (hsep, parens, vsep)
+import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), abstractTxBody)
 import Test.Cardano.Ledger.Generic.Functions
-  ( allInputs,
+  ( adaPots,
+    allInputs,
     getBody,
     getScriptWits,
     getTxOutCoin,
     getWitnesses,
     isValid',
+    totalAda,
     txoutFields,
   )
 import Test.Cardano.Ledger.Generic.GenState
@@ -94,19 +102,30 @@ import Test.Cardano.Ledger.Generic.GenState
     GenRS,
     GenSize (..),
     GenState (..),
-    genPool,
     getBlocksizeMax,
     getReserves,
     getSlot,
     getSlotDelta,
     getTreasury,
+    initStableFields,
     initialLedgerState,
     modifyModel,
     runGenRS,
   )
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcIndividualPoolStake, pcScript, pcScriptHash, pcTxBodyField, pcTxIn, scriptSummary)
+import Test.Cardano.Ledger.Generic.PrettyCore
+  ( pcCoin,
+    pcCredential,
+    pcDCert,
+    pcKeyHash,
+    pcPoolParams,
+    pcScript,
+    pcScriptHash,
+    pcTxBodyField,
+    pcTxIn,
+    scriptSummary,
+  )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
@@ -122,7 +141,7 @@ import Test.Tasty.QuickCheck (testProperty)
 genRsTxAndModel :: Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Core.Tx era)
 genRsTxAndModel proof n slot = do
   (_, tx) <- genValidatedTx proof slot
-  modifyModel (\model -> applyTx proof n model tx)
+  modifyModel (\model -> applyTx proof n slot model tx)
   pure tx
 
 -- | Generate a Vector of (StrictSeq (Core.Tx era))  representing a (Vector Block)
@@ -135,7 +154,10 @@ genRsTxSeq ::
   [(StrictSeq (Core.Tx era), SlotNo)] ->
   SlotNo ->
   GenRS era (Vector (StrictSeq (Core.Tx era), SlotNo))
-genRsTxSeq _ this lastN ans _slot | this >= lastN = pure (Vector.fromList (reverse ans))
+genRsTxSeq proof this lastN ans _slot | this >= lastN = do
+  seq
+    (unsafePerformIO (writeIORef theVector (TT proof (reverse ans))))
+    (pure (Vector.fromList (reverse ans)))
 genRsTxSeq proof this lastN ans slot = do
   maxBlockSize <- getBlocksizeMax <$> get
   n <- lift $ choose (2 :: Int, fromIntegral maxBlockSize)
@@ -165,13 +187,13 @@ runTest = do
 -- ==================================================================
 -- Constructing the "real", initial NewEpochState, from the GenState
 
-genMockChainState ::
+initialMockChainState ::
   Reflect era =>
   Proof era ->
   GenState era ->
-  Gen (MockChainState era)
-genMockChainState proof gstate =
-  pure $ MockChainState newepochstate (getSlot gstate) 0
+  MockChainState era
+initialMockChainState proof gstate =
+  MockChainState newepochstate (getSlot gstate) 0
   where
     ledgerstate = initialLedgerState gstate
     newepochstate =
@@ -197,7 +219,7 @@ makeEpochState gstate ledgerstate =
     }
 
 snaps :: Era era => LedgerState era -> SnapShots (Crypto era)
-snaps (LedgerState UTxOState {_utxo = u} (DPState dstate pstate)) = SnapShots snap snap snap mempty
+snaps (LedgerState UTxOState {_utxo = u, _fees = f} (DPState dstate pstate)) = SnapShots snap snap snap f
   where
     snap = stakeDistr u dstate pstate
 
@@ -214,7 +236,7 @@ pcSmallUTxO proof u txs = ppMap pcTxIn (shortTxOut proof) m
 
 raiseMockError ::
   forall era.
-  (UsesValue era, Reflect era) =>
+  (Reflect era) =>
   Word64 ->
   SlotNo ->
   EpochState era ->
@@ -224,26 +246,41 @@ raiseMockError ::
   String
 raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (_utxo . lsUTxOState . esLState) epochstate
+      _poolParams = (_pParams . dpsPState . lsDPState . esLState) epochstate
    in show $
         vsep
-          [ pcSmallUTxO reify utxo txs,
+          [ ppString "===================================",
+            ppString "UTxO\n" <> pcSmallUTxO reify utxo txs,
             ppString "===================================",
-            ppString "Stable Pools\n" <> ppSet ppKeyHash gsStablePools,
+            ppString "Stable Pools\n" <> ppSet pcKeyHash gsStablePools,
             ppString "===================================",
-            ppString "Initial Pools\n" <> ppMap ppKeyHash pcIndividualPoolStake gsInitialPoolDistr,
+            -- You never know what is NEEDED to debug a failure, and what is a DISTRACTION
+            -- These things certainly fall in that category. I leave them commented out so if
+            -- they are not a distraction in the current error, they are easy to turn back on.
+            -- ppString "Initial Pool Distr\n" <> ppMap pcKeyHash pcIndividualPoolStake gsInitialPoolDistr,
+            -- ppString "===================================",
+            -- ppString "Initial Pool Params\n" <> ppMap pcKeyHash pcPoolParams gsInitialPoolParams,
+            ppString "===================================",
+            ppString "Stable Delegators\n" <> ppSet pcCredential gsStableDelegators,
             ppString "===================================",
             ppString "Initial Rewards\n" <> ppMap pcCredential pcCoin gsInitialRewards,
             ppString "===================================",
             showBlock utxo txs,
             ppString "===================================",
-            ppString (show (totalAdaPotsES epochstate)),
+            ppString (show (adaPots reify epochstate)),
             ppString "===================================",
             ppList (ppMockChainFailure reify) pdfs,
             ppString "===================================",
             ppString "Last Slot " <> ppWord64 slot,
             ppString "Current Slot " <> ppWord64 next,
             ppString "===================================",
-            ppMap pcScriptHash (scriptSummary @era reify) (Map.restrictKeys gsScripts (badScripts reify pdfs))
+            ppString "Script Witnesses\n"
+              <> ppMap
+                pcScriptHash
+                (scriptSummary @era reify)
+                (Map.restrictKeys gsScripts (badScripts reify pdfs))
+                -- ppString "===================================",
+                -- ppString "Real Pool Params\n" <> ppMap pcKeyHash pcPoolParams poolParams
           ]
 
 badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (Crypto era))
@@ -345,7 +382,6 @@ data Gen1 era = Gen1 (Vector (StrictSeq (Core.Tx era), SlotNo)) (GenState era)
 
 instance
   ( STS (MOCKCHAIN era),
-    UsesValue era,
     Reflect era
   ) =>
   HasTrace (MOCKCHAIN era) (Gen1 era)
@@ -357,8 +393,8 @@ instance
   envGen _gstate = pure ()
 
   sigGen (Gen1 txss gs) () mcs@(MockChainState newepoch (SlotNo lastSlot) count) = do
-    let NewEpochState _epochnum _ _ epochstate _ pooldistr _ = newepoch
-    issuerkey <- chooseIssuer pooldistr
+    let NewEpochState epochnum _ _ epochstate _ pooldistr _ = newepoch
+    issuerkey <- chooseIssuer epochnum lastSlot count pooldistr
     let (txs, nextSlotNo) = txss ! count
     -- Assmble it into a MockBlock
     let mockblock = MockBlock issuerkey nextSlotNo txs
@@ -370,28 +406,38 @@ instance
          in trace
               (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl gs)
               (error "FAILS")
-      -- Left pdfs -> trace ("Discard\n"++show(ppList (ppMockChainFailure reify) pdfs)) discard -- TODO should we enable this?
       Right mcs2 -> seq mcs2 (pure mockblock)
 
-  shrinkSignal (MockBlock _ _ xs) | SS.null xs = []
-  shrinkSignal (MockBlock i s xs) = [MockBlock i s (SS.drop 1 xs), MockBlock i s (SS.take (SS.length xs - 1) xs)]
+  shrinkSignal _ = []
 
-mapProportion :: (v -> Int) -> Map.Map k v -> Gen k
-mapProportion toInt m =
+-- TODO, perhaps we might add shrinking like this. Just a thought. Failure is usually caused by just one Tx
+-- in the Block. If the first or last Tx, is independent of the failing Tx, we can probably throw them away.
+--  shrinkSignal (MockBlock _ _ xs) | SS.null xs = []
+--  shrinkSignal (MockBlock i s xs) = [MockBlock i s (SS.drop 1 xs), MockBlock i s (SS.take (SS.length xs - 1) xs)]
+
+mapProportion :: EpochNo -> Word64 -> Int -> Map.Map k Int -> Gen k
+mapProportion epochnum lastSlot count m =
   if null pairs
-    then error "There are no stakepools to choose an issuer from"
+    then
+      error
+        ( "There are no stakepools to choose an issuer from"
+            ++ "\n  epoch = "
+            ++ show epochnum
+            ++ "\n  last slot ="
+            ++ show lastSlot
+            ++ "\n  index of Tx in the trace = "
+            ++ show count
+        )
     else
       if all (\(n, _k) -> n == 0) pairs
-        then
-          trace
-            "All stakepools have zero stake, choose issuer arbitrarily. Probably caused by epoch boundary issue."
-            (snd (head pairs))
-        else frequency pairs
+        then snd (head pairs)
+        else -- All stakepools have zero Stake, choose issuer arbitrarily. possible, but rare.
+          frequency pairs
   where
-    pairs = [(toInt v, pure k) | (k, v) <- Map.toList m]
+    pairs = [(n, pure k) | (k, n) <- Map.toList m]
 
-chooseIssuer :: PoolDistr crypto -> Gen (KeyHash 'StakePool crypto)
-chooseIssuer (PoolDistr m) = mapProportion getInt m
+chooseIssuer :: EpochNo -> Word64 -> Int -> PoolDistr crypto -> Gen (KeyHash 'StakePool crypto)
+chooseIssuer epochnum lastSlot count (PoolDistr m) = mapProportion epochnum lastSlot count (getInt <$> m)
   where
     getInt x = floor (individualPoolStake x * 1000)
 
@@ -413,15 +459,12 @@ genTrace ::
   Gen (Trace (MOCKCHAIN era))
 genTrace proof numTxInTrace gsize initialize = do
   (vs, genstate) <- genTxSeq proof gsize numTxInTrace initialize
-  initState <- genMockChainState proof genstate
+  let initState = initialMockChainState proof genstate
   traceFromInitState @(MOCKCHAIN era)
     testGlobals
     (fromIntegral (length vs))
     (Gen1 vs genstate)
     (Just (\_ -> pure $ Right initState))
-
-makeSomePools :: Reflect era => GenRS era ()
-makeSomePools = mapM_ (const genPool) [1 .. (5 :: Int)]
 
 traceProp ::
   forall era prop.
@@ -434,8 +477,54 @@ traceProp ::
   (MockChainState era -> MockChainState era -> prop) ->
   Gen prop
 traceProp proof numTxInTrace gsize f = do
-  trace1 <- genTrace proof numTxInTrace gsize makeSomePools
+  trace1 <- genTrace proof numTxInTrace gsize (initStableFields proof)
   pure (f (_traceInitState trace1) (lastState trace1))
+
+forEachEpochTrace ::
+  forall era prop.
+  ( Testable prop,
+    Reflect era
+  ) =>
+  Proof era ->
+  Int ->
+  GenSize ->
+  (Trace (MOCKCHAIN era) -> prop) ->
+  Gen Property
+forEachEpochTrace proof tracelen genSize f = do
+  let newEpoch tr1 tr2 = nesEL (mcsNes tr1) /= nesEL (mcsNes tr2)
+  trc <- case proof of
+    Babbage _ -> genTrace proof tracelen genSize (initStableFields proof)
+    Alonzo _ -> genTrace proof tracelen genSize (initStableFields proof)
+    Allegra _ -> genTrace proof tracelen genSize (initStableFields proof)
+    Mary _ -> genTrace proof tracelen genSize (initStableFields proof)
+    Shelley _ -> genTrace proof tracelen genSize (initStableFields proof)
+  let propf (subtrace, index) = counterexample ("Subtrace of EpochNo " ++ show index ++ " fails.") (f subtrace)
+  -- The very last sub-trace may not be a full epoch, so we throw it away.
+  case reverse (splitTrace newEpoch trc) of
+    [] -> pure (property True)
+    _ : revSplits -> pure (conjoin (propf <$> zip (reverse revSplits) [0 :: Int ..]))
+
+-- | Check a property on the 'sts' traces.
+--
+-- Takes an optional generator for initial state of the STS.
+forAllTraceFromInitState ::
+  forall sts traceGenEnv prop.
+  ( HasTrace sts traceGenEnv,
+    Testable prop,
+    Show (Environment sts)
+  ) =>
+  BaseEnv sts ->
+  -- | Maximum trace length.
+  Word64 ->
+  traceGenEnv ->
+  -- | Optional generator of STS initial state
+  Maybe (IRC sts -> Gen (Either [STS.PredicateFailure sts] (State sts))) ->
+  (Trace sts -> prop) ->
+  Property
+forAllTraceFromInitState baseEnv maxTraceLength traceGenEnv genSt0 =
+  forAllShrinkBlind
+    (traceFromInitState @sts @traceGenEnv baseEnv maxTraceLength traceGenEnv genSt0)
+    (const [])
 
 -- =========================================================================
 -- Test for just making a trace
@@ -457,8 +546,8 @@ chainTest proof n gsize = testProperty message action
   where
     message = show proof ++ " era."
     action = do
-      (vs, genstate) <- genTxSeq proof gsize n makeSomePools
-      initState <- genMockChainState proof genstate
+      (vs, genstate) <- genTxSeq proof gsize n (initStableFields proof)
+      let initState = initialMockChainState proof genstate
       trace1 <-
         traceFromInitState @(MOCKCHAIN era)
           testGlobals
@@ -476,8 +565,69 @@ testTraces n =
       chainTest (Alonzo Mock) n def,
       chainTest (Mary Mock) n def,
       chainTest (Allegra Mock) n def,
-      chainTest (Shelley Mock) n def
+      multiEpochTest (Babbage Mock) 225 def,
+      multiEpochTest (Shelley Mock) 225 def
     ]
 
+-- | Show that Ada is preserved across multiple Epochs
+multiEpochTest ::
+  ( Reflect era,
+    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ) =>
+  Proof era ->
+  Int ->
+  GenSize ->
+  TestTree
+multiEpochTest proof numTx gsize =
+  let gensize = gsize {blocksizeMax = 4, slotDelta = (6, 12)}
+      getEpoch mockchainstate = nesEL (mcsNes mockchainstate)
+      propf firstSt lastSt =
+        collect (getEpoch lastSt) (totalAda firstSt === totalAda lastSt)
+   in testProperty
+        ("Multi epoch. Ada is preserved. " ++ show proof ++ " era. Trace length = " ++ show numTx)
+        (traceProp proof numTx gensize propf)
+
+-- ===========================================================
+-- Debugging tools for replaying failures. We store the trace in
+-- the IORef TT, and then we can use 'main3' to display what we
+-- need to see from the trace.
+
 main :: IO ()
-main = defaultMain (chainTest (Mary Mock) 30 def)
+main = defaultMain $ multiEpochTest (Shelley Mock) 200 def
+
+data TT where
+  TT :: Proof era -> [(StrictSeq (Core.Tx era), SlotNo)] -> TT
+
+theVector :: IORef TT
+theVector = unsafePerformIO (newIORef (TT (Babbage Mock) []))
+
+showVector :: (forall era. Proof era -> [Core.Tx era] -> SlotNo -> PDoc) -> IO ()
+showVector pretty = do
+  xs <- readIORef theVector
+  case xs of
+    TT _ [] -> print ("NONE" :: String)
+    TT proof ys -> mapM_ (\(ss, slot) -> print (pretty proof (Fold.toList ss) slot)) ys
+
+main3 :: IO ()
+main3 = showVector pretty
+  where
+    pretty :: Proof era -> [Core.Tx era] -> SlotNo -> PDoc
+    pretty (Babbage Mock) xs slot =
+      vsep
+        [ ppSlotNo slot,
+          vsep (map (ppList pcDCert . Fold.toList . certs' . body) xs)
+        ]
+    pretty p _ _ = ppString ("main3 does not work in era " ++ show p)
+
+main2 :: IO ()
+main2 = defaultMain (chainTest (Babbage Mock) 100 def)
+
+-- | display information about stable fields if the only action is to 'initStableFields'
+displayStableInfo :: IO ()
+displayStableInfo = do
+  let proof = Babbage Mock
+  ((), gstate) <- generate $ runGenRS proof def (initStableFields proof)
+  let mcst = initialMockChainState proof gstate
+  let del = gsInitialPoolParams gstate
+  print (ppMockChainState mcst)
+  print (ppMap pcKeyHash pcPoolParams del)
