@@ -9,13 +9,13 @@ after each block is applied. Note that there are no guarantees about the orderin
 for any given block.
 
 Note thet when we say that an event only occurs on an epoch boundary, we mean that it only occurs on the first
-block of a new ear.
+block of a new epoch.
 
 ## List of Events
 
 ### `NewEpoch epoch`
 
-This event signals the fact that the given block is the first block of a new epoch, namely epoch `epoch`.
+This event signals the fact that the given block is the first block of a new epoch, namely `epoch`.
 
 ### `RetiredPools refundPools unclaimedPools epoch`
 
@@ -115,7 +115,7 @@ which successfully execute.
 The field `debugInformation` is a list of `PlutusDebug`, which is a record containing
 all the information needed to re-run a Plutus script.
 
-### `FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs`
+### `FailedPlutusScriptsEvent debugInformation`
 This event is the same as `SuccessfulPlutusScriptsEvent`, except that it contains the
 information for all the failed Plutus scripts in a single transaction.
 
