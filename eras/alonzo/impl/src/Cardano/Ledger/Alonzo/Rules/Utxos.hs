@@ -17,7 +17,6 @@
 module Cardano.Ledger.Alonzo.Rules.Utxos
   ( UTXOS,
     UtxosPredicateFailure (..),
-    constructValidated,
     lbl2Phase,
     TagMismatchDescription (..),
     validBegin,
@@ -40,20 +39,13 @@ import Cardano.Ledger.Alonzo.PlutusScriptApi
     collectTwoPhaseScriptInputs,
     evalScripts,
   )
-import Cardano.Ledger.Alonzo.Scripts (CostModels, Script)
-import Cardano.Ledger.Alonzo.Tx
-  ( DataHash,
-    IsValid (..),
-    ValidatedTx (..),
-  )
+import Cardano.Ledger.Alonzo.Scripts (Script)
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), PlutusDebug, ScriptFailure (..), ScriptResult (..))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.BaseTypes
-  ( Globals,
-    ProtVer,
-    ShelleyBase,
-    StrictMaybe (..),
+  ( ShelleyBase,
     epochInfo,
     strictMaybeToMaybe,
     systemStart,
@@ -67,12 +59,8 @@ import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
-import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval)
-import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val as Val
-import Control.Monad.Except (MonadError (throwError))
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.ByteString as BS (ByteString)
@@ -84,8 +72,6 @@ import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
 import Data.Text (Text)
 import Debug.Trace (traceEvent)
 import GHC.Generics (Generic)
@@ -373,54 +359,6 @@ instance
   ) =>
   NoThunks (UtxosPredicateFailure era)
 
--- =================================================================
-
--- | Construct a 'ValidatedTx' from a 'Core.Tx' by setting the `IsValid`
--- flag.
---
--- Note that this simply constructs the transaction; it does not validate
--- anything other than the scripts. Thus the resulting transaction may be
--- completely invalid.
-constructValidated ::
-  forall era m.
-  ( MonadError [UtxosPredicateFailure era] m,
-    Core.Script era ~ Script era,
-    Core.TxOut era ~ Alonzo.TxOut era,
-    Core.Witnesses era ~ Alonzo.TxWitness era,
-    ValidateScript era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "_costmdls" (Core.PParams era) CostModels,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "vldt" (Core.TxBody era) ValidityInterval,
-    ExtendedUTxO era
-  ) =>
-  Globals ->
-  UtxoEnv era ->
-  UTxOState era ->
-  Core.Tx era ->
-  m (ValidatedTx era)
-constructValidated globals (UtxoEnv _ pp _ _) st tx =
-  case collectTwoPhaseScriptInputs ei sysS pp tx utxo of
-    Left errs -> throwError [CollectErrors errs]
-    Right sLst ->
-      let scriptEvalResult = evalScripts @era (getField @"_protocolVersion" pp) tx sLst
-          vTx =
-            ValidatedTx
-              (getField @"body" tx)
-              (getField @"wits" tx)
-              (IsValid (lift scriptEvalResult))
-              (getField @"auxiliaryData" tx)
-       in pure vTx
-  where
-    utxo = _utxo st
-    sysS = systemStart globals
-    ei = epochInfo globals
-    lift (Passes _) = True
-    lift (Fails _ _) = False
-
 --------------------------------------------------------------------------------
 -- 2-phase checks
 --------------------------------------------------------------------------------
@@ -429,8 +367,7 @@ constructValidated globals (UtxoEnv _ pp _ _) st tx =
 --
 -- Above and beyond 'static' checks (see 'Cardano.Ledger.Rules.ValidateMode') we
 -- additionally label 2-phase checks. This is to support a workflow where we
--- validate a 'ValidatedTx' directly after constructing it with
--- 'constructValidated' - we would like to trust the flag we have ourselves just
+-- validate a 'ValidatedTx'. We would like to trust the flag we have ourselves just
 -- computed rather than re-calculating it. However, all other checks should be
 -- computed as normal.
 
