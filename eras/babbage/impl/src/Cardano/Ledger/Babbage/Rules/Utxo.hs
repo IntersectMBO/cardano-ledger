@@ -14,7 +14,6 @@ module Cardano.Ledger.Babbage.Rules.Utxo where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize)
 import Cardano.Ledger.Address (bootstrapAddressAttrsSize)
-import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Rules.Utxo
   ( UtxoEvent (..),
     UtxoPredicateFailure (..),
@@ -90,7 +89,6 @@ import Data.Foldable (Foldable (foldl'), sequenceA_)
 import Data.List.NonEmpty (NonEmpty)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
-import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import GHC.Natural (Natural)
 import GHC.Records (HasField (getField))
@@ -111,10 +109,6 @@ data BabbageUtxoPred era
       -- ^ collateral needed
       !Coin
       -- ^ collateral returned
-  | -- | the set of hashes in the transaction datum objects that are not in use
-    -- in the inputHashes or outputs
-    DanglingWitnessDataHash
-      !(Set.Set (DataHash (Crypto era)))
   | -- | the set of malformed scripts
     MalformedScripts
       !(Set (ScriptHash (Crypto era)))
@@ -471,9 +465,8 @@ instance
       work (FromAlonzoUtxoFail x) = Sum FromAlonzoUtxoFail 1 !> To x
       work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 2 !> To x
       work (UnequalCollateralReturn c1 c2) = Sum UnequalCollateralReturn 3 !> To c1 !> To c2
-      work (DanglingWitnessDataHash x) = Sum DanglingWitnessDataHash 4 !> To x
-      work (MalformedScripts x) = Sum MalformedScripts 5 !> To x
-      work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 6 !> To x
+      work (MalformedScripts x) = Sum MalformedScripts 4 !> To x
+      work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 5 !> To x
 
 instance
   ( Era era,
@@ -492,9 +485,8 @@ instance
       work 1 = SumD FromAlonzoUtxoFail <! From
       work 2 = SumD FromAlonzoUtxowFail <! From
       work 3 = SumD UnequalCollateralReturn <! From <! From
-      work 4 = SumD DanglingWitnessDataHash <! From
-      work 5 = SumD MalformedScripts <! From
-      work 6 = SumD BabbageOutputTooSmallUTxO <! From
+      work 4 = SumD MalformedScripts <! From
+      work 5 = SumD BabbageOutputTooSmallUTxO <! From
       work n = Invalid n
 
 deriving via InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era) instance NoThunks (BabbageUtxoPred era)
