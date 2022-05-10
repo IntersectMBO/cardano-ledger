@@ -45,6 +45,7 @@ import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
     epochInfoWithErr,
     networkId,
+    stabilityWindow,
     systemStart,
   )
 import Cardano.Ledger.Coin (Coin (..))
@@ -345,9 +346,10 @@ utxoTransition = do
 
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfoWithErr
+  sw <- liftSTS $ asks stabilityWindow
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast ei sysSt tx
+  runTest $ validateOutsideForecast pp ei slot sysSt sw tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txb
