@@ -10,6 +10,8 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
+-- computed from testGlobals
+
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.BaseTypes (TxIx, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
@@ -29,6 +31,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Foldable (toList)
 import qualified Data.List as List
 import Data.Map (Map)
@@ -36,6 +39,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Debug.Trace
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (collateralOutputTx, initUTxO)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
@@ -48,6 +52,7 @@ import Test.Cardano.Ledger.Generic.ModelState
   )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 -- ========================================================================
 
@@ -56,17 +61,26 @@ hasValid [] = Nothing
 hasValid (Valid (IsValid b) : _) = Just b
 hasValid (_ : fs) = hasValid fs
 
-applyTx :: Reflect era => Proof era -> Int -> Model era -> Core.Tx era -> Model era
-applyTx proof count model tx = ans
+applyTx :: Reflect era => Proof era -> Int -> SlotNo -> Model era -> Core.Tx era -> Model era
+applyTx proof count slot model tx = ans
   where
+    transactionEpoch = epochFromSlotNo slot
+    modelEpoch = mEL model
+    epochAccurateModel = epochBoundary count slot transactionEpoch modelEpoch model
     txbody = (getBody proof tx)
     outputs = getOutputs proof txbody
     fields = abstractTx proof tx
     nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
     ans = case hasValid fields of
-      Nothing -> List.foldl' (applyTxSimple proof count) model fields
-      Just True -> List.foldl' (applyTxSimple proof count) model fields
-      Just False -> List.foldl' (applyTxFail proof count nextTxIx) model fields
+      Nothing -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
+      Just True -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
+      Just False -> List.foldl' (applyTxFail proof count nextTxIx) epochAccurateModel fields
+
+epochBoundary :: Int -> SlotNo -> EpochNo -> EpochNo -> Model era -> Model era
+epochBoundary count (SlotNo n) transactionEpoch modelEpoch model =
+  if transactionEpoch > modelEpoch
+    then model {mEL = trace ("EPOCH count=" ++ show count ++ " slot=" ++ show n ++ " epoch=" ++ show transactionEpoch) transactionEpoch}
+    else model
 
 applyTxSimple :: Proof era -> Int -> Model era -> TxField era -> Model era
 applyTxSimple proof count model field = case field of
@@ -108,7 +122,7 @@ applyCert proof model dcert = case dcert of
       pp = mPParams model
       (keydeposit, _) = keyPoolDeposits proof pp
   (DCertDeleg (DeRegKey x)) -> case Map.lookup x (mRewards model) of
-    Nothing -> error $ "DeRegKey not in rewards: " <> show (pcCredential x)
+    Nothing -> error . show $ "DeRegKey not in rewards: " <> pcCredential x
     Just (Coin 0) ->
       model
         { mRewards = Map.delete x (mRewards model),
@@ -233,7 +247,7 @@ go = do
             mFees = Coin 10,
             mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))
           }
-      model2 = applyTx proof 0 model1 tx
+      model2 = applyTx proof 0 (SlotNo 0) model1 tx
   print (pcModelNewEpochState proof model1)
   print doc
   print (pcModelNewEpochState proof model2)

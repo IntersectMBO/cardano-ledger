@@ -50,6 +50,7 @@ module Test.Cardano.Ledger.Generic.GenState
     getNewPoolTest,
     viewGenState,
     initialLedgerState,
+    initStableFields,
     modifyModel,
     runGenRS,
     ioGenRS,
@@ -57,6 +58,7 @@ module Test.Cardano.Ledger.Generic.GenState
   )
 where
 
+-- import Debug.Trace
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
@@ -184,6 +186,7 @@ data GenState era = GenState
     gsModel :: !(ModelNewEpochState era),
     gsInitialUtxo :: !(Map (TxIn (Crypto era)) (Core.TxOut era)),
     gsInitialRewards :: !(Map (Credential 'Staking (Crypto era)) Coin),
+    gsInitialDelegations :: !(Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))),
     gsInitialPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
     gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (Crypto era)) (IndividualPoolStake (Crypto era))),
     -- Stable fields are stable from initialization to the end of the generation process
@@ -206,6 +209,7 @@ emptyGenState proof genv =
     mempty
     mempty
     mNewEpochStateZero
+    Map.empty
     Map.empty
     Map.empty
     Map.empty
@@ -426,6 +430,7 @@ initStableFields proof = do
       )
     modifyModel (\ms -> ms {mPoolParams = Map.insert kh pp $ mPoolParams ms})
     return kh
+
   -- This incantation gets a list of fresh (not previously generated) Credential
   credentials <- replicateM maxStablePools $ do
     old' <- gets (Map.keysSet . gsInitialRewards)
@@ -451,14 +456,15 @@ initStableFields proof = do
                   mDeposited = mDeposited ms <+> keydeposit
                 }
           )
+        modify (\gs -> gs {gsInitialDelegations = Map.insert cred kh $ gsInitialDelegations gs})
   zipWithM_ f credentials hashes
 
 runGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> Gen (ans, GenState era)
-runGenRS proof gsize action = do
-  genenv <- genGenEnv proof gsize
-  let action' = initStableFields proof >> action
-  (ans, state, ()) <- runRWST action' genenv (emptyGenState proof genenv)
-  pure (ans, state)
+runGenRS proof gsize action =
+  do
+    genenv <- genGenEnv proof gsize
+    (ans, state, ()) <- runRWST action genenv (emptyGenState proof genenv)
+    pure (ans, state)
 
 -- | Should not be used in tests, this is a helper function to be used in ghci only!
 ioGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> IO (ans, GenState era)
@@ -529,7 +535,8 @@ genDatumWithHash = do
     ts {gsDatums = Map.insert datumHash datum gsDatums}
   pure (datumHash, datum)
 
--- Adds to the rewards of the ModelNewEpochState
+-- Adds to the rewards of the ModelNewEpochState. This used exclusively to generate Withdrawals, so
+-- we mark these as ones to avoid in the future. Especialy when generating DeRegKey.
 genRewards :: Reflect era => GenRS era (RewardAccounts (Crypto era))
 genRewards = do
   wmax <- gets (withdrawalMax . geSize . gsGenEnv)
@@ -541,23 +548,32 @@ genRewards = do
   credentials <- genFreshCredentials n 100 Rewrd (Set.union old prev) []
   newRewards <- Map.fromList <$> mapM (\x -> (,) x <$> lift genRewardVal) credentials
   modifyModel (\m -> m {mRewards = eval (mRewards m ⨃ newRewards)}) -- Prefers coins in newrewards
-  modify (\st -> st {gsInitialRewards = eval (gsInitialRewards st ⨃ newRewards)})
+  modify
+    ( \st ->
+        st
+          { gsInitialRewards = eval (gsInitialRewards st ⨃ newRewards),
+            gsAvoidCred = Set.union (Set.fromList credentials) (gsAvoidCred st)
+          }
+    )
   pure newRewards
 
 genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
 genRetirementHash = do
-  m <- gets $ mPoolParams . gsModel
+  m <- gets (mPoolParams . gsModel)
   honestKhs <- gets gsStablePools
   avoidKey <- gets gsAvoidKey
   res <- lift . genMapElemWhere m 10 $ \kh _ ->
     kh `Set.notMember` honestKhs && kh `Set.notMember` avoidKey
   case res of
-    Just x -> return $ fst x
+    Just x -> do
+      modify (\st -> st {gsAvoidKey = Set.insert (fst x) (gsAvoidKey st)})
+      -- if it is retiring, we should probably avoid it in the future
+      pure $ fst x
     Nothing -> do
       (kh, pp, ips) <- genNewPool
       addPoolToInitialState kh pp ips
       addPoolToModel kh pp ips
-      return kh
+      pure kh
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,
 --   if it doesn't work in 'tries' attempts then quit with an error. Better to raise an error
@@ -600,21 +616,19 @@ genPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era)
 genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do
-      (kh, pp, _) <- genNewPool
+      (kh, pp, ips) <- genNewPool
+      addPoolToInitialState kh pp ips
       modifyModel $ \m ->
         m
           { mPoolParams = Map.insert kh pp $ mPoolParams m
           }
-      modify $ \st ->
-        st
-          { gsInitialPoolParams = Map.insert kh pp $ gsInitialPoolParams st
-          }
       return (kh, pp)
     pickExisting = do
       _pParams <- gets (mPoolParams . gsModel)
-      lift (genMapElem _pParams) >>= \case
+      avoidKey <- gets gsAvoidKey
+      lift (genMapElemWhere _pParams 10 (\kh _ -> kh `Set.notMember` avoidKey)) >>= \case
         Nothing -> genNew
-        Just (poolId, pp) -> pure (poolId, pp)
+        Just (kh, pp) -> pure (kh, pp)
 
 genFreshKeyHash :: Reflect era => GenRS era (KeyHash kr (Crypto era))
 genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash collisions.
@@ -694,7 +708,7 @@ genCredential tag =
     ]
   where
     genKeyHash' = do
-      kh <- genKeyHash
+      kh <- genFreshKeyHash -- We need to avoid some key credentials
       case tag of
         Rewrd -> modify $ \st ->
           st {gsInitialRewards = Map.insert (KeyHashObj kh) (Coin 0) $ gsInitialRewards st}
@@ -890,7 +904,7 @@ genFreshRegCred = do
 -- =================================================================
 
 pcGenState :: Reflect era => Proof era -> GenState era -> PDoc
-pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoolp ipoold hp hd avcred _avkey prf _genenv _si) =
+pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew idel ipoolp ipoold hp hd avcred _avkey prf _genenv _si) =
   ppRecord
     "GenState Summary"
     [ ("ValidityInterval", ppValidityInterval vi),
@@ -902,6 +916,7 @@ pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoo
       ("Model", pcModelNewEpochState proof model),
       ("Initial Utxo", ppMap pcTxIn (pcTxOut proof) iutxo),
       ("Initial Rewards", ppMap pcCredential pcCoin irew),
+      ("Initial Delegations", ppMap pcCredential pcKeyHash idel),
       ("Initial PoolParams", ppMap pcKeyHash pcPoolParams ipoolp),
       ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake ipoold),
       ("Stable PoolParams", ppSet pcKeyHash hp),
@@ -924,12 +939,12 @@ instance era ~ BabbageEra Mock => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
-    rewards = UMap.unify (gsInitialRewards gstate) Map.empty Map.empty
+    umap = UMap.unify (gsInitialRewards gstate) (gsInitialDelegations gstate) Map.empty
     utxostate = smartUTxOState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) (pPUPStateZero @era)
     dpstate = DPState dstate pstate
     dstate =
       DState
-        rewards
+        umap
         Map.empty
         genDelegsZero
         instantaneousRewardsZero

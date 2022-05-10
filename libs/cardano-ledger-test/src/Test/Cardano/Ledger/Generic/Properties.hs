@@ -45,6 +45,7 @@ import Test.Cardano.Ledger.Generic.GenState
     GenSize (..),
     GenState (..),
     blocksizeMax,
+    initStableFields,
     modifyModel,
     runGenRS,
   )
@@ -110,7 +111,7 @@ genTxAndLEDGERState proof sizes = do
         let ledgerState = extract @(LedgerState era) model
             ledgerEnv = LedgerEnv slotNo txIx pp (AccountState (Coin 0) (Coin 0))
         pure $ TRC (ledgerEnv, ledgerState, tx)
-  (trc, genstate) <- runGenRS proof sizes genT
+  (trc, genstate) <- runGenRS proof sizes (initStableFields proof >> genT)
   pure (Box proof trc genstate)
 
 -- =============================================
@@ -224,25 +225,26 @@ adaIsPreserved ::
     HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
+  Int ->
   GenSize ->
   TestTree
-adaIsPreserved proof gensize =
-  testProperty (show proof ++ " era. Trace length = 45") $
-    traceProp proof 45 gensize (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
+adaIsPreserved proof numTx gensize =
+  testProperty (show proof ++ " era. Trace length = " ++ show numTx) $
+    traceProp proof numTx gensize (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
 
-tracePreserveAda :: GenSize -> TestTree
-tracePreserveAda gensize =
+tracePreserveAda :: Int -> GenSize -> TestTree
+tracePreserveAda numTx gensize =
   testGroup
-    "Total Ada is preserved over traces of length 3"
-    [ adaIsPreservedBabbage gensize,
-      adaIsPreserved (Alonzo Mock) gensize,
-      adaIsPreserved (Mary Mock) gensize,
-      adaIsPreserved (Allegra Mock) gensize,
-      adaIsPreserved (Shelley Mock) gensize
+    ("Total Ada is preserved over traces of length " ++ show numTx)
+    [ adaIsPreservedBabbage numTx gensize,
+      adaIsPreserved (Alonzo Mock) numTx gensize,
+      adaIsPreserved (Mary Mock) numTx gensize,
+      adaIsPreserved (Allegra Mock) numTx gensize,
+      adaIsPreserved (Shelley Mock) numTx gensize
     ]
 
-adaIsPreservedBabbage :: GenSize -> TestTree
-adaIsPreservedBabbage gensize = adaIsPreserved (Babbage Mock) gensize
+adaIsPreservedBabbage :: Int -> GenSize -> TestTree
+adaIsPreservedBabbage numTx gensize = adaIsPreserved (Babbage Mock) numTx gensize
 
 -- | The incremental Stake invaraint is preserved over a trace of length 45
 stakeInvariant :: Era era => MockChainState era -> MockChainState era -> Property
@@ -272,7 +274,7 @@ genericProperties gensize =
     "Generic Property tests"
     [ coreTypesRoundTrip,
       txPreserveAda gensize,
-      tracePreserveAda gensize,
+      tracePreserveAda 45 gensize,
       incrementalStake gensize,
       testTraces 45
     ]
@@ -283,7 +285,7 @@ genericProperties gensize =
 -- :main --quickcheck-replay=205148
 
 main :: IO ()
-main = defaultMain $ adaIsPreservedBabbage (def {blocksizeMax = 4})
+main = defaultMain $ adaIsPreservedBabbage 100 (def {blocksizeMax = 4})
 
 main8 :: IO ()
 main8 = test 100 (Babbage Mock)
