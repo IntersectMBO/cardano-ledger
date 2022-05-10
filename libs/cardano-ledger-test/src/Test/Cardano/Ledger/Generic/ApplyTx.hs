@@ -1,27 +1,31 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
+import Cardano.Ledger.BaseTypes (TxIx, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
-import Cardano.Ledger.SafeHash (SafeHash)
-import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..), EraIndependentTxBody, PoolCert (..), PoolParams (..), RewardAcnt (..), Wdrl (..))
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    EraIndependentTxBody,
+    PoolCert (..),
+    PoolParams (..),
+    RewardAcnt (..),
+    Wdrl (..),
+  )
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Foldable (toList)
@@ -32,9 +36,17 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
+import Test.Cardano.Ledger.Examples.BabbageFeatures (collateralOutputTx, initUTxO)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
-import Test.Cardano.Ledger.Generic.Functions (getTxOutCoin, keyPoolDeposits, txInBalance)
-import Test.Cardano.Ledger.Generic.ModelState (Model, ModelNewEpochState (..))
+import Test.Cardano.Ledger.Generic.Functions (getBody, getOutputs, getTxOutCoin, keyPoolDeposits, txInBalance)
+import Test.Cardano.Ledger.Generic.ModelState
+  ( Model,
+    ModelNewEpochState (..),
+    mNewEpochStateZero,
+    pcModelNewEpochState,
+    toMUtxo,
+  )
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 
 -- ========================================================================
@@ -47,15 +59,18 @@ hasValid (_ : fs) = hasValid fs
 applyTx :: Reflect era => Proof era -> Int -> Model era -> Core.Tx era -> Model era
 applyTx proof count model tx = ans
   where
+    txbody = (getBody proof tx)
+    outputs = getOutputs proof txbody
     fields = abstractTx proof tx
+    nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
     ans = case hasValid fields of
       Nothing -> List.foldl' (applyTxSimple proof count) model fields
       Just True -> List.foldl' (applyTxSimple proof count) model fields
-      Just False -> List.foldl' (applyTxFail proof count) model fields
+      Just False -> List.foldl' (applyTxFail proof count nextTxIx) model fields
 
 applyTxSimple :: Proof era -> Int -> Model era -> TxField era -> Model era
 applyTxSimple proof count model field = case field of
-  Body body -> applyTxBody proof count model body
+  Body body1 -> applyTxBody proof count model body1
   BodyI fs -> List.foldl' (applyField proof count) model fs
   Witnesses _ -> model
   WitnessesI _ -> model
@@ -69,10 +84,10 @@ applyField :: Proof era -> Int -> Model era -> TxBodyField era -> Model era
 applyField proof count model field = case field of
   (Inputs txins) -> model {mUTxO = Map.withoutKeys (mUTxO model) txins}
   (Outputs seqo) -> case Map.lookup count (mIndex model) of
-    Nothing -> error "Output not found"
+    Nothing -> error ("Output not found phase1: " ++ show (mIndex model))
     Just (TxId hash) -> model {mUTxO = Map.union newstuff (mUTxO model)}
       where
-        newstuff = additions hash (toList seqo)
+        newstuff = additions hash minBound (toList seqo)
   (Txfee coin) -> model {mFees = coin <+> (mFees model)}
   (Certs seqc) -> List.foldl' (applyCert proof) model (toList seqc)
   (Wdrls (Wdrl m)) -> Map.foldlWithKey' (applyWdrl proof) model m
@@ -144,18 +159,23 @@ collInfo ::
   (Reflect era, HasCallStack) =>
   Proof era ->
   Int ->
+  TxIx ->
   Model era ->
   CollInfo era ->
   TxBodyField era ->
   CollInfo era
-collInfo proof count model info field = case field of
+collInfo proof count firstTxIx model info field = case field of
   CollateralReturn SNothing -> info
   CollateralReturn (SJust txout) ->
     case Map.lookup count (mIndex model) of
-      Nothing -> error "Output not found"
-      Just (TxId hash) -> info {ciRet = getTxOutCoin proof txout, ciAddmap = newstuff}
+      Nothing -> error ("Output not found phase2: " ++ show (count, mIndex model))
+      Just (TxId hash) ->
+        info
+          { ciRet = getTxOutCoin proof txout,
+            ciAddmap = newstuff
+          }
         where
-          newstuff = additions hash [txout]
+          newstuff = additions hash firstTxIx [txout]
   Collateral inputs ->
     info
       { ciDelset = inputs,
@@ -170,14 +190,14 @@ updateInfo info m =
       mFees = mFees m <+> ciBal info <-> ciRet info
     }
 
-applyTxFail :: Reflect era => Proof era -> Int -> Model era -> TxField era -> Model era
-applyTxFail proof count model field = case field of
-  Body body -> updateInfo info model
+applyTxFail :: Reflect era => Proof era -> Int -> TxIx -> Model era -> TxField era -> Model era
+applyTxFail proof count nextTxIx model field = case field of
+  Body body2 -> updateInfo info model
     where
-      info = List.foldl' (collInfo proof count model) emptyCollInfo (abstractTxBody proof body)
+      info = List.foldl' (collInfo proof count nextTxIx model) emptyCollInfo (abstractTxBody proof body2)
   BodyI fs -> updateInfo info model
     where
-      info = List.foldl' (collInfo proof count model) emptyCollInfo fs
+      info = List.foldl' (collInfo proof count nextTxIx model) emptyCollInfo fs
   Witnesses _ -> model
   WitnessesI _ -> model
   AuxData _ -> model
@@ -187,10 +207,33 @@ applyTxFail proof count model field = case field of
 
 additions ::
   SafeHash (Crypto era) EraIndependentTxBody ->
+  TxIx ->
   [Core.TxOut era] ->
   Map (TxIn (Crypto era)) (Core.TxOut era)
-additions bodyhash outputs =
+additions bodyhash firstTxIx outputs =
   Map.fromList
     [ (TxIn (TxId bodyhash) idx, out)
-      | (out, idx) <- zip outputs [minBound ..]
+      | (out, idx) <- zip outputs [firstTxIx ..]
     ]
+
+-- | This is a template of how we might create unit tests that run both the real STS rules
+--   and the model to see that they agree. 'collateralOutputTx' and 'initUTxO' are from
+--   the BabbageFeatures.hs unit test file.
+go :: IO ()
+go = do
+  let proof = Babbage Mock
+      tx = (collateralOutputTx proof) {isValid = IsValid False}
+      allinputs = getAllTxInputs txbody
+      txbody = body tx
+      doc = pcTx proof tx
+      model1 =
+        (mNewEpochStateZero @(BabbageEra Mock))
+          { mUTxO = Map.restrictKeys (toMUtxo (initUTxO proof)) allinputs,
+            mCount = 0,
+            mFees = Coin 10,
+            mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))
+          }
+      model2 = applyTx proof 0 model1 tx
+  print (pcModelNewEpochState proof model1)
+  print doc
+  print (pcModelNewEpochState proof model2)

@@ -56,7 +56,7 @@ import Control.State.Transition
   )
 import qualified Data.Map as Map
 import Data.Maybe.Strict (StrictMaybe)
-import Data.Sequence (Seq (..))
+import Data.Sequence.Strict (StrictSeq (..), fromStrict)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( pcNewEpochState,
@@ -72,26 +72,26 @@ data MOCKCHAIN era -- This is a Testing only STS instance
 type instance Core.EraRule "MOCKCHAIN" era = MOCKCHAIN era
 
 data MockChainFailure era
-  = MockChainFromTickFailure (TickPredicateFailure era)
-  | MockChainFromLedgersFailure (LedgersPredicateFailure era)
+  = MockChainFromTickFailure !(TickPredicateFailure era)
+  | MockChainFromLedgersFailure !(LedgersPredicateFailure era)
   | BlocksOutOfOrder
-      SlotNo -- The last applied block SlotNo
-      SlotNo -- The candidate block SlotNo
+      !SlotNo -- The last applied block SlotNo
+      !SlotNo -- The candidate block SlotNo
 
 data MockChainEvent era
-  = MockChainFromTickEvent (TickEvent era)
-  | MockChainFromLedgersEvent (LedgersEvent era)
+  = MockChainFromTickEvent !(TickEvent era)
+  | MockChainFromLedgersEvent !(LedgersEvent era)
 
 data MockBlock era = MockBlock
-  { mbIssuer :: KeyHash 'StakePool (Crypto era),
-    mbSlot :: SlotNo,
-    mbTrans :: Seq (Core.Tx era)
+  { mbIssuer :: !(KeyHash 'StakePool (Crypto era)),
+    mbSlot :: !SlotNo,
+    mbTrans :: !(StrictSeq (Core.Tx era))
   }
 
 data MockChainState era = MockChainState
-  { mcsNes :: NewEpochState era,
-    mcsLastBlock :: SlotNo,
-    mcsCount :: Int -- Counts the blocks made
+  { mcsNes :: !(NewEpochState era),
+    mcsLastBlock :: !SlotNo,
+    mcsCount :: !Int -- Counts the blocks made
   }
 
 deriving instance
@@ -111,7 +111,7 @@ instance Show (MockBlock era) where
   show (MockBlock is sl _) = show is ++ " " ++ show sl
 
 instance Reflect era => TotalAda (MockChainState era) where
-  totalAda (MockChainState nes _lastbock _count) = totalAda nes
+  totalAda (MockChainState nes _ _) = totalAda nes
 
 -- ======================================================================
 
@@ -164,7 +164,7 @@ chainTransition = do
   let newblocksmade = BlocksMade (Map.unionWith (+) current (Map.singleton issuer 1))
 
   newledgerState <-
-    trans @(LEDGERS era) $ TRC (LedgersEnv slot pparams account, ledgerState, txs)
+    trans @(LEDGERS era) $ TRC (LedgersEnv slot pparams account, ledgerState, fromStrict txs)
 
   let newEpochstate = epochState {esLState = newledgerState}
       newNewEpochState = nes' {nesEs = newEpochstate, nesBcur = newblocksmade}

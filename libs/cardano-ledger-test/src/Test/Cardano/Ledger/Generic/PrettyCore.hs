@@ -40,6 +40,7 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
 import qualified Cardano.Ledger.Pretty.Babbage as Babbage
 import Cardano.Ledger.Pretty.Mary
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -1223,7 +1224,7 @@ pcTxBodyField proof x = case x of
 
 pcTxField :: Reflect era => Proof era -> TxField era -> [(Text, PDoc)]
 pcTxField proof x = case x of
-  Body b -> [("body", pcTxBody proof b)]
+  Body b -> [("txbody hash", ppSafeHash (hashAnnotated b)), ("body", pcTxBody proof b)]
   BodyI xs -> [("body", ppRecord "TxBody" (concat (map (pcTxBodyField proof) xs)))]
   Witnesses w -> [("witnesses", pcWitnesses proof w)]
   WitnessesI ws -> [("witnesses", ppRecord "Witnesses" (concat (map (pcWitnessesField proof) ws)))]

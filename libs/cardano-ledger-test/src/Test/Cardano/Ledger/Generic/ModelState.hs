@@ -138,6 +138,9 @@ toMUtxo (UTxO m) = SplitMap.toMap m
 fromMUtxo :: MUtxo era -> UTxO era
 fromMUtxo m = UTxO (SplitMap.fromMap m)
 
+pcMUtxo :: Reflect era => Proof era -> MUtxo era -> PDoc
+pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
+
 -- ===========================================================
 
 data ModelNewEpochState era = ModelNewEpochState
