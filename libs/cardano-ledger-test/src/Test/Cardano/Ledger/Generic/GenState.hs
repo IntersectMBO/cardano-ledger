@@ -506,6 +506,15 @@ genCredential tag =
         Just (h, _) -> pure h
         Nothing -> genScript reify tag
 
+-- | Generate a transaction body validity interval which is close in proximity
+--  (less than a stability window) from the current slot.
+genValidityInterval :: SlotNo -> Gen ValidityInterval
+genValidityInterval (SlotNo s) = do
+  let stabilityWindow = 29 -- < 3k/f many slots, where 10k is the epoch length
+  start <- frequency [(1, pure SNothing), (4, SJust <$> choose (minBound, s))]
+  end <- frequency [(1, pure SNothing), (4, SJust <$> choose (s + 1, s + stabilityWindow))]
+  pure $ ValidityInterval (SlotNo <$> start) (SlotNo <$> end)
+
 -- ===========================================================
 -- Generate Era agnostic Scripts
 
