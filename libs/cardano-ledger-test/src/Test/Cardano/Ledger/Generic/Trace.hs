@@ -15,6 +15,7 @@ module Test.Cardano.Ledger.Generic.Trace where
 
 -- =========================================================================
 
+import Debug.Trace
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Ledger ()
@@ -23,7 +24,8 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
-import Cardano.Ledger.Pretty (PDoc, ppInt, ppList, ppMap, ppSafeHash, ppStrictSeq, ppString, ppWord64)
+import Cardano.Ledger.Pretty
+ (PDoc, ppInt, ppList, ppMap, ppSafeHash, ppString, ppWord64)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API.Wallet (totalAdaPotsES)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
@@ -76,52 +78,42 @@ import Test.Cardano.Ledger.Generic.ModelState
   ( stashedAVVMAddressesZero,
     toMUtxo,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTx, pcTxBody, pcTxIn)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTxBody, pcTxIn)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.QuickCheck
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
+import Control.Monad (replicateM)
+import Control.State.Transition.Trace(traceSignals,TraceOrder(..)) 
 
 -- ===========================================
 
 -- | Generate a Core.Tx and an internal Model of the state after the tx
 --   has been applied. That model can be used to generate the next Tx
-genRsTxAndModel :: Reflect era => Proof era -> Word64 -> SlotNo -> GenRS era (Core.Tx era)
+genRsTxAndModel :: Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Core.Tx era)
 genRsTxAndModel proof n slot = do
-  (_, tx) <- genValidatedTx proof slot
-  tx <$ modifyModel (\model -> applyTx proof (fromIntegral n) model tx)
+  (_, tx) <- genValidatedTx proof (trace ("TX AND MODEL SLOT " ++show slot) slot)
+  tx <$ modifyModel (\model -> applyTx proof n model tx)
 
 -- | Generate a Vector of (StrictSeq (Core.Tx era))  representing a (Vector Block)
 genRsTxSeq ::
   forall era.
   Reflect era =>
   Proof era ->
-  Word64 ->
-  Word64 ->
-  [Core.Tx era] ->
+  Int ->
+  Int ->
+  [(StrictSeq (Core.Tx era),SlotNo)] ->
   SlotNo ->
-  GenRS era (Vector (StrictSeq (Core.Tx era)))
-genRsTxSeq _ this lastN ans _slot | this >= lastN = chop (reverse ans) []
+  GenRS era (Vector (StrictSeq (Core.Tx era),SlotNo))
+genRsTxSeq _ this lastN ans _slot | this >= lastN = pure(Vector.fromList (reverse ans))
 genRsTxSeq proof this lastN ans slot = do
-  tx <- genRsTxAndModel proof this slot
-  genRsTxSeq proof (this + 1) lastN (tx : ans) slot
-
--- | Chop a list into random size blocks
-chop ::
-  [Core.Tx era] ->
-  [StrictSeq (Core.Tx era)] ->
-  GenRS era (Vector (StrictSeq (Core.Tx era)))
-chop [] ans = pure $ Vector.fromList (reverse ans)
-chop xs ans
-  | length (Prelude.take 4 xs) <= 3 =
-      pure $ Vector.fromList (reverse (SS.fromList xs : ans))
-chop pairs ans = do
   maxBlockSize <- getBlocksizeMax <$> get
   n <- lift $ choose (2 :: Int, fromIntegral maxBlockSize)
-  let block = SS.fromList $ Prelude.take n pairs
-  chop (Prelude.drop n pairs) (block : ans)
+  nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose (5, 12)
+  txs <- replicateM n (genRsTxAndModel proof this nextSlotNo)
+  genRsTxSeq proof (this + n) lastN ((SS.fromList txs,slot) : ans) nextSlotNo
 
 -- | Generate a Vector of Blocks, and an initial LedgerState
 genTxSeq ::
@@ -129,15 +121,10 @@ genTxSeq ::
   Reflect era =>
   Proof era ->
   GenSize ->
-  Word64 ->
-  Gen (Vector (StrictSeq (Core.Tx era)), GenState era)
+  Int ->
+  Gen (Vector (StrictSeq (Core.Tx era),SlotNo), GenState era)
 genTxSeq proof gensize numTx = do
-  runGenRS proof gensize (genRsTxSeq proof 0 numTx [] (SlotNo $ startSlot gensize))
-
-run :: IO ()
-run = do
-  (vs, _) <- generate $ genTxSeq (Babbage Mock) def 5
-  print (ppList (ppStrictSeq (pcTx (Babbage Mock))) (Vector.toList vs))
+  runGenRS proof gensize (genRsTxSeq proof 0 numTx [] (SlotNo $ 1)) -- startSlot gensize))
 
 -- ==================================================================
 -- Constructing the "real", initial NewEpochState, from the GenState
@@ -186,16 +173,18 @@ pcSmallUTxO proof u txs = ppMap pcTxIn (pcCoin . getTxOutCoin proof) m
 raiseMockError ::
   (UsesValue era, Reflect era) =>
   Word64 ->
+  SlotNo -> 
   EpochState era ->
   [MockChainFailure era] ->
   [Core.Tx era] ->
   String
-raiseMockError slot epochstate pdfs txs =
+raiseMockError slot (SlotNo next) epochstate pdfs txs =
   show $
     vsep
       [ pcSmallUTxO reify ((_utxo . lsUTxOState . esLState) epochstate) txs,
         ppString "===================================",
         ppString "Slot " <> ppWord64 slot,
+        ppString "NextSlot " <> ppWord64 next,
         ppString "===================================",
         showBlock txs,
         ppString "===================================",
@@ -230,7 +219,7 @@ instance STS (MOCKCHAIN era)
 -}
 -- ==============================================================
 
-newtype Gen1 era = Gen1 (Vector (StrictSeq (Core.Tx era)))
+newtype Gen1 era = Gen1 (Vector (StrictSeq (Core.Tx era),SlotNo))
 
 instance
   ( STS (MOCKCHAIN era),
@@ -248,16 +237,15 @@ instance
   sigGen (Gen1 txss) () mcs@(MockChainState newepoch (SlotNo lastSlot) count) = do
     let NewEpochState _epochnum _ _ epochstate _ pooldistr _ = newepoch
     issuerkey <- chooseIssuer pooldistr
-    nextSlotNo <- SlotNo . (+ lastSlot) <$> choose (15, 25)
-    let txs = txss ! count
+    let (txs,nextSlotNo) = txss ! count
     -- Assmble it into a MockBlock
     let mockblock = MockBlock issuerkey nextSlotNo txs
     -- Run the STS Rules for MOCKCHAIN with generated signal
 
     case runShelleyBase (applySTSTest (TRC @(MOCKCHAIN era) ((), mcs, mockblock))) of
-      Left pdfs -> error (raiseMockError lastSlot epochstate pdfs (Fold.toList (txss ! count)))
+      Left pdfs -> error (raiseMockError lastSlot nextSlotNo epochstate pdfs (Fold.toList (fst(txss ! count))))
       -- Left pdfs -> trace ("Discard\n"++show(ppList (ppMockChainFailure reify) pdfs)) discard -- TODO should we enable this?
-      Right mcs2 -> seq mcs2 (pure mockblock)
+      Right mcs2 -> seq mcs2 (pure (trace ("SLOT "++show nextSlotNo) mockblock))
 
   shrinkSignal _x = []
 
@@ -280,7 +268,7 @@ genTrace ::
     HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
-  Word64 ->
+  Int ->
   GenSize ->
   Gen (Trace (MOCKCHAIN era))
 genTrace proof numTxInTrace gsize = do
@@ -298,7 +286,7 @@ traceProp ::
     HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
-  Word64 ->
+  Int ->
   GenSize ->
   (MockChainState era -> MockChainState era -> prop) ->
   Gen prop
@@ -319,12 +307,12 @@ chainTest ::
     Eq (StashedAVVMAddresses era)
   ) =>
   Proof era ->
-  Word64 ->
+  Int ->
   GenSize ->
   TestTree
 chainTest proof n gsize = testProperty message action
   where
-    message = "MockChainTrace: " ++ show proof ++ " era."
+    message = show proof ++ " era."
     action = do
       (vs, genstate) <- genTxSeq proof gsize n
       initState <- genMockChainState proof genstate
@@ -337,7 +325,7 @@ chainTest proof n gsize = testProperty message action
       -- Here is where we can add some properties for traces:
       pure (_traceInitState trace1 === initState)
 
-testTraces :: Word64 -> TestTree
+testTraces :: Int -> TestTree
 testTraces n =
   testGroup
     "MockChainTrace"
