@@ -48,7 +48,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (join, replicateM, when)
+import Control.Monad (join, replicateM, replicateM_, when)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, get, gets, modify)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -139,6 +139,9 @@ data GenState era = GenState
     gsInitialRewards :: !(Map (Credential 'Staking (Crypto era)) Coin),
     gsInitialPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
     gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (Crypto era)) (IndividualPoolStake (Crypto era))),
+    -- Honest fields are stable from initialization to the end of the generation process
+    gsHonestPool :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
+    gsHonestDelegators :: !(Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))),
     gsRegKey :: !(Set (Credential 'Staking (Crypto era))),
     gsProof :: !(Proof era),
     gsGenEnv :: !(GenEnv era)
@@ -152,6 +155,8 @@ emptyGenState proof genv =
     mempty
     mempty
     mNewEpochStateZero
+    Map.empty
+    Map.empty
     Map.empty
     Map.empty
     Map.empty
@@ -306,6 +311,22 @@ getNewPoolTest = do
 -- ========================================================================
 -- Tools to get started
 
+-- | Initialize (or overwrite if they are not empty) the Honest fields. It is
+--   intended that this be called just once at the beginning of a trace generation.
+initHonestFields :: Reflect era => Proof era -> Int -> GenRS era ()
+initHonestFields proof n = do
+  old <- gets gsInitialPoolParams
+  hashes <- replicateM n genPool
+  new <- gets gsInitialPoolParams
+  modify (\ gs -> gs{ gsHonestPool = Map.difference new old})
+  -- This incantation gets a list of fresh (not previously generated) Credential
+  old <- gets (Map.keysSet . gsInitialRewards)
+  prev <- gets gsRegKey
+  credentials <- genFreshCredentials n 100 Rewrd (Set.union old prev) []
+  modify (\ gs -> gs{ gsHonestDelegators = Map.fromList (zip credentials hashes) }) 
+  pure ()
+  
+
 runGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> Gen (ans, GenState era)
 runGenRS proof gsize action = do
   genenv <- genGenEnv proof gsize
@@ -357,7 +378,7 @@ genGenState proof gsize = do
 -- | Helper function for development and debugging in ghci
 viewGenState :: Reflect era => Proof era -> GenSize -> Bool -> IO ()
 viewGenState proof gsize verbose = do
-  st <- generate (genGenState proof gsize)
+  (_,st) <- generate (runGenRS proof def (initHonestFields proof 4))
   when verbose $ putStrLn (show (pcGenState proof st))
 
 -- =============================================
@@ -630,7 +651,7 @@ genPlutusScript proof tag = do
 -- =================================================================
 
 pcGenState :: Reflect era => Proof era -> GenState era -> PDoc
-pcGenState proof (GenState keys scripts plutus dats model iutxo irew ipoolp ipoold irkey prf _genenv) =
+pcGenState proof (GenState keys scripts plutus dats model iutxo irew ipoolp ipoold hp hd irkey prf _genenv) =
   ppRecord
     "GenState Summary"
     [ ("Keymap", ppInt (Map.size keys)),
@@ -642,6 +663,8 @@ pcGenState proof (GenState keys scripts plutus dats model iutxo irew ipoolp ipoo
       ("Initial Rewards", ppMap pcCredential pcCoin irew),
       ("Initial PoolParams", ppMap pcKeyHash pcPoolParams ipoolp),
       ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake ipoold),
+      ("Honest Pools", ppMap pcKeyHash pcPoolParams hp),
+      ("Honest Delegators",  ppMap pcCredential pcKeyHash hd),
       ("Previous RegKey", ppSet pcCredential irkey),
       ("GenEnv", ppString "GenEnv ..."),
       ("Proof", ppString (show prf))

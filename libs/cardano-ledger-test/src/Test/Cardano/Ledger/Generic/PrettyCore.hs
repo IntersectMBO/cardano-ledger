@@ -93,6 +93,11 @@ import Test.Cardano.Ledger.Generic.Fields
     abstractWitnesses,
   )
 import Test.Cardano.Ledger.Generic.Proof
+import qualified Data.Compact.VMap as VMap
+import Cardano.Ledger.Shelley.EpochBoundary(Stake(..))
+import Cardano.Ledger.Compactible(Compactible(..))
+import Cardano.Ledger.Shelley.EpochBoundary(SnapShot(..),SnapShots(..))
+
 
 -- =====================================================
 
@@ -1270,10 +1275,10 @@ pcTxBody proof txbody = ppRecord "TxBody" pairs
     pairs = concat (map (pcTxBodyField proof) fields)
 
 pcUTxOState :: Reflect era => Proof era -> UTxOState era -> PDoc
-pcUTxOState proof (UTxOState u dep fees _pups _stakedistro) =
+pcUTxOState proof (UTxOState (UTxO u) dep fees _pups _stakedistro) =
   ppRecord
     "UTxOState"
-    [ ("utxo", pcUTxO proof u),
+    [ ("utxo", seq (pcUTxO proof (UTxO u)) (ppInt (Split.size u))), 
       ("deposited", pcCoin dep),
       ("fees", pcCoin fees),
       ("ppups", ppString "PPUP"),
@@ -1316,10 +1321,11 @@ pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ p
 instance Reflect era => PrettyC (NewEpochState era) era where prettyC = pcNewEpochState
 
 pcEpochState :: Reflect era => Proof era -> EpochState era -> PDoc
-pcEpochState proof (EpochState (AccountState tre res) _ ls _ _ _) =
+pcEpochState proof (EpochState (AccountState tre res) snaps ls _ _ _) =
   ppRecord
     "EpochState"
     [ ("AccountState", ppRecord' "" [("treasury", pcCoin tre), ("reserves", pcCoin res)]),
+      ("SnapShots",pcSnapShots snaps),
       ("LedgerState", pcLedgerState proof ls)
     ]
 
@@ -1327,3 +1333,30 @@ instance Reflect era => PrettyC (EpochState era) era where prettyC = pcEpochStat
 
 pc :: PrettyC t era => Proof era -> t -> IO ()
 pc proof x = putStrLn (show (prettyC proof x))
+
+
+pcSnapShot :: SnapShot era -> PDoc
+pcSnapShot (SnapShot (Stake m1) m2 m3) =
+  ppRecord "SnapShot"
+    [ ("stake",pcVMap pcCredential (pcCoin . fromCompact) m1)
+    , ("delegations",pcVMap pcCredential pcKeyHash m2)
+    , ("pool params",pcVMap pcKeyHash pcPoolParams m3)
+    ]
+
+instance PrettyC (SnapShot era) era where prettyC _ = pcSnapShot
+
+pcSnapShots :: SnapShots era -> PDoc
+pcSnapShots (SnapShots mark _set _go fees) =
+  ppRecord "SnapShots"
+    [("mark",pcSnapShot mark)
+    ,("set",ppString "...")
+    ,("go",ppString "...")
+    ,("fees",pcCoin fees)
+    ]
+
+instance PrettyC (SnapShots era) era where prettyC _ = pcSnapShots
+
+pcVMap :: (VMap.Vector kv k, VMap.Vector vv v) =>
+   (k -> PDoc) -> (v -> PDoc) ->  VMap.VMap kv vv k v -> PDoc
+pcVMap pcK pcV m = ppList (ppPair pcK pcV) (VMap.toList m)
+

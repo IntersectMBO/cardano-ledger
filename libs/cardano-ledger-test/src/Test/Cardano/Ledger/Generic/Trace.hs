@@ -99,6 +99,7 @@ genRsTxAndModel proof n = do
   tx <$ modifyModel (\model -> applyTx proof (fromIntegral n) model tx)
 
 -- | Generate a Vector of (StrictSeq (Core.Tx era))  representing a (Vector Block)
+--   This function initializes the Honest fields of the GenState
 genRsTxSeq ::
   forall era.
   Reflect era =>
