@@ -96,6 +96,7 @@ import Test.Cardano.Ledger.Generic.GenState
     genPositiveVal,
     genRewards,
     genScript,
+    genValidityInterval,
     getCertificateMax,
     getOldUtxoPercent,
     getRefInputsMax,
@@ -730,15 +731,16 @@ timeToLive (ValidityInterval _ SNothing) = SlotNo maxBound
 
 -- ============================================================================
 
-genValidatedTx :: forall era. Reflect era => Proof era -> GenRS era (UTxO era, Core.Tx era)
-genValidatedTx proof = do
-  (utxo, tx, _fee, _old) <- genValidatedTxAndInfo proof
+genValidatedTx :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (UTxO era, Core.Tx era)
+genValidatedTx proof slot = do
+  (utxo, tx, _fee, _old) <- genValidatedTxAndInfo proof slot
   pure (utxo, tx)
 
 genValidatedTxAndInfo ::
   forall era.
   Reflect era =>
   Proof era ->
+  SlotNo ->
   GenRS
     era
     ( UTxO era,
@@ -746,8 +748,9 @@ genValidatedTxAndInfo ::
       UtxoEntry era, -- The fee key
       Maybe (UtxoEntry era) -- from oldUtxO
     )
-genValidatedTxAndInfo proof = do
-  GenEnv {geValidityInterval, gePParams} <- gets gsGenEnv
+genValidatedTxAndInfo proof slot = do
+  GenEnv {gePParams} <- gets gsGenEnv
+  geValidityInterval <- lift $ genValidityInterval slot
 
   -- 1. Produce utxos that will be spent
   (utxoChoices, maybeoldpair) <- genUTxO
@@ -1013,7 +1016,7 @@ instance
 testTx :: IO ()
 testTx = do
   let proof = Babbage Mock
-  ((_utxo, tx, _feepair, _), genstate) <- generate $ runGenRS proof def (genValidatedTxAndInfo proof)
+  ((_utxo, tx, _feepair, _), genstate) <- generate $ runGenRS proof def (genValidatedTxAndInfo proof (SlotNo 0))
   let m = gsModel genstate
   putStrLn (show (pcTx proof tx))
   putStrLn (show (pcModelNewEpochState proof m))

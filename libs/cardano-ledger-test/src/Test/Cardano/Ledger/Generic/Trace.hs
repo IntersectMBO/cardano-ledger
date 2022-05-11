@@ -61,7 +61,7 @@ import Test.Cardano.Ledger.Generic.Functions (allInputs, getBody, getTxOutCoin, 
 import Test.Cardano.Ledger.Generic.GenState
   ( GenEnv (..),
     GenRS,
-    GenSize,
+    GenSize (..),
     GenState (..),
     getBlocksizeMax,
     getReserves,
@@ -88,9 +88,9 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- | Generate a Core.Tx and an internal Model of the state after the tx
 --   has been applied. That model can be used to generate the next Tx
-genRsTxAndModel :: Reflect era => Proof era -> Word64 -> GenRS era (Core.Tx era)
-genRsTxAndModel proof n = do
-  (_, tx) <- genValidatedTx proof
+genRsTxAndModel :: Reflect era => Proof era -> Word64 -> SlotNo -> GenRS era (Core.Tx era)
+genRsTxAndModel proof n slot = do
+  (_, tx) <- genValidatedTx proof slot
   tx <$ modifyModel (\model -> applyTx proof (fromIntegral n) model tx)
 
 -- | Generate a Vector of (StrictSeq (Core.Tx era))  representing a (Vector Block)
@@ -101,11 +101,12 @@ genRsTxSeq ::
   Word64 ->
   Word64 ->
   [Core.Tx era] ->
+  SlotNo ->
   GenRS era (Vector (StrictSeq (Core.Tx era)))
-genRsTxSeq _ this lastN ans | this >= lastN = chop (reverse ans) []
-genRsTxSeq proof this lastN ans = do
-  tx <- genRsTxAndModel proof this
-  genRsTxSeq proof (this + 1) lastN (tx : ans)
+genRsTxSeq _ this lastN ans _slot | this >= lastN = chop (reverse ans) []
+genRsTxSeq proof this lastN ans slot = do
+  tx <- genRsTxAndModel proof this slot
+  genRsTxSeq proof (this + 1) lastN (tx : ans) slot
 
 -- | Chop a list into random size blocks
 chop ::
@@ -131,7 +132,7 @@ genTxSeq ::
   Word64 ->
   Gen (Vector (StrictSeq (Core.Tx era)), GenState era)
 genTxSeq proof gensize numTx = do
-  runGenRS proof gensize (genRsTxSeq proof 0 numTx [])
+  runGenRS proof gensize (genRsTxSeq proof 0 numTx [] (SlotNo $ startSlot gensize))
 
 run :: IO ()
 run = do
