@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -11,7 +10,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Protocol.TPraos.BHeader
   ( HashHeader (..),
@@ -19,6 +17,8 @@ module Cardano.Protocol.TPraos.BHeader
     BHeader (BHeader),
     BHBody (..),
     LastAppliedBlock (..),
+    BoundedNatural (bvValue, bvMaxValue),
+    assertBoundedNatural,
     lastAppliedHash,
     issuerIDfromBHBody,
     checkLeaderValue,
@@ -367,6 +367,26 @@ bhbody (BHeader b _) = b
 hBbsize :: BHBody crypto -> Natural
 hBbsize = bsize
 
+-- | Natural value with some additional bound. It must always be the base that
+-- 'bvValue <= bvMaxValue'. The creator is responsible for checking this value.
+data BoundedNatural = UnsafeBoundedNatural
+  { bvMaxValue :: Natural,
+    bvValue :: Natural
+  }
+
+-- | Assert that a natural is bounded by a certain value. Throws an error when
+-- this is not the case.
+assertBoundedNatural ::
+  -- | Maximum bound
+  Natural ->
+  -- | Value
+  Natural ->
+  BoundedNatural
+assertBoundedNatural maxVal val =
+  if val <= maxVal
+    then UnsafeBoundedNatural maxVal val
+    else error $ show val <> " is greater than max value " <> show maxVal
+
 -- | Check that the certified VRF output, when used as a natural, is valid for
 -- being slot leader.
 checkLeaderValue ::
@@ -377,7 +397,10 @@ checkLeaderValue ::
   ActiveSlotCoeff ->
   Bool
 checkLeaderValue certVRF σ f =
-  checkLeaderNatValue certVRF (VRF.getOutputVRFNatural certVRF) σ f
+  checkLeaderNatValue (assertBoundedNatural certNatMax (VRF.getOutputVRFNatural certVRF)) σ f
+  where
+    certNatMax :: Natural
+    certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF certVRF)
 
 -- | Check that the certified input natural is valid for being slot leader. This
 -- means we check that
@@ -403,14 +426,13 @@ checkLeaderValue certVRF σ f =
 --           --- =  ----- = ---------------------------- = ----------------------
 --            q     1 - p    1 - (certNat / certNatMax)    (certNatMax - certNat)
 checkLeaderNatValue ::
-  forall proxy v.
-  (VRF.VRFAlgorithm v) =>
-  proxy v ->
-  Natural ->
+  -- | Certified nat value
+  BoundedNatural ->
+  -- | Stake proportion
   Rational ->
   ActiveSlotCoeff ->
   Bool
-checkLeaderNatValue prox certNat σ f =
+checkLeaderNatValue bn σ f =
   if activeSlotVal f == maxBound
     then -- If the active slot coefficient is equal to one,
     -- then nearly every stake pool can produce a block every slot.
@@ -424,12 +446,12 @@ checkLeaderNatValue prox certNat σ f =
       BELOW _ _ -> True
       MaxReached _ -> False
   where
-    certNatMax :: Natural
-    certNatMax = (2 :: Natural) ^ (8 * VRF.sizeOutputVRF prox)
     c, recip_q, x :: FixedPoint
     c = activeSlotLog f
     recip_q = fromRational (toInteger certNatMax % toInteger (certNatMax - certNat))
     x = -fromRational σ * c
+    certNatMax = bvMaxValue bn
+    certNat = bvValue bn
 
 seedEta :: Nonce
 seedEta = mkNonceFromNumber 0
