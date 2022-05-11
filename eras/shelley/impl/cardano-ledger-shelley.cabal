@@ -76,7 +76,6 @@ library
     Cardano.Ledger.Shelley.Rules.Rupd
     Cardano.Ledger.Shelley.Rules.Snap
     Cardano.Ledger.Shelley.Rules.Tick
-    Cardano.Ledger.Shelley.Rules.Updn
     Cardano.Ledger.Shelley.Rules.Upec
     Cardano.Ledger.Shelley.Rules.Utxo
     Cardano.Ledger.Shelley.Rules.Utxow
