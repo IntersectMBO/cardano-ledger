@@ -55,7 +55,7 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (forceElemsToWHNF)
 import Cardano.Slotting.EpochInfo
-import Cardano.Slotting.Slot (EpochSize (..))
+import Cardano.Slotting.Slot (EpochSize (..), SlotNo)
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -424,10 +424,11 @@ validateGenesis
 
 mkShelleyGlobals ::
   ShelleyGenesis era ->
+  SlotNo ->
   EpochInfo (Either Text) ->
   Natural ->
   Globals
-mkShelleyGlobals genesis epochInfoAc maxMajorPV =
+mkShelleyGlobals genesis tipSlot epochInfoAc maxMajorPV =
   Globals
     { activeSlotCoeff = sgActiveSlotCoeff genesis,
       epochInfoWithErr = epochInfoAc,
@@ -440,7 +441,8 @@ mkShelleyGlobals genesis epochInfoAc maxMajorPV =
       securityParameter = k,
       slotsPerKESPeriod = sgSlotsPerKESPeriod genesis,
       stabilityWindow,
-      systemStart
+      systemStart,
+      tipSlot
     }
   where
     systemStart = SystemStart $ sgSystemStart genesis

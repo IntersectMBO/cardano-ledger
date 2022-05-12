@@ -89,6 +89,7 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
+import Cardano.Slotting.Slot (SlotNo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Exception (throw)
 import Control.Monad (when, (<=<))
@@ -610,7 +611,9 @@ data Globals = Globals
     -- | The network ID
     networkId :: !Network,
     -- | System start time
-    systemStart :: !SystemStart
+    systemStart :: !SystemStart,
+    -- | Slot of the last applied block
+    tipSlot :: !SlotNo
   }
   deriving (Show, Generic)
 

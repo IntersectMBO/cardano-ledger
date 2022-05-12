@@ -35,6 +35,7 @@ import Cardano.Ledger.BaseTypes
     epochInfoWithErr,
     networkId,
     systemStart,
+    tipSlot,
   )
 import Cardano.Ledger.Coin
 import Cardano.Ledger.CompactAddress
@@ -362,7 +363,7 @@ validateOutsideForecast ::
   ) =>
   Core.PParams era ->
   EpochInfo (Either a) ->
-  -- | Current slot number
+  -- | Tip slot number
   SlotNo ->
   SystemStart ->
   -- | Stability window, in terms of number of slots
@@ -516,11 +517,12 @@ utxoTransition = do
     ShelleyMA.validateOutsideValidityIntervalUTxO slot txb
 
   sysSt <- liftSTS $ asks systemStart
+  tipSlotNo <- liftSTS $ asks tipSlot
   ei <- liftSTS $ asks epochInfoWithErr
   stability <- liftSTS $ asks stabilityWindow
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast pp ei slot sysSt stability tx
+  runTest $ validateOutsideForecast pp ei tipSlotNo sysSt stability tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txb
