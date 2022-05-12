@@ -1,3 +1,3 @@
-# Revision history for compact-map
+# Revision history for vector-map
 
 

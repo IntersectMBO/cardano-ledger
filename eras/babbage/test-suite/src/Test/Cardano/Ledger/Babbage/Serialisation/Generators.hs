@@ -7,50 +7,24 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-orphans -fno-warn-unused-imports #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
--- instances
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), BinaryData, Data (..), dataToBinaryData)
-import Cardano.Ledger.Alonzo.Language
+import Cardano.Ledger.Alonzo.Data (dataToBinaryData)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (TagMismatchDescription (..), UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
-import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
-    ExUnits (..),
-    Prices (..),
-    Script (..),
-    Tag (..),
-  )
-import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..))
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
 import Cardano.Ledger.Babbage.Tx
-import Cardano.Ledger.Babbage.TxBody
-  ( BabbageBody,
-    Datum (..),
-    TxBody (..),
-    TxOut (..),
-  )
-import Cardano.Ledger.CompactAddress (compactAddr)
-import Cardano.Ledger.Compactible (toCompact)
+import Cardano.Ledger.Babbage.TxBody (BabbageBody, Datum (..), TxOut (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
-import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
-import Control.Applicative (liftA2)
-import Data.Int (Int64)
-import Data.Map (Map)
-import qualified Data.Map as Map
-import Data.Maybe (fromJust, fromMaybe)
+import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import qualified Data.Set as Set
-import Data.Text (pack)
-import Numeric.Natural (Natural)
-import qualified PlutusTx as Plutus
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators (genData)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)

@@ -47,7 +47,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..), trace
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as Fold
 import Data.Functor.Identity (Identity (runIdentity))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as SS

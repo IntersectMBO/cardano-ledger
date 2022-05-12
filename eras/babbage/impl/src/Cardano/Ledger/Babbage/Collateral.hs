@@ -26,8 +26,8 @@ import Cardano.Ledger.Era (Era (Crypto), ValidateScript (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val ((<->))
-import Data.Compact.SplitMap ((◁))
-import qualified Data.Compact.SplitMap as SplitMap
+import Control.SetAlgebra (eval, (◁))
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import Data.Word (Word16)
@@ -74,7 +74,7 @@ collBalance txb (UTxO m) =
     SNothing -> colbal
     SJust (TxOut _ retval _ _) -> colbal <-> retval
   where
-    col = UTxO (getField @"collateral" txb ◁ m)
+    col = UTxO (eval (getField @"collateral" txb ◁ m))
     colbal = balance @era col
 
 collOuts ::
@@ -86,8 +86,8 @@ collOuts ::
   UTxO era
 collOuts txb =
   case collateralReturn' txb of
-    SNothing -> UTxO SplitMap.empty
-    SJust txout -> UTxO (SplitMap.singleton (TxIn (txid txb) index) txout)
+    SNothing -> UTxO Map.empty
+    SJust txout -> UTxO (Map.singleton (TxIn (txid txb) index) txout)
       where
         index = case txIxFromIntegral (length (outputs' txb)) of
           Just i -> i

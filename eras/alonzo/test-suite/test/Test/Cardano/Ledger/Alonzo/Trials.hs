@@ -95,7 +95,7 @@ import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
 import Data.Default.Class (Default (def))
 import Data.Functor.Identity (runIdentity)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)

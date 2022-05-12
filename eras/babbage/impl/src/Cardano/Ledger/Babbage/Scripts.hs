@@ -28,8 +28,8 @@ import Cardano.Ledger.Hashes (DataHash)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Map as Map
+import Control.SetAlgebra (eval, (◁))
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -55,7 +55,7 @@ getDatum ::
   Maybe (BinaryData era)
 getDatum tx (UTxO m) sp = do
   txin <- getTxIn sp
-  TxOut _ _ datum _refScript <- SplitMap.lookup txin m
+  TxOut _ _ datum _refScript <- Map.lookup txin m
   case datum of
     NoDatum -> Nothing
     Datum d -> Just d
@@ -117,7 +117,7 @@ refScripts ::
   Set (TxIn (Crypto era)) ->
   UTxO era ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era)
-refScripts ins (UTxO mp) = SplitMap.foldl' accum Map.empty (ins SplitMap.◁ mp)
+refScripts ins (UTxO mp) = Map.foldl' accum Map.empty (eval (ins ◁ mp))
   where
     accum ans txout =
       case getField @"referenceScript" txout of
@@ -141,11 +141,11 @@ babbageInputDataHashes ::
   UTxO era ->
   (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
 babbageInputDataHashes hashScriptMap tx (UTxO mp) =
-  SplitMap.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
+  Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
   where
     txbody = body tx
-    spendinputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
-    smallUtxo = spendinputs SplitMap.◁ mp
+    spendinputs = getField @"inputs" txbody :: Set (TxIn (Crypto era))
+    smallUtxo = eval (spendinputs ◁ mp)
     accum ans@(!hashSet, !inputSet) txin txout =
       case txout of
         TxOut addr _ NoDatum _ ->

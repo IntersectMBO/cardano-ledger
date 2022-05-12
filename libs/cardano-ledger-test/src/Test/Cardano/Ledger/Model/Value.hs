@@ -37,7 +37,7 @@ import Data.Group.GrpMap
     mkGrpMap,
     pointWise',
   )
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Monoid (Ap (..), Sum (..))
 import Data.Typeable
 import GHC.Generics (Generic)

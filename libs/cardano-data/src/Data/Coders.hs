@@ -1,20 +1,15 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -69,11 +64,10 @@ module Data.Coders
     encodeFoldableEncoder,
     encodeMap,
     encodeVMap,
-    encodeSplitMap,
     wrapCBORMap,
     decodeMap,
     decodeVMap,
-    decodeSplitMap,
+    decodeMapNoDuplicates,
     decodeMapByKey,
     decodeMapContents,
     decodeMapTraverse,
@@ -140,11 +134,9 @@ import Control.Applicative (liftA2)
 import Control.Monad (replicateM, unless, when)
 import Control.Monad.Trans
 import Control.Monad.Trans.Identity
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
@@ -154,6 +146,7 @@ import Data.Set (Set, insert, member)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Typeable
+import qualified Data.VMap as VMap
 import Data.Void (Void)
 import Formatting (build, formatToString)
 import Formatting.Buildable (Buildable)
@@ -330,12 +323,6 @@ wrapCBORArray len contents =
 -- Era, which are not always cannonical. We want to make these
 -- cannonical improvements easy to use.
 
-encodeSplitMap :: (k -> Encoding) -> (v -> Encoding) -> SplitMap.SplitMap k v -> Encoding
-encodeSplitMap encodeKey encodeValue m =
-  let l = fromIntegral $ SplitMap.size m
-      contents = SplitMap.foldrWithKey' (\k v acc -> encodeKey k <> encodeValue v <> acc) mempty m
-   in wrapCBORMap l contents
-
 encodeVMap ::
   (VMap.Vector vk k, VMap.Vector vv v) =>
   (k -> Encoding) ->
@@ -369,13 +356,14 @@ decodeVMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 decodeMap :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
 decodeMap decodeKey decodeValue = decodeMapByKey decodeKey (const decodeValue)
 
-decodeSplitMap :: SplitMap.Split a => Decoder s a -> Decoder s b -> Decoder s (SplitMap.SplitMap a b)
-decodeSplitMap decodeKey decodeValue =
+-- | Just like `decodeMap`, but assumes there are no duplicate keys
+decodeMapNoDuplicates :: Ord a => Decoder s a -> Decoder s b -> Decoder s (Map.Map a b)
+decodeMapNoDuplicates decodeKey decodeValue =
   snd
     <$> decodeAccWithLen
       decodeMapLenOrIndef
-      (uncurry SplitMap.insert)
-      SplitMap.empty
+      (uncurry Map.insert)
+      Map.empty
       decodeInlinedPair
   where
     decodeInlinedPair = do

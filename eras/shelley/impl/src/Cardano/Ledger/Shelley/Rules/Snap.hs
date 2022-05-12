@@ -37,9 +37,9 @@ import Control.State.Transition
     judgmentContext,
     tellEvent,
   )
-import qualified Data.Compact.VMap as VMap
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 

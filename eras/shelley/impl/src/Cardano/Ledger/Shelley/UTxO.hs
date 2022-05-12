@@ -85,9 +85,8 @@ import qualified Cardano.Ledger.TxIn as Core (txid)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
-import Data.Coders (decodeSplitMap, encodeSplitMap)
+import Data.Coders (decodeMapNoDuplicates, encodeMap)
 import Data.Coerce (coerce)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default)
 import Data.Foldable (foldMap', toList)
@@ -108,7 +107,7 @@ import Quiet
 -- ===============================================
 
 -- | The unspent transaction outputs.
-newtype UTxO era = UTxO {unUTxO :: SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)}
+newtype UTxO era = UTxO {unUTxO :: Map.Map (TxIn (Crypto era)) (Core.TxOut era)}
   deriving (Default, Generic, Semigroup)
 
 type TransUTxO (c :: Type -> Constraint) era = (c (Core.TxOut era), TransTxId c era)
@@ -123,7 +122,7 @@ deriving newtype instance
 deriving newtype instance CC.Crypto (Crypto era) => Monoid (UTxO era)
 
 instance (Era era, ToCBOR (Core.TxOut era)) => ToCBOR (UTxO era) where
-  toCBOR = encodeSplitMap toCBOR toCBOR . unUTxO
+  toCBOR = encodeMap toCBOR toCBOR . unUTxO
 
 instance
   ( CC.Crypto (Crypto era),
@@ -136,7 +135,7 @@ instance
     Share (UTxO era) =
       Interns (Credential 'Staking (Crypto era))
   fromSharedCBOR credsInterns =
-    UTxO <$!> decodeSplitMap fromCBOR (fromSharedCBOR credsInterns)
+    UTxO <$!> decodeMapNoDuplicates fromCBOR (fromSharedCBOR credsInterns)
 
 instance
   ( FromCBOR (Core.TxOut era),
@@ -144,7 +143,7 @@ instance
   ) =>
   FromCBOR (UTxO era)
   where
-  fromCBOR = UTxO <$!> decodeSplitMap fromCBOR fromCBOR
+  fromCBOR = UTxO <$!> decodeMapNoDuplicates fromCBOR fromCBOR
 
 deriving via
   Quiet (UTxO era)
@@ -168,7 +167,7 @@ txouts ::
   UTxO era
 txouts txBody =
   UTxO $
-    SplitMap.fromList
+    Map.fromList
       [ (TxIn transId idx, out)
         | (out, idx) <- zip (toList $ getField @"outputs" txBody) [minBound ..]
       ]
@@ -180,7 +179,7 @@ txinLookup ::
   TxIn (Crypto era) ->
   UTxO era ->
   Maybe (Core.TxOut era)
-txinLookup txin (UTxO utxo') = SplitMap.lookup txin utxo'
+txinLookup txin (UTxO utxo') = Map.lookup txin utxo'
 
 -- | Verify a transaction body witness
 verifyWitVKey ::
@@ -345,7 +344,7 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
   where
     -- to get subset, start with empty, and only insert those inputs in txInps
     -- that are locked in u
-    add input ans = case SplitMap.lookup input u of
+    add input ans = case Map.lookup input u of
       Just out -> case getTxOutAddr out of
         Addr _ (ScriptHashObj h) _ -> Set.insert h ans
         _ -> ans

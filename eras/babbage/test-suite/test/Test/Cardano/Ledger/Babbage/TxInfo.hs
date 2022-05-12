@@ -20,10 +20,10 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (def)
 import Data.Either (fromRight)
 import Data.Functor.Identity (Identity, runIdentity)
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -90,7 +90,7 @@ inputWithRefScript = mkTxInPartial genesisId 4
 utxo :: UTxO B
 utxo =
   UTxO $
-    SplitMap.fromList
+    Map.fromList
       [ (byronInput, byronOutput),
         (shelleyInput, shelleyOutput),
         (inputWithInlineDatum, inlineDatumOutput),

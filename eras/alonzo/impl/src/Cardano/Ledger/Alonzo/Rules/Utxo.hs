@@ -69,6 +69,7 @@ import Cardano.Slotting.Slot (SlotNo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
 import qualified Data.ByteString.Lazy as BSL (length)
 import Data.Coders
@@ -77,17 +78,17 @@ import Data.Coders
     Wrapped (Open),
     decode,
     decodeList,
+    decodeMap,
     decodeSet,
-    decodeSplitMap,
     encode,
     encodeFoldable,
     (!>),
     (<!),
   )
 import Data.Coerce (coerce)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Either (isRight)
 import Data.Foldable (foldl', sequenceA_, toList)
+import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -283,8 +284,7 @@ feesOK pp tx (UTxO utxo) =
   let txb = getField @"body" tx
       collateral = getField @"collateral" txb -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
-      -- (collateral ◁ utxo)
-      utxoCollateral = collateral SplitMap.◁ utxo
+      utxoCollateral = eval (collateral ◁ utxo)
       bal = balance @era (UTxO utxoCollateral)
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txb
@@ -300,7 +300,7 @@ validateCollateral ::
   ) =>
   Core.PParams era ->
   Core.TxBody era ->
-  SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era) ->
+  Map.Map (TxIn (Crypto era)) (Core.TxOut era) ->
   Core.Value era ->
   Test (UtxoPredicateFailure era)
 validateCollateral pp txb utxoCollateral bal =
@@ -318,11 +318,11 @@ validateCollateral pp txb utxoCollateral bal =
 -- > (∀(a,_,_) ∈ range (collateral txb ◁ utxo), a ∈ Addrvkey)
 validateScriptsNotPaidUTxO ::
   Era era =>
-  SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era) ->
+  Map.Map (TxIn (Crypto era)) (Core.TxOut era) ->
   Test (UtxoPredicateFailure era)
 validateScriptsNotPaidUTxO utxoCollateral =
   failureUnless (all vKeyLocked utxoCollateral) $
-    ScriptsNotPaidUTxO (UTxO (SplitMap.filter (not . vKeyLocked) utxoCollateral))
+    ScriptsNotPaidUTxO (UTxO (Map.filter (not . vKeyLocked) utxoCollateral))
 
 -- > balance ∗ 100 ≥ txfee txb ∗ (collateralPercent pp)
 validateInsufficientCollateral ::
@@ -401,7 +401,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
              in -- pointwise is used because non-ada amounts must be >= 0 too
                 not $ Val.pointwise (>=) v (Val.inject $ Coin (utxoEntrySize out * coinsPerUTxOWord))
         )
-        (SplitMap.elems outputs)
+        (Map.elems outputs)
 
 -- | Ensure that there are no `Core.TxOut`s that have `Value` of size larger
 -- than @MaxValSize@. We use serialized length of `Core.Value` because this Value
@@ -420,7 +420,7 @@ validateOutputTooBigUTxO pp (UTxO outputs) =
   failureUnless (null outputsTooBig) $ OutputTooBigUTxO outputsTooBig
   where
     maxValSize = getField @"_maxValSize" pp
-    outputsTooBig = foldl' accum [] $ SplitMap.elems outputs
+    outputsTooBig = foldl' accum [] $ Map.elems outputs
     accum ans out =
       let v = getField @"value" out
           serSize = fromIntegral $ BSL.length $ serialize v
@@ -703,7 +703,7 @@ decFail 12 =
 decFail 13 = SumD InsufficientCollateral <! From <! From
 decFail 14 =
   SumD ScriptsNotPaidUTxO
-    <! D (UTxO <$> decodeSplitMap fromCBOR fromCBOR)
+    <! D (UTxO <$> decodeMap fromCBOR fromCBOR)
 decFail 15 = SumD ExUnitsTooBigUTxO <! From <! From
 decFail 16 = SumD CollateralContainsNonADA <! From
 decFail 17 = SumD WrongNetworkInTxBody <! From <! From

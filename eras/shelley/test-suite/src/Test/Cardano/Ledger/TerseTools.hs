@@ -21,8 +21,7 @@ import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 
 -- ====================================================
 
@@ -107,4 +106,4 @@ tersediffincremental message (IStake a b) (IStake c d) =
     ++ tersemapdiffs (message ++ " " ++ "ptrs") b d
 
 terseutxo :: (Era era, Terse (Core.TxOut era)) => String -> UTxO era -> String
-terseutxo message (UTxO mp) = terselist message (SplitMap.toList mp)
+terseutxo message (UTxO mp) = terselist message (Map.toList mp)

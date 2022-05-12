@@ -43,7 +43,7 @@ import Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import Data.Coders
 import Data.Functor.Identity
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Scientific (fromRationalRepetendLimited)
 import Data.Text (Text)

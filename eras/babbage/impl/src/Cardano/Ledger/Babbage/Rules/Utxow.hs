@@ -62,7 +62,7 @@ import Control.State.Transition.Extended
     trans,
   )
 import Data.Foldable (sequenceA_)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))

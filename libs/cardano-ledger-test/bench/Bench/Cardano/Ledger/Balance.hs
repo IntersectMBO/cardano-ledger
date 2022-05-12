@@ -10,8 +10,6 @@ import Cardano.Ledger.Shelley.UTxO (sumAllValue)
 import Control.DeepSeq
 import Control.Monad
 import Criterion
-import Data.Compact.KeyMap
-import Data.Compact.SplitMap as SplitMap
 import Data.Foldable as F
 import Data.Map.Strict as Map
 import System.Random.Stateful
@@ -22,6 +20,8 @@ import System.Random.Stateful
 
 newtype T = T {value :: Coin}
   deriving (NFData)
+
+type Key = Int
 
 balanceBenchmarks :: Benchmark
 balanceBenchmarks =
@@ -41,36 +41,28 @@ balanceBenchmarks =
             [ env (pure (snd <$> utxo)) $
                 bench "[Coin]" . nf sumAllValueList,
               env (pure (Map.fromList utxo)) $
-                bench "Map TxIn Coin" . nf sumAllValueMap,
-              env (pure (SplitMap.fromList utxo)) $
-                bench "SplitMap TxIn Coin" . nf sumAllValueSplitMap
+                bench "Map TxIn Coin" . nf sumAllValueMap
             ],
           bgroup
             "foldMap"
             [ env (pure (snd <$> utxo)) $
                 bench "[Coin]" . nf foldMapList,
               env (pure (Map.fromList utxo)) $
-                bench "Map TxIn Coin" . nf foldMapMap,
-              env (pure (SplitMap.fromList utxo)) $
-                bench "SplitMap TxIn Coin" . nf foldMapSplitMap
+                bench "Map TxIn Coin" . nf foldMapMap
             ],
           bgroup
             "foldMap'"
             [ env (pure (snd <$> utxo)) $
                 bench "[Coin]" . nf foldMap'List,
               env (pure (Map.fromList utxo)) $
-                bench "Map TxIn Coin" . nf foldMap'Map,
-              env (pure (SplitMap.fromList utxo)) $
-                bench "SplitMap TxIn Coin" . nf foldMap'SplitMap
+                bench "Map TxIn Coin" . nf foldMap'Map
             ],
           bgroup
             "foldl'"
             [ env (pure (snd <$> utxo)) $
                 bench "[Coin]" . nf foldl'List,
               env (pure (Map.fromList utxo)) $
-                bench "Map TxIn Coin" . nf foldl'Map,
-              env (pure (SplitMap.fromList utxo)) $
-                bench "SplitMap TxIn Coin" . nf foldl'SplitMap
+                bench "Map TxIn Coin" . nf foldl'Map
             ]
         ]
 
@@ -82,10 +74,6 @@ sumAllValueMap :: Map (Int, Key) T -> Coin
 sumAllValueMap xs = sumAllValue @ShelleyBench xs
 {-# NOINLINE sumAllValueMap #-}
 
-sumAllValueSplitMap :: SplitMap (Int, Key) T -> Coin
-sumAllValueSplitMap xs = sumAllValue @ShelleyBench xs
-{-# NOINLINE sumAllValueSplitMap #-}
-
 foldMapList :: [T] -> Coin
 foldMapList xs = F.foldMap value xs
 {-# NOINLINE foldMapList #-}
@@ -93,10 +81,6 @@ foldMapList xs = F.foldMap value xs
 foldMapMap :: Map (Int, Key) T -> Coin
 foldMapMap xs = F.foldMap value xs
 {-# NOINLINE foldMapMap #-}
-
-foldMapSplitMap :: SplitMap (Int, Key) T -> Coin
-foldMapSplitMap xs = F.foldMap value xs
-{-# NOINLINE foldMapSplitMap #-}
 
 foldMap'List :: [T] -> Coin
 foldMap'List xs = F.foldMap' value xs
@@ -106,10 +90,6 @@ foldMap'Map :: Map (Int, Key) T -> Coin
 foldMap'Map xs = F.foldMap' value xs
 {-# NOINLINE foldMap'Map #-}
 
-foldMap'SplitMap :: SplitMap (Int, Key) T -> Coin
-foldMap'SplitMap xs = F.foldMap' value xs
-{-# NOINLINE foldMap'SplitMap #-}
-
 foldl'List :: [T] -> Coin
 foldl'List xs = F.foldl' (\acc tx -> acc <> value tx) mempty xs
 {-# NOINLINE foldl'List #-}
@@ -117,7 +97,3 @@ foldl'List xs = F.foldl' (\acc tx -> acc <> value tx) mempty xs
 foldl'Map :: Map (Int, Key) T -> Coin
 foldl'Map xs = F.foldl' (\acc tx -> acc <> value tx) mempty xs
 {-# NOINLINE foldl'Map #-}
-
-foldl'SplitMap :: SplitMap (Int, Key) T -> Coin
-foldl'SplitMap xs = F.foldl' (\acc tx -> acc <> value tx) mempty xs
-{-# NOINLINE foldl'SplitMap #-}

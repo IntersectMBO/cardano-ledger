@@ -55,9 +55,8 @@ import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (..))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import GHC.Stack
 import qualified Plutus.V1.Ledger.Api as Plutus
@@ -237,7 +236,7 @@ referenceScriptInput3 = mkGenesisTxIn 18
 initUTxO :: PostShelley era => Proof era -> UTxO era
 initUTxO pf =
   UTxO $
-    SplitMap.fromList $
+    Map.fromList $
       [ (inlineDatumInput, inlineDatumOutput pf),
         (referenceScriptInput, referenceScriptOutput pf),
         (referenceDataHashInput, referenceDataHashOutput pf),
@@ -627,7 +626,7 @@ collateralOutputTx pf =
 utxoEx8 :: forall era. PostShelley era => Proof era -> UTxO era
 utxoEx8 pf =
   UTxO $
-    SplitMap.insert
+    Map.insert
       (TxIn (txid (collateralOutputTxBody pf)) (mkTxIxPartial 1))
       (collateralReturn pf)
       utxoWithoutCollateral

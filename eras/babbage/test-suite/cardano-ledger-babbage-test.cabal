@@ -99,7 +99,7 @@ test-suite cardano-ledger-babbage-test
     cardano-protocol-tpraos,
     cardano-slotting,
     cborg,
-    compact-map,
+    vector-map,
     containers,
     data-default-class,
     plutus-core,

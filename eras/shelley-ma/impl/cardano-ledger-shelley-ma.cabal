@@ -62,7 +62,7 @@ library
     cardano-slotting,
     cborg,
     containers,
-    compact-map,
+    vector-map,
     data-default-class,
     deepseq,
     groups,

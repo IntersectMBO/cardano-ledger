@@ -129,10 +129,10 @@ import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (coin, (<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
+import Control.SetAlgebra (eval, (◁))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coders
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
   ( StrictMaybe (..),
     maybeToStrictMaybe,
@@ -593,11 +593,11 @@ alonzoInputHashes ::
   ValidatedTx era ->
   UTxO era ->
   (Set (DataHash (Crypto era)), Set (TxIn (Crypto era)))
-alonzoInputHashes hashScriptMap tx (UTxO mp) = SplitMap.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
+alonzoInputHashes hashScriptMap tx (UTxO mp) = Map.foldlWithKey' accum (Set.empty, Set.empty) smallUtxo
   where
     txbody = body tx
-    spendinputs = getField @"inputs" txbody :: (Set (TxIn (Crypto era)))
-    smallUtxo = spendinputs SplitMap.◁ mp
+    spendinputs = getField @"inputs" txbody :: Set (TxIn (Crypto era))
+    smallUtxo = eval (spendinputs ◁ mp)
     accum ans@(hashSet, inputSet) txin txout =
       case txout of
         (TxOut addr _ SNothing) ->

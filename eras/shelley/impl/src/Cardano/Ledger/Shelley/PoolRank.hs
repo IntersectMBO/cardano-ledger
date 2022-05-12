@@ -57,7 +57,6 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans
-import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Foldable (find)
 import Data.Function (on)
@@ -72,6 +71,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Sharing
+import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import Lens.Micro (_1)

@@ -122,10 +122,8 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
-import qualified Data.Map.Strict as Map (empty, fromList)
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
@@ -135,6 +133,7 @@ import qualified Data.Text as T
 import qualified Data.Time as Time
 import qualified Data.Time.Calendar.OrdinalDate as Time
 import Data.Typeable (Typeable)
+import qualified Data.VMap as VMap
 import Data.Word (Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
@@ -430,16 +429,13 @@ instance CC.Crypto crypto => Arbitrary (STS.PrtclState crypto) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 
-instance
+deriving instance
   ( UsesTxOut era,
     UsesValue era,
     Mock (Crypto era),
     Arbitrary (Core.TxOut era)
   ) =>
   Arbitrary (UTxO era)
-  where
-  arbitrary = UTxO . SplitMap.fromMap <$> arbitrary
-  shrink = fmap (UTxO . SplitMap.fromMap) . shrink . SplitMap.toMap . unUTxO
 
 instance CC.Crypto crypto => Arbitrary (PState crypto) where
   arbitrary = genericArbitraryU

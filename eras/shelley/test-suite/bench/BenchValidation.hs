@@ -58,7 +58,7 @@ import Cardano.Slotting.Slot (withOriginToMaybe)
 import Control.Monad.Except ()
 import Control.State.Transition (STS (State))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)

@@ -45,7 +45,6 @@ import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot
 import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class
 import Data.Functor.Identity (Identity (..))
 import Data.Map.Strict (Map)
@@ -332,7 +331,7 @@ exampleNewEpochState value ppp pp =
                   UTxOState
                     { _utxo =
                         UTxO $
-                          SplitMap.fromList
+                          Map.fromList
                             [ ( TxIn (TxId (mkDummySafeHash Proxy 1)) minBound,
                                 makeTxOut (Proxy @era) addr value
                               )

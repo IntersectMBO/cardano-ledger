@@ -40,7 +40,7 @@ library
                     , cardano-ledger-shelley-ma
                     , conduit
                     , containers
-                    , compact-map
+                    , vector-map
                     , deepseq
                     , foldl
                     , vector

@@ -71,6 +71,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
+import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Extended
   ( Embed (..),
     STS (..),
@@ -84,9 +85,9 @@ import Data.Bifunctor (first)
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders
 import Data.Coerce (coerce)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (Foldable (foldl'), sequenceA_)
 import Data.List.NonEmpty (NonEmpty)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import Data.Typeable (Typeable)
@@ -185,6 +186,7 @@ feesOK ::
   ( Era era,
     Core.Tx era ~ ValidatedTx era,
     Core.TxBody era ~ TxBody era,
+    Core.TxOut era ~ TxOut era,
     -- "collateral" to get inputs to pay the fees
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "_minfeeA" (Core.PParams era) Natural,
@@ -203,8 +205,7 @@ feesOK pp tx u@(UTxO utxo) =
   let txb = getField @"body" tx
       collateral' = getField @"collateral" txb -- Inputs allocated to pay txfee
       -- restrict Utxo to those inputs we use to pay fees.
-      -- (collateral ◁ utxo)
-      utxoCollateral = collateral' SplitMap.◁ utxo
+      utxoCollateral = eval (collateral' ◁ utxo)
       bal = collBalance txb u
       theFee = txfee' txb -- Coin supplied to pay fees
       minimumFee = minfee @era pp tx
@@ -224,7 +225,7 @@ validateTotalCollateral ::
   ) =>
   Core.PParams era ->
   Core.TxBody era ->
-  SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era) ->
+  Map.Map (TxIn (Crypto era)) (Core.TxOut era) ->
   Core.Value era ->
   Test (BabbageUtxoPred era)
 validateTotalCollateral pp txb utxoCollateral bal =

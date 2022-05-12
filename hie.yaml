@@ -90,14 +90,14 @@ cradle:
     - path: "libs/non-integral/test"
       component: "non-integral:test:non-integral-test"
 
-    - path: "libs/compact-map/src"
-      component: "lib:compact-map"
+    - path: "libs/vector-map/src"
+      component: "lib:vector-map"
 
-    - path: "libs/compact-map/test"
-      component: "compact-map:test:tests"
+    - path: "libs/vector-map/test"
+      component: "vector-map:test:tests"
 
-    - path: "libs/compact-map/bench"
-      component: "compact-map:bench:bench"
+    - path: "libs/vector-map/bench"
+      component: "vector-map:bench:bench"
 
     - path: "libs/set-algebra/src"
       component: "lib:set-algebra"

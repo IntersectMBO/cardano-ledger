@@ -20,7 +20,7 @@ import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)

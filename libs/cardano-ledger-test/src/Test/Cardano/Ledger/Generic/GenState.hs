@@ -55,7 +55,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import Control.SetAlgebra (eval, (⨃))
 import Data.Default.Class (Default (def))
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)

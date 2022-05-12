@@ -57,12 +57,12 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, scriptsNeeded, totalDepo
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (coin, inject, (<+>), (<->)))
 import Control.State.Transition.Extended (STS (State))
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold
 import qualified Data.List as List
 import Data.Map (Map, keysSet, restrictKeys)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -358,7 +358,7 @@ instance Reflect era => TotalAda (UTxOState era) where
   totalAda (UTxOState utxo deposits fees _ _) = totalAda utxo <+> deposits <+> fees
 
 instance Reflect era => TotalAda (UTxO era) where
-  totalAda (UTxO m) = SplitMap.foldl' accum mempty m
+  totalAda (UTxO m) = Map.foldl' accum mempty m
     where
       accum ans txout = getTxOutCoin reify txout <+> ans
 

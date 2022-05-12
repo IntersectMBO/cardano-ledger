@@ -41,7 +41,7 @@ import Control.State.Transition.Extended (STS (BaseM, Environment, Signal, State
 import Data.Array (Array, array)
 import Data.Default.Class (Default (..))
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (getField))

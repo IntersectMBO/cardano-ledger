@@ -31,7 +31,7 @@ import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Foldable (toList)
 import qualified Data.List as List
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set

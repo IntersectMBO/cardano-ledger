@@ -62,13 +62,12 @@ import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as F
 import Data.Functor
 import qualified Data.List as List
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (All (..))
@@ -479,10 +478,10 @@ genSpendReferenceInputs ::
       Map (TxIn (Crypto era)) (Core.TxOut era)
     )
 genSpendReferenceInputs newUTxO = do
-  let pairs = SplitMap.toList newUTxO
+  let pairs = Map.toList newUTxO
   maxInputs <- gets getSpendInputsMax
   maxRef <- gets getRefInputsMax
-  numInputs <- lift $ choose (1, min (SplitMap.size newUTxO) maxInputs)
+  numInputs <- lift $ choose (1, min (Map.size newUTxO) maxInputs)
   numRefInputs <- lift $ choose (0, maxRef)
   badTest <- getUtxoTest
   (feepair@(txin, txout), inputPairs) <- lift $ chooseGood (badTest . fst) numInputs pairs
@@ -654,8 +653,7 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
                 else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
             go ecs' coll' (curCollTotal <+> c) um'
   (collaterals, excessColCoin) <-
-    go collateralAddresses Map.empty (Coin 0) $
-      SplitMap.toMap $ SplitMap.filter spendOnly utxo
+    go collateralAddresses Map.empty (Coin 0) $ Map.filter spendOnly utxo
   pure (Map.union collaterals utxo, collaterals, excessColCoin)
 
 spendOnly :: Era era => Core.TxOut era -> Bool

@@ -67,12 +67,12 @@ import Control.State.Transition.Extended
 import Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base64 as B64
 import Data.Coders
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
 import Data.List (intercalate)
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (extractKeys)
 import Data.Text (Text)
 import Debug.Trace (traceEvent)
 import GHC.Generics (Generic)
@@ -232,8 +232,7 @@ scriptsNotValidateTransition = do
 
       {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
       {- utxoDel  = getField @"collateral" txb ◁ utxo -}
-      !(!utxoKeep, !utxoDel) =
-        SplitMap.extractKeysSet (unUTxO utxo) (getField @"collateral" txb)
+      !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (getField @"collateral" txb)
   pure
     $! us
       { _utxo = UTxO utxoKeep,

@@ -74,9 +74,8 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UnifiedMap (UnifiedMap)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (STS (..))
-import qualified Data.Compact.SplitMap as Split
 import Data.Foldable (toList)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
@@ -145,7 +144,7 @@ instance CC.Crypto c => PrettyCore (BabbageEra c) where
   prettyTxOut = Babbage.ppTxOut
 
 prettyUTxO :: Proof era -> UTxO era -> PDoc
-prettyUTxO proof (UTxO mp) = prettyUTxOMap proof (Split.toMap mp)
+prettyUTxO proof = prettyUTxOMap proof . unUTxO
 
 prettyUTxOMap :: Proof era -> Map.Map (TxIn (Crypto era)) (Core.TxOut era) -> PDoc
 prettyUTxOMap (Babbage _) mp = ppMap ppTxIn prettyTxOut mp
@@ -914,10 +913,10 @@ stakeSummary (StakeRefPtr _) = ppString "Ptr"
 stakeSummary (StakeRefBase x) = ppSexp "Stake" [credSummary (coerceKeyRole x)]
 
 utxoSummary :: Proof era -> UTxO era -> PDoc
-utxoSummary proof (UTxO mp) = ppMap txInSummary (txOutSummary proof) (Split.toMap mp)
+utxoSummary proof = ppMap txInSummary (txOutSummary proof) . unUTxO
 
 utxoString :: Proof era -> UTxO era -> String
-utxoString proof (UTxO mp) = show (ppMap txInSummary (txOutSummary proof) (Split.toMap mp))
+utxoString proof = show . ppMap txInSummary (txOutSummary proof) . unUTxO
 
 scriptHashSummary :: ScriptHash crypto -> PDoc
 scriptHashSummary (ScriptHash h) = trim (ppHash h)
@@ -1144,7 +1143,7 @@ pcTxOut p@(Shelley _) (Shelley.TxOut addr v) =
   ppSexp "TxOut" [pcAddr addr, pcCoreValue p v]
 
 pcUTxO :: Reflect era => Proof era -> UTxO era -> PDoc
-pcUTxO proof (UTxO m) = ppMap pcTxIn (pcTxOut proof) (Split.toMap m)
+pcUTxO proof = ppMap pcTxIn (pcTxOut proof) . unUTxO
 
 instance Reflect era => PrettyC (UTxO era) era where prettyC = pcUTxO
 

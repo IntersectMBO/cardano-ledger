@@ -68,11 +68,10 @@ import Data.Coders
     (!>),
     (<!),
   )
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Either (rights)
 import Data.Fixed (HasResolution (resolution))
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -243,7 +242,7 @@ txInfoIn ::
   TxIn (Crypto era) ->
   Either TranslationError PV1.TxInInfo
 txInfoIn (UTxO mp) txin =
-  case SplitMap.lookup txin mp of
+  case Map.lookup txin mp of
     Nothing -> Left TranslationLogicErrorInput
     Just txout -> case transTxOutAddr txout of
       Just ad -> Right (PV1.TxInInfo (txInfoIn' txin) (PV1.TxOut ad valout dhash))

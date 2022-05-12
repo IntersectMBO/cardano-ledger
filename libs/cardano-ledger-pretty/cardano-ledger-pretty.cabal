@@ -51,7 +51,7 @@ library
     cardano-ledger-shelley-ma,
     cardano-protocol-tpraos,
     cardano-slotting,
-    compact-map,
+    vector-map,
     containers,
     hashable,
     iproute,

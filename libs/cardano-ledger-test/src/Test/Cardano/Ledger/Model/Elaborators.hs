@@ -160,7 +160,7 @@ import Data.Functor.Identity (Identity (..))
 import Data.Group.GrpMap (GrpMap (..))
 import Data.Kind (Type)
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as StrictSeq

@@ -115,14 +115,13 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS (replicate)
 import Data.ByteString.Short (ShortByteString)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Functor.Identity (Identity, runIdentity)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -281,7 +280,7 @@ unspendableOut pf =
 initUTxO :: PostShelley era => Proof era -> UTxO era
 initUTxO pf =
   UTxO $
-    SplitMap.fromList $
+    Map.fromList $
       [ (mkGenesisTxIn 1, alwaysSucceedsOutput pf),
         (mkGenesisTxIn 2, alwaysFailsOutput pf)
       ]
@@ -328,10 +327,10 @@ expectedUTxO initUtxo ex idx = UTxO utxo
   where
     utxo = case ex of
       ExpectSuccess txb newOut ->
-        SplitMap.insert (TxIn (txid txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
+        Map.insert (TxIn (txid txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
       ExpectFailure -> filteredUTxO (mkTxIxPartial (10 + idx))
-    filteredUTxO :: TxIx -> SplitMap.SplitMap (TxIn (Crypto era)) (Core.TxOut era)
-    filteredUTxO x = SplitMap.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO initUtxo
+    filteredUTxO :: TxIx -> Map.Map (TxIn (Crypto era)) (Core.TxOut era)
+    filteredUTxO x = Map.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO initUtxo
 
 expectedUTxO' ::
   forall era.
@@ -972,8 +971,8 @@ utxoEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> UTxO era
 utxoEx9 pf = UTxO utxo
   where
     utxo =
-      SplitMap.insert (TxIn (txid (validatingBodyManyScripts pf)) minBound) (outEx9 pf) $
-        SplitMap.filterWithKey
+      Map.insert (TxIn (txid (validatingBodyManyScripts pf)) minBound) (outEx9 pf) $
+        Map.filterWithKey
           (\k _ -> k /= mkGenesisTxIn 1 && k /= mkGenesisTxIn 100)
           (unUTxO $ initUTxO pf)
 
@@ -1786,7 +1785,7 @@ example1UTxO ::
   UTxO era
 example1UTxO pf =
   UTxO $
-    SplitMap.fromList
+    Map.fromList
       [ (TxIn (txid (validatingBody pf)) minBound, outEx1 pf),
         (TxIn (txid (validatingBodyWithCert pf)) minBound, outEx3 pf),
         (TxIn (txid (validatingBodyWithWithdrawal pf)) minBound, outEx5 pf),
