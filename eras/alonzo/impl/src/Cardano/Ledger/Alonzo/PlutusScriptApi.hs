@@ -75,6 +75,7 @@ import qualified Data.Set as Set
 import Debug.Trace (traceEvent)
 import GHC.Generics
 import GHC.Records (HasField (..))
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks)
 
 -- ===============================================================
@@ -147,7 +148,8 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 --     that the transaction is within the time horizon.
 collectTwoPhaseScriptInputs ::
   forall era.
-  ( Era era,
+  ( HasCallStack,
+    Era era,
     ExtendedUTxO era,
     Core.Script era ~ AlonzoScript.Script era,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),

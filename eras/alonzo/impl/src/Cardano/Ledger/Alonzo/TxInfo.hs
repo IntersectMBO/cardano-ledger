@@ -82,6 +82,7 @@ import Data.Time.Clock.POSIX (utcTimeToPOSIXSeconds)
 import Data.Typeable (Proxy (..), Typeable)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import qualified Plutus.V1.Ledger.Api as PV1
@@ -184,7 +185,7 @@ transTxOutAddr txOut = do
     Nothing -> transAddr (getTxOutAddr txOut)
 
 slotToPOSIXTime ::
-  (Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
+  (HasCallStack, Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
   Core.PParams era ->
   EpochInfo m ->
   SystemStart ->
@@ -204,7 +205,7 @@ slotToPOSIXTime pp ei sysS s = do
 
 -- | translate a validity interval to POSIX time
 transVITime ::
-  (Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
+  (HasCallStack, Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
   Core.PParams era ->
   EpochInfo m ->
   SystemStart ->
@@ -365,6 +366,7 @@ class ExtendedUTxO era where
   -- Compute a Digest of the current transaction to pass to the script
   --    This is the major component of the valContext function.
   txInfo ::
+    HasCallStack =>
     Monad m =>
     Core.PParams era ->
     Language ->
@@ -404,7 +406,8 @@ class ExtendedUTxO era where
 
 alonzoTxInfo ::
   forall era m.
-  ( Era era,
+  ( HasCallStack,
+    Era era,
     Monad m,
     Value era ~ Mary.Value (Crypto era),
     HasField "wits" (Core.Tx era) (TxWitness era),

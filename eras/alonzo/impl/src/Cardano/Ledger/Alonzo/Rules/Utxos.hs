@@ -76,6 +76,7 @@ import Data.Text (Text)
 import Debug.Trace (traceEvent)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks)
 
 --------------------------------------------------------------------------------
@@ -155,7 +156,8 @@ utxosTransition =
 
 scriptsValidateTransition ::
   forall era.
-  ( ValidateScript era,
+  ( HasCallStack,
+    ValidateScript era,
     ConcreteAlonzo era,
     ExtendedUTxO era,
     STS (UTXOS era),
@@ -200,7 +202,8 @@ scriptsValidateTransition = do
 
 scriptsNotValidateTransition ::
   forall era.
-  ( ValidateScript era,
+  ( HasCallStack,
+    ValidateScript era,
     ConcreteAlonzo era,
     ExtendedUTxO era,
     STS (UTXOS era)
