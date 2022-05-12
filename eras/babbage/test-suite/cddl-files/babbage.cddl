@@ -323,7 +323,7 @@ language = 0 ; Plutus v1
 
 costmdls =
   { ? 0 : [ 166*166 int ] ; Plutus v1
-  , ? 1 : [ 170*170 int ] ; Plutus v2
+  , ? 1 : [ 175*175 int ] ; Plutus v2
   }
 
 transaction_metadatum =
