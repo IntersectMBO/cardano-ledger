@@ -24,7 +24,7 @@ import Cardano.Ledger.Alonzo.PParams
     getLanguageView,
   )
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
-import Cardano.Ledger.Alonzo.Scripts (CostModels (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), mkCostModel)
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
@@ -34,9 +34,11 @@ import qualified Data.ByteString.Lazy as BSL
 import Data.Char (chr)
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
+import Data.Set as Set
 import Plutus.V1.Ledger.Api (Data (..))
+import qualified Plutus.V1.Ledger.Api as PV1 (costModelParamNames)
+import qualified Plutus.V2.Ledger.Api as PV2 (costModelParamNames)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
-import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1, testingCostModelV2)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Mary.Golden
   ( largestName,
@@ -190,12 +192,22 @@ goldenSerialization =
         serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
 
+-- | A cost model that sets everything as being free
+freeCostModel :: Language -> CostModel
+freeCostModel lang =
+  fromRight (error "freeCostModel is not well-formed") $
+    mkCostModel lang (cmps lang)
+  where
+    names PlutusV1 = PV1.costModelParamNames
+    names PlutusV2 = PV2.costModelParamNames
+    cmps l = Map.fromList $ fmap (\k -> (k, 0)) (Set.toList $ names l)
+
 exPP :: PParams (AlonzoEra StandardCrypto)
 exPP =
   emptyPParams
     { _costmdls =
         CostModels $
-          Map.fromList [(PlutusV1, testingCostModelV1), (PlutusV2, testingCostModelV2)]
+          Map.fromList [(PlutusV1, freeCostModel PlutusV1), (PlutusV2, freeCostModel PlutusV2)]
     }
 
 exampleLangDepViewPV1 :: LangDepView
@@ -207,22 +219,12 @@ exampleLangDepViewPV1 = LangDepView b1 b2
     b2 =
       fromRight (error "invalid hex encoding of the cost model inside exampleLangDepViewPV1") $
         B16.decode $
-          "5901e19f1a000302590001011a00060bc719026d00011a000249f01903e80001"
-            <> "1a000249f018201a0025cea81971f70419744d186419744d186419744d186419"
-            <> "744d186419744d186419744d18641864186419744d18641a000249f018201a00"
-            <> "0249f018201a000249f018201a000249f01903e800011a000249f018201a0002"
-            <> "49f01903e800081a000242201a00067e2318760001011a000249f01903e80008"
-            <> "1a000249f01a0001b79818f7011a000249f0192710011a0002155e19052e0119"
-            <> "03e81a000249f01903e8011a000249f018201a000249f018201a000249f01820"
-            <> "01011a000249f0011a000249f0041a000194af18f8011a000194af18f8011a00"
-            <> "02377c190556011a0002bdea1901f1011a000249f018201a000249f018201a00"
-            <> "0249f018201a000249f018201a000249f018201a000249f018201a000242201a"
-            <> "00067e23187600010119f04c192bd200011a000249f018201a000242201a0006"
-            <> "7e2318760001011a000242201a00067e2318760001011a001239301a0005f00f"
-            <> "00021a0025cea81971f704001a000141bb041a000249f019138800011a000249"
-            <> "f018201a000302590001011a000249f018201a000249f018201a000249f01820"
-            <> "1a000249f018201a000249f018201a000249f018201a000249f018201a00330d"
-            <> "a70101ff"
+          "58a89f0000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000000000000000000000000000000000"
+            <> "000000000000000000ff"
 
 exampleLangDepViewPV2 :: LangDepView
 exampleLangDepViewPV2 = LangDepView b1 b2
@@ -233,22 +235,12 @@ exampleLangDepViewPV2 = LangDepView b1 b2
     b2 =
       fromRight (error "invalid hex encoding of the cost model inside exampleLangDepViewPV2") $
         B16.decode $
-          "98aa1a000302590001011a00060bc719026d00011a000249f01903e800011a00"
-            <> "0249f018201a0025cea81971f70419744d186419744d186419744d186419744d"
-            <> "186419744d186419744d18641864186419744d18641a000249f018201a000249"
-            <> "f018201a000249f018201a000249f01903e800011a000249f018201a000249f0"
-            <> "1903e800081a000242201a00067e2318760001011a000249f01903e800081a00"
-            <> "0249f01a0001b79818f7011a000249f0192710011a0002155e19052e011903e8"
-            <> "1a000249f01903e8011a000249f018201a000249f018201a000249f018200101"
-            <> "1a000249f0011a000249f0041a000194af18f8011a000194af18f8011a000237"
-            <> "7c190556011a0002bdea1901f1011a000249f018201a000249f018201a000249"
-            <> "f018201a000249f018201a000249f018201a000249f018201a000242201a0006"
-            <> "7e23187600010119f04c192bd200011a000249f018201a000242201a00067e23"
-            <> "18760001011a000242201a00067e2318760001011a001239301a0005f00f0002"
-            <> "1a0025cea81971f704001a000141bb041a000249f019138800011a000249f018"
-            <> "201a000302590001011a000249f018201a000249f018201a000249f018201a00"
-            <> "0249f018201a000249f018201a000249f018201a000249f018201a00330da701"
-            <> "01"
+          "98af000000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000000000000000000000000000000000"
+            <> "0000000000000000000000000000000000"
 
 testScriptIntegritpHash :: PParams (AlonzoEra StandardCrypto) -> Language -> LangDepView -> IO ()
 testScriptIntegritpHash pp lang view = getLanguageView pp lang @?= view
