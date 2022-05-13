@@ -254,7 +254,7 @@ adaIsPreservedBabbage = adaIsPreserved (Babbage Mock)
 
 -- | The incremental Stake invaraint is preserved over a trace of length 100
 stakeInvariant :: Era era => MockChainState era -> MockChainState era -> Property
-stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
+stakeInvariant (MockChainState _ _) (MockChainState nes _) =
   case (lsUTxOState . esLState . nesEs) nes of
     (UTxOState utxo _ _ _ istake) -> istake === updateStakeDistribution mempty mempty utxo
 
