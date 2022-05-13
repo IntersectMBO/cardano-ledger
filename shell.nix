@@ -48,6 +48,18 @@ let
     exactDeps = false;
 
     inherit withHoogle;
+    shellHook = ''
+      DEFAULT_PS1="\n\[\033[1;32m\][nix-shell:\w]\$\[\033[0m\] "
+      prompt() {
+        local EXIT="$?"
+        if [ $EXIT != 0 ]; then
+          PS1="$DEFAULT_PS1\[\033[1;31m\]($EXIT)\[\033[00m\] "
+        else
+          PS1="$DEFAULT_PS1"
+        fi
+      }
+      PROMPT_COMMAND=prompt
+    '';
   };
 
   devops = pkgs.stdenv.mkDerivation {
