@@ -22,6 +22,8 @@ import Cardano.Ledger.Babbage.Rules.Ledger ()
 import Cardano.Ledger.Babbage.Rules.Utxow ()
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Era(Crypto)
+import Cardano.Ledger.Hashes(ScriptHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
@@ -59,7 +61,7 @@ import qualified Data.Vector as Vector
 import GHC.Word (Word64)
 import Prettyprinter (vsep)
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
-import Test.Cardano.Ledger.Generic.Functions (allInputs, getBody, getTxOutCoin, isValid')
+import Test.Cardano.Ledger.Generic.Functions (allInputs, getBody, getTxOutCoin, getWitnesses, isValid')
 import Test.Cardano.Ledger.Generic.GenState
   ( GenEnv (..),
     GenRS,
@@ -78,24 +80,36 @@ import Test.Cardano.Ledger.Generic.ModelState
   ( stashedAVVMAddressesZero,
     toMUtxo,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTxBody, pcTxIn)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTxBody, pcTxIn,pcScriptHash,scriptSummary,pcWitnesses)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.QuickCheck
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestTree, testGroup,defaultMain)
 import Test.Tasty.QuickCheck (testProperty)
-import Control.Monad (replicateM)
-import Control.State.Transition.Trace(traceSignals,TraceOrder(..)) 
+import Control.Monad (forM)
+
+
+import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
+import Cardano.Ledger.Shelley.Rules.Ledgers(LedgersPredicateFailure (..))
+import Cardano.Ledger.Babbage.Rules.Utxo(BabbageUtxoPred(..))
+import Cardano.Ledger.Shelley.Rules.Utxow(UtxowPredicateFailure(ScriptWitnessNotValidatingUTXOW))
+
+-- import Control.State.Transition.Trace(traceSignals,TraceOrder(..)) 
 
 -- ===========================================
+
+showhash ::Reflect era => Core.Tx era -> String
+showhash tx = show(hashAnnotated (getBody reify tx))
 
 -- | Generate a Core.Tx and an internal Model of the state after the tx
 --   has been applied. That model can be used to generate the next Tx
 genRsTxAndModel :: Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Core.Tx era)
 genRsTxAndModel proof n slot = do
-  (_, tx) <- genValidatedTx proof (trace ("TX AND MODEL SLOT " ++show slot) slot)
-  tx <$ modifyModel (\model -> applyTx proof n model tx)
+  (_, tx) <- genValidatedTx proof slot
+  modifyModel (\model -> applyTx proof n model tx)
+  pure tx
 
 -- | Generate a Vector of (StrictSeq (Core.Tx era))  representing a (Vector Block)
 genRsTxSeq ::
@@ -111,8 +125,8 @@ genRsTxSeq _ this lastN ans _slot | this >= lastN = pure(Vector.fromList (revers
 genRsTxSeq proof this lastN ans slot = do
   maxBlockSize <- getBlocksizeMax <$> get
   n <- lift $ choose (2 :: Int, fromIntegral maxBlockSize)
+  txs <- forM [0 .. n-1] (\ i -> genRsTxAndModel proof (this+i) slot)
   nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose (5, 12)
-  txs <- replicateM n (genRsTxAndModel proof this nextSlotNo)
   genRsTxSeq proof (this + n) lastN ((SS.fromList txs,slot) : ans) nextSlotNo
 
 -- | Generate a Vector of Blocks, and an initial LedgerState
@@ -126,6 +140,10 @@ genTxSeq ::
 genTxSeq proof gensize numTx = do
   runGenRS proof gensize (genRsTxSeq proof 0 numTx [] (SlotNo $ 1)) -- startSlot gensize))
 
+runTest :: IO ()
+runTest = do
+  (v,_) <- generate $ genTxSeq (Babbage Mock) def 20
+  print (Vector.length v)
 -- ==================================================================
 -- Constructing the "real", initial NewEpochState, from the GenState
 
@@ -170,28 +188,48 @@ pcSmallUTxO proof u txs = ppMap pcTxIn (pcCoin . getTxOutCoin proof) m
     f tx = allInputs proof (getBody proof tx)
     m = Map.restrictKeys (toMUtxo u) keys
 
-raiseMockError ::
+raiseMockError :: forall era. 
   (UsesValue era, Reflect era) =>
   Word64 ->
   SlotNo -> 
   EpochState era ->
   [MockChainFailure era] ->
   [Core.Tx era] ->
+  Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
   String
-raiseMockError slot (SlotNo next) epochstate pdfs txs =
+raiseMockError slot (SlotNo next) epochstate pdfs txs scripts =
   show $
     vsep
       [ pcSmallUTxO reify ((_utxo . lsUTxOState . esLState) epochstate) txs,
-        ppString "===================================",
-        ppString "Slot " <> ppWord64 slot,
-        ppString "NextSlot " <> ppWord64 next,
         ppString "===================================",
         showBlock txs,
         ppString "===================================",
         ppString (show (totalAdaPotsES epochstate)),
         ppString "===================================",
-        ppList (ppMockChainFailure reify) pdfs
+        ppList (ppMockChainFailure reify) pdfs,
+        -- ppList (foo reify) pdfs,
+        ppString "===================================",
+        ppString "Last Slot " <> ppWord64 slot,
+        ppString "Current Slot " <> ppWord64 next,
+        ppString "===================================",
+        ppMap pcScriptHash (scriptSummary @era reify) (Map.restrictKeys scripts (badScripts reify pdfs))
       ]
+
+foo :: Proof era -> MockChainFailure era -> PDoc
+foo (Babbage _) m = ppString(show m)
+foo _ _ = ppString "foo works on Babbage only"
+
+badScripts :: Proof era -> [MockChainFailure era] -> Set.Set(ScriptHash (Crypto era))
+badScripts proof xs = Fold.foldl' (\ s mcf -> Set.union s (getw proof mcf)) Set.empty xs
+  where getw :: Proof era -> MockChainFailure era -> Set.Set(ScriptHash (Crypto era))
+        getw (Babbage _) (MockChainFromLedgersFailure
+             (LedgerFailure
+             (UtxowFailure
+             (FromAlonzoUtxowFail
+             (WrappedShelleyEraFailure
+             (ScriptWitnessNotValidatingUTXOW set)))))) = set
+        getw _ _ = Set.empty            
+
 
 showBlock :: Reflect era => [Core.Tx era] -> PDoc
 showBlock txs = ppList pppair (zip txs [0 ..])
@@ -204,6 +242,7 @@ showBlock txs = ppList pppair (zip txs [0 ..])
               ppSafeHash (hashAnnotated body),
               pcTxBody reify body,
               ppString (show (isValid' reify tx)),
+              pcWitnesses reify (getWitnesses reify tx),
               ppString "\n"
             ]
 
@@ -219,7 +258,7 @@ instance STS (MOCKCHAIN era)
 -}
 -- ==============================================================
 
-newtype Gen1 era = Gen1 (Vector (StrictSeq (Core.Tx era),SlotNo))
+data Gen1 era = Gen1 (Vector (StrictSeq (Core.Tx era),SlotNo)) (GenState era)
 
 instance
   ( STS (MOCKCHAIN era),
@@ -234,7 +273,7 @@ instance
 
   envGen _gstate = pure ()
 
-  sigGen (Gen1 txss) () mcs@(MockChainState newepoch (SlotNo lastSlot) count) = do
+  sigGen (Gen1 txss gs) () mcs@(MockChainState newepoch (SlotNo lastSlot) count) = do
     let NewEpochState _epochnum _ _ epochstate _ pooldistr _ = newepoch
     issuerkey <- chooseIssuer pooldistr
     let (txs,nextSlotNo) = txss ! count
@@ -243,7 +282,10 @@ instance
     -- Run the STS Rules for MOCKCHAIN with generated signal
 
     case runShelleyBase (applySTSTest (TRC @(MOCKCHAIN era) ((), mcs, mockblock))) of
-      Left pdfs -> error (raiseMockError lastSlot nextSlotNo epochstate pdfs (Fold.toList (fst(txss ! count))))
+      Left pdfs -> let txsl = Fold.toList txs
+                       scs = gsScripts gs
+                   in trace (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl scs)
+                            (error "FAILS")
       -- Left pdfs -> trace ("Discard\n"++show(ppList (ppMockChainFailure reify) pdfs)) discard -- TODO should we enable this?
       Right mcs2 -> seq mcs2 (pure (trace ("SLOT "++show nextSlotNo) mockblock))
 
@@ -277,7 +319,7 @@ genTrace proof numTxInTrace gsize = do
   traceFromInitState @(MOCKCHAIN era)
     testGlobals
     (fromIntegral (length vs))
-    (Gen1 vs)
+    (Gen1 vs genstate)
     (Just (\_ -> pure $ Right initState))
 
 traceProp ::
@@ -320,10 +362,10 @@ chainTest proof n gsize = testProperty message action
         traceFromInitState @(MOCKCHAIN era)
           testGlobals
           (fromIntegral (length vs))
-          (Gen1 vs)
+          (Gen1 vs genstate)
           (Just (\_ -> pure $ Right initState))
       -- Here is where we can add some properties for traces:
-      pure (_traceInitState trace1 === initState)
+      pure $ (_traceInitState trace1 === initState)
 
 testTraces :: Int -> TestTree
 testTraces n =
@@ -335,3 +377,7 @@ testTraces n =
       chainTest (Allegra Mock) n def,
       chainTest (Shelley Mock) n def
     ]
+
+
+main :: IO ()
+main = defaultMain (chainTest (Babbage Mock) 70 def)

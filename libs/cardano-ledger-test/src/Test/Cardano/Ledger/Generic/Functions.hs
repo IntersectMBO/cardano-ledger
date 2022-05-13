@@ -302,6 +302,13 @@ allInputs (Mary _) txb = getAllTxInputs txb
 allInputs (Allegra _) txb = getAllTxInputs txb
 allInputs (Shelley _) txb = getAllTxInputs txb
 
+getWitnesses :: Proof era -> Core.Tx era -> Core.Witnesses era
+getWitnesses (Babbage _) tx = getField @"wits" tx
+getWitnesses (Alonzo _) tx = getField @"wits" tx
+getWitnesses (Mary _) tx = getField @"wits" tx
+getWitnesses (Allegra _) tx = getField @"wits" tx
+getWitnesses (Shelley _) tx = getField @"wits" tx
+
 primaryLanguage :: Proof era -> Maybe Language
 primaryLanguage (Babbage _) = Just (PlutusV2)
 primaryLanguage (Alonzo _) = Just (PlutusV1)

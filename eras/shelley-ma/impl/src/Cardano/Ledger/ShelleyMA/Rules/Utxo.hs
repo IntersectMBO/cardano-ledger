@@ -13,6 +13,8 @@
 
 module Cardano.Ledger.ShelleyMA.Rules.Utxo where
 
+import Debug.Trace
+import Cardano.Ledger.SafeHash(hashAnnotated)
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen, serialize)
 import Cardano.Ledger.Address (Addr)
 import Cardano.Ledger.BaseTypes
@@ -377,7 +379,7 @@ validateValueNotConservedUTxO ::
   Test (UtxoPredicateFailure era)
 validateValueNotConservedUTxO pp utxo stakepools txb =
   failureUnless (consumedValue == producedValue) $
-    ValueNotConservedUTxO consumedValue producedValue
+    ValueNotConservedUTxO consumedValue (trace ("NOT CONSERVED BODY HASH "++show(hashAnnotated txb)) producedValue)
   where
     consumedValue = consumed pp utxo txb
     producedValue = Shelley.produced pp (`Map.notMember` stakepools) txb
