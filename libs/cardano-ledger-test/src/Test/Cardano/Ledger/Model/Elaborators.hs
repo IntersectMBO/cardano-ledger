@@ -148,7 +148,7 @@ import Control.Lens
   )
 import Control.Monad (unless)
 import qualified Control.Monad.Except as Except
-import Control.Monad.State (MonadState (..))
+import Control.Monad.State (MonadState (..), gets)
 import qualified Control.Monad.State.Class as State
 import Control.Monad.Trans.Class (lift)
 import qualified Control.Monad.Trans.State as State hiding (get, gets, state)
@@ -1099,7 +1099,7 @@ class
           [Core.Tx era] <-
           for mtxSeq $ \tx -> Except.ExceptT $ State.state $ elaborateTx (Proxy :: Proxy era) globals ttl tx
 
-        mempoolEnv <- (\(nes0, _) -> mkMempoolEnv nes0 slot) <$> get
+        mempoolEnv <- gets (\(nes0, _) -> mkMempoolEnv nes0 slot)
 
         -- apply the transactions.
 

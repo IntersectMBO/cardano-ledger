@@ -94,6 +94,7 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey, makeWitnessesVKey)
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader (checkLeaderValue)
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Control.State.Transition.Trace (checkTrace, (.-), (.->))
 import qualified Data.ByteString.Char8 as BS (pack)
@@ -399,7 +400,7 @@ addReward dp ra c = dp {dpsDState = ds {_unified = rewards'}}
     rewards' = UM.insert ra c (rewards ds)
 
 ledgerEnv :: LedgerEnv C
-ledgerEnv = LedgerEnv (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))
+ledgerEnv = LedgerEnv Origin (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
   [PredicateFailure (LEDGER C)] ->
@@ -561,7 +562,7 @@ testExpiredTx =
               ttl = SlotNo 0,
               signers = [asWitness alicePay]
             }
-      ledgerEnv' = LedgerEnv (SlotNo 1) minBound pp (AccountState (Coin 0) (Coin 0))
+      ledgerEnv' = LedgerEnv Origin (SlotNo 1) minBound pp (AccountState (Coin 0) (Coin 0))
    in testLEDGER ledgerState tx ledgerEnv' (Left errs)
 
 testInvalidWintess :: Assertion

@@ -81,6 +81,7 @@ import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), txid)
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
@@ -252,6 +253,7 @@ initialUTxOState aliceKeep msigs =
               applySTSTest @(UTXOW (ShelleyEra c))
                 ( TRC
                     ( UtxoEnv
+                        Origin
                         (SlotNo 0)
                         initPParams
                         Map.empty
@@ -306,6 +308,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
         applySTSTest @(UTXOW (ShelleyEra c))
           ( TRC
               ( UtxoEnv
+                  Origin
                   (SlotNo 0)
                   initPParams
                   Map.empty

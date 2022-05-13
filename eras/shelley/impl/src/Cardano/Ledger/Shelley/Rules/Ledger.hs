@@ -55,6 +55,7 @@ import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW, UtxowPredicateFailure)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Slotting.Slot (WithOrigin)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition
   ( Assertion (..),
@@ -80,7 +81,8 @@ import NoThunks.Class (NoThunks (..))
 data LEDGER era
 
 data LedgerEnv era = LedgerEnv
-  { ledgerSlotNo :: !SlotNo,
+  { ledgerTipSlot :: !(WithOrigin SlotNo),
+    ledgerSlotNo :: !SlotNo,
     ledgerIx :: !TxIx,
     ledgerPp :: !(Core.PParams era),
     ledgerAccount :: !AccountState
@@ -89,7 +91,7 @@ data LedgerEnv era = LedgerEnv
 deriving instance Show (Core.PParams era) => Show (LedgerEnv era)
 
 instance NFData (Core.PParams era) => NFData (LedgerEnv era) where
-  rnf (LedgerEnv _slotNo _ix pp _account) = rnf pp
+  rnf (LedgerEnv _tipSlot _slotNo _ix pp _account) = rnf pp
 
 data LedgerPredicateFailure era
   = UtxowFailure (PredicateFailure (Core.EraRule "UTXOW" era)) -- Subtransition Failures
@@ -214,7 +216,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (LEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
+  TRC (LedgerEnv tipSlot slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
 
   dpstate' <-
     trans @(Core.EraRule "DELEGS" era) $
@@ -231,7 +233,7 @@ ledgerTransition = do
   utxoSt' <-
     trans @(Core.EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv slot pp stpools genDelegs,
+        ( UtxoEnv tipSlot slot pp stpools genDelegs,
           utxoSt,
           tx
         )

@@ -731,10 +731,11 @@ ppEpochState (EpochState acnt snap ls prev pp non) =
     ]
 
 ppNewEpochState :: CanPrettyPrintLedgerState era => NewEpochState era -> PDoc
-ppNewEpochState (NewEpochState enum prevB curB es rewup pool _) =
+ppNewEpochState (NewEpochState enum tipSlot prevB curB es rewup pool _) =
   ppRecord
     "NewEpochState"
     [ ("epochnum", ppEpochNo enum),
+      ("tipSlot", ppWithOrigin ppSlotNo tipSlot),
       ("prevBlock", ppBlocksMade prevB),
       ("currBlock", ppBlocksMade curB),
       ("epochState", ppEpochState es),

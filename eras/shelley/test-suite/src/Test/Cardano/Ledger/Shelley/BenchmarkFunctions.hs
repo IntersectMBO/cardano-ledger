@@ -79,6 +79,7 @@ import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val (Val (inject))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.State.Transition.Extended (TRC (..), applySTS)
 import Data.Default.Class (def)
 import qualified Data.Map as Map
@@ -172,7 +173,7 @@ ppsBench =
     }
 
 ledgerEnv :: (Core.PParams era ~ PParams era) => LedgerEnv era
-ledgerEnv = LedgerEnv (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))
+ledgerEnv = LedgerEnv Origin (SlotNo 0) minBound ppsBench (AccountState (Coin 0) (Coin 0))
 
 testLEDGER ::
   LedgerState B ->

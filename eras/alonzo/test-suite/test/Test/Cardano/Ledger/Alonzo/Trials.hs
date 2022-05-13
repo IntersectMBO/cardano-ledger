@@ -89,7 +89,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
-import Cardano.Slotting.Slot (SlotNo (..))
+import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (Origin))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as TQC
@@ -222,7 +222,7 @@ instance
   TQC.HasTrace (AlonzoLEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
-    LedgerEnv (SlotNo 0) minBound
+    LedgerEnv Origin (SlotNo 0) minBound
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
@@ -235,7 +235,7 @@ instance
 
 -- An initial (mostly empty) LedgerEnv
 ledgerEnv :: forall era. Default (Core.PParams era) => LedgerEnv era
-ledgerEnv = LedgerEnv (SlotNo 0) minBound def (AccountState (Coin 0) (Coin 0))
+ledgerEnv = LedgerEnv Origin (SlotNo 0) minBound def (AccountState (Coin 0) (Coin 0))
 
 genAlonzoTx :: Gen (Core.Tx A)
 genAlonzoTx = genstuff ap $ \genv _cs _nep _ep _ls _pp utxo dp _d _p ->

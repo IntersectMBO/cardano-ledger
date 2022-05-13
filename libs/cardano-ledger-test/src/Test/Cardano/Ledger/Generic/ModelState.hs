@@ -90,8 +90,9 @@ import Cardano.Ledger.Shelley.PoolRank (NonMyopic (..))
 import Cardano.Ledger.Shelley.RewardUpdate (PulsingRewUpdate (..), RewardUpdate (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import Cardano.Ledger.Slot (EpochNo (..))
+import Cardano.Ledger.Slot (EpochNo (..), SlotNo)
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.Monad.Trans ()
 import Control.Provenance (runProvM)
 import Control.State.Transition (STS (State))
@@ -176,6 +177,7 @@ data ModelNewEpochState era = ModelNewEpochState
     mRetiring :: !(Map (KeyHash 'StakePool (Crypto era)) EpochNo),
     mSnapshots :: !(SnapShots (Crypto era)),
     mEL :: !EpochNo, -- Last epoch,
+    mTipSlot :: !(WithOrigin SlotNo), -- Tip slot
     mBprev :: !(Map (KeyHash 'StakePool (Crypto era)) Natural), --  Blocks made before current epoch, NO EFFECT until we model EpochBoundar
     mBcur :: !(Map (KeyHash 'StakePool (Crypto era)) Natural),
     -- | Blocks made in current epoch
@@ -268,6 +270,7 @@ newEpochStateZero :: forall era. Reflect era => NewEpochState era
 newEpochStateZero =
   NewEpochState
     (EpochNo 0)
+    Origin
     blocksMadeZero
     blocksMadeZero
     epochStateZero
@@ -302,6 +305,7 @@ mNewEpochStateZero =
       mRetiring = Map.empty,
       mSnapshots = snapShotsZero,
       mEL = EpochNo 0,
+      mTipSlot = Origin,
       mBprev = Map.empty,
       mBcur = Map.empty,
       mRu = SNothing
@@ -357,6 +361,7 @@ instance forall era. Reflect era => Extract (NewEpochState era) era where
   extract x =
     NewEpochState
       (mEL x)
+      (mTipSlot x)
       (BlocksMade (mBprev x))
       (BlocksMade (mBcur x))
       (extract x)
@@ -384,6 +389,7 @@ abstract x =
       mRetiring = (_retiring . dpsPState . lsDPState . esLState . nesEs) x,
       mSnapshots = (esSnapshots . nesEs) x,
       mEL = nesEL x,
+      mTipSlot = nesTipSlot x,
       mBprev = unBlocksMade (nesBprev x),
       mBcur = unBlocksMade (nesBcur x),
       mRu = case nesRu x of

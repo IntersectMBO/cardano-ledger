@@ -84,6 +84,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.Arrow (left)
 import Control.Monad.Except (liftEither)
 import Control.Monad.Reader (runReader)
@@ -150,6 +151,7 @@ instance
   initialState sg ag =
     NewEpochState
       initialEpochNo
+      Origin
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
       ( EpochState

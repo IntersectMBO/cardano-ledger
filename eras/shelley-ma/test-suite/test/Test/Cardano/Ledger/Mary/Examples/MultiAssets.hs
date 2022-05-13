@@ -39,6 +39,7 @@ import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..), mkTxInPartial, txid)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.Exception (ErrorCall (ErrorCall), evaluate, try)
 import Control.State.Transition.Extended (PredicateFailure)
 import qualified Data.ByteString.Char8 as BS
@@ -101,7 +102,7 @@ pp =
     }
 
 ledgerEnv :: SlotNo -> LedgerEnv MaryTest
-ledgerEnv s = LedgerEnv s minBound pp (AccountState (Coin 0) (Coin 0))
+ledgerEnv s = LedgerEnv Origin s minBound pp (AccountState (Coin 0) (Coin 0))
 
 feeEx :: Coin
 feeEx = Coin 3

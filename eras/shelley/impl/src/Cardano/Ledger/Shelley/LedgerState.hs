@@ -84,7 +84,16 @@ module Cardano.Ledger.Shelley.LedgerState
     startStep,
     pulseStep,
     completeStep,
-    NewEpochState (NewEpochState, nesEL, nesEs, nesRu, nesPd, nesBprev, nesBcur),
+    NewEpochState
+      ( NewEpochState,
+        nesTipSlot,
+        nesEL,
+        nesEs,
+        nesRu,
+        nesPd,
+        nesBprev,
+        nesBcur
+      ),
     StashedAVVMAddresses,
     stashedAVVMAddresses,
     getGKeys,
@@ -221,6 +230,7 @@ import Cardano.Ledger.UnifiedMap (Trip (..), Triple, UMap (..), UnifiedMap, View
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Prelude (rightToMaybe)
+import Cardano.Slotting.Slot (WithOrigin)
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans
@@ -718,6 +728,8 @@ instance
 data NewEpochState era = NewEpochState
   { -- | Last epoch
     nesEL :: !EpochNo,
+    -- | Tip of the slot of the last applied block
+    nesTipSlot :: !(WithOrigin SlotNo),
     -- | Blocks made before current epoch
     nesBprev :: !(BlocksMade (Crypto era)),
     -- | Blocks made in current epoch
@@ -796,8 +808,9 @@ instance
   ) =>
   ToCBOR (NewEpochState era)
   where
-  toCBOR (NewEpochState e bp bc es ru pd av) =
-    encodeListLen 7
+  toCBOR (NewEpochState tipSlot e bp bc es ru pd av) =
+    encodeListLen 8
+      <> toCBOR tipSlot
       <> toCBOR e
       <> toCBOR bp
       <> toCBOR bc
@@ -827,13 +840,14 @@ instance
         <! From
         <! From
         <! From
+        <! From
 
 getGKeys ::
   NewEpochState era ->
   Set (KeyHash 'Genesis (Crypto era))
 getGKeys nes = Map.keysSet genDelegs
   where
-    NewEpochState _ _ _ es _ _ _ = nes
+    NewEpochState _ _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
     LedgerState _ (DPState (DState _ _ (GenDelegs genDelegs) _) _) = ls
 
@@ -1665,6 +1679,7 @@ updateNES ::
   NewEpochState era
 updateNES
   oldNes@( NewEpochState
+             _tipSlot
              _eL
              _bprev
              _

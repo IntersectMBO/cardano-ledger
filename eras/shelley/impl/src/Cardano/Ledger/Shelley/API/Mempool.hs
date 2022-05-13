@@ -192,11 +192,13 @@ mkMempoolEnv ::
   MempoolEnv era
 mkMempoolEnv
   LedgerState.NewEpochState
-    { LedgerState.nesEs
+    { LedgerState.nesEs,
+      LedgerState.nesTipSlot
     }
   slot =
     Ledger.LedgerEnv
-      { Ledger.ledgerSlotNo = slot,
+      { Ledger.ledgerTipSlot = nesTipSlot,
+        Ledger.ledgerSlotNo = slot,
         Ledger.ledgerIx = minBound,
         Ledger.ledgerPp = LedgerState.esPp nesEs,
         Ledger.ledgerAccount = LedgerState.esAccountState nesEs

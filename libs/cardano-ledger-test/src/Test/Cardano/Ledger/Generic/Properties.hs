@@ -36,7 +36,7 @@ import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import Cardano.Slotting.Slot (SlotNo (..))
+import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (Origin))
 import Control.Monad.Trans.RWS.Strict (gets)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
@@ -79,20 +79,20 @@ import Test.Tasty.QuickCheck (testProperty)
 
 genTxAndUTXOState :: Reflect era => Proof era -> GenSize -> Gen (TRC (Core.EraRule "UTXOW" era), GenState era)
 genTxAndUTXOState proof@(Babbage _) gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  (Box _ (TRC (LedgerEnv tipSlot slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
+  pure (TRC (UtxoEnv tipSlot slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Alonzo _) gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  (Box _ (TRC (LedgerEnv tipSlot slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
+  pure (TRC (UtxoEnv tipSlot slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Mary _) gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  (Box _ (TRC (LedgerEnv tipSlot slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
+  pure (TRC (UtxoEnv tipSlot slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Allegra _) gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  (Box _ (TRC (LedgerEnv tipSlot slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
+  pure (TRC (UtxoEnv tipSlot slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 genTxAndUTXOState proof@(Shelley _) gsize = do
-  (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
-  pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
+  (Box _ (TRC (LedgerEnv tipSlot slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
+  pure (TRC (UtxoEnv tipSlot slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
 
 genTxAndLEDGERState ::
   forall era.
@@ -114,7 +114,7 @@ genTxAndLEDGERState proof sizes = do
         model <- gets gsModel
         pp <- gets (gePParams . gsGenEnv)
         let ledgerState = extract @(LedgerState era) model
-            ledgerEnv = LedgerEnv slotNo txIx pp (AccountState (Coin 0) (Coin 0))
+            ledgerEnv = LedgerEnv Origin slotNo txIx pp (AccountState (Coin 0) (Coin 0))
         pure $ TRC (ledgerEnv, ledgerState, tx)
   (trc, genstate) <- runGenRS proof def genT
   pure (Box proof trc genstate)

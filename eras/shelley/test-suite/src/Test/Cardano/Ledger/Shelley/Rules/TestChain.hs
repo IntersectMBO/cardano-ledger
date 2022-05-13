@@ -91,6 +91,7 @@ import Cardano.Prelude (HasField (..))
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader (..),
+    LastAppliedBlock (labSlotNo),
     bhbody,
     bheaderSlotNo,
   )
@@ -1118,7 +1119,7 @@ poolTraceFromBlock chainSt block =
     certs = concatMap (toList . getField @"certs" . getField @"body")
     poolCerts = filter poolCert (certs txs)
     poolEnv =
-      let (LedgerEnv s _ pp _) = ledgerEnv
+      let (LedgerEnv _tipSlot s _ pp _) = ledgerEnv
        in PoolEnv s pp
     poolSt0 =
       let LedgerState _ (DPState _ poolSt0_) = ledgerSt0
@@ -1145,7 +1146,7 @@ delegTraceFromBlock chainSt block =
     certs = concatMap (reverse . toList . getField @"certs" . getField @"body")
     blockCerts = filter delegCert (certs txs)
     delegEnv =
-      let (LedgerEnv s txIx pp reserves) = ledgerEnv
+      let (LedgerEnv _tipSlot s txIx pp reserves) = ledgerEnv
           dummyCertIx = minBound
           ptr = Ptr s txIx dummyCertIx
        in DelegEnv s ptr reserves pp
@@ -1172,13 +1173,14 @@ ledgerTraceBase ::
   (ChainState era, LedgerEnv era, LedgerState era, [Core.Tx era])
 ledgerTraceBase chainSt block =
   ( tickedChainSt,
-    LedgerEnv slot minBound pp_ (esAccountState nes),
+    LedgerEnv tipSlot slot minBound pp_ (esAccountState nes),
     esLState nes,
     txs
   )
   where
     (UnserialisedBlock (BHeader bhb _) txSeq) = block
     slot = bheaderSlotNo bhb
+    tipSlot = labSlotNo <$> chainLastAppliedBlock chainSt
     tickedChainSt = tickChainState slot chainSt
     nes = (nesEs . chainNes) tickedChainSt
     pp_ = esPp nes

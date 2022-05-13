@@ -38,6 +38,7 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState (DPState, LedgerState (..), UTxOState)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (State)
 import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
@@ -76,7 +77,8 @@ type AlonzoBench = AlonzoEra C_Crypto
 applyTxMempoolEnv :: Default (Core.PParams era) => MempoolEnv era
 applyTxMempoolEnv =
   LedgerEnv
-    { ledgerSlotNo = SlotNo 0,
+    { ledgerTipSlot = Origin,
+      ledgerSlotNo = SlotNo 0,
       ledgerIx = minBound,
       ledgerPp = def,
       ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)

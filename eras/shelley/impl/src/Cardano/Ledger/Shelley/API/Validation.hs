@@ -200,10 +200,12 @@ mkBbodyEnv ::
   STS.BbodyEnv era
 mkBbodyEnv
   LedgerState.NewEpochState
-    { LedgerState.nesEs
+    { LedgerState.nesEs,
+      LedgerState.nesTipSlot
     } =
     STS.BbodyEnv
-      { STS.bbodyPp = LedgerState.esPp nesEs,
+      { STS.bbodyTipSlot = nesTipSlot,
+        STS.bbodyPp = LedgerState.esPp nesEs,
         STS.bbodyAccount = LedgerState.esAccountState nesEs
       }
 

@@ -235,7 +235,7 @@ utxoTransition ::
   ) =>
   TransitionRule (UTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
+  TRC (Shelley.UtxoEnv _tipSlot slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _ _ ppup _ = u
   let txb = getField @"body" tx
 

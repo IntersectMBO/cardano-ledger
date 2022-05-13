@@ -38,7 +38,8 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersEnv (..))
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
-import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
+import Cardano.Ledger.Slot (SlotNo, epochInfoEpoch, epochInfoFirst)
+import Cardano.Slotting.Slot (WithOrigin)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Embed (..),
@@ -66,7 +67,8 @@ deriving stock instance Show (LedgerState era) => Show (BbodyState era)
 deriving stock instance Eq (LedgerState era) => Eq (BbodyState era)
 
 data BbodyEnv era = BbodyEnv
-  { bbodyPp :: Core.PParams era,
+  { bbodyTipSlot :: WithOrigin SlotNo,
+    bbodyPp :: Core.PParams era,
     bbodyAccount :: AccountState
   }
 
@@ -148,7 +150,7 @@ bbodyTransition ::
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-             ( BbodyEnv pp account,
+             ( BbodyEnv tipSlot pp account,
                BbodyState ls b,
                UnserialisedBlock bhview txsSeq
                )
@@ -164,7 +166,7 @@ bbodyTransition =
 
         ls' <-
           trans @(Core.EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bhview) pp account, ls, StrictSeq.fromStrict txs)
+            TRC (LedgersEnv tipSlot (bhviewSlot bhview) pp account, ls, StrictSeq.fromStrict txs)
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
         -- delegate. However, this would only entail an overhead of 7 counts, and it's

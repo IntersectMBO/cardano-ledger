@@ -65,7 +65,7 @@ import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as ShelleyMA
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API (EpochInfo, epochInfoSlotToUTCTime)
-import Cardano.Slotting.Slot (SlotNo (SlotNo))
+import Cardano.Slotting.Slot (SlotNo (SlotNo), WithOrigin (..))
 import Cardano.Slotting.Time (SystemStart)
 import Control.Monad (unless)
 import Control.Monad.Trans.Reader (asks)
@@ -362,14 +362,14 @@ validateOutsideForecast ::
   ) =>
   Core.PParams era ->
   EpochInfo (Either a) ->
-  -- | Current slot number
-  SlotNo ->
+  -- | Tip slot number
+  WithOrigin SlotNo ->
   SystemStart ->
   -- | Stability window, in terms of number of slots
   Word64 ->
   ValidatedTx era ->
   Test (UtxoPredicateFailure era)
-validateOutsideForecast pp ei slotNo sysSt sw tx =
+validateOutsideForecast pp ei tipSlot sysSt sw tx =
   {-   (_,i_f) := txvldt tx   -}
   case getField @"vldt" (body tx) of
     ValidityInterval _ (SJust ifj)
@@ -382,6 +382,9 @@ validateOutsideForecast pp ei slotNo sysSt sw tx =
     _ -> pure ()
   where
     addSlots count (SlotNo toSlot) = SlotNo (toSlot + count)
+    slotNo = case tipSlot of
+      At n -> n
+      Origin -> SlotNo 0
 
 -- | Ensure that there are no `Core.TxOut`s that have value less than the sized @coinsPerUTxOWord@
 --
@@ -501,7 +504,7 @@ utxoTransition ::
   ) =>
   TransitionRule (AlonzoUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
+  TRC (Shelley.UtxoEnv tipSlot slot pp stakepools _genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
@@ -520,7 +523,7 @@ utxoTransition = do
   stability <- liftSTS $ asks stabilityWindow
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast pp ei slot sysSt stability tx
+  runTest $ validateOutsideForecast pp ei tipSlot sysSt stability tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txb

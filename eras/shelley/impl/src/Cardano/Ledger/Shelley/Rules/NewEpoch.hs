@@ -38,6 +38,7 @@ import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Slot
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.Provenance (runProvM)
 import Control.State.Transition
 import Data.Compact.VMap as VMap
@@ -117,6 +118,7 @@ instance
     [ pure $
         NewEpochState
           (EpochNo 0)
+          Origin
           (BlocksMade Map.empty)
           (BlocksMade Map.empty)
           def
@@ -150,7 +152,7 @@ newEpochTransition ::
 newEpochTransition = do
   TRC
     ( _,
-      src@(NewEpochState (EpochNo eL) _ bcur es ru _pd _),
+      src@(NewEpochState (EpochNo eL) _ _ bcur es ru _pd _),
       e@(EpochNo e_)
       ) <-
     judgmentContext

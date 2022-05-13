@@ -93,11 +93,12 @@ genBlock ::
   GenEnv era ->
   ChainState era ->
   Gen (Block (BHeader (Crypto era)) era)
-genBlock ge = genBlockWithTxGen genTxs ge
+genBlock ge cs = genBlockWithTxGen genTxs ge cs
   where
+    tipSlot = labSlotNo <$> chainLastAppliedBlock cs
     genTxs :: TxGen era
     genTxs pp reserves ls s = do
-      let ledgerEnv = LedgersEnv @era s pp reserves
+      let ledgerEnv = LedgersEnv @era tipSlot s pp reserves
       block <- sigGen @(Core.EraRule "LEDGERS" era) ge ledgerEnv ls
       genEraTweakBlock @era pp block
 
@@ -126,7 +127,7 @@ genBlockWithTxGen
             $ selectNextSlotWithLeader ge origChainState firstConsideredSlot
 
     -- Now we need to compute the KES period and get the set of hot keys.
-    let NewEpochState _ _ _ es _ _ _ = chainNes chainSt
+    let NewEpochState _ _ _ _ es _ _ _ = chainNes chainSt
         EpochState acnt _ ls _ pp _ = es
         kp@(KESPeriod kesPeriod_) = runShelleyBase $ kesPeriod nextSlot
         cs = chainOCertIssue chainSt

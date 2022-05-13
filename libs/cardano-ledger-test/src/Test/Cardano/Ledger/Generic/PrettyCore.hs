@@ -1303,10 +1303,11 @@ pcLedgerState proof (LedgerState utstate dpstate) =
 instance Reflect era => PrettyC (LedgerState era) era where prettyC = pcLedgerState
 
 pcNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
-pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ pd _) =
+pcNewEpochState proof (NewEpochState en tipSlot (BlocksMade pbm) (BlocksMade cbm) es _ pd _) =
   ppRecord
     "NewEpochState"
     [ ("EpochNo", ppEpochNo en),
+      ("TipSlot", ppWithOrigin ppSlotNo tipSlot),
       ("EpochState", pcEpochState proof es),
       ("PoolDistr", ppPoolDistr pd),
       ("Prev Blocks", ppMap pcKeyHash ppNatural pbm),

@@ -110,7 +110,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
-import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..), WithOrigin (Origin))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS (replicate)
@@ -189,6 +189,7 @@ defaultPPs =
 utxoEnv :: Core.PParams era -> UtxoEnv era
 utxoEnv pparams =
   UtxoEnv
+    Origin
     (SlotNo 0)
     pparams
     mempty
@@ -1703,7 +1704,7 @@ collectOrderingAlonzo =
 -- =======================
 
 bbodyEnv :: Proof era -> BbodyEnv era
-bbodyEnv pf = BbodyEnv (pp pf) def
+bbodyEnv pf = BbodyEnv Origin (pp pf) def
 
 dpstate :: Scriptic era => Proof era -> DPState (Crypto era)
 dpstate pf =

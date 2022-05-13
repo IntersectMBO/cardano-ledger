@@ -171,7 +171,13 @@ newLab ::
   ChainState era ->
   ChainState era
 newLab b cs =
-  cs {chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh)}
+  cs
+    { chainLastAppliedBlock = At $ LastAppliedBlock bn sn (bhHash bh),
+      chainNes =
+        (chainNes cs)
+          { nesTipSlot = At sn
+          }
+    }
   where
     bh = bheader b
     bn = bheaderBlockNo . bhbody $ bh
@@ -649,6 +655,7 @@ newEpoch b cs = cs'
     nes' =
       nes
         { nesEL = e,
+          nesTipSlot = At sn,
           nesBprev = nesBcur nes,
           nesBcur = BlocksMade Map.empty
         }

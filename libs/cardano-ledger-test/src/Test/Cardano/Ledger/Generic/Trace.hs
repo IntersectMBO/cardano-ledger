@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..), WithOrigin (Origin))
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (get)
 import Control.Monad.Trans.Reader (ReaderT (..))
@@ -153,6 +153,7 @@ genMockChainState proof gstate = pure $ MockChainState newepochstate (getSlot gs
     newepochstate =
       NewEpochState
         { nesEL = EpochNo 0,
+          nesTipSlot = Origin,
           nesBprev = BlocksMade Map.empty,
           nesBcur = BlocksMade Map.empty,
           nesEs = makeEpochState gstate ledgerstate,
@@ -246,7 +247,7 @@ instance
   envGen _gstate = pure ()
 
   sigGen (Gen1 txss) () mcs@(MockChainState newepoch (SlotNo lastSlot) count) = do
-    let NewEpochState _epochnum _ _ epochstate _ pooldistr _ = newepoch
+    let NewEpochState _epochnum _tipSLot _ _ epochstate _ pooldistr _ = newepoch
     issuerkey <- chooseIssuer pooldistr
     nextSlotNo <- SlotNo . (+ lastSlot) <$> choose (15, 25)
     let txs = txss ! count

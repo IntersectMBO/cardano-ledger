@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -111,7 +112,7 @@ instance
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
-    LedgerEnv (SlotNo 0) minBound
+    LedgerEnv Origin (SlotNo 0) minBound
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
@@ -145,14 +146,14 @@ instance
   TQC.HasTrace (LEDGERS era) (GenEnv era)
   where
   envGen GenEnv {geConstants} =
-    LedgersEnv (SlotNo 0)
+    LedgersEnv Origin (SlotNo 0)
       <$> genEraPParams @era geConstants
       <*> genAccountState geConstants
 
   -- a LEDGERS signal is a sequence of LEDGER signals
   sigGen
     ge@(GenEnv _ _ Constants {maxTxsPerBlock})
-    (LedgersEnv slotNo pParams reserves)
+    (LedgersEnv tipSlot slotNo pParams reserves)
     ls = do
       (_, txs') <-
         foldM
@@ -168,7 +169,7 @@ instance
           TxIx ->
           Gen (LedgerState era, [Core.Tx era])
         genAndApplyTx (ls', txs) txIx = do
-          let ledgerEnv = LedgerEnv slotNo txIx pParams reserves
+          let ledgerEnv = LedgerEnv tipSlot slotNo txIx pParams reserves
           tx <- genTx ge ledgerEnv ls'
 
           let res =

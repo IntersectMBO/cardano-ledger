@@ -34,6 +34,7 @@ import Cardano.Ledger.Shelley.Rules.Ledger
   )
 import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Slotting.Slot (WithOrigin)
 import Control.Monad (foldM)
 import Control.State.Transition
   ( Embed (..),
@@ -52,7 +53,8 @@ import NoThunks.Class (NoThunks (..))
 data LEDGERS era
 
 data LedgersEnv era = LedgersEnv
-  { ledgersSlotNo :: SlotNo,
+  { ledgersTipSlot :: WithOrigin SlotNo,
+    ledgersSlotNo :: SlotNo,
     ledgersPp :: Core.PParams era,
     ledgersAccount :: AccountState
   }
@@ -127,11 +129,11 @@ ledgersTransition ::
   ) =>
   TransitionRule (LEDGERS era)
 ledgersTransition = do
-  TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
+  TRC (LedgersEnv tipSlot slot pp account, ls, txwits) <- judgmentContext
   foldM
     ( \ !ls' (ix, tx) ->
         trans @(Core.EraRule "LEDGER" era) $
-          TRC (LedgerEnv slot ix pp account, ls', tx)
+          TRC (LedgerEnv tipSlot slot ix pp account, ls', tx)
     )
     ls
     $ zip [minBound ..] $ toList txwits

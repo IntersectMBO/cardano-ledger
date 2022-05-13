@@ -84,6 +84,7 @@ import Cardano.Ledger.Val ((<->))
 import Cardano.Prelude
   ( ByteString,
   )
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Map as Map
 import Data.Maybe (fromJust)
@@ -186,6 +187,7 @@ utxoState1 =
 utxoEnv :: UtxoEnv C
 utxoEnv =
   UtxoEnv
+    Origin
     0
     emptyPParams {_maxTxSize = 1000}
     mempty

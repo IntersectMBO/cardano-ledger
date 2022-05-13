@@ -165,7 +165,7 @@ babbageUtxowTransition ::
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (UtxoEnv tipSlot slot pp stakepools genDelegs, u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  txb := txbody tx  -}
@@ -238,7 +238,7 @@ babbageUtxowTransition = do
   runTest $ ppViewHashesMatch tx txbody pp utxo
 
   trans @(Core.EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+    TRC (UtxoEnv tipSlot slot pp stakepools genDelegs, u, tx)
 
 -- ================================
 

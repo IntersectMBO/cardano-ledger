@@ -13,7 +13,7 @@ import Cardano.Ledger.Shelley.PParams (emptyPParams)
 import Cardano.Ledger.Shelley.Tx (hashScript, scriptWits)
 import Cardano.Ledger.TxIn (txid)
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Slotting.Slot (SlotNo (..))
+import Cardano.Slotting.Slot (SlotNo (..), WithOrigin (Origin))
 import Control.Monad.Except (runExcept)
 import Control.State.Transition.Extended (TRC (..))
 import qualified Data.Compact.SplitMap as SplitMap
@@ -72,7 +72,13 @@ testScriptPostTranslation =
               SplitMap.singleton
                 (S.TxIn bootstrapTxId minBound)
                 (S.TxOut addr (Val.inject (S.Coin 1)))
-          env = S.LedgerEnv (SlotNo 0) minBound emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))
+          env =
+            S.LedgerEnv
+              Origin
+              (SlotNo 0)
+              minBound
+              emptyPParams
+              (S.AccountState (S.Coin 0) (S.Coin 0))
           utxoStShelley = def {S._utxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @Allegra () utxoStShelley
           txb =

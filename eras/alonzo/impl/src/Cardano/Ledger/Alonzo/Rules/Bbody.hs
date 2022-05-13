@@ -143,9 +143,9 @@ bbodyTransition ::
 bbodyTransition =
   judgmentContext
     >>= \( TRC
-             ( BbodyEnv pp account,
+             ( BbodyEnv tipSlot pp account,
                BbodyState ls b,
-               (UnserialisedBlock bh txsSeq)
+               UnserialisedBlock bh txsSeq
                )
            ) -> do
         let txs = txSeqTxns txsSeq
@@ -164,7 +164,7 @@ bbodyTransition =
 
         ls' <-
           trans @(Core.EraRule "LEDGERS" era) $
-            TRC (LedgersEnv (bhviewSlot bh) pp account, ls, StrictSeq.fromStrict txs)
+            TRC (LedgersEnv tipSlot (bhviewSlot bh) pp account, ls, StrictSeq.fromStrict txs)
 
         -- Note that this may not actually be a stake pool - it could be a
         -- genesis key delegate. However, this would only entail an overhead of

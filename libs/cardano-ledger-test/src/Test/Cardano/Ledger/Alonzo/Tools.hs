@@ -35,7 +35,7 @@ import Cardano.Ledger.Shelley.Rules.Utxo (PredicateFailure, UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
-import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..), WithOrigin (Origin))
 import Cardano.Slotting.Time (SystemStart, mkSlotLength)
 import Control.State.Transition.Extended (STS (BaseM, Environment, Signal, State), TRC (TRC))
 import Data.Array (Array, array)
@@ -231,7 +231,7 @@ exampleEpochInfo :: Monad m => EpochInfo m
 exampleEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
 uenv :: Proof era -> UtxoEnv era
-uenv pf = UtxoEnv (SlotNo 0) (pparams pf) mempty (GenDelegs mempty)
+uenv pf = UtxoEnv Origin (SlotNo 0) (pparams pf) mempty (GenDelegs mempty)
 
 costmodels :: Array Language CostModel
 costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, testingCostModelV1)]

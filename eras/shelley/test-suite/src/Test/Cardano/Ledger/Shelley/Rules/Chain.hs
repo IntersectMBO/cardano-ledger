@@ -83,7 +83,7 @@ import Cardano.Ledger.Shelley.Rules.Bbody
   )
 import Cardano.Ledger.Shelley.Rules.Tick (TICK, TickEvent, TickPredicateFailure)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import Cardano.Ledger.Slot (EpochNo)
+import Cardano.Ledger.Slot (EpochNo, SlotNo)
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader,
     LastAppliedBlock (..),
@@ -103,7 +103,7 @@ import Cardano.Protocol.TPraos.Rules.Prtcl
     prtlSeqChecks,
   )
 import Cardano.Protocol.TPraos.Rules.Tickn
-import Cardano.Slotting.Slot (SlotNo, WithOrigin (..))
+import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -204,6 +204,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
   ChainState
     ( NewEpochState
         e
+        Origin
         (BlocksMade Map.empty)
         (BlocksMade Map.empty)
         ( EpochState
@@ -325,7 +326,7 @@ chainTransition =
           Right () -> pure ()
           Left e -> failBecause $ PrtclSeqFailure e
 
-        let NewEpochState _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
+        let NewEpochState _ _ _ _ (EpochState _ _ _ _ pp _) _ _ _ = nes
             chainChecksData = pparamsToChainChecksPParams pp
             bhView = makeHeaderView bh
 
@@ -338,8 +339,8 @@ chainTransition =
 
         nes' <- trans @(Core.EraRule "TICK" era) $ TRC ((), nes, s)
 
-        let NewEpochState e1 _ _ _ _ _ _ = nes
-            NewEpochState e2 _ bcur es _ _pd _ = nes'
+        let NewEpochState e1 _ _ _ _ _ _ _ = nes
+            NewEpochState e2 _ _ bcur es _ _pd _ = nes'
         let EpochState account _ ls _ pp' _ = es
         let LedgerState _ (DPState (DState _ _ genDelegs _) (PState _ _ _)) = ls
         let ph = lastAppliedHash lab
@@ -362,9 +363,10 @@ chainTransition =
               )
 
         let thouShaltNot = error "A block with a header view should never be hashed"
+            labSlot = labSlotNo <$> lab
         BbodyState ls' bcur' <-
           trans @(Core.EraRule "BBODY" era) $
-            TRC (BbodyEnv pp' account, BbodyState ls bcur, Block' bhView txs thouShaltNot)
+            TRC (BbodyEnv labSlot pp' account, BbodyState ls bcur, Block' bhView txs thouShaltNot)
 
         let nes'' = updateNES nes' bcur' ls'
             bhb = bhbody bh

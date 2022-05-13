@@ -177,6 +177,7 @@ import Cardano.Protocol.TPraos.OCert
     OCertSignable (..),
     pattern OCert,
   )
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
@@ -1316,6 +1317,7 @@ tests =
           nes =
             NewEpochState
               e
+              Origin
               (BlocksMade bs)
               (BlocksMade bs)
               es
@@ -1325,8 +1327,9 @@ tests =
        in checkEncodingCBOR
             "new_epoch_state"
             nes
-            ( T (TkListLen 7)
+            ( T (TkListLen 8)
                 <> S e
+                <> S (Origin :: WithOrigin SlotNo)
                 <> S (BlocksMade @C_Crypto bs)
                 <> S (BlocksMade @C_Crypto bs)
                 <> S es
@@ -1336,7 +1339,7 @@ tests =
             ),
       let actual = B16.encode . serialize' $ Ex.sleNewEpochState Ex.ledgerExamplesShelley
           expected =
-            "8700a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541"
+            "88008100a1581ce0a714319812c3f773ba04ec5d6b3ffcd5aad85006805b047b082541"
               <> "0aa1581ca646474b8f5431261506b6c273d307c7569a4eb6c96b42dd4a29520a03"
               <> "86821927101903e8828283a0a0a08482a0a0a0a084a0a0000085a1825820ee155a"
               <> "ce9c40292074cb6aff8c9ccdd273c81648ff1149ef36bcea6ebb8a3e2500825839"

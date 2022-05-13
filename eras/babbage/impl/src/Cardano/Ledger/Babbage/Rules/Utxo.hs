@@ -333,7 +333,7 @@ utxoTransition ::
   ) =>
   TransitionRule (BabbageUTXO era)
 utxoTransition = do
-  TRC (Shelley.UtxoEnv slot pp stakepools _genDelegs, u, tx) <- judgmentContext
+  TRC (Shelley.UtxoEnv tipSlot slot pp stakepools _genDelegs, u, tx) <- judgmentContext
   let Shelley.UTxOState utxo _deposits _fees _ppup _ = u
 
   {-   txb := txbody tx   -}
@@ -349,7 +349,7 @@ utxoTransition = do
   sw <- liftSTS $ asks stabilityWindow
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
-  runTest $ validateOutsideForecast pp ei slot sysSt sw tx
+  runTest $ validateOutsideForecast pp ei tipSlot sysSt sw tx
 
   {-   txins txb ≠ ∅   -}
   runTestOnSignal $ Shelley.validateInputSetEmptyUTxO txb

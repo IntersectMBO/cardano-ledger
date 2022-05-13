@@ -15,6 +15,7 @@ where
 
 import qualified Cardano.Chain.Block as Byron
 import qualified Cardano.Chain.Common as Byron
+import qualified Cardano.Chain.Slotting as Byron
 import qualified Cardano.Chain.UTxO as Byron
 import qualified Cardano.Crypto.Hash as Crypto
 import qualified Cardano.Crypto.Hashing as Hashing
@@ -31,6 +32,7 @@ import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
+import Cardano.Slotting.Slot (WithOrigin (At))
 import qualified Data.ByteString.Short as SBS
 import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (def)
@@ -97,6 +99,7 @@ translateToShelleyLedgerState ::
 translateToShelleyLedgerState genesisShelley epochNo cvs =
   NewEpochState
     { nesEL = epochNo,
+      nesTipSlot = At . SlotNo . Byron.unSlotNumber $ Byron.cvsLastSlot cvs,
       nesBprev = BlocksMade Map.empty,
       nesBcur = BlocksMade Map.empty,
       nesEs = epochState,

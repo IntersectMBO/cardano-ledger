@@ -33,6 +33,7 @@ import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed, scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.Val (Val ((<->)), coin, inject)
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 
@@ -44,6 +45,7 @@ instance Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState sg () =
     NewEpochState
       initialEpochNo
+      Origin
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
       ( EpochState

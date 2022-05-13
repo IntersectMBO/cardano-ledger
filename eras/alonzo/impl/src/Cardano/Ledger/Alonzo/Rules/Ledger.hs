@@ -82,7 +82,7 @@ ledgerTransition ::
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
-  TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
+  TRC (LedgerEnv tipSlot slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
   let txbody = getField @"body" tx
 
   dpstate' <-
@@ -103,7 +103,7 @@ ledgerTransition = do
   utxoSt' <-
     trans @(Core.EraRule "UTXOW" era) $
       TRC
-        ( UtxoEnv @era slot pp stpools genDelegs,
+        ( UtxoEnv @era tipSlot slot pp stpools genDelegs,
           utxoSt,
           tx
         )

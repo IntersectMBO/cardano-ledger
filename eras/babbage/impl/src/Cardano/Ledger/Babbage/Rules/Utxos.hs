@@ -140,7 +140,7 @@ scriptsYes ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsYes = do
-  TRC (UtxoEnv slot pp poolParams genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
+  TRC (UtxoEnv _ slot pp poolParams genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
   let {- txb := txbody tx -}
       txb = body tx
@@ -192,7 +192,7 @@ scriptsNo ::
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsNo = do
-  TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
+  TRC (UtxoEnv _ _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
   let txb = body tx
   sysSt <- liftSTS $ asks systemStart

@@ -304,8 +304,8 @@ initialLedgerStateUTXOW ::
   ) =>
   InitialRule (UTXOW era)
 initialLedgerStateUTXOW = do
-  IRC (UtxoEnv slots pp stakepools genDelegs) <- judgmentContext
-  trans @(Core.EraRule "UTXO" era) $ IRC (UtxoEnv slots pp stakepools genDelegs)
+  IRC (UtxoEnv tipSlot slots pp stakepools genDelegs) <- judgmentContext
+  trans @(Core.EraRule "UTXO" era) $ IRC (UtxoEnv tipSlot slots pp stakepools genDelegs)
 
 -- | A generic Utxow witnessing function designed to be use across many Eras.
 --   Note the 'embed' argument lifts from the simple Shelley (UtxowPredicateFailure) to
@@ -327,7 +327,7 @@ transitionRulesUTXOW ::
   ) =>
   TransitionRule (utxow era)
 transitionRulesUTXOW = do
-  (TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)) <- judgmentContext
+  (TRC (UtxoEnv tipSlot slot pp stakepools genDelegs, u, tx)) <- judgmentContext
 
   {-  (utxo,_,_,_ ) := utxoSt  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
@@ -361,7 +361,7 @@ transitionRulesUTXOW = do
     validateMIRInsufficientGenesisSigs genDelegs coreNodeQuorum witsKeyHashes tx
 
   trans @(Core.EraRule "UTXO" era) $
-    TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
+    TRC (UtxoEnv tipSlot slot pp stakepools genDelegs, u, tx)
 
 instance
   ( Era era,

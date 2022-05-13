@@ -66,6 +66,7 @@ instance
     return $
       NewEpochState
         { nesEL = nesEL nes,
+          nesTipSlot = nesTipSlot nes,
           nesBprev = nesBprev nes,
           nesBcur = nesBcur nes,
           nesEs = translateEra' ctxt $ nesEs nes,

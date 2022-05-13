@@ -309,6 +309,7 @@ exampleNewEpochState ::
 exampleNewEpochState value ppp pp =
   NewEpochState
     { nesEL = EpochNo 0,
+      nesTipSlot = Origin,
       nesBprev = BlocksMade (Map.singleton (mkKeyHash 1) 10),
       nesBcur = BlocksMade (Map.singleton (mkKeyHash 2) 3),
       nesEs = epochState,

@@ -147,7 +147,7 @@ showBalance ::
   Core.Tx era ->
   String
 showBalance
-  (LedgerEnv _ _ pparams _)
+  (LedgerEnv _ _ _ pparams _)
   (UTxOState utxo _ _ _ _)
   (DPState _ (PState stakepools _ _))
   tx =
@@ -207,7 +207,7 @@ genTx
          scriptspace
          constants
        )
-  (LedgerEnv slot txIx pparams reserves)
+  (LedgerEnv _ slot txIx pparams reserves)
   (LedgerState utxoSt@(UTxOState utxo _ _ _ _) dpState) =
     do
       -------------------------------------------------------------------------

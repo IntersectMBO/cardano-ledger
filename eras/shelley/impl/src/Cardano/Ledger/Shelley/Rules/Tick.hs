@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rules.NewEpoch (NEWEPOCH, NewEpochEvent, NewEpochPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Rupd (RUPD, RupdEnv (..), RupdEvent, RupdPredicateFailure)
 import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
+import Cardano.Slotting.Slot (WithOrigin (At))
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
@@ -179,7 +180,7 @@ bheadTransition ::
   ) =>
   TransitionRule (TICK era)
 bheadTransition = do
-  TRC ((), nes@(NewEpochState _ bprev _ es _ _ _), slot) <-
+  TRC ((), nes@(NewEpochState _ _ bprev _ es _ _ _), slot) <-
     judgmentContext
 
   nes' <- validatingTickTransition @TICK nes slot
@@ -194,7 +195,7 @@ bheadTransition = do
     trans @(Core.EraRule "RUPD" era) $
       TRC (RupdEnv bprev es, nesRu nes', slot)
 
-  let nes'' = nes' {nesRu = ru''}
+  let nes'' = nes' {nesRu = ru'', nesTipSlot = At slot}
   pure nes''
 
 instance

@@ -30,6 +30,7 @@ import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState (updateStakeDistribution)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Val (Val ((<->)))
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
 import Data.Kind (Type)
@@ -58,6 +59,7 @@ instance
   initialState sg () =
     NewEpochState
       initialEpochNo
+      Origin
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
       ( EpochState

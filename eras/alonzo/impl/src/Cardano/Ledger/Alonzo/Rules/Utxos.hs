@@ -166,7 +166,7 @@ scriptsValidateTransition ::
   ) =>
   TransitionRule (UTXOS era)
 scriptsValidateTransition = do
-  TRC (UtxoEnv slot pp poolParams genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
+  TRC (UtxoEnv _ slot pp poolParams genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
   let txb = body tx
       refunded = keyRefunds pp txb
@@ -207,7 +207,7 @@ scriptsNotValidateTransition ::
   ) =>
   TransitionRule (UTXOS era)
 scriptsNotValidateTransition = do
-  TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
+  TRC (UtxoEnv _ _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   let txb = body tx
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo

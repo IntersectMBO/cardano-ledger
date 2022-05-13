@@ -34,6 +34,7 @@ import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Cardano.Ledger.Val (Val ((<->)))
+import Cardano.Slotting.Slot (WithOrigin (Origin))
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 
@@ -51,6 +52,7 @@ instance
   initialState sg () =
     NewEpochState
       initialEpochNo
+      Origin
       (BlocksMade Map.empty)
       (BlocksMade Map.empty)
       ( EpochState

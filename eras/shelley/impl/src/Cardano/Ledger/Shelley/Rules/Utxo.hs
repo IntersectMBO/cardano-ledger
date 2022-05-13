@@ -101,6 +101,7 @@ import Cardano.Ledger.Shelley.UTxO
 import Cardano.Ledger.Slot (SlotNo)
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
+import Cardano.Slotting.Slot (WithOrigin)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
   ( Assertion (..),
@@ -135,7 +136,10 @@ data UTXO era
 
 data UtxoEnv era
   = UtxoEnv
+      (WithOrigin SlotNo)
+      -- ^ Tip of the chain
       SlotNo
+      -- ^ Current slot number
       (Core.PParams era)
       (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
       (GenDelegs (Crypto era))
@@ -380,7 +384,7 @@ utxoInductive ::
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
-  TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
+  TRC (UtxoEnv _ slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo _ _ ppup _ = u
   let txb = getField @"body" tx
 

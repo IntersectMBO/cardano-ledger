@@ -118,7 +118,7 @@ import qualified Cardano.Protocol.TPraos.Rules.Overlay as STS
 import qualified Cardano.Protocol.TPraos.Rules.Prtcl as STS (PrtclState)
 import qualified Cardano.Protocol.TPraos.Rules.Tickn as STS
 import Cardano.Slotting.Block (BlockNo (..))
-import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..))
+import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..), SlotNo (..), WithOrigin (At, Origin))
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
@@ -185,6 +185,9 @@ instance HasAlgorithm c => Arbitrary (SafeHash c i) where
   These are generators for roundtrip tests, so the generated values are not
   necessarily valid
 -------------------------------------------------------------------------------}
+
+instance Arbitrary a => Arbitrary (WithOrigin a) where
+  arbitrary = oneof [pure Origin, At <$> arbitrary]
 
 type MockGen era =
   ( Mock (Crypto era),
