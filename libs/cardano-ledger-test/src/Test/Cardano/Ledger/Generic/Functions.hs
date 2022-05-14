@@ -295,6 +295,13 @@ getOutputs (Mary _) tx = getField @"outputs" tx
 getOutputs (Allegra _) tx = getField @"outputs" tx
 getOutputs (Shelley _) tx = getField @"outputs" tx
 
+getScriptWits :: Proof era -> Core.Witnesses era -> Map (ScriptHash (Crypto era)) (Core.Script era)
+getScriptWits (Babbage _) tx = getField @"scriptWits" tx
+getScriptWits (Alonzo _) tx = getField @"scriptWits" tx
+getScriptWits (Mary _) tx = getField @"scriptWits" tx
+getScriptWits (Allegra _) tx = getField @"scriptWits" tx
+getScriptWits (Shelley _) tx = getField @"scriptWits" tx
+
 allInputs :: Proof era -> Core.TxBody era -> Set (TxIn (Crypto era))
 allInputs (Babbage _) txb = getAllTxInputs txb
 allInputs (Alonzo _) txb = getAllTxInputs txb

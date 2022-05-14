@@ -751,7 +751,7 @@ genValidatedTxAndInfo ::
 genValidatedTxAndInfo proof slot = do
   GenEnv {gePParams} <- gets gsGenEnv
   validityInterval <- lift $ genValidityInterval slot
-  modify (\ gs -> gs{gsValidityInterval = validityInterval})
+  modify (\gs -> gs {gsValidityInterval = validityInterval})
 
   -- 1. Produce utxos that will be spent
   (utxoChoices, maybeoldpair) <- genUTxO

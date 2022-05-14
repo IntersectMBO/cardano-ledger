@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
@@ -9,26 +10,9 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE BangPatterns #-}
 
 module Test.Cardano.Ledger.Generic.MockChain where
 
-{-
-import Control.Monad (foldM)
-import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER)
-import Test.Cardano.Ledger.Generic.Proof (Evidence(..))
-import Data.Default.Class(Default)
-import Control.State.Transition.Extended(Rule,RuleContext(..),RuleType(..))
-import Data.Sequence (Seq)
-import Cardano.Ledger.Shelley.Rules.Ledger
-  ( LEDGER,
-    LedgerEnv (..),
-    LedgerEvent,
-    LedgerPredicateFailure,
-  )
-import Data.Foldable (toList)
-
--}
 import Cardano.Ledger.BaseTypes (BlocksMade (..), ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
@@ -80,8 +64,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore
     ppLedgersPredicateFailure,
     ppTickPredicateFailure,
   )
-import Test.Cardano.Ledger.Generic.Proof (Proof (..),Reflect (reify))
-
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
 
 -- ================================================
 
@@ -274,63 +257,3 @@ ppMockChainFailure proof x = case proof of
         [ ("Last applied block", ppSlotNo lastslot),
           ("Candidate block", ppSlotNo cand)
         ]
-
-
--- ============================
-
-{-
-data MOCKLEDGERS era
-
-{-
-instance
-  ( Reflect era,
-    -- Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    -- State (Core.EraRule "LEDGER" era) ~ LedgerState era,
-    -- Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,    
-    -- Eq (PredicateFailure (Core.EraRule "NEWEPOCH" era)),
-    Show (PredicateFailure (Core.EraRule "NEWEPOCH" era)),
-    Eq (PredicateFailure (Core.EraRule "RUPD" era)),
-    Show (PredicateFailure (Core.EraRule "RUPD" era)),
-    Eq (PredicateFailure (Core.EraRule "LEDGER" era)),
-    Show (PredicateFailure (Core.EraRule "LEDGER" era)),
-    Default (State (Core.EraRule "PPUP" era)),
-    Embed (LEDGER era) (MOCKLEDGERS era)
-
-  ) =>
-
-  STS (MOCKLEDGERS era)
-  where
-  type State (MOCKLEDGERS era) = LedgerState era
-  type Signal (MOCKLEDGERS era) = Seq (Core.Tx era)
-  type Environment (MOCKLEDGERS era) = LedgersEnv era
-  type BaseM (MOCKLEDGERS era) = ShelleyBase
-  type PredicateFailure (MOCKLEDGERS era) = MockChainFailure era
-  type Event (MOCKLEDGERS era) = LedgersEvent era
-
-  transitionRules = [ledgersTransition reify]
--}
-
-ledgersTransition ::
-  forall era.
-  ( Reflect era,
-    State (MOCKLEDGERS era) ~ LedgerState era,
-    Signal (MOCKLEDGERS era) ~ Seq (Core.Tx era),
-    Environment (MOCKLEDGERS era) ~ LedgersEnv era,
-    Embed (LEDGER era) (MOCKLEDGERS era)
-  ) =>
-  Proof era -> TransitionRule (MOCKLEDGERS era)  
-ledgersTransition _ = do
-  TRC (LedgersEnv slot pp account, ls, txwits) <- judgmentContext
-  foldM
-    ( \ !ls' (ix, tx) ->
-        trans @(LEDGER era) $
-          TRC (LedgerEnv slot ix pp account, ls', tx)
-    )
-    ls
-    $ zip [minBound ..] $ toList txwits
-
-
-jContext :: Proof era -> Rule (MOCKLEDGERS era) 'Transition (RuleContext 'Transition (MOCKLEDGERS era))
-jContext (Babbage c) = judgmentContext
-
--}

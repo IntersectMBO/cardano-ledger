@@ -1093,8 +1093,6 @@ pcData d@(Data (B bytes)) =
 
 instance Era era => PrettyC (Alonzo.Data era) era where prettyC _ = pcData
 
-
-
 pcTimelock :: forall era. Reflect era => PDoc -> Timelock (Crypto era) -> PDoc
 pcTimelock hash (RequireSignature akh) = ppSexp "Signature" [keyHashSummary akh, hash]
 pcTimelock hash (RequireAllOf _ts) = ppSexp "AllOf" [hash]
