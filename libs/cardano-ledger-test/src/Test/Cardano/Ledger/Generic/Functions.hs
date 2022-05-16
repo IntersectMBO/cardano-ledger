@@ -295,12 +295,26 @@ getOutputs (Mary _) tx = getField @"outputs" tx
 getOutputs (Allegra _) tx = getField @"outputs" tx
 getOutputs (Shelley _) tx = getField @"outputs" tx
 
+getScriptWits :: Proof era -> Core.Witnesses era -> Map (ScriptHash (Crypto era)) (Core.Script era)
+getScriptWits (Babbage _) tx = getField @"scriptWits" tx
+getScriptWits (Alonzo _) tx = getField @"scriptWits" tx
+getScriptWits (Mary _) tx = getField @"scriptWits" tx
+getScriptWits (Allegra _) tx = getField @"scriptWits" tx
+getScriptWits (Shelley _) tx = getField @"scriptWits" tx
+
 allInputs :: Proof era -> Core.TxBody era -> Set (TxIn (Crypto era))
 allInputs (Babbage _) txb = getAllTxInputs txb
 allInputs (Alonzo _) txb = getAllTxInputs txb
 allInputs (Mary _) txb = getAllTxInputs txb
 allInputs (Allegra _) txb = getAllTxInputs txb
 allInputs (Shelley _) txb = getAllTxInputs txb
+
+getWitnesses :: Proof era -> Core.Tx era -> Core.Witnesses era
+getWitnesses (Babbage _) tx = getField @"wits" tx
+getWitnesses (Alonzo _) tx = getField @"wits" tx
+getWitnesses (Mary _) tx = getField @"wits" tx
+getWitnesses (Allegra _) tx = getField @"wits" tx
+getWitnesses (Shelley _) tx = getField @"wits" tx
 
 primaryLanguage :: Proof era -> Maybe Language
 primaryLanguage (Babbage _) = Just (PlutusV2)

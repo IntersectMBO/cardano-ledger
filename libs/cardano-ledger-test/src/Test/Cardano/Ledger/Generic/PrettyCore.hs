@@ -1092,9 +1092,9 @@ pcData d@(Data (B bytes)) =
 
 instance Era era => PrettyC (Alonzo.Data era) era where prettyC _ = pcData
 
-pcTimelock :: Reflect era => PDoc -> Timelock (Crypto era) -> PDoc
+pcTimelock :: forall era. Reflect era => PDoc -> Timelock (Crypto era) -> PDoc
 pcTimelock hash (RequireSignature akh) = ppSexp "Signature" [keyHashSummary akh, hash]
-pcTimelock hash (RequireAllOf _) = ppSexp "AllOf" [hash]
+pcTimelock hash (RequireAllOf _ts) = ppSexp "AllOf" [hash]
 pcTimelock hash (RequireAnyOf _) = ppSexp "AnyOf" [hash]
 pcTimelock hash (RequireMOf m _) = ppSexp "MOfN" [ppInteger (fromIntegral m), hash]
 pcTimelock hash (RequireTimeExpire mslot) = ppSexp "Expires" [ppSlotNo mslot, hash]
@@ -1326,3 +1326,5 @@ instance Reflect era => PrettyC (EpochState era) era where prettyC = pcEpochStat
 
 pc :: PrettyC t era => Proof era -> t -> IO ()
 pc proof x = putStrLn (show (prettyC proof x))
+
+-- ===================================================
