@@ -106,6 +106,7 @@ import Test.Tasty.QuickCheck
     frequency,
     generate,
   )
+  
 
 -- =================================================
 
