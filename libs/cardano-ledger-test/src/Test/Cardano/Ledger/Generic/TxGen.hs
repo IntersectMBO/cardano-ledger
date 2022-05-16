@@ -750,7 +750,8 @@ genValidatedTxAndInfo ::
     )
 genValidatedTxAndInfo proof slot = do
   GenEnv {gePParams} <- gets gsGenEnv
-  geValidityInterval <- lift $ genValidityInterval slot
+  validityInterval <- lift $ genValidityInterval slot
+  modify (\gs -> gs {gsValidityInterval = validityInterval})
 
   -- 1. Produce utxos that will be spent
   (utxoChoices, maybeoldpair) <- genUTxO
@@ -863,8 +864,8 @@ genValidatedTxAndInfo proof slot = do
             Wdrls wdrls,
             Txfee maxCoin,
             if Some proof >= Some (Allegra Mock)
-              then Vldt geValidityInterval
-              else TTL (timeToLive geValidityInterval),
+              then Vldt validityInterval
+              else TTL (timeToLive validityInterval),
             Update' [],
             ReqSignerHashes' [],
             Generic.Mint mempty,

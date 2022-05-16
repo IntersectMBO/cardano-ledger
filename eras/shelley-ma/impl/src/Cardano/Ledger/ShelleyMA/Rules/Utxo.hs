@@ -32,6 +32,7 @@ import Cardano.Ledger.Rules.ValidationMode
     Test,
     runTest,
   )
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -72,6 +73,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
+import Debug.Trace
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class (NoThunks)
@@ -377,7 +379,7 @@ validateValueNotConservedUTxO ::
   Test (UtxoPredicateFailure era)
 validateValueNotConservedUTxO pp utxo stakepools txb =
   failureUnless (consumedValue == producedValue) $
-    ValueNotConservedUTxO consumedValue producedValue
+    ValueNotConservedUTxO consumedValue (trace ("NOT CONSERVED BODY HASH " ++ show (hashAnnotated txb)) producedValue)
   where
     consumedValue = consumed pp utxo txb
     producedValue = Shelley.produced pp (`Map.notMember` stakepools) txb
