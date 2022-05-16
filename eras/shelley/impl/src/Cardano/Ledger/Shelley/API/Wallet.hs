@@ -19,6 +19,7 @@ module Cardano.Ledger.Shelley.API.Wallet
     getFilteredUTxO,
 
     -- * Stake Pools
+    calculatePoolDistr,
     getPools,
     getPoolParameters,
     getTotalStake,
@@ -102,7 +103,6 @@ import Cardano.Ledger.Shelley.PoolRank
   )
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
-import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody (DCert, PoolParams (..), WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
@@ -227,6 +227,24 @@ poolsByTotalStakeFraction globals ss =
       IndividualPoolStake (Crypto era)
     toTotalStakeFrac (IndividualPoolStake s vrf) =
       IndividualPoolStake (s * stakeRatio) vrf
+
+calculatePoolDistr :: EB.SnapShot crypto -> PoolDistr crypto
+calculatePoolDistr (EB.SnapShot stake delegs poolParams) =
+  let Coin total = EB.sumAllStake stake
+      -- total could be zero (in particular when shrinking)
+      nonZeroTotal = if total == 0 then 1 else total
+      sd =
+        Map.fromListWith (+) $
+          [ (d, c % nonZeroTotal)
+            | (hk, compactCoin) <- VMap.toAscList (EB.unStake stake),
+              let Coin c = fromCompact compactCoin,
+              Just d <- [VMap.lookup hk delegs]
+          ]
+   in PoolDistr $
+        Map.intersectionWith
+          IndividualPoolStake
+          sd
+          (VMap.toMap (VMap.map _poolVrf poolParams))
 
 -- | Calculate the current total stake.
 getTotalStake :: Globals -> NewEpochState era -> Coin

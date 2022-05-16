@@ -63,6 +63,7 @@ import Cardano.Ledger.PoolDistr as X
   ( PoolDistr (..),
     individualPoolStake,
   )
+import Cardano.Ledger.Shelley.API.Wallet as X (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Address.Bootstrap as X
   ( BootstrapWitness (..),
   )
@@ -114,7 +115,6 @@ import Cardano.Ledger.Shelley.Rules.Ledger as X (LEDGER, LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Ledgers as X (LEDGERS, LedgersEnv (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch as X
   ( NEWEPOCH,
-    calculatePoolDistr,
   )
 import Cardano.Ledger.Shelley.Rules.Pool as X (POOL, PoolEnv (..))
 import Cardano.Ledger.Shelley.Rules.PoolReap as X (POOLREAP)
