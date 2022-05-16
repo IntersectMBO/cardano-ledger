@@ -83,27 +83,11 @@ jobs:
         key: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-${{ github.sha }}
         restore-keys: cache-${{ runner.os }}-${{ matrix.ghc }}-v1-${{ hashFiles('cabal-cache.cabal') }}-
 
-    - name: Install cabal-docspec
-      run: |
-        git clone https://github.com/phadej/cabal-extras
-        ( cd cabal-extras
-          grep -v with-compiler cabal.project > cabal.project.out
-          mv cabal.project.out cabal.project
-          cd cabal-docspec
-          cabal install cabal-docspec
-        )
-        rm -rf cabal-extras
-        echo "$HOME/.local/bin" >> $GITHUB_PATH
-        echo "$HOME/.cabal/bin" >> $GITHUB_PATH
-
     - name: Install dependencies
       run: cabal build all --only-dependencies
 
     - name: Build
       run: cabal build all
-
-    - name: Run doctests
-      run: cabal-docspec
 
     - name: Git clone
       run: git clone https://github.com/input-output-hk/cardano-mainnet-mirror
