@@ -370,13 +370,17 @@ instance
 
 mapProportion :: (v -> Int) -> Map.Map k v -> Gen k
 mapProportion toInt m =
-    if null pairs
-       then error "There are no stakepools to choose an issuer from"
-       else if all (\ (n,_k) -> n==0) pairs
-               then trace "All stakepools have zero stake, choose issuer arbitrarily. Probably caused by epoch boundary issue."
-                          (snd (head pairs))
-               else frequency pairs
-  where pairs = [(toInt v, pure k) | (k, v) <- Map.toList m]
+  if null pairs
+    then error "There are no stakepools to choose an issuer from"
+    else
+      if all (\(n, _k) -> n == 0) pairs
+        then
+          trace
+            "All stakepools have zero stake, choose issuer arbitrarily. Probably caused by epoch boundary issue."
+            (snd (head pairs))
+        else frequency pairs
+  where
+    pairs = [(toInt v, pure k) | (k, v) <- Map.toList m]
 
 chooseIssuer :: PoolDistr crypto -> Gen (KeyHash 'StakePool crypto)
 chooseIssuer (PoolDistr m) = mapProportion getInt m
