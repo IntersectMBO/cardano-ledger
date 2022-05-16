@@ -26,7 +26,7 @@ import Cardano.Ledger.Credential (Credential)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Shelley.API.Wallet (calculatePoolDistr)
+import Cardano.Ledger.Shelley.API.Wallet (AdaPots, calculatePoolDistr, totalAdaPotsES)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
@@ -78,6 +78,7 @@ data NewEpochEvent era
   | TotalRewardEvent EpochNo (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
   | EpochEvent (Event (Core.EraRule "EPOCH" era))
   | MirEvent (Event (Core.EraRule "MIR" era))
+  | TotalAdaPotsEvent AdaPots
 
 instance
   ( UsesTxOut era,
@@ -169,9 +170,11 @@ newEpochTransition = do
           tellReward (DeltaRewardEvent (RupdEvent e event))
           updateRewards ans
         SJust (Complete ru') -> updateRewards ru'
+      let adaPots = totalAdaPotsES es'
+      tellEvent $ TotalAdaPotsEvent adaPots
       es'' <- trans @(Core.EraRule "MIR" era) $ TRC ((), es', ())
       es''' <- trans @(Core.EraRule "EPOCH" era) $ TRC ((), es'', e)
-      let EpochState _acnt ss _ls _pr _ _ = es'''
+      let ss = esSnapshots es'''
           pd' = calculatePoolDistr (_pstakeSet ss)
       pure $
         src
