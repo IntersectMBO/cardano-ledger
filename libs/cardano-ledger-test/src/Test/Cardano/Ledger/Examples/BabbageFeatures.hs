@@ -119,7 +119,7 @@ mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
 collateralOutput pf =
-  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 50)]
+  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 350)]
 
 -- We intentionally use a ByteString with length greater than 64 to serve as
 -- as reminder that our protection against contiguous data over 64 Bytes on
@@ -590,7 +590,7 @@ utxoStEx7 pf = smartUTxOState (utxoEx7 pf) (Coin 0) (Coin 5) def
 
 collateralReturn :: Era era => Proof era -> Core.TxOut era
 collateralReturn pf =
-  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 45)]
+  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 345)]
 
 collateralOutputTxBody :: Scriptic era => Proof era -> Core.TxBody era
 collateralOutputTxBody pf =
@@ -972,7 +972,7 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ largeOutputTx pf)
-              (Left [fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput pf, 1015)]])
+              (Left [fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput pf, 8115)]])
         ]
     ]
 

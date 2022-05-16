@@ -250,20 +250,20 @@ validateCollateralEqBalance bal txcoll =
     SNothing -> pure ()
     SJust tc -> failureUnless (bal == tc) (UnequalCollateralReturn bal tc)
 
--- > getValue txout ≥ inject ( ⌈ serSize txout ∗ coinsPerUTxOWord pp / 8 ⌉ )
+-- > getValue txout ≥ inject ( serSize txout ∗ coinsPerUTxOByte pp )
 validateOutputTooSmallUTxO ::
   ( Era era,
     ToCBOR (Core.TxOut era),
-    HasField "_coinsPerUTxOWord" (Core.PParams era) Coin
+    HasField "_coinsPerUTxOByte" (Core.PParams era) Coin
   ) =>
   Core.PParams era ->
   [Core.TxOut era] ->
   Test (BabbageUtxoPred era)
 validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
   where
-    Coin coinsPerUTxOWord = getField @"_coinsPerUTxOWord" pp
+    Coin coinsPerUTxOByte = getField @"_coinsPerUTxOByte" pp
     serSize = fromIntegral . BSL.length . serialize
-    outs' = map (\out -> (out, (serSize out * coinsPerUTxOWord + 7) `div` 8)) outs
+    outs' = map (\out -> (out, serSize out * coinsPerUTxOByte)) outs
     outputsTooSmall =
       filter
         ( \(out, minSize) ->
@@ -369,7 +369,7 @@ utxoTransition = do
     ShelleyMA.validateTriesToForgeADA txb
 
   let outs = allOuts txb
-  {-   ∀ txout ∈ allOuts txb, getValue txout ≥ inject ⌈ uxoEntrySize txout ∗ coinsPerUTxOWord p / 8 ⌉ -}
+  {-   ∀ txout ∈ allOuts txb, getValue txout ≥ inject (uxoEntrySize txout ∗ coinsPerUTxOByte pp) -}
   runTest $ validateOutputTooSmallUTxO pp outs
 
   {-   ∀ txout ∈ allOuts txb, serSize (getValue txout) ≤ maxValSize pp   -}
