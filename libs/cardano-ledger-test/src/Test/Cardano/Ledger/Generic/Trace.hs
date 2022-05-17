@@ -200,9 +200,10 @@ makeEpochState gstate ledgerstate =
       esNonMyopic = def
     }
 
-snaps:: Era era => LedgerState era -> SnapShots (Crypto era)
-snaps (LedgerState (UTxOState{_utxo = u}) (DPState dstate pstate)) = SnapShots snap snap snap mempty
-  where snap = stakeDistr u dstate pstate
+snaps :: Era era => LedgerState era -> SnapShots (Crypto era)
+snaps (LedgerState UTxOState{_utxo = u} (DPState dstate pstate)) = SnapShots snap snap snap mempty
+  where
+    snap = stakeDistr u dstate pstate
 
 -- ==============================================================================
 

@@ -104,7 +104,8 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS,
+    runGenRS, 
+    genFreshRegCred
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -521,13 +522,6 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
-genFreshRegCred :: forall era. Reflect era => GenRS era (Credential 'Staking (Crypto era))
-genFreshRegCred = do
-  old <- gets (Map.keysSet . gsInitialRewards)
-  cred <- genFreshCredential 100 Cert old
-  modify (\st -> st {gsRegKey = Set.insert cred (gsRegKey st)})
-  pure cred
-
 genDCert :: forall era. Reflect era => GenRS era (DCert (Crypto era))
 genDCert = do
   elementsT
@@ -544,7 +538,7 @@ genDCert = do
       poolId <- genPool
       pure $ Delegation {_delegator = rewardAccount, _delegatee = poolId}
 
-genDCerts :: forall era. Reflect era => GenRS era ([DCert (Crypto era)])
+genDCerts :: forall era. Reflect era => GenRS era [DCert (Crypto era)]
 genDCerts = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
         dc <- genDCert

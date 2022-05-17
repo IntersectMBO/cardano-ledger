@@ -13,7 +13,38 @@
 -- | Strategy for Generic Tests
 --   Make the GenState include a Mode of the NewEpochState, modify
 --   the ModelNewEpochState to reflect what we generated.
-module Test.Cardano.Ledger.Generic.GenState where
+module Test.Cardano.Ledger.Generic.GenState 
+  ( GenEnv(..)
+  , GenRS
+  , GenState(..)
+  , GenSize
+  , elementsT  -- TODO move to a utilities module
+  , frequencyT -- TODO move to a utilities module
+  , genCredential
+  , genDatumWithHash
+  , genFreshCredential
+  , genFreshRegCred
+  , genKeyHash
+  , genPool
+  , genPositiveVal
+  , genRewards
+  , genScript
+  , getBlocksizeMax
+  , getCertificateMax
+  , getOldUtxoPercent
+  , getRefInputsMax
+  , getReserves
+  , getSlot
+  , getSpendInputsMax
+  , getTreasury
+  , getUtxoChoicesMax
+  , getUtxoElem
+  , getUtxoTest
+  , initialLedgerState
+  , modifyModel
+  , runGenRS
+  , startSlot
+  ) where
 
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
@@ -121,7 +152,9 @@ data GenSize = GenSize
     utxoChoicesMax :: !Int,
     certificateMax :: !Int,
     withdrawalMax :: !Int,
-    oldUtxoPercent :: !Int -- between 0-100, 10 means pick an old UTxO 10% of the time
+    oldUtxoPercent :: !Int, -- between 0-100, 10 means pick an old UTxO 10% of the time
+    maxHonestPools :: !Int,
+    maxHonestDelegators :: !Int
   }
   deriving (Show)
 
@@ -178,7 +211,9 @@ instance Default GenSize where
         refInputsMax = 6,
         utxoChoicesMax = 30,
         certificateMax = 10,
-        withdrawalMax = 10
+        withdrawalMax = 10,
+        maxHonestPools = 5,
+        maxHonestDelegators = 10
       }
 
 small :: GenSize
@@ -194,15 +229,15 @@ small =
       refInputsMax = 1,
       utxoChoicesMax = 12,
       certificateMax = 2,
-      withdrawalMax = 2
+      withdrawalMax = 2,
+      maxHonestPools = 4,
+      maxHonestDelegators = 8
     }
 
 -- ==============================================================
 -- The Monad
 
 type GenRS era = RWST (GenEnv era) () (GenState era) Gen
-
-type GenR era = Reader.ReaderT (GenState era) Gen
 
 genMapElem :: Map k a -> Gen (Maybe (k, a))
 genMapElem m
@@ -350,11 +385,32 @@ getNewPoolTest = do
 -- ========================================================================
 -- Tools to get started
 
+-- | Initialize (or overwrite if they are not empty) the Honest fields. It is
+--   intended that this be called just once at the beginning of a trace generation.
+initHonestFields :: Reflect era => Proof era -> Int -> GenRS era ()
+initHonestFields _ n = do
+  old <- gets gsInitialPoolParams
+  hashes <- replicateM n genPool
+  new <- gets gsInitialPoolParams
+  let diff = Map.difference new old
+  modify (\ gs -> gs{ gsHonestPool = diff})
+  modifyModel (\ms -> ms {mPoolParams = mPoolParams ms <> diff})
+  -- This incantation gets a list of fresh (not previously generated) Credential
+  old' <- gets (Map.keysSet . gsInitialRewards)
+  prev <- gets gsRegKey
+  credentials <- genFreshCredentials n 100 Rewrd (Set.union old' prev) []
+  let delegs = Map.fromList (zip credentials hashes)
+  modify (\ gs -> gs{ gsHonestDelegators = delegs}) 
+  modifyModel (\ms -> ms {mDelegations = mDelegations ms <> delegs})
+  pure ()
+  
 runGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> Gen (ans, GenState era)
-runGenRS proof gsize action = do
-  genenv <- genGenEnv proof gsize
-  (ans, state, ()) <- runRWST action genenv (emptyGenState proof genenv)
-  pure (ans, state)
+runGenRS proof gsize action = 
+  do
+    genenv@GenEnv{geSize} <- genGenEnv proof gsize
+    let action' = initHonestFields proof (maxHonestPools geSize) >> action
+    (ans, state, ()) <- runRWST action' genenv (emptyGenState proof genenv)
+    pure (ans, state)
 
 -- | Should not be used in tests, this is a helper function to be used in ghci only!
 ioGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> IO (ans, GenState era)
@@ -690,6 +746,13 @@ genPlutusScript proof tag = do
   modify $ \ts@GenState {gsPlutusScripts} ->
     ts {gsPlutusScripts = Map.insert (scriptHash, tag) (IsValid isValid, corescript) gsPlutusScripts}
   pure scriptHash
+
+genFreshRegCred :: forall era. Reflect era => GenRS era (Credential 'Staking (Crypto era))
+genFreshRegCred = do
+  old <- gets (Map.keysSet . gsInitialRewards)
+  cred <- genFreshCredential 100 Cert old
+  modify (\st -> st {gsRegKey = Set.insert cred (gsRegKey st)})
+  pure cred
 
 -- =================================================================
 
