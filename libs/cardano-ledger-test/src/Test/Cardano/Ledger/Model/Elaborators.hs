@@ -100,7 +100,7 @@ import Cardano.Ledger.Shelley.API.Mempool
     mkMempoolState,
   )
 import Cardano.Ledger.Shelley.API.Validation (ApplyBlock, applyTick)
-import Cardano.Ledger.Shelley.API.Wallet (totalAdaES)
+import Cardano.Ledger.Shelley.AdaPots (totalAdaES)
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue, makeTxOut)
 import Cardano.Ledger.Shelley.Genesis (initialFundsPseudoTxIn)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
