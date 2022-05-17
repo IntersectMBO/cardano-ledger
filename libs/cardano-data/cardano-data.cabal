@@ -72,7 +72,8 @@ test-suite cardano-data-tests
   main-is:             Main.hs
   other-modules:       Test.Data.UMap
                      , Test.Data.Coders
-                     
+                     , Test.Data.MapExtras
+
   type:                exitcode-stdio-1.0
   default-language:    Haskell2010
   build-depends:       base
@@ -87,6 +88,4 @@ test-suite cardano-data-tests
                      , text
                      , cardano-data
                      , QuickCheck
-                     -- , quickcheck-classes-base
-                     -- , random
-  ghc-options:        -threaded -O
+  ghc-options:        -threaded

@@ -102,6 +102,7 @@ benchmark performance
     bytestring,
     base16-bytestring,
     cardano-binary,
+    cardano-data,
     cardano-ledger-alonzo,
     cardano-slotting,
     containers,
@@ -110,6 +111,7 @@ benchmark performance
     cardano-ledger-core,
     cardano-ledger-shelley,
     ledger-state,
+    random,
   ghc-options:
       -threaded
       -rtsopts
@@ -125,7 +127,6 @@ benchmark address
   build-depends:
     base,
     bytestring,
-    -- base16-bytestring,
     cardano-binary,
     cardano-crypto-class,
     cardano-ledger-core,

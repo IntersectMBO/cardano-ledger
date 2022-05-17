@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 
@@ -29,8 +30,10 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class (def)
 import Data.Foldable as F
 import Data.Map.Strict as Map
+import Data.MapExtras (extractKeys)
 import Data.Set as Set
 import System.Environment (getEnv)
+import System.Random.Stateful
 
 main :: IO ()
 main = do
@@ -58,6 +61,7 @@ main = do
   putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
   es <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"
+  ks <- selectRandomMapKeys 100000 (mkStdGen 2022) (unUTxO (getUTxO es))
   defaultMain
     [ env (pure ((mkMempoolEnv es slotNo, toMempoolState es))) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
@@ -83,7 +87,7 @@ main = do
               bench "Tx3" . whnf (applyTx' mempoolEnv mempoolState)
           ],
       env (pure es) $ \newEpochState ->
-        let utxo = getUTxO newEpochState
+        let utxo = getUTxO es
             (_, minTxOut) = Map.findMin $ unUTxO utxo
             (_, maxTxOut) = Map.findMax $ unUTxO utxo
             setAddr =
@@ -93,8 +97,45 @@ main = do
                   bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState),
                 env (pure setAddr) $
                   bench "getFilteredOldUTxO" . nf (getFilteredOldUTxO newEpochState)
-              ]
+              ],
+      bgroup
+        "DeleteTxOuts"
+        [ env (pure (unUTxO (getUTxO es))) $ \m ->
+            bench "extractKeys" $ whnf (seqTuple . extractKeys m) ks,
+          env (pure (unUTxO (getUTxO es))) $ \m ->
+            bench "extractKeysFoldSet" $ whnf (seqTuple . extractKeysFoldSet m) ks,
+          env (pure (unUTxO (getUTxO es))) $ \m ->
+            bench "extractKeysNaive" $ whnf (seqTuple . extractKeysNaive m) ks
+        ]
     ]
+
+-- | Pick out randomly n unique keys from the Map
+selectRandomMapKeys :: (Monad m, Ord k) => Int -> StdGen -> Map k v -> m (Set k)
+selectRandomMapKeys n gen m = runStateGenT_ gen $ \g ->
+  let go !ixs !ks
+        | Set.size ixs < n = do
+            ix <- uniformRM (0, Map.size m - 1) g
+            if ix `Set.member` ixs
+              then go ixs ks
+              else go (Set.insert ix ixs) (Set.insert (fst $ Map.elemAt ix m) ks)
+        | otherwise = pure ks
+   in go Set.empty Set.empty
+
+-- | Extract keys that folds over the Set. This turns out to be faster than
+-- `extractKeysNaive`, but slower that `extractKeys`
+extractKeysFoldSet :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
+extractKeysFoldSet sm = Set.foldl' f (sm, Map.empty)
+  where
+    f acc@(without, restrict) k =
+      case Map.lookup k without of
+        Nothing -> acc
+        Just v ->
+          let !without' = Map.delete k without
+              !restrict' = Map.insert k v restrict
+           in (without', restrict')
+
+extractKeysNaive :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
+extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
 
 decodeTx :: ByteString -> Core.Tx CurrentEra
 decodeTx hex = either error id $ do
