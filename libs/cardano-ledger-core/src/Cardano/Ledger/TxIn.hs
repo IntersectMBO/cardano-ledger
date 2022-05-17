@@ -34,7 +34,6 @@ import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, hashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Prelude (HeapWords (..), NFData)
 import qualified Cardano.Prelude as HW
-import Data.Compact.HashMap (Keyed (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -63,8 +62,6 @@ newtype TxId crypto = TxId {_unTxId :: SafeHash crypto EraIndependentTxBody}
   deriving (Show, Eq, Ord, Generic)
   deriving newtype (NoThunks, HeapWords)
 
-deriving newtype instance CC.Crypto crypto => Keyed (TxId crypto)
-
 deriving newtype instance CC.Crypto crypto => ToCBOR (TxId crypto)
 
 deriving newtype instance CC.Crypto crypto => FromCBOR (TxId crypto)
@@ -84,11 +81,11 @@ data TxIn crypto = TxIn !(TxId crypto) {-# UNPACK #-} !TxIx
 mkTxInPartial :: HW.HasCallStack => TxId crypto -> Integer -> TxIn crypto
 mkTxInPartial txId = TxIn txId . mkTxIxPartial
 
--- This instance might be useful again if we can get SplitMap to perform well.
+-- This instance might be useful again if we can get Map to perform well.
 -- instance CC.Crypto crypto => Split (TxIn crypto) where
 --   splitKey (TxIn txId txIx) = (txIxToInt txIx, toKey txId)
 --   joinKey txIx key =
---     -- `fromIntegral` is safe here, since we have only valid values in the SplitMap:
+--     -- `fromIntegral` is safe here, since we have only valid values in the Map:
 --     TxIn (fromKey key) (TxIx (fromIntegral txIx))
 
 deriving instance Eq (TxIn crypto)

@@ -32,7 +32,6 @@ import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
@@ -80,7 +79,7 @@ translateUTxOByronToShelley ::
   UTxO (ShelleyEra c)
 translateUTxOByronToShelley (Byron.UTxO utxoByron) =
   UTxO $
-    SplitMap.fromList
+    Map.fromList
       [ (txInShelley, txOutShelley)
         | (txInByron, txOutByron) <- Map.toList utxoByron,
           let txInShelley = translateCompactTxInByronToShelley txInByron
@@ -108,7 +107,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
       stashedAVVMAddresses =
         let UTxO utxo = _utxo . lsUTxOState . esLState $ epochState
             redeemers =
-              SplitMap.filter (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
+              Map.filter (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
          in UTxO redeemers
     }
   where

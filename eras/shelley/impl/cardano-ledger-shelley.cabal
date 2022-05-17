@@ -97,7 +97,7 @@ library
     cardano-prelude,
     cardano-slotting,
     cborg,
-    compact-map,
+    vector-map,
     constraints,
     containers,
     data-default-class,

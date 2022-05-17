@@ -34,8 +34,7 @@ import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.Monad (unless)
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -127,7 +126,7 @@ txInfoInV1 ::
   TxIn (Crypto era) ->
   Either TranslationError PV1.TxInInfo
 txInfoInV1 (UTxO mp) txin =
-  case SplitMap.lookup txin mp of
+  case Map.lookup txin mp of
     Nothing -> Left TranslationLogicErrorInput
     Just txout -> do
       out <- txInfoOutV1 OutputFromInput txout
@@ -147,7 +146,7 @@ txInfoInV2 ::
   TxIn (Crypto era) ->
   Either TranslationError PV2.TxInInfo
 txInfoInV2 (UTxO mp) txin =
-  case SplitMap.lookup txin mp of
+  case Map.lookup txin mp of
     Nothing -> Left TranslationLogicErrorInput
     Just txout -> do
       out <- txInfoOutV2 OutputFromInput txout

@@ -111,7 +111,6 @@ import Cardano.Protocol.TPraos.BHeader
   )
 import Cardano.Slotting.Slot (EpochNo, WithOrigin (..))
 import Control.State.Transition (STS (State))
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -223,9 +222,10 @@ newUTxO txb cs = cs {chainNes = nes'}
     utxoSt = lsUTxOState ls
     utxo = unUTxO $ _utxo utxoSt
     utxoAdd = txouts @era txb
-    (utxoWithout, utxoToDel) = SplitMap.extractKeysSet utxo (txins @era txb)
+    utxoToDel = Map.restrictKeys utxo (txins @era txb)
+    utxoWithout = Map.withoutKeys utxo (txins @era txb)
     utxoDel = UTxO utxoToDel
-    utxo' = UTxO (utxoWithout `SplitMap.union` unUTxO utxoAdd)
+    utxo' = UTxO (utxoWithout `Map.union` unUTxO utxoAdd)
     sd' = updateStakeDistribution @era (_stakeDistro utxoSt) utxoDel utxoAdd
     utxoSt' = utxoSt {_utxo = utxo', _stakeDistro = sd'}
     ls' = ls {lsUTxOState = utxoSt'}

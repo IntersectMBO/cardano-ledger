@@ -19,13 +19,13 @@ import qualified Cardano.Ledger.Val as Val
 import Data.Foldable (toList)
 import Data.List (foldl')
 import Data.Map (Map)
-import qualified Data.Map as M
+import qualified Data.Map.Strict as Map
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import Data.Sequence.Strict (StrictSeq (..), empty, (<|))
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
-import qualified Data.Set as S
+import qualified Data.Set as Set
 import Debug.Trace (traceShowId)
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.QuickCheck (shrinkIntegral, shrinkList)
@@ -127,7 +127,7 @@ shrinkMultiSig :: MultiSig crypto -> [MultiSig crypto]
 shrinkMultiSig = const []
 
 shrinkSet :: Ord a => (a -> [a]) -> Set a -> [Set a]
-shrinkSet f = (S.fromList <$>) . shrinkList f . toList
+shrinkSet f = (Set.fromList <$>) . shrinkList f . toList
 
 -- TODO can this be made more efficient?
 shrinkSeq :: (a -> [a]) -> Seq a -> [Seq a]
@@ -144,7 +144,7 @@ shrinkMap ::
   Map k v ->
   [Map k v]
 shrinkMap shrinkK shrinkV =
-  (M.fromList <$>) . shrinkList shrinkPair . M.toList
+  (Map.fromList <$>) . shrinkList shrinkPair . Map.toList
   where
     shrinkPair (x, y) =
       [(x', y) | x' <- shrinkK x]

@@ -33,13 +33,13 @@ import Control.Monad.Trans
 import Control.Monad.Trans.State.Strict
 import Data.BiMap (BiMap (..), biMapFromMap)
 import Data.Coders (decodeMap, decodeVMap, invalidKey)
-import Data.Compact.VMap (VB, VMap, VP)
-import qualified Data.Compact.VMap as VMap
 import qualified Data.Foldable as F
 import Data.Kind
 import qualified Data.Map.Strict as Map
 import Data.Map.Strict.Internal
 import Data.Primitive.Types (Prim)
+import Data.VMap (VB, VMap, VP)
+import qualified Data.VMap as VMap
 import Lens.Micro
 
 -- =======================================

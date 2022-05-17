@@ -27,7 +27,6 @@ import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition
 import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
-import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -78,9 +77,9 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
           target = LedgerState UTxOState {_utxo = UTxO u', _deposited = dp', _fees = f'} ds'
         } =
         let isValid' = getField @"isValid" tx
-            noNewUTxO = u' `SplitMap.isSubmapOf` u
+            noNewUTxO = u' `Map.isSubmapOf` u
             collateralInFees = f <> sumCollateral tx (UTxO u) == f'
-            utxoConsumed = not $ u `SplitMap.isSubmapOf` u'
+            utxoConsumed = not $ u `Map.isSubmapOf` u'
             allScripts = getField @"txscripts" $ getField @"wits" tx
             hasPlutus = if all (isNativeScript @A) allScripts then NoPlutus else HasPlutus
             totEU = totExUnits tx

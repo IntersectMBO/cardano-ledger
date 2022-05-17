@@ -38,7 +38,7 @@ import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad (replicateM)
 import qualified Data.ByteString.Char8 as BS
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq (..), (<|), (><))
 import qualified Data.Sequence.Strict as StrictSeq

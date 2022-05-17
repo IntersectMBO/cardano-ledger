@@ -64,7 +64,6 @@ import Data.Coders
     encodeFoldable,
     invalidKey,
   )
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
@@ -332,7 +331,7 @@ validateOutputTooBigUTxO (UTxO outputs) =
             let v = getField @"value" out
              in BSL.length (serialize v) > maxValSize
         )
-        (SplitMap.elems outputs)
+        (Map.elems outputs)
 
 -- | Ensure that there are no `Core.TxOut`s that have value less than the scaled @minUTxOValue@
 --
@@ -355,7 +354,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
             let v = getField @"value" out
              in Val.pointwise (<) v (Val.inject $ scaledMinDeposit v minUTxOValue)
         )
-        (SplitMap.elems outputs)
+        (Map.elems outputs)
 
 -- | Ensure that value consumed and produced matches up exactly. Note that this
 -- is different from Shelley, since implementation of `consumed` has changed.

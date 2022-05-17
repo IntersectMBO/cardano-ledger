@@ -1,25 +1,22 @@
 {-# LANGUAGE BangPatterns #-}
-{-# LANGUAGE MagicHash #-}
-{-# LANGUAGE UnboxedTuples #-}
 
+-- | Sometimes we need to write our own version of functions over `Map.Map` that
+-- do not appear in the "containers" library. This module is for such functions.
+--
+-- For example:
+--
+-- 1. Version of `Map.withoutKeys` where both arguments are `Map.Map`
+-- 2. Comparing that two maps have exactly the same set of keys
+-- 3. The intersection of two maps guarded by a predicate.
+--
+--    > ((dom stkcred) ◁ deleg) ▷ (dom stpool)) ==>
+--    > intersectDomP (\ k v -> Map.member v stpool) stkcred deleg
 module Data.MapExtras where
 
-import qualified Data.Map as Map
 import Data.Map.Internal (Map (..), link, link2)
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
-import GHC.Exts (isTrue#, reallyUnsafePtrEquality#, (==#))
-
--- ===========================================================
--- Some times we need to write our own version of functions
--- over  Map.Map that do not appear in the library
--- For example
--- 1) version of Map.withoutKeys where both parts are Map.Map
--- 2) Comparing that two maps have exactly the same set of keys
--- 3) The intersection of two maps guarded by a predicate.
---    ((dom stkcred) ◁ deleg) ▷ (dom stpool))   ==>
---    intersectDomP (\ k v -> Map.member v stpool) stkcred deleg
--- ============================================================
 
 noKeys :: Ord k => Map k a -> Map k b -> Map k a
 noKeys Tip _ = Tip
@@ -30,18 +27,6 @@ noKeys m (Bin _ k _ ls rs) = case Map.split k m of
       !lm' = noKeys lm ls
       !rm' = noKeys rm rs
 {-# INLINEABLE noKeys #-}
-
--- This version benchmarks better than the following three versions, by almost a factor of 4, at Trees with 100 to 100,000 pairs
--- keysEqual2 x y = Map.foldrWithKey' (\ k v ans -> k:ans) [] x == Map.foldrWithKey' (\ k v ans -> k:ans) [] y
--- keysEqual3 x y = Map.keysSet x == Map.keysSet y
--- keysEqual4 x y = Map.keys x == Map.keys y
--- This is a type specific version of sameDomain
-
--- | Check if two the two arguments are the same value.  N.B. This
--- function might give false negatives (due to GC moving objects.)
-ptrEq :: a -> a -> Bool
-ptrEq x y = isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
-{-# INLINE ptrEq #-}
 
 keysEqual :: Ord k => Map k v1 -> Map k v2 -> Bool
 keysEqual Tip Tip = True
@@ -83,7 +68,7 @@ intersectDomP :: Ord k => (k -> v2 -> Bool) -> Map k v1 -> Map k v2 -> Map k v2
 intersectDomP _ Tip _ = Tip
 intersectDomP _ _ Tip = Tip
 intersectDomP p t1 (Bin _ k v l2 r2) =
-  if mb && (p k v)
+  if mb && p k v
     then link k v l1l2 r1r2
     else link2 l1l2 r1r2
   where
@@ -126,11 +111,29 @@ disjointMapSetFold accum (Bin _ k v l1 l2) set !ans =
   where
     (s1, found, s2) = Set.splitMember k set
     addKV k1 v1 !ans1 = if not found then accum k1 v1 ans1 else ans1
+{-# INLINEABLE disjointMapSetFold #-}
 
 -- =================================
 
 intersectWhen1 :: Ord k => (k -> u -> v -> Bool) -> Map k u -> Map k v -> Map k u
 intersectWhen1 p x y = Map.mergeWithKey (\k u v -> if p k u v then Just u else Nothing) (const Map.empty) (const Map.empty) x y
+{-# INLINE intersectWhen1 #-}
 
 intersectWhen2 :: Ord k => (k -> u -> v -> Bool) -> Map k u -> Map k v -> Map k v
 intersectWhen2 p x y = Map.mergeWithKey (\k u v -> if p k u v then Just v else Nothing) (const Map.empty) (const Map.empty) x y
+{-# INLINE intersectWhen2 #-}
+
+-- | Partition the `Map` according to keys in the `Set`. This is equivalent to:
+--
+-- > extractKeysSet m s === (withoutKeys m s, restrictKeys m s)
+extractKeys :: Ord k => Map k a -> Set k -> (Map k a, Map k a)
+extractKeys sm = Set.foldl' f (sm, Map.empty)
+  where
+    f acc@(without, restrict) k =
+      case Map.lookup k without of
+        Nothing -> acc
+        Just v ->
+          let !without' = Map.delete k without
+              !restrict' = Map.insert k v restrict
+           in (without', restrict')
+{-# INLINEABLE extractKeys #-}

@@ -52,7 +52,6 @@ import Data.Coders
     (!>),
     (<!),
   )
-import Data.Compact.VMap as VMap
 import Data.Default.Class (def)
 import Data.Group (invert)
 import Data.Kind (Type)
@@ -64,6 +63,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Sharing (fromNotSharedCBOR)
 import Data.Typeable
+import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..), allNoThunks)

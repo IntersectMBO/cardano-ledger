@@ -51,13 +51,13 @@ import Cardano.Ledger.Shelley.TxBody (PoolParams)
 import Cardano.Ledger.Val ((<+>), (<×>))
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans (lift)
-import Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Sharing
 import Data.Typeable
+import Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import Lens.Micro (_1, _2)

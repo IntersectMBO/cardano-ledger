@@ -57,12 +57,12 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, scriptsNeeded, totalDepo
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (coin, inject, (<+>), (<->)))
 import Control.State.Transition.Extended (STS (State))
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (Default (def))
 import Data.Foldable (toList)
 import qualified Data.Foldable as Fold
 import qualified Data.List as List
 import Data.Map (Map, keysSet, restrictKeys)
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -72,7 +72,7 @@ import GHC.Records (HasField (getField))
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Generic.Fields (TxField (..), TxOutField (..), initialTx)
-import Test.Cardano.Ledger.Generic.ModelState (MUtxo, fromMUtxo)
+import Test.Cardano.Ledger.Generic.ModelState (MUtxo)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters (updateTx)
@@ -154,14 +154,14 @@ keyPoolDeposits proof pp = case proof of
 scriptsNeeded' :: Proof era -> MUtxo era -> Core.TxBody era -> Set (ScriptHash (Crypto era))
 scriptsNeeded' (Babbage _) utxo txbody = regularScripts `Set.difference` inlineScripts
   where
-    theUtxo = fromMUtxo utxo
+    theUtxo = UTxO utxo
     inputs = spendInputs' txbody `Set.union` referenceInputs' txbody
     inlineScripts = keysSet $ refScripts inputs theUtxo
     regularScripts = Set.fromList (map snd (scriptsNeededFromBody theUtxo txbody))
-scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (fromMUtxo utxo) txbody))
-scriptsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (fromMUtxo utxo) (updateTx p (initialTx p) (Body txbody))
-scriptsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (fromMUtxo utxo) (updateTx p (initialTx p) (Body txbody))
-scriptsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (fromMUtxo utxo) (updateTx p (initialTx p) (Body txbody))
+scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
+scriptsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
+scriptsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
+scriptsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 
 minfee' :: forall era. Proof era -> Core.PParams era -> Core.Tx era -> Coin
 minfee' (Alonzo _) = minfee
@@ -176,7 +176,7 @@ txInBalance ::
   Set (TxIn (Crypto era)) ->
   MUtxo era ->
   Coin
-txInBalance txinSet m = coin (balance (fromMUtxo (restrictKeys m txinSet)))
+txInBalance txinSet m = coin (balance (UTxO (restrictKeys m txinSet)))
 
 hashScriptIntegrity' ::
   Proof era ->
@@ -358,7 +358,7 @@ instance Reflect era => TotalAda (UTxOState era) where
   totalAda (UTxOState utxo deposits fees _ _) = totalAda utxo <+> deposits <+> fees
 
 instance Reflect era => TotalAda (UTxO era) where
-  totalAda (UTxO m) = SplitMap.foldl' accum mempty m
+  totalAda (UTxO m) = Map.foldl' accum mempty m
     where
       accum ans txout = getTxOutCoin reify txout <+> ans
 

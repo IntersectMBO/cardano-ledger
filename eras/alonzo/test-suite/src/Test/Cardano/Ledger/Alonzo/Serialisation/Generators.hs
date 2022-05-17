@@ -19,7 +19,11 @@ import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), BinaryData, Data (..), da
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (FailureDescription (..), TagMismatchDescription (..), UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos
+  ( FailureDescription (..),
+    TagMismatchDescription (..),
+    UtxosPredicateFailure (..),
+  )
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModels (..),
@@ -41,7 +45,7 @@ import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)

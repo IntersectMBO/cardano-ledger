@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Data.Compact.VMap
+module Data.VMap
   ( VG.Vector,
     VB,
     VU,
@@ -51,10 +51,10 @@ where
 
 import Cardano.Binary
 import Control.DeepSeq
-import Data.Compact.KVVector (KVVector (..))
-import qualified Data.Compact.KVVector as KV
 import qualified Data.Map.Strict as Map
 import Data.Maybe as Maybe hiding (mapMaybe)
+import Data.VMap.KVVector (KVVector (..))
+import qualified Data.VMap.KVVector as KV
 import qualified Data.Vector as V
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Primitive as VP

@@ -48,7 +48,7 @@ library
                      , bytestring
                      , cborg
                      , containers
-                     , compact-map
+                     , vector-map
                      , cryptonite
                      , deepseq
                      , formatting

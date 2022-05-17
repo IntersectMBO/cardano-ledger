@@ -71,7 +71,7 @@ import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Data.Default.Class (def)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as Seq (empty, fromList)
 import Data.Set (Set)

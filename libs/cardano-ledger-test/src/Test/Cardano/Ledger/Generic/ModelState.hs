@@ -95,8 +95,6 @@ import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Monad.Trans ()
 import Control.Provenance (runProvM)
 import Control.State.Transition (STS (State))
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (def))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -104,6 +102,7 @@ import qualified Data.Maybe as Maybe
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Text (Text)
 import qualified Data.UMap as UMap
+import qualified Data.VMap as VMap
 import GHC.Natural (Natural)
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( PrettyC (..),
@@ -129,14 +128,8 @@ import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 -- =============================================
 
 -- | MUtxo = Model UTxO. In the Model we represent the
---   UTxO as a Map (not a newtype around a SplitMap)
+--   UTxO as a Map (not a newtype around a Map)
 type MUtxo era = Map (TxIn (Crypto era)) (Core.TxOut era)
-
-toMUtxo :: UTxO era -> MUtxo era
-toMUtxo (UTxO m) = SplitMap.toMap m
-
-fromMUtxo :: MUtxo era -> UTxO era
-fromMUtxo m = UTxO (SplitMap.fromMap m)
 
 pcMUtxo :: Reflect era => Proof era -> MUtxo era -> PDoc
 pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
@@ -209,7 +202,7 @@ accountStateZero :: AccountState
 accountStateZero = AccountState (Coin 0) (Coin 0)
 
 utxoZero :: UTxO era
-utxoZero = UTxO SplitMap.empty
+utxoZero = UTxO Map.empty
 
 genDelegsZero :: GenDelegs crypto
 genDelegsZero = GenDelegs Map.empty
@@ -335,7 +328,7 @@ instance Crypto era ~ c => Extract (DPState c) era where
 instance Reflect era => Extract (UTxOState era) era where
   extract x =
     smartUTxOState
-      (UTxO (SplitMap.fromMap (mUTxO x)))
+      (UTxO (mUTxO x))
       (mDeposited x)
       (mFees x)
       (pPUPStateZero @era)
@@ -370,7 +363,7 @@ abstract x =
     { mPoolParams = (_pParams . dpsPState . lsDPState . esLState . nesEs) x,
       mRewards = (UMap.rewView . _unified . dpsDState . lsDPState . esLState . nesEs) x,
       mDelegations = (UMap.delView . _unified . dpsDState . lsDPState . esLState . nesEs) x,
-      mUTxO = (SplitMap.toMap . unUTxO . _utxo . lsUTxOState . esLState . nesEs) x,
+      mUTxO = (unUTxO . _utxo . lsUTxOState . esLState . nesEs) x,
       mMutFee = Map.empty,
       mAccountState = (esAccountState . nesEs) x,
       mPoolDistr = (unPoolDistr . nesPd) x,

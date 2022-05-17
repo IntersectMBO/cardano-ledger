@@ -16,10 +16,9 @@ import Data.Map.Internal
     balanceR,
     link,
     link2,
-    singleton,
-    splitLookup,
   )
 import qualified Data.Map.Strict as Map
+import Data.Map.Strict.Internal (singleton, splitLookup)
 
 -- =====================================================================================
 -- Operations on Map from keys to values that are specialised to `CanonicalZero` values.

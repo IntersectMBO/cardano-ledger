@@ -42,7 +42,7 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Debug.Trace
 import Test.Cardano.Ledger.Generic.Fields (abstractTx, abstractTxBody, abstractTxOut, abstractWitnesses)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..), isValid')
@@ -326,6 +326,6 @@ main2 :: IO ()
 main2 = runTest (\x -> fst <$> genValidatedTx x) (const (pure ())) (Babbage Mock)
 
 main3 :: IO ()
-main3 = runTest (\_x -> (fromMUtxo . fst) <$> genUTxO) action (Alonzo Mock)
+main3 = runTest (\_x -> UTxO . fst <$> genUTxO) action (Alonzo Mock)
   where
     action (UTxO x) = putStrLn ("Size = " ++ show (Map.size x))

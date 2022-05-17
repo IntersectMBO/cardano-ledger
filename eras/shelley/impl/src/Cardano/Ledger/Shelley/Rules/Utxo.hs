@@ -116,10 +116,10 @@ import Control.State.Transition
     wrapEvent,
     wrapFailed,
   )
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (extractKeys)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -483,7 +483,7 @@ validateBadInputsUTxO utxo txins =
   failureUnless (Set.null badInputs) $ BadInputsUTxO badInputs
   where
     {- inputs ➖ dom utxo -}
-    badInputs = Set.filter (`SplitMap.notMember` unUTxO utxo) txins
+    badInputs = Set.filter (`Map.notMember` unUTxO utxo) txins
 
 -- | Make sure all addresses match the supplied NetworkId
 --
@@ -564,7 +564,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
             let c = getField @"value" x
              in c < minUTxOValue
         )
-        (SplitMap.elems outputs)
+        (Map.elems outputs)
 
 -- | Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
 -- It is important to limit their overall size.
@@ -584,7 +584,7 @@ validateOutputBootAddrAttrsTooBig (UTxO outputs) =
               Just addr -> bootstrapAddressAttrsSize addr > 64
               _ -> False
         )
-        (SplitMap.elems outputs)
+        (Map.elems outputs)
 
 -- | Ensure that the size of the transaction does not exceed the @maxTxSize@ protocol parameter
 --
@@ -613,9 +613,9 @@ updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositCh
   let UTxO utxo = _utxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
-      !(!utxoWithout, !utxoDel) = SplitMap.extractKeysSet utxo (getField @"inputs" txb)
+      !(utxoWithout, utxoDel) = extractKeys utxo (getField @"inputs" txb)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
-      newUTxO = utxoWithout `SplitMap.union` unUTxO utxoAdd
+      newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
       newIncStakeDistro = updateStakeDistribution _stakeDistro (UTxO utxoDel) utxoAdd
    in UTxOState
         { _utxo = UTxO newUTxO,

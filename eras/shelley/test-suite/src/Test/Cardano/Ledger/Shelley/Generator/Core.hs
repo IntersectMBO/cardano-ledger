@@ -151,7 +151,6 @@ import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks)
 import Data.ByteString.Lazy (toStrict)
 import Data.Coerce (coerce)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
@@ -705,7 +704,7 @@ genesisCoins ::
   UTxO era
 genesisCoins genesisTxId outs =
   UTxO $
-    SplitMap.fromList [(TxIn genesisTxId idx, out) | (idx, out) <- zip [minBound ..] outs]
+    Map.fromList [(TxIn genesisTxId idx, out) | (idx, out) <- zip [minBound ..] outs]
 
 -- ==================================================================
 -- Operations on GenEnv that deal with ScriptSpace

@@ -57,7 +57,7 @@ library
     cardano-ledger-shelley,
     cardano-ledger-shelley-ma,
     cardano-slotting,
-    compact-map,
+    vector-map,
     containers,
     data-default,
     deepseq,

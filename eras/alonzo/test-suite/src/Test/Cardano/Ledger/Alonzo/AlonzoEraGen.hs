@@ -64,11 +64,11 @@ import Cardano.Ledger.Val (Val (coin, isAdaOnly, (<+>), (<×>)))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
 import qualified Data.ByteString.Char8 as BS
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Either (fromRight)
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
-import Data.Map as Map
+import Data.Map.Strict (Map)
+import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq ((:|>)))
@@ -242,7 +242,7 @@ unTime (PlutusScript _ _) = error "Plutus in Timelock"
 
 okAsCollateral :: forall c. Mock c => UTxO (AlonzoEra c) -> TxIn c -> Bool
 okAsCollateral utxo inputx =
-  case SplitMap.lookup inputx (unUTxO utxo) of
+  case Map.lookup inputx (unUTxO utxo) of
     Nothing -> False
     Just outputx -> vKeyLockedAdaOnly outputx
 
@@ -391,7 +391,7 @@ instance Mock c => EraGen (AlonzoEra c) where
           (Redeemers rdmrMap)
       txinputs = inputs' txbody
       smallUtxo :: [Core.TxOut (AlonzoEra c)]
-      smallUtxo = SplitMap.elems (unUTxO utxo `SplitMap.restrictKeysSet` txinputs)
+      smallUtxo = Map.elems (unUTxO utxo `Map.restrictKeys` txinputs)
       purposeHashPairs = scriptsNeededFromBody @(AlonzoEra c) utxo txbody
       rdmrMap = List.foldl' accum Map.empty purposeHashPairs -- Search through the pairs for Plutus scripts
       accum ans (purpose, hash1) =
@@ -458,7 +458,7 @@ sumCollateral ::
   UTxO era ->
   Coin
 sumCollateral tx (UTxO utxo) =
-  coin . balance @era . UTxO $ SplitMap.restrictKeysSet utxo collateral_
+  coin . balance @era . UTxO $ Map.restrictKeys utxo collateral_
   where
     collateral_ = getField @"collateral" . getField @"body" $ tx
 

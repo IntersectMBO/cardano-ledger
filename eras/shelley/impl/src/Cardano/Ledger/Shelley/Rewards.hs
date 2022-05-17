@@ -58,13 +58,13 @@ import Cardano.Ledger.Val ((<->))
 import Control.DeepSeq (NFData)
 import Control.Monad (guard)
 import Data.Coders (Decode (..), Encode (..), decode, encode, (!>), (<!))
-import qualified Data.Compact.VMap as VMap
 import Data.Foldable (fold, foldMap')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))

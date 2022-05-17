@@ -34,7 +34,7 @@ import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Either (fromRight)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Set (Set)
 import GHC.Records (HasField (..))

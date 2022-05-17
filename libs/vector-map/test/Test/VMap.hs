@@ -1,12 +1,12 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Test.Compact.VMap where
+module Test.VMap where
 
-import Data.Compact.VMap as VMap
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
-import Test.Compact.Common
+import Data.VMap as VMap
+import Test.Common
 
 type MapT = Map.Map Char Int
 

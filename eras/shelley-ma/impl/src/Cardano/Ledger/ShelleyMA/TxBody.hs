@@ -85,7 +85,7 @@ import Data.Coders
     ofield,
     (!>),
   )
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)

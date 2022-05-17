@@ -14,9 +14,9 @@ import Control.Lens.Indexed (FoldableWithIndex (..))
 import Control.Monad (guard)
 import Data.Functor.Const (Const (..))
 import Data.Group (Abelian, Group (..))
-import qualified Data.Map as Map
 import qualified Data.Map.Merge.Lazy as MapLazy
 import qualified Data.Map.Merge.Strict as Map
+import qualified Data.Map.Strict as Map
 import Data.Monoid (All (..))
 import qualified Data.Set as Set
 import GHC.Generics (Generic)

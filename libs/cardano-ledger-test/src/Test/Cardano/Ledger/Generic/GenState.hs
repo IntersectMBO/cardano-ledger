@@ -44,6 +44,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
@@ -55,7 +56,7 @@ import qualified Control.Monad.Trans.Reader as Reader
 import Control.SetAlgebra (eval, (⨃))
 import Data.Default.Class (Default (def))
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
@@ -75,7 +76,6 @@ import Test.Cardano.Ledger.Generic.Functions
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( ModelNewEpochState (..),
-    fromMUtxo,
     genDelegsZero,
     instantaneousRewardsZero,
     mNewEpochStateZero,
@@ -660,7 +660,7 @@ instance era ~ BabbageEra Mock => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
-    utxostate = smartUTxOState (fromMUtxo (gsInitialUtxo gstate)) deposited (Coin 0) (pPUPStateZero @era)
+    utxostate = smartUTxOState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) (pPUPStateZero @era)
     dpstate = DPState dstate pstate
     dstate =
       DState

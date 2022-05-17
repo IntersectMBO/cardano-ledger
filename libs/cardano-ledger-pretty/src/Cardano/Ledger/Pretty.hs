@@ -179,17 +179,16 @@ import Control.Monad.Identity (Identity)
 import Control.State.Transition (STS (State))
 import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import qualified Data.Hashable as Hashable
 import Data.IP (IPv4, IPv6)
-import qualified Data.Map.Strict as Map (Map, toList)
+import qualified Data.Map.Strict as Map
 import Data.MemoBytes (MemoBytes (..))
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
 import Data.Text (Text)
 import Data.Typeable (Typeable)
+import qualified Data.VMap as VMap
 import Data.Word (Word16, Word32, Word64, Word8)
 import Debug.Trace (trace)
 import GHC.Natural (Natural)
@@ -380,9 +379,6 @@ ppAssocList name kf vf xs =
         flatAlt
           vertical
           (name <> encloseSep (lbrace <> space) (space <> rbrace) (comma <> space) docs)
-
-ppSplitMap :: (k -> PDoc) -> (v -> PDoc) -> SplitMap.SplitMap k v -> PDoc
-ppSplitMap kf vf = ppAssocList (text "SplitMap") kf vf . SplitMap.toList
 
 ppMap' :: PDoc -> (k -> PDoc) -> (v -> PDoc) -> Map.Map k v -> PDoc
 ppMap' name kf vf = ppAssocList name kf vf . Map.toList
@@ -901,7 +897,7 @@ ppUTxO ::
   PrettyA (Core.TxOut era) =>
   UTxO era ->
   PDoc
-ppUTxO = ppAssocList (text "UTxO") ppTxIn prettyA . SplitMap.toList . unUTxO
+ppUTxO = ppAssocList (text "UTxO") ppTxIn prettyA . Map.toList . unUTxO
 
 instance
   PrettyA (Core.TxOut era) =>

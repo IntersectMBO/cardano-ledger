@@ -66,7 +66,7 @@ import Data.Coders
 import Data.DerivingVia (InstantiatedAt (..))
 import Data.Int (Int64)
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Measure (BoundedMeasure, Measure)
 import Data.Set (Set)
 import qualified Data.Set as Set

@@ -26,12 +26,13 @@ import Cardano.Ledger.Shelley.TxBody
     RewardAcnt (..),
     Wdrl (..),
   )
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import Data.Foldable (toList)
 import qualified Data.List as List
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -44,7 +45,6 @@ import Test.Cardano.Ledger.Generic.ModelState
     ModelNewEpochState (..),
     mNewEpochStateZero,
     pcModelNewEpochState,
-    toMUtxo,
   )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
@@ -228,7 +228,7 @@ go = do
       doc = pcTx proof tx
       model1 =
         (mNewEpochStateZero @(BabbageEra Mock))
-          { mUTxO = Map.restrictKeys (toMUtxo (initUTxO proof)) allinputs,
+          { mUTxO = Map.restrictKeys (unUTxO (initUTxO proof)) allinputs,
             mCount = 0,
             mFees = Coin 10,
             mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))

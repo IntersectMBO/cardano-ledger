@@ -19,7 +19,6 @@ module Test.Cardano.Ledger.Shelley.Generator.Utxo
     encodedLen,
     myDiscard,
     pickRandomFromMap,
-    pickRandomFromSplitMap,
   )
 where
 
@@ -86,7 +85,6 @@ import Cardano.Ledger.Val (Val (..), sumVal, (<+>), (<->), (<×>))
 import Control.Monad (when)
 import Control.State.Transition
 import qualified Data.ByteString.Lazy as BSL
-import qualified Data.Compact.SplitMap as SplitMap
 import qualified Data.Either as Either (partitionEithers)
 import qualified Data.IntSet as IntSet
 import Data.List (foldl')
@@ -260,7 +258,7 @@ genTx
             spendingBalanceUtxo
               <+> inject ((withdrawals <-> deposits) <+> refunds)
           n =
-            if SplitMap.size (unUTxO utxo) < genTxStableUtxoSize defaultConstants
+            if Map.size (unUTxO utxo) < genTxStableUtxoSize defaultConstants
               then -- something moderate 80-120 ^
                 genTxUtxoIncrement defaultConstants -- something small 2-5
               else 0 -- no change at all
@@ -453,7 +451,7 @@ genNextDelta
                       -- Remove possible inputs from Utxo, if they already
                       -- appear in inputs.
                       UTxO $
-                        SplitMap.filterWithKey
+                        Map.filterWithKey
                           ( \k v ->
                               (k `Set.notMember` inputsInUse) && genEraGoodTxOut v
                           )
@@ -658,25 +656,6 @@ genIndices k (l', u')
             then go n res acc
             else go (n - 1) (i : res) $ IntSet.insert i acc
 
--- | Select @n@ random key value pairs from the supplied map. The order of keys
--- with respect to each other will be the same as in `SplitMap.toList`, so you
--- need to call `QC.shuffle` if order needs to be randomized as well.
---
--- NOTE: we can't use the same approach as we do for `Map.Map` in
--- `pickRandomFromMap`, because `SplitMap.SplitMap` does not implement integer
--- indexing (a.k.a. elemAt).
-pickRandomFromSplitMap :: Int -> SplitMap.SplitMap a b -> Gen [(a, b)]
-pickRandomFromSplitMap n sp = do
-  (_, ixs) <- genIndices (min (max 0 n) sz) (0, sz - 1)
-  case SplitMap.foldrWithKey' pickFromIndex ([], 0, IntSet.toAscList ixs) sp of
-    (acc, _, _) -> pure acc
-  where
-    sz = SplitMap.size sp
-    pickFromIndex _k _v res@(_acc, _i, []) = res
-    pickFromIndex k v (!acc, i, x : xs)
-      | i == x = ((k, v) : acc, i + 1, xs)
-      | otherwise = (acc, i + 1, x : xs)
-
 -- | Select @n@ random key value pairs from the supplied map. Order of keys with
 -- respect to each other will also be random, i.e. not sorted.
 pickRandomFromMap :: Int -> Map.Map k t -> Gen [(k, t)]
@@ -808,7 +787,7 @@ genInputs ::
     )
 genInputs (minNumGenInputs, maxNumGenInputs) keyHashMap payScriptMap (UTxO utxo) = do
   numInputs <- QC.choose (minNumGenInputs, maxNumGenInputs)
-  selectedUtxo <- pickRandomFromSplitMap numInputs utxo
+  selectedUtxo <- pickRandomFromMap numInputs utxo
   let (inputs, witnesses) = unzip (fmap witnessedInput <$> selectedUtxo)
   return
     ( inputs,

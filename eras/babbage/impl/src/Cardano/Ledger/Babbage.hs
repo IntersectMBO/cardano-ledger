@@ -88,7 +88,6 @@ import Control.Arrow (left)
 import Control.Monad.Except (liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default (def)
 import Data.Foldable (toList)
 import qualified Data.List as List
@@ -240,7 +239,7 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
     Set.fromList [dh | out <- outs, SJust dh <- [getField @"datahash" out]]
     where
       newOuts = allOuts txbody
-      referencedOuts = SplitMap.elems $ SplitMap.restrictKeysSet utxo (getField @"referenceInputs" txbody)
+      referencedOuts = Map.elems $ Map.restrictKeys utxo (getField @"referenceInputs" txbody)
       outs = newOuts <> referencedOuts
   allOuts txbody = toList (getField @"outputs" txbody) <> collOuts
     where

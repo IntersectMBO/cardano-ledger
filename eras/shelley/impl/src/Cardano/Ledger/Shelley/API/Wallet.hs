@@ -124,8 +124,6 @@ import Data.Coders
     (!>),
     (<!),
   )
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Foldable (fold, foldMap')
@@ -136,6 +134,7 @@ import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..), getField)
 import NoThunks.Class (NoThunks (..))
@@ -158,7 +157,7 @@ getFilteredUTxO ::
   Set (Addr (Crypto era)) ->
   UTxO era
 getFilteredUTxO ss addrSet =
-  UTxO $ SplitMap.filter checkAddr fullUTxO
+  UTxO $ Map.filter checkAddr fullUTxO
   where
     UTxO fullUTxO = getUTxO ss
     compactAddrSet = Set.map compactAddr addrSet
@@ -173,7 +172,7 @@ getUTxOSubset ::
   Set (TxIn (Crypto era)) ->
   UTxO era
 getUTxOSubset ss txins =
-  UTxO $ fullUTxO `SplitMap.restrictKeysSet` txins
+  UTxO $ fullUTxO `Map.restrictKeys` txins
   where
     UTxO fullUTxO = getUTxO ss
 

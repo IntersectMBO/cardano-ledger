@@ -41,7 +41,7 @@ import Cardano.Ledger.Shelley.Rules.Utxow
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import qualified Control.Monad.Trans.State as State hiding (state)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
 import GHC.Records as GHC

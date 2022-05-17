@@ -9,7 +9,7 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Data.Compact.KVVector
+module Data.VMap.KVVector
   ( VG.Vector,
     VGM.MVector,
     KVVector (..),

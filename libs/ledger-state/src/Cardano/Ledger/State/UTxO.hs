@@ -30,10 +30,6 @@ import Control.Exception (throwIO)
 import Control.Foldl (Fold (..))
 import Control.SetAlgebra (range)
 import qualified Data.ByteString.Lazy as LBS
-import Data.Compact.HashMap (toKey)
-import Data.Compact.KeyMap as KeyMap
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import Data.Foldable as F
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
@@ -41,6 +37,7 @@ import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable
 import Data.UMap (delView, ptrView, rewView)
+import qualified Data.VMap as VMap
 import Prettyprinter
 import Text.Printf
 
@@ -78,11 +75,11 @@ noSharing = Fold (\ !m !(!k, !v) -> Map.insert k v m) mempty id
 noSharing_ :: UTxOFold (Map.Map (TxIn C) ())
 noSharing_ = Fold (\ !m !(!k, _) -> Map.insert k () m) mempty id
 
-noSharingSplitMap :: Fold (TxIn C, a) (SplitMap.SplitMap (TxIn C) a)
-noSharingSplitMap = Fold (\ !m !(!k, !v) -> SplitMap.insert k v m) mempty id
+noSharingMap :: Fold (TxIn C, a) (Map.Map (TxIn C) a)
+noSharingMap = Fold (\ !m !(!k, !v) -> Map.insert k v m) mempty id
 
-noSharingSplitMap_ :: UTxOFold (SplitMap.SplitMap (TxIn C) ())
-noSharingSplitMap_ = Fold (\ !m !(!k, _) -> SplitMap.insert k () m) mempty id
+noSharingMap_ :: UTxOFold (Map.Map (TxIn C) ())
+noSharingMap_ = Fold (\ !m !(!k, _) -> Map.insert k () m) mempty id
 
 txIdSharing ::
   UTxOFold (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
@@ -115,69 +112,6 @@ txIxNestedInsert !im (TxIn !txId !txIx, !v) =
           Nothing -> Just $! Map.singleton txId v
           Just !m -> Just $! Map.insert txId v m
    in IntMap.alter f (txIxToInt txIx) im
-
-txIxSharingKeyMap :: Fold (TxIn C, a) (IntMap.IntMap (KeyMap.KeyMap a))
-txIxSharingKeyMap = Fold txIxNestedInsertKeyMap mempty id
-
-txIxSharingKeyMap_ :: UTxOFold (IntMap.IntMap (KeyMap.KeyMap ()))
-txIxSharingKeyMap_ =
-  Fold ((\m (k, _) -> txIxNestedInsertKeyMap m (k, ()))) mempty id
-
-txIxNestedInsertKeyMap ::
-  IntMap.IntMap (KeyMap.KeyMap a) ->
-  (TxIn C, a) ->
-  IntMap.IntMap (KeyMap.KeyMap a)
-txIxNestedInsertKeyMap !m (TxIn txId txIx, !v) =
-  let !key = toKey txId
-      f =
-        \case
-          Nothing -> Just $! KeyMap.Leaf key v
-          Just hm -> Just $! KeyMap.insert key v hm
-   in IntMap.alter f (txIxToInt txIx) m
-
-txIdSharingKeyMap :: Fold (TxIn C, a) (KeyMap.KeyMap (IntMap.IntMap a))
-txIdSharingKeyMap = Fold txIdNestedInsertKeyMap KeyMap.Empty id
-
-txIdSharingKeyMap_ :: UTxOFold (KeyMap.KeyMap (IntMap.IntMap ()))
-txIdSharingKeyMap_ = Fold (\a (k, _) -> txIdNestedInsertKeyMap a (k, ())) KeyMap.Empty id
-
-txIdNestedInsertKeyMap ::
-  KeyMap.KeyMap (IntMap.IntMap a) ->
-  (TxIn C, a) ->
-  KeyMap.KeyMap (IntMap.IntMap a)
-txIdNestedInsertKeyMap !m (TxIn txId txIx, !a) =
-  let !key = toKey txId
-      !v = IntMap.singleton (txIxToInt txIx) a
-   in KeyMap.insertWith (<>) key v m
-
-testKeyMap ::
-  KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra)) ->
-  Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) ->
-  IO ()
-testKeyMap km m =
-  case Map.foldlWithKey' test km m of
-    KeyMap.Empty -> putStrLn "Tested UTxO equality: Pass"
-    _ -> error "Expected the KeyMap to be empty, but it's not."
-  where
-    test ::
-      KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra)) ->
-      TxIn C ->
-      Alonzo.TxOut CurrentEra ->
-      KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra))
-    test acc txIn@(TxIn txId txIx) txOut =
-      let !key = toKey txId
-       in case KeyMap.lookup key acc of
-            Nothing -> error $ "Can't find txId: " <> show txIn
-            Just im ->
-              let txIx' = txIxToInt txIx
-                  im' = IntMap.delete txIx' im
-               in case IntMap.lookup txIx' im of
-                    Nothing -> error $ "Can't find txIx: " <> show txIn
-                    Just txOut'
-                      | txOut /= txOut' ->
-                          error $ "Found mismatching TxOuts for " <> show txIn
-                      | IntMap.null im' -> KeyMap.delete key acc
-                      | otherwise -> KeyMap.insert key im' acc
 
 totalADA :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> Mary.Value C
 totalADA = foldMap (\(Alonzo.TxOut _ v _) -> v)
@@ -684,8 +618,8 @@ instance AggregateStat UTxOStats where
 countUTxOStats :: UTxO (AlonzoEra StandardCrypto) -> UTxOStats
 countUTxOStats (UTxO m) =
   UTxOStats
-    { usTxInStats = countTxInStats (SplitMap.keys m),
-      usTxOutStats = countTxOutStats (SplitMap.elems m)
+    { usTxInStats = countTxInStats (Map.keys m),
+      usTxOutStats = countTxOutStats (Map.elems m)
     }
 
 data AggregateStats = AggregateStats

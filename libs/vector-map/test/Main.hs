@@ -1,19 +1,15 @@
 module Main where
 
-import Test.Compact.KeyMap (alltests)
-import Test.Compact.SplitMap (splitMapTests)
-import Test.Compact.VMap
 import Test.Tasty
+import Test.VMap
 
 -- ====================================================================================
 
 tests :: TestTree
 tests =
   testGroup
-    "compact-map"
-    [ alltests,
-      vMapTests,
-      splitMapTests
+    "vector-map"
+    [ vMapTests
     ]
 
 main :: IO ()

@@ -51,7 +51,7 @@ import Data.Functor.PiecewiseConstant (liftPiecewiseConstantMap)
 import Data.Functor.Reverse (Reverse (..))
 import Data.Group.GrpMap (GrpMap, mkGrpMap)
 import qualified Data.List as List
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Any (..))
 import Data.Set (Set)

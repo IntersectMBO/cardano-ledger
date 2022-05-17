@@ -1,7 +1,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Test.Compact.Common
+module Test.Common
   ( testLawsGroup,
     testPropertyN,
     withMaxTimesSuccess,

@@ -51,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState (KeyPairs)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import Data.List (permutations)
 import qualified Data.List as List
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Tuple (swap)
 import Data.Word (Word64)

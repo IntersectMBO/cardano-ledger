@@ -47,7 +47,7 @@ import Data.Foldable
 import Data.Functor.Contravariant (Predicate (..))
 import Data.HKD
 import qualified Data.List as List
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust, mapMaybe)
 import Data.Monoid (Endo (..))
 import qualified Data.Set as Set

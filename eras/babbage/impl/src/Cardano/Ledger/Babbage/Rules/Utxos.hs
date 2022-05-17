@@ -50,9 +50,9 @@ import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Foldable (toList)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
+import Data.MapExtras (extractKeys)
 import Data.Maybe.Strict
 import Data.Set (Set)
 import Debug.Trace (traceEvent)
@@ -215,13 +215,12 @@ scriptsNo = do
 
   {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
   {- utxoDel  = getField @"collateral" txb ◁ utxo -}
-  let !(!utxoKeep, !utxoDel) =
-        SplitMap.extractKeysSet (unUTxO utxo) (getField @"collateral" txb)
+  let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (getField @"collateral" txb)
       UTxO collouts = Babbage.collOuts txb
       collateralFees = Val.coin (Babbage.collBalance txb utxo) -- NEW to Babbage
   pure
     $! us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
-      { _utxo = UTxO (SplitMap.union utxoKeep collouts), -- NEW to Babbage
+      { _utxo = UTxO (Map.union utxoKeep collouts), -- NEW to Babbage
       {- fees + collateralFees -}
         _fees = fees <> collateralFees, -- NEW to Babbage
         _stakeDistro = updateStakeDistribution (_stakeDistro us) (UTxO utxoDel) (UTxO collouts)

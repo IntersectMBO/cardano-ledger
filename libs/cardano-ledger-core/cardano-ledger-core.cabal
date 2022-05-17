@@ -77,7 +77,6 @@ library
     cardano-ledger-byron,
     cardano-prelude,
     cardano-slotting,
-    compact-map,
     containers,
     data-default-class,
     deepseq,

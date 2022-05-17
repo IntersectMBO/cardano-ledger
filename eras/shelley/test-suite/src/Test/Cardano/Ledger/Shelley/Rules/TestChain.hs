@@ -110,8 +110,6 @@ import Control.State.Transition.Trace
 import qualified Control.State.Transition.Trace as Trace
 import Control.State.Transition.Trace.Generator.QuickCheck (forAllTraceFromInitState)
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default)
 import Data.Foldable (fold, foldl', toList)
 import Data.Functor.Identity (Identity)
@@ -123,6 +121,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.TreeDiff.QuickCheck (ediffEq)
 import qualified Data.UMap as UM
+import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
@@ -262,7 +261,7 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
                   "\ntx\n",
                   show tx,
                   "\nsize original utxo\n",
-                  show (SplitMap.size $ unUTxO u),
+                  show (Map.size $ unUTxO u),
                   "\noriginal utxo\n",
                   show u,
                   "\noriginal sd\n",
@@ -700,7 +699,7 @@ preserveBalanceRestricted SourceSignalTarget {source = chainSt, signal = block} 
           txb = getField @"body" tx
           pools = _pParams . dpsPState $ dstate
           inps =
-            Val.coin (balance @era (UTxO (SplitMap.restrictKeysSet u (getField @"inputs" txb))))
+            Val.coin (balance @era (UTxO (Map.restrictKeys u (getField @"inputs" txb))))
               <> keyRefunds pp_ txb
               <> fold (unWdrl (getField @"wdrls" txb))
           outs =
@@ -732,7 +731,7 @@ preserveOutputsTx SourceSignalTarget {source = chainSt, signal = block} =
         let UTxO outs = txouts @era (getField @"body" tx)
          in property $
               hasFailedScripts tx
-                .||. counterexample "TxOuts are not a subset of UTxO" (outs `SplitMap.isSubmapOf` utxo)
+                .||. counterexample "TxOuts are not a subset of UTxO" (outs `Map.isSubmapOf` utxo)
 
 canRestrictUTxO ::
   forall era ledger.
@@ -757,8 +756,8 @@ canRestrictUTxO SourceSignalTarget {source = chainSt, signal = block} =
       SourceSignalTarget {target = LedgerState (UTxOState {_utxo = UTxO uRestr}) _} =
         counterexample
           (unlines ["non-disjoint:", show uRestr, show irrelevantUTxO])
-          (uRestr `SplitMap.disjoint` irrelevantUTxO)
-          .&&. uFull === (uRestr `SplitMap.union` irrelevantUTxO)
+          (uRestr `Map.disjoint` irrelevantUTxO)
+          .&&. uFull === (uRestr `Map.union` irrelevantUTxO)
 
 -- | Check that consumed inputs are eliminated from the resulting UTxO
 eliminateTxInputs ::
@@ -784,7 +783,7 @@ eliminateTxInputs SourceSignalTarget {source = chainSt, signal = block} =
         } =
         property $
           hasFailedScripts tx
-            || Set.null (eval (txins @era (getField @"body" tx) ∩ SplitMap.toSet u'))
+            || Set.null (eval (txins @era (getField @"body" tx) ∩ Map.keysSet u'))
 
 -- | Collision-Freeness of new TxIds - checks that all new outputs of a Tx are
 -- included in the new UTxO and that all TxIds are new.
@@ -810,11 +809,11 @@ newEntriesAndUniqueTxIns SourceSignalTarget {source = chainSt, signal = block} =
           target = LedgerState (UTxOState {_utxo = UTxO u'}) _
         } =
         let UTxO outs = txouts @era (getField @"body" tx)
-            outIds = Set.map (\(TxIn _id _) -> _id) (SplitMap.toSet outs)
-            oldIds = Set.map (\(TxIn _id _) -> _id) (SplitMap.toSet u)
+            outIds = Set.map (\(TxIn _id _) -> _id) (Map.keysSet outs)
+            oldIds = Set.map (\(TxIn _id _) -> _id) (Map.keysSet u)
          in property $
               hasFailedScripts tx
-                || ((outIds `Set.disjoint` oldIds) && (outs `SplitMap.isSubmapOf` u'))
+                || ((outIds `Set.disjoint` oldIds) && (outs `Map.isSubmapOf` u'))
 
 -- | Check for required signatures in case of Multi-Sig. There has to be one set
 -- of possible signatures for a multi-sig script which is a sub-set of the
@@ -1094,7 +1093,7 @@ ledgerTraceFromBlockWithRestrictedUTxO chainSt block =
     txIns = neededTxInsForBlock block
     LedgerState utxoSt delegationSt = ledgerSt0
     utxo = unUTxO . _utxo $ utxoSt
-    (relevantUTxO, irrelevantUTxO) = SplitMap.partitionWithKey (const . (`Set.member` txIns)) utxo
+    (relevantUTxO, irrelevantUTxO) = Map.partitionWithKey (const . (`Set.member` txIns)) utxo
     ledgerSt0' = LedgerState (utxoSt {_utxo = UTxO relevantUTxO}) delegationSt
 
 -- | Reconstruct a POOL trace from the transactions in a Block and ChainState
@@ -1384,7 +1383,7 @@ aggregateUtxoCoinByCredential ::
   Map (Credential 'Staking (Crypto era)) Coin ->
   Map (Credential 'Staking (Crypto era)) Coin
 aggregateUtxoCoinByCredential ptrs (UTxO u) initial =
-  SplitMap.foldl' accum initial u
+  Map.foldl' accum initial u
   where
     accum ans out =
       let c = Val.coin (getField @"value" out)

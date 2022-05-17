@@ -233,8 +233,6 @@ import Data.Coders
     decodeRecordNamed,
     (<!),
   )
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
 import Data.Group (Group, invert)
@@ -248,6 +246,7 @@ import qualified Data.Set as Set
 import Data.Sharing
 import Data.Typeable
 import qualified Data.UMap as UM
+import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
@@ -637,7 +636,7 @@ instance Default (IncrementalStake c) where
 
 -- | There is a serious invariant that we must maintain in the UTxOState.
 --   Given (UTxOState utxo _ _ _ istake) it must be the case that
---   istake == (updateStakeDistribution (UTxO SplitMap.empty) (UTxO SplitMap.empty) utxo)
+--   istake == (updateStakeDistribution (UTxO Map.empty) (UTxO Map.empty) utxo)
 --   Of course computing the RHS of the above equality can be very expensive, so we only
 --   use this route in the testing function smartUTxO. But we are very carefull, wherever
 --   we update the UTxO, we carefully make INCREMENTAL changes to istake to maintain
@@ -1020,7 +1019,7 @@ consumed pp (UTxO u) tx =
   Set.foldl' lookupAddTxOut mempty (txins @era tx)
     <> Val.inject (refunds <+> withdrawals)
   where
-    lookupAddTxOut acc txin = maybe acc (addTxOut acc) $ SplitMap.lookup txin u
+    lookupAddTxOut acc txin = maybe acc (addTxOut acc) $ Map.lookup txin u
     addTxOut !b out = getField @"value" out <+> b
     refunds = keyRefunds pp tx
     withdrawals = fold . unWdrl $ getField @"wdrls" tx
@@ -1143,7 +1142,7 @@ incrementalAggregateUtxoCoinByCredential ::
   IncrementalStake (Crypto era) ->
   IncrementalStake (Crypto era)
 incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
-  SplitMap.foldl' accum initial u
+  Map.foldl' accum initial u
   where
     keepOrDelete new Nothing =
       case mode new of
@@ -1691,7 +1690,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     us = lsUTxOState ls
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
-      SplitMap.partition (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
+      Map.partition (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
     acnt = esAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =

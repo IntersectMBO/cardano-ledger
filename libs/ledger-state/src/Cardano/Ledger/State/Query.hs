@@ -24,9 +24,6 @@ import Conduit
 import Control.Foldl (Fold (..))
 import Control.Monad
 import Control.Monad.Trans.Reader
-import qualified Data.Compact.KeyMap as KeyMap
-import qualified Data.Compact.SplitMap as SplitMap
-import qualified Data.Compact.VMap as VMap
 import Data.Conduit.Internal (zipSources)
 import Data.Conduit.List (sourceList)
 import Data.Functor
@@ -35,6 +32,7 @@ import qualified Data.Map.Strict as Map
 import Data.Sharing
 import qualified Data.Text as T
 import Data.UMap (delView, ptrView, rewView, unify)
+import qualified Data.VMap as VMap
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Generic.Mutable as VGM
 import Database.Persist.Sqlite
@@ -69,7 +67,7 @@ insertUTxO ::
   Key UtxoState ->
   ReaderT SqlBackend m ()
 insertUTxO utxo stateKey = do
-  mapM_ insertTxOut $ SplitMap.toList (Shelley.unUTxO utxo)
+  mapM_ insertTxOut $ Map.toList (Shelley.unUTxO utxo)
   where
     insertTxOut (TxIn.TxIn txId txIx, out) = do
       txKey <-
@@ -629,7 +627,7 @@ loadDStateNoSharing fp =
 loadUTxONoSharing ::
   MonadUnliftIO m => T.Text -> m (Shelley.UTxO CurrentEra)
 loadUTxONoSharing fp =
-  runSqlite fp (Shelley.UTxO <$> runConduitFold sourceUTxO noSharingSplitMap)
+  runSqlite fp (Shelley.UTxO <$> runConduitFold sourceUTxO noSharingMap)
 
 loadLedgerStateNoSharing ::
   MonadUnliftIO m => T.Text -> m (Shelley.LedgerState CurrentEra)
@@ -637,7 +635,7 @@ loadLedgerStateNoSharing fp =
   runSqlite fp $ do
     ledgerState@LedgerState {..} <- getJust lsId
     dstate <- getDStateNoSharing ledgerStateDstateId
-    m <- runConduitFold sourceUTxO noSharingSplitMap
+    m <- runConduitFold sourceUTxO noSharingMap
     getLedgerState (Shelley.UTxO m) ledgerState dstate
 
 loadLedgerStateDStateSharing ::
@@ -660,36 +658,6 @@ loadLedgerStateDStateTxIxSharing fp =
     dstate <- getDStateWithSharing ledgerStateDstateId
     ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
     m <- runConduitFold sourceUTxO txIxSharing
-    pure (ls, m)
-
-loadLedgerStateDStateTxIxSharingKeyMap ::
-  MonadUnliftIO m =>
-  T.Text ->
-  m
-    ( Shelley.LedgerState CurrentEra,
-      IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
-    )
-loadLedgerStateDStateTxIxSharingKeyMap fp =
-  runSqlite fp $ do
-    ledgerState@LedgerState {..} <- getJust lsId
-    dstate <- getDStateWithSharing ledgerStateDstateId
-    m <- runConduitFold sourceUTxO txIxSharingKeyMap
-    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
-    pure (ls, m)
-
-loadLedgerStateDStateTxIdSharingKeyMap ::
-  MonadUnliftIO m =>
-  T.Text ->
-  m
-    ( Shelley.LedgerState CurrentEra,
-      KeyMap.KeyMap (IntMap.IntMap (Alonzo.TxOut CurrentEra))
-    )
-loadLedgerStateDStateTxIdSharingKeyMap fp =
-  runSqlite fp $ do
-    ledgerState@LedgerState {..} <- getJust lsId
-    dstate <- getDStateWithSharing ledgerStateDstateId
-    m <- runConduitFold sourceUTxO txIdSharingKeyMap
-    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
     pure (ls, m)
 
 storeEpochState ::
@@ -717,7 +685,7 @@ getLedgerStateWithSharing ese = do
     maybe (error "Impossible") (pure . entityVal)
       =<< selectFirst [LedgerStateEpochStateId ==. entityKey ese] []
   dstate <- getDStateWithSharing ledgerStateDstateId
-  m <- runConduitFold sourceUTxO noSharingSplitMap
+  m <- runConduitFold sourceUTxO noSharingMap
   getLedgerState (Shelley.UTxO m) ledgerState dstate
 
 getLedgerStateNoSharing ::
@@ -729,7 +697,7 @@ getLedgerStateNoSharing ese = do
     maybe (error "Impossible") (pure . entityVal)
       =<< selectFirst [LedgerStateEpochStateId ==. entityKey ese] []
   dstate <- getDStateNoSharing ledgerStateDstateId
-  m <- runConduitFold sourceUTxO noSharingSplitMap
+  m <- runConduitFold sourceUTxO noSharingMap
   getLedgerState (Shelley.UTxO m) ledgerState dstate
 
 loadEpochState :: MonadUnliftIO m => T.Text -> m (Shelley.EpochState CurrentEra)
@@ -787,34 +755,3 @@ loadSnapShotsNoSharingM fp = runSqlite fp . getSnapShotsNoSharingM
 loadSnapShotsWithSharingM :: T.Text -> Entity EpochState -> IO (SnapShotsM C)
 loadSnapShotsWithSharingM fp = runSqlite fp . getSnapShotsWithSharingM
 {-# INLINEABLE loadSnapShotsWithSharingM #-}
-
-loadLedgerStateNoSharingKeyMap ::
-  MonadUnliftIO m =>
-  T.Text ->
-  m
-    ( Shelley.LedgerState CurrentEra,
-      IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
-    )
-loadLedgerStateNoSharingKeyMap fp =
-  runSqlite fp $ do
-    ledgerState@LedgerState {..} <- getJust lsId
-    dstate <- getDStateNoSharing ledgerStateDstateId
-    m <- runConduitFold sourceUTxO txIxSharingKeyMap
-    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
-    pure (ls, m)
-
-loadLedgerStateWithSharingKeyMap ::
-  MonadUnliftIO m =>
-  T.Text ->
-  m
-    ( Shelley.LedgerState CurrentEra,
-      IntMap.IntMap (KeyMap.KeyMap (Alonzo.TxOut CurrentEra))
-    )
-loadLedgerStateWithSharingKeyMap fp =
-  runSqlite fp $ do
-    ledgerState@LedgerState {..} <- getJust lsId
-    dstate <- getDStateNoSharing ledgerStateDstateId
-    let stakeCredentials = rewView (Shelley._unified dstate)
-    m <- runConduitFold (sourceWithSharingUTxO stakeCredentials) txIxSharingKeyMap
-    ls <- getLedgerState (Shelley.UTxO mempty) ledgerState dstate
-    pure (ls, m)

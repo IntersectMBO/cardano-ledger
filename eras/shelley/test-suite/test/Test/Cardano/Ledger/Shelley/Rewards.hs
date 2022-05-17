@@ -118,11 +118,10 @@ import Control.Monad.Trans.Reader (asks, runReader)
 import Control.Provenance (preservesJust, preservesNothing, runProvM, runWithProvM)
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
-import qualified Data.Compact.VMap as VMap
 import Data.Default.Class (Default (def))
 import Data.Foldable (fold, foldl')
 import Data.Map (Map)
-import qualified Data.Map as Map
+import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe, mapMaybe)
 import Data.Proxy
 import Data.Pulse (Pulsable (..))
@@ -131,6 +130,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UM
+import qualified Data.VMap as VMap
 import Data.Word (Word64)
 import GHC.Stack
 import Numeric.Natural (Natural)

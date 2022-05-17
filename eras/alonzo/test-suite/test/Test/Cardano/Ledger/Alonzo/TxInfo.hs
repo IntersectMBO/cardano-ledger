@@ -18,9 +18,9 @@ import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
-import qualified Data.Compact.SplitMap as SplitMap
 import Data.Default.Class (def)
 import Data.Functor.Identity (Identity, runIdentity)
+import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -67,7 +67,7 @@ shelleyOutput :: TxOut A
 shelleyOutput = TxOut shelleyAddr (Val.inject $ Coin 2) SNothing
 
 utxo :: UTxO A
-utxo = UTxO $ SplitMap.fromList [(byronInput, byronOutput), (shelleyInput, shelleyOutput)]
+utxo = UTxO $ Map.fromList [(byronInput, byronOutput), (shelleyInput, shelleyOutput)]
 
 txb :: TxIn StandardCrypto -> TxOut A -> TxBody A
 txb i o =
