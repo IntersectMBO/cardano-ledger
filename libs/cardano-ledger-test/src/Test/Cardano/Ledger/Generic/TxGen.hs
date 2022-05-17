@@ -109,7 +109,6 @@ import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
     ModelNewEpochState (..),
     UtxoEntry,
-    fromMUtxo,
     pcModelNewEpochState,
   )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
@@ -952,7 +951,7 @@ genValidatedTxAndInfo proof = do
             mUTxO = utxo -- This is the UTxO that will run this Tx,
           }
     )
-  pure (fromMUtxo utxo, validTx, feepair, maybeoldpair)
+  pure (UTxO utxo, validTx, feepair, maybeoldpair)
 
 minus :: MUtxo era -> Maybe (UtxoEntry era) -> MUtxo era
 minus m Nothing = m

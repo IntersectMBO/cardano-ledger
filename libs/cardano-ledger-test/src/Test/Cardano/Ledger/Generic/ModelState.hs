@@ -131,12 +131,6 @@ import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 --   UTxO as a Map (not a newtype around a Map)
 type MUtxo era = Map (TxIn (Crypto era)) (Core.TxOut era)
 
-toMUtxo :: UTxO era -> MUtxo era
-toMUtxo (UTxO m) = m
-
-fromMUtxo :: MUtxo era -> UTxO era
-fromMUtxo m = UTxO m
-
 pcMUtxo :: Reflect era => Proof era -> MUtxo era -> PDoc
 pcMUtxo proof m = ppMap pcTxIn (pcTxOut proof) m
 

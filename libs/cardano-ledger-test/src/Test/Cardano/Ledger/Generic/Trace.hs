@@ -2,7 +2,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -72,10 +71,7 @@ import Test.Cardano.Ledger.Generic.GenState
     runGenRS,
   )
 import Test.Cardano.Ledger.Generic.MockChain
-import Test.Cardano.Ledger.Generic.ModelState
-  ( stashedAVVMAddressesZero,
-    toMUtxo,
-  )
+import Test.Cardano.Ledger.Generic.ModelState (stashedAVVMAddressesZero)
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTx, pcTxBody, pcTxIn)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
@@ -180,7 +176,7 @@ pcSmallUTxO proof u txs = ppMap pcTxIn (pcCoin . getTxOutCoin proof) m
   where
     keys = Set.unions (map f txs)
     f tx = allInputs proof (getBody proof tx)
-    m = Map.restrictKeys (toMUtxo u) keys
+    m = Map.restrictKeys (unUTxO u) keys
 
 raiseMockError ::
   (UsesValue era, Reflect era) =>

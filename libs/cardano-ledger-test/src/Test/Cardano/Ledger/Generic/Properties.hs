@@ -326,6 +326,6 @@ main2 :: IO ()
 main2 = runTest (\x -> fst <$> genValidatedTx x) (const (pure ())) (Babbage Mock)
 
 main3 :: IO ()
-main3 = runTest (\_x -> (fromMUtxo . fst) <$> genUTxO) action (Alonzo Mock)
+main3 = runTest (\_x -> UTxO . fst <$> genUTxO) action (Alonzo Mock)
   where
     action (UTxO x) = putStrLn ("Size = " ++ show (Map.size x))
