@@ -221,7 +221,7 @@ validateCostModel (lang, cmps) = case mkCostModel lang cmps of
   Left err -> fail err
   Right cm -> pure (lang, cm)
 
--- | The keys the Plutus V1 cost models have changed since the Alonzo genesis file was created.
+-- | The keys of the Plutus V1 cost models have changed since the Alonzo genesis file was created.
 -- The number of keys, and the ordering of the keys, however, has not changed.
 -- Therefore we just replace (in order) the new keys for the old ones.
 translateLegacyV1paramNames :: Map Text Integer -> Map Text Integer
