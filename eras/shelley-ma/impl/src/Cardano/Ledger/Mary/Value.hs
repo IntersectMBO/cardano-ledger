@@ -80,10 +80,10 @@ import Data.Map.Internal
   ( Map (..),
     link,
     link2,
-    splitLookup,
   )
 import Data.Map.Strict (assocs)
 import qualified Data.Map.Strict as Map
+import Data.Map.Strict.Internal (splitLookup)
 import Data.Maybe (fromJust)
 import qualified Data.Primitive.ByteArray as BA
 import Data.Proxy (Proxy (..))
