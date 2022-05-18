@@ -41,6 +41,7 @@ library
     Cardano.Ledger.Shelley.API.Wallet
     Cardano.Ledger.Shelley.API.Mempool
     Cardano.Ledger.Shelley.API.Types
+    Cardano.Ledger.Shelley.AdaPots
     Cardano.Ledger.Shelley.BlockChain
     Cardano.Ledger.Shelley.CompactAddr
     Cardano.Ledger.Shelley.Delegation.Certificates

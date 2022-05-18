@@ -1,7 +1,7 @@
 module Test.Cardano.Ledger.Shelley.ShelleyTranslation (testGroupShelleyTranslation) where
 
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Wallet (totalAdaES)
+import Cardano.Ledger.Shelley.AdaPots (totalAdaES)
 import Cardano.Ledger.Shelley.LedgerState (EpochState, returnRedeemAddrsToReserves)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()

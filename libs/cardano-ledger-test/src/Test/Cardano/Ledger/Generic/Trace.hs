@@ -39,7 +39,7 @@ import Cardano.Ledger.Pretty
     ppWord64,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API.Wallet (totalAdaPotsES)
+import Cardano.Ledger.Shelley.AdaPots (totalAdaPotsES)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),

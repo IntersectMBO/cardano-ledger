@@ -55,7 +55,7 @@ import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import qualified Cardano.Ledger.Pretty as PP
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Wallet
+import Cardano.Ledger.Shelley.AdaPots
   ( AdaPots (..),
     totalAdaES,
     totalAdaPotsES,
