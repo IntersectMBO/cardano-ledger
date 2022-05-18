@@ -81,7 +81,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (join, replicateM, when)
+import Control.Monad (join, replicateM, replicateM_, when)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), get, gets, modify)
 import qualified Control.Monad.Trans.Reader as Reader
@@ -137,6 +137,7 @@ import Test.Tasty.QuickCheck
     frequency,
     generate,
   )
+import Cardano.Ledger.Slot (SlotNo (SlotNo))
 
 -- =================================================
 
@@ -177,7 +178,8 @@ data GenState era = GenState
     gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (Crypto era)) (IndividualPoolStake (Crypto era))),
     gsRegKey :: !(Set (Credential 'Staking (Crypto era))),
     gsProof :: !(Proof era),
-    gsGenEnv :: !(GenEnv era)
+    gsGenEnv :: !(GenEnv era),
+    gsSeedIndex :: !Int
   }
 
 emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
@@ -197,6 +199,7 @@ emptyGenState proof genv =
     Set.empty
     proof
     genv
+    0
 
 instance Default GenSize where
   def =
@@ -773,7 +776,8 @@ pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoo
       ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake ipoold),
       ("Previous RegKey", ppSet pcCredential irkey),
       ("GenEnv", ppString "GenEnv ..."),
-      ("Proof", ppString (show prf))
+      ("Proof", ppString (show prf)),
+      ("SeedIndex", ppInt seedIdx)
     ]
 
 instance Reflect era => PrettyC (GenState era) era where prettyC = pcGenState

@@ -16,6 +16,8 @@
 
 module Test.Cardano.Ledger.Generic.TxGen where
 
+import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
+import Cardano.Crypto.VRF (VRFAlgorithm (deriveVerKeyVRF, genKeyVRF, seedSizeVRF))
 import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Scripts
@@ -28,9 +30,10 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
-import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
+import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import qualified Cardano.Ledger.Crypto as C
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys
@@ -44,9 +47,16 @@ import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API
   ( Addr (..),
     Credential (..),
+    PoolCert (RegPool, RetirePool),
+    PoolMetadata (PoolMetadata),
+    PoolParams (..),
     RewardAcnt (..),
+    SignKeyVRF,
+    StakePoolRelay (SingleHostAddr),
     StakeReference (..),
+    VerKeyVRF,
     Wdrl (..),
+    hashVerKeyVRF,
   )
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
@@ -62,6 +72,9 @@ import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BSC
+import Data.Data (Proxy (Proxy))
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as F
 import Data.Functor
@@ -72,8 +85,10 @@ import Data.Maybe (catMaybes)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Text as Text
 import Data.Word (Word16)
 import GHC.Stack
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -90,6 +105,7 @@ import Test.Cardano.Ledger.Generic.GenState
     genCredential,
     genDatumWithHash,
     genFreshCredential,
+    genFreshRegCred,
     genKeyHash,
     genPool,
     genPositiveVal,
@@ -104,8 +120,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS, 
-    genFreshRegCred
+    runGenRS,
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -166,8 +181,8 @@ genExUnits era n = do
     genUpTo maxVal (!totalLeft, !acc) _
       | totalLeft == 0 = pure (0, 0 : acc)
       | otherwise = do
-          x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
-          pure (totalLeft - x, x : acc)
+        x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
+        pure (totalLeft - x, x : acc)
     genSequenceSum maxVal
       | maxVal == 0 = pure $ replicate n 0
       | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
@@ -183,7 +198,7 @@ lookupScript scriptHash mTag = do
     Just script -> pure $ Just script
     Nothing
       | Just tag <- mTag ->
-          Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
+        Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
     _ -> pure Nothing
 
 -- ========================================================================
@@ -522,6 +537,107 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
+encodeInt :: Int -> BS.ByteString
+encodeInt n
+  | n < 0 = error "Trying to turn a negative int into a bytestring"
+  | n == 0 = mempty
+  | otherwise = BS.cons (fromIntegral $ n `mod` 255) $ encodeInt (n `div` 255)
+
+freshSeed :: Proof era -> GenRS era Seed
+freshSeed _ = do
+  seedIdx <- gets gsSeedIndex
+  modify $ \gs@GenState {gsSeedIndex} -> gs {gsSeedIndex = gsSeedIndex + 1}
+  return . mkSeedFromBytes $ encodeInt seedIdx
+
+genVRFKeyPair ::
+  forall era.
+  Proof era ->
+  GenRS era (SignKeyVRF (Crypto era), VerKeyVRF (Crypto era))
+genVRFKeyPair proof = do
+  seed <- freshSeed proof
+  let sk = genKeyVRF seed
+      vk = deriveVerKeyVRF sk
+  pure (sk, vk)
+
+-- | Actually generates a random string with length up to 64 bytes
+genUrl :: Proof era -> GenRS era Url
+genUrl _ = do
+  n <- lift $ chooseInt (1, 64)
+  str <- Text.pack <$> lift (vector n)
+  case textToUrl str of
+    Just url -> return url
+    Nothing -> error $ "Failed to generate an url of length " <> show n
+
+genMetadata ::
+  Proof era ->
+  GenRS era (StrictMaybe PoolMetadata)
+genMetadata proof = frequencyT [(1, genMD), (1, return SNothing)]
+  where
+    genMD = do
+      url <- genUrl proof
+      return . SJust $
+        PoolMetadata
+          url
+          (BSC.pack "{}") -- ???
+
+genRewardAcnt :: Proof era -> GenRS era (RewardAcnt (Crypto era))
+genRewardAcnt _ = do
+  cred <- genCredential Rewrd
+  return $
+    RewardAcnt
+      Testnet
+      cred
+
+genIPAddr :: GenRS era (StrictMaybe IPv4, StrictMaybe IPv6)
+genIPAddr = do
+  undefined
+
+genRelays :: Proof era -> GenRS era (StrictSeq StakePoolRelay)
+genRelays proof = elementsT
+  [ genSingleHostAddr
+  , SingleHostName <$> genPort <*> _
+  , MultiHostName <$> _
+  ]
+  where
+    genPort = undefined
+    genSingleHostAddr = do
+      port <- genPort
+      (ipv4, ipv6) <- genIPAddr
+      return $ SingleHostAddr port ipv4 ipv6
+
+genFreshRegPool ::
+  Proof era ->
+  Set (KeyHash 'Staking (Crypto era)) ->
+  GenRS era (PoolParams (Crypto era))
+genFreshRegPool proof owners = do
+  pool <- genKeyHash
+  (_, vk) <- genVRFKeyPair proof
+  let vrf = hashVerKeyVRF vk
+  meta <- genMetadata proof
+  pledge <- lift arbitrary
+  cost <- lift arbitrary
+  margin <- lift $ choose (minBound, maxBound)
+  rAcnt <- genRewardAcnt proof
+  relays <- genRelays proof
+  return
+    PoolParams
+      { _poolId = pool,
+        _poolVrf = vrf,
+        _poolPledge = Coin pledge,
+        _poolCost = Coin cost,
+        _poolMargin = margin,
+        _poolRAcnt = rAcnt,
+        _poolOwners = owners,
+        _poolRelays = relays,
+        _poolMD = meta
+      }
+
+genRetirementHash ::
+  Proof era ->
+  GenRS era (KeyHash 'StakePool (Crypto era))
+genRetirementHash proof = do
+  return _
+
 genDCert :: forall era. Reflect era => GenRS era (DCert (Crypto era))
 genDCert = do
   elementsT
@@ -530,9 +646,15 @@ genDCert = do
           [ RegKey <$> genFreshRegCred @era,
             DeRegKey <$> genCredential Cert,
             Delegate <$> genDelegation
+          ],
+      DCertPool
+        <$> elementsT
+          [ RegPool <$> genFreshRegPool,
+            RetirePool <$> genRetirementHash <*> epoch
           ]
     ]
   where
+    epoch = _
     genDelegation = do
       rewardAccount <- genFreshRegCred @era
       poolId <- genPool
@@ -546,40 +668,40 @@ genDCerts = do
         -- so if a duplicate might be generated, we don't do that generation
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
               | Just (_, scriptHash) <- mScriptHash =
-                  if (scriptHash, mKey) `Set.member` ss
-                    then (dcs, ss, regCreds)
-                    else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
+                if (scriptHash, mKey) `Set.member` ss
+                  then (dcs, ss, regCreds)
+                  else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
               | otherwise = (dc : dcs', ss, regCreds')
         -- Generate registration and de-registration delegation certificates,
         -- while ensuring the proper registered/unregistered state in DState
         case dc of
           DCertDeleg d
             | RegKey regCred <- d ->
-                if regCred `Map.member` regCreds -- Can't register if it is already registered
-                  then pure (dcs, ss, regCreds)
-                  else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
+              if regCred `Map.member` regCreds -- Can't register if it is already registered
+                then pure (dcs, ss, regCreds)
+                else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
             | DeRegKey deregCred <- d ->
-                -- We can't make DeRegKey certificate if deregCred is not already registered
-                -- or if the Rewards balance for deregCred is not 0
-                case Map.lookup deregCred regCreds of
-                  Nothing -> pure (dcs, ss, regCreds)
-                  -- No credential, skip making certificate
-                  Just (Coin 0) ->
-                    -- Ok to make certificate, rewards balance is 0
-                    insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
-                      <$> lookupPlutusScript deregCred Cert
-                  Just (Coin _) -> pure (dcs, ss, regCreds)
+              -- We can't make DeRegKey certificate if deregCred is not already registered
+              -- or if the Rewards balance for deregCred is not 0
+              case Map.lookup deregCred regCreds of
+                Nothing -> pure (dcs, ss, regCreds)
+                -- No credential, skip making certificate
+                Just (Coin 0) ->
+                  -- Ok to make certificate, rewards balance is 0
+                  insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
+                    <$> lookupPlutusScript deregCred Cert
+                Just (Coin _) -> pure (dcs, ss, regCreds)
             -- Either Reward balance is not zero, or no Credential, so skip making certificate
             | Delegate (Delegation delegCred delegKey) <- d ->
-                let (dcs', regCreds')
-                      | delegCred `Map.member` regCreds = (dcs, regCreds)
-                      | otherwise -- In order to Delegate, the delegCred must exist in rewards.
-                      -- so if it is not there, we put it there, otherwise we may
-                      -- never generate a valid delegation.
-                        =
-                          (DCertDeleg (RegKey delegCred) : dcs, Map.insert delegCred (Coin 99) regCreds)
-                 in insertIfNotPresent dcs' regCreds' (Just delegKey)
-                      <$> lookupPlutusScript delegCred Cert
+              let (dcs', regCreds')
+                    | delegCred `Map.member` regCreds = (dcs, regCreds)
+                    | otherwise -- In order to Delegate, the delegCred must exist in rewards.
+                    -- so if it is not there, we put it there, otherwise we may
+                    -- never generate a valid delegation.
+                      =
+                      (DCertDeleg (RegKey delegCred) : dcs, Map.insert delegCred (Coin 99) regCreds)
+               in insertIfNotPresent dcs' regCreds' (Just delegKey)
+                    <$> lookupPlutusScript delegCred Cert
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
@@ -621,10 +743,10 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
       genCollateral addr coll um
         | Map.null um = genNewCollateral addr coll um =<< lift genPositiveVal
         | otherwise = do
-            i <- lift $ chooseInt (0, Map.size um - 1)
-            let (txIn, txOut) = Map.elemAt i um
-                val = getTxOutVal reify txOut
-            pure (Map.deleteAt i um, Map.insert txIn txOut coll, coin val)
+          i <- lift $ chooseInt (0, Map.size um - 1)
+          let (txIn, txOut) = Map.elemAt i um
+              val = getTxOutVal reify txOut
+          pure (Map.deleteAt i um, Map.insert txIn txOut coll, coin val)
       -- Recursively either pick existing key spend only outputs or generate new ones that
       -- will be later added to the UTxO map
       go ::
@@ -637,15 +759,15 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         | curCollTotal >= minCollTotal = pure (coll, curCollTotal <-> minCollTotal)
         | [] <- ecs = error "Impossible: supplied less addresses then `maxCollateralInputs`"
         | ec : ecs' <- ecs = do
-            (um', coll', c) <-
-              if null ecs'
-                then -- This is the last input, so most of the time, put something (val > 0)
-                -- extra in it or we will always have a ColReturn with zero in it.
-                do
-                  excess <- lift genPositiveVal
-                  genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
-                else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
-            go ecs' coll' (curCollTotal <+> c) um'
+          (um', coll', c) <-
+            if null ecs'
+              then -- This is the last input, so most of the time, put something (val > 0)
+              -- extra in it or we will always have a ColReturn with zero in it.
+              do
+                excess <- lift genPositiveVal
+                genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
+              else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
+          go ecs' coll' (curCollTotal <+> c) um'
   (collaterals, excessColCoin) <-
     go collateralAddresses Map.empty (Coin 0) $ Map.filter spendOnly utxo
   pure (Map.union collaterals utxo, collaterals, excessColCoin)
