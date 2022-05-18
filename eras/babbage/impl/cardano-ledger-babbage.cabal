@@ -65,6 +65,7 @@ library
     nothunks,
     plutus-ledger-api ^>= 1.0,
     plutus-tx ^>= 1.0,
+    set-algebra,
     small-steps,
     strict-containers,
     text,

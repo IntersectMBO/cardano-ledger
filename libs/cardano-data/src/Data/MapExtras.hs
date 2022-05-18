@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE MagicHash #-}
 
 -- | Sometimes we need to write our own version of functions over `Map.Map` that
 -- do not appear in the "containers" library. This module is for such functions.
@@ -17,6 +18,8 @@ import Data.Map.Internal (Map (..), link, link2)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
+import qualified Data.Set.Internal as Set
+import GHC.Exts (isTrue#, reallyUnsafePtrEquality#, (==#))
 
 noKeys :: Ord k => Map k a -> Map k b -> Map k a
 noKeys Tip _ = Tip
@@ -28,22 +31,32 @@ noKeys m (Bin _ k _ ls rs) = case Map.split k m of
       !rm' = noKeys rm rs
 {-# INLINEABLE noKeys #-}
 
+-- | Checks if two pointers are equal. Yes means yes;
+-- no means maybe. The values should be forced to at least
+-- WHNF before comparison to get moderately reliable results.
+ptrEq :: a -> a -> Bool
+ptrEq x y = isTrue# (reallyUnsafePtrEquality# x y ==# 1#)
+{-# INLINE ptrEq #-}
+
 keysEqual :: Ord k => Map k v1 -> Map k v2 -> Bool
 keysEqual Tip Tip = True
 keysEqual Tip (Bin _ _ _ _ _) = False
 keysEqual (Bin _ _ _ _ _) Tip = False
 keysEqual m (Bin _ k _ ls rs) =
-  case splitMember k m of
-    (lm, True, rm) -> keysEqual ls lm && keysEqual rs rm
+  case splitMemberMap k m of
+    StrictTriple lm True rm -> keysEqual ls lm && keysEqual rs rm
     _ -> False
+{-# INLINEABLE keysEqual #-}
 
 -- | A variant of 'splitLookup' that indicates only whether the
 -- key was present, rather than producing its value. This is used to
 -- implement 'keysEqual' to avoid allocating unnecessary 'Just'
 -- constructors.
-splitMember :: Ord k => k -> Map k a -> (Map k a, Bool, Map k a)
-splitMember k0 m = case go k0 m of
-  StrictTriple l mv r -> (l, mv, r)
+--
+-- /Note/ - this is a copy pasted internal function from "containers" package
+-- adjusted to return `StrictTriple`
+splitMemberMap :: Ord k => k -> Map k a -> StrictTriple (Map k a) Bool (Map k a)
+splitMemberMap = go
   where
     go :: Ord k => k -> Map k a -> StrictTriple (Map k a) Bool (Map k a)
     go !k t =
@@ -51,15 +64,35 @@ splitMember k0 m = case go k0 m of
         Tip -> StrictTriple Tip False Tip
         Bin _ kx x l r -> case compare k kx of
           LT ->
-            let StrictTriple lt z gt = go k l
+            let !(StrictTriple lt z gt) = go k l
                 !gt' = link kx x gt r
              in StrictTriple lt z gt'
           GT ->
-            let StrictTriple lt z gt = go k r
+            let !(StrictTriple lt z gt) = go k r
                 !lt' = link kx x l lt
              in StrictTriple lt' z gt
           EQ -> StrictTriple l True r
-{-# INLINEABLE splitMember #-}
+{-# INLINEABLE splitMemberMap #-}
+
+-- | /O(log n)/. Performs a 'split' but also returns whether the pivot
+-- element was found in the original set.
+--
+-- This is a modified version of `Set.splitMember`, where `StrictTriple` is used
+-- instead of a lazy one for minor performance gain.
+splitMemberSet :: Ord a => a -> Set a -> StrictTriple (Set a) Bool (Set a)
+splitMemberSet _ Set.Tip = StrictTriple Set.Tip False Set.Tip
+splitMemberSet x (Set.Bin _ y l r) =
+  case compare x y of
+    LT ->
+      let !(StrictTriple lt found gt) = splitMemberSet x l
+          !gt' = Set.link y gt r
+       in StrictTriple lt found gt'
+    GT ->
+      let !(StrictTriple lt found gt) = splitMemberSet x r
+          !lt' = Set.link y l lt
+       in StrictTriple lt' found gt
+    EQ -> StrictTriple l True r
+{-# INLINEABLE splitMemberSet #-}
 
 data StrictTriple a b c = StrictTriple !a !b !c
 
@@ -72,7 +105,7 @@ intersectDomP p t1 (Bin _ k v l2 r2) =
     then link k v l1l2 r1r2
     else link2 l1l2 r1r2
   where
-    !(l1, mb, r1) = splitMember k t1
+    !(StrictTriple l1 mb r1) = splitMemberMap k t1
     !l1l2 = intersectDomP p l1 l2
     !r1r2 = intersectDomP p r1 r2
 {-# INLINEABLE intersectDomP #-}
@@ -125,15 +158,25 @@ intersectWhen2 p x y = Map.mergeWithKey (\k u v -> if p k u v then Just v else N
 
 -- | Partition the `Map` according to keys in the `Set`. This is equivalent to:
 --
--- > extractKeysSet m s === (withoutKeys m s, restrictKeys m s)
+-- > extractKeys m s === (withoutKeys m s, restrictKeys m s)
 extractKeys :: Ord k => Map k a -> Set k -> (Map k a, Map k a)
-extractKeys sm = Set.foldl' f (sm, Map.empty)
+extractKeys Tip _ = (Tip, Tip)
+extractKeys m Set.Tip = (m, Tip)
+extractKeys m@(Bin _ k x lm rm) s = (w, r)
   where
-    f acc@(without, restrict) k =
-      case Map.lookup k without of
-        Nothing -> acc
-        Just v ->
-          let !without' = Map.delete k without
-              !restrict' = Map.insert k v restrict
-           in (without', restrict')
+    !(StrictTriple ls b rs) = splitMemberSet k s
+    !w
+      | not b =
+          if lmw `ptrEq` lm && rmw `ptrEq` rm
+            then m
+            else link k x lmw rmw
+      | otherwise = link2 lmw rmw
+    !r
+      | b =
+          if lmr `ptrEq` lm && rmr `ptrEq` rm
+            then m
+            else link k x lmr rmr
+      | otherwise = link2 lmr rmr
+    !(lmw, lmr) = extractKeys lm ls
+    !(rmw, rmr) = extractKeys rm rs
 {-# INLINEABLE extractKeys #-}

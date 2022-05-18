@@ -50,7 +50,6 @@ library
     Cardano.Ledger.ShelleyMA.Timelocks
     Cardano.Ledger.ShelleyMA.TxBody
 
-  -- other-extensions:
   build-depends:
     bytestring,
     base16-bytestring,
@@ -62,7 +61,6 @@ library
     cardano-slotting,
     cborg,
     containers,
-    vector-map,
     data-default-class,
     deepseq,
     groups,

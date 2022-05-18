@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
 -- | Defines what types can be used in the SetAlgebra, and
@@ -15,6 +14,7 @@ import Data.BiMap
 import Data.List (sortBy)
 import qualified Data.List as List
 import qualified Data.Map.Strict as Map
+import Data.MapExtras (StrictTriple (..), splitMemberSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UM
@@ -225,9 +225,9 @@ instance Iter Sett where
       ( \ans f ->
           if Set.null m
             then ans
-            else case Set.splitMember key m of -- NOTE in Log time, we skip over all those tuples in _left
-              (_left, True, right) -> f (key, (), Sett right) ans
-              (_left, False, right) ->
+            else case splitMemberSet key m of -- NOTE in Log time, we skip over all those tuples in _left
+              StrictTriple _left True right -> f (key, (), Sett right) ans
+              StrictTriple _left False right ->
                 if Set.null right
                   then ans
                   else let (k, nextm) = Set.deleteFindMin right in f (k, (), Sett nextm) ans
