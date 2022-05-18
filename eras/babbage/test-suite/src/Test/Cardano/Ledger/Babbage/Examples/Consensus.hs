@@ -181,4 +181,4 @@ exampleBabbageNewEpochState =
   SLE.exampleNewEpochState
     (MarySLE.exampleMultiAssetValue 1)
     emptyPParams
-    (emptyPParams {_coinsPerUTxOWord = Coin 1})
+    (emptyPParams {_coinsPerUTxOByte = Coin 1})

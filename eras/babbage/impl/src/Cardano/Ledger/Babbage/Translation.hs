@@ -23,6 +23,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..))
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxOut (..))
+import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -39,6 +40,8 @@ import Cardano.Ledger.Shelley.API
     StrictMaybe (..),
   )
 import qualified Cardano.Ledger.Shelley.API as API
+import Cardano.Ledger.Shelley.PParams (HKDFunctor (..))
+import Data.Proxy (Proxy (..))
 
 --------------------------------------------------------------------------------
 -- Translation from Alonzo to Babbage
@@ -180,6 +183,14 @@ translateTxOut (Alonzo.TxOut addr value dh) = TxOut addr value d SNothing
       SNothing -> NoDatum
       SJust d' -> DatumHash d'
 
+-- | A word is 8 bytes, so to convert from coinsPerUTxOWord to coinsPerUTxOByte,
+-- we divide by 8, after first adding 7 so that we are rounding up.
+coinsPerUTxOWordToCoinsPerUTxOByte :: Coin -> Coin
+coinsPerUTxOWordToCoinsPerUTxOByte (Coin c) = Coin $ (c + 7) `div` 8
+
 translatePParams ::
-  Alonzo.PParams' f (AlonzoEra c) -> PParams' f (BabbageEra c)
-translatePParams (Alonzo.PParams {..}) = PParams {..}
+  forall f c. HKDFunctor f => Alonzo.PParams' f (AlonzoEra c) -> PParams' f (BabbageEra c)
+translatePParams Alonzo.PParams {_coinsPerUTxOWord = cpuw, ..} =
+  PParams {_coinsPerUTxOByte = cpub, ..}
+  where
+    cpub = hkdMap (Proxy :: Proxy f) coinsPerUTxOWordToCoinsPerUTxOByte cpuw

@@ -385,7 +385,7 @@ updatePParams (Babbage _) pp dpp = case dpp of
   MaxBlockExUnits n -> pp {Babbage._maxBlockExUnits = n}
   CollateralPercentage perc -> pp {Babbage._collateralPercentage = perc}
   MaxCollateralInputs n -> pp {Babbage._maxCollateralInputs = n}
-  AdaPerUTxOWord n -> pp {Babbage._coinsPerUTxOWord = n}
+  AdaPerUTxOWord n -> pp {Babbage._coinsPerUTxOByte = n} -- TODO rename AdaPerUTxOWord
   -- Not used in Babbage
   D _ -> pp
   ExtraEntropy _ -> pp

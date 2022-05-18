@@ -114,8 +114,8 @@ data PParams' f era = PParams
     _protocolVersion :: !(HKD f BT.ProtVer),
     -- | Minimum Stake Pool Cost
     _minPoolCost :: !(HKD f Coin),
-    -- | Cost in lovelace per word (8 bytes) of UTxO storage (instead of _minUTxOValue)
-    _coinsPerUTxOWord :: !(HKD f Coin),
+    -- | Cost in lovelace per byte of UTxO storage (instead of _coinsPerUTxOByte)
+    _coinsPerUTxOByte :: !(HKD f Coin),
     -- | Cost models for non-native script languages
     _costmdls :: !(HKD f CostModels),
     -- | Prices of execution units (for non-native script languages)
@@ -161,7 +161,7 @@ instance Era era => ToCBOR (PParams era) where
         _tau = tau',
         _protocolVersion = protocolVersion',
         _minPoolCost = minPoolCost',
-        _coinsPerUTxOWord = coinsPerUTxOWord',
+        _coinsPerUTxOByte = coinsPerUTxOByte',
         _costmdls = costmdls',
         _prices = prices',
         _maxTxExUnits = maxTxExUnits',
@@ -186,7 +186,7 @@ instance Era era => ToCBOR (PParams era) where
             !> To tau'
             !> E toCBORGroup protocolVersion'
             !> To minPoolCost'
-            !> To coinsPerUTxOWord'
+            !> To coinsPerUTxOByte'
             !> To costmdls'
             !> To prices'
             !> To maxTxExUnits'
@@ -214,7 +214,7 @@ instance Era era => FromCBOR (PParams era) where
         <! From -- _tau             :: UnitInterval
         <! D fromCBORGroup -- _protocolVersion :: ProtVer
         <! From -- _minPoolCost     :: Natural
-        <! From -- _coinsPerUTxOWord  :: Coin
+        <! From -- _coinsPerUTxOByte  :: Coin
         <! From -- _costmdls :: CostModel
         <! From -- _prices = prices',
         <! From -- _maxTxExUnits = maxTxExUnits',
@@ -241,7 +241,7 @@ emptyPParams =
       _tau = minBound,
       _protocolVersion = BT.ProtVer 0 0,
       _minPoolCost = mempty,
-      _coinsPerUTxOWord = Coin 0,
+      _coinsPerUTxOByte = Coin 0,
       _costmdls = CostModels mempty,
       _prices = Prices minBound minBound,
       _maxTxExUnits = ExUnits 0 0,
@@ -269,7 +269,7 @@ instance Ord (PParams' StrictMaybe era) where
       <> compare (_tau x) (_tau y)
       <> compare (_protocolVersion x) (_protocolVersion y)
       <> compare (_minPoolCost x) (_minPoolCost y)
-      <> compare (_coinsPerUTxOWord x) (_coinsPerUTxOWord y)
+      <> compare (_coinsPerUTxOByte x) (_coinsPerUTxOByte y)
       <> compare (_costmdls x) (_costmdls y)
       <> compare (_prices x) (_prices y)
       <> compareEx (_maxTxExUnits x) (_maxTxExUnits y)
@@ -317,7 +317,7 @@ encodePParamsUpdate ppup =
     !> omitStrictMaybe 11 (_tau ppup) toCBOR
     !> omitStrictMaybe 14 (_protocolVersion ppup) toCBOR
     !> omitStrictMaybe 16 (_minPoolCost ppup) toCBOR
-    !> omitStrictMaybe 17 (_coinsPerUTxOWord ppup) toCBOR
+    !> omitStrictMaybe 17 (_coinsPerUTxOByte ppup) toCBOR
     !> omitStrictMaybe 18 (_costmdls ppup) toCBOR
     !> omitStrictMaybe 19 (_prices ppup) toCBOR
     !> omitStrictMaybe 20 (_maxTxExUnits ppup) toCBOR
@@ -354,7 +354,7 @@ emptyPParamsUpdate =
       _tau = SNothing,
       _protocolVersion = SNothing,
       _minPoolCost = SNothing,
-      _coinsPerUTxOWord = SNothing,
+      _coinsPerUTxOByte = SNothing,
       _costmdls = SNothing,
       _prices = SNothing,
       _maxTxExUnits = SNothing,
@@ -379,7 +379,7 @@ updateField 10 = field (\x up -> up {_rho = SJust x}) From
 updateField 11 = field (\x up -> up {_tau = SJust x}) From
 updateField 14 = field (\x up -> up {_protocolVersion = SJust x}) From
 updateField 16 = field (\x up -> up {_minPoolCost = SJust x}) From
-updateField 17 = field (\x up -> up {_coinsPerUTxOWord = SJust x}) From
+updateField 17 = field (\x up -> up {_coinsPerUTxOByte = SJust x}) From
 updateField 18 = field (\x up -> up {_costmdls = SJust x}) From
 updateField 19 = field (\x up -> up {_prices = SJust x}) From
 updateField 20 = field (\x up -> up {_maxTxExUnits = SJust x}) From
@@ -414,7 +414,7 @@ updatePParams pp ppup =
       _tau = fromSMaybe (_tau pp) (_tau ppup),
       _protocolVersion = fromSMaybe (_protocolVersion pp) (_protocolVersion ppup),
       _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup),
-      _coinsPerUTxOWord = fromSMaybe (_coinsPerUTxOWord pp) (_coinsPerUTxOWord ppup),
+      _coinsPerUTxOByte = fromSMaybe (_coinsPerUTxOByte pp) (_coinsPerUTxOByte ppup),
       _costmdls = fromSMaybe (_costmdls pp) (_costmdls ppup),
       _prices = fromSMaybe (_prices pp) (_prices ppup),
       _maxTxExUnits = fromSMaybe (_maxTxExUnits pp) (_maxTxExUnits ppup),

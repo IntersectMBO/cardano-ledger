@@ -193,7 +193,7 @@ instance CC.Crypto c => API.CLI (BabbageEra c) where
       ws' = ws {txwitsVKey = Set.union newWits (txwitsVKey ws)}
 
   evaluateMinLovelaceOutput pp out =
-    Coin $ utxoEntrySize out * unCoin (_coinsPerUTxOWord pp)
+    Coin $ utxoEntrySize out * unCoin (_coinsPerUTxOByte pp)
 
 type instance Core.Tx (BabbageEra c) = ValidatedTx (BabbageEra c)
 
