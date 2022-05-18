@@ -4,7 +4,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Data.Relation
+module Test.Control.Iterate.RelationReference
   ( Relation
       ( (⨃),
         (∪),
