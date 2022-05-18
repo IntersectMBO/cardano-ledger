@@ -204,7 +204,8 @@ instance (Show k, Show v) => Show (Single k v) where
 
 -- ================= Basic Set =====================
 
-data Sett k v where Sett :: (Set.Set k) -> Sett k ()
+data Sett k v where
+  Sett :: Set.Set k -> Sett k ()
 
 instance Basic Sett where
   addpair key _unit (Sett m) = Sett (Set.insert key m)
