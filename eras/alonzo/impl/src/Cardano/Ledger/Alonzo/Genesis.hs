@@ -46,11 +46,13 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Scientific (fromRationalRepetendLimited)
+import qualified Data.Set as Set
 import Data.Text (Text)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
+import Plutus.V1.Ledger.Api as PV1 (costModelParamNames)
 import Prelude
 
 data AlonzoGenesis = AlonzoGenesis
@@ -219,11 +221,20 @@ validateCostModel (lang, cmps) = case mkCostModel lang cmps of
   Left err -> fail err
   Right cm -> pure (lang, cm)
 
+-- | The keys of the Plutus V1 cost models have changed since the Alonzo genesis file was created.
+-- The number of keys, and the ordering of the keys, however, has not changed.
+-- Therefore we just replace (in order) the new keys for the old ones.
+translateLegacyV1paramNames :: Map Text Integer -> Map Text Integer
+translateLegacyV1paramNames cmps =
+  Map.fromList $
+    map (\((_, v), k2) -> (k2, v)) (zip (Map.toList cmps) (Set.toList PV1.costModelParamNames))
+
 instance FromJSON CostModels where
   parseJSON = Aeson.withObject "CostModels" $ \o -> do
     plutusV1 <- o .:? "PlutusV1"
     plutusV2 <- o .:? "PlutusV2"
-    cms <- mapM validateCostModel $ mapMaybe f [(PlutusV1, plutusV1), (PlutusV2, plutusV2)]
+    let plutusV1' = translateLegacyV1paramNames <$> plutusV1
+    cms <- mapM validateCostModel $ mapMaybe f [(PlutusV1, plutusV1'), (PlutusV2, plutusV2)]
     pure . CostModels . Map.fromList $ cms
     where
       f (_, Nothing) = Nothing
