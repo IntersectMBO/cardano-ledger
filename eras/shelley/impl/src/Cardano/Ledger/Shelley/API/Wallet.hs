@@ -32,6 +32,10 @@ module Cardano.Ledger.Shelley.API.Wallet
     -- * Transaction helpers
     CLI (..),
     addShelleyKeyWitnesses,
+    -- -- * Ada pots
+    AdaPots (..),
+    totalAdaES,
+    totalAdaPotsES,
   )
 where
 
@@ -68,6 +72,11 @@ import Cardano.Ledger.PoolDistr
     PoolDistr (..),
   )
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Ledger.Shelley.AdaPots
+  ( AdaPots (..),
+    totalAdaES,
+    totalAdaPotsES,
+  )
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
