@@ -41,7 +41,7 @@ test-show-details: streaming
 source-repository-package
   type: git
   location: https://github.com/input-output-hk/cardano-base
-  tag: b1eb0e678b834ef5a6eaea84e75b41a14123331a
+  tag: 631cb6cf1fa01ab346233b610a38b3b4cba6e6ab
   --sha256: 0944wg2nqazmhlmsynwgdwxxj6ay0hb9qig9l128isb2cjia0hlp
   subdir:
     base-deriving-via
