@@ -15,7 +15,7 @@
 --   the ModelNewEpochState to reflect what we generated.
 module Test.Cardano.Ledger.Generic.GenState where
 
-import Cardano.Ledger.Address (RewardAcnt (..))
+import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
@@ -34,6 +34,7 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
+import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     DState (..),
@@ -51,7 +52,7 @@ import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (join, replicateM, when)
 import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.RWS.Strict (RWST (..), ask, get, gets, modify)
+import Control.Monad.Trans.RWS.Strict (RWST (..), get, gets, modify)
 import qualified Control.Monad.Trans.Reader as Reader
 import Control.SetAlgebra (eval, (⨃))
 import Data.Default.Class (Default (def))
@@ -73,6 +74,7 @@ import Test.Cardano.Ledger.Generic.Functions
     obligation',
     primaryLanguage,
     protocolVersion,
+    txoutFields,
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( ModelNewEpochState (..),
@@ -124,16 +126,17 @@ data GenSize = GenSize
   deriving (Show)
 
 data GenEnv era = GenEnv
-  { geValidityInterval :: !ValidityInterval,
-    gePParams :: !(Core.PParams era),
+  { gePParams :: !(Core.PParams era),
     geSize :: !GenSize
   }
 
 data GenState era = GenState
-  { gsKeys :: !(Map (KeyHash 'Witness (Crypto era)) (KeyPair 'Witness (Crypto era))),
+  { gsValidityInterval :: !ValidityInterval,
+    gsKeys :: !(Map (KeyHash 'Witness (Crypto era)) (KeyPair 'Witness (Crypto era))),
     gsScripts :: !(Map (ScriptHash (Crypto era)) (Core.Script era)),
     gsPlutusScripts :: !(Map (ScriptHash (Crypto era), Tag) (IsValid, Core.Script era)),
     gsDatums :: !(Map (DataHash (Crypto era)) (Data era)),
+    gsVI :: !(Map ValidityInterval (Set (ScriptHash (Crypto era)))),
     gsModel :: !(ModelNewEpochState era),
     gsInitialUtxo :: !(Map (TxIn (Crypto era)) (Core.TxOut era)),
     gsInitialRewards :: !(Map (Credential 'Staking (Crypto era)) Coin),
@@ -147,6 +150,8 @@ data GenState era = GenState
 emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
 emptyGenState proof genv =
   GenState
+    (ValidityInterval SNothing SNothing)
+    mempty
     mempty
     mempty
     mempty
@@ -165,7 +170,7 @@ instance Default GenSize where
     GenSize
       { treasury = 1000000,
         reserves = 1000000,
-        startSlot = 10000000,
+        startSlot = 0,
         blocksizeMax = 10,
         collInputsMax = 5,
         oldUtxoPercent = 15,
@@ -181,7 +186,7 @@ small =
   GenSize
     { treasury = 1000000,
       reserves = 1000000,
-      startSlot = 100,
+      startSlot = 0,
       blocksizeMax = 3,
       collInputsMax = 2,
       oldUtxoPercent = 5,
@@ -216,6 +221,20 @@ genSetElem m
       pure $ Just $ Set.elemAt i m
   where
     n = Set.size m
+
+-- | Use up to 'tries' attempts to choose a random (k,a) pair from 'm', that meets predicate 'p'
+genMapElemWhere :: Map k a -> Int -> (k -> a -> Bool) -> Gen (Maybe (k, a))
+genMapElemWhere m tries p
+  | tries <= 0 = pure Nothing
+  | n == 0 = pure Nothing
+  | otherwise = do
+      i <- choose (0, n - 1)
+      let (k, a) = Map.elemAt i m
+      if p k a
+        then pure $ Just $ (k, a)
+        else genMapElemWhere m (tries - 1) p
+  where
+    n = Map.size m
 
 elementsT :: (Monad (t Gen), MonadTrans t) => [t Gen b] -> t Gen b
 elementsT = join . lift . elements
@@ -285,10 +304,34 @@ getTreasury = Coin . treasury . geSize . gsGenEnv
 getReserves :: GenState era -> Coin
 getReserves = Coin . reserves . geSize . gsGenEnv
 
-getUtxoElem :: GenRS era (Maybe (TxIn (Crypto era), Core.TxOut era))
+-- | Pick a UTxO element where we can use it in a new Tx. Most of the time we generate new
+--   elements for each Tx, but once in a while we choose an existing one. We must be carefull
+--   that that the Pay credential of the TxOut can run in the curent ValidityInterval
+--   A crude but simple way is to insist Pay credential is either Key locked, or locked
+--   with Plutus or MultiSig scripts, and return False for any Timelock scripts.
+getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn (Crypto era), Core.TxOut era))
 getUtxoElem = do
   x <- gets (mUTxO . gsModel)
-  lift $ genMapElem x
+  scriptmap <- gets gsScripts
+  lift $ genMapElemWhere x 20 (validTxOut reify scriptmap)
+
+-- | Test if the Payment part of the Address in the TxOut
+--   is valid in the current ValidityInterval. Using the simple rule allowing
+--   only (Key or Plutus or MutiSig) locking. Disallowing all Timelock scripts
+validTxOut ::
+  Proof era ->
+  Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  TxIn (Crypto era) ->
+  Core.TxOut era ->
+  Bool
+validTxOut proof m _txin txout = case txoutFields proof txout of
+  (Addr _ (KeyHashObj _) _, _, _) -> True
+  (Addr _ (ScriptHashObj h) _, _, _) -> case (proof, Map.lookup h m) of
+    (Babbage _, Just (PlutusScript _ _)) -> True
+    (Alonzo _, Just (PlutusScript _ _)) -> True
+    (Shelley _, Just _msig) -> True
+    _ -> False
+  _bootstrap -> False
 
 getUtxoTest :: GenRS era (TxIn (Crypto era) -> Bool)
 getUtxoTest = do
@@ -324,8 +367,7 @@ genGenEnv proof gsize = do
   collateralPercentage <- fromIntegral <$> chooseInt (1, 10000)
   minfeeA <- fromIntegral <$> chooseInt (0, 1000)
   minfeeB <- fromIntegral <$> chooseInt (0, 10000)
-  let slotNo = startSlot gsize
-      pp =
+  let pp =
         newPParams
           proof
           [ MinfeeA minfeeA,
@@ -340,19 +382,20 @@ genGenEnv proof gsize = do
             PoolDeposit $ Coin 5,
             KeyDeposit $ Coin 2
           ]
-  minSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (minBound, slotNo))]
-  maxSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (slotNo + 1, maxBound))]
   pure $
     GenEnv
-      { geValidityInterval = ValidityInterval (SlotNo <$> minSlotNo) (SlotNo <$> maxSlotNo),
-        gePParams = pp,
+      { gePParams = pp,
         geSize = gsize
       }
 
 genGenState :: Reflect era => Proof era -> GenSize -> Gen (GenState era)
 genGenState proof gsize = do
+  let slotNo = startSlot gsize
+  minSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (minBound, slotNo))]
+  maxSlotNo <- frequency [(1, pure SNothing), (4, SJust <$> choose (slotNo + 1, maxBound))]
+  let vi = ValidityInterval (SlotNo <$> minSlotNo) (SlotNo <$> maxSlotNo)
   env <- genGenEnv proof gsize
-  pure (emptyGenState proof env)
+  pure ((emptyGenState proof env) {gsValidityInterval = vi})
 
 -- | Helper function for development and debugging in ghci
 viewGenState :: Reflect era => Proof era -> GenSize -> Bool -> IO ()
@@ -476,7 +519,7 @@ genPool = frequencyT [(10, genNewPool), (90, pickExisting)]
 -- | Generate a credential that can be used for supplied purpose (in case of
 -- plutus scripts), while occasionally picking out randomly from previously
 -- generated set.
-genCredential :: Reflect era => Tag -> GenRS era (Credential kr (Crypto era))
+genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (Crypto era))
 genCredential tag =
   frequencyT
     [ (35, KeyHashObj <$> genKeyHash),
@@ -501,10 +544,24 @@ genCredential tag =
         Just ((h, _), _) -> pure h
         Nothing -> genScript reify tag
     pickExistingTimelockScript = do
-      timelockScriptsMap <- gsScripts <$> get
-      lift (genMapElem timelockScriptsMap) >>= \case
-        Just (h, _) -> pure h
+      -- Only pick one if it matches the
+      vi <- gets gsValidityInterval -- current ValidityInterval
+      vimap <- gets gsVI
+      case Map.lookup vi vimap of
         Nothing -> genScript reify tag
+        Just set ->
+          lift (genSetElem set) >>= \case
+            Nothing -> genScript reify tag
+            Just hash -> pure hash
+
+-- | Generate a transaction body validity interval which is close in proximity
+--  (less than a stability window) from the current slot.
+genValidityInterval :: SlotNo -> Gen ValidityInterval
+genValidityInterval (SlotNo s) = do
+  let stabilityWindow = 29 -- < 3k/f many slots, where 10k is the epoch length
+  start <- frequency [(1, pure SNothing), (4, SJust <$> choose (minBound, s))]
+  end <- frequency [(1, pure SNothing), (4, SJust <$> choose (s + 1, s + stabilityWindow))]
+  pure $ ValidityInterval (SlotNo <$> start) (SlotNo <$> end)
 
 -- ===========================================================
 -- Generate Era agnostic Scripts
@@ -521,7 +578,7 @@ genScript proof tag = case proof of
 -- Adds to gsScripts
 genTimelockScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHash (Crypto era))
 genTimelockScript proof = do
-  GenEnv {geValidityInterval = ValidityInterval mBefore mAfter} <- ask
+  vi@(ValidityInterval mBefore mAfter) <- gets gsValidityInterval
   -- We need to limit how deep these timelocks can go, otherwise this generator will
   -- diverge. It also has to stay very shallow because it grows too fast.
   let genNestedTimelock k
@@ -564,7 +621,13 @@ genTimelockScript proof = do
         Allegra _ -> tlscript
         Shelley _ -> error "Shelley does not have TimeLock scripts"
   let scriptHash = hashScript @era corescript
-  modify $ \ts@GenState {gsScripts} -> ts {gsScripts = Map.insert scriptHash corescript gsScripts}
+      insertOrCreate x Nothing = Just (Set.singleton x)
+      insertOrCreate x (Just s) = Just (Set.insert x s)
+  modify $ \ts@GenState {gsScripts, gsVI} ->
+    ts
+      { gsScripts = Map.insert scriptHash corescript gsScripts,
+        gsVI = Map.alter (insertOrCreate scriptHash) vi gsVI
+      }
   pure scriptHash
 
 -- Adds to gsScripts
@@ -630,13 +693,15 @@ genPlutusScript proof tag = do
 -- =================================================================
 
 pcGenState :: Reflect era => Proof era -> GenState era -> PDoc
-pcGenState proof (GenState keys scripts plutus dats model iutxo irew ipoolp ipoold irkey prf _genenv) =
+pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoolp ipoold irkey prf _genenv) =
   ppRecord
     "GenState Summary"
-    [ ("Keymap", ppInt (Map.size keys)),
+    [ ("ValidityInterval", ppValidityInterval vi),
+      ("Keymap", ppInt (Map.size keys)),
       ("Scriptmap", ppInt (Map.size scripts)),
       ("PlutusScripts", ppInt (Map.size plutus)),
       ("Datums", ppInt (Map.size dats)),
+      ("VI-ScriptMap", ppInt (Map.size mvi)),
       ("Model", pcModelNewEpochState proof model),
       ("Initial Utxo", ppMap pcTxIn (pcTxOut proof) iutxo),
       ("Initial Rewards", ppMap pcCredential pcCoin irew),

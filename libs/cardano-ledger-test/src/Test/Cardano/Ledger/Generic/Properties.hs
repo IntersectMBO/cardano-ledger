@@ -110,7 +110,7 @@ genTxAndLEDGERState proof sizes = do
   let genT = do
         (initial, _) <- genUTxO -- Generate a random UTxO, so mUTxO is not empty
         modifyModel (\m -> m {mUTxO = initial})
-        (_utxo, tx) <- genValidatedTx proof
+        (_utxo, tx) <- genValidatedTx proof slotNo
         model <- gets gsModel
         pp <- gets (gePParams . gsGenEnv)
         let ledgerState = extract @(LedgerState era) model
@@ -235,13 +235,13 @@ adaIsPreserved ::
   Proof era ->
   TestTree
 adaIsPreserved proof =
-  testProperty (show proof ++ " era. Trace length = 100") $
-    traceProp proof 100 def (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
+  testProperty (show proof ++ " era. Trace length = 45") $
+    traceProp proof 45 def (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
 
 tracePreserveAda :: TestTree
 tracePreserveAda =
   testGroup
-    "Total Ada is preserved over traces of length 100"
+    "Total Ada is preserved over traces of length 45"
     [ adaIsPreservedBabbage,
       adaIsPreserved (Alonzo Mock),
       adaIsPreserved (Mary Mock),
@@ -252,7 +252,7 @@ tracePreserveAda =
 adaIsPreservedBabbage :: TestTree
 adaIsPreservedBabbage = adaIsPreserved (Babbage Mock)
 
--- | The incremental Stake invaraint is preserved over a trace of length 100
+-- | The incremental Stake invaraint is preserved over a trace of length 45
 stakeInvariant :: Era era => MockChainState era -> MockChainState era -> Property
 stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
   case (lsUTxOState . esLState . nesEs) nes of
@@ -260,8 +260,8 @@ stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
 
 incrementStakeInvariant :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> TestTree
 incrementStakeInvariant proof =
-  testProperty (show proof ++ " era. Trace length = 100") $
-    traceProp proof 100 def stakeInvariant
+  testProperty (show proof ++ " era. Trace length = 45") $
+    traceProp proof 45 def stakeInvariant
 
 incrementalStake :: TestTree
 incrementalStake =
@@ -282,7 +282,7 @@ genericProperties =
       txPreserveAda,
       tracePreserveAda,
       incrementalStake,
-      testTraces 100
+      testTraces 45 -- When we get the Epoch Boundary correct we can increass this to 100-200
     ]
 
 -- ==============================================================
@@ -323,7 +323,7 @@ runTest computeWith action proof = do
   action ans
 
 main2 :: IO ()
-main2 = runTest (\x -> fst <$> genValidatedTx x) (const (pure ())) (Babbage Mock)
+main2 = runTest (\x -> fst <$> genValidatedTx x (SlotNo 0)) (const (pure ())) (Babbage Mock)
 
 main3 :: IO ()
 main3 = runTest (\_x -> UTxO . fst <$> genUTxO) action (Alonzo Mock)
