@@ -1,5 +1,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE MagicHash #-}
+{-# LANGUAGE UnboxedTuples #-}
 
 -- | Sometimes we need to write our own version of functions over `Map.Map` that
 -- do not appear in the "containers" library. This module is for such functions.
@@ -12,7 +13,22 @@
 --
 --    > ((dom stkcred) ◁ deleg) ▷ (dom stpool)) ==>
 --    > intersectDomP (\ k v -> Map.member v stpool) stkcred deleg
-module Data.MapExtras where
+module Data.MapExtras
+  ( StrictTriple (..),
+    noKeys,
+    keysEqual,
+    splitMemberMap,
+    splitMemberSet,
+    intersectDomP,
+    intersectDomPLeft,
+    intersectMapSetFold,
+    disjointMapSetFold,
+    extractKeys,
+
+    -- * Exported for benchmarks
+    extractKeysSmallSet,
+  )
+where
 
 import Data.Map.Internal (Map (..), link, link2)
 import qualified Data.Map.Strict as Map
@@ -20,6 +36,9 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Set.Internal as Set
 import GHC.Exts (isTrue#, reallyUnsafePtrEquality#, (==#))
+
+data StrictTriple a b c = StrictTriple !a !b !c
+  deriving (Show, Eq)
 
 noKeys :: Ord k => Map k a -> Map k b -> Map k a
 noKeys Tip _ = Tip
@@ -94,8 +113,6 @@ splitMemberSet x (Set.Bin _ y l r) =
     EQ -> StrictTriple l True r
 {-# INLINEABLE splitMemberSet #-}
 
-data StrictTriple a b c = StrictTriple !a !b !c
-
 -- | intersetDomP p m1 m2 == Keep the key and value from m2, iff (the key is in the dom of m1) && ((p key value) is true)
 intersectDomP :: Ord k => (k -> v2 -> Bool) -> Map k v1 -> Map k v2 -> Map k v2
 intersectDomP _ Tip _ = Tip
@@ -148,21 +165,24 @@ disjointMapSetFold accum (Bin _ k v l1 l2) set !ans =
 
 -- =================================
 
-intersectWhen1 :: Ord k => (k -> u -> v -> Bool) -> Map k u -> Map k v -> Map k u
-intersectWhen1 p x y = Map.mergeWithKey (\k u v -> if p k u v then Just u else Nothing) (const Map.empty) (const Map.empty) x y
-{-# INLINE intersectWhen1 #-}
-
-intersectWhen2 :: Ord k => (k -> u -> v -> Bool) -> Map k u -> Map k v -> Map k v
-intersectWhen2 p x y = Map.mergeWithKey (\k u v -> if p k u v then Just v else Nothing) (const Map.empty) (const Map.empty) x y
-{-# INLINE intersectWhen2 #-}
-
 -- | Partition the `Map` according to keys in the `Set`. This is equivalent to:
 --
 -- > extractKeys m s === (withoutKeys m s, restrictKeys m s)
 extractKeys :: Ord k => Map k a -> Set k -> (Map k a, Map k a)
-extractKeys Tip _ = (Tip, Tip)
-extractKeys m Set.Tip = (m, Tip)
-extractKeys m@(Bin _ k x lm rm) s = (w, r)
+extractKeys m s
+  | Set.size s < 75 = extractKeysSmallSet m s
+  | otherwise =
+      case extractKeysBigSet m s of
+        (# w, r #) -> (w, r)
+{-# INLINEABLE extractKeys #-}
+
+-- | This function will produce exactly the same results as
+-- `extractKeysSmallSet` for all inputs, but it performs better whenever the set
+-- is big and worse otherwise.
+extractKeysBigSet :: Ord k => Map k a -> Set k -> (# Map k a, Map k a #)
+extractKeysBigSet Tip _ = (# Tip, Tip #)
+extractKeysBigSet m Set.Tip = (# m, Tip #)
+extractKeysBigSet m@(Bin _ k x lm rm) s = (# w, r #)
   where
     !(StrictTriple ls b rs) = splitMemberSet k s
     !w
@@ -177,6 +197,21 @@ extractKeys m@(Bin _ k x lm rm) s = (w, r)
             then m
             else link k x lmr rmr
       | otherwise = link2 lmr rmr
-    !(lmw, lmr) = extractKeys lm ls
-    !(rmw, rmr) = extractKeys rm rs
-{-# INLINEABLE extractKeys #-}
+    !(# lmw, lmr #) = extractKeysBigSet lm ls
+    !(# rmw, rmr #) = extractKeysBigSet rm rs
+{-# INLINEABLE extractKeysBigSet #-}
+
+-- | This function will produce exactly the same results as `extractKeysBigSet`
+-- for all inputs, but it performs better whenever the set is small and worse
+-- otherwise.
+extractKeysSmallSet :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
+extractKeysSmallSet sm = Set.foldl' f (sm, Map.empty)
+  where
+    f acc@(without, restrict) k =
+      case Map.lookup k without of
+        Nothing -> acc
+        Just v ->
+          let !without' = Map.delete k without
+              !restrict' = Map.insert k v restrict
+           in (without', restrict')
+{-# INLINEABLE extractKeysSmallSet #-}

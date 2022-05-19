@@ -22,6 +22,7 @@ import Cardano.Ledger.State.UTxO
 import Cardano.Slotting.EpochInfo (fixedEpochInfo)
 import Cardano.Slotting.Slot
 import Cardano.Slotting.Time (mkSlotLength)
+import Control.DeepSeq
 import Criterion.Main
 import Data.Aeson
 import Data.Bifunctor (first)
@@ -30,7 +31,7 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class (def)
 import Data.Foldable as F
 import Data.Map.Strict as Map
-import Data.MapExtras (extractKeys)
+import Data.MapExtras (extractKeys, extractKeysSmallSet)
 import Data.Set as Set
 import System.Environment (getEnv)
 import System.Random.Stateful
@@ -49,8 +50,6 @@ main = do
       pp = def
       !globals = mkGlobals genesis pp
       !slotNo = SlotNo 55733343
-      seqTuple :: (a, b) -> (a, b)
-      seqTuple (x, y) = x `seq` y `seq` (x, y)
       applyTx' mempoolEnv mempoolState =
         either (error . show) seqTuple
           . applyTx globals mempoolEnv mempoolState
@@ -61,7 +60,10 @@ main = do
   putStrLn $ "Importing NewEpochState from: " ++ show ledgerStateFilePath
   es <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"
-  ks <- selectRandomMapKeys 100000 (mkStdGen 2022) (unUTxO (getUTxO es))
+  let largeKeysNum = 100000
+      smallKeysNum = 2 -- Most common number of TxOuts in a transaction.
+  largeKeys <- selectRandomMapKeys 100000 (mkStdGen 2022) (unUTxO (getUTxO es))
+  let smallKeys = Set.take 2 largeKeys
   defaultMain
     [ env (pure ((mkMempoolEnv es slotNo, toMempoolState es))) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
@@ -100,13 +102,26 @@ main = do
               ],
       bgroup
         "DeleteTxOuts"
-        [ env (pure (unUTxO (getUTxO es))) $ \m ->
-            bench "extractKeys" $ whnf (seqTuple . extractKeys m) ks,
-          env (pure (unUTxO (getUTxO es))) $ \m ->
-            bench "extractKeysFoldSet" $ whnf (seqTuple . extractKeysFoldSet m) ks,
-          env (pure (unUTxO (getUTxO es))) $ \m ->
-            bench "extractKeysNaive" $ whnf (seqTuple . extractKeysNaive m) ks
+        [ extractKeysBench (unUTxO (getUTxO es)) largeKeysNum largeKeys,
+          extractKeysBench (unUTxO (getUTxO es)) smallKeysNum smallKeys
         ]
+    ]
+
+extractKeysBench ::
+  (NFData k, NFData a, Ord k) =>
+  Map k a ->
+  Int ->
+  Set k ->
+  Benchmark
+extractKeysBench utxo n ks =
+  bgroup
+    (show n)
+    [ env (pure utxo) $ \m ->
+        bench "extractKeys" $ whnf (seqTuple . extractKeys m) ks,
+      env (pure utxo) $ \m ->
+        bench "extractKeysSmallSet" $ whnf (seqTuple . extractKeysSmallSet m) ks,
+      env (pure utxo) $ \m ->
+        bench "extractKeysNaive" $ whnf (seqTuple . extractKeysNaive m) ks
     ]
 
 -- | Pick out randomly n unique keys from the Map
@@ -120,19 +135,6 @@ selectRandomMapKeys n gen m = runStateGenT_ gen $ \g ->
               else go (Set.insert ix ixs) (Set.insert (fst $ Map.elemAt ix m) ks)
         | otherwise = pure ks
    in go Set.empty Set.empty
-
--- | Extract keys that folds over the Set. This turns out to be faster than
--- `extractKeysNaive`, but slower that `extractKeys`
-extractKeysFoldSet :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
-extractKeysFoldSet sm = Set.foldl' f (sm, Map.empty)
-  where
-    f acc@(without, restrict) k =
-      case Map.lookup k without of
-        Nothing -> acc
-        Just v ->
-          let !without' = Map.delete k without
-              !restrict' = Map.insert k v restrict
-           in (without', restrict')
 
 extractKeysNaive :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
 extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
@@ -220,3 +222,6 @@ getFilteredOldUTxO ss addrs =
   where
     UTxO fullUTxO = getUTxO ss
     addrSBSs = Set.map compactAddr addrs
+
+seqTuple :: (a, b) -> (a, b)
+seqTuple (x, y) = x `seq` y `seq` (x, y)
