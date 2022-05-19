@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
-import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl)
+import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl, boundRational)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as C
@@ -52,7 +52,7 @@ import Cardano.Ledger.Shelley.API
     PoolParams (..),
     RewardAcnt (..),
     SignKeyVRF,
-    StakePoolRelay (SingleHostAddr),
+    StakePoolRelay (SingleHostAddr, SingleHostName, MultiHostName),
     StakeReference (..),
     VerKeyVRF,
     Wdrl (..),
@@ -81,7 +81,7 @@ import Data.Functor
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes)
+import Data.Maybe (catMaybes, fromJust)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
@@ -111,7 +111,6 @@ import Test.Cardano.Ledger.Generic.GenState
     genPositiveVal,
     genRewards,
     genScript,
-    genValidityInterval,
     getCertificateMax,
     getOldUtxoPercent,
     getRefInputsMax,
@@ -120,7 +119,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS,
+    runGenRS, genValidityInterval, genPoolParams
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -135,6 +134,8 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
+import qualified Data.Sequence.Strict as Seq
+import Data.IP (IPv4, IPv6, IP (IPv4), toIPv4w, toIPv6w)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -555,8 +556,12 @@ genVRFKeyPair ::
   GenRS era (SignKeyVRF (Crypto era), VerKeyVRF (Crypto era))
 genVRFKeyPair proof = do
   seed <- freshSeed proof
-  let sk = genKeyVRF seed
-      vk = deriveVerKeyVRF sk
+  let sk = case getCrypto proof of
+             Mock -> genKeyVRF seed
+             Standard -> genKeyVRF seed
+      vk = case getCrypto proof of
+             Mock -> deriveVerKeyVRF sk
+             Standard -> deriveVerKeyVRF sk
   pure (sk, vk)
 
 -- | Actually generates a random string with length up to 64 bytes
@@ -580,7 +585,7 @@ genMetadata proof = frequencyT [(1, genMD), (1, return SNothing)]
           url
           (BSC.pack "{}") -- ???
 
-genRewardAcnt :: Proof era -> GenRS era (RewardAcnt (Crypto era))
+genRewardAcnt :: Reflect era => Proof era -> GenRS era (RewardAcnt (Crypto era))
 genRewardAcnt _ = do
   cred <- genCredential Rewrd
   return $
@@ -590,56 +595,66 @@ genRewardAcnt _ = do
 
 genIPAddr :: GenRS era (StrictMaybe IPv4, StrictMaybe IPv6)
 genIPAddr = do
-  undefined
+  let genIPv4 = lift $ toIPv4w <$> arbitrary
+  let genIPv6 = lift $ toIPv6w <$> arbitrary
+  elementsT
+    [ (,SNothing) . SJust <$> genIPv4
+    , (SNothing,) . SJust <$> genIPv6
+    , (,) <$> fmap SJust genIPv4 <*> fmap SJust genIPv6
+    ]
 
-genRelays :: Proof era -> GenRS era (StrictSeq StakePoolRelay)
-genRelays proof = elementsT
+genRelay :: Proof era -> GenRS era StakePoolRelay
+genRelay _ = elementsT
   [ genSingleHostAddr
-  , SingleHostName <$> genPort <*> _
-  , MultiHostName <$> _
+  , SingleHostName <$> genPort <*> genDNSName
+  , MultiHostName <$> genDNSName
   ]
   where
-    genPort = undefined
+    genDNSName = lift arbitrary
+    genPort = lift arbitrary
     genSingleHostAddr = do
       port <- genPort
       (ipv4, ipv6) <- genIPAddr
       return $ SingleHostAddr port ipv4 ipv6
 
-genFreshRegPool ::
-  Proof era ->
-  Set (KeyHash 'Staking (Crypto era)) ->
-  GenRS era (PoolParams (Crypto era))
-genFreshRegPool proof owners = do
-  pool <- genKeyHash
-  (_, vk) <- genVRFKeyPair proof
-  let vrf = hashVerKeyVRF vk
-  meta <- genMetadata proof
-  pledge <- lift arbitrary
-  cost <- lift arbitrary
-  margin <- lift $ choose (minBound, maxBound)
-  rAcnt <- genRewardAcnt proof
-  relays <- genRelays proof
-  return
-    PoolParams
-      { _poolId = pool,
-        _poolVrf = vrf,
-        _poolPledge = Coin pledge,
-        _poolCost = Coin cost,
-        _poolMargin = margin,
-        _poolRAcnt = rAcnt,
-        _poolOwners = owners,
-        _poolRelays = relays,
-        _poolMD = meta
-      }
+listOf' :: GenRS era a -> GenRS era [a]
+listOf' gen = do
+  n <- lift getSize
+  k <- lift $ chooseInt (0, n)
+  traverse (const gen) [1..k]
+
+genRelays :: Proof era -> GenRS era (StrictSeq StakePoolRelay)
+genRelays proof = Seq.fromList <$> listOf' (genRelay proof)
 
 genRetirementHash ::
   Proof era ->
   GenRS era (KeyHash 'StakePool (Crypto era))
-genRetirementHash proof = do
-  return _
+genRetirementHash (Babbage Mock) = genKeyHash
+genRetirementHash (Alonzo Mock) = genKeyHash
+genRetirementHash (Mary Mock) = genKeyHash
+genRetirementHash (Allegra Mock) = genKeyHash
+genRetirementHash (Shelley Mock) = genKeyHash
+genRetirementHash (Babbage Standard) = genKeyHash
+genRetirementHash (Alonzo Standard) = genKeyHash
+genRetirementHash (Mary Standard) = genKeyHash
+genRetirementHash (Allegra Standard) = genKeyHash
+genRetirementHash (Shelley Standard) = genKeyHash
 
-genDCert :: forall era. Reflect era => GenRS era (DCert (Crypto era))
-genDCert = do
+genFreshRegCred' :: Proof era -> GenRS era (Credential 'Staking (Crypto era))
+genFreshRegCred' (Babbage Mock) = genFreshRegCred
+genFreshRegCred' (Alonzo Mock) = genFreshRegCred
+genFreshRegCred' (Mary Mock) = genFreshRegCred
+genFreshRegCred' (Allegra Mock) = genFreshRegCred
+genFreshRegCred' (Shelley Mock) = genFreshRegCred
+genFreshRegCred' (Babbage Standard) = genFreshRegCred
+genFreshRegCred' (Alonzo Standard) = genFreshRegCred
+genFreshRegCred' (Mary Standard) = genFreshRegCred
+genFreshRegCred' (Allegra Standard) = genFreshRegCred
+genFreshRegCred' (Shelley Standard) = genFreshRegCred
+
+genDCert :: forall era. Reflect era => Proof era -> GenRS era (DCert (Crypto era))
+genDCert proof = do
+  let epoch = gets $ mEL . gsModel
   elementsT
     [ DCertDeleg
         <$> elementsT
@@ -649,21 +664,20 @@ genDCert = do
           ],
       DCertPool
         <$> elementsT
-          [ RegPool <$> genFreshRegPool,
-            RetirePool <$> genRetirementHash <*> epoch
+          [ RegPool <$> (genPoolParams =<< genKeyHash),
+            RetirePool <$> genRetirementHash proof <*> epoch
           ]
     ]
   where
-    epoch = _
     genDelegation = do
-      rewardAccount <- genFreshRegCred @era
+      rewardAccount <- genFreshRegCred' proof
       poolId <- genPool
       pure $ Delegation {_delegator = rewardAccount, _delegatee = poolId}
 
-genDCerts :: forall era. Reflect era => GenRS era [DCert (Crypto era)]
-genDCerts = do
+genDCerts :: forall era. Reflect era => Proof era -> GenRS era [DCert (Crypto era)]
+genDCerts proof = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
-        dc <- genDCert
+        dc <- genDCert proof
         -- Workaround a misfeature where duplicate plutus scripts in DCert are ignored
         -- so if a duplicate might be generated, we don't do that generation
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
@@ -912,7 +926,7 @@ genValidatedTxAndInfo proof slot = do
   (IsValid v2, mkWdrlWits) <-
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
-  dcerts <- genDCerts
+  dcerts <- genDCerts proof
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
