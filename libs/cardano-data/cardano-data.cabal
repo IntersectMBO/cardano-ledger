@@ -33,7 +33,6 @@ library
   import:             base, project-config
 
   exposed-modules:     Data.AbstractSize
-                     , Data.Relation
                      , Data.CanonicalMaps
                      , Data.MemoBytes
                      , Data.Coders

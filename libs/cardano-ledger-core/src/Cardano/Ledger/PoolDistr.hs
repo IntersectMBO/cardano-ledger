@@ -30,7 +30,6 @@ import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Control.DeepSeq (NFData)
 import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (..))
 import Data.Map.Strict (Map)
-import Data.Relation (Relation (..))
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -76,7 +75,7 @@ newtype PoolDistr crypto = PoolDistr
       Map (KeyHash 'StakePool crypto) (IndividualPoolStake crypto)
   }
   deriving stock (Show, Eq)
-  deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks, Relation)
+  deriving newtype (ToCBOR, FromCBOR, NFData, NoThunks)
 
 -- ===============================
 

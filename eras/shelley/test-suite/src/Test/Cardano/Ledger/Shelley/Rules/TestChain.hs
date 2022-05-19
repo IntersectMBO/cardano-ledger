@@ -284,7 +284,7 @@ incrStakeComp SourceSignalTarget {source = chainSt, signal = block} =
           ptrs = ptrsMap . dpsDState $ dp
           ptrs' = ptrsMap . dpsDState $ dp'
 
--- | Various preservation propertiesC
+-- | Various preservation properties
 adaPreservationChain ::
   forall era ledger.
   ( EraGen era,
