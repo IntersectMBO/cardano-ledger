@@ -278,12 +278,14 @@ transaction_witness_set =
   { ? 0: [* vkeywitness ]
   , ? 1: [* native_script ]
   , ? 2: [* bootstrap_witness ]
-  , ? 3: [* plutus_script ]
+  , ? 3: [* plutus_v1_script ]
   , ? 4: [* plutus_data ]
   , ? 5: [* redeemer ]
+  , ? 6: [* plutus_v2_script ] ; New
   }
 
-plutus_script = bytes
+plutus_v1_script = bytes
+plutus_v2_script = bytes
 
 plutus_data =
     constr<plutus_data>
@@ -343,7 +345,8 @@ auxiliary_data =
     ]
   / #6.259({ ? 0 => metadata         ; Alonzo and beyond
       , ? 1 => [ * native_script ]
-      , ? 2 => [ * plutus_script ]
+      , ? 2 => [ * plutus_v1_script ]
+      , ? 3 => [ * plutus_v2_script ]
       })
 
 vkeywitness = [ $vkey, $signature ]
@@ -409,4 +412,4 @@ datum = [ 0, $hash32 // 1, data ]
 
 script_ref = #6.24(bytes .cbor script)
 
-script = [ 0, native_script // 1, plutus_script // 2, plutus_script ]
+script = [ 0, native_script // 1, plutus_v1_script // 2, plutus_v2_script ]
