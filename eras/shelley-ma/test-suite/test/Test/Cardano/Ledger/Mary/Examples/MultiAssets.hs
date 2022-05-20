@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- |
@@ -41,10 +42,10 @@ import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Control.Exception (ErrorCall (ErrorCall), evaluate, try)
 import Control.State.Transition.Extended (PredicateFailure)
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import GHC.Exts (fromString)
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Mary.Examples (testMaryNoDelegLEDGER)
 import qualified Test.Cardano.Ledger.Mary.Examples.Cast as Cast
@@ -150,10 +151,10 @@ purplePolicyId :: PolicyID TestCrypto
 purplePolicyId = PolicyID $ hashScript @MaryTest purplePolicy
 
 plum :: AssetName
-plum = AssetName $ BS.pack "plum"
+plum = AssetName "plum"
 
 amethyst :: AssetName
-amethyst = AssetName $ BS.pack "amethyst"
+amethyst = AssetName "amethyst"
 
 ------------------------
 -- Mint Purple Tokens --
@@ -277,7 +278,7 @@ boundedTimePolicyId :: PolicyID TestCrypto
 boundedTimePolicyId = PolicyID $ hashScript @MaryTest boundedTimePolicy
 
 tokenTimeEx :: AssetName
-tokenTimeEx = AssetName $ BS.pack "tokenTimeEx"
+tokenTimeEx = AssetName "tokenTimeEx"
 
 ------------------------------------
 -- Mint Bounded Time Range Tokens --
@@ -398,7 +399,7 @@ alicePolicyId :: PolicyID TestCrypto
 alicePolicyId = PolicyID $ hashScript @MaryTest alicePolicy
 
 tokenSingWitEx1 :: AssetName
-tokenSingWitEx1 = AssetName $ BS.pack "tokenSingWitEx1"
+tokenSingWitEx1 = AssetName "tokenSingWitEx1"
 
 -----------------------
 -- Mint Alice Tokens --
@@ -558,7 +559,7 @@ bigValue =
   Value 0 $
     Map.singleton
       purplePolicyId
-      (Map.fromList $ map (\x -> (AssetName . BS.pack $ show x, 1)) [1 .. numAssets])
+      (Map.fromList $ map (\x -> (AssetName . fromString $ show x, 1)) [1 .. numAssets])
 
 bigOut :: TxOut MaryTest
 bigOut = TxOut Cast.aliceAddr $ bigValue <+> Val.inject minUtxoBigEx

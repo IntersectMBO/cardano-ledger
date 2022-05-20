@@ -31,7 +31,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (Value (..), valueFromList)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
-import Data.Char (chr)
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import Data.Set as Set
@@ -89,7 +88,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( TxOut
               aliceAddr
-              (valueFromList 1444443 [(pid1, smallName '1', 1)])
+              (valueFromList 1444443 [(pid1, smallName 1, 1)])
               SNothing
           )
           @?= Coin 1344798,
@@ -97,7 +96,13 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( TxOut
               aliceAddr
-              (valueFromList 1555554 [(pid1, smallName '1', 1), (pid1, smallName '2', 1), (pid1, smallName '3', 1)])
+              ( valueFromList
+                  1555554
+                  [ (pid1, smallName 1, 1),
+                    (pid1, smallName 2, 1),
+                    (pid1, smallName 3, 1)
+                  ]
+              )
               SNothing
           )
           @?= Coin 1448244,
@@ -105,7 +110,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( TxOut
               carlAddr
-              (valueFromList 1555554 [(pid1, largestName 'a', 1)])
+              (valueFromList 1555554 [(pid1, largestName 65, 1)])
               SNothing
           )
           @?= Coin 1448244,
@@ -115,12 +120,12 @@ goldenUTxOEntryMinAda =
               carlAddr
               ( valueFromList
                   1962961
-                  [ (pid1, largestName 'a', 1),
-                    (pid1, largestName 'b', 1),
-                    (pid1, largestName 'c', 1)
+                  [ (pid1, largestName 65, 1),
+                    (pid1, largestName 66, 1),
+                    (pid1, largestName 67, 1)
                   ]
               )
-              (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (Constr 0 [(Constr 0 [])])))
+              (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (Constr 0 [Constr 0 []])))
           )
           @?= Coin 2172366,
       testCase "two policies, one (smallest) name" $
@@ -143,7 +148,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( TxOut
               bobAddr
-              (valueFromList 1629628 [(pid1, smallName '1', 1), (pid2, smallName '2', 1)])
+              (valueFromList 1629628 [(pid1, smallName 1, 1), (pid2, smallName 2, 1)])
               SNothing
           )
           @?= Coin 1517208,
@@ -151,7 +156,7 @@ goldenUTxOEntryMinAda =
         calcMinUTxO
           ( TxOut
               aliceAddr
-              ( let f i c = (i, smallName (chr c), 1)
+              ( let f i c = (i, smallName c, 1)
                  in valueFromList 7407400 [f i c | (i, cs) <- [(pid1, [32 .. 63]), (pid2, [64 .. 95]), (pid3, [96 .. 127])], c <- cs]
               )
               {-
@@ -185,10 +190,10 @@ goldenSerialization =
   testGroup
     "golden tests - serialization"
     [ testCase "Alonzo Block" $ do
-        expected <- (BSL.readFile "golden/block.cbor")
+        expected <- BSL.readFile "golden/block.cbor"
         serialize (SLE.sleBlock ledgerExamplesAlonzo) @?= expected,
       testCase "Alonzo Tx" $ do
-        expected <- (BSL.readFile "golden/tx.cbor")
+        expected <- BSL.readFile "golden/tx.cbor"
         serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
 

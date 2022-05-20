@@ -32,7 +32,7 @@ import qualified Control.Monad.State.Strict as State
 import Control.Monad.Supply
   ( MonadSupply (..),
   )
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Short as SBS
 import Data.Foldable (toList)
 import Data.List.NonEmpty (NonEmpty, nonEmpty)
 import Data.Map (Map)
@@ -194,7 +194,7 @@ genAssetName :: Gen AssetName
 genAssetName =
   AssetName
     <$> oneof
-      [ pure BS.empty,
+      [ pure SBS.empty,
         resize 32 arbitrary
       ]
 

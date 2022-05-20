@@ -14,7 +14,7 @@ import Cardano.Ledger.Pretty hiding (ppTxBody)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody
-import Prettyprinter (hsep)
+import Prettyprinter (hsep, viaShow)
 
 ppValue :: Value crypto -> PDoc
 ppValue v = case gettriples' v of
@@ -27,7 +27,7 @@ ppPolicyID :: PolicyID crypto -> PDoc
 ppPolicyID (PolicyID sh) = ppScriptHash sh
 
 ppAssetName :: AssetName -> PDoc
-ppAssetName (AssetName bs) = ppLong bs
+ppAssetName = viaShow
 
 instance PrettyA (Value crypto) where prettyA = ppValue
 

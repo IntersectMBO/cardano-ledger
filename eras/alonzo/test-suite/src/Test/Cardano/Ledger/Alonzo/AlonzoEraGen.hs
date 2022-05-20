@@ -1,9 +1,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -63,7 +63,6 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (coin, isAdaOnly, (<+>), (<×>)))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (replicateM)
-import qualified Data.ByteString.Char8 as BS
 import Data.Either (fromRight)
 import Data.Hashable (Hashable (..))
 import qualified Data.List as List
@@ -172,7 +171,7 @@ genAlonzoMint startvalue = do
     Nothing -> pure (startvalue, [])
     Just (TwoPhase2ArgInfo script shash _ _) -> do
       count <- chooseEnum (1, 10)
-      let assetname = AssetName . BS.pack $ "purple"
+      let assetname = AssetName "purple"
       pure (((valueFromList 0 [(PolicyID shash, assetname, count)]) <> startvalue), [script])
 
 -- ================================================================
