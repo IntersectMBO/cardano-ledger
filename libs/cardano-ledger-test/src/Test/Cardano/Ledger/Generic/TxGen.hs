@@ -17,7 +17,7 @@
 module Test.Cardano.Ledger.Generic.TxGen where
 
 import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
-import Cardano.Crypto.VRF (VRFAlgorithm (deriveVerKeyVRF, genKeyVRF, seedSizeVRF))
+import Cardano.Crypto.VRF (VRFAlgorithm (deriveVerKeyVRF, genKeyVRF))
 import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Scripts
@@ -30,10 +30,9 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
-import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl, boundRational)
+import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import qualified Cardano.Ledger.Crypto as C
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys
@@ -56,7 +55,6 @@ import Cardano.Ledger.Shelley.API
     StakeReference (..),
     VerKeyVRF,
     Wdrl (..),
-    hashVerKeyVRF,
   )
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
@@ -74,14 +72,13 @@ import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BSC
-import Data.Data (Proxy (Proxy))
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as F
 import Data.Functor
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe (catMaybes, fromJust)
+import Data.Maybe (catMaybes, mapMaybe)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
@@ -104,7 +101,6 @@ import Test.Cardano.Ledger.Generic.GenState
     frequencyT,
     genCredential,
     genDatumWithHash,
-    genFreshCredential,
     genFreshRegCred,
     genKeyHash,
     genPool,
@@ -135,7 +131,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
 import qualified Data.Sequence.Strict as Seq
-import Data.IP (IPv4, IPv6, IP (IPv4), toIPv4w, toIPv6w)
+import Data.IP (IPv6, toIPv4w, toIPv6w, IPv4)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -930,6 +926,8 @@ genValidatedTxAndInfo proof slot = do
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
+  let pCertWitHashes = mapMaybe getPCertCredential dcerts
+  pCertWitsMakers <- traverse (mkWitVKey proof Nothing . KeyHashObj) pCertWitHashes
 
   let isValid = IsValid (v1 && v2 && v3)
       mkWits :: [ExUnits -> [WitnessesField era]]
@@ -1002,7 +1000,7 @@ genValidatedTxAndInfo proof slot = do
           ]
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
       witsMakers :: [SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era]]
-      witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
+      witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers ++ pCertWitsMakers
       bogusNeededScripts = scriptsNeeded' proof utxoNoCollateral txBodyNoFee
       noFeeWits :: [WitnessesField era]
       noFeeWits =
@@ -1087,6 +1085,13 @@ genValidatedTxAndInfo proof slot = do
           }
     )
   pure (UTxO utxo, validTx, feepair, maybeoldpair)
+
+getPCertCredential :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)
+getPCertCredential (DCertPool pc) =
+  case pc of
+    RegPool PoolParams{..} -> Just _poolId
+    RetirePool kh _ -> Just kh
+getPCertCredential _ = Nothing
 
 minus :: MUtxo era -> Maybe (UtxoEntry era) -> MUtxo era
 minus m Nothing = m
