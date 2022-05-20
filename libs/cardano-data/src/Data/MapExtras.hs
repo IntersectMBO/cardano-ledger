@@ -15,6 +15,7 @@
 --    > intersectDomP (\ k v -> Map.member v stpool) stkcred deleg
 module Data.MapExtras
   ( StrictTriple (..),
+    extract,
     noKeys,
     keysEqual,
     splitMemberMap,
@@ -24,10 +25,11 @@ module Data.MapExtras
     intersectMapSetFold,
     disjointMapSetFold,
     extractKeys,
+    extractKeysSmallSet,
   )
 where
 
-import Data.Map.Internal (Map (..), link, link2)
+import Data.Map.Internal (Map (..), balanceL, balanceR, glue, link, link2)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -162,43 +164,63 @@ disjointMapSetFold accum (Bin _ k v l1 l2) set !ans =
 
 -- =================================
 
-extractKey :: Ord k => k -> Map k b -> Maybe (Map k b, b)
-extractKey k m
-  | Just v <- Map.lookup k m = Just (Map.delete k m, v)
-  | otherwise = Nothing
-{-# INLINE extractKey #-}
+-- This is a slightly adjusted version of `delete` from "containers"
+extract# :: Ord k => k -> Map k a -> (# Maybe a, Map k a #)
+extract# !k = go
+  where
+    go Tip = (# Nothing, Tip #)
+    go t@(Bin _ kx x l r) =
+      case compare k kx of
+        LT
+          | l' `ptrEq` l -> (# mVal, t #)
+          | otherwise -> let !m = balanceR kx x l' r in (# mVal, m #)
+          where
+            !(# mVal, l' #) = go l
+        GT
+          | r' `ptrEq` r -> (# mVal, t #)
+          | otherwise -> let !m = balanceL kx x l r' in (# mVal, m #)
+          where
+            !(# mVal, r' #) = go r
+        EQ -> let !m = glue l r in (# Just x, m #)
+{-# INLINE extract# #-}
+
+-- | Just like `Map.delete`, but also returns the value if it was indeed deleted
+-- from the map.
+extract :: Ord k => k -> Map k b -> (Maybe b, Map k b)
+extract k m =
+  case extract# k m of
+    (# Just v, m' #) -> (Just v, m')
+    _ -> (Nothing, m)
+{-# INLINE extract #-}
 
 -- | Partition the `Map` according to keys in the `Set`. This is equivalent to:
 --
 -- > extractKeys m s === (withoutKeys m s, restrictKeys m s)
 extractKeys :: Ord k => Map k a -> Set k -> (Map k a, Map k a)
-extractKeys m s =
-  case s of -- Three cases below are an optimization for the three very common cases:
-    Set.Bin _ k Set.Tip Set.Tip -> extractKey1 k m
-    Set.Bin _ k1 (Set.Bin _ k2 Set.Tip Set.Tip) Set.Tip -> extractKey2 k1 k2 m
-    Set.Bin _ k1 Set.Tip (Set.Bin _ k2 Set.Tip Set.Tip) -> extractKey2 k1 k2 m
-    _ ->
-      -- Above we only specialize the Set of size 1 and 2, because
-      -- `extractKeysBigSet` performs just as good for Sets large than that.
+extractKeys m s
+  | Set.size s < 6 = extractKeysSmallSet m s -- See haddock for value 6
+  | otherwise =
       case extractKeys# m s of
         (# w, r #) -> (w, r)
-  where
-    extractKey1 !k m0 =
-      case extractKey k m0 of
-        Just (mw, v) -> let !mr = Map.singleton k v in (mw, mr)
-        Nothing -> (m0, Tip)
-    {-# INLINE extractKey1 #-}
-    extractKey2 !k1 !k2 m0 =
-      let !(mw1, mr1) = extractKey1 k1 m0
-       in case extractKey k2 mw1 of
-            Nothing -> (mw1, mr1)
-            Just (mw2, v2) -> (mw2, Map.insert k2 v2 mr1)
-    {-# INLINE extractKey2 #-}
 {-# INLINE extractKeys #-}
+
+-- | It has been discovered expirementally through benchmarks that for small Set
+-- size of under around 6 elements this function performs faster than
+-- `extractKeys#`
+extractKeysSmallSet :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
+extractKeysSmallSet sm = Set.foldl' f (sm, Map.empty)
+  where
+    f acc@(without, restrict) k =
+      case extract# k without of
+        (# Just v, without' #) ->
+          let !restrict' = Map.insert k v restrict
+           in (without', restrict')
+        _ -> acc
+{-# INLINE extractKeysSmallSet #-}
 
 -- | This function will produce exactly the same results as
 -- `extractKeysSmallSet` for all inputs, but it performs better whenever the set
--- is big and worse otherwise.
+-- is big.
 extractKeys# :: Ord k => Map k a -> Set k -> (# Map k a, Map k a #)
 extractKeys# Tip _ = (# Tip, Tip #)
 extractKeys# m Set.Tip = (# m, Tip #)

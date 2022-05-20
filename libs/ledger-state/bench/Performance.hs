@@ -31,7 +31,7 @@ import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class (def)
 import Data.Foldable as F
 import Data.Map.Strict as Map
-import Data.MapExtras (extractKeys)
+import Data.MapExtras (extractKeys, extractKeysSmallSet)
 import Data.Set as Set
 import System.Environment (getEnv)
 import System.Random.Stateful
@@ -61,9 +61,7 @@ main = do
   es <- readNewEpochState ledgerStateFilePath
   putStrLn "Done importing NewEpochState"
   let largeKeysNum = 100000
-      smallKeysNum = 3
   largeKeys <- selectRandomMapKeys 100000 (mkStdGen 2022) (unUTxO (getUTxO es))
-  let smallKeys = Set.take smallKeysNum largeKeys
   defaultMain
     [ env (pure ((mkMempoolEnv es slotNo, toMempoolState es))) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
@@ -103,9 +101,9 @@ main = do
       bgroup
         "DeleteTxOuts"
         [ extractKeysBench (unUTxO (getUTxO es)) largeKeysNum largeKeys,
-          extractKeysBench (unUTxO (getUTxO es)) smallKeysNum smallKeys,
-          extractKeysBench (unUTxO (getUTxO es)) 2 (Set.take 2 largeKeys),
-          extractKeysBench (unUTxO (getUTxO es)) 1 (Set.take 1 largeKeys)
+          extractKeysBench (unUTxO (getUTxO es)) 9 (Set.take 9 largeKeys),
+          extractKeysBench (unUTxO (getUTxO es)) 5 (Set.take 5 largeKeys),
+          extractKeysBench (unUTxO (getUTxO es)) 2 (Set.take 2 largeKeys)
         ]
     ]
 
@@ -121,7 +119,7 @@ extractKeysBench utxo n ks =
     [ env (pure utxo) $ \m ->
         bench "extractKeys" $ whnf (seqTuple . extractKeys m) ks,
       env (pure utxo) $ \m ->
-        bench "extractKeysFoldSet" $ whnf (seqTuple . extractKeysFoldSet m) ks,
+        bench "extractKeysSmallSet" $ whnf (seqTuple . extractKeysSmallSet m) ks,
       env (pure utxo) $ \m ->
         bench "extractKeysNaive" $ whnf (seqTuple . extractKeysNaive m) ks
     ]
@@ -137,18 +135,6 @@ selectRandomMapKeys n gen m = runStateGenT_ gen $ \g ->
               else go (Set.insert ix ixs) (Set.insert (fst $ Map.elemAt ix m) ks)
         | otherwise = pure ks
    in go Set.empty Set.empty
-
-extractKeysFoldSet :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
-extractKeysFoldSet sm = Set.foldl' f (sm, Map.empty)
-  where
-    f acc@(without, restrict) k =
-      case Map.lookup k without of
-        Nothing -> acc
-        Just v ->
-          let !without' = Map.delete k without
-              !restrict' = Map.insert k v restrict
-           in (without', restrict')
-{-# INLINE extractKeysFoldSet #-}
 
 extractKeysNaive :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
 extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
