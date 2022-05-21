@@ -80,14 +80,11 @@ legacy_transaction_output =
   , ? datum_hash : $hash32
   ]
 
-; Note that in the post_alonzo_transaction_output, we do not allow
-; a transaction output to include both a datum hash and a datum.
-; In other words, keys 2 and 3 are mutually exclusive.
 post_alonzo_transaction_output =
   { 0 : address
   , 1 : value
-  , ? 2 : datum      ; New; inline datum
-  , ? 3 : script_ref ; New; script reference
+  , ? 2 : datum_option ; New; datum option
+  , ? 3 : script_ref   ; New; script reference
   }
 
 script_data_hash = $hash32
@@ -408,7 +405,7 @@ pool_metadata_hash    = $hash32
 datum_hash = $hash32
 data = #6.24(bytes .cbor plutus_data)
 
-datum = [ 0, $hash32 // 1, data ]
+datum_option = [ 0, $hash32 // 1, data ]
 
 script_ref = #6.24(bytes .cbor script)
 
