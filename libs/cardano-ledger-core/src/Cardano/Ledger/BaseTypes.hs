@@ -87,9 +87,9 @@ import Cardano.Ledger.Serialization
     ratioFromCBOR,
     ratioToCBOR,
   )
-import Cardano.Prelude (NFData, cborError)
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Time (SystemStart)
+import Control.DeepSeq (NFData)
 import Control.Exception (throw)
 import Control.Monad (when, (<=<))
 import Control.Monad.Trans.Reader (ReaderT)
@@ -98,7 +98,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
-import Data.Coders (invalidKey)
+import Data.Coders (cborError, invalidKey)
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)

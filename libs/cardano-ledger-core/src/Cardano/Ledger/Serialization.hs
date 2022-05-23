@@ -70,7 +70,6 @@ import Cardano.Binary
     serialize,
     withWordSize,
   )
-import Cardano.Prelude (cborError)
 import Control.Monad (unless, when)
 import Control.Monad.Except (Except, MonadError (throwError))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
@@ -81,6 +80,7 @@ import qualified Data.ByteString.Builder.Extra as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders
   ( Annotator,
+    cborError,
     decodeCollectionWithLen,
     decodeList,
     decodeMap,

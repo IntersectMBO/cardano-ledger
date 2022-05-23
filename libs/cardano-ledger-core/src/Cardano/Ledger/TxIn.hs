@@ -32,8 +32,9 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeHash, hashAnnotated)
 import Cardano.Ledger.Serialization (decodeRecordNamed)
-import Cardano.Prelude (HeapWords (..), NFData)
+import Cardano.Prelude (HeapWords (..))
 import qualified Cardano.Prelude as HW
+import Control.DeepSeq (NFData)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
