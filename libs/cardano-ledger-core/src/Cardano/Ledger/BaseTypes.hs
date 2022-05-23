@@ -665,8 +665,8 @@ newtype BlocksMade crypto = BlocksMade
 -- other than `Word16`. There is also `mkTxIxPartial` that can be used for
 -- testing.
 newtype TxIx = TxIx Word16
-  deriving stock (Eq, Ord)
-  deriving newtype (NFData, Enum, Bounded, Show, NoThunks, ToCBOR, FromCBOR)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
 
 txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
@@ -685,8 +685,8 @@ mkTxIxPartial i =
 -- index safely from anything other than `Word16`. There is also
 -- `mkCertIxPartial` that can be used for testing.
 newtype CertIx = CertIx Word16
-  deriving stock (Eq, Ord)
-  deriving newtype (NFData, Enum, Bounded, Show, NoThunks, ToCBOR, FromCBOR)
+  deriving stock (Eq, Ord, Show)
+  deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
 
 certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16
