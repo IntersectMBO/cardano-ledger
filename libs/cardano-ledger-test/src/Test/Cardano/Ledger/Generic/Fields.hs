@@ -57,6 +57,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Era (Era (..), ValidateScript, hashScript)
 import Cardano.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
+import Cardano.Ledger.Serialization (sizedValue)
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..))
 import qualified Cardano.Ledger.Shelley.PParams as PP (Update)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
@@ -353,8 +354,8 @@ abstractTxBody (Babbage _) (Babbage.TxBody inp col ref out colret totcol cert wd
   [ Inputs inp,
     Collateral col,
     RefInputs ref,
-    Outputs out,
-    CollateralReturn colret,
+    Outputs (sizedValue <$> out),
+    CollateralReturn (sizedValue <$> colret),
     TotalCol totcol,
     Certs cert,
     Wdrls wdrl,

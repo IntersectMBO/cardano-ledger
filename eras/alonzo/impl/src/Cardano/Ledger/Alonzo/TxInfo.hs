@@ -35,6 +35,7 @@ import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
 import Cardano.Ledger.SafeHash
+import Cardano.Ledger.Serialization (Sized (sizedValue))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody
@@ -396,6 +397,11 @@ class ExtendedUTxO era where
   allOuts ::
     Core.TxBody era ->
     [Core.TxOut era]
+  allOuts = map sizedValue . allSizedOuts
+
+  allSizedOuts ::
+    Core.TxBody era ->
+    [Sized (Core.TxOut era)]
 
   txdata ::
     Core.Tx era ->
@@ -736,7 +742,7 @@ languages ::
   ) =>
   Core.Tx era ->
   UTxO era ->
-  Set (Language)
+  Set Language
 languages tx utxo = Map.foldl' accum Set.empty allscripts
   where
     allscripts = Cardano.Ledger.Alonzo.TxInfo.txscripts @era utxo tx

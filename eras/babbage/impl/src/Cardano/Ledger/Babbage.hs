@@ -34,7 +34,7 @@ import Cardano.Ledger.Babbage.PParams
     updatePParams,
   )
 import Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER)
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, babbageMinUTxOSize)
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, babbageMinUTxOValue)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Scripts (babbageInputDataHashes, babbageTxScripts)
@@ -51,6 +51,7 @@ import qualified Cardano.Ledger.Mary.Value as Mary (Value)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.API.Validation (ShelleyEraCrypto)
@@ -191,7 +192,7 @@ instance CC.Crypto c => API.CLI (BabbageEra c) where
     where
       ws' = ws {txwitsVKey = Set.union newWits (txwitsVKey ws)}
 
-  evaluateMinLovelaceOutput = babbageMinUTxOSize
+  evaluateMinLovelaceOutput pp out = babbageMinUTxOValue pp (mkSized out)
 
 type instance Core.Tx (BabbageEra c) = ValidatedTx (BabbageEra c)
 
@@ -239,9 +240,9 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
       newOuts = allOuts txbody
       referencedOuts = Map.elems $ Map.restrictKeys utxo (getField @"referenceInputs" txbody)
       outs = newOuts <> referencedOuts
-  allOuts txbody = toList (getField @"outputs" txbody) <> collOuts
+  allSizedOuts txbody = toList (getField @"sizedOutputs" txbody) <> collOuts
     where
-      collOuts = case getField @"collateralReturn" txbody of
+      collOuts = case getField @"sizedCollateralReturn" txbody of
         SNothing -> []
         SJust x -> [x]
   txdata (ValidatedTx txbody (TxWitness _ _ _ (TxDats' m) _) _ _) = Set.union witnessData outputData

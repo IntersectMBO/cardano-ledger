@@ -3,23 +3,13 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
---
--- Eq (Some Proof)
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE InstanceSigs #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Test.Cardano.Ledger.Generic.Updaters where
 
@@ -37,6 +27,7 @@ import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxBody (.
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (ScriptHash)
+import Cardano.Ledger.Serialization (mkSized)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams, PParams' (..))
 import Cardano.Ledger.Shelley.Tx as Shelley (WitnessSetHKD (addrWits, bootWits, scriptWits))
 import qualified Cardano.Ledger.Shelley.Tx as Shelley (Tx (..))
@@ -207,8 +198,8 @@ updateTxBody (Babbage _) tx dt = case dt of
   (Inputs is) -> tx {Babbage.inputs = is}
   (Collateral is) -> tx {Babbage.collateral = is}
   (RefInputs is) -> tx {Babbage.referenceInputs = is}
-  (Outputs outs1) -> tx {Babbage.outputs = outs1}
-  (CollateralReturn outs1) -> tx {Babbage.collateralReturn = outs1}
+  (Outputs outs1) -> tx {Babbage.outputs = mkSized <$> outs1}
+  (CollateralReturn outs1) -> tx {Babbage.collateralReturn = mkSized <$> outs1}
   (Certs cs) -> tx {Babbage.txcerts = cs}
   (Wdrls ws) -> tx {Babbage.txwdrls = ws}
   (Txfee c) -> tx {Babbage.txfee = c}

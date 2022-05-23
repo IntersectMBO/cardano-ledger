@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -52,16 +53,23 @@ module Cardano.Ledger.Serialization
     -- UTC Time
     utcTimeToCBOR,
     utcTimeFromCBOR,
+    -- This abstraction can/should be moved into cardano-binary
+    Sized (..),
+    mkSized,
+    sizedDecoder,
   )
 where
 
 import Cardano.Binary
-  ( Decoder,
+  ( Annotated (..),
+    ByteSpan (..),
+    Decoder,
     DecoderError (..),
     Encoding,
     FromCBOR (..),
     Size,
     ToCBOR (..),
+    annotatedDecoder,
     decodeAnnotator,
     decodeListLenOrIndef,
     decodeTag,
@@ -109,6 +117,7 @@ import Data.IP
     toHostAddress,
     toHostAddress6,
   )
+import Data.Int (Int64)
 import Data.Map.Strict (Map)
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Sequence (Seq)
@@ -119,7 +128,9 @@ import Data.Time (UTCTime (..))
 import Data.Time.Calendar.OrdinalDate (fromOrdinalDate, toOrdinalDate)
 import Data.Time.Clock (diffTimeToPicoseconds, picosecondsToDiffTime)
 import Data.Typeable
+import GHC.Generics
 import Network.Socket (HostAddress6)
+import NoThunks.Class (NoThunks)
 import Prelude
 
 class Typeable a => ToCBORGroup a where
@@ -310,3 +321,43 @@ translateViaCBORAnn name x =
   case decodeAnnotator name fromCBOR (serialize x) of
     Right newx -> pure newx
     Left decoderError -> throwError decoderError
+
+-- | A CBOR deserialized value together with its size. When deserializing use
+-- either `sizedDecoder` or its `FromCBOR` instance.
+--
+-- Use `mkSized` to construct such value.
+data Sized a = Sized
+  { sizedValue :: !a,
+    -- | Overhead in bytes. The field is lazy on purpose, because it might not
+    -- be needed, but it can be expensive to compute.
+    sizedSize :: Int64
+  }
+  deriving (Eq, Show, Generic)
+
+instance NoThunks a => NoThunks (Sized a)
+
+-- | Construct a `Sized` value by serializing it first and recording the amount
+-- of bytes it requires. Note, however, CBOR serialization is not canonical,
+-- therefore it is *NOT* a requirement that this property holds:
+--
+-- > sizedSize (mkSized a) === sizedSize (unsafeDeserialize (serialize a) :: a)
+mkSized :: ToCBOR a => a -> Sized a
+mkSized a =
+  Sized
+    { sizedValue = a,
+      sizedSize = BSL.length (serialize a)
+    }
+
+sizedDecoder :: Decoder s a -> Decoder s (Sized a)
+sizedDecoder decoder = do
+  Annotated v (ByteSpan start end) <- annotatedDecoder decoder
+  pure $ Sized v $! end - start
+
+instance FromCBOR a => FromCBOR (Sized a) where
+  fromCBOR = sizedDecoder fromCBOR
+
+-- | Discards the size.
+instance ToCBOR a => ToCBOR (Sized a) where
+  -- Size is an auxiliary value and should not be transmitted over the wire,
+  -- therefore it is ignored.
+  toCBOR (Sized v _) = toCBOR v

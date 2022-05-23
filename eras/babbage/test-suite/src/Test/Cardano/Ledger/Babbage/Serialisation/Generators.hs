@@ -11,6 +11,7 @@
 
 module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Alonzo.Data (dataToBinaryData)
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
@@ -23,6 +24,7 @@ import Cardano.Ledger.Babbage.Tx
 import Cardano.Ledger.Babbage.TxBody (BabbageBody, Datum (..), TxOut (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Serialization (Sized, mkSized)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
@@ -31,6 +33,9 @@ import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
+
+instance (ToCBOR a, Arbitrary a) => Arbitrary (Sized a) where
+  arbitrary = mkSized <$> arbitrary
 
 instance
   ( Era era,
