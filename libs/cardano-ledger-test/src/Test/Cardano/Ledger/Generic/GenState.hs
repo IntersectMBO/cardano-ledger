@@ -42,6 +42,7 @@ module Test.Cardano.Ledger.Generic.GenState
     getUtxoChoicesMax,
     getUtxoElem,
     getUtxoTest,
+    getPoolParams,
     initialLedgerState,
     modifyModel,
     runGenRS,
@@ -94,7 +95,7 @@ import Control.SetAlgebra (eval, (⨃))
 import Data.Default.Class (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing), maybeToStrictMaybe)
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -142,6 +143,7 @@ import Test.Tasty.QuickCheck
     frequency,
     generate,
   )
+import Control.Applicative ((<|>))
 
 -- =================================================
 
@@ -393,6 +395,11 @@ getNewPoolTest :: GenRS era (KeyHash 'StakePool (Crypto era) -> Bool)
 getNewPoolTest = do
   poolparams <- gets (mPoolParams . gsModel)
   pure (`Map.member` poolparams)
+
+getPoolParams :: KeyHash 'StakePool (Crypto era) -> GenRS era (StrictMaybe (PoolParams (Crypto era)))
+getPoolParams kh = gets $ \GenState{..} -> maybeToStrictMaybe $ 
+  Map.lookup kh gsHonestPool <|> 
+  Map.lookup kh gsInitialPoolParams
 
 -- ========================================================================
 -- Tools to get started

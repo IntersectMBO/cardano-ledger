@@ -115,7 +115,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS, genValidityInterval, genPoolParams
+    runGenRS, genValidityInterval, genPoolParams, getPoolParams
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -712,6 +712,14 @@ genDCerts proof = do
                       (DCertDeleg (RegKey delegCred) : dcs, Map.insert delegCred (Coin 99) regCreds)
                in insertIfNotPresent dcs' regCreds' (Just delegKey)
                     <$> lookupPlutusScript delegCred Cert
+          DCertPool d
+            | RetirePool kh _ <- d -> do
+                -- We need to make sure that the pool is registered before
+                -- we try to retire it
+                poolParams <- getPoolParams kh
+                case poolParams of
+                  SJust _ -> pure (dc : dcs, ss, regCreds)
+                  SNothing -> pure (dcs, ss, regCreds)
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
@@ -767,7 +775,7 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         GenRS era (Map (TxIn (Crypto era)) (Core.TxOut era), Coin)
       go ecs !coll !curCollTotal !um
         | curCollTotal >= minCollTotal = pure (coll, curCollTotal <-> minCollTotal)
-        | [] <- ecs = error "Impossible: supplied less addresses then `maxCollateralInputs`"
+        | [] <- ecs = error "Impossible: supplied less addresses than `maxCollateralInputs`"
         | ec : ecs' <- ecs = do
           (um', coll', c) <-
             if null ecs'
