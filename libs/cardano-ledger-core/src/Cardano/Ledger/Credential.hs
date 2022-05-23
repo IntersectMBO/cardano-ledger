@@ -22,8 +22,16 @@ module Cardano.Ledger.Credential
   )
 where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
-import Cardano.Ledger.BaseTypes (CertIx (..), TxIx (..), invalidKey)
+import Cardano.Binary
+  ( FromCBOR (..),
+    ToCBOR (..),
+    encodeListLen,
+  )
+import Cardano.Ledger.BaseTypes
+  ( CertIx (..),
+    TxIx (..),
+    invalidKey,
+  )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
@@ -39,7 +47,14 @@ import Cardano.Ledger.Serialization
   )
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.DeepSeq (NFData)
-import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=))
+import Data.Aeson
+  ( FromJSON (..),
+    FromJSONKey,
+    ToJSON (..),
+    ToJSONKey,
+    (.:),
+    (.=),
+  )
 import qualified Data.Aeson as Aeson
 import Data.Bits
 import Data.Foldable (asum)
@@ -103,7 +118,7 @@ instance NoThunks (StakeReference crypto)
 -- | Pointer to a slot number, transaction index and an index in certificate
 -- list. We expect that `SlotNo` will fit into `Word32` for a very long time,
 -- because we can assume that the rate at which it is incremented isn't going to
--- icrease in the near future. Therefore with current rate we should be fine for
+-- increase in the near future. Therefore with current rate we should be fine for
 -- about a 150 years. I suggest to remove this optimization in about a
 -- hundred years or thereabouts, so around a year 2122 would be good.
 --
@@ -118,8 +133,22 @@ instance NoThunks (StakeReference crypto)
 --
 -- @@@
 newtype Ptr = PtrCompact Word64
-  deriving (Show, Eq, Ord, Generic, NFData, NoThunks)
+  deriving (Eq, Ord, Generic, NFData, NoThunks)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
+
+instance Show Ptr where
+  showsPrec n (Ptr slotNo txIx certIx)
+    | n < 1 = inner
+    | otherwise = ('(' :) . inner . (")" ++)
+    where
+      inner =
+        ("Ptr (" ++)
+          . shows slotNo
+          . (") (" ++)
+          . shows txIx
+          . (") " ++)
+          . shows certIx
+          . (')' :)
 
 -- | With this pattern synonym we can recover actual values from compacted version of `Ptr`.
 pattern Ptr :: SlotNo -> TxIx -> CertIx -> Ptr
