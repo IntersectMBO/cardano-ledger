@@ -37,7 +37,6 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
-import Cardano.Prelude (cborError)
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
@@ -45,6 +44,7 @@ import Control.DeepSeq (NFData (rnf), deepseq)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
+import Data.Coders (cborError)
 import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T

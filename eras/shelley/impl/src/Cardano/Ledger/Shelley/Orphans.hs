@@ -14,7 +14,6 @@ import qualified Cardano.Crypto.Wallet as WC
 import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..))
-import Cardano.Prelude (readEither)
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import qualified Data.ByteString as Long (ByteString, empty)
@@ -26,6 +25,7 @@ import Data.Proxy
 import qualified Data.Sequence.Strict as SS
 import qualified Data.Text as Text
 import NoThunks.Class (NoThunks (..))
+import Text.Read (readEither)
 
 instance FromJSON IPv4 where
   parseJSON =

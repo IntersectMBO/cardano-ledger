@@ -17,8 +17,9 @@ import Cardano.Ledger.Address
   ( BootstrapAddress (..),
   )
 import Data.Maybe (fromJust)
+import qualified Hedgehog.Gen
+import qualified Hedgehog.Range
 import qualified Test.Cardano.Chain.Common.Gen as Byron
-import Test.Cardano.Prelude (genBytes)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Hedgehog (hedgehog)
 
@@ -27,7 +28,7 @@ genSignature =
   DSIGN.SignedDSIGN
     . fromJust
     . DSIGN.rawDeserialiseSigDSIGN
-    <$> hedgehog (genBytes . fromIntegral $ DSIGN.sizeSigDSIGN ([] @a))
+    <$> hedgehog (Hedgehog.Gen.bytes . Hedgehog.Range.singleton . fromIntegral $ DSIGN.sizeSigDSIGN ([] @a))
 
 genBootstrapAddress :: Gen (BootstrapAddress crypto)
 genBootstrapAddress = BootstrapAddress <$> hedgehog Byron.genAddress

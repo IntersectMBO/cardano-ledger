@@ -150,7 +150,6 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO), makeWitnessVKey)
 import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (TxId, TxIn (..))
-import Cardano.Prelude (LByteString)
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
     BHeader (..),
@@ -181,6 +180,7 @@ import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Char8 as BS (pack)
+import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.Coerce (coerce)
 import Data.Default.Class (def)
 import Data.IP (toIPv4)
@@ -214,7 +214,7 @@ type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig C_Crypto)
 decodeMultiSigMap :: Decoder s (Annotator MultiSigMap)
 decodeMultiSigMap = decodeMapTraverse (pure <$> fromCBOR) fromCBOR
 
-deserializeMultiSigMap :: LByteString -> Either DecoderError MultiSigMap
+deserializeMultiSigMap :: BSL.ByteString -> Either DecoderError MultiSigMap
 deserializeMultiSigMap = decodeAnnotator "Map ScriptHash MultiSig" decodeMultiSigMap
 
 checkEncodingCBORCBORGroup ::

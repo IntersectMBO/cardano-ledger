@@ -30,23 +30,21 @@ import Cardano.Ledger.Serialization
     ToCBORGroup (..),
     groupRecord,
   )
-import Cardano.Prelude
-  ( Exception,
-    ExitCode (..),
-    forM_,
-    throwIO,
-  )
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term (decodeTerm)
+import Control.Exception hiding (throwIO)
 import qualified Data.ByteString.Base16.Lazy as Base16
 import qualified Data.ByteString.Lazy as BSL
 import Data.ByteString.Lazy.Char8 as Char8 (lines, unpack)
+import Data.Foldable (forM_)
 import Data.Typeable
 import GHC.Stack
+import System.Exit (ExitCode (..))
 import qualified System.IO as Sys
 import System.Process.ByteString.Lazy (readProcessWithExitCode)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit (assertFailure, testCase)
+import UnliftIO (throwIO)
 import UnliftIO.Temporary (withTempFile)
 
 -- Round trip test for a type t with instances:

@@ -41,7 +41,6 @@ import Cardano.Ledger.Shelley.LedgerState
     nesBcur,
   )
 import Cardano.Ledger.Shelley.TxBody (TransTxBody, TransTxId)
-import Cardano.Prelude (NFData (rnf))
 import Cardano.Protocol.TPraos.API
   ( ChainDepState (..),
     ChainTransitionError,
@@ -55,6 +54,7 @@ import Cardano.Protocol.TPraos.BHeader (BHeader (..), LastAppliedBlock (..), mak
 import Cardano.Protocol.TPraos.Rules.Prtcl (PrtclState (..))
 import Cardano.Protocol.TPraos.Rules.Tickn (TicknState (..))
 import Cardano.Slotting.Slot (withOriginToMaybe)
+import Control.DeepSeq (NFData (rnf))
 import Control.Monad.Except ()
 import Control.State.Transition (STS (State))
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
