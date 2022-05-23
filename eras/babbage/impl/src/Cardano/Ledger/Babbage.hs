@@ -21,7 +21,6 @@ where
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), binaryDataToData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
-import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
@@ -35,7 +34,7 @@ import Cardano.Ledger.Babbage.PParams
     updatePParams,
   )
 import Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER)
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO)
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, babbageMinUTxOSize)
 import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Scripts (babbageInputDataHashes, babbageTxScripts)
@@ -192,8 +191,7 @@ instance CC.Crypto c => API.CLI (BabbageEra c) where
     where
       ws' = ws {txwitsVKey = Set.union newWits (txwitsVKey ws)}
 
-  evaluateMinLovelaceOutput pp out =
-    Coin $ utxoEntrySize out * unCoin (_coinsPerUTxOByte pp)
+  evaluateMinLovelaceOutput = babbageMinUTxOSize
 
 type instance Core.Tx (BabbageEra c) = ValidatedTx (BabbageEra c)
 
