@@ -164,6 +164,7 @@ test-suite cardano-ledger-test
     cardano-ledger-test,
     cardano-ledger-shelley-test,
     tasty,
+    data-default-class,
 
 
 

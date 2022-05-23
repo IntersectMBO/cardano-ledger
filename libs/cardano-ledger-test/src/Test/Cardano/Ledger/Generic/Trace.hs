@@ -378,6 +378,7 @@ mapProportion toInt m =
   where
     pairs = [(toInt v, pure k) | (k, v) <- Map.toList m]
 
+
 chooseIssuer :: PoolDistr crypto -> Gen (KeyHash 'StakePool crypto)
 chooseIssuer (PoolDistr m) = mapProportion getInt m
   where
