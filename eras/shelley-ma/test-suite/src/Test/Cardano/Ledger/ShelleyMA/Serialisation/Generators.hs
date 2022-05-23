@@ -41,7 +41,7 @@ import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as MA.STS
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA (Timelock (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
-import qualified Data.ByteString as BS
+import qualified Data.ByteString.Short as SBS
 import Data.Coerce (coerce)
 import Data.Int (Int64)
 import qualified Data.Map.Strict as Map
@@ -203,7 +203,7 @@ valueFromListBounded (fromIntegral -> ada) =
         (min (fromIntegral $ maxBound @i) (a + b))
 
 instance Arbitrary Mary.AssetName where
-  arbitrary = Mary.AssetName . BS.pack . take 32 . BS.unpack <$> arbitrary
+  arbitrary = Mary.AssetName . SBS.pack . take 32 . SBS.unpack <$> arbitrary
 
 instance Mock c => Arbitrary (MA.STS.UtxoPredicateFailure (MaryEra c)) where
   arbitrary = genericArbitraryU

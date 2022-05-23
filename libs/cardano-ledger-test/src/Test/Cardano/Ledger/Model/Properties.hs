@@ -42,7 +42,6 @@ import qualified Control.Monad.State.Strict as State
 import qualified Control.Monad.Trans.Writer.CPS as CPS
 import Control.Monad.Writer.Class
 import Control.State.Transition.Extended
-import qualified Data.ByteString.Char8 as BS
 import Data.Foldable
 import Data.Functor.Contravariant (Predicate (..))
 import Data.HKD
@@ -126,7 +125,7 @@ modelPlutusScript :: Natural -> ModelScript ('TyScriptFeature x 'True)
 modelPlutusScript = ModelScript_PlutusV1 . ModelPlutusScript_AlwaysSucceeds
 
 instance IsString AssetName where
-  fromString = AssetName . BS.pack
+  fromString = AssetName . fromString
 
 modelTestDelegations ::
   forall era proxy.

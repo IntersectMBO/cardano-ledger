@@ -57,7 +57,7 @@ import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
 import qualified Data.ByteString.Base64 as B64
-import Data.ByteString.Short as SBS (ShortByteString)
+import Data.ByteString.Short as SBS (ShortByteString, fromShort)
 import qualified Data.ByteString.UTF8 as BSU
 import Data.Coders
   ( Decode (..),
@@ -278,7 +278,7 @@ transPolicyID :: Mary.PolicyID crypto -> PV1.CurrencySymbol
 transPolicyID (Mary.PolicyID (ScriptHash x)) = PV1.CurrencySymbol (PV1.toBuiltin (hashToBytes x))
 
 transAssetName :: Mary.AssetName -> PV1.TokenName
-transAssetName (Mary.AssetName bs) = PV1.TokenName (PV1.toBuiltin bs)
+transAssetName (Mary.AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 
 transValue :: Mary.Value c -> PV1.Value
 transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp

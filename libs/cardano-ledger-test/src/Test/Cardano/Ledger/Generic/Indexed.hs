@@ -36,7 +36,7 @@ import Cardano.Ledger.Shelley.TxBody (WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Data.ByteString (ByteString, pack, unpack)
+import Data.ByteString.Short (ShortByteString, pack, unpack)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence.Strict as Seq (fromList)
@@ -62,26 +62,26 @@ class PrettyA t => Fixed t where
   size _ = Nothing
 
 class Era e => IndexedE t e where
-  pickE :: Int -> Proof e -> (t e)
+  pickE :: Int -> Proof e -> t e
 
-pickCbyCrypto :: (Fixed (t c)) => Int -> Evidence c -> (t c)
+pickCbyCrypto :: Fixed (t c) => Int -> Evidence c -> t c
 pickCbyCrypto n Standard = unique n
 pickCbyCrypto n Mock = unique n
 
-pickCbyEra :: (Fixed (t (Crypto era))) => Int -> Proof era -> (t (Crypto era))
+pickCbyEra :: Fixed (t (Crypto era)) => Int -> Proof era -> t (Crypto era)
 pickCbyEra n _ = unique n
 
 -- =======================================================
 -- Examples where the type is independent of Era
 
-names :: ByteString
+names :: ShortByteString
 names = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 
-allnames :: [ByteString]
-allnames = (map (\x -> pack [x]) (unpack names))
+allnames :: [ShortByteString]
+allnames = map (\x -> pack [x]) (unpack names)
 
 instance Fixed Mary.AssetName where
-  unique n = (map Mary.AssetName allnames) !! n
+  unique n = map Mary.AssetName allnames !! n
   size _ = Just (length allnames)
 
 instance Fixed Coin where
@@ -315,7 +315,7 @@ instance (CC.Crypto c) => PrettyA (PublicSecret kr kr' c) where
   prettyA (PublicSecret x y) = ppPair prettyA prettyA (x, y)
 
 instance PrettyA (SKey kr c) where
-  prettyA (SKey _x) = ppString ("SKey")
+  prettyA (SKey _x) = ppString "SKey"
 
 instance PrettyA (MultiAsset era) where
   prettyA (MultiAsset v) = prettyA v

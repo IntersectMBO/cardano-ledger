@@ -119,3 +119,4 @@ pointWise p m (Bin _ k v2 ls rs) =
   case Map.splitLookup k m of
     (lm, Just v1, rm) -> p v1 v2 && pointWise p ls lm && pointWise p rs rm
     _ -> False
+{-# INLINEABLE pointWise #-}

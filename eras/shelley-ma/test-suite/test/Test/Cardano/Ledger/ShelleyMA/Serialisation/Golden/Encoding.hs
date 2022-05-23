@@ -46,7 +46,7 @@ import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
 import qualified Cardano.Ledger.Val as Val
 import Codec.CBOR.Encoding (Tokens (..))
-import qualified Data.ByteString.Char8 as BS
+import qualified Data.ByteString.Short as SBS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
@@ -79,14 +79,14 @@ policyID1 = PolicyID . (hashScript @A) $ policy1
 policyID2 :: PolicyID TestCrypto
 policyID2 = PolicyID . (hashScript @A) . RequireAllOf . StrictSeq.fromList $ []
 
-assetName1 :: BS.ByteString
-assetName1 = BS.pack "a1"
+assetName1 :: SBS.ShortByteString
+assetName1 = "a1"
 
-assetName2 :: BS.ByteString
-assetName2 = BS.pack "a2"
+assetName2 :: SBS.ShortByteString
+assetName2 = "a2"
 
-assetName3 :: BS.ByteString
-assetName3 = BS.pack "a3"
+assetName3 :: SBS.ShortByteString
+assetName3 = "a3"
 
 -- ===========================================
 -- == Test Values for Building Transactions ==
@@ -336,15 +336,15 @@ goldenEncodingTestsMary =
             <> S policyID1
             <> T
               ( TkMapLen 2
-                  . TkBytes assetName1
+                  . TkBytes (SBS.fromShort assetName1)
                   . TkInteger 13
-                  . TkBytes assetName2
+                  . TkBytes (SBS.fromShort assetName2)
                   . TkInteger 17
               )
             <> S policyID2
             <> T
               ( TkMapLen 1
-                  . TkBytes assetName3
+                  . TkBytes (SBS.fromShort assetName3)
                   . TkInteger 19
               )
         ),
@@ -359,7 +359,7 @@ goldenEncodingTestsMary =
             <> S policyID1
             <> T
               ( TkMapLen 1
-                  . TkBytes assetName1
+                  . TkBytes (SBS.fromShort assetName1)
                   . TkInteger (-19)
               )
         ),
@@ -441,7 +441,7 @@ goldenEncodingTestsMary =
     ]
 
 assetName32Bytes :: Assertion
-assetName32Bytes = expectDecodeFailure . AssetName . BS.pack $ "123456789-123456789-123456789-123"
+assetName32Bytes = expectDecodeFailure $ AssetName "123456789-123456789-123456789-123"
 
 -- | Golden Tests for Allegra and Mary
 goldenEncodingTests :: TestTree

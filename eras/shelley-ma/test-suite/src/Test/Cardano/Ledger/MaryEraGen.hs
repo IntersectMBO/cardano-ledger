@@ -36,13 +36,13 @@ import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
 import Control.Monad (replicateM)
-import qualified Data.ByteString.Char8 as BS
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq (..), (<|), (><))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import GHC.Exts (fromString)
 import GHC.Records (HasField (getField))
 import Test.Cardano.Ledger.AllegraEraGen
   ( genValidityInterval,
@@ -144,7 +144,7 @@ redCoinId :: forall c. CryptoClass.Crypto c => PolicyID c
 redCoinId = PolicyID $ hashScript @(MaryEra c) redCoins
 
 red :: AssetName
-red = AssetName $ BS.pack "redCoin"
+red = AssetName "red"
 
 genRed :: CryptoClass.Crypto c => Gen (Value c)
 genRed = do
@@ -206,7 +206,7 @@ genYellow = do
   where
     genSingleYellow x = do
       y <- genInteger coloredCoinMinMint coloredCoinMaxMint
-      let an = AssetName . BS.pack $ "yellow" <> show x
+      let an = AssetName . fromString $ "yellow" <> show x
       pure (an, y)
 
 -- | Carefully crafted to apply in any Era where Core.Value is Value

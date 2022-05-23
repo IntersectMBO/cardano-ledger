@@ -21,7 +21,7 @@ import Cardano.Ledger.Mary.Value
   )
 import Cardano.Ledger.Val (Val (..), invert)
 import Control.Monad (replicateM)
-import Data.ByteString (ByteString)
+import Data.ByteString.Short (ShortByteString)
 import Data.CanonicalMaps
   ( CanonicalZero (..),
     canonicalInsert,
@@ -126,11 +126,11 @@ insertTests =
 -- ============================================================================================
 -- Arbitray instances
 
-genB :: Gen ByteString
+genB :: Gen ShortByteString
 genB = resize 4 arbitrary
 
 genAssetName :: Gen AssetName
-genAssetName = fmap AssetName genB
+genAssetName = AssetName <$> genB
 
 genPolicyID :: Gen (PolicyID C_Crypto)
 genPolicyID = PolicyID <$> arbitrary

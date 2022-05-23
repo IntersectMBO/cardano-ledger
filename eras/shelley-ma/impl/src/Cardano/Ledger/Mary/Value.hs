@@ -43,7 +43,6 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), integerToWord64)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Serialization (decodeMap, encodeMap)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
@@ -55,8 +54,8 @@ import Cardano.Prelude (cborError)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
-import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as BS16
+import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Short as SBS
 import Data.ByteString.Short.Internal (ShortByteString (SBS))
 import Data.CanonicalMaps
@@ -68,7 +67,9 @@ import Data.Coders
   ( Decode (..),
     Encode (..),
     decode,
+    decodeMap,
     encode,
+    encodeMap,
     (!>),
     (<!),
   )
@@ -98,24 +99,27 @@ import NoThunks.Class (NoThunks (..), OnlyCheckWhnfNamed (..))
 import Prelude hiding (lookup)
 
 -- | Asset Name
-newtype AssetName = AssetName {assetName :: BS.ByteString}
+newtype AssetName = AssetName {assetName :: SBS.ShortByteString}
   deriving newtype
-    ( Show,
-      Eq,
+    ( Eq,
       ToCBOR,
       Ord,
       NoThunks,
       NFData
     )
 
+instance Show AssetName where
+  show = BS8.unpack . BS16.encode . SBS.fromShort . assetName
+
 instance FromCBOR AssetName where
   fromCBOR = do
     an <- fromCBOR
-    if BS.length an > 32
+    if SBS.length an > 32
       then
         cborError $
-          DecoderErrorCustom "asset name exceeds 32 bytes:" (decodeLatin1 $ BS16.encode an)
-      else pure . AssetName $ an
+          DecoderErrorCustom "asset name exceeds 32 bytes:" $
+            decodeLatin1 $ BS16.encode $ SBS.fromShort an
+      else pure $ AssetName an
 
 -- | Policy ID
 newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
@@ -152,7 +156,7 @@ instance Abelian (Value crypto)
 -- Make the Val instance of Value
 
 instance CC.Crypto crypto => Val (Value crypto) where
-  s <×> (Value c v) =
+  s <×> Value c v =
     Value
       (fromIntegral s * c)
       (canonicalMap (canonicalMap (fromIntegral s *)) v)
@@ -187,7 +191,7 @@ instance CC.Crypto crypto => Val (Value crypto) where
 
   isAdaOnlyCompact = \case
     CompactValue (CompactValueAdaOnly _) -> True
-    CompactValue (CompactValueMultiAsset {}) -> False
+    CompactValue CompactValueMultiAsset {} -> False
 
   injectCompact = CompactValue . CompactValueAdaOnly
 
@@ -550,8 +554,8 @@ to v = do
 
         forM_ (Map.toList assetNameOffsetMap) $
           \(AssetName anameBS, offset) ->
-            let anameBytes = SBS.toShort anameBS
-                anameLen = BS.length anameBS
+            let anameBytes = anameBS
+                anameLen = SBS.length anameBS
              in BA.copyByteArray
                   byteArray
                   (fromIntegral offset)
@@ -588,7 +592,7 @@ to v = do
     -- is last, so the associated offset is pointing to the end of the array
     assetNames = Set.toDescList $ Set.fromList $ (\(_, an, _) -> an) <$> triples
 
-    assetNameLengths = fromIntegral . BS.length . assetName <$> assetNames
+    assetNameLengths = fromIntegral . SBS.length . assetName <$> assetNames
 
     assetNameOffsetMap :: Map AssetName Word16
     assetNameOffsetMap =
@@ -624,7 +628,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
 
     assetNames = Set.fromList $ (\(_, an, _) -> an) <$> xs
     anameBlockSize =
-      Semigroup.getSum $ foldMap' (Semigroup.Sum . BS.length . assetName) assetNames
+      Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetName) assetNames
 
 from :: forall crypto. (CC.Crypto crypto) => CompactValue crypto -> Value crypto
 from (CompactValueAdaOnly (CompactCoin c)) = Value (fromIntegral c) mempty
@@ -678,8 +682,7 @@ from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
                 rep
                 (fromIntegral p)
                 (fromIntegral $ Hash.sizeHash ([] :: [CC.ADDRHASH crypto])),
-        AssetName $
-          SBS.fromShort $ readShortByteString rep (fromIntegral a) (assetLen a),
+        AssetName $ readShortByteString rep (fromIntegral a) (assetLen a),
         fromIntegral i
       )
 

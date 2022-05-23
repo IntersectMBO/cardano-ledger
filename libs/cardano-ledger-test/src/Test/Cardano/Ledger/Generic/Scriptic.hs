@@ -19,7 +19,6 @@ import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import qualified Data.ByteString.Char8 as BS
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as Seq (fromList)
 import Numeric.Natural (Natural)
@@ -33,14 +32,17 @@ import Test.Cardano.Ledger.Generic.Proof
 theSlot :: Int -> SlotNo
 theSlot n = SlotNo (fromIntegral n)
 
-class (Era era, ValidateScript era, Eq (Core.Script era), Show (Core.Script era)) => Scriptic era where
-  always :: Natural -> Proof era -> (Core.Script era)
-  alwaysAlt :: Natural -> Proof era -> (Core.Script era)
-  never :: Natural -> Proof era -> (Core.Script era)
-  require :: KeyHash 'Witness (Crypto era) -> Proof era -> (Core.Script era)
-  allOf :: [Proof era -> (Core.Script era)] -> Proof era -> (Core.Script era)
-  anyOf :: [Proof era -> (Core.Script era)] -> Proof era -> (Core.Script era)
-  mOf :: Int -> [Proof era -> (Core.Script era)] -> Proof era -> (Core.Script era)
+class
+  (Era era, ValidateScript era, Eq (Core.Script era), Show (Core.Script era)) =>
+  Scriptic era
+  where
+  always :: Natural -> Proof era -> Core.Script era
+  alwaysAlt :: Natural -> Proof era -> Core.Script era
+  never :: Natural -> Proof era -> Core.Script era
+  require :: KeyHash 'Witness (Crypto era) -> Proof era -> Core.Script era
+  allOf :: [Proof era -> Core.Script era] -> Proof era -> Core.Script era
+  anyOf :: [Proof era -> Core.Script era] -> Proof era -> Core.Script era
+  mOf :: Int -> [Proof era -> Core.Script era] -> Proof era -> Core.Script era
 
 class Scriptic era => PostShelley era where
   before :: Int -> Proof era -> Core.Script era
@@ -54,9 +56,9 @@ instance CC.Crypto c => Scriptic (ShelleyEra c) where
   always _ (Shelley _) = Multi.RequireAllOf mempty -- always True
   alwaysAlt _ (Shelley _) = Multi.RequireAllOf mempty -- always True
   require key (Shelley _) = Multi.RequireSignature key
-  allOf xs (Shelley c) = (Multi.RequireAllOf (map ($ Shelley c) xs))
-  anyOf xs (Shelley c) = (Multi.RequireAnyOf (map ($ Shelley c) xs))
-  mOf n xs (Shelley c) = (Multi.RequireMOf n (map ($ Shelley c) xs))
+  allOf xs (Shelley c) = Multi.RequireAllOf (map ($ Shelley c) xs)
+  anyOf xs (Shelley c) = Multi.RequireAnyOf (map ($ Shelley c) xs)
+  mOf n xs (Shelley c) = Multi.RequireMOf n (map ($ Shelley c) xs)
 
 -- Make Scripts in AllegraEra
 
@@ -65,9 +67,9 @@ instance CC.Crypto c => Scriptic (AllegraEra c) where
   always _ (Allegra _) = RequireAllOf mempty -- always True
   alwaysAlt _ (Allegra _) = RequireAllOf mempty -- always True
   require key (Allegra _) = RequireSignature key
-  allOf xs (Allegra c) = (RequireAllOf (Seq.fromList (map ($ Allegra c) xs)))
-  anyOf xs (Allegra c) = (RequireAnyOf (Seq.fromList (map ($ Allegra c) xs)))
-  mOf n xs (Allegra c) = (RequireMOf n (Seq.fromList (map ($ Allegra c) xs)))
+  allOf xs (Allegra c) = RequireAllOf (Seq.fromList (map ($ Allegra c) xs))
+  anyOf xs (Allegra c) = RequireAnyOf (Seq.fromList (map ($ Allegra c) xs))
+  mOf n xs (Allegra c) = RequireMOf n (Seq.fromList (map ($ Allegra c) xs))
 
 instance CC.Crypto c => PostShelley (AllegraEra c) where
   before n (Allegra _) = RequireTimeStart (theSlot n)
@@ -80,9 +82,9 @@ instance CC.Crypto c => Scriptic (MaryEra c) where
   always _ (Mary _) = RequireAllOf mempty -- always True
   alwaysAlt _ (Mary _) = RequireAllOf mempty -- always True
   require key (Mary _) = RequireSignature key
-  allOf xs (Mary c) = (RequireAllOf (Seq.fromList (map ($ Mary c) xs)))
-  anyOf xs (Mary c) = (RequireAnyOf (Seq.fromList (map ($ Mary c) xs)))
-  mOf n xs (Mary c) = (RequireMOf n (Seq.fromList (map ($ Mary c) xs)))
+  allOf xs (Mary c) = RequireAllOf (Seq.fromList (map ($ Mary c) xs))
+  anyOf xs (Mary c) = RequireAnyOf (Seq.fromList (map ($ Mary c) xs))
+  mOf n xs (Mary c) = RequireMOf n (Seq.fromList (map ($ Mary c) xs))
 
 instance CC.Crypto c => PostShelley (MaryEra c) where
   before n (Mary _) = RequireTimeStart (theSlot n)
@@ -92,19 +94,19 @@ instance forall c. CC.Crypto c => HasTokens (MaryEra c) where
   forge n s = Mary.Value 0 $ Map.singleton pid (Map.singleton an n)
     where
       pid = Mary.PolicyID (hashScript @(MaryEra c) s)
-      an = Mary.AssetName $ BS.pack "an"
+      an = Mary.AssetName "an"
 
 instance forall c. CC.Crypto c => HasTokens (AlonzoEra c) where
   forge n s = Mary.Value 0 $ Map.singleton pid (Map.singleton an n)
     where
       pid = Mary.PolicyID (hashScript @(AlonzoEra c) s)
-      an = Mary.AssetName $ BS.pack "an"
+      an = Mary.AssetName "an"
 
 instance forall c. CC.Crypto c => HasTokens (BabbageEra c) where
   forge n s = Mary.Value 0 $ Map.singleton pid (Map.singleton an n)
     where
       pid = Mary.PolicyID (hashScript @(BabbageEra c) s)
-      an = Mary.AssetName $ BS.pack "an"
+      an = Mary.AssetName "an"
 
 -- =================================
 -- Make Scripts in Alonzo era
@@ -113,9 +115,9 @@ instance forall c. CC.Crypto c => HasTokens (BabbageEra c) where
 unTime :: CC.Crypto (Crypto era) => Proof era -> (Proof era -> Script era) -> Timelock (Crypto era)
 unTime wit f = case f wit of
   (TimelockScript x) -> x
-  (PlutusScript _ "\SOH\NUL\NUL \ACK\SOH") -> (RequireAnyOf mempty)
-  (PlutusScript _ "\SOH\NUL\NUL \STX\NUL\NUL\DC1") -> (RequireAllOf mempty)
-  (PlutusScript _ _) -> error ("Plutus script in Timelock context")
+  (PlutusScript _ "\SOH\NUL\NUL \ACK\SOH") -> RequireAnyOf mempty
+  (PlutusScript _ "\SOH\NUL\NUL \STX\NUL\NUL\DC1") -> RequireAllOf mempty
+  (PlutusScript _ _) -> error "Plutus script in Timelock context"
 
 instance CC.Crypto c => Scriptic (AlonzoEra c) where
   never n (Alonzo _) = alwaysFails PlutusV1 n -- always False
@@ -151,7 +153,7 @@ matchkey :: Scriptic era => Int -> Proof era -> Core.Script era
 matchkey n era = require (theKeyHash n) era
 
 test21 :: Scriptic era => Proof era -> Core.Script era
-test21 wit = allOf [always 1, matchkey 1, anyOf [matchkey 2, matchkey 3]] $ wit
+test21 wit = allOf [always 1, matchkey 1, anyOf [matchkey 2, matchkey 3]] wit
 
 test22 :: PostShelley era => Proof era -> Core.Script era
-test22 wit = mOf 2 [matchkey 1, before 100, anyOf [matchkey 2, matchkey 3]] $ wit
+test22 wit = mOf 2 [matchkey 1, before 100, anyOf [matchkey 2, matchkey 3]] wit
