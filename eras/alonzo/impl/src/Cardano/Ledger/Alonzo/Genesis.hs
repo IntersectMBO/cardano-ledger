@@ -218,7 +218,7 @@ instance FromJSONKey Language where
 
 validateCostModel :: MonadFail m => (Language, (Map Text Integer)) -> m (Language, CostModel)
 validateCostModel (lang, cmps) = case mkCostModel lang cmps of
-  Left err -> fail err
+  Left err -> fail $ show err
   Right cm -> pure (lang, cm)
 
 -- | The keys of the Plutus V1 cost models have changed since the Alonzo genesis file was created.
