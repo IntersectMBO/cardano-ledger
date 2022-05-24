@@ -69,6 +69,7 @@ import Test.Cardano.Ledger.Generic.ModelState (MUtxo)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters (updateTx)
+import Cardano.Ledger.Slot (EpochNo)
 
 -- ====================================================================
 -- Era agnostic actions on (Core.PParams era) (Core.TxOut era) and
@@ -130,9 +131,17 @@ depositsAndRefunds proof pp certificates = List.foldl' accum (Coin 0) certificat
     accum ans (DCertDeleg (RegKey _)) = keydep <+> ans
     accum ans (DCertDeleg (DeRegKey _)) = ans <-> keydep
     accum ans (DCertPool (RegPool _)) = pooldep <+> ans
-    accum ans (DCertPool (RetirePool _ _)) = ans <-> pooldep
+    --accum ans (DCertPool (RetirePool _ _)) = ans <-> pooldep 
+     -- TODO Seems like this is accounted for somewhere else.. find out where.
     accum ans _ = ans
     (keydep, pooldep :: Coin) = keyPoolDeposits proof pp
+
+epochMax :: Proof era -> Core.PParams era -> EpochNo
+epochMax (Babbage _) = getField @"_eMax"
+epochMax (Alonzo _) = getField @"_eMax"
+epochMax (Mary _) = getField @"_eMax"
+epochMax (Allegra _) = getField @"_eMax"
+epochMax (Shelley _) = getField @"_eMax"
 
 keyPoolDeposits :: Proof era -> Core.PParams era -> (Coin, Coin)
 keyPoolDeposits proof pp = case proof of

@@ -35,7 +35,7 @@ import Cardano.Ledger.Pretty
     ppSafeHash,
     ppSet,
     ppString,
-    ppWord64,
+    ppWord64, ppKeyHash
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (totalAdaPotsES)
@@ -109,7 +109,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore
     pcScriptHash,
     pcTxBodyField,
     pcTxIn,
-    scriptSummary,
+    scriptSummary, pcKeyHash
   )
 import Cardano.Ledger.Shelley.EpochBoundary(SnapShots(..))
 import Test.Cardano.Ledger.Shelley.Rules.TestChain(stakeDistr)  
@@ -225,12 +225,15 @@ raiseMockError ::
   [MockChainFailure era] ->
   [Core.Tx era] ->
   Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Set.Set (KeyHash 'StakePool (Crypto era)) ->
   String
-raiseMockError slot (SlotNo next) epochstate pdfs txs scripts =
+raiseMockError slot (SlotNo next) epochstate pdfs txs scripts honestPools =
   let utxo = unUTxO $ (_utxo . lsUTxOState . esLState) epochstate
    in show $
         vsep
           [ pcSmallUTxO reify utxo txs,
+            ppString "===================================",
+            ppString "Honest Pools" <> ppSet ppKeyHash honestPools,
             ppString "===================================",
             showBlock utxo txs,
             ppString "===================================",
@@ -366,8 +369,9 @@ instance
       Left pdfs ->
         let txsl = Fold.toList txs
             scs = gsScripts gs
+            honestPools = Map.keysSet $ gsHonestPoolParams gs
          in trace
-              (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl scs)
+              (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl scs honestPools)
               (error "FAILS")
       -- Left pdfs -> trace ("Discard\n"++show(ppList (ppMockChainFailure reify) pdfs)) discard -- TODO should we enable this?
       Right mcs2 -> seq mcs2 (pure mockblock)
