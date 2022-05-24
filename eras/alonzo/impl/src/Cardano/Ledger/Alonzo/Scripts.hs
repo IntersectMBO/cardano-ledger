@@ -35,13 +35,15 @@ module Cardano.Ledger.Alonzo.Scripts
     ExUnits',
     Prices (..),
     hashCostModel,
-    isCostModelParamsWellFormed,
+    assertWellFormedCostModelParams,
     decodeCostModelMap,
     decodeCostModel,
     CostModels (..),
+    CostModelApplyError (..),
 
     -- * Deprecated
     validateCostModelParams,
+    isCostModelParamsWellFormed,
   )
 where
 
@@ -64,6 +66,7 @@ import Control.Monad (when)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
 import Data.DerivingVia (InstantiatedAt (..))
+import Data.Either (isRight)
 import Data.Int (Int64)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -229,15 +232,15 @@ instance NFData CostModel where
 
 -- | Convert cost model parameters to a cost model, making use of the
 --  conversion function mkEvaluationContext from the Plutus API.
-mkCostModel :: Language -> Map Text Integer -> Either String CostModel
+mkCostModel :: Language -> Map Text Integer -> Either CostModelApplyError CostModel
 mkCostModel PlutusV1 cm =
   case PV1.mkEvaluationContext cm of
-    Just evalCtx -> Right (CostModel PlutusV1 cm evalCtx)
-    Nothing -> Left ("Invalid PlutusV1 cost model: " ++ show cm)
+    Right evalCtx -> Right (CostModel PlutusV1 cm evalCtx)
+    Left e -> Left e
 mkCostModel PlutusV2 cm =
   case PV2.mkEvaluationContext cm of
-    Just evalCtx -> Right (CostModel PlutusV2 cm evalCtx)
-    Nothing -> Left ("Invalid PlutusV2 cost model: " ++ show cm)
+    Right evalCtx -> Right (CostModel PlutusV2 cm evalCtx)
+    Left e -> Left e
 
 getCostModelLanguage :: CostModel -> Language
 getCostModelLanguage (CostModel lang _ _) = lang
@@ -252,7 +255,7 @@ decodeCostModel :: Language -> Decoder s CostModel
 decodeCostModel lang = do
   checked <- mkCostModel lang <$> decodeArrayAsMap keys fromCBOR
   case checked of
-    Left e -> fail e
+    Left e -> fail $ show e
     Right cm -> pure cm
   where
     keys = case lang of
@@ -383,6 +386,10 @@ instance
       decodeScript 2 = Ann (SumD $ PlutusScript PlutusV2) <*! Ann From
       decodeScript n = Invalid n
 
-{-# DEPRECATED validateCostModelParams "this function is replaced by isCostModelParamsWellFormed" #-}
+{-# DEPRECATED validateCostModelParams "this function is replaced by assertWellFormedCostModelParams" #-}
 validateCostModelParams :: CostModelParams -> Bool
-validateCostModelParams = isCostModelParamsWellFormed
+validateCostModelParams = isRight . assertWellFormedCostModelParams
+
+{-# DEPRECATED isCostModelParamsWellFormed "this function is replaced by assertWellFormedCostModelParams" #-}
+isCostModelParamsWellFormed :: CostModelParams -> Bool
+isCostModelParamsWellFormed = validateCostModelParams
