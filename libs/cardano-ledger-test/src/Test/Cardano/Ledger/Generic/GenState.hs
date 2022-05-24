@@ -31,6 +31,7 @@ module Test.Cardano.Ledger.Generic.GenState
     genRewards,
     genScript,
     genValidityInterval,
+    genNewPool,
     getBlocksizeMax,
     getCertificateMax,
     getOldUtxoPercent,
@@ -183,7 +184,7 @@ data GenState era = GenState
     gsInitialPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
     gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (Crypto era)) (IndividualPoolStake (Crypto era))),
     -- Honest fields are stable from initialization to the end of the generation process
-    gsHonestPool :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
+    gsHonestPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
     gsHonestDelegators :: !(Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))),
     gsRegKey :: !(Set (Credential 'Staking (Crypto era))),
     gsProof :: !(Proof era),
@@ -396,10 +397,8 @@ getNewPoolTest = do
   poolparams <- gets (mPoolParams . gsModel)
   pure (`Map.member` poolparams)
 
-getPoolParams :: KeyHash 'StakePool (Crypto era) -> GenRS era (StrictMaybe (PoolParams (Crypto era)))
-getPoolParams kh = gets $ \GenState{..} -> maybeToStrictMaybe $ 
-  Map.lookup kh gsHonestPool <|> 
-  Map.lookup kh gsInitialPoolParams
+getPoolParams :: GenState era -> Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))
+getPoolParams st = gsHonestPoolParams st <> gsInitialPoolParams st
 
 -- ========================================================================
 -- Tools to get started
@@ -409,10 +408,10 @@ getPoolParams kh = gets $ \GenState{..} -> maybeToStrictMaybe $
 initHonestFields :: Reflect era => Proof era -> Int -> GenRS era ()
 initHonestFields _ n = do
   old <- gets gsInitialPoolParams
-  hashes <- replicateM n genPool
+  hashes <- replicateM n (fst <$> genNewPool)
   new <- gets gsInitialPoolParams
   let diff = Map.difference new old
-  modify (\gs -> gs {gsHonestPool = diff})
+  modify (\gs -> gs {gsHonestPoolParams = diff})
   modifyModel (\ms -> ms {mPoolParams = mPoolParams ms <> diff})
   -- This incantation gets a list of fresh (not previously generated) Credential
   old' <- gets (Map.keysSet . gsInitialRewards)
@@ -551,33 +550,35 @@ genFreshCredential tries0 tag old = go tries0
 
 -- Adds to the mPoolParams and the  mPoolDistr of the Model, and the initial set of objects for Traces
 genPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
-genPool = frequencyT [(10, genNewPool), (90, pickExisting)]
+genPool = frequencyT [(10, fst <$> genNewPool), (90, pickExisting)]
   where
     pickExisting = do
       _pParams <- gets (mPoolParams . gsModel)
       lift (genMapElem _pParams) >>= \case
-        Nothing -> genNewPool
+        Nothing -> fst <$> genNewPool
         Just poolId -> pure $ fst poolId
-    genNewPool = do
-      poolId <- genKeyHash
-      poolparam <- genPoolParams poolId
-      percent <- lift $ choose (0, 1 :: Float)
-      let stake = IndividualPoolStake @(Crypto era) (toRational percent) (_poolVrf poolparam)
-      modify
-        ( \st ->
-            st
-              { gsInitialPoolParams = Map.insert poolId poolparam (gsInitialPoolParams st),
-                gsInitialPoolDistr = Map.insert poolId stake (gsInitialPoolDistr st)
-              }
-        )
-      modifyModel
-        ( \m ->
-            m
-              { mPoolParams = Map.insert poolId poolparam (mPoolParams m),
-                mPoolDistr = Map.insert poolId stake (mPoolDistr m)
-              }
-        )
-      pure poolId
+
+genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era))
+genNewPool = do
+  poolId <- genKeyHash
+  poolparam <- genPoolParams poolId
+  percent <- lift $ choose (0, 1 :: Float)
+  let stake = IndividualPoolStake @(Crypto era) (toRational percent) (_poolVrf poolparam)
+  --modify
+  --  ( \st ->
+  --      st
+  --        { gsInitialPoolParams = Map.insert poolId poolparam (gsInitialPoolParams st),
+  --          gsInitialPoolDistr = Map.insert poolId stake (gsInitialPoolDistr st)
+  --        }
+  --  )
+  modifyModel
+    ( \m ->
+        m
+          { mPoolParams = Map.insert poolId poolparam (mPoolParams m),
+            mPoolDistr = Map.insert poolId stake (mPoolDistr m)
+          }
+    )
+  pure (poolId, poolparam)
 
 genPoolParams ::
   Reflect era =>
@@ -795,7 +796,7 @@ pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoo
       ("Initial Rewards", ppMap pcCredential pcCoin irew),
       ("Initial PoolParams", ppMap pcKeyHash pcPoolParams ipoolp),
       ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake ipoold),
-      ("Honest Pools", ppMap pcKeyHash pcPoolParams hp),
+      ("Honest PoolParams", ppMap pcKeyHash pcPoolParams hp),
       ("Honest Delegators", ppMap pcCredential pcKeyHash hd),
       ("Previous RegKey", ppSet pcCredential irkey),
       ("GenEnv", ppString "GenEnv ..."),

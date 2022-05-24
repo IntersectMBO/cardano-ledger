@@ -98,7 +98,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getTreasury,
     initialLedgerState,
     modifyModel,
-    runGenRS,
+    runGenRS, 
   )
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)

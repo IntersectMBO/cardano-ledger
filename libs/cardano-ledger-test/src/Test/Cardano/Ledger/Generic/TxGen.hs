@@ -40,6 +40,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (IndividualPoolStake))
 import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
@@ -51,7 +52,7 @@ import Cardano.Ledger.Shelley.API
     PoolParams (..),
     RewardAcnt (..),
     SignKeyVRF,
-    StakePoolRelay (SingleHostAddr, SingleHostName, MultiHostName),
+    StakePoolRelay (MultiHostName, SingleHostAddr, SingleHostName),
     StakeReference (..),
     VerKeyVRF,
     Wdrl (..),
@@ -75,6 +76,7 @@ import qualified Data.ByteString.Char8 as BSC
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as F
 import Data.Functor
+import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -83,6 +85,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
 import Data.Sequence.Strict (StrictSeq)
+import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
@@ -103,19 +106,23 @@ import Test.Cardano.Ledger.Generic.GenState
     genDatumWithHash,
     genFreshRegCred,
     genKeyHash,
+    genNewPool,
     genPool,
+    genPoolParams,
     genPositiveVal,
     genRewards,
     genScript,
+    genValidityInterval,
     getCertificateMax,
     getOldUtxoPercent,
+    getPoolParams,
     getRefInputsMax,
     getSpendInputsMax,
     getUtxoChoicesMax,
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS, genValidityInterval, genPoolParams, getPoolParams
+    runGenRS,
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -130,8 +137,6 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
-import qualified Data.Sequence.Strict as Seq
-import Data.IP (IPv6, toIPv4w, toIPv6w, IPv4)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -553,11 +558,11 @@ genVRFKeyPair ::
 genVRFKeyPair proof = do
   seed <- freshSeed proof
   let sk = case getCrypto proof of
-             Mock -> genKeyVRF seed
-             Standard -> genKeyVRF seed
+        Mock -> genKeyVRF seed
+        Standard -> genKeyVRF seed
       vk = case getCrypto proof of
-             Mock -> deriveVerKeyVRF sk
-             Standard -> deriveVerKeyVRF sk
+        Mock -> deriveVerKeyVRF sk
+        Standard -> deriveVerKeyVRF sk
   pure (sk, vk)
 
 -- | Actually generates a random string with length up to 64 bytes
@@ -594,17 +599,18 @@ genIPAddr = do
   let genIPv4 = lift $ toIPv4w <$> arbitrary
   let genIPv6 = lift $ toIPv6w <$> arbitrary
   elementsT
-    [ (,SNothing) . SJust <$> genIPv4
-    , (SNothing,) . SJust <$> genIPv6
-    , (,) <$> fmap SJust genIPv4 <*> fmap SJust genIPv6
+    [ (,SNothing) . SJust <$> genIPv4,
+      (SNothing,) . SJust <$> genIPv6,
+      (,) <$> fmap SJust genIPv4 <*> fmap SJust genIPv6
     ]
 
 genRelay :: Proof era -> GenRS era StakePoolRelay
-genRelay _ = elementsT
-  [ genSingleHostAddr
-  , SingleHostName <$> genPort <*> genDNSName
-  , MultiHostName <$> genDNSName
-  ]
+genRelay _ =
+  elementsT
+    [ genSingleHostAddr,
+      SingleHostName <$> genPort <*> genDNSName,
+      MultiHostName <$> genDNSName
+    ]
   where
     genDNSName = lift arbitrary
     genPort = lift arbitrary
@@ -617,7 +623,7 @@ listOf' :: GenRS era a -> GenRS era [a]
 listOf' gen = do
   n <- lift getSize
   k <- lift $ chooseInt (0, n)
-  traverse (const gen) [1..k]
+  traverse (const gen) [1 .. k]
 
 genRelays :: Proof era -> GenRS era (StrictSeq StakePoolRelay)
 genRelays proof = Seq.fromList <$> listOf' (genRelay proof)
@@ -660,7 +666,7 @@ genDCert proof = do
           ],
       DCertPool
         <$> elementsT
-          [ RegPool <$> (genPoolParams =<< genKeyHash),
+          [ RegPool <$> genFreshPool,
             RetirePool <$> genRetirementHash proof <*> epoch
           ]
     ]
@@ -669,6 +675,9 @@ genDCert proof = do
       rewardAccount <- genFreshRegCred' proof
       poolId <- genPool
       pure $ Delegation {_delegator = rewardAccount, _delegatee = poolId}
+    genFreshPool = do
+      (poolId, pp) <- genNewPool
+      return pp
 
 genDCerts :: forall era. Reflect era => Proof era -> GenRS era [DCert (Crypto era)]
 genDCerts proof = do
@@ -713,13 +722,19 @@ genDCerts proof = do
                in insertIfNotPresent dcs' regCreds' (Just delegKey)
                     <$> lookupPlutusScript delegCred Cert
           DCertPool d
+            | RegPool PoolParams {..} <- d -> do
+              poolMap <- gets $ mPoolParams . gsModel
+              let poolParams = Map.lookup _poolId poolMap
+              case poolParams of
+                Just _ -> pure (dcs, ss, regCreds)
+                Nothing -> pure (dc : dcs, ss, regCreds)
             | RetirePool kh _ <- d -> do
-                -- We need to make sure that the pool is registered before
-                -- we try to retire it
-                poolParams <- getPoolParams kh
-                case poolParams of
-                  SJust _ -> pure (dc : dcs, ss, regCreds)
-                  SNothing -> pure (dcs, ss, regCreds)
+              -- We need to make sure that the pool is registered before
+              -- we try to retire it
+              poolParams <- gets $ Map.lookup kh . gsInitialPoolParams
+              case poolParams of
+                Just _ -> pure (dc : dcs, ss, regCreds)
+                Nothing -> pure (dcs, ss, regCreds)
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
@@ -846,7 +861,10 @@ getDCertCredential = \case
       RegKey _rk -> Nothing -- we don't require witnesses for RegKey
       DeRegKey drk -> Just drk
       Delegate (Delegation dk _) -> Just dk
-  DCertPool _p -> Nothing
+  DCertPool pc ->
+    case pc of
+      RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj _poolId
+      RetirePool kh _ -> Just . coerceKeyRole $ KeyHashObj kh
   DCertGenesis _g -> Nothing
   DCertMir _m -> Nothing
 
@@ -934,8 +952,6 @@ genValidatedTxAndInfo proof slot = do
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
-  let pCertWitHashes = mapMaybe getPCertCredential dcerts
-  pCertWitsMakers <- traverse (mkWitVKey proof Nothing . KeyHashObj) pCertWitHashes
 
   let isValid = IsValid (v1 && v2 && v3)
       mkWits :: [ExUnits -> [WitnessesField era]]
@@ -1008,7 +1024,7 @@ genValidatedTxAndInfo proof slot = do
           ]
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
       witsMakers :: [SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era]]
-      witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers ++ pCertWitsMakers
+      witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
       bogusNeededScripts = scriptsNeeded' proof utxoNoCollateral txBodyNoFee
       noFeeWits :: [WitnessesField era]
       noFeeWits =
@@ -1093,13 +1109,6 @@ genValidatedTxAndInfo proof slot = do
           }
     )
   pure (UTxO utxo, validTx, feepair, maybeoldpair)
-
-getPCertCredential :: DCert crypto -> Maybe (KeyHash 'StakePool crypto)
-getPCertCredential (DCertPool pc) =
-  case pc of
-    RegPool PoolParams{..} -> Just _poolId
-    RetirePool kh _ -> Just kh
-getPCertCredential _ = Nothing
 
 minus :: MUtxo era -> Maybe (UtxoEntry era) -> MUtxo era
 minus m Nothing = m
