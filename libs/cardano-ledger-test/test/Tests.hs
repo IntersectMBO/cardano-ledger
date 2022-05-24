@@ -8,6 +8,7 @@
 
 module Main where
 
+import Data.Default.Class (Default (def))
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
@@ -17,7 +18,6 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
     alonzoAPITests,
     collectOrderingAlonzo,
   )
-import Data.Default.Class(Default(def))
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import Test.Cardano.Ledger.Model.Properties (modelUnitTests_)
 import Test.Tasty

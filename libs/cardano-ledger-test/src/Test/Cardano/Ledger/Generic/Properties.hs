@@ -227,13 +227,13 @@ txPreserveAda gensize =
         forAll (genTxAndLEDGERState (Babbage Mock) gensize) (testTxValidForLEDGER (Babbage Mock))
     ]
 
--- | Ada is preserved over a trace of length 100
+-- | Ada is preserved over a trace of length 45
 adaIsPreserved ::
   ( Reflect era,
     HasTrace (MOCKCHAIN era) (Gen1 era)
   ) =>
   Proof era ->
-  GenSize -> 
+  GenSize ->
   TestTree
 adaIsPreserved proof gensize =
   testProperty (show proof ++ " era. Trace length = 45") $
@@ -242,7 +242,7 @@ adaIsPreserved proof gensize =
 tracePreserveAda :: GenSize -> TestTree
 tracePreserveAda gensize =
   testGroup
-    "Total Ada is preserved over traces of length 100"
+    "Total Ada is preserved over traces of length 3"
     [ adaIsPreservedBabbage gensize,
       adaIsPreserved (Alonzo Mock) gensize,
       adaIsPreserved (Mary Mock) gensize,
