@@ -23,7 +23,7 @@ module Cardano.Ledger.Shelley.Rules.Tick
   )
 where
 
-import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfo)
+import Cardano.Ledger.BaseTypes (ShelleyBase, StrictMaybe (..), epochInfoPure)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (GenDelegs (..))
@@ -155,7 +155,7 @@ validatingTickTransition ::
   TransitionRule (tick era)
 validatingTickTransition nes slot = do
   epoch <- liftSTS $ do
-    ei <- asks epochInfo
+    ei <- asks epochInfoPure
     epochInfoEpoch ei slot
 
   nes' <- trans @(Core.EraRule "NEWEPOCH" era) $ TRC ((), nes, epoch)

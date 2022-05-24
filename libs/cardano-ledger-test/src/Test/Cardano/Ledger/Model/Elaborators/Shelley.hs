@@ -12,7 +12,7 @@ import qualified Cardano.Crypto.DSIGN.Class as DSIGN
 import qualified Cardano.Crypto.KES.Class as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.Address (Addr)
-import Cardano.Ledger.BaseTypes (Globals (..), activeSlotVal, epochInfo)
+import Cardano.Ledger.BaseTypes (Globals (..), activeSlotVal, epochInfoPure)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Crypto (DSIGN, KES)
 import Cardano.Ledger.Era (Crypto)
@@ -132,7 +132,7 @@ fromShelleyGlobals globals pp genDelegs initialFunds =
       sgNetworkId = networkId globals,
       sgActiveSlotsCoeff = activeSlotVal $ activeSlotCoeff globals,
       sgSecurityParam = securityParameter globals,
-      sgEpochLength = runIdentity $ flip epochInfoSize (EpochNo 1) $ epochInfo globals,
+      sgEpochLength = runIdentity $ flip epochInfoSize (EpochNo 1) $ epochInfoPure globals,
       sgSlotsPerKESPeriod = slotsPerKESPeriod globals,
       sgMaxKESEvolutions = maxKESEvo globals,
       sgSlotLength = (secondsToNominalDiffTime 1),

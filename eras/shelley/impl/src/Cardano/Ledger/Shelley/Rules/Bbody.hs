@@ -22,12 +22,12 @@ module Cardano.Ledger.Shelley.Rules.Bbody
 where
 
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfo)
+import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
 import qualified Cardano.Ledger.Era as Era
-import Cardano.Ledger.Hashes (EraIndependentBlockBody)
+import Cardano.Ledger.Hashes (EraIndependentBlockBody, EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
@@ -37,7 +37,6 @@ import Cardano.Ledger.Shelley.LedgerState
     LedgerState,
   )
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersEnv (..))
-import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
 import Cardano.Ledger.Slot (epochInfoEpoch, epochInfoFirst)
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition
@@ -172,7 +171,7 @@ bbodyTransition =
         let hkAsStakePool = coerceKeyRole . bhviewID $ bhview
             slot = bhviewSlot bhview
         firstSlotNo <- liftSTS $ do
-          ei <- asks epochInfo
+          ei <- asks epochInfoPure
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
         pure $

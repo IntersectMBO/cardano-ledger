@@ -26,7 +26,16 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Crypto.Hash.Class (sizeHash)
-import Cardano.Ledger.BaseTypes (Globals (..), Network, ProtVer, ShelleyBase, StrictMaybe (..), epochInfo, invalidKey, networkId)
+import Cardano.Ledger.BaseTypes
+  ( Globals (..),
+    Network,
+    ProtVer,
+    ShelleyBase,
+    StrictMaybe (..),
+    epochInfoPure,
+    invalidKey,
+    networkId,
+  )
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
@@ -224,7 +233,7 @@ poolDelegationTransition = do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom stpools) ?! StakePoolNotRegisteredOnKeyPOOL hk
       EpochNo cepoch <- liftSTS $ do
-        ei <- asks epochInfo
+        ei <- asks epochInfoPure
         epochInfoEpoch ei slot
       let EpochNo maxEpoch = getField @"_eMax" pp
       cepoch < e && e <= cepoch + maxEpoch

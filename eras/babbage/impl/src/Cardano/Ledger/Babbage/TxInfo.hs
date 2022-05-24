@@ -33,11 +33,13 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
+import Control.Arrow (left)
 import Control.Monad (unless)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (Text)
 import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as PV1
 import Plutus.V1.Ledger.Contexts ()
@@ -170,10 +172,9 @@ transRedeemerPtr txb (ptr, (d, _)) =
     SJust sp -> Right (Alonzo.transScriptPurpose sp, transRedeemer d)
 
 babbageTxInfo ::
-  forall era m.
+  forall era.
   ( Era era,
     ValidateScript era,
-    Monad m,
     Value era ~ Mary.Value (Crypto era),
     HasField "wits" (Core.Tx era) (TxWitness era),
     HasField "datahash" (TxOut era) (StrictMaybe (SafeHash (Crypto era) EraIndependentData)),
@@ -190,52 +191,51 @@ babbageTxInfo ::
   ) =>
   Core.PParams era ->
   Language ->
-  EpochInfo m ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
   Core.Tx era ->
-  m (Either TranslationError VersionedTxInfo)
+  Either TranslationError VersionedTxInfo
 babbageTxInfo pp lang ei sysS utxo tx = do
-  timeRange <- Alonzo.transVITime pp ei sysS interval
-  pure $
-    case lang of
-      PlutusV1 -> do
-        unless (Set.null $ getField @"referenceInputs" tbody) (Left ReferenceInputsNotSupported)
-        inputs <- mapM (txInfoInV1 utxo) (Set.toList (getField @"inputs" tbody))
-        outputs <- mapM (txInfoOutV1 OutputFromOutput) (foldr (:) [] outs)
-        pure . TxInfoPV1 $
-          PV1.TxInfo
-            { PV1.txInfoInputs = inputs,
-              PV1.txInfoOutputs = outputs,
-              PV1.txInfoFee = Alonzo.transValue (inject @(Mary.Value (Crypto era)) fee),
-              PV1.txInfoMint = Alonzo.transValue forge,
-              PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (getField @"certs" tbody),
-              PV1.txInfoWdrl = Map.toList (Alonzo.transWdrl (getField @"wdrls" tbody)),
-              PV1.txInfoValidRange = timeRange,
-              PV1.txInfoSignatories = map Alonzo.transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
-              PV1.txInfoData = map Alonzo.transDataPair datpairs,
-              PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) tbody))
-            }
-      PlutusV2 -> do
-        inputs <- mapM (txInfoInV2 utxo) (Set.toList (getField @"inputs" tbody))
-        refInputs <- mapM (txInfoInV2 utxo) (Set.toList (getField @"referenceInputs" tbody))
-        outputs <- mapM (txInfoOutV2 OutputFromOutput) (foldr (:) [] outs)
-        rdmrs' <- mapM (transRedeemerPtr tbody) rdmrs
-        pure . TxInfoPV2 $
-          PV2.TxInfo
-            { PV2.txInfoInputs = inputs,
-              PV2.txInfoOutputs = outputs,
-              PV2.txInfoReferenceInputs = refInputs,
-              PV2.txInfoFee = Alonzo.transValue (inject @(Mary.Value (Crypto era)) fee),
-              PV2.txInfoMint = Alonzo.transValue forge,
-              PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (getField @"certs" tbody),
-              PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWdrl (getField @"wdrls" tbody)),
-              PV2.txInfoValidRange = timeRange,
-              PV2.txInfoSignatories = map Alonzo.transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
-              PV2.txInfoRedeemers = PV2.fromList rdmrs',
-              PV2.txInfoData = PV2.fromList $ map Alonzo.transDataPair datpairs,
-              PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) tbody))
-            }
+  timeRange <- left (const TimeTranslationPastHorizon) $ Alonzo.transVITime pp ei sysS interval
+  case lang of
+    PlutusV1 -> do
+      unless (Set.null $ getField @"referenceInputs" tbody) (Left ReferenceInputsNotSupported)
+      inputs <- mapM (txInfoInV1 utxo) (Set.toList (getField @"inputs" tbody))
+      outputs <- mapM (txInfoOutV1 OutputFromOutput) (foldr (:) [] outs)
+      pure . TxInfoPV1 $
+        PV1.TxInfo
+          { PV1.txInfoInputs = inputs,
+            PV1.txInfoOutputs = outputs,
+            PV1.txInfoFee = Alonzo.transValue (inject @(Mary.Value (Crypto era)) fee),
+            PV1.txInfoMint = Alonzo.transValue forge,
+            PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (getField @"certs" tbody),
+            PV1.txInfoWdrl = Map.toList (Alonzo.transWdrl (getField @"wdrls" tbody)),
+            PV1.txInfoValidRange = timeRange,
+            PV1.txInfoSignatories = map Alonzo.transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
+            PV1.txInfoData = map Alonzo.transDataPair datpairs,
+            PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) tbody))
+          }
+    PlutusV2 -> do
+      inputs <- mapM (txInfoInV2 utxo) (Set.toList (getField @"inputs" tbody))
+      refInputs <- mapM (txInfoInV2 utxo) (Set.toList (getField @"referenceInputs" tbody))
+      outputs <- mapM (txInfoOutV2 OutputFromOutput) (foldr (:) [] outs)
+      rdmrs' <- mapM (transRedeemerPtr tbody) rdmrs
+      pure . TxInfoPV2 $
+        PV2.TxInfo
+          { PV2.txInfoInputs = inputs,
+            PV2.txInfoOutputs = outputs,
+            PV2.txInfoReferenceInputs = refInputs,
+            PV2.txInfoFee = Alonzo.transValue (inject @(Mary.Value (Crypto era)) fee),
+            PV2.txInfoMint = Alonzo.transValue forge,
+            PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (getField @"certs" tbody),
+            PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWdrl (getField @"wdrls" tbody)),
+            PV2.txInfoValidRange = timeRange,
+            PV2.txInfoSignatories = map Alonzo.transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
+            PV2.txInfoRedeemers = PV2.fromList rdmrs',
+            PV2.txInfoData = PV2.fromList $ map Alonzo.transDataPair datpairs,
+            PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) tbody))
+          }
   where
     tbody :: Core.TxBody era
     tbody = getField @"body" tx

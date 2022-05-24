@@ -26,7 +26,7 @@ import Cardano.Ledger.Alonzo.TxSeq (txSeqTxns)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
-import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfo)
+import Cardano.Ledger.BaseTypes (ShelleyBase, UnitInterval, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (..))
@@ -177,7 +177,7 @@ bbodyTransition =
         let hkAsStakePool = coerceKeyRole . bhviewID $ bh
             slot = bhviewSlot bh
         firstSlotNo <- liftSTS $ do
-          ei <- asks epochInfo
+          ei <- asks epochInfoPure
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
 

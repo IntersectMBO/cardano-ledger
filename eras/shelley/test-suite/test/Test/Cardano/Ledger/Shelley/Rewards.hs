@@ -32,7 +32,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     activeSlotVal,
-    epochInfo,
+    epochInfoPure,
     mkActiveSlotCoeff,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), rationalToCoinViaFloor, toDeltaCoin)
@@ -392,7 +392,7 @@ justRewardInfo globals newepochstate =
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
@@ -426,7 +426,7 @@ nothingInNothingOut newepochstate =
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
@@ -449,7 +449,7 @@ justInJustOut newepochstate =
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
@@ -691,7 +691,7 @@ oldEqualsNew pv newepochstate =
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
     unAggregated =
       runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
@@ -718,7 +718,7 @@ oldEqualsNewOn pv newepochstate = old === new
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
     (unAggregated, _) =
       runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old :: Map (Credential 'Staking (Crypto era)) Coin

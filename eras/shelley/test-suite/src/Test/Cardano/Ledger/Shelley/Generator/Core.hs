@@ -67,7 +67,7 @@ import Cardano.Ledger.BaseTypes
     ProtVer (..),
     StrictMaybe (..),
     UnitInterval,
-    epochInfo,
+    epochInfoPure,
     stabilityWindow,
   )
 import Cardano.Ledger.Block (Block (..))
@@ -682,7 +682,7 @@ getKESPeriodRenewalNo keys (KESPeriod kp) =
 -- slots of the current epoch.
 tooLateInEpoch :: SlotNo -> Bool
 tooLateInEpoch s = runShelleyBase $ do
-  ei <- asks epochInfo
+  ei <- asks epochInfoPure
   firstSlotNo <- epochInfoFirst ei (epochFromSlotNo s + 1)
   stabilityWindow <- asks stabilityWindow
 

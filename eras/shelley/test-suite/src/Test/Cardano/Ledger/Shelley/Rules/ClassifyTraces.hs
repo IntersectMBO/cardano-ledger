@@ -20,7 +20,7 @@ module Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
 where
 
 import Cardano.Binary (ToCBOR, serialize')
-import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfo)
+import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..), epochInfoPure)
 import Cardano.Ledger.Block (Block (..), bheader)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..), SupportsSegWit (fromTxSeq), TxSeq)
@@ -420,6 +420,6 @@ epochsInTrace bs =
   where
     fromEpoch = atEpoch . blockSlot $ head bs
     toEpoch = atEpoch . blockSlot $ last bs
-    EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfo) testGlobals undefined
+    EpochSize slotsPerEpoch = runShelleyBase $ (epochInfoSize . epochInfoPure) testGlobals undefined
     blockSlot = bheaderSlotNo . bhbody . bheader
     atEpoch (SlotNo s) = s `div` slotsPerEpoch

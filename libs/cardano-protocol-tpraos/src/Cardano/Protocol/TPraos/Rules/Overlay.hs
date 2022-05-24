@@ -41,7 +41,7 @@ import Cardano.Ledger.BaseTypes
     UnitInterval,
     activeSlotCoeff,
     activeSlotVal,
-    epochInfo,
+    epochInfoPure,
   )
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Keys
@@ -268,7 +268,7 @@ overlayTransition =
 
         asc <- liftSTS $ asks activeSlotCoeff
         firstSlotNo <- liftSTS $ do
-          ei <- asks epochInfo
+          ei <- asks epochInfoPure
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
 

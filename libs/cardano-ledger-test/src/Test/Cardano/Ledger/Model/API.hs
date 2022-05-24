@@ -135,7 +135,7 @@ where
 
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
-    epochInfo,
+    epochInfoPure,
   )
 import Cardano.Ledger.Coin
   ( Coin,
@@ -335,7 +335,7 @@ instance NFData (ModelLedger era)
 applyModelTick :: HasModelM era st r m => SlotNo -> m ()
 applyModelTick mslot = do
   globals <- asks getGlobals
-  let ei = epochInfo globals
+  let ei = epochInfoPure globals
   Identity firstSlot <- epochInfoFirst ei <$> use (modelLedger . to getModelLedger_epoch)
   let slot = firstSlot + mslot
 
@@ -384,7 +384,7 @@ applyModelBlocksMade blocksMade = do
   currentSlotOffset <- modelLedger . modelLedger_slotOffset <<.= 0
 
   globals <- asks getGlobals
-  let ei = epochInfo globals
+  let ei = epochInfoPure globals
       prevEpoch = epochNo
       epoch = succ epochNo
       firstOfOld = runIdentity $ epochInfoFirst ei prevEpoch

@@ -67,7 +67,7 @@ import Cardano.Ledger.BaseTypes
     Globals (..),
     Network (Testnet),
     StrictMaybe (..),
-    epochInfo,
+    epochInfoPure,
     mkTxIxPartial,
   )
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
@@ -1088,7 +1088,7 @@ class
       mblock@(ModelBlock mslot mtxSeq) -> do
         currentEpoch <- use $ _2 . eesCurrentEpoch
         let slot = runIdentity (epochInfoFirst ei currentEpoch) + mslot
-            ei = epochInfo globals
+            ei = epochInfoPure globals
             ttl = succ slot
 
         unless (currentEpoch == runIdentity (epochInfoEpoch ei slot)) $ error $ "model slot out of range: " <> show mslot
@@ -1403,7 +1403,7 @@ class
 
     prevEpoch <- use $ _2 . eesCurrentEpoch
     epoch <- _2 . eesCurrentEpoch <%= succ
-    let ei = epochInfo globals
+    let ei = epochInfoPure globals
     bs <- for (Map.toList $ unModelBlocksMade mblocksMade) $ \(maddr, n) -> do
       poolKey <- zoom _2 $ getTestPoolId (Proxy :: Proxy era) maddr
       pure (poolKey, n)

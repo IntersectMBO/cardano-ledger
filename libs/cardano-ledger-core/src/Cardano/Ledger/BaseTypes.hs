@@ -60,7 +60,7 @@ module Cardano.Ledger.BaseTypes
 
     -- * STS Base
     Globals (..),
-    epochInfo,
+    epochInfoPure,
     ShelleyBase,
   )
 where
@@ -583,7 +583,7 @@ activeSlotLog f = fromIntegral (unActiveSlotLog f) / fpPrecision
 --------------------------------------------------------------------------------
 
 data Globals = Globals
-  { epochInfoWithErr :: !(EpochInfo (Either Text)),
+  { epochInfo :: !(EpochInfo (Either Text)),
     slotsPerKESPeriod :: !Word64,
     -- | The window size in which our chosen chain growth property
     --   guarantees at least k blocks. From the paper
@@ -618,8 +618,11 @@ instance NoThunks Globals
 
 type ShelleyBase = ReaderT Globals Identity
 
-epochInfo :: Globals -> EpochInfo Identity
-epochInfo = hoistEpochInfo (either (throw . EpochErr) pure) . epochInfoWithErr
+-- | Pure epoch info via throw. Note that this should only be used when we can
+-- guarantee the validity of the translation; in particular, the `EpochInfo`
+-- used here should never be applied to user-supplied input.
+epochInfoPure :: Globals -> EpochInfo Identity
+epochInfoPure = hoistEpochInfo (either (throw . EpochErr) pure) . epochInfo
 
 newtype EpochErr = EpochErr Text
 

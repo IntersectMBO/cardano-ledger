@@ -50,7 +50,7 @@ where
 
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
-    epochInfo,
+    epochInfoPure,
   )
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.Keys (KeyRole (..))
@@ -697,7 +697,7 @@ instance ModelSTS 'ModelRule_TICK where
   applyRuleImpl _ slot = RWS.execRWST $ do
     Identity epoch <-
       epochInfoEpoch
-        <$> asks (epochInfo . getGlobals)
+        <$> asks (epochInfoPure . getGlobals)
         <*> pure (getConst slot)
 
     lift $ setSlot epoch (getConst slot)
@@ -716,7 +716,7 @@ instance ModelSTS 'ModelRule_RUPD where
       State.get >>= \case
         Compose (Just _) -> pure ()
         Compose (Nothing) -> do
-          ei <- asks (epochInfo . getGlobals)
+          ei <- asks (epochInfoPure . getGlobals)
           rsw <- asks (randomnessStabilisationWindow . getGlobals)
           let e = runIdentity $ epochInfoEpoch ei s
           when (s > runIdentity (epochInfoFirst ei e) + (fromIntegral rsw)) $ do

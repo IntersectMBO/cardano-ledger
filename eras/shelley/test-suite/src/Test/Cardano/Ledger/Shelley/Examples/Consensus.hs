@@ -386,7 +386,7 @@ exampleLedgerChainDepState seed =
     }
 
 testEpochInfo :: EpochInfo Identity
-testEpochInfo = epochInfo testGlobals
+testEpochInfo = epochInfoPure testGlobals
 
 mkDummyHash :: forall h a. HashAlgorithm h => Proxy h -> Int -> Hash.Hash h a
 mkDummyHash _ = coerce . hashWithSerialiser @h toCBOR

@@ -21,7 +21,7 @@ import Cardano.Ledger.BaseTypes
   ( Globals (activeSlotCoeff, securityParameter),
     Network (Testnet),
     StrictMaybe (..),
-    epochInfo,
+    epochInfoPure,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
@@ -188,7 +188,7 @@ createRUpd globals cs =
     total = totalAda cs
     epochSize =
       runIdentity $
-        epochInfoSize (epochInfo globals) (LS.nesEL nes)
+        epochInfoSize (epochInfoPure globals) (LS.nesEL nes)
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals
 
@@ -209,6 +209,6 @@ createRUpdWithProv globals cs =
     total = totalAda cs
     epochSize =
       runIdentity $
-        epochInfoSize (epochInfo globals) (LS.nesEL nes)
+        epochInfoSize (epochInfoPure globals) (LS.nesEL nes)
     asc = activeSlotCoeff globals
     k = securityParameter testGlobals

@@ -30,7 +30,7 @@ import Cardano.Ledger.BaseTypes
     StrictMaybe (..),
     UnitInterval,
     activeSlotCoeff,
-    epochInfo,
+    epochInfoPure,
     maxLovelaceSupply,
     randomnessStabilisationWindow,
     securityParameter,
@@ -141,7 +141,7 @@ rupdTransition ::
 rupdTransition = do
   TRC (RupdEnv b es, ru, s) <- judgmentContext
   (slotsPerEpoch, slot, slotForce, maxLL, asc, k, e) <- liftSTS $ do
-    ei <- asks epochInfo
+    ei <- asks epochInfoPure
     sr <- asks randomnessStabilisationWindow
     e <- epochInfoEpoch ei s
     slotsPerEpoch <- epochInfoSize ei e

@@ -21,7 +21,7 @@ import Cardano.Binary
     ToCBOR (..),
     encodeListLen,
   )
-import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, epochInfo, invalidKey)
+import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, epochInfoPure, invalidKey)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential)
@@ -324,7 +324,7 @@ delegationTransition = do
       if HardForks.allowMIRTransfer pp
         then do
           sp <- liftSTS $ asks stabilityWindow
-          ei <- liftSTS $ asks epochInfo
+          ei <- liftSTS $ asks epochInfoPure
           EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
           let newEpoch = EpochNo (currEpoch + 1)
           tellEvent (NewEpoch newEpoch)
@@ -352,7 +352,7 @@ delegationTransition = do
             TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
         else do
           sp <- liftSTS $ asks stabilityWindow
-          ei <- liftSTS $ asks epochInfo
+          ei <- liftSTS $ asks epochInfoPure
           EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
           let newEpoch = EpochNo (currEpoch + 1)
           tellEvent (NewEpoch newEpoch)
@@ -380,7 +380,7 @@ delegationTransition = do
       if HardForks.allowMIRTransfer pp
         then do
           sp <- liftSTS $ asks stabilityWindow
-          ei <- liftSTS $ asks epochInfo
+          ei <- liftSTS $ asks epochInfoPure
           EpochNo currEpoch <- liftSTS $ epochInfoEpoch ei slot
           let newEpoch = EpochNo (currEpoch + 1)
           tellEvent (NewEpoch newEpoch)

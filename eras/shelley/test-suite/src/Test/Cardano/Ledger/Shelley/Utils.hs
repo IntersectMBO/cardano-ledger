@@ -79,7 +79,7 @@ import Cardano.Ledger.BaseTypes
     Network (..),
     Nonce,
     ShelleyBase,
-    epochInfo,
+    epochInfoPure,
     mkActiveSlotCoeff,
     mkNonceFromOutputVRF,
   )
@@ -285,7 +285,7 @@ unsafeBoundRational r =
 testGlobals :: Globals
 testGlobals =
   Globals
-    { epochInfoWithErr = fixedEpochInfo (EpochSize 100) (mkSlotLength 1),
+    { epochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1),
       slotsPerKESPeriod = 20,
       stabilityWindow = 33,
       randomnessStabilisationWindow = 33,
@@ -303,13 +303,13 @@ runShelleyBase :: ShelleyBase a -> a
 runShelleyBase act = runIdentity $ runReaderT act testGlobals
 
 epochFromSlotNo :: SlotNo -> EpochNo
-epochFromSlotNo = runIdentity . epochInfoEpoch (epochInfo testGlobals)
+epochFromSlotNo = runIdentity . epochInfoEpoch (epochInfoPure testGlobals)
 
 slotFromEpoch :: EpochNo -> SlotNo
-slotFromEpoch = runIdentity . epochInfoFirst (epochInfo testGlobals)
+slotFromEpoch = runIdentity . epochInfoFirst (epochInfoPure testGlobals)
 
 epochSize :: EpochNo -> EpochSize
-epochSize = runIdentity . epochInfoSize (epochInfo testGlobals)
+epochSize = runIdentity . epochInfoSize (epochInfoPure testGlobals)
 
 -- | Try to evolve KES key until specific KES period is reached, given the
 -- current KES period.

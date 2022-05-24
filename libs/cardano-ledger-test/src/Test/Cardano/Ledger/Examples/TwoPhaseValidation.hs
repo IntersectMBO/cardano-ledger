@@ -117,7 +117,6 @@ import qualified Data.ByteString as BS (replicate)
 import Data.ByteString.Short (ShortByteString)
 import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
-import Data.Functor.Identity (Identity, runIdentity)
 import qualified Data.List as List
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
@@ -125,6 +124,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
+import Data.Text (Text)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.UMap (View (Rewards))
 import qualified Data.UMap as UM
@@ -157,7 +157,7 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 -- Setup the initial state
 -- =======================
 
-testEpochInfo :: EpochInfo Identity
+testEpochInfo :: EpochInfo (Either Text)
 testEpochInfo = fixedEpochInfo (EpochSize 100) (mkSlotLength 1)
 
 testSystemStart :: SystemStart
@@ -1631,7 +1631,7 @@ quietPlutusFailure = PlutusFailure "human" "debug"
 collectInputs ::
   forall era.
   Proof era ->
-  EpochInfo Identity ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   Core.PParams era ->
   Core.Tx era ->
@@ -1644,15 +1644,14 @@ collectInputs (Babbage _) = collectTwoPhaseScriptInputs @era
 collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 
 getTxInfo ::
-  Monad m =>
   Proof era ->
   Core.PParams era ->
   Language ->
-  EpochInfo m ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
   Core.Tx era ->
-  m (Either TranslationError VersionedTxInfo)
+  Either TranslationError VersionedTxInfo
 getTxInfo (Alonzo _) = txInfo
 getTxInfo (Babbage _) = txInfo
 getTxInfo era = error ("getTxInfo Not defined in era " ++ show era)
@@ -1679,7 +1678,7 @@ collectTwoPhaseScriptInputsOutputOrdering =
       PlutusScript l s -> (l, s)
     context =
       valContext
-        ( fromRight (error "translation error") . runIdentity $
+        ( fromRight (error "translation error") $
             getTxInfo
               apf
               (pp apf)

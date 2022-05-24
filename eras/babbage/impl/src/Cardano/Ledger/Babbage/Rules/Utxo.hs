@@ -43,7 +43,7 @@ import Cardano.Ledger.Babbage.TxBody
   )
 import Cardano.Ledger.BaseTypes
   ( ShelleyBase,
-    epochInfoWithErr,
+    epochInfo,
     networkId,
     systemStart,
   )
@@ -353,7 +353,7 @@ utxoTransition = do
     ShelleyMA.validateOutsideValidityIntervalUTxO slot txb
 
   sysSt <- liftSTS $ asks systemStart
-  ei <- liftSTS $ asks epochInfoWithErr
+  ei <- liftSTS $ asks epochInfo
 
   {- epochInfoSlotToUTCTime epochInfo systemTime i_f ≠ ◇ -}
   runTest $ validateOutsideForecast pp ei slot sysSt tx

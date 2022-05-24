@@ -163,7 +163,7 @@ ppupTransitionNonEmpty = do
 
       sp <- liftSTS $ asks stabilityWindow
       firstSlotNextEpoch <- do
-        ei <- liftSTS $ asks epochInfo
+        ei <- liftSTS $ asks epochInfoPure
         EpochNo e <- liftSTS $ epochInfoEpoch ei slot
         let newEpochNo = EpochNo $ e + 1
         tellEvent $ NewEpoch newEpochNo
@@ -171,7 +171,7 @@ ppupTransitionNonEmpty = do
       let tooLate = firstSlotNextEpoch *- Duration (2 * sp)
 
       currentEpoch <- liftSTS $ do
-        ei <- asks epochInfo
+        ei <- asks epochInfoPure
         epochInfoEpoch ei slot
 
       if slot < tooLate
