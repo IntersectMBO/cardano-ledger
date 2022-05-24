@@ -110,7 +110,6 @@ import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
 import Cardano.Ledger.Shelley.PParams (PParamsUpdate)
 import Cardano.Ledger.Shelley.Tx (Tx, TxOut, WitnessSet)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
-import Cardano.Prelude (Coercible, asks)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
@@ -121,6 +120,7 @@ import Cardano.Slotting.EpochInfo
     fixedEpochInfo,
   )
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
+import Control.Monad.Reader.Class (asks)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition.Extended hiding (Assertion)
 import Control.State.Transition.Trace
@@ -129,7 +129,7 @@ import Control.State.Transition.Trace
     (.-),
     (.->),
   )
-import Data.Coerce (coerce)
+import Data.Coerce (Coercible, coerce)
 import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
 import Data.Maybe (fromMaybe)

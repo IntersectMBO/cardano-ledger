@@ -25,11 +25,11 @@ import Cardano.Binary
     toCBOR,
   )
 import Cardano.Ledger.Serialization (ToCBORGroup (..))
-import Cardano.Prelude (LByteString)
 import Codec.CBOR.Encoding (Encoding (..), Tokens (..))
 import Codec.CBOR.Term (decodeTerm)
 import Control.Exception (throwIO)
 import Control.Monad (unless)
+import qualified Data.ByteString.Lazy as BSL (ByteString)
 import Data.String (fromString)
 import GHC.Stack
 import Test.Tasty (TestTree)
@@ -38,7 +38,7 @@ import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 roundTrip ::
   (HasCallStack, Show a, Eq a) =>
   (a -> Encoding) ->
-  (LByteString -> Either DecoderError a) ->
+  (BSL.ByteString -> Either DecoderError a) ->
   a ->
   Assertion
 roundTrip encode decode x =
@@ -49,7 +49,7 @@ roundTrip encode decode x =
 checkEncoding ::
   (HasCallStack, Show a, Eq a) =>
   (a -> Encoding) ->
-  (LByteString -> Either DecoderError a) ->
+  (BSL.ByteString -> Either DecoderError a) ->
   String ->
   a ->
   ToTokens ->

@@ -50,7 +50,6 @@ import Cardano.Ledger.Val
     EncodeMint (..),
     Val (..),
   )
-import Cardano.Prelude (cborError)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (forM_)
 import Control.Monad.ST (runST)
@@ -66,6 +65,7 @@ import Data.CanonicalMaps
 import Data.Coders
   ( Decode (..),
     Encode (..),
+    cborError,
     decode,
     decodeMap,
     encode,

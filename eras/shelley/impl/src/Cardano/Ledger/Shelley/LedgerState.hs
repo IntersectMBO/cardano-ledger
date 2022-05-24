@@ -220,7 +220,6 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UnifiedMap (Trip (..), Triple, UMap (..), UnifiedMap, View (..), ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Prelude (rightToMaybe)
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans
@@ -1477,7 +1476,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- Stake pools that do not produce any blocks get no rewards,
       -- but some information is still needed from non-block-producing
       -- pools for the ranking algorithm used by the wallets.
-      blockProducingPoolInfo = VMap.toMap $ VMap.mapMaybe rightToMaybe allPoolInfo
+      blockProducingPoolInfo = VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just) allPoolInfo
 
       getSigma = unStakeShare . poolRelativeStake
       makeLikelihoods = \case

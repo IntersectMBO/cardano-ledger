@@ -87,7 +87,6 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val (coin)
-import Cardano.Prelude (HasField (..))
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader (..),
@@ -123,6 +122,7 @@ import Data.TreeDiff.QuickCheck (ediffEq)
 import qualified Data.UMap as UM
 import qualified Data.VMap as VMap
 import Data.Word (Word64)
+import GHC.Records (HasField (..))
 import Test.Cardano.Ledger.Shelley.Generator.Block (tickChainState)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))

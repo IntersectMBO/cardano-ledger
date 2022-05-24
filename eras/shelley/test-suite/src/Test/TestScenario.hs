@@ -3,7 +3,7 @@
 
 module Test.TestScenario where
 
-import Cardano.Prelude hiding (Option)
+import Data.Proxy (Proxy (..))
 import Test.Tasty (TestTree, defaultMainWithIngredients, includingOptions)
 import Test.Tasty.Ingredients (Ingredient (..), composeReporters)
 import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
@@ -13,7 +13,6 @@ import Test.Tasty.Options
     lookupOption,
     safeRead,
   )
-import Prelude hiding (show)
 
 data TestScenario
   = ContinuousIntegration
@@ -31,7 +30,7 @@ instance IsOption TestScenario where
 logScenario :: Ingredient
 logScenario = TestReporter [] $ \options _ -> Just $ \_ -> do
   let scenario = lookupOption @TestScenario options
-  putTextLn $ "\nRunning in scenario: " <> show scenario
+  putStrLn $ "\nRunning in scenario: " <> show scenario
   pure (const (pure True))
 
 mainWithTestScenario :: TestTree -> IO ()

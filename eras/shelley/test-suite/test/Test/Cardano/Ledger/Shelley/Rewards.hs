@@ -111,7 +111,6 @@ import qualified Cardano.Ledger.Shelley.Rules.Tick as Tick
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.Val (invert, (<+>), (<->))
-import Cardano.Prelude (rightToMaybe)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
@@ -843,7 +842,7 @@ reward
           (Coin totalStake)
           (Coin activeStake)
           pool
-      poolRewardInfo = VMap.toMap $ VMap.mapMaybe (rightToMaybe . mkPoolRewardInfo') poolParams
+      poolRewardInfo = VMap.toMap $ VMap.mapMaybe (either (const Nothing) Just . mkPoolRewardInfo') poolParams
       pp_pv = _protocolVersion pp
       free =
         FreeVars

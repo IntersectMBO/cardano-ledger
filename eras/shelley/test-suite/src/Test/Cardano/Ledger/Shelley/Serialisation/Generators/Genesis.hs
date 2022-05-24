@@ -30,7 +30,6 @@ import Cardano.Ledger.Shelley.Genesis
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody
-import Cardano.Prelude (Natural, Word32, Word64, Word8)
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
@@ -41,11 +40,13 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock (NominalDiffTime, UTCTime)
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import GHC.Word (Word32, Word64, Word8)
 import Hedgehog (Gen)
 import qualified Hedgehog.Gen as Gen
 import Hedgehog.Internal.Gen ()
 import Hedgehog.Range (Range)
 import qualified Hedgehog.Range as Range
+import Numeric.Natural
 import Test.Cardano.Ledger.Shelley.Utils (mkHash, unsafeBoundRational)
 
 genShelleyGenesis :: Era era => Gen (ShelleyGenesis era)

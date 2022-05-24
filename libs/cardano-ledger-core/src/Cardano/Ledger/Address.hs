@@ -87,7 +87,7 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Prelude (cborError, panic)
+import Cardano.Prelude (panic)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -103,6 +103,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
+import Data.Coders (cborError)
 import Data.Foldable (foldl')
 import Data.Maybe (fromMaybe)
 import Data.String (fromString)

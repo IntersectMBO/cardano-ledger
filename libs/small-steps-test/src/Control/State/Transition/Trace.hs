@@ -50,7 +50,7 @@ module Control.State.Transition.Trace
   )
 where
 
-import Cardano.Prelude (NFData)
+import Control.DeepSeq (NFData)
 import Control.Monad (void)
 import Control.Monad.IO.Class (MonadIO, liftIO)
 import Control.Monad.Reader (MonadReader, ReaderT, ask, runReaderT)
