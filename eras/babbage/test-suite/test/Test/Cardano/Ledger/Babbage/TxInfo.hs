@@ -12,6 +12,7 @@ import Cardano.Ledger.Babbage.TxInfo (OutputSource (..), txInfoInV2, txInfoOutV2
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
+import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
@@ -105,7 +106,7 @@ txb i mRefInp o =
       referenceInputs = case mRefInp of
         Nothing -> mempty
         Just ri -> Set.singleton ri,
-      outputs = StrictSeq.singleton o,
+      outputs = StrictSeq.singleton (mkSized o),
       collateralReturn = SNothing,
       totalCollateral = SNothing,
       txcerts = mempty,

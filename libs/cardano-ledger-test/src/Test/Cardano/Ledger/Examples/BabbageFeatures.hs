@@ -971,7 +971,7 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ largeOutputTx pf)
-              (Left [fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput pf, 8115)]])
+              (Left [fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput pf, Coin 8115)]])
         ]
     ]
 

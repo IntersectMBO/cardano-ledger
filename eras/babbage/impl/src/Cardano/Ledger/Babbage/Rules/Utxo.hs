@@ -31,7 +31,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (WrappedShelleyEraFailure))
 import Cardano.Ledger.Alonzo.Scripts (Prices)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (allOuts))
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (allOuts, allSizedOuts))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness (..), nullRedeemers)
 import Cardano.Ledger.Babbage.Collateral
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
@@ -57,6 +57,7 @@ import Cardano.Ledger.Rules.ValidationMode
     runTest,
     runTestOnSignal,
   )
+import Cardano.Ledger.Serialization (Sized (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure)
@@ -116,7 +117,7 @@ data BabbageUtxoPred era
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
-      ![(Core.TxOut era, Integer)]
+      ![(Core.TxOut era, Coin)]
 
 deriving instance
   ( Era era,
@@ -251,29 +252,27 @@ validateCollateralEqBalance bal txcoll =
     SNothing -> pure ()
     SJust tc -> failureUnless (bal == tc) (UnequalCollateralReturn bal tc)
 
-babbageMinUTxOSize ::
-  ( ToCBOR (Core.TxOut era),
-    HasField "_coinsPerUTxOByte" (Core.PParams era) Coin
-  ) =>
+babbageMinUTxOValue ::
+  HasField "_coinsPerUTxOByte" (Core.PParams era) Coin =>
   Core.PParams era ->
-  Core.TxOut era ->
+  Sized (Core.TxOut era) ->
   Coin
-babbageMinUTxOSize pp out =
+babbageMinUTxOValue pp sizedOut =
   Coin $
-    (fromIntegral . BSL.length . serialize $ out) * (unCoin $ getField @"_coinsPerUTxOByte" pp)
+    fromIntegral (sizedSize sizedOut) * unCoin (getField @"_coinsPerUTxOByte" pp)
 
 -- > getValue txout ≥ inject ( serSize txout ∗ coinsPerUTxOByte pp )
 validateOutputTooSmallUTxO ::
   ( Era era,
-    ToCBOR (Core.TxOut era),
     HasField "_coinsPerUTxOByte" (Core.PParams era) Coin
   ) =>
   Core.PParams era ->
-  [Core.TxOut era] ->
+  [Sized (Core.TxOut era)] ->
   Test (BabbageUtxoPred era)
-validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
+validateOutputTooSmallUTxO pp outs =
+  failureUnless (null outputsTooSmall) $ BabbageOutputTooSmallUTxO outputsTooSmall
   where
-    outs' = map (\out -> (out, unCoin $ babbageMinUTxOSize pp out)) outs
+    outs' = map (\out -> (sizedValue out, babbageMinUTxOValue pp out)) outs
     outputsTooSmall =
       filter
         ( \(out, minSize) ->
@@ -283,7 +282,7 @@ validateOutputTooSmallUTxO pp outs = failureUnless (null outputsTooSmall) $ Babb
                   Val.pointwise
                     (>=)
                     v
-                    (Val.inject . Coin $ minSize)
+                    (Val.inject minSize)
         )
         outs'
 
@@ -378,10 +377,10 @@ utxoTransition = do
   runTestOnSignal $
     ShelleyMA.validateTriesToForgeADA txb
 
-  let outs = allOuts txb
   {-   ∀ txout ∈ allOuts txb, getValue txout ≥ inject (serSize txout ∗ coinsPerUTxOByte pp) -}
-  runTest $ validateOutputTooSmallUTxO pp outs
+  runTest $ validateOutputTooSmallUTxO pp $ allSizedOuts txb
 
+  let outs = allOuts txb
   {-   ∀ txout ∈ allOuts txb, serSize (getValue txout) ≤ maxValSize pp   -}
   runTest $ validateOutputTooBigUTxO pp outs
 

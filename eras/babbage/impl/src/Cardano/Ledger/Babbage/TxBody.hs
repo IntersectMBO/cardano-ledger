@@ -128,6 +128,7 @@ import Cardano.Ledger.SafeHash
     SafeHash,
     SafeToHash,
   )
+import Cardano.Ledger.Serialization (Sized (..), sizedDecoder)
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
@@ -387,15 +388,15 @@ data TxBodyRaw era = TxBodyRaw
   { _spendInputs :: !(Set (TxIn (Crypto era))),
     _collateralInputs :: !(Set (TxIn (Crypto era))),
     _referenceInputs :: !(Set (TxIn (Crypto era))),
-    _outputs :: !(StrictSeq (TxOut era)),
-    _collateralReturn :: !(StrictMaybe (TxOut era)),
+    _outputs :: !(StrictSeq (Sized (TxOut era))),
+    _collateralReturn :: !(StrictMaybe (Sized (TxOut era))),
     _totalCollateral :: !(StrictMaybe Coin),
     _certs :: !(StrictSeq (DCert (Crypto era))),
     _wdrls :: !(Wdrl (Crypto era)),
     _txfee :: !Coin,
     _vldt :: !ValidityInterval,
     _update :: !(StrictMaybe (Update era)),
-    _reqSignerHashes :: Set (KeyHash 'Witness (Crypto era)),
+    _reqSignerHashes :: !(Set (KeyHash 'Witness (Crypto era))),
     _mint :: !(Value (Crypto era)),
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.Value, not a Core.Value.
@@ -494,8 +495,8 @@ pattern TxBody ::
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
   Set (TxIn (Crypto era)) ->
-  StrictSeq (TxOut era) ->
-  StrictMaybe (TxOut era) ->
+  StrictSeq (Sized (TxOut era)) ->
+  StrictMaybe (Sized (TxOut era)) ->
   StrictMaybe Coin ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
@@ -621,9 +622,9 @@ collateralInputs' (TxBodyConstr (Memo raw _)) = _collateralInputs raw
 
 referenceInputs' (TxBodyConstr (Memo raw _)) = _referenceInputs raw
 
-outputs' (TxBodyConstr (Memo raw _)) = _outputs raw
+outputs' (TxBodyConstr (Memo raw _)) = sizedValue <$> _outputs raw
 
-collateralReturn' (TxBodyConstr (Memo raw _)) = _collateralReturn raw
+collateralReturn' (TxBodyConstr (Memo raw _)) = sizedValue <$> _collateralReturn raw
 
 totalCollateral' (TxBodyConstr (Memo raw _)) = _totalCollateral raw
 
@@ -918,11 +919,11 @@ instance
       bodyFields 1 =
         field
           (\x tx -> tx {_outputs = x})
-          (D (decodeStrictSeq (fromCborTxOutWithAddr fromCborBothAddr)))
+          (D (decodeStrictSeq (sizedDecoder (fromCborTxOutWithAddr fromCborBothAddr))))
       bodyFields 16 =
         ofield
           (\x tx -> tx {_collateralReturn = x})
-          (D (fromCborTxOutWithAddr fromCborBothAddr))
+          (D (sizedDecoder (fromCborTxOutWithAddr fromCborBothAddr)))
       bodyFields 17 =
         ofield
           (\x tx -> tx {_totalCollateral = x})
@@ -964,6 +965,9 @@ instance (Crypto era ~ c) => HasField "inputs" (TxBody era) (Set (TxIn c)) where
   getField (TxBodyConstr (Memo m _)) = _spendInputs m
 
 instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
+  getField (TxBodyConstr (Memo m _)) = sizedValue <$> _outputs m
+
+instance HasField "sizedOutputs" (TxBody era) (StrictSeq (Sized (TxOut era))) where
   getField (TxBodyConstr (Memo m _)) = _outputs m
 
 instance Crypto era ~ crypto => HasField "certs" (TxBody era) (StrictSeq (DCert crypto)) where
@@ -994,6 +998,9 @@ instance (Crypto era ~ c) => HasField "referenceInputs" (TxBody era) (Set (TxIn 
   getField (TxBodyConstr (Memo m _)) = _referenceInputs m
 
 instance HasField "collateralReturn" (TxBody era) (StrictMaybe (TxOut era)) where
+  getField (TxBodyConstr (Memo m _)) = sizedValue <$> _collateralReturn m
+
+instance HasField "sizedCollateralReturn" (TxBody era) (StrictMaybe (Sized (TxOut era))) where
   getField (TxBodyConstr (Memo m _)) = _collateralReturn m
 
 instance HasField "totalCollateral" (TxBody era) (StrictMaybe Coin) where

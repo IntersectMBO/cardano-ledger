@@ -53,6 +53,7 @@ import qualified Cardano.Ledger.Mary.Value as V (Value)
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.Constraints
@@ -239,6 +240,7 @@ instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
           SJust dh <- [getField @"datahash" out]
       ]
   allOuts txbody = toList $ getField @"outputs" txbody
+  allSizedOuts = map mkSized . allOuts
   txdata (ValidatedTx _ (TxWitness _ _ _ (TxDats' m) _) _ _) = Set.fromList $ Map.elems m
 
 -------------------------------------------------------------------------------

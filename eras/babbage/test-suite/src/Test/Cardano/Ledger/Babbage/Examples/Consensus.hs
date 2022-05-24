@@ -4,7 +4,13 @@
 
 module Test.Cardano.Ledger.Babbage.Examples.Consensus where
 
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), AuxiliaryDataHash (..), Data (..), dataToBinaryData, hashData)
+import Cardano.Ledger.Alonzo.Data
+  ( AuxiliaryData (..),
+    AuxiliaryDataHash (..),
+    Data (..),
+    dataToBinaryData,
+    hashData,
+  )
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
@@ -23,6 +29,7 @@ import Cardano.Ledger.Era (ValidateScript (hashScript))
 import Cardano.Ledger.Keys (asWitness)
 import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley.API
   ( ApplyTxError (..),
     Credential (..),
@@ -109,14 +116,15 @@ exampleTxBodyBabbage =
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 3]) -- reference inputs
     ( StrictSeq.fromList
-        [ TxOut
-            (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
-            (MarySLE.exampleMultiAssetValue 2)
-            (Datum $ dataToBinaryData datumExample) -- inline datum
-            (SJust $ alwaysSucceeds PlutusV2 3) -- reference script
+        [ mkSized $
+            TxOut
+              (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
+              (MarySLE.exampleMultiAssetValue 2)
+              (Datum $ dataToBinaryData datumExample) -- inline datum
+              (SJust $ alwaysSucceeds PlutusV2 3) -- reference script
         ]
     )
-    (SJust collateralOutput) -- collateral return
+    (SJust $ mkSized collateralOutput) -- collateral return
     (SJust $ Coin 8675309) -- collateral tot
     SLE.exampleCerts -- txcerts
     ( Wdrl $

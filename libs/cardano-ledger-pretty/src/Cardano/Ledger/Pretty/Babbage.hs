@@ -146,7 +146,7 @@ ppBabbageUtxoPred (UnequalCollateralReturn c1 c2) =
 ppBabbageUtxoPred (MalformedScripts scripts) =
   ppSexp "MalformedScripts" [ppSet ppScriptHash scripts]
 ppBabbageUtxoPred (BabbageOutputTooSmallUTxO xs) =
-  ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair prettyA ppInteger) xs]
+  ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair prettyA ppCoin) xs]
 
 instance
   ( PrettyA (UtxoPredicateFailure era),
