@@ -845,7 +845,7 @@ genValidatedTxAndInfo proof slot = do
 
   -- 7. Estimate the fee
   let redeemerDatumWits = redeemerWitsList ++ datumWitsList
-      bogusIntegrityHash = hashScriptIntegrity' proof gePParams mempty (Redeemers mempty) mempty
+      bogusIntegrityHash = newScriptIntegrityHash proof gePParams mempty (Redeemers mempty) mempty
       inputSet = Map.keysSet toSpendNoCollateral
       outputList = maybe recipients (: recipients) rewardsWithdrawalTxOut
       txBodyNoFee =
@@ -902,11 +902,12 @@ genValidatedTxAndInfo proof slot = do
 
   -- 10. Construct the correct Tx with valid fee and collaterals
   allPlutusScripts <- gsPlutusScripts <$> get
-  let mIntegrityHash =
-        hashScriptIntegrity'
+  let langs = Set.toList $ languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts
+      mIntegrityHash =
+        newScriptIntegrityHash
           proof
           gePParams
-          (languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts)
+          langs
           (mkTxrdmrs redeemerDatumWits)
           (mkTxdats redeemerDatumWits)
       balance =

@@ -18,16 +18,9 @@ import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag (..))
-import Cardano.Ledger.Alonzo.Tx
-  ( IsValid (..),
-    ScriptIntegrityHash,
-    ValidatedTx (..),
-    hashScriptIntegrity,
-    minfee,
-  )
+import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), minfee)
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (languages)
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams, PParams' (..))
 import Cardano.Ledger.Babbage.Scripts (refScripts)
 import Cardano.Ledger.Babbage.TxBody as Babbage (referenceInputs', spendInputs')
@@ -177,17 +170,6 @@ txInBalance ::
   MUtxo era ->
   Coin
 txInBalance txinSet m = coin (balance (UTxO (restrictKeys m txinSet)))
-
-hashScriptIntegrity' ::
-  Proof era ->
-  Core.PParams era ->
-  Set Language ->
-  Redeemers era ->
-  TxDats era ->
-  StrictMaybe (ScriptIntegrityHash (Crypto era))
-hashScriptIntegrity' (Babbage _) = hashScriptIntegrity
-hashScriptIntegrity' (Alonzo _) = hashScriptIntegrity
-hashScriptIntegrity' _proof = (\_pp _l _r _d -> SNothing)
 
 -- | Break a TxOut into its mandatory and optional parts
 txoutFields :: Proof era -> Core.TxOut era -> (Addr (Crypto era), Core.Value era, [TxOutField era])

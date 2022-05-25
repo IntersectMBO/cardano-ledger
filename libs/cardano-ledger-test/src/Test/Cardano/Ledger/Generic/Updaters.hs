@@ -387,7 +387,7 @@ newPParams era = List.foldl' (updatePParams era) (initialPParams era)
 
 -- ====================================
 
--- | This only make sense in the Alonzo era, all other Eras return Nothing
+-- | This only make sense in the Alonzo era and forward, all other Eras return Nothing
 newScriptIntegrityHash ::
   Proof era ->
   Core.PParams era ->
@@ -396,11 +396,11 @@ newScriptIntegrityHash ::
   TxDats era ->
   StrictMaybe (Alonzo.ScriptIntegrityHash (Crypto era))
 newScriptIntegrityHash (Babbage _) pp ls rds dats =
-  case (hashScriptIntegrity pp (Set.fromList ls) rds dats) of
+  case (hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats) of
     SJust x -> SJust x
     SNothing -> SNothing
 newScriptIntegrityHash (Alonzo _) pp ls rds dats =
-  case (hashScriptIntegrity pp (Set.fromList ls) rds dats) of
+  case (hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats) of
     SJust x -> SJust x
     SNothing -> SNothing
 newScriptIntegrityHash _wit _pp _ls _rds _dats = SNothing

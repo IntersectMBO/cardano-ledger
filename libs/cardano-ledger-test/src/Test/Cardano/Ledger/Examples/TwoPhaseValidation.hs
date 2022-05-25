@@ -30,10 +30,8 @@ import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
     ScriptPurpose (..),
     ValidatedTx (..),
-    hashScriptIntegrity,
     minfee,
   )
-import Cardano.Ledger.Alonzo.TxBody (ScriptIntegrityHash)
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
@@ -1858,17 +1856,6 @@ alonzoAPITests =
 -- =====================================================================================
 -- Proof parameterized TestTrees
 
-hashScriptIntegrityByProof ::
-  Proof era ->
-  Core.PParams era ->
-  Set.Set Language ->
-  Redeemers era ->
-  TxDats era ->
-  StrictMaybe (ScriptIntegrityHash (Crypto era))
-hashScriptIntegrityByProof (Alonzo _) = hashScriptIntegrity
-hashScriptIntegrityByProof (Babbage _) = hashScriptIntegrity
-hashScriptIntegrityByProof _ = \_ _ _ _ -> SNothing
-
 -- | This type is what you get when you use runSTS in the UTXOW rule. It is also
 --   the type one uses for expected answers, to compare the 'computed' against 'expected'
 type Result era = Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era))
@@ -2154,17 +2141,17 @@ alonzoUTXOWexamplesB pf =
               ( Left
                   [ fromPredFail @era $
                       PPViewHashesDontMatch
-                        ( hashScriptIntegrityByProof
+                        ( newScriptIntegrityHash
                             pf
                             (pp pf)
-                            (Set.singleton PlutusV1)
+                            [PlutusV1]
                             (Redeemers mempty)
                             txDatsExample1
                         )
-                        ( hashScriptIntegrityByProof
+                        ( newScriptIntegrityHash
                             pf
                             (pp pf)
-                            (Set.singleton PlutusV1)
+                            [PlutusV1]
                             validatingRedeemersEx1
                             txDatsExample1
                         )

@@ -19,7 +19,7 @@ import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Address (Addr (..), bootstrapKeyHash, getRwdCred)
 import Cardano.Ledger.Alonzo.Data (DataHash)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import Cardano.Ledger.Alonzo.PParams (PParams' (..), getLanguageView)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (language, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Rules.Utxo (AlonzoUTXO)
 import qualified Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent, UtxoPredicateFailure)
@@ -328,7 +328,8 @@ ppViewHashesMatch ::
   Test (UtxowPredicateFail era)
 ppViewHashesMatch tx txbody pp utxo = do
   let langs = languages @era tx utxo
-      computedPPhash = hashScriptIntegrity pp langs (txrdmrs . wits $ tx) (txdats . wits $ tx)
+      langViews = Set.map (getLanguageView pp) langs
+      computedPPhash = hashScriptIntegrity langViews (txrdmrs . wits $ tx) (txdats . wits $ tx)
       bodyPPhash = getField @"scriptIntegrityHash" txbody
   failureUnless
     (bodyPPhash == computedPPhash)

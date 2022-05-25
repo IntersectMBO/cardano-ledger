@@ -130,16 +130,12 @@ instance
         Alonzo.txUpdates = SNothing,
         Alonzo.reqSignerHashes = Set.empty,
         Alonzo.mint = mint,
-        Alonzo.scriptIntegrityHash =
-          redeemers
-            >>= uncurry
-              ( Alonzo.hashScriptIntegrity
-                  (LedgerState.esPp . LedgerState.nesEs $ nes)
-                  (Set.singleton PlutusV1)
-              ),
+        Alonzo.scriptIntegrityHash = redeemers >>= uncurry (Alonzo.hashScriptIntegrity langViews),
         Alonzo.adHash = SNothing,
         Alonzo.txnetworkid = SNothing -- SJust Testnet
       }
+    where
+      langViews = Set.singleton $ Alonzo.getLanguageView (LedgerState.esPp . LedgerState.nesEs $ nes) PlutusV1
 
   makeTx _ realTxBody (TxWitnessArguments wits (SupportsScript ScriptFeatureTag_PlutusV1 scripts) (SupportsPlutus (rdmr, dats)) (SupportsPlutus isValid)) =
     let witSet =
