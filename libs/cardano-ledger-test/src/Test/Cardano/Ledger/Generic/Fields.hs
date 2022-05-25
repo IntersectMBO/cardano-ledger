@@ -174,53 +174,55 @@ pattern RefScript' :: [Core.Script era] -> TxOutField era -- 0 or 1 element
 
 -- ==================
 data PParamsField era
-  = MinfeeA (Natural)
+  = MinfeeA Natural
   | -- | The constant factor for the minimum fee calculation
-    MinfeeB (Natural)
+    MinfeeB Natural
   | -- | Maximal block body size
-    MaxBBSize (Natural)
+    MaxBBSize Natural
   | -- | Maximal transaction size
-    MaxTxSize (Natural)
+    MaxTxSize Natural
   | -- | Maximal block header size
-    MaxBHSize (Natural)
+    MaxBHSize Natural
   | -- | The amount of a key registration deposit
-    KeyDeposit (Coin)
+    KeyDeposit Coin
   | -- | The amount of a pool registration deposit
-    PoolDeposit (Coin)
+    PoolDeposit Coin
   | -- | epoch bound on pool retirement
-    EMax (EpochNo)
+    EMax EpochNo
   | -- | Desired number of pools
-    NOpt (Natural)
+    NOpt Natural
   | -- | Pool influence
-    A0 (NonNegativeInterval)
+    A0 NonNegativeInterval
   | -- | Monetary expansion
-    Rho (UnitInterval)
+    Rho UnitInterval
   | -- | Treasury expansion
-    Tau (UnitInterval)
+    Tau UnitInterval
   | -- | Decentralization parameter
-    D (UnitInterval) -- Dropped in Babbage
+    D UnitInterval -- Dropped in Babbage
   | -- | Extra entropy
-    ExtraEntropy (Nonce) -- Dropped in Babbage
+    ExtraEntropy Nonce -- Dropped in Babbage
   | -- | Protocol version
-    ProtocolVersion (ProtVer)
+    ProtocolVersion ProtVer
   | -- | Minimum Stake Pool Cost
-    MinPoolCost (Coin)
-  | -- | Minimum Lovelace in a UTxO (deprecated by AdaPerUTxOWord)
-    MinUTxOValue (Coin)
-  | -- | Cost in ada per byte of UTxO storage (instead of _minUTxOValue)
-    AdaPerUTxOWord (Coin)
+    MinPoolCost Coin
+  | -- | Minimum Lovelace in a UTxO deprecated by AdaPerUTxOWord
+    MinUTxOValue Coin
+  | -- | Cost in ada per 8 bytes of UTxO storage instead of _minUTxOValue
+    AdaPerUTxOWord Coin -- Dropped in Babbage
+  | -- | Cost in ada per 1 byte of UTxO storage instead of _coinsPerUTxOWord
+    AdaPerUTxOByte Coin -- New in Babbage
   | -- | Cost models for non-native script languages
-    Costmdls (CostModels)
-  | -- | Prices of execution units (for non-native script languages)
-    Prices (Prices)
+    Costmdls CostModels
+  | -- | Prices of execution units for non-native script languages
+    Prices Prices
   | -- | Max total script execution resources units allowed per tx
-    MaxTxExUnits (ExUnits)
+    MaxTxExUnits ExUnits
   | -- | Max total script execution resources units allowed per block
-    MaxBlockExUnits (ExUnits)
+    MaxBlockExUnits ExUnits
   | -- | Max size of a Value in an output
-    MaxValSize (Natural)
+    MaxValSize Natural
   | -- | The scaling percentage of the collateral relative to the fee
-    CollateralPercentage (Natural)
+    CollateralPercentage Natural
   | -- | Maximum number of collateral inputs allowed in a transaction
     MaxCollateralInputs Natural
 

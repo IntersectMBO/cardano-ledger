@@ -24,6 +24,7 @@ import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import qualified Cardano.Ledger.Babbage.Tx as Babbage (ValidatedTx (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxBody (..), TxOut (..))
+import Cardano.Ledger.Coin (Coin (Coin, unCoin))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Hashes (ScriptHash)
@@ -34,6 +35,7 @@ import qualified Cardano.Ledger.Shelley.Tx as Shelley (Tx (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxBody (..), TxOut (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
+import Cardano.Ledger.Val ((<×>))
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -314,6 +316,7 @@ updateShelleyPP pp dpp = case dpp of
   (MinUTxOValue mu) -> pp {Shelley._minUTxOValue = mu}
   -- Not present in Shelley
   (AdaPerUTxOWord _) -> pp
+  (AdaPerUTxOByte _) -> pp
   (Costmdls _) -> pp
   (Prices _) -> pp
   (MaxTxExUnits _) -> pp
@@ -352,6 +355,7 @@ updatePParams (Alonzo _) pp dpp = case dpp of
   CollateralPercentage perc -> pp {Alonzo._collateralPercentage = perc}
   MaxCollateralInputs n -> pp {Alonzo._maxCollateralInputs = n}
   AdaPerUTxOWord n -> pp {Alonzo._coinsPerUTxOWord = n}
+  AdaPerUTxOByte n -> pp {Alonzo._coinsPerUTxOWord = (8 :: Int) <×> n}
   -- Not used in Alonzo
   MinUTxOValue _ -> pp
 updatePParams (Babbage _) pp dpp = case dpp of
@@ -376,7 +380,8 @@ updatePParams (Babbage _) pp dpp = case dpp of
   MaxBlockExUnits n -> pp {Babbage._maxBlockExUnits = n}
   CollateralPercentage perc -> pp {Babbage._collateralPercentage = perc}
   MaxCollateralInputs n -> pp {Babbage._maxCollateralInputs = n}
-  AdaPerUTxOWord n -> pp {Babbage._coinsPerUTxOByte = n} -- TODO rename AdaPerUTxOWord
+  AdaPerUTxOWord n -> pp {Babbage._coinsPerUTxOByte = Coin $ (unCoin n + 7) `div` 8}
+  AdaPerUTxOByte n -> pp {Babbage._coinsPerUTxOByte = n}
   -- Not used in Babbage
   D _ -> pp
   ExtraEntropy _ -> pp
