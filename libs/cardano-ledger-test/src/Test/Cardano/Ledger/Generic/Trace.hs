@@ -91,6 +91,7 @@ import Test.Cardano.Ledger.Generic.GenState
     GenRS,
     GenSize (..),
     GenState (..),
+    genPool,
     getBlocksizeMax,
     getReserves,
     getSlot,
@@ -149,16 +150,18 @@ genRsTxSeq proof this lastN ans slot = do
 genTxSeq ::
   forall era.
   Reflect era =>
-  Proof era ->
-  GenSize ->
-  Int ->
+  Proof era -> -- Proof of the Era we want to generate the sequence in
+  GenSize -> -- Size of things the generated code should adhere to
+  Int -> -- The number of Tx in the sequence
+  GenRS era () -> -- An arbitrary 'initialization action', to run before we generate the sequence
+  -- use (pure ()) if you don't want or need initialization
   Gen (Vector (StrictSeq (Core.Tx era), SlotNo), GenState era)
-genTxSeq proof gensize numTx = do
-  runGenRS proof gensize (genRsTxSeq proof 0 numTx [] (SlotNo $ 1)) -- startSlot gensize))
+genTxSeq proof gensize numTx initialize = do
+  runGenRS proof gensize (initialize >> genRsTxSeq proof 0 numTx [] (SlotNo $ 1))
 
 runTest :: IO ()
 runTest = do
-  (v, _) <- generate $ genTxSeq (Babbage Mock) def 20
+  (v, _) <- generate $ genTxSeq (Babbage Mock) def 20 (pure ())
   print (Vector.length v)
 
 -- ==================================================================
@@ -396,15 +399,20 @@ genTrace ::
   Proof era ->
   Int ->
   GenSize ->
+  GenRS era () -> -- An arbitrary 'initialization action', to run before we generate the sequence
+  -- use (pure ()) if you don't want or need initialization
   Gen (Trace (MOCKCHAIN era))
-genTrace proof numTxInTrace gsize = do
-  (vs, genstate) <- genTxSeq proof gsize numTxInTrace
+genTrace proof numTxInTrace gsize initialize = do
+  (vs, genstate) <- genTxSeq proof gsize numTxInTrace initialize
   initState <- genMockChainState proof genstate
   traceFromInitState @(MOCKCHAIN era)
     testGlobals
     (fromIntegral (length vs))
     (Gen1 vs genstate)
     (Just (\_ -> pure $ Right initState))
+
+makeSomePools :: Reflect era => GenRS era ()
+makeSomePools = mapM_ (const genPool) [1 .. (5 :: Int)]
 
 traceProp ::
   forall era prop.
@@ -417,7 +425,7 @@ traceProp ::
   (MockChainState era -> MockChainState era -> prop) ->
   Gen prop
 traceProp proof numTxInTrace gsize f = do
-  trace1 <- genTrace proof numTxInTrace gsize
+  trace1 <- genTrace proof numTxInTrace gsize makeSomePools
   pure (f (_traceInitState trace1) (lastState trace1))
 
 -- =========================================================================
@@ -440,7 +448,7 @@ chainTest proof n gsize = testProperty message action
   where
     message = show proof ++ " era."
     action = do
-      (vs, genstate) <- genTxSeq proof gsize n
+      (vs, genstate) <- genTxSeq proof gsize n makeSomePools
       initState <- genMockChainState proof genstate
       trace1 <-
         traceFromInitState @(MOCKCHAIN era)

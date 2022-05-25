@@ -8,6 +8,7 @@
 
 module Main where
 
+import Data.Default.Class (Default (def))
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
@@ -44,7 +45,7 @@ mainTests =
           collectOrderingAlonzo,
           modelUnitTests_
         ],
-      genericProperties
+      genericProperties def
     ]
 
 -- main entry point

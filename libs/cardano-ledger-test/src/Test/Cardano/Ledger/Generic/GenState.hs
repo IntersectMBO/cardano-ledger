@@ -240,7 +240,8 @@ elementsT :: (Monad (t Gen), MonadTrans t) => [t Gen b] -> t Gen b
 elementsT = join . lift . elements
 
 frequencyT :: (Monad (t Gen), MonadTrans t) => [(Int, t Gen b)] -> t Gen b
-frequencyT = join . lift . frequency . map (pure <$>)
+frequencyT [] = error ("frequencyT called with empty list")
+frequencyT choices = join . lift . frequency . map (pure <$>) $ choices
 
 -- | Gen a positive single digit Int, on a skewed distribution that
 --   favors 2,3,4,5 but occasionally gets others
