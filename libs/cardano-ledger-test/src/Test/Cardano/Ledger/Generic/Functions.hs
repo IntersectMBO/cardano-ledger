@@ -130,9 +130,8 @@ depositsAndRefunds proof pp certificates = List.foldl' accum (Coin 0) certificat
   where
     accum ans (DCertDeleg (RegKey _)) = keydep <+> ans
     accum ans (DCertDeleg (DeRegKey _)) = ans <-> keydep
-    accum ans (DCertPool (RegPool _)) = pooldep <+> ans
-    --accum ans (DCertPool (RetirePool _ _)) = ans <-> pooldep 
-     -- TODO Seems like this is accounted for somewhere else.. find out where.
+    accum ans (DCertPool (RegPool _)) = ans -- TODO ???? pooldep <+> ans
+    accum ans (DCertPool (RetirePool _ _)) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans
     (keydep, pooldep :: Coin) = keyPoolDeposits proof pp
 

@@ -105,7 +105,6 @@ import Test.Cardano.Ledger.Generic.GenState
     genDatumWithHash,
     genFreshRegCred,
     genKeyHash,
-    genNewPool,
     genPool,
     genPositiveVal,
     genRewards,
@@ -119,7 +118,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS, genNewInitialPool
+    runGenRS, genNewInitialPool, genRetirementHash, genNewPool
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -134,9 +133,9 @@ import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
-import Debug.Trace (traceM, traceShowM)
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import GHC.Records (getField)
+import Debug.Trace (traceShowM)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -632,15 +631,15 @@ genDCert :: forall era. Reflect era => Proof era -> GenRS era (DCert (Crypto era
 genDCert proof = do
   elementsT
     [ DCertDeleg
-        <$> elementsT
-          [ RegKey <$> genFreshRegCred @era,
-            DeRegKey <$> genCredential Cert,
-            Delegate <$> genDelegation
+        <$> frequencyT
+          [ (75, RegKey <$> genFreshRegCred @era),
+            (25, DeRegKey <$> genCredential Cert),
+            (50, Delegate <$> genDelegation)
           ],
       DCertPool
-        <$> elementsT
-          [ RegPool <$> genFreshPool,
-            RetirePool <$> genRetirementHash <*> genEpoch
+        <$> frequencyT
+          [ (75, RegPool <$> genFreshPool),
+            (25, RetirePool <$> genRetirementHash <*> genEpoch)
           ]
     ]
   where
@@ -651,22 +650,35 @@ genDCert proof = do
     genFreshPool = do
       (_, pp) <- genNewPool
       return pp
-    genRetirementHash = do
-      khs <- gets $ Map.keysSet . mPoolParams . gsModel
-      honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
-      let retireableKhs = Set.toList $ khs `Set.difference` honestKhs
-      let genNewInitPool = fst <$> genNewInitialPool
-      case retireableKhs of
-        [] -> genNewInitPool
-        xs  -> frequencyT 
-                 [ (90, lift $ elements xs)
-                 , (10, genNewInitPool)
-                 ]
+      --khs <- gets $ Map.keysSet . mPoolParams . gsModel
+      --honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
+      --let retireableKhs = Set.toList $ khs `Set.difference` honestKhs
+      --let genNewInitPool = fst <$> genNewInitialPool
+      --case retireableKhs of
+      --  [] -> genNewInitPool
+      --  xs  -> frequencyT 
+      --           [ (90, lift $ elements xs)
+      --           , (10, genNewInitPool)
+      --           ]
     genEpoch = do
       EpochNo curEpoch <- gets $ mEL . gsModel
       EpochNo maxEpoch <- asks $ epochMax proof . gePParams
       delta <- lift $ choose (1, maxEpoch)
       return . EpochNo $ curEpoch + delta
+
+-- | Use up to 'tries' attempts to choose a random (k,a) pair from 'm', that meets predicate 'p'
+genMapElemWhere :: Map k a -> Int -> (k -> a -> Bool) -> Gen (Maybe (k, a))
+genMapElemWhere m tries p
+  | tries <= 0 = pure Nothing
+  | n == 0 = pure Nothing
+  | otherwise = do
+      i <- choose (0, n - 1)
+      let (k, a) = Map.elemAt i m
+      if p k a
+        then pure $ Just $ (k, a)
+        else genMapElemWhere m (tries - 1) p
+  where
+    n = Map.size m
 
 genDCerts :: forall era. Reflect era => Proof era -> GenRS era [DCert (Crypto era)]
 genDCerts proof = do
@@ -711,19 +723,13 @@ genDCerts proof = do
                in insertIfNotPresent dcs' regCreds' (Just delegKey)
                     <$> lookupPlutusScript delegCred Cert
           DCertPool d
-            | RegPool PoolParams {..} <- d -> do
-              poolMap <- gets $ mPoolParams . gsModel
-              let poolParams = Map.lookup _poolId poolMap
-              case poolParams of
-                Just _ -> pure (dcs, ss, regCreds)
-                Nothing -> pure (dc : dcs, ss, regCreds)
+            | RegPool _ <- d -> do
+                pure (dc : dcs, ss, regCreds)
             | RetirePool kh _ <- d -> do
               -- We need to make sure that the pool is registered before
               -- we try to retire it
               modelPools <- gets $ mPoolParams . gsModel
-              honestPools <- gets gsHonestPoolParams
-              let retireablePools = Map.difference modelPools honestPools
-              case Map.lookup kh retireablePools of
+              case Map.lookup kh modelPools of
                 Just _ -> pure (dc : dcs, ss, regCreds)
                 Nothing -> pure (dcs, ss, regCreds)
           _ -> pure (dc : dcs, ss, regCreds)
@@ -940,7 +946,7 @@ genValidatedTxAndInfo proof slot = do
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
   dcerts <- genDCerts proof
-  traceShowM $ "dcerts: " <> ppList pcDCert dcerts
+  --traceShowM $ "dcerts: " <> ppList pcDCert dcerts
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
@@ -1034,6 +1040,7 @@ genValidatedTxAndInfo proof slot = do
       fee = minfee' proof gePParams bogusTxForFeeCalc
       deposits = depositsAndRefunds proof gePParams dcerts
   traceShowM $ "Deposits: " <> ppCoin deposits
+  traceShowM $ "DCerts: " <> ppList pcDCert dcerts
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce

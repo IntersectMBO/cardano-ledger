@@ -283,7 +283,10 @@ genericProperties gensize =
 -- :main --quickcheck-replay=205148
 
 main :: IO ()
-main = test 100 (Babbage Mock)
+main = do
+  test 100 (Shelley Mock)
+  test 100 (Alonzo Mock)
+  test 100 (Babbage Mock)
 
 test :: ReflectC (Crypto era) => Int -> Proof era -> IO ()
 test n proof = defaultMain $

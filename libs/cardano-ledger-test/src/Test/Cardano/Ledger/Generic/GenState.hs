@@ -33,6 +33,7 @@ module Test.Cardano.Ledger.Generic.GenState
     genValidityInterval,
     genNewPool,
     genNewInitialPool,
+    genRetirementHash,
     getBlocksizeMax,
     getCertificateMax,
     getOldUtxoPercent,
@@ -88,9 +89,10 @@ import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
+import Control.Applicative ((<|>))
 import Control.Monad (join, replicateM, replicateM_, when)
 import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.RWS.Strict (RWST (..), get, gets, modify, ask)
+import Control.Monad.Trans.RWS.Strict (RWST (..), ask, get, gets, modify, asks)
 import qualified Control.Monad.Trans.Reader as Reader
 import Control.SetAlgebra (eval, (⨃))
 import Data.Default.Class (Default (def))
@@ -109,6 +111,7 @@ import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Functions
   ( alwaysFalse,
     alwaysTrue,
+    keyPoolDeposits,
     obligation',
     primaryLanguage,
     protocolVersion,
@@ -144,7 +147,6 @@ import Test.Tasty.QuickCheck
     frequency,
     generate,
   )
-import Control.Applicative ((<|>))
 
 -- =================================================
 
@@ -186,7 +188,8 @@ data GenState era = GenState
     -- Honest fields are stable from initialization to the end of the generation process
     gsHonestPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
     gsHonestDelegators :: !(Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))),
-    gsRegKey :: !(Set (Credential 'Staking (Crypto era))),
+    gsAvoidCred :: !(Set (Credential 'Staking (Crypto era))),
+    gsAvoidKey :: !(Set (KeyHash 'StakePool (Crypto era))),
     gsProof :: !(Proof era),
     gsGenEnv :: !(GenEnv era),
     gsSeedIndex :: !Int
@@ -208,6 +211,7 @@ emptyGenState proof genv =
     Map.empty
     Map.empty
     Map.empty
+    Set.empty
     Set.empty
     proof
     genv
@@ -402,23 +406,41 @@ getNewPoolTest = do
 
 -- | Initialize (or overwrite if they are not empty) the Honest fields. It is
 --   intended that this be called just once at the beginning of a trace generation.
-initHonestFields :: Reflect era => Proof era -> GenRS era ()
-initHonestFields _ = do
+initHonestFields :: forall era. Reflect era => Proof era -> GenRS era ()
+initHonestFields proof = do
   old <- gets gsInitialPoolParams
-  GenEnv{geSize} <- ask
-  let GenSize{..} = geSize
-  hashes <- replicateM maxHonestPools (fst <$> genNewPool)
+  GenEnv {geSize} <- ask
+  let GenSize {..} = geSize
+  hashes <- replicateM maxHonestPools (fst <$> genNewInitialPool)
   new <- gets gsInitialPoolParams
   let diff = Map.difference new old
+  --traceShowM $ "New: " <> ppMap pcKeyHash pcPoolParams new
   modify (\gs -> gs {gsHonestPoolParams = diff})
   modifyModel (\ms -> ms {mPoolParams = mPoolParams ms <> diff})
   -- This incantation gets a list of fresh (not previously generated) Credential
   old' <- gets (Map.keysSet . gsInitialRewards)
-  prev <- gets gsRegKey
+  prev <- gets gsAvoidCred
   credentials <- genFreshCredentials maxHonestDelegators 100 Rewrd (Set.union old' prev) []
   let delegs = Map.fromList (zip credentials hashes)
-  modify (\gs -> gs {gsHonestDelegators = delegs})
-  modifyModel (\ms -> ms {mDelegations = mDelegations ms <> delegs})
+  modify
+    ( \gs ->
+        gs
+          { gsHonestDelegators = delegs
+          }
+    )
+  let f :: Credential 'Staking (Crypto era) -> KeyHash 'StakePool (Crypto era) -> GenRS era ()
+      f cred kh = do
+        pp <- asks gePParams
+        let (keydeposit, _) = keyPoolDeposits proof pp
+        modifyModel
+          ( \ms ->
+              ms
+                { mDelegations = Map.insert cred kh $ mDelegations ms,
+                  mRewards = Map.insert cred (Coin 0) (mRewards @era ms),
+                  mDeposited = mDeposited ms <+> keydeposit
+                }
+          )
+  Map.traverseWithKey f delegs
   pure ()
 
 runGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> Gen (ans, GenState era)
@@ -506,11 +528,22 @@ genRewards = do
   -- we need a fresh credential, one that was not previously
   -- generated here, or one that arose from RegKey (i.e. prev)
   old <- gets (Map.keysSet . gsInitialRewards)
-  prev <- gets gsRegKey
+  prev <- gets gsAvoidCred
   credentials <- genFreshCredentials n 100 Rewrd (Set.union old prev) []
   newRewards <- Map.fromList <$> mapM (\x -> (,) x <$> lift genRewardVal) credentials
   modifyModel (\m -> m {mRewards = eval (mRewards m ⨃ newRewards)}) -- Prefers coins in newrewards
   pure newRewards
+
+genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
+genRetirementHash = do
+  m <- gets $ mPoolParams . gsModel
+  honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
+  avoidKey <- gets gsAvoidKey
+  res <- lift . genMapElemWhere m 10 $ \kh _ -> 
+    kh `Set.notMember` honestKhs && kh `Set.notMember` avoidKey
+  case res of
+    Just x -> return $ fst x
+    Nothing -> fst <$> genNewPool
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,
 --   if it doesn't work in 'tries' attempts then quit with an error. Better to raise an error
@@ -558,12 +591,25 @@ genPool = frequencyT [(10, fst <$> genNewPool), (90, pickExisting)]
         Nothing -> fst <$> genNewPool
         Just poolId -> pure $ fst poolId
 
+genFreshKeyHash :: Reflect era => Int -> GenRS era (KeyHash kr (Crypto era))
+genFreshKeyHash n
+  | n <= 0 = error "Something very unlikely happened"
+  | otherwise = do
+  avoidKeys <- gets gsAvoidKey
+  kh <- genKeyHash
+  if coerceKeyRole kh `Set.member` avoidKeys
+    then genFreshKeyHash $ n - 1
+    else return kh
+
+-- | Use this function to get a new pool that should not be used in the future transactions
 genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era))
 genNewPool = do
-  poolId <- genKeyHash
+  poolId <- genFreshKeyHash 100
   poolparam <- genPoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
   let stake = IndividualPoolStake @(Crypto era) (toRational percent) (_poolVrf poolparam)
+  -- TODO it would be best to modify the model at the end of the tx generation
+  modify (\s -> s { gsAvoidKey = Set.insert (coerceKeyRole poolId) $ gsAvoidKey s })
   modifyModel
     ( \m ->
         m
@@ -578,13 +624,14 @@ genNewInitialPool = do
   res@(poolId, poolparam) <- genNewPool
   mstake <- gets $ Map.lookup poolId . mPoolDistr . gsModel
   case mstake of
-    Just stake -> modify
-      ( \st ->
-          st
-            { gsInitialPoolParams = Map.insert poolId poolparam (gsInitialPoolParams st),
-              gsInitialPoolDistr = Map.insert poolId stake (gsInitialPoolDistr st)
-            }
-      )
+    Just stake ->
+      modify
+        ( \st ->
+            st
+              { gsInitialPoolParams = Map.insert poolId poolparam (gsInitialPoolParams st),
+                gsInitialPoolDistr = Map.insert poolId stake (gsInitialPoolDistr st)
+              }
+        )
     Nothing -> error "Could not find poolId in the model"
   return res
 
@@ -784,13 +831,13 @@ genFreshRegCred :: forall era. Reflect era => GenRS era (Credential 'Staking (Cr
 genFreshRegCred = do
   old <- gets (Map.keysSet . gsInitialRewards)
   cred <- genFreshCredential 100 Cert old
-  modify (\st -> st {gsRegKey = Set.insert cred (gsRegKey st)})
+  modify (\st -> st {gsAvoidCred = Set.insert cred (gsAvoidCred st)})
   pure cred
 
 -- =================================================================
 
 pcGenState :: Reflect era => Proof era -> GenState era -> PDoc
-pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoolp ipoold hp hd irkey prf _genenv seedIdx) =
+pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoolp ipoold hp hd avcred avkey prf _genenv seedIdx) =
   ppRecord
     "GenState Summary"
     [ ("ValidityInterval", ppValidityInterval vi),
@@ -806,7 +853,7 @@ pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoo
       ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake ipoold),
       ("Honest PoolParams", ppMap pcKeyHash pcPoolParams hp),
       ("Honest Delegators", ppMap pcCredential pcKeyHash hd),
-      ("Previous RegKey", ppSet pcCredential irkey),
+      ("Previous RegKey", ppSet pcCredential avcred),
       ("GenEnv", ppString "GenEnv ..."),
       ("Proof", ppString (show prf)),
       ("SeedIndex", ppInt seedIdx)
