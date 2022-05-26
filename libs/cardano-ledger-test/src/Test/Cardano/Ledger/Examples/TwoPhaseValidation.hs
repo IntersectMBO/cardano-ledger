@@ -1902,7 +1902,8 @@ genericCont ::
     PrettyA x,
     Eq y,
     Show y,
-    PrettyA y
+    PrettyA y,
+    HasCallStack
   ) =>
   Either [x] y ->
   Either [x] y ->
@@ -1966,13 +1967,14 @@ testUTXOWsubset,
     forall era.
     ( GoodCrypto (Crypto era),
       Default (State (EraRule "PPUP" era)),
-      PostShelley era
+      PostShelley era,
+      HasCallStack
     ) =>
     WitRule "UTXOW" era ->
     UTxO era ->
     Core.PParams era ->
     Core.Tx era ->
-    Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era)) ->
+    Either [PredicateFailure (Core.EraRule "UTXOW" era)] (State (Core.EraRule "UTXOW" era)) ->
     Assertion
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
@@ -1989,11 +1991,12 @@ testU ::
   forall era.
   ( GoodCrypto (Crypto era),
     Default (State (EraRule "PPUP" era)),
-    PostShelley era
+    PostShelley era,
+    HasCallStack
   ) =>
   Proof era ->
   Core.Tx era ->
-  Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era)) ->
+  Either [PredicateFailure (Core.EraRule "UTXOW" era)] (State (Core.EraRule "UTXOW" era)) ->
   Assertion
 testU pf tx expect = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf) tx expect
 
@@ -2021,7 +2024,8 @@ specialCont ::
   ( Eq (PredicateFailure (EraRule "UTXOW" era)),
     Eq a,
     Show (PredicateFailure (EraRule "UTXOW" era)),
-    Show a
+    Show a,
+    HasCallStack
   ) =>
   Proof era ->
   Either [PredicateFailure (EraRule "UTXOW" era)] a ->
@@ -2365,8 +2369,7 @@ instance AlonzoBased (BabbageEra c) (BabbageUtxoPred (BabbageEra c)) where
 -- ===================================================================
 
 testBBODY ::
-  ( GoodCrypto (Crypto era)
-  ) =>
+  (GoodCrypto (Crypto era), HasCallStack) =>
   WitRule "BBODY" era ->
   BbodyState era ->
   Block (BHeaderView (Crypto era)) era ->

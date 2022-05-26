@@ -111,14 +111,14 @@ plainAddr pf = Addr Testnet pCred sCred
 
 somePlainOutput :: Scriptic era => Proof era -> Core.TxOut era
 somePlainOutput pf =
-  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1000)]
+  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]
 
 mkGenesisTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => Integer -> TxIn crypto
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
 collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
 collateralOutput pf =
-  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 350)]
+  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]
 
 -- We intentionally use a ByteString with length greater than 64 to serve as
 -- as reminder that our protection against contiguous data over 64 Bytes on
@@ -236,7 +236,7 @@ referenceScriptInput3 = mkGenesisTxIn 18
 initUTxO :: PostShelley era => Proof era -> UTxO era
 initUTxO pf =
   UTxO $
-    Map.fromList $
+    Map.fromList
       [ (inlineDatumInput, inlineDatumOutput pf),
         (referenceScriptInput, referenceScriptOutput pf),
         (referenceDataHashInput, referenceDataHashOutput pf),
@@ -258,7 +258,7 @@ defaultPPs =
     MaxBlockExUnits $ ExUnits 1000000 1000000,
     ProtocolVersion $ ProtVer 7 0,
     CollateralPercentage 1,
-    AdaPerUTxOWord (Coin 5)
+    AdaPerUTxOByte (Coin 5)
   ]
 
 pp :: Proof era -> Core.PParams era
@@ -448,7 +448,7 @@ utxoStEx4 pf = smartUTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
 -- ====================================================================================
 
 outEx5 :: Scriptic era => Proof era -> Core.TxOut era
-outEx5 pf = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 995)]
+outEx5 pf = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]
 
 refInputWithDataHashNoWitTxBody :: Scriptic era => Proof era -> Core.TxBody era
 refInputWithDataHashNoWitTxBody pf =
@@ -534,7 +534,7 @@ utxoStEx6 pf = smartUTxOState (utxoEx6 pf) (Coin 0) (Coin 5) def
 -- ====================================================================================
 
 outEx7 :: Scriptic era => Proof era -> Core.TxOut era
-outEx7 pf = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 995)]
+outEx7 pf = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]
 
 redeemersEx7 :: Era era => Redeemers era
 redeemersEx7 =
@@ -589,7 +589,7 @@ utxoStEx7 pf = smartUTxOState (utxoEx7 pf) (Coin 0) (Coin 5) def
 
 collateralReturn :: Era era => Proof era -> Core.TxOut era
 collateralReturn pf =
-  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 345)]
+  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2110)]
 
 collateralOutputTxBody :: Scriptic era => Proof era -> Core.TxBody era
 collateralOutputTxBody pf =
@@ -830,7 +830,7 @@ largeOutput pf =
   newTxOut
     pf
     [ Address (plainAddr pf),
-      Amount (inject $ Coin 995),
+      Amount (inject $ Coin 1135),
       Datum . Babbage.Datum . dataToBinaryData $ largeDatum @era
     ]
 
@@ -867,11 +867,12 @@ testU ::
   forall era.
   ( GoodCrypto (Crypto era),
     Default (State (EraRule "PPUP" era)),
-    PostShelley era
+    PostShelley era,
+    HasCallStack
   ) =>
   Proof era ->
   Core.Tx era ->
-  Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era)) ->
+  Either [PredicateFailure (Core.EraRule "UTXOW" era)] (State (Core.EraRule "UTXOW" era)) ->
   Assertion
 testU pf tx expect = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf) tx expect
 
@@ -971,7 +972,7 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ largeOutputTx pf)
-              (Left [fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput pf, Coin 8115)]])
+              (Left [fromUtxoB @era $ BabbageOutputTooSmallUTxO [(largeOutput pf, Coin 8915)]])
         ]
     ]
 
