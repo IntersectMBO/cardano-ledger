@@ -17,7 +17,7 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data as Alonzo (AuxiliaryData (..), Data (..), DataHash)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import Cardano.Ledger.Alonzo.PParams (PParams' (..), getLanguageView)
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams, extendPP, retractPP)
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize, vKeyLocked)
@@ -287,7 +287,7 @@ genAlonzoTxBody _genenv utxo pparams currentslot input txOuts certs wdrls fee up
         minted2
         -- scriptIntegrityHash starts out with empty Redeemers,
         -- as Remdeemers are added it is recomputed in updateEraTxBody
-        (hashScriptIntegrity pparams (langsUsed @(AlonzoEra c) Map.empty) (Redeemers Map.empty) (TxDats Map.empty))
+        (hashScriptIntegrity @(AlonzoEra c) Set.empty (Redeemers Map.empty) (TxDats Map.empty))
         auxDHash
         netid,
       (List.map TimelockScript scriptsFromPolicies <> plutusScripts)
@@ -358,6 +358,8 @@ instance Mock c => EraGen (AlonzoEra c) where
   genEraTxBody = genAlonzoTxBody
   updateEraTxBody utxo pp witnesses txb coinx txin txout = new
     where
+      langs = langsUsed @(AlonzoEra c) (getField @"txscripts" witnesses)
+      langViews = Set.map (getLanguageView pp) langs
       new =
         txb
           { inputs = (inputs txb) <> txin,
@@ -367,8 +369,7 @@ instance Mock c => EraGen (AlonzoEra c) where
             -- The witnesses may have changed, recompute the scriptIntegrityHash.
             scriptIntegrityHash =
               hashScriptIntegrity
-                pp
-                (langsUsed @(AlonzoEra c) (getField @"txscripts" witnesses))
+                langViews
                 (getField @"txrdmrs" witnesses)
                 (getField @"txdats" witnesses)
           }

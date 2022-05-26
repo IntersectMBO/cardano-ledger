@@ -76,7 +76,7 @@ import Cardano.Binary
 import Cardano.Crypto.DSIGN.Class (SigDSIGN, VerKeyDSIGN)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data, DataHash, hashData)
-import Cardano.Ledger.Alonzo.Language (Language (..), nonNativeLanguages)
+import Cardano.Ledger.Alonzo.Language (nonNativeLanguages)
 import Cardano.Ledger.Alonzo.PParams
   ( LangDepView (..),
     encodeLangViews,
@@ -84,7 +84,6 @@ import Cardano.Ledger.Alonzo.PParams
   )
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
-    CostModels,
     ExUnits (..),
     Prices,
     Script,
@@ -270,20 +269,15 @@ instance (Era era, c ~ Crypto era) => HashAnnotated (ScriptIntegrity era) EraInd
 
 hashScriptIntegrity ::
   forall era.
-  ( Era era,
-    HasField "_costmdls" (Core.PParams era) CostModels
-  ) =>
-  Core.PParams era ->
-  Set Language ->
+  Era era =>
+  Set LangDepView ->
   Redeemers era ->
   TxDats era ->
   StrictMaybe (ScriptIntegrityHash (Crypto era))
-hashScriptIntegrity pp langs rdmrs dats =
-  if nullRedeemers rdmrs && Set.null langs && nullDats dats
+hashScriptIntegrity langViews rdmrs dats =
+  if nullRedeemers rdmrs && Set.null langViews && nullDats dats
     then SNothing
-    else
-      let newset = Set.map (getLanguageView pp) langs
-       in SJust (hashAnnotated (ScriptIntegrity rdmrs dats newset))
+    else SJust (hashAnnotated (ScriptIntegrity rdmrs dats langViews))
 
 -- ===============================================================
 -- From the specification, Figure 5 "Functions related to fees"
