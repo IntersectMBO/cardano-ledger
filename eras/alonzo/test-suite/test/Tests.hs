@@ -4,17 +4,16 @@
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Main where
 
 import Test.Cardano.Ledger.Alonzo.Examples (plutusScriptExamples)
 import Test.Cardano.Ledger.Alonzo.Golden as Golden
+import Test.Cardano.Ledger.Alonzo.PropertyTests (alonzoPropertyTests, fastPropertyTests)
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.CDDL as CDDL
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Canonical as Canonical
 import qualified Test.Cardano.Ledger.Alonzo.Serialisation.Tripping as Tripping
 import qualified Test.Cardano.Ledger.Alonzo.Translation as Translation
-import Test.Cardano.Ledger.Alonzo.Trials (alonzoPropertyTests, fastPropertyTests)
 import Test.Cardano.Ledger.Alonzo.TxInfo (txInfoTests)
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)

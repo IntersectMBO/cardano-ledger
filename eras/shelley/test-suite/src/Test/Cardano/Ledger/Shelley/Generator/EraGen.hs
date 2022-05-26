@@ -258,7 +258,7 @@ class
     -- | This overrides the existing TxFee
     Set (TxIn (Crypto era)) ->
     -- | This is to be Unioned with the existing TxIn
-    (Core.TxOut era) ->
+    Core.TxOut era ->
     -- | This is to be Appended to the end of the existing TxOut
     Core.TxBody era
 
@@ -276,7 +276,7 @@ class
 
   genEraWitnesses ::
     (UTxO era, Core.TxBody era, ScriptInfo era) ->
-    (Set (WitVKey 'Witness (Crypto era))) ->
+    Set (WitVKey 'Witness (Crypto era)) ->
     Map (ScriptHash (Crypto era)) (Core.Script era) ->
     Core.Witnesses era
 
