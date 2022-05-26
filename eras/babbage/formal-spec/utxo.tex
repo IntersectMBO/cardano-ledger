@@ -173,7 +173,7 @@ overflow, we let this number be $0$.
   \label{fig:rules:utxo-state-upd}
 \end{figure}
 
-In the UTXO rule, we switch from a manual estimation of the size consumed by $\UTxO$ entries to an estimation using the serialization. However, since the $\TxIn$ used as a key in the $\UTxO$ map is not part of the serialization, we need to account for it manually. By itself it is $40$ bytes, but we add another $128$ bytes of overhead for the in-memory representation of Haskell data.
+In the UTXO rule, we switch from a manual estimation of the size consumed by $\UTxO$ entries to an estimation using the serialization. However, since the $\TxIn$ used as a key in the $\UTxO$ map is not part of the serialization, we need to account for it manually. By itself it is $40$ bytes, but we add another $120$ bytes of overhead for the in-memory representation of Haskell data.
 
 \begin{figure}[htb]
   \begin{equation}
