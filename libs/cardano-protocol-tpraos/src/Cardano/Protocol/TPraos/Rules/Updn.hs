@@ -61,7 +61,7 @@ instance
 updTransition :: Crypto crypto => TransitionRule (UPDN crypto)
 updTransition = do
   TRC (UpdnEnv eta, UpdnState eta_v eta_c, s) <- judgmentContext
-  ei <- liftSTS $ asks epochInfo
+  ei <- liftSTS $ asks epochInfoPure
   sp <- liftSTS $ asks stabilityWindow
   EpochNo e <- liftSTS $ epochInfoEpoch ei s
   let newEpochNo = EpochNo (e + 1)

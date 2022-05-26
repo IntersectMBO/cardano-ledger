@@ -55,7 +55,7 @@ import Cardano.Ledger.BaseTypes
     Seed,
     ShelleyBase,
     UnitInterval,
-    epochInfo,
+    epochInfoPure,
   )
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
 import Cardano.Ledger.Core (ChainData, SerialisableData)
@@ -563,7 +563,7 @@ getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlot
     poolDistr = unPoolDistr $ nesPd ss
     STS.Tickn.TicknState epochNonce _ = csTickn cds
     currentEpoch = nesEL ss
-    ei = epochInfo globals
+    ei = epochInfoPure globals
     f = activeSlotCoeff globals
     epochSlots = Set.fromList [a .. b]
     (a, b) = runIdentity $ epochInfoRange ei currentEpoch

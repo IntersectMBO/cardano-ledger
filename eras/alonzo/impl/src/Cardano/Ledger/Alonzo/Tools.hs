@@ -125,7 +125,7 @@ languagesUsed scripts = Set.fromList $ mapMaybe getLanguage scripts
 --  The execution budgets in the supplied transaction are completely ignored.
 --  The results of 'evaluateTransactionExecutionUnits' are intended to replace them.
 evaluateTransactionExecutionUnits ::
-  forall era m.
+  forall era.
   ( Era era,
     ExtendedUTxO era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
@@ -137,8 +137,7 @@ evaluateTransactionExecutionUnits ::
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
-    Core.Script era ~ Script era,
-    Monad m
+    Core.Script era ~ Script era
   ) =>
   Core.PParams era ->
   -- | The transaction.
@@ -146,7 +145,7 @@ evaluateTransactionExecutionUnits ::
   -- | The current UTxO set (or the relevant portion for the transaction).
   UTxO era ->
   -- | The epoch info, used to translate slots to POSIX time for plutus.
-  EpochInfo m ->
+  EpochInfo (Either Text) ->
   -- | The start time of the given block chain.
   SystemStart ->
   -- | The array of cost models, indexed by the supported languages.
@@ -155,21 +154,21 @@ evaluateTransactionExecutionUnits ::
   --  redeemer pointers to either a failure or a sufficient execution budget.
   --  Otherwise we return a basic validation error.
   --  The value is monadic, depending on the epoch info.
-  m (Either (BasicFailure (Crypto era)) (RedeemerReport (Crypto era)))
+  Either (BasicFailure (Crypto era)) (RedeemerReport (Crypto era))
 evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
   case basicValidation tx utxo of
-    Nothing -> do
-      let getInfo :: Language -> m (Either TranslationError (Language, VersionedTxInfo))
-          getInfo lang = ((,) lang <$>) <$> txInfo pp lang ei sysS utxo tx
-      txInfos <- mapM getInfo (Set.toList $ languagesUsed (Map.elems scripts))
-      case sequence txInfos of
-        Left transEr -> pure . Left $ BadTranslation transEr
-        Right ctx ->
-          pure . Right $
-            Map.mapWithKey
-              (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
-              (unRedeemers $ getField @"txrdmrs" ws)
-    Just e -> pure . Left $ e
+    Nothing ->
+      let getInfo :: Language -> Either TranslationError (Language, VersionedTxInfo)
+          getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
+          txInfos = map getInfo (Set.toList $ languagesUsed (Map.elems scripts))
+       in case sequence txInfos of
+            Left transEr -> Left $ BadTranslation transEr
+            Right ctx ->
+              Right $
+                Map.mapWithKey
+                  (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
+                  (unRedeemers $ getField @"txrdmrs" ws)
+    Just e -> Left e
   where
     txb = getField @"body" tx
     ws = getField @"wits" tx

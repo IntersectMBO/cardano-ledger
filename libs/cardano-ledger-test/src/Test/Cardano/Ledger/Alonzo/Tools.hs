@@ -13,7 +13,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script)
-import Cardano.Ledger.Alonzo.Tools (BasicFailure (..), evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Alonzo.Tools (BasicFailure (..), ScriptFailure, evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
@@ -44,6 +44,7 @@ import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import Data.Text (Text)
 import GHC.Records (HasField (getField))
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -115,7 +116,7 @@ testExUnitCalculation ::
   Core.Tx era ->
   UTxOState era ->
   UtxoEnv era ->
-  EpochInfo m ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   Array Language CostModel ->
   (forall a. String -> m a) ->
@@ -194,16 +195,14 @@ exampleInvalidExUnitCalc ::
   ) =>
   Proof era ->
   IO ()
-exampleInvalidExUnitCalc proof = do
-  res <-
-    evaluateTransactionExecutionUnits @era
-      (pparams proof)
-      (exampleTx proof)
-      (UTxO mempty)
-      exampleEpochInfo
-      testSystemStart
-      costmodels
-  case res of
+exampleInvalidExUnitCalc proof =
+  case evaluateTransactionExecutionUnits @era
+    (pparams proof)
+    (exampleTx proof)
+    (UTxO mempty)
+    exampleEpochInfo
+    testSystemStart
+    costmodels of
     Left (UnknownTxIns _) -> pure ()
     Left (BadTranslation _) ->
       assertFailure "evaluateTransactionExecutionUnits should not fail from BadTranslation"
@@ -265,19 +264,25 @@ updateTxExUnits ::
   Proof era ->
   Core.Tx era ->
   UTxO era ->
-  EpochInfo m ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   Array Language CostModel ->
   (forall a. String -> m a) ->
   m (Core.Tx era)
-updateTxExUnits proof tx utxo ei ss costmdls err = do
-  res <- evaluateTransactionExecutionUnits (pparams proof) tx utxo ei ss costmdls
-  case res of
-    Left e -> err (show e)
-    -- rdmrs :: Map RdmrPtr ExUnits
-    Right rdmrs -> (replaceRdmrs proof tx) <$> traverse (failLeft err) rdmrs
+updateTxExUnits proof tx utxo ei ss costmdls err =
+  let res = evaluateTransactionExecutionUnits (pparams proof) tx utxo ei ss costmdls
+   in case res of
+        Left e -> err (show e)
+        Right (rdmrs :: Map RdmrPtr (Either (ScriptFailure (Crypto era)) ExUnits)) ->
+          replaceRdmrs proof tx <$> traverse (failLeft err) rdmrs
 
-replaceRdmrs :: forall era. (Era era, HasField "txrdmrs" (Core.Witnesses era) (Redeemers era)) => Proof era -> Core.Tx era -> (Map RdmrPtr ExUnits) -> Core.Tx era
+replaceRdmrs ::
+  forall era.
+  (Era era, HasField "txrdmrs" (Core.Witnesses era) (Redeemers era)) =>
+  Proof era ->
+  Core.Tx era ->
+  Map RdmrPtr ExUnits ->
+  Core.Tx era
 replaceRdmrs pf tx rdmrs = updateTx pf tx (WitnessesI [RdmrWits newrdmrs])
   where
     newrdmrs = foldr replaceRdmr (getField @"txrdmrs" (getField @"wits" tx)) (Map.assocs rdmrs)

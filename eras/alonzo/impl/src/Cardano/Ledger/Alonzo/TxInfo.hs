@@ -55,6 +55,7 @@ import Cardano.Slotting.EpochInfo (EpochInfo, epochInfoSlotToUTCTime)
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart)
 import qualified Codec.Serialise as Cborg (Serialise (..))
+import Control.Arrow (left)
 import Control.DeepSeq (deepseq)
 import Data.ByteString as BS (ByteString, length)
 import qualified Data.ByteString.Base64 as B64
@@ -102,6 +103,7 @@ data TranslationError
   | InlineDatumsNotSupported
   | ReferenceScriptsNotSupported
   | ReferenceInputsNotSupported
+  | TimeTranslationPastHorizon
   deriving (Eq, Show, Generic, NoThunks)
 
 instance ToCBOR TranslationError where
@@ -114,6 +116,7 @@ instance ToCBOR TranslationError where
   toCBOR InlineDatumsNotSupported = encode $ Sum InlineDatumsNotSupported 6
   toCBOR ReferenceScriptsNotSupported = encode $ Sum ReferenceScriptsNotSupported 7
   toCBOR ReferenceInputsNotSupported = encode $ Sum ReferenceInputsNotSupported 8
+  toCBOR TimeTranslationPastHorizon = encode $ Sum TimeTranslationPastHorizon 9
 
 instance FromCBOR TranslationError where
   fromCBOR = decode (Summands "TranslationError" dec)
@@ -127,6 +130,7 @@ instance FromCBOR TranslationError where
       dec 6 = SumD InlineDatumsNotSupported
       dec 7 = SumD ReferenceScriptsNotSupported
       dec 8 = SumD ReferenceInputsNotSupported
+      dec 9 = SumD TimeTranslationPastHorizon
       dec n = Invalid n
 
 transDataHash :: StrictMaybe (DataHash c) -> Maybe PV1.DatumHash
@@ -365,14 +369,13 @@ class ExtendedUTxO era where
   -- Compute a Digest of the current transaction to pass to the script
   --    This is the major component of the valContext function.
   txInfo ::
-    Monad m =>
     Core.PParams era ->
     Language ->
-    EpochInfo m ->
+    EpochInfo (Either Text) ->
     SystemStart ->
     UTxO era ->
     Core.Tx era ->
-    m (Either TranslationError VersionedTxInfo)
+    Either TranslationError VersionedTxInfo
 
   -- Compute two sets for all TwoPhase scripts in a Tx.
   -- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
@@ -408,9 +411,8 @@ class ExtendedUTxO era where
     Set (Data era)
 
 alonzoTxInfo ::
-  forall era m.
+  forall era.
   ( Era era,
-    Monad m,
     Value era ~ Mary.Value (Crypto era),
     HasField "wits" (Core.Tx era) (TxWitness era),
     HasField "datahash" (TxOut era) (StrictMaybe (SafeHash (Crypto era) EraIndependentData)),
@@ -424,30 +426,29 @@ alonzoTxInfo ::
   ) =>
   Core.PParams era ->
   Language ->
-  EpochInfo m ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
   Core.Tx era ->
-  m (Either TranslationError VersionedTxInfo)
+  Either TranslationError VersionedTxInfo
 alonzoTxInfo pp lang ei sysS utxo tx = do
-  timeRange <- transVITime pp ei sysS interval
-  pure $
-    case lang of
-      PlutusV1 ->
-        Right . TxInfoPV1 $
-          PV1.TxInfo
-            { PV1.txInfoInputs = rights $ map (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
-              PV1.txInfoOutputs = rights $ map txInfoOut (foldr (:) [] outs),
-              PV1.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
-              PV1.txInfoMint = transValue forge,
-              PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
-              PV1.txInfoWdrl = Map.toList (transWdrl (getField @"wdrls" tbody)),
-              PV1.txInfoValidRange = timeRange,
-              PV1.txInfoSignatories = map transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
-              PV1.txInfoData = map transDataPair datpairs,
-              PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
-            }
-      _ -> Left LanguageNotSupported
+  timeRange <- left (const TimeTranslationPastHorizon) $ transVITime pp ei sysS interval
+  case lang of
+    PlutusV1 ->
+      Right . TxInfoPV1 $
+        PV1.TxInfo
+          { PV1.txInfoInputs = rights $ map (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
+            PV1.txInfoOutputs = rights $ map txInfoOut (foldr (:) [] outs),
+            PV1.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
+            PV1.txInfoMint = transValue forge,
+            PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
+            PV1.txInfoWdrl = Map.toList (transWdrl (getField @"wdrls" tbody)),
+            PV1.txInfoValidRange = timeRange,
+            PV1.txInfoSignatories = map transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
+            PV1.txInfoData = map transDataPair datpairs,
+            PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
+          }
+    _ -> Left LanguageNotSupported
   where
     tbody :: Core.TxBody era
     tbody = getField @"body" tx

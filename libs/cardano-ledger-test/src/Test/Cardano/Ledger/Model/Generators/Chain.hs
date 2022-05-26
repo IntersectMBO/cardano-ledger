@@ -20,7 +20,7 @@ where
 
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
-    epochInfo,
+    epochInfoPure,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Val as Val
@@ -113,7 +113,7 @@ genBlocksMade = do
     use
       (modelLedger . modelLedger_nes . modelNewEpochState_es . modelEpochState_ss . modelSnapshots_pstake . snapshotQueue_go . modelSnapshot_pools)
   currentEpoch <- use $ modelLedger . to getModelLedger_epoch
-  EpochSize numSlots <- asks $ runIdentity . flip epochInfoSize currentEpoch . epochInfo . _modelGeneratorContext_globals
+  EpochSize numSlots <- asks $ runIdentity . flip epochInfoSize currentEpoch . epochInfoPure . _modelGeneratorContext_globals
   pools' <- Map.fromList . take (fromEnum numSlots) <$> shuffle (Map.toList pools)
 
   -- TODO: Model scenarios where pools make varying amounts of blocks (e.g. 0 or many)
@@ -125,8 +125,8 @@ genBlocksMade = do
 genModelEpoch :: HasGenModelM st era m => m (ModelEpoch era)
 genModelEpoch = do
   currentEpoch <- use $ modelLedger . to getModelLedger_epoch
-  EpochSize numSlots <- asks $ runIdentity . flip epochInfoSize currentEpoch . epochInfo . _modelGeneratorContext_globals
-  firstSlot <- asks $ runIdentity . flip epochInfoFirst currentEpoch . epochInfo . _modelGeneratorContext_globals
+  EpochSize numSlots <- asks $ runIdentity . flip epochInfoSize currentEpoch . epochInfoPure . _modelGeneratorContext_globals
+  firstSlot <- asks $ runIdentity . flip epochInfoFirst currentEpoch . epochInfoPure . _modelGeneratorContext_globals
 
   -- we don't have to put a block in every slot.
   numSlotsUsed <- liftGen =<< asks (_modelGeneratorParams_numSlotsUsed . _modelGeneratorContext_modelGeneratorParams)

@@ -29,7 +29,7 @@ import Cardano.Ledger.BaseTypes
     Network (..),
     Nonce,
     StrictMaybe (..),
-    epochInfo,
+    epochInfoPure,
     mkCertIxPartial,
     (⭒),
   )
@@ -802,7 +802,7 @@ rewardInfoTest = rewardInfoEx8 @?= expected
   where
     expected =
       RP.RewardProvenance
-        { RP.spe = unEpochSize . runShelleyBase $ epochInfoSize (epochInfo testGlobals) (EpochNo 0),
+        { RP.spe = unEpochSize . runShelleyBase $ epochInfoSize (epochInfoPure testGlobals) (EpochNo 0),
           RP.blocks =
             BlocksMade $
               Map.singleton (_poolId $ Cast.alicePoolParams) 1,

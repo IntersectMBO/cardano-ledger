@@ -56,7 +56,7 @@ import Cardano.Ledger.BaseTypes
     NonNegativeInterval,
     ProtVer,
     UnitInterval,
-    epochInfo,
+    epochInfoPure,
   )
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (compactAddr)
@@ -445,7 +445,7 @@ getRewardProvenance globals newepochstate =
     blocksmade = nesBprev newepochstate
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfo globals) epochnumber) globals
+    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
     asc = activeSlotCoeff globals
     secparam = securityParameter globals
 

@@ -429,7 +429,7 @@ mkShelleyGlobals ::
 mkShelleyGlobals genesis epochInfoAc maxMajorPV =
   Globals
     { activeSlotCoeff = sgActiveSlotCoeff genesis,
-      epochInfoWithErr = epochInfoAc,
+      epochInfo = epochInfoAc,
       maxKESEvo = sgMaxKESEvolutions genesis,
       maxLovelaceSupply = sgMaxLovelaceSupply genesis,
       maxMajorPV = maxMajorPV,

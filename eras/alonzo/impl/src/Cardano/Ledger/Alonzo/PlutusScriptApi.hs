@@ -63,7 +63,6 @@ import Cardano.Slotting.Time (SystemStart)
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders
 import Data.Foldable (foldl')
-import Data.Functor.Identity (Identity, runIdentity)
 import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -71,6 +70,7 @@ import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Text (Text)
 import Debug.Trace (traceEvent)
 import GHC.Generics
 import GHC.Records (HasField (..))
@@ -138,12 +138,6 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 --     the consequences of not finding Data means scripts can get dropped, so things
 --     might validate that shouldn't. So we double check that every Script has its Data, and
 --     if that is not the case, a PredicateFailure is raised in the Utxos rule.
---
---   NOTE that 'runIdentity $ txInfo ei sysS utxo tx' will fail when the validity interval
---     of the transaction 'tx' is beyond the time horizon, ie when
---     'epochInfoSlotToUTCTime ei sysS validityInterval' returns Left.
---     Therefore collectTwoPhaseScriptInputs must only be called after checking
---     that the transaction is within the time horizon.
 collectTwoPhaseScriptInputs ::
   forall era.
   ( Era era,
@@ -156,7 +150,7 @@ collectTwoPhaseScriptInputs ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "wits" (Core.Tx era) (TxWitness era)
   ) =>
-  EpochInfo Identity ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   Core.PParams era ->
   Core.Tx era ->
@@ -171,7 +165,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
         _ -> merge (apply costModels) (map redeemer needed) (map getscript needed) (Right [])
   where
     scriptsUsed = txscripts utxo tx
-    txinfo lang = runIdentity $ txInfo pp lang ei sysS utxo tx
+    txinfo lang = txInfo pp lang ei sysS utxo tx
     needed = mapMaybe knownToNotBe1Phase $ scriptsNeeded utxo tx
     -- The formal spec achieves the same filtering as knownToNotBe1Phase
     -- by use of the (partial) language function, which is not defined
