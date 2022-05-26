@@ -173,6 +173,8 @@ overflow, we let this number be $2^{16} - 1$.
   \label{fig:rules:utxo-state-upd}
 \end{figure}
 
+In the UTXO rule, we switch from a manual estimation of the size consumed by $\UTxO$ entries to an estimation using the serialization. However, since the $\TxIn$ used as a key in the $\UTxO$ map is not part of the serialization, we need to account for it manually. By itself it is $40$ bytes, but we add another $120$ bytes of overhead for the in-memory representation of Haskell data.
+
 \begin{figure}[htb]
   \begin{equation}
     \inference[UTxO-inductive]
@@ -189,7 +191,7 @@ overflow, we let this number be $2^{16} - 1$.
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \hldiff{\fun{allOuts}~txb}, \\
-      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\lceil\fun{serSize}~txout * \fun{coinsPerUTxOWord}~pp/8\rceil}) \\~
+      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{(\fun{serSize}~txout + 160) * \fun{coinsPerUTxOByte}~pp}) \\~
       \\
       \forall txout \in \hldiff{\fun{allOuts}~txb},\\
       \fun{serSize}~(\fun{getValue}~txout) \leq \fun{maxValSize}~pp \\~
@@ -270,7 +272,7 @@ overflow, we let this number be $2^{16} - 1$.
 To the UTXOW rule, in addition to the changes required by the new
 features, we add a check that all scripts and datums involved in the
 transaction are well-formed. Also, we forbid transactions that use the
-new features and try to use $\PlutusVI$ scripts.
+new features and try to execute $\PlutusVI$ scripts.
 
 \begin{figure}
   \begin{equation}
