@@ -191,7 +191,7 @@ In the UTXO rule, we switch from a manual estimation of the size consumed by $\U
       \\~\\
       \mathsf{adaID}\notin \supp {\fun{mint}~tx} \\~\\
       \forall txout \in \hldiff{\fun{allOuts}~txb}, \\
-      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{\lceil(\fun{serSize}~txout + 160) * \fun{coinsPerUTxOByte}~pp\rceil}) \\~
+      \fun{getValue}~txout \geq \fun{inject}~(\hldiff{(\fun{serSize}~txout + 160) * \fun{coinsPerUTxOByte}~pp}) \\~
       \\
       \forall txout \in \hldiff{\fun{allOuts}~txb},\\
       \fun{serSize}~(\fun{getValue}~txout) \leq \fun{maxValSize}~pp \\~
