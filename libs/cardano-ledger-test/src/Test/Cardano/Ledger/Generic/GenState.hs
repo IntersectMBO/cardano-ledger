@@ -32,7 +32,6 @@ module Test.Cardano.Ledger.Generic.GenState
     genScript,
     genValidityInterval,
     genNewPool,
-    genNewInitialPool,
     genRetirementHash,
     getBlocksizeMax,
     getCertificateMax,
@@ -59,7 +58,7 @@ import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (Network (Testnet), Seed)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj))
+import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
 import Cardano.Ledger.Era (Era (..), ValidateScript (hashScript))
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys
@@ -90,9 +89,9 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Applicative ((<|>))
-import Control.Monad (join, replicateM, replicateM_, when)
+import Control.Monad (join, replicateM, replicateM_, when, zipWithM_)
 import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.RWS.Strict (RWST (..), ask, get, gets, modify, asks)
+import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
 import qualified Control.Monad.Trans.Reader as Reader
 import Control.SetAlgebra (eval, (⨃))
 import Data.Default.Class (Default (def))
@@ -103,6 +102,7 @@ import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
+import Debug.Trace (traceShowM)
 import GHC.Word (Word64)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -163,8 +163,7 @@ data GenSize = GenSize
     certificateMax :: !Int,
     withdrawalMax :: !Int,
     oldUtxoPercent :: !Int, -- between 0-100, 10 means pick an old UTxO 10% of the time
-    maxHonestPools :: !Int,
-    maxHonestDelegators :: !Int
+    maxHonestPools :: !Int
   }
   deriving (Show)
 
@@ -186,8 +185,8 @@ data GenState era = GenState
     gsInitialPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
     gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (Crypto era)) (IndividualPoolStake (Crypto era))),
     -- Honest fields are stable from initialization to the end of the generation process
-    gsHonestPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
-    gsHonestDelegators :: !(Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))),
+    gsHonestPools :: !(Set (KeyHash 'StakePool (Crypto era))),
+    gsHonestDelegators :: !(Set (StakeCredential (Crypto era))),
     gsAvoidCred :: !(Set (Credential 'Staking (Crypto era))),
     gsAvoidKey :: !(Set (KeyHash 'StakePool (Crypto era))),
     gsProof :: !(Proof era),
@@ -209,8 +208,8 @@ emptyGenState proof genv =
     Map.empty
     Map.empty
     Map.empty
-    Map.empty
-    Map.empty
+    Set.empty
+    Set.empty
     Set.empty
     Set.empty
     proof
@@ -231,8 +230,7 @@ instance Default GenSize where
         utxoChoicesMax = 30,
         certificateMax = 10,
         withdrawalMax = 10,
-        maxHonestPools = 5,
-        maxHonestDelegators = 10
+        maxHonestPools = 5
       }
 
 small :: GenSize
@@ -249,8 +247,7 @@ small =
       utxoChoicesMax = 12,
       certificateMax = 2,
       withdrawalMax = 2,
-      maxHonestPools = 4,
-      maxHonestDelegators = 8
+      maxHonestPools = 4
     }
 
 -- ==============================================================
@@ -408,26 +405,26 @@ getNewPoolTest = do
 --   intended that this be called just once at the beginning of a trace generation.
 initHonestFields :: forall era. Reflect era => Proof era -> GenRS era ()
 initHonestFields proof = do
-  old <- gets gsInitialPoolParams
   GenEnv {geSize} <- ask
   let GenSize {..} = geSize
-  hashes <- replicateM maxHonestPools (fst <$> genNewInitialPool)
-  new <- gets gsInitialPoolParams
-  let diff = Map.difference new old
+  hashes <- replicateM maxHonestPools $ do
+    (kh, pp, _) <- genNewPool
+    modify (\gs@GenState {..} -> gs {gsHonestPools = Set.insert kh gsHonestPools})
+    modifyModel (\ms -> ms {mPoolParams = Map.insert kh pp $ mPoolParams ms})
+    return kh
   --traceShowM $ "New: " <> ppMap pcKeyHash pcPoolParams new
-  modify (\gs -> gs {gsHonestPoolParams = diff})
-  modifyModel (\ms -> ms {mPoolParams = mPoolParams ms <> diff})
   -- This incantation gets a list of fresh (not previously generated) Credential
-  old' <- gets (Map.keysSet . gsInitialRewards)
-  prev <- gets gsAvoidCred
-  credentials <- genFreshCredentials maxHonestDelegators 100 Rewrd (Set.union old' prev) []
-  let delegs = Map.fromList (zip credentials hashes)
-  modify
-    ( \gs ->
-        gs
-          { gsHonestDelegators = delegs
-          }
-    )
+  credentials <- replicateM maxHonestPools $ do
+    old' <- gets (Map.keysSet . gsInitialRewards)
+    prev <- gets gsAvoidCred
+    cred <- genFreshCredential 100 Rewrd (Set.union old' prev)
+    modify
+      ( \gs ->
+          gs
+            { gsHonestDelegators = Set.insert cred $ gsHonestDelegators gs
+            }
+      )
+    return cred
   let f :: Credential 'Staking (Crypto era) -> KeyHash 'StakePool (Crypto era) -> GenRS era ()
       f cred kh = do
         pp <- asks gePParams
@@ -440,8 +437,7 @@ initHonestFields proof = do
                   mDeposited = mDeposited ms <+> keydeposit
                 }
           )
-  Map.traverseWithKey f delegs
-  pure ()
+  zipWithM_ f credentials hashes
 
 runGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> Gen (ans, GenState era)
 runGenRS proof gsize action =
@@ -537,13 +533,20 @@ genRewards = do
 genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
 genRetirementHash = do
   m <- gets $ mPoolParams . gsModel
-  honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
+  honestKhs <- gets gsHonestPools
   avoidKey <- gets gsAvoidKey
-  res <- lift . genMapElemWhere m 10 $ \kh _ -> 
+  res <- lift . genMapElemWhere m 10 $ \kh _ ->
     kh `Set.notMember` honestKhs && kh `Set.notMember` avoidKey
   case res of
-    Just x -> return $ fst x
-    Nothing -> fst <$> genNewPool
+    Just x -> do
+      traceShowM $ "Retiring an existing pool: " <> pcKeyHash (fst x)
+      return $ fst x
+    Nothing -> do
+      (kh, pp, ips) <- genNewPool
+      addPoolToInitialState kh pp ips
+      addPoolToModel kh pp ips
+      traceShowM $ "Retiring an ad-hoc pool: " <> pcKeyHash kh
+      return kh
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,
 --   if it doesn't work in 'tries' attempts then quit with an error. Better to raise an error
@@ -583,33 +586,56 @@ genFreshCredential tries0 tag old = go tries0
 
 -- Adds to the mPoolParams and the  mPoolDistr of the Model, and the initial set of objects for Traces
 genPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
-genPool = frequencyT [(10, fst <$> genNewPool), (90, pickExisting)]
+genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
+    genNew = do
+      (kh, _) <- genNewInitialPool
+      traceShowM $ "Generated a new pool: " <> pcKeyHash kh
+      return kh
     pickExisting = do
       _pParams <- gets (mPoolParams . gsModel)
       lift (genMapElem _pParams) >>= \case
-        Nothing -> fst <$> genNewPool
-        Just poolId -> pure $ fst poolId
+        Nothing -> genNew
+        Just (poolId, _) -> do
+          traceShowM $ "Using an existing pool: " <> pcKeyHash poolId
+          pure poolId
 
 genFreshKeyHash :: Reflect era => Int -> GenRS era (KeyHash kr (Crypto era))
 genFreshKeyHash n
   | n <= 0 = error "Something very unlikely happened"
   | otherwise = do
-  avoidKeys <- gets gsAvoidKey
-  kh <- genKeyHash
-  if coerceKeyRole kh `Set.member` avoidKeys
-    then genFreshKeyHash $ n - 1
-    else return kh
+    avoidKeys <- gets gsAvoidKey
+    kh <- genKeyHash
+    if coerceKeyRole kh `Set.member` avoidKeys
+      then genFreshKeyHash $ n - 1
+      else return kh
 
 -- | Use this function to get a new pool that should not be used in the future transactions
-genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era))
+genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era), IndividualPoolStake (Crypto era))
 genNewPool = do
   poolId <- genFreshKeyHash 100
   poolparam <- genPoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
   let stake = IndividualPoolStake @(Crypto era) (toRational percent) (_poolVrf poolparam)
-  -- TODO it would be best to modify the model at the end of the tx generation
-  modify (\s -> s { gsAvoidKey = Set.insert (coerceKeyRole poolId) $ gsAvoidKey s })
+  modify (\s -> s {gsAvoidKey = Set.insert (coerceKeyRole poolId) $ gsAvoidKey s})
+  pure (poolId, poolparam, stake)
+
+addPoolToInitialState ::
+  KeyHash 'StakePool (Crypto era) ->
+  PoolParams (Crypto era) ->
+  IndividualPoolStake (Crypto era) ->
+  GenRS era ()
+addPoolToInitialState poolId poolparam stake =
+  modify
+    ( \st ->
+        st
+          { gsInitialPoolParams = Map.insert poolId poolparam (gsInitialPoolParams st),
+            gsInitialPoolDistr = Map.insert poolId stake (gsInitialPoolDistr st)
+          }
+    )
+
+addPoolToModel :: KeyHash 'StakePool (Crypto era) -> PoolParams (Crypto era) -> IndividualPoolStake (Crypto era) -> GenRS era ()
+addPoolToModel poolId poolparam stake =
   modifyModel
     ( \m ->
         m
@@ -617,23 +643,6 @@ genNewPool = do
             mPoolDistr = Map.insert poolId stake (mPoolDistr m)
           }
     )
-  pure (poolId, poolparam)
-
-genNewInitialPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era))
-genNewInitialPool = do
-  res@(poolId, poolparam) <- genNewPool
-  mstake <- gets $ Map.lookup poolId . mPoolDistr . gsModel
-  case mstake of
-    Just stake ->
-      modify
-        ( \st ->
-            st
-              { gsInitialPoolParams = Map.insert poolId poolparam (gsInitialPoolParams st),
-                gsInitialPoolDistr = Map.insert poolId stake (gsInitialPoolDistr st)
-              }
-        )
-    Nothing -> error "Could not find poolId in the model"
-  return res
 
 genPoolParams ::
   Reflect era =>

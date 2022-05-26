@@ -65,7 +65,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (forM, replicateM)
+import Control.Monad (forM, replicateM, when)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (get, gets, modify, asks)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -126,7 +126,7 @@ import Test.Cardano.Ledger.Generic.ModelState
     UtxoEntry,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcDCert)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcDCert, pcKeyHash)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
@@ -135,7 +135,7 @@ import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import GHC.Records (getField)
-import Debug.Trace (traceShowM)
+import Debug.Trace (traceShowM, traceM)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -648,7 +648,8 @@ genDCert proof = do
       poolId <- genPool
       pure $ Delegation {_delegator = rewardAccount, _delegatee = poolId}
     genFreshPool = do
-      (_, pp) <- genNewPool
+      (kh, pp) <- genNewPool
+      traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
       return pp
       --khs <- gets $ Map.keysSet . mPoolParams . gsModel
       --honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
@@ -656,7 +657,7 @@ genDCert proof = do
       --let genNewInitPool = fst <$> genNewInitialPool
       --case retireableKhs of
       --  [] -> genNewInitPool
-      --  xs  -> frequencyT 
+      --  xs -> frequencyT 
       --           [ (90, lift $ elements xs)
       --           , (10, genNewInitPool)
       --           ]
@@ -895,6 +896,7 @@ genValidatedTxAndInfo ::
       Maybe (UtxoEntry era) -- from oldUtxO
     )
 genValidatedTxAndInfo proof slot = do
+  traceM "--------- GENERATING A NEW TX ---------"
   GenEnv {gePParams} <- gets gsGenEnv
   validityInterval <- lift $ genValidityInterval slot
   modify (\gs -> gs {gsValidityInterval = validityInterval})
@@ -946,14 +948,15 @@ genValidatedTxAndInfo proof slot = do
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
   dcerts <- genDCerts proof
-  --traceShowM $ "dcerts: " <> ppList pcDCert dcerts
+  traceShowM $ "dcerts: " <> ppList pcDCert dcerts
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
 
-  let isValid = IsValid (v1 && v2 && v3)
+  let isValid@(IsValid vs) = IsValid (v1 && v2 && v3)
       mkWits :: [ExUnits -> [WitnessesField era]]
       mkWits = mkPaymentWits ++ mkCertsWits ++ mkWdrlWits
+  when vs $ traceM "TX IS INVALID!!!"
   exUnits <- genExUnits proof (length mkWits)
 
   let redeemerWitsList :: [WitnessesField era]
@@ -1039,8 +1042,8 @@ genValidatedTxAndInfo proof slot = do
           ]
       fee = minfee' proof gePParams bogusTxForFeeCalc
       deposits = depositsAndRefunds proof gePParams dcerts
-  traceShowM $ "Deposits: " <> ppCoin deposits
-  traceShowM $ "DCerts: " <> ppList pcDCert dcerts
+  --traceShowM $ "Deposits: " <> ppCoin deposits
+  --traceShowM $ "DCerts: " <> ppList pcDCert dcerts
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce
