@@ -22,32 +22,34 @@ import Cardano.Ledger.Babbage.Rules.Ledger ()
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era(..))
+import Cardano.Ledger.Era (Crypto, Era (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
     ppInt,
+    ppKeyHash,
     ppList,
     ppMap,
     ppRecord,
     ppSafeHash,
     ppSet,
     ppString,
-    ppWord64, ppKeyHash
+    ppWord64,
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (totalAdaPotsES)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
+    DPState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
     StashedAVVMAddresses,
     UTxOState (..),
-    DPState(..),
   )
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
@@ -98,24 +100,14 @@ import Test.Cardano.Ledger.Generic.GenState
     getTreasury,
     initialLedgerState,
     modifyModel,
-    runGenRS, 
+    runGenRS,
   )
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
-import Test.Cardano.Ledger.Generic.PrettyCore
-  ( pcCoin,
-    pcCredential,
-    pcScript,
-    pcScriptHash,
-    pcTxBodyField,
-    pcTxIn,
-    scriptSummary, pcKeyHash
-  )
-import Cardano.Ledger.Shelley.EpochBoundary(SnapShots(..))
-import Test.Cardano.Ledger.Shelley.Rules.TestChain(stakeDistr)  
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTx, pcTxBody, pcTxIn)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcKeyHash, pcScript, pcScriptHash, pcTx, pcTxBody, pcTxBodyField, pcTxIn, scriptSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -201,7 +193,7 @@ makeEpochState gstate ledgerstate =
     }
 
 snaps :: Era era => LedgerState era -> SnapShots (Crypto era)
-snaps (LedgerState UTxOState{_utxo = u} (DPState dstate pstate)) = SnapShots snap snap snap mempty
+snaps (LedgerState UTxOState {_utxo = u} (DPState dstate pstate)) = SnapShots snap snap snap mempty
   where
     snap = stakeDistr u dstate pstate
 
@@ -369,7 +361,7 @@ instance
       Left pdfs ->
         let txsl = Fold.toList txs
             scs = gsScripts gs
-            honestPools = Map.keysSet $ gsHonestPoolParams gs
+            honestPools = gsHonestPools gs
          in trace
               (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl scs honestPools)
               (error "FAILS")

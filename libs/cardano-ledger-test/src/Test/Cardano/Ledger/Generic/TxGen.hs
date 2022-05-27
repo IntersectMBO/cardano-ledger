@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
-import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl)
+import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl, Globals (stabilityWindow))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
@@ -40,7 +40,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
-import Cardano.Ledger.Pretty (PrettyA (..), ppRecord, ppList, ppCoin)
+import Cardano.Ledger.Pretty (PrettyA (..), ppCoin, ppList, ppRecord, ppMap)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API
@@ -62,12 +62,13 @@ import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (forM, replicateM, when)
+import Control.Monad (forM, replicateM, when, forM_)
 import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.RWS.Strict (get, gets, modify, asks)
+import Control.Monad.Trans.RWS.Strict (asks, get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
 import qualified Data.ByteString as BS
@@ -89,6 +90,8 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Word (Word16)
+import Debug.Trace (traceM, traceShowM)
+import GHC.Records (getField)
 import GHC.Stack
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -105,8 +108,10 @@ import Test.Cardano.Ledger.Generic.GenState
     genDatumWithHash,
     genFreshRegCred,
     genKeyHash,
+    genNewPool,
     genPool,
     genPositiveVal,
+    genRetirementHash,
     genRewards,
     genScript,
     genValidityInterval,
@@ -118,7 +123,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS, genNewInitialPool, genRetirementHash, genNewPool
+    runGenRS,
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -126,16 +131,14 @@ import Test.Cardano.Ledger.Generic.ModelState
     UtxoEntry,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcDCert, pcKeyHash)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcDCert, pcKeyHash, pcTx, pcCoin)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
-import Cardano.Ledger.Slot (EpochNo (EpochNo))
-import GHC.Records (getField)
-import Debug.Trace (traceShowM, traceM)
+import Test.Cardano.Ledger.Generic.ApplyTx (applyCert)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -546,8 +549,8 @@ encodeInt n
 
 freshSeed :: Proof era -> GenRS era Seed
 freshSeed _ = do
-  seedIdx <- gets gsSeedIndex
-  modify $ \gs@GenState {gsSeedIndex} -> gs {gsSeedIndex = gsSeedIndex + 1}
+  seedIdx <- gets gsSeedIdx
+  modify $ \gs@GenState {gsSeedIdx} -> gs {gsSeedIdx = gsSeedIdx + 1}
   return . mkSeedFromBytes $ encodeInt seedIdx
 
 genVRFKeyPair ::
@@ -632,8 +635,8 @@ genDCert proof = do
   elementsT
     [ DCertDeleg
         <$> frequencyT
-          [ (75, RegKey <$> genFreshRegCred @era),
-            (25, DeRegKey <$> genCredential Cert),
+          [ (75, RegKey <$> genRegKey),
+            (25, DeRegKey <$> genDeRegKey),
             (50, Delegate <$> genDelegation)
           ],
       DCertPool
@@ -643,24 +646,43 @@ genDCert proof = do
           ]
     ]
   where
+    genRegKey = do
+      cred <- genFreshRegCred @era
+      --traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
+      return cred
+    genDeRegKey = do
+      cred <- genFreshRegCred
+      --modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey cred)
+      modify $ \st ->
+        st
+          { gsInitialRewards = Map.insert cred (Coin 0) $ gsInitialRewards st
+          }
+      --traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
+      return cred
     genDelegation = do
       rewardAccount <- genFreshRegCred
-      poolId <- genPool
-      pure $ Delegation {_delegator = rewardAccount, _delegatee = poolId}
+      (kh, _) <- genPool
+      --before <- gets $ mRewards . gsModel
+      --traceShowM $ "Rewards before application: " <> ppMap pcCredential pcCoin before
+      --modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey rewardAccount)
+      --after <- gets $ mRewards . gsModel
+      --traceShowM $ "Rewards after application: " <> ppMap pcCredential pcCoin after
+      --traceShowM $ "Generated a fresh reward account for delegation: " <> pcCredential rewardAccount
+      pure $ Delegation {_delegator = rewardAccount, _delegatee = kh}
     genFreshPool = do
-      (kh, pp) <- genNewPool
-      traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
+      (kh, pp, _) <- genNewPool
+      --traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
       return pp
-      --khs <- gets $ Map.keysSet . mPoolParams . gsModel
-      --honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
-      --let retireableKhs = Set.toList $ khs `Set.difference` honestKhs
-      --let genNewInitPool = fst <$> genNewInitialPool
-      --case retireableKhs of
-      --  [] -> genNewInitPool
-      --  xs -> frequencyT 
-      --           [ (90, lift $ elements xs)
-      --           , (10, genNewInitPool)
-      --           ]
+    -- khs <- gets $ Map.keysSet . mPoolParams . gsModel
+    -- honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
+    -- let retireableKhs = Set.toList $ khs `Set.difference` honestKhs
+    -- let genNewInitPool = fst <$> genNewInitialPool
+    -- case retireableKhs of
+    --  [] -> genNewInitPool
+    --  xs -> frequencyT
+    --           [ (90, lift $ elements xs)
+    --           , (10, genNewInitPool)
+    --           ]
     genEpoch = do
       EpochNo curEpoch <- gets $ mEL . gsModel
       EpochNo maxEpoch <- asks $ epochMax proof . gePParams
@@ -673,11 +695,11 @@ genMapElemWhere m tries p
   | tries <= 0 = pure Nothing
   | n == 0 = pure Nothing
   | otherwise = do
-      i <- choose (0, n - 1)
-      let (k, a) = Map.elemAt i m
-      if p k a
-        then pure $ Just $ (k, a)
-        else genMapElemWhere m (tries - 1) p
+    i <- choose (0, n - 1)
+    let (k, a) = Map.elemAt i m
+    if p k a
+      then pure $ Just $ (k, a)
+      else genMapElemWhere m (tries - 1) p
   where
     n = Map.size m
 
@@ -705,13 +727,17 @@ genDCerts proof = do
               -- We can't make DeRegKey certificate if deregCred is not already registered
               -- or if the Rewards balance for deregCred is not 0
               case Map.lookup deregCred regCreds of
-                Nothing -> pure (dcs, ss, regCreds)
+                Nothing -> do
+                  --traceShowM $ "Credential not found in regCreds, discarding certificate: " <> pcCredential deregCred
+                  pure (dcs, ss, regCreds)
                 -- No credential, skip making certificate
                 Just (Coin 0) ->
                   -- Ok to make certificate, rewards balance is 0
                   insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
                     <$> lookupPlutusScript deregCred Cert
-                Just (Coin _) -> pure (dcs, ss, regCreds)
+                Just (Coin _) -> do
+                  --traceShowM $ "Cannot deregister the key, because rewards balance is not 0, discarding certificate: " <> pcCredential deregCred
+                  pure (dcs, ss, regCreds)
             -- Either Reward balance is not zero, or no Credential, so skip making certificate
             | Delegate (Delegation delegCred delegKey) <- d ->
               let (dcs', regCreds')
@@ -725,7 +751,7 @@ genDCerts proof = do
                     <$> lookupPlutusScript delegCred Cert
           DCertPool d
             | RegPool _ <- d -> do
-                pure (dc : dcs, ss, regCreds)
+              pure (dc : dcs, ss, regCreds)
             | RetirePool kh _ <- d -> do
               -- We need to make sure that the pool is registered before
               -- we try to retire it
@@ -896,7 +922,7 @@ genValidatedTxAndInfo ::
       Maybe (UtxoEntry era) -- from oldUtxO
     )
 genValidatedTxAndInfo proof slot = do
-  traceM "--------- GENERATING A NEW TX ---------"
+  --traceM "--------- GENERATING A NEW TX ---------"
   GenEnv {gePParams} <- gets gsGenEnv
   validityInterval <- lift $ genValidityInterval slot
   modify (\gs -> gs {gsValidityInterval = validityInterval})
@@ -948,15 +974,17 @@ genValidatedTxAndInfo proof slot = do
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
   dcerts <- genDCerts proof
-  traceShowM $ "dcerts: " <> ppList pcDCert dcerts
+  --traceShowM $ "dcerts: " <> ppList pcDCert dcerts
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
 
-  let isValid@(IsValid vs) = IsValid (v1 && v2 && v3)
+  let isValid = IsValid (v1 && v2 && v3)
       mkWits :: [ExUnits -> [WitnessesField era]]
       mkWits = mkPaymentWits ++ mkCertsWits ++ mkWdrlWits
-  when vs $ traceM "TX IS INVALID!!!"
+  case isValid of
+    IsValid True -> traceM "TX IS INVALID!!!"
+    _ -> return ()
   exUnits <- genExUnits proof (length mkWits)
 
   let redeemerWitsList :: [WitnessesField era]
@@ -1042,8 +1070,8 @@ genValidatedTxAndInfo proof slot = do
           ]
       fee = minfee' proof gePParams bogusTxForFeeCalc
       deposits = depositsAndRefunds proof gePParams dcerts
-  --traceShowM $ "Deposits: " <> ppCoin deposits
-  --traceShowM $ "DCerts: " <> ppList pcDCert dcerts
+  -- traceShowM $ "Deposits: " <> ppCoin deposits
+  -- traceShowM $ "DCerts: " <> ppList pcDCert dcerts
 
   -- 8. Crank up the amount in one of outputs to account for the fee and deposits. Note
   -- this is a hack that is not possible in a real life, but in the end it does produce
@@ -1094,6 +1122,12 @@ genValidatedTxAndInfo proof slot = do
             AuxData' []
           ]
   count <- gets (mCount . gsModel)
+
+  -- Apply all certificates to the model if the transaction is valid
+  --case isValid of
+  --  IsValid True -> forM_ dcerts $ \cert -> modifyModel $ \m -> applyCert proof m cert
+  --  _ -> return ()
+
   -- Add the new objects freshly generated for this Tx to the set of Initial objects for a Trace
   modify
     ( \st ->

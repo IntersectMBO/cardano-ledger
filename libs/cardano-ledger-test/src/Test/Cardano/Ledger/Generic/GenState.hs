@@ -55,7 +55,7 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.BaseTypes (Network (Testnet), Seed)
+import Cardano.Ledger.BaseTypes (Network (Testnet), Globals (stabilityWindow))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
@@ -65,12 +65,11 @@ import Cardano.Ledger.Keys
   ( KeyHash (..),
     KeyPair (..),
     KeyRole (..),
-    SignKeyVRF,
     coerceKeyRole,
     hashKey,
   )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
+import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString, ppUnifiedMap)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
@@ -88,21 +87,19 @@ import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Applicative ((<|>))
-import Control.Monad (join, replicateM, replicateM_, when, zipWithM_)
+import Control.Monad (join, replicateM, when, zipWithM_)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (RWST (..), ask, asks, get, gets, modify)
-import qualified Control.Monad.Trans.Reader as Reader
 import Control.SetAlgebra (eval, (⨃))
 import Data.Default.Class (Default (def))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Maybe.Strict (StrictMaybe (SJust, SNothing), maybeToStrictMaybe)
+import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
-import Debug.Trace (traceShowM)
+import Debug.Trace (traceShowM, traceShow)
 import GHC.Word (Word64)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -191,7 +188,7 @@ data GenState era = GenState
     gsAvoidKey :: !(Set (KeyHash 'StakePool (Crypto era))),
     gsProof :: !(Proof era),
     gsGenEnv :: !(GenEnv era),
-    gsSeedIndex :: !Int
+    gsSeedIdx :: !Int
   }
 
 emptyGenState :: Reflect era => Proof era -> GenEnv era -> GenState era
@@ -409,10 +406,16 @@ initHonestFields proof = do
   let GenSize {..} = geSize
   hashes <- replicateM maxHonestPools $ do
     (kh, pp, _) <- genNewPool
-    modify (\gs@GenState {..} -> gs {gsHonestPools = Set.insert kh gsHonestPools})
+    modify
+      ( \gs@GenState {..} ->
+          gs
+            { gsHonestPools = Set.insert kh gsHonestPools,
+              gsInitialPoolParams = Map.insert kh pp gsInitialPoolParams
+            }
+      )
     modifyModel (\ms -> ms {mPoolParams = Map.insert kh pp $ mPoolParams ms})
     return kh
-  --traceShowM $ "New: " <> ppMap pcKeyHash pcPoolParams new
+  -- traceShowM $ "New: " <> ppMap pcKeyHash pcPoolParams new
   -- This incantation gets a list of fresh (not previously generated) Credential
   credentials <- replicateM maxHonestPools $ do
     old' <- gets (Map.keysSet . gsInitialRewards)
@@ -539,13 +542,13 @@ genRetirementHash = do
     kh `Set.notMember` honestKhs && kh `Set.notMember` avoidKey
   case res of
     Just x -> do
-      traceShowM $ "Retiring an existing pool: " <> pcKeyHash (fst x)
+      --traceShowM $ "Retiring an existing pool: " <> pcKeyHash (fst x)
       return $ fst x
     Nothing -> do
       (kh, pp, ips) <- genNewPool
       addPoolToInitialState kh pp ips
       addPoolToModel kh pp ips
-      traceShowM $ "Retiring an ad-hoc pool: " <> pcKeyHash kh
+      --traceShowM $ "Retiring an ad-hoc pool: " <> pcKeyHash kh
       return kh
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,
@@ -585,20 +588,28 @@ genFreshCredential tries0 tag old = go tries0
         else pure c
 
 -- Adds to the mPoolParams and the  mPoolDistr of the Model, and the initial set of objects for Traces
-genPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
+genPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era))
 genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do
-      (kh, _) <- genNewInitialPool
-      traceShowM $ "Generated a new pool: " <> pcKeyHash kh
-      return kh
+      (kh, pp, _) <- genNewPool
+      --traceShowM $ "Generated a new pool: " <> pcKeyHash kh
+      modifyModel $ \m ->
+        m
+          { mPoolParams = Map.insert kh pp $ mPoolParams m
+          }
+      modify $ \st ->
+        st
+          { gsInitialPoolParams = Map.insert kh pp $ gsInitialPoolParams st
+          }
+      return (kh, pp)
     pickExisting = do
       _pParams <- gets (mPoolParams . gsModel)
       lift (genMapElem _pParams) >>= \case
         Nothing -> genNew
-        Just (poolId, _) -> do
-          traceShowM $ "Using an existing pool: " <> pcKeyHash poolId
-          pure poolId
+        Just (poolId, pp) -> do
+          --traceShowM $ "Using an existing pool: " <> pcKeyHash poolId
+          pure (poolId, pp)
 
 genFreshKeyHash :: Reflect era => Int -> GenRS era (KeyHash kr (Crypto era))
 genFreshKeyHash n
@@ -839,14 +850,16 @@ genPlutusScript proof tag = do
 genFreshRegCred :: forall era. Reflect era => GenRS era (Credential 'Staking (Crypto era))
 genFreshRegCred = do
   old <- gets (Map.keysSet . gsInitialRewards)
-  cred <- genFreshCredential 100 Cert old
+  avoid <- gets gsAvoidCred
+  rewards <- gets $ Map.keysSet . mRewards .  gsModel
+  cred <- genFreshCredential 100 Cert $ old <> avoid <> rewards
   modify (\st -> st {gsAvoidCred = Set.insert cred (gsAvoidCred st)})
   pure cred
 
 -- =================================================================
 
 pcGenState :: Reflect era => Proof era -> GenState era -> PDoc
-pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoolp ipoold hp hd avcred avkey prf _genenv seedIdx) =
+pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoolp ipoold hp hd avcred avkey prf _genenv _si) =
   ppRecord
     "GenState Summary"
     [ ("ValidityInterval", ppValidityInterval vi),
@@ -860,12 +873,11 @@ pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoo
       ("Initial Rewards", ppMap pcCredential pcCoin irew),
       ("Initial PoolParams", ppMap pcKeyHash pcPoolParams ipoolp),
       ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake ipoold),
-      ("Honest PoolParams", ppMap pcKeyHash pcPoolParams hp),
-      ("Honest Delegators", ppMap pcCredential pcKeyHash hd),
+      ("Honest PoolParams", ppSet pcKeyHash hp),
+      ("Honest Delegators", ppSet pcCredential hd),
       ("Previous RegKey", ppSet pcCredential avcred),
       ("GenEnv", ppString "GenEnv ..."),
-      ("Proof", ppString (show prf)),
-      ("SeedIndex", ppInt seedIdx)
+      ("Proof", ppString (show prf))
     ]
 
 instance Reflect era => PrettyC (GenState era) era where prettyC = pcGenState
@@ -881,11 +893,13 @@ instance era ~ BabbageEra Mock => Show (GenState era) where
 initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
+    rewards = UMap.unify (gsInitialRewards gstate) Map.empty Map.empty
+    msg = "Rewards: " <> ppUnifiedMap rewards
     utxostate = smartUTxOState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) (pPUPStateZero @era)
     dpstate = DPState dstate pstate
     dstate =
       DState
-        (UMap.unify (gsInitialRewards gstate) Map.empty Map.empty)
+        rewards
         Map.empty
         genDelegsZero
         instantaneousRewardsZero
