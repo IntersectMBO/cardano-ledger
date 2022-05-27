@@ -46,7 +46,7 @@ import Test.Cardano.Ledger.Generic.ModelState
     mNewEpochStateZero,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcKeyHash, pcCredential)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 
 -- ========================================================================

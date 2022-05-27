@@ -104,7 +104,7 @@ import Test.Cardano.Ledger.Generic.GenState
   )
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcKeyHash, pcScript, pcScriptHash, pcTx, pcTxBody, pcTxBodyField, pcTxIn, scriptSummary)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcScript, pcScriptHash, pcTxBodyField, pcTxIn, scriptSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)

@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
-import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl, Globals (stabilityWindow))
+import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
@@ -40,7 +40,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
-import Cardano.Ledger.Pretty (PrettyA (..), ppCoin, ppList, ppRecord, ppMap)
+import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API
@@ -66,7 +66,7 @@ import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
-import Control.Monad (forM, replicateM, when, forM_)
+import Control.Monad (forM, replicateM)
 import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (asks, get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
@@ -90,8 +90,6 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
 import Data.Word (Word16)
-import Debug.Trace (traceM, traceShowM)
-import GHC.Records (getField)
 import GHC.Stack
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -131,14 +129,13 @@ import Test.Cardano.Ledger.Generic.ModelState
     UtxoEntry,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcDCert, pcKeyHash, pcTx, pcCoin)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
-import Test.Cardano.Ledger.Generic.ApplyTx (applyCert)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -185,8 +182,8 @@ genExUnits era n = do
     genUpTo maxVal (!totalLeft, !acc) _
       | totalLeft == 0 = pure (0, 0 : acc)
       | otherwise = do
-        x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
-        pure (totalLeft - x, x : acc)
+          x <- min totalLeft . round . (% un) <$> genNatural 0 maxVal
+          pure (totalLeft - x, x : acc)
     genSequenceSum maxVal
       | maxVal == 0 = pure $ replicate n 0
       | otherwise = snd <$> F.foldlM (genUpTo maxVal) (maxVal, []) [1 .. n]
@@ -202,7 +199,7 @@ lookupScript scriptHash mTag = do
     Just script -> pure $ Just script
     Nothing
       | Just tag <- mTag ->
-        Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
+          Just . snd <$> lookupByKeyM "plutusScript" (scriptHash, tag) gsPlutusScripts
     _ -> pure Nothing
 
 -- ========================================================================
@@ -648,30 +645,30 @@ genDCert proof = do
   where
     genRegKey = do
       cred <- genFreshRegCred @era
-      --traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
+      -- traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
       return cred
     genDeRegKey = do
       cred <- genFreshRegCred
-      --modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey cred)
+      -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey cred)
       modify $ \st ->
         st
           { gsInitialRewards = Map.insert cred (Coin 0) $ gsInitialRewards st
           }
-      --traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
+      -- traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
       return cred
     genDelegation = do
       rewardAccount <- genFreshRegCred
       (kh, _) <- genPool
-      --before <- gets $ mRewards . gsModel
-      --traceShowM $ "Rewards before application: " <> ppMap pcCredential pcCoin before
-      --modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey rewardAccount)
-      --after <- gets $ mRewards . gsModel
-      --traceShowM $ "Rewards after application: " <> ppMap pcCredential pcCoin after
-      --traceShowM $ "Generated a fresh reward account for delegation: " <> pcCredential rewardAccount
+      -- before <- gets $ mRewards . gsModel
+      -- traceShowM $ "Rewards before application: " <> ppMap pcCredential pcCoin before
+      -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey rewardAccount)
+      -- after <- gets $ mRewards . gsModel
+      -- traceShowM $ "Rewards after application: " <> ppMap pcCredential pcCoin after
+      -- traceShowM $ "Generated a fresh reward account for delegation: " <> pcCredential rewardAccount
       pure $ Delegation {_delegator = rewardAccount, _delegatee = kh}
     genFreshPool = do
-      (kh, pp, _) <- genNewPool
-      --traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
+      (_, pp, _) <- genNewPool
+      -- traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
       return pp
     -- khs <- gets $ Map.keysSet . mPoolParams . gsModel
     -- honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
@@ -695,11 +692,11 @@ genMapElemWhere m tries p
   | tries <= 0 = pure Nothing
   | n == 0 = pure Nothing
   | otherwise = do
-    i <- choose (0, n - 1)
-    let (k, a) = Map.elemAt i m
-    if p k a
-      then pure $ Just $ (k, a)
-      else genMapElemWhere m (tries - 1) p
+      i <- choose (0, n - 1)
+      let (k, a) = Map.elemAt i m
+      if p k a
+        then pure $ Just $ (k, a)
+        else genMapElemWhere m (tries - 1) p
   where
     n = Map.size m
 
@@ -711,54 +708,54 @@ genDCerts proof = do
         -- so if a duplicate might be generated, we don't do that generation
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
               | Just (_, scriptHash) <- mScriptHash =
-                if (scriptHash, mKey) `Set.member` ss
-                  then (dcs, ss, regCreds)
-                  else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
+                  if (scriptHash, mKey) `Set.member` ss
+                    then (dcs, ss, regCreds)
+                    else (dc : dcs', Set.insert (scriptHash, mKey) ss, regCreds')
               | otherwise = (dc : dcs', ss, regCreds')
         -- Generate registration and de-registration delegation certificates,
         -- while ensuring the proper registered/unregistered state in DState
         case dc of
           DCertDeleg d
             | RegKey regCred <- d ->
-              if regCred `Map.member` regCreds -- Can't register if it is already registered
-                then pure (dcs, ss, regCreds)
-                else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
+                if regCred `Map.member` regCreds -- Can't register if it is already registered
+                  then pure (dcs, ss, regCreds)
+                  else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
             | DeRegKey deregCred <- d ->
-              -- We can't make DeRegKey certificate if deregCred is not already registered
-              -- or if the Rewards balance for deregCred is not 0
-              case Map.lookup deregCred regCreds of
-                Nothing -> do
-                  --traceShowM $ "Credential not found in regCreds, discarding certificate: " <> pcCredential deregCred
-                  pure (dcs, ss, regCreds)
-                -- No credential, skip making certificate
-                Just (Coin 0) ->
-                  -- Ok to make certificate, rewards balance is 0
-                  insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
-                    <$> lookupPlutusScript deregCred Cert
-                Just (Coin _) -> do
-                  --traceShowM $ "Cannot deregister the key, because rewards balance is not 0, discarding certificate: " <> pcCredential deregCred
-                  pure (dcs, ss, regCreds)
+                -- We can't make DeRegKey certificate if deregCred is not already registered
+                -- or if the Rewards balance for deregCred is not 0
+                case Map.lookup deregCred regCreds of
+                  Nothing -> do
+                    -- traceShowM $ "Credential not found in regCreds, discarding certificate: " <> pcCredential deregCred
+                    pure (dcs, ss, regCreds)
+                  -- No credential, skip making certificate
+                  Just (Coin 0) ->
+                    -- Ok to make certificate, rewards balance is 0
+                    insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
+                      <$> lookupPlutusScript deregCred Cert
+                  Just (Coin _) -> do
+                    -- traceShowM $ "Cannot deregister the key, because rewards balance is not 0, discarding certificate: " <> pcCredential deregCred
+                    pure (dcs, ss, regCreds)
             -- Either Reward balance is not zero, or no Credential, so skip making certificate
             | Delegate (Delegation delegCred delegKey) <- d ->
-              let (dcs', regCreds')
-                    | delegCred `Map.member` regCreds = (dcs, regCreds)
-                    | otherwise -- In order to Delegate, the delegCred must exist in rewards.
-                    -- so if it is not there, we put it there, otherwise we may
-                    -- never generate a valid delegation.
-                      =
-                      (DCertDeleg (RegKey delegCred) : dcs, Map.insert delegCred (Coin 99) regCreds)
-               in insertIfNotPresent dcs' regCreds' (Just delegKey)
-                    <$> lookupPlutusScript delegCred Cert
+                let (dcs', regCreds')
+                      | delegCred `Map.member` regCreds = (dcs, regCreds)
+                      | otherwise -- In order to Delegate, the delegCred must exist in rewards.
+                      -- so if it is not there, we put it there, otherwise we may
+                      -- never generate a valid delegation.
+                        =
+                          (DCertDeleg (RegKey delegCred) : dcs, Map.insert delegCred (Coin 99) regCreds)
+                 in insertIfNotPresent dcs' regCreds' (Just delegKey)
+                      <$> lookupPlutusScript delegCred Cert
           DCertPool d
             | RegPool _ <- d -> do
-              pure (dc : dcs, ss, regCreds)
+                pure (dc : dcs, ss, regCreds)
             | RetirePool kh _ <- d -> do
-              -- We need to make sure that the pool is registered before
-              -- we try to retire it
-              modelPools <- gets $ mPoolParams . gsModel
-              case Map.lookup kh modelPools of
-                Just _ -> pure (dc : dcs, ss, regCreds)
-                Nothing -> pure (dcs, ss, regCreds)
+                -- We need to make sure that the pool is registered before
+                -- we try to retire it
+                modelPools <- gets $ mPoolParams . gsModel
+                case Map.lookup kh modelPools of
+                  Just _ -> pure (dc : dcs, ss, regCreds)
+                  Nothing -> pure (dcs, ss, regCreds)
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
@@ -800,10 +797,10 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
       genCollateral addr coll um
         | Map.null um = genNewCollateral addr coll um =<< lift genPositiveVal
         | otherwise = do
-          i <- lift $ chooseInt (0, Map.size um - 1)
-          let (txIn, txOut) = Map.elemAt i um
-              val = getTxOutVal reify txOut
-          pure (Map.deleteAt i um, Map.insert txIn txOut coll, coin val)
+            i <- lift $ chooseInt (0, Map.size um - 1)
+            let (txIn, txOut) = Map.elemAt i um
+                val = getTxOutVal reify txOut
+            pure (Map.deleteAt i um, Map.insert txIn txOut coll, coin val)
       -- Recursively either pick existing key spend only outputs or generate new ones that
       -- will be later added to the UTxO map
       go ::
@@ -816,15 +813,15 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         | curCollTotal >= minCollTotal = pure (coll, curCollTotal <-> minCollTotal)
         | [] <- ecs = error "Impossible: supplied less addresses than `maxCollateralInputs`"
         | ec : ecs' <- ecs = do
-          (um', coll', c) <-
-            if null ecs'
-              then -- This is the last input, so most of the time, put something (val > 0)
-              -- extra in it or we will always have a ColReturn with zero in it.
-              do
-                excess <- lift genPositiveVal
-                genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
-              else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
-          go ecs' coll' (curCollTotal <+> c) um'
+            (um', coll', c) <-
+              if null ecs'
+                then -- This is the last input, so most of the time, put something (val > 0)
+                -- extra in it or we will always have a ColReturn with zero in it.
+                do
+                  excess <- lift genPositiveVal
+                  genNewCollateral ec coll um ((minCollTotal <-> curCollTotal) <+> excess)
+                else elementsT [genCollateral ec coll Map.empty, genCollateral ec coll um]
+            go ecs' coll' (curCollTotal <+> c) um'
   (collaterals, excessColCoin) <-
     go collateralAddresses Map.empty (Coin 0) $ Map.filter spendOnly utxo
   pure (Map.union collaterals utxo, collaterals, excessColCoin)
@@ -922,7 +919,7 @@ genValidatedTxAndInfo ::
       Maybe (UtxoEntry era) -- from oldUtxO
     )
 genValidatedTxAndInfo proof slot = do
-  --traceM "--------- GENERATING A NEW TX ---------"
+  -- traceM "--------- GENERATING A NEW TX ---------"
   GenEnv {gePParams} <- gets gsGenEnv
   validityInterval <- lift $ genValidityInterval slot
   modify (\gs -> gs {gsValidityInterval = validityInterval})
@@ -974,7 +971,7 @@ genValidatedTxAndInfo proof slot = do
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
   dcerts <- genDCerts proof
-  --traceShowM $ "dcerts: " <> ppList pcDCert dcerts
+  -- traceShowM $ "dcerts: " <> ppList pcDCert dcerts
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
@@ -982,9 +979,6 @@ genValidatedTxAndInfo proof slot = do
   let isValid = IsValid (v1 && v2 && v3)
       mkWits :: [ExUnits -> [WitnessesField era]]
       mkWits = mkPaymentWits ++ mkCertsWits ++ mkWdrlWits
-  case isValid of
-    IsValid True -> traceM "TX IS INVALID!!!"
-    _ -> return ()
   exUnits <- genExUnits proof (length mkWits)
 
   let redeemerWitsList :: [WitnessesField era]
@@ -1124,7 +1118,7 @@ genValidatedTxAndInfo proof slot = do
   count <- gets (mCount . gsModel)
 
   -- Apply all certificates to the model if the transaction is valid
-  --case isValid of
+  -- case isValid of
   --  IsValid True -> forM_ dcerts $ \cert -> modifyModel $ \m -> applyCert proof m cert
   --  _ -> return ()
 

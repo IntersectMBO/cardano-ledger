@@ -1,5 +1,5 @@
-{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -33,6 +33,7 @@ module Test.Cardano.Ledger.Generic.GenState
     genValidityInterval,
     genNewPool,
     genRetirementHash,
+    genGenState,
     getBlocksizeMax,
     getCertificateMax,
     getOldUtxoPercent,
@@ -44,10 +45,15 @@ module Test.Cardano.Ledger.Generic.GenState
     getUtxoChoicesMax,
     getUtxoElem,
     getUtxoTest,
+    getCollInputsMax,
+    getNewPoolTest,
+    viewGenState,
     initialLedgerState,
     modifyModel,
     runGenRS,
+    ioGenRS,
     startSlot,
+    small,
   )
 where
 
@@ -55,7 +61,7 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.BaseTypes (Network (Testnet), Globals (stabilityWindow))
+import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
@@ -69,7 +75,7 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
-import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString, ppUnifiedMap)
+import Cardano.Ledger.Pretty (PDoc, ppInt, ppMap, ppRecord, ppSet, ppString)
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
@@ -83,7 +89,6 @@ import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
-import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -99,7 +104,6 @@ import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
-import Debug.Trace (traceShowM, traceShow)
 import GHC.Word (Word64)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -256,8 +260,8 @@ genMapElem :: Map k a -> Gen (Maybe (k, a))
 genMapElem m
   | n == 0 = pure Nothing
   | otherwise = do
-    i <- choose (0, n - 1)
-    pure $ Just $ Map.elemAt i m
+      i <- choose (0, n - 1)
+      pure $ Just $ Map.elemAt i m
   where
     n = Map.size m
 
@@ -265,8 +269,8 @@ genSetElem :: Set a -> Gen (Maybe a)
 genSetElem m
   | n == 0 = pure Nothing
   | otherwise = do
-    i <- choose (0, n - 1)
-    pure $ Just $ Set.elemAt i m
+      i <- choose (0, n - 1)
+      pure $ Just $ Set.elemAt i m
   where
     n = Set.size m
 
@@ -276,11 +280,11 @@ genMapElemWhere m tries p
   | tries <= 0 = pure Nothing
   | n == 0 = pure Nothing
   | otherwise = do
-    i <- choose (0, n - 1)
-    let (k, a) = Map.elemAt i m
-    if p k a
-      then pure $ Just $ (k, a)
-      else genMapElemWhere m (tries - 1) p
+      i <- choose (0, n - 1)
+      let (k, a) = Map.elemAt i m
+      if p k a
+        then pure $ Just $ (k, a)
+        else genMapElemWhere m (tries - 1) p
   where
     n = Map.size m
 
@@ -542,13 +546,13 @@ genRetirementHash = do
     kh `Set.notMember` honestKhs && kh `Set.notMember` avoidKey
   case res of
     Just x -> do
-      --traceShowM $ "Retiring an existing pool: " <> pcKeyHash (fst x)
+      -- traceShowM $ "Retiring an existing pool: " <> pcKeyHash (fst x)
       return $ fst x
     Nothing -> do
       (kh, pp, ips) <- genNewPool
       addPoolToInitialState kh pp ips
       addPoolToModel kh pp ips
-      --traceShowM $ "Retiring an ad-hoc pool: " <> pcKeyHash kh
+      -- traceShowM $ "Retiring an ad-hoc pool: " <> pcKeyHash kh
       return kh
 
 -- | Generate a 'n' fresh credentials (ones not in the set 'old'). We get 'tries' chances,
@@ -593,7 +597,7 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
   where
     genNew = do
       (kh, pp, _) <- genNewPool
-      --traceShowM $ "Generated a new pool: " <> pcKeyHash kh
+      -- traceShowM $ "Generated a new pool: " <> pcKeyHash kh
       modifyModel $ \m ->
         m
           { mPoolParams = Map.insert kh pp $ mPoolParams m
@@ -608,18 +612,18 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
       lift (genMapElem _pParams) >>= \case
         Nothing -> genNew
         Just (poolId, pp) -> do
-          --traceShowM $ "Using an existing pool: " <> pcKeyHash poolId
+          -- traceShowM $ "Using an existing pool: " <> pcKeyHash poolId
           pure (poolId, pp)
 
 genFreshKeyHash :: Reflect era => Int -> GenRS era (KeyHash kr (Crypto era))
 genFreshKeyHash n
   | n <= 0 = error "Something very unlikely happened"
   | otherwise = do
-    avoidKeys <- gets gsAvoidKey
-    kh <- genKeyHash
-    if coerceKeyRole kh `Set.member` avoidKeys
-      then genFreshKeyHash $ n - 1
-      else return kh
+      avoidKeys <- gets gsAvoidKey
+      kh <- genKeyHash
+      if coerceKeyRole kh `Set.member` avoidKeys
+        then genFreshKeyHash $ n - 1
+        else return kh
 
 -- | Use this function to get a new pool that should not be used in the future transactions
 genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era), IndividualPoolStake (Crypto era))
@@ -740,8 +744,8 @@ genTimelockScript proof = do
   -- diverge. It also has to stay very shallow because it grows too fast.
   let genNestedTimelock k
         | k > 0 =
-          elementsT $
-            nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
+            elementsT $
+              nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks :: [GenRS era (Timelock (Crypto era))]
       nonRecTimelocks =
@@ -792,8 +796,8 @@ genMultiSigScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHa
 genMultiSigScript proof = do
   let genNestedMultiSig k
         | k > 0 =
-          elementsT $
-            nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
+            elementsT $
+              nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks = [requireSignature]
       requireSignature = Shelley.RequireSignature <$> genKeyHash
@@ -851,7 +855,7 @@ genFreshRegCred :: forall era. Reflect era => GenRS era (Credential 'Staking (Cr
 genFreshRegCred = do
   old <- gets (Map.keysSet . gsInitialRewards)
   avoid <- gets gsAvoidCred
-  rewards <- gets $ Map.keysSet . mRewards .  gsModel
+  rewards <- gets $ Map.keysSet . mRewards . gsModel
   cred <- genFreshCredential 100 Cert $ old <> avoid <> rewards
   modify (\st -> st {gsAvoidCred = Set.insert cred (gsAvoidCred st)})
   pure cred
@@ -859,7 +863,7 @@ genFreshRegCred = do
 -- =================================================================
 
 pcGenState :: Reflect era => Proof era -> GenState era -> PDoc
-pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoolp ipoold hp hd avcred avkey prf _genenv _si) =
+pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoolp ipoold hp hd avcred _avkey prf _genenv _si) =
   ppRecord
     "GenState Summary"
     [ ("ValidityInterval", ppValidityInterval vi),
@@ -894,7 +898,6 @@ initialLedgerState :: forall era. Reflect era => GenState era -> LedgerState era
 initialLedgerState gstate = LedgerState utxostate dpstate
   where
     rewards = UMap.unify (gsInitialRewards gstate) Map.empty Map.empty
-    msg = "Rewards: " <> ppUnifiedMap rewards
     utxostate = smartUTxOState (UTxO (gsInitialUtxo gstate)) deposited (Coin 0) (pPUPStateZero @era)
     dpstate = DPState dstate pstate
     dstate =
