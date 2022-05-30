@@ -121,7 +121,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS,
+    runGenRS, genRewardCredential
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -648,12 +648,8 @@ genDCert proof = do
       -- traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
       return cred
     genDeRegKey = do
-      cred <- genFreshRegCred
+      cred <- genRewardCredential
       -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey cred)
-      modify $ \st ->
-        st
-          { gsInitialRewards = Map.insert cred (Coin 0) $ gsInitialRewards st
-          }
       -- traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
       return cred
     genDelegation = do

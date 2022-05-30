@@ -1,5 +1,5 @@
-{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -21,6 +21,7 @@ module Test.Cardano.Ledger.Generic.GenState
     elementsT, -- TODO move to a utilities module
     frequencyT, -- TODO move to a utilities module
     genCredential,
+    genRewardCredential,
     genDatumWithHash,
     genFreshCredential,
     genFreshRegCred,
@@ -104,7 +105,7 @@ import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
-import GHC.Word (Word64)
+import GHC.Word (Word64, neWord)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -134,7 +135,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore
     pcKeyHash,
     pcPoolParams,
     pcTxIn,
-    pcTxOut,
+    pcTxOut, pcScriptHash
   )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters
@@ -148,6 +149,7 @@ import Test.Tasty.QuickCheck
     frequency,
     generate,
   )
+import Debug.Trace (traceM, traceShowM)
 
 -- =================================================
 
@@ -260,8 +262,8 @@ genMapElem :: Map k a -> Gen (Maybe (k, a))
 genMapElem m
   | n == 0 = pure Nothing
   | otherwise = do
-      i <- choose (0, n - 1)
-      pure $ Just $ Map.elemAt i m
+    i <- choose (0, n - 1)
+    pure $ Just $ Map.elemAt i m
   where
     n = Map.size m
 
@@ -269,8 +271,8 @@ genSetElem :: Set a -> Gen (Maybe a)
 genSetElem m
   | n == 0 = pure Nothing
   | otherwise = do
-      i <- choose (0, n - 1)
-      pure $ Just $ Set.elemAt i m
+    i <- choose (0, n - 1)
+    pure $ Just $ Set.elemAt i m
   where
     n = Set.size m
 
@@ -280,11 +282,11 @@ genMapElemWhere m tries p
   | tries <= 0 = pure Nothing
   | n == 0 = pure Nothing
   | otherwise = do
-      i <- choose (0, n - 1)
-      let (k, a) = Map.elemAt i m
-      if p k a
-        then pure $ Just $ (k, a)
-        else genMapElemWhere m (tries - 1) p
+    i <- choose (0, n - 1)
+    let (k, a) = Map.elemAt i m
+    if p k a
+      then pure $ Just $ (k, a)
+      else genMapElemWhere m (tries - 1) p
   where
     n = Map.size m
 
@@ -619,11 +621,11 @@ genFreshKeyHash :: Reflect era => Int -> GenRS era (KeyHash kr (Crypto era))
 genFreshKeyHash n
   | n <= 0 = error "Something very unlikely happened"
   | otherwise = do
-      avoidKeys <- gets gsAvoidKey
-      kh <- genKeyHash
-      if coerceKeyRole kh `Set.member` avoidKeys
-        then genFreshKeyHash $ n - 1
-        else return kh
+    avoidKeys <- gets gsAvoidKey
+    kh <- genKeyHash
+    if coerceKeyRole kh `Set.member` avoidKeys
+      then genFreshKeyHash $ n - 1
+      else return kh
 
 -- | Use this function to get a new pool that should not be used in the future transactions
 genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era), IndividualPoolStake (Crypto era))
@@ -680,40 +682,88 @@ genPoolParams _poolId = do
 -- | Generate a credential that can be used for supplied purpose (in case of
 -- plutus scripts), while occasionally picking out randomly from previously
 -- generated set.
+-- Returns the credential and True iff the credential is freshly generated
 genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (Crypto era))
-genCredential tag =
+genCredential tag = genCredential' tag False
+
+genRewardCredential :: forall era kr. Reflect era => GenRS era (Credential 'Staking (Crypto era))
+genRewardCredential = genCredential' Rewrd True
+
+-- | Generates a credential and if True is supplied, then adds any fresh credentials
+-- to initial rewards
+genCredential' ::
+  forall era kr.
+  Reflect era =>
+  Tag ->
+  Bool ->
+  RWST
+    (GenEnv era)
+    ()
+    (GenState era)
+    Gen
+    (Credential kr (Crypto era))
+genCredential' tag addToRewards =
   frequencyT
-    [ (35, KeyHashObj <$> genKeyHash),
-      (35, ScriptHashObj <$> genScript reify tag),
-      (10, pickExistingKeyHash),
-      (20, pickExistingScript)
+    [ (35, KeyHashObj <$> genKeyHash'),
+      --(35, ScriptHashObj <$> genScript' (100 :: Int))
+      (10, pickExistingKeyHash)
+      --(20, pickExistingScript)
     ]
   where
+    genKeyHash' = do
+      kh <- genKeyHash
+      traceShowM $ "Generated fresh keyhash: " <> pcKeyHash kh
+      when addToRewards . modify $ \st ->
+        st
+          { gsInitialRewards = Map.insert (KeyHashObj kh) (Coin 0) $ gsInitialRewards st
+          }
+      return $ coerceKeyRole kh
+    genScript' n
+      | n <= 0 =  error "Failed to generate a fresh script hash"
+      | otherwise = do
+        sh <- genScript @era reify tag
+        traceShowM $ "Generated a fresh script: " <> pcScriptHash sh
+        initialRewards <- gets gsInitialRewards
+        if Map.notMember (ScriptHashObj sh) initialRewards
+          then do
+            when addToRewards . modify $ \st ->
+              st
+                { gsInitialRewards = Map.insert (ScriptHashObj sh) (Coin 0) $ gsInitialRewards st
+                }
+            return sh
+          else genScript' $ n - 1
     pickExistingKeyHash =
       KeyHashObj <$> do
         keysMap <- gsKeys <$> get
         lift (genMapElem keysMap) >>= \case
-          Just (k, _) -> pure $ coerceKeyRole k
-          Nothing -> genKeyHash
+          Just (k, _) -> do
+            traceShowM $ "Picked an existing keyhash: " <> pcKeyHash k
+            pure $ coerceKeyRole k
+          Nothing -> genKeyHash'
     pickExistingScript =
       ScriptHashObj
-        <$> elementsT [pickExistingPlutusScript, pickExistingTimelockScript]
+        <$> do
+          elementsT [pickExistingPlutusScript, pickExistingTimelockScript]
     pickExistingPlutusScript = do
       plutusScriptsMap <-
         Map.filterWithKey (\(_, t) _ -> t == tag) . gsPlutusScripts <$> get
       lift (genMapElem plutusScriptsMap) >>= \case
-        Just ((h, _), _) -> pure h
+        Just ((h, _), _) -> do
+          traceShowM $ "Picked an existing Plutus script: " <> pcScriptHash h
+          pure h
         Nothing -> genScript reify tag
     pickExistingTimelockScript = do
       -- Only pick one if it matches the
       vi <- gets gsValidityInterval -- current ValidityInterval
       vimap <- gets gsVI
       case Map.lookup vi vimap of
-        Nothing -> genScript reify tag
+        Nothing -> genScript @era reify tag
         Just set ->
           lift (genSetElem set) >>= \case
             Nothing -> genScript reify tag
-            Just hash -> pure hash
+            Just hash -> do
+              traceShowM $ "Picked an existing timelock script: " <> pcScriptHash hash
+              pure hash
 
 -- | Generate a transaction body validity interval which is close in proximity
 --  (less than a stability window) from the current slot.
@@ -744,8 +794,8 @@ genTimelockScript proof = do
   -- diverge. It also has to stay very shallow because it grows too fast.
   let genNestedTimelock k
         | k > 0 =
-            elementsT $
-              nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
+          elementsT $
+            nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks :: [GenRS era (Timelock (Crypto era))]
       nonRecTimelocks =
@@ -796,8 +846,8 @@ genMultiSigScript :: forall era. Reflect era => Proof era -> GenRS era (ScriptHa
 genMultiSigScript proof = do
   let genNestedMultiSig k
         | k > 0 =
-            elementsT $
-              nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
+          elementsT $
+            nonRecTimelocks ++ [requireAllOf k, requireAnyOf k, requireMOf k]
         | otherwise = elementsT nonRecTimelocks
       nonRecTimelocks = [requireSignature]
       requireSignature = Shelley.RequireSignature <$> genKeyHash
