@@ -13,7 +13,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script)
-import Cardano.Ledger.Alonzo.Tools (BasicFailure (..), ScriptFailure, evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Alonzo.Tools (ScriptFailure, evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
@@ -203,9 +203,7 @@ exampleInvalidExUnitCalc proof =
     exampleEpochInfo
     testSystemStart
     costmodels of
-    Left (UnknownTxIns _) -> pure ()
-    Left (BadTranslation _) ->
-      assertFailure "evaluateTransactionExecutionUnits should not fail from BadTranslation"
+    Left{} -> assertFailure "evaluateTransactionExecutionUnits should not fail from TranslationError"
     Right _ -> assertFailure "evaluateTransactionExecutionUnits should have failed"
 
 exampleTx ::
