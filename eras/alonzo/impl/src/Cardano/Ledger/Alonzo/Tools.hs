@@ -6,7 +6,6 @@
 
 module Cardano.Ledger.Alonzo.Tools
   ( evaluateTransactionExecutionUnits,
-    BasicFailure (..),
     ScriptFailure (..),
   )
 where
@@ -53,14 +52,6 @@ import GHC.Records (HasField (..))
 import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V2.Ledger.Api as PV2
 
--- | Basic validtion failures that can be returned by 'evaluateTransactionExecutionUnits'.
-data BasicFailure c
-  = -- | The transaction contains inputs that are not present in the UTxO.
-    UnknownTxIns (Set (TxIn c))
-  | -- | The transaction context translation failed
-    BadTranslation TranslationError
-  deriving (Show)
-
 -- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
 data ScriptFailure c
   = -- | A redeemer was supplied that does not point to a
@@ -91,25 +82,6 @@ data ScriptFailure c
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
 note e Nothing = Left e
-
-basicValidation ::
-  ( HasField "body" (Core.Tx era) (Core.TxBody era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
-  -- | The transaction.
-  Core.Tx era ->
-  -- | The current UTxO set (or the relevant portion for the transaction).
-  UTxO era ->
-  -- | Basic failures.
-  Maybe (BasicFailure (Crypto era))
-basicValidation tx utxo =
-  if Set.null badIns
-    then Nothing
-    else Just (UnknownTxIns badIns)
-  where
-    txb = getField @"body" tx
-    ins = getField @"inputs" txb
-    badIns = Set.filter (`Map.notMember` unUTxO utxo) ins
 
 type RedeemerReport c = Map RdmrPtr (Either (ScriptFailure c) ExUnits)
 
@@ -150,25 +122,19 @@ evaluateTransactionExecutionUnits ::
   SystemStart ->
   -- | The array of cost models, indexed by the supported languages.
   Array Language CostModel ->
-  -- | If the transaction meets basic validation, we return a map from
-  --  redeemer pointers to either a failure or a sufficient execution budget.
-  --  Otherwise we return a basic validation error.
-  --  The value is monadic, depending on the epoch info.
-  Either (BasicFailure (Crypto era)) (RedeemerReport (Crypto era))
-evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
-  case basicValidation tx utxo of
-    Nothing ->
-      let getInfo :: Language -> Either TranslationError (Language, VersionedTxInfo)
-          getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
-          txInfos = map getInfo (Set.toList $ languagesUsed (Map.elems scripts))
-       in case sequence txInfos of
-            Left transEr -> Left $ BadTranslation transEr
-            Right ctx ->
-              Right $
-                Map.mapWithKey
-                  (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
-                  (unRedeemers $ getField @"txrdmrs" ws)
-    Just e -> Left e
+  -- | We return a map from redeemer pointers to either a failure or a
+  --  sufficient execution budget.
+  --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
+  --  to construct a valid execution context for the given transaction.
+  Either TranslationError (RedeemerReport (Crypto era))
+evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
+  let getInfo :: Language -> Either TranslationError (Language, VersionedTxInfo)
+      getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
+   in do
+      ctx <- sequence $ map getInfo (Set.toList $ languagesUsed (Map.elems scripts))
+      pure $ Map.mapWithKey
+        (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
+        (unRedeemers $ getField @"txrdmrs" ws)
   where
     txb = getField @"body" tx
     ws = getField @"wits" tx
