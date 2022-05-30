@@ -292,9 +292,10 @@ new features and try to execute $\PlutusVI$ scripts.
           \end{array}
         }
       \right\} - \hldiff{\Datum} \\~\\
-      \forall \var{s} \in \range (\fun{txscripts}~txw~\hldiff{utxo}) \cap \ScriptPhOne,
+      \var{neededHashes}\leteq \{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~txb\} \\
+      \forall \var{s} \in (\fun{txscripts}~txw~\hldiff{utxo~\var{neededHashes}}) \cap \ScriptPhOne,
       \fun{validateScript}~\var{s}~\var{tx}\\~\\
-      \{ h \mid (\_, h) \in \fun{scriptsNeeded}~\var{utxo}~txb\} - \hldiff{\dom (\fun{refScripts}~tx~utxo)} = \dom (\fun{txwitscripts}~txw) \\~\\
+      \var{neededHashes} - \hldiff{\dom (\fun{refScripts}~tx~utxo)} = \dom (\fun{txwitscripts}~txw) \\~\\
       \var{inputHashes} \subseteq_{\{h \mid (\wcard, \wcard, h)\in\fun{allOuts}~tx \cup \hldiff{\var{utxo}~(\fun{refInputs}~{tx})}\}} \dom (\fun{txdats}~{txw})  \\~\\
       \\~\\
       \dom (\fun{txrdmrs}~tx) = \left\{ \fun{rdptr}~txb~sp \,\middle|
