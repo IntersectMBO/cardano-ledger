@@ -28,23 +28,36 @@ import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Control.State.Transition
 import Control.State.Transition.Trace (SourceSignalTarget (..), sourceSignalTargets)
 import qualified Data.Map.Strict as Map
+import Data.Proxy
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
 import GHC.Records (HasField (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
+import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import qualified Test.Cardano.Ledger.Shelley.PropertyTests as Shelley
 import Test.Cardano.Ledger.Shelley.Rules.Chain
   ( CHAIN,
     ChainEvent (..),
     ChainState (..),
     TestChainPredicateFailure (..),
   )
-import Test.Cardano.Ledger.Shelley.Rules.TestChain (forAllChainTrace, ledgerTraceFromBlock)
-import Test.QuickCheck (Property, conjoin, counterexample, (.&&.))
-import Test.Tasty (TestTree)
-import Test.Tasty.QuickCheck ((===))
+import Test.Cardano.Ledger.Shelley.Rules.TestChain
+  ( forAllChainTrace,
+    incrementalStakeProp,
+    ledgerTraceFromBlock,
+  )
+import Test.QuickCheck
+  ( Property,
+    conjoin,
+    counterexample,
+    withMaxSuccess,
+    (.&&.),
+    (===),
+  )
+import Test.Tasty
 import qualified Test.Tasty.QuickCheck as TQC
 
 type A = AlonzoEra TestCrypto
@@ -154,3 +167,25 @@ alonzoTraceTests =
 propertyTests :: TestTree
 propertyTests =
   TQC.testProperty "alonzo specific" alonzoTraceTests
+
+-- | The same property tests run in all the other Eras, specialized to the Alonzo Era.
+alonzoPropertyTests :: TestTree
+alonzoPropertyTests =
+  testGroup
+    "Alonzo property tests"
+    [ Shelley.propertyTests @A @(AlonzoLEDGER A),
+      propertyTests,
+      TQC.testProperty
+        "Incremental stake distribution at epoch boundaries agrees"
+        (incrementalStakeProp (Proxy :: Proxy A))
+    ]
+
+-- | A select subset of all the property tests
+fastPropertyTests :: TestTree
+fastPropertyTests =
+  testGroup
+    "Fast Alonzo Property Tests"
+    [ TQC.testProperty
+        "total amount of Ada is preserved (Chain)"
+        (withMaxSuccess 50 (Shelley.adaPreservationChain @A @(AlonzoLEDGER A)))
+    ]

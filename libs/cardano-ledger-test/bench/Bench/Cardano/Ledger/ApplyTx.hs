@@ -1,9 +1,7 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
@@ -16,44 +14,38 @@
 -- | Benchmarks for transaction application
 module Bench.Cardano.Ledger.ApplyTx (applyTxBenchmarks, ShelleyBench) where
 
-import Bench.Cardano.Ledger.ApplyTx.Gen (generateForEra)
-import Cardano.Binary
+import Bench.Cardano.Ledger.ApplyTx.Gen (ApplyTxEnv (..), generateApplyTxEnvForEra)
+import Cardano.Binary (FromCBOR (fromCBOR), decodeAnnotator, serialize)
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Ledger ()
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
-  ( AccountState (..),
-    ApplyTx,
-    Coin (..),
+  ( ApplyTx,
     Globals,
-    LedgerEnv (..),
-    MempoolEnv,
-    MempoolState,
     ShelleyBasedEra,
     applyTxsTransition,
   )
-import Cardano.Ledger.Shelley.LedgerState (DPState, LedgerState (..), UTxOState)
+import Cardano.Ledger.Shelley.LedgerState (DPState, UTxOState)
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition (State)
 import Control.State.Transition.Trace.Generator.QuickCheck (BaseEnv, HasTrace)
 import Criterion
-import Data.Default.Class (Default, def)
+import Data.Default.Class (Default)
 import Data.Proxy (Proxy (..))
 import qualified Data.Sequence as Seq
 import Data.Sharing (fromNotSharedCBOR)
 import Data.Typeable (typeRep)
-import GHC.Generics (Generic)
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()
+import Test.Cardano.Ledger.Alonzo.Trace ()
 import Test.Cardano.Ledger.MaryEraGen ()
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen)
-import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
 type ShelleyBench = ShelleyEra C_Crypto
 
@@ -66,32 +58,9 @@ type AlonzoBench = AlonzoEra C_Crypto
 --------------------------------------------------------------------------------
 -- Applying a Shelley transaction in multiple eras.
 --
--- This benchmark starts with a fixed Shelley transaction. We decode it in the
--- correct transaction format for subsequent eras, and benchmark applying it to
--- a given ledger state (also translated for each era.)
+-- This benchmark starts by generating a fixed Shelley transaction from a fixed
+-- seed.
 --------------------------------------------------------------------------------
-
--- | Static mempool environment. We apply Txs in some future slot. The account
--- state shouldn't matter much.
-applyTxMempoolEnv :: Default (Core.PParams era) => MempoolEnv era
-applyTxMempoolEnv =
-  LedgerEnv
-    { ledgerSlotNo = SlotNo 0,
-      ledgerIx = minBound,
-      ledgerPp = def,
-      ledgerAccount = AccountState (Coin 45000000000) (Coin 45000000000)
-    }
-
-data ApplyTxRes era = ApplyTxRes
-  { atrGlobals :: Globals,
-    atrMempoolEnv :: MempoolEnv era,
-    atrState :: MempoolState era,
-    atrTx :: Core.Tx era
-  }
-  deriving (Generic)
-
-instance NFData (ApplyTxRes era) where
-  rnf (ApplyTxRes g me s t) = seq g (seq me (seq s (seq t ())))
 
 --------------------------------------------------------------------------------
 -- Fixed generators
@@ -109,11 +78,11 @@ benchWithGenState ::
     BaseEnv (Core.EraRule "LEDGER" era) ~ Globals
   ) =>
   Proxy era ->
-  ((LedgerState era, Core.Tx era) -> IO a) ->
+  (ApplyTxEnv era -> IO a) ->
   (a -> Benchmarkable) ->
   Benchmark
 benchWithGenState px prepEnv mkBench =
-  env (prepEnv $ generateForEra px benchmarkSeed) $ bench (show $ typeRep px) . mkBench
+  env (prepEnv $ generateApplyTxEnvForEra px benchmarkSeed) $ bench (show $ typeRep px) . mkBench
 
 benchApplyTx ::
   forall era.
@@ -128,15 +97,14 @@ benchApplyTx ::
   ) =>
   Proxy era ->
   Benchmark
-benchApplyTx px = benchWithGenState px genRes $ \txRes ->
-  let ApplyTxRes {atrGlobals, atrMempoolEnv, atrState, atrTx} = txRes
-   in nf
-        ( either (error . show) id
-            . applyTxsTransition atrGlobals atrMempoolEnv (Seq.singleton atrTx)
-        )
-        atrState
-  where
-    genRes (state, tx) = pure $ ApplyTxRes testGlobals applyTxMempoolEnv state tx
+benchApplyTx px =
+  benchWithGenState px pure $ \applyTxEnv ->
+    let ApplyTxEnv {ateGlobals, ateMempoolEnv, ateState, ateTx} = applyTxEnv
+     in nf
+          ( either (error . show) id
+              . applyTxsTransition ateGlobals ateMempoolEnv (Seq.singleton ateTx)
+          )
+          ateState
 
 --------------------------------------------------------------------------------
 -- Deserialising resources
@@ -156,8 +124,8 @@ deserialiseTxEra ::
   Proxy era ->
   Benchmark
 deserialiseTxEra px =
-  benchWithGenState px (pure . serialize . snd) $
-    nf (either (error . show) (id @((Core.Tx era))) . decodeAnnotator "tx" fromCBOR)
+  benchWithGenState px (pure . serialize . ateTx) $
+    nf (either (error . show) (id @(Core.Tx era)) . decodeAnnotator "tx" fromCBOR)
 
 --------------------------------------------------------------------------------
 -- Benchmark suite
@@ -171,15 +139,15 @@ applyTxBenchmarks =
         "ApplyTxInEra"
         [ benchApplyTx (Proxy @ShelleyBench),
           benchApplyTx (Proxy @AllegraBench),
-          benchApplyTx (Proxy @MaryBench)
-          -- benchApplyTx (Proxy @AlonzoBench)
+          benchApplyTx (Proxy @MaryBench),
+          benchApplyTx (Proxy @AlonzoBench)
         ],
       bgroup
         "Deserialise Shelley Tx"
         [ deserialiseTxEra (Proxy @ShelleyBench),
           deserialiseTxEra (Proxy @AllegraBench),
-          deserialiseTxEra (Proxy @MaryBench)
-          -- deserialiseTxEra (Proxy @AlonzoBench)
+          deserialiseTxEra (Proxy @MaryBench),
+          deserialiseTxEra (Proxy @AlonzoBench)
         ]
     ]
 
