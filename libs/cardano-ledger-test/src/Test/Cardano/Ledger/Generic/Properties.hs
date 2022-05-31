@@ -286,8 +286,8 @@ main :: IO ()
 main = defaultMain $  adaIsPreservedBabbage (def{blocksizeMax = 4})
 -- :main  --quickcheck-replay=855806 
 
-
--- main = test 100 (Babbage Mock)
+main8 :: IO ()
+main8 = test 100 (Babbage Mock)
 
 test :: ReflectC (Crypto era) => Int -> Proof era -> IO ()
 test n proof = defaultMain $

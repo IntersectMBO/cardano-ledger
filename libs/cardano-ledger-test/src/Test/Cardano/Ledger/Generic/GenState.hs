@@ -57,7 +57,7 @@ module Test.Cardano.Ledger.Generic.GenState
   )
 where
 
-import Debug.Trace
+-- import Debug.Trace
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
@@ -134,7 +134,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore
     pcIndividualPoolStake,
     pcKeyHash,
     pcPoolParams,
-    pcScriptHash,
+    -- pcScriptHash,
     pcTxIn,
     pcTxOut,
   )
@@ -545,6 +545,7 @@ genRewards = do
   credentials <- genFreshCredentials n 100 Rewrd (Set.union old prev) []
   newRewards <- Map.fromList <$> mapM (\x -> (,) x <$> lift genRewardVal) credentials
   modifyModel (\m -> m {mRewards = eval (mRewards m ⨃ newRewards)}) -- Prefers coins in newrewards
+  modify (\ st -> st {gsInitialRewards = eval (gsInitialRewards st ⨃ newRewards)})
   pure newRewards
 
 genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
@@ -702,7 +703,7 @@ genCredential tag =
   where
     genKeyHash' = do
       kh <- genKeyHash
-      traceShowM $ "Generated fresh keyhash: " <> pcKeyHash kh
+      -- traceShowM $ "Generated fresh keyhash: " <> pcKeyHash kh
       case tag of
         Rewrd ->  modify $ \st ->
                              st{ gsInitialRewards = Map.insert (KeyHashObj kh) (Coin 0) $ gsInitialRewards st }
@@ -712,7 +713,7 @@ genCredential tag =
       | n <= 0 = error "Failed to generate a fresh script hash"
       | otherwise = do
         sh <- genScript @era reify tag
-        traceShowM $ "Generated a fresh script: " <> pcScriptHash sh
+        -- traceShowM $ "Generated a fresh script: " <> pcScriptHash sh
         initialRewards <- gets gsInitialRewards
         avoidCredentials <- gets gsAvoidCred
         let newcred =  ScriptHashObj sh
@@ -728,7 +729,7 @@ genCredential tag =
         keysMap <- gsKeys <$> get
         lift (genMapElem keysMap) >>= \case
           Just (k, _) -> do
-            traceShowM $ "Picked an existing keyhash: " <> pcKeyHash k
+            -- traceShowM $ "Picked an existing keyhash: " <> pcKeyHash k
             pure $ coerceKeyRole k
           Nothing -> genKeyHash'
     pickExistingScript =
@@ -740,7 +741,7 @@ genCredential tag =
         Map.filterWithKey (\(_, t) _ -> t == tag) . gsPlutusScripts <$> get
       lift (genMapElem plutusScriptsMap) >>= \case
         Just ((h, _), _) -> do
-          traceShowM $ "Picked an existing Plutus script: " <> pcScriptHash h
+          -- traceShowM $ "Picked an existing Plutus script: " <> pcScriptHash h
           pure h
         Nothing -> genScript reify tag
     pickExistingTimelockScript = do
@@ -753,7 +754,7 @@ genCredential tag =
           lift (genSetElem set) >>= \case
             Nothing -> genScript reify tag
             Just hash -> do
-              traceShowM $ "Picked an existing timelock script: " <> pcScriptHash hash
+              -- traceShowM $ "Picked an existing timelock script: " <> pcScriptHash hash
               pure hash
 
 -- | Generate a transaction body validity interval which is close in proximity

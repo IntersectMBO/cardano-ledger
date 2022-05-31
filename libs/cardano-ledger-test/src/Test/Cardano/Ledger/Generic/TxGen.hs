@@ -129,14 +129,14 @@ import Test.Cardano.Ledger.Generic.ModelState
     UtxoEntry,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcCredential, pcKeyHash) -- , pcScriptHash, pcScript)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTx) -- ,pcCredential, pcKeyHash, pcScriptHash, pcScript)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
-import Debug.Trace (traceShowM, traceM)
+--import Debug.Trace (traceShowM, traceM)
 -- import Cardano.Ledger.Pretty.Alonzo (ppTag, ppIsValid) -- ppScript)
 
 -- ===================================================
@@ -632,6 +632,7 @@ listOf' gen = do
 genRelays :: Proof era -> GenRS era (StrictSeq StakePoolRelay)
 genRelays proof = Seq.fromList <$> listOf' (genRelay proof)
 
+{-
 traceObligation :: Reflect era => GenRS era ()
 traceObligation = do
   gstate <- get
@@ -640,11 +641,12 @@ traceObligation = do
     (gePParams (gsGenEnv gstate))
     (gsInitialRewards gstate)
     (gsInitialPoolParams gstate)
+-}
 
 genDCert :: forall era. Reflect era => Proof era -> GenRS era (DCert (Crypto era))
 genDCert proof = do
-  traceM "Obligation before DCert"
-  traceObligation
+  -- traceM "Obligation before DCert"
+  -- traceObligation
   res <- elementsT
     [ DCertDeleg
         <$> frequencyT
@@ -658,18 +660,18 @@ genDCert proof = do
             (25, RetirePool <$> genRetirementHash <*> genEpoch)
           ]
     ]
-  traceM "Obligation after DCert"
-  traceObligation
+  -- traceM "Obligation after DCert"
+  -- traceObligation
   return res
   where
     genRegKey = do
       cred <- genFreshRegCred @era
-      traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
+      -- traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
       return cred
     genDeRegKey = do
       cred <- genCredential Rewrd
       -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey cred)
-      traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
+      -- traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
       return cred
     genDelegation = do
       rewardAccount <- genFreshRegCred
@@ -679,11 +681,11 @@ genDCert proof = do
       -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey rewardAccount)
       -- after <- gets $ mRewards . gsModel
       -- traceShowM $ "Rewards after application: " <> ppMap pcCredential pcCoin after
-      traceShowM $ "Generated a fresh reward account for delegation: " <> pcCredential rewardAccount
+      -- traceShowM $ "Generated a fresh reward account for delegation: " <> pcCredential rewardAccount
       pure $ Delegation {_delegator = rewardAccount, _delegatee = kh}
     genFreshPool = do
-      (kh, pp, _) <- genNewPool
-      traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
+      (_kh, pp, _) <- genNewPool
+      -- traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
       return pp
     -- khs <- gets $ Map.keysSet . mPoolParams . gsModel
     -- honestKhs <- gets $ Map.keysSet . gsHonestPoolParams
