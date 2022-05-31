@@ -139,10 +139,10 @@ ppBabbageUtxoPred ::
   PDoc
 ppBabbageUtxoPred (FromAlonzoUtxoFail x) = prettyA x
 ppBabbageUtxoPred (FromAlonzoUtxowFail x) = prettyA x
-ppBabbageUtxoPred (UnequalCollateralReturn c1 c2) =
+ppBabbageUtxoPred (IncorrectTotalCollateralField c1 c2) =
   ppRecord
-    "UnequalCollateralReturn"
-    [("collateral needed", ppCoin c1), ("collateral returned", ppCoin c2)]
+    "IncorrectTotalCollateralField"
+    [("collateral provided", ppCoin c1), ("collateral declared", ppCoin c2)]
 ppBabbageUtxoPred (MalformedScripts scripts) =
   ppSexp "MalformedScripts" [ppSet ppScriptHash scripts]
 ppBabbageUtxoPred (BabbageOutputTooSmallUTxO xs) =
