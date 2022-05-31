@@ -60,7 +60,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
 import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.RWS.Strict (get)
+import Control.Monad.Trans.RWS.Strict (get, gets)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Control.State.Transition.Trace (Trace (..), lastState)
@@ -98,6 +98,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getBlocksizeMax,
     getReserves,
     getSlot,
+    getSlotDelta,
     getTreasury,
     initialLedgerState,
     modifyModel,
@@ -139,7 +140,8 @@ genRsTxSeq proof this lastN ans slot = do
   maxBlockSize <- getBlocksizeMax <$> get
   n <- lift $ choose (2 :: Int, fromIntegral maxBlockSize)
   txs <- forM [0 .. n - 1] (\i -> genRsTxAndModel proof (this + i) slot)
-  nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose (5, 12)
+  newSlotRange <- gets getSlotDelta
+  nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose  newSlotRange
   genRsTxSeq proof (this + n) lastN ((SS.fromList txs, slot) : ans) nextSlotNo
 
 -- | Generate a Vector of Blocks, and an initial LedgerState

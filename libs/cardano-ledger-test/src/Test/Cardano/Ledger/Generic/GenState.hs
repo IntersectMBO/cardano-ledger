@@ -17,11 +17,10 @@ module Test.Cardano.Ledger.Generic.GenState
   ( GenEnv (..),
     GenRS,
     GenState (..),
-    GenSize,
+    GenSize(..),
     elementsT, -- TODO move to a utilities module
     frequencyT, -- TODO move to a utilities module
     genCredential,
-    genRewardCredential,
     genDatumWithHash,
     genFreshCredential,
     genFreshRegCred,
@@ -41,6 +40,7 @@ module Test.Cardano.Ledger.Generic.GenState
     getRefInputsMax,
     getReserves,
     getSlot,
+    getSlotDelta,
     getSpendInputsMax,
     getTreasury,
     getUtxoChoicesMax,
@@ -53,11 +53,11 @@ module Test.Cardano.Ledger.Generic.GenState
     modifyModel,
     runGenRS,
     ioGenRS,
-    startSlot,
     small,
   )
 where
 
+import Debug.Trace
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
@@ -105,8 +105,7 @@ import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
-import Debug.Trace (traceM, traceShowM)
-import GHC.Word (Word64, neWord)
+import GHC.Word (Word64)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -159,6 +158,7 @@ data GenSize = GenSize
   { treasury :: !Integer,
     reserves :: !Integer,
     startSlot :: !Word64,
+    slotDelta :: !(Word64,Word64),
     blocksizeMax :: !Integer,
     collInputsMax :: !Natural,
     spendInputsMax :: !Int,
@@ -226,6 +226,7 @@ instance Default GenSize where
       { treasury = 1000000,
         reserves = 1000000,
         startSlot = 0,
+        slotDelta = (3,7),
         blocksizeMax = 10,
         collInputsMax = 5,
         oldUtxoPercent = 15,
@@ -243,6 +244,7 @@ small =
     { treasury = 1000000,
       reserves = 1000000,
       startSlot = 0,
+      slotDelta = (2,5),
       blocksizeMax = 3,
       collInputsMax = 2,
       oldUtxoPercent = 5,
@@ -332,6 +334,9 @@ modifyModel f = modify (\gstate -> gstate {gsModel = f (gsModel gstate)})
 
 getSlot :: GenState era -> SlotNo
 getSlot = SlotNo . startSlot . geSize . gsGenEnv
+
+getSlotDelta :: GenState era -> (Word64,Word64)
+getSlotDelta = slotDelta . geSize . gsGenEnv
 
 getBlocksizeMax :: GenState era -> Integer
 getBlocksizeMax = blocksizeMax . geSize . gsGenEnv
@@ -534,7 +539,7 @@ genRewards = do
   wmax <- gets (withdrawalMax . geSize . gsGenEnv)
   n <- lift $ choose (1, wmax)
   -- we need a fresh credential, one that was not previously
-  -- generated here, or one that arose from RegKey (i.e. prev)
+  -- generated here, or one that arose from gsAvoidCred (i.e. prev)
   old <- gets (Map.keysSet . gsInitialRewards)
   prev <- gets gsAvoidCred
   credentials <- genFreshCredentials n 100 Rewrd (Set.union old prev) []
@@ -687,25 +692,7 @@ genPoolParams _poolId = do
 -- generated set.
 -- Returns the credential and True iff the credential is freshly generated
 genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (Crypto era))
-genCredential tag = genCredential' tag False
-
-genRewardCredential :: forall era kr. Reflect era => GenRS era (Credential 'Staking (Crypto era))
-genRewardCredential = genCredential' Rewrd True
-
--- | Generates a credential and if True is supplied, then adds any fresh credentials
--- to initial rewards
-genCredential' ::
-  forall era kr.
-  Reflect era =>
-  Tag ->
-  Bool ->
-  RWST
-    (GenEnv era)
-    ()
-    (GenState era)
-    Gen
-    (Credential kr (Crypto era))
-genCredential' tag addToRewards =
+genCredential tag =
   frequencyT
     [ (35, KeyHashObj <$> genKeyHash'),
       (35, ScriptHashObj <$> genScript' (100 :: Int)),
@@ -716,10 +703,10 @@ genCredential' tag addToRewards =
     genKeyHash' = do
       kh <- genKeyHash
       traceShowM $ "Generated fresh keyhash: " <> pcKeyHash kh
-      when addToRewards . modify $ \st ->
-        st
-          { gsInitialRewards = Map.insert (KeyHashObj kh) (Coin 0) $ gsInitialRewards st
-          }
+      case tag of
+        Rewrd ->  modify $ \st ->
+                             st{ gsInitialRewards = Map.insert (KeyHashObj kh) (Coin 0) $ gsInitialRewards st }
+        _ -> pure ()
       return $ coerceKeyRole kh
     genScript' n
       | n <= 0 = error "Failed to generate a fresh script hash"
@@ -727,12 +714,13 @@ genCredential' tag addToRewards =
         sh <- genScript @era reify tag
         traceShowM $ "Generated a fresh script: " <> pcScriptHash sh
         initialRewards <- gets gsInitialRewards
-        if Map.notMember (ScriptHashObj sh) initialRewards
+        avoidCredentials <- gets gsAvoidCred
+        let newcred =  ScriptHashObj sh
+        if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
           then do
-            when addToRewards . modify $ \st ->
-              st
-                { gsInitialRewards = Map.insert (ScriptHashObj sh) (Coin 0) $ gsInitialRewards st
-                }
+            case tag of
+              Rewrd -> modify $ \st -> st{ gsInitialRewards = Map.insert newcred (Coin 0) $ gsInitialRewards st}
+              _ -> pure ()
             return sh
           else genScript' $ n - 1
     pickExistingKeyHash =

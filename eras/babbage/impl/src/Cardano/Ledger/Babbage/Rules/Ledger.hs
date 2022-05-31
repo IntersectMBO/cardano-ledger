@@ -44,7 +44,7 @@ import qualified Cardano.Ledger.Shelley.Rules.Ledgers as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition
-  ( Assertion (..),
+  ( -- Assertion (..),
     AssertionViolation (..),
     Embed (..),
     STS (..),
@@ -92,13 +92,13 @@ instance
       UTxOState _ depositAmt _ _ _ = utxoSt
 
   assertions =
-    [ PostCondition
+    [ {- PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
               obligation ledgerPp (rewards dpsDState) (_pParams dpsPState)
                 == _deposited utxoSt
-        )
+        ) -}
     ]
 
 instance

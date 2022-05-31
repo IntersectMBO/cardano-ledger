@@ -40,7 +40,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
-import Cardano.Ledger.Pretty (PrettyA (..), ppRecord, ppMap, ppPair)
+import Cardano.Ledger.Pretty (PrettyA (..), ppRecord) -- , ppMap, ppPair)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API
@@ -121,7 +121,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getUtxoElem,
     getUtxoTest,
     modifyModel,
-    runGenRS, genRewardCredential
+    runGenRS,
   )
 import Test.Cardano.Ledger.Generic.ModelState
   ( MUtxo,
@@ -129,7 +129,7 @@ import Test.Cardano.Ledger.Generic.ModelState
     UtxoEntry,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcCredential, pcKeyHash, pcScriptHash, pcScript)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcCredential, pcKeyHash) -- , pcScriptHash, pcScript)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
@@ -137,7 +137,7 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
 import Debug.Trace (traceShowM, traceM)
-import Cardano.Ledger.Pretty.Alonzo (ppTag, ppIsValid, ppScript)
+-- import Cardano.Ledger.Pretty.Alonzo (ppTag, ppIsValid) -- ppScript)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -192,14 +192,14 @@ genExUnits era n = do
 
 lookupScript ::
   forall era.
-  Reflect era =>
+  -- Reflect era =>
   ScriptHash (Crypto era) ->
   Maybe Tag ->
   GenRS era (Maybe (Core.Script era))
 lookupScript scriptHash mTag = do
   m <- gsScripts <$> get
-  pss <- gets gsPlutusScripts
-  traceShowM $ "plutus scrips map:\n" <> ppMap (ppPair pcScriptHash ppTag) (ppPair ppIsValid (pcScript $ reify @era)) pss
+  -- pss <- gets gsPlutusScripts
+  -- traceShowM $ "plutus scrips map:\n" <> ppMap (ppPair pcScriptHash ppTag) (ppPair ppIsValid (pcScript $ reify @era)) pss
   case Map.lookup scriptHash m of
     Just script -> pure $ Just script
     Nothing
@@ -667,7 +667,7 @@ genDCert proof = do
       traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
       return cred
     genDeRegKey = do
-      cred <- genRewardCredential
+      cred <- genCredential Rewrd
       -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey cred)
       traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
       return cred

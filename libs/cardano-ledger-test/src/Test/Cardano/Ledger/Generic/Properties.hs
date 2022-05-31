@@ -43,6 +43,7 @@ import Test.Cardano.Ledger.Generic.GenState
   ( GenEnv (..),
     GenRS,
     GenSize (..),
+    blocksizeMax,
     GenState (..),
     modifyModel,
     runGenRS,
@@ -282,7 +283,11 @@ genericProperties gensize =
 -- :main --quickcheck-replay=205148
 
 main :: IO ()
-main = test 100 (Babbage Mock)
+main = defaultMain $  adaIsPreservedBabbage (def{blocksizeMax = 4})
+-- :main  --quickcheck-replay=855806 
+
+
+-- main = test 100 (Babbage Mock)
 
 test :: ReflectC (Crypto era) => Int -> Proof era -> IO ()
 test n proof = defaultMain $
