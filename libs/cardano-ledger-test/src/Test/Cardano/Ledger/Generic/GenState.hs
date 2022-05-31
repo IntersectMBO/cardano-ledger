@@ -105,6 +105,7 @@ import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
+import Debug.Trace (traceM, traceShowM)
 import GHC.Word (Word64, neWord)
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -134,8 +135,9 @@ import Test.Cardano.Ledger.Generic.PrettyCore
     pcIndividualPoolStake,
     pcKeyHash,
     pcPoolParams,
+    pcScriptHash,
     pcTxIn,
-    pcTxOut, pcScriptHash
+    pcTxOut,
   )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters
@@ -149,7 +151,6 @@ import Test.Tasty.QuickCheck
     frequency,
     generate,
   )
-import Debug.Trace (traceM, traceShowM)
 
 -- =================================================
 
@@ -411,12 +412,13 @@ initHonestFields proof = do
   GenEnv {geSize} <- ask
   let GenSize {..} = geSize
   hashes <- replicateM maxHonestPools $ do
-    (kh, pp, _) <- genNewPool
+    (kh, pp, ips) <- genNewPool
     modify
       ( \gs@GenState {..} ->
           gs
             { gsHonestPools = Set.insert kh gsHonestPools,
-              gsInitialPoolParams = Map.insert kh pp gsInitialPoolParams
+              gsInitialPoolParams = Map.insert kh pp gsInitialPoolParams,
+              gsInitialPoolDistr = Map.insert kh ips gsInitialPoolDistr
             }
       )
     modifyModel (\ms -> ms {mPoolParams = Map.insert kh pp $ mPoolParams ms})
@@ -430,7 +432,8 @@ initHonestFields proof = do
     modify
       ( \gs ->
           gs
-            { gsHonestDelegators = Set.insert cred $ gsHonestDelegators gs
+            { gsHonestDelegators = Set.insert cred $ gsHonestDelegators gs,
+              gsInitialRewards = Map.insert cred (Coin 0) $ gsInitialRewards gs
             }
       )
     return cred
@@ -705,9 +708,9 @@ genCredential' ::
 genCredential' tag addToRewards =
   frequencyT
     [ (35, KeyHashObj <$> genKeyHash'),
-      --(35, ScriptHashObj <$> genScript' (100 :: Int))
-      (10, pickExistingKeyHash)
-      --(20, pickExistingScript)
+      (35, ScriptHashObj <$> genScript' (100 :: Int)),
+      (10, pickExistingKeyHash),
+      (20, pickExistingScript)
     ]
   where
     genKeyHash' = do
@@ -719,7 +722,7 @@ genCredential' tag addToRewards =
           }
       return $ coerceKeyRole kh
     genScript' n
-      | n <= 0 =  error "Failed to generate a fresh script hash"
+      | n <= 0 = error "Failed to generate a fresh script hash"
       | otherwise = do
         sh <- genScript @era reify tag
         traceShowM $ "Generated a fresh script: " <> pcScriptHash sh

@@ -73,7 +73,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.UnifiedMap (UnifiedMap)
 import qualified Cardano.Ledger.Val as Val
-import Control.State.Transition.Extended (STS (..))
+import Control.State.Transition.Extended (STS (..), TRC (TRC))
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))

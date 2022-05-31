@@ -40,7 +40,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
-import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
+import Cardano.Ledger.Pretty (PrettyA (..), ppRecord, ppMap, ppPair)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API
@@ -129,13 +129,15 @@ import Test.Cardano.Ledger.Generic.ModelState
     UtxoEntry,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcTx, pcCredential, pcKeyHash, pcScriptHash, pcScript)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
 import Test.QuickCheck
+import Debug.Trace (traceShowM, traceM)
+import Cardano.Ledger.Pretty.Alonzo (ppTag, ppIsValid, ppScript)
 
 -- ===================================================
 -- Assembing lists of Fields in to (Core.XX era)
@@ -190,11 +192,14 @@ genExUnits era n = do
 
 lookupScript ::
   forall era.
+  Reflect era =>
   ScriptHash (Crypto era) ->
   Maybe Tag ->
   GenRS era (Maybe (Core.Script era))
 lookupScript scriptHash mTag = do
   m <- gsScripts <$> get
+  pss <- gets gsPlutusScripts
+  traceShowM $ "plutus scrips map:\n" <> ppMap (ppPair pcScriptHash ppTag) (ppPair ppIsValid (pcScript $ reify @era)) pss
   case Map.lookup scriptHash m of
     Just script -> pure $ Just script
     Nothing
@@ -627,9 +632,20 @@ listOf' gen = do
 genRelays :: Proof era -> GenRS era (StrictSeq StakePoolRelay)
 genRelays proof = Seq.fromList <$> listOf' (genRelay proof)
 
+traceObligation :: Reflect era => GenRS era ()
+traceObligation = do
+  gstate <- get
+  traceShowM $ obligation'
+    reify
+    (gePParams (gsGenEnv gstate))
+    (gsInitialRewards gstate)
+    (gsInitialPoolParams gstate)
+
 genDCert :: forall era. Reflect era => Proof era -> GenRS era (DCert (Crypto era))
 genDCert proof = do
-  elementsT
+  traceM "Obligation before DCert"
+  traceObligation
+  res <- elementsT
     [ DCertDeleg
         <$> frequencyT
           [ (75, RegKey <$> genRegKey),
@@ -642,15 +658,18 @@ genDCert proof = do
             (25, RetirePool <$> genRetirementHash <*> genEpoch)
           ]
     ]
+  traceM "Obligation after DCert"
+  traceObligation
+  return res
   where
     genRegKey = do
       cred <- genFreshRegCred @era
-      -- traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
+      traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
       return cred
     genDeRegKey = do
       cred <- genRewardCredential
       -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey cred)
-      -- traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
+      traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
       return cred
     genDelegation = do
       rewardAccount <- genFreshRegCred
@@ -660,11 +679,11 @@ genDCert proof = do
       -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey rewardAccount)
       -- after <- gets $ mRewards . gsModel
       -- traceShowM $ "Rewards after application: " <> ppMap pcCredential pcCoin after
-      -- traceShowM $ "Generated a fresh reward account for delegation: " <> pcCredential rewardAccount
+      traceShowM $ "Generated a fresh reward account for delegation: " <> pcCredential rewardAccount
       pure $ Delegation {_delegator = rewardAccount, _delegatee = kh}
     genFreshPool = do
-      (_, pp, _) <- genNewPool
-      -- traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
+      (kh, pp, _) <- genNewPool
+      traceShowM $ "Creating a RegPool cert for: " <> pcKeyHash kh
       return pp
     -- khs <- gets $ Map.keysSet . mPoolParams . gsModel
     -- honestKhs <- gets $ Map.keysSet . gsHonestPoolParams

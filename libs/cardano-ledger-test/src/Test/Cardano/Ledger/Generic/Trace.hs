@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# LANGUAGE RecordWildCards #-}
 
 module Test.Cardano.Ledger.Generic.Trace where
 
@@ -104,7 +105,7 @@ import Test.Cardano.Ledger.Generic.GenState
   )
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcScript, pcScriptHash, pcTxBodyField, pcTxIn, scriptSummary)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcScript, pcScriptHash, pcTxBodyField, pcTxIn, scriptSummary, pcIndividualPoolStake)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
@@ -217,16 +218,19 @@ raiseMockError ::
   EpochState era ->
   [MockChainFailure era] ->
   [Core.Tx era] ->
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
-  Set.Set (KeyHash 'StakePool (Crypto era)) ->
+  GenState era ->
   String
-raiseMockError slot (SlotNo next) epochstate pdfs txs scripts honestPools =
+raiseMockError slot (SlotNo next) epochstate pdfs txs GenState{..} =
   let utxo = unUTxO $ (_utxo . lsUTxOState . esLState) epochstate
    in show $
         vsep
           [ pcSmallUTxO reify utxo txs,
             ppString "===================================",
-            ppString "Honest Pools" <> ppSet ppKeyHash honestPools,
+            ppString "Honest Pools\n" <> ppSet ppKeyHash gsHonestPools,
+            ppString "===================================",
+            ppString "Initial Pools\n" <> ppMap ppKeyHash pcIndividualPoolStake gsInitialPoolDistr,
+            ppString "===================================",
+            ppString "Initial Rewards\n" <> ppMap pcCredential pcCoin gsInitialRewards,
             ppString "===================================",
             showBlock utxo txs,
             ppString "===================================",
@@ -237,7 +241,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs scripts honestPools =
             ppString "Last Slot " <> ppWord64 slot,
             ppString "Current Slot " <> ppWord64 next,
             ppString "===================================",
-            ppMap pcScriptHash (scriptSummary @era reify) (Map.restrictKeys scripts (badScripts reify pdfs))
+            ppMap pcScriptHash (scriptSummary @era reify) (Map.restrictKeys gsScripts (badScripts reify pdfs))
           ]
 
 badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (Crypto era))
@@ -361,10 +365,8 @@ instance
     case runShelleyBase (applySTSTest (TRC @(MOCKCHAIN era) ((), mcs, mockblock))) of
       Left pdfs ->
         let txsl = Fold.toList txs
-            scs = gsScripts gs
-            honestPools = gsHonestPools gs
          in trace
-              (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl scs honestPools)
+              (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl gs)
               (error "FAILS")
       -- Left pdfs -> trace ("Discard\n"++show(ppList (ppMockChainFailure reify) pdfs)) discard -- TODO should we enable this?
       Right mcs2 -> seq mcs2 (pure mockblock)
