@@ -102,15 +102,17 @@ validateFailedBabbageScripts ::
   ) =>
   Core.Tx era ->
   UTxO era ->
+  Set (ScriptHash (Crypto era)) ->
   Test (Shelley.UtxowPredicateFailure era)
-validateFailedBabbageScripts tx utxo =
+validateFailedBabbageScripts tx utxo neededHashes =
   let failedScripts =
         Map.filterWithKey
           ( \hs script ->
-              let one = isNativeScript @era script
+              let zero = hs `Set.member` neededHashes
+                  one = isNativeScript @era script
                   two = hashScript @era script /= hs -- TODO this is probably not needed. Only the script is transmitted on the wire, we compute the hash
                   three = not (validateScript @era script tx)
-                  answer = one && (two || three)
+                  answer = zero && one && (two || three)
                in answer
           )
           (txscripts utxo tx)
@@ -178,12 +180,13 @@ babbageUtxowTransition = do
       inputs = getField @"referenceInputs" txbody `Set.union` getField @"inputs" txbody
 
   -- check scripts
-  {- ∀s ∈ range(txscripts txw utxo ∩ Script^{ph1}), validateScript s tx -}
-  runTest $ validateFailedBabbageScripts tx utxo -- CHANGED In BABBAGE txscripts depends on UTxO
-
-  {-  { h | (_,h) ∈ scriptsNeeded utxo tx} ⊆ dom(txscripts txw utxo)     -}
+  {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
+  {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
   let sNeeded = Set.fromList (map snd (Alonzo.scriptsNeeded utxo tx)) -- Script credentials
-      sReceived = Map.keysSet $ case getField @"wits" tx of
+  {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
+  runTest $ validateFailedBabbageScripts tx utxo sNeeded -- CHANGED In BABBAGE txscripts depends on UTxO
+  {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
+  let sReceived = Map.keysSet $ case getField @"wits" tx of
         (TxWitness' _ _ scs _ _) -> scs
       sRefs = Map.keysSet $ refScripts inputs utxo
   runTest $ babbageMissingScripts pp sNeeded sRefs sReceived
