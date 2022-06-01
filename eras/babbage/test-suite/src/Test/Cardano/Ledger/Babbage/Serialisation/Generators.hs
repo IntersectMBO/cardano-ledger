@@ -214,6 +214,6 @@ instance Mock c => Arbitrary (BabbageUtxoPred (BabbageEra c)) where
     oneof
       [ FromAlonzoUtxoFail <$> arbitrary,
         FromAlonzoUtxowFail <$> arbitrary,
-        UnequalCollateralReturn <$> arbitrary <*> arbitrary,
+        IncorrectTotalCollateralField <$> arbitrary <*> arbitrary,
         MalformedScripts <$> arbitrary
       ]

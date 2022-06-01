@@ -106,11 +106,11 @@ data BabbageUtxoPred era
   = FromAlonzoUtxoFail !(UtxoPredicateFailure era) -- Inherited from Alonzo
   | FromAlonzoUtxowFail !(UtxowPredicateFail era)
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
-    UnequalCollateralReturn
+    IncorrectTotalCollateralField
       !Coin
-      -- ^ collateral needed
+      -- ^ collateral provided
       !Coin
-      -- ^ collateral returned
+      -- ^ collateral amount declared in transaction body
   | -- | the set of malformed scripts
     MalformedScripts
       !(Set (ScriptHash (Crypto era)))
@@ -250,7 +250,7 @@ validateCollateralEqBalance :: Coin -> StrictMaybe Coin -> Validation (NonEmpty 
 validateCollateralEqBalance bal txcoll =
   case txcoll of
     SNothing -> pure ()
-    SJust tc -> failureUnless (bal == tc) (UnequalCollateralReturn bal tc)
+    SJust tc -> failureUnless (bal == tc) (IncorrectTotalCollateralField bal tc)
 
 babbageMinUTxOValue ::
   HasField "_coinsPerUTxOByte" (Core.PParams era) Coin =>
@@ -489,7 +489,7 @@ instance
     where
       work (FromAlonzoUtxoFail x) = Sum FromAlonzoUtxoFail 1 !> To x
       work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 2 !> To x
-      work (UnequalCollateralReturn c1 c2) = Sum UnequalCollateralReturn 3 !> To c1 !> To c2
+      work (IncorrectTotalCollateralField c1 c2) = Sum IncorrectTotalCollateralField 3 !> To c1 !> To c2
       work (MalformedScripts x) = Sum MalformedScripts 4 !> To x
       work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 5 !> To x
 
@@ -509,7 +509,7 @@ instance
     where
       work 1 = SumD FromAlonzoUtxoFail <! From
       work 2 = SumD FromAlonzoUtxowFail <! From
-      work 3 = SumD UnequalCollateralReturn <! From <! From
+      work 3 = SumD IncorrectTotalCollateralField <! From <! From
       work 4 = SumD MalformedScripts <! From
       work 5 = SumD BabbageOutputTooSmallUTxO <! From
       work n = Invalid n

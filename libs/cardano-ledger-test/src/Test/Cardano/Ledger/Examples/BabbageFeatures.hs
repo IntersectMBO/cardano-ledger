@@ -934,7 +934,7 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ incorrectCollateralTotalTx pf)
-              (Left [fromUtxoB @era (UnequalCollateralReturn (Coin 5) (Coin 6))]),
+              (Left [fromUtxoB @era (IncorrectTotalCollateralField (Coin 5) (Coin 6))]),
           testCase "malformed scripts" $
             testU
               pf
