@@ -669,7 +669,7 @@ genDCert proof = do
       -- traceShowM $ "Created a RegKey cert for a new credential: " <> pcCredential cred
       return cred
     genDeRegKey = do
-      cred <- genCredential Rewrd
+      cred <- genCredential Cert
       -- modifyModel $ \m -> applyCert proof m (DCertDeleg $ RegKey cred)
       -- traceShowM $ "Generated a fresh reward account for deregistration: " <> pcCredential cred
       return cred
