@@ -111,8 +111,11 @@ data BabbageUtxoPred era
       -- ^ collateral provided
       !Coin
       -- ^ collateral amount declared in transaction body
-  | -- | the set of malformed scripts
-    MalformedScripts
+  | -- | the set of malformed script witnesses
+    MalformedScriptWitnesses
+      !(Set (ScriptHash (Crypto era)))
+  | -- | the set of malformed script witnesses
+    MalformedReferenceScripts
       !(Set (ScriptHash (Crypto era)))
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
@@ -490,8 +493,9 @@ instance
       work (FromAlonzoUtxoFail x) = Sum FromAlonzoUtxoFail 1 !> To x
       work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 2 !> To x
       work (IncorrectTotalCollateralField c1 c2) = Sum IncorrectTotalCollateralField 3 !> To c1 !> To c2
-      work (MalformedScripts x) = Sum MalformedScripts 4 !> To x
-      work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 5 !> To x
+      work (MalformedScriptWitnesses x) = Sum MalformedScriptWitnesses 4 !> To x
+      work (MalformedReferenceScripts x) = Sum MalformedReferenceScripts 5 !> To x
+      work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 6 !> To x
 
 instance
   ( Era era,
@@ -510,8 +514,9 @@ instance
       work 1 = SumD FromAlonzoUtxoFail <! From
       work 2 = SumD FromAlonzoUtxowFail <! From
       work 3 = SumD IncorrectTotalCollateralField <! From <! From
-      work 4 = SumD MalformedScripts <! From
-      work 5 = SumD BabbageOutputTooSmallUTxO <! From
+      work 4 = SumD MalformedScriptWitnesses <! From
+      work 5 = SumD MalformedReferenceScripts <! From
+      work 6 = SumD BabbageOutputTooSmallUTxO <! From
       work n = Invalid n
 
 deriving via InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era) instance NoThunks (BabbageUtxoPred era)

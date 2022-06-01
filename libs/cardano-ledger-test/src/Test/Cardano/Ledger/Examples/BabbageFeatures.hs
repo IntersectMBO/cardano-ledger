@@ -37,7 +37,6 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), ValidateScript (hashScript))
-import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -68,6 +67,7 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
     freeCostModelV2,
     keyBy,
     testUTXOW,
+    testUTXOWsubset,
     trustMeP,
   )
 import Test.Cardano.Ledger.Generic.Fields
@@ -79,7 +79,7 @@ import Test.Cardano.Ledger.Generic.Fields
   )
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
-import Test.Cardano.Ledger.Generic.Scriptic (PostShelley (after), Scriptic (..), matchkey)
+import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Utils (RawSeed (..), mkKeyPair)
@@ -94,6 +94,13 @@ scriptAddr :: forall era. (Scriptic era) => Proof era -> Core.Script era -> Addr
 scriptAddr _pf s = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
+    (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 0)
+    sCred = StakeRefBase . KeyHashObj . hashKey $ svk
+
+malformedScriptAddr :: forall era. (ValidateScript era) => Proof era -> Addr (Crypto era)
+malformedScriptAddr pf = Addr Testnet pCred sCred
+  where
+    pCred = ScriptHashObj . hashScript @era $ malformedScript pf "malfoy"
     (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
@@ -112,6 +119,10 @@ plainAddr pf = Addr Testnet pCred sCred
 somePlainOutput :: Scriptic era => Proof era -> Core.TxOut era
 somePlainOutput pf =
   newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]
+
+somePlainOutput2 :: Scriptic era => Proof era -> Core.TxOut era
+somePlainOutput2 pf =
+  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 5000)]
 
 mkGenesisTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => Integer -> TxIn crypto
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
@@ -216,6 +227,15 @@ referenceDataHashOutput pf =
       DHash' [hashData $ datumExampleSixtyFiveBytes @era]
     ]
 
+malformedScriptTxOut :: forall era. (ValidateScript era) => Proof era -> Core.TxOut era
+malformedScriptTxOut pf =
+  newTxOut
+    pf
+    [ Address (malformedScriptAddr pf),
+      Amount (inject $ Coin 5000),
+      Datum (Babbage.Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
+    ]
+
 --
 -- Genesis Inputs
 --
@@ -256,8 +276,11 @@ collateralInput11 = mkGenesisTxIn 11
 collateralInput17 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
 collateralInput17 = mkGenesisTxIn 17
 
-referenceScriptInput3 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
-referenceScriptInput3 = mkGenesisTxIn 18
+somePlainInput2 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+somePlainInput2 = mkGenesisTxIn 18
+
+malformedScriptTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+malformedScriptTxIn = mkGenesisTxIn 19
 
 --
 -- Genesis UTxO
@@ -277,9 +300,10 @@ initUTxO pf =
         (inlineDatumInputV1, inlineDatumOutputV1 pf),
         (collateralInput11, collateralOutput pf),
         (collateralInput17, collateralOutput pf),
-        (referenceScriptInput3, malformedScriptsTxOut pf),
         (referenceScriptInput4, referenceScriptOutput4 pf),
-        (inlineDatumInputOdd, inlineDatumOutputFailingScript pf)
+        (inlineDatumInputOdd, inlineDatumOutputFailingScript pf),
+        (somePlainInput2, somePlainOutput2 pf),
+        (malformedScriptTxIn, malformedScriptTxOut pf)
       ]
 
 defaultPPs :: [PParamsField era]
@@ -822,28 +846,17 @@ instance BabbageBased (BabbageEra c) (BabbageUtxoPred (BabbageEra c)) where
   fromUtxoB = id
 
 -- ====================================================================================
---  Example 12: Invalid - Malformed plutus scripts
+--  Example 12: Invalid - Malformed plutus reference script creation
 -- ====================================================================================
 
-plutusScriptHash ::
-  forall era.
-  PostShelley era =>
-  Int ->
-  Proof era ->
-  ScriptHash (Crypto era)
-plutusScriptHash n pf = hashScript @era $ plutusScript n pf
-
-plutusScript :: PostShelley era => Int -> Proof era -> Core.Script era
-plutusScript s = allOf [matchkey 1, after (100 + s)]
-
-malformedScriptsTx ::
+malformedScriptRefTx ::
   forall era.
   ( Scriptic era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   Core.Tx era
-malformedScriptsTx pf =
+malformedScriptRefTx pf =
   newTx
     pf
     [ Body txb,
@@ -852,19 +865,18 @@ malformedScriptsTx pf =
         ]
     ]
   where
-    txb = malformedScriptsTxBody pf
+    txb = malformedScriptRefTxBody pf
 
-malformedScriptsTxBody ::
+malformedScriptRefTxBody ::
   forall era.
   (Scriptic era) =>
   Proof era ->
   Core.TxBody era
-malformedScriptsTxBody pf =
+malformedScriptRefTxBody pf =
   newTxBody
     pf
     [ Outputs' [malformedScriptsTxOut pf],
-      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] (Redeemers mempty) mempty),
-      Inputs' [referenceScriptInput3]
+      Inputs' [somePlainInput2]
     ]
 
 malformedScriptsTxOut ::
@@ -930,6 +942,47 @@ largeOutputTx pf =
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (largeOutputTxBody pf)) (someKeys pf)]
         ]
+    ]
+
+-- ====================================================================================
+--  Example 14: Invalid - Malformed plutus script witness
+-- ====================================================================================
+
+malformedScriptWitTx ::
+  forall era.
+  ( Scriptic era,
+    GoodCrypto (Crypto era)
+  ) =>
+  Proof era ->
+  Core.Tx era
+malformedScriptWitTx pf =
+  newTx
+    pf
+    [ Body txb,
+      WitnessesI
+        [ AddrWits' [makeWitnessVKey (hashAnnotated txb) (someKeys pf)],
+          ScriptWits' [malformedScript pf "malfoy"],
+          RdmrWits validatingRedeemersEx1
+        ]
+    ]
+  where
+    txb = malformedScriptWitTxBody pf
+
+outEx14 :: Era era => Proof era -> Core.TxOut era
+outEx14 pf = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 5000)]
+
+malformedScriptWitTxBody ::
+  forall era.
+  (Scriptic era) =>
+  Proof era ->
+  Core.TxBody era
+malformedScriptWitTxBody pf =
+  newTxBody
+    pf
+    [ Inputs' [malformedScriptTxIn],
+      Collateral' [collateralInput11],
+      Outputs' [outEx14 pf],
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersEx1 mempty)
     ]
 
 -- ====================================================================================
@@ -1013,11 +1066,21 @@ genericBabbageFeatures pf =
               pf
               (trustMeP pf True $ incorrectCollateralTotalTx pf)
               (Left [fromUtxoB @era (IncorrectTotalCollateralField (Coin 5) (Coin 6))]),
-          testCase "malformed scripts" $
+          testCase "malformed reference script" $
             testU
               pf
-              (trustMeP pf True $ malformedScriptsTx pf)
-              (Left [fromUtxoB @era (MalformedScripts (Set.fromList [hashScript @era $ malformedScript pf "rs"]))]),
+              (trustMeP pf True $ malformedScriptRefTx pf)
+              (Left [fromUtxoB @era (MalformedReferenceScripts (Set.fromList [hashScript @era $ malformedScript pf "rs"]))]),
+          testCase "malformed script witness" $
+            -- TODO replace testUTXOWsubset with testU and figure out why a script which is failing phase 1 validation
+            -- is still being run, ie why are we getting this error as well:
+            -- FromAlonzoUtxoFail (UtxosFailure (ValidationTagMismatch (IsValid True) (FailedUnexpectedly (PlutusFailure ...
+            testUTXOWsubset
+              (UTXOW pf)
+              (initUTxO pf)
+              (pp pf)
+              (trustMeP pf True $ malformedScriptWitTx pf)
+              (Left [fromUtxoB @era (MalformedScriptWitnesses (Set.fromList [hashScript @era $ malformedScript pf "malfoy"]))]),
           testCase "inline datum and ref script and redundant script witness" $
             testU
               pf

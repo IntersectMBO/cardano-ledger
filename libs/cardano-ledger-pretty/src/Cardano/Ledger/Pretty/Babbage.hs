@@ -143,8 +143,10 @@ ppBabbageUtxoPred (IncorrectTotalCollateralField c1 c2) =
   ppRecord
     "IncorrectTotalCollateralField"
     [("collateral provided", ppCoin c1), ("collateral declared", ppCoin c2)]
-ppBabbageUtxoPred (MalformedScripts scripts) =
-  ppSexp "MalformedScripts" [ppSet ppScriptHash scripts]
+ppBabbageUtxoPred (MalformedScriptWitnesses scripts) =
+  ppSexp "MalformedScriptWitnesses" [ppSet ppScriptHash scripts]
+ppBabbageUtxoPred (MalformedReferenceScripts scripts) =
+  ppSexp "MalformedReferenceScripts" [ppSet ppScriptHash scripts]
 ppBabbageUtxoPred (BabbageOutputTooSmallUTxO xs) =
   ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair prettyA ppCoin) xs]
 
