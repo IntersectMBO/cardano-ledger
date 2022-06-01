@@ -428,7 +428,6 @@ initHonestFields proof = do
       )
     modifyModel (\ms -> ms {mPoolParams = Map.insert kh pp $ mPoolParams ms})
     return kh
-  -- traceShowM $ "New: " <> ppMap pcKeyHash pcPoolParams new
   -- This incantation gets a list of fresh (not previously generated) Credential
   credentials <- replicateM maxHonestPools $ do
     old' <- gets (Map.keysSet . gsInitialRewards)
