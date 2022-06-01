@@ -14,17 +14,18 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Generic.TxGen 
-  ( genValidatedTx
-  , Box(..)
-  , applySTSByProof
-  , assembleWits
-  , coreTx
-  , coreTxBody
-  , coreTxOut
-  , genUTxO
-  , testTx
-  ) where
+module Test.Cardano.Ledger.Generic.TxGen
+  ( genValidatedTx,
+    Box (..),
+    applySTSByProof,
+    assembleWits,
+    coreTx,
+    coreTxBody,
+    coreTxOut,
+    genUTxO,
+    testTx,
+  )
+where
 
 import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
