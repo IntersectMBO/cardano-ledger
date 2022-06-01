@@ -19,7 +19,7 @@ import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), decodeCostModel, getEvaluationContext)
 import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..), unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), certIxToInt, txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, Tx, TxBody, TxOut, Value)
@@ -97,7 +97,7 @@ data TranslationError
   = ByronInputInContext
   | ByronOutputInContext
   | TranslationLogicErrorInput
-  | TranslationLogicErrorRedeemer
+  | RdmrPtrPointsToNothing RdmrPtr
   | TranslationLogicErrorDoubleDatum
   | LanguageNotSupported
   | InlineDatumsNotSupported
@@ -110,7 +110,7 @@ instance ToCBOR TranslationError where
   toCBOR ByronInputInContext = encode $ Sum ByronInputInContext 0
   toCBOR ByronOutputInContext = encode $ Sum ByronOutputInContext 1
   toCBOR TranslationLogicErrorInput = encode $ Sum TranslationLogicErrorInput 2
-  toCBOR TranslationLogicErrorRedeemer = encode $ Sum TranslationLogicErrorRedeemer 3
+  toCBOR (RdmrPtrPointsToNothing ptr) = encode $ Sum RdmrPtrPointsToNothing 3 !> To ptr
   toCBOR TranslationLogicErrorDoubleDatum = encode $ Sum LanguageNotSupported 4
   toCBOR LanguageNotSupported = encode $ Sum LanguageNotSupported 5
   toCBOR InlineDatumsNotSupported = encode $ Sum InlineDatumsNotSupported 6
@@ -124,7 +124,7 @@ instance FromCBOR TranslationError where
       dec 0 = SumD ByronInputInContext
       dec 1 = SumD ByronOutputInContext
       dec 2 = SumD TranslationLogicErrorInput
-      dec 3 = SumD TranslationLogicErrorRedeemer
+      dec 3 = SumD RdmrPtrPointsToNothing <! From
       dec 4 = SumD TranslationLogicErrorDoubleDatum
       dec 5 = SumD LanguageNotSupported
       dec 6 = SumD InlineDatumsNotSupported
