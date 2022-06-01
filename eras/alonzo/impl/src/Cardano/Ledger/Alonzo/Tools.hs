@@ -41,6 +41,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Data.Array (Array, array, bounds, (!))
+import Data.ByteString.Short as SBS (ShortByteString)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -65,8 +66,9 @@ data ScriptFailure c
   = -- | A redeemer was supplied that does not point to a
     --  valid plutus evaluation site in the given transaction.
     RedeemerNotNeeded RdmrPtr
-  | -- | Missing redeemer.
-    MissingScript RdmrPtr
+  | -- | Missing redeemer. The first parameter is the redeemer pointer which cannot be resolved,
+    -- and the second parameter is the map of pointers which can be resolved.
+    MissingScript RdmrPtr (Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language)))
   | -- | Missing datum.
     MissingDatum (DataHash c)
   | -- | Plutus V1 evaluation error.
@@ -197,7 +199,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       Either (ScriptFailure (Crypto era)) ExUnits
     findAndCount pparams info pointer (rdmr, _) = do
       (sp, mscript) <- note (RedeemerNotNeeded pointer) $ Map.lookup pointer ptrToPlutusScript
-      (script, lang) <- note (MissingScript pointer) mscript
+      (script, lang) <- note (MissingScript pointer ptrToPlutusScript) mscript
       let inf = info ! lang
       let (l1, l2) = bounds costModels
       cm <- if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModel lang)
