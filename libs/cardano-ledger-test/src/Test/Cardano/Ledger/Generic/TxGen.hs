@@ -261,7 +261,7 @@ mkWitVKey era mTag (ScriptHashObj scriptHash) =
     Just script -> do
       let scriptWit = ScriptWits' [script]
       otherWit <- genGenericScriptWitness era mTag script
-      pure (\hash -> (scriptWit : otherWit hash))
+      pure (\hash -> scriptWit : otherWit hash)
 
 -- | Generator for witnesses necessary for Scripts and Key
 -- credentials. Because of the Key credentials generating function requires a body
@@ -287,7 +287,7 @@ genTxOutKeyWitness ::
   Core.TxOut era ->
   GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
 genTxOutKeyWitness era mTag txout =
-  case (getTxOutAddr txout) of
+  case getTxOutAddr txout of
     AddrBootstrap baddr ->
       error $ "Can't authorize bootstrap address: " ++ show baddr
     Addr _ payCred _ ->

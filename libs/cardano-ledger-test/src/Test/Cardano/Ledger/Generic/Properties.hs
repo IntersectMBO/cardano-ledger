@@ -1,15 +1,9 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -43,7 +37,6 @@ import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace (..))
 import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import qualified Data.Map.Strict as Map
-import Debug.Trace
 import Test.Cardano.Ledger.Generic.Fields (abstractTx, abstractTxBody, abstractTxOut, abstractWitnesses)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..), isValid')
 import Test.Cardano.Ledger.Generic.GenState
@@ -56,7 +49,7 @@ import Test.Cardano.Ledger.Generic.GenState
   )
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState (..))
 import Test.Cardano.Ledger.Generic.ModelState
-import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx, txSummary)
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcLedgerState, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Trace (Gen1, testTraces, traceProp)
 import Test.Cardano.Ledger.Generic.TxGen
@@ -131,24 +124,21 @@ testTxValidForLEDGER ::
   Proof era ->
   Box era ->
   Property
-testTxValidForLEDGER proof (Box _ (trc@(TRC (_, ledgerState, vtx))) _genstate) =
-  ( if False
-      then trace (show (txSummary proof vtx))
-      else id
-  )
-    $ case applySTSByProof proof trc of -- trc encodes the initial (generated) state, vtx is the transaction
-      Right ledgerState' ->
-        -- UTxOState and DPState after applying the transaction $$$
-        classify (coerce (isValid' proof vtx)) "TxValid" $
-          totalAda ledgerState' === totalAda ledgerState
-      Left errs ->
-        counterexample
-          ( show (pcLedgerState proof ledgerState) ++ "\n\n"
-              ++ show (pcTx proof vtx)
-              ++ "\n\n"
-              ++ show (ppList prettyA errs)
-          )
-          (property False)
+testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
+  -- trc encodes the initial (generated) state, vtx is the transaction
+  case applySTSByProof proof trc of
+    Right ledgerState' ->
+      -- UTxOState and DPState after applying the transaction $$$
+      classify (coerce (isValid' proof vtx)) "TxValid" $
+        totalAda ledgerState' === totalAda ledgerState
+    Left errs ->
+      counterexample
+        ( show (pcLedgerState proof ledgerState) ++ "\n\n"
+            ++ show (pcTx proof vtx)
+            ++ "\n\n"
+            ++ show (ppList prettyA errs)
+        )
+        (property False)
 
 -- =============================================
 -- Make some property tests
@@ -299,13 +289,13 @@ test n proof = defaultMain $
   case proof of
     Babbage _ ->
       testProperty "Babbage ValidTx preserves ADA" $
-        (withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof)))
+        withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Alonzo _ ->
       testProperty "Babbage ValidTx preserves ADA" $
-        (withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof)))
+        withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     Shelley _ ->
       testProperty "Babbage ValidTx preserves ADA" $
-        (withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof)))
+        withMaxSuccess n (forAll (genTxAndLEDGERState proof def) (testTxValidForLEDGER proof))
     other -> error ("NO Test in era " ++ show other)
 
 -- ===============================================================
@@ -317,10 +307,15 @@ test n proof = defaultMain $
 makeGen :: Reflect era => Proof era -> (Proof era -> GenRS era b) -> Gen b
 makeGen proof computeWith = fst <$> runGenRS proof def (computeWith proof)
 
-runTest :: (Reflect era, PrettyC a era) => (Proof era -> GenRS era a) -> (a -> IO ()) -> Proof era -> IO ()
+runTest ::
+  (Reflect era, PrettyC a era) =>
+  (Proof era -> GenRS era a) ->
+  (a -> IO ()) ->
+  Proof era ->
+  IO ()
 runTest computeWith action proof = do
   ans <- generate (makeGen proof computeWith)
-  putStrLn (show (prettyC proof ans))
+  print (prettyC proof ans)
   action ans
 
 main2 :: IO ()

@@ -10,7 +10,6 @@
 {-# LANGUAGE TypeApplications #-}
 -- Used for Reflect classes
 {-# LANGUAGE UndecidableInstances #-}
--- Used for Refect classes
 {-# LANGUAGE UndecidableSuperClasses #-}
 
 module Test.Cardano.Ledger.Generic.Proof

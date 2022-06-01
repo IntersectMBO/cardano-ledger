@@ -431,7 +431,7 @@ rdptrInv ::
   RdmrPtr ->
   StrictMaybe (ScriptPurpose (Crypto era))
 rdptrInv txb (RdmrPtr Mint idx) =
-  (Minting . PolicyID) <$> fromIndex idx (getField @"minted" txb)
+  Minting . PolicyID <$> fromIndex idx (getField @"minted" txb)
 rdptrInv txb (RdmrPtr Spend idx) =
   Spending <$> fromIndex idx (getField @"inputs" txb)
 rdptrInv txb (RdmrPtr Rewrd idx) =
