@@ -14,10 +14,18 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Generic.TxGen where
+module Test.Cardano.Ledger.Generic.TxGen 
+  ( genValidatedTx
+  , Box(..)
+  , applySTSByProof
+  , assembleWits
+  , coreTx
+  , coreTxBody
+  , coreTxOut
+  , genUTxO
+  , testTx
+  ) where
 
-import Cardano.Crypto.Seed (Seed, mkSeedFromBytes)
-import Cardano.Crypto.VRF (VRFAlgorithm (deriveVerKeyVRF, genKeyVRF))
 import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Scripts
@@ -30,7 +38,7 @@ import Cardano.Ledger.Alonzo.TxWitness
   )
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
-import Cardano.Ledger.BaseTypes (Network (..), Url, mkTxIxPartial, textToUrl)
+import Cardano.Ledger.BaseTypes (Network (..), mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
@@ -47,13 +55,9 @@ import Cardano.Ledger.Shelley.API
   ( Addr (..),
     Credential (..),
     PoolCert (RegPool, RetirePool),
-    PoolMetadata (PoolMetadata),
     PoolParams (..),
     RewardAcnt (..),
-    SignKeyVRF,
-    StakePoolRelay (MultiHostName, SingleHostAddr, SingleHostName),
     StakeReference (..),
-    VerKeyVRF,
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.LedgerState (RewardAccounts)
@@ -71,12 +75,9 @@ import Control.Monad.Trans.Class (MonadTrans (lift))
 import Control.Monad.Trans.RWS.Strict (asks, get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
-import qualified Data.ByteString as BS
-import qualified Data.ByteString.Char8 as BSC
 import Data.Default.Class (Default (def))
 import qualified Data.Foldable as F
 import Data.Functor
-import Data.IP (IPv4, IPv6, toIPv4w, toIPv6w)
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -84,11 +85,8 @@ import Data.Maybe (catMaybes)
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Monoid (All (..))
 import Data.Ratio ((%))
-import Data.Sequence.Strict (StrictSeq)
-import qualified Data.Sequence.Strict as Seq
 import Data.Set (Set)
 import qualified Data.Set as Set
-import qualified Data.Text as Text
 import Data.Word (Word16)
 import GHC.Stack
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
@@ -279,21 +277,6 @@ mkWitVKey era mTag (ScriptHashObj scriptHash) =
       let scriptWit = ScriptWits' [script]
       otherWit <- genGenericScriptWitness era mTag script
       pure (\hash -> scriptWit : otherWit hash)
-
--- | Generator for witnesses necessary for Scripts and Key
--- credentials. Because of the Key credentials generating function requires a body
--- hash for an acutal witness to be constructed. In order to be able to estimate
--- fees and collateral needed we will use these produced witness generators twice: one
--- time with bogus body hash for estimation, and the second time with an actual
--- body hash.
-genCredTimelockKeyWit ::
-  forall era k.
-  (Reflect era) =>
-  Proof era ->
-  Maybe Tag ->
-  Credential k (Crypto era) ->
-  GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> Core.Witnesses era)
-genCredTimelockKeyWit era mTag cred = (assembleWits era .) <$> mkWitVKey era mTag cred
 
 -- | Same as `genCredKeyWit`, but for `TxOuts`
 genTxOutKeyWitness ::
@@ -538,95 +521,6 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
-encodeInt :: Int -> BS.ByteString
-encodeInt n
-  | n < 0 = error "Trying to turn a negative int into a bytestring"
-  | n == 0 = mempty
-  | otherwise = BS.cons (fromIntegral $ n `mod` 255) $ encodeInt (n `div` 255)
-
-freshSeed :: Proof era -> GenRS era Seed
-freshSeed _ = do
-  seedIdx <- gets gsSeedIdx
-  modify $ \gs@GenState {gsSeedIdx} -> gs {gsSeedIdx = gsSeedIdx + 1}
-  return . mkSeedFromBytes $ encodeInt seedIdx
-
-genVRFKeyPair ::
-  forall era.
-  Proof era ->
-  GenRS era (SignKeyVRF (Crypto era), VerKeyVRF (Crypto era))
-genVRFKeyPair proof = do
-  seed <- freshSeed proof
-  let sk = case getCrypto proof of
-        Mock -> genKeyVRF seed
-        Standard -> genKeyVRF seed
-      vk = case getCrypto proof of
-        Mock -> deriveVerKeyVRF sk
-        Standard -> deriveVerKeyVRF sk
-  pure (sk, vk)
-
--- | Actually generates a random string with length up to 64 bytes
-genUrl :: Proof era -> GenRS era Url
-genUrl _ = do
-  n <- lift $ chooseInt (1, 64)
-  str <- Text.pack <$> lift (vector n)
-  case textToUrl str of
-    Just url -> return url
-    Nothing -> error $ "Failed to generate an url of length " <> show n
-
-genMetadata ::
-  Proof era ->
-  GenRS era (StrictMaybe PoolMetadata)
-genMetadata proof = frequencyT [(1, genMD), (1, return SNothing)]
-  where
-    genMD = do
-      url <- genUrl proof
-      return . SJust $
-        PoolMetadata
-          url
-          (BSC.pack "{}") -- ???
-
-genRewardAcnt :: Reflect era => Proof era -> GenRS era (RewardAcnt (Crypto era))
-genRewardAcnt _ = do
-  cred <- genCredential Rewrd
-  return $
-    RewardAcnt
-      Testnet
-      cred
-
-genIPAddr :: GenRS era (StrictMaybe IPv4, StrictMaybe IPv6)
-genIPAddr = do
-  let genIPv4 = lift $ toIPv4w <$> arbitrary
-  let genIPv6 = lift $ toIPv6w <$> arbitrary
-  elementsT
-    [ (,SNothing) . SJust <$> genIPv4,
-      (SNothing,) . SJust <$> genIPv6,
-      (,) <$> fmap SJust genIPv4 <*> fmap SJust genIPv6
-    ]
-
-genRelay :: Proof era -> GenRS era StakePoolRelay
-genRelay _ =
-  elementsT
-    [ genSingleHostAddr,
-      SingleHostName <$> genPort <*> genDNSName,
-      MultiHostName <$> genDNSName
-    ]
-  where
-    genDNSName = lift arbitrary
-    genPort = lift arbitrary
-    genSingleHostAddr = do
-      port <- genPort
-      (ipv4, ipv6) <- genIPAddr
-      return $ SingleHostAddr port ipv4 ipv6
-
-listOf' :: GenRS era a -> GenRS era [a]
-listOf' gen = do
-  n <- lift getSize
-  k <- lift $ chooseInt (0, n)
-  traverse (const gen) [1 .. k]
-
-genRelays :: Proof era -> GenRS era (StrictSeq StakePoolRelay)
-genRelays proof = Seq.fromList <$> listOf' (genRelay proof)
-
 genDCert :: forall era. Reflect era => Proof era -> GenRS era (DCert (Crypto era))
 genDCert proof = do
   res <-
@@ -659,20 +553,6 @@ genDCert proof = do
       EpochNo maxEpoch <- asks $ epochMax proof . gePParams
       delta <- lift $ choose (1, maxEpoch)
       return . EpochNo $ curEpoch + delta
-
--- | Use up to 'tries' attempts to choose a random (k,a) pair from 'm', that meets predicate 'p'
-genMapElemWhere :: Map k a -> Int -> (k -> a -> Bool) -> Gen (Maybe (k, a))
-genMapElemWhere m tries p
-  | tries <= 0 = pure Nothing
-  | n == 0 = pure Nothing
-  | otherwise = do
-      i <- choose (0, n - 1)
-      let (k, a) = Map.elemAt i m
-      if p k a
-        then pure $ Just $ (k, a)
-        else genMapElemWhere m (tries - 1) p
-  where
-    n = Map.size m
 
 genDCerts :: forall era. Reflect era => Proof era -> GenRS era [DCert (Crypto era)]
 genDCerts proof = do

@@ -227,7 +227,7 @@ adaIsPreserved ::
   GenSize ->
   TestTree
 adaIsPreserved proof gensize =
-  testProperty (show proof ++ " era. Trace length = 45") $ do
+  testProperty (show proof ++ " era. Trace length = 45") $
     traceProp proof 45 gensize (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
 
 tracePreserveAda :: GenSize -> TestTree

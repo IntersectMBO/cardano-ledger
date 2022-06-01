@@ -724,8 +724,7 @@ genCredential tag =
           Nothing -> genKeyHash'
     pickExistingScript =
       ScriptHashObj
-        <$> do
-          elementsT [pickExistingPlutusScript, pickExistingTimelockScript]
+        <$> elementsT [pickExistingPlutusScript, pickExistingTimelockScript]
     pickExistingPlutusScript = do
       plutusScriptsMap <-
         Map.filterWithKey (\(_, t) _ -> t == tag) . gsPlutusScripts <$> get
