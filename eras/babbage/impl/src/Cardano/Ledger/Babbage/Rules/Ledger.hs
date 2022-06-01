@@ -44,14 +44,13 @@ import qualified Cardano.Ledger.Shelley.Rules.Ledgers as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition
-  ( -- Assertion (..),
+  ( Assertion (..),
     AssertionViolation (..),
     Embed (..),
     STS (..),
     TRC (..),
   )
 import Data.Sequence (Seq)
-import Data.Maybe (fromJust)
 
 -- ==================================================
 data BabbageLEDGER c
@@ -60,6 +59,7 @@ instance
   ( Era era,
     ValidateScript era,
     ConcreteBabbage era,
+    Show (State (Core.EraRule "PPUP" era)),
     Embed (Core.EraRule "DELEGS" era) (BabbageLEDGER era),
     Embed (Core.EraRule "UTXOW" era) (BabbageLEDGER era),
     Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
@@ -67,7 +67,8 @@ instance
     Signal (Core.EraRule "UTXOW" era) ~ ValidatedTx era,
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era))
+    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Show (ValidatedTx era)
   ) =>
   STS (BabbageLEDGER era)
   where
@@ -83,22 +84,19 @@ instance
 
   renderAssertionViolation AssertionViolation {avSTS, avMsg, avCtx, avState} =
     "AssertionViolation (" <> avSTS <> "): " <> avMsg
-      <> "\nObligation: " <> show obligationAmt
-      <> "\nDeposit: " <> show depositAmt
-    where
-      TRC (LedgerEnv {ledgerPp}, _, _) = avCtx
-      LedgerState utxoSt DPState {dpsDState, dpsPState} = fromJust avState
-      obligationAmt = obligation ledgerPp (rewards dpsDState) (_pParams dpsPState) 
-      UTxOState _ depositAmt _ _ _ = utxoSt
+      <> "\n"
+      <> show avCtx
+      <> "\n"
+      <> show avState
 
   assertions =
-    [ {- PostCondition
+    [ PostCondition
         "Deposit pot must equal obligation"
         ( \(TRC (LedgerEnv {ledgerPp}, _, _))
            (LedgerState utxoSt DPState {dpsDState, dpsPState}) ->
               obligation ledgerPp (rewards dpsDState) (_pParams dpsPState)
                 == _deposited utxoSt
-        ) -}
+        )
     ]
 
 instance

@@ -5,11 +5,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE RecordWildCards #-}
 
 module Test.Cardano.Ledger.Generic.Trace where
 
@@ -106,7 +106,7 @@ import Test.Cardano.Ledger.Generic.GenState
   )
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
-import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcScript, pcScriptHash, pcTxBodyField, pcTxIn, scriptSummary, pcIndividualPoolStake)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcIndividualPoolStake, pcScript, pcScriptHash, pcTxBodyField, pcTxIn, scriptSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
@@ -141,7 +141,7 @@ genRsTxSeq proof this lastN ans slot = do
   n <- lift $ choose (2 :: Int, fromIntegral maxBlockSize)
   txs <- forM [0 .. n - 1] (\i -> genRsTxAndModel proof (this + i) slot)
   newSlotRange <- gets getSlotDelta
-  nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose  newSlotRange
+  nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose newSlotRange
   genRsTxSeq proof (this + n) lastN ((SS.fromList txs, slot) : ans) nextSlotNo
 
 -- | Generate a Vector of Blocks, and an initial LedgerState
@@ -170,7 +170,7 @@ genMockChainState ::
   Proof era ->
   GenState era ->
   Gen (MockChainState era)
-genMockChainState proof gstate = 
+genMockChainState proof gstate =
   pure $ MockChainState newepochstate (getSlot gstate) 0
   where
     ledgerstate = initialLedgerState gstate
@@ -222,7 +222,7 @@ raiseMockError ::
   [Core.Tx era] ->
   GenState era ->
   String
-raiseMockError slot (SlotNo next) epochstate pdfs txs GenState{..} =
+raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (_utxo . lsUTxOState . esLState) epochstate
    in show $
         vsep
