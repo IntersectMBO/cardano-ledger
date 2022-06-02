@@ -301,7 +301,10 @@ initialUtxoSt utxo = smartUTxOState utxo (Coin 0) (Coin 0) def
 -- | This is a helper type for the expectedUTxO function.
 --  ExpectSuccess indicates that we created a valid transaction
 --  where the IsValid flag is true.
-data Expect era = ExpectSuccess (Core.TxBody era) (Core.TxOut era) | ExpectFailure
+data Expect era
+  = ExpectSuccess (Core.TxBody era) (Core.TxOut era)
+  | ExpectSuccessInvalid
+  | ExpectFailure
 
 -- | In each of our main eight examples, the UTxO map obtained
 -- by applying the transaction is straightforward. This function
@@ -326,6 +329,7 @@ expectedUTxO initUtxo ex idx = UTxO utxo
     utxo = case ex of
       ExpectSuccess txb newOut ->
         Map.insert (TxIn (txid txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
+      ExpectSuccessInvalid -> filteredUTxO (mkTxIxPartial idx)
       ExpectFailure -> filteredUTxO (mkTxIxPartial (10 + idx))
     filteredUTxO :: TxIx -> Map.Map (TxIn (Crypto era)) (Core.TxOut era)
     filteredUTxO x = Map.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO initUtxo

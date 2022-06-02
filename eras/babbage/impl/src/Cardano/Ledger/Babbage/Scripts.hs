@@ -58,13 +58,6 @@ getDatumBabbage tx (UTxO m) sp = do
         Map.lookup hash (unTxDats (txdats' (getField @"wits" tx)))
   txOutData txOut <|> txOutDataFromWits
 
--- TxOut _ _ datum _refScript <- Map.lookup txin m
--- case datum of
---   NoDatum -> Nothing
---   Datum d -> Just d
---   DatumHash hash ->
---     dataToBinaryData <$> Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx))
-
 -- Figure 3 of the Specification
 {- txscripts tx utxo = txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}
 

@@ -17,7 +17,6 @@ testingCostModelV2 =
   fromRight (error "testingCostModelV2 is not well-formed") $
     mkCostModel PlutusV2 PV1.costModelParamsForTesting -- TODO use PV2 when it exists
 
-
 {- Preproceesed Plutus Script
 guessTheNumber'2_0 :: PlutusTx.Builtins.Internal.BuiltinData ->
                       PlutusTx.Builtins.Internal.BuiltinData -> ()

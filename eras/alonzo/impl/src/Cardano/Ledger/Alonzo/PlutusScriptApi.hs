@@ -90,7 +90,6 @@ getSpendingTxIn = \case
   Rewarding _rewaccnt -> Nothing
   Certifying _dcert -> Nothing
 
-
 -- | Get the Data associated with a ScriptPurpose. Only the Spending
 --   ScriptPurpose contains Data. The null list is returned for the other kinds.
 getDatumAlonzo ::
@@ -184,7 +183,7 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
       case txinfo lang of
         Right inf ->
           let datums = maybe id (:) (getDatum tx utxo sp) [d, valContext inf sp]
-          in Right (script, lang, datums, eu, costs Map.! lang)
+           in Right (script, lang, datums, eu, costs Map.! lang)
         Left te -> Left $ BadTranslation te
 
 -- | Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
