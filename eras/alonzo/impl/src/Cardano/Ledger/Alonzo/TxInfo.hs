@@ -397,6 +397,12 @@ class ExtendedUTxO era where
     UTxO era ->
     Set (DataHash (Crypto era))
 
+  getDatum ::
+    Core.Tx era ->
+    UTxO era ->
+    ScriptPurpose (Crypto era) ->
+    Maybe (Data era)
+
   allOuts ::
     Core.TxBody era ->
     [Core.TxOut era]

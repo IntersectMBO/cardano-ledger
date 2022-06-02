@@ -30,6 +30,7 @@ import Cardano.Ledger.Alonzo.PParams
     PParamsUpdate,
     updatePParams,
   )
+import Cardano.Ledger.Alonzo.PlutusScriptApi (getDatumAlonzo)
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
 import qualified Cardano.Ledger.Alonzo.Rules.Ledger as Alonzo (AlonzoLEDGER)
 import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
@@ -239,6 +240,7 @@ instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
         | out <- allOuts txbody,
           SJust dh <- [getField @"datahash" out]
       ]
+  getDatum = getDatumAlonzo
   allOuts txbody = toList $ getField @"outputs" txbody
   allSizedOuts = map mkSized . allOuts
   txdata (ValidatedTx _ (TxWitness _ _ _ (TxDats' m) _) _ _) = Set.fromList $ Map.elems m

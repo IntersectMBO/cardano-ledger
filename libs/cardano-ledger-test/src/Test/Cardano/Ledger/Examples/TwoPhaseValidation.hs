@@ -149,7 +149,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     mkVRFKeyPair,
   )
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.HUnit (Assertion, testCase, (@?=))
+import Test.Tasty.HUnit (Assertion, assertFailure, testCase, (@?=))
 
 -- =======================
 -- Setup the initial state
@@ -1857,7 +1857,7 @@ alonzoAPITests =
 
 -- | This type is what you get when you use runSTS in the UTXOW rule. It is also
 --   the type one uses for expected answers, to compare the 'computed' against 'expected'
-type Result era = Either [(PredicateFailure (Core.EraRule "UTXOW" era))] (State (Core.EraRule "UTXOW" era))
+type Result era = Either [PredicateFailure (Core.EraRule "UTXOW" era)] (State (Core.EraRule "UTXOW" era))
 
 testUTXOWwith ::
   forall era.
@@ -1885,32 +1885,34 @@ testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
 -- | A small example of what a continuation for 'runSTS' might look like
 genericCont ::
   ( Eq x,
-    Show x,
     PrettyA x,
     Eq y,
-    Show y,
     PrettyA y,
     HasCallStack
   ) =>
+  String ->
   Either [x] y ->
   Either [x] y ->
   Assertion
-genericCont expected computed =
+genericCont cause expected computed =
   case (computed, expected) of
-    (Left c, Left e) -> c @?= e
-    (Right c, Right e) -> c @?= e
+    (Left c, Left e)
+      | c /= e -> assertFailure $ causedBy ++ expectedToFail e ++ failedWith c
+    (Right c, Right e)
+      | c /= e -> assertFailure $ causedBy ++ expectedToPass e ++ passedWith c
     (Left x, Right y) ->
-      error $
-        "expected to pass with "
-          ++ show (prettyA y)
-          ++ "\n\nBut failed with\n\n"
-          ++ show (ppList prettyA x)
+      assertFailure $ causedBy ++ expectedToPass y ++ failedWith x
     (Right x, Left y) ->
-      error $
-        "expected to fail with "
-          ++ show (ppList prettyA y)
-          ++ "\n\nBut passed with\n\n"
-          ++ show (prettyA x)
+      assertFailure $ causedBy ++ expectedToFail y ++ passedWith x
+    _ -> pure ()
+  where
+    causedBy
+      | null cause = ""
+      | otherwise = "Caused by:\n" ++ cause ++ "\n"
+    expectedToPass y = "Expected to pass with:\n" ++ show (prettyA y) ++ "\n"
+    expectedToFail y = "Expected to fail with:\n" ++ show (ppList prettyA y) ++ "\n"
+    failedWith x = "But failed with:\n" ++ show (ppList prettyA x)
+    passedWith x = "But passed with:\n" ++ show (prettyA x)
 
 isSubset :: Eq t => [t] -> [t] -> Bool
 isSubset small big = List.all (`List.elem` big) small
@@ -1965,9 +1967,9 @@ testUTXOWsubset,
     Assertion
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
-testUTXOW wit@(UTXOW (Alonzo _)) = testUTXOWwith wit genericCont
-testUTXOW wit@(UTXOW (Babbage _)) = testUTXOWwith wit genericCont
-testUTXOW (UTXOW other) = error ("Cannot use testUTXOW in era " ++ show other)
+testUTXOW wit@(UTXOW (Alonzo _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
+testUTXOW wit@(UTXOW (Babbage _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
+testUTXOW (UTXOW other) _ _ _ = error ("Cannot use testUTXOW in era " ++ show other)
 
 -- | Use a subset test on the expected and computed [PredicateFailure]
 testUTXOWsubset wit@(UTXOW (Alonzo _)) utxo = testUTXOWwith wit subsetCont utxo
@@ -2365,8 +2367,8 @@ testBBODY ::
 testBBODY wit@(BBODY proof) initialSt block expected =
   let env = bbodyEnv proof
    in case proof of
-        Alonzo _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont expected)
-        Babbage _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont expected)
+        Alonzo _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
+        Babbage _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         other -> error ("We cannot testBBODY in era " ++ show other)
 
 alonzoBBODYexamplesP ::

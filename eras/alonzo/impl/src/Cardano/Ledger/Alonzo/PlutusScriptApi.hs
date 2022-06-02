@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -10,7 +11,8 @@
 
 module Cardano.Ledger.Alonzo.PlutusScriptApi
   ( -- Figure 8
-    getData,
+    getSpendingTxIn,
+    getDatumAlonzo,
     evalScripts,
     -- Figure 12
     scriptsNeeded,
@@ -80,9 +82,18 @@ import NoThunks.Class (NoThunks)
 -- From the specification, Figure 8 "Scripts and their Arguments"
 -- ===============================================================
 
+-- | Only the Spending ScriptPurpose contains TxIn
+getSpendingTxIn :: ScriptPurpose crypto -> Maybe (TxIn crypto)
+getSpendingTxIn = \case
+  Spending txin -> Just txin
+  Minting _policyid -> Nothing
+  Rewarding _rewaccnt -> Nothing
+  Certifying _dcert -> Nothing
+
+
 -- | Get the Data associated with a ScriptPurpose. Only the Spending
 --   ScriptPurpose contains Data. The null list is returned for the other kinds.
-getData ::
+getDatumAlonzo ::
   forall era tx.
   ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "wits" tx (TxWitness era)
@@ -90,22 +101,12 @@ getData ::
   tx ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
-  [Data era]
-getData tx (UTxO m) sp = case sp of
-  Minting _policyid -> []
-  Rewarding _rewaccnt -> []
-  Certifying _dcert -> []
-  Spending txin ->
-    -- Only the Spending ScriptPurpose contains Data
-    case Map.lookup txin m of
-      Nothing -> []
-      Just txout ->
-        case getField @"datahash" txout of
-          SNothing -> []
-          SJust hash ->
-            case Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx)) of
-              Nothing -> []
-              Just d -> [d]
+  Maybe (Data era)
+getDatumAlonzo tx (UTxO m) sp = do
+  txIn <- getSpendingTxIn sp
+  txOut <- Map.lookup txIn m
+  SJust hash <- Just $ getField @"datahash" txOut
+  Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx))
 
 -- ========================================================================
 
@@ -143,7 +144,6 @@ collectTwoPhaseScriptInputs ::
   ( Era era,
     ExtendedUTxO era,
     Core.Script era ~ AlonzoScript.Script era,
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
     HasField "_costmdls" (Core.PParams era) CostModels,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -182,7 +182,9 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
     getscript (_, _, script) = script
     apply costs (lang, sp, d, eu) script =
       case txinfo lang of
-        Right inf -> Right (script, lang, getData tx utxo sp ++ (d : [valContext inf sp]), eu, costs Map.! lang)
+        Right inf ->
+          let datums = maybe id (:) (getDatum tx utxo sp) [d, valContext inf sp]
+          in Right (script, lang, datums, eu, costs Map.! lang)
         Left te -> Left $ BadTranslation te
 
 -- | Merge two lists (the first of which may have failures, i.e. (Left _)), collect all the failures
