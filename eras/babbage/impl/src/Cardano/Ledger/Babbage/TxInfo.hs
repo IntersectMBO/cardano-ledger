@@ -168,7 +168,7 @@ transRedeemerPtr ::
   Either TranslationError (PV2.ScriptPurpose, PV2.Redeemer)
 transRedeemerPtr txb (ptr, (d, _)) =
   case rdptrInv txb ptr of
-    SNothing -> Left TranslationLogicErrorRedeemer
+    SNothing -> Left (RdmrPtrPointsToNothing ptr)
     SJust sp -> Right (Alonzo.transScriptPurpose sp, transRedeemer d)
 
 babbageTxInfo ::
