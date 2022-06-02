@@ -127,8 +127,9 @@ script_data_hash = $hash32
 ; For PlutusV2 (language id 1), the language view is the following:
 ;   - the value of costmdls map at key 1 is encoded as an definite length list.
 ;
-; If there is no value for key 0, then the corresponding scripts cannot execute.
-; Regardless of what the script integrity data is.
+; Note that each Plutus language represented inside a transaction must have
+; a cost model in the costmdls protocol parameter in order to execute,
+; regardless of what the script integrity data is.
 ;
 ; Finally, note that in the case that a transaction includes datums but does not
 ; include any redeemers, the script data format becomes (in hex):
