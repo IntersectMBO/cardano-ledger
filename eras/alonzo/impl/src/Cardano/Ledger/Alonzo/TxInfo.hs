@@ -397,6 +397,12 @@ class ExtendedUTxO era where
     UTxO era ->
     Set (DataHash (Crypto era))
 
+  getDatum ::
+    Core.Tx era ->
+    UTxO era ->
+    ScriptPurpose (Crypto era) ->
+    Maybe (Data era)
+
   allOuts ::
     Core.TxBody era ->
     [Core.TxOut era]
@@ -406,6 +412,7 @@ class ExtendedUTxO era where
     Core.TxBody era ->
     [Sized (Core.TxOut era)]
 
+  -- | Used for property check that datums we have are completely pointless.
   txdata ::
     Core.Tx era ->
     Set (Data era)

@@ -10,7 +10,8 @@
 --   Babbage Specification
 module Cardano.Ledger.Babbage.Scripts where
 
-import Cardano.Ledger.Alonzo.Data (BinaryData, dataToBinaryData)
+import Cardano.Ledger.Alonzo.Data (Data)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (getSpendingTxIn)
 import Cardano.Ledger.Alonzo.Tx
   ( ScriptPurpose (..),
     ValidatedTx (..),
@@ -21,6 +22,8 @@ import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
 import Cardano.Ledger.Babbage.TxBody
   ( Datum (..),
     TxOut (..),
+    txOutData,
+    txOutDataHash,
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript (hashScript))
@@ -28,6 +31,7 @@ import Cardano.Ledger.Hashes (DataHash)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxIn)
+import Control.Applicative ((<|>))
 import Control.SetAlgebra (eval, (◁))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
@@ -35,16 +39,9 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 
-getTxIn :: ScriptPurpose crypto -> Maybe (TxIn crypto)
-getTxIn (Spending txin) = Just txin
--- Only the Spending ScriptPurpose contains TxIn
-getTxIn (Minting _policyid) = Nothing
-getTxIn (Rewarding _rewaccnt) = Nothing
-getTxIn (Certifying _dcert) = Nothing
-
 -- | Extract binary data either directly from the `Core.Tx` as an "inline datum"
--- or it up in the witnesses by the hash.
-getDatum ::
+-- or look it up in the witnesses by the hash.
+getDatumBabbage ::
   ( Era era,
     Core.TxOut era ~ TxOut era,
     Core.Witnesses era ~ TxWitness era
@@ -52,15 +49,14 @@ getDatum ::
   Core.Tx era ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
-  Maybe (BinaryData era)
-getDatum tx (UTxO m) sp = do
-  txin <- getTxIn sp
-  TxOut _ _ datum _refScript <- Map.lookup txin m
-  case datum of
-    NoDatum -> Nothing
-    Datum d -> Just d
-    DatumHash hash ->
-      dataToBinaryData <$> Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx))
+  Maybe (Data era)
+getDatumBabbage tx (UTxO m) sp = do
+  txIn <- getSpendingTxIn sp
+  txOut <- Map.lookup txIn m
+  let txOutDataFromWits = do
+        hash <- txOutDataHash txOut
+        Map.lookup hash (unTxDats (txdats' (getField @"wits" tx)))
+  txOutData txOut <|> txOutDataFromWits
 
 -- Figure 3 of the Specification
 {- txscripts tx utxo = txwitscripts tx ∪ {hash s ↦ s | ( , , , s) ∈ utxo (spendInputs tx ∪ refInputs tx)} -}

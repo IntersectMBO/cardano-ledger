@@ -54,7 +54,7 @@ import Cardano.Ledger.TxIn (TxIn (..), txid)
 import Cardano.Ledger.Val (inject)
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
-import Data.ByteString.Short (ShortByteString)
+import Data.ByteString.Short as SBS (ShortByteString, pack)
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
@@ -126,16 +126,31 @@ collateralOutput pf =
 sixtyFiveBytes :: BS.ByteString
 sixtyFiveBytes = BS.pack [1 .. 65]
 
-datumExample1 :: Data era
-datumExample1 = Data (Plutus.B sixtyFiveBytes)
+datumExampleSixtyFiveBytes :: Data era
+datumExampleSixtyFiveBytes = Data (Plutus.B sixtyFiveBytes)
+
+datumExampleEven :: Data era
+datumExampleEven = Data (Plutus.I 2)
+
+datumExampleOdd :: Data era
+datumExampleOdd = Data (Plutus.I 3)
 
 inlineDatumOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 inlineDatumOutput pf =
   newTxOut
     pf
-    [ Address (scriptAddr pf (alwaysAlt 3 pf)),
+    [ Address (scriptAddr pf (evenData3ArgsScript pf)),
       Amount (inject $ Coin 5000),
-      Datum (Babbage.Datum . dataToBinaryData $ datumExample1 @era)
+      Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
+    ]
+
+inlineDatumOutputFailingScript :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+inlineDatumOutputFailingScript pf =
+  newTxOut
+    pf
+    [ Address (scriptAddr pf (evenData3ArgsScript pf)),
+      Amount (inject $ Coin 5000),
+      Datum (Babbage.Datum . dataToBinaryData $ datumExampleOdd @era)
     ]
 
 inlineDatumOutputV1 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
@@ -144,7 +159,7 @@ inlineDatumOutputV1 pf =
     pf
     [ Address (scriptAddr pf (always 3 pf)),
       Amount (inject $ Coin 5000),
-      Datum (Babbage.Datum . dataToBinaryData $ datumExample1 @era)
+      Datum (Babbage.Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
     ]
 
 simpleV2EUTxO :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
@@ -153,7 +168,7 @@ simpleV2EUTxO pf =
     pf
     [ Address (scriptAddr pf (alwaysAlt 3 pf)),
       Amount (inject $ Coin 5000),
-      DHash' [hashData $ datumExample1 @era]
+      DHash' [hashData $ datumExampleSixtyFiveBytes @era]
     ]
 
 failsEUTxO :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
@@ -162,7 +177,7 @@ failsEUTxO pf =
     pf
     [ Address (scriptAddr pf (never 3 pf)),
       Amount (inject $ Coin 5000),
-      DHash' [hashData $ datumExample1 @era]
+      DHash' [hashData $ datumExampleSixtyFiveBytes @era]
     ]
 
 referenceScriptOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
@@ -171,7 +186,7 @@ referenceScriptOutput pf =
     pf
     [ Address (plainAddr pf),
       Amount (inject $ Coin 5000),
-      RefScript (SJust $ alwaysAlt 3 pf)
+      RefScript (SJust $ evenData3ArgsScript pf)
     ]
 
 referenceScriptOutput2 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
@@ -183,13 +198,22 @@ referenceScriptOutput2 pf =
       RefScript (SJust $ alwaysAlt 2 pf)
     ]
 
+referenceScriptOutput4 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+referenceScriptOutput4 pf =
+  newTxOut
+    pf
+    [ Address (plainAddr pf),
+      Amount (inject $ Coin 5000),
+      RefScript (SJust $ alwaysAlt 3 pf)
+    ]
+
 referenceDataHashOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 referenceDataHashOutput pf =
   newTxOut
     pf
     [ Address (plainAddr pf),
       Amount (inject $ Coin 10),
-      DHash' [hashData $ datumExample1 @era]
+      DHash' [hashData $ datumExampleSixtyFiveBytes @era]
     ]
 
 --
@@ -220,6 +244,12 @@ failsEUTxOInput = mkGenesisTxIn 7
 inlineDatumInputV1 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
 inlineDatumInputV1 = mkGenesisTxIn 8
 
+referenceScriptInput4 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+referenceScriptInput4 = mkGenesisTxIn 9
+
+inlineDatumInputOdd :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+inlineDatumInputOdd = mkGenesisTxIn 10
+
 collateralInput11 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
 collateralInput11 = mkGenesisTxIn 11
 
@@ -247,7 +277,9 @@ initUTxO pf =
         (inlineDatumInputV1, inlineDatumOutputV1 pf),
         (collateralInput11, collateralOutput pf),
         (collateralInput17, collateralOutput pf),
-        (referenceScriptInput3, malformedScriptsTxOut pf)
+        (referenceScriptInput3, malformedScriptsTxOut pf),
+        (referenceScriptInput4, referenceScriptOutput4 pf),
+        (inlineDatumInputOdd, inlineDatumOutputFailingScript pf)
       ]
 
 defaultPPs :: [PParamsField era]
@@ -279,11 +311,20 @@ validatingRedeemersEx1 =
 outEx1 :: Scriptic era => Proof era -> Core.TxOut era
 outEx1 pf = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]
 
-inlineDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
-inlineDatumTxBody pf =
+inlineDatumTxBodyEven, inlineDatumTxBodyOdd :: Scriptic era => Proof era -> Core.TxBody era
+inlineDatumTxBodyEven pf =
   newTxBody
     pf
     [ Inputs' [inlineDatumInput],
+      Collateral' [collateralInput11],
+      Outputs' [outEx1 pf],
+      Txfee (Coin 5),
+      WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersEx1 mempty)
+    ]
+inlineDatumTxBodyOdd pf =
+  newTxBody
+    pf
+    [ Inputs' [inlineDatumInputOdd],
       Collateral' [collateralInput11],
       Outputs' [outEx1 pf],
       Txfee (Coin 5),
@@ -296,20 +337,42 @@ inlineDatumTx ::
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
+  (Proof era -> Core.TxBody era) ->
   Core.Tx era
-inlineDatumTx pf =
-  newTx
-    pf
-    [ Body (inlineDatumTxBody pf),
-      WitnessesI
-        [ AddrWits' [makeWitnessVKey (hashAnnotated (inlineDatumTxBody pf)) (someKeys pf)],
-          ScriptWits' [alwaysAlt 3 pf],
-          RdmrWits validatingRedeemersEx1
+inlineDatumTx pf mkTxBody =
+  let txBody = mkTxBody pf
+   in newTx
+        pf
+        [ Body txBody,
+          WitnessesI
+            [ AddrWits' [makeWitnessVKey (hashAnnotated txBody) (someKeys pf)],
+              ScriptWits' [evenData3ArgsScript pf],
+              RdmrWits validatingRedeemersEx1
+            ]
         ]
-    ]
+
+evenData3ArgsScript :: HasCallStack => Proof era -> Core.Script era
+evenData3ArgsScript proof =
+  case proof of
+    Shelley _ -> error unsupported
+    Mary _ -> error unsupported
+    Allegra _ -> error unsupported
+    Alonzo _ -> evenData3ArgsLang PlutusV1
+    Babbage _ -> evenData3ArgsLang PlutusV2
+  where
+    unsupported = "Plutus scripts are not supported in:" ++ show proof
+    evenData3ArgsLang lang =
+      PlutusScript lang . SBS.pack $
+        concat
+          [ [88, 65, 1, 0, 0, 51, 50, 34, 51, 34, 34, 37, 51, 83, 0],
+            [99, 50, 35, 51, 87, 52, 102, 225, 192, 8, 0, 64, 40, 2, 76],
+            [200, 140, 220, 48, 1, 0, 9, 186, 208, 3, 72, 1, 18, 0, 1],
+            [0, 81, 50, 99, 83, 0, 64, 5, 73, 132, 128, 4, 128, 4, 72],
+            [128, 8, 72, 128, 4, 128, 5]
+          ]
 
 utxoEx1 :: forall era. PostShelley era => Proof era -> UTxO era
-utxoEx1 pf = expectedUTxO (initUTxO pf) (ExpectSuccess (inlineDatumTxBody pf) (outEx1 pf)) 1
+utxoEx1 pf = expectedUTxO (initUTxO pf) (ExpectSuccess (inlineDatumTxBodyEven pf) (outEx1 pf)) 1
 
 utxoStEx1 ::
   forall era.
@@ -318,19 +381,29 @@ utxoStEx1 ::
   UTxOState era
 utxoStEx1 pf = smartUTxOState (utxoEx1 pf) (Coin 0) (Coin 5) def
 
+utxoEx1invalid :: forall era. PostShelley era => Proof era -> UTxO era
+utxoEx1invalid pf = expectedUTxO (initUTxO pf) ExpectSuccessInvalid 11
+
+utxoStEx1invalid ::
+  forall era.
+  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  Proof era ->
+  UTxOState era
+utxoStEx1invalid pf = smartUTxOState (utxoEx1invalid pf) (Coin 0) (Coin 2115) def
+
 -- =========================================================================
 --  Example 2: Use a reference script.
 -- =========================================================================
 
 txDatsExample2 :: Era era => TxDats era
-txDatsExample2 = TxDats $ keyBy hashData [datumExample1]
+txDatsExample2 = TxDats $ keyBy hashData [datumExampleSixtyFiveBytes]
 
 referenceScriptTxBody :: Scriptic era => Proof era -> Core.TxBody era
 referenceScriptTxBody pf =
   newTxBody
     pf
     [ Inputs' [simpleV2EUTxOInput],
-      RefInputs' [referenceScriptInput],
+      RefInputs' [referenceScriptInput4],
       Collateral' [collateralInput11],
       Outputs' [outEx1 pf],
       Txfee (Coin 5),
@@ -350,7 +423,7 @@ referenceScriptTx pf =
     [ Body (referenceScriptTxBody pf),
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (referenceScriptTxBody pf)) (someKeys pf)],
-          DataWits' [datumExample1],
+          DataWits' [datumExampleSixtyFiveBytes],
           RdmrWits validatingRedeemersEx1
         ]
     ]
@@ -515,7 +588,7 @@ refInputWithDataHashWithWitTx pf =
     [ Body (refInputWithDataHashWithWitTxBody pf),
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (refInputWithDataHashWithWitTxBody pf)) (someKeys pf)],
-          DataWits' [datumExample1]
+          DataWits' [datumExampleSixtyFiveBytes]
         ]
     ]
 
@@ -618,7 +691,7 @@ collateralOutputTx pf =
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (collateralOutputTxBody pf)) (someKeys pf)],
           ScriptWits' [never 3 pf],
-          DataWits' [datumExample1],
+          DataWits' [datumExampleSixtyFiveBytes],
           RdmrWits validatingRedeemersEx1
         ]
     ]
@@ -670,7 +743,7 @@ incorrectCollateralTotalTx pf =
     [ Body (incorrectCollateralTotalTxBody pf),
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (incorrectCollateralTotalTxBody pf)) (someKeys pf)],
-          ScriptWits' [alwaysAlt 3 pf],
+          ScriptWits' [evenData3ArgsScript pf],
           RdmrWits validatingRedeemersEx1
         ]
     ]
@@ -703,8 +776,8 @@ inlineDatumRedundantDatumTx pf =
     [ Body (inlineDatumRedundantDatumTxBody pf),
       WitnessesI
         [ AddrWits' [makeWitnessVKey (hashAnnotated (inlineDatumRedundantDatumTxBody pf)) (someKeys pf)],
-          ScriptWits' [alwaysAlt 3 pf],
-          DataWits' [datumExample1],
+          ScriptWits' [evenData3ArgsScript pf],
+          DataWits' [datumExampleSixtyFiveBytes],
           RdmrWits validatingRedeemersEx1
         ]
     ]
@@ -895,8 +968,13 @@ genericBabbageFeatures pf =
         [ testCase "inline datum" $
             testU
               pf
-              (trustMeP pf True $ inlineDatumTx pf)
+              (trustMeP pf True $ inlineDatumTx pf inlineDatumTxBodyEven)
               (Right $ utxoStEx1 pf),
+          testCase "inline datum failing script" $
+            testU
+              pf
+              (trustMeP pf False $ inlineDatumTx pf inlineDatumTxBodyOdd)
+              (Right $ utxoStEx1invalid pf),
           testCase "reference script" $
             testU
               pf
@@ -958,7 +1036,7 @@ genericBabbageFeatures pf =
               ( Left
                   [ fromPredFail @era
                       ( NonOutputSupplimentaryDatums
-                          (Set.singleton $ hashData @era datumExample1)
+                          (Set.singleton $ hashData @era datumExampleSixtyFiveBytes)
                           mempty
                       )
                   ]

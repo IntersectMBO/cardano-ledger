@@ -402,7 +402,7 @@ genGenState proof gsize = do
 viewGenState :: Reflect era => Proof era -> GenSize -> Bool -> IO ()
 viewGenState proof gsize verbose = do
   st <- generate (genGenState proof gsize)
-  when verbose $ putStrLn (show (pcGenState proof st))
+  when verbose $ print (pcGenState proof st)
 
 -- =============================================
 -- Generators of inter-related items

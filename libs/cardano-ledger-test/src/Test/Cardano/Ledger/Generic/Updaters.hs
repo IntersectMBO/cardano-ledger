@@ -401,13 +401,9 @@ newScriptIntegrityHash ::
   TxDats era ->
   StrictMaybe (Alonzo.ScriptIntegrityHash (Crypto era))
 newScriptIntegrityHash (Babbage _) pp ls rds dats =
-  case (hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats) of
-    SJust x -> SJust x
-    SNothing -> SNothing
+  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
 newScriptIntegrityHash (Alonzo _) pp ls rds dats =
-  case (hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats) of
-    SJust x -> SJust x
-    SNothing -> SNothing
+  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
 newScriptIntegrityHash _wit _pp _ls _rds _dats = SNothing
 
 defaultCostModels :: Proof era -> PParamsField era
