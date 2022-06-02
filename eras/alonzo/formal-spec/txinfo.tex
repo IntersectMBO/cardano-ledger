@@ -45,6 +45,24 @@ $\fun{transPoolCert}$.
 Functions needed to implement conversion of a slot number to POSIX time are
 given in Figure \ref{fig:time-funcs}.
 
+\textbf{Time Range Translation.}
+Performed by $\fun{transVITime}$ given in Figure \ref{fig:time-funcs}.
+In case when both upper and lower bounds are set to specific slots,
+resulting \type{P.POSIXTimeRange} will have non-strict lower bound
+and strict upper bound.
+
+\textbf{Value Translation.}
+\textbf{CAUTION}: Details provided here expose internals of the \type{Value} abstraction. 
+It is \textbf{strongly} recommended to use abstractions provided by the Plutus library, 
+where these details are handled under the hood for the user by library functions. 
+Providing these details aims to help developers with very specific needs, 
+who understand the risk of bypassing abstractions provided by the library.
+
+During $\fun{toPlutusType}_{\Value} \in \Value \to \type{P.Value}$ translation (Figure \ref{fig:time-funcs}),
+if there is no Ada in the \type{Value}, then translated \type{P.Value} will contain 0 Ada value,
+i.e. there will be \type{P.Value} with 0 Ada in it. Consequently, $\TxInfo$ mint field 
+will contain 0 Ada \type{P.Value} among other assets.
+
 \textbf{Pointer Address Resolution. }
 Note that the $\Ptr$ addresses translated and passed to Plutus scripts are
 not resolvable to their corresponding key or script staking credencials. This
