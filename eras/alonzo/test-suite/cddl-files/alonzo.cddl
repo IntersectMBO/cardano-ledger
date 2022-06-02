@@ -114,8 +114,10 @@ script_data_hash = $hash32 ; New
 ;   - the language ID tag is also encoded twice. first as a uint then as
 ;     a bytestring. (our apologies)
 ;
-; If there is no value for key 0, then the corresponding scripts cannot execute.
-; Regardless of what the script integrity data is.
+; Note that each Plutus language represented inside a transaction must have
+; a cost model in the costmdls protocol parameter in order to execute,
+; regardless of what the script integrity data is. In the Alonzo era,
+; this means costmdls must have a key 0 for Plutus V1.
 ;
 ; Finally, note that in the case that a transaction includes datums but does not
 ; include any redeemers, the script data format becomes (in hex):
