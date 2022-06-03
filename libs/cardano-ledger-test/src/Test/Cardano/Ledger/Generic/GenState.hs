@@ -616,15 +616,17 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
         Nothing -> genNew
         Just (poolId, pp) -> pure (poolId, pp)
 
-genFreshKeyHash :: Reflect era => Int -> GenRS era (KeyHash kr (Crypto era))
-genFreshKeyHash n
-  | n <= 0 = error "Something very unlikely happened"
-  | otherwise = do
-      avoidKeys <- gets gsAvoidKey
-      kh <- genKeyHash
-      if coerceKeyRole kh `Set.member` avoidKeys
-        then genFreshKeyHash $ n - 1
-        else return kh
+genFreshKeyHash :: Reflect era => GenRS era (KeyHash kr (Crypto era))
+genFreshKeyHash = go 100 -- avoid unlikely chance of generated hash collisions.
+  where
+    go n
+      | n <= 0 = error "Something very unlikely happened"
+      | otherwise = do
+          avoidKeys <- gets gsAvoidKey
+          kh <- genKeyHash
+          if coerceKeyRole kh `Set.member` avoidKeys
+            then go $ n - 1
+            else return kh
 
 -- | Use this function to get a new pool that should not be used in the future transactions
 genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era), IndividualPoolStake (Crypto era))
