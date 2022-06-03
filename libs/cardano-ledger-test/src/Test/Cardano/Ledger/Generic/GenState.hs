@@ -454,12 +454,11 @@ initHonestFields proof = do
   zipWithM_ f credentials hashes
 
 runGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> Gen (ans, GenState era)
-runGenRS proof gsize action =
-  do
-    genenv <- genGenEnv proof gsize
-    let action' = initHonestFields proof >> action
-    (ans, state, ()) <- runRWST action' genenv (emptyGenState proof genenv)
-    pure (ans, state)
+runGenRS proof gsize action = do
+  genenv <- genGenEnv proof gsize
+  let action' = initHonestFields proof >> action
+  (ans, state, ()) <- runRWST action' genenv (emptyGenState proof genenv)
+  pure (ans, state)
 
 -- | Should not be used in tests, this is a helper function to be used in ghci only!
 ioGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> IO (ans, GenState era)
