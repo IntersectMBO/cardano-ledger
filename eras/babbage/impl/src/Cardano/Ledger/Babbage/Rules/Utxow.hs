@@ -32,6 +32,7 @@ import Cardano.Ledger.Babbage.Rules.Utxo
   )
 import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
 import Cardano.Ledger.Babbage.Scripts (refScripts)
+import Cardano.Ledger.Babbage.TxBody (TxOut, txOutScript)
 import Cardano.Ledger.BaseTypes
   ( ProtVer,
     ShelleyBase,
@@ -61,8 +62,10 @@ import Control.State.Transition.Extended
     liftSTS,
     trans,
   )
-import Data.Foldable (sequenceA_)
+import Data.Foldable (sequenceA_, toList)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
+import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
@@ -125,19 +128,33 @@ validateFailedBabbageScripts tx utxo neededHashes =
 -}
 validateScriptsWellFormed ::
   forall era.
-  ( ExtendedUTxO era,
+  ( ValidateScript era,
+    HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (TxOut era)),
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    Core.Script era ~ Script era
+    Core.Script era ~ Script era,
+    Core.TxOut era ~ TxOut era
   ) =>
   Core.PParams era ->
   Core.Tx era ->
-  UTxO era ->
   Test (BabbageUtxoPred era)
-validateScriptsWellFormed pp tx utxo =
-  let invalidScripts = Map.filter (not . validScript (getField @"_protocolVersion" pp)) (txscripts utxo tx)
-   in failureUnless
-        (Map.null invalidScripts)
-        (MalformedScripts $ Map.keysSet invalidScripts)
+validateScriptsWellFormed pp tx =
+  sequenceA_
+    [ failureUnless (Map.null invalidScriptWits) $ MalformedScriptWitnesses (Map.keysSet invalidScriptWits),
+      failureUnless (null invalidRefScripts) $ MalformedReferenceScripts invalidRefScriptHashes
+    ]
+  where
+    scriptWits = getField @"scriptWits" tx
+    invalidScriptWits = Map.filter (not . validScript (getField @"_protocolVersion" pp)) scriptWits
+
+    txb = getField @"body" tx
+    normalOuts = toList $ getField @"outputs" txb
+    returnOut = getField @"collateralReturn" txb
+    outs = case returnOut of
+      SNothing -> normalOuts
+      SJust rOut -> rOut : normalOuts
+    rScripts = mapMaybe txOutScript outs
+    invalidRefScripts = filter (not . validScript (getField @"_protocolVersion" pp)) rScripts
+    invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
 
 -- ==============================================================
 -- Here we define the transtion function, using reusable tests.
@@ -228,7 +245,7 @@ babbageUtxowTransition = do
   {- ∀x ∈ range(txdats txw) ∪ range(txwitscripts txw) ∪ (⋃ ( , ,d,s) ∈ txouts tx {s, d}),
                          x ∈ Script ∪ Datum ⇒ isWellFormed x
   -}
-  runTest $ validateScriptsWellFormed pp tx utxo
+  runTest $ validateScriptsWellFormed pp tx
   -- Note that Datum validation is done during deserialization,
   -- as given by the decoders in the Plutus libraray
 

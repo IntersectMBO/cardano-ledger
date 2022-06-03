@@ -64,6 +64,7 @@ module Cardano.Ledger.Babbage.TxBody
     ScriptIntegrityHash,
     txOutData,
     txOutDataHash,
+    txOutScript,
   )
 where
 
