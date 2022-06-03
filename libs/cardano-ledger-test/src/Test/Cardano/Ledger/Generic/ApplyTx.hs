@@ -108,7 +108,7 @@ applyCert proof model dcert = case dcert of
       pp = mPParams model
       (keydeposit, _) = keyPoolDeposits proof pp
   (DCertDeleg (DeRegKey x)) -> case Map.lookup x (mRewards model) of
-    Nothing -> error . show $ "DeRegKey not in rewards: " <> pcCredential x
+    Nothing -> error $ "DeRegKey not in rewards: " <> show (pcCredential x)
     Just (Coin 0) ->
       model
         { mRewards = Map.delete x (mRewards model),
