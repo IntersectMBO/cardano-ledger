@@ -105,7 +105,7 @@ instance (ShelleyEraCrypto c) => API.ApplyTx (BabbageEra c) where
             . applySTSNonStatic
               @(Core.EraRule "LEDGER" (BabbageEra c))
             $ TRC (env, state, API.extractTx vtx)
-     in liftEither . left (API.ApplyTxError) $ res
+     in liftEither . left API.ApplyTxError $ res
 
 instance ShelleyEraCrypto c => API.ApplyBlock (BabbageEra c)
 

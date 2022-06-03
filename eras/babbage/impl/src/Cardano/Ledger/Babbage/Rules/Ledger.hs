@@ -6,20 +6,18 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER) where
 
-import Cardano.Ledger.Alonzo.Rules.Ledger
+import Cardano.Ledger.Alonzo.Rules.Ledger (ledgerTransition)
 import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
 import Cardano.Ledger.Babbage.PParams (PParams' (..))
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
 import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPred)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
@@ -31,8 +29,17 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Delegs
+  ( DELEGS,
+    DelegsEnv (..),
+    DelegsEvent,
+    DelegsPredicateFailure,
+  )
+import Cardano.Ledger.Shelley.Rules.Ledger
+  ( LedgerEnv (..),
+    LedgerEvent (..),
+    LedgerPredicateFailure (..),
+  )
 import qualified Cardano.Ledger.Shelley.Rules.Ledgers as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.TxBody (DCert)
@@ -107,7 +114,7 @@ instance
   ( Era era,
     STS (BabbageUTXOW era),
     Event (Core.EraRule "UTXOW" era) ~ AlonzoEvent era,
-    PredicateFailure (Core.EraRule "UTXOW" era) ~ BabbageUtxoPred era
+    PredicateFailure (Core.EraRule "UTXOW" era) ~ BabbageUtxowPred era
   ) =>
   Embed (BabbageUTXOW era) (BabbageLEDGER era)
   where
