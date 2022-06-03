@@ -632,11 +632,11 @@ genFreshKeyHash = go 100 -- avoid unlikely chance of generated hash collisions.
 genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era), IndividualPoolStake (Crypto era))
 genNewPool = do
   poolId <- genFreshKeyHash 100
-  poolparam <- genPoolParams poolId
+  poolParam <- genPoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
-  let stake = IndividualPoolStake @(Crypto era) (toRational percent) (_poolVrf poolparam)
+  let stake = IndividualPoolStake @(Crypto era) (toRational percent) (_poolVrf poolParam)
   modify (\s -> s {gsAvoidKey = Set.insert (coerceKeyRole poolId) $ gsAvoidKey s})
-  pure (poolId, poolparam, stake)
+  pure (poolId, poolParam, stake)
 
 addPoolToInitialState ::
   KeyHash 'StakePool (Crypto era) ->
