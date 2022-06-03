@@ -42,7 +42,7 @@ import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), alonzoInputHashes, minfee)
 import Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut (TxOut), getAlonzoTxOutEitherAddr)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo, validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
-import Cardano.Ledger.Alonzo.TxWitness (TxDats (TxDats'), TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
@@ -243,7 +243,6 @@ instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
   getDatum = getDatumAlonzo
   allOuts txbody = toList $ getField @"outputs" txbody
   allSizedOuts = map mkSized . allOuts
-  txdata (ValidatedTx _ (TxWitness _ _ _ (TxDats' m) _) _ _) = Set.fromList $ Map.elems m
 
 -------------------------------------------------------------------------------
 -- Era Mapping

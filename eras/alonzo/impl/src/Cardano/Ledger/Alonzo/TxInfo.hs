@@ -423,11 +423,6 @@ class ExtendedUTxO era where
     Core.TxBody era ->
     [Sized (Core.TxOut era)]
 
-  -- | Used for property check that datums we have are completely pointless.
-  txdata ::
-    Core.Tx era ->
-    Set (Data era)
-
 alonzoTxInfo ::
   forall era.
   ( Era era,
