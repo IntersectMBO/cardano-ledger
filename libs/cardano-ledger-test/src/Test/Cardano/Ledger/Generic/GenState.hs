@@ -165,7 +165,7 @@ data GenSize = GenSize
     certificateMax :: !Int,
     withdrawalMax :: !Int,
     oldUtxoPercent :: !Int, -- between 0-100, 10 means pick an old UTxO 10% of the time
-    maxHonestPools :: !Int
+    maxStablePools :: !Int
   }
   deriving (Show)
 
@@ -186,9 +186,9 @@ data GenState era = GenState
     gsInitialRewards :: !(Map (Credential 'Staking (Crypto era)) Coin),
     gsInitialPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
     gsInitialPoolDistr :: !(Map (KeyHash 'StakePool (Crypto era)) (IndividualPoolStake (Crypto era))),
-    -- Honest fields are stable from initialization to the end of the generation process
-    gsHonestPools :: !(Set (KeyHash 'StakePool (Crypto era))),
-    gsHonestDelegators :: !(Set (StakeCredential (Crypto era))),
+    -- Stable fields are stable from initialization to the end of the generation process
+    gsStablePools :: !(Set (KeyHash 'StakePool (Crypto era))),
+    gsStableDelegators :: !(Set (StakeCredential (Crypto era))),
     gsAvoidCred :: !(Set (Credential 'Staking (Crypto era))),
     gsAvoidKey :: !(Set (KeyHash 'StakePool (Crypto era))),
     gsProof :: !(Proof era),
@@ -233,7 +233,7 @@ instance Default GenSize where
         utxoChoicesMax = 30,
         certificateMax = 10,
         withdrawalMax = 10,
-        maxHonestPools = 5
+        maxStablePools = 5
       }
 
 small :: GenSize
@@ -251,7 +251,7 @@ small =
       utxoChoicesMax = 12,
       certificateMax = 2,
       withdrawalMax = 2,
-      maxHonestPools = 4
+      maxStablePools = 4
     }
 
 -- ==============================================================
@@ -408,18 +408,18 @@ getNewPoolTest = do
 -- ========================================================================
 -- Tools to get started
 
--- | Initialize (or overwrite if they are not empty) the Honest fields. It is
+-- | Initialize (or overwrite if they are not empty) the Stable fields. It is
 --   intended that this be called just once at the beginning of a trace generation.
-initHonestFields :: forall era. Reflect era => Proof era -> GenRS era ()
-initHonestFields proof = do
+initStableFields :: forall era. Reflect era => Proof era -> GenRS era ()
+initStableFields proof = do
   GenEnv {geSize} <- ask
   let GenSize {..} = geSize
-  hashes <- replicateM maxHonestPools $ do
+  hashes <- replicateM maxStablePools $ do
     (kh, pp, ips) <- genNewPool
     modify
       ( \gs@GenState {..} ->
           gs
-            { gsHonestPools = Set.insert kh gsHonestPools,
+            { gsStablePools = Set.insert kh gsStablePools,
               gsInitialPoolParams = Map.insert kh pp gsInitialPoolParams,
               gsInitialPoolDistr = Map.insert kh ips gsInitialPoolDistr
             }
@@ -427,14 +427,14 @@ initHonestFields proof = do
     modifyModel (\ms -> ms {mPoolParams = Map.insert kh pp $ mPoolParams ms})
     return kh
   -- This incantation gets a list of fresh (not previously generated) Credential
-  credentials <- replicateM maxHonestPools $ do
+  credentials <- replicateM maxStablePools $ do
     old' <- gets (Map.keysSet . gsInitialRewards)
     prev <- gets gsAvoidCred
     cred <- genFreshCredential 100 Rewrd (Set.union old' prev)
     modify
       ( \gs ->
           gs
-            { gsHonestDelegators = Set.insert cred $ gsHonestDelegators gs,
+            { gsStableDelegators = Set.insert cred $ gsStableDelegators gs,
               gsInitialRewards = Map.insert cred (Coin 0) $ gsInitialRewards gs
             }
       )
@@ -456,7 +456,7 @@ initHonestFields proof = do
 runGenRS :: Reflect era => Proof era -> GenSize -> GenRS era ans -> Gen (ans, GenState era)
 runGenRS proof gsize action = do
   genenv <- genGenEnv proof gsize
-  let action' = initHonestFields proof >> action
+  let action' = initStableFields proof >> action
   (ans, state, ()) <- runRWST action' genenv (emptyGenState proof genenv)
   pure (ans, state)
 
@@ -547,7 +547,7 @@ genRewards = do
 genRetirementHash :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era))
 genRetirementHash = do
   m <- gets $ mPoolParams . gsModel
-  honestKhs <- gets gsHonestPools
+  honestKhs <- gets gsStablePools
   avoidKey <- gets gsAvoidKey
   res <- lift . genMapElemWhere m 10 $ \kh _ ->
     kh `Set.notMember` honestKhs && kh `Set.notMember` avoidKey
@@ -617,7 +617,7 @@ genPool = frequencyT [(10, genNew), (90, pickExisting)]
         Just (poolId, pp) -> pure (poolId, pp)
 
 genFreshKeyHash :: Reflect era => GenRS era (KeyHash kr (Crypto era))
-genFreshKeyHash = go 100 -- avoid unlikely chance of generated hash collisions.
+genFreshKeyHash = go (100 :: Int) -- avoid unlikely chance of generated hash collisions.
   where
     go n
       | n <= 0 = error "Something very unlikely happened"
@@ -631,7 +631,7 @@ genFreshKeyHash = go 100 -- avoid unlikely chance of generated hash collisions.
 -- | Use this function to get a new pool that should not be used in the future transactions
 genNewPool :: forall era. Reflect era => GenRS era (KeyHash 'StakePool (Crypto era), PoolParams (Crypto era), IndividualPoolStake (Crypto era))
 genNewPool = do
-  poolId <- genFreshKeyHash 100
+  poolId <- genFreshKeyHash
   poolParam <- genPoolParams poolId
   percent <- lift $ choose (0, 1 :: Float)
   let stake = IndividualPoolStake @(Crypto era) (toRational percent) (_poolVrf poolParam)
@@ -688,7 +688,7 @@ genCredential :: forall era kr. Reflect era => Tag -> GenRS era (Credential kr (
 genCredential tag =
   frequencyT
     [ (35, KeyHashObj <$> genKeyHash'),
-      (35, ScriptHashObj <$> genScript' (100 :: Int)),
+      (35, ScriptHashObj <$> genScript'),
       (10, pickExistingKeyHash),
       (20, pickExistingScript)
     ]
@@ -700,20 +700,22 @@ genCredential tag =
           st {gsInitialRewards = Map.insert (KeyHashObj kh) (Coin 0) $ gsInitialRewards st}
         _ -> pure ()
       return $ coerceKeyRole kh
-    genScript' n
-      | n <= 0 = error "Failed to generate a fresh script hash"
-      | otherwise = do
-          sh <- genScript @era reify tag
-          initialRewards <- gets gsInitialRewards
-          avoidCredentials <- gets gsAvoidCred
-          let newcred = ScriptHashObj sh
-          if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
-            then do
-              case tag of
-                Rewrd -> modify $ \st -> st {gsInitialRewards = Map.insert newcred (Coin 0) $ gsInitialRewards st}
-                _ -> pure ()
-              return sh
-            else genScript' $ n - 1
+    genScript' = f (100 :: Int)
+      where
+        f n
+          | n <= 0 = error "Failed to generate a fresh script hash"
+          | otherwise = do
+              sh <- genScript @era reify tag
+              initialRewards <- gets gsInitialRewards
+              avoidCredentials <- gets gsAvoidCred
+              let newcred = ScriptHashObj sh
+              if Map.notMember newcred initialRewards && Set.notMember newcred avoidCredentials
+                then do
+                  case tag of
+                    Rewrd -> modify $ \st -> st {gsInitialRewards = Map.insert newcred (Coin 0) $ gsInitialRewards st}
+                    _ -> pure ()
+                  return sh
+                else f $ n - 1
     pickExistingKeyHash =
       KeyHashObj <$> do
         keysMap <- gsKeys <$> get
@@ -902,8 +904,8 @@ pcGenState proof (GenState vi keys scripts plutus dats mvi model iutxo irew ipoo
       ("Initial Rewards", ppMap pcCredential pcCoin irew),
       ("Initial PoolParams", ppMap pcKeyHash pcPoolParams ipoolp),
       ("Initial PoolDistr", ppMap pcKeyHash pcIndividualPoolStake ipoold),
-      ("Honest PoolParams", ppSet pcKeyHash hp),
-      ("Honest Delegators", ppSet pcCredential hd),
+      ("Stable PoolParams", ppSet pcKeyHash hp),
+      ("Stable Delegators", ppSet pcCredential hd),
       ("Previous RegKey", ppSet pcCredential avcred),
       ("GenEnv", ppString "GenEnv ..."),
       ("Proof", ppString (show prf))
