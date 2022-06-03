@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.Scripts
     getCostModelParams,
     mkCostModel,
   )
-import Cardano.Ledger.Alonzo.TxBody
+import Cardano.Ledger.Alonzo.TxBody (TxOut (TxOut))
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
@@ -216,7 +216,7 @@ instance ToJSONKey Language where
 instance FromJSONKey Language where
   fromJSONKey = Aeson.FromJSONKeyTextParser languageFromText
 
-validateCostModel :: MonadFail m => (Language, (Map Text Integer)) -> m (Language, CostModel)
+validateCostModel :: MonadFail m => (Language, Map Text Integer) -> m (Language, CostModel)
 validateCostModel (lang, cmps) = case mkCostModel lang cmps of
   Left err -> fail $ show err
   Right cm -> pure (lang, cm)
@@ -227,7 +227,7 @@ validateCostModel (lang, cmps) = case mkCostModel lang cmps of
 translateLegacyV1paramNames :: Map Text Integer -> Map Text Integer
 translateLegacyV1paramNames cmps =
   Map.fromList $
-    map (\((_, v), k2) -> (k2, v)) (zip (Map.toList cmps) (Set.toList PV1.costModelParamNames))
+    zipWith (\(_, v) k2 -> (k2, v)) (Map.toList cmps) (Set.toList PV1.costModelParamNames)
 
 instance FromJSON CostModels where
   parseJSON = Aeson.withObject "CostModels" $ \o -> do

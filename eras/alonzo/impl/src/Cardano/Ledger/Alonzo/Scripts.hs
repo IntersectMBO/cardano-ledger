@@ -15,7 +15,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
--- Needed for FromCBOR(Annotator CostModel)
+-- Needed for (NoThunks PV1.EvaluationContext)
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Alonzo.Scripts
@@ -40,16 +40,12 @@ module Cardano.Ledger.Alonzo.Scripts
     decodeCostModel,
     CostModels (..),
     CostModelApplyError (..),
-
-    -- * Deprecated
-    validateCostModelParams,
-    isCostModelParamsWellFormed,
   )
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -60,13 +56,27 @@ import Cardano.Ledger.SafeHash
     SafeToHash (..),
   )
 import Cardano.Ledger.Serialization (mapToCBOR)
-import Cardano.Ledger.ShelleyMA.Timelocks
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Coders
+  ( Annotator,
+    Decode (Ann, D, From, Invalid, RecD, SumD, Summands),
+    Decoder,
+    Encode (Rec, Sum, To),
+    Wrapped (Open),
+    cborError,
+    decode,
+    decodeList,
+    decodeMapByKey,
+    encode,
+    encodeFoldableAsDefinite,
+    (!>),
+    (<!),
+    (<*!),
+  )
 import Data.DerivingVia (InstantiatedAt (..))
-import Data.Either (isRight)
 import Data.Int (Int64)
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -74,13 +84,13 @@ import Data.Measure (BoundedMeasure, Measure)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
-import Data.Typeable
+import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
-import Plutus.V2.Ledger.Api as PV2 hiding (Map, Script)
+import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, mkEvaluationContext)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -223,7 +233,10 @@ instance SafeToHash CostModel where
 
 instance HashWithCrypto CostModel CostModel
 
-deriving via InspectHeapNamed "PV1.EvaluationContext" PV1.EvaluationContext instance NoThunks PV1.EvaluationContext
+deriving via
+  InspectHeapNamed "PV1.EvaluationContext" PV1.EvaluationContext
+  instance
+    NoThunks PV1.EvaluationContext
 
 deriving via InspectHeapNamed "CostModel" CostModel instance NoThunks CostModel
 
@@ -371,8 +384,9 @@ instance forall era. (Typeable (Crypto era), Typeable era) => ToCBOR (Script era
 
 encodeScript :: (Typeable (Crypto era)) => Script era -> Encode 'Open (Script era)
 encodeScript (TimelockScript i) = Sum TimelockScript 0 !> To i
-encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s -- Use the ToCBOR instance of ShortByteString
-encodeScript (PlutusScript PlutusV2 s) = Sum (PlutusScript PlutusV1) 2 !> To s
+-- Use the ToCBOR instance of ShortByteString:
+encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s
+encodeScript (PlutusScript PlutusV2 s) = Sum (PlutusScript PlutusV2) 2 !> To s
 
 instance
   (CC.Crypto (Crypto era), Typeable (Crypto era), Typeable era) =>
@@ -385,11 +399,3 @@ instance
       decodeScript 1 = Ann (SumD $ PlutusScript PlutusV1) <*! Ann From
       decodeScript 2 = Ann (SumD $ PlutusScript PlutusV2) <*! Ann From
       decodeScript n = Invalid n
-
-{-# DEPRECATED validateCostModelParams "this function is replaced by assertWellFormedCostModelParams" #-}
-validateCostModelParams :: CostModelParams -> Bool
-validateCostModelParams = isRight . assertWellFormedCostModelParams
-
-{-# DEPRECATED isCostModelParamsWellFormed "this function is replaced by assertWellFormedCostModelParams" #-}
-isCostModelParamsWellFormed :: CostModelParams -> Bool
-isCostModelParamsWellFormed = validateCostModelParams

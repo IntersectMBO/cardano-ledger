@@ -132,8 +132,8 @@ import Codec.CBOR.Decoding (Decoder, decodeTag, decodeTag64)
 import Codec.CBOR.Encoding (Encoding, encodeTag)
 import Control.Applicative (liftA2)
 import Control.Monad (replicateM, unless, when)
-import Control.Monad.Trans
-import Control.Monad.Trans.Identity
+import Control.Monad.Trans (MonadTrans (..))
+import Control.Monad.Trans.Identity (IdentityT (runIdentityT))
 import Data.Foldable (foldl')
 import Data.Functor.Compose (Compose (..))
 import qualified Data.Map.Strict as Map
@@ -145,7 +145,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set, insert, member)
 import qualified Data.Set as Set
 import qualified Data.Text as Text
-import Data.Typeable
+import Data.Typeable (Typeable, typeOf)
 import qualified Data.VMap as VMap
 import Data.Void (Void)
 import Formatting (build, formatToString)
@@ -181,7 +181,13 @@ decodeRecordSum name decoder = do
   tag <- decodeWord
   (size, x) <- decoder tag -- we decode all the stuff we want
   case lenOrIndef of
-    Just n -> matchSize (Text.pack ("\nSum " ++ name ++ "\nreturned=" ++ show size ++ " actually read= " ++ show n)) size n
+    Just n ->
+      let errMsg =
+            "\nSum " ++ name ++ "\nreturned="
+              ++ show size
+              ++ " actually read= "
+              ++ show n
+       in matchSize (Text.pack errMsg) size n
     Nothing -> do
       isBreak <- decodeBreakOr -- if there is stuff left, it is unnecessary extra stuff
       unless isBreak $ cborError $ DecoderErrorCustom (Text.pack name) "Excess terms in array"
@@ -200,10 +206,7 @@ decodeNullMaybe decoder = do
     _ -> Just <$> decoder
 
 decodePair :: Decoder s a -> Decoder s b -> Decoder s (a, b)
-decodePair first second = decodeRecordNamed "pair" (const 2) $ do
-  a <- first
-  b <- second
-  pure (a, b)
+decodePair first second = decodeRecordNamed "pair" (const 2) ((,) <$> first <*> second)
 
 encodePair :: (a -> Encoding) -> (b -> Encoding) -> (a, b) -> Encoding
 encodePair encodeFirst encodeSecond (x, y) =
@@ -215,17 +218,24 @@ invalidKey :: Word -> Decoder s a
 invalidKey k = cborError $ DecoderErrorCustom "not a valid key:" (Text.pack $ show k)
 
 duplicateKey :: String -> Word -> Decoder s a
-duplicateKey name k = cborError $ DecoderErrorCustom "Duplicate key:" (Text.pack $ show k ++ " while decoding type " ++ name)
+duplicateKey name k =
+  cborError $
+    DecoderErrorCustom
+      "Duplicate key:"
+      (Text.pack $ show k ++ " while decoding type " ++ name)
 
 unusedRequiredKeys :: Set Word -> [(Word, String)] -> String -> Decoder s a
 unusedRequiredKeys used required name =
-  cborError $ DecoderErrorCustom (Text.pack ("value of type " ++ name)) (Text.pack (message (filter bad required)))
+  cborError $
+    DecoderErrorCustom
+      (Text.pack ("value of type " ++ name))
+      (Text.pack (message (filter bad required)))
   where
     bad (k, _) = not (member k used)
     message [] = ", not decoded."
     message [pair] = report pair ++ message []
     message (pair : more) = report pair ++ ", and " ++ message more
-    report (k, f) = ("field " ++ f ++ " with key " ++ show k)
+    report (k, f) = "field " ++ f ++ " with key " ++ show k
 
 decodeList :: Decoder s a -> Decoder s [a]
 decodeList = decodeCollection decodeListLenOrIndef
@@ -240,7 +250,9 @@ decodeSet :: Ord a => Decoder s a -> Decoder s (Set a)
 decodeSet decoder = Set.fromList <$> decodeList decoder
 
 decodeAnnSet :: Ord t => Decoder s (Annotator t) -> Decoder s (Annotator (Set t))
-decodeAnnSet dec = do xs <- decodeList dec; pure (Set.fromList <$> (sequence xs))
+decodeAnnSet dec = do
+  xs <- decodeList dec
+  pure (Set.fromList <$> sequence xs)
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
@@ -257,7 +269,7 @@ decodeCollectionWithLen lenOrIndef el = do
     loop (n, acc) condition action =
       condition >>= \case
         False -> pure (n, reverse acc)
-        True -> action >>= \v -> loop (n + 1, (v : acc)) condition action
+        True -> action >>= \v -> loop (n + 1, v : acc) condition action
 
 decodeAccWithLen ::
   Decoder s (Maybe Int) ->
@@ -283,12 +295,12 @@ encodeFoldable :: (ToCBOR a, Foldable f) => f a -> Encoding
 encodeFoldable = encodeFoldableEncoder toCBOR
 
 encodeFoldableAsIndefinite :: (ToCBOR a, Foldable f) => f a -> Encoding
-encodeFoldableAsIndefinite f = encodeFoldableEncoderAs wrapArray toCBOR f
+encodeFoldableAsIndefinite = encodeFoldableEncoderAs wrapArray toCBOR
   where
     wrapArray _len contents = encodeListLenIndef <> contents <> encodeBreak
 
 encodeFoldableAsDefinite :: (ToCBOR a, Foldable f) => f a -> Encoding
-encodeFoldableAsDefinite f = encodeFoldableEncoderAs wrapArray toCBOR f
+encodeFoldableAsDefinite = encodeFoldableEncoderAs wrapArray toCBOR
   where
     wrapArray len contents = encodeListLen len <> contents
 
@@ -579,7 +591,7 @@ gsize (Key _ x) = gsize x
 gsize (Keyed _) = 0
 
 encode :: Encode w t -> Encoding
-encode sym = encodeCountPrefix 0 sym
+encode = encodeCountPrefix 0
   where
     encodeCountPrefix :: Word -> Encode w t -> Encoding
     -- n is the number of fields we must write in the prefix.
@@ -711,15 +723,15 @@ decodeCount (ApplyErr cn g) n = do
   y <- decodeClosed g
   case f y of
     Right z -> pure (i, z)
-    Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack $ message)
+    Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
 
 -- The type of DecodeClosed precludes pattern match against (SumD c) as the types are different.
 
 decodeClosed :: Decode ('Closed d) t -> Decoder s t
-decodeClosed (Summands nm f) = decodeRecordSum nm (\x -> decodE (f x))
+decodeClosed (Summands nm f) = decodeRecordSum nm (decodE . f)
 decodeClosed (KeyedD cn) = pure cn
 decodeClosed (RecD cn) = pure cn
-decodeClosed From = do x <- fromCBOR; pure x
+decodeClosed From = fromCBOR
 decodeClosed (D dec) = dec
 decodeClosed (ApplyD cn g) = do
   f <- decodeClosed cn
@@ -744,7 +756,7 @@ decodeClosed (ApplyErr cn g) = do
   y <- decodeClosed g
   case f y of
     Right z -> pure z
-    Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack $ message)
+    Left message -> cborError $ DecoderErrorCustom "decoding error:" (Text.pack message)
 
 decodeSparse ::
   Typeable a =>
@@ -756,8 +768,8 @@ decodeSparse ::
 decodeSparse name initial pick required = do
   lenOrIndef <- decodeMapLenOrIndef
   (!v, used) <- case lenOrIndef of
-    Just len -> getSparseBlock len initial pick (Set.empty) name
-    Nothing -> getSparseBlockIndef initial pick (Set.empty) name
+    Just len -> getSparseBlock len initial pick Set.empty name
+    Nothing -> getSparseBlockIndef initial pick Set.empty name
   if all (\(key, _name) -> member key used) required
     then pure v
     else unusedRequiredKeys used required (show (typeOf initial))
@@ -842,7 +854,7 @@ dualCBOR = Dual toCBOR fromCBOR
 -- ToCBOR and FromCBR instances.
 
 to :: (ToCBOR t, FromCBOR t) => t -> Encode ('Closed 'Dense) t
-to xs = ED dualCBOR xs
+to = ED dualCBOR
 
 from :: (ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
 from = DD dualCBOR
@@ -871,7 +883,7 @@ from = DD dualCBOR
 
 -- | (mapEncode x)  is self-documenting, correct way to encode Map. use mapDecode as its dual
 mapEncode :: (ToCBOR k, ToCBOR v) => Map.Map k v -> Encode ('Closed 'Dense) (Map.Map k v)
-mapEncode x = E (encodeMap toCBOR toCBOR) x
+mapEncode = E (encodeMap toCBOR toCBOR)
 
 -- | (mapDecode) is the Dual for (mapEncode x)
 mapDecode :: (Ord k, FromCBOR k, FromCBOR v) => Decode ('Closed 'Dense) (Map.Map k v)
@@ -893,7 +905,7 @@ vMapDecode = D (decodeVMap fromCBOR fromCBOR)
 
 -- | (setEncode x) is self-documenting (E encodeFoldable x), use setDecode as its dual
 setEncode :: (ToCBOR v) => Set.Set v -> Encode ('Closed 'Dense) (Set.Set v)
-setEncode x = E encodeFoldable x
+setEncode = E encodeFoldable
 
 -- | (setDecode) is the Dual for (setEncode x)
 setDecode :: (Ord v, FromCBOR v) => Decode ('Closed 'Dense) (Set.Set v)
@@ -901,7 +913,7 @@ setDecode = D (decodeSet fromCBOR)
 
 -- | (listEncode x) is self-documenting (E encodeFoldable x), use listDecode as its dual
 listEncode :: (ToCBOR v) => [v] -> Encode ('Closed 'Dense) [v]
-listEncode x = E encodeFoldable x
+listEncode = E encodeFoldable
 
 -- | (listDecode) is the Dual for (listEncode x)
 listDecode :: (FromCBOR v) => Decode ('Closed 'Dense) [v]
@@ -919,13 +931,21 @@ listDecode = D (decodeList fromCBOR)
 --                                             ^^^^^^^^
 -- One can always lift x::(Decode w T) by using Ann. so (Ann x)::(Decode w (Annotator T)).
 
-pairDecodeA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator y) -> Decode ('Closed 'Dense) (Annotator (x, y))
-pairDecodeA x y = D (do (xA, yA) <- decodePair (decode x) (decode y); pure (do x' <- xA; y' <- yA; pure (x', y')))
+pairDecodeA ::
+  Decode ('Closed 'Dense) (Annotator x) ->
+  Decode ('Closed 'Dense) (Annotator y) ->
+  Decode ('Closed 'Dense) (Annotator (x, y))
+pairDecodeA x y = D $ do
+  (xA, yA) <- decodePair (decode x) (decode y)
+  pure ((,) <$> xA <*> yA)
 
 listDecodeA :: Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator [x])
-listDecodeA dx = D (do listXA <- decodeList (decode dx); pure (sequence listXA))
+listDecodeA dx = D (sequence <$> decodeList (decode dx))
 
-setDecodeA :: Ord x => Decode ('Closed 'Dense) (Annotator x) -> Decode ('Closed 'Dense) (Annotator (Set x))
+setDecodeA ::
+  Ord x =>
+  Decode ('Closed 'Dense) (Annotator x) ->
+  Decode ('Closed 'Dense) (Annotator (Set x))
 setDecodeA dx = D (decodeAnnSet (decode dx))
 
 mapDecodeA ::

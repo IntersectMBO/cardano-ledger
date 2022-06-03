@@ -17,9 +17,20 @@ import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..), decodeCostModel, getEvaluationContext)
+import Cardano.Ledger.Alonzo.Scripts
+  ( ExUnits (..),
+    Script (..),
+    decodeCostModel,
+    getEvaluationContext,
+  )
 import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unTxDats)
+  ( CostModel,
+    DataHash,
+    ScriptPurpose (..),
+    ValidatedTx,
+    txdats',
+  )
+import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), certIxToInt, txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, Tx, TxBody, TxOut, Value)
@@ -34,7 +45,7 @@ import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness), hashKey)
 import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
-import Cardano.Ledger.SafeHash
+import Cardano.Ledger.SafeHash (SafeHash, extractHash, hashAnnotated)
 import Cardano.Ledger.Serialization (Sized (sizedValue))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
@@ -753,6 +764,6 @@ languages ::
   Set Language
 languages tx utxo = Map.foldl' accum Set.empty allscripts
   where
-    allscripts = Cardano.Ledger.Alonzo.TxInfo.txscripts @era utxo tx
+    allscripts = txscripts @era utxo tx
     accum ans (TimelockScript _) = ans
     accum ans (PlutusScript l _) = Set.insert l ans

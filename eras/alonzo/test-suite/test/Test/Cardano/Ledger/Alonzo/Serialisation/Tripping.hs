@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail)
 import Cardano.Ledger.Alonzo.Scripts (CostModels, Script)
 import Cardano.Ledger.Alonzo.TxBody (TxBody)
-import Cardano.Ledger.Alonzo.TxWitness
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley.Metadata (Metadata)
 import qualified Cardano.Ledger.Shelley.Tx as LTX
@@ -61,10 +61,10 @@ trippingAnn ::
   ) =>
   t ->
   Property
-trippingAnn x = trippingF roundTripAnn x
+trippingAnn = trippingF roundTripAnn
 
 tripping :: (Eq src, Show src, ToCBOR src, FromCBOR src) => src -> Property
-tripping x = trippingF roundTrip x
+tripping = trippingF roundTrip
 
 tests :: TestTree
 tests =

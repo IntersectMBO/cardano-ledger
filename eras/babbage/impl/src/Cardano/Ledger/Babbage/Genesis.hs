@@ -1,5 +1,3 @@
-{-# LANGUAGE DeriveAnyClass #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
 module Cardano.Ledger.Babbage.Genesis
@@ -9,9 +7,9 @@ module Cardano.Ledger.Babbage.Genesis
 where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Babbage.PParams (PParams', extendPP)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley
-import Data.Functor.Identity
+import Data.Functor.Identity (Identity)
 
 -- | Given the missing pieces turn a Shelley.PParams' into an Params'
 extendPPWithGenesis ::

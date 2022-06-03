@@ -57,7 +57,7 @@ instance
 instance
   ( UsesValue era,
     Mock (Crypto era),
-    BabbageBody (era),
+    BabbageBody era,
     Arbitrary (Core.Value era),
     Arbitrary (Core.Script era)
   ) =>
@@ -164,19 +164,19 @@ instance Mock c => Arbitrary (UtxosPredicateFailure (BabbageEra c)) where
 instance Mock c => Arbitrary (UtxoPredicateFailure (BabbageEra c)) where
   arbitrary =
     oneof
-      [ (BadInputsUTxO) <$> arbitrary,
+      [ BadInputsUTxO <$> arbitrary,
         OutsideValidityIntervalUTxO <$> arbitrary <*> arbitrary,
         MaxTxSizeUTxO <$> arbitrary <*> arbitrary,
         pure InputSetEmptyUTxO,
         FeeTooSmallUTxO <$> arbitrary <*> arbitrary,
-        (ValueNotConservedUTxO) <$> arbitrary <*> arbitrary,
-        (OutputTooSmallUTxO) <$> arbitrary,
-        (UtxosFailure) <$> arbitrary,
-        (WrongNetwork) <$> arbitrary <*> arbitrary,
-        (WrongNetworkWithdrawal) <$> arbitrary <*> arbitrary,
-        (OutputBootAddrAttrsTooBig) <$> arbitrary,
+        ValueNotConservedUTxO <$> arbitrary <*> arbitrary,
+        OutputTooSmallUTxO <$> arbitrary,
+        UtxosFailure <$> arbitrary,
+        WrongNetwork <$> arbitrary <*> arbitrary,
+        WrongNetworkWithdrawal <$> arbitrary <*> arbitrary,
+        OutputBootAddrAttrsTooBig <$> arbitrary,
         pure TriesToForgeADA,
-        (OutputTooBigUTxO) <$> arbitrary,
+        OutputTooBigUTxO <$> arbitrary,
         InsufficientCollateral <$> arbitrary <*> arbitrary,
         ScriptsNotPaidUTxO <$> arbitrary,
         ExUnitsTooBigUTxO <$> arbitrary <*> arbitrary,

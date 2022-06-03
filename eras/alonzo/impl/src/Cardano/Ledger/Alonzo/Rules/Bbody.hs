@@ -121,7 +121,7 @@ bbodyTransition ::
   forall (someBBODY :: Type -> Type) era.
   ( -- Conditions that the Abstract someBBODY must meet
     STS (someBBODY era),
-    Signal (someBBODY era) ~ (Block (BHeaderView (Crypto era)) era),
+    Signal (someBBODY era) ~ Block (BHeaderView (Crypto era)) era,
     PredicateFailure (someBBODY era) ~ AlonzoBbodyPredFail era,
     BaseM (someBBODY era) ~ ShelleyBase,
     State (someBBODY era) ~ BbodyState era,
@@ -145,7 +145,7 @@ bbodyTransition =
     >>= \( TRC
              ( BbodyEnv pp account,
                BbodyState ls b,
-               (UnserialisedBlock bh txsSeq)
+               UnserialisedBlock bh txsSeq
                )
            ) -> do
         let txs = txSeqTxns txsSeq

@@ -1,5 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeFamilies #-}
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.Canonical (tests) where
 
@@ -58,6 +57,8 @@ checkCanonicalTerm :: Decoder s (Annotator (Either String ()))
 checkCanonicalTerm = do
   tt <- peekTokenType
   let t _ = pure (Right ())
+      failNotImplemented =
+        fail $ "canonicity check for " <> show tt <> " not implemented"
   case tt of
     TypeUInt -> t <$> decodeIntegerCanonical
     TypeUInt64 -> t <$> decodeIntegerCanonical
@@ -77,14 +78,13 @@ checkCanonicalTerm = do
     TypeMapLen -> checkCanonicalMap
     TypeMapLen64 -> checkCanonicalMap
     TypeMapLenIndef -> fail "indefinite map encoding"
-    -- TypeTag ->
-    -- TypeTag64 ->
+    TypeTag -> failNotImplemented
+    TypeTag64 -> failNotImplemented
     TypeBool -> t <$> decodeBool
     TypeNull -> t <$> decodeNull
     TypeSimple -> t <$> decodeSimpleCanonical
-    -- TypeBreak ->
-    -- TypeInvalid ->
-    x -> fail $ "canonicity check for " <> show x <> " not implemented"
+    TypeBreak -> failNotImplemented
+    TypeInvalid -> failNotImplemented
 
 {-
 - The keys in the map must be sorted as follows:
@@ -104,7 +104,7 @@ checkCanonicalMap = do
   n <- decodeMapLenCanonical
   keys <- replicateM n checkCanonicalKVPair
   let keys' :: Annotator (Either String [ByteString])
-      keys' = (getCompose . sequenceA . fmap Compose) keys
+      keys' = (getCompose . traverse Compose) keys
   pure $
     Annotator $ \fullBytes -> do
       ks <- runAnnotator keys' fullBytes
@@ -113,13 +113,13 @@ checkCanonicalMap = do
 checkCanonicalList :: Decoder s (Annotator (Either String ()))
 checkCanonicalList = do
   len <- decodeListLenCanonical
-  checkedTerms <- (replicateM len checkCanonicalTerm)
-  pure $ void <$> (getCompose . sequenceA . fmap Compose) checkedTerms
+  checkedTerms <- replicateM len checkCanonicalTerm
+  pure $ void <$> (getCompose . traverse Compose) checkedTerms
 
 isSorted :: [ByteString] -> Bool
 isSorted [] = True
 isSorted [_] = True
-isSorted (x : (xs@(y : _))) = case shortLex x y of
+isSorted (x : xs@(y : _)) = case shortLex x y of
   GT -> False
   _ -> isSorted xs
 

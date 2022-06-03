@@ -772,20 +772,22 @@ instance
 
 utxoPredFailMaToAlonzo ::
   Inject (PredicateFailure (Core.EraRule "PPUP" era)) (PredicateFailure (Core.EraRule "UTXOS" era)) =>
-  (ShelleyMA.UtxoPredicateFailure era) ->
-  (UtxoPredicateFailure era)
+  ShelleyMA.UtxoPredicateFailure era ->
+  UtxoPredicateFailure era
 utxoPredFailMaToAlonzo (ShelleyMA.BadInputsUTxO x) = BadInputsUTxO x
-utxoPredFailMaToAlonzo (ShelleyMA.OutsideValidityIntervalUTxO vi slotNo) = OutsideValidityIntervalUTxO vi slotNo
+utxoPredFailMaToAlonzo (ShelleyMA.OutsideValidityIntervalUTxO vi slotNo) =
+  OutsideValidityIntervalUTxO vi slotNo
 utxoPredFailMaToAlonzo (ShelleyMA.MaxTxSizeUTxO x y) = MaxTxSizeUTxO x y
-utxoPredFailMaToAlonzo (ShelleyMA.InputSetEmptyUTxO) = InputSetEmptyUTxO
+utxoPredFailMaToAlonzo ShelleyMA.InputSetEmptyUTxO = InputSetEmptyUTxO
 utxoPredFailMaToAlonzo (ShelleyMA.FeeTooSmallUTxO c1 c2) = FeeTooSmallUTxO c1 c2
 utxoPredFailMaToAlonzo (ShelleyMA.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
 utxoPredFailMaToAlonzo (ShelleyMA.WrongNetwork x y) = WrongNetwork x y
 utxoPredFailMaToAlonzo (ShelleyMA.WrongNetworkWithdrawal x y) = WrongNetworkWithdrawal x y
 utxoPredFailMaToAlonzo (ShelleyMA.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
 utxoPredFailMaToAlonzo (ShelleyMA.UpdateFailure x) = UtxosFailure (inject x)
-utxoPredFailMaToAlonzo (ShelleyMA.OutputBootAddrAttrsTooBig xs) = OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
-utxoPredFailMaToAlonzo (ShelleyMA.TriesToForgeADA) = TriesToForgeADA
+utxoPredFailMaToAlonzo (ShelleyMA.OutputBootAddrAttrsTooBig xs) =
+  OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
+utxoPredFailMaToAlonzo ShelleyMA.TriesToForgeADA = TriesToForgeADA
 utxoPredFailMaToAlonzo (ShelleyMA.OutputTooBigUTxO xs) = OutputTooBigUTxO (map (\x -> (0, 0, x)) xs)
 
 instance
@@ -796,19 +798,21 @@ instance
 
 utxoPredFailShelleyToAlonzo ::
   Inject (PredicateFailure (Core.EraRule "PPUP" era)) (PredicateFailure (Core.EraRule "UTXOS" era)) =>
-  (Shelley.UtxoPredicateFailure era) ->
-  (UtxoPredicateFailure era)
+  Shelley.UtxoPredicateFailure era ->
+  UtxoPredicateFailure era
 utxoPredFailShelleyToAlonzo (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins
-utxoPredFailShelleyToAlonzo (Shelley.ExpiredUTxO ttl current) = OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
+utxoPredFailShelleyToAlonzo (Shelley.ExpiredUTxO ttl current) =
+  OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
 utxoPredFailShelleyToAlonzo (Shelley.MaxTxSizeUTxO a m) = MaxTxSizeUTxO a m
-utxoPredFailShelleyToAlonzo (Shelley.InputSetEmptyUTxO) = InputSetEmptyUTxO
+utxoPredFailShelleyToAlonzo Shelley.InputSetEmptyUTxO = InputSetEmptyUTxO
 utxoPredFailShelleyToAlonzo (Shelley.FeeTooSmallUTxO mf af) = FeeTooSmallUTxO mf af
 utxoPredFailShelleyToAlonzo (Shelley.ValueNotConservedUTxO vc vp) = ValueNotConservedUTxO vc vp
 utxoPredFailShelleyToAlonzo (Shelley.WrongNetwork n as) = WrongNetwork n as
 utxoPredFailShelleyToAlonzo (Shelley.WrongNetworkWithdrawal n as) = WrongNetworkWithdrawal n as
 utxoPredFailShelleyToAlonzo (Shelley.OutputTooSmallUTxO x) = OutputTooSmallUTxO x
 utxoPredFailShelleyToAlonzo (Shelley.UpdateFailure x) = UtxosFailure (inject x)
-utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) = OutputTooBigUTxO (map (\x -> (0, 0, x)) outs)
+utxoPredFailShelleyToAlonzo (Shelley.OutputBootAddrAttrsTooBig outs) =
+  OutputTooBigUTxO (map (\x -> (0, 0, x)) outs)
 
 instance InjectMaybe (Shelley.UtxoPredicateFailure era) (UtxoPredicateFailure era) where
   injectMaybe = fromShelleyFailure
