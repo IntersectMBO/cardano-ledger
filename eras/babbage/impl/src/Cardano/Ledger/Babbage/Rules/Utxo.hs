@@ -255,13 +255,13 @@ babbageMinUTxOValue pp sizedOut =
     --
     -- This means that if:
     --
-    --  * 'coinsPerUTxOByte' = 4311
+    --  * 'coinsPerUTxOByte' = 4310
     --  * A simple TxOut with staking and payment credentials with ADA only
-    --    amount of 978597 lovelace
+    --    amount of 978370 lovelace
     --
     -- we get the size of TxOut to be 67 bytes and the minimum value will come
     -- out to be 978597 lovelace. Also the absolute minimum value will be
-    -- 857889, because TxOut without staking address can't be less than 39 bytes
+    -- 857690, because TxOut without staking address can't be less than 39 bytes
     constantOverhead = 160
 
 -- > getValue txout ≥ inject ( serSize txout ∗ coinsPerUTxOByte pp )

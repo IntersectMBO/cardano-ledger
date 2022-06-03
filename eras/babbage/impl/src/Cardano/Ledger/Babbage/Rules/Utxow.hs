@@ -89,7 +89,7 @@ import Validation (failureUnless)
 data BabbageUtxowPred era
   = FromAlonzoUtxowFail !(UtxowPredicateFail era)
   | -- | Embed UTXO rule failures
-    UtxoFailure (PredicateFailure (Core.EraRule "UTXO" era))
+    UtxoFailure !(PredicateFailure (Core.EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
     MalformedScriptWitnesses
       !(Set (ScriptHash (Crypto era)))
