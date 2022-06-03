@@ -68,7 +68,6 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
     freeCostModelV2,
     keyBy,
     testUTXOW,
-    testUTXOWsubset,
     trustMeP,
   )
 import Test.Cardano.Ledger.Generic.Fields
@@ -1076,13 +1075,8 @@ genericBabbageFeatures pf =
               (trustMeP pf True $ malformedScriptRefTx pf)
               (Left [fromUtxowB @era (MalformedReferenceScripts (Set.fromList [hashScript @era $ malformedScript pf "rs"]))]),
           testCase "malformed script witness" $
-            -- TODO replace testUTXOWsubset with testU and figure out why a script which is failing phase 1 validation
-            -- is still being run, ie why are we getting this error as well:
-            -- FromAlonzoUtxoFail (UtxosFailure (ValidationTagMismatch (IsValid True) (FailedUnexpectedly (PlutusFailure ...
-            testUTXOWsubset
-              (UTXOW pf)
-              (initUTxO pf)
-              (pp pf)
+            testU
+              pf
               (trustMeP pf True $ malformedScriptWitTx pf)
               (Left [fromUtxowB @era (MalformedScriptWitnesses (Set.fromList [hashScript @era $ malformedScript pf "malfoy"]))]),
           testCase "inline datum and ref script and redundant script witness" $
