@@ -552,8 +552,7 @@ genRetirementHash = do
   res <- lift . genMapElemWhere m 10 $ \kh _ ->
     kh `Set.notMember` honestKhs && kh `Set.notMember` avoidKey
   case res of
-    Just x -> do
-      return $ fst x
+    Just x -> return $ fst x
     Nothing -> do
       (kh, pp, ips) <- genNewPool
       addPoolToInitialState kh pp ips
