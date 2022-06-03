@@ -1,6 +1,6 @@
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -15,6 +15,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail)
 import Cardano.Ledger.Babbage.PParams (PParams, PParams' (..), PParamsUpdate)
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
 import Cardano.Ledger.Babbage.TxBody
   ( Datum (..),
     TxBody (..),
@@ -45,13 +46,15 @@ import Cardano.Ledger.Pretty hiding
     ppTxBody,
     ppTxOut,
   )
-import Cardano.Ledger.Pretty.Alonzo hiding
-  ( ppPParams,
-    ppPParamsUpdate,
-    ppTxBody,
-    ppTxOut,
+import Cardano.Ledger.Pretty.Alonzo
+  ( ppAuxDataHash,
+    ppCostModels,
+    ppData,
+    ppExUnits,
+    ppPrices,
   )
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval, ppValue)
+import Control.State.Transition.Extended
 import Data.Functor.Identity (Identity (..))
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Prettyprinter ((<+>))
@@ -132,32 +135,46 @@ instance PrettyA (PParamsUpdate era) where
 
 ppBabbageUtxoPred ::
   ( PrettyA (UtxoPredicateFailure era),
-    PrettyA (UtxowPredicateFail era),
     PrettyA (Core.TxOut era)
   ) =>
   BabbageUtxoPred era ->
   PDoc
 ppBabbageUtxoPred (FromAlonzoUtxoFail x) = prettyA x
-ppBabbageUtxoPred (FromAlonzoUtxowFail x) = prettyA x
 ppBabbageUtxoPred (IncorrectTotalCollateralField c1 c2) =
   ppRecord
     "IncorrectTotalCollateralField"
     [("collateral provided", ppCoin c1), ("collateral declared", ppCoin c2)]
-ppBabbageUtxoPred (MalformedScriptWitnesses scripts) =
-  ppSexp "MalformedScriptWitnesses" [ppSet ppScriptHash scripts]
-ppBabbageUtxoPred (MalformedReferenceScripts scripts) =
-  ppSexp "MalformedReferenceScripts" [ppSet ppScriptHash scripts]
 ppBabbageUtxoPred (BabbageOutputTooSmallUTxO xs) =
   ppSexp "BabbageOutputTooSmallUTxO" [ppList (ppPair prettyA ppCoin) xs]
 
 instance
   ( PrettyA (UtxoPredicateFailure era),
-    PrettyA (UtxowPredicateFail era),
     PrettyA (Core.TxOut era)
   ) =>
   PrettyA (BabbageUtxoPred era)
   where
   prettyA = ppBabbageUtxoPred
+
+ppBabbageUtxowPred ::
+  ( PrettyA (UtxowPredicateFail era),
+    PrettyA (PredicateFailure (Core.EraRule "UTXO" era))
+  ) =>
+  BabbageUtxowPred era ->
+  PDoc
+ppBabbageUtxowPred (FromAlonzoUtxowFail pf) = prettyA pf
+ppBabbageUtxowPred (UtxoFailure pf) = prettyA pf
+ppBabbageUtxowPred (MalformedScriptWitnesses scripts) =
+  ppSexp "MalformedScriptWitnesses" [ppSet ppScriptHash scripts]
+ppBabbageUtxowPred (MalformedReferenceScripts scripts) =
+  ppSexp "MalformedReferenceScripts" [ppSet ppScriptHash scripts]
+
+instance
+  ( PrettyA (UtxowPredicateFail era),
+    PrettyA (PredicateFailure (Core.EraRule "UTXO" era))
+  ) =>
+  PrettyA (BabbageUtxowPred era)
+  where
+  prettyA = ppBabbageUtxowPred
 
 ppTxOut ::
   forall era.

@@ -25,6 +25,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -842,8 +843,11 @@ inlineDatumV1Tx pf =
 class BabbageBased era failure where
   fromUtxoB :: BabbageUtxoPred era -> failure
 
-instance BabbageBased (BabbageEra c) (BabbageUtxoPred (BabbageEra c)) where
-  fromUtxoB = id
+  fromUtxowB :: BabbageUtxowPred era -> failure
+
+instance BabbageBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
+  fromUtxoB = UtxoFailure
+  fromUtxowB = id
 
 -- ====================================================================================
 --  Example 12: Invalid - Malformed plutus reference script creation
@@ -1070,7 +1074,7 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ malformedScriptRefTx pf)
-              (Left [fromUtxoB @era (MalformedReferenceScripts (Set.fromList [hashScript @era $ malformedScript pf "rs"]))]),
+              (Left [fromUtxowB @era (MalformedReferenceScripts (Set.fromList [hashScript @era $ malformedScript pf "rs"]))]),
           testCase "malformed script witness" $
             -- TODO replace testUTXOWsubset with testU and figure out why a script which is failing phase 1 validation
             -- is still being run, ie why are we getting this error as well:
@@ -1080,7 +1084,7 @@ genericBabbageFeatures pf =
               (initUTxO pf)
               (pp pf)
               (trustMeP pf True $ malformedScriptWitTx pf)
-              (Left [fromUtxoB @era (MalformedScriptWitnesses (Set.fromList [hashScript @era $ malformedScript pf "malfoy"]))]),
+              (Left [fromUtxowB @era (MalformedScriptWitnesses (Set.fromList [hashScript @era $ malformedScript pf "malfoy"]))]),
           testCase "inline datum and ref script and redundant script witness" $
             testU
               pf

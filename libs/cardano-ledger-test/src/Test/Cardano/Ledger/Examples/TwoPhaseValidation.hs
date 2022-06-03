@@ -37,6 +37,7 @@ import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
+import Cardano.Ledger.Babbage.Rules.Utxow as Babbage (BabbageUtxowPred (..))
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Network (..),
@@ -94,7 +95,7 @@ import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Pool (PoolPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
-import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Utxow as Shelley (UtxowPredicateFailure (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -2008,9 +2009,12 @@ specialCase wit@(UTXOW proof) utxo pparam tx expected =
 -- and expected are ValidationTagMismatch. Of course the 'path' to ValidationTagMismatch differs by Era.
 -- so we need to case over the Era proof, to get the path correctly.
 
-findMismatch :: Proof era -> (PredicateFailure (Core.EraRule "UTXOW" era)) -> Maybe (UtxosPredicateFailure era)
-findMismatch (Alonzo _) (WrappedShelleyEraFailure (UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
-findMismatch (Babbage _) (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _))) = Just x
+findMismatch ::
+  Proof era ->
+  PredicateFailure (Core.EraRule "UTXOW" era) ->
+  Maybe (UtxosPredicateFailure era)
+findMismatch (Alonzo _) (WrappedShelleyEraFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+findMismatch (Babbage _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch _ _ = Nothing
 
 specialCont ::
@@ -2348,14 +2352,14 @@ class AlonzoBased era failure where
   fromPredFail :: UtxowPredicateFail era -> failure
 
 instance AlonzoBased (AlonzoEra c) (UtxowPredicateFail (AlonzoEra c)) where
-  fromUtxos = WrappedShelleyEraFailure . UtxoFailure . UtxosFailure
-  fromUtxo = WrappedShelleyEraFailure . UtxoFailure
+  fromUtxos = WrappedShelleyEraFailure . Shelley.UtxoFailure . UtxosFailure
+  fromUtxo = WrappedShelleyEraFailure . Shelley.UtxoFailure
   fromUtxow = WrappedShelleyEraFailure
   fromPredFail = id
 
-instance AlonzoBased (BabbageEra c) (BabbageUtxoPred (BabbageEra c)) where
-  fromUtxos = FromAlonzoUtxoFail . UtxosFailure
-  fromUtxo = FromAlonzoUtxoFail
+instance AlonzoBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
+  fromUtxos = Babbage.UtxoFailure . FromAlonzoUtxoFail . UtxosFailure
+  fromUtxo = Babbage.UtxoFailure . FromAlonzoUtxoFail
   fromUtxow = FromAlonzoUtxowFail . WrappedShelleyEraFailure
   fromPredFail = FromAlonzoUtxowFail
 

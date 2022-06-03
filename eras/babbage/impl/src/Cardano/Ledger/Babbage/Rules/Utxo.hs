@@ -28,7 +28,6 @@ import Cardano.Ledger.Alonzo.Rules.Utxo
     validateWrongNetworkInTxBody,
   )
 import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (WrappedShelleyEraFailure))
 import Cardano.Ledger.Alonzo.Scripts (Prices)
 import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (allOuts, allSizedOuts))
@@ -50,7 +49,6 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..), ValidateScript (..), getTxOutBootstrapAddress)
-import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     Test,
@@ -60,7 +58,6 @@ import Cardano.Ledger.Rules.ValidationMode
 import Cardano.Ledger.Serialization (Sized (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
-import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.ShelleyMA.Rules.Utxo as ShelleyMA
   ( UtxoPredicateFailure,
@@ -95,7 +92,7 @@ import Data.Typeable (Typeable)
 import GHC.Natural (Natural)
 import GHC.Records (HasField (getField))
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
-import Validation
+import Validation (Validation, failureIf, failureUnless)
 
 -- ======================================================
 
@@ -104,19 +101,12 @@ data BabbageUTXO era
 -- | Predicate failure for the Babbage Era
 data BabbageUtxoPred era
   = FromAlonzoUtxoFail !(UtxoPredicateFailure era) -- Inherited from Alonzo
-  | FromAlonzoUtxowFail !(UtxowPredicateFail era)
   | -- | The collateral is not equivalent to the total collateral asserted by the transaction
     IncorrectTotalCollateralField
       !Coin
       -- ^ collateral provided
       !Coin
       -- ^ collateral amount declared in transaction body
-  | -- | the set of malformed script witnesses
-    MalformedScriptWitnesses
-      !(Set (ScriptHash (Crypto era)))
-  | -- | the set of malformed script witnesses
-    MalformedReferenceScripts
-      !(Set (ScriptHash (Crypto era)))
   | -- | list of supplied transaction outputs that are too small,
     -- together with the minimum value for the given output.
     BabbageOutputTooSmallUTxO
@@ -146,9 +136,6 @@ deriving instance
 instance Inject (UtxoPredicateFailure era) (BabbageUtxoPred era) where
   inject = FromAlonzoUtxoFail
 
-instance Inject (UtxowPredicateFail era) (BabbageUtxoPred era) where
-  inject = FromAlonzoUtxowFail
-
 instance Inject (BabbageUtxoPred era) (BabbageUtxoPred era) where
   inject = id
 
@@ -163,9 +150,6 @@ instance
   Inject (Shelley.UtxoPredicateFailure era) (BabbageUtxoPred era)
   where
   inject = FromAlonzoUtxoFail . utxoPredFailShelleyToAlonzo
-
-instance Inject (UtxowPredicateFailure era) (BabbageUtxoPred era) where
-  inject = FromAlonzoUtxowFail . WrappedShelleyEraFailure
 
 -- =======================================================
 
@@ -438,7 +422,8 @@ instance
   ( ValidateScript era,
     Era era,
     ValidateScript era,
-    ConcreteBabbage era, -- Unlike the Tests, we are only going to use this once, so we fix the Core.XX types
+    ConcreteBabbage era, -- Unlike the Tests, we are only going to use this once,
+    -- so we fix the Core.XX types
     Core.Tx era ~ ValidatedTx era,
     Core.Witnesses era ~ TxWitness era,
     -- instructions for calling UTXOS from BabbageUTXO
@@ -491,11 +476,8 @@ instance
   toCBOR pf = encode (work pf)
     where
       work (FromAlonzoUtxoFail x) = Sum FromAlonzoUtxoFail 1 !> To x
-      work (FromAlonzoUtxowFail x) = Sum FromAlonzoUtxowFail 2 !> To x
-      work (IncorrectTotalCollateralField c1 c2) = Sum IncorrectTotalCollateralField 3 !> To c1 !> To c2
-      work (MalformedScriptWitnesses x) = Sum MalformedScriptWitnesses 4 !> To x
-      work (MalformedReferenceScripts x) = Sum MalformedReferenceScripts 5 !> To x
-      work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 6 !> To x
+      work (IncorrectTotalCollateralField c1 c2) = Sum IncorrectTotalCollateralField 2 !> To c1 !> To c2
+      work (BabbageOutputTooSmallUTxO x) = Sum BabbageOutputTooSmallUTxO 3 !> To x
 
 instance
   ( Era era,
@@ -512,11 +494,11 @@ instance
   fromCBOR = decode (Summands "BabbageUtxoPred" work)
     where
       work 1 = SumD FromAlonzoUtxoFail <! From
-      work 2 = SumD FromAlonzoUtxowFail <! From
-      work 3 = SumD IncorrectTotalCollateralField <! From <! From
-      work 4 = SumD MalformedScriptWitnesses <! From
-      work 5 = SumD MalformedReferenceScripts <! From
-      work 6 = SumD BabbageOutputTooSmallUTxO <! From
+      work 2 = SumD IncorrectTotalCollateralField <! From <! From
+      work 3 = SumD BabbageOutputTooSmallUTxO <! From
       work n = Invalid n
 
-deriving via InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era) instance NoThunks (BabbageUtxoPred era)
+deriving via
+  InspectHeapNamed "BabbageUtxoPred" (BabbageUtxoPred era)
+  instance
+    NoThunks (BabbageUtxoPred era)
