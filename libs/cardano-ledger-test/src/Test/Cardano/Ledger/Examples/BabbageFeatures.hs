@@ -1073,12 +1073,23 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ malformedScriptRefTx pf)
-              (Left [fromUtxowB @era (MalformedReferenceScripts (Set.fromList [hashScript @era $ malformedScript pf "rs"]))]),
+              ( Left
+                  [ fromUtxowB @era $
+                      MalformedReferenceScripts $
+                        Set.singleton
+                          (hashScript @era $ malformedScript pf "rs")
+                  ]
+              ),
           testCase "malformed script witness" $
             testU
               pf
               (trustMeP pf True $ malformedScriptWitTx pf)
-              (Left [fromUtxowB @era (MalformedScriptWitnesses (Set.fromList [hashScript @era $ malformedScript pf "malfoy"]))]),
+              ( Left
+                  [ fromUtxowB @era $
+                      MalformedScriptWitnesses $
+                        Set.singleton (hashScript @era $ malformedScript pf "malfoy")
+                  ]
+              ),
           testCase "inline datum and ref script and redundant script witness" $
             testU
               pf

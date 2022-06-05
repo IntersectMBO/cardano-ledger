@@ -84,11 +84,11 @@ where
 
 import Control.Exception (Exception (..), throw)
 import Control.Monad (when)
-import Control.Monad.Free.Church
+import Control.Monad.Free.Church (F, MonadFree (wrap), foldF, liftF)
 import Control.Monad.Identity (Identity (..))
 import Control.Monad.State.Class (MonadState (..), modify)
-import Control.Monad.Trans.Class (MonadTrans, lift)
-import Control.Monad.Trans.Except
+import Control.Monad.Trans.Class (lift)
+import Control.Monad.Trans.Except (ExceptT, runExceptT, throwE)
 import Control.Monad.Trans.State.Strict (StateT (..))
 import Data.Bifunctor (Bifunctor (second), first)
 import Data.Coerce (Coercible, coerce)
@@ -102,7 +102,7 @@ import qualified Data.List.NonEmpty as NE
 import Data.Typeable (typeRep)
 import Data.Void (Void)
 import NoThunks.Class (NoThunks (..))
-import Validation
+import Validation (Validation (..), eitherToValidation)
 
 data RuleType
   = Initial
@@ -576,14 +576,7 @@ applyRuleInternal ep vp goSTS jc r = do
     EPDiscard -> pure (s, fst er)
     EPReturn -> pure ((s, fst er), snd er)
   where
-    runClause ::
-      forall f t a.
-      ( f ~ t m,
-        MonadState ([PredicateFailure s], [Event s]) f,
-        MonadTrans t
-      ) =>
-      Clause s rtype a ->
-      t m a
+    runClause :: Clause s rtype a -> StateT ([PredicateFailure s], [Event s]) m a
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
     runClause (IfFailureFree yesrule norule) = do
