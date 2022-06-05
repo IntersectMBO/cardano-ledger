@@ -104,6 +104,14 @@ import Data.Void (Void)
 import NoThunks.Class (NoThunks (..))
 import Validation (Validation (..), eitherToValidation)
 
+-- | In order to avoid boolean blindness we create specialized type for the
+-- concept of any rule having information about overall state of the nested
+-- clause.
+data IsFailing
+  = Failing
+  | NotFailing
+  deriving (Eq, Show)
+
 data RuleType
   = Initial
   | Transition
@@ -475,14 +483,14 @@ applySTSOpts ::
   RuleContext rtype s ->
   m (EventReturnType ep s (State s, [PredicateFailure s]))
 applySTSOpts ApplySTSOpts {asoAssertions, asoValidation, asoEvents} ctx =
-  let goRule :: RuleInterpreter ep
-      goRule = applyRuleInternal asoEvents asoValidation goSTS
-      goSTS :: STSInterpreter ep
-      goSTS c =
-        runExceptT (applySTSInternal asoEvents asoAssertions goRule c) >>= \case
+  let goRule :: IsFailing -> RuleInterpreter ep
+      goRule isFailing = applyRuleInternal isFailing asoEvents asoValidation goSTS
+      goSTS :: IsFailing -> STSInterpreter ep
+      goSTS isFailing c =
+        runExceptT (applySTSInternal asoEvents asoAssertions (goRule isFailing) c) >>= \case
           Left err -> throw $! AssertionException err
           Right res -> pure $! res
-   in goSTS ctx
+   in goSTS NotFailing ctx
 
 applySTSOptsEither ::
   forall s m rtype ep.
@@ -563,27 +571,38 @@ applySTSIndifferently =
 applyRuleInternal ::
   forall (ep :: EventPolicy) s m rtype.
   (STS s, RuleTypeRep rtype, m ~ BaseM s) =>
+  -- | We need to know if the current STS incurred at least one
+  -- PredicateFailure.  This is necessary because `applyRuleInternal` is called
+  -- recursively through the @goSTS@ argument, which will not have access to any
+  -- of the predicate failures occured in other branches of STS rule execusion tree.
+  IsFailing ->
   SingEP ep ->
   ValidationPolicy ->
   -- | Interpreter for subsystems
-  STSInterpreter ep ->
+  (IsFailing -> STSInterpreter ep) ->
   RuleContext rtype s ->
   Rule s rtype (State s) ->
   m (EventReturnType ep s (State s, [PredicateFailure s]))
-applyRuleInternal ep vp goSTS jc r = do
+applyRuleInternal isAlreadyFailing ep vp goSTS jc r = do
   (s, er) <- flip runStateT ([], []) $ foldF runClause r
   case ep of
     EPDiscard -> pure (s, fst er)
     EPReturn -> pure ((s, fst er), snd er)
   where
+    isFailing :: StateT ([PredicateFailure s], [Event s]) m IsFailing
+    isFailing =
+      case isAlreadyFailing of
+        Failing -> pure Failing
+        NotFailing -> do
+          isFailingNow <- null . fst <$> get
+          pure $ if isFailingNow then NotFailing else Failing
     runClause :: Clause s rtype a -> StateT ([PredicateFailure s], [Event s]) m a
     runClause (Lift f next) = next <$> lift f
     runClause (GetCtx next) = pure $ next jc
-    runClause (IfFailureFree yesrule norule) = do
-      failureFree <- null . fst <$> get
-      if failureFree
-        then foldF runClause yesrule
-        else foldF runClause norule
+    runClause (IfFailureFree notFailingRule failingRule) = do
+      isFailing >>= \case
+        Failing -> foldF runClause failingRule
+        NotFailing -> foldF runClause notFailingRule
     runClause (Predicate cond orElse val) =
       case vp of
         ValidateNone -> pure val
@@ -595,7 +614,8 @@ applyRuleInternal ep vp goSTS jc r = do
         then foldF runClause subrule
         else pure val
     runClause (SubTrans (subCtx :: RuleContext _rtype sub) next) = do
-      s <- lift $ goSTS subCtx
+      isFailingNow <- isFailing
+      s <- lift $ goSTS isFailingNow subCtx
       let ss :: State sub
           sfails :: [PredicateFailure sub]
           sevs :: [Event sub]
