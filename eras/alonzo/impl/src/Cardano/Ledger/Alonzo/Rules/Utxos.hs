@@ -217,15 +217,14 @@ scriptsNotValidateTransition = do
 
   case collectTwoPhaseScriptInputs (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
     Right sLst ->
-      whenFailureFree $
-        when2Phase $
-          case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
-            Passes _ps ->
-              failBecause $
-                ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
-            Fails ps fs -> do
-              tellEvent (SuccessfulPlutusScriptsEvent ps)
-              tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
+      when2Phase $
+        case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+          Passes _ps ->
+            failBecause $
+              ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+          Fails ps fs -> do
+            tellEvent (SuccessfulPlutusScriptsEvent ps)
+            tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent invalidEnd ()
