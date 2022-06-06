@@ -5,10 +5,15 @@ import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams ()
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..), VersionedTxInfo (..), txInfo)
+import Cardano.Ledger.Alonzo.TxInfo
+  ( TranslationError (..),
+    TxOutSource (..),
+    VersionedTxInfo (..),
+    txInfo,
+  )
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody (..), TxOut (..))
-import Cardano.Ledger.Babbage.TxInfo (OutputSource (..), txInfoInV2, txInfoOutV2)
+import Cardano.Ledger.Babbage.TxInfo (txInfoInV2, txInfoOutV2)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (StakeReference (..))
@@ -22,11 +27,11 @@ import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (..), mkSlotLength)
 import Data.Default.Class (def)
-import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import GHC.Stack
 import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Plutus.V2.Ledger.Api as PV2
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysSucceeds)
@@ -121,8 +126,9 @@ txb i mRefInp o =
 txBare :: TxIn StandardCrypto -> TxOut B -> ValidatedTx B
 txBare i o = ValidatedTx (txb i Nothing o) mempty (IsValid True) SNothing
 
-txRefInput :: ValidatedTx B
-txRefInput = ValidatedTx (txb shelleyInput (Just shelleyInput) shelleyOutput) mempty (IsValid True) SNothing
+txRefInput :: TxIn StandardCrypto -> ValidatedTx B
+txRefInput refInput =
+  ValidatedTx (txb shelleyInput (Just refInput) shelleyOutput) mempty (IsValid True) SNothing
 
 hasReferenceInput :: VersionedTxInfo -> Bool
 hasReferenceInput (TxInfoPV1 _) = False
@@ -147,7 +153,7 @@ successfulTranslation lang tx f =
 successfulV2Translation :: ValidatedTx B -> (VersionedTxInfo -> Bool) -> Assertion
 successfulV2Translation = successfulTranslation PlutusV2
 
-expectTranslationError :: Language -> ValidatedTx B -> TranslationError -> Assertion
+expectTranslationError :: Language -> ValidatedTx B -> TranslationError StandardCrypto -> Assertion
 expectTranslationError lang tx expected =
   case ctx of
     Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
@@ -155,23 +161,31 @@ expectTranslationError lang tx expected =
   where
     ctx = txInfo def lang ei ss utxo tx
 
-expectV1TranslationError :: ValidatedTx B -> TranslationError -> Assertion
+expectV1TranslationError :: ValidatedTx B -> TranslationError StandardCrypto -> Assertion
 expectV1TranslationError = expectTranslationError PlutusV1
 
-expectV2TranslationError :: ValidatedTx B -> TranslationError -> Assertion
+expectV2TranslationError :: ValidatedTx B -> TranslationError StandardCrypto -> Assertion
 expectV2TranslationError = expectTranslationError PlutusV2
 
+errorTranslate :: (HasCallStack, Show a) => String -> Either a b -> b
+errorTranslate exampleName =
+  either (\err -> error $ exampleName ++ " failed: " ++ show err) id
+
 translatedInputEx1 :: PV2.TxInInfo
-translatedInputEx1 = fromRight (error "translatedInputEx1 failed") (txInfoInV2 utxo inputWithInlineDatum)
+translatedInputEx1 =
+  errorTranslate "translatedInputEx1" $ txInfoInV2 utxo inputWithInlineDatum
 
 translatedInputEx2 :: PV2.TxInInfo
-translatedInputEx2 = fromRight (error "translatedInputEx2 failed") (txInfoInV2 utxo inputWithRefScript)
+translatedInputEx2 =
+  errorTranslate "translatedInputEx2" $ txInfoInV2 utxo inputWithRefScript
 
 translatedOutputEx1 :: PV2.TxOut
-translatedOutputEx1 = fromRight (error "translatedOutputEx1 failed") (txInfoOutV2 OutputFromOutput inlineDatumOutput)
+translatedOutputEx1 =
+  errorTranslate "translatedOutputEx1" $ txInfoOutV2 (TxOutFromOutput minBound) inlineDatumOutput
 
 translatedOutputEx2 :: PV2.TxOut
-translatedOutputEx2 = fromRight (error "translatedOutputEx2 failed") (txInfoOutV2 OutputFromOutput refScriptOutput)
+translatedOutputEx2 =
+  errorTranslate "translatedOutputEx2" $ txInfoOutV2 (TxOutFromOutput minBound) refScriptOutput
 
 txInfoTests :: TestTree
 txInfoTests =
@@ -182,53 +196,53 @@ txInfoTests =
         [ testCase "translation error on byron txout" $
             expectV1TranslationError
               (txBare shelleyInput byronOutput)
-              ByronOutputInContext,
+              (ByronTxOutInContext (TxOutFromOutput minBound)),
           testCase "translation error on byron txin" $
             expectV1TranslationError
               (txBare byronInput shelleyOutput)
-              ByronInputInContext,
+              (ByronTxOutInContext (TxOutFromInput byronInput)),
           testCase "translation error on unknown txin (logic error)" $
             expectV1TranslationError
               (txBare unknownInput shelleyOutput)
-              TranslationLogicErrorInput,
+              (TranslationLogicMissingInput unknownInput),
           testCase "translation error on reference input" $
             expectV1TranslationError
-              txRefInput
-              ReferenceInputsNotSupported,
+              (txRefInput shelleyInput)
+              (ReferenceInputsNotSupported (Set.singleton shelleyInput)),
           testCase "translation error on inline datum in input" $
             expectV1TranslationError
               (txBare inputWithInlineDatum shelleyOutput)
-              InlineDatumsNotSupported,
+              (InlineDatumsNotSupported (TxOutFromInput inputWithInlineDatum)),
           testCase "translation error on inline datum in output" $
             expectV1TranslationError
               (txBare shelleyInput inlineDatumOutput)
-              InlineDatumsNotSupported,
+              (InlineDatumsNotSupported (TxOutFromOutput minBound)),
           testCase "translation error on reference script in input" $
             expectV1TranslationError
               (txBare inputWithRefScript shelleyOutput)
-              ReferenceScriptsNotSupported,
+              (ReferenceScriptsNotSupported (TxOutFromInput inputWithRefScript)),
           testCase "translation error on reference script in output" $
             expectV1TranslationError
               (txBare shelleyInput refScriptOutput)
-              ReferenceScriptsNotSupported
+              (ReferenceScriptsNotSupported (TxOutFromOutput minBound))
         ],
       testGroup
         "Plutus V2"
         [ testCase "translation error on byron txout" $
             expectV2TranslationError
               (txBare shelleyInput byronOutput)
-              ByronOutputInContext,
+              (ByronTxOutInContext (TxOutFromOutput minBound)),
           testCase "translation error on byron txin" $
             expectV2TranslationError
               (txBare byronInput shelleyOutput)
-              ByronInputInContext,
+              (ByronTxOutInContext (TxOutFromInput byronInput)),
           testCase "translation error on unknown txin (logic error)" $
             expectV2TranslationError
               (txBare unknownInput shelleyOutput)
-              TranslationLogicErrorInput,
+              (TranslationLogicMissingInput unknownInput),
           testCase "use reference input in Babbage" $
             successfulV2Translation
-              txRefInput
+              (txRefInput shelleyInput)
               hasReferenceInput,
           testCase "use inline datum in input" $
             successfulV2Translation

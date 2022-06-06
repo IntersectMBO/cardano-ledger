@@ -924,3 +924,11 @@ instance HasField "datum" (TxOut era) (StrictMaybe (Data era)) where
 
 instance HasField "referenceScript" (TxOut era) (StrictMaybe (Script era)) where
   getField _ = SNothing
+
+
+
+-- instance
+--   (Era era, c ~ Crypto era) =>
+--   HasField "datum" (TxOut era) (StrictMaybe (Either (Data era) (DataHash c)))
+--   where
+--   getField _ = fmap Right . getField @"datahash"

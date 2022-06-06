@@ -3,6 +3,7 @@
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -31,7 +32,7 @@ import Cardano.Ledger.Alonzo.Tx
     txdats',
   )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness, unTxDats)
-import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), certIxToInt, txIxToInt)
+import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), TxIx, certIxToInt, txIxToInt)
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core as Core (PParams, Tx, TxBody, TxOut, Value)
 import qualified Cardano.Ledger.Core as Core
@@ -81,10 +82,10 @@ import Data.Coders
     (!>),
     (<!),
   )
-import Data.Either (rights)
 import Data.Fixed (HasResolution (resolution))
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (mapMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
@@ -104,44 +105,69 @@ import Prettyprinter (Pretty (..))
 -- =========================================================
 -- Translate Hashes, Credentials, Certificates etc.
 
-data TranslationError
-  = ByronInputInContext
-  | ByronOutputInContext
-  | TranslationLogicErrorInput
-  | RdmrPtrPointsToNothing RdmrPtr
-  | TranslationLogicErrorDoubleDatum
-  | LanguageNotSupported
-  | InlineDatumsNotSupported
-  | ReferenceScriptsNotSupported
-  | ReferenceInputsNotSupported
-  | TimeTranslationPastHorizon
+-- | A transaction output can be translated because it is a newly created output,
+-- or because it is the output which is connected to a transaction input being spent.
+data TxOutSource crypto
+  = TxOutFromInput !(TxIn crypto)
+  | TxOutFromOutput !TxIx
   deriving (Eq, Show, Generic, NoThunks)
 
-instance ToCBOR TranslationError where
-  toCBOR ByronInputInContext = encode $ Sum ByronInputInContext 0
-  toCBOR ByronOutputInContext = encode $ Sum ByronOutputInContext 1
-  toCBOR TranslationLogicErrorInput = encode $ Sum TranslationLogicErrorInput 2
-  toCBOR (RdmrPtrPointsToNothing ptr) = encode $ Sum RdmrPtrPointsToNothing 3 !> To ptr
-  toCBOR TranslationLogicErrorDoubleDatum = encode $ Sum LanguageNotSupported 4
-  toCBOR LanguageNotSupported = encode $ Sum LanguageNotSupported 5
-  toCBOR InlineDatumsNotSupported = encode $ Sum InlineDatumsNotSupported 6
-  toCBOR ReferenceScriptsNotSupported = encode $ Sum ReferenceScriptsNotSupported 7
-  toCBOR ReferenceInputsNotSupported = encode $ Sum ReferenceInputsNotSupported 8
-  toCBOR TimeTranslationPastHorizon = encode $ Sum TimeTranslationPastHorizon 9
+instance CC.Crypto crypto => ToCBOR (TxOutSource crypto) where
+  toCBOR = \case
+    TxOutFromInput txIn -> encode $ Sum TxOutFromInput 0 !> To txIn
+    TxOutFromOutput txIx -> encode $ Sum TxOutFromOutput 1 !> To txIx
 
-instance FromCBOR TranslationError where
+instance CC.Crypto crypto => FromCBOR (TxOutSource crypto) where
+  fromCBOR = decode (Summands "TxOutSource" dec)
+    where
+      dec 0 = SumD TxOutFromInput <! From
+      dec 1 = SumD TxOutFromOutput <! From
+      dec n = Invalid n
+
+data TranslationError crypto
+  = ByronTxOutInContext !(TxOutSource crypto)
+  | TranslationLogicMissingInput !(TxIn crypto)
+  | RdmrPtrPointsToNothing !RdmrPtr
+  | -- | TranslationLogicErrorDoubleDatum
+    LanguageNotSupported !Language
+  | InlineDatumsNotSupported !(TxOutSource crypto)
+  | ReferenceScriptsNotSupported !(TxOutSource crypto)
+  | ReferenceInputsNotSupported !(Set (TxIn crypto))
+  | TimeTranslationPastHorizon !Text
+  deriving (Eq, Show, Generic, NoThunks)
+
+instance CC.Crypto crypto => ToCBOR (TranslationError crypto) where
+  toCBOR = \case
+    ByronTxOutInContext txOutSource ->
+      encode $ Sum ByronTxOutInContext 0 !> To txOutSource
+    TranslationLogicMissingInput txIn ->
+      encode $ Sum TranslationLogicMissingInput 1 !> To txIn
+    RdmrPtrPointsToNothing ptr ->
+      encode $ Sum RdmrPtrPointsToNothing 2 !> To ptr
+    -- TranslationLogicErrorDoubleDatum = encode $ Sum LanguageNotSupported 4
+    LanguageNotSupported lang ->
+      encode $ Sum LanguageNotSupported 3 !> To lang
+    InlineDatumsNotSupported txOutSource ->
+      encode $ Sum InlineDatumsNotSupported 4 !> To txOutSource
+    ReferenceScriptsNotSupported txOutSource ->
+      encode $ Sum ReferenceScriptsNotSupported 5 !> To txOutSource
+    ReferenceInputsNotSupported txIns ->
+      encode $ Sum ReferenceInputsNotSupported 6 !> To txIns
+    TimeTranslationPastHorizon err ->
+      encode $ Sum TimeTranslationPastHorizon 7 !> To err
+
+instance CC.Crypto crypto => FromCBOR (TranslationError crypto) where
   fromCBOR = decode (Summands "TranslationError" dec)
     where
-      dec 0 = SumD ByronInputInContext
-      dec 1 = SumD ByronOutputInContext
-      dec 2 = SumD TranslationLogicErrorInput
-      dec 3 = SumD RdmrPtrPointsToNothing <! From
-      dec 4 = SumD TranslationLogicErrorDoubleDatum
-      dec 5 = SumD LanguageNotSupported
-      dec 6 = SumD InlineDatumsNotSupported
-      dec 7 = SumD ReferenceScriptsNotSupported
-      dec 8 = SumD ReferenceInputsNotSupported
-      dec 9 = SumD TimeTranslationPastHorizon
+      dec 0 = SumD ByronTxOutInContext <! From
+      dec 1 = SumD TranslationLogicMissingInput <! From
+      dec 2 = SumD RdmrPtrPointsToNothing <! From
+      -- dec 4 = SumD TranslationLogicErrorDoubleDatum
+      dec 3 = SumD LanguageNotSupported <! From
+      dec 4 = SumD InlineDatumsNotSupported <! From
+      dec 5 = SumD ReferenceScriptsNotSupported <! From
+      dec 6 = SumD ReferenceInputsNotSupported <! From
+      dec 7 = SumD TimeTranslationPastHorizon <! From
       dec n = Invalid n
 
 transDataHash :: StrictMaybe (DataHash c) -> Maybe PV1.DatumHash
@@ -199,12 +225,12 @@ transTxOutAddr txOut = do
     Nothing -> transAddr (getTxOutAddr txOut)
 
 slotToPOSIXTime ::
-  (Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
+  HasField "_protocolVersion" (PParams era) ProtVer =>
   Core.PParams era ->
-  EpochInfo m ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   SlotNo ->
-  m PV1.POSIXTime
+  Either Text PV1.POSIXTime
 slotToPOSIXTime pp ei sysS s = do
   PV1.POSIXTime . transTime . nominalDiffTimeToSeconds . utcTimeToPOSIXSeconds
     <$> epochInfoSlotToUTCTime ei sysS s
@@ -219,12 +245,12 @@ slotToPOSIXTime pp ei sysS s = do
 
 -- | translate a validity interval to POSIX time
 transVITime ::
-  (Monad m, HasField "_protocolVersion" (PParams era) ProtVer) =>
+  HasField "_protocolVersion" (PParams era) ProtVer =>
   Core.PParams era ->
-  EpochInfo m ->
+  EpochInfo (Either Text) ->
   SystemStart ->
   ValidityInterval ->
-  m PV1.POSIXTimeRange
+  Either Text PV1.POSIXTimeRange
 transVITime _ _ _ (ValidityInterval SNothing SNothing) = pure PV1.always
 transVITime pp ei sysS (ValidityInterval (SJust i) SNothing) = do
   t <- slotToPOSIXTime pp ei sysS i
@@ -256,18 +282,15 @@ txInfoIn ::
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
-  Either TranslationError PV1.TxInInfo
-txInfoIn (UTxO mp) txin =
-  case Map.lookup txin mp of
-    Nothing -> Left TranslationLogicErrorInput
-    Just txout -> case transTxOutAddr txout of
-      Just ad -> Right (PV1.TxInInfo (txInfoIn' txin) (PV1.TxOut ad valout dhash))
-      Nothing -> Left ByronInputInContext
-      where
-        valout = transValue (getField @"value" txout)
-        dhash = case getField @"datahash" txout of
-          SNothing -> Nothing
-          SJust safehash -> Just (PV1.DatumHash (transSafeHash safehash))
+  Maybe PV1.TxInInfo
+txInfoIn (UTxO mp) txin = do
+  txout <- Map.lookup txin mp
+  let valout = transValue (getField @"value" txout)
+      dhash = case getField @"datahash" txout of
+        SNothing -> Nothing
+        SJust safehash -> Just (PV1.DatumHash (transSafeHash safehash))
+  addr <- transTxOutAddr txout
+  pure $ PV1.TxInInfo (txInfoIn' txin) (PV1.TxOut addr valout dhash)
 
 -- | Given a TxOut, translate it and return (Just transalation). It is
 --   possible the address part is a Bootstrap Address, in that case return Nothing
@@ -279,13 +302,12 @@ txInfoOut ::
     HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash c))
   ) =>
   Core.TxOut era ->
-  Either TranslationError PV1.TxOut
-txInfoOut txout =
+  Maybe PV1.TxOut
+txInfoOut txout = do
   let val = getField @"value" txout
       datahash = getField @"datahash" txout
-   in case transTxOutAddr txout of
-        Just ad -> Right (PV1.TxOut ad (transValue @(Crypto era) val) (transDataHash datahash))
-        Nothing -> Left ByronOutputInContext
+  addr <- transTxOutAddr txout
+  pure (PV1.TxOut addr (transValue @(Crypto era) val) (transDataHash datahash))
 
 -- ==================================
 -- translate Values
@@ -386,7 +408,7 @@ class ExtendedUTxO era where
     SystemStart ->
     UTxO era ->
     Core.Tx era ->
-    Either TranslationError VersionedTxInfo
+    Either (TranslationError (Crypto era)) VersionedTxInfo
 
   -- Compute two sets for all TwoPhase scripts in a Tx.
   -- set 1) DataHashes for each Two phase Script in a TxIn that has a DataHash
@@ -443,15 +465,15 @@ alonzoTxInfo ::
   SystemStart ->
   UTxO era ->
   Core.Tx era ->
-  Either TranslationError VersionedTxInfo
+  Either (TranslationError (Crypto era)) VersionedTxInfo
 alonzoTxInfo pp lang ei sysS utxo tx = do
-  timeRange <- left (const TimeTranslationPastHorizon) $ transVITime pp ei sysS interval
+  timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
   case lang of
     PlutusV1 ->
       Right . TxInfoPV1 $
         PV1.TxInfo
-          { PV1.txInfoInputs = rights $ map (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
-            PV1.txInfoOutputs = rights $ map txInfoOut (foldr (:) [] outs),
+          { PV1.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
+            PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
             PV1.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
             PV1.txInfoMint = transValue forge,
             PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (getField @"certs" tbody),
@@ -461,7 +483,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
             PV1.txInfoData = map transDataPair datpairs,
             PV1.txInfoId = PV1.TxId (transSafeHash (hashAnnotated @(Crypto era) tbody))
           }
-    _ -> Left LanguageNotSupported
+    _ -> Left $ LanguageNotSupported lang
   where
     tbody :: Core.TxBody era
     tbody = getField @"body" tx

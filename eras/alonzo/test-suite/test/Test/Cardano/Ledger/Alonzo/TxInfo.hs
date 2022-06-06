@@ -96,7 +96,7 @@ silentlyIgnore tx =
   where
     ctx = txInfo def PlutusV1 ei ss utxo tx
 
-expectTranslationError :: Language -> ValidatedTx A -> TranslationError -> Assertion
+expectTranslationError :: Language -> ValidatedTx A -> TranslationError StandardCrypto -> Assertion
 expectTranslationError lang tx expected =
   case ctx of
     Right _ -> error "This translation was expected to fail, but it succeeded."
@@ -123,6 +123,6 @@ txInfoTests =
             expectTranslationError
               PlutusV2
               (txEx shelleyInput shelleyOutput)
-              LanguageNotSupported
+              (LanguageNotSupported PlutusV2)
         ]
     ]

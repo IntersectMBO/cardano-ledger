@@ -126,12 +126,12 @@ evaluateTransactionExecutionUnits ::
   --  sufficient execution budget.
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
-  Either TranslationError (RedeemerReport (Crypto era))
+  Either (TranslationError (Crypto era)) (RedeemerReport (Crypto era))
 evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
-  let getInfo :: Language -> Either TranslationError (Language, VersionedTxInfo)
+  let getInfo :: Language -> Either (TranslationError (Crypto era)) (Language, VersionedTxInfo)
       getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
    in do
-      ctx <- sequence $ map getInfo (Set.toList $ languagesUsed (Map.elems scripts))
+      ctx <- mapM getInfo (Set.toList $ languagesUsed (Map.elems scripts))
       pure $ Map.mapWithKey
         (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
         (unRedeemers $ getField @"txrdmrs" ws)
