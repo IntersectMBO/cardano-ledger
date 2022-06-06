@@ -204,11 +204,12 @@ scriptsNo = do
     Right sLst ->
       {- sLst := collectTwoPhaseScriptInputs pp tx utxo -}
       {- isValid tx = evalScripts tx sLst = False -}
-      when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
-        Passes _ -> failBecause $ ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
-        Fails ps fs -> do
-          tellEvent (SuccessfulPlutusScriptsEvent ps)
-          tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
+      whenFailureFree $
+        when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
+          Passes _ -> failBecause $ ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+          Fails ps fs -> do
+            tellEvent (SuccessfulPlutusScriptsEvent ps)
+            tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
     Left info -> failBecause (CollectErrors info)
 
   () <- pure $! traceEvent invalidEnd ()
