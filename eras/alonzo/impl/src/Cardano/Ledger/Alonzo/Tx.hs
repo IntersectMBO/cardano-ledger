@@ -289,7 +289,7 @@ isTwoPhaseScriptAddress ::
   ValidatedTx era ->
   Addr (Crypto era) ->
   Bool
-isTwoPhaseScriptAddress tx addr = isTwoPhaseScriptAddressFromMap @era (getField @"scriptWits" tx) addr
+isTwoPhaseScriptAddress tx = isTwoPhaseScriptAddressFromMap @era (getField @"scriptWits" tx)
 
 -- | txsize computes the length of the serialised bytes
 instance
@@ -385,7 +385,7 @@ instance Ord k => Indexable k (Set k) where
     Just x -> SJust (fromIntegral x)
     Nothing -> SNothing
   fromIndex i set =
-    if (fromIntegral i) < Set.size set
+    if fromIntegral i < Set.size set
       then SJust $ Set.elemAt (fromIntegral i) set
       else SNothing
 
@@ -400,7 +400,7 @@ instance Ord k => Indexable k (Map.Map k v) where
     Just x -> SJust (fromIntegral x)
     Nothing -> SNothing
   fromIndex i mp =
-    if (fromIntegral i) < Map.size mp
+    if fromIntegral i < Map.size mp
       then SJust . fst $ Map.elemAt (fromIntegral i) mp
       else SNothing
 

@@ -18,13 +18,13 @@ module Cardano.Ledger.Babbage
   )
 where
 
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), binaryDataToData)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
 import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
-import Cardano.Ledger.Alonzo.TxWitness (TxDats (TxDats'), TxWitness (..))
+import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..), ValidateAuxiliaryData (..))
 import Cardano.Ledger.Babbage.Genesis
 import Cardano.Ledger.Babbage.PParams
@@ -39,7 +39,7 @@ import Cardano.Ledger.Babbage.Rules.Utxos (BabbageUTXOS)
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW)
 import Cardano.Ledger.Babbage.Scripts (babbageInputDataHashes, babbageTxScripts, getDatumBabbage)
 import Cardano.Ledger.Babbage.Tx (ValidatedTx (..), minfee)
-import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut, TxOutCompactDatum, TxOutCompactRefScript), getBabbageTxOutEitherAddr)
+import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody, TxOut (TxOut), getBabbageTxOutEitherAddr)
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
@@ -90,7 +90,6 @@ import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
 import Data.Default (def)
 import Data.Foldable (toList)
-import qualified Data.List as List
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
@@ -246,14 +245,6 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
       collOuts = case getField @"sizedCollateralReturn" txbody of
         SNothing -> []
         SJust x -> [x]
-  txdata (ValidatedTx txbody (TxWitness _ _ _ (TxDats' m) _) _ _) = Set.union witnessData outputData
-    where
-      witnessData = Set.fromList $ Map.elems m
-      outputData = List.foldl' accum Set.empty $ allOuts txbody
-      accum s txout = case txout of
-        TxOutCompactDatum _ _ dat -> Set.insert (binaryDataToData dat) s
-        TxOutCompactRefScript _ _ (Datum dat) _ -> Set.insert (binaryDataToData dat) s
-        _ -> s
 
 -------------------------------------------------------------------------------
 -- Era Mapping

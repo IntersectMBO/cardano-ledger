@@ -75,10 +75,10 @@ trippingAnn ::
   ) =>
   t ->
   Property
-trippingAnn x = trippingF roundTripAnn x
+trippingAnn = trippingF roundTripAnn
 
 tripping :: (Eq src, Show src, ToCBOR src, FromCBOR src) => src -> Property
-tripping x = trippingF roundTrip x
+tripping = trippingF roundTrip
 
 tests :: TestTree
 tests =

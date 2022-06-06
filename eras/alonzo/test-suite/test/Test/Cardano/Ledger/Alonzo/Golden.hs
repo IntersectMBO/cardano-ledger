@@ -1,10 +1,9 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 -- |
--- Module      : Test.Cardano.Ledger.Mary.Golden
--- Description : Golden Tests for the Mary era
+-- Module      : Test.Cardano.Ledger.Alonzo.Golden
+-- Description : Golden Tests for the Alonzo era
 module Test.Cardano.Ledger.Alonzo.Golden
   ( goldenUTxOEntryMinAda,
     goldenSerialization,
@@ -31,9 +30,8 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (Value (..), valueFromList)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.ByteString.Lazy as BSL
-import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
-import Data.Set as Set
+import GHC.Stack (HasCallStack)
 import Plutus.V1.Ledger.Api (Data (..))
 import qualified Plutus.V1.Ledger.Api as PV1 (costModelParamNames)
 import qualified Plutus.V2.Ledger.Api as PV2 (costModelParamNames)
@@ -159,21 +157,6 @@ goldenUTxOEntryMinAda =
               ( let f i c = (i, smallName c, 1)
                  in valueFromList 7407400 [f i c | (i, cs) <- [(pid1, [32 .. 63]), (pid2, [64 .. 95]), (pid3, [96 .. 127])], c <- cs]
               )
-              {-
-                            ( Value 7407400 $
-                                Map.fromList
-                                  [ ( pid1,
-                                      (Map.fromList $ map ((,1) . smallName . chr) [32 .. 63])
-                                    ),
-                                    ( pid2,
-                                      (Map.fromList $ map ((,1) . smallName . chr) [64 .. 95])
-                                    ),
-                                    ( pid3,
-                                      (Map.fromList $ map ((,1) . smallName . chr) [96 .. 127])
-                                    )
-                                  ]
-                            )
-              -}
               SNothing
           )
           @?= Coin 6896400,
@@ -197,32 +180,34 @@ goldenSerialization =
         serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
 
+fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b
+fromRightError errorMsg =
+  either (\e -> error $ errorMsg ++ ": " ++ show e) id
+
 -- | A cost model that sets everything as being free
-freeCostModel :: Language -> CostModel
+freeCostModel :: HasCallStack => Language -> CostModel
 freeCostModel lang =
-  fromRight (error "freeCostModel is not well-formed") $
-    mkCostModel lang (cmps lang)
+  fromRightError "freeCostModel is not well-formed" $ mkCostModel lang (cmps lang)
   where
     names PlutusV1 = PV1.costModelParamNames
     names PlutusV2 = PV2.costModelParamNames
-    cmps l = Map.fromList $ fmap (\k -> (k, 0)) (Set.toList $ names l)
+    cmps = Map.fromSet (const 0) . names
 
 exPP :: PParams (AlonzoEra StandardCrypto)
 exPP =
   emptyPParams
     { _costmdls =
-        CostModels $
-          Map.fromList [(PlutusV1, freeCostModel PlutusV1), (PlutusV2, freeCostModel PlutusV2)]
+        CostModels $ Map.fromList [(l, freeCostModel l) | l <- [PlutusV1, PlutusV2]]
     }
 
 exampleLangDepViewPV1 :: LangDepView
 exampleLangDepViewPV1 = LangDepView b1 b2
   where
     b1 =
-      fromRight (error "invalid hex encoding of the language inside exampleLangDepViewPV1") $
+      fromRightError "invalid hex encoding of the language inside exampleLangDepViewPV1" $
         B16.decode "4100"
     b2 =
-      fromRight (error "invalid hex encoding of the cost model inside exampleLangDepViewPV1") $
+      fromRightError "invalid hex encoding of the cost model inside exampleLangDepViewPV1" $
         B16.decode $
           "58a89f0000000000000000000000000000000000000000000000000000000000"
             <> "0000000000000000000000000000000000000000000000000000000000000000"
@@ -235,10 +220,10 @@ exampleLangDepViewPV2 :: LangDepView
 exampleLangDepViewPV2 = LangDepView b1 b2
   where
     b1 =
-      fromRight (error "invalid hex encoding of the language inside exampleLangDepViewPV2") $
+      fromRightError "invalid hex encoding of the language inside exampleLangDepViewPV2" $
         B16.decode "01"
     b2 =
-      fromRight (error "invalid hex encoding of the cost model inside exampleLangDepViewPV2") $
+      fromRightError "invalid hex encoding of the cost model inside exampleLangDepViewPV2" $
         B16.decode $
           "98af000000000000000000000000000000000000000000000000000000000000"
             <> "0000000000000000000000000000000000000000000000000000000000000000"

@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
@@ -64,22 +63,18 @@ instance Arbitrary (Data era) where
 instance Arbitrary (BinaryData era) where
   arbitrary = dataToBinaryData <$> arbitrary
 
-genPair :: Gen a -> Gen b -> Gen (a, b)
-genPair x y = do a <- x; b <- y; pure (a, b)
-
 instance Arbitrary PV1.Data where
   arbitrary = resize 5 (sized gendata)
     where
       gendata n
         | n > 0 =
             oneof
-              [ (PV1.I <$> arbitrary),
-                (PV1.B <$> arbitrary),
-                (PV1.Map <$> listOf (genPair (gendata (n `div` 2)) (gendata (n `div` 2)))),
-                ( PV1.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
-                    <*> listOf (gendata (n `div` 2))
-                ),
-                (PV1.List <$> listOf (gendata (n `div` 2)))
+              [ PV1.I <$> arbitrary,
+                PV1.B <$> arbitrary,
+                PV1.Map <$> listOf ((,) <$> gendata (n `div` 2) <*> gendata (n `div` 2)),
+                PV1.Constr <$> fmap fromIntegral (arbitrary :: Gen Natural)
+                  <*> listOf (gendata (n `div` 2)),
+                PV1.List <$> listOf (gendata (n `div` 2))
               ]
       gendata _ = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
@@ -139,7 +134,7 @@ genScripts ::
 genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Core.Script era])
 
 genData :: forall era. Era era => Gen (TxDats era)
-genData = TxDats <$> keyBy hashData <$> arbitrary
+genData = TxDats . keyBy hashData <$> arbitrary
 
 instance
   ( Era era,
@@ -205,7 +200,7 @@ instance Arbitrary Prices where
   arbitrary = Prices <$> arbitrary <*> arbitrary
 
 mkNullCostModel :: Set Text -> Map Text Integer
-mkNullCostModel = Map.fromList . fmap (\k -> (k, 0 :: Integer)) . Set.toList
+mkNullCostModel = Map.fromSet (const 0)
 
 genCM :: Language -> Set Text -> Gen CostModel
 genCM lang costModelParamNames = do

@@ -102,9 +102,7 @@ txb i mRefInp o =
   TxBody
     { inputs = Set.singleton i,
       collateral = mempty,
-      referenceInputs = case mRefInp of
-        Nothing -> mempty
-        Just ri -> Set.singleton ri,
+      referenceInputs = maybe mempty Set.singleton mRefInp,
       outputs = StrictSeq.singleton (mkSized o),
       collateralReturn = SNothing,
       totalCollateral = SNothing,

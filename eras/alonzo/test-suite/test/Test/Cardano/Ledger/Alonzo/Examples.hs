@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -78,47 +79,37 @@ directPlutusTest expectation script ds =
       budget <- snd $ P.evaluateScriptCounting pv P.Quiet P.evalCtxForTesting scr datums
       snd $ P.evaluateScriptRestricting pv P.Verbose P.evalCtxForTesting budget scr datums
 
+getRawPlutusScript :: String -> Script () -> ShortByteString
+getRawPlutusScript name =
+  \case
+    PlutusScript _ sbs -> sbs
+    _ -> error $ "Should not happen '" ++ name ++ "' is a plutus script"
+
 -- | Expects 3 args (data, redeemer, context)
 guessTheNumber3 :: ShortByteString
-guessTheNumber3 = case Generated.guessTheNumber3 of
-  PlutusScript _ sbs -> sbs
-  _ -> error ("Should not happen 'guessTheNumber3' is a plutus script")
+guessTheNumber3 = getRawPlutusScript "guessTheNumber3" Generated.guessTheNumber3
 
 -- | Expects 2 args (data, redeemer)
 guessTheNumber2 :: ShortByteString
-guessTheNumber2 = case Generated.guessTheNumber2 of
-  PlutusScript _ sbs -> sbs
-  _ -> error ("Should not happen 'guessTheNumber2' is a plutus script")
+guessTheNumber2 = getRawPlutusScript "guessTheNumber2" Generated.guessTheNumber2
 
 even3 :: ShortByteString
-even3 = case Generated.evendata3 of
-  PlutusScript _ sbs -> sbs
-  _ -> error ("Should not happen 'evendata3' is a plutus script")
+even3 = getRawPlutusScript "evendata3" Generated.evendata3
 
 odd3 :: ShortByteString
-odd3 = case Generated.odddata3 of
-  PlutusScript _ sbs -> sbs
-  _ -> error ("Should not happen 'odddata3' is a plutus script")
+odd3 = getRawPlutusScript "odddata3" Generated.odddata3
 
 sum103 :: ShortByteString
-sum103 = case Generated.sumsTo103 of
-  PlutusScript _ sbs -> sbs
-  _ -> error ("Should not happen 'sumsTo1033' is a plutus script")
+sum103 = getRawPlutusScript "sumsTo1033" Generated.sumsTo103
 
 evenRed2 :: ShortByteString
-evenRed2 = case Generated.evenRedeemer2 of
-  PlutusScript _ sbs -> sbs
-  _ -> error ("Should not happen 'evenredeemer2' is a plutus script")
+evenRed2 = getRawPlutusScript "evenRedeemer2" Generated.evenRedeemer2
 
 redeemer102 :: ShortByteString
-redeemer102 = case Generated.redeemerIs102 of
-  PlutusScript _ sbs -> sbs
-  _ -> error ("Should not happen 'redeemeris102' is a plutus script")
+redeemer102 = getRawPlutusScript "redeemeris102" Generated.redeemerIs102
 
 oddredeemer2 :: ShortByteString
-oddredeemer2 = case Generated.oddRedeemer2 of
-  PlutusScript _ sbs -> sbs
-  _ -> error ("Should not happen 'oddredeemer2' is a plutus script")
+oddredeemer2 = getRawPlutusScript "oddredeemer2" Generated.oddRedeemer2
 
 plutusScriptExamples :: TestTree
 plutusScriptExamples =
@@ -203,7 +194,7 @@ alonzo :: Proxy (AlonzoEra StandardCrypto)
 alonzo = Proxy
 
 explainTest :: Script (AlonzoEra StandardCrypto) -> ShouldSucceed -> [P.Data] -> Assertion
-explainTest (script@(PlutusScript _ bytes)) mode ds =
+explainTest script@(PlutusScript _ bytes) mode ds =
   case ( mode,
          runPLCScript
            alonzo

@@ -21,12 +21,9 @@ import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
-import Cardano.Ledger.SafeHash
+import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
-import Cardano.Ledger.Shelley.TxBody
-  ( DCert (..),
-    Wdrl (..),
-  )
+import Cardano.Ledger.Shelley.TxBody (DCert (..), Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -48,12 +45,16 @@ import qualified Plutus.V2.Ledger.Api as PV2
 transScriptHash :: ScriptHash c -> PV2.ScriptHash
 transScriptHash (ScriptHash h) = PV2.ScriptHash (PV2.toBuiltin (hashToBytes h))
 
-transReferenceScript :: forall era. ValidateScript era => StrictMaybe (Core.Script era) -> Maybe PV2.ScriptHash
+transReferenceScript ::
+  forall era.
+  ValidateScript era =>
+  StrictMaybe (Core.Script era) ->
+  Maybe PV2.ScriptHash
 transReferenceScript SNothing = Nothing
 transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 
--- | A transaction output can be transalated because it is a newly created output,
--- or because it is the output which is connected to an transaction input being spent.
+-- | A transaction output can be translated because it is a newly created output,
+-- or because it is the output which is connected to a transaction input being spent.
 data OutputSource = OutputFromInput | OutputFromOutput
 
 -- | Given a TxOut, translate it for V2 and return (Right transalation).
@@ -163,7 +164,7 @@ transRedeemerPtr ::
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
   ) =>
-  (Core.TxBody era) ->
+  Core.TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
   Either TranslationError (PV2.ScriptPurpose, PV2.Redeemer)
 transRedeemerPtr txb (ptr, (d, _)) =

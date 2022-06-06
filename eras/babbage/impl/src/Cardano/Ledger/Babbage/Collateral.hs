@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -45,7 +44,7 @@ isTwoPhaseScriptAddress ::
   UTxO era ->
   Addr (Crypto era) ->
   Bool
-isTwoPhaseScriptAddress tx utxo addr = isTwoPhaseScriptAddressFromMap @era (txscripts utxo tx) addr
+isTwoPhaseScriptAddress tx utxo = isTwoPhaseScriptAddressFromMap @era (txscripts utxo tx)
 
 minCollateral ::
   HasField "_collateralPercentage" (Core.PParams era) Natural =>
@@ -56,9 +55,9 @@ minCollateral txb pp = Coin ((fee * percent) `divideCeiling` 100)
   where
     fee = unCoin (txfee' txb)
     percent = fromIntegral (getField @"_collateralPercentage" pp)
-    divideCeiling x y = if _rem == 0 then n else n + 1 -- Works when both x and y are positive
+    divideCeiling x y = if r == 0 then n else n + 1 -- Works when both x and y are positive
       where
-        (n, _rem) = x `divMod` y
+        (n, r) = x `divMod` y
 
 collBalance ::
   forall era.
