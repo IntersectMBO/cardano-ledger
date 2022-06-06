@@ -228,7 +228,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
         vsep
           [ pcSmallUTxO reify utxo txs,
             ppString "===================================",
-            ppString "Honest Pools\n" <> ppSet ppKeyHash gsHonestPools,
+            ppString "Stable Pools\n" <> ppSet ppKeyHash gsStablePools,
             ppString "===================================",
             ppString "Initial Pools\n" <> ppMap ppKeyHash pcIndividualPoolStake gsInitialPoolDistr,
             ppString "===================================",
