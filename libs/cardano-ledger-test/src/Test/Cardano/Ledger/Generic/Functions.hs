@@ -47,6 +47,7 @@ import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), PoolCert (..), PoolParams (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, scriptsNeeded, totalDeposits)
+import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (coin, inject, (<+>), (<->)))
 import Control.State.Transition.Extended (STS (State))
@@ -130,9 +131,16 @@ depositsAndRefunds proof pp certificates = List.foldl' accum (Coin 0) certificat
     accum ans (DCertDeleg (RegKey _)) = keydep <+> ans
     accum ans (DCertDeleg (DeRegKey _)) = ans <-> keydep
     accum ans (DCertPool (RegPool _)) = pooldep <+> ans
-    accum ans (DCertPool (RetirePool _ _)) = ans <-> pooldep
+    accum ans (DCertPool (RetirePool _ _)) = ans -- The pool reward is refunded at the end of the epoch
     accum ans _ = ans
     (keydep, pooldep :: Coin) = keyPoolDeposits proof pp
+
+epochMax :: Proof era -> Core.PParams era -> EpochNo
+epochMax (Babbage _) = getField @"_eMax"
+epochMax (Alonzo _) = getField @"_eMax"
+epochMax (Mary _) = getField @"_eMax"
+epochMax (Allegra _) = getField @"_eMax"
+epochMax (Shelley _) = getField @"_eMax"
 
 keyPoolDeposits :: Proof era -> Core.PParams era -> (Coin, Coin)
 keyPoolDeposits proof pp = case proof of

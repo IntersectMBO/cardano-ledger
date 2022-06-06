@@ -14,7 +14,18 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-module Test.Cardano.Ledger.Generic.TxGen where
+module Test.Cardano.Ledger.Generic.TxGen
+  ( genValidatedTx,
+    Box (..),
+    applySTSByProof,
+    assembleWits,
+    coreTx,
+    coreTxBody,
+    coreTxOut,
+    genUTxO,
+    testTx,
+  )
+where
 
 import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
@@ -38,12 +49,14 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
-import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
+import Cardano.Ledger.Pretty (PrettyA (..), ppRecord) -- , ppMap, ppPair)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API
   ( Addr (..),
     Credential (..),
+    PoolCert (RegPool, RetirePool),
+    PoolParams (..),
     RewardAcnt (..),
     StakeReference (..),
     Wdrl (..),
@@ -54,12 +67,13 @@ import qualified Cardano.Ledger.Shelley.Scripts as Shelley (MultiSig (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), Delegation (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
+import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad (forM, replicateM)
 import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.RWS.Strict (get, gets, modify)
+import Control.Monad.Trans.RWS.Strict (asks, get, gets, modify)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Bifunctor (first)
 import Data.Default.Class (Default (def))
@@ -89,10 +103,12 @@ import Test.Cardano.Ledger.Generic.GenState
     frequencyT,
     genCredential,
     genDatumWithHash,
-    genFreshCredential,
+    genFreshRegCred,
     genKeyHash,
+    genNewPool,
     genPool,
     genPositiveVal,
+    genRetirementHash,
     genRewards,
     genScript,
     genValidityInterval,
@@ -262,21 +278,6 @@ mkWitVKey era mTag (ScriptHashObj scriptHash) =
       let scriptWit = ScriptWits' [script]
       otherWit <- genGenericScriptWitness era mTag script
       pure (\hash -> scriptWit : otherWit hash)
-
--- | Generator for witnesses necessary for Scripts and Key
--- credentials. Because of the Key credentials generating function requires a body
--- hash for an acutal witness to be constructed. In order to be able to estimate
--- fees and collateral needed we will use these produced witness generators twice: one
--- time with bogus body hash for estimation, and the second time with an actual
--- body hash.
-genCredTimelockKeyWit ::
-  forall era k.
-  (Reflect era) =>
-  Proof era ->
-  Maybe Tag ->
-  Credential k (Crypto era) ->
-  GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> Core.Witnesses era)
-genCredTimelockKeyWit era mTag cred = (assembleWits era .) <$> mkWitVKey era mTag cred
 
 -- | Same as `genCredKeyWit`, but for `TxOuts`
 genTxOutKeyWitness ::
@@ -521,33 +522,43 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
-genFreshRegCred :: forall era. Reflect era => GenRS era (Credential 'Staking (Crypto era))
-genFreshRegCred = do
-  old <- gets (Map.keysSet . gsInitialRewards)
-  cred <- genFreshCredential 100 Cert old
-  modify (\st -> st {gsRegKey = Set.insert cred (gsRegKey st)})
-  pure cred
-
-genDCert :: forall era. Reflect era => GenRS era (DCert (Crypto era))
-genDCert = do
-  elementsT
-    [ DCertDeleg
-        <$> elementsT
-          [ RegKey <$> genFreshRegCred @era,
-            DeRegKey <$> genCredential Cert,
-            Delegate <$> genDelegation
-          ]
-    ]
+genDCert :: forall era. Reflect era => Proof era -> GenRS era (DCert (Crypto era))
+genDCert proof = do
+  res <-
+    elementsT
+      [ DCertDeleg
+          <$> frequencyT
+            [ (75, RegKey <$> genRegKey),
+              (25, DeRegKey <$> genDeRegKey),
+              (50, Delegate <$> genDelegation)
+            ],
+        DCertPool
+          <$> frequencyT
+            [ (75, RegPool <$> genFreshPool),
+              (25, RetirePool <$> genRetirementHash <*> genEpoch)
+            ]
+      ]
+  return res
   where
+    genRegKey = genFreshRegCred @era
+    genDeRegKey = genCredential Cert
     genDelegation = do
-      rewardAccount <- genFreshRegCred @era
-      poolId <- genPool
-      pure $ Delegation {_delegator = rewardAccount, _delegatee = poolId}
+      rewardAccount <- genFreshRegCred
+      (kh, _) <- genPool
+      pure $ Delegation {_delegator = rewardAccount, _delegatee = kh}
+    genFreshPool = do
+      (_kh, pp, _) <- genNewPool
+      return pp
+    genEpoch = do
+      EpochNo curEpoch <- gets $ mEL . gsModel
+      EpochNo maxEpoch <- asks $ epochMax proof . gePParams
+      delta <- lift $ choose (1, maxEpoch)
+      return . EpochNo $ curEpoch + delta
 
-genDCerts :: forall era. Reflect era => GenRS era ([DCert (Crypto era)])
-genDCerts = do
+genDCerts :: forall era. Reflect era => Proof era -> GenRS era [DCert (Crypto era)]
+genDCerts proof = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
-        dc <- genDCert
+        dc <- genDCert proof
         -- Workaround a misfeature where duplicate plutus scripts in DCert are ignored
         -- so if a duplicate might be generated, we don't do that generation
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
@@ -586,6 +597,16 @@ genDCerts = do
                           (DCertDeleg (RegKey delegCred) : dcs, Map.insert delegCred (Coin 99) regCreds)
                  in insertIfNotPresent dcs' regCreds' (Just delegKey)
                       <$> lookupPlutusScript delegCred Cert
+          DCertPool d
+            | RegPool _ <- d -> do
+                pure (dc : dcs, ss, regCreds)
+            | RetirePool kh _ <- d -> do
+                -- We need to make sure that the pool is registered before
+                -- we try to retire it
+                modelPools <- gets $ mPoolParams . gsModel
+                case Map.lookup kh modelPools of
+                  Just _ -> pure (dc : dcs, ss, regCreds)
+                  Nothing -> pure (dcs, ss, regCreds)
           _ -> pure (dc : dcs, ss, regCreds)
   maxcert <- gets getCertificateMax
   n <- lift $ choose (0, maxcert)
@@ -641,7 +662,7 @@ genCollateralUTxO collateralAddresses (Coin fee) utxo = do
         GenRS era (Map (TxIn (Crypto era)) (Core.TxOut era), Coin)
       go ecs !coll !curCollTotal !um
         | curCollTotal >= minCollTotal = pure (coll, curCollTotal <-> minCollTotal)
-        | [] <- ecs = error "Impossible: supplied less addresses then `maxCollateralInputs`"
+        | [] <- ecs = error "Impossible: supplied less addresses than `maxCollateralInputs`"
         | ec : ecs' <- ecs = do
             (um', coll', c) <-
               if null ecs'
@@ -712,7 +733,10 @@ getDCertCredential = \case
       RegKey _rk -> Nothing -- we don't require witnesses for RegKey
       DeRegKey drk -> Just drk
       Delegate (Delegation dk _) -> Just dk
-  DCertPool _p -> Nothing
+  DCertPool pc ->
+    case pc of
+      RegPool PoolParams {..} -> Just . coerceKeyRole $ KeyHashObj _poolId
+      RetirePool kh _ -> Just . coerceKeyRole $ KeyHashObj kh
   DCertGenesis _g -> Nothing
   DCertMir _m -> Nothing
 
@@ -796,7 +820,7 @@ genValidatedTxAndInfo proof slot = do
   (IsValid v2, mkWdrlWits) <-
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
-  dcerts <- genDCerts
+  dcerts <- genDCerts proof
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds

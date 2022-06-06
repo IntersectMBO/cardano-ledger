@@ -46,7 +46,7 @@ import Test.Cardano.Ledger.Generic.ModelState
     mNewEpochStateZero,
     pcModelNewEpochState,
   )
-import Test.Cardano.Ledger.Generic.PrettyCore (pcTx)
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 
 -- ========================================================================
@@ -108,7 +108,7 @@ applyCert proof model dcert = case dcert of
       pp = mPParams model
       (keydeposit, _) = keyPoolDeposits proof pp
   (DCertDeleg (DeRegKey x)) -> case Map.lookup x (mRewards model) of
-    Nothing -> error "DeRegKey not in rewards"
+    Nothing -> error $ "DeRegKey not in rewards: " <> show (pcCredential x)
     Just (Coin 0) ->
       model
         { mRewards = Map.delete x (mRewards model),

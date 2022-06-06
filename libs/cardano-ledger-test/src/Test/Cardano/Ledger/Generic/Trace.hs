@@ -5,6 +5,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -22,13 +23,14 @@ import Cardano.Ledger.Babbage.Rules.Ledger ()
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Era (Crypto, Era (..))
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
   ( PDoc,
     ppInt,
+    ppKeyHash,
     ppList,
     ppMap,
     ppRecord,
@@ -40,8 +42,10 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (totalAdaPotsES)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
+    DPState (..),
     EpochState (..),
     LedgerState (..),
     NewEpochState (..),
@@ -56,7 +60,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
 import Control.Monad (forM)
 import Control.Monad.Trans.Class (MonadTrans (lift))
-import Control.Monad.Trans.RWS.Strict (get)
+import Control.Monad.Trans.RWS.Strict (get, gets)
 import Control.Monad.Trans.Reader (ReaderT (..))
 import Control.State.Transition.Extended (STS (..), TRC (..))
 import Control.State.Transition.Trace (Trace (..), lastState)
@@ -94,6 +98,7 @@ import Test.Cardano.Ledger.Generic.GenState
     getBlocksizeMax,
     getReserves,
     getSlot,
+    getSlotDelta,
     getTreasury,
     initialLedgerState,
     modifyModel,
@@ -101,17 +106,10 @@ import Test.Cardano.Ledger.Generic.GenState
   )
 import Test.Cardano.Ledger.Generic.MockChain
 import Test.Cardano.Ledger.Generic.ModelState (MUtxo, stashedAVVMAddressesZero)
-import Test.Cardano.Ledger.Generic.PrettyCore
-  ( pcCoin,
-    pcCredential,
-    pcScript,
-    pcScriptHash,
-    pcTxBodyField,
-    pcTxIn,
-    scriptSummary,
-  )
+import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcCredential, pcIndividualPoolStake, pcScript, pcScriptHash, pcTxBodyField, pcTxIn, scriptSummary)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
+import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
@@ -142,7 +140,8 @@ genRsTxSeq proof this lastN ans slot = do
   maxBlockSize <- getBlocksizeMax <$> get
   n <- lift $ choose (2 :: Int, fromIntegral maxBlockSize)
   txs <- forM [0 .. n - 1] (\i -> genRsTxAndModel proof (this + i) slot)
-  nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose (5, 12)
+  newSlotRange <- gets getSlotDelta
+  nextSlotNo <- lift $ SlotNo . (+ (unSlotNo slot)) <$> choose newSlotRange
   genRsTxSeq proof (this + n) lastN ((SS.fromList txs, slot) : ans) nextSlotNo
 
 -- | Generate a Vector of Blocks, and an initial LedgerState
@@ -171,7 +170,8 @@ genMockChainState ::
   Proof era ->
   GenState era ->
   Gen (MockChainState era)
-genMockChainState proof gstate = pure $ MockChainState newepochstate (getSlot gstate) 0
+genMockChainState proof gstate =
+  pure $ MockChainState newepochstate (getSlot gstate) 0
   where
     ledgerstate = initialLedgerState gstate
     newepochstate =
@@ -185,16 +185,21 @@ genMockChainState proof gstate = pure $ MockChainState newepochstate (getSlot gs
           stashedAVVMAddresses = stashedAVVMAddressesZero proof
         }
 
-makeEpochState :: GenState era -> LedgerState era -> EpochState era
+makeEpochState :: Reflect era => GenState era -> LedgerState era -> EpochState era
 makeEpochState gstate ledgerstate =
   EpochState
     { esAccountState = AccountState (getTreasury gstate) (getReserves gstate),
-      esSnapshots = def,
+      esSnapshots = snaps ledgerstate,
       esLState = ledgerstate,
       esPrevPp = gePParams (gsGenEnv gstate),
       esPp = gePParams (gsGenEnv gstate),
       esNonMyopic = def
     }
+
+snaps :: Era era => LedgerState era -> SnapShots (Crypto era)
+snaps (LedgerState UTxOState {_utxo = u} (DPState dstate pstate)) = SnapShots snap snap snap mempty
+  where
+    snap = stakeDistr u dstate pstate
 
 -- ==============================================================================
 
@@ -215,13 +220,19 @@ raiseMockError ::
   EpochState era ->
   [MockChainFailure era] ->
   [Core.Tx era] ->
-  Map.Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  GenState era ->
   String
-raiseMockError slot (SlotNo next) epochstate pdfs txs scripts =
+raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
   let utxo = unUTxO $ (_utxo . lsUTxOState . esLState) epochstate
    in show $
         vsep
           [ pcSmallUTxO reify utxo txs,
+            ppString "===================================",
+            ppString "Stable Pools\n" <> ppSet ppKeyHash gsStablePools,
+            ppString "===================================",
+            ppString "Initial Pools\n" <> ppMap ppKeyHash pcIndividualPoolStake gsInitialPoolDistr,
+            ppString "===================================",
+            ppString "Initial Rewards\n" <> ppMap pcCredential pcCoin gsInitialRewards,
             ppString "===================================",
             showBlock utxo txs,
             ppString "===================================",
@@ -232,7 +243,7 @@ raiseMockError slot (SlotNo next) epochstate pdfs txs scripts =
             ppString "Last Slot " <> ppWord64 slot,
             ppString "Current Slot " <> ppWord64 next,
             ppString "===================================",
-            ppMap pcScriptHash (scriptSummary @era reify) (Map.restrictKeys scripts (badScripts reify pdfs))
+            ppMap pcScriptHash (scriptSummary @era reify) (Map.restrictKeys gsScripts (badScripts reify pdfs))
           ]
 
 badScripts :: Proof era -> [MockChainFailure era] -> Set.Set (ScriptHash (Crypto era))
@@ -356,9 +367,8 @@ instance
     case runShelleyBase (applySTSTest (TRC @(MOCKCHAIN era) ((), mcs, mockblock))) of
       Left pdfs ->
         let txsl = Fold.toList txs
-            scs = gsScripts gs
          in trace
-              (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl scs)
+              (raiseMockError lastSlot nextSlotNo epochstate pdfs txsl gs)
               (error "FAILS")
       -- Left pdfs -> trace ("Discard\n"++show(ppList (ppMockChainFailure reify) pdfs)) discard -- TODO should we enable this?
       Right mcs2 -> seq mcs2 (pure mockblock)
