@@ -156,21 +156,21 @@ collectTwoPhaseScriptInputs ::
   UTxO era ->
   Either [CollectError (Crypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
-  let usedLanguages = [lang | (AlonzoScript.PlutusScript lang _) <- Map.elems scriptsUsed]
+  let usedLanguages = [lang | (_, lang, _) <- needed]
       costModels = unCostModels $ getField @"_costmdls" pp
       missingCMs = [lang | lang <- usedLanguages, lang `Map.notMember` costModels]
    in case missingCMs of
         l : _ -> Left [NoCostModel l]
         _ -> merge (apply costModels) (map redeemer needed) (map getscript needed) (Right [])
   where
-    scriptsUsed = txscripts utxo tx
+    scriptsAvailable = txscripts utxo tx
     txinfo lang = txInfo pp lang ei sysS utxo tx
     needed = mapMaybe knownToNotBe1Phase $ scriptsNeeded utxo tx
     -- The formal spec achieves the same filtering as knownToNotBe1Phase
     -- by use of the (partial) language function, which is not defined
     -- on 1-phase scripts.
     knownToNotBe1Phase (sp, sh) =
-      case sh `Map.lookup` scriptsUsed of
+      case sh `Map.lookup` scriptsAvailable of
         Just (AlonzoScript.PlutusScript lang script) -> Just (sp, lang, script)
         Just (AlonzoScript.TimelockScript _) -> Nothing
         Nothing -> Nothing
