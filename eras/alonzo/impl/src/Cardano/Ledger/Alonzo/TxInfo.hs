@@ -472,7 +472,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
         case Map.lookup txIn (unUTxO utxo) of
           Nothing -> Left $ TranslationLogicMissingInput txIn
           Just txOut -> Right (txIn, txOut)
-  txOuts <- mapM lookupTxOut (Set.toList(getField @"inputs" tbody))
+  txOuts <- mapM lookupTxOut (Set.toList (getField @"inputs" tbody))
   case lang of
     PlutusV1 ->
       Right . TxInfoPV1 $

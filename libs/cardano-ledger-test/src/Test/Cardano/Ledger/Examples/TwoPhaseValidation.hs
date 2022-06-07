@@ -371,7 +371,7 @@ redeemerExample1 :: Data era
 redeemerExample1 = Data (Plutus.I 42)
 
 txDatsExample1 :: Era era => TxDats era
-txDatsExample1 = TxDats $ keyBy hashData $ [datumExample1]
+txDatsExample1 = TxDats $ keyBy hashData [datumExample1]
 
 alwaysSucceedsOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 alwaysSucceedsOutput pf =

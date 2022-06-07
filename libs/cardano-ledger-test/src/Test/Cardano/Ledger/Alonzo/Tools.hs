@@ -11,14 +11,15 @@ import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script)
-import Cardano.Ledger.Alonzo.Tools (ScriptFailure, evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script, Tag (..))
+import Cardano.Ledger.Alonzo.Tools (ScriptFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (DSIGN, HASH)
 import qualified Cardano.Ledger.Crypto as Ledger.Crypto
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -47,10 +48,10 @@ import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   ( datumExample1,
     initUTxO,
+    redeemerExample1,
     someKeys,
     testSystemStart,
     validatingBody,
-    validatingRedeemersEx1,
   )
 import Test.Cardano.Ledger.Generic.Fields (PParamsField (..), TxField (..), WitnessesField (..))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
@@ -174,6 +175,7 @@ exampleExUnitCalc proof =
 exampleInvalidExUnitCalc ::
   forall era.
   ( ExtendedUTxO era,
+    PostShelley era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -187,25 +189,37 @@ exampleInvalidExUnitCalc ::
       ( Crypto.Hash
           (Ledger.Crypto.HASH (Crypto era))
           EraIndependentTxBody
-      ),
-    Scriptic era
+      )
   ) =>
   Proof era ->
   IO ()
-exampleInvalidExUnitCalc proof =
-  case evaluateTransactionExecutionUnits @era
-    (pparams proof)
-    (exampleTx proof)
-    (UTxO mempty)
-    exampleEpochInfo
-    testSystemStart
-    costmodels of
-    Left {} -> assertFailure "evaluateTransactionExecutionUnits should not fail from TranslationError"
-    Right _ -> assertFailure "evaluateTransactionExecutionUnits should have failed"
+exampleInvalidExUnitCalc proof = do
+  let result =
+        evaluateTransactionExecutionUnits @era
+          (pparams proof)
+          (exampleTx proof)
+          (initUTxO proof)
+          exampleEpochInfo
+          testSystemStart
+          costmodels
+  case result of
+    Left err ->
+      assertFailure $
+        "evaluateTransactionExecutionUnits should not have failed, but it did with: " ++ show err
+    Right report ->
+      case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
+        [] ->
+          assertFailure "evaluateTransactionExecutionUnits should have produced failing scripts"
+        [(_, failure)]
+          | failure == RedeemerNotNeeded (RdmrPtr Spend 1) -> pure ()
+        failures ->
+          assertFailure $
+            "evaluateTransactionExecutionUnits produce failing scripts with unexpected errors: "
+              ++ show failures
 
 exampleTx ::
   ( Scriptic era,
-    Signable (Ledger.Crypto.DSIGN (Crypto era)) (Crypto.Hash (Ledger.Crypto.HASH (Crypto era)) EraIndependentTxBody)
+    Signable (DSIGN (Crypto era)) (Crypto.Hash (HASH (Crypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   Core.Tx era
@@ -217,7 +231,9 @@ exampleTx pf =
         [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [datumExample1],
-          RdmrWits validatingRedeemersEx1
+          RdmrWits $
+            Redeemers $
+              Map.singleton (RdmrPtr Spend 1) (redeemerExample1, ExUnits 5000 5000)
         ]
     ]
 

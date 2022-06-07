@@ -77,7 +77,7 @@ data ScriptFailure c
     IncompatibleBudget PV1.ExBudget
   | -- | There was no cost model for a given version of Plutus
     NoCostModel Language
-  deriving (Show)
+  deriving (Show, Eq)
 
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
