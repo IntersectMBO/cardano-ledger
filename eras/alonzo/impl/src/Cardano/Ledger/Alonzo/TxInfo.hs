@@ -277,11 +277,10 @@ txInfoIn ::
     Value era ~ Mary.Value (Crypto era),
     HasField "datahash" (TxOut era) (StrictMaybe (SafeHash c i))
   ) =>
-  UTxO era ->
   TxIn (Crypto era) ->
+  TxOut era ->
   Maybe PV1.TxInInfo
-txInfoIn (UTxO mp) txin = do
-  txout <- Map.lookup txin mp
+txInfoIn txin txout = do
   let valout = transValue (getField @"value" txout)
       dhash = case getField @"datahash" txout of
         SNothing -> Nothing
@@ -468,11 +467,17 @@ alonzoTxInfo ::
   Either (TranslationError (Crypto era)) VersionedTxInfo
 alonzoTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ transVITime pp ei sysS interval
+  -- We need to do this as a separate step
+  let lookupTxOut txIn =
+        case Map.lookup txIn (unUTxO utxo) of
+          Nothing -> Left $ TranslationLogicMissingInput txIn
+          Just txOut -> Right (txIn, txOut)
+  txOuts <- mapM lookupTxOut (Set.toList(getField @"inputs" tbody))
   case lang of
     PlutusV1 ->
       Right . TxInfoPV1 $
         PV1.TxInfo
-          { PV1.txInfoInputs = mapMaybe (txInfoIn utxo) (Set.toList (getField @"inputs" tbody)),
+          { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txOuts,
             PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] outs),
             PV1.txInfoFee = transValue (inject @(Mary.Value (Crypto era)) fee),
             PV1.txInfoMint = transValue forge,

@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxInfo
-  ( ExtendedUTxO (txscripts, getTxOutDatum),
+  ( ExtendedUTxO (getTxOutDatum, txscripts),
     TranslationError,
     VersionedTxInfo (..),
     exBudgetToExUnits,
