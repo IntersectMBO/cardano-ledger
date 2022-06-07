@@ -77,7 +77,7 @@ import Cardano.Binary
   )
 import Cardano.Crypto.Hash
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), Data, DataHash)
+import Cardano.Ledger.Alonzo.Data (AuxiliaryDataHash (..), DataHash)
 import Cardano.Ledger.Alonzo.Scripts (Script)
 import Cardano.Ledger.BaseTypes
   ( Network (..),
@@ -919,16 +919,5 @@ addressErrorMsg :: String
 addressErrorMsg = "Impossible: Compacted an address of non-standard size"
 {-# NOINLINE addressErrorMsg #-}
 
-instance HasField "datum" (TxOut era) (StrictMaybe (Data era)) where
-  getField _ = SNothing
-
 instance HasField "referenceScript" (TxOut era) (StrictMaybe (Script era)) where
   getField _ = SNothing
-
-
-
--- instance
---   (Era era, c ~ Crypto era) =>
---   HasField "datum" (TxOut era) (StrictMaybe (Either (Data era) (DataHash c)))
---   where
---   getField _ = fmap Right . getField @"datahash"

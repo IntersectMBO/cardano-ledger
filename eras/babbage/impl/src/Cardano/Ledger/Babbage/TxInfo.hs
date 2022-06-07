@@ -8,20 +8,24 @@
 module Cardano.Ledger.Babbage.TxInfo where
 
 import Cardano.Crypto.Hash.Class (hashToBytes)
-import Cardano.Ledger.Alonzo.Data (getPlutusData)
+import Cardano.Ledger.Alonzo.Data (Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (Data, DataHash, rdptrInv)
-import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..), TxOutSource (..), VersionedTxInfo (..))
+import Cardano.Ledger.Alonzo.Tx (Data, rdptrInv)
+import Cardano.Ledger.Alonzo.TxInfo
+  ( ExtendedUTxO (getTxOutDatum),
+    TranslationError (..),
+    TxOutSource (..),
+    VersionedTxInfo (..),
+  )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), isSJust)
 import Cardano.Ledger.Core as Core (PParams, Script, Tx, TxBody, TxOut, Value)
 import Cardano.Ledger.Era (Era (..), ValidateScript (..))
-import Cardano.Ledger.Hashes (EraIndependentData)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
-import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
+import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -58,10 +62,9 @@ transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 txInfoOutV1 ::
   forall era.
   ( Era era,
+    ExtendedUTxO era,
     ValidateScript era,
     Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
   ) =>
   TxOutSource (Crypto era) ->
@@ -69,11 +72,13 @@ txInfoOutV1 ::
   Either (TranslationError (Crypto era)) PV1.TxOut
 txInfoOutV1 os txout = do
   let val = getField @"value" txout
-      datahash = getField @"datahash" txout
-      inlineDatum = getField @"datum" txout
       referenceScript = getField @"referenceScript" txout
-  when (isSJust inlineDatum) $ Left $ InlineDatumsNotSupported os
   when (isSJust referenceScript) $ Left $ ReferenceScriptsNotSupported os
+  datahash <-
+    case getTxOutDatum txout of
+      NoDatum -> Right SNothing
+      DatumHash dh -> Right $ SJust dh
+      Datum _ -> Left $ InlineDatumsNotSupported os
   addr <-
     case Alonzo.transTxOutAddr txout of
       Nothing -> Left (ByronTxOutInContext os)
@@ -85,10 +90,9 @@ txInfoOutV1 os txout = do
 txInfoOutV2 ::
   forall era.
   ( Era era,
+    ExtendedUTxO era,
     ValidateScript era,
     Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
   ) =>
   TxOutSource (Crypto era) ->
@@ -98,12 +102,15 @@ txInfoOutV2 os txout = do
   let val = getField @"value" txout
       referenceScript = transReferenceScript @era $ getField @"referenceScript" txout
       datum =
-        case (getField @"datahash" txout, getField @"datum" txout) of
-          (SNothing, SNothing) -> PV2.NoOutputDatum
-          (SJust dh, SNothing) -> PV2.OutputDatumHash $ Alonzo.transDataHash' dh
-          (SNothing, SJust d') ->
-            PV2.OutputDatum . PV2.Datum . PV2.dataToBuiltinData . getPlutusData $ d'
-          (SJust _, SJust _) -> error "TranslationLogicErrorDoubleDatum"
+        case getTxOutDatum txout of
+          NoDatum -> PV2.NoOutputDatum
+          DatumHash dh -> PV2.OutputDatumHash $ Alonzo.transDataHash' dh
+          Datum binaryData ->
+            PV2.OutputDatum . PV2.Datum
+              . PV2.dataToBuiltinData
+              . getPlutusData
+              . binaryDataToData
+              $ binaryData
   case Alonzo.transTxOutAddr txout of
     Nothing -> Left (ByronTxOutInContext os)
     Just ad ->
@@ -114,9 +121,8 @@ txInfoOutV2 os txout = do
 txInfoInV1 ::
   forall era.
   ( ValidateScript era,
+    ExtendedUTxO era,
     Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
   ) =>
   UTxO era ->
@@ -134,9 +140,8 @@ txInfoInV1 (UTxO mp) txin =
 txInfoInV2 ::
   forall era.
   ( ValidateScript era,
+    ExtendedUTxO era,
     Value era ~ Mary.Value (Crypto era),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
   ) =>
   UTxO era ->
@@ -169,11 +174,10 @@ transRedeemerPtr txb (ptr, (d, _)) =
 babbageTxInfo ::
   forall era.
   ( Era era,
+    ExtendedUTxO era,
     ValidateScript era,
     Value era ~ Mary.Value (Crypto era),
     HasField "wits" (Core.Tx era) (TxWitness era),
-    HasField "datahash" (TxOut era) (StrictMaybe (SafeHash (Crypto era) EraIndependentData)),
-    HasField "datum" (TxOut era) (StrictMaybe (Data era)),
     HasField "referenceScript" (TxOut era) (StrictMaybe (Core.Script era)),
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),

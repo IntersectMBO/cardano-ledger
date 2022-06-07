@@ -16,7 +16,7 @@ module Cardano.Ledger.Alonzo.TxInfo where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeFull')
 import Cardano.Crypto.Hash.Class (Hash, hashToBytes)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), getPlutusData)
+import Cardano.Ledger.Alonzo.Data (Data (..), Datum (..), getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( ExUnits (..),
@@ -128,8 +128,7 @@ data TranslationError crypto
   = ByronTxOutInContext !(TxOutSource crypto)
   | TranslationLogicMissingInput !(TxIn crypto)
   | RdmrPtrPointsToNothing !RdmrPtr
-  | -- | TranslationLogicErrorDoubleDatum
-    LanguageNotSupported !Language
+  | LanguageNotSupported !Language
   | InlineDatumsNotSupported !(TxOutSource crypto)
   | ReferenceScriptsNotSupported !(TxOutSource crypto)
   | ReferenceInputsNotSupported !(Set (TxIn crypto))
@@ -144,7 +143,6 @@ instance CC.Crypto crypto => ToCBOR (TranslationError crypto) where
       encode $ Sum TranslationLogicMissingInput 1 !> To txIn
     RdmrPtrPointsToNothing ptr ->
       encode $ Sum RdmrPtrPointsToNothing 2 !> To ptr
-    -- TranslationLogicErrorDoubleDatum = encode $ Sum LanguageNotSupported 4
     LanguageNotSupported lang ->
       encode $ Sum LanguageNotSupported 3 !> To lang
     InlineDatumsNotSupported txOutSource ->
@@ -162,7 +160,6 @@ instance CC.Crypto crypto => FromCBOR (TranslationError crypto) where
       dec 0 = SumD ByronTxOutInContext <! From
       dec 1 = SumD TranslationLogicMissingInput <! From
       dec 2 = SumD RdmrPtrPointsToNothing <! From
-      -- dec 4 = SumD TranslationLogicErrorDoubleDatum
       dec 3 = SumD LanguageNotSupported <! From
       dec 4 = SumD InlineDatumsNotSupported <! From
       dec 5 = SumD ReferenceScriptsNotSupported <! From
@@ -435,6 +432,9 @@ class ExtendedUTxO era where
     UTxO era ->
     ScriptPurpose (Crypto era) ->
     Maybe (Data era)
+
+  getTxOutDatum ::
+    Core.TxOut era -> Datum era
 
   allOuts ::
     Core.TxBody era ->

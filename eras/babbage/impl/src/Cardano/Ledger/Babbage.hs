@@ -240,6 +240,7 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
       referencedOuts = Map.elems $ Map.restrictKeys utxo (getField @"referenceInputs" txbody)
       outs = newOuts <> referencedOuts
   getDatum = getDatumBabbage
+  getTxOutDatum (TxOut _ _ datum _) = datum
   allSizedOuts txbody = toList (getField @"sizedOutputs" txbody) <> collOuts
     where
       collOuts = case getField @"sizedCollateralReturn" txbody of

@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -17,11 +16,7 @@ import Cardano.Ledger.Alonzo.Tools (ScriptFailure, evaluateTransactionExecutionU
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
-import Cardano.Ledger.Babbage.Tx
-  ( Data,
-    DataHash,
-  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe)
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as Ledger.Crypto
@@ -49,7 +44,14 @@ import GHC.Records (HasField (getField))
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Examples.TwoPhaseValidation (datumExample1, initUTxO, someKeys, testSystemStart, validatingBody, validatingRedeemersEx1)
+import Test.Cardano.Ledger.Examples.TwoPhaseValidation
+  ( datumExample1,
+    initUTxO,
+    someKeys,
+    testSystemStart,
+    validatingBody,
+    validatingRedeemersEx1,
+  )
 import Test.Cardano.Ledger.Generic.Fields (PParamsField (..), TxField (..), WitnessesField (..))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
@@ -61,7 +63,8 @@ import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProp
 
 tests :: TestTree
 tests =
-  testGroup "ExUnit tools" $
+  testGroup
+    "ExUnit tools"
     [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip,
       testGroup
         "Alonzo"
@@ -102,8 +105,6 @@ testExUnitCalculation ::
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
@@ -147,8 +148,6 @@ exampleExUnitCalc ::
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
@@ -182,8 +181,6 @@ exampleInvalidExUnitCalc ::
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     Core.Script era ~ Script era,
     Signable
       (Ledger.Crypto.DSIGN (Crypto era))
@@ -203,7 +200,7 @@ exampleInvalidExUnitCalc proof =
     exampleEpochInfo
     testSystemStart
     costmodels of
-    Left{} -> assertFailure "evaluateTransactionExecutionUnits should not fail from TranslationError"
+    Left {} -> assertFailure "evaluateTransactionExecutionUnits should not fail from TranslationError"
     Right _ -> assertFailure "evaluateTransactionExecutionUnits should have failed"
 
 exampleTx ::
@@ -251,8 +248,6 @@ updateTxExUnits ::
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),

@@ -21,7 +21,7 @@ module Cardano.Ledger.Alonzo
   )
 where
 
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
+import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), Datum (..))
 import Cardano.Ledger.Alonzo.Genesis
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
@@ -241,6 +241,10 @@ instance CC.Crypto c => ExtendedUTxO (AlonzoEra c) where
           SJust dh <- [getField @"datahash" out]
       ]
   getDatum = getDatumAlonzo
+  getTxOutDatum txOut =
+    case getField @"datahash" txOut of
+      SNothing -> NoDatum
+      SJust dh -> DatumHash dh
   allOuts txbody = toList $ getField @"outputs" txbody
   allSizedOuts = map mkSized . allOuts
 

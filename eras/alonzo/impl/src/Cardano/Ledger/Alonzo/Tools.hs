@@ -10,7 +10,7 @@ module Cardano.Ledger.Alonzo.Tools
   )
 where
 
-import Cardano.Ledger.Alonzo.Data (Data, getPlutusData)
+import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
@@ -21,7 +21,7 @@ import Cardano.Ledger.Alonzo.Scripts
   )
 import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxInfo
-  ( ExtendedUTxO (txscripts),
+  ( ExtendedUTxO (txscripts, getTxOutDatum),
     TranslationError,
     VersionedTxInfo (..),
     exBudgetToExUnits,
@@ -107,8 +107,6 @@ evaluateTransactionExecutionUnits ::
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     Core.Script era ~ Script era
   ) =>
   Core.PParams era ->
@@ -131,10 +129,11 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
   let getInfo :: Language -> Either (TranslationError (Crypto era)) (Language, VersionedTxInfo)
       getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
    in do
-      ctx <- mapM getInfo (Set.toList $ languagesUsed (Map.elems scripts))
-      pure $ Map.mapWithKey
-        (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
-        (unRedeemers $ getField @"txrdmrs" ws)
+        ctx <- mapM getInfo (Set.toList $ languagesUsed (Map.elems scripts))
+        pure $
+          Map.mapWithKey
+            (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
+            (unRedeemers $ getField @"txrdmrs" ws)
   where
     txb = getField @"body" tx
     ws = getField @"wits" tx
@@ -168,15 +167,13 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
       let (l1, l2) = bounds costModels
       cm <- if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModel lang)
       args <- case sp of
-        (Spending txin) -> do
+        Spending txin -> do
           txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
-          let mdh = getField @"datahash" txOut
-              md = getField @"datum" txOut
-          dat <- case (md, mdh) of
-            (SJust d, _) -> pure d
-            (_, SJust dh) -> note (MissingDatum dh) $ Map.lookup dh dats
-            (SNothing, SNothing) -> Left (InvalidTxIn txin)
-          pure [dat, rdmr, valContext inf sp]
+          datum <- case getTxOutDatum txOut of
+            Datum binaryData -> pure $ binaryDataToData binaryData
+            DatumHash dh -> note (MissingDatum dh) $ Map.lookup dh dats
+            NoDatum -> Left (InvalidTxIn txin)
+          pure [datum, rdmr, valContext inf sp]
         _ -> pure [rdmr, valContext inf sp]
       let pArgs = map getPlutusData args
 
