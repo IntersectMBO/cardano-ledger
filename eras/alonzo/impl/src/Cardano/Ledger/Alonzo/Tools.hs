@@ -12,7 +12,7 @@ where
 
 import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
@@ -85,12 +85,6 @@ note e Nothing = Left e
 
 type RedeemerReport c = Map RdmrPtr (Either (ScriptFailure c) ExUnits)
 
-languagesUsed :: [Script era] -> Set Language
-languagesUsed scripts = Set.fromList $ mapMaybe getLanguage scripts
-  where
-    getLanguage (TimelockScript _) = Nothing
-    getLanguage (PlutusScript lang _) = Just lang
-
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
 --
@@ -129,24 +123,26 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
   let getInfo :: Language -> Either (TranslationError (Crypto era)) (Language, VersionedTxInfo)
       getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
    in do
-        ctx <- mapM getInfo (Set.toList $ languagesUsed (Map.elems scripts))
+        ctx <- mapM getInfo languagesUsed
         pure $
           Map.mapWithKey
-            (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
+            (findAndCount pp (array (minBound :: Language, maxBound) ctx))
             (unRedeemers $ getField @"txrdmrs" ws)
   where
     txb = getField @"body" tx
     ws = getField @"wits" tx
     dats = unTxDats $ getField @"txdats" ws
-    scripts = txscripts utxo tx
+    scriptsAvailable = txscripts utxo tx
     needed = scriptsNeeded utxo tx
+    neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed
+    languagesUsed = Set.toList $ Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
 
     ptrToPlutusScript = Map.fromList $ do
       (sp, sh) <- needed
-      msb <- case Map.lookup sh scripts of
+      msb <- case Map.lookup sh scriptsAvailable of
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
-        Just (PlutusScript v bytes) -> pure $ Just (bytes, v)
+        Just (PlutusScript lang bytes) -> pure $ Just (bytes, lang)
       pointer <- case rdptr txb sp of
         SNothing -> []
         -- Since scriptsNeeded used the transaction to create script purposes,

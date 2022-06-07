@@ -20,6 +20,7 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
     language,
     CollectError (..),
     collectTwoPhaseScriptInputs,
+    knownToNotBe1Phase,
   )
 where
 
@@ -132,6 +133,22 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
       dec 3 = SumD BadTranslation <! From
       dec n = Invalid n
 
+-- Given a script purpose and a script hash, determine if it is *not*
+-- a simple 1-phase script by looking up the script hash in a mapping
+-- of script hashes to labeled scripts.
+-- If the script is determined to not be a 1-phase script, we return
+-- a triple: the script purpose, the language, and the script bytes.
+--
+-- The formal spec achieves the same filtering as knownToNotBe1Phase
+-- by use of the (partial) language function, which is not defined on 1-phase scripts.
+knownToNotBe1Phase ::
+  Map.Map (ScriptHash (Crypto era)) (AlonzoScript.Script era) ->
+  (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
+  Maybe (ScriptPurpose (Crypto era), Language, ShortByteString)
+knownToNotBe1Phase scriptsAvailable (sp, sh) = do
+  AlonzoScript.PlutusScript lang script <- sh `Map.lookup` scriptsAvailable
+  Just (sp, lang, script)
+
 -- | Collect the inputs for twophase scripts. If any script can't find ist data return
 --     a list of CollectError, if all goes well return a list of quadruples with the inputs.
 --     Previous PredicateFailure tests should ensure we find Data for every script, BUT
@@ -156,24 +173,22 @@ collectTwoPhaseScriptInputs ::
   UTxO era ->
   Either [CollectError (Crypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
-  let usedLanguages = [lang | (_, lang, _) <- needed]
+  let usedLanguages = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
       costModels = unCostModels $ getField @"_costmdls" pp
-      missingCMs = [lang | lang <- usedLanguages, lang `Map.notMember` costModels]
-   in case missingCMs of
-        l : _ -> Left [NoCostModel l]
-        _ -> merge (apply costModels) (map redeemer needed) (map getscript needed) (Right [])
+      missingCMs = Set.filter (`Map.notMember` costModels) usedLanguages
+   in case Set.lookupMin missingCMs of
+        Just l -> Left [NoCostModel l]
+        Nothing ->
+          merge
+            (apply costModels)
+            (map redeemer neededAndConfirmedToBePlutus)
+            (map getscript neededAndConfirmedToBePlutus)
+            (Right [])
   where
     scriptsAvailable = txscripts utxo tx
     txinfo lang = txInfo pp lang ei sysS utxo tx
-    needed = mapMaybe knownToNotBe1Phase $ scriptsNeeded utxo tx
-    -- The formal spec achieves the same filtering as knownToNotBe1Phase
-    -- by use of the (partial) language function, which is not defined
-    -- on 1-phase scripts.
-    knownToNotBe1Phase (sp, sh) =
-      case sh `Map.lookup` scriptsAvailable of
-        Just (AlonzoScript.PlutusScript lang script) -> Just (sp, lang, script)
-        Just (AlonzoScript.TimelockScript _) -> Nothing
-        Nothing -> Nothing
+    neededAndConfirmedToBePlutus =
+      mapMaybe (knownToNotBe1Phase scriptsAvailable) $ scriptsNeeded utxo tx
     redeemer (sp, lang, _) =
       case indexedRdmrs tx sp of
         Just (d, eu) -> Right (lang, sp, d, eu)
