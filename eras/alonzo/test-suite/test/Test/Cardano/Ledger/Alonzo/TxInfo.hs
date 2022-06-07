@@ -54,11 +54,6 @@ byronInput = mkTxInPartial genesisId 0
 shelleyInput :: TxIn StandardCrypto
 shelleyInput = mkTxInPartial genesisId 1
 
--- This input is only unknown in the sense
--- that it is not present in the UTxO created below.
-unknownInput :: TxIn StandardCrypto
-unknownInput = mkTxInPartial genesisId 2
-
 byronOutput :: TxOut A
 byronOutput = TxOut byronAddr (Val.inject $ Coin 1) SNothing
 
@@ -113,9 +108,7 @@ txInfoTests =
         [ testCase "silently ignore byron txout" $
             silentlyIgnore (txEx shelleyInput byronOutput),
           testCase "silently ignore byron txin" $
-            silentlyIgnore (txEx byronInput shelleyOutput),
-          testCase "silently ignore unknown txin (logic error)" $
-            silentlyIgnore (txEx unknownInput shelleyOutput)
+            silentlyIgnore (txEx byronInput shelleyOutput)
         ],
       testGroup
         "Plutus V2"

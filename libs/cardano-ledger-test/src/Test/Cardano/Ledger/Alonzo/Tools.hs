@@ -83,7 +83,7 @@ tests =
 exUnitsTranslationRoundTrip :: Gen Property
 exUnitsTranslationRoundTrip = do
   e <- arbitrary
-  let result = (exBudgetToExUnits . transExUnits) e
+  let result = exBudgetToExUnits (transExUnits e)
   pure $
     counterexample
       ( "Before: " <> show e
@@ -164,7 +164,7 @@ exampleExUnitCalc ::
 exampleExUnitCalc proof =
   testExUnitCalculation
     proof
-    (exampleTx proof)
+    (exampleTx proof (RdmrPtr Spend 0))
     (ustate proof)
     (uenv proof)
     exampleEpochInfo
@@ -197,7 +197,7 @@ exampleInvalidExUnitCalc proof = do
   let result =
         evaluateTransactionExecutionUnits @era
           (pparams proof)
-          (exampleTx proof)
+          (exampleTx proof (RdmrPtr Spend 1))
           (initUTxO proof)
           exampleEpochInfo
           testSystemStart
@@ -209,7 +209,7 @@ exampleInvalidExUnitCalc proof = do
     Right report ->
       case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
         [] ->
-          assertFailure "evaluateTransactionExecutionUnits should have produced failing scripts"
+          assertFailure "evaluateTransactionExecutionUnits should have produced a failing report"
         [(_, failure)]
           | failure == RedeemerNotNeeded (RdmrPtr Spend 1) -> pure ()
         failures ->
@@ -222,8 +222,9 @@ exampleTx ::
     Signable (DSIGN (Crypto era)) (Crypto.Hash (HASH (Crypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
+  RdmrPtr ->
   Core.Tx era
-exampleTx pf =
+exampleTx pf ptr =
   newTx
     pf
     [ Body (validatingBody pf),
@@ -233,7 +234,7 @@ exampleTx pf =
           DataWits' [datumExample1],
           RdmrWits $
             Redeemers $
-              Map.singleton (RdmrPtr Spend 1) (redeemerExample1, ExUnits 5000 5000)
+              Map.singleton ptr (redeemerExample1, ExUnits 5000 5000)
         ]
     ]
 
