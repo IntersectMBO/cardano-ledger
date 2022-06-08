@@ -59,7 +59,7 @@ import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
+import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)
 
 tests :: TestTree
@@ -210,8 +210,9 @@ exampleInvalidExUnitCalc proof = do
       case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
         [] ->
           assertFailure "evaluateTransactionExecutionUnits should have produced a failing report"
-        [(_, failure)]
-          | failure == RedeemerNotNeeded (RdmrPtr Spend 1) -> pure ()
+        [(_, failure)] ->
+          RedeemerPointsToUnknowScriptHash (RdmrPtr Spend 1)
+            @=? failure
         failures ->
           assertFailure $
             "evaluateTransactionExecutionUnits produce failing scripts with unexpected errors: "

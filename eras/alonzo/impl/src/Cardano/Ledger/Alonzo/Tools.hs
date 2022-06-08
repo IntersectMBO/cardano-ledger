@@ -34,6 +34,7 @@ import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers, TxDats, unRedee
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
@@ -56,10 +57,13 @@ import qualified Plutus.V2.Ledger.Api as PV2
 data ScriptFailure c
   = -- | A redeemer was supplied that does not point to a
     --  valid plutus evaluation site in the given transaction.
-    RedeemerNotNeeded RdmrPtr
+    RedeemerNotNeeded RdmrPtr (ScriptHash c)
+  | -- | A redeemer was supplied which points to a script hash which
+    -- we cannot connect to a Plutus script.
+    RedeemerPointsToUnknowScriptHash RdmrPtr
   | -- | Missing redeemer. The first parameter is the redeemer pointer which cannot be resolved,
     -- and the second parameter is the map of pointers which can be resolved.
-    MissingScript RdmrPtr (Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language)))
+    MissingScript RdmrPtr (Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language), (ScriptHash c)))
   | -- | Missing datum.
     MissingDatum (DataHash c)
   | -- | Plutus V1 evaluation error.
@@ -75,8 +79,8 @@ data ScriptFailure c
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
     IncompatibleBudget PV1.ExBudget
-  | -- | There was no cost model for a given version of Plutus
-    NoCostModel Language
+  | -- | There was no cost model for a given version of Plutus in the ledger state
+    NoCostModelInLedgerState Language
   deriving (Show, Eq)
 
 note :: e -> Maybe a -> Either e a
@@ -148,7 +152,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
         -- Since scriptsNeeded used the transaction to create script purposes,
         -- it would be a logic error if rdptr was not able to find sp.
         SJust p -> pure p
-      pure (pointer, (sp, msb))
+      pure (pointer, (sp, msb, sh))
 
     findAndCount ::
       Core.PParams era ->
@@ -157,11 +161,12 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
       (Data era, ExUnits) ->
       Either (ScriptFailure (Crypto era)) ExUnits
     findAndCount pparams info pointer (rdmr, _) = do
-      (sp, mscript) <- note (RedeemerNotNeeded pointer) $ Map.lookup pointer ptrToPlutusScript
+      (sp, mscript, sh) <- note (RedeemerPointsToUnknowScriptHash pointer) $ Map.lookup pointer ptrToPlutusScript
       (script, lang) <- note (MissingScript pointer ptrToPlutusScript) mscript
-      let inf = info ! lang
+      let (infoLB, infoUB) = bounds info
+      inf <- if infoLB <= lang && lang <= infoUB then Right (info ! lang) else Left (RedeemerNotNeeded pointer sh)
       let (l1, l2) = bounds costModels
-      cm <- if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModel lang)
+      cm <- if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModelInLedgerState lang)
       args <- case sp of
         Spending txin -> do
           txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
