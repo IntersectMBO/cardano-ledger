@@ -40,7 +40,7 @@ import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Data.Array (Array, array, bounds, (!))
+import Data.Array (Array, bounds, (!))
 import Data.ByteString.Short as SBS (ShortByteString)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -63,7 +63,7 @@ data ScriptFailure c
     RedeemerPointsToUnknowScriptHash RdmrPtr
   | -- | Missing redeemer. The first parameter is the redeemer pointer which cannot be resolved,
     -- and the second parameter is the map of pointers which can be resolved.
-    MissingScript RdmrPtr (Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language), (ScriptHash c)))
+    MissingScript RdmrPtr (Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language), ScriptHash c))
   | -- | Missing datum.
     MissingDatum (DataHash c)
   | -- | Plutus V1 evaluation error.
@@ -123,15 +123,14 @@ evaluateTransactionExecutionUnits ::
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
   Either (TranslationError (Crypto era)) (RedeemerReport (Crypto era))
-evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
-  let getInfo :: Language -> Either (TranslationError (Crypto era)) (Language, VersionedTxInfo)
-      getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
-   in do
-        ctx <- mapM getInfo languagesUsed
-        pure $
-          Map.mapWithKey
-            (findAndCount pp (array (minBound :: Language, maxBound) ctx))
-            (unRedeemers $ getField @"txrdmrs" ws)
+evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
+  let getInfo :: Language -> Either (TranslationError (Crypto era)) VersionedTxInfo
+      getInfo lang = txInfo pp lang ei sysS utxo tx
+  ctx <- sequence $ Map.fromSet getInfo languagesUsed
+  pure $
+    Map.mapWithKey
+      (findAndCount pp ctx)
+      (unRedeemers $ getField @"txrdmrs" ws)
   where
     txb = getField @"body" tx
     ws = getField @"wits" tx
@@ -139,7 +138,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
     scriptsAvailable = txscripts utxo tx
     needed = scriptsNeeded utxo tx
     neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed
-    languagesUsed = Set.toList $ Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
+    languagesUsed = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
 
     ptrToPlutusScript = Map.fromList $ do
       (sp, sh) <- needed
@@ -156,17 +155,21 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
 
     findAndCount ::
       Core.PParams era ->
-      Array Language VersionedTxInfo ->
+      Map Language VersionedTxInfo ->
       RdmrPtr ->
       (Data era, ExUnits) ->
       Either (ScriptFailure (Crypto era)) ExUnits
     findAndCount pparams info pointer (rdmr, _) = do
-      (sp, mscript, sh) <- note (RedeemerPointsToUnknowScriptHash pointer) $ Map.lookup pointer ptrToPlutusScript
+      (sp, mscript, sh) <-
+        note (RedeemerPointsToUnknowScriptHash pointer) $
+          Map.lookup pointer ptrToPlutusScript
       (script, lang) <- note (MissingScript pointer ptrToPlutusScript) mscript
-      let (infoLB, infoUB) = bounds info
-      inf <- if infoLB <= lang && lang <= infoUB then Right (info ! lang) else Left (RedeemerNotNeeded pointer sh)
+      inf <- note (RedeemerNotNeeded pointer sh) $ Map.lookup lang info
       let (l1, l2) = bounds costModels
-      cm <- if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModelInLedgerState lang)
+      cm <-
+        if l1 <= lang && lang <= l2
+          then Right (costModels ! lang)
+          else Left (NoCostModelInLedgerState lang)
       args <- case sp of
         Spending txin -> do
           txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
