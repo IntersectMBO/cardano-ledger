@@ -22,7 +22,7 @@ import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Script (PlutusScript))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..))
+import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..), TxOutSource (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
 import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
 import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
@@ -1117,7 +1117,15 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ inlineDatumV1Tx pf)
-              (Left [fromUtxos @era (CollectErrors [BadTranslation InlineDatumsNotSupported])]),
+              ( Left
+                  [ fromUtxos @era
+                      ( CollectErrors
+                          [ BadTranslation $
+                              InlineDatumsNotSupported (TxOutFromInput inlineDatumInputV1)
+                          ]
+                      )
+                  ]
+              ),
           testCase "min-utxo value with output too large" $
             testU
               pf

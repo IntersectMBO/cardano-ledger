@@ -114,7 +114,7 @@ data CollectError crypto
   = NoRedeemer !(ScriptPurpose crypto)
   | NoWitness !(ScriptHash crypto)
   | NoCostModel !Language
-  | BadTranslation !TranslationError
+  | BadTranslation !(TranslationError crypto)
   deriving (Eq, Show, Generic, NoThunks)
 
 instance (CC.Crypto crypto) => ToCBOR (CollectError crypto) where

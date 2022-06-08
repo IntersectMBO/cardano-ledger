@@ -5,6 +5,7 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -34,17 +35,24 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), serialize')
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import Cardano.Ledger.Alonzo.PlutusScriptApi
-  ( CollectError,
+  ( CollectError (..),
     collectTwoPhaseScriptInputs,
     evalScripts,
   )
-import Cardano.Ledger.Alonzo.Scripts (Script)
+import Cardano.Ledger.Alonzo.Scripts (CostModels, Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), PlutusDebug, ScriptFailure (..), ScriptResult (..))
+import Cardano.Ledger.Alonzo.TxInfo
+  ( ExtendedUTxO (..),
+    PlutusDebug,
+    ScriptFailure (..),
+    ScriptResult (..),
+  )
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.BaseTypes
-  ( ShelleyBase,
+  ( Globals,
+    ProtVer,
+    ShelleyBase,
     epochInfo,
     strictMaybeToMaybe,
     systemStart,
@@ -53,15 +61,24 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
 import Cardano.Ledger.Mary.Value (Value)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), lblStatic)
-import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyRefunds, updateStakeDistribution)
+import Cardano.Ledger.Shelley.LedgerState
+  ( PPUPState (..),
+    UTxOState (..),
+    keyRefunds,
+    updateStakeDistribution,
+  )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
+import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, totalDeposits)
-import Cardano.Ledger.Val as Val
+import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval)
+import Cardano.Ledger.TxIn (TxIn)
+import Cardano.Ledger.Val as Val (Val (coin, (<->)))
 import Cardano.Slotting.EpochInfo.Extend (unsafeLinearExtendEpochInfo)
-import Control.Monad.Trans.Reader (asks)
+import Cardano.Slotting.Slot (SlotNo)
+import Control.Monad.Trans.Reader (ReaderT, asks)
 import Control.State.Transition.Extended
 import Data.ByteString as BS (ByteString)
 import qualified Data.ByteString.Base64 as B64
@@ -72,6 +89,8 @@ import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
+import Data.Sequence.Strict (StrictSeq)
+import Data.Set (Set)
 import Data.Text (Text)
 import Debug.Trace (traceEvent)
 import GHC.Generics (Generic)
@@ -153,6 +172,45 @@ utxosTransition =
 
 -- ===================================================================
 
+scriptsTransition ::
+  ( STS sts,
+    Monad m,
+    ExtendedUTxO era,
+    ValidateScript era,
+    HasField "_costmdls" (Core.PParams era) CostModels,
+    HasField "_protocolVersion" (Core.PParams era) ProtVer,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "vldt" (Core.TxBody era) ValidityInterval,
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "wits" (Core.Tx era) (Alonzo.TxWitness era),
+    BaseM sts ~ ReaderT Globals m,
+    PredicateFailure sts ~ UtxosPredicateFailure era,
+    Core.Script era ~ Script era
+  ) =>
+  SlotNo ->
+  Core.PParams era ->
+  Core.Tx era ->
+  UTxO era ->
+  (ScriptResult -> Rule sts ctx ()) ->
+  Rule sts ctx ()
+scriptsTransition slot pp tx utxo action = do
+  sysSt <- liftSTS $ asks systemStart
+  ei <- liftSTS $ asks epochInfo
+  case collectTwoPhaseScriptInputs (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
+    Right sLst ->
+      when2Phase $ action $ evalScripts (getField @"_protocolVersion" pp) tx sLst
+    Left info
+      | alonzoFailures <- filter isNotBadTranslation info,
+        not (null alonzoFailures) ->
+          failBecause (CollectErrors alonzoFailures)
+      | otherwise -> pure ()
+  where
+    -- BadTranslation was introduced in Babbage, thus we need to filter those failures out.
+    isNotBadTranslation = \case
+      BadTranslation {} -> False
+      _ -> True
+
 scriptsValidateTransition ::
   forall era.
   ( ValidateScript era,
@@ -173,21 +231,16 @@ scriptsValidateTransition = do
       txcerts = toList $ getField @"certs" txb
       depositChange =
         totalDeposits pp (`Map.notMember` poolParams) txcerts <-> refunded
-  sysSt <- liftSTS $ asks systemStart
-  ei <- liftSTS $ asks epochInfo
 
   () <- pure $! traceEvent validBegin ()
 
-  case collectTwoPhaseScriptInputs (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
-    Right sLst ->
-      when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
-        Fails _ps fs ->
-          failBecause $
-            ValidationTagMismatch
-              (getField @"isValid" tx)
-              (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
-        Passes ps -> tellEvent (SuccessfulPlutusScriptsEvent ps)
-    Left info -> failBecause (CollectErrors info)
+  scriptsTransition slot pp tx utxo $ \case
+    Fails _ps fs ->
+      failBecause $
+        ValidationTagMismatch
+          (getField @"isValid" tx)
+          (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
+    Passes ps -> tellEvent (SuccessfulPlutusScriptsEvent ps)
 
   () <- pure $! traceEvent validEnd ()
 
@@ -209,22 +262,16 @@ scriptsNotValidateTransition ::
 scriptsNotValidateTransition = do
   TRC (UtxoEnv slot pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   let txb = body tx
-  sysSt <- liftSTS $ asks systemStart
-  ei <- liftSTS $ asks epochInfo
 
   let !_ = traceEvent invalidBegin ()
 
-  case collectTwoPhaseScriptInputs (unsafeLinearExtendEpochInfo slot ei) sysSt pp tx utxo of
-    Right sLst ->
-      when2Phase $
-        case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
-          Passes _ps ->
-            failBecause $
-              ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
-          Fails ps fs -> do
-            tellEvent (SuccessfulPlutusScriptsEvent ps)
-            tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
-    Left info -> failBecause (CollectErrors info)
+  scriptsTransition slot pp tx utxo $ \case
+    Passes _ps ->
+      failBecause $
+        ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+    Fails ps fs -> do
+      tellEvent (SuccessfulPlutusScriptsEvent ps)
+      tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
 
   let !_ = traceEvent invalidEnd ()
 

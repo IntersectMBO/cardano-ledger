@@ -22,9 +22,19 @@ import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
 import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
 import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (FailureDescription (..), TagMismatchDescription (..), UtxosPredicateFailure (..))
+import Cardano.Ledger.Alonzo.Rules.Utxos
+  ( FailureDescription (..),
+    TagMismatchDescription (..),
+    UtxosPredicateFailure (..),
+  )
 import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script (..), mkCostModel)
+import Cardano.Ledger.Alonzo.Scripts
+  ( CostModel,
+    CostModels (..),
+    ExUnits (..),
+    Script (..),
+    mkCostModel,
+  )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx
   ( IsValid (..),
@@ -361,7 +371,7 @@ redeemerExample1 :: Data era
 redeemerExample1 = Data (Plutus.I 42)
 
 txDatsExample1 :: Era era => TxDats era
-txDatsExample1 = TxDats $ keyBy hashData $ [datumExample1]
+txDatsExample1 = TxDats $ keyBy hashData [datumExample1]
 
 alwaysSucceedsOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 alwaysSucceedsOutput pf =
@@ -1654,7 +1664,7 @@ getTxInfo ::
   SystemStart ->
   UTxO era ->
   Core.Tx era ->
-  Either TranslationError VersionedTxInfo
+  Either (TranslationError (Crypto era)) VersionedTxInfo
 getTxInfo (Alonzo _) = txInfo
 getTxInfo (Babbage _) = txInfo
 getTxInfo era = error ("getTxInfo Not defined in era " ++ show era)

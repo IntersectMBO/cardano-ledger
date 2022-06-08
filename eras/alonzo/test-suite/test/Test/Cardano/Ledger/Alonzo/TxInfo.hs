@@ -54,11 +54,6 @@ byronInput = mkTxInPartial genesisId 0
 shelleyInput :: TxIn StandardCrypto
 shelleyInput = mkTxInPartial genesisId 1
 
--- This input is only unknown in the sense
--- that it is not present in the UTxO created below.
-unknownInput :: TxIn StandardCrypto
-unknownInput = mkTxInPartial genesisId 2
-
 byronOutput :: TxOut A
 byronOutput = TxOut byronAddr (Val.inject $ Coin 1) SNothing
 
@@ -96,7 +91,7 @@ silentlyIgnore tx =
   where
     ctx = txInfo def PlutusV1 ei ss utxo tx
 
-expectTranslationError :: Language -> ValidatedTx A -> TranslationError -> Assertion
+expectTranslationError :: Language -> ValidatedTx A -> TranslationError StandardCrypto -> Assertion
 expectTranslationError lang tx expected =
   case ctx of
     Right _ -> error "This translation was expected to fail, but it succeeded."
@@ -113,9 +108,7 @@ txInfoTests =
         [ testCase "silently ignore byron txout" $
             silentlyIgnore (txEx shelleyInput byronOutput),
           testCase "silently ignore byron txin" $
-            silentlyIgnore (txEx byronInput shelleyOutput),
-          testCase "silently ignore unknown txin (logic error)" $
-            silentlyIgnore (txEx unknownInput shelleyOutput)
+            silentlyIgnore (txEx byronInput shelleyOutput)
         ],
       testGroup
         "Plutus V2"
@@ -123,6 +116,6 @@ txInfoTests =
             expectTranslationError
               PlutusV2
               (txEx shelleyInput shelleyOutput)
-              LanguageNotSupported
+              (LanguageNotSupported PlutusV2)
         ]
     ]

@@ -41,7 +41,6 @@ module Cardano.Ledger.Babbage.TxBody
         txnetworkid
       ),
     Datum (..),
-    datumDataHash,
     spendInputs',
     collateralInputs',
     referenceInputs',
@@ -87,6 +86,7 @@ import Cardano.Ledger.Alonzo.Data
     BinaryData,
     Data,
     DataHash,
+    Datum (..),
     binaryDataToData,
   )
 import Cardano.Ledger.Alonzo.TxBody
@@ -272,31 +272,6 @@ instance
   show = show . viewTxOut
 
 deriving via InspectHeapNamed "TxOut" (TxOut era) instance NoThunks (TxOut era)
-
-data Datum era
-  = NoDatum
-  | DatumHash !(DataHash (Crypto era))
-  | Datum !(BinaryData era)
-  deriving (Eq, Ord, Show)
-
-instance Era era => ToCBOR (Datum era) where
-  toCBOR d = encode $ case d of
-    DatumHash dh -> Sum DatumHash 0 !> To dh
-    Datum d' -> Sum Datum 1 !> To d'
-    NoDatum -> OmitC NoDatum
-
-instance Era era => FromCBOR (Datum era) where
-  fromCBOR = decode (Summands "Datum" decodeDatum)
-    where
-      decodeDatum 0 = SumD DatumHash <! From
-      decodeDatum 1 = SumD Datum <! From
-      decodeDatum k = Invalid k
-
-datumDataHash :: Datum era -> StrictMaybe (DataHash (Crypto era))
-datumDataHash = \case
-  NoDatum -> SNothing
-  (DatumHash dh) -> SJust dh
-  (Datum _) -> SNothing
 
 pattern TxOut ::
   forall era.
@@ -1041,9 +1016,6 @@ instance (Era era, Core.Value era ~ val, Compactible val) => HasField "value" (T
 
 instance (Era era, c ~ Crypto era) => HasField "datahash" (TxOut era) (StrictMaybe (DataHash c)) where
   getField = maybeToStrictMaybe . txOutDataHash
-
-instance (Era era) => HasField "datum" (TxOut era) (StrictMaybe (Data era)) where
-  getField = maybeToStrictMaybe . txOutData
 
 instance (Era era, s ~ Core.Script era) => HasField "referenceScript" (TxOut era) (StrictMaybe s) where
   getField = maybeToStrictMaybe . txOutScript

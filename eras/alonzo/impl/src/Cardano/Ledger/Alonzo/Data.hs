@@ -29,6 +29,8 @@ module Cardano.Ledger.Alonzo.Data
     binaryDataToData,
     dataToBinaryData,
     decodeBinaryData,
+    Datum (..),
+    datumDataHash,
     -- $
     AuxiliaryData (AuxiliaryData, AuxiliaryData', scripts, txMD),
     AuxiliaryDataHash (..),
@@ -179,6 +181,37 @@ dataHashSize (SJust _) = 10
 instance (CC.Crypto c) => HeapWords (StrictMaybe (DataHash c)) where
   heapWords SNothing = heapWords0
   heapWords (SJust a) = heapWords1 a
+
+-- ============================================================================
+-- Datum
+
+-- | Datum can be described by a either a data hash or binary data, but not
+-- both. It can also be neither one of them.
+data Datum era
+  = NoDatum
+  | DatumHash !(DataHash (Crypto era))
+  | Datum !(BinaryData era)
+  deriving (Eq, Ord, Show)
+
+instance Era era => ToCBOR (Datum era) where
+  toCBOR d = encode $ case d of
+    DatumHash dh -> Sum DatumHash 0 !> To dh
+    Datum d' -> Sum Datum 1 !> To d'
+    NoDatum -> OmitC NoDatum
+
+instance Era era => FromCBOR (Datum era) where
+  fromCBOR = decode (Summands "Datum" decodeDatum)
+    where
+      decodeDatum 0 = SumD DatumHash <! From
+      decodeDatum 1 = SumD Datum <! From
+      decodeDatum k = Invalid k
+
+-- | Get the Hash of the datum.
+datumDataHash :: Era era => Datum era -> StrictMaybe (DataHash (Crypto era))
+datumDataHash = \case
+  NoDatum -> SNothing
+  DatumHash dh -> SJust dh
+  Datum bd -> SJust (hashBinaryData bd)
 
 -- =============================================================================
 -- Version without serialized bytes

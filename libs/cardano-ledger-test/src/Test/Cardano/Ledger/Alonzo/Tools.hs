@@ -1,4 +1,3 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
@@ -12,18 +11,15 @@ import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script)
-import Cardano.Ledger.Alonzo.Tools (BasicFailure (..), ScriptFailure, evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script, Tag (..))
+import Cardano.Ledger.Alonzo.Tools (ScriptFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
-import Cardano.Ledger.Babbage.Tx
-  ( Data,
-    DataHash,
-  )
-import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase, StrictMaybe)
+import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Crypto (DSIGN, HASH)
 import qualified Cardano.Ledger.Crypto as Ledger.Crypto
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
@@ -49,7 +45,14 @@ import GHC.Records (HasField (getField))
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
-import Test.Cardano.Ledger.Examples.TwoPhaseValidation (datumExample1, initUTxO, someKeys, testSystemStart, validatingBody, validatingRedeemersEx1)
+import Test.Cardano.Ledger.Examples.TwoPhaseValidation
+  ( datumExample1,
+    initUTxO,
+    redeemerExample1,
+    someKeys,
+    testSystemStart,
+    validatingBody,
+  )
 import Test.Cardano.Ledger.Generic.Fields (PParamsField (..), TxField (..), WitnessesField (..))
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Alonzo, Babbage))
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
@@ -61,7 +64,8 @@ import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProp
 
 tests :: TestTree
 tests =
-  testGroup "ExUnit tools" $
+  testGroup
+    "ExUnit tools"
     [ testProperty "Plutus ExUnit translation round-trip" exUnitsTranslationRoundTrip,
       testGroup
         "Alonzo"
@@ -79,7 +83,7 @@ tests =
 exUnitsTranslationRoundTrip :: Gen Property
 exUnitsTranslationRoundTrip = do
   e <- arbitrary
-  let result = (exBudgetToExUnits . transExUnits) e
+  let result = exBudgetToExUnits (transExUnits e)
   pure $
     counterexample
       ( "Before: " <> show e
@@ -102,8 +106,6 @@ testExUnitCalculation ::
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
@@ -147,8 +149,6 @@ exampleExUnitCalc ::
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
@@ -164,7 +164,7 @@ exampleExUnitCalc ::
 exampleExUnitCalc proof =
   testExUnitCalculation
     proof
-    (exampleTx proof)
+    (exampleTx proof (RdmrPtr Spend 0))
     (ustate proof)
     (uenv proof)
     exampleEpochInfo
@@ -175,6 +175,7 @@ exampleExUnitCalc proof =
 exampleInvalidExUnitCalc ::
   forall era.
   ( ExtendedUTxO era,
+    PostShelley era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
@@ -182,39 +183,48 @@ exampleInvalidExUnitCalc ::
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     Core.Script era ~ Script era,
     Signable
       (Ledger.Crypto.DSIGN (Crypto era))
       ( Crypto.Hash
           (Ledger.Crypto.HASH (Crypto era))
           EraIndependentTxBody
-      ),
-    Scriptic era
+      )
   ) =>
   Proof era ->
   IO ()
-exampleInvalidExUnitCalc proof =
-  case evaluateTransactionExecutionUnits @era
-    (pparams proof)
-    (exampleTx proof)
-    (UTxO mempty)
-    exampleEpochInfo
-    testSystemStart
-    costmodels of
-    Left (UnknownTxIns _) -> pure ()
-    Left (BadTranslation _) ->
-      assertFailure "evaluateTransactionExecutionUnits should not fail from BadTranslation"
-    Right _ -> assertFailure "evaluateTransactionExecutionUnits should have failed"
+exampleInvalidExUnitCalc proof = do
+  let result =
+        evaluateTransactionExecutionUnits @era
+          (pparams proof)
+          (exampleTx proof (RdmrPtr Spend 1))
+          (initUTxO proof)
+          exampleEpochInfo
+          testSystemStart
+          costmodels
+  case result of
+    Left err ->
+      assertFailure $
+        "evaluateTransactionExecutionUnits should not have failed, but it did with: " ++ show err
+    Right report ->
+      case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
+        [] ->
+          assertFailure "evaluateTransactionExecutionUnits should have produced a failing report"
+        [(_, failure)]
+          | failure == RedeemerNotNeeded (RdmrPtr Spend 1) -> pure ()
+        failures ->
+          assertFailure $
+            "evaluateTransactionExecutionUnits produce failing scripts with unexpected errors: "
+              ++ show failures
 
 exampleTx ::
   ( Scriptic era,
-    Signable (Ledger.Crypto.DSIGN (Crypto era)) (Crypto.Hash (Ledger.Crypto.HASH (Crypto era)) EraIndependentTxBody)
+    Signable (DSIGN (Crypto era)) (Crypto.Hash (HASH (Crypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
+  RdmrPtr ->
   Core.Tx era
-exampleTx pf =
+exampleTx pf ptr =
   newTx
     pf
     [ Body (validatingBody pf),
@@ -222,7 +232,9 @@ exampleTx pf =
         [ AddrWits' [makeWitnessVKey (hashAnnotated (validatingBody pf)) (someKeys pf)],
           ScriptWits' [always 3 pf],
           DataWits' [datumExample1],
-          RdmrWits validatingRedeemersEx1
+          RdmrWits $
+            Redeemers $
+              Map.singleton ptr (redeemerExample1, ExUnits 5000 5000)
         ]
     ]
 
@@ -253,8 +265,6 @@ updateTxExUnits ::
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "datum" (Core.TxOut era) (StrictMaybe (Data era)),
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
