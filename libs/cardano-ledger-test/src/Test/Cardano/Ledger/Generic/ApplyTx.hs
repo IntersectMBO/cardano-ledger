@@ -39,7 +39,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Debug.Trace
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (collateralOutputTx, initUTxO)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
@@ -77,9 +76,9 @@ applyTx proof count slot model tx = ans
       Just False -> List.foldl' (applyTxFail proof count nextTxIx) epochAccurateModel fields
 
 epochBoundary :: Int -> SlotNo -> EpochNo -> EpochNo -> Model era -> Model era
-epochBoundary count (SlotNo n) transactionEpoch modelEpoch model =
+epochBoundary _count (SlotNo _n) transactionEpoch modelEpoch model =
   if transactionEpoch > modelEpoch
-    then model {mEL = trace ("EPOCH count=" ++ show count ++ " slot=" ++ show n ++ " epoch=" ++ show transactionEpoch) transactionEpoch}
+    then model {mEL = transactionEpoch}
     else model
 
 applyTxSimple :: Proof era -> Int -> Model era -> TxField era -> Model era

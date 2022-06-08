@@ -685,7 +685,7 @@ genPoolParams _poolId = do
   _poolPledge <- lift genPositiveVal
   _poolCost <- lift genPositiveVal
   _poolMargin <- lift arbitrary
-  _poolRAcnt <- RewardAcnt Testnet <$> genCredential Rewrd
+  _poolRAcnt <- RewardAcnt Testnet <$> genFreshRegCred Rewrd
   let _poolOwners = mempty
   let _poolRelays = mempty
   let _poolMD = SNothing
@@ -892,12 +892,12 @@ genPlutusScript proof tag = do
     ts {gsPlutusScripts = Map.insert (scriptHash, tag) (IsValid isValid, corescript) gsPlutusScripts}
   pure scriptHash
 
-genFreshRegCred :: forall era. Reflect era => GenRS era (Credential 'Staking (Crypto era))
-genFreshRegCred = do
+genFreshRegCred :: forall era. Reflect era => Tag -> GenRS era (Credential 'Staking (Crypto era))
+genFreshRegCred tag = do
   old <- gets (Map.keysSet . gsInitialRewards)
   avoid <- gets gsAvoidCred
   rewards <- gets $ Map.keysSet . mRewards . gsModel
-  cred <- genFreshCredential 100 Cert $ old <> avoid <> rewards
+  cred <- genFreshCredential 100 tag $ old <> avoid <> rewards
   modify (\st -> st {gsAvoidCred = Set.insert cred (gsAvoidCred st)})
   pure cred
 

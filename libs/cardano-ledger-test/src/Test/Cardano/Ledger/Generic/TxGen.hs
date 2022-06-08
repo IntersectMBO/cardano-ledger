@@ -542,10 +542,10 @@ genDCert proof slot = do
       ]
   return res
   where
-    genRegKey = genFreshRegCred @era
+    genRegKey = genFreshRegCred @era Cert
     genDeRegKey = genCredential Cert
     genDelegation = do
-      rewardAccount <- genFreshRegCred
+      rewardAccount <- genFreshRegCred Cert
       (kh, _) <- genPool
       pure $ Delegation {_delegator = rewardAccount, _delegatee = kh}
     genFreshPool = do
@@ -749,11 +749,14 @@ getDCertCredential = \case
   DCertGenesis _g -> Nothing
   DCertMir _m -> Nothing
 
-genWithdrawals :: Reflect era => GenRS era (Wdrl (Crypto era), RewardAccounts (Crypto era))
-genWithdrawals = do
-  let networkId = Testnet
-  newRewards <- genRewards
-  pure (Wdrl $ Map.mapKeys (RewardAcnt networkId) newRewards, newRewards)
+genWithdrawals :: Reflect era => SlotNo -> GenRS era (Wdrl (Crypto era), RewardAccounts (Crypto era))
+genWithdrawals _slot =
+  if True -- epochFromSlotNo slot == EpochNo 0
+    then do
+      let networkId = Testnet
+      newRewards <- genRewards
+      pure (Wdrl $ Map.mapKeys (RewardAcnt networkId) newRewards, newRewards)
+    else pure (Wdrl Map.empty, Map.empty)
 
 timeToLive :: ValidityInterval -> SlotNo
 timeToLive (ValidityInterval _ (SJust n)) = n
@@ -818,7 +821,7 @@ genValidatedTxAndInfo proof slot = do
 
   -- generate Withdrawals before DCerts, as Rewards are populated in the Model here,
   -- and we need to avoid certain DCerts if they conflict with existing Rewards
-  (wdrls@(Wdrl wdrlMap), newRewards) <- genWithdrawals
+  (wdrls@(Wdrl wdrlMap), newRewards) <- genWithdrawals slot
   let withdrawalAmount = F.fold wdrlMap
 
   rewardsWithdrawalTxOut <-
