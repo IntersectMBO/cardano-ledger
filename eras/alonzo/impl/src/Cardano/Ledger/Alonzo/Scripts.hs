@@ -203,7 +203,8 @@ pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `o
 -- cost model parameters (ie the `Map` `Text` `Integer`) and that
 -- this type uses the smart constructor `mkCostModel`
 -- to hide the evaluation context.
-data CostModel = CostModel !Language (Map Text Integer) PV1.EvaluationContext
+data CostModel = CostModel !Language !(Map Text Integer) !PV1.EvaluationContext
+  deriving (Generic)
 
 -- | Note that this Eq instance ignores the evaluation context, which is
 -- entirely dependent on the cost model parameters and is guarded by the
@@ -233,12 +234,16 @@ instance SafeToHash CostModel where
 
 instance HashWithCrypto CostModel CostModel
 
+-- | It would be preferable to have a proper NoThunks instance for
+-- EvaluationContext in the Plutus repository, but we can use this
+-- workaround in the meantime.
+-- See https://github.com/input-output-hk/plutus/issues/4687
 deriving via
   InspectHeapNamed "PV1.EvaluationContext" PV1.EvaluationContext
   instance
     NoThunks PV1.EvaluationContext
 
-deriving via InspectHeapNamed "CostModel" CostModel instance NoThunks CostModel
+instance NoThunks CostModel
 
 instance NFData CostModel where
   rnf (CostModel lang cm ectx) = lang `deepseq` cm `deepseq` rnf ectx
