@@ -27,7 +27,6 @@ module Test.Cardano.Ledger.Generic.TxGen
   )
 where
 
--- import Debug.Trace
 import Cardano.Ledger.Alonzo.Data (Data, dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Scripts
@@ -90,7 +89,6 @@ import Data.Ratio ((%))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Word (Word16)
--- import GHC.Records (getField)
 import GHC.Stack
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -975,11 +973,6 @@ genValidatedTxAndInfo proof slot = do
             AuxData' []
           ]
   count <- gets (mCount . gsModel)
-
-  -- Apply all certificates to the model if the transaction is valid
-  -- case isValid of
-  --  IsValid True -> forM_ dcerts $ \cert -> modifyModel $ \m -> applyCert proof m cert
-  --  _ -> return ()
 
   -- Add the new objects freshly generated for this Tx to the set of Initial objects for a Trace
   modify

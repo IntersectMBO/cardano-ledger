@@ -78,7 +78,6 @@ import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import qualified Data.UMap as UM
 import Data.Word (Word8)
-import Debug.Trace
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
@@ -279,7 +278,7 @@ delegationTransition = do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom (rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
       let rewardCoin = UM.lookup hk (rewards ds)
-      rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG (trace ("NonZeroDeRegKey " ++ show rewardCoin ++ " " ++ show hk) rewardCoin)
+      rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
       pure $
         let u0 = _unified ds

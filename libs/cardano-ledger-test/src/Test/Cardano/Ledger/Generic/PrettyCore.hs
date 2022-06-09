@@ -1160,7 +1160,6 @@ pcPoolParams x =
   ppRecord
     "PoolParams"
     [ ("Id", keyHashSummary (_poolId x)),
-      -- ("Vrf", trim (ppHash (_poolVrf x))),
       ("reward accnt", pcCredential (getRwdCred (_poolRAcnt x)))
     ]
 

@@ -58,7 +58,6 @@ module Test.Cardano.Ledger.Generic.GenState
   )
 where
 
--- import Debug.Trace
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
 import Cardano.Ledger.Alonzo.Scripts hiding (Mint)

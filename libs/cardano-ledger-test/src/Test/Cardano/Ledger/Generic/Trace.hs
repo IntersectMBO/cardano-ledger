@@ -46,12 +46,6 @@ import Cardano.Ledger.Pretty
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.AdaPots (totalAdaPotsES)
 import Cardano.Ledger.Shelley.Constraints (UsesValue)
--- import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (..))
-
--- import Debug.Trace
-
--- pcIndividualPoolStake,
-
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -132,17 +126,13 @@ import Test.Cardano.Ledger.Generic.PrettyCore
     pcTxIn,
     scriptSummary,
   )
--- import Test.Cardano.Ledger.Generic.PrettyCore (pcCoin, pcTx, pcTxBody, pcTxIn)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
--- import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.QuickCheck
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
-
--- import Cardano.Ledger.Pretty(ppSnapShot)
 
 -- ===========================================
 
@@ -528,11 +518,14 @@ testTraces n =
       chainTest (Shelley Mock) n def
     ]
 
+-- ===========================================================
+-- Debugging tools for replaying failures
+
 main :: IO ()
 main =
   let proof = Babbage Mock
-      numTx = 150
-      gensize = def {blocksizeMax = 4, slotDelta = (3, 7)}
+      numTx = 250
+      gensize = def {blocksizeMax = 4, slotDelta = (5, 10)}
    in defaultMain $
         testProperty (show proof ++ " era. Trace length = " ++ show numTx) $
           traceProp proof numTx gensize (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
@@ -571,5 +564,4 @@ go = do
   let mcst = initialMockChainState proof gstate
   let del = gsInitialPoolParams gstate
   print (ppMockChainState mcst)
-  -- let SnapShots s1 _ _ _  = (esSnapshots . nesEs . mcsNes) mcst
   print (ppMap pcKeyHash pcPoolParams del)
