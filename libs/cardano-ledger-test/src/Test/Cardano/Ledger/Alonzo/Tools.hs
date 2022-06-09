@@ -12,7 +12,7 @@ import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
 import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script, Tag (..))
-import Cardano.Ledger.Alonzo.Tools (ScriptFailure (..), evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Alonzo.Tools (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
@@ -59,7 +59,7 @@ import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic, always)
 import Test.Cardano.Ledger.Generic.Updaters
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase)
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (assertFailure, testCase)
+import Test.Tasty.HUnit (assertFailure, testCase, (@=?))
 import Test.Tasty.QuickCheck (Gen, Property, arbitrary, counterexample, testProperty)
 
 tests :: TestTree
@@ -210,8 +210,9 @@ exampleInvalidExUnitCalc proof = do
       case [(rdmrPtr, failure) | (rdmrPtr, Left failure) <- Map.toList report] of
         [] ->
           assertFailure "evaluateTransactionExecutionUnits should have produced a failing report"
-        [(_, failure)]
-          | failure == RedeemerNotNeeded (RdmrPtr Spend 1) -> pure ()
+        [(_, failure)] ->
+          RedeemerPointsToUnknownScriptHash (RdmrPtr Spend 1)
+            @=? failure
         failures ->
           assertFailure $
             "evaluateTransactionExecutionUnits produce failing scripts with unexpected errors: "
@@ -283,7 +284,7 @@ updateTxExUnits proof tx utxo ei ss costmdls err =
   let res = evaluateTransactionExecutionUnits (pparams proof) tx utxo ei ss costmdls
    in case res of
         Left e -> err (show e)
-        Right (rdmrs :: Map RdmrPtr (Either (ScriptFailure (Crypto era)) ExUnits)) ->
+        Right (rdmrs :: Map RdmrPtr (Either (TransactionScriptFailure (Crypto era)) ExUnits)) ->
           replaceRdmrs proof tx <$> traverse (failLeft err) rdmrs
 
 replaceRdmrs ::

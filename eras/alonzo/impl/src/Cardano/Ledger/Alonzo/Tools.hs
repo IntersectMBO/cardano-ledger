@@ -6,13 +6,13 @@
 
 module Cardano.Ledger.Alonzo.Tools
   ( evaluateTransactionExecutionUnits,
-    ScriptFailure (..),
+    TransactionScriptFailure (..),
   )
 where
 
 import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
@@ -34,12 +34,13 @@ import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers, TxDats, unRedee
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
-import Data.Array (Array, array, bounds, (!))
+import Data.Array (Array, bounds, (!))
 import Data.ByteString.Short as SBS (ShortByteString)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -53,43 +54,40 @@ import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V2.Ledger.Api as PV2
 
 -- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
-data ScriptFailure c
+data TransactionScriptFailure c
   = -- | A redeemer was supplied that does not point to a
     --  valid plutus evaluation site in the given transaction.
-    RedeemerNotNeeded RdmrPtr
+    RedeemerNotNeeded !RdmrPtr !(ScriptHash c)
+  | -- | A redeemer was supplied which points to a script hash which
+    -- we cannot connect to a Plutus script.
+    RedeemerPointsToUnknownScriptHash !RdmrPtr
   | -- | Missing redeemer. The first parameter is the redeemer pointer which cannot be resolved,
     -- and the second parameter is the map of pointers which can be resolved.
-    MissingScript RdmrPtr (Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language)))
+    MissingScript !RdmrPtr !(Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language), ScriptHash c))
   | -- | Missing datum.
-    MissingDatum (DataHash c)
+    MissingDatum !(DataHash c)
   | -- | Plutus V1 evaluation error.
-    ValidationFailedV1 PV1.EvaluationError [Text]
+    ValidationFailedV1 !PV1.EvaluationError ![Text]
   | -- | Plutus V2 evaluation error.
-    ValidationFailedV2 PV2.EvaluationError [Text]
+    ValidationFailedV2 !PV2.EvaluationError ![Text]
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
-    UnknownTxIn (TxIn c)
+    UnknownTxIn !(TxIn c)
   | -- | A redeemer points to a transaction input which is not
     --  plutus locked.
-    InvalidTxIn (TxIn c)
+    InvalidTxIn !(TxIn c)
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
-    IncompatibleBudget PV1.ExBudget
-  | -- | There was no cost model for a given version of Plutus
-    NoCostModel Language
+    IncompatibleBudget !PV1.ExBudget
+  | -- | There was no cost model for a given version of Plutus in the ledger state
+    NoCostModelInLedgerState !Language
   deriving (Show, Eq)
 
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
 note e Nothing = Left e
 
-type RedeemerReport c = Map RdmrPtr (Either (ScriptFailure c) ExUnits)
-
-languagesUsed :: [Script era] -> Set Language
-languagesUsed scripts = Set.fromList $ mapMaybe getLanguage scripts
-  where
-    getLanguage (TimelockScript _) = Nothing
-    getLanguage (PlutusScript lang _) = Just lang
+type RedeemerReport c = Map RdmrPtr (Either (TransactionScriptFailure c) ExUnits)
 
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
@@ -125,47 +123,53 @@ evaluateTransactionExecutionUnits ::
   --  Otherwise, we return a 'TranslationError' manifesting from failed attempts
   --  to construct a valid execution context for the given transaction.
   Either (TranslationError (Crypto era)) (RedeemerReport (Crypto era))
-evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels =
-  let getInfo :: Language -> Either (TranslationError (Crypto era)) (Language, VersionedTxInfo)
-      getInfo lang = (,) lang <$> txInfo pp lang ei sysS utxo tx
-   in do
-        ctx <- mapM getInfo (Set.toList $ languagesUsed (Map.elems scripts))
-        pure $
-          Map.mapWithKey
-            (findAndCount pp (array (PlutusV1, PlutusV2) ctx))
-            (unRedeemers $ getField @"txrdmrs" ws)
+evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
+  let getInfo :: Language -> Either (TranslationError (Crypto era)) VersionedTxInfo
+      getInfo lang = txInfo pp lang ei sysS utxo tx
+  ctx <- sequence $ Map.fromSet getInfo languagesUsed
+  pure $
+    Map.mapWithKey
+      (findAndCount pp ctx)
+      (unRedeemers $ getField @"txrdmrs" ws)
   where
     txb = getField @"body" tx
     ws = getField @"wits" tx
     dats = unTxDats $ getField @"txdats" ws
-    scripts = txscripts utxo tx
+    scriptsAvailable = txscripts utxo tx
     needed = scriptsNeeded utxo tx
+    neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed
+    languagesUsed = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
 
     ptrToPlutusScript = Map.fromList $ do
       (sp, sh) <- needed
-      msb <- case Map.lookup sh scripts of
+      msb <- case Map.lookup sh scriptsAvailable of
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
-        Just (PlutusScript v bytes) -> pure $ Just (bytes, v)
+        Just (PlutusScript lang bytes) -> pure $ Just (bytes, lang)
       pointer <- case rdptr txb sp of
         SNothing -> []
         -- Since scriptsNeeded used the transaction to create script purposes,
         -- it would be a logic error if rdptr was not able to find sp.
         SJust p -> pure p
-      pure (pointer, (sp, msb))
+      pure (pointer, (sp, msb, sh))
 
     findAndCount ::
       Core.PParams era ->
-      Array Language VersionedTxInfo ->
+      Map Language VersionedTxInfo ->
       RdmrPtr ->
       (Data era, ExUnits) ->
-      Either (ScriptFailure (Crypto era)) ExUnits
+      Either (TransactionScriptFailure (Crypto era)) ExUnits
     findAndCount pparams info pointer (rdmr, _) = do
-      (sp, mscript) <- note (RedeemerNotNeeded pointer) $ Map.lookup pointer ptrToPlutusScript
+      (sp, mscript, sh) <-
+        note (RedeemerPointsToUnknownScriptHash pointer) $
+          Map.lookup pointer ptrToPlutusScript
       (script, lang) <- note (MissingScript pointer ptrToPlutusScript) mscript
-      let inf = info ! lang
+      inf <- note (RedeemerNotNeeded pointer sh) $ Map.lookup lang info
       let (l1, l2) = bounds costModels
-      cm <- if l1 <= lang && lang <= l2 then Right (costModels ! lang) else Left (NoCostModel lang)
+      cm <-
+        if l1 <= lang && lang <= l2
+          then Right (costModels ! lang)
+          else Left (NoCostModelInLedgerState lang)
       args <- case sp of
         Spending txin -> do
           txOut <- note (UnknownTxIn txin) $ Map.lookup txin (unUTxO utxo)
