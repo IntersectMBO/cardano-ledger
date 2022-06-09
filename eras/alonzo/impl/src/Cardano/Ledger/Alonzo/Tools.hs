@@ -6,7 +6,7 @@
 
 module Cardano.Ledger.Alonzo.Tools
   ( evaluateTransactionExecutionUnits,
-    ScriptFailure (..),
+    TransactionScriptFailure (..),
   )
 where
 
@@ -54,40 +54,40 @@ import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V2.Ledger.Api as PV2
 
 -- | Script failures that can be returned by 'evaluateTransactionExecutionUnits'.
-data ScriptFailure c
+data TransactionScriptFailure c
   = -- | A redeemer was supplied that does not point to a
     --  valid plutus evaluation site in the given transaction.
-    RedeemerNotNeeded RdmrPtr (ScriptHash c)
+    RedeemerNotNeeded !RdmrPtr !(ScriptHash c)
   | -- | A redeemer was supplied which points to a script hash which
     -- we cannot connect to a Plutus script.
-    RedeemerPointsToUnknowScriptHash RdmrPtr
+    RedeemerPointsToUnknownScriptHash !RdmrPtr
   | -- | Missing redeemer. The first parameter is the redeemer pointer which cannot be resolved,
     -- and the second parameter is the map of pointers which can be resolved.
-    MissingScript RdmrPtr (Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language), ScriptHash c))
+    MissingScript !RdmrPtr !(Map RdmrPtr (ScriptPurpose c, Maybe (ShortByteString, Language), ScriptHash c))
   | -- | Missing datum.
-    MissingDatum (DataHash c)
+    MissingDatum !(DataHash c)
   | -- | Plutus V1 evaluation error.
-    ValidationFailedV1 PV1.EvaluationError [Text]
+    ValidationFailedV1 !PV1.EvaluationError ![Text]
   | -- | Plutus V2 evaluation error.
-    ValidationFailedV2 PV2.EvaluationError [Text]
+    ValidationFailedV2 !PV2.EvaluationError ![Text]
   | -- | A redeemer points to a transaction input which is not
     --  present in the current UTxO.
-    UnknownTxIn (TxIn c)
+    UnknownTxIn !(TxIn c)
   | -- | A redeemer points to a transaction input which is not
     --  plutus locked.
-    InvalidTxIn (TxIn c)
+    InvalidTxIn !(TxIn c)
   | -- | The execution budget that was calculated by the Plutus
     --  evaluator is out of bounds.
-    IncompatibleBudget PV1.ExBudget
+    IncompatibleBudget !PV1.ExBudget
   | -- | There was no cost model for a given version of Plutus in the ledger state
-    NoCostModelInLedgerState Language
+    NoCostModelInLedgerState !Language
   deriving (Show, Eq)
 
 note :: e -> Maybe a -> Either e a
 note _ (Just x) = Right x
 note e Nothing = Left e
 
-type RedeemerReport c = Map RdmrPtr (Either (ScriptFailure c) ExUnits)
+type RedeemerReport c = Map RdmrPtr (Either (TransactionScriptFailure c) ExUnits)
 
 -- | Evaluate the execution budgets needed for all the redeemers in
 --  a given transaction. If a redeemer is invalid, a failure is returned instead.
@@ -158,10 +158,10 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       Map Language VersionedTxInfo ->
       RdmrPtr ->
       (Data era, ExUnits) ->
-      Either (ScriptFailure (Crypto era)) ExUnits
+      Either (TransactionScriptFailure (Crypto era)) ExUnits
     findAndCount pparams info pointer (rdmr, _) = do
       (sp, mscript, sh) <-
-        note (RedeemerPointsToUnknowScriptHash pointer) $
+        note (RedeemerPointsToUnknownScriptHash pointer) $
           Map.lookup pointer ptrToPlutusScript
       (script, lang) <- note (MissingScript pointer ptrToPlutusScript) mscript
       inf <- note (RedeemerNotNeeded pointer sh) $ Map.lookup lang info
