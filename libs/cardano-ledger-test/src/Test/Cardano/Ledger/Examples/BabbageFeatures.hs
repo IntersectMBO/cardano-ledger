@@ -39,7 +39,8 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), ValidateScript (hashScript))
 import Cardano.Ledger.Keys
-  ( KeyPair (..),
+  ( KeyHash,
+    KeyPair (..),
     KeyRole (..),
     hashKey,
   )
@@ -303,6 +304,7 @@ initUTxO pf =
         (referenceScriptInput4, referenceScriptOutput4 pf),
         (inlineDatumInputOdd, inlineDatumOutputFailingScript pf),
         (somePlainInput2, somePlainOutput2 pf),
+        (referenceScriptInput5, referenceScriptOutput5 pf),
         (malformedScriptTxIn, malformedScriptTxOut pf)
       ]
 
@@ -906,6 +908,60 @@ malformedScript pf s = case pf of
     ms = PlutusScript PlutusV2 $ "nonsense " <> s
     er x = error $ "no malformedScript for " <> show x
 
+-- ====================================================================================
+--  Example: Don't run reference scripts in output for validation
+-- ====================================================================================
+
+referenceScriptInput5 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+referenceScriptInput5 = mkGenesisTxIn 12
+
+extraneousKeyHash :: CC.Crypto c => KeyHash 'Witness c
+extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
+
+referenceScriptOutput5 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+referenceScriptOutput5 pf =
+  newTxOut
+    pf
+    [ Address (plainAddr pf),
+      Amount (inject $ Coin 5000),
+      RefScript (SJust $ allOf [require extraneousKeyHash] pf)
+    ]
+
+refScriptWasInOutputTxBody :: Scriptic era => Proof era -> Core.TxBody era
+refScriptWasInOutputTxBody pf =
+  newTxBody
+    pf
+    [ Inputs' [referenceScriptInput5],
+      Outputs' [outEx1 pf],
+      Txfee (Coin 5)
+    ]
+
+refScriptWasInOutputTx ::
+  forall era.
+  ( Scriptic era,
+    GoodCrypto (Crypto era)
+  ) =>
+  Proof era ->
+  Core.Tx era
+refScriptWasInOutputTx pf =
+  newTx
+    pf
+    [ Body (refScriptWasInOutputTxBody pf),
+      WitnessesI
+        [ AddrWits' [makeWitnessVKey (hashAnnotated (refScriptWasInOutputTxBody pf)) (someKeys pf)]
+        ]
+    ]
+
+refScriptWasInOutputUTxO :: forall era. PostShelley era => Proof era -> UTxO era
+refScriptWasInOutputUTxO pf = expectedUTxO (initUTxO pf) (ExpectSuccess (refScriptWasInOutputTxBody pf) (outEx1 pf)) 12
+
+refScriptWasInOutputState ::
+  forall era.
+  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  Proof era ->
+  UTxOState era
+refScriptWasInOutputState pf = smartUTxOState (refScriptWasInOutputUTxO pf) (Coin 0) (Coin 5) def
+
 -- ========================================================================================
 --  Example 13: Invalid - TxOut too large for the included ADA, using a large inline datum
 -- ========================================================================================
@@ -1060,7 +1116,12 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf False $ collateralOutputTx pf)
-              (Right $ utxoStEx8 pf)
+              (Right $ utxoStEx8 pf),
+          testCase "not validating scripts not required" $
+            testU
+              pf
+              (trustMeP pf True $ refScriptWasInOutputTx pf)
+              (Right . refScriptWasInOutputState $ pf)
         ],
       testGroup
         "invalid transactions"
