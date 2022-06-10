@@ -219,6 +219,37 @@ referenceScriptOutput4 pf =
       RefScript (SJust $ alwaysAlt 3 pf)
     ]
 
+keysForMultisig :: forall era. Era era => Proof era -> KeyPair 'Witness (Crypto era)
+keysForMultisig _pf = KeyPair vk sk
+  where
+    (sk, vk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 99)
+
+keyHashForMultisig :: forall era. Era era => Proof era -> KeyHash 'Witness (Crypto era)
+keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
+
+simpleScript :: forall era. (Scriptic era) => Proof era -> Core.Script era
+simpleScript pf = allOf [require @era (keyHashForMultisig pf)] pf
+
+referenceSimpleScriptOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+referenceSimpleScriptOutput pf =
+  newTxOut
+    pf
+    [ Address (plainAddr pf),
+      Amount (inject $ Coin 5000),
+      RefScript (SJust $ simpleScript pf)
+    ]
+
+simpleScriptAddr :: forall era. (Scriptic era) => Proof era -> Addr (Crypto era)
+simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
+
+simpleScriptLockedOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+simpleScriptLockedOutput pf =
+  newTxOut
+    pf
+    [ Address (simpleScriptAddr pf),
+      Amount (inject $ Coin 5000)
+    ]
+
 referenceDataHashOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
 referenceDataHashOutput pf =
   newTxOut
@@ -274,6 +305,9 @@ inlineDatumInputOdd = mkGenesisTxIn 10
 collateralInput11 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
 collateralInput11 = mkGenesisTxIn 11
 
+referenceSimpleScriptInput :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+referenceSimpleScriptInput = mkGenesisTxIn 12
+
 collateralInput17 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
 collateralInput17 = mkGenesisTxIn 17
 
@@ -282,6 +316,9 @@ somePlainInput2 = mkGenesisTxIn 18
 
 malformedScriptTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
 malformedScriptTxIn = mkGenesisTxIn 19
+
+simpleScriptLockedInput :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
+simpleScriptLockedInput = mkGenesisTxIn 20
 
 --
 -- Genesis UTxO
@@ -304,7 +341,8 @@ initUTxO pf =
         (referenceScriptInput4, referenceScriptOutput4 pf),
         (inlineDatumInputOdd, inlineDatumOutputFailingScript pf),
         (somePlainInput2, somePlainOutput2 pf),
-        (referenceScriptInput5, referenceScriptOutput5 pf),
+        (referenceSimpleScriptInput, referenceSimpleScriptOutput pf),
+        (simpleScriptLockedInput, simpleScriptLockedOutput pf),
         (malformedScriptTxIn, malformedScriptTxOut pf)
       ]
 
@@ -912,26 +950,11 @@ malformedScript pf s = case pf of
 --  Example: Don't run reference scripts in output for validation
 -- ====================================================================================
 
-referenceScriptInput5 :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => TxIn crypto
-referenceScriptInput5 = mkGenesisTxIn 12
-
-extraneousKeyHash :: CC.Crypto c => KeyHash 'Witness c
-extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
-
-referenceScriptOutput5 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
-referenceScriptOutput5 pf =
-  newTxOut
-    pf
-    [ Address (plainAddr pf),
-      Amount (inject $ Coin 5000),
-      RefScript (SJust $ allOf [require extraneousKeyHash] pf)
-    ]
-
 refScriptWasInOutputTxBody :: Scriptic era => Proof era -> Core.TxBody era
 refScriptWasInOutputTxBody pf =
   newTxBody
     pf
-    [ Inputs' [referenceScriptInput5],
+    [ Inputs' [referenceSimpleScriptInput],
       Outputs' [outEx1 pf],
       Txfee (Coin 5)
     ]
@@ -961,6 +984,51 @@ refScriptWasInOutputState ::
   Proof era ->
   UTxOState era
 refScriptWasInOutputState pf = smartUTxOState (refScriptWasInOutputUTxO pf) (Coin 0) (Coin 5) def
+
+-- ====================================================================================
+--  Example: Unlock Simple Scripts with a Reference Script
+-- ====================================================================================
+
+spendSimpleScriptLockedOutputWithRefScriptsTxBody :: Scriptic era => Proof era -> Core.TxBody era
+spendSimpleScriptLockedOutputWithRefScriptsTxBody pf =
+  newTxBody
+    pf
+    [ Inputs' [simpleScriptLockedInput],
+      RefInputs' [referenceSimpleScriptInput],
+      Outputs' [outEx1 pf],
+      Txfee (Coin 5)
+    ]
+
+spendSimpleScriptLockedOutputWithRefScriptsTx ::
+  forall era.
+  ( Scriptic era,
+    GoodCrypto (Crypto era)
+  ) =>
+  Proof era ->
+  Core.Tx era
+spendSimpleScriptLockedOutputWithRefScriptsTx pf =
+  newTx
+    pf
+    [ Body (spendSimpleScriptLockedOutputWithRefScriptsTxBody pf),
+      WitnessesI
+        [ AddrWits'
+            [ makeWitnessVKey (hashAnnotated (spendSimpleScriptLockedOutputWithRefScriptsTxBody pf)) (someKeys pf),
+              makeWitnessVKey (hashAnnotated (spendSimpleScriptLockedOutputWithRefScriptsTxBody pf)) (keysForMultisig pf)
+            ]
+            -- Note we did not add a script witness for simpleScript
+        ]
+    ]
+
+spendSimpleScriptOutWithRefScriptUTxO :: forall era. PostShelley era => Proof era -> UTxO era
+spendSimpleScriptOutWithRefScriptUTxO pf =
+  expectedUTxO (initUTxO pf) (ExpectSuccess (spendSimpleScriptLockedOutputWithRefScriptsTxBody pf) (outEx1 pf)) 20
+
+spendSimpleScriptOutWithRefScriptUTxOState ::
+  forall era.
+  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  Proof era ->
+  UTxOState era
+spendSimpleScriptOutWithRefScriptUTxOState pf = smartUTxOState (spendSimpleScriptOutWithRefScriptUTxO pf) (Coin 0) (Coin 5) def
 
 -- ========================================================================================
 --  Example 13: Invalid - TxOut too large for the included ADA, using a large inline datum
@@ -1121,7 +1189,12 @@ genericBabbageFeatures pf =
             testU
               pf
               (trustMeP pf True $ refScriptWasInOutputTx pf)
-              (Right . refScriptWasInOutputState $ pf)
+              (Right . refScriptWasInOutputState $ pf),
+          testCase "spend simple script output with reference script" $
+            testU
+              pf
+              (trustMeP pf True $ spendSimpleScriptLockedOutputWithRefScriptsTx pf)
+              (Right . spendSimpleScriptOutWithRefScriptUTxOState $ pf)
         ],
       testGroup
         "invalid transactions"
