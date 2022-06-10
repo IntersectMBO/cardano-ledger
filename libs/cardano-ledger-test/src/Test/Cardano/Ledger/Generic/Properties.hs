@@ -219,7 +219,7 @@ txPreserveAda gensize =
         forAll (genTxAndLEDGERState (Babbage Mock) gensize) (testTxValidForLEDGER (Babbage Mock))
     ]
 
--- | Ada is preserved over a trace of length 45
+-- | Ada is preserved over a trace of length 100
 adaIsPreserved ::
   ( Reflect era,
     HasTrace (MOCKCHAIN era) (Gen1 era)
@@ -246,7 +246,7 @@ tracePreserveAda numTx gensize =
 adaIsPreservedBabbage :: Int -> GenSize -> TestTree
 adaIsPreservedBabbage numTx gensize = adaIsPreserved (Babbage Mock) numTx gensize
 
--- | The incremental Stake invaraint is preserved over a trace of length 45
+-- | The incremental Stake invaraint is preserved over a trace of length 100
 stakeInvariant :: Era era => MockChainState era -> MockChainState era -> Property
 stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
   case (lsUTxOState . esLState . nesEs) nes of
@@ -254,8 +254,8 @@ stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
 
 incrementStakeInvariant :: (Reflect era, HasTrace (MOCKCHAIN era) (Gen1 era)) => Proof era -> GenSize -> TestTree
 incrementStakeInvariant proof gensize =
-  testProperty (show proof ++ " era. Trace length = 45") $
-    traceProp proof 45 gensize stakeInvariant
+  testProperty (show proof ++ " era. Trace length = 100") $
+    traceProp proof 100 gensize stakeInvariant
 
 incrementalStake :: GenSize -> TestTree
 incrementalStake gensize =
@@ -274,9 +274,9 @@ genericProperties gensize =
     "Generic Property tests"
     [ coreTypesRoundTrip,
       txPreserveAda gensize,
-      tracePreserveAda 45 gensize,
+      tracePreserveAda 100 gensize,
       incrementalStake gensize,
-      testTraces 45
+      testTraces 100
     ]
 
 -- ==============================================================

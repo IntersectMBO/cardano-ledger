@@ -515,20 +515,35 @@ testTraces n =
       chainTest (Alonzo Mock) n def,
       chainTest (Mary Mock) n def,
       chainTest (Allegra Mock) n def,
-      chainTest (Shelley Mock) n def
+      multiEpochTest (Babbage Mock) 225 def,
+      multiEpochTest (Shelley Mock) 225 def
     ]
 
+-- | Show that Ada is preserved across multiple Epochs
+multiEpochTest ::
+  ( Reflect era,
+    HasTrace (MOCKCHAIN era) (Gen1 era)
+  ) =>
+  Proof era ->
+  Int ->
+  GenSize ->
+  TestTree
+multiEpochTest proof numTx gsize =
+  let gensize = gsize {blocksizeMax = 4, slotDelta = (6, 12)}
+      getEpoch mockchainstate = nesEL (mcsNes mockchainstate)
+      propf firstSt lastSt =
+        collect (getEpoch lastSt) (totalAda firstSt === totalAda lastSt)
+   in testProperty
+        ("Multi epoch. Ada is preserved. " ++ show proof ++ " era. Trace length = " ++ show numTx)
+        (traceProp proof numTx gensize propf)
+
 -- ===========================================================
--- Debugging tools for replaying failures
+-- Debugging tools for replaying failures. We store the trace in
+-- the IORef TT, and then we can use 'main3' to display what we
+-- need to see from the trace.
 
 main :: IO ()
-main =
-  let proof = Babbage Mock
-      numTx = 250
-      gensize = def {blocksizeMax = 4, slotDelta = (5, 10)}
-   in defaultMain $
-        testProperty (show proof ++ " era. Trace length = " ++ show numTx) $
-          traceProp proof numTx gensize (\firstSt lastSt -> totalAda firstSt === totalAda lastSt)
+main = defaultMain $ multiEpochTest (Shelley Mock) 200 def
 
 data TT where
   TT :: Proof era -> [(StrictSeq (Core.Tx era), SlotNo)] -> TT
