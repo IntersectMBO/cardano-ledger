@@ -85,7 +85,7 @@ import qualified Data.ByteString.Base64 as B64
 import Data.Coders
 import Data.Foldable (toList)
 import Data.List (intercalate)
-import Data.List.NonEmpty (NonEmpty (..))
+import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
 import qualified Data.List.NonEmpty as NE
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
@@ -138,7 +138,7 @@ instance
 
 data UtxosEvent era
   = AlonzoPpupToUtxosEvent (Event (Core.EraRule "PPUP" era))
-  | SuccessfulPlutusScriptsEvent [PlutusDebug]
+  | SuccessfulPlutusScriptsEvent (NonEmpty PlutusDebug)
   | FailedPlutusScriptsEvent (NonEmpty PlutusDebug)
 
 instance
@@ -240,7 +240,7 @@ scriptsValidateTransition = do
         ValidationTagMismatch
           (getField @"isValid" tx)
           (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
-    Passes ps -> tellEvent (SuccessfulPlutusScriptsEvent ps)
+    Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
 
   () <- pure $! traceEvent validEnd ()
 
@@ -270,7 +270,7 @@ scriptsNotValidateTransition = do
       failBecause $
         ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
     Fails ps fs -> do
-      tellEvent (SuccessfulPlutusScriptsEvent ps)
+      mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
       tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
 
   let !_ = traceEvent invalidEnd ()
