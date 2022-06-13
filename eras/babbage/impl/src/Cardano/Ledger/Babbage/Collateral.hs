@@ -16,10 +16,8 @@ import Cardano.Ledger.Babbage.TxBody
     TxOut (..),
     collateralReturn',
     outputs',
-    txfee',
   )
 import Cardano.Ledger.BaseTypes (TxIx (..), txIxFromIntegral)
-import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (Crypto), ValidateScript (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
@@ -31,7 +29,6 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import Data.Word (Word16)
 import GHC.Records (HasField (..))
-import Numeric.Natural (Natural)
 
 -- ============================================================
 
@@ -45,19 +42,6 @@ isTwoPhaseScriptAddress ::
   Addr (Crypto era) ->
   Bool
 isTwoPhaseScriptAddress tx utxo = isTwoPhaseScriptAddressFromMap @era (txscripts utxo tx)
-
-minCollateral ::
-  HasField "_collateralPercentage" (Core.PParams era) Natural =>
-  TxBody era ->
-  Core.PParams era ->
-  Coin
-minCollateral txb pp = Coin ((fee * percent) `divideCeiling` 100)
-  where
-    fee = unCoin (txfee' txb)
-    percent = fromIntegral (getField @"_collateralPercentage" pp)
-    divideCeiling x y = if r == 0 then n else n + 1 -- Works when both x and y are positive
-      where
-        (n, r) = x `divMod` y
 
 collBalance ::
   forall era.
