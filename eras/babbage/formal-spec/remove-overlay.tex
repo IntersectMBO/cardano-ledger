@@ -71,9 +71,16 @@ $\fun{incrBlocks}$ gets the same treatment as $\fun{mkApparentPerformance}$. Its
 \end{figure}
 
 \newpage
-Finally, the $\mathsf{PRTCL}$ STS needs to be adjusted. To retire the $\mathsf{OVERLAY}$ STS, we inline the definition of its 'decentralized' case and drop all the unnecessary variables from its environment. It is invoked in $\mathsf{CHAIN}$, which needs to be adjusted accordingly.
+Finally, the $\mathsf{PRTCL}$ STS needs to be adjusted.
+To retire the $\mathsf{OVERLAY}$ STS, we inline the definition of its
+'decentralized' case and drop all the unnecessary variables from its environment.
+It is invoked in $\mathsf{CHAIN}$, which needs to be adjusted accordingly.
 
-As there is now only a singe VRF check, slight modifications are needed for the definition of the block header body \text{BHBody} type and the function \text{vrfChecks}. The Shelley era accessor functions $\fun{bleader}$ and $\fun{bnonce}$ are replaced with new functions.
+As there is now only a singe VRF check, slight modifications are needed for the
+definition of the block header body \text{BHBody} type and the function \text{vrfChecks}.
+The Shelley era accessor functions $\fun{bleader}$ and $\fun{bnonce}$ are replaced with new functions
+which make use of the VRF range extension as described in \cite{vrf-range-extension}[4.1],
+to re-use the singe VRF value.
 
 \begin{figure*}[htb]
   %
@@ -109,10 +116,10 @@ As there is now only a singe VRF check, slight modifications are needed for the 
   \emph{New Helper Functions}
     \begin{align*}
       & \fun{bleader} \in \BHBody \to \Seed \\
-      & \fun{bleader}~(\var{bhb}) = (\fun{hash}~``TEST") ~\XOR~ (\fun{bVrfRes}~\var{bhb})\\
+      & \fun{bleader}~(\var{bhb}) = \fun{hash}~(``L"~|~(\fun{bVrfRes}~\var{bhb}))\\
       \\
       & \fun{bnonce} \in \BHBody \to \Seed \\
-      & \fun{bnonce}~(\var{bhb}) = (\fun{hash}~``NONCE") ~\XOR~ (\fun{bVrfRes}~\var{bhb})\\
+      & \fun{bnonce}~(\var{bhb}) = \fun{hash}~(``N"~|~(\fun{bVrfRes}~\var{bhb}))\\
       \\
       & \fun{vrfChecks} \in \Seed \to \BHBody \to \Bool \\
       & \fun{vrfChecks}~\eta_0~\var{bhb} =
