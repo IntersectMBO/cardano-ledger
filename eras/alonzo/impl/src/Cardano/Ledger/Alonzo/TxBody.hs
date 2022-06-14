@@ -721,7 +721,7 @@ encodeTxBodyRaw
           TxBodyRaw i ifee o c w f (ValidityInterval b t) u rsh mi sh ah ni
       )
       !> Key 0 (E encodeFoldable _inputs)
-      !> Key 13 (E encodeFoldable _collateral)
+      !> Omit null (Key 13 (E encodeFoldable _collateral))
       !> Key 1 (E encodeFoldable _outputs)
       !> Key 2 (To _txfee)
       !> encodeKeyedStrictMaybe 3 top
@@ -729,7 +729,7 @@ encodeTxBodyRaw
       !> Omit (null . unWdrl) (Key 5 (To _wdrls))
       !> encodeKeyedStrictMaybe 6 _update
       !> encodeKeyedStrictMaybe 8 bot
-      !> Key 14 (E encodeFoldable _reqSignerHashes)
+      !> Omit null (Key 14 (E encodeFoldable _reqSignerHashes))
       !> Omit isZero (Key 9 (E encodeMint _mint))
       !> encodeKeyedStrictMaybe 11 _scriptIntegrityHash
       !> encodeKeyedStrictMaybe 7 _adHash
