@@ -51,6 +51,7 @@ import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
 import Data.Foldable (toList)
+import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
 import Data.Maybe.Strict
@@ -175,7 +176,7 @@ scriptsYes = do
                 ValidationTagMismatch
                   (getField @"isValid" tx)
                   (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
-            Passes _ -> pure ()
+            Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent validEnd ()
@@ -208,7 +209,7 @@ scriptsNo = do
         when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
           Passes _ -> failBecause $ ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
           Fails ps fs -> do
-            tellEvent (SuccessfulPlutusScriptsEvent ps)
+            mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
             tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
     Left info -> failBecause (CollectErrors info)
 
