@@ -12,6 +12,7 @@ import Data.Default.Class (Default (def))
 import System.IO (hSetEncoding, stdout, utf8)
 import qualified Test.Cardano.Ledger.Alonzo.Tools as Tools
 import Test.Cardano.Ledger.BaseTypes (baseTypesTests)
+import Test.Cardano.Ledger.Examples.BFeatures (bFeatures)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (babbageFeatures)
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   ( allTrees,
@@ -41,6 +42,7 @@ mainTests =
         "STS Tests"
         [ allTrees,
           babbageFeatures,
+          bFeatures,
           alonzoAPITests,
           collectOrderingAlonzo,
           modelUnitTests_
