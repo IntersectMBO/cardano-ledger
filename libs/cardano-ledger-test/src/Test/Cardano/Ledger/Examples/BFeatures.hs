@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -69,6 +70,7 @@ import Test.Cardano.Ledger.Generic.Fields
     TxOutField (..),
     WitnessesField (..),
   )
+
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
@@ -100,10 +102,16 @@ someKeys _pf = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @(Crypto era) (RawSeed 1 1 1 1 1)
 
+someKeysPaymentKeyRole :: forall era. Era era => Proof era -> KeyPairRole era
+someKeysPaymentKeyRole pf = KeyPairPayment (someKeys pf)
+
 keysForMultisig :: forall era. Era era => Proof era -> KeyPair 'Witness (Crypto era)
 keysForMultisig _pf = KeyPair vk sk
   where
     (sk, vk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 99)
+
+keysForMultisigWitnessKeyRole :: forall era. Era era => Proof era -> KeyPairRole era
+keysForMultisigWitnessKeyRole pf = KeyPairWitness (keysForMultisig pf)
 
 keyHashForMultisig :: forall era. Era era => Proof era -> KeyHash 'Witness (Crypto era)
 keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
@@ -145,8 +153,14 @@ scriptAddr _pf s = Addr Testnet pCred sCred
     (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
+simpleScriptAddr :: forall era. (Scriptic era) => Proof era -> Addr (Crypto era)
+simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
+
 datumExampleEven :: Data era
 datumExampleEven = Data (Plutus.I 2)
+
+datumExampleOdd :: Data era
+datumExampleOdd = Data (Plutus.I 3)
 
 validatingRedeemersDatumEven :: Era era => Redeemers era
 validatingRedeemersDatumEven =
@@ -194,7 +208,7 @@ inlineDatumTestCaseData pf =
         [ Txfee (Coin 5),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven mempty)
         ],
-      keysForAddrWits = [someKeys pf],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields =
         [ ScriptWits' [evenData3ArgsScript pf],
           RdmrWits validatingRedeemersDatumEven
@@ -233,7 +247,7 @@ referenceScriptTestCaseData pf =
         [ Txfee (Coin 5),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven txDatsExample2)
         ],
-      keysForAddrWits = [someKeys pf],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields =
         [ DataWits' [datumExampleSixtyFiveBytes],
           RdmrWits validatingRedeemersDatumEven
@@ -273,7 +287,7 @@ inlineDatumAndRefScriptTestCaseData pf =
         [ Txfee (Coin 5),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven mempty)
         ],
-      keysForAddrWits = [someKeys pf],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [RdmrWits validatingRedeemersDatumEven],
       ttxOut = outEx1 pf
     }
@@ -310,7 +324,7 @@ inlineDatumAndRefScriptAndWitScriptTestCaseData pf =
         [ Txfee (Coin 5),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven mempty)
         ],
-      keysForAddrWits = [someKeys pf],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields =
         [ ScriptWits' [alwaysAlt 3 pf], -- This is redundant with the reference script
           RdmrWits validatingRedeemersDatumEven
@@ -342,7 +356,7 @@ refInputWithDataHashNoWitTestCaseData pf =
           )
         ],
       txBodyFields = [Txfee (Coin 5)],
-      keysForAddrWits = [someKeys pf],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [],
       ttxOut = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]
     }
@@ -373,7 +387,7 @@ refInputWithDataHashWithWitTestCaseData pf =
         [ Txfee (Coin 5),
           WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) txDatsExample2)
         ],
-      keysForAddrWits = [someKeys pf],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [DataWits' [datumExampleSixtyFiveBytes]],
       ttxOut = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]
     }
@@ -405,7 +419,7 @@ refScriptForDelegCertTestCaseData pf =
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] redeemersEx7 mempty),
           Certs' [DCertDeleg (DeRegKey cred)]
         ],
-      keysForAddrWits = [someKeys pf],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [RdmrWits redeemersEx7],
       ttxOut = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]
     }
@@ -436,10 +450,44 @@ refScriptInOutputTestCaseData pf =
       collateral = [],
       refInputs = [],
       txBodyFields = [Txfee (Coin 5)],
-      keysForAddrWits = [someKeys pf],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [],
       ttxOut = outEx1 pf
     }
+
+-- ====================================================================================
+--  Example: Unlock Simple Scripts with a Reference Script
+-- ====================================================================================
+
+scriptLockedOutputWithRefScriptsTestCaseData :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+scriptLockedOutputWithRefScriptsTestCaseData pf =
+  TestCaseData
+    { input =
+        ( mkGenesisTxIn 20,
+          newTxOut
+            pf
+            [ Address (simpleScriptAddr pf),
+              Amount (inject $ Coin 5000)
+            ]
+        ),
+      collateral = [],
+      refInputs =
+        [ ( mkGenesisTxIn 12,
+            newTxOut
+              pf
+              [ Address (plainAddr pf),
+                Amount (inject $ Coin 5000),
+                RefScript (SJust $ simpleScript pf)
+              ]
+          )
+        ],
+      txBodyFields = [Txfee (Coin 5)],
+      keysForAddrWits = [someKeysPaymentKeyRole pf, keysForMultisigWitnessKeyRole pf],
+      otherWitsFields = [], -- Note we did not add a script witness for simpleScript
+      ttxOut = outEx1 pf
+    }
+
+-- ====================================================================================
 
 class BabbageBased era failure where
   fromUtxoB :: BabbageUtxoPred era -> failure
@@ -457,9 +505,13 @@ data TestCaseData era = TestCaseData
     refInputs :: [InOut era],
     ttxOut :: Core.TxOut era,
     txBodyFields :: [TxBodyField era],
-    keysForAddrWits :: [KeyPair 'Payment (Crypto era)],
+    keysForAddrWits :: [KeyPairRole era],
     otherWitsFields :: [WitnessesField era]
   }
+
+data KeyPairRole era
+  = KeyPairPayment (KeyPair 'Payment (Crypto era))
+  | KeyPairWitness (KeyPair 'Witness (Crypto era))
 
 testExpectSuccessValid ::
   forall era.
@@ -485,7 +537,13 @@ testExpectSuccessValid
               ]
                 ++ txBodyFields'
             )
-        addrWits = makeWitnessVKey (hashAnnotated txBody') <$> keysForAddrWits'
+        addrWits =
+          fmap
+            ( \case
+                KeyPairPayment p -> makeWitnessVKey (hashAnnotated txBody') p
+                KeyPairWitness w -> makeWitnessVKey (hashAnnotated txBody') w
+            )
+            keysForAddrWits'
         tx' =
           newTx
             pf
@@ -520,7 +578,8 @@ genericBFeatures pf =
           testCase "reference input with data hash, no data witness" $ testExpectSuccessValid pf (refInputWithDataHashNoWitTestCaseData pf),
           testCase "reference input with data hash, with data witness" $ testExpectSuccessValid pf (refInputWithDataHashWithWitTestCaseData pf),
           testCase "reference script to authorize delegation certificate" $ testExpectSuccessValid pf (refScriptForDelegCertTestCaseData pf),
-          testCase "not validating scripts not required" $ testExpectSuccessValid pf (refScriptInOutputTestCaseData pf)
+          testCase "not validating scripts not required" $ testExpectSuccessValid pf (refScriptInOutputTestCaseData pf),
+          testCase "spend simple script output with reference script" $ testExpectSuccessValid pf (scriptLockedOutputWithRefScriptsTestCaseData pf)
         ],
       testGroup "invalid transactions" []
     ]
