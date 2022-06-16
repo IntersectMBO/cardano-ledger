@@ -70,7 +70,6 @@ import Test.Cardano.Ledger.Generic.Fields
     TxOutField (..),
     WitnessesField (..),
   )
-
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
@@ -179,12 +178,21 @@ datumExampleSixtyFiveBytes = Data (Plutus.B sixtyFiveBytes)
 txDatsExample2 :: Era era => TxDats era
 txDatsExample2 = TxDats $ keyBy hashData [datumExampleSixtyFiveBytes]
 
+amount :: Integer
+amount = 5000
+
+feeAmount :: Integer
+feeAmount = 5
+
+collateralAmount :: Integer
+collateralAmount = 2115
+
 outEx1 :: Scriptic era => Proof era -> Core.TxOut era
-outEx1 pf = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 4995)]
+outEx1 pf = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin (amount - feeAmount))]
 
 collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
 collateralOutput pf =
-  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2115)]
+  newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin collateralAmount)]
 
 -- =========================================================================
 -- Spend a EUTxO with an inline datum.
@@ -198,14 +206,14 @@ inlineDatumTestCaseData pf =
           newTxOut
             pf
             [ Address (scriptAddr pf (evenData3ArgsScript pf)),
-              Amount (inject $ Coin 5000),
+              Amount (inject $ Coin amount),
               Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
             ]
         ),
       collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
       refInputs = [],
       txBodyFields =
-        [ Txfee (Coin 5),
+        [ Txfee (Coin feeAmount),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven mempty)
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
@@ -228,7 +236,7 @@ referenceScriptTestCaseData pf =
           newTxOut
             pf
             [ Address (scriptAddr pf (alwaysAlt 3 pf)),
-              Amount (inject $ Coin 5000),
+              Amount (inject $ Coin amount),
               DHash' [hashData $ datumExampleSixtyFiveBytes @era]
             ]
         ),
@@ -238,13 +246,13 @@ referenceScriptTestCaseData pf =
             newTxOut
               pf
               [ Address (plainAddr pf),
-                Amount (inject $ Coin 5000),
+                Amount (inject $ Coin 6000),
                 RefScript (SJust $ alwaysAlt 3 pf)
               ]
           )
         ],
       txBodyFields =
-        [ Txfee (Coin 5),
+        [ Txfee (Coin feeAmount),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven txDatsExample2)
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
@@ -268,7 +276,7 @@ inlineDatumAndRefScriptTestCaseData pf =
           newTxOut
             pf
             [ Address (scriptAddr pf (evenData3ArgsScript pf)),
-              Amount (inject $ Coin 5000),
+              Amount (inject $ Coin amount),
               Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
             ]
         ),
@@ -278,13 +286,13 @@ inlineDatumAndRefScriptTestCaseData pf =
             newTxOut
               pf
               [ Address (plainAddr pf),
-                Amount (inject $ Coin 5000),
+                Amount (inject $ Coin 6000),
                 RefScript (SJust $ evenData3ArgsScript pf)
               ]
           )
         ],
       txBodyFields =
-        [ Txfee (Coin 5),
+        [ Txfee (Coin feeAmount),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven mempty)
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
@@ -305,7 +313,7 @@ inlineDatumAndRefScriptAndWitScriptTestCaseData pf =
           newTxOut
             pf
             [ Address (scriptAddr pf (evenData3ArgsScript pf)),
-              Amount (inject $ Coin 5000),
+              Amount (inject $ Coin amount),
               Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
             ]
         ),
@@ -315,13 +323,13 @@ inlineDatumAndRefScriptAndWitScriptTestCaseData pf =
             newTxOut
               pf
               [ Address (plainAddr pf),
-                Amount (inject $ Coin 5000),
+                Amount (inject $ Coin 6000),
                 RefScript (SJust $ evenData3ArgsScript pf)
               ]
           )
         ],
       txBodyFields =
-        [ Txfee (Coin 5),
+        [ Txfee (Coin feeAmount),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven mempty)
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
@@ -342,7 +350,7 @@ refInputWithDataHashNoWitTestCaseData pf =
   TestCaseData
     { input =
         ( mkGenesisTxIn 4,
-          newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]
+          newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin amount)]
         ),
       collateral = [],
       refInputs =
@@ -350,15 +358,15 @@ refInputWithDataHashNoWitTestCaseData pf =
             newTxOut
               pf
               [ Address (plainAddr pf),
-                Amount (inject $ Coin 10),
+                Amount (inject $ Coin 6000),
                 DHash' [hashData $ datumExampleSixtyFiveBytes @era]
               ]
           )
         ],
-      txBodyFields = [Txfee (Coin 5)],
+      txBodyFields = [Txfee (Coin feeAmount)],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [],
-      ttxOut = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]
+      ttxOut = outEx1 pf
     }
 
 -- =======================================================================================
@@ -370,7 +378,7 @@ refInputWithDataHashWithWitTestCaseData pf =
   TestCaseData
     { input =
         ( mkGenesisTxIn 4,
-          newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]
+          newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin amount)]
         ),
       collateral = [],
       refInputs =
@@ -378,18 +386,18 @@ refInputWithDataHashWithWitTestCaseData pf =
             newTxOut
               pf
               [ Address (plainAddr pf),
-                Amount (inject $ Coin 10),
+                Amount (inject $ Coin 6000),
                 DHash' [hashData $ datumExampleSixtyFiveBytes @era]
               ]
           )
         ],
       txBodyFields =
-        [ Txfee (Coin 5),
+        [ Txfee (Coin feeAmount),
           WppHash (newScriptIntegrityHash pf (pp pf) [] (Redeemers mempty) txDatsExample2)
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [DataWits' [datumExampleSixtyFiveBytes]],
-      ttxOut = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]
+      ttxOut = outEx1 pf
     }
 
 -- ====================================================================================
@@ -401,7 +409,7 @@ refScriptForDelegCertTestCaseData pf =
   TestCaseData
     { input =
         ( mkGenesisTxIn 4,
-          newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 1140)]
+          newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin amount)]
         ),
       collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
       refInputs =
@@ -409,19 +417,19 @@ refScriptForDelegCertTestCaseData pf =
             newTxOut
               pf
               [ Address (plainAddr pf),
-                Amount (inject $ Coin 5000),
+                Amount (inject $ Coin 6000),
                 RefScript (SJust $ alwaysAlt 2 pf)
               ]
           )
         ],
       txBodyFields =
-        [ Txfee (Coin 5),
+        [ Txfee (Coin feeAmount),
           WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] redeemersEx7 mempty),
           Certs' [DCertDeleg (DeRegKey cred)]
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [RdmrWits redeemersEx7],
-      ttxOut = newTxOut pf [Address (plainAddr pf), Amount (inject $ Coin 1135)]
+      ttxOut = outEx1 pf
     }
   where
     cred = ScriptHashObj (hashScript @era $ alwaysAlt 2 pf)
@@ -443,13 +451,13 @@ refScriptInOutputTestCaseData pf =
           newTxOut
             pf
             [ Address (plainAddr pf),
-              Amount (inject $ Coin 5000),
+              Amount (inject $ Coin amount),
               RefScript (SJust $ simpleScript pf)
             ]
         ),
       collateral = [],
       refInputs = [],
-      txBodyFields = [Txfee (Coin 5)],
+      txBodyFields = [Txfee (Coin feeAmount)],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [],
       ttxOut = outEx1 pf
@@ -467,7 +475,7 @@ scriptLockedOutputWithRefScriptsTestCaseData pf =
           newTxOut
             pf
             [ Address (simpleScriptAddr pf),
-              Amount (inject $ Coin 5000)
+              Amount (inject $ Coin amount)
             ]
         ),
       collateral = [],
@@ -476,12 +484,12 @@ scriptLockedOutputWithRefScriptsTestCaseData pf =
             newTxOut
               pf
               [ Address (plainAddr pf),
-                Amount (inject $ Coin 5000),
+                Amount (inject $ Coin 6000),
                 RefScript (SJust $ simpleScript pf)
               ]
           )
         ],
-      txBodyFields = [Txfee (Coin 5)],
+      txBodyFields = [Txfee (Coin feeAmount)],
       keysForAddrWits = [someKeysPaymentKeyRole pf, keysForMultisigWitnessKeyRole pf],
       otherWitsFields = [], -- Note we did not add a script witness for simpleScript
       ttxOut = outEx1 pf
@@ -555,7 +563,7 @@ testExpectSuccessValid
         newTxIn = TxIn (txid txBody') minBound
         utxo = (UTxO . Map.fromList) $ [input'] ++ collateral' ++ refInputs'
         expectedUtxo = UTxO $ Map.insert newTxIn txOut' (Map.fromList (collateral' ++ refInputs'))
-        expectedState = smartUTxOState expectedUtxo (Coin 0) (Coin 5) def
+        expectedState = smartUTxOState expectedUtxo (Coin 0) (Coin feeAmount) def
      in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf True tx') (Right expectedState)
 
 genericBFeatures ::
