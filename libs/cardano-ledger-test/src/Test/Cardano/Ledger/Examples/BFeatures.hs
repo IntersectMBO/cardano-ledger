@@ -46,6 +46,7 @@ import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API (ProtVer (..), UTxO (..))
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
+import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxIn (..), txid)
@@ -56,10 +57,12 @@ import Data.ByteString.Short as SBS (pack)
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
+import qualified Data.Set as Set
 import GHC.Stack
 import qualified Plutus.V1.Ledger.Api as Plutus
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
-  ( freeCostModelV1,
+  ( AlonzoBased (..),
+    freeCostModelV1,
     freeCostModelV2,
     keyBy,
     testUTXOW,
@@ -590,6 +593,41 @@ collateralOutputTestCaseData pf =
     }
 
 -- ====================================================================================
+--  Invalid collateral total
+-- ====================================================================================
+
+incorrectCollateralTotalTestCaseData :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+incorrectCollateralTotalTestCaseData pf =
+  TestCaseData
+    { input =
+        ( mkGenesisTxIn 1,
+          newTxOut
+            pf
+            [ Address (scriptAddr pf (evenData3ArgsScript pf)),
+              Amount (inject $ Coin amount),
+              Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
+            ]
+        ),
+      collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
+      collateralReturn =
+        Just $
+          newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin 2110)],
+      refInputs = [],
+      txBodyFields =
+        [ Txfee (Coin feeAmount),
+          WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven mempty),
+          TotalCol (SJust $ Coin 6)
+        ],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
+      otherWitsFields =
+        [ ScriptWits' [evenData3ArgsScript pf],
+          RdmrWits validatingRedeemersDatumEven
+        ],
+      ttxOut = outEx1 pf,
+      fees = 5
+    }
+
+-- ====================================================================================
 
 class BabbageBased era failure where
   fromUtxoB :: BabbageUtxoPred era -> failure
@@ -722,7 +760,9 @@ testExpectFailure
 
 genericBFeatures ::
   forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era,
+  ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era)),
+    BabbageBased era (PredicateFailure (EraRule "UTXOW" era)),
+    State (EraRule "UTXOW" era) ~ UTxOState era,
     GoodCrypto (Crypto era),
     Default (State (EraRule "PPUP" era)),
     PostShelley era
@@ -746,7 +786,21 @@ genericBFeatures pf =
       testGroup
         "invalid transactions"
         [ testCase "inline datum failing script" $ testExpectSuccessInvalid pf (inlineDatumFailingScriptTestCaseData pf),
-          testCase "use a collateral output" $ testExpectSuccessInvalid pf (collateralOutputTestCaseData pf)
+          testCase "use a collateral output" $ testExpectSuccessInvalid pf (collateralOutputTestCaseData pf),
+          testCase "incorrect collateral total" $
+            testExpectFailure
+              pf
+              (incorrectCollateralTotalTestCaseData pf)
+              (fromUtxoB @era (IncorrectTotalCollateralField (Coin 5) (Coin 6))),
+          testCase "inline datum and ref script and redundant script witness" $
+            testExpectFailure
+              pf
+              (inlineDatumAndRefScriptAndWitScriptTestCaseData pf)
+              ( fromUtxow @era
+                  ( Shelley.ExtraneousScriptWitnessesUTXOW
+                      (Set.singleton $ hashScript @era (alwaysAlt 3 pf))
+                  )
+              )
         ]
     ]
 
