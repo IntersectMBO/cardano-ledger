@@ -8,6 +8,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -54,6 +55,7 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Short as SBS (pack)
 import Data.Default.Class (Default (..))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (maybeToList)
 import GHC.Stack
 import qualified Plutus.V1.Ledger.Api as Plutus
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
@@ -212,6 +214,7 @@ inlineDatumTestCaseData pf =
             ]
         ),
       collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
+      collateralReturn = Nothing,
       refInputs = [],
       txBodyFields =
         [ Txfee (Coin feeAmount),
@@ -222,7 +225,40 @@ inlineDatumTestCaseData pf =
         [ ScriptWits' [evenData3ArgsScript pf],
           RdmrWits validatingRedeemersDatumEven
         ],
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
+    }
+
+-- =========================================================================
+-- EUTxO with an inline datum with a failing script.
+-- =========================================================================
+
+inlineDatumFailingScriptTestCaseData :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+inlineDatumFailingScriptTestCaseData pf =
+  TestCaseData
+    { input =
+        ( mkGenesisTxIn 10,
+          newTxOut
+            pf
+            [ Address (scriptAddr pf (evenData3ArgsScript pf)),
+              Amount (inject $ Coin amount),
+              Datum (Babbage.Datum . dataToBinaryData $ datumExampleOdd @era)
+            ]
+        ),
+      collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
+      collateralReturn = Nothing,
+      refInputs = [],
+      txBodyFields =
+        [ Txfee (Coin feeAmount),
+          WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV2] validatingRedeemersDatumEven mempty)
+        ],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
+      otherWitsFields =
+        [ ScriptWits' [evenData3ArgsScript pf],
+          RdmrWits validatingRedeemersDatumEven
+        ],
+      ttxOut = outEx1 pf,
+      fees = collateralAmount
     }
 
 -- =========================================================================
@@ -242,6 +278,7 @@ referenceScriptTestCaseData pf =
             ]
         ),
       collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
+      collateralReturn = Nothing,
       refInputs =
         [ ( mkGenesisTxIn 9,
             newTxOut
@@ -261,7 +298,8 @@ referenceScriptTestCaseData pf =
         [ DataWits' [datumExampleSixtyFiveBytes],
           RdmrWits validatingRedeemersDatumEven
         ],
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
     }
 
 -- =========================================================================
@@ -282,6 +320,7 @@ inlineDatumAndRefScriptTestCaseData pf =
             ]
         ),
       collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
+      collateralReturn = Nothing,
       refInputs =
         [ ( mkGenesisTxIn 2,
             newTxOut
@@ -298,7 +337,8 @@ inlineDatumAndRefScriptTestCaseData pf =
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [RdmrWits validatingRedeemersDatumEven],
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
     }
 
 -- =========================================================================
@@ -319,6 +359,7 @@ inlineDatumAndRefScriptAndWitScriptTestCaseData pf =
             ]
         ),
       collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
+      collateralReturn = Nothing,
       refInputs =
         [ ( mkGenesisTxIn 2,
             newTxOut
@@ -338,7 +379,8 @@ inlineDatumAndRefScriptAndWitScriptTestCaseData pf =
         [ ScriptWits' [alwaysAlt 3 pf], -- This is redundant with the reference script
           RdmrWits validatingRedeemersDatumEven
         ],
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
     }
 
 -- ====================================================================================
@@ -354,6 +396,7 @@ refInputWithDataHashNoWitTestCaseData pf =
           newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin amount)]
         ),
       collateral = [],
+      collateralReturn = Nothing,
       refInputs =
         [ ( mkGenesisTxIn 3,
             newTxOut
@@ -367,7 +410,8 @@ refInputWithDataHashNoWitTestCaseData pf =
       txBodyFields = [Txfee (Coin feeAmount)],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [],
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
     }
 
 -- =======================================================================================
@@ -382,6 +426,7 @@ refInputWithDataHashWithWitTestCaseData pf =
           newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin amount)]
         ),
       collateral = [],
+      collateralReturn = Nothing,
       refInputs =
         [ ( mkGenesisTxIn 3,
             newTxOut
@@ -398,7 +443,8 @@ refInputWithDataHashWithWitTestCaseData pf =
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [DataWits' [datumExampleSixtyFiveBytes]],
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
     }
 
 -- ====================================================================================
@@ -413,6 +459,7 @@ refScriptForDelegCertTestCaseData pf =
           newTxOut pf [Address $ plainAddr pf, Amount (inject $ Coin amount)]
         ),
       collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
+      collateralReturn = Nothing,
       refInputs =
         [ ( mkGenesisTxIn 6,
             newTxOut
@@ -430,7 +477,8 @@ refScriptForDelegCertTestCaseData pf =
         ],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [RdmrWits redeemersEx7],
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
     }
   where
     cred = ScriptHashObj (hashScript @era $ alwaysAlt 2 pf)
@@ -457,11 +505,13 @@ refScriptInOutputTestCaseData pf =
             ]
         ),
       collateral = [],
+      collateralReturn = Nothing,
       refInputs = [],
       txBodyFields = [Txfee (Coin feeAmount)],
       keysForAddrWits = [someKeysPaymentKeyRole pf],
       otherWitsFields = [],
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
     }
 
 -- ====================================================================================
@@ -480,6 +530,7 @@ scriptLockedOutputWithRefScriptsTestCaseData pf =
             ]
         ),
       collateral = [],
+      collateralReturn = Nothing,
       refInputs =
         [ ( mkGenesisTxIn 12,
             newTxOut
@@ -493,7 +544,49 @@ scriptLockedOutputWithRefScriptsTestCaseData pf =
       txBodyFields = [Txfee (Coin feeAmount)],
       keysForAddrWits = [someKeysPaymentKeyRole pf, keysForMultisigWitnessKeyRole pf],
       otherWitsFields = [], -- Note we did not add a script witness for simpleScript
-      ttxOut = outEx1 pf
+      ttxOut = outEx1 pf,
+      fees = feeAmount
+    }
+
+-- ====================================================================================
+--  Use a collateral output
+-- ====================================================================================
+
+collateralOutputTestCaseData :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+collateralOutputTestCaseData pf =
+  TestCaseData
+    { input =
+        ( mkGenesisTxIn 7,
+          newTxOut
+            pf
+            [ Address (scriptAddr pf (never 3 pf)),
+              Amount (inject $ Coin amount),
+              DHash' [hashData $ datumExampleSixtyFiveBytes @era]
+            ]
+        ),
+      collateral = [(mkGenesisTxIn 11, collateralOutput pf)],
+      collateralReturn =
+        Just
+          ( newTxOut
+              pf
+              [ Address $ plainAddr pf,
+                Amount (inject $ Coin 2110)
+              ]
+          ),
+      refInputs = [],
+      txBodyFields =
+        [ Txfee (Coin feeAmount),
+          WppHash (newScriptIntegrityHash pf (pp pf) [PlutusV1] validatingRedeemersDatumEven txDatsExample2),
+          TotalCol (SJust $ Coin 5)
+        ],
+      keysForAddrWits = [someKeysPaymentKeyRole pf],
+      otherWitsFields =
+        [ ScriptWits' [never 3 pf],
+          DataWits' [datumExampleSixtyFiveBytes],
+          RdmrWits validatingRedeemersDatumEven
+        ],
+      ttxOut = outEx1 pf,
+      fees = 5
     }
 
 -- ====================================================================================
@@ -511,11 +604,13 @@ type InOut era = (TxIn (Crypto era), Core.TxOut era)
 data TestCaseData era = TestCaseData
   { input :: InOut era,
     collateral :: [InOut era],
+    collateralReturn :: Maybe (Core.TxOut era),
     refInputs :: [InOut era],
     ttxOut :: Core.TxOut era,
     txBodyFields :: [TxBodyField era],
     keysForAddrWits :: [KeyPairRole era],
-    otherWitsFields :: [WitnessesField era]
+    otherWitsFields :: [WitnessesField era],
+    fees :: Integer
   }
 
 data KeyPairRole era
@@ -532,12 +627,13 @@ txFromTestCaseData ::
   Core.Tx era
 txFromTestCaseData
   pf
-  (TestCaseData input' collateral' refInputs' txOut' txBodyFields' keysForAddrWits' otherWitsFields') =
+  (TestCaseData input' collateral' collateralReturn' refInputs' txOut' txBodyFields' keysForAddrWits' otherWitsFields' _) =
     let txBody' =
           newTxBody
             pf
             ( [ Inputs' [fst input'],
                 Collateral' $ fst <$> collateral',
+                CollateralReturn' $ maybeToList collateralReturn',
                 RefInputs' $ fst <$> refInputs',
                 Outputs' [txOut']
               ]
@@ -573,14 +669,37 @@ testExpectSuccessValid ::
   Assertion
 testExpectSuccessValid
   pf
-  tc@(TestCaseData input' collateral' refInputs' txOut' _ _ _) =
+  tc@(TestCaseData input' collateral' _ refInputs' txOut' _ _ _ fees') =
     let tx' = txFromTestCaseData pf tc
         txBody' = getBody pf tx'
         newTxIn = TxIn (txid txBody') minBound
         utxo = (UTxO . Map.fromList) $ [input'] ++ collateral' ++ refInputs'
         expectedUtxo = UTxO $ Map.insert newTxIn txOut' (Map.fromList (collateral' ++ refInputs'))
-        expectedState = smartUTxOState expectedUtxo (Coin 0) (Coin feeAmount) def
+        expectedState = smartUTxOState expectedUtxo (Coin 0) (Coin fees') def
      in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf True tx') (Right expectedState)
+
+testExpectSuccessInvalid ::
+  forall era.
+  ( State (EraRule "UTXOW" era) ~ UTxOState era,
+    Scriptic era,
+    GoodCrypto (Crypto era),
+    Default (State (EraRule "PPUP" era)),
+    PostShelley era
+  ) =>
+  Proof era ->
+  TestCaseData era ->
+  Assertion
+testExpectSuccessInvalid
+  pf
+  tc@(TestCaseData input' collateral' collateralReturn' refInputs' _ _ _ _ fees') =
+    let tx' = txFromTestCaseData pf tc
+        txBody' = getBody pf tx'
+        newColReturnTxIn = TxIn (txid txBody') (mkTxIxPartial 1)
+        newColReturn = maybeToList $ fmap (newColReturnTxIn,) collateralReturn'
+        utxo = (UTxO . Map.fromList) $ [input'] ++ collateral' ++ refInputs'
+        expectedUtxo = UTxO $ Map.fromList ([input'] ++ refInputs' ++ newColReturn)
+        expectedState = smartUTxOState expectedUtxo (Coin 0) (Coin fees') def
+     in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf False tx') (Right expectedState)
 
 genericBFeatures ::
   forall era.
@@ -605,7 +724,11 @@ genericBFeatures pf =
           testCase "not validating scripts not required" $ testExpectSuccessValid pf (refScriptInOutputTestCaseData pf),
           testCase "spend simple script output with reference script" $ testExpectSuccessValid pf (scriptLockedOutputWithRefScriptsTestCaseData pf)
         ],
-      testGroup "invalid transactions" []
+      testGroup
+        "invalid transactions"
+        [ testCase "inline datum failing script" $ testExpectSuccessInvalid pf (inlineDatumFailingScriptTestCaseData pf),
+          testCase "use a collateral output" $ testExpectSuccessInvalid pf (collateralOutputTestCaseData pf)
+        ]
     ]
 
 bFeatures :: TestTree
