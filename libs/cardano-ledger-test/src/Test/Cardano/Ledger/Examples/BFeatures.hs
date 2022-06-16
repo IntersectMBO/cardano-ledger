@@ -70,6 +70,7 @@ import Test.Cardano.Ledger.Generic.Fields
     TxOutField (..),
     WitnessesField (..),
   )
+import Test.Cardano.Ledger.Generic.Functions (getBody)
 import Test.Cardano.Ledger.Generic.PrettyCore ()
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (PostShelley, Scriptic (..))
@@ -521,18 +522,15 @@ data KeyPairRole era
   = KeyPairPayment (KeyPair 'Payment (Crypto era))
   | KeyPairWitness (KeyPair 'Witness (Crypto era))
 
-testExpectSuccessValid ::
+txFromTestCaseData ::
   forall era.
-  ( State (EraRule "UTXOW" era) ~ UTxOState era,
-    Scriptic era,
-    GoodCrypto (Crypto era),
-    Default (State (EraRule "PPUP" era)),
-    PostShelley era
+  ( Scriptic era,
+    GoodCrypto (Crypto era)
   ) =>
   Proof era ->
   TestCaseData era ->
-  Assertion
-testExpectSuccessValid
+  Core.Tx era
+txFromTestCaseData
   pf
   (TestCaseData input' collateral' refInputs' txOut' txBodyFields' keysForAddrWits' otherWitsFields') =
     let txBody' =
@@ -560,6 +558,24 @@ testExpectSuccessValid
                   (AddrWits' addrWits : otherWitsFields')
               ]
             )
+     in tx'
+
+testExpectSuccessValid ::
+  forall era.
+  ( State (EraRule "UTXOW" era) ~ UTxOState era,
+    Scriptic era,
+    GoodCrypto (Crypto era),
+    Default (State (EraRule "PPUP" era)),
+    PostShelley era
+  ) =>
+  Proof era ->
+  TestCaseData era ->
+  Assertion
+testExpectSuccessValid
+  pf
+  tc@(TestCaseData input' collateral' refInputs' txOut' _ _ _) =
+    let tx' = txFromTestCaseData pf tc
+        txBody' = getBody pf tx'
         newTxIn = TxIn (txid txBody') minBound
         utxo = (UTxO . Map.fromList) $ [input'] ++ collateral' ++ refInputs'
         expectedUtxo = UTxO $ Map.insert newTxIn txOut' (Map.fromList (collateral' ++ refInputs'))
