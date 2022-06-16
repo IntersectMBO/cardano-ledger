@@ -701,6 +701,25 @@ testExpectSuccessInvalid
         expectedState = smartUTxOState expectedUtxo (Coin 0) (Coin fees') def
      in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf False tx') (Right expectedState)
 
+testExpectFailure ::
+  forall era.
+  ( State (EraRule "UTXOW" era) ~ UTxOState era,
+    GoodCrypto (Crypto era),
+    Default (State (EraRule "PPUP" era)),
+    PostShelley era
+  ) =>
+  Proof era ->
+  TestCaseData era ->
+  PredicateFailure (Core.EraRule "UTXOW" era) ->
+  Assertion
+testExpectFailure
+  pf
+  tc@(TestCaseData input' collateral' _ refInputs' _ _ _ _ _)
+  predicateFailure =
+    let tx' = txFromTestCaseData pf tc
+        utxo = (UTxO . Map.fromList) $ [input'] ++ collateral' ++ refInputs'
+     in testUTXOW (UTXOW pf) utxo (pp pf) (trustMeP pf True tx') (Left [predicateFailure])
+
 genericBFeatures ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
