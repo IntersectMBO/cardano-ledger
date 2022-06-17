@@ -117,7 +117,7 @@ import Control.State.Transition
     trans,
   )
 import Data.Default.Class (Default, def)
-import Data.Map.Strict (Map)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Void (Void)
 import Data.Word (Word64)
@@ -196,7 +196,7 @@ initialShelleyState ::
   EpochNo ->
   UTxO era ->
   Coin ->
-  Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
+  LM.ListMap (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   Core.PParams era ->
   Nonce ->
   ChainState era
@@ -237,7 +237,7 @@ initialShelleyState lab e utxo reserves genDelegs pp initNonce =
       Map.fromList
         ( fmap
             (\(GenDelegPair hk _) -> (coerceKeyRole hk, 0))
-            (Map.elems genDelegs)
+            (LM.elems genDelegs)
         )
 
 instance

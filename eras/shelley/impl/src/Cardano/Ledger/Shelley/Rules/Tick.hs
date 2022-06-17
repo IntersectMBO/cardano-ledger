@@ -47,6 +47,7 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import Data.ListMap (ListMap(ListMap))
 
 -- ==================================================
 
@@ -132,7 +133,7 @@ adoptGenesisDelegs es slot = es'
     ds' =
       ds
         { _fGenDelegs = fGenDelegs',
-          _genDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
+          _genDelegs = GenDelegs . ListMap $ eval (genDelegs ⨃ genDelegs')
         }
     dp' = dp {dpsDState = ds'}
     ls' = ls {lsDPState = dp'}

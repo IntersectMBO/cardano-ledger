@@ -48,6 +48,7 @@ import Hedgehog.Range (Range)
 import qualified Hedgehog.Range as Range
 import Numeric.Natural
 import Test.Cardano.Ledger.Shelley.Utils (mkHash, unsafeBoundRational)
+import qualified Data.ListMap as LM
 
 genShelleyGenesis :: Era era => Gen (ShelleyGenesis era)
 genShelleyGenesis =
@@ -64,7 +65,7 @@ genShelleyGenesis =
     <*> Gen.word64 (Range.linear 1 100000)
     <*> Gen.word64 (Range.linear 1 100000)
     <*> genPParams
-    <*> fmap Map.fromList genGenesisDelegationList
+    <*> genGenesisDelegationList
     <*> fmap Map.fromList genFundsList
     <*> genStaking
 
@@ -228,8 +229,8 @@ genDecimalBoundedRational gen = do
 
 genGenesisDelegationList ::
   CC.Crypto crypto =>
-  Gen [(KeyHash 'Genesis crypto, GenDelegPair crypto)]
-genGenesisDelegationList = Gen.list (Range.linear 1 10) genGenesisDelegationPair
+  Gen (LM.ListMap (KeyHash 'Genesis crypto) (GenDelegPair crypto))
+genGenesisDelegationList = LM.ListMap <$> Gen.list (Range.linear 1 10) genGenesisDelegationPair
 
 genGenesisDelegationPair ::
   forall crypto.

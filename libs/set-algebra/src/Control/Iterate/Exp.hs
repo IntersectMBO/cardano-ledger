@@ -31,6 +31,7 @@ import qualified Data.Set as Set
 import Data.UMap (UnifiedView (..), View)
 import Text.PrettyPrint.ANSI.Leijen (Doc, align, parens, text, vsep, (<+>))
 import Prelude hiding (lookup)
+import Data.ListMap (ListMap (ListMap))
 
 -- ================================================================================================
 -- PART 1. Exp over sets and maps
@@ -119,6 +120,9 @@ instance (Ord k) => HasExp (Single k v) (Single k v) where
 
 instance (Ord k, Ord v) => HasExp (Bimap k v) (Bimap k v) where
   toExp x = Base BiMapR x
+
+instance (Ord k) => HasExp (ListMap k v) (List k v) where
+  toExp (ListMap xs) = toExp xs
 
 instance
   (UnifiedView coin cred pool ptr k v, Ord k, Monoid coin, Ord coin, Ord cred, Ord ptr, Ord pool) =>

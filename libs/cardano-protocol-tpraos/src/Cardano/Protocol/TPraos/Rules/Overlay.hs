@@ -78,7 +78,7 @@ import Control.DeepSeq (NFData)
 import Control.Monad (unless)
 import Control.Monad.Except (throwError)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (dom, eval, range)
+import Control.SetAlgebra (dom, eval)
 import Control.State.Transition
 import Data.Coerce (coerce)
 import Data.Map.Strict (Map)
@@ -88,6 +88,7 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
+import qualified Data.ListMap as LM
 
 data OVERLAY crypto
 
@@ -264,7 +265,7 @@ overlayTransition =
         let vk = bheaderVk bhb
             vkh = hashKey vk
             slot = bheaderSlotNo bhb
-            gkeys = Map.keysSet genDelegs
+            gkeys = LM.keysSet genDelegs
 
         asc <- liftSTS $ asks activeSlotCoeff
         firstSlotNo <- liftSTS $ do
@@ -278,7 +279,7 @@ overlayTransition =
           Just NonActiveSlot ->
             failBecause $ NotActiveSlotOVERLAY (bheaderSlotNo bhb)
           Just (ActiveSlot gkey) ->
-            case Map.lookup gkey genDelegs of
+            case LM.lookup gkey genDelegs of
               Nothing ->
                 failBecause $ UnknownGenesisKeyOVERLAY gkey
               Just (GenDelegPair genDelegsKey genesisVrfKH) -> do
@@ -288,7 +289,7 @@ overlayTransition =
         let oce =
               OCertEnv
                 { ocertEnvStPools = eval (dom pd),
-                  ocertEnvGenDelegs = Set.map genDelegKeyHash $ range genDelegs
+                  ocertEnvGenDelegs = Set.fromList $ genDelegKeyHash <$> LM.elems genDelegs
                 }
 
         trans @(OCERT crypto) $ TRC (oce, cs, bh)

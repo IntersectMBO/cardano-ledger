@@ -42,8 +42,10 @@ library
                      , Data.MapExtras
                      , Data.Roundtrip
                      , Data.UMap
+                     , Data.ListMap
 
-  build-depends:       base >=4.11 && <5
+  build-depends:       aeson
+                     , base >=4.11 && <5
                      , bytestring
                      , cborg
                      , containers
@@ -58,6 +60,7 @@ library
                      , strict-containers
                      , text
                      , transformers >= 0.5
+                     , vector
                      -- IOHK deps
                      , cardano-crypto-class
                      , cardano-binary

@@ -40,6 +40,7 @@ import Data.UMap (delView, ptrView, rewView)
 import qualified Data.VMap as VMap
 import Prettyprinter
 import Text.Printf
+import qualified Data.ListMap as LM
 
 type C = StandardCrypto
 
@@ -162,6 +163,9 @@ statSet s = Stat s (Count (Set.size s))
 
 statMapKeys :: Map.Map k v -> Stat k
 statMapKeys = statSet . Map.keysSet
+
+statListMapKeys :: Ord k => LM.ListMap k v -> Stat k
+statListMapKeys = statSet . LM.keysSet
 
 statFoldable :: (Ord a, Foldable t) => t a -> Stat a
 statFoldable m = Stat (Set.fromList (F.toList m)) (Count (F.length m))
@@ -432,15 +436,15 @@ countDStateStats DState {..} =
       dssDelegations = statFoldable (delView _unified),
       dssKeyHashGenesis =
         statFoldable (fGenDelegGenKeyHash <$> Map.keys _fGenDelegs)
-          <> statMapKeys (unGenDelegs _genDelegs),
+          <> statListMapKeys (unGenDelegs _genDelegs),
       dssKeyHashGenesisDelegate =
         statFoldable (genDelegKeyHash <$> Map.elems _fGenDelegs)
           <> statFoldable
-            (genDelegKeyHash <$> Map.elems (unGenDelegs _genDelegs)),
+            (genDelegKeyHash <$> LM.elems (unGenDelegs _genDelegs)),
       dssHashVerKeyVRF =
         statFoldable (genDelegVrfHash <$> Map.elems _fGenDelegs)
           <> statFoldable
-            (genDelegVrfHash <$> Map.elems (unGenDelegs _genDelegs))
+            (genDelegVrfHash <$> LM.elems (unGenDelegs _genDelegs))
     }
 
 data PStateStats = PStateStats

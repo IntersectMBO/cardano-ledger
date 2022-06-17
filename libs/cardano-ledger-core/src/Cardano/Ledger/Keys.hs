@@ -87,12 +87,12 @@ import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=
 import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
-import Data.Map.Strict (Map)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
+import Data.ListMap (ListMap)
 
 -- | The role of a key.
 --
@@ -321,7 +321,7 @@ instance Crypto crypto => FromJSON (GenDelegPair crypto) where
         <*> obj .: "vrf"
 
 newtype GenDelegs crypto = GenDelegs
-  { unGenDelegs :: Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
+  { unGenDelegs :: ListMap (KeyHash 'Genesis crypto) (GenDelegPair crypto)
   }
   deriving (Eq, FromCBOR, NoThunks, NFData, Generic)
   deriving (Show) via Quiet (GenDelegs crypto)

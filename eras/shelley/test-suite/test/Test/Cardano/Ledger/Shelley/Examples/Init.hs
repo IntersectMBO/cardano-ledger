@@ -48,6 +48,7 @@ import Test.Cardano.Ledger.Shelley.Rules.Chain
     initialShelleyState,
   )
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, maxLLSupply, mkHash, unsafeBoundRational)
+import qualified Data.ListMap as ListMap
 
 -- === Initial Protocol Parameters
 --
@@ -118,6 +119,6 @@ initSt utxo =
     (EpochNo 0)
     utxo
     (maxLLSupply <-> (Val.coin $ balance utxo))
-    genDelegs
+    (ListMap.toMap genDelegs)
     ppEx
     (nonce0 @(Crypto era))

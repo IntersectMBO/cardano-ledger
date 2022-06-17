@@ -77,11 +77,13 @@ import Data.Maybe (isJust)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.UMap (View (..))
+import qualified Data.ListMap as ListMap
 import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
+import qualified Data.ListMap as LM
 
 data DELEG era
 
@@ -296,11 +298,11 @@ delegationTransition = do
           GenDelegs genDelegs = _genDelegs ds
 
       -- gkh ∈ dom genDelegs ?! GenesisKeyNotInMappingDELEG gkh
-      isJust (Map.lookup gkh genDelegs) ?! GenesisKeyNotInMappingDELEG gkh
+      isJust (ListMap.lookup gkh genDelegs) ?! GenesisKeyNotInMappingDELEG gkh
 
       let cod =
-            range $
-              Map.filterWithKey (\g _ -> g /= gkh) genDelegs
+            Set.fromList . LM.elems $
+              LM.filter (\g _ -> g /= gkh) genDelegs
           fod =
             range $
               Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (_fGenDelegs ds)

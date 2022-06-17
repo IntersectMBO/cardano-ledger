@@ -165,6 +165,7 @@ import Test.QuickCheck
     vectorOf,
   )
 import Test.QuickCheck.Gen (chooseAny)
+import qualified Data.ListMap as LM
 
 -- =======================================================
 
@@ -447,6 +448,10 @@ instance CC.Crypto crypto => Arbitrary (InstantaneousRewards crypto) where
   shrink = genericShrink
 
 instance CC.Crypto crypto => Arbitrary (FutureGenDeleg crypto) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 

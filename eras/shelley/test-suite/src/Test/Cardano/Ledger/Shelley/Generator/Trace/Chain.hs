@@ -80,6 +80,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     mkHash,
   )
 import Test.QuickCheck (Gen)
+import qualified Data.ListMap as LM
 
 -- ======================================================
 
@@ -184,7 +185,7 @@ mkOCertIssueNos ::
   GenDelegs h ->
   Map (KeyHash 'BlockIssuer h) Natural
 mkOCertIssueNos (GenDelegs delegs0) =
-  Map.fromList (fmap f (Map.elems delegs0))
+  Map.fromList (fmap f (LM.elems delegs0))
   where
     f (GenDelegPair vk _) = (coerceKeyRole vk, 0)
 

@@ -195,6 +195,7 @@ import GHC.Records
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
+import Data.ListMap (ListMap(ListMap))
 
 -- =====================================================================================================
 -- HELPER FUNCTIONS
@@ -1572,7 +1573,7 @@ ppVerKeyKES :: forall crypto. Crypto crypto => Proxy crypto -> VerKeyKES crypto 
 ppVerKeyKES Proxy x = reAnnotate (Width 5 :) (viaShow x)
 
 ppGenDelegs :: GenDelegs c -> PDoc
-ppGenDelegs (GenDelegs m) = ppSexp "GenDelegs" [ppMap ppKeyHash ppGenDelegPair m]
+ppGenDelegs (GenDelegs (ListMap m)) = ppSexp "GenDelegs" [ppList (ppPair ppKeyHash ppGenDelegPair) m]
 
 instance Crypto c => PrettyA (VKey r c) where
   prettyA = ppVKey

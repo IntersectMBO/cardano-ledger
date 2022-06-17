@@ -18,6 +18,7 @@ import Data.MapExtras (StrictTriple (..), splitMemberSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UM
+import qualified Data.ListMap as LM
 
 -- ================= The Iter class =================================================
 -- The Set algebra include types that encode finite maps of some type. They
@@ -378,5 +379,9 @@ instance Embed Bool Bool where
   fromBase xs = xs
 
 instance Embed (UM.View coin cred pool ptr k v) (UM.View coin cred pool ptr k v) where
+  toBase xs = xs
+  fromBase xs = xs
+
+instance Embed (LM.ListMap k v) (LM.ListMap k v) where
   toBase xs = xs
   fromBase xs = xs

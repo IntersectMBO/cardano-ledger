@@ -58,6 +58,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import Data.ListMap (ListMap(..))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -136,7 +137,7 @@ data ShelleyGenesis era = ShelleyGenesis
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !(PParams era),
-    sgGenDelegs :: !(Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era))),
+    sgGenDelegs :: !(ListMap (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era))),
     sgInitialFunds :: !(Map (Addr (Crypto era)) Coin),
     sgStaking :: !(ShelleyGenesisStaking (Crypto era))
   }
@@ -238,7 +239,7 @@ instance Era era => ToCBOR (ShelleyGenesis era) where
         <> toCBOR sgUpdateQuorum
         <> toCBOR sgMaxLovelaceSupply
         <> toCBOR sgProtocolParams
-        <> mapToCBOR sgGenDelegs
+        <> toCBOR sgGenDelegs
         <> mapToCBOR sgInitialFunds
         <> toCBOR sgStaking
 
@@ -257,7 +258,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
       sgUpdateQuorum <- fromCBOR
       sgMaxLovelaceSupply <- fromCBOR
       sgProtocolParams <- fromCBOR
-      sgGenDelegs <- mapFromCBOR
+      sgGenDelegs <- fromCBOR
       sgInitialFunds <- mapFromCBOR
       sgStaking <- fromCBOR
       pure $

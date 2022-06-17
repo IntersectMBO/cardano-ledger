@@ -33,7 +33,6 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
   )
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Word (Word64)
@@ -50,6 +49,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     mkVRFKeyPair,
     slotsPerKESIteration,
   )
+import qualified Data.ListMap as LM
 
 -- =================================================================
 
@@ -155,9 +155,8 @@ issuerKeys Constants {maxSlotTrace} ns x =
 genesisDelegs0 ::
   CC.Crypto crypto =>
   Constants ->
-  Map (KeyHash 'Genesis crypto) (GenDelegPair crypto)
-genesisDelegs0 c =
-  Map.fromList
+  LM.ListMap (KeyHash 'Genesis crypto) (GenDelegPair crypto)
+genesisDelegs0 c = LM.ListMap
     [ ( hashVKey gkey,
         GenDelegPair
           (coerceKeyRole $ hashVKey (cold pkeys))

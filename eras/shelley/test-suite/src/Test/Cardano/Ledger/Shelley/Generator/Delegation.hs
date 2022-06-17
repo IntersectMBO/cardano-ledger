@@ -88,6 +88,7 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
+import qualified Data.ListMap as LM
 
 -- ======================================================
 
@@ -330,7 +331,7 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     else do
       gk <- QC.elements genesisDelegators
       AllIssuerKeys {cold, vrf} <- QC.elements availableDelegatees
-      case Map.lookup (hashVKey gk) genDelegs_ of
+      case LM.lookup (hashVKey gk) genDelegs_ of
         Nothing -> pure Nothing
         Just _ -> return $ mkCert gk cold (snd vrf)
   where
@@ -349,9 +350,9 @@ genGenesisDelegation coreNodes delegateKeys dpState =
     (GenDelegs genDelegs_) = _genDelegs $ dpsDState dpState
     genesisDelegator k = eval (k ∈ dom genDelegs_)
     genesisDelegators = filter (genesisDelegator . hashVKey) (fst <$> coreNodes)
-    notActiveDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems genDelegs_))
+    notActiveDelegatee k = coerceKeyRole k `notElem` fmap genDelegKeyHash (LM.elems genDelegs_)
     fGenDelegs = _fGenDelegs $ dpsDState dpState
-    notFutureDelegatee k = not (coerceKeyRole k `List.elem` fmap genDelegKeyHash (Map.elems fGenDelegs))
+    notFutureDelegatee k = coerceKeyRole k `notElem` fmap genDelegKeyHash (Map.elems fGenDelegs)
     notDelegatee k = notActiveDelegatee k && notFutureDelegatee k
     availableDelegatees = filter (notDelegatee . hashVKey . cold) allDelegateKeys
 
@@ -472,7 +473,7 @@ genInstantaneousRewardsAccounts s genesisDelegatesByHash pparams accountState de
 
   coreSigners <-
     take <$> QC.elements [5 .. (max 0 $ length genDelegs_ - 1)]
-      <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
+      <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> LM.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]
   let available = availableAfterMIR pot accountState (_irwd delegSt)
@@ -514,7 +515,7 @@ genInstantaneousRewardsTransfer s genesisDelegatesByHash pparams accountState de
 
   coreSigners <-
     take <$> QC.elements [5 .. (max 0 $ length genDelegs_ - 1)]
-      <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> Map.elems genDelegs_)
+      <*> QC.shuffle (lookupGenDelegate' . genDelegKeyHash <$> LM.elems genDelegs_)
 
   pot <- QC.elements [ReservesMIR, TreasuryMIR]
   let Coin available = availableAfterMIR pot accountState (_irwd delegSt)

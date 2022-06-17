@@ -93,7 +93,7 @@ makeStatePair rewards' delegs ptrs' poolParams =
   ( DState
       (UM.unify rewards' delegs ptrs')
       Map.empty
-      (GenDelegs Map.empty)
+      (GenDelegs mempty)
       (InstantaneousRewards Map.empty Map.empty mempty mempty),
     PState poolParams Map.empty Map.empty
   )

@@ -86,6 +86,7 @@ import Test.Cardano.Ledger.Shelley.Utils
   )
 import Test.QuickCheck (Gen, frequency)
 import qualified Test.QuickCheck as QC
+import qualified Data.ListMap as LM
 
 -- ====================================
 
@@ -321,8 +322,8 @@ genUpdate
       let e = epochFromSlotNo s
           (GenDelegs genDelegs) = (_genDelegs . dpsDState) delegPoolSt
           genesisKeys = fst <$> nodes
-          coreSigners = catMaybes $ (flip Map.lookup) genesisDelegatesByHash . genDelegKeyHash <$> Map.elems genDelegs
-          failedWitnessLookup = length coreSigners < Map.size genDelegs
+          coreSigners = catMaybes $ flip Map.lookup genesisDelegatesByHash . genDelegKeyHash <$> LM.elems genDelegs
+          failedWitnessLookup = length coreSigners < length genDelegs
       if failedWitnessLookup
         then -- discard
           pure (Nothing, [])

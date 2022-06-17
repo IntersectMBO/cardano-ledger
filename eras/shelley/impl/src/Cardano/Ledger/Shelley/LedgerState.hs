@@ -253,6 +253,8 @@ import Lens.Micro (_1, _2)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
+import Data.Bifunctor (second)
+import qualified Data.ListMap as LM
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]
@@ -829,7 +831,7 @@ instance
 getGKeys ::
   NewEpochState era ->
   Set (KeyHash 'Genesis (Crypto era))
-getGKeys nes = Map.keysSet genDelegs
+getGKeys nes = LM.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
@@ -911,7 +913,7 @@ instance
 --  contains the specified transaction outputs.
 genesisState ::
   Default (State (Core.EraRule "PPUP" era)) =>
-  Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
+  LM.ListMap (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   UTxO era ->
   LedgerState era
 genesisState genDelegs0 utxo0 =
@@ -1060,15 +1062,16 @@ witsFromTxWitnesses coreTx =
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
+  forall era.
   Maybe (Update era) ->
   GenDelegs (Crypto era) ->
   Set (KeyHash 'Witness (Crypto era))
 propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
-  Set.map asWitness . Set.fromList $ Map.elems updateKeys
+  Set.map asWitness . Set.fromList $ snd <$> updateKeys
   where
     updateKeys' = eval (Map.keysSet pup ◁ genDelegs)
-    updateKeys = Map.map genDelegKeyHash updateKeys'
+    updateKeys = fmap (second genDelegKeyHash) updateKeys'
 
 -- Functions for stake delegation model
 
@@ -1735,7 +1738,7 @@ emptyDState =
   DState
     UM.empty
     Map.empty
-    (GenDelegs Map.empty)
+    (GenDelegs mempty)
     def
 
 instance Default (PState crypto) where

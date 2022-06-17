@@ -148,6 +148,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Validation
+import qualified Data.ListMap as LM
 
 -- =========================================
 
@@ -617,7 +618,7 @@ validateMIRInsufficientGenesisSigs ::
   Test (UtxowPredicateFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =
   let genDelegates =
-        Set.fromList $ asWitness . genDelegKeyHash <$> Map.elems genMapping
+        Set.fromList $ asWitness . genDelegKeyHash <$> LM.elems genMapping
       WitHashes khAsSet = witsKeyHashes
       genSig = eval (genDelegates ∩ khAsSet)
       txBody = getField @"body" tx
