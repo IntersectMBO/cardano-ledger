@@ -31,7 +31,6 @@ import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), TxOut (..))
-import qualified Data.ListMap as LM
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
@@ -41,6 +40,7 @@ import Control.State.Transition.Extended (IRC (..), TRC (..), applySTS)
 import Data.Default.Class (Default (def))
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Proxy (Proxy (..))

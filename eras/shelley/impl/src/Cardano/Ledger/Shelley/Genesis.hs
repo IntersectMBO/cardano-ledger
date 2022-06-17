@@ -58,6 +58,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -70,7 +71,6 @@ import Data.Word (Word32, Word64)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
 import NoThunks.Class (NoThunks (..))
-import qualified Data.ListMap as LM
 
 -- | Genesis Shelley staking configuration.
 --

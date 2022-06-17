@@ -33,13 +33,13 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock (NominalDiffTime, UTCTime)
-import qualified Data.ListMap as LM
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Word (Word32, Word64, Word8)
 import Hedgehog (Gen)

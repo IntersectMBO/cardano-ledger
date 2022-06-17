@@ -41,13 +41,13 @@ import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Types (listValue)
 import Data.Coerce (coerce)
 import qualified Data.List as L
+import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import qualified Data.Vector as V
 import GHC.Generics (Generic, Generic1)
 import NoThunks.Class (NoThunks)
 import Prelude hiding (filter, lookup)
 import qualified Prelude as Pre
-import qualified Data.Map.Strict as Map
 
 -- | ListMap is a wrapper around an associative list. It is encoded in CBOR
 --   and JSON as an object/map.
@@ -139,4 +139,3 @@ filter f (ListMap xs) = ListMap $ Pre.filter (uncurry f) xs
 
 toMap :: Ord k => ListMap k v -> Map.Map k v
 toMap (ListMap xs) = Map.fromList xs
-

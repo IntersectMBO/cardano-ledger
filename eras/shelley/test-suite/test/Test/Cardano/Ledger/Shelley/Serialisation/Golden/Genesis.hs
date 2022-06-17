@@ -16,7 +16,6 @@ where
 
 import Cardano.Binary (Encoding (..), ToCBOR (..), Tokens (..), serializeEncoding)
 import qualified Cardano.Crypto.Hash as Hash
-import qualified Data.ListMap as LM
 import Cardano.Ledger.BaseTypes (textToDns, textToUrl)
 import Cardano.Ledger.Crypto (HASH)
 import Cardano.Ledger.Era (Crypto (..))
@@ -28,6 +27,7 @@ import Cardano.Ledger.Shelley.PParams (PParams' (..), emptyPParams)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS (pack)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Scientific (Scientific)

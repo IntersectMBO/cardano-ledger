@@ -36,6 +36,7 @@ import Cardano.Slotting.Slot (EpochNo (..))
 import qualified Control.Monad.Trans.State as State hiding (state)
 import Data.Functor.Identity (Identity (..))
 import Data.Group (Group (..))
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Time.Clock (secondsToNominalDiffTime)
@@ -71,7 +72,6 @@ import Test.Cardano.Ledger.Model.Rules (ModelPredicateFailure (..))
 import Test.Cardano.Ledger.Model.Value
   ( evalModelValue,
   )
-import qualified Data.ListMap as LM
 
 instance
   ( PraosCrypto crypto,
