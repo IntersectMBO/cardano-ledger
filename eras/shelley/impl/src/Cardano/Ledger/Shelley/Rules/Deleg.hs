@@ -72,7 +72,6 @@ import Control.State.Transition
 import Data.Coders (decodeRecordSum)
 import Data.Foldable (fold)
 import Data.Group (Group (..))
-import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import qualified Data.Set as Set
@@ -301,8 +300,8 @@ delegationTransition = do
       isJust (ListMap.lookup gkh genDelegs) ?! GenesisKeyNotInMappingDELEG gkh
 
       let cod =
-            Set.fromList . LM.elems $
-              LM.filter (\g _ -> g /= gkh) genDelegs
+            range $
+              Map.filterWithKey (\g _ -> g /= gkh) genDelegs
           fod =
             range $
               Map.filterWithKey (\(FutureGenDeleg _ g) _ -> g /= gkh) (_fGenDelegs ds)

@@ -62,7 +62,6 @@ import Cardano.Ledger.Shelley.PParams
     pattern Update,
   )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
-import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -322,8 +321,8 @@ genUpdate
       let e = epochFromSlotNo s
           (GenDelegs genDelegs) = (_genDelegs . dpsDState) delegPoolSt
           genesisKeys = fst <$> nodes
-          coreSigners = catMaybes $ flip Map.lookup genesisDelegatesByHash . genDelegKeyHash <$> LM.elems genDelegs
-          failedWitnessLookup = length coreSigners < length genDelegs
+          coreSigners = catMaybes $ (flip Map.lookup) genesisDelegatesByHash . genDelegKeyHash <$> Map.elems genDelegs
+          failedWitnessLookup = length coreSigners < Map.size genDelegs
       if failedWitnessLookup
         then -- discard
           pure (Nothing, [])

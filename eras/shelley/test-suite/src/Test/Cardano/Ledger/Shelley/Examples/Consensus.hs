@@ -283,7 +283,7 @@ testShelleyGenesis =
       sgUpdateQuorum = quorum testGlobals,
       sgMaxLovelaceSupply = maxLovelaceSupply testGlobals,
       sgProtocolParams = emptyPParams,
-      sgGenDelegs = mempty,
+      sgGenDelegs = Map.empty,
       sgInitialFunds = Map.empty,
       sgStaking = emptyGenesisStaking
     }

@@ -13,7 +13,6 @@ import Control.Iterate.Collect (Collect (..), hasElem, isempty, none, one, when)
 import Data.BiMap
 import Data.List (sortBy)
 import qualified Data.List as List
-import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (StrictTriple (..), splitMemberSet)
 import Data.Set (Set)
@@ -379,9 +378,5 @@ instance Embed Bool Bool where
   fromBase xs = xs
 
 instance Embed (UM.View coin cred pool ptr k v) (UM.View coin cred pool ptr k v) where
-  toBase xs = xs
-  fromBase xs = xs
-
-instance Embed (LM.ListMap k v) (LM.ListMap k v) where
   toBase xs = xs
   fromBase xs = xs

@@ -33,7 +33,6 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable as F
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
-import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable
@@ -163,9 +162,6 @@ statSet s = Stat s (Count (Set.size s))
 
 statMapKeys :: Map.Map k v -> Stat k
 statMapKeys = statSet . Map.keysSet
-
-statListMapKeys :: Ord k => LM.ListMap k v -> Stat k
-statListMapKeys = statSet . LM.keysSet
 
 statFoldable :: (Ord a, Foldable t) => t a -> Stat a
 statFoldable m = Stat (Set.fromList (F.toList m)) (Count (F.length m))
@@ -436,15 +432,15 @@ countDStateStats DState {..} =
       dssDelegations = statFoldable (delView _unified),
       dssKeyHashGenesis =
         statFoldable (fGenDelegGenKeyHash <$> Map.keys _fGenDelegs)
-          <> statListMapKeys (unGenDelegs _genDelegs),
+          <> statMapKeys (unGenDelegs _genDelegs),
       dssKeyHashGenesisDelegate =
         statFoldable (genDelegKeyHash <$> Map.elems _fGenDelegs)
           <> statFoldable
-            (genDelegKeyHash <$> LM.elems (unGenDelegs _genDelegs)),
+            (genDelegKeyHash <$> Map.elems (unGenDelegs _genDelegs)),
       dssHashVerKeyVRF =
         statFoldable (genDelegVrfHash <$> Map.elems _fGenDelegs)
           <> statFoldable
-            (genDelegVrfHash <$> LM.elems (unGenDelegs _genDelegs))
+            (genDelegVrfHash <$> Map.elems (unGenDelegs _genDelegs))
     }
 
 data PStateStats = PStateStats

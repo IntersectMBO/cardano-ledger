@@ -967,7 +967,7 @@ dStateSummary (DState umap future (GenDelegs current) irwd) =
     "DState"
     [ ("Unified Reward Map", uMapSummary umap),
       ("Future genesis key delegations", ppInt (Map.size future)),
-      ("Genesis key delegations", ppInt (length current)),
+      ("Genesis key delegations", ppInt (Map.size current)),
       ("Instantaneous Rewards", instantSummary irwd)
     ]
 

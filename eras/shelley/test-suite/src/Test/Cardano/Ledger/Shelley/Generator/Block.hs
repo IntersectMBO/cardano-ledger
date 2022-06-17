@@ -41,7 +41,6 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
-import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
@@ -214,17 +213,17 @@ selectNextSlotWithLeader
         Maybe (ChainState era, AllIssuerKeys (Crypto era) 'BlockIssuer)
       selectLeaderForSlot slotNo =
         (chainSt,)
-          <$> case lookupInOverlaySchedule firstEpochSlot (LM.keysSet cores) d f slotNo of
+          <$> case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
             Nothing ->
               coerce
                 <$> List.find
-                  ( \AllIssuerKeys {vrf, hk} ->
+                  ( \(AllIssuerKeys {vrf, hk}) ->
                       isLeader hk (fst vrf)
                   )
                   ksStakePools
             Just (ActiveSlot x) ->
               fmap coerce $
-                LM.lookup x cores
+                Map.lookup x cores
                   >>= \y -> Map.lookup (genDelegKeyHash y) ksIndexedGenDelegates
             _ -> Nothing
         where
@@ -242,7 +241,7 @@ selectNextSlotWithLeader
           isLeader poolHash vrfKey =
             let y = VRF.evalCertified @(VRF (Crypto era)) () (mkSeed seedL slotNo epochNonce) vrfKey
                 stake = maybe 0 individualPoolStake $ Map.lookup poolHash poolDistr
-             in case lookupInOverlaySchedule firstEpochSlot (LM.keysSet cores) d f slotNo of
+             in case lookupInOverlaySchedule firstEpochSlot (Map.keysSet cores) d f slotNo of
                   Nothing -> checkLeaderValue (VRF.certifiedOutput y) stake f
                   Just (ActiveSlot x) | coerceKeyRole x == poolHash -> True
                   _ -> False

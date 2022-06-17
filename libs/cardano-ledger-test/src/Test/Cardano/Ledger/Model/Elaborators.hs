@@ -160,7 +160,6 @@ import Data.Functor.Identity (Identity (..))
 import Data.Group.GrpMap (GrpMap (..))
 import Data.Kind (Type)
 import qualified Data.List.NonEmpty as NonEmpty
-import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Proxy (Proxy (..))
@@ -1162,17 +1161,18 @@ class
               addr <- getAddrFor (Proxy :: Proxy era) mAddr
               eesUTxOs . at oid .= Just (TestUTxOInfo (Just (initialFundsPseudoTxIn addr)) mAddr SNothing)
               pure (addr, coins)
-          genDelegs0 <- for (Map.toList genDelegs) $ \(mgkh, mvkh) -> do
-            gkh <- getGenesisKeyHash (Proxy :: Proxy era) mgkh
-            (vkh, vrf) <- getGenesisDelegateKeyHash (Proxy :: Proxy era) mvkh
-            pure (gkh, GenDelegPair vkh vrf)
+          genDelegs0 <- fmap (Map.fromListWith (\_ _ -> error "gen delegate collision")) $
+            for (Map.toList genDelegs) $ \(mgkh, mvkh) -> do
+              gkh <- getGenesisKeyHash (Proxy :: Proxy era) mgkh
+              (vkh, vrf) <- getGenesisDelegateKeyHash (Proxy :: Proxy era) mvkh
+              pure (gkh, GenDelegPair vkh vrf)
 
-          pure $ makeInitialState globals mpp (LM.ListMap genDelegs0) utxo0
+          pure $ makeInitialState globals mpp genDelegs0 utxo0
 
   makeInitialState ::
     Globals ->
     ModelPParams (EraFeatureSet era) ->
-    LM.ListMap (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
+    Map.Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
     Map.Map (Addr (Crypto era)) Coin ->
     NewEpochState era
 

@@ -136,7 +136,6 @@ import Control.State.Transition
     wrapFailed,
   )
 import Data.Foldable (sequenceA_)
-import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import Data.Sequence.Strict (StrictSeq)
@@ -618,7 +617,7 @@ validateMIRInsufficientGenesisSigs ::
   Test (UtxowPredicateFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =
   let genDelegates =
-        Set.fromList $ asWitness . genDelegKeyHash <$> LM.elems genMapping
+        Set.fromList $ asWitness . genDelegKeyHash <$> Map.elems genMapping
       WitHashes khAsSet = witsKeyHashes
       genSig = eval (genDelegates ∩ khAsSet)
       txBody = getField @"body" tx

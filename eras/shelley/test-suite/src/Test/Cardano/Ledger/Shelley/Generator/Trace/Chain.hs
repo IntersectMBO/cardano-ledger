@@ -53,7 +53,6 @@ import Control.State.Transition.Trace.Generator.QuickCheck
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
-import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -185,7 +184,7 @@ mkOCertIssueNos ::
   GenDelegs h ->
   Map (KeyHash 'BlockIssuer h) Natural
 mkOCertIssueNos (GenDelegs delegs0) =
-  Map.fromList (fmap f (LM.elems delegs0))
+  Map.fromList (fmap f (Map.elems delegs0))
   where
     f (GenDelegPair vk _) = (coerceKeyRole vk, 0)
 

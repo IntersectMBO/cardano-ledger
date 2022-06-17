@@ -180,7 +180,6 @@ import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import qualified Data.Hashable as Hashable
 import Data.IP (IPv4, IPv6)
-import Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
 import Data.MemoBytes (MemoBytes (..))
 import Data.Proxy (Proxy (..))
@@ -1573,7 +1572,7 @@ ppVerKeyKES :: forall crypto. Crypto crypto => Proxy crypto -> VerKeyKES crypto 
 ppVerKeyKES Proxy x = reAnnotate (Width 5 :) (viaShow x)
 
 ppGenDelegs :: GenDelegs c -> PDoc
-ppGenDelegs (GenDelegs (ListMap m)) = ppSexp "GenDelegs" [ppList (ppPair ppKeyHash ppGenDelegPair) m]
+ppGenDelegs (GenDelegs m) = ppSexp "GenDelegs" [ppMap ppKeyHash ppGenDelegPair m]
 
 instance Crypto c => PrettyA (VKey r c) where
   prettyA = ppVKey

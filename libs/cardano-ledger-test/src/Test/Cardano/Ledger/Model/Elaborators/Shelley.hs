@@ -36,7 +36,6 @@ import Cardano.Slotting.Slot (EpochNo (..))
 import qualified Control.Monad.Trans.State as State hiding (state)
 import Data.Functor.Identity (Identity (..))
 import Data.Group (Group (..))
-import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Time.Clock (secondsToNominalDiffTime)
@@ -123,7 +122,7 @@ instance
 fromShelleyGlobals ::
   Globals ->
   Shelley.PParams era ->
-  LM.ListMap (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
+  Map.Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   Map.Map (Addr (Crypto era)) Coin ->
   ShelleyGenesis era
 fromShelleyGlobals globals pp genDelegs initialFunds =

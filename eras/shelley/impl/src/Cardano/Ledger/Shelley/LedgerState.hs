@@ -226,7 +226,6 @@ import Control.Monad.Trans
 import Control.Provenance (ProvM, modifyM, runProvM)
 import Control.SetAlgebra (dom, eval, (∈), (◁))
 import Control.State.Transition (STS (State))
-import Data.Bifunctor (second)
 import Data.Coders
   ( Decode (From, RecD),
     decode,
@@ -236,7 +235,6 @@ import Data.Coders
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
 import Data.Group (Group, invert)
-import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), completeM)
@@ -831,7 +829,7 @@ instance
 getGKeys ::
   NewEpochState era ->
   Set (KeyHash 'Genesis (Crypto era))
-getGKeys nes = LM.keysSet genDelegs
+getGKeys nes = Map.keysSet genDelegs
   where
     NewEpochState _ _ _ es _ _ _ = nes
     EpochState _ _ ls _ _ _ = es
@@ -913,7 +911,7 @@ instance
 --  contains the specified transaction outputs.
 genesisState ::
   Default (State (Core.EraRule "PPUP" era)) =>
-  LM.ListMap (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
+  Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   UTxO era ->
   LedgerState era
 genesisState genDelegs0 utxo0 =
@@ -1062,16 +1060,15 @@ witsFromTxWitnesses coreTx =
 -- | Calculate the set of hash keys of the required witnesses for update
 -- proposals.
 propWits ::
-  forall era.
   Maybe (Update era) ->
   GenDelegs (Crypto era) ->
   Set (KeyHash 'Witness (Crypto era))
 propWits Nothing _ = Set.empty
 propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
-  Set.map asWitness . Set.fromList $ snd <$> updateKeys
+  Set.map asWitness . Set.fromList $ Map.elems updateKeys
   where
     updateKeys' = eval (Map.keysSet pup ◁ genDelegs)
-    updateKeys = fmap (second genDelegKeyHash) updateKeys'
+    updateKeys = Map.map genDelegKeyHash updateKeys'
 
 -- Functions for stake delegation model
 
@@ -1738,7 +1735,7 @@ emptyDState =
   DState
     UM.empty
     Map.empty
-    (GenDelegs mempty)
+    (GenDelegs Map.empty)
     def
 
 instance Default (PState crypto) where

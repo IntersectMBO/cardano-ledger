@@ -205,7 +205,7 @@ utxoZero :: UTxO era
 utxoZero = UTxO Map.empty
 
 genDelegsZero :: GenDelegs crypto
-genDelegsZero = GenDelegs mempty
+genDelegsZero = GenDelegs Map.empty
 
 instantaneousRewardsZero :: InstantaneousRewards crypto
 instantaneousRewardsZero = InstantaneousRewards Map.empty Map.empty mempty mempty

@@ -44,7 +44,6 @@ import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
-import Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
@@ -133,7 +132,7 @@ adoptGenesisDelegs es slot = es'
     ds' =
       ds
         { _fGenDelegs = fGenDelegs',
-          _genDelegs = GenDelegs . ListMap $ eval (genDelegs ⨃ genDelegs')
+          _genDelegs = GenDelegs $ eval (genDelegs ⨃ genDelegs')
         }
     dp' = dp {dpsDState = ds'}
     ls' = ls {lsDPState = dp'}
