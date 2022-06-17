@@ -14,7 +14,6 @@ module Cardano.Ledger.Credential
     GenesisCredential (..),
     PaymentCredential,
     Ptr (Ptr),
-    mkPtr,
     ptrSlotNo,
     ptrTxIx,
     ptrCertIx,
@@ -57,10 +56,10 @@ import Data.Aeson
     (.=),
   )
 import qualified Data.Aeson as Aeson
-import Data.Bits (Bits (shiftL, shiftR, (.|.)))
+-- import Data.Bits (Bits (shiftL, shiftR, (.|.)))
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)
-import Data.Word (Word32, Word64, Word8)
+import Data.Word
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet (Quiet (Quiet))
@@ -116,8 +115,8 @@ data StakeReference crypto
 
 instance NoThunks (StakeReference crypto)
 
--- | Pointer to a slot number, transaction index and an index in certificate
--- list. We expect that `SlotNo` will fit into `Word32` for a very long time,
+-- TODO: implement this optimization:
+-- We expect that `SlotNo` will fit into `Word32` for a very long time,
 -- because we can assume that the rate at which it is incremented isn't going to
 -- increase in the near future. Therefore with current rate we should be fine for
 -- another 134 years. I suggest to remove this optimization in about a
@@ -133,7 +132,11 @@ instance NoThunks (StakeReference crypto)
 -- ┗━━┷━━┷━━┷━━┷━━┷━━┷━━┷━━┛
 --
 -- @@@
-newtype Ptr = PtrCompact Word64
+-- newtype Ptr = PtrCompact
+
+-- | Pointer to a slot number, transaction index and an index in certificate
+-- list.
+data Ptr = Ptr !SlotNo !TxIx !CertIx
   deriving (Eq, Ord, Generic, NFData, NoThunks)
   deriving (ToCBOR, FromCBOR) via CBORGroup Ptr
 
@@ -150,6 +153,8 @@ instance Show Ptr where
           . (") " ++)
           . shows certIx
           . (')' :)
+
+{- TODO: Uncomment this once Mainnet is ready for Ptr optimization.
 
 -- | With this pattern synonym we can recover actual values from compacted version of `Ptr`.
 pattern Ptr :: SlotNo -> TxIx -> CertIx -> Ptr
@@ -174,6 +179,7 @@ mkPtr (SlotNo slotNo) (TxIx txIx) (CertIx certIx)
 viewPtr :: Ptr -> (SlotNo, TxIx, CertIx)
 viewPtr (PtrCompact ptr) =
   (SlotNo (ptr `shiftR` 32), TxIx (fromIntegral (ptr `shiftR` 16)), CertIx (fromIntegral ptr))
+-}
 
 ptrSlotNo :: Ptr -> SlotNo
 ptrSlotNo (Ptr sn _ _) = sn
@@ -224,9 +230,11 @@ instance FromCBORGroup Ptr where
     slotNo <- fromCBOR
     txIx <- fromCBOR
     certIx <- fromCBOR
-    case mkPtr slotNo txIx certIx of
-      Nothing -> fail $ "SlotNo is too far into the future: " ++ show slotNo
-      Just ptr -> pure ptr
+    pure $ Ptr slotNo txIx certIx
+
+-- case mkPtr slotNo txIx certIx of
+--   Nothing -> fail $ "SlotNo is too far into the future: " ++ show slotNo
+--   Just ptr -> pure ptr
 
 newtype GenesisCredential crypto = GenesisCredential
   { unGenesisCredential :: KeyHash 'Genesis crypto

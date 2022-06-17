@@ -87,7 +87,7 @@ import Cardano.Ledger.Serialization
     ratioFromCBOR,
     ratioToCBOR,
   )
-import Cardano.Slotting.EpochInfo
+import Cardano.Slotting.EpochInfo (EpochInfo, hoistEpochInfo)
 import Cardano.Slotting.Time (SystemStart)
 import Control.DeepSeq (NFData)
 import Control.Exception (throw)
@@ -99,25 +99,25 @@ import qualified Data.Binary.Put as B
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BSL
 import Data.Coders (cborError, invalidKey)
-import Data.Coerce (coerce)
 import Data.Default.Class (Default (def))
 import qualified Data.Fixed as FP (Fixed, HasResolution, resolution)
-import Data.Functor.Identity
+import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
+import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict
 import Data.Ratio (Ratio, denominator, numerator, (%))
 import Data.Scientific (Scientific, base10Exponent, coefficient, normalize, scientific)
 import Data.Text (Text)
 import qualified Data.Text as Text
 import Data.Text.Encoding (encodeUtf8)
-import Data.Typeable
+import Data.Typeable (Typeable)
 import Data.Word (Word16, Word64, Word8)
 import GHC.Exception.Type (Exception)
 import GHC.Generics (Generic)
-import GHC.Stack
+import GHC.Stack (HasCallStack)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Quiet
+import Quiet (Quiet (Quiet))
 
 data ProtVer = ProtVer {pvMajor :: !Natural, pvMinor :: !Natural}
   deriving (Show, Eq, Generic, Ord, NFData)
@@ -661,13 +661,15 @@ newtype BlocksMade crypto = BlocksMade
   deriving (Show) via Quiet (BlocksMade crypto)
   deriving newtype (NoThunks, NFData, ToJSON, FromJSON, ToCBOR, FromCBOR)
 
--- | Transaction index. It is unfeasable to have 65535 outputs in a transaction,
--- but 255 is right on the border of a maximum CertIx on Mainnet at the moment,
+-- TODO: It is unfeasable to have 65535 outputs in a transaction,
+-- but 255 is right on the border of a maximum TxIx on Mainnet at the moment,
 -- that is why `Word16` was chosen as the smallest upper bound. Use
 -- `txIxFromIntegral` in order to construct this index safely from anything
 -- other than `Word16`. There is also `mkTxIxPartial` that can be used for
 -- testing.
-newtype TxIx = TxIx Word16
+
+-- | Transaction index.
+newtype TxIx = TxIx Word64
   deriving stock (Eq, Ord, Show)
   deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
 
@@ -675,19 +677,19 @@ txIxToInt :: TxIx -> Int
 txIxToInt (TxIx w16) = fromIntegral w16
 
 txIxFromIntegral :: Integral a => a -> Maybe TxIx
-txIxFromIntegral = coerce . word16FromInteger . toInteger
+txIxFromIntegral = fmap (TxIx . fromIntegral) . word16FromInteger . toInteger
 
 -- | Construct a `TxIx` from an arbitrary precision `Integer`. Throws an error for
 -- values out of range. Make sure to use it only for testing.
 mkTxIxPartial :: HasCallStack => Integer -> TxIx
 mkTxIxPartial i =
-  maybe (error $ "Value for TxIx is out of a valid range: " ++ show i) TxIx $
-    word16FromInteger i
+  fromMaybe (error $ "Value for TxIx is out of a valid range: " ++ show i) $
+    txIxFromIntegral i
 
 -- | Certificate index. Use `certIxFromIntegral` in order to construct this
 -- index safely from anything other than `Word16`. There is also
 -- `mkCertIxPartial` that can be used for testing.
-newtype CertIx = CertIx Word16
+newtype CertIx = CertIx Word64
   deriving stock (Eq, Ord, Show)
   deriving newtype (NFData, Enum, Bounded, NoThunks, ToCBOR, FromCBOR)
 
@@ -695,14 +697,14 @@ certIxToInt :: CertIx -> Int
 certIxToInt (CertIx w16) = fromIntegral w16
 
 certIxFromIntegral :: Integral a => a -> Maybe CertIx
-certIxFromIntegral = coerce . word16FromInteger . toInteger
+certIxFromIntegral = fmap (CertIx . fromIntegral) . word16FromInteger . toInteger
 
 -- | Construct a `CertIx` from an arbitrary precision `Integer`. Throws an error for
 -- values out of range. Make sure to use it only for testing.
 mkCertIxPartial :: HasCallStack => Integer -> CertIx
 mkCertIxPartial i =
-  maybe (error $ "Value for CertIx is out of a valid range: " ++ show i) CertIx $
-    word16FromInteger i
+  fromMaybe (error $ "Value for CertIx is out of a valid range: " ++ show i) $
+    certIxFromIntegral i
 
 word16FromInteger :: Integer -> Maybe Word16
 word16FromInteger i

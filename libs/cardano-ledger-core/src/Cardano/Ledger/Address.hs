@@ -109,7 +109,7 @@ import Data.Maybe (fromMaybe)
 import Data.String (fromString)
 import Data.Text (Text)
 import qualified Data.Text.Encoding as Text
-import Data.Word (Word16, Word64)
+import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
@@ -403,8 +403,8 @@ isBootstrapRedeemer _ = False
 putPtr :: Ptr -> Put
 putPtr (Ptr slot (TxIx txIx) (CertIx certIx)) = do
   putSlot slot
-  putVariableLengthWord64 ((fromIntegral :: Word16 -> Word64) txIx)
-  putVariableLengthWord64 ((fromIntegral :: Word16 -> Word64) certIx)
+  putVariableLengthWord64 ((fromIntegral @_ @Word64) txIx)
+  putVariableLengthWord64 ((fromIntegral @_ @Word64) certIx)
   where
     putSlot (SlotNo n) = putVariableLengthWord64 n
 
