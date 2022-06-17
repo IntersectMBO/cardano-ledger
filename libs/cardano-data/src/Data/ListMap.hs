@@ -20,7 +20,18 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Binary as C
 import Control.DeepSeq (NFData, NFData1)
 import Control.Monad
-import Data.Aeson (FromJSON (..), FromJSON1 (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..), ToJSON1 (..), ToJSON2 (..), ToJSONKey (..), ToJSONKeyFunction (..), Value (..))
+import Data.Aeson
+  ( FromJSON (..),
+    FromJSON1 (..),
+    FromJSONKey (..),
+    FromJSONKeyFunction (..),
+    ToJSON (..),
+    ToJSON1 (..),
+    ToJSON2 (..),
+    ToJSONKey (..),
+    ToJSONKeyFunction (..),
+    Value (..),
+  )
 import qualified Data.Aeson as J
 import Data.Aeson.Encoding (dict)
 import qualified Data.Aeson.Encoding as E
