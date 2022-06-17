@@ -180,6 +180,7 @@ import qualified Data.ByteString as Long (ByteString)
 import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import qualified Data.Hashable as Hashable
 import Data.IP (IPv4, IPv6)
+import Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
 import Data.MemoBytes (MemoBytes (..))
 import Data.Proxy (Proxy (..))
@@ -195,7 +196,6 @@ import GHC.Records
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
-import Data.ListMap (ListMap(ListMap))
 
 -- =====================================================================================================
 -- HELPER FUNCTIONS

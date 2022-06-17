@@ -62,6 +62,7 @@ import Cardano.Ledger.Shelley.PParams
     pattern Update,
   )
 import Cardano.Ledger.Slot (EpochNo (EpochNo), SlotNo)
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -86,7 +87,6 @@ import Test.Cardano.Ledger.Shelley.Utils
   )
 import Test.QuickCheck (Gen, frequency)
 import qualified Test.QuickCheck as QC
-import qualified Data.ListMap as LM
 
 -- ====================================
 

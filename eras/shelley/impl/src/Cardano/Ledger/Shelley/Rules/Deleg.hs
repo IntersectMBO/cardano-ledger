@@ -72,6 +72,7 @@ import Control.State.Transition
 import Data.Coders (decodeRecordSum)
 import Data.Foldable (fold)
 import Data.Group (Group (..))
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
 import qualified Data.Set as Set
@@ -83,7 +84,6 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
-import qualified Data.ListMap as LM
 
 data DELEG era
 

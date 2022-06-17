@@ -122,6 +122,7 @@ import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
@@ -165,7 +166,6 @@ import Test.QuickCheck
     vectorOf,
   )
 import Test.QuickCheck.Gen (chooseAny)
-import qualified Data.ListMap as LM
 
 -- =======================================================
 

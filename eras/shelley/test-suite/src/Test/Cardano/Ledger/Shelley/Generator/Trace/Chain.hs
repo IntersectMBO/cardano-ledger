@@ -53,6 +53,7 @@ import Control.State.Transition.Trace.Generator.QuickCheck
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
@@ -80,7 +81,6 @@ import Test.Cardano.Ledger.Shelley.Utils
     mkHash,
   )
 import Test.QuickCheck (Gen)
-import qualified Data.ListMap as LM
 
 -- ======================================================
 

@@ -136,6 +136,7 @@ import Control.State.Transition
     wrapFailed,
   )
 import Data.Foldable (sequenceA_)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Sequence as Seq (filter)
 import Data.Sequence.Strict (StrictSeq)
@@ -148,7 +149,6 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField, getField)
 import NoThunks.Class (NoThunks (..))
 import Validation
-import qualified Data.ListMap as LM
 
 -- =========================================
 

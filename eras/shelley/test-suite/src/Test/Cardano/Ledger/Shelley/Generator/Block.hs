@@ -41,6 +41,7 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Coerce (coerce)
 import Data.Foldable (toList)
 import qualified Data.List as List (find)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes, fromMaybe)
 import Data.Sequence (Seq)
@@ -69,7 +70,6 @@ import Test.Cardano.Ledger.Shelley.Utils
   )
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC (choose)
-import qualified Data.ListMap as LM
 
 -- ======================================================
 

@@ -1,38 +1,38 @@
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Data.ListMap
-  ( ListMap(..)
-  , foldrWithKey
-  , keys
-  , keysSet
-  , elems
-  , lookup
-  , filter
-  ) where
+  ( ListMap (..),
+    foldrWithKey,
+    keys,
+    keysSet,
+    elems,
+    lookup,
+    filter,
+  )
+where
 
-import Data.Aeson (Value(..), ToJSON(..), ToJSON1(..), ToJSON2(..), ToJSONKey(..), ToJSONKeyFunction(..), FromJSONKey(..), FromJSON1(..), FromJSON(..), FromJSONKeyFunction(..))
-import Data.Aeson.Encoding ( dict )
-import Data.Aeson.Types (listValue)
-
-import qualified Data.Aeson as J
-import qualified Data.Aeson.Encoding as E
-import qualified Data.Aeson.KeyMap as KM
-import qualified Data.List as L
-import qualified Data.Vector as V
-import Cardano.Binary (FromCBOR(..), ToCBOR(..))
+import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import qualified Cardano.Binary as C
-import Control.Monad
-import NoThunks.Class (NoThunks)
-import GHC.Generics (Generic, Generic1)
-import Data.Coerce (coerce)
-import qualified Data.Aeson.Key as Key
 import Control.DeepSeq (NFData, NFData1)
+import Control.Monad
+import Data.Aeson (FromJSON (..), FromJSON1 (..), FromJSONKey (..), FromJSONKeyFunction (..), ToJSON (..), ToJSON1 (..), ToJSON2 (..), ToJSONKey (..), ToJSONKeyFunction (..), Value (..))
+import qualified Data.Aeson as J
+import Data.Aeson.Encoding (dict)
+import qualified Data.Aeson.Encoding as E
+import qualified Data.Aeson.Key as Key
+import qualified Data.Aeson.KeyMap as KM
+import Data.Aeson.Types (listValue)
+import Data.Coerce (coerce)
+import qualified Data.List as L
 import qualified Data.Set as Set
+import qualified Data.Vector as V
+import GHC.Generics (Generic, Generic1)
+import NoThunks.Class (NoThunks)
 import Prelude hiding (filter, lookup)
 import qualified Prelude as Pre
 
@@ -40,7 +40,8 @@ import qualified Prelude as Pre
 --   and JSON as an object/map.
 newtype ListMap k v = ListMap
   { unListMap :: [(k, v)]
-  } deriving (Eq, Ord, Show, Foldable, Functor, Generic, Generic1, NFData)
+  }
+  deriving (Eq, Ord, Show, Foldable, Functor, Generic, Generic1, NFData)
 
 instance Semigroup (ListMap k v) where
   ListMap xs <> ListMap ys = ListMap $ xs <> ys
@@ -51,12 +52,13 @@ instance Monoid (ListMap k v) where
 instance (NoThunks k, NoThunks v) => NoThunks (ListMap k v)
 
 instance (FromCBOR k, FromCBOR v) => FromCBOR (ListMap k v) where
-  fromCBOR = ListMap <$> do
-    len <- C.decodeListLen
-    replicateM len $ do
-      k <- fromCBOR
-      v <- fromCBOR
-      return (k, v)
+  fromCBOR =
+    ListMap <$> do
+      len <- C.decodeListLen
+      replicateM len $ do
+        k <- fromCBOR
+        v <- fromCBOR
+        return (k, v)
 
 instance (ToCBOR k, ToCBOR v) => ToCBOR (ListMap k v) where
   toCBOR (ListMap xs) = C.encodeListLen (fromIntegral $ length xs) <> foldr f mempty xs
@@ -65,17 +67,19 @@ instance (ToCBOR k, ToCBOR v) => ToCBOR (ListMap k v) where
 
 instance ToJSONKey k => ToJSON1 (ListMap k) where
   liftToJSON g _ = case toJSONKey of
-    ToJSONKeyText  f _ -> Object . KM.fromList . unListMap . mapKeyValO f g
+    ToJSONKeyText f _ -> Object . KM.fromList . unListMap . mapKeyValO f g
     ToJSONKeyValue f _ -> Array . V.fromList . L.map (toJSONPair f g) . unListMap
-    where mapKeyValO :: (k1 -> k2) -> (v1 -> v2) -> ListMap k1 v1 -> ListMap k2 v2
-          mapKeyValO fk kv = ListMap . foldrWithKey (\(k, v) -> ((fk k, kv v):)) []
-          toJSONPair :: (a -> Value) -> (b -> Value) -> (a, b) -> Value
-          toJSONPair a b = liftToJSON2 a (listValue a) b (listValue b)
+    where
+      mapKeyValO :: (k1 -> k2) -> (v1 -> v2) -> ListMap k1 v1 -> ListMap k2 v2
+      mapKeyValO fk kv = ListMap . foldrWithKey (\(k, v) -> ((fk k, kv v) :)) []
+      toJSONPair :: (a -> Value) -> (b -> Value) -> (a, b) -> Value
+      toJSONPair a b = liftToJSON2 a (listValue a) b (listValue b)
 
   liftToEncoding g _ = case toJSONKey of
-    ToJSONKeyText  _ f -> dict f g (foldrWithKey . uncurry)
+    ToJSONKeyText _ f -> dict f g (foldrWithKey . uncurry)
     ToJSONKeyValue _ f -> E.list (pairEncoding f) . unListMap
-    where pairEncoding f (a, b) = E.list id [f a, g b]
+    where
+      pairEncoding f (a, b) = E.list id [f a, g b]
 
 instance (ToJSON v, ToJSONKey k) => ToJSON (ListMap k v) where
   toJSON = J.toJSON1
@@ -88,11 +92,11 @@ instance (FromJSONKey k) => FromJSON1 (ListMap k) where
     res <- forM kv $ \(k, v) -> do
       let t = Key.toText k
       k' <- case fromJSONKey of
-              FromJSONKeyCoerce -> return $ coerce t
-              FromJSONKeyText f -> return $ f t
-              FromJSONKeyTextParser f -> f t
-              -- TODO figure out what to do here
-              FromJSONKeyValue _ -> error "key conversion not implemented"
+        FromJSONKeyCoerce -> return $ coerce t
+        FromJSONKeyText f -> return $ f t
+        FromJSONKeyTextParser f -> f t
+        -- TODO figure out what to do here
+        FromJSONKeyValue _ -> error "key conversion not implemented"
       v' <- parser v
       return (k', v')
     return $ ListMap res
@@ -119,4 +123,3 @@ lookup k (ListMap xs) = L.lookup k xs
 
 filter :: (k -> v -> Bool) -> ListMap k v -> ListMap k v
 filter f (ListMap xs) = ListMap $ Pre.filter (uncurry f) xs
-

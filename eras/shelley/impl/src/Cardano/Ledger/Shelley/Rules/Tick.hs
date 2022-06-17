@@ -44,10 +44,10 @@ import Cardano.Ledger.Slot (EpochNo, SlotNo, epochInfoEpoch)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (eval, (⨃))
 import Control.State.Transition
+import Data.ListMap (ListMap (ListMap))
 import qualified Data.Map.Strict as Map
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Data.ListMap (ListMap(ListMap))
 
 -- ==================================================
 

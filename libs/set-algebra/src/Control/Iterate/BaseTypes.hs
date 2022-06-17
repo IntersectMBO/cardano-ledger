@@ -13,12 +13,12 @@ import Control.Iterate.Collect (Collect (..), hasElem, isempty, none, one, when)
 import Data.BiMap
 import Data.List (sortBy)
 import qualified Data.List as List
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (StrictTriple (..), splitMemberSet)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UM
-import qualified Data.ListMap as LM
 
 -- ================= The Iter class =================================================
 -- The Set algebra include types that encode finite maps of some type. They

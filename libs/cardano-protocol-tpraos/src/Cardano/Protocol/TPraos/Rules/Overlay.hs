@@ -81,6 +81,7 @@ import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval)
 import Control.State.Transition
 import Data.Coerce (coerce)
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -88,7 +89,6 @@ import qualified Data.Set as Set
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import qualified Data.ListMap as LM
 
 data OVERLAY crypto
 

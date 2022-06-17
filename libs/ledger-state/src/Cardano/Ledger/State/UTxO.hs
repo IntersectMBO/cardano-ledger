@@ -33,6 +33,7 @@ import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable as F
 import Data.Functor
 import qualified Data.IntMap.Strict as IntMap
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.Typeable
@@ -40,7 +41,6 @@ import Data.UMap (delView, ptrView, rewView)
 import qualified Data.VMap as VMap
 import Prettyprinter
 import Text.Printf
-import qualified Data.ListMap as LM
 
 type C = StandardCrypto
 

@@ -226,6 +226,7 @@ import Control.Monad.Trans
 import Control.Provenance (ProvM, modifyM, runProvM)
 import Control.SetAlgebra (dom, eval, (∈), (◁))
 import Control.State.Transition (STS (State))
+import Data.Bifunctor (second)
 import Data.Coders
   ( Decode (From, RecD),
     decode,
@@ -235,6 +236,7 @@ import Data.Coders
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
 import Data.Group (Group, invert)
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Pulse (Pulsable (..), completeM)
@@ -253,8 +255,6 @@ import Lens.Micro (_1, _2)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Quiet
-import Data.Bifunctor (second)
-import qualified Data.ListMap as LM
 
 -- | Representation of a list of pairs of key pairs, e.g., pay and stake keys
 type KeyPairs crypto = [(KeyPair 'Payment crypto, KeyPair 'Staking crypto)]

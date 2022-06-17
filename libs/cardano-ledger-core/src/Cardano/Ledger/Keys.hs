@@ -87,12 +87,12 @@ import Data.Aeson (FromJSON (..), FromJSONKey, ToJSON (..), ToJSONKey, (.:), (.=
 import qualified Data.Aeson as Aeson
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
+import Data.ListMap (ListMap)
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Quiet
-import Data.ListMap (ListMap)
 
 -- | The role of a key.
 --

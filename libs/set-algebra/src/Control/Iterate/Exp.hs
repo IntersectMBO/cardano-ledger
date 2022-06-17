@@ -25,13 +25,13 @@ import Control.Iterate.BaseTypes
 import Control.Iterate.Collect (Collect (..), hasElem, none, one)
 import Data.BiMap (BiMap, Bimap)
 import Data.List (sortBy)
+import Data.ListMap (ListMap (ListMap))
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Set as Set
 import Data.UMap (UnifiedView (..), View)
 import Text.PrettyPrint.ANSI.Leijen (Doc, align, parens, text, vsep, (<+>))
 import Prelude hiding (lookup)
-import Data.ListMap (ListMap (ListMap))
 
 -- ================================================================================================
 -- PART 1. Exp over sets and maps

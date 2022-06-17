@@ -33,6 +33,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Ratio ((%))
@@ -48,7 +49,6 @@ import Hedgehog.Range (Range)
 import qualified Hedgehog.Range as Range
 import Numeric.Natural
 import Test.Cardano.Ledger.Shelley.Utils (mkHash, unsafeBoundRational)
-import qualified Data.ListMap as LM
 
 genShelleyGenesis :: Era era => Gen (ShelleyGenesis era)
 genShelleyGenesis =

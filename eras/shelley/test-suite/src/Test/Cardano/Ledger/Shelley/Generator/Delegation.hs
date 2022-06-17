@@ -65,6 +65,7 @@ import Control.Monad (replicateM)
 import Control.SetAlgebra (dom, domain, eval, (∈), (∉))
 import Data.Foldable (fold)
 import qualified Data.List as List
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map (elems, fromList, lookup)
 import Data.Maybe (fromMaybe)
@@ -88,7 +89,6 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen (EraGen (..))
 import Test.Cardano.Ledger.Shelley.Utils
 import Test.QuickCheck (Gen)
 import qualified Test.QuickCheck as QC
-import qualified Data.ListMap as LM
 
 -- ======================================================
 
