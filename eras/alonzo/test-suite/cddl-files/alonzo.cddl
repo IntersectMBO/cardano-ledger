@@ -386,7 +386,6 @@ network_id = 0 / 1 ; New
 epoch = uint
 
 addr_keyhash          = $hash28
-scripthash            = $hash28
 genesis_delegate_hash = $hash28
 pool_keyhash          = $hash28
 genesishash           = $hash28
@@ -394,3 +393,11 @@ genesishash           = $hash28
 vrf_keyhash           = $hash32
 auxiliary_data_hash   = $hash32
 pool_metadata_hash    = $hash32
+
+; To compute a script hash, note that you must prepend
+; a tag to the bytes of the script before hashing.
+; The tag is determined by the language.
+; The tags in the Alonzo era are:
+;   "\x00" for multisig scripts
+;   "\x01" for Plutus V1 scripts
+scripthash            = $hash28
