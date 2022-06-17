@@ -14,6 +14,7 @@ module Cardano.Ledger.Credential
     GenesisCredential (..),
     PaymentCredential,
     Ptr (Ptr),
+    mkPtr,
     ptrSlotNo,
     ptrTxIx,
     ptrCertIx,
@@ -56,13 +57,13 @@ import Data.Aeson
     (.=),
   )
 import qualified Data.Aeson as Aeson
-import Data.Bits
+import Data.Bits (Bits (shiftL, shiftR, (.|.)))
 import Data.Foldable (asum)
 import Data.Typeable (Typeable)
-import Data.Word (Word64, Word8)
+import Data.Word (Word32, Word64, Word8)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
-import Quiet
+import Quiet (Quiet (Quiet))
 
 -- | Script hash or key hash for a payment or a staking object.
 --
@@ -119,7 +120,7 @@ instance NoThunks (StakeReference crypto)
 -- list. We expect that `SlotNo` will fit into `Word32` for a very long time,
 -- because we can assume that the rate at which it is incremented isn't going to
 -- increase in the near future. Therefore with current rate we should be fine for
--- about a 150 years. I suggest to remove this optimization in about a
+-- another 134 years. I suggest to remove this optimization in about a
 -- hundred years or thereabouts, so around a year 2122 would be good.
 --
 -- Compaction works in a following manner. Total 8 bytes: first 4 bytes are for
@@ -154,11 +155,21 @@ instance Show Ptr where
 pattern Ptr :: SlotNo -> TxIx -> CertIx -> Ptr
 pattern Ptr slotNo txIx certIx <-
   (viewPtr -> (slotNo, txIx, certIx))
-  where
-    Ptr (SlotNo slotNo) (TxIx txIx) (CertIx certIx) =
-      PtrCompact ((slotNo `shiftL` 32) .|. (fromIntegral txIx `shiftL` 16) .|. fromIntegral certIx)
 
 {-# COMPLETE Ptr #-}
+
+-- | `Ptr` relies on compact representation for memory efficiency and therefore
+-- it will return `Nothing` if `SlotNo` takes up more than 32 bits, which is
+-- totally fine for at least another 100 years.
+mkPtr :: SlotNo -> TxIx -> CertIx -> Maybe Ptr
+mkPtr (SlotNo slotNo) (TxIx txIx) (CertIx certIx)
+  | slotNo > fromIntegral (maxBound :: Word32) = Nothing
+  | otherwise =
+      Just
+        $! PtrCompact
+          ( (slotNo `shiftL` 32) .|. (fromIntegral txIx `shiftL` 16)
+              .|. fromIntegral certIx
+          )
 
 viewPtr :: Ptr -> (SlotNo, TxIx, CertIx)
 viewPtr (PtrCompact ptr) =
@@ -209,7 +220,13 @@ instance ToCBORGroup Ptr where
   listLenBound _ = 3
 
 instance FromCBORGroup Ptr where
-  fromCBORGroup = Ptr <$> fromCBOR <*> fromCBOR <*> fromCBOR
+  fromCBORGroup = do
+    slotNo <- fromCBOR
+    txIx <- fromCBOR
+    certIx <- fromCBOR
+    case mkPtr slotNo txIx certIx of
+      Nothing -> fail $ "SlotNo is too far into the future: " ++ show slotNo
+      Just ptr -> pure ptr
 
 newtype GenesisCredential crypto = GenesisCredential
   { unGenesisCredential :: KeyHash 'Genesis crypto
