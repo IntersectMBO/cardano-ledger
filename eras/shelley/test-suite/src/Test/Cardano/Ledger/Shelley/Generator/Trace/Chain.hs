@@ -80,6 +80,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     mkHash,
   )
 import Test.QuickCheck (Gen)
+import qualified Data.ListMap as LM
 
 -- ======================================================
 
@@ -243,8 +244,8 @@ registerGenesisStaking
         (dpsDState oldDPState)
           { _unified =
               UM.unify
-                (Map.map (const $ Coin 0) . Map.mapKeys KeyHashObj $ sgsStake)
-                (Map.mapKeys KeyHashObj sgsStake)
+                (Map.map (const $ Coin 0) . Map.mapKeys KeyHashObj . LM.toMap $ sgsStake)
+                (Map.mapKeys KeyHashObj $ LM.toMap sgsStake)
                 (UM.ptrView (_unified (dpsDState oldDPState)))
           }
 
@@ -253,7 +254,7 @@ registerGenesisStaking
       newPState :: PState (Crypto era)
       newPState =
         (dpsPState oldDPState)
-          { _pParams = sgsPools
+          { _pParams = LM.toMap sgsPools
           }
 
       -- The new stake distribution is made on the basis of a snapshot taken

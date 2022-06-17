@@ -31,6 +31,7 @@ import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), TxOut (..))
+import qualified Data.ListMap as LM
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
@@ -136,7 +137,7 @@ genChainInEpoch epoch = do
     mkGenesisStaking stakeMap =
       ShelleyGenesisStaking
         { sgsPools =
-            Map.fromList
+            LM.ListMap
               [ (hk, pp)
                 | (AllIssuerKeys {vrf, hk}, (owner : _)) <- stakeMap,
                   let pp =
@@ -153,7 +154,7 @@ genChainInEpoch epoch = do
                           }
               ],
           sgsStake =
-            Map.fromList
+            LM.ListMap
               [ (dlg, hk)
                 | (AllIssuerKeys {hk}, dlgs) <- stakeMap,
                   dlg <- dlgs

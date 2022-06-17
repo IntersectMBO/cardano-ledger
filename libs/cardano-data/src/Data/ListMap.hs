@@ -13,6 +13,7 @@ module Data.ListMap
     elems,
     lookup,
     filter,
+    toMap,
   )
 where
 
@@ -46,6 +47,7 @@ import GHC.Generics (Generic, Generic1)
 import NoThunks.Class (NoThunks)
 import Prelude hiding (filter, lookup)
 import qualified Prelude as Pre
+import qualified Data.Map.Strict as Map
 
 -- | ListMap is a wrapper around an associative list. It is encoded in CBOR
 --   and JSON as an object/map.
@@ -134,3 +136,7 @@ lookup k (ListMap xs) = L.lookup k xs
 
 filter :: (k -> v -> Bool) -> ListMap k v -> ListMap k v
 filter f (ListMap xs) = ListMap $ Pre.filter (uncurry f) xs
+
+toMap :: Ord k => ListMap k v -> Map.Map k v
+toMap (ListMap xs) = Map.fromList xs
+

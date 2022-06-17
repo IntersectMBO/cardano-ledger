@@ -39,6 +39,7 @@ import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock (NominalDiffTime, UTCTime)
+import qualified Data.ListMap as LM
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Word (Word32, Word64, Word8)
 import Hedgehog (Gen)
@@ -65,14 +66,14 @@ genShelleyGenesis =
     <*> Gen.word64 (Range.linear 1 100000)
     <*> genPParams
     <*> fmap Map.fromList genGenesisDelegationList
-    <*> fmap Map.fromList genFundsList
+    <*> fmap LM.ListMap genFundsList
     <*> genStaking
 
 genStaking :: CC.Crypto crypto => Gen (ShelleyGenesisStaking crypto)
 genStaking =
   ShelleyGenesisStaking
-    <$> fmap Map.fromList genPools
-    <*> fmap Map.fromList genStake
+    <$> fmap LM.ListMap genPools
+    <*> fmap LM.ListMap genStake
 
 genPools ::
   CC.Crypto crypto =>

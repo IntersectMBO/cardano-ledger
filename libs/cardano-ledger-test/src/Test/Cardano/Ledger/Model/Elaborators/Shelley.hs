@@ -71,6 +71,7 @@ import Test.Cardano.Ledger.Model.Rules (ModelPredicateFailure (..))
 import Test.Cardano.Ledger.Model.Value
   ( evalModelValue,
   )
+import qualified Data.ListMap as LM
 
 instance
   ( PraosCrypto crypto,
@@ -140,7 +141,7 @@ fromShelleyGlobals globals pp genDelegs initialFunds =
       sgMaxLovelaceSupply = maxLovelaceSupply globals,
       sgProtocolParams = pp,
       sgGenDelegs = genDelegs, --  genGenesisDelegationList
-      sgInitialFunds = initialFunds, -- genFundsList
+      sgInitialFunds = LM.ListMap $ Map.toList initialFunds, -- genFundsList
       sgStaking = emptyGenesisStaking -- genStaking
     }
 
