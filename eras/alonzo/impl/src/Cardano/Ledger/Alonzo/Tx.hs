@@ -280,7 +280,7 @@ hashScriptIntegrity langViews rdmrs dats =
     else SJust (hashAnnotated (ScriptIntegrity rdmrs dats langViews))
 
 -- ===============================================================
--- From the specification, Figure 5 "Functions related to fees"
+-- From the specification, Figure 4 "Functions related to fees"
 -- ===============================================================
 
 isTwoPhaseScriptAddress ::
