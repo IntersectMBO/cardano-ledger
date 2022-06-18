@@ -237,12 +237,18 @@ coin = uint
 epoch = uint
 
 addr_keyhash          = $hash28
-scripthash            = $hash28
 genesis_delegate_hash = $hash28
 pool_keyhash          = $hash28
 genesishash           = $hash28
 
 vrf_keyhash           = $hash32
 metadata_hash         = $hash32
+
+; To compute a script hash, note that you must prepend
+; a tag to the bytes of the script before hashing.
+; The tag is determined by the language.
+; In the Shelley era there is only one such tag,
+; namely "\x00" for multisig scripts.
+scripthash            = $hash28
 
 $nonce /= [ 0 // 1, bytes .size 32 ]
