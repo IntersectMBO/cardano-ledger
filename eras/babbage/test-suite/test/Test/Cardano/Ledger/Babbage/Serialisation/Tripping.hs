@@ -46,7 +46,7 @@ trippingF f x =
             <> case deserialiseFromBytes decodeTerm (serialize x) of
               Left e -> ppShow e
               Right (_, terms) -> ppShow terms
-            <> "\nreamining term: "
+            <> "\nremaining term: "
             <> case deserialiseFromBytes decodeTerm (serialize y) of
               Left e -> ppShow e
               Right (_, terms) -> ppShow terms

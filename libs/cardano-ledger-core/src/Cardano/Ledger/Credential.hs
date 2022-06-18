@@ -132,7 +132,7 @@ instance NoThunks (StakeReference crypto)
 -- ┗━━┷━━┷━━┷━━┷━━┷━━┷━━┷━━┛
 --
 -- @@@
--- newtype Ptr = PtrCompact
+-- newtype Ptr = PtrCompact Word64
 
 -- | Pointer to a slot number, transaction index and an index in certificate
 -- list.
