@@ -6,7 +6,6 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -21,7 +20,12 @@ module Cardano.Ledger.Shelley.Rules.NewEpoch
 where
 
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin
+  ( BlocksMade (BlocksMade),
+    ProtVer,
+    ShelleyBase,
+    StrictMaybe (SJust, SNothing),
+  )
+import Cardano.Ledger.Coin (Coin (Coin), toDeltaCoin)
 import Cardano.Ledger.Compactible (fromCompact)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential)
@@ -34,20 +38,20 @@ import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
 import Cardano.Ledger.Shelley.Rules.Epoch
-import Cardano.Ledger.Shelley.Rules.Mir
+import Cardano.Ledger.Shelley.Rules.Mir (MIR, MirEvent, MirPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
-import Cardano.Ledger.Shelley.TxBody
-import Cardano.Ledger.Slot
+import Cardano.Ledger.Shelley.TxBody (PoolParams (_poolVrf))
+import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
 import Control.Provenance (runProvM)
 import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
-import Data.Ratio
+import Data.Ratio ((%))
 import Data.Set (Set)
 import Data.VMap as VMap
 import GHC.Generics (Generic)
-import GHC.Records
+import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 
 data NEWEPOCH era
@@ -79,7 +83,10 @@ instance
 
 data NewEpochEvent era
   = DeltaRewardEvent (Event (Core.EraRule "RUPD" era))
-  | RestrainedRewards EpochNo (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))) (Set (Credential 'Staking (Crypto era)))
+  | RestrainedRewards
+      EpochNo
+      (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
+      (Set (Credential 'Staking (Crypto era)))
   | TotalRewardEvent EpochNo (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
   | EpochEvent (Event (Core.EraRule "EPOCH" era))
   | MirEvent (Event (Core.EraRule "MIR" era))
@@ -192,7 +199,10 @@ newEpochTransition = do
           }
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
-tellReward :: (Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)) => NewEpochEvent era -> Rule (NEWEPOCH era) rtype ()
+tellReward ::
+  (Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)) =>
+  NewEpochEvent era ->
+  Rule (NEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 

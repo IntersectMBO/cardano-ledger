@@ -236,13 +236,13 @@ delegsTransition = do
             DCertDeleg (Delegate deleg) ->
               let stPools_ = _pParams $ dpsPState dpstate'
                   targetPool = _delegatee deleg
-               in case eval (targetPool ∈ dom stPools_) of
-                    True -> Right ()
-                    False -> Left $ DelegateeNotRegisteredDELEG targetPool
+               in if eval (targetPool ∈ dom stPools_)
+                    then Right ()
+                    else Left $ DelegateeNotRegisteredDELEG targetPool
             _ -> Right ()
       isDelegationRegistered ?!: id
 
-      -- It is impossible to have 4294967295 number of certificates in a
+      -- It is impossible to have 65535 number of certificates in a
       -- transaction, therefore partial function is justified.
       let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
       trans @(Core.EraRule "DELPL" era) $

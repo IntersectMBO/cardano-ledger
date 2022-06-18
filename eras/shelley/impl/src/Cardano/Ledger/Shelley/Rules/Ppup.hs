@@ -26,23 +26,37 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.BaseTypes
+  ( Globals (stabilityWindow),
+    ProtVer,
+    ShelleyBase,
+    StrictMaybe (SJust),
+    epochInfoPure,
+    invalidKey,
+  )
 import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Keys
-import Cardano.Ledger.Serialization (decodeRecordSum)
+import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
 import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), pvCanFollow)
-import Cardano.Ledger.Shelley.PParams
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
 import Cardano.Ledger.Slot
+  ( Duration (Duration),
+    EpochNo (EpochNo),
+    SlotNo,
+    epochInfoEpoch,
+    epochInfoFirst,
+    (*-),
+  )
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, (⊆), (⨃))
 import Control.State.Transition
+import Data.Coders (decodeRecordSum)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
 data PPUP era

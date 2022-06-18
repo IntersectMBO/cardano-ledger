@@ -57,12 +57,6 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
-import Cardano.Ledger.Serialization
-  ( decodeList,
-    decodeRecordSum,
-    decodeSet,
-    encodeFoldable,
-  )
 import Cardano.Ledger.Shelley.Constraints
   ( TransValue,
     UsesAuxiliary,
@@ -116,6 +110,12 @@ import Control.State.Transition
     wrapEvent,
     wrapFailed,
   )
+import Data.Coders
+  ( decodeList,
+    decodeRecordSum,
+    decodeSet,
+    encodeFoldable,
+  )
 import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -129,7 +129,7 @@ import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
-import Validation
+import Validation (failureUnless)
 
 data UTXO era
 
