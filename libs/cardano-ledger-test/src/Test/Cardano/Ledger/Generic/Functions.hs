@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE NamedFieldPuns #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -19,18 +20,19 @@ import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), minfee)
-import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (TxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
 import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams, PParams' (..))
 import Cardano.Ledger.Babbage.Scripts (refScripts)
-import Cardano.Ledger.Babbage.TxBody as Babbage (referenceInputs', spendInputs')
+import Cardano.Ledger.Babbage.TxBody as Babbage (collateralInputs', collateralReturn', referenceInputs', spendInputs')
 import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
-import Cardano.Ledger.BaseTypes (ProtVer (..))
+import Cardano.Ledger.BaseTypes (BlocksMade (BlocksMade), Globals (epochInfo), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
 import Cardano.Ledger.Era (Era (Crypto, getAllTxInputs))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
+import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -43,6 +45,7 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (minfee)
 import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams, PParams' (..))
+import Cardano.Ledger.Shelley.Rewards (Reward, aggregateRewards)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), PoolCert (..), PoolParams (..))
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxOut (..))
@@ -50,10 +53,11 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, scriptsNeeded, totalDepo
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (coin, inject, (<+>), (<->)))
+import Cardano.Slotting.EpochInfo.API (epochInfoSize)
+import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (STS (State))
 import Data.Default.Class (Default (def))
-import Data.Foldable (toList)
-import qualified Data.Foldable as Fold
+import qualified Data.Foldable as Fold (foldl', toList)
 import qualified Data.List as List
 import Data.Map (Map, keysSet, restrictKeys)
 import qualified Data.Map.Strict as Map
@@ -66,10 +70,12 @@ import GHC.Records (HasField (getField))
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Generic.Fields (TxField (..), TxOutField (..), initialTx)
-import Test.Cardano.Ledger.Generic.ModelState (MUtxo)
-import Test.Cardano.Ledger.Generic.Proof
+import Test.Cardano.Ledger.Generic.ModelState (MUtxo, Model, ModelNewEpochState (..))
+import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (..))
 import Test.Cardano.Ledger.Generic.Scriptic (Scriptic (..))
 import Test.Cardano.Ledger.Generic.Updaters (updateTx)
+import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld, createRUpdOld_)
+import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
 -- ====================================================================
 -- Era agnostic actions on (Core.PParams era) (Core.TxOut era) and
@@ -96,6 +102,25 @@ protocolVersion (Alonzo _) = ProtVer 6 0
 protocolVersion (Mary _) = ProtVer 4 0
 protocolVersion (Allegra _) = ProtVer 3 0
 protocolVersion (Shelley _) = ProtVer 2 0
+
+ppProtocolVersion :: Proof era -> Core.PParams era -> ProtVer
+ppProtocolVersion (Babbage _) pp = getField @"_protocolVersion" pp
+ppProtocolVersion (Alonzo _) pp = getField @"_protocolVersion" pp
+ppProtocolVersion (Mary _) pp = getField @"_protocolVersion" pp
+ppProtocolVersion (Allegra _) pp = getField @"_protocolVersion" pp
+ppProtocolVersion (Shelley _) pp = getField @"_protocolVersion" pp
+
+aggregateRewards' ::
+  forall era.
+  Proof era ->
+  Core.PParams era ->
+  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
+  Map (Credential 'Staking (Crypto era)) Coin
+aggregateRewards' (Babbage _) = aggregateRewards
+aggregateRewards' (Alonzo _) = aggregateRewards
+aggregateRewards' (Mary _) = aggregateRewards
+aggregateRewards' (Allegra _) = aggregateRewards
+aggregateRewards' (Shelley _) = aggregateRewards
 
 obligation' ::
   forall era c.
@@ -271,6 +296,20 @@ getBody (Mary _) tx = getField @"body" tx
 getBody (Allegra _) tx = getField @"body" tx
 getBody (Shelley _) tx = getField @"body" tx
 
+getCollateralInputs :: Proof era -> Core.TxBody era -> Set (TxIn (Crypto era))
+getCollateralInputs (Babbage _) tx = collateralInputs' tx
+getCollateralInputs (Alonzo _) tx = collateral' tx
+getCollateralInputs (Mary _) _ = Set.empty
+getCollateralInputs (Allegra _) _ = Set.empty
+getCollateralInputs (Shelley _) _ = Set.empty
+
+getCollateralOutputs :: Proof era -> Core.TxBody era -> [Core.TxOut era]
+getCollateralOutputs (Babbage _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
+getCollateralOutputs (Alonzo _) _ = []
+getCollateralOutputs (Mary _) _ = []
+getCollateralOutputs (Allegra _) _ = []
+getCollateralOutputs (Shelley _) _ = []
+
 getInputs :: Proof era -> Core.TxBody era -> Set (TxIn (Crypto era))
 getInputs (Babbage _) tx = getField @"inputs" tx
 getInputs (Alonzo _) tx = getField @"inputs" tx
@@ -330,11 +369,38 @@ alwaysFalse p@(Allegra _) _ n = never n p
 alwaysFalse p@(Shelley _) _ n = never n p
 
 certs :: Proof era -> Core.Tx era -> [DCert (Crypto era)]
-certs (Babbage _) tx = toList $ getField @"certs" (getField @"body" tx)
-certs (Alonzo _) tx = toList $ getField @"certs" (getField @"body" tx)
-certs (Mary _) tx = toList $ getField @"certs" (getField @"body" tx)
-certs (Allegra _) tx = toList $ getField @"certs" (getField @"body" tx)
-certs (Shelley _) tx = toList $ getField @"certs" (getField @"body" tx)
+certs (Babbage _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
+certs (Alonzo _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
+certs (Mary _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
+certs (Allegra _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
+certs (Shelley _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
+
+-- | Create an old style RewardUpdate to be used in tests, in any Era.
+createRUpdNonPulsing' ::
+  forall era.
+  Proof era ->
+  Model era ->
+  RewardUpdateOld (Crypto era)
+createRUpdNonPulsing' proof model =
+  let bm = BlocksMade $ mBcur model -- TODO or should this be mBprev?
+      ss = mSnapshots model
+      as = mAccountState model
+      reserves = _reserves as
+      pp = mPParams model
+      totalStake = Map.foldr (<+>) (Coin 0) $ mRewards model
+      rs = Map.keysSet $ mRewards model -- TODO or should we look at delegated keys instead?
+      en = mEL model
+
+      -- We use testGlobals here, since this generic function is used only in tests.
+      slotsPerEpoch = case epochInfoSize (epochInfo testGlobals) en of
+        Left err -> error ("Failed to calculate slots per epoch:\n" ++ show err)
+        Right x -> x
+   in (`runReader` testGlobals) $ case proof of
+        Babbage _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Alonzo _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Mary _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Allegra _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
+        Shelley _ -> createRUpdOld_ @era slotsPerEpoch bm ss reserves pp totalStake rs def
 
 languagesUsed ::
   forall era.
@@ -380,3 +446,10 @@ instance Reflect era => TotalAda (EpochState era) where
 
 instance Reflect era => TotalAda (NewEpochState era) where
   totalAda nes = totalAda (nesEs nes)
+
+adaPots :: Proof era -> EpochState era -> AdaPots
+adaPots (Babbage _) es = totalAdaPotsES es
+adaPots (Alonzo _) es = totalAdaPotsES es
+adaPots (Mary _) es = totalAdaPotsES es
+adaPots (Allegra _) es = totalAdaPotsES es
+adaPots (Shelley _) es = totalAdaPotsES es

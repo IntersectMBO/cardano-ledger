@@ -62,6 +62,7 @@ library
     Test.Cardano.Ledger.Shelley.LaxBlock
     Test.Cardano.Ledger.Shelley.Orphans
     Test.Cardano.Ledger.Shelley.PropertyTests
+    Test.Cardano.Ledger.Shelley.Rewards
     Test.Cardano.Ledger.Shelley.Rules.Chain
     Test.Cardano.Ledger.Shelley.Rules.ClassifyTraces
     Test.Cardano.Ledger.Shelley.Rules.TestChain
@@ -146,7 +147,6 @@ test-suite cardano-ledger-shelley-test
       Test.Cardano.Ledger.Shelley.Fees
       Test.Cardano.Ledger.Shelley.MultiSigExamples
       Test.Cardano.Ledger.Shelley.Pretty
-      Test.Cardano.Ledger.Shelley.Rewards
       Test.Cardano.Ledger.Shelley.SafeHash
       Test.Cardano.Ledger.Shelley.Serialisation
       Test.Cardano.Ledger.Shelley.Serialisation.CDDL
@@ -184,17 +184,15 @@ test-suite cardano-ledger-shelley-test
       cardano-slotting,
       cborg,
       containers,
-      vector-map,
       data-default-class,
       groups,
       hedgehog >= 1.0.4,
       iproute,
       prettyprinter,
       QuickCheck,
-      scientific,
       cardano-ledger-shelley-test,
       cardano-ledger-shelley,
-      set-algebra,
+      scientific,
       small-steps-test,
       small-steps,
       strict-containers,
@@ -203,7 +201,6 @@ test-suite cardano-ledger-shelley-test
       tasty-quickcheck,
       tasty,
       time,
-      transformers,
 
 
 benchmark mainbench

@@ -12,10 +12,12 @@ module Test.Cardano.Ledger.Generic.ApplyTx where
 
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
 import Cardano.Ledger.BaseTypes (TxIx, mkTxIxPartial)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
+import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking), ProtVer (pvMajor))
+import Cardano.Ledger.Shelley.Rewards (Reward)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
@@ -29,7 +31,10 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
-import Data.Foldable (toList)
+import Cardano.Slotting.Slot (EpochNo (..), SlotNo (..))
+import Control.Iterate.Exp (dom, (∈))
+import Control.Iterate.SetAlgebra (eval)
+import Data.Foldable (fold, toList)
 import qualified Data.List as List
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
@@ -39,7 +44,16 @@ import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
 import Test.Cardano.Ledger.Examples.BabbageFeatures (collateralOutputTx, initUTxO)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
-import Test.Cardano.Ledger.Generic.Functions (getBody, getOutputs, getTxOutCoin, keyPoolDeposits, txInBalance)
+import Test.Cardano.Ledger.Generic.Functions
+  ( aggregateRewards',
+    createRUpdNonPulsing',
+    getBody,
+    getOutputs,
+    getTxOutCoin,
+    keyPoolDeposits,
+    ppProtocolVersion,
+    txInBalance,
+  )
 import Test.Cardano.Ledger.Generic.ModelState
   ( Model,
     ModelNewEpochState (..),
@@ -48,6 +62,8 @@ import Test.Cardano.Ledger.Generic.ModelState
   )
 import Test.Cardano.Ledger.Generic.PrettyCore (pcCredential, pcTx)
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
+import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld (deltaFOld), rsOld)
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo)
 
 -- ========================================================================
 
@@ -56,17 +72,32 @@ hasValid [] = Nothing
 hasValid (Valid (IsValid b) : _) = Just b
 hasValid (_ : fs) = hasValid fs
 
-applyTx :: Reflect era => Proof era -> Int -> Model era -> Core.Tx era -> Model era
-applyTx proof count model tx = ans
+applyTx :: Reflect era => Proof era -> Int -> SlotNo -> Model era -> Core.Tx era -> Model era
+applyTx proof count slot model tx = ans
   where
-    txbody = (getBody proof tx)
+    transactionEpoch = epochFromSlotNo slot
+    modelEpoch = mEL model
+    epochAccurateModel = epochBoundary proof transactionEpoch modelEpoch model
+    txbody = getBody proof tx
     outputs = getOutputs proof txbody
     fields = abstractTx proof tx
     nextTxIx = mkTxIxPartial (fromIntegral (length outputs)) -- When IsValid is false, ColRet will get this TxIx
     ans = case hasValid fields of
-      Nothing -> List.foldl' (applyTxSimple proof count) model fields
-      Just True -> List.foldl' (applyTxSimple proof count) model fields
-      Just False -> List.foldl' (applyTxFail proof count nextTxIx) model fields
+      Nothing -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
+      Just True -> List.foldl' (applyTxSimple proof count) epochAccurateModel fields
+      Just False -> List.foldl' (applyTxFail proof count nextTxIx) epochAccurateModel fields
+
+epochBoundary :: forall era. Proof era -> EpochNo -> EpochNo -> Model era -> Model era
+epochBoundary proof transactionEpoch modelEpoch model =
+  if transactionEpoch > modelEpoch
+    then
+      applyRUpd ru $
+        model
+          { mEL = transactionEpoch
+          }
+    else model
+  where
+    ru = createRUpdNonPulsing' proof model
 
 applyTxSimple :: Proof era -> Int -> Model era -> TxField era -> Model era
 applyTxSimple proof count model field = case field of
@@ -108,7 +139,7 @@ applyCert proof model dcert = case dcert of
       pp = mPParams model
       (keydeposit, _) = keyPoolDeposits proof pp
   (DCertDeleg (DeRegKey x)) -> case Map.lookup x (mRewards model) of
-    Nothing -> error $ "DeRegKey not in rewards: " <> show (pcCredential x)
+    Nothing -> error ("DeRegKey not in rewards: " <> show (pcCredential x))
     Just (Coin 0) ->
       model
         { mRewards = Map.delete x (mRewards model),
@@ -233,7 +264,54 @@ go = do
             mFees = Coin 10,
             mIndex = Map.singleton 0 (TxId (hashAnnotated txbody))
           }
-      model2 = applyTx proof 0 model1 tx
+      model2 = applyTx proof 0 (SlotNo 0) model1 tx
   print (pcModelNewEpochState proof model1)
   print doc
   print (pcModelNewEpochState proof model2)
+
+filterRewards ::
+  Proof era ->
+  Core.PParams era ->
+  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
+  ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
+    Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))
+  )
+filterRewards proof pp rewards =
+  if pvMajor (ppProtocolVersion proof pp) > 2
+    then (rewards, Map.empty)
+    else
+      let mp = Map.map Set.deleteFindMin rewards
+       in (Map.map (Set.singleton . fst) mp, Map.filter (not . Set.null) $ Map.map snd mp)
+
+filterAllRewards ::
+  Proof era ->
+  Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
+  Model era ->
+  ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
+    Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
+    Set (Credential 'Staking (Crypto era)),
+    Coin
+  )
+filterAllRewards proof rs' m =
+  (registered, eraIgnored, unregistered, totalUnregistered)
+  where
+    pr = mPParams m
+    (regRU, unregRU) =
+      Map.partitionWithKey
+        (\k _ -> eval (k ∈ dom (mRewards m)))
+        rs'
+    totalUnregistered = fold $ aggregateRewards' proof pr unregRU
+    unregistered = Map.keysSet unregRU
+
+    (registered, eraIgnored) = filterRewards proof pr regRU
+
+applyRUpd ::
+  forall era.
+  RewardUpdateOld (Crypto era) ->
+  Model era ->
+  Model era
+applyRUpd ru m =
+  m
+    { mFees = mFees m `addDeltaCoin` deltaFOld @(Crypto era) ru,
+      mRewards = Map.unionWith (<>) (mRewards m) (rsOld ru)
+    }

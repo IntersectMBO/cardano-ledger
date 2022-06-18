@@ -49,7 +49,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     coerceKeyRole,
   )
-import Cardano.Ledger.Pretty (PrettyA (..), ppRecord) -- , ppMap, ppPair)
+import Cardano.Ledger.Pretty (PrettyA (..), ppRecord)
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API
@@ -133,7 +133,7 @@ import Test.Cardano.Ledger.Generic.Proof hiding (lift)
 import Test.Cardano.Ledger.Generic.Updaters hiding (first)
 import Test.Cardano.Ledger.Shelley.Generator.Core (genNatural)
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
-import Test.Cardano.Ledger.Shelley.Utils (runShelleyBase)
+import Test.Cardano.Ledger.Shelley.Utils (epochFromSlotNo, runShelleyBase)
 import Test.QuickCheck
 
 -- ===================================================
@@ -522,8 +522,8 @@ chooseGood bad n xs = do
 -- ==================================================
 -- Generating Certificates, May add to the Model
 
-genDCert :: forall era. Reflect era => Proof era -> GenRS era (DCert (Crypto era))
-genDCert proof = do
+genDCert :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era (DCert (Crypto era))
+genDCert proof slot = do
   res <-
     elementsT
       [ DCertDeleg
@@ -540,25 +540,28 @@ genDCert proof = do
       ]
   return res
   where
-    genRegKey = genFreshRegCred @era
+    genRegKey = genFreshRegCred @era Cert
     genDeRegKey = genCredential Cert
     genDelegation = do
-      rewardAccount <- genFreshRegCred
+      rewardAccount <- genFreshRegCred Cert
       (kh, _) <- genPool
       pure $ Delegation {_delegator = rewardAccount, _delegatee = kh}
     genFreshPool = do
       (_kh, pp, _) <- genNewPool
       return pp
     genEpoch = do
+      let EpochNo txEpoch = epochFromSlotNo slot
       EpochNo curEpoch <- gets $ mEL . gsModel
       EpochNo maxEpoch <- asks $ epochMax proof . gePParams
-      delta <- lift $ choose (1, maxEpoch)
-      return . EpochNo $ curEpoch + delta
+      let nextEpoch = 1 + (txEpoch - curEpoch) -- This will be either 1 or 2. It is 2 if the Tx is at the epoch boundary
+      delta <- lift $ choose (nextEpoch, maxEpoch)
+      return . EpochNo $ (curEpoch + delta)
 
-genDCerts :: forall era. Reflect era => Proof era -> GenRS era [DCert (Crypto era)]
-genDCerts proof = do
+genDCerts :: forall era. Reflect era => Proof era -> SlotNo -> GenRS era [DCert (Crypto era)]
+genDCerts proof slot = do
   let genUniqueScript (!dcs, !ss, !regCreds) _ = do
-        dc <- genDCert proof
+        honest <- gets gsStableDelegators
+        dc <- genDCert proof slot
         -- Workaround a misfeature where duplicate plutus scripts in DCert are ignored
         -- so if a duplicate might be generated, we don't do that generation
         let insertIfNotPresent dcs' regCreds' mKey mScriptHash
@@ -577,14 +580,18 @@ genDCerts proof = do
                   else pure (dc : dcs, ss, Map.insert regCred (Coin 99) regCreds) -- 99 is a NonZero Value
             | DeRegKey deregCred <- d ->
                 -- We can't make DeRegKey certificate if deregCred is not already registered
-                -- or if the Rewards balance for deregCred is not 0
+                -- or if the Rewards balance for deregCred is not 0,
+                -- or if the credential is one of the StableDelegators (which are never de-registered)
                 case Map.lookup deregCred regCreds of
                   Nothing -> pure (dcs, ss, regCreds)
                   -- No credential, skip making certificate
                   Just (Coin 0) ->
                     -- Ok to make certificate, rewards balance is 0
-                    insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
-                      <$> lookupPlutusScript deregCred Cert
+                    if Set.member deregCred honest
+                      then pure (dcs, ss, regCreds)
+                      else
+                        insertIfNotPresent dcs (Map.delete deregCred regCreds) Nothing
+                          <$> lookupPlutusScript deregCred Cert
                   Just (Coin _) -> pure (dcs, ss, regCreds)
             -- Either Reward balance is not zero, or no Credential, so skip making certificate
             | Delegate (Delegation delegCred delegKey) <- d ->
@@ -740,11 +747,14 @@ getDCertCredential = \case
   DCertGenesis _g -> Nothing
   DCertMir _m -> Nothing
 
-genWithdrawals :: Reflect era => GenRS era (Wdrl (Crypto era), RewardAccounts (Crypto era))
-genWithdrawals = do
-  let networkId = Testnet
-  newRewards <- genRewards
-  pure (Wdrl $ Map.mapKeys (RewardAcnt networkId) newRewards, newRewards)
+genWithdrawals :: Reflect era => SlotNo -> GenRS era (Wdrl (Crypto era), RewardAccounts (Crypto era))
+genWithdrawals slot =
+  if epochFromSlotNo slot == EpochNo 0
+    then do
+      let networkId = Testnet
+      newRewards <- genRewards
+      pure (Wdrl $ Map.mapKeys (RewardAcnt networkId) newRewards, newRewards)
+    else pure (Wdrl Map.empty, Map.empty)
 
 timeToLive :: ValidityInterval -> SlotNo
 timeToLive (ValidityInterval _ (SJust n)) = n
@@ -809,7 +819,7 @@ genValidatedTxAndInfo proof slot = do
 
   -- generate Withdrawals before DCerts, as Rewards are populated in the Model here,
   -- and we need to avoid certain DCerts if they conflict with existing Rewards
-  (wdrls@(Wdrl wdrlMap), newRewards) <- genWithdrawals
+  (wdrls@(Wdrl wdrlMap), newRewards) <- genWithdrawals slot
   let withdrawalAmount = F.fold wdrlMap
 
   rewardsWithdrawalTxOut <-
@@ -820,7 +830,7 @@ genValidatedTxAndInfo proof slot = do
   (IsValid v2, mkWdrlWits) <-
     redeemerWitnessMaker Rewrd $ map (Just . (,) genDatum) wdrlCreds
 
-  dcerts <- genDCerts proof
+  dcerts <- genDCerts proof slot
   let dcertCreds = map getDCertCredential dcerts
   (IsValid v3, mkCertsWits) <-
     redeemerWitnessMaker Cert $ map ((,) genDatum <$>) dcertCreds
@@ -963,6 +973,7 @@ genValidatedTxAndInfo proof slot = do
             AuxData' []
           ]
   count <- gets (mCount . gsModel)
+
   -- Add the new objects freshly generated for this Tx to the set of Initial objects for a Trace
   modify
     ( \st ->

@@ -35,7 +35,7 @@ import Cardano.Ledger.Era (Era (..), hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
 import Cardano.Ledger.Keys (GenDelegs (..), HasKeyRole (coerceKeyRole), KeyHash (..), KeyPair (..), VKey (..), hashKey)
 import Cardano.Ledger.Mary.Value (Value (..))
-import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
+import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Alonzo
 import qualified Cardano.Ledger.Pretty.Babbage as Babbage
@@ -80,7 +80,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
-import qualified Data.UMap as UMap (View (..), rewView, size)
+import qualified Data.UMap as UMap (View (..), delView, rewView, size)
 import PlutusCore.Data (Data (..))
 import Prettyprinter (hsep, parens, viaShow, vsep)
 import Test.Cardano.Ledger.Generic.Fields
@@ -1160,7 +1160,7 @@ pcPoolParams x =
   ppRecord
     "PoolParams"
     [ ("Id", keyHashSummary (_poolId x)),
-      ("Vrf", trim (ppHash (_poolVrf x)))
+      ("reward accnt", pcCredential (getRwdCred (_poolRAcnt x)))
     ]
 
 instance PrettyC (PoolParams era) era where prettyC _ = pcPoolParams
@@ -1286,6 +1286,7 @@ pcDPState _proof (DPState (DState {_unified = un}) (PState {_pParams = pool})) =
   ppRecord
     "DPState summary"
     [ ("rewards", ppMap pcCredential pcCoin (UMap.rewView un)),
+      ("delegations", ppMap pcCredential keyHashSummary (UMap.delView un)),
       ("pool params", ppMap pcKeyHash pcPoolParams pool)
     ]
 
@@ -1302,12 +1303,12 @@ pcLedgerState proof (LedgerState utstate dpstate) =
 instance Reflect era => PrettyC (LedgerState era) era where prettyC = pcLedgerState
 
 pcNewEpochState :: Reflect era => Proof era -> NewEpochState era -> PDoc
-pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ pd _) =
+pcNewEpochState proof (NewEpochState en (BlocksMade pbm) (BlocksMade cbm) es _ (PoolDistr pd) _) =
   ppRecord
     "NewEpochState"
     [ ("EpochNo", ppEpochNo en),
       ("EpochState", pcEpochState proof es),
-      ("PoolDistr", ppPoolDistr pd),
+      ("PoolDistr", ppMap pcKeyHash pcIndividualPoolStake pd),
       ("Prev Blocks", ppMap pcKeyHash ppNatural pbm),
       ("Current Blocks", ppMap pcKeyHash ppNatural cbm)
     ]

@@ -19,7 +19,9 @@
 -- This module also includes a minimal domain-specific-language to specify
 -- expectations on traces.
 module Control.State.Transition.Trace
-  ( -- * Trace checking
+  ( SigState (..),
+
+    -- * Trace checking
     (.-),
     (.->),
     checkTrace,
