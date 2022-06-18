@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -44,16 +43,16 @@ import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
 import Cardano.Ledger.BaseTypes
   ( ActiveSlotCoeff,
     BlocksMade (..),
-    CertIx (..),
     DnsName,
     NonNegativeInterval,
     PositiveInterval,
     PositiveUnitInterval,
-    TxIx (..),
     UnitInterval,
     Url,
     mkActiveSlotCoeff,
+    mkCertIxPartial,
     mkNonceFromNumber,
+    mkTxIxPartial,
     promoteRatio,
     textToDns,
     textToUrl,
@@ -134,7 +133,7 @@ import qualified Data.Time as Time
 import qualified Data.Time.Calendar.OrdinalDate as Time
 import Data.Typeable (Typeable)
 import qualified Data.VMap as VMap
-import Data.Word (Word64, Word8)
+import Data.Word (Word16, Word64, Word8)
 import Generic.Random (genericArbitraryU)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
@@ -390,9 +389,11 @@ instance CC.Crypto crypto => Arbitrary (Credential r crypto) where
         KeyHashObj <$> arbitrary
       ]
 
-deriving instance Arbitrary TxIx
+instance Arbitrary TxIx where
+  arbitrary = mkTxIxPartial . toInteger <$> (arbitrary :: Gen Word16)
 
-deriving instance Arbitrary CertIx
+instance Arbitrary CertIx where
+  arbitrary = mkCertIxPartial . toInteger <$> (arbitrary :: Gen Word16)
 
 instance Arbitrary Ptr where
   arbitrary = genericArbitraryU

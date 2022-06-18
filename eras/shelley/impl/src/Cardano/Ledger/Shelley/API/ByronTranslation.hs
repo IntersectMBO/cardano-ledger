@@ -34,6 +34,7 @@ import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
+import Data.Word
 import GHC.Stack (HasCallStack)
 
 -- | We use the same hashing algorithm so we can unwrap and rewrap the bytes.
@@ -70,7 +71,7 @@ translateCompactTxInByronToShelley ::
 translateCompactTxInByronToShelley (Byron.CompactTxInUtxo compactTxId idx) =
   TxIn
     (translateTxIdByronToShelley (Byron.fromCompactTxId compactTxId))
-    (TxIx idx)
+    (TxIx ((fromIntegral :: Word16 -> Word64) idx))
 
 translateUTxOByronToShelley ::
   forall c.

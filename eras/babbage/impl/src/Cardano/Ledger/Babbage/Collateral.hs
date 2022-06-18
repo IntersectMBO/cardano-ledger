@@ -27,7 +27,7 @@ import Control.SetAlgebra (eval, (◁))
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
-import Data.Word (Word16)
+import Data.Word (Word16, Word64)
 import GHC.Records (HasField (..))
 
 -- ============================================================
@@ -77,4 +77,4 @@ collOuts txb =
           -- In the impossible event that there are more transaction outputs
           -- in the transaction than will fit into a Word16 (which backs the TxIx),
           -- we give the collateral return output an index of maxBound.
-          Nothing -> TxIx (maxBound :: Word16)
+          Nothing -> TxIx ((fromIntegral :: Word16 -> Word64) (maxBound :: Word16))

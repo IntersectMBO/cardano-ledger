@@ -1013,7 +1013,7 @@ pcTxId (TxId safehash) = trim (ppSafeHash safehash)
 instance c ~ Crypto era => PrettyC (TxId c) era where prettyC _ = pcTxId
 
 pcTxIn :: TxIn crypto -> PDoc
-pcTxIn (TxIn (TxId h) (TxIx i)) = parens (hsep [ppString "TxIn", trim (ppSafeHash h), ppWord16 i])
+pcTxIn (TxIn (TxId h) (TxIx i)) = parens (hsep [ppString "TxIn", trim (ppSafeHash h), ppWord64 i])
 
 instance c ~ Crypto era => PrettyC (TxIn c) era where prettyC _ = pcTxIn
 

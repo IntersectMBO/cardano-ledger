@@ -431,8 +431,8 @@ decodePtr ::
 decodePtr buf =
   Ptr
     <$> (SlotNo . (fromIntegral :: Word32 -> Word64) <$> decodeVariableLengthWord32 "SlotNo" buf)
-    <*> (TxIx <$> decodeVariableLengthWord16 "TxIx" buf)
-    <*> (CertIx <$> decodeVariableLengthWord16 "CertIx" buf)
+    <*> (TxIx . (fromIntegral :: Word16 -> Word64) <$> decodeVariableLengthWord16 "TxIx" buf)
+    <*> (CertIx . (fromIntegral :: Word16 -> Word64) <$> decodeVariableLengthWord16 "CertIx" buf)
 {-# INLINE decodePtr #-}
 
 guardLength ::
