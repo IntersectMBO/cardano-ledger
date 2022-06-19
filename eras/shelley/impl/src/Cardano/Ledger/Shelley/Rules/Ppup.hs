@@ -170,9 +170,10 @@ ppupTransitionNonEmpty = do
       let goodPV =
             pvCanFollow (getField @"_protocolVersion" pp)
               . getField @"_protocolVersion"
-      let badPVs = Map.filter (not . goodPV) pup
-      case Map.toList (Map.map (getField @"_protocolVersion") badPVs) of
-        ((_, SJust pv) : _) -> failBecause $ PVCannotFollowPPUP pv
+      let badPVs = filter (not . goodPV) (Map.elems pup)
+      case map (getField @"_protocolVersion") badPVs of
+        -- All Nothing cases have been filtered out by 'pvCanFollow'
+        SJust pv : _ -> failBecause $ PVCannotFollowPPUP pv
         _ -> pure ()
 
       sp <- liftSTS $ asks stabilityWindow
