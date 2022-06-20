@@ -38,7 +38,7 @@ data StandardCrypto
 
 instance Crypto StandardCrypto where
   type DSIGN StandardCrypto = Ed25519DSIGN
-  type KES StandardCrypto = Sum6KES Ed25519DSIGN Blake2b_256
+  type KES StandardCrypto = Sum6KES Ed25519DSIGNM Blake2b_256
   type VRF StandardCrypto = PraosVRF
   type HASH StandardCrypto = Blake2b_256
   type ADDRHASH StandardCrypto = Blake2b_224
