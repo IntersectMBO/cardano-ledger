@@ -18,7 +18,7 @@ import Cardano.Ledger.Alonzo.Data (DataHash, binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), minfee)
 import Cardano.Ledger.Alonzo.TxBody (TxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
@@ -177,13 +177,20 @@ keyPoolDeposits proof pp = case proof of
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
-scriptsNeeded' :: Proof era -> MUtxo era -> Core.TxBody era -> Set (ScriptHash (Crypto era))
-scriptsNeeded' (Babbage _) utxo txbody = regularScripts `Set.difference` inlineScripts
+scriptWitsNeeded' :: Proof era -> MUtxo era -> Core.TxBody era -> Set (ScriptHash (Crypto era))
+scriptWitsNeeded' (Babbage _) utxo txbody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
     inputs = spendInputs' txbody `Set.union` referenceInputs' txbody
     inlineScripts = keysSet $ refScripts inputs theUtxo
     regularScripts = Set.fromList (map snd (scriptsNeededFromBody theUtxo txbody))
+scriptWitsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
+scriptWitsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
+scriptWitsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
+scriptWitsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
+
+scriptsNeeded' :: Proof era -> MUtxo era -> Core.TxBody era -> Set (ScriptHash (Crypto era))
+scriptsNeeded' (Babbage _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 scriptsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
@@ -408,14 +415,14 @@ languagesUsed ::
   Proof era ->
   Core.Tx era ->
   UTxO era ->
-  Map (ScriptHash (Crypto era), Tag) (IsValid, Core.Script era) ->
+  Set (ScriptHash (Crypto era)) ->
   Set Language
-languagesUsed proof tx utxo _plutusScripts = case proof of
+languagesUsed proof tx utxo sNeeded = case proof of
   (Shelley _) -> Set.empty
   (Allegra _) -> Set.empty
   (Mary _) -> Set.empty
-  (Alonzo _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo
-  (Babbage _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo
+  (Alonzo _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo sNeeded
+  (Babbage _) -> Cardano.Ledger.Alonzo.TxInfo.languages tx utxo sNeeded
 
 -- | Compute the total Ada from Ada pots within 't'
 class TotalAda t where

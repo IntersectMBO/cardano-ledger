@@ -353,7 +353,7 @@ babbageUtxowTransition = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx txbody pp utxo
+  runTest $ ppViewHashesMatch tx txbody pp utxo sNeeded
 
   trans @(Core.EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
