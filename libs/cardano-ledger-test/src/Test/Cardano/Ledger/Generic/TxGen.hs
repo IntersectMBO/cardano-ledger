@@ -907,7 +907,7 @@ genValidatedTxAndInfo proof slot = do
       txBodyNoFeeHash = hashAnnotated txBodyNoFee
       witsMakers :: [SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era]]
       witsMakers = keyWitsMakers ++ dcertWitsMakers ++ rwdrsWitsMakers
-      bogusNeededScripts = scriptsNeeded' proof utxoNoCollateral txBodyNoFee
+      bogusNeededScripts = scriptWitsNeeded' proof utxoNoCollateral txBodyNoFee
       noFeeWits :: [WitnessesField era]
       noFeeWits =
         onlyNecessaryScripts proof bogusNeededScripts $
@@ -935,8 +935,8 @@ genValidatedTxAndInfo proof slot = do
     mapM (genTxOutKeyWitness proof Nothing) $ Map.elems collMap
 
   -- 10. Construct the correct Tx with valid fee and collaterals
-  allPlutusScripts <- gsPlutusScripts <$> get
-  let langs = Set.toList $ languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) allPlutusScripts
+  let sNeeded = scriptsNeeded' proof utxo txBodyNoFee
+      langs = Set.toList $ languagesUsed proof bogusTxForFeeCalc (UTxO utxoNoCollateral) sNeeded
       mIntegrityHash =
         newScriptIntegrityHash
           proof
@@ -959,7 +959,7 @@ genValidatedTxAndInfo proof slot = do
             WppHash mIntegrityHash
           ]
       txBodyHash = hashAnnotated txBody
-      neededScripts = scriptsNeeded' proof utxo txBody
+      neededScripts = scriptWitsNeeded' proof utxo txBody
       wits =
         onlyNecessaryScripts proof neededScripts $
           redeemerDatumWits

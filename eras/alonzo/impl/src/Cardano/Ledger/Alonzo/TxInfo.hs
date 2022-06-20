@@ -783,9 +783,11 @@ languages ::
   ) =>
   Core.Tx era ->
   UTxO era ->
+  Set (ScriptHash (Crypto era)) ->
   Set Language
-languages tx utxo = Map.foldl' accum Set.empty allscripts
+languages tx utxo sNeeded = Map.foldl' accum Set.empty allscripts
   where
-    allscripts = txscripts @era utxo tx
+    isNeeded scriptHash _script = scriptHash `Set.member` sNeeded
+    allscripts = Map.filterWithKey isNeeded $ txscripts @era utxo tx
     accum ans (TimelockScript _) = ans
     accum ans (PlutusScript l _) = Set.insert l ans

@@ -325,9 +325,10 @@ ppViewHashesMatch ::
   Core.TxBody era ->
   Core.PParams era ->
   UTxO era ->
+  Set (ScriptHash (Crypto era)) ->
   Test (UtxowPredicateFail era)
-ppViewHashesMatch tx txbody pp utxo = do
-  let langs = languages @era tx utxo
+ppViewHashesMatch tx txbody pp utxo sNeeded = do
+  let langs = languages @era tx utxo sNeeded
       langViews = Set.map (getLanguageView pp) langs
       computedPPhash = hashScriptIntegrity langViews (txrdmrs . wits $ tx) (txdats . wits $ tx)
       bodyPPhash = getField @"scriptIntegrityHash" txbody
@@ -421,7 +422,7 @@ alonzoStyleWitness = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx txbody pp utxo
+  runTest $ ppViewHashesMatch tx txbody pp utxo sNeeded
 
   trans @(Core.EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
