@@ -787,7 +787,6 @@ languages ::
   Set Language
 languages tx utxo sNeeded = Map.foldl' accum Set.empty allscripts
   where
-    isNeeded scriptHash _script = scriptHash `Set.member` sNeeded
-    allscripts = Map.filterWithKey isNeeded $ txscripts @era utxo tx
+    allscripts = Map.restrictKeys (txscripts @era utxo tx) sNeeded
     accum ans (TimelockScript _) = ans
     accum ans (PlutusScript l _) = Set.insert l ans
