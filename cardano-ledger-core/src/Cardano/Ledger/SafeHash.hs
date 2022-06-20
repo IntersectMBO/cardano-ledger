@@ -52,7 +52,9 @@ import NoThunks.Class (NoThunks (..))
 --     that limit their application to types which preserve their original serialization
 --     bytes.
 newtype SafeHash crypto index = SafeHash (Hash.Hash (CC.HASH crypto) index)
-  deriving (Show, Eq, Ord, SafeToHash, NoThunks, NFData)
+  deriving (Show, Eq, Ord, NoThunks, NFData)
+
+deriving newtype instance (CC.Crypto crypto) => SafeToHash (SafeHash crypto index)
 
 deriving newtype instance HeapWords (Hash.Hash (CC.HASH c) i) => HeapWords (SafeHash c i)
 
@@ -106,7 +108,7 @@ instance SafeToHash ByteString where
 -- derive that it is SafeToHash. We can derive this instance because SafeHash is
 -- a newtype around (Hash.Hash c i) which is a primitive SafeToHash type.
 
-instance SafeToHash (Hash.Hash c i) where
+instance Hash.HashAlgorithm c => SafeToHash (Hash.Hash c i) where
   originalBytes (Hash.UnsafeHash b) = fromShort b
 
 -- =====================================================================

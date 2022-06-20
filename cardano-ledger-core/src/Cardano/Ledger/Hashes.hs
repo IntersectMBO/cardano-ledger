@@ -76,6 +76,6 @@ deriving newtype instance
   CC.Crypto crypto =>
   FromCBOR (ScriptHash crypto)
 
-deriving newtype instance ToJSON (ScriptHash crypto)
+deriving newtype instance CC.Crypto crypto => ToJSON (ScriptHash crypto)
 
 deriving newtype instance CC.Crypto crypto => FromJSON (ScriptHash crypto)
