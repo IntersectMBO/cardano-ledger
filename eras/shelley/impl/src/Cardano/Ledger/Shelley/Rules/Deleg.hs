@@ -34,8 +34,7 @@ import Cardano.Ledger.Keys
     KeyRole (..),
     VerKeyVRF,
   )
-import Cardano.Ledger.Serialization (decodeRecordSum)
-import Cardano.Ledger.Shelley.HardForks as HardForks
+import Cardano.Ledger.Shelley.HardForks as HardForks (allowMIRTransfer)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DState (..),
@@ -67,15 +66,17 @@ import Cardano.Ledger.Slot
     (*-),
     (+*),
   )
-import Cardano.Ledger.UnifiedMap (View (..))
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, range, singleton, (∈), (∉), (∪), (⨃))
 import Control.State.Transition
+import Data.Coders (decodeRecordSum)
 import Data.Foldable (fold)
 import Data.Group (Group (..))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (isJust)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Data.UMap (View (..))
 import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
@@ -268,37 +269,34 @@ delegationTransition = do
   case c of
     DCertDeleg (RegKey hk) -> do
       eval (hk ∉ dom (rewards ds)) ?! StakeKeyAlreadyRegisteredDELEG hk
-      pure $
-        ( let u1 = _unified ds
-              u2 = (Rewards u1 UM.∪ (hk, mempty))
-              u3 = (Ptrs u2 UM.∪ (ptr, hk))
-           in ds {_unified = u3}
-        )
+      let u1 = _unified ds
+          u2 = Rewards u1 UM.∪ (hk, mempty)
+          u3 = Ptrs u2 UM.∪ (ptr, hk)
+      pure ds {_unified = u3}
     DCertDeleg (DeRegKey hk) -> do
       -- note that pattern match is used instead of cwitness, as in the spec
       eval (hk ∈ dom (rewards ds)) ?! StakeKeyNotRegisteredDELEG hk
       let rewardCoin = UM.lookup hk (rewards ds)
       rewardCoin == Just mempty ?! StakeKeyNonZeroAccountBalanceDELEG rewardCoin
 
-      pure $
-        let u0 = _unified ds
-            u1 = (Set.singleton hk UM.⋪ Rewards u0)
-            u2 = (Set.singleton hk UM.⋪ Delegations u1)
-            u3 = (Ptrs u2 UM.⋫ Set.singleton hk)
-         in ds {_unified = u3}
+      let u0 = _unified ds
+          u1 = Set.singleton hk UM.⋪ Rewards u0
+          u2 = Set.singleton hk UM.⋪ Delegations u1
+          u3 = Ptrs u2 UM.⋫ Set.singleton hk
+      pure ds {_unified = u3}
     DCertDeleg (Delegate (Delegation hk dpool)) -> do
       -- note that pattern match is used instead of cwitness and dpool, as in the spec
       eval (hk ∈ dom (rewards ds)) ?! StakeDelegationImpossibleDELEG hk
 
-      pure (ds {_unified = (delegations ds UM.⨃ (Map.singleton hk dpool))})
+      pure (ds {_unified = delegations ds UM.⨃ Map.singleton hk dpool})
     DCertGenesis (GenesisDelegCert gkh vkh vrf) -> do
       sp <- liftSTS $ asks stabilityWindow
       -- note that pattern match is used instead of genesisDeleg, as in the spec
       let s' = slot +* Duration sp
-          (GenDelegs genDelegs) = _genDelegs ds
+          GenDelegs genDelegs = _genDelegs ds
 
       -- gkh ∈ dom genDelegs ?! GenesisKeyNotInMappingDELEG gkh
-      (case Map.lookup gkh genDelegs of Just _ -> True; Nothing -> False) ?! GenesisKeyNotInMappingDELEG gkh
+      isJust (Map.lookup gkh genDelegs) ?! GenesisKeyNotInMappingDELEG gkh
 
       let cod =
             range $
@@ -318,7 +316,8 @@ delegationTransition = do
 
       pure $
         ds
-          { _fGenDelegs = eval (_fGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
+          { _fGenDelegs =
+              eval (_fGenDelegs ds ⨃ singleton (FutureGenDeleg s' gkh) (GenDelegPair vkh vrf))
           }
     DCertMir (MIRCert targetPot (StakeAddressesMIR credCoinMap)) -> do
       if HardForks.allowMIRTransfer pp
@@ -335,8 +334,8 @@ delegationTransition = do
 
           let (potAmount, delta, instantaneousRewards) =
                 case targetPot of
-                  ReservesMIR -> (_reserves acnt, deltaReserves . _irwd $ ds, iRReserves $ _irwd ds)
-                  TreasuryMIR -> (_treasury acnt, deltaTreasury . _irwd $ ds, iRTreasury $ _irwd ds)
+                  ReservesMIR -> (_reserves acnt, deltaReserves $ _irwd ds, iRReserves $ _irwd ds)
+                  TreasuryMIR -> (_treasury acnt, deltaTreasury $ _irwd ds, iRTreasury $ _irwd ds)
               credCoinMap' = Map.map (\(DeltaCoin x) -> Coin x) credCoinMap
               combinedMap = Map.unionWith (<>) credCoinMap' instantaneousRewards
               requiredForRewards = fold combinedMap
@@ -347,9 +346,10 @@ delegationTransition = do
           requiredForRewards <= available
             ?! InsufficientForInstantaneousRewardsDELEG targetPot requiredForRewards available
 
-          case targetPot of
-            ReservesMIR -> pure $ ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
-            TreasuryMIR -> pure $ ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
+          pure $
+            case targetPot of
+              ReservesMIR -> ds {_irwd = (_irwd ds) {iRReserves = combinedMap}}
+              TreasuryMIR -> ds {_irwd = (_irwd ds) {iRTreasury = combinedMap}}
         else do
           sp <- liftSTS $ asks stabilityWindow
           ei <- liftSTS $ asks epochInfoPure

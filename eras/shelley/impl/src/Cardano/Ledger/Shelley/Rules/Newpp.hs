@@ -50,7 +50,7 @@ import Data.Typeable (Typeable)
 import Data.UMap (rewView)
 import GHC.Generics (Generic)
 import GHC.Natural (Natural)
-import GHC.Records
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
 data NEWPP era
@@ -147,7 +147,7 @@ updatePpup ::
   PPUPState era
 updatePpup ppupSt pp = PPUPState ps emptyPPPUpdates
   where
-    (ProposedPPUpdates newProposals) = futureProposals ppupSt
+    ProposedPPUpdates newProposals = futureProposals ppupSt
     goodPV =
       pvCanFollow (getField @"_protocolVersion" pp)
         . getField @"_protocolVersion"

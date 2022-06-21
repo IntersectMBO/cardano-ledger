@@ -132,7 +132,7 @@ mirTransition = do
                 dpState
                   { dpsDState =
                       ds
-                        { _unified = (rewards' UM.∪+ update),
+                        { _unified = rewards' UM.∪+ update,
                           _irwd = emptyInstantaneousRewards
                         }
                   }

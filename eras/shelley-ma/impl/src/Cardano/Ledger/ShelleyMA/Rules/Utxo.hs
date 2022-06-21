@@ -562,7 +562,8 @@ instance Inject (UtxoPredicateFailure era) (UtxoPredicateFailure era) where
 
 instance Inject (Shelley.UtxoPredicateFailure era) (UtxoPredicateFailure era) where
   inject (Shelley.BadInputsUTxO ins) = BadInputsUTxO ins
-  inject (Shelley.ExpiredUTxO ttl current) = OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
+  inject (Shelley.ExpiredUTxO ttl current) =
+    OutsideValidityIntervalUTxO (ValidityInterval SNothing (SJust ttl)) current
   inject (Shelley.MaxTxSizeUTxO a m) = MaxTxSizeUTxO a m
   inject (Shelley.InputSetEmptyUTxO) = InputSetEmptyUTxO
   inject (Shelley.FeeTooSmallUTxO mf af) = FeeTooSmallUTxO mf af

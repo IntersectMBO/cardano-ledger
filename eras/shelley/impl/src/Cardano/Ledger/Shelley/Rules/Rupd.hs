@@ -74,7 +74,7 @@ import Data.Functor ((<&>))
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
 import GHC.Generics (Generic)
-import GHC.Records
+import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -109,7 +109,10 @@ instance
   initialRules = [pure SNothing]
   transitionRules = [rupdTransition]
 
-data RupdEvent crypto = RupdEvent !EpochNo !(Map.Map (Credential 'Staking crypto) (Set (Reward crypto)))
+data RupdEvent crypto
+  = RupdEvent
+      !EpochNo
+      !(Map.Map (Credential 'Staking crypto) (Set (Reward crypto)))
 
 -- | tell a RupdEvent only if the map is non-empty
 tellRupd :: String -> RupdEvent (Crypto era) -> Rule (RUPD era) rtype ()
@@ -120,13 +123,10 @@ tellRupd _message x = tellEvent x
 data RewardTiming = RewardsTooEarly | RewardsJustRight | RewardsTooLate
 
 determineRewardTiming :: SlotNo -> SlotNo -> SlotNo -> RewardTiming
-determineRewardTiming currentSlot startAftterSlot endSlot =
-  if currentSlot > endSlot
-    then RewardsTooLate
-    else
-      if currentSlot <= startAftterSlot
-        then RewardsTooEarly
-        else RewardsJustRight
+determineRewardTiming currentSlot startAftterSlot endSlot
+  | currentSlot > endSlot = RewardsTooLate
+  | currentSlot <= startAftterSlot = RewardsTooEarly
+  | otherwise = RewardsJustRight
 
 rupdTransition ::
   ( Era era,
@@ -149,7 +149,7 @@ rupdTransition = do
     maxLL <- asks maxLovelaceSupply
     asc <- asks activeSlotCoeff
     k <- asks securityParameter -- Maximum number of blocks we are allowed to roll back
-    return (slotsPerEpoch, slot, (slot +* Duration sr), maxLL, asc, k, e)
+    return (slotsPerEpoch, slot, slot +* Duration sr, maxLL, asc, k, e)
   let maxsupply = Coin (fromIntegral maxLL)
   case determineRewardTiming s slot slotForce of
     -- Waiting for the stability point, do nothing, keep waiting

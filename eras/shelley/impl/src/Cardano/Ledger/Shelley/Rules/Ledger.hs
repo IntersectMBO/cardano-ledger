@@ -33,7 +33,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (DSignable, Hash)
-import Cardano.Ledger.Serialization (decodeRecordSum)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
@@ -52,9 +51,9 @@ import Cardano.Ledger.Shelley.Rules.Delegs
   )
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UTXOW, UtxowPredicateFailure)
-import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody)
 import Cardano.Ledger.Slot (SlotNo)
+import Cardano.Ledger.TxIn (TxIn)
 import Control.DeepSeq (NFData (..))
 import Control.State.Transition
   ( Assertion (..),
@@ -66,6 +65,7 @@ import Control.State.Transition
     judgmentContext,
     trans,
   )
+import Data.Coders (decodeRecordSum)
 import Data.Sequence (Seq)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq

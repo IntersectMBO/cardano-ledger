@@ -16,7 +16,7 @@ module Cardano.Ledger.Shelley.Rules.Snap
   )
 where
 
-import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin, CompactForm)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Credential (Credential)
@@ -24,6 +24,11 @@ import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
+  ( SnapShot (_delegations, _stake),
+    SnapShots (_feeSS, _pstakeGo, _pstakeMark, _pstakeSet),
+    Stake (unStake),
+    emptySnapShots,
+  )
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
     LedgerState (..),
@@ -52,8 +57,8 @@ data SnapPredicateFailure era -- No predicate failures
 
 instance NoThunks (SnapPredicateFailure era)
 
-data SnapEvent era
-  = StakeDistEvent !(Map (Credential 'Staking (Crypto era)) (Coin, (KeyHash 'StakePool (Crypto era))))
+newtype SnapEvent era
+  = StakeDistEvent (Map (Credential 'Staking (Crypto era)) (Coin, KeyHash 'StakePool (Crypto era)))
 
 instance (UsesTxOut era, UsesValue era) => STS (SNAP era) where
   type State (SNAP era) = SnapShots (Crypto era)
@@ -93,7 +98,7 @@ snapTransition = do
         stakePoolMap :: Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))
         stakePoolMap = VMap.toMap $ _delegations istakeSnap
 
-        stakeMap :: Map (Credential 'Staking (Crypto era)) (Coin, (KeyHash 'StakePool (Crypto era)))
+        stakeMap :: Map (Credential 'Staking (Crypto era)) (Coin, KeyHash 'StakePool (Crypto era))
         stakeMap = Map.intersectionWith (,) stakeCoinMap stakePoolMap
      in StakeDistEvent stakeMap
 

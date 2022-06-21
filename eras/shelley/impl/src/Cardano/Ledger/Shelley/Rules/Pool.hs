@@ -31,7 +31,6 @@ import Cardano.Ledger.BaseTypes
     Network,
     ProtVer,
     ShelleyBase,
-    StrictMaybe (..),
     epochInfoPure,
     invalidKey,
     networkId,
@@ -41,7 +40,6 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Serialization (decodeRecordSum)
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..))
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
@@ -53,7 +51,7 @@ import Cardano.Ledger.Shelley.TxBody
     getRwdNetwork,
   )
 import Cardano.Ledger.Slot (EpochNo (..), SlotNo, epochInfoEpoch)
-import Control.Monad (when)
+import Control.Monad (forM_, when)
 import Control.Monad.Trans.Reader (asks)
 import Control.SetAlgebra (dom, eval, setSingleton, singleton, (∈), (∉), (∪), (⋪), (⨃))
 import Control.State.Transition
@@ -67,6 +65,7 @@ import Control.State.Transition
     (?!),
   )
 import qualified Data.ByteString as BS
+import Data.Coders (decodeRecordSum)
 import Data.Kind (Type)
 import Data.Typeable (Typeable)
 import Data.Word (Word64, Word8)
@@ -201,13 +200,11 @@ poolDelegationTransition = do
         actualNetID == suppliedNetID
           ?! WrongNetworkPOOL actualNetID suppliedNetID (_poolId poolParam)
 
-      when (SoftForks.restrictPoolMetadataHash pp) $ do
-        case _poolMD poolParam of
-          SNothing -> pure ()
-          SJust pmd ->
-            let s = BS.length (_poolMDHash pmd)
-             in s <= fromIntegral (sizeHash ([] @(CC.HASH (Crypto era))))
-                  ?! PoolMedataHashTooBig (_poolId poolParam) s
+      when (SoftForks.restrictPoolMetadataHash pp) $
+        forM_ (_poolMD poolParam) $ \pmd ->
+          let s = BS.length (_poolMDHash pmd)
+           in s <= fromIntegral (sizeHash ([] @(CC.HASH (Crypto era))))
+                ?! PoolMedataHashTooBig (_poolId poolParam) s
 
       let poolCost = _poolCost poolParam
           minPoolCost = getField @"_minPoolCost" pp

@@ -23,7 +23,8 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era
+import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.LedgerState (AccountState, LedgerState)
 import Cardano.Ledger.Shelley.Rules.Ledger
@@ -32,7 +33,6 @@ import Cardano.Ledger.Shelley.Rules.Ledger
     LedgerEvent,
     LedgerPredicateFailure,
   )
-import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Monad (foldM)
 import Control.State.Transition

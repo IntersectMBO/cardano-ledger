@@ -52,7 +52,7 @@ import Control.State.Transition
 import Data.Sequence (Seq)
 import qualified Data.Sequence.Strict as StrictSeq
 import GHC.Generics (Generic)
-import GHC.Records
+import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 
 data BBODY era
@@ -159,7 +159,8 @@ bbodyTransition =
         actualBodySize == fromIntegral (bhviewBSize bhview)
           ?! WrongBlockBodySizeBBODY actualBodySize (fromIntegral $ bhviewBSize bhview)
 
-        actualBodyHash == bhviewBHash bhview ?! InvalidBodyHashBBODY actualBodyHash (bhviewBHash bhview)
+        actualBodyHash == bhviewBHash bhview
+          ?! InvalidBodyHashBBODY actualBodyHash (bhviewBHash bhview)
 
         ls' <-
           trans @(Core.EraRule "LEDGERS" era) $
@@ -174,14 +175,8 @@ bbodyTransition =
           ei <- asks epochInfoPure
           e <- epochInfoEpoch ei slot
           epochInfoFirst ei e
-        pure $
-          BbodyState
-            ls'
-            ( incrBlocks
-                (isOverlaySlot firstSlotNo (getField @"_d" pp) slot)
-                hkAsStakePool
-                b
-            )
+        let isOverlay = isOverlaySlot firstSlotNo (getField @"_d" pp) slot
+        pure $ BbodyState ls' (incrBlocks isOverlay hkAsStakePool b)
 
 instance
   forall era ledgers.
