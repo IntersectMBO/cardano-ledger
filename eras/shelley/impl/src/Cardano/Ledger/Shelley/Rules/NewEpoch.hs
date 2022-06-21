@@ -43,7 +43,6 @@ import Cardano.Ledger.Shelley.Rules.Rupd (RupdEvent (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (_poolVrf))
 import Cardano.Ledger.Slot (EpochNo (EpochNo))
 import qualified Cardano.Ledger.Val as Val
-import Control.Provenance (runProvM)
 import Control.State.Transition
 import Data.Default.Class (Default, def)
 import qualified Data.Map.Strict as Map
@@ -178,7 +177,7 @@ newEpochTransition = do
       es' <- case ru of
         SNothing -> pure es
         SJust p@(Pulsing _ _) -> do
-          (ans, event) <- liftSTS (runProvM $ completeRupd p)
+          (ans, event) <- liftSTS (completeRupd p)
           tellReward (DeltaRewardEvent (RupdEvent e event))
           updateRewards ans
         SJust (Complete ru') -> updateRewards ru'

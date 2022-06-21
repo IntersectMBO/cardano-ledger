@@ -48,7 +48,6 @@ import Cardano.Ledger.CompactAddress (fromCborAddr, fromCborRewardAcnt)
 import Cardano.Ledger.Compactible (Compactible (..))
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
-import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.RewardUpdate
   ( FreeVars (..),
     Pulser,
@@ -206,9 +205,6 @@ prop_roundtrip_Coin_1 = roundtrip (toCBOR . fromJust . toCompact) fromCBOR
 prop_roundtrip_Coin_2 :: Coin -> Property
 prop_roundtrip_Coin_2 = roundtrip toCBOR (fromCompact <$> fromCBOR)
 
-prop_roundtrip_RewardProvenance :: RewardProvenance Mock.C_Crypto -> Property
-prop_roundtrip_RewardProvenance = roundtrip toCBOR fromCBOR
-
 prop_roundtrip_RewardUpdate :: RewardUpdate Mock.C_Crypto -> Property
 prop_roundtrip_RewardUpdate = roundtrip toCBOR fromCBOR
 
@@ -280,7 +276,6 @@ tests =
       testProperty "roundtrip Shelley Genesis" prop_roundtrip_ShelleyGenesis,
       testProperty "roundtrip coin compactcoin cbor" prop_roundtrip_Coin_1,
       testProperty "roundtrip coin cbor compactcoin" prop_roundtrip_Coin_2,
-      testProperty "roundtrip reward provenance" prop_roundtrip_RewardProvenance,
       pulsingTest
     ]
 

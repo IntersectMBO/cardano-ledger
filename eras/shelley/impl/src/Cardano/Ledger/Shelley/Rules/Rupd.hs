@@ -160,7 +160,7 @@ rupdTransition = do
         SNothing ->
           -- This is the first opportunity to pulse, so start pulsing.
           -- SJust <$> tellLeaderEvents (e + 1) (fst (startStep slotsPerEpoch b es maxsupply asc k))
-          (pure . SJust . fst) (startStep slotsPerEpoch b es maxsupply asc k)
+          (pure . SJust) (startStep slotsPerEpoch b es maxsupply asc k)
         (SJust p@(Pulsing _ _)) -> do
           -- We began pulsing earlier, so run another pulse
           (ans, event) <- liftSTS $ pulseStep p
@@ -173,7 +173,7 @@ rupdTransition = do
       case ru of
         SNothing -> do
           -- Nothing has been done, so start, and then complete the pulser. We hope this is very rare.
-          let pulser = fst (startStep slotsPerEpoch b es maxsupply asc k)
+          let pulser = startStep slotsPerEpoch b es maxsupply asc k
           (reward, event) <- liftSTS . completeStep $ pulser
           tellRupd "Starting too late" (RupdEvent (e + 1) event)
           pure (SJust reward)

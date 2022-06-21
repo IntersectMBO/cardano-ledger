@@ -55,7 +55,6 @@ library
     Cardano.Ledger.Shelley.PoolRank
     Cardano.Ledger.Shelley.PParams
     Cardano.Ledger.Shelley.Rewards
-    Cardano.Ledger.Shelley.RewardProvenance
     Cardano.Ledger.Shelley.RewardUpdate
     Cardano.Ledger.Shelley.Scripts
     Cardano.Ledger.Shelley.SoftForks

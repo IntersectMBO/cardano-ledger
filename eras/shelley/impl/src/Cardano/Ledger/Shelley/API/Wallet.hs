@@ -101,7 +101,6 @@ import Cardano.Ledger.Shelley.PoolRank
     nonMyopicMemberRew,
     percentile',
   )
-import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
@@ -113,7 +112,6 @@ import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
-import Control.Provenance (runWithProvM)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coders
@@ -124,7 +122,6 @@ import Data.Coders
     (!>),
     (<!),
   )
-import Data.Default.Class (Default (..))
 import Data.Either (fromRight)
 import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
@@ -430,12 +427,10 @@ getRewardProvenance ::
   ) =>
   Globals ->
   NewEpochState era ->
-  (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
+  (RewardUpdate (Crypto era))
 getRewardProvenance globals newepochstate =
   runReader
-    ( runWithProvM def $
-        createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam
-    )
+    (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam)
     globals
   where
     epochstate = nesEs newepochstate

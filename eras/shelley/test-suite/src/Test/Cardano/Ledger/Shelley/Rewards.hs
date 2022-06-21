@@ -66,7 +66,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Pretty (PDoc, PrettyA (..), ppMap, ppReward, ppSet)
 import Cardano.Ledger.Shelley.API (NonMyopic, SnapShot (..), SnapShots (..))
 import Cardano.Ledger.Shelley.API.Types (PoolParams (..))
-import Cardano.Ledger.Shelley.API.Wallet (getRewardProvenance)
 import Cardano.Ledger.Shelley.EpochBoundary
   ( Stake (..),
     maxPool,
@@ -122,10 +121,8 @@ import Cardano.Ledger.Val (Val (..), invert, (<+>), (<->))
 import Cardano.Slotting.Slot (EpochSize (..))
 import Control.Monad (replicateM)
 import Control.Monad.Trans.Reader (asks, runReader)
-import Control.Provenance (preservesJust, preservesNothing, runProvM, runWithProvM)
 import Control.SetAlgebra (eval, (◁))
 import Control.State.Transition.Trace (SourceSignalTarget (..), getEvents, sourceSignalTargets)
-import Data.Default.Class (Default (def))
 import Data.Foldable (fold, foldl')
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -379,91 +376,8 @@ rewardsBoundedByPot _ = property $ do
       )
       (fold (fmap rewardAmount rs) < rewardPot)
 
--- =================================================
--- tests when running rewards with provenance
-
--- Analog to getRewardProvenance, but does not produce Provenance
-justRewardInfo ::
-  forall era.
-  (Core.PParams era ~ PParams era) =>
-  Globals ->
-  NewEpochState era ->
-  RewardUpdate (Crypto era)
-justRewardInfo globals newepochstate =
-  runReader
-    (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
-    globals
-  where
-    epochstate = nesEs newepochstate
-    maxsupply :: Coin
-    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: BlocksMade (Crypto era)
-    blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
-    slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
-    asc = activeSlotCoeff globals
-    k = securityParameter testGlobals
-
-sameWithOrWithoutProvenance ::
-  forall era.
-  (Core.PParams era ~ PParams era) =>
-  Globals ->
-  NewEpochState era ->
-  Property
-sameWithOrWithoutProvenance globals newepochstate = with === without
-  where
-    (with, _) = getRewardProvenance globals newepochstate
-    without = justRewardInfo globals newepochstate
-
-nothingInNothingOut ::
-  forall era.
-  (Core.PParams era ~ PParams era) =>
-  NewEpochState era ->
-  Property
-nothingInNothingOut newepochstate =
-  counterexample "nothingInNothingOut fails" $
-    runReader
-      (preservesNothing $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
-      globals
-  where
-    globals = testGlobals
-    epochstate = nesEs newepochstate
-    maxsupply :: Coin
-    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: BlocksMade (Crypto era)
-    blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
-    slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
-    asc = activeSlotCoeff globals
-    k = securityParameter testGlobals
-
-justInJustOut ::
-  forall era.
-  (Core.PParams era ~ PParams era) =>
-  NewEpochState era ->
-  Property
-justInJustOut newepochstate =
-  counterexample "justInJustOut fails" $
-    runReader
-      (preservesJust def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k)
-      globals
-  where
-    globals = testGlobals
-    epochstate = nesEs newepochstate
-    maxsupply :: Coin
-    maxsupply = Coin (fromIntegral (maxLovelaceSupply globals))
-    blocksmade :: BlocksMade (Crypto era)
-    blocksmade = nesBprev newepochstate
-    epochnumber = nesEL newepochstate
-    slotsPerEpoch :: EpochSize
-    slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
-    asc = activeSlotCoeff globals
-    k = securityParameter testGlobals
-
 -- ====================================================================================
--- To demonstrate that the code we wrote that enables provenance collection does not
+-- To demonstrate that the code we wrote that uses pulsing does not
 -- change the result of reward calculation. we reproduce the old style functions here.
 
 rewardOnePool ::
@@ -741,7 +655,7 @@ oldEqualsNew pv newepochstate =
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
     unAggregated =
-      runReader (runProvM $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
+      runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new_with_zeros = aggregateRewards @(Crypto era) (emptyPParams {_protocolVersion = pv}) (rs unAggregated)
     new = Map.filter (/= Coin 0) new_with_zeros
@@ -767,8 +681,8 @@ oldEqualsNewOn pv newepochstate = old === new
     epochnumber = nesEL newepochstate
     slotsPerEpoch :: EpochSize
     slotsPerEpoch = runReader (epochInfoSize (epochInfoPure globals) epochnumber) globals
-    (unAggregated, _) =
-      runReader (runWithProvM def $ createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
+    unAggregated =
+      runReader (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc k) globals
     old :: Map (Credential 'Staking (Crypto era)) Coin
     old = rsOld $ runReader (createRUpdOld slotsPerEpoch blocksmade epochstate maxsupply) globals
     new_with_zeros =
@@ -815,7 +729,7 @@ getMostRecentTotalRewardEvent = foldl' accum Map.empty
 
 complete :: PulsingRewUpdate crypto -> (RewardUpdate crypto, RewardEvent crypto)
 complete (Complete r) = (r, mempty)
-complete (Pulsing rewsnap pulser) = runShelleyBase $ runProvM (completeRupd (Pulsing rewsnap pulser))
+complete (Pulsing rewsnap pulser) = runShelleyBase $ (completeRupd (Pulsing rewsnap pulser))
 
 eventsMirrorRewards :: [ChainEvent C] -> NewEpochState C -> Property
 eventsMirrorRewards events nes = same eventRew compRew
@@ -919,9 +833,6 @@ rewardTests =
   testGroup
     "Reward Tests"
     [ testProperty "Sum of rewards is bounded by reward pot" (withMaxSuccess numberOfTests (rewardsBoundedByPot (Proxy @C))),
-      testProperty "provenance does not affect result" (newEpochProp 100 (sameWithOrWithoutProvenance @C testGlobals)),
-      testProperty "ProvM preserves Nothing" (newEpochProp 100 (nothingInNothingOut @C)),
-      testProperty "ProvM preserves Just" (newEpochProp 100 (justInJustOut @C)),
       testProperty "compare with reference impl, no provenance, v3" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 3 0))),
       testProperty "compare with reference impl, no provenance, v7" (newEpochProp chainlen (oldEqualsNew @C (ProtVer 7 0))),
       testProperty "compare with reference impl, with provenance" (newEpochProp chainlen (oldEqualsNewOn @C (ProtVer 3 0))),

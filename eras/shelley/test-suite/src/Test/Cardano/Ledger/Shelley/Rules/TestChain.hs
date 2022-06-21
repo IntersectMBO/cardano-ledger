@@ -95,7 +95,6 @@ import Cardano.Protocol.TPraos.BHeader
   )
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Trans.Reader (ReaderT)
-import Control.Provenance (runProvM)
 import Control.SetAlgebra (dom, eval, (∩), (▷), (◁))
 import Control.State.Transition
 import Control.State.Transition.Trace
@@ -411,7 +410,7 @@ checkPreservation SourceSignalTarget {source, target, signal} =
     rewardUpdateMsgs = case ru' of
       SNothing -> []
       SJust ru'' ->
-        let (ru, _) = runShelleyBase . runProvM . completeRupd $ ru''
+        let (ru, _rewevent) = runShelleyBase (completeRupd ru'')
             regRewards = Map.filterWithKey (\kh _ -> UM.member kh oldRAs) (rs ru)
          in [ "\n\nSum of new rewards\n",
               show (sumRewards prevPP (rs ru)),
