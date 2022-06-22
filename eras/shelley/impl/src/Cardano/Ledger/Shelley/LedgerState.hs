@@ -202,7 +202,7 @@ import Cardano.Ledger.Shelley.TxBody
     Wdrl (..),
     WitVKey (..),
     getRwdCred,
-    witKeyHash,
+    witVKeyHash,
   )
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
@@ -1051,7 +1051,7 @@ witsFromTxWitnesses ::
   WitHashes (Crypto era)
 witsFromTxWitnesses coreTx =
   WitHashes $
-    Set.map witKeyHash addWits
+    Set.map witVKeyHash addWits
       `Set.union` Set.map bootstrapWitKeyHash bsWits
   where
     bsWits = getField @"bootWits" coreTx

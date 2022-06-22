@@ -52,9 +52,10 @@ module Cardano.Ledger.Shelley.TxBody
     TxOut (TxOut, TxOutCompact),
     Url,
     Wdrl (..),
-    WitVKey (WitVKey, wvkBytes),
     --
+    module Cardano.Ledger.Keys.WitVKey,
     witKeyHash,
+    wvkBytes,
     --
     SizeOfPoolOwners (..),
     SizeOfPoolRelays (..),
@@ -72,12 +73,9 @@ import Cardano.Binary
     Size,
     ToCBOR (..),
     TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
-    annotatorSlice,
     decodeWord,
     encodeListLen,
-    encodePreEncoded,
     peekTokenType,
-    serializeEncoding,
     szCases,
   )
 import qualified Cardano.Crypto.Hash.Class as HS
@@ -101,18 +99,12 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeCredential)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
+import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.Keys
   ( Hash,
     KeyHash (..),
     KeyRole (..),
-    SignedDSIGN,
-    VKey,
     VerKeyVRF,
-    asWitness,
-    decodeSignedDSIGN,
-    encodeSignedDSIGN,
-    hashKey,
-    hashSignature,
   )
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization
@@ -174,7 +166,6 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
-import Data.Ord (comparing)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -187,8 +178,7 @@ import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
 import NoThunks.Class
-  ( AllowThunksIn (..),
-    InspectHeapNamed (..),
+  ( InspectHeapNamed (..),
     NoThunks (..),
   )
 import Quiet
@@ -817,65 +807,6 @@ instance
 
 -- ===============================================================
 
--- | Proof/Witness that a transaction is authorized by the given key holder.
-data WitVKey kr crypto = WitVKey'
-  { wvkKey' :: !(VKey kr crypto),
-    wvkSig' :: !(SignedDSIGN crypto (Hash crypto EraIndependentTxBody)),
-    -- | Hash of the witness vkey. We store this here to avoid repeated hashing
-    --   when used in ordering.
-    wvkKeyHash :: !(KeyHash 'Witness crypto),
-    wvkBytes :: BSL.ByteString
-  }
-  deriving (Generic)
-
-deriving instance CC.Crypto crypto => Show (WitVKey kr crypto)
-
-deriving instance CC.Crypto crypto => Eq (WitVKey kr crypto)
-
-instance NFData (WitVKey kr crypto) where
-  rnf (WitVKey' _ _ _ bytes) = rnf bytes
-
-deriving via
-  (AllowThunksIn '["wvkBytes"] (WitVKey kr crypto))
-  instance
-    (CC.Crypto crypto, Typeable kr) => NoThunks (WitVKey kr crypto)
-
-pattern WitVKey ::
-  (Typeable kr, CC.Crypto crypto) =>
-  VKey kr crypto ->
-  SignedDSIGN crypto (Hash crypto EraIndependentTxBody) ->
-  WitVKey kr crypto
-pattern WitVKey k s <-
-  WitVKey' k s _ _
-  where
-    WitVKey k s =
-      let bytes =
-            serializeEncoding $
-              encodeListLen 2
-                <> toCBOR k
-                <> encodeSignedDSIGN s
-          hash = asWitness $ hashKey k
-       in WitVKey' k s hash bytes
-
-{-# COMPLETE WitVKey #-}
-
-witKeyHash ::
-  WitVKey kr crypto ->
-  KeyHash 'Witness crypto
-witKeyHash (WitVKey' _ _ kh _) = kh
-
-instance (Typeable kr, CC.Crypto crypto) => Ord (WitVKey kr crypto) where
-  compare x y =
-    -- It is advised against comparison on keys and signatures directly,
-    -- therefore we use hashes of verification keys and signatures for
-    -- implementing this Ord instance. Note that we do not need to memoize the
-    -- hash of a signature, like it is done with the hash of a key, because Ord
-    -- instance is only used for Sets of WitVKeys and it would be a mistake to
-    -- have two WitVKeys in a same Set for different transactions. Therefore
-    -- comparison on signatures is unlikely to happen and is only needed for
-    -- compliance with Ord laws.
-    comparing wvkKeyHash x y <> comparing (hashSignature @crypto . wvkSig') x y
-
 newtype StakeCreds crypto = StakeCreds
   { unStakeCreds :: Map (Credential 'Staking crypto) SlotNo
   }
@@ -997,24 +928,6 @@ instance
       coin <- decodeNonNegative
       pure $ TxOutCompact cAddr coin
 
-instance
-  (Typeable kr, CC.Crypto crypto) =>
-  ToCBOR (WitVKey kr crypto)
-  where
-  toCBOR = encodePreEncoded . BSL.toStrict . wvkBytes
-
-instance
-  (Typeable kr, CC.Crypto crypto) =>
-  FromCBOR (Annotator (WitVKey kr crypto))
-  where
-  fromCBOR =
-    annotatorSlice $
-      decodeRecordNamed "WitVKey" (const 2) $
-        fmap pure $
-          mkWitVKey <$> fromCBOR <*> decodeSignedDSIGN
-    where
-      mkWitVKey k sig = WitVKey' k sig (asWitness $ hashKey k)
-
 instance ToCBOR PoolMetadata where
   toCBOR (PoolMetadata u h) =
     encodeListLen 2
@@ -1105,3 +1018,13 @@ instance
           _poolRelays = relays,
           _poolMD = maybeToStrictMaybe md
         }
+
+
+
+witKeyHash :: WitVKey kr crypto -> KeyHash 'Witness crypto
+witKeyHash = witVKeyHash
+{-# DEPRECATED witKeyHash "In favor of `witVKeyHash`" #-}
+
+wvkBytes :: WitVKey kr crypto -> BSL.ByteString
+wvkBytes = witVKeyBytes
+{-# DEPRECATED wvkBytes "In favor of `witVKeyBytes`" #-}

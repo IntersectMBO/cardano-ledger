@@ -16,7 +16,14 @@
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.ShelleyMA.Timelocks
-  ( Timelock (RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf, RequireTimeExpire, RequireTimeStart),
+  ( Timelock
+      ( RequireSignature,
+        RequireAllOf,
+        RequireAnyOf,
+        RequireMOf,
+        RequireTimeExpire,
+        RequireTimeStart
+      ),
     pattern TimelockConstr,
     inInterval,
     showTimelock,
@@ -40,17 +47,11 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
+import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
 import Cardano.Ledger.SafeHash (SafeToHash)
-import Cardano.Ledger.Serialization
-  ( decodeStrictSeq,
-    encodeFoldable,
-  )
+import Cardano.Ledger.Serialization (decodeStrictSeq, encodeFoldable)
 import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes)
-import Cardano.Ledger.Shelley.Tx (WitVKey)
-import Cardano.Ledger.Shelley.TxBody
-  ( witKeyHash,
-  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))
@@ -285,7 +286,7 @@ validateTimelock ::
   Bool
 validateTimelock lock tx = evalFPS @era lock vhks (getField @"body" tx)
   where
-    vhks = Set.map witKeyHash (getField @"addrWits" tx)
+    vhks = Set.map witVKeyHash (getField @"addrWits" tx)
 
 showTimelock :: CC.Crypto crypto => Timelock crypto -> String
 showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"
