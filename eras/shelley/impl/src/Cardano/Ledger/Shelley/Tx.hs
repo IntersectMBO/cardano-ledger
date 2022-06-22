@@ -285,11 +285,6 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (Memo (TxRaw b w a) bytes)
 -- Witnessing
 --------------------------------------------------------------------------------
 
--- | Higher Kinded Data
-type family HKD f a where
-  HKD Identity a = a
-  HKD f a = f a
-
 data WitnessSetHKD f era = WitnessSet'
   { addrWits' :: !(HKD f (Set (WitVKey 'Witness (Crypto era)))),
     scriptWits' :: !(HKD f (Map (ScriptHash (Crypto era)) (Core.Script era))),

@@ -54,6 +54,7 @@ library
     Cardano.Ledger.Crypto
     Cardano.Ledger.Era
     Cardano.Ledger.Hashes
+    Cardano.Ledger.HKD
     Cardano.Ledger.Keys
     Cardano.Ledger.Keys.WitVKey
     Cardano.Ledger.PoolDistr

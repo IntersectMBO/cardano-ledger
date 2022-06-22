@@ -99,13 +99,13 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeCredential)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
-import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.Keys
   ( Hash,
     KeyHash (..),
     KeyRole (..),
     VerKeyVRF,
   )
+import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization
   ( CBORGroup (..),
@@ -1018,8 +1018,6 @@ instance
           _poolRelays = relays,
           _poolMD = maybeToStrictMaybe md
         }
-
-
 
 witKeyHash :: WitVKey kr crypto -> KeyHash 'Witness crypto
 witKeyHash = witVKeyHash
