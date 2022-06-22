@@ -141,7 +141,6 @@ import Cardano.Ledger.Shelley.TxBody
     PoolCert (..),
     PoolMetadata (..),
     PoolParams (..),
-    StakeCreds (..),
     StakePoolRelay (..),
     TxBody (..),
     TxBodyRaw (..),
@@ -1107,9 +1106,6 @@ ppTxBody (TxBodyConstr (Memo (TxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
 ppWitVKey :: (Typeable kr, Crypto c) => WitVKey kr c -> PDoc
 ppWitVKey (WitVKey key sig) = ppRecord "WitVKey" [("key", ppVKey key), ("signature", ppSignedDSIGN sig)]
 
-ppStakeCreds :: StakeCreds c -> PDoc
-ppStakeCreds (StakeCreds m) = ppSexp "" [ppMap' (text "StakeCreds") ppCredential ppSlotNo m]
-
 instance PrettyA (Delegation c) where
   prettyA = ppDelegation
 
@@ -1160,9 +1156,6 @@ instance
 
 instance (Typeable kr, Crypto c) => PrettyA (WitVKey kr c) where
   prettyA = ppWitVKey
-
-instance Crypto c => PrettyA (StakeCreds c) where
-  prettyA = ppStakeCreds
 
 -- ===========================================
 -- Data.IP

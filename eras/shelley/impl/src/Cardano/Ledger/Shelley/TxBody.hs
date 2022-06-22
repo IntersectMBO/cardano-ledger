@@ -33,7 +33,6 @@ module Cardano.Ledger.Shelley.TxBody
     PoolParams (..),
     Ptr (..),
     RewardAcnt (..),
-    StakeCreds (..),
     StakePoolRelay (..),
     TxBody
       ( TxBody,
@@ -135,7 +134,6 @@ import qualified Cardano.Ledger.TxIn as Core
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude (HeapWords (..), panic)
 import Control.DeepSeq (NFData (rnf))
-import Control.SetAlgebra (BaseRep (MapR), Embed (..), Exp (Base), HasExp (toExp))
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (Parser, explicitParseField)
@@ -177,20 +175,9 @@ import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records
-import NoThunks.Class
-  ( InspectHeapNamed (..),
-    NoThunks (..),
-  )
-import Quiet
+import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ========================================================================
-
-instance HasExp (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
-  toExp (StakeCreds x) = Base MapR x
-
-instance Embed (StakeCreds era) (Map (Credential 'Staking era) SlotNo) where
-  toBase (StakeCreds x) = x
-  fromBase x = StakeCreds x
 
 -- | The delegation of one stake key to another.
 data Delegation crypto = Delegation
@@ -806,21 +793,6 @@ instance
   getField (TxBodyConstr (Memo m _)) = getField @"_inputsX" m
 
 -- ===============================================================
-
-newtype StakeCreds crypto = StakeCreds
-  { unStakeCreds :: Map (Credential 'Staking crypto) SlotNo
-  }
-  deriving (Eq, Generic)
-  deriving (Show) via (Quiet (StakeCreds crypto))
-  deriving newtype (NFData, NoThunks, ToJSON, FromJSON)
-
-deriving newtype instance
-  CC.Crypto crypto =>
-  FromCBOR (StakeCreds crypto)
-
-deriving newtype instance
-  CC.Crypto crypto =>
-  ToCBOR (StakeCreds crypto)
 
 -- CBOR
 

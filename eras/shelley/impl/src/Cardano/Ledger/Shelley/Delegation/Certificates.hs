@@ -17,7 +17,6 @@ module Cardano.Ledger.Shelley.Delegation.Certificates
     PoolCert (..),
     GenesisDelegCert (..),
     MIRCert (..),
-    StakeCreds (..),
     delegCWitness,
     poolCWitness,
     genesisCWitness,
@@ -45,7 +44,6 @@ import Cardano.Ledger.Shelley.TxBody
     MIRPot (..),
     PoolCert (..),
     PoolParams (..),
-    StakeCreds (..),
   )
 
 -- | Determine the certificate author
