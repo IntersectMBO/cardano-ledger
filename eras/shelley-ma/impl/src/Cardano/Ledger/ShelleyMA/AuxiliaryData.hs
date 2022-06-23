@@ -91,8 +91,7 @@ deriving newtype instance
 deriving newtype instance NFData (Core.Script era) => NFData (AuxiliaryData era)
 
 pattern AuxiliaryData ::
-  ( Core.AnnotatedData (Core.Script era),
-    Ord (Core.Script era)
+  ( Core.AnnotatedData (Core.Script era)
   ) =>
   Map Word64 Metadatum ->
   StrictSeq (Core.Script era) ->

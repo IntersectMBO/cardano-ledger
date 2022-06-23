@@ -127,7 +127,7 @@ data TimelockRaw crypto
   | MOfN !Int !(StrictSeq (Timelock crypto)) -- Note that the Int may be negative in which case (MOfN -2 [..]) is always True
   | TimeStart !SlotNo -- The start time
   | TimeExpire !SlotNo -- The time it expires
-  deriving (Eq, Show, Ord, Generic, NFData)
+  deriving (Eq, Show, Generic, NFData)
 
 deriving instance Typeable crypto => NoThunks (TimelockRaw crypto)
 
@@ -164,7 +164,7 @@ instance CC.Crypto crypto => FromCBOR (Annotator (TimelockRaw crypto)) where
 -- =================================================================
 
 newtype Timelock crypto = TimelockConstr (MemoBytes (TimelockRaw crypto))
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
 
 deriving via

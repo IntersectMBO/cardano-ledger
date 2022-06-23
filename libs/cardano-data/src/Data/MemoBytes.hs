@@ -73,8 +73,6 @@ instance Eq (MemoBytes t) where (Memo _ x) == (Memo _ y) = x == y
 
 instance Show t => Show (MemoBytes t) where show (Memo y _) = show y
 
-instance Ord t => Ord (MemoBytes t) where compare (Memo x _) (Memo y _) = compare x y
-
 shorten :: Lazy.ByteString -> ShortByteString
 shorten x = toShort (toStrict x)
 
