@@ -148,7 +148,6 @@ import Cardano.Ledger.Shelley.TxBody as X
     PoolMetadata (..),
     PoolParams (..),
     Ptr (..),
-    StakeCreds (..),
     StakePoolRelay (..),
     Wdrl (..),
     WitVKey (..),

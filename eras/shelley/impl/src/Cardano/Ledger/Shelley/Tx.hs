@@ -77,16 +77,13 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era
+import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys
+import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley.Scripts
-import Cardano.Ledger.Shelley.TxBody
-  ( TxBody (..),
-    TxOut (..),
-    WitVKey (..),
-    witKeyHash,
-  )
+import Cardano.Ledger.Shelley.TxBody (TxBody (..), TxOut (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.DeepSeq (NFData)
 import qualified Data.ByteString.Lazy as BSL
@@ -288,11 +285,6 @@ unsafeConstructTxWithBytes b w a bytes = TxConstr (Memo (TxRaw b w a) bytes)
 -- Witnessing
 --------------------------------------------------------------------------------
 
--- | Higher Kinded Data
-type family HKD f a where
-  HKD Identity a = a
-  HKD f a = f a
-
 data WitnessSetHKD f era = WitnessSet'
   { addrWits' :: !(HKD f (Set (WitVKey 'Witness (Crypto era)))),
     scriptWits' :: !(HKD f (Map (ScriptHash (Crypto era)) (Core.Script era))),
@@ -474,11 +466,13 @@ instance
   where
   fromCBOR = decodeWits
 
+-- | This type is only used to preserve the old buggy behavior where signature
+-- was ignored in the `Ord` instance for `WitVKey`s.
 newtype IgnoreSigOrd kr crypto = IgnoreSigOrd {unIgnoreSigOrd :: WitVKey kr crypto}
   deriving (Eq)
 
 instance (Typeable kr, CC.Crypto crypto) => Ord (IgnoreSigOrd kr crypto) where
-  compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witKeyHash w1) (witKeyHash w2)
+  compare (IgnoreSigOrd w1) (IgnoreSigOrd w2) = compare (witVKeyHash w1) (witVKeyHash w2)
 
 decodeWits ::
   forall era s.
@@ -564,7 +558,7 @@ validateNativeMultiSigScript ::
 validateNativeMultiSigScript msig tx =
   evalNativeMultiSigScript msig (coerceKeyRole `Set.map` vhks)
   where
-    vhks = Set.map witKeyHash (getField @"addrWits" tx)
+    vhks = Set.map witVKeyHash (getField @"addrWits" tx)
 
 -- | Multi-signature script witness accessor function for Transactions
 txwitsScript ::

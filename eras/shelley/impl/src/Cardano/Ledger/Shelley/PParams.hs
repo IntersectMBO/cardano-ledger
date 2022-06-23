@@ -48,6 +48,7 @@ import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (PParamsDelta)
 import Cardano.Ledger.Era
+import Cardano.Ledger.HKD
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
@@ -75,33 +76,15 @@ import Data.List (nub)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import Data.Proxy (Proxy)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
 -- ====================================================================
 
--- | Higher Kinded Data
-type family HKD f a where
-  HKD Identity a = a
-  HKD f a = f a
-
-class HKDFunctor f where
-  hkdMap :: Proxy f -> (a -> b) -> HKD f a -> HKD f b
-
-instance HKDFunctor Identity where
-  hkdMap _ f a = f a
-
-instance HKDFunctor Maybe where
-  hkdMap _ f = fmap f
-
-instance HKDFunctor StrictMaybe where
-  hkdMap _ f = fmap f
-
 -- | Protocol parameters.
 --
--- We use the HKD type family so that the protocol parameters type and
+-- We use the `HKD` type family so that the protocol parameters type and
 -- the type for the updates to the protocol parameters can share records fields.
 -- The protocol parameters will have type 'PParams'' 'Identity', and the updates
 -- will have type 'PParams'' 'StrictMaybe', though 'Identity' will be hidden from use.

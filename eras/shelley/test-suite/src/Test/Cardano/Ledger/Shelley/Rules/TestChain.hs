@@ -845,7 +845,7 @@ requiredMSigSignaturesSubset SourceSignalTarget {source = chainSt, signal = bloc
       any (\kl -> Set.fromList kl `Set.isSubsetOf` keyHashes) (scriptKeyCombinations (Proxy @era) msig)
     keyHashSet :: Core.Tx era -> Set (KeyHash 'Witness (Crypto era))
     keyHashSet tx_ =
-      Set.map witKeyHash (getField @"addrWits" . getField @"wits" $ tx_)
+      Set.map witVKeyHash (getField @"addrWits" . getField @"wits" $ tx_)
 
 --- | Check for absence of double spend in a block
 noDoubleSpend ::
