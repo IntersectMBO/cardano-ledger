@@ -8,7 +8,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
@@ -69,48 +68,45 @@ import Cardano.Binary
   ( Annotator (..),
     FromCBOR (fromCBOR),
     ToCBOR (..),
-    TokenType (TypeMapLen, TypeMapLen64, TypeMapLenIndef),
-    decodeWord,
     encodeListLen,
-    peekTokenType,
   )
 import qualified Cardano.Crypto.Hash.Class as HS
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
-import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url, invalidKey)
-import Cardano.Ledger.Coin (Coin (..), DeltaCoin)
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), Url)
+import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr)
 import Cardano.Ledger.Compactible
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Credential (Credential (..), Ptr (..), StakeCredential)
+import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
-import Cardano.Ledger.Keys
-  ( Hash,
-    KeyHash (..),
-    KeyRole (..),
-    VerKeyVRF,
-  )
+import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization
-  ( FromCBORGroup (..),
-    ToCBORGroup (..),
-    decodeRecordNamed,
-    decodeRecordSum,
+  ( decodeRecordNamed,
     decodeSet,
     decodeStrictSeq,
     encodeFoldable,
-    listLenInt,
     mapFromCBOR,
     mapToCBOR,
   )
 import Cardano.Ledger.Shelley.Constraints (TransValue)
-import Cardano.Ledger.Shelley.Orphans ()
+import Cardano.Ledger.Shelley.Delegation.Certificates
+  ( DCert (..),
+    DelegCert (..),
+    Delegation (..),
+    GenesisDelegCert (..),
+    MIRCert (..),
+    MIRPot (..),
+    MIRTarget (..),
+    PoolCert (..),
+  )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.PoolParams
-import Cardano.Ledger.Slot (EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import qualified Cardano.Ledger.TxIn as Core
 import Cardano.Ledger.Val (DecodeNonNegative (..))
 import Cardano.Prelude (HeapWords (..))
@@ -150,15 +146,6 @@ import GHC.Records
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 
 -- ========================================================================
-
--- | The delegation of one stake key to another.
-data Delegation crypto = Delegation
-  { _delegator :: !(StakeCredential crypto),
-    _delegatee :: !(KeyHash 'StakePool crypto)
-  }
-  deriving (Eq, Generic, Show, NFData)
-
-instance NoThunks (Delegation crypto)
 
 newtype Wdrl crypto = Wdrl {unWdrl :: Map (RewardAcnt crypto) Coin}
   deriving (Show, Eq, Generic)
@@ -254,115 +241,6 @@ viewCompactTxOut (TxOutCompact bs c) = (addr, val)
 
 instance (Compactible v, v ~ Core.Value era) => HasField "value" (TxOut era) v where
   getField (TxOutCompact _ v) = fromCompact v
-
-data DelegCert crypto
-  = -- | A stake key registration certificate.
-    RegKey !(StakeCredential crypto)
-  | -- | A stake key deregistration certificate.
-    DeRegKey !(StakeCredential crypto)
-  | -- | A stake delegation certificate.
-    Delegate !(Delegation crypto)
-  deriving (Show, Generic, Eq, NFData)
-
-data PoolCert crypto
-  = -- | A stake pool registration certificate.
-    RegPool !(PoolParams crypto)
-  | -- | A stake pool retirement certificate.
-    RetirePool !(KeyHash 'StakePool crypto) !EpochNo
-  deriving (Show, Generic, Eq, NFData)
-
--- | Genesis key delegation certificate
-data GenesisDelegCert crypto
-  = GenesisDelegCert
-      !(KeyHash 'Genesis crypto)
-      !(KeyHash 'GenesisDelegate crypto)
-      !(Hash crypto (VerKeyVRF crypto))
-  deriving (Show, Generic, Eq, NFData)
-
-data MIRPot = ReservesMIR | TreasuryMIR
-  deriving (Show, Generic, Eq, NFData, Ord, Enum, Bounded)
-
-deriving instance NoThunks MIRPot
-
-instance ToCBOR MIRPot where
-  toCBOR ReservesMIR = toCBOR (0 :: Word8)
-  toCBOR TreasuryMIR = toCBOR (1 :: Word8)
-
-instance FromCBOR MIRPot where
-  fromCBOR =
-    decodeWord >>= \case
-      0 -> pure ReservesMIR
-      1 -> pure TreasuryMIR
-      k -> invalidKey k
-
--- | MIRTarget specifies if funds from either the reserves
--- or the treasury are to be handed out to a collection of
--- reward accounts or instead transfered to the opposite pot.
-data MIRTarget crypto
-  = StakeAddressesMIR (Map (Credential 'Staking crypto) DeltaCoin)
-  | SendToOppositePotMIR Coin
-  deriving (Show, Generic, Eq, NFData)
-
-deriving instance NoThunks (MIRTarget crypto)
-
-instance
-  CC.Crypto crypto =>
-  FromCBOR (MIRTarget crypto)
-  where
-  fromCBOR = do
-    peekTokenType >>= \case
-      TypeMapLen -> StakeAddressesMIR <$> mapFromCBOR
-      TypeMapLen64 -> StakeAddressesMIR <$> mapFromCBOR
-      TypeMapLenIndef -> StakeAddressesMIR <$> mapFromCBOR
-      _ -> SendToOppositePotMIR <$> fromCBOR
-
-instance
-  CC.Crypto crypto =>
-  ToCBOR (MIRTarget crypto)
-  where
-  toCBOR (StakeAddressesMIR m) = mapToCBOR m
-  toCBOR (SendToOppositePotMIR c) = toCBOR c
-
--- | Move instantaneous rewards certificate
-data MIRCert crypto = MIRCert
-  { mirPot :: MIRPot,
-    mirRewards :: MIRTarget crypto
-  }
-  deriving (Show, Generic, Eq, NFData)
-
-instance
-  CC.Crypto crypto =>
-  FromCBOR (MIRCert crypto)
-  where
-  fromCBOR =
-    decodeRecordNamed "MIRCert" (const 2) (MIRCert <$> fromCBOR <*> fromCBOR)
-
-instance
-  CC.Crypto crypto =>
-  ToCBOR (MIRCert crypto)
-  where
-  toCBOR (MIRCert pot targets) =
-    encodeListLen 2
-      <> toCBOR pot
-      <> toCBOR targets
-
--- | A heavyweight certificate.
-data DCert crypto
-  = DCertDeleg !(DelegCert crypto)
-  | DCertPool !(PoolCert crypto)
-  | DCertGenesis !(GenesisDelegCert crypto)
-  | DCertMir !(MIRCert crypto)
-  deriving (Show, Generic, Eq, NFData)
-
-instance NoThunks (DelegCert crypto)
-
-instance NoThunks (PoolCert crypto)
-
-instance NoThunks (GenesisDelegCert crypto)
-
-instance NoThunks (MIRCert crypto)
-
-instance NoThunks (DCert crypto)
 
 -- ==============================
 -- The underlying type for TxBody
@@ -591,83 +469,6 @@ instance
   getField (TxBodyConstr (Memo m _)) = getField @"_inputsX" m
 
 -- ===============================================================
-
--- CBOR
-
-instance
-  CC.Crypto crypto =>
-  ToCBOR (DCert crypto)
-  where
-  toCBOR = \case
-    -- DCertDeleg
-    DCertDeleg (RegKey cred) ->
-      encodeListLen 2
-        <> toCBOR (0 :: Word8)
-        <> toCBOR cred
-    DCertDeleg (DeRegKey cred) ->
-      encodeListLen 2
-        <> toCBOR (1 :: Word8)
-        <> toCBOR cred
-    DCertDeleg (Delegate (Delegation cred poolkh)) ->
-      encodeListLen 3
-        <> toCBOR (2 :: Word8)
-        <> toCBOR cred
-        <> toCBOR poolkh
-    -- DCertPool
-    DCertPool (RegPool poolParams) ->
-      encodeListLen (1 + listLen poolParams)
-        <> toCBOR (3 :: Word8)
-        <> toCBORGroup poolParams
-    DCertPool (RetirePool vk epoch) ->
-      encodeListLen 3
-        <> toCBOR (4 :: Word8)
-        <> toCBOR vk
-        <> toCBOR epoch
-    -- DCertGenesis
-    DCertGenesis (GenesisDelegCert gk kh vrf) ->
-      encodeListLen 4
-        <> toCBOR (5 :: Word8)
-        <> toCBOR gk
-        <> toCBOR kh
-        <> toCBOR vrf
-    -- DCertMIR
-    DCertMir mir ->
-      encodeListLen 2
-        <> toCBOR (6 :: Word8)
-        <> toCBOR mir
-
-instance
-  CC.Crypto crypto =>
-  FromCBOR (DCert crypto)
-  where
-  fromCBOR = decodeRecordSum "DCert crypto" $
-    \case
-      0 -> do
-        x <- fromCBOR
-        pure (2, DCertDeleg . RegKey $ x)
-      1 -> do
-        x <- fromCBOR
-        pure (2, DCertDeleg . DeRegKey $ x)
-      2 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        pure (3, DCertDeleg $ Delegate (Delegation a b))
-      3 -> do
-        group <- fromCBORGroup
-        pure (fromIntegral (1 + listLenInt group), DCertPool (RegPool group))
-      4 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        pure (3, DCertPool $ RetirePool a (EpochNo b))
-      5 -> do
-        a <- fromCBOR
-        b <- fromCBOR
-        c <- fromCBOR
-        pure (4, DCertGenesis $ GenesisDelegCert a b c)
-      6 -> do
-        x <- fromCBOR
-        pure (2, DCertMir x)
-      k -> invalidKey k
 
 instance-- use the weakest constraint necessary
 
