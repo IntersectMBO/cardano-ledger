@@ -70,13 +70,13 @@ data MultiSigRaw crypto
     RequireAnyOf' ![MultiSig crypto]
   | -- | Require M of the given sub-terms to be satisfied.
     RequireMOf' !Int ![MultiSig crypto]
-  deriving (Show, Eq, Ord, Generic)
+  deriving (Show, Eq, Generic)
   deriving anyclass (NoThunks)
 
 instance NFData (MultiSigRaw era)
 
 newtype MultiSig crypto = MultiSigConstr (MemoBytes (MultiSigRaw crypto))
-  deriving (Eq, Ord, Show, Generic)
+  deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
 deriving newtype instance NFData (MultiSig era)

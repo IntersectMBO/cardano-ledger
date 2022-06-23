@@ -80,7 +80,6 @@ instance Arbitrary PV1.Data where
 
 instance
   ( UsesScript era,
-    Ord (Core.Script era),
     Core.Script era ~ Script era,
     Arbitrary (Core.Script era)
   ) =>

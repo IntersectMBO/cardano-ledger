@@ -116,7 +116,6 @@ instance
     Mock c,
     FromCBOR (Annotator (Core.Script era)),
     ToCBOR (Core.Script era),
-    Ord (Core.Script era),
     Arbitrary (Core.Script era)
   ) =>
   Arbitrary (MA.AuxiliaryData era)

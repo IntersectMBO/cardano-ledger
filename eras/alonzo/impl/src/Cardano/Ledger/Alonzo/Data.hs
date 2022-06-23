@@ -99,7 +99,7 @@ deriving instance NoThunks Plutus.Data
 -- The newtype will memoize the serialized bytes.
 
 newtype Data era = DataConstr (MemoBytes Plutus.Data)
-  deriving (Eq, Ord, Generic, Show)
+  deriving (Eq, Generic, Show)
   deriving newtype (SafeToHash, ToCBOR, NFData)
 
 instance Typeable era => FromCBOR (Annotator (Data era)) where
@@ -235,7 +235,6 @@ deriving via
 
 instance
   ( Typeable era,
-    Ord (Core.Script era),
     Core.Script era ~ Script era,
     ToCBOR (Core.Script era),
     Typeable (Crypto era)
@@ -273,7 +272,6 @@ encodeRaw metadata allScripts =
 
 instance
   ( Era era,
-    Ord (Core.Script era),
     FromCBOR (Annotator (Core.Script era)),
     Core.Script era ~ Script era
   ) =>
@@ -351,7 +349,6 @@ deriving via
   (Mem (AuxiliaryDataRaw era))
   instance
     ( Era era,
-      Ord (Core.Script era),
       FromCBOR (Annotator (Core.Script era)),
       Script era ~ Core.Script era -- FIXME: this smells fishy
     ) =>
@@ -360,8 +357,7 @@ deriving via
 pattern AuxiliaryData ::
   ( Era era,
     ToCBOR (Core.Script era),
-    Core.Script era ~ Script era,
-    Ord (Core.Script era)
+    Core.Script era ~ Script era
   ) =>
   Map Word64 Metadatum ->
   StrictSeq (Core.Script era) ->

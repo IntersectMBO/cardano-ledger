@@ -116,7 +116,7 @@ instance NFData Tag where
 data Script era
   = TimelockScript (Timelock (Crypto era))
   | PlutusScript Language ShortByteString
-  deriving (Eq, Generic, Ord)
+  deriving (Eq, Generic)
 
 instance (ValidateScript era, Core.Script era ~ Script era) => Show (Script era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
