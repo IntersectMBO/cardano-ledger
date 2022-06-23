@@ -16,23 +16,23 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
 
-
-
 -- | Data.Coders provides tools for writing 'ToCBOR' and 'FromCBOR' instances (see module 'Cardano.Binary')
 --   in an intuitive way that mirrors the way one constructs values of a particular type. Advantages include:
--- 
+--
 -- 1. Book-keeping details neccesary to write correct instances are hidden from the user.
 -- 2. Inverse 'ToCBOR' and 'FromCBOR' instances have visually similar definitions.
--- 3. Advanced instances involving sparse-encoding, compact-representation, and 'Annotator' instances are also supported. 
--- 
+-- 3. Advanced instances involving sparse-encoding, compact-representation, and 'Annotator' instances are also supported.
 module Data.Coders
   ( -- * Creating encoders.
+
     --
     -- $Encoders
     Encode (..),
     (!>),
     encode,
+
     -- * Creating decoders.
+
     --
     -- $Decoders
     Decode (..),
@@ -41,7 +41,9 @@ module Data.Coders
     (<?),
     decode,
     decodeSparse,
+
     -- * Index types for well-formed Coders.
+
     --
     -- $Indexes
     Density (..),
@@ -54,12 +56,13 @@ module Data.Coders
     fieldA,
     fieldAA,
     runE, -- Used in testing
-    
+
     -- * Using Duals .
+
     --
     -- $Duals
     Dual (..),
-    dualList,  
+    dualList,
     dualSeq,
     dualSet,
     dualMaybeAsList,
@@ -69,7 +72,9 @@ module Data.Coders
     dualCBOR,
     to,
     from,
+
     -- * Containers, Combinators, Annotators
+
     --
     -- $Combinators
     mapEncode,
@@ -247,7 +252,7 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- The coders and the decoders as GADT datatypes
 -- ===========================================================
 
--- $Encoders
+-- Encoders
 
 -- | A first-order domain specific langage for describing ToCBOR instances. Applying
 --   the interpreter 'encode' to a well-typed @(Encode w t)@ always produces a valid encoding for @t@.
@@ -256,13 +261,13 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 --
 -- @
 -- data T = T Bool Word
--- 
+--
 -- instance ToCBOR T where
 --   toCBOR (T b w) = encode (Rec T !> To b !> To w)
 -- @
 --
 -- Note the similarity of
--- 
+--
 -- @(/T/ /x/ /y/)@ and @(/T/ $ /x/ $ /y/)@ and @(Rec /T/ !> To /x/ !> To /y/)@
 --
 -- Where @(!>)@ is the infx version of @ApplyE@ with the same infixity and precedence as @($)@. Note
@@ -280,7 +285,7 @@ data Encode (w :: Wrapped) t where
   To :: ToCBOR a => a -> Encode ('Closed 'Dense) a
   -- | Label a  (component, field, argument) to be encoded using the given encoding function.
   E :: (t -> Encoding) -> t -> Encode ('Closed 'Dense) t
-  -- | Lift one Encode to another with a different type. Used to make a Functor instance of (Encode w). 
+  -- | Lift one Encode to another with a different type. Used to make a Functor instance of (Encode w).
   MapE :: (a -> b) -> Encode w a -> Encode w b
   -- | Use the encoding part of the given 'Dual' to encode the field.
   ED :: Dual t -> t -> Encode ('Closed 'Dense) t
@@ -289,10 +294,11 @@ data Encode (w :: Wrapped) t where
   -- | Precede the given encoding with the given tag
   Tag :: Word -> Encode ('Closed x) t -> Encode ('Closed x) t
   -- | Omit the  (component,field, argument) if the function is True, otherwise encode with the given encoding.
-  Omit :: (t -> Bool) ->
-          Encode ('Closed 'Sparse) t ->
-          Encode ('Closed 'Sparse) t
-  -- | Lable the encoding with the key 'word', used for put of order sparse encoding.          
+  Omit ::
+    (t -> Bool) ->
+    Encode ('Closed 'Sparse) t ->
+    Encode ('Closed 'Sparse) t
+  -- | Lable the encoding with the key 'word', used for put of order sparse encoding.
   Key :: Word -> Encode ('Closed 'Dense) t -> Encode ('Closed 'Sparse) t
   -- | Apply a functional encoding (arising from 'Rec' or 'Sum') to get (type wise) smaller encoding.
   ApplyE :: Encode w (a -> t) -> Encode ('Closed r) a -> Encode w t
@@ -380,8 +386,7 @@ encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 -- Decode
 -- ===================================================================
 
--- $Decoders
-
+-- Decoders
 
 -- | The type @(Decode t)@ is designed to be dual to @(Encode t)@. It was designed so that
 -- in many cases a decoder can be extracted from an encoder by visual inspection. We now give some
@@ -397,15 +402,15 @@ encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 --
 -- data B = B Text.Text
 -- dualB = Dual (\ (B t) ->toCBOR t) (B <$> fromCBOR)
--- 
+--
 -- data A = ACon Int B C
 --
 -- encodeA :: A -> Encode ('Closed 'Dense) A
 -- encodeA (ACon i b c) = Rec ACon !> To i !> ED dualB b !> To c
--- 
+--
 -- decodeA :: Decode ('Closed 'Dense) A
 -- decodeA = RecD ACon <! From <! DD dualB <! From
--- 
+--
 -- instance ToCBOR A   where toCBOR x = encode(encodeA x)
 -- instance FromCBOR A where fromCBOR = decode decodeA
 -- @
@@ -414,19 +419,19 @@ encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 --
 -- @
 -- data N = N1 Int | N2 B Bool | N3 A
--- 
+--
 -- encodeN :: N -> Encode 'Open N
 -- encodeN (N1 i)    = Sum N1 0 !> To i
 -- encodeN (N2 b tf) = Sum N2 1 !> ED dualB b  !> To tf
 -- encodeN (N3 a)    = Sum N3 2 !> To a
--- 
+--
 -- decodeN :: Decode ('Closed 'Dense) N    -- Note each clause has an 'Open decoder,
 -- decodeN = Summands "N" decodeNx           -- But Summands returns a ('Closed 'Dense) decoder
 --   where decodeNx 0 = SumD N1 <! From
 --         decodeNx 1 = SumD N2 <! DD dualB <! From
 --         decodeNx 3 = SumD N3 <! From
 --         decodeNx k = Invalid k
--- 
+--
 -- instance ToCBOR N   where toCBOR x = encode(encodeN x)
 -- instance FromCBOR N where fromCBOR = decode decodeN
 -- @
@@ -456,12 +461,17 @@ data Decode (w :: Wrapped) t where
   -- | Lift a Word to Decode function into a DeCode for a type with multiple constructors.
   Summands :: String -> (Word -> Decode 'Open t) -> Decode ('Closed 'Dense) t
   -- | Lift a Word to Field function into a DeCode for a type with 1 constructor stored sparsely
-  SparseKeyed :: Typeable t =>
-      String -- ^ Name of the Type (for error messages)
-      -> t   -- ^ The type with default values in all fields
-      -> (Word -> Field t) -- ^ What to do with key in the @Word@
-      -> [(Word, String)]  -- ^ Pairs of keys and Strings which must be there (default values not allowed)
-      -> Decode ('Closed 'Dense) t 
+  SparseKeyed ::
+    Typeable t =>
+    -- | Name of the Type (for error messages)
+    String ->
+    -- | The type with default values in all fields
+    t ->
+    -- | What to do with key in the @Word@
+    (Word -> Field t) ->
+    -- | Pairs of keys and Strings which must be there (default values not allowed)
+    [(Word, String)] ->
+    Decode ('Closed 'Dense) t
   -- | Label a (component, field, argument) as sparsely stored, which will be populated with the default value.
   KeyedD :: t -> Decode ('Closed 'Sparse) t
   -- | Label a (component, field, argument). It will be decoded using the existing FromCBOR instance at @t@
@@ -481,13 +491,16 @@ data Decode (w :: Wrapped) t where
   -- | Decode the next thing, not by inspecting the bytes, but pulled out of thin air, returning @t@. Used in sparse decoding.
   Emit :: t -> Decode w t
   -- The next two could be generalized to any (Applicative f) rather than Annotator
+
   -- | Lift a @(Decode w t)@ to a @(Decode w (Annotator t))@. Used on a (component, field, argument) that was not Annotator encoded, but contained in Record or Sum which is Annotator encoded.
   Ann :: Decode w t -> Decode w (Annotator t)
-  -- | Apply a functional decoding (arising from 'RecD' or 'SumD' that needs to be Annotator decoded) to get (type wise) smaller decoding.  
+  -- | Apply a functional decoding (arising from 'RecD' or 'SumD' that needs to be Annotator decoded) to get (type wise) smaller decoding.
   ApplyAnn ::
-    Decode w1 (Annotator (a -> t))  -- ^ A functional Decode
-    -> Decode ('Closed d) (Annotator a) -- ^ An Decoder for an Annotator
-    -> Decode w1 (Annotator t)
+    -- | A functional Decode
+    Decode w1 (Annotator (a -> t)) ->
+    -- | An Decoder for an Annotator
+    Decode ('Closed d) (Annotator a) ->
+    Decode w1 (Annotator t)
   -- | the function to Either can raise an error when applied by returning (Left errorMessage)
   ApplyErr :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 
@@ -508,8 +521,6 @@ x <*! y = ApplyAnn x y
 -- | Infix form of @ApplyErr@ with the same infixity and precedence as @($)@.
 (<?) :: Decode w1 (a -> Either String t) -> Decode ('Closed d) a -> Decode w1 t
 f <? y = ApplyErr f y
-
-
 
 hsize :: Decode w t -> Int
 hsize (Summands _ _) = 1
@@ -659,27 +670,27 @@ instance Applicative (Decode ('Closed d)) where
   f <*> x = ApplyD f x
 
 -- ===========================================================================================
--- $Duals
+-- Duals
 
 -- | A Dual pairs an Encoding and a Decoder with a roundtrip property.
 -- They are used with the (E and D) constructors of Encode and Decode
 -- If you are trying to code something not in the CBOR classes
 -- or you want something not traditional, make you own Dual and use E or D.
--- 
+--
 -- Duals are analogous to paired ToCBOR and FromCBOR instances with out freezing out
 -- alternate ways to code. Unlike ToCBOR and FromCBOR where there is only
 -- one instance per type. There can be multiple Duals with the same type.
 data Dual t = Dual (t -> Encoding) (forall s. Decoder s t)
 
--- | Duals for @[a]@ where @a@ has CBOR instances 
+-- | Duals for @[a]@ where @a@ has CBOR instances
 dualList :: (ToCBOR a, FromCBOR a) => Dual [a]
 dualList = Dual encodeFoldable (decodeList fromCBOR)
 
--- | Duals for @(Seq a)@ where @a@ has CBOR instances 
+-- | Duals for @(Seq a)@ where @a@ has CBOR instances
 dualSeq :: (ToCBOR a, FromCBOR a) => Dual (Seq a)
 dualSeq = Dual encodeFoldable (decodeSeq fromCBOR)
 
--- | Duals for @(Set a)@ where @a@ has CBOR instances 
+-- | Duals for @(Set a)@ where @a@ has CBOR instances
 dualSet :: (Ord a, ToCBOR a, FromCBOR a) => Dual (Set a)
 dualSet = Dual encodeFoldable (decodeSet fromCBOR)
 
@@ -691,7 +702,7 @@ dualMaybeAsList = Dual toCBOR fromCBOR
 dualMaybeAsNull :: (ToCBOR a, FromCBOR a) => Dual (Maybe a)
 dualMaybeAsNull = Dual (encodeNullMaybe toCBOR) (decodeNullMaybe fromCBOR)
 
--- | Duals for @(StrictSeq a)@ where @a@ has CBOR instances 
+-- | Duals for @(StrictSeq a)@ where @a@ has CBOR instances
 dualStrictSeq :: (ToCBOR a, FromCBOR a) => Dual (StrictSeq a)
 dualStrictSeq = Dual encodeFoldable (decodeStrictSeq fromCBOR)
 
@@ -712,10 +723,10 @@ to = ED dualCBOR
 from :: (ToCBOR t, FromCBOR t) => Decode ('Closed 'Dense) t
 from = DD dualCBOR
 
--- $Combinators
+-- Combinators
 
 -- | Combinators for building @(Encode ('Closed 'Dense) x)@ and @(Decode ('Closed 'Dense) x)@ objects.
--- 
+--
 -- The use of "encodeFoldable" is not self-documenting at all (and not even correct for Maps, even
 -- though Map is an instance of Foldable). So instead of writing: @(E encodeFoldable x)@, we want people to write:
 -- 1. @(mapEncode x)@   if x is a Map
@@ -734,9 +745,6 @@ from = DD dualCBOR
 -- 2. @setDecodeA@   if x is a Set
 -- 3. @listDecodeA@  if x is a List
 -- 4. @pairDecodeA@  if x is a Pair like (Int,Bool)
---
-
-
 
 -- | @(mapEncode x)@  is self-documenting, correct way to encode Map. use @mapDecode@ as its dual
 mapEncode :: (ToCBOR k, ToCBOR v) => Map.Map k v -> Encode ('Closed 'Dense) (Map.Map k v)
@@ -777,6 +785,7 @@ listDecode :: (FromCBOR v) => Decode ('Closed 'Dense) [v]
 listDecode = D (decodeList fromCBOR)
 
 -- =============================================================================
+
 -- | Combinators for building (Decode ('Closed 'Dense) (Annotator x)) objects. Unlike
 -- the combinators above (setDecode, mapDecode, ListDecode) for Non-Annotator types,
 -- these combinators take explicit (Decode  ('Closed 'Dense) i) objects as parameters
@@ -787,7 +796,6 @@ listDecode = D (decodeList fromCBOR)
 -- mapDecodeA (listDecodeA From) (pairDecodeA (Ann From) From).
 --                                             ^^^^^^^^
 -- One can always lift x::(Decode w T) by using Ann. so (Ann x)::(Decode w (Annotator T)).
-
 pairDecodeA ::
   Decode ('Closed 'Dense) (Annotator x) ->
   Decode ('Closed 'Dense) (Annotator y) ->
@@ -812,7 +820,6 @@ mapDecodeA ::
   Decode ('Closed 'Dense) (Annotator (Map.Map k v))
 mapDecodeA k v = D (decodeMapTraverse (decode k) (decode v))
 
-
 --------------------------------------------------------------------------------
 -- Utility functions for working with CBOR
 --------------------------------------------------------------------------------
@@ -830,8 +837,6 @@ assertTag tag = do
 -- | Convert a @Buildable@ error into a 'cborg' decoder error
 cborError :: Buildable e => e -> Decoder s a
 cborError = fail . formatToString build
-
-
 
 decodeRecordNamed :: Text.Text -> (a -> Int) -> Decoder s a -> Decoder s a
 decodeRecordNamed name getRecordSize decoder = do
@@ -932,7 +937,7 @@ decodeAnnSet dec = do
   xs <- decodeList dec
   pure (Set.fromList <$> sequence xs)
 
--- $Utilities
+-- Utilities
 
 decodeCollection :: Decoder s (Maybe Int) -> Decoder s a -> Decoder s [a]
 decodeCollection lenOrIndef el = snd <$> decodeCollectionWithLen lenOrIndef el
