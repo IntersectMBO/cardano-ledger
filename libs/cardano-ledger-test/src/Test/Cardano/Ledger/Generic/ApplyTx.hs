@@ -42,7 +42,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Examples.BabbageFeatures (collateralOutputTx, initUTxO)
+import Test.Cardano.Ledger.Examples.TwoPhaseValidation (initUTxO, notValidatingTx)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
 import Test.Cardano.Ledger.Generic.Functions
   ( aggregateRewards',
@@ -253,7 +253,7 @@ additions bodyhash firstTxIx outputs =
 go :: IO ()
 go = do
   let proof = Babbage Mock
-      tx = (collateralOutputTx proof) {isValid = IsValid False}
+      tx = (notValidatingTx proof) {isValid = IsValid False}
       allinputs = getAllTxInputs txbody
       txbody = body tx
       doc = pcTx proof tx
