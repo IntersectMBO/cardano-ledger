@@ -22,6 +22,21 @@
 -- 1. Book-keeping details neccesary to write correct instances are hidden from the user.
 -- 2. Inverse 'ToCBOR' and 'FromCBOR' instances have visually similar definitions.
 -- 3. Advanced instances involving sparse-encoding, compact-representation, and 'Annotator' instances are also supported.
+--
+-- A Guide to Visual inspection of Duality in Encode and Decode
+--
+-- 1. @(Sum c)@     and @(SumD c)@    are duals
+-- 2. @(Rec c)@     and @(RecD c)@    are duals
+-- 3. @(Keyed c)@   and @(KeyedD c)@  are duals
+-- 4. @(OmitC x)@   and @(Emit x)@    are duals
+-- 5. @(Omit p ..)@ and @(Emit x)@    are duals if (p x) is True
+-- 6. @(To x)@      and @(From)@      are duals if (x::T) and (forall (y::T). isRight (roundTrip y))
+-- 7. @(E enc x)@   and @(D dec)@     are duals if (forall x . isRight (roundTrip' enc dec x))
+-- 6. @(ED d x)@    and @(DD f)@      are duals as long as d=(Dual enc dec) and (forall x . isRight (roundTrip' enc dec x))
+-- 7. @(f !> x)@    and @(g <! y)@    are duals if (f and g are duals) and (x and y are duals)
+--
+-- Duality properties of @(Summands name decodeT)@ and @(SparseKeyed name (init::T) pick required)@ also exist
+-- but are harder to describe succinctly.
 module Data.Coders
   ( -- * Creating encoders.
 
@@ -271,9 +286,9 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 --
 -- @(/T/ /b/ /w/)@ and @(/T/ $ /b/ $ /w/)@ and @(Rec /T/ !> To /b/ !> To /w/)@
 --
--- Where @(!>)@ is the infx version of @ApplyE@ with the same infixity and precedence as @($)@. Note
+-- Where ('!>') is the infx version of 'ApplyE' with the same infixity and precedence as ('$'). Note
 -- how the constructor and each (component, field, argument) is labeled with one of the constructors
--- of "Encode", and are combined with the application operator @(!>)@. Using different constructors supports
+-- of 'Encode', and are combined with the application operator ('!>'). Using different constructors supports
 -- different styles of encoding.
 data Encode (w :: Wrapped) t where
   -- | Label the constructor of a Record-like datatype (one with exactly 1 constructor) as an Encode.
@@ -544,21 +559,6 @@ encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 -- instance ToCBOR M where
 --   toCBOR m = encode(encM2 m)
 -- @
---
--- A Guide to Visual inspection of Duality in Encode and Decode
---
--- 1. @(Sum c)@     and @(SumD c)@    are duals
--- 2. @(Rec c)@     and @(RecD c)@    are duals
--- 3. @(Keyed c)@   and @(KeyedD c)@  are duals
--- 4. @(OmitC x)@   and @(Emit x)@    are duals
--- 5. @(Omit p ..)@ and @(Emit x)@    are duals if (p x) is True
--- 6. @(To x)@      and @(From)@      are duals if (x::T) and (forall (y::T). isRight (roundTrip y))
--- 7. @(E enc x)@   and @(D dec)@     are duals if (forall x . isRight (roundTrip' enc dec x))
--- 6. @(ED d x)@    and @(DD f)@      are duals as long as d=(Dual enc dec) and (forall x . isRight (roundTrip' enc dec x))
--- 7. @(f !> x)     and @(g <! y)@    are duals if (f and g are duals) and (x and y are duals)
---
--- The duality of (Summands name decodeT) depends on the duality of the range of decodeT with the endoder of T
--- A some property also holds for (SparseKeyed name (init::T) pick required) depending on the keys of pick and the Sparse encoder of T
 data Decode (w :: Wrapped) t where
   -- | Label the constructor of a Record-like datatype (one with exactly 1 constructor) as a Decode.
   RecD :: t -> Decode ('Closed 'Dense) t
