@@ -210,14 +210,15 @@ import Numeric.Natural (Natural)
 --  prefix , encode, encode, encode , ... , suffix.
 --  There are two kinds of wrapping coders: Nary sums, and Sparsely encoded products.
 --  Coders in these classes can only be decoded when they are wrapped by their
---  closing forms Summand and SparseKeyed. In another dimension records can be
+--  closing forms 'Summands' and 'SparseKeyed'. Another dimension, where we use indexes
+--  to maintain type safety, are records which can be
 --  encoded densely (all their fields serialised) or sparsely (only some of their
 --  fields). We use indexes to types to try and mark (and enforce) these distinctions.
 
 -- | Index for record density. Distinguishing (all the fields) from (some of the fields).
 data Density = Dense | Sparse
 
--- | Index for a wrapped Coder. Wrapping is necessary for 'Summand' and 'SparseKeyed'.
+-- | Index for a wrapped Coder. Wrapping is necessary for 'Summands' and 'SparseKeyed'.
 data Wrapped where
   Open :: Wrapped -- Needs some type-wide wrapping
   Closed :: Density -> Wrapped -- Does not need type-wide wrapping,
@@ -255,7 +256,7 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 -- Encoders
 
 -- | A first-order domain specific langage for describing ToCBOR instances. Applying
---   the interpreter 'encode' to a well-typed @(Encode w t)@ always produces a valid encoding for @t@.
+--   the interpreter 'encode' to a well-typed @(Encode w T)@ always produces a valid encoding for @T@.
 --   Constructing an Encode of type T is just like building a value of type T, applying a constructor
 --   of @T@ to the correctly typed arguments. For example
 --
@@ -268,7 +269,7 @@ fieldAA update dec = Field (liftA2 update) (decode dec)
 --
 -- Note the similarity of
 --
--- @(/T/ /x/ /y/)@ and @(/T/ $ /x/ $ /y/)@ and @(Rec /T/ !> To /x/ !> To /y/)@
+-- @(/T/ /b/ /w/)@ and @(/T/ $ /b/ $ /w/)@ and @(Rec /T/ !> To /b/ !> To /w/)@
 --
 -- Where @(!>)@ is the infx version of @ApplyE@ with the same infixity and precedence as @($)@. Note
 -- how the constructor and each (component, field, argument) is labeled with one of the constructors
@@ -291,16 +292,16 @@ data Encode (w :: Wrapped) t where
   ED :: Dual t -> t -> Encode ('Closed 'Dense) t
   -- | Skip over the  (component,field, argument), don't encode it at all (used in sparse encoding).
   OmitC :: t -> Encode w t
-  -- | Precede the given encoding with the given tag
+  -- | Precede the given encoding (in the produced bytes) with the given tag Word.
   Tag :: Word -> Encode ('Closed x) t -> Encode ('Closed x) t
   -- | Omit the  (component,field, argument) if the function is True, otherwise encode with the given encoding.
   Omit ::
     (t -> Bool) ->
     Encode ('Closed 'Sparse) t ->
     Encode ('Closed 'Sparse) t
-  -- | Lable the encoding with the key 'word', used for put of order sparse encoding.
+  -- | Precede the encoding (in the produced bytes) with the key Word. Analagous to 'Tag', but lifts a 'Dense' encoding to a 'Sparse' encoding.
   Key :: Word -> Encode ('Closed 'Dense) t -> Encode ('Closed 'Sparse) t
-  -- | Apply a functional encoding (arising from 'Rec' or 'Sum') to get (type wise) smaller encoding.
+  -- | Apply a functional encoding (arising from 'Rec' or 'Sum') to get (type wise) smaller encoding. A fully saturated chain of 'ApplyE' will be a complete encoding. See also '!>' which is infix 'ApplyE'.
   ApplyE :: Encode w (a -> t) -> Encode ('Closed r) a -> Encode w t
 
 -- The Wrapped index of ApplyE is determined by the index
@@ -309,7 +310,7 @@ data Encode (w :: Wrapped) t where
 
 infixl 4 !>
 
--- | Infix operator version of @ApplyE@. Has the same infxity and operator precedence as @$@
+-- | Infix operator version of @ApplyE@. Has the same infxity and operator precedence as '$'
 (!>) :: Encode w (a -> t) -> Encode ('Closed r) a -> Encode w t
 x !> y = ApplyE x y
 
@@ -388,12 +389,14 @@ encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 
 -- Decoders
 
--- | The type @(Decode t)@ is designed to be dual to @(Encode t)@. It was designed so that
+-- | The type @('Decode' t)@ is designed to be dual to @('Encode' t)@. It was designed so that
 -- in many cases a decoder can be extracted from an encoder by visual inspection. We now give some
 -- example of @(Decode t)@  and  @(Encode t)@ pairs.
 --
--- In the examples Let @Int@ and @C$ have 'ToCBOR' instances, and @dualB :: Dual B@
+--
 -- An example with 1 constructor (a record) uses 'Rec' and 'RecD'
+--
+-- In this example, let @Int@ and @C@ have 'ToCBOR' instances, and @dualB :: Dual B@.
 --
 -- @
 -- data C = C Text.Text
@@ -435,9 +438,112 @@ encodeKeyedStrictMaybe key = encodeKeyedStrictMaybeWith key toCBOR
 -- instance ToCBOR N   where toCBOR x = encode(encodeN x)
 -- instance FromCBOR N where fromCBOR = decode decodeN
 -- @
--- For more examples writing CBOR instances using Encode and Decode, including
--- ones using Sparse encoding, see the test file
--- @cardano-ledger-shelley-test/test/Test/Cardano/Ledger/Shelley/Coders.hs@
+--
+-- Two examples using variants of sparse encoding for records, i.e. those datatypes with only one constructor.
+-- The Virtual constructor approach using 'Summands', 'OmitC', 'Emit'.
+-- The Sparse field approach using 'Keyed', 'Key' and 'Omit'. The approaches work
+-- because encoders and decoders don't put
+-- fields with default values in the Encoding, and reconstruct the default values on the decoding side.
+-- We will illustrate the two approaches using the datatype M
+--
+-- @
+-- data M = M Int [Bool] Text.Text
+--   deriving (Show, Typeable)
+--
+-- a0, a1, a2, a3 :: M  -- Some illustrative examples, using things that might be given default values.
+-- a0 = M 0 [] "ABC"
+-- a1 = M 0 [True] "ABC"
+-- a2 = M 9 [] "ABC"
+-- a3 = M 9 [False] "ABC"
+-- @
+--
+-- The virtual constructor strategy pretends there are mutiple constructors
+-- Even though there is only one. We use invariants about the data to avoid
+-- encoding some of the values. Note the use of 'Sum' with virtual constructor tags 0,1,2,3
+--
+-- @
+-- encM :: M -> Encode 'Open M
+-- encM (M 0 [] t) = Sum M 0 !> OmitC 0 !> OmitC [] !> To t
+-- encM (M 0 bs t) = Sum M 1 !> OmitC 0 !> To bs !> To t
+-- encM (M n [] t) = Sum M 2 !> To n !> OmitC [] !> To t
+-- encM (M n bs t) = Sum M 3 !> To n !> To bs !> To t
+--
+-- decM :: Word -> Decode 'Open M
+-- decM 0 = SumD M <! Emit 0 <! Emit [] <! From  -- The virtual constructors tell which fields have been Omited
+-- decM 1 = SumD M <! Emit 0 <! From <! From     -- So those fields are reconstructed using 'Emit'.
+-- decM 2 = SumD M <! From <! Emit [] <! From
+-- decM 3 = SumD M <! From <! From <! From
+-- decM n = Invalid n
+--
+-- instance ToCBOR M where
+--   toCBOR m = encode (encM m)
+--
+-- instance FromCBOR M where
+--   fromCBOR = decode (Summands "M" decM)
+-- @
+--
+-- The Sparse field approach uses N keys, one for each field that is not defaulted. For example
+-- @(M 9 [True] (pack "hi")))@. Here zero fields are defaulted, so there should be 3 keys.
+-- Encoding this example would look something like this.
+--
+-- @
+-- [TkMapLen 3,TkInt 0,TkInt 9,TkInt 1,TkListBegin,TkBool True,TkBreak,TkInt 2,TkString "hi"]
+--                   ^key            ^key                                    ^key
+-- @
+--
+-- So the user supplies a function, that encodes every field, each field must use a unique
+-- key, and fields with default values have Omit wrapped around the Key encoding.
+-- The user must ensure that there is NOT an Omit on a required field. 'encM2' is an example.
+--
+-- @
+-- encM2:: M -> Encode ('Closed 'Sparse) M
+-- encM2 (M n xs t) =
+--     Keyed M
+--        !> Omit (== 0) (Key 0 (To n))    -- Omit if n is zero
+--        !> Omit null (Key 1 (To xs))     -- Omit if xs is null
+--        !> Key 2 (To t)                  -- Always encode t
+-- @
+--
+-- To write an Decoder we must pair a decoder for each field, with a function that updates only
+-- that field. We use the 'Field' GADT to construct these pairs, and we must write a function, that
+-- for each field tag, picks out the correct pair. If the Encode and Decode don't agree on how the
+-- tags correspond to a particular field, things will fail.
+--
+-- @
+-- boxM :: Word -> Field M
+-- boxM 0 = field update0 From
+--   where
+--     update0 n (M _ xs t) = M n xs t
+-- boxM 1 = field update1 From
+--   where
+--     update1 xs (M n _ t) = M n xs t
+-- boxM 2 = field update2 From
+--   where
+--     update2 t (M n xs _) = M n xs t
+-- boxM n = invalidField n
+-- @
+--
+-- Finally there is a new constructor for 'Decode', called 'SparseKeyed', that decodes field
+-- keyed sparse objects. The user supplies an initial value and field function, and a list
+-- of tags of the required fields. The initial value should have default values and
+-- any well type value in required fields. If the encode function (baz above) is
+-- encoded properly the required fields in the initial value should always be over
+-- overwritten. If it is not written properly, or a bad encoding comes from somewhere
+-- else, the intial values in the required fields might survive decoding. The list
+-- of required fields is checked.
+--
+-- @
+-- instance FromCBOR M where
+--   fromCBOR = decode (SparseKeyed
+--                       "TT"                        -- ^ Name of the type being decoded
+--                       (M 0 [] (Text.pack "a"))  -- ^ The default value
+--                       boxM                      -- ^ The Field function
+--                       [(2, "Stringpart")]         -- ^ The required Fields
+--                     )
+--
+-- instance ToCBOR M where
+--   toCBOR m = encode(encM2 m)
+-- @
 --
 -- A Guide to Visual inspection of Duality in Encode and Decode
 --
@@ -672,10 +778,10 @@ instance Applicative (Decode ('Closed d)) where
 -- ===========================================================================================
 -- Duals
 
--- | A Dual pairs an Encoding and a Decoder with a roundtrip property.
--- They are used with the (E and D) constructors of Encode and Decode
--- If you are trying to code something not in the CBOR classes
--- or you want something not traditional, make you own Dual and use E or D.
+-- | A Dual pairs an 'Encoding' and a 'Decoder' with a roundtrip property.
+-- They are used with the ('ED' and 'DD') constructors of 'Encode' and 'Decode'
+-- If you are trying to code something not in the CBOR classes,
+-- or you want something not traditional, make you own Dual and use 'ED' or 'DD'.
 --
 -- Duals are analogous to paired ToCBOR and FromCBOR instances with out freezing out
 -- alternate ways to code. Unlike ToCBOR and FromCBOR where there is only
@@ -727,13 +833,13 @@ from = DD dualCBOR
 
 -- | Combinators for building @(Encode ('Closed 'Dense) x)@ and @(Decode ('Closed 'Dense) x)@ objects.
 --
--- The use of "encodeFoldable" is not self-documenting at all (and not even correct for Maps, even
+-- The use of the low level function 'encodeFoldable' is not self-documenting at all (and not even correct for Maps, even
 -- though Map is an instance of Foldable). So instead of writing: @(E encodeFoldable x)@, we want people to write:
 -- 1. @(mapEncode x)@   if x is a Map
 -- 2. @(setEncode x)@   if x is a Set
 -- 3. @(listEncode x)@  if x is a List
 --
--- To decode one of these foldable instances, should use one of the aptly named Duals
+-- To decode one of these foldable instances, we should use one of the aptly named Duals
 --
 -- 1. @mapDecode@   if x is a Map
 -- 2. @setDecode@   if x is a Set
