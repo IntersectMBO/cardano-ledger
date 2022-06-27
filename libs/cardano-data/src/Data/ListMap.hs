@@ -54,7 +54,11 @@ import qualified Prelude as Pre
 newtype ListMap k v = ListMap
   { unListMap :: [(k, v)]
   }
-  deriving (Eq, Ord, Show, Foldable, Functor, Generic, Generic1, NFData)
+  deriving (Show, Foldable, Functor, Generic, Generic1, NFData)
+
+-- | Eq works similarly to Map
+instance (Ord k, Ord v) => Eq (ListMap k v) where
+  (ListMap xs) == (ListMap ys) = L.sort xs == L.sort ys
 
 instance Semigroup (ListMap k v) where
   ListMap xs <> ListMap ys = ListMap $ xs <> ys
@@ -67,14 +71,14 @@ instance (NoThunks k, NoThunks v) => NoThunks (ListMap k v)
 instance (FromCBOR k, FromCBOR v) => FromCBOR (ListMap k v) where
   fromCBOR =
     ListMap <$> do
-      len <- C.decodeListLen
+      len <- C.decodeMapLen
       replicateM len $ do
         k <- fromCBOR
         v <- fromCBOR
         return (k, v)
 
 instance (ToCBOR k, ToCBOR v) => ToCBOR (ListMap k v) where
-  toCBOR (ListMap xs) = C.encodeListLen (fromIntegral $ length xs) <> foldr f mempty xs
+  toCBOR (ListMap xs) = C.encodeMapLen (fromIntegral $ length xs) <> foldr f mempty xs
     where
       f (k, v) e = toCBOR k <> toCBOR v <> e
 
