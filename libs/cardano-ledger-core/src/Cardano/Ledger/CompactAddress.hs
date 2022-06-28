@@ -66,7 +66,6 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..))
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Prelude (panic)
 import Control.DeepSeq (NFData)
 import Control.Monad (ap, guard, unless, when)
 import qualified Control.Monad.Fail
@@ -112,7 +111,7 @@ decompactAddrOld short = snd . unwrap "CompactAddr" $ runGetShort getShortAddr 0
     -- is using a CompactAddr, which can only be constructed using compactAddr.
     -- compactAddr serializes an Addr, so this is guaranteed to work.
     unwrap :: forall a. Text -> Maybe a -> a
-    unwrap name = fromMaybe (panic $ "Impossible failure when decoding " <> name)
+    unwrap name = fromMaybe (error $ "Impossible failure when decoding " <> name)
 {-# NOINLINE decompactAddrOld #-}
 
 ------------------------------------------------------------------------------------------
@@ -594,7 +593,7 @@ decompactAddrLazy (UnsafeCompactAddr bytes) =
     -- is using a CompactAddr, which can only be constructed using compactAddr.
     -- compactAddr serializes an Addr, so this is guaranteed to work.
     unwrap :: forall a. Text -> Maybe a -> a
-    unwrap name = fromMaybe (panic $ "Impossible failure when decoding " <> name)
+    unwrap name = fromMaybe (error $ "Impossible failure when decoding " <> name)
     header = run "address header" 0 bytes getWord
     addrNetId =
       unwrap "address network id" $

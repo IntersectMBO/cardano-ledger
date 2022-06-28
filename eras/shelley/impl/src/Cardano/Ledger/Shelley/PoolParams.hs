@@ -61,7 +61,6 @@ import Cardano.Ledger.Serialization
     ipv6ToCBOR,
   )
 import Cardano.Ledger.Shelley.Orphans ()
-import Cardano.Prelude (panic)
 import Control.DeepSeq (NFData ())
 import Data.Aeson (FromJSON (..), ToJSON (..), Value, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
@@ -271,14 +270,14 @@ instance FromCBOR PoolMetadata where
 data SizeOfPoolOwners = SizeOfPoolOwners
 
 instance ToCBOR SizeOfPoolOwners where
-  toCBOR = panic "The `SizeOfPoolOwners` type cannot be encoded!"
+  toCBOR = error "The `SizeOfPoolOwners` type cannot be encoded!"
 
 -- | The size of the '_poolRelays' 'Set'.  Only used to compute size of encoded
 -- 'PoolParams'.
 data SizeOfPoolRelays = SizeOfPoolRelays
 
 instance ToCBOR SizeOfPoolRelays where
-  toCBOR = panic "The `SizeOfPoolRelays` type cannot be encoded!"
+  toCBOR = error "The `SizeOfPoolRelays` type cannot be encoded!"
 
 instance
   CC.Crypto crypto =>

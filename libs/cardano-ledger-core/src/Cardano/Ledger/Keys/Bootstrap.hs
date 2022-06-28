@@ -56,7 +56,6 @@ import Cardano.Ledger.Keys
   )
 import qualified Cardano.Ledger.Keys as Keys
 import Cardano.Ledger.Serialization (decodeRecordNamed)
-import Cardano.Prelude (panic)
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString.Lazy as LBS
@@ -185,7 +184,7 @@ unpackByronVKey
     -- This maybe is produced by a check that the length of the public key
     -- is the correct one. (32 bytes). If the XPub was constructed correctly,
     -- we already know that it has this length.
-    Nothing -> panic "unpackByronVKey: impossible!"
+    Nothing -> error "unpackByronVKey: impossible!"
     Just vk -> (VKey vk, ChainCode chainCodeBytes)
 
 verifyBootstrapWit ::
@@ -204,7 +203,7 @@ verifyBootstrapWit txbodyHash witness =
 
 coerceSignature :: WC.XSignature -> DSIGN.SigDSIGN DSIGN.Ed25519DSIGN
 coerceSignature sig =
-  fromMaybe (panic "coerceSignature: impossible! signature size mismatch") $
+  fromMaybe (error "coerceSignature: impossible! signature size mismatch") $
     DSIGN.rawDeserialiseSigDSIGN (WC.unXSignature sig)
 
 makeBootstrapWitness ::
