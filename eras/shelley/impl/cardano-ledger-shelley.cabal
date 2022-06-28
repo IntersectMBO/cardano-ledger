@@ -102,7 +102,6 @@ library
     cardano-data,
     cardano-ledger-byron,
     cardano-ledger-core,
-    cardano-prelude,
     cardano-slotting,
     cborg,
     vector-map,
