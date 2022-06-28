@@ -87,7 +87,6 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Prelude (panic)
 import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), FromJSONKey (..), ToJSON (..), ToJSONKey (..), (.:), (.=))
 import qualified Data.Aeson as Aeson
@@ -495,6 +494,6 @@ bootstrapKeyHash (BootstrapAddress byronAddress) =
   let root = Byron.addrRoot byronAddress
       bytes = Byron.abstractHashToBytes root
       !hash =
-        fromMaybe (panic "bootstrapKeyHash: incorrect hash length") $
+        fromMaybe (error "bootstrapKeyHash: incorrect hash length") $
           Hash.hashFromBytes bytes
    in KeyHash hash
