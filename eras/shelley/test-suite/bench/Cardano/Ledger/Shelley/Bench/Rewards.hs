@@ -40,6 +40,7 @@ import Control.State.Transition.Extended (IRC (..), TRC (..), applySTS)
 import Data.Default.Class (Default (def))
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
 import Data.Proxy (Proxy (..))
@@ -136,7 +137,7 @@ genChainInEpoch epoch = do
     mkGenesisStaking stakeMap =
       ShelleyGenesisStaking
         { sgsPools =
-            Map.fromList
+            LM.ListMap
               [ (hk, pp)
                 | (AllIssuerKeys {vrf, hk}, (owner : _)) <- stakeMap,
                   let pp =
@@ -153,7 +154,7 @@ genChainInEpoch epoch = do
                           }
               ],
           sgsStake =
-            Map.fromList
+            LM.ListMap
               [ (dlg, hk)
                 | (AllIssuerKeys {hk}, dlgs) <- stakeMap,
                   dlg <- dlgs

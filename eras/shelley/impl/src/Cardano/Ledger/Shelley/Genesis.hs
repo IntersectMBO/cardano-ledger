@@ -58,6 +58,7 @@ import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
@@ -85,14 +86,14 @@ data ShelleyGenesisStaking crypto = ShelleyGenesisStaking
     --   The key in this map is the hash of the public key of the _pool_. This
     --   need not correspond to any payment or staking key, but must correspond
     --   to the cold key held by 'TPraosIsCoreNode'.
-    sgsPools :: !(Map (KeyHash 'StakePool crypto) (PoolParams crypto)),
+    sgsPools :: LM.ListMap (KeyHash 'StakePool crypto) (PoolParams crypto),
     -- | Stake-holding key hash credentials and the pools to delegate that stake
     -- to. We require the raw staking key hash in order to:
     --
     -- - Avoid pointer addresses, which would be tricky when there's no slot or
     --   transaction to point to.
     -- - Avoid script credentials.
-    sgsStake :: !(Map (KeyHash 'Staking crypto) (KeyHash 'StakePool crypto))
+    sgsStake :: LM.ListMap (KeyHash 'Staking crypto) (KeyHash 'StakePool crypto)
   }
   deriving stock (Eq, Show, Generic)
 
@@ -100,21 +101,21 @@ instance NoThunks (ShelleyGenesisStaking crypto)
 
 instance CC.Crypto crypto => ToCBOR (ShelleyGenesisStaking crypto) where
   toCBOR (ShelleyGenesisStaking pools stake) =
-    encodeListLen 2 <> mapToCBOR pools <> mapToCBOR stake
+    encodeListLen 2 <> toCBOR pools <> toCBOR stake
 
 instance CC.Crypto crypto => FromCBOR (ShelleyGenesisStaking crypto) where
   fromCBOR = do
     decodeRecordNamed "ShelleyGenesisStaking" (const 2) $ do
-      pools <- mapFromCBOR
-      stake <- mapFromCBOR
+      pools <- fromCBOR
+      stake <- fromCBOR
       pure $ ShelleyGenesisStaking pools stake
 
 -- | Empty genesis staking
 emptyGenesisStaking :: ShelleyGenesisStaking crypto
 emptyGenesisStaking =
   ShelleyGenesisStaking
-    { sgsPools = Map.empty,
-      sgsStake = Map.empty
+    { sgsPools = mempty,
+      sgsStake = mempty
     }
 
 -- | Shelley genesis information
@@ -137,8 +138,8 @@ data ShelleyGenesis era = ShelleyGenesis
     sgMaxLovelaceSupply :: !Word64,
     sgProtocolParams :: !(PParams era),
     sgGenDelegs :: !(Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era))),
-    sgInitialFunds :: !(Map (Addr (Crypto era)) Coin),
-    sgStaking :: !(ShelleyGenesisStaking (Crypto era))
+    sgInitialFunds :: LM.ListMap (Addr (Crypto era)) Coin,
+    sgStaking :: ShelleyGenesisStaking (Crypto era)
   }
   deriving stock (Eq, Show, Generic)
 
@@ -239,7 +240,7 @@ instance Era era => ToCBOR (ShelleyGenesis era) where
         <> toCBOR sgMaxLovelaceSupply
         <> toCBOR sgProtocolParams
         <> mapToCBOR sgGenDelegs
-        <> mapToCBOR sgInitialFunds
+        <> toCBOR sgInitialFunds
         <> toCBOR sgStaking
 
 instance Era era => FromCBOR (ShelleyGenesis era) where
@@ -258,7 +259,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
       sgMaxLovelaceSupply <- fromCBOR
       sgProtocolParams <- fromCBOR
       sgGenDelegs <- mapFromCBOR
-      sgInitialFunds <- mapFromCBOR
+      sgInitialFunds <- fromCBOR
       sgStaking <- fromCBOR
       pure $
         ShelleyGenesis
@@ -291,7 +292,7 @@ genesisUTxO genesis =
   UTxO $
     Map.fromList
       [ (txIn, txOut)
-        | (addr, amount) <- Map.toList (sgInitialFunds genesis),
+        | (addr, amount) <- LM.unListMap (sgInitialFunds genesis),
           let txIn = initialFundsPseudoTxIn addr
               txOut = makeTxOut (Proxy @era) addr (Val.inject amount)
       ]

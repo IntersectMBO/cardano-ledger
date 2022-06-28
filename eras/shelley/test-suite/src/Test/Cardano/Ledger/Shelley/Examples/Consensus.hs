@@ -284,7 +284,7 @@ testShelleyGenesis =
       sgMaxLovelaceSupply = maxLovelaceSupply testGlobals,
       sgProtocolParams = emptyPParams,
       sgGenDelegs = Map.empty,
-      sgInitialFunds = Map.empty,
+      sgInitialFunds = mempty,
       sgStaking = emptyGenesisStaking
     }
 

@@ -122,6 +122,7 @@ import Control.State.Transition (STS (State))
 import qualified Data.ByteString.Char8 as BS
 import Data.Coerce (coerce)
 import Data.IP (IPv4, IPv6, toIPv4, toIPv6)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Proxy (Proxy (..))
@@ -447,6 +448,10 @@ instance CC.Crypto crypto => Arbitrary (InstantaneousRewards crypto) where
   shrink = genericShrink
 
 instance CC.Crypto crypto => Arbitrary (FutureGenDeleg crypto) where
+  arbitrary = genericArbitraryU
+  shrink = genericShrink
+
+instance (Arbitrary k, Arbitrary v) => Arbitrary (LM.ListMap k v) where
   arbitrary = genericArbitraryU
   shrink = genericShrink
 

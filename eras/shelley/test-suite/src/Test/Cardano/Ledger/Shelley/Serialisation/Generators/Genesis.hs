@@ -33,6 +33,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Ratio ((%))
@@ -65,14 +66,14 @@ genShelleyGenesis =
     <*> Gen.word64 (Range.linear 1 100000)
     <*> genPParams
     <*> fmap Map.fromList genGenesisDelegationList
-    <*> fmap Map.fromList genFundsList
+    <*> fmap LM.ListMap genFundsList
     <*> genStaking
 
 genStaking :: CC.Crypto crypto => Gen (ShelleyGenesisStaking crypto)
 genStaking =
   ShelleyGenesisStaking
-    <$> fmap Map.fromList genPools
-    <*> fmap Map.fromList genStake
+    <$> fmap LM.ListMap genPools
+    <*> fmap LM.ListMap genStake
 
 genPools ::
   CC.Crypto crypto =>

@@ -27,6 +27,7 @@ import Cardano.Ledger.Shelley.PParams (PParams' (..), emptyPParams)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS (pack)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
 import Data.Scientific (Scientific)
@@ -214,7 +215,7 @@ exampleShelleyGenesis =
             _maxBHSize = 217569
           },
       sgGenDelegs = Map.fromList [(genesisVerKeyHash, genDelegPair)],
-      sgInitialFunds = Map.fromList [(initialFundedAddress, initialFunds)],
+      sgInitialFunds = LM.ListMap [(initialFundedAddress, initialFunds)],
       sgStaking = staking
     }
   where
@@ -274,11 +275,11 @@ exampleShelleyGenesis =
     staking =
       ShelleyGenesisStaking
         { sgsPools =
-            Map.fromList
+            LM.ListMap
               [ (L.KeyHash "f583a45e4947c102091b96170ef50ef0cf8edb62666193a2163247bb", poolParams)
               ],
           sgsStake =
-            Map.fromList
+            LM.ListMap
               [ ( L.KeyHash "83a192dec0e8da2188e520d0c536a69a747cf173a3df16a6daa94d86",
                   L.KeyHash "649eda82bf644d34a6925f24ea4c4c36d27e51de1b44ef47e3560be7"
                 )

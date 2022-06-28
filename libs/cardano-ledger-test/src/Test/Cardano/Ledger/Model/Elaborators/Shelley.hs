@@ -36,6 +36,7 @@ import Cardano.Slotting.Slot (EpochNo (..))
 import qualified Control.Monad.Trans.State as State hiding (state)
 import Data.Functor.Identity (Identity (..))
 import Data.Group (Group (..))
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Time.Clock (secondsToNominalDiffTime)
@@ -140,7 +141,7 @@ fromShelleyGlobals globals pp genDelegs initialFunds =
       sgMaxLovelaceSupply = maxLovelaceSupply globals,
       sgProtocolParams = pp,
       sgGenDelegs = genDelegs, --  genGenesisDelegationList
-      sgInitialFunds = initialFunds, -- genFundsList
+      sgInitialFunds = LM.ListMap $ Map.toList initialFunds, -- genFundsList
       sgStaking = emptyGenesisStaking -- genStaking
     }
 

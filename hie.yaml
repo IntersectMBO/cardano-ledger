@@ -110,3 +110,6 @@ cradle:
 
     - path: "libs/cardano-protocol-tpraos"
       component: "lib:cardano-protocol-tpraos"
+
+    - path: "libs/ledger-state"
+      component: "lib:ledger-state"
