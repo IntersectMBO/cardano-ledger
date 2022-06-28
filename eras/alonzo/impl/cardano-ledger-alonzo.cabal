@@ -70,7 +70,6 @@ library
     cardano-crypto-class,
     cardano-ledger-core,
     cardano-ledger-shelley-ma,
-    cardano-prelude,
     cardano-slotting,
     containers,
     data-default,

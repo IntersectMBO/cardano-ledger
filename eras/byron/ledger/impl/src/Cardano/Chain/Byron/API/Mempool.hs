@@ -26,7 +26,7 @@ import qualified Cardano.Chain.Update as Update
 import qualified Cardano.Chain.Update.Validation.Interface as U.Iface
 import qualified Cardano.Chain.ValidationMode as CC
 import Cardano.Crypto.ProtocolMagic
-import Cardano.Prelude
+import Cardano.Prelude hiding (cborError)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
 import qualified Codec.CBOR.Write as CBOR
