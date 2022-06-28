@@ -669,91 +669,74 @@ explainPlutusFailure ::
   CostModel ->
   ExUnits ->
   ScriptResult
-explainPlutusFailure _proxy pv lang scriptbytestring e ds@[dat, redeemer, info] cm eu =
-  -- A three data argument script.
-  let ss :: Script era
-      ss = PlutusScript lang scriptbytestring
-      name :: String
-      name = show ss
-   in case PV1.fromData info of
-        Nothing -> scriptFail $ PlutusSF line db
-          where
-            line =
-              pack $
-                unlines
-                  [ "\nThe 3 arg plutus script (" ++ name ++ ") fails.",
-                    show e,
-                    "The protocol version is: " ++ show pv,
-                    "The data is: " ++ show dat,
-                    "The redeemer is: " ++ show redeemer,
-                    "The third data argument, does not decode to a context\n" ++ show info
-                  ]
-            db = PlutusDebugV1 cm eu scriptbytestring ds pv
-        Just info2 -> scriptFail $ PlutusSF line db
-          where
-            info3 = show (pretty (info2 :: PV1.ScriptContext))
-            line =
-              pack $
-                unlines
-                  [ "\nThe 3 arg plutus script (" ++ name ++ ") fails.",
-                    show e,
-                    "The protocol version is: " ++ show pv,
-                    "The data is: " ++ show dat,
-                    "The redeemer is: " ++ show redeemer,
-                    "The context is:\n" ++ info3
-                  ]
-            db = PlutusDebugV1 cm eu scriptbytestring ds pv
-explainPlutusFailure _proxy pv lang scriptbytestring e ds@[redeemer, info] cm eu =
-  -- A two data argument script.
-  let ss :: Script era
-      ss = PlutusScript lang scriptbytestring
-      name :: String
-      name = show ss
-   in case PV1.fromData info of
-        Nothing -> scriptFail $ PlutusSF line db
-          where
-            line =
-              pack $
-                unlines
-                  [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
-                    show e,
-                    "The protocol version is: " ++ show pv,
-                    "The redeemer is: " ++ show redeemer,
-                    "The second data argument, does not decode to a context\n" ++ show info
-                  ]
-            db = PlutusDebugV1 cm eu scriptbytestring ds pv
-        Just info2 -> scriptFail $ PlutusSF line db
-          where
-            info3 = show (pretty (info2 :: PV1.ScriptContext))
-            line =
-              pack $
-                unlines
-                  [ "\nThe 2 arg plutus script (" ++ name ++ ") fails.",
-                    show e,
-                    "The protocol version is: " ++ show pv,
-                    "The redeemer is: " ++ show redeemer,
-                    "The context is:\n" ++ info3
-                  ]
-            db = PlutusDebugV1 cm eu scriptbytestring ds pv
 explainPlutusFailure _proxy pv lang scriptbytestring e ds cm eu =
-  -- A script with the wrong number of arguments
-  scriptFail $ PlutusSF line db
-  where
-    ss :: Script era
-    ss = PlutusScript lang scriptbytestring
-    name :: String
-    name = show ss
-    line =
-      pack $
-        unlines
-          ( [ "\nThe plutus script (" ++ name ++ ") fails.",
-              show e,
-              "The protocol version is: " ++ show pv,
-              "It was passed these " ++ show (Prelude.length ds) ++ " data arguments."
+  let ss :: Script era
+      ss = PlutusScript lang scriptbytestring
+      name :: String
+      name = show ss
+      firstLine = "\nThe " ++ show lang ++ " script (" ++ name ++ ") fails."
+      pvLine = "The protocol version is: " ++ show pv
+      plutusError = "The plutus error is: " ++ show e
+      dataLines =
+        case ds of
+          [dat, redeemer, info] ->
+            case lang of
+              PlutusV1 ->
+                case PV1.fromData info of
+                  Nothing ->
+                    [ "The data is: " ++ show dat,
+                      "The redeemer is: " ++ show redeemer,
+                      "The third data argument, does not translate to a V1 script context\n" ++ show info
+                    ]
+                  Just info2 ->
+                    [ "The data is: " ++ show dat,
+                      "The redeemer is: " ++ show redeemer,
+                      "The script context is:\n" ++ show (pretty (info2 :: PV1.ScriptContext))
+                    ]
+              PlutusV2 ->
+                case PV2.fromData info of
+                  Nothing ->
+                    [ "The data is: " ++ show dat,
+                      "The redeemer is: " ++ show redeemer,
+                      "The third data argument, does not translate to a V2 script context\n" ++ show info
+                    ]
+                  Just info2 ->
+                    [ "The data is: " ++ show dat,
+                      "The redeemer is: " ++ show redeemer,
+                      "The script context is:\n" ++ show (pretty (info2 :: PV2.ScriptContext))
+                    ]
+          [redeemer, info] ->
+            case lang of
+              PlutusV1 ->
+                case PV1.fromData info of
+                  Nothing ->
+                    [ "The redeemer is: " ++ show redeemer,
+                      "The second data argument, does not translate to a V1 script context\n" ++ show info
+                    ]
+                  Just info2 ->
+                    [ "The redeemer is: " ++ show redeemer,
+                      "The script context is:\n" ++ show (pretty (info2 :: PV1.ScriptContext))
+                    ]
+              PlutusV2 ->
+                case PV2.fromData info of
+                  Nothing ->
+                    [ "The redeemer is: " ++ show redeemer,
+                      "The second data argument, does not translate to a V2 script context\n" ++ show info
+                    ]
+                  Just info2 ->
+                    [ "The redeemer is: " ++ show redeemer,
+                      "The script context is:\n" ++ show (pretty (info2 :: PV2.ScriptContext))
+                    ]
+          _ ->
+            [ "Received an unexpected number of Data",
+              "The data was:\n" ++ show ds
             ]
-              ++ map show ds
-          )
-    db = PlutusDebugV1 cm eu scriptbytestring ds pv
+      line = pack . unlines $ firstLine : plutusError : pvLine : dataLines
+
+      db = case lang of
+        PlutusV1 -> PlutusDebugV1 cm eu scriptbytestring ds pv
+        PlutusV2 -> PlutusDebugV2 cm eu scriptbytestring ds pv
+   in scriptFail $ PlutusSF line db
 
 validPlutusdata :: PV1.Data -> Bool
 validPlutusdata (PV1.Constr _n ds) = all validPlutusdata ds
