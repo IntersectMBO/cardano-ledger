@@ -14,6 +14,12 @@ module Data.ListMap
     lookup,
     filter,
     toMap,
+    fromMap,
+    mapKeys,
+    map,
+    empty,
+    fromList,
+    toList,
   )
 where
 
@@ -39,6 +45,7 @@ import qualified Data.Aeson.Encoding as E
 import qualified Data.Aeson.Key as Key
 import qualified Data.Aeson.KeyMap as KM
 import Data.Aeson.Types (listValue)
+import Data.Bifunctor (Bifunctor (..))
 import Data.Coerce (coerce)
 import qualified Data.List as L
 import qualified Data.Map.Strict as Map
@@ -46,7 +53,7 @@ import qualified Data.Set as Set
 import qualified Data.Vector as V
 import GHC.Generics (Generic, Generic1)
 import NoThunks.Class (NoThunks)
-import Prelude hiding (filter, lookup)
+import Prelude hiding (filter, lookup, map)
 import qualified Prelude as Pre
 
 -- | ListMap is a wrapper around an associative list. It is encoded in CBOR
@@ -143,3 +150,21 @@ filter f (ListMap xs) = ListMap $ Pre.filter (uncurry f) xs
 
 toMap :: Ord k => ListMap k v -> Map.Map k v
 toMap (ListMap xs) = Map.fromList xs
+
+fromMap :: Map.Map k v -> ListMap k v
+fromMap = ListMap . Map.toList
+
+mapKeys :: (k1 -> k2) -> ListMap k1 a -> ListMap k2 a
+mapKeys f = ListMap . fmap (first f) . unListMap
+
+map :: Ord k => (a -> v) -> ListMap k a -> ListMap k v
+map f = ListMap . Map.toList . Map.map f . Map.fromList . unListMap
+
+empty :: ListMap k a
+empty = ListMap []
+
+fromList :: [(k, v)] -> ListMap k v
+fromList = ListMap
+
+toList :: ListMap k v -> [(k, v)]
+toList = unListMap
