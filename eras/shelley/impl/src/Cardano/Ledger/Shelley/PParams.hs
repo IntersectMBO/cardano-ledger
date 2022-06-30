@@ -14,6 +14,7 @@
 module Cardano.Ledger.Shelley.PParams
   ( PParams' (..),
     PParams,
+    PPUPState (..),
     emptyPParams,
     HKD,
     HKDFunctor (..),
@@ -24,6 +25,7 @@ module Cardano.Ledger.Shelley.PParams
     emptyPParamsUpdate,
     Update (..),
     updatePParams,
+    pvCanFollow,
   )
 where
 
@@ -454,3 +456,39 @@ updatePParams pp ppup =
       _minUTxOValue = fromSMaybe (_minUTxOValue pp) (_minUTxOValue ppup),
       _minPoolCost = fromSMaybe (_minPoolCost pp) (_minPoolCost ppup)
     }
+
+data PPUPState era = PPUPState
+  { proposals :: !(ProposedPPUpdates era),
+    futureProposals :: !(ProposedPPUpdates era)
+  }
+  deriving (Generic)
+
+deriving instance Show (PParamsDelta era) => Show (PPUPState era)
+
+deriving instance Eq (PParamsDelta era) => Eq (PPUPState era)
+
+deriving instance NFData (PParamsDelta era) => NFData (PPUPState era)
+
+instance NoThunks (PParamsDelta era) => NoThunks (PPUPState era)
+
+instance (Era era, ToCBOR (PParamsDelta era)) => ToCBOR (PPUPState era) where
+  toCBOR (PPUPState ppup fppup) =
+    encodeListLen 2 <> toCBOR ppup <> toCBOR fppup
+
+instance
+  (Era era, FromCBOR (PParamsDelta era)) =>
+  FromCBOR (PPUPState era)
+  where
+  fromCBOR =
+    decode $
+      RecD PPUPState
+        <! From
+        <! From
+
+instance Default (PPUPState era) where
+  def = PPUPState emptyPPPUpdates emptyPPPUpdates
+
+pvCanFollow :: BT.ProtVer -> StrictMaybe BT.ProtVer -> Bool
+pvCanFollow _ SNothing = True
+pvCanFollow (BT.ProtVer m n) (SJust (BT.ProtVer m' n')) =
+  (m + 1, 0) == (m', n') || (m, n + 1) == (m', n')

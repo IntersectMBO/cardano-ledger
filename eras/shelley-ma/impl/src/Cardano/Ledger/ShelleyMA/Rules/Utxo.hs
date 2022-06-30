@@ -49,7 +49,6 @@ import qualified Cardano.Ledger.Shelley.Rules.Utxo as Shelley
 import Cardano.Ledger.Shelley.Tx (Tx (..), TxIn, TxOut)
 import Cardano.Ledger.Shelley.TxBody (DCert, RewardAcnt, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits, txouts, txup)
-import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody (TxBody)
 import qualified Cardano.Ledger.Val as Val

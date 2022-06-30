@@ -92,7 +92,6 @@ import Cardano.Ledger.Shelley.LedgerState as X
     PState (..),
     RewardUpdate (..),
     UTxOState (..),
-    WitHashes (..),
   )
 import Cardano.Ledger.Shelley.Metadata as X
   ( Metadata (..),

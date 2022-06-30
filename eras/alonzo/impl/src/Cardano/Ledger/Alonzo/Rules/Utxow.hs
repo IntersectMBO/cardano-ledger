@@ -61,9 +61,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
   )
 import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState (..),
-    WitHashes (..),
     propWits,
-    unWitHashes,
     witsFromTxWitnesses,
   )
 import Cardano.Ledger.Shelley.PParams (Update)
@@ -302,13 +300,13 @@ requiredSignersAreWitnessed ::
   ( HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era)))
   ) =>
   Core.TxBody era ->
-  WitHashes (Crypto era) ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Test (UtxowPredicateFail era)
 requiredSignersAreWitnessed txbody witsKeyHashes = do
   let reqSignerHashes' = getField @"reqSignerHashes" txbody
   failureUnless
-    (eval (reqSignerHashes' ⊆ unWitHashes witsKeyHashes))
-    (MissingRequiredSigners (eval $ reqSignerHashes' ➖ unWitHashes witsKeyHashes))
+    (eval (reqSignerHashes' ⊆ witsKeyHashes))
+    (MissingRequiredSigners (eval $ reqSignerHashes' ➖ witsKeyHashes))
 
 -- =======================
 {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
@@ -448,14 +446,13 @@ witsVKeyNeeded ::
   UTxO era ->
   tx ->
   GenDelegs (Crypto era) ->
-  WitHashes (Crypto era)
+  Set (KeyHash 'Witness (Crypto era))
 witsVKeyNeeded utxo' tx genDelegs =
-  WitHashes $
-    certAuthors
-      `Set.union` inputAuthors
-      `Set.union` owners
-      `Set.union` wdrlAuthors
-      `Set.union` updateKeys
+  certAuthors
+    `Set.union` inputAuthors
+    `Set.union` owners
+    `Set.union` wdrlAuthors
+    `Set.union` updateKeys
   where
     txbody = getField @"body" tx
     inputAuthors :: Set (KeyHash 'Witness (Crypto era))

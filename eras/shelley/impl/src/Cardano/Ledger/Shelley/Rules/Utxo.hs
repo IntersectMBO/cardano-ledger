@@ -65,18 +65,28 @@ import Cardano.Ledger.Shelley.Constraints
     UsesTxOut,
     UsesValue,
   )
-import Cardano.Ledger.Shelley.LedgerState
-  ( PPUPState,
-    UTxOState (..),
-    consumed,
-    keyRefunds,
-    minfee,
-    produced,
-    updateStakeDistribution,
+import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
+import Cardano.Ledger.Shelley.LedgerState.Types
+  ( UTxOState (..),
   )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
-import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupEvent, PpupPredicateFailure)
-import Cardano.Ledger.Shelley.Tx (Tx (..), TxIn, TxOut (..))
+import Cardano.Ledger.Shelley.PParams
+  ( PPUPState (..),
+    PParams,
+    PParams' (..),
+    Update,
+  )
+import Cardano.Ledger.Shelley.Rules.Ppup
+  ( PPUP,
+    PPUPEnv (..),
+    PpupEvent,
+    PpupPredicateFailure,
+  )
+import Cardano.Ledger.Shelley.Tx
+  ( Tx (..),
+    TxIn,
+    TxOut (..),
+    minfee,
+  )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert,
     PoolParams,
@@ -88,6 +98,9 @@ import Cardano.Ledger.Shelley.UTxO
   ( TransUTxO,
     UTxO (..),
     balance,
+    consumed,
+    keyRefunds,
+    produced,
     totalDeposits,
     txouts,
     txup,

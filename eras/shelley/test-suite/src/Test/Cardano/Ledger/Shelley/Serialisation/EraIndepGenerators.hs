@@ -329,9 +329,6 @@ instance Arbitrary NonNegativeInterval where
 instance CC.Crypto crypto => Arbitrary (KeyHash a crypto) where
   arbitrary = KeyHash <$> genHash
 
-instance CC.Crypto crypto => Arbitrary (WitHashes crypto) where
-  arbitrary = genericArbitraryU
-
 instance Arbitrary MIRPot where
   arbitrary = genericArbitraryU
 

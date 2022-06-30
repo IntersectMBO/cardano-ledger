@@ -37,8 +37,7 @@ import Cardano.Ledger.Core (PParamsDelta)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs), KeyHash, KeyRole (Genesis))
-import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), pvCanFollow)
-import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (..))
+import Cardano.Ledger.Shelley.PParams (PPUPState (..), ProposedPPUpdates (ProposedPPUpdates), Update (..), pvCanFollow)
 import Cardano.Ledger.Slot
   ( Duration (Duration),
     EpochNo (EpochNo),

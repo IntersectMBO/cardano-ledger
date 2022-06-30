@@ -13,7 +13,6 @@ import Cardano.Ledger.BaseTypes (Network (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Credential (pattern ScriptHashObj)
 import Cardano.Ledger.Keys (asWitness, hashKey, vKey)
-import Cardano.Ledger.Shelley.LedgerState (WitHashes (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
 import Cardano.Ledger.Shelley.Tx (hashScript)
 import Cardano.Ledger.Shelley.TxBody (RewardAcnt (..), Wdrl (..))
@@ -386,7 +385,7 @@ testScriptAndSKey' =
   utxoSt'
     @?= Left
       [ MissingVKeyWitnessesUTXOW $
-          WitHashes wits
+          wits
       ]
   where
     utxoSt' =

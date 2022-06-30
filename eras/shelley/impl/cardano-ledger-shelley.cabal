@@ -50,6 +50,7 @@ library
     Cardano.Ledger.Shelley.Genesis
     Cardano.Ledger.Shelley.HardForks
     Cardano.Ledger.Shelley.LedgerState
+    Cardano.Ledger.Shelley.LedgerState.Types
     Cardano.Ledger.Shelley.Metadata
     Cardano.Ledger.Shelley.Orphans
     Cardano.Ledger.Shelley.PoolRank
@@ -84,6 +85,11 @@ library
     Cardano.Ledger.Shelley.Tx
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.UTxO
+  other-modules:
+    Cardano.Ledger.Shelley.LedgerState.DPState
+    Cardano.Ledger.Shelley.LedgerState.IncrementalStake
+    Cardano.Ledger.Shelley.LedgerState.NewEpochState
+    Cardano.Ledger.Shelley.LedgerState.PulsingReward
   hs-source-dirs: src
   build-depends:
     aeson >= 2,

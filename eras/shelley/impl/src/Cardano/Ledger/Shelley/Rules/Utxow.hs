@@ -29,6 +29,7 @@ module Cardano.Ledger.Shelley.Rules.Utxow
     validateMetadata,
     validateMIRInsufficientGenesisSigs,
     validateNeededWitnesses,
+    propWits,
   )
 where
 
@@ -87,15 +88,8 @@ import Cardano.Ledger.Shelley.Delegation.Certificates
     requiresVKeyWitness,
   )
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
-import Cardano.Ledger.Shelley.LedgerState
-  ( UTxOState (..),
-    WitHashes (..),
-    diffWitHashes,
-    nullWitHashes,
-    propWits,
-    witsFromTxWitnesses,
-  )
-import Cardano.Ledger.Shelley.PParams (Update)
+import Cardano.Ledger.Shelley.LedgerState.Types (UTxOState (..))
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates (ProposedPPUpdates), Update (Update))
 import Cardano.Ledger.Shelley.Rules.Utxo (UTXO, UtxoEnv (..), UtxoEvent, UtxoPredicateFailure)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import qualified Cardano.Ledger.Shelley.SoftForks as SoftForks
@@ -106,6 +100,7 @@ import Cardano.Ledger.Shelley.Tx
     extractKeyHashWitnessSet,
     hashScript,
     validateScript,
+    witsFromTxWitnesses,
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
@@ -121,7 +116,7 @@ import Cardano.Ledger.Shelley.UTxO (UTxO, scriptsNeeded, txinLookup, verifyWitVK
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (when)
 import Control.Monad.Trans.Reader (asks)
-import Control.SetAlgebra (eval, (∩))
+import Control.SetAlgebra (eval, (∩), (◁))
 import Control.State.Transition
   ( Embed,
     IRC (..),
@@ -158,7 +153,7 @@ data UtxowPredicateFailure era
       ![VKey 'Witness (Crypto era)]
   | -- witnesses which failed in verifiedWits function
     MissingVKeyWitnessesUTXOW
-      !(WitHashes (Crypto era)) -- witnesses which were needed and not supplied
+      !(Set (KeyHash 'Witness (Crypto era))) -- witnesses which were needed and not supplied
   | MissingScriptWitnessesUTXOW
       !(Set (ScriptHash (Crypto era))) -- missing scripts
   | ScriptWitnessNotValidatingUTXOW
@@ -210,7 +205,7 @@ instance
   toCBOR = \case
     InvalidWitnessesUTXOW wits ->
       encodeListLen 2 <> toCBOR (0 :: Word8) <> encodeFoldable wits
-    MissingVKeyWitnessesUTXOW (WitHashes missing) ->
+    MissingVKeyWitnessesUTXOW missing ->
       encodeListLen 2 <> toCBOR (1 :: Word8) <> encodeFoldable missing
     MissingScriptWitnessesUTXOW ss ->
       encodeListLen 2 <> toCBOR (2 :: Word8)
@@ -251,7 +246,7 @@ instance
         pure (2, InvalidWitnessesUTXOW wits)
       1 -> do
         missing <- decodeSet fromCBOR
-        pure (2, MissingVKeyWitnessesUTXOW $ WitHashes missing)
+        pure (2, MissingVKeyWitnessesUTXOW missing)
       2 -> do
         ss <- decodeSet fromCBOR
         pure (2, MissingScriptWitnessesUTXOW ss)
@@ -478,7 +473,7 @@ validateNeededWitnesses ::
   GenDelegs (Crypto era) ->
   UTxO era ->
   Core.Tx era ->
-  WitHashes (Crypto era) ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Test (UtxowPredicateFailure era)
 validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
   let needed = witsVKeyNeeded utxo tx genDelegs
@@ -491,16 +486,16 @@ validateNeededWitnesses genDelegs utxo tx witsKeyHashes =
 -- from Era to Era, so we parameterise over that function in this test.
 -- That allows it to be used in many Eras.
 validateNeededWitnesses ::
-  (UTxO era -> Core.Tx era -> GenDelegs (Crypto era) -> WitHashes (Crypto era)) ->
+  (UTxO era -> Core.Tx era -> GenDelegs (Crypto era) -> Set (KeyHash 'Witness (Crypto era))) ->
   GenDelegs (Crypto era) ->
   UTxO era ->
   Core.Tx era ->
-  WitHashes (Crypto era) ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Test (UtxowPredicateFailure era)
 validateNeededWitnesses witsvkeyneeded genDelegs utxo tx witsKeyHashes =
   let needed = witsvkeyneeded utxo tx genDelegs
-      missingWitnesses = diffWitHashes needed witsKeyHashes
-   in failureUnless (nullWitHashes missingWitnesses) $
+      missingWitnesses = Set.difference needed witsKeyHashes
+   in failureUnless (Set.null missingWitnesses) $
         MissingVKeyWitnessesUTXOW missingWitnesses
 
 -- | Collect the set of hashes of keys that needs to sign a
@@ -518,14 +513,13 @@ witsVKeyNeeded ::
   UTxO era ->
   tx ->
   GenDelegs (Crypto era) ->
-  WitHashes (Crypto era)
+  Set (KeyHash 'Witness (Crypto era))
 witsVKeyNeeded utxo' tx genDelegs =
-  WitHashes $
-    certAuthors
-      `Set.union` inputAuthors
-      `Set.union` owners
-      `Set.union` wdrlAuthors
-      `Set.union` updateKeys
+  certAuthors
+    `Set.union` inputAuthors
+    `Set.union` owners
+    `Set.union` wdrlAuthors
+    `Set.union` updateKeys
   where
     txbody = getField @"body" tx
     inputAuthors :: Set (KeyHash 'Witness (Crypto era))
@@ -612,13 +606,13 @@ validateMIRInsufficientGenesisSigs ::
   ) =>
   GenDelegs (Crypto era) ->
   Word64 ->
-  WitHashes (Crypto era) ->
+  Set (KeyHash 'Witness (Crypto era)) ->
   Core.Tx era ->
   Test (UtxowPredicateFailure era)
 validateMIRInsufficientGenesisSigs (GenDelegs genMapping) coreNodeQuorum witsKeyHashes tx =
   let genDelegates =
         Set.fromList $ asWitness . genDelegKeyHash <$> Map.elems genMapping
-      WitHashes khAsSet = witsKeyHashes
+      khAsSet = witsKeyHashes
       genSig = eval (genDelegates ∩ khAsSet)
       txBody = getField @"body" tx
       mirCerts =
@@ -641,3 +635,16 @@ instance
   Inject (UtxoPredicateFailure era) (UtxowPredicateFailure era)
   where
   inject = UtxoFailure
+
+-- | Calculate the set of hash keys of the required witnesses for update
+-- proposals.
+propWits ::
+  Maybe (Update era) ->
+  GenDelegs (Crypto era) ->
+  Set (KeyHash 'Witness (Crypto era))
+propWits Nothing _ = Set.empty
+propWits (Just (Update (ProposedPPUpdates pup) _)) (GenDelegs genDelegs) =
+  Set.map asWitness . Set.fromList $ Map.elems updateKeys
+  where
+    updateKeys' = eval (Map.keysSet pup ◁ genDelegs)
+    updateKeys = Map.map genDelegKeyHash updateKeys'
