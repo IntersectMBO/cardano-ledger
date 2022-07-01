@@ -35,6 +35,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.ShelleyMA.TxBody ()
 import Cardano.Ledger.Val (Val ((<->)))
 import Data.Default.Class (def)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 
 type AllegraEra = ShelleyMAEra 'Allegra
@@ -64,7 +65,7 @@ instance
                   def
                   (IStake mempty mempty)
               )
-              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+              (DPState (def {_genDelegs = GenDelegs (LM.toMap genDelegs)}) def)
           )
           pp
           pp

@@ -34,6 +34,7 @@ import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Cardano.Ledger.Val (Val ((<->)), coin, inject)
 import Data.Default.Class (def)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 
 instance ShelleyEraCrypto c => ApplyTx (MaryEra c)
@@ -57,7 +58,7 @@ instance Crypto c => CanStartFromGenesis (MaryEra c) where
                   def
                   (IStake mempty mempty)
               )
-              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+              (DPState (def {_genDelegs = GenDelegs (LM.toMap genDelegs)}) def)
           )
           pp
           pp

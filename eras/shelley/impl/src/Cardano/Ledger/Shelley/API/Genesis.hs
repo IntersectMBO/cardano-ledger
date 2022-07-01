@@ -33,6 +33,7 @@ import Cardano.Ledger.Val (Val ((<->)))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
 import Data.Kind (Type)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 
 -- | Indicates that this era may be bootstrapped from 'ShelleyGenesis'.
@@ -71,7 +72,7 @@ instance
                   def
                   (updateStakeDistribution mempty (UTxO mempty) initialUtxo)
               )
-              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+              (DPState (def {_genDelegs = GenDelegs (LM.toMap genDelegs)}) def)
           )
           pp
           pp

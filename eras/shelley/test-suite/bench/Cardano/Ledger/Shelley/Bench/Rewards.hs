@@ -137,7 +137,7 @@ genChainInEpoch epoch = do
     mkGenesisStaking stakeMap =
       ShelleyGenesisStaking
         { sgsPools =
-            LM.ListMap
+            LM.fromList
               [ (hk, pp)
                 | (AllIssuerKeys {vrf, hk}, (owner : _)) <- stakeMap,
                   let pp =
@@ -154,7 +154,7 @@ genChainInEpoch epoch = do
                           }
               ],
           sgsStake =
-            LM.ListMap
+            LM.fromList
               [ (dlg, hk)
                 | (AllIssuerKeys {hk}, dlgs) <- stakeMap,
                   dlg <- dlgs

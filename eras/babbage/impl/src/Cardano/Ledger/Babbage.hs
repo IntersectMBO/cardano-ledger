@@ -92,6 +92,7 @@ import Data.Default (def)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
+import qualified Data.ListMap as LM
 import qualified Data.Set as Set
 import GHC.Records (HasField (..))
 
@@ -160,7 +161,7 @@ instance
                   (Coin 0)
                   def
               )
-              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+              (DPState (def {_genDelegs = GenDelegs (LM.toMap genDelegs)}) def)
           )
           (extendPPWithGenesis pp ag)
           (extendPPWithGenesis pp ag)

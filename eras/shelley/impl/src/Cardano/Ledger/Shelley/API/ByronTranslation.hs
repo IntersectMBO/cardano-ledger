@@ -33,6 +33,7 @@ import Cardano.Ledger.Slot
 import Cardano.Ledger.Val ((<->))
 import qualified Data.ByteString.Short as SBS
 import Data.Default.Class (def)
+import qualified Data.ListMap as LM
 import qualified Data.Map.Strict as Map
 import Data.Word
 import GHC.Stack (HasCallStack)
@@ -126,7 +127,7 @@ translateToShelleyLedgerState genesisShelley epochNo cvs =
     -- Shelley genesis contains the same genesis and delegation verification
     -- keys, but hashed with the right algorithm.
     genDelegs :: GenDelegs c
-    genDelegs = GenDelegs $ sgGenDelegs genesisShelley
+    genDelegs = GenDelegs $ LM.toMap (sgGenDelegs genesisShelley)
 
     reserves :: Coin
     reserves =

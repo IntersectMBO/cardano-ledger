@@ -140,8 +140,8 @@ fromShelleyGlobals globals pp genDelegs initialFunds =
       sgUpdateQuorum = quorum globals,
       sgMaxLovelaceSupply = maxLovelaceSupply globals,
       sgProtocolParams = pp,
-      sgGenDelegs = genDelegs, --  genGenesisDelegationList
-      sgInitialFunds = LM.ListMap $ Map.toList initialFunds, -- genFundsList
+      sgGenDelegs = LM.fromMap genDelegs, --  genGenesisDelegationList
+      sgInitialFunds = LM.fromList $ Map.toList initialFunds, -- genFundsList
       sgStaking = emptyGenesisStaking -- genStaking
     }
 

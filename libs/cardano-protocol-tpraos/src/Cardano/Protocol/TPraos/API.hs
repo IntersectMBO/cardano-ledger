@@ -118,6 +118,7 @@ import Control.State.Transition.Extended
   )
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
@@ -580,6 +581,6 @@ mkInitialShelleyLedgerView genesisShelley =
         { lvD = _d . sgProtocolParams $ genesisShelley,
           lvExtraEntropy = ee,
           lvPoolDistr = PoolDistr Map.empty,
-          lvGenDelegs = GenDelegs $ sgGenDelegs genesisShelley,
+          lvGenDelegs = GenDelegs $ LM.toMap (sgGenDelegs genesisShelley),
           lvChainChecks = pparamsToChainChecksPParams . sgProtocolParams $ genesisShelley
         }

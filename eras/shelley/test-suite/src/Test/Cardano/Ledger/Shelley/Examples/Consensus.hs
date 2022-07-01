@@ -47,6 +47,7 @@ import qualified Data.ByteString as Strict
 import Data.Coerce (coerce)
 import Data.Default.Class
 import Data.Functor.Identity (Identity (..))
+import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromJust)
@@ -283,7 +284,7 @@ testShelleyGenesis =
       sgUpdateQuorum = quorum testGlobals,
       sgMaxLovelaceSupply = maxLovelaceSupply testGlobals,
       sgProtocolParams = emptyPParams,
-      sgGenDelegs = Map.empty,
+      sgGenDelegs = LM.empty,
       sgInitialFunds = mempty,
       sgStaking = emptyGenesisStaking
     }

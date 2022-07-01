@@ -34,7 +34,6 @@ import Cardano.Slotting.Slot (EpochNo (..), EpochSize (..))
 import Data.Fixed
 import Data.IP (IPv4, IPv6, fromHostAddress, fromHostAddress6)
 import qualified Data.ListMap as LM
-import qualified Data.Map.Strict as Map
 import Data.Proxy
 import Data.Ratio ((%))
 import qualified Data.Sequence.Strict as StrictSeq
@@ -65,15 +64,15 @@ genShelleyGenesis =
     <*> Gen.word64 (Range.linear 1 100000)
     <*> Gen.word64 (Range.linear 1 100000)
     <*> genPParams
-    <*> fmap Map.fromList genGenesisDelegationList
-    <*> fmap LM.ListMap genFundsList
+    <*> fmap LM.fromList genGenesisDelegationList
+    <*> fmap LM.fromList genFundsList
     <*> genStaking
 
 genStaking :: CC.Crypto crypto => Gen (ShelleyGenesisStaking crypto)
 genStaking =
   ShelleyGenesisStaking
-    <$> fmap LM.ListMap genPools
-    <*> fmap LM.ListMap genStake
+    <$> fmap LM.fromList genPools
+    <*> fmap LM.fromList genStake
 
 genPools ::
   CC.Crypto crypto =>
