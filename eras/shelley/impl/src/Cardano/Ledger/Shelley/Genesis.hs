@@ -168,6 +168,45 @@ instance Era era => ToJSON (ShelleyGenesis era) where
         "staking" .= sgStaking sg
       ]
 
+  toEncoding
+    ShelleyGenesis
+      { sgSystemStart,
+        sgNetworkMagic,
+        sgNetworkId,
+        sgActiveSlotsCoeff,
+        sgSecurityParam,
+        sgEpochLength,
+        sgSlotsPerKESPeriod,
+        sgMaxKESEvolutions,
+        sgSlotLength,
+        sgUpdateQuorum,
+        sgMaxLovelaceSupply,
+        sgProtocolParams,
+        sgGenDelegs,
+        sgInitialFunds,
+        sgStaking
+      } =
+      Aeson.pairs $
+        let !strictSgInitialFunds = sgInitialFunds
+            !strictSgStaking = sgStaking
+         in mconcat
+              [ "systemStart" .= sgSystemStart,
+                "networkMagic" .= sgNetworkMagic,
+                "networkId" .= sgNetworkId,
+                "activeSlotsCoeff" .= sgActiveSlotsCoeff,
+                "securityParam" .= sgSecurityParam,
+                "epochLength" .= sgEpochLength,
+                "slotsPerKESPeriod" .= sgSlotsPerKESPeriod,
+                "maxKESEvolutions" .= sgMaxKESEvolutions,
+                "slotLength" .= sgSlotLength,
+                "updateQuorum" .= sgUpdateQuorum,
+                "maxLovelaceSupply" .= sgMaxLovelaceSupply,
+                "protocolParams" .= sgProtocolParams,
+                "genDelegs" .= sgGenDelegs,
+                "initialFunds" .= strictSgInitialFunds,
+                "staking" .= strictSgStaking
+              ]
+
 instance Era era => FromJSON (ShelleyGenesis era) where
   parseJSON =
     Aeson.withObject "ShelleyGenesis" $ \obj ->
@@ -199,6 +238,16 @@ instance CC.Crypto crypto => ToJSON (ShelleyGenesisStaking crypto) where
       [ "pools" .= sgsPools sgs,
         "stake" .= sgsStake sgs
       ]
+  toEncoding
+    ShelleyGenesisStaking
+      { sgsPools,
+        sgsStake
+      } =
+      Aeson.pairs $
+        mconcat
+          [ "pools" .= sgsPools,
+            "stake" .= sgsStake
+          ]
 
 instance CC.Crypto crypto => FromJSON (ShelleyGenesisStaking crypto) where
   parseJSON =
