@@ -130,6 +130,9 @@ instance (FromJSON v, FromJSONKey k) => FromJSON (ListMap k v) where
 
 instance NFData k => NFData1 (ListMap k)
 
+instance Bifunctor ListMap where
+  bimap f g (ListMap xs) = ListMap $ fmap (bimap f g) xs
+
 foldrWithKey :: ((k, a) -> b -> b) -> b -> ListMap k a -> b
 foldrWithKey f z = L.foldr f z . unListMap
 
@@ -157,8 +160,8 @@ fromMap = ListMap . Map.toList
 mapKeys :: (k1 -> k2) -> ListMap k1 a -> ListMap k2 a
 mapKeys f = ListMap . fmap (first f) . unListMap
 
-map :: Ord k => (a -> v) -> ListMap k a -> ListMap k v
-map f = ListMap . Map.toList . Map.map f . Map.fromList . unListMap
+map :: (a -> v) -> ListMap k a -> ListMap k v
+map = fmap
 
 empty :: ListMap k a
 empty = ListMap []
