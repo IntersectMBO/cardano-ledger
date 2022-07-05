@@ -10,16 +10,14 @@
 
 module Cardano.Ledger.Pretty.Babbage where
 
-import Cardano.Ledger.Alonzo.Data (BinaryData, DataHash, binaryDataToData)
-import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure)
-import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail)
-import Cardano.Ledger.Babbage.PParams (PParams, PParams' (..), PParamsUpdate)
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
+import Cardano.Ledger.Alonzo.Data (BinaryData, binaryDataToData)
+import Cardano.Ledger.Alonzo.Rules (UtxoPredicateFailure, UtxowPredicateFail)
+import Cardano.Ledger.Babbage.PParams (BabbagePParams, BabbagePParamsHKD (..), BabbagePParamsUpdate)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..), BabbageUtxowPred (..))
 import Cardano.Ledger.Babbage.TxBody
-  ( Datum (..),
-    TxBody (..),
-    TxOut (..),
+  ( BabbageTxBody (..),
+    BabbageTxOut (..),
+    Datum (..),
     adHash',
     certs',
     collateralInputs',
@@ -37,9 +35,8 @@ import Cardano.Ledger.Babbage.TxBody
     vldt',
     wdrls',
   )
-import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), StrictMaybe)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era, ValidateScript (hashScript))
+import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Pretty hiding
   ( ppPParams,
     ppPParamsUpdate,
@@ -55,14 +52,13 @@ import Cardano.Ledger.Pretty.Alonzo
   )
 import Cardano.Ledger.Pretty.Mary (ppValidityInterval, ppValue)
 import Control.State.Transition.Extended
-import Data.Functor.Identity (Identity (..))
 import Data.Maybe.Strict (StrictMaybe (SJust, SNothing))
 import Prettyprinter ((<+>))
 
 -- =====================================
 
-ppPParamsId :: PParams' Identity era -> PDoc
-ppPParamsId (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+ppPParamsId :: BabbagePParams era -> PDoc
+ppPParamsId (BabbagePParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
   ppRecord
     "PParams"
     [ ("minfeeA", lift ppNatural feeA),
@@ -91,14 +87,14 @@ ppPParamsId (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mpool ada c
   where
     lift f = f
 
-ppPParams :: PParams era -> PDoc
+ppPParams :: BabbagePParams era -> PDoc
 ppPParams = ppPParamsId
 
-instance PrettyA (PParams era) where
+instance PrettyA (BabbagePParams era) where
   prettyA = ppPParams
 
-ppPParamsStrictMaybe :: PParams' StrictMaybe era -> PDoc
-ppPParamsStrictMaybe (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+ppPParamsStrictMaybe :: BabbagePParamsUpdate era -> PDoc
+ppPParamsStrictMaybe (BabbagePParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
   ppRecord
     "PParams"
     [ ("minfeeA", lift ppNatural feeA),
@@ -127,15 +123,15 @@ ppPParamsStrictMaybe (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau pv mp
   where
     lift f = ppStrictMaybe f
 
-ppPParamsUpdate :: PParamsUpdate era -> PDoc
+ppPParamsUpdate :: BabbagePParamsUpdate era -> PDoc
 ppPParamsUpdate = ppPParamsStrictMaybe
 
-instance PrettyA (PParamsUpdate era) where
+instance PrettyA (BabbagePParamsUpdate era) where
   prettyA = ppPParamsUpdate
 
 ppBabbageUtxoPred ::
   ( PrettyA (UtxoPredicateFailure era),
-    PrettyA (Core.TxOut era)
+    PrettyA (TxOut era)
   ) =>
   BabbageUtxoPred era ->
   PDoc
@@ -149,7 +145,7 @@ ppBabbageUtxoPred (BabbageOutputTooSmallUTxO xs) =
 
 instance
   ( PrettyA (UtxoPredicateFailure era),
-    PrettyA (Core.TxOut era)
+    PrettyA (TxOut era)
   ) =>
   PrettyA (BabbageUtxoPred era)
   where
@@ -157,7 +153,7 @@ instance
 
 ppBabbageUtxowPred ::
   ( PrettyA (UtxowPredicateFail era),
-    PrettyA (PredicateFailure (Core.EraRule "UTXO" era))
+    PrettyA (PredicateFailure (EraRule "UTXO" era))
   ) =>
   BabbageUtxowPred era ->
   PDoc
@@ -170,7 +166,7 @@ ppBabbageUtxowPred (MalformedReferenceScripts scripts) =
 
 instance
   ( PrettyA (UtxowPredicateFail era),
-    PrettyA (PredicateFailure (Core.EraRule "UTXO" era))
+    PrettyA (PredicateFailure (EraRule "UTXO" era))
   ) =>
   PrettyA (BabbageUtxowPred era)
   where
@@ -178,14 +174,14 @@ instance
 
 ppTxOut ::
   forall era.
-  ( Era era,
-    ValidateScript era,
-    PrettyA (Core.Script era),
-    PrettyA (Core.Value era)
+  ( EraTxOut era,
+    EraScript era,
+    PrettyA (Script era),
+    PrettyA (Value era)
   ) =>
-  TxOut era ->
+  BabbageTxOut era ->
   PDoc
-ppTxOut (TxOut addr val datum mscript) =
+ppTxOut (BabbageTxOut addr val datum mscript) =
   ppRecord
     "TxOut"
     [ ("address", ppAddr addr),
@@ -199,12 +195,12 @@ ppTxOut (TxOut addr val datum mscript) =
     ]
 
 instance
-  ( Era era,
-    ValidateScript era,
-    PrettyA (Core.Script era),
-    PrettyA (Core.Value era)
+  ( EraTxOut era,
+    EraScript era,
+    PrettyA (Script era),
+    PrettyA (Value era)
   ) =>
-  PrettyA (TxOut era)
+  PrettyA (BabbageTxOut era)
   where
   prettyA = ppTxOut
 
@@ -226,17 +222,18 @@ ppDataHash x = ppSafeHash x
 instance PrettyA (DataHash era) where prettyA = ppDataHash
 
 ppTxBody ::
-  ( ValidateScript era,
-    PrettyA (Core.Value era),
-    PrettyA (Core.PParamsDelta era),
-    PrettyA (Core.Script era)
+  ( EraScript era,
+    PrettyA (Value era),
+    PrettyA (PParamsUpdate era),
+    PrettyA (Script era),
+    EraTxOut era
   ) =>
-  TxBody era ->
+  BabbageTxBody era ->
   PDoc
 ppTxBody x =
   -- (TxBody si ci ri o cr tc c w fee vi u rsh mnt sdh axh ni) =
   ppRecord
-    "TxBody(Alonzo)"
+    "TxBody(Babbage)"
     [ ("spending inputs", ppSet ppTxIn (spendInputs' x)),
       ("collateral inputs", ppSet ppTxIn (collateralInputs' x)),
       ("reference inputs", ppSet ppTxIn (referenceInputs' x)),
@@ -256,12 +253,12 @@ ppTxBody x =
     ]
 
 instance
-  ( Era era,
-    ValidateScript era,
-    PrettyA (Core.Value era),
-    PrettyA (Core.PParamsDelta era),
-    PrettyA (Core.Script era)
+  ( EraTxOut era,
+    EraScript era,
+    PrettyA (Value era),
+    PrettyA (PParamsUpdate era),
+    PrettyA (Script era)
   ) =>
-  PrettyA (TxBody era)
+  PrettyA (BabbageTxBody era)
   where
   prettyA = ppTxBody

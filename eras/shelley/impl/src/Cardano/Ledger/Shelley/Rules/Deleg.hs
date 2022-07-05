@@ -23,9 +23,8 @@ import Cardano.Binary
   )
 import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, epochInfoPure, invalidKey)
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..), addDeltaCoin, toDeltaCoin)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
@@ -89,12 +88,12 @@ data DelegEnv era = DelegEnv
   { slotNo :: SlotNo,
     ptr_ :: Ptr,
     acnt_ :: AccountState,
-    ppDE :: Core.PParams era -- The protocol parameters are only used for the HardFork mechanism
+    ppDE :: PParams era -- The protocol parameters are only used for the HardFork mechanism
   }
 
-deriving instance (Show (Core.PParams era)) => Show (DelegEnv era)
+deriving instance (Show (PParams era)) => Show (DelegEnv era)
 
-deriving instance (Eq (Core.PParams era)) => Eq (DelegEnv era)
+deriving instance (Eq (PParams era)) => Eq (DelegEnv era)
 
 data DelegPredicateFailure era
   = StakeKeyAlreadyRegisteredDELEG
@@ -121,7 +120,7 @@ data DelegPredicateFailure era
       !Coin -- size of the pot from which the lovelace is drawn
   | MIRCertificateTooLateinEpochDELEG
       !SlotNo -- current slot
-      !SlotNo -- Core.EraRule "MIR" must be submitted before this slot
+      !SlotNo -- EraRule "MIR" must be submitted before this slot
   | DuplicateGenesisVRFDELEG
       !(Hash (Crypto era) (VerKeyVRF (Crypto era))) -- VRF KeyHash which is already delegated to
   | MIRTransferNotCurrentlyAllowed
@@ -140,7 +139,7 @@ newtype DelegEvent era = NewEpoch EpochNo
 
 instance
   ( Typeable era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   STS (DELEG era)
   where
@@ -156,7 +155,7 @@ instance
 instance NoThunks (DelegPredicateFailure era)
 
 instance
-  (Typeable era, Era era, Typeable (Core.Script era)) =>
+  (Typeable era, Era era, Typeable (Script era)) =>
   ToCBOR (DelegPredicateFailure era)
   where
   toCBOR = \case
@@ -202,7 +201,7 @@ instance
         <> toCBOR amt
 
 instance
-  (Era era, Typeable (Core.Script era)) =>
+  (Era era, Typeable (Script era)) =>
   FromCBOR (DelegPredicateFailure era)
   where
   fromCBOR = decodeRecordSum "PredicateFailure (DELEG era)" $
@@ -261,7 +260,7 @@ instance
 
 delegationTransition ::
   ( Typeable era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (DELEG era)
 delegationTransition = do

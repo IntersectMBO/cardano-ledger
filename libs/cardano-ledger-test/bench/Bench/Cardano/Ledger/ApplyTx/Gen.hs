@@ -16,12 +16,11 @@ import Cardano.Ledger.Shelley.API
     Globals,
     LedgerEnv (..),
     MempoolEnv,
-    ShelleyBasedEra,
   )
 import Cardano.Ledger.Shelley.LedgerState (LedgerState)
 import Cardano.Ledger.Slot (SlotNo (SlotNo))
 import Control.DeepSeq (NFData (..))
-import Control.State.Transition (State)
+import Control.State.Transition (Environment, Signal, State)
 import Control.State.Transition.Trace
   ( SourceSignalTarget (signal, source),
     Trace (..),
@@ -67,10 +66,12 @@ instance NFData (ApplyTxEnv era) where
 generateApplyTxEnvForEra ::
   forall era.
   ( EraGen era,
-    HasTrace (EraRule "LEDGER" era) (GenEnv era),
     Default (State (EraRule "PPUP" era)),
+    HasTrace (EraRule "LEDGER" era) (GenEnv era),
     BaseEnv (EraRule "LEDGER" era) ~ Globals,
-    ShelleyBasedEra era
+    Signal (EraRule "LEDGER" era) ~ Core.Tx era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
+    State (EraRule "LEDGER" era) ~ LedgerState era
   ) =>
   Proxy era ->
   Int ->

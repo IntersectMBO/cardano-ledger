@@ -6,7 +6,6 @@
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Model.TxOut where
 
@@ -20,7 +19,7 @@ import Control.Lens
   )
 import Data.Functor.Identity (Identity (..))
 import Data.Group (Group (..))
-import Data.Proxy (Proxy (..))
+import Data.Typeable
 import GHC.Generics (Generic)
 import qualified PlutusTx (Data (..))
 import Quiet (Quiet (..))
@@ -94,14 +93,18 @@ modelTxOut_data :: Lens' (ModelTxOut era) (IfSupportsPlutus () (Maybe PlutusTx.D
 modelTxOut_data = lens _mtxo_data (\s b -> s {_mtxo_data = b})
 {-# INLINE modelTxOut_data #-}
 
-modelMinUTxOCoins :: ModelPParams era -> ModelTxOut era -> Coin
+modelMinUTxOCoins ::
+  (Typeable era, Typeable (ValueFeature era)) =>
+  ModelPParams era ->
+  ModelTxOut era ->
+  Coin
 modelMinUTxOCoins pp txout = case runIdentity $ _modelPParams_coinsPerUTxOWord pp of
   NoMintSupport x -> x
   SupportsMint coinsPerUTxOWord -> coinsPerUTxOWord `pow` modelUTxOEntrySize txout
 
 -- SEE Fig 17 [GL-D2]
 -- TODO: this is not at all correct, just a placeholder
-modelUTxOEntrySize :: ModelTxOut era -> Integer
+modelUTxOEntrySize :: (Typeable era, Typeable (ValueFeature era)) => ModelTxOut era -> Integer
 modelUTxOEntrySize (ModelTxOut _a v d) =
   utxoEntrySizeWithoutVal + Val.size v' + bifoldMapSupportsFeature (\() -> 0) modelDataHashSize d
   where
@@ -109,7 +112,7 @@ modelUTxOEntrySize (ModelTxOut _a v d) =
     utxoEntrySizeWithoutVal = 29 -- according to spec, anways.
     modelDataHashSize = maybe 0 (const 10)
 
-canBeUsedAsCollateral :: ModelTxOut era -> Bool
+canBeUsedAsCollateral :: (Typeable era, Typeable (ValueFeature era)) => ModelTxOut era -> Bool
 canBeUsedAsCollateral txo
   | not $ has (modelTxOut_address . modelAddress_pmt . _ModelKeyHashObj) txo = False
   | not $ Val.isAdaOnly $ _mtxo_value txo = False

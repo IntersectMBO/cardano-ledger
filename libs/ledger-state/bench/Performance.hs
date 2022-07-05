@@ -7,12 +7,10 @@ module Main where
 
 import Cardano.Binary
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo
-import Cardano.Ledger.Alonzo.PParams
+import Cardano.Ledger.Alonzo.PParams hiding (PParams)
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.API.Mempool
 import Cardano.Ledger.Shelley.API.Wallet (getFilteredUTxO, getUTxO)
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis (..), mkShelleyGlobals)
@@ -33,6 +31,7 @@ import Data.Foldable as F
 import Data.Map.Strict as Map
 import Data.MapExtras (extractKeys, extractKeysSmallSet)
 import Data.Set as Set
+import Lens.Micro ((^.))
 import System.Environment (getEnv)
 import System.Random.Stateful
 
@@ -63,7 +62,7 @@ main = do
   let largeKeysNum = 100000
   largeKeys <- selectRandomMapKeys 100000 (mkStdGen 2022) (unUTxO (getUTxO es))
   defaultMain
-    [ env (pure ((mkMempoolEnv es slotNo, toMempoolState es))) $ \ ~(mempoolEnv, mempoolState) ->
+    [ env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
           "reapplyTx"
           [ env (pure validatedTx1) $
@@ -76,7 +75,7 @@ main = do
               (pure [validatedTx1, validatedTx2, validatedTx3])
               $ bench "Tx1+Tx2+Tx3" . whnf (F.foldl' (reapplyTx' mempoolEnv) mempoolState)
           ],
-      env (pure ((mkMempoolEnv es slotNo, toMempoolState es))) $ \ ~(mempoolEnv, mempoolState) ->
+      env (pure (mkMempoolEnv es slotNo, toMempoolState es)) $ \ ~(mempoolEnv, mempoolState) ->
         bgroup
           "applyTx"
           [ env (pure (extractTx validatedTx1)) $
@@ -91,8 +90,9 @@ main = do
             (_, minTxOut) = Map.findMin $ unUTxO utxo
             (_, maxTxOut) = Map.findMax $ unUTxO utxo
             setAddr =
-              Set.fromList [getTxOutAddr minTxOut, getTxOutAddr maxTxOut]
-         in bgroup "MinMaxTxId" $
+              Set.fromList [minTxOut ^. addrTxOutL, maxTxOut ^. addrTxOutL]
+         in bgroup
+              "MinMaxTxId"
               [ env (pure setAddr) $
                   bench "getFilteredNewUTxO" . nf (getFilteredUTxO newEpochState),
                 env (pure setAddr) $
@@ -139,7 +139,7 @@ selectRandomMapKeys n gen m = runStateGenT_ gen $ \g ->
 extractKeysNaive :: Ord k => Map k a -> Set.Set k -> (Map k a, Map k a)
 extractKeysNaive sm s = (Map.withoutKeys sm s, Map.restrictKeys sm s)
 
-decodeTx :: ByteString -> Core.Tx CurrentEra
+decodeTx :: ByteString -> Tx CurrentEra
 decodeTx hex = either error id $ do
   bsl <- BSL16.decode hex
   first show $ decodeAnnotator "Tx" fromCBOR bsl
@@ -148,7 +148,7 @@ decodeTx hex = either error id $ do
 --
 -- * One input with Shelley address without staking
 -- * One destination and change back to the address from original input.
-validatedTx1 :: Validated (Core.Tx CurrentEra)
+validatedTx1 :: Validated (Tx CurrentEra)
 validatedTx1 =
   unsafeMakeValidated $
     decodeTx
@@ -166,7 +166,7 @@ validatedTx1 =
 --
 -- * One input with Shelley address /with/ staking address
 -- * One destination and change back to the address from original input.
-validatedTx2 :: Validated (Core.Tx CurrentEra)
+validatedTx2 :: Validated (Tx CurrentEra)
 validatedTx2 =
   unsafeMakeValidated $
     decodeTx
@@ -185,7 +185,7 @@ validatedTx2 =
 --
 -- * One input with Shelley address /with/ staking address and some tokens
 -- * One destination and change back to the address from original input.
-validatedTx3 :: Validated (Core.Tx CurrentEra)
+validatedTx3 :: Validated (Tx CurrentEra)
 validatedTx3 =
   unsafeMakeValidated $
     decodeTx
@@ -201,7 +201,7 @@ validatedTx3 =
       \7120c2d3482751b14f06dd41d7ff023eeae6e63933b097c023c1ed19df6a061173c45aa\
       \54cceb568ff1886e2716e84e6260df5f6"
 
-mkGlobals :: ShelleyGenesis CurrentEra -> Core.PParams CurrentEra -> Globals
+mkGlobals :: ShelleyGenesis CurrentEra -> PParams CurrentEra -> Globals
 mkGlobals genesis pp =
   mkShelleyGlobals genesis epochInfoE majorPParamsVer
   where
@@ -212,13 +212,13 @@ mkGlobals genesis pp =
         (mkSlotLength $ sgSlotLength genesis)
 
 getFilteredOldUTxO ::
-  Era era =>
+  EraTxOut era =>
   NewEpochState era ->
   Set (Addr (Crypto era)) ->
   UTxO era
 getFilteredOldUTxO ss addrs =
   UTxO $
-    Map.filter (\out -> getTxOutCompactAddr out `Set.member` addrSBSs) fullUTxO
+    Map.filter (\txOut -> (txOut ^. compactAddrTxOutL) `Set.member` addrSBSs) fullUTxO
   where
     UTxO fullUTxO = getUTxO ss
     addrSBSs = Set.map compactAddr addrs

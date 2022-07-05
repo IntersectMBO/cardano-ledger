@@ -12,14 +12,13 @@
 module Test.Cardano.Ledger.Alonzo.PropertyTests where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (collectTwoPhaseScriptInputs, evalScripts)
-import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY)
-import Cardano.Ledger.Alonzo.Rules.Ledger (AlonzoLEDGER)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), totExUnits)
+import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoLEDGER)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), IsValid (..), totExUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ScriptResult (..))
-import Cardano.Ledger.Era (ValidateScript (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState hiding (circulation)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochSize (..))
@@ -32,7 +31,7 @@ import Data.Proxy
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Word (Word64)
-import GHC.Records (HasField (..))
+import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen (sumCollateral)
 import Test.Cardano.Ledger.Alonzo.EraMapping ()
 import Test.Cardano.Ledger.Alonzo.Trace ()
@@ -89,11 +88,11 @@ alonzoSpecificProps SourceSignalTarget {source = chainSt, signal = block} =
           signal = tx,
           target = LedgerState UTxOState {_utxo = UTxO u', _deposited = dp', _fees = f'} ds'
         } =
-        let isValid' = getField @"isValid" tx
+        let isValid' = tx ^. isValidTxL
             noNewUTxO = u' `Map.isSubmapOf` u
             collateralInFees = f <> sumCollateral tx (UTxO u) == f'
             utxoConsumed = not $ u `Map.isSubmapOf` u'
-            allScripts = getField @"txscripts" $ getField @"wits" tx
+            allScripts = tx ^. witsTxL . scriptWitsL
             hasPlutus = if all (isNativeScript @A) allScripts then NoPlutus else HasPlutus
             totEU = totExUnits tx
             nonTrivialExU = exUnitsMem totEU > 0 && exUnitsSteps totEU > 0

@@ -162,9 +162,9 @@ genWords n
   | n > 0 = (:) <$> Gen.word8 Range.constantBounded <*> genWords (n - 1)
   | otherwise = pure []
 
-genPParams :: Gen (PParams era)
+genPParams :: Gen (ShelleyPParams era)
 genPParams =
-  PParams
+  ShelleyPParams
     <$> genNatural (Range.linear 0 1000)
     <*> genNatural (Range.linear 0 3)
     <*> fmap fromIntegral (Gen.word $ Range.linear 100 1000000)

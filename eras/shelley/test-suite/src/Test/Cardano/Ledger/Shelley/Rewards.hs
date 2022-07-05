@@ -91,8 +91,8 @@ import Cardano.Ledger.Shelley.LedgerState
     updateNonMyopic,
   )
 import Cardano.Ledger.Shelley.PParams
-  ( PParams,
-    PParams' (..),
+  ( ShelleyPParams,
+    ShelleyPParamsHKD (..),
     emptyPParams,
   )
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, leaderProbability, likelihood)
@@ -294,7 +294,7 @@ genPoolInfo PoolSetUpArgs {poolPledge, poolCost, poolMargin, poolMembers} = do
           }
   pure $ PoolInfo {params, coldKey, ownerKey, ownerStake, rewardKey, members}
 
-genRewardPPs :: Gen (PParams era)
+genRewardPPs :: Gen (ShelleyPParams era)
 genRewardPPs = do
   d <- g decentralizationRange
   t <- g tauRange
@@ -316,7 +316,7 @@ toCompactCoinError c =
 
 rewardsBoundedByPot ::
   forall era.
-  (Era era, Core.PParams era ~ PParams era) =>
+  (Era era, Core.PParams era ~ ShelleyPParams era) =>
   Proxy era ->
   Property
 rewardsBoundedByPot _ = property $ do
@@ -622,20 +622,20 @@ createRUpdOld_ slotsPerEpoch b@(BlocksMade b') ss (Coin reserves) pr totalStake 
       }
 
 overrideProtocolVersionUsedInRewardCalc ::
-  Core.PParams era ~ PParams era =>
+  Core.PParams era ~ ShelleyPParams era =>
   ProtVer ->
   EpochState era ->
   EpochState era
 overrideProtocolVersionUsedInRewardCalc pv es =
   es {esPrevPp = pp'}
   where
-    pp = esPrevPp $ es
+    pp = esPrevPp es
     pp' = pp {_protocolVersion = pv}
 
 oldEqualsNew ::
   forall era.
   ( era ~ C,
-    Core.PParams era ~ PParams era
+    Core.PParams era ~ ShelleyPParams era
   ) =>
   ProtVer ->
   NewEpochState era ->
@@ -665,7 +665,7 @@ oldEqualsNew pv newepochstate =
 oldEqualsNewOn ::
   forall era.
   ( era ~ C,
-    Core.PParams era ~ PParams era
+    Core.PParams era ~ ShelleyPParams era
   ) =>
   ProtVer ->
   NewEpochState era ->
@@ -771,7 +771,7 @@ instance PrettyA (Reward crypto) where
 
 reward ::
   forall era.
-  (Core.PParams era ~ PParams era) =>
+  (Core.PParams era ~ ShelleyPParams era) =>
   Core.PParams era ->
   BlocksMade (Crypto era) ->
   Coin ->

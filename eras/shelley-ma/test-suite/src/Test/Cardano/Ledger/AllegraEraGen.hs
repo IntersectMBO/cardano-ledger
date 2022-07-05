@@ -25,23 +25,19 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
 import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Keys (KeyHash)
 import Cardano.Ledger.Pretty.Mary ()
 import Cardano.Ledger.Shelley.API (KeyRole (Witness))
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesPParams,
-    UsesValue,
-  )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
-import Cardano.Ledger.Shelley.Tx (pattern Tx, pattern WitnessSet)
-import Cardano.Ledger.Shelley.TxBody (DCert, TxOut (..), Wdrl)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.Tx (pattern ShelleyTx, pattern ShelleyWitnesses)
+import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyTxOut (..), Wdrl)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Ledger.ShelleyMA.TxBody
-  ( TxBody (..),
+  ( MATxBody (..),
+    ShelleyMAEraTxBody,
     ValidityInterval (ValidityInterval),
   )
 import Cardano.Ledger.TxIn (TxIn)
@@ -59,7 +55,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
   ( Quantifier (..),
     ScriptClass (..),
   )
-import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsDelta)
+import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.QuickCheck (Gen, arbitrary, frequency)
 
@@ -86,37 +82,33 @@ instance (CryptoClass.Crypto c) => ScriptClass (AllegraEra c) where
 instance (CryptoClass.Crypto c, Mock c) => EraGen (AllegraEra c) where
   genGenesisValue (GenEnv _keySpace _scriptspace Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
     genCoin minGenesisOutputVal maxGenesisOutputVal
-  genEraTxBody _ge _utxo = genTxBody
+  genEraTxBody _ge _utxo _pparams = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
-  updateEraTxBody _utxo _pp _wits (TxBody existingins outs cert wdrl _txfee vi upd ad forge) fee ins out =
-    TxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd ad forge
-  genEraPParamsDelta = genShelleyPParamsDelta
+  updateEraTxBody _utxo _pp _wits txBody fee ins out =
+    case txBody of
+      MATxBody existingins outs cert wdrl _txfee vi upd ad forge ->
+        MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd ad forge
+  genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
-  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
-  constructTx = Tx
+  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
+  constructTx = ShelleyTx
 
 genTxBody ::
-  forall era.
-  ( UsesValue era,
-    UsesAuxiliary era,
-    UsesPParams era,
-    EraGen era
-  ) =>
-  PParams era ->
+  ShelleyMAEraTxBody era =>
   SlotNo ->
   Set.Set (TxIn (Crypto era)) ->
-  StrictSeq (TxOut era) ->
+  StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (TxBody era, [Timelock (Crypto era)])
-genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
+  Gen (MATxBody era, [Timelock (Crypto era)])
+genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   let mint = zero -- the mint field is always empty for an Allegra TxBody
   pure
-    ( TxBody
+    ( MATxBody
         ins
         outs
         cert
@@ -131,11 +123,10 @@ genTxBody _pparams slot ins outs cert wdrl fee upd ad = do
 
 instance Mock c => MinGenTxout (AllegraEra c) where
   calcEraMinUTxO _txout pp = _minUTxOValue pp
-  addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
+  addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal
-    let makeTxOut (addr, val) = TxOut addr val
-    pure (makeTxOut <$> zip addrs values)
+    pure (zipWith Core.mkBasicTxOut addrs values)
 
 {------------------------------------------------------------------------------
   ShelleyMA helpers, shared by Allegra and Mary

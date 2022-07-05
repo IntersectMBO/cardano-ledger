@@ -44,10 +44,10 @@ import Cardano.Binary (FromCBOR (..), ToCBOR (..), encodeListLen)
 import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams' (..))
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParamsHKD (..))
 import Cardano.Ledger.BHeaderView (isOverlaySlot)
 import Cardano.Ledger.Babbage (BabbageEra)
-import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
+import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
 import Cardano.Ledger.BaseTypes
   ( Globals (..),
     Nonce (NeutralNonce),
@@ -58,10 +58,8 @@ import Cardano.Ledger.BaseTypes
     epochInfoPure,
   )
 import Cardano.Ledger.Chain (ChainChecksPParams, pparamsToChainChecksPParams)
-import Cardano.Ledger.Core (ChainData, SerialisableData)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, StandardCrypto, VRF)
-import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -85,7 +83,7 @@ import Cardano.Ledger.Shelley.LedgerState
     lsDPState,
     _genDelegs,
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.Rules.Tick (TickfPredicateFailure)
 import Cardano.Ledger.Slot (SlotNo)
@@ -140,22 +138,20 @@ class
 instance PraosCrypto CC.StandardCrypto
 
 class
-  ( ChainData (ChainDepState (Crypto era)),
-    SerialisableData (ChainDepState (Crypto era)),
-    Eq (ChainTransitionError (Crypto era)),
+  ( Eq (ChainTransitionError (Crypto era)),
     Show (ChainTransitionError (Crypto era)),
     Show (LedgerView (Crypto era)),
     Show (FutureLedgerViewError era),
-    STS (Core.EraRule "TICKF" era),
-    BaseM (Core.EraRule "TICKF" era) ~ ShelleyBase,
-    Environment (Core.EraRule "TICKF" era) ~ (),
-    State (Core.EraRule "TICKF" era) ~ NewEpochState era,
-    Signal (Core.EraRule "TICKF" era) ~ SlotNo,
-    PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    STS (EraRule "TICKF" era),
+    BaseM (EraRule "TICKF" era) ~ ShelleyBase,
+    Environment (EraRule "TICKF" era) ~ (),
+    State (EraRule "TICKF" era) ~ NewEpochState era,
+    Signal (EraRule "TICKF" era) ~ SlotNo,
+    PredicateFailure (EraRule "TICKF" era) ~ TickfPredicateFailure era,
+    HasField "_d" (PParams era) UnitInterval,
+    HasField "_maxBBSize" (PParams era) Natural,
+    HasField "_maxBHSize" (PParams era) Natural,
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   GetLedgerView era
   where
@@ -163,7 +159,7 @@ class
     NewEpochState era ->
     LedgerView (Crypto era)
   default currentLedgerView ::
-    HasField "_extraEntropy" (Core.PParams era) Nonce =>
+    HasField "_extraEntropy" (PParams era) Nonce =>
     NewEpochState era ->
     LedgerView (Crypto era)
   currentLedgerView = view
@@ -177,7 +173,7 @@ class
     m (LedgerView (Crypto era))
   default futureLedgerView ::
     ( MonadError (FutureLedgerViewError era) m,
-      HasField "_extraEntropy" (Core.PParams era) Nonce
+      HasField "_extraEntropy" (PParams era) Nonce
     ) =>
     Globals ->
     NewEpochState era ->
@@ -217,7 +213,7 @@ instance CC.Crypto c => GetLedgerView (BabbageEra c) where
     where
       res =
         flip runReader globals
-          . applySTS @(Core.EraRule "TICKF" (BabbageEra c))
+          . applySTS @(EraRule "TICKF" (BabbageEra c))
           $ TRC ((), ss, slot)
 
 -- | Data required by the Transitional Praos protocol from the Shelley ledger.
@@ -257,11 +253,11 @@ mkPrtclEnv
       lvGenDelegs
 
 view ::
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_d" (PParams era) UnitInterval,
+    HasField "_extraEntropy" (PParams era) Nonce,
+    HasField "_maxBBSize" (PParams era) Natural,
+    HasField "_maxBHSize" (PParams era) Natural,
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   NewEpochState era ->
   LedgerView (Crypto era)
@@ -311,14 +307,14 @@ view
 --  application of the TICK rule at the target slot to the curernt ledger state.
 
 newtype FutureLedgerViewError era
-  = FutureLedgerViewError [PredicateFailure (Core.EraRule "TICKF" era)]
+  = FutureLedgerViewError [PredicateFailure (EraRule "TICKF" era)]
 
 deriving stock instance
-  (Eq (PredicateFailure (Core.EraRule "TICKF" era))) =>
+  (Eq (PredicateFailure (EraRule "TICKF" era))) =>
   Eq (FutureLedgerViewError era)
 
 deriving stock instance
-  (Show (PredicateFailure (Core.EraRule "TICKF" era))) =>
+  (Show (PredicateFailure (EraRule "TICKF" era))) =>
   Show (FutureLedgerViewError era)
 
 -- | Anachronistic ledger view
@@ -329,17 +325,17 @@ deriving stock instance
 futureView ::
   forall era m.
   ( MonadError (FutureLedgerViewError era) m,
-    STS (Core.EraRule "TICKF" era),
-    BaseM (Core.EraRule "TICKF" era) ~ ShelleyBase,
-    Environment (Core.EraRule "TICKF" era) ~ (),
-    State (Core.EraRule "TICKF" era) ~ NewEpochState era,
-    Signal (Core.EraRule "TICKF" era) ~ SlotNo,
-    PredicateFailure (Core.EraRule "TICKF" era) ~ TickfPredicateFailure era,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_extraEntropy" (Core.PParams era) Nonce,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    STS (EraRule "TICKF" era),
+    BaseM (EraRule "TICKF" era) ~ ShelleyBase,
+    Environment (EraRule "TICKF" era) ~ (),
+    State (EraRule "TICKF" era) ~ NewEpochState era,
+    Signal (EraRule "TICKF" era) ~ SlotNo,
+    PredicateFailure (EraRule "TICKF" era) ~ TickfPredicateFailure era,
+    HasField "_d" (PParams era) UnitInterval,
+    HasField "_extraEntropy" (PParams era) Nonce,
+    HasField "_maxBBSize" (PParams era) Natural,
+    HasField "_maxBHSize" (PParams era) Natural,
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   Globals ->
   NewEpochState era ->
@@ -353,7 +349,7 @@ futureView globals ss slot =
   where
     res =
       flip runReader globals
-        . applySTS @(Core.EraRule "TICKF" era)
+        . applySTS @(EraRule "TICKF" era)
         $ TRC ((), ss, slot)
 
 -- $chainstate
@@ -544,14 +540,14 @@ getLeaderSchedule ::
     VRF.Signable
       (CC.VRF (Crypto era))
       Seed,
-    HasField "_d" (Core.PParams era) UnitInterval
+    HasField "_d" (PParams era) UnitInterval
   ) =>
   Globals ->
   NewEpochState era ->
   ChainDepState (Crypto era) ->
   KeyHash 'StakePool (Crypto era) ->
   SignKeyVRF (Crypto era) ->
-  Core.PParams era ->
+  PParams era ->
   Set SlotNo
 getLeaderSchedule globals ss cds poolHash key pp = Set.filter isLeader epochSlots
   where

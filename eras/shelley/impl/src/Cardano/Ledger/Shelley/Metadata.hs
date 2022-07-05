@@ -8,8 +8,11 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Metadata
   ( Metadatum (..),
@@ -28,7 +31,9 @@ import Cardano.Binary
     serializeEncoding,
     withSlice,
   )
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Core (Era (..), EraAuxiliaryData (..))
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
@@ -37,6 +42,7 @@ import Cardano.Ledger.SafeHash
     hashAnnotated,
   )
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
+import Cardano.Ledger.Shelley.Era
 import Codec.CBOR.Decoding (Decoder)
 import qualified Codec.CBOR.Decoding as CBOR
 import qualified Codec.CBOR.Encoding as CBOR
@@ -48,7 +54,7 @@ import Data.Coders (cborError)
 import Data.Map.Strict (Map)
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as T
-import Data.Typeable (Typeable)
+import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
@@ -79,10 +85,19 @@ data Metadata era = Metadata'
   deriving (Eq, Show, Ord, Generic)
   deriving (NoThunks) via AllowThunksIn '["mdBytes"] (Metadata era)
 
+instance CC.Crypto crypto => EraAuxiliaryData (ShelleyEra crypto) where
+  type AuxiliaryData (ShelleyEra crypto) = Metadata (ShelleyEra crypto)
+
+  validateAuxiliaryData _ (Metadata m) = all validMetadatum m
+  hashAuxiliaryData metadata =
+    AuxiliaryDataHash (makeHashWithExplicitProxys (Proxy @crypto) index metadata)
+    where
+      index = Proxy @EraIndependentAuxiliaryData
+
 instance NFData (Metadata era) where
   rnf m = mdMap m `deepseq` rnf (mdBytes m)
 
--- Usually we derive SafetToHash instances, but since Metadata preserves its serialisation
+-- Usually we derive SafeToHash instances, but since Metadata preserves its serialisation
 -- bytes we can just extract them here, and make an explicit SafeToHash instance.
 
 instance SafeToHash (Metadata era) where

@@ -49,10 +49,10 @@ import Data.Group (Group (..))
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (isJust)
-import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Traversable (for)
+import Data.Typeable
 import GHC.Generics (Generic)
 import qualified GHC.Records as GHC
 import qualified PlutusTx (Data)
@@ -597,6 +597,7 @@ modelCWitness = \case
     ModelRetirePool mpid _ -> Just $ liftModelCredential $ coerceKeyRole' $ unModelPoolId mpid
 
 getModelConsumed ::
+  (Typeable era, Typeable (ValueFeature era)) =>
   ModelPParams era ->
   ModelUTxOMap era ->
   ModelTx era ->
@@ -606,9 +607,9 @@ getModelConsumed pp (ModelUTxOMap {_modelUTxOMap_utxos = utxo}) tx =
     <> mkMintValue (_mtxMint tx)
     <> foldMapOf (modelTx_wdrl . traverse . _1) liftModelValue tx
     <> Val.inject (modelKeyRefunds pp $ toListOf modelDCerts tx)
-  where
 
 getModelProduced ::
+  (Typeable era, Typeable (ValueFeature era)) =>
   ModelPParams era ->
   Map.Map ModelPoolId (ModelPoolParams era) ->
   ModelTx era ->

@@ -59,15 +59,13 @@ module Test.Cardano.Ledger.Generic.GenState
 where
 
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
-import Cardano.Ledger.Alonzo.Data (Data (..), DataHash, hashData)
-import Cardano.Ledger.Alonzo.Scripts hiding (Mint)
+import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
+import Cardano.Ledger.Alonzo.Scripts hiding (Mint, Script)
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeCredential)
-import Cardano.Ledger.Era (Era (..), ValidateScript (hashScript))
-import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys
   ( KeyHash (..),
     KeyPair (..),
@@ -171,19 +169,19 @@ data GenSize = GenSize
   deriving (Show)
 
 data GenEnv era = GenEnv
-  { gePParams :: !(Core.PParams era),
+  { gePParams :: !(PParams era),
     geSize :: !GenSize
   }
 
 data GenState era = GenState
   { gsValidityInterval :: !ValidityInterval,
     gsKeys :: !(Map (KeyHash 'Witness (Crypto era)) (KeyPair 'Witness (Crypto era))),
-    gsScripts :: !(Map (ScriptHash (Crypto era)) (Core.Script era)),
-    gsPlutusScripts :: !(Map (ScriptHash (Crypto era), Tag) (IsValid, Core.Script era)),
+    gsScripts :: !(Map (ScriptHash (Crypto era)) (Script era)),
+    gsPlutusScripts :: !(Map (ScriptHash (Crypto era), Tag) (IsValid, Script era)),
     gsDatums :: !(Map (DataHash (Crypto era)) (Data era)),
     gsVI :: !(Map ValidityInterval (Set (ScriptHash (Crypto era)))),
     gsModel :: !(ModelNewEpochState era),
-    gsInitialUtxo :: !(Map (TxIn (Crypto era)) (Core.TxOut era)),
+    gsInitialUtxo :: !(Map (TxIn (Crypto era)) (TxOut era)),
     gsInitialRewards :: !(Map (Credential 'Staking (Crypto era)) Coin),
     gsInitialDelegations :: !(Map (Credential 'Staking (Crypto era)) (KeyHash 'StakePool (Crypto era))),
     gsInitialPoolParams :: !(Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era))),
@@ -371,7 +369,7 @@ getReserves = Coin . reserves . geSize . gsGenEnv
 --   that that the Pay credential of the TxOut can run in the curent ValidityInterval
 --   A crude but simple way is to insist Pay credential is either Key locked, or locked
 --   with Plutus or MultiSig scripts, and return False for any Timelock scripts.
-getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn (Crypto era), Core.TxOut era))
+getUtxoElem :: Reflect era => GenRS era (Maybe (TxIn (Crypto era), TxOut era))
 getUtxoElem = do
   x <- gets (mUTxO . gsModel)
   scriptmap <- gets gsScripts
@@ -382,9 +380,9 @@ getUtxoElem = do
 --   only (Key or Plutus or MutiSig) locking. Disallowing all Timelock scripts
 validTxOut ::
   Proof era ->
-  Map (ScriptHash (Crypto era)) (Core.Script era) ->
+  Map (ScriptHash (Crypto era)) (Script era) ->
   TxIn (Crypto era) ->
-  Core.TxOut era ->
+  TxOut era ->
   Bool
 validTxOut proof m _txin txout = case txoutFields proof txout of
   (Addr _ (KeyHashObj _) _, _, _) -> True
@@ -818,7 +816,7 @@ genTimelockScript proof = do
         maxSlotNo <- lift $ choose (validTill, maxBound)
         pure $ RequireTimeExpire (SlotNo maxSlotNo)
   tlscript <- genNestedTimelock (2 :: Natural)
-  let corescript :: Core.Script era
+  let corescript :: Script era
       corescript = case proof of
         Babbage _ -> TimelockScript tlscript
         Alonzo _ -> TimelockScript tlscript
@@ -856,7 +854,7 @@ genMultiSigScript proof = do
         m <- lift $ choose (0, n)
         Shelley.RequireMOf m <$> replicateM n (genNestedMultiSig (k - 1))
   msscript <- genNestedMultiSig (2 :: Natural)
-  let corescript :: Core.Script era
+  let corescript :: Script era
       corescript = case proof of
         Shelley _ -> msscript
         _ -> error (show proof ++ " does not have MultiSig scripts")
@@ -885,7 +883,7 @@ genPlutusScript proof tag = do
       then alwaysTrue proof mlanguage . (+ numArgs) <$> lift (elements [0, 1, 2, 3 :: Natural])
       else pure $ alwaysFalse proof mlanguage numArgs
 
-  let corescript :: Core.Script era
+  let corescript :: Script era
       corescript = case proof of
         Alonzo _ -> script
         Babbage _ -> script

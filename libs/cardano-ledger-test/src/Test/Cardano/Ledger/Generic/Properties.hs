@@ -10,12 +10,11 @@
 
 module Test.Cardano.Ledger.Generic.Properties where
 
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
+import qualified Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.Pretty (PrettyA (..), ppList)
 import Cardano.Ledger.Shelley.LedgerState
@@ -26,7 +25,7 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     updateStakeDistribution,
   )
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
+import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -62,8 +61,8 @@ import Test.Cardano.Ledger.Generic.TxGen
     coreTx,
     coreTxBody,
     coreTxOut,
+    genAlonzoTx,
     genUTxO,
-    genValidatedTx,
   )
 import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.QuickCheck
@@ -73,7 +72,7 @@ import Test.Tasty.QuickCheck (testProperty)
 -- =====================================
 -- Top level generators of TRC
 
-genTxAndUTXOState :: Reflect era => Proof era -> GenSize -> Gen (TRC (Core.EraRule "UTXOW" era), GenState era)
+genTxAndUTXOState :: Reflect era => Proof era -> GenSize -> Gen (TRC (EraRule "UTXOW" era), GenState era)
 genTxAndUTXOState proof@(Babbage _) gsize = do
   (Box _ (TRC (LedgerEnv slotNo _ pp _, ledgerState, vtx)) genState) <- genTxAndLEDGERState proof gsize
   pure (TRC (UtxoEnv slotNo pp mempty (GenDelegs mempty), lsUTxOState ledgerState, vtx), genState)
@@ -93,9 +92,9 @@ genTxAndUTXOState proof@(Shelley _) gsize = do
 genTxAndLEDGERState ::
   forall era.
   ( Reflect era,
-    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era
+    Signal (EraRule "LEDGER" era) ~ Tx era,
+    State (EraRule "LEDGER" era) ~ LedgerState era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era
   ) =>
   Proof era ->
   GenSize ->
@@ -106,7 +105,7 @@ genTxAndLEDGERState proof sizes = do
   let genT = do
         (initial, _) <- genUTxO -- Generate a random UTxO, so mUTxO is not empty
         modifyModel (\m -> m {mUTxO = initial})
-        (_utxo, tx) <- genValidatedTx proof slotNo
+        (_utxo, tx) <- genAlonzoTx proof slotNo
         model <- gets gsModel
         pp <- gets (gePParams . gsGenEnv)
         let ledgerState = extract @(LedgerState era) model
@@ -120,9 +119,9 @@ genTxAndLEDGERState proof sizes = do
 
 testTxValidForLEDGER ::
   ( Reflect era,
-    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
-    PrettyA (PredicateFailure (Core.EraRule "LEDGER" era))
+    Signal (EraRule "LEDGER" era) ~ Tx era,
+    State (EraRule "LEDGER" era) ~ LedgerState era,
+    PrettyA (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   Proof era ->
   Box era ->
@@ -150,19 +149,19 @@ testTxValidForLEDGER proof (Box _ trc@(TRC (_, ledgerState, vtx)) _genstate) =
 -- The generic types make a roundtrip without adding or losing information
 
 txOutRoundTrip ::
-  (Eq (Core.TxOut era), Era era) => Proof era -> Core.TxOut era -> Bool
+  EraTxOut era => Proof era -> TxOut era -> Bool
 txOutRoundTrip proof x = coreTxOut proof (abstractTxOut proof x) == x
 
 txRoundTrip ::
-  Eq (Core.Tx era) => Proof era -> Core.Tx era -> Bool
+  EraTx era => Proof era -> Tx era -> Bool
 txRoundTrip proof x = coreTx proof (abstractTx proof x) == x
 
 txBodyRoundTrip ::
-  (Eq (Core.TxBody era), Era era) => Proof era -> Core.TxBody era -> Bool
+  EraTxBody era => Proof era -> TxBody era -> Bool
 txBodyRoundTrip proof x = coreTxBody proof (abstractTxBody proof x) == x
 
 txWitRoundTrip ::
-  (Eq (Core.Witnesses era), Era era) => Proof era -> Core.Witnesses era -> Bool
+  EraWitnesses era => Proof era -> Witnesses era -> Bool
 txWitRoundTrip proof x = assembleWits proof (abstractWitnesses proof x) == x
 
 coreTypesRoundTrip :: TestTree
@@ -252,7 +251,7 @@ adaIsPreservedBabbage :: Int -> GenSize -> TestTree
 adaIsPreservedBabbage numTx gensize = adaIsPreserved (Babbage Mock) numTx gensize
 
 -- | The incremental Stake invaraint is preserved over a trace of length 100=
-stakeInvariant :: Era era => MockChainState era -> MockChainState era -> Property
+stakeInvariant :: EraTxOut era => MockChainState era -> MockChainState era -> Property
 stakeInvariant (MockChainState _ _ _) (MockChainState nes _ _) =
   case (lsUTxOState . esLState . nesEs) nes of
     (UTxOState utxo _ _ _ istake) -> istake === updateStakeDistribution mempty mempty utxo
@@ -359,7 +358,7 @@ runTest computeWith action proof = do
   action ans
 
 main2 :: IO ()
-main2 = runTest (\x -> fst <$> genValidatedTx x (SlotNo 0)) (const (pure ())) (Babbage Mock)
+main2 = runTest (\x -> fst <$> genAlonzoTx x (SlotNo 0)) (const (pure ())) (Babbage Mock)
 
 main3 :: IO ()
 main3 = runTest (\_x -> UTxO . fst <$> genUTxO) action (Alonzo Mock)

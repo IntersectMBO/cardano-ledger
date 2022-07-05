@@ -36,9 +36,8 @@ package plutus-core
 module Main where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
-import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY)
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW)
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
+import Cardano.Ledger.Alonzo.Rules (AlonzoBBODY, AlonzoUTXOW)
 import Cardano.Ledger.Shelley.Rules.Ledger (LEDGER, LedgerEvent (UtxowEvent), LedgerPredicateFailure (UtxowFailure))
 import Control.State.Transition.Extended (Embed (..))
 import Test.Cardano.Ledger.Alonzo.AlonzoEraGen ()

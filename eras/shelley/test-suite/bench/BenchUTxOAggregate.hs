@@ -27,7 +27,7 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Ledger.Shelley.TxBody
   ( PoolParams (..),
-    TxOut (..),
+    ShelleyTxOut (..),
   )
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
@@ -66,7 +66,7 @@ genTestCase numUTxO numAddr = do
   let mktxin i = TxIn (mktxid i) (mkTxIxPartial (toInteger i))
   let utxo = Map.fromList $ zip (mktxin <$> [1 ..]) txOuts
       liveptrs :: [Ptr]
-      liveptrs = [p | (TxOut (Addr _ _ (StakeRefPtr p)) _) <- txOuts]
+      liveptrs = [p | ShelleyTxOut (Addr _ _ (StakeRefPtr p)) _ <- txOuts]
       m = length liveptrs `div` 2
   moreptrs :: [Ptr] <- replicateM m arbitrary
   creds :: [Credential 'Staking C_Crypto] <- replicateM (m + m) arbitrary

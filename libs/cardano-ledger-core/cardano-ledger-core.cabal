@@ -56,6 +56,7 @@ library
     Cardano.Ledger.Hashes
     Cardano.Ledger.HKD
     Cardano.Ledger.Keys
+    Cardano.Ledger.Keys.Bootstrap
     Cardano.Ledger.Keys.WitVKey
     Cardano.Ledger.PoolDistr
     Cardano.Ledger.Rules.ValidationMode
@@ -72,6 +73,7 @@ library
     binary,
     bytestring,
     cardano-binary,
+    cardano-crypto,
     cardano-crypto-class,
     cardano-crypto-praos,
     cardano-crypto-wrapper,
@@ -85,6 +87,7 @@ library
     groups,
     iproute,
     mtl,
+    microlens,
     network,
     nothunks,
     partial-order,

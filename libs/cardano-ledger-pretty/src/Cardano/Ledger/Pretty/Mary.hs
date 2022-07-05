@@ -1,5 +1,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -8,15 +9,15 @@ module Cardano.Ledger.Pretty.Mary where
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era)
 import Cardano.Ledger.Mary.Value
 import Cardano.Ledger.Pretty hiding (ppTxBody)
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody
 import Prettyprinter (hsep, viaShow)
 
-ppValue :: Value crypto -> PDoc
+ppValue :: MaryValue crypto -> PDoc
 ppValue v = case gettriples' v of
   (n, triples, []) -> ppSexp "Value" [ppCoin (Coin n), ppList pptriple triples]
   (n, triples, bad) -> ppSexp "Value" [ppCoin (Coin n), ppList pptriple triples, ppString "Bad " <> ppList ppPolicyID bad]
@@ -29,7 +30,7 @@ ppPolicyID (PolicyID sh) = ppScriptHash sh
 ppAssetName :: AssetName -> PDoc
 ppAssetName = viaShow
 
-instance PrettyA (Value crypto) where prettyA = ppValue
+instance PrettyA (MaryValue crypto) where prettyA = ppValue
 
 instance PrettyA (PolicyID crypto) where prettyA x = ppSexp "PolicyID" [ppPolicyID x]
 
@@ -61,7 +62,7 @@ ppValidityInterval (ValidityInterval b a) =
 
 instance PrettyA ValidityInterval where prettyA = ppValidityInterval
 
-ppAuxiliaryData :: PrettyA (Core.Script era) => AuxiliaryData era -> PDoc
+ppAuxiliaryData :: PrettyA (Core.Script era) => MAAuxiliaryData era -> PDoc
 ppAuxiliaryData (AuxiliaryData' m sp) =
   ppRecord
     "AuxiliaryData"
@@ -69,15 +70,16 @@ ppAuxiliaryData (AuxiliaryData' m sp) =
       ("auxiliaryscripts", ppStrictSeq prettyA sp)
     ]
 
-instance PrettyA (Core.Script era) => PrettyA (AuxiliaryData era) where
+instance PrettyA (Core.Script era) => PrettyA (MAAuxiliaryData era) where
   prettyA = ppAuxiliaryData
 
 ppTxBody ::
-  ( Era era,
+  ( Core.EraTxOut era,
     PrettyA (Core.Value era),
-    PrettyA (Core.PParamsDelta era)
+    PrettyA (Core.PParamsUpdate era),
+    Core.TxOut era ~ ShelleyTxOut era
   ) =>
-  TxBody era ->
+  MATxBody era ->
   PDoc
 ppTxBody (TxBody' i o d w fee vi u m mnt) =
   ppRecord
@@ -94,10 +96,11 @@ ppTxBody (TxBody' i o d w fee vi u m mnt) =
     ]
 
 instance
-  ( Era era,
+  ( Core.EraTxOut era,
     PrettyA (Core.Value era),
-    PrettyA (Core.PParamsDelta era)
+    PrettyA (Core.PParamsUpdate era),
+    Core.TxOut era ~ ShelleyTxOut era
   ) =>
-  PrettyA (TxBody era)
+  PrettyA (MATxBody era)
   where
   prettyA = ppTxBody

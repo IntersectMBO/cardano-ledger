@@ -4,11 +4,12 @@ import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError (..), txInfo)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
@@ -55,17 +56,17 @@ shelleyInput :: TxIn StandardCrypto
 shelleyInput = mkTxInPartial genesisId 1
 
 byronOutput :: TxOut A
-byronOutput = TxOut byronAddr (Val.inject $ Coin 1) SNothing
+byronOutput = AlonzoTxOut byronAddr (Val.inject $ Coin 1) SNothing
 
 shelleyOutput :: TxOut A
-shelleyOutput = TxOut shelleyAddr (Val.inject $ Coin 2) SNothing
+shelleyOutput = AlonzoTxOut shelleyAddr (Val.inject $ Coin 2) SNothing
 
 utxo :: UTxO A
 utxo = UTxO $ Map.fromList [(byronInput, byronOutput), (shelleyInput, shelleyOutput)]
 
 txb :: TxIn StandardCrypto -> TxOut A -> TxBody A
 txb i o =
-  TxBody
+  AlonzoTxBody
     (Set.singleton i) -- inputs
     mempty -- collateral
     (StrictSeq.singleton o) -- outputs
@@ -80,10 +81,10 @@ txb i o =
     SNothing -- auxiliary data hash
     SNothing -- network ID
 
-txEx :: TxIn StandardCrypto -> TxOut A -> ValidatedTx A
-txEx i o = ValidatedTx (txb i o) mempty (IsValid True) SNothing
+txEx :: TxIn StandardCrypto -> TxOut A -> Tx A
+txEx i o = AlonzoTx (txb i o) mempty (IsValid True) SNothing
 
-silentlyIgnore :: ValidatedTx A -> Assertion
+silentlyIgnore :: Tx A -> Assertion
 silentlyIgnore tx =
   case ctx of
     Right _ -> pure ()
@@ -91,7 +92,7 @@ silentlyIgnore tx =
   where
     ctx = txInfo def PlutusV1 ei ss utxo tx
 
-expectTranslationError :: Language -> ValidatedTx A -> TranslationError StandardCrypto -> Assertion
+expectTranslationError :: Language -> Tx A -> TranslationError StandardCrypto -> Assertion
 expectTranslationError lang tx expected =
   case ctx of
     Right _ -> error "This translation was expected to fail, but it succeeded."

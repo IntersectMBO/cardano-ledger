@@ -13,13 +13,14 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | This module contains just the type of protocol parameters.
 module Cardano.Ledger.Alonzo.PParams
-  ( PParams' (..),
-    PParams,
+  ( AlonzoPParamsHKD (..),
+    AlonzoPParams,
     emptyPParams,
-    PParamsUpdate,
+    AlonzoPParamsUpdate,
     emptyPParamsUpdate,
     updatePParams,
     getLanguageView,
@@ -27,6 +28,11 @@ module Cardano.Ledger.Alonzo.PParams
     encodeLangViews,
     retractPP,
     extendPP,
+
+    -- * Deprecated
+    PParams',
+    PParams,
+    PParamsUpdate,
   )
 where
 
@@ -40,6 +46,7 @@ import Cardano.Binary
     serialize',
     serializeEncoding',
   )
+import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
@@ -58,12 +65,13 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core hiding (PParams, PParamsUpdate)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era
+import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Serialization (FromCBORGroup (..), ToCBORGroup (..))
 import Cardano.Ledger.Shelley.Orphans ()
-import Cardano.Ledger.Shelley.PParams (HKD)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
@@ -93,11 +101,21 @@ import GHC.Records (HasField (getField))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
-type PParamsUpdate era = PParams' StrictMaybe era
+type PParams era = AlonzoPParams era
+
+{-# DEPRECATED PParams "Use `AlonzoPParams` instead" #-}
+
+type PParams' f era = AlonzoPParamsHKD f era
+
+{-# DEPRECATED PParams' "Use `AlonzoPParamsHKD` instead" #-}
+
+type PParamsUpdate era = AlonzoPParamsUpdate era
+
+{-# DEPRECATED PParamsUpdate "Use `AlonzoPParamsUpdate` instead" #-}
 
 -- | Protocol parameters.
 -- Shelley parameters + additional ones
-data PParams' f era = PParams
+data AlonzoPParamsHKD f era = AlonzoPParams
   { -- | The linear factor for the minimum fee calculation
     _minfeeA :: !(HKD f Natural),
     -- | The constant factor for the minimum fee calculation
@@ -155,7 +173,15 @@ data PParams' f era = PParams
   }
   deriving (Generic)
 
-type PParams era = PParams' Identity era
+type AlonzoPParams era = AlonzoPParamsHKD Identity era
+
+type AlonzoPParamsUpdate era = AlonzoPParamsHKD StrictMaybe era
+
+instance CC.Crypto crypto => EraPParams (AlonzoEra crypto) where
+  type PParams (AlonzoEra crypto) = AlonzoPParams (AlonzoEra crypto)
+  type PParamsUpdate (AlonzoEra crypto) = AlonzoPParamsUpdate (AlonzoEra crypto)
+
+  applyPPUpdates = updatePParams
 
 deriving instance Eq (PParams' Identity era)
 
@@ -167,7 +193,7 @@ instance NoThunks (PParams era)
 
 instance (Era era) => ToCBOR (PParams era) where
   toCBOR
-    PParams
+    AlonzoPParams
       { _minfeeA = minfeeA',
         _minfeeB = minfeeB',
         _maxBBSize = maxBBSize',
@@ -195,7 +221,7 @@ instance (Era era) => ToCBOR (PParams era) where
         _maxCollateralInputs = maxCollateralInputs'
       } =
       encode
-        ( Rec (PParams @Identity)
+        ( Rec (AlonzoPParams @Identity)
             !> To minfeeA'
             !> To minfeeB'
             !> To maxBBSize'
@@ -229,7 +255,7 @@ instance
   where
   fromCBOR =
     decode $
-      RecD PParams
+      RecD AlonzoPParams
         <! From -- _minfeeA         :: Integer
         <! From -- _minfeeB         :: Natural
         <! From -- _maxBBSize       :: Natural
@@ -259,7 +285,7 @@ instance
 -- | Returns a basic "empty" `PParams` structure with all zero values.
 emptyPParams :: PParams era
 emptyPParams =
-  PParams
+  AlonzoPParams
     { _minfeeA = 0,
       _minfeeB = 0,
       _maxBBSize = 0,
@@ -289,7 +315,7 @@ emptyPParams =
 
 -- | Since ExUnits does not have an Ord instance, we have to roll this Ord instance by hand.
 -- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
-instance Ord (PParams' StrictMaybe era) where
+instance Ord (AlonzoPParamsHKD StrictMaybe era) where
   compare x y =
     compare (_minfeeA x) (_minfeeA y)
       <> compare (_minfeeB x) (_minfeeB y)
@@ -323,13 +349,13 @@ compareEx (SJust (ExUnits m1 s1)) (SJust (ExUnits m2 s2)) = compare (m1, s1) (m2
 instance Default (PParams era) where
   def = emptyPParams
 
-deriving instance Eq (PParams' StrictMaybe era)
+deriving instance Eq (AlonzoPParamsHKD StrictMaybe era)
 
-deriving instance Show (PParams' StrictMaybe era)
+deriving instance Show (AlonzoPParamsHKD StrictMaybe era)
 
-deriving instance NFData (PParams' StrictMaybe era)
+deriving instance NFData (AlonzoPParamsHKD StrictMaybe era)
 
-instance NoThunks (PParamsUpdate era)
+instance NoThunks (AlonzoPParamsUpdate era)
 
 -- =======================================================
 -- A PParamsUpdate has StrictMaybe fields, we want to Sparse encode it, by
@@ -337,10 +363,10 @@ instance NoThunks (PParamsUpdate era)
 -- the local function (omitStrictMaybe key x)
 
 encodePParamsUpdate ::
-  PParamsUpdate era ->
-  Encode ('Closed 'Sparse) (PParamsUpdate era)
+  AlonzoPParamsUpdate era ->
+  Encode ('Closed 'Sparse) (AlonzoPParamsUpdate era)
 encodePParamsUpdate ppup =
-  Keyed PParams
+  Keyed AlonzoPParams
     !> omitStrictMaybe 0 (_minfeeA ppup) toCBOR
     !> omitStrictMaybe 1 (_minfeeB ppup) toCBOR
     !> omitStrictMaybe 2 (_maxBBSize ppup) toCBOR
@@ -379,7 +405,7 @@ instance (Era era) => ToCBOR (PParamsUpdate era) where
 
 emptyPParamsUpdate :: PParamsUpdate era
 emptyPParamsUpdate =
-  PParams
+  AlonzoPParams
     { _minfeeA = SNothing,
       _minfeeB = SNothing,
       _maxBBSize = SNothing,
@@ -444,7 +470,7 @@ instance (Era era) => FromCBOR (PParamsUpdate era) where
 -- | Update operation for protocol parameters structure @PParams
 updatePParams :: PParams era -> PParamsUpdate era -> PParams era
 updatePParams pp ppup =
-  PParams
+  AlonzoPParams
     { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
       _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
       _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
@@ -525,16 +551,16 @@ encodeLangViews views = encodeMapLen n <> foldMap encPair ascending
       | BS.length a > BS.length b = GT
       | otherwise = compare a b
 
--- | Turn an PParams' into a Shelley.Params'
-retractPP :: HKD f Coin -> PParams' f era2 -> Shelley.PParams' f era1
+-- | Turn an PParams' into a ShelleyParams'
+retractPP :: HKD f Coin -> AlonzoPParamsHKD f era2 -> ShelleyPParamsHKD f era1
 retractPP
   c
-  (PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP _ _ _ _ _ _ _ _) =
-    Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP
+  (AlonzoPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP _ _ _ _ _ _ _ _) =
+    ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP
 
--- | Given the missing pieces Turn a Shelley.PParams' into an Params'
+-- | Given the missing pieces Turn a ShelleyPParams' into an Params'
 extendPP ::
-  Shelley.PParams' f era1 ->
+  ShelleyPParamsHKD f era1 ->
   HKD f Coin ->
   HKD f CostModels ->
   HKD f Prices ->
@@ -545,7 +571,7 @@ extendPP ::
   HKD f Natural ->
   PParams' f era2
 extendPP
-  (Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv _ mnP)
+  (ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv _ mnP)
   ada
   cost
   price
@@ -554,4 +580,4 @@ extendPP
   mxV
   col
   mxCol =
-    PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP ada cost price mxTx mxBl mxV col mxCol
+    AlonzoPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv mnP ada cost price mxTx mxBl mxV col mxCol

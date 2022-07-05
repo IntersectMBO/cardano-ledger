@@ -8,7 +8,7 @@ where
 
 import Cardano.Ledger.Block (Block)
 import Cardano.Ledger.Shelley ()
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Scripts ()
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended hiding (Assertion)

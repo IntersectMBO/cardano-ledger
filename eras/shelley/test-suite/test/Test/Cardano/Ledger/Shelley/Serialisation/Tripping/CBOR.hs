@@ -154,16 +154,16 @@ prop_roundtrip_Header = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 prop_roundtrip_BlockHeaderHash :: TP.HashHeader Mock.C_Crypto -> Property
 prop_roundtrip_BlockHeaderHash = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_TxBody :: Ledger.TxBody Mock.C -> Property
+prop_roundtrip_TxBody :: Ledger.ShelleyTxBody Mock.C -> Property
 prop_roundtrip_TxBody = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
-prop_roundtrip_Tx :: Ledger.Tx Mock.C -> Property
+prop_roundtrip_Tx :: Ledger.ShelleyTx Mock.C -> Property
 prop_roundtrip_Tx = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_TxId :: Ledger.TxId Mock.C_Crypto -> Property
 prop_roundtrip_TxId = roundtrip toCBOR fromCBOR
 
-prop_roundtrip_TxOut :: Ledger.TxOut Mock.C -> Property
+prop_roundtrip_TxOut :: Ledger.ShelleyTxOut Mock.C -> Property
 prop_roundtrip_TxOut = roundtrip toCBOR fromCBOR
 
 prop_roundtrip_BootstrapWitness ::

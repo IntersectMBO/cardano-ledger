@@ -23,7 +23,7 @@ import Cardano.Ledger.Keys (hashKey, hashVerKeyVRF, vKey)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as L
 import Cardano.Ledger.Shelley.Genesis
-import Cardano.Ledger.Shelley.PParams (PParams' (..), emptyPParams)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Data.Aeson
 import qualified Data.ByteString.Char8 as BS (pack)

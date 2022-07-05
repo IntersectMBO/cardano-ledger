@@ -44,6 +44,7 @@ library
                     , deepseq
                     , foldl
                     , vector
+                    , microlens
                     , persistent
                     , persistent-sqlite
                     , prettyprinter
@@ -112,6 +113,7 @@ benchmark performance
     data-default-class,
     deepseq,
     ledger-state,
+    microlens,
     random,
   ghc-options:
       -threaded

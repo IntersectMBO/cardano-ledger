@@ -15,26 +15,28 @@ module Test.Cardano.Ledger.Generic.Updaters where
 
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams' (..))
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Scripts (CostModels (..))
-import Cardano.Ledger.Alonzo.Tx (hashScriptIntegrity)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), hashScriptIntegrity)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers (..), TxDats (..), TxWitness (..))
-import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
-import qualified Cardano.Ledger.Babbage.Tx as Babbage (ValidatedTx (..))
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxBody (..), TxOut (..))
+import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.TxBody as Babbage
+  ( BabbageEraTxBody (..),
+    BabbageTxOut (..),
+    Datum (..),
+  )
 import Cardano.Ledger.Coin (Coin (Coin, unCoin))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..))
-import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.Serialization (mkSized)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams, PParams' (..))
-import Cardano.Ledger.Shelley.Tx as Shelley (WitnessSetHKD (addrWits, bootWits, scriptWits))
-import qualified Cardano.Ledger.Shelley.Tx as Shelley (Tx (..))
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxBody (..), TxOut (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
-import qualified Cardano.Ledger.ShelleyMA.TxBody as MA (TxBody (..))
+import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
+import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.Tx as Shelley
+  ( ShelleyTx (..),
+    WitnessSetHKD (addrWits, bootWits, scriptWits),
+  )
+import Cardano.Ledger.Shelley.TxBody as Shelley (ShelleyEraTxBody (..), ShelleyTxOut (..))
+import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.Val ((<×>))
 import qualified Data.List as List
 import Data.Map (Map)
@@ -43,6 +45,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
+import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1, testingCostModelV2)
 import Test.Cardano.Ledger.Generic.Fields
 import Test.Cardano.Ledger.Generic.Proof
@@ -98,130 +101,116 @@ instance Merge (Map (ScriptHash c) v) where
 
 -- Updaters for Tx
 
-updateTx :: Proof era -> Core.Tx era -> TxField era -> Core.Tx era
-updateTx (wit@(Shelley _)) (tx@(Shelley.Tx b w d)) dt =
+updateTx :: Proof era -> Tx era -> TxField era -> Tx era
+updateTx (wit@(Shelley _)) (tx@(ShelleyTx b w d)) dt =
   case dt of
-    Body fbody -> Shelley.Tx fbody w d
-    BodyI bfields -> Shelley.Tx (newTxBody wit bfields) w d
-    Witnesses fwit -> Shelley.Tx b fwit d
-    WitnessesI wfields -> Shelley.Tx b (newWitnesses override wit wfields) d
-    AuxData faux -> Shelley.Tx b w faux
+    Body fbody -> ShelleyTx fbody w d
+    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
+    Witnesses fwit -> ShelleyTx b fwit d
+    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
+    AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx (wit@(Allegra _)) (tx@(Shelley.Tx b w d)) dt =
+updateTx (wit@(Allegra _)) (tx@(ShelleyTx b w d)) dt =
   case dt of
-    Body fbody -> Shelley.Tx fbody w d
-    BodyI bfields -> Shelley.Tx (newTxBody wit bfields) w d
-    Witnesses fwit -> Shelley.Tx b fwit d
-    WitnessesI wfields -> Shelley.Tx b (newWitnesses override wit wfields) d
-    AuxData faux -> Shelley.Tx b w faux
+    Body fbody -> ShelleyTx fbody w d
+    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
+    Witnesses fwit -> ShelleyTx b fwit d
+    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
+    AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx (wit@(Mary _)) (tx@(Shelley.Tx b w d)) dt =
+updateTx (wit@(Mary _)) (tx@(ShelleyTx b w d)) dt =
   case dt of
-    Body fbody -> Shelley.Tx fbody w d
-    BodyI bfields -> Shelley.Tx (newTxBody wit bfields) w d
-    Witnesses fwit -> Shelley.Tx b fwit d
-    WitnessesI wfields -> Shelley.Tx b (newWitnesses override wit wfields) d
-    AuxData faux -> Shelley.Tx b w faux
+    Body fbody -> ShelleyTx fbody w d
+    BodyI bfields -> ShelleyTx (newTxBody wit bfields) w d
+    Witnesses fwit -> ShelleyTx b fwit d
+    WitnessesI wfields -> ShelleyTx b (newWitnesses override wit wfields) d
+    AuxData faux -> ShelleyTx b w faux
     Valid _ -> tx
-updateTx wit@(Alonzo _) (Alonzo.ValidatedTx b w iv d) dt =
+updateTx wit@(Alonzo _) (Alonzo.AlonzoTx b w iv d) dt =
   case dt of
-    Body fbody -> Alonzo.ValidatedTx fbody w iv d
-    BodyI bfields -> Alonzo.ValidatedTx (newTxBody wit bfields) w iv d
-    Witnesses fwit -> Alonzo.ValidatedTx b fwit iv d
-    WitnessesI wfields -> Alonzo.ValidatedTx b (newWitnesses override wit wfields) iv d
-    AuxData faux -> Alonzo.ValidatedTx b w iv faux
-    Valid iv' -> Alonzo.ValidatedTx b w iv' d
-updateTx wit@(Babbage _) (Babbage.ValidatedTx b w iv d) dt =
+    Body fbody -> Alonzo.AlonzoTx fbody w iv d
+    BodyI bfields -> Alonzo.AlonzoTx (newTxBody wit bfields) w iv d
+    Witnesses fwit -> Alonzo.AlonzoTx b fwit iv d
+    WitnessesI wfields -> Alonzo.AlonzoTx b (newWitnesses override wit wfields) iv d
+    AuxData faux -> Alonzo.AlonzoTx b w iv faux
+    Valid iv' -> Alonzo.AlonzoTx b w iv' d
+updateTx wit@(Babbage _) (AlonzoTx b w iv d) dt =
   case dt of
-    Body fbody -> Babbage.ValidatedTx fbody w iv d
-    BodyI bfields -> Babbage.ValidatedTx (newTxBody wit bfields) w iv d
-    Witnesses fwit -> Babbage.ValidatedTx b fwit iv d
-    WitnessesI wfields -> Babbage.ValidatedTx b (newWitnesses override wit wfields) iv d
-    AuxData faux -> Babbage.ValidatedTx b w iv faux
-    Valid iv' -> Babbage.ValidatedTx b w iv' d
+    Body fbody -> AlonzoTx fbody w iv d
+    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
+    Witnesses fwit -> AlonzoTx b fwit iv d
+    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
+    AuxData faux -> AlonzoTx b w iv faux
+    Valid iv' -> AlonzoTx b w iv' d
 
-newTx :: Proof era -> [TxField era] -> Core.Tx era
+newTx :: Proof era -> [TxField era] -> Tx era
 newTx era = List.foldl' (updateTx era) (initialTx era)
 
 --------------------------------------------------------------------
 -- Updaters for TxBody
 
-updateTxBody :: Proof era -> Core.TxBody era -> TxBodyField era -> Core.TxBody era
-updateTxBody (Shelley _) tx dt = case dt of
-  (Inputs is) -> tx {Shelley._inputs = is}
-  (Outputs outs) -> tx {Shelley._outputs = outs}
-  (Certs cs) -> tx {Shelley._certs = cs}
-  (Wdrls ws) -> tx {Shelley._wdrls = ws}
-  (Txfee c) -> tx {Shelley._txfee = c}
-  (Vldt (ValidityInterval _ (SJust n))) -> tx {Shelley._ttl = n}
-  (Vldt (ValidityInterval _ SNothing)) -> tx {Shelley._ttl = 0}
-  (TTL n) -> tx {Shelley._ttl = n}
-  (Update up) -> tx {Shelley._txUpdate = up}
-  (AdHash hs) -> tx {Shelley._mdHash = hs}
-  _ -> tx
-updateTxBody (Allegra _) tx@(MA.TxBody ins outs certs wdrls txfee vldt ups adHash mint) dt = case dt of
-  (Inputs is) -> MA.TxBody is outs certs wdrls txfee vldt ups adHash mint
-  (Outputs outs1) -> MA.TxBody ins outs1 certs wdrls txfee vldt ups adHash mint
-  (Certs cs) -> MA.TxBody ins outs cs wdrls txfee vldt ups adHash mint
-  (Wdrls ws) -> MA.TxBody ins outs certs ws txfee vldt ups adHash mint
-  (Txfee c) -> MA.TxBody ins outs certs wdrls c vldt ups adHash mint
-  (Vldt vi) -> MA.TxBody ins outs certs wdrls txfee vi ups adHash mint
-  (Update up) -> MA.TxBody ins outs certs wdrls txfee vldt up adHash mint
-  (AdHash hs) -> MA.TxBody ins outs certs wdrls txfee vldt ups hs mint
-  (Mint v) -> MA.TxBody ins outs certs wdrls txfee vldt ups adHash v
-  _ -> tx
-updateTxBody (Mary _) tx@(MA.TxBody ins outs certs wdrls txfee vldt ups adHash mint) dt = case dt of
-  (Inputs is) -> MA.TxBody is outs certs wdrls txfee vldt ups adHash mint
-  (Outputs outs1) -> MA.TxBody ins outs1 certs wdrls txfee vldt ups adHash mint
-  (Certs cs) -> MA.TxBody ins outs cs wdrls txfee vldt ups adHash mint
-  (Wdrls ws) -> MA.TxBody ins outs certs ws txfee vldt ups adHash mint
-  (Txfee c) -> MA.TxBody ins outs certs wdrls c vldt ups adHash mint
-  (Vldt vi) -> MA.TxBody ins outs certs wdrls txfee vi ups adHash mint
-  (Update up) -> MA.TxBody ins outs certs wdrls txfee vldt up adHash mint
-  (AdHash hs) -> MA.TxBody ins outs certs wdrls txfee vldt ups hs mint
-  (Mint v) -> MA.TxBody ins outs certs wdrls txfee vldt ups adHash v
-  _ -> tx
-updateTxBody (Alonzo _) tx dt = case dt of
-  (Inputs is) -> tx {Alonzo.inputs = is}
-  (Collateral is) -> tx {Alonzo.collateral = is}
-  (Outputs outs1) -> tx {Alonzo.outputs = outs1}
-  (Certs cs) -> tx {Alonzo.txcerts = cs}
-  (Wdrls ws) -> tx {Alonzo.txwdrls = ws}
-  (Txfee c) -> tx {Alonzo.txfee = c}
-  (Vldt vi) -> tx {Alonzo.txvldt = vi}
-  (Update up) -> tx {Alonzo.txUpdates = up}
-  (ReqSignerHashes hs) -> tx {Alonzo.reqSignerHashes = hs}
-  (Mint v) -> tx {Alonzo.mint = v}
-  (WppHash h) -> tx {Alonzo.scriptIntegrityHash = h}
-  (AdHash hs) -> tx {Alonzo.adHash = hs}
-  (Txnetworkid i) -> tx {Alonzo.txnetworkid = i}
-  _ -> tx
-updateTxBody (Babbage _) tx dt = case dt of
-  (Inputs is) -> tx {Babbage.inputs = is}
-  (Collateral is) -> tx {Babbage.collateral = is}
-  (RefInputs is) -> tx {Babbage.referenceInputs = is}
-  (Outputs outs1) -> tx {Babbage.outputs = mkSized <$> outs1}
-  (CollateralReturn outs1) -> tx {Babbage.collateralReturn = mkSized <$> outs1}
-  (Certs cs) -> tx {Babbage.txcerts = cs}
-  (Wdrls ws) -> tx {Babbage.txwdrls = ws}
-  (Txfee c) -> tx {Babbage.txfee = c}
-  (Vldt vi) -> tx {Babbage.txvldt = vi}
-  (Update up) -> tx {Babbage.txUpdates = up}
-  (ReqSignerHashes hs) -> tx {Babbage.reqSignerHashes = hs}
-  (Mint v) -> tx {Babbage.mint = v}
-  (WppHash h) -> tx {Babbage.scriptIntegrityHash = h}
-  (AdHash hs) -> tx {Babbage.adHash = hs}
-  (Txnetworkid i) -> tx {Babbage.txnetworkid = i}
-  (TotalCol coin) -> tx {Babbage.totalCollateral = coin}
-  (TTL _) -> tx
+updateTxBody :: EraTxBody era => Proof era -> TxBody era -> TxBodyField era -> TxBody era
+updateTxBody pf txBody dt =
+  case pf of
+    _ | Inputs ins <- dt -> txBody & inputsTxBodyL .~ ins
+    _ | Outputs outs <- dt -> txBody & outputsTxBodyL .~ outs
+    _ | Txfee fee <- dt -> txBody & feeTxBodyL .~ fee
+    _ | AdHash auxDataHash <- dt -> txBody & auxDataHashTxBodyL .~ auxDataHash
+    Shelley _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      TTL ttl -> txBody & ttlTxBodyL .~ ttl
+      Update update -> txBody & updateTxBodyL .~ update
+      _ -> txBody
+    Allegra _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      _ -> txBody
+    Mary _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      _ -> txBody
+    Alonzo _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
+      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
+      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
+      _ -> txBody
+    Babbage _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
+      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
+      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
+      RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
+      TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
+      CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
+      _ -> txBody
 
-newTxBody :: Era era => Proof era -> [TxBodyField era] -> Core.TxBody era
+newTxBody :: EraTxBody era => Proof era -> [TxBodyField era] -> TxBody era
 newTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
 
 --------------------------------------------------------------------
 -- Updaters for Witnesses
 
-updateWitnesses :: forall era. Policy -> Proof era -> Core.Witnesses era -> WitnessesField era -> Core.Witnesses era
+updateWitnesses :: forall era. Policy -> Proof era -> Witnesses era -> WitnessesField era -> Witnesses era
 updateWitnesses p (Shelley _) w dw = case dw of
   (AddrWits ks) -> w {Shelley.addrWits = p (Shelley.addrWits w) ks}
   (BootWits boots) -> w {Shelley.bootWits = p (Shelley.bootWits w) boots}
@@ -250,7 +239,7 @@ updateWitnesses p (Babbage _) w dw = case dw of
   (DataWits ds) -> w {txdats = p (txdats w) ds}
   (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
 
-newWitnesses :: Era era => Policy -> Proof era -> [WitnessesField era] -> Core.Witnesses era
+newWitnesses :: Era era => Policy -> Proof era -> [WitnessesField era] -> Witnesses era
 newWitnesses p era = List.foldl' (updateWitnesses p era) (initialWitnesses era)
 
 --------------------------------------------------------------------
@@ -260,34 +249,34 @@ notAddress :: TxOutField era -> Bool
 notAddress (Address _) = False
 notAddress _ = True
 
-updateTxOut :: Proof era -> Core.TxOut era -> TxOutField era -> Core.TxOut era
-updateTxOut (Shelley _) (out@(Shelley.TxOut a v)) txoutd = case txoutd of
-  Address addr -> Shelley.TxOut addr v
-  Amount val -> Shelley.TxOut a val
+updateTxOut :: Proof era -> TxOut era -> TxOutField era -> TxOut era
+updateTxOut (Shelley _) (out@(ShelleyTxOut a v)) txoutd = case txoutd of
+  Address addr -> ShelleyTxOut addr v
+  Amount val -> ShelleyTxOut a val
   _ -> out
-updateTxOut (Allegra _) (out@(Shelley.TxOut a v)) txoutd = case txoutd of
-  Address addr -> Shelley.TxOut addr v
-  Amount val -> Shelley.TxOut a val
+updateTxOut (Allegra _) (out@(ShelleyTxOut a v)) txoutd = case txoutd of
+  Address addr -> ShelleyTxOut addr v
+  Amount val -> ShelleyTxOut a val
   _ -> out
-updateTxOut (Mary _) (out@(Shelley.TxOut a v)) txoutd = case txoutd of
-  Address addr -> Shelley.TxOut addr v
-  Amount val -> Shelley.TxOut a val
+updateTxOut (Mary _) (out@(ShelleyTxOut a v)) txoutd = case txoutd of
+  Address addr -> ShelleyTxOut addr v
+  Amount val -> ShelleyTxOut a val
   _ -> out
-updateTxOut (Alonzo _) (out@(Alonzo.TxOut a v h)) txoutd = case txoutd of
-  Address addr -> Alonzo.TxOut addr v h
-  Amount val -> Alonzo.TxOut a val h
-  DHash mdh -> Alonzo.TxOut a v mdh
-  Datum d -> error ("This feature is only available from Babbage onward " ++ show d)
+updateTxOut (Alonzo _) (out@(AlonzoTxOut a v h)) txoutd = case txoutd of
+  Address addr -> AlonzoTxOut addr v h
+  Amount val -> AlonzoTxOut a val h
+  DHash mdh -> AlonzoTxOut a v mdh
+  FDatum d -> error ("This feature is only available from Babbage onward " ++ show d)
   _ -> out
-updateTxOut (Babbage _) (Babbage.TxOut a v h refscript) txoutd = case txoutd of
-  Address addr -> Babbage.TxOut addr v h refscript
-  Amount val -> Babbage.TxOut a val h refscript
-  DHash SNothing -> Babbage.TxOut a v Babbage.NoDatum refscript
-  DHash (SJust dh) -> Babbage.TxOut a v (Babbage.DatumHash dh) refscript
-  Datum d -> Babbage.TxOut a v d refscript
-  RefScript s -> Babbage.TxOut a v h s
+updateTxOut (Babbage _) (BabbageTxOut a v h refscript) txoutd = case txoutd of
+  Address addr -> BabbageTxOut addr v h refscript
+  Amount val -> BabbageTxOut a val h refscript
+  DHash SNothing -> BabbageTxOut a v Babbage.NoDatum refscript
+  DHash (SJust dh) -> BabbageTxOut a v (Babbage.DatumHash dh) refscript
+  FDatum d -> BabbageTxOut a v d refscript
+  RefScript s -> BabbageTxOut a v h s
 
-newTxOut :: Era era => Proof era -> [TxOutField era] -> Core.TxOut era
+newTxOut :: Era era => Proof era -> [TxOutField era] -> TxOut era
 newTxOut _ dts | all notAddress dts = error ("A call to newTxOut must have an (Address x) field.")
 -- This is because we don't have a good story about an initial Address, so the user MUST supply one
 newTxOut era dts = List.foldl' (updateTxOut era) (initialTxOut era) dts
@@ -295,7 +284,7 @@ newTxOut era dts = List.foldl' (updateTxOut era) (initialTxOut era) dts
 -- =====================================================
 
 -- | An updater specialized to the Shelley PParams (also used in Allegra and Mary)
-updateShelleyPP :: Shelley.PParams era -> PParamsField era -> Shelley.PParams era
+updateShelleyPP :: ShelleyPParams era -> PParamsField era -> ShelleyPParams era
 updateShelleyPP pp dpp = case dpp of
   (MinfeeA nat) -> pp {Shelley._minfeeA = nat}
   (MinfeeB nat) -> pp {Shelley._minfeeB = nat}
@@ -326,7 +315,7 @@ updateShelleyPP pp dpp = case dpp of
   (CollateralPercentage _) -> pp
 
 -- | updatePParams uses the Override policy exclusively
-updatePParams :: Proof era -> Core.PParams era -> PParamsField era -> Core.PParams era
+updatePParams :: Proof era -> PParams era -> PParamsField era -> PParams era
 updatePParams (Shelley _) pp dpp = updateShelleyPP pp dpp
 updatePParams (Allegra _) pp dpp = updateShelleyPP pp dpp
 updatePParams (Mary _) pp dpp = updateShelleyPP pp dpp
@@ -387,7 +376,7 @@ updatePParams (Babbage _) pp dpp = case dpp of
   ExtraEntropy _ -> pp
   MinUTxOValue _ -> pp
 
-newPParams :: Proof era -> [PParamsField era] -> Core.PParams era
+newPParams :: Proof era -> [PParamsField era] -> PParams era
 newPParams era = List.foldl' (updatePParams era) (initialPParams era)
 
 -- ====================================
@@ -395,7 +384,7 @@ newPParams era = List.foldl' (updatePParams era) (initialPParams era)
 -- | This only make sense in the Alonzo era and forward, all other Eras return Nothing
 newScriptIntegrityHash ::
   Proof era ->
-  Core.PParams era ->
+  PParams era ->
   [Language] ->
   Redeemers era ->
   TxDats era ->

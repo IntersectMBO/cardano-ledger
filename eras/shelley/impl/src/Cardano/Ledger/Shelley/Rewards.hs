@@ -45,10 +45,9 @@ import Cardano.Ledger.Coin
     rationalToCoinViaFloor,
   )
 import Cardano.Ledger.Compactible (fromCompact)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Shelley.Delegation.PoolParams (poolSpec)
 import Cardano.Ledger.Shelley.EpochBoundary (Stake (..), maxPool')
@@ -324,11 +323,11 @@ rewardOnePoolMember
 -- the ranking information out of the ledger code and into a separate service,
 -- and at that point we can simplify this function to not care about ranking.
 mkPoolRewardInfo ::
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "_d" (PParams era) UnitInterval,
+    HasField "_a0" (PParams era) NonNegativeInterval,
+    HasField "_nOpt" (PParams era) Natural
   ) =>
-  Core.PParams era ->
+  PParams era ->
   Coin ->
   BlocksMade (Crypto era) ->
   Natural ->

@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
 -- | Benchmarks for Shelley test generators.
@@ -22,13 +21,13 @@ import Cardano.Ledger.Shelley.API
     DPState,
     DelplEnv,
     LEDGERS,
-    Tx,
+    ShelleyTx,
   )
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     NewEpochState (..),
   )
-import Cardano.Ledger.Shelley.Tx (TxIn)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Control.State.Transition.Extended
@@ -36,8 +35,6 @@ import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Either (fromRight)
 import qualified Data.Map.Strict as Map
 import Data.Proxy
-import Data.Set (Set)
-import GHC.Records (HasField (..))
 import Test.Cardano.Ledger.Shelley.BenchmarkFunctions (ledgerEnv)
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import qualified Test.Cardano.Ledger.Shelley.Generator.Block as GenBlock
@@ -111,17 +108,17 @@ genBlock ge cs = generate $ GenBlock.genBlock ge cs
 
 genTriple ::
   ( EraGen era,
+    Core.PParams era ~ ShelleyPParams era,
     Mock (Crypto era),
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era),
-    ShelleyTest era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    ShelleyTest era
   ) =>
   Proxy era ->
   Int ->
-  IO (GenEnv era, ChainState era, GenEnv era -> IO (Tx era))
+  IO (GenEnv era, ChainState era, GenEnv era -> IO (ShelleyTx era))
 genTriple proxy n = do
   let ge = genEnv proxy
   cs <- genChainState n ge

@@ -36,9 +36,8 @@ import Cardano.Ledger.BaseTypes
     securityParameter,
   )
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
@@ -90,12 +89,12 @@ instance NoThunks (RupdPredicateFailure era)
 
 instance
   ( Era era,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval
+    HasField "_a0" (PParams era) NonNegativeInterval,
+    HasField "_d" (PParams era) UnitInterval,
+    HasField "_nOpt" (PParams era) Natural,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_rho" (PParams era) UnitInterval,
+    HasField "_tau" (PParams era) UnitInterval
   ) =>
   STS (RUPD era)
   where
@@ -130,12 +129,12 @@ determineRewardTiming currentSlot startAftterSlot endSlot
 
 rupdTransition ::
   ( Era era,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval
+    HasField "_a0" (PParams era) NonNegativeInterval,
+    HasField "_d" (PParams era) UnitInterval,
+    HasField "_nOpt" (PParams era) Natural,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_rho" (PParams era) UnitInterval,
+    HasField "_tau" (PParams era) UnitInterval
   ) =>
   TransitionRule (RUPD era)
 rupdTransition = do

@@ -36,8 +36,7 @@ import Cardano.Ledger.Coin
     rationalToCoinViaFloor,
     toDeltaCoin,
   )
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool))
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
@@ -81,9 +80,7 @@ import Cardano.Ledger.Shelley.TxBody
     RewardAcnt (..),
     getRwdCred,
   )
-import Cardano.Ledger.Slot
-  ( EpochSize (..),
-  )
+import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Ledger.Val ((<->))
 import Data.Group (invert)
 import Data.Map.Strict (Map)
@@ -105,15 +102,15 @@ import Numeric.Natural (Natural)
 -- parameters is a Pulser, i.e. a computation that when pulseM'ed computes
 -- a portion of what is required, so that the whole compuation can be spread out in time.
 
--- | The EpochState has a field which is (Core.PParams era). We need these
+-- | The EpochState has a field which is (PParams era). We need these
 --     fields, a subset of the fields in PParams, in: startStep and createRUpd.
 type UsesPP era =
-  ( HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval,
-    HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_d" (PParams era) UnitInterval,
+    HasField "_tau" (PParams era) UnitInterval,
+    HasField "_a0" (PParams era) NonNegativeInterval,
+    HasField "_rho" (PParams era) UnitInterval,
+    HasField "_nOpt" (PParams era) Natural,
+    HasField "_protocolVersion" (PParams era) ProtVer
   )
 
 startStep ::
@@ -246,7 +243,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           free
           (unStake stake')
           (RewardAns Map.empty Map.empty)
-   in (Pulsing rewsnap pulser)
+   in Pulsing rewsnap pulser
 
 -- Phase 2
 

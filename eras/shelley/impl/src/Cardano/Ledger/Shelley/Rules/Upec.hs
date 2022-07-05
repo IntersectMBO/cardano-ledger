@@ -16,15 +16,7 @@ module Cardano.Ledger.Shelley.Rules.Upec where
 
 import Cardano.Ledger.BaseTypes (Globals (..), ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesPParams (mergePPUpdates),
-    UsesScript,
-    UsesTxBody,
-    UsesValue,
-  )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
     PPUPState (..),
@@ -51,7 +43,6 @@ import Control.State.Transition
 import Data.Default.Class (Default)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import GHC.Generics (Generic)
 import GHC.Records (HasField)
 import NoThunks.Class (NoThunks (..))
@@ -67,20 +58,16 @@ newtype UpecPredicateFailure era
 instance NoThunks (UpecPredicateFailure era)
 
 instance
-  ( UsesAuxiliary era,
-    UsesTxBody era,
-    UsesScript era,
-    UsesValue era,
-    UsesPParams era,
-    Default (Core.PParams era),
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_maxTxSize" (Core.PParams era) Natural,
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (Core.PParamsDelta era) (StrictMaybe ProtVer)
+  ( EraPParams era,
+    Default (PParams era),
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_maxBBSize" (PParams era) Natural,
+    HasField "_maxTxSize" (PParams era) Natural,
+    HasField "_maxBHSize" (PParams era) Natural,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   STS (UPEC era)
   where
@@ -120,19 +107,19 @@ instance
 -- values. Here @n@ is the quorum needed.
 votedValue ::
   forall era.
-  UsesPParams era =>
+  EraPParams era =>
   ProposedPPUpdates era ->
   -- | Protocol parameters to which the change will be applied.
-  Core.PParams era ->
+  PParams era ->
   -- | Quorum needed to change the protocol parameters.
   Int ->
-  Maybe (Core.PParams era)
+  Maybe (PParams era)
 votedValue (ProposedPPUpdates pup) pps quorumN =
   let incrTally vote tally = 1 + Map.findWithDefault 0 vote tally
       votes =
         Map.foldr
           (\vote tally -> Map.insert vote (incrTally vote tally) tally)
-          (Map.empty :: Map (Core.PParamsDelta era) Int)
+          (Map.empty :: Map (PParamsUpdate era) Int)
           pup
       consensus = Map.filter (>= quorumN) votes
    in case length consensus of
@@ -143,7 +130,7 @@ votedValue (ProposedPPUpdates pup) pps quorumN =
         --   1) `consensus` is empty, or
         --   2) `consensus` has exactly one element.
         1 ->
-          (Just . mergePPUpdates (Proxy @era) pps . fst . head . Map.toList)
+          (Just . applyPPUpdates pps . fst . head . Map.toList)
             consensus
         -- NOTE that `updatePParams` corresponds to the union override right
         -- operation in the formal spec.

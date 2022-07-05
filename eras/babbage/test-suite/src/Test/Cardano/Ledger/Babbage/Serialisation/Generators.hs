@@ -13,20 +13,23 @@ module Test.Cardano.Ledger.Babbage.Serialisation.Generators where
 
 import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.Alonzo.Data (dataToBinaryData)
-import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
-import Cardano.Ledger.Alonzo.Scripts (Script (..))
+import Cardano.Ledger.Alonzo.Rules
+  ( UtxoPredicateFailure (..),
+    UtxosPredicateFailure (..),
+    UtxowPredicateFail (..),
+  )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..), BabbageUtxowPred (..))
 import Cardano.Ledger.Babbage.Tx
-import Cardano.Ledger.Babbage.TxBody (BabbageBody, Datum (..), TxOut (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Babbage.TxBody
+  ( BabbageEraTxBody,
+    BabbageTxOut (..),
+    Datum (..),
+  )
+import Cardano.Ledger.Core
 import Cardano.Ledger.Serialization (Sized, mkSized)
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import qualified Data.Set as Set
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators (genData)
@@ -39,32 +42,31 @@ instance (ToCBOR a, Arbitrary a) => Arbitrary (Sized a) where
   arbitrary = mkSized <$> arbitrary
 
 instance
-  ( Era era,
-    UsesValue era,
+  ( EraTxOut era,
     Mock (Crypto era),
-    Arbitrary (Core.Value era),
-    Arbitrary (Core.Script era)
+    Arbitrary (Value era),
+    Arbitrary (Script era)
   ) =>
-  Arbitrary (TxOut era)
+  Arbitrary (BabbageTxOut era)
   where
   arbitrary =
-    TxOut
+    BabbageTxOut
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
 
 instance
-  ( UsesValue era,
-    Mock (Crypto era),
-    BabbageBody era,
-    Arbitrary (Core.Value era),
-    Arbitrary (Core.Script era)
+  ( Mock (Crypto era),
+    ToCBOR (Script era),
+    BabbageEraTxBody era,
+    Arbitrary (Value era),
+    Arbitrary (Script era)
   ) =>
-  Arbitrary (TxBody era)
+  Arbitrary (BabbageTxBody era)
   where
   arbitrary =
-    TxBody
+    BabbageTxBody
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -82,15 +84,15 @@ instance
       <*> arbitrary
       <*> arbitrary
 
-instance Mock c => Arbitrary (ValidatedTx (BabbageEra c)) where
+instance Mock c => Arbitrary (AlonzoTx (BabbageEra c)) where
   arbitrary =
-    ValidatedTx
+    AlonzoTx
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
 
-instance Mock c => Arbitrary (Script (BabbageEra c)) where
+instance Mock c => Arbitrary (AlonzoScript (BabbageEra c)) where
   arbitrary = do
     lang <- arbitrary -- The language is not present in the Script serialization
     frequency
@@ -102,9 +104,9 @@ instance Mock c => Arbitrary (Script (BabbageEra c)) where
 -- ==========================
 --
 
-instance Arbitrary (PParams era) where
+instance Arbitrary (BabbagePParams era) where
   arbitrary =
-    PParams
+    BabbagePParams
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -128,9 +130,9 @@ instance Arbitrary (PParams era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (PParamsUpdate era) where
+instance Arbitrary (BabbagePParamsUpdate era) where
   arbitrary =
-    PParams
+    BabbagePParams
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary

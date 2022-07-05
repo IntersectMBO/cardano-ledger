@@ -6,12 +6,12 @@ module Test.Cardano.Ledger.Allegra.ScriptTranslation
 where
 
 import Cardano.Ledger.Allegra.Translation ()
-import Cardano.Ledger.Era (TranslateEra (..))
+import Cardano.Ledger.Block (txid)
+import Cardano.Ledger.Core (TranslateEra (..), hashScript)
 import qualified Cardano.Ledger.Shelley.API as S
 import Cardano.Ledger.Shelley.LedgerState (LedgerState (..))
 import Cardano.Ledger.Shelley.PParams (emptyPParams)
-import Cardano.Ledger.Shelley.Tx (hashScript, scriptWits)
-import Cardano.Ledger.TxIn (txid)
+import Cardano.Ledger.Shelley.Tx (scriptWits)
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo (..))
 import Control.Monad.Except (runExcept)
@@ -37,7 +37,7 @@ bootstrapTxId :: S.TxId StandardCrypto
 bootstrapTxId = txid @Shelley txb
   where
     txb =
-      S.TxBody
+      S.ShelleyTxBody
         mempty
         StrictSeq.empty
         StrictSeq.empty
@@ -70,12 +70,12 @@ testScriptPostTranslation =
             S.UTxO $
               Map.singleton
                 (S.TxIn bootstrapTxId minBound)
-                (S.TxOut addr (Val.inject (S.Coin 1)))
+                (S.ShelleyTxOut addr (Val.inject (S.Coin 1)))
           env = S.LedgerEnv (SlotNo 0) minBound emptyPParams (S.AccountState (S.Coin 0) (S.Coin 0))
           utxoStShelley = def {S._utxo = utxo}
           utxoStAllegra = fromRight . runExcept $ translateEra @Allegra () utxoStShelley
           txb =
-            S.TxBody
+            S.ShelleyTxBody
               (Set.singleton $ S.TxIn bootstrapTxId minBound)
               StrictSeq.empty
               StrictSeq.empty
@@ -85,7 +85,7 @@ testScriptPostTranslation =
               S.SNothing
               S.SNothing
           wits = mempty {scriptWits = Map.singleton scriptHash script}
-          txs = S.Tx txb wits S.SNothing
+          txs = S.ShelleyTx txb wits S.SNothing
           txa = fromRight . runExcept $ translateEra @Allegra () txs
           result =
             runShelleyBase $

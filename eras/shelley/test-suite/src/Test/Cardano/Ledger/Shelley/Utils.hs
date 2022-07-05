@@ -3,7 +3,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -85,12 +84,10 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto (..))
-import qualified Cardano.Ledger.Era as Era
 import Cardano.Ledger.Keys
   ( KeyPair,
     KeyRole (..),
@@ -100,15 +97,11 @@ import Cardano.Ledger.Keys
     vKey,
     pattern KeyPair,
   )
-import Cardano.Ledger.Shelley.API
-  ( ApplyBlock,
-    PParams,
-  )
-import Cardano.Ledger.Shelley.BlockChain (TxSeq)
-import Cardano.Ledger.Shelley.Constraints
+import Cardano.Ledger.Shelley.API (ApplyBlock)
+import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq)
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses)
-import Cardano.Ledger.Shelley.PParams (PParamsUpdate)
-import Cardano.Ledger.Shelley.Tx (Tx, TxOut, WitnessSet)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx, ShelleyTxOut, ShelleyWitnesses)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 import Cardano.Ledger.Slot (EpochNo, EpochSize (..), SlotNo)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader (BHBody (..), BHeader, bhbody)
@@ -145,37 +138,24 @@ import Test.Tasty.HUnit
   )
 
 type ChainProperty era =
-  ( UsesTxOut era,
-    UsesPParams era,
-    UsesValue era,
-    UsesTxBody era,
-    UsesAuxiliary era,
-    Mock (Crypto era),
+  ( Mock (Crypto era),
     ApplyBlock era,
     GetLedgerView era,
-    Show (Core.Tx era),
-    Eq (Core.Tx era)
+    EraTx era
   )
 
 -- ================================================
 
 type ShelleyTest era =
-  ( UsesTxBody era,
-    UsesValue era,
-    UsesTxOut era,
-    UsesScript era,
-    UsesAuxiliary era,
-    UsesPParams era,
-    Core.Tx era ~ Tx era,
-    Era.TxSeq era ~ TxSeq era,
-    TxOut era ~ Core.TxOut era,
-    PParams era ~ Core.PParams era,
-    Core.PParamsDelta era ~ PParamsUpdate era,
-    Core.Witnesses era ~ WitnessSet era,
-    Split (Core.Value era),
-    Default (State (Core.EraRule "PPUP" era)),
-    Default (StashedAVVMAddresses era),
-    Core.AnnotatedData (Core.Witnesses era)
+  ( EraTx era,
+    ShelleyEraTxBody era,
+    Tx era ~ ShelleyTx era,
+    TxSeq era ~ ShelleyTxSeq era,
+    ShelleyTxOut era ~ TxOut era,
+    Witnesses era ~ ShelleyWitnesses era,
+    Split (Value era),
+    Default (State (EraRule "PPUP" era)),
+    Default (StashedAVVMAddresses era)
   )
 
 class Split v where

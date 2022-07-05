@@ -7,13 +7,11 @@ module Test.Cardano.Ledger.Babbage.Serialisation.Tripping where
 
 import Cardano.Binary
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
-import Cardano.Ledger.Babbage (AuxiliaryData, BabbageEra, Script, TxOut)
-import Cardano.Ledger.Babbage.PParams (PParams, PParamsUpdate)
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred)
-import Cardano.Ledger.Babbage.TxBody (TxBody)
+import Cardano.Ledger.Babbage (BabbageEra)
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred)
 import Cardano.Ledger.Block (Block)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.Metadata (Metadata)
-import qualified Cardano.Ledger.Shelley.Tx as LTX
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Codec.CBOR.Term (decodeTerm)
@@ -103,7 +101,7 @@ tests =
       testProperty "Script" $
         trippingAnn @(Script (BabbageEra C_Crypto)),
       testProperty "babbage/Tx" $
-        trippingAnn @(LTX.Tx (BabbageEra C_Crypto)),
+        trippingAnn @(Tx (BabbageEra C_Crypto)),
       testProperty "babbage/BabbageUtxoPred" $
         tripping @(BabbageUtxoPred (BabbageEra C_Crypto)),
       testProperty "babbage/Block" $

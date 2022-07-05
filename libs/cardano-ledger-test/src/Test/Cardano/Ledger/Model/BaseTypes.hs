@@ -5,7 +5,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
@@ -46,6 +45,7 @@ import Data.Coerce
 import Data.Group (Abelian, Group)
 import Data.Group.GrpMap (GrpMap (..))
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Sum (..))
 import Data.Proxy (Proxy (..))
 import Data.Typeable (Typeable, (:~:) (Refl))
@@ -142,7 +142,7 @@ newtype ModelValue k era = ModelValue {unModelValue :: ModelValueF (ModelValueVa
   deriving (Eq, Ord, Generic, NFData, Semigroup, Monoid, Group, Abelian)
   deriving (Show) via Quiet (ModelValue k era)
 
-instance Val.Val (ModelValue k era) where
+instance (Typeable k, Typeable era) => Val.Val (ModelValue k era) where
   coin = coerce (Val.coin :: ModelValueF (ModelValueVars era k) -> Coin)
   modifyCoin f =
     coerce
@@ -157,8 +157,13 @@ instance Val.Val (ModelValue k era) where
       (Val.pointwise f :: ModelValueF (ModelValueVars era k) -> ModelValueF (ModelValueVars era k) -> Bool)
   isAdaOnly = coerce (Val.isAdaOnly :: ModelValueF (ModelValueVars era k) -> Bool)
   isAdaOnlyCompact (ModelValueCompact v) = Val.isAdaOnly v
+  coinCompact =
+    fromMaybe (error "Invalid compacted coin in ModelValue") . toCompact . Val.coin . fromCompact
   injectCompact (CompactCoin w64) =
     ModelValueCompact (Val.inject (Coin (toInteger w64)))
+  modifyCompactCoin fc (ModelValueCompact mv) = ModelValueCompact (Val.modifyCoin f mv)
+    where
+      f = fromCompact . fc . fromMaybe (error "Invalid compacted coin in ModelValue") . toCompact
 
 liftModelValue :: ModelValue 'ExpectAdaOnly era -> ModelValue k era
 liftModelValue = ModelValue . mapModelValueF liftModelValueVars . unModelValue

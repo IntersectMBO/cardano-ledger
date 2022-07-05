@@ -47,32 +47,23 @@ import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
   ( Network,
     ShelleyBase,
-    StrictMaybe,
     invalidKey,
     networkId,
   )
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..))
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest)
-import Cardano.Ledger.Shelley.Constraints
-  ( TransValue,
-    UsesAuxiliary,
-    UsesPParams,
-    UsesScript,
-    UsesTxOut,
-    UsesValue,
-  )
+import Cardano.Ledger.Shelley.Era (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState.IncrementalStake
 import Cardano.Ledger.Shelley.LedgerState.Types
   ( UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams
   ( PPUPState (..),
-    PParams,
-    PParams' (..),
+    ShelleyPParams,
+    ShelleyPParamsHKD (..),
     Update,
   )
 import Cardano.Ledger.Shelley.Rules.Ppup
@@ -82,21 +73,20 @@ import Cardano.Ledger.Shelley.Rules.Ppup
     PpupPredicateFailure,
   )
 import Cardano.Ledger.Shelley.Tx
-  ( Tx (..),
+  ( ShelleyTx (..),
+    ShelleyTxOut (..),
     TxIn,
-    TxOut (..),
     minfee,
   )
 import Cardano.Ledger.Shelley.TxBody
-  ( DCert,
-    PoolParams,
+  ( PoolParams,
     RewardAcnt,
-    TxBody (..),
+    ShelleyEraTxBody (..),
+    ShelleyTxBody,
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO
-  ( TransUTxO,
-    UTxO (..),
+  ( UTxO (..),
     balance,
     consumed,
     keyRefunds,
@@ -133,13 +123,14 @@ import Data.Foldable (foldl', toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
-import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable (Typeable)
 import Data.Word (Word8)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
+import Lens.Micro
+import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 import Validation (failureUnless)
@@ -149,15 +140,15 @@ data UTXO era
 data UtxoEnv era
   = UtxoEnv
       SlotNo
-      (Core.PParams era)
+      (PParams era)
       (Map (KeyHash 'StakePool (Crypto era)) (PoolParams (Crypto era)))
       (GenDelegs (Crypto era))
 
-deriving instance Show (Core.PParams era) => Show (UtxoEnv era)
+deriving instance Show (PParams era) => Show (UtxoEnv era)
 
 data UtxoEvent era
   = TotalDeposits Coin
-  | UpdateEvent (Event (Core.EraRule "PPUP" era))
+  | UpdateEvent (Event (EraRule "PPUP" era))
 
 data UtxoPredicateFailure era
   = BadInputsUTxO
@@ -173,8 +164,8 @@ data UtxoPredicateFailure era
       !Coin -- the minimum fee for this transaction
       !Coin -- the fee supplied in this transaction
   | ValueNotConservedUTxO
-      !(Core.Value era) -- the Coin consumed by this transaction
-      !(Core.Value era) -- the Coin produced by this transaction
+      !(Value era) -- the Coin consumed by this transaction
+      !(Value era) -- the Coin produced by this transaction
   | WrongNetwork
       !Network -- the expected network id
       !(Set (Addr (Crypto era))) -- the set of addresses with incorrect network IDs
@@ -182,39 +173,39 @@ data UtxoPredicateFailure era
       !Network -- the expected network id
       !(Set (RewardAcnt (Crypto era))) -- the set of reward addresses with incorrect network IDs
   | OutputTooSmallUTxO
-      ![Core.TxOut era] -- list of supplied transaction outputs that are too small
-  | UpdateFailure (PredicateFailure (Core.EraRule "PPUP" era)) -- Subtransition Failures
+      ![TxOut era] -- list of supplied transaction outputs that are too small
+  | UpdateFailure (PredicateFailure (EraRule "PPUP" era)) -- Subtransition Failures
   | OutputBootAddrAttrsTooBig
-      ![Core.TxOut era] -- list of supplied bad transaction outputs
+      ![TxOut era] -- list of supplied bad transaction outputs
   deriving (Generic)
 
 deriving stock instance
-  ( UsesValue era,
-    Show (Core.TxOut era),
-    Show (PredicateFailure (Core.EraRule "PPUP" era))
+  ( Show (Value era),
+    Show (TxOut era),
+    Show (PredicateFailure (EraRule "PPUP" era))
   ) =>
   Show (UtxoPredicateFailure era)
 
 deriving stock instance
-  ( Eq (Core.Value era),
-    Eq (Core.TxOut era),
-    Eq (PredicateFailure (Core.EraRule "PPUP" era))
+  ( Eq (Value era),
+    Eq (TxOut era),
+    Eq (PredicateFailure (EraRule "PPUP" era))
   ) =>
   Eq (UtxoPredicateFailure era)
 
 instance
-  ( NoThunks (Core.Value era),
-    NoThunks (Core.TxOut era),
-    NoThunks (PredicateFailure (Core.EraRule "PPUP" era))
+  ( NoThunks (Value era),
+    NoThunks (TxOut era),
+    NoThunks (PredicateFailure (EraRule "PPUP" era))
   ) =>
   NoThunks (UtxoPredicateFailure era)
 
 instance
   ( Typeable era,
     CC.Crypto (Crypto era),
-    ToCBOR (Core.Value era),
-    ToCBOR (Core.TxOut era),
-    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+    ToCBOR (Value era),
+    ToCBOR (TxOut era),
+    ToCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
   ToCBOR (UtxoPredicateFailure era)
   where
@@ -257,11 +248,9 @@ instance
         <> encodeFoldable outs
 
 instance
-  ( TransValue FromCBOR era,
-    TransUTxO FromCBOR era,
-    Val.DecodeNonNegative (Core.Value era),
-    Show (Core.Value era),
-    FromCBOR (PredicateFailure (Core.EraRule "PPUP" era))
+  ( EraTxOut era,
+    FromCBOR (TxOut era),
+    FromCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
   FromCBOR (UtxoPredicateFailure era)
   where
@@ -308,27 +297,28 @@ instance
         k -> invalidKey k
 
 instance
-  ( UsesTxOut era,
-    Core.TxOut era ~ TxOut era,
-    UsesValue era,
-    UsesScript era,
-    UsesAuxiliary era,
-    UsesPParams era,
-    Show (Core.Witnesses era),
-    Core.TxBody era ~ TxBody era,
-    Core.PParams era ~ PParams era,
-    Core.Tx era ~ Tx era,
-    Core.Value era ~ Coin,
-    Eq (PredicateFailure (Core.EraRule "PPUP" era)),
-    Embed (Core.EraRule "PPUP" era) (UTXO era),
-    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era)
+  ( EraTx era,
+    ShelleyEraTxBody era,
+    ProtVerInEra era (ShelleyEra c),
+    TxOut era ~ ShelleyTxOut era,
+    Show (Value era),
+    Show (Witnesses era),
+    Show (PParamsUpdate era),
+    TxBody era ~ ShelleyTxBody era,
+    PParams era ~ ShelleyPParams era,
+    Tx era ~ ShelleyTx era,
+    Value era ~ Coin,
+    Show (ShelleyTx era),
+    Eq (PredicateFailure (EraRule "PPUP" era)),
+    Embed (EraRule "PPUP" era) (UTXO era),
+    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era)
   ) =>
   STS (UTXO era)
   where
   type State (UTXO era) = UTxOState era
-  type Signal (UTXO era) = Tx era
+  type Signal (UTXO era) = ShelleyTx era
   type Environment (UTXO era) = UtxoEnv era
   type BaseM (UTXO era) = ShelleyBase
   type PredicateFailure (UTXO era) = UtxoPredicateFailure era
@@ -354,48 +344,44 @@ instance
         "Deposit pot must not be negative (post)"
         (\_ st' -> _deposited st' >= mempty),
       let utxoBalance us = Val.inject (_deposited us <> _fees us) <> balance (_utxo us)
-          withdrawals :: TxBody era -> Core.Value era
-          withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ _wdrls txb
+          withdrawals :: ShelleyTxBody era -> Value era
+          withdrawals txb = Val.inject $ foldl' (<>) mempty $ unWdrl $ txb ^. wdrlsTxBodyL
        in PostCondition
             "Should preserve value in the UTxO state"
             ( \(TRC (_, us, tx)) us' ->
-                utxoBalance us <> withdrawals (getField @"body" tx) == utxoBalance us'
+                utxoBalance us <> withdrawals (tx ^. bodyTxL) == utxoBalance us'
             )
     ]
 
 utxoInductive ::
-  forall era utxo.
-  ( Core.TxOut era ~ TxOut era,
-    Core.Value era ~ Coin,
-    UsesAuxiliary era,
+  forall era utxo c.
+  ( EraTx era,
+    ShelleyEraTxBody era,
+    ProtVerInEra era (ShelleyEra c),
+    TxOut era ~ ShelleyTxOut era,
     STS (utxo era),
-    Embed (Core.EraRule "PPUP" era) (utxo era),
+    Embed (EraRule "PPUP" era) (utxo era),
     BaseM (utxo era) ~ ShelleyBase,
     Environment (utxo era) ~ UtxoEnv era,
     State (utxo era) ~ UTxOState era,
-    Signal (utxo era) ~ Core.Tx era,
+    Signal (utxo era) ~ Tx era,
     PredicateFailure (utxo era) ~ UtxoPredicateFailure era,
     Event (utxo era) ~ UtxoEvent era,
-    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "ttl" (Core.TxBody era) SlotNo,
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural,
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_minUTxOValue" (Core.PParams era) Coin,
-    HasField "_maxTxSize" (Core.PParams era) Natural
+    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
+    HasField "_minfeeA" (PParams era) Natural,
+    HasField "_minfeeB" (PParams era) Natural,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_minUTxOValue" (PParams era) Coin,
+    HasField "_maxTxSize" (PParams era) Natural
   ) =>
   TransitionRule (utxo era)
 utxoInductive = do
   TRC (UtxoEnv slot pp stakepools genDelegs, u, tx) <- judgmentContext
   let UTxOState utxo _ _ ppup _ = u
-  let txb = getField @"body" tx
+  let txb = tx ^. bodyTxL
 
   {- txttl txb ≥ slot -}
   runTest $ validateTimeToLive txb slot
@@ -407,12 +393,12 @@ utxoInductive = do
   runTest $ validateFeeTooSmallUTxO pp tx
 
   {- txins txb ⊆ dom utxo -}
-  runTest $ validateBadInputsUTxO utxo $ getField @"inputs" txb
+  runTest $ validateBadInputsUTxO utxo $ txb ^. inputsTxBodyL
 
   netId <- liftSTS $ asks networkId
 
   {- ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId -}
-  runTest . validateWrongNetwork netId . toList $ getField @"outputs" txb
+  runTest . validateWrongNetwork netId . toList $ txb ^. outputsTxBodyL
 
   {- ∀(a → ) ∈ txwdrls txb, netId a = NetworkId -}
   runTest $ validateWrongNetworkWithdrawal netId txb
@@ -421,7 +407,7 @@ utxoInductive = do
   runTest $ validateValueNotConservedUTxO pp utxo stakepools txb
 
   -- process Protocol Parameter Update Proposals
-  ppup' <- trans @(Core.EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
+  ppup' <- trans @(EraRule "PPUP" era) $ TRC (PPUPEnv slot pp genDelegs, ppup, txup tx)
 
   let outputs = txouts txb
   {- ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp) -}
@@ -434,7 +420,7 @@ utxoInductive = do
   runTest $ validateMaxTxSizeUTxO pp tx
 
   let refunded = keyRefunds pp txb
-  let txCerts = toList $ getField @"certs" txb
+  let txCerts = toList $ txb ^. certsTxBodyL
   let totalDeposits' = totalDeposits pp (`Map.notMember` stakepools) txCerts
   tellEvent $ TotalDeposits totalDeposits'
   let depositChange = totalDeposits' <-> refunded
@@ -445,45 +431,43 @@ utxoInductive = do
 --
 -- > txttl txb ≥ slot
 validateTimeToLive ::
-  HasField "ttl" (Core.TxBody era) SlotNo =>
-  Core.TxBody era ->
+  (ShelleyEraTxBody era, ProtVerInEra era (ShelleyEra c)) =>
+  TxBody era ->
   SlotNo ->
   Test (UtxoPredicateFailure era)
 validateTimeToLive txb slot = failureUnless (ttl >= slot) $ ExpiredUTxO ttl slot
   where
-    ttl = getField @"ttl" txb
+    ttl = txb ^. ttlTxBodyL
 
--- | Ensure that there is at least one input in the `Core.TxBody`
+-- | Ensure that there is at least one input in the `TxBody`
 --
 -- > txins txb ≠ ∅
 validateInputSetEmptyUTxO ::
-  HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))) =>
-  Core.TxBody era ->
+  EraTxBody era =>
+  TxBody era ->
   Test (UtxoPredicateFailure era)
 validateInputSetEmptyUTxO txb =
-  failureUnless (txins txb /= Set.empty) InputSetEmptyUTxO
+  failureUnless (txins /= Set.empty) InputSetEmptyUTxO
   where
-    txins = getField @"inputs"
+    txins = txb ^. inputsTxBodyL
 
 -- | Ensure that the fee is at least the amount specified by the `minfee`
 --
 -- > minfee pp tx ≤ txfee txb
 validateFeeTooSmallUTxO ::
-  ( HasField "body" (Core.Tx era) (Core.TxBody era),
-    HasField "txfee" (Core.TxBody era) Coin,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minfeeB" (Core.PParams era) Natural,
-    HasField "txsize" (Core.Tx era) Integer
+  ( EraTx era,
+    HasField "_minfeeA" (PParams era) Natural,
+    HasField "_minfeeB" (PParams era) Natural
   ) =>
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   Test (UtxoPredicateFailure era)
 validateFeeTooSmallUTxO pp tx =
   failureUnless (minFee <= txFee) $ FeeTooSmallUTxO minFee txFee
   where
     minFee = minfee pp tx
-    txFee = getField @"txfee" txb
-    txb = getField @"body" tx
+    txFee = txb ^. feeTxBodyL
+    txb = tx ^. bodyTxL
 
 -- | Ensure all transaction inputs are present in `UTxO`
 --
@@ -502,9 +486,9 @@ validateBadInputsUTxO utxo txins =
 --
 -- > ∀(_ → (a, _)) ∈ txouts txb, netId a = NetworkId
 validateWrongNetwork ::
-  Era era =>
+  EraTxOut era =>
   Network ->
-  [Core.TxOut era] ->
+  [TxOut era] ->
   Test (UtxoPredicateFailure era)
 validateWrongNetwork netId outs =
   failureUnless (null addrsWrongNetwork) $ WrongNetwork netId (Set.fromList addrsWrongNetwork)
@@ -512,15 +496,15 @@ validateWrongNetwork netId outs =
     addrsWrongNetwork =
       filter
         (\a -> getNetwork a /= netId)
-        (getTxOutAddr <$> outs)
+        (view addrTxOutL <$> outs)
 
 -- | Make sure all addresses match the supplied NetworkId
 --
 -- > ∀(a → ) ∈ txwdrls txb, netId a = NetworkId
 validateWrongNetworkWithdrawal ::
-  (HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))) =>
+  ShelleyEraTxBody era =>
   Network ->
-  Core.TxBody era ->
+  TxBody era ->
   Test (UtxoPredicateFailure era)
 validateWrongNetworkWithdrawal netId txb =
   failureUnless (null wdrlsWrongNetwork) $
@@ -529,23 +513,20 @@ validateWrongNetworkWithdrawal netId txb =
     wdrlsWrongNetwork =
       filter
         (\a -> getRwdNetwork a /= netId)
-        (Map.keys . unWdrl . getField @"wdrls" $ txb)
+        (Map.keys . unWdrl $ txb ^. wdrlsTxBodyL)
 
 -- | Ensure that value consumed and produced matches up exactly
 --
 -- > consumed pp utxo txb = produced pp poolParams txb
 validateValueNotConservedUTxO ::
-  ( Era era,
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
+  ( ShelleyEraTxBody era,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin
   ) =>
-  Core.PParams era ->
+  PParams era ->
   UTxO era ->
   Map (KeyHash 'StakePool (Crypto era)) a ->
-  Core.TxBody era ->
+  TxBody era ->
   Test (UtxoPredicateFailure era)
 validateValueNotConservedUTxO pp utxo stakepools txb =
   failureUnless (consumedValue == producedValue) $
@@ -554,14 +535,14 @@ validateValueNotConservedUTxO pp utxo stakepools txb =
     consumedValue = consumed pp utxo txb
     producedValue = produced pp (`Map.notMember` stakepools) txb
 
--- | Ensure there are no `Core.TxOut`s that have less than @minUTxOValue@
+-- | Ensure there are no `TxOut`s that have less than @minUTxOValue@
 --
 -- > ∀(_ → (_, c)) ∈ txouts txb, c ≥ (minUTxOValue pp)
 validateOutputTooSmallUTxO ::
-  ( HasField "_minUTxOValue" (Core.PParams era) Coin,
-    HasField "value" (Core.TxOut era) Coin
+  ( HasField "_minUTxOValue" (PParams era) Coin,
+    EraTxOut era
   ) =>
-  Core.PParams era ->
+  PParams era ->
   UTxO era ->
   Test (UtxoPredicateFailure era)
 validateOutputTooSmallUTxO pp (UTxO outputs) =
@@ -573,10 +554,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
     -- amounts are non-negative)
     outputsTooSmall =
       filter
-        ( \x ->
-            let c = getField @"value" x
-             in c < minUTxOValue
-        )
+        (\txOut -> txOut ^. coinTxOutL < minUTxOValue)
         (Map.elems outputs)
 
 -- | Bootstrap (i.e. Byron) addresses have variable sized attributes in them.
@@ -584,7 +562,7 @@ validateOutputTooSmallUTxO pp (UTxO outputs) =
 --
 -- > ∀ ( _ ↦ (a,_)) ∈ txoutstxb,  a ∈ Addrbootstrap → bootstrapAttrsSize a ≤ 64
 validateOutputBootAddrAttrsTooBig ::
-  Era era =>
+  EraTxOut era =>
   UTxO era ->
   Test (UtxoPredicateFailure era)
 validateOutputBootAddrAttrsTooBig (UTxO outputs) =
@@ -593,7 +571,7 @@ validateOutputBootAddrAttrsTooBig (UTxO outputs) =
     outputsAttrsTooBig =
       filter
         ( \txOut ->
-            case getTxOutBootstrapAddress txOut of
+            case txOut ^. bootAddrTxOutF of
               Just addr -> bootstrapAddressAttrsSize addr > 64
               _ -> False
         )
@@ -603,37 +581,37 @@ validateOutputBootAddrAttrsTooBig (UTxO outputs) =
 --
 -- > txsize tx ≤ maxTxSize pp
 validateMaxTxSizeUTxO ::
-  ( HasField "_maxTxSize" (Core.PParams era) Natural,
-    HasField "txsize" (Core.Tx era) Integer
+  ( HasField "_maxTxSize" (PParams era) Natural,
+    EraTx era
   ) =>
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   Test (UtxoPredicateFailure era)
 validateMaxTxSizeUTxO pp tx =
   failureUnless (txSize <= maxTxSize) $ MaxTxSizeUTxO txSize maxTxSize
   where
     maxTxSize = toInteger (getField @"_maxTxSize" pp)
-    txSize = getField @"txsize" tx
+    txSize = tx ^. sizeTxF
 
 updateUTxOState ::
-  (Era era, HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))) =>
+  EraTxBody era =>
   UTxOState era ->
-  Core.TxBody era ->
+  TxBody era ->
   Coin ->
-  State (Core.EraRule "PPUP" era) ->
+  State (EraRule "PPUP" era) ->
   UTxOState era
 updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositChange ppups =
   let UTxO utxo = _utxo
       !utxoAdd = txouts txb -- These will be inserted into the UTxO
       {- utxoDel  = txins txb ◁ utxo -}
-      !(utxoWithout, utxoDel) = extractKeys utxo (getField @"inputs" txb)
+      !(utxoWithout, utxoDel) = extractKeys utxo (txb ^. inputsTxBodyL)
       {- newUTxO = (txins txb ⋪ utxo) ∪ outs txb -}
       newUTxO = utxoWithout `Map.union` unUTxO utxoAdd
       newIncStakeDistro = updateStakeDistribution _stakeDistro (UTxO utxoDel) utxoAdd
    in UTxOState
         { _utxo = UTxO newUTxO,
           _deposited = _deposited <> depositChange,
-          _fees = _fees <> getField @"txfee" txb,
+          _fees = _fees <> txb ^. feeTxBodyL,
           _ppups = ppups,
           _stakeDistro = newIncStakeDistro
         }
@@ -641,8 +619,8 @@ updateUTxOState UTxOState {_utxo, _deposited, _fees, _stakeDistro} txb depositCh
 instance
   ( Era era,
     STS (PPUP era),
-    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era,
-    Event (Core.EraRule "PPUP" era) ~ PpupEvent era
+    PredicateFailure (EraRule "PPUP" era) ~ PpupPredicateFailure era,
+    Event (EraRule "PPUP" era) ~ PpupEvent era
   ) =>
   Embed (PPUP era) (UTXO era)
   where
@@ -652,7 +630,7 @@ instance
 -- =================================
 
 instance
-  PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era =>
+  PredicateFailure (EraRule "PPUP" era) ~ PpupPredicateFailure era =>
   Inject (PpupPredicateFailure era) (UtxoPredicateFailure era)
   where
   inject = UpdateFailure

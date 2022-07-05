@@ -10,12 +10,11 @@
 module Test.Cardano.Ledger.Generic.Scriptic where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (Script (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -32,24 +31,21 @@ import Test.Cardano.Ledger.Generic.Proof
 theSlot :: Int -> SlotNo
 theSlot n = SlotNo (fromIntegral n)
 
-class
-  (Era era, ValidateScript era, Eq (Core.Script era), Show (Core.Script era)) =>
-  Scriptic era
-  where
-  always :: Natural -> Proof era -> Core.Script era
-  alwaysAlt :: Natural -> Proof era -> Core.Script era
-  never :: Natural -> Proof era -> Core.Script era
-  require :: KeyHash 'Witness (Crypto era) -> Proof era -> Core.Script era
-  allOf :: [Proof era -> Core.Script era] -> Proof era -> Core.Script era
-  anyOf :: [Proof era -> Core.Script era] -> Proof era -> Core.Script era
-  mOf :: Int -> [Proof era -> Core.Script era] -> Proof era -> Core.Script era
+class (EraScript era, Show (Script era)) => Scriptic era where
+  always :: Natural -> Proof era -> Script era
+  alwaysAlt :: Natural -> Proof era -> Script era
+  never :: Natural -> Proof era -> Script era
+  require :: KeyHash 'Witness (Crypto era) -> Proof era -> Script era
+  allOf :: [Proof era -> Script era] -> Proof era -> Script era
+  anyOf :: [Proof era -> Script era] -> Proof era -> Script era
+  mOf :: Int -> [Proof era -> Script era] -> Proof era -> Script era
 
 class Scriptic era => PostShelley era where
-  before :: Int -> Proof era -> Core.Script era
-  after :: Int -> Proof era -> Core.Script era
+  before :: Int -> Proof era -> Script era
+  after :: Int -> Proof era -> Script era
 
 class HasTokens era where
-  forge :: Integer -> Core.Script era -> Core.Value era
+  forge :: Integer -> Script era -> Value era
 
 instance CC.Crypto c => Scriptic (ShelleyEra c) where
   never _ (Shelley _) = Multi.RequireAnyOf mempty -- always False
@@ -91,28 +87,28 @@ instance CC.Crypto c => PostShelley (MaryEra c) where
   after n (Mary _) = RequireTimeExpire (theSlot n)
 
 instance forall c. CC.Crypto c => HasTokens (MaryEra c) where
-  forge n s = Mary.Value 0 $ Map.singleton pid (Map.singleton an n)
+  forge n s = MaryValue 0 $ Map.singleton pid (Map.singleton an n)
     where
-      pid = Mary.PolicyID (hashScript @(MaryEra c) s)
-      an = Mary.AssetName "an"
+      pid = PolicyID (hashScript @(MaryEra c) s)
+      an = AssetName "an"
 
 instance forall c. CC.Crypto c => HasTokens (AlonzoEra c) where
-  forge n s = Mary.Value 0 $ Map.singleton pid (Map.singleton an n)
+  forge n s = MaryValue 0 $ Map.singleton pid (Map.singleton an n)
     where
-      pid = Mary.PolicyID (hashScript @(AlonzoEra c) s)
-      an = Mary.AssetName "an"
+      pid = PolicyID (hashScript @(AlonzoEra c) s)
+      an = AssetName "an"
 
 instance forall c. CC.Crypto c => HasTokens (BabbageEra c) where
-  forge n s = Mary.Value 0 $ Map.singleton pid (Map.singleton an n)
+  forge n s = MaryValue 0 $ Map.singleton pid (Map.singleton an n)
     where
-      pid = Mary.PolicyID (hashScript @(BabbageEra c) s)
-      an = Mary.AssetName "an"
+      pid = PolicyID (hashScript @(BabbageEra c) s)
+      an = AssetName "an"
 
 -- =================================
 -- Make Scripts in Alonzo era
 
 -- | Not every Alonzo Script can be used in a Timelock context.
-unTime :: CC.Crypto (Crypto era) => Proof era -> (Proof era -> Script era) -> Timelock (Crypto era)
+unTime :: CC.Crypto (Crypto era) => Proof era -> (Proof era -> AlonzoScript era) -> Timelock (Crypto era)
 unTime wit f = case f wit of
   (TimelockScript x) -> x
   (PlutusScript _ "\SOH\NUL\NUL \ACK\SOH") -> RequireAnyOf mempty
@@ -149,11 +145,11 @@ instance CC.Crypto c => PostShelley (BabbageEra c) where
 
 -- =======================================
 -- Some examples that work in multiple Eras
-matchkey :: Scriptic era => Int -> Proof era -> Core.Script era
+matchkey :: Scriptic era => Int -> Proof era -> Script era
 matchkey n era = require (theKeyHash n) era
 
-test21 :: Scriptic era => Proof era -> Core.Script era
+test21 :: Scriptic era => Proof era -> Script era
 test21 wit = allOf [always 1, matchkey 1, anyOf [matchkey 2, matchkey 3]] wit
 
-test22 :: PostShelley era => Proof era -> Core.Script era
+test22 :: PostShelley era => Proof era -> Script era
 test22 wit = mOf 2 [matchkey 1, before 100, anyOf [matchkey 2, matchkey 3]] wit

@@ -7,28 +7,39 @@
 module Cardano.Ledger.Mary
   ( MaryEra,
     Self,
-    TxOut,
-    Value,
-    TxBody,
-    Script,
-    AuxiliaryData,
-    PParams,
-    PParamsDelta,
-    Tx,
+    ShelleyTx,
+    ShelleyTxOut,
+    MaryValue,
+    MATxBody,
+    ShelleyPParams,
+    ShelleyPParamsUpdate,
+    MAAuxiliaryData,
+
+    -- * Deprecated
+    Cardano.Ledger.Shelley.API.Tx,
+    Cardano.Ledger.Shelley.API.TxOut,
+    Cardano.Ledger.ShelleyMA.TxBody,
+    Cardano.Ledger.Shelley.PParams.PParams,
+    Cardano.Ledger.Mary.Value,
+    Cardano.Ledger.Mary.Script,
+    Cardano.Ledger.Mary.PParamsDelta,
+    Cardano.Ledger.ShelleyMA.AuxiliaryData.AuxiliaryData,
   )
 where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Crypto (Crypto)
+import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import qualified Cardano.Ledger.Era as E (Era (Crypto))
-import qualified Cardano.Ledger.Mary.Value as V (Value)
+import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Keys (DSignable)
+import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API hiding (TxBody)
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState (minfee)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParamsUpdate)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
+import qualified Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.ShelleyMA
-import Cardano.Ledger.ShelleyMA.Rules.EraMapping ()
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed, scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
@@ -36,11 +47,15 @@ import Cardano.Ledger.Val (Val ((<->)), coin, inject)
 import Data.Default.Class (def)
 import qualified Data.Map.Strict as Map
 
-instance ShelleyEraCrypto c => ApplyTx (MaryEra c)
+instance
+  (CC.Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
+  ApplyTx (MaryEra crypto)
 
-instance ShelleyEraCrypto c => ApplyBlock (MaryEra c)
+instance
+  (CC.Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
+  ApplyBlock (MaryEra crypto)
 
-instance Crypto c => CanStartFromGenesis (MaryEra c) where
+instance CC.Crypto c => CanStartFromGenesis (MaryEra c) where
   initialState sg () =
     NewEpochState
       initialEpochNo
@@ -76,8 +91,6 @@ instance Crypto c => CanStartFromGenesis (MaryEra c) where
       genDelegs = sgGenDelegs sg
       pp = sgProtocolParams sg
 
-instance ShelleyEraCrypto c => ShelleyBasedEra (MaryEra c)
-
 instance CC.Crypto c => CLI (MaryEra c) where
   evaluateMinFee = minfee
 
@@ -85,7 +98,7 @@ instance CC.Crypto c => CLI (MaryEra c) where
 
   addKeyWitnesses = addShelleyKeyWitnesses
 
-  evaluateMinLovelaceOutput pp (TxOut _ v) = scaledMinDeposit v (_minUTxOValue pp)
+  evaluateMinLovelaceOutput pp (ShelleyTxOut _ v) = scaledMinDeposit v (_minUTxOValue pp)
 
 -- Self-Describing type synomyms
 
@@ -93,8 +106,16 @@ type MaryEra c = ShelleyMAEra 'Mary c
 
 type Self c = ShelleyMAEra 'Mary c
 
-type Script era = Timelock (E.Crypto era)
+{-# DEPRECATED Self "Use `MaryEra` instead" #-}
 
-type Value era = V.Value (E.Crypto era)
+type Script era = Timelock (Core.Crypto era)
 
-type PParamsDelta era = Shelley.PParamsUpdate era
+{-# DEPRECATED Script "Use `Timelock` instead" #-}
+
+type Value era = MaryValue (Core.Crypto era)
+
+{-# DEPRECATED Value "Use `MaryValue` instead" #-}
+
+type PParamsDelta era = ShelleyPParamsUpdate era
+
+{-# DEPRECATED PParamsDelta "Use `ShelleyPParamsUpdate` instead" #-}

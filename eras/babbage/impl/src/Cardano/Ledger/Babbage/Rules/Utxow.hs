@@ -7,16 +7,24 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.Rules.Utxow where
+module Cardano.Ledger.Babbage.Rules.Utxow
+  ( BabbageUTXOW,
+    BabbageUtxowPred (..),
+    babbageMissingScripts,
+    validateFailedBabbageScripts,
+    validateScriptsWellFormed,
+    babbageUtxowTransition,
+  )
+where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Crypto.DSIGN.Class (Signable)
 import Cardano.Crypto.Hash.Class (Hash)
 import Cardano.Ledger.Alonzo.PlutusScriptApi as Alonzo (scriptsNeeded)
-import Cardano.Ledger.Alonzo.Rules.Utxo as Alonzo (UtxoEvent)
-import Cardano.Ledger.Alonzo.Rules.Utxow
-  ( AlonzoEvent (WrappedShelleyEraEvent),
+import Cardano.Ledger.Alonzo.Rules
+  ( AlonzoUtxowEvent (WrappedShelleyEraEvent),
     UtxowPredicateFail (WrappedShelleyEraFailure),
     hasExactSetOfRedeemers,
     missingRequiredDatums,
@@ -24,30 +32,22 @@ import Cardano.Ledger.Alonzo.Rules.Utxow
     requiredSignersAreWitnessed,
     witsVKeyNeeded,
   )
-import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Rules as Alonzo (UtxoEvent)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
-import Cardano.Ledger.Alonzo.TxWitness (TxWitness (TxWitness'))
-import Cardano.Ledger.AuxiliaryData (ValidateAuxiliaryData)
-import Cardano.Ledger.Babbage.PParams (PParams' (..))
-import Cardano.Ledger.Babbage.Rules.Utxo
-  ( BabbageUTXO,
-    BabbageUtxoPred (..),
+import Cardano.Ledger.Babbage.Era (BabbageUTXOW)
+import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUTXO, BabbageUtxoPred (..))
+import Cardano.Ledger.Babbage.Tx (refScripts)
+import Cardano.Ledger.Babbage.TxBody
+  ( BabbageEraTxBody (..),
+    BabbageEraTxOut (..),
+    BabbageTxOut (..),
   )
-import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
-import Cardano.Ledger.Babbage.Scripts (refScripts)
-import Cardano.Ledger.Babbage.TxBody (TxOut, txOutScript)
-import Cardano.Ledger.BaseTypes
-  ( ProtVer,
-    ShelleyBase,
-    quorum,
-  )
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, quorum, strictMaybeToMaybe)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
-import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
-import Cardano.Ledger.Shelley.API (TxIn)
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), witsFromTxWitnesses)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
@@ -83,13 +83,15 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Records (HasField (..))
+import Lens.Micro
+import Lens.Micro.Extras (view)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
 import Validation (failureUnless)
 
 data BabbageUtxowPred era
   = FromAlonzoUtxowFail !(UtxowPredicateFail era)
   | -- | Embed UTXO rule failures
-    UtxoFailure !(PredicateFailure (Core.EraRule "UTXO" era))
+    UtxoFailure !(PredicateFailure (EraRule "UTXO" era))
   | -- | the set of malformed script witnesses
     MalformedScriptWitnesses
       !(Set (ScriptHash (Crypto era)))
@@ -100,22 +102,22 @@ data BabbageUtxowPred era
 deriving instance
   ( Era era,
     Show (UtxowPredicateFailure era),
-    Show (PredicateFailure (Core.EraRule "UTXO" era)),
-    Show (PredicateFailure (Core.EraRule "UTXOS" era)),
-    Show (Core.Script era),
-    Show (Core.TxOut era),
-    Show (Core.TxBody era),
-    Show (Core.Value era)
+    Show (PredicateFailure (EraRule "UTXO" era)),
+    Show (PredicateFailure (EraRule "UTXOS" era)),
+    Show (Script era),
+    Show (TxOut era),
+    Show (TxBody era),
+    Show (Value era)
   ) =>
   Show (BabbageUtxowPred era)
 
 deriving instance
   ( Era era,
     Eq (UtxowPredicateFailure era),
-    Eq (PredicateFailure (Core.EraRule "UTXO" era)),
-    Eq (PredicateFailure (Core.EraRule "UTXOS" era)),
-    Eq (Core.TxOut era),
-    Eq (Core.Script era)
+    Eq (PredicateFailure (EraRule "UTXO" era)),
+    Eq (PredicateFailure (EraRule "UTXOS" era)),
+    Eq (TxOut era),
+    Eq (Script era)
   ) =>
   Eq (BabbageUtxowPred era)
 
@@ -128,12 +130,12 @@ instance Inject (UtxowPredicateFailure era) (BabbageUtxowPred era) where
 instance
   ( Era era,
     Typeable era,
-    ToCBOR (Core.TxOut era),
-    ToCBOR (Core.Value era),
-    ToCBOR (PredicateFailure (Core.EraRule "UTXOS" era)),
-    ToCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
-    ToCBOR (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    ToCBOR (TxOut era),
+    ToCBOR (Value era),
+    ToCBOR (PredicateFailure (EraRule "UTXOS" era)),
+    ToCBOR (PredicateFailure (EraRule "UTXO" era)),
+    ToCBOR (Script era),
+    Typeable (AuxiliaryData era)
   ) =>
   ToCBOR (BabbageUtxowPred era)
   where
@@ -147,12 +149,12 @@ instance
 instance
   ( Era era,
     Typeable era,
-    FromCBOR (Core.TxOut era),
-    FromCBOR (Core.Value era),
-    FromCBOR (PredicateFailure (Core.EraRule "UTXOS" era)),
-    FromCBOR (PredicateFailure (Core.EraRule "UTXO" era)),
-    Typeable (Core.Script era),
-    Typeable (Core.AuxiliaryData era)
+    FromCBOR (TxOut era),
+    FromCBOR (Value era),
+    FromCBOR (PredicateFailure (EraRule "UTXOS" era)),
+    FromCBOR (PredicateFailure (EraRule "UTXO" era)),
+    Typeable (Script era),
+    Typeable (AuxiliaryData era)
   ) =>
   FromCBOR (BabbageUtxowPred era)
   where
@@ -179,7 +181,7 @@ deriving via
 {-  sReceived := Map.keysSet (getField @"scriptWits" tx)                                 -}
 babbageMissingScripts ::
   forall era.
-  Core.PParams era ->
+  PParams era ->
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
   Set (ScriptHash (Crypto era)) ->
@@ -197,11 +199,11 @@ babbageMissingScripts _ sNeeded sRefs sReceived =
 {-  ∀ s ∈ (txscripts txw utxo ∩ Scriptnative), validateScript s tx   -}
 validateFailedBabbageScripts ::
   forall era.
-  ( ValidateScript era,
+  ( EraTx era,
     ExtendedUTxO era,
-    Core.Script era ~ Script era
+    Script era ~ AlonzoScript era
   ) =>
-  Core.Tx era ->
+  Tx era ->
   UTxO era ->
   Set (ScriptHash (Crypto era)) ->
   Test (Shelley.UtxowPredicateFailure era)
@@ -226,14 +228,14 @@ validateFailedBabbageScripts tx utxo neededHashes =
 -}
 validateScriptsWellFormed ::
   forall era.
-  ( ValidateScript era,
-    HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (TxOut era)),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    Core.Script era ~ Script era,
-    Core.TxOut era ~ TxOut era
+  ( EraTx era,
+    BabbageEraTxBody era,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Script era ~ AlonzoScript era,
+    TxOut era ~ BabbageTxOut era
   ) =>
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   Test (BabbageUtxowPred era)
 validateScriptsWellFormed pp tx =
   sequenceA_
@@ -241,16 +243,16 @@ validateScriptsWellFormed pp tx =
       failureUnless (null invalidRefScripts) $ MalformedReferenceScripts invalidRefScriptHashes
     ]
   where
-    scriptWits = getField @"scriptWits" tx
+    scriptWits = tx ^. witsTxL . scriptWitsL
     invalidScriptWits = Map.filter (not . validScript (getField @"_protocolVersion" pp)) scriptWits
 
-    txb = getField @"body" tx
-    normalOuts = toList $ getField @"outputs" txb
-    returnOut = getField @"collateralReturn" txb
+    txBody = tx ^. bodyTxL
+    normalOuts = toList $ txBody ^. outputsTxBodyL
+    returnOut = txBody ^. collateralReturnTxBodyL
     outs = case returnOut of
       SNothing -> normalOuts
       SJust rOut -> rOut : normalOuts
-    rScripts = mapMaybe txOutScript outs
+    rScripts = mapMaybe (strictMaybeToMaybe . view referenceScriptTxOutL) outs
     invalidRefScripts = filter (not . validScript (getField @"_protocolVersion" pp)) rScripts
     invalidRefScriptHashes = Set.fromList $ map (hashScript @era) invalidRefScripts
 
@@ -259,26 +261,24 @@ validateScriptsWellFormed pp tx =
 -- The tests are very generic and reusable, but the transition
 -- function is very specific to the Babbage Era.
 
-data BabbageUTXOW era
-
 -- | A very specialized transitionRule function for the Babbage Era.
 babbageUtxowTransition ::
   forall era.
-  ( ValidateScript era,
-    ValidateAuxiliaryData era (Crypto era),
+  ( EraTx era,
     ExtendedUTxO era,
+    Tx era ~ AlonzoTx era,
+    Script era ~ AlonzoScript era,
+    TxOut era ~ BabbageTxOut era,
     STS (BabbageUTXOW era),
-    -- Fix some Core types to the Babbage Era
-    ConcreteBabbage era,
-    -- Crypto magic
+    BabbageEraTxBody era,
+    HasField "_costmdls" (PParams era) CostModels,
+    HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
     -- Allow UTXOW to call UTXO
-    Embed (Core.EraRule "UTXO" era) (BabbageUTXOW era),
-    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "referenceInputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
+    Embed (EraRule "UTXO" era) (BabbageUTXOW era),
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    State (EraRule "UTXO" era) ~ UTxOState era,
+    Signal (EraRule "UTXO" era) ~ AlonzoTx era
   ) =>
   TransitionRule (BabbageUTXOW era)
 babbageUtxowTransition = do
@@ -289,10 +289,10 @@ babbageUtxowTransition = do
   {-  txw := txwits tx  -}
   {-  witsKeyHashes := { hashKey vk | vk ∈ dom(txwitsVKey txw) }  -}
   let utxo = _utxo u
-      txbody = getField @"body" (tx :: Core.Tx era)
+      txBody = tx ^. bodyTxL
       witsKeyHashes = witsFromTxWitnesses @era tx
       hashScriptMap = txscripts utxo tx
-      inputs = getField @"referenceInputs" txbody `Set.union` getField @"inputs" txbody
+      inputs = (txBody ^. referenceInputsTxBodyL) `Set.union` (txBody ^. inputsTxBodyL)
 
   -- check scripts
   {- neededHashes := {h | ( , h) ∈ scriptsNeeded utxo txb} -}
@@ -301,17 +301,16 @@ babbageUtxowTransition = do
   {- ∀s ∈ (txscripts txw utxo neededHashes ) ∩ Scriptph1 , validateScript s tx -}
   runTest $ validateFailedBabbageScripts tx utxo sNeeded -- CHANGED In BABBAGE txscripts depends on UTxO
   {- neededHashes − dom(refScripts tx utxo) = dom(txwitscripts txw) -}
-  let sReceived = Map.keysSet $ case getField @"wits" tx of
-        (TxWitness' _ _ scs _ _) -> scs
+  let sReceived = Map.keysSet $ tx ^. witsTxL . scriptWitsL
       sRefs = Map.keysSet $ refScripts inputs utxo
   runTest $ babbageMissingScripts pp sNeeded sRefs sReceived
 
   {-  inputHashes ⊆  dom(txdats txw) ⊆  allowed -}
-  runTest $ missingRequiredDatums hashScriptMap utxo tx txbody
+  runTest $ missingRequiredDatums hashScriptMap utxo tx txBody
 
   {-  dom (txrdmrs tx) = { rdptr txb sp | (sp, h) ∈ scriptsNeeded utxo tx,
                            h ↦ s ∈ txscripts txw, s ∈ Scriptph2}     -}
-  runTest $ hasExactSetOfRedeemers utxo tx txbody
+  runTest $ hasExactSetOfRedeemers utxo tx txBody
 
   -- check VKey witnesses
   -- let txbodyHash = hashAnnotated @(Crypto era) txbody
@@ -325,7 +324,7 @@ babbageUtxowTransition = do
   {-  THIS DOES NOT APPPEAR IN THE SPEC as a separate check, but
       witsVKeyNeeded must include the reqSignerHashes in the union   -}
   {- reqSignerHashes txbody ⊆ witsKeyHashes -}
-  runTestOnSignal $ requiredSignersAreWitnessed txbody witsKeyHashes
+  runTestOnSignal $ requiredSignersAreWitnessed txBody witsKeyHashes
 
   -- check genesis keys signatures for instantaneous rewards certificates
   {-  genSig := { hashKey gkey | gkey ∈ dom(genDelegs)} ∩ witsKeyHashes  -}
@@ -353,49 +352,54 @@ babbageUtxowTransition = do
   -- which appears in the spec, seems broken since costmdls is a projection of PPrams, not Tx
 
   {-  scriptIntegrityHash txb = hashScriptIntegrity pp (languages txw) (txrdmrs txw)  -}
-  runTest $ ppViewHashesMatch tx txbody pp utxo sNeeded
+  runTest $ ppViewHashesMatch tx txBody pp utxo sNeeded
 
-  trans @(Core.EraRule "UTXO" era) $
+  trans @(EraRule "UTXO" era) $
     TRC (UtxoEnv slot pp stakepools genDelegs, u, tx)
 
 -- ================================
 
 instance
   forall era.
-  ( ValidateScript era,
-    ValidateAuxiliaryData era (Crypto era),
-    ExtendedUTxO era,
+  ( ExtendedUTxO era,
+    EraTx era,
+    BabbageEraTxBody era,
+    TxOut era ~ BabbageTxOut era,
+    HasField "_costmdls" (PParams era) CostModels,
+    HasField "_protocolVersion" (PParams era) ProtVer,
     Signable (DSIGN (Crypto era)) (Hash (HASH (Crypto era)) EraIndependentTxBody),
+    Show (TxBody era),
+    Show (TxOut era),
     -- Fix some Core types to the Babbage Era
-    Core.Tx era ~ ValidatedTx era,
-    ConcreteBabbage era,
+    Tx era ~ AlonzoTx era,
+    Script era ~ AlonzoScript era,
     -- Allow UTXOW to call UTXO
-    Embed (Core.EraRule "UTXO" era) (BabbageUTXOW era),
-    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXO" era) ~ ValidatedTx era,
-    Eq (PredicateFailure (Core.EraRule "UTXOS" era)),
-    Show (PredicateFailure (Core.EraRule "UTXOS" era))
+    Embed (EraRule "UTXO" era) (BabbageUTXOW era),
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    State (EraRule "UTXO" era) ~ UTxOState era,
+    Signal (EraRule "UTXO" era) ~ AlonzoTx era,
+    Eq (PredicateFailure (EraRule "UTXOS" era)),
+    Show (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (BabbageUTXOW era)
   where
   type State (BabbageUTXOW era) = UTxOState era
-  type Signal (BabbageUTXOW era) = ValidatedTx era
+  type Signal (BabbageUTXOW era) = AlonzoTx era
   type Environment (BabbageUTXOW era) = UtxoEnv era
   type BaseM (BabbageUTXOW era) = ShelleyBase
   type PredicateFailure (BabbageUTXOW era) = BabbageUtxowPred era
-  type Event (BabbageUTXOW era) = AlonzoEvent era
+  type Event (BabbageUTXOW era) = AlonzoUtxowEvent era
   transitionRules = [babbageUtxowTransition]
   initialRules = []
 
 instance
   ( Era era,
     STS (BabbageUTXO era),
-    PredicateFailure (Core.EraRule "UTXO" era) ~ BabbageUtxoPred era,
-    Event (Core.EraRule "UTXO" era) ~ Alonzo.UtxoEvent era,
+    PredicateFailure (EraRule "UTXO" era) ~ BabbageUtxoPred era,
+    Event (EraRule "UTXO" era) ~ Alonzo.UtxoEvent era,
     BaseM (BabbageUTXOW era) ~ ShelleyBase,
     PredicateFailure (BabbageUTXOW era) ~ BabbageUtxowPred era,
-    Event (BabbageUTXOW era) ~ AlonzoEvent era
+    Event (BabbageUTXOW era) ~ AlonzoUtxowEvent era
   ) =>
   Embed (BabbageUTXO era) (BabbageUTXOW era)
   where

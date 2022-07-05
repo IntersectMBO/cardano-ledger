@@ -6,18 +6,18 @@
 
 module Test.Cardano.Ledger.Mary.Examples.Consensus where
 
-import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Translation ()
 import Cardano.Ledger.Mary.Value
+import Cardano.Ledger.ShelleyMA.TxBody (MATxBody)
 import qualified Data.Map.Strict as Map (singleton)
 import Data.Proxy
 import Test.Cardano.Ledger.Allegra.Examples.Consensus
 import Test.Cardano.Ledger.Shelley.Examples.Consensus
 import Test.Cardano.Ledger.Shelley.Orphans ()
 
-type StandardMary = MaryEra StandardCrypto
+type StandardMary = MaryEra CC.StandardCrypto
 
 -- | ShelleyLedgerExamples for Allegra era
 ledgerExamplesMary :: ShelleyLedgerExamples StandardMary
@@ -32,11 +32,11 @@ ledgerExamplesMary =
 
 exampleMultiAssetValue ::
   forall c.
-  Cardano.Ledger.Crypto.Crypto c =>
+  CC.Crypto c =>
   Int ->
-  Cardano.Ledger.Mary.Value.Value c
+  MaryValue c
 exampleMultiAssetValue x =
-  Value 100 $ Map.singleton policyId $ Map.singleton couttsCoin 1000
+  MaryValue 100 $ Map.singleton policyId $ Map.singleton couttsCoin 1000
   where
     policyId :: PolicyID c
     policyId = PolicyID $ mkScriptHash x
@@ -44,5 +44,5 @@ exampleMultiAssetValue x =
     couttsCoin :: AssetName
     couttsCoin = AssetName "couttsCoin"
 
-exampleTxBodyMary :: Cardano.Ledger.Core.TxBody StandardMary
+exampleTxBodyMary :: MATxBody StandardMary
 exampleTxBodyMary = exampleTxBodyMA (exampleMultiAssetValue 1)

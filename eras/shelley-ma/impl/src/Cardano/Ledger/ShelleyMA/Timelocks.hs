@@ -11,9 +11,9 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock
@@ -28,7 +28,6 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     inInterval,
     showTimelock,
     evalTimelock,
-    validateTimelock,
     ValidityInterval (..),
     encodeVI,
     decodeVI,
@@ -43,15 +42,13 @@ import Cardano.Binary
     ToCBOR (toCBOR),
   )
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (Crypto))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Serialization (decodeStrictSeq, encodeFoldable)
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
-import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes)
+import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes, nativeMultiSigTag)
+import Cardano.Ledger.ShelleyMA.Era (MAClass, ShelleyMAEra)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))
@@ -75,10 +72,8 @@ import Data.MemoBytes
   )
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, member)
-import qualified Data.Set as Set
 import Data.Typeable
 import GHC.Generics (Generic)
-import GHC.Records
 import NoThunks.Class (NoThunks (..))
 
 -- =================================================================
@@ -93,12 +88,12 @@ translate multi =
    in case deserialiseFromBytes fromCBOR bytes of
         Left err -> error ("Translating MultiSig script to Timelock script fails\n" ++ show err)
         Right (left, Annotator f) | left == Lazy.empty -> f (Full bytes)
-        Right (left, _) -> error ("Translating MultiSig script to Timelock script does not consume all they bytes: " ++ show left)
+        Right (left, _) -> error ("Translating MultiSig script to Timelock script does not consume all the bytes: " ++ show left)
 
 -- ================================================================
--- An pair of optional SlotNo.
+-- A pair of optional SlotNo.
 
--- | ValidityInterval is a half open interval. Closed on the bottom, Open on the top.
+-- | ValidityInterval is a half open interval. Closed on the bottom, open on the top.
 --   A SNothing on the bottom is negative infinity, and a SNothing on the top is positive infinity
 data ValidityInterval = ValidityInterval
   { invalidBefore :: !(StrictMaybe SlotNo),
@@ -166,6 +161,13 @@ instance CC.Crypto crypto => FromCBOR (Annotator (TimelockRaw crypto)) where
 newtype Timelock crypto = TimelockConstr (MemoBytes (TimelockRaw crypto))
   deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
+
+-- | Since Timelock scripts are a strictly backwards compatible extension of
+-- Multisig scripts, we can use the same 'scriptPrefixTag' tag here as we did
+-- for the ValidateScript instance in Multisig
+instance MAClass ma crypto => EraScript (ShelleyMAEra ma crypto) where
+  type Script (ShelleyMAEra ma crypto) = Timelock crypto
+  scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
 
 deriving via
   Mem (TimelockRaw crypto)
@@ -258,35 +260,6 @@ inInterval slot (ValidityInterval SNothing (SJust top)) = slot < top
 inInterval slot (ValidityInterval (SJust bottom) SNothing) = bottom <= slot
 inInterval slot (ValidityInterval (SJust bottom) (SJust top)) =
   bottom <= slot && slot < top
-
--- =======================================================
--- Validating timelock scripts
--- We Assume that TxBody has field "vldt" that extracts a ValidityInterval
--- We still need to correctly compute the witness set for Core.TxBody as well.
-
-evalFPS ::
-  forall era.
-  ( Era era,
-    HasField "vldt" (Core.TxBody era) ValidityInterval
-  ) =>
-  Timelock (Crypto era) ->
-  Set (KeyHash 'Witness (Crypto era)) ->
-  Core.TxBody era ->
-  Bool
-evalFPS timelock vhks txb = evalTimelock vhks (getField @"vldt" txb) timelock
-
-validateTimelock ::
-  forall era.
-  ( UsesTxBody era,
-    HasField "vldt" (Core.TxBody era) ValidityInterval,
-    HasField "addrWits" (Core.Tx era) (Set (WitVKey 'Witness (Crypto era)))
-  ) =>
-  Timelock (Crypto era) ->
-  Core.Tx era ->
-  Bool
-validateTimelock lock tx = evalFPS @era lock vhks (getField @"body" tx)
-  where
-    vhks = Set.map witVKeyHash (getField @"addrWits" tx)
 
 showTimelock :: CC.Crypto crypto => Timelock crypto -> String
 showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"

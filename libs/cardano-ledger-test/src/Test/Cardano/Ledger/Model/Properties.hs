@@ -133,7 +133,6 @@ modelTestDelegations ::
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
     Show (Core.TxOut era),
-    Show (Core.Script era),
     Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
     Show (LedgerState.LedgerState era),
@@ -424,10 +423,10 @@ instance FFoldable ModelStats where ffoldMap = ffoldMapDefault
 
 instance FTraversable ModelStats where ftraverse = gftraverse
 
-mstats :: forall era. ModelStats ((->) [ModelEpoch era])
+mstats :: forall era. (Typeable era, Typeable (ValueFeature era)) => ModelStats ((->) [ModelEpoch era])
 mstats =
   ModelStats
-    { _numberOfEpochs = lengthOf (traverse),
+    { _numberOfEpochs = lengthOf traverse,
       _numberOfTransactions = lengthOf (traverse . modelTxs),
       _numberOfCerts = lengthOf (traverse . modelDCerts),
       _blocksMade = sumOf (traverse . modelEpoch_blocksMade . _ModelBlocksMade . traverse),
@@ -480,7 +479,10 @@ mstatsCover =
       _numberOfMintBurns = Const (alonzoFeatureTag, 0, "number of mint burns") :*: Predicate (> 0)
     }
 
-collectModelUTxOs :: [ModelEpoch era] -> ModelUTxOMap era
+collectModelUTxOs ::
+  (Typeable era, Typeable (ValueFeature era)) =>
+  [ModelEpoch era] ->
+  ModelUTxOMap era
 collectModelUTxOs epochs =
   fold $
     [ set (at ui) (Just txo) mempty
@@ -511,6 +513,7 @@ propModelStats proxy epochs =
             tellProperty $ cover pct (threshhold $ f epochs) tag
 
 examineModel ::
+  (Typeable era, Typeable (ValueFeature era)) =>
   [ModelEpoch era] ->
   ModelStats ((,) Bool)
 examineModel epochs = fzipWith (\f (_ :*: Predicate p) -> let x = f epochs in (p x, x)) mstats mstatsCover
@@ -522,7 +525,6 @@ modelGenTest ::
     Show (LedgerState.LedgerState era),
     Show (Core.Tx era),
     Show (Core.TxOut era),
-    Show (Core.Script era),
     Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
     Show (StashedAVVMAddresses era)
@@ -547,7 +549,6 @@ testModelShrinking ::
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
     Show (Core.TxOut era),
-    Show (Core.Script era),
     Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
     Show (LedgerState.LedgerState era),
@@ -610,7 +611,6 @@ propertyShrinking ::
   ( Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
     Show (Core.TxOut era),
-    Show (Core.Script era),
     Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
     Show (LedgerState.LedgerState era),
@@ -659,7 +659,6 @@ testDelegCombinations ::
     Show (LedgerState.LedgerState era),
     Show (Core.Tx era),
     Show (Core.TxOut era),
-    Show (Core.Script era),
     Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
     Show (StashedAVVMAddresses era)
@@ -687,12 +686,9 @@ modelUnitTests ::
     Eq (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (LedgerState.NewEpochState era),
-    Show (Core.Tx era),
-    Show (Core.TxOut era),
-    Show (Core.Script era),
-    Show (Core.PParams era),
     Show (State (Core.EraRule "PPUP" era)),
-    Show (StashedAVVMAddresses era)
+    Show (StashedAVVMAddresses era),
+    Core.EraTx era
   ) =>
   proxy era ->
   TestTree

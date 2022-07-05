@@ -10,14 +10,12 @@
 
 module Cardano.Ledger.Alonzo.Translation where
 
-import Cardano.Binary
-  ( DecoderError,
-  )
+import Cardano.Binary (DecoderError)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..), extendPPWithGenesis)
-import Cardano.Ledger.Alonzo.PParams (PParams, PParamsUpdate, extendPP)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsUpdate, extendPP)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era
@@ -58,10 +56,7 @@ type instance PreviousEra (AlonzoEra c) = MaryEra c
 
 type instance TranslationContext (AlonzoEra c) = AlonzoGenesis
 
-instance
-  (Crypto c) =>
-  TranslateEra (AlonzoEra c) NewEpochState
-  where
+instance Crypto c => TranslateEra (AlonzoEra c) NewEpochState where
   translateEra ctxt nes =
     return $
       NewEpochState
@@ -99,7 +94,7 @@ newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
   ( Crypto c,
-    Core.Tx (AlonzoEra c) ~ ValidatedTx (AlonzoEra c)
+    Core.Tx (AlonzoEra c) ~ AlonzoTx (AlonzoEra c)
   ) =>
   TranslateEra (AlonzoEra c) Tx
   where
@@ -115,13 +110,13 @@ instance
       SNothing -> pure SNothing
       SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
     let validating = IsValid True
-    pure $ Tx $ ValidatedTx bdy txwits validating aux
+    pure $ Tx $ AlonzoTx bdy txwits validating aux
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (AlonzoEra c) (API.PParams' f)
+instance (Crypto c, Functor f) => TranslateEra (AlonzoEra c) (API.ShelleyPParamsHKD f)
 
 instance Crypto c => TranslateEra (AlonzoEra c) EpochState where
   translateEra ctxt es =
@@ -182,10 +177,10 @@ translateTxOut (Shelley.TxOutCompact addr value) = TxOutCompact addr value
 -- (PParamsUpdate era) = (PParams' StrictMaybe era)
 
 translatePParams ::
-  AlonzoGenesis -> Shelley.PParams (MaryEra c) -> PParams (AlonzoEra c)
+  AlonzoGenesis -> Shelley.ShelleyPParams (MaryEra c) -> AlonzoPParams (AlonzoEra c)
 translatePParams = flip extendPPWithGenesis
 
 translatePParamsUpdate ::
-  Shelley.PParamsUpdate (MaryEra c) -> PParamsUpdate (AlonzoEra c)
+  Shelley.ShelleyPParamsUpdate (MaryEra c) -> AlonzoPParamsUpdate (AlonzoEra c)
 translatePParamsUpdate pp =
   extendPP pp SNothing SNothing SNothing SNothing SNothing SNothing SNothing SNothing

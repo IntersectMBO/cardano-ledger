@@ -1,11 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 
@@ -14,23 +11,29 @@
 module Test.Cardano.Ledger.Generic.Functions where
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.Data (DataHash, binaryDataToData, hashData)
+import Cardano.Ledger.Alonzo.Data (binaryDataToData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (PParams, PParams' (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParams, AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeededFromBody)
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), minfee)
-import Cardano.Ledger.Alonzo.TxBody (TxOut (..), collateral')
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), minfee)
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..), collateral')
 import Cardano.Ledger.Alonzo.TxInfo (languages)
-import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams, PParams' (..))
-import Cardano.Ledger.Babbage.Scripts (refScripts)
-import Cardano.Ledger.Babbage.TxBody as Babbage (collateralInputs', collateralReturn', referenceInputs', spendInputs')
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage (Datum (..), TxOut (..))
+import Cardano.Ledger.Babbage.PParams (BabbagePParams)
+import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.Tx (refScripts)
+import Cardano.Ledger.Babbage.TxBody
+  ( BabbageTxOut (..),
+    Datum (..),
+    collateralInputs',
+    collateralReturn',
+    referenceInputs',
+    spendInputs',
+  )
 import Cardano.Ledger.BaseTypes (BlocksMade (BlocksMade), Globals (epochInfo), ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential, StakeReference (..))
-import Cardano.Ledger.Era (Era (Crypto, getAllTxInputs))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots (..), totalAdaPotsES)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
@@ -44,11 +47,16 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
   )
 import qualified Cardano.Ledger.Shelley.LedgerState as Shelley (minfee)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams, PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rewards (Reward, aggregateRewards)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
-import Cardano.Ledger.Shelley.TxBody (DCert (..), DelegCert (..), PoolCert (..), PoolParams (..))
-import qualified Cardano.Ledger.Shelley.TxBody as Shelley (TxOut (..))
+import Cardano.Ledger.Shelley.TxBody
+  ( DCert (..),
+    DelegCert (..),
+    PoolCert (..),
+    PoolParams (..),
+    ShelleyEraTxBody (..),
+    ShelleyTxOut (..),
+  )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance, scriptsNeeded, totalDeposits)
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -67,6 +75,7 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UMap
 import GHC.Records (HasField (getField))
+import Lens.Micro
 import Numeric.Natural
 import Test.Cardano.Ledger.Alonzo.Scripts (alwaysFails, alwaysSucceeds)
 import Test.Cardano.Ledger.Generic.Fields (TxField (..), TxOutField (..), initialTx)
@@ -78,20 +87,20 @@ import Test.Cardano.Ledger.Shelley.Rewards (RewardUpdateOld, createRUpdOld_)
 import Test.Cardano.Ledger.Shelley.Utils (testGlobals)
 
 -- ====================================================================
--- Era agnostic actions on (Core.PParams era) (Core.TxOut era) and
--- other Core.XX types Mostly by pattern matching against Proof objects
+-- Era agnostic actions on (PParams era) (TxOut era) and
+-- other XX types Mostly by pattern matching against Proof objects
 
-maxCollateralInputs' :: Proof era -> Core.PParams era -> Natural
+maxCollateralInputs' :: Proof era -> PParams era -> Natural
 maxCollateralInputs' (Alonzo _) x = _maxCollateralInputs x
 maxCollateralInputs' (Babbage _) x = Babbage._maxCollateralInputs x
 maxCollateralInputs' _proof _x = 0
 
-maxTxExUnits' :: Proof era -> Core.PParams era -> ExUnits
+maxTxExUnits' :: Proof era -> PParams era -> ExUnits
 maxTxExUnits' (Alonzo _) x = _maxTxExUnits x
 maxTxExUnits' (Babbage _) x = Babbage._maxTxExUnits x
 maxTxExUnits' _proof _x = mempty
 
-collateralPercentage' :: Proof era -> Core.PParams era -> Natural
+collateralPercentage' :: Proof era -> PParams era -> Natural
 collateralPercentage' (Alonzo _) x = _collateralPercentage x
 collateralPercentage' (Babbage _) x = Babbage._collateralPercentage x
 collateralPercentage' _proof _x = 0
@@ -103,7 +112,7 @@ protocolVersion (Mary _) = ProtVer 4 0
 protocolVersion (Allegra _) = ProtVer 3 0
 protocolVersion (Shelley _) = ProtVer 2 0
 
-ppProtocolVersion :: Proof era -> Core.PParams era -> ProtVer
+ppProtocolVersion :: Proof era -> PParams era -> ProtVer
 ppProtocolVersion (Babbage _) pp = getField @"_protocolVersion" pp
 ppProtocolVersion (Alonzo _) pp = getField @"_protocolVersion" pp
 ppProtocolVersion (Mary _) pp = getField @"_protocolVersion" pp
@@ -113,7 +122,7 @@ ppProtocolVersion (Shelley _) pp = getField @"_protocolVersion" pp
 aggregateRewards' ::
   forall era.
   Proof era ->
-  Core.PParams era ->
+  PParams era ->
   Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
   Map (Credential 'Staking (Crypto era)) Coin
 aggregateRewards' (Babbage _) = aggregateRewards
@@ -126,20 +135,20 @@ obligation' ::
   forall era c.
   (c ~ Crypto era) =>
   Proof era ->
-  Core.PParams era ->
+  PParams era ->
   Map (Credential 'Staking c) Coin ->
   Map (KeyHash 'StakePool c) (PoolParams c) ->
   Coin
-obligation' (Babbage _) = obligation @c @(Babbage.PParams era) @Map
-obligation' (Alonzo _) = obligation @c @(PParams era) @Map
-obligation' (Mary _) = obligation @c @(Shelley.PParams era) @Map
-obligation' (Allegra _) = obligation @c @(Shelley.PParams era) @Map
-obligation' (Shelley _) = obligation @c @(Shelley.PParams era) @Map
+obligation' (Babbage _) = obligation @c @(BabbagePParams era) @Map
+obligation' (Alonzo _) = obligation @c @(AlonzoPParams era) @Map
+obligation' (Mary _) = obligation @c @(ShelleyPParams era) @Map
+obligation' (Allegra _) = obligation @c @(ShelleyPParams era) @Map
+obligation' (Shelley _) = obligation @c @(ShelleyPParams era) @Map
 
 totalDeposits' ::
   forall era.
   Proof era ->
-  Core.PParams era ->
+  PParams era ->
   (KeyHash 'StakePool (Crypto era) -> Bool) ->
   [DCert (Crypto era)] ->
   Coin
@@ -150,7 +159,7 @@ totalDeposits' (Allegra _) pp = totalDeposits pp
 totalDeposits' (Shelley _) pp = totalDeposits pp
 
 -- | Positive numbers are "deposits owed", negative amounts are "refunds gained"
-depositsAndRefunds :: Proof era -> Core.PParams era -> [DCert (Crypto era)] -> Coin
+depositsAndRefunds :: Proof era -> PParams era -> [DCert (Crypto era)] -> Coin
 depositsAndRefunds proof pp certificates = List.foldl' accum (Coin 0) certificates
   where
     accum ans (DCertDeleg (RegKey _)) = keydep <+> ans
@@ -160,14 +169,14 @@ depositsAndRefunds proof pp certificates = List.foldl' accum (Coin 0) certificat
     accum ans _ = ans
     (keydep, pooldep :: Coin) = keyPoolDeposits proof pp
 
-epochMax :: Proof era -> Core.PParams era -> EpochNo
+epochMax :: Proof era -> PParams era -> EpochNo
 epochMax (Babbage _) = getField @"_eMax"
 epochMax (Alonzo _) = getField @"_eMax"
 epochMax (Mary _) = getField @"_eMax"
 epochMax (Allegra _) = getField @"_eMax"
 epochMax (Shelley _) = getField @"_eMax"
 
-keyPoolDeposits :: Proof era -> Core.PParams era -> (Coin, Coin)
+keyPoolDeposits :: Proof era -> PParams era -> (Coin, Coin)
 keyPoolDeposits proof pp = case proof of
   Babbage _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
   Alonzo _ -> (getField @"_keyDeposit" pp, getField @"_poolDeposit" pp)
@@ -177,7 +186,7 @@ keyPoolDeposits proof pp = case proof of
 
 -- | Compute the set of ScriptHashes for which there should be ScriptWitnesses. In Babbage
 --  Era and later, where inline Scripts are allowed, they should not appear in this set.
-scriptWitsNeeded' :: Proof era -> MUtxo era -> Core.TxBody era -> Set (ScriptHash (Crypto era))
+scriptWitsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (Crypto era))
 scriptWitsNeeded' (Babbage _) utxo txbody = regularScripts `Set.difference` inlineScripts
   where
     theUtxo = UTxO utxo
@@ -189,14 +198,14 @@ scriptWitsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p
 scriptWitsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 scriptWitsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 
-scriptsNeeded' :: Proof era -> MUtxo era -> Core.TxBody era -> Set (ScriptHash (Crypto era))
+scriptsNeeded' :: Proof era -> MUtxo era -> TxBody era -> Set (ScriptHash (Crypto era))
 scriptsNeeded' (Babbage _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' (Alonzo _) utxo txbody = Set.fromList (map snd (scriptsNeededFromBody (UTxO utxo) txbody))
 scriptsNeeded' p@(Mary _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 scriptsNeeded' p@(Allegra _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 scriptsNeeded' p@(Shelley _) utxo txbody = scriptsNeeded (UTxO utxo) (updateTx p (initialTx p) (Body txbody))
 
-minfee' :: forall era. Proof era -> Core.PParams era -> Core.Tx era -> Coin
+minfee' :: forall era. Proof era -> PParams era -> Tx era -> Coin
 minfee' (Alonzo _) = minfee
 minfee' (Babbage _) = minfee
 minfee' (Mary _) = Shelley.minfee
@@ -205,46 +214,28 @@ minfee' (Shelley _) = Shelley.minfee
 
 txInBalance ::
   forall era.
-  Era era =>
+  EraTxOut era =>
   Set (TxIn (Crypto era)) ->
   MUtxo era ->
   Coin
 txInBalance txinSet m = coin (balance (UTxO (restrictKeys m txinSet)))
 
 -- | Break a TxOut into its mandatory and optional parts
-txoutFields :: Proof era -> Core.TxOut era -> (Addr (Crypto era), Core.Value era, [TxOutField era])
-txoutFields (Alonzo _) (TxOut addr val dh) = (addr, val, [DHash dh])
-txoutFields (Babbage _) (Babbage.TxOut addr val d h) = (addr, val, [Datum d, RefScript h])
-txoutFields (Mary _) (Shelley.TxOut addr val) = (addr, val, [])
-txoutFields (Allegra _) (Shelley.TxOut addr val) = (addr, val, [])
-txoutFields (Shelley _) (Shelley.TxOut addr val) = (addr, val, [])
+txoutFields :: Proof era -> TxOut era -> (Addr (Crypto era), Value era, [TxOutField era])
+txoutFields (Alonzo _) (AlonzoTxOut addr val dh) = (addr, val, [DHash dh])
+txoutFields (Babbage _) (BabbageTxOut addr val d h) = (addr, val, [FDatum d, RefScript h])
+txoutFields (Mary _) (ShelleyTxOut addr val) = (addr, val, [])
+txoutFields (Allegra _) (ShelleyTxOut addr val) = (addr, val, [])
+txoutFields (Shelley _) (ShelleyTxOut addr val) = (addr, val, [])
 
-injectFee :: Proof era -> Coin -> Core.TxOut era -> Core.TxOut era
-injectFee (Babbage _) fee (Babbage.TxOut addr val d ref) = Babbage.TxOut addr (val <+> inject fee) d ref
-injectFee (Alonzo _) fee (TxOut addr val mdh) = TxOut addr (val <+> inject fee) mdh
-injectFee (Mary _) fee (Shelley.TxOut addr val) = Shelley.TxOut addr (val <+> inject fee)
-injectFee (Allegra _) fee (Shelley.TxOut addr val) = Shelley.TxOut addr (val <+> inject fee)
-injectFee (Shelley _) fee (Shelley.TxOut addr val) = Shelley.TxOut addr (val <+> inject fee)
+injectFee :: EraTxOut era => Proof era -> Coin -> TxOut era -> TxOut era
+injectFee _ fee txOut = txOut & valueTxOutL %~ (<+> inject fee)
 
-getTxOutVal :: Proof era -> Core.TxOut era -> Core.Value era
-getTxOutVal (Babbage _) (Babbage.TxOut _ v _ _) = v
-getTxOutVal (Alonzo _) (TxOut _ v _) = v
-getTxOutVal (Mary _) (Shelley.TxOut _ v) = v
-getTxOutVal (Allegra _) (Shelley.TxOut _ v) = v
-getTxOutVal (Shelley _) (Shelley.TxOut _ v) = v
-
-getTxOutCoin :: Proof era -> Core.TxOut era -> Coin
-getTxOutCoin (Babbage _) (Babbage.TxOut _ v _ _) = coin v
-getTxOutCoin (Alonzo _) (TxOut _ v _) = coin v
-getTxOutCoin (Mary _) (Shelley.TxOut _ v) = coin v
-getTxOutCoin (Allegra _) (Shelley.TxOut _ v) = coin v
-getTxOutCoin (Shelley _) (Shelley.TxOut _ v) = coin v
-
-getTxOutRefScript :: Proof era -> Core.TxOut era -> StrictMaybe (Core.Script era)
-getTxOutRefScript (Babbage _) (Babbage.TxOut _ _ _ ms) = ms
+getTxOutRefScript :: Proof era -> TxOut era -> StrictMaybe (Script era)
+getTxOutRefScript (Babbage _) (BabbageTxOut _ _ _ ms) = ms
 getTxOutRefScript _ _ = SNothing
 
-emptyPPUPstate :: forall era. Proof era -> State (Core.EraRule "PPUP" era)
+emptyPPUPstate :: forall era. Proof era -> State (EraRule "PPUP" era)
 emptyPPUPstate (Babbage _) = def
 emptyPPUPstate (Alonzo _) = def
 emptyPPUPstate (Mary _) = def
@@ -255,7 +246,7 @@ maxRefInputs :: Proof era -> Int
 maxRefInputs (Babbage _) = 3
 maxRefInputs _ = 0
 
-isValid' :: Proof era -> Core.Tx era -> IsValid
+isValid' :: Proof era -> Tx era -> IsValid
 isValid' (Alonzo _) x = isValid x
 isValid' (Babbage _) x = isValid x
 isValid' _ _ = IsValid True
@@ -266,23 +257,23 @@ isValid' _ _ = IsValid True
 txoutEvidence ::
   forall era.
   Proof era ->
-  Core.TxOut era ->
+  TxOut era ->
   ([Credential 'Payment (Crypto era)], Maybe (DataHash (Crypto era)))
-txoutEvidence (Alonzo _) (TxOut addr _ (SJust dh)) =
+txoutEvidence (Alonzo _) (AlonzoTxOut addr _ (SJust dh)) =
   (addrCredentials addr, Just dh)
-txoutEvidence (Alonzo _) (TxOut addr _ SNothing) =
+txoutEvidence (Alonzo _) (AlonzoTxOut addr _ SNothing) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Babbage _) (Babbage.TxOut addr _ Babbage.NoDatum _) =
+txoutEvidence (Babbage _) (BabbageTxOut addr _ NoDatum _) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Babbage _) (Babbage.TxOut addr _ (Babbage.DatumHash dh) _) =
+txoutEvidence (Babbage _) (BabbageTxOut addr _ (DatumHash dh) _) =
   (addrCredentials addr, Just dh)
-txoutEvidence (Babbage _) (Babbage.TxOut addr _ (Babbage.Datum _d) _) =
+txoutEvidence (Babbage _) (BabbageTxOut addr _ (Datum _d) _) =
   (addrCredentials addr, Just (hashData @era (binaryDataToData _d)))
-txoutEvidence (Mary _) (Shelley.TxOut addr _) =
+txoutEvidence (Mary _) (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Allegra _) (Shelley.TxOut addr _) =
+txoutEvidence (Allegra _) (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
-txoutEvidence (Shelley _) (Shelley.TxOut addr _) =
+txoutEvidence (Shelley _) (ShelleyTxOut addr _) =
   (addrCredentials addr, Nothing)
 
 addrCredentials :: Addr crypto -> [Credential 'Payment crypto]
@@ -296,68 +287,44 @@ stakeCredAddr :: Addr c -> Maybe (Credential 'Staking c)
 stakeCredAddr (Addr _ _ (StakeRefBase cred)) = Just cred
 stakeCredAddr _ = Nothing
 
-getBody :: Proof era -> Core.Tx era -> Core.TxBody era
-getBody (Babbage _) tx = getField @"body" tx
-getBody (Alonzo _) tx = getField @"body" tx
-getBody (Mary _) tx = getField @"body" tx
-getBody (Allegra _) tx = getField @"body" tx
-getBody (Shelley _) tx = getField @"body" tx
+getBody :: EraTx era => Proof era -> Tx era -> TxBody era
+getBody _ tx = tx ^. bodyTxL
 
-getCollateralInputs :: Proof era -> Core.TxBody era -> Set (TxIn (Crypto era))
+getCollateralInputs :: Proof era -> TxBody era -> Set (TxIn (Crypto era))
 getCollateralInputs (Babbage _) tx = collateralInputs' tx
 getCollateralInputs (Alonzo _) tx = collateral' tx
 getCollateralInputs (Mary _) _ = Set.empty
 getCollateralInputs (Allegra _) _ = Set.empty
 getCollateralInputs (Shelley _) _ = Set.empty
 
-getCollateralOutputs :: Proof era -> Core.TxBody era -> [Core.TxOut era]
+getCollateralOutputs :: Proof era -> TxBody era -> [TxOut era]
 getCollateralOutputs (Babbage _) tx = case collateralReturn' tx of SNothing -> []; SJust x -> [x]
 getCollateralOutputs (Alonzo _) _ = []
 getCollateralOutputs (Mary _) _ = []
 getCollateralOutputs (Allegra _) _ = []
 getCollateralOutputs (Shelley _) _ = []
 
-getInputs :: Proof era -> Core.TxBody era -> Set (TxIn (Crypto era))
-getInputs (Babbage _) tx = getField @"inputs" tx
-getInputs (Alonzo _) tx = getField @"inputs" tx
-getInputs (Mary _) tx = getField @"inputs" tx
-getInputs (Allegra _) tx = getField @"inputs" tx
-getInputs (Shelley _) tx = getField @"inputs" tx
+getInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (Crypto era))
+getInputs _ tx = tx ^. inputsTxBodyL
 
-getOutputs :: Proof era -> Core.TxBody era -> StrictSeq (Core.TxOut era)
-getOutputs (Babbage _) tx = getField @"outputs" tx
-getOutputs (Alonzo _) tx = getField @"outputs" tx
-getOutputs (Mary _) tx = getField @"outputs" tx
-getOutputs (Allegra _) tx = getField @"outputs" tx
-getOutputs (Shelley _) tx = getField @"outputs" tx
+getOutputs :: EraTxBody era => Proof era -> TxBody era -> StrictSeq (TxOut era)
+getOutputs _ tx = tx ^. outputsTxBodyL
 
-getScriptWits :: Proof era -> Core.Witnesses era -> Map (ScriptHash (Crypto era)) (Core.Script era)
-getScriptWits (Babbage _) tx = getField @"scriptWits" tx
-getScriptWits (Alonzo _) tx = getField @"scriptWits" tx
-getScriptWits (Mary _) tx = getField @"scriptWits" tx
-getScriptWits (Allegra _) tx = getField @"scriptWits" tx
-getScriptWits (Shelley _) tx = getField @"scriptWits" tx
+getScriptWits :: EraWitnesses era => Proof era -> Witnesses era -> Map (ScriptHash (Crypto era)) (Script era)
+getScriptWits _ tx = tx ^. scriptWitsL
 
-allInputs :: Proof era -> Core.TxBody era -> Set (TxIn (Crypto era))
-allInputs (Babbage _) txb = getAllTxInputs txb
-allInputs (Alonzo _) txb = getAllTxInputs txb
-allInputs (Mary _) txb = getAllTxInputs txb
-allInputs (Allegra _) txb = getAllTxInputs txb
-allInputs (Shelley _) txb = getAllTxInputs txb
+allInputs :: EraTxBody era => Proof era -> TxBody era -> Set (TxIn (Crypto era))
+allInputs _ txb = txb ^. allInputsTxBodyF
 
-getWitnesses :: Proof era -> Core.Tx era -> Core.Witnesses era
-getWitnesses (Babbage _) tx = getField @"wits" tx
-getWitnesses (Alonzo _) tx = getField @"wits" tx
-getWitnesses (Mary _) tx = getField @"wits" tx
-getWitnesses (Allegra _) tx = getField @"wits" tx
-getWitnesses (Shelley _) tx = getField @"wits" tx
+getWitnesses :: EraTx era => Proof era -> Tx era -> Witnesses era
+getWitnesses _ tx = tx ^. witsTxL
 
 primaryLanguage :: Proof era -> Maybe Language
-primaryLanguage (Babbage _) = Just (PlutusV2)
-primaryLanguage (Alonzo _) = Just (PlutusV1)
+primaryLanguage (Babbage _) = Just PlutusV2
+primaryLanguage (Alonzo _) = Just PlutusV1
 primaryLanguage _ = Nothing
 
-alwaysTrue :: forall era. Proof era -> Maybe Language -> Natural -> Core.Script era
+alwaysTrue :: forall era. Proof era -> Maybe Language -> Natural -> Script era
 alwaysTrue (Babbage _) (Just l) n = alwaysSucceeds @era l n
 alwaysTrue p@(Babbage _) Nothing _ = allOf [] p
 alwaysTrue (Alonzo _) (Just l) n = alwaysSucceeds @era l n
@@ -366,7 +333,7 @@ alwaysTrue p@(Mary _) _ n = always n p
 alwaysTrue p@(Allegra _) _ n = always n p
 alwaysTrue p@(Shelley _) _ n = always n p
 
-alwaysFalse :: forall era. Proof era -> Maybe Language -> Natural -> Core.Script era
+alwaysFalse :: forall era. Proof era -> Maybe Language -> Natural -> Script era
 alwaysFalse (Babbage _) (Just l) n = alwaysFails @era l n
 alwaysFalse p@(Babbage _) Nothing _ = anyOf [] p
 alwaysFalse (Alonzo _) (Just l) n = alwaysFails @era l n
@@ -375,12 +342,8 @@ alwaysFalse p@(Mary _) _ n = never n p
 alwaysFalse p@(Allegra _) _ n = never n p
 alwaysFalse p@(Shelley _) _ n = never n p
 
-certs :: Proof era -> Core.Tx era -> [DCert (Crypto era)]
-certs (Babbage _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
-certs (Alonzo _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
-certs (Mary _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
-certs (Allegra _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
-certs (Shelley _) tx = Fold.toList $ getField @"certs" (getField @"body" tx)
+certs :: (ShelleyEraTxBody era, EraTx era) => Proof era -> Tx era -> [DCert (Crypto era)]
+certs _ tx = Fold.toList $ tx ^. bodyTxL . certsTxBodyL
 
 -- | Create an old style RewardUpdate to be used in tests, in any Era.
 createRUpdNonPulsing' ::
@@ -413,7 +376,7 @@ languagesUsed ::
   forall era.
   Era era =>
   Proof era ->
-  Core.Tx era ->
+  Tx era ->
   UTxO era ->
   Set (ScriptHash (Crypto era)) ->
   Set Language
@@ -437,7 +400,7 @@ instance Reflect era => TotalAda (UTxOState era) where
 instance Reflect era => TotalAda (UTxO era) where
   totalAda (UTxO m) = Map.foldl' accum mempty m
     where
-      accum ans txout = getTxOutCoin reify txout <+> ans
+      accum ans txOut = (txOut ^. coinTxOutL) <+> ans
 
 instance TotalAda (DState era) where
   totalAda dstate = Fold.foldl' (<+>) mempty (UMap.Rewards (_unified dstate))

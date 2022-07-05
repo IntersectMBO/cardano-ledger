@@ -44,11 +44,15 @@ library
     Cardano.Ledger.Mary.Value
     Cardano.Ledger.ShelleyMA
     Cardano.Ledger.ShelleyMA.AuxiliaryData
-    Cardano.Ledger.ShelleyMA.Rules.EraMapping
-    Cardano.Ledger.ShelleyMA.Rules.Utxo
-    Cardano.Ledger.ShelleyMA.Rules.Utxow
+    Cardano.Ledger.ShelleyMA.Rules
     Cardano.Ledger.ShelleyMA.Timelocks
     Cardano.Ledger.ShelleyMA.TxBody
+    Cardano.Ledger.ShelleyMA.Tx
+
+  other-modules:
+    Cardano.Ledger.ShelleyMA.Era
+    Cardano.Ledger.ShelleyMA.Rules.Utxo
+    Cardano.Ledger.ShelleyMA.Rules.Utxow
 
   build-depends:
     bytestring,
@@ -64,6 +68,7 @@ library
     deepseq,
     groups,
     mtl,
+    microlens,
     nothunks,
     primitive,
     cardano-ledger-shelley,

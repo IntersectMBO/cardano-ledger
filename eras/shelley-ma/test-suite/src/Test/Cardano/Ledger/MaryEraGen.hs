@@ -3,7 +3,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -16,22 +15,25 @@ module Test.Cardano.Ledger.MaryEraGen (genMint, maryGenesisValue, policyIndex, a
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core (AuxiliaryData, PParams, TxOut, Value)
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
+    MaryValue (..),
     PolicyID (..),
-    Value (..),
     policies,
     valueFromList,
   )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), Update)
-import Cardano.Ledger.Shelley.Tx (TxIn, TxOut (..), hashScript, pattern Tx, pattern WitnessSet)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
+import Cardano.Ledger.Shelley.Tx
+  ( ShelleyTxOut (..),
+    TxIn,
+    WitnessSetHKD (..),
+  )
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
-import Cardano.Ledger.ShelleyMA.Rules.Utxo (scaledMinDeposit)
+import Cardano.Ledger.ShelleyMA.Rules (scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
-import Cardano.Ledger.ShelleyMA.TxBody (TxBody (TxBody))
+import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (MATxBody), ShelleyMAEraTxBody)
 import Cardano.Ledger.Val ((<+>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.Slot (SlotNo)
@@ -44,6 +46,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Exts (fromString)
 import GHC.Records (HasField (getField))
+import Lens.Micro
 import Test.Cardano.Ledger.AllegraEraGen
   ( genValidityInterval,
     quantifyTL,
@@ -59,7 +62,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
   ( ScriptClass (..),
     exponential,
   )
-import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsDelta)
+import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
 import Test.Cardano.Ledger.Shelley.Utils (Split (..))
 import Test.QuickCheck (Gen, arbitrary, frequency)
 import qualified Test.QuickCheck as QC
@@ -71,40 +74,41 @@ import qualified Test.QuickCheck as QC
  This instance is layered on top of the ShelleyMA instances
  in Cardano.Ledger.ShelleyMA.Scripts:
 
-   `type instance Core.Script (MaryEra c) = Timelock (MaryEra c)`
+   `type instance Script (MaryEra c) = Timelock (MaryEra c)`
    `instance ValidateScript (ShelleyMAEra ma c) where ... `
 ------------------------------------------------------------------------------}
 
-instance (CryptoClass.Crypto c) => ScriptClass (MaryEra c) where
+instance (CC.Crypto c) => ScriptClass (MaryEra c) where
   isKey _ (RequireSignature hk) = Just hk
   isKey _ _ = Nothing
   basescript _proxy = someLeaf @(MaryEra c)
   quantify _ = quantifyTL
   unQuantify _ = unQuantifyTL
 
-instance (CryptoClass.Crypto c, Mock c) => EraGen (MaryEra c) where
+instance (CC.Crypto c, Mock c) => EraGen (MaryEra c) where
   genGenesisValue = maryGenesisValue
   genEraTxBody _ge _utxo = genTxBody
   genEraAuxiliaryData = genAuxiliaryData
-  updateEraTxBody _utxo _pp _wits (TxBody existingins outs cert wdrl _txfee vi upd meta mint) fee ins out =
-    TxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd meta mint
-  genEraPParamsDelta = genShelleyPParamsDelta
+  updateEraTxBody _utxo _pp _wits txBody fee ins out =
+    case txBody of
+      MATxBody existingins outs cert wdrl _txfee vi upd meta mint ->
+        MATxBody (existingins <> ins) (outs :|> out) cert wdrl fee vi upd meta mint
+  genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
-  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
-  constructTx = Tx
+  genEraWitnesses _scriptinfo setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
 
 genAuxiliaryData ::
   Mock crypto =>
   Constants ->
-  Gen (StrictMaybe (Core.AuxiliaryData (MaryEra crypto)))
+  Gen (StrictMaybe (AuxiliaryData (MaryEra crypto)))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary),
       (100 - frequencyTxWithMetadata, pure SNothing)
     ]
 
--- | Carefully crafted to apply in any Era where Core.Value is Value
-maryGenesisValue :: forall era crypto. CryptoClass.Crypto crypto => GenEnv era -> Gen (Value crypto)
+-- | Carefully crafted to apply in any Era where Value is MaryValue
+maryGenesisValue :: forall era crypto. CC.Crypto crypto => GenEnv era -> Gen (MaryValue crypto)
 maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal}) =
   Val.inject . Coin <$> exponential minGenesisOutputVal maxGenesisOutputVal
 
@@ -119,7 +123,7 @@ maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal
 -- | An infinite indexed collection of trivial policies.
 --  They are trivial in the sense that they require no
 --  signature and can be submitted at any time.
-trivialPolicy :: CryptoClass.Crypto c => Int -> Timelock c
+trivialPolicy :: CC.Crypto c => Int -> Timelock c
 trivialPolicy i
   | i == 0 = RequireAllOf (StrictSeq.fromList [])
   | otherwise = RequireAllOf (StrictSeq.fromList [trivialPolicy (i - 1)])
@@ -137,16 +141,16 @@ coloredCoinMaxMint = 1000 * 1000
 -- name, "red".                                       --
 --------------------------------------------------------
 
-redCoins :: CryptoClass.Crypto c => Timelock c
+redCoins :: CC.Crypto c => Timelock c
 redCoins = trivialPolicy 0
 
-redCoinId :: forall c. CryptoClass.Crypto c => PolicyID c
+redCoinId :: forall c. CC.Crypto c => PolicyID c
 redCoinId = PolicyID $ hashScript @(MaryEra c) redCoins
 
 red :: AssetName
 red = AssetName "red"
 
-genRed :: CryptoClass.Crypto c => Gen (Value c)
+genRed :: CC.Crypto c => Gen (MaryValue c)
 genRed = do
   n <- genInteger coloredCoinMinMint coloredCoinMaxMint
   pure $ valueFromList 0 [(redCoinId, red, n)]
@@ -158,10 +162,10 @@ genRed = do
 -- asset name.
 --------------------------------------------------------
 
-blueCoins :: CryptoClass.Crypto c => Timelock c
+blueCoins :: CC.Crypto c => Timelock c
 blueCoins = trivialPolicy 1
 
-blueCoinId :: forall c. CryptoClass.Crypto c => PolicyID c
+blueCoinId :: forall c. CC.Crypto c => PolicyID c
 blueCoinId = PolicyID $ hashScript @(MaryEra c) blueCoins
 
 maxBlueMint :: Int
@@ -171,7 +175,7 @@ maxBlueMint = 5
 -- current coin selection algorithm does not prevent creating
 -- a multi-asset that is too large.
 
-genBlue :: CryptoClass.Crypto c => Gen (Value c)
+genBlue :: CC.Crypto c => Gen (MaryValue c)
 genBlue = do
   as <- QC.resize maxBlueMint $ QC.listOf genSingleBlue
   -- the transaction size gets too big if we mint too many assets
@@ -189,16 +193,16 @@ genBlue = do
 -- asset names.                                       --
 --------------------------------------------------------
 
-yellowCoins :: CryptoClass.Crypto c => Timelock c
+yellowCoins :: CC.Crypto c => Timelock c
 yellowCoins = trivialPolicy 2
 
-yellowCoinId :: forall c. CryptoClass.Crypto c => PolicyID c
+yellowCoinId :: forall c. CC.Crypto c => PolicyID c
 yellowCoinId = PolicyID $ hashScript @(MaryEra c) yellowCoins
 
 yellowNumAssets :: Int
 yellowNumAssets = 5
 
-genYellow :: CryptoClass.Crypto c => Gen (Value c)
+genYellow :: CC.Crypto c => Gen (MaryValue c)
 genYellow = do
   xs <- QC.sublistOf [0 .. yellowNumAssets]
   as <- mapM genSingleYellow xs
@@ -209,9 +213,9 @@ genYellow = do
       let an = AssetName . fromString $ "yellow" <> show x
       pure (an, y)
 
--- | Carefully crafted to apply in any Era where Core.Value is Value
+-- | Carefully crafted to apply in any Era where Value is MaryValue
 -- | This map allows us to lookup a minting policy by the policy ID.
-policyIndex :: CryptoClass.Crypto c => Map (PolicyID c) (Timelock c)
+policyIndex :: CC.Crypto c => Map (PolicyID c) (Timelock c)
 policyIndex =
   Map.fromList
     [ (redCoinId, redCoins),
@@ -236,10 +240,10 @@ blueFreq = 1
 yellowFreq :: Int
 yellowFreq = 20
 
-genBundle :: Int -> Gen (Value c) -> Gen (Value c)
+genBundle :: Int -> Gen (MaryValue c) -> Gen (MaryValue c)
 genBundle freq g = QC.frequency [(freq, g), (100 - freq, pure mempty)]
 
-genMint :: CryptoClass.Crypto c => Gen (Value c)
+genMint :: CC.Crypto c => Gen (MaryValue c)
 genMint = do
   r <- genBundle redFreq genRed
   b <- genBundle blueFreq genBlue
@@ -250,46 +254,47 @@ genMint = do
 -- END Permissionless Tokens --
 -------------------------------
 
--- | Carefully crafted to apply to any Era where Core.Value is Value
+-- | Carefully crafted to apply to any Era where Value is MaryValue
 -- We attempt to Add tokens to a non-empty list of transaction outputs.
 -- It will add them to the first output that has enough lovelace
 -- to meet the minUTxO requirment, if such an output exists.
 addTokens ::
   forall era.
   ( EraGen era,
-    Core.Value era ~ Value (Crypto era)
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proxy era ->
-  StrictSeq (Core.TxOut era) -> -- This is an accumuating parameter
-  Core.PParams era ->
-  Value (Crypto era) ->
-  StrictSeq (Core.TxOut era) ->
-  Maybe (StrictSeq (Core.TxOut era))
-addTokens proxy tooLittleLovelace pparams ts (txout :<| os) =
-  let v = getField @"value" txout
+  StrictSeq (TxOut era) -> -- This is an accumuating parameter
+  PParams era ->
+  MaryValue (Crypto era) ->
+  StrictSeq (TxOut era) ->
+  Maybe (StrictSeq (TxOut era))
+addTokens proxy tooLittleLovelace pparams ts (txOut :<| os) =
+  let v = txOut ^. valueTxOutL
    in if Val.coin v < scaledMinDeposit v (getField @"_minUTxOValue" pparams)
-        then addTokens proxy (txout :<| tooLittleLovelace) pparams ts os
-        else Just $ tooLittleLovelace >< addValToTxOut @era ts txout <| os
+        then addTokens proxy (txOut :<| tooLittleLovelace) pparams ts os
+        else Just $ tooLittleLovelace >< addValToTxOut @era ts txOut <| os
 addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 
 -- | This function is only good in the Mary Era
 genTxBody ::
   forall era.
   ( EraGen era,
-    Core.Value era ~ Value (Crypto era),
-    Core.PParams era ~ PParams era,
-    Core.TxOut era ~ TxOut era
+    Value era ~ MaryValue (Crypto era),
+    PParams era ~ ShelleyPParams era,
+    TxOut era ~ ShelleyTxOut era,
+    ShelleyMAEraTxBody era
   ) =>
-  PParams era ->
+  ShelleyPParams era ->
   SlotNo ->
   Set.Set (TxIn (Crypto era)) ->
-  StrictSeq (TxOut era) ->
+  StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (TxBody era, [Timelock (Crypto era)])
+  Gen (MATxBody era, [Timelock (Crypto era)])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   mint <- genMint
@@ -300,7 +305,7 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
         map (\k -> Map.findWithDefault (error $ "Cannot find policy: " ++ show k) k policyIndex) $
           Set.toList $ policies mint
   pure
-    ( TxBody
+    ( MATxBody
         ins
         outs'
         cert
@@ -313,19 +318,19 @@ genTxBody pparams slot ins outs cert wdrl fee upd meta = do
       ps -- These additional scripts are for the minting policies.
     )
 
-instance Split (Value era) where
-  vsplit (Value n _) 0 = ([], Coin n)
-  vsplit (Value n mp) m
-    | m Prelude.<= 0 = error "must split coins into positive parts"
+instance Split (MaryValue era) where
+  vsplit (MaryValue n _) 0 = ([], Coin n)
+  vsplit (MaryValue n mp) m
+    | m <= 0 = error "must split coins into positive parts"
     | otherwise =
-        ( take (fromIntegral m) (Value (n `div` m) mp : repeat (Value (n `div` m) Map.empty)),
+        ( take (fromIntegral m) (MaryValue (n `div` m) mp : repeat (MaryValue (n `div` m) Map.empty)),
           Coin (n `rem` m)
         )
 
 instance Mock c => MinGenTxout (MaryEra c) where
   calcEraMinUTxO _txout pp = _minUTxOValue pp
-  addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
+  addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal
-    let makeTxOut (addr, val) = TxOut addr val
+    let makeTxOut (addr, val) = ShelleyTxOut addr val
     pure (makeTxOut <$> zip addrs values)

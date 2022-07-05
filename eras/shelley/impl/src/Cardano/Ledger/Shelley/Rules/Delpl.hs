@@ -27,8 +27,7 @@ import Cardano.Binary
     encodeListLen,
   )
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, invalidKey)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Serialization (decodeRecordSum)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
@@ -60,13 +59,13 @@ data DELPL era
 data DelplEnv era = DelplEnv
   { delplSlotNo :: SlotNo,
     delPlPtr :: Ptr,
-    delPlPp :: Core.PParams era,
+    delPlPp :: PParams era,
     delPlAcnt :: AccountState
   }
 
 data DelplPredicateFailure era
-  = PoolFailure (PredicateFailure (Core.EraRule "POOL" era)) -- Subtransition Failures
-  | DelegFailure (PredicateFailure (Core.EraRule "DELEG" era)) -- Subtransition Failures
+  = PoolFailure (PredicateFailure (EraRule "POOL" era)) -- Subtransition Failures
+  | DelegFailure (PredicateFailure (EraRule "DELEG" era)) -- Subtransition Failures
   deriving (Generic)
 
 data DelplEvent era
@@ -74,33 +73,33 @@ data DelplEvent era
   | DelegEvent (Event (DELEG era))
 
 deriving stock instance
-  ( Eq (PredicateFailure (Core.EraRule "DELEG" era)),
-    Eq (PredicateFailure (Core.EraRule "POOL" era))
+  ( Eq (PredicateFailure (EraRule "DELEG" era)),
+    Eq (PredicateFailure (EraRule "POOL" era))
   ) =>
   Eq (DelplPredicateFailure era)
 
 deriving stock instance
-  ( Show (PredicateFailure (Core.EraRule "DELEG" era)),
-    Show (PredicateFailure (Core.EraRule "POOL" era))
+  ( Show (PredicateFailure (EraRule "DELEG" era)),
+    Show (PredicateFailure (EraRule "POOL" era))
   ) =>
   Show (DelplPredicateFailure era)
 
 instance
-  ( NoThunks (PredicateFailure (Core.EraRule "DELEG" era)),
-    NoThunks (PredicateFailure (Core.EraRule "POOL" era))
+  ( NoThunks (PredicateFailure (EraRule "DELEG" era)),
+    NoThunks (PredicateFailure (EraRule "POOL" era))
   ) =>
   NoThunks (DelplPredicateFailure era)
 
 instance
   ( Era era,
-    Embed (Core.EraRule "DELEG" era) (DELPL era),
-    Environment (Core.EraRule "DELEG" era) ~ DelegEnv era,
-    State (Core.EraRule "DELEG" era) ~ DState (Crypto era),
-    Signal (Core.EraRule "DELEG" era) ~ DCert (Crypto era),
-    Embed (Core.EraRule "POOL" era) (DELPL era),
-    Environment (Core.EraRule "POOL" era) ~ PoolEnv era,
-    State (Core.EraRule "POOL" era) ~ PState (Crypto era),
-    Signal (Core.EraRule "POOL" era) ~ DCert (Crypto era)
+    Embed (EraRule "DELEG" era) (DELPL era),
+    Environment (EraRule "DELEG" era) ~ DelegEnv era,
+    State (EraRule "DELEG" era) ~ DState (Crypto era),
+    Signal (EraRule "DELEG" era) ~ DCert (Crypto era),
+    Embed (EraRule "POOL" era) (DELPL era),
+    Environment (EraRule "POOL" era) ~ PoolEnv era,
+    State (EraRule "POOL" era) ~ PState (Crypto era),
+    Signal (EraRule "POOL" era) ~ DCert (Crypto era)
   ) =>
   STS (DELPL era)
   where
@@ -115,9 +114,9 @@ instance
 
 instance
   ( Era era,
-    ToCBOR (PredicateFailure (Core.EraRule "POOL" era)),
-    ToCBOR (PredicateFailure (Core.EraRule "DELEG" era)),
-    Typeable (Core.Script era)
+    ToCBOR (PredicateFailure (EraRule "POOL" era)),
+    ToCBOR (PredicateFailure (EraRule "DELEG" era)),
+    Typeable (Script era)
   ) =>
   ToCBOR (DelplPredicateFailure era)
   where
@@ -131,9 +130,9 @@ instance
 
 instance
   ( Era era,
-    FromCBOR (PredicateFailure (Core.EraRule "POOL" era)),
-    FromCBOR (PredicateFailure (Core.EraRule "DELEG" era)),
-    Typeable (Core.Script era)
+    FromCBOR (PredicateFailure (EraRule "POOL" era)),
+    FromCBOR (PredicateFailure (EraRule "DELEG" era)),
+    Typeable (Script era)
   ) =>
   FromCBOR (DelplPredicateFailure era)
   where
@@ -152,14 +151,14 @@ instance
 
 delplTransition ::
   forall era.
-  ( Embed (Core.EraRule "DELEG" era) (DELPL era),
-    Environment (Core.EraRule "DELEG" era) ~ DelegEnv era,
-    State (Core.EraRule "DELEG" era) ~ DState (Crypto era),
-    Signal (Core.EraRule "DELEG" era) ~ DCert (Crypto era),
-    Embed (Core.EraRule "POOL" era) (DELPL era),
-    Environment (Core.EraRule "POOL" era) ~ PoolEnv era,
-    State (Core.EraRule "POOL" era) ~ PState (Crypto era),
-    Signal (Core.EraRule "POOL" era) ~ DCert (Crypto era)
+  ( Embed (EraRule "DELEG" era) (DELPL era),
+    Environment (EraRule "DELEG" era) ~ DelegEnv era,
+    State (EraRule "DELEG" era) ~ DState (Crypto era),
+    Signal (EraRule "DELEG" era) ~ DCert (Crypto era),
+    Embed (EraRule "POOL" era) (DELPL era),
+    Environment (EraRule "POOL" era) ~ PoolEnv era,
+    State (EraRule "POOL" era) ~ PState (Crypto era),
+    Signal (EraRule "POOL" era) ~ DCert (Crypto era)
   ) =>
   TransitionRule (DELPL era)
 delplTransition = do
@@ -167,36 +166,36 @@ delplTransition = do
   case c of
     DCertPool (RegPool _) -> do
       ps <-
-        trans @(Core.EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
       pure $ d {dpsPState = ps}
     DCertPool (RetirePool _ _) -> do
       ps <-
-        trans @(Core.EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
+        trans @(EraRule "POOL" era) $ TRC (PoolEnv slot pp, dpsPState d, c)
       pure $ d {dpsPState = ps}
     DCertGenesis GenesisDelegCert {} -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
       pure $ d {dpsDState = ds}
     DCertDeleg (RegKey _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
       pure $ d {dpsDState = ds}
     DCertDeleg (DeRegKey _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
       pure $ d {dpsDState = ds}
     DCertDeleg (Delegate _) -> do
       ds <-
-        trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+        trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
       pure $ d {dpsDState = ds}
     DCertMir _ -> do
-      ds <- trans @(Core.EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
+      ds <- trans @(EraRule "DELEG" era) $ TRC (DelegEnv slot ptr acnt pp, dpsDState d, c)
       pure $ d {dpsDState = ds}
 
 instance
   ( Era era,
     STS (POOL era),
-    PredicateFailure (Core.EraRule "POOL" era) ~ PoolPredicateFailure era
+    PredicateFailure (EraRule "POOL" era) ~ PoolPredicateFailure era
   ) =>
   Embed (POOL era) (DELPL era)
   where
@@ -205,8 +204,8 @@ instance
 
 instance
   ( Era era,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    PredicateFailure (Core.EraRule "DELEG" era) ~ DelegPredicateFailure era
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    PredicateFailure (EraRule "DELEG" era) ~ DelegPredicateFailure era
   ) =>
   Embed (DELEG era) (DELPL era)
   where

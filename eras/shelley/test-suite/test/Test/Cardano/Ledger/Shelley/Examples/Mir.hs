@@ -18,9 +18,9 @@ where
 import Cardano.Ledger.BaseTypes (Nonce, StrictMaybe (..), mkCertIxPartial)
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Ptr (..))
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto (..))
 import Cardano.Ledger.Keys
   ( KeyPair (..),
     KeyRole (..),
@@ -37,7 +37,7 @@ import Cardano.Ledger.Shelley.LedgerState
     PulsingRewUpdate,
     emptyRewardUpdate,
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
@@ -45,13 +45,13 @@ import Cardano.Ledger.Shelley.Rules.Delpl (DelplPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
-import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     MIRPot (..),
     MIRTarget (..),
-    TxBody (..),
-    TxOut (..),
+    ShelleyTxBody (..),
+    ShelleyTxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
@@ -97,22 +97,22 @@ initUTxO :: (ShelleyTest era) => UTxO era
 initUTxO =
   genesisCoins
     genesisId
-    [ TxOut Cast.aliceAddr aliceInitCoin,
-      TxOut Cast.bobAddr bobInitCoin
+    [ ShelleyTxOut Cast.aliceAddr aliceInitCoin,
+      ShelleyTxOut Cast.bobAddr bobInitCoin
     ]
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStMIR :: forall era. ShelleyTest era => Coin -> ChainState era
+initStMIR :: forall era. (ShelleyTest era, PParams era ~ ShelleyPParams era) => Coin -> ChainState era
 initStMIR treasury = cs {chainNes = (chainNes cs) {nesEs = es'}}
   where
     cs = initSt @era initUTxO
     as = esAccountState . nesEs . chainNes $ cs
     as' =
       as
-        { _treasury = (_treasury as) <+> treasury,
-          _reserves = (_reserves as) <-> treasury
+        { _treasury = _treasury as <+> treasury,
+          _reserves = _reserves as <-> treasury
         }
     es' = (nesEs $ chainNes cs) {esAccountState = as'}
 
@@ -129,11 +129,11 @@ ir = StakeAddressesMIR $ Map.fromList [(Cast.aliceSHK, toDeltaCoin aliceMIRCoin)
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: (ShelleyTest era) => MIRPot -> TxBody era
+txbodyEx1 :: ShelleyTest era => MIRPot -> ShelleyTxBody era
 txbodyEx1 pot =
-  TxBody
+  ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx1)
+    (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
         [ DCertMir (MIRCert pot ir),
           DCertDeleg (RegKey Cast.aliceSHK)
@@ -162,9 +162,9 @@ txEx1 ::
   (Mock c) =>
   [KeyPair 'Witness c] ->
   MIRPot ->
-  Tx (ShelleyEra c)
+  ShelleyTx (ShelleyEra c)
 txEx1 txwits pot =
-  Tx
+  ShelleyTx
     (txbodyEx1 pot)
     mempty
       { addrWits =

@@ -18,7 +18,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto
+import Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era
 import qualified Cardano.Ledger.Era as Era (Crypto)
 import Cardano.Ledger.Keys
@@ -27,7 +27,6 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Serialization
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
-import Cardano.Ledger.Shelley.Constraints
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PParams
@@ -97,8 +96,7 @@ data ShelleyLedgerExamples era = ShelleyLedgerExamples
 -------------------------------------------------------------------------------}
 
 type ShelleyBasedEra' era =
-  ( ShelleyBasedEra era,
-    ToCBORGroup (TxSeq era),
+  ( ToCBORGroup (TxSeq era),
     ToCBOR (Core.Witnesses era),
     Default (State (Core.EraRule "PPUP" era)),
     PraosCrypto (Cardano.Ledger.Era.Crypto era)
@@ -107,29 +105,28 @@ type ShelleyBasedEra' era =
 defaultShelleyLedgerExamples ::
   forall era.
   ( ShelleyBasedEra' era,
-    PredicateFailure (Core.EraRule "DELEGS" era)
-      ~ DelegsPredicateFailure era,
-    Core.PParams era ~ Cardano.Ledger.Shelley.PParams.PParams era,
-    Core.PParamsDelta era ~ PParams' StrictMaybe era,
+    EraSegWits era,
+    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era,
+    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
+    Core.PParams era ~ ShelleyPParams era,
+    Core.PParamsUpdate era ~ ShelleyPParamsUpdate era,
     Default (StashedAVVMAddresses era)
   ) =>
   (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
-  (Tx era -> Core.Tx era) ->
+  (ShelleyTx era -> Core.Tx era) ->
   Core.Value era ->
   Core.TxBody era ->
   Core.AuxiliaryData era ->
   TranslationContext era ->
   ShelleyLedgerExamples era
-defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData translationContext =
+defaultShelleyLedgerExamples mkWitnesses mkAlonzoTx value txBody auxData translationContext =
   ShelleyLedgerExamples
-    { sleBlock = exampleShelleyLedgerBlock (mkValidatedTx tx),
+    { sleBlock = exampleShelleyLedgerBlock (mkAlonzoTx tx),
       sleHashHeader = exampleHashHeader (Proxy @era),
-      sleTx = mkValidatedTx tx,
+      sleTx = mkAlonzoTx tx,
       sleApplyTxError =
-        ApplyTxError $
-          pure $
-            DelegsFailure $
-              DelegateeNotRegisteredDELEG @era (mkKeyHash 1),
+        ApplyTxError
+          [DelegsFailure $ DelegateeNotRegisteredDELEG @era (mkKeyHash 1)],
       sleRewardsCredentials =
         Set.fromList
           [ Left (Coin 100),
@@ -163,7 +160,7 @@ defaultShelleyLedgerExamples mkWitnesses mkValidatedTx value txBody auxData tran
 
 exampleShelleyLedgerBlock ::
   forall era.
-  ShelleyBasedEra' era =>
+  (Core.EraTx era, EraSegWits era, ShelleyBasedEra' era) =>
   Core.Tx era ->
   Block (BHeader (Era.Crypto era)) era
 exampleShelleyLedgerBlock tx = Block blockHeader blockBody
@@ -205,23 +202,23 @@ exampleHashHeader ::
   HashHeader (Cardano.Ledger.Era.Crypto era)
 exampleHashHeader _ = coerce $ mkDummyHash (Proxy @(HASH (Cardano.Ledger.Era.Crypto era))) 0
 
-mkKeyHash :: forall c discriminator. Cardano.Ledger.Crypto.Crypto c => Int -> KeyHash discriminator c
+mkKeyHash :: forall c discriminator. CC.Crypto c => Int -> KeyHash discriminator c
 mkKeyHash = KeyHash . mkDummyHash (Proxy @(ADDRHASH c))
 
-mkScriptHash :: forall c. Cardano.Ledger.Crypto.Crypto c => Int -> ScriptHash c
+mkScriptHash :: forall c. CC.Crypto c => Int -> ScriptHash c
 mkScriptHash = ScriptHash . mkDummyHash (Proxy @(ADDRHASH c))
 
 -- | This is not a valid transaction. We don't care, we are only interested in
 -- serialisation, not validation.
 exampleTx ::
   forall era.
-  ShelleyBasedEra' era =>
+  Core.EraTx era =>
   (Core.TxBody era -> KeyPairWits era -> Core.Witnesses era) ->
   Core.TxBody era ->
   Core.AuxiliaryData era ->
-  Tx era
+  ShelleyTx era
 exampleTx mkWitnesses txBody auxData =
-  Tx txBody (mkWitnesses txBody keyPairWits) (SJust auxData)
+  ShelleyTx txBody (mkWitnesses txBody keyPairWits) (SJust auxData)
   where
     keyPairWits :: KeyPairWits era
     keyPairWits =
@@ -232,7 +229,7 @@ exampleTx mkWitnesses txBody auxData =
 
 exampleProposedPParamsUpdates ::
   ( ShelleyBasedEra' era,
-    Core.PParamsDelta era ~ PParams' StrictMaybe era
+    Core.PParamsUpdate era ~ ShelleyPParamsUpdate era
   ) =>
   ProposedPPUpdates era
 exampleProposedPParamsUpdates =
@@ -299,7 +296,8 @@ exampleNewEpochState ::
     HasField "_nOpt" (Core.PParams era) Natural,
     HasField "_rho" (Core.PParams era) UnitInterval,
     HasField "_tau" (Core.PParams era) UnitInterval,
-    Default (StashedAVVMAddresses era)
+    Default (StashedAVVMAddresses era),
+    Core.EraTxOut era
   ) =>
   Core.Value era ->
   Core.PParams era ->
@@ -333,7 +331,7 @@ exampleNewEpochState value ppp pp =
                         UTxO $
                           Map.fromList
                             [ ( TxIn (TxId (mkDummySafeHash Proxy 1)) minBound,
-                                makeTxOut (Proxy @era) addr value
+                                Core.mkBasicTxOut addr value
                               )
                             ],
                       _deposited = Coin 1000,
@@ -391,7 +389,7 @@ testEpochInfo = epochInfoPure testGlobals
 mkDummyHash :: forall h a. HashAlgorithm h => Proxy h -> Int -> Hash.Hash h a
 mkDummyHash _ = coerce . hashWithSerialiser @h toCBOR
 
-mkDummySafeHash :: forall c a. Cardano.Ledger.Crypto.Crypto c => Proxy c -> Int -> SafeHash c a
+mkDummySafeHash :: forall c a. CC.Crypto c => Proxy c -> Int -> SafeHash c a
 mkDummySafeHash _ =
   unsafeMakeSafeHash
     . mkDummyHash (Proxy @(HASH c))
@@ -414,11 +412,15 @@ ledgerExamplesShelley =
     ()
 
 mkWitnessesPreAlonzo ::
-  ShelleyBasedEra' era =>
+  ( Core.EraTx era,
+    DSIGN.Signable
+      (DSIGN (Era.Crypto era))
+      (Hash.Hash (HASH (Era.Crypto era)) Core.EraIndependentTxBody)
+  ) =>
   Proxy era ->
   Core.TxBody era ->
   KeyPairWits era ->
-  WitnessSet era
+  ShelleyWitnesses era
 mkWitnessesPreAlonzo _ txBody keyPairWits =
   mempty
     { addrWits =
@@ -428,12 +430,12 @@ mkWitnessesPreAlonzo _ txBody keyPairWits =
 exampleCoin :: Coin
 exampleCoin = Coin 10
 
-exampleTxBodyShelley :: Cardano.Ledger.Shelley.API.TxBody StandardShelley
+exampleTxBodyShelley :: ShelleyTxBody StandardShelley
 exampleTxBodyShelley =
-  Cardano.Ledger.Shelley.API.TxBody
+  ShelleyTxBody
     exampleTxIns
     ( StrictSeq.fromList
-        [ TxOut (mkAddr (examplePayKey, exampleStakeKey)) (Coin 100000)
+        [ ShelleyTxOut (mkAddr (examplePayKey, exampleStakeKey)) (Coin 100000)
         ]
     )
     exampleCerts
@@ -460,13 +462,13 @@ exampleMetadataMap =
 exampleAuxiliaryDataShelley :: Core.AuxiliaryData StandardShelley
 exampleAuxiliaryDataShelley = Metadata exampleMetadataMap
 
-exampleTxIns :: Cardano.Ledger.Crypto.Crypto c => Set (TxIn c)
+exampleTxIns :: CC.Crypto c => Set (TxIn c)
 exampleTxIns =
   Set.fromList
     [ TxIn (TxId (mkDummySafeHash Proxy 1)) minBound
     ]
 
-exampleCerts :: Cardano.Ledger.Crypto.Crypto c => StrictSeq (DCert c)
+exampleCerts :: CC.Crypto c => StrictSeq (DCert c)
 exampleCerts =
   StrictSeq.fromList
     [ DCertDeleg (RegKey (keyToCredential exampleStakeKey)),
@@ -479,7 +481,7 @@ exampleCerts =
               ]
     ]
 
-exampleWithdrawals :: Cardano.Ledger.Crypto.Crypto c => Wdrl c
+exampleWithdrawals :: CC.Crypto c => Wdrl c
 exampleWithdrawals =
   Wdrl $
     Map.fromList
@@ -487,7 +489,7 @@ exampleWithdrawals =
       ]
 
 exampleProposedPPUpdates ::
-  ( Core.PParamsDelta era ~ PParams' StrictMaybe era,
+  ( Core.PParamsUpdate era ~ ShelleyPParamsUpdate era,
     ShelleyBasedEra' era
   ) =>
   ProposedPPUpdates era
@@ -497,13 +499,13 @@ exampleProposedPPUpdates =
       (mkKeyHash 1)
       (emptyPParamsUpdate {_maxBHSize = SJust 4000})
 
-examplePayKey :: Cardano.Ledger.Crypto.Crypto c => KeyPair 'Payment c
+examplePayKey :: CC.Crypto c => KeyPair 'Payment c
 examplePayKey = mkDSIGNKeyPair 0
 
-exampleStakeKey :: Cardano.Ledger.Crypto.Crypto c => KeyPair 'Staking c
+exampleStakeKey :: CC.Crypto c => KeyPair 'Staking c
 exampleStakeKey = mkDSIGNKeyPair 1
 
-exampleKeys :: forall c r. Cardano.Ledger.Crypto.Crypto c => AllIssuerKeys c r
+exampleKeys :: forall c r. CC.Crypto c => AllIssuerKeys c r
 exampleKeys =
   AllIssuerKeys
     coldKey
@@ -513,7 +515,7 @@ exampleKeys =
   where
     coldKey = mkDSIGNKeyPair 1
 
-keyToCredential :: Cardano.Ledger.Crypto.Crypto c => KeyPair r c -> Credential r c
+keyToCredential :: CC.Crypto c => KeyPair r c -> Credential r c
 keyToCredential = KeyHashObj . hashKey . vKey
 
 -- | @mkKeyPair'@ from @Test.Cardano.Ledger.Shelley.Utils@ doesn't work for real
@@ -550,7 +552,7 @@ mkVRFKeyPair _ byte = (sk, VRF.deriveVerKeyVRF sk)
 
     sk = VRF.genKeyVRF seed
 
-examplePoolParams :: forall c. Cardano.Ledger.Crypto.Crypto c => PoolParams c
+examplePoolParams :: forall c. CC.Crypto c => PoolParams c
 examplePoolParams =
   PoolParams
     { _poolId = hashKey $ vKey $ cold poolKeys,

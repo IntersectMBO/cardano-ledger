@@ -8,7 +8,7 @@
 
 module Cardano.Ledger.State.Query where
 
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import Cardano.Ledger.Alonzo.TxBody as Alonzo
 import qualified Cardano.Ledger.Credential as Credential
 import qualified Cardano.Ledger.Keys as Keys
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EpochBoundary
@@ -445,7 +445,7 @@ getSnapShotsWithSharing (Entity epochStateId EpochState {epochStateSnapShotsFee}
 
 sourceUTxO ::
   MonadResource m =>
-  ConduitM () (TxIn.TxIn C, Alonzo.TxOut CurrentEra) (ReaderT SqlBackend m) ()
+  ConduitM () (TxIn.TxIn C, AlonzoTxOut CurrentEra) (ReaderT SqlBackend m) ()
 sourceUTxO =
   selectSource [] []
     .| mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId txInIx, txOut))
@@ -453,7 +453,7 @@ sourceUTxO =
 sourceWithSharingUTxO ::
   MonadResource m =>
   Map.Map (Credential.StakeCredential C) a ->
-  ConduitM () (TxIn.TxIn C, Alonzo.TxOut CurrentEra) (ReaderT SqlBackend m) ()
+  ConduitM () (TxIn.TxIn C, AlonzoTxOut CurrentEra) (ReaderT SqlBackend m) ()
 sourceWithSharingUTxO stakeCredentials =
   sourceUTxO .| mapC (fmap internTxOut)
   where
@@ -471,7 +471,7 @@ sourceWithSharingUTxO stakeCredentials =
 foldDbUTxO ::
   MonadUnliftIO m =>
   -- | Folding function
-  (a -> (TxIn.TxIn C, Alonzo.TxOut CurrentEra) -> a) ->
+  (a -> (TxIn.TxIn C, AlonzoTxOut CurrentEra) -> a) ->
   -- | Empty acc
   a ->
   -- | Path to Sqlite db
@@ -481,7 +481,7 @@ foldDbUTxO f m fp = runSqlite fp (runConduit (sourceUTxO .| foldlC f m))
 
 -- sourceUTxOr ::
 --      MonadResource m
---   => Int64 -> Int64 -> ConduitM () (TxIn.TxIn C, Alonzo.TxOut CurrentEra) (ReaderT SqlBackend m) ()
+--   => Int64 -> Int64 -> ConduitM () (TxIn.TxIn C, AlonzoTxOut CurrentEra) (ReaderT SqlBackend m) ()
 -- sourceUTxOr b t =
 --   selectSource [TxId >. TxKey (SqlBackendKey b) , TxId <. TxKey (SqlBackendKey t)] [] .|
 --   mapC (\(Entity _ Tx {..}) -> (TxIn.TxIn txInId (fromIntegral txInIx), txOut))
@@ -490,7 +490,7 @@ foldDbUTxO f m fp = runSqlite fp (runConduit (sourceUTxO .| foldlC f m))
 --      MonadUnliftIO m
 --   => Int64
 --   -> Int64
---   -> (a -> (TxIn.TxIn C, Alonzo.TxOut CurrentEra) -> a) -- ^ Folding function
+--   -> (a -> (TxIn.TxIn C, AlonzoTxOut CurrentEra) -> a) -- ^ Folding function
 --   -> a -- ^ Empty acc
 --   -> T.Text -- ^ Path to Sqlite db
 --   -> m a
@@ -650,7 +650,7 @@ loadLedgerStateDStateTxIxSharing ::
   T.Text ->
   m
     ( Shelley.LedgerState CurrentEra,
-      IntMap.IntMap (Map.Map (TxIn.TxId C) (Alonzo.TxOut CurrentEra))
+      IntMap.IntMap (Map.Map (TxIn.TxId C) (AlonzoTxOut CurrentEra))
     )
 loadLedgerStateDStateTxIxSharing fp =
   runSqlite fp $ do

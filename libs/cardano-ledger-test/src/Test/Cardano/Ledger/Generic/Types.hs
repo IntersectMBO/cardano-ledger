@@ -4,28 +4,28 @@
 
 module Test.Cardano.Ledger.Generic.Types
   ( TotalAda (..),
-    getTxOutCoin,
   )
 where
 
-import Cardano.Ledger.Alonzo.TxBody (TxOut (TxOut))
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Shelley.API (AccountState (AccountState), Coin, DPState (DPState), DState, EpochState (esAccountState, esLState), LedgerState (LedgerState), NewEpochState (nesEs), UTxO (UTxO), UTxOState (UTxOState))
-import qualified Cardano.Ledger.Shelley.API as Shelley
+import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.API
+  ( AccountState (AccountState),
+    Coin,
+    DPState (DPState),
+    DState,
+    EpochState (esAccountState, esLState),
+    LedgerState (LedgerState),
+    NewEpochState (nesEs),
+    UTxO (UTxO),
+    UTxOState (UTxOState),
+  )
 import Cardano.Ledger.Shelley.LedgerState (_unified)
 import qualified Cardano.Ledger.UnifiedMap as UMap
-import Cardano.Ledger.Val (Val (coin, (<+>)))
+import Cardano.Ledger.Val (Val ((<+>)))
 import qualified Data.Foldable as Fold
 import qualified Data.Map.Strict as Map
-import Test.Cardano.Ledger.Generic.Proof (Proof (..), Reflect (reify))
-
-getTxOutCoin :: Proof era -> Core.TxOut era -> Coin
-getTxOutCoin (Babbage _) (Babbage.TxOut _ v _ _) = coin v
-getTxOutCoin (Alonzo _) (TxOut _ v _) = coin v
-getTxOutCoin (Mary _) (Shelley.TxOut _ v) = coin v
-getTxOutCoin (Allegra _) (Shelley.TxOut _ v) = coin v
-getTxOutCoin (Shelley _) (Shelley.TxOut _ v) = coin v
+import Lens.Micro
+import Test.Cardano.Ledger.Generic.Proof (Reflect)
 
 -- | Compute the total Ada from Ada pots within 't'
 class TotalAda t where
@@ -55,4 +55,4 @@ instance Reflect era => TotalAda (NewEpochState era) where
 instance Reflect era => TotalAda (UTxO era) where
   totalAda (UTxO m) = Map.foldl' accum mempty m
     where
-      accum ans txout = getTxOutCoin reify txout <+> ans
+      accum ans txOut = txOut ^. coinTxOutL <+> ans

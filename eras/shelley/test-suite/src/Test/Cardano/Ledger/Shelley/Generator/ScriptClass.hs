@@ -4,19 +4,13 @@
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternGuards #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.Shelley.Generator.ScriptClass
   ( ScriptClass (..),
@@ -40,13 +34,11 @@ module Test.Cardano.Ledger.Shelley.Generator.ScriptClass
 where
 
 import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm (..))
-import Cardano.Ledger.Core (Script)
+import Cardano.Ledger.Core (Era (..), EraScript (..), Script)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Keys (KeyHash, KeyPair (..), KeyRole (..), asWitness, hashKey, vKey)
-import Cardano.Ledger.Shelley.Constraints (UsesScript)
 import Cardano.Ledger.Shelley.LedgerState (KeyPairs)
 import Cardano.Ledger.Shelley.Scripts (ScriptHash)
 import Data.List (permutations)
@@ -67,13 +59,7 @@ import qualified Test.QuickCheck as QC
   be adapated to property tests. This is a key component of the EraGen class.
 ------------------------------------------------------------------------------}
 
-class
-  ( UsesScript era,
-    ValidateScript era,
-    CC.Crypto (Crypto era)
-  ) =>
-  ScriptClass era
-  where
+class EraScript era => ScriptClass era where
   basescript :: Proxy era -> KeyHash 'Witness (Crypto era) -> Script era
   isKey :: Proxy era -> Script era -> Maybe (KeyHash 'Witness (Crypto era))
   isOnePhase :: Proxy era -> Script era -> Bool

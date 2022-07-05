@@ -23,7 +23,6 @@ module Cardano.Ledger.Shelley.LedgerState
     FutureGenDeleg (..),
     InstantaneousRewards (..),
     KeyPairs,
-    TransUTxO,
     LedgerState (..),
     PPUPState (..),
     PState (..),
@@ -48,7 +47,6 @@ module Cardano.Ledger.Shelley.LedgerState
     nullWitHashes,
     diffWitHashes,
     minfee,
-    txsizeBound,
     produced,
     consumed,
     witsFromTxWitnesses,
@@ -96,23 +94,9 @@ import Cardano.Ledger.Shelley.PParams
     pvCanFollow,
   )
 import Cardano.Ledger.Shelley.RewardUpdate
-  ( PulsingRewUpdate (..),
-    RewardSnapShot (..),
-    RewardUpdate (..),
-    emptyRewardUpdate,
-  )
 import Cardano.Ledger.Shelley.Rules.Utxow (propWits)
-import Cardano.Ledger.Shelley.Tx
-  ( minfee,
-    txsizeBound,
-    witsFromTxWitnesses,
-  )
-import Cardano.Ledger.Shelley.UTxO
-  ( TransUTxO,
-    consumed,
-    keyRefunds,
-    produced,
-  )
+import Cardano.Ledger.Shelley.Tx (minfee, witsFromTxWitnesses)
+import Cardano.Ledger.Shelley.UTxO (consumed, keyRefunds, produced)
 import Data.Default.Class (def)
 import Data.Set (Set)
 import qualified Data.Set as Set

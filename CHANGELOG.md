@@ -6,6 +6,100 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 in the naming of release branches.
 
+
+### Added
+- Core type classes: `EraSegWits`, `EraTx`, `EraTxBody`, `EraTxOut`, `EraPParams`,
+  `EraAuxiliaryData`, `EraWitnesses`, `EraScript`
+- Era specific type classes: `ShelleyEraTxBody`, `ShelleyMAEraTxBody`,
+  `AlonzoEraTxBody`, `AlonzoEraTxOut`, `AlonzoEraTx`, `BabbageEraTxBody`, `BabbageEraTxOut`
+- Type class hierarchy:
+```
+EraSegWits --> EraTx --> EraTxBody --> EraTxOut --> Era
+                     \             `--> EraPParams --> Era
+                      `--> EraWitnesses --> EraScript --> Era
+                       `--> EraAuxiliaryData --> Era
+```
+- Shelley:
+```
+ShelleyEraTxBody --> EraTxBody --> EraTxOut --> Era
+```
+- ShelleyMA:
+```
+ShelleyMAEraTxBody --> ShelleyEraTxBody --> EraTxBody --> EraTxOut --> Era
+```
+- Alonzo:
+```
+AlonzoEraTx --> EraTx --> ...
+           `--> AlonzoEraTxBody --> ShelleyMAEraTxBody --> ShelleyEraTxBody --> EraTxBody --> ...
+                                `--> AlonzoEraTxOut -> ShelleyEraTxOut --> EraTxOut --> ...
+```
+- Babbage:
+```
+BabbageEraTxBody --> AlonzoEraTxBody --> ....
+                `--> BabbageEraTxOut -> AlonzoEraTxOut -->
+```
+### Changed
+- Renamed `SupportsSegWit` to `EraSegWits`
+- Split `ValidateScript` into `EraScript` and `EraTx.validateScript`
+- Renamed `ValidateAuxiliaryData` to `EraAuxiliaryData` while removing usage of FunDeps.
+- Renamed in `Cardano.Ledger.Shelley`:
+  - `Tx` to `ShelleyTx` (kept type synonym with a deprecation message)
+  - `TxOut` to `ShelleyTxOut` (kept type synonym with a deprecation message)
+  - `TxBody` to `ShelleyTxBody` (kept type synonym with a deprecation message)
+  - `PParams` to `ShelleyPParams` (kept type synonym with a deprecation message)
+  - `PParamsUpdate` to `ShelleyPParamsUpdate` (kept type synonym with a deprecation message)
+  - `AuxiliaryData` to `ShelleyAuxiliaryData` (kept type synonym with a deprecation message)
+- Renamed in `Cardano.Ledger.Mary`:
+  - Renamed `Value` to `MaryValue` (kept type synonym with a deprecation message)
+- Renamed in `Cardano.Ledger.ShelleyMA`:
+  - `TxBody` to `MATxBody` (kept type synonym with a deprecation message)
+  - `AuxiliaryData` to `ShelleyAuxiliaryData` (kept type synonym with a deprecation message)
+- Renamed in `Cardano.Ledger.Alonzo`:
+  - `ValidatedTx` to `AlonzoTx` (kept type synonym with a deprecation message)
+  - `TxOut` to `AlonzoTxOut` (kept type synonym with a deprecation message)
+  - `TxBody` to `AlonzoTxBody` (kept type synonym with a deprecation message)
+  - `Script` to `AlonzoScript` (kept type synonym with a deprecation message)
+  - `PParams` to `AlonzoPParams` (kept type synonym with a deprecation message)
+  - `PParamsUpdate` to `AlonzoPParamsUpdate` (kept type synonym with a deprecation message)
+  - `AuxiliaryData` to `AlonzoAuxiliaryData` (kept type synonym with a deprecation message)
+- Renamed in `Cardano.Ledger.Babbage`:
+  - `TxOut` to `BabbageTxOut` (kept type synonym with a deprecation message)
+  - `TxBody` to `BabbageTxBody` (kept type synonym with a deprecation message)
+  - `PParams` to `BabbagePParams` (kept type synonym with a deprecation message)
+  - `PParamsUpdate` to `BabbagePParamsUpdate` (kept type synonym with a deprecation message)
+### Deprecated
+- `getTxOutAddr txOut` in favor of `txOut ^. addrTxOutL`
+- `getTxOutEitherAddr txOut` in favor of `txOut ^. addrEitherTxOutL`
+- `getTxOutCompactAddr txOut` in favor of `txOut ^. compactAddrTxOutL`
+- `getTxOutBootstrapAddress txOut` in favor of `txOut ^. bootAddrTxOutF`
+- `getAllInputs txBody` in favor of ` txBody ^. allInputsTxBodyF`
+- `getCoin txOut` in favor of `txOut ^. coinTxOutL`
+### Removed
+- `makeTxOut` in favor of `mkBasicTxOut`
+- `HasField` instances for: `"inputs"`, `"outputs"`, `"txfee"`,
+  `"auxiliaryData"`, `"minted"`, `"wdrls"`, `"ttl"`, `"update"`, `"certs"`,
+  `"vldt"`, `"mint"`, `"collateral"`, `"reqSignerHashes"`,
+  `"scriptIntegrityHash"`, `"txnetworkid"`, `"sizedOutputs"`,
+  `"referenceInputs"`, `"totalCollateral"`, `"collateralReturn"`,
+  `"sizedCollateralReturn"`, `"body"`, `"wits"`, `"auxData"`, `"size"`,
+  `"isValid"`, `"addrWits"`, `"scriptWits"`, `"bootWits"`, `"txdatahash"`,
+  `"addr"`, `"bootAddr"`, `"script"`, `"dats"`, `"rdmrs"`
+- `ValidateScript` in favor of `EraScript` and `EraTx`
+- Type class synonyms:
+  - `Trans*`
+  - `Uses*`: `UsesPParams`, `UsesScript`, `UsesTxBody`, `UsesTxOut`, `UsesAuxiliaryData`
+  - `BlockAnn`
+  - `ChainData`
+  - `AnnotatedData`
+  - `SerialisableData`
+  - `WellFormed`
+  - `ConcreteAlonzo`
+  - `ConcreteBabbage`
+  - ...
+
+### Fixed
+
+
 ## [Unreleased]
 ### Added
 -  Added `coinsPerUTxOByteToCoinsPerUTxOWord` helper function for Babbage

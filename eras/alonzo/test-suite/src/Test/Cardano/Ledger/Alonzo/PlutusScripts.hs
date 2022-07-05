@@ -2,7 +2,7 @@
 module Test.Cardano.Ledger.Alonzo.PlutusScripts where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel, Script (..), mkCostModel)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, mkCostModel)
 import Data.ByteString.Short (pack)
 import Data.Either (fromRight)
 import qualified Plutus.V1.Ledger.EvaluationContext as PV1
@@ -25,7 +25,7 @@ guessTheNumber'2_0 d1_1 d2_2 = if d1_1 PlutusTx.Eq.== d2_2
                                 else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-guessTheNumber2 :: Script era
+guessTheNumber2 :: AlonzoScript era
 guessTheNumber2 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -44,7 +44,7 @@ guessTheNumber'3_0 d1_1 d2_2 _d3_3 = if d1_1 PlutusTx.Eq.== d2_2
                                       else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-guessTheNumber3 :: Script era
+guessTheNumber3 :: AlonzoScript era
 guessTheNumber3 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -64,7 +64,7 @@ evendata'_0 d1_1 _d2_2 _d3_3 = let n_4 = PlutusTx.Builtins.unsafeDataAsI d1_1
                                     else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-evendata3 :: Script era
+evendata3 :: AlonzoScript era
 evendata3 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -85,7 +85,7 @@ odddata'_0 d1_1 _d2_2 _d3_3 = let n_4 = PlutusTx.Builtins.unsafeDataAsI d1_1
                                    else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-odddata3 :: Script era
+odddata3 :: AlonzoScript era
 odddata3 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -106,7 +106,7 @@ evenRedeemer'_0 _d1_1 d2_2 _d3_3 = let n_4 = PlutusTx.Builtins.unsafeDataAsI d2_
                                         else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-evenRedeemer3 :: Script era
+evenRedeemer3 :: AlonzoScript era
 evenRedeemer3 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -127,7 +127,7 @@ oddRedeemer'_0 _d1_1 d2_2 _d3_3 = let n_4 = PlutusTx.Builtins.unsafeDataAsI d2_2
                                        else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-oddRedeemer3 :: Script era
+oddRedeemer3 :: AlonzoScript era
 oddRedeemer3 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -149,7 +149,7 @@ sumsTo10'_0 d1_1 d2_2 _d3_3 = let {n_4 = PlutusTx.Builtins.unsafeDataAsI d1_1;
                                    else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-sumsTo103 :: Script era
+sumsTo103 :: AlonzoScript era
 sumsTo103 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -169,7 +169,7 @@ oddRedeemer2'_0 d1_1 _d3_2 = let n_3 = PlutusTx.Builtins.unsafeDataAsI d1_1
                                   else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-oddRedeemer2 :: Script era
+oddRedeemer2 :: AlonzoScript era
 oddRedeemer2 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -189,7 +189,7 @@ evenRedeemer2'_0 d1_1 _d3_2 = let n_3 = PlutusTx.Builtins.unsafeDataAsI d1_1
                                    else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-evenRedeemer2 :: Script era
+evenRedeemer2 :: AlonzoScript era
 evenRedeemer2 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -209,7 +209,7 @@ redeemerIs102'_0 d1_1 _d3_2 = let n_3 = PlutusTx.Builtins.unsafeDataAsI d1_1
                                    else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-redeemerIs102 :: Script era
+redeemerIs102 :: AlonzoScript era
 redeemerIs102 =
   PlutusScript PlutusV1 . pack $
     concat
@@ -227,7 +227,7 @@ guessTheNumber'2_0 d1_1 d2_2 = if d1_1 PlutusTx.Eq.== d2_2
                                 else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-guessTheNumber2V2 :: Script era
+guessTheNumber2V2 :: AlonzoScript era
 guessTheNumber2V2 =
   PlutusScript PlutusV2 . pack $
     concat
@@ -246,7 +246,7 @@ guessTheNumber'3_0 d1_1 d2_2 _d3_3 = if d1_1 PlutusTx.Eq.== d2_2
                                       else PlutusTx.Builtins.error GHC.Tuple.()
 -}
 
-guessTheNumber3V2 :: Script era
+guessTheNumber3V2 :: AlonzoScript era
 guessTheNumber3V2 =
   PlutusScript PlutusV2 . pack $
     concat

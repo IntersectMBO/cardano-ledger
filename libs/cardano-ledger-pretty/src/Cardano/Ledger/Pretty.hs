@@ -7,7 +7,6 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE ViewPatterns #-}
 
 module Cardano.Ledger.Pretty where
 
@@ -50,8 +49,7 @@ import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), DeltaCoin (..))
 import Cardano.Ledger.CompactAddress (CompactAddr (..), decompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
-import Cardano.Ledger.Core (PParamsDelta)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core hiding (Crypto)
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj, ScriptHashObj),
     GenesisCredential (..),
@@ -59,7 +57,6 @@ import Cardano.Ledger.Credential
     StakeReference (..),
   )
 import Cardano.Ledger.Crypto (Crypto)
-import Cardano.Ledger.Era (Era)
 import qualified Cardano.Ledger.Era as Era (TxSeq)
 import Cardano.Ledger.Keys
   ( GKeys (..),
@@ -72,9 +69,9 @@ import Cardano.Ledger.Keys
     VerKeyKES,
     hashKey,
   )
+import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
-import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness (..), ChainCode (..))
 import Cardano.Ledger.Shelley.EpochBoundary
   ( SnapShot (..),
     SnapShots (..),
@@ -97,8 +94,10 @@ import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Metadata (Metadata (..), Metadatum (..))
 import Cardano.Ledger.Shelley.PParams
   ( PPUpdateEnv (..),
-    PParams' (..),
     ProposedPPUpdates (..),
+    ShelleyPParams,
+    ShelleyPParamsHKD (..),
+    ShelleyPParamsUpdate,
     Update (..),
   )
 import Cardano.Ledger.Shelley.PoolRank
@@ -124,9 +123,9 @@ import Cardano.Ledger.Shelley.Rewards
     RewardType (..),
     StakeShare (..),
   )
-import Cardano.Ledger.Shelley.Scripts (MultiSig (..), ScriptHash (..))
+import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
 import Cardano.Ledger.Shelley.Tx
-  ( Tx (..),
+  ( ShelleyTx (..),
     WitnessSetHKD,
     prettyWitnessSetParts,
   )
@@ -141,10 +140,10 @@ import Cardano.Ledger.Shelley.TxBody
     PoolCert (..),
     PoolMetadata (..),
     PoolParams (..),
+    ShelleyTxBody (..),
+    ShelleyTxOut (..),
     StakePoolRelay (..),
-    TxBody (..),
     TxBodyRaw (..),
-    TxOut (..),
     Wdrl (..),
     WitVKey (..),
   )
@@ -191,7 +190,7 @@ import qualified Data.VMap as VMap
 import Data.Word (Word16, Word32, Word64, Word8)
 import Debug.Trace (trace)
 import GHC.Natural (Natural)
-import GHC.Records
+import Lens.Micro ((^.))
 import Prettyprinter
 import Prettyprinter.Internal (Doc (Empty))
 import Prettyprinter.Util (putDocW)
@@ -606,9 +605,9 @@ instance PrettyA (RewardUpdate crypto) where
 
 -- | Constraints needed to ensure that the ledger state can be pretty printed.
 type CanPrettyPrintLedgerState era =
-  ( PrettyA (Core.TxOut era),
-    PrettyA (Core.PParams era),
-    PrettyA (State (Core.EraRule "PPUP" era))
+  ( PrettyA (TxOut era),
+    PrettyA (PParams era),
+    PrettyA (State (EraRule "PPUP" era))
   )
 
 ppAccountState :: AccountState -> PDoc
@@ -650,7 +649,7 @@ ppInstantaneousRewards (InstantaneousRewards res treas dR dT) =
       ("deltaTreasury", ppDeltaCoin dT)
     ]
 
-ppPPUPState :: PrettyA (PParamsDelta era) => PPUPState era -> PDoc
+ppPPUPState :: PrettyA (PParamsUpdate era) => PPUPState era -> PDoc
 ppPPUPState (PPUPState p fp) =
   ppRecord
     "Proposed PPUPState"
@@ -788,7 +787,7 @@ instance
   prettyA = ppLedgerState
 
 instance
-  PrettyA (PParamsDelta era) =>
+  PrettyA (PParamsUpdate era) =>
   PrettyA (PPUPState era)
   where
   prettyA = ppPPUPState
@@ -893,13 +892,13 @@ instance PrettyA (SnapShots crypto) where
 -- Cardano.Ledger.Shelley.UTxO
 
 ppUTxO ::
-  PrettyA (Core.TxOut era) =>
+  PrettyA (TxOut era) =>
   UTxO era ->
   PDoc
 ppUTxO = ppAssocList (text "UTxO") ppTxIn prettyA . Map.toList . unUTxO
 
 instance
-  PrettyA (Core.TxOut era) =>
+  PrettyA (TxOut era) =>
   PrettyA (UTxO era)
   where
   prettyA = ppUTxO
@@ -935,18 +934,19 @@ instance PrettyA (Metadata era) where
 -- Cardano.Ledger.Shelley.Tx
 
 ppTx ::
-  ( PrettyA (Core.TxBody era),
-    PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.Witnesses era)
+  ( PrettyA (TxBody era),
+    PrettyA (AuxiliaryData era),
+    PrettyA (Witnesses era),
+    EraTx era
   ) =>
   Tx era ->
   PDoc
 ppTx tx =
   ppRecord
     "Tx"
-    [ ("body", prettyA $ getField @"body" tx),
-      ("witnessSet", prettyA $ getField @"wits" tx),
-      ("metadata", ppStrictMaybe prettyA $ getField @"auxiliaryData" tx)
+    [ ("body", prettyA $ tx ^. bodyTxL),
+      ("witnessSet", prettyA $ tx ^. witsTxL),
+      ("metadata", ppStrictMaybe prettyA $ tx ^. auxDataTxL)
     ]
 
 ppBootstrapWitness :: Crypto crypto => BootstrapWitness crypto -> PDoc
@@ -959,7 +959,7 @@ ppBootstrapWitness (BootstrapWitness key sig (ChainCode code) attr) =
       ("attributes", ppLong attr)
     ]
 
-ppWitnessSetHKD :: (Era era, PrettyA (Core.Script era)) => WitnessSetHKD Identity era -> PDoc
+ppWitnessSetHKD :: (Era era, PrettyA (Script era)) => WitnessSetHKD Identity era -> PDoc
 ppWitnessSetHKD x =
   let (addr, scr, boot) = prettyWitnessSetParts x
    in ppRecord
@@ -970,19 +970,20 @@ ppWitnessSetHKD x =
         ]
 
 instance
-  ( PrettyA (Core.TxBody era),
-    PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.Witnesses era),
-    Era era
+  ( PrettyA (TxBody era),
+    PrettyA (AuxiliaryData era),
+    PrettyA (Witnesses era),
+    EraTx era,
+    Tx era ~ ShelleyTx era
   ) =>
-  PrettyA (Tx era)
+  PrettyA (ShelleyTx era)
   where
   prettyA = ppTx
 
 instance Crypto crypto => PrettyA (BootstrapWitness crypto) where
   prettyA = ppBootstrapWitness
 
-instance (Era era, PrettyA (Core.Script era)) => PrettyA (WitnessSetHKD Identity era) where
+instance (Era era, PrettyA (Script era)) => PrettyA (WitnessSetHKD Identity era) where
   prettyA = ppWitnessSetHKD
 
 -- ============================
@@ -1053,8 +1054,13 @@ ppTxId (TxId x) = ppSexp "TxId" [ppSafeHash x]
 ppTxIn :: TxIn c -> PDoc
 ppTxIn (TxIn txid index) = ppSexp "TxIn" [ppTxId txid, pretty (txIxToInt index)]
 
-ppTxOut :: (Era era, PrettyA (Core.Value era)) => TxOut era -> PDoc
-ppTxOut (TxOutCompact caddr cval) = ppSexp "TxOut" [ppCompactAddr caddr, ppCompactForm prettyA cval]
+ppTxOut :: (EraTxOut era, PrettyA (Value era)) => TxOut era -> PDoc
+ppTxOut txOut =
+  ppSexp
+    "TxOut"
+    [ ppCompactAddr (txOut ^. compactAddrTxOutL),
+      ppCompactForm prettyA (txOut ^. compactValueTxOutL)
+    ]
 
 ppDelegCert :: DelegCert c -> PDoc
 ppDelegCert (RegKey x) = ppSexp "RegKey" [ppCredential x]
@@ -1086,9 +1092,9 @@ ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppGenesisDelegCert x]
 ppDCert (DCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
 
 ppTxBody ::
-  PrettyA (Core.TxOut era) =>
-  PrettyA (PParamsDelta era) =>
-  TxBody era ->
+  (PrettyA (TxOut era), TxOut era ~ ShelleyTxOut era) =>
+  PrettyA (PParamsUpdate era) =>
+  ShelleyTxBody era ->
   PDoc
 ppTxBody (TxBodyConstr (Memo (TxBodyRaw ins outs cs wdrls fee ttl upd mdh) _)) =
   ppRecord
@@ -1127,7 +1133,13 @@ instance PrettyA (TxId c) where
 instance PrettyA (TxIn c) where
   prettyA = ppTxIn
 
-instance (Era era, PrettyA (Core.Value era)) => PrettyA (TxOut era) where
+instance
+  ( EraTxOut era,
+    TxOut era ~ ShelleyTxOut era,
+    PrettyA (Value era)
+  ) =>
+  PrettyA (ShelleyTxOut era)
+  where
   prettyA = ppTxOut
 
 instance PrettyA (DelegCert c) where
@@ -1149,8 +1161,8 @@ instance PrettyA (DCert c) where
   prettyA = ppDCert
 
 instance
-  (PrettyA (Core.TxOut era), PrettyA (PParamsDelta era)) =>
-  PrettyA (TxBody era)
+  (PrettyA (TxOut era), PrettyA (PParamsUpdate era), TxOut era ~ ShelleyTxOut era) =>
+  PrettyA (ShelleyTxBody era)
   where
   prettyA = ppTxBody
 
@@ -1186,8 +1198,8 @@ instance Crypto c => PrettyA (CompactAddr c) where
 ppProtVer :: ProtVer -> PDoc
 ppProtVer (ProtVer maj mi) = ppRecord "Version" [("major", ppNatural maj), ("minor", ppNatural mi)]
 
-ppPParams :: PParams' Identity era -> PDoc
-ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
+ppPParams :: ShelleyPParams era -> PDoc
+ppPParams (ShelleyPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
   ppRecord
     "PParams"
     [ ("minfeeA", ppNatural feeA),
@@ -1209,8 +1221,8 @@ ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mp
       ("minPoolCost", ppCoin mpool)
     ]
 
-ppPParamsUpdate :: PParams' StrictMaybe era -> PDoc
-ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
+ppPParamsUpdate :: ShelleyPParamsUpdate era -> PDoc
+ppPParamsUpdate (ShelleyPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mutxo mpool) =
   ppRecord
     "PParams"
     [ ("minfeeA", lift ppNatural feeA),
@@ -1234,10 +1246,10 @@ ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mu
   where
     lift pp x = ppStrictMaybe pp x
 
-ppUpdate :: PrettyA (PParamsDelta era) => Update era -> PDoc
+ppUpdate :: PrettyA (PParamsUpdate era) => Update era -> PDoc
 ppUpdate (Update prop epn) = ppSexp "Update" [ppProposedPPUpdates prop, ppEpochNo epn]
 
-ppProposedPPUpdates :: PrettyA (PParamsDelta era) => ProposedPPUpdates era -> PDoc
+ppProposedPPUpdates :: PrettyA (PParamsUpdate era) => ProposedPPUpdates era -> PDoc
 ppProposedPPUpdates (ProposedPPUpdates m) = ppMap ppKeyHash prettyA m
 
 ppPPUpdateEnv :: PPUpdateEnv c -> PDoc
@@ -1250,18 +1262,18 @@ instance PrettyA (PPUpdateEnv c) where
   prettyA = ppPPUpdateEnv
 
 instance
-  PrettyA (PParamsDelta e) =>
+  PrettyA (PParamsUpdate e) =>
   PrettyA (ProposedPPUpdates e)
   where
   prettyA = ppProposedPPUpdates
 
-instance PrettyA (PParamsDelta e) => PrettyA (Update e) where
+instance PrettyA (PParamsUpdate e) => PrettyA (Update e) where
   prettyA = ppUpdate
 
-instance PrettyA (PParams' StrictMaybe e) where
+instance PrettyA (ShelleyPParamsUpdate e) where
   prettyA = ppPParamsUpdate
 
-instance PrettyA (PParams' Identity e) where
+instance PrettyA (ShelleyPParams e) where
   prettyA = ppPParams
 
 instance PrettyA ProtVer where

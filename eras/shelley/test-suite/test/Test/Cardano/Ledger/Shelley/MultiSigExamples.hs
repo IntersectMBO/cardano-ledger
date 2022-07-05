@@ -28,15 +28,15 @@ import Cardano.Ledger.BaseTypes
     maybeToStrictMaybe,
     mkTxIxPartial,
   )
+import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
   ( pattern KeyHashObj,
     pattern ScriptHashObj,
     pattern StakeRefBase,
   )
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyHash (..),
@@ -46,17 +46,19 @@ import Cardano.Ledger.Keys
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API
-  ( ScriptHash,
-    UTXOW,
-  )
+import Cardano.Ledger.Shelley.API (UTXOW)
 import Cardano.Ledger.Shelley.LedgerState
   ( LedgerState (..),
     UTxOState,
     genesisState,
   )
 import Cardano.Ledger.Shelley.Metadata (Metadata)
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), emptyPParams, _maxTxSize)
+import Cardano.Ledger.Shelley.PParams
+  ( ShelleyPParams,
+    ShelleyPParamsHKD (..),
+    emptyPParams,
+    _maxTxSize,
+  )
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Scripts
   ( MultiSig,
@@ -64,22 +66,16 @@ import Cardano.Ledger.Shelley.Scripts
     pattern RequireAnyOf,
     pattern RequireMOf,
     pattern RequireSignature,
-    pattern ScriptHash,
   )
-import Cardano.Ledger.Shelley.Tx
-  ( Tx (..),
-    TxId,
-    WitnessSetHKD (..),
-    hashScript,
-  )
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), TxId, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
-  ( TxBody (..),
-    TxOut (..),
+  ( ShelleyTxBody (..),
+    ShelleyTxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.TxIn (TxIn (..), txid)
+import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended (PredicateFailure, TRC (..))
 import Data.Foldable (fold)
@@ -88,7 +84,7 @@ import qualified Data.Map.Strict as Map (empty, fromList)
 import Data.Sequence.Strict (StrictSeq (..))
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set (fromList)
-import GHC.Records (HasField (..))
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
   ( Mock,
   )
@@ -149,11 +145,11 @@ aliceAndBobOrCarlOrDaria =
       RequireAnyOf [singleKeyOnly Cast.carlAddr, singleKeyOnly Cast.dariaAddr]
     ]
 
-initTxBody :: ShelleyTest era => [(Addr (Crypto era), Core.Value era)] -> TxBody era
+initTxBody :: ShelleyTest era => [(Addr (Crypto era), Value era)] -> ShelleyTxBody era
 initTxBody addrs =
-  TxBody
+  ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound, TxIn genesisId (mkTxIxPartial 1)])
-    (StrictSeq.fromList $ map (uncurry TxOut) addrs)
+    (StrictSeq.fromList $ map (uncurry ShelleyTxOut) addrs)
     Empty
     (Wdrl Map.empty)
     (Coin 0)
@@ -164,13 +160,13 @@ initTxBody addrs =
 makeTxBody ::
   ShelleyTest era =>
   [TxIn (Crypto era)] ->
-  [(Addr (Crypto era), Core.Value era)] ->
+  [(Addr (Crypto era), Value era)] ->
   Wdrl (Crypto era) ->
-  TxBody era
+  ShelleyTxBody era
 makeTxBody inp addrCs wdrl =
-  TxBody
+  ShelleyTxBody
     (Set.fromList inp)
-    (StrictSeq.fromList [uncurry TxOut addrC | addrC <- addrCs])
+    (StrictSeq.fromList [uncurry ShelleyTxOut addrC | addrC <- addrCs])
     Empty
     wdrl
     (Coin 0)
@@ -181,16 +177,16 @@ makeTxBody inp addrCs wdrl =
 makeTx ::
   forall c.
   (Mock c) =>
-  Core.TxBody (ShelleyEra c) ->
+  TxBody (ShelleyEra c) ->
   [KeyPair 'Witness c] ->
   Map (ScriptHash c) (MultiSig c) ->
   Maybe (Metadata (ShelleyEra c)) ->
-  Tx (ShelleyEra c)
-makeTx txBody keyPairs msigs = Tx txBody txWits . maybeToStrictMaybe
+  ShelleyTx (ShelleyEra c)
+makeTx txBody keyPairs msigs = ShelleyTx txBody txWits . maybeToStrictMaybe
   where
     txWits =
       mempty
-        { addrWits = makeWitnessesVKey (hashAnnotated $ txBody) keyPairs,
+        { addrWits = makeWitnessesVKey (hashAnnotated txBody) keyPairs,
           scriptWits = msigs
         }
 
@@ -207,11 +203,11 @@ genesis = genesisState genDelegs0 utxo0
     utxo0 =
       genesisCoins @era
         genesisId
-        [ TxOut Cast.aliceAddr (Val.inject aliceInitCoin),
-          TxOut Cast.bobAddr (Val.inject bobInitCoin)
+        [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin),
+          ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin)
         ]
 
-initPParams :: PParams era
+initPParams :: ShelleyPParams era
 initPParams = emptyPParams {_maxTxSize = 1000}
 
 -- | Create an initial UTxO state where Alice has 'aliceInitCoin' and Bob
@@ -247,7 +243,7 @@ initialUTxOState aliceKeep msigs =
               (asWitness <$> [Cast.alicePay, Cast.bobPay])
               Map.empty
               Nothing
-       in ( txid $ getField @"body" tx,
+       in ( txid $ tx ^. bodyTxL,
             runShelleyBase $
               applySTSTest @(UTXOW (ShelleyEra c))
                 ( TRC
@@ -287,7 +283,7 @@ applyTxWithScript lockScripts unlockScripts wdrl aliceKeep signers = utxoSt'
     txbody =
       makeTxBody
         inputs'
-        [(Cast.aliceAddr, (Val.inject $ aliceInitCoin <> bobInitCoin <> fold (unWdrl wdrl)))]
+        [(Cast.aliceAddr, Val.inject $ aliceInitCoin <> bobInitCoin <> fold (unWdrl wdrl))]
         wdrl
     inputs' =
       [ TxIn txId (mkTxIxPartial (toInteger n))

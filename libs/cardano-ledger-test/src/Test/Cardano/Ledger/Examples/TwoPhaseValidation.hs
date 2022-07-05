@@ -18,36 +18,37 @@ import Cardano.Crypto.Hash.Class (sizeHash)
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (..), collectTwoPhaseScriptInputs)
-import Cardano.Ledger.Alonzo.Rules.Bbody (AlonzoBBODY, AlonzoBbodyPredFail (..))
-import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos
-  ( FailureDescription (..),
+import Cardano.Ledger.Alonzo.Rules
+  ( AlonzoBBODY,
+    AlonzoBbodyPredFail (..),
+    FailureDescription (..),
     TagMismatchDescription (..),
+    UtxoPredicateFailure (..),
     UtxosPredicateFailure (..),
+    UtxowPredicateFail (..),
   )
-import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
+  ( AlonzoScript (..),
+    CostModel,
     CostModels (..),
     ExUnits (..),
-    Script (..),
     mkCostModel,
   )
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Tx
-  ( IsValid (..),
+  ( AlonzoTx (..),
+    IsValid (..),
     ScriptPurpose (..),
-    ValidatedTx (..),
     minfee,
   )
 import Cardano.Ledger.Alonzo.TxInfo (TranslationError, VersionedTxInfo, txInfo, valContext)
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), unRedeemers)
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
-import qualified Cardano.Ledger.Babbage.PParams as Babbage (PParams' (..))
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
-import Cardano.Ledger.Babbage.Rules.Utxow as Babbage (BabbageUtxowPred (..))
+import qualified Cardano.Ledger.Babbage.PParams as Babbage (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..))
+import Cardano.Ledger.Babbage.Rules as Babbage (BabbageUtxowPred (..))
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     Network (..),
@@ -56,18 +57,15 @@ import Cardano.Ledger.BaseTypes
     mkTxIxPartial,
     textToUrl,
   )
-import Cardano.Ledger.Block (Block (..))
+import Cardano.Ledger.Block (Block (..), txid)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraRule)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential
   ( Credential (..),
     StakeCredential,
     StakeReference (..),
   )
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era (..), SupportsSegWit (..), ValidateScript (hashScript))
-import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
     KeyHash,
@@ -81,7 +79,6 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.API
   ( CLI (..),
     DPState (..),
@@ -96,7 +93,7 @@ import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState (..),
     smartUTxOState,
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv (..), BbodyPredicateFailure (..), BbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplPredicateFailure (..))
@@ -115,7 +112,7 @@ import Cardano.Ledger.Shelley.TxBody
   )
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
-import Cardano.Ledger.TxIn (TxIn (..), txid)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject, (<+>))
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
@@ -193,7 +190,7 @@ defaultPPs =
     CollateralPercentage 100
   ]
 
-utxoEnv :: Core.PParams era -> UtxoEnv era
+utxoEnv :: PParams era -> UtxoEnv era
 utxoEnv pparams =
   UtxoEnv
     (SlotNo 0)
@@ -203,7 +200,7 @@ utxoEnv pparams =
 
 -- | Create an address with a given payment script.
 -- The proof here is used only as a Proxy.
-scriptAddr :: forall era. (Scriptic era) => Core.Script era -> Proof era -> Addr (Crypto era)
+scriptAddr :: forall era. (Scriptic era) => Script era -> Proof era -> Addr (Crypto era)
 scriptAddr s _pf = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
@@ -222,11 +219,11 @@ someAddr pf = Addr Testnet pCred sCred
     pCred = KeyHashObj . hashKey . vKey $ someKeys pf
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-someOutput :: Scriptic era => Proof era -> Core.TxOut era
+someOutput :: EraTxOut era => Proof era -> TxOut era
 someOutput pf =
   newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 1000)]
 
-nonScriptOutWithDatum :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+nonScriptOutWithDatum :: forall era. EraTxOut era => Proof era -> TxOut era
 nonScriptOutWithDatum pf =
   newTxOut
     pf
@@ -238,7 +235,7 @@ nonScriptOutWithDatum pf =
 mkGenesisTxIn :: (CH.HashAlgorithm (CC.HASH crypto), HasCallStack) => Integer -> TxIn crypto
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
-collateralOutput :: Scriptic era => Proof era -> Core.TxOut era
+collateralOutput :: EraTxOut era => Proof era -> TxOut era
 collateralOutput pf =
   newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 5)]
 
@@ -253,7 +250,7 @@ alwaysSucceedsHash n pf = hashScript @era $ always n pf
 alwaysFailsHash :: forall era. Scriptic era => Natural -> Proof era -> ScriptHash (Crypto era)
 alwaysFailsHash n pf = hashScript @era $ never n pf
 
-timelockScript :: PostShelley era => Int -> Proof era -> Core.Script era
+timelockScript :: PostShelley era => Int -> Proof era -> Script era
 timelockScript s = allOf [matchkey 1, after (100 + s)]
 
 timelockHash ::
@@ -271,13 +268,13 @@ timelockAddr pf = Addr Testnet pCred sCred
     pCred = ScriptHashObj (timelockHash 0 pf)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-timelockOut :: PostShelley era => Proof era -> Core.TxOut era
+timelockOut :: (EraTxOut era, PostShelley era) => Proof era -> TxOut era
 timelockOut pf =
   newTxOut pf [Address $ timelockAddr pf, Amount (inject $ Coin 1)]
 
 -- | This output is unspendable since it is locked by a plutus script,
 --  but has no datum hash.
-unspendableOut :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+unspendableOut :: forall era. (EraTxOut era, Scriptic era) => Proof era -> TxOut era
 unspendableOut pf =
   newTxOut
     pf
@@ -285,7 +282,7 @@ unspendableOut pf =
       Amount (inject $ Coin 5000)
     ]
 
-initUTxO :: PostShelley era => Proof era -> UTxO era
+initUTxO :: (EraTxOut era, PostShelley era) => Proof era -> UTxO era
 initUTxO pf =
   UTxO $
     Map.fromList $
@@ -301,9 +298,7 @@ initUTxO pf =
            ]
 
 initialUtxoSt ::
-  ( Default (State (EraRule "PPUP" era)),
-    PostShelley era
-  ) =>
+  (Default (State (EraRule "PPUP" era)), EraTxOut era) =>
   UTxO era ->
   UTxOState era
 initialUtxoSt utxo = smartUTxOState utxo (Coin 0) (Coin 0) def
@@ -312,7 +307,7 @@ initialUtxoSt utxo = smartUTxOState utxo (Coin 0) (Coin 0) def
 --  ExpectSuccess indicates that we created a valid transaction
 --  where the IsValid flag is true.
 data Expect era
-  = ExpectSuccess (Core.TxBody era) (Core.TxOut era)
+  = ExpectSuccess (TxBody era) (TxOut era)
   | ExpectSuccessInvalid
   | ExpectFailure
 
@@ -329,7 +324,7 @@ data Expect era
 -- Otherwise, the UTxO for (TxIn genesisId (10+i)) will be consumed.
 expectedUTxO ::
   forall era.
-  (HasCallStack, PostShelley era) =>
+  (HasCallStack, EraTxBody era) =>
   UTxO era ->
   Expect era ->
   Integer ->
@@ -341,12 +336,11 @@ expectedUTxO initUtxo ex idx = UTxO utxo
         Map.insert (TxIn (txid txb) minBound) newOut (filteredUTxO (mkTxIxPartial idx))
       ExpectSuccessInvalid -> filteredUTxO (mkTxIxPartial idx)
       ExpectFailure -> filteredUTxO (mkTxIxPartial (10 + idx))
-    filteredUTxO :: TxIx -> Map.Map (TxIn (Crypto era)) (Core.TxOut era)
+    filteredUTxO :: TxIx -> Map.Map (TxIn (Crypto era)) (TxOut era)
     filteredUTxO x = Map.filterWithKey (\(TxIn _ i) _ -> i /= x) $ unUTxO initUtxo
 
 expectedUTxO' ::
-  forall era.
-  (HasCallStack, PostShelley era) =>
+  (HasCallStack, EraTxBody era, PostShelley era) =>
   Proof era ->
   Expect era ->
   Integer ->
@@ -356,7 +350,7 @@ expectedUTxO' pf ex idx = expectedUTxO (initUTxO pf) ex idx
 keyBy :: Ord k => (a -> k) -> [a] -> Map k a
 keyBy f xs = Map.fromList $ (\x -> (f x, x)) <$> xs
 
-pp :: Proof era -> Core.PParams era
+pp :: Proof era -> PParams era
 pp pf = newPParams pf defaultPPs
 
 -- =========================================================================
@@ -372,7 +366,7 @@ redeemerExample1 = Data (Plutus.I 42)
 txDatsExample1 :: Era era => TxDats era
 txDatsExample1 = TxDats $ keyBy hashData [datumExample1]
 
-alwaysSucceedsOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+alwaysSucceedsOutput :: forall era. (EraTxOut era, Scriptic era) => Proof era -> TxOut era
 alwaysSucceedsOutput pf =
   newTxOut
     pf
@@ -381,7 +375,7 @@ alwaysSucceedsOutput pf =
       DHash' [hashData $ datumExample1 @era]
     ]
 
-alwaysSucceedsOutputV2 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+alwaysSucceedsOutputV2 :: forall era. (EraTxOut era, Scriptic era) => Proof era -> TxOut era
 alwaysSucceedsOutputV2 pf =
   newTxOut
     pf
@@ -400,7 +394,7 @@ extraRedeemersEx =
   Redeemers $
     Map.insert (RdmrPtr Tag.Spend 7) (redeemerExample1, ExUnits 432 444) (unRedeemers validatingRedeemersEx1)
 
-extraRedeemersBody :: Scriptic era => Proof era -> Core.TxBody era
+extraRedeemersBody :: EraTxBody era => Proof era -> TxBody era
 extraRedeemersBody pf =
   newTxBody
     pf
@@ -414,10 +408,11 @@ extraRedeemersBody pf =
 extraRedeemersTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 extraRedeemersTx pf =
   newTx
     pf
@@ -430,10 +425,10 @@ extraRedeemersTx pf =
         ]
     ]
 
-outEx1 :: Scriptic era => Proof era -> Core.TxOut era
+outEx1 :: EraTxOut era => Proof era -> TxOut era
 outEx1 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 4995)]
 
-validatingBody :: Scriptic era => Proof era -> Core.TxBody era
+validatingBody :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
 validatingBody pf =
   newTxBody
     pf
@@ -447,10 +442,11 @@ validatingBody pf =
 validatingTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 validatingTx pf =
   newTx
     pf
@@ -463,12 +459,12 @@ validatingTx pf =
         ]
     ]
 
-utxoEx1 :: forall era. PostShelley era => Proof era -> UTxO era
+utxoEx1 :: forall era. (PostShelley era, EraTxBody era) => Proof era -> UTxO era
 utxoEx1 pf = expectedUTxO' pf (ExpectSuccess (validatingBody pf) (outEx1 pf)) 1
 
 utxoStEx1 ::
   forall era.
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (Default (State (EraRule "PPUP" era)), EraTxBody era, PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx1 pf = smartUTxOState (utxoEx1 pf) (Coin 0) (Coin 5) def
@@ -496,7 +492,7 @@ notValidatingRedeemers =
         ]
     )
 
-alwaysFailsOutput :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+alwaysFailsOutput :: forall era. (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 alwaysFailsOutput pf =
   newTxOut
     pf
@@ -505,10 +501,10 @@ alwaysFailsOutput pf =
       DHash' [hashData $ datumExample2 @era]
     ]
 
-outEx2 :: (Scriptic era) => Proof era -> Core.TxOut era
+outEx2 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 outEx2 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 2995)]
 
-notValidatingBody :: Scriptic era => Proof era -> Core.TxBody era
+notValidatingBody :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
 notValidatingBody pf =
   newTxBody
     pf
@@ -521,10 +517,11 @@ notValidatingBody pf =
 
 notValidatingTx ::
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 notValidatingTx pf =
   newTx
     pf
@@ -537,11 +534,11 @@ notValidatingTx pf =
         ]
     ]
 
-utxoEx2 :: PostShelley era => Proof era -> UTxO era
+utxoEx2 :: (EraTxBody era, PostShelley era) => Proof era -> UTxO era
 utxoEx2 pf = expectedUTxO' pf ExpectFailure 2
 
 utxoStEx2 ::
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (Default (State (EraRule "PPUP" era)), EraTxBody era, PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx2 pf = smartUTxOState (utxoEx2 pf) (Coin 0) (Coin 5) def
@@ -550,7 +547,7 @@ utxoStEx2 pf = smartUTxOState (utxoEx2 pf) (Coin 0) (Coin 5) def
 --  Example 3: Process a CERT transaction with a succeeding Plutus script.
 -- =========================================================================
 
-outEx3 :: Era era => Proof era -> Core.TxOut era
+outEx3 :: EraTxOut era => Proof era -> TxOut era
 outEx3 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
 
 redeemerExample3 :: Data era
@@ -564,7 +561,7 @@ validatingRedeemersEx3 =
 scriptStakeCredSuceed :: Scriptic era => Proof era -> StakeCredential (Crypto era)
 scriptStakeCredSuceed pf = ScriptHashObj (alwaysSucceedsHash 2 pf)
 
-validatingBodyWithCert :: Scriptic era => Proof era -> Core.TxBody era
+validatingBodyWithCert :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
 validatingBodyWithCert pf =
   newTxBody
     pf
@@ -579,10 +576,11 @@ validatingBodyWithCert pf =
 validatingTxWithCert ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 validatingTxWithCert pf =
   newTx
     pf
@@ -594,11 +592,11 @@ validatingTxWithCert pf =
         ]
     ]
 
-utxoEx3 :: PostShelley era => Proof era -> UTxO era
+utxoEx3 :: (PostShelley era, EraTxBody era) => Proof era -> UTxO era
 utxoEx3 pf = expectedUTxO' pf (ExpectSuccess (validatingBodyWithCert pf) (outEx3 pf)) 3
 
 utxoStEx3 ::
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (Default (State (EraRule "PPUP" era)), EraTxBody era, PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx3 pf = smartUTxOState (utxoEx3 pf) (Coin 0) (Coin 5) def
@@ -607,7 +605,7 @@ utxoStEx3 pf = smartUTxOState (utxoEx3 pf) (Coin 0) (Coin 5) def
 --  Example 4: Process a CERT transaction with a failing Plutus script.
 -- =====================================================================
 
-outEx4 :: (Scriptic era) => Proof era -> Core.TxOut era
+outEx4 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 outEx4 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 995)]
 
 redeemerExample4 :: Data era
@@ -621,7 +619,7 @@ notValidatingRedeemersEx4 =
 scriptStakeCredFail :: Scriptic era => Proof era -> StakeCredential (Crypto era)
 scriptStakeCredFail pf = ScriptHashObj (alwaysFailsHash 1 pf)
 
-notValidatingBodyWithCert :: Scriptic era => Proof era -> Core.TxBody era
+notValidatingBodyWithCert :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
 notValidatingBodyWithCert pf =
   newTxBody
     pf
@@ -636,10 +634,11 @@ notValidatingBodyWithCert pf =
 notValidatingTxWithCert ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 notValidatingTxWithCert pf =
   newTx
     pf
@@ -651,11 +650,11 @@ notValidatingTxWithCert pf =
         ]
     ]
 
-utxoEx4 :: PostShelley era => Proof era -> UTxO era
+utxoEx4 :: (EraTxBody era, PostShelley era) => Proof era -> UTxO era
 utxoEx4 pf = expectedUTxO' pf ExpectFailure 4
 
 utxoStEx4 ::
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (Default (State (EraRule "PPUP" era)), EraTxBody era, PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx4 pf = smartUTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
@@ -664,7 +663,7 @@ utxoStEx4 pf = smartUTxOState (utxoEx4 pf) (Coin 0) (Coin 5) def
 --  Example 5: Process a WITHDRAWAL transaction with a succeeding Plutus script.
 -- ==============================================================================
 
-outEx5 :: (Scriptic era) => Proof era -> Core.TxOut era
+outEx5 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 outEx5 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
 redeemerExample5 :: Data era
@@ -675,7 +674,7 @@ validatingRedeemersEx5 =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Rewrd 0) (redeemerExample5, ExUnits 5000 5000)
 
-validatingBodyWithWithdrawal :: Scriptic era => Proof era -> Core.TxBody era
+validatingBodyWithWithdrawal :: (EraTxBody era, Scriptic era) => Proof era -> TxBody era
 validatingBodyWithWithdrawal pf =
   newTxBody
     pf
@@ -695,10 +694,11 @@ validatingBodyWithWithdrawal pf =
 validatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 validatingTxWithWithdrawal pf =
   newTx
     pf
@@ -710,11 +710,11 @@ validatingTxWithWithdrawal pf =
         ]
     ]
 
-utxoEx5 :: PostShelley era => Proof era -> UTxO era
+utxoEx5 :: (PostShelley era, EraTxBody era) => Proof era -> UTxO era
 utxoEx5 pf = expectedUTxO' pf (ExpectSuccess (validatingBodyWithWithdrawal pf) (outEx5 pf)) 5
 
 utxoStEx5 ::
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (Default (State (EraRule "PPUP" era)), EraTxBody era, PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx5 pf = smartUTxOState (utxoEx5 pf) (Coin 0) (Coin 5) def
@@ -723,7 +723,7 @@ utxoStEx5 pf = smartUTxOState (utxoEx5 pf) (Coin 0) (Coin 5) def
 --  Example 6: Process a WITHDRAWAL transaction with a failing Plutus script.
 -- ===========================================================================
 
-outEx6 :: (Scriptic era) => Proof era -> Core.TxOut era
+outEx6 :: (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 outEx6 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1995)]
 
 redeemerExample6 :: Data era
@@ -734,7 +734,7 @@ notValidatingRedeemersEx6 =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Rewrd 0) (redeemerExample6, ExUnits 5000 5000)
 
-notValidatingBodyWithWithdrawal :: Scriptic era => Proof era -> Core.TxBody era
+notValidatingBodyWithWithdrawal :: (Scriptic era, EraTxBody era) => Proof era -> TxBody era
 notValidatingBodyWithWithdrawal pf =
   newTxBody
     pf
@@ -754,10 +754,11 @@ notValidatingBodyWithWithdrawal pf =
 notValidatingTxWithWithdrawal ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 notValidatingTxWithWithdrawal pf =
   newTx
     pf
@@ -769,11 +770,11 @@ notValidatingTxWithWithdrawal pf =
         ]
     ]
 
-utxoEx6 :: PostShelley era => Proof era -> UTxO era
+utxoEx6 :: (EraTxBody era, PostShelley era) => Proof era -> UTxO era
 utxoEx6 pf = expectedUTxO' pf ExpectFailure 6
 
 utxoStEx6 ::
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (Default (State (EraRule "PPUP" era)), EraTxBody era, PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx6 pf = smartUTxOState (utxoEx6 pf) (Coin 0) (Coin 5) def
@@ -782,10 +783,10 @@ utxoStEx6 pf = smartUTxOState (utxoEx6 pf) (Coin 0) (Coin 5) def
 --  Example 7: Process a MINT transaction with a succeeding Plutus script.
 -- =============================================================================
 
-mintEx7 :: forall era. (Scriptic era, HasTokens era) => Proof era -> Core.Value era
+mintEx7 :: forall era. (Scriptic era, HasTokens era) => Proof era -> Value era
 mintEx7 pf = forge @era 1 (always 2 pf)
 
-outEx7 :: (HasTokens era, Scriptic era) => Proof era -> Core.TxOut era
+outEx7 :: (HasTokens era, EraTxOut era, Scriptic era) => Proof era -> TxOut era
 outEx7 pf = newTxOut pf [Address (someAddr pf), Amount (mintEx7 pf <+> inject (Coin 995))]
 
 redeemerExample7 :: Data era
@@ -796,7 +797,10 @@ validatingRedeemersEx7 =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Mint 0) (redeemerExample7, ExUnits 5000 5000)
 
-validatingBodyWithMint :: (HasTokens era, Scriptic era) => Proof era -> Core.TxBody era
+validatingBodyWithMint ::
+  (HasTokens era, EraTxBody era, Scriptic era) =>
+  Proof era ->
+  TxBody era
 validatingBodyWithMint pf =
   newTxBody
     pf
@@ -812,10 +816,11 @@ validatingTxWithMint ::
   forall era.
   ( Scriptic era,
     HasTokens era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 validatingTxWithMint pf =
   newTx
     pf
@@ -827,12 +832,12 @@ validatingTxWithMint pf =
         ]
     ]
 
-utxoEx7 :: forall era. (HasTokens era, PostShelley era) => Proof era -> UTxO era
+utxoEx7 :: forall era. (HasTokens era, EraTxBody era, PostShelley era) => Proof era -> UTxO era
 utxoEx7 pf = expectedUTxO' pf (ExpectSuccess (validatingBodyWithMint pf) (outEx7 pf)) 7
 
 utxoStEx7 ::
   forall era.
-  (Default (State (EraRule "PPUP" era)), PostShelley era, HasTokens era) =>
+  (Default (State (EraRule "PPUP" era)), PostShelley era, EraTxBody era, HasTokens era) =>
   Proof era ->
   UTxOState era
 utxoStEx7 pf = smartUTxOState (utxoEx7 pf) (Coin 0) (Coin 5) def
@@ -841,10 +846,10 @@ utxoStEx7 pf = smartUTxOState (utxoEx7 pf) (Coin 0) (Coin 5) def
 --  Example 8: Process a MINT transaction with a failing Plutus script.
 -- ==============================================================================
 
-mintEx8 :: forall era. (Scriptic era, HasTokens era) => Proof era -> Core.Value era
+mintEx8 :: forall era. (Scriptic era, HasTokens era) => Proof era -> Value era
 mintEx8 pf = forge @era 1 (never 1 pf)
 
-outEx8 :: (HasTokens era, Scriptic era) => Proof era -> Core.TxOut era
+outEx8 :: (HasTokens era, EraTxOut era, Scriptic era) => Proof era -> TxOut era
 outEx8 pf = newTxOut pf [Address (someAddr pf), Amount (mintEx8 pf <+> inject (Coin 995))]
 
 redeemerExample8 :: Data era
@@ -855,7 +860,10 @@ notValidatingRedeemersEx8 =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Mint 0) (redeemerExample8, ExUnits 5000 5000)
 
-notValidatingBodyWithMint :: (HasTokens era, Scriptic era) => Proof era -> Core.TxBody era
+notValidatingBodyWithMint ::
+  (HasTokens era, EraTxBody era, Scriptic era) =>
+  Proof era ->
+  TxBody era
 notValidatingBodyWithMint pf =
   newTxBody
     pf
@@ -871,10 +879,11 @@ notValidatingTxWithMint ::
   forall era.
   ( Scriptic era,
     HasTokens era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 notValidatingTxWithMint pf =
   newTx
     pf
@@ -886,11 +895,11 @@ notValidatingTxWithMint pf =
         ]
     ]
 
-utxoEx8 :: PostShelley era => Proof era -> UTxO era
+utxoEx8 :: (PostShelley era, EraTxBody era) => Proof era -> UTxO era
 utxoEx8 pf = expectedUTxO' pf ExpectFailure 8
 
 utxoStEx8 ::
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (Default (State (EraRule "PPUP" era)), EraTxBody era, PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx8 pf = smartUTxOState (utxoEx8 pf) (Coin 0) (Coin 5) def
@@ -909,10 +918,10 @@ validatingRedeemersEx9 =
       (RdmrPtr Tag.Mint 1, (Data (Plutus.I 104), ExUnits 5000 5000))
     ]
 
-mintEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> Core.Value era
+mintEx9 :: forall era. (PostShelley era, EraTxOut era, HasTokens era) => Proof era -> Value era
 mintEx9 pf = forge @era 1 (always 2 pf) <+> forge @era 1 (timelockScript 1 pf)
 
-outEx9 :: (HasTokens era, PostShelley era) => Proof era -> Core.TxOut era
+outEx9 :: (HasTokens era, EraTxOut era, PostShelley era) => Proof era -> TxOut era
 outEx9 pf =
   newTxOut
     pf
@@ -924,9 +933,9 @@ timelockStakeCred :: PostShelley era => Proof era -> StakeCredential (Crypto era
 timelockStakeCred pf = ScriptHashObj (timelockHash 2 pf)
 
 validatingBodyManyScripts ::
-  (HasTokens era, PostShelley era) =>
+  (HasTokens era, EraTxBody era, PostShelley era) =>
   Proof era ->
-  Core.TxBody era
+  TxBody era
 validatingBodyManyScripts pf =
   newTxBody
     pf
@@ -954,10 +963,11 @@ validatingTxManyScripts ::
   forall era.
   ( PostShelley era,
     HasTokens era,
+    EraTxBody era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 validatingTxManyScripts pf =
   newTx
     pf
@@ -979,7 +989,7 @@ validatingTxManyScripts pf =
         ]
     ]
 
-utxoEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> UTxO era
+utxoEx9 :: forall era. (EraTxBody era, PostShelley era, HasTokens era) => Proof era -> UTxO era
 utxoEx9 pf = UTxO utxo
   where
     utxo =
@@ -990,7 +1000,7 @@ utxoEx9 pf = UTxO utxo
 
 utxoStEx9 ::
   forall era.
-  (Default (State (EraRule "PPUP" era)), PostShelley era, HasTokens era) =>
+  (EraTxBody era, Default (State (EraRule "PPUP" era)), PostShelley era, HasTokens era) =>
   Proof era ->
   UTxOState era
 utxoStEx9 pf = smartUTxOState (utxoEx9 pf) (Coin 0) (Coin 5) def
@@ -999,7 +1009,7 @@ utxoStEx9 pf = smartUTxOState (utxoEx9 pf) (Coin 0) (Coin 5) def
 --  Example 10: A transaction with an acceptable supplimentary datum
 -- ====================================================================================
 
-outEx10 :: forall era. (Scriptic era) => Proof era -> Core.TxOut era
+outEx10 :: forall era. (EraTxBody era, Scriptic era) => Proof era -> TxOut era
 outEx10 pf =
   newTxOut
     pf
@@ -1008,7 +1018,7 @@ outEx10 pf =
       DHash' [hashData $ datumExample1 @era]
     ]
 
-okSupplimentaryDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
+okSupplimentaryDatumTxBody :: (EraTxBody era, Scriptic era) => Proof era -> TxBody era
 okSupplimentaryDatumTxBody pf =
   newTxBody
     pf
@@ -1021,10 +1031,11 @@ okSupplimentaryDatumTxBody pf =
 okSupplimentaryDatumTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 okSupplimentaryDatumTx pf =
   newTx
     pf
@@ -1035,12 +1046,12 @@ okSupplimentaryDatumTx pf =
         ]
     ]
 
-utxoEx10 :: forall era. PostShelley era => Proof era -> UTxO era
+utxoEx10 :: forall era. (EraTxBody era, PostShelley era) => Proof era -> UTxO era
 utxoEx10 pf = expectedUTxO' pf (ExpectSuccess (okSupplimentaryDatumTxBody pf) (outEx10 pf)) 3
 
 utxoStEx10 ::
   forall era.
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (EraTxBody era, Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx10 pf = smartUTxOState (utxoEx10 pf) (Coin 0) (Coin 5) def
@@ -1056,7 +1067,7 @@ multipleEqualCertsRedeemers =
       [ (RdmrPtr Tag.Cert 0, (redeemerExample3, ExUnits 5000 5000))
       ]
 
-multipleEqualCertsBody :: Scriptic era => Proof era -> Core.TxBody era
+multipleEqualCertsBody :: (EraTxBody era, Scriptic era) => Proof era -> TxBody era
 multipleEqualCertsBody pf =
   newTxBody
     pf
@@ -1074,10 +1085,11 @@ multipleEqualCertsBody pf =
 multipleEqualCertsTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 multipleEqualCertsTx pf =
   newTx
     pf
@@ -1089,11 +1101,11 @@ multipleEqualCertsTx pf =
         ]
     ]
 
-utxoEx11 :: PostShelley era => Proof era -> UTxO era
+utxoEx11 :: (EraTxBody era, PostShelley era) => Proof era -> UTxO era
 utxoEx11 pf = expectedUTxO' pf (ExpectSuccess (multipleEqualCertsBody pf) (outEx3 pf)) 3
 
 utxoStEx11 ::
-  (Default (State (EraRule "PPUP" era)), PostShelley era) =>
+  (EraTxBody era, Default (State (EraRule "PPUP" era)), PostShelley era) =>
   Proof era ->
   UTxOState era
 utxoStEx11 pf = smartUTxOState (utxoEx11 pf) (Coin 0) (Coin 5) def
@@ -1106,10 +1118,10 @@ utxoStEx11 pf = smartUTxOState (utxoEx11 pf) (Coin 0) (Coin 5) def
 --  as in the 'notOkSupplimentaryDatumTx' example.
 -- ====================================================================================
 
-outEx12 :: Scriptic era => Proof era -> Core.TxOut era
+outEx12 :: EraTxOut era => Proof era -> TxOut era
 outEx12 pf = newTxOut pf [Address (someAddr pf), Amount (inject $ Coin 1216)]
 
-nonScriptOutWithDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
+nonScriptOutWithDatumTxBody :: EraTxBody era => Proof era -> TxBody era
 nonScriptOutWithDatumTxBody pf =
   newTxBody
     pf
@@ -1121,10 +1133,11 @@ nonScriptOutWithDatumTxBody pf =
 nonScriptOutWithDatumTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 nonScriptOutWithDatumTx pf =
   newTx
     pf
@@ -1134,12 +1147,13 @@ nonScriptOutWithDatumTx pf =
         ]
     ]
 
-utxoEx12 :: PostShelley era => Proof era -> UTxO era
+utxoEx12 :: (EraTxBody era, PostShelley era) => Proof era -> UTxO era
 utxoEx12 pf = expectedUTxO' pf (ExpectSuccess (nonScriptOutWithDatumTxBody pf) (outEx12 pf)) 103
 
 utxoStEx12 ::
   ( Default (State (EraRule "PPUP" era)),
-    PostShelley era
+    PostShelley era,
+    EraTxBody era
   ) =>
   Proof era ->
   UTxOState era
@@ -1154,7 +1168,7 @@ utxoStEx12 pf =
 -- Invalid Transactions
 -- =======================
 
-incorrectNetworkIDTxBody :: Era era => Proof era -> Core.TxBody era
+incorrectNetworkIDTxBody :: EraTxBody era => Proof era -> TxBody era
 incorrectNetworkIDTxBody pf =
   newTxBody
     pf
@@ -1164,7 +1178,7 @@ incorrectNetworkIDTxBody pf =
       Txnetworkid (SJust Mainnet)
     ]
 
-incorrectNetworkIDTx :: (Era era, GoodCrypto (Crypto era)) => Proof era -> Core.Tx era
+incorrectNetworkIDTx :: (EraTx era, GoodCrypto (Crypto era)) => Proof era -> Tx era
 incorrectNetworkIDTx pf =
   newTx
     pf
@@ -1177,7 +1191,7 @@ incorrectNetworkIDTx pf =
 extraneousKeyHash :: CC.Crypto c => KeyHash 'Witness c
 extraneousKeyHash = hashKey . snd . mkKeyPair $ RawSeed 0 0 0 0 99
 
-missingRequiredWitnessTxBody :: Era era => Proof era -> Core.TxBody era
+missingRequiredWitnessTxBody :: EraTxBody era => Proof era -> TxBody era
 missingRequiredWitnessTxBody pf =
   newTxBody
     pf
@@ -1187,7 +1201,7 @@ missingRequiredWitnessTxBody pf =
       ReqSignerHashes' [extraneousKeyHash]
     ]
 
-missingRequiredWitnessTx :: (Era era, GoodCrypto (Crypto era)) => Proof era -> Core.Tx era
+missingRequiredWitnessTx :: (EraTx era, GoodCrypto (Crypto era)) => Proof era -> Tx era
 missingRequiredWitnessTx pf =
   newTx
     pf
@@ -1197,7 +1211,7 @@ missingRequiredWitnessTx pf =
         ]
     ]
 
-missingRedeemerTxBody :: Scriptic era => Proof era -> Core.TxBody era
+missingRedeemerTxBody :: EraTxBody era => Proof era -> TxBody era
 missingRedeemerTxBody pf =
   newTxBody
     pf
@@ -1209,9 +1223,9 @@ missingRedeemerTxBody pf =
     ]
 
 missingRedeemerTx ::
-  (Scriptic era, GoodCrypto (Crypto era)) =>
+  (Scriptic era, EraTx era, GoodCrypto (Crypto era)) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 missingRedeemerTx pf =
   newTx
     pf
@@ -1224,9 +1238,9 @@ missingRedeemerTx pf =
     ]
 
 wrongWppHashTx ::
-  (Scriptic era, GoodCrypto (Crypto era)) =>
+  (Scriptic era, EraTx era, GoodCrypto (Crypto era)) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 wrongWppHashTx pf =
   newTx
     pf
@@ -1243,10 +1257,11 @@ missing1phaseScriptWitnessTx ::
   forall era.
   ( PostShelley era,
     HasTokens era,
+    EraTxBody era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 missing1phaseScriptWitnessTx pf =
   newTx
     pf
@@ -1272,10 +1287,11 @@ missing2phaseScriptWitnessTx ::
   forall era.
   ( PostShelley era,
     HasTokens era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 missing2phaseScriptWitnessTx pf =
   newTx
     pf
@@ -1303,7 +1319,7 @@ misPurposedRedeemer =
     -- The label *should* be Spend, not Mint
     Map.singleton (RdmrPtr Tag.Mint 0) (redeemerExample1, ExUnits 5000 5000)
 
-wrongRedeemerLabelTxBody :: Scriptic era => Proof era -> Core.TxBody era
+wrongRedeemerLabelTxBody :: EraTxBody era => Proof era -> TxBody era
 wrongRedeemerLabelTxBody pf =
   newTxBody
     pf
@@ -1317,10 +1333,11 @@ wrongRedeemerLabelTxBody pf =
 wrongRedeemerLabelTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 wrongRedeemerLabelTx pf =
   newTx
     pf
@@ -1333,7 +1350,7 @@ wrongRedeemerLabelTx pf =
         ]
     ]
 
-missingDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
+missingDatumTxBody :: EraTxBody era => Proof era -> TxBody era
 missingDatumTxBody pf =
   newTxBody
     pf
@@ -1347,10 +1364,11 @@ missingDatumTxBody pf =
 missingDatumTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 missingDatumTx pf =
   newTx
     pf
@@ -1366,10 +1384,11 @@ phase1FailureTx ::
   forall era.
   ( PostShelley era,
     HasTokens era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 phase1FailureTx pf =
   newTx
     pf
@@ -1397,7 +1416,7 @@ validatingRedeemersTooManyExUnits =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Spend 0) (redeemerExample1, ExUnits 1000001 5000)
 
-tooManyExUnitsTxBody :: Scriptic era => Proof era -> Core.TxBody era
+tooManyExUnitsTxBody :: EraTxBody era => Proof era -> TxBody era
 tooManyExUnitsTxBody pf =
   newTxBody
     pf
@@ -1411,10 +1430,11 @@ tooManyExUnitsTxBody pf =
 tooManyExUnitsTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 tooManyExUnitsTx pf =
   newTx
     pf
@@ -1429,9 +1449,9 @@ tooManyExUnitsTx pf =
 
 missingCollateralSig ::
   forall era.
-  Scriptic era =>
+  (Scriptic era, EraTx era) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 missingCollateralSig pf =
   newTx
     pf
@@ -1443,7 +1463,7 @@ missingCollateralSig pf =
         ]
     ]
 
-plutusOutputWithNoDataTxBody :: Scriptic era => Proof era -> Core.TxBody era
+plutusOutputWithNoDataTxBody :: EraTxBody era => Proof era -> TxBody era
 plutusOutputWithNoDataTxBody pf =
   newTxBody
     pf
@@ -1457,10 +1477,11 @@ plutusOutputWithNoDataTxBody pf =
 plutusOutputWithNoDataTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 plutusOutputWithNoDataTx pf =
   newTx
     pf
@@ -1475,10 +1496,10 @@ plutusOutputWithNoDataTx pf =
 totallyIrrelevantDatum :: Data era
 totallyIrrelevantDatum = Data (Plutus.I 1729)
 
-outputWithNoDatum :: forall era. Era era => Proof era -> Core.TxOut era
+outputWithNoDatum :: forall era. EraTxOut era => Proof era -> TxOut era
 outputWithNoDatum pf = newTxOut pf [Address $ someAddr pf, Amount (inject $ Coin 995)]
 
-notOkSupplimentaryDatumTxBody :: Scriptic era => Proof era -> Core.TxBody era
+notOkSupplimentaryDatumTxBody :: EraTxBody era => Proof era -> TxBody era
 notOkSupplimentaryDatumTxBody pf =
   newTxBody
     pf
@@ -1493,10 +1514,11 @@ notOkSupplimentaryDatumTxBody pf =
 notOkSupplimentaryDatumTx ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 notOkSupplimentaryDatumTx pf =
   newTx
     pf
@@ -1510,7 +1532,7 @@ notOkSupplimentaryDatumTx pf =
 hashsize :: forall c. CC.Crypto c => Int
 hashsize = fromIntegral $ sizeHash ([] @(CC.HASH c))
 
-poolMDHTooBigTxBody :: forall era. Scriptic era => Proof era -> Core.TxBody era
+poolMDHTooBigTxBody :: forall era. (EraTxBody era, Scriptic era) => Proof era -> TxBody era
 poolMDHTooBigTxBody pf =
   newTxBody
     pf
@@ -1537,10 +1559,11 @@ poolMDHTooBigTxBody pf =
 poolMDHTooBigTx ::
   forall era.
   ( Scriptic era,
+    EraTxBody era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 poolMDHTooBigTx pf =
   -- Note that the UTXOW rule will no trigger the expected predicate failure,
   -- since it is checked in the POOL rule. BBODY will trigger it, however.
@@ -1560,7 +1583,7 @@ multipleEqualCertsRedeemersInvalid =
         (RdmrPtr Tag.Cert 1, (redeemerExample3, ExUnits 5000 5000))
       ]
 
-multipleEqualCertsBodyInvalid :: Scriptic era => Proof era -> Core.TxBody era
+multipleEqualCertsBodyInvalid :: EraTxBody era => Scriptic era => Proof era -> TxBody era
 multipleEqualCertsBodyInvalid pf =
   newTxBody
     pf
@@ -1578,10 +1601,11 @@ multipleEqualCertsBodyInvalid pf =
 multipleEqualCertsTxInvalid ::
   forall era.
   ( Scriptic era,
+    EraTx era,
     GoodCrypto (Crypto era)
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 multipleEqualCertsTxInvalid pf =
   newTx
     pf
@@ -1593,7 +1617,7 @@ multipleEqualCertsTxInvalid pf =
         ]
     ]
 
-noCostModelBody :: Scriptic era => Proof era -> Core.TxBody era
+noCostModelBody :: EraTxBody era => Proof era -> TxBody era
 noCostModelBody pf =
   newTxBody
     pf
@@ -1607,10 +1631,11 @@ noCostModelBody pf =
 noCostModelTx ::
   forall era.
   ( Scriptic era,
-    GoodCrypto (Crypto era)
+    GoodCrypto (Crypto era),
+    EraTx era
   ) =>
   Proof era ->
-  Core.Tx era
+  Tx era
 noCostModelTx pf =
   newTx
     pf
@@ -1629,7 +1654,7 @@ noCostModelTx pf =
 
 type A = AlonzoEra C_Crypto
 
-type UtxowPF = PredicateFailure (Core.EraRule "UTXOW" A)
+type UtxowPF = PredicateFailure (EraRule "UTXOW" A)
 
 quietPlutusFailure :: FailureDescription
 quietPlutusFailure = PlutusFailure "human" "debug"
@@ -1645,8 +1670,8 @@ collectInputs ::
   Proof era ->
   EpochInfo (Either Text) ->
   SystemStart ->
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   UTxO era ->
   Either
     [CollectError (Crypto era)]
@@ -1657,12 +1682,12 @@ collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 
 getTxInfo ::
   Proof era ->
-  Core.PParams era ->
+  PParams era ->
   Language ->
   EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
-  Core.Tx era ->
+  Tx era ->
   Either (TranslationError (Crypto era)) VersionedTxInfo
 getTxInfo (Alonzo _) = txInfo
 getTxInfo (Babbage _) = txInfo
@@ -1724,6 +1749,7 @@ dpstate pf =
 
 initialBBodyState ::
   ( Default (State (EraRule "PPUP" era)),
+    EraTxOut era,
     PostShelley era
   ) =>
   Proof era ->
@@ -1738,12 +1764,7 @@ coldKeys = KeyPair vk sk
     (sk, vk) = mkKeyPair (RawSeed 1 2 3 2 1)
 
 makeNaiveBlock ::
-  forall era.
-  ( Era era,
-    ToCBORGroup (TxSeq era)
-  ) =>
-  [Core.Tx era] ->
-  Block (BHeaderView (Crypto era)) era
+  forall era. EraSegWits era => [Tx era] -> Block (BHeaderView (Crypto era)) era
 makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txs'
   where
     bhView =
@@ -1756,19 +1777,19 @@ makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txs'
         }
     txs' = (toTxSeq @era) . StrictSeq.fromList $ txs
 
-trustMeP :: Proof era -> Bool -> Core.Tx era -> Core.Tx era
-trustMeP (Alonzo _) iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValid iv') m
-trustMeP (Babbage _) iv' (ValidatedTx b w _ m) = ValidatedTx b w (IsValid iv') m
+trustMeP :: Proof era -> Bool -> Tx era -> Tx era
+trustMeP (Alonzo _) iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
+trustMeP (Babbage _) iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
 trustMeP _ _ tx = tx
 
 testAlonzoBlock ::
   ( GoodCrypto (Crypto era),
-    Scriptic era,
     HasTokens era,
-    ToCBORGroup (TxSeq era)
+    Scriptic era,
+    EraSegWits era
   ) =>
   Proof era ->
-  (Block (BHeaderView (Crypto era)) era)
+  Block (BHeaderView (Crypto era)) era
 testAlonzoBlock pf =
   makeNaiveBlock
     [ trustMeP pf True $ validatingTx pf,
@@ -1788,9 +1809,9 @@ testAlonzoBadPMDHBlock other = error ("testAlonzoBadPMDHBlock does not work in e
 
 example1UTxO ::
   ( GoodCrypto (Crypto era),
-    Scriptic era,
     HasTokens era,
-    PostShelley era
+    PostShelley era,
+    EraTxBody era
   ) =>
   Proof era ->
   UTxO era
@@ -1816,8 +1837,8 @@ example1UTxO pf =
       ]
 
 example1UtxoSt ::
-  ( GoodCrypto (Crypto era),
-    Scriptic era,
+  ( EraTxBody era,
+    GoodCrypto (Crypto era),
     HasTokens era,
     PostShelley era,
     Default (State (EraRule "PPUP" era))
@@ -1830,7 +1851,8 @@ example1BBodyState ::
   ( GoodCrypto (Crypto era),
     HasTokens era,
     PostShelley era,
-    Default (State (EraRule "PPUP" era))
+    Default (State (EraRule "PPUP" era)),
+    EraTxBody era
   ) =>
   Proof era ->
   BbodyState era
@@ -1871,19 +1893,19 @@ alonzoAPITests =
 
 -- | This type is what you get when you use runSTS in the UTXOW rule. It is also
 --   the type one uses for expected answers, to compare the 'computed' against 'expected'
-type Result era = Either [PredicateFailure (Core.EraRule "UTXOW" era)] (State (Core.EraRule "UTXOW" era))
+type Result era = Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era))
 
 testUTXOWwith ::
   forall era.
   ( GoodCrypto (Crypto era),
     Default (State (EraRule "PPUP" era)),
-    PostShelley era
+    EraTx era
   ) =>
   WitRule "UTXOW" era ->
   (Result era -> Result era -> Assertion) ->
   UTxO era ->
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   Result era ->
   Assertion
 testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
@@ -1971,13 +1993,14 @@ testUTXOWsubset,
     ( GoodCrypto (Crypto era),
       Default (State (EraRule "PPUP" era)),
       PostShelley era,
+      EraTx era,
       HasCallStack
     ) =>
     WitRule "UTXOW" era ->
     UTxO era ->
-    Core.PParams era ->
-    Core.Tx era ->
-    Either [PredicateFailure (Core.EraRule "UTXOW" era)] (State (Core.EraRule "UTXOW" era)) ->
+    PParams era ->
+    Tx era ->
+    Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era)) ->
     Assertion
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
@@ -1995,11 +2018,12 @@ testU ::
   ( GoodCrypto (Crypto era),
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
+    EraTx era,
     HasCallStack
   ) =>
   Proof era ->
-  Core.Tx era ->
-  Either [PredicateFailure (Core.EraRule "UTXOW" era)] (State (Core.EraRule "UTXOW" era)) ->
+  Tx era ->
+  Either [PredicateFailure (EraRule "UTXOW" era)] (State (EraRule "UTXOW" era)) ->
   Assertion
 testU pf tx expect = testUTXOW (UTXOW pf) (initUTxO pf) (pp pf) tx expect
 
@@ -2020,7 +2044,7 @@ specialCase wit@(UTXOW proof) utxo pparam tx expected =
 
 findMismatch ::
   Proof era ->
-  PredicateFailure (Core.EraRule "UTXOW" era) ->
+  PredicateFailure (EraRule "UTXOW" era) ->
   Maybe (UtxosPredicateFailure era)
 findMismatch (Alonzo _) (WrappedShelleyEraFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch (Babbage _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
@@ -2058,6 +2082,7 @@ alonzoUTXOWexamplesB ::
     HasTokens era,
     Scriptic era,
     Default (State (EraRule "PPUP" era)),
+    EraTx era,
     PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto
   ) =>
   Proof era ->
@@ -2390,9 +2415,9 @@ alonzoBBODYexamplesP ::
   forall era.
   ( GoodCrypto (Crypto era),
     HasTokens era,
-    ToCBORGroup (TxSeq era),
     Default (State (EraRule "PPUP" era)),
-    PostShelley era
+    PostShelley era,
+    EraSegWits era
   ) =>
   Proof era ->
   TestTree

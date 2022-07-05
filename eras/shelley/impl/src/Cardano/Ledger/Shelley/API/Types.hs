@@ -59,12 +59,12 @@ import Cardano.Ledger.Keys as X
     hashKey,
     hashVerKeyVRF,
   )
+import Cardano.Ledger.Keys.Bootstrap as X
+  ( BootstrapWitness (..),
+  )
 import Cardano.Ledger.PoolDistr as X
   ( PoolDistr (..),
     individualPoolStake,
-  )
-import Cardano.Ledger.Shelley.Address.Bootstrap as X
-  ( BootstrapWitness (..),
   )
 import Cardano.Ledger.Shelley.BlockChain as X (bbHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates as X
@@ -99,8 +99,10 @@ import Cardano.Ledger.Shelley.Metadata as X
   )
 import Cardano.Ledger.Shelley.PParams as X
   ( PParams,
-    PParams' (..),
+    PParams',
     ProposedPPUpdates (..),
+    ShelleyPParams,
+    ShelleyPParamsHKD (..),
     Update (..),
   )
 import Cardano.Ledger.Shelley.PoolRank as X
@@ -133,9 +135,13 @@ import Cardano.Ledger.Shelley.StabilityWindow as X
     computeStabilityWindow,
   )
 import Cardano.Ledger.Shelley.Tx as X
-  ( Tx (..),
-    TxBody (..),
-    TxOut (..),
+  ( ShelleyTx (..),
+    ShelleyTxBody (..),
+    ShelleyTxOut (..),
+    ShelleyWitnesses,
+    Tx,
+    TxBody,
+    TxOut,
     WitnessSet,
   )
 import Cardano.Ledger.Shelley.TxBody as X

@@ -4,8 +4,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
@@ -17,7 +15,7 @@
 module Test.Cardano.Ledger.Model.Script where
 
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
 import qualified Cardano.Ledger.Crypto as C
 import Cardano.Ledger.Keys
@@ -263,7 +261,7 @@ elaborateModelTimelock f = go
       ModelTimelock_TimeStart slotNo -> pure $ RequireTimeStart slotNo
       ModelTimelock_TimeExpire slotNo -> pure $ RequireTimeExpire slotNo
 
-elaboratePreprocessedPlutusScript :: PreprocessedPlutusScript -> Alonzo.Script x
+elaboratePreprocessedPlutusScript :: PreprocessedPlutusScript -> AlonzoScript x
 elaboratePreprocessedPlutusScript = \case
   GuessTheNumber3 -> TestScripts.guessTheNumber3
   Evendata3 -> TestScripts.evendata3
@@ -277,14 +275,14 @@ elaboratePreprocessedPlutusScript = \case
 
 elaborateModelScript ::
   ModelPlutusScript ->
-  Alonzo.Script era
+  AlonzoScript era
 elaborateModelScript = \case
   ModelPlutusScript_AlwaysSucceeds n -> AlonzoTest.alwaysSucceeds PlutusV1 n
   ModelPlutusScript_AlwaysFails n -> AlonzoTest.alwaysFails PlutusV1 n
   ModelPlutusScript_Preprocessed p -> elaboratePreprocessedPlutusScript p
   ModelPlutusScript_Salt n ps -> case elaborateModelScript ps of
-    Alonzo.TimelockScript {} -> error $ "not supposted to be a timelock script: " <> show ps
-    Alonzo.PlutusScript lang ps' -> AlonzoTest.saltFunction lang n ps'
+    TimelockScript {} -> error $ "not supposted to be a timelock script: " <> show ps
+    PlutusScript lang ps' -> AlonzoTest.saltFunction lang n ps'
 
 evalModelPlutusScript ::
   Maybe PlutusTx.Data ->

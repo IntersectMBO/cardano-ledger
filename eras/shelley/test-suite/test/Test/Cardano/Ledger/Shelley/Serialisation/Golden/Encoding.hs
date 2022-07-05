@@ -28,10 +28,7 @@ import Cardano.Crypto.DSIGN (encodeSignedDSIGN, encodeVerKeyDSIGN)
 import qualified Cardano.Crypto.Hash as Monomorphic
 import Cardano.Crypto.KES (SignedKES)
 import Cardano.Crypto.VRF (CertifiedVRF)
-import Cardano.Ledger.Address
-  ( Addr (..),
-  )
-import Cardano.Ledger.AuxiliaryData (hashAuxiliaryData)
+import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     BoundedRational (..),
@@ -47,6 +44,7 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..), CompactForm (..), DeltaCoin (..))
+import Cardano.Ledger.Core (EraTx, Tx, hashAuxiliaryData, hashScript)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Era (Crypto (..))
@@ -85,8 +83,7 @@ import Cardano.Ledger.Shelley.API
   ( MultiSig,
     ScriptHash,
   )
-import Cardano.Ledger.Shelley.BlockChain (TxSeq (..), bbHash)
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
+import Cardano.Ledger.Shelley.BlockChain (ShelleyTxSeq (..), bbHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( pattern DeRegKey,
     pattern Delegate,
@@ -110,22 +107,22 @@ import Cardano.Ledger.Shelley.LedgerState
   )
 import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PParams
-  ( PParams' (..),
-    PParamsUpdate,
+  ( ShelleyPParamsHKD (..),
+    ShelleyPParamsUpdate,
     emptyPParams,
     pattern ProposedPPUpdates,
     pattern Update,
   )
 import Cardano.Ledger.Shelley.Rewards ()
 import Cardano.Ledger.Shelley.Scripts (pattern RequireSignature)
-import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..), hashScript)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyWitnesses, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
     MIRTarget (..),
     PoolMetadata (..),
+    ShelleyTxBody (..),
+    ShelleyTxOut (..),
     StakePoolRelay (..),
-    TxBody (..),
-    TxOut (..),
     Wdrl (..),
     WitVKey (..),
     _poolCost,
@@ -248,9 +245,9 @@ testVRF = mkVRFKeyPair (RawSeed 0 0 0 0 5)
 testVRFKH :: forall crypto. CC.Crypto crypto => Hash crypto (VerKeyVRF crypto)
 testVRFKH = hashVerKeyVRF $ snd (testVRF @crypto)
 
-testTxb :: ShelleyTest era => TxBody era
+testTxb :: ShelleyTest era => ShelleyTxBody era
 testTxb =
-  TxBody
+  ShelleyTxBody
     Set.empty
     StrictSeq.empty
     StrictSeq.empty
@@ -368,11 +365,11 @@ testHeaderHash =
 
 testBHB ::
   forall era crypto.
-  ( Era era,
+  ( EraTx era,
     PreAlonzo era,
-    UsesTxBody era,
     ExMock crypto,
-    crypto ~ Crypto era
+    crypto ~ Crypto era,
+    Tx era ~ ShelleyTx era
   ) =>
   BHBody crypto
 testBHB =
@@ -397,7 +394,7 @@ testBHB =
           )
           (fst $ testVRF @crypto),
       bsize = 0,
-      bhash = bbHash @era $ TxSeq @era StrictSeq.empty,
+      bhash = bbHash @era $ ShelleyTxSeq @era StrictSeq.empty,
       bheaderOCert =
         OCert
           (snd $ testKESKeys @crypto)
@@ -412,10 +409,10 @@ testBHB =
 
 testBHBSigTokens ::
   forall era.
-  ( Era era,
+  ( EraTx era,
     PreAlonzo era,
     ExMock (Crypto era),
-    UsesTxBody era
+    Tx era ~ ShelleyTx era
   ) =>
   Tokens ->
   Tokens
@@ -480,7 +477,7 @@ tests =
       let a = Addr Testnet testPayCred StakeRefNull
        in checkEncodingCBOR
             "txout"
-            (TxOut @C a (Coin 2))
+            (ShelleyTxOut @C a (Coin 2))
             ( T (TkListLen 2)
                 <> S a
                 <> S (Coin 2)
@@ -650,7 +647,7 @@ tests =
             ),
       checkEncodingCBOR
         "pparams_update_key_deposit_only"
-        ( PParams
+        ( ShelleyPParams
             { _minfeeA = SNothing,
               _minfeeB = SNothing,
               _maxBBSize = SNothing,
@@ -669,7 +666,7 @@ tests =
               _minUTxOValue = SNothing,
               _minPoolCost = SNothing
             } ::
-            PParamsUpdate C
+            ShelleyPParamsUpdate C
         )
         ((T $ TkMapLen 1 . TkWord 5) <> S (Coin 5)),
       -- checkEncodingCBOR "pparams_update_all"
@@ -692,7 +689,7 @@ tests =
           minPoolCost = Coin 987
        in checkEncodingCBOR
             "pparams_update_all"
-            ( PParams
+            ( ShelleyPParams
                 { _minfeeA = SJust minfeea,
                   _minfeeB = SJust minfeeb,
                   _maxBBSize = SJust maxbbsize,
@@ -711,7 +708,7 @@ tests =
                   _minUTxOValue = SJust minUTxOValue,
                   _minPoolCost = SJust minPoolCost
                 } ::
-                PParamsUpdate C
+                ShelleyPParamsUpdate C
             )
             ( (T $ TkMapLen 17)
                 <> (T $ TkWord 0)
@@ -754,7 +751,7 @@ tests =
             ProposedPPUpdates @C
               ( Map.singleton
                   (testGKeyHash @C_Crypto)
-                  ( PParams
+                  ( ShelleyPParams
                       { _minfeeA = SNothing,
                         _minfeeB = SNothing,
                         _maxBBSize = SNothing,
@@ -784,10 +781,10 @@ tests =
                 <> S e
             ),
       -- checkEncodingCBOR "minimal_txn_body"
-      let tout = TxOut @C testAddrE (Coin 2)
+      let tout = ShelleyTxOut @C testAddrE (Coin 2)
        in checkEncodingCBORAnnotated
             "txbody"
-            ( TxBody @C -- minimal transaction body
+            ( ShelleyTxBody @C -- minimal transaction body
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 StrictSeq.empty
@@ -810,7 +807,7 @@ tests =
                 <> T (TkWord64 500)
             ),
       -- checkEncodingCBOR "transaction_mixed"
-      let tout = TxOut @C testAddrE (Coin 2)
+      let tout = ShelleyTxOut @C testAddrE (Coin 2)
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
           up =
@@ -818,7 +815,7 @@ tests =
               ( ProposedPPUpdates
                   ( Map.singleton
                       testGKeyHash
-                      ( PParams
+                      ( ShelleyPParams
                           { _minfeeA = SNothing,
                             _minfeeB = SNothing,
                             _maxBBSize = SNothing,
@@ -843,7 +840,7 @@ tests =
               (EpochNo 0)
        in checkEncodingCBORAnnotated
             "txbody_partial"
-            ( TxBody @C -- transaction body with some optional components
+            ( ShelleyTxBody @C -- transaction body with some optional components
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 StrictSeq.Empty
@@ -870,7 +867,7 @@ tests =
                 <> S up
             ),
       -- checkEncodingCBOR "full_txn_body"
-      let tout = TxOut @C testAddrE (Coin 2)
+      let tout = ShelleyTxOut @C testAddrE (Coin 2)
           reg = DCertDeleg (RegKey (testStakeCred @C_Crypto))
           ra = RewardAcnt Testnet (KeyHashObj testKeyHash2)
           ras = Map.singleton ra (Coin 123)
@@ -879,7 +876,7 @@ tests =
               ( ProposedPPUpdates
                   ( Map.singleton
                       testGKeyHash
-                      ( PParams
+                      ( ShelleyPParams
                           { _minfeeA = SNothing,
                             _minfeeB = SNothing,
                             _maxBBSize = SNothing,
@@ -905,7 +902,7 @@ tests =
           mdh = hashAuxiliaryData @C $ MD.Metadata $ Map.singleton 13 (MD.I 17)
        in checkEncodingCBORAnnotated
             "txbody_full"
-            ( TxBody @C -- transaction body with all components
+            ( ShelleyTxBody @C -- transaction body with all components
                 (Set.fromList [genesisTxIn1])
                 (StrictSeq.singleton tout)
                 (StrictSeq.fromList [reg])
@@ -938,9 +935,9 @@ tests =
             ),
       -- checkEncodingCBOR "minimal_txn"
       let txb =
-            TxBody @C
+            ShelleyTxBody @C
               (Set.fromList [TxIn genesisId (mkTxIxPartial 1)])
-              (StrictSeq.singleton $ TxOut @C testAddrE (Coin 2))
+              (StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2))
               StrictSeq.empty
               (Wdrl Map.empty)
               (Coin 9)
@@ -951,9 +948,9 @@ tests =
           w = makeWitnessVKey @C_Crypto txbh testKey1
        in checkEncodingCBORAnnotated
             "tx_min"
-            ( Tx @(ShelleyEra C_Crypto)
+            ( ShelleyTx @(ShelleyEra C_Crypto)
                 txb
-                (mempty {addrWits = Set.singleton w} :: Cardano.Ledger.Shelley.Tx.WitnessSet C)
+                (mempty {addrWits = Set.singleton w} :: ShelleyWitnesses C)
                 SNothing
             )
             ( T (TkListLen 3)
@@ -966,24 +963,24 @@ tests =
             ),
       -- checkEncodingCBOR "full_txn"
       let txb =
-            TxBody @C
+            ShelleyTxBody @C
               (Set.fromList [genesisTxIn1])
-              (StrictSeq.singleton $ TxOut @C testAddrE (Coin 2))
+              (StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2))
               StrictSeq.empty
               (Wdrl Map.empty)
               (Coin 9)
               (SlotNo 500)
               SNothing
               SNothing
-          txbh = (hashAnnotated txb)
+          txbh = hashAnnotated txb
           w = makeWitnessVKey @C_Crypto txbh testKey1
           s = Map.singleton (hashScript @C testScript) (testScript @C_Crypto)
-          txwits :: Cardano.Ledger.Shelley.Tx.WitnessSet C
+          txwits :: ShelleyWitnesses C
           txwits = mempty {addrWits = Set.singleton w, scriptWits = s}
           md = (MD.Metadata @C) $ Map.singleton 17 (MD.I 42)
        in checkEncodingCBORAnnotated
             "tx_full"
-            (Tx @(ShelleyEra C_Crypto) txb txwits (SJust md))
+            (ShelleyTx @(ShelleyEra C_Crypto) txb txwits (SJust md))
             ( T (TkListLen 3)
                 <> S txb
                 <> T (TkMapLen 2)
@@ -1013,7 +1010,7 @@ tests =
               (fst $ testVRF @C_Crypto)
           size = 0
           blockNo = BlockNo 44
-          bbhash = bbHash @C $ TxSeq StrictSeq.empty
+          bbhash = bbHash @C $ ShelleyTxSeq StrictSeq.empty
           ocert :: OCert C_Crypto
           ocert =
             OCert
@@ -1089,7 +1086,7 @@ tests =
       let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
-          txns = TxSeq StrictSeq.Empty
+          txns = ShelleyTxSeq StrictSeq.Empty
        in checkEncodingCBORAnnotated
             "empty_block"
             (Block @C bh txns)
@@ -1101,9 +1098,9 @@ tests =
       let sig :: (SignedKES (CC.KES C_Crypto) (BHBody C_Crypto))
           sig = signedKES () 0 (testBHB @C) (fst $ testKESKeys @C_Crypto)
           bh = BHeader (testBHB @C) sig
-          tout = StrictSeq.singleton $ TxOut @C testAddrE (Coin 2)
+          tout = StrictSeq.singleton $ ShelleyTxOut @C testAddrE (Coin 2)
           txb s =
-            TxBody @C
+            ShelleyTxBody @C
               (Set.fromList [genesisTxIn1])
               tout
               StrictSeq.empty
@@ -1120,10 +1117,10 @@ tests =
           w1 = makeWitnessVKey (hashAnnotated txb1) testKey1
           w2 = makeWitnessVKey (hashAnnotated txb1) testKey2
           ws = Set.fromList [w1, w2]
-          tx1 = Tx @C txb1 mempty {addrWits = Set.singleton w1} SNothing
-          tx2 = Tx @C txb2 mempty {addrWits = ws} SNothing
+          tx1 = ShelleyTx @C txb1 mempty {addrWits = Set.singleton w1} SNothing
+          tx2 = ShelleyTx @C txb2 mempty {addrWits = ws} SNothing
           tx3 =
-            Tx @C
+            ShelleyTx @C
               txb3
               mempty
                 { scriptWits =
@@ -1135,10 +1132,10 @@ tests =
               [ (hashScript @C testScript, testScript),
                 (hashScript @C testScript2, testScript2)
               ]
-          tx4 = Tx txb4 mempty {scriptWits = ss} SNothing
+          tx4 = ShelleyTx txb4 mempty {scriptWits = ss} SNothing
           tx5MD = MD.Metadata @C $ Map.singleton 17 (MD.I 42)
-          tx5 = Tx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
-          txns = TxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
+          tx5 = ShelleyTx txb5 mempty {addrWits = ws, scriptWits = ss} (SJust tx5MD)
+          txns = ShelleyTxSeq $ StrictSeq.fromList [tx1, tx2, tx3, tx4, tx5]
        in checkEncodingCBORAnnotated
             "rich_block"
             (Block @C bh txns)

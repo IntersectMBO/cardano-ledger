@@ -60,7 +60,6 @@ import Cardano.Ledger.Shelley.AdaPots
     totalAdaES,
     totalAdaPotsES,
   )
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -188,7 +187,7 @@ instance
 
 -- | Creates a valid initial chain state
 initialShelleyState ::
-  ( Era era,
+  ( Core.EraTxOut era,
     Default (State (Core.EraRule "PPUP" era)),
     Default (StashedAVVMAddresses era)
   ) =>
@@ -425,13 +424,13 @@ instance
 
 -- | Calculate the total ada pots in the chain state
 totalAdaPots ::
-  UsesValue era =>
+  Core.EraTxOut era =>
   ChainState era ->
   AdaPots
 totalAdaPots = totalAdaPotsES . nesEs . chainNes
 
 -- | Calculate the total ada in the chain state
-totalAda :: UsesValue era => ChainState era -> Coin
+totalAda :: Core.EraTxOut era => ChainState era -> Coin
 totalAda = totalAdaES . nesEs . chainNes
 
 ppChainState :: PP.CanPrettyPrintLedgerState era => ChainState era -> PP.PDoc

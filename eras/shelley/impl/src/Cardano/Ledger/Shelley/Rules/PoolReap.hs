@@ -21,9 +21,8 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
@@ -85,14 +84,14 @@ instance
   forall era.
   ( Typeable era,
     Default (PoolreapState era),
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_keyDeposit" (Core.PParams era) Coin
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_keyDeposit" (PParams era) Coin
   ) =>
   STS (POOLREAP era)
   where
   type State (POOLREAP era) = PoolreapState era
   type Signal (POOLREAP era) = EpochNo
-  type Environment (POOLREAP era) = Core.PParams era
+  type Environment (POOLREAP era) = PParams era
   type BaseM (POOLREAP era) = ShelleyBase
   type PredicateFailure (POOLREAP era) = PoolreapPredicateFailure era
   type Event (POOLREAP era) = PoolreapEvent era
@@ -114,7 +113,7 @@ instance
 
 poolReapTransition ::
   forall era.
-  HasField "_poolDeposit" (Core.PParams era) Coin =>
+  HasField "_poolDeposit" (PParams era) Coin =>
   TransitionRule (POOLREAP era)
 poolReapTransition = do
   TRC (pp, PoolreapState us a ds ps, e) <- judgmentContext

@@ -18,16 +18,12 @@ where
 
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value
-  ( AssetName (..),
-    PolicyID (..),
-    Value (..),
-  )
-import Cardano.Ledger.Shelley.Tx (hashScript)
-import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
-import qualified Cardano.Ledger.ShelleyMA.TxBody as Mary
+import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..), ShelleyMAEraTxBody (..))
 import Cardano.Slotting.Slot (SlotNo (..))
 import Data.ByteString.Short (ShortByteString)
 import qualified Data.ByteString.Short as Short
@@ -37,7 +33,7 @@ import Data.Sequence.Strict (fromList)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (empty)
 import Data.String (fromString)
-import GHC.Records
+import Lens.Micro
 import Test.Cardano.Ledger.EraBuffet (TestCrypto)
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Tasty
@@ -56,9 +52,9 @@ type TestEra = MaryEra TestCrypto
 -- ====================================================================================================
 -- Make a TxBody to test with
 
-txM :: Mary.TxBody TestEra
+txM :: MATxBody TestEra
 txM =
-  Mary.TxBody
+  MATxBody
     empty
     StrictSeq.empty
     StrictSeq.empty
@@ -69,40 +65,30 @@ txM =
     SNothing
     testmint
 
-testmint :: Value TestCrypto
-testmint = Value 0 (Map.singleton policyId (Map.singleton aname 2))
+testmint :: MaryValue TestCrypto
+testmint = MaryValue 0 (Map.singleton policyId (Map.singleton aname 2))
   where
     policyId = PolicyID . hashScript @TestEra . RequireAnyOf $ fromList []
     aname = AssetName $ fromString "asset name"
 
-bytes :: Mary.TxBody era -> ShortByteString
-bytes (Mary.TxBodyConstr (Memo _ b)) = b
+bytes :: MATxBody era -> ShortByteString
+bytes (TxBodyConstr (Memo _ b)) = b
 
 fieldTests :: TestTree
 fieldTests =
   testGroup
     "getField tests"
-    [ testCase "inputs" (assertEqual "inputs" (getField @"inputs" txM) empty),
-      testCase
-        "outputs"
-        ( assertEqual
-            "outputs"
-            (getField @"outputs" txM)
-            StrictSeq.empty
-        ),
-      testCase "certs" (assertEqual "certs" (getField @"certs" txM) StrictSeq.empty),
-      testCase "wdrls" (assertEqual "wdrls" (getField @"wdrls" txM) (Wdrl Map.empty)),
-      testCase "txfree" (assertEqual "txfree" (getField @"txfee" txM) (Coin 6)),
-      testCase
-        "vldt"
-        ( assertEqual
-            "vldt"
-            (getField @"vldt" txM)
-            (ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)))
-        ),
-      testCase "update" (assertEqual "update" (getField @"update" txM) SNothing),
-      testCase "adHash" (assertEqual "adHash" (getField @"adHash" txM) SNothing),
-      testCase "mint" (assertEqual "mint" (getField @"mint" txM) testmint)
+    [ testCase "inputs" (assertEqual "inputs" (txM ^. inputsTxBodyL) empty),
+      testCase "outputs" (assertEqual "outputs" (txM ^. outputsTxBodyL) StrictSeq.empty),
+      testCase "certs" (assertEqual "certs" (txM ^. certsTxBodyL) StrictSeq.empty),
+      testCase "wdrls" (assertEqual "wdrls" (txM ^. wdrlsTxBodyL) (Wdrl Map.empty)),
+      testCase "txfree" (assertEqual "txfree" (txM ^. feeTxBodyL) (Coin 6)),
+      testCase "vldt" $
+        assertEqual "vldt" (txM ^. vldtTxBodyL) $
+          ValidityInterval (SJust (SlotNo 3)) (SJust (SlotNo 42)),
+      testCase "update" (assertEqual "update" (txM ^. updateTxBodyL) SNothing),
+      testCase "adHash" (assertEqual "adHash" (txM ^. auxDataHashTxBodyL) SNothing),
+      testCase "mint" (assertEqual "mint" (txM ^. mintTxBodyL) testmint)
     ]
 
 txBodyTest :: TestTree

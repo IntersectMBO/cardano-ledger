@@ -3,9 +3,8 @@
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
-{-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -78,9 +77,9 @@ import Data.Group.GrpMap (GrpMap (..), mkGrpMap, restrictKeysGrpMap)
 import Data.Kind (Type)
 import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import Data.Void (Void, absurd)
 import GHC.Generics ((:.:) (Comp1))
 import GHC.Natural (Natural)
@@ -459,7 +458,12 @@ instance ModelSTS 'ModelRule_LEDGERS where
     liftApplyRules (Proxy @'ModelRule_LEDGER) (getCompose txs) txs
 
 -- | See figure 4 [GL-D2]
-modelFeesOK :: ModelPParams era -> ModelTx era -> ModelUTxOMap era -> Bool
+modelFeesOK ::
+  (Typeable (ValueFeature era), Typeable era) =>
+  ModelPParams era ->
+  ModelTx era ->
+  ModelUTxOMap era ->
+  Bool
 modelFeesOK pp tx utxoMap =
   -- TODO: This is not fully completed at all
   has modelTx_redeemers tx

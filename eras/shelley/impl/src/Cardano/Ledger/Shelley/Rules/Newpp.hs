@@ -18,9 +18,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, StrictMaybe)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (PParamsDelta)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
@@ -56,7 +54,7 @@ import NoThunks.Class (NoThunks (..))
 data NEWPP era
 
 data NewppState era
-  = NewppState (Core.PParams era) (PPUPState era)
+  = NewppState (PParams era) (PPUPState era)
 
 data NewppEnv era
   = NewppEnv
@@ -74,37 +72,37 @@ data NewppPredicateFailure era
 instance NoThunks (NewppPredicateFailure era)
 
 instance
-  ( Default (Core.PParams era),
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_maxTxSize" (Core.PParams era) Natural,
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer),
+  ( Default (PParams era),
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_maxTxSize" (PParams era) Natural,
+    HasField "_maxBHSize" (PParams era) Natural,
+    HasField "_maxBBSize" (PParams era) Natural,
+    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer),
     Typeable era
   ) =>
   STS (NEWPP era)
   where
   type State (NEWPP era) = NewppState era
-  type Signal (NEWPP era) = Maybe (Core.PParams era)
+  type Signal (NEWPP era) = Maybe (PParams era)
   type Environment (NEWPP era) = NewppEnv era
   type BaseM (NEWPP era) = ShelleyBase
   type PredicateFailure (NEWPP era) = NewppPredicateFailure era
   transitionRules = [newPpTransition]
 
-instance Default (Core.PParams era) => Default (NewppState era) where
+instance Default (PParams era) => Default (NewppState era) where
   def = NewppState def def
 
 newPpTransition ::
   forall era.
-  ( HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_maxTxSize" (Core.PParams era) Natural,
-    HasField "_maxBHSize" (Core.PParams era) Natural,
-    HasField "_maxBBSize" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+  ( HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_maxTxSize" (PParams era) Natural,
+    HasField "_maxBHSize" (PParams era) Natural,
+    HasField "_maxBBSize" (PParams era) Natural,
+    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   TransitionRule (NEWPP era)
 newPpTransition = do
@@ -139,11 +137,11 @@ newPpTransition = do
 -- and making the future proposals become the new proposals,
 -- provided the new proposals can follow (otherwise reset them).
 updatePpup ::
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_protocolVersion" (PParamsDelta era) (StrictMaybe ProtVer)
+  ( HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_protocolVersion" (PParamsUpdate era) (StrictMaybe ProtVer)
   ) =>
   PPUPState era ->
-  Core.PParams era ->
+  PParams era ->
   PPUPState era
 updatePpup ppupSt pp = PPUPState ps emptyPPPUpdates
   where

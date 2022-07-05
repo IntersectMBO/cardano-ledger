@@ -11,19 +11,21 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE ViewPatterns #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | TxSeq. This is effectively the block body, which consists of a sequence of
 -- transactions with segregated witness and metadata information.
 module Cardano.Ledger.Alonzo.TxSeq
-  ( TxSeq (TxSeq, txSeqTxns),
+  ( AlonzoTxSeq (AlonzoTxSeq, txSeqTxns),
+    TxSeq,
     hashTxSeq,
+    hashAlonzoTxSeq,
   )
 where
 
 import Cardano.Binary
   ( Annotator,
     FromCBOR (..),
-    ToCBOR,
     encodePreEncoded,
     encodedSizeExpr,
     serializeEncoding,
@@ -31,12 +33,13 @@ import Cardano.Binary
     withSlice,
   )
 import qualified Cardano.Crypto.Hash as Hash
-import Cardano.Ledger.Alonzo.Scripts (Script)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..), segwitTx)
+import Cardano.Ledger.Alonzo.Era
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript)
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..), segwitTx)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness)
+import Cardano.Ledger.Core hiding (TxSeq, hashTxSeq)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
-import Cardano.Ledger.Hashes (EraIndependentBlockBody)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (Hash)
 import Cardano.Ledger.SafeHash (SafeToHash, originalBytes)
 import Cardano.Ledger.Serialization
@@ -64,7 +67,6 @@ import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (getField))
 import NoThunks.Class (AllowThunksIn (..), NoThunks)
 
 -- =================================================
@@ -76,30 +78,39 @@ import NoThunks.Class (AllowThunksIn (..), NoThunks)
 -- TxSeq provides an alternate way of formatting transactions in a block, in
 -- order to support segregated witnessing.
 
-data TxSeq era = TxSeq'
-  { txSeqTxns :: !(StrictSeq (ValidatedTx era)),
+data AlonzoTxSeq era = TxSeq'
+  { txSeqTxns :: !(StrictSeq (AlonzoTx era)),
+    -- | Bytes encoding @Seq ('AlonzoTxBody' era)@
     txSeqBodyBytes :: BSL.ByteString,
+    -- | Bytes encoding @Seq ('TxWitness' era)@
     txSeqWitsBytes :: BSL.ByteString,
-    -- | Bytes representing a (Map index metadata). Missing indices have
-    -- SNothing for metadata
+    -- | Bytes encoding a @Map Int ('AuxiliaryData')@. Missing indices have
+    -- 'SNothing' for metadata
     txSeqMetadataBytes :: BSL.ByteString,
     -- | Bytes representing a set of integers. These are the indices of
-    -- transactions with isValid == False.
+    -- transactions with 'isValid' == False.
     txSeqIsValidBytes :: BSL.ByteString
   }
   deriving (Generic)
 
-pattern TxSeq ::
+instance CC.Crypto c => EraSegWits (AlonzoEra c) where
+  type TxSeq (AlonzoEra c) = AlonzoTxSeq (AlonzoEra c)
+  fromTxSeq = txSeqTxns
+  toTxSeq = AlonzoTxSeq
+  hashTxSeq = hashAlonzoTxSeq
+  numSegComponents = 4
+
+pattern AlonzoTxSeq ::
   forall era.
-  ( Era era,
+  ( EraTx era,
     SafeToHash (TxWitness era)
   ) =>
-  StrictSeq (ValidatedTx era) ->
-  TxSeq era
-pattern TxSeq xs <-
+  StrictSeq (AlonzoTx era) ->
+  AlonzoTxSeq era
+pattern AlonzoTxSeq xs <-
   TxSeq' xs _ _ _ _
   where
-    TxSeq txns =
+    AlonzoTxSeq txns =
       let serializeFoldable x =
             serializeEncoding $
               encodeFoldableEncoder encodePreEncoded x
@@ -108,24 +119,22 @@ pattern TxSeq xs <-
               encodePair metadata = toCBOR index <> encodePreEncoded metadata
        in TxSeq'
             { txSeqTxns = txns,
-              -- bytes encoding Seq(Core.TxBody era)
               txSeqBodyBytes =
-                serializeFoldable $
-                  originalBytes . getField @"body" <$> txns,
-              -- bytes encoding Seq(Core.Witnesses era)
+                serializeFoldable $ originalBytes . body <$> txns,
               txSeqWitsBytes =
-                serializeFoldable $
-                  originalBytes . getField @"wits" <$> txns,
-              -- bytes encoding a (Map Int (Core.AuxiliaryData))
+                serializeFoldable $ originalBytes . wits <$> txns,
               txSeqMetadataBytes =
                 serializeEncoding . encodeFoldableMapEncoder metaChunk $
-                  fmap originalBytes . getField @"auxiliaryData" <$> txns,
-              -- bytes encoding a [Int] Indexes where IsValid is False.
+                  fmap originalBytes . auxiliaryData <$> txns,
               txSeqIsValidBytes =
                 serializeEncoding $ encodeFoldable $ nonValidatingIndices txns
             }
 
-{-# COMPLETE TxSeq #-}
+{-# COMPLETE AlonzoTxSeq #-}
+
+type TxSeq era = AlonzoTxSeq era
+
+{-# DEPRECATED TxSeq "Use `AlonzoTxSeq` instead" #-}
 
 deriving via
   AllowThunksIn
@@ -136,14 +145,14 @@ deriving via
      ]
     (TxSeq era)
   instance
-    (Typeable era, NoThunks (ValidatedTx era)) => NoThunks (TxSeq era)
+    (Typeable era, NoThunks (AlonzoTx era)) => NoThunks (TxSeq era)
 
 deriving stock instance
-  Show (ValidatedTx era) =>
+  Show (AlonzoTx era) =>
   Show (TxSeq era)
 
 deriving stock instance
-  Eq (ValidatedTx era) =>
+  Eq (AlonzoTx era) =>
   Eq (TxSeq era)
 
 --------------------------------------------------------------------------------
@@ -167,13 +176,21 @@ instance
   listLen _ = 4
   listLenBound _ = 4
 
--- | Hash a given block body
 hashTxSeq ::
   forall era.
   (Era era) =>
-  TxSeq era ->
+  AlonzoTxSeq era ->
   Hash (Crypto era) EraIndependentBlockBody
-hashTxSeq (TxSeq' _ bodies ws md vs) =
+hashTxSeq = hashAlonzoTxSeq
+{-# DEPRECATED hashTxSeq "Use `hashAlonzoTxSeq` instead" #-}
+
+-- | Hash a given block body
+hashAlonzoTxSeq ::
+  forall era.
+  (Era era) =>
+  AlonzoTxSeq era ->
+  Hash (Crypto era) EraIndependentBlockBody
+hashAlonzoTxSeq (TxSeq' _ bodies ws md vs) =
   coerce $
     hashStrict $
       BSL.toStrict $
@@ -190,17 +207,8 @@ hashTxSeq (TxSeq' _ bodies ws md vs) =
     hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 
 instance
-  ( FromCBOR (Annotator (Core.AuxiliaryData era)),
-    FromCBOR (Annotator (Core.Script era)),
-    FromCBOR (Annotator (Core.TxBody era)),
-    FromCBOR (Annotator (Core.Witnesses era)),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Script era),
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.Witnesses era),
-    ValidateScript era,
-    Core.Script era ~ Script era,
-    Era era
+  ( Core.Script era ~ AlonzoScript era,
+    EraTx era
   ) =>
   FromCBOR (Annotator (TxSeq era))
   where
@@ -261,11 +269,11 @@ instance
 -- | Given a sequence of transactions, return the indices of those which do not
 -- validate. We store the indices of the non-validating transactions because we
 -- expect this to be a much smaller set than the validating transactions.
-nonValidatingIndices :: StrictSeq (ValidatedTx era) -> [Int]
+nonValidatingIndices :: StrictSeq (AlonzoTx era) -> [Int]
 nonValidatingIndices (StrictSeq.fromStrict -> xs) =
   Seq.foldrWithIndex
-    ( \idx elt acc ->
-        if getField @"isValid" elt == IsValid False
+    ( \idx tx acc ->
+        if isValid tx == IsValid False
           then idx : acc
           else acc
     )

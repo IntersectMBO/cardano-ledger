@@ -40,7 +40,7 @@ import Cardano.Ledger.Shelley.LedgerState
     incrementalStakeDistr,
     updateStakeDistribution,
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank (likelihood)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
 import Cardano.Protocol.TPraos.API (PraosCrypto)

@@ -15,7 +15,7 @@ import Cardano.Binary
 import Cardano.Ledger.Allegra.Translation ()
 import Cardano.Ledger.Era (TranslateEra (..))
 import qualified Cardano.Ledger.Shelley.API as S
-import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
+import Cardano.Ledger.ShelleyMA.AuxiliaryData
 import Test.Cardano.Ledger.EraBuffet
   ( AllegraEra,
     ShelleyEra,
@@ -41,23 +41,23 @@ allegraEncodeDecodeTests =
     "encoded shelley types can be decoded as allegra types"
     [ testProperty
         "decoding auxiliary data"
-        (decodeTestAnn @(S.Metadata Allegra) ([] :: [MA.AuxiliaryData Allegra]))
+        (decodeTestAnn @(S.Metadata Allegra) ([] :: [MAAuxiliaryData Allegra]))
     ]
 
 allegraTranslationTests :: TestTree
 allegraTranslationTests =
   testGroup
     "Allegra translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (test @S.Tx),
+    [ testProperty "Tx compatibility" (test @S.ShelleyTx),
       testProperty "ShelleyGenesis compatibility" (test @S.ShelleyGenesis),
       testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates),
       testProperty "PPUPState compatibility" (test @S.PPUPState),
-      testProperty "TxOut compatibility" (test @S.TxOut),
+      testProperty "TxOut compatibility" (test @S.ShelleyTxOut),
       testProperty "UTxO compatibility" (test @S.UTxO),
       testProperty "UTxOState compatibility" (test @S.UTxOState),
       testProperty "LedgerState compatibility" (test @S.LedgerState),
       testProperty "EpochState compatibility" (test @S.EpochState),
-      testProperty "WitnessSet compatibility" (test @S.WitnessSet),
+      testProperty "WitnessSet compatibility" (test @S.ShelleyWitnesses),
       testProperty "Update compatibility" (test @S.Update)
     ]
 

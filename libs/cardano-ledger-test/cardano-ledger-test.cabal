@@ -121,6 +121,7 @@ library
     groups,
     hkd,
     lens,
+    microlens,
     monad-supply,
     mtl,
     nothunks,
@@ -182,7 +183,7 @@ benchmark bench
   other-modules:
     Bench.Cardano.Ledger.ApplyTx
     Bench.Cardano.Ledger.ApplyTx.Gen
-    Bench.Cardano.Ledger.Balance
+    -- Bench.Cardano.Ledger.Balance
     Bench.Cardano.Ledger.EpochBoundary
     Bench.Cardano.Ledger.Serialisation.Generators
     Bench.Cardano.Ledger.SumStake
@@ -205,6 +206,7 @@ benchmark bench
     QuickCheck,
     cardano-ledger-shelley,
     cardano-ledger-shelley-test,
+    microlens,
     random,
     small-steps,
     small-steps-test,

@@ -27,17 +27,14 @@ import Cardano.Ledger.BHeaderView (BHeaderView)
 import Cardano.Ledger.BaseTypes (Globals (..), ShelleyBase)
 import Cardano.Ledger.Block (Block)
 import qualified Cardano.Ledger.Chain as STS
-import Cardano.Ledger.Core (ChainData, SerialisableData)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, TxSeq)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import qualified Cardano.Ledger.Shelley.Rules.Bbody as STS
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Slot (SlotNo)
@@ -54,20 +51,16 @@ import Numeric.Natural (Natural)
 -------------------------------------------------------------------------------}
 
 class
-  ( ChainData (NewEpochState era),
-    SerialisableData (NewEpochState era),
-    ChainData (BlockTransitionError era),
-    ChainData STS.ChainPredicateFailure,
-    STS (Core.EraRule "TICK" era),
-    BaseM (Core.EraRule "TICK" era) ~ ShelleyBase,
-    Environment (Core.EraRule "TICK" era) ~ (),
-    State (Core.EraRule "TICK" era) ~ NewEpochState era,
-    Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    STS (Core.EraRule "BBODY" era),
-    BaseM (Core.EraRule "BBODY" era) ~ ShelleyBase,
-    Environment (Core.EraRule "BBODY" era) ~ STS.BbodyEnv era,
-    State (Core.EraRule "BBODY" era) ~ STS.BbodyState era,
-    Signal (Core.EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
+  ( STS (EraRule "TICK" era),
+    BaseM (EraRule "TICK" era) ~ ShelleyBase,
+    Environment (EraRule "TICK" era) ~ (),
+    State (EraRule "TICK" era) ~ NewEpochState era,
+    Signal (EraRule "TICK" era) ~ SlotNo,
+    STS (EraRule "BBODY" era),
+    BaseM (EraRule "BBODY" era) ~ ShelleyBase,
+    Environment (EraRule "BBODY" era) ~ STS.BbodyEnv era,
+    State (EraRule "BBODY" era) ~ STS.BbodyState era,
+    Signal (EraRule "BBODY" era) ~ Block (BHeaderView (Crypto era)) era,
     ToCBORGroup (TxSeq era)
   ) =>
   ApplyBlock era
@@ -81,11 +74,11 @@ class
     Globals ->
     NewEpochState era ->
     SlotNo ->
-    EventReturnType ep (Core.EraRule "TICK" era) (NewEpochState era)
+    EventReturnType ep (EraRule "TICK" era) (NewEpochState era)
   applyTickOpts opts globals state hdr =
     either err id
       . flip runReader globals
-      . applySTSOptsEither @(Core.EraRule "TICK" era) opts
+      . applySTSOptsEither @(EraRule "TICK" era) opts
       $ TRC ((), state, hdr)
     where
       err :: Show a => a -> b
@@ -99,19 +92,19 @@ class
     Globals ->
     NewEpochState era ->
     Block (BHeaderView (Crypto era)) era ->
-    m (EventReturnType ep (Core.EraRule "BBODY" era) (NewEpochState era))
+    m (EventReturnType ep (EraRule "BBODY" era) (NewEpochState era))
   applyBlockOpts opts globals state blk =
     liftEither
       . left BlockTransitionError
       . right
-        ( mapEventReturn @ep @(Core.EraRule "BBODY" era) $
+        ( mapEventReturn @ep @(EraRule "BBODY" era) $
             updateNewEpochState state
         )
       $ res
     where
       res =
         flip runReader globals
-          . applySTSOptsEither @(Core.EraRule "BBODY" era)
+          . applySTSOptsEither @(EraRule "BBODY" era)
             opts
           $ TRC (mkBbodyEnv state, bbs, blk)
       bbs =
@@ -133,7 +126,7 @@ class
     updateNewEpochState state res
     where
       res =
-        flip runReader globals . reapplySTS @(Core.EraRule "BBODY" era) $
+        flip runReader globals . reapplySTS @(EraRule "BBODY" era) $
           TRC (mkBbodyEnv state, bbs, blk)
       bbs =
         STS.BbodyState
@@ -175,7 +168,13 @@ type ShelleyEraCrypto crypto =
     DSignable crypto (Hash crypto EraIndependentTxBody)
   )
 
-instance ShelleyEraCrypto crypto => ApplyBlock (ShelleyEra crypto)
+{-# DEPRECATED ShelleyEraCrypto "Constraint synonyms are being removed" #-}
+
+instance
+  ( CC.Crypto crypto,
+    DSignable crypto (Hash crypto EraIndependentTxBody)
+  ) =>
+  ApplyBlock (ShelleyEra crypto)
 
 {-------------------------------------------------------------------------------
   CHAIN Transition checks
@@ -215,33 +214,33 @@ updateNewEpochState ss (STS.BbodyState ls bcur) =
   LedgerState.updateNES ss bcur ls
 
 newtype TickTransitionError era
-  = TickTransitionError [STS.PredicateFailure (Core.EraRule "TICK" era)]
+  = TickTransitionError [STS.PredicateFailure (EraRule "TICK" era)]
   deriving (Generic)
 
 instance
-  (NoThunks (STS.PredicateFailure (Core.EraRule "TICK" era))) =>
+  (NoThunks (STS.PredicateFailure (EraRule "TICK" era))) =>
   NoThunks (TickTransitionError era)
 
 deriving stock instance
-  (Eq (STS.PredicateFailure (Core.EraRule "TICK" era))) =>
+  (Eq (STS.PredicateFailure (EraRule "TICK" era))) =>
   Eq (TickTransitionError era)
 
 deriving stock instance
-  (Show (STS.PredicateFailure (Core.EraRule "TICK" era))) =>
+  (Show (STS.PredicateFailure (EraRule "TICK" era))) =>
   Show (TickTransitionError era)
 
 newtype BlockTransitionError era
-  = BlockTransitionError [STS.PredicateFailure (Core.EraRule "BBODY" era)]
+  = BlockTransitionError [STS.PredicateFailure (EraRule "BBODY" era)]
   deriving (Generic)
 
 deriving stock instance
-  (Eq (STS.PredicateFailure (Core.EraRule "BBODY" era))) =>
+  (Eq (STS.PredicateFailure (EraRule "BBODY" era))) =>
   Eq (BlockTransitionError era)
 
 deriving stock instance
-  (Show (STS.PredicateFailure (Core.EraRule "BBODY" era))) =>
+  (Show (STS.PredicateFailure (EraRule "BBODY" era))) =>
   Show (BlockTransitionError era)
 
 instance
-  (NoThunks (STS.PredicateFailure (Core.EraRule "BBODY" era))) =>
+  (NoThunks (STS.PredicateFailure (EraRule "BBODY" era))) =>
   NoThunks (BlockTransitionError era)

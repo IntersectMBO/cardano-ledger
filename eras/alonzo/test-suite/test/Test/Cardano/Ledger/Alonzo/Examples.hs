@@ -10,7 +10,7 @@ module Test.Cardano.Ledger.Alonzo.Examples where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import Cardano.Ledger.Alonzo.TxInfo
   ( PlutusDebug (..),
     PlutusDebugInfo (..),
@@ -79,7 +79,7 @@ directPlutusTest expectation script ds =
       budget <- snd $ P.evaluateScriptCounting pv P.Quiet P.evalCtxForTesting scr datums
       snd $ P.evaluateScriptRestricting pv P.Verbose P.evalCtxForTesting budget scr datums
 
-getRawPlutusScript :: String -> Script () -> ShortByteString
+getRawPlutusScript :: String -> AlonzoScript () -> ShortByteString
 getRawPlutusScript name =
   \case
     PlutusScript _ sbs -> sbs
@@ -193,7 +193,7 @@ plutusScriptExamples =
 alonzo :: Proxy (AlonzoEra StandardCrypto)
 alonzo = Proxy
 
-explainTest :: Script (AlonzoEra StandardCrypto) -> ShouldSucceed -> [P.Data] -> Assertion
+explainTest :: AlonzoScript (AlonzoEra StandardCrypto) -> ShouldSucceed -> [P.Data] -> Assertion
 explainTest script@(PlutusScript _ bytes) mode ds =
   case ( mode,
          runPLCScript

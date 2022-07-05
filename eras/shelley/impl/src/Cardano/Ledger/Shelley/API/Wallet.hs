@@ -3,7 +3,6 @@
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -11,6 +10,8 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+-- FIXME: use better names for record names
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Cardano.Ledger.Shelley.API.Wallet
   ( -- * UTxOs
@@ -31,6 +32,7 @@ module Cardano.Ledger.Shelley.API.Wallet
 
     -- * Transaction helpers
     CLI (..),
+    evaluateTransactionBalance,
     addShelleyKeyWitnesses,
     -- -- * Ada pots
     AdaPots (..),
@@ -61,11 +63,10 @@ import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (fromCompact)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (Crypto, getTxOutEitherAddr))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr
   ( IndividualPoolStake (..),
@@ -93,7 +94,7 @@ import Cardano.Ledger.Shelley.LedgerState
     minfee,
     produced,
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.PoolRank
   ( NonMyopic (..),
     PerformanceEstimate (..),
@@ -104,8 +105,8 @@ import Cardano.Ledger.Shelley.PoolRank
 import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
-import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
-import Cardano.Ledger.Shelley.TxBody (DCert, PoolParams (..), WitVKey (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyWitnesses, WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyEraTxBody, WitVKey (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -130,12 +131,12 @@ import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
-import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.VMap as VMap
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..), getField)
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
@@ -151,7 +152,7 @@ getUTxO = _utxo . lsUTxOState . esLState . nesEs
 
 -- | Get the UTxO filtered by address.
 getFilteredUTxO ::
-  Era era =>
+  EraTxOut era =>
   NewEpochState era ->
   Set (Addr (Crypto era)) ->
   UTxO era
@@ -161,7 +162,7 @@ getFilteredUTxO ss addrSet =
     UTxO fullUTxO = getUTxO ss
     compactAddrSet = Set.map compactAddr addrSet
     checkAddr out =
-      case getTxOutEitherAddr out of
+      case out ^. addrEitherTxOutL of
         Left addr -> addr `Set.member` addrSet
         Right cAddr -> cAddr `Set.member` compactAddrSet
 {-# INLINEABLE getFilteredUTxO #-}
@@ -240,8 +241,8 @@ getTotalStake globals ss =
 --
 -- This is not based on any snapshot, but uses the current ledger state.
 getNonMyopicMemberRewards ::
-  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "_a0" (PParams era) NonNegativeInterval,
+    HasField "_nOpt" (PParams era) Natural
   ) =>
   Globals ->
   NewEpochState era ->
@@ -368,8 +369,8 @@ deriving instance ToJSON RewardParams
 -- Also included are global information such as
 -- the total stake or protocol parameters.
 getRewardInfoPools ::
-  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_nOpt" (Core.PParams era) Natural
+  ( HasField "_a0" (PParams era) NonNegativeInterval,
+    HasField "_nOpt" (PParams era) Natural
   ) =>
   Globals ->
   NewEpochState era ->
@@ -420,12 +421,12 @@ getRewardInfoPools globals ss =
 -- on stake pool rewards.
 getRewardProvenance ::
   forall era.
-  ( HasField "_a0" (Core.PParams era) NonNegativeInterval,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_nOpt" (Core.PParams era) Natural,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_rho" (Core.PParams era) UnitInterval,
-    HasField "_tau" (Core.PParams era) UnitInterval
+  ( HasField "_a0" (PParams era) NonNegativeInterval,
+    HasField "_d" (PParams era) UnitInterval,
+    HasField "_nOpt" (PParams era) Natural,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_rho" (PParams era) UnitInterval,
+    HasField "_tau" (PParams era) UnitInterval
   ) =>
   Globals ->
   NewEpochState era ->
@@ -455,52 +456,29 @@ getRewardProvenance globals newepochstate =
 -- | A collection of functons to help construction transactions
 --  from the cardano-cli.
 class
-  ( Era era,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  ( EraTx era,
+    HasField "_minfeeA" (PParams era) Natural,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin
   ) =>
   CLI era
   where
   -- | The minimum fee calculation.
   -- Used for the default implentation of 'evaluateTransactionFee'.
-  evaluateMinFee :: Core.PParams era -> Core.Tx era -> Coin
+  evaluateMinFee :: PParams era -> Tx era -> Coin
 
   -- | The consumed calculation.
   -- Used for the default implentation of 'evaluateTransactionBalance'.
-  evaluateConsumed :: Core.PParams era -> UTxO era -> Core.TxBody era -> Core.Value era
+  evaluateConsumed :: PParams era -> UTxO era -> TxBody era -> Value era
 
-  addKeyWitnesses :: Core.Tx era -> Set (WitVKey 'Witness (Crypto era)) -> Core.Tx era
-
-  -- | Evaluate the difference between the value currently being consumed by
-  -- a transaction and the number of lovelace being produced.
-  -- This value will be zero for a valid transaction.
-  evaluateTransactionBalance ::
-    -- | The current protocol parameters.
-    Core.PParams era ->
-    -- | The UTxO relevant to the transaction.
-    UTxO era ->
-    -- | A predicate that a stake pool ID is new (i.e. unregistered).
-    -- Typically this will be:
-    --
-    -- @
-    --   (`Map.notMember` stakepools)
-    -- @
-    (KeyHash 'StakePool (Crypto era) -> Bool) ->
-    -- | The transaction being evaluated for balance.
-    Core.TxBody era ->
-    -- | The difference between what the transaction consumes and what it produces.
-    Core.Value era
-  evaluateTransactionBalance pp u isNewPool txb =
-    evaluateConsumed pp u txb <-> produced @era pp isNewPool txb
+  addKeyWitnesses :: Tx era -> Set (WitVKey 'Witness (Crypto era)) -> Tx era
 
   -- | Evaluate the fee for a given transaction.
   evaluateTransactionFee ::
     -- | The current protocol parameters.
-    Core.PParams era ->
+    PParams era ->
     -- | The transaction.
-    Core.Tx era ->
+    Tx era ->
     -- | The number of key witnesses still to be added to the transaction.
     Word ->
     -- | The required fee.
@@ -526,24 +504,42 @@ class
 
       tx' = addKeyWitnesses @era tx dummyKeyWits
 
-  -- | Evaluate the minimum lovelace that a given transaciton output must contain.
-  evaluateMinLovelaceOutput :: Core.PParams era -> Core.TxOut era -> Coin
+  -- | Evaluate the minimum lovelace that a given transaction output must contain.
+  evaluateMinLovelaceOutput :: PParams era -> TxOut era -> Coin
+
+-- | Evaluate the difference between the value currently being consumed by
+-- a transaction and the number of lovelace being produced.
+-- This value will be zero for a valid transaction.
+evaluateTransactionBalance ::
+  (CLI era, ShelleyEraTxBody era) =>
+  -- | The current protocol parameters.
+  PParams era ->
+  -- | The UTxO relevant to the transaction.
+  UTxO era ->
+  -- | A predicate that a stake pool ID is new (i.e. unregistered).
+  -- Typically this will be:
+  --
+  -- @
+  --   (`Map.notMember` stakepools)
+  -- @
+  (KeyHash 'StakePool (Crypto era) -> Bool) ->
+  -- | The transaction being evaluated for balance.
+  TxBody era ->
+  -- | The difference between what the transaction consumes and what it produces.
+  Value era
+evaluateTransactionBalance pp u isNewPool txb =
+  evaluateConsumed pp u txb <-> produced pp isNewPool txb
 
 --------------------------------------------------------------------------------
 -- Shelley specifics
 --------------------------------------------------------------------------------
 
 addShelleyKeyWitnesses ::
-  ( Era era,
-    Core.Witnesses era ~ WitnessSet era,
-    Core.AnnotatedData (Core.Script era),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.TxBody era)
-  ) =>
-  Tx era ->
+  (EraTx era, Witnesses era ~ ShelleyWitnesses era) =>
+  ShelleyTx era ->
   Set (WitVKey 'Witness (Crypto era)) ->
-  Tx era
-addShelleyKeyWitnesses (Tx b ws aux) newWits = Tx b ws' aux
+  ShelleyTx era
+addShelleyKeyWitnesses (ShelleyTx b ws aux) newWits = ShelleyTx b ws' aux
   where
     ws' = ws {addrWits = Set.union newWits (addrWits ws)}
 

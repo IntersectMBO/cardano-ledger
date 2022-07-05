@@ -20,6 +20,7 @@ module Test.Cardano.Ledger.Shelley.Examples.TwoPools
   )
 where
 
+import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
     BoundedRational (..),
@@ -57,8 +58,8 @@ import Cardano.Ledger.Shelley.LedgerState
     emptyRewardUpdate,
   )
 import Cardano.Ledger.Shelley.PParams
-  ( PParams,
-    PParams' (..),
+  ( ShelleyPParams,
+    ShelleyPParamsHKD (..),
   )
 import Cardano.Ledger.Shelley.PoolRank
   ( Likelihood (..),
@@ -77,7 +78,7 @@ import Cardano.Ledger.Shelley.Rewards
     sumRewards,
   )
 import Cardano.Ledger.Shelley.Tx
-  ( Tx (..),
+  ( ShelleyTx (..),
     WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.TxBody
@@ -87,8 +88,8 @@ import Cardano.Ledger.Shelley.TxBody
     PoolCert (..),
     PoolParams (..),
     RewardAcnt (..),
-    TxBody (..),
-    TxOut (..),
+    ShelleyTxBody (..),
+    ShelleyTxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
@@ -152,9 +153,12 @@ import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 type TwoPoolsConstraints era =
   ( ShelleyTest era,
     ExMock (Crypto era),
-    Core.TxBody era ~ TxBody era,
-    Core.Tx era ~ Tx era,
-    PreAlonzo era
+    Core.TxBody era ~ ShelleyTxBody era,
+    Core.Tx era ~ ShelleyTx era,
+    Core.PParams era ~ ShelleyPParams era,
+    PreAlonzo era,
+    Core.EraSegWits era,
+    ToCBOR (Core.Script era)
   )
 
 aliceInitCoin :: Coin
@@ -170,9 +174,9 @@ initUTxO :: TwoPoolsConstraints era => UTxO era
 initUTxO =
   genesisCoins
     genesisId
-    [ TxOut Cast.aliceAddr (Val.inject aliceInitCoin),
-      TxOut Cast.bobAddr (Val.inject bobInitCoin),
-      TxOut Cast.carlAddr (Val.inject carlInitCoin)
+    [ ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin),
+      ShelleyTxOut Cast.bobAddr (Val.inject bobInitCoin),
+      ShelleyTxOut Cast.carlAddr (Val.inject carlInitCoin)
     ]
 
 initStTwoPools :: forall era. TwoPoolsConstraints era => ChainState era
@@ -198,11 +202,11 @@ alicePoolParams' = Cast.alicePoolParams {_poolRAcnt = RewardAcnt Testnet Cast.ca
 bobPoolParams' :: CryptoClass.Crypto c => PoolParams c
 bobPoolParams' = Cast.bobPoolParams {_poolRAcnt = RewardAcnt Testnet Cast.carlSHK}
 
-txbodyEx1 :: forall era. TwoPoolsConstraints era => TxBody era
+txbodyEx1 :: forall era. TwoPoolsConstraints era => ShelleyTxBody era
 txbodyEx1 =
-  TxBody
+  ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
-    (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
+    (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
     ( StrictSeq.fromList
         [ DCertDeleg (RegKey Cast.aliceSHK),
           DCertDeleg (RegKey Cast.bobSHK),
@@ -224,9 +228,9 @@ txEx1 ::
   forall era.
   ( TwoPoolsConstraints era
   ) =>
-  Tx era
+  ShelleyTx era
 txEx1 =
-  Tx
+  ShelleyTx
     txbodyEx1
     mempty
       { addrWits =
@@ -753,13 +757,13 @@ nonMyopicEx9 =
 rewardUpdateEx9 ::
   forall era.
   ExMock (Crypto era) =>
-  PParams era ->
+  ShelleyPParams era ->
   Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
   RewardUpdate (Crypto era)
 rewardUpdateEx9 pp rewards =
   RewardUpdate
     { deltaT = DeltaCoin deltaTEx9,
-      deltaR = (invert $ toDeltaCoin deltaR1Ex9) <> toDeltaCoin deltaR2Ex9,
+      deltaR = invert (toDeltaCoin deltaR1Ex9) <> toDeltaCoin deltaR2Ex9,
       rs = rewards,
       deltaF = DeltaCoin 0,
       nonMyopic = nonMyopicEx9
@@ -770,7 +774,7 @@ rewardUpdateEx9 pp rewards =
 pulserEx9 ::
   forall era.
   (ExMock (Crypto era), TwoPoolsConstraints era) =>
-  PParams era ->
+  ShelleyPParams era ->
   PulsingRewUpdate (Crypto era)
 pulserEx9 pp =
   makeCompletedPulser
@@ -785,7 +789,7 @@ pulserEx9 pp =
 expectedStEx9 ::
   forall era.
   (TwoPoolsConstraints era) =>
-  PParams era ->
+  ShelleyPParams era ->
   ChainState era
 expectedStEx9 pp =
   C.evolveNonceFrozen (getBlockNonce (blockEx9 @era))
@@ -817,7 +821,7 @@ carlsRewards =
 rsEx9Agg :: forall c. ExMock c => Map (Credential 'Staking c) (Set (Reward c))
 rsEx9Agg = Map.singleton Cast.carlSHK carlsRewards
 
-ppProtVer3 :: PParams era
+ppProtVer3 :: ShelleyPParams era
 ppProtVer3 = ppEx {_protocolVersion = ProtVer 3 0}
 
 expectedStEx8Agg :: forall era. (TwoPoolsConstraints era) => ChainState era

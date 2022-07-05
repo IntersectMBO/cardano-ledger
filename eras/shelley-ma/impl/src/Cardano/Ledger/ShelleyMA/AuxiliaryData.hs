@@ -12,19 +12,29 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.AuxiliaryData
-  ( AuxiliaryData (AuxiliaryData, AuxiliaryData', ..),
+  ( MAAuxiliaryData (MAAuxiliaryData, AuxiliaryData', ..),
+    AuxiliaryData,
   )
 where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..), peekTokenType)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash (..))
+import Cardano.Ledger.Core
+  ( Era (..),
+    EraAuxiliaryData (hashAuxiliaryData, validateAuxiliaryData),
+    Script,
+  )
+import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
-import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
+import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
-import Cardano.Ledger.Shelley.Metadata (Metadatum)
+import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
+import Cardano.Ledger.ShelleyMA.Era
+import Cardano.Ledger.ShelleyMA.Timelocks ()
 import Codec.CBOR.Decoding
   ( TokenType
       ( TypeListLen,
@@ -38,13 +48,12 @@ import Codec.CBOR.Decoding
 import Control.DeepSeq
 import Data.Coders
 import Data.Map.Strict (Map)
-import Data.MemoBytes
+import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import Data.Typeable (Typeable)
 import Data.Word (Word64)
 import GHC.Generics (Generic)
-import NoThunks.Class
+import NoThunks.Class (NoThunks)
 
 -- =======================================
 
@@ -56,60 +65,62 @@ data AuxiliaryDataRaw era = AuxiliaryDataRaw
     -- required as witnesses. Examples include:
     -- - Token policy IDs appearing in transaction outputs
     -- - Pool reward account registrations
-    auxiliaryScripts :: !(StrictSeq (Core.Script era))
+    auxiliaryScripts :: !(StrictSeq (Script era))
   }
   deriving (Generic)
 
-deriving instance (Core.ChainData (Core.Script era)) => Eq (AuxiliaryDataRaw era)
+instance (CC.Crypto c, MAClass ma c) => EraAuxiliaryData (ShelleyMAEra ma c) where
+  type AuxiliaryData (ShelleyMAEra ma c) = MAAuxiliaryData (ShelleyMAEra ma c)
+  validateAuxiliaryData _ (MAAuxiliaryData md as) = as `deepseq` all validMetadatum md
+  hashAuxiliaryData aux = AuxiliaryDataHash (hashAnnotated aux)
 
-deriving instance (Core.ChainData (Core.Script era)) => Show (AuxiliaryDataRaw era)
+deriving instance Eq (Script era) => Eq (AuxiliaryDataRaw era)
 
-deriving instance
-  (Core.ChainData (Core.Script era)) =>
-  NoThunks (AuxiliaryDataRaw era)
+deriving instance Show (Script era) => Show (AuxiliaryDataRaw era)
 
-instance NFData (Core.Script era) => NFData (AuxiliaryDataRaw era)
+deriving instance NoThunks (Script era) => NoThunks (AuxiliaryDataRaw era)
 
-newtype AuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes (AuxiliaryDataRaw era))
-  deriving (Generic, Typeable)
+instance NFData (Script era) => NFData (AuxiliaryDataRaw era)
+
+newtype MAAuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes (AuxiliaryDataRaw era))
+  deriving (Generic)
   deriving newtype (ToCBOR, SafeToHash)
 
-instance (c ~ Crypto era) => HashAnnotated (AuxiliaryData era) EraIndependentAuxiliaryData c
+instance (c ~ Crypto era) => HashAnnotated (MAAuxiliaryData era) EraIndependentAuxiliaryData c
+
+deriving newtype instance Eq (MAAuxiliaryData era)
+
+deriving newtype instance Show (Script era) => Show (MAAuxiliaryData era)
 
 deriving newtype instance
-  (Era era) =>
-  Eq (AuxiliaryData era)
+  (NoThunks (Script era), Era era) =>
+  NoThunks (MAAuxiliaryData era)
 
-deriving newtype instance
-  (Era era, Core.ChainData (Core.Script era)) =>
-  Show (AuxiliaryData era)
+deriving newtype instance NFData (Script era) => NFData (MAAuxiliaryData era)
 
-deriving newtype instance
-  (Era era, Core.ChainData (Core.Script era)) =>
-  NoThunks (AuxiliaryData era)
-
-deriving newtype instance NFData (Core.Script era) => NFData (AuxiliaryData era)
-
-pattern AuxiliaryData ::
-  ( Core.AnnotatedData (Core.Script era)
-  ) =>
+pattern MAAuxiliaryData ::
+  ToCBOR (Script era) =>
   Map Word64 Metadatum ->
-  StrictSeq (Core.Script era) ->
-  AuxiliaryData era
-pattern AuxiliaryData blob sp <-
+  StrictSeq (Script era) ->
+  MAAuxiliaryData era
+pattern MAAuxiliaryData blob sp <-
   AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw blob sp) _)
   where
-    AuxiliaryData blob sp =
+    MAAuxiliaryData blob sp =
       AuxiliaryDataWithBytes $
         memoBytes
           (encAuxiliaryDataRaw $ AuxiliaryDataRaw blob sp)
 
-{-# COMPLETE AuxiliaryData #-}
+{-# COMPLETE MAAuxiliaryData #-}
+
+type AuxiliaryData = MAAuxiliaryData
+
+{-# DEPRECATED AuxiliaryData "Use `MAAuxiliaryData` instead" #-}
 
 pattern AuxiliaryData' ::
   Map Word64 Metadatum ->
-  StrictSeq (Core.Script era) ->
-  AuxiliaryData era
+  StrictSeq (Script era) ->
+  MAAuxiliaryData era
 pattern AuxiliaryData' blob sp <-
   AuxiliaryDataWithBytes (Memo (AuxiliaryDataRaw blob sp) _)
 
@@ -121,7 +132,7 @@ pattern AuxiliaryData' blob sp <-
 
 -- | Encode AuxiliaryData
 encAuxiliaryDataRaw ::
-  (Core.AnnotatedData (Core.Script era)) =>
+  ToCBOR (Script era) =>
   AuxiliaryDataRaw era ->
   Encode ('Closed 'Dense) (AuxiliaryDataRaw era)
 encAuxiliaryDataRaw (AuxiliaryDataRaw blob sp) =
@@ -130,7 +141,7 @@ encAuxiliaryDataRaw (AuxiliaryDataRaw blob sp) =
     !> E encodeFoldable sp
 
 instance
-  (Era era, Core.AnnotatedData (Core.Script era)) =>
+  (Era era, FromCBOR (Annotator (Script era))) =>
   FromCBOR (Annotator (AuxiliaryDataRaw era))
   where
   fromCBOR =
@@ -159,7 +170,5 @@ instance
 deriving via
   (Mem (AuxiliaryDataRaw era))
   instance
-    ( Era era,
-      Core.AnnotatedData (Core.Script era)
-    ) =>
-    FromCBOR (Annotator (AuxiliaryData era))
+    (Era era, FromCBOR (Annotator (Script era))) =>
+    FromCBOR (Annotator (MAAuxiliaryData era))

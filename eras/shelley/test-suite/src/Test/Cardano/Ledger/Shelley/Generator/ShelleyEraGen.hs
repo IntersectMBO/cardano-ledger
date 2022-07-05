@@ -1,9 +1,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -15,25 +13,24 @@ import qualified Cardano.Crypto.KES as KES
 import Cardano.Crypto.Util (SignableRepresentation)
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (DSIGN, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( Coin (..),
     DCert,
     Update,
   )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.Scripts (MultiSig (..))
-import Cardano.Ledger.Shelley.Tx
-  ( Tx (..),
-    TxIn (..),
-    TxOut (..),
-    pattern WitnessSet,
+import Cardano.Ledger.Shelley.Tx (TxIn (..), WitnessSetHKD (ShelleyWitnesses))
+import Cardano.Ledger.Shelley.TxBody
+  ( ShelleyTxBody (ShelleyTxBody, _inputs, _outputs, _txfee),
+    ShelleyTxOut (..),
+    Wdrl (..),
   )
-import Cardano.Ledger.Shelley.TxBody (TxBody (TxBody, _inputs, _outputs, _txfee), Wdrl (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.Val ((<+>))
 import Cardano.Protocol.TPraos.API (PraosCrypto)
@@ -54,7 +51,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
     ScriptClass (..),
   )
 import Test.Cardano.Ledger.Shelley.Generator.Trace.Chain ()
-import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsDelta)
+import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
 import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest)
 import Test.QuickCheck (Gen)
 
@@ -82,14 +79,13 @@ instance
   updateEraTxBody _utxo _pp _wits body' fee ins out =
     body'
       { _txfee = fee,
-        _inputs = (_inputs body') <> ins,
-        _outputs = (_outputs body') :|> out
+        _inputs = _inputs body' <> ins,
+        _outputs = _outputs body' :|> out
       }
-  genEraPParamsDelta = genShelleyPParamsDelta
+  genEraPParamsUpdate = genShelleyPParamsUpdate
   genEraPParams = genPParams
 
-  genEraWitnesses _ setWitVKey mapScriptWit = WitnessSet setWitVKey mapScriptWit mempty
-  constructTx = Tx
+  genEraWitnesses _ setWitVKey mapScriptWit = ShelleyWitnesses setWitVKey mapScriptWit mempty
 
 instance CC.Crypto c => ScriptClass (ShelleyEra c) where
   basescript _proxy = RequireSignature
@@ -110,20 +106,20 @@ instance CC.Crypto c => ScriptClass (ShelleyEra c) where
 
 genTxBody ::
   (ShelleyTest era) =>
-  PParams era ->
+  ShelleyPParams era ->
   SlotNo ->
   Set (TxIn (Crypto era)) ->
-  StrictSeq (TxOut era) ->
+  StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (TxBody era, [MultiSig (Crypto era)])
+  Gen (ShelleyTxBody era, [MultiSig (Crypto era)])
 genTxBody _pparams slot inputs outputs certs wdrls fee update adHash = do
   ttl <- genTimeToLive slot
   return
-    ( TxBody
+    ( ShelleyTxBody
         inputs
         outputs
         certs
@@ -141,9 +137,8 @@ genTimeToLive currentSlot = do
   pure $ currentSlot + SlotNo (fromIntegral ttl)
 
 instance Mock c => MinGenTxout (ShelleyEra c) where
-  calcEraMinUTxO _txout pp = (_minUTxOValue pp)
-  addValToTxOut v (TxOut a u) = TxOut a (v <+> u)
+  calcEraMinUTxO _txout = _minUTxOValue
+  addValToTxOut v (ShelleyTxOut a u) = ShelleyTxOut a (v <+> u)
   genEraTxOut _genenv genVal addrs = do
     values <- replicateM (length addrs) genVal
-    let makeTxOut (addr, val) = TxOut addr val
-    pure (makeTxOut <$> zip addrs values)
+    pure (zipWith mkBasicTxOut addrs values)

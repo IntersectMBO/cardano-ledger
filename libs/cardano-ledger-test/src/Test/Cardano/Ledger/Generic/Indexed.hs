@@ -16,16 +16,20 @@ module Test.Cardano.Ledger.Generic.Indexed where
 
 import Cardano.Crypto.DSIGN.Class ()
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (Script (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Value)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
-import Cardano.Ledger.Hashes (EraIndependentTxBody, ScriptHash (..))
 import Cardano.Ledger.Keys
-import qualified Cardano.Ledger.Mary.Value as Mary (AssetName (..), PolicyID (..), Value (..))
+  ( KeyHash,
+    KeyPair (..),
+    KeyRole (Witness),
+    SignKeyDSIGN,
+    VKey,
+    hashKey,
+  )
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
 import Cardano.Ledger.Pretty (PrettyA (..), ppPair, ppString)
 import Cardano.Ledger.Pretty.Alonzo ()
 import Cardano.Ledger.Pretty.Mary ()
@@ -80,8 +84,8 @@ names = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
 allnames :: [ShortByteString]
 allnames = map (\x -> pack [x]) (unpack names)
 
-instance Fixed Mary.AssetName where
-  unique n = map Mary.AssetName allnames !! n
+instance Fixed AssetName where
+  unique n = map AssetName allnames !! n
   size _ = Just (length allnames)
 
 instance Fixed Coin where
@@ -92,31 +96,31 @@ instance Fixed Coin where
 -- Examples where type depends on Crypto
 
 data MultiAsset era where
-  MultiAsset :: Era era => Mary.Value (Crypto era) -> MultiAsset era
+  MultiAsset :: Era era => MaryValue (Crypto era) -> MultiAsset era
 
-unMulti :: MultiAsset era -> Mary.Value (Crypto era)
+unMulti :: MultiAsset era -> MaryValue (Crypto era)
 unMulti (MultiAsset x) = x
 
 deriving instance Show (MultiAsset era)
 
-instance (Reflect era, ValidateScript era, Fixed (Core.Script era)) => Fixed (MultiAsset era) where
+instance (Reflect era, EraScript era, Fixed (Script era)) => Fixed (MultiAsset era) where
   unique n =
     MultiAsset
-      ( Mary.Value
+      ( MaryValue
           (fromIntegral n)
           ( Map.singleton
               (lift (pickPolicyID @era n))
-              (Map.singleton (unique @Mary.AssetName n) (fromIntegral n))
+              (Map.singleton (unique @AssetName n) (fromIntegral n))
           )
       )
   size _ = lift (scriptsize @era)
 
-scriptsize :: forall era. Fixed (Core.Script era) => Proof era -> Maybe Int
-scriptsize _ = size (Proxy @(Core.Script era))
+scriptsize :: forall era. Fixed (Script era) => Proof era -> Maybe Int
+scriptsize _ = size (Proxy @(Script era))
 
-instance CC.Crypto c => Fixed (Mary.Value c) where
+instance CC.Crypto c => Fixed (MaryValue c) where
   size _ = Nothing
-  unique n = Mary.Value (fromIntegral n) Map.empty
+  unique n = MaryValue (fromIntegral n) Map.empty
 
 -- =======================================================
 -- Keys and KeyHashes
@@ -125,7 +129,7 @@ instance CC.Crypto c => Fixed (Mary.Value c) where
 newtype SKey (kr :: KeyRole) c = SKey (SignKeyDSIGN c)
 
 instance CC.Crypto c => Fixed (KeyPair kr c) where
-  unique n = (KeyPair a b)
+  unique n = KeyPair a b
     where
       m1 = fromIntegral n
       (b, a) = mkKeyPair (RawSeed 0 0 0 0 m1)
@@ -148,7 +152,7 @@ theWitVKey n hash = makeWitnessVKey hash (theKeyPair n)
 theKeyHashObj :: CC.Crypto crypto => Int -> Credential kr crypto
 theKeyHashObj n = KeyHashObj . hashKey . vKey $ theKeyPair n
 
-aScriptHashObj :: forall era kr. ValidateScript era => Proof era -> Core.Script era -> Credential kr (Crypto era)
+aScriptHashObj :: forall era kr. EraScript era => Proof era -> Script era -> Credential kr (Crypto era)
 aScriptHashObj _wit s = ScriptHashObj . hashScript @era $ s
 
 theStakeReference :: CC.Crypto crypto => Int -> StakeReference crypto
@@ -239,13 +243,13 @@ instance (ReflectC c, CC.Crypto c) => Fixed (Timelock c) where
 -- ====================================================
 -- Alonzo Scripts
 
-alonzoSimple :: forall era. [Script era]
+alonzoSimple :: forall era. [AlonzoScript era]
 alonzoSimple =
   [ alwaysFails PlutusV1 1, -- always False
     alwaysSucceeds PlutusV1 1 -- always True
   ]
 
-somealonzo :: Era era => Evidence (Crypto era) -> [Script era]
+somealonzo :: Era era => Evidence (Crypto era) -> [AlonzoScript era]
 somealonzo c =
   alonzoSimple
     ++ ( fmap
@@ -258,28 +262,28 @@ somealonzo c =
 alonzolength :: Int
 alonzolength = length (somealonzo Mock :: [Script (AlonzoEra Mock)]) - 1
 
-instance Reflect (AlonzoEra c) => Fixed (Script (AlonzoEra c)) where
-  unique n = (liftC somealonzo) !! n
+instance Reflect (AlonzoEra c) => Fixed (AlonzoScript (AlonzoEra c)) where
+  unique n = liftC somealonzo !! n
   size _ = Just alonzolength
 
-instance Reflect (BabbageEra c) => Fixed (Script (BabbageEra c)) where
-  unique n = (liftC somealonzo) !! n
+instance Reflect (BabbageEra c) => Fixed (AlonzoScript (BabbageEra c)) where
+  unique n = liftC somealonzo !! n
   size _ = Just alonzolength
 
 -- ==============================================
 -- Type families (and other Types uniquely determined from type families like Hashes)
 -- Because we can't make instances over type families, we can't say things like
--- instance IndexedE (Core.Value era) where pickE x wit = ...
+-- instance IndexedE (Value era) where pickE x wit = ...
 -- So instead we make a special pickXXX function where XXX is the name of a type family
 
-pickValue :: forall era. Reflect era => Int -> Proof era -> (Value era)
+pickValue :: forall era. Reflect era => Int -> Proof era -> Value era
 pickValue n (Shelley _) = unique @Coin n
 pickValue n (Allegra _) = unique @Coin n
 pickValue n (Mary _) = unMulti (unique @(MultiAsset era) n)
 pickValue n (Alonzo _) = unMulti (unique @(MultiAsset era) n)
 pickValue n (Babbage _) = unMulti (unique @(MultiAsset era) n)
 
-pickScript :: Int -> Proof era -> Core.Script era
+pickScript :: Int -> Proof era -> Script era
 pickScript n (Shelley c) = somemultisigs c !! n
 pickScript n (Allegra c) = sometimelocks c !! n
 pickScript n (Mary c) = sometimelocks c !! n
@@ -289,8 +293,8 @@ pickScript n (Babbage c) = somealonzo c !! n
 pickScriptHash :: forall era. Reflect era => Int -> Proof era -> ScriptHash (Crypto era)
 pickScriptHash n wit = hashScript @era (pickScript n wit)
 
-pickPolicyID :: Reflect era => Int -> Proof era -> Mary.PolicyID (Crypto era)
-pickPolicyID n wit = Mary.PolicyID (pickScriptHash n wit)
+pickPolicyID :: Reflect era => Int -> Proof era -> PolicyID (Crypto era)
+pickPolicyID n wit = PolicyID (pickScriptHash n wit)
 
 -- ===========================================================================
 -- An example where the 'pick' is the same type across all Crypto Evidence
