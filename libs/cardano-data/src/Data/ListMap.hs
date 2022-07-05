@@ -161,7 +161,7 @@ mapKeys :: (k1 -> k2) -> ListMap k1 a -> ListMap k2 a
 mapKeys f = ListMap . fmap (first f) . unListMap
 
 map :: (a -> v) -> ListMap k a -> ListMap k v
-map = second
+map = fmap
 
 empty :: ListMap k a
 empty = ListMap []
