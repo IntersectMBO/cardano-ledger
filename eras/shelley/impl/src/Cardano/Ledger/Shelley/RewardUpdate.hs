@@ -30,7 +30,6 @@ import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization (decodeRecordNamed)
 import Cardano.Ledger.Shelley.PoolRank (Likelihood, NonMyopic)
-import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenancePool (..))
 import Cardano.Ledger.Shelley.Rewards
   ( PoolRewardInfo (..),
     Reward (..),
@@ -88,9 +87,6 @@ instance CC.Crypto c => ToCBOR (RewardAns c) where
 
 instance CC.Crypto c => FromCBOR (RewardAns c) where
   fromCBOR = decodeRecordNamed "RewardAns" (const 2) (RewardAns <$> fromCBOR <*> fromCBOR)
-
--- | The provenance we collect
-type KeyHashPoolProvenance c = Map (KeyHash 'StakePool c) (RewardProvenancePool c)
 
 -- | The type of RewardPulser we pulse on.
 type Pulser c = RewardPulser c ShelleyBase (RewardAns c)

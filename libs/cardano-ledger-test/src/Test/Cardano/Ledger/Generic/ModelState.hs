@@ -93,7 +93,6 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import Control.Monad.Trans ()
-import Control.Provenance (runProvM)
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default (def))
 import Data.Map.Strict (Map)
@@ -387,7 +386,7 @@ abstract x =
 
 complete :: PulsingRewUpdate crypto -> RewardUpdate crypto
 complete (Complete r) = r
-complete (Pulsing rewsnap pulser) = fst $ runShelleyBase $ runProvM (completeRupd (Pulsing rewsnap pulser))
+complete (Pulsing rewsnap pulser) = fst $ runShelleyBase (completeRupd (Pulsing rewsnap pulser))
 
 -- =====================================================================
 

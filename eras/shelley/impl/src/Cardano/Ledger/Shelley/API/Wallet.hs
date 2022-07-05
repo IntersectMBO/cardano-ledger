@@ -113,7 +113,6 @@ import Cardano.Ledger.Val ((<->))
 import Cardano.Slotting.Slot (EpochSize)
 import Control.DeepSeq (NFData)
 import Control.Monad.Trans.Reader (runReader)
-import Control.Provenance (runWithProvM)
 import Data.Aeson (FromJSON, ToJSON)
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coders
@@ -124,7 +123,7 @@ import Data.Coders
     (!>),
     (<!),
   )
-import Data.Default.Class (Default (..))
+import Data.Default.Class (Default (def))
 import Data.Either (fromRight)
 import Data.Foldable (foldMap')
 import Data.Map.Strict (Map)
@@ -432,11 +431,11 @@ getRewardProvenance ::
   NewEpochState era ->
   (RewardUpdate (Crypto era), RewardProvenance (Crypto era))
 getRewardProvenance globals newepochstate =
-  runReader
-    ( runWithProvM def $
-        createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam
-    )
-    globals
+  ( runReader
+      (createRUpd slotsPerEpoch blocksmade epochstate maxsupply asc secparam)
+      globals,
+    def
+  )
   where
     epochstate = nesEs newepochstate
     maxsupply :: Coin

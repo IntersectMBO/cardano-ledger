@@ -170,8 +170,6 @@ import Cardano.Ledger.Shelley.PoolRank
     leaderProbability,
     likelihood,
   )
-import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance (..))
-import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
 import Cardano.Ledger.Shelley.RewardUpdate
   ( FreeVars (..),
     Pulser,
@@ -223,7 +221,6 @@ import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans
-import Control.Provenance (ProvM, modifyM, runProvM)
 import Control.SetAlgebra (dom, eval, (∈), (◁))
 import Control.State.Transition (STS (State))
 import Data.Coders
@@ -1408,7 +1405,7 @@ startStep ::
   Coin ->
   ActiveSlotCoeff ->
   Word64 ->
-  (PulsingRewUpdate (Crypto era), RewardProvenance (Crypto era))
+  PulsingRewUpdate (Crypto era)
 startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) maxSupply asc secparam =
   let SnapShot stake' delegs' poolParams = _pstakeGo ss
       numStakeCreds, k :: Rational
@@ -1537,26 +1534,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
           free
           (unStake stake')
           (RewardAns Map.empty Map.empty)
-      provenance =
-        def
-          { spe = case slotsPerEpoch of EpochSize n -> n,
-            blocks = b,
-            blocksCount = blocksMade,
-            maxLL = maxSupply,
-            deltaR1 = deltaR1,
-            RP.r = _R,
-            RP.totalStake = totalStake,
-            RP.activeStake = activestake,
-            d = d,
-            expBlocks = expectedBlocks,
-            eta = eta,
-            rPot = Coin rPot,
-            deltaT1 = Coin deltaT1
-            -- The reward provenance is in the process of being deprecated,
-            -- some fields are not populated anymore, such as the pool provenance
-            -- and the desireabilities.
-          }
-   in (Pulsing rewsnap pulser, provenance)
+   in (Pulsing rewsnap pulser)
 
 -- Phase 2
 
@@ -1578,7 +1556,7 @@ completeStep ::
   ShelleyBase (PulsingRewUpdate crypto, RewardEvent crypto)
 completeStep (Complete r) = pure (Complete r, mempty)
 completeStep (Pulsing rewsnap pulser) = do
-  (p2, !event) <- runProvM (completeRupd (Pulsing rewsnap pulser))
+  (p2, !event) <- completeRupd (Pulsing rewsnap pulser)
   pure (Complete p2, event)
 
 -- | Phase 3 of reward update has several parts
@@ -1588,7 +1566,7 @@ completeStep (Pulsing rewsnap pulser) = do
 --   d) Add the leader rewards to both the events and the computed Rewards
 completeRupd ::
   PulsingRewUpdate crypto ->
-  ProvM (RewardProvenance crypto) ShelleyBase (RewardUpdate crypto, RewardEvent crypto)
+  ShelleyBase (RewardUpdate crypto, RewardEvent crypto)
 completeRupd (Complete x) = pure (x, mempty)
 completeRupd
   ( Pulsing
@@ -1603,13 +1581,12 @@ completeRupd
         }
       pulser@(RSLP _size _free _source (RewardAns prev _now)) -- If prev is Map.empty, we have never pulsed.
     ) = do
-    RewardAns rs_ events <- lift (completeM pulser)
+    RewardAns rs_ events <- completeM pulser
     let rs' = Map.map Set.singleton rs_
     let rs'' = Map.unionWith Set.union rs' lrewards
     let !events' = Map.unionWith Set.union events lrewards
 
     let deltaR2 = oldr <-> sumRewards rewsnap rs''
-    modifyM (\rp -> rp {deltaR2 = deltaR2})
     let neverpulsed = Map.null prev
         !newevent =
           if neverpulsed -- If we have never pulsed then everything in the computed needs to added to the event
@@ -1630,18 +1607,17 @@ completeRupd
 --   This function is not used in the rules, so it ignores RewardEvents
 createRUpd ::
   forall era.
-  (UsesPP era) =>
+  UsesPP era =>
   EpochSize ->
   BlocksMade (Crypto era) ->
   EpochState era ->
   Coin ->
   ActiveSlotCoeff ->
   Word64 ->
-  ProvM (RewardProvenance (Crypto era)) ShelleyBase (RewardUpdate (Crypto era))
+  ShelleyBase (RewardUpdate (Crypto era))
 createRUpd slotsPerEpoch blocksmade epstate maxSupply asc secparam = do
-  let (step1, initialProvenance) = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
-  modifyM (\_ -> initialProvenance)
-  (step2, _event) <- lift (pulseStep step1)
+  let step1 = startStep slotsPerEpoch blocksmade epstate maxSupply asc secparam
+  (step2, _event) <- pulseStep step1
   case step2 of
     (Complete r) -> pure r
     (Pulsing rewsnap pulser) -> fst <$> completeRupd (Pulsing rewsnap pulser)

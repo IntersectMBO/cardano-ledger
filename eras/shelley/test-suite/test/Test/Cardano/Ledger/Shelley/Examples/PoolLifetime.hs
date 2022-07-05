@@ -24,12 +24,10 @@ where
 
 import Cardano.Ledger.BaseTypes
   ( BlocksMade (..),
-    BoundedRational (..),
     Globals (..),
     Network (..),
     Nonce,
     StrictMaybe (..),
-    epochInfoPure,
     mkCertIxPartial,
     (⭒),
   )
@@ -46,7 +44,6 @@ import Cardano.Ledger.PoolDistr
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API (getRewardProvenance)
 import qualified Cardano.Ledger.Shelley.EpochBoundary as EB
 import Cardano.Ledger.Shelley.LedgerState
   ( NewEpochState (..),
@@ -65,7 +62,6 @@ import Cardano.Ledger.Shelley.PoolRank
     leaderProbability,
     likelihood,
   )
-import qualified Cardano.Ledger.Shelley.RewardProvenance as RP
 import Cardano.Ledger.Shelley.Rewards (Reward (..), RewardType (..))
 import Cardano.Ledger.Shelley.Tx
   ( Tx (..),
@@ -89,16 +85,13 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot
   ( BlockNo (..),
     EpochNo (..),
-    EpochSize (unEpochSize),
     SlotNo (..),
-    epochInfoSize,
   )
 import Cardano.Ledger.TxIn (TxIn (..), mkTxInPartial, txid)
 import Cardano.Ledger.Val ((<+>), (<->), (<×>))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash, hashHeaderToNonce)
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
-import Control.Provenance (runProvM)
 import Data.Default.Class (def)
 import Data.Group (invert)
 import qualified Data.Map.Strict as Map
@@ -107,7 +100,7 @@ import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import GHC.Exts (fromList)
 import GHC.Stack (HasCallStack)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C_Crypto, ExMock)
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (ExMock)
 import Test.Cardano.Ledger.Shelley.Examples (CHAINExample (..), testCHAINExample)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import qualified Test.Cardano.Ledger.Shelley.Examples.Combinators as C
@@ -139,7 +132,7 @@ import Test.Cardano.Ledger.Shelley.Utils
     testGlobals,
   )
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (Assertion, testCase, (@?=))
+import Test.Tasty.HUnit (testCase)
 
 aliceInitCoin :: Coin
 aliceInitCoin = Coin 10_000_000_000_000_000
@@ -356,7 +349,7 @@ makePulser ::
   PulsingRewUpdate (Crypto era)
 makePulser bs cs = p
   where
-    (p, _) =
+    p =
       startStep
         (epochSize $ EpochNo 0)
         bs
@@ -378,7 +371,7 @@ makeCompletedPulser ::
   BlocksMade (Crypto era) ->
   ChainState era ->
   PulsingRewUpdate (Crypto era)
-makeCompletedPulser bs cs = Complete . fst . runShelleyBase . runProvM . completeRupd $ makePulser bs cs
+makeCompletedPulser bs cs = Complete . fst . runShelleyBase . completeRupd $ makePulser bs cs
 
 pulserEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => PulsingRewUpdate c
 pulserEx2 = makeCompletedPulser (BlocksMade mempty) expectedStEx1
@@ -794,38 +787,6 @@ expectedStEx8 =
 poolLifetime8 :: (ExMock (Crypto (ShelleyEra c))) => CHAINExample (BHeader c) (ShelleyEra c)
 poolLifetime8 = CHAINExample expectedStEx7 blockEx8 (Right expectedStEx8)
 
-rewardInfoEx8 :: RP.RewardProvenance C_Crypto
-rewardInfoEx8 = snd $ getRewardProvenance testGlobals (chainNes expectedStEx8)
-
-rewardInfoTest :: Assertion
-rewardInfoTest = rewardInfoEx8 @?= expected
-  where
-    expected =
-      RP.RewardProvenance
-        { RP.spe = unEpochSize . runShelleyBase $ epochInfoSize (epochInfoPure testGlobals) (EpochNo 0),
-          RP.blocks =
-            BlocksMade $
-              Map.singleton (_poolId $ Cast.alicePoolParams) 1,
-          RP.maxLL = supply,
-          RP.deltaR1 = rpot,
-          RP.deltaR2 = Coin 1256640000001,
-          RP.r = rewardPot8,
-          RP.totalStake = totstake,
-          RP.blocksCount = 1,
-          RP.d = unboundRational $ _d ppEx,
-          RP.expBlocks = 45,
-          RP.eta = 1 % 45,
-          RP.rPot = rpot,
-          RP.deltaT1 = deltaT8',
-          RP.activeStake = activestake,
-          RP.pools = mempty,
-          RP.desirabilities = mempty
-        }
-    rpot = Coin 1586666666666
-    supply = Coin . fromIntegral . maxLovelaceSupply $ testGlobals
-    totstake = supply <-> reserves7
-    activestake = aliceCoinEx2Base <> aliceCoinEx2Ptr <> bobInitCoin
-
 --
 -- Block 9, Slot 410, Epoch 4
 --
@@ -1121,6 +1082,5 @@ poolLifetimeExample =
       testCase "apply a nontrivial rewards" $ testCHAINExample poolLifetime9,
       testCase "drain reward account and deregister" $ testCHAINExample poolLifetime10,
       testCase "stage stake pool retirement" $ testCHAINExample poolLifetime11,
-      testCase "reap stake pool" $ testCHAINExample poolLifetime12,
-      testCase "reward info" rewardInfoTest
+      testCase "reap stake pool" $ testCHAINExample poolLifetime12
     ]

@@ -29,15 +29,12 @@ import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Shelley.RewardProvenance (RewardProvenance)
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), TxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
 import Control.Monad.Reader (runReader, runReaderT)
-import Control.Provenance (runProvM, runWithProvM)
 import Control.State.Transition.Extended (IRC (..), TRC (..), applySTS)
-import Data.Default.Class (Default (def))
 import Data.Either (fromRight)
 import Data.Functor.Identity (runIdentity)
 import qualified Data.ListMap as LM
@@ -180,7 +177,7 @@ createRUpd ::
 createRUpd globals cs =
   runIdentity $
     runReaderT
-      (runProvM (LS.createRUpd epochSize bm es total asc k))
+      (LS.createRUpd epochSize bm es total asc k)
       globals
   where
     nes = chainNes cs
@@ -197,11 +194,11 @@ createRUpd globals cs =
 createRUpdWithProv ::
   Globals ->
   ChainState B ->
-  (LS.RewardUpdate B_Crypto, RewardProvenance B_Crypto)
+  (LS.RewardUpdate B_Crypto)
 createRUpdWithProv globals cs =
   runIdentity $
     runReaderT
-      (runWithProvM def (LS.createRUpd epochSize bm es total asc k))
+      (LS.createRUpd epochSize bm es total asc k)
       globals
   where
     nes = chainNes cs

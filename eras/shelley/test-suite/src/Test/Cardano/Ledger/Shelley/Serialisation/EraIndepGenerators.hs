@@ -80,11 +80,6 @@ import Cardano.Ledger.Shelley.PoolRank
     LogWeight (..),
     PerformanceEstimate (..),
   )
-import Cardano.Ledger.Shelley.RewardProvenance
-  ( Desirability (..),
-    RewardProvenance (..),
-    RewardProvenancePool (..),
-  )
 import Cardano.Ledger.Shelley.RewardUpdate
   ( FreeVars (..),
     Pulser,
@@ -938,49 +933,6 @@ instance
   where
   arbitrary = ApplyTxError <$> arbitrary
   shrink (ApplyTxError xs) = [ApplyTxError xs' | xs' <- shrink xs]
-
-instance Arbitrary Desirability where
-  arbitrary = Desirability <$> arbitrary <*> arbitrary
-
-instance
-  Mock crypto =>
-  Arbitrary (RewardProvenancePool crypto)
-  where
-  arbitrary =
-    RewardProvenancePool
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-
-instance
-  Mock crypto =>
-  Arbitrary (RewardProvenance crypto)
-  where
-  arbitrary =
-    RewardProvenance
-      <$> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
-      <*> arbitrary
 
 instance (Mock crypto) => Arbitrary (PulsingRewUpdate crypto) where
   arbitrary =
