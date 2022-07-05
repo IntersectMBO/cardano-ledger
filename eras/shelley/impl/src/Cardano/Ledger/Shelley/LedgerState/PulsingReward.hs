@@ -185,7 +185,7 @@ startStep slotsPerEpoch b@(BlocksMade b') es@(EpochState acnt ss ls pr _ nm) max
       -- We map over the registered stake pools to compute the revelant
       -- stake pool specific values.
       allPoolInfo = VMap.map mkPoolRewardInfoCurry poolParams
-  
+
       -- Stake pools that do not produce any blocks get no rewards,
       -- but some information is still needed from non-block-producing
       -- pools for the ranking algorithm used by the wallets.
