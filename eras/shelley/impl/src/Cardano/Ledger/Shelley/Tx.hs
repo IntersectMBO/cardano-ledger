@@ -54,6 +54,9 @@ module Cardano.Ledger.Shelley.Tx
     TransTx,
     TransWitnessSet,
     prettyWitnessSetParts,
+    minfee,
+    witsFromTxWitnesses,
+    txsizeBound,
   )
 where
 
@@ -73,6 +76,7 @@ import Cardano.Binary
 import Cardano.Ledger.BaseTypes
   ( maybeToStrictMaybe,
   )
+import Cardano.Ledger.Coin (Coin (Coin))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
@@ -81,7 +85,7 @@ import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.Keys.WitVKey (WitVKey (..), witVKeyHash)
 import Cardano.Ledger.SafeHash (SafeToHash (..))
-import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
+import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness, bootstrapWitKeyHash)
 import Cardano.Ledger.Shelley.Scripts
 import Cardano.Ledger.Shelley.TxBody (TxBody (..), TxOut (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
@@ -98,12 +102,14 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Maybe.Strict (StrictMaybe, strictMaybeToMaybe)
 import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
+import Data.Typeable (Proxy (Proxy), Typeable)
 import GHC.Generics (Generic)
 import GHC.Records (HasField (..))
 import NoThunks.Class (AllowThunksIn (..), NoThunks (..))
+import Numeric.Natural (Natural)
 
 -- ========================================================
 
@@ -575,3 +581,60 @@ extractKeyHashWitnessSet = foldr accum Set.empty
   where
     accum (KeyHashObj hk) ans = Set.insert (asWitness hk) ans
     accum _other ans = ans
+
+-- | Minimum fee calculation
+minfee ::
+  ( HasField "_minfeeA" pp Natural,
+    HasField "_minfeeB" pp Natural,
+    HasField "txsize" tx Integer
+  ) =>
+  pp ->
+  tx ->
+  Coin
+minfee pp tx =
+  Coin $
+    fromIntegral (getField @"_minfeeA" pp)
+      * getField @"txsize" tx + fromIntegral (getField @"_minfeeB" pp)
+
+-- | Extract the witness hashes from the Transaction.
+witsFromTxWitnesses ::
+  ( Era era,
+    HasField "addrWits" tx (Set (WitVKey 'Witness (Crypto era))),
+    HasField "bootWits" tx (Set (BootstrapWitness (Crypto era)))
+  ) =>
+  tx ->
+  Set (KeyHash 'Witness (Crypto era))
+witsFromTxWitnesses coreTx =
+  Set.map witVKeyHash addWits
+    `Set.union` Set.map bootstrapWitKeyHash bsWits
+  where
+    bsWits = getField @"bootWits" coreTx
+    addWits = getField @"addrWits" coreTx
+
+-- | Convenience Function to bound the txsize function.
+-- | It can be helpful for coin selection.
+txsizeBound ::
+  forall era out tx.
+  ( HasField "outputs" (Core.TxBody era) (StrictSeq out),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "body" tx (Core.TxBody era),
+    HasField "txsize" tx Integer
+  ) =>
+  Proxy era ->
+  tx ->
+  Integer
+txsizeBound Proxy tx = numInputs * inputSize + numOutputs * outputSize + rest
+  where
+    uint = 5
+    smallArray = 1
+    hashLen = 32
+    hashObj = 2 + hashLen
+    addrHashLen = 28
+    addrHeader = 1
+    address = 2 + addrHeader + 2 * addrHashLen
+    txbody = getField @"body" tx
+    numInputs = toInteger . length . getField @"inputs" $ txbody
+    inputSize = smallArray + uint + hashObj
+    numOutputs = toInteger . length . getField @"outputs" $ txbody
+    outputSize = smallArray + uint + address
+    rest = getField @"txsize" tx

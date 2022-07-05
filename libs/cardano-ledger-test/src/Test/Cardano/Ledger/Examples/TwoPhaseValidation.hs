@@ -94,7 +94,6 @@ import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.BlockChain (bBodySize)
 import Cardano.Ledger.Shelley.LedgerState
   ( UTxOState (..),
-    WitHashes (..),
     smartUTxOState,
   )
 import Cardano.Ledger.Shelley.PParams (PParams' (..))
@@ -2282,12 +2281,10 @@ alonzoUTXOWexamplesB pf =
               ( Left
                   [ fromUtxow @era
                       ( MissingVKeyWitnessesUTXOW
-                          ( WitHashes
-                              ( Set.fromList
-                                  [ asWitness $
-                                      hashKey (vKey $ someKeys pf)
-                                  ]
-                              )
+                          ( Set.fromList
+                              [ asWitness $
+                                  hashKey (vKey $ someKeys pf)
+                              ]
                           )
                       )
                   ]

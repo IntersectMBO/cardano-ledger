@@ -35,6 +35,9 @@ module Cardano.Ledger.Shelley.UTxO
     scriptsNeeded,
     scriptCred,
     scriptStakeCred,
+    consumed,
+    produced,
+    keyRefunds,
 
     -- * Utilities
     TransUTxO,
@@ -63,6 +66,7 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.Delegation.Certificates
   ( DCert (..),
+    isDeRegKey,
     isRegKey,
     requiresVKeyWitness,
   )
@@ -83,13 +87,14 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.TxIn (TxIn (..))
 import qualified Cardano.Ledger.TxIn as Core (txid)
 import Cardano.Ledger.Val ((<+>), (<×>))
+import qualified Cardano.Ledger.Val as Val
 import Control.DeepSeq (NFData)
 import Control.Monad ((<$!>))
 import Data.Coders (decodeMapNoDuplicates, encodeMap)
 import Data.Coerce (coerce)
 import Data.Constraint (Constraint)
 import Data.Default.Class (Default)
-import Data.Foldable (foldMap', toList)
+import Data.Foldable (Foldable (fold), foldMap', toList)
 import Data.Kind (Type)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
@@ -349,3 +354,57 @@ txinsScriptHashes txInps (UTxO u) = foldr add Set.empty txInps
         Addr _ (ScriptHashObj h) _ -> Set.insert h ans
         _ -> ans
       Nothing -> ans
+
+-- | Compute the lovelace which are created by the transaction
+produced ::
+  forall era pp.
+  ( Era era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "_keyDeposit" pp Coin,
+    HasField "_poolDeposit" pp Coin
+  ) =>
+  pp ->
+  (KeyHash 'StakePool (Crypto era) -> Bool) ->
+  Core.TxBody era ->
+  Core.Value era
+produced pp isNewPool tx =
+  balance (txouts tx)
+    <+> Val.inject
+      ( getField @"txfee" tx
+          <+> totalDeposits pp isNewPool (toList $ getField @"certs" tx)
+      )
+
+-- | Compute the lovelace which are destroyed by the transaction
+consumed ::
+  forall era pp.
+  ( Era era,
+    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
+    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
+    HasField "_keyDeposit" pp Coin
+  ) =>
+  pp ->
+  UTxO era ->
+  Core.TxBody era ->
+  Core.Value era
+consumed pp (UTxO u) tx =
+  {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
+  Set.foldl' lookupAddTxOut mempty (txins @era tx)
+    <> Val.inject (refunds <+> withdrawals)
+  where
+    lookupAddTxOut acc txin = maybe acc (addTxOut acc) $ Map.lookup txin u
+    addTxOut !b out = getField @"value" out <+> b
+    refunds = keyRefunds pp tx
+    withdrawals = fold . unWdrl $ getField @"wdrls" tx
+
+-- | Compute the key deregistration refunds in a transaction
+keyRefunds ::
+  ( HasField "certs" txb (StrictSeq (DCert crypto)),
+    HasField "_keyDeposit" pp Coin
+  ) =>
+  pp ->
+  txb ->
+  Coin
+keyRefunds pp tx = length deregistrations <×> getField @"_keyDeposit" pp
+  where
+    deregistrations = filter isDeRegKey (toList $ getField @"certs" tx)

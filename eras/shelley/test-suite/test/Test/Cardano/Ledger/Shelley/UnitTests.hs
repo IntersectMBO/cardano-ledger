@@ -49,7 +49,6 @@ import Cardano.Ledger.Shelley.LedgerState
     IncrementalStake (..),
     LedgerState (..),
     UTxOState (..),
-    WitHashes (..),
     dpsDState,
     rewards,
     _unified,
@@ -447,7 +446,7 @@ testWitnessNotIncluded =
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes txwits
+              txwits
         ]
         tx
 
@@ -469,7 +468,7 @@ testSpendNotOwnedUTxO =
    in testInvalidTx
         [ UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes txwits
+              txwits
         ]
         tx
 
@@ -504,7 +503,7 @@ testWitnessWrongUTxO =
               [asWitness $ vKey alicePay],
           UtxowFailure $
             MissingVKeyWitnessesUTXOW $
-              WitHashes txwits
+              txwits
         ]
         tx
 
@@ -612,7 +611,7 @@ testWithdrawalNoWit =
       tx = Tx @C txb txwits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
-        [ UtxowFailure . MissingVKeyWitnessesUTXOW $ WitHashes missing
+        [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
         ]
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet bobStake) (Coin 10)
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)

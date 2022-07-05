@@ -33,7 +33,7 @@ import Cardano.Ledger.Credential (Credential (KeyHashObj, ScriptHashObj), StakeR
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Era (..), hashScript)
 import Cardano.Ledger.Hashes (DataHash, ScriptHash (..))
-import Cardano.Ledger.Keys (GenDelegs (..), HasKeyRole (coerceKeyRole), KeyHash (..), KeyPair (..), VKey (..), hashKey)
+import Cardano.Ledger.Keys (GenDelegs (..), HasKeyRole (coerceKeyRole), KeyHash (..), KeyPair (..), KeyRole (..), VKey (..), hashKey)
 import Cardano.Ledger.Mary.Value (Value (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
@@ -51,7 +51,6 @@ import Cardano.Ledger.Shelley.LedgerState
     NewEpochState (..),
     PState (..),
     UTxOState (..),
-    WitHashes (..),
   )
 import Cardano.Ledger.Shelley.Rules.Bbody (BbodyPredicateFailure (..), BbodyState (..))
 import Cardano.Ledger.Shelley.Rules.Epoch (EpochPredicateFailure (..))
@@ -77,6 +76,7 @@ import Control.State.Transition.Extended (STS (..))
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
+import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text, pack)
 import Data.Typeable (Typeable)
@@ -581,11 +581,8 @@ instance
 -- Probably should be moved elsewhere
 
 -- LedgerState.hs
-ppWitHashes :: WitHashes crypto -> PDoc
-ppWitHashes (WitHashes hs) = ppSexp "WitHashes" [ppSet ppKeyHash hs]
-
-instance PrettyA (WitHashes crypto) where
-  prettyA = ppWitHashes
+ppWitHashes :: Set (KeyHash 'Witness crypto) -> PDoc
+ppWitHashes hs = ppSexp "WitHashes" [ppSet ppKeyHash hs]
 
 -- Defined in ‘Cardano.Ledger.Alonzo.Tx’
 ppScriptPurpose :: ScriptPurpose crypto -> PDoc
