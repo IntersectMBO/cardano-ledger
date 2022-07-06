@@ -187,6 +187,10 @@ translateTxOut (Alonzo.TxOut addr value dh) = TxOut addr value d SNothing
 coinsPerUTxOWordToCoinsPerUTxOByte :: Coin -> Coin
 coinsPerUTxOWordToCoinsPerUTxOByte (Coin c) = Coin $ c `div` 8
 
+-- | A word is 8 bytes, so to convert from coinsPerUTxOByte to coinsPerUTxOWord.
+coinsPerUTxOByteToCoinsPerUTxOWord :: Coin -> Coin
+coinsPerUTxOByteToCoinsPerUTxOWord (Coin c) = Coin $ c * 8
+
 translatePParams ::
   forall f c. HKDFunctor f => Alonzo.PParams' f (AlonzoEra c) -> PParams' f (BabbageEra c)
 translatePParams Alonzo.PParams {_coinsPerUTxOWord = cpuw, ..} =
