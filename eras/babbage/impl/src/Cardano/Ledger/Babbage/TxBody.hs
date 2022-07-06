@@ -11,6 +11,7 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
@@ -662,8 +663,9 @@ decodeTxOut ::
     FromCBOR (Annotator (Core.Script era)),
     DecodeNonNegative (Core.Value era)
   ) =>
+  (forall s'. Decoder s' (Addr (Crypto era), CompactAddr (Crypto era))) ->
   Decoder s (TxOut era)
-decodeTxOut = do
+decodeTxOut decAddr = do
   dtxo <- decode $ SparseKeyed "TxOut" initial bodyFields requiredFields
   case dtxo of
     DecodingTxOut SNothing _ _ _ -> cborError $ DecoderErrorCustom "TxOut" "Impossible: no Addr"
@@ -676,7 +678,7 @@ decodeTxOut = do
     bodyFields 0 =
       field
         (\x txo -> txo {decodingTxOutAddr = SJust x})
-        (D fromCborBothAddr)
+        (D decAddr)
     bodyFields 1 =
       field
         (\x txo -> txo {decodingTxOutVal = x})
@@ -759,12 +761,12 @@ fromCborTxOutWithAddr ::
     FromCBOR (Annotator (Core.Script era)),
     DecodeNonNegative (Core.Value era)
   ) =>
-  Decoder s (Addr (Crypto era), CompactAddr (Crypto era)) ->
+  (forall s'. Decoder s' (Addr (Crypto era), CompactAddr (Crypto era))) ->
   Decoder s (TxOut era)
 fromCborTxOutWithAddr decAddr = do
   peekTokenType >>= \case
-    TypeMapLenIndef -> decodeTxOut
-    TypeMapLen -> decodeTxOut
+    TypeMapLenIndef -> decodeTxOut decAddr
+    TypeMapLen -> decodeTxOut decAddr
     _ -> oldTxOut
   where
     oldTxOut = do
