@@ -153,5 +153,5 @@ testTxHasTypeReps =
     "Test HasTypeReps instances"
     [ testCase "AbstractSize - example - TxIn" exampleTypeRepsTxIn,
       testCase "AbstractSize - example - Tx" exampleTypeRepsTx,
-      testProperty "AbstractSize and HasTypeReps - Tx*" propTxAbstractSize
+      testPropertyNamed "AbstractSize and HasTypeReps - Tx*" "propTxAbstractSize" propTxAbstractSize
     ]

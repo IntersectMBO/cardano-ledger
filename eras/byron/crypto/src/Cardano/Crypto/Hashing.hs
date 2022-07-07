@@ -87,6 +87,7 @@ import Formatting (Format, bprint, build, fitLeft, later, sformat, (%.))
 import qualified Formatting.Buildable as B (Buildable (..))
 import NoThunks.Class (NoThunks (..))
 import qualified Prelude
+import Data.String (String)
 
 --------------------------------------------------------------------------------
 -- AbstractHash
@@ -119,7 +120,7 @@ instance ToJSON (AbstractHash algo a) where
   toJSON = toJSON . sformat hashHexF
 
 instance HashAlgorithm algo => FromJSON (AbstractHash algo a) where
-  parseJSON = toAesonError . readEither <=< parseJSON
+  parseJSON = toAesonError . readEither @_ @String <=< parseJSON
 
 instance
   (HashAlgorithm algo, FromJSON (AbstractHash algo a)) =>
