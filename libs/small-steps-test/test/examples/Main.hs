@@ -5,7 +5,7 @@ import qualified Control.State.Transition.Examples.GlobalSum as GSum
 import qualified Control.State.Transition.Examples.Sum as Sum
 import Test.Tasty (defaultMain, testGroup)
 import Test.Tasty.ExpectedFailure (expectFailBecause)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 import qualified Test.Tasty.QuickCheck as Tasty.QuickCheck
 
 main :: IO ()
@@ -19,11 +19,18 @@ main = do
             "Sum"
             [ expectFailBecause
                 "it allows to inspect generated trace counterexamples"
-                $ testProperty "False (Hedgehog)" Sum.prop_Bounded,
-              testProperty
+                $ testPropertyNamed
+                    "False (Hedgehog)"
+                    "prop_Bounded"
+                    Sum.prop_Bounded,
+              testPropertyNamed
                 "Only valid traces are generated"
+                "prop_onlyValidTracesAreGenerated"
                 Sum.prop_onlyValidTracesAreGenerated,
-              testProperty "Classified" Sum.prop_Classified,
+              testPropertyNamed
+                "Classified"
+                "prop_Classified"
+                Sum.prop_Classified,
               Tasty.QuickCheck.testProperty
                 "Classified (QuickCheck)"
                 Sum.prop_qc_Classified,
