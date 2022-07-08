@@ -69,6 +69,7 @@ module Cardano.Ledger.Shelley.LedgerState
     pulseStep,
     completeStep,
     NewEpochState (NewEpochState, nesEL, nesEs, nesRu, nesPd, nesBprev, nesBcur),
+    LwNewEpochState (LwNewEpochState, lwNesEL, lwNesEs, lwNesRu, lwNesPd, lwNesBprev, lwNesBcur),
     StashedAVVMAddresses,
     stashedAVVMAddresses,
     getGKeys,

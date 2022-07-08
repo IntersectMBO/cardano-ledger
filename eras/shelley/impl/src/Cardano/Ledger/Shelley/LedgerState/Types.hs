@@ -12,6 +12,7 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -69,7 +70,7 @@ import Control.Monad.State.Strict (evalStateT)
 import Control.Monad.Trans
 import Control.State.Transition (STS (State))
 import Data.Coders
-  ( Decode (From, RecD),
+  ( Decode (..),
     decode,
     decodeRecordNamed,
     (<!),
@@ -359,6 +360,42 @@ data NewEpochState era = NewEpochState
   }
   deriving (Generic)
 
+newtype Ignore t = Ignore ()
+
+instance Semigroup (Ignore t) where
+  Ignore () <> Ignore () = Ignore ()
+
+instance Monoid (Ignore t) where
+  mempty = Ignore ()
+
+data LwNewEpochState era = LwNewEpochState
+  { -- | Last epoch
+    lwNesEL :: !(Ignore EpochNo),
+    -- | Blocks made before current epoch
+    lwNesBprev :: !(Ignore (BlocksMade (Crypto era))),
+    -- | Blocks made in current epoch
+    lwNesBcur :: !(Ignore (BlocksMade (Crypto era))),
+    -- | Epoch state before current
+    lwNesEs :: !(EpochState era),
+    -- | Possible reward update
+    lwNesRu :: !(Ignore (StrictMaybe (PulsingRewUpdate (Crypto era)))),
+    -- | Stake distribution within the stake pool
+    lwNesPd :: !(Ignore (PoolDistr (Crypto era))),
+    -- | AVVM addresses to be removed at the end of the Shelley era. Note that
+    -- the existence of this field is a hack, related to the transition of UTxO
+    -- to disk. We remove AVVM addresses from the UTxO on the Shelley/Allegra
+    -- boundary. However, by this point the UTxO will be moved to disk, and
+    -- hence doing a scan of the UTxO for AVVM addresses will be expensive. Our
+    -- solution to this is to do a scan of the UTxO on the Byron/Shelley
+    -- boundary (since Byron UTxO are still on disk), stash the results here,
+    -- and then remove them at the Shelley/Allegra boundary.
+    --
+    -- This is very much an awkward implementation hack, and hence we hide it
+    -- from as many places as possible.
+    lwStashedAVVMAddresses :: !(Ignore (StashedAVVMAddresses era))
+  }
+  deriving (Generic)
+
 type family StashedAVVMAddresses era where
   StashedAVVMAddresses (ShelleyEra c) = UTxO (ShelleyEra c)
   StashedAVVMAddresses _ = ()
@@ -443,6 +480,37 @@ instance
         <! From
         <! From
         <! From
+
+instance
+  ( Era era,
+    FromCBOR (Core.PParams era),
+    FromSharedCBOR (Core.TxOut era),
+    Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
+    FromCBOR (Core.Value era),
+    FromCBOR (State (Core.EraRule "PPUP" era)),
+    FromCBOR (StashedAVVMAddresses era)
+  ) =>
+  FromCBOR (LwNewEpochState era)
+  where
+  fromCBOR =
+    decode $
+      RecD LwNewEpochState
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+        <! From
+
+instance forall t.
+  ( FromCBOR t
+  ) =>
+  FromCBOR (Ignore t)
+  where
+  fromCBOR =
+    decode $
+      Map (const @_ @t (Ignore ())) From
 
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
