@@ -197,6 +197,43 @@ instance
         esNonMyopic <- fromSharedLensCBOR _2
         pure EpochState {esAccountState, esSnapshots, esLState, esPrevPp, esPp, esNonMyopic}
 
+data LwEpochState era = LwEpochState
+  { lwEsAccountState :: !(Ignore AccountState),
+    lwEsSnapshots :: !(Ignore (SnapShots (Crypto era))),
+    lwEsLState :: !(LedgerState era),
+    lwEsPrevPp :: !(Ignore (Core.PParams era)),
+    lwEsPp :: !(Ignore (Core.PParams era)),
+    -- | This field, esNonMyopic, does not appear in the formal spec
+    -- and is not a part of the protocol. It is only used for providing
+    -- data to the stake pool ranking calculation @getNonMyopicMemberRewards@.
+    -- See https://hydra.iohk.io/job/Cardano/cardano-ledger/specs.pool-ranking/latest/download-by-type/doc-pdf/pool-ranking
+    lwEsNonMyopic :: !(Ignore (NonMyopic (Crypto era)))
+  }
+  deriving (Generic)
+
+instance
+  ( FromCBOR (Core.PParams era),
+    TransValue FromCBOR era,
+    HashAnnotated (Core.TxBody era) EraIndependentTxBody (Crypto era),
+    FromSharedCBOR (Core.TxOut era),
+    Share (Core.TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
+    FromCBOR (State (Core.EraRule "PPUP" era)),
+    Era era
+  ) =>
+  FromCBOR (LwEpochState era)
+  where
+  fromCBOR =
+    decodeRecordNamed "LwEpochState" (const 6) $
+      flip evalStateT mempty $ do
+        lwEsAccountState <- lift fromCBOR
+        lwEsLState <- fromSharedPlusCBOR
+        lwEsSnapshots <- fromSharedPlusCBOR
+        lwEsPrevPp <- lift fromCBOR
+        lwEsPp <- lift fromCBOR
+        lwEsNonMyopic <- fromSharedLensCBOR _2
+        pure LwEpochState {lwEsAccountState, lwEsSnapshots, lwEsLState, lwEsPrevPp, lwEsPp, lwEsNonMyopic}
+
+
 data UpecState era = UpecState
   { -- | Current protocol parameters.
     currentPp :: !(Core.PParams era),
@@ -511,6 +548,13 @@ instance forall t.
   fromCBOR =
     decode $
       Map (const @_ @t (Ignore ())) From
+
+instance forall t.
+  ( FromSharedCBOR t
+  ) =>
+  FromSharedCBOR (Ignore t) where
+  type Share (Ignore t) = Share t
+  fromSharedCBOR s = Ignore () <$ fromSharedCBOR @t s
 
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
