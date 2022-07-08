@@ -199,7 +199,7 @@ instance
 
 data LwEpochState era = LwEpochState
   { lwEsAccountState :: !(Ignore AccountState),
-    lwEsSnapshots :: !(Ignore (SnapShots (Crypto era))),
+    lwEsSnapshots :: !(SnapShots (Crypto era)),
     lwEsLState :: !(LedgerState era),
     lwEsPrevPp :: !(Ignore (Core.PParams era)),
     lwEsPp :: !(Ignore (Core.PParams era)),
