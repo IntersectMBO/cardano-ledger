@@ -413,7 +413,7 @@ data LwNewEpochState era = LwNewEpochState
     -- | Blocks made in current epoch
     lwNesBcur :: !(Ignore (BlocksMade (Crypto era))),
     -- | Epoch state before current
-    lwNesEs :: !(EpochState era),
+    lwNesEs :: !(LwEpochState era),
     -- | Possible reward update
     lwNesRu :: !(Ignore (StrictMaybe (PulsingRewUpdate (Crypto era)))),
     -- | Stake distribution within the stake pool
