@@ -46,8 +46,8 @@ import Cardano.Ledger.Serialization
 import Cardano.Ledger.Shelley.BlockChain (constructMetadata)
 import Control.Monad (unless)
 import Data.ByteString (ByteString)
+import Data.ByteString.Builder (shortByteString, toLazyByteString)
 import qualified Data.ByteString.Lazy as BSL
-import Data.ByteString.Short (fromShort)
 import Data.Coders
   ( decodeList,
     decodeMap,
@@ -176,17 +176,18 @@ hashTxSeq ::
 hashTxSeq (TxSeq' _ bodies ws md vs) =
   coerce $
     hashStrict $
-      fromShort $
-        mconcat
-          [ hashPart bodies,
-            hashPart ws,
-            hashPart md,
-            hashPart vs
-          ]
+      BSL.toStrict $
+        toLazyByteString $
+          mconcat
+            [ hashPart bodies,
+              hashPart ws,
+              hashPart md,
+              hashPart vs
+            ]
   where
     hashStrict :: ByteString -> Hash (Crypto era) ByteString
     hashStrict = Hash.hashWith id
-    hashPart = Hash.hashToBytesShort . hashStrict . BSL.toStrict
+    hashPart = shortByteString . Hash.hashToBytesShort . hashStrict . BSL.toStrict
 
 instance
   ( FromCBOR (Annotator (Core.AuxiliaryData era)),
