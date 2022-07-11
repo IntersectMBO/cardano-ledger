@@ -1,26 +1,28 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE BangPatterns #-}
 
 module Test.Cardano.Ledger.NoThunks
   (
   )
 where
 
-import Control.State.Transition.Trace.Generator.QuickCheck (HasTrace)
 import Data.Default.Class (def)
-import NoThunks.Class (NoThunks, unsafeNoThunks)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)
-import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, MockChainState)
+import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
 import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Babbage), Reflect)
-import Test.Cardano.Ledger.Generic.Trace (Gen1, traceProp)
+import Test.Cardano.Ledger.Generic.Trace (traceProp)
 import Test.Tasty (TestTree, defaultMain)
 import Test.Tasty.QuickCheck (testProperty)
+import Control.State.Transition.Extended (STS)
+import qualified Cardano.Ledger.Babbage.PParams
 
 test ::
   forall era.
   ( Reflect era,
-    HasTrace (MOCKCHAIN era) (Gen1 era),
-    NoThunks (MockChainState era)
+    STS (MOCKCHAIN era)
   ) =>
   Proof era ->
   Int ->
@@ -32,9 +34,11 @@ test proof numTx gensize =
       proof
       numTx
       gensize
-      ( \_ trc -> case unsafeNoThunks trc of
-          Just x -> error $ "Thunks present: " <> show x
-          Nothing -> ()
+      ( \_ !trc -> do
+          nt <- noThunksGen proof trc
+          case nt of
+            Just x -> error $ "Thunks present: " <> show x
+            Nothing -> return ()
       )
 
 main :: IO ()
