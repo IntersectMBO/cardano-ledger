@@ -19,27 +19,28 @@ import Data.Set (Set)
 import qualified Data.Set as Set
 import qualified Data.UMap as UM
 
+--  $ClassesForSetAlgebra
+
 -- ================= The Iter class =================================================
--- The Set algebra include types that encode finite maps of some type. They
+
+-- | The Set algebra include types that encode finite sets and maps of some type. They
 -- have a finite domain, and for each domain element they pair a single range
--- element. We are interested in those finite maps that can iterate their
+-- element (unit for sets). We are interested in those finite maps that can iterate their
 -- pairs in ascending domain order. The operations are: `nxt` and `lub` .
 -- lub can skip over many items in sub-linear time, it can make things really fast.
 -- Many finite maps can support a support lub operation in sub-linear time. Some examples:
 -- Balanced binary trees, Arrays (using binary search), Tries, etc. There are basic and compound
 -- Iter instances. Compound types include components with types that have Iter instances.
--- ===================================================================================
-
 class Iter f where
   nxt :: f a b -> Collect (a, b, f a b)
   lub :: Ord k => k -> f k b -> Collect (k, b, f k b)
 
-  -- The next few methods can all be defined via nxt and lub, but for base types there often exist
+  -- | The next few methods can all be defined via nxt and lub, but for base types there often exist
   -- much more efficent means, so the default definitions should be overwritten for such basic types.
   -- For compound types with Guards, these are often the only way to define them.
-
   hasNxt :: f a b -> Maybe (a, b, f a b)
   hasNxt f = hasElem (nxt f)
+
   hasLub :: Ord k => k -> f k b -> Maybe (k, b, f k b)
   hasLub a f = hasElem (lub a f)
   haskey :: Ord key => key -> f key b -> Bool
@@ -53,8 +54,8 @@ class Iter f where
 
 -- ==================================================================================================
 
--- | In order to build typed Exp (which are a typed deep embedding) of Set operations, we need to know
--- what kind of basic types of Maps and Sets can be used this way. Every Basic type has a few operations
+-- | In order to build typed 'Exp' (which are a typed deep embedding) of map and set operations, we need to know
+-- what kind of basic types can be used this way. Every Basic type has a few operations
 -- for creating one from a list, for adding and removing key-value pairs, looking up a value given a key.
 -- Instances of this algebra are functional in that every key has exactly one value associated with it.
 class Basic f where
@@ -65,11 +66,18 @@ class Basic f where
   -- | use (\ old new -> old) if you want the v in (f k v) to prevail, and use (\ old new -> new) if you want the v in (k,v) to prevail
   addkv :: Ord k => (k, v) -> f k v -> (v -> v -> v) -> f k v
 
+  -- | remove the pair with key 'k', if it is there.
   removekey :: (Ord k) => k -> f k v -> f k v
+
+  -- | the set of keys
   domain :: Ord k => f k v -> Set k
+
+  -- | the set of values.
   range :: Ord v => f k v -> Set v
 
 -- ===============================================================================================
+
+-- $Deep embedding
 
 -- | BaseRep witnesses Basic types. I.e. those types that are instances of both Basic and Iter.
 --   Pattern matching against a constructor of type BaseRep, determines which base type. For example
@@ -100,8 +108,12 @@ instance Show (BaseRep f k v) where
 -- Now for each Basic type we provide instances
 -- ==================================================================
 
+-- MapAndSetTypes
+
 -- ========== Basic List ==============
 
+-- | Maps stored as lists. Sorted [(key,value)] pairs, with no duplicate keys.
+-- The constructor for List is hidden, since it requires some invariants. Use 'fromPairs' to build an initial List.
 data List k v where UnSafeList :: Ord k => [(k, v)] -> List k v
 
 unList :: List k v -> [(k, v)]
@@ -112,7 +124,6 @@ deriving instance (Eq k, Eq v) => Eq (List k v)
 instance (Show k, Show v) => Show (List k v) where
   show (UnSafeList xs) = show xs
 
--- | The constructor for List is hidden, since it requires some invariants. Use fromPairs to build an initial List.
 instance Basic List where
   addkv (k, v) (UnSafeList xs) comb = UnSafeList (insert xs)
     where
@@ -150,8 +161,8 @@ instance Iter List where -- List is the only basic instance with non-linear nxt 
   hasNxt (UnSafeList (((k, v) : ps))) = Just (k, v, UnSafeList ps)
 
 -- ================ Basic Single ===============
--- The Single type encode 0 or 1 pairs. Iteration is trivial. Succeeds only once.
 
+-- | Maps and sets with zero or a single pair. Iteration is trivial. Succeeds at most once.
 data Single k v where
   Single :: k -> v -> Single k v
   Fail :: Single k v
@@ -341,13 +352,12 @@ instance
   lookup = UM.lookup
 
 -- ===========================================================================
--- Every iterable type type forms an isomorphism with some Base type. For most
+
+-- | Every iterable type type forms an isomorphism with some Base type. For most
 -- Base types the isomorphism is the identity in both directions, but for some,
 -- like List and Sett, the embeddings are not the trivial identities because the
 -- concrete types are not binary type constructors. The Embed class also allows
 -- us to add 'newtypes' which encode some Base type to the system.
--- ============================================================================
-
 class Embed concrete base | concrete -> base where
   toBase :: concrete -> base
   fromBase :: base -> concrete

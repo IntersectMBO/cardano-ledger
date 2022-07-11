@@ -369,10 +369,11 @@ fifo x = do (k, v, x2) <- nxt x; rear (fifo x2) (k, v)
 addp :: (Ord k, Basic f) => (v -> v -> v) -> (k, v) -> f k v -> f k v
 addp combine (k, v) xs = addkv (k, v) xs combine
 
--- The combine function comb = (\ earlier later -> later) will let values
+-- | Turn a list of pairs into any 'Basic' type. The first argument is a 'BaseRep' which
+--   chooses what Base type to construct.
+-- The combine function comb = (\\ earlier later -> later) will let values
 -- later in the list override ones earlier in the list, and comb =
--- (\ earlier later -> earlier) will keep the value that appears first in the list
-
+-- (\\ earlier later -> earlier) will keep the value that appears first in the list
 fromList :: Ord k => BaseRep f k v -> (v -> v -> v) -> [(k, v)] -> f k v
 fromList MapR combine xs = Map.fromListWith combine xs
 fromList ListR combine xs = fromPairs combine xs

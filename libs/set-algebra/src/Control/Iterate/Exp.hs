@@ -1,3 +1,4 @@
+{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -32,6 +33,8 @@ import Data.UMap (UnifiedView (..), View)
 import Text.PrettyPrint.ANSI.Leijen (Doc, align, parens, text, vsep, (<+>))
 import Prelude hiding (lookup)
 
+-- $Deep embedding
+
 -- ================================================================================================
 -- PART 1. Exp over sets and maps
 -- ================================================================================================
@@ -39,13 +42,14 @@ import Prelude hiding (lookup)
 -- | The self typed GADT: Exp, that encodes the shape of Set expressions. A deep embedding.
 -- Exp is a typed Symbolic representation of queries we may ask. It allows us to introspect a query
 -- The strategy is to
--- 1) Define Exp so all queries can be represented.
--- 2) Define smart constructors that "parse" the surface syntax, and build a typed Exp
--- 3) Write an evaluate function:  eval:: Exp t -> t
--- 4) "eval" can introspect the code and apply efficient domain and type specific translations
--- 5) Use the (Iter f) class to evaluate some Exp that can benefit from its efficient nature.
+--
+-- 1. Define Exp so all queries can be represented.
+-- 2. Define smart constructors that "parse" the surface syntax, and build a typed Exp
+-- 3. Write an evaluate function:  eval:: Exp t -> t
+-- 4. "eval" can introspect the code and apply efficient domain and type specific translations
+-- 5.  Use the (Iter f) class to evaluate some Exp that can benefit from its efficient nature.
 data Exp t where
-  Base :: (Ord k, Basic f, Iter f) => BaseRep f k v -> f k v -> Exp (f k v) -- Note the use of BaseRep to witness what Base type.
+  Base :: (Ord k, Basic f, Iter f) => BaseRep f k v -> f k v -> Exp (f k v)
   Dom :: Ord k => Exp (f k v) -> Exp (Sett k ())
   Rng :: (Ord k, Ord v) => Exp (f k v) -> Exp (Sett v ())
   DRestrict :: (Ord k, Iter g) => Exp (g k ()) -> Exp (f k v) -> Exp (f k v)
@@ -94,7 +98,7 @@ instance Show (Exp t) where
 
 -- =================================================================
 
--- | Basic types are those that can be embedded into Exp.
+-- | Basic types are those that can be tranformed into Exp.
 -- The HasExp class, encodes how to lift a Basic type into an Exp.
 -- The function 'toExp' will build a typed Exp for that Basic type.
 -- This will be really usefull in the smart constructors.
@@ -120,8 +124,13 @@ instance (Ord k) => HasExp (Single k v) (Single k v) where
 instance (Ord k, Ord v) => HasExp (Bimap k v) (Bimap k v) where
   toExp x = Base BiMapR x
 
+type OrdAll coin cred pool ptr k = (Ord k, Ord coin, Ord cred, Ord ptr, Ord pool)
+
 instance
-  (UnifiedView coin cred pool ptr k v, Ord k, Monoid coin, Ord coin, Ord cred, Ord ptr, Ord pool) =>
+  ( UnifiedView coin cred pool ptr k v,
+    OrdAll coin cred pool ptr k,
+    Monoid coin
+  ) =>
   HasExp
     (View coin cred pool ptr k v)
     (View coin cred pool ptr k v)
@@ -151,70 +160,89 @@ rExclude y x = RExclude y x
 -- ==========================================================================================
 -- Smart constructors build typed Exp with real values at the leaves (the Base constuctor)
 
+-- setoperators
+
 -- (⊆),
 -- (∩),
 
+-- | domain of a map or element type of a set.
 dom :: (Ord k, HasExp s (f k v)) => s -> Exp (Sett k ())
 dom x = Dom (toExp x)
 
+-- | range of a map or () for a set.
 rng :: (Ord k, Ord v) => HasExp s (f k v) => s -> Exp (Sett v ())
 rng x = Rng (toExp x)
 
+-- | domain restrict.
 (◁), (<|), drestrict :: (Ord k, HasExp s1 (Sett k ()), HasExp s2 (f k v)) => s1 -> s2 -> Exp (f k v)
 (◁) x y = dRestrict (toExp x) (toExp y)
 drestrict = (◁)
 (<|) = drestrict
 
+-- | domain exclude
 (⋪), dexclude :: (Ord k, Iter g, HasExp s1 (g k ()), HasExp s2 (f k v)) => s1 -> s2 -> Exp (f k v)
 (⋪) x y = dExclude (toExp x) (toExp y)
 dexclude = (⋪)
 
+-- | range restrict
 (▷), (|>), rrestrict :: (Ord k, Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
 (▷) x y = rRestrict (toExp x) (toExp y)
 rrestrict = (▷)
 (|>) = (▷)
 
+-- | range exclude
 (⋫), rexclude :: (Ord k, Iter g, Ord v, HasExp s1 (f k v), HasExp s2 (g v ())) => s1 -> s2 -> Exp (f k v)
 (⋫) x y = rExclude (toExp x) (toExp y)
 rexclude = (⋫)
 
+-- | element of the domain
 (∈) :: (Show k, Ord k, Iter g, HasExp s (g k ())) => k -> s -> Exp Bool
 (∈) x y = Elem x (toExp y)
 
+-- | not an element of the domain
 (∉), notelem :: (Show k, Ord k, Iter g, HasExp s (g k ())) => k -> s -> Exp Bool
 (∉) x y = NotElem x (toExp y)
 notelem = (∉)
 
+-- | union two maps or sets. In the case of a map, keep the pair from the left, if the two have common keys.
 (∪), unionleft :: (Show k, Show v, Ord k, HasExp s1 (f k v), HasExp s2 (g k v)) => s1 -> s2 -> Exp (f k v)
 (∪) x y = UnionOverrideLeft (toExp x) (toExp y)
 unionleft = (∪)
 
+-- | union two maps or sets. In the case of a map, keep the pair from the right, if the two have common keys.
 (⨃), unionright :: (Ord k, HasExp s1 (f k v), HasExp s2 (g k v)) => s1 -> s2 -> Exp (f k v)
 (⨃) x y = UnionOverrideRight (toExp x) (toExp y)
 unionright = (⨃)
 
+-- | union two maps or sets. In the case of a map, combine values with monoid (<>), if the two have common keys.
 (∪+), unionplus :: (Ord k, Monoid n, HasExp s1 (f k n), HasExp s2 (g k n)) => s1 -> s2 -> Exp (f k n)
 (∪+) x y = UnionPlus (toExp x) (toExp y)
 unionplus = (∪+)
 
+-- | create a singleton map.
 singleton :: (Ord k) => k -> v -> Exp (Single k v)
 singleton k v = Singleton k v
 
+-- | create a singleton set.
 setSingleton :: (Ord k) => k -> Exp (Single k ())
 setSingleton k = SetSingleton k
 
+-- | intersect two sets, or the intersection of the domain of two maps.
 (∩), intersect :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp (Sett k ())
 (∩) x y = Intersect (toExp x) (toExp y)
 intersect = (∩)
 
+-- | @(subset x y)@. is the domain of @x@ a subset of the domain of @y@.
 (⊆), subset :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp Bool
 (⊆) x y = Subset (toExp x) (toExp y)
 subset = (⊆)
 
+-- | @(x ➖ y)@ Everything in @x@ except for those pairs in @x@ where the domain of @x@ is an element of the domain of @y@.
 (➖), setdiff :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp (f k v)
 (➖) x y = SetDiff (toExp x) (toExp y)
 setdiff = (➖)
 
+-- | Do two maps (or sets) have exactly the same domain.
 (≍), keyeq :: (Ord k, Iter f, Iter g, HasExp s1 (f k v), HasExp s2 (g k u)) => s1 -> s2 -> Exp Bool
 (≍) x y = KeyEqual (toExp x) (toExp y)
 keyeq = (≍)
@@ -258,8 +286,8 @@ data Expr env t where
   SND :: Expr e (a, b) -> Expr e b
   Lit :: Show t => t -> Expr env t
 
--- Carefull no pattern P1, P2, P3, P4 should appear MORE THAN ONCE in a Lam.
-
+-- | A typed deep embedding of Haskell functions with type @t@.
+--   Be carefull, no pattern P1, P2, P3, P4 should appear MORE THAN ONCE in a Lam.
 data Lam t where
   Lam :: Pat (d, c, b, a) t -> Pat (d, c, b, a) s -> Expr (d, c, b, a) v -> Lam (t -> s -> v)
   Add :: Num n => Lam (n -> n -> n)
@@ -309,9 +337,11 @@ showP (_, _, z, _) P3 = z
 showP (_, _, _, w) P4 = w
 showP env (PPair p1 p2) = "(" ++ showP env p1 ++ "," ++ showP env p2 ++ ")"
 
+-- turn an Expr into a String
 instance Show (Expr (a, b, c, d) t) where
   show x = showE ("X1", "X2", "X3", "X4") x
 
+-- turn a @Lam@ into a String.
 instance Show (Lam t) where
   show x = showL ("X1", "X2", "X3", "X4") x
 
@@ -384,10 +414,9 @@ lift f = Fun (Lift f) f
 -- ==============================================================
 
 -- =================================================================================
--- Query is a single datatype that describes a low-level language that can be
--- used to build compound iterators, from other iterators.
--- =================================================================================
 
+-- | Query is a single datatype that describes a low-level language that can be
+-- used to build compound iterators, from other iterators.
 data Query k v where
   BaseD :: (Iter f, Ord k) => BaseRep f k v -> f k v -> Query k v
   ProjectD :: Ord k => Query k v -> Fun (k -> v -> u) -> Query k u
@@ -436,12 +465,15 @@ guardD qry test = GuardD qry test
 -- ones, except the low-level ones take Querys, and the high-level ones just take data, lift the
 -- data to Query, and then apply the low-level smart constructors.
 
+-- Create a projection Query
 projectQ :: (Ord k, HasQuery c k v) => c -> Fun (k -> v -> u) -> Query k u
 projectQ q fun = ProjectD (query q) fun
 
+-- Conjoin two Querys
 andQ :: (Ord k, HasQuery concrete1 k v, HasQuery concrete2 k w) => concrete1 -> concrete2 -> Query k (v, w)
 andQ x y = AndD (query x) (query y)
 
+-- Disjoin two Queries
 orQ ::
   (Ord k, HasQuery concrete1 k v, HasQuery concrete2 k v) =>
   concrete1 ->
