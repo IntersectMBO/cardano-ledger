@@ -57,6 +57,7 @@ import qualified Data.UMap as UM
 import GHC.Generics (Generic)
 import Lens.Micro (_1, _2)
 import NoThunks.Class (NoThunks (..))
+import Control.Monad.State.Strict (evalStateT)
 
 data FutureGenDeleg crypto = FutureGenDeleg
   { fGenDelegSlot :: !SlotNo,
@@ -207,6 +208,12 @@ instance CC.Crypto crypto => FromSharedCBOR (DPState crypto) where
     dpsPState <- fromSharedPlusLensCBOR _2
     dpsDState <- fromSharedPlusCBOR
     pure DPState {dpsPState, dpsDState}
+
+instance
+  ( CC.Crypto crypto
+  , FromSharedCBOR (DPState crypto)
+  ) => FromCBOR (DPState crypto) where
+  fromCBOR = evalStateT fromSharedPlusCBOR mempty
 
 instance Default (DPState crypto) where
   def = DPState def def
