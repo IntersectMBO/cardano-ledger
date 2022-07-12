@@ -163,6 +163,9 @@ instance CC.Crypto crypto => FromSharedCBOR (PState crypto) where
     _retiring <- fromSharedPlusLensCBOR (toMemptyLens _1 id)
     pure PState {_pParams, _fPParams, _retiring}
 
+instance (CC.Crypto crypto, FromSharedCBOR (PState crypto)) => FromCBOR (PState crypto) where
+  fromCBOR = fromNotSharedCBOR
+
 -- | The state associated with the current stake delegation.
 data DPState crypto = DPState
   { dpsDState :: !(DState crypto),
