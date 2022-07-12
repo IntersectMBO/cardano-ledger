@@ -93,6 +93,7 @@ library
     Test.Cardano.Ledger.Model.TxOut
     Test.Cardano.Ledger.Model.UTxO
     Test.Cardano.Ledger.Model.Value
+    Test.Cardano.Ledger.NoThunks
     Test.Cardano.Ledger.Rational
     Test.Cardano.Ledger.TestableEra
     Test.Cardano.Ledger.ValueFromList

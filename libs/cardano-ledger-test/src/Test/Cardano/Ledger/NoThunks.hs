@@ -5,21 +5,34 @@
 {-# LANGUAGE BangPatterns #-}
 
 module Test.Cardano.Ledger.NoThunks
-  (
+  ( test
   )
 where
 
 import Data.Default.Class (def)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
-import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (Babbage), Reflect)
+import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (..), Reflect)
 import Test.Cardano.Ledger.Generic.Trace (traceProp)
-import Test.Tasty (TestTree, defaultMain)
+import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
 import Control.State.Transition.Extended (STS)
 import qualified Cardano.Ledger.Babbage.PParams
+import qualified Cardano.Ledger.Alonzo.PParams
+import qualified Cardano.Ledger.Shelley.PParams
 
-test ::
+test :: TestTree
+test = testGroup "There are no unexpected thunks in MockChainState"
+  [ f $ Babbage Mock,
+    f $ Alonzo Mock,
+    f $ Allegra Mock,
+    f $ Mary Mock,
+    f $ Shelley Mock
+  ]
+    where 
+      f proof = testThunks proof 100 def
+
+testThunks ::
   forall era.
   ( Reflect era,
     STS (MOCKCHAIN era)
@@ -28,7 +41,7 @@ test ::
   Int ->
   GenSize ->
   TestTree
-test proof numTx gensize =
+testThunks proof numTx gensize =
   testProperty (show proof ++ " era. Trace length = " ++ show numTx) $
     traceProp
       proof
@@ -41,5 +54,5 @@ test proof numTx gensize =
             Nothing -> return ()
       )
 
-main :: IO ()
-main = defaultMain $ test (Babbage Mock) 200 def
+--main :: IO ()
+--main = defaultMain test
