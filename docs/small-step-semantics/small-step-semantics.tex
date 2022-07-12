@@ -287,7 +287,7 @@ This property allows us to extract specific subparts of our serialised form. Our
 specifications will rely in places on functions defined over the serialisesation
 of a value. If we have a type $A=(B,C,D,E)$, for example, and we need to extract
 $\llbracket\var{B}\rrbracket$ from $\llbracket\var{A}\rrbracket$, it is this
-property which guarantees we may do so without rounnd-tripping through $A$,
+property which guarantees we may do so without round-tripping through $A$,
 since $\llbracket \pi_1 ~ A\rrbracket = (\pi_1)_{\llbracket\rrbracket} ~ \llbracket A
 \rrbracket$ (where $\pi_1$ is the projection onto the first component of the tuple).
 \end{document}
