@@ -20,9 +20,9 @@ import Test.Cardano.Ledger.Examples.TwoPhaseValidation
 import Test.Cardano.Ledger.Generic.AggPropTests (aggTests)
 import Test.Cardano.Ledger.Generic.Properties (genericProperties)
 import Test.Cardano.Ledger.Model.Properties (modelUnitTests_)
+import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 import Test.Tasty
 import Test.TestScenario (TestScenario (..), mainWithTestScenario)
-import qualified Test.Cardano.Ledger.NoThunks as NoThunks
 
 -- ====================================================================================
 
@@ -33,20 +33,20 @@ tests = askOption $ \case
   _ -> mainTests
 
 mainTestTrees :: [TestTree]
-mainTestTrees = 
-    [ baseTypesTests,
-      Tools.tests,
-      testGroup
-        "STS Tests"
-        [ allTrees,
-          babbageFeatures,
-          alonzoAPITests,
-          collectOrderingAlonzo,
-          modelUnitTests_
-        ],
-      genericProperties def,
-      aggTests
-    ]
+mainTestTrees =
+  [ baseTypesTests,
+    Tools.tests,
+    testGroup
+      "STS Tests"
+      [ allTrees,
+        babbageFeatures,
+        alonzoAPITests,
+        collectOrderingAlonzo,
+        modelUnitTests_
+      ],
+    genericProperties def,
+    aggTests
+  ]
 
 nightlyTestTrees :: [TestTree]
 nightlyTestTrees =

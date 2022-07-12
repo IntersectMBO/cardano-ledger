@@ -1,14 +1,18 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE DataKinds #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE RankNTypes #-}
 
 module Test.Cardano.Ledger.NoThunks
-  ( test
+  ( test,
   )
 where
 
+import qualified Cardano.Ledger.Alonzo.PParams
+import qualified Cardano.Ledger.Babbage.PParams
+import qualified Cardano.Ledger.Shelley.PParams
+import Control.State.Transition.Extended (STS)
 import Data.Default.Class (def)
 import Test.Cardano.Ledger.Generic.GenState (GenSize)
 import Test.Cardano.Ledger.Generic.MockChain (MOCKCHAIN, noThunksGen)
@@ -16,21 +20,19 @@ import Test.Cardano.Ledger.Generic.Proof (Evidence (Mock), Proof (..), Reflect)
 import Test.Cardano.Ledger.Generic.Trace (traceProp)
 import Test.Tasty (TestTree, testGroup)
 import Test.Tasty.QuickCheck (testProperty)
-import Control.State.Transition.Extended (STS)
-import qualified Cardano.Ledger.Babbage.PParams
-import qualified Cardano.Ledger.Alonzo.PParams
-import qualified Cardano.Ledger.Shelley.PParams
 
 test :: TestTree
-test = testGroup "There are no unexpected thunks in MockChainState"
-  [ f $ Babbage Mock,
-    f $ Alonzo Mock,
-    f $ Allegra Mock,
-    f $ Mary Mock,
-    f $ Shelley Mock
-  ]
-    where 
-      f proof = testThunks proof 100 def
+test =
+  testGroup
+    "There are no unexpected thunks in MockChainState"
+    [ f $ Babbage Mock,
+      f $ Alonzo Mock,
+      f $ Allegra Mock,
+      f $ Mary Mock,
+      f $ Shelley Mock
+    ]
+  where
+    f proof = testThunks proof 100 def
 
 testThunks ::
   forall era.
@@ -54,5 +56,5 @@ testThunks proof numTx gensize =
             Nothing -> return ()
       )
 
---main :: IO ()
---main = defaultMain test
+-- main :: IO ()
+-- main = defaultMain test

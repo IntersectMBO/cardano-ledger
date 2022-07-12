@@ -87,7 +87,7 @@ import Data.Text (Text)
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..), AllowThunksIn(..))
+import NoThunks.Class (AllowThunksIn (..), InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
 import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, mkEvaluationContext)
@@ -203,10 +203,10 @@ pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `o
 -- cost model parameters (ie the `Map` `Text` `Integer`) and that
 -- this type uses the smart constructor `mkCostModel`
 -- to hide the evaluation context.
-data CostModel = CostModel 
-  { cmLanguage :: !Language 
-  , cmMap      :: !(Map Text Integer) 
-  , cmEvalCtx  :: !PV1.EvaluationContext
+data CostModel = CostModel
+  { cmLanguage :: !Language,
+    cmMap :: !(Map Text Integer),
+    cmEvalCtx :: !PV1.EvaluationContext
   }
   deriving (Generic)
 
@@ -247,8 +247,8 @@ deriving via
   instance
     NoThunks PV1.EvaluationContext
 
---instance NoThunks CostModel
--- Temporarily ignore thunks in the evaluation context until the plutus version 
+-- instance NoThunks CostModel
+-- Temporarily ignore thunks in the evaluation context until the plutus version
 -- is bumped
 deriving via AllowThunksIn '["cmEvalCtx"] CostModel instance NoThunks CostModel
 

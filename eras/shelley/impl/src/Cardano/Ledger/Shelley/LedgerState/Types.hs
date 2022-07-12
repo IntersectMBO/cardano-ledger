@@ -427,13 +427,13 @@ instance
         <! From
         <! From
 
-instance 
-  ( Era era
-  , NoThunks (BlocksMade (Crypto era))
-  , NoThunks (EpochState era)
-  , NoThunks (PulsingRewUpdate (Crypto era))
-  , NoThunks (StashedAVVMAddresses era)
-  ) => 
+instance
+  ( Era era,
+    NoThunks (BlocksMade (Crypto era)),
+    NoThunks (EpochState era),
+    NoThunks (PulsingRewUpdate (Crypto era)),
+    NoThunks (StashedAVVMAddresses era)
+  ) =>
   NoThunks (NewEpochState era)
 
 -- | The state associated with a 'Ledger'.
@@ -459,12 +459,13 @@ deriving stock instance
   ) =>
   Eq (LedgerState era)
 
-instance 
+instance
   ( Era era,
     NoThunks (UTxO era),
     NoThunks (State (Core.EraRule "PPUP" era)),
     NoThunks (Core.Value era)
-  ) => NoThunks (LedgerState era)
+  ) =>
+  NoThunks (LedgerState era)
 
 instance
   ( Era era,
