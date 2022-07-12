@@ -118,11 +118,7 @@ instance Reflect era => TotalAda (MockChainState era) where
 
 deriving instance Generic (MockChainState era)
 
-instance
-  ( Era era,
-    NoThunks (NewEpochState era)
-  ) =>
-  NoThunks (MockChainState era)
+instance (Era era, NoThunks (NewEpochState era)) => NoThunks (MockChainState era)
 
 -- ======================================================================
 
