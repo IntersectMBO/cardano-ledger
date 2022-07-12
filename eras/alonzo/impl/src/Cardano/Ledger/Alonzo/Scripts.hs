@@ -247,7 +247,6 @@ deriving via
   instance
     NoThunks PV1.EvaluationContext
 
--- instance NoThunks CostModel
 -- Temporarily ignore thunks in the evaluation context until the plutus version
 -- is bumped
 deriving via AllowThunksIn '["cmEvalCtx"] CostModel instance NoThunks CostModel
