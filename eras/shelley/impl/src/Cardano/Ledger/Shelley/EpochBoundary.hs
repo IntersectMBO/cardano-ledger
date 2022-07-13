@@ -221,6 +221,9 @@ instance CC.Crypto crypto => FromSharedCBOR (SnapShots crypto) where
     _feeSS <- lift fromCBOR
     pure SnapShots {_pstakeMark, _pstakeSet, _pstakeGo, _feeSS}
 
+instance (CC.Crypto crypto, FromSharedCBOR (SnapShots crypto)) => FromCBOR (SnapShots crypto) where
+  fromCBOR = fromNotSharedCBOR
+
 instance Default (SnapShots crypto) where
   def = emptySnapShots
 

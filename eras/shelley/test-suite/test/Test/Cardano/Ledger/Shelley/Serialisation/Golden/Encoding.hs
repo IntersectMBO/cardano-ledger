@@ -1358,6 +1358,3 @@ tests =
 
 instance FromCBOR (Stake C_Crypto) where
   fromCBOR = fromNotSharedCBOR
-
-instance FromCBOR (SnapShots C_Crypto) where
-  fromCBOR = fromNotSharedCBOR
