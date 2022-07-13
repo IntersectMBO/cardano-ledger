@@ -6,6 +6,9 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 
+-- | A 'BiMap' is a pair of maps @(Map k v, Map v (Set k))@ where we call the first one the forwards map,
+--   and the second one the backwards map. The pair form a bijection. The advantage of using 'BiMap' is that
+--   changes to the forwards map, are automatically reflected in the backwards map.
 module Data.BiMap where
 
 import Cardano.Binary
@@ -34,13 +37,15 @@ import NoThunks.Class (NoThunks (..))
 -- 4) Missing operation 'union', make performant versions of ∪ and ⨃ hard.
 -- 5) So we roll our own which is really a (Data.Map k v) with an index that maps v to Set{k}
 
+-- | Maps for Bijections. Use 'biMapFromList' and 'biMapEmpty' to construct concrete values.
+--   While 'BiMap' has three type parameters, we enfoce that the 1st and 3rd parameter are always the same.
 data BiMap v a b where MkBiMap :: (v ~ b) => !(Map.Map a b) -> !(Map.Map b (Set.Set a)) -> BiMap v a b
 
---  ^   the 1st and 3rd parameter must be the same:             ^   ^
-
+-- | Extract the forwards map from a 'BiMap'
 biMapToMap :: BiMap v a b -> Map a b
 biMapToMap (MkBiMap m _) = m
 
+-- | Build a 'BiMap' from a 'Data.Map'. Construct the associated backwards map as the forward map is populated.
 biMapFromMap ::
   (Ord k, Ord v) => Map k v -> BiMap v k v
 biMapFromMap bmForward =
@@ -96,28 +101,34 @@ instance (Eq k, Eq v) => Eq (BiMap u k v) where
 instance (Show k, Show v) => Show (BiMap u k v) where
   show (MkBiMap l _r) = show l
 
+-- | Add a value and a key to a @(Map value (Set key))@, intended that this is used to alter the backwards map of a 'BiMap'.
 addBack :: (Ord v, Ord k) => v -> k -> Map.Map v (Set.Set k) -> Map.Map v (Set.Set k)
 addBack newv k m = Map.insertWith Set.union newv (Set.singleton k) m
 
+-- | Retract (or remove) a value from a @(Map value (Set key))@, intended that this is used to alter the backwards map of a 'BiMap'.
 retract :: (Ord v, Ord k) => v -> k -> Map.Map v (Set.Set k) -> Map.Map v (Set.Set k)
 retract oldv k m = Map.adjust (Set.delete k) oldv m
 
+-- | Replace an old value with a new value associated with a given key from a @(Map value (Set key))@.
+--   Intended that this is used to alter the backwards map of a 'BiMap'
 insertBackwards :: (Ord k, Ord v) => v -> v -> k -> Map.Map v (Set.Set k) -> Map.Map v (Set.Set k)
 insertBackwards oldv newv k m = addBack newv k (retract oldv k m)
 
+-- | Insert a key value pair into a 'BiMap', Use the combining function to choose between new and old value if the
+-- value for that key already exists.
 insertWithBiMap :: (Ord k, Ord v) => (v -> v -> v) -> k -> v -> BiMap v k v -> BiMap v k v
 insertWithBiMap comb k v (MkBiMap f b) = MkBiMap (Map.insertWith (mapflip comb) k v f) (insertBackwards oldv newv k b)
   where
     (oldv, newv) = case Map.lookup k f of Nothing -> (v, v); Just v2 -> (v2, comb v2 v)
 
+-- | An empty BiMap
 biMapEmpty :: BiMap v k v
 biMapEmpty = MkBiMap Map.empty Map.empty
 
--- Make a BiMap from a list of pairs.
--- The combine function comb=(\ earlier later -> later) will let elements
+-- | Make a BiMap from a list of pairs.
+-- The combine function comb=(\\ earlier later -> later) will let elements
 -- later in the list override ones earlier in the list, and comb =
--- (\ earlier later -> earlier) will keep the vaue that appears first in the list
-
+-- (\\ earlier later -> earlier) will keep the vaue that appears first in the list
 biMapFromList :: (Ord k, Ord v) => (v -> v -> v) -> [(k, v)] -> BiMap v k v
 biMapFromList comb xs = foldr addEntry biMapEmpty xs
   where
@@ -142,10 +153,10 @@ biMapFromAscDistinctList xs = MkBiMap bmForward bmBackward
     bmForward = Map.fromDistinctAscList xs
     bmBackward = foldr (uncurry $ flip addBack) Map.empty xs
 
--- This synonym makes (BiMap v k v) appear as an ordinary Binary type contructor: (Bimap k v)
+-- | This synonym makes (BiMap v k v) appear as an ordinary Binary type contructor: (Bimap k v)
 type Bimap k v = BiMap v k v
 
--- This operation is very fast (Log n) on BiMap, but extremely slow on other collections.
+-- | This operation is very fast (Log n) on BiMap, but extremely slow on other collections.
 removeval :: (Ord k, Ord v) => v -> BiMap v k v -> BiMap v k v
 removeval v (m@(MkBiMap m1 m2)) =
   case Map.lookup v m2 of

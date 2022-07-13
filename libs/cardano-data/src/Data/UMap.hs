@@ -11,14 +11,22 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE ViewPatterns #-}
 
+-- | A 'UMap' (for Unified map) represents 2 'Data.Map's and one 'Data.BiMap' into a single structure.
+--   The advantage of using 'UMap' is that 'UMap' stores all the information compactly, by exploiting the
+--   the large amount of sharing in the 2 maps and 1 bimap.
 module Data.UMap
-  ( Trip (Triple),
+  ( -- * Constructing 'UMap'
+    -- $UMAP
+    Trip (Triple),
     tripReward,
     tripRewardActiveDelegation,
     tripDelegation,
     UMap (..),
-    UnifiedView (..),
     umInvariant,
+
+    -- * View and its components
+    -- $VIEW
+    View (..),
     unView,
     unUnify,
     viewToVMap,
@@ -28,10 +36,16 @@ module Data.UMap
     domRestrictedView,
     zero,
     zeroMaybe,
+
+    -- * Operations to implement the 'Iter' class
+    -- $ITER
     mapNext,
     mapLub,
     next,
     leastUpperBound,
+
+    -- * Set and Map operations on Views
+    -- $VIEWOPS
     empty,
     delete,
     delete',
@@ -51,8 +65,13 @@ module Data.UMap
     member,
     notMember,
     domRestrict,
+
+    -- * Runtime evidence of a View
+    -- $Tag
     Tag (..),
-    View (..),
+    UnifiedView (..),
+    --  * Derived functions
+    --  $DFUNS
     findWithDefault,
     size,
     unify,
@@ -80,22 +99,26 @@ import NoThunks.Class (NoThunks (..))
 import Prelude hiding (lookup)
 
 -- ===================================================================
+-- UMAP
 
-{- The space compacting Trip datatype, and the pattern Triple are equivalent to:
-
-data Trip coin ptr pool = Triple
-  { coinT :: !(StrictMaybe coin),
-    ptrT :: !(Set ptr),
-    poolidT :: !(StrictMaybe pool)
-  }
-  deriving (Show, Eq, Generic, NoThunks, NFData)
--}
-
--- We use the notation "F" for full, the component is present, and "E" for empty,
--- the component  is not present. As illustrsted above there are three components
+-- | a 'Trip' compactly represents the range of 3 maps with the same domain as a single triple.
+--   The space compacting Trip datatype, and the pattern Triple are equivalent to:
+--
+-- @
+-- data Trip coin ptr pool = Triple
+--   { coinT :: !(StrictMaybe coin),
+--     ptrT :: !(Set ptr),
+--     poolidT :: !(StrictMaybe pool)
+--   }
+--  deriving (Show, Eq, Generic, NoThunks, NFData)
+-- @
+--
+-- To name the constructors of 'Trip' we use the notation @Txxx@ where each @x@ is either
+-- @F@ for full, i.e. the component is present, or @E@ for empty,
+-- the component  is not present. There are three components
 -- 1) the coin, 2) the Ptr set, and 3) the PoolID. so TEEE means none of the
 -- components are present, and TEEF means only the PoolId is present. etc.
-
+-- The pattern 'Triple' will correctly use the optimal constructor.
 data Trip coin ptr pool
   = TEEE
   | TEEF !pool
@@ -118,6 +141,7 @@ viewTrip (TFEF x y) = (SJust x, Set.empty, SJust y)
 viewTrip (TFFE x y) = (SJust x, y, SNothing)
 viewTrip (TFFF x y z) = (SJust x, y, SJust z)
 
+-- | Extract the active delegation, if it is present.
 tripRewardActiveDelegation :: Trip coin ptr pool -> Maybe coin
 tripRewardActiveDelegation =
   \case
@@ -125,6 +149,7 @@ tripRewardActiveDelegation =
     TFEF c _ -> Just c
     _ -> Nothing
 
+-- | Extract the Reward 'Coin' if it is present.
 tripReward :: Trip coin ptr pool -> Maybe coin
 tripReward =
   \case
@@ -134,6 +159,7 @@ tripReward =
     TFEE c -> Just c
     _ -> Nothing
 
+-- | Extract the Delegation PoolParams, if present.
 tripDelegation :: Trip coin ptr pool -> Maybe pool
 tripDelegation =
   \case
@@ -143,7 +169,7 @@ tripDelegation =
     TEEF p -> Just p
     _ -> Nothing
 
--- A Triple can be extracted and injected into the TEEE ... TFFF constructors.
+-- | A Triple can be extracted and injected into the TEEE ... TFFF constructors.
 pattern Triple :: StrictMaybe coin -> Set ptr -> StrictMaybe pool -> Trip coin ptr pool
 pattern Triple a b c <-
   (viewTrip -> (a, b, c))
@@ -166,6 +192,7 @@ instance (Show coin, Show pool, Show ptr) => Show (Trip coin ptr pool) where
 
 -- =====================================================
 
+-- A unified map represents 2 maps and a bimap compactly.
 data UMap coin cred pool ptr = UnifiedMap !(Map cred (Trip coin ptr pool)) !(Map ptr cred)
   deriving (Show, Eq, Generic, NoThunks, NFData)
 
@@ -193,6 +220,10 @@ umInvariant stake ptr (UnifiedMap tripmap ptrmap) = forwards && backwards
 
 -- =====================================================
 
+-- VIEW
+
+-- | A 'View' lets one view a 'UMap' in three different ways
+--   A view with type @(View coin cred poolparam ptr key value)@ can be used like a @(Map key value)@
 data View coin cr pl ptr k v where
   Rewards ::
     !(UMap coin cr pl ptr) ->
@@ -225,19 +256,22 @@ ptrs ::
   View coin cred pool ptr ptr cred
 ptrs x y = Ptrs (UnifiedMap x y)
 
+-- | Extract the underlying 'UMap' from a 'View'
 unView :: View coin cr pl ptr k v -> UMap coin cr pl ptr
 unView (Rewards um) = um
 unView (Delegations um) = um
 unView (Ptrs um) = um
 
--- | This is expensive, use it wisely (like maybe once per epoch boundary to make a SnapShot)
+-- | Materialize a real 'Map' from a 'View'
+--   This is expensive, use it wisely (like maybe once per epoch boundary to make a SnapShot)
 --   See also domRestrictedView, which domain restricts before computing a view.
 unUnify :: View coin cred pool ptr k v -> Map k v
 unUnify (Rewards (UnifiedMap tripmap _)) = Map.mapMaybe tripReward tripmap
 unUnify (Delegations (UnifiedMap tripmap _)) = Map.mapMaybe tripDelegation tripmap
 unUnify (Ptrs (UnifiedMap _ ptrmap)) = ptrmap
 
--- | This is expensive, use it wisely (like maybe once per epoch boundary to make a SnapShot)
+-- | Materialize a real Vector Map from a 'View'
+--   This is expensive, use it wisely (like maybe once per epoch boundary to make a SnapShot)
 viewToVMap :: Ord cred => View coin cred pool ptr k v -> VMap.VMap VMap.VB VMap.VB k v
 viewToVMap view =
   case view of
@@ -250,12 +284,15 @@ viewToVMap view =
     toReward (key, t) = (,) key <$> tripReward t
     toDelegation (key, t) = (,) key <$> tripDelegation t
 
+-- | Materialize the Rewards Map from a 'UMap'
 rewView :: UMap coin cred pool ptr -> Map.Map cred coin
 rewView x = unUnify (Rewards x)
 
+-- | Materialize the Delegation Map from a 'UMap'
 delView :: UMap coin cred pool ptr -> Map.Map cred pool
 delView x = unUnify (Delegations x)
 
+-- | Materialize the Ptr Map from a 'UMap'
 ptrView :: UMap coin cred pool ptr -> Map.Map ptr cred
 ptrView x = unUnify (Ptrs x)
 
@@ -267,6 +304,7 @@ domRestrictedView setk (Delegations (UnifiedMap tripmap _)) =
   Map.mapMaybe tripDelegation (Map.restrictKeys tripmap setk)
 domRestrictedView setk (Ptrs (UnifiedMap _ ptrmap)) = Map.restrictKeys ptrmap setk
 
+-- | All 3 'Views' are 'Foldable'
 instance Foldable (View coin cred pool ptr k) where
   foldMap f (Rewards (UnifiedMap tmap _)) = Map.foldlWithKey accum mempty tmap
     where
@@ -327,6 +365,9 @@ zeroMaybe t | zero t = Nothing
 zeroMaybe t = Just t
 
 -- ===============================================================
+-- Iter Operations
+
+-- ITER
 
 mapNext :: Map k v -> Maybe (k, v, Map k v)
 mapNext m =
@@ -339,9 +380,6 @@ mapLub k m =
   case Map.splitLookup k m of
     (_, Nothing, m2) -> mapNext m2
     (_, Just v, m2) -> Just (k, v, m2)
-
--- ================================================================
--- Iter Operations
 
 next :: View coin cr pl ptr k v -> Maybe (k, v, View coin cr pl ptr k v)
 next (Rewards (UnifiedMap tripmap _)) =
@@ -381,6 +419,8 @@ leastUpperBound ptr (Ptrs (UnifiedMap tripmap ptrmap)) =
 
 -- ==============================================================
 -- Basic operations on ViewMap
+
+-- VIEWOPS
 
 empty :: UMap coin cr pool ptr
 empty = UnifiedMap Map.empty Map.empty
@@ -715,6 +755,9 @@ instance
 
 -- =================================================================
 
+-- ===================================================
+-- Tag
+
 data Tag coin cred pool ptr k v where
   Rew :: Tag coin cred pool ptr cred coin
   Del :: Tag coin cred pool ptr cred pool
@@ -723,9 +766,12 @@ data Tag coin cred pool ptr k v where
 class UnifiedView coin cred pool ptr k v where
   tag :: Tag coin cred pool ptr k v
 
--- ===================================================
+-- ==================================================
 -- derived operations
 
+-- DFUNS
+
+-- | Find the value associated with a key from a View, return the default if the key is not there.
 findWithDefault :: (Ord cred, Ord ptr) => a -> k -> View coin cred pool ptr k a -> a
 findWithDefault d k = fromMaybe d . lookup k
 
