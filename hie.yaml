@@ -66,6 +66,9 @@ cradle:
     - path: "libs/cardano-ledger-test/src"
       component: "lib:cardano-ledger-test"
 
+    - path: "libs/cardano-ledger-test/test"
+      component: "test:cardano-ledger-test"
+
     - path: "libs/cardano-ledger-test/bench"
       component: "cardano-ledger-test:bench:bench"
 

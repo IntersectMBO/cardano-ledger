@@ -1,5 +1,6 @@
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
@@ -57,6 +58,8 @@ import Control.State.Transition
 import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq (..), fromStrict)
+import GHC.Generics (Generic)
+import NoThunks.Class (NoThunks, ThunkInfo, noThunks)
 import Test.Cardano.Ledger.Generic.Functions (TotalAda (..))
 import Test.Cardano.Ledger.Generic.PrettyCore
   ( pcNewEpochState,
@@ -112,6 +115,10 @@ instance Show (MockBlock era) where
 
 instance Reflect era => TotalAda (MockChainState era) where
   totalAda (MockChainState nes _ _) = totalAda nes
+
+deriving instance Generic (MockChainState era)
+
+instance (Era era, NoThunks (NewEpochState era)) => NoThunks (MockChainState era)
 
 -- ======================================================================
 
@@ -256,3 +263,10 @@ ppMockChainFailure proof x = case proof of
         [ ("Last applied block", ppSlotNo lastslot),
           ("Candidate block", ppSlotNo cand)
         ]
+
+noThunksGen :: Proof era -> MockChainState era -> IO (Maybe ThunkInfo)
+noThunksGen (Babbage _) = noThunks []
+noThunksGen (Alonzo _) = noThunks []
+noThunksGen (Mary _) = noThunks []
+noThunksGen (Allegra _) = noThunks []
+noThunksGen (Shelley _) = noThunks []

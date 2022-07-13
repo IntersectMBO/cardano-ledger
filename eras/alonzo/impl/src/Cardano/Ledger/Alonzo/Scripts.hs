@@ -15,8 +15,6 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
--- Needed for (NoThunks PV1.EvaluationContext)
-{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
@@ -87,7 +85,7 @@ import Data.Text (Text)
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (InspectHeapNamed (..), NoThunks (..))
+import NoThunks.Class (AllowThunksIn (..), InspectHeapNamed (..), NoThunks (..))
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
 import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, mkEvaluationContext)
@@ -203,7 +201,11 @@ pointWiseExUnits oper (ExUnits m1 s1) (ExUnits m2 s2) = (m1 `oper` m2) && (s1 `o
 -- cost model parameters (ie the `Map` `Text` `Integer`) and that
 -- this type uses the smart constructor `mkCostModel`
 -- to hide the evaluation context.
-data CostModel = CostModel !Language !(Map Text Integer) !PV1.EvaluationContext
+data CostModel = CostModel
+  { cmLanguage :: !Language,
+    cmMap :: !(Map Text Integer),
+    cmEvalCtx :: !PV1.EvaluationContext
+  }
   deriving (Generic)
 
 -- | Note that this Eq instance ignores the evaluation context, which is
@@ -234,16 +236,9 @@ instance SafeToHash CostModel where
 
 instance HashWithCrypto CostModel CostModel
 
--- | It would be preferable to have a proper NoThunks instance for
--- EvaluationContext in the Plutus repository, but we can use this
--- workaround in the meantime.
--- See https://github.com/input-output-hk/plutus/issues/4687
-deriving via
-  InspectHeapNamed "PV1.EvaluationContext" PV1.EvaluationContext
-  instance
-    NoThunks PV1.EvaluationContext
-
-instance NoThunks CostModel
+-- Temporarily ignore thunks in the evaluation context until the plutus version
+-- is bumped
+deriving via AllowThunksIn '["cmEvalCtx"] CostModel instance NoThunks CostModel
 
 instance NFData CostModel where
   rnf (CostModel lang cm ectx) = lang `deepseq` cm `deepseq` rnf ectx

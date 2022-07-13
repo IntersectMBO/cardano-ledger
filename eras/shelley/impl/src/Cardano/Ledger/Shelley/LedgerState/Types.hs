@@ -289,13 +289,9 @@ deriving stock instance
   Eq (UTxOState era)
 
 instance
-  ( Era era,
-    NoThunks (Core.TxOut era),
+  ( NoThunks (UTxO era),
     NoThunks (State (Core.EraRule "PPUP" era)),
-    NoThunks (Core.Value era),
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.TxOut era),
-    ToCBOR (Core.Value era)
+    NoThunks (Core.Value era)
   ) =>
   NoThunks (UTxOState era)
 
@@ -392,19 +388,6 @@ instance
 
 instance
   ( Era era,
-    NoThunks (Core.TxOut era),
-    NoThunks (Core.PParams era),
-    NoThunks (State (Core.EraRule "PPUP" era)),
-    NoThunks (Core.Value era),
-    NoThunks (StashedAVVMAddresses era),
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.TxOut era),
-    ToCBOR (Core.Value era)
-  ) =>
-  NoThunks (NewEpochState era)
-
-instance
-  ( Era era,
     ToCBOR (Core.TxOut era),
     ToCBOR (Core.PParams era),
     ToCBOR (State (Core.EraRule "PPUP" era)),
@@ -444,6 +427,15 @@ instance
         <! From
         <! From
 
+instance
+  ( Era era,
+    NoThunks (BlocksMade (Crypto era)),
+    NoThunks (EpochState era),
+    NoThunks (PulsingRewUpdate (Crypto era)),
+    NoThunks (StashedAVVMAddresses era)
+  ) =>
+  NoThunks (NewEpochState era)
+
 -- | The state associated with a 'Ledger'.
 data LedgerState era = LedgerState
   { -- | The current unspent transaction outputs.
@@ -469,12 +461,9 @@ deriving stock instance
 
 instance
   ( Era era,
-    NoThunks (Core.TxOut era),
+    NoThunks (UTxO era),
     NoThunks (State (Core.EraRule "PPUP" era)),
-    NoThunks (Core.Value era),
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.TxOut era),
-    ToCBOR (Core.Value era)
+    NoThunks (Core.Value era)
   ) =>
   NoThunks (LedgerState era)
 

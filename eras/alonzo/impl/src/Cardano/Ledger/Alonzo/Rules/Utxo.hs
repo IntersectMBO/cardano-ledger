@@ -225,13 +225,10 @@ deriving stock instance
   Eq (UtxoPredicateFailure era)
 
 instance
-  ( Era era,
-    ToCBOR (Core.Value era),
-    ToCBOR (Core.TxOut era),
-    ToCBOR (Core.TxBody era),
-    NoThunks (Core.Value era),
-    NoThunks (Core.TxOut era),
-    NoThunks (PredicateFailure (Core.EraRule "UTXOS" era))
+  ( NoThunks (Core.Value era),
+    NoThunks (UTxO era),
+    NoThunks (PredicateFailure (Core.EraRule "UTXOS" era)),
+    NoThunks (Core.TxOut era)
   ) =>
   NoThunks (UtxoPredicateFailure era)
 
