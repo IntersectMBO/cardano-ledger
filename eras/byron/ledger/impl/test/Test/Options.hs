@@ -1,6 +1,9 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
+{-# OPTIONS_GHC -Wno-deprecations #-}
+
+-- TODO Remove use of deprecated function testProperty
 
 module Test.Options
   ( TestScenario (..),

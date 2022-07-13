@@ -125,9 +125,6 @@ deriving via Enc (TxOut CurrentEra) instance PersistFieldSql (TxOut CurrentEra)
 instance FromCBOR (DState C) where
   fromCBOR = fromNotSharedCBOR
 
-instance FromCBOR (PState C) where
-  fromCBOR = fromNotSharedCBOR
-
 deriving via Enc (DState C) instance PersistField (DState C)
 
 deriving via Enc (DState C) instance PersistFieldSql (DState C)
