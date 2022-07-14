@@ -1,7 +1,3 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
-
 module Main (main) where
 
 import Test.Byron.AbstractSize.Properties (testAbstractSize)
