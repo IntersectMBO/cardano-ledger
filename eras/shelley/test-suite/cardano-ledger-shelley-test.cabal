@@ -8,10 +8,11 @@ author:              IOHK Formal Methods Team
 maintainer:          formal.methods@iohk.io
 build-type:          Simple
 
-extra-source-files:
+data-files:
   cddl-files/shelley.cddl
   cddl-files/real/crypto.cddl
   cddl-files/mock/extras.cddl
+  test/Golden/ShelleyGenesis
 
 source-repository head
   type: git
@@ -157,7 +158,7 @@ test-suite cardano-ledger-shelley-test
       Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
       Test.Cardano.Ledger.Shelley.RulesTests
       Test.Cardano.Ledger.Shelley.UnitTests
-
+      Paths_cardano_ledger_shelley_test
   hs-source-dirs:      test
   ghc-options:
       -threaded

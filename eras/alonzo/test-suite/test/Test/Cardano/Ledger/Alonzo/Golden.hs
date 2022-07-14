@@ -29,13 +29,13 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Mary.Value (Value (..), valueFromList)
 import qualified Data.ByteString.Base16 as B16
-import qualified Data.ByteString.Lazy as BSL
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
 import Plutus.V1.Ledger.Api (Data (..))
 import qualified Plutus.V1.Ledger.Api as PV1 (costModelParamNames)
 import qualified Plutus.V2.Ledger.Api as PV2 (costModelParamNames)
 import Test.Cardano.Ledger.Alonzo.Examples.Consensus (ledgerExamplesAlonzo)
+import Test.Cardano.Ledger.Alonzo.Serialisation.CDDL (readDataFile)
 import Test.Cardano.Ledger.EraBuffet (StandardCrypto)
 import Test.Cardano.Ledger.Mary.Golden
   ( largestName,
@@ -173,10 +173,10 @@ goldenSerialization =
   testGroup
     "golden tests - serialization"
     [ testCase "Alonzo Block" $ do
-        expected <- BSL.readFile "golden/block.cbor"
+        expected <- readDataFile "golden/block.cbor"
         serialize (SLE.sleBlock ledgerExamplesAlonzo) @?= expected,
       testCase "Alonzo Tx" $ do
-        expected <- BSL.readFile "golden/tx.cbor"
+        expected <- readDataFile "golden/tx.cbor"
         serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
     ]
 

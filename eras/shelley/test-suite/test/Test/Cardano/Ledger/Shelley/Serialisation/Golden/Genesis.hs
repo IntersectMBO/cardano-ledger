@@ -34,6 +34,7 @@ import Data.Scientific (Scientific)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Paths_cardano_ledger_shelley_test
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (StandardCrypto)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Cast as Cast
 import Test.Cardano.Ledger.Shelley.Utils
@@ -54,7 +55,8 @@ goldenTestJSON actual expectedFile =
       val @?= expected
 
 golden_json_ShelleyGenesis :: Assertion
-golden_json_ShelleyGenesis = goldenTestJSON example "test/Golden/ShelleyGenesis"
+golden_json_ShelleyGenesis =
+  goldenTestJSON example =<< getDataFileName "test/Golden/ShelleyGenesis"
   where
     example :: ShelleyGenesis (ShelleyEra StandardCrypto)
     example = exampleShelleyGenesis

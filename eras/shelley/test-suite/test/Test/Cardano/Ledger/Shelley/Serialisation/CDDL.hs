@@ -35,6 +35,7 @@ import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
 import Cardano.Protocol.TPraos.OCert (OCert)
 import qualified Data.ByteString.Lazy as BSL
+import Paths_cardano_ledger_shelley_test
 import Test.Cardano.Ledger.Shelley.LaxBlock (LaxBlock)
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   ( cddlAnnotatorTest,
@@ -72,8 +73,11 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do
-  base <- BSL.readFile "cddl-files/shelley.cddl"
-  crypto <- BSL.readFile "cddl-files/real/crypto.cddl"
-  extras <- BSL.readFile "cddl-files/mock/extras.cddl"
+  base <- readDataFile "cddl-files/shelley.cddl"
+  crypto <- readDataFile "cddl-files/real/crypto.cddl"
+  extras <- readDataFile "cddl-files/mock/extras.cddl"
   -- extras contains the types whose restrictions cannot be expressed in CDDL
   pure $ base <> crypto <> extras
+
+readDataFile :: FilePath -> IO BSL.ByteString
+readDataFile name = getDataFileName name >>= BSL.readFile
