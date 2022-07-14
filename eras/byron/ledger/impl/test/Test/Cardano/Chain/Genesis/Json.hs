@@ -8,6 +8,7 @@ module Test.Cardano.Chain.Genesis.Json
 where
 
 import Cardano.Prelude
+import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import Test.Cardano.Chain.Delegation.Gen (genCanonicalCertificate)
 import Test.Cardano.Chain.Genesis.Example (exampleGenesisData0)
@@ -69,7 +70,7 @@ golden_GenesisData0Dec :: Property
 golden_GenesisData0Dec =
   goldenTestCanonicalJSONDec
     exampleGenesisData0
-    "test/golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic"
+    <:< "golden/json/genesis/GenesisData0_Legacy_HasNetworkMagic"
 
 -------------------------------------------------------------------------------
 -- Main test export

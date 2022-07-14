@@ -22,6 +22,7 @@ import Cardano.Binary
   )
 import Cardano.Prelude
 import qualified Data.ByteString.Lazy as LBS
+import GetDataFileName ((<:<))
 import Hedgehog (Property, tripping)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( goldenTestCBOR,
@@ -91,49 +92,49 @@ goldenMempoolPayload :: Property
 goldenMempoolPayload =
   goldenTestCBOR
     exampleMempoolPayload
-    "test/golden/cbor/mempoolpayload/MempoolPayload"
+    <:< "golden/cbor/mempoolpayload/MempoolPayload"
 
 goldenMempoolPayloadFilledIn :: Property
 goldenMempoolPayloadFilledIn =
   filledInGoldenTestCBOR
     exampleMempoolPayload
-    "test/golden/cbor/mempoolpayload/MempoolPayload"
+    <:< "golden/cbor/mempoolpayload/MempoolPayload"
 
 goldenMempoolPayload1 :: Property
 goldenMempoolPayload1 =
   goldenTestCBOR
     exampleMempoolPayload1
-    "test/golden/cbor/mempoolpayload/MempoolPayload1"
+    <:< "golden/cbor/mempoolpayload/MempoolPayload1"
 
 goldenMempoolPayload1FilledIn :: Property
 goldenMempoolPayload1FilledIn =
   filledInGoldenTestCBOR
     exampleMempoolPayload1
-    "test/golden/cbor/mempoolpayload/MempoolPayload1"
+    <:< "golden/cbor/mempoolpayload/MempoolPayload1"
 
 goldenMempoolPayload2 :: Property
 goldenMempoolPayload2 =
   goldenTestCBOR
     exampleMempoolPayload2
-    "test/golden/cbor/mempoolpayload/MempoolPayload2"
+    <:< "golden/cbor/mempoolpayload/MempoolPayload2"
 
 goldenMempoolPayload2FilledIn :: Property
 goldenMempoolPayload2FilledIn =
   filledInGoldenTestCBOR
     exampleMempoolPayload2
-    "test/golden/cbor/mempoolpayload/MempoolPayload2"
+    <:< "golden/cbor/mempoolpayload/MempoolPayload2"
 
 goldenMempoolPayload3 :: Property
 goldenMempoolPayload3 =
   goldenTestCBOR
     exampleMempoolPayload3
-    "test/golden/cbor/mempoolpayload/MempoolPayload3"
+    <:< "golden/cbor/mempoolpayload/MempoolPayload3"
 
 goldenMempoolPayload3FilledIn :: Property
 goldenMempoolPayload3FilledIn =
   filledInGoldenTestCBOR
     exampleMempoolPayload3
-    "test/golden/cbor/mempoolpayload/MempoolPayload3"
+    <:< "golden/cbor/mempoolpayload/MempoolPayload3"
 
 ts_roundTripMempoolPayload :: TSProperty
 ts_roundTripMempoolPayload =

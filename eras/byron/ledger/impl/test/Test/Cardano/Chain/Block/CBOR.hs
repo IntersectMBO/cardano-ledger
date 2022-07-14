@@ -60,6 +60,7 @@ import Cardano.Crypto
 import Cardano.Prelude
 import Data.Coerce (coerce)
 import Data.Maybe (fromJust)
+import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import qualified Hedgehog as H
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
@@ -97,7 +98,7 @@ goldenHeader =
     (toCBORHeader exampleEs)
     (fromCBORHeader exampleEs)
     exampleHeader
-    "test/golden/cbor/block/Header"
+    <:< "golden/cbor/block/Header"
 
 -- | Round-trip test the backwards compatible header encoding/decoding functions
 ts_roundTripHeaderCompat :: TSProperty
@@ -143,7 +144,7 @@ ts_roundTripBlockCompat =
 
 goldenBlockSignature :: Property
 goldenBlockSignature =
-  goldenTestCBOR exampleBlockSignature "test/golden/cbor/block/BlockSignature"
+  goldenTestCBOR exampleBlockSignature <:< "golden/cbor/block/BlockSignature"
 
 ts_roundTripBlockSignatureCBOR :: TSProperty
 ts_roundTripBlockSignatureCBOR =
@@ -158,7 +159,7 @@ goldenDeprecatedBoundaryBlockHeader =
   deprecatedGoldenDecode
     "BoundaryBlockHeader"
     (void fromCBORABoundaryHeader)
-    "test/golden/cbor/block/BoundaryBlockHeader"
+    <:< "golden/cbor/block/BoundaryBlockHeader"
 
 ts_roundTripBoundaryBlock :: TSProperty
 ts_roundTripBoundaryBlock =
@@ -190,7 +191,7 @@ goldenDeprecatedBoundaryBody =
   deprecatedGoldenDecode
     "BoundaryBody"
     dropBoundaryBody
-    "test/golden/cbor/block/BoundaryBody"
+    <:< "golden/cbor/block/BoundaryBody"
 
 --------------------------------------------------------------------------------
 -- BoundaryConsensusData
@@ -201,7 +202,7 @@ goldenDeprecatedBoundaryConsensusData =
   deprecatedGoldenDecode
     "BoundaryConsensusData"
     (void fromCBORBoundaryConsensusData)
-    "test/golden/cbor/block/BoundaryConsensusData"
+    <:< "golden/cbor/block/BoundaryConsensusData"
 
 --------------------------------------------------------------------------------
 -- HeaderHash
@@ -209,7 +210,7 @@ goldenDeprecatedBoundaryConsensusData =
 
 goldenHeaderHash :: Property
 goldenHeaderHash =
-  goldenTestCBOR exampleHeaderHash "test/golden/cbor/block/HeaderHash"
+  goldenTestCBOR exampleHeaderHash <:< "golden/cbor/block/HeaderHash"
 
 ts_roundTripHeaderHashCBOR :: TSProperty
 ts_roundTripHeaderHashCBOR =
@@ -224,14 +225,14 @@ goldenDeprecatedBoundaryProof =
   deprecatedGoldenDecode
     "BoundaryProof"
     dropBytes
-    "test/golden/cbor/block/BoundaryProof"
+    <:< "golden/cbor/block/BoundaryProof"
 
 --------------------------------------------------------------------------------
 -- Body
 --------------------------------------------------------------------------------
 
 goldenBody :: Property
-goldenBody = goldenTestCBOR exampleBody "test/golden/cbor/block/Body"
+goldenBody = goldenTestCBOR exampleBody <:< "golden/cbor/block/Body"
 
 ts_roundTripBodyCBOR :: TSProperty
 ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORShow
@@ -241,7 +242,7 @@ ts_roundTripBodyCBOR = eachOfTS 20 (feedPM genBody) roundTripsCBORShow
 --------------------------------------------------------------------------------
 
 goldenProof :: Property
-goldenProof = goldenTestCBOR exampleProof "test/golden/cbor/block/Proof"
+goldenProof = goldenTestCBOR exampleProof <:< "golden/cbor/block/Proof"
 
 ts_roundTripProofCBOR :: TSProperty
 ts_roundTripProofCBOR = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
@@ -251,7 +252,7 @@ ts_roundTripProofCBOR = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenToSign :: Property
-goldenToSign = goldenTestCBOR exampleToSign "test/golden/cbor/block/ToSign"
+goldenToSign = goldenTestCBOR exampleToSign <:< "golden/cbor/block/ToSign"
 
 ts_roundTripToSignCBOR :: TSProperty
 ts_roundTripToSignCBOR =
