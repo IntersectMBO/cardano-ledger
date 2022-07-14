@@ -234,15 +234,6 @@ instance SafeToHash CostModel where
 
 instance HashWithCrypto CostModel CostModel
 
--- | It would be preferable to have a proper NoThunks instance for
--- EvaluationContext in the Plutus repository, but we can use this
--- workaround in the meantime.
--- See https://github.com/input-output-hk/plutus/issues/4687
-deriving via
-  InspectHeapNamed "PV1.EvaluationContext" PV1.EvaluationContext
-  instance
-    NoThunks PV1.EvaluationContext
-
 instance NoThunks CostModel
 
 instance NFData CostModel where
