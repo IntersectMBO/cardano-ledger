@@ -1322,6 +1322,21 @@ pcEpochState proof (EpochState (AccountState tre res) _ ls _ _ _) =
 
 instance Reflect era => PrettyC (EpochState era) era where prettyC = pcEpochState
 
+pcBbodyState ::
+  ( Reflect era
+  ) =>
+  Proof era ->
+  BbodyState era ->
+  PDoc
+pcBbodyState proof (BbodyState ls (BlocksMade mp)) =
+  ppRecord
+    "BbodyState"
+    [ ("ledger state", pcLedgerState proof ls),
+      ("blocks made", ppMap pcKeyHash ppNatural mp)
+    ]
+
+instance Reflect era => PrettyC (BbodyState era) era where prettyC = pcBbodyState
+
 pc :: PrettyC t era => Proof era -> t -> IO ()
 pc proof x = putStrLn (show (prettyC proof x))
 

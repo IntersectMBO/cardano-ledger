@@ -49,7 +49,7 @@ import Cardano.Ledger.BaseTypes
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (KeyHashObj))
 import Cardano.Ledger.Crypto (DSIGN, HASH)
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), ValidateScript (..), getPhase2)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (GenDelegs, KeyHash, KeyRole (..), asWitness)
 import Cardano.Ledger.Rules.ValidationMode (Inject (..), Test, runTest, runTestOnSignal)
@@ -280,8 +280,7 @@ hasExactSetOfRedeemers utxo tx txbody = do
         [ (rp, (sp, sh))
           | (sp, sh) <- Alonzo.scriptsNeeded utxo tx,
             SJust rp <- [rdptr @era txbody sp],
-            Just script <- [Map.lookup sh (txscripts utxo tx)],
-            (not . isNativeScript @era) script
+            Just _phase2Script <- [Map.lookup sh (getPhase2 @era (txscripts utxo tx))]
         ]
       (extraRdmrs, missingRdmrs) =
         extSymmetricDifference

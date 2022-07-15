@@ -55,7 +55,7 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..))
-import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Era (Era (..), getPhase1)
 import Cardano.Ledger.Keys
   ( DSignable,
     GenDelegPair (..),
@@ -399,12 +399,13 @@ validateFailedScripts ::
   Core.Tx era ->
   Test (UtxowPredicateFailure era)
 validateFailedScripts tx = do
-  let failedScripts =
+  let phase1Map = getPhase1 (getField @"scriptWits" tx)
+      failedScripts =
         Map.filterWithKey
-          ( \hs validator ->
-              hashScript @era validator /= hs || not (validateScript @era validator tx)
+          ( \hs (core, phase) ->
+              hashScript @era core /= hs || not (validateScript @era phase tx)
           )
-          (getField @"scriptWits" tx)
+          phase1Map
   failureUnless (Map.null failedScripts) $
     ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
 

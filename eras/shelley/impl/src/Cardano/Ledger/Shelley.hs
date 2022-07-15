@@ -34,7 +34,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.Coin (Coin)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (SupportsSegWit (..), ValidateScript (..))
+import Cardano.Ledger.Era (Phase (..), PhaseRep (..), PhasedScript (..), SomeScript, SupportsSegWit (..), ValidateScript (..))
 import qualified Cardano.Ledger.Era as E (Era (..), TranslationContext)
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
 import Cardano.Ledger.SafeHash (makeHashWithExplicitProxys)
@@ -45,7 +45,6 @@ import qualified Cardano.Ledger.Shelley.BlockChain as Shelley
   )
 import Cardano.Ledger.Shelley.Constraints
   ( UsesPParams (..),
-    UsesTxBody,
     UsesTxOut (..),
     UsesValue,
   )
@@ -111,14 +110,13 @@ type instance Core.PParamsDelta (ShelleyEra c) = PParamsUpdate (ShelleyEra c)
 nativeMultiSigTag :: BS.ByteString
 nativeMultiSigTag = "\00"
 
-instance
-  (CryptoClass.Crypto c, UsesTxBody (ShelleyEra c)) =>
-  ValidateScript (ShelleyEra c)
-  where
-  scriptPrefixTag _script = nativeMultiSigTag
+type instance SomeScript 'PhaseOne (ShelleyEra c) = MultiSig c
 
-  -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
-  validateScript = validateNativeMultiSigScript
+instance CryptoClass.Crypto c => ValidateScript (ShelleyEra c) where
+  phaseScript PhaseOneRep multisig = Just (Phase1Script multisig)
+  phaseScript PhaseTwoRep _ = Nothing
+  scriptPrefixTag _script = nativeMultiSigTag -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
+  validateScript (Phase1Script multisig) tx = validateNativeMultiSigScript multisig tx
 
 instance CryptoClass.Crypto c => SupportsSegWit (ShelleyEra c) where
   type TxSeq (ShelleyEra c) = Shelley.TxSeq (ShelleyEra c)

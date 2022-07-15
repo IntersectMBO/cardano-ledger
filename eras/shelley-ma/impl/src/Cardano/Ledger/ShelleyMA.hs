@@ -27,7 +27,7 @@ import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.Compactible (Compactible)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Era (..), SupportsSegWit (..), ValidateScript (..))
+import Cardano.Ledger.Era (Era (..), Phase (..), PhaseRep (..), PhasedScript (..), SomeScript, SupportsSegWit (..), ValidateScript (..))
 import Cardano.Ledger.Mary.Value (Value, policies, policyID)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (nativeMultiSigTag)
@@ -169,6 +169,8 @@ type instance
 -- Ledger data instances
 --------------------------------------------------------------------------------
 
+type instance SomeScript 'PhaseOne (ShelleyMAEra ma c) = Timelock c
+
 -- Since Timelock scripts are a strictly backwards compatible extension of
 -- Multisig scripts, we can use the same 'scriptPrefixTag' tag here as
 -- we did for the ValidateScript instance in Multisig which is imported
@@ -182,7 +184,9 @@ instance
   ValidateScript (ShelleyMAEra ma c)
   where
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
-  validateScript script tx = validateTimelock @(ShelleyMAEra ma c) script tx
+  validateScript (Phase1Script script) tx = validateTimelock @(ShelleyMAEra ma c) script tx
+  phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
+  phaseScript PhaseTwoRep _ = Nothing
 
 -- Uses the default instance of hashScript
 

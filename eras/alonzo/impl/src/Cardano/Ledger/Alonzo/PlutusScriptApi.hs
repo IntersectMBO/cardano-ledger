@@ -20,7 +20,6 @@ module Cardano.Ledger.Alonzo.PlutusScriptApi
     language,
     CollectError (..),
     collectTwoPhaseScriptInputs,
-    knownToNotBe1Phase,
   )
 where
 
@@ -48,7 +47,7 @@ import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Era (Era (..), PhasedScript (..), ValidateScript (..), getPhase2)
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
@@ -110,7 +109,7 @@ getDatumAlonzo tx (UTxO m) sp = do
 
 -- ========================================================================
 
--- | When collecting inputs for twophase scripts, 3 things can go wrong.
+-- | When collecting inputs for twophase scripts, 4 things can go wrong.
 data CollectError crypto
   = NoRedeemer !(ScriptPurpose crypto)
   | NoWitness !(ScriptHash crypto)
@@ -133,23 +132,7 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
       dec 3 = SumD BadTranslation <! From
       dec n = Invalid n
 
--- Given a script purpose and a script hash, determine if it is *not*
--- a simple 1-phase script by looking up the script hash in a mapping
--- of script hashes to labeled scripts.
--- If the script is determined to not be a 1-phase script, we return
--- a triple: the script purpose, the language, and the script bytes.
---
--- The formal spec achieves the same filtering as knownToNotBe1Phase
--- by use of the (partial) language function, which is not defined on 1-phase scripts.
-knownToNotBe1Phase ::
-  Map.Map (ScriptHash (Crypto era)) (AlonzoScript.Script era) ->
-  (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
-  Maybe (ScriptPurpose (Crypto era), Language, ShortByteString)
-knownToNotBe1Phase scriptsAvailable (sp, sh) = do
-  AlonzoScript.PlutusScript lang script <- sh `Map.lookup` scriptsAvailable
-  Just (sp, lang, script)
-
--- | Collect the inputs for twophase scripts. If any script can't find ist data return
+-- | Collect the inputs for twophase scripts. If any script can't find its data, return
 --     a list of CollectError, if all goes well return a list of quadruples with the inputs.
 --     Previous PredicateFailure tests should ensure we find Data for every script, BUT
 --     the consequences of not finding Data means scripts can get dropped, so things
@@ -158,8 +141,8 @@ knownToNotBe1Phase scriptsAvailable (sp, sh) = do
 collectTwoPhaseScriptInputs ::
   forall era.
   ( Era era,
+    ValidateScript era,
     ExtendedUTxO era,
-    Core.Script era ~ AlonzoScript.Script era,
     HasField "_costmdls" (Core.PParams era) CostModels,
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -185,15 +168,22 @@ collectTwoPhaseScriptInputs ei sysS pp tx utxo =
             (map getscript neededAndConfirmedToBePlutus)
             (Right [])
   where
-    scriptsAvailable = txscripts utxo tx
+    availablePhase2Scripts = getPhase2 @era (txscripts utxo tx)
     txinfo lang = txInfo pp lang ei sysS utxo tx
     neededAndConfirmedToBePlutus =
-      mapMaybe (knownToNotBe1Phase scriptsAvailable) $ scriptsNeeded utxo tx
+      mapMaybe
+        ( \(neededPurpose, neededHash) ->
+            -- Get available scripts that are also needed.
+            case Map.lookup neededHash availablePhase2Scripts of
+              Just (Phase2Script lang bytes) -> Just (neededPurpose, lang, bytes)
+              Nothing -> Nothing
+        )
+        (scriptsNeeded utxo tx)
     redeemer (sp, lang, _) =
       case indexedRdmrs tx sp of
         Just (d, eu) -> Right (lang, sp, d, eu)
         Nothing -> Left (NoRedeemer sp)
-    getscript (_, _, script) = script
+    getscript (_, _, scriptBytes) = scriptBytes
     apply costs (lang, sp, d, eu) script =
       case txinfo lang of
         Right inf ->

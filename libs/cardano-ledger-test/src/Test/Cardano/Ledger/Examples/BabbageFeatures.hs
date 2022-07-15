@@ -929,8 +929,7 @@ txFromTestCaseData
 testExpectSuccessValid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
-    Scriptic era,
-    GoodCrypto (Crypto era),
+    Reflect era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
     HasField "referenceInputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
@@ -976,8 +975,7 @@ testExpectSuccessInvalid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
     Core.TxBody era ~ Babbage.TxBody era,
-    Scriptic era,
-    GoodCrypto (Crypto era),
+    Reflect era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
     HasField "referenceInputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
@@ -1005,7 +1003,7 @@ testExpectFailure ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
     Core.TxBody era ~ Babbage.TxBody era,
-    GoodCrypto (Crypto era),
+    Reflect era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era
   ) =>
@@ -1028,7 +1026,7 @@ genericBabbageFeatures ::
     BabbageBased era (PredicateFailure (EraRule "UTXOW" era)),
     State (EraRule "UTXOW" era) ~ UTxOState era,
     Core.TxBody era ~ Babbage.TxBody era,
-    GoodCrypto (Crypto era),
+    Reflect era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
     HasField "referenceInputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),

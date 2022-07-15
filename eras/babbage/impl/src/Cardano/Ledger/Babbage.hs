@@ -21,7 +21,7 @@ where
 import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.Rules.Bbody as Alonzo (AlonzoBBODY)
-import Cardano.Ledger.Alonzo.Scripts (Script (..), isPlutusScript)
+import Cardano.Ledger.Alonzo.Scripts (Script (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), validScript)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq (..), hashTxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
@@ -45,6 +45,7 @@ import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Era (Phase (..), PhaseRep (..), PhasedScript (..), SomeScript)
 import qualified Cardano.Ledger.Era as EraModule
 import Cardano.Ledger.Keys (GenDelegs (GenDelegs))
 import qualified Cardano.Ledger.Mary.Value as Mary (Value)
@@ -79,15 +80,15 @@ import qualified Cardano.Ledger.Shelley.Rules.Rupd as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Snap as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Tick as Shelley
 import qualified Cardano.Ledger.Shelley.Rules.Upec as Shelley
-import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed)
-import Cardano.Ledger.ShelleyMA.Timelocks (validateTimelock)
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, validateTimelock)
 import Cardano.Ledger.Val (Val (inject), coin, (<->))
 import Control.Arrow (left)
 import Control.Monad.Except (liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
+import Data.ByteString.Short (ShortByteString)
 import Data.Default (def)
 import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
@@ -128,15 +129,20 @@ instance
       collateral = getField @"collateral" txb
       reference = getField @"referenceInputs" txb
 
-instance (CC.Crypto c) => Shelley.ValidateScript (BabbageEra c) where
-  isNativeScript x = not (isPlutusScript x)
+type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock c
+
+type instance SomeScript 'PhaseTwo (BabbageEra c) = (Language, ShortByteString)
+
+instance (CC.Crypto c) => EraModule.ValidateScript (BabbageEra c) where
+  phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
+  phaseScript PhaseTwoRep (PlutusScript lang bytes) = Just (Phase2Script lang bytes)
+  phaseScript _ _ = Nothing
   scriptPrefixTag script =
     case script of
       (TimelockScript _) -> nativeMultiSigTag -- "\x00"
       (PlutusScript PlutusV1 _) -> "\x01"
       (PlutusScript PlutusV2 _) -> "\x02"
-  validateScript (TimelockScript script) tx = validateTimelock @(BabbageEra c) script tx
-  validateScript (PlutusScript _ _) _tx = True
+  validateScript (Phase1Script script) tx = validateTimelock @(BabbageEra c) script tx
 
 instance
   ( CC.Crypto c

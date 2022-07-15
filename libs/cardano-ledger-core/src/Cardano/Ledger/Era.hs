@@ -3,6 +3,7 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,6 +22,13 @@ module Cardano.Ledger.Era
     ValidateScript (..),
     -- $segWit
     SupportsSegWit (..),
+    -- $PHASES
+    Phase (..),
+    PhaseRep (..),
+    SomeScript,
+    PhasedScript (..),
+    getPhase1,
+    getPhase2,
   )
 where
 
@@ -38,6 +46,7 @@ import Cardano.Ledger.Hashes
     EraIndependentTxBody,
     ScriptHash (..),
   )
+import Cardano.Ledger.Language (Language (..))
 import Cardano.Ledger.SafeHash
   ( HashAnnotated (..),
     SafeToHash (..),
@@ -46,9 +55,10 @@ import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val)
 import Control.Monad.Except (Except, runExcept)
 import qualified Data.ByteString as BS
+import Data.ByteString.Short (ShortByteString)
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Type)
-import Data.Map (Map)
+import Data.Map (Map, mapMaybe)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
@@ -142,7 +152,8 @@ class
   ValidateScript era
   where
   scriptPrefixTag :: Core.Script era -> BS.ByteString
-  validateScript :: Core.Script era -> Core.Tx era -> Bool
+  validateScript :: PhasedScript 'PhaseOne era -> Core.Tx era -> Bool
+  phaseScript :: PhaseRep phase -> Core.Script era -> Maybe (PhasedScript phase era)
   hashScript :: Core.Script era -> ScriptHash (Crypto era)
   -- ONE SHOULD NOT OVERIDE THE hashScript DEFAULT METHOD
   -- UNLESS YOU UNDERSTAND THE SafeToHash class, AND THE ROLE OF THE scriptPrefixTag
@@ -151,7 +162,10 @@ class
       . Hash.hashWith
         (\x -> scriptPrefixTag @era x <> originalBytes x)
   isNativeScript :: Core.Script era -> Bool
-  isNativeScript _ = True
+  isNativeScript s =
+    case phaseScript @era PhaseOneRep s of
+      Nothing -> False
+      Just _ -> True
 
 --------------------------------------------------------------------------------
 -- Segregated Witness
@@ -328,3 +342,44 @@ others where the concrete type (Update and WitnessSet) will have to be made into
    -- HasField "wits" (Core.Tx era) (WitnessSet era),
    -- HasField "exUnits" (Core.Tx era) ExUnits,
 -}
+-- ====================================================
+-- Reflecting the phase of scripts into types
+-- ====================================================
+
+-- | There are only two Phases
+data Phase
+  = PhaseOne -- simple scripts run in phase 1
+  | PhaseTwo -- smart scripts (Plutus) run in phase 2
+
+-- | A GADT that witnesses the two Phases
+data PhaseRep t where
+  PhaseOneRep :: PhaseRep 'PhaseOne
+  PhaseTwoRep :: PhaseRep 'PhaseTwo
+
+-- | Type family that defines a script type given a Phase and an Era.
+type family SomeScript (phase :: Phase) (era :: Type) :: Type
+
+{- Instance like these appear in modules Cardano.Ledger.{Shelley,ShelleyMA,Alonzo,Babbage}
+type instance SomeScript PhaseOne (BabbageEra c) = Timelock c
+type instance SomeScript PhaseOne (AlonzoEra c) = Timelock c
+--  We need the Language for Phase2 scripts because Plutus comes in several variants
+type instance SomeScript PhaseTwo (BabbageEra c) = (Language, ShortByteString)
+type instance SomeScript PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
+type instance SomeScript PhaseOne (ShelleyMAEra ma c) = Timelock c
+type instance SomeScript PhaseOne (ShelleyEra c) = MultiSig c
+-}
+
+-- | A concrete type that witnesses the Phase of SomeScript
+data PhasedScript phase era where
+  Phase1Script :: SomeScript 'PhaseOne era -> PhasedScript 'PhaseOne era
+  Phase2Script :: Language -> ShortByteString -> PhasedScript 'PhaseTwo era
+
+getPhase1 :: ValidateScript era => Map k (Core.Script era) -> Map k (Core.Script era, PhasedScript 'PhaseOne era)
+getPhase1 m = mapMaybe phase1 m
+  where
+    phase1 s = case phaseScript PhaseOneRep s of
+      Just ps -> Just (s, ps)
+      Nothing -> Nothing
+
+getPhase2 :: ValidateScript era => Map k (Core.Script era) -> Map k (PhasedScript 'PhaseTwo era)
+getPhase2 = mapMaybe (phaseScript PhaseTwoRep)

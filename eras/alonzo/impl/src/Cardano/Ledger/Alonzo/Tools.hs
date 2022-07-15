@@ -12,11 +12,10 @@ where
 
 import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase, scriptsNeeded)
+import Cardano.Ledger.Alonzo.PlutusScriptApi (scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
   ( CostModel,
     ExUnits (..),
-    Script (..),
     getEvaluationContext,
   )
 import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (..), rdptr)
@@ -33,7 +32,7 @@ import Cardano.Ledger.Alonzo.TxInfo
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers, TxDats, unRedeemers, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Era (Crypto, Era, PhasedScript (..), ValidateScript, getPhase2)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Shelley.Tx (TxIn)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
@@ -97,6 +96,7 @@ type RedeemerReport c = Map RdmrPtr (Either (TransactionScriptFailure c) ExUnits
 evaluateTransactionExecutionUnits ::
   forall era.
   ( Era era,
+    ValidateScript era,
     ExtendedUTxO era,
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
@@ -104,8 +104,7 @@ evaluateTransactionExecutionUnits ::
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    Core.Script era ~ Script era
+    HasField "_protocolVersion" (Core.PParams era) ProtVer
   ) =>
   Core.PParams era ->
   -- | The transaction.
@@ -135,17 +134,24 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
     txb = getField @"body" tx
     ws = getField @"wits" tx
     dats = unTxDats $ getField @"txdats" ws
-    scriptsAvailable = txscripts utxo tx
+    scriptsAvailable = getPhase2 @era (txscripts utxo tx)
     needed = scriptsNeeded utxo tx
-    neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed
+    neededAndConfirmedToBePlutus =
+      mapMaybe
+        ( \(neededPurpose, neededHash) ->
+            -- Get available scripts that are also needed.
+            case Map.lookup neededHash scriptsAvailable of
+              Just (Phase2Script lang bytes) -> Just (neededPurpose, lang, bytes)
+              Nothing -> Nothing
+        )
+        needed
     languagesUsed = Set.fromList [lang | (_, lang, _) <- neededAndConfirmedToBePlutus]
 
     ptrToPlutusScript = Map.fromList $ do
       (sp, sh) <- needed
       msb <- case Map.lookup sh scriptsAvailable of
         Nothing -> pure Nothing
-        Just (TimelockScript _) -> []
-        Just (PlutusScript lang bytes) -> pure $ Just (bytes, lang)
+        Just (Phase2Script lang bytes) -> pure $ Just (bytes, lang)
       pointer <- case rdptr txb sp of
         SNothing -> []
         -- Since scriptsNeeded used the transaction to create script purposes,

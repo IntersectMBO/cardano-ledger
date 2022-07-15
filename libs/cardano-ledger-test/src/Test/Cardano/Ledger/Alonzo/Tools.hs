@@ -11,7 +11,7 @@ import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script, Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tools (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness
@@ -21,7 +21,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN, HASH)
 import qualified Cardano.Ledger.Crypto as Ledger.Crypto
-import Cardano.Ledger.Era (Era (Crypto))
+import Cardano.Ledger.Era (Era (Crypto), ValidateScript)
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -101,7 +101,7 @@ testExUnitCalculation ::
     State (Core.EraRule "UTXOS" era) ~ UTxOState era,
     Environment (Core.EraRule "UTXOS" era) ~ UtxoEnv era,
     Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
-    Era era,
+    ValidateScript era,
     ExtendedUTxO era,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
@@ -111,8 +111,7 @@ testExUnitCalculation ::
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
     HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
     Show (PredicateFailure (Core.EraRule "UTXOS" era)),
-    STS (Core.EraRule "UTXOS" era),
-    Core.Script era ~ Script era
+    STS (Core.EraRule "UTXOS" era)
   ) =>
   Proof era ->
   Core.Tx era ->
@@ -156,8 +155,7 @@ exampleExUnitCalc ::
     STS (Core.EraRule "UTXOS" era),
     Scriptic era,
     PostShelley era,
-    Default (State (Core.EraRule "PPUP" era)),
-    Core.Script era ~ Script era
+    Default (State (Core.EraRule "PPUP" era))
   ) =>
   Proof era ->
   IO ()
@@ -183,7 +181,6 @@ exampleInvalidExUnitCalc ::
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    Core.Script era ~ Script era,
     Signable
       (Ledger.Crypto.DSIGN (Crypto era))
       ( Crypto.Hash
@@ -261,7 +258,7 @@ ustate pf =
 updateTxExUnits ::
   forall era m.
   ( MonadFail m,
-    Era era,
+    ValidateScript era,
     ExtendedUTxO era,
     HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
     HasField "_protocolVersion" (Core.PParams era) ProtVer,
@@ -269,8 +266,7 @@ updateTxExUnits ::
     HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
     HasField "txdats" (Core.Witnesses era) (TxDats era),
     HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    Core.Script era ~ Script era
+    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era))
   ) =>
   Proof era ->
   Core.Tx era ->

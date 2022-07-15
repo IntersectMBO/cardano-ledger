@@ -148,7 +148,7 @@ import Test.Cardano.Ledger.Generic.Fields
     WitnessesField (..),
   )
 import Test.Cardano.Ledger.Generic.Indexed (theKeyPair)
-import Test.Cardano.Ledger.Generic.PrettyCore ()
+import Test.Cardano.Ledger.Generic.PrettyCore (PrettyC (..), pcTx)
 import Test.Cardano.Ledger.Generic.Proof
 import Test.Cardano.Ledger.Generic.Scriptic (HasTokens (..), PostShelley, Scriptic (..), after, matchkey)
 import Test.Cardano.Ledger.Generic.Updaters
@@ -1901,14 +1901,15 @@ genericCont ::
   ( Eq x,
     PrettyA x,
     Eq y,
-    PrettyA y,
+    PrettyC y era,
     HasCallStack
   ) =>
+  Proof era ->
   String ->
   Either [x] y ->
   Either [x] y ->
   Assertion
-genericCont cause expected computed =
+genericCont proof cause expected computed =
   case (computed, expected) of
     (Left c, Left e)
       | c /= e -> assertFailure $ causedBy ++ expectedToFail e ++ failedWith c
@@ -1923,10 +1924,10 @@ genericCont cause expected computed =
     causedBy
       | null cause = ""
       | otherwise = "Caused by:\n" ++ cause ++ "\n"
-    expectedToPass y = "Expected to pass with:\n" ++ show (prettyA y) ++ "\n"
+    expectedToPass y = "Expected to pass with:\n" ++ show (prettyC proof y) ++ "\n"
     expectedToFail y = "Expected to fail with:\n" ++ show (ppList prettyA y) ++ "\n"
     failedWith x = "But failed with:\n" ++ show (ppList prettyA x)
-    passedWith x = "But passed with:\n" ++ show (prettyA x)
+    passedWith x = "But passed with:\n" ++ show (prettyC proof x)
 
 isSubset :: Eq t => [t] -> [t] -> Bool
 isSubset small big = List.all (`List.elem` big) small
@@ -1968,7 +1969,7 @@ testUTXOWsubset,
   specialCase,
   testUTXOW ::
     forall era.
-    ( GoodCrypto (Crypto era),
+    ( Reflect era,
       Default (State (EraRule "PPUP" era)),
       PostShelley era,
       HasCallStack
@@ -1981,8 +1982,8 @@ testUTXOWsubset,
     Assertion
 
 -- | Use an equality test on the expected and computed [PredicateFailure]
-testUTXOW wit@(UTXOW (Alonzo _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
-testUTXOW wit@(UTXOW (Babbage _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
+testUTXOW wit@(UTXOW proof@(Alonzo _)) utxo p tx = testUTXOWwith wit (genericCont proof (show proof ++ "\n" ++ show (pcTx proof tx))) utxo p tx
+testUTXOW wit@(UTXOW proof@(Babbage _)) utxo p tx = testUTXOWwith wit (genericCont proof (show proof ++ "\n" ++ show (pcTx proof tx))) utxo p tx
 testUTXOW (UTXOW other) _ _ _ = error ("Cannot use testUTXOW in era " ++ show other)
 
 -- | Use a subset test on the expected and computed [PredicateFailure]
@@ -1992,7 +1993,7 @@ testUTXOWsubset (UTXOW other) _ = error ("Cannot use testUTXOW in era " ++ show 
 
 testU ::
   forall era.
-  ( GoodCrypto (Crypto era),
+  ( Reflect era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
     HasCallStack
@@ -2052,11 +2053,10 @@ specialCont proof expected computed =
 
 alonzoUTXOWexamplesB ::
   forall era.
-  ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era)),
+  ( Reflect era,
+    AlonzoBased era (PredicateFailure (EraRule "UTXOW" era)),
     State (EraRule "UTXOW" era) ~ UTxOState era,
-    GoodCrypto (Crypto era),
     HasTokens era,
-    Scriptic era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto
   ) =>
@@ -2373,7 +2373,7 @@ instance AlonzoBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
 -- ===================================================================
 
 testBBODY ::
-  (GoodCrypto (Crypto era), HasCallStack) =>
+  (Reflect era, HasCallStack) =>
   WitRule "BBODY" era ->
   BbodyState era ->
   Block (BHeaderView (Crypto era)) era ->
@@ -2382,13 +2382,13 @@ testBBODY ::
 testBBODY wit@(BBODY proof) initialSt block expected =
   let env = bbodyEnv proof
    in case proof of
-        Alonzo _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
-        Babbage _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
+        Alonzo _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont proof "" expected)
+        Babbage _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont proof "" expected)
         other -> error ("We cannot testBBODY in era " ++ show other)
 
 alonzoBBODYexamplesP ::
   forall era.
-  ( GoodCrypto (Crypto era),
+  ( Reflect era,
     HasTokens era,
     ToCBORGroup (TxSeq era),
     Default (State (EraRule "PPUP" era)),
