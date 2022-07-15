@@ -85,7 +85,7 @@ import Data.Text (Text)
 import Data.Typeable (Proxy (..), Typeable)
 import Data.Word (Word64, Word8)
 import GHC.Generics (Generic)
-import NoThunks.Class (AllowThunksIn (..), InspectHeapNamed (..), NoThunks (..))
+import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
 import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, mkEvaluationContext)
@@ -236,9 +236,7 @@ instance SafeToHash CostModel where
 
 instance HashWithCrypto CostModel CostModel
 
--- Temporarily ignore thunks in the evaluation context until the plutus version
--- is bumped
-deriving via AllowThunksIn '["cmEvalCtx"] CostModel instance NoThunks CostModel
+instance NoThunks CostModel
 
 instance NFData CostModel where
   rnf (CostModel lang cm ectx) = lang `deepseq` cm `deepseq` rnf ectx
