@@ -11,6 +11,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary (MaryEra)
 import qualified Data.ByteString.Lazy as BSL
+import Paths_cardano_ledger_shelley_ma_test
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   ( cddlAnnotatorTest,
     cddlTest,
@@ -37,7 +38,10 @@ cddlTests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do
-  base <- BSL.readFile "cddl-files/shelley-ma.cddl"
-  crypto <- BSL.readFile "cddl-files/real/crypto.cddl"
-  extras <- BSL.readFile "cddl-files/mock/extras.cddl"
+  base <- readDataFile "cddl-files/shelley-ma.cddl"
+  crypto <- readDataFile "cddl-files/real/crypto.cddl"
+  extras <- readDataFile "cddl-files/mock/extras.cddl"
   pure $ base <> crypto <> extras
+
+readDataFile :: FilePath -> IO BSL.ByteString
+readDataFile name = getDataFileName name >>= BSL.readFile

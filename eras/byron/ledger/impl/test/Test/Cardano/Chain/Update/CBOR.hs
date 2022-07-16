@@ -11,6 +11,7 @@ import Cardano.Chain.Common (rationalToLovelacePortion)
 import Cardano.Chain.Update (ApplicationName (..), SoftforkRule (..))
 import Cardano.Crypto (Hash, abstractHash)
 import Cardano.Prelude
+import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( goldenTestCBOR,
@@ -60,7 +61,7 @@ goldenApplicationName :: Property
 goldenApplicationName =
   goldenTestCBOR
     aN
-    "test/golden/cbor/update/ApplicationName"
+    <:< "golden/cbor/update/ApplicationName"
   where
     aN = ApplicationName "Golden"
 
@@ -76,7 +77,7 @@ goldenProtocolVersion :: Property
 goldenProtocolVersion =
   goldenTestCBOR
     exampleProtocolVersion
-    "test/golden/cbor/update/ProtocolVersion"
+    <:< "golden/cbor/update/ProtocolVersion"
 
 ts_roundTripProtocolVersion :: TSProperty
 ts_roundTripProtocolVersion =
@@ -90,7 +91,7 @@ goldenProtocolParameters :: Property
 goldenProtocolParameters =
   goldenTestCBOR
     bVerDat
-    "test/golden/cbor/update/ProtocolParameters"
+    <:< "golden/cbor/update/ProtocolParameters"
   where
     bVerDat = exampleProtocolParameters
 
@@ -106,7 +107,7 @@ goldenProtocolParametersUpdate :: Property
 goldenProtocolParametersUpdate =
   goldenTestCBOR
     ppu
-    "test/golden/cbor/update/ProtocolParametersUpdate"
+    <:< "golden/cbor/update/ProtocolParametersUpdate"
   where
     ppu = exampleProtocolParametersUpdate
 
@@ -119,7 +120,7 @@ ts_roundTripProtocolParametersUpdate =
 --------------------------------------------------------------------------------
 
 goldenBlockHashRaw :: Property
-goldenBlockHashRaw = goldenTestCBOR hRaw "test/golden/cbor/update/HashRaw"
+goldenBlockHashRaw = goldenTestCBOR hRaw <:< "golden/cbor/update/HashRaw"
   where
     hRaw = (abstractHash $ Raw ("9") :: Hash Raw)
 
@@ -131,7 +132,7 @@ ts_roundTripHashRaw = eachOfTS 50 genHashRaw roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenSoftforkRule :: Property
-goldenSoftforkRule = goldenTestCBOR sfR "test/golden/cbor/update/SoftforkRule"
+goldenSoftforkRule = goldenTestCBOR sfR <:< "golden/cbor/update/SoftforkRule"
   where
     sfR =
       SoftforkRule
@@ -150,7 +151,7 @@ goldenSoftwareVersion :: Property
 goldenSoftwareVersion =
   goldenTestCBOR
     exampleSoftwareVersion
-    "test/golden/cbor/update/SoftwareVersion"
+    <:< "golden/cbor/update/SoftwareVersion"
 
 ts_roundTripSoftwareVersion :: TSProperty
 ts_roundTripSoftwareVersion =
@@ -162,7 +163,7 @@ ts_roundTripSoftwareVersion =
 
 goldenSystemTag :: Property
 goldenSystemTag =
-  goldenTestCBOR exampleSystemTag "test/golden/cbor/update/SystemTag"
+  goldenTestCBOR exampleSystemTag <:< "golden/cbor/update/SystemTag"
 
 ts_roundTripSystemTag :: TSProperty
 ts_roundTripSystemTag = eachOfTS 10 genSystemTag roundTripsCBORBuildable
@@ -173,7 +174,7 @@ ts_roundTripSystemTag = eachOfTS 10 genSystemTag roundTripsCBORBuildable
 
 goldenInstallerHash :: Property
 goldenInstallerHash =
-  goldenTestCBOR exampleInstallerHash "test/golden/cbor/update/InstallerHash"
+  goldenTestCBOR exampleInstallerHash <:< "golden/cbor/update/InstallerHash"
 
 ts_roundTripInstallerHash :: TSProperty
 ts_roundTripInstallerHash = eachOfTS 20 genInstallerHash roundTripsCBORBuildable
@@ -184,7 +185,7 @@ ts_roundTripInstallerHash = eachOfTS 20 genInstallerHash roundTripsCBORBuildable
 
 goldenUpdatePayload :: Property
 goldenUpdatePayload =
-  goldenTestCBOR examplePayload "test/golden/cbor/update/Payload"
+  goldenTestCBOR examplePayload <:< "golden/cbor/update/Payload"
 
 ts_roundTripUpdatePayload :: TSProperty
 ts_roundTripUpdatePayload =
@@ -195,7 +196,7 @@ ts_roundTripUpdatePayload =
 --------------------------------------------------------------------------------
 
 goldenUpdateProof :: Property
-goldenUpdateProof = goldenTestCBOR exampleProof "test/golden/cbor/update/Proof"
+goldenUpdateProof = goldenTestCBOR exampleProof <:< "golden/cbor/update/Proof"
 
 ts_roundTripUpdateProof :: TSProperty
 ts_roundTripUpdateProof = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
@@ -206,7 +207,7 @@ ts_roundTripUpdateProof = eachOfTS 20 (feedPM genProof) roundTripsCBORBuildable
 
 goldenUpdateProposal :: Property
 goldenUpdateProposal =
-  goldenTestCBOR exampleProposal "test/golden/cbor/update/Proposal"
+  goldenTestCBOR exampleProposal <:< "golden/cbor/update/Proposal"
 
 ts_roundTripUpdateProposal :: TSProperty
 ts_roundTripUpdateProposal =
@@ -218,7 +219,7 @@ ts_roundTripUpdateProposal =
 
 goldenProposalBody :: Property
 goldenProposalBody =
-  goldenTestCBOR exampleProposalBody "test/golden/cbor/update/ProposalBody"
+  goldenTestCBOR exampleProposalBody <:< "golden/cbor/update/ProposalBody"
 
 ts_roundTripProposalBody :: TSProperty
 ts_roundTripProposalBody = eachOfTS 20 genProposalBody roundTripsCBORShow
@@ -228,7 +229,7 @@ ts_roundTripProposalBody = eachOfTS 20 genProposalBody roundTripsCBORShow
 --------------------------------------------------------------------------------
 
 goldenUpdateVote :: Property
-goldenUpdateVote = goldenTestCBOR exampleVote "test/golden/cbor/update/Vote"
+goldenUpdateVote = goldenTestCBOR exampleVote <:< "golden/cbor/update/Vote"
 
 ts_roundTripUpdateVote :: TSProperty
 ts_roundTripUpdateVote = eachOfTS 20 (feedPM genVote) roundTripsCBORBuildable
@@ -238,7 +239,7 @@ ts_roundTripUpdateVote = eachOfTS 20 (feedPM genVote) roundTripsCBORBuildable
 --------------------------------------------------------------------------------
 
 goldenUpId :: Property
-goldenUpId = goldenTestCBOR exampleUpId "test/golden/cbor/update/UpId"
+goldenUpId = goldenTestCBOR exampleUpId <:< "golden/cbor/update/UpId"
 
 ts_roundTripUpId :: TSProperty
 ts_roundTripUpId = eachOfTS 20 (feedPM genUpId) roundTripsCBORBuildable

@@ -14,7 +14,7 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
-extra-source-files:
+data-files:
   cddl-files/alonzo.cddl
   cddl-files/real/crypto.cddl
   cddl-files/mock/extras.cddl
@@ -92,6 +92,7 @@ test-suite cardano-ledger-alonzo-test
     Test.Cardano.Ledger.Alonzo.Serialisation.Tripping
     Test.Cardano.Ledger.Alonzo.Translation
     Test.Cardano.Ledger.Alonzo.TxInfo
+    Paths_cardano_ledger_alonzo_test
   build-depends:
     base16-bytestring,
     bytestring,

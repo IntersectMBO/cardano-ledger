@@ -11,6 +11,24 @@ copyright:           2019 IOHK
 category:            Currency
 build-type:          Simple
 extra-source-files:  README.md
+data-files:          test/golden/AbstractHash
+                     test/golden/DecShare
+                     test/golden/EncShare
+                     test/golden/PassPhrase
+                     test/golden/RedeemSignature
+                     test/golden/RedeemSigningKey
+                     test/golden/RedeemVerificationKey
+                     test/golden/Secret
+                     test/golden/SecretProof
+                     test/golden/Signature
+                     test/golden/SigningKey
+                     test/golden/VerificationKey
+                     test/golden/VssPublicKey
+                     test/golden/json/ProtocolMagic0_Legacy_HasNetworkMagic
+                     test/golden/json/ProtocolMagic1_Legacy_HasNetworkMagic
+                     test/golden/json/ProtocolMagic2_Legacy_HasNetworkMagic
+                     test/golden/json/ProtocolMagic_Legacy_NMMustBeJust
+                     test/golden/json/ProtocolMagic_Legacy_NMMustBeNothing
 
 common base
   build-depends:      base >= 4.12 && < 4.15
@@ -102,7 +120,8 @@ test-suite test
                        Test.Cardano.Crypto.Signing.Redeem.Compact
                        Test.Cardano.Crypto.Signing.Safe
                        Test.Cardano.Crypto.Signing.Signing
-
+                       Paths_cardano_crypto_wrapper
+                       GetDataFileName
   build-depends:       bytestring
                      , cardano-binary
                      , cardano-binary-test
@@ -112,6 +131,7 @@ test-suite test
                      , cardano-prelude-test
                      , cryptonite
                      , formatting
+                     , filepath
                      , hedgehog >= 1.0.4
                      , memory
                      , text

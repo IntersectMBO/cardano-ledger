@@ -8,6 +8,7 @@ where
 import Cardano.Chain.Delegation (unsafePayload)
 import Cardano.Prelude
 import Data.List ((!!))
+import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( goldenTestCBOR,
@@ -32,7 +33,7 @@ goldenCertificate :: Property
 goldenCertificate =
   goldenTestCBOR
     cert
-    "test/golden/cbor/delegation/Certificate"
+    <:< "golden/cbor/delegation/Certificate"
   where
     cert = exampleCertificates !! 0
 
@@ -45,7 +46,7 @@ ts_roundTripCertificateCBOR =
 --------------------------------------------------------------------------------
 
 goldenDlgPayload :: Property
-goldenDlgPayload = goldenTestCBOR dp "test/golden/cbor/delegation/DlgPayload"
+goldenDlgPayload = goldenTestCBOR dp <:< "golden/cbor/delegation/DlgPayload"
   where
     dp = unsafePayload (take 4 exampleCertificates)
 

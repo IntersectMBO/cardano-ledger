@@ -7,6 +7,7 @@ where
 
 import Cardano.Chain.Slotting (EpochSlots (..), SlotNumber)
 import Cardano.Prelude
+import GetDataFileName ((<:<))
 import Hedgehog (Property)
 import Test.Cardano.Binary.Helpers.GoldenRoundTrip
   ( goldenTestCBOR,
@@ -31,7 +32,7 @@ import Test.Options (TSGroup, TSProperty, concatTSGroups, eachOfTS)
 --------------------------------------------------------------------------------
 golden_EpochNumber :: Property
 golden_EpochNumber =
-  goldenTestCBOR exampleEpochNumber "test/golden/cbor/slotting/EpochNumber"
+  goldenTestCBOR exampleEpochNumber <:< "golden/cbor/slotting/EpochNumber"
 
 ts_roundTripEpochNumberCBOR :: TSProperty
 ts_roundTripEpochNumberCBOR = eachOfTS 1000 genEpochNumber roundTripsCBORBuildable
@@ -40,7 +41,7 @@ ts_roundTripEpochNumberCBOR = eachOfTS 1000 genEpochNumber roundTripsCBORBuildab
 -- SlotNumber
 --------------------------------------------------------------------------------
 golden_SlotNumber :: Property
-golden_SlotNumber = goldenTestCBOR fsi "test/golden/cbor/slotting/SlotNumber"
+golden_SlotNumber = goldenTestCBOR fsi <:< "golden/cbor/slotting/SlotNumber"
   where
     fsi = 5001 :: SlotNumber
 
@@ -51,7 +52,7 @@ ts_roundTripSlotNumberCBOR = eachOfTS 1000 genSlotNumber roundTripsCBORBuildable
 -- EpochSlots
 --------------------------------------------------------------------------------
 golden_EpochSlots :: Property
-golden_EpochSlots = goldenTestCBOR sc "test/golden/cbor/slotting/EpochSlots"
+golden_EpochSlots = goldenTestCBOR sc <:< "golden/cbor/slotting/EpochSlots"
   where
     sc = EpochSlots 474747
 
@@ -65,7 +66,7 @@ golden_EpochAndSlotCount :: Property
 golden_EpochAndSlotCount =
   goldenTestCBOR
     exampleEpochAndSlotCount
-    "test/golden/cbor/slotting/EpochAndSlotCount"
+    <:< "golden/cbor/slotting/EpochAndSlotCount"
 
 ts_roundTripEpochAndSlotCountCBOR :: TSProperty
 ts_roundTripEpochAndSlotCountCBOR = eachOfTS 1000 gen roundTripsCBORBuildable

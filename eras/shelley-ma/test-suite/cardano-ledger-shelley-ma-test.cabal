@@ -14,7 +14,7 @@ copyright:           2020 Input Output (Hong Kong) Ltd.
 category:            Network
 build-type:          Simple
 
-extra-source-files:
+data-files:
   cddl-files/shelley-ma.cddl
   cddl-files/real/crypto.cddl
   cddl-files/mock/extras.cddl
@@ -97,6 +97,7 @@ test-suite cardano-ledger-shelley-ma-test
       Test.Cardano.Ledger.ShelleyMA.Serialisation.CDDL
       Test.Cardano.Ledger.ShelleyMA.Serialisation.Golden.Encoding
       Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
+      Paths_cardano_ledger_shelley_ma_test
   -- We set a bound here so that we're alerted of potential space
   -- leaks in our generators (or test) code.
   --

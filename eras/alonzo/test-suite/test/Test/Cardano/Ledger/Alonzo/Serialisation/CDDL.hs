@@ -3,6 +3,7 @@
 
 module Test.Cardano.Ledger.Alonzo.Serialisation.CDDL
   ( tests,
+    readDataFile,
   )
 where
 
@@ -16,6 +17,7 @@ import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Data.ByteString.Lazy as BSL
+import Paths_cardano_ledger_alonzo_test
 import Test.Cardano.Ledger.Shelley.Serialisation.CDDLUtils
   ( cddlAnnotatorTest,
     cddlTest,
@@ -42,7 +44,10 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
 
 combinedCDDL :: IO BSL.ByteString
 combinedCDDL = do
-  base <- BSL.readFile "cddl-files/alonzo.cddl"
-  crypto <- BSL.readFile "cddl-files/real/crypto.cddl"
-  extras <- BSL.readFile "cddl-files/mock/extras.cddl"
+  base <- readDataFile "cddl-files/alonzo.cddl"
+  crypto <- readDataFile "cddl-files/real/crypto.cddl"
+  extras <- readDataFile "cddl-files/mock/extras.cddl"
   pure $ base <> crypto <> extras
+
+readDataFile :: FilePath -> IO BSL.ByteString
+readDataFile name = getDataFileName name >>= BSL.readFile
