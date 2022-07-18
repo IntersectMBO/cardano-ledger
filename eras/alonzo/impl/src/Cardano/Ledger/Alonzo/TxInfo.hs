@@ -324,7 +324,7 @@ transValue (Mary.Value n mp) = Map.foldlWithKey' accum1 justada mp
             (+)
             ans2
             (PV1.singleton (transPolicyID sym) (transAssetName tok) quantity)
-    justada = PV1.singleton PV1.adaSymbol PV1.adaToken n
+    justada = if n == 0 then mempty else PV1.singleton PV1.adaSymbol PV1.adaToken n
 
 -- =============================================
 -- translate fileds like DCert, Wdrl, and similar
