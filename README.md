@@ -129,6 +129,18 @@ For a continuous compilation of the `LaTeX` file run:
 nix-shell --pure --run "make watch"
 ```
 
+## Updating dependencies
+
+When updating the [pinned hackage index-state](https://github.com/input-output-hk/cardano-ledger/blob/master/cabal.project) (for example, in order to get a new version of a package), it's necessary to make sure that [`hackage.nix` pin](https://github.com/input-output-hk/cardano-ledger/blob/master/nix/sources.json) points to a later date than the index-state, in order to avoid an error like this:
+```
+error: Unknown index-state 2021-08-08T00:00:00Z, the latest index-state I know about is 2021-08-06T00:00:00Z. You may need to update to a newer hackage.nix.
+```
+
+You can update the `sources.json` file using niv:
+```
+niv update hackage
+```
+
 # Submitting an issue
 
 Issues can be filed in the [GitHub Issue tracker](https://github.com/input-output-hk/cardano-ledger/issues).
