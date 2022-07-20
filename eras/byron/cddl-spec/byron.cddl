@@ -45,7 +45,7 @@ attributes = {* any => any}
 
 ; Addresses
 
-protocolMagic = u32
+protocolMagic = bytes ; integer encoded as CBOR encoded as Bytes in CBOR
 
 addrdistr = [1] / [0, stakeholderid]
 
