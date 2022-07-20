@@ -45,11 +45,14 @@ attributes = {* any => any}
 
 ; Addresses
 
+protocolMagic = u32
+
 addrdistr = [1] / [0, stakeholderid]
 
 addrtype = &("PubKey" : 0, "Script" : 1, "Redeem" : 2) / (u64 .gt 2)
-addrattr = { ? 0 : addrdistr
-           , ? 1 : bytes}
+addrattr = {   0 : addrdistr
+           , ? 1 : bytes
+           , ? 2 : protocolMagic }
 address = [ #6.24(bytes .cbor ([addressid, addrattr, addrtype])), u64 ]
 
 ; Transactions
