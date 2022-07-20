@@ -1,8 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
   ( tests,
@@ -21,10 +18,15 @@ import Data.Aeson (decode, encode, fromJSON, toJSON)
 import Data.Proxy
 import Hedgehog (Property)
 import qualified Hedgehog
+import Hedgehog.Internal.Property (PropertyName (..))
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (C, C_Crypto)
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators.Genesis
 import Test.Tasty
-import Test.Tasty.Hedgehog
+import Test.Tasty.Hedgehog hiding (testProperty)
+
+-- | testProperty has been deprecated. We make our own version here.
+testProperty :: TestName -> Property -> TestTree
+testProperty s p = testPropertyNamed s (Hedgehog.Internal.Property.PropertyName s) p
 
 prop_roundtrip_Address_JSON ::
   forall crypto.
