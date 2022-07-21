@@ -149,63 +149,49 @@ sgActiveSlotCoeff :: ShelleyGenesis era -> ActiveSlotCoeff
 sgActiveSlotCoeff = mkActiveSlotCoeff . sgActiveSlotsCoeff
 
 instance Era era => ToJSON (ShelleyGenesis era) where
-  toJSON sg =
-    Aeson.object
-      [ "systemStart" .= sgSystemStart sg,
-        "networkMagic" .= sgNetworkMagic sg,
-        "networkId" .= sgNetworkId sg,
-        "activeSlotsCoeff" .= sgActiveSlotsCoeff sg,
-        "securityParam" .= sgSecurityParam sg,
-        "epochLength" .= sgEpochLength sg,
-        "slotsPerKESPeriod" .= sgSlotsPerKESPeriod sg,
-        "maxKESEvolutions" .= sgMaxKESEvolutions sg,
-        "slotLength" .= sgSlotLength sg,
-        "updateQuorum" .= sgUpdateQuorum sg,
-        "maxLovelaceSupply" .= sgMaxLovelaceSupply sg,
-        "protocolParams" .= sgProtocolParams sg,
-        "genDelegs" .= sgGenDelegs sg,
-        "initialFunds" .= sgInitialFunds sg,
-        "staking" .= sgStaking sg
-      ]
+  toJSON = Aeson.object . toShelleyGenesisPairs
+  toEncoding = Aeson.pairs . mconcat . toShelleyGenesisPairs
 
-  toEncoding
-    ShelleyGenesis
-      { sgSystemStart,
-        sgNetworkMagic,
-        sgNetworkId,
-        sgActiveSlotsCoeff,
-        sgSecurityParam,
-        sgEpochLength,
-        sgSlotsPerKESPeriod,
-        sgMaxKESEvolutions,
-        sgSlotLength,
-        sgUpdateQuorum,
-        sgMaxLovelaceSupply,
-        sgProtocolParams,
-        sgGenDelegs,
-        sgInitialFunds,
-        sgStaking
-      } =
-      Aeson.pairs $
-        let !strictSgInitialFunds = sgInitialFunds
-            !strictSgStaking = sgStaking
-         in mconcat
-              [ "systemStart" .= sgSystemStart,
-                "networkMagic" .= sgNetworkMagic,
-                "networkId" .= sgNetworkId,
-                "activeSlotsCoeff" .= sgActiveSlotsCoeff,
-                "securityParam" .= sgSecurityParam,
-                "epochLength" .= sgEpochLength,
-                "slotsPerKESPeriod" .= sgSlotsPerKESPeriod,
-                "maxKESEvolutions" .= sgMaxKESEvolutions,
-                "slotLength" .= sgSlotLength,
-                "updateQuorum" .= sgUpdateQuorum,
-                "maxLovelaceSupply" .= sgMaxLovelaceSupply,
-                "protocolParams" .= sgProtocolParams,
-                "genDelegs" .= sgGenDelegs,
-                "initialFunds" .= strictSgInitialFunds,
-                "staking" .= strictSgStaking
-              ]
+toShelleyGenesisPairs ::
+  (Aeson.KeyValue a, CC.Crypto (Crypto era)) =>
+  ShelleyGenesis era ->
+  [a]
+toShelleyGenesisPairs
+  ShelleyGenesis
+    { sgSystemStart,
+      sgNetworkMagic,
+      sgNetworkId,
+      sgActiveSlotsCoeff,
+      sgSecurityParam,
+      sgEpochLength,
+      sgSlotsPerKESPeriod,
+      sgMaxKESEvolutions,
+      sgSlotLength,
+      sgUpdateQuorum,
+      sgMaxLovelaceSupply,
+      sgProtocolParams,
+      sgGenDelegs,
+      sgInitialFunds,
+      sgStaking
+    } =
+    let !strictSgInitialFunds = sgInitialFunds
+        !strictSgStaking = sgStaking
+     in [ "systemStart" .= sgSystemStart,
+          "networkMagic" .= sgNetworkMagic,
+          "networkId" .= sgNetworkId,
+          "activeSlotsCoeff" .= sgActiveSlotsCoeff,
+          "securityParam" .= sgSecurityParam,
+          "epochLength" .= sgEpochLength,
+          "slotsPerKESPeriod" .= sgSlotsPerKESPeriod,
+          "maxKESEvolutions" .= sgMaxKESEvolutions,
+          "slotLength" .= sgSlotLength,
+          "updateQuorum" .= sgUpdateQuorum,
+          "maxLovelaceSupply" .= sgMaxLovelaceSupply,
+          "protocolParams" .= sgProtocolParams,
+          "genDelegs" .= sgGenDelegs,
+          "initialFunds" .= strictSgInitialFunds,
+          "staking" .= strictSgStaking
+        ]
 
 instance Era era => FromJSON (ShelleyGenesis era) where
   parseJSON =
@@ -233,21 +219,17 @@ instance Era era => FromJSON (ShelleyGenesis era) where
          in UTCTime day time
 
 instance CC.Crypto crypto => ToJSON (ShelleyGenesisStaking crypto) where
-  toJSON sgs =
-    Aeson.object
-      [ "pools" .= sgsPools sgs,
-        "stake" .= sgsStake sgs
-      ]
-  toEncoding
-    ShelleyGenesisStaking
-      { sgsPools,
-        sgsStake
-      } =
-      Aeson.pairs $
-        mconcat
-          [ "pools" .= sgsPools,
-            "stake" .= sgsStake
-          ]
+  toJSON = Aeson.object . toShelleyGenesisStakingPairs
+  toEncoding = Aeson.pairs . mconcat . toShelleyGenesisStakingPairs
+
+toShelleyGenesisStakingPairs ::
+  (Aeson.KeyValue a, CC.Crypto crypto) =>
+  ShelleyGenesisStaking crypto ->
+  [a]
+toShelleyGenesisStakingPairs ShelleyGenesisStaking {sgsPools, sgsStake} =
+  [ "pools" .= sgsPools,
+    "stake" .= sgsStake
+  ]
 
 instance CC.Crypto crypto => FromJSON (ShelleyGenesisStaking crypto) where
   parseJSON =
