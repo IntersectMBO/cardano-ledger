@@ -55,3 +55,6 @@ specs/**/.ghc.environment.x86_64-linux-*
 
 ## macOS
 .DS_Store
+
+## python for generating the doc site's transitive dependencies
+.venv

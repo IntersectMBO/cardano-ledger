@@ -28,6 +28,8 @@ Other Documents:
 
 In addition, there is a formalization of the Ledger Specification in Isabelle/HOL which can be found [here](https://github.com/input-output-hk/fm-ledger-formalization).
 
+Some user documentation is published on [Read the Docs](https://cardano-ledger.readthedocs.io/en/latest)
+
 # Repository structure
 
 The directory structure of this repository is as follows:
