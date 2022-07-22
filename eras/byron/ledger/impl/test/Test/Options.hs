@@ -1,9 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 module Test.Options
   ( TestScenario (..),
@@ -32,7 +29,7 @@ import Test.Tasty
     includingOptions,
     testGroup,
   )
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 import Test.Tasty.Ingredients (Ingredient (..), composeReporters)
 import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
 import Test.Tasty.Options
@@ -96,7 +93,10 @@ tsGroupToTree tsGroup = askOption $ \scenario -> case tsGroup scenario of
   Group {groupName, groupProperties} ->
     testGroup
       (unGroupName groupName)
-      (uncurry testProperty . first unPropertyName <$> groupProperties)
+      (uncurry testPropertyNoName <$> groupProperties)
+
+testPropertyNoName :: PropertyName -> Property -> TestTree
+testPropertyNoName propName@(PropertyName name) = testPropertyNamed name propName
 
 -- | Convenient alias for TestScenario-dependent @Property@s
 type TSProperty = TestScenario -> Property

@@ -1,8 +1,6 @@
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 module Test.Cardano.Ledger.Shelley.Serialisation.Tripping.JSON
   ( tests,
@@ -80,12 +78,20 @@ tests :: TestTree
 tests =
   testGroup
     "Shelley Genesis"
-    [ testProperty "Address round trip" $
-        prop_roundtrip_Address_JSON @C_Crypto Proxy,
-      testProperty "Genesis round trip" $
-        prop_roundtrip_ShelleyGenesis_JSON @C Proxy,
-      testProperty "fund pair round trip" $
-        prop_roundtrip_FundPair_JSON @C_Crypto Proxy,
-      testProperty "delegation pair round trip" $
-        prop_roundtrip_GenesisDelegationPair_JSON @C_Crypto Proxy
+    [ testPropertyNamed
+        "Address round trip"
+        "address-round-trip"
+        $ prop_roundtrip_Address_JSON @C_Crypto Proxy,
+      testPropertyNamed
+        "Genesis round trip"
+        "genesis-round-trip"
+        $ prop_roundtrip_ShelleyGenesis_JSON @C Proxy,
+      testPropertyNamed
+        "Fund pair round trip"
+        "fund-pair-round-trip"
+        $ prop_roundtrip_FundPair_JSON @C_Crypto Proxy,
+      testPropertyNamed
+        "Delegation pair round trip"
+        "delegation-pair-round-trip"
+        $ prop_roundtrip_GenesisDelegationPair_JSON @C_Crypto Proxy
     ]

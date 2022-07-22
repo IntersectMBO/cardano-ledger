@@ -1,9 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 module Test.Byron.AbstractSize.Properties (testAbstractSize) where
 
@@ -178,5 +176,8 @@ testAbstractSize =
     [ testCase "AbstractSize - example - BlockHeader" exampleTypeRepsBlockHeader,
       testCase "AbstractSize - example - BlockBody" exampleTypeRepsBlockBody,
       testCase "AbstractSize - example - Block" exampleTypeRepsBlock,
-      testProperty "AbstractSize - Block/Header/Body" propBlockAbstractSize
+      testPropertyNamed
+        "AbstractSize - Block/Header/Body"
+        "abstract-size-bhb"
+        propBlockAbstractSize
     ]

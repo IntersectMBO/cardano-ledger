@@ -1,13 +1,11 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
+{-# LANGUAGE OverloadedStrings #-}
 
 module Main (main) where
 
 import Test.Byron.AbstractSize.Properties (testAbstractSize)
 import Test.Byron.Spec.Chain.STS.Properties as CHAIN
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog (testPropertyNamed)
 
 main :: IO ()
 main = defaultMain tests
@@ -18,12 +16,30 @@ main = defaultMain tests
         "Chain"
         [ testGroup
             "Properties"
-            [ testProperty "Increasing slots" CHAIN.slotsIncrease,
-              testProperty "Block issuers are delegates" CHAIN.blockIssuersAreDelegates,
+            [ testPropertyNamed
+                "Increasing slots"
+                "increasing-slots"
+                CHAIN.slotsIncrease,
+              testPropertyNamed
+                "Block issuers are delegates"
+                "issuers-delegates"
+                CHAIN.blockIssuersAreDelegates,
               testAbstractSize,
-              testProperty "Only valid signals are generated" CHAIN.onlyValidSignalsAreGenerated,
-              testProperty "Signers list is bounded by k " CHAIN.signersListIsBoundedByK,
-              testProperty "We are generating reasonable Chain Traces" CHAIN.relevantCasesAreCovered,
-              testProperty "Invalid signals are generated when requested" CHAIN.invalidSignalsAreGenerated
+              testPropertyNamed
+                "Only valid signals are generated"
+                "valid-signals"
+                CHAIN.onlyValidSignalsAreGenerated,
+              testPropertyNamed
+                "Signers list is bounded by k "
+                "signers-bounded"
+                CHAIN.signersListIsBoundedByK,
+              testPropertyNamed
+                "We are generating reasonable Chain Traces"
+                "reasonable-traces"
+                CHAIN.relevantCasesAreCovered,
+              testPropertyNamed
+                "Invalid signals are generated when requested"
+                "generate-invalid-signals"
+                CHAIN.invalidSignalsAreGenerated
             ]
         ]

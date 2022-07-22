@@ -17,8 +17,10 @@ in the naming of release branches.
   - The `PoolParams` type has been moved into its own module
   - The `DCert` type and related functionality from `TxBody` to `Cardano.Ledger.Shelley.Delegation.Certificates`.
   #2880
-- The initial funds and staking in the Shelley genesis type (used only for testing) now use `ListMap` instead of `Map`.
+  - The initial funds and staking in the Shelley genesis type (used only for testing) now use `ListMap` instead of `Map`.
   #2871, #2890, #2892, #2895
+  - Switched to using `testPropertyNamed` in tests. Tests now have short names (lower case and hyphenated) in addition to longer descriptive names.
+  #2926
 ### Deprecated
 - The provenance for the reward calculation has been removed.
   The type signature to the API function `getRewardProvenance` has not change,

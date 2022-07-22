@@ -1,9 +1,7 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 module Test.Byron.Spec.Ledger.AbstractSize.Properties (testTxHasTypeReps) where
 
@@ -156,5 +154,8 @@ testTxHasTypeReps =
     "Test HasTypeReps instances"
     [ testCase "AbstractSize - example - TxIn" exampleTypeRepsTxIn,
       testCase "AbstractSize - example - Tx" exampleTypeRepsTx,
-      testProperty "AbstractSize and HasTypeReps - Tx*" propTxAbstractSize
+      testPropertyNamed
+        "AbstractSize and HasTypeReps - Tx*"
+        "abstract-size-hastypereps-tx-star"
+        propTxAbstractSize
     ]

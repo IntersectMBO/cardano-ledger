@@ -2,9 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 module Test.Byron.Spec.Ledger.Relation.Properties (testRelation) where
 
@@ -166,86 +163,109 @@ testRelation =
     "Test Relation instances"
     [ testGroup
         "Relation - Set"
-        [ testProperty
+        [ testPropertyNamed
             "DomainRestrictionAndIntersection"
+            "domain-restriction-and-intersection"
             (propRelation genIntS genSet propDomainRestrictionAndIntersection),
-          testProperty
+          testPropertyNamed
             "DomainRestrictionAndIntersectionB"
+            "domain-restriction-and-intersection-b"
             (propRelation genIntS genSet propDomainRestrictionAndIntersectionB),
-          testProperty
+          testPropertyNamed
             "DomainExclusionAndSetDifference"
+            "domain-exclusion-and-set-difference"
             (propRelation genIntS genSet propDomainExclusionAndSetDifference),
-          testProperty
+          testPropertyNamed
             "RangeRestrictionAndIntersection"
+            "range-restriction-and-intersection"
             (propRelation genIntS genSet propRangeRestrictionAndIntersection),
-          testProperty
+          testPropertyNamed
             "RangeRestrictionAndIntersectionB"
+            "range-restriction-and-intersection-b"
             (propRelation genIntS genSet propRangeRestrictionAndIntersectionB)
         ],
       testGroup
         "Relation - Map"
-        [ testProperty
+        [ testPropertyNamed
             "DomainRestrictionAndIntersection"
+            "domain-restriction-and-intersection"
             (propRelation genIntS genMap propDomainRestrictionAndIntersection),
-          testProperty
+          testPropertyNamed
             "DomainRestrictionAndIntersectionB"
+            "domain-restriction-and-intersection-b"
             (propRelation genIntS genMap propDomainRestrictionAndIntersectionB),
-          testProperty
+          testPropertyNamed
             "DomainExclusionAndSetDifference"
+            "domain-exclusion-and-set-difference"
             (propRelation genIntS genMap propDomainExclusionAndSetDifference),
-          testProperty
+          testPropertyNamed
             "RangeRestrictionAndIntersection"
+            "range-restriction-and-intersection"
             (propRelation genIntS genMap propRangeRestrictionAndIntersection),
-          testProperty
+          testPropertyNamed
             "RangeRestrictionAndIntersectionB"
+            "range-restriction-and-intersection-b"
             (propRelation genIntS genMap propRangeRestrictionAndIntersectionB)
         ],
       testGroup
         "Relation - Bimap"
-        [ testProperty
+        [ testPropertyNamed
             "DomainRestrictionAndIntersection"
+            "domain-restriction-and-intersection"
             (propRelation genIntS genBimap propDomainRestrictionAndIntersection),
-          testProperty
+          testPropertyNamed
             "DomainRestrictionAndIntersectionB"
+            "domain-restriction-and-intersection-b"
             (propRelation genIntS genBimap propDomainRestrictionAndIntersectionB),
-          testProperty
+          testPropertyNamed
             "DomainExclusionAndSetDifference"
+            "domain-exclusion-and-set-difference"
             (propRelation genIntS genBimap propDomainExclusionAndSetDifference),
-          testProperty
+          testPropertyNamed
             "RangeRestrictionAndIntersection"
+            "range-restriction-and-intersection"
             (propRelation genIntS genBimap propRangeRestrictionAndIntersection),
-          testProperty
+          testPropertyNamed
             "RangeRestrictionAndIntersectionB"
+            "range-restriction-and-intersection-b"
             (propRelation genIntS genBimap propRangeRestrictionAndIntersectionB)
         ],
       testGroup
         "Relation - Pairs list"
-        [ testProperty
+        [ testPropertyNamed
             "DomainRestrictionAndIntersection"
+            "domain-restriction-and-intersection"
             (propRelation genIntS genPairsList propDomainRestrictionAndIntersection),
-          testProperty
+          testPropertyNamed
             "DomainRestrictionAndIntersectionB"
+            "domain-restriction-and-intersection-b"
             (propRelation genIntS genPairsList propDomainRestrictionAndIntersectionB),
-          testProperty
+          testPropertyNamed
             "DomainExclusionAndSetDifference"
+            "domain-exclusion-and-set-difference"
             (propRelation genIntS genPairsList propDomainExclusionAndSetDifference),
-          testProperty
+          testPropertyNamed
             "RangeRestrictionAndIntersection"
+            "range-restriction-and-intersection"
             (propRelation genIntS genPairsList propRangeRestrictionAndIntersection),
-          testProperty
+          testPropertyNamed
             "RangeRestrictionAndIntersectionB"
+            "range-restriction-and-intersection-b"
             (propRelation genIntS genPairsList propRangeRestrictionAndIntersectionB)
         ],
       testGroup
         "Relations"
-        [ testProperty
+        [ testPropertyNamed
             "Set instance"
+            "set-instance"
             (propRelations genIntS genSet propDomainExclusionAndUnion),
-          testProperty
+          testPropertyNamed
             "Map instance"
+            "map-instance"
             (propRelations genIntS genMap propDomainExclusionAndUnion),
-          testProperty
+          testPropertyNamed
             "Bimap instance"
+            "bimap-instance"
             (propRelations genIntS genBimap propDomainExclusionAndUnion)
         ]
     ]

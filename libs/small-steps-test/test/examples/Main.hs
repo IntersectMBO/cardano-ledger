@@ -1,7 +1,4 @@
 {-# LANGUAGE OverloadedStrings #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 import qualified Control.State.Transition.Examples.CommitReveal as CommitReveal
 import qualified Control.State.Transition.Examples.GlobalSum as GSum
@@ -28,11 +25,11 @@ main = do
                   Sum.prop_Bounded,
               testPropertyNamed
                 "Only valid traces are generated"
-                "prop_onlyValidTracesAreGenerated"
+                "prop-only-valid-traces-generated"
                 Sum.prop_onlyValidTracesAreGenerated,
               testPropertyNamed
                 "Classified"
-                "prop_Classified"
+                "prop-classified"
                 Sum.prop_Classified,
               Tasty.QuickCheck.testProperty
                 "Classified (QuickCheck)"
