@@ -5,8 +5,9 @@
 --     versions of old languages) will be added here.
 module Cardano.Ledger.Alonzo.Language where
 
-import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeWord64)
+import Cardano.Binary (FromCBOR (..), ToCBOR (..), decodeInt)
 import Control.DeepSeq (NFData (..))
+import Data.Coders (invalidKey)
 import Data.Ix (Ix)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
@@ -31,10 +32,21 @@ instance NoThunks Language
 instance NFData Language
 
 instance ToCBOR Language where
-  toCBOR = toCBOR . fromEnum
+  toCBOR PlutusV1 = toCBOR (0 :: Int)
+  toCBOR PlutusV2 = toCBOR (1 :: Int)
 
 instance FromCBOR Language where
-  fromCBOR = toEnum . fromIntegral <$> decodeWord64
+  fromCBOR = do
+    n <- decodeInt
+    lang <-
+      if n >= fromEnum (minBound :: Language) && n <= fromEnum (maxBound :: Language)
+        then pure $ toEnum n
+        else invalidKey (fromIntegral n)
+    -- We pattern match on lang so that the type checker will
+    -- notice when new language versions are added.
+    pure $ case lang of
+      PlutusV1 -> lang
+      PlutusV2 -> lang
 
 nonNativeLanguages :: [Language]
 nonNativeLanguages = [minBound .. maxBound]
