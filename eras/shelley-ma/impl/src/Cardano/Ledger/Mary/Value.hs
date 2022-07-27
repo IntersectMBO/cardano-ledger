@@ -131,7 +131,30 @@ newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
 newtype MultiAsset crypto = MultiAsset (Map (PolicyID crypto) (Map AssetName Integer))
   deriving (Show, Generic)
 
+instance CC.Crypto crypto => Eq (MultiAsset crypto) where
+  (MultiAsset x) == (MultiAsset y) = pointWise (pointWise (==)) x y
+
+instance NFData (MultiAsset cypto) where
+  rnf (MultiAsset m) = rnf m
+
 instance NoThunks (MultiAsset crypto)
+
+instance Semigroup (MultiAsset crypto) where
+  (MultiAsset m) <> (MultiAsset m1) =
+    MultiAsset (canonicalMapUnion (canonicalMapUnion (+)) m m1)
+
+instance Monoid (MultiAsset crypto) where
+  mempty = MultiAsset mempty
+
+instance Group (MultiAsset crypto) where
+  invert (MultiAsset m) =
+    MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
+
+instance CC.Crypto crypto => DecodeMint (MultiAsset crypto) where
+  decodeMint = decodeMultiAssetMaps decodeIntegerBounded64
+
+instance CC.Crypto crypto => EncodeMint (MultiAsset crypto) where
+  encodeMint = encodeMultiAssetMaps
 
 -- | The Value representing MultiAssets
 data MaryValue crypto = MaryValue !Integer !(MultiAsset crypto)
@@ -145,22 +168,22 @@ instance CC.Crypto crypto => Eq (MaryValue crypto) where
   x == y = pointwise (==) x y
 
 instance NFData (MaryValue crypto) where
-  rnf (MaryValue c (MultiAsset m)) = c `deepseq` rnf m
+  rnf (MaryValue c m) = c `deepseq` rnf m
 
 instance NoThunks (MaryValue crypto)
 
 instance Semigroup (MaryValue crypto) where
-  MaryValue c (MultiAsset m) <> MaryValue c1 (MultiAsset m1) =
-    MaryValue (c + c1) (MultiAsset (canonicalMapUnion (canonicalMapUnion (+)) m m1))
+  MaryValue c m <> MaryValue c1 m1 =
+    MaryValue (c + c1) (m <> m1)
 
 instance Monoid (MaryValue crypto) where
-  mempty = MaryValue 0 (MultiAsset mempty)
+  mempty = MaryValue 0 mempty
 
 instance Group (MaryValue crypto) where
-  invert (MaryValue c (MultiAsset m)) =
+  invert (MaryValue c m) =
     MaryValue
       (-c)
-      (MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m))
+      (invert m)
 
 instance Abelian (MaryValue crypto)
 
@@ -172,11 +195,11 @@ instance CC.Crypto crypto => Val (MaryValue crypto) where
     MaryValue
       (fromIntegral s * c)
       (MultiAsset (canonicalMap (canonicalMap (fromIntegral s *)) m))
-  isZero (MaryValue c (MultiAsset m)) = c == 0 && Map.null m
+  isZero (MaryValue c m) = c == 0 && m == mempty
   coin (MaryValue c _) = Coin c
-  inject (Coin c) = MaryValue c (MultiAsset mempty)
+  inject (Coin c) = MaryValue c mempty
   modifyCoin f (MaryValue c m) = MaryValue n m where (Coin n) = f (Coin c)
-  pointwise p (MaryValue c (MultiAsset x)) (MaryValue d (MultiAsset y)) = p c d && pointWise (pointWise p) x y
+  pointwise p (MaryValue c x) (MaryValue d y) = p c d && (x == y)
 
   -- returns the size, in Word64's, of the CompactValue representation of MaryValue
   size vv@(MaryValue _ (MultiAsset m))
@@ -199,7 +222,7 @@ instance CC.Crypto crypto => Val (MaryValue crypto) where
               + repOverhead
           )
 
-  isAdaOnly (MaryValue _ (MultiAsset m)) = Map.null m
+  isAdaOnly (MaryValue _ (MultiAsset m)) = m == mempty
 
   isAdaOnlyCompact = \case
     CompactValue (CompactValueAdaOnly _) -> True
@@ -302,14 +325,14 @@ instance
   CC.Crypto crypto =>
   ToCBOR (MaryValue crypto)
   where
-  toCBOR (MaryValue c (MultiAsset m)) =
-    if Map.null m
+  toCBOR (MaryValue c m) =
+    if m == mempty
       then toCBOR c
       else
         encode $
           Rec MaryValue
             !> To c
-            !> E encodeMultiAssetMaps (MultiAsset m)
+            !> E encodeMultiAssetMaps m
 
 instance
   CC.Crypto crypto =>
@@ -327,7 +350,7 @@ instance
   CC.Crypto crypto =>
   DecodeMint (MaryValue crypto)
   where
-  decodeMint = MaryValue 0 <$> decodeMultiAssetMaps decodeIntegerBounded64
+  decodeMint = MaryValue 0 <$> decodeMint
 
 -- Note: we do not use `decodeInt64` from the cborg library here because the
 -- implementation contains "-- TODO FIXME: overflow"
@@ -361,7 +384,7 @@ instance
   CC.Crypto crypto =>
   EncodeMint (MaryValue crypto)
   where
-  encodeMint (MaryValue _ multiasset) = encodeMultiAssetMaps multiasset
+  encodeMint (MaryValue _ multiasset) = encodeMint multiasset
 
 -- ========================================================================
 -- Compactible
@@ -516,8 +539,8 @@ to ::
   -- The Nothing case of the return value corresponds to a quantity that is outside
   -- the bounds of a Word64. x < 0 or x > (2^64 - 1)
   Maybe (CompactValue crypto)
-to (MaryValue ada (MultiAsset m))
-  | Map.null m =
+to (MaryValue ada m)
+  | m == mempty =
       CompactValueAdaOnly . CompactCoin <$> integerToWord64 ada
 to v = do
   c <- integerToWord64 ada
