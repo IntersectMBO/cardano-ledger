@@ -40,7 +40,6 @@ import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..))
 import qualified Data.ByteString.Short as SBS
 import Data.Coerce (coerce)
 import Data.Int (Int64)
-import qualified Data.Map.Strict as Map
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Word (Word64)
 import Generic.Random (genericArbitraryU)
@@ -192,7 +191,7 @@ valueFromListBounded ::
 valueFromListBounded (fromIntegral -> ada) =
   foldr
     (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insert comb p n i ans)
-    (MaryValue ada (MultiAsset Map.empty))
+    (MaryValue ada mempty)
   where
     comb :: Integer -> Integer -> Integer
     comb a b =

@@ -102,17 +102,17 @@ insert2 combine pid aid new m1 =
 -- 3 functions that build Values from Policy Asset triples.
 
 valueFromList :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
-valueFromList list c = foldr acc (MaryValue c (MultiAsset empty)) list
+valueFromList list c = foldr acc (MaryValue c mempty) list
   where
     acc (policy, asset, count) m = insert (+) policy asset count m
 
 valueFromList3 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
-valueFromList3 list c = foldr acc (MaryValue c (MultiAsset empty)) list
+valueFromList3 list c = foldr acc (MaryValue c mempty) list
   where
     acc (policy, asset, count) m = insert3 (+) policy asset count m
 
 valueFromList2 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
-valueFromList2 list c = foldr acc (MaryValue c (MultiAsset empty)) list
+valueFromList2 list c = foldr acc (MaryValue c mempty) list
   where
     acc (policy, asset, count) m = insert2 (+) policy asset count m
 

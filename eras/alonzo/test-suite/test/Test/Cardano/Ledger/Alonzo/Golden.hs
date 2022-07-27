@@ -31,7 +31,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
 import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Era (EraSegWits (..))
-import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..), valueFromList)
+import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
 import Cardano.Protocol.TPraos.BHeader (BHeader)
 import Codec.CBOR.Read (deserialiseFromBytes)
 import qualified Data.ByteString.Base16 as B16
@@ -175,7 +175,7 @@ goldenUTxOEntryMinAda =
         -- with the old parameter minUTxOValue.
         -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
         -- we can divide minUTxOValue by 29 and round.
-        utxoEntrySize @(AlonzoEra StandardCrypto) (AlonzoTxOut aliceAddr (MaryValue 0 (MultiAsset mempty)) SNothing) @?= 29
+        utxoEntrySize @(AlonzoEra StandardCrypto) (AlonzoTxOut aliceAddr (MaryValue 0 mempty) SNothing) @?= 29
     ]
 
 goldenSerialization :: TestTree

@@ -131,7 +131,30 @@ newtype PolicyID crypto = PolicyID {policyID :: ScriptHash crypto}
 newtype MultiAsset crypto = MultiAsset (Map (PolicyID crypto) (Map AssetName Integer))
   deriving (Show, Generic)
 
+instance CC.Crypto crypto => Eq (MultiAsset crypto) where
+  (MultiAsset x) == (MultiAsset y) = pointWise (pointWise (==)) x y
+
+instance NFData (MultiAsset cypto) where
+  rnf (MultiAsset m) = rnf m
+
 instance NoThunks (MultiAsset crypto)
+
+instance Semigroup (MultiAsset crypto) where
+  (MultiAsset m) <> (MultiAsset m1) =
+    MultiAsset (canonicalMapUnion (canonicalMapUnion (+)) m m1)
+
+instance Monoid (MultiAsset crypto) where
+  mempty = MultiAsset mempty
+
+instance Group (MultiAsset crypto) where
+  invert (MultiAsset m) =
+    MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m)
+
+instance CC.Crypto crypto => DecodeMint (MultiAsset crypto) where
+  decodeMint = decodeMultiAssetMaps decodeIntegerBounded64
+
+instance CC.Crypto crypto => EncodeMint (MultiAsset crypto) where
+  encodeMint = encodeMultiAssetMaps
 
 -- | The Value representing MultiAssets
 data MaryValue crypto = MaryValue !Integer !(MultiAsset crypto)
@@ -145,22 +168,22 @@ instance CC.Crypto crypto => Eq (MaryValue crypto) where
   x == y = pointwise (==) x y
 
 instance NFData (MaryValue crypto) where
-  rnf (MaryValue c (MultiAsset m)) = c `deepseq` rnf m
+  rnf (MaryValue c m) = c `deepseq` rnf m
 
 instance NoThunks (MaryValue crypto)
 
 instance Semigroup (MaryValue crypto) where
-  MaryValue c (MultiAsset m) <> MaryValue c1 (MultiAsset m1) =
-    MaryValue (c + c1) (MultiAsset (canonicalMapUnion (canonicalMapUnion (+)) m m1))
+  MaryValue c m <> MaryValue c1 m1 =
+    MaryValue (c + c1) (m <> m1)
 
 instance Monoid (MaryValue crypto) where
-  mempty = MaryValue 0 (MultiAsset mempty)
+  mempty = MaryValue 0 mempty
 
 instance Group (MaryValue crypto) where
-  invert (MaryValue c (MultiAsset m)) =
+  invert (MaryValue c m) =
     MaryValue
       (-c)
-      (MultiAsset (canonicalMap (canonicalMap ((-1 :: Integer) *)) m))
+      (invert m)
 
 instance Abelian (MaryValue crypto)
 
@@ -174,7 +197,7 @@ instance CC.Crypto crypto => Val (MaryValue crypto) where
       (MultiAsset (canonicalMap (canonicalMap (fromIntegral s *)) m))
   isZero (MaryValue c (MultiAsset m)) = c == 0 && Map.null m
   coin (MaryValue c _) = Coin c
-  inject (Coin c) = MaryValue c (MultiAsset mempty)
+  inject (Coin c) = MaryValue c (MultiAsset Map.empty)
   modifyCoin f (MaryValue c m) = MaryValue n m where (Coin n) = f (Coin c)
   pointwise p (MaryValue c (MultiAsset x)) (MaryValue d (MultiAsset y)) = p c d && pointWise (pointWise p) x y
 
@@ -185,7 +208,7 @@ instance CC.Crypto crypto => Val (MaryValue crypto) where
     -- used in the Alonzo ERA.
     -- TODO - find a better way to reconcile the mistakes in Mary with what needs
     -- to be the case in Alonzo.
-    | m == mempty = 2
+    | Map.null m = 2
     -- when MaryValue contains ada as well as other tokens
     -- sums up :
     -- i) adaWords : the space taken up by the ada amount
@@ -302,14 +325,14 @@ instance
   CC.Crypto crypto =>
   ToCBOR (MaryValue crypto)
   where
-  toCBOR (MaryValue c (MultiAsset m)) =
+  toCBOR (MaryValue c ma@(MultiAsset m)) =
     if Map.null m
       then toCBOR c
       else
         encode $
           Rec MaryValue
             !> To c
-            !> E encodeMultiAssetMaps (MultiAsset m)
+            !> E encodeMultiAssetMaps ma
 
 instance
   CC.Crypto crypto =>
@@ -327,7 +350,7 @@ instance
   CC.Crypto crypto =>
   DecodeMint (MaryValue crypto)
   where
-  decodeMint = MaryValue 0 <$> decodeMultiAssetMaps decodeIntegerBounded64
+  decodeMint = MaryValue 0 <$> decodeMint
 
 -- Note: we do not use `decodeInt64` from the cborg library here because the
 -- implementation contains "-- TODO FIXME: overflow"
@@ -361,7 +384,7 @@ instance
   CC.Crypto crypto =>
   EncodeMint (MaryValue crypto)
   where
-  encodeMint (MaryValue _ multiasset) = encodeMultiAssetMaps multiasset
+  encodeMint (MaryValue _ multiasset) = encodeMint multiasset
 
 -- ========================================================================
 -- Compactible
@@ -653,7 +676,7 @@ representationSize xs = abcRegionSize + pidBlockSize + anameBlockSize
       Semigroup.getSum $ foldMap' (Semigroup.Sum . SBS.length . assetName) assetNames
 
 from :: forall crypto. (CC.Crypto crypto) => CompactValue crypto -> MaryValue crypto
-from (CompactValueAdaOnly (CompactCoin c)) = MaryValue (fromIntegral c) (MultiAsset mempty)
+from (CompactValueAdaOnly (CompactCoin c)) = MaryValue (fromIntegral c) (MultiAsset Map.empty)
 from (CompactValueMultiAsset (CompactCoin c) numAssets rep) =
   valueFromList (fromIntegral c) triples
   where
