@@ -36,8 +36,8 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt)
 import Cardano.Ledger.Alonzo.Data (dataHashSize)
 import Cardano.Ledger.Alonzo.Era (AlonzoUTXO)
 import Cardano.Ledger.Alonzo.Rules.Utxos (AlonzoUTXOS, UtxosPredicateFailure)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), totExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), minfee, totExUnits)
 import Cardano.Ledger.Alonzo.TxBody
   ( AlonzoEraTxBody (..),
     AlonzoEraTxOut (..),
@@ -71,7 +71,6 @@ import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     InjectMaybe (..),
     Test,
-    mapMaybeValidation,
     runTest,
     runTestOnSignal,
   )
@@ -280,9 +279,9 @@ feesOK ::
   forall era.
   ( AlonzoEraTx era,
     Tx era ~ AlonzoTx era,
-    -- "collateral" to get inputs to pay the fees
     HasField "_minfeeA" (PParams era) Natural,
     HasField "_minfeeB" (PParams era) Natural,
+    HasField "_prices" (PParams era) Prices,
     HasField "_collateralPercentage" (PParams era) Natural
   ) =>
   PParams era ->
@@ -295,9 +294,11 @@ feesOK pp tx (UTxO utxo) =
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = eval (collateral ◁ utxo)
       bal = balance @era (UTxO utxoCollateral)
+      theFee = txBody ^. feeTxBodyL
+      minimumFee = minfee @era pp tx
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txb
-          mapMaybeValidation fromShelleyFailure $ Shelley.validateFeeTooSmallUTxO pp tx,
+          failureUnless (minimumFee <= theFee) (inject (FeeTooSmallUTxO @era minimumFee theFee)),
           -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers . txrdmrs' . wits $ tx) $
             validateCollateral pp txBody utxoCollateral bal
@@ -507,6 +508,7 @@ utxoTransition ::
     HasField "_coinsPerUTxOWord" (PParams era) Coin,
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_collateralPercentage" (PParams era) Natural,
+    HasField "_prices" (PParams era) Prices,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   TransitionRule (AlonzoUTXO era)
@@ -609,6 +611,7 @@ instance
     HasField "_protocolVersion" (PParams era) ProtVer,
     HasField "_maxCollateralInputs" (PParams era) Natural,
     HasField "_collateralPercentage" (PParams era) Natural,
+    HasField "_prices" (PParams era) Prices,
     Inject (PredicateFailure (EraRule "PPUP" era)) (PredicateFailure (EraRule "UTXOS" era))
   ) =>
   STS (AlonzoUTXO era)

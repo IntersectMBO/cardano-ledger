@@ -132,6 +132,9 @@ BabbageEraTxBody --> AlonzoEraTxBody --> ....
   #2897
 - The error message for failed Plutus V2 scripts was being obscured by a bug which has now been fixed.
   #2888
+- The Alonzo UTxO rule was previously using the incorrect minfee function (from Shelley).
+  It now uses the Alonze minfee function.
+  #2936
 
 ## Release branch 1.0.0
 
