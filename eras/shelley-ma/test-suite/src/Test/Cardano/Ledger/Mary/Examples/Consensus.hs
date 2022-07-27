@@ -36,7 +36,7 @@ exampleMultiAssetValue ::
   Int ->
   MaryValue c
 exampleMultiAssetValue x =
-  MaryValue 100 $ Map.singleton policyId $ Map.singleton couttsCoin 1000
+  MaryValue 100 $ (MultiAsset (Map.singleton policyId $ Map.singleton couttsCoin 1000))
   where
     policyId :: PolicyID c
     policyId = PolicyID $ mkScriptHash x

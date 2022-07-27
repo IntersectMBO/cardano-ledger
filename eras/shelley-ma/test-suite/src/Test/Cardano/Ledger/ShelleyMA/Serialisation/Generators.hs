@@ -29,7 +29,7 @@ import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Mary.Value as ConcreteValue
 import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
@@ -158,6 +158,9 @@ instance Mock c => Arbitrary (MATxBody (MaryEra c)) where
 instance Mock c => Arbitrary (PolicyID c) where
   arbitrary = PolicyID <$> arbitrary
 
+instance Mock c => Arbitrary (MultiAsset c) where
+  arbitrary = MultiAsset <$> arbitrary
+
 instance Mock c => Arbitrary (MaryValue c) where
   arbitrary = valueFromListBounded @Word64 <$> arbitrary <*> arbitrary
 
@@ -189,7 +192,7 @@ valueFromListBounded ::
 valueFromListBounded (fromIntegral -> ada) =
   foldr
     (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insert comb p n i ans)
-    (MaryValue ada Map.empty)
+    (MaryValue ada (MultiAsset Map.empty))
   where
     comb :: Integer -> Integer -> Integer
     comb a b =

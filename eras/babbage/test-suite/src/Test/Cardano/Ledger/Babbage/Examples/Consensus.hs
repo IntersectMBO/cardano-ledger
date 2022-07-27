@@ -26,7 +26,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (EraScript (hashScript), TxBody)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (asWitness)
-import Cardano.Ledger.Mary.Value (MaryValue (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley.API
@@ -104,7 +104,7 @@ collateralOutput :: BabbageTxOut StandardBabbage
 collateralOutput =
   BabbageTxOut
     (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
-    (MaryValue 8675309 mempty)
+    (MaryValue 8675309 (MultiAsset mempty))
     NoDatum
     SNothing
 

@@ -9,6 +9,7 @@ import qualified Cardano.Ledger.Crypto as C
 import Cardano.Ledger.Mary.Value as Mary
   ( AssetName,
     MaryValue (..),
+    MultiAsset (..),
     PolicyID (..),
     insert,
     valueFromList,
@@ -28,7 +29,7 @@ instance C.Crypto crypto => ValueFromList (MaryValue crypto) crypto where
 
   insert = Mary.insert
 
-  gettriples (MaryValue c m1) = (c, triples)
+  gettriples (MaryValue c (MultiAsset m1)) = (c, triples)
     where
       triples =
         [ (policyId, aname, amount)

@@ -20,6 +20,7 @@ import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     MaryValue (..),
+    MultiAsset (..),
     PolicyID (..),
   )
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -161,7 +162,8 @@ amethyst = AssetName "amethyst"
 mintSimpleEx1 :: MaryValue TestCrypto
 mintSimpleEx1 =
   MaryValue 0 $
-    Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
 
 aliceCoinSimpleEx1 :: Coin
 aliceCoinSimpleEx1 = aliceInitCoin <-> feeEx
@@ -210,12 +212,14 @@ aliceCoinsSimpleEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> minUtxoSimpleEx2)
 aliceTokensSimpleEx2 :: MaryValue TestCrypto
 aliceTokensSimpleEx2 =
   MaryValue (unCoin aliceCoinsSimpleEx2) $
-    Map.singleton purplePolicyId (Map.fromList [(plum, 8), (amethyst, 2)])
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.fromList [(plum, 8), (amethyst, 2)])
 
 bobTokensSimpleEx2 :: MaryValue TestCrypto
 bobTokensSimpleEx2 =
   MaryValue (unCoin minUtxoSimpleEx2) $
-    Map.singleton purplePolicyId (Map.singleton plum 5)
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.singleton plum 5)
 
 -- Alice gives five plums to Bob.
 txbodySimpleEx2 :: MATxBody MaryTest
@@ -285,7 +289,8 @@ tokenTimeEx = AssetName "tokenTimeEx"
 mintTimeEx1 :: MaryValue TestCrypto
 mintTimeEx1 =
   MaryValue 0 $
-    Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
+    MultiAsset $
+      Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
 
 aliceCoinsTimeEx1 :: Coin
 aliceCoinsTimeEx1 = aliceInitCoin <-> feeEx
@@ -348,7 +353,8 @@ mintTimeEx2 = Coin 120
 bobTokensTimeEx2 :: MaryValue TestCrypto
 bobTokensTimeEx2 =
   MaryValue (unCoin mintTimeEx2) $
-    Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
+    MultiAsset $
+      Map.singleton boundedTimePolicyId (Map.singleton tokenTimeEx 1)
 
 aliceCoinsTimeEx2 :: Coin
 aliceCoinsTimeEx2 = aliceCoinSimpleEx1 <-> (feeEx <+> mintTimeEx2)
@@ -406,7 +412,8 @@ tokenSingWitEx1 = AssetName "tokenSingWitEx1"
 mintSingWitEx1 :: MaryValue TestCrypto
 mintSingWitEx1 =
   MaryValue 0 $
-    Map.singleton alicePolicyId (Map.singleton tokenSingWitEx1 17)
+    MultiAsset $
+      Map.singleton alicePolicyId (Map.singleton tokenSingWitEx1 17)
 
 bobCoinsSingWitEx1 :: Coin
 bobCoinsSingWitEx1 = bobInitCoin <-> feeEx
@@ -466,12 +473,14 @@ txSingWitEx1Invalid =
 mintNegEx1 :: MaryValue TestCrypto
 mintNegEx1 =
   MaryValue 0 $
-    Map.singleton purplePolicyId (Map.singleton plum (-8))
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.singleton plum (-8))
 
 aliceTokensNegEx1 :: MaryValue TestCrypto
 aliceTokensNegEx1 =
   MaryValue (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
-    Map.singleton purplePolicyId (Map.singleton amethyst 2)
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.singleton amethyst 2)
 
 txbodyNegEx1 :: MATxBody MaryTest
 txbodyNegEx1 =
@@ -510,12 +519,14 @@ expectedUTxONegEx1 =
 mintNegEx2 :: MaryValue TestCrypto
 mintNegEx2 =
   MaryValue 0 $
-    Map.singleton purplePolicyId (Map.singleton plum (-9))
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.singleton plum (-9))
 
 aliceTokensNegEx2 :: MaryValue TestCrypto
 aliceTokensNegEx2 =
   MaryValue (unCoin $ aliceCoinsSimpleEx2 <-> feeEx) $
-    Map.singleton purplePolicyId (Map.fromList [(plum, -1), (amethyst, 2)])
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.fromList [(plum, -1), (amethyst, 2)])
 
 -- Mint negative valued tokens
 txbodyNegEx2 :: MATxBody MaryTest
@@ -543,7 +554,8 @@ minUtxoBigEx = Coin 50000
 smallValue :: MaryValue TestCrypto
 smallValue =
   MaryValue 0 $
-    Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
+    MultiAsset $
+      Map.singleton purplePolicyId (Map.fromList [(plum, 13), (amethyst, 2)])
 
 smallOut :: ShelleyTxOut MaryTest
 smallOut =
@@ -555,9 +567,10 @@ numAssets = 1000
 bigValue :: MaryValue TestCrypto
 bigValue =
   MaryValue 0 $
-    Map.singleton
-      purplePolicyId
-      (Map.fromList $ map (\x -> (AssetName . fromString $ show x, 1)) [1 .. numAssets])
+    MultiAsset $
+      Map.singleton
+        purplePolicyId
+        (Map.fromList $ map (\x -> (AssetName . fromString $ show x, 1)) [1 .. numAssets])
 
 bigOut :: ShelleyTxOut MaryTest
 bigOut = ShelleyTxOut Cast.aliceAddr $ bigValue <+> Val.inject minUtxoBigEx
