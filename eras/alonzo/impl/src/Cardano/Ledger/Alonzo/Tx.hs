@@ -124,7 +124,7 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (AssetName, MaryValue (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeToHash (..),
@@ -440,7 +440,7 @@ rdptrInv txBody (RdmrPtr Cert idx) =
   Certifying <$> fromIndex idx (txBody ^. certsTxBodyL)
 
 getMapFromValue :: MaryValue crypto -> Map.Map (PolicyID crypto) (Map.Map AssetName Integer)
-getMapFromValue (MaryValue _ m) = m
+getMapFromValue (MaryValue _ (MultiAsset m)) = m
 
 -- | Find the Data and ExUnits assigned to a script.
 indexedRdmrs ::

@@ -574,17 +574,17 @@ countTxOutStats :: [TxOut CurrentEra] -> TxOutStats
 countTxOutStats = foldMap countTxOutStat
   where
     countTxOutStat :: TxOut CurrentEra -> TxOutStats
-    countTxOutStat (AlonzoTxOut addr (MaryValue v vm) mData) =
+    countTxOutStat (AlonzoTxOut addr (MaryValue v (MultiAsset m)) mData) =
       let !dataStat =
             strictMaybe
               mempty
               (\d -> mempty {tosDataHash = statSingleton d})
               mData
-          !vmElems = Map.elems vm
+          !vmElems = Map.elems m
           !valueStat =
             dataStat
               { tosValue = statSingleton v,
-                tosPolicyId = statMapKeys vm,
+                tosPolicyId = statMapKeys m,
                 tosAssetName = foldMap statMapKeys vmElems,
                 tosAssetValue = foldMap statFoldable vmElems
               }
