@@ -1,25 +1,25 @@
-{-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.ShelleyMA.TxBody
-  ( TxBody
-      ( TxBody,
+  ( MATxBody
+      ( MATxBody,
         TxBodyConstr,
         TxBody',
         adHash',
@@ -32,9 +32,9 @@ module Cardano.Ledger.ShelleyMA.TxBody
         vldt',
         wdrls'
       ),
+    TxBody,
+    ShelleyMAEraTxBody (..),
     TxBodyRaw (..),
-    FamsFrom,
-    FamsTo,
     txSparse,
     bodyFields,
     StrictMaybe (..),
@@ -48,24 +48,24 @@ import Cardano.Binary (Annotator, FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (PParamsDelta, Script, Value)
+import Cardano.Ledger.Core hiding (TxBody)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization (encodeFoldable)
-import Cardano.Ledger.Shelley.Constraints (TransValue)
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
-    TxOut (..),
+    ShelleyEraTxBody (..),
+    ShelleyTxOut (..),
     Wdrl (..),
+    addrEitherShelleyTxOutL,
+    valueEitherShelleyTxOutL,
   )
+import Cardano.Ledger.ShelleyMA.Era (MAClass (getScriptHash), ShelleyMAEra)
 import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
   ( DecodeMint (..),
-    DecodeNonNegative,
     EncodeMint (..),
     Val (..),
   )
@@ -87,48 +87,19 @@ import Data.Coders
   )
 import qualified Data.Map.Strict as Map
 import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
+import Data.Proxy
 import Data.Sequence.Strict (StrictSeq, fromList)
 import Data.Set (Set, empty)
 import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records
+import Lens.Micro
 import NoThunks.Class (NoThunks (..))
-
--- =====================================================
--- TxBody has three Era dependent type families
--- (Value era), (AuxiliaryData era), and (Script era) (hidden in DCert) in
--- order to make CBOR instances of things we are going to
--- have to assume some properties about these.
-
-type FamsFrom era =
-  ( Era era,
-    Typeable era,
-    Typeable (Script era),
-    Typeable (Core.AuxiliaryData era),
-    Show (Value era),
-    DecodeNonNegative (Value era),
-    DecodeMint (Value era),
-    FromCBOR (Core.PParams era),
-    FromCBOR (PParamsDelta era),
-    FromCBOR (Value era),
-    FromCBOR (Annotator (Script era)) -- Arises becaause DCert memoizes its bytes
-  )
-
-type FamsTo era =
-  ( Era era,
-    ToCBOR (Value era),
-    EncodeMint (Value era),
-    ToCBOR (Script era),
-    ToCBOR (Core.PParams era),
-    ToCBOR (PParamsDelta era),
-    Typeable (Core.AuxiliaryData era)
-  )
 
 -- =======================================================
 
 data TxBodyRaw era = TxBodyRaw
   { inputs :: !(Set (TxIn (Crypto era))),
-    outputs :: !(StrictSeq (TxOut era)),
+    outputs :: !(StrictSeq (ShelleyTxOut era)),
     certs :: !(StrictSeq (DCert (Crypto era))),
     wdrls :: !(Wdrl (Crypto era)),
     txfee :: !Coin,
@@ -137,31 +108,20 @@ data TxBodyRaw era = TxBodyRaw
     adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     mint :: !(Value era)
   }
-  deriving (Typeable)
-
--- For each instance we try and use the weakest constraint possible
--- The surprising (Compactible (Value era))) constraint comes from the fact that TxOut
--- stores a (Value era) in a compactible form.
 
 deriving instance
-  (NFData (Value era), Era era, NFData (PParamsDelta era)) =>
+  (NFData (Value era), EraTxOut era, NFData (PParamsUpdate era)) =>
   NFData (TxBodyRaw era)
 
-deriving instance
-  (TransValue Eq era, Eq (PParamsDelta era)) =>
-  Eq (TxBodyRaw era)
+deriving instance EraTxBody era => Eq (TxBodyRaw era)
 
-deriving instance
-  (TransValue Show era, Show (PParamsDelta era)) =>
-  Show (TxBodyRaw era)
+deriving instance EraTxBody era => Show (TxBodyRaw era)
 
 deriving instance Generic (TxBodyRaw era)
 
-deriving instance
-  (NoThunks (Value era), NoThunks (PParamsDelta era)) =>
-  NoThunks (TxBodyRaw era)
+deriving instance (EraTxBody era, NoThunks (Value era)) => NoThunks (TxBodyRaw era)
 
-instance (FamsFrom era) => FromCBOR (TxBodyRaw era) where
+instance ShelleyMAEraTxBody era => FromCBOR (TxBodyRaw era) where
   fromCBOR =
     decode
       ( SparseKeyed
@@ -171,10 +131,7 @@ instance (FamsFrom era) => FromCBOR (TxBodyRaw era) where
           [(0, "inputs"), (1, "outputs"), (2, "txfee")]
       )
 
-instance
-  (FamsFrom era) =>
-  FromCBOR (Annotator (TxBodyRaw era))
-  where
+instance ShelleyMAEraTxBody era => FromCBOR (Annotator (TxBodyRaw era)) where
   fromCBOR = pure <$> fromCBOR
 
 fromSJust :: StrictMaybe a -> a
@@ -185,10 +142,7 @@ fromSJust SNothing = error "SNothing in fromSJust"
 -- concerns as we want the Shelley era TxBody to deserialise as a Shelley-ma TxBody.
 -- txXparse and bodyFields should be Duals, visual inspection helps ensure this.
 
-txSparse ::
-  (FamsTo era) =>
-  TxBodyRaw era ->
-  Encode ('Closed 'Sparse) (TxBodyRaw era)
+txSparse :: ShelleyMAEraTxBody era => TxBodyRaw era -> Encode ('Closed 'Sparse) (TxBodyRaw era)
 txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frge) =
   Keyed (\i o f topx c w u h botx forg -> TxBodyRaw i o c w f (ValidityInterval botx topx) u h forg)
     !> Key 0 (E encodeFoldable inp) -- We don't have to send these in TxBodyX order
@@ -202,7 +156,7 @@ txSparse (TxBodyRaw inp out cert wdrl fee (ValidityInterval bot top) up hash frg
     !> encodeKeyedStrictMaybe 8 bot
     !> Omit isZero (Key 9 (E encodeMint frge))
 
-bodyFields :: FamsFrom era => Word -> Field (TxBodyRaw era)
+bodyFields :: ShelleyMAEraTxBody era => Word -> Field (TxBodyRaw era)
 bodyFields 0 = field (\x tx -> tx {inputs = x}) (D (decodeSet fromCBOR))
 bodyFields 1 = field (\x tx -> tx {outputs = x}) (D (decodeStrictSeq fromCBOR))
 bodyFields 2 = field (\x tx -> tx {txfee = x}) From
@@ -231,45 +185,43 @@ initial =
 -- ===========================================================================
 -- Wrap it all up in a newtype, hiding the insides with a pattern construtor.
 
-newtype TxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
-  deriving (Typeable)
+newtype MATxBody e = TxBodyConstr (MemoBytes (TxBodyRaw e))
   deriving newtype (SafeToHash)
 
-deriving instance Eq (TxBody era)
+type TxBody era = MATxBody era
 
-deriving instance
-  (TransValue Show era, Show (PParamsDelta era)) =>
-  Show (TxBody era)
+{-# DEPRECATED TxBody "Use `MATxBody` instead" #-}
 
-deriving instance Generic (TxBody era)
+deriving instance Eq (MATxBody era)
 
-deriving newtype instance
-  (Typeable era, NoThunks (Value era), NoThunks (PParamsDelta era)) =>
-  NoThunks (TxBody era)
+deriving instance EraTxBody era => Show (MATxBody era)
+
+deriving instance Generic (MATxBody era)
+
+deriving newtype instance (EraTxBody era, NoThunks (Value era)) => NoThunks (MATxBody era)
 
 deriving newtype instance
   ( NFData (Value era),
-    NFData (PParamsDelta era),
-    Era era
+    NFData (PParamsUpdate era),
+    EraTxBody era
   ) =>
-  NFData (TxBody era)
+  NFData (MATxBody era)
 
-deriving newtype instance (Typeable era) => ToCBOR (TxBody era)
+deriving newtype instance Typeable era => ToCBOR (MATxBody era)
 
 deriving via
-  (Mem (TxBodyRaw era))
+  Mem (TxBodyRaw era)
   instance
-    (FamsFrom era) =>
-    FromCBOR (Annotator (TxBody era))
+    ShelleyMAEraTxBody era => FromCBOR (Annotator (MATxBody era))
 
-instance (c ~ Crypto era, Era era) => HashAnnotated (TxBody era) EraIndependentTxBody c
+instance (c ~ Crypto era, Era era) => HashAnnotated (MATxBody era) EraIndependentTxBody c
 
 -- Make a Pattern so the newtype and the MemoBytes are hidden
 
-pattern TxBody ::
-  FamsTo era =>
+pattern MATxBody ::
+  ShelleyMAEraTxBody era =>
   Set (TxIn (Crypto era)) ->
-  StrictSeq (TxOut era) ->
+  StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
   Coin ->
@@ -277,27 +229,31 @@ pattern TxBody ::
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Value era ->
-  TxBody era
-pattern TxBody inputs outputs certs wdrls txfee vldt update adHash mint <-
+  MATxBody era
+pattern MATxBody inputs outputs certs wdrls txfee vldt update adHash mint <-
   TxBodyConstr
     ( Memo
         TxBodyRaw {inputs, outputs, certs, wdrls, txfee, vldt, update, adHash, mint}
         _
       )
   where
-    TxBody inputs outputs certs wdrls txfee vldt update adHash mint =
-      TxBodyConstr $
-        memoBytes $
-          txSparse
-            TxBodyRaw {inputs, outputs, certs, wdrls, txfee, vldt, update, adHash, mint}
+    MATxBody inputs outputs certs wdrls txfee vldt update adHash mint =
+      mkMATxBody $
+        TxBodyRaw {inputs, outputs, certs, wdrls, txfee, vldt, update, adHash, mint}
 
-{-# COMPLETE TxBody #-}
+{-# COMPLETE MATxBody #-}
+
+mkMATxBody ::
+  ShelleyMAEraTxBody era =>
+  TxBodyRaw era ->
+  MATxBody era
+mkMATxBody = TxBodyConstr . memoBytes . txSparse
 
 -- | This pattern is for deconstruction only but accompanied with fields and
 -- projection functions.
 pattern TxBody' ::
   Set (TxIn (Crypto era)) ->
-  StrictSeq (TxOut era) ->
+  StrictSeq (ShelleyTxOut era) ->
   StrictSeq (DCert (Crypto era)) ->
   Wdrl (Crypto era) ->
   Coin ->
@@ -305,7 +261,7 @@ pattern TxBody' ::
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   Value era ->
-  TxBody era
+  MATxBody era
 pattern TxBody' {inputs', outputs', certs', wdrls', txfee', vldt', update', adHash', mint'} <-
   TxBodyConstr
     ( Memo
@@ -325,52 +281,68 @@ pattern TxBody' {inputs', outputs', certs', wdrls', txfee', vldt', update', adHa
 
 {-# COMPLETE TxBody' #-}
 
--- ==================================================================
--- Promote the fields of TxBodyRaw to be fields of TxBody. Either
--- automatically or by hand. Both methods have drawbacks.
+lensTxBodyRaw ::
+  ShelleyMAEraTxBody era =>
+  (TxBodyRaw era -> a) ->
+  (TxBodyRaw era -> t -> TxBodyRaw era) ->
+  Lens (MATxBody era) (MATxBody era) a t
+lensTxBodyRaw getter setter =
+  lens
+    (\(TxBodyConstr (Memo txBodyRaw _)) -> getter txBodyRaw)
+    (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkMATxBody $ setter txBodyRaw val)
 
-{-
-instance HasField tag (TxBodyRaw e) c => HasField (tag::Symbol) (TxBody e) c where
-   getField (TxBodyConstr (Memo x _)) = getField @tag x
+instance MAClass ma crypto => EraTxBody (ShelleyMAEra ma crypto) where
+  type TxBody (ShelleyMAEra ma crypto) = MATxBody (ShelleyMAEra ma crypto)
 
--- The method above autmatically lifts the Hasfield instances from TxBodyRaw to TxBody
--- the problem is, if some other file imports this file, it needs to import both
--- the hidden type TxBodyRaw and its constructors like this
--- import Cardano.Ledger.ShelleyMA.TxBody(TxBodyRaw(..))     OR
--- import qualified Cardano.Ledger.ShelleyMA.TxBody as XXX
--- Both are very ugly, but at least in the second way, one doesn't need to know the name of TxBodyRaw
--- So instead we tediously write by hand explicit HasField instances for TxBody
--}
+  mkBasicTxBody = mkMATxBody initial
 
--- ========================================
--- WellFormed era (and a few other) instances
+  inputsTxBodyL =
+    lensTxBodyRaw inputs (\txBodyRaw inputs_ -> txBodyRaw {inputs = inputs_})
 
-instance Crypto era ~ crypto => HasField "inputs" (TxBody era) (Set (TxIn crypto)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"inputs" m
+  outputsTxBodyL =
+    lensTxBodyRaw outputs (\txBodyRaw outputs_ -> txBodyRaw {outputs = outputs_})
 
-instance HasField "outputs" (TxBody era) (StrictSeq (TxOut era)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"outputs" m
+  feeTxBodyL =
+    lensTxBodyRaw txfee (\txBodyRaw fee_ -> txBodyRaw {txfee = fee_})
 
-instance Crypto era ~ crypto => HasField "certs" (TxBody era) (StrictSeq (DCert crypto)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"certs" m
+  auxDataHashTxBodyL =
+    lensTxBodyRaw adHash (\txBodyRaw auxDataHash -> txBodyRaw {adHash = auxDataHash})
 
-instance Crypto era ~ crypto => HasField "wdrls" (TxBody era) (Wdrl crypto) where
-  getField (TxBodyConstr (Memo m _)) = getField @"wdrls" m
+  allInputsTxBodyF = inputsTxBodyL
 
-instance HasField "txfee" (TxBody era) Coin where
-  getField (TxBodyConstr (Memo m _)) = getField @"txfee" m
+  mintedTxBodyF =
+    to (\(TxBodyConstr (Memo txBodyRaw _)) -> getScriptHash (Proxy @ma) (mint txBodyRaw))
 
-instance HasField "vldt" (TxBody era) ValidityInterval where
-  getField (TxBodyConstr (Memo m _)) = getField @"vldt" m
+instance MAClass ma crypto => ShelleyEraTxBody (ShelleyMAEra ma crypto) where
+  wdrlsTxBodyL =
+    lensTxBodyRaw wdrls (\txBodyRaw wdrls_ -> txBodyRaw {wdrls = wdrls_})
 
-instance HasField "update" (TxBody era) (StrictMaybe (Update era)) where
-  getField (TxBodyConstr (Memo m _)) = getField @"update" m
+  ttlTxBodyL = notSupportedInThisEraL
 
-instance
-  Crypto era ~ crypto =>
-  HasField "adHash" (TxBody era) (StrictMaybe (AuxiliaryDataHash crypto))
+  updateTxBodyL =
+    lensTxBodyRaw update (\txBodyRaw update_ -> txBodyRaw {update = update_})
+
+  certsTxBodyL =
+    lensTxBodyRaw certs (\txBodyRaw certs_ -> txBodyRaw {certs = certs_})
+
+class
+  (ShelleyEraTxBody era, EncodeMint (Value era), DecodeMint (Value era)) =>
+  ShelleyMAEraTxBody era
   where
-  getField (TxBodyConstr (Memo m _)) = getField @"adHash" m
+  vldtTxBodyL :: Lens' (Core.TxBody era) ValidityInterval
 
-instance Value era ~ value => HasField "mint" (TxBody era) value where
-  getField (TxBodyConstr (Memo m _)) = getField @"mint" m
+  mintTxBodyL :: Lens' (Core.TxBody era) (Value era)
+
+instance MAClass ma crypto => ShelleyMAEraTxBody (ShelleyMAEra ma crypto) where
+  vldtTxBodyL =
+    lensTxBodyRaw vldt (\txBodyRaw vldt_ -> txBodyRaw {vldt = vldt_})
+
+  mintTxBodyL =
+    lensTxBodyRaw mint (\txBodyRaw mint_ -> txBodyRaw {mint = mint_})
+
+instance MAClass ma crypto => EraTxOut (ShelleyMAEra ma crypto) where
+  type TxOut (ShelleyMAEra ma crypto) = ShelleyTxOut (ShelleyMAEra ma crypto)
+
+  mkBasicTxOut = ShelleyTxOut
+  addrEitherTxOutL = addrEitherShelleyTxOutL
+  valueEitherTxOutL = valueEitherShelleyTxOutL

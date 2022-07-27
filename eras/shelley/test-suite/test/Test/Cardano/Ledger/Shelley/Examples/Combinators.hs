@@ -73,7 +73,6 @@ import Cardano.Ledger.Keys
     KeyRole (..),
   )
 import Cardano.Ledger.PoolDistr (PoolDistr (..))
-import Cardano.Ledger.Shelley.Constraints (UsesTxBody)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot, SnapShots (..))
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
@@ -94,11 +93,10 @@ import Cardano.Ledger.Shelley.LedgerState
     rewards,
     updateStakeDistribution,
   )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..), ProposedPPUpdates)
+import Cardano.Ledger.Shelley.PParams (ProposedPPUpdates, ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Mir (emptyInstantaneousRewards)
 import Cardano.Ledger.Shelley.TxBody (MIRPot (..), PoolParams (..), RewardAcnt (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), txins, txouts)
-import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val ((<+>), (<->))
 import Cardano.Protocol.TPraos.BHeader
   ( BHBody (..),
@@ -114,7 +112,6 @@ import Control.State.Transition (STS (State))
 import Data.Foldable (fold)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.UMap (View (Delegations, Ptrs, Rewards), unView)
 import qualified Data.UMap as UM
@@ -208,9 +205,7 @@ feesAndDeposits newFees depositChange cs = cs {chainNes = nes'}
 -- Update the UTxO for given transaction body.
 newUTxO ::
   forall era.
-  ( UsesTxBody era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era)))
-  ) =>
+  Core.EraTx era =>
   Core.TxBody era ->
   ChainState era ->
   ChainState era
@@ -412,7 +407,7 @@ stageRetirement kh e cs = cs {chainNes = nes'}
 -- Remove a stake pool.
 reapPool ::
   forall era.
-  (Core.PParams era ~ PParams era) =>
+  (Core.PParams era ~ ShelleyPParams era) =>
   PoolParams (Crypto era) ->
   ChainState era ->
   ChainState era
@@ -627,7 +622,7 @@ incrBlockCount kh cs = cs {chainNes = nes'}
 -- 'newLab', 'evolveNonceUnfrozen', and 'evolveNonceFrozen'.
 newEpoch ::
   forall era.
-  (Core.PParams era ~ PParams era) =>
+  (Core.PParams era ~ ShelleyPParams era) =>
   Era era =>
   Block (BHeader (Crypto era)) era ->
   ChainState era ->
@@ -712,8 +707,8 @@ setFutureProposals ps cs = cs {chainNes = nes'}
 -- Set the protocol parameters.
 setPParams ::
   forall era.
-  (Core.PParams era ~ PParams era) =>
-  PParams era ->
+  (Core.PParams era ~ ShelleyPParams era) =>
+  ShelleyPParams era ->
   ChainState era ->
   ChainState era
 setPParams pp cs = cs {chainNes = nes'}
@@ -728,8 +723,8 @@ setPParams pp cs = cs {chainNes = nes'}
 -- Set the previous protocol parameters.
 setPrevPParams ::
   forall era.
-  (Core.PParams era ~ PParams era) =>
-  PParams era ->
+  (Core.PParams era ~ ShelleyPParams era) =>
+  ShelleyPParams era ->
   ChainState era ->
   ChainState era
 setPrevPParams pp cs = cs {chainNes = nes'}

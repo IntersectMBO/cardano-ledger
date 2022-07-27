@@ -14,22 +14,22 @@ import Cardano.Ledger.Address
   )
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Keys (KeyRole (Staking))
+import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API
   ( Credential,
     DCert,
     MultiSig,
     ProposedPPUpdates,
-    Tx,
+    ShelleyTx,
     Update,
   )
-import Cardano.Ledger.Shelley.Address.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Shelley.Metadata (Metadata)
-import Cardano.Ledger.Shelley.PParams (PParamsUpdate)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import Cardano.Ledger.Shelley.TxBody
-  ( StakePoolRelay,
-    TxBody,
-    TxOut,
+  ( ShelleyTxBody,
+    ShelleyTxOut,
+    StakePoolRelay,
   )
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Protocol.TPraos.BHeader (BHBody, BHeader)
@@ -56,8 +56,8 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(Addr StandardCrypto) n "address",
       cddlTest @(RewardAcnt StandardCrypto) n "reward_account",
       cddlTest @(Credential 'Staking StandardCrypto) n "stake_credential",
-      cddlAnnotatorTest @(TxBody ShelleyE) n "transaction_body",
-      cddlTest @(TxOut ShelleyE) n "transaction_output",
+      cddlAnnotatorTest @(ShelleyTxBody ShelleyE) n "transaction_body",
+      cddlTest @(ShelleyTxOut ShelleyE) n "transaction_output",
       cddlTest @StakePoolRelay n "relay",
       cddlTest @(DCert StandardCrypto) n "certificate",
       cddlTest @(TxIn StandardCrypto) n "transaction_input",
@@ -65,8 +65,8 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlAnnotatorTest @(MultiSig StandardCrypto) n "multisig_script",
       cddlTest @(Update ShelleyE) n "update",
       cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
-      cddlTest @(PParamsUpdate ShelleyE) n "protocol_param_update",
-      cddlAnnotatorTest @(Tx ShelleyE) n "transaction",
+      cddlTest @(ShelleyPParamsUpdate ShelleyE) n "protocol_param_update",
+      cddlAnnotatorTest @(ShelleyTx ShelleyE) n "transaction",
       cddlAnnotatorTest @(LaxBlock (BHeader StandardCrypto) ShelleyE) n "block"
     ]
       <*> pure cddl

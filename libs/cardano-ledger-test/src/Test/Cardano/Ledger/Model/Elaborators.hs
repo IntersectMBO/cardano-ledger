@@ -3,25 +3,19 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE InstanceSigs #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE UndecidableSuperClasses #-}
-{-# LANGUAGE ViewPatterns #-}
 
 -- | This module contains the mechanism used to related a ledger model
 -- transaction with a real implementation.
@@ -57,7 +51,7 @@ import qualified Cardano.Crypto.Hash.Class as Hash
 import qualified Cardano.Crypto.VRF.Class (VerKeyVRF)
 import Cardano.Ledger.Address (Addr (..), RewardAcnt (..))
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import Cardano.Ledger.Alonzo.Tx (IsValid (..), ScriptPurpose (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
@@ -70,11 +64,12 @@ import Cardano.Ledger.BaseTypes
     epochInfoPure,
     mkTxIxPartial,
   )
+import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..), toDeltaCoin)
+import Cardano.Ledger.Core (Era (Crypto), EraScript (hashScript))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as C
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript, hashScript)
 import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -88,7 +83,7 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
-import Cardano.Ledger.Mary.Value (PolicyID (..), Value)
+import Cardano.Ledger.Mary.Value (MaryValue, PolicyID (..))
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API.Mempool
   ( ApplyTx,
@@ -101,7 +96,6 @@ import Cardano.Ledger.Shelley.API.Mempool
   )
 import Cardano.Ledger.Shelley.API.Validation (ApplyBlock, applyTick)
 import Cardano.Ledger.Shelley.AdaPots (totalAdaES)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue, makeTxOut)
 import Cardano.Ledger.Shelley.Genesis (initialFundsPseudoTxIn)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
@@ -113,11 +107,11 @@ import Cardano.Ledger.Shelley.TxBody
     Delegation (..),
     PoolCert (..),
     PoolParams (..),
+    ShelleyEraTxBody (..),
   )
 import qualified Cardano.Ledger.Shelley.TxBody as Shelley
 import qualified Cardano.Ledger.Shelley.UTxO as UTxO
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
-import qualified Cardano.Ledger.TxIn as TxIn
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Slotting.EpochInfo.API
   ( epochInfoEpoch,
@@ -153,6 +147,7 @@ import qualified Control.Monad.State.Class as State
 import Control.Monad.Trans.Class (lift)
 import qualified Control.Monad.Trans.State as State hiding (get, gets, state)
 import qualified Control.Monad.Writer.CPS as CPS
+import Control.State.Transition.Extended (State)
 import Data.Bool (bool)
 import Data.Foldable (fold, for_, toList, traverse_)
 import Data.Function (on)
@@ -172,7 +167,6 @@ import Data.UMap (rewView)
 import Data.Void (Void)
 import Data.Word (Word64)
 import GHC.Generics (Generic, (:.:) (Comp1))
-import GHC.Records (HasField (..))
 import qualified PlutusTx
 import Quiet (Quiet (..))
 import Test.Cardano.Ledger.Model.API
@@ -399,11 +393,7 @@ data TestRedeemer era = TestRedeemer
 
 elaborateModelRedeemer ::
   forall era.
-  ( HasField "inputs" (Core.TxBody era) (Set.Set (Shelley.TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Shelley.Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq.StrictSeq (DCert (Crypto era))),
-    HasField "minted" (Core.TxBody era) (Set.Set (ScriptHash (Crypto era)))
-  ) =>
+  ShelleyEraTxBody era =>
   Core.TxBody era ->
   TestRedeemer era ->
   StrictMaybe (Alonzo.RdmrPtr, (Alonzo.Data era, Alonzo.ExUnits))
@@ -764,8 +754,7 @@ mkTxOut ::
   forall m era.
   ( MonadState (NewEpochState era, EraElaboratorState era) m,
     Except.MonadError (ElaborateBlockError era) m,
-    Era era,
-    UsesTxOut era,
+    Core.EraTxOut era,
     ElaborateEraModel era
   ) =>
   ModelUTxOId ->
@@ -777,7 +766,7 @@ mkTxOut mutxoId (ModelTxOut mAddr (ModelValue mValue) mDat) = (=<<) Except.liftE
       Except.runExceptT $ do
         addr <- zoom _2 $ getAddrFor (Proxy :: Proxy era) mAddr
         val :: Core.Value era <- evalModelValue (lookupModelValue noScriptAction) mValue
-        let txo = makeTxOut (Proxy :: Proxy era) addr val
+        let txo = Core.mkBasicTxOut @era addr val
             (dat, txo') = case mDat of
               NoPlutusSupport () -> (SNothing, txo)
               SupportsPlutus Nothing -> (SNothing, txo)
@@ -927,9 +916,7 @@ mkTxWitnessArguments ::
   ( Monad m,
     C.Crypto (Crypto era),
     ElaborateEraModel era,
-    HasField "certs" (Core.TxBody era) (StrictSeq.StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set.Set (Shelley.TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Shelley.Wdrl (Crypto era)),
+    ShelleyEraTxBody era,
     DSIGN.Signable (C.DSIGN (Crypto era)) (Hash.Hash (C.HASH (Crypto era)) Shelley.EraIndependentTxBody)
   ) =>
   Set.Set ModelUTxOId ->
@@ -986,10 +973,8 @@ elaborateScriptPurpose ::
   ElaborateEraModel era =>
   proxy era ->
   ModelScriptPurpose (EraFeatureSet era) ->
-  (EraElaboratorState era) ->
-  ( (ScriptPurpose (Crypto era)),
-    (EraElaboratorState era)
-  )
+  EraElaboratorState era ->
+  (ScriptPurpose (Crypto era), EraElaboratorState era)
 elaborateScriptPurpose proxy =
   State.runState . \case
     ModelScriptPurpose_Minting ms -> do
@@ -1001,7 +986,7 @@ elaborateScriptPurpose proxy =
       ui' <- use (eesUTxOs . at mui)
       case ui' >>= _tuoi_txid of
         Nothing -> error ("missing UTxO: " <> show mui)
-        Just ui -> pure $ Spending $ ui
+        Just ui -> pure $ Spending ui
     ModelScriptPurpose_Rewarding mAddr -> do
       stakeCredential <- getCredentialFor proxy mAddr
       pure $ Rewarding $ RewardAcnt Testnet stakeCredential
@@ -1032,7 +1017,7 @@ tellDCertScriptWits proxy mdc = do
 -- based approach using ValueFromList
 type family ElaborateValueType (valF :: TyValueExpected) crypto :: Type where
   ElaborateValueType 'ExpectAdaOnly _ = Coin
-  ElaborateValueType 'ExpectAnyOutput crypto = Cardano.Ledger.Mary.Value.Value crypto
+  ElaborateValueType 'ExpectAnyOutput crypto = MaryValue crypto
 
 eraFeatureSet ::
   forall era proxy.
@@ -1045,14 +1030,14 @@ eraFeatureSet _ = reifyRequiredFeatures (Proxy :: Proxy (EraFeatureSet era))
 class
   ( ElaborateValueType (EraValueFeature era) (Crypto era) ~ Core.Value era,
     KnownRequiredFeatures (EraFeatureSet era),
-    ValidateScript era
+    EraScript era
   ) =>
   ElaborateEraModel era
   where
   -- | the features that can be used in the model for this era.
   type EraFeatureSet era :: FeatureSet
 
-  -- | refies the constraints neccessary to instantiate a 'Core.Value' from
+  -- | reifies the constraints neccessary to instantiate a 'Core.Value' from
   -- a 'ModelValue'
   reifyValueConstraint :: ExpectedValueTypeC era
   default reifyValueConstraint ::
@@ -1073,9 +1058,9 @@ class
   default elaborateBlock ::
     ( ApplyBlock era,
       ApplyTx era,
-      UsesValue era,
-      Show (Core.TxOut era),
-      Show (EraElaboratorState era)
+      Show (EraElaboratorState era),
+      Show (State (Core.EraRule "PPUP" era)),
+      Show (LedgerState.StashedAVVMAddresses era)
     ) =>
     Globals ->
     ModelBlock (EraFeatureSet era) ->
@@ -1130,10 +1115,9 @@ class
       EraElaboratorState era
     )
   default elaborateInitialState ::
-    ( Show (Core.TxOut era),
-      Show (LedgerState.NewEpochState era),
+    ( Show (LedgerState.NewEpochState era),
       Show (EraElaboratorState era),
-      UsesValue era
+      Core.EraTx era
     ) =>
     Globals ->
     ModelGenesis (EraFeatureSet era) ->
@@ -1183,7 +1167,7 @@ class
 
   makePlutusScript ::
     proxy era ->
-    IfSupportsPlutus Void (Alonzo.Script era) (EraScriptFeature era) ->
+    IfSupportsPlutus Void (AlonzoScript era) (EraScriptFeature era) ->
     Core.Script era
 
   makeExtendedTxOut ::
@@ -1228,10 +1212,7 @@ class
     )
   default elaborateTx ::
     ( DSIGN.Signable (C.DSIGN (Crypto era)) (Hash.Hash (C.HASH (Crypto era)) Shelley.EraIndependentTxBody),
-      UsesTxOut era,
-      HasField "inputs" (Core.TxBody era) (Set.Set (Shelley.TxIn (Crypto era))),
-      HasField "wdrls" (Core.TxBody era) (Shelley.Wdrl (Crypto era)),
-      HasField "certs" (Core.TxBody era) (StrictSeq.StrictSeq (DCert (Crypto era)))
+      ShelleyEraTxBody era
     ) =>
     proxy era ->
     Globals ->
@@ -1357,10 +1338,10 @@ class
 
       (realTxBody, txWitnessArguments) <- mkTxWitnessArguments (Map.keysSet mtxInputs) nes witA scripts rdm dats txBodyArguments
 
-      let txid = TxIn.txid @era realTxBody
+      let txid' = txid @era realTxBody
       ifor_ mtxOutputs $ \n (mutxoid, _) ->
         _2 . eesUTxOs . at mutxoid . _Just . tuoi_txid
-          .= Just (Shelley.TxIn txid (mkTxIxPartial (toInteger n)))
+          .= Just (Shelley.TxIn txid' (mkTxIxPartial (toInteger n)))
       pure $ makeTx proxy realTxBody txWitnessArguments
 
   -- | build a full tx from TxBody and set of witnesses.
@@ -1375,7 +1356,7 @@ class
   toEraPredicateFailure ::
     ModelPredicateFailure (EraFeatureSet era) ->
     (NewEpochState era, EraElaboratorState era) ->
-    (ApplyBlockTransitionError era)
+    ApplyBlockTransitionError era
 
   -- | apply the model New Epoch event to a specific eras ledger
   elaborateBlocksMade ::
@@ -1387,9 +1368,10 @@ class
     )
   default elaborateBlocksMade ::
     ( ApplyBlock era,
-      Show (Core.TxOut era),
+      Core.EraTx era,
       Show (EraElaboratorState era),
-      UsesValue era
+      Show (State (Core.EraRule "PPUP" era)),
+      Show (LedgerState.StashedAVVMAddresses era)
     ) =>
     Globals ->
     ModelBlocksMade ->
@@ -1487,7 +1469,7 @@ class
 
 liftApplyTxError ::
   Except.MonadError (ElaborateBlockError era) m =>
-  (ApplyTxError era -> ElaborateApplyTxError era) -> -- Core.Tx era ->
+  (ApplyTxError era -> ElaborateApplyTxError era) ->
   Except.Except (ApplyTxError era) a ->
   m a
 liftApplyTxError tx = either (Except.throwError . ElaborateBlockError_ApplyTx . tx) pure . Except.runExcept
@@ -1507,7 +1489,7 @@ emulateBlocksMade (BlocksMade newBlocksMade) nes@(LedgerState.NewEpochState {Led
 -- | apply several epochs full of blocks to a ledger
 elaborateBlocks_ ::
   forall era.
-  (ElaborateEraModel era) =>
+  ElaborateEraModel era =>
   Globals ->
   [ModelEpoch (EraFeatureSet era)] ->
   (NewEpochState era, EraElaboratorState era) ->
@@ -1564,7 +1546,9 @@ cmsError hint nes ees issues =
 compareModelLedger ::
   forall era m.
   ( MonadState (NewEpochState era, EraElaboratorState era) m,
-    UsesValue era
+    Core.EraTx era,
+    Typeable (ValueFeature (EraFeatureSet era)),
+    Typeable (EraFeatureSet era)
   ) =>
   (NewEpochState era -> EraElaboratorState era -> NonEmpty.NonEmpty (ElaboratorLedgerIssue era) -> m ()) ->
   m ()
@@ -1581,7 +1565,7 @@ class CompareModelLedger a where
   type ModelFor a :: FeatureSet -> Type
 
   compareModel ::
-    UsesValue era =>
+    (Core.EraTx era, Typeable (ValueFeature (EraFeatureSet era)), Typeable (EraFeatureSet era)) =>
     ModelFor a (EraFeatureSet era) ->
     a era ->
     [ElaboratorLedgerIssue era]
@@ -1729,7 +1713,7 @@ instance CompareModelLedger UTxO.UTxO where
     unless (length (_modelUTxOMap_utxos mutxos) == length (UTxO.unUTxO utxos)) $ CPS.tell [MissingUtxos mutxos utxos]
 
 compareModelLedgerImpl ::
-  UsesValue era =>
+  (Core.EraTx era, Typeable (EraFeatureSet era), Typeable (ValueFeature (EraFeatureSet era))) =>
   ModelLedger (EraFeatureSet era) ->
   NewEpochState era ->
   [ElaboratorLedgerIssue era]

@@ -19,27 +19,36 @@ import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData, hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (CollectError (BadTranslation))
-import Cardano.Ledger.Alonzo.Rules.Utxos (UtxosPredicateFailure (CollectErrors))
-import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (NonOutputSupplimentaryDatums))
-import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Script (PlutusScript))
+import Cardano.Ledger.Alonzo.Rules
+  ( UtxosPredicateFailure (CollectErrors),
+    UtxowPredicateFail (NonOutputSupplimentaryDatums),
+  )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (PlutusScript), CostModels (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
-import Cardano.Ledger.Alonzo.TxInfo (TranslationError (InlineDatumsNotSupported), TxOutSource (TxOutFromInput))
+import Cardano.Ledger.Alonzo.TxInfo
+  ( TranslationError (InlineDatumsNotSupported),
+    TxOutSource (TxOutFromInput),
+  )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
 import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collBalance)
-import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage
+import Cardano.Ledger.Babbage.Rules (BabbageUtxoPred (..), BabbageUtxowPred (..))
+import Cardano.Ledger.Babbage.TxBody
+  ( AlonzoEraTxBody (..),
+    BabbageEraTxBody (..),
+    BabbageTxBody (..),
+    BabbageTxOut (..),
+    Datum (..),
+  )
 import Cardano.Ledger.BaseTypes
   ( Network (..),
     StrictMaybe (..),
     mkTxIxPartial,
   )
+import Cardano.Ledger.Block (txid)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (EraRule)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Era (Era (..), ValidateScript (hashScript))
 import Cardano.Ledger.Keys
   ( KeyHash,
     KeyPair (..),
@@ -52,7 +61,7 @@ import Cardano.Ledger.Shelley.API (DCert (DCertDeleg), DelegCert (DeRegKey), Pro
 import Cardano.Ledger.Shelley.LedgerState (UTxOState (..), smartUTxOState)
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
-import Cardano.Ledger.TxIn (TxIn (..), txid)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
 import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended hiding (Assertion)
@@ -63,8 +72,8 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (maybeToList)
 import qualified Data.Sequence.Strict as StrictSeq
 import qualified Data.Set as Set
-import GHC.Records (HasField (..))
 import GHC.Stack
+import Lens.Micro
 import qualified Plutus.V1.Ledger.Api as Plutus
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation
   ( AlonzoBased (..),
@@ -110,10 +119,10 @@ keysForMultisigWitnessKeyRole pf = KeyPairWitness (keysForMultisig pf)
 keyHashForMultisig :: forall era. Era era => Proof era -> KeyHash 'Witness (Crypto era)
 keyHashForMultisig pf = hashKey . vKey $ keysForMultisig pf
 
-simpleScript :: forall era. (Scriptic era) => Proof era -> Core.Script era
+simpleScript :: forall era. (Scriptic era) => Proof era -> Script era
 simpleScript pf = allOf [require @era (keyHashForMultisig pf)] pf
 
-evenData3ArgsScript :: HasCallStack => Proof era -> Core.Script era
+evenData3ArgsScript :: HasCallStack => Proof era -> Script era
 evenData3ArgsScript proof =
   case proof of
     Shelley _ -> error unsupported
@@ -140,14 +149,14 @@ plainAddr pf = Addr Testnet pCred sCred
     pCred = KeyHashObj . hashKey . vKey $ someKeys pf
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-scriptAddr :: forall era. (Scriptic era) => Proof era -> Core.Script era -> Addr (Crypto era)
+scriptAddr :: forall era. (Scriptic era) => Proof era -> Script era -> Addr (Crypto era)
 scriptAddr _pf s = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ s
     (_ssk, svk) = mkKeyPair @(Crypto era) (RawSeed 0 0 0 0 0)
     sCred = StakeRefBase . KeyHashObj . hashKey $ svk
 
-malformedScriptAddr :: forall era. (ValidateScript era) => Proof era -> Addr (Crypto era)
+malformedScriptAddr :: forall era. EraScript era => Proof era -> Addr (Crypto era)
 malformedScriptAddr pf = Addr Testnet pCred sCred
   where
     pCred = ScriptHashObj . hashScript @era $ malformedScript pf "malfoy"
@@ -200,14 +209,14 @@ defaultPPs =
     AdaPerUTxOByte (Coin 5)
   ]
 
-pp :: Proof era -> Core.PParams era
+pp :: Proof era -> PParams era
 pp pf = newPParams pf defaultPPs
 
 -- =========================================================================
 -- Spend a EUTxO with an inline datum (without and with a failing script)
 -- =========================================================================
 
-inlineDatum :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+inlineDatum :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 inlineDatum pf =
   TestCaseData
     { txBody =
@@ -226,7 +235,7 @@ inlineDatum pf =
                   pf
                   [ Address (scriptAddr pf (evenData3ArgsScript pf)),
                     Amount (inject $ Coin 5000),
-                    Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
+                    FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
                   ]
               ],
             ofRefInputs = [],
@@ -239,7 +248,7 @@ inlineDatum pf =
         ]
     }
 
-inlineDatumFailingScript :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+inlineDatumFailingScript :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 inlineDatumFailingScript pf =
   TestCaseData
     { txBody =
@@ -258,7 +267,7 @@ inlineDatumFailingScript pf =
                   pf
                   [ Address (scriptAddr pf (evenData3ArgsScript pf)),
                     Amount (inject $ Coin 5000),
-                    Datum (Babbage.Datum . dataToBinaryData $ datumExampleOdd @era)
+                    FDatum (Datum . dataToBinaryData $ datumExampleOdd @era)
                   ]
               ],
             ofRefInputs = [],
@@ -275,7 +284,7 @@ inlineDatumFailingScript pf =
 -- Valid: Use a reference script.
 -- =========================================================================
 
-referenceScript :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+referenceScript :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 referenceScript pf =
   TestCaseData
     { txBody =
@@ -320,7 +329,11 @@ referenceScript pf =
 -- Notice that the reference input is not consumed.
 -- =========================================================================
 
-inlineDatumAndRefScript :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+inlineDatumAndRefScript ::
+  forall era.
+  (Scriptic era, EraTxBody era) =>
+  Proof era ->
+  TestCaseData era
 inlineDatumAndRefScript pf =
   TestCaseData
     { txBody =
@@ -340,7 +353,7 @@ inlineDatumAndRefScript pf =
                   pf
                   [ Address (scriptAddr pf (evenData3ArgsScript pf)),
                     Amount (inject $ Coin 5000),
-                    Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
+                    FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
                   ]
               ],
             ofRefInputs =
@@ -364,7 +377,11 @@ inlineDatumAndRefScript pf =
 -- and also redundantly supply the script witness.
 -- =========================================================================
 
-inlineDatumAndRefScriptWithRedundantWitScript :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+inlineDatumAndRefScriptWithRedundantWitScript ::
+  forall era.
+  (Scriptic era, EraTxBody era) =>
+  Proof era ->
+  TestCaseData era
 inlineDatumAndRefScriptWithRedundantWitScript pf =
   TestCaseData
     { txBody =
@@ -384,7 +401,7 @@ inlineDatumAndRefScriptWithRedundantWitScript pf =
                   pf
                   [ Address (scriptAddr pf (evenData3ArgsScript pf)),
                     Amount (inject $ Coin 5000),
-                    Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
+                    FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
                   ]
               ],
             ofRefInputs =
@@ -409,7 +426,11 @@ inlineDatumAndRefScriptWithRedundantWitScript pf =
 -- without supplying the correspending data witness.
 -- ====================================================================================
 
-refInputWithDataHashNoWit :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+refInputWithDataHashNoWit ::
+  forall era.
+  (Scriptic era, EraTxBody era) =>
+  Proof era ->
+  TestCaseData era
 refInputWithDataHashNoWit pf =
   TestCaseData
     { txBody =
@@ -442,7 +463,11 @@ refInputWithDataHashNoWit pf =
 -- supplying the correspending data witness.
 -- =======================================================================================
 
-refInputWithDataHashWithWit :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+refInputWithDataHashWithWit ::
+  forall era.
+  (Scriptic era, EraTxBody era) =>
+  Proof era ->
+  TestCaseData era
 refInputWithDataHashWithWit pf =
   TestCaseData
     { txBody =
@@ -480,7 +505,7 @@ certRedeemers =
   Redeemers $
     Map.singleton (RdmrPtr Tag.Cert 0) (Data (Plutus.I 42), ExUnits 5000 5000)
 
-refscriptForDelegCert :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+refscriptForDelegCert :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 refscriptForDelegCert pf =
   TestCaseData
     { txBody =
@@ -515,7 +540,7 @@ refscriptForDelegCert pf =
 --  Invalid: Use a collateral output
 -- ====================================================================================
 
-useCollateralReturn :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+useCollateralReturn :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 useCollateralReturn pf =
   TestCaseData
     { txBody =
@@ -554,7 +579,7 @@ useCollateralReturn pf =
 -- Invalid: Invalid collateral total
 -- ====================================================================================
 
-incorrectCollateralTotal :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+incorrectCollateralTotal :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 incorrectCollateralTotal pf =
   TestCaseData
     { txBody =
@@ -575,7 +600,7 @@ incorrectCollateralTotal pf =
                   pf
                   [ Address (scriptAddr pf (evenData3ArgsScript pf)),
                     Amount (inject $ Coin 5000),
-                    Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
+                    FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
                   ]
               ],
             ofRefInputs = [],
@@ -592,7 +617,11 @@ incorrectCollateralTotal pf =
 -- Invalid: Inline datum used with redundant datum in witness set
 -- ====================================================================================
 
-inlineDatumRedundantDatumWit :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+inlineDatumRedundantDatumWit ::
+  forall era.
+  (Scriptic era, EraTxBody era) =>
+  Proof era ->
+  TestCaseData era
 inlineDatumRedundantDatumWit pf =
   TestCaseData
     { txBody =
@@ -611,7 +640,7 @@ inlineDatumRedundantDatumWit pf =
                   pf
                   [ Address (scriptAddr pf (evenData3ArgsScript pf)),
                     Amount (inject $ Coin 5000),
-                    Datum (Babbage.Datum . dataToBinaryData $ datumExampleEven @era)
+                    FDatum (Datum . dataToBinaryData $ datumExampleEven @era)
                   ]
               ],
             ofRefInputs = [],
@@ -629,7 +658,7 @@ inlineDatumRedundantDatumWit pf =
 -- Invalid:  Using inline datums with Plutus V1 script
 -- ====================================================================================
 
-inlineDatumWithPlutusV1Script :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+inlineDatumWithPlutusV1Script :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 inlineDatumWithPlutusV1Script pf =
   TestCaseData
     { txBody =
@@ -648,7 +677,7 @@ inlineDatumWithPlutusV1Script pf =
                   pf
                   [ Address (scriptAddr pf (always 3 pf)),
                     Amount (inject $ Coin 5000),
-                    Datum (Babbage.Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
+                    FDatum (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
                   ]
               ],
             ofRefInputs = [],
@@ -665,7 +694,7 @@ inlineDatumWithPlutusV1Script pf =
 -- Invalid: Malformed plutus reference script creation
 -- ====================================================================================
 
-malformedScript :: forall era. Proof era -> ShortByteString -> Core.Script era
+malformedScript :: forall era. Proof era -> ShortByteString -> Script era
 malformedScript pf s = case pf of
   Babbage {} -> ms
   Alonzo {} -> ms
@@ -673,11 +702,11 @@ malformedScript pf s = case pf of
   x@Mary {} -> er x
   x@Allegra {} -> er x
   where
-    ms :: Script era
+    ms :: AlonzoScript era
     ms = PlutusScript PlutusV2 $ "nonsense " <> s
     er x = error $ "no malformedScript for " <> show x
 
-malformedPlutusRefScript :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+malformedPlutusRefScript :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 malformedPlutusRefScript pf =
   TestCaseData
     { txBody =
@@ -707,7 +736,7 @@ malformedPlutusRefScript pf =
 --  Valid: Don't run reference scripts in output for validation
 -- ====================================================================================
 
-refScriptInOutput :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+refScriptInOutput :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 refScriptInOutput pf =
   TestCaseData
     { txBody =
@@ -738,7 +767,7 @@ refScriptInOutput pf =
 --  Valid: Unlock Simple Scripts with a Reference Script
 -- ====================================================================================
 
-simpleScriptOutWithRefScriptUTxOState :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+simpleScriptOutWithRefScriptUTxOState :: (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 simpleScriptOutWithRefScriptUTxOState pf =
   TestCaseData
     { txBody =
@@ -779,16 +808,16 @@ simpleScriptOutWithRefScriptUTxOState pf =
 largeDatum :: Data era
 largeDatum = Data (Plutus.B . BS.pack $ replicate 1500 0)
 
-largeOutput' :: forall era. Scriptic era => Proof era -> Core.TxOut era
+largeOutput' :: forall era. (Scriptic era, EraTxOut era) => Proof era -> TxOut era
 largeOutput' pf =
   newTxOut
     pf
     [ Address (plainAddr pf),
       Amount (inject $ Coin 1135),
-      Datum . Babbage.Datum . dataToBinaryData $ largeDatum @era
+      FDatum . Datum . dataToBinaryData $ largeDatum @era
     ]
 
-largeOutput :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+largeOutput :: forall era. (BabbageEraTxBody era, Scriptic era) => Proof era -> TestCaseData era
 largeOutput pf =
   TestCaseData
     { txBody =
@@ -812,7 +841,7 @@ largeOutput pf =
 -- Invalid:  Malformed plutus script witness
 -- ====================================================================================
 
-malformedScriptWit :: forall era. (Scriptic era) => Proof era -> TestCaseData era
+malformedScriptWit :: forall era. (Scriptic era, EraTxBody era) => Proof era -> TestCaseData era
 malformedScriptWit pf =
   TestCaseData
     { txBody =
@@ -830,7 +859,7 @@ malformedScriptWit pf =
                   pf
                   [ Address (malformedScriptAddr pf),
                     Amount (inject $ Coin 5000),
-                    Datum (Babbage.Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
+                    FDatum (Datum . dataToBinaryData $ datumExampleSixtyFiveBytes @era)
                   ]
               ],
             ofRefInputs = [],
@@ -853,19 +882,19 @@ instance BabbageBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
   fromUtxoB = UtxoFailure
   fromUtxowB = id
 
-type InOut era = (TxIn (Crypto era), Core.TxOut era)
+type InOut era = (TxIn (Crypto era), TxOut era)
 
 data TestCaseData era = TestCaseData
-  { txBody :: Core.TxBody era,
+  { txBody :: TxBody era,
     initOutputs :: InitOutputs era,
     keysForAddrWits :: [KeyPairRole era],
     otherWitsFields :: [WitnessesField era]
   }
 
 data InitOutputs era = InitOutputs
-  { ofInputs :: [Core.TxOut era],
-    ofRefInputs :: [Core.TxOut era],
-    ofCollateral :: [Core.TxOut era]
+  { ofInputs :: [TxOut era],
+    ofRefInputs :: [TxOut era],
+    ofCollateral :: [TxOut era]
   }
 
 data InitUtxo era = InitUtxo
@@ -879,10 +908,7 @@ data KeyPairRole era
   | KeyPairWitness (KeyPair 'Witness (Crypto era))
 
 initUtxoFromTestCaseData ::
-  forall era.
-  ( HasField "referenceInputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
-    HasField "collateral" (Core.TxBody era) (Set.Set (TxIn (Crypto era)))
-  ) =>
+  BabbageEraTxBody era =>
   Proof era ->
   TestCaseData era ->
   InitUtxo era
@@ -890,8 +916,8 @@ initUtxoFromTestCaseData
   pf
   (TestCaseData txBody' (InitOutputs ofInputs' ofRefInputs' ofCollateral') _ _) =
     let inputsIns = getInputs pf txBody'
-        refInputsIns = getField @"referenceInputs" txBody'
-        collateralIns = getField @"collateral" txBody'
+        refInputsIns = txBody' ^. referenceInputsTxBodyL
+        collateralIns = txBody' ^. collateralInputsTxBodyL
 
         inputs' = Set.toList inputsIns `zip` ofInputs'
         refInputs' = Set.toList refInputsIns `zip` ofRefInputs'
@@ -901,11 +927,12 @@ initUtxoFromTestCaseData
 txFromTestCaseData ::
   forall era.
   ( Scriptic era,
-    GoodCrypto (Crypto era)
+    GoodCrypto (Crypto era),
+    BabbageEraTxBody era
   ) =>
   Proof era ->
   TestCaseData era ->
-  Core.Tx era
+  Tx era
 txFromTestCaseData
   pf
   testCaseData =
@@ -929,12 +956,11 @@ txFromTestCaseData
 testExpectSuccessValid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
-    Scriptic era,
     GoodCrypto (Crypto era),
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
-    HasField "referenceInputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
-    HasField "collateral" (Core.TxBody era) (Set.Set (TxIn (Crypto era)))
+    EraTx era,
+    BabbageEraTxBody era
   ) =>
   Proof era ->
   TestCaseData era ->
@@ -944,7 +970,7 @@ testExpectSuccessValid
   tc =
     let txBody' = txBody tc
         tx' = txFromTestCaseData pf tc
-        fees = getField @"txfee" txBody'
+        fees = txBody' ^. feeTxBodyL
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
 
         newTxIn = TxIn (txid txBody') minBound
@@ -958,16 +984,16 @@ testExpectSuccessValid
 
 newColReturn ::
   forall era.
-  ( Core.TxBody era ~ Babbage.TxBody era,
-    Scriptic era,
-    HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (Core.TxOut era))
+  ( TxBody era ~ BabbageTxBody era,
+    TxOut era ~ BabbageTxOut era,
+    BabbageEraTxBody era
   ) =>
-  Core.TxBody era ->
+  TxBody era ->
   [InOut era]
 newColReturn
   txBody' =
     let newColReturnTxIn = TxIn (txid txBody') (mkTxIxPartial 1)
-        colReturnOut = case getField @"collateralReturn" txBody' of
+        colReturnOut = case txBody' ^. collateralReturnTxBodyL of
           SNothing -> []
           SJust rOut -> [rOut]
      in [newColReturnTxIn] `zip` colReturnOut
@@ -975,14 +1001,13 @@ newColReturn
 testExpectSuccessInvalid ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
-    Core.TxBody era ~ Babbage.TxBody era,
-    Scriptic era,
+    TxBody era ~ BabbageTxBody era,
+    TxOut era ~ BabbageTxOut era,
     GoodCrypto (Crypto era),
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
-    HasField "referenceInputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
-    HasField "collateral" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
-    HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (Core.TxOut era))
+    EraTx era,
+    BabbageEraTxBody era
   ) =>
   Proof era ->
   TestCaseData era ->
@@ -1004,14 +1029,15 @@ testExpectSuccessInvalid
 testExpectFailure ::
   forall era.
   ( State (EraRule "UTXOW" era) ~ UTxOState era,
-    Core.TxBody era ~ Babbage.TxBody era,
     GoodCrypto (Crypto era),
     Default (State (EraRule "PPUP" era)),
-    PostShelley era
+    PostShelley era,
+    BabbageEraTxBody era,
+    EraTx era
   ) =>
   Proof era ->
   TestCaseData era ->
-  PredicateFailure (Core.EraRule "UTXOW" era) ->
+  PredicateFailure (EraRule "UTXOW" era) ->
   Assertion
 testExpectFailure
   pf
@@ -1027,13 +1053,13 @@ genericBabbageFeatures ::
   ( AlonzoBased era (PredicateFailure (EraRule "UTXOW" era)),
     BabbageBased era (PredicateFailure (EraRule "UTXOW" era)),
     State (EraRule "UTXOW" era) ~ UTxOState era,
-    Core.TxBody era ~ Babbage.TxBody era,
+    TxBody era ~ BabbageTxBody era,
+    TxOut era ~ BabbageTxOut era,
     GoodCrypto (Crypto era),
+    BabbageEraTxBody era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
-    HasField "referenceInputs" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
-    HasField "collateral" (Core.TxBody era) (Set.Set (TxIn (Crypto era))),
-    HasField "collateralReturn" (Core.TxBody era) (StrictMaybe (Core.TxOut era))
+    EraTx era
   ) =>
   Proof era ->
   TestTree

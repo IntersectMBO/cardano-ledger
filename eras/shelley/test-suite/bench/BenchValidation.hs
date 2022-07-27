@@ -40,7 +40,6 @@ import Cardano.Ledger.Shelley.LedgerState
     StashedAVVMAddresses,
     nesBcur,
   )
-import Cardano.Ledger.Shelley.TxBody (TransTxBody, TransTxId)
 import Cardano.Protocol.TPraos.API
   ( ChainDepState (..),
     ChainTransitionError,
@@ -121,8 +120,8 @@ benchValidate (ValidateInput globals state (Block bh txs)) =
 
 applyBlock ::
   forall era.
-  ( TransTxId Show era,
-    TransTxBody NFData era,
+  ( Era era,
+    NFData (Core.TxOut era),
     API.ApplyBlock era,
     NFData (Core.PParams era),
     NFData (State (Core.EraRule "PPUP" era)),

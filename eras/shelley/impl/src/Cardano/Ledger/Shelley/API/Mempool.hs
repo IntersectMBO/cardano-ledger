@@ -36,26 +36,28 @@ where
 
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.BaseTypes (Globals, ShelleyBase)
-import Cardano.Ledger.Core (AnnotatedData, ChainData, SerialisableData)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era
+import Cardano.Ledger.Core
   ( Era,
+    EraIndependentTxBody,
+    EraRule,
+    EraTx (Tx),
     PreviousEra,
-    TranslateEra (translateEra),
+    TranslateEra (..),
     TranslationContext,
-    TranslationError,
   )
+import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.Keys
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.API.Validation (ShelleyEraCrypto)
 import Cardano.Ledger.Shelley.LedgerState (NewEpochState)
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv, LedgerPredicateFailure)
 import qualified Cardano.Ledger.Shelley.Rules.Ledger as Ledger
 import Cardano.Ledger.Slot (SlotNo)
 import Control.Arrow (ArrowChoice (right), left)
 import Control.DeepSeq (NFData)
-import Control.Monad.Except
+import Control.Monad.Except (Except, MonadError, foldM, liftEither)
 import Control.Monad.Trans.Reader (runReader)
 import Control.State.Transition.Extended
   ( BaseM,
@@ -102,18 +104,16 @@ translateValidated ::
 translateValidated ctx (Validated tx) = Validated <$> translateEra @era ctx tx
 
 class
-  ( ChainData (Core.Tx era),
-    AnnotatedData (Core.Tx era),
+  ( EraTx era,
     Eq (ApplyTxError era),
     Show (ApplyTxError era),
     Typeable (ApplyTxError era),
-    SerialisableData (ApplyTxError era),
-    STS (Core.EraRule "LEDGER" era),
-    BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
-    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    State (Core.EraRule "LEDGER" era) ~ MempoolState era,
-    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era
+    STS (EraRule "LEDGER" era),
+    BaseM (EraRule "LEDGER" era) ~ ShelleyBase,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
+    State (EraRule "LEDGER" era) ~ MempoolState era,
+    Signal (EraRule "LEDGER" era) ~ Tx era,
+    PredicateFailure (EraRule "LEDGER" era) ~ LedgerPredicateFailure era
   ) =>
   ApplyTx era
   where
@@ -128,12 +128,12 @@ class
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    Core.Tx era ->
-    m (MempoolState era, Validated (Core.Tx era))
+    Tx era ->
+    m (MempoolState era, Validated (Tx era))
   applyTx globals env state tx =
     let res =
           flip runReader globals
-            . applySTS @(Core.EraRule "LEDGER" era)
+            . applySTS @(EraRule "LEDGER" era)
             $ TRC (env, state, tx)
      in liftEither
           . left ApplyTxError
@@ -156,18 +156,22 @@ class
     Globals ->
     MempoolEnv era ->
     MempoolState era ->
-    Validated (Core.Tx era) ->
+    Validated (Tx era) ->
     m (MempoolState era)
   reapplyTx globals env state (Validated tx) =
     let res =
           flip runReader globals
-            . applySTS @(Core.EraRule "LEDGER" era)
+            . applySTS @(EraRule "LEDGER" era)
             $ TRC (env, state, tx)
      in liftEither
           . left ApplyTxError
           $ res
 
-instance ShelleyEraCrypto c => ApplyTx (ShelleyEra c)
+instance
+  ( CC.Crypto crypto,
+    DSignable crypto (Hash crypto EraIndependentTxBody)
+  ) =>
+  ApplyTx (ShelleyEra crypto)
 
 type MempoolEnv era = Ledger.LedgerEnv era
 
@@ -210,19 +214,19 @@ mkMempoolEnv
 mkMempoolState :: NewEpochState era -> MempoolState era
 mkMempoolState LedgerState.NewEpochState {LedgerState.nesEs} = LedgerState.esLState nesEs
 
-newtype ApplyTxError era = ApplyTxError [PredicateFailure (Core.EraRule "LEDGER" era)]
+newtype ApplyTxError era = ApplyTxError [PredicateFailure (EraRule "LEDGER" era)]
 
 deriving stock instance
-  (Eq (PredicateFailure (Core.EraRule "LEDGER" era))) =>
+  (Eq (PredicateFailure (EraRule "LEDGER" era))) =>
   Eq (ApplyTxError era)
 
 deriving stock instance
-  (Show (PredicateFailure (Core.EraRule "LEDGER" era))) =>
+  (Show (PredicateFailure (EraRule "LEDGER" era))) =>
   Show (ApplyTxError era)
 
 instance
   ( Era era,
-    ToCBOR (PredicateFailure (Core.EraRule "LEDGER" era))
+    ToCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   ToCBOR (ApplyTxError era)
   where
@@ -230,7 +234,7 @@ instance
 
 instance
   ( Era era,
-    FromCBOR (PredicateFailure (Core.EraRule "LEDGER" era))
+    FromCBOR (PredicateFailure (EraRule "LEDGER" era))
   ) =>
   FromCBOR (ApplyTxError era)
   where
@@ -241,7 +245,7 @@ applyTxs ::
   (ApplyTx era, MonadError (ApplyTxError era) m) =>
   Globals ->
   SlotNo ->
-  Seq (Core.Tx era) ->
+  Seq (Tx era) ->
   NewEpochState era ->
   m (NewEpochState era)
 applyTxs
@@ -260,7 +264,7 @@ applyTxsTransition ::
   ) =>
   Globals ->
   MempoolEnv era ->
-  Seq (Core.Tx era) ->
+  Seq (Tx era) ->
   MempoolState era ->
   m (MempoolState era)
 applyTxsTransition globals env txs state =

@@ -14,12 +14,12 @@ import Cardano.Ledger.Alonzo.Data (Data, Datum (..), binaryDataToData, getPlutus
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi (knownToNotBe1Phase, scriptsNeeded)
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModel,
+  ( AlonzoScript (..),
+    CostModel,
     ExUnits (..),
-    Script (..),
     getEvaluationContext,
   )
-import Cardano.Ledger.Alonzo.Tx (DataHash, ScriptPurpose (..), rdptr)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, ScriptPurpose (..), rdptr)
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (getTxOutDatum, txscripts),
     TranslationError,
@@ -30,13 +30,15 @@ import Cardano.Ledger.Alonzo.TxInfo
     txInfo,
     valContext,
   )
-import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers, TxDats, unRedeemers, unTxDats)
+import Cardano.Ledger.Alonzo.TxWitness
+  ( AlonzoEraWitnesses (..),
+    RdmrPtr (..),
+    unRedeemers,
+    unTxDats,
+  )
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Hashes (ScriptHash)
+import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Shelley.Tx (TxIn)
-import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), unUTxO)
 import Cardano.Slotting.EpochInfo.API (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -45,11 +47,10 @@ import Data.ByteString.Short as SBS (ShortByteString)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Records (HasField (..))
+import Lens.Micro
 import qualified Plutus.V1.Ledger.Api as PV1
 import qualified Plutus.V2.Ledger.Api as PV2
 
@@ -96,20 +97,15 @@ type RedeemerReport c = Map RdmrPtr (Either (TransactionScriptFailure c) ExUnits
 --  The results of 'evaluateTransactionExecutionUnits' are intended to replace them.
 evaluateTransactionExecutionUnits ::
   forall era.
-  ( Era era,
+  ( AlonzoEraTx era,
     ExtendedUTxO era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "txdats" (Core.Witnesses era) (TxDats era),
-    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    Core.Script era ~ Script era
+    HasField "_maxTxExUnits" (PParams era) ExUnits,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Script era ~ AlonzoScript era
   ) =>
-  Core.PParams era ->
+  PParams era ->
   -- | The transaction.
-  Core.Tx era ->
+  Tx era ->
   -- | The current UTxO set (or the relevant portion for the transaction).
   UTxO era ->
   -- | The epoch info, used to translate slots to POSIX time for plutus.
@@ -130,11 +126,11 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
   pure $
     Map.mapWithKey
       (findAndCount pp ctx)
-      (unRedeemers $ getField @"txrdmrs" ws)
+      (unRedeemers $ ws ^. rdmrsWitsL)
   where
-    txb = getField @"body" tx
-    ws = getField @"wits" tx
-    dats = unTxDats $ getField @"txdats" ws
+    txBody = tx ^. bodyTxL
+    ws = tx ^. witsTxL
+    dats = unTxDats $ ws ^. datsWitsL
     scriptsAvailable = txscripts utxo tx
     needed = scriptsNeeded utxo tx
     neededAndConfirmedToBePlutus = mapMaybe (knownToNotBe1Phase scriptsAvailable) needed
@@ -146,7 +142,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
         Nothing -> pure Nothing
         Just (TimelockScript _) -> []
         Just (PlutusScript lang bytes) -> pure $ Just (bytes, lang)
-      pointer <- case rdptr txb sp of
+      pointer <- case rdptr txBody sp of
         SNothing -> []
         -- Since scriptsNeeded used the transaction to create script purposes,
         -- it would be a logic error if rdptr was not able to find sp.
@@ -154,7 +150,7 @@ evaluateTransactionExecutionUnits pp tx utxo ei sysS costModels = do
       pure (pointer, (sp, msb, sh))
 
     findAndCount ::
-      Core.PParams era ->
+      PParams era ->
       Map Language VersionedTxInfo ->
       RdmrPtr ->
       (Data era, ExUnits) ->

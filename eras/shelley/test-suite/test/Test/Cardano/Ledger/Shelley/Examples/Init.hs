@@ -17,15 +17,13 @@ module Test.Cardano.Ledger.Shelley.Examples.Init
   )
 where
 
-import Cardano.Ledger.BaseTypes
-  ( Nonce (..),
-  )
+import Cardano.Ledger.BaseTypes (Nonce (..))
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.PParams
-  ( PParams,
-    PParams' (..),
+  ( ShelleyPParams,
+    ShelleyPParamsHKD (..),
     emptyPParams,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
@@ -65,7 +63,7 @@ import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, maxLLSupply, mkHash, unsa
 --       _minUTxOValue = 100
 --     }
 -- @
-ppEx :: PParams era
+ppEx :: ShelleyPParams era
 ppEx =
   emptyPParams
     { _maxBBSize = 50000,
@@ -91,14 +89,14 @@ ppEx =
 -- sure that the hash gets translated across the fork.
 lastByronHeaderHash ::
   forall c.
-  CryptoClass.Crypto c =>
+  CC.Crypto c =>
   HashHeader c
 lastByronHeaderHash = HashHeader $ mkHash 0
 
 -- | === Initial Nonce
 nonce0 ::
   forall c.
-  CryptoClass.Crypto c =>
+  CC.Crypto c =>
   Nonce
 nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 
@@ -109,7 +107,7 @@ nonce0 = hashHeaderToNonce (lastByronHeaderHash @c)
 -- 'genDelegs' and any given starting 'UTxO' set.
 initSt ::
   forall era.
-  (ShelleyTest era) =>
+  (ShelleyTest era, PParams era ~ ShelleyPParams era) =>
   UTxO era ->
   ChainState era
 initSt utxo =
@@ -117,7 +115,7 @@ initSt utxo =
     (At $ LastAppliedBlock (BlockNo 0) (SlotNo 0) lastByronHeaderHash)
     (EpochNo 0)
     utxo
-    (maxLLSupply <-> (Val.coin $ balance utxo))
+    (maxLLSupply <-> Val.coin (balance utxo))
     genDelegs
     ppEx
     (nonce0 @(Crypto era))

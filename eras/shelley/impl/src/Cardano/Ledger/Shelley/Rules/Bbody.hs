@@ -24,14 +24,9 @@ where
 import Cardano.Ledger.BHeaderView (BHeaderView (..), isOverlaySlot)
 import Cardano.Ledger.BaseTypes (BlocksMade, ShelleyBase, UnitInterval, epochInfoPure)
 import Cardano.Ledger.Block (Block (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto), SupportsSegWit (fromTxSeq, hashTxSeq))
-import qualified Cardano.Ledger.Era as Era
-import Cardano.Ledger.Hashes (EraIndependentBlockBody, EraIndependentTxBody)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash, coerceKeyRole)
-import Cardano.Ledger.Serialization (ToCBORGroup)
 import Cardano.Ledger.Shelley.BlockChain (bBodySize, incrBlocks)
-import Cardano.Ledger.Shelley.Constraints (UsesAuxiliary, UsesTxBody)
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState,
     LedgerState,
@@ -65,7 +60,7 @@ deriving stock instance Show (LedgerState era) => Show (BbodyState era)
 deriving stock instance Eq (LedgerState era) => Eq (BbodyState era)
 
 data BbodyEnv era = BbodyEnv
-  { bbodyPp :: Core.PParams era,
+  { bbodyPp :: PParams era,
     bbodyAccount :: AccountState
   }
 
@@ -76,40 +71,38 @@ data BbodyPredicateFailure era
   | InvalidBodyHashBBODY
       !(Hash (Crypto era) EraIndependentBlockBody) -- Actual Hash
       !(Hash (Crypto era) EraIndependentBlockBody) -- Claimed Hash
-  | LedgersFailure (PredicateFailure (Core.EraRule "LEDGERS" era)) -- Subtransition Failures
+  | LedgersFailure (PredicateFailure (EraRule "LEDGERS" era)) -- Subtransition Failures
   deriving (Generic)
 
 newtype BbodyEvent era
-  = LedgersEvent (Event (Core.EraRule "LEDGERS" era))
+  = LedgersEvent (Event (EraRule "LEDGERS" era))
 
 deriving stock instance
   ( Era era,
-    Show (PredicateFailure (Core.EraRule "LEDGERS" era))
+    Show (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   Show (BbodyPredicateFailure era)
 
 deriving stock instance
   ( Era era,
-    Eq (PredicateFailure (Core.EraRule "LEDGERS" era))
+    Eq (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   Eq (BbodyPredicateFailure era)
 
 instance
   ( Era era,
-    NoThunks (PredicateFailure (Core.EraRule "LEDGERS" era))
+    NoThunks (PredicateFailure (EraRule "LEDGERS" era))
   ) =>
   NoThunks (BbodyPredicateFailure era)
 
 instance
-  ( UsesTxBody era,
-    UsesAuxiliary era,
-    ToCBORGroup (Era.TxSeq era),
+  ( EraSegWits era,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    Embed (Core.EraRule "LEDGERS" era) (BBODY era),
-    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
-    State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
-    HasField "_d" (Core.PParams era) UnitInterval
+    Embed (EraRule "LEDGERS" era) (BBODY era),
+    Environment (EraRule "LEDGERS" era) ~ LedgersEnv era,
+    State (EraRule "LEDGERS" era) ~ LedgerState era,
+    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
+    HasField "_d" (PParams era) UnitInterval
   ) =>
   STS (BBODY era)
   where
@@ -135,13 +128,12 @@ instance
 bbodyTransition ::
   forall era.
   ( STS (BBODY era),
-    UsesTxBody era,
-    ToCBORGroup (Era.TxSeq era),
-    Embed (Core.EraRule "LEDGERS" era) (BBODY era),
-    Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
-    State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
-    HasField "_d" (Core.PParams era) UnitInterval
+    EraSegWits era,
+    Embed (EraRule "LEDGERS" era) (BBODY era),
+    Environment (EraRule "LEDGERS" era) ~ LedgersEnv era,
+    State (EraRule "LEDGERS" era) ~ LedgerState era,
+    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
+    HasField "_d" (PParams era) UnitInterval
   ) =>
   TransitionRule (BBODY era)
 bbodyTransition =
@@ -163,7 +155,7 @@ bbodyTransition =
           ?! InvalidBodyHashBBODY actualBodyHash (bhviewBHash bhview)
 
         ls' <-
-          trans @(Core.EraRule "LEDGERS" era) $
+          trans @(EraRule "LEDGERS" era) $
             TRC (LedgersEnv (bhviewSlot bhview) pp account, ls, StrictSeq.fromStrict txs)
 
         -- Note that this may not actually be a stake pool - it could be a genesis key
@@ -182,7 +174,7 @@ instance
   forall era ledgers.
   ( Era era,
     BaseM ledgers ~ ShelleyBase,
-    ledgers ~ Core.EraRule "LEDGERS" era,
+    ledgers ~ EraRule "LEDGERS" era,
     STS ledgers,
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
     Era era

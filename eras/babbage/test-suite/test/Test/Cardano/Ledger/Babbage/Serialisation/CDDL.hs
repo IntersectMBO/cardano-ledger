@@ -8,12 +8,10 @@ where
 
 import Cardano.Ledger.Alonzo.Data (Data)
 import Cardano.Ledger.Alonzo.Scripts (CostModels)
-import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness)
+import Cardano.Ledger.Alonzo.TxWitness (Redeemers)
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (PParamsUpdate)
-import Cardano.Ledger.Babbage.Tx (ValidatedTx)
-import Cardano.Ledger.Babbage.TxBody (Datum, TxOut)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Babbage.TxBody (Datum)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.ShelleyMA.Timelocks as MA
 import qualified Data.ByteString.Lazy as BSL
@@ -29,19 +27,19 @@ type B = BabbageEra StandardCrypto
 tests :: Int -> TestTree
 tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
   testGroup "CDDL roundtrip tests" $
-    [ cddlTest @(Core.Value B) n "coin",
-      cddlAnnotatorTest @(Core.TxBody B) n "transaction_body",
-      cddlAnnotatorTest @(Core.AuxiliaryData B) n "auxiliary_data",
+    [ cddlTest @(Value B) n "coin",
+      cddlAnnotatorTest @(TxBody B) n "transaction_body",
+      cddlAnnotatorTest @(AuxiliaryData B) n "auxiliary_data",
       cddlAnnotatorTest @(MA.Timelock StandardCrypto) n "native_script",
       cddlAnnotatorTest @(Data B) n "plutus_data",
       cddlTest @(TxOut B) n "transaction_output",
-      cddlAnnotatorTest @(Core.Script B) n "script",
+      cddlAnnotatorTest @(Script B) n "script",
       cddlTest @(Datum B) n "datum_option",
-      cddlAnnotatorTest @(TxWitness B) n "transaction_witness_set",
+      cddlAnnotatorTest @(Witnesses B) n "transaction_witness_set",
       cddlTest @(PParamsUpdate B) n "protocol_param_update",
       cddlTest @CostModels n "costmdls",
       cddlAnnotatorTest @(Redeemers B) n "[* redeemer]",
-      cddlAnnotatorTest @(ValidatedTx B) n "transaction"
+      cddlAnnotatorTest @(Tx B) n "transaction"
     ]
       <*> pure cddl
 

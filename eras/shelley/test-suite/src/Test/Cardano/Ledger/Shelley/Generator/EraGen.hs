@@ -5,7 +5,6 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
@@ -21,7 +20,6 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen
     MinLEDGER_STS,
     MinCHAIN_STS,
     MinUTXO_STS,
-    MinGenTxBody,
     MinGenTxout (..),
     Label (..),
     Sets (..),
@@ -31,16 +29,14 @@ module Test.Cardano.Ledger.Shelley.Generator.EraGen
   )
 where
 
-import Cardano.Binary (Annotator, FromCBOR, ToCBOR (toCBOR), serializeEncoding')
+import Cardano.Binary (ToCBOR (toCBOR), serializeEncoding')
 import qualified Cardano.Crypto.Hash as Hash
 import Cardano.Ledger.Address (toAddr)
-import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash, ValidateAuxiliaryData (..))
+import Cardano.Ledger.AuxiliaryData (AuxiliaryDataHash)
 import Cardano.Ledger.BaseTypes (Network (..), ProtVer, ShelleyBase, StrictMaybe, UnitInterval)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
-import Cardano.Ledger.Hashes (ScriptHash)
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Pretty (PrettyA (..))
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
@@ -54,11 +50,10 @@ import Cardano.Ledger.Shelley.API
     LedgersEnv,
     StakeReference (StakeRefBase),
   )
-import Cardano.Ledger.Shelley.Constraints (UsesPParams (..))
 import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, UTxOState (..))
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
-import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl, WitVKey)
+import Cardano.Ledger.Shelley.TxBody (DCert, ShelleyEraTxBody, Wdrl, WitVKey)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
 import Cardano.Ledger.Slot (EpochNo)
 import Cardano.Ledger.TxIn (TxId (TxId), TxIn)
@@ -74,7 +69,7 @@ import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Natural (Natural)
 import GHC.Records (HasField (..))
-import NoThunks.Class (NoThunks)
+import Lens.Micro
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
 import Test.Cardano.Ledger.Shelley.Generator.Core
   ( GenEnv (..),
@@ -120,15 +115,15 @@ import Test.QuickCheck (Gen, choose, shuffle)
 
 -- | Minimal requirements on the LEDGER and LEDGERS instances
 type MinLEDGER_STS era =
-  ( Environment (Core.EraRule "LEDGERS" era) ~ LedgersEnv era,
-    BaseM (Core.EraRule "LEDGER" era) ~ ShelleyBase,
-    Signal (Core.EraRule "LEDGER" era) ~ Core.Tx era,
-    State (Core.EraRule "LEDGER" era) ~ LedgerState era,
-    Environment (Core.EraRule "LEDGER" era) ~ LedgerEnv era,
-    BaseM (Core.EraRule "LEDGERS" era) ~ ShelleyBase,
-    State (Core.EraRule "LEDGERS" era) ~ LedgerState era,
-    Signal (Core.EraRule "LEDGERS" era) ~ Seq (Core.Tx era),
-    STS (Core.EraRule "LEDGER" era)
+  ( Environment (EraRule "LEDGERS" era) ~ LedgersEnv era,
+    BaseM (EraRule "LEDGER" era) ~ ShelleyBase,
+    Signal (EraRule "LEDGER" era) ~ Tx era,
+    State (EraRule "LEDGER" era) ~ LedgerState era,
+    Environment (EraRule "LEDGER" era) ~ LedgerEnv era,
+    BaseM (EraRule "LEDGERS" era) ~ ShelleyBase,
+    State (EraRule "LEDGERS" era) ~ LedgerState era,
+    Signal (EraRule "LEDGERS" era) ~ Seq (Tx era),
+    STS (EraRule "LEDGER" era)
   )
 
 -- | Minimal requirements on the CHAIN instances
@@ -142,83 +137,57 @@ type MinCHAIN_STS era =
 
 -- | Minimal requirements on the UTxO instances
 type MinUTXO_STS era =
-  ( STS (Core.EraRule "UTXOW" era),
-    BaseM (Core.EraRule "UTXOW" era) ~ ShelleyBase,
-    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
-    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
-    State (Core.EraRule "UTXO" era) ~ UTxOState era,
-    Environment (Core.EraRule "UTXO" era) ~ UtxoEnv era,
-    Signal (Core.EraRule "UTXO" era) ~ Core.Tx era
+  ( STS (EraRule "UTXOW" era),
+    BaseM (EraRule "UTXOW" era) ~ ShelleyBase,
+    State (EraRule "UTXOW" era) ~ UTxOState era,
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
+    Signal (EraRule "UTXOW" era) ~ Tx era,
+    State (EraRule "UTXO" era) ~ UTxOState era,
+    Environment (EraRule "UTXO" era) ~ UtxoEnv era,
+    Signal (EraRule "UTXO" era) ~ Tx era
   )
 
--- | Minimal requirements on Core.PParams to generate random stuff
+-- | Minimal requirements on PParams to generate random stuff
 type MinGenPParams era =
-  ( UsesPParams era,
-    Default (Core.PParams era),
-    HasField "_minPoolCost" (Core.PParams era) Coin,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "_eMax" (Core.PParams era) EpochNo,
-    HasField "_d" (Core.PParams era) UnitInterval,
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin,
-    HasField "_minfeeA" (Core.PParams era) Natural,
-    HasField "_minUTxOValue" (Core.PParams era) Coin,
-    HasField "_minfeeB" (Core.PParams era) Natural
+  ( EraPParams era,
+    Default (PParams era),
+    HasField "_minPoolCost" (PParams era) Coin,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_eMax" (PParams era) EpochNo,
+    HasField "_d" (PParams era) UnitInterval,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_minfeeA" (PParams era) Natural,
+    HasField "_minUTxOValue" (PParams era) Coin,
+    HasField "_minfeeB" (PParams era) Natural
   )
 
-type MinGenWitnesses era =
-  ( ToCBOR (Core.Witnesses era),
-    Eq (Core.Witnesses era),
-    Monoid (Core.Witnesses era)
-  )
-
-type MinGenAuxData era =
-  ( ValidateAuxiliaryData era (Crypto era),
-    ToCBOR (Core.AuxiliaryData era), -- Needs to be serialized
-    Eq (Core.AuxiliaryData era),
-    Show (Core.AuxiliaryData era),
-    FromCBOR (Annotator (Core.AuxiliaryData era)) -- arises because some pattern Constructors deserialize
-  )
-
-type MinGenTxBody era =
-  ( Eq (Core.TxBody era),
-    ToCBOR (Core.TxBody era),
-    NoThunks (Core.TxBody era),
-    Show (Core.TxBody era),
-    FromCBOR (Annotator (Core.TxBody era)), -- arises because some pattern Constructors deserialize
-    HasField "txfee" (Core.TxBody era) Coin
-  )
-
-class Show (Core.TxOut era) => MinGenTxout era where
-  calcEraMinUTxO :: Core.TxOut era -> Core.PParams era -> Coin
-  addValToTxOut :: Core.Value era -> Core.TxOut era -> Core.TxOut era
-  genEraTxOut :: GenEnv era -> Gen (Core.Value era) -> [Addr (Crypto era)] -> Gen [Core.TxOut era]
+class Show (TxOut era) => MinGenTxout era where
+  calcEraMinUTxO :: TxOut era -> PParams era -> Coin
+  addValToTxOut :: Value era -> TxOut era -> TxOut era
+  genEraTxOut :: GenEnv era -> Gen (Value era) -> [Addr (Crypto era)] -> Gen [TxOut era]
 
 -- ======================================================================================
 -- The EraGen class. Generally one method for each type family in Cardano.Ledger.Core
 -- ======================================================================================
 
 class
-  ( Era era,
-    Split (Core.Value era),
+  ( EraSegWits era,
+    ShelleyEraTxBody era,
+    Split (Value era),
     ScriptClass era,
     MinGenPParams era,
-    MinGenWitnesses era,
-    MinGenAuxData era,
-    MinGenTxBody era,
-    HasField "body" (Core.Tx era) (Core.TxBody era),
     MinGenTxout era,
-    PrettyA (Core.Tx era),
-    PrettyA (Core.TxBody era),
-    PrettyA (Core.Witnesses era),
-    PrettyA (Core.Value era),
+    PrettyA (Tx era),
+    PrettyA (TxBody era),
+    PrettyA (Witnesses era),
+    PrettyA (Value era),
     Default (StashedAVVMAddresses era)
   ) =>
   EraGen era
   where
   -- | Generate a genesis value for the Era
-  genGenesisValue :: GenEnv era -> Gen (Core.Value era)
+  genGenesisValue :: GenEnv era -> Gen (Value era)
 
   -- | A list of three-phase scripts that can be chosen for payment when building a transaction
   genEraTwoPhase3Arg :: [TwoPhase3ArgInfo era]
@@ -234,82 +203,84 @@ class
   genEraTxBody ::
     GenEnv era ->
     UTxO era ->
-    Core.PParams era ->
+    PParams era ->
     SlotNo ->
     Set (TxIn (Crypto era)) ->
-    StrictSeq (Core.TxOut era) ->
+    StrictSeq (TxOut era) ->
     StrictSeq (DCert (Crypto era)) ->
     Wdrl (Crypto era) ->
     Coin ->
     StrictMaybe (Update era) ->
     StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-    Gen (Core.TxBody era, [Core.Script era])
+    Gen (TxBody era, [Script era])
 
   -- | Generate era-specific auxiliary data
-  genEraAuxiliaryData :: Constants -> Gen (StrictMaybe (Core.AuxiliaryData era))
+  genEraAuxiliaryData :: Constants -> Gen (StrictMaybe (AuxiliaryData era))
 
   -- | Update an era-specific TxBody
   updateEraTxBody ::
     UTxO era ->
-    Core.PParams era ->
-    Core.Witnesses era ->
-    Core.TxBody era ->
+    PParams era ->
+    Witnesses era ->
+    TxBody era ->
     Coin ->
     -- | This overrides the existing TxFee
     Set (TxIn (Crypto era)) ->
     -- | This is to be Unioned with the existing TxIn
-    Core.TxOut era ->
+    TxOut era ->
     -- | This is to be Appended to the end of the existing TxOut
-    Core.TxBody era
+    TxBody era
 
   -- |  Union the TxIn with the existing TxIn in the TxBody
-  addInputs :: Core.TxBody era -> Set (TxIn (Crypto era)) -> Core.TxBody era
+  addInputs :: TxBody era -> Set (TxIn (Crypto era)) -> TxBody era
   addInputs txb _ins = txb
 
-  genEraPParamsDelta :: Constants -> Core.PParams era -> Gen (Core.PParamsDelta era)
+  genEraPParamsUpdate :: Constants -> PParams era -> Gen (PParamsUpdate era)
 
-  genEraPParams :: Constants -> Gen (Core.PParams era)
+  genEraPParams :: Constants -> Gen (PParams era)
 
   -- Its is VERY IMPORTANT that the decentralisation parameter "_d" be non-zero and less than 1.
   -- The system will deadlock if d==0 and there are no registered stake pools.
   -- use Test.Cardano.Ledger.Shelley.Generator.Update(genDecentralisationParam) in your instance.
 
   genEraWitnesses ::
-    (UTxO era, Core.TxBody era, ScriptInfo era) ->
+    (UTxO era, TxBody era, ScriptInfo era) ->
     Set (WitVKey 'Witness (Crypto era)) ->
-    Map (ScriptHash (Crypto era)) (Core.Script era) ->
-    Core.Witnesses era
+    Map (ScriptHash (Crypto era)) (Script era) ->
+    Witnesses era
 
   -- When choosing new recipeients from the UTxO, choose only those whose Outputs meet this predicate.
-  genEraGoodTxOut :: Core.TxOut era -> Bool
+  genEraGoodTxOut :: TxOut era -> Bool
   genEraGoodTxOut _ = True -- The default implementation marks every TxOut as good.
 
   -- | Construct a transaction given its constituent parts.
   constructTx ::
-    Core.TxBody era ->
-    Core.Witnesses era ->
-    StrictMaybe (Core.AuxiliaryData era) ->
-    Core.Tx era
+    TxBody era ->
+    Witnesses era ->
+    StrictMaybe (AuxiliaryData era) ->
+    Tx era
+  constructTx txBody txWits txAuxData =
+    mkBasicTx txBody & witsTxL .~ txWits & auxDataTxL .~ txAuxData
 
   -- | compute the delta cost of an additional script on  per Era basis.
-  genEraScriptCost :: Core.PParams era -> Core.Script era -> Coin
+  genEraScriptCost :: PParams era -> Script era -> Coin
   genEraScriptCost _pp _script = Coin 0
 
   -- | A final opportunity to tweak things when the generator is done. Possible uses
   --   1) Add tracing when debugging on a per Era basis
-  genEraDone :: Core.PParams era -> Core.Tx era -> Gen (Core.Tx era)
+  genEraDone :: PParams era -> Tx era -> Gen (Tx era)
   genEraDone _pp x = pure x
 
   -- | A final opportunity to tweak things at the block level. Possible uses
   --   2) Run a test that might decide to 'discard' the test, because we got unlucky, and a rare unfixible condition has occurred.
-  genEraTweakBlock :: Core.PParams era -> Seq (Core.Tx era) -> Gen (Seq (Core.Tx era))
+  genEraTweakBlock :: PParams era -> Seq (Tx era) -> Gen (Seq (Tx era))
   genEraTweakBlock _pp seqTx = pure seqTx
 
-  hasFailedScripts :: Core.Tx era -> Bool
+  hasFailedScripts :: Tx era -> Bool
   hasFailedScripts = const False
 
-  feeOrCollateral :: Core.Tx era -> UTxO era -> Coin
-  feeOrCollateral tx _ = getField @"txfee" $ getField @"body" tx
+  feeOrCollateral :: Tx era -> UTxO era -> Coin
+  feeOrCollateral tx _ = tx ^. bodyTxL . feeTxBodyL
 
 {------------------------------------------------------------------------------
   Generators shared across eras
@@ -332,11 +303,11 @@ genUtxo0 ge@(GenEnv _ _ c@Constants {minGenesisUTxOouts, maxGenesisUTxOouts}) = 
       (fmap (toAddr Testnet) genesisKeys ++ fmap (scriptsToAddr' Testnet) genesisScripts)
   return (genesisCoins genesisId outs)
   where
-    scriptsToAddr' :: Network -> (Core.Script era, Core.Script era) -> Addr (Crypto era)
+    scriptsToAddr' :: Network -> (Script era, Script era) -> Addr (Crypto era)
     scriptsToAddr' n (payScript, stakeScript) =
       Addr n (scriptToCred' payScript) (StakeRefBase $ scriptToCred' stakeScript)
 
-    scriptToCred' :: Core.Script era -> Credential kr (Crypto era)
+    scriptToCred' :: Script era -> Credential kr (Crypto era)
     scriptToCred' = ScriptHashObj . hashScript @era
 
 -- | We share this dummy TxId as genesis transaction id across eras
@@ -359,26 +330,26 @@ someScripts ::
   Constants ->
   Int ->
   Int ->
-  Gen [(Core.Script era, Core.Script era)]
+  Gen [(Script era, Script era)]
 someScripts c lower upper = take <$> choose (lower, upper) <*> shuffle (allScripts @era c)
 
 -- | A list of all possible kinds of scripts in the current Era.
 --   Might include Keylocked scripts, Start-Finish Timelock scripts, Quantified scripts (All, Any, MofN), Plutus Scripts
 --   Note that 'genEraTwoPhase3Arg' and 'genEraTwoPhase2Arg' may be the empty list ([]) in some Eras.
-allScripts :: forall era. EraGen era => Constants -> [(Core.Script era, Core.Script era)]
+allScripts :: forall era. EraGen era => Constants -> [(Script era, Script era)]
 allScripts c =
-  (plutusPairs genEraTwoPhase3Arg genEraTwoPhase2Arg (take 3 simple))
-    ++ (take (numSimpleScripts c) simple) -- 10 means about 5% of allScripts are Plutus Scripts
+  plutusPairs genEraTwoPhase3Arg genEraTwoPhase2Arg (take 3 simple)
+    ++ take (numSimpleScripts c) simple -- 10 means about 5% of allScripts are Plutus Scripts
     -- Plutus scripts in some Eras ([] in other Eras)
     -- [(payment,staking)] where the either payment or staking may be a plutus script
     ++
     -- Simple scripts (key locked, Start-Finish timelocks)
-    (combinedScripts @era c)
+    combinedScripts @era c
   where
     -- Quantifed scripts (All, Any, MofN)
 
     simple = baseScripts @era c
-    plutusPairs :: [TwoPhase3ArgInfo era] -> [TwoPhase2ArgInfo era] -> [(Core.Script era, Core.Script era)] -> [(Core.Script era, Core.Script era)]
+    plutusPairs :: [TwoPhase3ArgInfo era] -> [TwoPhase2ArgInfo era] -> [(Script era, Script era)] -> [(Script era, Script era)]
     plutusPairs [] _ _ = []
     plutusPairs _ [] _ = []
     plutusPairs _ _ [] = []
@@ -407,8 +378,8 @@ randomByHash low high x = low + remainder
 -- =========================================================
 
 data Label t where
-  Body' :: Label (Core.TxBody era)
-  Wits' :: Label (Core.Witnesses era)
+  Body' :: Label (TxBody era)
+  Wits' :: Label (Witnesses era)
 
 class Sets (x :: Label t) y where
   set :: Label t -> y -> y

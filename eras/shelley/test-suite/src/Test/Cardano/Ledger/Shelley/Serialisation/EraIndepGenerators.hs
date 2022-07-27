@@ -58,21 +58,15 @@ import Cardano.Ledger.BaseTypes
     textToUrl,
   )
 import Cardano.Ledger.Coin (CompactForm (..), DeltaCoin (..))
+import Cardano.Ledger.Core (Crypto, Era, EraScript (..), EraSegWits (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (DSIGN)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era, SupportsSegWit (..), ValidateScript)
+import Cardano.Ledger.Keys.Bootstrap (ChainCode (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..))
 import Cardano.Ledger.SafeHash (HasAlgorithm, SafeHash, unsafeMakeSafeHash)
 import Cardano.Ledger.Serialization (ToCBORGroup)
-import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody (..))
-import Cardano.Ledger.Shelley.Address.Bootstrap (ChainCode (..))
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesScript,
-    UsesTxBody,
-    UsesTxOut,
-    UsesValue,
-  )
+import Cardano.Ledger.Shelley.API hiding (SignedDSIGN, TxBody)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg, StashedAVVMAddresses)
 import qualified Cardano.Ledger.Shelley.Metadata as MD
 import Cardano.Ledger.Shelley.PoolRank
@@ -103,7 +97,7 @@ import qualified Cardano.Ledger.Shelley.Rules.Ledgers as STS
 import qualified Cardano.Ledger.Shelley.Rules.Pool as STS
 import qualified Cardano.Ledger.Shelley.Rules.Ppup as STS
 import qualified Cardano.Ledger.Shelley.Rules.Utxow as STS
-import Cardano.Ledger.Shelley.Tx (WitnessSetHKD (WitnessSet), hashScript)
+import Cardano.Ledger.Shelley.Tx (WitnessSetHKD (..))
 import Cardano.Ledger.UnifiedMap (Trip (Triple), Triple, UMap (UnifiedMap), UnifiedMap)
 import Cardano.Protocol.TPraos.BHeader (BHeader, HashHeader)
 import qualified Cardano.Protocol.TPraos.BHeader as TP
@@ -290,10 +284,10 @@ instance CC.Crypto crypto => Arbitrary (TxIn crypto) where
       <*> arbitrary
 
 instance
-  (UsesValue era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
-  Arbitrary (TxOut era)
+  (Core.EraTxOut era, Mock (Crypto era), Arbitrary (Core.Value era)) =>
+  Arbitrary (ShelleyTxOut era)
   where
-  arbitrary = TxOut <$> arbitrary <*> arbitrary
+  arbitrary = ShelleyTxOut <$> arbitrary <*> arbitrary
 
 instance Arbitrary Nonce where
   arbitrary =
@@ -424,8 +418,7 @@ instance CC.Crypto crypto => Arbitrary (STS.PrtclState crypto) where
   shrink = genericShrink
 
 deriving instance
-  ( UsesTxOut era,
-    UsesValue era,
+  ( Core.EraTxOut era,
     Mock (Crypto era),
     Arbitrary (Core.TxOut era)
   ) =>
@@ -504,8 +497,7 @@ instance CC.Crypto crypto => Arbitrary (DPState crypto) where
   shrink = genericShrink
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
+  ( Core.EraTxOut era,
     Mock (Crypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (State (Core.EraRule "PPUP" era))
@@ -532,8 +524,7 @@ instance CC.Crypto c => Arbitrary (IncrementalStake c) where
 -- > instance OVERLAPPING_ GSubtermsIncl (K1 i a) b where
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
+  ( Core.EraTxOut era,
     Mock (Crypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (State (Core.EraRule "PPUP" era))
@@ -544,8 +535,7 @@ instance
   shrink = genericShrink
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
+  ( Core.EraTxOut era,
     Mock (Crypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (Core.Value era),
@@ -568,8 +558,7 @@ instance CC.Crypto crypto => Arbitrary (PoolDistr crypto) where
       genVal = IndividualPoolStake <$> arbitrary <*> genHash
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
+  ( Core.EraTxOut era,
     Mock (Crypto era),
     Arbitrary (Core.TxOut era),
     Arbitrary (Core.Value era),
@@ -727,7 +716,7 @@ genUTCTime = do
       (Time.picosecondsToDiffTime diff)
 
 instance
-  (Mock (Crypto era), Arbitrary (PParams era)) =>
+  (Mock (Crypto era), Arbitrary (ShelleyPParams era)) =>
   Arbitrary (ShelleyGenesis era)
   where
   arbitrary =
@@ -749,15 +738,14 @@ instance
       <*> (ShelleyGenesisStaking <$> arbitrary <*> arbitrary) -- sgStaking
 
 instance
-  ( UsesScript era,
-    Mock (Crypto era),
-    ValidateScript era,
+  ( Mock (Crypto era),
+    EraScript era,
     Arbitrary (Core.Script era)
   ) =>
-  Arbitrary (WitnessSet era)
+  Arbitrary (ShelleyWitnesses era)
   where
   arbitrary =
-    WitnessSet
+    ShelleyWitnesses
       <$> arbitrary
       <*> (mscriptsToWits <$> arbitrary)
       <*> arbitrary
@@ -829,25 +817,21 @@ instance
   shrink _ = []
 
 genTx ::
-  ( Era era,
+  ( Core.EraTx era,
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.AuxiliaryData era),
-    Arbitrary (Core.Witnesses era),
-    ToCBOR (Core.AuxiliaryData era), -- for Tx Pattern
-    ToCBOR (Core.TxBody era), -- for Tx Pattern
-    ToCBOR (Core.Witnesses era) -- for Tx Pattern
+    Arbitrary (Core.Witnesses era)
   ) =>
-  Gen (Tx era)
+  Gen (ShelleyTx era)
 genTx =
-  Tx
+  ShelleyTx
     <$> arbitrary
     <*> resize maxTxWits arbitrary
     <*> arbitrary
 
 genBlock ::
   forall era h.
-  ( Era era,
-    ToCBORGroup (TxSeq era),
+  ( EraSegWits era,
     Mock (Crypto era),
     Arbitrary (Core.Tx era),
     h ~ BHeader (Crypto era)
@@ -865,9 +849,8 @@ genBlock = Block <$> arbitrary <*> (toTxSeq @era <$> arbitrary)
 -- This generator uses 'mkBlock' provide more coherent blocks.
 genCoherentBlock ::
   forall era h.
-  ( ToCBORGroup (TxSeq era),
-    Mock (Crypto era),
-    UsesTxBody era,
+  ( Mock (Crypto era),
+    EraSegWits era,
     Arbitrary (Core.Tx era),
     h ~ BHeader (Crypto era)
   ) =>
@@ -896,24 +879,22 @@ genCoherentBlock = do
       ocert
 
 instance
-  ( Era era,
+  ( Core.EraTx era,
+    ToCBOR (Core.Witnesses era),
     Arbitrary (Core.TxBody era),
     Arbitrary (Core.Value era),
     Arbitrary (Core.AuxiliaryData era),
     Arbitrary (Core.Script era),
-    Arbitrary (Core.Witnesses era),
-    ToCBOR (Core.AuxiliaryData era), -- for Tx Pattern
-    ToCBOR (Core.TxBody era), -- for Tx Pattern
-    ToCBOR (Core.Witnesses era) -- for Tx Pattern
+    Arbitrary (Core.Witnesses era)
   ) =>
-  Arbitrary (Tx era)
+  Arbitrary (ShelleyTx era)
   where
   arbitrary = genTx
 
 instance
-  ( UsesTxBody era,
+  ( Core.EraTxBody era,
     ToCBORGroup (TxSeq era),
-    SupportsSegWit era,
+    EraSegWits era,
     Mock (Crypto era),
     Arbitrary (Core.Tx era),
     h ~ BHeader (Crypto era)

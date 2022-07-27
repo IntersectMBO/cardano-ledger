@@ -29,6 +29,7 @@ import Cardano.Ledger.Shelley.Rules.EraMapping ()
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (ShelleyTx), ShelleyTxBody (ShelleyTxBody))
 import qualified Cardano.Ledger.Shelley.Tx as Shelley
 import Cardano.Protocol.TPraos.API (PraosCrypto)
 import Cardano.Slotting.EpochInfo.API (epochInfoSize)
@@ -106,7 +107,7 @@ instance
               [UtxowFailure (UtxoFailure (ValueNotConservedUTxO x' y'))]
 
   makeTxBody _ (TxBodyArguments maxTTL fee ins outs dcerts wdrl (NoMintSupport ()) (NoPlutusSupport ()) (NoPlutusSupport ()) (NoPlutusSupport ())) =
-    Shelley.TxBody
+    ShelleyTxBody
       { Shelley._inputs = ins,
         Shelley._outputs = outs,
         Shelley._certs = dcerts,
@@ -118,11 +119,11 @@ instance
       }
 
   makeTx _ realTxBody (TxWitnessArguments wits (NoScriptSupport ()) (NoPlutusSupport ()) (NoPlutusSupport ())) =
-    Shelley.Tx realTxBody (mempty {Shelley.addrWits = wits}) SNothing
+    ShelleyTx realTxBody (mempty {Shelley.addrWits = wits}) SNothing
 
 fromShelleyGlobals ::
   Globals ->
-  Shelley.PParams era ->
+  Shelley.ShelleyPParams era ->
   Map.Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   Map.Map (Addr (Crypto era)) Coin ->
   ShelleyGenesis era
@@ -148,7 +149,7 @@ fromShelleyGlobals globals pp genDelegs initialFunds =
 elaborateShelleyPParams ::
   KnownRequiredFeatures (EraFeatureSet era) =>
   ModelPParams (EraFeatureSet era) ->
-  Shelley.PParams era
+  Shelley.ShelleyPParams era
 elaborateShelleyPParams mpp =
   let minUTxOValue =
         bifoldMapSupportsFeature id (`pow` (29 :: Integer)) $ runIdentity $ _modelPParams_coinsPerUTxOWord mpp

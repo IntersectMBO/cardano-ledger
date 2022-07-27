@@ -14,8 +14,8 @@ import Cardano.Ledger.Compactible (fromCompact, toCompact)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
+    MaryValue (..),
     PolicyID (..),
-    Value (..),
     insert,
     lookup,
   )
@@ -54,24 +54,24 @@ insert3 ::
   PolicyID crypto ->
   AssetName ->
   Integer ->
-  Value crypto ->
-  Value crypto
-insert3 combine pid aid new (Value c m1) =
+  MaryValue crypto ->
+  MaryValue crypto
+insert3 combine pid aid new (MaryValue c m1) =
   case Map.lookup pid m1 of
     Nothing ->
-      Value c $
+      MaryValue c $
         canonicalInsert (canonicalMapUnion combine) pid (canonicalInsert combine aid new zeroC) m1
     Just m2 -> case Map.lookup aid m2 of
       Nothing ->
-        Value c $
+        MaryValue c $
           canonicalInsert (canonicalMapUnion combine) pid (singleton aid new) m1
       Just old ->
-        Value c $
+        MaryValue c $
           canonicalInsert pickNew pid (canonicalInsert pickNew aid (combine old new) m2) m1
 
 -- | Make a Value with no coin, and just one token.
-unit :: PolicyID crypto -> AssetName -> Integer -> Value crypto
-unit pid aid n = Value 0 (canonicalInsert pickNew pid (canonicalInsert pickNew aid n empty) empty)
+unit :: PolicyID crypto -> AssetName -> Integer -> MaryValue crypto
+unit pid aid n = MaryValue 0 (canonicalInsert pickNew pid (canonicalInsert pickNew aid n empty) empty)
 
 -- Use <+> and <->
 
@@ -81,8 +81,8 @@ insert2 ::
   PolicyID crypto ->
   AssetName ->
   Integer ->
-  Value crypto ->
-  Value crypto
+  MaryValue crypto ->
+  MaryValue crypto
 insert2 combine pid aid new m1 =
   -- The trick is to correctly not store a zero. Several ways to get a zero
   case (lookup pid aid m1, new == 0) of
@@ -97,18 +97,18 @@ insert2 combine pid aid new m1 =
 
 -- 3 functions that build Values from Policy Asset triples.
 
-valueFromList :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> Value C_Crypto
-valueFromList list c = foldr acc (Value c empty) list
+valueFromList :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
+valueFromList list c = foldr acc (MaryValue c empty) list
   where
     acc (policy, asset, count) m = insert (+) policy asset count m
 
-valueFromList3 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> Value C_Crypto
-valueFromList3 list c = foldr acc (Value c empty) list
+valueFromList3 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
+valueFromList3 list c = foldr acc (MaryValue c empty) list
   where
     acc (policy, asset, count) m = insert3 (+) policy asset count m
 
-valueFromList2 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> Value C_Crypto
-valueFromList2 list c = foldr acc (Value c empty) list
+valueFromList2 :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
+valueFromList2 list c = foldr acc (MaryValue c empty) list
   where
     acc (policy, asset, count) m = insert2 (+) policy asset count m
 
@@ -144,10 +144,10 @@ genMap genAmount = do
   len <- frequency [(1, pure 0), (4, pure 1), (5, pure 2), (2, pure 3), (1, pure 4)]
   vectorOf len (genTriple genAmount)
 
-genValue :: Gen Integer -> Gen (Value C_Crypto)
+genValue :: Gen Integer -> Gen (MaryValue C_Crypto)
 genValue genAmount = valueFromList <$> genMap genAmount <*> genAmount
 
-instance Arbitrary (Value C_Crypto) where
+instance Arbitrary (MaryValue C_Crypto) where
   arbitrary = genValue (choose (-2, 10))
   shrink _ = []
 
@@ -176,7 +176,7 @@ albelianTests =
     [ testGroup "albelian Coin" $
         map (\(prop, name) -> testProperty name prop) (albelianlist @Coin),
       testGroup "albelian Value" $
-        map (\(prop, name) -> testProperty name prop) (albelianlist @(Value C_Crypto))
+        map (\(prop, name) -> testProperty name prop) (albelianlist @(MaryValue C_Crypto))
     ]
 
 -- ===================================================================
@@ -224,7 +224,7 @@ polyCoinTests = testGroup "polyCoinTests" (map f (proplist @Coin))
     f (fun, name) = testProperty name fun
 
 polyValueTests :: TestTree
-polyValueTests = testGroup "polyValueTests" (map f (proplist @(Value C_Crypto)))
+polyValueTests = testGroup "polyValueTests" (map f (proplist @(MaryValue C_Crypto)))
   where
     f (fun, name) = testProperty name fun
 
@@ -233,7 +233,7 @@ polyValueTests = testGroup "polyValueTests" (map f (proplist @(Value C_Crypto)))
 -- Testing that insert, lookup, and coin interact properly
 
 valuePropList ::
-  [(Integer -> Integer -> Value C_Crypto -> PolicyID C_Crypto -> AssetName -> Bool, String)]
+  [(Integer -> Integer -> MaryValue C_Crypto -> PolicyID C_Crypto -> AssetName -> Bool, String)]
 valuePropList =
   [ (\_ _ x _ _ -> coin (modifyCoin f x) == modifyCoin f (coin x), "coinModify"),
     (\_ _ _ p a -> insert pickOld p a 0 zero == zero, "Nozeros"),
@@ -284,7 +284,16 @@ valuePropList =
 monoValueTests :: TestTree
 monoValueTests = testGroup "Value specific tests" (map (\(f, n) -> testProperty n f) valuePropList)
 
-valueGroup :: [(Integer -> Value C_Crypto -> Value C_Crypto -> PolicyID C_Crypto -> AssetName -> Property, String)]
+valueGroup ::
+  [ ( Integer ->
+      MaryValue C_Crypto ->
+      MaryValue C_Crypto ->
+      PolicyID C_Crypto ->
+      AssetName ->
+      Property,
+      String
+    )
+  ]
 valueGroup =
   [ (\_ x y p a -> lookup p a (x <+> y) === lookup p a x + lookup p a y, "lookup over <+>"),
     (\_ x y p a -> lookup p a (x <-> y) === lookup p a x - lookup p a y, "lookup over <->"),

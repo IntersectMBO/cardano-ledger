@@ -21,9 +21,7 @@ where
 
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShots, obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState,
@@ -74,49 +72,48 @@ import NoThunks.Class (NoThunks (..))
 data EPOCH era
 
 data EpochPredicateFailure era
-  = PoolReapFailure (PredicateFailure (Core.EraRule "POOLREAP" era)) -- Subtransition Failures
-  | SnapFailure (PredicateFailure (Core.EraRule "SNAP" era)) -- Subtransition Failures
-  | UpecFailure (PredicateFailure (Core.EraRule "UPEC" era)) -- Subtransition Failures
+  = PoolReapFailure (PredicateFailure (EraRule "POOLREAP" era)) -- Subtransition Failures
+  | SnapFailure (PredicateFailure (EraRule "SNAP" era)) -- Subtransition Failures
+  | UpecFailure (PredicateFailure (EraRule "UPEC" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
-  ( Eq (PredicateFailure (Core.EraRule "POOLREAP" era)),
-    Eq (PredicateFailure (Core.EraRule "SNAP" era)),
-    Eq (PredicateFailure (Core.EraRule "UPEC" era))
+  ( Eq (PredicateFailure (EraRule "POOLREAP" era)),
+    Eq (PredicateFailure (EraRule "SNAP" era)),
+    Eq (PredicateFailure (EraRule "UPEC" era))
   ) =>
   Eq (EpochPredicateFailure era)
 
 deriving stock instance
-  ( Show (PredicateFailure (Core.EraRule "POOLREAP" era)),
-    Show (PredicateFailure (Core.EraRule "SNAP" era)),
-    Show (PredicateFailure (Core.EraRule "UPEC" era))
+  ( Show (PredicateFailure (EraRule "POOLREAP" era)),
+    Show (PredicateFailure (EraRule "SNAP" era)),
+    Show (PredicateFailure (EraRule "UPEC" era))
   ) =>
   Show (EpochPredicateFailure era)
 
 data EpochEvent era
-  = PoolReapEvent (Event (Core.EraRule "POOLREAP" era))
-  | SnapEvent (Event (Core.EraRule "SNAP" era))
-  | UpecEvent (Event (Core.EraRule "UPEC" era))
+  = PoolReapEvent (Event (EraRule "POOLREAP" era))
+  | SnapEvent (Event (EraRule "SNAP" era))
+  | UpecEvent (Event (EraRule "UPEC" era))
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    Embed (Core.EraRule "SNAP" era) (EPOCH era),
-    Environment (Core.EraRule "SNAP" era) ~ LedgerState era,
-    State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
-    Signal (Core.EraRule "SNAP" era) ~ (),
-    Embed (Core.EraRule "POOLREAP" era) (EPOCH era),
-    Environment (Core.EraRule "POOLREAP" era) ~ Core.PParams era,
-    State (Core.EraRule "POOLREAP" era) ~ PoolreapState era,
-    Signal (Core.EraRule "POOLREAP" era) ~ EpochNo,
-    Embed (Core.EraRule "UPEC" era) (EPOCH era),
-    Environment (Core.EraRule "UPEC" era) ~ EpochState era,
-    State (Core.EraRule "UPEC" era) ~ UpecState era,
-    Signal (Core.EraRule "UPEC" era) ~ (),
-    Default (State (Core.EraRule "PPUP" era)),
-    Default (Core.PParams era),
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin
+  ( EraTxOut era,
+    Embed (EraRule "SNAP" era) (EPOCH era),
+    Environment (EraRule "SNAP" era) ~ LedgerState era,
+    State (EraRule "SNAP" era) ~ SnapShots (Crypto era),
+    Signal (EraRule "SNAP" era) ~ (),
+    Embed (EraRule "POOLREAP" era) (EPOCH era),
+    Environment (EraRule "POOLREAP" era) ~ PParams era,
+    State (EraRule "POOLREAP" era) ~ PoolreapState era,
+    Signal (EraRule "POOLREAP" era) ~ EpochNo,
+    Embed (EraRule "UPEC" era) (EPOCH era),
+    Environment (EraRule "UPEC" era) ~ EpochState era,
+    State (EraRule "UPEC" era) ~ UpecState era,
+    Signal (EraRule "UPEC" era) ~ (),
+    Default (State (EraRule "PPUP" era)),
+    Default (PParams era),
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin
   ) =>
   STS (EPOCH era)
   where
@@ -129,28 +126,28 @@ instance
   transitionRules = [epochTransition]
 
 instance
-  ( NoThunks (PredicateFailure (Core.EraRule "POOLREAP" era)),
-    NoThunks (PredicateFailure (Core.EraRule "SNAP" era)),
-    NoThunks (PredicateFailure (Core.EraRule "UPEC" era))
+  ( NoThunks (PredicateFailure (EraRule "POOLREAP" era)),
+    NoThunks (PredicateFailure (EraRule "SNAP" era)),
+    NoThunks (PredicateFailure (EraRule "UPEC" era))
   ) =>
   NoThunks (EpochPredicateFailure era)
 
 epochTransition ::
   forall era.
-  ( Embed (Core.EraRule "SNAP" era) (EPOCH era),
-    Environment (Core.EraRule "SNAP" era) ~ LedgerState era,
-    State (Core.EraRule "SNAP" era) ~ SnapShots (Crypto era),
-    Signal (Core.EraRule "SNAP" era) ~ (),
-    Embed (Core.EraRule "POOLREAP" era) (EPOCH era),
-    Environment (Core.EraRule "POOLREAP" era) ~ Core.PParams era,
-    State (Core.EraRule "POOLREAP" era) ~ PoolreapState era,
-    Signal (Core.EraRule "POOLREAP" era) ~ EpochNo,
-    Embed (Core.EraRule "UPEC" era) (EPOCH era),
-    Environment (Core.EraRule "UPEC" era) ~ EpochState era,
-    State (Core.EraRule "UPEC" era) ~ UpecState era,
-    Signal (Core.EraRule "UPEC" era) ~ (),
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin
+  ( Embed (EraRule "SNAP" era) (EPOCH era),
+    Environment (EraRule "SNAP" era) ~ LedgerState era,
+    State (EraRule "SNAP" era) ~ SnapShots (Crypto era),
+    Signal (EraRule "SNAP" era) ~ (),
+    Embed (EraRule "POOLREAP" era) (EPOCH era),
+    Environment (EraRule "POOLREAP" era) ~ PParams era,
+    State (EraRule "POOLREAP" era) ~ PoolreapState era,
+    Signal (EraRule "POOLREAP" era) ~ EpochNo,
+    Embed (EraRule "UPEC" era) (EPOCH era),
+    Environment (EraRule "UPEC" era) ~ EpochState era,
+    State (EraRule "UPEC" era) ~ UpecState era,
+    Signal (EraRule "UPEC" era) ~ (),
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin
   ) =>
   TransitionRule (EPOCH era)
 epochTransition = do
@@ -170,7 +167,7 @@ epochTransition = do
   let utxoSt = lsUTxOState ls
   let DPState dstate pstate = lsDPState ls
   ss' <-
-    trans @(Core.EraRule "SNAP" era) $ TRC (ls, ss, ())
+    trans @(EraRule "SNAP" era) $ TRC (ls, ss, ())
 
   let PState pParams fPParams _ = pstate
       ppp = eval (pParams ⨃ fPParams)
@@ -180,7 +177,7 @@ epochTransition = do
             _fPParams = Map.empty
           }
   PoolreapState utxoSt' acnt' dstate' pstate'' <-
-    trans @(Core.EraRule "POOLREAP" era) $
+    trans @(EraRule "POOLREAP" era) $
       TRC (pp, PoolreapState utxoSt acnt dstate pstate', e)
 
   let epochState' =
@@ -193,7 +190,7 @@ epochTransition = do
           nm
 
   UpecState pp' ppupSt' <-
-    trans @(Core.EraRule "UPEC" era) $
+    trans @(EraRule "UPEC" era) $
       TRC (epochState', UpecState pp (_ppups utxoSt'), ())
   let utxoSt'' = utxoSt' {_ppups = ppupSt'}
 
@@ -211,10 +208,9 @@ epochTransition = do
       }
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    PredicateFailure (Core.EraRule "SNAP" era) ~ SnapPredicateFailure era,
-    Event (Core.EraRule "SNAP" era) ~ SnapEvent era
+  ( EraTxOut era,
+    PredicateFailure (EraRule "SNAP" era) ~ SnapPredicateFailure era,
+    Event (EraRule "SNAP" era) ~ SnapEvent era
   ) =>
   Embed (SNAP era) (EPOCH era)
   where
@@ -224,8 +220,8 @@ instance
 instance
   ( Era era,
     STS (POOLREAP era),
-    PredicateFailure (Core.EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era,
-    Event (Core.EraRule "POOLREAP" era) ~ PoolreapEvent era
+    PredicateFailure (EraRule "POOLREAP" era) ~ PoolreapPredicateFailure era,
+    Event (EraRule "POOLREAP" era) ~ PoolreapEvent era
   ) =>
   Embed (POOLREAP era) (EPOCH era)
   where
@@ -235,8 +231,8 @@ instance
 instance
   ( Era era,
     STS (UPEC era),
-    PredicateFailure (Core.EraRule "UPEC" era) ~ UpecPredicateFailure era,
-    Event (Core.EraRule "UPEC" era) ~ Void
+    PredicateFailure (EraRule "UPEC" era) ~ UpecPredicateFailure era,
+    Event (EraRule "UPEC" era) ~ Void
   ) =>
   Embed (UPEC era) (EPOCH era)
   where

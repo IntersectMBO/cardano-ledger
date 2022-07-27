@@ -18,6 +18,9 @@ import System.Random.Stateful
 -- Benchmark suite
 --------------------------------------------------------------------------------
 
+-- FIXME: This benchmark needs to be rewritten to work on an actual TxOut,
+-- rather than a T newtype because `sumAllValue` now works only on TxOut
+
 newtype T = T {value :: Coin}
   deriving (NFData)
 

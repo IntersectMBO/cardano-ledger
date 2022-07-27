@@ -3,13 +3,10 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
@@ -22,9 +19,9 @@ where
 import Cardano.Ledger.Address (mkRwdAcnt)
 import Cardano.Ledger.BaseTypes (ProtVer, UnitInterval)
 import Cardano.Ledger.Coin (DeltaCoin (..), toDeltaCoin)
+import Cardano.Ledger.Core (Crypto, Era, EraScript (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
 import Cardano.Ledger.Keys
   ( coerceKeyRole,
     hashKey,
@@ -169,7 +166,7 @@ genDCert
 -- | Generate a RegKey certificate
 genRegKeyCert ::
   forall era.
-  ValidateScript era =>
+  EraScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
@@ -214,7 +211,7 @@ genRegKeyCert
 -- needed to witness the certificate.
 genDeRegKeyCert ::
   forall era.
-  ValidateScript era =>
+  EraScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->
@@ -259,7 +256,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
         )
         scripts
     zeroRewards k =
-      (Coin 0) == (UM.findWithDefault (Coin 1) (getRwdCred $ mkRwdAcnt Testnet k) (rewards dState))
+      Coin 0 == UM.findWithDefault (Coin 1) (getRwdCred $ mkRwdAcnt Testnet k) (rewards dState)
 
 -- | Generate a new delegation certificate by picking a registered staking
 -- credential and pool. The delegation is witnessed by the delegator's
@@ -269,7 +266,7 @@ genDeRegKeyCert Constants {frequencyKeyCredDeReg, frequencyScriptCredDeReg} keys
 -- registered pools.
 genDelegation ::
   forall era.
-  ValidateScript era =>
+  EraScript era =>
   Constants ->
   KeyPairs (Crypto era) ->
   [(Core.Script era, Core.Script era)] ->

@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE NamedFieldPuns #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
@@ -21,8 +20,8 @@ module Test.Cardano.Ledger.Shelley.Generator.Presets
   )
 where
 
+import Cardano.Ledger.Core (EraScript (hashScript))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (ValidateScript (hashScript))
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyHash,
@@ -67,7 +66,12 @@ genEnv _ =
     defaultConstants
 
 -- | An Example Script space for use in Trace generators
-scriptSpace :: forall era. ValidateScript era => [TwoPhase3ArgInfo era] -> [TwoPhase2ArgInfo era] -> ScriptSpace era
+scriptSpace ::
+  forall era.
+  EraScript era =>
+  [TwoPhase3ArgInfo era] ->
+  [TwoPhase2ArgInfo era] ->
+  ScriptSpace era
 scriptSpace scripts3 scripts2 =
   ScriptSpace
     scripts3

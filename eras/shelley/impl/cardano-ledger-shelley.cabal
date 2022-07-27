@@ -32,7 +32,6 @@ library
   exposed-modules:
     Cardano.Ledger.Chain
     Cardano.Ledger.Shelley
-    Cardano.Ledger.Shelley.Constraints
     Cardano.Ledger.Shelley.Address.Bootstrap
     Cardano.Ledger.Shelley.API
     Cardano.Ledger.Shelley.API.ByronTranslation
@@ -50,14 +49,13 @@ library
     Cardano.Ledger.Shelley.Genesis
     Cardano.Ledger.Shelley.HardForks
     Cardano.Ledger.Shelley.LedgerState
-    Cardano.Ledger.Shelley.LedgerState.Types
     Cardano.Ledger.Shelley.Metadata
     Cardano.Ledger.Shelley.Orphans
     Cardano.Ledger.Shelley.PoolRank
     Cardano.Ledger.Shelley.PoolParams
     Cardano.Ledger.Shelley.PParams
     Cardano.Ledger.Shelley.Rewards
-    Cardano.Ledger.Shelley.RewardProvenance    
+    Cardano.Ledger.Shelley.RewardProvenance
     Cardano.Ledger.Shelley.RewardUpdate
     Cardano.Ledger.Shelley.Scripts
     Cardano.Ledger.Shelley.SoftForks
@@ -86,6 +84,8 @@ library
     Cardano.Ledger.Shelley.TxBody
     Cardano.Ledger.Shelley.UTxO
   other-modules:
+    Cardano.Ledger.Shelley.Era
+    Cardano.Ledger.Shelley.LedgerState.Types
     Cardano.Ledger.Shelley.LedgerState.DPState
     Cardano.Ledger.Shelley.LedgerState.IncrementalStake
     Cardano.Ledger.Shelley.LedgerState.NewEpochState
@@ -106,7 +106,6 @@ library
     cardano-slotting,
     cborg,
     vector-map,
-    constraints,
     containers,
     data-default-class,
     deepseq,

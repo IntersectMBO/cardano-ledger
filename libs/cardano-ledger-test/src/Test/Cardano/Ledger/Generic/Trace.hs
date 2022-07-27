@@ -17,18 +17,14 @@ module Test.Cardano.Ledger.Generic.Trace where
 -- =========================================================================
 
 import Cardano.Ledger.Address (Addr (..))
-import Cardano.Ledger.Alonzo.PParams (PParams' (..))
-import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (body))
-import qualified Cardano.Ledger.Babbage.PParams (PParams' (..))
-import Cardano.Ledger.Babbage.Rules.Ledger ()
--- import Cardano.Ledger.Babbage.Rules.Utxo (BabbageUtxoPred (..))
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
+import Cardano.Ledger.Alonzo.Rules (UtxowPredicateFail (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (body))
+import qualified Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.Rules (BabbageUtxowPred (..))
 import Cardano.Ledger.Babbage.TxBody (certs')
 import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era (..))
-import Cardano.Ledger.Hashes (ScriptHash)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Pretty
@@ -55,7 +51,7 @@ import Cardano.Ledger.Shelley.LedgerState
     StashedAVVMAddresses,
     UTxOState (..),
   )
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
+import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledgers (LedgersPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (ScriptWitnessNotValidatingUTXOW))
@@ -82,6 +78,7 @@ import Data.Vector (Vector, (!))
 import qualified Data.Vector as Vector
 import Debug.Trace
 import GHC.Word (Word64)
+import Lens.Micro ((^.))
 import Prettyprinter (hsep, parens, vsep)
 import System.IO.Unsafe (unsafePerformIO)
 import Test.Cardano.Ledger.Generic.ApplyTx (applyTx)
@@ -91,7 +88,6 @@ import Test.Cardano.Ledger.Generic.Functions
     allInputs,
     getBody,
     getScriptWits,
-    getTxOutCoin,
     getWitnesses,
     isValid',
     totalAda,
@@ -127,7 +123,7 @@ import Test.Cardano.Ledger.Generic.PrettyCore
     scriptSummary,
   )
 import Test.Cardano.Ledger.Generic.Proof hiding (lift)
-import Test.Cardano.Ledger.Generic.TxGen (genValidatedTx)
+import Test.Cardano.Ledger.Generic.TxGen (genAlonzoTx)
 import Test.Cardano.Ledger.Shelley.Rules.TestChain (stakeDistr)
 import Test.Cardano.Ledger.Shelley.Utils (applySTSTest, runShelleyBase, testGlobals)
 import Test.QuickCheck
@@ -136,24 +132,24 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- ===========================================
 
--- | Generate a Core.Tx and an internal Model of the state after the tx
+-- | Generate a Tx and an internal Model of the state after the tx
 --   has been applied. That model can be used to generate the next Tx
-genRsTxAndModel :: Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Core.Tx era)
+genRsTxAndModel :: Reflect era => Proof era -> Int -> SlotNo -> GenRS era (Tx era)
 genRsTxAndModel proof n slot = do
-  (_, tx) <- genValidatedTx proof slot
+  (_, tx) <- genAlonzoTx proof slot
   modifyModel (\model -> applyTx proof n slot model tx)
   pure tx
 
--- | Generate a Vector of (StrictSeq (Core.Tx era))  representing a (Vector Block)
+-- | Generate a Vector of (StrictSeq (Tx era))  representing a (Vector Block)
 genRsTxSeq ::
   forall era.
   Reflect era =>
   Proof era ->
   Int ->
   Int ->
-  [(StrictSeq (Core.Tx era), SlotNo)] ->
+  [(StrictSeq (Tx era), SlotNo)] ->
   SlotNo ->
-  GenRS era (Vector (StrictSeq (Core.Tx era), SlotNo))
+  GenRS era (Vector (StrictSeq (Tx era), SlotNo))
 genRsTxSeq proof this lastN ans _slot | this >= lastN = do
   seq
     (unsafePerformIO (writeIORef theVector (TT proof (reverse ans))))
@@ -175,7 +171,7 @@ genTxSeq ::
   Int -> -- The number of Tx in the sequence
   GenRS era () -> -- An arbitrary 'initialization action', to run before we generate the sequence
   -- use (pure ()) if you don't want or need initialization
-  Gen (Vector (StrictSeq (Core.Tx era), SlotNo), GenState era)
+  Gen (Vector (StrictSeq (Tx era), SlotNo), GenState era)
 genTxSeq proof gensize numTx initialize = do
   runGenRS proof gensize (initialize >> genRsTxSeq proof 0 numTx [] (SlotNo $ 1))
 
@@ -218,8 +214,9 @@ makeEpochState gstate ledgerstate =
       esNonMyopic = def
     }
 
-snaps :: Era era => LedgerState era -> SnapShots (Crypto era)
-snaps (LedgerState UTxOState {_utxo = u, _fees = f} (DPState dstate pstate)) = SnapShots snap snap snap f
+snaps :: EraTxOut era => LedgerState era -> SnapShots (Crypto era)
+snaps (LedgerState UTxOState {_utxo = u, _fees = f} (DPState dstate pstate)) =
+  SnapShots snap snap snap f
   where
     snap = stakeDistr u dstate pstate
 
@@ -227,7 +224,7 @@ snaps (LedgerState UTxOState {_utxo = u, _fees = f} (DPState dstate pstate)) = S
 
 -- | Turn a UTxO into a smaller UTxO, with only entries mentioned in
 --   the inputs of 'txs' ,  then pretty print it.
-pcSmallUTxO :: Proof era -> MUtxo era -> [Core.Tx era] -> PDoc
+pcSmallUTxO :: EraTx era => Proof era -> MUtxo era -> [Tx era] -> PDoc
 pcSmallUTxO proof u txs = ppMap pcTxIn (shortTxOut proof) m
   where
     keys = Set.unions (map f txs)
@@ -241,7 +238,7 @@ raiseMockError ::
   SlotNo ->
   EpochState era ->
   [MockChainFailure era] ->
-  [Core.Tx era] ->
+  [Tx era] ->
   GenState era ->
   String
 raiseMockError slot (SlotNo next) epochstate pdfs txs GenState {..} =
@@ -331,7 +328,7 @@ badScripts proof xs = Fold.foldl' (\s mcf -> Set.union s (getw proof mcf)) Set.e
         ) = set
     getw _ _ = Set.empty
 
-showBlock :: forall era. Reflect era => MUtxo era -> [Core.Tx era] -> PDoc
+showBlock :: forall era. Reflect era => MUtxo era -> [Tx era] -> PDoc
 showBlock u txs = ppList pppair (zip txs [0 ..])
   where
     pppair (tx, n) =
@@ -346,12 +343,13 @@ showBlock u txs = ppList pppair (zip txs [0 ..])
               ppString "\n"
             ]
 
-shortTxOut :: Proof era -> Core.TxOut era -> PDoc
+shortTxOut :: EraTxOut era => Proof era -> TxOut era -> PDoc
 shortTxOut proof out = case txoutFields proof out of
-  (Addr _ pay _, _, _) -> hsep ["Out", parens $ hsep ["Addr", pcCredential pay], pcCoin (getTxOutCoin proof out)]
+  (Addr _ pay _, _, _) ->
+    hsep ["Out", parens $ hsep ["Addr", pcCredential pay], pcCoin (out ^. coinTxOutL)]
   _ -> error "Bootstrap Address in shortTxOut"
 
-smartTxBody :: Reflect era => Proof era -> MUtxo era -> Core.TxBody era -> PDoc
+smartTxBody :: Reflect era => Proof era -> MUtxo era -> TxBody era -> PDoc
 smartTxBody proof u txbody = ppRecord "TxBody" pairs
   where
     fields = abstractTxBody proof txbody
@@ -378,7 +376,7 @@ instance STS (MOCKCHAIN era)
 -}
 -- ==============================================================
 
-data Gen1 era = Gen1 (Vector (StrictSeq (Core.Tx era), SlotNo)) (GenState era)
+data Gen1 era = Gen1 (Vector (StrictSeq (Tx era), SlotNo)) (GenState era)
 
 instance
   ( STS (MOCKCHAIN era),
@@ -533,9 +531,7 @@ chainTest ::
   forall era.
   ( Reflect era,
     HasTrace (MOCKCHAIN era) (Gen1 era),
-    Eq (Core.TxOut era),
-    Eq (Core.PParams era),
-    Eq (State (Core.EraRule "PPUP" era)),
+    Eq (State (EraRule "PPUP" era)),
     Eq (StashedAVVMAddresses era)
   ) =>
   Proof era ->
@@ -596,12 +592,12 @@ main :: IO ()
 main = defaultMain $ multiEpochTest (Shelley Mock) 200 def
 
 data TT where
-  TT :: Proof era -> [(StrictSeq (Core.Tx era), SlotNo)] -> TT
+  TT :: Proof era -> [(StrictSeq (Tx era), SlotNo)] -> TT
 
 theVector :: IORef TT
 theVector = unsafePerformIO (newIORef (TT (Babbage Mock) []))
 
-showVector :: (forall era. Proof era -> [Core.Tx era] -> SlotNo -> PDoc) -> IO ()
+showVector :: (forall era. Proof era -> [Tx era] -> SlotNo -> PDoc) -> IO ()
 showVector pretty = do
   xs <- readIORef theVector
   case xs of
@@ -611,7 +607,7 @@ showVector pretty = do
 main3 :: IO ()
 main3 = showVector pretty
   where
-    pretty :: Proof era -> [Core.Tx era] -> SlotNo -> PDoc
+    pretty :: Proof era -> [Tx era] -> SlotNo -> PDoc
     pretty (Babbage Mock) xs slot =
       vsep
         [ ppSlotNo slot,

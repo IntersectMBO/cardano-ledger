@@ -6,10 +6,15 @@
 module Test.Cardano.Ledger.ValueFromList where
 
 import qualified Cardano.Ledger.Crypto as C
-import Cardano.Ledger.Mary.Value (AssetName, PolicyID (..))
-import qualified Cardano.Ledger.Mary.Value
-import qualified Cardano.Ledger.Val as Val
-import qualified Data.Map.Strict as Map
+import Cardano.Ledger.Mary.Value as Mary
+  ( AssetName,
+    MaryValue (..),
+    PolicyID (..),
+    insert,
+    valueFromList,
+  )
+import Cardano.Ledger.Val as Val
+import Data.Map.Strict as Map
 
 class Val.Val val => ValueFromList val crypto | val -> crypto where
   valueFromList :: Integer -> [(PolicyID crypto, AssetName, Integer)] -> val
@@ -18,12 +23,12 @@ class Val.Val val => ValueFromList val crypto | val -> crypto where
 
   gettriples :: val -> (Integer, [(PolicyID crypto, AssetName, Integer)])
 
-instance C.Crypto crypto => ValueFromList (Cardano.Ledger.Mary.Value.Value crypto) crypto where
-  valueFromList = Cardano.Ledger.Mary.Value.valueFromList
+instance C.Crypto crypto => ValueFromList (MaryValue crypto) crypto where
+  valueFromList = Mary.valueFromList
 
-  insert = Cardano.Ledger.Mary.Value.insert
+  insert = Mary.insert
 
-  gettriples (Cardano.Ledger.Mary.Value.Value c m1) = (c, triples)
+  gettriples (MaryValue c m1) = (c, triples)
     where
       triples =
         [ (policyId, aname, amount)

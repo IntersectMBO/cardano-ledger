@@ -30,18 +30,16 @@ import Cardano.Ledger.Alonzo.Scripts
     getCostModelParams,
     mkCostModel,
   )
-import Cardano.Ledger.Alonzo.TxBody (TxOut (TxOut))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (AlonzoTxOut))
 import qualified Cardano.Ledger.BaseTypes as BT
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (extractHash)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley
-import Data.Aeson (FromJSON (..), ToJSON (..), Value, object, (.!=), (.:), (.:?), (.=))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
+import Data.Aeson (FromJSON (..), ToJSON (..), object, (.!=), (.:), (.:?), (.=))
 import qualified Data.Aeson as Aeson
 import Data.Aeson.Types (FromJSONKey (..), ToJSONKey (..), toJSONKeyText)
 import Data.Coders
-import Data.Functor.Identity
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
@@ -53,7 +51,6 @@ import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api as PV1 (costModelParamNames)
-import Prelude
 
 data AlonzoGenesis = AlonzoGenesis
   { coinsPerUTxOWord :: !Coin,
@@ -69,9 +66,9 @@ data AlonzoGenesis = AlonzoGenesis
 
 -- | Given the missing pieces turn a Shelley.PParams' into an Params'
 extendPPWithGenesis ::
-  Shelley.PParams' Identity era1 ->
+  ShelleyPParams era1 ->
   AlonzoGenesis ->
-  PParams' Identity era2
+  AlonzoPParams era2
 extendPPWithGenesis
   pp
   AlonzoGenesis
@@ -160,7 +157,7 @@ instance FromJSON ExUnits where
           then pure n
           else fail ("Unit out of bounds for Word64: " <> show n)
 
-toRationalJSON :: Rational -> Value
+toRationalJSON :: Rational -> Aeson.Value
 toRationalJSON r =
   case fromRationalRepetendLimited 20 r of
     Right (s, Nothing) -> toJSON s
@@ -275,7 +272,7 @@ instance ToJSON AlonzoGenesis where
         "maxCollateralInputs" .= maxCollateralInputs v
       ]
 
-instance ToJSON (PParams era) where
+instance ToJSON (AlonzoPParams era) where
   toJSON pp =
     Aeson.object
       [ "minFeeA" .= _minfeeA pp,
@@ -304,10 +301,10 @@ instance ToJSON (PParams era) where
         "maxCollateralInputs " .= _maxCollateralInputs pp
       ]
 
-instance FromJSON (PParams era) where
+instance FromJSON (AlonzoPParams era) where
   parseJSON =
     Aeson.withObject "PParams" $ \obj ->
-      PParams
+      AlonzoPParams
         <$> obj .: "minFeeA"
         <*> obj .: "minFeeB"
         <*> obj .: "maxBlockBodySize"
@@ -333,13 +330,13 @@ instance FromJSON (PParams era) where
         <*> obj .: "collateralPercentage"
         <*> obj .: "maxCollateralInputs"
 
-deriving instance ToJSON (PParamsUpdate era)
+deriving instance ToJSON (AlonzoPParamsUpdate era)
 
 instance
-  (Era era, Show (Core.Value era), ToJSON (Core.Value era)) =>
-  ToJSON (TxOut era)
+  (EraTxOut era, Show (Value era), ToJSON (Value era)) =>
+  ToJSON (AlonzoTxOut era)
   where
-  toJSON (TxOut addr v dataHash) =
+  toJSON (AlonzoTxOut addr v dataHash) =
     object
       [ "address" .= toJSON addr,
         "value" .= toJSON v,

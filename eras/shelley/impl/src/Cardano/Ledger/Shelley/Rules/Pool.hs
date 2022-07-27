@@ -36,9 +36,8 @@ import Cardano.Ledger.BaseTypes
     networkId,
   )
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto (HASH))
-import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import qualified Cardano.Ledger.Shelley.HardForks as HardForks
 import Cardano.Ledger.Shelley.LedgerState (PState (..))
@@ -76,11 +75,11 @@ import NoThunks.Class (NoThunks (..))
 data POOL (era :: Type)
 
 data PoolEnv era
-  = PoolEnv SlotNo (Core.PParams era)
+  = PoolEnv SlotNo (PParams era)
 
-deriving instance (Show (Core.PParams era)) => Show (PoolEnv era)
+deriving instance (Show (PParams era)) => Show (PoolEnv era)
 
-deriving instance (Eq (Core.PParams era)) => Eq (PoolEnv era)
+deriving instance (Eq (PParams era)) => Eq (PoolEnv era)
 
 data PoolPredicateFailure era
   = StakePoolNotRegisteredOnKeyPOOL
@@ -107,9 +106,9 @@ instance NoThunks (PoolPredicateFailure era)
 
 instance
   ( Era era,
-    HasField "_minPoolCost" (Core.PParams era) Coin,
-    HasField "_eMax" (Core.PParams era) EpochNo,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_minPoolCost" (PParams era) Coin,
+    HasField "_eMax" (PParams era) EpochNo,
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   STS (POOL era)
   where
@@ -182,9 +181,9 @@ instance
 poolDelegationTransition ::
   forall era.
   ( Era era,
-    HasField "_minPoolCost" (Core.PParams era) Coin,
-    HasField "_eMax" (Core.PParams era) EpochNo,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer
+    HasField "_minPoolCost" (PParams era) Coin,
+    HasField "_eMax" (PParams era) EpochNo,
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (POOL era)
 poolDelegationTransition = do

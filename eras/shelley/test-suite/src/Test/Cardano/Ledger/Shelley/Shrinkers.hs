@@ -37,11 +37,11 @@ shrinkBlock _ = []
 
 shrinkTx ::
   forall era.
-  (ShelleyTest era, Core.TxBody era ~ TxBody era) =>
-  Tx era ->
-  [Tx era]
-shrinkTx (Tx _b _ws _md) =
-  [Tx b' _ws _md | b' <- shrinkTxBody _b]
+  (ShelleyTest era, Core.TxBody era ~ ShelleyTxBody era) =>
+  ShelleyTx era ->
+  [ShelleyTx era]
+shrinkTx (ShelleyTx _b _ws _md) =
+  [ShelleyTx b' _ws _md | b' <- shrinkTxBody _b]
 
 -- NOTE ====
 --
@@ -56,20 +56,20 @@ shrinkTx (Tx _b _ws _md) =
 shrinkTxBody ::
   forall era.
   ShelleyTest era =>
-  TxBody era ->
-  [TxBody era]
+  ShelleyTxBody era ->
+  [ShelleyTxBody era]
 -- do not shrink body in case of empty output list
 -- this will have to change in case any other part of TxBody will be shrunk
-shrinkTxBody (TxBody _ Empty _ _ _ _ _ _) = []
+shrinkTxBody (ShelleyTxBody _ Empty _ _ _ _ _ _) = []
 -- need to keep all the MA tokens in the transaction, so we need at least one
 -- output to remain after the shrinking to preserve invariant
-shrinkTxBody (TxBody is os@((:<|) (TxOut a vs) _) cs ws tf tl tu md) =
+shrinkTxBody (ShelleyTxBody is os@((:<|) (ShelleyTxOut a vs) _) cs ws tf tl tu md) =
   -- shrinking inputs is probably not very beneficial
   -- [ TxBody is' os cs ws tf tl tu | is' <- shrinkSet shrinkTxIn is ] ++
 
   -- Shrink outputs, add the differing balance of the original and new outputs
   -- to the fees in order to preserve the invariant
-  [ TxBody is (mvExtraTksnToOut1 os') cs ws (tf <+> (extraCoin os')) tl tu md
+  [ ShelleyTxBody is (mvExtraTksnToOut1 os') cs ws (tf <+> extraCoin os') tl tu md
     | os' <- toList $ shrinkStrictSeq shrinkTxOut os
   ]
   where
@@ -84,17 +84,17 @@ shrinkTxBody (TxBody is os@((:<|) (TxOut a vs) _) cs ws tf tl tu md) =
     -- put all the non-ada tokens in the head of the outputs, append shrunk list
     mvExtraTksnToOut1 Empty = empty
     mvExtraTksnToOut1 sr =
-      (TxOut a (vs <+> (extraTokens sr) <-> (Val.inject $ extraCoin sr))) <| sr
+      ShelleyTxOut a (vs <+> extraTokens sr <-> Val.inject (extraCoin sr)) <| sr
 
-outputBalance :: ShelleyTest era => StrictSeq (TxOut era) -> Core.Value era
-outputBalance = foldl' (\v (TxOut _ c) -> v <+> c) mempty
+outputBalance :: ShelleyTest era => StrictSeq (ShelleyTxOut era) -> Core.Value era
+outputBalance = foldl' (\v (ShelleyTxOut _ c) -> v <+> c) mempty
 
 shrinkTxIn :: TxIn crypto -> [TxIn crypto]
 shrinkTxIn = const []
 
-shrinkTxOut :: ShelleyTest era => TxOut era -> [TxOut era]
-shrinkTxOut (TxOut addr vl) =
-  TxOut addr <$> shrinkVal vl
+shrinkTxOut :: ShelleyTest era => ShelleyTxOut era -> [ShelleyTxOut era]
+shrinkTxOut (ShelleyTxOut addr vl) =
+  ShelleyTxOut addr <$> shrinkVal vl
   where
     -- we do not shrink value for now
     shrinkVal vl' = [vl']

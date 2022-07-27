@@ -1,5 +1,4 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveAnyClass #-}
 {-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -10,7 +9,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 
 module Test.Cardano.Ledger.Model.Generators.Shrinking where
 
@@ -56,6 +54,7 @@ import Data.Maybe (catMaybes, fromMaybe)
 import Data.Monoid (Any (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import Test.Cardano.Ledger.Model.API
   ( ModelBlock (..),
     ModelEpoch (..),
@@ -70,6 +69,7 @@ import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSupport (..),
     KnownRequiredFeatures,
     ScriptFeature,
+    ValueFeature,
     traverseSupportsFeature,
   )
 import Test.Cardano.Ledger.Model.Fixup (fixupValues)
@@ -222,7 +222,12 @@ instance State.MonadState TxDependencies (DiscardTransactionM era) where
   put s = DiscardTransactionM (\_ _ -> (s, mempty, ()))
 
 discardOneTx ::
-  (MonadWriter Any m, State.MonadState TxDependencies m, MonadReader (ModelProvenanceState era, ModelUTxOMap era) m) =>
+  ( Typeable era,
+    Typeable (ValueFeature era),
+    MonadWriter Any m,
+    State.MonadState TxDependencies m,
+    MonadReader (ModelProvenanceState era, ModelUTxOMap era) m
+  ) =>
   EpochNo ->
   ModelTx era ->
   m (Maybe (ModelTx era))
@@ -397,8 +402,9 @@ instance Applicative (CollapseTransactionsM era) where
   (<*>) = ap
 
 txOutputToGenesis ::
-  (ModelUTxOId, ModelTxOut era') ->
-  Map.Map ModelUTxOId (ModelAddress (ScriptFeature era'), Coin)
+  (Typeable era, Typeable (ValueFeature era)) =>
+  (ModelUTxOId, ModelTxOut era) ->
+  Map.Map ModelUTxOId (ModelAddress (ScriptFeature era), Coin)
 txOutputToGenesis (uTxOId, ModelTxOut (ModelAddress pmt stk) value _) =
   let newPmtKey = fixPmtCred pmt uTxOId
    in Map.singleton uTxOId (ModelAddress newPmtKey stk, Val.coin value)
@@ -456,6 +462,7 @@ spendGenesis txInputs allGenesis = Map.withoutKeys allGenesis txInputs
 
 collapseOneTx ::
   forall era.
+  (Typeable era, Typeable (ValueFeature era)) =>
   ModelTx era ->
   ModelTx era ->
   CollapseTransactionsM era (Maybe (ModelTx era))

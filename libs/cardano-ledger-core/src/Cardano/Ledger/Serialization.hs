@@ -78,6 +78,7 @@ import Cardano.Binary
     serialize,
     withWordSize,
   )
+import Control.DeepSeq
 import Control.Monad (unless, when)
 import Control.Monad.Except (Except, MonadError (throwError))
 import Data.Binary.Get (Get, getWord32le, runGetOrFail)
@@ -335,6 +336,9 @@ data Sized a = Sized
   deriving (Eq, Show, Generic)
 
 instance NoThunks a => NoThunks (Sized a)
+
+instance NFData a => NFData (Sized a) where
+  rnf (Sized val sz) = val `deepseq` sz `seq` ()
 
 -- | Construct a `Sized` value by serializing it first and recording the amount
 -- of bytes it requires. Note, however, CBOR serialization is not canonical,

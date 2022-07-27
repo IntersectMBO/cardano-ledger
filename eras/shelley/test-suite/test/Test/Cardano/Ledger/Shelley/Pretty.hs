@@ -1,9 +1,9 @@
 module Test.Cardano.Ledger.Shelley.Pretty (testwidth, prettyTest) where
 
 import Cardano.Ledger.Pretty
-import Cardano.Ledger.Shelley.LedgerState (LedgerState) -- ,EpochState)
-import Cardano.Ledger.Shelley.Tx (Tx)
-import Cardano.Ledger.Shelley.TxBody (TxBody)
+import Cardano.Ledger.Shelley.LedgerState (LedgerState)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx)
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxBody)
 import Cardano.Ledger.Shelley.UTxO (UTxO)
 import Prettyprinter (defaultLayoutOptions, layoutPretty)
 import Prettyprinter.Render.Text (renderStrict)
@@ -16,17 +16,17 @@ import Test.Tasty.QuickCheck (Arbitrary (..), Gen, generate, testProperty, withM
 -- ====================================================
 -- a few generators to generate random UTxO, TxBody, Tx and LedgerState
 
-txbody :: Gen (TxBody C)
-txbody = (arbitrary :: Gen (TxBody C))
+txbody :: Gen (ShelleyTxBody C)
+txbody = arbitrary :: Gen (ShelleyTxBody C)
 
-tx :: Gen (Tx C)
-tx = (arbitrary :: Gen (Tx C))
+tx :: Gen (ShelleyTx C)
+tx = arbitrary :: Gen (ShelleyTx C)
 
 utxo :: Gen (UTxO C)
-utxo = (arbitrary :: Gen (UTxO C))
+utxo = arbitrary :: Gen (UTxO C)
 
 ls :: Gen (LedgerState C)
-ls = (arbitrary :: Gen (LedgerState C))
+ls = arbitrary :: Gen (LedgerState C)
 
 -- | Used to test pretty printing things with different widths
 --   for example: testwidth 120 ls ppLedgerState

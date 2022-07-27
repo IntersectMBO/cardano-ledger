@@ -11,6 +11,7 @@ import Cardano.Ledger.BaseTypes (Network (Testnet))
 import Cardano.Ledger.Coin (Coin (Coin))
 import Cardano.Ledger.CompactAddress (compactAddr)
 import Cardano.Ledger.Compactible (Compactible (toCompact))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
   ( Credential (KeyHashObj),
     PaymentCredential,
@@ -18,14 +19,13 @@ import Cardano.Ledger.Credential
     StakeCredential,
     StakeReference (StakeRefBase, StakeRefNull, StakeRefPtr),
   )
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (VKey (..), hashKey)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.SafeHash
   ( SafeToHash (makeHashWithExplicitProxys),
     castSafeHash,
   )
-import Cardano.Ledger.Shelley.TxBody (TxOut (..))
+import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.ShelleyMA ()
 import Cardano.Ledger.Slot (SlotNo (SlotNo))

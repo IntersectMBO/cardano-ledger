@@ -5,21 +5,25 @@
 module Test.Cardano.Ledger.Alonzo.Examples.Consensus where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), AuxiliaryDataHash (..), Data (..), hashData)
+import Cardano.Ledger.Alonzo.Data
+  ( AlonzoAuxiliaryData (..),
+    AuxiliaryDataHash (..),
+    Data (..),
+    hashData,
+  )
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.PParams (PParams' (..), emptyPParams, emptyPParamsUpdate)
-import Cardano.Ledger.Alonzo.Scripts (CostModels (..), ExUnits (..), Prices (..), Script (..))
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..), emptyPParams, emptyPParamsUpdate)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModels (..), ExUnits (..), Prices (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Translation ()
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
-import Cardano.Ledger.Alonzo.TxBody (TxBody (..), TxOut (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (..), AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
 import Cardano.Ledger.BaseTypes (NonNegativeInterval, StrictMaybe (..), boundRational)
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (TxBody)
+import Cardano.Ledger.Core (EraScript (hashScript))
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Era (ValidateScript (hashScript))
 import Cardano.Ledger.Keys (asWitness)
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley.API
@@ -35,7 +39,7 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
-import Cardano.Ledger.Shelley.Tx (Tx (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -94,13 +98,13 @@ ledgerExamplesAlonzo =
           (SLE.mkKeyHash 0)
           (emptyPParamsUpdate {_collateralPercentage = SJust 150})
 
-exampleTxBodyAlonzo :: Cardano.Ledger.Core.TxBody StandardAlonzo
+exampleTxBodyAlonzo :: AlonzoTxBody StandardAlonzo
 exampleTxBodyAlonzo =
-  TxBody
+  AlonzoTxBody
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral
     ( StrictSeq.fromList
-        [ TxOut
+        [ AlonzoTxOut
             (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
             (SLE.exampleMultiAssetValue 2)
             (SJust $ SLE.mkDummySafeHash Proxy 1) -- outputs
@@ -135,9 +139,9 @@ datumExample = Data (Plutus.I 191)
 redeemerExample :: Data StandardAlonzo
 redeemerExample = Data (Plutus.I 919)
 
-exampleTx :: Tx StandardAlonzo
+exampleTx :: ShelleyTx StandardAlonzo
 exampleTx =
-  Tx
+  ShelleyTx
     exampleTxBodyAlonzo
     ( TxWitness
         (makeWitnessesVKey (hashAnnotated exampleTxBodyAlonzo) [asWitness SLE.examplePayKey]) -- vkey
@@ -152,17 +156,17 @@ exampleTx =
         ) -- redeemers
     )
     ( SJust $
-        AuxiliaryData
+        AlonzoAuxiliaryData
           SLE.exampleMetadataMap -- metadata
           ( StrictSeq.fromList
               [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
           )
     )
 
-exampleTransactionInBlock :: ValidatedTx StandardAlonzo
-exampleTransactionInBlock = ValidatedTx b w (IsValid True) a
+exampleTransactionInBlock :: AlonzoTx StandardAlonzo
+exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
-    (Tx b w a) = exampleTx
+    ShelleyTx b w a = exampleTx
 
 exampleAlonzoNewEpochState :: NewEpochState StandardAlonzo
 exampleAlonzoNewEpochState =

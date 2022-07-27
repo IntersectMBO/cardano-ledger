@@ -52,15 +52,12 @@ import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (StandardCrypto)
 import qualified Cardano.Ledger.Crypto as CC (Crypto, DSIGN, HASH)
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.TxBody (EraIndependentTxBody)
-import Cardano.Ledger.Val (Val)
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Kind (Type)
 import GHC.Natural
@@ -125,14 +122,7 @@ instance ReflectC StandardCrypto where
 instance ReflectC C_Crypto where
   evidence = Mock
 
-class
-  ( Era era,
-    ValidateScript era,
-    Val (Core.Value era),
-    ReflectC (Crypto era)
-  ) =>
-  Reflect era
-  where
+class (EraTx era, ReflectC (Crypto era)) => Reflect era where
   reify :: Proof era
   lift :: forall a. (Proof era -> a) -> a
   lift f = f (reify @era)
@@ -171,7 +161,7 @@ instance Show (Some Proof) where
   show (Some (Babbage c)) = show (Babbage c)
 
 -- ===============================================================
--- Proofs or witnesses to Core.EraRule Tags
+-- Proofs or witnesses to EraRule Tags
 
 data WitRule (s :: Symbol) (e :: Type) where
   UTXOW :: Proof era -> WitRule "UTXOW" era
@@ -189,12 +179,12 @@ ruleProof (MOCKCHAIN p) = p
 
 runSTS ::
   forall s e ans.
-  ( BaseM (Core.EraRule s e) ~ ShelleyBase,
-    STS (Core.EraRule s e)
+  ( BaseM (EraRule s e) ~ ShelleyBase,
+    STS (EraRule s e)
   ) =>
   WitRule s e ->
-  TRC (Core.EraRule s e) ->
-  (Either [PredicateFailure (Core.EraRule s e)] (State (Core.EraRule s e)) -> ans) ->
+  TRC (EraRule s e) ->
+  (Either [PredicateFailure (EraRule s e)] (State (EraRule s e)) -> ans) ->
   ans
 runSTS (UTXOW _proof) x cont = cont (runShelleyBase (applySTSTest x))
 runSTS (LEDGER _proof) x cont = cont (runShelleyBase (applySTSTest x))
@@ -209,7 +199,7 @@ runSTS (MOCKCHAIN _proof) x cont = cont (runShelleyBase (applySTSTest x))
 --   goSTS (LEDGER (Babbage Mock))
 --     :: LedgerEnv (BabbageEra C_Crypto)
 --        -> (UTxOState (BabbageEra C_Crypto), DPState C_Crypto)
---        -> Cardano.Ledger.Alonzo.Tx.ValidatedTx (BabbageEra C_Crypto)
+--        -> Cardano.Ledger.Alonzo.Tx.AlonzoTx (BabbageEra C_Crypto)
 --        -> (Either
 --              [LedgerPredicateFailure (BabbageEra C_Crypto)]
 --              (UTxOState (BabbageEra C_Crypto), DPState C_Crypto)
@@ -219,28 +209,28 @@ runSTS (MOCKCHAIN _proof) x cont = cont (runShelleyBase (applySTSTest x))
 --   it will tell you what type 'env' 'state' and 'sig' are for Babbage
 goSTS ::
   forall s e ans env state sig.
-  ( BaseM (Core.EraRule s e) ~ ShelleyBase,
-    STS (Core.EraRule s e),
-    env ~ Environment (Core.EraRule s e),
-    state ~ State (Core.EraRule s e),
-    sig ~ Signal (Core.EraRule s e)
+  ( BaseM (EraRule s e) ~ ShelleyBase,
+    STS (EraRule s e),
+    env ~ Environment (EraRule s e),
+    state ~ State (EraRule s e),
+    sig ~ Signal (EraRule s e)
   ) =>
   WitRule s e ->
   env ->
   state ->
   sig ->
-  (Either [PredicateFailure (Core.EraRule s e)] (State (Core.EraRule s e)) -> ans) ->
+  (Either [PredicateFailure (EraRule s e)] (State (EraRule s e)) -> ans) ->
   ans
 goSTS (UTXOW _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 goSTS (LEDGER _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 goSTS (BBODY _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 goSTS (LEDGERS _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 goSTS (MOCKCHAIN _proof) env state sig cont =
-  cont (runShelleyBase (applySTSTest (TRC @(Core.EraRule s e) (env, state, sig))))
+  cont (runShelleyBase (applySTSTest (TRC @(EraRule s e) (env, state, sig))))
 
 -- ================================================================
 -- Crypto agnostic operations on (Proof era) via (Some Proof)

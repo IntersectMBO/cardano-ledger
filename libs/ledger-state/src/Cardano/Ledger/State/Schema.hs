@@ -9,11 +9,12 @@
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 module Cardano.Ledger.State.Schema where
 
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo
+import Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParams)
+import Cardano.Ledger.Alonzo.TxBody as Alonzo (AlonzoTxOut)
 import Cardano.Ledger.BaseTypes (TxIx (..))
 import Cardano.Ledger.Coin
 import qualified Cardano.Ledger.Credential as Credential
@@ -40,8 +41,8 @@ share
 EpochState
   treasury Coin
   reserves Coin
-  prevPp (Alonzo.PParams CurrentEra)
-  pp (Alonzo.PParams CurrentEra)
+  prevPp (AlonzoPParams CurrentEra)
+  pp (AlonzoPParams CurrentEra)
   nonMyopic (Shelley.NonMyopic C)
   snapShotsFee Coin
 
@@ -92,12 +93,12 @@ KeyHash
 Tx
   inIx TxIx
   inId (TxIn.TxId C)
-  out (Alonzo.TxOut CurrentEra)
+  out (AlonzoTxOut CurrentEra)
   UniqueTx inIx inId
 Txs
   inIx TxIx
   inId (TxIn.TxId C)
-  out (Alonzo.TxOut CurrentEra)
+  out (AlonzoTxOut CurrentEra)
   stakeCredential CredentialId Maybe
   UniqueTxs inIx inId
 UtxoEntry

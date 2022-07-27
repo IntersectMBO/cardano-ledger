@@ -178,8 +178,8 @@ import Data.Functor.Identity (Identity (..))
 import Data.Group (Group (..))
 import Data.Kind (Type)
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import Data.Tagged (Tagged (..))
+import Data.Typeable (Proxy (..), Typeable)
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.Model.Acnt (ModelAcntF (..))
 import Test.Cardano.Ledger.Model.BaseTypes
@@ -194,6 +194,7 @@ import Test.Cardano.Ledger.Model.FeatureSet
     KnownScriptFeature,
     RequiredFeatures (..),
     ScriptFeature,
+    ValueFeature,
   )
 import Test.Cardano.Ledger.Model.LedgerState
   ( ModelDPState (..),
@@ -526,7 +527,7 @@ type HasModelM era st r m =
 
 mkModelLedger ::
   forall era.
-  KnownScriptFeature (ScriptFeature era) =>
+  (KnownScriptFeature (ScriptFeature era), Typeable era, Typeable (ValueFeature era)) =>
   Globals ->
   ModelGenesis era ->
   ModelLedger era
@@ -613,7 +614,7 @@ modelGenesis_utxos = lens _modelGenesis_utxos $ \s b -> s {_modelGenesis_utxos =
 
 instance NFData (ModelGenesis era)
 
-instance PreservedAda (ModelLedger era) where
+instance (Typeable era, Typeable (ValueFeature era)) => PreservedAda (ModelLedger era) where
   totalPreservedAda = totalPreservedAda . _modelLedger_nes
 
 applyModelDCert ::

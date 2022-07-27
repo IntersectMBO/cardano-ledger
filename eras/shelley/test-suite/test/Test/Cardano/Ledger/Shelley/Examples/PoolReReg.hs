@@ -22,7 +22,7 @@ import Cardano.Ledger.BaseTypes
     Nonce,
     StrictMaybe (..),
   )
-import Cardano.Ledger.Block (Block, bheader)
+import Cardano.Ledger.Block (Block, bheader, txid)
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Crypto as Cr
 import Cardano.Ledger.Era (Crypto (..))
@@ -31,22 +31,22 @@ import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.EpochBoundary (SnapShot (_poolParams), emptySnapShot)
 import Cardano.Ledger.Shelley.LedgerState (PulsingRewUpdate, emptyRewardUpdate)
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.Tx
-  ( Tx (..),
+  ( ShelleyTx (..),
     WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     PoolCert (..),
     PoolParams (..),
-    TxBody (..),
-    TxOut (..),
+    ShelleyTxBody (..),
+    ShelleyTxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
 import Cardano.Ledger.Slot (BlockNo (..), SlotNo (..))
-import Cardano.Ledger.TxIn (TxIn (..), txid)
+import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<+>), (<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.BHeader (BHeader, bhHash)
@@ -86,7 +86,7 @@ aliceInitCoin :: Coin
 aliceInitCoin = Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
 
 initUTxO :: Cr.Crypto c => UTxO (ShelleyEra c)
-initUTxO = genesisCoins genesisId [TxOut Cast.aliceAddr (Val.inject aliceInitCoin)]
+initUTxO = genesisCoins genesisId [ShelleyTxOut Cast.aliceAddr (Val.inject aliceInitCoin)]
 
 initStPoolReReg :: Cr.Crypto c => ChainState (ShelleyEra c)
 initStPoolReReg = initSt initUTxO
@@ -101,21 +101,21 @@ feeTx1 = Coin 3
 aliceCoinEx1 :: Coin
 aliceCoinEx1 = aliceInitCoin <-> _poolDeposit ppEx <-> feeTx1
 
-txbodyEx1 :: Cr.Crypto c => TxBody (ShelleyEra c)
+txbodyEx1 :: Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
-  TxBody
+  ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
-    (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
-    (StrictSeq.fromList ([DCertPool (RegPool Cast.alicePoolParams)]))
+    (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx1)])
+    (StrictSeq.fromList [DCertPool (RegPool Cast.alicePoolParams)])
     (Wdrl Map.empty)
     feeTx1
     (SlotNo 10)
     SNothing
     SNothing
 
-txEx1 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Tx (ShelleyEra c)
+txEx1 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
 txEx1 =
-  Tx
+  ShelleyTx
     txbodyEx1
     mempty
       { addrWits =
@@ -130,7 +130,7 @@ txEx1 =
 
 blockEx1 ::
   forall c.
-  (HasCallStack, Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) =>
+  (HasCallStack, ExMock (Crypto (ShelleyEra c))) =>
   Block (BHeader c) (ShelleyEra c)
 blockEx1 =
   mkBlockFakeVRF
@@ -177,11 +177,11 @@ aliceCoinEx2 = aliceCoinEx1 <-> feeTx2
 newPoolParams :: Cr.Crypto c => PoolParams c
 newPoolParams = Cast.alicePoolParams {_poolCost = Coin 500}
 
-txbodyEx2 :: forall c. Cr.Crypto c => TxBody (ShelleyEra c)
+txbodyEx2 :: forall c. Cr.Crypto c => ShelleyTxBody (ShelleyEra c)
 txbodyEx2 =
-  TxBody
+  ShelleyTxBody
     (Set.fromList [TxIn (txid txbodyEx1) minBound])
-    (StrictSeq.fromList [TxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
+    (StrictSeq.fromList [ShelleyTxOut Cast.aliceAddr (Val.inject aliceCoinEx2)])
     ( StrictSeq.fromList
         ( [ DCertPool (RegPool newPoolParams)
           ]
@@ -193,9 +193,9 @@ txbodyEx2 =
     SNothing
     SNothing
 
-txEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Tx (ShelleyEra c)
+txEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => ShelleyTx (ShelleyEra c)
 txEx2 =
-  Tx
+  ShelleyTx
     txbodyEx2
     mempty
       { addrWits =
@@ -210,9 +210,9 @@ txEx2 =
 
 word64SlotToKesPeriodWord :: Word64 -> Word
 word64SlotToKesPeriodWord slot =
-  (fromIntegral $ toInteger slot) `div` (fromIntegral $ toInteger $ slotsPerKESPeriod testGlobals)
+  fromIntegral (toInteger slot) `div` fromIntegral (toInteger $ slotsPerKESPeriod testGlobals)
 
-blockEx2 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Word64 -> Block (BHeader c) (ShelleyEra c)
+blockEx2 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Word64 -> Block (BHeader c) (ShelleyEra c)
 blockEx2 slot =
   mkBlockFakeVRF
     (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx1)
@@ -277,7 +277,7 @@ poolReReg2B = CHAINExample expectedStEx1 blockEx2B (Right expectedStEx2B)
 epoch1Nonce :: forall c. (ExMock (Crypto (ShelleyEra c))) => Nonce
 epoch1Nonce = chainCandidateNonce (expectedStEx2B @c)
 
-blockEx3 :: forall c. (Cr.Crypto c, ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
+blockEx3 :: forall c. (ExMock (Crypto (ShelleyEra c))) => Block (BHeader c) (ShelleyEra c)
 blockEx3 =
   mkBlockFakeVRF
     (bhHash $ bheader @(BHeader c) @(ShelleyEra c) blockEx2B)

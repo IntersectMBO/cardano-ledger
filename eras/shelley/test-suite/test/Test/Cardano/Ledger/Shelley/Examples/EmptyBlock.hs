@@ -12,7 +12,8 @@ where
 
 import Cardano.Ledger.BaseTypes (Nonce)
 import Cardano.Ledger.Block (Block)
-import Cardano.Ledger.Era (Crypto (..))
+import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Ledger.Slot
   ( BlockNo (..),
@@ -45,13 +46,14 @@ import Test.Cardano.Ledger.Shelley.Utils (ShelleyTest, getBlockNonce)
 
 -- =============================================================
 
-initStEx1 :: forall era. ShelleyTest era => ChainState era
+initStEx1 :: forall era. (ShelleyTest era, PParams era ~ ShelleyPParams era) => ChainState era
 initStEx1 = initSt (UTxO mempty)
 
 blockEx1 ::
   forall era.
   ( HasCallStack,
     ShelleyTest era,
+    EraSegWits era,
     ExMock (Crypto era)
   ) =>
   Block (BHeader (Crypto era)) era
@@ -74,6 +76,7 @@ blockNonce ::
   ( HasCallStack,
     PreAlonzo era,
     ShelleyTest era,
+    EraSegWits era,
     ExMock (Crypto era)
   ) =>
   Nonce
@@ -81,12 +84,14 @@ blockNonce = getBlockNonce (blockEx1 @era)
 
 expectedStEx1 ::
   forall era.
-  (ShelleyTest era, ExMock (Crypto era), PreAlonzo era) =>
+  ( ShelleyTest era,
+    EraSegWits era,
+    ExMock (Crypto era),
+    PreAlonzo era,
+    PParams era ~ ShelleyPParams era
+  ) =>
   ChainState era
-expectedStEx1 =
-  (evolveNonceUnfrozen (blockNonce @era))
-    . (newLab blockEx1)
-    $ initStEx1
+expectedStEx1 = evolveNonceUnfrozen (blockNonce @era) . newLab blockEx1 $ initStEx1
 
 -- | = Empty Block Example
 --
@@ -95,5 +100,12 @@ expectedStEx1 =
 --
 -- The only things that change in the chain state are the
 -- evolving and candidate nonces, and the last applied block.
-exEmptyBlock :: (ShelleyTest era, ExMock (Crypto era), PreAlonzo era) => CHAINExample (BHeader (Crypto era)) era
+exEmptyBlock ::
+  ( ShelleyTest era,
+    ExMock (Crypto era),
+    PreAlonzo era,
+    EraSegWits era,
+    PParams era ~ ShelleyPParams era
+  ) =>
+  CHAINExample (BHeader (Crypto era)) era
 exEmptyBlock = CHAINExample initStEx1 blockEx1 (Right expectedStEx1)

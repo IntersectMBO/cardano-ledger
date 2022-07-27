@@ -1,7 +1,6 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
@@ -118,9 +117,9 @@ deriving via Enc (PPUPState CurrentEra) instance PersistField (PPUPState Current
 
 deriving via Enc (PPUPState CurrentEra) instance PersistFieldSql (PPUPState CurrentEra)
 
-deriving via Enc (TxOut CurrentEra) instance PersistField (TxOut CurrentEra)
+deriving via Enc (AlonzoTxOut CurrentEra) instance PersistField (AlonzoTxOut CurrentEra)
 
-deriving via Enc (TxOut CurrentEra) instance PersistFieldSql (TxOut CurrentEra)
+deriving via Enc (AlonzoTxOut CurrentEra) instance PersistFieldSql (AlonzoTxOut CurrentEra)
 
 instance FromCBOR (DState C) where
   fromCBOR = fromNotSharedCBOR
@@ -148,6 +147,6 @@ deriving via Enc (NonMyopic C) instance PersistField (NonMyopic C)
 
 deriving via Enc (NonMyopic C) instance PersistFieldSql (NonMyopic C)
 
-deriving via Enc (PParams CurrentEra) instance PersistField (PParams CurrentEra)
+deriving via Enc (AlonzoPParams CurrentEra) instance PersistField (AlonzoPParams CurrentEra)
 
-deriving via Enc (PParams CurrentEra) instance PersistFieldSql (PParams CurrentEra)
+deriving via Enc (AlonzoPParams CurrentEra) instance PersistFieldSql (AlonzoPParams CurrentEra)

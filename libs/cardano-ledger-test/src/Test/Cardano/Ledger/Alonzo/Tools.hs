@@ -11,25 +11,21 @@ import Cardano.Crypto.DSIGN
 import qualified Cardano.Crypto.Hash as Crypto
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo.PParams
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..), Script, Tag (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModel, CostModels (..), ExUnits (..), Tag (..))
 import Cardano.Ledger.Alonzo.Tools (TransactionScriptFailure (..), evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..))
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, exBudgetToExUnits, transExUnits)
 import Cardano.Ledger.Alonzo.TxWitness
 import qualified Cardano.Ledger.Babbage.PParams as Babbage.PParams
 import Cardano.Ledger.BaseTypes (ProtVer (..), ShelleyBase)
 import Cardano.Ledger.Coin (Coin (..))
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Crypto (DSIGN, HASH)
-import qualified Cardano.Ledger.Crypto as Ledger.Crypto
-import Cardano.Ledger.Era (Era (Crypto))
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
+import Cardano.Ledger.Core
+import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (GenDelegs (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.API (DCert, Wdrl)
 import Cardano.Ledger.Shelley.LedgerState (IncrementalStake (..), UTxOState (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (PredicateFailure, UtxoEnv (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessVKey)
-import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Slotting.EpochInfo (EpochInfo, fixedEpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..), SlotNo (..))
 import Cardano.Slotting.Time (SystemStart, mkSlotLength)
@@ -38,10 +34,9 @@ import Data.Array (Array, array)
 import Data.Default.Class (Default (..))
 import Data.Map (Map)
 import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
 import Data.Text (Text)
-import GHC.Records (HasField (getField))
+import GHC.Records (HasField)
+import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1)
 import Test.Cardano.Ledger.Alonzo.Serialisation.Generators ()
 import Test.Cardano.Ledger.Babbage.Serialisation.Generators ()
@@ -97,25 +92,20 @@ exUnitsTranslationRoundTrip = do
 testExUnitCalculation ::
   forall era m.
   ( MonadFail m,
-    BaseM (Core.EraRule "UTXOS" era) ~ ShelleyBase,
-    State (Core.EraRule "UTXOS" era) ~ UTxOState era,
-    Environment (Core.EraRule "UTXOS" era) ~ UtxoEnv era,
-    Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
-    Era era,
+    BaseM (EraRule "UTXOS" era) ~ ShelleyBase,
+    State (EraRule "UTXOS" era) ~ UTxOState era,
+    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
+    Signal (EraRule "UTXOS" era) ~ Tx era,
+    AlonzoEraTx era,
     ExtendedUTxO era,
-    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "txdats" (Core.Witnesses era) (TxDats era),
-    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    Show (PredicateFailure (Core.EraRule "UTXOS" era)),
-    STS (Core.EraRule "UTXOS" era),
-    Core.Script era ~ Script era
+    HasField "_maxTxExUnits" (PParams era) ExUnits,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Show (PredicateFailure (EraRule "UTXOS" era)),
+    STS (EraRule "UTXOS" era),
+    Script era ~ AlonzoScript era
   ) =>
   Proof era ->
-  Core.Tx era ->
+  Tx era ->
   UTxOState era ->
   UtxoEnv era ->
   EpochInfo (Either Text) ->
@@ -128,36 +118,28 @@ testExUnitCalculation proof tx utxoState ue ei ss costmdls err = do
   _ <-
     failLeft err $
       runShelleyBase $
-        applySTSTest @(Core.EraRule "UTXOS" era) (TRC (ue, utxoState, tx'))
+        applySTSTest @(EraRule "UTXOS" era) (TRC (ue, utxoState, tx'))
   pure ()
   where
     utxo = _utxo utxoState
 
 exampleExUnitCalc ::
   forall era.
-  ( BaseM (Core.EraRule "UTXOS" era) ~ ShelleyBase,
-    State (Core.EraRule "UTXOS" era) ~ UTxOState era,
-    Environment (Core.EraRule "UTXOS" era) ~ UtxoEnv era,
+  ( BaseM (EraRule "UTXOS" era) ~ ShelleyBase,
+    State (EraRule "UTXOS" era) ~ UTxOState era,
+    Environment (EraRule "UTXOS" era) ~ UtxoEnv era,
     Signable
-      (Ledger.Crypto.DSIGN (Crypto era))
-      ( Crypto.Hash
-          (Ledger.Crypto.HASH (Crypto era))
-          EraIndependentTxBody
-      ),
-    Signal (Core.EraRule "UTXOS" era) ~ Core.Tx era,
+      (CC.DSIGN (Crypto era))
+      (Crypto.Hash (CC.HASH (Crypto era)) EraIndependentTxBody),
+    Signal (EraRule "UTXOS" era) ~ Tx era,
     ExtendedUTxO era,
-    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "txdats" (Core.Witnesses era) (TxDats era),
-    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    STS (Core.EraRule "UTXOS" era),
-    Scriptic era,
+    HasField "_maxTxExUnits" (PParams era) ExUnits,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    STS (EraRule "UTXOS" era),
+    AlonzoEraTx era,
     PostShelley era,
-    Default (State (Core.EraRule "PPUP" era)),
-    Core.Script era ~ Script era
+    Default (State (EraRule "PPUP" era)),
+    Script era ~ AlonzoScript era
   ) =>
   Proof era ->
   IO ()
@@ -176,20 +158,13 @@ exampleInvalidExUnitCalc ::
   forall era.
   ( ExtendedUTxO era,
     PostShelley era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "txdats" (Core.Witnesses era) (TxDats era),
-    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    Core.Script era ~ Script era,
+    AlonzoEraTx era,
+    HasField "_maxTxExUnits" (PParams era) ExUnits,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Script era ~ AlonzoScript era,
     Signable
-      (Ledger.Crypto.DSIGN (Crypto era))
-      ( Crypto.Hash
-          (Ledger.Crypto.HASH (Crypto era))
-          EraIndependentTxBody
-      )
+      (CC.DSIGN (Crypto era))
+      (Crypto.Hash (CC.HASH (Crypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   IO ()
@@ -220,11 +195,12 @@ exampleInvalidExUnitCalc proof = do
 
 exampleTx ::
   ( Scriptic era,
-    Signable (DSIGN (Crypto era)) (Crypto.Hash (HASH (Crypto era)) EraIndependentTxBody)
+    EraTxBody era,
+    Signable (CC.DSIGN (Crypto era)) (Crypto.Hash (CC.HASH (Crypto era)) EraIndependentTxBody)
   ) =>
   Proof era ->
   RdmrPtr ->
-  Core.Tx era
+  Tx era
 exampleTx pf ptr =
   newTx
     pf
@@ -248,7 +224,10 @@ uenv pf = UtxoEnv (SlotNo 0) (pparams pf) mempty (GenDelegs mempty)
 costmodels :: Array Language CostModel
 costmodels = array (PlutusV1, PlutusV1) [(PlutusV1, testingCostModelV1)]
 
-ustate :: (PostShelley era, Default (State (Core.EraRule "PPUP" era))) => Proof era -> UTxOState era
+ustate ::
+  (EraTxOut era, PostShelley era, Default (State (EraRule "PPUP" era))) =>
+  Proof era ->
+  UTxOState era
 ustate pf =
   UTxOState
     { _utxo = initUTxO pf,
@@ -261,25 +240,20 @@ ustate pf =
 updateTxExUnits ::
   forall era m.
   ( MonadFail m,
-    Era era,
+    AlonzoEraTx era,
     ExtendedUTxO era,
-    HasField "_maxTxExUnits" (Core.PParams era) ExUnits,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "txdats" (Core.Witnesses era) (TxDats era),
-    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    Core.Script era ~ Script era
+    HasField "_maxTxExUnits" (PParams era) ExUnits,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Script era ~ AlonzoScript era
   ) =>
   Proof era ->
-  Core.Tx era ->
+  Tx era ->
   UTxO era ->
   EpochInfo (Either Text) ->
   SystemStart ->
   Array Language CostModel ->
   (forall a. String -> m a) ->
-  m (Core.Tx era)
+  m (Tx era)
 updateTxExUnits proof tx utxo ei ss costmdls err =
   let res = evaluateTransactionExecutionUnits (pparams proof) tx utxo ei ss costmdls
    in case res of
@@ -289,14 +263,14 @@ updateTxExUnits proof tx utxo ei ss costmdls err =
 
 replaceRdmrs ::
   forall era.
-  (Era era, HasField "txrdmrs" (Core.Witnesses era) (Redeemers era)) =>
+  (AlonzoEraWitnesses era, EraTx era) =>
   Proof era ->
-  Core.Tx era ->
+  Tx era ->
   Map RdmrPtr ExUnits ->
-  Core.Tx era
+  Tx era
 replaceRdmrs pf tx rdmrs = updateTx pf tx (WitnessesI [RdmrWits newrdmrs])
   where
-    newrdmrs = foldr replaceRdmr (getField @"txrdmrs" (getField @"wits" tx)) (Map.assocs rdmrs)
+    newrdmrs = foldr replaceRdmr (tx ^. witsTxL . rdmrsWitsL) (Map.assocs rdmrs)
 
     replaceRdmr :: (RdmrPtr, ExUnits) -> Redeemers era -> Redeemers era
     replaceRdmr (ptr, ex) x@(Redeemers r) =
@@ -308,7 +282,7 @@ failLeft :: (Monad m, Show e) => (String -> m a) -> Either e a -> m a
 failLeft _ (Right a) = pure a
 failLeft err (Left e) = err (show e)
 
-pparams :: Proof era -> Core.PParams era
+pparams :: Proof era -> PParams era
 pparams proof =
   newPParams
     proof

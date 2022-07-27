@@ -76,8 +76,8 @@ instance Crypto c => TranslateEra (AllegraEra c) NewEpochState where
           stashedAVVMAddresses = ()
         }
 
-instance forall c. Crypto c => TranslateEra (AllegraEra c) Tx where
-  type TranslationError (AllegraEra c) Tx = DecoderError
+instance forall c. Crypto c => TranslateEra (AllegraEra c) ShelleyTx where
+  type TranslationError (AllegraEra c) ShelleyTx = DecoderError
   translateEra _ctx tx =
     case decodeAnnotator "tx" fromCBOR (serialize tx) of
       Right newTx -> pure newTx
@@ -108,10 +108,10 @@ instance Crypto c => TranslateEra (AllegraEra c) ShelleyGenesis where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance Crypto c => TranslateEra (AllegraEra c) (PParams' f) where
+instance Crypto c => TranslateEra (AllegraEra c) (ShelleyPParamsHKD f) where
   translateEra _ pp =
     return $
-      PParams
+      ShelleyPParams
         { _minfeeA = _minfeeA pp,
           _minfeeB = _minfeeB pp,
           _maxBBSize = _maxBBSize pp,
@@ -143,7 +143,7 @@ instance Crypto c => TranslateEra (AllegraEra c) PPUPState where
           futureProposals = translateEra' ctxt $ futureProposals ps
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) TxOut where
+instance Crypto c => TranslateEra (AllegraEra c) ShelleyTxOut where
   translateEra () (TxOutCompact addr cfval) =
     pure $ TxOutCompact (coerce addr) cfval
 
@@ -182,8 +182,8 @@ instance Crypto c => TranslateEra (AllegraEra c) EpochState where
           esNonMyopic = esNonMyopic es
         }
 
-instance Crypto c => TranslateEra (AllegraEra c) WitnessSet where
-  type TranslationError (AllegraEra c) WitnessSet = DecoderError
+instance Crypto c => TranslateEra (AllegraEra c) ShelleyWitnesses where
+  type TranslationError (AllegraEra c) ShelleyWitnesses = DecoderError
   translateEra _ctx ws =
     case decodeAnnotator "witnessSet" decodeWits (serialize ws) of
       Right new -> pure new

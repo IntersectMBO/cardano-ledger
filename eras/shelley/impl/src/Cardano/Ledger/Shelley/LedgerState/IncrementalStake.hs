@@ -1,7 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.LedgerState.IncrementalStake
   ( updateStakeDistribution,
@@ -22,12 +21,11 @@ import Cardano.Ledger.Coin
     addDeltaCoin,
   )
 import Cardano.Ledger.Compactible
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
   ( Credential (..),
     StakeReference (StakeRefBase, StakeRefPtr),
   )
-import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Keys
   ( KeyRole (..),
   )
@@ -70,11 +68,11 @@ import Data.Set (Set)
 import qualified Data.UMap as UM
 import qualified Data.VMap as VMap
 import GHC.Records (HasField (..))
+import Lens.Micro
 
 -- | Incrementally add the inserts 'utxoAdd' and the deletes 'utxoDel' to the IncrementalStake.
 updateStakeDistribution ::
-  ( Era era
-  ) =>
+  EraTxOut era =>
   IncrementalStake (Crypto era) ->
   UTxO era ->
   UTxO era ->
@@ -92,7 +90,7 @@ updateStakeDistribution incStake0 utxoDel utxoAdd = incStake2
 --   in a transaction, which is aways < 4096, not millions, and very often < 10).
 incrementalAggregateUtxoCoinByCredential ::
   forall era.
-  Era era =>
+  EraTxOut era =>
   (Coin -> Coin) ->
   UTxO era ->
   IncrementalStake (Crypto era) ->
@@ -109,14 +107,14 @@ incrementalAggregateUtxoCoinByCredential mode (UTxO u) initial =
         Coin 0 -> Nothing
         final -> Just final
     accum ans@(IStake stake ptrs) out =
-      let c = Val.coin (getField @"value" out)
-       in case getTxOutAddr out of
+      let c = Val.coin (out ^. valueTxOutL)
+       in case out ^. addrTxOutL of
             Addr _ _ (StakeRefPtr p) -> IStake stake (Map.alter (keepOrDelete c) p ptrs)
             Addr _ _ (StakeRefBase hk) -> IStake (Map.alter (keepOrDelete c) hk stake) ptrs
             _other -> ans
 
 filterAllRewards ::
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
   EpochState era ->
@@ -170,12 +168,11 @@ aggregateActiveStake =
 --
 --   TO IncrementalStake
 smartUTxOState ::
-  ( Era era
-  ) =>
+  EraTxOut era =>
   UTxO era ->
   Coin ->
   Coin ->
-  State (Core.EraRule "PPUP" era) ->
+  State (EraRule "PPUP" era) ->
   UTxOState era
 smartUTxOState utxo c1 c2 st =
   UTxOState
@@ -191,7 +188,7 @@ smartUTxOState utxo c1 c2 st =
 --
 -- TO IncrementalStake
 applyRUpd ::
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   RewardUpdate (Crypto era) ->
   EpochState era ->
@@ -202,7 +199,7 @@ applyRUpd ru es =
 
 -- TO IncrementalStake
 applyRUpd' ::
-  ( HasField "_protocolVersion" (Core.PParams era) ProtVer
+  ( HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   RewardUpdate (Crypto era) ->
   EpochState era ->

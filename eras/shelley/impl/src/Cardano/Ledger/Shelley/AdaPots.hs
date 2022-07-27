@@ -15,7 +15,7 @@ module Cardano.Ledger.Shelley.AdaPots
 where
 
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Shelley.Constraints (UsesValue)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState (..),
@@ -40,7 +40,7 @@ data AdaPots = AdaPots
 
 -- | Calculate the total ada pots in the epoch state
 totalAdaPotsES ::
-  UsesValue era =>
+  EraTxOut era =>
   EpochState era ->
   AdaPots
 totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
@@ -53,13 +53,13 @@ totalAdaPotsES (EpochState (AccountState treasury_ reserves_) _ ls _ _ _) =
       feesAdaPot = fees_
     }
   where
-    (UTxOState u deposits fees_ _ _) = lsUTxOState ls
-    (DPState dstate _) = lsDPState ls
+    UTxOState u deposits fees_ _ _ = lsUTxOState ls
+    DPState dstate _ = lsDPState ls
     rewards_ = fold (rewards dstate)
     coins = Val.coin $ balance u
 
 -- | Calculate the total ada in the epoch state
-totalAdaES :: UsesValue era => EpochState era -> Coin
+totalAdaES :: EraTxOut era => EpochState era -> Coin
 totalAdaES cs =
   treasuryAdaPot
     <> reservesAdaPot

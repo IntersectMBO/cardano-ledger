@@ -49,9 +49,9 @@ translateTxOutByronToShelley ::
   forall crypto.
   CryptoClass.Crypto crypto =>
   Byron.TxOut ->
-  TxOut (ShelleyEra crypto)
+  ShelleyTxOut (ShelleyEra crypto)
 translateTxOutByronToShelley (Byron.TxOut addr amount) =
-  TxOut (translateAddr addr) (translateAmount amount)
+  ShelleyTxOut (translateAddr addr) (translateAmount amount)
   where
     translateAmount :: Byron.Lovelace -> Coin
     translateAmount = Coin . Byron.lovelaceToInteger

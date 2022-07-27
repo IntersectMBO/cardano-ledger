@@ -27,15 +27,9 @@ import Cardano.Ledger.Address
     BootstrapAddress (..),
     bootstrapKeyHash,
   )
-import Cardano.Ledger.BaseTypes
-  ( Network (..),
-    StrictMaybe (..),
-  )
+import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Credential
-  ( Credential (..),
-    StakeReference (..),
-  )
+import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Crypto (Crypto (..))
 import Cardano.Ledger.Keys
   ( GenDelegs (..),
@@ -44,41 +38,35 @@ import Cardano.Ledger.Keys
     coerceKeyRole,
     hashKey,
   )
+import Cardano.Ledger.Keys.Bootstrap
 import Cardano.Ledger.SafeHash (extractHash, hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
-import Cardano.Ledger.Shelley.Address.Bootstrap
 import Cardano.Ledger.Shelley.LedgerState
   ( IncrementalStake (..),
     PPUPState (..),
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams
-  ( PParams' (..),
-    ProposedPPUpdates (..),
+  ( ProposedPPUpdates (..),
+    ShelleyPParamsHKD (..),
     emptyPParams,
   )
-import Cardano.Ledger.Shelley.Rules.Utxo
-  ( UtxoEnv (..),
-  )
+import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxow
   ( UTXOW,
     UtxowPredicateFailure (..),
   )
 import Cardano.Ledger.Shelley.Tx
-  ( Tx (..),
+  ( ShelleyTx (..),
     WitnessSetHKD (..),
   )
 import Cardano.Ledger.Shelley.TxBody
-  ( TxBody (..),
-    TxOut (..),
+  ( ShelleyTxBody (..),
+    ShelleyTxOut (..),
     Wdrl (..),
   )
-import Cardano.Ledger.Shelley.UTxO
-  ( UTxO (..),
-  )
-import Cardano.Ledger.Slot
-  ( SlotNo (..),
-  )
+import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..), mkTxInPartial)
 import Cardano.Ledger.Val ((<->))
 import Data.ByteString (ByteString)
@@ -90,9 +78,7 @@ import qualified Hedgehog.Gen
 import qualified Hedgehog.Range
 import qualified Test.Cardano.Chain.Common.Gen as Byron
 import qualified Test.Cardano.Crypto.Gen as Byron
-import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original
-  ( C_Crypto,
-  )
+import qualified Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes as Original (C_Crypto)
 import Test.Cardano.Ledger.Shelley.Generator.EraGen (genesisId)
 import Test.Cardano.Ledger.Shelley.Generator.ShelleyEraGen ()
 import Test.Cardano.Ledger.Shelley.Orphans ()
@@ -100,9 +86,7 @@ import Test.Cardano.Ledger.Shelley.Utils (testSTS)
 import Test.QuickCheck (Gen)
 import Test.QuickCheck.Hedgehog (hedgehog)
 import Test.Tasty (TestTree)
-import Test.Tasty.HUnit
-  ( Assertion,
-  )
+import Test.Tasty.HUnit (Assertion)
 import Test.Tasty.QuickCheck (testProperty, (===))
 
 bootstrapHashTest :: TestTree
@@ -121,7 +105,7 @@ bootstrapHashTest = testProperty "rebuild the 'addr root' using a bootstrap witn
               bwAttributes = serialize' $ Byron.addrAttributes byronAddr
             }
     pure $
-      (coerceKeyRole $ bootstrapKeyHash @C_crypto addr)
+      coerceKeyRole (bootstrapKeyHash @C_crypto addr)
         === bootstrapWitKeyHash witness
 
 genSignature :: forall a b. DSIGN.DSIGNAlgorithm a => Gen (DSIGN.SignedDSIGN a b)
@@ -149,7 +133,7 @@ utxo0 =
   UTxO $
     Map.singleton
       (TxIn genesisId minBound)
-      (TxOut aliceAddr aliceInitCoin)
+      (ShelleyTxOut aliceAddr aliceInitCoin)
 
 utxoState0 :: UTxOState C
 utxoState0 =
@@ -161,11 +145,11 @@ utxoState0 =
       _stakeDistro = mempty
     }
 
-tx :: Tx C
-tx = Tx txBody mempty {bootWits = Set.fromList [aliceWitness]} SNothing
+tx :: ShelleyTx C
+tx = ShelleyTx txBody mempty {bootWits = Set.fromList [aliceWitness]} SNothing
 
-txBad :: Tx C
-txBad = Tx txBody mempty {bootWits = Set.fromList [aliceBadWitness]} SNothing
+txBad :: ShelleyTx C
+txBad = ShelleyTx txBody mempty {bootWits = Set.fromList [aliceBadWitness]} SNothing
 
 utxoState1 :: UTxOState C
 utxoState1 =
@@ -178,8 +162,8 @@ utxoState1 =
     }
   where
     txid = TxId $ hashAnnotated txBody
-    bobResult = (mkTxInPartial txid 0, TxOut bobAddr coinsToBob)
-    aliceResult = (mkTxInPartial txid 1, TxOut aliceAddr (Coin 998990))
+    bobResult = (mkTxInPartial txid 0, ShelleyTxOut bobAddr coinsToBob)
+    aliceResult = (mkTxInPartial txid 1, ShelleyTxOut aliceAddr (Coin 998990))
 
 utxoEnv :: UtxoEnv C
 utxoEnv =
@@ -204,7 +188,7 @@ aliceVKey = fst . unpackByronVKey . Byron.toVerification $ aliceSigningKey
 aliceByronAddr :: Byron.Address
 aliceByronAddr = Byron.makeAddress asd attrs
   where
-    asd = Byron.VerKeyASD $ byronVerificationKey
+    asd = Byron.VerKeyASD byronVerificationKey
     attrs =
       Byron.AddrAttributes
         (Just (Byron.HDAddressPayload "a compressed lenna.png"))
@@ -236,11 +220,11 @@ bobAddr = Addr Testnet (KeyHashObj k) StakeRefNull
 coinsToBob :: Coin
 coinsToBob = Coin 1000
 
-txBody :: TxBody C
+txBody :: ShelleyTxBody C
 txBody =
-  TxBody
+  ShelleyTxBody
     { _inputs = Set.fromList [TxIn genesisId minBound],
-      _outputs = StrictSeq.fromList [TxOut bobAddr coinsToBob, TxOut aliceAddr change],
+      _outputs = StrictSeq.fromList [ShelleyTxOut bobAddr coinsToBob, ShelleyTxOut aliceAddr change],
       _certs = StrictSeq.fromList mempty,
       _wdrls = Wdrl Map.empty,
       _txfee = fee,

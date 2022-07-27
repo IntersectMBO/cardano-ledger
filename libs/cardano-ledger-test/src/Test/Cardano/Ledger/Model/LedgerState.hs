@@ -2,6 +2,7 @@
 {-# LANGUAGE DeriveFoldable #-}
 {-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingVia #-}
+{-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
@@ -30,6 +31,7 @@ import Data.Group (Group (..))
 import Data.Group.GrpMap (GrpMap)
 import qualified Data.Map.Strict as Map
 import Data.Set (Set)
+import Data.Typeable
 import GHC.Generics (Generic, (:.:) (..))
 import qualified PlutusTx (Data)
 import Quiet (Quiet (..))
@@ -46,6 +48,7 @@ import Test.Cardano.Ledger.Model.FeatureSet
   ( FeatureSupport (..),
     ScriptFeature,
     ShelleyScriptFeatures,
+    ValueFeature,
   )
 import Test.Cardano.Ledger.Model.PParams
   ( HasModelPParams (..),
@@ -104,7 +107,7 @@ data ModelEpochState era = ModelEpochState
 
 instance NFData (ModelEpochState era)
 
-instance PreservedAda (ModelEpochState era) where
+instance (Typeable era, Typeable (ValueFeature era)) => PreservedAda (ModelEpochState era) where
   totalPreservedAda =
     totalPreservedAda . _modelEpochState_acnt
       <> totalPreservedAda . _modelEpochState_ls
@@ -145,7 +148,7 @@ data ModelNewEpochState era = ModelNewEpochState
 
 instance NFData (ModelNewEpochState era)
 
-instance PreservedAda (ModelNewEpochState era) where
+instance (Typeable era, Typeable (ValueFeature era)) => PreservedAda (ModelNewEpochState era) where
   totalPreservedAda = totalPreservedAda . _modelNewEpochState_es
 
 instance HasModelPParams era (ModelNewEpochState era) where
@@ -180,7 +183,7 @@ data ModelLState era = ModelLState
 
 instance NFData (ModelLState era)
 
-instance PreservedAda (ModelLState era) where
+instance (Typeable era, Typeable (ValueFeature era)) => PreservedAda (ModelLState era) where
   totalPreservedAda =
     foldOf
       ( modelLState_dpstate . modelDPStatedpsDState . modelDState_rewards . folded
@@ -385,7 +388,12 @@ modelSnapshot_pools :: Lens' (ModelSnapshot era) (Map.Map ModelPoolId (ModelPool
 modelSnapshot_pools a2fb s = (\b -> s {_modelSnapshot_pools = b}) <$> a2fb (_modelSnapshot_pools s)
 {-# INLINE modelSnapshot_pools #-}
 
-validateModelTx :: forall era. ModelUTxOMap era -> ModelTx era -> IsValid
+validateModelTx ::
+  forall era.
+  (Typeable era, Typeable (ValueFeature era)) =>
+  ModelUTxOMap era ->
+  ModelTx era ->
+  IsValid
 validateModelTx
   utxos
   ( ModelTx

@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Cardano.Ledger.Shelley.LedgerState.NewEpochState
   ( availableAfterMIR,
@@ -23,15 +22,13 @@ import Cardano.Ledger.Coin
   ( Coin (..),
     addDeltaCoin,
   )
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..), getTxOutBootstrapAddress)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     GenDelegs (..),
     KeyHash (..),
     KeyRole (..),
   )
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
 import Cardano.Ledger.Shelley.LedgerState.DPState
   ( DPState (..),
     DState (..),
@@ -39,12 +36,9 @@ import Cardano.Ledger.Shelley.LedgerState.DPState
     PState (..),
   )
 import Cardano.Ledger.Shelley.LedgerState.Types
-import Cardano.Ledger.Shelley.PParams
-  ( PParams,
-    PParams' (..),
-  )
 import Cardano.Ledger.Shelley.TxBody
   ( MIRPot (..),
+    ShelleyEraTxBody (..),
   )
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
@@ -64,9 +58,10 @@ import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import GHC.Records (HasField (..))
+import Lens.Micro
+import Lens.Micro.Extras (view)
 
 -- | This function returns the coin balance of a given pot, either the
 -- reserves or the treasury, after the instantaneous rewards and pot
@@ -92,7 +87,7 @@ getGKeys nes = Map.keysSet genDelegs
 -- | Creates the ledger state for an empty ledger which
 --  contains the specified transaction outputs.
 genesisState ::
-  Default (State (Core.EraRule "PPUP" era)) =>
+  Default (State (EraRule "PPUP" era)) =>
   Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era)) ->
   UTxO era ->
   LedgerState era
@@ -113,23 +108,25 @@ genesisState genDelegs0 utxo0 =
 
 -- | Calculate the change to the deposit pool for a given transaction.
 depositPoolChange ::
-  ( HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
+  ( HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    ShelleyEraTxBody era
   ) =>
   LedgerState era ->
   PParams era ->
-  Core.TxBody era ->
+  TxBody era ->
   Coin
-depositPoolChange ls pp tx = (currentPool <+> txDeposits) <-> txRefunds
+depositPoolChange ls pp txBody = (currentPool <+> txDeposits) <-> txRefunds
   where
     -- Note that while (currentPool + txDeposits) >= txRefunds,
     -- it could be that txDeposits < txRefunds. We keep the parenthesis above
     -- to emphasize this point.
 
     currentPool = (_deposited . lsUTxOState) ls
-    pools_ = _pParams . dpsPState . lsDPState $ ls
+    pools = _pParams . dpsPState . lsDPState $ ls
     txDeposits =
-      totalDeposits pp (`Map.notMember` pools_) (toList $ getField @"certs" tx)
-    txRefunds = keyRefunds pp tx
+      totalDeposits pp (`Map.notMember` pools) (toList $ txBody ^. certsTxBodyL)
+    txRefunds = keyRefunds pp txBody
 
 reapRewards ::
   UnifiedMap crypto ->
@@ -172,7 +169,7 @@ updateNES
 
 returnRedeemAddrsToReserves ::
   forall era.
-  Era era =>
+  EraTxOut era =>
   EpochState era ->
   EpochState era
 returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
@@ -181,7 +178,7 @@ returnRedeemAddrsToReserves es = es {esAccountState = acnt', esLState = ls'}
     us = lsUTxOState ls
     UTxO utxo = _utxo us
     (redeemers, nonredeemers) =
-      Map.partition (maybe False isBootstrapRedeemer . getTxOutBootstrapAddress) utxo
+      Map.partition (maybe False isBootstrapRedeemer . view bootAddrTxOutF) utxo
     acnt = esAccountState es
     utxoR = UTxO redeemers :: UTxO era
     acnt' =

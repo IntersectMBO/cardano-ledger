@@ -35,9 +35,8 @@ import Cardano.Ledger.BaseTypes
     networkId,
   )
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
 import Cardano.Ledger.Serialization
   ( decodeRecordSum,
@@ -60,6 +59,7 @@ import Cardano.Ledger.Shelley.TxBody
     Delegation (..),
     Ptr (..),
     RewardAcnt (..),
+    ShelleyEraTxBody (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Slot (SlotNo)
@@ -85,7 +85,7 @@ import Data.Typeable (Typeable)
 import qualified Data.UMap as UM
 import Data.Word (Word8)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data DELEGS era
@@ -93,14 +93,14 @@ data DELEGS era
 data DelegsEnv era = DelegsEnv
   { delegsSlotNo :: !SlotNo,
     delegsIx :: !TxIx,
-    delegspp :: !(Core.PParams era),
-    delegsTx :: !(Core.Tx era),
+    delegspp :: !(PParams era),
+    delegsTx :: !(Tx era),
     delegsAccount :: !AccountState
   }
 
 deriving stock instance
-  ( Show (Core.Tx era),
-    Show (Core.PParams era)
+  ( Show (Tx era),
+    Show (PParams era)
   ) =>
   Show (DelegsEnv era)
 
@@ -109,28 +109,28 @@ data DelegsPredicateFailure era
       !(KeyHash 'StakePool (Crypto era)) -- target pool which is not registered
   | WithdrawalsNotInRewardsDELEGS
       !(Map (RewardAcnt (Crypto era)) Coin) -- withdrawals that are missing or do not withdrawl the entire amount
-  | DelplFailure (PredicateFailure (Core.EraRule "DELPL" era)) -- Subtransition Failures
+  | DelplFailure (PredicateFailure (EraRule "DELPL" era)) -- Subtransition Failures
   deriving (Generic)
 
-newtype DelegsEvent era = DelplEvent (Event (Core.EraRule "DELPL" era))
+newtype DelegsEvent era = DelplEvent (Event (EraRule "DELPL" era))
 
 deriving stock instance
-  ( Show (PredicateFailure (Core.EraRule "DELPL" era))
+  ( Show (PredicateFailure (EraRule "DELPL" era))
   ) =>
   Show (DelegsPredicateFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (Core.EraRule "DELPL" era))
+  ( Eq (PredicateFailure (EraRule "DELPL" era))
   ) =>
   Eq (DelegsPredicateFailure era)
 
 instance
-  ( Era era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    Embed (Core.EraRule "DELPL" era) (DELEGS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+  ( EraTx era,
+    ShelleyEraTxBody era,
+    Embed (EraRule "DELPL" era) (DELEGS era),
+    Environment (EraRule "DELPL" era) ~ DelplEnv era,
+    State (EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   STS (DELEGS era)
   where
@@ -146,14 +146,14 @@ instance
   transitionRules = [delegsTransition]
 
 instance
-  ( NoThunks (PredicateFailure (Core.EraRule "DELPL" era))
+  ( NoThunks (PredicateFailure (EraRule "DELPL" era))
   ) =>
   NoThunks (DelegsPredicateFailure era)
 
 instance
   ( Era era,
-    Typeable (Core.Script era),
-    ToCBOR (PredicateFailure (Core.EraRule "DELPL" era))
+    Typeable (Script era),
+    ToCBOR (PredicateFailure (EraRule "DELPL" era))
   ) =>
   ToCBOR (DelegsPredicateFailure era)
   where
@@ -172,8 +172,8 @@ instance
 
 instance
   ( Era era,
-    FromCBOR (PredicateFailure (Core.EraRule "DELPL" era)),
-    Typeable (Core.Script era)
+    FromCBOR (PredicateFailure (EraRule "DELPL" era)),
+    Typeable (Script era)
   ) =>
   FromCBOR (DelegsPredicateFailure era)
   where
@@ -193,12 +193,12 @@ instance
 
 delegsTransition ::
   forall era.
-  ( Era era,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    Embed (Core.EraRule "DELPL" era) (DELEGS era),
-    Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
-    State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELPL" era) ~ DCert (Crypto era)
+  ( EraTx era,
+    ShelleyEraTxBody era,
+    Embed (EraRule "DELPL" era) (DELEGS era),
+    Environment (EraRule "DELPL" era) ~ DelplEnv era,
+    State (EraRule "DELPL" era) ~ DPState (Crypto era),
+    Signal (EraRule "DELPL" era) ~ DCert (Crypto era)
   ) =>
   TransitionRule (DELEGS era)
 delegsTransition = do
@@ -208,7 +208,7 @@ delegsTransition = do
   case certificates of
     Empty -> do
       let ds = dpsDState dpstate
-          wdrls_ = unWdrl . getField @"wdrls" $ getField @"body" tx
+          wdrls_ = unWdrl (tx ^. bodyTxL . wdrlsTxBodyL)
           rewards' = rewards ds
       isSubmapOf wdrls_ rewards' -- wdrls_ ⊆ rewards
         ?! WithdrawalsNotInRewardsDELEGS
@@ -245,7 +245,7 @@ delegsTransition = do
       -- It is impossible to have 65535 number of certificates in a
       -- transaction, therefore partial function is justified.
       let ptr = Ptr slot txIx (mkCertIxPartial $ toInteger $ length gamma)
-      trans @(Core.EraRule "DELPL" era) $
+      trans @(EraRule "DELPL" era) $
         TRC (DelplEnv slot ptr pp acnt, dpstate', c)
   where
     -- @wdrls_@ is small and @rewards@ big, better to transform the former
@@ -267,8 +267,8 @@ delegsTransition = do
 instance
   ( Era era,
     STS (DELPL era),
-    PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
-    Event (Core.EraRule "DELPL" era) ~ DelplEvent era
+    PredicateFailure (EraRule "DELPL" era) ~ DelplPredicateFailure era,
+    Event (EraRule "DELPL" era) ~ DelplEvent era
   ) =>
   Embed (DELPL era) (DELEGS era)
   where

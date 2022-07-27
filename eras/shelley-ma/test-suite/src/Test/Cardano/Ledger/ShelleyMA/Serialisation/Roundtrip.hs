@@ -1,4 +1,5 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -9,7 +10,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Roundtrip where
 import Cardano.Binary (Annotator (..), FromCBOR, ToCBOR)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Shelley.API (ApplyTx, ApplyTxError)
-import Cardano.Ledger.Shelley.Constraints
+import Control.State.Transition.Extended (PredicateFailure)
 import qualified Data.ByteString.Lazy.Char8 as BSL
 import Data.Proxy (Proxy (Proxy))
 import Data.Roundtrip
@@ -68,16 +69,16 @@ property x =
 
 allprops ::
   forall e.
-  ( UsesValue e,
-    UsesScript e,
-    UsesTxBody e,
-    UsesAuxiliary e,
-    ApplyTx e,
+  ( ApplyTx e,
     Arbitrary (Core.TxBody e),
     Arbitrary (Core.AuxiliaryData e),
     Arbitrary (Core.Value e),
     Arbitrary (Core.Script e),
-    Arbitrary (ApplyTxError e)
+    Arbitrary (ApplyTxError e),
+    ToCBOR (PredicateFailure (Core.EraRule "DELEGS" e)),
+    FromCBOR (PredicateFailure (Core.EraRule "DELEGS" e)),
+    ToCBOR (PredicateFailure (Core.EraRule "UTXOW" e)),
+    FromCBOR (PredicateFailure (Core.EraRule "UTXOW" e))
   ) =>
   TestTree
 allprops =

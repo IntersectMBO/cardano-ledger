@@ -27,13 +27,11 @@ import Cardano.Ledger.BaseTypes
   )
 import Cardano.Ledger.Coin (Coin (Coin), toDeltaCoin)
 import Cardano.Ledger.Compactible (fromCompact)
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Era (Crypto, Era)
 import Cardano.Ledger.Keys (KeyRole (Staking))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut, UsesValue)
 import Cardano.Ledger.Shelley.EpochBoundary
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.Rewards (Reward, sumRewards)
@@ -56,57 +54,56 @@ import NoThunks.Class (NoThunks (..))
 data NEWEPOCH era
 
 data NewEpochPredicateFailure era
-  = EpochFailure (PredicateFailure (Core.EraRule "EPOCH" era)) -- Subtransition Failures
+  = EpochFailure (PredicateFailure (EraRule "EPOCH" era)) -- Subtransition Failures
   | CorruptRewardUpdate
       !(RewardUpdate (Crypto era)) -- The reward update which violates an invariant
-  | MirFailure (PredicateFailure (Core.EraRule "MIR" era)) -- Subtransition Failures
+  | MirFailure (PredicateFailure (EraRule "MIR" era)) -- Subtransition Failures
   deriving (Generic)
 
 deriving stock instance
-  ( Show (PredicateFailure (Core.EraRule "EPOCH" era)),
-    Show (PredicateFailure (Core.EraRule "MIR" era))
+  ( Show (PredicateFailure (EraRule "EPOCH" era)),
+    Show (PredicateFailure (EraRule "MIR" era))
   ) =>
   Show (NewEpochPredicateFailure era)
 
 deriving stock instance
-  ( Eq (PredicateFailure (Core.EraRule "EPOCH" era)),
-    Eq (PredicateFailure (Core.EraRule "MIR" era))
+  ( Eq (PredicateFailure (EraRule "EPOCH" era)),
+    Eq (PredicateFailure (EraRule "MIR" era))
   ) =>
   Eq (NewEpochPredicateFailure era)
 
 instance
-  ( NoThunks (PredicateFailure (Core.EraRule "EPOCH" era)),
-    NoThunks (PredicateFailure (Core.EraRule "MIR" era))
+  ( NoThunks (PredicateFailure (EraRule "EPOCH" era)),
+    NoThunks (PredicateFailure (EraRule "MIR" era))
   ) =>
   NoThunks (NewEpochPredicateFailure era)
 
 data NewEpochEvent era
-  = DeltaRewardEvent (Event (Core.EraRule "RUPD" era))
+  = DeltaRewardEvent (Event (EraRule "RUPD" era))
   | RestrainedRewards
       EpochNo
       (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
       (Set (Credential 'Staking (Crypto era)))
   | TotalRewardEvent EpochNo (Map.Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))))
-  | EpochEvent (Event (Core.EraRule "EPOCH" era))
-  | MirEvent (Event (Core.EraRule "MIR" era))
+  | EpochEvent (Event (EraRule "EPOCH" era))
+  | MirEvent (Event (EraRule "MIR" era))
   | TotalAdaPotsEvent AdaPots
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
-    Embed (Core.EraRule "EPOCH" era) (NEWEPOCH era),
-    Environment (Core.EraRule "MIR" era) ~ (),
-    State (Core.EraRule "MIR" era) ~ EpochState era,
-    Signal (Core.EraRule "MIR" era) ~ (),
-    Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era),
-    Environment (Core.EraRule "EPOCH" era) ~ (),
-    State (Core.EraRule "EPOCH" era) ~ EpochState era,
-    Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
+  ( EraTxOut era,
+    Embed (EraRule "MIR" era) (NEWEPOCH era),
+    Embed (EraRule "EPOCH" era) (NEWEPOCH era),
+    Environment (EraRule "MIR" era) ~ (),
+    State (EraRule "MIR" era) ~ EpochState era,
+    Signal (EraRule "MIR" era) ~ (),
+    Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era),
+    Environment (EraRule "EPOCH" era) ~ (),
+    State (EraRule "EPOCH" era) ~ EpochState era,
+    Signal (EraRule "EPOCH" era) ~ EpochNo,
     Default (EpochState era),
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    Default (State (Core.EraRule "PPUP" era)),
-    Default (Core.PParams era),
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Default (State (EraRule "PPUP" era)),
+    Default (PParams era),
     Default (StashedAVVMAddresses era)
   ) =>
   STS (NEWEPOCH era)
@@ -137,22 +134,21 @@ instance
 
 newEpochTransition ::
   forall era.
-  ( Embed (Core.EraRule "MIR" era) (NEWEPOCH era),
-    Embed (Core.EraRule "EPOCH" era) (NEWEPOCH era),
-    Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era),
-    Environment (Core.EraRule "MIR" era) ~ (),
-    State (Core.EraRule "MIR" era) ~ EpochState era,
-    Signal (Core.EraRule "MIR" era) ~ (),
-    Environment (Core.EraRule "EPOCH" era) ~ (),
-    State (Core.EraRule "EPOCH" era) ~ EpochState era,
-    Signal (Core.EraRule "EPOCH" era) ~ EpochNo,
-    HasField "_protocolVersion" (Core.PParams era) ProtVer,
-    UsesTxOut era,
-    UsesValue era,
-    Default (State (Core.EraRule "PPUP" era)),
-    Default (Core.PParams era),
+  ( EraTxOut era,
+    Embed (EraRule "MIR" era) (NEWEPOCH era),
+    Embed (EraRule "EPOCH" era) (NEWEPOCH era),
+    Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era),
+    Environment (EraRule "MIR" era) ~ (),
+    State (EraRule "MIR" era) ~ EpochState era,
+    Signal (EraRule "MIR" era) ~ (),
+    Environment (EraRule "EPOCH" era) ~ (),
+    State (EraRule "EPOCH" era) ~ EpochState era,
+    Signal (EraRule "EPOCH" era) ~ EpochNo,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Default (State (EraRule "PPUP" era)),
+    Default (PParams era),
     Default (StashedAVVMAddresses era),
-    Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)
+    Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era)
   ) =>
   TransitionRule (NEWEPOCH era)
 newEpochTransition = do
@@ -181,8 +177,8 @@ newEpochTransition = do
           tellReward (DeltaRewardEvent (RupdEvent e event))
           updateRewards ans
         SJust (Complete ru') -> updateRewards ru'
-      es'' <- trans @(Core.EraRule "MIR" era) $ TRC ((), es', ())
-      es''' <- trans @(Core.EraRule "EPOCH" era) $ TRC ((), es'', e)
+      es'' <- trans @(EraRule "MIR" era) $ TRC ((), es', ())
+      es''' <- trans @(EraRule "EPOCH" era) $ TRC ((), es'', e)
       let adaPots = totalAdaPotsES es'''
       tellEvent $ TotalAdaPotsEvent adaPots
       let ss = esSnapshots es'''
@@ -199,7 +195,7 @@ newEpochTransition = do
 
 -- | tell a RupdEvent as a DeltaRewardEvent only if the map is non-empty
 tellReward ::
-  (Event (Core.EraRule "RUPD" era) ~ RupdEvent (Crypto era)) =>
+  (Event (EraRule "RUPD" era) ~ RupdEvent (Crypto era)) =>
   NewEpochEvent era ->
   Rule (NEWEPOCH era) rtype ()
 tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
@@ -224,11 +220,9 @@ calculatePoolDistr (SnapShot stake delegs poolParams) =
           (toMap (VMap.map _poolVrf poolParams))
 
 instance
-  ( UsesTxOut era,
-    UsesValue era,
-    STS (EPOCH era),
-    PredicateFailure (Core.EraRule "EPOCH" era) ~ EpochPredicateFailure era,
-    Event (Core.EraRule "EPOCH" era) ~ EpochEvent era
+  ( STS (EPOCH era),
+    PredicateFailure (EraRule "EPOCH" era) ~ EpochPredicateFailure era,
+    Event (EraRule "EPOCH" era) ~ EpochEvent era
   ) =>
   Embed (EPOCH era) (NEWEPOCH era)
   where
@@ -238,8 +232,8 @@ instance
 instance
   ( Era era,
     Default (EpochState era),
-    PredicateFailure (Core.EraRule "MIR" era) ~ MirPredicateFailure era,
-    Event (Core.EraRule "MIR" era) ~ MirEvent era
+    PredicateFailure (EraRule "MIR" era) ~ MirPredicateFailure era,
+    Event (EraRule "MIR" era) ~ MirEvent era
   ) =>
   Embed (MIR era) (NEWEPOCH era)
   where

@@ -8,15 +8,20 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage.Rules.Utxos where
+module Cardano.Ledger.Babbage.Rules.Utxos
+  ( BabbageUTXOS,
+    utxosTransition,
+  )
+where
 
 import Cardano.Binary (ToCBOR (..))
 import Cardano.Ledger.Alonzo.PlutusScriptApi
   ( collectTwoPhaseScriptInputs,
     evalScripts,
   )
-import Cardano.Ledger.Alonzo.Rules.Utxos
+import Cardano.Ledger.Alonzo.Rules
   ( TagMismatchDescription (..),
     UtxosEvent (..),
     UtxosPredicateFailure (..),
@@ -28,25 +33,31 @@ import Cardano.Ledger.Alonzo.Rules.Utxos
     validEnd,
     when2Phase,
   )
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import Cardano.Ledger.Alonzo.Tx (IsValid (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript, CostModels)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, ScriptResult (Fails, Passes))
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
-import qualified Cardano.Ledger.Babbage.Collateral as Babbage
-import qualified Cardano.Ledger.Babbage.PParams as Babbage
-import Cardano.Ledger.Babbage.Tx (ValidatedTx (..))
-import qualified Cardano.Ledger.Babbage.Tx as Babbage
-import qualified Cardano.Ledger.Babbage.TxBody as Babbage
-import Cardano.Ledger.BaseTypes (ShelleyBase, epochInfo, systemStart)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..), ValidateScript)
-import qualified Cardano.Ledger.Mary.Value as Mary
-import Cardano.Ledger.Shelley.LedgerState (PPUPState (..), UTxOState (..), keyRefunds, updateStakeDistribution)
+import Cardano.Ledger.Babbage.Collateral (collBalance, collOuts)
+import Cardano.Ledger.Babbage.Era (BabbageUTXOS)
+import Cardano.Ledger.Babbage.Tx
+import Cardano.Ledger.Babbage.TxBody
+  ( AlonzoEraTxBody (collateralInputsTxBodyL),
+    BabbageEraTxBody,
+    BabbageTxOut,
+    ShelleyEraTxBody (certsTxBodyL, updateTxBodyL),
+  )
+import Cardano.Ledger.BaseTypes (ProtVer, ShelleyBase, epochInfo, strictMaybeToMaybe, systemStart)
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Core
+import Cardano.Ledger.Shelley.LedgerState
+  ( PPUPState (..),
+    UTxOState (..),
+    keyRefunds,
+    updateStakeDistribution,
+  )
 import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.Rules.Ppup (PPUP, PPUPEnv (..), PpupPredicateFailure)
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv (..), updateUTxOState)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), totalDeposits)
-import Cardano.Ledger.TxIn (TxIn)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Trans.Reader (asks)
 import Control.State.Transition.Extended
@@ -54,44 +65,41 @@ import Data.Foldable (toList)
 import Data.List.NonEmpty (nonEmpty)
 import qualified Data.Map.Strict as Map
 import Data.MapExtras (extractKeys)
-import Data.Maybe.Strict
-import Data.Set (Set)
 import Debug.Trace (traceEvent)
 import GHC.Records (HasField (..))
+import Lens.Micro
 
 -- =====================================================
 
-type ConcreteBabbage era =
-  ( Core.Script era ~ Alonzo.Script era,
-    Core.Value era ~ Mary.Value (Crypto era),
-    Core.TxBody era ~ Babbage.TxBody era,
-    Core.PParams era ~ Babbage.PParams era,
-    Core.PParamsDelta era ~ Babbage.PParamsUpdate era,
-    Core.TxOut era ~ Babbage.TxOut era,
-    Core.Tx era ~ ValidatedTx era,
-    Core.Witnesses era ~ TxWitness era
-  )
-
-data BabbageUTXOS era
-
 instance
   forall era.
-  ( Era era,
-    ConcreteBabbage era,
+  ( AlonzoEraTx era,
+    BabbageEraTxBody era,
     ExtendedUTxO era,
-    Embed (Core.EraRule "PPUP" era) (BabbageUTXOS era),
-    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    ValidateScript era,
-    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era)) -- Serializing the PredicateFailure
+    Show (Script era),
+    Eq (PParamsUpdate era),
+    Show (PParamsUpdate era),
+    Tx era ~ AlonzoTx era,
+    TxOut era ~ BabbageTxOut era,
+    TxBody era ~ BabbageTxBody era,
+    Witnesses era ~ TxWitness era,
+    Script era ~ AlonzoScript era,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_costmdls" (PParams era) CostModels,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Embed (EraRule "PPUP" era) (BabbageUTXOS era),
+    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
+    ToCBOR (PredicateFailure (EraRule "PPUP" era)) -- Serializing the PredicateFailure
   ) =>
   STS (BabbageUTXOS era)
   where
   type BaseM (BabbageUTXOS era) = ShelleyBase
   type Environment (BabbageUTXOS era) = UtxoEnv era
   type State (BabbageUTXOS era) = UTxOState era
-  type Signal (BabbageUTXOS era) = ValidatedTx era
+  type Signal (BabbageUTXOS era) = AlonzoTx era
   type PredicateFailure (BabbageUTXOS era) = UtxosPredicateFailure era
   type Event (BabbageUTXOS era) = UtxosEvent era
   transitionRules = [utxosTransition]
@@ -99,8 +107,8 @@ instance
 instance
   ( Era era,
     STS (PPUP era),
-    PredicateFailure (Core.EraRule "PPUP" era) ~ PpupPredicateFailure era,
-    Event (Core.EraRule "PPUP" era) ~ Event (PPUP era)
+    PredicateFailure (EraRule "PPUP" era) ~ PpupPredicateFailure era,
+    Event (EraRule "PPUP" era) ~ Event (PPUP era)
   ) =>
   Embed (PPUP era) (BabbageUTXOS era)
   where
@@ -109,20 +117,28 @@ instance
 
 utxosTransition ::
   forall era.
-  ( ConcreteBabbage era,
+  ( AlonzoEraTx era,
     ExtendedUTxO era,
-    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (Core.EraRule "PPUP" era) (BabbageUTXOS era),
-    ValidateScript era,
-    ToCBOR (PredicateFailure (Core.EraRule "PPUP" era)),
-    HasField "collateral" (Babbage.TxBody era) (Set (TxIn (Crypto era)))
+    BabbageEraTxBody era,
+    Tx era ~ AlonzoTx era,
+    TxOut era ~ BabbageTxOut era,
+    TxBody era ~ BabbageTxBody era,
+    Witnesses era ~ TxWitness era,
+    Script era ~ AlonzoScript era,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_costmdls" (PParams era) CostModels,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
+    Embed (EraRule "PPUP" era) (BabbageUTXOS era),
+    ToCBOR (PredicateFailure (EraRule "PPUP" era))
   ) =>
   TransitionRule (BabbageUTXOS era)
 utxosTransition =
   judgmentContext >>= \(TRC (_, _, tx)) -> do
-    case getField @"isValid" tx of
+    case tx ^. isValidTxL of
       IsValid True -> scriptsYes
       IsValid False -> scriptsNo
 
@@ -130,27 +146,33 @@ utxosTransition =
 
 scriptsYes ::
   forall era.
-  ( ValidateScript era,
-    ConcreteBabbage era,
-    ExtendedUTxO era,
+  ( ExtendedUTxO era,
+    AlonzoEraTx era,
+    Tx era ~ AlonzoTx era,
+    Script era ~ AlonzoScript era,
+    Witnesses era ~ TxWitness era,
     STS (BabbageUTXOS era),
-    Environment (Core.EraRule "PPUP" era) ~ PPUPEnv era,
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    Signal (Core.EraRule "PPUP" era) ~ Maybe (Update era),
-    Embed (Core.EraRule "PPUP" era) (BabbageUTXOS era)
+    Environment (EraRule "PPUP" era) ~ PPUPEnv era,
+    State (EraRule "PPUP" era) ~ PPUPState era,
+    Signal (EraRule "PPUP" era) ~ Maybe (Update era),
+    Embed (EraRule "PPUP" era) (BabbageUTXOS era),
+    HasField "_poolDeposit" (PParams era) Coin,
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_costmdls" (PParams era) CostModels,
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsYes = do
   TRC (UtxoEnv slot pp poolParams genDelegs, u@(UTxOState utxo _ _ pup _), tx) <-
     judgmentContext
   let {- txb := txbody tx -}
-      txb = body tx
+      txBody = body tx
       {- refunded := keyRefunds pp txb -}
-      refunded = keyRefunds pp txb
-      txcerts = toList $ getField @"certs" txb
+      refunded = keyRefunds pp txBody
+      txCerts = toList $ txBody ^. certsTxBodyL
       {- depositChange := (totalDeposits pp poolParams txcerts txb) − refunded -}
       depositChange =
-        totalDeposits pp (`Map.notMember` poolParams) txcerts Val.<-> refunded
+        totalDeposits pp (`Map.notMember` poolParams) txCerts Val.<-> refunded
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
@@ -158,9 +180,9 @@ scriptsYes = do
   -- We do not want to waste computation running plutus scripts if the
   -- transaction will fail due to `PPUP`
   ppup' <-
-    trans @(Core.EraRule "PPUP" era) $
+    trans @(EraRule "PPUP" era) $
       TRC
-        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ getField @"update" txb)
+        (PPUPEnv slot pp genDelegs, pup, strictMaybeToMaybe $ txBody ^. updateTxBodyL)
 
   let !_ = traceEvent validBegin ()
 
@@ -174,28 +196,34 @@ scriptsYes = do
             Fails _ fs ->
               failBecause $
                 ValidationTagMismatch
-                  (getField @"isValid" tx)
+                  (tx ^. isValidTxL)
                   (FailedUnexpectedly (scriptFailuresToPredicateFailure fs))
             Passes ps -> mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
     Left info -> failBecause (CollectErrors info)
 
   let !_ = traceEvent validEnd ()
 
-  pure $! updateUTxOState u txb depositChange ppup'
+  pure $! updateUTxOState u txBody depositChange ppup'
 
 scriptsNo ::
   forall era.
-  ( ValidateScript era,
-    ConcreteBabbage era,
+  ( AlonzoEraTx era,
     ExtendedUTxO era,
     STS (BabbageUTXOS era),
-    HasField "collateral" (Babbage.TxBody era) (Set (TxIn (Crypto era)))
+    BabbageEraTxBody era,
+    Tx era ~ AlonzoTx era,
+    TxOut era ~ BabbageTxOut era,
+    TxBody era ~ BabbageTxBody era,
+    Witnesses era ~ TxWitness era,
+    Script era ~ AlonzoScript era,
+    HasField "_protocolVersion" (PParams era) ProtVer,
+    HasField "_costmdls" (PParams era) CostModels
   ) =>
   TransitionRule (BabbageUTXOS era)
 scriptsNo = do
   TRC (UtxoEnv _ pp _ _, us@(UTxOState utxo _ fees _ _), tx) <- judgmentContext
   {- txb := txbody tx -}
-  let txb = body tx
+  let txBody = tx ^. bodyTxL
   sysSt <- liftSTS $ asks systemStart
   ei <- liftSTS $ asks epochInfo
 
@@ -207,7 +235,7 @@ scriptsNo = do
       {- isValid tx = evalScripts tx sLst = False -}
       whenFailureFree $
         when2Phase $ case evalScripts @era (getField @"_protocolVersion" pp) tx sLst of
-          Passes _ -> failBecause $ ValidationTagMismatch (getField @"isValid" tx) PassedUnexpectedly
+          Passes _ -> failBecause $ ValidationTagMismatch (tx ^. isValidTxL) PassedUnexpectedly
           Fails ps fs -> do
             mapM_ (tellEvent . SuccessfulPlutusScriptsEvent) (nonEmpty ps)
             tellEvent (FailedPlutusScriptsEvent (scriptFailuresToPlutusDebug fs))
@@ -217,9 +245,9 @@ scriptsNo = do
 
   {- utxoKeep = getField @"collateral" txb ⋪ utxo -}
   {- utxoDel  = getField @"collateral" txb ◁ utxo -}
-  let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (getField @"collateral" txb)
-      UTxO collouts = Babbage.collOuts txb
-      collateralFees = Val.coin (Babbage.collBalance txb utxo) -- NEW to Babbage
+  let !(utxoKeep, utxoDel) = extractKeys (unUTxO utxo) (txBody ^. collateralInputsTxBodyL)
+      UTxO collouts = collOuts txBody
+      collateralFees = Val.coin (collBalance txBody utxo) -- NEW to Babbage
   pure
     $! us {- (collInputs txb ⋪ utxo) ∪ collouts tx -}
       { _utxo = UTxO (Map.union utxoKeep collouts), -- NEW to Babbage

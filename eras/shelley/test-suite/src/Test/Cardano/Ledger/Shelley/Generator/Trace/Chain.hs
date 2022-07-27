@@ -20,17 +20,21 @@ module Test.Cardano.Ledger.Shelley.Generator.Trace.Chain where
 import Cardano.Ledger.BHeaderView (BHeaderView (..))
 import Cardano.Ledger.BaseTypes (UnitInterval)
 import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
-import Cardano.Ledger.Shelley.API
-import Cardano.Ledger.Shelley.Constraints
-  ( UsesAuxiliary,
-    UsesTxBody,
-    UsesTxOut,
-    UsesValue,
+import Cardano.Ledger.Era
+  ( Crypto,
+    Era,
   )
+import Cardano.Ledger.Shelley.API
 import Cardano.Ledger.Shelley.LedgerState (incrementalStakeDistr)
-import Cardano.Ledger.Shelley.Rules.Bbody (BbodyEnv, BbodyState)
-import Cardano.Ledger.Slot (BlockNo (..), EpochNo (..), SlotNo (..))
+import Cardano.Ledger.Shelley.Rules.Bbody
+  ( BbodyEnv,
+    BbodyState,
+  )
+import Cardano.Ledger.Slot
+  ( BlockNo (..),
+    EpochNo (..),
+    SlotNo (..),
+  )
 import Cardano.Ledger.Val ((<->))
 import qualified Cardano.Ledger.Val as Val
 import Cardano.Protocol.TPraos.API
@@ -39,7 +43,10 @@ import Cardano.Protocol.TPraos.BHeader
     LastAppliedBlock (..),
     hashHeaderToNonce,
   )
-import Cardano.Protocol.TPraos.Rules.Tickn (TicknEnv, TicknState)
+import Cardano.Protocol.TPraos.Rules.Tickn
+  ( TicknEnv,
+    TicknState,
+  )
 import Cardano.Slotting.Slot (WithOrigin (..))
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -56,15 +63,11 @@ import Data.Functor.Identity (runIdentity)
 import qualified Data.ListMap as LM
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
-import Data.Proxy
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
+import Data.Proxy (Proxy (..))
 import qualified Data.UMap as UM
 import GHC.Records (HasField)
 import Numeric.Natural (Natural)
-import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes
-  ( Mock,
-  )
+import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Block (genBlock)
 import Test.Cardano.Ledger.Shelley.Generator.Core (GenEnv (..))
 import Test.Cardano.Ledger.Shelley.Generator.EraGen
@@ -74,7 +77,11 @@ import Test.Cardano.Ledger.Shelley.Generator.EraGen
     genUtxo0,
   )
 import Test.Cardano.Ledger.Shelley.Generator.Presets (genesisDelegs0)
-import Test.Cardano.Ledger.Shelley.Rules.Chain (CHAIN, ChainState (..), initialShelleyState)
+import Test.Cardano.Ledger.Shelley.Rules.Chain
+  ( CHAIN,
+    ChainState (..),
+    initialShelleyState,
+  )
 import qualified Test.Cardano.Ledger.Shelley.Rules.Chain as STS (ChainState (ChainState))
 import Test.Cardano.Ledger.Shelley.Utils
   ( maxLLSupply,
@@ -87,12 +94,8 @@ import Test.QuickCheck (Gen)
 -- The CHAIN STS at the root of the STS allows for generating blocks of transactions
 -- with meaningful delegation certificates, protocol and application updates, withdrawals etc.
 instance
-  ( Era era,
-    EraGen era,
-    UsesTxBody era,
-    UsesTxOut era,
-    UsesValue era,
-    UsesAuxiliary era,
+  ( EraGen era,
+    Core.EraSegWits era,
     Mock (Crypto era),
     ApplyBlock era,
     GetLedgerView era,
@@ -110,8 +113,6 @@ instance
     Environment (Core.EraRule "TICK" era) ~ (),
     State (Core.EraRule "TICK" era) ~ NewEpochState era,
     Signal (Core.EraRule "TICK" era) ~ SlotNo,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     HasField "_d" (Core.PParams era) UnitInterval,
     QC.HasTrace (Core.EraRule "LEDGERS" era) (GenEnv era)
   ) =>
@@ -139,9 +140,7 @@ lastByronHeaderHash _ = HashHeader $ mkHash 0
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisChainState ::
   forall era a.
-  ( Default (State (Core.EraRule "PPUP" era)),
-    EraGen era
-  ) =>
+  (Default (State (Core.EraRule "PPUP" era)), EraGen era) =>
   GenEnv era ->
   IRC (CHAIN era) ->
   Gen (Either a (ChainState era))

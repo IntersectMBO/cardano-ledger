@@ -4,7 +4,7 @@ import Cardano.Ledger.Address (Addr (..), BootstrapAddress (..))
 import Cardano.Ledger.Alonzo.Data (Data (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams ()
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxInfo
   ( TranslationError (..),
     TxOutSource (..),
@@ -12,10 +12,11 @@ import Cardano.Ledger.Alonzo.TxInfo
     txInfo,
   )
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody (..), TxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Babbage.TxInfo (txInfoInV2, txInfoOutV2)
 import Cardano.Ledger.BaseTypes (Network (..), StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (StakeReference (..))
 import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
@@ -67,19 +68,19 @@ unknownInput :: TxIn StandardCrypto
 unknownInput = mkTxInPartial genesisId 1
 
 byronOutput :: TxOut B
-byronOutput = TxOut byronAddr (Val.inject $ Coin 1) NoDatum SNothing
+byronOutput = BabbageTxOut byronAddr (Val.inject $ Coin 1) NoDatum SNothing
 
 shelleyOutput :: TxOut B
-shelleyOutput = TxOut shelleyAddr (Val.inject $ Coin 2) NoDatum SNothing
+shelleyOutput = BabbageTxOut shelleyAddr (Val.inject $ Coin 2) NoDatum SNothing
 
 datumEx :: Datum B
 datumEx = Datum . dataToBinaryData . Data . Plutus.I $ 123
 
 inlineDatumOutput :: TxOut B
-inlineDatumOutput = TxOut shelleyAddr (Val.inject $ Coin 3) datumEx SNothing
+inlineDatumOutput = BabbageTxOut shelleyAddr (Val.inject $ Coin 3) datumEx SNothing
 
 refScriptOutput :: TxOut B
-refScriptOutput = TxOut shelleyAddr (Val.inject $ Coin 3) NoDatum (SJust $ alwaysSucceeds PlutusV2 3)
+refScriptOutput = BabbageTxOut shelleyAddr (Val.inject $ Coin 3) NoDatum (SJust $ alwaysSucceeds PlutusV2 3)
 
 -- This input is only a "Shelley input" in the sense
 -- that we attach it to a Shelley output in the UTxO created below.
@@ -104,7 +105,7 @@ utxo =
 
 txb :: TxIn StandardCrypto -> Maybe (TxIn StandardCrypto) -> TxOut B -> TxBody B
 txb i mRefInp o =
-  TxBody
+  BabbageTxBody
     { inputs = Set.singleton i,
       collateral = mempty,
       referenceInputs = maybe mempty Set.singleton mRefInp,
@@ -123,12 +124,12 @@ txb i mRefInp o =
       txnetworkid = SNothing
     }
 
-txBare :: TxIn StandardCrypto -> TxOut B -> ValidatedTx B
-txBare i o = ValidatedTx (txb i Nothing o) mempty (IsValid True) SNothing
+txBare :: TxIn StandardCrypto -> TxOut B -> AlonzoTx B
+txBare i o = AlonzoTx (txb i Nothing o) mempty (IsValid True) SNothing
 
-txRefInput :: TxIn StandardCrypto -> ValidatedTx B
+txRefInput :: TxIn StandardCrypto -> AlonzoTx B
 txRefInput refInput =
-  ValidatedTx (txb shelleyInput (Just refInput) shelleyOutput) mempty (IsValid True) SNothing
+  AlonzoTx (txb shelleyInput (Just refInput) shelleyOutput) mempty (IsValid True) SNothing
 
 hasReferenceInput :: VersionedTxInfo -> Bool
 hasReferenceInput (TxInfoPV1 _) = False
@@ -142,7 +143,7 @@ expectOneOutput :: PV2.TxOut -> VersionedTxInfo -> Bool
 expectOneOutput _ (TxInfoPV1 _) = False
 expectOneOutput o (TxInfoPV2 info) = PV2.txInfoOutputs info == [o]
 
-successfulTranslation :: Language -> ValidatedTx B -> (VersionedTxInfo -> Bool) -> Assertion
+successfulTranslation :: Language -> AlonzoTx B -> (VersionedTxInfo -> Bool) -> Assertion
 successfulTranslation lang tx f =
   case ctx of
     Right info -> assertBool "unexpected transaction info" (f info)
@@ -150,10 +151,10 @@ successfulTranslation lang tx f =
   where
     ctx = txInfo def lang ei ss utxo tx
 
-successfulV2Translation :: ValidatedTx B -> (VersionedTxInfo -> Bool) -> Assertion
+successfulV2Translation :: AlonzoTx B -> (VersionedTxInfo -> Bool) -> Assertion
 successfulV2Translation = successfulTranslation PlutusV2
 
-expectTranslationError :: Language -> ValidatedTx B -> TranslationError StandardCrypto -> Assertion
+expectTranslationError :: Language -> AlonzoTx B -> TranslationError StandardCrypto -> Assertion
 expectTranslationError lang tx expected =
   case ctx of
     Right _ -> assertFailure "This translation was expected to fail, but it succeeded."
@@ -161,10 +162,10 @@ expectTranslationError lang tx expected =
   where
     ctx = txInfo def lang ei ss utxo tx
 
-expectV1TranslationError :: ValidatedTx B -> TranslationError StandardCrypto -> Assertion
+expectV1TranslationError :: AlonzoTx B -> TranslationError StandardCrypto -> Assertion
 expectV1TranslationError = expectTranslationError PlutusV1
 
-expectV2TranslationError :: ValidatedTx B -> TranslationError StandardCrypto -> Assertion
+expectV2TranslationError :: AlonzoTx B -> TranslationError StandardCrypto -> Assertion
 expectV2TranslationError = expectTranslationError PlutusV2
 
 errorTranslate :: (HasCallStack, Show a) => String -> Either a b -> b

@@ -10,41 +10,53 @@
 
 module Cardano.Ledger.Pretty.Alonzo where
 
-import Cardano.Ledger.Alonzo.Data
-import Cardano.Ledger.Alonzo.Language
+import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (AlonzoAuxiliaryData), Data (..))
+import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
+  ( AlonzoPParams,
+    AlonzoPParamsHKD (AlonzoPParams),
+    AlonzoPParamsUpdate,
+  )
 import Cardano.Ledger.Alonzo.Scripts
-import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxBody
-import Cardano.Ledger.Alonzo.TxSeq
+  ( AlonzoScript (..),
+    CostModel,
+    CostModels (CostModels),
+    ExUnits (ExUnits),
+    Prices (..),
+    Tag,
+    getCostModelLanguage,
+    getCostModelParams,
+  )
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (AlonzoTx), AlonzoTxBody (AlonzoTxBody), IsValid (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxBody, AlonzoTxOut (AlonzoTxOut))
+import Cardano.Ledger.Alonzo.TxSeq (AlonzoTxSeq (AlonzoTxSeq))
 import Cardano.Ledger.Alonzo.TxWitness
-import qualified Cardano.Ledger.AuxiliaryData as Core
-import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), StrictMaybe)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era, ValidateScript, hashScript)
+import Cardano.Ledger.AuxiliaryData
+import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
 import Cardano.Ledger.Pretty.Mary (ppTimelock, ppValidityInterval, ppValue)
 import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Prettyprinter as PP
 
 ppTxSeq ::
-  ( PrettyA (Core.Script era),
-    Era era,
-    PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.TxBody era)
+  ( PrettyA (Script era),
+    EraTx era,
+    PrettyA (AuxiliaryData era),
+    PrettyA (TxBody era)
   ) =>
-  TxSeq era ->
+  AlonzoTxSeq era ->
   PDoc
-ppTxSeq (TxSeq xs) =
+ppTxSeq (AlonzoTxSeq xs) =
   ppSexp "Alonzo TxSeq" [ppStrictSeq ppTx xs]
 
 instance
-  ( PrettyA (Core.Script era),
-    Era era,
-    PrettyA (Core.AuxiliaryData era),
-    PrettyA (Core.TxBody era)
+  ( PrettyA (Script era),
+    EraTx era,
+    PrettyA (AuxiliaryData era),
+    PrettyA (TxBody era)
   ) =>
-  PrettyA (TxSeq era)
+  PrettyA (AlonzoTxSeq era)
   where
   prettyA = ppTxSeq
 
@@ -59,11 +71,16 @@ ppTag x = ppString (show x)
 
 instance PrettyA Tag where prettyA = ppTag
 
-ppScript :: forall era. (ValidateScript era, Core.Script era ~ Script era) => Script era -> PDoc
+ppScript ::
+  forall era.
+  (EraScript era, Script era ~ AlonzoScript era) =>
+  AlonzoScript era ->
+  PDoc
 ppScript s@(PlutusScript v _) = ppString ("PlutusScript " <> show v <> " ") PP.<+> ppScriptHash (hashScript @era s)
 ppScript (TimelockScript x) = ppTimelock x
 
-instance (ValidateScript era, Core.Script era ~ Script era) => PrettyA (Script era) where prettyA = ppScript
+instance (EraScript era, Script era ~ AlonzoScript era) => PrettyA (AlonzoScript era) where
+  prettyA = ppScript
 
 ppExUnits :: ExUnits -> PDoc
 ppExUnits (ExUnits mem step) =
@@ -78,7 +95,7 @@ ppCostModel cm =
 instance PrettyA CostModel where prettyA = ppCostModel
 
 ppCostModels :: CostModels -> PDoc
-ppCostModels (CostModels cms) = (ppMap ppLanguage ppCostModel) cms
+ppCostModels (CostModels cms) = ppMap ppLanguage ppCostModel cms
 
 ppPrices :: Prices -> PDoc
 ppPrices Prices {prMem, prSteps} =
@@ -90,11 +107,11 @@ ppPrices Prices {prMem, prSteps} =
 
 instance PrettyA Prices where prettyA = ppPrices
 
-instance PrettyA (PParams era) where
+instance PrettyA (AlonzoPParams era) where
   prettyA = ppPParams
 
-ppPParamsUpdate :: PParams' StrictMaybe era -> PDoc
-ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+ppPParamsUpdate :: AlonzoPParamsUpdate era -> PDoc
+ppPParamsUpdate (AlonzoPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
   ppRecord
     "PParams"
     [ ("minfeeA", lift ppNatural feeA),
@@ -125,7 +142,7 @@ ppPParamsUpdate (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mp
   where
     lift pp x = ppStrictMaybe pp x
 
-instance PrettyA (PParams' StrictMaybe era) where
+instance PrettyA (AlonzoPParamsUpdate era) where
   prettyA = ppPParamsUpdate
 
 ppPlutusData :: Plutus.Data -> PDoc
@@ -142,14 +159,21 @@ ppData (Data d) = ppSexp "Data" [ppPlutusData d]
 
 instance PrettyA (Data era) where prettyA = ppData
 
-ppAuxiliaryData :: (PrettyA (Core.Script era)) => AuxiliaryData era -> PDoc
-ppAuxiliaryData (AuxiliaryData' m s) =
+ppAuxiliaryData ::
+  (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
+  AlonzoAuxiliaryData era ->
+  PDoc
+ppAuxiliaryData (AlonzoAuxiliaryData m s) =
   ppSexp "AuxiliaryData" [ppMap ppWord64 ppMetadatum m, ppStrictSeq prettyA s]
 
-instance (PrettyA (Core.Script era)) => PrettyA (AuxiliaryData era) where prettyA = ppAuxiliaryData
+instance
+  (PrettyA (Script era), EraTx era, Script era ~ AlonzoScript era) =>
+  PrettyA (AlonzoAuxiliaryData era)
+  where
+  prettyA = ppAuxiliaryData
 
-ppPParams :: PParams era -> PDoc
-ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
+ppPParams :: AlonzoPParams era -> PDoc
+ppPParams (AlonzoPParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ada cost prices mxEx mxBEx mxV c mxC) =
   ppRecord
     "PParams"
     [ ("minfeeA", ppNatural feeA),
@@ -178,15 +202,15 @@ ppPParams (PParams feeA feeB mbb mtx mbh kd pd em no a0 rho tau d ex pv mpool ad
       ("maxCollateralInputs", ppNatural mxC)
     ]
 
-ppTxOut :: (Era era, PrettyA (Core.Value era)) => TxOut era -> PDoc
-ppTxOut (TxOut addr val dhash) =
+ppTxOut :: (EraTxOut era, PrettyA (Value era)) => AlonzoTxOut era -> PDoc
+ppTxOut (AlonzoTxOut addr val dhash) =
   ppSexp "TxOut" [ppAddr addr, prettyA val, ppStrictMaybe ppSafeHash dhash]
 
 ppTxBody ::
-  (AlonzoBody era, PrettyA (Core.Value era), PrettyA (Core.PParamsDelta era)) =>
-  TxBody era ->
+  (AlonzoEraTxBody era, PrettyA (Value era), PrettyA (PParamsUpdate era)) =>
+  AlonzoTxBody era ->
   PDoc
-ppTxBody (TxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
+ppTxBody (AlonzoTxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
   ppRecord
     "TxBody(Alonzo)"
     [ ("inputs", ppSet ppTxIn i),
@@ -204,16 +228,16 @@ ppTxBody (TxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
       ("txnetworkid", ppStrictMaybe ppNetwork ni)
     ]
 
-ppAuxDataHash :: Core.AuxiliaryDataHash crypto -> PDoc
-ppAuxDataHash (Core.AuxiliaryDataHash axh) = ppSafeHash axh
+ppAuxDataHash :: AuxiliaryDataHash crypto -> PDoc
+ppAuxDataHash (AuxiliaryDataHash axh) = ppSafeHash axh
 
 instance
-  (AlonzoBody era, PrettyA (Core.Value era), PrettyA (Core.PParamsDelta era)) =>
-  PrettyA (TxBody era)
+  (AlonzoEraTxBody era, PrettyA (Value era), PrettyA (PParamsUpdate era)) =>
+  PrettyA (AlonzoTxBody era)
   where
   prettyA = ppTxBody
 
-instance (Era era, PrettyA (Core.Value era)) => PrettyA (TxOut era) where
+instance (EraTxOut era, PrettyA (Value era)) => PrettyA (AlonzoTxOut era) where
   prettyA x = ppTxOut x
 
 ppRdmrPtr :: RdmrPtr -> PDoc
@@ -221,7 +245,7 @@ ppRdmrPtr (RdmrPtr tag w) = ppSexp "RdmrPtr" [ppTag tag, ppWord64 w]
 
 instance PrettyA RdmrPtr where prettyA = ppRdmrPtr
 
-ppTxWitness :: (Era era, PrettyA (Core.Script era)) => TxWitness era -> PDoc
+ppTxWitness :: (Era era, PrettyA (Script era)) => TxWitness era -> PDoc
 ppTxWitness (TxWitness' vk wb sc da (Redeemers rd)) =
   ppRecord
     "TxWitness"
@@ -233,7 +257,7 @@ ppTxWitness (TxWitness' vk wb sc da (Redeemers rd)) =
     ]
 
 instance
-  (Era era, PrettyA (Core.Script era)) =>
+  (Era era, PrettyA (Script era)) =>
   PrettyA (TxWitness era)
   where
   prettyA = ppTxWitness
@@ -246,13 +270,13 @@ instance PrettyA IsValid where prettyA = ppIsValid
 
 ppTx ::
   ( Era era,
-    PrettyA (Core.Script era),
-    PrettyA (Core.TxBody era),
-    PrettyA (Core.AuxiliaryData era)
+    PrettyA (Script era),
+    PrettyA (TxBody era),
+    PrettyA (AuxiliaryData era)
   ) =>
-  ValidatedTx era ->
+  AlonzoTx era ->
   PDoc
-ppTx (ValidatedTx b w iv aux) =
+ppTx (AlonzoTx b w iv aux) =
   ppRecord
     "Tx"
     [ ("body", prettyA b),
@@ -263,10 +287,10 @@ ppTx (ValidatedTx b w iv aux) =
 
 instance
   ( Era era,
-    PrettyA (Core.Script era),
-    PrettyA (Core.TxBody era),
-    PrettyA (Core.AuxiliaryData era)
+    PrettyA (Script era),
+    PrettyA (TxBody era),
+    PrettyA (AuxiliaryData era)
   ) =>
-  PrettyA (ValidatedTx era)
+  PrettyA (AlonzoTx era)
   where
   prettyA = ppTx

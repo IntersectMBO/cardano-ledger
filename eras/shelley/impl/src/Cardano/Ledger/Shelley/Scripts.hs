@@ -11,6 +11,8 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Shelley.Scripts
   ( MultiSig
@@ -21,6 +23,7 @@ module Cardano.Ledger.Shelley.Scripts
       ),
     getMultiSigBytes,
     ScriptHash (..),
+    nativeMultiSigTag,
   )
 where
 
@@ -30,12 +33,14 @@ import Cardano.Binary
     ToCBOR,
   )
 import Cardano.Ledger.BaseTypes (invalidKey)
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Hashes (ScriptHash (..))
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
+import Cardano.Ledger.Shelley.Era
 import Control.DeepSeq (NFData)
+import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
 import Data.MemoBytes
@@ -78,6 +83,17 @@ instance NFData (MultiSigRaw era)
 newtype MultiSig crypto = MultiSigConstr (MemoBytes (MultiSigRaw crypto))
   deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
+
+-- | Magic number "memorialized" in the ValidateScript class under the method:
+--   scriptPrefixTag:: Core.Script era -> Bs.ByteString, for the Shelley Era.
+nativeMultiSigTag :: BS.ByteString
+nativeMultiSigTag = "\00"
+
+instance CC.Crypto c => EraScript (ShelleyEra c) where
+  type Script (ShelleyEra c) = MultiSig c
+
+  -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
+  scriptPrefixTag _script = nativeMultiSigTag
 
 deriving newtype instance NFData (MultiSig era)
 

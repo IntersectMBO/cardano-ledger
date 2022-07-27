@@ -16,18 +16,18 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.Alonzo.PParams
-  ( LangDepView (..),
-    PParams,
-    PParams' (..),
+  ( AlonzoPParams,
+    AlonzoPParamsHKD (..),
+    LangDepView (..),
     emptyPParams,
     getLanguageView,
   )
-import Cardano.Ledger.Alonzo.Rules.Utxo (utxoEntrySize)
+import Cardano.Ledger.Alonzo.Rules (utxoEntrySize)
 import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), mkCostModel)
-import Cardano.Ledger.Alonzo.TxBody (TxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Mary.Value (Value (..), valueFromList)
+import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
 import qualified Data.ByteString.Base16 as B16
 import qualified Data.Map.Strict as Map
 import GHC.Stack (HasCallStack)
@@ -49,7 +49,7 @@ import Test.Cardano.Ledger.Mary.Golden
 import Test.Cardano.Ledger.Shelley.Examples.Cast (aliceAddr, bobAddr, carlAddr)
 import qualified Test.Cardano.Ledger.Shelley.Examples.Consensus as SLE
 import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.HUnit (testCase, (@?=))
+import Test.Tasty.HUnit (Assertion, testCase, (@?=))
 
 -- | ada cost of storing a word8 of data as a UTxO entry, assuming no change to minUTxOValue
 coinsPerUTxOWordLocal :: Integer
@@ -58,7 +58,7 @@ coinsPerUTxOWordLocal = quot minUTxOValueShelleyMA utxoEntrySizeWithoutValLocal
     utxoEntrySizeWithoutValLocal = 29
     Coin minUTxOValueShelleyMA = minUTxO
 
-calcMinUTxO :: TxOut (AlonzoEra StandardCrypto) -> Coin
+calcMinUTxO :: AlonzoTxOut (AlonzoEra StandardCrypto) -> Coin
 calcMinUTxO tout = Coin (utxoEntrySize tout * coinsPerUTxOWordLocal)
 
 -- | (heapWords of a DataHash) * coinsPerUTxOWordLocal is 344820
@@ -68,7 +68,7 @@ goldenUTxOEntryMinAda =
     "golden tests - UTxOEntryMinAda"
     [ testCase "one policy, one (smallest) name, yes datum hash" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               carlAddr
               (valueFromList 1407406 [(pid1, smallestName, 1)])
               (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (List [])))
@@ -76,7 +76,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 1655136,
       testCase "one policy, one (smallest) name, no datum hash" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               bobAddr
               (valueFromList 1407406 [(pid1, smallestName, 1)])
               SNothing
@@ -84,7 +84,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 1310316,
       testCase "one policy, one (small) name" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               aliceAddr
               (valueFromList 1444443 [(pid1, smallName 1, 1)])
               SNothing
@@ -92,7 +92,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 1344798,
       testCase "one policy, three (small) names" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               aliceAddr
               ( valueFromList
                   1555554
@@ -106,7 +106,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 1448244,
       testCase "one policy, one (largest) name" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               carlAddr
               (valueFromList 1555554 [(pid1, largestName 65, 1)])
               SNothing
@@ -114,7 +114,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 1448244,
       testCase "one policy, three (largest) name, with hash" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               carlAddr
               ( valueFromList
                   1962961
@@ -128,7 +128,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 2172366,
       testCase "two policies, one (smallest) name" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               aliceAddr
               (valueFromList 1592591 [(pid1, smallestName, 1), (pid2, smallestName, 1)])
               SNothing
@@ -136,7 +136,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 1482726,
       testCase "two policies, one (smallest) name, with hash" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               aliceAddr
               (valueFromList 1592591 [(pid1, smallestName, 1), (pid2, smallestName, 1)])
               (SJust $ hashData @(AlonzoEra StandardCrypto) (Data (Constr 0 [])))
@@ -144,7 +144,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 1827546,
       testCase "two policies, two (small) names" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               bobAddr
               (valueFromList 1629628 [(pid1, smallName 1, 1), (pid2, smallName 2, 1)])
               SNothing
@@ -152,7 +152,7 @@ goldenUTxOEntryMinAda =
           @?= Coin 1517208,
       testCase "three policies, ninety-six (small) names" $
         calcMinUTxO
-          ( TxOut
+          ( AlonzoTxOut
               aliceAddr
               ( let f i c = (i, smallName c, 1)
                  in valueFromList 7407400 [f i c | (i, cs) <- [(pid1, [32 .. 63]), (pid2, [64 .. 95]), (pid3, [96 .. 127])], c <- cs]
@@ -165,7 +165,7 @@ goldenUTxOEntryMinAda =
         -- with the old parameter minUTxOValue.
         -- If we wish to keep the ada-only, no datum hash, minimum value nearly the same,
         -- we can divide minUTxOValue by 29 and round.
-        utxoEntrySize @(AlonzoEra StandardCrypto) (TxOut aliceAddr (Value 0 mempty) SNothing) @?= 29
+        utxoEntrySize @(AlonzoEra StandardCrypto) (AlonzoTxOut aliceAddr (MaryValue 0 mempty) SNothing) @?= 29
     ]
 
 goldenSerialization :: TestTree
@@ -193,7 +193,7 @@ freeCostModel lang =
     names PlutusV2 = PV2.costModelParamNames
     cmps = Map.fromSet (const 0) . names
 
-exPP :: PParams (AlonzoEra StandardCrypto)
+exPP :: AlonzoPParams (AlonzoEra StandardCrypto)
 exPP =
   emptyPParams
     { _costmdls =
@@ -232,7 +232,11 @@ exampleLangDepViewPV2 = LangDepView b1 b2
             <> "0000000000000000000000000000000000000000000000000000000000000000"
             <> "0000000000000000000000000000000000"
 
-testScriptIntegritpHash :: PParams (AlonzoEra StandardCrypto) -> Language -> LangDepView -> IO ()
+testScriptIntegritpHash ::
+  AlonzoPParams (AlonzoEra StandardCrypto) ->
+  Language ->
+  LangDepView ->
+  Assertion
 testScriptIntegritpHash pp lang view = getLanguageView pp lang @?= view
 
 goldenScriptIntegrity :: TestTree

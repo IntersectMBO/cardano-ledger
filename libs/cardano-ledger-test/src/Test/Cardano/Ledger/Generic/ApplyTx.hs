@@ -10,11 +10,10 @@
 
 module Test.Cardano.Ledger.Generic.ApplyTx where
 
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.BaseTypes (TxIx, mkTxIxPartial)
 import Cardano.Ledger.Coin (Coin (..), addDeltaCoin)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Era (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.SafeHash (SafeHash, hashAnnotated)
 import Cardano.Ledger.Shelley.API (Credential, KeyRole (Staking), ProtVer (pvMajor))
 import Cardano.Ledger.Shelley.Rewards (Reward)
@@ -22,7 +21,6 @@ import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     DelegCert (..),
     Delegation (..),
-    EraIndependentTxBody,
     PoolCert (..),
     PoolParams (..),
     RewardAcnt (..),
@@ -42,6 +40,7 @@ import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import GHC.Stack (HasCallStack)
+import Lens.Micro
 import Test.Cardano.Ledger.Examples.TwoPhaseValidation (initUTxO, notValidatingTx)
 import Test.Cardano.Ledger.Generic.Fields (TxBodyField (..), TxField (..), abstractTx, abstractTxBody)
 import Test.Cardano.Ledger.Generic.Functions
@@ -49,7 +48,6 @@ import Test.Cardano.Ledger.Generic.Functions
     createRUpdNonPulsing',
     getBody,
     getOutputs,
-    getTxOutCoin,
     keyPoolDeposits,
     ppProtocolVersion,
     txInBalance,
@@ -72,7 +70,7 @@ hasValid [] = Nothing
 hasValid (Valid (IsValid b) : _) = Just b
 hasValid (_ : fs) = hasValid fs
 
-applyTx :: Reflect era => Proof era -> Int -> SlotNo -> Model era -> Core.Tx era -> Model era
+applyTx :: Reflect era => Proof era -> Int -> SlotNo -> Model era -> Tx era -> Model era
 applyTx proof count slot model tx = ans
   where
     transactionEpoch = epochFromSlotNo slot
@@ -108,7 +106,7 @@ applyTxSimple proof count model field = case field of
   AuxData _ -> model
   Valid _ -> model
 
-applyTxBody :: Proof era -> Int -> Model era -> Core.TxBody era -> Model era
+applyTxBody :: Proof era -> Int -> Model era -> TxBody era -> Model era
 applyTxBody proof count model tx = List.foldl' (applyField proof count) model (abstractTxBody proof tx)
 
 applyField :: Proof era -> Int -> Model era -> TxBodyField era -> Model era
@@ -179,7 +177,7 @@ data CollInfo era = CollInfo
   { ciBal :: Coin, -- Balance of all the collateral inputs
     ciRet :: Coin, -- Coin amount of the collateral return output
     ciDelset :: Set (TxIn (Crypto era)), -- The set of inputs to delete from the UTxO
-    ciAddmap :: Map (TxIn (Crypto era)) (Core.TxOut era) -- Things to Add to the UTxO
+    ciAddmap :: Map (TxIn (Crypto era)) (TxOut era) -- Things to Add to the UTxO
   }
 
 emptyCollInfo :: CollInfo era
@@ -188,21 +186,20 @@ emptyCollInfo = CollInfo (Coin 0) (Coin 0) Set.empty Map.empty
 -- | Collect information about how to process Collateral, in a second phase failure.
 collInfo ::
   (Reflect era, HasCallStack) =>
-  Proof era ->
   Int ->
   TxIx ->
   Model era ->
   CollInfo era ->
   TxBodyField era ->
   CollInfo era
-collInfo proof count firstTxIx model info field = case field of
+collInfo count firstTxIx model info field = case field of
   CollateralReturn SNothing -> info
   CollateralReturn (SJust txout) ->
     case Map.lookup count (mIndex model) of
       Nothing -> error ("Output not found phase2: " ++ show (count, mIndex model))
       Just (TxId hash) ->
         info
-          { ciRet = getTxOutCoin proof txout,
+          { ciRet = txout ^. coinTxOutL,
             ciAddmap = newstuff
           }
         where
@@ -225,10 +222,10 @@ applyTxFail :: Reflect era => Proof era -> Int -> TxIx -> Model era -> TxField e
 applyTxFail proof count nextTxIx model field = case field of
   Body body2 -> updateInfo info model
     where
-      info = List.foldl' (collInfo proof count nextTxIx model) emptyCollInfo (abstractTxBody proof body2)
+      info = List.foldl' (collInfo count nextTxIx model) emptyCollInfo (abstractTxBody proof body2)
   BodyI fs -> updateInfo info model
     where
-      info = List.foldl' (collInfo proof count nextTxIx model) emptyCollInfo fs
+      info = List.foldl' (collInfo count nextTxIx model) emptyCollInfo fs
   Witnesses _ -> model
   WitnessesI _ -> model
   AuxData _ -> model
@@ -239,8 +236,8 @@ applyTxFail proof count nextTxIx model field = case field of
 additions ::
   SafeHash (Crypto era) EraIndependentTxBody ->
   TxIx ->
-  [Core.TxOut era] ->
-  Map (TxIn (Crypto era)) (Core.TxOut era)
+  [TxOut era] ->
+  Map (TxIn (Crypto era)) (TxOut era)
 additions bodyhash firstTxIx outputs =
   Map.fromList
     [ (TxIn (TxId bodyhash) idx, out)
@@ -254,7 +251,7 @@ go :: IO ()
 go = do
   let proof = Babbage Mock
       tx = (notValidatingTx proof) {isValid = IsValid False}
-      allinputs = getAllTxInputs txbody
+      allinputs = txbody ^. allInputsTxBodyF
       txbody = body tx
       doc = pcTx proof tx
       model1 =
@@ -271,7 +268,7 @@ go = do
 
 filterRewards ::
   Proof era ->
-  Core.PParams era ->
+  PParams era ->
   Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))) ->
   ( Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era))),
     Map (Credential 'Staking (Crypto era)) (Set (Reward (Crypto era)))

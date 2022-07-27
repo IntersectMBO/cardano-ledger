@@ -21,10 +21,9 @@ import qualified Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Block (Block, bheader)
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as Cr
 import qualified Cardano.Ledger.Crypto as CryptoClass
-import Cardano.Ledger.Era (Crypto (..))
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
     KeyPair (..),
@@ -36,13 +35,13 @@ import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.LedgerState (FutureGenDeleg (..), PulsingRewUpdate)
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Shelley.Tx (Tx (..), WitnessSet, WitnessSetHKD (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyWitnesses, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DCert (..),
     GenesisDelegCert (..),
-    TxBody (..),
-    TxOut (..),
+    ShelleyTxBody (..),
+    ShelleyTxOut (..),
     Wdrl (..),
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), makeWitnessesVKey)
@@ -94,14 +93,16 @@ initUTxO :: (ShelleyTest era) => UTxO era
 initUTxO =
   genesisCoins
     genesisId
-    [ TxOut Cast.aliceAddr aliceInitCoin,
-      TxOut Cast.bobAddr bobInitCoin
+    [ ShelleyTxOut Cast.aliceAddr aliceInitCoin,
+      ShelleyTxOut Cast.bobAddr bobInitCoin
     ]
   where
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
     bobInitCoin = Val.inject $ Coin $ 1 * 1000 * 1000 * 1000 * 1000 * 1000
 
-initStGenesisDeleg :: forall era. ShelleyTest era => ChainState era
+initStGenesisDeleg ::
+  (ShelleyTest era, PParams era ~ ShelleyPParams era) =>
+  ChainState era
 initStGenesisDeleg = initSt initUTxO
 
 --
@@ -124,11 +125,11 @@ newGenesisVrfKH = hashVerKeyVRF . snd $ mkVRFKeyPair (RawSeed 9 8 7 6 5)
 feeTx1 :: Coin
 feeTx1 = Coin 1
 
-txbodyEx1 :: (Cr.Crypto c) => TxBody (ShelleyEra c)
+txbodyEx1 :: (Cr.Crypto c) => ShelleyTxBody (ShelleyEra c)
 txbodyEx1 =
-  TxBody
+  ShelleyTxBody
     (Set.fromList [TxIn genesisId minBound])
-    (StrictSeq.singleton $ TxOut Cast.aliceAddr aliceCoinEx1)
+    (StrictSeq.singleton $ ShelleyTxOut Cast.aliceAddr aliceCoinEx1)
     ( StrictSeq.fromList
         [ DCertGenesis
             ( GenesisDelegCert
@@ -144,24 +145,18 @@ txbodyEx1 =
     SNothing
     SNothing
   where
-    aliceCoinEx1 = aliceInitCoin <-> (Val.inject feeTx1)
+    aliceCoinEx1 = aliceInitCoin <-> Val.inject feeTx1
     aliceInitCoin = Val.inject $ Coin $ 10 * 1000 * 1000 * 1000 * 1000 * 1000
-
--- fooo :: Bool
--- fooo = addrWits == True
 
 txEx1 ::
   forall c.
   ( CryptoClass.Crypto c,
-    -- HashAlgorithm (CryptoClass.HASH c),
-    Signable
-      (CryptoClass.DSIGN c)
-      (Hash.Hash (CryptoClass.HASH c) EraIndependentTxBody)
+    Signable (CryptoClass.DSIGN c) (Hash.Hash (CryptoClass.HASH c) EraIndependentTxBody)
   ) =>
-  Tx (ShelleyEra c)
-txEx1 = Tx txbodyEx1 txwits SNothing
+  ShelleyTx (ShelleyEra c)
+txEx1 = ShelleyTx txbodyEx1 txwits SNothing
   where
-    txwits :: WitnessSet (ShelleyEra c)
+    txwits :: ShelleyWitnesses (ShelleyEra c)
     txwits =
       mempty
         { addrWits =
@@ -208,7 +203,7 @@ expectedStEx1 ::
   (ExMock c) =>
   ChainState (ShelleyEra c)
 expectedStEx1 =
-  C.evolveNonceUnfrozen (getBlockNonce @(ShelleyEra c) (blockEx1))
+  C.evolveNonceUnfrozen (getBlockNonce @(ShelleyEra c) blockEx1)
     . C.newLab blockEx1
     . C.feesAndDeposits feeTx1 (Coin 0)
     . C.newUTxO txbodyEx1

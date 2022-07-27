@@ -32,11 +32,10 @@ import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Crypto.KES.Class (totalPeriodsKES)
 import Cardano.Ledger.Address
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Coin
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Crypto (HASH, KES)
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys
 import Cardano.Ledger.SafeHash (unsafeMakeSafeHash)
 import Cardano.Ledger.Serialization
@@ -46,14 +45,13 @@ import Cardano.Ledger.Serialization
     utcTimeFromCBOR,
     utcTimeToCBOR,
   )
-import Cardano.Ledger.Shelley.Constraints (UsesTxOut (..))
 import Cardano.Ledger.Shelley.PParams
 import Cardano.Ledger.Shelley.StabilityWindow
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..))
-import Cardano.Ledger.Shelley.UTxO
+import Cardano.Ledger.Shelley.UTxO (UTxO (UTxO))
 import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Cardano.Ledger.Val as Val
-import Cardano.Slotting.EpochInfo
+import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Slot (EpochSize (..))
 import Cardano.Slotting.Time (SystemStart (SystemStart))
 import Data.Aeson (FromJSON (..), ToJSON (..), (.!=), (.:), (.:?), (.=))
@@ -136,7 +134,7 @@ data ShelleyGenesis era = ShelleyGenesis
     sgSlotLength :: !NominalDiffTime,
     sgUpdateQuorum :: !Word64,
     sgMaxLovelaceSupply :: !Word64,
-    sgProtocolParams :: !(PParams era),
+    sgProtocolParams :: !(ShelleyPParams era),
     sgGenDelegs :: !(Map (KeyHash 'Genesis (Crypto era)) (GenDelegPair (Crypto era))),
     sgInitialFunds :: LM.ListMap (Addr (Crypto era)) Coin,
     sgStaking :: ShelleyGenesisStaking (Crypto era)
@@ -316,7 +314,7 @@ instance Era era => FromCBOR (ShelleyGenesis era) where
 
 genesisUTxO ::
   forall era.
-  (Era era, UsesTxOut era) =>
+  (Era era, EraTxOut era) =>
   ShelleyGenesis era ->
   UTxO era
 genesisUTxO genesis =
@@ -325,7 +323,7 @@ genesisUTxO genesis =
       [ (txIn, txOut)
         | (addr, amount) <- LM.unListMap (sgInitialFunds genesis),
           let txIn = initialFundsPseudoTxIn addr
-              txOut = makeTxOut (Proxy @era) addr (Val.inject amount)
+              txOut = mkBasicTxOut addr (Val.inject amount)
       ]
 
 -- | Compute the 'TxIn' of the initial UTxO pseudo-transaction corresponding

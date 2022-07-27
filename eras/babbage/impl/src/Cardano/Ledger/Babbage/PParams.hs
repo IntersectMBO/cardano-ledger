@@ -13,13 +13,14 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
--- | This module contains just the type of protocol parameters.
+-- | This module contains the type of protocol parameters and EraPParams instance
 module Cardano.Ledger.Babbage.PParams
-  ( PParams' (..),
-    PParams,
+  ( BabbagePParamsHKD (..),
+    BabbagePParams,
     emptyPParams,
-    PParamsUpdate,
+    BabbagePParamsUpdate,
     emptyPParamsUpdate,
     updatePParams,
     getLanguageView,
@@ -27,6 +28,11 @@ module Cardano.Ledger.Babbage.PParams
     encodeLangViews,
     retractPP,
     extendPP,
+
+    -- * Dperecated
+    PParams,
+    PParams',
+    PParamsUpdate,
   )
 where
 
@@ -41,6 +47,7 @@ import Cardano.Ledger.Alonzo.Scripts
     ExUnits (..),
     Prices (..),
   )
+import Cardano.Ledger.Babbage.Era (BabbageEra)
 import Cardano.Ledger.BaseTypes
   ( NonNegativeInterval,
     Nonce,
@@ -51,14 +58,16 @@ import Cardano.Ledger.BaseTypes
   )
 import qualified Cardano.Ledger.BaseTypes as BT (ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Era (Era)
+import Cardano.Ledger.Core (Era, EraPParams (applyPPUpdates))
+import qualified Cardano.Ledger.Core as Core (PParams, PParamsUpdate)
+import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.HKD (HKD)
 import Cardano.Ledger.Serialization
   ( FromCBORGroup (..),
     ToCBORGroup (..),
   )
 import Cardano.Ledger.Shelley.Orphans ()
-import Cardano.Ledger.Shelley.PParams (HKD)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (ShelleyPParams))
 import Cardano.Ledger.Slot (EpochNo (..))
 import Control.DeepSeq (NFData)
 import Data.Coders
@@ -80,11 +89,21 @@ import GHC.Records (HasField (..))
 import NoThunks.Class (NoThunks (..))
 import Numeric.Natural (Natural)
 
-type PParamsUpdate era = PParams' StrictMaybe era
+type PParams era = BabbagePParams era
+
+{-# DEPRECATED PParams "Use `BabbagePParams` instead" #-}
+
+type PParams' f era = BabbagePParamsHKD f era
+
+{-# DEPRECATED PParams' "Use `BabbagePParamsHKD` instead" #-}
+
+type PParamsUpdate era = BabbagePParamsUpdate era
+
+{-# DEPRECATED PParamsUpdate "Use `BabbagePParamsUpdate` instead" #-}
 
 -- | Protocol parameters.
 -- Alonzo parameters without d and extraEntropy
-data PParams' f era = PParams
+data BabbagePParamsHKD f era = BabbagePParams
   { -- | The linear factor for the minimum fee calculation
     _minfeeA :: !(HKD f Natural),
     -- | The constant factor for the minimum fee calculation
@@ -134,19 +153,26 @@ data PParams' f era = PParams
   }
   deriving (Generic)
 
-type PParams = PParams' Identity
+type BabbagePParams = BabbagePParamsHKD Identity
 
-deriving instance Eq (PParams' Identity era)
+type BabbagePParamsUpdate era = BabbagePParamsHKD StrictMaybe era
 
-deriving instance Show (PParams' Identity era)
+instance CC.Crypto c => EraPParams (BabbageEra c) where
+  type PParams (BabbageEra c) = BabbagePParams (BabbageEra c)
+  type PParamsUpdate (BabbageEra c) = BabbagePParamsUpdate (BabbageEra c)
+  applyPPUpdates = updatePParams
 
-deriving instance NFData (PParams' Identity era)
+deriving instance Eq (BabbagePParams era)
 
-instance NoThunks (PParams era)
+deriving instance Show (BabbagePParams era)
 
-instance Era era => ToCBOR (PParams era) where
+deriving instance NFData (BabbagePParams era)
+
+instance NoThunks (BabbagePParams era)
+
+instance Era era => ToCBOR (BabbagePParams era) where
   toCBOR
-    PParams
+    BabbagePParams
       { _minfeeA = minfeeA',
         _minfeeB = minfeeB',
         _maxBBSize = maxBBSize',
@@ -171,7 +197,7 @@ instance Era era => ToCBOR (PParams era) where
         _maxCollateralInputs = maxCollateralInputs'
       } =
       encode
-        ( Rec (PParams @Identity)
+        ( Rec (BabbagePParams @Identity)
             !> To minfeeA'
             !> To minfeeB'
             !> To maxBBSize'
@@ -196,10 +222,10 @@ instance Era era => ToCBOR (PParams era) where
             !> To maxCollateralInputs'
         )
 
-instance Era era => FromCBOR (PParams era) where
+instance Era era => FromCBOR (BabbagePParams era) where
   fromCBOR =
     decode $
-      RecD PParams
+      RecD BabbagePParams
         <! From -- _minfeeA         :: Integer
         <! From -- _minfeeB         :: Natural
         <! From -- _maxBBSize       :: Natural
@@ -224,9 +250,9 @@ instance Era era => FromCBOR (PParams era) where
         <! From -- maxCollateralInputs :: Natural
 
 -- | Returns a basic "empty" `PParams` structure with all zero values.
-emptyPParams :: PParams era
+emptyPParams :: BabbagePParams era
 emptyPParams =
-  PParams
+  BabbagePParams
     { _minfeeA = 0,
       _minfeeB = 0,
       _maxBBSize = 0,
@@ -253,7 +279,7 @@ emptyPParams =
 
 -- | Since ExUnits does not have an Ord instance, we have to roll this Ord instance by hand.
 -- IF THE ORDER OR TYPES OF THE FIELDS OF PParams changes, this instance may need adusting.
-instance Ord (PParams' StrictMaybe era) where
+instance Ord (BabbagePParamsHKD StrictMaybe era) where
   compare x y =
     compare (_minfeeA x) (_minfeeA y)
       <> compare (_minfeeB x) (_minfeeB y)
@@ -282,16 +308,16 @@ compareEx SNothing (SJust _) = LT
 compareEx (SJust _) SNothing = GT
 compareEx (SJust (ExUnits m1 s1)) (SJust (ExUnits m2 s2)) = compare (m1, s1) (m2, s2)
 
-instance Default (PParams era) where
+instance Default (BabbagePParams era) where
   def = emptyPParams
 
-deriving instance Eq (PParams' StrictMaybe era)
+deriving instance Eq (BabbagePParamsUpdate era)
 
-deriving instance Show (PParams' StrictMaybe era)
+deriving instance Show (BabbagePParamsUpdate era)
 
-deriving instance NFData (PParams' StrictMaybe era)
+deriving instance NFData (BabbagePParamsUpdate era)
 
-instance NoThunks (PParamsUpdate era)
+instance NoThunks (BabbagePParamsUpdate era)
 
 -- =======================================================
 -- A PParamsUpdate has StrictMaybe fields, we want to Sparse encode it, by
@@ -299,10 +325,10 @@ instance NoThunks (PParamsUpdate era)
 -- the local function (omitStrictMaybe key x)
 
 encodePParamsUpdate ::
-  PParamsUpdate era ->
-  Encode ('Closed 'Sparse) (PParamsUpdate era)
+  BabbagePParamsUpdate era ->
+  Encode ('Closed 'Sparse) (BabbagePParamsUpdate era)
 encodePParamsUpdate ppup =
-  Keyed PParams
+  Keyed BabbagePParams
     !> omitStrictMaybe 0 (_minfeeA ppup) toCBOR
     !> omitStrictMaybe 1 (_minfeeB ppup) toCBOR
     !> omitStrictMaybe 2 (_maxBBSize ppup) toCBOR
@@ -334,12 +360,12 @@ encodePParamsUpdate ppup =
     fromSJust (SJust x) = x
     fromSJust SNothing = error "SNothing in fromSJust. This should never happen, it is guarded by isSNothing."
 
-instance Era era => ToCBOR (PParamsUpdate era) where
+instance Era era => ToCBOR (BabbagePParamsUpdate era) where
   toCBOR ppup = encode (encodePParamsUpdate ppup)
 
-emptyPParamsUpdate :: PParamsUpdate era
+emptyPParamsUpdate :: BabbagePParamsUpdate era
 emptyPParamsUpdate =
-  PParams
+  BabbagePParams
     { _minfeeA = SNothing,
       _minfeeB = SNothing,
       _maxBBSize = SNothing,
@@ -364,7 +390,7 @@ emptyPParamsUpdate =
       _maxCollateralInputs = SNothing
     }
 
-updateField :: Word -> Field (PParamsUpdate era)
+updateField :: Word -> Field (BabbagePParamsUpdate era)
 updateField 0 = field (\x up -> up {_minfeeA = SJust x}) From
 updateField 1 = field (\x up -> up {_minfeeB = SJust x}) From
 updateField 2 = field (\x up -> up {_maxBBSize = SJust x}) From
@@ -389,7 +415,7 @@ updateField 23 = field (\x up -> up {_collateralPercentage = SJust x}) From
 updateField 24 = field (\x up -> up {_maxCollateralInputs = SJust x}) From
 updateField k = field (\_x up -> up) (Invalid k)
 
-instance Era era => FromCBOR (PParamsUpdate era) where
+instance Era era => FromCBOR (BabbagePParamsUpdate era) where
   fromCBOR =
     decode
       (SparseKeyed "PParamsUpdate" emptyPParamsUpdate updateField [])
@@ -397,9 +423,9 @@ instance Era era => FromCBOR (PParamsUpdate era) where
 -- =================================================================
 
 -- | Update operation for protocol parameters structure @PParams
-updatePParams :: PParams era -> PParamsUpdate era -> PParams era
+updatePParams :: BabbagePParams era -> BabbagePParamsUpdate era -> BabbagePParams era
 updatePParams pp ppup =
-  PParams
+  BabbagePParams
     { _minfeeA = fromSMaybe (_minfeeA pp) (_minfeeA ppup),
       _minfeeB = fromSMaybe (_minfeeB pp) (_minfeeB ppup),
       _maxBBSize = fromSMaybe (_maxBBSize pp) (_maxBBSize ppup),
@@ -424,18 +450,23 @@ updatePParams pp ppup =
       _maxCollateralInputs = fromSMaybe (_maxCollateralInputs pp) (_maxCollateralInputs ppup)
     }
 
--- | Turn an PParams' into a Shelley.Params'
-retractPP :: HKD f Coin -> HKD f UnitInterval -> HKD f Nonce -> PParams' f era -> Shelley.PParams' f era
+-- | Turn an BabbagePParamsHKD into a ShelleyPParamsHKD
+retractPP ::
+  HKD f Coin ->
+  HKD f UnitInterval ->
+  HKD f Nonce ->
+  BabbagePParamsHKD f era ->
+  ShelleyPParamsHKD f era
 retractPP
   c
   d
   eE
-  (PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau pv mnP _ _ _ _ _ _ _ _) =
-    Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP
+  (BabbagePParams ma mb mxBB mxT mxBH kd pd emx a n rho tau pv mnP _ _ _ _ _ _ _ _) =
+    ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau d eE pv c mnP
 
--- | Given the missing pieces Turn a Shelley.PParams' into an Params'
+-- | Given the missing pieces Turn a ShelleyPParamsHKD into an BabbagePParamsHKD
 extendPP ::
-  Shelley.PParams' f era1 ->
+  ShelleyPParamsHKD f era1 ->
   HKD f Coin ->
   HKD f CostModels ->
   HKD f Prices ->
@@ -444,9 +475,9 @@ extendPP ::
   HKD f Natural ->
   HKD f Natural ->
   HKD f Natural ->
-  PParams' f era2
+  BabbagePParamsHKD f era2
 extendPP
-  (Shelley.PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau _d _eE pv _ mnP)
+  (ShelleyPParams ma mb mxBB mxT mxBH kd pd emx a n rho tau _d _eE pv _ mnP)
   ada
   cost
   price
@@ -455,10 +486,10 @@ extendPP
   mxV
   col
   mxCol =
-    PParams ma mb mxBB mxT mxBH kd pd emx a n rho tau pv mnP ada cost price mxTx mxBl mxV col mxCol
+    BabbagePParams ma mb mxBB mxT mxBH kd pd emx a n rho tau pv mnP ada cost price mxTx mxBl mxV col mxCol
 
 -- | Since Babbage removes the '_d' field from PParams, we provide this
 -- 'HasField' instance which defaults '_d' to '0' in order to reuse
 -- code for the reward calculation.
-instance HasField "_d" (PParams era) UnitInterval where
+instance HasField "_d" (BabbagePParams era) UnitInterval where
   getField _ = minBound

@@ -27,15 +27,9 @@ where
 import Cardano.Binary (FromCBOR (..), ToCBOR (..))
 import Cardano.Ledger.Alonzo.Data (getPlutusData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), ExUnits (..))
-import qualified Cardano.Ledger.Alonzo.Scripts as AlonzoScript (Script (..))
-import Cardano.Ledger.Alonzo.Tx
-  ( Data,
-    DataHash,
-    ScriptPurpose (..),
-    indexedRdmrs,
-    txdats',
-  )
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), CostModel, CostModels (..), ExUnits (..))
+import Cardano.Ledger.Alonzo.Tx (Data, ScriptPurpose (..), indexedRdmrs, txdats')
+import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..))
 import Cardano.Ledger.Alonzo.TxInfo
   ( ExtendedUTxO (..),
     ScriptResult (..),
@@ -45,21 +39,19 @@ import Cardano.Ledger.Alonzo.TxInfo
   )
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness, unTxDats)
 import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.Core hiding (TranslationError)
 import Cardano.Ledger.Credential (Credential (ScriptHashObj))
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (..))
 import Cardano.Ledger.Mary.Value (PolicyID (..))
 import Cardano.Ledger.Shelley.Delegation.Certificates (DCert (..))
-import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
 import Cardano.Ledger.Shelley.TxBody
   ( DelegCert (..),
     Delegation (..),
+    ShelleyEraTxBody (..),
     Wdrl (..),
     getRwdCred,
   )
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), getScriptHash, scriptCred)
-import Cardano.Ledger.ShelleyMA.TxBody (ValidityInterval)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
 import Cardano.Slotting.Time (SystemStart)
@@ -70,13 +62,13 @@ import Data.List (intercalate)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
 import Data.Proxy (Proxy (..))
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import Debug.Trace (traceEvent)
 import GHC.Generics
 import GHC.Records (HasField (..))
+import Lens.Micro
+import Lens.Micro.Extras (view)
 import NoThunks.Class (NoThunks)
 
 -- ===============================================================
@@ -94,19 +86,16 @@ getSpendingTxIn = \case
 -- | Get the Data associated with a ScriptPurpose. Only the Spending
 --   ScriptPurpose contains Data. The null list is returned for the other kinds.
 getDatumAlonzo ::
-  forall era tx.
-  ( HasField "datahash" (Core.TxOut era) (StrictMaybe (DataHash (Crypto era))),
-    HasField "wits" tx (TxWitness era)
-  ) =>
-  tx ->
+  (AlonzoEraTxOut era, EraTx era, Witnesses era ~ TxWitness era) =>
+  Tx era ->
   UTxO era ->
   ScriptPurpose (Crypto era) ->
   Maybe (Data era)
 getDatumAlonzo tx (UTxO m) sp = do
   txIn <- getSpendingTxIn sp
   txOut <- Map.lookup txIn m
-  SJust hash <- Just $ getField @"datahash" txOut
-  Map.lookup hash (unTxDats $ txdats' (getField @"wits" tx))
+  SJust hash <- Just $ txOut ^. dataHashTxOutL
+  Map.lookup hash (unTxDats $ txdats' (tx ^. witsTxL))
 
 -- ========================================================================
 
@@ -142,11 +131,11 @@ instance (CC.Crypto crypto) => FromCBOR (CollectError crypto) where
 -- The formal spec achieves the same filtering as knownToNotBe1Phase
 -- by use of the (partial) language function, which is not defined on 1-phase scripts.
 knownToNotBe1Phase ::
-  Map.Map (ScriptHash (Crypto era)) (AlonzoScript.Script era) ->
+  Map.Map (ScriptHash (Crypto era)) (AlonzoScript era) ->
   (ScriptPurpose (Crypto era), ScriptHash (Crypto era)) ->
   Maybe (ScriptPurpose (Crypto era), Language, ShortByteString)
 knownToNotBe1Phase scriptsAvailable (sp, sh) = do
-  AlonzoScript.PlutusScript lang script <- sh `Map.lookup` scriptsAvailable
+  PlutusScript lang script <- sh `Map.lookup` scriptsAvailable
   Just (sp, lang, script)
 
 -- | Collect the inputs for twophase scripts. If any script can't find ist data return
@@ -157,19 +146,17 @@ knownToNotBe1Phase scriptsAvailable (sp, sh) = do
 --     if that is not the case, a PredicateFailure is raised in the Utxos rule.
 collectTwoPhaseScriptInputs ::
   forall era.
-  ( Era era,
+  ( EraTx era,
+    ShelleyEraTxBody era,
     ExtendedUTxO era,
-    Core.Script era ~ AlonzoScript.Script era,
-    HasField "_costmdls" (Core.PParams era) CostModels,
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wits" (Core.Tx era) (TxWitness era)
+    Script era ~ AlonzoScript era,
+    Witnesses era ~ TxWitness era,
+    HasField "_costmdls" (PParams era) CostModels
   ) =>
   EpochInfo (Either Text) ->
   SystemStart ->
-  Core.PParams era ->
-  Core.Tx era ->
+  PParams era ->
+  Tx era ->
   UTxO era ->
   Either [CollectError (Crypto era)] [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectTwoPhaseScriptInputs ei sysS pp tx utxo =
@@ -218,23 +205,18 @@ merge f (x : xs) (y : ys) zs = merge f xs ys (gg x y zs)
     gg (Right _) _ (Left cs) = Left cs
     gg (Left a) _ (Left cs) = Left (a : cs)
 
-language :: AlonzoScript.Script era -> Maybe Language
-language (AlonzoScript.PlutusScript lang _) = Just lang
-language (AlonzoScript.TimelockScript _) = Nothing
+language :: AlonzoScript era -> Maybe Language
+language (PlutusScript lang _) = Just lang
+language (TimelockScript _) = Nothing
 
 -- | evaluate a list of scripts, All scripts in the list must be True.
 --   There are two kinds of scripts, evaluate each kind using the
 --   appropriate mechanism.
 evalScripts ::
-  forall era tx.
-  ( Era era,
-    Show (AlonzoScript.Script era),
-    HasField "body" tx (Core.TxBody era),
-    HasField "wits" tx (TxWitness era),
-    HasField "vldt" (Core.TxBody era) ValidityInterval
-  ) =>
+  forall era.
+  (EraTx era, Script era ~ AlonzoScript era) =>
   ProtVer ->
-  tx ->
+  Tx era ->
   [(ShortByteString, Language, [Data era], ExUnits, CostModel)] ->
   ScriptResult
 evalScripts _pv _tx [] = mempty
@@ -259,17 +241,12 @@ evalScripts pv tx ((pscript, lang, ds, units, cost) : rest) =
 -- THE SPEC CALLS FOR A SET, BUT THAT NEEDS A BUNCH OF ORD INSTANCES (DCert)
 -- See additional comments about 'scriptsNeededFromBody' below.
 scriptsNeeded ::
-  forall era tx.
-  ( Era era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "body" tx (Core.TxBody era)
-  ) =>
+  forall era.
+  (EraTx era, ShelleyEraTxBody era) =>
   UTxO era ->
-  tx ->
+  Tx era ->
   [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-scriptsNeeded utxo tx = scriptsNeededFromBody utxo (getField @"body" tx)
+scriptsNeeded utxo tx = scriptsNeededFromBody utxo (tx ^. bodyTxL)
 
 -- We only find certificate witnesses in Delegating and Deregistration DCerts
 -- that have ScriptHashObj credentials.
@@ -316,31 +293,27 @@ addOnlyCwitness !ans _ = ans
 -- This is tested in the test function 'validateMissingScripts' in the Utxow rule.
 scriptsNeededFromBody ::
   forall era.
-  ( Era era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
-  ) =>
+  (ShelleyEraTxBody era) =>
   UTxO era ->
-  Core.TxBody era ->
+  TxBody era ->
   [(ScriptPurpose (Crypto era), ScriptHash (Crypto era))]
-scriptsNeededFromBody (UTxO u) txb = spend ++ reward ++ cert ++ minted
+scriptsNeededFromBody (UTxO u) txBody = spend ++ reward ++ cert ++ minted
   where
     collect :: TxIn (Crypto era) -> Maybe (ScriptPurpose (Crypto era), ScriptHash (Crypto era))
     collect !i = do
-      addr <- getTxOutAddr <$> Map.lookup i u
+      addr <- view addrTxOutL <$> Map.lookup i u
       hash <- getScriptHash addr
       return (Spending i, hash)
 
-    !spend = mapMaybe collect (Set.toList $ getField @"inputs" txb)
+    !spend = mapMaybe collect (Set.toList $ txBody ^. inputsTxBodyL)
 
     !reward = mapMaybe fromRwd (Map.keys withdrawals)
       where
-        withdrawals = unWdrl $ getField @"wdrls" txb
+        withdrawals = unWdrl $ txBody ^. wdrlsTxBodyL
         fromRwd accnt = do
           hash <- scriptCred $ getRwdCred accnt
           return (Rewarding accnt, hash)
 
-    !cert = foldl' addOnlyCwitness [] (getField @"certs" txb)
+    !cert = foldl' addOnlyCwitness [] (txBody ^. certsTxBodyL)
 
-    !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ getField @"minted" txb
+    !minted = map (\hash -> (Minting (PolicyID hash), hash)) $ Set.toList $ txBody ^. mintedTxBodyF

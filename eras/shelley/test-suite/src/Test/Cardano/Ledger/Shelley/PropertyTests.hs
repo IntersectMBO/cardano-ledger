@@ -24,30 +24,21 @@ module Test.Cardano.Ledger.Shelley.PropertyTests
   )
 where
 
-import Cardano.Ledger.BaseTypes (Globals, StrictMaybe (..))
-import qualified Cardano.Ledger.Core as Core
+import Cardano.Ledger.BaseTypes (Globals)
+import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (Crypto), TxSeq)
-import Cardano.Ledger.Hashes (EraIndependentTxBody)
-import Cardano.Ledger.Keys (DSignable, Hash, KeyRole (Witness))
+import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.SafeHash (SafeHash)
 import Cardano.Ledger.Shelley.API (LedgerState, PPUPState)
-import Cardano.Ledger.Shelley.Delegation.Certificates (DCert)
-import Cardano.Ledger.Shelley.PParams (Update (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash)
-import Cardano.Ledger.Shelley.TxBody (Wdrl, WitVKey)
+import Cardano.Ledger.Shelley.Tx (ShelleyTx)
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
-import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad.Trans.Reader (ReaderT)
 import Control.State.Transition
 import qualified Control.State.Transition.Trace.Generator.QuickCheck as QC
 import Data.Functor.Identity (Identity)
 import Data.List (nub, sort)
-import Data.Map (Map)
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set as Set (Set, fromList, singleton)
-import GHC.Records (HasField (..))
+import Data.Set as Set (fromList, singleton)
 import Test.Cardano.Ledger.Shelley.Address.Bootstrap
   ( bootstrapHashTest,
   )
@@ -105,15 +96,11 @@ propWitVKeys seed h1 h2 =
 minimalPropertyTests ::
   forall era ledger.
   ( EraGen era,
+    Tx era ~ ShelleyTx era,
     TestingLedger era ledger,
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    Show (TxSeq era)
+    State (EraRule "PPUP" era) ~ PPUPState era
   ) =>
   TestTree
 minimalPropertyTests =
@@ -145,21 +132,14 @@ propertyTests ::
     ChainProperty era,
     QC.HasTrace (CHAIN era) (GenEnv era),
     QC.HasTrace ledger (GenEnv era),
-    Embed (Core.EraRule "DELEGS" era) ledger,
-    Embed (Core.EraRule "UTXOW" era) ledger,
-    State (Core.EraRule "PPUP" era) ~ PPUPState era,
+    Embed (EraRule "DELEGS" era) ledger,
+    Embed (EraRule "UTXOW" era) ledger,
+    State (EraRule "PPUP" era) ~ PPUPState era,
     Environment ledger ~ LedgerEnv era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "update" (Core.TxBody era) (StrictMaybe (Update era)),
-    HasField "addrWits" (Core.Witnesses era) (Set (WitVKey 'Witness (Crypto era))),
-    HasField "scriptWits" (Core.Witnesses era) (Map (ScriptHash (Crypto era)) (Core.Script era)),
     QC.BaseEnv ledger ~ Globals,
     BaseM ledger ~ ReaderT Globals Identity,
     State ledger ~ LedgerState era,
-    Signal ledger ~ Core.Tx era,
-    Show (TxSeq era)
+    Signal ledger ~ Tx era
   ) =>
   TestTree
 propertyTests =

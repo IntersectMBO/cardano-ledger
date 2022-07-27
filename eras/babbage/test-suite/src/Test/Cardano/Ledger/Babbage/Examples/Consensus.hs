@@ -5,29 +5,28 @@
 module Test.Cardano.Ledger.Babbage.Examples.Consensus where
 
 import Cardano.Ledger.Alonzo.Data
-  ( AuxiliaryData (..),
+  ( AlonzoAuxiliaryData (..),
     AuxiliaryDataHash (..),
     Data (..),
     dataToBinaryData,
     hashData,
   )
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Script (..))
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), ExUnits (..))
 import qualified Cardano.Ledger.Alonzo.Scripts as Tag (Tag (..))
 import Cardano.Ledger.Alonzo.Translation ()
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Tx (AlonzoTx (..), IsValid (..))
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..), TxWitness (..))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (PParams' (..), emptyPParams, emptyPParamsUpdate)
+import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..), emptyPParams, emptyPParamsUpdate)
 import Cardano.Ledger.Babbage.Translation ()
-import Cardano.Ledger.Babbage.TxBody (Datum (..), TxBody (..), TxOut (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxBody (..), BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (TxBody)
+import Cardano.Ledger.Core (EraScript (hashScript), TxBody)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Era (ValidateScript (hashScript))
 import Cardano.Ledger.Keys (asWitness)
-import qualified Cardano.Ledger.Mary.Value as Mary
+import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
 import Cardano.Ledger.Serialization (mkSized)
 import Cardano.Ledger.Shelley.API
@@ -43,7 +42,7 @@ import Cardano.Ledger.Shelley.API
   )
 import Cardano.Ledger.Shelley.Rules.Delegs (DelegsPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerPredicateFailure (..))
-import Cardano.Ledger.Shelley.Tx (Tx (..))
+import Cardano.Ledger.Shelley.Tx (ShelleyTx (..))
 import Cardano.Ledger.Shelley.UTxO (makeWitnessesVKey)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.TxIn (mkTxInPartial)
@@ -101,23 +100,23 @@ ledgerExamplesBabbage =
           (SLE.mkKeyHash 0)
           (emptyPParamsUpdate {_collateralPercentage = SJust 150})
 
-collateralOutput :: TxOut StandardBabbage
+collateralOutput :: BabbageTxOut StandardBabbage
 collateralOutput =
-  TxOut
+  BabbageTxOut
     (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
-    (Mary.Value 8675309 mempty)
+    (MaryValue 8675309 mempty)
     NoDatum
     SNothing
 
-exampleTxBodyBabbage :: Cardano.Ledger.Core.TxBody StandardBabbage
+exampleTxBodyBabbage :: TxBody StandardBabbage
 exampleTxBodyBabbage =
-  TxBody
+  BabbageTxBody
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 0]) -- spending inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 2)) 1]) -- collateral inputs
     (Set.fromList [mkTxInPartial (TxId (SLE.mkDummySafeHash Proxy 1)) 3]) -- reference inputs
     ( StrictSeq.fromList
         [ mkSized $
-            TxOut
+            BabbageTxOut
               (mkAddr (SLE.examplePayKey, SLE.exampleStakeKey))
               (MarySLE.exampleMultiAssetValue 2)
               (Datum $ dataToBinaryData datumExample) -- inline datum
@@ -155,9 +154,9 @@ datumExample = Data (Plutus.I 191)
 redeemerExample :: Data StandardBabbage
 redeemerExample = Data (Plutus.I 919)
 
-exampleTx :: Tx StandardBabbage
+exampleTx :: ShelleyTx StandardBabbage
 exampleTx =
-  Tx
+  ShelleyTx
     exampleTxBodyBabbage
     ( TxWitness
         (makeWitnessesVKey (hashAnnotated exampleTxBodyBabbage) [asWitness SLE.examplePayKey]) -- vkey
@@ -172,17 +171,17 @@ exampleTx =
         ) -- redeemers
     )
     ( SJust $
-        AuxiliaryData
+        AlonzoAuxiliaryData
           SLE.exampleMetadataMap -- metadata
           ( StrictSeq.fromList
               [alwaysFails PlutusV1 2, TimelockScript $ RequireAllOf mempty] -- Scripts
           )
     )
 
-exampleTransactionInBlock :: ValidatedTx StandardBabbage
-exampleTransactionInBlock = ValidatedTx b w (IsValid True) a
+exampleTransactionInBlock :: AlonzoTx StandardBabbage
+exampleTransactionInBlock = AlonzoTx b w (IsValid True) a
   where
-    (Tx b w a) = exampleTx
+    (ShelleyTx b w a) = exampleTx
 
 exampleBabbageNewEpochState :: NewEpochState StandardBabbage
 exampleBabbageNewEpochState =

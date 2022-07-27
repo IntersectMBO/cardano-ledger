@@ -64,11 +64,11 @@ import Cardano.Ledger.Shelley.Rules.Pool (PoolPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoPredicateFailure (..))
 import Cardano.Ledger.Shelley.Rules.Utxow (UtxowPredicateFailure (..))
 import Cardano.Ledger.Shelley.Tx
-  ( Tx (..),
-    TxBody (..),
+  ( ShelleyTx (..),
+    ShelleyTxBody (..),
+    ShelleyTxOut (..),
+    ShelleyWitnesses,
     TxIn (..),
-    TxOut (..),
-    WitnessSet,
     WitnessSetHKD (..),
     _ttl,
   )
@@ -163,7 +163,7 @@ bobAddr =
 mkGenesisTxIn :: (HashAlgorithm (HASH crypto), HasCallStack) => Integer -> TxIn crypto
 mkGenesisTxIn = TxIn genesisId . mkTxIxPartial
 
-pp :: PParams era
+pp :: ShelleyPParams era
 pp =
   emptyPParams
     { _minfeeA = 1,
@@ -188,8 +188,7 @@ testsPParams :: TestTree
 testsPParams =
   testGroup
     "Test the protocol parameters."
-    [ testCase "VRF checks when the activeSlotCoeff is one" $
-        testVRFCheckWithActiveSlotCoeffOne
+    [ testCase "VRF checks when the activeSlotCoeff is one" testVRFCheckWithActiveSlotCoeffOne
     ]
 
 newtype VRFNatVal = VRFNatVal Natural
@@ -317,7 +316,7 @@ testCheckLeaderVal =
 testLEDGER ::
   HasCallStack =>
   LedgerState C ->
-  Tx C ->
+  ShelleyTx C ->
   LedgerEnv C ->
   Either [PredicateFailure (LEDGER C)] (LedgerState C) ->
   Assertion
@@ -341,7 +340,7 @@ data AliceToBob = AliceToBob
     signers :: [KeyPair 'Witness C_Crypto]
   }
 
-aliceGivesBobLovelace :: AliceToBob -> Tx C
+aliceGivesBobLovelace :: AliceToBob -> ShelleyTx C
 aliceGivesBobLovelace
   AliceToBob
     { input,
@@ -352,15 +351,15 @@ aliceGivesBobLovelace
       certs,
       ttl,
       signers
-    } = Tx txbody mempty {addrWits = awits} SNothing
+    } = ShelleyTx txbody mempty {addrWits = awits} SNothing
     where
       aliceCoin = aliceInitCoin <+> refunds <-> (toBob <+> fee <+> deposits)
       txbody =
-        TxBody
+        ShelleyTxBody
           (Set.singleton input)
           ( StrictSeq.fromList
-              [ TxOut aliceAddr aliceCoin,
-                TxOut bobAddr toBob
+              [ ShelleyTxOut aliceAddr aliceCoin,
+                ShelleyTxOut bobAddr toBob
               ]
           )
           (StrictSeq.fromList certs)
@@ -376,8 +375,8 @@ utxoState =
   UTxOState
     ( genesisCoins
         genesisId
-        [ TxOut aliceAddr aliceInitCoin,
-          TxOut bobAddr (Coin 1000)
+        [ ShelleyTxOut aliceAddr aliceInitCoin,
+          ShelleyTxOut bobAddr (Coin 1000)
         ]
     )
     (Coin 0)
@@ -402,7 +401,7 @@ ledgerEnv = LedgerEnv (SlotNo 0) minBound pp (AccountState (Coin 0) (Coin 0))
 
 testInvalidTx ::
   [PredicateFailure (LEDGER C)] ->
-  Tx C ->
+  ShelleyTx C ->
   Assertion
 testInvalidTx errs tx =
   testLEDGER ledgerState tx ledgerEnv (Left errs)
@@ -428,11 +427,11 @@ testSpendNonexistentInput =
 testWitnessNotIncluded :: Assertion
 testWitnessNotIncluded =
   let txbody =
-        TxBody @C
+        ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6404),
-                TxOut bobAddr (Coin 3000)
+              [ ShelleyTxOut aliceAddr (Coin 6404),
+                ShelleyTxOut bobAddr (Coin 3000)
               ]
           )
           Empty
@@ -441,21 +440,20 @@ testWitnessNotIncluded =
           (SlotNo 100)
           SNothing
           SNothing
-      tx = Tx @C txbody mempty SNothing
+      tx = ShelleyTx @C txbody mempty SNothing
       txwits = Set.singleton (asWitness $ hashKey $ vKey alicePay)
    in testInvalidTx
         [ UtxowFailure $
-            MissingVKeyWitnessesUTXOW $
-              txwits
+            MissingVKeyWitnessesUTXOW txwits
         ]
         tx
 
 testSpendNotOwnedUTxO :: Assertion
 testSpendNotOwnedUTxO =
   let txbody =
-        TxBody @C
+        ShelleyTxBody @C
           (Set.fromList [mkGenesisTxIn 1])
-          (StrictSeq.singleton $ TxOut aliceAddr (Coin 232))
+          (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 232))
           Empty
           (Wdrl Map.empty)
           (Coin 768)
@@ -463,21 +461,20 @@ testSpendNotOwnedUTxO =
           SNothing
           SNothing
       aliceWit = makeWitnessVKey (hashAnnotated txbody) alicePay
-      tx = Tx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
+      tx = ShelleyTx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
-            MissingVKeyWitnessesUTXOW $
-              txwits
+            MissingVKeyWitnessesUTXOW txwits
         ]
         tx
 
 testWitnessWrongUTxO :: Assertion
 testWitnessWrongUTxO =
   let txbody =
-        TxBody @C
+        ShelleyTxBody @C
           (Set.fromList [mkGenesisTxIn 1])
-          (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
+          (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 230))
           Empty
           (Wdrl Map.empty)
           (Coin 770)
@@ -485,9 +482,9 @@ testWitnessWrongUTxO =
           SNothing
           SNothing
       tx2body =
-        TxBody @C
+        ShelleyTxBody @C
           (Set.fromList [mkGenesisTxIn 1])
-          (StrictSeq.singleton $ TxOut aliceAddr (Coin 230))
+          (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 230))
           Empty
           (Wdrl Map.empty)
           (Coin 770)
@@ -495,15 +492,14 @@ testWitnessWrongUTxO =
           SNothing
           SNothing
       aliceWit = makeWitnessVKey (hashAnnotated tx2body) alicePay
-      tx = Tx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
+      tx = ShelleyTx @C txbody mempty {addrWits = Set.fromList [aliceWit]} SNothing
       txwits = Set.singleton (asWitness $ hashKey $ vKey bobPay)
    in testInvalidTx
         [ UtxowFailure $
             InvalidWitnessesUTXOW
               [asWitness $ vKey alicePay],
           UtxowFailure $
-            MissingVKeyWitnessesUTXOW $
-              txwits
+            MissingVKeyWitnessesUTXOW txwits
         ]
         tx
 
@@ -511,9 +507,9 @@ testEmptyInputSet :: Assertion
 testEmptyInputSet =
   let aliceWithdrawal = Map.singleton (mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
       txb =
-        TxBody
+        ShelleyTxBody
           Set.empty
-          (StrictSeq.singleton $ TxOut aliceAddr (Coin 1000))
+          (StrictSeq.singleton $ ShelleyTxOut aliceAddr (Coin 1000))
           Empty
           (Wdrl aliceWithdrawal)
           (Coin 1000)
@@ -521,7 +517,7 @@ testEmptyInputSet =
           SNothing
           SNothing
       txwits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb) [aliceStake]}
-      tx = Tx txb txwits SNothing
+      tx = ShelleyTx txb txwits SNothing
       dpState' = addReward dpState (getRwdCred $ mkVKeyRwdAcnt Testnet aliceStake) (Coin 2000)
    in testLEDGER
         (LedgerState utxoState dpState')
@@ -566,11 +562,11 @@ testExpiredTx =
 testInvalidWintess :: Assertion
 testInvalidWintess =
   let txb =
-        TxBody @C
+        ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3000)
+              [ ShelleyTxOut aliceAddr (Coin 6000),
+                ShelleyTxOut bobAddr (Coin 3000)
               ]
           )
           Empty
@@ -580,9 +576,9 @@ testInvalidWintess =
           SNothing
           SNothing
       txb' = txb {_ttl = SlotNo 2}
-      txwits :: Cardano.Ledger.Shelley.Tx.WitnessSet C
+      txwits :: Cardano.Ledger.Shelley.Tx.ShelleyWitnesses C
       txwits = mempty {addrWits = makeWitnessesVKey (hashAnnotated txb') [alicePay]}
-      tx = Tx @C txb txwits SNothing
+      tx = ShelleyTx @C txb txwits SNothing
       errs =
         [ UtxowFailure $
             InvalidWitnessesUTXOW
@@ -593,11 +589,11 @@ testInvalidWintess =
 testWithdrawalNoWit :: Assertion
 testWithdrawalNoWit =
   let txb =
-        TxBody @C
+        ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3010)
+              [ ShelleyTxOut aliceAddr (Coin 6000),
+                ShelleyTxOut bobAddr (Coin 3010)
               ]
           )
           Empty
@@ -606,9 +602,9 @@ testWithdrawalNoWit =
           (SlotNo 0)
           SNothing
           SNothing
-      txwits :: Cardano.Ledger.Shelley.Tx.WitnessSet C
+      txwits :: ShelleyWitnesses C
       txwits = mempty {addrWits = Set.singleton $ makeWitnessVKey (hashAnnotated txb) alicePay}
-      tx = Tx @C txb txwits SNothing
+      tx = ShelleyTx @C txb txwits SNothing
       missing = Set.singleton (asWitness $ hashKey $ vKey bobStake)
       errs =
         [ UtxowFailure $ MissingVKeyWitnessesUTXOW missing
@@ -619,11 +615,11 @@ testWithdrawalNoWit =
 testWithdrawalWrongAmt :: Assertion
 testWithdrawalWrongAmt =
   let txb =
-        TxBody @C
+        ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
           ( StrictSeq.fromList
-              [ TxOut aliceAddr (Coin 6000),
-                TxOut bobAddr (Coin 3011)
+              [ ShelleyTxOut aliceAddr (Coin 6000),
+                ShelleyTxOut bobAddr (Coin 3011)
               ]
           )
           Empty
@@ -641,14 +637,14 @@ testWithdrawalWrongAmt =
           }
       rAcnt = mkVKeyRwdAcnt Testnet bobStake
       dpState' = addReward dpState (getRwdCred rAcnt) (Coin 10)
-      tx = Tx @C txb txwits SNothing
+      tx = ShelleyTx @C txb txwits SNothing
       errs = [DelegsFailure (WithdrawalsNotInRewardsDELEGS (Map.singleton rAcnt (Coin 11)))]
    in testLEDGER (LedgerState utxoState dpState') tx ledgerEnv (Left errs)
 
 testOutputTooSmall :: Assertion
 testOutputTooSmall =
   testInvalidTx
-    [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [TxOut bobAddr (Coin 1)])]
+    [UtxowFailure (UtxoFailure $ OutputTooSmallUTxO [ShelleyTxOut bobAddr (Coin 1)])]
     $ aliceGivesBobLovelace $
       AliceToBob
         { input = TxIn genesisId minBound,
@@ -719,9 +715,9 @@ testProducedOverMaxWord64 :: Assertion
 testProducedOverMaxWord64 =
   let biggestCoin = fromIntegral (maxBound :: Word64)
       txbody =
-        TxBody @C
+        ShelleyTxBody @C
           (Set.fromList [TxIn genesisId minBound])
-          (StrictSeq.fromList [TxOut bobAddr (Coin biggestCoin)])
+          (StrictSeq.fromList [ShelleyTxOut bobAddr (Coin biggestCoin)])
           Empty
           (Wdrl Map.empty)
           (Coin 1) -- @produced@ will return biggestCoin + 1, which is > 2^64.
@@ -729,7 +725,7 @@ testProducedOverMaxWord64 =
           SNothing
           SNothing
       txwits = mempty {addrWits = makeWitnessesVKey @C_Crypto (hashAnnotated txbody) [alicePay]}
-      tx = Tx @C txbody txwits SNothing
+      tx = ShelleyTx @C txbody txwits SNothing
       st =
         runShelleyBase $
           applySTSTest @(LEDGER C) (TRC (ledgerEnv, ledgerState, tx))

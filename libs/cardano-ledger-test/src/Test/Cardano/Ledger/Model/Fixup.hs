@@ -1,21 +1,16 @@
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE EmptyCase #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MonoLocalBinds #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE ViewPatterns #-}
 
@@ -67,12 +62,12 @@ import Data.Group.GrpMap (GrpMap (..), mapGrpMap, mkGrpMap, zipWithGrpMap)
 import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
 import Data.Maybe (mapMaybe)
-import Data.Proxy (Proxy (..))
 import Data.Ratio ((%))
 import Data.Semigroup (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Traversable
+import Data.Typeable (Proxy (..), Typeable)
 import GHC.Exts (fromString)
 import GHC.Generics ((:*:) (..), (:.:) (..))
 import Test.Cardano.Ledger.Model.API
@@ -504,7 +499,11 @@ fixBalance
         }
 
 witnessModelTx ::
-  forall (era :: FeatureSet). ModelTx era -> ModelLedger era -> ModelTx era
+  forall (era :: FeatureSet).
+  (Typeable era, Typeable (ValueFeature era)) =>
+  ModelTx era ->
+  ModelLedger era ->
+  ModelTx era
 witnessModelTx mtx ml = mtx {_mtxWitnessSigs = witnessModelTxImpl mtx ml}
 
 -- TODO: there's some extra degrees of freedom hidden in this function, they
@@ -514,10 +513,10 @@ witnessModelTx mtx ml = mtx {_mtxWitnessSigs = witnessModelTxImpl mtx ml}
 -- SEE: Fig18 [SL-D5]
 witnessModelTxImpl ::
   forall (era :: FeatureSet).
+  (Typeable era, Typeable (ValueFeature era)) =>
   ModelTx era ->
   ModelLedger era ->
-  ( Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False))
-  )
+  Set (ModelCredential 'Witness ('TyScriptFeature 'False 'False))
 witnessModelTxImpl mtx ml =
   let lookupOutput :: ModelUTxOId -> Maybe (ModelCredential 'Payment (ScriptFeature era))
       lookupOutput ui = preview (to getModelLedger_utxos . at ui . _Just . modelTxOut_address @era . modelAddress_pmt) ml

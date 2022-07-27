@@ -5,21 +5,21 @@
 {-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
 module Cardano.Ledger.Block
   ( Block (Block, Block', UnserialisedBlock, UnsafeUnserialisedBlock),
-    BlockAnn,
     bheader,
     bbody,
     neededTxInsForBlock,
+    txid,
   )
 where
 
@@ -32,49 +32,45 @@ import Cardano.Binary
     encodePreEncoded,
     serializeEncoding,
   )
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era (getAllTxInputs), ValidateScript (..))
-import qualified Cardano.Ledger.Era as Era
-import Cardano.Ledger.Serialization
-  ( ToCBORGroup (..),
-    decodeRecordNamed,
-  )
-import Cardano.Ledger.TxIn (TxIn (..), txid)
+import Cardano.Ledger.Core
+import Cardano.Ledger.SafeHash (hashAnnotated)
+import Cardano.Ledger.Serialization (ToCBORGroup (..), decodeRecordNamed)
+import Cardano.Ledger.TxIn (TxId (..), TxIn (..))
 import qualified Data.ByteString.Lazy as BSL
 import Data.Foldable (toList)
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
-import GHC.Records (HasField (..))
+import Lens.Micro ((^.))
 import NoThunks.Class (NoThunks (..))
 
 data Block h era
-  = Block' !h !(Era.TxSeq era) BSL.ByteString
+  = Block' !h !(TxSeq era) BSL.ByteString
   deriving (Generic)
 
 deriving stock instance
-  (Era era, Show (Era.TxSeq era), Show h) =>
+  (Era era, Show (TxSeq era), Show h) =>
   Show (Block h era)
 
 deriving stock instance
-  (Era era, Eq (Era.TxSeq era), Eq h) =>
+  (Era era, Eq (TxSeq era), Eq h) =>
   Eq (Block h era)
 
 deriving anyclass instance
   ( Era era,
-    NoThunks (Era.TxSeq era),
+    NoThunks (TxSeq era),
     NoThunks h
   ) =>
   NoThunks (Block h era)
 
 pattern Block ::
   ( Era era,
-    ToCBORGroup (Era.TxSeq era),
+    ToCBORGroup (TxSeq era),
     ToCBOR h
   ) =>
   h ->
-  Era.TxSeq era ->
+  TxSeq era ->
   Block h era
 pattern Block h txns <-
   Block' h txns _
@@ -91,7 +87,7 @@ pattern Block h txns <-
 -- we're using a 'BHeaderView' in place of the concrete header.
 pattern UnserialisedBlock ::
   h ->
-  Era.TxSeq era ->
+  TxSeq era ->
   Block h era
 pattern UnserialisedBlock h txns <- Block' h txns _
 
@@ -104,7 +100,7 @@ pattern UnserialisedBlock h txns <- Block' h txns _
 --   regarded with suspicion.
 pattern UnsafeUnserialisedBlock ::
   h ->
-  Era.TxSeq era ->
+  TxSeq era ->
   Block h era
 pattern UnsafeUnserialisedBlock h txns <-
   Block' h txns _
@@ -115,27 +111,12 @@ pattern UnsafeUnserialisedBlock h txns <-
 
 {-# COMPLETE UnsafeUnserialisedBlock #-}
 
-instance
-  (Era era, Typeable h) =>
-  ToCBOR (Block h era)
-  where
+instance (EraTx era, Typeable h) => ToCBOR (Block h era) where
   toCBOR (Block' _ _ blockBytes) = encodePreEncoded $ BSL.toStrict blockBytes
-
-type BlockAnn era =
-  ( FromCBOR (Annotator (Core.TxBody era)),
-    FromCBOR (Annotator (Core.AuxiliaryData era)),
-    FromCBOR (Annotator (Core.Witnesses era)),
-    ToCBOR (Core.TxBody era),
-    ToCBOR (Core.AuxiliaryData era),
-    ToCBOR (Core.Witnesses era)
-  )
 
 instance
   forall h era.
-  ( BlockAnn era,
-    ValidateScript era,
-    Era.SupportsSegWit era,
-    FromCBOR (Annotator (Era.TxSeq era)),
+  ( EraSegWits era,
     FromCBOR (Annotator h),
     Typeable h
   ) =>
@@ -149,14 +130,14 @@ instance
     where
       blockSize =
         1 -- header
-          + fromIntegral (Era.numSegComponents @era)
+          + fromIntegral (numSegComponents @era)
 
 bheader ::
   Block h era ->
   h
 bheader (Block' bh _ _) = bh
 
-bbody :: Block h era -> Era.TxSeq era
+bbody :: Block h era -> TxSeq era
 bbody (Block' _ txs _) = txs
 
 -- | The validity of any individual block depends only on a subset
@@ -169,12 +150,17 @@ bbody (Block' _ txs _) = txs
 -- will use 'neededTxInsForBlock' to retrieve the needed UTxO from disk
 -- and present only those to the ledger.
 neededTxInsForBlock ::
-  Era era =>
+  forall h era.
+  EraSegWits era =>
   Block h era ->
   Set (TxIn (Crypto era))
 neededTxInsForBlock (Block' _ txsSeq _) = Set.filter isNotNewInput allTxIns
   where
-    txBodies = map (getField @"body") $ toList $ Era.fromTxSeq txsSeq
-    allTxIns = Set.unions $ map getAllTxInputs txBodies
+    txBodies = map (^. bodyTxL) $ toList $ fromTxSeq txsSeq
+    allTxIns = Set.unions $ map (^. allInputsTxBodyF) txBodies
     newTxIds = Set.fromList $ map txid txBodies
     isNotNewInput (TxIn txID _) = txID `Set.notMember` newTxIds
+
+-- | Compute the id of a transaction.
+txid :: EraTxBody era => TxBody era -> TxId (Crypto era)
+txid = TxId . hashAnnotated

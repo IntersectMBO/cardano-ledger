@@ -42,11 +42,7 @@ library
     Cardano.Ledger.Alonzo.Language
     Cardano.Ledger.Alonzo.PlutusScriptApi
     Cardano.Ledger.Alonzo.PParams
-    Cardano.Ledger.Alonzo.Rules.Bbody
-    Cardano.Ledger.Alonzo.Rules.Ledger
-    Cardano.Ledger.Alonzo.Rules.Utxo
-    Cardano.Ledger.Alonzo.Rules.Utxos
-    Cardano.Ledger.Alonzo.Rules.Utxow
+    Cardano.Ledger.Alonzo.Rules
     Cardano.Ledger.Alonzo.Scripts
     Cardano.Ledger.Alonzo.Tools
     Cardano.Ledger.Alonzo.Translation
@@ -55,7 +51,13 @@ library
     Cardano.Ledger.Alonzo.TxInfo
     Cardano.Ledger.Alonzo.TxSeq
     Cardano.Ledger.Alonzo.TxWitness
-    Cardano.Ledger.DescribeEras
+  other-modules:
+    Cardano.Ledger.Alonzo.Era
+    Cardano.Ledger.Alonzo.Rules.Bbody
+    Cardano.Ledger.Alonzo.Rules.Ledger
+    Cardano.Ledger.Alonzo.Rules.Utxo
+    Cardano.Ledger.Alonzo.Rules.Utxos
+    Cardano.Ledger.Alonzo.Rules.Utxow
   build-depends:
     aeson >= 2,
     array,
@@ -74,6 +76,7 @@ library
     deepseq,
     measures,
     mtl,
+    microlens,
     nothunks,
     plutus-ledger-api ^>= 1.0,
     plutus-tx ^>= 1.0,

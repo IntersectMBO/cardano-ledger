@@ -15,7 +15,7 @@ import Cardano.Binary
 import Cardano.Ledger.Era (TranslateEra (..))
 import Cardano.Ledger.Mary.Translation ()
 import qualified Cardano.Ledger.Shelley.API as S
-import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData)
 import Test.Cardano.Ledger.AllegraEraGen ()
 -- import Allegra EraGen instance
 import Test.Cardano.Ledger.EraBuffet
@@ -44,22 +44,22 @@ maryEncodeDecodeTests =
     "encoded allegra types can be decoded as mary types"
     [ testProperty
         "decoding metadata"
-        (decodeTestAnn @(S.Metadata Allegra) ([] :: [MA.AuxiliaryData Mary]))
+        (decodeTestAnn @(S.Metadata Allegra) ([] :: [MAAuxiliaryData Mary]))
     ]
 
 maryTranslationTests :: TestTree
 maryTranslationTests =
   testGroup
     "Mary translation binary compatibiliby tests"
-    [ testProperty "Tx compatibility" (test @S.Tx),
+    [ testProperty "Tx compatibility" (test @S.ShelleyTx),
       testProperty "ProposedPPUpdates compatibility" (test @S.ProposedPPUpdates),
       testProperty "PPUPState compatibility" (test @S.PPUPState),
-      testProperty "TxOut compatibility" (test @S.TxOut),
+      testProperty "TxOut compatibility" (test @S.ShelleyTxOut),
       testProperty "UTxO compatibility" (test @S.UTxO),
       testProperty "UTxOState compatibility" (test @S.UTxOState),
       testProperty "LedgerState compatibility" (test @S.LedgerState),
       testProperty "EpochState compatibility" (test @S.EpochState),
-      testProperty "WitnessSet compatibility" (test @S.WitnessSet),
+      testProperty "WitnessSet compatibility" (test @S.ShelleyWitnesses),
       testProperty "Update compatibility" (test @S.Update)
     ]
 

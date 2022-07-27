@@ -26,7 +26,7 @@ import Cardano.Ledger.Shelley.API
     MIRTarget (..),
     Ptr (..),
   )
-import Cardano.Ledger.Shelley.PParams (PParams' (..), emptyPParams)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..), emptyPParams)
 import Cardano.Ledger.Shelley.Rules.Deleg (DelegPredicateFailure (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Control.State.Transition.Extended hiding (Assertion)

@@ -17,16 +17,14 @@ import Cardano.Binary
   ( ToCBOR (..),
   )
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Alonzo.Translation (Tx (..))
+import qualified Cardano.Ledger.Alonzo.Translation as Translation (Tx (..))
 import Cardano.Ledger.Alonzo.Tx (toCBORForSizeComputation)
-import Cardano.Ledger.Alonzo.TxBody (TxBody)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (TranslateEra (..))
 import qualified Cardano.Ledger.Shelley.API as API
-import qualified Cardano.Ledger.ShelleyMA.AuxiliaryData as MA
-import qualified Cardano.Ledger.ShelleyMA.TxBody as MA
+import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData)
+import Cardano.Ledger.ShelleyMA.TxBody (MATxBody)
 import Data.Typeable (Typeable)
 import Test.Cardano.Ledger.AllegraEraGen ()
 import Test.Cardano.Ledger.EraBuffet
@@ -63,10 +61,10 @@ alonzoEncodeDecodeTests =
     "encoded mary types can be decoded as alonzo types"
     [ testProperty
         "decoding auxilliary"
-        (decodeTestAnn @(MA.AuxiliaryData Mary) ([] :: [AuxiliaryData Alonzo])),
+        (decodeTestAnn @(MAAuxiliaryData Mary) ([] :: [Core.AuxiliaryData Alonzo])),
       testProperty
         "decoding txbody"
-        (decodeTestAnn @(MA.TxBody Mary) ([] :: [TxBody Alonzo])),
+        (decodeTestAnn @(MATxBody Mary) ([] :: [Core.TxBody Alonzo])),
       testProperty
         "decoding witnesses"
         (decodeTestAnn @(Core.Witnesses Mary) ([] :: [Core.Witnesses Alonzo]))
@@ -86,15 +84,15 @@ alonzoTranslationTests =
 
 deriving newtype instance
   (Arbitrary (Core.Tx era)) =>
-  Arbitrary (Tx era)
+  Arbitrary (Translation.Tx era)
 
 deriving newtype instance
   (Typeable era, ToCBOR (Core.Tx era)) =>
-  ToCBOR (Tx era)
+  ToCBOR (Translation.Tx era)
 
 deriving newtype instance
   (Show (Core.Tx era)) =>
-  Show (Tx era)
+  Show (Translation.Tx era)
 
 dummyAlonzoGenesis :: AlonzoGenesis
 dummyAlonzoGenesis = undefined
@@ -110,9 +108,9 @@ test ::
   Bool
 test = translationCompatToCBOR ([] :: [Alonzo]) dummyAlonzoGenesis
 
-testTx :: Tx Mary -> Bool
+testTx :: Translation.Tx Mary -> Bool
 testTx =
   translationCompat @Alonzo
     dummyAlonzoGenesis
-    (toCBORForSizeComputation . unTx)
+    (toCBORForSizeComputation . Translation.unTx)
     toCBOR

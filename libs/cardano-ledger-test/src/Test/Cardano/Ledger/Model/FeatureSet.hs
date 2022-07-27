@@ -57,9 +57,8 @@ import Control.DeepSeq (NFData (..))
 import Data.Functor.Const (Const (..))
 import Data.Functor.Identity (Identity (..))
 import Data.Kind (Type)
-import Data.Proxy (Proxy (..))
 import Data.Type.Bool (type (||))
-import Data.Type.Equality ((:~:) (..))
+import Data.Typeable (Proxy (..), Typeable, type (:~:) (..))
 
 -- | Type level indication of what kind of value is allowed.
 data TyValueExpected
@@ -288,7 +287,11 @@ data FeatureSet = FeatureSet TyValueExpected TyScriptFeature
 
 -- | GADT to reify the type level information in 'FeatureSet'
 data FeatureTag (tag :: FeatureSet) where
-  FeatureTag :: ValueFeatureTag v -> ScriptFeatureTag s -> FeatureTag ('FeatureSet v s)
+  FeatureTag ::
+    (Typeable v, Typeable s) =>
+    ValueFeatureTag v ->
+    ScriptFeatureTag s ->
+    FeatureTag ('FeatureSet v s)
 
 deriving instance Show (FeatureTag tag)
 
@@ -389,7 +392,10 @@ hasKnownValueFeature = \case
   ValueFeatureTag_AnyOutput -> \x -> x
 
 class
-  ( KnownValueFeature (ValueFeature a),
+  ( Typeable a,
+    Typeable (ValueFeature a),
+    Typeable (ScriptFeature a),
+    KnownValueFeature (ValueFeature a),
     KnownScriptFeature (ScriptFeature a),
     a ~ 'FeatureSet (ValueFeature a) (ScriptFeature a)
   ) =>
@@ -407,7 +413,9 @@ hasKnownRequiredFeatures (FeatureTag v s) =
   \x -> hasKnownValueFeature v (hasKnownScriptFeature s x)
 
 instance
-  ( KnownValueFeature v,
+  ( Typeable v,
+    Typeable s,
+    KnownValueFeature v,
     KnownScriptFeature s
   ) =>
   KnownRequiredFeatures ('FeatureSet v s)

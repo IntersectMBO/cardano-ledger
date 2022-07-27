@@ -1,20 +1,20 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE RankNTypes #-}
-{-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Generic.AggPropTests where
 
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (PParams' (..))
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo (AlonzoPParamsHKD (..))
 import Cardano.Ledger.Alonzo.Tx (IsValid (..))
-import Cardano.Ledger.Babbage.PParams (PParams' (..))
+import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.LedgerState
   ( EpochState (..),
     LedgerState (..),
     NewEpochState (..),
     UTxOState (..),
   )
-import qualified Cardano.Ledger.Shelley.PParams as Shelley (PParams' (..))
+import qualified Cardano.Ledger.Shelley.PParams as Shelley (ShelleyPParamsHKD (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Control.State.Transition (STS (..))
 import Control.State.Transition.Trace (Trace (..), TraceOrder (..), firstAndLastState, traceSignals)
@@ -49,7 +49,7 @@ aggProp agg0 aggregate test trace = test firstState lastState (foldl' aggregate 
 
 -- | The aggregate sizes of (outputs - inputs) is consistent with the change in size of the UTxO.
 --   Be carefull to choose the correct outputs and inputs, depending on if the Tx validates.
-consistentUtxoSizeProp :: Proof era -> Trace (MOCKCHAIN era) -> Property
+consistentUtxoSizeProp :: EraTx era => Proof era -> Trace (MOCKCHAIN era) -> Property
 consistentUtxoSizeProp proof trace = aggProp agg0 aggregate makeprop trace
   where
     agg0 = 0

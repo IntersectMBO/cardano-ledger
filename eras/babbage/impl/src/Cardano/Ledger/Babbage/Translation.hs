@@ -11,18 +11,16 @@
 
 module Cardano.Ledger.Babbage.Translation where
 
-import Cardano.Binary
-  ( DecoderError,
-  )
+import Cardano.Binary (DecoderError)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
+import Cardano.Ledger.Alonzo.PParams (AlonzoPParamsHKD (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
-import qualified Cardano.Ledger.Alonzo.TxBody as Alonzo (TxOut (..))
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (PParams' (..))
-import Cardano.Ledger.Babbage.Tx (ValidatedTx (..))
-import Cardano.Ledger.Babbage.TxBody (Datum (..), TxOut (..))
+import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
+import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Coin (Coin (..))
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Crypto (Crypto)
@@ -32,6 +30,7 @@ import Cardano.Ledger.Era
     TranslationContext,
     translateEra',
   )
+import Cardano.Ledger.HKD (HKDFunctor (..))
 import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
   ( EpochState (..),
@@ -40,7 +39,7 @@ import Cardano.Ledger.Shelley.API
     StrictMaybe (..),
   )
 import qualified Cardano.Ledger.Shelley.API as API
-import Cardano.Ledger.Shelley.PParams (HKDFunctor (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
 import Data.Proxy (Proxy (..))
 
 --------------------------------------------------------------------------------
@@ -103,7 +102,7 @@ newtype Tx era = Tx {unTx :: Core.Tx era}
 
 instance
   ( Crypto c,
-    Core.Tx (BabbageEra c) ~ ValidatedTx (BabbageEra c)
+    Core.Tx (BabbageEra c) ~ AlonzoTx (BabbageEra c)
   ) =>
   TranslateEra (BabbageEra c) Tx
   where
@@ -118,13 +117,13 @@ instance
       SNothing -> pure SNothing
       SJust axd -> SJust <$> translateViaCBORAnn "auxiliarydata" axd
     let validating = Alonzo.isValid tx
-    pure $ Tx $ ValidatedTx bdy txwits validating aux
+    pure $ Tx $ AlonzoTx bdy txwits validating aux
 
 --------------------------------------------------------------------------------
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (BabbageEra c) (API.PParams' f)
+instance (Crypto c, Functor f) => TranslateEra (BabbageEra c) (ShelleyPParamsHKD f)
 
 instance Crypto c => TranslateEra (BabbageEra c) EpochState where
   translateEra ctxt es =
@@ -177,7 +176,7 @@ translateTxOut ::
   Crypto c =>
   Core.TxOut (AlonzoEra c) ->
   Core.TxOut (BabbageEra c)
-translateTxOut (Alonzo.TxOut addr value dh) = TxOut addr value d SNothing
+translateTxOut (AlonzoTxOut addr value dh) = BabbageTxOut addr value d SNothing
   where
     d = case dh of
       SNothing -> NoDatum
@@ -192,8 +191,8 @@ coinsPerUTxOByteToCoinsPerUTxOWord :: Coin -> Coin
 coinsPerUTxOByteToCoinsPerUTxOWord (Coin c) = Coin $ c * 8
 
 translatePParams ::
-  forall f c. HKDFunctor f => Alonzo.PParams' f (AlonzoEra c) -> PParams' f (BabbageEra c)
-translatePParams Alonzo.PParams {_coinsPerUTxOWord = cpuw, ..} =
-  PParams {_coinsPerUTxOByte = cpub, ..}
+  forall f c. HKDFunctor f => AlonzoPParamsHKD f (AlonzoEra c) -> BabbagePParamsHKD f (BabbageEra c)
+translatePParams AlonzoPParams {_coinsPerUTxOWord = cpuw, ..} =
+  BabbagePParams {_coinsPerUTxOByte = cpub, ..}
   where
     cpub = hkdMap (Proxy :: Proxy f) coinsPerUTxOWordToCoinsPerUTxOByte cpuw

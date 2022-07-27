@@ -28,8 +28,8 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import Cardano.Ledger.Keys (KeyHash, KeyRole (Staking))
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesisStaking (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LS
-import Cardano.Ledger.Shelley.PParams (PParams' (..))
-import Cardano.Ledger.Shelley.TxBody (PoolParams (..), TxOut (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD (..))
+import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyTxOut (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import Cardano.Slotting.EpochInfo
 import Cardano.Slotting.Slot (EpochNo)
@@ -89,7 +89,7 @@ genChainInEpoch epoch = do
           . LS.nesEs
           $ chainNes genesisChainState
       initUtxoAddrs =
-        Maybe.mapMaybe (\(TxOut addr _) -> addrToKeyHash addr)
+        Maybe.mapMaybe (\(ShelleyTxOut addr _) -> addrToKeyHash addr)
           . Map.elems
           . unUTxO
           $ initUtxo

@@ -9,18 +9,17 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Babbage.Rules.Ledger (BabbageLEDGER) where
 
-import Cardano.Ledger.Alonzo.Rules.Ledger (ledgerTransition)
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..))
-import Cardano.Ledger.Babbage.PParams (PParams' (..))
-import Cardano.Ledger.Babbage.Rules.Utxos (ConcreteBabbage)
-import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUTXOW, BabbageUtxowPred)
+import Cardano.Ledger.Alonzo.Rules (AlonzoUtxowEvent, ledgerTransition)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx, AlonzoTx (..))
+import Cardano.Ledger.Babbage.Era
+import Cardano.Ledger.Babbage.Rules.Utxow (BabbageUtxowPred)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript)
+import Cardano.Ledger.Coin (Coin)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
   ( DPState (..),
@@ -51,29 +50,32 @@ import Control.State.Transition
     TRC (..),
   )
 import Data.Sequence (Seq)
+import GHC.Records (HasField)
 
 -- ==================================================
-data BabbageLEDGER c
 
 instance
-  ( Era era,
-    ValidateScript era,
-    ConcreteBabbage era,
-    Show (State (Core.EraRule "PPUP" era)),
-    Embed (Core.EraRule "DELEGS" era) (BabbageLEDGER era),
-    Embed (Core.EraRule "UTXOW" era) (BabbageLEDGER era),
-    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ ValidatedTx era,
-    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    Show (ValidatedTx era)
+  ( AlonzoEraTx era,
+    Tx era ~ AlonzoTx era,
+    Show (PParams era),
+    Show (TxOut era),
+    Show (Tx era),
+    Show (State (EraRule "PPUP" era)),
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin,
+    Embed (EraRule "DELEGS" era) (BabbageLEDGER era),
+    Embed (EraRule "UTXOW" era) (BabbageLEDGER era),
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (EraRule "UTXOW" era) ~ AlonzoTx era,
+    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era))
   ) =>
   STS (BabbageLEDGER era)
   where
   type State (BabbageLEDGER era) = LedgerState era
-  type Signal (BabbageLEDGER era) = ValidatedTx era
+  type Signal (BabbageLEDGER era) = AlonzoTx era
   type Environment (BabbageLEDGER era) = LedgerEnv era
   type BaseM (BabbageLEDGER era) = ShelleyBase
   type PredicateFailure (BabbageLEDGER era) = LedgerPredicateFailure era
@@ -102,8 +104,8 @@ instance
 instance
   ( Era era,
     STS (DELEGS era),
-    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era,
-    Event (Core.EraRule "DELEGS" era) ~ DelegsEvent era
+    PredicateFailure (EraRule "DELEGS" era) ~ DelegsPredicateFailure era,
+    Event (EraRule "DELEGS" era) ~ DelegsEvent era
   ) =>
   Embed (DELEGS era) (BabbageLEDGER era)
   where
@@ -113,8 +115,8 @@ instance
 instance
   ( Era era,
     STS (BabbageUTXOW era),
-    Event (Core.EraRule "UTXOW" era) ~ AlonzoEvent era,
-    PredicateFailure (Core.EraRule "UTXOW" era) ~ BabbageUtxowPred era
+    Event (EraRule "UTXOW" era) ~ AlonzoUtxowEvent era,
+    PredicateFailure (EraRule "UTXOW" era) ~ BabbageUtxowPred era
   ) =>
   Embed (BabbageUTXOW era) (BabbageLEDGER era)
   where
@@ -124,8 +126,8 @@ instance
 instance
   ( Era era,
     STS (BabbageLEDGER era),
-    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
-    Event (Core.EraRule "LEDGER" era) ~ LedgerEvent era
+    PredicateFailure (EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
+    Event (EraRule "LEDGER" era) ~ LedgerEvent era
   ) =>
   Embed (BabbageLEDGER era) (Shelley.LEDGERS era)
   where

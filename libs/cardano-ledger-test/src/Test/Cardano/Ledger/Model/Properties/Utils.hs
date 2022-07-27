@@ -2,10 +2,8 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE KindSignatures #-}
-{-# LANGUAGE NumericUnderscores #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 
 module Test.Cardano.Ledger.Model.Properties.Utils where
@@ -53,7 +51,6 @@ testChainModelInteractionWith ::
     ElaborateEraModel era,
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
-    Show (Core.Script era),
     Show (NewEpochState era),
     Show (EraElaboratorState era)
   ) =>
@@ -73,7 +70,6 @@ testChainModelInteractionWith' ::
     ElaborateEraModel era,
     Show (PredicateFailure (Core.EraRule "LEDGER" era)),
     Show (Core.Tx era),
-    Show (Core.Script era),
     Show (NewEpochState era),
     Show (EraElaboratorState era)
   ) =>
@@ -129,10 +125,7 @@ testChainModelInteraction ::
     Show (State (Core.EraRule "PPUP" era)),
     Show (NewEpochState era),
     ElaborateEraModel era,
-    Show (Core.Tx era),
-    Show (Core.TxOut era),
-    Show (Core.Script era),
-    Show (Core.PParams era)
+    Core.EraTx era
   ) =>
   proxy era ->
   ModelGenesis (EraFeatureSet era) ->

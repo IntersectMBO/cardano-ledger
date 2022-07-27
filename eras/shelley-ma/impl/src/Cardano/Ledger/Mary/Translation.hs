@@ -2,7 +2,6 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -20,14 +19,11 @@ import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Era hiding (Crypto)
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value (Value (..))
+import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API hiding (Metadata, TxBody)
-import Cardano.Ledger.Shelley.Tx
-  ( decodeWits,
-  )
+import Cardano.Ledger.Shelley.Tx (decodeWits)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
-  ( AuxiliaryData (..),
-    pattern AuxiliaryData,
+  ( MAAuxiliaryData (..),
   )
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Except (throwError)
@@ -71,8 +67,8 @@ instance Crypto c => TranslateEra (MaryEra c) NewEpochState where
           stashedAVVMAddresses = ()
         }
 
-instance Crypto c => TranslateEra (MaryEra c) Tx where
-  type TranslationError (MaryEra c) Tx = DecoderError
+instance Crypto c => TranslateEra (MaryEra c) ShelleyTx where
+  type TranslationError (MaryEra c) ShelleyTx = DecoderError
   translateEra _ctx tx =
     case decodeAnnotator "tx" fromCBOR (serialize tx) of
       Right newTx -> pure newTx
@@ -105,7 +101,7 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyGenesis where
 -- Auxiliary instances and functions
 --------------------------------------------------------------------------------
 
-instance (Crypto c, Functor f) => TranslateEra (MaryEra c) (PParams' f)
+instance (Crypto c, Functor f) => TranslateEra (MaryEra c) (ShelleyPParamsHKD f)
 
 instance Crypto c => TranslateEra (MaryEra c) EpochState where
   translateEra ctxt es =
@@ -150,7 +146,7 @@ instance Crypto c => TranslateEra (MaryEra c) UTxOState where
           _stakeDistro = _stakeDistro us
         }
 
-instance Crypto c => TranslateEra (MaryEra c) TxOut where
+instance Crypto c => TranslateEra (MaryEra c) ShelleyTxOut where
   translateEra () (TxOutCompact addr cfval) =
     pure $ TxOutCompact (coerce addr) (translateCompactValue cfval)
 
@@ -158,8 +154,8 @@ instance Crypto c => TranslateEra (MaryEra c) UTxO where
   translateEra ctxt utxo =
     return $ UTxO (translateEra' ctxt <$> unUTxO utxo)
 
-instance Crypto c => TranslateEra (MaryEra c) WitnessSet where
-  type TranslationError (MaryEra c) WitnessSet = DecoderError
+instance Crypto c => TranslateEra (MaryEra c) ShelleyWitnesses where
+  type TranslationError (MaryEra c) ShelleyWitnesses = DecoderError
   translateEra _ctx ws =
     case decodeAnnotator "witnessSet" decodeWits (serialize ws) of
       Right new -> pure new
@@ -168,14 +164,14 @@ instance Crypto c => TranslateEra (MaryEra c) WitnessSet where
 instance Crypto c => TranslateEra (MaryEra c) Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en
 
-instance Crypto c => TranslateEra (MaryEra c) AuxiliaryData where
-  translateEra _ (AuxiliaryData md as) =
-    pure $ AuxiliaryData md as
+instance Crypto c => TranslateEra (MaryEra c) MAAuxiliaryData where
+  translateEra _ (MAAuxiliaryData md as) =
+    pure $ MAAuxiliaryData md as
 
-translateValue :: Crypto c => Coin -> Value c
+translateValue :: Crypto c => Coin -> MaryValue c
 translateValue = Val.inject
 
-translateCompactValue :: Crypto c => CompactForm Coin -> CompactForm (Value c)
+translateCompactValue :: Crypto c => CompactForm Coin -> CompactForm (MaryValue c)
 translateCompactValue =
   fromMaybe (error msg) . toCompact . translateValue . fromCompact
   where

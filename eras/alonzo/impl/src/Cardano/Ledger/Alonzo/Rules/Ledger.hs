@@ -9,6 +9,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Rules.Ledger
   ( AlonzoLEDGER,
@@ -16,12 +17,13 @@ module Cardano.Ledger.Alonzo.Rules.Ledger
   )
 where
 
-import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoEvent, AlonzoUTXOW, UtxowPredicateFail)
-import Cardano.Ledger.Alonzo.Tx (IsValid (..), ValidatedTx (..))
+import Cardano.Ledger.Alonzo.Era (AlonzoLEDGER)
+import Cardano.Ledger.Alonzo.Rules.Utxow (AlonzoUTXOW, AlonzoUtxowEvent, UtxowPredicateFail)
+import Cardano.Ledger.Alonzo.Tx (AlonzoEraTx (..), AlonzoTx (..), IsValid (..))
+import Cardano.Ledger.Alonzo.TxBody (ShelleyEraTxBody (..))
 import Cardano.Ledger.BaseTypes (ShelleyBase)
 import Cardano.Ledger.Coin (Coin)
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Shelley.EpochBoundary (obligation)
 import Cardano.Ledger.Shelley.LedgerState
@@ -32,13 +34,22 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
     rewards,
   )
-import Cardano.Ledger.Shelley.Rules.Delegs (DELEGS, DelegsEnv (..), DelegsEvent, DelegsPredicateFailure)
-import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..), LedgerEvent (..), LedgerPredicateFailure (..))
+import Cardano.Ledger.Shelley.Rules.Delegs
+  ( DELEGS,
+    DelegsEnv (..),
+    DelegsEvent,
+    DelegsPredicateFailure,
+  )
+import Cardano.Ledger.Shelley.Rules.Ledger
+  ( LedgerEnv (..),
+    LedgerEvent (..),
+    LedgerPredicateFailure (..),
+  )
 import qualified Cardano.Ledger.Shelley.Rules.Ledgers as Shelley
 import Cardano.Ledger.Shelley.Rules.Utxo
   ( UtxoEnv (..),
   )
-import Cardano.Ledger.Shelley.TxBody (DCert, EraIndependentTxBody)
+import Cardano.Ledger.Shelley.TxBody (DCert)
 import Control.State.Transition
   ( Assertion (..),
     AssertionViolation (..),
@@ -51,47 +62,42 @@ import Control.State.Transition
   )
 import Data.Kind (Type)
 import Data.Sequence (Seq)
-import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
-import GHC.Records (HasField, getField)
+import GHC.Records (HasField)
+import Lens.Micro
 
 -- =======================================
 
--- | The uninhabited type that marks the (STS Ledger) instance in the Alonzo Era.
-data AlonzoLEDGER era
-
 -- | An abstract Alonzo Era, Ledger transition. Fix 'someLedger' at a concrete type to
---   make it concrete. Depends only on the "certs" and "isValid" HasField instances.
+--   make it concrete.
 ledgerTransition ::
   forall (someLEDGER :: Type -> Type) era.
-  ( Signal (someLEDGER era) ~ Core.Tx era,
+  ( Signal (someLEDGER era) ~ Tx era,
     State (someLEDGER era) ~ LedgerState era,
     Environment (someLEDGER era) ~ LedgerEnv era,
-    Embed (Core.EraRule "UTXOW" era) (someLEDGER era),
-    Embed (Core.EraRule "DELEGS" era) (someLEDGER era),
-    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ Core.Tx era,
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "isValid" (Core.Tx era) IsValid,
-    Era era
+    Embed (EraRule "UTXOW" era) (someLEDGER era),
+    Embed (EraRule "DELEGS" era) (someLEDGER era),
+    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (EraRule "UTXOW" era) ~ Tx era,
+    AlonzoEraTx era
   ) =>
   TransitionRule (someLEDGER era)
 ledgerTransition = do
   TRC (LedgerEnv slot txIx pp account, LedgerState utxoSt dpstate, tx) <- judgmentContext
-  let txbody = getField @"body" tx
+  let txBody = tx ^. bodyTxL
 
   dpstate' <-
-    if getField @"isValid" tx == IsValid True
+    if tx ^. isValidTxL == IsValid True
       then
-        trans @(Core.EraRule "DELEGS" era) $
+        trans @(EraRule "DELEGS" era) $
           TRC
             ( DelegsEnv slot txIx pp tx account,
               dpstate,
-              StrictSeq.fromStrict $ getField @"certs" $ txbody
+              StrictSeq.fromStrict $ txBody ^. certsTxBodyL
             )
       else pure dpstate
 
@@ -100,7 +106,7 @@ ledgerTransition = do
       stpools = _pParams pstate
 
   utxoSt' <-
-    trans @(Core.EraRule "UTXOW" era) $
+    trans @(EraRule "UTXOW" era) $
       TRC
         ( UtxoEnv @era slot pp stpools genDelegs,
           utxoSt,
@@ -109,33 +115,25 @@ ledgerTransition = do
   pure $ LedgerState utxoSt' dpstate'
 
 instance
-  ( Show (Core.Script era), -- All these Show instances arise because
-    Show (Core.TxBody era), -- renderAssertionViolation, turns them into strings
-    Show (Core.TxOut era),
-    Show (State (Core.EraRule "PPUP" era)),
-    Show (Core.AuxiliaryData era),
-    Show (Core.PParams era),
-    Show (Core.Value era),
-    Show (Core.PParamsDelta era),
+  ( Show (State (EraRule "PPUP" era)),
     DSignable (Crypto era) (Hash (Crypto era) EraIndependentTxBody),
-    Era era,
-    Core.Tx era ~ ValidatedTx era,
-    Embed (Core.EraRule "DELEGS" era) (AlonzoLEDGER era),
-    Embed (Core.EraRule "UTXOW" era) (AlonzoLEDGER era),
-    Environment (Core.EraRule "UTXOW" era) ~ UtxoEnv era,
-    State (Core.EraRule "UTXOW" era) ~ UTxOState era,
-    Signal (Core.EraRule "UTXOW" era) ~ ValidatedTx era,
-    Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
-    State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
-    Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "_keyDeposit" (Core.PParams era) Coin,
-    HasField "_poolDeposit" (Core.PParams era) Coin
+    AlonzoEraTx era,
+    Tx era ~ AlonzoTx era,
+    Embed (EraRule "DELEGS" era) (AlonzoLEDGER era),
+    Embed (EraRule "UTXOW" era) (AlonzoLEDGER era),
+    Environment (EraRule "UTXOW" era) ~ UtxoEnv era,
+    State (EraRule "UTXOW" era) ~ UTxOState era,
+    Signal (EraRule "UTXOW" era) ~ AlonzoTx era,
+    Environment (EraRule "DELEGS" era) ~ DelegsEnv era,
+    State (EraRule "DELEGS" era) ~ DPState (Crypto era),
+    Signal (EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
+    HasField "_keyDeposit" (PParams era) Coin,
+    HasField "_poolDeposit" (PParams era) Coin
   ) =>
   STS (AlonzoLEDGER era)
   where
   type State (AlonzoLEDGER era) = LedgerState era
-  type Signal (AlonzoLEDGER era) = ValidatedTx era
+  type Signal (AlonzoLEDGER era) = AlonzoTx era
   type Environment (AlonzoLEDGER era) = LedgerEnv era
   type BaseM (AlonzoLEDGER era) = ShelleyBase
   type PredicateFailure (AlonzoLEDGER era) = LedgerPredicateFailure era
@@ -164,8 +162,8 @@ instance
 instance
   ( Era era,
     STS (DELEGS era),
-    PredicateFailure (Core.EraRule "DELEGS" era) ~ DelegsPredicateFailure era,
-    Event (Core.EraRule "DELEGS" era) ~ DelegsEvent era
+    PredicateFailure (EraRule "DELEGS" era) ~ DelegsPredicateFailure era,
+    Event (EraRule "DELEGS" era) ~ DelegsEvent era
   ) =>
   Embed (DELEGS era) (AlonzoLEDGER era)
   where
@@ -175,8 +173,8 @@ instance
 instance
   ( Era era,
     STS (AlonzoUTXOW era),
-    PredicateFailure (Core.EraRule "UTXOW" era) ~ UtxowPredicateFail era,
-    Event (Core.EraRule "UTXOW" era) ~ AlonzoEvent era
+    PredicateFailure (EraRule "UTXOW" era) ~ UtxowPredicateFail era,
+    Event (EraRule "UTXOW" era) ~ AlonzoUtxowEvent era
   ) =>
   Embed (AlonzoUTXOW era) (AlonzoLEDGER era)
   where
@@ -186,8 +184,8 @@ instance
 instance
   ( Era era,
     STS (AlonzoLEDGER era),
-    PredicateFailure (Core.EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
-    Event (Core.EraRule "LEDGER" era) ~ LedgerEvent era
+    PredicateFailure (EraRule "LEDGER" era) ~ LedgerPredicateFailure era,
+    Event (EraRule "LEDGER" era) ~ LedgerEvent era
   ) =>
   Embed (AlonzoLEDGER era) (Shelley.LEDGERS era)
   where

@@ -13,16 +13,16 @@ module Cardano.Ledger.State.UTxO where
 
 import Cardano.Binary
 import Cardano.Ledger.Address
-import Cardano.Ledger.Alonzo
+import Cardano.Ledger.Alonzo hiding (TxOut)
 import Cardano.Ledger.Alonzo.Data hiding (scripts)
-import Cardano.Ledger.Alonzo.TxBody as Alonzo
+import Cardano.Ledger.Alonzo.TxBody hiding (TxOut)
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Core
 import Cardano.Ledger.Credential
 import Cardano.Ledger.Crypto
 import Cardano.Ledger.Mary.Value
-import qualified Cardano.Ledger.Mary.Value as Mary
 import Cardano.Ledger.PoolDistr (individualPoolStakeVrf)
-import Cardano.Ledger.Shelley.API
+import Cardano.Ledger.Shelley.API hiding (TxOut)
 import Cardano.Ledger.Shelley.LedgerState
 import Cardano.Ledger.Shelley.PoolRank
 import Conduit
@@ -38,6 +38,7 @@ import qualified Data.Set as Set
 import Data.Typeable
 import Data.UMap (delView, ptrView, rewView)
 import qualified Data.VMap as VMap
+import Lens.Micro
 import Prettyprinter
 import Text.Printf
 
@@ -67,7 +68,7 @@ loadLedgerState fp = esLState . nesEs <$> readNewEpochState fp
 runConduitFold :: Monad m => ConduitT () a m () -> Fold a b -> m b
 runConduitFold source (Fold f e g) = (g <$> runConduit (source .| foldlC f e))
 
-type UTxOFold b = Fold (TxIn C, Alonzo.TxOut CurrentEra) b
+type UTxOFold b = Fold (TxIn C, TxOut CurrentEra) b
 
 noSharing :: Fold (TxIn C, a) (Map.Map (TxIn C) a)
 noSharing = Fold (\ !m !(!k, !v) -> Map.insert k v m) mempty id
@@ -82,7 +83,7 @@ noSharingMap_ :: UTxOFold (Map.Map (TxIn C) ())
 noSharingMap_ = Fold (\ !m !(!k, _) -> Map.insert k () m) mempty id
 
 txIdSharing ::
-  UTxOFold (Map.Map (TxId C) (IntMap.IntMap (Alonzo.TxOut CurrentEra)))
+  UTxOFold (Map.Map (TxId C) (IntMap.IntMap (TxOut CurrentEra)))
 txIdSharing = Fold txIdNestedInsert mempty id
 
 txIdSharing_ :: UTxOFold (Map.Map (TxId C) (IntMap.IntMap ()))
@@ -113,8 +114,8 @@ txIxNestedInsert !im (TxIn !txId !txIx, !v) =
           Just !m -> Just $! Map.insert txId v m
    in IntMap.alter f (txIxToInt txIx) im
 
-totalADA :: Map.Map (TxIn C) (Alonzo.TxOut CurrentEra) -> Mary.Value C
-totalADA = foldMap (\(Alonzo.TxOut _ v _) -> v)
+totalADA :: Map.Map (TxIn C) (TxOut CurrentEra) -> MaryValue C
+totalADA = foldMap (^. valueTxOutL)
 
 readBinUTxO :: FilePath -> IO (UTxO CurrentEra)
 readBinUTxO fp = do
@@ -569,11 +570,11 @@ instance Pretty TxOutStats where
 instance AggregateStat TxOutStats where
   aggregateStat TxOutStats {..} = aggregateStat tosStakingCredential
 
-countTxOutStats :: [Alonzo.TxOut CurrentEra] -> TxOutStats
+countTxOutStats :: [TxOut CurrentEra] -> TxOutStats
 countTxOutStats = foldMap countTxOutStat
   where
-    countTxOutStat :: Alonzo.TxOut CurrentEra -> TxOutStats
-    countTxOutStat (Alonzo.TxOut addr (Value v vm) mData) =
+    countTxOutStat :: TxOut CurrentEra -> TxOutStats
+    countTxOutStat (AlonzoTxOut addr (MaryValue v vm) mData) =
       let !dataStat =
             strictMaybe
               mempty
@@ -697,18 +698,19 @@ data UTxOStats' = UTxOStats'
 initStats :: UTxOStats'
 initStats = UTxOStats' 0 0 0 0 0 0 0 0
 
-collectStats :: ConduitT (TxIn C, Alonzo.TxOut CurrentEra) Void IO ()
+collectStats :: ConduitT (TxIn C, TxOut CurrentEra) Void IO ()
 collectStats = do
   (uniques, stats) <- foldlC collect (emptyUniques, initStats)
   lift $ reportStats uniques stats
   where
     collect ::
       (UTxOUniques, UTxOStats') ->
-      (TxIn C, Alonzo.TxOut CurrentEra) ->
+      (TxIn C, TxOut CurrentEra) ->
       (UTxOUniques, UTxOStats')
-    collect (u@UTxOUniques {..}, s@UTxOStats' {..}) (TxIn txId txIx, Alonzo.TxOut addr _val _datum) =
+    collect (u@UTxOUniques {..}, s@UTxOStats' {..}) (TxIn txId txIx, txOut) =
       let u' = u {txIds = Set.insert txId txIds, txIxs = Set.insert txIx txIxs}
           s' = s {statsTotalTxOuts = statsTotalTxOuts + 1}
+          addr = txOut ^. addrTxOutL
           updateStakingStats sr (su, ss) =
             case sr of
               StakeRefNull ->

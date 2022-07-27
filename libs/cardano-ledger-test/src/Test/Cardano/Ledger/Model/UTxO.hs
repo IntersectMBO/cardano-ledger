@@ -38,9 +38,9 @@ import Data.Group.GrpMap
   )
 import qualified Data.Map.Merge.Strict as Map
 import qualified Data.Map.Strict as Map
-import Data.Proxy (Proxy (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
+import Data.Typeable
 import GHC.Generics (Generic)
 import Test.Cardano.Ledger.Model.BaseTypes (ModelValue, PreservedAda (..))
 import Test.Cardano.Ledger.Model.FeatureSet
@@ -67,10 +67,10 @@ data ModelUTxOMap era = ModelUTxOMap
   }
   deriving (Eq, Show, Generic)
 
-instance PreservedAda (ModelUTxOMap era) where
+instance (Typeable era, Typeable (ValueFeature era)) => PreservedAda (ModelUTxOMap era) where
   totalPreservedAda = Val.coin . _modelUTxOMap_balance
 
-validModelUTxOMap :: ModelUTxOMap era -> Bool
+validModelUTxOMap :: (Typeable era, Typeable (ValueFeature era)) => ModelUTxOMap era -> Bool
 validModelUTxOMap m = m == toModelUTxOMap (_modelUTxOMap_utxos m)
 
 instance Semigroup (ModelUTxOMap era) where
@@ -105,7 +105,10 @@ mergeModelUTxOMapWithConflicts
 emptyUTxOMap :: ModelUTxOMap era
 emptyUTxOMap = ModelUTxOMap Map.empty mempty Set.empty mempty
 
-toModelUTxOMap :: Map.Map ModelUTxOId (ModelTxOut era) -> ModelUTxOMap era
+toModelUTxOMap ::
+  (Typeable era, Typeable (ValueFeature era)) =>
+  Map.Map ModelUTxOId (ModelTxOut era) ->
+  ModelUTxOMap era
 toModelUTxOMap =
   ifoldMap $ \ui txo@(ModelTxOut ma mval _) ->
     let val = Val.coin mval
@@ -117,7 +120,7 @@ toModelUTxOMap =
 
 mkModelUTxOMap ::
   forall era.
-  KnownScriptFeature (ScriptFeature era) =>
+  (Typeable era, Typeable (ValueFeature era), KnownScriptFeature (ScriptFeature era)) =>
   Map.Map ModelUTxOId (ModelAddress (ScriptFeature era), Coin) ->
   ModelUTxOMap era
 mkModelUTxOMap =
@@ -132,6 +135,8 @@ mkModelUTxOMap =
     dh = ifSupportsPlutus (Proxy :: Proxy (ScriptFeature era)) () Nothing
 
 spendModelUTxOs ::
+  forall era.
+  (Typeable era, Typeable (ValueFeature era)) =>
   Set ModelUTxOId ->
   [(ModelUTxOId, ModelTxOut era)] ->
   ModelUTxOMap era ->
@@ -168,9 +173,9 @@ type instance Index (ModelUTxOMap era) = ModelUTxOId
 
 type instance IxValue (ModelUTxOMap era) = ModelTxOut era
 
-instance Ixed (ModelUTxOMap era)
+instance (Typeable era, Typeable (ValueFeature era)) => Ixed (ModelUTxOMap era)
 
-instance At (ModelUTxOMap era) where
+instance (Typeable era, Typeable (ValueFeature era)) => At (ModelUTxOMap era) where
   at :: ModelUTxOId -> Lens' (ModelUTxOMap era) (Maybe (ModelTxOut era))
   at k = \a2fb s ->
     let a = Map.lookup k $ _modelUTxOMap_utxos s
@@ -196,8 +201,11 @@ instance At (ModelUTxOMap era) where
                       grpMap h . _2 %= Set.insert k,
                   _modelUTxOMap_balance = _modelUTxOMap_balance s <> val ~~ val'
                 }
-     in b2t <$> (a2fb a)
+     in b2t <$> a2fb a
   {-# INLINE at #-}
 
-getCoinUTxOsfromUTxoMap :: ModelUTxOMap era -> (Coin, Set ModelUTxOId)
+getCoinUTxOsfromUTxoMap ::
+  (Typeable era, Typeable (ValueFeature era)) =>
+  ModelUTxOMap era ->
+  (Coin, Set ModelUTxOId)
 getCoinUTxOsfromUTxoMap (ModelUTxOMap utxos _ _ balances) = (Val.coin balances, Map.keysSet utxos)

@@ -15,13 +15,17 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-orphans #-}
 
 module Cardano.Ledger.Alonzo.Scripts
   ( Tag (..),
-    Script (TimelockScript, PlutusScript),
+    AlonzoScript (TimelockScript, PlutusScript),
+    Script,
     txscriptfee,
     isPlutusScript,
     pointWiseExUnits,
+    validScript,
+    transProtocolVersion,
 
     -- * Cost Model
     CostModel,
@@ -42,18 +46,20 @@ module Cardano.Ledger.Alonzo.Scripts
 where
 
 import Cardano.Binary (DecoderError (..), FromCBOR (fromCBOR), ToCBOR (toCBOR), serialize')
+import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
-import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval)
+import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval, ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Core (Era (Crypto), EraScript)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
-import Cardano.Ledger.Era (Era (Crypto), ValidateScript (hashScript))
 import Cardano.Ledger.SafeHash
   ( HashWithCrypto (..),
     SafeHash,
     SafeToHash (..),
   )
 import Cardano.Ledger.Serialization (mapToCBOR)
+import Cardano.Ledger.Shelley (nativeMultiSigTag)
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Control.DeepSeq (NFData (..), deepseq, rwhnf)
 import Control.Monad (when)
@@ -88,7 +94,7 @@ import GHC.Generics (Generic)
 import NoThunks.Class (InspectHeapNamed (..), NoThunks)
 import Numeric.Natural (Natural)
 import Plutus.V1.Ledger.Api as PV1 hiding (Map, Script)
-import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, mkEvaluationContext)
+import Plutus.V2.Ledger.Api as PV2 (costModelParamNames, isScriptWellFormed, mkEvaluationContext)
 
 -- | Marker indicating the part of a transaction for which this script is acting
 -- as a validator.
@@ -111,30 +117,43 @@ instance NFData Tag where
 -- =======================================================
 
 -- | Scripts in the Alonzo Era, Either a Timelock script or a Plutus script.
-data Script era
+data AlonzoScript era
   = TimelockScript (Timelock (Crypto era))
   | PlutusScript Language ShortByteString
   deriving (Eq, Generic)
 
-instance (ValidateScript era, Core.Script era ~ Script era) => Show (Script era) where
+type Script era = AlonzoScript era
+
+{-# DEPRECATED Script "Use `AlonzoScript` instead" #-}
+
+instance (EraScript era, Core.Script era ~ AlonzoScript era) => Show (AlonzoScript era) where
   show (TimelockScript x) = "TimelockScript " ++ show x
-  show s@(PlutusScript v _) = "PlutusScript " ++ show v ++ " " ++ show (hashScript @era s)
+  show s@(PlutusScript v _) = "PlutusScript " ++ show v ++ " " ++ show (Core.hashScript @era s)
 
 deriving via
-  InspectHeapNamed "Script" (Script era)
+  InspectHeapNamed "AlonzoScript" (AlonzoScript era)
   instance
-    NoThunks (Script era)
+    NoThunks (AlonzoScript era)
 
-instance NFData (Script era)
+instance NFData (AlonzoScript era)
 
 -- | Both constructors know their original bytes
-instance SafeToHash (Script era) where
+instance SafeToHash (AlonzoScript era) where
   originalBytes (TimelockScript t) = originalBytes t
   originalBytes (PlutusScript _ bs) = fromShort bs
 
-isPlutusScript :: Script era -> Bool
+isPlutusScript :: AlonzoScript era -> Bool
 isPlutusScript (PlutusScript _ _) = True
 isPlutusScript (TimelockScript _) = False
+
+instance CC.Crypto c => EraScript (AlonzoEra c) where
+  type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
+  isNativeScript x = not (isPlutusScript x)
+  scriptPrefixTag script =
+    case script of
+      TimelockScript _ -> nativeMultiSigTag -- "\x00"
+      PlutusScript PlutusV1 _ -> "\x01"
+      PlutusScript PlutusV2 _ -> "\x02"
 
 -- ===========================================
 
@@ -142,7 +161,7 @@ isPlutusScript (TimelockScript _) = False
 -- of space in memory and execution time.
 --
 -- The ledger itself uses 'ExUnits' Natural' exclusively, but the flexibility here
--- alows the consensus layer to translate the execution units into something
+-- allows the consensus layer to translate the execution units into something
 -- equivalent to 'ExUnits (Inf Natural)'. This is needed in order to provide
 -- a 'BoundedMeasure' instance, which itself is needed for the alonzo instance of
 -- 'TxLimits' (in consensus).
@@ -386,10 +405,7 @@ encodeScript (TimelockScript i) = Sum TimelockScript 0 !> To i
 encodeScript (PlutusScript PlutusV1 s) = Sum (PlutusScript PlutusV1) 1 !> To s
 encodeScript (PlutusScript PlutusV2 s) = Sum (PlutusScript PlutusV2) 2 !> To s
 
-instance
-  (CC.Crypto (Crypto era), Typeable (Crypto era), Typeable era) =>
-  FromCBOR (Annotator (Script era))
-  where
+instance Era era => FromCBOR (Annotator (Script era)) where
   fromCBOR = decode (Summands "Alonzo Script" decodeScript)
     where
       decodeScript :: Word -> Decode 'Open (Annotator (Script era))
@@ -397,3 +413,16 @@ instance
       decodeScript 1 = Ann (SumD $ PlutusScript PlutusV1) <*! Ann From
       decodeScript 2 = Ann (SumD $ PlutusScript PlutusV2) <*! Ann From
       decodeScript n = Invalid n
+
+-- | Test that every Alonzo script represents a real Script.
+--     Run deepseq to see that there are no infinite computations and that
+--     every Plutus Script unflattens into a real PV1.Script
+validScript :: ProtVer -> Script era -> Bool
+validScript pv scrip = case scrip of
+  TimelockScript sc -> deepseq sc True
+  PlutusScript PlutusV1 bytes -> PV1.isScriptWellFormed (transProtocolVersion pv) bytes
+  PlutusScript PlutusV2 bytes -> PV2.isScriptWellFormed (transProtocolVersion pv) bytes
+
+transProtocolVersion :: ProtVer -> PV1.ProtocolVersion
+transProtocolVersion (ProtVer major minor) =
+  PV1.ProtocolVersion (fromIntegral major) (fromIntegral minor)

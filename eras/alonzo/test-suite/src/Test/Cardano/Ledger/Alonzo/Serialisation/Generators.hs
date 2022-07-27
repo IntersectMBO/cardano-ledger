@@ -14,33 +14,28 @@
 module Test.Cardano.Ledger.Alonzo.Serialisation.Generators where
 
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.Data (AuxiliaryData (..), BinaryData, Data (..), dataToBinaryData)
+import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), BinaryData, Data (..), dataToBinaryData)
 import Cardano.Ledger.Alonzo.Language
 import Cardano.Ledger.Alonzo.PParams
-import Cardano.Ledger.Alonzo.Rules.Utxo (UtxoPredicateFailure (..))
-import Cardano.Ledger.Alonzo.Rules.Utxos
+import Cardano.Ledger.Alonzo.Rules
   ( FailureDescription (..),
     TagMismatchDescription (..),
+    UtxoPredicateFailure (..),
     UtxosPredicateFailure (..),
+    UtxowPredicateFail (..),
   )
-import Cardano.Ledger.Alonzo.Rules.Utxow (UtxowPredicateFail (..))
 import Cardano.Ledger.Alonzo.Scripts
-  ( CostModels (..),
+  ( AlonzoScript (..),
+    CostModels (..),
     ExUnits (..),
     Prices (..),
-    Script (..),
     Tag (..),
     mkCostModel,
   )
 import Cardano.Ledger.Alonzo.Tx
-import Cardano.Ledger.Alonzo.TxBody
-  ( TxOut (..),
-  )
+import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
 import Cardano.Ledger.Alonzo.TxWitness
-import qualified Cardano.Ledger.Core as Core
-import Cardano.Ledger.Era (Crypto, Era, ValidateScript (..))
-import Cardano.Ledger.Hashes (ScriptHash)
-import Cardano.Ledger.Shelley.Constraints (UsesScript, UsesValue)
+import Cardano.Ledger.Core
 import Data.Int (Int64)
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Map (Map)
@@ -79,13 +74,13 @@ instance Arbitrary PV1.Data where
       gendata _ = oneof [PV1.I <$> arbitrary, PV1.B <$> arbitrary]
 
 instance
-  ( UsesScript era,
-    Core.Script era ~ Script era,
-    Arbitrary (Core.Script era)
+  ( Script era ~ AlonzoScript era,
+    Arbitrary (Script era),
+    Era era
   ) =>
-  Arbitrary (AuxiliaryData era)
+  Arbitrary (AlonzoAuxiliaryData era)
   where
-  arbitrary = AuxiliaryData <$> arbitrary <*> arbitrary
+  arbitrary = AlonzoAuxiliaryData <$> arbitrary <*> arbitrary
 
 instance Arbitrary Tag where
   arbitrary = elements [Spend, Mint, Cert, Rewrd]
@@ -102,13 +97,10 @@ instance (Era era) => Arbitrary (Redeemers era) where
   arbitrary = Redeemers <$> arbitrary
 
 instance
-  ( Era era,
-    UsesValue era,
-    Mock (Crypto era),
-    Arbitrary (Core.Script era),
-    Script era ~ Core.Script era,
-    ValidateScript era,
-    UsesScript era
+  ( Mock (Crypto era),
+    Arbitrary (Script era),
+    AlonzoScript era ~ Script era,
+    EraScript era
   ) =>
   Arbitrary (TxWitness era)
   where
@@ -125,37 +117,32 @@ keyBy f xs = Map.fromList ((\x -> (f x, x)) <$> xs)
 
 genScripts ::
   forall era.
-  ( Core.Script era ~ Script era,
-    ValidateScript era,
-    Arbitrary (Script era)
+  ( Script era ~ AlonzoScript era,
+    EraScript era,
+    Arbitrary (AlonzoScript era)
   ) =>
-  Gen (Map (ScriptHash (Crypto era)) (Core.Script era))
-genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Core.Script era])
+  Gen (Map (ScriptHash (Crypto era)) (Script era))
+genScripts = keyBy (hashScript @era) <$> (arbitrary :: Gen [Script era])
 
 genData :: forall era. Era era => Gen (TxDats era)
 genData = TxDats . keyBy hashData <$> arbitrary
 
 instance
-  ( Era era,
-    UsesValue era,
+  ( EraTxOut era,
     Mock (Crypto era),
-    Arbitrary (Core.Value era)
+    Arbitrary (Value era)
   ) =>
-  Arbitrary (TxOut era)
+  Arbitrary (AlonzoTxOut era)
   where
   arbitrary =
-    TxOut
+    AlonzoTxOut
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
 
-instance
-  forall c.
-  (Mock c) =>
-  Arbitrary (TxBody (AlonzoEra c))
-  where
+instance Mock c => Arbitrary (AlonzoTxBody (AlonzoEra c)) where
   arbitrary =
-    TxBody
+    AlonzoTxBody
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -172,15 +159,15 @@ instance
 
 deriving newtype instance Arbitrary IsValid
 
-instance Mock c => Arbitrary (ValidatedTx (AlonzoEra c)) where
+instance Mock c => Arbitrary (AlonzoTx (AlonzoEra c)) where
   arbitrary =
-    ValidatedTx
+    AlonzoTx
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
 
-instance Mock c => Arbitrary (Script (AlonzoEra c)) where
+instance Mock c => Arbitrary (AlonzoScript (AlonzoEra c)) where
   arbitrary = do
     lang <- arbitrary -- The language is not present in the Script serialization
     frequency
@@ -216,9 +203,9 @@ instance Arbitrary CostModel where
 instance Arbitrary CostModels where
   arbitrary = CostModels . Map.fromList <$> (sublistOf nonNativeLanguages >>= mapM genCostModel)
 
-instance Arbitrary (PParams era) where
+instance Arbitrary (AlonzoPParams era) where
   arbitrary =
-    PParams
+    AlonzoPParams
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary
@@ -244,9 +231,9 @@ instance Arbitrary (PParams era) where
       <*> arbitrary
       <*> arbitrary
 
-instance Arbitrary (PParamsUpdate era) where
+instance Arbitrary (AlonzoPParamsUpdate era) where
   arbitrary =
-    PParams
+    AlonzoPParams
       <$> arbitrary
       <*> arbitrary
       <*> arbitrary

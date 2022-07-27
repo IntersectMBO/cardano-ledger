@@ -7,15 +7,14 @@ module Cardano.Ledger.Babbage.Genesis
 where
 
 import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis (..))
-import Cardano.Ledger.Babbage.PParams (PParams', extendPP)
-import qualified Cardano.Ledger.Shelley.PParams as Shelley
-import Data.Functor.Identity (Identity)
+import Cardano.Ledger.Babbage.PParams (BabbagePParams, extendPP)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
 
 -- | Given the missing pieces turn a Shelley.PParams' into an Params'
 extendPPWithGenesis ::
-  Shelley.PParams' Identity era1 ->
+  ShelleyPParams era1 ->
   AlonzoGenesis ->
-  PParams' Identity era2
+  BabbagePParams era2
 extendPPWithGenesis
   pp
   AlonzoGenesis

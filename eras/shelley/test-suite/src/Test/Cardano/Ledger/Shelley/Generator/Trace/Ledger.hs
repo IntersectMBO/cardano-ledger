@@ -15,17 +15,9 @@
 
 module Test.Cardano.Ledger.Shelley.Generator.Trace.Ledger where
 
-import Cardano.Binary (ToCBOR)
 import Cardano.Ledger.BaseTypes (Globals, TxIx, mkTxIxPartial)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Shelley.Constraints
-  ( TransValue,
-    UsesAuxiliary,
-    UsesTxBody,
-    UsesTxOut,
-    UsesValue,
-  )
 import Cardano.Ledger.Shelley.LedgerState
   ( AccountState (..),
     DPState,
@@ -40,7 +32,6 @@ import Cardano.Ledger.Shelley.Rules.Ledgers (LEDGERS, LedgersEnv (..))
 import Cardano.Ledger.Shelley.Rules.Utxo (UtxoEnv)
 import Cardano.Ledger.Shelley.TxBody (DCert)
 import Cardano.Ledger.Slot (SlotNo (..))
-import Cardano.Ledger.TxIn (TxIn)
 import Control.Monad (foldM)
 import Control.Monad.Trans.Reader (runReaderT)
 import Control.State.Transition
@@ -49,9 +40,6 @@ import Data.Default.Class (Default)
 import Data.Functor.Identity (runIdentity)
 import Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
-import GHC.Records (HasField)
 import GHC.Stack
 import Test.Cardano.Ledger.Shelley.ConcreteCryptoTypes (Mock)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
@@ -73,7 +61,7 @@ import Test.QuickCheck (Gen)
 -- ======================================================
 
 genAccountState :: Constants -> Gen AccountState
-genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves}) =
+genAccountState Constants {minTreasury, maxTreasury, minReserves, maxReserves} =
   AccountState
     <$> genCoin minTreasury maxTreasury
     <*> genCoin minReserves maxReserves
@@ -82,13 +70,8 @@ genAccountState (Constants {minTreasury, maxTreasury, minReserves, maxReserves})
 -- with meaningful delegation certificates.
 instance
   ( EraGen era,
-    UsesTxBody era,
-    UsesTxOut era,
-    UsesValue era,
-    UsesAuxiliary era,
     Mock (Crypto era),
     MinLEDGER_STS era,
-    TransValue ToCBOR era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
     Environment (Core.EraRule "DELPL" era) ~ DelplEnv era,
     State (Core.EraRule "DELPL" era) ~ DPState (Crypto era),
@@ -102,11 +85,7 @@ instance
     Environment (Core.EraRule "DELEGS" era) ~ DelegsEnv era,
     State (Core.EraRule "DELEGS" era) ~ DPState (Crypto era),
     Signal (Core.EraRule "DELEGS" era) ~ Seq (DCert (Crypto era)),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    Show (State (Core.EraRule "PPUP" era)),
-    Show (Core.Tx era)
+    Show (State (Core.EraRule "PPUP" era))
   ) =>
   TQC.HasTrace (LEDGER era) (GenEnv era)
   where
@@ -125,10 +104,6 @@ instance
 instance
   forall era.
   ( EraGen era,
-    UsesTxBody era,
-    UsesTxOut era,
-    UsesValue era,
-    UsesAuxiliary era,
     Mock (Crypto era),
     MinLEDGER_STS era,
     Embed (Core.EraRule "DELPL" era) (CERTS era),
@@ -138,8 +113,6 @@ instance
     PredicateFailure (Core.EraRule "DELPL" era) ~ DelplPredicateFailure era,
     Embed (Core.EraRule "DELEG" era) (DELPL era),
     Embed (Core.EraRule "LEDGER" era) (LEDGERS era),
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "outputs" (Core.TxBody era) (StrictSeq (Core.TxOut era)),
     Default (State (Core.EraRule "PPUP" era))
   ) =>
   TQC.HasTrace (LEDGERS era) (GenEnv era)
@@ -192,10 +165,7 @@ instance
 -- and (2) always return Right (since this function does not raise predicate failures).
 mkGenesisLedgerState ::
   forall a era ledger.
-  ( UsesValue era,
-    EraGen era,
-    Default (State (Core.EraRule "PPUP" era))
-  ) =>
+  (EraGen era, Default (State (Core.EraRule "PPUP" era))) =>
   GenEnv era ->
   IRC ledger ->
   Gen (Either a (LedgerState era))

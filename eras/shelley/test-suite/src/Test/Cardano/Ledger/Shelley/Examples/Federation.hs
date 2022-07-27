@@ -33,7 +33,7 @@ import Cardano.Ledger.Keys
     hashVerKeyVRF,
     vKey,
   )
-import Cardano.Ledger.Shelley.PParams (PParams, PParams' (..))
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..))
 import Cardano.Ledger.Slot (SlotNo (..))
 import Cardano.Protocol.TPraos.OCert (KESPeriod (..))
 import Cardano.Protocol.TPraos.Rules.Overlay
@@ -110,7 +110,7 @@ coreNodeIssuerKeys = snd . (coreNodes @crypto !!)
 coreNodeKeysBySchedule ::
   forall era.
   (HasCallStack, Era era) =>
-  PParams era ->
+  ShelleyPParams era ->
   Word64 ->
   AllIssuerKeys (Crypto era) 'GenesisDelegate
 coreNodeKeysBySchedule pp slot =

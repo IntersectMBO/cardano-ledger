@@ -20,16 +20,18 @@ import Cardano.Ledger.Alonzo.TxInfo
   )
 import qualified Cardano.Ledger.Alonzo.TxInfo as Alonzo
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr, TxWitness (..), unRedeemers, unTxDats)
+import Cardano.Ledger.Babbage.TxBody
+  ( AlonzoEraTxBody (..),
+    BabbageEraTxBody (..),
+    BabbageEraTxOut (..),
+    ShelleyEraTxBody (..),
+    ShelleyMAEraTxBody (..),
+  )
 import Cardano.Ledger.BaseTypes (ProtVer (..), StrictMaybe (..), isSJust)
-import Cardano.Ledger.Core as Core (PParams, Script, Tx, TxBody, TxOut, Value)
-import Cardano.Ledger.Era (Era (..), ValidateScript (..))
-import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
-import qualified Cardano.Ledger.Mary.Value as Mary (Value (..))
+import Cardano.Ledger.Core hiding (TranslationError)
+import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.SafeHash (hashAnnotated)
-import Cardano.Ledger.Shelley.Scripts (ScriptHash (..))
-import Cardano.Ledger.Shelley.TxBody (DCert (..), Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val (..))
 import Cardano.Slotting.EpochInfo (EpochInfo)
@@ -37,11 +39,10 @@ import Cardano.Slotting.Time (SystemStart)
 import Control.Arrow (left)
 import Control.Monad (unless, when, zipWithM)
 import qualified Data.Map.Strict as Map
-import Data.Sequence.Strict (StrictSeq)
-import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Text (Text)
 import GHC.Records (HasField (..))
+import Lens.Micro
 import qualified Plutus.V1.Ledger.Api as PV1
 import Plutus.V1.Ledger.Contexts ()
 import qualified Plutus.V2.Ledger.Api as PV2
@@ -51,8 +52,8 @@ transScriptHash (ScriptHash h) = PV2.ScriptHash (PV2.toBuiltin (hashToBytes h))
 
 transReferenceScript ::
   forall era.
-  ValidateScript era =>
-  StrictMaybe (Core.Script era) ->
+  EraScript era =>
+  StrictMaybe (Script era) ->
   Maybe PV2.ScriptHash
 transReferenceScript SNothing = Nothing
 transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
@@ -61,26 +62,24 @@ transReferenceScript (SJust s) = Just . transScriptHash . hashScript @era $ s
 -- If the transaction contains any Byron addresses or Babbage features, return Left.
 txInfoOutV1 ::
   forall era.
-  ( Era era,
+  ( BabbageEraTxOut era,
     ExtendedUTxO era,
-    ValidateScript era,
-    Value era ~ Mary.Value (Crypto era),
-    HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
+    Value era ~ MaryValue (Crypto era)
   ) =>
   TxOutSource (Crypto era) ->
-  Core.TxOut era ->
+  TxOut era ->
   Either (TranslationError (Crypto era)) PV1.TxOut
-txInfoOutV1 os txout = do
-  let val = getField @"value" txout
-      referenceScript = getField @"referenceScript" txout
+txInfoOutV1 os txOut = do
+  let val = txOut ^. valueTxOutL
+      referenceScript = txOut ^. referenceScriptTxOutL
   when (isSJust referenceScript) $ Left $ ReferenceScriptsNotSupported os
   datahash <-
-    case getTxOutDatum txout of
+    case getTxOutDatum txOut of
       NoDatum -> Right SNothing
       DatumHash dh -> Right $ SJust dh
       Datum _ -> Left $ InlineDatumsNotSupported os
   addr <-
-    case Alonzo.transTxOutAddr txout of
+    case Alonzo.transTxOutAddr txOut of
       Nothing -> Left (ByronTxOutInContext os)
       Just addr -> Right addr
   Right (PV1.TxOut addr (Alonzo.transValue @(Crypto era) val) (Alonzo.transDataHash datahash))
@@ -89,20 +88,18 @@ txInfoOutV1 os txout = do
 --   possible the address part is a Bootstrap Address, in that case return Left.
 txInfoOutV2 ::
   forall era.
-  ( Era era,
+  ( BabbageEraTxOut era,
     ExtendedUTxO era,
-    ValidateScript era,
-    Value era ~ Mary.Value (Crypto era),
-    HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
+    Value era ~ MaryValue (Crypto era)
   ) =>
   TxOutSource (Crypto era) ->
-  Core.TxOut era ->
+  TxOut era ->
   Either (TranslationError (Crypto era)) PV2.TxOut
-txInfoOutV2 os txout = do
-  let val = getField @"value" txout
-      referenceScript = transReferenceScript @era $ getField @"referenceScript" txout
+txInfoOutV2 os txOut = do
+  let val = txOut ^. valueTxOutL
+      referenceScript = transReferenceScript @era $ txOut ^. referenceScriptTxOutL
       datum =
-        case getTxOutDatum txout of
+        case getTxOutDatum txOut of
           NoDatum -> PV2.NoOutputDatum
           DatumHash dh -> PV2.OutputDatumHash $ Alonzo.transDataHash' dh
           Datum binaryData ->
@@ -111,7 +108,7 @@ txInfoOutV2 os txout = do
               . getPlutusData
               . binaryDataToData
               $ binaryData
-  case Alonzo.transTxOutAddr txout of
+  case Alonzo.transTxOutAddr txOut of
     Nothing -> Left (ByronTxOutInContext os)
     Just ad ->
       Right (PV2.TxOut ad (Alonzo.transValue @(Crypto era) val) datum referenceScript)
@@ -120,10 +117,9 @@ txInfoOutV2 os txout = do
 --   and return (Just translation). If does not exist in the UTxO, return Nothing.
 txInfoInV1 ::
   forall era.
-  ( ValidateScript era,
+  ( BabbageEraTxOut era,
     ExtendedUTxO era,
-    Value era ~ Mary.Value (Crypto era),
-    HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
+    Value era ~ MaryValue (Crypto era)
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
@@ -139,10 +135,9 @@ txInfoInV1 (UTxO mp) txin =
 --   and return (Just translation). If does not exist in the UTxO, return Nothing.
 txInfoInV2 ::
   forall era.
-  ( ValidateScript era,
+  ( BabbageEraTxOut era,
     ExtendedUTxO era,
-    Value era ~ Mary.Value (Crypto era),
-    HasField "referenceScript" (Core.TxOut era) (StrictMaybe (Core.Script era))
+    Value era ~ MaryValue (Crypto era)
   ) =>
   UTxO era ->
   TxIn (Crypto era) ->
@@ -158,12 +153,8 @@ transRedeemer :: Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::
-  ( Era era,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era)))
-  ) =>
-  Core.TxBody era ->
+  ShelleyEraTxBody era =>
+  TxBody era ->
   (RdmrPtr, (Data era, ExUnits)) ->
   Either (TranslationError (Crypto era)) (PV2.ScriptPurpose, PV2.Redeemer)
 transRedeemerPtr txb (ptr, (d, _)) =
@@ -173,35 +164,27 @@ transRedeemerPtr txb (ptr, (d, _)) =
 
 babbageTxInfo ::
   forall era.
-  ( Era era,
+  ( EraTx era,
+    BabbageEraTxBody era,
     ExtendedUTxO era,
-    ValidateScript era,
-    Value era ~ Mary.Value (Crypto era),
-    HasField "wits" (Core.Tx era) (TxWitness era),
-    HasField "referenceScript" (TxOut era) (StrictMaybe (Core.Script era)),
-    HasField "_protocolVersion" (PParams era) ProtVer,
-    HasField "inputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "referenceInputs" (Core.TxBody era) (Set (TxIn (Crypto era))),
-    HasField "reqSignerHashes" (Core.TxBody era) (Set (KeyHash 'Witness (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (Wdrl (Crypto era)),
-    HasField "mint" (Core.TxBody era) (Mary.Value (Crypto era)),
-    HasField "vldt" (Core.TxBody era) ValidityInterval
+    Value era ~ MaryValue (Crypto era),
+    Witnesses era ~ TxWitness era,
+    HasField "_protocolVersion" (PParams era) ProtVer
   ) =>
-  Core.PParams era ->
+  PParams era ->
   Language ->
   EpochInfo (Either Text) ->
   SystemStart ->
   UTxO era ->
-  Core.Tx era ->
+  Tx era ->
   Either (TranslationError (Crypto era)) VersionedTxInfo
 babbageTxInfo pp lang ei sysS utxo tx = do
   timeRange <- left TimeTranslationPastHorizon $ Alonzo.transVITime pp ei sysS interval
   case lang of
     PlutusV1 -> do
-      let refInputs = getField @"referenceInputs" tbody
+      let refInputs = txBody ^. referenceInputsTxBodyL
       unless (Set.null refInputs) $ Left (ReferenceInputsNotSupported refInputs)
-      inputs <- mapM (txInfoInV1 utxo) (Set.toList (getField @"inputs" tbody))
+      inputs <- mapM (txInfoInV1 utxo) (Set.toList (txBody ^. inputsTxBodyL))
       outputs <-
         zipWithM
           (\txIx -> txInfoOutV1 (TxOutFromOutput txIx))
@@ -211,47 +194,48 @@ babbageTxInfo pp lang ei sysS utxo tx = do
         PV1.TxInfo
           { PV1.txInfoInputs = inputs,
             PV1.txInfoOutputs = outputs,
-            PV1.txInfoFee = Alonzo.transValue (inject @(Mary.Value (Crypto era)) fee),
+            PV1.txInfoFee = Alonzo.transValue (inject @(MaryValue (Crypto era)) fee),
             PV1.txInfoMint = Alonzo.transValue forge,
-            PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (getField @"certs" tbody),
-            PV1.txInfoWdrl = Map.toList (Alonzo.transWdrl (getField @"wdrls" tbody)),
+            PV1.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyL),
+            PV1.txInfoWdrl = Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL)),
             PV1.txInfoValidRange = timeRange,
-            PV1.txInfoSignatories = map Alonzo.transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
+            PV1.txInfoSignatories =
+              map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL)),
             PV1.txInfoData = map Alonzo.transDataPair datpairs,
-            PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) tbody))
+            PV1.txInfoId = PV1.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) txBody))
           }
     PlutusV2 -> do
-      inputs <- mapM (txInfoInV2 utxo) (Set.toList (getField @"inputs" tbody))
-      refInputs <- mapM (txInfoInV2 utxo) (Set.toList (getField @"referenceInputs" tbody))
+      inputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. inputsTxBodyL))
+      refInputs <- mapM (txInfoInV2 utxo) (Set.toList (txBody ^. referenceInputsTxBodyL))
       outputs <-
         zipWithM
           (\txIx -> txInfoOutV2 (TxOutFromOutput txIx))
           [minBound ..]
           (foldr (:) [] outs)
-      rdmrs' <- mapM (transRedeemerPtr tbody) rdmrs
+      rdmrs' <- mapM (transRedeemerPtr txBody) rdmrs
       pure . TxInfoPV2 $
         PV2.TxInfo
           { PV2.txInfoInputs = inputs,
             PV2.txInfoOutputs = outputs,
             PV2.txInfoReferenceInputs = refInputs,
-            PV2.txInfoFee = Alonzo.transValue (inject @(Mary.Value (Crypto era)) fee),
+            PV2.txInfoFee = Alonzo.transValue (inject @(MaryValue (Crypto era)) fee),
             PV2.txInfoMint = Alonzo.transValue forge,
-            PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (getField @"certs" tbody),
-            PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWdrl (getField @"wdrls" tbody)),
+            PV2.txInfoDCert = foldr (\c ans -> Alonzo.transDCert c : ans) [] (txBody ^. certsTxBodyL),
+            PV2.txInfoWdrl = PV2.fromList $ Map.toList (Alonzo.transWdrl (txBody ^. wdrlsTxBodyL)),
             PV2.txInfoValidRange = timeRange,
-            PV2.txInfoSignatories = map Alonzo.transKeyHash (Set.toList (getField @"reqSignerHashes" tbody)),
+            PV2.txInfoSignatories =
+              map Alonzo.transKeyHash (Set.toList (txBody ^. reqSignerHashesTxBodyL)),
             PV2.txInfoRedeemers = PV2.fromList rdmrs',
             PV2.txInfoData = PV2.fromList $ map Alonzo.transDataPair datpairs,
-            PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) tbody))
+            PV2.txInfoId = PV2.TxId (Alonzo.transSafeHash (hashAnnotated @(Crypto era) txBody))
           }
   where
-    tbody :: Core.TxBody era
-    tbody = getField @"body" tx
-    witnesses = getField @"wits" tx
-    outs = getField @"outputs" tbody
-    fee = getField @"txfee" tbody
-    forge = getField @"mint" tbody
-    interval = getField @"vldt" tbody
+    txBody = tx ^. bodyTxL
+    witnesses = tx ^. witsTxL
+    outs = txBody ^. outputsTxBodyL
+    fee = txBody ^. feeTxBodyL
+    forge = txBody ^. mintTxBodyL
+    interval = txBody ^. vldtTxBodyL
 
     datpairs = Map.toList (unTxDats $ txdats' witnesses)
     rdmrs = Map.toList (unRedeemers $ txrdmrs' witnesses)

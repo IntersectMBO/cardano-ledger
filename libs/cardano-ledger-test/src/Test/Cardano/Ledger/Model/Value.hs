@@ -1,18 +1,13 @@
 {-# LANGUAGE DataKinds #-}
-{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE DeriveGeneric #-}
-{-# LANGUAGE DeriveTraversable #-}
 {-# LANGUAGE EmptyDataDeriving #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE FunctionalDependencies #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE LambdaCase #-}
-{-# LANGUAGE MultiWayIf #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE RankNTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
@@ -38,6 +33,7 @@ import Data.Group.GrpMap
     pointWise',
   )
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromMaybe)
 import Data.Monoid (Ap (..), Sum (..))
 import Data.Typeable
 import GHC.Generics (Generic)
@@ -71,7 +67,7 @@ instance Ord a => Group (ModelValueF a) where
 
 instance Ord a => Abelian (ModelValueF a)
 
-instance Ord a => Val (ModelValueF a) where
+instance (Typeable a, Show a, Ord a) => Val (ModelValueF a) where
   -- these operations are kinda sus; represented variables can (and do)
   -- represent unknown qty of ADA,
   coin (ModelValueF (c, _)) = c
@@ -112,7 +108,13 @@ instance Ord a => Val (ModelValueF a) where
 
   isAdaOnly (ModelValueF (_, v)) = Map.null (unGrpMap v)
   isAdaOnlyCompact (ModelValueCompactF v) = isAdaOnly v
+  coinCompact =
+    fromMaybe (error "Invalid compacted coin in ModelValueF") . toCompact . coin . fromCompact
   injectCompact (CompactCoin w64) = ModelValueCompactF (inject (Coin (toInteger w64)))
+
+  modifyCompactCoin fc (ModelValueCompactF mv) = ModelValueCompactF (modifyCoin f mv)
+    where
+      f = fromCompact . fc . fromMaybe (error "Invalid compacted coin in ModelValueF") . toCompact
 
 instance NFData a => NFData (ModelValueF a)
 

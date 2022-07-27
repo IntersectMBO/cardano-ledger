@@ -7,7 +7,6 @@
 {-# LANGUAGE TupleSections #-}
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
-{-# LANGUAGE TypeSynonymInstances #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-redundant-constraints #-}
 {-# OPTIONS_GHC -fno-warn-unused-binds #-}
@@ -16,7 +15,7 @@
 module Test.Cardano.Ledger.Shelley.Generator.Update
   ( genPParams,
     genUpdate,
-    genShelleyPParamsDelta,
+    genShelleyPParamsUpdate,
     genM,
     genDecentralisationParam,
   )
@@ -32,8 +31,7 @@ import Cardano.Ledger.BaseTypes
     mkNonceFromNumber,
   )
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (PParamsDelta)
-import qualified Cardano.Ledger.Core as Core (PParams, PParamsDelta)
+import Cardano.Ledger.Core
 import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Keys
   ( GenDelegPair (..),
@@ -55,9 +53,9 @@ import Cardano.Ledger.Shelley.LedgerState
     UTxOState (..),
   )
 import Cardano.Ledger.Shelley.PParams
-  ( PParams,
-    PParams' (..),
-    PParamsUpdate,
+  ( ShelleyPParams,
+    ShelleyPParamsHKD (..),
+    ShelleyPParamsUpdate,
     pattern ProposedPPUpdates,
     pattern Update,
   )
@@ -67,6 +65,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe (catMaybes)
 import Data.Ratio (Ratio, (%))
 import Data.Word (Word64)
+import GHC.Records
 import GHC.Stack (HasCallStack)
 import Numeric.Natural (Natural)
 import Test.Cardano.Ledger.Shelley.Generator.Constants (Constants (..))
@@ -97,8 +96,8 @@ genIntervalInThousands :: (BoundedRational a, HasCallStack) => Integer -> Intege
 genIntervalInThousands lower upper =
   unsafeBoundRational <$> genRationalInThousands lower upper
 
-genPParams :: Constants -> Gen (PParams era)
-genPParams c@(Constants {maxMinFeeA, maxMinFeeB, minMajorPV}) =
+genPParams :: Constants -> Gen (ShelleyPParams era)
+genPParams c@Constants {maxMinFeeA, maxMinFeeB, minMajorPV} =
   mkPParams <$> genNatural 0 maxMinFeeA -- _minfeeA
     <*> genNatural 0 maxMinFeeB -- _minfeeB
     <*> szGen -- (maxBBSize, maxBHSize, maxTxSize)
@@ -124,7 +123,7 @@ genPParams c@(Constants {maxMinFeeA, maxMinFeeB, minMajorPV}) =
 
     -- A wrapper to enable the dependent generators for the max sizes
     mkPParams minFeeA minFeeB (maxBBSize, maxTxSize, maxBHSize) =
-      PParams minFeeA minFeeB maxBBSize maxTxSize maxBHSize
+      ShelleyPParams minFeeA minFeeB maxBBSize maxTxSize maxBHSize
     rangeUpTo :: Natural -> Gen Natural
     rangeUpTo upper = genNatural low upper
 
@@ -202,31 +201,25 @@ genMinPoolCost = Coin <$> genInteger 10 50
 
 -- | Generate a possible next Protocol version based on the previous version.
 -- Increments the Major or Minor versions and possibly the Alt version.
-genNextProtocolVersion ::
-  HasCallStack =>
-  PParams era ->
-  Gen ProtVer
+genNextProtocolVersion :: HasCallStack => ShelleyPParams era -> Gen ProtVer
 genNextProtocolVersion pp = do
   QC.elements
     [ ProtVer (m + 1) 0,
       ProtVer m (n + 1)
     ]
   where
-    ProtVer m n = _protocolVersion pp
+    ProtVer m n = getField @"_protocolVersion" pp
 
 genM :: Gen a -> Gen (StrictMaybe a)
 genM gen = frequency [(1, SJust <$> gen), (2, pure SNothing)]
 
--- | This is only good in the Shelley Era, used to define the genEraPParamsDelta method for (EraGen (ShelleyEra c))
-genShelleyPParamsDelta ::
+-- | This is only good in the Shelley Era, used to define the genShelleyEraPParamsUpdate method for (EraGen (ShelleyEra c))
+genShelleyPParamsUpdate ::
   forall era.
-  ( PParams era ~ Core.PParams era,
-    Core.PParamsDelta era ~ PParamsUpdate era
-  ) =>
   Constants ->
-  PParams era ->
-  Gen (PParamsDelta era)
-genShelleyPParamsDelta (c@Constants {maxMinFeeA, maxMinFeeB}) pp = do
+  ShelleyPParams era ->
+  Gen (ShelleyPParamsUpdate era)
+genShelleyPParamsUpdate c@Constants {maxMinFeeA, maxMinFeeB} pp = do
   -- TODO generate Maybe types so not all updates are full
   minFeeA <- genM $ genNatural 0 maxMinFeeA
   minFeeB <- genM $ genNatural 0 maxMinFeeB
@@ -246,7 +239,7 @@ genShelleyPParamsDelta (c@Constants {maxMinFeeA, maxMinFeeB}) pp = do
   minUTxOValue <- genM $ genMinUTxOValue
   minPoolCost <- genM $ genMinPoolCost
   pure
-    ( PParams
+    ( ShelleyPParams
         { _minfeeA = minFeeA,
           _minfeeB = minFeeB,
           _maxBBSize = maxBBSize,
@@ -271,25 +264,25 @@ genShelleyPParamsDelta (c@Constants {maxMinFeeA, maxMinFeeB}) pp = do
 -- Return an empty update if it is too late in the epoch for updates.
 genPPUpdate ::
   forall era.
-  (EraGen era) =>
+  EraGen era =>
   Constants ->
-  Core.PParams era ->
+  PParams era ->
   [KeyHash 'Genesis (Crypto era)] ->
   Gen (ProposedPPUpdates era)
 genPPUpdate constants pp genesisKeys = do
-  pps <- genEraPParamsDelta @era constants pp
+  pps <- genEraPParamsUpdate @era constants pp
   let ppUpdate = zip genesisKeys (repeat pps)
   pure $ ProposedPPUpdates . Map.fromList $ ppUpdate
 
 -- | Generate an @Update (where all the given nodes participate)
 genUpdateForNodes ::
   forall era.
-  (EraGen era) =>
+  EraGen era =>
   Constants ->
   SlotNo ->
   EpochNo -> -- current epoch
   [KeyPair 'Genesis (Crypto era)] ->
-  Core.PParams era ->
+  PParams era ->
   Gen (Maybe (Update era))
 genUpdateForNodes c s e coreKeys pp =
   Just <$> (Update <$> genPPUpdate_ <*> pure e')
@@ -300,16 +293,16 @@ genUpdateForNodes c s e coreKeys pp =
 
 -- | Occasionally generate an update and return with the witness keys
 genUpdate ::
-  (EraGen era) =>
+  EraGen era =>
   Constants ->
   SlotNo ->
   [(GenesisKeyPair (Crypto era), AllIssuerKeys (Crypto era) 'GenesisDelegate)] ->
   Map (KeyHash 'GenesisDelegate (Crypto era)) (AllIssuerKeys (Crypto era) 'GenesisDelegate) ->
-  Core.PParams era ->
+  PParams era ->
   (UTxOState era, DPState (Crypto era)) ->
   Gen (Maybe (Update era), [KeyPair 'Witness (Crypto era)])
 genUpdate
-  c@(Constants {frequencyTxUpdates})
+  c@Constants {frequencyTxUpdates}
   s
   coreNodes
   genesisDelegatesByHash
@@ -321,7 +314,9 @@ genUpdate
       let e = epochFromSlotNo s
           (GenDelegs genDelegs) = (_genDelegs . dpsDState) delegPoolSt
           genesisKeys = fst <$> nodes
-          coreSigners = catMaybes $ (flip Map.lookup) genesisDelegatesByHash . genDelegKeyHash <$> Map.elems genDelegs
+          coreSigners =
+            catMaybes $
+              flip Map.lookup genesisDelegatesByHash . genDelegKeyHash <$> Map.elems genDelegs
           failedWitnessLookup = length coreSigners < Map.size genDelegs
       if failedWitnessLookup
         then -- discard
