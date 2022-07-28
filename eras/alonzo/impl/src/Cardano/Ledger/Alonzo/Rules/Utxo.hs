@@ -21,8 +21,8 @@ import Cardano.Ledger.Address (Addr (..), RewardAcnt)
 import Cardano.Ledger.Alonzo.Data (DataHash, dataHashSize)
 import Cardano.Ledger.Alonzo.PParams (PParams' (..))
 import Cardano.Ledger.Alonzo.Rules.Utxos (ConcreteAlonzo, UTXOS, UtxosPredicateFailure)
-import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), pointWiseExUnits)
-import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), totExUnits)
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..), Prices, pointWiseExUnits)
+import Cardano.Ledger.Alonzo.Tx (ValidatedTx (..), minfee, totExUnits)
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo (ValidatedTx)
 import qualified Cardano.Ledger.Alonzo.TxSeq as Alonzo (TxSeq)
 import Cardano.Ledger.Alonzo.TxWitness (Redeemers, TxWitness (txrdmrs'), nullRedeemers)
@@ -50,7 +50,6 @@ import Cardano.Ledger.Rules.ValidationMode
   ( Inject (..),
     InjectMaybe (..),
     Test,
-    mapMaybeValidation,
     runTest,
     runTestOnSignal,
   )
@@ -272,8 +271,10 @@ feesOK ::
     Core.Tx era ~ Alonzo.ValidatedTx era,
     -- "collateral" to get inputs to pay the fees
     HasField "collateral" (Core.TxBody era) (Set (TxIn (Crypto era))),
+    HasField "txrdmrs" (Core.Witnesses era) (Redeemers era),
     HasField "_minfeeA" (Core.PParams era) Natural,
     HasField "_minfeeB" (Core.PParams era) Natural,
+    HasField "_prices" (Core.PParams era) Prices,
     HasField "_collateralPercentage" (Core.PParams era) Natural
   ) =>
   Core.PParams era ->
@@ -286,9 +287,11 @@ feesOK pp tx (UTxO utxo) =
       -- restrict Utxo to those inputs we use to pay fees.
       utxoCollateral = eval (collateral ◁ utxo)
       bal = balance @era (UTxO utxoCollateral)
+      theFee = getField @"txfee" txb
+      minimumFee = minfee @era pp tx
    in sequenceA_
         [ -- Part 1: minfee pp tx ≤ txfee txb
-          mapMaybeValidation fromShelleyFailure $ Shelley.validateFeeTooSmallUTxO pp tx,
+          failureUnless (minimumFee <= theFee) (inject (FeeTooSmallUTxO @era minimumFee theFee)),
           -- Part 2: (txrdmrs tx ≠ ∅ ⇒ validateCollateral)
           unless (nullRedeemers . txrdmrs' . wits $ tx) $
             validateCollateral pp txb utxoCollateral bal
