@@ -7,11 +7,12 @@
 module Test.Cardano.Ledger.Alonzo.Golden
   ( goldenUTxOEntryMinAda,
     goldenSerialization,
+    goldenMinFee,
     goldenScriptIntegrity,
   )
 where
 
-import Cardano.Binary (serialize)
+import Cardano.Binary (Annotator (..), FullByteString (Full), fromCBOR, serialize)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.Data (Data (..), hashData)
 import Cardano.Ledger.Alonzo.Language (Language (..))
@@ -23,13 +24,22 @@ import Cardano.Ledger.Alonzo.PParams
     getLanguageView,
   )
 import Cardano.Ledger.Alonzo.Rules (utxoEntrySize)
-import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), mkCostModel)
+import Cardano.Ledger.Alonzo.Scripts (CostModel, CostModels (..), Prices (..), mkCostModel)
+import Cardano.Ledger.Alonzo.Tx (minfee)
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxOut (..))
-import Cardano.Ledger.BaseTypes (StrictMaybe (..))
+import Cardano.Ledger.BaseTypes (StrictMaybe (..), boundRational)
+import Cardano.Ledger.Block (Block (..))
 import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Era (EraSegWits (..))
 import Cardano.Ledger.Mary.Value (MaryValue (..), valueFromList)
+import Cardano.Protocol.TPraos.BHeader (BHeader)
+import Codec.CBOR.Read (deserialiseFromBytes)
 import qualified Data.ByteString.Base16 as B16
+import qualified Data.ByteString.Base16.Lazy as B16L
+import Data.Either (fromRight)
+import Data.Foldable (toList)
 import qualified Data.Map.Strict as Map
+import Data.Maybe (fromJust)
 import GHC.Stack (HasCallStack)
 import Plutus.V1.Ledger.Api (Data (..))
 import qualified Plutus.V1.Ledger.Api as PV1 (costModelParamNames)
@@ -178,6 +188,40 @@ goldenSerialization =
       testCase "Alonzo Tx" $ do
         expected <- readDataFile "golden/tx.cbor"
         serialize (SLE.sleTx ledgerExamplesAlonzo) @?= expected
+    ]
+
+goldenMinFee :: TestTree
+goldenMinFee =
+  testGroup
+    "golden tests - minimum fee calculation"
+    [ testCase "Alonzo Block" $ do
+        -- This golden test uses the block from:
+        -- https://github.com/input-output-hk/cardano-node/issues/4228#issuecomment-1195707491
+        --
+        -- The first transaction in this block is invalide due to:
+        --   FeeTooSmallUTxO (Coin 1006053) (Coin 1001829)
+        --
+        -- The correct behavior is for the minimum fee for this transaction
+        -- to be 1006053 lovelace, as indicated by the failure above.
+        -- Nodes that had the bug determined the minimum fee to be 1001829.
+        hex <- readDataFile "golden/hex-block-node-issue-4228.cbor"
+        let cborBlock = fromRight mempty (B16L.decode hex)
+            (_leftover, Annotator f) =
+              fromRight (error "bad golden block 4228") $
+                deserialiseFromBytes fromCBOR cborBlock
+            _block :: Block (BHeader StandardCrypto) (AlonzoEra StandardCrypto)
+            _block@(Block _header txs) = f (Full cborBlock)
+            txs' = fromTxSeq @(AlonzoEra StandardCrypto) txs
+            firstTx = head $ toList txs'
+
+            -- Below are the relevant protocol parameters that were active
+            -- at the time this block was rejected.
+            priceMem = fromJust $ boundRational 0.0577
+            priceSteps = fromJust $ boundRational 0.0000721
+            prices = Prices priceMem priceSteps
+            pp = emptyPParams {_minfeeA = 44, _minfeeB = 155381, _prices = prices}
+
+        Coin 1006053 @?= minfee pp firstTx
     ]
 
 fromRightError :: (HasCallStack, Show a) => String -> Either a b -> b
