@@ -27,14 +27,12 @@ module Cardano.Ledger.Mary
   )
 where
 
-import Cardano.Ledger.BaseTypes (BlocksMade (..))
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary.Value (MaryValue)
 import Cardano.Ledger.Shelley.API hiding (TxBody)
-import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
 import Cardano.Ledger.Shelley.LedgerState (minfee)
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsUpdate)
 import qualified Cardano.Ledger.Shelley.PParams
@@ -43,9 +41,6 @@ import Cardano.Ledger.ShelleyMA.AuxiliaryData (AuxiliaryData)
 import Cardano.Ledger.ShelleyMA.Rules.Utxo (consumed, scaledMinDeposit)
 import Cardano.Ledger.ShelleyMA.Rules.Utxow ()
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
-import Cardano.Ledger.Val (Val ((<->)), coin, inject)
-import Data.Default.Class (def)
-import qualified Data.Map.Strict as Map
 
 instance
   (CC.Crypto crypto, DSignable crypto (Hash crypto EraIndependentTxBody)) =>
@@ -56,40 +51,7 @@ instance
   ApplyBlock (MaryEra crypto)
 
 instance CC.Crypto c => CanStartFromGenesis (MaryEra c) where
-  initialState sg () =
-    NewEpochState
-      initialEpochNo
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      ( EpochState
-          (AccountState (Coin 0) reserves)
-          emptySnapShots
-          ( LedgerState
-              ( UTxOState
-                  initialUtxo
-                  (Coin 0)
-                  (Coin 0)
-                  def
-                  (IStake mempty mempty)
-              )
-              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
-          )
-          pp
-          pp
-          def
-      )
-      SNothing
-      (PoolDistr Map.empty)
-      ()
-    where
-      initialEpochNo = 0
-      initialUtxo = genesisUTxO sg
-      reserves =
-        coin $
-          inject (word64ToCoin (sgMaxLovelaceSupply sg))
-            <-> balance initialUtxo
-      genDelegs = sgGenDelegs sg
-      pp = sgProtocolParams sg
+  initialState = initialStateFromGenesis const
 
 instance CC.Crypto c => CLI (MaryEra c) where
   evaluateMinFee = minfee

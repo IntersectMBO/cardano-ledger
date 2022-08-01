@@ -50,38 +50,22 @@ import Cardano.Ledger.Alonzo.TxBody (AlonzoEraTxOut (..), AlonzoTxBody, AlonzoTx
 import qualified Cardano.Ledger.Alonzo.TxBody (TxBody, TxOut)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..), alonzoTxInfo)
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
-import Cardano.Ledger.BaseTypes (BlocksMade (..), Globals)
+import Cardano.Ledger.BaseTypes (Globals)
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Core hiding (PParamsDelta, Value)
 import qualified Cardano.Ledger.Crypto as CC
-import Cardano.Ledger.Keys (DSignable, GenDelegs (GenDelegs), Hash)
+import Cardano.Ledger.Keys (DSignable, Hash)
 import Cardano.Ledger.Mary.Value (MaryValue)
-import Cardano.Ledger.PoolDistr (PoolDistr (..))
 import Cardano.Ledger.Rules.ValidationMode (applySTSNonStatic)
 import Cardano.Ledger.Serialization (mkSized)
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.API.Mempool
-import Cardano.Ledger.Shelley.EpochBoundary
-import Cardano.Ledger.Shelley.Genesis (genesisUTxO, sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams)
-import Cardano.Ledger.Shelley.LedgerState
-  ( AccountState (..),
-    DPState (..),
-    EpochState (..),
-    LedgerState (..),
-    NewEpochState (..),
-    smartUTxOState,
-    _genDelegs,
-  )
-import Cardano.Ledger.Shelley.UTxO (balance)
 import Cardano.Ledger.ShelleyMA.Rules (consumed)
-import Cardano.Ledger.Val (Val (inject), coin, (<->))
 import Control.Arrow (left)
 import Control.Monad.Except (MonadError, liftEither)
 import Control.Monad.Reader (runReader)
 import Control.State.Transition.Extended (TRC (TRC))
-import Data.Default (def)
 import Data.Foldable (toList)
-import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
@@ -114,46 +98,10 @@ instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBl
 -- To run any Alonzo Script use Cardano.Ledger.Alonzo.PlutusScriptApi(evalScripts)
 -- hashScript x = ...  We use the default method for hashScript
 
-instance
-  ( CC.Crypto c
-  ) =>
-  API.CanStartFromGenesis (AlonzoEra c)
-  where
+instance CC.Crypto c => API.CanStartFromGenesis (AlonzoEra c) where
   type AdditionalGenesisConfig (AlonzoEra c) = AlonzoGenesis
 
-  initialState sg ag =
-    NewEpochState
-      initialEpochNo
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      ( EpochState
-          (AccountState (Coin 0) reserves)
-          emptySnapShots
-          ( LedgerState
-              ( smartUTxOState
-                  initialUtxo
-                  (Coin 0)
-                  (Coin 0)
-                  def
-              )
-              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
-          )
-          (extendPPWithGenesis pp ag)
-          (extendPPWithGenesis pp ag)
-          def
-      )
-      SNothing
-      (PoolDistr Map.empty)
-      ()
-    where
-      initialEpochNo = 0
-      initialUtxo = genesisUTxO sg
-      reserves =
-        coin $
-          inject (word64ToCoin (sgMaxLovelaceSupply sg))
-            <-> balance initialUtxo
-      genDelegs = sgGenDelegs sg
-      pp = sgProtocolParams sg
+  initialState = API.initialStateFromGenesis extendPPWithGenesis
 
 instance CC.Crypto c => API.CLI (AlonzoEra c) where
   evaluateMinFee = minfee

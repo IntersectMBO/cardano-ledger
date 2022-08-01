@@ -6,7 +6,7 @@
 module Cardano.Ledger.Shelley.API.Genesis where
 
 import Cardano.Ledger.BaseTypes (BlocksMade (..))
-import Cardano.Ledger.Core (EraRule)
+import Cardano.Ledger.Core (EraRule, EraTxOut, PParams)
 import Cardano.Ledger.Crypto (Crypto)
 import Cardano.Ledger.Shelley (ShelleyEra)
 import Cardano.Ledger.Shelley.API.Types
@@ -21,15 +21,14 @@ import Cardano.Ledger.Shelley.API.Types
     PoolDistr (PoolDistr),
     ShelleyGenesis (sgGenDelegs, sgMaxLovelaceSupply, sgProtocolParams),
     StrictMaybe (SNothing),
-    UTxOState (UTxOState),
     balance,
     genesisUTxO,
     word64ToCoin,
   )
 import Cardano.Ledger.Shelley.EpochBoundary (emptySnapShots)
-import Cardano.Ledger.Shelley.LedgerState (updateStakeDistribution)
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
-import Cardano.Ledger.Val (Val ((<->)))
+import Cardano.Ledger.Shelley.LedgerState (StashedAVVMAddresses, smartUTxOState)
+import Cardano.Ledger.Shelley.PParams (ShelleyPParams)
+import Cardano.Ledger.Val (Val (coin, (<->)))
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
 import Data.Kind (Type)
@@ -55,36 +54,42 @@ instance
   ) =>
   CanStartFromGenesis (ShelleyEra c)
   where
-  initialState sg () =
-    NewEpochState
-      initialEpochNo
-      (BlocksMade Map.empty)
-      (BlocksMade Map.empty)
-      ( EpochState
-          (AccountState (Coin 0) reserves)
-          emptySnapShots
-          ( LedgerState
-              ( UTxOState
-                  initialUtxo
-                  (Coin 0)
-                  (Coin 0)
-                  def
-                  (updateStakeDistribution mempty (UTxO mempty) initialUtxo)
-              )
-              (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
-          )
-          pp
-          pp
-          def
-      )
-      SNothing
-      (PoolDistr Map.empty)
-      (UTxO mempty)
-    where
-      initialEpochNo = 0
-      initialUtxo = genesisUTxO sg
-      reserves =
-        word64ToCoin (sgMaxLovelaceSupply sg)
-          <-> balance initialUtxo
-      genDelegs = sgGenDelegs sg
-      pp = sgProtocolParams sg
+  initialState = initialStateFromGenesis const
+
+-- | Helper function for constructing the initial state for any era
+initialStateFromGenesis ::
+  ( EraTxOut era,
+    Default (State (EraRule "PPUP" era)),
+    Default (StashedAVVMAddresses era)
+  ) =>
+  -- | Function to extend ShelleyPParams into PParams for the specific era
+  (ShelleyPParams era -> g -> PParams era) ->
+  ShelleyGenesis era ->
+  -- | Genesis type
+  g ->
+  NewEpochState era
+initialStateFromGenesis extendPPWithGenesis' sg ag =
+  NewEpochState
+    initialEpochNo
+    (BlocksMade Map.empty)
+    (BlocksMade Map.empty)
+    ( EpochState
+        (AccountState (Coin 0) reserves)
+        emptySnapShots
+        ( LedgerState
+            (smartUTxOState initialUtxo (Coin 0) (Coin 0) def)
+            (DPState (def {_genDelegs = GenDelegs genDelegs}) def)
+        )
+        (extendPPWithGenesis' pp ag)
+        (extendPPWithGenesis' pp ag)
+        def
+    )
+    SNothing
+    (PoolDistr Map.empty)
+    def
+  where
+    initialEpochNo = 0
+    initialUtxo = genesisUTxO sg
+    reserves = word64ToCoin (sgMaxLovelaceSupply sg) <-> coin (balance initialUtxo)
+    genDelegs = sgGenDelegs sg
+    pp = sgProtocolParams sg
