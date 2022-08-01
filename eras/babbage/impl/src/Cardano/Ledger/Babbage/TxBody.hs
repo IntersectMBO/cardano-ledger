@@ -29,6 +29,12 @@ module Cardano.Ledger.Babbage.TxBody
       ),
     AlonzoEraTxOut (..),
     BabbageEraTxOut (..),
+    addrEitherBabbageTxOutL,
+    valueEitherBabbageTxOutL,
+    dataHashBabbageTxOutL,
+    dataBabbageTxOutL,
+    datumBabbageTxOutL,
+    referenceScriptBabbageTxOutL,
     BabbageTxBody
       ( BabbageTxBody,
         inputs,
@@ -48,6 +54,28 @@ module Cardano.Ledger.Babbage.TxBody
         adHash,
         txnetworkid
       ),
+    mkBabbageTxBody,
+    inputsBabbageTxBodyL,
+    outputsBabbageTxBodyL,
+    feeBabbageTxBodyL,
+    auxDataHashBabbageTxBodyL,
+    allInputsBabbageTxBodyF,
+    mintedBabbageTxBodyF,
+    wdrlsBabbbageTxBodyL,
+    notSupportedInThisEraL,
+    updateBabbageTxBodyL,
+    certsBabbageTxBodyL,
+    vldtBabbageTxBodyL,
+    mintBabbageTxBodyL,
+    collateralInputsBabbageTxBodyL,
+    reqSignerHashesBabbageTxBodyL,
+    scriptIntegrityHashBabbageTxBodyL,
+    networkIdBabbageTxBodyL,
+    sizedOutputsBabbageTxBodyL,
+    referenceInputsBabbageTxBodyL,
+    totalCollateralBabbageTxBodyL,
+    collateralReturnBabbageTxBodyL,
+    sizedCollateralReturnBabbageTxBodyL,
     BabbageEraTxBody (..),
     module AlonzoTxBodyReExports,
     Datum (..),
@@ -221,14 +249,18 @@ instance CC.Crypto c => EraTxOut (BabbageEra c) where
 
   valueEitherTxOutL = valueEitherBabbageTxOutL
 
+dataHashBabbageTxOutL ::
+  EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (DataHash (Crypto era)))
+dataHashBabbageTxOutL =
+  lens
+    getBabbageTxOutDataHash
+    ( \(BabbageTxOut addr cv _ s) -> \case
+        SNothing -> BabbageTxOut addr cv NoDatum s
+        SJust dh -> BabbageTxOut addr cv (DatumHash dh) s
+    )
+
 instance CC.Crypto c => AlonzoEraTxOut (BabbageEra c) where
-  dataHashTxOutL =
-    lens
-      getBabbageTxOutDataHash
-      ( \(BabbageTxOut addr cv _ s) -> \case
-          SNothing -> BabbageTxOut addr cv NoDatum s
-          SJust dh -> BabbageTxOut addr cv (DatumHash dh) s
-      )
+  dataHashTxOutL = dataHashBabbageTxOutL
 
 class (AlonzoEraTxOut era, EraScript era) => BabbageEraTxOut era where
   referenceScriptTxOutL :: Lens' (Core.TxOut era) (StrictMaybe (Script era))
@@ -237,19 +269,30 @@ class (AlonzoEraTxOut era, EraScript era) => BabbageEraTxOut era where
 
   datumTxOutL :: Lens' (Core.TxOut era) (Datum era)
 
-instance CC.Crypto c => BabbageEraTxOut (BabbageEra c) where
-  dataTxOutL =
-    lens
-      getBabbageTxOutData
-      ( \(BabbageTxOut addr cv _ s) -> \case
+dataBabbageTxOutL :: EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (Data era))
+dataBabbageTxOutL =
+  lens
+    getBabbageTxOutData
+    ( \(BabbageTxOut addr cv _ s) ->
+        \case
           SNothing -> BabbageTxOut addr cv NoDatum s
           SJust d -> BabbageTxOut addr cv (Datum (dataToBinaryData d)) s
-      )
-  datumTxOutL =
-    lens getBabbageTxOutDatum (\(BabbageTxOut addr cv _ s) d -> BabbageTxOut addr cv d s)
+    )
 
-  referenceScriptTxOutL =
-    lens getBabbageTxOutScript (\(BabbageTxOut addr cv d _) s -> BabbageTxOut addr cv d s)
+datumBabbageTxOutL :: EraTxOut era => Lens' (BabbageTxOut era) (Datum era)
+datumBabbageTxOutL =
+  lens getBabbageTxOutDatum (\(BabbageTxOut addr cv _ s) d -> BabbageTxOut addr cv d s)
+
+referenceScriptBabbageTxOutL :: EraTxOut era => Lens' (BabbageTxOut era) (StrictMaybe (Script era))
+referenceScriptBabbageTxOutL =
+  lens getBabbageTxOutScript (\(BabbageTxOut addr cv d _) s -> BabbageTxOut addr cv d s)
+
+instance CC.Crypto c => BabbageEraTxOut (BabbageEra c) where
+  dataTxOutL = dataBabbageTxOutL
+
+  datumTxOutL = datumBabbageTxOutL
+
+  referenceScriptTxOutL = referenceScriptBabbageTxOutL
 
 addrEitherBabbageTxOutL ::
   EraTxOut era =>
@@ -476,9 +519,7 @@ newtype BabbageTxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
   deriving newtype (SafeToHash)
 
 deriving newtype instance
-  ( CC.Crypto (Crypto era),
-    NFData (PParamsUpdate era)
-  ) =>
+  (CC.Crypto (Crypto era), NFData (PParamsUpdate era)) =>
   NFData (BabbageTxBody era)
 
 lensTxBodyRaw ::
@@ -489,73 +530,166 @@ lensTxBodyRaw ::
 lensTxBodyRaw getter setter =
   lens
     (\(TxBodyConstr (Memo txBodyRaw _)) -> getter txBodyRaw)
-    (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkBabbageTxBody $ setter txBodyRaw val)
+    (\(TxBodyConstr (Memo txBodyRaw _)) val -> mkBabbageTxBodyFromRaw $ setter txBodyRaw val)
+
+inputsBabbageTxBodyL ::
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (TxIn (Crypto era)))
+inputsBabbageTxBodyL =
+  lensTxBodyRaw _spendInputs (\txBodyRaw inputs_ -> txBodyRaw {_spendInputs = inputs_})
+
+outputsBabbageTxBodyL ::
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictSeq (TxOut era))
+outputsBabbageTxBodyL =
+  lensTxBodyRaw
+    (fmap sizedValue . _outputs)
+    (\txBodyRaw outputs_ -> txBodyRaw {_outputs = mkSized <$> outputs_})
+
+feeBabbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) Coin
+feeBabbageTxBodyL =
+  lensTxBodyRaw _txfee (\txBodyRaw fee_ -> txBodyRaw {_txfee = fee_})
+
+auxDataHashBabbageTxBodyL ::
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe (AuxiliaryDataHash (Crypto era)))
+auxDataHashBabbageTxBodyL =
+  lensTxBodyRaw _adHash (\txBodyRaw auxDataHash -> txBodyRaw {_adHash = auxDataHash})
+
+allInputsBabbageTxBodyF ::
+  BabbageEraTxBody era => SimpleGetter (BabbageTxBody era) (Set (TxIn (Crypto era)))
+allInputsBabbageTxBodyF =
+  to $ \txBody ->
+    (txBody ^. inputsBabbageTxBodyL)
+      `Set.union` (txBody ^. collateralInputsBabbageTxBodyL)
+      `Set.union` (txBody ^. referenceInputsBabbageTxBodyL)
+
+mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (ScriptHash (Crypto era)))
+mintedBabbageTxBodyF =
+  to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
+
+wdrlsBabbbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) (Wdrl (Crypto era))
+wdrlsBabbbageTxBodyL =
+  lensTxBodyRaw _wdrls (\txBodyRaw wdrls_ -> txBodyRaw {_wdrls = wdrls_})
+
+updateBabbageTxBodyL ::
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe (Update era))
+updateBabbageTxBodyL =
+  lensTxBodyRaw _update (\txBodyRaw update_ -> txBodyRaw {_update = update_})
+
+certsBabbageTxBodyL ::
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictSeq (DCert (Crypto era)))
+certsBabbageTxBodyL =
+  lensTxBodyRaw _certs (\txBodyRaw certs_ -> txBodyRaw {_certs = certs_})
+
+vldtBabbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) ValidityInterval
+vldtBabbageTxBodyL =
+  lensTxBodyRaw _vldt (\txBodyRaw vldt_ -> txBodyRaw {_vldt = vldt_})
+
+mintBabbageTxBodyL ::
+  (BabbageEraTxBody era, Value era ~ MaryValue (Crypto era)) =>
+  Lens' (BabbageTxBody era) (Value era)
+mintBabbageTxBodyL =
+  lensTxBodyRaw _mint (\txBodyRaw mint_ -> txBodyRaw {_mint = mint_})
+
+collateralInputsBabbageTxBodyL ::
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (TxIn (Crypto era)))
+collateralInputsBabbageTxBodyL =
+  lensTxBodyRaw
+    _collateralInputs
+    (\txBodyRaw collateral_ -> txBodyRaw {_collateralInputs = collateral_})
+
+reqSignerHashesBabbageTxBodyL ::
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (KeyHash 'Witness (Crypto era)))
+reqSignerHashesBabbageTxBodyL =
+  lensTxBodyRaw
+    _reqSignerHashes
+    (\txBodyRaw reqSignerHashes_ -> txBodyRaw {_reqSignerHashes = reqSignerHashes_})
+
+scriptIntegrityHashBabbageTxBodyL ::
+  BabbageEraTxBody era =>
+  Lens' (BabbageTxBody era) (StrictMaybe (ScriptIntegrityHash (Crypto era)))
+scriptIntegrityHashBabbageTxBodyL =
+  lensTxBodyRaw
+    _scriptIntegrityHash
+    (\txBodyRaw scriptIntegrityHash_ -> txBodyRaw {_scriptIntegrityHash = scriptIntegrityHash_})
+
+networkIdBabbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe Network)
+networkIdBabbageTxBodyL =
+  lensTxBodyRaw _txnetworkid (\txBodyRaw networkId -> txBodyRaw {_txnetworkid = networkId})
+
+sizedOutputsBabbageTxBodyL ::
+  BabbageEraTxBody era =>
+  Lens' (BabbageTxBody era) (StrictSeq (Sized (BabbageTxOut era)))
+sizedOutputsBabbageTxBodyL =
+  lensTxBodyRaw _outputs (\txBodyRaw outputs_ -> txBodyRaw {_outputs = outputs_})
+
+referenceInputsBabbageTxBodyL ::
+  BabbageEraTxBody era =>
+  Lens' (BabbageTxBody era) (Set (TxIn (Crypto era)))
+referenceInputsBabbageTxBodyL =
+  lensTxBodyRaw
+    _referenceInputs
+    (\txBodyRaw reference_ -> txBodyRaw {_referenceInputs = reference_})
+
+totalCollateralBabbageTxBodyL :: BabbageEraTxBody era => Lens' (BabbageTxBody era) (StrictMaybe Coin)
+totalCollateralBabbageTxBodyL =
+  lensTxBodyRaw
+    _totalCollateral
+    (\txBodyRaw totalCollateral_ -> txBodyRaw {_totalCollateral = totalCollateral_})
+
+collateralReturnBabbageTxBodyL ::
+  BabbageEraTxBody era =>
+  Lens' (BabbageTxBody era) (StrictMaybe (BabbageTxOut era))
+collateralReturnBabbageTxBodyL =
+  lensTxBodyRaw
+    (fmap sizedValue . _collateralReturn)
+    (\txBodyRaw collateralReturn_ -> txBodyRaw {_collateralReturn = mkSized <$> collateralReturn_})
+
+sizedCollateralReturnBabbageTxBodyL ::
+  BabbageEraTxBody era =>
+  Lens' (BabbageTxBody era) (StrictMaybe (Sized (BabbageTxOut era)))
+sizedCollateralReturnBabbageTxBodyL =
+  lensTxBodyRaw
+    _collateralReturn
+    (\txBodyRaw collateralReturn_ -> txBodyRaw {_collateralReturn = collateralReturn_})
 
 instance CC.Crypto c => EraTxBody (BabbageEra c) where
   type TxBody (BabbageEra c) = BabbageTxBody (BabbageEra c)
 
-  mkBasicTxBody = mkBabbageTxBody initialTxBodyRaw
+  mkBasicTxBody = mkBabbageTxBody
 
-  inputsTxBodyL =
-    lensTxBodyRaw _spendInputs (\txBodyRaw inputs_ -> txBodyRaw {_spendInputs = inputs_})
+  inputsTxBodyL = inputsBabbageTxBodyL
 
-  outputsTxBodyL =
-    lensTxBodyRaw
-      (fmap sizedValue . _outputs)
-      (\txBodyRaw outputs_ -> txBodyRaw {_outputs = mkSized <$> outputs_})
+  outputsTxBodyL = outputsBabbageTxBodyL
 
-  feeTxBodyL =
-    lensTxBodyRaw _txfee (\txBodyRaw fee_ -> txBodyRaw {_txfee = fee_})
+  feeTxBodyL = feeBabbageTxBodyL
 
-  auxDataHashTxBodyL =
-    lensTxBodyRaw _adHash (\txBodyRaw auxDataHash -> txBodyRaw {_adHash = auxDataHash})
+  auxDataHashTxBodyL = auxDataHashBabbageTxBodyL
 
-  allInputsTxBodyF =
-    to $ \txBody ->
-      (txBody ^. inputsTxBodyL)
-        `Set.union` (txBody ^. collateralInputsTxBodyL)
-        `Set.union` (txBody ^. referenceInputsTxBodyL)
+  allInputsTxBodyF = allInputsBabbageTxBodyF
 
-  mintedTxBodyF =
-    to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
+  mintedTxBodyF = mintedBabbageTxBodyF
 
 instance CC.Crypto c => ShelleyEraTxBody (BabbageEra c) where
-  wdrlsTxBodyL =
-    lensTxBodyRaw _wdrls (\txBodyRaw wdrls_ -> txBodyRaw {_wdrls = wdrls_})
+  wdrlsTxBodyL = wdrlsBabbbageTxBodyL
 
   ttlTxBodyL = notSupportedInThisEraL
 
-  updateTxBodyL =
-    lensTxBodyRaw _update (\txBodyRaw update_ -> txBodyRaw {_update = update_})
+  updateTxBodyL = updateBabbageTxBodyL
 
-  certsTxBodyL =
-    lensTxBodyRaw _certs (\txBodyRaw certs_ -> txBodyRaw {_certs = certs_})
+  certsTxBodyL = certsBabbageTxBodyL
 
 instance CC.Crypto c => ShelleyMAEraTxBody (BabbageEra c) where
-  vldtTxBodyL =
-    lensTxBodyRaw _vldt (\txBodyRaw vldt_ -> txBodyRaw {_vldt = vldt_})
+  vldtTxBodyL = vldtBabbageTxBodyL
 
-  mintTxBodyL =
-    lensTxBodyRaw _mint (\txBodyRaw mint_ -> txBodyRaw {_mint = mint_})
+  mintTxBodyL = mintBabbageTxBodyL
 
 instance CC.Crypto c => AlonzoEraTxBody (BabbageEra c) where
-  collateralInputsTxBodyL =
-    lensTxBodyRaw
-      _collateralInputs
-      (\txBodyRaw collateral_ -> txBodyRaw {_collateralInputs = collateral_})
+  collateralInputsTxBodyL = collateralInputsBabbageTxBodyL
 
-  reqSignerHashesTxBodyL =
-    lensTxBodyRaw
-      _reqSignerHashes
-      (\txBodyRaw reqSignerHashes_ -> txBodyRaw {_reqSignerHashes = reqSignerHashes_})
+  reqSignerHashesTxBodyL = reqSignerHashesBabbageTxBodyL
 
-  scriptIntegrityHashTxBodyL =
-    lensTxBodyRaw
-      _scriptIntegrityHash
-      (\txBodyRaw scriptIntegrityHash_ -> txBodyRaw {_scriptIntegrityHash = scriptIntegrityHash_})
+  scriptIntegrityHashTxBodyL = scriptIntegrityHashBabbageTxBodyL
 
-  networkIdTxBodyL =
-    lensTxBodyRaw _txnetworkid (\txBodyRaw networkId -> txBodyRaw {_txnetworkid = networkId})
+  networkIdTxBodyL = networkIdBabbageTxBodyL
 
 class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
   sizedOutputsTxBodyL :: Lens' (Core.TxBody era) (StrictSeq (Sized (BabbageTxOut era)))
@@ -569,28 +703,15 @@ class (AlonzoEraTxBody era, BabbageEraTxOut era) => BabbageEraTxBody era where
   sizedCollateralReturnTxBodyL :: Lens' (Core.TxBody era) (StrictMaybe (Sized (BabbageTxOut era)))
 
 instance CC.Crypto c => BabbageEraTxBody (BabbageEra c) where
-  sizedOutputsTxBodyL =
-    lensTxBodyRaw _outputs (\txBodyRaw outputs_ -> txBodyRaw {_outputs = outputs_})
+  sizedOutputsTxBodyL = sizedOutputsBabbageTxBodyL
 
-  referenceInputsTxBodyL =
-    lensTxBodyRaw
-      _referenceInputs
-      (\txBodyRaw reference_ -> txBodyRaw {_referenceInputs = reference_})
+  referenceInputsTxBodyL = referenceInputsBabbageTxBodyL
 
-  totalCollateralTxBodyL =
-    lensTxBodyRaw
-      _totalCollateral
-      (\txBodyRaw totalCollateral_ -> txBodyRaw {_totalCollateral = totalCollateral_})
+  totalCollateralTxBodyL = totalCollateralBabbageTxBodyL
 
-  collateralReturnTxBodyL =
-    lensTxBodyRaw
-      (fmap sizedValue . _collateralReturn)
-      (\txBodyRaw collateralReturn_ -> txBodyRaw {_collateralReturn = mkSized <$> collateralReturn_})
+  collateralReturnTxBodyL = collateralReturnBabbageTxBodyL
 
-  sizedCollateralReturnTxBodyL =
-    lensTxBodyRaw
-      _collateralReturn
-      (\txBodyRaw collateralReturn_ -> txBodyRaw {_collateralReturn = collateralReturn_})
+  sizedCollateralReturnTxBodyL = sizedCollateralReturnBabbageTxBodyL
 
 type TxBody era = BabbageTxBody era
 
@@ -687,7 +808,7 @@ pattern BabbageTxBody
       scriptIntegrityHashX
       adHashX
       txnetworkidX =
-        mkBabbageTxBody $
+        mkBabbageTxBodyFromRaw $
           TxBodyRaw
             inputsX
             collateralX
@@ -708,8 +829,11 @@ pattern BabbageTxBody
 
 {-# COMPLETE BabbageTxBody #-}
 
-mkBabbageTxBody :: BabbageEraTxBody era => TxBodyRaw era -> BabbageTxBody era
-mkBabbageTxBody = TxBodyConstr . memoBytes . encodeTxBodyRaw
+mkBabbageTxBodyFromRaw :: BabbageEraTxBody era => TxBodyRaw era -> BabbageTxBody era
+mkBabbageTxBodyFromRaw = TxBodyConstr . memoBytes . encodeTxBodyRaw
+
+mkBabbageTxBody :: BabbageEraTxBody era => BabbageTxBody era
+mkBabbageTxBody = mkBabbageTxBodyFromRaw initialTxBodyRaw
 
 instance (c ~ Crypto era) => HashAnnotated (BabbageTxBody era) EraIndependentTxBody c
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -10,7 +10,12 @@
 
 -- | Figure 3: Functions related to scripts
 --   Babbage Specification
-module Cardano.Ledger.Babbage.Scripts where
+module Cardano.Ledger.Babbage.Scripts
+  ( AlonzoScript (..),
+    isPlutusScript,
+    babbageScriptPrefixTag,
+  )
+where
 
 import Cardano.Ledger.Alonzo.Data
   ( AlonzoAuxiliaryData,
@@ -23,15 +28,20 @@ import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
+import Data.ByteString (ByteString)
 
 instance CC.Crypto c => EraScript (BabbageEra c) where
   type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
   isNativeScript x = not (isPlutusScript x)
-  scriptPrefixTag script =
-    case script of
-      (TimelockScript _) -> nativeMultiSigTag -- "\x00"
-      (PlutusScript PlutusV1 _) -> "\x01"
-      (PlutusScript PlutusV2 _) -> "\x02"
+  scriptPrefixTag = babbageScriptPrefixTag @(BabbageEra c)
+
+babbageScriptPrefixTag ::
+  Script era ~ AlonzoScript era => Script era -> ByteString
+babbageScriptPrefixTag script =
+  case script of
+    (TimelockScript _) -> nativeMultiSigTag -- "\x00"
+    (PlutusScript PlutusV1 _) -> "\x01"
+    (PlutusScript PlutusV2 _) -> "\x02"
 
 instance CC.Crypto c => EraAuxiliaryData (BabbageEra c) where
   type AuxiliaryData (BabbageEra c) = AlonzoAuxiliaryData (BabbageEra c)
