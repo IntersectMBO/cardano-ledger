@@ -24,6 +24,7 @@ import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Alonzo.TxBody (AlonzoTxBody (AlonzoTxBody), AlonzoTxOut (AlonzoTxOut))
 import qualified Cardano.Ledger.Alonzo.TxWitness as Alonzo
 import Cardano.Ledger.Crypto (DSIGN, KES)
+import Cardano.Ledger.Mary.Value (MaryValue (..))
 import Cardano.Ledger.Shelley.API.Genesis (initialState)
 import Cardano.Ledger.Shelley.API.Mempool (ApplyTxError (..))
 import qualified Cardano.Ledger.Shelley.LedgerState as LedgerState
@@ -124,13 +125,14 @@ instance
         Alonzo.txvldt = ValidityInterval SNothing $ SJust (1 + maxTTL),
         Alonzo.txUpdates = SNothing,
         Alonzo.reqSignerHashes = Set.empty,
-        Alonzo.mint = mint,
+        Alonzo.mint = ma,
         Alonzo.scriptIntegrityHash = redeemers >>= uncurry (Alonzo.hashScriptIntegrity langViews),
         Alonzo.adHash = SNothing,
         Alonzo.txnetworkid = SNothing -- SJust Testnet
       }
     where
       langViews = Set.singleton $ Alonzo.getLanguageView (LedgerState.esPp . LedgerState.nesEs $ nes) PlutusV1
+      MaryValue _ ma = mint
 
   makeTx _ realTxBody (TxWitnessArguments wits (SupportsScript ScriptFeatureTag_PlutusV1 scripts) (SupportsPlutus (rdmr, dats)) (SupportsPlutus isValid)) =
     let witSet =

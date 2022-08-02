@@ -245,7 +245,7 @@ goldenEncodingTestsAllegra =
                 (ValidityInterval SNothing SNothing)
                 SNothing
                 SNothing
-                (Coin 0)
+                (MultiAsset Map.empty)
             )
             ( T (TkMapLen 3)
                 <> T (TkWord 0) -- Tx Ins
@@ -275,7 +275,7 @@ goldenEncodingTestsAllegra =
                 (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
                 (SJust up)
                 (SJust mdh)
-                (Coin 0)
+                mempty
             )
             ( T (TkMapLen 9)
                 <> T (TkWord 0) -- Tx Ins
@@ -379,7 +379,7 @@ goldenEncodingTestsMary =
                 (ValidityInterval SNothing SNothing)
                 SNothing
                 SNothing
-                (Val.inject (Coin 0))
+                mempty
             )
             ( T (TkMapLen 3)
                 <> T (TkWord 0) -- Tx Ins
@@ -410,7 +410,7 @@ goldenEncodingTestsMary =
                 (ValidityInterval (SJust $ SlotNo 500) (SJust $ SlotNo 600))
                 (SJust up)
                 (SJust mdh)
-                (MaryValue 0 (MultiAsset mint))
+                (MultiAsset mint)
             )
             ( T (TkMapLen 10)
                 <> T (TkWord 0) -- Tx Ins

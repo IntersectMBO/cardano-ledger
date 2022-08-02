@@ -14,7 +14,7 @@ import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash, KeyRole (..))
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Shelley.Scripts as Multi
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -45,7 +45,7 @@ class Scriptic era => PostShelley era where
   after :: Int -> Proof era -> Script era
 
 class HasTokens era where
-  forge :: Integer -> Script era -> Value era
+  forge :: Integer -> Script era -> MultiAsset (Crypto era)
 
 instance CC.Crypto c => Scriptic (ShelleyEra c) where
   never _ (Shelley _) = Multi.RequireAnyOf mempty -- always False
@@ -87,25 +87,25 @@ instance CC.Crypto c => PostShelley (MaryEra c) where
   after n (Mary _) = RequireTimeExpire (theSlot n)
 
 instance forall c. CC.Crypto c => HasTokens (MaryEra c) where
-  forge n s = MaryValue 0 $ MultiAsset $ Map.singleton pid (Map.singleton an n)
+  forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
       pid = PolicyID (hashScript @(MaryEra c) s)
       an = AssetName "an"
 
 instance forall c. CC.Crypto c => HasTokens (AlonzoEra c) where
-  forge n s = MaryValue 0 $ MultiAsset $ Map.singleton pid (Map.singleton an n)
+  forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
       pid = PolicyID (hashScript @(AlonzoEra c) s)
       an = AssetName "an"
 
 instance forall c. CC.Crypto c => HasTokens (BabbageEra c) where
-  forge n s = MaryValue 0 $ MultiAsset $ Map.singleton pid (Map.singleton an n)
+  forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
       pid = PolicyID (hashScript @(BabbageEra c) s)
       an = AssetName "an"
 
 instance forall c. CC.Crypto c => HasTokens (ConwayEra c) where
-  forge n s = MaryValue 0 $ Map.singleton pid (Map.singleton an n)
+  forge n s = MultiAsset $ Map.singleton pid (Map.singleton an n)
     where
       pid = PolicyID (hashScript @(ConwayEra c) s)
       an = AssetName "an"

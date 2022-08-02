@@ -161,7 +161,10 @@ instance Mock c => Arbitrary (MultiAsset c) where
   arbitrary = MultiAsset <$> arbitrary
 
 instance Mock c => Arbitrary (MaryValue c) where
-  arbitrary = valueFromListBounded @Word64 <$> arbitrary <*> arbitrary
+  arbitrary = MaryValue <$> (fromIntegral <$> positives) <*> (multiAssetFromListBounded <$> triples)
+    where
+      triples = arbitrary :: Gen [(PolicyID c, AssetName, Word64)]
+      positives = arbitrary :: Gen Word64
 
   shrink (MaryValue ada assets) =
     concat
@@ -177,21 +180,20 @@ instance Mock c => Arbitrary (MaryValue c) where
 --
 -- - Fix the ADA value to 0
 -- - Allow both positive and negative quantities
-genMintValues :: forall c. Mock c => Gen (MaryValue c)
-genMintValues = valueFromListBounded @Int64 0 <$> arbitrary
+genMintValues :: forall c. Mock c => Gen (MultiAsset c)
+genMintValues = multiAssetFromListBounded @Int64 <$> arbitrary
 
--- | Variant on @valueFromList@ that makes sure that generated values stay
+-- | Variant on @multiAssetFromList@ that makes sure that generated values stay
 -- bounded within the range of a given integral type.
-valueFromListBounded ::
+multiAssetFromListBounded ::
   forall i crypto.
   (Bounded i, Integral i) =>
-  i ->
   [(PolicyID crypto, AssetName, i)] ->
-  MaryValue crypto
-valueFromListBounded (fromIntegral -> ada) =
+  MultiAsset crypto
+multiAssetFromListBounded =
   foldr
     (\(p, n, fromIntegral -> i) ans -> ConcreteValue.insert comb p n i ans)
-    (MaryValue ada mempty)
+    mempty
   where
     comb :: Integer -> Integer -> Integer
     comb a b =
@@ -220,7 +222,7 @@ instance Mock c => Arbitrary (MATxBody (AllegraEra c)) where
       <*> arbitrary
       <*> arbitrary
       <*> arbitrary
-      <*> pure (Coin 0)
+      <*> pure mempty
 
 instance Mock c => Arbitrary (Timelock c) where
   arbitrary = sizedTimelock maxTimelockDepth

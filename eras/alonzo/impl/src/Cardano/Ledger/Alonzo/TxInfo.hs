@@ -33,6 +33,7 @@ module Cardano.Ledger.Alonzo.TxInfo
     txInfoOut,
     transPolicyID,
     transAssetName,
+    transMultiAsset,
     transValue,
     transDCert,
     transWdrl,
@@ -359,8 +360,8 @@ transPolicyID (PolicyID (ScriptHash x)) = PV1.CurrencySymbol (PV1.toBuiltin (has
 transAssetName :: AssetName -> PV1.TokenName
 transAssetName (AssetName bs) = PV1.TokenName (PV1.toBuiltin (SBS.fromShort bs))
 
-transValue :: MaryValue c -> PV1.Value
-transValue (MaryValue n (MultiAsset mp)) = Map.foldlWithKey' accum1 justada mp
+transMultiAsset :: MultiAsset c -> PV1.Value
+transMultiAsset (MultiAsset m) = Map.foldlWithKey' accum1 mempty m
   where
     accum1 ans sym mp2 = Map.foldlWithKey' accum2 ans mp2
       where
@@ -369,7 +370,11 @@ transValue (MaryValue n (MultiAsset mp)) = Map.foldlWithKey' accum1 justada mp
             (+)
             ans2
             (PV1.singleton (transPolicyID sym) (transAssetName tok) quantity)
-    justada = PV1.singleton PV1.adaSymbol PV1.adaToken n
+
+transValue :: MaryValue c -> PV1.Value
+transValue (MaryValue n m) = justAda <> transMultiAsset m
+  where
+    justAda = PV1.singleton PV1.adaSymbol PV1.adaToken n
 
 -- =============================================
 -- translate fileds like DCert, Wdrl, and similar
@@ -519,7 +524,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
           { PV1.txInfoInputs = mapMaybe (uncurry txInfoIn) txIns,
             PV1.txInfoOutputs = mapMaybe txInfoOut (foldr (:) [] txOuts),
             PV1.txInfoFee = transValue (inject @(MaryValue (Crypto era)) fee),
-            PV1.txInfoMint = transValue mint,
+            PV1.txInfoMint = transMultiAsset (txBody ^. mintTxBodyL),
             PV1.txInfoDCert = foldr (\c ans -> transDCert c : ans) [] (txBody ^. certsTxBodyL),
             PV1.txInfoWdrl = Map.toList (transWdrl (txBody ^. wdrlsTxBodyL)),
             PV1.txInfoValidRange = timeRange,
@@ -535,7 +540,6 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
     txWits = tx ^. witsTxL
     txOuts = txBody ^. outputsTxBodyL
     fee = txBody ^. feeTxBodyL
-    mint = txBody ^. mintTxBodyL
     interval = txBody ^. vldtTxBodyL
 
     datpairs = Map.toList (unTxDats $ txdats' txWits)

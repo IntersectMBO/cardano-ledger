@@ -20,9 +20,10 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Mary.Value
   ( AssetName (..),
     MaryValue (..),
+    MultiAsset,
     PolicyID (..),
+    multiAssetFromList,
     policies,
-    valueFromList,
   )
 import Cardano.Ledger.Shelley.PParams (ShelleyPParams, ShelleyPParamsHKD (..), Update)
 import Cardano.Ledger.Shelley.Tx
@@ -150,10 +151,10 @@ redCoinId = PolicyID $ hashScript @(MaryEra c) redCoins
 red :: AssetName
 red = AssetName "red"
 
-genRed :: CC.Crypto c => Gen (MaryValue c)
+genRed :: CC.Crypto c => Gen (MultiAsset c)
 genRed = do
   n <- genInteger coloredCoinMinMint coloredCoinMaxMint
-  pure $ valueFromList 0 [(redCoinId, red, n)]
+  pure $ multiAssetFromList [(redCoinId, red, n)]
 
 --------------------------------------------------------
 -- Blue Coins                                         --
@@ -175,11 +176,11 @@ maxBlueMint = 5
 -- current coin selection algorithm does not prevent creating
 -- a multi-asset that is too large.
 
-genBlue :: CC.Crypto c => Gen (MaryValue c)
+genBlue :: CC.Crypto c => Gen (MultiAsset c)
 genBlue = do
   as <- QC.resize maxBlueMint $ QC.listOf genSingleBlue
   -- the transaction size gets too big if we mint too many assets
-  pure $ valueFromList 0 (map (\(asset, count) -> (blueCoinId, asset, count)) as)
+  pure $ multiAssetFromList (map (\(asset, count) -> (blueCoinId, asset, count)) as)
   where
     genSingleBlue = do
       n <- genInteger coloredCoinMinMint coloredCoinMaxMint
@@ -202,11 +203,11 @@ yellowCoinId = PolicyID $ hashScript @(MaryEra c) yellowCoins
 yellowNumAssets :: Int
 yellowNumAssets = 5
 
-genYellow :: CC.Crypto c => Gen (MaryValue c)
+genYellow :: CC.Crypto c => Gen (MultiAsset c)
 genYellow = do
   xs <- QC.sublistOf [0 .. yellowNumAssets]
   as <- mapM genSingleYellow xs
-  pure $ valueFromList 0 (map (\(asset, count) -> (yellowCoinId, asset, count)) as)
+  pure $ multiAssetFromList (map (\(asset, count) -> (yellowCoinId, asset, count)) as)
   where
     genSingleYellow x = do
       y <- genInteger coloredCoinMinMint coloredCoinMaxMint
@@ -240,10 +241,10 @@ blueFreq = 1
 yellowFreq :: Int
 yellowFreq = 20
 
-genBundle :: Int -> Gen (MaryValue c) -> Gen (MaryValue c)
+genBundle :: Int -> Gen (MultiAsset c) -> Gen (MultiAsset c)
 genBundle freq g = QC.frequency [(freq, g), (100 - freq, pure mempty)]
 
-genMint :: CC.Crypto c => Gen (MaryValue c)
+genMint :: CC.Crypto c => Gen (MultiAsset c)
 genMint = do
   r <- genBundle redFreq genRed
   b <- genBundle blueFreq genBlue
@@ -266,14 +267,14 @@ addTokens ::
   Proxy era ->
   StrictSeq (TxOut era) -> -- This is an accumuating parameter
   PParams era ->
-  MaryValue (Crypto era) ->
+  MultiAsset (Crypto era) ->
   StrictSeq (TxOut era) ->
   Maybe (StrictSeq (TxOut era))
 addTokens proxy tooLittleLovelace pparams ts (txOut :<| os) =
   let v = txOut ^. valueTxOutL
    in if Val.coin v < scaledMinDeposit v (getField @"_minUTxOValue" pparams)
         then addTokens proxy (txOut :<| tooLittleLovelace) pparams ts os
-        else Just $ tooLittleLovelace >< addValToTxOut @era ts txOut <| os
+        else Just $ tooLittleLovelace >< addValToTxOut @era (MaryValue 0 ts) txOut <| os
 addTokens _proxy _ _ _ StrictSeq.Empty = Nothing
 
 -- | This function is only good in the Mary Era

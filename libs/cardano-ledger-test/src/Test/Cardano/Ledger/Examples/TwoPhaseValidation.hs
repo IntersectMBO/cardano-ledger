@@ -76,6 +76,7 @@ import Cardano.Ledger.Keys
     hashKey,
     hashVerKeyVRF,
   )
+import Cardano.Ledger.Mary.Value (MaryValue (..), MultiAsset (..))
 import Cardano.Ledger.Pretty
 import Cardano.Ledger.Pretty.Babbage ()
 import Cardano.Ledger.SafeHash (hashAnnotated)
@@ -783,11 +784,11 @@ utxoStEx6 pf = smartUTxOState (utxoEx6 pf) (Coin 0) (Coin 5) def
 --  Example 7: Process a MINT transaction with a succeeding Plutus script.
 -- =============================================================================
 
-mintEx7 :: forall era. (Scriptic era, HasTokens era) => Proof era -> Value era
+mintEx7 :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAsset (Crypto era)
 mintEx7 pf = forge @era 1 (always 2 pf)
 
-outEx7 :: (HasTokens era, EraTxOut era, Scriptic era) => Proof era -> TxOut era
-outEx7 pf = newTxOut pf [Address (someAddr pf), Amount (mintEx7 pf <+> inject (Coin 995))]
+outEx7 :: (HasTokens era, EraTxOut era, Scriptic era, Value era ~ MaryValue (Crypto era)) => Proof era -> TxOut era
+outEx7 pf = newTxOut pf [Address (someAddr pf), Amount (MaryValue 0 (mintEx7 pf) <+> inject (Coin 995))]
 
 redeemerExample7 :: Data era
 redeemerExample7 = Data (Plutus.I 42)
@@ -798,7 +799,7 @@ validatingRedeemersEx7 =
     Map.singleton (RdmrPtr Tag.Mint 0) (redeemerExample7, ExUnits 5000 5000)
 
 validatingBodyWithMint ::
-  (HasTokens era, EraTxBody era, Scriptic era) =>
+  (HasTokens era, EraTxBody era, Scriptic era, Value era ~ MaryValue (Crypto era)) =>
   Proof era ->
   TxBody era
 validatingBodyWithMint pf =
@@ -817,7 +818,8 @@ validatingTxWithMint ::
   ( Scriptic era,
     HasTokens era,
     EraTx era,
-    GoodCrypto (Crypto era)
+    GoodCrypto (Crypto era),
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   Tx era
@@ -832,12 +834,12 @@ validatingTxWithMint pf =
         ]
     ]
 
-utxoEx7 :: forall era. (HasTokens era, EraTxBody era, PostShelley era) => Proof era -> UTxO era
+utxoEx7 :: forall era. (HasTokens era, EraTxBody era, PostShelley era, Value era ~ MaryValue (Crypto era)) => Proof era -> UTxO era
 utxoEx7 pf = expectedUTxO' pf (ExpectSuccess (validatingBodyWithMint pf) (outEx7 pf)) 7
 
 utxoStEx7 ::
   forall era.
-  (Default (State (EraRule "PPUP" era)), PostShelley era, EraTxBody era, HasTokens era) =>
+  (Default (State (EraRule "PPUP" era)), PostShelley era, EraTxBody era, HasTokens era, Value era ~ MaryValue (Crypto era)) =>
   Proof era ->
   UTxOState era
 utxoStEx7 pf = smartUTxOState (utxoEx7 pf) (Coin 0) (Coin 5) def
@@ -846,11 +848,11 @@ utxoStEx7 pf = smartUTxOState (utxoEx7 pf) (Coin 0) (Coin 5) def
 --  Example 8: Process a MINT transaction with a failing Plutus script.
 -- ==============================================================================
 
-mintEx8 :: forall era. (Scriptic era, HasTokens era) => Proof era -> Value era
+mintEx8 :: forall era. (Scriptic era, HasTokens era) => Proof era -> MultiAsset (Crypto era)
 mintEx8 pf = forge @era 1 (never 1 pf)
 
-outEx8 :: (HasTokens era, EraTxOut era, Scriptic era) => Proof era -> TxOut era
-outEx8 pf = newTxOut pf [Address (someAddr pf), Amount (mintEx8 pf <+> inject (Coin 995))]
+outEx8 :: (HasTokens era, EraTxOut era, Scriptic era, Value era ~ MaryValue (Crypto era)) => Proof era -> TxOut era
+outEx8 pf = newTxOut pf [Address (someAddr pf), Amount ((MaryValue 0 (mintEx8 pf)) <+> inject (Coin 995))]
 
 redeemerExample8 :: Data era
 redeemerExample8 = Data (Plutus.I 0)
@@ -861,7 +863,7 @@ notValidatingRedeemersEx8 =
     Map.singleton (RdmrPtr Tag.Mint 0) (redeemerExample8, ExUnits 5000 5000)
 
 notValidatingBodyWithMint ::
-  (HasTokens era, EraTxBody era, Scriptic era) =>
+  (HasTokens era, EraTxBody era, Scriptic era, Value era ~ MaryValue (Crypto era)) =>
   Proof era ->
   TxBody era
 notValidatingBodyWithMint pf =
@@ -880,7 +882,8 @@ notValidatingTxWithMint ::
   ( Scriptic era,
     HasTokens era,
     EraTx era,
-    GoodCrypto (Crypto era)
+    GoodCrypto (Crypto era),
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   Tx era
@@ -918,22 +921,22 @@ validatingRedeemersEx9 =
       (RdmrPtr Tag.Mint 1, (Data (Plutus.I 104), ExUnits 5000 5000))
     ]
 
-mintEx9 :: forall era. (PostShelley era, EraTxOut era, HasTokens era) => Proof era -> Value era
-mintEx9 pf = forge @era 1 (always 2 pf) <+> forge @era 1 (timelockScript 1 pf)
+mintEx9 :: forall era. (PostShelley era, HasTokens era) => Proof era -> MultiAsset (Crypto era)
+mintEx9 pf = forge @era 1 (always 2 pf) <> forge @era 1 (timelockScript 1 pf)
 
-outEx9 :: (HasTokens era, EraTxOut era, PostShelley era) => Proof era -> TxOut era
+outEx9 :: (HasTokens era, EraTxOut era, PostShelley era, Value era ~ MaryValue (Crypto era)) => Proof era -> TxOut era
 outEx9 pf =
   newTxOut
     pf
     [ Address (someAddr pf),
-      Amount (mintEx9 pf <+> inject (Coin 4996))
+      Amount ((MaryValue 0 (mintEx9 pf)) <+> inject (Coin 4996))
     ]
 
 timelockStakeCred :: PostShelley era => Proof era -> StakeCredential (Crypto era)
 timelockStakeCred pf = ScriptHashObj (timelockHash 2 pf)
 
 validatingBodyManyScripts ::
-  (HasTokens era, EraTxBody era, PostShelley era) =>
+  (HasTokens era, EraTxBody era, PostShelley era, Value era ~ MaryValue (Crypto era)) =>
   Proof era ->
   TxBody era
 validatingBodyManyScripts pf =
@@ -964,7 +967,8 @@ validatingTxManyScripts ::
   ( PostShelley era,
     HasTokens era,
     EraTxBody era,
-    GoodCrypto (Crypto era)
+    GoodCrypto (Crypto era),
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   Tx era
@@ -989,7 +993,7 @@ validatingTxManyScripts pf =
         ]
     ]
 
-utxoEx9 :: forall era. (EraTxBody era, PostShelley era, HasTokens era) => Proof era -> UTxO era
+utxoEx9 :: forall era. (EraTxBody era, PostShelley era, HasTokens era, Value era ~ MaryValue (Crypto era)) => Proof era -> UTxO era
 utxoEx9 pf = UTxO utxo
   where
     utxo =
@@ -1000,7 +1004,7 @@ utxoEx9 pf = UTxO utxo
 
 utxoStEx9 ::
   forall era.
-  (EraTxBody era, Default (State (EraRule "PPUP" era)), PostShelley era, HasTokens era) =>
+  (EraTxBody era, Default (State (EraRule "PPUP" era)), PostShelley era, HasTokens era, Value era ~ MaryValue (Crypto era)) =>
   Proof era ->
   UTxOState era
 utxoStEx9 pf = smartUTxOState (utxoEx9 pf) (Coin 0) (Coin 5) def
@@ -1258,7 +1262,8 @@ missing1phaseScriptWitnessTx ::
   ( PostShelley era,
     HasTokens era,
     EraTxBody era,
-    GoodCrypto (Crypto era)
+    GoodCrypto (Crypto era),
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   Tx era
@@ -1288,7 +1293,8 @@ missing2phaseScriptWitnessTx ::
   ( PostShelley era,
     HasTokens era,
     EraTx era,
-    GoodCrypto (Crypto era)
+    GoodCrypto (Crypto era),
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   Tx era
@@ -1385,7 +1391,8 @@ phase1FailureTx ::
   ( PostShelley era,
     HasTokens era,
     EraTx era,
-    GoodCrypto (Crypto era)
+    GoodCrypto (Crypto era),
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   Tx era
@@ -1789,7 +1796,8 @@ testAlonzoBlock ::
   ( GoodCrypto (Crypto era),
     HasTokens era,
     Scriptic era,
-    EraSegWits era
+    EraSegWits era,
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   Block (BHeaderView (Crypto era)) era
@@ -1815,7 +1823,8 @@ example1UTxO ::
   ( GoodCrypto (Crypto era),
     HasTokens era,
     PostShelley era,
-    EraTxBody era
+    EraTxBody era,
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   UTxO era
@@ -1845,7 +1854,8 @@ example1UtxoSt ::
     GoodCrypto (Crypto era),
     HasTokens era,
     PostShelley era,
-    Default (State (EraRule "PPUP" era))
+    Default (State (EraRule "PPUP" era)),
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   UTxOState era
@@ -1856,7 +1866,8 @@ example1BBodyState ::
     HasTokens era,
     PostShelley era,
     Default (State (EraRule "PPUP" era)),
-    EraTxBody era
+    EraTxBody era,
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   ShelleyBbodyState era
@@ -2092,7 +2103,8 @@ alonzoUTXOWexamplesB ::
     Scriptic era,
     Default (State (EraRule "PPUP" era)),
     EraTx era,
-    PostShelley era -- MAYBE WE CAN REPLACE THIS BY GoodCrypto
+    PostShelley era, -- MAYBE WE CAN REPLACE THIS BY GoodCrypto,
+    Value era ~ MaryValue (Crypto era)
   ) =>
   Proof era ->
   TestTree
@@ -2433,6 +2445,7 @@ alonzoBBODYexamplesP ::
     HasTokens era,
     Default (State (EraRule "PPUP" era)),
     PostShelley era,
+    Value era ~ MaryValue (Crypto era),
     EraSegWits era
   ) =>
   Proof era ->

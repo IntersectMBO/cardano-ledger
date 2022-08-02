@@ -20,7 +20,7 @@ import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Mary (MaryEra)
-import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
+import Cardano.Ledger.Mary.Value (AssetName (..), MultiAsset (..), PolicyID (..))
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..))
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (MATxBody (..), ShelleyMAEraTxBody (..))
@@ -65,8 +65,8 @@ txM =
     SNothing
     testmint
 
-testmint :: MaryValue TestCrypto
-testmint = MaryValue 0 $ MultiAsset $ Map.singleton policyId (Map.singleton aname 2)
+testmint :: MultiAsset TestCrypto
+testmint = MultiAsset $ Map.singleton policyId (Map.singleton aname 2)
   where
     policyId = PolicyID . hashScript @TestEra . RequireAnyOf $ fromList []
     aname = AssetName $ fromString "asset name"

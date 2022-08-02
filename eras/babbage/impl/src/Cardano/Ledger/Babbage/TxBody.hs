@@ -61,6 +61,7 @@ module Cardano.Ledger.Babbage.TxBody
     auxDataHashBabbageTxBodyL,
     allInputsBabbageTxBodyF,
     mintedBabbageTxBodyF,
+    mintValueBabbageTxBodyF,
     wdrlsBabbbageTxBodyL,
     notSupportedInThisEraL,
     updateBabbageTxBodyL,
@@ -170,7 +171,7 @@ import qualified Cardano.Ledger.Core as Core (TxBody, TxOut)
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
-import Cardano.Ledger.Mary.Value (MaryValue (..), policies, policyID)
+import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
@@ -187,7 +188,6 @@ import Cardano.Ledger.Val
     Val (..),
     decodeMint,
     encodeMint,
-    isZero,
   )
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import Control.Monad ((<$!>))
@@ -518,10 +518,11 @@ data TxBodyRaw era = TxBodyRaw
     _vldt :: !ValidityInterval,
     _update :: !(StrictMaybe (Update era)),
     _reqSignerHashes :: !(Set (KeyHash 'Witness (Crypto era))),
-    _mint :: !(MaryValue (Crypto era)),
+    _mint :: !(MultiAsset (Crypto era)),
     -- The spec makes it clear that the mint field is a
     -- Cardano.Ledger.Mary.Value.MaryValue, not a Value.
     -- Operations on the TxBody in the BabbageEra depend upon this.
+    -- We now store only the MultiAsset part of a Mary.Value.
     _scriptIntegrityHash :: !(StrictMaybe (ScriptIntegrityHash (Crypto era))),
     _adHash :: !(StrictMaybe (AuxiliaryDataHash (Crypto era))),
     _txnetworkid :: !(StrictMaybe Network)
@@ -621,11 +622,15 @@ vldtBabbageTxBodyL =
 {-# INLINE vldtBabbageTxBodyL #-}
 
 mintBabbageTxBodyL ::
-  (BabbageEraTxBody era, Value era ~ MaryValue (Crypto era)) =>
-  Lens' (BabbageTxBody era) (Value era)
+  BabbageEraTxBody era => Lens' (BabbageTxBody era) (MultiAsset (Crypto era))
 mintBabbageTxBodyL =
   lensTxBodyRaw _mint (\txBodyRaw mint_ -> txBodyRaw {_mint = mint_})
 {-# INLINE mintBabbageTxBodyL #-}
+
+mintValueBabbageTxBodyF ::
+  (BabbageEraTxBody era, Value era ~ MaryValue (Crypto era)) =>
+  SimpleGetter (BabbageTxBody era) (Value era)
+mintValueBabbageTxBodyF = mintBabbageTxBodyL . to (MaryValue 0)
 
 collateralInputsBabbageTxBodyL ::
   BabbageEraTxBody era => Lens' (BabbageTxBody era) (Set (TxIn (Crypto era)))
@@ -747,6 +752,8 @@ instance CC.Crypto c => ShelleyMAEraTxBody (BabbageEra c) where
   mintTxBodyL = mintBabbageTxBodyL
   {-# INLINE mintTxBodyL #-}
 
+  mintValueTxBodyF = mintValueBabbageTxBodyF
+
 instance CC.Crypto c => AlonzoEraTxBody (BabbageEra c) where
   {-# SPECIALIZE instance AlonzoEraTxBody (BabbageEra CC.StandardCrypto) #-}
 
@@ -839,7 +846,7 @@ pattern BabbageTxBody ::
   ValidityInterval ->
   StrictMaybe (Update era) ->
   Set (KeyHash 'Witness (Crypto era)) ->
-  MaryValue (Crypto era) ->
+  MultiAsset (Crypto era) ->
   StrictMaybe (ScriptIntegrityHash (Crypto era)) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
   StrictMaybe Network ->
@@ -950,7 +957,7 @@ vldt' :: TxBody era -> ValidityInterval
 update' :: TxBody era -> StrictMaybe (Update era)
 reqSignerHashes' :: TxBody era -> Set (KeyHash 'Witness (Crypto era))
 adHash' :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
-mint' :: TxBody era -> MaryValue (Crypto era)
+mint' :: TxBody era -> MultiAsset (Crypto era)
 scriptIntegrityHash' :: TxBody era -> StrictMaybe (ScriptIntegrityHash (Crypto era))
 spendInputs' (TxBodyConstr (Memo raw _)) = _spendInputs raw
 
@@ -1180,7 +1187,7 @@ encodeTxBodyRaw
       !> encodeKeyedStrictMaybe 6 _update
       !> encodeKeyedStrictMaybe 8 bot
       !> Omit null (Key 14 (E encodeFoldable _reqSignerHashes))
-      !> Omit isZero (Key 9 (E encodeMint _mint))
+      !> Omit (== mempty) (Key 9 (E encodeMint _mint))
       !> encodeKeyedStrictMaybe 11 _scriptIntegrityHash
       !> encodeKeyedStrictMaybe 7 _adHash
       !> encodeKeyedStrictMaybe 15 _txnetworkid

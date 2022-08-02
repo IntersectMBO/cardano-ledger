@@ -144,10 +144,12 @@ exampleTxBodyConway =
           (EpochNo 0)
     ) -- txUpdates
     (Set.singleton $ SLE.mkKeyHash 212) -- reqSignerHashes
-    (MarySLE.exampleMultiAssetValue 3) -- mint
+    exampleMultiAsset -- mint
     (SJust $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- scriptIntegrityHash
     (SJust . AuxiliaryDataHash $ SLE.mkDummySafeHash (Proxy @StandardCrypto) 42) -- adHash
     (SJust Mainnet) -- txnetworkid
+  where
+    MaryValue _ exampleMultiAsset = MarySLE.exampleMultiAssetValue 3
 
 datumExample :: Data StandardConway
 datumExample = Data (Plutus.I 191)

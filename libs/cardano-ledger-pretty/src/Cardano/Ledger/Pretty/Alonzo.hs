@@ -35,7 +35,7 @@ import Cardano.Ledger.AuxiliaryData
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Pretty hiding (ppPParams, ppPParamsUpdate, ppTx, ppTxBody, ppTxOut)
-import Cardano.Ledger.Pretty.Mary (ppTimelock, ppValidityInterval, ppValue)
+import Cardano.Ledger.Pretty.Mary (ppMultiAsset, ppTimelock, ppValidityInterval)
 import qualified Plutus.V1.Ledger.Api as Plutus
 import qualified Prettyprinter as PP
 
@@ -222,7 +222,7 @@ ppTxBody (AlonzoTxBody i ifee o c w fee vi u rsh mnt sdh axh ni) =
       ("vldt", ppValidityInterval vi),
       ("update", ppStrictMaybe ppUpdate u),
       ("reqSignerHashes", ppSet ppKeyHash rsh),
-      ("mint", ppValue mnt),
+      ("mint", ppMultiAsset mnt),
       ("scriptIntegrityHash", ppStrictMaybe ppSafeHash sdh),
       ("adHash", ppStrictMaybe ppAuxDataHash axh),
       ("txnetworkid", ppStrictMaybe ppNetwork ni)

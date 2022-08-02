@@ -50,6 +50,15 @@ pickNew, pickOld :: a -> a -> a
 pickNew _o n = n
 pickOld o _n = o
 
+insertValue ::
+  (Integer -> Integer -> Integer) ->
+  PolicyID crypto ->
+  AssetName ->
+  Integer ->
+  MaryValue crypto ->
+  MaryValue crypto
+insertValue combine pid aid new (MaryValue c m) = MaryValue c $ insert combine pid aid new m
+
 insert3 ::
   (Integer -> Integer -> Integer) ->
   PolicyID crypto ->
@@ -102,7 +111,7 @@ insert2 combine pid aid new m1 =
 -- 3 functions that build Values from Policy Asset triples.
 
 valueFromList :: [(PolicyID C_Crypto, AssetName, Integer)] -> Integer -> MaryValue C_Crypto
-valueFromList list c = foldr acc (MaryValue c mempty) list
+valueFromList list c = MaryValue c $ foldr acc mempty list
   where
     acc (policy, asset, count) m = insert (+) policy asset count m
 
@@ -240,47 +249,47 @@ valuePropList ::
   [(Integer -> Integer -> MaryValue C_Crypto -> PolicyID C_Crypto -> AssetName -> Bool, String)]
 valuePropList =
   [ (\_ _ x _ _ -> coin (modifyCoin f x) == modifyCoin f (coin x), "coinModify"),
-    (\_ _ _ p a -> insert pickOld p a 0 zero == zero, "Nozeros"),
-    (\_ _ x p a -> insert pickOld p a 0 x == insert2 pickOld p a 0 x, "insert==insert2A"),
-    (\_ _ x p a -> insert pickNew p a 0 x == insert2 pickNew p a 0 x, "insert==insert2B"),
-    (\_ _ x p a -> insert pickOld p a 0 x == insert3 pickOld p a 0 x, "insert==insert3A"),
-    (\_ _ x p a -> insert pickNew p a 0 x == insert3 pickNew p a 0 x, "insert==insert3B"),
-    ( \n _ _ p a -> insert pickNew p a n zero == insert pickOld p a n zero,
+    (\_ _ _ p a -> insertValue pickOld p a 0 zero == zero, "Nozeros"),
+    (\_ _ x p a -> insertValue pickOld p a 0 x == insert2 pickOld p a 0 x, "insert==insert2A"),
+    (\_ _ x p a -> insertValue pickNew p a 0 x == insert2 pickNew p a 0 x, "insert==insert2B"),
+    (\_ _ x p a -> insertValue pickOld p a 0 x == insert3 pickOld p a 0 x, "insert==insert3A"),
+    (\_ _ x p a -> insertValue pickNew p a 0 x == insert3 pickNew p a 0 x, "insert==insert3B"),
+    ( \n _ _ p a -> insertValue pickNew p a n zero == insertValue pickOld p a n zero,
       "comb doesn't matter on zero"
     ),
     -- the following 4 laws only holds for non zero n and m, and when not(n==m).
     -- Zeros cause the inserts to be no-ops in that case.
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || (insert pickOld p a m (insert pickNew p a n zero))
-          == (insert pickNew p a n zero),
+          || (insertValue pickOld p a m (insertValue pickNew p a n zero))
+          == (insertValue pickNew p a n zero),
       "retains-old"
     ),
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || (insert pickNew p a m (insert pickNew p a n zero))
-          == (insert pickNew p a m zero),
+          || (insertValue pickNew p a m (insertValue pickNew p a n zero))
+          == (insertValue pickNew p a m zero),
       "new-overrides"
     ),
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || lookup p a (insert pickOld p a m (insert pickNew p a n zero)) == n,
+          || lookup p a (insertValue pickOld p a m (insertValue pickNew p a n zero)) == n,
       "oldVsNew"
     ),
     ( \n m _ p a ->
         n == 0 || m == 0 || n == m
-          || lookup p a (insert pickNew p a m (insert pickNew p a n zero)) == m,
+          || lookup p a (insertValue pickNew p a m (insertValue pickNew p a n zero)) == m,
       "newVsOld"
     ),
-    (\n _ x p a -> lookup p a (insert pickNew p a n x) == n, "lookup-insert-overwrite"),
+    (\n _ x p a -> lookup p a (insertValue pickNew p a n x) == n, "lookup-insert-overwrite"),
     ( \n _ x p a ->
         lookup p a x == 0
-          || lookup p a (insert pickOld p a n x) == lookup p a x,
+          || lookup p a (insertValue pickOld p a n x) == lookup p a x,
       "lookup-insert-retain"
     ),
-    (\n _ x p a -> coin (insert pickOld p a n x) == coin x, "coinIgnores1"),
-    (\n _ x p a -> coin (insert pickNew p a n x) == coin x, "coinIgnores2"),
-    (\n _ x p a -> coin (insert (\o _n -> o + n) p a n x) == coin x, "coinIgnores3")
+    (\n _ x p a -> coin (insertValue pickOld p a n x) == coin x, "coinIgnores1"),
+    (\n _ x p a -> coin (insertValue pickNew p a n x) == coin x, "coinIgnores2"),
+    (\n _ x p a -> coin (insertValue (\o _n -> o + n) p a n x) == coin x, "coinIgnores3")
   ]
   where
     f (Coin n) = Coin (n + 3)

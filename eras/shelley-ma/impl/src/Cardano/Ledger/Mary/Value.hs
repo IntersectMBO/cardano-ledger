@@ -760,8 +760,8 @@ readShortByteString sbs start len =
 --
 --   This function is equivalent to computing the support of the value in the
 --   spec.
-policies :: MaryValue crypto -> Set (PolicyID crypto)
-policies (MaryValue _ (MultiAsset m)) = Map.keysSet m
+policies :: MultiAsset crypto -> Set (PolicyID crypto)
+policies (MultiAsset m) = Map.keysSet m
 
 lookup :: PolicyID crypto -> AssetName -> MaryValue crypto -> Integer
 lookup pid aid (MaryValue _ (MultiAsset m)) =

@@ -41,7 +41,7 @@ import Cardano.Ledger.ShelleyMA.TxBody
     ValidityInterval (ValidityInterval),
   )
 import Cardano.Ledger.TxIn (TxIn)
-import Cardano.Ledger.Val (Val (zero), (<+>))
+import Cardano.Ledger.Val ((<+>))
 import Cardano.Slotting.Slot (SlotNo (SlotNo))
 import Control.Monad (replicateM)
 import Data.Hashable (hash)
@@ -106,7 +106,7 @@ genTxBody ::
   Gen (MATxBody era, [Timelock (Crypto era)])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
-  let mint = zero -- the mint field is always empty for an Allegra TxBody
+  let mint = mempty -- the mint field is always empty for an Allegra TxBody
   pure
     ( MATxBody
         ins
