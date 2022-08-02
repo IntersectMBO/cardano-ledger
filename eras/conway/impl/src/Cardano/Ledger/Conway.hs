@@ -8,30 +8,11 @@
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module Cardano.Ledger.Babbage
-  ( BabbageEra,
-    BabbageTxOut,
-    BabbageTxBody,
-    AlonzoScript,
-    AlonzoAuxiliaryData,
-
-    -- * Deprecated
-    Self,
-    TxOut,
-    TxBody,
-    Script,
-    AuxiliaryData,
-  )
-where
+module Cardano.Ledger.Conway (ConwayEra) where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
-import Cardano.Ledger.Alonzo.Data (AlonzoAuxiliaryData (..), AuxiliaryData)
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), Script)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
-import Cardano.Ledger.Babbage.Era (BabbageEra)
-import Cardano.Ledger.Babbage.Genesis (AlonzoGenesis, extendPPWithGenesis)
-import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Rules (babbageMinUTxOValue)
 import Cardano.Ledger.Babbage.Tx
   ( AlonzoTx (..),
@@ -40,15 +21,13 @@ import Cardano.Ledger.Babbage.Tx
     getDatumBabbage,
     minfee,
   )
-import Cardano.Ledger.Babbage.TxBody
-  ( BabbageEraTxBody (referenceInputsTxBodyL, sizedCollateralReturnTxBodyL, sizedOutputsTxBodyL),
-    BabbageTxBody,
-    BabbageTxOut (BabbageTxOut),
-    TxBody,
-    TxOut,
-    dataHashTxOutL,
-  )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
+import Cardano.Ledger.Conway.Era (ConwayEra)
+import Cardano.Ledger.Conway.Genesis (AlonzoGenesis, extendPPWithGenesis)
+import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
+import Cardano.Ledger.Conway.Tx ()
+import Cardano.Ledger.Conway.TxBody (BabbageEraTxBody (..))
+import Cardano.Ledger.Conway.TxOut (AlonzoEraTxOut (..), BabbageTxOut (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentTxBody)
 import Cardano.Ledger.Keys (DSignable, Hash)
@@ -64,17 +43,17 @@ import Lens.Micro
 
 -- =====================================================
 
-instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (BabbageEra c) where
+instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyTx (ConwayEra c) where
   reapplyTx = reapplyAlonzoTx
 
-instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (BabbageEra c)
+instance (CC.Crypto c, DSignable c (Hash c EraIndependentTxBody)) => API.ApplyBlock (ConwayEra c)
 
-instance CC.Crypto c => API.CanStartFromGenesis (BabbageEra c) where
-  type AdditionalGenesisConfig (BabbageEra c) = AlonzoGenesis
+instance CC.Crypto c => API.CanStartFromGenesis (ConwayEra c) where
+  type AdditionalGenesisConfig (ConwayEra c) = AlonzoGenesis
 
   initialState = API.initialStateFromGenesis extendPPWithGenesis
 
-instance CC.Crypto c => API.CLI (BabbageEra c) where
+instance CC.Crypto c => API.CLI (ConwayEra c) where
   evaluateMinFee = minfee
 
   evaluateConsumed = consumed
@@ -85,7 +64,7 @@ instance CC.Crypto c => API.CLI (BabbageEra c) where
 
   evaluateMinLovelaceOutput pp out = babbageMinUTxOValue pp (mkSized out)
 
-instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
+instance CC.Crypto c => ExtendedUTxO (ConwayEra c) where
   txInfo = babbageTxInfo
   inputDataHashes = babbageInputDataHashes
   txscripts = babbageTxScripts
@@ -102,11 +81,3 @@ instance CC.Crypto c => ExtendedUTxO (BabbageEra c) where
       collOuts = case txBody ^. sizedCollateralReturnTxBodyL of
         SNothing -> []
         SJust x -> [x]
-
--- Self-Describing type synomyms
-
-type Self c = BabbageEra c
-
-{-# DEPRECATED Self "Use `BabbageEra` instead" #-}
-
--- =================================================
