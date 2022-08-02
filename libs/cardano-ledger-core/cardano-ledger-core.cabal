@@ -58,6 +58,7 @@ library
     Cardano.Ledger.Keys
     Cardano.Ledger.Keys.Bootstrap
     Cardano.Ledger.Keys.WitVKey
+    Cardano.Ledger.Language
     Cardano.Ledger.PoolDistr
     Cardano.Ledger.Rules.ValidationMode
     Cardano.Ledger.SafeHash

@@ -212,7 +212,7 @@ instance CC.Crypto crypto => EraTx (ShelleyEra crypto) where
 
   sizeTxF = sizeShelleyTxF
 
-  validateScript = validateNativeMultiSigScript
+  validateScript (Phase1Script multisig) tx = validateNativeMultiSigScript multisig tx
 
 deriving newtype instance
   ( NFData (Core.TxBody era),

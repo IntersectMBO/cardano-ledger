@@ -53,7 +53,6 @@ module Cardano.Ledger.Alonzo.Tx
     txrdmrs,
     TxBody,
     AlonzoTxBody (..),
-    validateAlonzoNativeScript,
     -- Figure 4
     totExUnits,
     isTwoPhaseScriptAddress,
@@ -135,7 +134,6 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody (..), Wdrl (..), unWdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
 import qualified Cardano.Ledger.Shelley.UTxO as Shelley
 import Cardano.Ledger.ShelleyMA.Tx (validateTimelock)
-import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (Val ((<+>), (<×>)))
 import Control.DeepSeq (NFData (..))
@@ -188,16 +186,7 @@ instance CC.Crypto c => EraTx (AlonzoEra c) where
   witsTxL = witsAlonzoTxL
   auxDataTxL = auxDataAlonzoTxL
   sizeTxF = sizeAlonzoTxF
-  validateScript = validateAlonzoNativeScript
-
-validateAlonzoNativeScript ::
-  forall era.
-  (EraTx era, ShelleyMAEraTxBody era, Script era ~ AlonzoScript era) =>
-  Script era ->
-  Tx era ->
-  Bool
-validateAlonzoNativeScript (TimelockScript script) tx = validateTimelock @era script tx
-validateAlonzoNativeScript (PlutusScript _ _) _tx = True
+  validateScript (Phase1Script script) tx = validateTimelock @(AlonzoEra c) script tx
 
 class (EraTx era, AlonzoEraTxBody era, AlonzoEraWitnesses era) => AlonzoEraTx era where
   isValidTxL :: Lens' (Core.Tx era) IsValid

@@ -50,7 +50,7 @@ import Cardano.Ledger.Alonzo.Era
 import Cardano.Ledger.Alonzo.Language (Language (..))
 import Cardano.Ledger.BaseTypes (BoundedRational (unboundRational), NonNegativeInterval, ProtVer (..))
 import Cardano.Ledger.Coin (Coin (..))
-import Cardano.Ledger.Core (Era (Crypto), EraScript)
+import Cardano.Ledger.Core (Era (Crypto), EraScript, Phase (..), PhaseRep (..), PhasedScript (..), SomeScript)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.SafeHash
@@ -142,13 +142,19 @@ instance SafeToHash (AlonzoScript era) where
   originalBytes (TimelockScript t) = originalBytes t
   originalBytes (PlutusScript _ bs) = fromShort bs
 
+type instance SomeScript 'PhaseOne (AlonzoEra c) = Timelock c
+
+type instance SomeScript 'PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
+
 isPlutusScript :: AlonzoScript era -> Bool
 isPlutusScript (PlutusScript _ _) = True
 isPlutusScript (TimelockScript _) = False
 
 instance CC.Crypto c => EraScript (AlonzoEra c) where
   type Script (AlonzoEra c) = AlonzoScript (AlonzoEra c)
-  isNativeScript x = not (isPlutusScript x)
+  phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
+  phaseScript PhaseTwoRep (PlutusScript lang bytes) = Just (Phase2Script lang bytes)
+  phaseScript _ _ = Nothing
   scriptPrefixTag script =
     case script of
       TimelockScript _ -> nativeMultiSigTag -- "\x00"

@@ -162,12 +162,16 @@ newtype Timelock crypto = TimelockConstr (MemoBytes (TimelockRaw crypto))
   deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
 
+type instance SomeScript 'PhaseOne (ShelleyMAEra ma c) = Timelock c
+
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- Multisig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in Multisig
 instance MAClass ma crypto => EraScript (ShelleyMAEra ma crypto) where
   type Script (ShelleyMAEra ma crypto) = Timelock crypto
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
+  phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
+  phaseScript PhaseTwoRep _ = Nothing
 
 deriving via
   Mem (TimelockRaw crypto)
