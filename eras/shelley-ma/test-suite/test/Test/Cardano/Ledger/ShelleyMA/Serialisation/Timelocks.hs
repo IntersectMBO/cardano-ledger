@@ -13,6 +13,7 @@ module Test.Cardano.Ledger.ShelleyMA.Serialisation.Timelocks
 where
 
 import Cardano.Binary (Annotator (..), FromCBOR (..), ToCBOR (..))
+import Cardano.Ledger.MemoBytes (MemoBytes (Memo))
 import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes)
 import Cardano.Ledger.ShelleyMA.Timelocks
   ( Timelock (..),
@@ -22,10 +23,9 @@ import Cardano.Ledger.ShelleyMA.Timelocks
   )
 import Cardano.Slotting.Slot (SlotNo (..))
 import qualified Data.ByteString.Lazy as Lazy
-import Data.MemoBytes (MemoBytes (Memo))
 import Data.Roundtrip (embedTripAnn, roundTripAnn)
 import Data.Sequence.Strict (fromList)
-import Test.Cardano.Ledger.EraBuffet (TestCrypto)
+import Test.Cardano.Ledger.EraBuffet (ShelleyEra, TestCrypto)
 import Test.Cardano.Ledger.Shelley.Serialisation.Generators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
 import Test.Tasty
@@ -33,13 +33,13 @@ import Test.Tasty.QuickCheck (testProperty)
 
 -- ================================================================
 
-s1 :: Timelock TestCrypto
+s1 :: Timelock (ShelleyEra TestCrypto)
 s1 = RequireAllOf (fromList [RequireTimeStart (SlotNo 12), RequireTimeExpire 18])
 
-s2 :: Timelock TestCrypto
+s2 :: Timelock (ShelleyEra TestCrypto)
 s2 = RequireAllOf (fromList [RequireTimeStart (SlotNo 12), RequireTimeExpire (SlotNo 23)])
 
-s4 :: Timelock TestCrypto
+s4 :: Timelock (ShelleyEra TestCrypto)
 s4 = RequireAllOf (fromList [s1, s2])
 
 -- ================================================================
@@ -50,24 +50,24 @@ checkOne nm t = testProperty ("RoundTrip: " ++ nm) $
     Right _ -> True
     Left s -> error ("Fail to roundtrip " ++ show t ++ " with error " ++ show s)
 
-checkAnn :: Timelock TestCrypto -> Bool
+checkAnn :: Timelock (ShelleyEra TestCrypto) -> Bool
 checkAnn t =
   case roundTripAnn t of
     Right _ -> True
     Left s -> error (show s)
 
-checkEmbed :: MultiSig TestCrypto -> Bool
+checkEmbed :: MultiSig (ShelleyEra TestCrypto) -> Bool
 checkEmbed multi =
-  case embedTripAnn @(Timelock TestCrypto) multi of
+  case embedTripAnn @(Timelock (ShelleyEra TestCrypto)) multi of
     Right (left, _) | left == Lazy.empty -> True
     Right (left, _) -> error ("Bytes left over: " ++ show left)
     Left s -> error (show s)
 
-checkTranslate :: MultiSig TestCrypto -> Bool
+checkTranslate :: MultiSig (ShelleyEra TestCrypto) -> Bool
 checkTranslate multi = bytes == bytes2
   where
     bytes = getMultiSigBytes multi
-    (TimelockConstr (Memo _ bytes2)) = translate @TestCrypto multi
+    (TimelockConstr (Memo _ bytes2)) = translate multi
 
 timelockTests :: TestTree
 timelockTests =

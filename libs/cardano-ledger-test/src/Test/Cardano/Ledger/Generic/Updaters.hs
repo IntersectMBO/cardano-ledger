@@ -44,7 +44,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict (StrictMaybe (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
-import Data.Typeable (Typeable)
 import Lens.Micro
 import Test.Cardano.Ledger.Alonzo.PlutusScripts (testingCostModelV1, testingCostModelV2)
 import Test.Cardano.Ledger.Generic.Fields
@@ -86,7 +85,7 @@ type Policy = (forall t. Merge t => t -> t -> t)
 instance Ord a => Merge (Set a) where
   merge = Set.union
 
-instance Typeable era => Merge (TxDats era) where
+instance Era era => Merge (TxDats era) where
   merge (TxDats x) (TxDats y) = TxDats (Map.union x y)
 
 instance Era era => Merge (Redeemers era) where

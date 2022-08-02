@@ -11,6 +11,7 @@
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -32,6 +33,7 @@ module Cardano.Ledger.ShelleyMA.Timelocks
     encodeVI,
     decodeVI,
     translate,
+    translateTimelock,
   )
 where
 
@@ -43,8 +45,13 @@ import Cardano.Binary
   )
 import Cardano.Ledger.BaseTypes (StrictMaybe (SJust, SNothing))
 import Cardano.Ledger.Core
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
+import Cardano.Ledger.MemoBytes
+  ( Mem,
+    MemoBytes (..),
+    memoBytes,
+    mkMemoBytes,
+  )
 import Cardano.Ledger.SafeHash (SafeToHash)
 import Cardano.Ledger.Serialization (decodeStrictSeq, encodeFoldable)
 import Cardano.Ledger.Shelley.Scripts (MultiSig, getMultiSigBytes, nativeMultiSigTag)
@@ -52,6 +59,7 @@ import Cardano.Ledger.ShelleyMA.Era (MAClass, ShelleyMAEra)
 import Cardano.Slotting.Slot (SlotNo (..))
 import Codec.CBOR.Read (deserialiseFromBytes)
 import Control.DeepSeq (NFData (..))
+import Data.ByteString.Lazy (fromStrict)
 import qualified Data.ByteString.Lazy as Lazy
 import Data.ByteString.Short (fromShort)
 import Data.Coders
@@ -65,14 +73,8 @@ import Data.Coders
     (<!),
     (<*!),
   )
-import Data.MemoBytes
-  ( Mem,
-    MemoBytes (..),
-    memoBytes,
-  )
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, member)
-import Data.Typeable
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -82,7 +84,7 @@ import NoThunks.Class (NoThunks (..))
 -- that property), then both version should have the same bytes,
 -- because we are using FromCBOR(Annotator Timelock) instance.
 
-translate :: CC.Crypto crypto => MultiSig crypto -> Timelock crypto
+translate :: Era era => MultiSig era -> Timelock era
 translate multi =
   let bytes = Lazy.fromStrict (fromShort (getMultiSigBytes multi))
    in case deserialiseFromBytes fromCBOR bytes of
@@ -115,21 +117,42 @@ instance FromCBOR ValidityInterval where
 
 -- ==================================================================
 
-data TimelockRaw crypto
-  = Signature !(KeyHash 'Witness crypto)
-  | AllOf !(StrictSeq (Timelock crypto)) -- NOTE that Timelock and
-  | AnyOf !(StrictSeq (Timelock crypto)) -- TimelockRaw are mutually recursive.
-  | MOfN !Int !(StrictSeq (Timelock crypto)) -- Note that the Int may be negative in which case (MOfN -2 [..]) is always True
+data TimelockRaw era
+  = Signature !(KeyHash 'Witness (Crypto era))
+  | AllOf !(StrictSeq (Timelock era)) -- NOTE that Timelock and
+  | AnyOf !(StrictSeq (Timelock era)) -- TimelockRaw are mutually recursive.
+  | MOfN !Int !(StrictSeq (Timelock era)) -- Note that the Int may be negative in which case (MOfN -2 [..]) is always True
   | TimeStart !SlotNo -- The start time
   | TimeExpire !SlotNo -- The time it expires
   deriving (Eq, Show, Generic, NFData)
 
-deriving instance Typeable crypto => NoThunks (TimelockRaw crypto)
+deriving instance Era era => NoThunks (TimelockRaw era)
+
+-- | This function deconstructs and then reconstructs the timelock script
+-- to prove the compiler that we can arbirarily switch out the eras as long
+-- as the cryptos for both eras are the same.
+translateTimelock ::
+  forall era1 era2.
+  ( Era era1,
+    Era era2,
+    Crypto era1 ~ Crypto era2
+  ) =>
+  Timelock era1 ->
+  Timelock era2
+translateTimelock (TimelockConstr (Memo tl bs)) =
+  let rewrap rtl = TimelockConstr $ mkMemoBytes rtl (fromStrict $ fromShort bs)
+   in case tl of
+        Signature s -> rewrap $ Signature s
+        AllOf l -> rewrap . AllOf $ translateTimelock <$> l
+        AnyOf l -> rewrap . AnyOf $ translateTimelock <$> l
+        MOfN n l -> rewrap $ MOfN n (translateTimelock <$> l)
+        TimeStart x -> rewrap $ TimeStart x
+        TimeExpire x -> rewrap $ TimeExpire x
 
 -- These coding choices are chosen so that a MultiSig script
 -- can be deserialised as a Timelock script
 
-encRaw :: CC.Crypto crypto => TimelockRaw crypto -> Encode 'Open (TimelockRaw crypto)
+encRaw :: Era era => TimelockRaw era -> Encode 'Open (TimelockRaw era)
 encRaw (Signature hash) = Sum Signature 0 !> To hash
 encRaw (AllOf xs) = Sum AllOf 1 !> E encodeFoldable xs
 encRaw (AnyOf xs) = Sum AnyOf 2 !> E encodeFoldable xs
@@ -137,7 +160,7 @@ encRaw (MOfN m xs) = Sum MOfN 3 !> To m !> E encodeFoldable xs
 encRaw (TimeStart m) = Sum TimeStart 4 !> To m
 encRaw (TimeExpire m) = Sum TimeExpire 5 !> To m
 
-decRaw :: CC.Crypto crypto => Word -> Decode 'Open (Annotator (TimelockRaw crypto))
+decRaw :: Era era => Word -> Decode 'Open (Annotator (TimelockRaw era))
 decRaw 0 = Ann (SumD Signature <! From)
 decRaw 1 = Ann (SumD AllOf) <*! D (sequence <$> decodeStrictSeq fromCBOR)
 decRaw 2 = Ann (SumD AnyOf) <*! D (sequence <$> decodeStrictSeq fromCBOR)
@@ -149,7 +172,7 @@ decRaw n = Invalid n
 -- This instance allows us to derive instance FromCBOR(Annotator (Timelock crypto)).
 -- Since Timelock is a newtype around (Memo (Timelock crypto)).
 
-instance CC.Crypto crypto => FromCBOR (Annotator (TimelockRaw crypto)) where
+instance Era era => FromCBOR (Annotator (TimelockRaw era)) where
   fromCBOR = decode (Summands "TimelockRaw" decRaw)
 
 -- =================================================================
@@ -158,62 +181,62 @@ instance CC.Crypto crypto => FromCBOR (Annotator (TimelockRaw crypto)) where
 -- They rely on memoBytes, and TimelockRaw to memoize each constructor of Timelock
 -- =================================================================
 
-newtype Timelock crypto = TimelockConstr (MemoBytes (TimelockRaw crypto))
+newtype Timelock era = TimelockConstr (MemoBytes TimelockRaw era)
   deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, NFData, SafeToHash)
 
-type instance SomeScript 'PhaseOne (ShelleyMAEra ma c) = Timelock c
+type instance SomeScript 'PhaseOne (ShelleyMAEra ma c) = Timelock (ShelleyMAEra ma c)
 
 -- | Since Timelock scripts are a strictly backwards compatible extension of
 -- Multisig scripts, we can use the same 'scriptPrefixTag' tag here as we did
 -- for the ValidateScript instance in Multisig
 instance MAClass ma crypto => EraScript (ShelleyMAEra ma crypto) where
-  type Script (ShelleyMAEra ma crypto) = Timelock crypto
+  type Script (ShelleyMAEra ma crypto) = Timelock (ShelleyMAEra ma crypto)
   scriptPrefixTag _script = nativeMultiSigTag -- "\x00"
   phaseScript PhaseOneRep timelock = Just (Phase1Script timelock)
   phaseScript PhaseTwoRep _ = Nothing
 
 deriving via
-  Mem (TimelockRaw crypto)
+  Mem TimelockRaw era
   instance
-    CC.Crypto crypto => FromCBOR (Annotator (Timelock crypto))
+    Era era => FromCBOR (Annotator (Timelock era))
 
-pattern RequireSignature :: CC.Crypto crypto => KeyHash 'Witness crypto -> Timelock crypto
+pattern RequireSignature :: Era era => KeyHash 'Witness (Crypto era) -> Timelock era
 pattern RequireSignature akh <-
   TimelockConstr (Memo (Signature akh) _)
   where
     RequireSignature akh =
       TimelockConstr $ memoBytes (encRaw (Signature akh))
 
-pattern RequireAllOf :: CC.Crypto crypto => StrictSeq (Timelock crypto) -> Timelock crypto
+pattern RequireAllOf :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern RequireAllOf ms <-
   TimelockConstr (Memo (AllOf ms) _)
   where
     RequireAllOf ms =
       TimelockConstr $ memoBytes (encRaw (AllOf ms))
 
-pattern RequireAnyOf :: CC.Crypto crypto => StrictSeq (Timelock crypto) -> Timelock crypto
+pattern RequireAnyOf :: Era era => StrictSeq (Timelock era) -> Timelock era
 pattern RequireAnyOf ms <-
   TimelockConstr (Memo (AnyOf ms) _)
   where
     RequireAnyOf ms =
       TimelockConstr $ memoBytes (encRaw (AnyOf ms))
 
-pattern RequireMOf :: CC.Crypto crypto => Int -> StrictSeq (Timelock crypto) -> Timelock crypto
+pattern RequireMOf :: Era era => Int -> StrictSeq (Timelock era) -> Timelock era
 pattern RequireMOf n ms <-
   TimelockConstr (Memo (MOfN n ms) _)
   where
     RequireMOf n ms =
       TimelockConstr $ memoBytes (encRaw (MOfN n ms))
 
-pattern RequireTimeExpire :: CC.Crypto crypto => SlotNo -> Timelock crypto
+pattern RequireTimeExpire :: Era era => SlotNo -> Timelock era
 pattern RequireTimeExpire mslot <-
   TimelockConstr (Memo (TimeExpire mslot) _)
   where
     RequireTimeExpire mslot =
       TimelockConstr $ memoBytes (encRaw (TimeExpire mslot))
 
-pattern RequireTimeStart :: CC.Crypto crypto => SlotNo -> Timelock crypto
+pattern RequireTimeStart :: Era era => SlotNo -> Timelock era
 pattern RequireTimeStart mslot <-
   TimelockConstr (Memo (TimeStart mslot) _)
   where
@@ -236,10 +259,10 @@ ltePosInfty SNothing _ = False -- ∞ > j
 ltePosInfty (SJust i) j = i <= j
 
 evalTimelock ::
-  CC.Crypto crypto =>
-  Set (KeyHash 'Witness crypto) ->
+  Era era =>
+  Set (KeyHash 'Witness (Crypto era)) ->
   ValidityInterval ->
-  Timelock crypto ->
+  Timelock era ->
   Bool
 evalTimelock _vhks (ValidityInterval txStart _) (RequireTimeStart lockStart) =
   lockStart `lteNegInfty` txStart
@@ -265,7 +288,7 @@ inInterval slot (ValidityInterval (SJust bottom) SNothing) = bottom <= slot
 inInterval slot (ValidityInterval (SJust bottom) (SJust top)) =
   bottom <= slot && slot < top
 
-showTimelock :: CC.Crypto crypto => Timelock crypto -> String
+showTimelock :: Era era => Timelock era -> String
 showTimelock (RequireTimeStart (SlotNo i)) = "(Start >= " ++ show i ++ ")"
 showTimelock (RequireTimeExpire (SlotNo i)) = "(Expire < " ++ show i ++ ")"
 showTimelock (RequireAllOf xs) = "(AllOf " ++ foldl accum ")" xs

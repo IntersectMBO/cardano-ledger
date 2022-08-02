@@ -143,7 +143,7 @@ outTooBigFailure out = Left [UtxowFailure (UtxoFailure (OutputTooBigUTxO [out]))
 ----------------------------------------------------
 
 -- This is the most lax policy possible, requiring no authorization at all.
-purplePolicy :: Timelock TestCrypto
+purplePolicy :: Timelock (MaryEra TestCrypto)
 purplePolicy = RequireAllOf (StrictSeq.fromList [])
 
 purplePolicyId :: PolicyID TestCrypto
@@ -266,7 +266,7 @@ stopInterval = SlotNo 19
 afterStop :: SlotNo
 afterStop = SlotNo 20
 
-boundedTimePolicy :: Timelock TestCrypto
+boundedTimePolicy :: Timelock (MaryEra TestCrypto)
 boundedTimePolicy =
   RequireAllOf
     ( StrictSeq.fromList
@@ -394,7 +394,7 @@ expectedUTxOTimeEx2 =
 -- refer to this example.
 --------------------------------------------------------------
 
-alicePolicy :: Timelock TestCrypto
+alicePolicy :: Timelock (MaryEra TestCrypto)
 alicePolicy = RequireSignature . asWitness . hashKey . vKey $ Cast.alicePay
 
 alicePolicyId :: PolicyID TestCrypto

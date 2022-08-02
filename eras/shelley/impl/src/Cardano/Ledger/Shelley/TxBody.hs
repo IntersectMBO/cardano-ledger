@@ -84,6 +84,7 @@ import Cardano.Ledger.Credential (Credential (..), Ptr (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Keys.WitVKey
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes, memoBytes, pattern Memo)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash)
 import Cardano.Ledger.Serialization
   ( decodeRecordNamed,
@@ -130,7 +131,6 @@ import Data.Coders
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe (fromMaybe)
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
@@ -374,7 +374,7 @@ instance
 -- ====================================================
 -- Introduce ShelleyTxBody as a newtype around a MemoBytes
 
-newtype ShelleyTxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
+newtype ShelleyTxBody era = TxBodyConstr (MemoBytes TxBodyRaw era)
   deriving (Generic, Typeable)
   deriving newtype (SafeToHash)
 
@@ -464,7 +464,7 @@ deriving instance EraTxBody era => Show (TxBody era)
 
 deriving instance Eq (TxBody era)
 
-deriving via Mem (TxBodyRaw era) instance EraTxBody era => FromCBOR (Annotator (TxBody era))
+deriving via Mem TxBodyRaw era instance EraTxBody era => FromCBOR (Annotator (TxBody era))
 
 -- | Pattern for use by external users
 pattern ShelleyTxBody ::

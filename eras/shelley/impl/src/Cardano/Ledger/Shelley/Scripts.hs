@@ -36,6 +36,12 @@ import Cardano.Ledger.BaseTypes (invalidKey)
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (Witness))
+import Cardano.Ledger.MemoBytes
+  ( Mem,
+    MemoBytes,
+    memoBytes,
+    pattern Memo,
+  )
 import Cardano.Ledger.SafeHash (SafeToHash (..))
 import Cardano.Ledger.Serialization (decodeList, decodeRecordSum, encodeFoldable)
 import Cardano.Ledger.Shelley.Era
@@ -43,11 +49,7 @@ import Control.DeepSeq (NFData)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short (ShortByteString)
 import Data.Coders (Encode (..), (!>))
-import Data.MemoBytes
-  ( Mem,
-    MemoBytes (..),
-    memoBytes,
-  )
+import Data.Typeable (Typeable)
 import GHC.Generics (Generic)
 import NoThunks.Class (NoThunks (..))
 
@@ -65,22 +67,22 @@ import NoThunks.Class (NoThunks (..))
 -- This makes it easy to express multi-signature addresses, and provides an
 -- extension point to express other validity conditions, e.g., as needed for
 -- locking funds used with lightning.
-data MultiSigRaw crypto
+data MultiSigRaw era
   = -- | Require the redeeming transaction be witnessed by the spending key
     --   corresponding to the given verification key hash.
-    RequireSignature' !(KeyHash 'Witness crypto)
+    RequireSignature' !(KeyHash 'Witness (Crypto era))
   | -- | Require all the sub-terms to be satisfied.
-    RequireAllOf' ![MultiSig crypto]
+    RequireAllOf' ![MultiSig era]
   | -- | Require any one of the sub-terms to be satisfied.
-    RequireAnyOf' ![MultiSig crypto]
+    RequireAnyOf' ![MultiSig era]
   | -- | Require M of the given sub-terms to be satisfied.
-    RequireMOf' !Int ![MultiSig crypto]
+    RequireMOf' !Int ![MultiSig era]
   deriving (Show, Eq, Generic)
   deriving anyclass (NoThunks)
 
 instance NFData (MultiSigRaw era)
 
-newtype MultiSig crypto = MultiSigConstr (MemoBytes (MultiSigRaw crypto))
+newtype MultiSig era = MultiSigConstr (MemoBytes MultiSigRaw era)
   deriving (Eq, Show, Generic)
   deriving newtype (ToCBOR, NoThunks, SafeToHash)
 
@@ -89,10 +91,10 @@ newtype MultiSig crypto = MultiSigConstr (MemoBytes (MultiSigRaw crypto))
 nativeMultiSigTag :: BS.ByteString
 nativeMultiSigTag = "\00"
 
-type instance SomeScript 'PhaseOne (ShelleyEra c) = MultiSig c
+type instance SomeScript 'PhaseOne (ShelleyEra c) = MultiSig (ShelleyEra c)
 
 instance CC.Crypto c => EraScript (ShelleyEra c) where
-  type Script (ShelleyEra c) = MultiSig c
+  type Script (ShelleyEra c) = MultiSig (ShelleyEra c)
 
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   scriptPrefixTag _script = nativeMultiSigTag
@@ -101,37 +103,36 @@ instance CC.Crypto c => EraScript (ShelleyEra c) where
 
 deriving newtype instance NFData (MultiSig era)
 
-getMultiSigBytes :: MultiSig crypto -> ShortByteString
+getMultiSigBytes :: Era era => MultiSig era -> ShortByteString
 getMultiSigBytes (MultiSigConstr (Memo _ bytes)) = bytes
 
 deriving via
-  Mem (MultiSigRaw crypto)
+  Mem MultiSigRaw era
   instance
-    CC.Crypto crypto =>
-    FromCBOR (Annotator (MultiSig crypto))
+    Era era => FromCBOR (Annotator (MultiSig era))
 
-pattern RequireSignature :: CC.Crypto crypto => KeyHash 'Witness crypto -> MultiSig crypto
+pattern RequireSignature :: Era era => KeyHash 'Witness (Crypto era) -> MultiSig era
 pattern RequireSignature akh <-
   MultiSigConstr (Memo (RequireSignature' akh) _)
   where
     RequireSignature akh =
       MultiSigConstr $ memoBytes (Sum RequireSignature' 0 !> To akh)
 
-pattern RequireAllOf :: CC.Crypto crypto => [MultiSig crypto] -> MultiSig crypto
+pattern RequireAllOf :: Era era => [MultiSig era] -> MultiSig era
 pattern RequireAllOf ms <-
   MultiSigConstr (Memo (RequireAllOf' ms) _)
   where
     RequireAllOf ms =
       MultiSigConstr $ memoBytes (Sum RequireAllOf' 1 !> E encodeFoldable ms)
 
-pattern RequireAnyOf :: CC.Crypto crypto => [MultiSig crypto] -> MultiSig crypto
+pattern RequireAnyOf :: Era era => [MultiSig era] -> MultiSig era
 pattern RequireAnyOf ms <-
   MultiSigConstr (Memo (RequireAnyOf' ms) _)
   where
     RequireAnyOf ms =
       MultiSigConstr $ memoBytes (Sum RequireAnyOf' 2 !> E encodeFoldable ms)
 
-pattern RequireMOf :: CC.Crypto crypto => Int -> [MultiSig crypto] -> MultiSig crypto
+pattern RequireMOf :: Era era => Int -> [MultiSig era] -> MultiSig era
 pattern RequireMOf n ms <-
   MultiSigConstr (Memo (RequireMOf' n ms) _)
   where
@@ -141,8 +142,8 @@ pattern RequireMOf n ms <-
 {-# COMPLETE RequireSignature, RequireAllOf, RequireAnyOf, RequireMOf #-}
 
 instance
-  CC.Crypto crypto =>
-  FromCBOR (Annotator (MultiSigRaw crypto))
+  (Era era, Typeable era) =>
+  FromCBOR (Annotator (MultiSigRaw era))
   where
   fromCBOR = decodeRecordSum "MultiSig" $
     \case

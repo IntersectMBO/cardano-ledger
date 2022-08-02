@@ -372,13 +372,13 @@ data EraElaboratorTxAccum era = EraElaboratorTxAccum
     _eetaDats :: Alonzo.TxDats era
   }
 
-instance Typeable era => Semigroup (EraElaboratorTxAccum era) where
+instance Era era => Semigroup (EraElaboratorTxAccum era) where
   EraElaboratorTxAccum a b <> EraElaboratorTxAccum a' b' =
     EraElaboratorTxAccum
       (a <> a')
       (b <> b')
 
-instance Typeable era => Monoid (EraElaboratorTxAccum era) where
+instance Era era => Monoid (EraElaboratorTxAccum era) where
   mempty = EraElaboratorTxAccum mempty mempty
 
 -- under normal circumstances, this arises during elaboration, at which time the
@@ -1162,7 +1162,7 @@ class
 
   makeTimelockScript ::
     proxy era ->
-    IfSupportsTimelock Void (Timelock (Crypto era)) (EraScriptFeature era) ->
+    IfSupportsTimelock Void (Timelock era) (EraScriptFeature era) ->
     Core.Script era
 
   makePlutusScript ::
@@ -1190,7 +1190,7 @@ class
     ModelScript_PlutusV1 ms ->
       pure $ makePlutusScript proxy (SupportsPlutus $ elaborateModelScript ms)
     ModelScript_Timelock ms -> do
-      x <- elaborateModelTimelock (getScriptWitnessFor (Proxy :: Proxy era) . liftModelCredential) ms
+      x <- elaborateModelTimelock @era (getScriptWitnessFor (Proxy :: Proxy era) . liftModelCredential) ms
       pure $ makeTimelockScript proxy $ SupportsTimelock x
 
   -- | Construct a TxBody from some elaborated inputs.

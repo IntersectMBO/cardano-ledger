@@ -70,6 +70,7 @@ import Cardano.Ledger.Keys
     hashKey,
   )
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness (..), ChainCode (..))
+import Cardano.Ledger.MemoBytes (MemoBytes (..))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.SafeHash (SafeHash, extractHash)
 import Cardano.Ledger.Shelley.EpochBoundary
@@ -180,7 +181,6 @@ import qualified Data.ByteString.Lazy as Lazy (ByteString, toStrict)
 import qualified Data.Hashable as Hashable
 import Data.IP (IPv4, IPv6)
 import qualified Data.Map.Strict as Map
-import Data.MemoBytes (MemoBytes (..))
 import Data.Proxy (Proxy (..))
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set, toList)
@@ -1092,7 +1092,7 @@ ppDCert (DCertGenesis x) = ppSexp "DCertGenesis" [ppGenesisDelegCert x]
 ppDCert (DCertMir x) = ppSexp "DCertMir" [ppMIRCert x]
 
 ppTxBody ::
-  (PrettyA (TxOut era), TxOut era ~ ShelleyTxOut era) =>
+  (Era era, PrettyA (TxOut era), TxOut era ~ ShelleyTxOut era) =>
   PrettyA (PParamsUpdate era) =>
   ShelleyTxBody era ->
   PDoc
@@ -1161,7 +1161,7 @@ instance PrettyA (DCert c) where
   prettyA = ppDCert
 
 instance
-  (PrettyA (TxOut era), PrettyA (PParamsUpdate era), TxOut era ~ ShelleyTxOut era) =>
+  (PrettyA (TxOut era), PrettyA (PParamsUpdate era), TxOut era ~ ShelleyTxOut era, Era era) =>
   PrettyA (ShelleyTxBody era)
   where
   prettyA = ppTxBody
@@ -1373,7 +1373,7 @@ instance PrettyA Ptr where
 -- ===========================================
 -- Cardano.Ledger.Shelley.Scripts
 
-ppMultiSig :: Crypto crypto => MultiSig crypto -> PDoc
+ppMultiSig :: Era era => MultiSig era -> PDoc
 ppMultiSig (RequireSignature hk) = ppSexp "Require" [ppKeyHash hk]
 ppMultiSig (RequireAllOf ps) = ppSexp "AllOf" (map ppMultiSig ps)
 ppMultiSig (RequireAnyOf ps) = ppSexp "AnyOf" (map ppMultiSig ps)
@@ -1385,7 +1385,7 @@ ppScriptHash (ScriptHash h) = ppSexp "ScriptHash" [ppHash h]
 instance PrettyA (ScriptHash c) where
   prettyA = ppScriptHash
 
-instance Crypto c => PrettyA (MultiSig c) where
+instance Era era => PrettyA (MultiSig era) where
   prettyA = ppMultiSig
 
 -- ====================================================

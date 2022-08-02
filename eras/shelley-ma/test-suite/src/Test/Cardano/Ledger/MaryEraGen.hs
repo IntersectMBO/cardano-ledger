@@ -124,7 +124,7 @@ maryGenesisValue (GenEnv _ _ Constants {minGenesisOutputVal, maxGenesisOutputVal
 -- | An infinite indexed collection of trivial policies.
 --  They are trivial in the sense that they require no
 --  signature and can be submitted at any time.
-trivialPolicy :: CC.Crypto c => Int -> Timelock c
+trivialPolicy :: Era era => Int -> Timelock era
 trivialPolicy i
   | i == 0 = RequireAllOf (StrictSeq.fromList [])
   | otherwise = RequireAllOf (StrictSeq.fromList [trivialPolicy (i - 1)])
@@ -142,7 +142,7 @@ coloredCoinMaxMint = 1000 * 1000
 -- name, "red".                                       --
 --------------------------------------------------------
 
-redCoins :: CC.Crypto c => Timelock c
+redCoins :: Era era => Timelock era
 redCoins = trivialPolicy 0
 
 redCoinId :: forall c. CC.Crypto c => PolicyID c
@@ -163,7 +163,7 @@ genRed = do
 -- asset name.
 --------------------------------------------------------
 
-blueCoins :: CC.Crypto c => Timelock c
+blueCoins :: Era era => Timelock era
 blueCoins = trivialPolicy 1
 
 blueCoinId :: forall c. CC.Crypto c => PolicyID c
@@ -194,7 +194,7 @@ genBlue = do
 -- asset names.                                       --
 --------------------------------------------------------
 
-yellowCoins :: CC.Crypto c => Timelock c
+yellowCoins :: Era era => Timelock era
 yellowCoins = trivialPolicy 2
 
 yellowCoinId :: forall c. CC.Crypto c => PolicyID c
@@ -216,7 +216,7 @@ genYellow = do
 
 -- | Carefully crafted to apply in any Era where Value is MaryValue
 -- | This map allows us to lookup a minting policy by the policy ID.
-policyIndex :: CC.Crypto c => Map (PolicyID c) (Timelock c)
+policyIndex :: Era era => Map (PolicyID (Crypto era)) (Timelock era)
 policyIndex =
   Map.fromList
     [ (redCoinId, redCoins),
@@ -295,7 +295,7 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (MATxBody era, [Timelock (Crypto era)])
+  Gen (MATxBody era, [Timelock era])
 genTxBody pparams slot ins outs cert wdrl fee upd meta = do
   validityInterval <- genValidityInterval slot
   mint <- genMint

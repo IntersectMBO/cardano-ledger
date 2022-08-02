@@ -25,6 +25,7 @@ import Cardano.Ledger.Shelley.Tx (decodeWits)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
   ( MAAuxiliaryData (..),
   )
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock, translateTimelock)
 import qualified Cardano.Ledger.Val as Val
 import Control.Monad.Except (throwError)
 import Data.Coerce (coerce)
@@ -164,9 +165,12 @@ instance Crypto c => TranslateEra (MaryEra c) ShelleyWitnesses where
 instance Crypto c => TranslateEra (MaryEra c) Update where
   translateEra _ (Update pp en) = pure $ Update (coerce pp) en
 
+instance Crypto c => TranslateEra (MaryEra c) Timelock where
+  translateEra _ = pure . translateTimelock
+
 instance Crypto c => TranslateEra (MaryEra c) MAAuxiliaryData where
-  translateEra _ (MAAuxiliaryData md as) =
-    pure $ MAAuxiliaryData md as
+  translateEra ctx (MAAuxiliaryData md as) =
+    pure $ MAAuxiliaryData md $ translateEra' ctx <$> as
 
 translateValue :: Crypto c => Coin -> MaryValue c
 translateValue = Val.inject

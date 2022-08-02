@@ -210,7 +210,7 @@ mkMultiSigWit ::
   (Reflect era) =>
   Proof era ->
   Maybe Tag ->
-  Shelley.MultiSig (Crypto era) ->
+  Shelley.MultiSig era ->
   GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
 mkMultiSigWit era mTag (Shelley.RequireSignature keyHash) = mkWitVKey era mTag (KeyHashObj keyHash)
 mkMultiSigWit era mTag (Shelley.RequireAllOf timelocks) = F.fold <$> mapM (mkMultiSigWit era mTag) timelocks
@@ -227,7 +227,7 @@ mkTimelockWit ::
   (Reflect era) =>
   Proof era ->
   Maybe Tag ->
-  Timelock (Crypto era) ->
+  Timelock era ->
   GenRS era (SafeHash (Crypto era) EraIndependentTxBody -> [WitnessesField era])
 mkTimelockWit era mTag =
   \case

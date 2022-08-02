@@ -66,7 +66,8 @@ import Cardano.Ledger.Shelley.PParams (Update)
 import Cardano.Ledger.Shelley.TxBody (DCert, Wdrl)
 import Cardano.Ledger.Shelley.UTxO (UTxO (..), balance)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData (MAAuxiliaryData (..))
-import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..))
+import Cardano.Ledger.ShelleyMA.Era ()
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock (..), translateTimelock)
 import Cardano.Ledger.TxIn (TxIn)
 import Cardano.Ledger.Val (Val (coin, isAdaOnly, (<+>), (<×>)))
 import Cardano.Slotting.Slot (SlotNo (..))
@@ -221,20 +222,20 @@ genAux constants = do
   maybeAux <- genEraAuxiliaryData @(MaryEra c) constants
   pure $
     fmap
-      (\(MAAuxiliaryData x y) -> AlonzoAuxiliaryData x (TimelockScript <$> y))
+      (\(MAAuxiliaryData x y) -> AlonzoAuxiliaryData x (TimelockScript . translateTimelock <$> y))
       maybeAux
 
 instance CC.Crypto c => ScriptClass (AlonzoEra c) where
   basescript proxy key = someLeaf proxy key
-  isKey _ (TimelockScript x) = isKey (Proxy @(MaryEra c)) x
+  isKey _ (TimelockScript x) = isKey (Proxy @(MaryEra c)) $ translateTimelock x
   isKey _ (PlutusScript _ _) = Nothing
   isOnePhase _ (TimelockScript _) = True
   isOnePhase _ (PlutusScript _ _) = False
-  quantify _ (TimelockScript x) = fmap TimelockScript (quantify (Proxy @(MaryEra c)) x)
+  quantify _ (TimelockScript x) = fmap (TimelockScript . translateTimelock) (quantify (Proxy @(MaryEra c)) (translateTimelock x))
   quantify _ x = Leaf x
-  unQuantify _ quant = TimelockScript $ unQuantify (Proxy @(MaryEra c)) (fmap unTime quant)
+  unQuantify _ quant = TimelockScript . translateTimelock $ unQuantify (Proxy @(MaryEra c)) (fmap (translateTimelock . unTime) quant)
 
-unTime :: AlonzoScript era -> Timelock (Crypto era)
+unTime :: AlonzoScript era -> Timelock era
 unTime (TimelockScript x) = x
 unTime (PlutusScript _ _) = error "Plutus in Timelock"
 

@@ -149,7 +149,7 @@ txInfoInV2 (UTxO mp) txin =
       out <- txInfoOutV2 (TxOutFromInput txin) txout
       Right (PV2.TxInInfo (Alonzo.txInfoIn' txin) out)
 
-transRedeemer :: Data era -> PV2.Redeemer
+transRedeemer :: Era era => Data era -> PV2.Redeemer
 transRedeemer = PV2.Redeemer . PV2.dataToBuiltinData . getPlutusData
 
 transRedeemerPtr ::

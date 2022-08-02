@@ -62,7 +62,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
       cddlTest @(DCert StandardCrypto) n "certificate",
       cddlTest @(TxIn StandardCrypto) n "transaction_input",
       cddlAnnotatorTest @(Metadata ShelleyE) n "transaction_metadata",
-      cddlAnnotatorTest @(MultiSig StandardCrypto) n "multisig_script",
+      cddlAnnotatorTest @(MultiSig ShelleyE) n "multisig_script",
       cddlTest @(Update ShelleyE) n "update",
       cddlTest @(ProposedPPUpdates ShelleyE) n "proposed_protocol_parameter_updates",
       cddlTest @(ShelleyPParamsUpdate ShelleyE) n "protocol_param_update",

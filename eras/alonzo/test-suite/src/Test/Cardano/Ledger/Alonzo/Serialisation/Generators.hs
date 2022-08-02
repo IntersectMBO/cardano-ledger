@@ -52,10 +52,10 @@ import Test.Cardano.Ledger.Shelley.Serialisation.EraIndepGenerators ()
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators (genMintValues)
 import Test.QuickCheck
 
-instance Arbitrary (Data era) where
+instance Era era => Arbitrary (Data era) where
   arbitrary = Data <$> arbitrary
 
-instance Arbitrary (BinaryData era) where
+instance Era era => Arbitrary (BinaryData era) where
   arbitrary = dataToBinaryData <$> arbitrary
 
 instance Arbitrary PV1.Data where

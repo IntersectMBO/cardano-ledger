@@ -43,6 +43,7 @@ library
     Cardano.Ledger.Mary.Translation
     Cardano.Ledger.Mary.Value
     Cardano.Ledger.ShelleyMA
+    Cardano.Ledger.ShelleyMA.Era
     Cardano.Ledger.ShelleyMA.AuxiliaryData
     Cardano.Ledger.ShelleyMA.Rules
     Cardano.Ledger.ShelleyMA.Timelocks
@@ -50,7 +51,6 @@ library
     Cardano.Ledger.ShelleyMA.Tx
 
   other-modules:
-    Cardano.Ledger.ShelleyMA.Era
     Cardano.Ledger.ShelleyMA.Rules.Utxo
     Cardano.Ledger.ShelleyMA.Rules.Utxow
 

@@ -51,7 +51,7 @@ fromRight :: Either e a -> a
 fromRight (Right x) = x
 fromRight _ = undefined
 
-script :: S.MultiSig StandardCrypto
+script :: S.MultiSig (ShelleyEra StandardCrypto)
 script = S.RequireAllOf []
 
 scriptHash :: S.ScriptHash StandardCrypto

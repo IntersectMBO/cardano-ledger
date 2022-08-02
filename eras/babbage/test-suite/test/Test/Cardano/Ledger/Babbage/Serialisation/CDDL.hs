@@ -30,7 +30,7 @@ tests n = withResource combinedCDDL (const (pure ())) $ \cddl ->
     [ cddlTest @(Value B) n "coin",
       cddlAnnotatorTest @(TxBody B) n "transaction_body",
       cddlAnnotatorTest @(AuxiliaryData B) n "auxiliary_data",
-      cddlAnnotatorTest @(MA.Timelock StandardCrypto) n "native_script",
+      cddlAnnotatorTest @(MA.Timelock (BabbageEra StandardCrypto)) n "native_script",
       cddlAnnotatorTest @(Data B) n "plutus_data",
       cddlTest @(TxOut B) n "transaction_output",
       cddlAnnotatorTest @(Script B) n "script",

@@ -26,7 +26,7 @@ import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Data.ByteString.Short (ShortByteString)
 
-type instance SomeScript 'PhaseOne (ConwayEra c) = Timelock c
+type instance SomeScript 'PhaseOne (ConwayEra c) = Timelock (ConwayEra c)
 
 type instance SomeScript 'PhaseTwo (ConwayEra c) = (Language, ShortByteString)
 

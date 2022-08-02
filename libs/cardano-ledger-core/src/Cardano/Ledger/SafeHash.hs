@@ -64,7 +64,6 @@ import Control.DeepSeq (NFData)
 import Data.ByteString (ByteString)
 import Data.ByteString.Short (ShortByteString, fromShort)
 import Data.Foldable (fold)
-import Data.MemoBytes (MemoBytes (..))
 import Data.Typeable
 import NoThunks.Class (NoThunks (..))
 
@@ -132,9 +131,6 @@ class SafeToHash t where
 
 -- There are a limited number of direct instances. Everything else should come
 -- from newtype deriving.
-
-instance SafeToHash (MemoBytes t) where
-  originalBytes = fromShort . memobytes
 
 instance SafeToHash ShortByteString where
   originalBytes x = fromShort x

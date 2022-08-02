@@ -16,7 +16,6 @@ import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.Core (Crypto (..), EraScript (hashScript), PParamsUpdate, hashAuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
-import qualified Cardano.Ledger.Crypto as CC (Crypto)
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..), hashKey)
 import Cardano.Ledger.Mary.Value (AssetName (..), MaryValue (..), MultiAsset (..), PolicyID (..))
 import qualified Cardano.Ledger.Shelley.Metadata as SMD
@@ -68,7 +67,7 @@ type M = MaryEra TestCrypto
 -- == Test Values for Building Timelock Scripts ==
 -- ===============================================
 
-policy1 :: CC.Crypto crypto => Timelock crypto
+policy1 :: Era era => Timelock era
 policy1 = RequireAnyOf . StrictSeq.fromList $ []
 
 policyID1 :: PolicyID TestCrypto
@@ -151,7 +150,7 @@ scriptGoldenTest =
       kh1 = hashKey . snd . mkGenKey $ RawSeed 1 1 1 1 1 :: KeyHash 'Witness (Crypto era)
    in checkEncodingCBORAnnotated
         "timelock_script"
-        ( RequireAllOf @(Crypto era)
+        ( RequireAllOf @era
             ( StrictSeq.fromList
                 [ RequireMOf 1 $ StrictSeq.fromList [RequireSignature kh0, RequireSignature kh1],
                   RequireTimeStart (SlotNo 100),
@@ -186,8 +185,8 @@ scriptGoldenTest =
               )
         )
 
-metadataNoScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock (Crypto era)) => TestTree
-metadataNoScritpsGoldenTest =
+metadataNoScriptsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock era) => TestTree
+metadataNoScriptsGoldenTest =
   checkEncodingCBORAnnotated
     "metadata_no_scripts"
     (MAAuxiliaryData @era (Map.singleton 17 (SMD.I 42)) StrictSeq.empty)
@@ -200,9 +199,9 @@ metadataNoScritpsGoldenTest =
         )
     )
 
--- CONTINUE also Scritps
-metadataWithScritpsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock (Crypto era)) => TestTree
-metadataWithScritpsGoldenTest =
+-- CONTINUE also Scripts
+metadataWithScriptsGoldenTest :: forall era. (Era era, Core.Script era ~ Timelock era) => TestTree
+metadataWithScriptsGoldenTest =
   checkEncodingCBORAnnotated
     "metadata_with_scripts"
     ( MAAuxiliaryData @era
@@ -216,7 +215,7 @@ metadataWithScritpsGoldenTest =
             . TkInteger 42
             . TkListLen 1 -- one script
         )
-        <> S (policy1 @(Crypto era))
+        <> S (policy1 @era)
     )
 
 -- | Golden Tests for Allegra
@@ -229,8 +228,8 @@ goldenEncodingTestsAllegra =
         (Val.inject (Coin 1) :: MaryValue TestCrypto)
         (T (TkInteger 1)),
       scriptGoldenTest @A,
-      metadataNoScritpsGoldenTest @A,
-      metadataWithScritpsGoldenTest @A,
+      metadataNoScriptsGoldenTest @A,
+      metadataWithScriptsGoldenTest @A,
       -- "minimal_txn_body"
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @A testAddrE (Coin 2)
@@ -363,8 +362,8 @@ goldenEncodingTestsMary =
               )
         ),
       scriptGoldenTest @M,
-      metadataNoScritpsGoldenTest @M,
-      metadataWithScritpsGoldenTest @M,
+      metadataNoScriptsGoldenTest @M,
+      metadataWithScriptsGoldenTest @M,
       -- "minimal_txn_body"
       let tin = mkTxInPartial genesisId 1
           tout = ShelleyTxOut @M testAddrE (Val.inject $ Coin 2)

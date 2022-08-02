@@ -30,6 +30,7 @@ import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Core as Core (AuxiliaryData)
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes (EraIndependentAuxiliaryData)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Cardano.Ledger.SafeHash (HashAnnotated, SafeToHash, hashAnnotated)
 import Cardano.Ledger.Serialization (mapFromCBOR, mapToCBOR)
 import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
@@ -48,7 +49,6 @@ import Codec.CBOR.Decoding
 import Control.DeepSeq
 import Data.Coders
 import Data.Map.Strict (Map)
-import Data.MemoBytes (Mem, MemoBytes (Memo), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Word (Word64)
@@ -82,7 +82,7 @@ deriving instance NoThunks (Script era) => NoThunks (AuxiliaryDataRaw era)
 
 instance NFData (Script era) => NFData (AuxiliaryDataRaw era)
 
-newtype MAAuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes (AuxiliaryDataRaw era))
+newtype MAAuxiliaryData era = AuxiliaryDataWithBytes (MemoBytes AuxiliaryDataRaw era)
   deriving (Generic)
   deriving newtype (ToCBOR, SafeToHash)
 
@@ -99,7 +99,7 @@ deriving newtype instance
 deriving newtype instance NFData (Script era) => NFData (MAAuxiliaryData era)
 
 pattern MAAuxiliaryData ::
-  ToCBOR (Script era) =>
+  (ToCBOR (Script era), Era era) =>
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
   MAAuxiliaryData era
@@ -118,6 +118,7 @@ type AuxiliaryData = MAAuxiliaryData
 {-# DEPRECATED AuxiliaryData "Use `MAAuxiliaryData` instead" #-}
 
 pattern AuxiliaryData' ::
+  Era era =>
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
   MAAuxiliaryData era
@@ -168,7 +169,7 @@ instance
           )
 
 deriving via
-  (Mem (AuxiliaryDataRaw era))
+  (Mem AuxiliaryDataRaw era)
   instance
     (Era era, FromCBOR (Annotator (Script era))) =>
     FromCBOR (Annotator (MAAuxiliaryData era))

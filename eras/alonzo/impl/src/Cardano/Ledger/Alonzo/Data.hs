@@ -62,6 +62,7 @@ import Cardano.Ledger.BaseTypes (ProtVer, StrictMaybe (..))
 import Cardano.Ledger.Core hiding (AuxiliaryData)
 import qualified Cardano.Ledger.Core as Core
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes, mkMemoBytes, shortToLazy)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeToHash (..),
@@ -72,13 +73,12 @@ import Cardano.Ledger.Shelley.Metadata (Metadatum, validMetadatum)
 import Cardano.Prelude (HeapWords (..), heapWords0, heapWords1)
 import qualified Codec.Serialise as Cborg (Serialise (..))
 import Control.DeepSeq (NFData)
-import Data.ByteString.Lazy (fromStrict, toStrict)
+import Data.ByteString.Lazy (fromStrict)
 import Data.ByteString.Short (ShortByteString, fromShort, toShort)
 import Data.Coders
 import Data.Foldable (foldl')
 import Data.Map (Map)
 import Data.Maybe (mapMaybe)
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Typeable (Typeable)
@@ -104,29 +104,37 @@ deriving instance NoThunks Plutus.Data
 -- the newtype Data is a wrapper around the type that Plutus expects as data.
 -- The newtype will memoize the serialized bytes.
 
-newtype Data era = DataConstr (MemoBytes Plutus.Data)
+-- | This is a wrapper with a phantom era for Plutus.Data, since we need
+-- something with kind (* -> *) for MemoBytes
+newtype PlutusData era = PlutusData Plutus.Data
+  deriving newtype (Eq, Generic, Show, ToCBOR, NFData, NoThunks, Cborg.Serialise)
+
+instance Typeable era => FromCBOR (Annotator (PlutusData era)) where
+  fromCBOR = pure <$> Cborg.decode
+
+newtype Data era = DataConstr (MemoBytes PlutusData era)
   deriving (Eq, Generic, Show)
   deriving newtype (SafeToHash, ToCBOR, NFData)
 
-instance Typeable era => FromCBOR (Annotator (Data era)) where
+instance (Typeable era, Era era) => FromCBOR (Annotator (Data era)) where
   fromCBOR = do
     (Annotator getT, Annotator getBytes) <- withSlice fromCBOR
-    pure (Annotator (\fullbytes -> DataConstr (Memo (getT fullbytes) (toShort (toStrict (getBytes fullbytes))))))
+    pure (Annotator (\fullbytes -> DataConstr (mkMemoBytes (getT fullbytes) (getBytes fullbytes))))
 
 instance (Crypto era ~ c) => HashAnnotated (Data era) EraIndependentData c
 
-instance NoThunks (Data era)
+instance Typeable era => NoThunks (Data era)
 
-pattern Data :: Plutus.Data -> Data era
+pattern Data :: Era era => Plutus.Data -> Data era
 pattern Data p <-
-  DataConstr (Memo p _)
+  DataConstr (Memo (PlutusData p) _)
   where
-    Data p = DataConstr (memoBytes (To p))
+    Data p = DataConstr $ memoBytes (To $ PlutusData p)
 
 {-# COMPLETE Data #-}
 
-getPlutusData :: Data era -> Plutus.Data
-getPlutusData (DataConstr (Memo d _)) = d
+getPlutusData :: Era era => Data era -> Plutus.Data
+getPlutusData (DataConstr (Memo (PlutusData d) _)) = d
 
 -- | Inlined data must be stored in the most compact form because it contributes
 -- to the memory overhead of the ledger state. Constructor is intentionally not
@@ -140,12 +148,12 @@ instance (Crypto era ~ c) => HashAnnotated (BinaryData era) EraIndependentData c
 instance Typeable era => ToCBOR (BinaryData era) where
   toCBOR (BinaryData sbs) = encodeTag 24 <> toCBOR sbs
 
-instance Typeable era => FromCBOR (BinaryData era) where
+instance Era era => FromCBOR (BinaryData era) where
   fromCBOR = do
     bs <- decodeNestedCborBytes
     either fail pure $! makeBinaryData (toShort bs)
 
-makeBinaryData :: ShortByteString -> Either String (BinaryData era)
+makeBinaryData :: Era era => ShortByteString -> Either String (BinaryData era)
 makeBinaryData sbs = do
   let binaryData = BinaryData sbs
   -- We need to verify that binary data is indeed valid Plutus Data.
@@ -153,22 +161,22 @@ makeBinaryData sbs = do
     Left e -> Left $ "Invalid CBOR for Data: " <> show e
     Right _d -> Right binaryData
 
-decodeBinaryData :: BinaryData era -> Either DecoderError (Data era)
+decodeBinaryData :: Era era => BinaryData era -> Either DecoderError (Data era)
 decodeBinaryData (BinaryData sbs) = do
   plutusData <- decodeAnnotator "Data" fromCBOR (fromStrict (fromShort sbs))
-  pure (DataConstr (Memo plutusData sbs))
+  pure (DataConstr (mkMemoBytes plutusData $ shortToLazy sbs))
 
 -- | It is safe to convert `BinaryData` to `Data` because the only way to
 -- construct `BinaryData` is thorugh smart constructor `makeBinaryData` that
 -- takes care of verification.
-binaryDataToData :: BinaryData era -> Data era
+binaryDataToData :: Era era => BinaryData era -> Data era
 binaryDataToData binaryData =
   case decodeBinaryData binaryData of
     Left errMsg ->
       error $ "Impossible: incorrectly encoded data: " ++ show errMsg
     Right d -> d
 
-dataToBinaryData :: Data era -> BinaryData era
+dataToBinaryData :: Era era => Data era -> BinaryData era
 dataToBinaryData (DataConstr (Memo _ sbs)) = BinaryData sbs
 
 hashBinaryData :: Era era => BinaryData era -> DataHash (Crypto era)
@@ -252,7 +260,7 @@ instance
 
 encodeRaw ::
   ( Script era ~ AlonzoScript era,
-    Typeable (Crypto era)
+    Typeable era
   ) =>
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
@@ -338,7 +346,7 @@ emptyAuxData = AuxiliaryDataRaw mempty mempty
 -- ================================================================================
 -- Version with serialized bytes.
 
-newtype AlonzoAuxiliaryData era = AuxiliaryDataConstr (MemoBytes (AuxiliaryDataRaw era))
+newtype AlonzoAuxiliaryData era = AuxiliaryDataConstr (MemoBytes AuxiliaryDataRaw era)
   deriving newtype (ToCBOR, SafeToHash)
 
 type AuxiliaryData era = AlonzoAuxiliaryData era
@@ -376,7 +384,7 @@ deriving instance Show (Script era) => Show (AuxiliaryData era)
 deriving via InspectHeapNamed "AuxiliaryDataRaw" (AuxiliaryData era) instance NoThunks (AuxiliaryData era)
 
 deriving via
-  (Mem (AuxiliaryDataRaw era))
+  (Mem AuxiliaryDataRaw era)
   instance
     ( Era era,
       FromCBOR (Annotator (Script era)),
@@ -404,6 +412,7 @@ pattern AlonzoAuxiliaryData {txMD, scripts} <-
 {-# COMPLETE AlonzoAuxiliaryData #-}
 
 pattern AlonzoAuxiliaryData' ::
+  Era era =>
   Map Word64 Metadatum ->
   StrictSeq (Script era) ->
   AuxiliaryData era

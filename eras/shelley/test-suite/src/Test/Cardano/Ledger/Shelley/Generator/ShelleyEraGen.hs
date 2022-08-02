@@ -115,7 +115,7 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (ShelleyTxBody era, [MultiSig (Crypto era)])
+  Gen (ShelleyTxBody era, [MultiSig era])
 genTxBody _pparams slot inputs outputs certs wdrls fee update adHash = do
   ttl <- genTimeToLive slot
   return

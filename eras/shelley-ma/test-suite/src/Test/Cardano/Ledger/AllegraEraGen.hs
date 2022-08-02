@@ -57,7 +57,7 @@ import Test.Cardano.Ledger.Shelley.Generator.ScriptClass
   )
 import Test.Cardano.Ledger.Shelley.Generator.Update (genPParams, genShelleyPParamsUpdate)
 import Test.Cardano.Ledger.ShelleyMA.Serialisation.Generators ()
-import Test.QuickCheck (Gen, arbitrary, frequency)
+import Test.QuickCheck (Arbitrary, Gen, arbitrary, frequency)
 
 -- ==========================================================
 
@@ -103,7 +103,7 @@ genTxBody ::
   Coin ->
   StrictMaybe (Update era) ->
   StrictMaybe (AuxiliaryDataHash (Crypto era)) ->
-  Gen (MATxBody era, [Timelock (Crypto era)])
+  Gen (MATxBody era, [Timelock era])
 genTxBody slot ins outs cert wdrl fee upd ad = do
   validityInterval <- genValidityInterval slot
   let mint = mempty -- the mint field is always empty for an Allegra TxBody
@@ -132,22 +132,22 @@ instance Mock c => MinGenTxout (AllegraEra c) where
   ShelleyMA helpers, shared by Allegra and Mary
 ------------------------------------------------------------------------------}
 
-quantifyTL :: CryptoClass.Crypto crypto => Timelock crypto -> Quantifier (Timelock crypto)
+quantifyTL :: Era era => Timelock era -> Quantifier (Timelock era)
 quantifyTL (RequireAllOf xs) = AllOf (foldr (:) [] xs)
 quantifyTL (RequireAnyOf xs) = AnyOf (foldr (:) [] xs)
 quantifyTL (RequireMOf n xs) = MOf n (foldr (:) [] xs)
 quantifyTL t = Leaf t
 
-unQuantifyTL :: CryptoClass.Crypto crypto => Quantifier (Timelock crypto) -> Timelock crypto
+unQuantifyTL :: Era era => Quantifier (Timelock era) -> Timelock era
 unQuantifyTL (AllOf xs) = RequireAllOf (fromList xs)
 unQuantifyTL (AnyOf xs) = RequireAnyOf (fromList xs)
 unQuantifyTL (MOf n xs) = RequireMOf n (fromList xs)
 unQuantifyTL (Leaf t) = t
 
 genAuxiliaryData ::
-  Mock crypto =>
+  (Arbitrary (Core.AuxiliaryData era)) =>
   Constants ->
-  Gen (StrictMaybe (Core.AuxiliaryData (AllegraEra crypto)))
+  Gen (StrictMaybe (Core.AuxiliaryData era))
 genAuxiliaryData Constants {frequencyTxWithMetadata} =
   frequency
     [ (frequencyTxWithMetadata, SJust <$> arbitrary),
@@ -188,7 +188,7 @@ someLeaf ::
   forall era.
   Era era =>
   KeyHash 'Witness (Crypto era) ->
-  Timelock (Crypto era)
+  Timelock era
 someLeaf x =
   let n = mod (hash (serializeEncoding' (toCBOR x))) 200
    in partition @era [n] [RequireSignature x]
@@ -197,8 +197,8 @@ partition ::
   forall era.
   Era era =>
   [Int] ->
-  [Timelock (Crypto era)] ->
-  Timelock (Crypto era)
+  [Timelock era] ->
+  Timelock era
 partition splits scripts =
   RequireAnyOf . fromList $
     zipWith pair (intervals @era splits) (cycle scripts)
@@ -209,7 +209,7 @@ intervals ::
   forall era.
   Era era =>
   [Int] ->
-  [Timelock (Crypto era)]
+  [Timelock era]
 intervals xs = zipWith mkInterval padded (tail padded)
   where
     padded = Nothing : (Just . SlotNo . fromIntegral <$> xs) ++ [Nothing]

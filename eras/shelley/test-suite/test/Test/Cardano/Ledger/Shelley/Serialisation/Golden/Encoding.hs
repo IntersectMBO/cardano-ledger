@@ -206,7 +206,7 @@ import Test.Tasty.HUnit (testCase, (@?=))
 
 -- ============================================
 
-type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig C_Crypto)
+type MultiSigMap = Map.Map (ScriptHash C_Crypto) (MultiSig (ShelleyEra C_Crypto))
 
 decodeMultiSigMap :: Decoder s (Annotator MultiSigMap)
 decodeMultiSigMap = decodeMapTraverse (pure <$> fromCBOR) fromCBOR
@@ -345,13 +345,13 @@ testPayCred = KeyHashObj (testKeyHash1 @crypto)
 testStakeCred :: forall crypto. CC.Crypto crypto => Credential 'Staking crypto
 testStakeCred = KeyHashObj $ testKeyHash2 @crypto
 
-testScript :: forall crypto. CC.Crypto crypto => MultiSig crypto
+testScript :: forall crypto. CC.Crypto crypto => MultiSig (ShelleyEra crypto)
 testScript = RequireSignature $ asWitness (testKeyHash1 @crypto)
 
 testScriptHash :: forall crypto. CC.Crypto crypto => ScriptHash crypto
 testScriptHash = hashScript @(ShelleyEra crypto) testScript
 
-testScript2 :: forall crypto. CC.Crypto crypto => MultiSig crypto
+testScript2 :: forall crypto. CC.Crypto crypto => MultiSig (ShelleyEra crypto)
 testScript2 = RequireSignature $ asWitness (testKeyHash2 @crypto)
 
 testHeaderHash ::

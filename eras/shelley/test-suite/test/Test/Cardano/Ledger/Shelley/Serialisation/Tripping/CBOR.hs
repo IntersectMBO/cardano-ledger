@@ -46,6 +46,7 @@ import Cardano.Binary
 import Cardano.Ledger.Coin (Coin (..))
 import Cardano.Ledger.CompactAddress (fromCborAddr, fromCborRewardAcnt)
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Shelley (ShelleyEra)
 import qualified Cardano.Ledger.Shelley.API as Ledger
 import Cardano.Ledger.Shelley.Genesis (ShelleyGenesis)
 import Cardano.Ledger.Shelley.RewardUpdate
@@ -190,7 +191,7 @@ prop_roundtrip_EpochState = roundtrip2 toCBOR fromCBOR
 prop_roundtrip_NewEpochState :: Ledger.NewEpochState Mock.C -> Property
 prop_roundtrip_NewEpochState = roundtrip2 toCBOR fromCBOR
 
-prop_roundtrip_MultiSig :: Ledger.MultiSig Mock.C_Crypto -> Property
+prop_roundtrip_MultiSig :: Ledger.MultiSig (ShelleyEra Mock.C_Crypto) -> Property
 prop_roundtrip_MultiSig = roundtrip' toCBOR ((. Full) . runAnnotator <$> fromCBOR)
 
 prop_roundtrip_metadata :: Ledger.Metadata Mock.C -> Property

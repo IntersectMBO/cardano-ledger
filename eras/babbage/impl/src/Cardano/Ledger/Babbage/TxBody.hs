@@ -172,6 +172,7 @@ import Cardano.Ledger.Credential (Credential (..), StakeReference (..))
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Keys (KeyHash (..), KeyRole (..))
 import Cardano.Ledger.Mary.Value (MaryValue (MaryValue), MultiAsset, policies, policyID)
+import Cardano.Ledger.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Cardano.Ledger.SafeHash
   ( HashAnnotated,
     SafeHash,
@@ -194,7 +195,6 @@ import Control.Monad ((<$!>))
 import qualified Data.ByteString.Lazy as LBS
 import Data.Coders hiding (to)
 import Data.Maybe (fromMaybe)
-import Data.MemoBytes (Mem, MemoBytes (..), memoBytes)
 import Data.Sequence.Strict (StrictSeq)
 import qualified Data.Sequence.Strict as StrictSeq
 import Data.Set (Set)
@@ -541,7 +541,7 @@ deriving instance
   (Era era, Val (Value era), Show (Value era), Show (Script era), Show (PParamsUpdate era)) =>
   Show (TxBodyRaw era)
 
-newtype BabbageTxBody era = TxBodyConstr (MemoBytes (TxBodyRaw era))
+newtype BabbageTxBody era = TxBodyConstr (MemoBytes TxBodyRaw era)
   deriving (ToCBOR)
   deriving newtype (SafeToHash)
 
@@ -594,7 +594,7 @@ allInputsBabbageTxBodyF =
       `Set.union` (txBody ^. referenceInputsBabbageTxBodyL)
 {-# INLINE allInputsBabbageTxBodyF #-}
 
-mintedBabbageTxBodyF :: SimpleGetter (BabbageTxBody era) (Set (ScriptHash (Crypto era)))
+mintedBabbageTxBodyF :: Era era => SimpleGetter (BabbageTxBody era) (Set (ScriptHash (Crypto era)))
 mintedBabbageTxBodyF =
   to (\(TxBodyConstr (Memo txBodyRaw _)) -> Set.map policyID (policies (_mint txBodyRaw)))
 {-# INLINE mintedBabbageTxBodyF #-}
@@ -811,7 +811,7 @@ deriving instance
   Show (BabbageTxBody era)
 
 deriving via
-  (Mem (TxBodyRaw era))
+  (Mem TxBodyRaw era)
   instance
     ( Era era,
       Val (Value era),
@@ -944,24 +944,24 @@ instance (c ~ Crypto era) => HashAnnotated (BabbageTxBody era) EraIndependentTxB
 -- constraint as a precondition. This is unnecessary, as one can see below
 -- they need not be constrained at all. This should be fixed in the GHC compiler.
 
-spendInputs' :: TxBody era -> Set (TxIn (Crypto era))
-collateralInputs' :: TxBody era -> Set (TxIn (Crypto era))
-referenceInputs' :: TxBody era -> Set (TxIn (Crypto era))
-outputs' :: TxBody era -> StrictSeq (BabbageTxOut era)
-collateralReturn' :: TxBody era -> StrictMaybe (BabbageTxOut era)
-totalCollateral' :: TxBody era -> StrictMaybe Coin
-certs' :: TxBody era -> StrictSeq (DCert (Crypto era))
-txfee' :: TxBody era -> Coin
-wdrls' :: TxBody era -> Wdrl (Crypto era)
-vldt' :: TxBody era -> ValidityInterval
-update' :: TxBody era -> StrictMaybe (Update era)
-reqSignerHashes' :: TxBody era -> Set (KeyHash 'Witness (Crypto era))
-adHash' :: TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
-mint' :: TxBody era -> MultiAsset (Crypto era)
-scriptIntegrityHash' :: TxBody era -> StrictMaybe (ScriptIntegrityHash (Crypto era))
+spendInputs' :: Era era => TxBody era -> Set (TxIn (Crypto era))
+collateralInputs' :: Era era => TxBody era -> Set (TxIn (Crypto era))
+referenceInputs' :: Era era => TxBody era -> Set (TxIn (Crypto era))
+outputs' :: Era era => TxBody era -> StrictSeq (BabbageTxOut era)
+collateralReturn' :: Era era => TxBody era -> StrictMaybe (BabbageTxOut era)
+totalCollateral' :: Era era => TxBody era -> StrictMaybe Coin
+certs' :: Era era => TxBody era -> StrictSeq (DCert (Crypto era))
+txfee' :: Era era => TxBody era -> Coin
+wdrls' :: Era era => TxBody era -> Wdrl (Crypto era)
+vldt' :: Era era => TxBody era -> ValidityInterval
+update' :: Era era => TxBody era -> StrictMaybe (Update era)
+reqSignerHashes' :: Era era => TxBody era -> Set (KeyHash 'Witness (Crypto era))
+adHash' :: Era era => TxBody era -> StrictMaybe (AuxiliaryDataHash (Crypto era))
+mint' :: Era era => TxBody era -> MultiAsset (Crypto era)
+scriptIntegrityHash' :: Era era => TxBody era -> StrictMaybe (ScriptIntegrityHash (Crypto era))
 spendInputs' (TxBodyConstr (Memo raw _)) = _spendInputs raw
 
-txnetworkid' :: TxBody era -> StrictMaybe Network
+txnetworkid' :: Era era => TxBody era -> StrictMaybe Network
 
 collateralInputs' (TxBodyConstr (Memo raw _)) = _collateralInputs raw
 
@@ -1301,7 +1301,7 @@ getBabbageTxOutEitherAddr = \case
     | otherwise -> error "Impossible: Compacted an address or a hash of non-standard size"
 
 -- TODO: Switch to using `getBabbageTxOutDatum`
-getBabbageTxOutData :: BabbageTxOut era -> StrictMaybe (Data era)
+getBabbageTxOutData :: Era era => BabbageTxOut era -> StrictMaybe (Data era)
 getBabbageTxOutData = \case
   TxOutCompact' {} -> SNothing
   TxOutCompactDH' {} -> SNothing
@@ -1361,11 +1361,11 @@ getTxOutCompactValue =
     TxOut_AddrHash28_AdaOnly _ _ cc -> injectCompact cc
     TxOut_AddrHash28_AdaOnly_DataHash32 _ _ cc _ -> injectCompact cc
 
-txOutData :: BabbageTxOut era -> Maybe (Data era)
+txOutData :: Era era => BabbageTxOut era -> Maybe (Data era)
 txOutData = strictMaybeToMaybe . getBabbageTxOutData
 {-# DEPRECATED txOutData "In favor of `dataTxOutL` or `getBabbageTxOutData`" #-}
 
-txOutDataHash :: BabbageTxOut era -> Maybe (Data era)
+txOutDataHash :: Era era => BabbageTxOut era -> Maybe (Data era)
 txOutDataHash = strictMaybeToMaybe . getBabbageTxOutData
 {-# DEPRECATED txOutDataHash "In favor of `dataHashTxOutL` or `getBabbageTxOutDataHash`" #-}
 

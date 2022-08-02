@@ -114,7 +114,7 @@ instance forall c. CC.Crypto c => HasTokens (ConwayEra c) where
 -- Make Scripts in Alonzo era
 
 -- | Not every Alonzo Script can be used in a Timelock context.
-unTime :: CC.Crypto (Crypto era) => Proof era -> (Proof era -> AlonzoScript era) -> Timelock (Crypto era)
+unTime :: Era era => Proof era -> (Proof era -> AlonzoScript era) -> Timelock era
 unTime wit f = case f wit of
   (TimelockScript x) -> x
   (PlutusScript _ "\SOH\NUL\NUL \ACK\SOH") -> RequireAnyOf mempty

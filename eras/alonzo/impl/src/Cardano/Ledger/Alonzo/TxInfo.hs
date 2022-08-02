@@ -410,7 +410,7 @@ getWitVKeyHash =
     . hashKey
     . (\(WitVKey x _) -> x)
 
-transDataPair :: (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
+transDataPair :: Era era => (DataHash c, Data era) -> (PV1.DatumHash, PV1.Datum)
 transDataPair (x, y) = (transDataHash' x, PV1.Datum (PV1.dataToBuiltinData (getPlutusData y)))
 
 transExUnits :: ExUnits -> PV1.ExBudget
@@ -547,6 +547,7 @@ alonzoTxInfo pp lang ei sysS utxo tx = do
 -- | valContext pairs transaction data with a script purpose.
 --   See figure 22 of the Alonzo specification.
 valContext ::
+  Era era =>
   VersionedTxInfo ->
   ScriptPurpose (Crypto era) ->
   Data era

@@ -167,10 +167,10 @@ malformedScriptAddr pf = Addr Testnet pCred sCred
 simpleScriptAddr :: forall era. (Scriptic era) => Proof era -> Addr (Crypto era)
 simpleScriptAddr pf = scriptAddr pf (simpleScript pf)
 
-datumExampleEven :: Data era
+datumExampleEven :: Era era => Data era
 datumExampleEven = Data (Plutus.I 2)
 
-datumExampleOdd :: Data era
+datumExampleOdd :: Era era => Data era
 datumExampleOdd = Data (Plutus.I 3)
 
 validatingRedeemers :: Era era => Redeemers era
@@ -184,7 +184,7 @@ validatingRedeemers =
 sixtyFiveBytes :: BS.ByteString
 sixtyFiveBytes = BS.pack [1 .. 65]
 
-datumExampleSixtyFiveBytes :: Data era
+datumExampleSixtyFiveBytes :: Era era => Data era
 datumExampleSixtyFiveBytes = Data (Plutus.B sixtyFiveBytes)
 
 txDats :: Era era => TxDats era
@@ -888,7 +888,7 @@ simpleScriptOutWithRefScriptUTxOState pf =
 -- Invalid: TxOut too large for the included ADA, using a large inline datum
 -- ========================================================================================
 
-largeDatum :: Data era
+largeDatum :: Era era => Data era
 largeDatum = Data (Plutus.B . BS.pack $ replicate 1500 0)
 
 largeOutput' :: forall era. (Scriptic era, EraTxOut era) => Proof era -> TxOut era
