@@ -31,6 +31,7 @@ module Data.VMap
     toList,
     toAscList,
     keys,
+    keysSet,
     elems,
     fromAscList,
     fromAscListN,
@@ -53,6 +54,8 @@ import Cardano.Binary
 import Control.DeepSeq
 import qualified Data.Map.Strict as Map
 import Data.Maybe as Maybe hiding (mapMaybe)
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.VMap.KVVector (KVVector (..))
 import qualified Data.VMap.KVVector as KV
 import qualified Data.Vector as V
@@ -243,6 +246,10 @@ fold = VG.foldMap' id . valsVector . unVMap
 keys :: VG.Vector kv k => VMap kv vv k v -> [k]
 keys = VG.toList . keysVector . unVMap
 {-# INLINE keys #-}
+
+keysSet :: (Ord k, VG.Vector kv k) => VMap kv vv k v -> Set k
+keysSet = Set.fromList . keys
+{-# INLINE keysSet #-}
 
 elems :: VG.Vector vv v => VMap kv vv k v -> [v]
 elems = VG.toList . valsVector . unVMap
