@@ -83,15 +83,28 @@ instance FromCBOR VotingPeriod where
       k -> invalidKey k
 
 data PpupPredicateFailure era
-  = NonGenesisUpdatePPUP
-      !(Set (KeyHash 'Genesis (Crypto era))) -- KeyHashes which are voting
-      !(Set (KeyHash 'Genesis (Crypto era))) -- KeyHashes which should be voting
-  | PPUpdateWrongEpoch
-      !EpochNo -- current epoch
-      !EpochNo -- intended epoch of update
-      !VotingPeriod -- voting period within the epoch
-  | PVCannotFollowPPUP
-      !ProtVer -- the first bad protocol version
+  = -- | An update was proposed by a key hash that is not one of the genesis keys.
+    --  The first set contains the key hashes which were a part of the update.
+    --  The second set contains the key hashes of the genesis keys.
+    NonGenesisUpdatePPUP
+      !(Set (KeyHash 'Genesis (Crypto era)))
+      !(Set (KeyHash 'Genesis (Crypto era)))
+  | -- | An update was proposed for the wrong epoch.
+    --  The first 'EpochNo' is the current epoch.
+    --  The second 'EpochNo' is the epoch listed in the update.
+    --  The last parameter indicates if the update was intended
+    --  for the current or the next epoch.
+    PPUpdateWrongEpoch
+      !EpochNo
+      !EpochNo
+      !VotingPeriod
+  | -- | An update was proposed which contains an invalid protocol version.
+    --  New protocol versions must either increase the major
+    --  number by exactly one and set the minor version to zero,
+    --  or keep the major version the same and increase the minor
+    --  version by exactly one.
+    PVCannotFollowPPUP
+      !ProtVer
   deriving (Show, Eq, Generic)
 
 instance NoThunks (PpupPredicateFailure era)
