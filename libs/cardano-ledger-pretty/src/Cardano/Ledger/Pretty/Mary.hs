@@ -15,14 +15,16 @@ import Cardano.Ledger.Shelley.TxBody (ShelleyTxOut)
 import Cardano.Ledger.ShelleyMA.AuxiliaryData
 import Cardano.Ledger.ShelleyMA.Timelocks
 import Cardano.Ledger.ShelleyMA.TxBody
+import qualified Data.Map as Map
 import Prettyprinter (hsep, viaShow)
 
 ppValue :: MaryValue crypto -> PDoc
-ppValue v = case gettriples' v of
-  (n, triples, []) -> ppSexp "Value" [ppCoin (Coin n), ppList pptriple triples]
-  (n, triples, bad) -> ppSexp "Value" [ppCoin (Coin n), ppList pptriple triples, ppString "Bad " <> ppList ppPolicyID bad]
+ppValue (MaryValue n m) = ppSexp "Value" $ [ppCoin (Coin n), ppMultiAsset m] ++ ppBad
   where
-    pptriple (i, asset, num) = hsep [ppPolicyID i, ppAssetName asset, ppInteger num]
+    ppBad = case getBadMultiAsset m of
+      [] -> []
+      bad -> [ppString "Bad " <> ppList ppPolicyID bad]
+    getBadMultiAsset (MultiAsset ma) = Map.keys (Map.filter Map.null ma)
 
 ppPolicyID :: PolicyID crypto -> PDoc
 ppPolicyID (PolicyID sh) = ppScriptHash sh

@@ -17,6 +17,7 @@ module Cardano.Ledger.Mary.Value
     MaryValue (..),
     MultiAsset (..),
     Value,
+    flattenMultiAsset,
     insert,
     lookup,
     policies,
@@ -24,7 +25,6 @@ module Cardano.Ledger.Mary.Value
     representationSize,
     showValue,
     valueFromList,
-    gettriples',
   )
 where
 
@@ -848,16 +848,12 @@ showValue v = show c ++ "\n" ++ unlines (map trans ts)
 
 -- | Turn the nested 'MaryValue' map-of-maps representation into a flat sequence
 -- of policyID, asset name and quantity, plus separately the ada quantity.
-gettriples' :: MaryValue crypto -> (Integer, [(PolicyID crypto, AssetName, Integer)], [PolicyID crypto])
-gettriples' (MaryValue c (MultiAsset m1)) = (c, triples, bad)
-  where
-    triples =
-      [ (policyId, aname, amount)
-        | (policyId, m2) <- assocs m1,
-          (aname, amount) <- assocs m2
-      ]
-    bad = Map.keys (Map.filter Map.null m1) -- This is a malformed value, not in cannonical form.
-
 gettriples :: MaryValue crypto -> (Integer, [(PolicyID crypto, AssetName, Integer)])
-gettriples v = case gettriples' v of
-  (a, b, _) -> (a, b)
+gettriples (MaryValue c ma) = (c, flattenMultiAsset ma)
+
+flattenMultiAsset :: MultiAsset crypto -> [(PolicyID crypto, AssetName, Integer)]
+flattenMultiAsset (MultiAsset m) =
+  [ (policyId, aname, amount)
+    | (policyId, m2) <- assocs m,
+      (aname, amount) <- assocs m2
+  ]
