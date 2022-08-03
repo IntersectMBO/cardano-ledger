@@ -59,7 +59,7 @@ import qualified Data.Vector as V
 import qualified Data.Vector.Generic as VG
 import qualified Data.Vector.Primitive as VP
 import qualified Data.Vector.Storable as VS
-import qualified Data.Vector.Storable as VU
+import qualified Data.Vector.Unboxed as VU
 import qualified GHC.Exts as Exts
 import GHC.Generics (Generic)
 import NoThunks.Class
