@@ -93,6 +93,8 @@ aggTests =
 -- We will add additional analogs (ledgerTraceFromBlock, poolTraceFromBlock) soon,
 -- and then redo the tests in that module in the Generic fashion
 forAllChainTrace :: (Testable prop, Reflect era) => Proof era -> Int -> (Trace (MOCKCHAIN era) -> prop) -> Property
+forAllChainTrace p@(Conway _) n propf =
+  property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
 forAllChainTrace p@(Babbage _) n propf =
   property $ propf <$> genTrace p n (def {blocksizeMax = 4, slotDelta = (6, 12)}) (initStableFields p)
 forAllChainTrace p@(Alonzo _) n propf =

@@ -6,6 +6,7 @@ packages:
   eras/babbage/impl
   eras/babbage/test-suite
   eras/conway/impl
+  eras/conway/test-suite
   eras/byron/chain/executable-spec
   eras/byron/ledger/executable-spec
   eras/byron/ledger/impl

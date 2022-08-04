@@ -249,6 +249,7 @@ instance PrettyA (MockBlock era) where prettyA = ppMockBlock
 
 ppMockChainFailure :: Proof era -> MockChainFailure era -> PDoc
 ppMockChainFailure proof x = case proof of
+  (Conway _) -> help x
   (Babbage _) -> help x
   (Alonzo _) -> help x
   (Mary _) -> help x
@@ -265,6 +266,7 @@ ppMockChainFailure proof x = case proof of
         ]
 
 noThunksGen :: Proof era -> MockChainState era -> IO (Maybe ThunkInfo)
+noThunksGen (Conway _) = noThunks []
 noThunksGen (Babbage _) = noThunks []
 noThunksGen (Alonzo _) = noThunks []
 noThunksGen (Mary _) = noThunks []

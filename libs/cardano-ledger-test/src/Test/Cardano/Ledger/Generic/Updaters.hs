@@ -142,6 +142,14 @@ updateTx wit@(Babbage _) (AlonzoTx b w iv d) dt =
     WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
     AuxData faux -> AlonzoTx b w iv faux
     Valid iv' -> AlonzoTx b w iv' d
+updateTx wit@(Conway _) (AlonzoTx b w iv d) dt =
+  case dt of
+    Body fbody -> AlonzoTx fbody w iv d
+    BodyI bfields -> AlonzoTx (newTxBody wit bfields) w iv d
+    Witnesses fwit -> AlonzoTx b fwit iv d
+    WitnessesI wfields -> AlonzoTx b (newWitnesses override wit wfields) iv d
+    AuxData faux -> AlonzoTx b w iv faux
+    Valid iv' -> AlonzoTx b w iv' d
 
 newTx :: Proof era -> [TxField era] -> Tx era
 newTx era = List.foldl' (updateTx era) (initialTx era)
@@ -203,6 +211,21 @@ updateTxBody pf txBody dt =
       TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
       CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
       _ -> txBody
+    Conway _ -> case dt of
+      Certs certs -> txBody & certsTxBodyL .~ certs
+      Wdrls wdrls -> txBody & wdrlsTxBodyL .~ wdrls
+      Vldt vldt -> txBody & vldtTxBodyL .~ vldt
+      Update update -> txBody & updateTxBodyL .~ update
+      AdHash auxDataHash -> txBody & auxDataHashTxBodyL .~ auxDataHash
+      Mint mint -> txBody & mintTxBodyL .~ mint
+      Collateral collateral -> txBody & collateralInputsTxBodyL .~ collateral
+      ReqSignerHashes reqSignerHashes -> txBody & reqSignerHashesTxBodyL .~ reqSignerHashes
+      WppHash scriptIntegrityHash -> txBody & scriptIntegrityHashTxBodyL .~ scriptIntegrityHash
+      Txnetworkid networkId -> txBody & networkIdTxBodyL .~ networkId
+      RefInputs refInputs -> txBody & referenceInputsTxBodyL .~ refInputs
+      TotalCol totalCol -> txBody & totalCollateralTxBodyL .~ totalCol
+      CollateralReturn collateralReturn -> txBody & collateralReturnTxBodyL .~ collateralReturn
+      _ -> txBody
 
 newTxBody :: EraTxBody era => Proof era -> [TxBodyField era] -> TxBody era
 newTxBody era = List.foldl' (updateTxBody era) (initialTxBody era)
@@ -233,6 +256,12 @@ updateWitnesses p (Alonzo _) w dw = case dw of
   (DataWits ds) -> w {txdats = p (txdats w) ds}
   (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
 updateWitnesses p (Babbage _) w dw = case dw of
+  (AddrWits ks) -> w {txwitsVKey = p (txwitsVKey w) ks}
+  (BootWits boots) -> w {txwitsBoot = p (txwitsBoot w) boots}
+  (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
+  (DataWits ds) -> w {txdats = p (txdats w) ds}
+  (RdmrWits r) -> w {txrdmrs = p (txrdmrs w) r}
+updateWitnesses p (Conway _) w dw = case dw of
   (AddrWits ks) -> w {txwitsVKey = p (txwitsVKey w) ks}
   (BootWits boots) -> w {txwitsBoot = p (txwitsBoot w) boots}
   (ScriptWits ss) -> w {txscripts = p (txscripts w) ss}
@@ -269,6 +298,13 @@ updateTxOut (Alonzo _) (out@(AlonzoTxOut a v h)) txoutd = case txoutd of
   FDatum d -> error ("This feature is only available from Babbage onward " ++ show d)
   _ -> out
 updateTxOut (Babbage _) (BabbageTxOut a v h refscript) txoutd = case txoutd of
+  Address addr -> BabbageTxOut addr v h refscript
+  Amount val -> BabbageTxOut a val h refscript
+  DHash SNothing -> BabbageTxOut a v Babbage.NoDatum refscript
+  DHash (SJust dh) -> BabbageTxOut a v (Babbage.DatumHash dh) refscript
+  FDatum d -> BabbageTxOut a v d refscript
+  RefScript s -> BabbageTxOut a v h s
+updateTxOut (Conway _) (BabbageTxOut a v h refscript) txoutd = case txoutd of
   Address addr -> BabbageTxOut addr v h refscript
   Amount val -> BabbageTxOut a val h refscript
   DHash SNothing -> BabbageTxOut a v Babbage.NoDatum refscript
@@ -375,6 +411,34 @@ updatePParams (Babbage _) pp dpp = case dpp of
   D _ -> pp
   ExtraEntropy _ -> pp
   MinUTxOValue _ -> pp
+updatePParams (Conway _) pp dpp = case dpp of
+  (MinfeeA nat) -> pp {Babbage._minfeeA = nat}
+  (MinfeeB nat) -> pp {Babbage._minfeeB = nat}
+  (MaxBBSize nat) -> pp {Babbage._maxBBSize = nat}
+  (MaxTxSize nat) -> pp {Babbage._maxTxSize = nat}
+  (MaxBHSize nat) -> pp {Babbage._maxBHSize = nat}
+  (KeyDeposit coin) -> pp {Babbage._keyDeposit = coin}
+  (PoolDeposit coin) -> pp {Babbage._poolDeposit = coin}
+  (EMax e) -> pp {Babbage._eMax = e}
+  (NOpt nat) -> pp {Babbage._nOpt = nat}
+  (A0 rat) -> pp {Babbage._a0 = rat}
+  (Rho u) -> pp {Babbage._rho = u}
+  (Tau u) -> pp {Babbage._tau = u}
+  (ProtocolVersion pv) -> pp {Babbage._protocolVersion = pv}
+  (MinPoolCost coin) -> pp {Babbage._minPoolCost = coin}
+  Costmdls cost -> pp {Babbage._costmdls = cost}
+  Prices n -> pp {Babbage._prices = n}
+  MaxValSize n -> pp {Babbage._maxValSize = n}
+  MaxTxExUnits n -> pp {Babbage._maxTxExUnits = n}
+  MaxBlockExUnits n -> pp {Babbage._maxBlockExUnits = n}
+  CollateralPercentage perc -> pp {Babbage._collateralPercentage = perc}
+  MaxCollateralInputs n -> pp {Babbage._maxCollateralInputs = n}
+  AdaPerUTxOWord n -> pp {Babbage._coinsPerUTxOByte = Coin $ (unCoin n + 7) `div` 8}
+  AdaPerUTxOByte n -> pp {Babbage._coinsPerUTxOByte = n}
+  -- Not used in Conway
+  D _ -> pp
+  ExtraEntropy _ -> pp
+  MinUTxOValue _ -> pp
 
 newPParams :: Proof era -> [PParamsField era] -> PParams era
 newPParams era = List.foldl' (updatePParams era) (initialPParams era)
@@ -389,6 +453,8 @@ newScriptIntegrityHash ::
   Redeemers era ->
   TxDats era ->
   StrictMaybe (Alonzo.ScriptIntegrityHash (Crypto era))
+newScriptIntegrityHash (Conway _) pp ls rds dats =
+  hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
 newScriptIntegrityHash (Babbage _) pp ls rds dats =
   hashScriptIntegrity (Set.map (Alonzo.getLanguageView pp) (Set.fromList ls)) rds dats
 newScriptIntegrityHash (Alonzo _) pp ls rds dats =
@@ -405,6 +471,11 @@ defaultCostModels (Babbage _) =
     [ (PlutusV1, testingCostModelV1),
       (PlutusV2, testingCostModelV2)
     ]
+defaultCostModels (Conway _) =
+  Costmdls . CostModels . Map.fromList $
+    [ (PlutusV1, testingCostModelV1),
+      (PlutusV2, testingCostModelV2)
+    ]
 
 languages :: Proof era -> [Language]
 languages (Shelley _) = []
@@ -412,3 +483,4 @@ languages (Allegra _) = []
 languages (Mary _) = []
 languages (Alonzo _) = [PlutusV1]
 languages (Babbage _) = [PlutusV1, PlutusV2]
+languages (Conway _) = [PlutusV1, PlutusV2]

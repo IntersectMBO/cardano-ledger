@@ -221,7 +221,7 @@ mkMultiSigWit era mTag (Shelley.RequireMOf m timelocks) = do
   ts <- take m <$> lift (shuffle (F.toList timelocks))
   F.fold <$> mapM (mkMultiSigWit era mTag) ts
 
--- | Used in Aonzo and Babbage and Mary Eras
+-- | Timeock scripts are used in Mary and subsequent Eras.
 mkTimelockWit ::
   forall era.
   (Reflect era) =>
@@ -255,6 +255,8 @@ genGenericScriptWitness (Alonzo c) mTag (TimelockScript timelock) = mkTimelockWi
 genGenericScriptWitness (Alonzo _) _ (PlutusScript _ _) = pure (const [])
 genGenericScriptWitness (Babbage c) mTag (TimelockScript timelock) = mkTimelockWit (Babbage c) mTag timelock
 genGenericScriptWitness (Babbage _) _ (PlutusScript _ _) = pure (const [])
+genGenericScriptWitness (Conway c) mTag (TimelockScript timelock) = mkTimelockWit (Conway c) mTag timelock
+genGenericScriptWitness (Conway _) _ (PlutusScript _ _) = pure (const [])
 
 -- | Generate a Witnesses producing function. We handle Witnesses come from Keys and Scripts
 --   Because scripts vary be Era, we need some Era specific code here: genGenericScriptWitness
@@ -311,6 +313,9 @@ makeDatumWitness proof txout = case (proof, txout) of
   (Babbage _, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
   (Babbage _, BabbageTxOut _ _ (Datum _) _) -> pure []
   (Babbage _, BabbageTxOut _ _ NoDatum _) -> pure []
+  (Conway _, BabbageTxOut _ _ (DatumHash h) _) -> mkDatumWit (SJust h)
+  (Conway _, BabbageTxOut _ _ (Datum _) _) -> pure []
+  (Conway _, BabbageTxOut _ _ NoDatum _) -> pure []
   (Alonzo _, AlonzoTxOut _ _ mDatum) -> mkDatumWit mDatum
   _ -> pure [] -- No other era has data witnesses
   where
@@ -404,15 +409,27 @@ genTxOut proof val = do
       KeyHashObj _ -> pure []
       ScriptHashObj scriptHash -> do
         maybeCoreScript <- lookupScript scriptHash (Just Spend)
-        case (proof, maybeCoreScript) of
-          (Babbage _, Just (PlutusScript _ _)) -> do
-            datum <- genBabbageDatum
-            script <- genRefScript proof
-            pure [FDatum datum, RefScript script]
-          (Alonzo _, Just (PlutusScript _ _)) -> do
-            (datahash, _data) <- genDatumWithHash
-            pure [DHash (SJust datahash)]
-          (_, _) -> pure []
+        case proof of
+          Conway _ -> case maybeCoreScript of
+            Just (PlutusScript _ _) -> do
+              datum <- genBabbageDatum
+              script <- genRefScript proof
+              pure [FDatum datum, RefScript script]
+            _ -> pure []
+          Babbage _ -> case maybeCoreScript of
+            Just (PlutusScript _ _) -> do
+              datum <- genBabbageDatum
+              script <- genRefScript proof
+              pure [FDatum datum, RefScript script]
+            _ -> pure []
+          Alonzo _ -> case maybeCoreScript of
+            Just (PlutusScript _ _) -> do
+              (datahash, _data) <- genDatumWithHash
+              pure [DHash (SJust datahash)]
+            _ -> pure []
+          Mary _ -> pure []
+          Allegra _ -> pure []
+          Shelley _ -> pure []
   pure $ [Address addr, Amount val] ++ dataHashFields
 
 -- ================================================================================
@@ -1062,6 +1079,7 @@ applySTSByProof ::
   Proof era ->
   RuleContext 'Transition (EraRule "LEDGER" era) ->
   Either [PredicateFailure (EraRule "LEDGER" era)] (State (EraRule "LEDGER" era))
+applySTSByProof (Conway _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (ConwayEra (Crypto era))) _trc
 applySTSByProof (Babbage _) _trc = runShelleyBase $ applySTS @(EraRule "LEDGER" (BabbageEra (Crypto era))) _trc
 applySTSByProof (Alonzo _) trc = runShelleyBase $ applySTS trc
 applySTSByProof (Mary _) trc = runShelleyBase $ applySTS trc

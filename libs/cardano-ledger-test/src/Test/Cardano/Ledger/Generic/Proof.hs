@@ -32,32 +32,43 @@ module Test.Cardano.Ledger.Generic.Proof
     preMary,
     preAlonzo,
     preBabbage,
+    preConway,
     postShelley,
     postAllegra,
     postMary,
     postAlonzo,
     postBabbage,
+    postConway,
     ShelleyEra,
     AllegraEra,
     MaryEra,
     AlonzoEra,
     BabbageEra,
+    ConwayEra,
     C_Crypto,
   )
 where
 
-import Cardano.Crypto.DSIGN.Class (DSIGNAlgorithm)
+import Cardano.Crypto.DSIGN as DSIGN
 import qualified Cardano.Crypto.Hash as CH
+import Cardano.Crypto.KES.Class (ContextKES)
+import qualified Cardano.Crypto.KES.Class as KES (Signable)
+import Cardano.Crypto.VRF as VRF
 import Cardano.Ledger.Allegra (AllegraEra)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes (ShelleyBase)
+import qualified Cardano.Ledger.BaseTypes as Base (Seed)
+import Cardano.Ledger.Conway (ConwayEra)
 import Cardano.Ledger.Core
-import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Crypto (KES, StandardCrypto, VRF)
 import qualified Cardano.Ledger.Crypto as CC (Crypto, DSIGN, HASH)
 import Cardano.Ledger.Keys (DSignable)
 import Cardano.Ledger.Mary (MaryEra)
 import Cardano.Ledger.Shelley (ShelleyEra)
+import Cardano.Protocol.TPraos.API (PraosCrypto)
+import Cardano.Protocol.TPraos.BHeader (BHBody)
+import Cardano.Protocol.TPraos.OCert
 import Control.State.Transition.Extended hiding (Assertion)
 import Data.Kind (Type)
 import GHC.Natural
@@ -83,6 +94,7 @@ data Proof era where
   Allegra :: forall c. CC.Crypto c => Evidence c -> Proof (AllegraEra c)
   Alonzo :: forall c. CC.Crypto c => Evidence c -> Proof (AlonzoEra c)
   Babbage :: forall c. CC.Crypto c => Evidence c -> Proof (BabbageEra c)
+  Conway :: forall c. CC.Crypto c => Evidence c -> Proof (ConwayEra c)
 
 instance Show (Proof e) where
   show (Shelley c) = "Shelley " ++ show c
@@ -90,6 +102,7 @@ instance Show (Proof e) where
   show (Mary c) = "Mary " ++ show c
   show (Alonzo c) = "Alonzo " ++ show c
   show (Babbage c) = "Babbage " ++ show c
+  show (Conway c) = "Conway " ++ show c
 
 instance Show (Evidence c) where
   show Mock = "Mock"
@@ -101,6 +114,7 @@ getCrypto (Alonzo c) = c
 getCrypto (Mary c) = c
 getCrypto (Allegra c) = c
 getCrypto (Shelley c) = c
+getCrypto (Conway c) = c
 
 -- ==================================
 -- Reflection over Crypto and Era
@@ -108,7 +122,14 @@ getCrypto (Shelley c) = c
 type GoodCrypto crypto =
   ( CC.Crypto crypto,
     DSignable crypto (CH.Hash (CC.HASH crypto) EraIndependentTxBody),
-    DSIGNAlgorithm (CC.DSIGN crypto)
+    DSIGNAlgorithm (CC.DSIGN crypto),
+    DSIGN.Signable (CC.DSIGN crypto) (OCertSignable crypto),
+    VRF.Signable (VRF crypto) Base.Seed,
+    KES.Signable (KES crypto) (BHBody crypto),
+    ContextKES (KES crypto) ~ (),
+    ContextVRF (VRF crypto) ~ (),
+    CH.HashAlgorithm (CC.HASH crypto),
+    PraosCrypto crypto
   )
 
 class (GoodCrypto c) => ReflectC c where
@@ -126,6 +147,9 @@ class (EraTx era, ReflectC (Crypto era)) => Reflect era where
   reify :: Proof era
   lift :: forall a. (Proof era -> a) -> a
   lift f = f (reify @era)
+
+instance ReflectC c => Reflect (ConwayEra c) where
+  reify = Conway evidence
 
 instance ReflectC c => Reflect (BabbageEra c) where
   reify = Babbage evidence
@@ -151,6 +175,7 @@ instance Eq (Some Proof) where
   (Some (Mary _)) == (Some (Mary _)) = True
   (Some (Alonzo _)) == (Some (Alonzo _)) = True
   (Some (Babbage _)) == (Some (Babbage _)) = True
+  (Some (Conway _)) == (Some (Conway _)) = True
   _ == _ = False
 
 instance Show (Some Proof) where
@@ -159,6 +184,7 @@ instance Show (Some Proof) where
   show (Some (Mary c)) = show (Mary c)
   show (Some (Alonzo c)) = show (Alonzo c)
   show (Some (Babbage c)) = show (Babbage c)
+  show (Some (Conway c)) = show (Conway c)
 
 -- ===============================================================
 -- Proofs or witnesses to EraRule Tags
@@ -250,23 +276,27 @@ instance Ranked Proof where
   rank (Mary _) = 2
   rank (Alonzo _) = 3
   rank (Babbage _) = 4
+  rank (Conway _) = 5
 
-preShelley, preAllegra, preMary, preAlonzo, preBabbage :: [Some Proof]
+preShelley, preAllegra, preMary, preAlonzo, preBabbage, preConway :: [Some Proof]
 preShelley = [Some (Shelley Mock)]
 preAllegra = [Some (Allegra Mock), Some (Shelley Mock)]
 preMary = [Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
 preAlonzo = [Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
 preBabbage = [Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
+preConway = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock), Some (Shelley Mock)]
 
-postShelley, postAllegra, postMary, postAlonzo, postBabbage :: [Some Proof]
+postShelley, postAllegra, postMary, postAlonzo, postBabbage, postConway :: [Some Proof]
 postShelley =
-  [ Some (Babbage Mock),
+  [ Some (Conway Mock),
+    Some (Babbage Mock),
     Some (Alonzo Mock),
     Some (Mary Mock),
     Some (Allegra Mock),
     Some (Shelley Mock)
   ]
-postAllegra = [Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock)]
-postMary = [Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock)]
-postAlonzo = [Some (Babbage Mock), Some (Alonzo Mock)]
-postBabbage = [Some (Babbage Mock)]
+postAllegra = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock), Some (Allegra Mock)]
+postMary = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock), Some (Mary Mock)]
+postAlonzo = [Some (Conway Mock), Some (Babbage Mock), Some (Alonzo Mock)]
+postBabbage = [Some (Conway Mock), Some (Babbage Mock)]
+postConway = [Some (Conway Mock)]

@@ -151,10 +151,19 @@ instance CC.Crypto c => PrettyCore (BabbageEra c) where
   prettyValue = ppValue
   prettyTxOut = Babbage.ppTxOut
 
+instance CC.Crypto c => PrettyCore (ConwayEra c) where
+  prettyTx = Cardano.Ledger.Pretty.Alonzo.ppTx
+  prettyScript = ppScript
+  prettyTxBody = Babbage.ppTxBody
+  prettyWitnesses = ppTxWitness
+  prettyValue = ppValue
+  prettyTxOut = Babbage.ppTxOut
+
 prettyUTxO :: Proof era -> UTxO era -> PDoc
 prettyUTxO proof = prettyUTxOMap proof . unUTxO
 
 prettyUTxOMap :: Proof era -> Map.Map (TxIn (Crypto era)) (TxOut era) -> PDoc
+prettyUTxOMap (Conway _) mp = ppMap ppTxIn prettyTxOut mp
 prettyUTxOMap (Babbage _) mp = ppMap ppTxIn prettyTxOut mp
 prettyUTxOMap (Alonzo _) mp = ppMap ppTxIn prettyTxOut mp
 prettyUTxOMap (Mary _) mp = ppMap ppTxIn prettyTxOut mp
@@ -618,13 +627,16 @@ ppMyWay :: (Typeable keyrole, CC.Crypto c) => WitVKey keyrole c -> PDoc
 ppMyWay (wvk@(WitVKey vkey _)) = ppSexp "MyWay" [ppKeyHash (hashKey vkey), ppWitVKey wvk]
 
 ppCoreWitnesses :: Proof era -> Witnesses era -> PDoc
-ppCoreWitnesses (Alonzo _) x = ppTxWitness x
+ppCoreWitnesses (Conway _) x = ppTxWitness x
 ppCoreWitnesses (Babbage _) x = ppTxWitness x
+ppCoreWitnesses (Alonzo _) x = ppTxWitness x
 ppCoreWitnesses (Mary _) x = ppWitnessSetHKD x
 ppCoreWitnesses (Allegra _) x = ppWitnessSetHKD x
 ppCoreWitnesses (Shelley _) x = ppWitnessSetHKD x
 
 ppCoreScript :: Proof era -> Script era -> PDoc
+ppCoreScript (Conway _) (PlutusScript _ x) = ppString (show x)
+ppCoreScript (Conway _) (TimelockScript x) = ppTimelock x
 ppCoreScript (Babbage _) (PlutusScript _ x) = ppString (show x)
 ppCoreScript (Babbage _) (TimelockScript x) = ppTimelock x
 ppCoreScript (Alonzo _) (PlutusScript _ x) = ppString (show x)
@@ -868,6 +880,8 @@ txInSummary :: TxIn era -> PDoc
 txInSummary (TxIn (TxId h) n) = ppSexp "TxIn" [trim (ppSafeHash h), ppInt (txIxToInt n)]
 
 txOutSummary :: Proof era -> TxOut era -> PDoc
+txOutSummary p@(Conway _) (BabbageTxOut addr v d s) =
+  ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
 txOutSummary p@(Babbage _) (BabbageTxOut addr v d s) =
   ppSexp "TxOut" [addrSummary addr, pcCoreValue p v, datumSummary d, ppStrictMaybe (scriptSummary p) s]
 txOutSummary p@(Alonzo _) (AlonzoTxOut addr v md) =
@@ -896,6 +910,7 @@ vSummary (MaryValue n m) =
   ppSexp "Value" [ppInteger n, ppString ("num tokens = " ++ show (Map.size m))]
 
 scriptSummary :: forall era. Proof era -> Script era -> PDoc
+scriptSummary p@(Conway _) script = plutusSummary p script
 scriptSummary p@(Babbage _) script = plutusSummary p script
 scriptSummary p@(Alonzo _) script = plutusSummary p script
 scriptSummary (Mary _) script = timelockSummary script
@@ -963,6 +978,9 @@ multiSigSummary (SS.RequireAnyOf ps) = ppSexp "AnyOf" (map multiSigSummary ps)
 multiSigSummary (SS.RequireMOf m ps) = ppSexp "MOf" (ppInt m : map multiSigSummary ps)
 
 plutusSummary :: forall era. Proof era -> AlonzoScript era -> PDoc
+plutusSummary (Conway _) s@(PlutusScript lang _) =
+  ppString (show lang ++ " ") <> scriptHashSummary (hashScript @era s)
+plutusSummary (Conway _) (TimelockScript x) = timelockSummary x
 plutusSummary (Babbage _) s@(PlutusScript lang _) =
   ppString (show lang ++ " ") <> scriptHashSummary (hashScript @era s)
 plutusSummary (Babbage _) (TimelockScript x) = timelockSummary x
@@ -1065,6 +1083,7 @@ pcAddr (AddrBootstrap _) = ppString "Bootstrap"
 instance c ~ Crypto era => PrettyC (Addr c) era where prettyC _ = pcAddr
 
 pcCoreValue :: Proof era -> Value era -> PDoc
+pcCoreValue (Conway _) v = vSummary v
 pcCoreValue (Babbage _) v = vSummary v
 pcCoreValue (Alonzo _) v = vSummary v
 pcCoreValue (Mary _) v = vSummary v
@@ -1121,6 +1140,7 @@ pcScriptHash :: ScriptHash era -> PDoc
 pcScriptHash (ScriptHash h) = trim (ppHash h)
 
 pcHashScript :: forall era. Reflect era => Proof era -> Script era -> PDoc
+pcHashScript (Conway _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
 pcHashScript (Babbage _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
 pcHashScript (Alonzo _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
 pcHashScript (Mary _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
@@ -1128,6 +1148,9 @@ pcHashScript (Allegra _) s = ppString "Hash " <> pcScriptHash (hashScript @era s
 pcHashScript (Shelley _) s = ppString "Hash " <> pcScriptHash (hashScript @era s)
 
 pcScript :: forall era. Reflect era => Proof era -> Script era -> PDoc
+pcScript p@(Conway _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
+pcScript p@(Conway _) s@(PlutusScript v _) =
+  parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
 pcScript p@(Babbage _) s@(TimelockScript t) = pcTimelock @era (pcHashScript @era p s) t
 pcScript p@(Babbage _) s@(PlutusScript v _) =
   parens (hsep [ppString ("PlutusScript " <> show v <> " "), pcHashScript p s])
@@ -1142,6 +1165,8 @@ pcDataHash :: DataHash era -> PDoc
 pcDataHash dh = trim (ppSafeHash dh)
 
 pcTxOut :: Reflect era => Proof era -> TxOut era -> PDoc
+pcTxOut p@(Conway _) (BabbageTxOut addr v d s) =
+  ppSexp "TxOut" [pcAddr addr, pcValue v, pcDatum d, ppStrictMaybe (pcScript p) s]
 pcTxOut p@(Babbage _) (BabbageTxOut addr v d s) =
   ppSexp "TxOut" [pcAddr addr, pcValue v, pcDatum d, ppStrictMaybe (pcScript p) s]
 pcTxOut (Alonzo _) (AlonzoTxOut addr v md) =

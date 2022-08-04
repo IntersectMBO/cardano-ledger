@@ -104,6 +104,12 @@ instance forall c. CC.Crypto c => HasTokens (BabbageEra c) where
       pid = PolicyID (hashScript @(BabbageEra c) s)
       an = AssetName "an"
 
+instance forall c. CC.Crypto c => HasTokens (ConwayEra c) where
+  forge n s = MaryValue 0 $ Map.singleton pid (Map.singleton an n)
+    where
+      pid = PolicyID (hashScript @(ConwayEra c) s)
+      an = AssetName "an"
+
 -- =================================
 -- Make Scripts in Alonzo era
 
@@ -142,6 +148,21 @@ instance CC.Crypto c => Scriptic (BabbageEra c) where
 instance CC.Crypto c => PostShelley (BabbageEra c) where
   before n (Babbage _) = TimelockScript $ RequireTimeStart (theSlot n)
   after n (Babbage _) = TimelockScript $ RequireTimeExpire (theSlot n)
+
+-- =================================
+
+instance CC.Crypto c => Scriptic (ConwayEra c) where
+  never n (Conway _) = alwaysFails PlutusV1 n -- always False
+  always n (Conway _) = alwaysSucceeds PlutusV1 n -- always True
+  alwaysAlt n (Conway _) = alwaysSucceeds PlutusV2 n -- always True
+  require key (Conway _) = TimelockScript (RequireSignature key)
+  allOf xs (Conway c) = TimelockScript (RequireAllOf (Seq.fromList (map (unTime (Conway c)) xs)))
+  anyOf xs (Conway c) = TimelockScript (RequireAnyOf (Seq.fromList (map (unTime (Conway c)) xs)))
+  mOf n xs (Conway c) = TimelockScript (RequireMOf n (Seq.fromList (map (unTime (Conway c)) xs)))
+
+instance CC.Crypto c => PostShelley (ConwayEra c) where
+  before n (Conway _) = TimelockScript $ RequireTimeStart (theSlot n)
+  after n (Conway _) = TimelockScript $ RequireTimeExpire (theSlot n)
 
 -- =======================================
 -- Some examples that work in multiple Eras

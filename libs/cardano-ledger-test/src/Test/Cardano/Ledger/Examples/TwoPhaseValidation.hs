@@ -1678,6 +1678,7 @@ collectInputs ::
     [(ShortByteString, Language, [Data era], ExUnits, CostModel)]
 collectInputs (Alonzo _) = collectTwoPhaseScriptInputs @era
 collectInputs (Babbage _) = collectTwoPhaseScriptInputs @era
+collectInputs (Conway _) = collectTwoPhaseScriptInputs @era
 collectInputs x = error ("collectInputs Not defined in era " ++ show x)
 
 getTxInfo ::
@@ -1691,6 +1692,7 @@ getTxInfo ::
   Either (TranslationError (Crypto era)) VersionedTxInfo
 getTxInfo (Alonzo _) = txInfo
 getTxInfo (Babbage _) = txInfo
+getTxInfo (Conway _) = txInfo
 getTxInfo era = error ("getTxInfo Not defined in era " ++ show era)
 
 -- Test for Plutus Data Ordering, using this strategy
@@ -1780,6 +1782,7 @@ makeNaiveBlock txs = UnsafeUnserialisedBlock bhView txs'
 trustMeP :: Proof era -> Bool -> Tx era -> Tx era
 trustMeP (Alonzo _) iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
 trustMeP (Babbage _) iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
+trustMeP (Conway _) iv' (AlonzoTx b w _ m) = AlonzoTx b w (IsValid iv') m
 trustMeP _ _ tx = tx
 
 testAlonzoBlock ::
@@ -1805,6 +1808,7 @@ testAlonzoBlock pf =
 testAlonzoBadPMDHBlock :: GoodCrypto (Crypto era) => Proof era -> Block (BHeaderView (Crypto era)) era
 testAlonzoBadPMDHBlock pf@(Alonzo _) = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
 testAlonzoBadPMDHBlock pf@(Babbage _) = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
+testAlonzoBadPMDHBlock pf@(Conway _) = makeNaiveBlock [trustMeP pf True $ poolMDHTooBigTx pf]
 testAlonzoBadPMDHBlock other = error ("testAlonzoBadPMDHBlock does not work in era " ++ show other)
 
 example1UTxO ::
@@ -1912,8 +1916,9 @@ testUTXOWwith wit@(UTXOW proof) cont utxo pparams tx expected =
   let env = utxoEnv pparams
       state = initialUtxoSt utxo
    in case proof of
-        Alonzo _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
+        Conway _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
+        Alonzo _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Mary _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Allegra _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
         Shelley _ -> runSTS wit (TRC (env, state, tx)) (cont expected)
@@ -2006,11 +2011,13 @@ testUTXOWsubset,
 -- | Use an equality test on the expected and computed [PredicateFailure]
 testUTXOW wit@(UTXOW (Alonzo _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW wit@(UTXOW (Babbage _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
+testUTXOW wit@(UTXOW (Conway _)) utxo p tx = testUTXOWwith wit (genericCont (show tx)) utxo p tx
 testUTXOW (UTXOW other) _ _ _ = error ("Cannot use testUTXOW in era " ++ show other)
 
 -- | Use a subset test on the expected and computed [PredicateFailure]
 testUTXOWsubset wit@(UTXOW (Alonzo _)) utxo = testUTXOWwith wit subsetCont utxo
 testUTXOWsubset wit@(UTXOW (Babbage _)) utxo = testUTXOWwith wit subsetCont utxo
+testUTXOWsubset wit@(UTXOW (Conway _)) utxo = testUTXOWwith wit subsetCont utxo
 testUTXOWsubset (UTXOW other) _ = error ("Cannot use testUTXOW in era " ++ show other)
 
 testU ::
@@ -2034,6 +2041,7 @@ specialCase wit@(UTXOW proof) utxo pparam tx expected =
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         Babbage _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
+        Conway _ -> runSTS wit (TRC (env, state, tx)) (specialCont proof expected)
         other -> error ("Cannot use specialCase in era " ++ show other)
 
 -- ========================================
@@ -2048,6 +2056,7 @@ findMismatch ::
   Maybe (UtxosPredicateFailure era)
 findMismatch (Alonzo _) (WrappedShelleyEraFailure (Shelley.UtxoFailure (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch (Babbage _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
+findMismatch (Conway _) (Babbage.UtxoFailure (FromAlonzoUtxoFail (UtxosFailure x@(ValidationTagMismatch _ _)))) = Just x
 findMismatch _ _ = Nothing
 
 specialCont ::
@@ -2395,6 +2404,12 @@ instance AlonzoBased (BabbageEra c) (BabbageUtxowPred (BabbageEra c)) where
   fromUtxow = FromAlonzoUtxowFail . WrappedShelleyEraFailure
   fromPredFail = FromAlonzoUtxowFail
 
+instance AlonzoBased (ConwayEra c) (BabbageUtxowPred (ConwayEra c)) where
+  fromUtxos = Babbage.UtxoFailure . FromAlonzoUtxoFail . UtxosFailure
+  fromUtxo = Babbage.UtxoFailure . FromAlonzoUtxoFail
+  fromUtxow = FromAlonzoUtxowFail . WrappedShelleyEraFailure
+  fromPredFail = FromAlonzoUtxowFail
+
 -- ===================================================================
 
 testBBODY ::
@@ -2409,6 +2424,7 @@ testBBODY wit@(BBODY proof) initialSt block expected =
    in case proof of
         Alonzo _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         Babbage _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
+        Conway _ -> runSTS wit (TRC (env, initialSt, block)) (genericCont "" expected)
         other -> error ("We cannot testBBODY in era " ++ show other)
 
 alonzoBBODYexamplesP ::
@@ -2445,6 +2461,9 @@ makeTooBig proof@(Alonzo _) =
 makeTooBig proof@(Babbage _) =
   ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
     PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
+makeTooBig proof@(Conway _) =
+  ShelleyInAlonzoPredFail . LedgersFailure . LedgerFailure . DelegsFailure . DelplFailure . PoolFailure $
+    PoolMedataHashTooBig (coerceKeyRole . hashKey . vKey $ someKeys proof) (hashsize @Mock + 1)
 makeTooBig proof = error ("makeTooBig does not work in era " ++ show proof)
 
 -- ==============================================================================
@@ -2455,8 +2474,10 @@ allTrees =
     "Generic Tests, testing Alonzo PredicateFailures, in postAlonzo eras."
     [ alonzoUTXOWexamplesB (Alonzo Mock),
       alonzoUTXOWexamplesB (Babbage Mock),
+      alonzoUTXOWexamplesB (Conway Mock),
       alonzoBBODYexamplesP (Alonzo Mock),
-      alonzoBBODYexamplesP (Babbage Mock)
+      alonzoBBODYexamplesP (Babbage Mock),
+      alonzoBBODYexamplesP (Conway Mock)
     ]
 
 main :: IO ()

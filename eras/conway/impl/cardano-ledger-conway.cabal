@@ -48,18 +48,13 @@ library
   build-depends:
                 bytestring,
                 cardano-binary,
-                cardano-crypto-class,
                 cardano-ledger-alonzo,
                 cardano-ledger-babbage,
                 cardano-ledger-core,
                 cardano-ledger-shelley,
                 cardano-ledger-shelley-ma,
-                cardano-slotting,
                 containers,
                 microlens,
-                plutus-ledger-api ^>= 1.0,
-                plutus-tx ^>= 1.0,
                 strict-containers,
-                text,
   hs-source-dirs:
     src
