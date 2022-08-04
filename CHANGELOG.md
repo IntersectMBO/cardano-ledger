@@ -10,6 +10,9 @@ in the naming of release branches.
 ## [Unreleased]
 
 ### Added
+- New `calculatePoolDistr'` function which is similar to `calculatePoolDistr` but has a new
+  filter argument to only include the stake pool ids (stake pool key hashes) that are needed.
+  #2957
 - New package `cardano-ledger-conway`, which defines new era: the `ConwayEra`
 - Added `coinsPerUTxOByteToCoinsPerUTxOWord` helper function for Babbage
   #2896

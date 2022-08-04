@@ -116,6 +116,7 @@ import Cardano.Ledger.Shelley.Rules.Ledgers as X (LEDGERS, LedgersEnv (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch as X
   ( NEWEPOCH,
     calculatePoolDistr,
+    calculatePoolDistr',
   )
 import Cardano.Ledger.Shelley.Rules.Pool as X (POOL, PoolEnv (..))
 import Cardano.Ledger.Shelley.Rules.PoolReap as X (POOLREAP)
