@@ -1,9 +1,6 @@
 {-# LANGUAGE NamedFieldPuns #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 module Test.Options
   ( TestScenario (..),
@@ -26,13 +23,14 @@ import Hedgehog (Gen, Group (..), Property, PropertyT, TestLimit, withTests)
 import Hedgehog.Internal.Property (GroupName (..), PropertyName (..))
 import Test.Cardano.Prelude
 import Test.Tasty
-  ( TestTree,
+  ( TestName,
+    TestTree,
     askOption,
     defaultMainWithIngredients,
     includingOptions,
     testGroup,
   )
-import Test.Tasty.Hedgehog (testProperty)
+import Test.Tasty.Hedgehog hiding (testProperty)
 import Test.Tasty.Ingredients (Ingredient (..), composeReporters)
 import Test.Tasty.Ingredients.Basic (consoleTestReporter, listingTests)
 import Test.Tasty.Options
@@ -41,6 +39,10 @@ import Test.Tasty.Options
     lookupOption,
     safeRead,
   )
+
+-- | testProperty has been deprecated. We make our own version here.
+testProperty :: TestName -> Property -> TestTree
+testProperty s p = testPropertyNamed s (Hedgehog.Internal.Property.PropertyName s) p
 
 --------------------------------------------------------------------------------
 -- TestScenario

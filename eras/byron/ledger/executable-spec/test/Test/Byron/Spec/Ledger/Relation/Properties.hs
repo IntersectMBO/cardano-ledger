@@ -2,9 +2,6 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
 
 module Test.Byron.Spec.Ledger.Relation.Properties (testRelation) where
 
@@ -15,9 +12,14 @@ import Data.Map.Strict (Map)
 import Data.Set (Set, union, (\\))
 import Hedgehog (Gen, MonadTest, Property, PropertyT, forAll, property, withTests, (===))
 import qualified Hedgehog.Gen as Gen
+import Hedgehog.Internal.Property (PropertyName (..))
 import qualified Hedgehog.Range as Range
-import Test.Tasty (TestTree, testGroup)
-import Test.Tasty.Hedgehog
+import Test.Tasty (TestName, TestTree, testGroup)
+import Test.Tasty.Hedgehog hiding (testProperty)
+
+-- | testProperty has been deprecated. We make our own version here.
+testProperty :: TestName -> Property -> TestTree
+testProperty s p = testPropertyNamed s (Hedgehog.Internal.Property.PropertyName s) p
 
 --------------------------------------------------------------------------------
 -- Properties on Relations

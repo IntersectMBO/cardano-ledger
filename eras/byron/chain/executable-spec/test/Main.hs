@@ -1,13 +1,8 @@
-{-# OPTIONS_GHC -Wno-deprecations #-}
-
--- TODO Remove use of deprecated function testProperty
-
 module Main (main) where
 
-import Test.Byron.AbstractSize.Properties (testAbstractSize)
+import Test.Byron.AbstractSize.Properties (testAbstractSize, testProperty)
 import Test.Byron.Spec.Chain.STS.Properties as CHAIN
 import Test.Tasty (TestTree, defaultMain, testGroup)
-import Test.Tasty.Hedgehog (testProperty)
 
 main :: IO ()
 main = defaultMain tests

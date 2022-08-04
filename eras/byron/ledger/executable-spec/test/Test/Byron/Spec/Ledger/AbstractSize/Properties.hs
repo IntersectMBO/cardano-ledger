@@ -1,11 +1,8 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-{-# OPTIONS_GHC -Wno-deprecations #-}
 
--- TODO Remove use of deprecated function testProperty
-
-module Test.Byron.Spec.Ledger.AbstractSize.Properties (testTxHasTypeReps) where
+module Test.Byron.Spec.Ledger.AbstractSize.Properties (testTxHasTypeReps, testProperty) where
 
 import Byron.Spec.Ledger.Core hiding ((<|))
 import Byron.Spec.Ledger.STS.UTXOW (UTXOW)
@@ -19,10 +16,15 @@ import Data.Sequence (empty, (<|), (><))
 import qualified Data.Sequence as Seq
 import Data.Typeable (TypeRep, Typeable, typeOf)
 import Hedgehog (MonadTest, Property, forAll, property, withTests, (===))
+import Hedgehog.Internal.Property (PropertyName (..))
 import Numeric.Natural (Natural)
-import Test.Tasty (TestTree, testGroup)
+import Test.Tasty (TestName, TestTree, testGroup)
 import Test.Tasty.HUnit (Assertion, testCase, (@?=))
-import Test.Tasty.Hedgehog
+import Test.Tasty.Hedgehog hiding (testProperty)
+
+-- | testProperty has been deprecated. We make our own version here.
+testProperty :: TestName -> Property -> TestTree
+testProperty s p = testPropertyNamed s (Hedgehog.Internal.Property.PropertyName s) p
 
 --------------------------------------------------------------------------------
 -- Example HasTypeReps.typeReps for TxIn, Tx
