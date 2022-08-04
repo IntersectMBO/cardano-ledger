@@ -1,4 +1,5 @@
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
@@ -13,7 +14,6 @@ import Cardano.Ledger.Alonzo.Tx
     isValidAlonzoTxL,
     mkBasicAlonzoTx,
     sizeAlonzoTxF,
-    validateAlonzoNativeScript,
     witsAlonzoTxL,
   )
 import Cardano.Ledger.Alonzo.TxSeq
@@ -29,6 +29,7 @@ import Cardano.Ledger.Conway.TxBody ()
 import Cardano.Ledger.Conway.TxWits ()
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
+import Cardano.Ledger.ShelleyMA.Tx (validateTimelock)
 
 instance CC.Crypto c => EraTx (ConwayEra c) where
   type Tx (ConwayEra c) = AlonzoTx (ConwayEra c)
@@ -37,7 +38,7 @@ instance CC.Crypto c => EraTx (ConwayEra c) where
   witsTxL = witsAlonzoTxL
   auxDataTxL = auxDataAlonzoTxL
   sizeTxF = sizeAlonzoTxF
-  validateScript = validateAlonzoNativeScript
+  validateScript (Phase1Script script) tx = validateTimelock @(ConwayEra c) script tx
 
 instance CC.Crypto c => AlonzoEraTx (ConwayEra c) where
   isValidTxL = isValidAlonzoTxL

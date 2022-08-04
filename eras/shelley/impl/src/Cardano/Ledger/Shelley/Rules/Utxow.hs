@@ -374,12 +374,13 @@ instance
 validateFailedScripts ::
   forall era. EraTx era => Tx era -> Test (UtxowPredicateFailure era)
 validateFailedScripts tx = do
-  let failedScripts =
+  let phase1Map = getPhase1 (tx ^. witsTxL . scriptWitsL)
+      failedScripts =
         Map.filterWithKey
-          ( \hs validator ->
-              hashScript @era validator /= hs || not (validateScript @era validator tx)
+          ( \hs (core, phase) ->
+              hashScript @era core /= hs || not (validateScript @era phase tx)
           )
-          (tx ^. witsTxL . scriptWitsL)
+          phase1Map
   failureUnless (Map.null failedScripts) $
     ScriptWitnessNotValidatingUTXOW (Map.keysSet failedScripts)
 

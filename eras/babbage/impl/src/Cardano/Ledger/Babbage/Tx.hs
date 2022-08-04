@@ -43,6 +43,7 @@ import Cardano.Ledger.Babbage.TxBody
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.ShelleyMA.Tx (validateTimelock)
 import Cardano.Ledger.TxIn (TxIn)
 import Control.Applicative ((<|>))
 import Control.SetAlgebra (eval, (◁))
@@ -59,7 +60,7 @@ instance CC.Crypto c => EraTx (BabbageEra c) where
   witsTxL = witsAlonzoTxL
   auxDataTxL = auxDataAlonzoTxL
   sizeTxF = sizeAlonzoTxF
-  validateScript = validateAlonzoNativeScript
+  validateScript (Phase1Script script) tx = validateTimelock @(BabbageEra c) script tx
 
 instance CC.Crypto c => AlonzoEraTx (BabbageEra c) where
   isValidTxL = isValidAlonzoTxL

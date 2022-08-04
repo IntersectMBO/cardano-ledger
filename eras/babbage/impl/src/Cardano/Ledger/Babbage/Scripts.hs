@@ -23,17 +23,14 @@ import Cardano.Ledger.Alonzo.Data
     validateAlonzoAuxiliaryData,
   )
 import Cardano.Ledger.Alonzo.Language
-import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..), isPlutusScript)
+import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import Cardano.Ledger.Babbage.Era
 import Cardano.Ledger.Core
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Shelley.Scripts (nativeMultiSigTag)
+import Cardano.Ledger.ShelleyMA.Timelocks (Timelock)
 import Data.ByteString (ByteString)
-
-instance CC.Crypto c => EraScript (BabbageEra c) where
-  type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
-  isNativeScript x = not (isPlutusScript x)
-  scriptPrefixTag = babbageScriptPrefixTag @(BabbageEra c)
+import Data.ByteString.Short (ShortByteString)
 
 babbageScriptPrefixTag ::
   Script era ~ AlonzoScript era => Script era -> ByteString
@@ -42,6 +39,23 @@ babbageScriptPrefixTag script =
     (TimelockScript _) -> nativeMultiSigTag -- "\x00"
     (PlutusScript PlutusV1 _) -> "\x01"
     (PlutusScript PlutusV2 _) -> "\x02"
+
+type instance SomeScript 'PhaseOne (BabbageEra c) = Timelock c
+
+type instance SomeScript 'PhaseTwo (BabbageEra c) = (Language, ShortByteString)
+
+instance CC.Crypto c => EraScript (BabbageEra c) where
+  type Script (BabbageEra c) = AlonzoScript (BabbageEra c)
+  scriptPrefixTag = babbageScriptPrefixTag
+  phaseScript PhaseOneRep (TimelockScript s) = Just (Phase1Script s)
+  phaseScript PhaseTwoRep (PlutusScript lang bytes) = Just (Phase2Script lang bytes)
+  phaseScript _ _ = Nothing
+
+isPlutusScript :: forall era. EraScript era => Script era -> Bool
+isPlutusScript x =
+  case phaseScript @era PhaseTwoRep x of
+    Just _ -> True
+    Nothing -> False
 
 instance CC.Crypto c => EraAuxiliaryData (BabbageEra c) where
   type AuxiliaryData (BabbageEra c) = AlonzoAuxiliaryData (BabbageEra c)

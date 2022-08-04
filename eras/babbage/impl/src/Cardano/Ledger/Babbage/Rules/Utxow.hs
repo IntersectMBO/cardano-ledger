@@ -208,17 +208,18 @@ validateFailedBabbageScripts ::
   Set (ScriptHash (Crypto era)) ->
   Test (Shelley.UtxowPredicateFailure era)
 validateFailedBabbageScripts tx utxo neededHashes =
-  let failedScripts =
+  let phase1Map = getPhase1 (txscripts utxo tx)
+      failedScripts =
         Map.filterWithKey
-          ( \hs script ->
-              let zero = hs `Set.member` neededHashes
-                  one = isNativeScript @era script
-                  two = hashScript @era script /= hs -- TODO this is probably not needed. Only the script is transmitted on the wire, we compute the hash
-                  three = not (validateScript @era script tx)
-                  answer = zero && one && (two || three)
+          ( \hs (script, phased) ->
+              let needed = hs `Set.member` neededHashes
+                  hashDisagrees = hashScript @era script /= hs
+                  -- TODO this is probably not needed. Only the script is transmitted on the wire, we compute the hash
+                  scriptDoesNotValidate = not (validateScript @era phased tx)
+                  answer = needed && (hashDisagrees || scriptDoesNotValidate)
                in answer
           )
-          (txscripts utxo tx)
+          phase1Map
    in failureUnless
         (Map.null failedScripts)
         (Shelley.ScriptWitnessNotValidatingUTXOW $ Map.keysSet failedScripts)

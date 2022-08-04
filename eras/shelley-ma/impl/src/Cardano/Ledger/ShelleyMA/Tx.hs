@@ -3,6 +3,7 @@
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
@@ -12,7 +13,7 @@ module Cardano.Ledger.ShelleyMA.Tx
   )
 where
 
-import Cardano.Ledger.Core (Era (Crypto), EraTx (..), EraWitnesses (..))
+import Cardano.Ledger.Core (Era (Crypto), EraTx (..), EraWitnesses (..), PhasedScript (..))
 import Cardano.Ledger.Keys.WitVKey (witVKeyHash)
 import Cardano.Ledger.Shelley.Tx
   ( ShelleyTx,
@@ -48,7 +49,7 @@ instance MAClass ma crypto => EraTx (ShelleyMAEra ma crypto) where
 
   sizeTxF = sizeShelleyTxF
 
-  validateScript = validateTimelock
+  validateScript (Phase1Script script) tx = validateTimelock @(ShelleyMAEra ma crypto) script tx
 
 -- =======================================================
 -- Validating timelock scripts

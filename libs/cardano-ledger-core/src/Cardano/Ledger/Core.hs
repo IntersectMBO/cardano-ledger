@@ -4,6 +4,7 @@
 {-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE GADTs #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
@@ -53,6 +54,14 @@ module Cardano.Ledger.Core
     notSupportedInThisEra,
     notSupportedInThisEraL,
 
+    -- * Phases
+    Phase (..),
+    PhaseRep (..),
+    SomeScript,
+    PhasedScript (..),
+    getPhase1,
+    getPhase2,
+
     -- * Re-exports
     module Cardano.Ledger.Hashes,
   )
@@ -71,6 +80,7 @@ import Cardano.Ledger.Hashes
 import Cardano.Ledger.Keys (KeyRole (Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
+import Cardano.Ledger.Language (Language)
 import Cardano.Ledger.SafeHash (HashAnnotated (..), SafeToHash (..))
 import Cardano.Ledger.Serialization (ToCBORGroup (..))
 import Cardano.Ledger.TxIn (TxIn (..))
@@ -78,9 +88,10 @@ import Cardano.Ledger.Val (DecodeNonNegative, Val (..))
 import Control.DeepSeq (NFData)
 import Control.Monad.Except (Except, runExcept)
 import qualified Data.ByteString as BS
+import Data.ByteString.Short (ShortByteString)
 import Data.Coerce (Coercible, coerce)
 import Data.Kind (Constraint, Type)
-import Data.Map (Map)
+import Data.Map (Map, mapMaybe)
 import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
@@ -134,7 +145,7 @@ class
 
   sizeTxF :: SimpleGetter (Tx era) Integer
 
-  validateScript :: Script era -> Tx era -> Bool
+  validateScript :: PhasedScript 'PhaseOne era -> Tx era -> Bool
 
 class
   ( EraTxOut era,
@@ -377,8 +388,12 @@ class
     ScriptHash . Hash.castHash
       . Hash.hashWith
         (\x -> scriptPrefixTag @era x <> originalBytes x)
+  phaseScript :: PhaseRep phase -> Script era -> Maybe (PhasedScript phase era)
   isNativeScript :: Script era -> Bool
-  isNativeScript _ = True
+  isNativeScript s =
+    case phaseScript @era PhaseOneRep s of
+      Nothing -> False
+      Just _ -> True
 
 --------------------------------------------------------------------------------
 -- Segregated Witness
@@ -552,3 +567,45 @@ notSupportedInThisEra = error "Impossible: Function is not supported in this era
 -- Without using `lens` we hit a ghc bug, which results in a redundant constraint warning
 notSupportedInThisEraL :: HasCallStack => Lens' a b
 notSupportedInThisEraL = lens notSupportedInThisEra notSupportedInThisEra
+
+-- ====================================================
+-- Reflecting the phase of scripts into types
+-- ====================================================
+
+-- | There are only two Phases
+data Phase
+  = PhaseOne -- simple scripts run in phase 1
+  | PhaseTwo -- smart scripts (Plutus) run in phase 2
+
+-- | A GADT that witnesses the two Phases
+data PhaseRep t where
+  PhaseOneRep :: PhaseRep 'PhaseOne
+  PhaseTwoRep :: PhaseRep 'PhaseTwo
+
+-- | Type family that defines a script type given a Phase and an Era.
+type family SomeScript (phase :: Phase) (era :: Type) :: Type
+
+{- Instance like these appear in modules Cardano.Ledger.{Shelley,ShelleyMA,Alonzo,Babbage}
+type instance SomeScript PhaseOne (BabbageEra c) = Timelock c
+type instance SomeScript PhaseOne (AlonzoEra c) = Timelock c
+--  We need the Language for Phase2 scripts because Plutus comes in several variants
+type instance SomeScript PhaseTwo (BabbageEra c) = (Language, ShortByteString)
+type instance SomeScript PhaseTwo (AlonzoEra c) = (Language, ShortByteString)
+type instance SomeScript PhaseOne (ShelleyMAEra ma c) = Timelock c
+type instance SomeScript PhaseOne (ShelleyEra c) = MultiSig c
+-}
+
+-- | A concrete type that witnesses the Phase of SomeScript
+data PhasedScript phase era where
+  Phase1Script :: SomeScript 'PhaseOne era -> PhasedScript 'PhaseOne era
+  Phase2Script :: Language -> ShortByteString -> PhasedScript 'PhaseTwo era
+
+getPhase1 :: EraScript era => Map k (Script era) -> Map k (Script era, PhasedScript 'PhaseOne era)
+getPhase1 m = mapMaybe phase1 m
+  where
+    phase1 s = case phaseScript PhaseOneRep s of
+      Just ps -> Just (s, ps)
+      Nothing -> Nothing
+
+getPhase2 :: EraScript era => Map k (Script era) -> Map k (PhasedScript 'PhaseTwo era)
+getPhase2 = mapMaybe (phaseScript PhaseTwoRep)

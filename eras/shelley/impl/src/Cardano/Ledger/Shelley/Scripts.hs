@@ -89,11 +89,15 @@ newtype MultiSig crypto = MultiSigConstr (MemoBytes (MultiSigRaw crypto))
 nativeMultiSigTag :: BS.ByteString
 nativeMultiSigTag = "\00"
 
+type instance SomeScript 'PhaseOne (ShelleyEra c) = MultiSig c
+
 instance CC.Crypto c => EraScript (ShelleyEra c) where
   type Script (ShelleyEra c) = MultiSig c
 
   -- In the ShelleyEra there is only one kind of Script and its tag is "\x00"
   scriptPrefixTag _script = nativeMultiSigTag
+  phaseScript PhaseOneRep multisig = Just (Phase1Script multisig)
+  phaseScript PhaseTwoRep _ = Nothing
 
 deriving newtype instance NFData (MultiSig era)
 
