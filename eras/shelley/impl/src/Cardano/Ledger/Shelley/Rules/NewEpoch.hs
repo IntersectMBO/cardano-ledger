@@ -16,6 +16,7 @@ module Cardano.Ledger.Shelley.Rules.NewEpoch
     NewEpochEvent (..),
     PredicateFailure,
     calculatePoolDistr,
+    calculatePoolDistr',
   )
 where
 
@@ -29,7 +30,7 @@ import Cardano.Ledger.Coin (Coin (Coin), toDeltaCoin)
 import Cardano.Ledger.Compactible (fromCompact)
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential)
-import Cardano.Ledger.Keys (KeyRole (Staking))
+import Cardano.Ledger.Keys (KeyHash, KeyRole (StakePool, Staking))
 import Cardano.Ledger.PoolDistr (IndividualPoolStake (..), PoolDistr (..))
 import Cardano.Ledger.Shelley.AdaPots (AdaPots, totalAdaPotsES)
 import Cardano.Ledger.Shelley.EpochBoundary
@@ -202,7 +203,10 @@ tellReward (DeltaRewardEvent (RupdEvent _ m)) | Map.null m = pure ()
 tellReward x = tellEvent x
 
 calculatePoolDistr :: SnapShot crypto -> PoolDistr crypto
-calculatePoolDistr (SnapShot stake delegs poolParams) =
+calculatePoolDistr = calculatePoolDistr' (const True)
+
+calculatePoolDistr' :: forall crypto. (KeyHash 'StakePool crypto -> Bool) -> SnapShot crypto -> PoolDistr crypto
+calculatePoolDistr' includeHash (SnapShot stake delegs poolParams) =
   let Coin total = sumAllStake stake
       -- total could be zero (in particular when shrinking)
       nonZeroTotal = if total == 0 then 1 else total
@@ -211,7 +215,8 @@ calculatePoolDistr (SnapShot stake delegs poolParams) =
           [ (d, c % nonZeroTotal)
             | (hk, compactCoin) <- VMap.toAscList (unStake stake),
               let Coin c = fromCompact compactCoin,
-              Just d <- [VMap.lookup hk delegs]
+              Just d <- [VMap.lookup hk delegs],
+              includeHash d
           ]
    in PoolDistr $
         Map.intersectionWith
