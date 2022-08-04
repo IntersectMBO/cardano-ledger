@@ -59,6 +59,7 @@ let
         fi
       }
       PROMPT_COMMAND=prompt
+      export LC_ALL="C.UTF-8"
     '';
   };
 
