@@ -458,7 +458,7 @@ instance EraTxBody era => ToCBOR (TxBody era) where
 
 -- ===============================================================
 
-instance EraTxOut era => ToCBOR (TxOut era) where
+instance (Era era, ToCBOR (CompactForm (Value era))) => ToCBOR (TxOut era) where
   toCBOR (TxOutCompact addr coin) =
     encodeListLen 2
       <> toCBOR addr
@@ -469,7 +469,10 @@ instance EraTxOut era => FromCBOR (TxOut era) where
 
 -- This instance does not do any sharing and is isomorphic to FromCBOR
 -- use the weakest constraint necessary
-instance (EraTxOut era, DecodeNonNegative (Value era)) => FromSharedCBOR (TxOut era) where
+instance
+  (Era era, Show (Value era), DecodeNonNegative (Value era), Compactible (Value era)) =>
+  FromSharedCBOR (TxOut era)
+  where
   type Share (TxOut era) = Interns (Credential 'Staking (Crypto era))
   fromSharedCBOR _ =
     decodeRecordNamed "TxOut" (const 2) $ do

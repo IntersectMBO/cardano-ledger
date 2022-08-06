@@ -123,9 +123,9 @@ import Cardano.Ledger.ShelleyMA.Timelocks (ValidityInterval (..))
 import Cardano.Ledger.ShelleyMA.TxBody (ShelleyMAEraTxBody (..))
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val
-  ( Val (..),
+  ( DecodeNonNegative (decodeNonNegative),
+    Val (..),
     decodeMint,
-    decodeNonNegative,
     encodeMint,
     isZero,
   )
@@ -277,7 +277,7 @@ encodeDataHash32 dataHash = do
     _ -> Nothing
 
 viewCompactTxOut ::
-  EraTxOut era =>
+  (Era era, Val (Value era)) =>
   AlonzoTxOut era ->
   (CompactAddr (Crypto era), CompactForm (Value era), StrictMaybe (DataHash (Crypto era)))
 viewCompactTxOut txOut = case txOut of
@@ -294,7 +294,7 @@ viewCompactTxOut txOut = case txOut of
     | otherwise -> error addressErrorMsg
 
 viewTxOut ::
-  EraTxOut era =>
+  (Era era, Val (Value era)) =>
   AlonzoTxOut era ->
   (Addr (Crypto era), Value era, StrictMaybe (DataHash (Crypto era)))
 viewTxOut (TxOutCompact' bs c) = (addr, val, SNothing)
@@ -322,7 +322,7 @@ deriving via InspectHeapNamed "AlonzoTxOut" (AlonzoTxOut era) instance NoThunks 
 
 pattern AlonzoTxOut ::
   forall era.
-  (EraTxOut era, HasCallStack) =>
+  (Era era, Val (Value era), HasCallStack) =>
   Addr (Crypto era) ->
   Value era ->
   StrictMaybe (DataHash (Crypto era)) ->
@@ -683,7 +683,10 @@ instance EraTxOut era => FromCBOR (AlonzoTxOut era) where
   fromCBOR = fromNotSharedCBOR
   {-# INLINE fromCBOR #-}
 
-instance EraTxOut era => FromSharedCBOR (AlonzoTxOut era) where
+instance
+  (Era era, Val (Value era), DecodeNonNegative (Value era), Show (Value era)) =>
+  FromSharedCBOR (AlonzoTxOut era)
+  where
   type Share (AlonzoTxOut era) = Interns (Credential 'Staking (Crypto era))
   fromSharedCBOR credsInterns = do
     lenOrIndef <- decodeListLenOrIndef
@@ -739,7 +742,7 @@ pattern TxOutCompactDH addr vl dh <-
 {-# COMPLETE TxOutCompact, TxOutCompactDH #-}
 
 mkTxOutCompact ::
-  (EraTxOut era, HasCallStack) =>
+  (Era era, HasCallStack, Val (Value era)) =>
   Addr (Crypto era) ->
   CompactAddr (Crypto era) ->
   CompactForm (Value era) ->
