@@ -184,7 +184,8 @@ data AlonzoUtxoPredFailure era
   | -- | list of supplied bad transaction outputs
     OutputBootAddrAttrsTooBig
       ![TxOut era]
-  | TriesToForgeADA
+  | -- Kept for backwards compatibility: no longer used because the `MultiAsset` type of mint doesn't allow for this possibility
+    TriesToForgeADA
   | -- | list of supplied bad transaction output triples (actualSize,PParameterMaxValue,TxOut)
     OutputTooBigUTxO
       ![(Integer, Integer, TxOut era)]
@@ -550,9 +551,7 @@ utxoTransition = do
   runTest $
     ShelleyMA.validateValueNotConservedUTxO pp utxo stakepools txBody
 
-  {-   adaID ∉ supp mint tx   -}
-  runTestOnSignal $
-    ShelleyMA.validateTriesToForgeADA txBody
+  {- adaPolicy ∉ supp mint tx  - check not needed because mint field of type MultiAsset cannot contain ada -}
 
   let outputs = txouts txBody
   {-   ∀ txout ∈ txouts txb, getValuetxout ≥ inject (uxoEntrySizetxout ∗ coinsPerUTxOWord p) -}
