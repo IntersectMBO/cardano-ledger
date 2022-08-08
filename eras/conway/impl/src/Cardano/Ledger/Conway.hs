@@ -11,6 +11,7 @@
 module Cardano.Ledger.Conway (ConwayEra) where
 
 import Cardano.Ledger.Alonzo (reapplyAlonzoTx)
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO (..))
 import Cardano.Ledger.Alonzo.TxWitness (TxWitness (..))
 import Cardano.Ledger.Babbage.Rules (babbageMinUTxOValue)
@@ -40,7 +41,6 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 
 -- =====================================================
 

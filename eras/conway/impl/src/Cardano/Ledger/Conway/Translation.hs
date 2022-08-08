@@ -20,6 +20,7 @@ import Cardano.Ledger.Babbage.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Babbage.Tx (AlonzoTx (..))
 import Cardano.Ledger.Babbage.TxBody (BabbageTxOut (..), Datum (..))
 import Cardano.Ledger.Conway (ConwayEra)
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 import Cardano.Ledger.Conway.Scripts ()
 import Cardano.Ledger.Conway.TxOut ()
 import qualified Cardano.Ledger.Core as Core
@@ -32,7 +33,9 @@ import Cardano.Ledger.Era
   )
 import Cardano.Ledger.Serialization (translateViaCBORAnn)
 import Cardano.Ledger.Shelley.API
-  ( EpochState (..),
+  ( DPState (..),
+    DState (..),
+    EpochState (..),
     NewEpochState (..),
     ShelleyGenesis,
     StrictMaybe (..),
@@ -40,7 +43,6 @@ import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
 import Data.Coerce
-import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 
 --------------------------------------------------------------------------------
 -- Translation from Alonzo to Babbage
@@ -75,7 +77,7 @@ instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
         }
 
 instance Crypto c => TranslateEra (ConwayEra c) ShelleyGenesis where
-  translateEra ctxt@(ConwayGenesis (API.GenDelegs genDelegs)) genesis =
+  translateEra ctxt genesis =
     pure
       API.ShelleyGenesis
         { API.sgSystemStart = API.sgSystemStart genesis,
@@ -90,7 +92,7 @@ instance Crypto c => TranslateEra (ConwayEra c) ShelleyGenesis where
           API.sgUpdateQuorum = API.sgUpdateQuorum genesis,
           API.sgMaxLovelaceSupply = API.sgMaxLovelaceSupply genesis,
           API.sgProtocolParams = translateEra' ctxt (API.sgProtocolParams genesis),
-          API.sgGenDelegs = genDelegs,
+          API.sgGenDelegs = API.sgGenDelegs genesis,
           API.sgInitialFunds = API.sgInitialFunds genesis,
           API.sgStaking = API.sgStaking genesis
         }
@@ -135,12 +137,16 @@ instance Crypto c => TranslateEra (ConwayEra c) EpochState where
         }
 
 instance Crypto c => TranslateEra (ConwayEra c) API.LedgerState where
-  translateEra ctxt ls =
+  translateEra ctxt@(ConwayGenesis newGenDelegs) ls =
     pure
       API.LedgerState
         { API.lsUTxOState = translateEra' ctxt $ API.lsUTxOState ls,
-          API.lsDPState = API.lsDPState ls
+          API.lsDPState = updateGenesisKeys $ API.lsDPState ls
         }
+    where
+      updateGenesisKeys (DPState dstate pstate) = DPState dstate' pstate
+        where
+          dstate' = dstate {_genDelegs = newGenDelegs}
 
 instance Crypto c => TranslateEra (ConwayEra c) API.UTxOState where
   translateEra ctxt us =
