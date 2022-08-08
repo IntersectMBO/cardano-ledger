@@ -23,7 +23,7 @@ import Cardano.Ledger.Babbage.Tx
   )
 import Cardano.Ledger.Babbage.TxInfo (babbageTxInfo)
 import Cardano.Ledger.Conway.Era (ConwayEra)
-import Cardano.Ledger.Conway.Genesis (AlonzoGenesis, extendPPWithGenesis)
+import Cardano.Ledger.Conway.Genesis (extendPPWithGenesis)
 import Cardano.Ledger.Conway.PParams (BabbagePParamsHKD (..))
 import Cardano.Ledger.Conway.Tx ()
 import Cardano.Ledger.Conway.TxBody (BabbageEraTxBody (..))
@@ -40,6 +40,7 @@ import qualified Data.Map.Strict as Map
 import Data.Maybe.Strict
 import qualified Data.Set as Set
 import Lens.Micro
+import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 
 -- =====================================================
 

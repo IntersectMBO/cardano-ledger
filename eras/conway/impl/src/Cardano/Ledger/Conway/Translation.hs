@@ -13,7 +13,6 @@
 module Cardano.Ledger.Conway.Translation where
 
 import Cardano.Binary (DecoderError)
-import Cardano.Ledger.Alonzo.Genesis (AlonzoGenesis)
 import Cardano.Ledger.Alonzo.Scripts (AlonzoScript (..))
 import qualified Cardano.Ledger.Alonzo.Tx as Alonzo
 import Cardano.Ledger.Babbage (BabbageEra)
@@ -41,6 +40,7 @@ import Cardano.Ledger.Shelley.API
 import qualified Cardano.Ledger.Shelley.API as API
 import Cardano.Ledger.Shelley.PParams (ShelleyPParamsHKD)
 import Data.Coerce
+import Cardano.Ledger.Conway.Genesis (ConwayGenesis (..))
 
 --------------------------------------------------------------------------------
 -- Translation from Alonzo to Babbage
@@ -59,7 +59,7 @@ import Data.Coerce
 
 type instance PreviousEra (ConwayEra c) = BabbageEra c
 
-type instance TranslationContext (ConwayEra c) = AlonzoGenesis
+type instance TranslationContext (ConwayEra c) = ConwayGenesis c
 
 instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
   translateEra ctxt nes =
@@ -75,7 +75,7 @@ instance Crypto c => TranslateEra (ConwayEra c) NewEpochState where
         }
 
 instance Crypto c => TranslateEra (ConwayEra c) ShelleyGenesis where
-  translateEra ctxt genesis =
+  translateEra ctxt@(ConwayGenesis (API.GenDelegs genDelegs)) genesis =
     pure
       API.ShelleyGenesis
         { API.sgSystemStart = API.sgSystemStart genesis,
@@ -90,7 +90,7 @@ instance Crypto c => TranslateEra (ConwayEra c) ShelleyGenesis where
           API.sgUpdateQuorum = API.sgUpdateQuorum genesis,
           API.sgMaxLovelaceSupply = API.sgMaxLovelaceSupply genesis,
           API.sgProtocolParams = translateEra' ctxt (API.sgProtocolParams genesis),
-          API.sgGenDelegs = API.sgGenDelegs genesis,
+          API.sgGenDelegs = genDelegs,
           API.sgInitialFunds = API.sgInitialFunds genesis,
           API.sgStaking = API.sgStaking genesis
         }
