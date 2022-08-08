@@ -30,7 +30,7 @@ import Cardano.Ledger.Alonzo.TxInfo
     TxOutSource (TxOutFromInput, TxOutFromOutput),
   )
 import Cardano.Ledger.Alonzo.TxWitness (RdmrPtr (..), Redeemers (..), TxDats (..))
-import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collBalance)
+import qualified Cardano.Ledger.Babbage.Collateral as Collateral (collAdaBalance)
 import Cardano.Ledger.Babbage.Rules (BabbageUtxoPredFailure (..), BabbageUtxowPredFailure (..))
 import Cardano.Ledger.Babbage.TxBody
   ( AlonzoEraTxBody (..),
@@ -63,7 +63,6 @@ import qualified Cardano.Ledger.Shelley.Rules.Utxow as Shelley
 import Cardano.Ledger.Shelley.UTxO (makeWitnessVKey)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val (inject)
-import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition.Extended hiding (Assertion)
 import qualified Data.ByteString as BS
 import Data.ByteString.Short as SBS (ShortByteString, pack)
@@ -1106,12 +1105,12 @@ testExpectSuccessInvalid
         tx' = txFromTestCaseData pf tc
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
 
-        initUtxo = (UTxO . Map.fromList) $ inputs' ++ refInputs' ++ collateral'
-        colBallance = Val.coin $ Collateral.collBalance txBody' initUtxo
+        initUtxo = Map.fromList $ inputs' ++ refInputs' ++ collateral'
+        colBallance = Collateral.collAdaBalance txBody' initUtxo
         expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
         expectedState = smartUTxOState expectedUtxo (Coin 0) colBallance def
         assumedInvalidTx = trustMeP pf False tx'
-     in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedInvalidTx (Right expectedState)
+     in testUTXOW (UTXOW pf) (UTxO initUtxo) (pp pf) assumedInvalidTx (Right expectedState)
 
 testExpectFailure ::
   forall era.

@@ -25,7 +25,10 @@ module Cardano.Ledger.Shelley.UTxO
     txouts,
     txup,
     balance,
+    coinBalance,
     sumAllValue,
+    sumAllCoin,
+    areAllAdaOnly,
     totalDeposits,
     makeWitnessVKey,
     makeWitnessesVKey,
@@ -224,22 +227,29 @@ makeWitnessesFromScriptKeys txbodyHash hashKeyMap scriptHashes =
    in makeWitnessesVKey txbodyHash (Map.elems witKeys)
 
 -- | Determine the total balance contained in the UTxO.
-balance ::
-  forall era.
-  EraTxOut era =>
-  UTxO era ->
-  Value era
-balance = sumAllValue @era . unUTxO
+balance :: EraTxOut era => UTxO era -> Value era
+balance = sumAllValue . unUTxO
 {-# INLINE balance #-}
 
--- | Sum all the value in any Foldable with elements that have a field "value"
-sumAllValue ::
-  forall era f.
-  (Foldable f, EraTxOut era) =>
-  f (TxOut era) ->
-  Value era
+-- | Determine the total Ada only balance contained in the UTxO. This is
+-- equivalent to `coin . balance`, but it will be more efficient
+coinBalance :: EraTxOut era => UTxO era -> Coin
+coinBalance = sumAllCoin . unUTxO
+{-# INLINE coinBalance #-}
+
+-- | Sum all the value in any Foldable with 'TxOut's
+sumAllValue :: (EraTxOut era, Foldable f) => f (TxOut era) -> Value era
 sumAllValue = foldMap' (^. valueTxOutL)
 {-# INLINE sumAllValue #-}
+
+-- | Sum all the coin in any Foldable with with 'TxOut's
+sumAllCoin :: (EraTxOut era, Foldable f) => f (TxOut era) -> Coin
+sumAllCoin = foldMap' (^. coinTxOutL)
+{-# INLINE sumAllCoin #-}
+
+areAllAdaOnly :: (EraTxOut era, Foldable f) => f (TxOut era) -> Bool
+areAllAdaOnly = all (^. isAdaOnlyTxOutF)
+{-# INLINE areAllAdaOnly #-}
 
 -- | Determine the total deposit amount needed.
 -- The block may (legitimately) contain multiple registration certificates
