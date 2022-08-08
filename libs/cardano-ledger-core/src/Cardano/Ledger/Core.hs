@@ -75,9 +75,10 @@ import Cardano.Ledger.BaseTypes (ProtVer)
 import Cardano.Ledger.Coin (Coin)
 import Cardano.Ledger.CompactAddress (CompactAddr, compactAddr, decompactAddr, isBootstrapCompactAddr)
 import Cardano.Ledger.Compactible (Compactible (..))
+import Cardano.Ledger.Credential
 import qualified Cardano.Ledger.Crypto as CC
 import Cardano.Ledger.Hashes
-import Cardano.Ledger.Keys (KeyRole (Witness))
+import Cardano.Ledger.Keys (KeyRole (Staking, Witness))
 import Cardano.Ledger.Keys.Bootstrap (BootstrapWitness)
 import Cardano.Ledger.Keys.WitVKey (WitVKey)
 import Cardano.Ledger.Language (Language)
@@ -96,6 +97,7 @@ import Data.Maybe (fromMaybe)
 import Data.Maybe.Strict (StrictMaybe)
 import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
+import Data.Sharing (FromSharedCBOR (Share), Interns)
 import Data.Typeable (Typeable)
 import Data.Void (Void, absurd)
 import Data.Word (Word64)
@@ -188,6 +190,8 @@ class
     FromCBOR (Value era),
     ToCBOR (Value era),
     FromCBOR (TxOut era),
+    FromSharedCBOR (TxOut era),
+    Share (TxOut era) ~ Interns (Credential 'Staking (Crypto era)),
     ToCBOR (TxOut era),
     NoThunks (TxOut era),
     NFData (TxOut era),
