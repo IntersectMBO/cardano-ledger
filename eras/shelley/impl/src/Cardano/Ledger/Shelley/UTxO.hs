@@ -49,7 +49,8 @@ import qualified Cardano.Crypto.Hash as CH
 import Cardano.Ledger.Address (Addr (..))
 import Cardano.Ledger.BaseTypes (strictMaybeToMaybe)
 import Cardano.Ledger.Block (txid)
-import Cardano.Ledger.Coin (Coin (..))
+import Cardano.Ledger.Coin (Coin, CompactForm (CompactCoin))
+import Cardano.Ledger.Compactible (Compactible (..))
 import Cardano.Ledger.Core
 import Cardano.Ledger.Credential (Credential (..))
 import qualified Cardano.Ledger.Crypto as CC (Crypto, HASH)
@@ -94,6 +95,7 @@ import Data.Foldable (Foldable (fold), foldMap', toList)
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import qualified Data.Maybe as Maybe
+import Data.Monoid (Sum (..))
 import Data.Set (Set)
 import qualified Data.Set as Set
 import Data.Sharing (FromSharedCBOR (Share, fromSharedCBOR), Interns)
@@ -242,11 +244,19 @@ sumAllValue :: (EraTxOut era, Foldable f) => f (TxOut era) -> Value era
 sumAllValue = foldMap' (^. valueTxOutL)
 {-# INLINE sumAllValue #-}
 
--- | Sum all the coin in any Foldable with with 'TxOut's
+-- | Sum all the 'Coin's in any Foldable with with 'TxOut's. Care should be
+-- taken since it is susceptible to integer overflow, therefore make sure this
+-- function is not applied to unvalidated 'TxOut's
 sumAllCoin :: (EraTxOut era, Foldable f) => f (TxOut era) -> Coin
-sumAllCoin = foldMap' (^. coinTxOutL)
+sumAllCoin = fromCompact . CompactCoin . getSum . foldMap' getCoinWord64
+  where
+    getCoinWord64 txOut =
+      case txOut ^. compactCoinTxOutL of
+        CompactCoin w64 -> Sum w64
 {-# INLINE sumAllCoin #-}
 
+-- | Check whether any of the supplied 'TxOut's contain any MultiAssets. Returns
+-- True if non of them do.
 areAllAdaOnly :: (EraTxOut era, Foldable f) => f (TxOut era) -> Bool
 areAllAdaOnly = all (^. isAdaOnlyTxOutF)
 {-# INLINE areAllAdaOnly #-}
