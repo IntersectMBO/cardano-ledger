@@ -1104,13 +1104,12 @@ testExpectSuccessInvalid
     let txBody' = txBody tc
         tx' = txFromTestCaseData pf tc
         (InitUtxo inputs' refInputs' collateral') = initUtxoFromTestCaseData pf tc
-
-        initUtxo = Map.fromList $ inputs' ++ refInputs' ++ collateral'
-        colBallance = Collateral.collAdaBalance txBody' initUtxo
+        initUtxo = UTxO . Map.fromList $ inputs' ++ refInputs' ++ collateral'
+        colBallance = Collateral.collAdaBalance txBody' (Map.fromList collateral')
         expectedUtxo = UTxO $ Map.fromList (inputs' ++ refInputs' ++ newColReturn txBody')
         expectedState = smartUTxOState expectedUtxo (Coin 0) colBallance def
         assumedInvalidTx = trustMeP pf False tx'
-     in testUTXOW (UTXOW pf) (UTxO initUtxo) (pp pf) assumedInvalidTx (Right expectedState)
+     in testUTXOW (UTXOW pf) initUtxo (pp pf) assumedInvalidTx (Right expectedState)
 
 testExpectFailure ::
   forall era.

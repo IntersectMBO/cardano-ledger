@@ -88,7 +88,7 @@ import Cardano.Ledger.Shelley.TxBody
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
     balance,
-    consumed,
+    coinConsumed,
     keyRefunds,
     produced,
     totalDeposits,
@@ -532,7 +532,7 @@ validateValueNotConservedUTxO pp utxo stakepools txb =
   failureUnless (consumedValue == producedValue) $
     ValueNotConservedUTxO consumedValue producedValue
   where
-    consumedValue = consumed pp utxo txb
+    consumedValue = Val.inject $ coinConsumed pp utxo txb
     producedValue = produced pp (`Map.notMember` stakepools) txb
 
 -- | Ensure there are no `TxOut`s that have less than @minUTxOValue@

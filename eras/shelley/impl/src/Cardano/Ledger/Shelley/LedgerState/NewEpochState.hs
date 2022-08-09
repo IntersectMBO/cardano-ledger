@@ -52,7 +52,6 @@ import Cardano.Ledger.UnifiedMap
     UnifiedMap,
   )
 import Cardano.Ledger.Val ((<+>), (<->))
-import qualified Cardano.Ledger.Val as Val
 import Control.State.Transition (STS (State))
 import Data.Default.Class (Default, def)
 import Data.Foldable (fold, toList)

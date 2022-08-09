@@ -82,7 +82,6 @@ import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinBalance, totalDeposits, txins
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.UnifiedMap (ViewMap)
 import Cardano.Ledger.Val ((<+>), (<->))
-import qualified Cardano.Ledger.Val as Val (coin)
 import Cardano.Protocol.TPraos.API (GetLedgerView)
 import Cardano.Protocol.TPraos.BHeader
   ( BHeader (..),

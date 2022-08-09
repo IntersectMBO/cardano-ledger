@@ -1,5 +1,4 @@
 {-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
@@ -38,7 +37,7 @@ module Cardano.Ledger.Shelley.UTxO
     scriptsNeeded,
     scriptCred,
     scriptStakeCred,
-    consumed,
+    coinConsumed,
     produced,
     keyRefunds,
   )
@@ -365,7 +364,7 @@ produced pp isNewPool txBody =
       )
 
 -- | Compute the lovelace which are destroyed by the transaction
-consumed ::
+coinConsumed ::
   forall era pp.
   ( ShelleyEraTxBody era,
     HasField "_keyDeposit" pp Coin
@@ -373,14 +372,13 @@ consumed ::
   pp ->
   UTxO era ->
   TxBody era ->
-  Value era
-consumed pp (UTxO u) txBody =
+  Coin
+coinConsumed pp (UTxO u) txBody =
   {- balance (txins tx ◁ u) + wbalance (txwdrls tx) + keyRefunds pp tx -}
-  Set.foldl' lookupAddTxOut mempty (txins @era txBody)
-    <> Val.inject (refunds <+> withdrawals)
+  coinBalance (UTxO (Map.restrictKeys u (txBody ^. inputsTxBodyL)))
+    <> refunds
+    <> withdrawals
   where
-    lookupAddTxOut acc txin = maybe acc (addTxOut acc) $ Map.lookup txin u
-    addTxOut !b out = out ^. valueTxOutL <+> b
     refunds = keyRefunds pp txBody
     withdrawals = fold . unWdrl $ txBody ^. wdrlsTxBodyL
 

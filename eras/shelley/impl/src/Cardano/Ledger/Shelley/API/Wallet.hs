@@ -88,7 +88,6 @@ import Cardano.Ledger.Shelley.LedgerState
     RewardUpdate,
     UTxOState (..),
     circulation,
-    consumed,
     createRUpd,
     incrementalStakeDistr,
     minfee,
@@ -107,7 +106,7 @@ import Cardano.Ledger.Shelley.Rewards (StakeShare (..))
 import Cardano.Ledger.Shelley.Rules.NewEpoch (calculatePoolDistr)
 import Cardano.Ledger.Shelley.Tx (ShelleyTx (..), ShelleyWitnesses, WitnessSetHKD (..))
 import Cardano.Ledger.Shelley.TxBody (PoolParams (..), ShelleyEraTxBody, WitVKey (..))
-import Cardano.Ledger.Shelley.UTxO (UTxO (..))
+import Cardano.Ledger.Shelley.UTxO (UTxO (..), coinConsumed)
 import Cardano.Ledger.Slot (epochInfoSize)
 import Cardano.Ledger.TxIn (TxIn (..))
 import Cardano.Ledger.Val ((<->))
@@ -546,7 +545,7 @@ addShelleyKeyWitnesses (ShelleyTx b ws aux) newWits = ShelleyTx b ws' aux
 instance CC.Crypto c => CLI (ShelleyEra c) where
   evaluateMinFee = minfee
 
-  evaluateConsumed = consumed
+  evaluateConsumed = coinConsumed
 
   addKeyWitnesses = addShelleyKeyWitnesses
 

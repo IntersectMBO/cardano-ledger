@@ -12,7 +12,6 @@
 module Test.Cardano.Ledger.Shelley.Generator.Utxo
   ( genTx,
     Delta (..),
-    showBalance,
     encodedLen,
     myDiscard,
     pickRandomFromMap,
@@ -45,19 +44,16 @@ import Cardano.Ledger.Shelley.LedgerState
     DState (..),
     KeyPairs,
     LedgerState (..),
-    PState (..),
     UTxOState (..),
-    consumed,
     dpsDState,
     minfee,
-    produced,
     ptrsMap,
     rewards,
   )
 import Cardano.Ledger.Shelley.Rules.Delpl (DelplEnv)
 import Cardano.Ledger.Shelley.Rules.Ledger (LedgerEnv (..))
 import Cardano.Ledger.Shelley.Tx (TxIn (..))
-import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody, Wdrl (..))
+import Cardano.Ledger.Shelley.TxBody (Wdrl (..))
 import Cardano.Ledger.Shelley.UTxO
   ( UTxO (..),
     makeWitnessesFromScriptKeys,
@@ -111,31 +107,6 @@ myDiscard :: [Char] -> a
 myDiscard message = trace ("\nDiscarded trace: " ++ message) discard
 
 -- ====================================================
-
-showBalance ::
-  forall era.
-  ( EraTx era,
-    ShelleyEraTxBody era,
-    HasField "_keyDeposit" (PParams era) Coin,
-    HasField "_poolDeposit" (PParams era) Coin
-  ) =>
-  LedgerEnv era ->
-  UTxOState era ->
-  DPState (Crypto era) ->
-  Tx era ->
-  String
-showBalance
-  (LedgerEnv _ _ pparams _)
-  (UTxOState utxo _ _ _ _)
-  (DPState _ (PState stakepools _ _))
-  tx =
-    "\n\nConsumed: " ++ show (consumed pparams utxo txBody)
-      ++ "  Produced: "
-      ++ show (produced @era pparams (`Map.notMember` stakepools) txBody)
-    where
-      txBody = tx ^. bodyTxL
-
---  ========================================================================
 
 -- | Generates a transaction in the context of the LEDGER STS environment
 -- and state.
